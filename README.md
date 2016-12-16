@@ -1,0 +1,37 @@
+# cproto
+
+## How to build and run server
+
+cd  server
+
+mkdir build & cd build
+
+## Create project
+cmake -G "Unix Makefiles" ..
+
+## Create project force to run on local host
+cmake -G "Unix Makefiles" -DFORCE_LOCALHOST_TEST=1 ..
+
+## Create project with debug data
+cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
+
+
+make
+./TEServer
+
+## How to build and run gui server
+cd server_gui
+mkdir build & cd build
+"/home/kj/Qt/5.7/gcc_64/bin/qmake" ../server_gui.pro -spec linux-g++ (if debug add CONFIG+=debug CONFIG+=qml_debug)
+make
+./server_gui
+
+## Visualization adaption
+cd websocket_visualization
+mkdir build & cd build
+"/home/kj/Qt/5.7/gcc_64/bin/qmake" ../websocket_visualization.pro -spec linux-g++
+make
+./websocket_visualization 53251 1 /home/kj/Repos/cproto/websocket_visualization/data/ 100
+
+## How to start objects
+./object 57.12345 12.54321 123.43 99999 99998
