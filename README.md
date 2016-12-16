@@ -28,10 +28,10 @@ make
 
 ## Visualization adaption
 cd websocket_visualization
-mkdir build & cd build
+mkdir build && cd build
 "/home/kj/Qt/5.7/gcc_64/bin/qmake" ../websocket_visualization.pro -spec linux-g++
 make
-./websocket_visualization 53251 1 /home/kj/Repos/cproto/websocket_visualization/data/ 100
+./websocket_visualization 53251 1 ./../data/ 100
 
 ## How to start objects
 ./object 57.12345 12.54321 123.43 99999 99998
