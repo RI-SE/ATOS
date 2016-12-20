@@ -2,4 +2,4 @@
 kill $(pidof object1.o)
 cd ./object/src/
 cc object.c -lm -o object1.o
-./object1.o 57.7776566 12.7813082 123.43 53242 53243
+./object1.o 57.7775688 12.7812653 123.43 53240 53241

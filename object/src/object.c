@@ -3,7 +3,7 @@
   --------------------------------------------------------------------------------
   -- File        : object.c
   -- Author      : Karl-Johan Ode
-  -- Description : CHRONOS central
+  -- Description : CHRONOS object
   -- Purpose     :
   -- Reference   :
   ------------------------------------------------------------------------------*/
@@ -36,9 +36,9 @@
 
 #define SAFETY_CHANNEL_PORT 53240
 #define CONTROL_CHANNEL_PORT 53241
-#define START_POS_LATITUDE 57.7773602
-#define START_POS_LONGITUDE 012.7804715
-#define START_POS_ALTITUDE 201.485
+#define ORIGIN_LATITUDE 57.7773602
+#define ORIGIN_LONGITUDE 012.7804715
+#define ORIGIN_ALTITUDE 201.485
 #define DATALEN 10000
 #define SAVED_TRAJECTORY_LINES 100
 #define PI acos(-1)
@@ -93,9 +93,9 @@ int main(int argc, char *argv[])
   double cal_lon = 0.0;
   double cal_alt = 0.0;
   double earth_radius = 6378137.0;
-  double lat_start = START_POS_LATITUDE;
-  double lon_start = START_POS_LONGITUDE;
-  double alt_start = START_POS_ALTITUDE;
+  double lat_start = ORIGIN_LATITUDE;
+  double lon_start = ORIGIN_LONGITUDE;
+  double alt_start = ORIGIN_ALTITUDE;
   unsigned int safety_port = SAFETY_CHANNEL_PORT;
   unsigned int control_port = CONTROL_CHANNEL_PORT;
 
@@ -229,13 +229,13 @@ int main(int argc, char *argv[])
 
   while(1)
   {
-    int recievedNewData = 0;
+    int receivedNewData = 0;
     bzero(bData,DATALEN);
     bzero(buffer,256);
     do
     {
       #ifdef DEBUG
-      printf("INF: Start for recieve\n");
+      printf("INF: Start for receive\n");
       #endif
 
       result = recv(command_com_socket_fd, 
@@ -260,7 +260,7 @@ int main(int argc, char *argv[])
       }
       else
       {
-        recievedNewData = 1;
+        receivedNewData = 1;
         #ifdef DEBUG
         printf("INF: Received: <%s>\n",buffer);
         fflush(stdout);
@@ -271,7 +271,7 @@ int main(int argc, char *argv[])
 
     
     /* Did we recieve anything on command? */
-    if(recievedNewData)
+    if(receivedNewData)
     {
       if (!strncmp(bData,"DOPM",4))
         {
@@ -435,22 +435,6 @@ int main(int argc, char *argv[])
                 break;
               }
             }
-	    /*            for(k; k < DATALEN; k++){
-              if(bData[k] == ';'){
-                bData[k] = '\0';
-                sscanf(&bData[ki],"%lf",&traj[row].lat);
-                ki = k+1;
-                break;
-              }
-            }
-            for(k; k < DATALEN; k++){
-              if(bData[k] == ';'){
-                bData[k] = '\0';
-                sscanf(&bData[ki],"%lf",&traj[row].lon);
-                ki = k+1;
-                break;
-              }
-	      }*/
             for(k; k < DATALEN; k++){
               if(bData[k] == ';'){
                 bData[k] = '\0';
@@ -460,13 +444,13 @@ int main(int argc, char *argv[])
                 break;
               }
             }
-	    //printf("??? %s;%f;%f;%f;%f;%f;%f;%f;%f;%d;%f;%f;%s %d %d\n",bLine,traj[row].time,traj[row].x,traj[row].y,traj[row].z,traj[row].hdg,traj[row].vel,traj[row].acc,traj[row].curv,traj[row].mode,traj[row].lat,traj[row].lon,bEndLine,k,ki);
+	    //printf("??? %s;%f;%f;%f;%f;%f;%f;%f;%f;%d;%s %d %d\n",bLine,traj[row].time,traj[row].x,traj[row].y,traj[row].z,traj[row].hdg,traj[row].vel,traj[row].acc,traj[row].curv,traj[row].mode,bEndLine,k,ki);
             k++;
             ki++;
           } // row
         } // endcommand
       } // current command DOPM
-    } // recievedNewData
+    } // receivedNewData
 
     #ifdef DEBUG
       printf("INF: Done handling incoming message\n");
@@ -488,21 +472,26 @@ int main(int argc, char *argv[])
       printf("INF: trig_time %d sent_rows %d rows %d \n",trig_time,sent_rows,rows);
     #endif
     if (trig_time < INT_MAX && sent_rows < rows)
-    {
+      {
       #ifdef DEBUG
     	 printf("INF: Create row %d from drive file.\n",sent_rows);
       #endif
       bzero(pcPosition,256);
 
-      cal_lat = lat_start - ((traj[sent_rows].y*180)/(PI*earth_radius));
-      cal_lon = lon_start - ((traj[sent_rows].x*180)/(PI*earth_radius))*(1/(cos((PI/180)*(0.5*(lat_start+cal_lat)))));
-      cal_alt = alt_start - traj[sent_rows].z;
+      cal_lat = ORIGIN_LATITUDE - ((traj[sent_rows].y*180)/(PI*earth_radius));
+      cal_lon = ORIGIN_LONGITUDE - ((traj[sent_rows].x*180)/(PI*earth_radius))*(1/(cos((PI/180)*(0.5*(ORIGIN_LATITUDE+cal_lat)))));
+      cal_alt = ORIGIN_ALTITUDE - traj[sent_rows].z;
       
       sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;3600;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,traj[sent_rows].vel*100);
       sent_rows++;
     }
+    else if (sent_rows == rows)
+      {
+	bzero(pcPosition,256);
+	sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;3600;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,traj[sent_rows].vel*100);
+      }
     else
-    {
+      {
       bzero(pcPosition,256);
       sprintf(pcPosition,";%.0lf;%.0lf;0;0;3600;0;",lat_start*10000000,lon_start*10000000);
     }
