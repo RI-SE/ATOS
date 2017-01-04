@@ -65,8 +65,8 @@ void vUtilFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
   while ((directory_entry = readdir(traj_directory)) && ((*nbr_objects) < MAX_OBJECTS))
   {
     
-
-    if (directory_entry->d_type == DT_REG)
+    /* Check so it's not . or .. */
+    if (strncmp(directory_entry->d_name,".",1))
     {
       bzero(object_address_name[(*nbr_objects)],MAX_FILE_PATH);
 
