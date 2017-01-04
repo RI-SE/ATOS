@@ -72,15 +72,16 @@ void supervision_task()
   char object_address_name[MAX_OBJECTS][MAX_FILE_PATH];
   uint32_t object_port[MAX_OBJECTS];
   int nbr_objects=0;
+  int iIndex = 0;
 
   monitor_t ldm[MAX_OBJECTS][LDM_SIZE];
   int ldm_act_step[MAX_OBJECTS];
 
   struct timespec sleep_time, ref_time;
 
-  for(int i=0;i<nbr_objects;++i)
+  for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
-    ldm_act_step[i] = 0;
+    ldm_act_step[iIndex] = 0;
   }
 
   (void)iCommInit(IPC_RECV_SEND,MQ_SV,1);
@@ -88,10 +89,10 @@ void supervision_task()
   /* Get objects; name, port and drive file */
   vUtilFindObjectsInfo(object_traj_file,object_address_name,object_port,&nbr_objects,SAFETY_CHANNEL_PORT);
 
-  for(int i=0;i<nbr_objects;++i)
+  for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
-    vCreateSafetyChannel(object_address_name[i],object_port[i],
-      &safety_socket_fd[i],&safety_object_addr[i]);
+    vCreateSafetyChannel(object_address_name[iIndex],object_port[iIndex],
+      &safety_socket_fd[iIndex],&safety_object_addr[iIndex]);
   }
 
   /* Start sending and receiving HEAB, MONT and visualization */
@@ -110,14 +111,14 @@ void supervision_task()
       fflush(stdout);
     #endif
 
-    for(int i=0;i<nbr_objects;++i)
+    for(iIndex=0;iIndex<nbr_objects;++iIndex)
     {
       bzero(buffer,RECV_MESSAGE_BUFFER);
-      vSendHeartbeat(&safety_socket_fd[i],&safety_object_addr[i],COMMAND_HEARBEAT_GO);
-      vRecvMonitor(&safety_socket_fd[i],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
+      vSendHeartbeat(&safety_socket_fd[iIndex],&safety_object_addr[iIndex],COMMAND_HEARBEAT_GO);
+      vRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
 
       #ifdef DEBUG
-        printf("INF: Did we recieve new data from %s %d: %d\n",object_address_name[i],object_port[i],recievedNewData);
+        printf("INF: Did we recieve new data from %s %d: %d\n",object_address_name[iIndex],object_port[iIndex],recievedNewData);
         fflush(stdout);
       #endif
 
@@ -125,22 +126,22 @@ void supervision_task()
       {
         /* Get monitor data */
         sscanf(buffer,"MONR;%" SCNu64 ";%" SCNd32 ";%" SCNd32 ";%" SCNd32 ";%" SCNu16 ";%" SCNu16 ";%" SCNu8 ";",
-          &ldm[i][ldm_act_step[i]].timestamp,&ldm[i][ldm_act_step[i]].latitude,&ldm[i][ldm_act_step[i]].longitude,
-          &ldm[i][ldm_act_step[i]].altitude,&ldm[i][ldm_act_step[i]].speed,&ldm[i][ldm_act_step[i]].heading,&ldm[i][ldm_act_step[i]].drivedirection);
+          &ldm[iIndex][ldm_act_step[iIndex]].timestamp,&ldm[iIndex][ldm_act_step[iIndex]].latitude,&ldm[iIndex][ldm_act_step[iIndex]].longitude,
+          &ldm[iIndex][ldm_act_step[iIndex]].altitude,&ldm[iIndex][ldm_act_step[iIndex]].speed,&ldm[iIndex][ldm_act_step[iIndex]].heading,&ldm[iIndex][ldm_act_step[iIndex]].drivedirection);
 
         bzero(buffer,RECV_MESSAGE_BUFFER);
         sprintf ( buffer,
           "%" PRIu16 ";0;%" PRIu64 ";%" PRId32 ";%" PRId32 ";%" PRId32 ";%" PRIu16 ";%" PRIu16 ";%" PRIu8 ";",
-          i,ldm[i][ldm_act_step[i]].timestamp,ldm[i][ldm_act_step[i]].latitude,ldm[i][ldm_act_step[i]].longitude,
-          ldm[i][ldm_act_step[i]].altitude,ldm[i][ldm_act_step[i]].speed,ldm[i][ldm_act_step[i]].heading,
-          ldm[i][ldm_act_step[i]].drivedirection);
+          iIndex,ldm[iIndex][ldm_act_step[iIndex]].timestamp,ldm[iIndex][ldm_act_step[iIndex]].latitude,ldm[iIndex][ldm_act_step[iIndex]].longitude,
+          ldm[iIndex][ldm_act_step[iIndex]].altitude,ldm[iIndex][ldm_act_step[iIndex]].speed,ldm[iIndex][ldm_act_step[iIndex]].heading,
+          ldm[iIndex][ldm_act_step[iIndex]].drivedirection);
         #ifdef DEBUG
           printf("INF: Send MONITOR message: %s\n",buffer);
           fflush(stdout);
         #endif
         (void)iCommSend(COMM_MONI,buffer);
 
-        ldm_act_step[i] = ++ldm_act_step[i] % LDM_SIZE;
+        ldm_act_step[iIndex] = ++ldm_act_step[iIndex] % LDM_SIZE;
       }
     }
 
@@ -168,9 +169,9 @@ void supervision_task()
   }
 
   /* Close safety socket */
-  for(int i=0;i<nbr_objects;++i)
+  for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
-    vCloseSafetyChannel(&safety_socket_fd[i]);
+    vCloseSafetyChannel(&safety_socket_fd[iIndex]);
   }
 
   (void)iCommClose();

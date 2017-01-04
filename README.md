@@ -35,3 +35,7 @@ make
 
 ## How to start objects
 ./object 57.12345 12.54321 123.43 99999 99998
+
+# CentOS needed
+yum install cmake
+yum groupinstall 'Development Tools'

@@ -61,6 +61,7 @@ void objectcontrol_task()
   char pcRecvBuffer[RECV_MESSAGE_BUFFER];
   char pcBuffer[OBJECT_MESS_BUFFER_SIZE];
   char pcTempBuffer[512];
+  int iIndex = 0;
 
   (void)iCommInit(IPC_RECV,MQ_OC,0);
 
@@ -101,18 +102,18 @@ void objectcontrol_task()
   #endif
 
   /* Connect and send drive files */
-  for(int i=0;i<nbr_objects;++i)
+  for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
-    vConnectObject(&socket_fd[i],object_address_name[i],object_port[i]);
+    vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_port[iIndex]);
 
 
     /* Send ODSM command */
     //vSendString(pcBuffer,&socket_fd[i]);
 
     /* Send DOPM command */
-    vSendString("DOPM;",&socket_fd[i]);
-    vSendFile(object_traj_file[i],&socket_fd[i]);
-    vSendString("ENDDOPM;",&socket_fd[i]);
+    vSendString("DOPM;",&socket_fd[iIndex]);
+    vSendFile(object_traj_file[iIndex],&socket_fd[iIndex]);
+    vSendString("ENDDOPM;",&socket_fd[iIndex]);
   }
 
   //#ifdef DEBUG
@@ -149,16 +150,16 @@ void objectcontrol_task()
         fflush(stdout);
       #endif
 
-      for(int i=0;i<nbr_objects;++i)
+      for(iIndex=0;iIndex<nbr_objects;++iIndex)
       {
-        vSendString(pcBuffer,&socket_fd[i]);
+        vSendString(pcBuffer,&socket_fd[iIndex]);
       }
     }
     else if(iCommand == COMM_STOP)
     {
-      for(int i=0;i<nbr_objects;++i)
+      for(iIndex=0;iIndex<nbr_objects;++iIndex)
       {
-        vSendString("STOP;ENDSTOP;",&socket_fd[i]); 
+        vSendString("STOP;ENDSTOP;",&socket_fd[iIndex]); 
       }
     }
     else if(iCommand == COMM_EXIT)
@@ -173,9 +174,9 @@ void objectcontrol_task()
       #endif
     }
   }
-  for(int i=0;i<nbr_objects;++i)
+  for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
-    vDisconnectObject(&socket_fd[i]);
+    vDisconnectObject(&socket_fd[iIndex]);
   }
   (void)iCommClose();
 }

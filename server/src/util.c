@@ -215,6 +215,7 @@ int iCommInit(const unsigned int uiMode, const char* name, const int iNonBlockin
 
 int iCommClose()
 {
+  int iIndex = 0;
   int iResult;
 
   if(tMQRecv != 0 && pcMessageQueueName != NULL)
@@ -231,7 +232,7 @@ int iCommClose()
     }
   }
 
-  for(int iIndex = 0; iIndex < MQ_NBR_QUEUES; ++iIndex)
+  for(iIndex = 0; iIndex < MQ_NBR_QUEUES; ++iIndex)
   {
     if(ptMQSend[iIndex] != 0)
     {
@@ -281,6 +282,7 @@ int iCommSend(const int iCommand,const char* cpData)
 {
   int iResult;
   unsigned int uiMessagePrio = 0;
+  int iIndex = 0;
   char cpMessage[MQ_MAX_MESSAGE_LENGTH];
 
   bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
@@ -315,7 +317,7 @@ int iCommSend(const int iCommand,const char* cpData)
     (void)strncat(&cpMessage[1],cpData,strlen(cpData));
   }
 
-  for(int iIndex = 0; iIndex < MQ_NBR_QUEUES; ++iIndex)
+  for(iIndex = 0; iIndex < MQ_NBR_QUEUES; ++iIndex)
   {
     if(ptMQSend[iIndex] != 0)
     {
