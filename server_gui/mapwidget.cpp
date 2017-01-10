@@ -167,10 +167,11 @@ MapWidget::MapWidget(QWidget *parent) :
 
     // Hardcoded for now
     mOsm->setCacheDir("osm_tiles");
-    //    mOsm->setTileServerUrl("http://tile.openstreetmap.org");
+
+    mOsm->setTileServerUrl("http://tile.openstreetmap.org");
     //    mOsm->setTileServerUrl("http://c.osm.rrze.fau.de/osmhd"); // Also https
     //    mOsm->setTileServerUrl("http://home.vedder.se/osm_tiles");
-    mOsm->setTileServerUrl("http://home.vedder.se/osm_tiles_hd");
+    //mOsm->setTileServerUrl("http://home.vedder.se/osm_tiles_hd");
 
     connect(mOsm, SIGNAL(tileReady(OsmTile)),
             this, SLOT(tileReady(OsmTile)));
@@ -180,8 +181,17 @@ MapWidget::MapWidget(QWidget *parent) :
     setMouseTracking(true);
 
     mUdpSocket = new QUdpSocket(this);
-    mUdpSocket->bind(QHostAddress::LocalHost, 53250);
-    connect(mUdpSocket, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
+
+    bool boResult = mUdpSocket->bind(QHostAddress::Any, 53250);
+    if(boResult)
+    {
+        connect(mUdpSocket, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
+        qDebug() << "UDP visualization started on address" << mUdpSocket->localAddress().toString() <<  " port: " << mUdpSocket->localPort();
+    }
+    else
+    {
+        qDebug() << "UDP visualization not able to start";
+    }
 
     mWebSocket = new QWebSocket(QString(),QWebSocketProtocol::VersionLatest,this);
     connect(mWebSocket, SIGNAL(connected()), this, SLOT(onConnected()));

@@ -34,8 +34,16 @@ typedef enum {
 
 #define IPC_BUFFER_SIZE   256
 
-/* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 + 22 * 1000 = 1072915222000 */
-#define MS_FROM_1970_TO_2004 1072915222000
+/* Calculation: 
+  34 years between 1970 and 2004 
+  8 days for leap year between 1970 and 2004 
+*/
+
+/* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
+#define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
+
+/* Number of leap seconds since 1970 */
+#define NBR_LEAP_SECONDS_FROM_1970 27
 
 
 /*------------------------------------------------------------
@@ -64,7 +72,9 @@ void systemcontrol_task()
 
       gettimeofday(&tvTime, NULL);
 
-      uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004 ;
+      uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - 
+        MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
+        NBR_LEAP_SECONDS_FROM_1970*1000;
 
       /* Add 5 seconds to get room for all objects to get command */
       uiTime += 5000;
