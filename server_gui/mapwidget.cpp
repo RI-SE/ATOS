@@ -255,12 +255,42 @@ void MapWidget::displayMessage(const QByteArray& message)
     getEnuRef(ref_llh);
 
     id = list[0].toInt();
-    llh[0] = list[3].insert(list[3].length()-7,'.').toDouble();
-    llh[1] = list[4].insert(list[4].length()-7,'.').toDouble();
-    llh[2] = 219.0;// list[5].insert(list[5].length()-7,'.').toDouble();
-    speed = list[6].insert(list[6].length()-2,'.').toDouble();
-    heading = list[7].insert(list[7].length()-1,'.').toDouble();
 
+    if(list[3].length()>7)
+    {
+        llh[0] = list[3].insert(list[3].length()-7,'.').toDouble();
+    }
+    else
+    {
+        llh[0] = 0;
+    }
+
+    if(list[4].length()>7)
+    {
+        llh[1] = list[4].insert(list[4].length()-7,'.').toDouble();
+    }
+    else
+    {
+        llh[1] = 0;
+    }
+    llh[2] = 219.0;// list[5].insert(list[5].length()-7,'.').toDouble();
+    if(list[6].length()>2)
+    {
+        speed = list[6].insert(list[6].length()-2,'.').toDouble();
+    }
+    else
+    {
+        speed = 0;
+    }
+
+    if(list[7].length()>1)
+    {
+        heading = list[7].insert(list[7].length()-1,'.').toDouble();
+    }
+    else
+    {
+        heading = 0;
+    }
 
     qDebug() << "Parse m: " << id << " " << list[1] << " " << QString::number( llh[0], 'f', 6 )
          << " " << QString::number( llh[1], 'f', 6 ) << " " << message;
