@@ -4,7 +4,7 @@
 
 cd  server
 
-mkdir build & cd build
+mkdir build && cd build
 
 ## Create project
 cmake -G "Unix Makefiles" ..
@@ -36,6 +36,11 @@ make
 ## How to start objects
 ./object 57.12345 12.54321 123.43 99999 99998
 
-# CentOS needed
+# CentOS installation for server
 yum install cmake
 yum groupinstall 'Development Tools'
+
+
+# CentOS installation qt
+wget http://download.qt.io/official_releases/qt/5.7/5.7.1/qt-opensource-linux-x64-5.7.1.run
+./http://download.qt.io/official_releases/qt/5.7/5.7.1/qt-opensource-linux-x64-5.7.1.run
