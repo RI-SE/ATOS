@@ -98,6 +98,7 @@ void visualization_task()
 static void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr)
 {
   struct hostent *server;
+  char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
 
   /* Setup connection to visualization */
   #ifdef DEBUG
@@ -114,8 +115,18 @@ static void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr)
   }
   
   bzero((char *)addr, sizeof(*addr));
-  
-  server = gethostbyname(VISUAL_SERVER_NAME);
+
+  bzero(pcTempBuffer,MAX_UTIL_VARIBLE_SIZE);
+  if(!iUtilGetParaConfFile("VisualizationServerName",pcTempBuffer))
+  {
+    strcat(pcTempBuffer,VISUAL_SERVER_NAME);
+  }
+
+  printf("INF: UDP visualization sending to %s %d.\n",pcTempBuffer,VISUAL_SERVER_PORT);
+  fflush(stdout);
+
+  server = gethostbyname(pcTempBuffer);
+
   if (server == NULL) 
   {
     util_error("ERR: Unkonown host\n");
