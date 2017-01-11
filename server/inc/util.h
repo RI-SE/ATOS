@@ -45,6 +45,8 @@
 #define MAX_OBJECTS 10
 #define MAX_FILE_PATH 256
 
+#define MAX_UTIL_VARIBLE_SIZE 512
+
 //#define DEBUG
 
 

@@ -22,7 +22,7 @@ make
 ## How to build and run gui server
 cd server_gui
 mkdir build & cd build
-"/home/kj/Qt/5.7/gcc_64/bin/qmake" ../server_gui.pro -spec linux-g++ (if debug add CONFIG+=debug CONFIG+=qml_debug)
+"/home/kj/Qt/5.7/gcc_64/bin/qmake" ../server_gui.pro -spec linux-g++ (if debug add CONFIG+=debug CONFIG+=qml_debug; if windows -spec win32-g++)
 make
 ./server_gui
 
