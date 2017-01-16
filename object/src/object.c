@@ -56,6 +56,16 @@ typedef struct {
   uint8_t mode;
 } traj_row_t;
 
+/* Calculation: 
+  34 years between 1970 and 2004 
+  8 days for leap year between 1970 and 2004 
+*/
+/* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
+#define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
+
+/* Number of leap seconds since 1970 */
+#define NBR_LEAP_SECONDS_FROM_1970 27
+
 /*------------------------------------------------------------
   -- The main function.
   ------------------------------------------------------------*/
@@ -98,11 +108,9 @@ int main(int argc, char *argv[])
   double alt_start = ORIGIN_ALTITUDE;
   unsigned int safety_port = SAFETY_CHANNEL_PORT;
   unsigned int control_port = CONTROL_CHANNEL_PORT;
+  int optval = 1;
 
   struct timeval tv;
-  unsigned long long msFrom1970To2004 = ((unsigned long long) 34 * 365 * 24 * 3600 * 1000) + ((unsigned long long) 8 * 24 * 3600 * 1000) + ((unsigned long long) 22 * 1000); 
-  
-
   
   if ( !( (argc == 1) || (argc == 4) || (argc == 6))){
     perror("Please use no, 3, or 5 arguments: object <lat,lon,alt><safety port,control port>");
@@ -177,9 +185,12 @@ int main(int argc, char *argv[])
   command_server_addr.sin_addr.s_addr = INADDR_ANY; 
   command_server_addr.sin_port = htons(control_port);
 
+  optval = 1;
+  result = setsockopt(command_server_socket_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval);
+
   if (result < 0)
   {
-    perror("calling fcntl");
+    perror("calling setsockopt");
     exit(1);
   }
 
@@ -462,9 +473,11 @@ int main(int argc, char *argv[])
 
     gettimeofday(&tv, NULL);
 
-    unsigned long long msSinceEpoch = (unsigned long long) (tv.tv_sec) * 1000 + (unsigned long long) (tv.tv_usec) / 1000;
+    unsigned long long msSinceEpochETSI = (unsigned long long)tv.tv_sec*1000 + (unsigned long long)tv.tv_usec/1000 - 
+      MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
+      NBR_LEAP_SECONDS_FROM_1970*1000;
     
-    sprintf(pcTimeString, "%llu", msSinceEpoch - msFrom1970To2004); 
+    sprintf(pcTimeString, "%llu", msSinceEpochETSI); 
     strcat(bMonitorBuffer,pcTimeString);
 
     static int sent_rows = 0;
