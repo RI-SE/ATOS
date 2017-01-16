@@ -291,6 +291,9 @@ void MapWidget::displayMessage(const QByteArray& message)
     {
         heading = 0;
     }
+    heading = (heading-90.0)*M_PI/180;
+
+
 
     qDebug() << "Parse m: " << id << " " << list[1] << " " << QString::number( llh[0], 'f', 6 )
          << " " << QString::number( llh[1], 'f', 6 ) << " " << message;
