@@ -18,6 +18,7 @@
 #include <QDebug>
 #include <math.h>
 #include <qmath.h>
+#include <QDir>
 
 #include "mapwidget.h"
 #include "utility.h"
@@ -198,6 +199,63 @@ MapWidget::MapWidget(QWidget *parent) :
     connect(mWebSocket, SIGNAL(disconnected()), mWebSocket, SLOT(close()));
     mWebSocket->open(QUrl(QStringLiteral("ws://localhost:53251")));
 
+    //QList<QPointF> trajTemp;
+    QDir dir("./traj/");
+
+    double ref_llh[3];
+    double llh[3];
+    double xyz[3];
+
+    qDebug() << "Path: " << dir.absolutePath();
+
+    if ( dir.exists() )
+    {
+        QFileInfoList entries = dir.entryInfoList( QDir::NoDotAndDotDot | QDir::Files);
+        for(int i = 0; i < entries.size(); ++i)
+        {
+            QList<QString> stringList;
+            QString line;
+            QFile file(entries[i].absoluteFilePath());
+            file.open(QIODevice::ReadOnly);
+
+            QTextStream in(&file);
+            while(!in.atEnd())
+            {
+                line = in.readLine();
+                QStringList list = line.split(';');
+                if(list[0].compare("LINE") == 0)
+                {
+                    //qDebug() << "X: " << list[2] << " Y: " << list[3] << " Z: " << list[4];
+
+                    // Transform  xyz to llh, hardcoded origo
+                    ref_llh[0] = 57.7773602;
+                    ref_llh[1] = 12.7804715;
+                    ref_llh[2] = 201.485;
+
+                    xyz[0] = list[2].toDouble();
+                    xyz[1] = list[3].toDouble();
+                    xyz[2] = list[4].toDouble();
+                    utility::enuToLlh(ref_llh,xyz,llh);
+                    //llh[2] = 219.0;
+
+                    qDebug() << "LLH: " << QString::number(llh[0], 'g', 8) << " " << QString::number(llh[1], 'g', 8) << " " << QString::number(llh[2], 'g', 8);
+
+                    // Transform to x,y,z according to getEnuRef
+                    getEnuRef(ref_llh);
+                    utility::llhToEnu(ref_llh, llh, xyz);
+
+                    qDebug() << "ref_llh: " << QString::number(ref_llh[0], 'g', 8) << " " << QString::number(ref_llh[1], 'g', 8) << " " << QString::number(ref_llh[2], 'g', 8);
+
+                    qDebug() << "ENU: " << xyz[0] << " " << xyz[1] << " " << xyz[2];
+
+                    //trajTemp.append(QPointF(xyz[0],xyz[1]));
+                    mInfoTrace.append(LocPoint(xyz[0],xyz[1]));
+                }
+
+            }
+            file.close();
+        }
+    }
 }
 
 MapWidget::~MapWidget()
@@ -922,6 +980,21 @@ void MapWidget::paintEvent(QPaintEvent *event)
                            pt_txt.x() + 150, pt_txt.y() + 25);
         painter.drawText(rect_txt, txt);
     }
+
+    // Draw trace for trajocteries
+    /*
+    for (int i = 0;i < mTrajectories.size();i++) {
+        pen.setWidthF(5.0 / mScaleFactor);
+        pen.setColor((Qt::GlobalColor)(Qt::red+i));
+        pen.setStyle(Qt::DashLine);
+        painter.setPen(pen);
+        painter.setTransform(drawTrans);
+        for (int i2 = 1;i2 < mTrajectories[i].size();i2++) {
+            painter.drawLine(mTrajectories[i][i2 - 1].x() * 1000.0, mTrajectories[i][i2 - 1].y() * 1000.0,
+                mTrajectories[i][i2].x() * 1000.0, mTrajectories[i][i2].y() * 1000.0);
+        }
+    }
+    */
 
     // Draw cars
     painter.setPen(QPen(textColor));

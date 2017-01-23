@@ -38,6 +38,8 @@
 #define COMM_STOP 2
 #define COMM_MONI 3
 #define COMM_EXIT 4
+#define COMM_ARMD 5
+#define COMM_INV 255
 
 #define SAFETY_CHANNEL_PORT 53240
 #define CONTROL_CHANNEL_PORT 53241
@@ -54,11 +56,6 @@
   -- Function declarations.
   ------------------------------------------------------------*/
 void util_error(char* message);
-void vUtilFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], 
-  char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
-  uint32_t object_port[MAX_OBJECTS],
-  int* nbr_objects,
-  const uint32_t default_port);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
 
 int iCommInit(const unsigned int, const char*, const int);

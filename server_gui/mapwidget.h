@@ -126,6 +126,7 @@ private:
     QList<LocPoint> mInfoTrace;
     QList<LocPoint> mVisibleInfoTracePoints;
     QList<PerspectivePixmap> mPerspectivePixmaps;
+    //QList<QList<QPointF>> mTrajectories;
     double mRoutePointSpeed;
     double mScaleFactor;
     double mRotation;

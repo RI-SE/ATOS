@@ -11,7 +11,7 @@
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
-#include <dirent.h>
+
 #include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -24,8 +24,6 @@
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-#define LOCALHOST "127.0.0.1"
-#define TRAJECTORY_PATH "./traj/"
 #define MQ_NBR_QUEUES 4
 
 #define TEST_CONF_FILE "./conf/test.conf"
@@ -44,48 +42,6 @@ void util_error(char* message)
 {
   perror(message);
   exit(EXIT_FAILURE);
-}
-
-
-void vUtilFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], 
-  char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
-  uint32_t object_port[MAX_OBJECTS],
-  int* nbr_objects,
-  const uint32_t default_port)
-{
-  DIR* traj_directory;
-  struct dirent *directory_entry;
-
-  traj_directory = opendir(TRAJECTORY_PATH);
-  if(traj_directory == NULL)
-  {
-    util_error("ERR: Failed to open trajectory directory");
-  }
-
-  while ((directory_entry = readdir(traj_directory)) && ((*nbr_objects) < MAX_OBJECTS))
-  {
-    
-    /* Check so it's not . or .. */
-    if (strncmp(directory_entry->d_name,".",1))
-    {
-      bzero(object_address_name[(*nbr_objects)],MAX_FILE_PATH);
-
-      #ifndef FORCE_LOCALHOST_TEST
-        (void)strncat(object_address_name[(*nbr_objects)],directory_entry->d_name,strlen(directory_entry->d_name));
-        object_port[(*nbr_objects)] = default_port;
-      #else
-        (void)strcat(object_address_name[(*nbr_objects)],LOCALHOST);
-        object_port[(*nbr_objects)] = default_port + (*nbr_objects)*2;
-      #endif
-
-      bzero(object_traj_file[(*nbr_objects)],MAX_FILE_PATH);
-      (void)strcat(object_traj_file[(*nbr_objects)],TRAJECTORY_PATH);
-      (void)strcat(object_traj_file[(*nbr_objects)],directory_entry->d_name);
-
-      ++(*nbr_objects);
-    }
-  }
-  (void)closedir(traj_directory);
 }
 
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue) 
@@ -272,6 +228,7 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize)
   }
   else
   {
+    *iCommand = COMM_INV;
     iResult = 0;
   }
 

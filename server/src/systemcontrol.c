@@ -27,6 +27,7 @@ typedef enum {
   SERVER_STATUS_INIT,
   SERVER_STATUS_OBJECT_CONNECTED,
   SERVER_STATUS_OBJECT_LOADED,
+  SERVER_STATUS_ARMED,
   SERVER_STATUS_RUNNING,
   SERVER_STATUS_STOPPED,
   SERVER_STATUS_DONE
@@ -66,7 +67,17 @@ void systemcontrol_task()
   {
     bzero(pcBuffer,IPC_BUFFER_SIZE);
     scanf("%49s",pcBuffer);
-    if(!strcmp(pcBuffer,"trig"))
+
+    if(!strcmp(pcBuffer,"status"))
+    {
+      printf("Server status: %d\n",server_state);
+    }
+    else if(!strcmp(pcBuffer,"arm"))
+    {
+      (void)iCommSend(COMM_ARMD,NULL);
+      server_state = SERVER_STATUS_ARMED;
+    }
+    else if(!strcmp(pcBuffer,"trig"))
     {
       bzero(pcBuffer, IPC_BUFFER_SIZE);
 

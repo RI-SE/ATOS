@@ -71,6 +71,11 @@ void visualization_task()
 
     if(iCommand == COMM_MONI)
     {
+      #ifdef DEBUG
+        printf("INF: Recieved MONITOR message: %s\n",cpBuffer);
+        fflush(stdout);
+      #endif
+
       vSendVisualization(&visual_server,&visual_server_addr,cpBuffer);
     }
     else if(iCommand == COMM_EXIT)
