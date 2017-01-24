@@ -70,36 +70,27 @@ void supervision_task()
     ldm_act_step[iIndex] = 0;
   }
 
-  (void)iCommInit(IPC_RECV,MQ_SV,1);
+  (void)iCommInit(IPC_RECV,MQ_SV,0);
 
   /* Start sending and receiving HEAB, MONT and visualization */
   int iExit = 0;
   int iCommand;
   while(!iExit)
   {
-    char buffer[RECV_MESSAGE_BUFFER];
-    int recievedNewData = 0;
-
+    bzero(cpBuffer,RECV_MESSAGE_BUFFER);
+    (void)iCommRecv(&iCommand,cpBuffer,RECV_MESSAGE_BUFFER);
+    
     #ifdef DEBUG
-      struct timespec spec;
-      clock_gettime(CLOCK_MONOTONIC, &spec);
-      printf("INF: Time: %"PRIdMAX".%06ld \n",
-        (intmax_t)spec.tv_sec, spec.tv_nsec);
+      printf("INF: VA received a command: %s\n",cpBuffer);
       fflush(stdout);
     #endif
 
-    int iResult = 1;
-    while(iResult > 0 && iExit == 0)
+    if(iCommand == COMM_MONI)
     {
-      bzero(cpBuffer,RECV_MESSAGE_BUFFER);
-      iResult = iCommRecv(&iCommand,cpBuffer,RECV_MESSAGE_BUFFER);
-
-      if(iCommand == COMM_MONI)
-      {
-        #ifdef DEBUG
-          printf("INF: Recieved MONITOR message: %s\n",cpBuffer);
-          fflush(stdout);
-        #endif
+      #ifdef DEBUG
+        printf("INF: Recieved MONITOR message: %s\n",cpBuffer);
+        fflush(stdout);
+      #endif
 
         /* Start parsing messages */
         sscanf(cpBuffer,"%" SCNu16 ";0;%" SCNu64 ";%" SCNd32 ";%" SCNd32 ";%" SCNd32 ";%" SCNu16 ";%" SCNu16 ";%" SCNu8 ";",
@@ -114,28 +105,19 @@ void supervision_task()
         ldm[iIndex][ldm_act_step[iIndex]].drivedirection = drivedirection;
 
         ldm_act_step[iIndex] = ++ldm_act_step[iIndex] % LDM_SIZE;
-      }
-  	  else if(iCommand == COMM_EXIT)
-      {
-        iExit = 1;
-      }
-      else
-      {
-        #ifdef DEBUG
-          printf("INF: Unhandled command in supervision\n");
-          fflush(stdout);
-        #endif
-      }
     }
-
-    if(!iExit)
-	  {
-	    /* Make call periodic */
-	    sleep_time.tv_sec = 0;
-	    sleep_time.tv_nsec = 100000000;
-	    (void)nanosleep(&sleep_time,&ref_time);
+    else if(iCommand == COMM_EXIT)
+    {
+      iExit = 1;  
     }
-  }
+    else
+    {
+      #ifdef DEBUG
+        printf("INF: Unhandled command in visualization adapter\n");
+        fflush(stdout);
+      #endif
+    }
+  }  
 
   (void)iCommClose();
 
