@@ -38,6 +38,9 @@
 #define RECV_MESSAGE_BUFFER 1024
 #define OBJECT_MESS_BUFFER_SIZE 1024
 
+#define TASK_PERIOD_MS 1
+#define HEARTBEAT_TIME_MS 10
+
 typedef enum {
   COMMAND_HEARBEAT_GO,
   COMMAND_HEARBEAT_ABORT
@@ -174,7 +177,8 @@ void objectcontrol_task()
     fflush(stdout);
   //#endif
 
-  /* Listen for commands */
+  uint8_t uiTimeCycle = 0;
+  /* Should we exit? */
   while(!iExit)
   {
     char buffer[RECV_MESSAGE_BUFFER];
@@ -190,8 +194,16 @@ void objectcontrol_task()
 
     for(iIndex=0;iIndex<nbr_objects;++iIndex)
     {
+      /* Should we send heart beat in this cycle */
+      if(uiTimeCycle == 0)
+      {
+        vSendHeartbeat(&safety_socket_fd[iIndex],&safety_object_addr[iIndex],COMMAND_HEARBEAT_GO);
+      }
+    }
+
+    for(iIndex=0;iIndex<nbr_objects;++iIndex)
+    {
       bzero(buffer,RECV_MESSAGE_BUFFER);
-      vSendHeartbeat(&safety_socket_fd[iIndex],&safety_object_addr[iIndex],COMMAND_HEARBEAT_GO);
       vRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
 
       #ifdef DEBUG
@@ -223,59 +235,69 @@ void objectcontrol_task()
 
     bzero(pcRecvBuffer,RECV_MESSAGE_BUFFER);
 
-    (void)iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER);
-
-    #ifdef DEBUG
-      printf("INF: Object control command %d\n",iCommand);
-      fflush(stdout);
-    #endif
-
-    if(iCommand == COMM_ARMD)
+    // Have we recieved a command?
+    if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER))
     {
-      for(iIndex=0;iIndex<nbr_objects;++iIndex)
-      {
-        vSendString("AROM;ENDAROM;",&socket_fd[iIndex]); 
-      }
-    }
-    else if(iCommand == COMM_TRIG)
-    {  
-      //#ifdef DEBUG
-        printf("INF: Object control TRIG recvied string <%s>\n",pcRecvBuffer);
-        fflush(stdout);
-      //#endif
-
-      bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
-      strncat(pcBuffer,"TRIG;",5);
-      strncat(pcBuffer,pcRecvBuffer,OBJECT_MESS_BUFFER_SIZE-13);
-      strncat(pcBuffer,"ENDTRIG;",8);
 
       #ifdef DEBUG
-        printf("INF: Sending TRIG from object control <%s>\n",pcBuffer);
+        printf("INF: Object control command %d\n",iCommand);
         fflush(stdout);
       #endif
 
-      for(iIndex=0;iIndex<nbr_objects;++iIndex)
+      if(iCommand == COMM_ARMD)
       {
-        vSendString(pcBuffer,&socket_fd[iIndex]);
+        for(iIndex=0;iIndex<nbr_objects;++iIndex)
+        {
+          vSendString("AROM;ENDAROM;",&socket_fd[iIndex]); 
+        }
       }
-    }
-    else if(iCommand == COMM_EXIT)
-    {
-      iExit = 1;  
-    }
-    else
-    {
-      #ifdef DEBUG
-        printf("Unhandled command in object control\n");
-        fflush(stdout);
-      #endif
+      else if(iCommand == COMM_TRIG)
+      {  
+        //#ifdef DEBUG
+          printf("INF: Object control TRIG recvied string <%s>\n",pcRecvBuffer);
+          fflush(stdout);
+        //#endif
+
+        bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
+        strncat(pcBuffer,"TRIG;",5);
+        strncat(pcBuffer,pcRecvBuffer,OBJECT_MESS_BUFFER_SIZE-13);
+        strncat(pcBuffer,"ENDTRIG;",8);
+
+        #ifdef DEBUG
+          printf("INF: Sending TRIG from object control <%s>\n",pcBuffer);
+          fflush(stdout);
+        #endif
+
+        for(iIndex=0;iIndex<nbr_objects;++iIndex)
+        {
+          vSendString(pcBuffer,&socket_fd[iIndex]);
+        }
+      }
+      else if(iCommand == COMM_EXIT)
+      {
+        iExit = 1;  
+      }
+      else
+      {
+        #ifdef DEBUG
+          printf("Unhandled command in object control\n");
+          fflush(stdout);
+        #endif
+      }
     }
 
     if(!iExit)
     {
       /* Make call periodic */
       sleep_time.tv_sec = 0;
-      sleep_time.tv_nsec = 100000000;
+      sleep_time.tv_nsec = TASK_PERIOD_MS*1000000;
+
+      ++uiTimeCycle;
+      if(uiTimeCycle >= HEARTBEAT_TIME_MS/TASK_PERIOD_MS)
+      {
+        uiTimeCycle = 0;
+      }
+
       (void)nanosleep(&sleep_time,&ref_time);
     }
   }
