@@ -86,6 +86,7 @@ int main(int argc, char *argv[])
   const char bEndDOPM[10]= "ENDDOPM";
   const char bEndTRIG[10]= "ENDTRIG";
   char bData[DATALEN];
+  int newFileData = 0;
   char bFileTrajName[100];
   char bCommand[10];
   char bFileCommand[10];
@@ -320,11 +321,27 @@ int main(int argc, char *argv[])
 	    {
 
 	      rewind(fp);
-	      read = getline(&bFileLine, &len, fp);
-	      if (read == -1)
+	      newFileData = 0;
+	      while(newFileData != 1)
 		{
-		 perror("ERR: Failed to read first line in drive file");
-		 exit(1); 
+		  read = getline(&bFileLine, &len, fp);
+		  if (read < 0)
+		    {
+		      if(errno != EAGAIN && errno != EWOULDBLOCK)
+			{
+			  perror("ERR: Failed to read first line in drive file");
+			  exit(1);
+			}
+		      else
+			{
+#ifdef DEBUG
+			  printf("INF: No data read from drive file\n");
+			  fflush(stdout);
+#endif
+			}
+		    }
+		  else
+		    newFileData = 1;
 		}
 
 	      int l = 0;
@@ -403,11 +420,27 @@ int main(int argc, char *argv[])
 #endif
 	  bzero(pcPosition,256);
 
-	  read = getline(&bFileLine, &len, fp);
-	  if (read == -1)
+	  newFileData = 0;
+	  while(newFileData != 1)
 	    {
-	      perror("ERR: Failed to read first line in drive file");
-	      exit(1); 
+	      read = getline(&bFileLine, &len, fp);
+	      if (read < 0)
+		{
+		  if(errno != EAGAIN && errno != EWOULDBLOCK)
+		    {
+		      perror("ERR: Failed to read line in drive file");
+		      exit(1);
+		    }
+		  else
+		    {
+#ifdef DEBUG
+		      printf("INF: No data to read from drive file\n");
+		      fflush(stdout);
+#endif
+		    }
+		}
+	      else
+		newFileData = 1;
 	    }
 	  
 	  int l = 0;
