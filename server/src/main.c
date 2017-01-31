@@ -87,6 +87,7 @@ int main(int argc, char *argv[])
   }
   ++iIndex;
 
+#ifndef EXT_VISUALIZATION_ADAPTER
   pID[iIndex] = fork();
   if(pID[iIndex] < 0)
   {
@@ -101,6 +102,7 @@ int main(int argc, char *argv[])
     exit(EXIT_SUCCESS);
   }
   ++iIndex;
+#endif
 
   #ifdef DEBUG
     printf("INF: systemcontrol_task running in:  %i \n",getpid());

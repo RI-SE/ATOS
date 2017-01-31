@@ -31,6 +31,11 @@ if ( FORCE_LOCALHOST_TEST EQUAL 1)
   add_definitions(-DFORCE_LOCALHOST_TEST)
 endif ()
 
+# Use external visualization adapter
+if ( EXT_VISUALIZATION_ADAPTER EQUAL 1)
+  add_definitions(-DEXT_VISUALIZATION_ADAPTER)
+endif ()
+
 # add the install targets
 install (TARGETS TEServer DESTINATION bin)
 

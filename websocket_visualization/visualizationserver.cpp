@@ -4,16 +4,35 @@
 #include "QtWebSockets/qwebsocket.h"
 #include <QtCore/QDebug>
 
+#include <QThread>
+
+extern "C" {
+#include "util.h"
+}
+
 VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint16 port, bool debug, QObject *parent):
-    QObject(parent),
+    QThread(parent),
     m_pWebSocketServer(new QWebSocketServer(QStringLiteral("Websocket Visualization Server"),
                                             QWebSocketServer::NonSecureMode, this)),
     m_clients(),
     m_debug(debug)
 {
-    m_gen = gen;
-    m_genTime = genTime;
-    if (m_pWebSocketServer->listen(QHostAddress::Any, port)) {
+
+    if(gen != NULL)
+    {
+        m_gen = gen;
+        mTimerId = startTimer(genTime);
+    }
+    else
+    {
+        (void)iCommInit(IPC_RECV,MQ_VA,0);
+
+        start();
+        connect(this, &VisualizationServer::sendTextMessage,this, &VisualizationServer::onSendTextMessage);
+    }
+
+    if (m_pWebSocketServer->listen(QHostAddress::Any, port))
+    {
         if (m_debug)
         {
             qDebug() << "Websocket Visualization Adapter listening on port" << port;
@@ -26,9 +45,34 @@ VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint
 
 VisualizationServer::~VisualizationServer()
 {
-    killTimer(mTimerId);
+    if(m_gen != NULL)
+    {
+        killTimer(mTimerId);
+    }
+    else
+    {
+        (void)iCommClose();
+    }
     m_pWebSocketServer->close();
     qDeleteAll(m_clients.begin(), m_clients.end());
+}
+
+void VisualizationServer::run()
+{
+    int iCommand;
+    char cpBuffer[100];
+
+    while(true)
+    {
+        bzero(cpBuffer,100);
+        (void)iCommRecv(&iCommand,cpBuffer,100);
+
+        if(iCommand == COMM_MONI)
+        {
+            QString qsTemp(cpBuffer);
+            emit sendTextMessage(qsTemp);
+        }
+    }
 }
 
 void VisualizationServer::timerEvent(QTimerEvent *event)
@@ -37,7 +81,7 @@ void VisualizationServer::timerEvent(QTimerEvent *event)
     QList<QString> messages = m_gen->GetNextMessages();
     foreach(QString mess, messages)
     {
-        SendTextMessage(mess);
+        onSendTextMessage(mess);
     }
 }
 
@@ -49,15 +93,10 @@ void VisualizationServer::onNewConnection()
     connect(pSocket, &QWebSocket::binaryMessageReceived, this, &VisualizationServer::processBinaryMessage);
     connect(pSocket, &QWebSocket::disconnected, this, &VisualizationServer::socketDisconnected);
 
-    if(m_gen != NULL)
-    {
-        mTimerId = startTimer(m_genTime);
-    }
-
     m_clients << pSocket;
 }
 
-void VisualizationServer::SendTextMessage(QString message)
+void VisualizationServer::onSendTextMessage(QString message)
 {
     if (m_debug)
     {
@@ -65,6 +104,7 @@ void VisualizationServer::SendTextMessage(QString message)
         qDebug() << times++ << " message to send :" << message;
     }
 
+    // TODO m_clients mutex
     foreach(QWebSocket* client, m_clients)
     {
         client->sendTextMessage(message);

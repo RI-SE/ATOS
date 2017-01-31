@@ -12,6 +12,9 @@ cmake -G "Unix Makefiles" ..
 ## Create project force to run on local host
 cmake -G "Unix Makefiles" -DFORCE_LOCALHOST_TEST=1 ..
 
+## Create project with external visualization adapter
+cmake -G "Unix Makefiles" -DEXT_VISUALIZATION_ADAPTER=1 ..
+
 ## Create project with debug data
 cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
 

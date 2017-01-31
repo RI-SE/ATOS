@@ -5,21 +5,29 @@
 #include <QtCore/QList>
 #include <QtCore/QByteArray>
 
+#include <QThread>
+
 #include "generator.h"
 
 QT_FORWARD_DECLARE_CLASS(QWebSocketServer)
 QT_FORWARD_DECLARE_CLASS(QWebSocket)
 
-class VisualizationServer : public QObject
+QT_FORWARD_DECLARE_CLASS(MessageQueueThread)
+
+class VisualizationServer : public QThread
 {
     Q_OBJECT
 public:
     explicit VisualizationServer(Generator* gen, uint16_t genTime, quint16 port, bool debug, QObject *parent = Q_NULLPTR);
     ~VisualizationServer();
 
-    void SendTextMessage(QString message);
+    void onSendTextMessage(QString message);
+
+signals:
+    void sendTextMessage(QString message);
 
 protected:
+    void run() override;
     void timerEvent(QTimerEvent *event);
 
 Q_SIGNALS:
@@ -38,6 +46,7 @@ private:
     bool m_debug;
     int mTimerId;
     uint32_t m_genTime;
+    MessageQueueThread *m_Thread;
 };
 
 #endif // SERVER_H

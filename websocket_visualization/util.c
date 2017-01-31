@@ -44,51 +44,9 @@ void util_error(char* message)
   exit(EXIT_FAILURE);
 }
 
-int iUtilGetParaConfFile(char* pcParameter, char* pcValue) 
-{
-  FILE *filefd;
-  int iFindResult;
-  char pcTemp[512];
-
-  iFindResult = 0;
-
-  filefd = fopen (TEST_CONF_FILE, "rb");
-
-  if (filefd == NULL)
-  {
-    return 0;
-  }
-  
-  while(fgets(pcTemp, 512, filefd) != NULL)
-  {
-    if((strstr(pcTemp, pcParameter)) != NULL) 
-    {
-      /* Does contain any value? */
-      if(strlen(pcTemp) > (strlen(pcParameter)+1))
-      {
-        /* replace new line */
-        if(pcTemp[strlen(pcTemp)-1] == '\n')
-        {
-          pcTemp[strlen(pcTemp)-1] = 0;
-        }
-        strcpy(pcValue,&pcTemp[strlen(pcParameter)+1]);
-      }
-      iFindResult = 1;
-    }
-  }
-  
-  if(filefd) 
-  {
-    fclose(filefd);
-  }
-
-  return 1;
-}
-
 int iCommInit(const unsigned int uiMode, const char* name, const int iNonBlocking)
 {
   struct mq_attr attr;
-  int iResult;
   int iOFlag;
   unsigned int uiIndex;
 
@@ -208,11 +166,11 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize)
   int iResult;
   char cpMessage[MQ_MAX_MESSAGE_LENGTH];
   unsigned int prio;
-  
+
   bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
 
   iResult = mq_receive(tMQRecv, cpMessage, MQ_MAX_MESSAGE_LENGTH, &prio);
-    
+
   if(iResult < 0 && errno != EAGAIN)
   {
     util_error ("ERR: Error when recieveing");
@@ -236,59 +194,6 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize)
   }
 
   return iResult;
-}
-
-int iCommSend(const int iCommand,const char* cpData)
-{
-  int iResult;
-  unsigned int uiMessagePrio = 0;
-  int iIndex = 0;
-  char cpMessage[MQ_MAX_MESSAGE_LENGTH];
-
-  bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
-
-  if(iCommand == COMM_TRIG)
-  {
-    uiMessagePrio = 100;
-    cpMessage[0] = (char)COMM_TRIG;
-  }
-  else if(iCommand == COMM_STOP)
-  {
-    uiMessagePrio = 120;
-    cpMessage[0] = (char)COMM_STOP;
-  }
-  else if(iCommand == COMM_MONI)
-  {
-    uiMessagePrio = 80;
-    cpMessage[0] = (char)COMM_MONI;
-  }
-  else if(iCommand == COMM_EXIT)
-  {
-    uiMessagePrio = 140;
-    cpMessage[0] = (char)COMM_EXIT;
-  }
-  else
-  {
-    util_error("ERR: Unknown command");
-  }
-
-  if(cpData != NULL)
-  {
-    (void)strncat(&cpMessage[1],cpData,strlen(cpData));
-  }
-
-  for(iIndex = 0; iIndex < MQ_NBR_QUEUES; ++iIndex)
-  {
-    if(ptMQSend[iIndex] != 0)
-    {
-      iResult = mq_send(ptMQSend[iIndex],cpMessage,strlen(cpMessage),uiMessagePrio);
-      if(iResult < 0)
-      {
-        return 0;
-      }
-    }
-  }
-  return 1;
 }
 
 /*------------------------------------------------------------
