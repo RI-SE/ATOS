@@ -104,7 +104,6 @@ void VisualizationServer::onSendTextMessage(QString message)
         qDebug() << times++ << " message to send :" << message;
     }
 
-    // TODO m_clients mutex
     foreach(QWebSocket* client, m_clients)
     {
         client->sendTextMessage(message);
