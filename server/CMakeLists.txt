@@ -9,6 +9,12 @@ configure_file(conf/test.conf conf/test.conf COPYONLY)
 # add include directories
 include_directories(inc)
 
+# Create library
+add_library(util 
+  src/util.c 
+  inc/util.h
+)
+
 # add the executable
 add_executable(TEServer 
   src/main.c
@@ -16,13 +22,11 @@ add_executable(TEServer
   src/objectcontrol.c 
   src/supervision.c
   src/systemcontrol.c
-  src/util.c
   src/visualization.c
   inc/logger.h
   inc/objectcontrol.h
   inc/supervision.h
   inc/systemcontrol.h
-  inc/util.h
   inc/visualization.h
 )
 
@@ -40,4 +44,5 @@ endif ()
 install (TARGETS TEServer DESTINATION bin)
 
 # add linking to message queue
-target_link_libraries(TEServer rt)
+target_link_libraries(util rt)
+target_link_libraries(TEServer util)
