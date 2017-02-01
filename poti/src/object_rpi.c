@@ -373,6 +373,7 @@ printf("INF: Received: <%s>\n", buffer);
 #endif
 
 char workingBuffer[512];
+char tempBuffer[512];
 bzero(workingBuffer,512);
 
 int nbrOfBytesLeft = 0;
@@ -381,15 +382,20 @@ while(1)
   bzero(buffer,256);
   rc = recv(sd, buffer, 256, 0);
 
-  (void)strncat(&workingBuffer[nbrOfBytesLeft],buffer,strlen(buffer));
-
   #ifdef DEBUG
     printf("INF: Received from RTK: %s \n", buffer);
     fflush(stdout);
   #endif
 
   #ifdef DEBUG
-    printf("INF: workingBuffer: %s \n", workingBuffer);
+    printf("INF: workingBuffer before strncat: %s \n", workingBuffer);
+    fflush(stdout);
+  #endif
+
+  (void)strncat(&workingBuffer[nbrOfBytesLeft],buffer,strlen(buffer));
+
+  #ifdef DEBUG
+    printf("INF: workingBuffer after strncat: %s \n", workingBuffer);
     fflush(stdout);
   #endif
 
@@ -420,10 +426,6 @@ while(1)
     {
       /* Calc how many bytes left */
       nbrOfBytesLeft = rc-i;
-      #ifdef DEBUG
-        printf("INF: nbrOfBytesLeft rc k i: %d %d %d %d \n", nbrOfBytesLeft,rc,k,i);
-        fflush(stdout);
-      #endif
 
       sentence[k] = '\0';
 
@@ -475,8 +477,12 @@ while(1)
     }
   }
   
+  #ifdef DEBUG
+    printf("INF: nbrOfBytesLeft rc k i: %d %d %d %d \n", nbrOfBytesLeft,rc,k,i);
+    fflush(stdout);
+  #endif
+
   /* Copy bytes to beginning */
-  char tempBuffer[512];
   bzero(tempBuffer,512);
   strncpy(tempBuffer,&workingBuffer[i],nbrOfBytesLeft);
   bzero(workingBuffer,512);
@@ -484,7 +490,7 @@ while(1)
 
   sprintf(etsi_time_string, "%" PRIu64 "", etsi_time);
   bzero(bMonitorBuffer, 256);
-  sprintf(bMonitorBuffer,"MONR;%s;%09d;%010d;%06d;%05d;%04d;0;\n",etsi_time_string,etsi_lat,etsi_lon,etsi_alt,etsi_speed,etsi_heading);
+  sprintf(bMonitorBuffer,"MONR;%s;%09d;%010d;%06d;%05d;%04d;0;",etsi_time_string,etsi_lat,etsi_lon,etsi_alt,etsi_speed,etsi_heading);
   n = sendto(monitor_socket_fd, bMonitorBuffer, sizeof(bMonitorBuffer), 0, (struct sockaddr *) &monitor_from_addr, fromlen);
   if (n < 0)
   {
