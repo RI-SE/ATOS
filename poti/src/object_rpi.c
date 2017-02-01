@@ -378,120 +378,144 @@ bzero(workingBuffer,512);
 
 int nbrOfBytesLeft = 0;
 int iWorkbufferSize = 0;
+int receivedNewData = 0;
 while(1)
 {
   bzero(buffer,256);
+  receivedNewData = 0;
   rc = recv(sd, buffer, 255, 0);
-  
-  if(rc < 0)
+
+  if (rc < 0)
   {
-   perror("Client-read() error");
-   close(sd);
-   exit(-1);
-  }
-
-  #ifdef DEBUG
-    printf("INF: Received from RTK: %s \n", buffer);
-    fflush(stdout);
-  #endif
-
-  #ifdef DEBUG
-    printf("INF: workingBuffer before strncat: %s \n", workingBuffer);
-    fflush(stdout);
-  #endif
-
-  (void)strncat(&workingBuffer[nbrOfBytesLeft],buffer,256);
-  iWorkbufferSize = strlen(workingBuffer);
-
-  #ifdef DEBUG
-    printf("INF: workingBuffer after strncat: %s \n", workingBuffer);
-    fflush(stdout);
-  #endif
-
-  /* loop until message has been parsed */
-  int i = 0;
-  while(i < iWorkbufferSize)
-  {
-    int k = 0;
-    /* get next message */
-    while((workingBuffer[i] != '\n') && (i < iWorkbufferSize))
+    if(errno != EAGAIN && errno != EWOULDBLOCK)
     {
-     sentence[k] = workingBuffer[i];
-     k++;
-     i++;
+      perror("ERR: Failed to receive from command socket");
+      exit(1);
     }
-
-    /* Move past newline sign */
-    i++;
-
-    /* Check if we stopped due to new message */
-    if(workingBuffer[i-1] == '\n')
+    else
     {
-      /* Calc how many bytes left */
-      nbrOfBytesLeft = iWorkbufferSize-i;
-
-      sentence[k] = '\0';
-
-      #ifdef DEBUG
-        printf("INF: Message to handle: %s \n", sentence);
-        fflush(stdout);
-      #endif
-
-      getField(nmea_msg, 0);
-      if (strcmp(nmea_msg, "$GPRMC") == 0) 
-      {
-        getField(utc, 1);
-        getField(status, 2);
-        getField(latitude, 3);
-        getField(northsouth, 4);
-        getField(longitude, 5);
-        getField(eastwest, 6);
-        getField(gps_speed, 7);
-        getField(gps_heading, 8);
-        getField(date, 9);
-      }
-      else if (strcmp(nmea_msg, "$GPGGA") == 0) 
-      {
-        getField(utc, 1);
-        getField(latitude, 2);
-        getField(northsouth, 3);
-        getField(longitude, 4);
-        getField(eastwest, 5);
-        getField(gps_quality_indicator, 6);
-        getField(satellites_used, 7);
-        getField(antenna_altitude, 9);
-      }
-      else if (strcmp(nmea_msg, "$GPGSV") == 0) 
-      {
-        getField(satellites_in_view, 3);
-      }
-      else if (strcmp(nmea_msg, "$GPGSA") == 0) 
-      {
-        getField(pdop, 4);
-        getField(hdop, 5);
-        getField(vdop, 6);
-      }
-      etsi_lat          = ConvertLatitudeNMEAtoETSICDD(latitude, northsouth, status);
-      etsi_lon          = ConvertLongitudeNMEAtoETSICDD(longitude, eastwest, status);
-      etsi_speed        = ConvertSpeedValueNMEAtoETSICDD(gps_speed, status);
-      etsi_heading      = ConvertHeadingValueNMEAtoETSICDD(gps_heading, status);
-      etsi_alt          = ConvertAltitudeValueNMEAtoETSICDD(antenna_altitude, status);
-      etsi_time         = ConvertTimestapItsNMEAtoETSICDD(utc, date, status);
+      printf("INF: No data received\n");
+      fflush(stdout);
     }
   }
-  
-  #ifdef DEBUG
-    printf("INF: nbrOfBytesLeft iWorkbufferSize i: %d %d %d \n", nbrOfBytesLeft,iWorkbufferSize,i);
-    fflush(stdout);
-  #endif
+  else
+  {
+    receivedNewData = 1;
+  }
 
-  /* Copy bytes to beginning */
-  bzero(tempBuffer,512);
-  strncpy(tempBuffer,&workingBuffer[iWorkbufferSize-nbrOfBytesLeft],nbrOfBytesLeft);
-  bzero(workingBuffer,512);
-  strncpy(workingBuffer,tempBuffer,nbrOfBytesLeft);
+  if(receivedNewData)
+  {
+    #ifdef DEBUG
+      printf("INF: Received from RTK: %s \n", buffer);
+      fflush(stdout);
+    #endif
 
-  sprintf(etsi_time_string, "%" PRIu64 "", etsi_time);
+    #ifdef DEBUG
+      printf("INF: workingBuffer before strncat: %s \n", workingBuffer);
+      fflush(stdout);
+    #endif
+
+    (void)strncat(&workingBuffer[nbrOfBytesLeft],buffer,256);
+    iWorkbufferSize = strlen(workingBuffer);
+
+    #ifdef DEBUG
+      printf("INF: workingBuffer after strncat: %s \n", workingBuffer);
+      fflush(stdout);
+    #endif
+
+    /* loop until message has been parsed */
+    int i = 0;
+    while(i < iWorkbufferSize)
+    {
+      int k = 0;
+      /* get next message */
+      while((workingBuffer[i] != '\n') && (i < iWorkbufferSize))
+      {
+       sentence[k] = workingBuffer[i];
+       k++;
+       i++;
+      }
+
+      /* Move past newline sign */
+      i++;
+
+      /* Check if we stopped due to new message */
+      if(workingBuffer[i-1] == '\n')
+      {
+        /* Calc how many bytes left */
+        nbrOfBytesLeft = iWorkbufferSize-i;
+
+        sentence[k] = '\0';
+
+        #ifdef DEBUG
+          printf("INF: Message to handle: %s \n", sentence);
+          fflush(stdout);
+        #endif
+
+        getField(nmea_msg, 0);
+        if (strcmp(nmea_msg, "$GPRMC") == 0) 
+        {
+          getField(utc, 1);
+          getField(status, 2);
+          getField(latitude, 3);
+          getField(northsouth, 4);
+          getField(longitude, 5);
+          getField(eastwest, 6);
+          getField(gps_speed, 7);
+          getField(gps_heading, 8);
+          getField(date, 9);
+        }
+        else if (strcmp(nmea_msg, "$GPGGA") == 0) 
+        {
+          getField(utc, 1);
+          getField(latitude, 2);
+          getField(northsouth, 3);
+          getField(longitude, 4);
+          getField(eastwest, 5);
+          getField(gps_quality_indicator, 6);
+          getField(satellites_used, 7);
+          getField(antenna_altitude, 9);
+        }
+        else if (strcmp(nmea_msg, "$GPGSV") == 0) 
+        {
+          getField(satellites_in_view, 3);
+        }
+        else if (strcmp(nmea_msg, "$GPGSA") == 0) 
+        {
+          getField(pdop, 4);
+          getField(hdop, 5);
+          getField(vdop, 6);
+        }
+        etsi_lat          = ConvertLatitudeNMEAtoETSICDD(latitude, northsouth, status);
+        etsi_lon          = ConvertLongitudeNMEAtoETSICDD(longitude, eastwest, status);
+        etsi_speed        = ConvertSpeedValueNMEAtoETSICDD(gps_speed, status);
+        etsi_heading      = ConvertHeadingValueNMEAtoETSICDD(gps_heading, status);
+        etsi_alt          = ConvertAltitudeValueNMEAtoETSICDD(antenna_altitude, status);
+        etsi_time         = ConvertTimestapItsNMEAtoETSICDD(utc, date, status);
+        sprintf(etsi_time_string, "%" PRIu64 "", etsi_time);
+      }
+    }
+    
+    #ifdef DEBUG
+      printf("INF: nbrOfBytesLeft iWorkbufferSize i: %d %d %d \n", nbrOfBytesLeft,iWorkbufferSize,i);
+      fflush(stdout);
+    #endif
+
+    /* Copy bytes to beginning */
+    if(nbrOfBytesLeft != 0)
+    {
+      bzero(tempBuffer,512);
+      strncpy(tempBuffer,&workingBuffer[iWorkbufferSize-nbrOfBytesLeft],nbrOfBytesLeft);
+      bzero(workingBuffer,512);
+      strncpy(workingBuffer,tempBuffer,nbrOfBytesLeft);
+    }
+    else
+    {
+      bzero(workingBuffer,512);
+      iWorkbufferSize = 0;
+    }
+  }
+
   bzero(bMonitorBuffer, 256);
   sprintf(bMonitorBuffer,"MONR;%s;%09d;%010d;%06d;%05d;%04d;0;",etsi_time_string,etsi_lat,etsi_lon,etsi_alt,etsi_speed,etsi_heading);
   n = sendto(monitor_socket_fd, bMonitorBuffer, sizeof(bMonitorBuffer), 0, (struct sockaddr *) &monitor_from_addr, fromlen);
