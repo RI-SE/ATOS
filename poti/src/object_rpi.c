@@ -380,7 +380,7 @@ int nbrOfBytesLeft = 0;
 while(1)
 {
   bzero(buffer,256);
-  rc = recv(sd, buffer, 256, 0);
+  rc = recv(sd, buffer, 255, 0);
 
   #ifdef DEBUG
     printf("INF: Received from RTK: %s \n", buffer);
