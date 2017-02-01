@@ -228,8 +228,8 @@ MapWidget::MapWidget(QWidget *parent) :
                     //qDebug() << "X: " << list[2] << " Y: " << list[3] << " Z: " << list[4];
 
                     // Transform  xyz to llh, hardcoded origo
-                    ref_llh[0] = 57.7773602; // Latitude
-                    ref_llh[1] = 12.7804715; // Longitude
+                    ref_llh[0] = 57.7773602; // LATb
+                    ref_llh[1] = 12.7804715; // LONb
                     ref_llh[2] = 201.485;
 
                     xyz[0] = list[2].toDouble();
@@ -238,9 +238,15 @@ MapWidget::MapWidget(QWidget *parent) :
                     //utility::enuToLlh(ref_llh,xyz,llh);
                     //llh[2] = 219.0;
 
-                    llh[0] = ref_llh[0] - ((xyz[1]*180)/(M_PI*6378137.0));
-                    llh[1] = ref_llh[1] - ((xyz[0]*180)/(M_PI*6378137.0))*(1/(cos((M_PI/180)*(0.5*(ref_llh[0]+llh[0])))));
-                    llh[2] = ref_llh[2] - xyz[2];
+                    // x = (LON - LONb) * (M_PI/180)*R*cos(((LAT - LATb)/2)*(M_PI/180))
+                    // y = (LAT - LATb) * (M_PI/180)*R
+
+                    // LAT = y / ((M_PI/180)*R) + LATb
+                    // LON = x / ((M_PI/180)*R*cos(((LAT - LATb)/2)*(M_PI/180))) + LONb
+
+                    llh[0] = xyz[1] / ((M_PI/180)*6378137.0) + ref_llh[0];
+                    llh[1] = xyz[0] / ((M_PI/180)*6378137.0*cos(((llh[0] + ref_llh[0])/2)*(M_PI/180))) + ref_llh[1];
+                    llh[2] = ref_llh[2] + xyz[2];
 
                     qDebug() << "LLH: " << QString::number(llh[0], 'g', 8) << " " << QString::number(llh[1], 'g', 8) << " " << QString::number(llh[2], 'g', 8);
 
