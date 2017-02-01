@@ -405,7 +405,6 @@ while(1)
   while(i < rc)
   {
     int k = 0;
-
     /* get next message */
     while((workingBuffer[i] != '\n') && (i < rc))
     {
@@ -413,13 +412,15 @@ while(1)
      k++;
      i++;
     }
+    i++;
 
-    if(workingBuffer[i] == '\n')
+    /* Check if we stopped due to new message */
+    if(workingBuffer[i-1] == '\n')
     {
       /* Calc how many bytes left */
-      nbrOfBytesLeft = rc-i-1;
+      nbrOfBytesLeft = rc-i;
       #ifdef DEBUG
-        printf("INF: nbrOfBytesLeft: %d \n", nbrOfBytesLeft);
+        printf("INF: nbrOfBytesLeft rc k i: %d %d %d %d \n", nbrOfBytesLeft,rc,k,i);
         fflush(stdout);
       #endif
 
@@ -475,7 +476,7 @@ while(1)
     /* Copy bytes to beginning */
     char tempBuffer[512];
     bzero(tempBuffer,512);
-    strncpy(tempBuffer,&workingBuffer[++i],nbrOfBytesLeft);
+    strncpy(tempBuffer,&workingBuffer[i],nbrOfBytesLeft);
     bzero(workingBuffer,512);
     strncpy(workingBuffer,tempBuffer,nbrOfBytesLeft);
   }
