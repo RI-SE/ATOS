@@ -504,9 +504,9 @@ int main(int argc, char *argv[])
 	    }
 	  }
 
-	  cal_lat = ORIGIN_LATITUDE - ((y*180)/(PI*earth_radius));
-	  cal_lon = ORIGIN_LONGITUDE - ((x*180)/(PI*earth_radius))*(1/(cos((PI/180)*(0.5*(ORIGIN_LATITUDE+cal_lat)))));
-	  cal_alt = ORIGIN_ALTITUDE - z;
+	  cal_lat = ((y*180)/(PI*earth_radius)) + ORIGIN_LATITUDE;
+	  cal_lon = ((x*180)/(PI*earth_radius))*(1/(cos((PI/180)*(0.5*(ORIGIN_LATITUDE+cal_lat))))) + ORIGIN_LONGITUDE;
+	  cal_alt = z + ORIGIN_ALTITUDE;
       
 	  sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;3600;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,vel*100);
 	  sent_rows++;
