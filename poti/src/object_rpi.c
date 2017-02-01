@@ -377,6 +377,11 @@ while(1)
   bzero(buffer,256);
   rc = recv(sd, buffer, 256, 0);
 
+  #ifdef DEBUG
+    printf("INF: Received from RTK: %s \n", buffer);
+    fflush(stdout);
+  #endif
+
   if(rc < 0)
   {
    perror("Client-read() error");
@@ -385,17 +390,24 @@ while(1)
   }
 
   /* loop until message has been parsed */
+  int i = 0;
   while(i < rc)
   {
-    character='D';
-    int i = 0;
+    int k = 0;
 
     /* get next message */
-    while(character != '\n')
+    while(buffer[i] != '\n')
     {
-     sentence[i] = character;
+     sentence[k] = buffer[i];
+     k++;
      i++;
     }
+    sentence[k] = '\0';
+
+    #ifdef DEBUG
+      printf("INF: Message to handle: %s \n", sentence);
+      fflush(stdout);
+    #endif
 
     getField(nmea_msg, 0);
     if (strcmp(nmea_msg, "$GPRMC") == 0) 

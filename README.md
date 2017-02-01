@@ -43,5 +43,7 @@ wget http://download.qt.io/official_releases/qt/5.7/5.7.1/qt-opensource-linux-x6
 ./http://download.qt.io/official_releases/qt/5.7/5.7.1/qt-opensource-linux-x64-5.7.1.run
 
 # POTI
-gcc -I../inc/ nmea2etsi.c object_rpi.c -o object_rpi
+cd poti
+mkdir build && cd build
+gcc -I../inc/ ../src/nmea2etsi.c ../src/object_rpi.c -o object_rpi
 ./object_rpi 
