@@ -392,7 +392,7 @@ while(1)
     fflush(stdout);
   #endif
 
-  (void)strncat(&workingBuffer[nbrOfBytesLeft],buffer,strlen(buffer));
+  (void)strncat(&workingBuffer[nbrOfBytesLeft],buffer,256);
 
   #ifdef DEBUG
     printf("INF: workingBuffer after strncat: %s \n", workingBuffer);
