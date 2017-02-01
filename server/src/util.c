@@ -85,6 +85,22 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue)
   return 1;
 }
 
+int iUtilGetIntParaConfFile(char* pcParameter, int* iValue)
+{
+  int iResult;
+  char pcValue[512];
+
+  bzero(pcValue,512);
+  iResult = iUtilGetParaConfFile(pcParameter,pcValue);
+
+  if (iResult > 0)
+  {
+    *iValue = atoi(pcValue);
+  }
+
+  return iResult;
+}
+
 int iCommInit(const unsigned int uiMode, const char* name, const int iNonBlocking)
 {
   struct mq_attr attr;

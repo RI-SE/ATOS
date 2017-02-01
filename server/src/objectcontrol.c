@@ -99,22 +99,30 @@ void objectcontrol_task()
   int iIndex = 0;
   monitor_t ldm[MAX_OBJECTS];
   struct timespec sleep_time, ref_time;
+  int iForceObjectToLocalhost = 0;
 
   (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
     /* Get objects; name and drive file */
   vFindObjectsInfo(object_traj_file,object_address_name,&nbr_objects);
 
+
+  (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhost);
+
   
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
-    #ifndef FORCE_LOCALHOST_TEST
+
+    if(0 == iForceObjectToLocalhost)
+    {
       object_udp_port[iIndex] = SAFETY_CHANNEL_PORT;
       object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT;
-    #else
+    }
+    else
+    {
       object_udp_port[iIndex] = SAFETY_CHANNEL_PORT + iIndex*2;
       object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT + iIndex*2;
-    #endif    
+    }
   }
   
 
@@ -568,12 +576,17 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 {
   DIR* traj_directory;
   struct dirent *directory_entry;
+  int iForceObjectToLocalhost;
+
+  iForceObjectToLocalhost = 0;
 
   traj_directory = opendir(TRAJECTORY_PATH);
   if(traj_directory == NULL)
   {
     util_error("ERR: Failed to open trajectory directory");
   }
+
+  (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhost);
 
   while ((directory_entry = readdir(traj_directory)) && ((*nbr_objects) < MAX_OBJECTS))
   {
@@ -587,11 +600,14 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
       (void)strcat(object_traj_file[(*nbr_objects)],TRAJECTORY_PATH);
       (void)strcat(object_traj_file[(*nbr_objects)],directory_entry->d_name);
 
-      #ifndef FORCE_LOCALHOST_TEST
+      if(0 == iForceObjectToLocalhost)
+      {
         (void)strncat(object_address_name[(*nbr_objects)],directory_entry->d_name,strlen(directory_entry->d_name));
-      #else
+      }
+      else
+      {
         (void)strcat(object_address_name[(*nbr_objects)],LOCALHOST);
-      #endif    
+      }
 
       ++(*nbr_objects);
     }

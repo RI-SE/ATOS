@@ -87,22 +87,25 @@ int main(int argc, char *argv[])
   }
   ++iIndex;
 
-#ifndef EXT_VISUALIZATION_ADAPTER
-  pID[iIndex] = fork();
-  if(pID[iIndex] < 0)
+  int iValue = 0;
+  (void)iUtilGetIntParaConfFile("ExternalVisualizationAdapter",&iValue);
+  if(0 == iValue)
   {
-    util_error("ERR: Failed to fork");
+    pID[iIndex] = fork();
+    if(pID[iIndex] < 0)
+    {
+      util_error("ERR: Failed to fork");
+    }
+    if(pID[iIndex] == 0)
+    {
+      #ifdef DEBUG
+        printf("INF: visualization_task running in:  %i \n",getpid());
+      #endif
+      visualization_task();
+      exit(EXIT_SUCCESS);
+    }
+    ++iIndex;
   }
-  if(pID[iIndex] == 0)
-  {
-    #ifdef DEBUG
-      printf("INF: visualization_task running in:  %i \n",getpid());
-    #endif
-    visualization_task();
-    exit(EXIT_SUCCESS);
-  }
-  ++iIndex;
-#endif
 
   #ifdef DEBUG
     printf("INF: systemcontrol_task running in:  %i \n",getpid());
