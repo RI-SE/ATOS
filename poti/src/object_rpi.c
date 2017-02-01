@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 
   struct timeval tv;
 
- int sd, rc, length = sizeof(int);
+  int sd, rc, length = sizeof(int);
   struct sockaddr_in serveraddr;
   char character; 
   char server[255];
@@ -217,310 +217,251 @@ int main(int argc, char *argv[])
 
 
   if((sd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-      perror("Client-socket() error");
-      exit(-1);
-    }
+  {
+    perror("Client-socket() error");
+    exit(-1);
+  }
   else
     printf("Client-socket() OK\n");
     /*If the server hostname is supplied*/
-    if(argc > 1)
-      {
-	/*Use the supplied argument*/
-	strcpy(server, argv[1]);
-	printf("Connecting to %s, port %d ...\n", server, SERVPORT);
-      }
-    else
+  if(argc > 1)
+  {
+  /*Use the supplied argument*/
+   strcpy(server, argv[1]);
+   printf("Connecting to %s, port %d ...\n", server, SERVPORT);
+ }
+ else
+ {
       /*Use the default server name or IP*/
-      strcpy(server, SERVER);
-   
-    memset(&serveraddr, 0x00, sizeof(struct sockaddr_in));
-    serveraddr.sin_family = AF_INET;
-    serveraddr.sin_port = htons(SERVPORT);
-  
-    if((serveraddr.sin_addr.s_addr = inet_addr(server)) == (unsigned long)INADDR_NONE)
-      {
-	hostp = gethostbyname(server);
+  strcpy(server, SERVER);
+ }
 
-	if(hostp == (struct hostent *)NULL)
-	  {
-	    printf("HOST NOT FOUND --> ");
-	    printf("h_errno = %d\n",h_errno);
-	    printf("---This is a client program---\n");
-	    printf("Command usage: %s <server name or IP>\n", argv[0]);
-	    close(sd);
-	    exit(-1);
-	  }
-	memcpy(&serveraddr.sin_addr, hostp->h_addr, sizeof(serveraddr.sin_addr));
-      }
-    
-    if((rc = connect(sd, (struct sockaddr *)&serveraddr, sizeof(serveraddr))) < 0)
-      {
-	perror("Client-connect() error");
-	close(sd);
-	exit(-1);
-      }
-    else
-      printf("Connection established...\n");
+memset(&serveraddr, 0x00, sizeof(struct sockaddr_in));
+serveraddr.sin_family = AF_INET;
+serveraddr.sin_port = htons(SERVPORT);
 
+if((serveraddr.sin_addr.s_addr = inet_addr(server)) == (unsigned long)INADDR_NONE)
+{
+  hostp = gethostbyname(server);
+
+  if(hostp == (struct hostent *)NULL)
+  {
+   printf("HOST NOT FOUND --> ");
+   printf("h_errno = %d\n",h_errno);
+   printf("---This is a client program---\n");
+   printf("Command usage: %s <server name or IP>\n", argv[0]);
+   close(sd);
+   exit(-1);
+ }
+ memcpy(&serveraddr.sin_addr, hostp->h_addr, sizeof(serveraddr.sin_addr));
+}
+
+if((rc = connect(sd, (struct sockaddr *)&serveraddr, sizeof(serveraddr))) < 0)
+{
+  perror("Client-connect() error");
+  close(sd);
+  exit(-1);
+}
+else
+  printf("Connection established...\n");
+
+/* set socket to non-blocking */
+(void)fcntl(sd, F_SETFL, fcntl(sd, F_GETFL, 0) | O_NONBLOCK);
 
 
   /* Open a drive file */
-  sprintf(bFileName,"%d",safety_port);
-  fp = fopen(bFileName, "w+");
-  if (fp == NULL)
-    {
-      perror("ERR: Failed to create local drive file");
-      exit(1);
-    }
-  
+sprintf(bFileName,"%d",safety_port);
+fp = fopen(bFileName, "w+");
+if (fp == NULL)
+{
+  perror("ERR: Failed to create local drive file");
+  exit(1);
+}
+
   /* Init monitor socket */
 #ifdef DEBUG
-  printf("INF: Init monitor socket\n");
-  fflush(stdout);
+printf("INF: Init monitor socket\n");
+fflush(stdout);
 #endif
 
-  monitor_socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-  if (monitor_socket_fd < 0)
-    {
-      perror("ERR: Failed to create monitor socket");
-      exit(1);
-    }
-  bzero(&monitor_server_addr, sizeof(monitor_server_addr));
-  monitor_server_addr.sin_family = AF_INET;
-  monitor_server_addr.sin_addr.s_addr = INADDR_ANY;
-  monitor_server_addr.sin_port = htons(safety_port);
+monitor_socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+if (monitor_socket_fd < 0)
+{
+  perror("ERR: Failed to create monitor socket");
+  exit(1);
+}
+bzero(&monitor_server_addr, sizeof(monitor_server_addr));
+monitor_server_addr.sin_family = AF_INET;
+monitor_server_addr.sin_addr.s_addr = INADDR_ANY;
+monitor_server_addr.sin_port = htons(safety_port);
 
-  if (bind(monitor_socket_fd,(struct sockaddr *) &monitor_server_addr, sizeof(monitor_server_addr)) < 0)
-    {
-      perror("ERR: Failed to bind to monitor socket");
-      exit(1);
-    }
+if (bind(monitor_socket_fd,(struct sockaddr *) &monitor_server_addr, sizeof(monitor_server_addr)) < 0)
+{
+  perror("ERR: Failed to bind to monitor socket");
+  exit(1);
+}
 
-  socklen_t fromlen = sizeof(struct sockaddr_in);
+socklen_t fromlen = sizeof(struct sockaddr_in);
 
   /* Init control socket */
 #ifdef DEBUG
-  printf("INF: Init control socket\n");
-  fflush(stdout);
+printf("INF: Init control socket\n");
+fflush(stdout);
 #endif
 
-  command_server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-  if (command_server_socket_fd < 0)
-    {
-      perror("ERR: Failed to create control socket");
-      exit(1);
-    }
-  bzero((char *) &command_server_addr, sizeof(command_server_addr));
+command_server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+if (command_server_socket_fd < 0)
+{
+  perror("ERR: Failed to create control socket");
+  exit(1);
+}
+bzero((char *) &command_server_addr, sizeof(command_server_addr));
 
-  command_server_addr.sin_family = AF_INET;
-  command_server_addr.sin_addr.s_addr = INADDR_ANY; 
-  command_server_addr.sin_port = htons(control_port);
+command_server_addr.sin_family = AF_INET;
+command_server_addr.sin_addr.s_addr = INADDR_ANY; 
+command_server_addr.sin_port = htons(control_port);
 
-  optval = 1;
-  result = setsockopt(command_server_socket_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval);
+optval = 1;
+result = setsockopt(command_server_socket_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval);
 
-  if (result < 0)
-    {
-      perror("ERR: Failed to call setsockopt");
-      exit(1);
-    }
+if (result < 0)
+{
+  perror("ERR: Failed to call setsockopt");
+  exit(1);
+}
 
-  if (bind(command_server_socket_fd, (struct sockaddr *) &command_server_addr, sizeof(command_server_addr)) < 0) 
-    {
-      perror("ERR: Failed to bind to control socket");
-      exit(1);
-    }
+if (bind(command_server_socket_fd, (struct sockaddr *) &command_server_addr, sizeof(command_server_addr)) < 0) 
+{
+  perror("ERR: Failed to bind to control socket");
+  exit(1);
+}
 
   /* Monitor and control sockets up. Wait for central to connect to control socket to get server address*/
 #ifdef DEBUG
-  printf("INF: Listen on control socket\n");
-  fflush(stdout);
+printf("INF: Listen on control socket\n");
+fflush(stdout);
 #endif
 
-  listen(command_server_socket_fd, 5);
-  cli_length = sizeof(cli_addr);
+listen(command_server_socket_fd, 5);
+cli_length = sizeof(cli_addr);
 
 #ifdef DEBUG
-  printf("INF: Accept on control socket: %i \n", htons(command_server_addr.sin_port));
-  fflush(stdout);
+printf("INF: Accept on control socket: %i \n", htons(command_server_addr.sin_port));
+fflush(stdout);
 #endif
 
-  command_com_socket_fd = accept(command_server_socket_fd, (struct sockaddr *) &cli_addr, &cli_length);
-  if (command_com_socket_fd < 0) 
-    {
-      perror("ERR: Failed to accept from central");
-      exit(1);
-    }
+command_com_socket_fd = accept(command_server_socket_fd, (struct sockaddr *) &cli_addr, &cli_length);
+if (command_com_socket_fd < 0) 
+{
+  perror("ERR: Failed to accept from central");
+  exit(1);
+}
 
   /* Receive heartbeat from server just to save the server address */
-  n = recvfrom(monitor_socket_fd, buffer, 1024, 0, (struct sockaddr *) &monitor_from_addr, &fromlen);
-  if (n < 0) 
-    {
-      perror("ERR: Failed to receive from central");
-      exit(1);
-    }
+n = recvfrom(monitor_socket_fd, buffer, 1024, 0, (struct sockaddr *) &monitor_from_addr, &fromlen);
+if (n < 0) 
+{
+  perror("ERR: Failed to receive from central");
+  exit(1);
+}
 
   /* set socket to non-blocking */
-  result = fcntl(command_com_socket_fd, F_SETFL, fcntl(command_com_socket_fd, F_GETFL, 0) | O_NONBLOCK);
+(void)fcntl(command_com_socket_fd, F_SETFL, fcntl(command_com_socket_fd, F_GETFL, 0) | O_NONBLOCK);
 
 #ifdef DEBUG
-  printf("INF: Received: <%s>\n", buffer);
+printf("INF: Received: <%s>\n", buffer);
 #endif
 
-  while(1)
+while(1)
+{
+  bzero(buffer,256);
+  rc = recv(sd, buffer, 256, 0);
+
+  if(rc < 0)
+  {
+   perror("Client-read() error");
+   close(sd);
+   exit(-1);
+  }
+
+  /* loop until message has been parsed */
+  while(i < rc)
+  {
+    character='D';
+    int i = 0;
+
+    /* get next message */
+    while(character != '\n')
     {
-      int receivedNewData = 0;
-      bzero(bData,DATALEN);
-      bzero(buffer,256);
-      do
-	{
-#ifdef DEBUG
-	  printf("INF: Start receive\n");
-#endif
-
-	  result = recv(command_com_socket_fd, buffer, 256, 0);
-
-	  if (result < 0)
-	    {
-	      if(errno != EAGAIN && errno != EWOULDBLOCK)
-		{
-		  perror("ERR: Failed to receive from command socket");
-		  exit(1);
-		}
-	      else
-		{
-#ifdef DEBUG
-		  printf("INF: No data received\n");
-		  fflush(stdout);
-#endif
-		}
-	    }
-	  else
-	    {
-	      receivedNewData = 1;
-#ifdef DEBUG
-	      printf("INF: Received: <%s>\n",buffer);
-	      fflush(stdout);
-#endif
-	      if (!strncmp(buffer, "DOPM", 4))
-		{
-#ifdef DEBUG
-		  printf("INF: Current command set to DOPM\n");
-#endif
-		  bzero(bCurrentCommand, 10);
-		  strcpy(bCurrentCommand, "DOPM");
-		}
-	      else if (!strncmp(buffer, "TRIG", 4))
-		{
-#ifdef DEBUG
-		  printf("INF: Current command set to TRIG\n");
-#endif
-		  bzero(bCurrentCommand, 10);
-		  strcpy(bCurrentCommand, "TRIG");
-		  trig_time = 0;  
-		}
-	      if(!strncmp(bCurrentCommand, "DOPM", 4))
-		{
-		  if (result > 0 && result < 256)
-		    buffer[result] = '\0';
-		  fputs(buffer, fp);
-		  fflush(fp);
-		}
-	      else
-		{
-		  strncat(bData, buffer, result);
-		}
-	    }
-	} while(result > 0);
-
-          rc = read(sd, &character, 1);
-	  if(rc < 0)
-	    {
-	      perror("Client-read() error");
-	      close(sd);
-	      exit(-1);
-	    }
-	  else if (rc == 0)
-	    {
-	      printf("Server program has issued a close()\n");
-	      close(sd);
-	      exit(-1);
-	    }
-	  if (character != '\n' && i < BufferLength)
-	    {
-	      sentence[i] = character;
-	      i++;
-	    }
-	  else
-	    {
-	      sentence[i] = '\0';
-	      i = 0;
-
-	      getField(nmea_msg, 0);
-	      if (strcmp(nmea_msg, "$GPRMC") == 0) {
-		getField(utc, 1);
-		getField(status, 2);
-		getField(latitude, 3);
-		getField(northsouth, 4);
-		getField(longitude, 5);
-		getField(eastwest, 6);
-		getField(gps_speed, 7);
-		getField(gps_heading, 8);
-		getField(date, 9);
-	      }
-	      else if (strcmp(nmea_msg, "$GPGGA") == 0) {
-		getField(utc, 1);
-		getField(latitude, 2);
-		getField(northsouth, 3);
-		getField(longitude, 4);
-		getField(eastwest, 5);
-		getField(gps_quality_indicator, 6);
-		getField(satellites_used, 7);
-		getField(antenna_altitude, 9);
-	      }
-	      else if (strcmp(nmea_msg, "$GPGSV") == 0) {
-		getField(satellites_in_view, 3);
-	      }
-	      else if (strcmp(nmea_msg, "$GPGSA") == 0) {
-		getField(pdop, 4);
-		getField(hdop, 5);
-		getField(vdop, 6);
-	      }
-	    }
-	  if(i == 0)
-	    {
-	      etsi_lat          = ConvertLatitudeNMEAtoETSICDD(latitude, northsouth, status);
-	      etsi_lon          = ConvertLongitudeNMEAtoETSICDD(longitude, eastwest, status);
-	      etsi_speed        = ConvertSpeedValueNMEAtoETSICDD(gps_speed, status);
-	      etsi_heading      = ConvertHeadingValueNMEAtoETSICDD(gps_heading, status);
-	      etsi_alt          = ConvertAltitudeValueNMEAtoETSICDD(antenna_altitude, status);
-	      etsi_time         = ConvertTimestapItsNMEAtoETSICDD(utc, date, status);
-	      sprintf(etsi_time_string, "%" PRIu64 "", etsi_time);
-              bzero(bMonitorBuffer, 256);
-	      sprintf(bMonitorBuffer,"MONR;%s;%09d;%010d;%06d;%05d;%04d;0;\n",etsi_time_string,etsi_lat,etsi_lon,etsi_alt,etsi_speed,etsi_heading);
-	    }
-
-      n = sendto(monitor_socket_fd, bMonitorBuffer, sizeof(bMonitorBuffer), 0, (struct sockaddr *) &monitor_from_addr, fromlen);
-      if (n < 0)
-	{
-	  perror("ERR: Failed to send monitor message");
-	  exit(1);
-	}
-
-#ifdef DEBUG
-      printf("INF: Sending: <%s>\n", bMonitorBuffer);
-#endif
-
-      sleep_time.tv_sec = 0;
-      sleep_time.tv_nsec = 1000000000;
-      (void) nanosleep(&sleep_time, &ref_time);
+     sentence[i] = character;
+     i++;
     }
 
-  close(monitor_socket_fd);
-  close(command_com_socket_fd);
-  close(sd);
-  fclose(fp);
+    getField(nmea_msg, 0);
+    if (strcmp(nmea_msg, "$GPRMC") == 0) 
+    {
+      getField(utc, 1);
+      getField(status, 2);
+      getField(latitude, 3);
+      getField(northsouth, 4);
+      getField(longitude, 5);
+      getField(eastwest, 6);
+      getField(gps_speed, 7);
+      getField(gps_heading, 8);
+      getField(date, 9);
+    }
+    else if (strcmp(nmea_msg, "$GPGGA") == 0) 
+    {
+      getField(utc, 1);
+      getField(latitude, 2);
+      getField(northsouth, 3);
+      getField(longitude, 4);
+      getField(eastwest, 5);
+      getField(gps_quality_indicator, 6);
+      getField(satellites_used, 7);
+      getField(antenna_altitude, 9);
+    }
+    else if (strcmp(nmea_msg, "$GPGSV") == 0) 
+    {
+      getField(satellites_in_view, 3);
+    }
+    else if (strcmp(nmea_msg, "$GPGSA") == 0) 
+    {
+      getField(pdop, 4);
+      getField(hdop, 5);
+      getField(vdop, 6);
+    }
+    etsi_lat          = ConvertLatitudeNMEAtoETSICDD(latitude, northsouth, status);
+    etsi_lon          = ConvertLongitudeNMEAtoETSICDD(longitude, eastwest, status);
+    etsi_speed        = ConvertSpeedValueNMEAtoETSICDD(gps_speed, status);
+    etsi_heading      = ConvertHeadingValueNMEAtoETSICDD(gps_heading, status);
+    etsi_alt          = ConvertAltitudeValueNMEAtoETSICDD(antenna_altitude, status);
+    etsi_time         = ConvertTimestapItsNMEAtoETSICDD(utc, date, status);
+  }
 
-  return 0;
+  sprintf(etsi_time_string, "%" PRIu64 "", etsi_time);
+  bzero(bMonitorBuffer, 256);
+  sprintf(bMonitorBuffer,"MONR;%s;%09d;%010d;%06d;%05d;%04d;0;\n",etsi_time_string,etsi_lat,etsi_lon,etsi_alt,etsi_speed,etsi_heading);
+  n = sendto(monitor_socket_fd, bMonitorBuffer, sizeof(bMonitorBuffer), 0, (struct sockaddr *) &monitor_from_addr, fromlen);
+  if (n < 0)
+  {
+   perror("ERR: Failed to send monitor message");
+   exit(1);
+  }
+
+  #ifdef DEBUG
+  printf("INF: Sending: <%s>\n", bMonitorBuffer);
+  #endif
+
+  sleep_time.tv_sec = 0;
+  sleep_time.tv_nsec = 1000000000;
+  (void) nanosleep(&sleep_time, &ref_time);
+}
+
+close(monitor_socket_fd);
+close(command_com_socket_fd);
+close(sd);
+fclose(fp);
+
+return 0;
 }

@@ -41,3 +41,7 @@ yum groupinstall 'Development Tools'
 # CentOS installation qt
 wget http://download.qt.io/official_releases/qt/5.7/5.7.1/qt-opensource-linux-x64-5.7.1.run
 ./http://download.qt.io/official_releases/qt/5.7/5.7.1/qt-opensource-linux-x64-5.7.1.run
+
+# POTI
+gcc -I../inc/ nmea2etsi.c object_rpi.c -o object_rpi
+./object_rpi 
