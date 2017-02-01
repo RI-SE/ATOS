@@ -377,10 +377,18 @@ char tempBuffer[512];
 bzero(workingBuffer,512);
 
 int nbrOfBytesLeft = 0;
+int iWorkbufferSize = 0;
 while(1)
 {
   bzero(buffer,256);
   rc = recv(sd, buffer, 255, 0);
+  
+  if(rc < 0)
+  {
+   perror("Client-read() error");
+   close(sd);
+   exit(-1);
+  }
 
   #ifdef DEBUG
     printf("INF: Received from RTK: %s \n", buffer);
@@ -393,26 +401,20 @@ while(1)
   #endif
 
   (void)strncat(&workingBuffer[nbrOfBytesLeft],buffer,256);
+  iWorkbufferSize = strlen(workingBuffer);
 
   #ifdef DEBUG
     printf("INF: workingBuffer after strncat: %s \n", workingBuffer);
     fflush(stdout);
   #endif
 
-  if(rc < 0)
-  {
-   perror("Client-read() error");
-   close(sd);
-   exit(-1);
-  }
-
   /* loop until message has been parsed */
   int i = 0;
-  while(i < rc)
+  while(i < iWorkbufferSize)
   {
     int k = 0;
     /* get next message */
-    while((workingBuffer[i] != '\n') && (i < rc))
+    while((workingBuffer[i] != '\n') && (i < iWorkbufferSize))
     {
      sentence[k] = workingBuffer[i];
      k++;
@@ -426,7 +428,7 @@ while(1)
     if(workingBuffer[i-1] == '\n')
     {
       /* Calc how many bytes left */
-      nbrOfBytesLeft = rc-i;
+      nbrOfBytesLeft = iWorkbufferSize-i;
 
       sentence[k] = '\0';
 
@@ -479,13 +481,13 @@ while(1)
   }
   
   #ifdef DEBUG
-    printf("INF: nbrOfBytesLeft rc i: %d %d %d \n", nbrOfBytesLeft,rc,i);
+    printf("INF: nbrOfBytesLeft iWorkbufferSize i: %d %d %d \n", nbrOfBytesLeft,iWorkbufferSize,i);
     fflush(stdout);
   #endif
 
   /* Copy bytes to beginning */
   bzero(tempBuffer,512);
-  strncpy(tempBuffer,&workingBuffer[rc-nbrOfBytesLeft],nbrOfBytesLeft);
+  strncpy(tempBuffer,&workingBuffer[iWorkbufferSize-nbrOfBytesLeft],nbrOfBytesLeft);
   bzero(workingBuffer,512);
   strncpy(workingBuffer,tempBuffer,nbrOfBytesLeft);
 
