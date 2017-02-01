@@ -485,7 +485,7 @@ while(1)
 
   /* Copy bytes to beginning */
   bzero(tempBuffer,512);
-  strncpy(tempBuffer,&workingBuffer[i],nbrOfBytesLeft);
+  strncpy(tempBuffer,&workingBuffer[rc-nbrOfBytesLeft],nbrOfBytesLeft);
   bzero(workingBuffer,512);
   strncpy(workingBuffer,tempBuffer,nbrOfBytesLeft);
 
