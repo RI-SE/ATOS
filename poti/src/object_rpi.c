@@ -419,6 +419,7 @@ while(1)
      i++;
     }
 
+    /* Move past newline sign */
     i++;
 
     /* Check if we stopped due to new message */
@@ -478,7 +479,7 @@ while(1)
   }
   
   #ifdef DEBUG
-    printf("INF: nbrOfBytesLeft rc k i: %d %d %d %d \n", nbrOfBytesLeft,rc,k,i);
+    printf("INF: nbrOfBytesLeft rc i: %d %d %d \n", nbrOfBytesLeft,rc,i);
     fflush(stdout);
   #endif
 
