@@ -412,6 +412,7 @@ while(1)
      k++;
      i++;
     }
+
     i++;
 
     /* Check if we stopped due to new message */
@@ -472,14 +473,14 @@ while(1)
       etsi_alt          = ConvertAltitudeValueNMEAtoETSICDD(antenna_altitude, status);
       etsi_time         = ConvertTimestapItsNMEAtoETSICDD(utc, date, status);
     }
-
-    /* Copy bytes to beginning */
-    char tempBuffer[512];
-    bzero(tempBuffer,512);
-    strncpy(tempBuffer,&workingBuffer[i],nbrOfBytesLeft);
-    bzero(workingBuffer,512);
-    strncpy(workingBuffer,tempBuffer,nbrOfBytesLeft);
   }
+  
+  /* Copy bytes to beginning */
+  char tempBuffer[512];
+  bzero(tempBuffer,512);
+  strncpy(tempBuffer,&workingBuffer[i],nbrOfBytesLeft);
+  bzero(workingBuffer,512);
+  strncpy(workingBuffer,tempBuffer,nbrOfBytesLeft);
 
   sprintf(etsi_time_string, "%" PRIu64 "", etsi_time);
   bzero(bMonitorBuffer, 256);
