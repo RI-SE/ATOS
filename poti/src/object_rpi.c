@@ -372,13 +372,24 @@ if (n < 0)
 printf("INF: Received: <%s>\n", buffer);
 #endif
 
+char workingBuffer[512];
+bzero(workingBuffer,512);
+
+int nbrOfBytesLeft = 0;
 while(1)
 {
   bzero(buffer,256);
   rc = recv(sd, buffer, 256, 0);
 
+  (void)strncat(&workingBuffer[nbrOfBytesLeft],buffer,strlen(buffer));
+
   #ifdef DEBUG
     printf("INF: Received from RTK: %s \n", buffer);
+    fflush(stdout);
+  #endif
+
+  #ifdef DEBUG
+    printf("INF: workingBuffer: %s \n", workingBuffer);
     fflush(stdout);
   #endif
 
@@ -396,59 +407,77 @@ while(1)
     int k = 0;
 
     /* get next message */
-    while(buffer[i] != '\n')
+    while((workingBuffer[i] != '\n') && (i < rc))
     {
-     sentence[k] = buffer[i];
+     sentence[k] = workingBuffer[i];
      k++;
      i++;
     }
-    sentence[k] = '\0';
 
-    #ifdef DEBUG
-      printf("INF: Message to handle: %s \n", sentence);
-      fflush(stdout);
-    #endif
+    if(workingBuffer[i] == '\n')
+    {
+      /* Calc how many bytes left */
+      nbrOfBytesLeft = rc-i-1;
+      #ifdef DEBUG
+        printf("INF: nbrOfBytesLeft: %d \n", nbrOfBytesLeft);
+        fflush(stdout);
+      #endif
 
-    getField(nmea_msg, 0);
-    if (strcmp(nmea_msg, "$GPRMC") == 0) 
-    {
-      getField(utc, 1);
-      getField(status, 2);
-      getField(latitude, 3);
-      getField(northsouth, 4);
-      getField(longitude, 5);
-      getField(eastwest, 6);
-      getField(gps_speed, 7);
-      getField(gps_heading, 8);
-      getField(date, 9);
+      sentence[k] = '\0';
+
+      #ifdef DEBUG
+        printf("INF: Message to handle: %s \n", sentence);
+        fflush(stdout);
+      #endif
+
+      getField(nmea_msg, 0);
+      if (strcmp(nmea_msg, "$GPRMC") == 0) 
+      {
+        getField(utc, 1);
+        getField(status, 2);
+        getField(latitude, 3);
+        getField(northsouth, 4);
+        getField(longitude, 5);
+        getField(eastwest, 6);
+        getField(gps_speed, 7);
+        getField(gps_heading, 8);
+        getField(date, 9);
+      }
+      else if (strcmp(nmea_msg, "$GPGGA") == 0) 
+      {
+        getField(utc, 1);
+        getField(latitude, 2);
+        getField(northsouth, 3);
+        getField(longitude, 4);
+        getField(eastwest, 5);
+        getField(gps_quality_indicator, 6);
+        getField(satellites_used, 7);
+        getField(antenna_altitude, 9);
+      }
+      else if (strcmp(nmea_msg, "$GPGSV") == 0) 
+      {
+        getField(satellites_in_view, 3);
+      }
+      else if (strcmp(nmea_msg, "$GPGSA") == 0) 
+      {
+        getField(pdop, 4);
+        getField(hdop, 5);
+        getField(vdop, 6);
+      }
+      etsi_lat          = ConvertLatitudeNMEAtoETSICDD(latitude, northsouth, status);
+      etsi_lon          = ConvertLongitudeNMEAtoETSICDD(longitude, eastwest, status);
+      etsi_speed        = ConvertSpeedValueNMEAtoETSICDD(gps_speed, status);
+      etsi_heading      = ConvertHeadingValueNMEAtoETSICDD(gps_heading, status);
+      etsi_alt          = ConvertAltitudeValueNMEAtoETSICDD(antenna_altitude, status);
+      etsi_time         = ConvertTimestapItsNMEAtoETSICDD(utc, date, status);
     }
-    else if (strcmp(nmea_msg, "$GPGGA") == 0) 
-    {
-      getField(utc, 1);
-      getField(latitude, 2);
-      getField(northsouth, 3);
-      getField(longitude, 4);
-      getField(eastwest, 5);
-      getField(gps_quality_indicator, 6);
-      getField(satellites_used, 7);
-      getField(antenna_altitude, 9);
-    }
-    else if (strcmp(nmea_msg, "$GPGSV") == 0) 
-    {
-      getField(satellites_in_view, 3);
-    }
-    else if (strcmp(nmea_msg, "$GPGSA") == 0) 
-    {
-      getField(pdop, 4);
-      getField(hdop, 5);
-      getField(vdop, 6);
-    }
-    etsi_lat          = ConvertLatitudeNMEAtoETSICDD(latitude, northsouth, status);
-    etsi_lon          = ConvertLongitudeNMEAtoETSICDD(longitude, eastwest, status);
-    etsi_speed        = ConvertSpeedValueNMEAtoETSICDD(gps_speed, status);
-    etsi_heading      = ConvertHeadingValueNMEAtoETSICDD(gps_heading, status);
-    etsi_alt          = ConvertAltitudeValueNMEAtoETSICDD(antenna_altitude, status);
-    etsi_time         = ConvertTimestapItsNMEAtoETSICDD(utc, date, status);
+
+    /* Copy bytes to beginning */
+    char tempBuffer[512];
+    bzero(tempBuffer,512);
+    strncpy(tempBuffer,&workingBuffer[++i],nbrOfBytesLeft);
+    bzero(workingBuffer,512);
+    strncpy(workingBuffer,tempBuffer,nbrOfBytesLeft);
   }
 
   sprintf(etsi_time_string, "%" PRIu64 "", etsi_time);
