@@ -33,7 +33,6 @@
   -- Defines
   ------------------------------------------------------------*/
 #define LOCALHOST "127.0.0.1"
-#define TRAJECTORY_PATH "./traj/"
 
 #define RECV_MESSAGE_BUFFER 1024
 #define OBJECT_MESS_BUFFER_SIZE 1024

@@ -47,6 +47,8 @@ static void vCreateLogFolder(char logFolder[MAX_FILE_PATH]);
   ------------------------------------------------------------*/
 void logger_task()
 {
+  char pcCommand[100];
+  char pcLogFolder[MAX_FILE_PATH];
   char pcLogFile[MAX_FILE_PATH];
   char pcBuffer[MQ_MAX_MESSAGE_LENGTH+100];
   char pcRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
@@ -56,7 +58,8 @@ void logger_task()
   (void)iCommInit(IPC_RECV,MQ_LG,0);
 
   /* Create folder and event.log file */
-  vCreateLogFolder(pcLogFile);
+  vCreateLogFolder(pcLogFolder);
+  (void)strcpy(pcLogFile,pcLogFolder);
   (void)strcat(pcLogFile,LOG_FILE);
 
   //#ifdef DEBUG
@@ -69,9 +72,19 @@ void logger_task()
   strcpy(pcBuffer, "Log started...\n");
   (void)fwrite(pcBuffer,1,sizeof(pcBuffer),filefd);
 
-  /* TODO Copy drive files */
+  /* Copy drive files */
+  (void)strcpy(pcCommand,"cp -R ");
+  (void)strcat(pcCommand,TRAJECTORY_PATH);
+  (void)strcat(pcCommand," ");
+  (void)strcat(pcCommand,pcLogFolder);
+  (void)system(pcCommand);
 
-  /* TODO Copy conf file */
+  /* Copy conf file */
+  (void)strcpy(pcCommand,"cp ");
+  (void)strcat(pcCommand,TEST_CONF_FILE);
+  (void)strcat(pcCommand," ");
+  (void)strcat(pcCommand,pcLogFolder);
+  (void)system(pcCommand);
 
   /* Listen for commands */
   int iExit = 0;

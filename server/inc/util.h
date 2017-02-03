@@ -60,6 +60,9 @@
 /* Number of leap seconds since 1970 */
 #define NBR_LEAP_SECONDS_FROM_1970 27
 
+#define TEST_CONF_FILE "./conf/test.conf"
+#define TRAJECTORY_PATH "./traj/"
+
 //#define DEBUG
 
 
