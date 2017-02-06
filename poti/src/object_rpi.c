@@ -122,6 +122,7 @@ int main(int argc, char *argv[])
   int trig_time = INT_MAX;
   socklen_t cli_length;
   struct sockaddr_in monitor_server_addr;
+  struct sockaddr_in monitor_from_addr_temp;
   struct sockaddr_in monitor_from_addr;
   struct sockaddr_in command_server_addr;
   struct sockaddr_in cli_addr;
@@ -360,6 +361,16 @@ if (command_com_socket_fd < 0)
 /* set socket to non-blocking */
 (void)fcntl(command_com_socket_fd, F_SETFL, fcntl(command_com_socket_fd, F_GETFL, 0) | O_NONBLOCK);
 
+
+/* Recieve address from server */
+bzero(buffer,256);
+rc = recvfrom(monitor_socket_fd, buffer, 255, 0, (struct sockaddr *) &monitor_from_addr, &fromlen);
+if (rc < 0)
+{
+  perror("ERR: Failed to receive from monitor socket");
+  exit(1);
+}
+
 /* set socket to non-blocking */
 (void)fcntl(monitor_socket_fd, F_SETFL, fcntl(monitor_socket_fd, F_GETFL, 0) | O_NONBLOCK);
 
@@ -378,7 +389,7 @@ while(1)
 {
   /* Receive heartbeat from server */
   bzero(buffer,256);
-  rc = recvfrom(monitor_socket_fd, buffer, 255, 0, (struct sockaddr *) &monitor_from_addr, &fromlen);
+  rc = recvfrom(monitor_socket_fd, buffer, 255, 0, (struct sockaddr *) &monitor_from_addr_temp, &fromlen);
   if (rc < 0)
   {
     if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -394,7 +405,11 @@ while(1)
   }
   else
   {
-    /* recieved data */
+    /* recieved data, copy port */
+    monitor_from_addr.sin_family = monitor_from_addr_temp.sin_family;
+    monitor_from_addr.sin_addr.s_addr = monitor_from_addr_temp.sin_addr.s_addr;
+    monitor_from_addr.sin_port = monitor_from_addr_temp.sin_port;
+
   }
 
   /* Recieve from RTK socket */
