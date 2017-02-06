@@ -376,18 +376,30 @@ int iWorkbufferSize = 0;
 int receivedNewData = 0;
 while(1)
 {
-  bzero(buffer,256);
-  receivedNewData = 0;
-
   /* Receive heartbeat from server */
-  n = recvfrom(monitor_socket_fd, buffer, 1024, 0, (struct sockaddr *) &monitor_from_addr, &fromlen);
-  if (n < 0) 
+  bzero(buffer,256);
+  rc = recvfrom(monitor_socket_fd, buffer, 255, 0, (struct sockaddr *) &monitor_from_addr, &fromlen);
+  if (rc < 0)
   {
-    perror("ERR: Failed to receive from central");
-    exit(1);
+    if(errno != EAGAIN && errno != EWOULDBLOCK)
+    {
+      perror("ERR: Failed to receive from monitor socket");
+      exit(1);
+    }
+    else
+    {
+      printf("INF: No data received\n");
+      fflush(stdout);
+    }
+  }
+  else
+  {
+    /* recieved data */
   }
 
   /* Recieve from RTK socket */
+  bzero(buffer,256);
+  receivedNewData = 0;
   rc = recv(sd, buffer, 255, 0);
 
   if (rc < 0)
