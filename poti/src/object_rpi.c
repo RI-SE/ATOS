@@ -357,16 +357,11 @@ if (command_com_socket_fd < 0)
   exit(1);
 }
 
-  /* Receive heartbeat from server just to save the server address */
-n = recvfrom(monitor_socket_fd, buffer, 1024, 0, (struct sockaddr *) &monitor_from_addr, &fromlen);
-if (n < 0) 
-{
-  perror("ERR: Failed to receive from central");
-  exit(1);
-}
-
-  /* set socket to non-blocking */
+/* set socket to non-blocking */
 (void)fcntl(command_com_socket_fd, F_SETFL, fcntl(command_com_socket_fd, F_GETFL, 0) | O_NONBLOCK);
+
+/* set socket to non-blocking */
+(void)fcntl(monitor_socket_fd, F_SETFL, fcntl(monitor_socket_fd, F_GETFL, 0) | O_NONBLOCK);
 
 #ifdef DEBUG
 printf("INF: Received: <%s>\n", buffer);
@@ -383,6 +378,16 @@ while(1)
 {
   bzero(buffer,256);
   receivedNewData = 0;
+
+  /* Receive heartbeat from server */
+  n = recvfrom(monitor_socket_fd, buffer, 1024, 0, (struct sockaddr *) &monitor_from_addr, &fromlen);
+  if (n < 0) 
+  {
+    perror("ERR: Failed to receive from central");
+    exit(1);
+  }
+
+  /* Recieve from RTK socket */
   rc = recv(sd, buffer, 255, 0);
 
   if (rc < 0)

@@ -26,7 +26,8 @@ make
 ## Visualization adaption
 cd websocket_visualization
 mkdir build && cd build
-"/home/kj/Qt/5.7/gcc_64/bin/qmake" ../websocket_visualization.pro -spec linux-g++
+"/home/kj/Qt/5.7/gcc_64/bin/qmake" ../websocket_visualization.pro -spec linux-g++ 
+("/opt/Qt5.7.1/5.7/gcc_64/bin/qmake"  ../websocket_visualization.pro -spec linux-g++)
 make
 ./websocket_visualization 53251 1 ./../data/ 100
 
