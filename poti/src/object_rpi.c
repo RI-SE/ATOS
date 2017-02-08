@@ -52,6 +52,9 @@
 
 #define SERVPORT 2948
 
+#define RTK_RECV_BUFFER 4096
+#define WORK_BUFFER 8192
+
 /* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
 #define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
@@ -127,11 +130,12 @@ int main(int argc, char *argv[])
   struct sockaddr_in command_server_addr;
   struct sockaddr_in cli_addr;
   struct hostent *hp;
-  char buffer[256];
+  char buffer[RTK_RECV_BUFFER];
   char bMonitorBuffer[256];
   char pcPosition[256];
   struct timespec sleep_time;
   struct timespec ref_time;
+  useconds_t loop_delay = 100000;
   char pcTimeString[15];
   char *ret = NULL;
   char bCurrentCommand[10] = "NOOP"; 
@@ -378,9 +382,9 @@ if (rc < 0)
 printf("INF: Received: <%s>\n", buffer);
 #endif
 
-char workingBuffer[512];
-char tempBuffer[512];
-bzero(workingBuffer,512);
+char workingBuffer[WORK_BUFFER];
+char tempBuffer[WORK_BUFFER];
+bzero(workingBuffer,WORK_BUFFER);
 
 int nbrOfBytesLeft = 0;
 int iWorkbufferSize = 0;
@@ -413,9 +417,9 @@ while(1)
   }
 
   /* Recieve from RTK socket */
-  bzero(buffer,256);
+  bzero(buffer,RTK_RECV_BUFFER);
   receivedNewData = 0;
-  rc = recv(sd, buffer, 255, 0);
+  rc = recv(sd, buffer, RTK_RECV_BUFFER-1, 0);
 
   if (rc < 0)
   {
@@ -438,21 +442,21 @@ while(1)
   if(receivedNewData)
   {
     #ifdef DEBUG
-      printf("INF: Received from RTK: %s \n", buffer);
-      fflush(stdout);
+    //printf("INF: Received from RTK: %s \n", buffer);
+    //fflush(stdout);
     #endif
 
     #ifdef DEBUG
-      printf("INF: workingBuffer before strncat: %s \n", workingBuffer);
-      fflush(stdout);
+    //printf("INF: workingBuffer before strncat: %s \n", workingBuffer);
+    //fflush(stdout);
     #endif
 
-    (void)strncat(&workingBuffer[nbrOfBytesLeft],buffer,256);
+    (void)strncat(&workingBuffer[nbrOfBytesLeft],buffer,RTK_RECV_BUFFER);
     iWorkbufferSize = strlen(workingBuffer);
 
     #ifdef DEBUG
-      printf("INF: workingBuffer after strncat: %s \n", workingBuffer);
-      fflush(stdout);
+    //printf("INF: workingBuffer after strncat: %s \n", workingBuffer);
+    //fflush(stdout);
     #endif
 
     /* loop until message has been parsed */
@@ -480,8 +484,8 @@ while(1)
         sentence[k] = '\0';
 
         #ifdef DEBUG
-          printf("INF: Message to handle: %s \n", sentence);
-          fflush(stdout);
+	//printf("INF: Message to handle: %s \n", sentence);
+	//fflush(stdout);
         #endif
 
         getField(nmea_msg, 0);
@@ -507,6 +511,8 @@ while(1)
           getField(gps_quality_indicator, 6);
           getField(satellites_used, 7);
           getField(antenna_altitude, 9);
+	  printf("Lat: %s\n",latitude);
+	  fflush(stdout);
         }
         else if (strcmp(nmea_msg, "$GPGSV") == 0) 
         {
@@ -529,27 +535,30 @@ while(1)
     }
     
     #ifdef DEBUG
-      printf("INF: nbrOfBytesLeft iWorkbufferSize i: %d %d %d \n", nbrOfBytesLeft,iWorkbufferSize,i);
-      fflush(stdout);
+    //printf("INF: nbrOfBytesLeft iWorkbufferSize i: %d %d %d \n", nbrOfBytesLeft,iWorkbufferSize,i);
+    //fflush(stdout);
     #endif
 
     /* Copy bytes to beginning */
     if(nbrOfBytesLeft != 0)
     {
-      bzero(tempBuffer,512);
+      bzero(tempBuffer,WORK_BUFFER);
       strncpy(tempBuffer,&workingBuffer[iWorkbufferSize-nbrOfBytesLeft],nbrOfBytesLeft);
-      bzero(workingBuffer,512);
+      bzero(workingBuffer,WORK_BUFFER);
       strncpy(workingBuffer,tempBuffer,nbrOfBytesLeft);
     }
     else
     {
-      bzero(workingBuffer,512);
+      bzero(workingBuffer,WORK_BUFFER);
       iWorkbufferSize = 0;
     }
   }
 
   bzero(bMonitorBuffer, 256);
   sprintf(bMonitorBuffer,"MONR;%s;%09d;%010d;%06d;%05d;%04d;0;",etsi_time_string,etsi_lat,etsi_lon,etsi_alt,etsi_speed,etsi_heading);
+  #ifdef DEBUG
+  //printf("INF: Before: Sending: <%s>\n", bMonitorBuffer);
+  #endif
   n = sendto(monitor_socket_fd, bMonitorBuffer, sizeof(bMonitorBuffer), 0, (struct sockaddr *) &monitor_from_addr, fromlen);
   if (n < 0)
   {
@@ -558,12 +567,14 @@ while(1)
   }
 
   #ifdef DEBUG
-  printf("INF: Sending: <%s>\n", bMonitorBuffer);
+  //printf("INF: After: Sending: <%s>\n", bMonitorBuffer);
   #endif
 
-  sleep_time.tv_sec = 0;
-  sleep_time.tv_nsec = 1000000000;
-  (void) nanosleep(&sleep_time, &ref_time);
+  /* sleep_time.tv_sec = 0; */
+  /* sleep_time.tv_nsec = 1000000000; */
+  /* (void) nanosleep(&sleep_time, &ref_time); */
+  usleep(loop_delay);
+  
 }
 
 close(monitor_socket_fd);
