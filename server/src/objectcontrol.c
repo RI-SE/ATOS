@@ -232,6 +232,14 @@ void objectcontrol_task()
           ldm[iIndex].altitude,ldm[iIndex].speed,ldm[iIndex].heading,ldm[iIndex].drivedirection);
 
         #ifdef DEBUG
+          struct timespec spec;
+          clock_gettime(CLOCK_MONOTONIC, &spec);
+          printf("INF: Time: %"PRIdMAX".%06ld Send MONITOR message: %s\n",
+            (intmax_t)spec.tv_sec, spec.tv_nsec,buffer);
+          fflush(stdout);
+        #endif
+
+        #ifdef DEBUG
           printf("INF: Send MONITOR message: %s\n",buffer);
           fflush(stdout);
         #endif

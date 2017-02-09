@@ -43,6 +43,11 @@ yum groupinstall 'Development Tools'
 wget http://download.qt.io/official_releases/qt/5.7/5.7.1/qt-opensource-linux-x64-5.7.1.run
 ./http://download.qt.io/official_releases/qt/5.7/5.7.1/qt-opensource-linux-x64-5.7.1.run
 
+# Install on raspberry
+sudo apt-get isntall qt-sdk
+sudo apt install libqt5websockets5_dev
+qmake -qt=5 ../websocket_visualization.pro -spec linux-g++
+
 # POTI
 cd poti
 mkdir build && cd build
