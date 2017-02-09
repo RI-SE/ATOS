@@ -232,10 +232,18 @@ void objectcontrol_task()
           ldm[iIndex].altitude,ldm[iIndex].speed,ldm[iIndex].heading,ldm[iIndex].drivedirection);
 
         #ifdef DEBUG
+          struct timeval tvTime;
+          gettimeofday(&tvTime, NULL);
+          uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - 
+            MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
+            NBR_LEAP_SECONDS_FROM_1970*1000;
+          printf("INF: Time: %" PRIu64 " Send MONITOR message: %s\n",uiTime,buffer);
+/*
           struct timespec spec;
           clock_gettime(CLOCK_MONOTONIC, &spec);
           printf("INF: Time: %"PRIdMAX".%06ld Send MONITOR message: %s\n",
             (intmax_t)spec.tv_sec, spec.tv_nsec,buffer);
+*/
           fflush(stdout);
         #endif
 
