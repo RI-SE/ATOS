@@ -62,13 +62,15 @@ public:
     void setXOffset(double offset);
     void setYOffset(double offset);
     void clearTrace();
-    void addRoutePoint(double px, double py, double speed);
+    void addRoutePoint(double px, double py, double speed = 0.0, qint32 time = 0);
     QList<LocPoint> getRoute();
     void setRoute(QList<LocPoint> route);
     void clearRoute();
+    void clearAllRoutes();
     void setRoutePointSpeed(double speed);
     void addInfoPoint(LocPoint &info);
     void clearInfoTrace();
+    void clearAllInfoTraces();
     void addPerspectivePixmap(PerspectivePixmap map);
     void clearPerspectivePixmaps();
     QPoint getMousePosRelative();
@@ -83,6 +85,9 @@ public:
     double getInfoTraceTextZoom() const;
     void setInfoTraceTextZoom(double infoTraceTextZoom);
     OsmClient *osmClient();
+    int getInfoTraceNum();
+    int getInfoPointsInTrace(int trace);
+    int setNextEmptyOrCreateNewInfoTrace();
 
     int getOsmMaxZoomLevel() const;
     void setOsmMaxZoomLevel(int osmMaxZoomLevel);
@@ -95,12 +100,28 @@ public:
     bool getDrawOsmStats() const;
     void setDrawOsmStats(bool drawOsmStats);
 
+    int getRouteNow() const;
+    void setRouteNow(int routeNow);
+
+    qint32 getRoutePointTime() const;
+    void setRoutePointTime(const qint32 &routePointTime);
+
+    double getTraceMinSpaceCar() const;
+    void setTraceMinSpaceCar(double traceMinSpaceCar);
+
+    double getTraceMinSpaceGps() const;
+    void setTraceMinSpaceGps(double traceMinSpaceGps);
+
+    int getInfoTraceNow() const;
+    void setInfoTraceNow(int infoTraceNow);
+
 signals:
     void scaleChanged(double newScale);
     void offsetChanged(double newXOffset, double newYOffset);
     void posSet(quint8 id, LocPoint pos);
     void routePointAdded(LocPoint pos);
     void lastRoutePointRemoved(LocPoint pos);
+    void infoTraceChanged(int traceNow);
 
 private slots:
     void tileReady(OsmTile tile);
@@ -122,12 +143,12 @@ private:
     QList<CarInfo> mCarInfo;
     QList<LocPoint> mCarTrace;
     QList<LocPoint> mCarTraceGps;
-    QList<LocPoint> mRoute;
-    QList<LocPoint> mInfoTrace;
+    QList<QList<LocPoint> > mRoutes;
+    QList<QList<LocPoint> > mInfoTraces;
     QList<LocPoint> mVisibleInfoTracePoints;
     QList<PerspectivePixmap> mPerspectivePixmaps;
-    //QList<QList<QPointF>> mTrajectories;
     double mRoutePointSpeed;
+    qint32 mRoutePointTime;
     double mScaleFactor;
     double mRotation;
     double mXOffset;
@@ -154,6 +175,11 @@ private:
     LocPoint mClosestInfo;
     bool mDrawGrid;
     int mRoutePointSelected;
+    int mRouteNow;
+    int mInfoTraceNow;
+    double mTraceMinSpaceCar;
+    double mTraceMinSpaceGps;
+
     QUdpSocket *mUdpSocket;
     QWebSocket *mWebSocket;
 
