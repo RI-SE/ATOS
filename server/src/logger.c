@@ -70,7 +70,7 @@ void logger_task()
 
   bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
   strcpy(pcBuffer, "Log started...\n");
-  (void)fwrite(pcBuffer,1,sizeof(pcBuffer),filefd);
+  (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
   /* Copy drive files */
   (void)strcpy(pcCommand,"cp -R ");
@@ -101,7 +101,7 @@ void logger_task()
       NBR_LEAP_SECONDS_FROM_1970*1000;
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     sprintf ( pcBuffer,"%" PRIu64 ": %d %s\n",uiTime,iCommand,pcRecvBuffer);
-    (void)fwrite(pcBuffer,1,sizeof(pcBuffer),filefd);
+    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
 	  if(iCommand == COMM_EXIT)
     {
@@ -119,7 +119,7 @@ void logger_task()
 
   bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
   strcpy(pcBuffer, "Log closed...\n");
-  (void)fwrite(pcBuffer,1,sizeof(pcBuffer),filefd);
+  (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
   fclose(filefd);
 }
