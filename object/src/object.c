@@ -48,8 +48,8 @@
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
 #define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
 
-/* Number of leap seconds since 1970 */
-#define NBR_LEAP_SECONDS_FROM_1970 27
+/* Difference of leap seconds between UTC and ETSI */
+#define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
 /*------------------------------------------------------------
   -- The main function.
@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
       gettimeofday(&tv, NULL);
 
       unsigned long long msSinceEpochETSI = (unsigned long long) tv.tv_sec * 1000 + (unsigned long long) tv.tv_usec / 1000 - 
-	MS_FROM_1970_TO_2004_NO_LEAP_SECS + NBR_LEAP_SECONDS_FROM_1970 * 1000;
+	MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
     
       sprintf(pcTimeString, "%llu", msSinceEpochETSI); 
       strcat(bMonitorBuffer,pcTimeString);
