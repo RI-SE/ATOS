@@ -11,8 +11,6 @@
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
-#include "visualization.h"
-
 #include <errno.h>
 #include <mqueue.h>
 #include <netdb.h>
@@ -46,11 +44,14 @@ static void vSendVisualization(int* sockfd,
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
-void visualization_task()
+int main(int argc, char *argv[])
 {
   int visual_server;
   struct sockaddr_in visual_server_addr;
   char cpBuffer[RECV_MESSAGE_BUFFER];
+
+  printf("DefaultVisualizationAdapter started\n");
+  fflush(stdout);
 
   (void)iCommInit(IPC_RECV,MQ_VA,0);
 

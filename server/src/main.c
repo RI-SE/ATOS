@@ -15,12 +15,12 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #include "logger.h"
 #include "objectcontrol.h"
-#include "visualization.h"
 #include "systemcontrol.h"
 #include "supervision.h"
 #include "util.h"
@@ -87,9 +87,9 @@ int main(int argc, char *argv[])
   }
   ++iIndex;
 
-  int iValue = 0;
-  (void)iUtilGetIntParaConfFile("ExternalVisualizationAdapter",&iValue);
-  if(0 == iValue)
+  char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
+  bzero(pcTempBuffer,MAX_UTIL_VARIBLE_SIZE);
+  if(iUtilGetParaConfFile("VisualizationAdapter",pcTempBuffer))
   {
     pID[iIndex] = fork();
     if(pID[iIndex] < 0)
@@ -101,8 +101,12 @@ int main(int argc, char *argv[])
       #ifdef DEBUG
         printf("INF: visualization_task running in:  %i \n",getpid());
       #endif
-      visualization_task();
-      exit(EXIT_SUCCESS);
+
+      char *newargv[] = { NULL, NULL };
+      char *newenviron[] = { NULL };
+      newargv[0] = pcTempBuffer; 
+      execve(pcTempBuffer, newargv, newenviron);
+      util_error("ERR: Failed to create visualization adapter");
     }
     ++iIndex;
   }

@@ -16,23 +16,28 @@ add_library(util
 )
 
 # add the executable
+add_executable(DefaultVisualizationAdapter 
+  src/visualization.c
+)
+
+# add the executable
 add_executable(TEServer 
   src/main.c
   src/logger.c
   src/objectcontrol.c 
   src/supervision.c
   src/systemcontrol.c
-  src/visualization.c
   inc/logger.h
   inc/objectcontrol.h
   inc/supervision.h
   inc/systemcontrol.h
-  inc/visualization.h
 )
 
 # add the install targets
+install (TARGETS DefaultVisualizationAdapter DESTINATION bin)
 install (TARGETS TEServer DESTINATION bin)
 
 # add linking to message queue
 target_link_libraries(util rt)
+target_link_libraries(DefaultVisualizationAdapter util)
 target_link_libraries(TEServer util)
