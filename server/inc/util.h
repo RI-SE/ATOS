@@ -57,8 +57,8 @@
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
 #define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
 
-/* Number of leap seconds since 1970 */
-#define NBR_LEAP_SECONDS_FROM_1970 27
+/* Difference of leap seconds between UTC and ETSI */
+#define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
 #define TEST_CONF_FILE "./conf/test.conf"
 #define TRAJECTORY_PATH "./traj/"

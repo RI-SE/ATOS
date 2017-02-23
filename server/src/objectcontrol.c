@@ -197,7 +197,7 @@ void objectcontrol_task()
       gettimeofday(&tvTime, NULL);
       uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - 
         MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
-        NBR_LEAP_SECONDS_FROM_1970*1000;
+        DIFF_LEAP_SECONDS_UTC_ETSI*1000;
       printf("INF: Time: %" PRIu64 "\n",uiTime);
 /*
       struct timespec spec;
@@ -245,7 +245,7 @@ void objectcontrol_task()
           gettimeofday(&tvTime, NULL);
           uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - 
             MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
-            NBR_LEAP_SECONDS_FROM_1970*1000;
+            DIFF_LEAP_SECONDS_UTC_ETSI*1000;
           printf("INF: Time: %" PRIu64 " Send MONITOR message: %s\n",uiTime,buffer);
 /*
           struct timespec spec;

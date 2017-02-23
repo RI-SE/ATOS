@@ -511,7 +511,7 @@ while(1)
           getField(gps_quality_indicator, 6);
           getField(satellites_used, 7);
           getField(antenna_altitude, 9);
-	  printf("Lat: %s\n",latitude);
+	  printf("%s %s%s %s%s %s %s %s\n",utc,latitude,northsouth,longitude,eastwest,antenna_altitude,gps_quality_indicator,satellites_used);
 	  fflush(stdout);
         }
         else if (strcmp(nmea_msg, "$GPGSV") == 0) 

@@ -127,7 +127,7 @@ TimestampIts ConvertTimestapItsNMEAtoETSICDD(char *time, char *date, char *stat)
     //Add the number of miiliseconds from 2004 to present year
     data = (int64_t) (((int64_t) strtol(year, &ptr1, 10) - 4) * 365 * 24 * 3600 * 1000);
 
-    //Add thee number of milliseconds from January to present month
+    //Add the number of milliseconds from January to present month
     switch((char) strtol(month, &ptr1, 10)){
     case 1  :
       data += 0;
@@ -185,21 +185,23 @@ TimestampIts ConvertTimestapItsNMEAtoETSICDD(char *time, char *date, char *stat)
       data += (int64_t) 1000;
     if (data >= 383788804000) //Leap year 2016
       data += (int64_t) 24 * 3600 * 1000;
-    if (data >= 510019204000) //Leap year 2020
+    if (data >= 410313604000) //Leap second 2017-01-01:00.00.00.000
+      data += (int64_t) 1000;
+    if (data >= 510019205000) //Leap year 2020
       data += (int64_t) 24 * 3600 * 1000;
-    if (data >= 636249604000) //Leap year 2024
+    if (data >= 636249605000) //Leap year 2024
       data += (int64_t) 24 * 3600 * 1000;
-    if (data >= 762480004000) //Leap year 2028
+    if (data >= 762480005000) //Leap year 2028
       data += (int64_t) 24 * 3600 * 1000;
-    if (data >= 888710404000) //Leap year 2032
+    if (data >= 888710405000) //Leap year 2032
       data += (int64_t) 24 * 3600 * 1000;
-    if (data >= 1014940804000) //Leap year 2036
+    if (data >= 1014940805000) //Leap year 2036
       data += (int64_t) 24 * 3600 * 1000;
-    if (data >= 1141171204000) //Leap year 2040
+    if (data >= 1141171205000) //Leap year 2040
       data += (int64_t) 24 * 3600 * 1000;
-    if (data >= 1267401604000) //Leap year 2044
+    if (data >= 1267401605000) //Leap year 2044
       data += (int64_t) 24 * 3600 * 1000;
-    if (data >= 1393632004000) //Leap year 2048
+    if (data >= 1393632005000) //Leap year 2048
       data += (int64_t) 24 * 3600 * 1000;
     //Add the corresponding number of milliseconds for day, hour, minute, second, and millisecond, respectively
     data += (int64_t) (((int64_t) strtol(day, &ptr1, 10) - 1) * 24 * 3600 * 1000);

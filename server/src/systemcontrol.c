@@ -73,7 +73,7 @@ void systemcontrol_task()
 
       uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - 
         MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
-        NBR_LEAP_SECONDS_FROM_1970*1000;
+        DIFF_LEAP_SECONDS_UTC_ETSI*1000;
 
       /* Add 5 seconds to get room for all objects to get command */
       uiTime += 5000;

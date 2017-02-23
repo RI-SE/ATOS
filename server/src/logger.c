@@ -98,7 +98,7 @@ void logger_task()
     gettimeofday(&tvTime, NULL);
     uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - 
       MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
-      NBR_LEAP_SECONDS_FROM_1970*1000;
+      DIFF_LEAP_SECONDS_UTC_ETSI*1000;
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     sprintf ( pcBuffer,"%" PRIu64 ": %d %s\n",uiTime,iCommand,pcRecvBuffer);
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
