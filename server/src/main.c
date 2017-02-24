@@ -33,7 +33,7 @@
 -- The main function.
 ------------------------------------------------------------*/
 int main(int argc, char *argv[])
-{
+  {
   pid_t pID[4];
   int iIndex = 0;
   #ifdef DEBUG
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
     if(pID[iIndex] == 0)
     {
       #ifdef DEBUG
-        printf("INF: visualization_task running in:  %i \n",getpid());
+        printf("INF: visualization 0 running in:  %i \n",getpid());
       #endif
 
       char *newargv[] = { NULL, NULL };

@@ -3,6 +3,7 @@ QT -= gui
 
 CONFIG += c++11
 
+LIBS += ../server/build/libutil.a
 LIBS += -lrt
 
 TARGET = websocket_visualization
@@ -13,12 +14,11 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     visualizationserver.cpp \
-    generator.cpp \
-    util.c
+    generator.cpp
 
 HEADERS += \
     visualizationserver.h \
     generator.h \
-    util.h
+    ../server/inc/util.h
 
 DISTFILES +=
