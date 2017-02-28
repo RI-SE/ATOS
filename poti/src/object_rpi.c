@@ -62,6 +62,9 @@
 /* Number of leap seconds since 1970 */
 #define NBR_LEAP_SECONDS_FROM_1970 27
 
+/* Difference of leap seconds between UTC and ETSI */
+#define DIFF_LEAP_SECONDS_UTC_ETSI 5
+
 //GPS
 char nmea_msg[20]              = "N/A";
 char utc[20]                   = "N/A";
@@ -171,6 +174,8 @@ int main(int argc, char *argv[])
   int optval = 1;
 
   struct timeval tv;
+  struct timeval tvTime;
+  struct timeval tvTime2;
 
   int sd, rc, length = sizeof(int);
   struct sockaddr_in serveraddr;
@@ -391,6 +396,11 @@ int iWorkbufferSize = 0;
 int receivedNewData = 0;
 while(1)
 {
+  gettimeofday(&tvTime2, NULL);
+  uint64_t uiTime2 = (uint64_t)tvTime2.tv_sec*1000 + (uint64_t)tvTime2.tv_usec/1000 - 
+    MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
+    DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+
   /* Receive heartbeat from server */
   bzero(buffer,256);
   rc = recvfrom(monitor_socket_fd, buffer, 255, 0, (struct sockaddr *) &monitor_from_addr_temp, &fromlen);
@@ -420,7 +430,7 @@ while(1)
   bzero(buffer,RTK_RECV_BUFFER);
   receivedNewData = 0;
   rc = recv(sd, buffer, RTK_RECV_BUFFER-1, 0);
-
+  printf("rc: %d\n",rc);
   if (rc < 0)
   {
     if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -447,16 +457,16 @@ while(1)
     #endif
 
     #ifdef DEBUG
-    //printf("INF: workingBuffer before strncat: %s \n", workingBuffer);
-    //fflush(stdout);
+    printf("INF: workingBuffer before strncat: %s \n", workingBuffer);
+    fflush(stdout);
     #endif
 
     (void)strncat(&workingBuffer[nbrOfBytesLeft],buffer,RTK_RECV_BUFFER);
     iWorkbufferSize = strlen(workingBuffer);
 
     #ifdef DEBUG
-    //printf("INF: workingBuffer after strncat: %s \n", workingBuffer);
-    //fflush(stdout);
+    printf("INF: workingBuffer after strncat: %s \n", workingBuffer);
+    fflush(stdout);
     #endif
 
     /* loop until message has been parsed */
@@ -484,8 +494,8 @@ while(1)
         sentence[k] = '\0';
 
         #ifdef DEBUG
-	//printf("INF: Message to handle: %s \n", sentence);
-	//fflush(stdout);
+	printf("INF: Message to handle: %s \n", sentence);
+	fflush(stdout);
         #endif
 
         getField(nmea_msg, 0);
@@ -556,9 +566,17 @@ while(1)
 
   bzero(bMonitorBuffer, 256);
   sprintf(bMonitorBuffer,"MONR;%s;%09d;%010d;%06d;%05d;%04d;0;",etsi_time_string,etsi_lat,etsi_lon,etsi_alt,etsi_speed,etsi_heading);
+  //sprintf(bMonitorBuffer,"MONR;%" PRIu64 ";%09d;%010d;%06d;%05d;%04d;0;",uiTime2,etsi_lat,etsi_lon,etsi_alt,etsi_speed,etsi_heading);
   #ifdef DEBUG
   //printf("INF: Before: Sending: <%s>\n", bMonitorBuffer);
   #endif
+  /* Write time, command, buffer */
+  gettimeofday(&tvTime, NULL);
+  uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - 
+    MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
+    DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+  printf ("%" PRIu64 " : %" PRIu64 ": %s\n",uiTime2, uiTime, bMonitorBuffer);
+
   n = sendto(monitor_socket_fd, bMonitorBuffer, sizeof(bMonitorBuffer), 0, (struct sockaddr *) &monitor_from_addr, fromlen);
   if (n < 0)
   {
