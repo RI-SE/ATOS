@@ -112,17 +112,17 @@ TimestampIts ConvertTimestapItsNMEAtoETSICDD(char *time, char *date, char *stat)
   char    hour[3]        = "hh";
   char    minute[3]      = "mm";
   char    second[3]      = "ss";
-  char    millisecond[4] = "sss";
+  char    centisecond[4] = "ss";
 
   if(!strcmp(stat,"A")){
-    //Mask out string parts for year, month, day, hour, minute, second, and millisecond, respectively 
+    //Mask out string parts for year, month, day, hour, minute, second, and centisecond, respectively 
     strncpy(day, date, 2);
     strncpy(month, date+2, 2);
     strncpy(year, date+4, 2);
     strncpy(hour, time, 2);
     strncpy(minute, time+2, 2);
     strncpy(second, time+4, 2);
-    strncpy(millisecond, time+7, 3);
+    strncpy(centisecond, time+7, 2);
 
     //Add the number of miiliseconds from 2004 to present year
     data = (int64_t) (((int64_t) strtol(year, &ptr1, 10) - 4) * 365 * 24 * 3600 * 1000);
@@ -208,7 +208,7 @@ TimestampIts ConvertTimestapItsNMEAtoETSICDD(char *time, char *date, char *stat)
     data += (int64_t) (((int64_t) strtol(hour, &ptr1, 10)) * 3600 * 1000);
     data += (int64_t) (((int64_t) strtol(minute, &ptr1, 10)) * 60 * 1000);
     data += (int64_t) (((int64_t) strtol(second, &ptr1, 10)) * 1000);
-    data += (int64_t) (((int64_t) strtol(millisecond, &ptr1, 10)));
+    data += (int64_t) (((int64_t) strtol(centisecond, &ptr1, 10)) * 10);
   }
   return data;
 }
