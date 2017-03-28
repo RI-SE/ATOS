@@ -3,7 +3,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   --------------------------------------------------------------------------------
   -- File        : main.c
-  -- Author      : Karl-Johan Ode
+  -- Author      : Seb
   -- Description : CHRONOS main
   -- Purpose     :
   -- Reference   :
