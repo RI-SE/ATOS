@@ -3,7 +3,7 @@ QT -= gui
 
 CONFIG += c++11
 
-LIBS += ../server/build/libutil.a
+LIBS += ../../server/build/libutil.a
 LIBS += -lrt
 
 TARGET = websocket_visualization
