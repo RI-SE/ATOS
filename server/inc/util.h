@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : util.h
-  -- Author      : Karl-Johan Ode
+  -- Author      : Karl-Johan Ode, Sebastian Loh Lindholm
   -- Description : CHRONOS
   -- Purpose     :
   -- Reference   :
@@ -16,6 +16,7 @@
   ------------------------------------------------------------*/
 #include <inttypes.h>
 #include <mqueue.h>
+#include <math.h>
 
 /*------------------------------------------------------------
   -- Defines
@@ -39,6 +40,8 @@
 #define COMM_MONI 3
 #define COMM_EXIT 4
 #define COMM_ARMD 5
+#define COMM_REPLAY 6
+#define COMM_CONTROL 7
 #define COMM_INV 255
 
 #define SAFETY_CHANNEL_PORT 53240
@@ -48,6 +51,12 @@
 #define MAX_FILE_PATH 256
 
 #define MAX_UTIL_VARIBLE_SIZE 512
+
+#define a	6378137.0							//meters in WGS84
+#define k	298.257223563 						//in WGS84, f = 1/298.257223563
+#define b	6356752.3142451794975639665996337	//b = (1-f)*a
+#define l	1e-12
+#define PI	3.141592653589793
 
 /* Calculation: 
   34 years between 1970 and 2004 
@@ -65,6 +74,14 @@
 
 //#define DEBUG
 
+typedef struct 
+{
+   double OrigoDistance;
+   int start_loc;
+   int used_space;
+   int free_space;
+} ObjectPosition; 
+
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -77,5 +94,13 @@ int iCommInit(const unsigned int, const char*, const int);
 int iCommClose();
 int iCommRecv(int*, char*, const int);
 int iCommSend(const int,const char*);
+
+double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
+double UtilDegToRad(double Deg);
+double UtilRadToDeg(double Rad);
+
+
+
+
 
 #endif //__UTIL_H_INCLUDED__

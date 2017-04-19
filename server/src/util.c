@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : util.c
-  -- Author      : Karl-Johan Ode
+  -- Author      : Karl-Johan Ode, Sebastian Loh Lindholm
   -- Description : CHRONOS
   -- Purpose     :
   -- Reference   :
@@ -12,9 +12,10 @@
   -- Include files.
   ------------------------------------------------------------*/
 
+#include <stdio.h>
+#include <math.h>
 #include <errno.h>
 #include <inttypes.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -83,6 +84,61 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue)
   return 1;
 }
 
+double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP)
+{
+
+	double f, d, P1LatRad, P1LongRad, P2LatRad, P2LongRad, U1, U2, L, lambda, sins, coss, sigma, sinalpha, cosalpha2, cossm, C, lambdaprim, u2, A, B, dsigma, s, alpha1, alpha2;
+
+	
+	P1LatRad = UtilDegToRad(P1Lat);
+	P1LongRad = UtilDegToRad(P1Long);
+	P2LatRad = UtilDegToRad(P2Lat);
+	P2LongRad = UtilDegToRad(P2Long);
+
+	f = 1/k;
+	U1 = atan((1-f)*tan(P1LatRad));
+	U2 = atan((1-f)*tan(P2LatRad));
+	L = P2LongRad - P1LongRad;
+	lambda = L;
+	lambdaprim = lambda;	
+	//printf("Lambdadiff: %1.15f\n", fabs(lambda-lambdaprim));
+	
+	int i = 10;
+	do
+	{
+		sins = sqrt( pow((cos(U2)*sin(lambda)),2) + pow((cos(U1)*sin(U2) - sin(U1)*cos(U2)*cos(lambda)),2) );
+		coss = sin(U1)*sin(U2) + cos(U1)*cos(U2)*cos(lambda);
+		sigma = atan(sins/coss);	
+		sinalpha = (cos(U1)*cos(U2)*sin(lambda))/sins;
+		cosalpha2 = 1 - pow(sinalpha,2);
+		cossm = coss - (2*sin(U1)*sin(U2) / cosalpha2);
+		C = (f/16) * cosalpha2 * ( 4 + f*(4 - 3 * cosalpha2) );
+		lambdaprim = lambda;		
+		lambda = L + (1-C)*f*sinalpha*(sigma+C*sins*(cossm + C*coss*(-1+ 2*pow(cossm,2))));
+		i ++;
+		//printf("Lambdadiff: %1.15f\n", fabs(lambda-lambdaprim));
+	
+	} while(fabs(lambda-lambdaprim) > l  && --i > 0);
+
+	if (i == 0) printf("Failed to converge!\n");
+
+	u2 = cosalpha2*((pow(a,2) - pow(b,2))/pow(b,2));
+	A = 1 +(u2/16384)*(4096+u2*(-768+u2*(320-175*u2)));
+	B = (u2/1024)*(256 + u2*(-128*u2*(74-47*u2)));
+	dsigma = B*sins*(cossm+0.25*B*(coss*(-1+2*pow(cossm,2)) - (1/6)*B*cossm*(-3+4*pow(sins,2))*(-3+4*pow(cossm,2))));	
+	s = b*A*(sigma-dsigma);
+	
+	OP->OrigoDistance = s;
+
+	return s;
+}
+
+
+double UtilDegToRad(double Deg){return (PI*Deg/180);}
+double UtilRadToDeg(double Rad){return (180*Rad/PI);}
+
+
+
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue)
 {
   int iResult;
@@ -148,7 +204,7 @@ int iCommInit(const unsigned int uiMode, const char* name, const int iNonBlockin
       }
       ++uiIndex;
     }
-
+ 
     if(strcmp(name,MQ_OC))
     {
       ptMQSend[uiIndex] = mq_open(MQ_OC, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr);
@@ -254,41 +310,52 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize)
 
 int iCommSend(const int iCommand,const char* cpData)
 {
-  int iResult;
-  unsigned int uiMessagePrio = 0;
-  int iIndex = 0;
-  char cpMessage[MQ_MAX_MESSAGE_LENGTH];
+	int iResult;
+	unsigned int uiMessagePrio = 0;
+	int iIndex = 0;
+	char cpMessage[MQ_MAX_MESSAGE_LENGTH];
 
-  bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
+	bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
 
-  if(iCommand == COMM_TRIG)
-  {
-    uiMessagePrio = 100;
-    cpMessage[0] = (char)COMM_TRIG;
-  }
-  else if(iCommand == COMM_STOP)
-  {
-    uiMessagePrio = 120;
-    cpMessage[0] = (char)COMM_STOP;
-  }
-  else if(iCommand == COMM_MONI)
-  {
-    uiMessagePrio = 80;
-    cpMessage[0] = (char)COMM_MONI;
-  }
-  else if(iCommand == COMM_EXIT)
-  {
-    uiMessagePrio = 140;
-    cpMessage[0] = (char)COMM_EXIT;
-  }
-  else
-  {
-    util_error("ERR: Unknown command");
-  }
+	if(iCommand == COMM_TRIG)
+	{
+	uiMessagePrio = 100;
+	cpMessage[0] = (char)COMM_TRIG;
+	}
+	else if(iCommand == COMM_STOP)
+	{
+	uiMessagePrio = 120;
+	cpMessage[0] = (char)COMM_STOP;
+	}
+	else if(iCommand == COMM_MONI)
+	{
+	uiMessagePrio = 80;
+	cpMessage[0] = (char)COMM_MONI;
+	}
+	else if(iCommand == COMM_EXIT)
+	{
+	uiMessagePrio = 140;
+	cpMessage[0] = (char)COMM_EXIT;
+	}
+	else if (iCommand == COMM_REPLAY)
+	{
+		uiMessagePrio = 160;
+		cpMessage[0] = (char)COMM_REPLAY;
+	}
+	else if (iCommand == COMM_CONTROL)
+	{
+		uiMessagePrio = 180;
+		cpMessage[0] = (char)COMM_CONTROL;
+	}
+	else
+	{
+	util_error("ERR: Unknown command");
+	}
 
   if(cpData != NULL)
   {
     (void)strncat(&cpMessage[1],cpData,strlen(cpData));
+	//printf("Util message data: %s\n", cpData);
   }
 
   for(iIndex = 0; iIndex < MQ_NBR_QUEUES; ++iIndex)

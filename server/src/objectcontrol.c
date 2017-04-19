@@ -192,7 +192,7 @@ void objectcontrol_task()
     int recievedNewData = 0;
 
     #ifdef DEBUG
-
+/*
       struct timeval tvTime;
       gettimeofday(&tvTime, NULL);
       uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - 
@@ -223,8 +223,8 @@ void objectcontrol_task()
       vRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
 
       #ifdef DEBUG
-        printf("INF: Did we recieve new data from %s %d: %d\n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData);
-        fflush(stdout);
+      printf("INF: Did we recieve new data from %s %d: %d\n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData);
+       fflush(stdout);
       #endif
 
       if(recievedNewData)
@@ -241,7 +241,7 @@ void objectcontrol_task()
           ldm[iIndex].altitude,ldm[iIndex].speed,ldm[iIndex].heading,ldm[iIndex].drivedirection);
 
         #ifdef DEBUG
-          struct timeval tvTime;
+/*          struct timeval tvTime;
           gettimeofday(&tvTime, NULL);
           uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - 
             MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
@@ -305,6 +305,11 @@ void objectcontrol_task()
           vSendString(pcBuffer,&socket_fd[iIndex]);
         }
       }
+	else if(iCommand == COMM_REPLAY)
+	{
+			printf("INF: Object control REPLAY recevied string <%s>\n", pcRecvBuffer);
+			fflush(stdout);
+		}	
       else if(iCommand == COMM_EXIT)
       {
         iExit = 1;  
@@ -527,8 +532,8 @@ static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatComman
     bzero(pcCommand,10);
 
     #ifdef DEBUG
-      printf("INF: Sending: <HEBT>\n");
-      fflush(stdout);
+      //printf("INF: Sending: <HEBT>\n");
+      //fflush(stdout);
     #endif
 
     if(COMMAND_HEARBEAT_GO == tCommand)
@@ -541,8 +546,8 @@ static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatComman
     }
 
     #ifdef DEBUG
-      printf("INF: Sending: <%s>\n",pcCommand);
-      fflush(stdout);
+     // printf("INF: Sending: <%s>\n",pcCommand);
+     // fflush(stdout);
     #endif
 
     result = sendto(*sockfd,
@@ -578,8 +583,8 @@ static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNew
         else
         {
           #ifdef DEBUG
-            printf("INF: No data receive\n");
-            fflush(stdout);
+            //printf("INF: No data receive\n");
+            //fflush(stdout);
           #endif
         }
       }
@@ -587,8 +592,8 @@ static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNew
       {
         *recievedNewData = 1;
         #ifdef DEBUG
-          printf("INF: Received: <%s>\n",buffer);
-          fflush(stdout);
+          //printf("INF: Received: <%s>\n",buffer);
+          //fflush(stdout);
         #endif
       }
     } while(result > 0 );
