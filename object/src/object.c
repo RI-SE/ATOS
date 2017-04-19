@@ -43,6 +43,7 @@
 #define SAVED_TRAJECTORY_LINES 100
 #define PI                     acos(-1)
 #define DEBUG
+#define TIME_FROM_DRIVE_FILE 1
 
 /* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
@@ -60,8 +61,9 @@ int main(int argc, char *argv[])
   FILE *fp;
   char bFileName[6];
   char *bFileLine;
+  //char *bFileLine_ptr = bFileLine;
   size_t len;
-  int read;
+  size_t read;
   int monitor_socket_fd;
   int command_server_socket_fd;
   int command_com_socket_fd;
@@ -395,17 +397,25 @@ int main(int argc, char *argv[])
       printf("INF: Done handling incoming message\n");
 #endif
 
+
       /* Send monitor start */
       bzero(bMonitorBuffer, 256);
       strcpy(bMonitorBuffer, "MONR;");
 
-      gettimeofday(&tv, NULL);
+      if (TIME_FROM_DRIVE_FILE)
+	{
+	  sprintf(pcTimeString, "%s", "0");
+	}
+      else
+	{
+	  gettimeofday(&tv, NULL);
+	  
+	  unsigned long long msSinceEpochETSI = (unsigned long long) tv.tv_sec * 1000 + (unsigned long long) tv.tv_usec / 1000 - 
+	    MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
+	  
+	  sprintf(pcTimeString, "%llu", msSinceEpochETSI); 
+	}
 
-      unsigned long long msSinceEpochETSI = (unsigned long long) tv.tv_sec * 1000 + (unsigned long long) tv.tv_usec / 1000 - 
-	MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
-    
-      sprintf(pcTimeString, "%llu", msSinceEpochETSI); 
-      strcat(bMonitorBuffer,pcTimeString);
 
       static int sent_rows = 0;
       
@@ -508,21 +518,117 @@ int main(int argc, char *argv[])
 	  cal_lon = ((x*180)/(PI*earth_radius))*(1/(cos((PI/180)*(0.5*(ORIGIN_LATITUDE+cal_lat))))) + ORIGIN_LONGITUDE;
 	  cal_alt = z + ORIGIN_ALTITUDE;
       
-	  sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;3600;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,vel*100);
+	  sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;%.0f;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,vel*100,hdg*100);
 	  sent_rows++;
+	  bzero(pcTimeString, 256);
+	  sprintf(pcTimeString,"%.0f", time*100);
 	}
       else if (sent_rows == fileRows)
 	{
 	  bzero(pcPosition,256);
-	  sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;3600;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,vel*100);
+	  sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;%.0f;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,vel*100,hdg*100);
+	  bzero(pcTimeString, 256);
+	  sprintf(pcTimeString,"%.0f", time*100);
 	}
       else
 	{
-	  bzero(pcPosition,256);
-	  sprintf(pcPosition,";%.0lf;%.0lf;0;0;3600;0;",lat_start*10000000,lon_start*10000000);
+
+	  fseek(fp,fpos,0);
+	  newFileData = 0;
+	  while(newFileData != 1)
+	    {
+	      read = getline(&bFileLine, &len, fp);
+	      if (read < 0)
+		{
+		  if(errno != EAGAIN && errno != EWOULDBLOCK)
+		    {
+		      perror("ERR: Failed to read line in drive file");
+		      exit(1);
+		    }
+		  else
+		    {
+#ifdef DEBUG
+		      printf("INF: No data to read from drive file\n");
+		      fflush(stdout);
+#endif
+		    }
+		}
+	      else
+		newFileData = 1;
+	    }
+	  
+	  int l = 0;
+	  int li = 0;
+	  for(l; l <= len; l++){
+	    if(bFileLine[l] == ';'){
+	      bFileLine[l] = '\0';
+	      bzero(bLine,10);
+	      sscanf(&bFileLine[li],"%s",bLine);
+	      li = l+1;
+	      break;
+	    }
+	  }
+	  for(l; l <= len; l++){
+	    if(bFileLine[l] == ';'){
+	      bFileLine[l] = '\0';
+	      sscanf(&bFileLine[li],"%f",&time);
+	      li = l+1;
+	      break;
+	    }
+	  }
+	  for(l; l <= len; l++){
+	    if(bFileLine[l] == ';'){
+	      bFileLine[l] = '\0';
+	      sscanf(&bFileLine[li],"%lf",&x);
+	      li = l+1;
+	      break;
+	    }
+	  }
+	  for(l; l <= len; l++){
+	    if(bFileLine[l] == ';'){
+	      bFileLine[l] = '\0';
+	      sscanf(&bFileLine[li],"%lf",&y);
+	      li = l+1;
+	      break;
+	    }
+	  }
+	  for(l; l <= len; l++){
+	    if(bFileLine[l] == ';'){
+	      bFileLine[l] = '\0';
+	      sscanf(&bFileLine[li],"%lf",&z);
+	      li = l+1;
+	      break;
+	    }
+	  }
+	  
+	  for(l; l <= len; l++){
+	    if(bFileLine[l] == ';'){
+	      bFileLine[l] = '\0';
+	      sscanf(&bFileLine[li],"%f",&hdg);
+	      li = l+1;
+	      break;
+	    }
+	  }
+	  for(l; l <= len; l++){
+	    if(bFileLine[l] == ';'){
+	      bFileLine[l] = '\0';
+	      sscanf(&bFileLine[li],"%f",&vel);
+	      li = l+1;
+	      break;
+	    }
+	  }
+
+	  cal_lat = ((y*180)/(PI*earth_radius)) + ORIGIN_LATITUDE;
+	  cal_lon = ((x*180)/(PI*earth_radius))*(1/(cos((PI/180)*(0.5*(ORIGIN_LATITUDE+cal_lat))))) + ORIGIN_LONGITUDE;
+	  cal_alt = z + ORIGIN_ALTITUDE;
+      
+	  sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;%.0f;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,vel*100,hdg*100);
+	  
 	}
 
+      strcat(bMonitorBuffer,pcTimeString);
       strcat(bMonitorBuffer,pcPosition);
+
 #ifdef DEBUG
       printf("INF: Start send monitor message\n");
 #endif
