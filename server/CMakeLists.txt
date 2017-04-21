@@ -38,6 +38,6 @@ install (TARGETS DefaultVisualizationAdapter DESTINATION bin)
 install (TARGETS TEServer DESTINATION bin)
 
 # add linking to message queue
-target_link_libraries(util rt)
+target_link_libraries(util rt m)
 target_link_libraries(DefaultVisualizationAdapter util)
 target_link_libraries(TEServer util)
