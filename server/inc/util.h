@@ -57,6 +57,8 @@
 #define b	6356752.3142451794975639665996337	//b = (1-f)*a
 #define l	1e-12
 #define PI	3.141592653589793
+#define ORIGO_DISTANCE_CALC_ITERATIONS 14
+
 
 /* Calculation: 
   34 years between 1970 and 2004 
@@ -76,10 +78,18 @@
 
 typedef struct 
 {
-   double OrigoDistance;
-   int start_loc;
-   int used_space;
-   int free_space;
+	double Latitude;
+	double Longitude;
+	double OrigoDistance;
+	double x;
+	double y;
+	double z;
+	int CalcIterations;
+	double ForwardAzimuth1;
+	double ForwardAzimuth2;
+  double SyncTime;
+  double TrajectorDeviation;
+
 } ObjectPosition; 
 
 
@@ -98,7 +108,7 @@ int iCommSend(const int,const char*);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
 double UtilDegToRad(double Deg);
 double UtilRadToDeg(double Rad);
-
+double UtilFindTrajectoryPosition(ObjectPosition *OP);
 
 
 

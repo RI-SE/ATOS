@@ -27,6 +27,8 @@
 #define RECV_MESSAGE_BUFFER 1024
 #define VISUAL_SERVER_NAME  "localhost"
 #define VISUAL_SERVER_PORT  53250
+#define VISUAL_CONTROL_MODE 0
+#define VISUAL_REPLAY_MODE 1
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -46,20 +48,24 @@ static void vSendVisualization(int* sockfd,
   ------------------------------------------------------------*/
 int main(int argc, char *argv[])
 {
-  int visual_server;
-  struct sockaddr_in visual_server_addr;
-  char cpBuffer[RECV_MESSAGE_BUFFER];
+	int visual_server;
+	struct sockaddr_in visual_server_addr;
+	char cpBuffer[RECV_MESSAGE_BUFFER];
 
-  printf("DefaultVisualizationAdapter started\n");
-  fflush(stdout);
+	printf("DefaultVisualizationAdapter started\n");
+	fflush(stdout);
 
-  (void)iCommInit(IPC_RECV,MQ_VA,0);
+	(void)iCommInit(IPC_RECV,MQ_VA,0);
 
-  vConnectVisualizationChannel(&visual_server,&visual_server_addr);
+	vConnectVisualizationChannel(&visual_server,&visual_server_addr);
 
-  /* Listen for commands */
-  int iExit = 0;
-  int iCommand;
+	/* Listen for commands */
+	int iExit = 0;
+	int iCommand;
+
+	/* Execution mode*/
+	int VisualExecutionMode = VISUAL_CONTROL_MODE;
+
   while(!iExit)
   {
     bzero(cpBuffer,RECV_MESSAGE_BUFFER);
@@ -79,6 +85,20 @@ int main(int argc, char *argv[])
 
       vSendVisualization(&visual_server,&visual_server_addr,cpBuffer);
     }
+	else if(iCommand == COMM_REPLAY)
+	{
+		VisualExecutionMode = VISUAL_REPLAY_MODE;
+    #ifdef DEBUG
+    printf("Visualization in REPLAY mode: %s\n",cpBuffer);
+	 #endif
+  }
+	else if(iCommand == COMM_CONTROL)
+	{
+		VisualExecutionMode = VISUAL_CONTROL_MODE;
+		#ifdef DEBUG
+     printf("Visualization in CONTROL mode: %s\n", cpBuffer);
+    #endif
+	}
     else if(iCommand == COMM_EXIT)
     {
       iExit = 1;  

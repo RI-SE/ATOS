@@ -37,12 +37,14 @@
 #define TASK_PERIOD_MS 1
 #define HEARTBEAT_TIME_MS 10
 #define TIMESTAMP_BUFFER_LENGTH 20
+#define SPECIFIC_CHAR_THRESHOLD_COUNT 10  
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
 static void vCreateLogFolder(char logFolder[MAX_FILE_PATH]);
-static int vReadLine(FILE *fd, char *Buffer);
+static int ReadLogLine(FILE *fd, char *Buffer);
+static int CountFileRows(FILE *fd);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -106,6 +108,8 @@ void logger_task()
 	/* Execution mode*/
 	int LoggerExecutionMode = LOG_CONTROL_MODE;
 
+	int RowCount = 0;
+
 	while(!iExit)
 	{
 		bzero(pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
@@ -127,12 +131,17 @@ void logger_task()
 		{
 			LoggerExecutionMode = LOG_REPLAY_MODE;
 			printf("Logger in REPLAY mode <%s>\n", pcRecvBuffer);
-//			replayfd = fopen ("log/33/event.log", "r");
+			//replayfd = fopen ("log/33/event.log", "r");
 			replayfd = fopen (pcRecvBuffer, "r");
+			RowCount = CountFileRows(replayfd);
+			fclose(replayfd);
+			//replayfd = fopen ("log/33/event.log", "r");
+			replayfd = fopen (pcRecvBuffer, "r");
+			printf("Rows %d\n", RowCount);	
 			if(replayfd)
 			{			
-				vReadLine(replayfd, pcReadBuffer);//Just read first line
-				int status = 0;
+				ReadLogLine(replayfd, pcReadBuffer);//Just read first line
+				int SpecChars = 0, j=0;
 				char TimestampBuffer[TIMESTAMP_BUFFER_LENGTH];
 				int FirstIteration = 1;
 				char *src;			
@@ -140,8 +149,10 @@ void logger_task()
 				do
 				{			
 					bzero(pcReadBuffer,MQ_MAX_MESSAGE_LENGTH);			
-					status = vReadLine(replayfd, pcReadBuffer);
-					if(status)
+					SpecChars = ReadLogLine(replayfd, pcReadBuffer);
+					
+					j++;
+					if(SpecChars == SPECIFIC_CHAR_THRESHOLD_COUNT)
 					{				
 						/* Read to second ';' in row = 418571059920: 3 1;0;418571059920;577776566;127813082;0;0;3600;0; */			
 						src = strchr(pcReadBuffer, ';');
@@ -168,14 +179,33 @@ void logger_task()
 						bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);			
 						//strcpy(pcSendBuffer, "MONR;");					
 						strcat(pcSendBuffer, src+1);
-						//printf("Send buffer:<%s>\n", pcSendBuffer);
 						(void)iCommSend(COMM_MONI, pcSendBuffer);
 						FirstIteration = 0;
 						OldTimestamp = NewTimestamp;
-					} 
+					};
+					printf("%d:%d:%d<%s>\n", RowCount, j, SpecChars, pcSendBuffer);	
+
+					/*
+					(void)iCommRecv(&iCommand,pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
+
+					if(iCommand == COMM_STOP)
+					{
+						printf("Replay stopped by user.\n");
+						(void)iCommSend(COMM_CONTROL, NULL);
+					}*/
 				
-				}while(status);
-			} else printf("Failed to open file:%s\n",  pcRecvBuffer);
+				} while(--RowCount >= 0);
+
+			} 
+			else
+			{ 
+				printf("Failed to open file:%s\n",  pcRecvBuffer);
+			}
+
+			printf("Replay done.\n");
+			//(void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
+			(void)iCommSend(COMM_CONTROL, NULL);
+
 		}
 		else if(iCommand == COMM_CONTROL)
 		{
@@ -184,7 +214,9 @@ void logger_task()
 		}
 		else if(iCommand == COMM_EXIT)
 		{
-			printf("Logger exit\n");		  
+			#ifdef DEBUG
+				printf("Logger exit\n");
+			#endif		  
 			iExit = 1;  
 		}
 		else
@@ -207,24 +239,39 @@ void logger_task()
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
-int vReadLine(FILE *fd, char *Buffer)
+
+int CountFileRows(FILE *fd)
 {
-	char c;
-	int status;
+	int c = 0;
+	int rows = 0;
 
-	do{ // read one line
+	while(c != EOF)
+	{
 		c = fgetc(fd);
-		if(c != EOF && c != '\n')
-		{
-		 *Buffer = (char)c;
-		 Buffer++;
-		}
-	}while(c != EOF && c != '\n');
-	
-	if(c == EOF) status = 0;
-	else status = 1;
+		if(c == '\n') rows++;
+	}
 
-	return status;
+	return rows;
+}
+
+
+int ReadLogLine(FILE *fd, char *Buffer)
+{
+	int c = 0;
+	int SpecChars = 0;
+
+	while( (c != EOF) && (c != '\n') )
+	{
+		c = fgetc(fd);
+		if(c != '\n')
+		{
+			*Buffer = (char)c;
+		 	Buffer++;
+		 	if(c == ';' || c == ':') SpecChars++;
+		} 
+	}
+
+	return SpecChars;
 }
 
 

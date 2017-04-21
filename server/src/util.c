@@ -87,9 +87,10 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue)
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP)
 {
 
-	double f, d, P1LatRad, P1LongRad, P2LatRad, P2LongRad, U1, U2, L, lambda, sins, coss, sigma, sinalpha, cosalpha2, cossm, C, lambdaprim, u2, A, B, dsigma, s, alpha1, alpha2;
+	double f, d, P1LatRad, P1LongRad, P2LatRad, P2LongRad, U1, U2, L, lambda, sins, coss, sigma, sinalpha, cosalpha2, cossm, C, lambdaprim, u2, A, B, dsigma, s, alpha1, alpha2, cosU2, sinlambda, cosU1, sinU1, sinU2, coslambda;
 
-	
+	OP->Latitude = P2Lat;
+	OP->Longitude = P2Long;	
 	P1LatRad = UtilDegToRad(P1Lat);
 	P1LongRad = UtilDegToRad(P1Long);
 	P2LatRad = UtilDegToRad(P2Lat);
@@ -103,10 +104,12 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 	lambdaprim = lambda;	
 	//printf("Lambdadiff: %1.15f\n", fabs(lambda-lambdaprim));
 	
-	int i = 10;
+	int i = ORIGO_DISTANCE_CALC_ITERATIONS;
+	OP->CalcIterations = 0;	
 	do
 	{
 		sins = sqrt( pow((cos(U2)*sin(lambda)),2) + pow((cos(U1)*sin(U2) - sin(U1)*cos(U2)*cos(lambda)),2) );
+		if (sins==0) return 0; //co-incident points
 		coss = sin(U1)*sin(U2) + cos(U1)*cos(U2)*cos(lambda);
 		sigma = atan(sins/coss);	
 		sinalpha = (cos(U1)*cos(U2)*sin(lambda))/sins;
@@ -115,21 +118,36 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 		C = (f/16) * cosalpha2 * ( 4 + f*(4 - 3 * cosalpha2) );
 		lambdaprim = lambda;		
 		lambda = L + (1-C)*f*sinalpha*(sigma+C*sins*(cossm + C*coss*(-1+ 2*pow(cossm,2))));
-		i ++;
+		OP->CalcIterations ++;
 		//printf("Lambdadiff: %1.15f\n", fabs(lambda-lambdaprim));
 	
 	} while(fabs(lambda-lambdaprim) > l  && --i > 0);
 
-	if (i == 0) printf("Failed to converge!\n");
+	if (i == 0)
+	{
+		printf("Failed to converge!\n");
+		OP->OrigoDistance = -1;
+	}
+	else
+	{
+		u2 = cosalpha2*((pow(a,2) - pow(b,2))/pow(b,2));
+		A = 1 +(u2/16384)*(4096+u2*(-768+u2*(320-175*u2)));
+		B = (u2/1024)*(256 + u2*(-128*u2*(74-47*u2)));
+		dsigma = B*sins*(cossm+0.25*B*(coss*(-1+2*pow(cossm,2)) - (1/6)*B*cossm*(-3+4*pow(sins,2))*(-3+4*pow(cossm,2))));	
+		s = b*A*(sigma-dsigma);
+		OP->OrigoDistance = s;
 
-	u2 = cosalpha2*((pow(a,2) - pow(b,2))/pow(b,2));
-	A = 1 +(u2/16384)*(4096+u2*(-768+u2*(320-175*u2)));
-	B = (u2/1024)*(256 + u2*(-128*u2*(74-47*u2)));
-	dsigma = B*sins*(cossm+0.25*B*(coss*(-1+2*pow(cossm,2)) - (1/6)*B*cossm*(-3+4*pow(sins,2))*(-3+4*pow(cossm,2))));	
-	s = b*A*(sigma-dsigma);
-	
-	OP->OrigoDistance = s;
+		cosU2 = cos(U2);
+		sinU2 = sin(U2); 
+		cosU1 = cos(U1);
+		sinU1 = sin(U1); 
+		sinlambda = sin(lambda);
+		coslambda = cos(lambda);
 
+		OP->ForwardAzimuth1 = atan2(cosU2*sinlambda,(cosU1*sinU2-sinU1*cosU2*coslambda));
+		OP->ForwardAzimuth2 = atan2(cosU1*sinlambda,(-1*sinU1*cosU2+cosU1*sinU2*coslambda));
+
+	}
 	return s;
 }
 
@@ -138,6 +156,13 @@ double UtilDegToRad(double Deg){return (PI*Deg/180);}
 double UtilRadToDeg(double Rad){return (180*Rad/PI);}
 
 
+double UtilFindTrajectoryPosition(ObjectPosition *OP)
+{
+
+
+
+  return 0;
+}
 
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue)
 {

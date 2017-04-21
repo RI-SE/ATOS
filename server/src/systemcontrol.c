@@ -43,9 +43,9 @@ typedef enum {
 #define SYSTEM_CONTROL_COMMAND_MAX_LENGTH 	10
 
 typedef enum {
-   idle_0, status_0, arm_0, start_0, stop_0, replay_1, control_0, exit_0, cx_0, cc_0, pt_0, nocommand
+   idle_0, status_0, arm_0, start_0, stop_0, replay_1, control_0, exit_0, cx_0, cc_0, pt_0, ftp_1, nocommand
 } SystemControlCommand_t;
-const char* SystemControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "start_0", "stop_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0", "pt_0"};
+const char* SystemControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "start_0", "stop_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0", "pt_0", "ftp_1"};
 SystemControlCommand_t PreviousSystemControlCommand = nocommand;
 char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_COUNT];
 char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
@@ -62,7 +62,7 @@ void systemcontrol_task()
 	state_t server_state = SERVER_STATUS_INIT;
 	SystemControlCommand_t SystemControlCommand = idle_0;
 
-	int CommandArgCount, CurrentCommandArgCount;
+	int CommandArgCount=0, CurrentCommandArgCount=0;
 	char pcBuffer[IPC_BUFFER_SIZE];
 	char inchr;
 	struct timeval tvTime;
@@ -136,9 +136,9 @@ void systemcontrol_task()
 					}
 					else
 					{
-					(void)iCommSend(COMM_REPLAY, pcBuffer);
-					printf("INF: System control sending REPLAY on IPC <%s>\n", pcBuffer);
-					fflush(stdout);
+						(void)iCommSend(COMM_REPLAY, pcBuffer);
+						printf("INF: System control sending REPLAY on IPC <%s>\n", pcBuffer);
+						fflush(stdout);
 					}
 					SystemControlCommand = idle_0;
 					CurrentCommandArgCount = 0;
@@ -173,8 +173,14 @@ void systemcontrol_task()
 			break;
 			case pt_0:
 				SystemControlCommand = idle_0;
-				printf("d = 2.297 m, calc d = %4.3f m\n", UtilCalcPositionDelta(57.6626302333,12.1056869167,57.6626269972, 12.1057250694, &OP));
-				printf("d = 2.297 m, calc d = %4.3f m\n", OP.OrigoDistance);
+//				UtilCalcPositionDelta(57.6626302333,12.1056869167,57.6626269972, 12.1057250694, &OP);
+				UtilCalcPositionDelta(57.7773716086,12.7804629583,57.7773717286, 12.7804630683, &OP);
+				printf("meas d = 2.297 m, calc d = %4.3f m, iterations = %d\n", OP.OrigoDistance, OP.CalcIterations);
+				printf("Latitude = %3.10f \n", OP.Latitude);
+				printf("Longitude = %3.10f\n", OP.Longitude);
+				printf("ForwardAzimuth1 = %3.10f \n", OP.ForwardAzimuth1);
+				printf("ForwardAzimuth2 = %3.10f\n", OP.ForwardAzimuth2);
+
 				//printf("d = 0.590 m, calc d = %4.3f m\n", UtilCalcPositionDelta(57.6626340000,12.1056979028,57.6626332417, 12.1057076556));
 				//printf("d = 2.643 m, calc d = %4.3f m\n", UtilCalcPositionDelta(57.6626378750,12.1056752083,57.6626339472, 12.1057190472));
 				//printf("d = 1.901 m, calc d = %4.3f m\n", UtilCalcPositionDelta(57.6626295889,12.1056851083,57.6626267528, 12.1057165278));
@@ -182,6 +188,35 @@ void systemcontrol_task()
 				
 
 			break;
+			case ftp_1:
+
+				if(CurrentCommandArgCount == 1)
+				{
+					if(!strcmp(pcBuffer,"-help"))
+					{
+						printf("-----FIND TRAJECTORY POSITION-----\n");
+						printf("Find trajectory position finds the best position in a trajectory file. The function returns a struct with the error and time until reaching a specific position in the trajectory.\n");
+						printf("Arguments: 4\n");
+						printf("Syntax: ftp file x y z\n");
+						printf("Ex: ftp traj/traj.txt 45.568 -80.445 0\n");
+					}
+					SystemControlCommand = idle_0;
+					CurrentCommandArgCount = 0;
+				}
+
+				if(CurrentCommandArgCount == CommandArgCount)
+				{
+					OP.x = 45.568;
+					OP.y = -80.445;
+					OP.z = 0;
+					UtilFindTrajectoryPosition(&OP);
+					
+					
+					SystemControlCommand = idle_0;
+					CurrentCommandArgCount = 0;
+				} else CurrentCommandArgCount ++;
+			break;
+			
 			default:
 
 			break;
