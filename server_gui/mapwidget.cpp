@@ -19,6 +19,7 @@
 #include <math.h>
 #include <qmath.h>
 #include <QDir>
+#include <QTime>
 
 #include "mapwidget.h"
 #include "utility.h"
@@ -217,10 +218,10 @@ MapWidget::MapWidget(QWidget *parent) :
         qDebug() << "UDP visualization not able to start";
     }
 
-    mWebSocket = new QWebSocket(QString(),QWebSocketProtocol::VersionLatest,this);
-    connect(mWebSocket, SIGNAL(connected()), this, SLOT(onConnected()));
-    connect(mWebSocket, SIGNAL(disconnected()), mWebSocket, SLOT(close()));
-    mWebSocket->open(QUrl(QStringLiteral("ws://localhost:53251")));
+    //mWebSocket = new QWebSocket(QString(),QWebSocketProtocol::VersionLatest,this);
+    //connect(mWebSocket, SIGNAL(connected()), this, SLOT(onConnected()));
+    //connect(mWebSocket, SIGNAL(disconnected()), mWebSocket, SLOT(close()));
+    //mWebSocket->open(QUrl(QStringLiteral("ws://localhost:53251")));
 
     //QList<QPointF> trajTemp;
     QDir dir("./traj/");
@@ -301,15 +302,15 @@ MapWidget::MapWidget(QWidget *parent) :
 
 MapWidget::~MapWidget()
 {
-    mWebSocket->close();
+    //mWebSocket->close();
 }
 
 void MapWidget::onConnected()
 {
     qDebug() << "WebSocket connected";
 
-    connect(mWebSocket, SIGNAL(binaryMessageReceived(const QByteArray &)), this, SLOT(onBinaryMessageReceived(const QByteArray &)));
-    connect(mWebSocket, SIGNAL(textMessageReceived(const QString &)), this, SLOT(onTextMessageReceived(const QString &)));
+  //  connect(mWebSocket, SIGNAL(binaryMessageReceived(const QByteArray &)), this, SLOT(onBinaryMessageReceived(const QByteArray &)));
+    //connect(mWebSocket, SIGNAL(textMessageReceived(const QString &)), this, SLOT(onTextMessageReceived(const QString &)));
 }
 
 void MapWidget::onBinaryMessageReceived(const QByteArray &message)
@@ -321,10 +322,12 @@ void MapWidget::onBinaryMessageReceived(const QByteArray &message)
 
 void MapWidget::onTextMessageReceived(const QString &message)
 {
-    qDebug() << "Message received:" << message;
-    QByteArray textTemp(message.toUtf8());
-    displayMessage(textTemp);
+    (void)message;
+//    qDebug() << "Message received:" << message;
+//    QByteArray textTemp(message.toUtf8());
+//    displayMessage(textTemp);
 }
+
 
 void MapWidget::readPendingDatagrams()
 {

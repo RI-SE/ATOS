@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : objectcontrol.c
-  -- Author      : Karl-Johan Ode
+  -- Author      : Karl-Johan Ode, Sebastian Loh Lindholm
   -- Description : CHRONOS
   -- Purpose     :
   -- Reference   :
@@ -305,21 +305,21 @@ void objectcontrol_task()
           vSendString(pcBuffer,&socket_fd[iIndex]);
         }
       }
-	else if(iCommand == COMM_REPLAY)
-	{
-			printf("INF: Object control REPLAY recevied string <%s>\n", pcRecvBuffer);
-			fflush(stdout);
-		}	
+    	else if(iCommand == COMM_REPLAY)
+    	{
+  			printf("INF: Object control REPLAY recevied string <%s>\n", pcRecvBuffer);
+  			fflush(stdout);
+  		}	
       else if(iCommand == COMM_EXIT)
       {
         iExit = 1;  
       }
       else
       {
-        #ifdef DEBUG
-          printf("Unhandled command in object control\n");
-          fflush(stdout);
-        #endif
+          #ifdef DEBUG
+            printf("Unhandled command in object control\n");
+            fflush(stdout);
+          #endif
       }
     }
 

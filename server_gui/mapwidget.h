@@ -29,7 +29,7 @@
 #include <QInputDialog>
 #include <QTimer>
 #include <QUdpSocket>
-#include <QWebSocket>
+//#include <QWebSocket>
 
 #include "locpoint.h"
 #include "carinfo.h"
@@ -181,7 +181,7 @@ private:
     double mTraceMinSpaceGps;
 
     QUdpSocket *mUdpSocket;
-    QWebSocket *mWebSocket;
+    //QWebSocket *mWebSocket;
 
     void updateClosestInfoPoint();
     int drawInfoPoints(QPainter &painter, const QList<LocPoint> &pts,
