@@ -2,8 +2,8 @@
   -- Copyright   : (C) 2016 CHRONOS project
   --------------------------------------------------------------------------------
   -- File        : object.c
-  -- Author      : Karl-Johan Ode
-  -- Description : CHRONOS object
+  -- Author      : Henrik Eriksson
+  -- Description : CHRONOS software prototype object
   -- Purpose     :
   -- Reference   :
   ------------------------------------------------------------------------------*/
@@ -115,7 +115,8 @@ int main(int argc, char *argv[])
   unsigned int safety_port = SAFETY_CHANNEL_PORT;
   unsigned int control_port = CONTROL_CHANNEL_PORT;
   int optval = 1;
-
+  unsigned long long msSinceEpochETSI = 0;
+  
   struct timeval tv;
   
   if ( !( (argc == 1) || (argc == 4) || (argc == 6))){
@@ -402,6 +403,7 @@ int main(int argc, char *argv[])
       bzero(bMonitorBuffer, 256);
       strcpy(bMonitorBuffer, "MONR;");
 
+      bzero(pcTimeString, 256);
       if (TIME_FROM_DRIVE_FILE)
 	{
 	  sprintf(pcTimeString, "%s", "0");
@@ -410,7 +412,7 @@ int main(int argc, char *argv[])
 	{
 	  gettimeofday(&tv, NULL);
 	  
-	  unsigned long long msSinceEpochETSI = (unsigned long long) tv.tv_sec * 1000 + (unsigned long long) tv.tv_usec / 1000 - 
+	  msSinceEpochETSI = (unsigned long long) tv.tv_sec * 1000 + (unsigned long long) tv.tv_usec / 1000 - 
 	    MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
 	  
 	  sprintf(pcTimeString, "%llu", msSinceEpochETSI); 
@@ -520,15 +522,42 @@ int main(int argc, char *argv[])
       
 	  sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;%.0f;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,vel*100,hdg*100);
 	  sent_rows++;
+	  
 	  bzero(pcTimeString, 256);
-	  sprintf(pcTimeString,"%.0f", time*100);
+	  if (TIME_FROM_DRIVE_FILE)
+	    {
+	      sprintf(pcTimeString, "%.0f", time*100);
+	    }
+	  else
+	    {
+	      gettimeofday(&tv, NULL);
+	      
+	      msSinceEpochETSI = (unsigned long long) tv.tv_sec * 1000 + (unsigned long long) tv.tv_usec / 1000 - 
+		MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
+	      
+	      sprintf(pcTimeString, "%llu", msSinceEpochETSI); 
+	    }
+
 	}
       else if (sent_rows == fileRows)
 	{
 	  bzero(pcPosition,256);
 	  sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;%.0f;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,vel*100,hdg*100);
+	  
 	  bzero(pcTimeString, 256);
-	  sprintf(pcTimeString,"%.0f", time*100);
+	  if (TIME_FROM_DRIVE_FILE)
+	    {
+	      sprintf(pcTimeString, "%.0f", time*100);
+	    }
+	  else
+	    {
+	      gettimeofday(&tv, NULL);
+	      
+	      msSinceEpochETSI = (unsigned long long) tv.tv_sec * 1000 + (unsigned long long) tv.tv_usec / 1000 - 
+		MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
+	      
+	      sprintf(pcTimeString, "%llu", msSinceEpochETSI); 
+	    }
 	}
       else
 	{
