@@ -331,13 +331,16 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, float 
   }
 
   i = 0;
-  int PositionFound = -1;
-  while(i < j && PositionFound == -1)
+  int PositionFound = -1, Init = 1;
+  double PrevDiff = 0;
+  while(i < j /*&& PositionFound == -1*/)
   {
-
     Diff = fabs(OP->SpaceTimeArr[SampledPoints[i]].Time - CurrentTime);
     //printf("Diff %4.3f\n", Diff);
-    if(Diff < MAX_TIME_DIFF) PositionFound = SampledPoints[i];
+    //if(Diff < MAX_TIME_DIFF) PositionFound = SampledPoints[i];
+    if(Diff < PrevDiff && Init == 0) PositionFound = SampledPoints[i];
+    Init = 0;
+    PrevDiff = Diff;
     i ++;
   }
 
