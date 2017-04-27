@@ -61,7 +61,7 @@
 #define TRAJECTORY_LINE_LENGTH 100
 #define NUMBER_CHAR_LENGTH 20
 
-#define MAX_TIME_DIFF 0.2
+#define MAX_TIME_DIFF 5.0
 #define SYNC_POINT_BUFFER 30
 
 
@@ -103,10 +103,13 @@ typedef struct
 	double ForwardAzimuth2;
   int TrajectoryPositionCount;
   int SyncIndex;
-  int CurrentTrajectoryIndex;
+  int BestFoundTrajectoryIndex;
   float TimeToSyncPoint;
   float* SpaceArr;
   float* TimeArr;
+  float CurrentAltitude;
+  float InitialAltitude;
+  float ReferenceAltitude;
   SpaceTime* SpaceTimeArr;
 } ObjectPosition; 
 
@@ -137,6 +140,7 @@ float UtilCalculateTimeToSync(ObjectPosition *OP);
 
 int UtilCountFileRows(FILE *fd);
 int UtilReadLineCntSpecChars(FILE *fd, char *Buffer);
+char UtilGetch();
 
 
 

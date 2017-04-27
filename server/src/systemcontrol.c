@@ -214,7 +214,6 @@ void systemcontrol_task()
 
 				if(CurrentCommandArgCount == CommandArgCount)
 				{
-					
 					FILE *Trajfd;
   					Trajfd = fopen ("traj/192.168.0.1", "r");
     				OP.TrajectoryPositionCount = UtilCountFileRows(Trajfd) - 1;
@@ -225,21 +224,31 @@ void systemcontrol_task()
     				OP.SpaceArr = SpaceArr;
 					OP.TimeArr = TimeArr;
 					OP.SpaceTimeArr = SpaceTimeArr;
-					UtilCalcPositionDelta(57.7773716086,12.7804629583, 57.7773620, 12.7819188, &OP); //1
-					//UtilCalcPositionDelta(57.7773716086,12.7804629583,57.7776699,12.7808555, &OP); //2
+					//UtilCalcPositionDelta(57.7773716086,12.7804629583, 57.7773620, 12.7819188, &OP); //1
+					UtilCalcPositionDelta(57.7773716086,12.7804629583,57.7776699,12.7808555, &OP); //2
 					//UtilCalcPositionDelta(57.7773716086,12.7804629583,57.7776528,12.7812795, &OP); //3
-					printf("OrigoDistance = %4.3f\n", OP.OrigoDistance);
+					//printf("OrigoDistance = %4.3f\n", OP.OrigoDistance);
 					UtilPopulateSpaceTimeArr(&OP, "traj/192.168.0.1");
 					UtilSetSyncPoint(&OP, 60.039, -25.547, 0, 0);
-				
-					UtilFindCurrentTrajectoryPosition(&OP, 0, 35.7, 0.2);  //1
-					//UtilFindCurrentTrajectoryPosition(&OP, 0, 15.05, 0.2);	//2
-					//UtilFindCurrentTrajectoryPosition(&OP, 0, 26.6, 0.2);	//3
-					if(OP.CurrentTrajectoryIndex > -1 && OP.SyncIndex > -1)
-					{	
-						printf("Time to sync point = %4.3f s\n", UtilCalculateTimeToSync(&OP)); 
-					}
-				
+					if (OP.SyncIndex > -1)
+					{
+						printf("Sync point found=%4.3f, Time=%4.3f, Index=%d\n", OP.SpaceArr[OP.SyncIndex], OP.TimeArr[OP.SyncIndex], OP.SyncIndex);
+						double CurrentTime = 15.1;				
+						//UtilFindCurrentTrajectoryPosition(&OP, 0, 30.9, 0.2);  //1
+						UtilFindCurrentTrajectoryPosition(&OP, 0, CurrentTime, 0.2);	//2
+						//UtilFindCurrentTrajectoryPosition(&OP, 0, 26.6, 0.2);	//3
+						if(OP.BestFoundTrajectoryIndex > -1 && OP.SyncIndex > -1)
+						{	
+						    printf("Current origo distance=%4.3f m\n", OP.OrigoDistance);
+						    printf("Matched origo distance=%4.3f m\n", OP.SpaceArr[OP.BestFoundTrajectoryIndex]);
+						    printf("Distance error=%4.3f m\n", OP.OrigoDistance - OP.SpaceArr[OP.BestFoundTrajectoryIndex]);
+						    printf("Current time=%4.3f s\n", CurrentTime);
+						    printf("Expected time=%4.3f s (index=%d)\n", OP.TimeArr[OP.BestFoundTrajectoryIndex], OP.BestFoundTrajectoryIndex);
+						    printf("Time error=%4.3f s\n", CurrentTime - OP.TimeArr[OP.BestFoundTrajectoryIndex]);
+							printf("Time to sync point = %4.3f s\n", fabs(UtilCalculateTimeToSync(&OP) - (CurrentTime - OP.TimeArr[OP.BestFoundTrajectoryIndex]))); 
+						} else printf("Failed to find current position in trajectory\n");
+					
+					} else printf("Failed to find sync point!\n");;
 					SystemControlCommand = idle_0;
 					CurrentCommandArgCount = 0;
 				} else CurrentCommandArgCount ++;
