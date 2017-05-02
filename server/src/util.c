@@ -125,7 +125,7 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 
 	if (i == 0)
 	{
-		printf("Failed to converge!\n");
+		//printf("Failed to converge!\n");
 		OP->OrigoDistance = -1;
 	}
 	else
@@ -145,9 +145,13 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 		coslambda = cos(lambda);
 
 		OP->ForwardAzimuth1 = atan2(cosU2*sinlambda,(cosU1*sinU2-sinU1*cosU2*coslambda));
-		OP->ForwardAzimuth2 = atan2(cosU1*sinlambda,(-1*sinU1*cosU2+cosU1*sinU2*coslambda));
-    OP->x = s*cos(OP->ForwardAzimuth1 - OP->ForwardAzimuth2);
-    OP->y = s*sin(OP->ForwardAzimuth1 - OP->ForwardAzimuth2);
+		OP->ForwardAzimuth2 = atan2(cosU1*sinlambda,(sinU1*cosU2*-1+cosU1*sinU2*coslambda));
+    //OP->x = s*cos(OP->ForwardAzimuth1 - OP->ForwardAzimuth2);
+    //OP->y = s*sin(OP->ForwardAzimuth1 - OP->ForwardAzimuth2);
+    //OP->x = s*cos(OP->ForwardAzimuth1 - OP->ForwardAzimuth2);
+    //OP->y = s*sin(OP->ForwardAzimuth1);
+    OP->y = s*sin(P2LongRad-P1LongRad)*cos(P1LatRad);
+
 
 	}
 	return s;
