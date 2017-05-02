@@ -1,9 +1,0 @@
-#!/bin/bash
-# script to clean environment
-
-echo "Cleaning..."
-rm /dev/mqueue/*
-kill $(pidof TEServer)
-pkill -f "DefaultVisualiz"
-echo "Cleaning done."
-

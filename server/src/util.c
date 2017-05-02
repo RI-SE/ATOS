@@ -146,6 +146,8 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 
 		OP->ForwardAzimuth1 = atan2(cosU2*sinlambda,(cosU1*sinU2-sinU1*cosU2*coslambda));
 		OP->ForwardAzimuth2 = atan2(cosU1*sinlambda,(-1*sinU1*cosU2+cosU1*sinU2*coslambda));
+    OP->x = s*cos(OP->ForwardAzimuth1 - OP->ForwardAzimuth2);
+    OP->y = s*sin(OP->ForwardAzimuth1 - OP->ForwardAzimuth2);
 
 	}
 	return s;
@@ -156,13 +158,268 @@ double UtilDegToRad(double Deg){return (PI*Deg/180);}
 double UtilRadToDeg(double Rad){return (180*Rad/PI);}
 
 
-double UtilFindTrajectoryPosition(ObjectPosition *OP)
+int UtilPopulateSpaceTimeArr(ObjectPosition *OP, char* TrajFile)
 {
 
+  FILE *Trajfd;
+  int Rows, j = 0;
+  char TrajRow[TRAJECTORY_LINE_LENGTH];
 
+  Trajfd = fopen (TrajFile, "r");
+  
+  if(Trajfd)
+  {
+    Rows = OP->TrajectoryPositionCount;
+    //printf("Rows = %d\n", Rows);
+    double x, y, z;
+    float t;
+    char ValueStr[NUMBER_CHAR_LENGTH];
+    char* src1; char* src2; 
+    do
+    {
+      bzero(TrajRow,TRAJECTORY_LINE_LENGTH);
+      if( UtilReadLineCntSpecChars(Trajfd, TrajRow) == 11)
+      { 
+        bzero(ValueStr, NUMBER_CHAR_LENGTH);
+        src1 = strchr(TrajRow, ';');
+        src2 = strchr(src1+1, ';');
+        strncpy(ValueStr, src1+1, (uint64_t)src2 - (uint64_t)src1);
+        t = atof(ValueStr);
+        
+        bzero(ValueStr, NUMBER_CHAR_LENGTH);
+        src1 = strchr(src2, ';');
+        src2 = strchr(src1+1, ';');
+        strncpy(ValueStr, src1+1, (uint64_t)src2 - (uint64_t)src1);
+        x = atof(ValueStr);
+        
+        bzero(ValueStr, NUMBER_CHAR_LENGTH);
+        src1 = strchr(src2, ';');
+        src2 = strchr(src1+1, ';');
+        strncpy(ValueStr, src1+1, (uint64_t)src2 - (uint64_t)src1);
+        y = atof(ValueStr);
+        
+        /*
+        bzero(ValueStr, NUMBER_CHAR_LENGTH);
+        src1 = strchr(src2, ';');
+        src2 = strchr(src1+1, ';');
+        strncpy(ValueStr, src1+1, (uint64_t)src2 - (uint64_t)src1);
+        z = atof(ValueStr);
+        */
+
+        OP->SpaceArr[j]= (float)sqrt(pow(x,2) + pow(y,2));
+        OP->TimeArr[j]= (float)t;
+
+        OP->SpaceTimeArr[j].Index = j;
+        OP->SpaceTimeArr[j].Time = (float)t;
+        OP->SpaceTimeArr[j].OrigoDistance = (float)sqrt(pow(x,2) + pow(y,2) + pow(z,2));
+        //printf("t = %5.3f\n", OP->TimeArr[j]);
+        //printf("t = %5.3f\n", OP->TimeArr[j]);
+        j ++;
+      }
+      
+
+    } while (--Rows >= 0 /*j < 10*/);
+
+    UtilSortSpaceTimeAscending(OP);
+    
+    /*for(int g=0; g < OP->TrajectoryPositionCount; g ++)
+    {
+      printf("OrigoDistance=%4.3f, Time=%4.3f, Index=%d\n", OP->SpaceTimeArr[g].OrigoDistance, OP->SpaceTimeArr[g].Time, OP->SpaceTimeArr[g].Index);
+     }
+    */  
+
+    fclose(Trajfd);
+  } 
+  else
+  { 
+    printf("Failed to open file:%s\n",  TrajFile);
+  }
 
   return 0;
 }
+
+int UtilSetSyncPoint(ObjectPosition *OP, double x, double y, double z, double time)
+{
+
+  int i = 0;
+  int Gate1Reached = 0, Gate2Reached = 0;
+  float R = (float)sqrt(pow(x,2) + pow(y,2));
+  while(i < (OP->TrajectoryPositionCount-1) && Gate1Reached == 0)
+  {
+      
+      if( OP->SpaceArr[i] == R)
+      {
+        Gate1Reached = 1;
+        OP->SyncIndex = i;
+        //printf("Sync point found=%4.3f, Time=%4.3f, Index=%d\n", OP->SpaceArr[i], OP->TimeArr[i], i);
+       } 
+      else 
+      {
+        OP->SyncIndex = -1;
+      }
+     
+      i ++; 
+  }
+
+}
+
+float UtilCalculateTimeToSync(ObjectPosition *OP)
+{
+  
+  float t = OP->TimeArr[OP->SyncIndex] - OP->TimeArr[OP->BestFoundTrajectoryIndex];
+  OP->TimeToSyncPoint = t;
+  return t;
+}
+
+
+
+int UtilSortSpaceTimeAscending(ObjectPosition *OP)
+{
+    int i, j, index;
+    float r,t;
+    for (i = 0; i < OP->TrajectoryPositionCount; ++i)
+    {
+        for (j = i + 1; j < OP->TrajectoryPositionCount; ++j)
+        {
+            if (OP->SpaceTimeArr[i].OrigoDistance > OP->SpaceTimeArr[j].OrigoDistance)
+            {
+                index = OP->SpaceTimeArr[i].Index;
+                r = OP->SpaceTimeArr[i].OrigoDistance;
+                t = OP->SpaceTimeArr[i].Time;
+                OP->SpaceTimeArr[i].Index = OP->SpaceTimeArr[j].Index;
+                OP->SpaceTimeArr[i].OrigoDistance = OP->SpaceTimeArr[j].OrigoDistance;
+                OP->SpaceTimeArr[i].Time = OP->SpaceTimeArr[j].Time;
+                OP->SpaceTimeArr[j].Index = index;
+                OP->SpaceTimeArr[j].OrigoDistance = r;
+                OP->SpaceTimeArr[j].Time = t;
+            }
+        }
+    }
+}
+
+
+int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, float CurrentTime, float DistanceThreshold)
+{
+
+  int i = StartIndex, j=0;
+  int Gate1Reached = 0, Gate2Reached = 0, SampledSpaceIndex[SYNC_POINT_BUFFER];
+  double Diff;
+  
+  while(i < (OP->TrajectoryPositionCount-1) && Gate2Reached == 0)
+  {
+      Diff = fabs(OP->SpaceTimeArr[i].OrigoDistance - OP->OrigoDistance);
+      
+      if( Diff < DistanceThreshold  && Gate1Reached == 0)
+      {
+        Gate1Reached = 1;
+      }
+
+      if(Diff > DistanceThreshold  && Gate1Reached == 1)
+      {
+        Gate2Reached = 1;
+      }
+
+      if(Gate1Reached == 1)
+      {
+          if(i > SYNC_POINT_BUFFER-1)
+          {
+            SampledSpaceIndex[j] = i;
+            j++;
+            //printf("OrigoDistance=%4.3f, Time=%4.3f, Index=%d\n", OP->SpaceTimeArr[i].OrigoDistance, OP->SpaceTimeArr[i].Time, OP->SpaceTimeArr[i].Index);
+          } else printf("Sync point buffer overrun.\n");
+      }
+
+   i ++; 
+  }
+
+  i = 0;
+  int PositionFound = -1, kc = 0;
+  int SampledTimeIndex[SYNC_POINT_BUFFER];
+  while(i < j)
+  {
+    Diff = fabs(OP->SpaceTimeArr[SampledSpaceIndex[i]].Time - CurrentTime);
+    //printf("Diff1 %4.3f\n", Diff);
+    if(Diff < MAX_TIME_DIFF)
+    { 
+      SampledTimeIndex[kc] = SampledSpaceIndex[i];
+      kc ++;
+    }
+    i ++;
+  }
+
+  i= 0;
+  int Init = 1;
+  double PrevDiff = 0;
+  while(i < kc)
+  {
+  
+    if(Init == 1) PositionFound = SampledTimeIndex[i];
+    Diff = fabs(OP->SpaceTimeArr[SampledTimeIndex[i]].OrigoDistance - OP->OrigoDistance);
+    if(Diff < PrevDiff && Init == 0)
+    {
+     PositionFound = SampledTimeIndex[i];
+    }
+    Init = 0;
+    PrevDiff = Diff;
+    i ++;
+  }
+
+
+  if(PositionFound > -1)
+  {
+    //printf("PositionFound=%d\n", PositionFound);
+    OP->BestFoundTrajectoryIndex = OP->SpaceTimeArr[PositionFound].Index;
+    /*printf("BestFoundTrajectoryIndex=%d\n", OP->BestFoundTrajectoryIndex);
+    printf("Current origo distance=%4.3f m\n", OP->OrigoDistance);
+    printf("Current time=%4.3f s\n", CurrentTime);
+    printf("Matched origo distance=%4.3f m\n", OP->SpaceTimeArr[PositionFound].OrigoDistance);
+    printf("Distance error=%4.3f m\n", OP->OrigoDistance - OP->SpaceTimeArr[PositionFound].OrigoDistance);
+    printf("Expected time=%4.3f s (index=%d)\n", OP->SpaceTimeArr[PositionFound].Time, OP->SpaceTimeArr[PositionFound].Index);
+    printf("Time error=%4.3f s\n", CurrentTime - OP->SpaceTimeArr[PositionFound].Time);*/
+  }
+  else
+  {
+    OP->BestFoundTrajectoryIndex = -1;
+    //printf("Failed to find current position in trajectory\n");
+  }
+
+  return PositionFound;
+} 
+
+int UtilCountFileRows(FILE *fd)
+{
+  int c = 0;
+  int rows = 0;
+
+  while(c != EOF)
+  {
+    c = fgetc(fd);
+    if(c == '\n') rows++;
+  }
+
+  return rows;
+}
+
+int UtilReadLineCntSpecChars(FILE *fd, char *Buffer)
+{
+  int c = 0;
+  int SpecChars = 0;
+
+  while( (c != EOF) && (c != '\n') )
+  {
+    c = fgetc(fd);
+    //printf("%d", c);
+    if(c != '\n')
+    {
+      *Buffer = (char)c;
+      Buffer++;
+      if(c == ';' || c == ':') SpecChars++;
+    } 
+  }
+
+  return SpecChars;
+}
+
 
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue)
 {

@@ -106,6 +106,10 @@ void supervision_task()
 
         ldm_act_step[iIndex] = ++ldm_act_step[iIndex] % LDM_SIZE;
     }
+	if(iCommand == COMM_REPLAY)
+	{
+        printf("INF: Supervision received REPLAY message: %s\n",cpBuffer);
+	}
     else if(iCommand == COMM_EXIT)
     {
       iExit = 1;  

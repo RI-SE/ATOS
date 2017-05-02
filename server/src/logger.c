@@ -133,14 +133,14 @@ void logger_task()
 			printf("Logger in REPLAY mode <%s>\n", pcRecvBuffer);
 			//replayfd = fopen ("log/33/event.log", "r");
 			replayfd = fopen (pcRecvBuffer, "r");
-			RowCount = CountFileRows(replayfd);
+			RowCount = UtilCountFileRows(replayfd);
 			fclose(replayfd);
 			//replayfd = fopen ("log/33/event.log", "r");
 			replayfd = fopen (pcRecvBuffer, "r");
 			printf("Rows %d\n", RowCount);	
 			if(replayfd)
 			{			
-				ReadLogLine(replayfd, pcReadBuffer);//Just read first line
+				UtilReadLineCntSpecChars(replayfd, pcReadBuffer);//Just read first line
 				int SpecChars = 0, j=0;
 				char TimestampBuffer[TIMESTAMP_BUFFER_LENGTH];
 				int FirstIteration = 1;
@@ -149,7 +149,7 @@ void logger_task()
 				do
 				{			
 					bzero(pcReadBuffer,MQ_MAX_MESSAGE_LENGTH);			
-					SpecChars = ReadLogLine(replayfd, pcReadBuffer);
+					SpecChars = UtilReadLineCntSpecChars(replayfd, pcReadBuffer);
 					
 					j++;
 					if(SpecChars == SPECIFIC_CHAR_THRESHOLD_COUNT)
@@ -239,42 +239,6 @@ void logger_task()
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
-
-int CountFileRows(FILE *fd)
-{
-	int c = 0;
-	int rows = 0;
-
-	while(c != EOF)
-	{
-		c = fgetc(fd);
-		if(c == '\n') rows++;
-	}
-
-	return rows;
-}
-
-
-int ReadLogLine(FILE *fd, char *Buffer)
-{
-	int c = 0;
-	int SpecChars = 0;
-
-	while( (c != EOF) && (c != '\n') )
-	{
-		c = fgetc(fd);
-		if(c != '\n')
-		{
-			*Buffer = (char)c;
-		 	Buffer++;
-		 	if(c == ';' || c == ':') SpecChars++;
-		} 
-	}
-
-	return SpecChars;
-}
-
-
 
 
 void vCreateLogFolder(char logFolder[MAX_FILE_PATH])

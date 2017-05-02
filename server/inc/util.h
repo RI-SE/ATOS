@@ -58,6 +58,11 @@
 #define l	1e-12
 #define PI	3.141592653589793
 #define ORIGO_DISTANCE_CALC_ITERATIONS 14
+#define TRAJECTORY_LINE_LENGTH 100
+#define NUMBER_CHAR_LENGTH 20
+
+#define MAX_TIME_DIFF 5.0
+#define SYNC_POINT_BUFFER 30
 
 
 /* Calculation: 
@@ -76,6 +81,15 @@
 
 //#define DEBUG
 
+typedef struct
+{
+  int Index;
+  float Time;
+  float OrigoDistance;
+
+} SpaceTime;
+
+
 typedef struct 
 {
 	double Latitude;
@@ -87,10 +101,20 @@ typedef struct
 	int CalcIterations;
 	double ForwardAzimuth1;
 	double ForwardAzimuth2;
-  double SyncTime;
-  double TrajectorDeviation;
-
+  int TrajectoryPositionCount;
+  int SyncIndex;
+  int BestFoundTrajectoryIndex;
+  float TimeToSyncPoint;
+  float* SpaceArr;
+  float* TimeArr;
+  float CurrentAltitude;
+  float InitialAltitude;
+  float ReferenceAltitude;
+  SpaceTime* SpaceTimeArr;
 } ObjectPosition; 
+
+
+
 
 
 /*------------------------------------------------------------
@@ -108,8 +132,15 @@ int iCommSend(const int,const char*);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
 double UtilDegToRad(double Deg);
 double UtilRadToDeg(double Rad);
-double UtilFindTrajectoryPosition(ObjectPosition *OP);
+int UtilPopulateSpaceTimeArr(ObjectPosition *OP, char* TrajFile);
+int UtilSortSpaceTimeAscending(ObjectPosition *OP);
+int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, float CurrentTime, float DistanceThreshold);
+int UtilSetSyncPoint(ObjectPosition *OP, double x, double y, double z, double time);
+float UtilCalculateTimeToSync(ObjectPosition *OP);
 
+int UtilCountFileRows(FILE *fd);
+int UtilReadLineCntSpecChars(FILE *fd, char *Buffer);
+char UtilGetch();
 
 
 
