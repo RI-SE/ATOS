@@ -9,7 +9,7 @@ QT       += widgets
 QT       += gui
 QT       += network
 QT       += opengl
-QT       += websockets
+#QT       += websockets
 
 # OpenGL support
 DEFINES += HAS_OPENGL

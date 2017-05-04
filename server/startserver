@@ -1,9 +1,16 @@
 #!/bin/bash
-# script to clean environment
+#script to start TEServer
 
 echo "Cleaning..."
+
+su root
 rm /dev/mqueue/*
 kill $(pidof TEServer)
 pkill -f "DefaultVisualiz"
+exit
 echo "Cleaning done."
+echo "Starting server..."
+cd build
+./TEServer
+
 
