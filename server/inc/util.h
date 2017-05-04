@@ -42,6 +42,7 @@
 #define COMM_ARMD 5
 #define COMM_REPLAY 6
 #define COMM_CONTROL 7
+#define COMM_ABORT 8
 #define COMM_INV 255
 
 #define SAFETY_CHANNEL_PORT 53240

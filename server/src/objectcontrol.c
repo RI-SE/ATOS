@@ -101,6 +101,7 @@ void objectcontrol_task()
   monitor_t ldm[MAX_OBJECTS];
   struct timespec sleep_time, ref_time;
   int iForceObjectToLocalhost = 0;
+  hearbeatCommand_t tServerStatus = COMMAND_HEARBEAT_GO;
 
   (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
@@ -159,6 +160,9 @@ void objectcontrol_task()
     printf("INF: Created ODSM string <%s>\n",pcBuffer);
     fflush(stdout);
   #endif
+
+  /* Set status to go */
+  tServerStatus = COMMAND_HEARBEAT_GO;
 
   /* Connect and send drive files */
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -221,7 +225,7 @@ void objectcontrol_task()
       /* Should we send heart beat in this cycle */
       if(uiTimeCycle == 0)
       {
-        vSendHeartbeat(&safety_socket_fd[iIndex],&safety_object_addr[iIndex],COMMAND_HEARBEAT_GO);
+        vSendHeartbeat(&safety_socket_fd[iIndex],&safety_object_addr[iIndex],tServerStatus);
       }
     }
 
@@ -284,8 +288,19 @@ void objectcontrol_task()
         fflush(stdout);
       #endif
 
-      if(iCommand == COMM_ARMD)
+      if(iCommand == COMM_ABORT)
       {
+        printf("INF: Recieved abort command\n");
+        fflush(stdout);
+
+        tServerStatus = COMMAND_HEARBEAT_ABORT;
+      }
+      else if(iCommand == COMM_ARMD)
+      {
+        printf("INF: ObjectControl recieved armd\n");
+        fflush(stdout);
+
+        tServerStatus = COMMAND_HEARBEAT_GO;
         for(iIndex=0;iIndex<nbr_objects;++iIndex)
         {
           vSendString("AROM;ENDAROM;",&socket_fd[iIndex]); 
@@ -560,8 +575,8 @@ static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatComman
     }
 
     #ifdef DEBUG
-     // printf("INF: Sending: <%s>\n",pcCommand);
-     // fflush(stdout);
+     printf("INF: Sending: <%s>\n",pcCommand);
+     fflush(stdout);
     #endif
 
     result = sendto(*sockfd,
