@@ -297,6 +297,9 @@ void objectcontrol_task()
       }
       else if(iCommand == COMM_ARMD)
       {
+        printf("INF: ObjectControl recieved armd\n");
+        fflush(stdout);
+
         tServerStatus = COMMAND_HEARBEAT_GO;
         for(iIndex=0;iIndex<nbr_objects;++iIndex)
         {

@@ -608,6 +608,11 @@ int iCommSend(const int iCommand,const char* cpData)
 	uiMessagePrio = 100;
 	cpMessage[0] = (char)COMM_TRIG;
 	}
+  else if(iCommand == COMM_ARMD)
+  {
+  uiMessagePrio = 110;
+  cpMessage[0] = (char)COMM_ARMD;
+  }
 	else if(iCommand == COMM_STOP)
 	{
 	uiMessagePrio = 120;
