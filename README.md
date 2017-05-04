@@ -53,3 +53,14 @@ cd poti
 mkdir build && cd build
 gcc -I../inc/ ../src/nmea2etsi.c ../src/object_rpi.c -o object_rpi
 ./object_rpi 
+
+
+#Eclipse project
+cd /home/kj/Repos/chronos
+mkdir build_server_eclipse
+cd build_server_eclipse	
+cmake -G"Eclipse CDT4 - Unix Makefiles" -D CMAKE_BUILD_TYPE=Debug ./server/
+
+Import project using Menu File->Import
+Select General->Existing projects into workspace:
+Browse root directory /home/kj/Repos/chronos/build_server_eclipse 

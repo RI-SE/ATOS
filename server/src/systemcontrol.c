@@ -34,6 +34,7 @@ typedef enum {
   SERVER_STATUS_ARMED,
   SERVER_STATUS_RUNNING,
   SERVER_STATUS_STOPPED,
+  SERVER_STATUS_ABORTED,
   SERVER_STATUS_DONE
 } state_t;
 
@@ -43,9 +44,9 @@ typedef enum {
 #define SYSTEM_CONTROL_COMMAND_MAX_LENGTH 	10
 
 typedef enum {
-   idle_0, status_0, arm_0, start_0, stop_0, replay_1, control_0, exit_0, cx_0, cc_0, pt_0, ftp_1, nocommand
+   idle_0, status_0, arm_0, start_0, stop_0, abort_0, replay_1, control_0, exit_0, cx_0, cc_0, pt_0, ftp_1, nocommand
 } SystemControlCommand_t;
-const char* SystemControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "start_0", "stop_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0", "pt_0", "ftp_1"};
+const char* SystemControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "start_0", "stop_0", "abort_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0", "pt_0", "ftp_1"};
 SystemControlCommand_t PreviousSystemControlCommand = nocommand;
 char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_COUNT];
 char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
@@ -125,6 +126,12 @@ void systemcontrol_task()
 				SystemControlCommand = idle_0;
 				CurrentCommandArgCount = 0;
 			break;
+		    case abort_0:
+		        (void)iCommSend(COMM_ABORT,NULL);
+		        server_state = SERVER_STATUS_ABORTED;
+		        SystemControlCommand = idle_0;
+		        CurrentCommandArgCount = 0;
+		    break;
 			case replay_1:
 				if(CurrentCommandArgCount == CommandArgCount)
 				{

@@ -372,6 +372,11 @@ int iCommSend(const int iCommand,const char* cpData)
 		uiMessagePrio = 180;
 		cpMessage[0] = (char)COMM_CONTROL;
 	}
+  else if (iCommand == COMM_ABORT)
+  {
+    uiMessagePrio = 60;
+    cpMessage[0] = (char)COMM_ABORT;
+  }
 	else
 	{
 	util_error("ERR: Unknown command");
