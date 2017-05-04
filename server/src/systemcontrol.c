@@ -184,7 +184,7 @@ void systemcontrol_task()
 
 				//UtilCalcPositionDelta(57.466397884,12.469130065,57.466397865, 12.469129955, &OP);
 				//UtilCalcPositionDelta(57.7773298066,12.7818834416,57.777329775, 12.7818832583, &OP);
-				UtilCalcPositionDelta(57.77752072,12.7813972116667, 57.77785588,12.7811657866667, &OP);
+				UtilCalcPositionDelta(57.7771230833333,12.78156473, 57.7773268633333,12.7818788283333, &OP);
 
 
 //				UtilCalcPositionDelta(57.7773716086,12.7804629583,57.7773717086, 12.7804630583, &OP);
@@ -257,6 +257,8 @@ void systemcontrol_task()
 							    printf("Expected time=%4.3f s (index=%d)\n", OP.TimeArr[OP.BestFoundTrajectoryIndex], OP.BestFoundTrajectoryIndex);
 							    printf("Time error=%4.3f s\n", CurrentTime - OP.TimeArr[OP.BestFoundTrajectoryIndex]);
 								printf("Time to sync point = %4.3f s\n", fabs(UtilCalculateTimeToSync(&OP) - (CurrentTime - OP.TimeArr[OP.BestFoundTrajectoryIndex]))); 
+								printf("x=%4.3f m\n", OP.x);
+								printf("y=%4.3f m\n", OP.y);
 							} else printf("Failed to find current position in trajectory\n");
 						
 						} else printf("Failed to find sync point!\n");
