@@ -27,10 +27,12 @@ add_executable(TEServer
   src/objectcontrol.c 
   src/supervision.c
   src/systemcontrol.c
+  src/usercontrol.c
   inc/logger.h
   inc/objectcontrol.h
   inc/supervision.h
   inc/systemcontrol.h
+  inc/usercontrol.h
 )
 
 # add the install targets
@@ -39,5 +41,9 @@ install (TARGETS TEServer DESTINATION bin)
 
 # add linking to message queue
 target_link_libraries(util rt m)
+target_link_libraries(util m)
+target_link_libraries(util rt)
 target_link_libraries(DefaultVisualizationAdapter util)
 target_link_libraries(TEServer util)
+
+

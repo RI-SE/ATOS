@@ -24,6 +24,7 @@
 #include "systemcontrol.h"
 #include "supervision.h"
 #include "util.h"
+#include "usercontrol.h"
 
 /*------------------------------------------------------------
 -- Defines
@@ -87,6 +88,22 @@ int main(int argc, char *argv[])
   }
   ++iIndex;
 
+ pID[iIndex] = fork();
+  if(pID[iIndex] < 0)
+  {
+    util_error("ERR: Failed to fork");
+  }
+  if(pID[iIndex] == 0)
+  {
+    #ifdef DEBUG
+      printf("INF: usercontrol_task running in:  %i \n",getpid());
+    #endif
+    usercontrol_task();
+    exit(EXIT_SUCCESS);
+  }
+  ++iIndex;
+
+
   char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
   bzero(pcTempBuffer,MAX_UTIL_VARIBLE_SIZE);
   if(iUtilGetParaConfFile("VisualizationAdapter",pcTempBuffer))
@@ -110,9 +127,10 @@ int main(int argc, char *argv[])
     }
     ++iIndex;
   }
-
+ 
   //#ifdef DEBUG
     printf("INF: systemcontrol_task running in:  %i \n",getpid());
   //#endif
+    
   systemcontrol_task();
 }
