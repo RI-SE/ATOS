@@ -146,13 +146,11 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 
 		OP->ForwardAzimuth1 = atan2(cosU2*sinlambda,(cosU1*sinU2-sinU1*cosU2*coslambda));
 		OP->ForwardAzimuth2 = atan2(cosU1*sinlambda,(sinU1*cosU2*-1+cosU1*sinU2*coslambda));
-    //OP->x = s*cos(OP->ForwardAzimuth1 - OP->ForwardAzimuth2);
-    //OP->y = s*sin(OP->ForwardAzimuth1 - OP->ForwardAzimuth2);
-    //OP->x = s*cos(OP->ForwardAzimuth1 - OP->ForwardAzimuth2);
-    //OP->y = s*sin(OP->ForwardAzimuth1);
-    OP->y = s*sin(P2LongRad-P1LongRad)*cos(P1LatRad);
-
-
+    //OP->x = s*sin((OP->ForwardAzimuth1));
+    //OP->y = s*cos((OP->ForwardAzimuth1));
+    OP->x = s*sin((OP->ForwardAzimuth2));
+    OP->y = s*cos((OP->ForwardAzimuth2));
+  
 	}
 	return s;
 }
