@@ -63,6 +63,8 @@ void supervision_task()
   uint16_t heading;
   uint8_t drivedirection;
 
+  char pcTempBuffer[512];
+
   struct timespec sleep_time, ref_time;
 
   for(iIndex=0;iIndex<MAX_OBJECTS;++iIndex)
@@ -105,6 +107,59 @@ void supervision_task()
         ldm[iIndex][ldm_act_step[iIndex]].drivedirection = drivedirection;
 
         ldm_act_step[iIndex] = ++ldm_act_step[iIndex] % LDM_SIZE;
+
+        /* Check if passing line */
+        ObjectPosition tObjectPos;
+        double dP1Lat = 0;
+        double dP1Long = 0;
+        double dP2Lat = 0;
+        double dP2Long = 0;
+
+
+        bzero(pcTempBuffer,512);
+        (void)iUtilGetParaConfFile("OrigoLatidude=",pcTempBuffer);
+        sscanf(pcTempBuffer, "%lf", &dP1Lat);
+
+        bzero(pcTempBuffer,512);
+        (void)iUtilGetParaConfFile("OrigoLongitude=",pcTempBuffer);
+        sscanf(pcTempBuffer, "%lf", &dP1Long);
+
+        dP2Lat = (double)latitude/10000000;
+        dP2Long = (double)longitude/10000000;
+
+        #ifdef DEBUG
+          printf("INF: Origo position latitude: %lf longitude: %lf \n",dP1Lat, dP1Long);
+          fflush(stdout);
+        #endif
+
+        #ifdef DEBUG
+          printf("INF: Object position latitude: %lf longitude: %lf \n",dP2Lat, dP2Long);
+          fflush(stdout);
+        #endif
+
+        //(void)UtilCalcPositionDelta(dP1Lat, dP1Long, dP2Lat, dP2Long, &tObjectPos);
+        //UtilCalcPositionDelta(57.777360,12.780472, 57.777711,12.780829, &tObjectPos);
+        
+        //double r = 6378137.0;
+        //double latmid=(dP1Lat+dP2Lat)/2;
+        //tObjectPos.x =(dP2Long-dP1Long)*(M_PI/180)*r*cos(latmid*M_PI/180);
+        //tObjectPos.y =(dP2Lat-dP1Lat)*(M_PI/180)*r;
+      
+
+        #ifdef DEBUG
+          printf("INF: Calculate value x: %lf y: %lf \n",tObjectPos.x, tObjectPos.y);
+          fflush(stdout);
+        #endif
+
+        //double dRes = (tObjectPos.x-41.2)*(26.1-55.2)-(tObjectPos.y-55.2)*(65.2-41.2);
+        double dRes = 1.0;
+        if(dRes < 0.0)
+        {
+          printf("INF: Sending ABORT from supervisor\n");
+          fflush(stdout);
+          (void)iCommSend(COMM_ABORT,NULL);
+        }
+
     }
 	if(iCommand == COMM_REPLAY)
 	{
