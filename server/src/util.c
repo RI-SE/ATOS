@@ -594,58 +594,58 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize)
 
 int iCommSend(const int iCommand,const char* cpData)
 {
-	int iResult;
-	unsigned int uiMessagePrio = 0;
-	int iIndex = 0;
-	char cpMessage[MQ_MAX_MESSAGE_LENGTH];
-
-	bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
-
-	if(iCommand == COMM_TRIG)
-	{
-	uiMessagePrio = 100;
-	cpMessage[0] = (char)COMM_TRIG;
-	}
+  int iResult;
+  unsigned int uiMessagePrio = 0;
+  int iIndex = 0;
+  char cpMessage[MQ_MAX_MESSAGE_LENGTH];
+  
+  bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
+  
+  if(iCommand == COMM_TRIG)
+    {
+      uiMessagePrio = 100;
+      cpMessage[0] = (char)COMM_TRIG;
+    }
   else if(iCommand == COMM_ARMD)
-  {
-  uiMessagePrio = 110;
-  cpMessage[0] = (char)COMM_ARMD;
-  }
-	else if(iCommand == COMM_STOP)
-	{
-	uiMessagePrio = 120;
-	cpMessage[0] = (char)COMM_STOP;
-	}
-	else if(iCommand == COMM_MONI)
-	{
-	uiMessagePrio = 80;
-	cpMessage[0] = (char)COMM_MONI;
-	}
-	else if(iCommand == COMM_EXIT)
-	{
-	uiMessagePrio = 140;
-	cpMessage[0] = (char)COMM_EXIT;
-	}
-	else if (iCommand == COMM_REPLAY)
-	{
-		uiMessagePrio = 160;
-		cpMessage[0] = (char)COMM_REPLAY;
-	}
-	else if (iCommand == COMM_CONTROL)
-	{
-		uiMessagePrio = 180;
-		cpMessage[0] = (char)COMM_CONTROL;
-	}
+    {
+      uiMessagePrio = 110;
+      cpMessage[0] = (char)COMM_ARMD;
+    }
+  else if(iCommand == COMM_STOP)
+    {
+      uiMessagePrio = 120;
+      cpMessage[0] = (char)COMM_STOP;
+    }
+  else if(iCommand == COMM_MONI)
+    {
+      uiMessagePrio = 80;
+      cpMessage[0] = (char)COMM_MONI;
+    }
+  else if(iCommand == COMM_EXIT)
+    {
+      uiMessagePrio = 140;
+      cpMessage[0] = (char)COMM_EXIT;
+    }
+  else if (iCommand == COMM_REPLAY)
+    {
+      uiMessagePrio = 160;
+      cpMessage[0] = (char)COMM_REPLAY;
+    }
+  else if (iCommand == COMM_CONTROL)
+    {
+      uiMessagePrio = 180;
+      cpMessage[0] = (char)COMM_CONTROL;
+    }
   else if (iCommand == COMM_ABORT)
-  {
+    {
     uiMessagePrio = 60;
     cpMessage[0] = (char)COMM_ABORT;
   }
-	else
-	{
-	util_error("ERR: Unknown command");
-	}
-
+  else
+    {
+      util_error("ERR: Unknown command");
+    }
+  
   if(cpData != NULL)
   {
     (void)strncat(&cpMessage[1],cpData,strlen(cpData));
