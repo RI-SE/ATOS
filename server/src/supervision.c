@@ -274,7 +274,7 @@ void supervision_task()
 	    }
 
     }
-    if(iCommand == COMM_REPLAY)
+    else if(iCommand == COMM_REPLAY)
       {
         printf("INF: Supervision received REPLAY message: %s\n",cpBuffer);
       }
