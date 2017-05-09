@@ -1,0 +1,5 @@
+#!/bin/bash
+kill $(pidof object4.o)
+mkdir -p ./object/src/build && cd ./object/src/build
+cc ../object.c -lm -o ./object4.o
+./object4.o 57.7775688 12.7812653 123.43 53248 53249
