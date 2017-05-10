@@ -667,5 +667,18 @@ int iCommSend(const int iCommand,const char* cpData)
 }
 
 /*------------------------------------------------------------
-  -- Private functions
+  -- Function traj2ldm
+  --  converts a traj file format to a ldm:monitor_t
   ------------------------------------------------------------*/
+
+void traj2ldm ( float      time ,
+                double     x    ,
+                double     y    ,
+                double     z    ,
+                float      hdg  ,
+                float      vel  ,
+                monitor_t* ldm  )
+{
+
+}
+

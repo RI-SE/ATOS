@@ -47,15 +47,6 @@ typedef enum {
   COMMAND_HEARBEAT_ABORT
 } hearbeatCommand_t;
 
-typedef struct {
-  uint64_t timestamp;
-  int32_t latitude;
-  int32_t longitude;
-  int32_t altitude;
-  uint16_t speed;
-  uint16_t heading;
-  uint8_t drivedirection;
-} monitor_t;
 
 /*------------------------------------------------------------
 -- Function declarations.
