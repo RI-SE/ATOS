@@ -680,5 +680,40 @@ void traj2ldm ( float      time ,
                 monitor_t* ldm  )
 {
 
+  char   pcTempBuffer [512];
+
+  double earth_radius = a;
+
+  double lat_origin = 0.0;
+  double lon_origin = 0.0;
+  double alt_origin = 0.0;
+  double lat        = 0.0;
+  double lon        = 0.0;
+  double alt        = 0.0;
+
+  ldm->timestamp = (uint64_t) (time * 100);
+  ldm->speed     = (uint16_t) (vel * 100);
+  ldm->heading   = (uint16_t) (hdg * 100);
+
+  bzero(pcTempBuffer,512);
+  iUtilGetParaConfFile("OrigoLatidude=", pcTempBuffer);
+  sscanf(pcTempBuffer, "%lf", &lat_origin);
+  
+  bzero(pcTempBuffer,512);
+  iUtilGetParaConfFile("OrigoLongitude=", pcTempBuffer);
+  sscanf(pcTempBuffer, "%lf", &lon_origin);
+
+  bzero(pcTempBuffer,512);
+  iUtilGetParaConfFile("OrigoAltitude=", pcTempBuffer);
+  sscanf(pcTempBuffer, "%lf", &alt_origin);
+
+  lat = ((y * 180)/(PI * earth_radius)) + lat_origin;
+  lon = ((x * 180)/(PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * (lat_origin + lat))))) + lon_origin;
+  alt = z + alt_origin;
+
+  ldm->latitude  = (uint32_t) (lat * 10000000);
+  ldm->longitude = (uint32_t) (lon * 10000000);
+  ldm->altitude  = (uint32_t) (alt * 100);
+
 }
 

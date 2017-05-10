@@ -124,6 +124,7 @@ void supervision_task()
   ObjectPosition deviation   [ MAX_OBJECTS ] [3]          ;
   double         distance    [ MAX_OBJECTS ] [3]          ;
   int            bestFit     [ MAX_OBJECTS ] [3]          ;
+  int            bestFitDone [ MAX_OBJECTS ]              ;
 
   float     time       ;
   double    x          ;
@@ -132,11 +133,7 @@ void supervision_task()
   float     hdg        ;
   float     vel        ;
 
-  monitor_t ldm          [ MAX_OBJECTS ] [ LDM_SIZE ] ;
-  int       ldm_act_step [ MAX_OBJECTS ]              ;
-  char      cpBuffer     [ RECV_MESSAGE_BUFFER ]      ;
-
-  uint16_t  iIndex = 0;
+  uint16_t  iIndex = 0     ;
 
   uint64_t  timestamp      ;
   int32_t   latitude       ;
@@ -145,6 +142,12 @@ void supervision_task()
   uint16_t  speed          ;
   uint16_t  heading        ;
   uint8_t   drivedirection ;
+  monitor_t monitor        ;
+
+  monitor_t ldm          [ MAX_OBJECTS ] [ LDM_SIZE ] ;
+  int       ldm_act_step [ MAX_OBJECTS ]              ;
+  char      cpBuffer     [ RECV_MESSAGE_BUFFER ]      ;
+
 
   struct timespec sleep_time ;
   struct timespec ref_time   ;
@@ -183,9 +186,10 @@ void supervision_task()
             i < 3;
             i++ ) {
 
-        deviation [ iIndex ] [i] = tObjectPos ;
-        distance  [ iIndex ] [i] = 0          ;
-        bestFit   [ iIndex ] [i] = -1         ;
+        deviation    [ iIndex ] [i] = tObjectPos ;
+        distance     [ iIndex ] [i] = 0          ;
+        bestFit      [ iIndex ] [i] = -1         ;
+        bestFitDone  [ iIndex ]      = 0         ;
       }
     }
 
@@ -247,43 +251,41 @@ void supervision_task()
 
   for ( iIndex = 0           ;
         iIndex < nbr_objects ;
-        ++iIndex )
-    {
-      for ( i = 0;
-            i < 3;
-            i++ ) {
+        ++iIndex ) {
 
-        sscanf ( &bFileLine [ iIndex ] [i] [5],
-                 "%f;%lf;%lf;%lf;%f;%f;",
-                 &time ,
-                 &x    ,
-                 &y    ,
-                 &z    ,
-                 &hdg  ,
-                 &vel  );
+    for ( i = 0;
+          i < 3;
+          i++ ) {
 
-        traj2ldm ( time  ,
-                   x     ,
-                   y     ,
-                   z     ,
-                   hdg   ,
-                   vel   ,
-                   &traj );
+      sscanf ( &bFileLine [ iIndex ] [i] [5],
+               "%f;%lf;%lf;%lf;%f;%f;",
+               &time ,
+               &x    ,
+               &y    ,
+               &z    ,
+               &hdg  ,
+               &vel  );
 
-        trajs [ iIndex ] [ i ].timestamp  = traj.timestamp ;
-        trajs [ iIndex ] [ i ].latitude   = traj.latitude  ;
-        trajs [ iIndex ] [ i ].longitude  = traj.longitude ;
+      traj2ldm ( time  ,
+                 x     ,
+                 y     ,
+                 z     ,
+                 hdg   ,
+                 vel   ,
+                 &traj );
 
-        printf ( "DBG: SV %d %d : t %" PRIu64 ", lat %d, lon %d \n",
-                 iIndex ,
-                 i      ,
-                 trajs [ iIndex ] [ i ].timestamp ,
-                 trajs [ iIndex ] [ i ].latitude  ,
-                 trajs [ iIndex ] [ i ].longitude );
-      }
+      trajs [ iIndex ] [ i ].timestamp  = traj.timestamp ;
+      trajs [ iIndex ] [ i ].latitude   = traj.latitude  ;
+      trajs [ iIndex ] [ i ].longitude  = traj.longitude ;
+
+      printf ( "DBG: SV %d %d : t %" PRIu64 ", lat %d, lon %d \n",
+               iIndex ,
+               i      ,
+               trajs [ iIndex ] [ i ].timestamp ,
+               trajs [ iIndex ] [ i ].latitude  ,
+               trajs [ iIndex ] [ i ].longitude );
     }
-
-  exit (0);
+  }
 
 
   /*----------------------------------------------------------------------
@@ -330,102 +332,139 @@ void supervision_task()
               &heading,
               &drivedirection );
 
-      if ( doInitialAlignmentLoop == 1) {
-        {
-          for ( i = 0;
-                i < 3;
-                i++ ) {
+       monitor.timestamp      = timestamp      ;
+       monitor.latitude       = latitude       ;
+       monitor.longitude      = longitude      ;
+       monitor.altitude       = altitude       ;
+       monitor.speed          = speed          ;
+       monitor.heading        = heading        ;
+       monitor.drivedirection = drivedirection ;
 
+       printf ( "DBG: SV i %d : t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
+                iIndex                 ,
+                monitor.timestamp      ,
+                monitor.latitude       ,
+                monitor.longitude      ,
+                monitor.altitude       ,
+                monitor.speed          ,
+                monitor.heading        ,
+                monitor.drivedirection );
+       fflush(stdout);
 
-            dP1Lat  = trajs [ iIndex ] [ i ].latitude  ;
-            dP1Long = trajs [ iIndex ] [ i ].longitude ;
+       if ( doInitialAlignmentLoop == 1) {
 
-            dP2Lat  = (double) latitude  / 10000000;
-            dP2Long = (double) longitude / 10000000;
+         if ( bestFitDone [ iIndex ] == 0 ) {
 
-            UtilCalcPositionDelta ( dP1Lat  ,
-                                    dP1Long ,
-                                    dP2Lat  ,
-                                    dP2Long ,
-                                    &tObjectPos );
+           for ( i = 0 ;
+                 i < 3 ;
+                 i++   ) {
 
-            dRes = sqrt ( tObjectPos.x * tObjectPos.x +
-                          tObjectPos.y * tObjectPos.y );
+             dP1Lat  = (double) trajs [ iIndex ] [ i ].latitude  / 10000000;
+             dP1Long = (double) trajs [ iIndex ] [ i ].longitude / 10000000;
 
-            deviation [ iIndex ] [ i ] = tObjectPos ;
-            distance  [ iIndex ] [ i ] = dRes       ;
-          }
-        }
-      }
+             dP2Lat  = (double) latitude  / 10000000;
+             dP2Long = (double) longitude / 10000000;
 
+             double         dLat  = dP1Lat  - dP2Lat;
+             double         dLong = dP1Long - dP2Long;
 
-      ldm [ iIndex ][ ldm_act_step [ iIndex ] ].timestamp      = timestamp      ;
-      ldm [ iIndex ][ ldm_act_step [ iIndex ] ].latitude       = latitude       ;
-      ldm [ iIndex ][ ldm_act_step [ iIndex ] ].longitude      = longitude      ;
-      ldm [ iIndex ][ ldm_act_step [ iIndex ] ].altitude       = altitude       ;
-      ldm [ iIndex ][ ldm_act_step [ iIndex ] ].speed          = speed          ;
-      ldm [ iIndex ][ ldm_act_step [ iIndex ] ].heading        = heading        ;
-      ldm [ iIndex ][ ldm_act_step [ iIndex ] ].drivedirection = drivedirection ;
+             printf ( "DGB : SV : iIndex = %d, dP1Lat = %f, dP1Long = %f,  dP2Lat = %f, dP2Long = %f, dLat = %f, dLong = %f\n",
+                      iIndex  ,
+                      dP1Lat  ,
+                      dP1Long ,
+                      dP2Lat  ,
+                      dP2Long ,
+                      dLat    ,
+                      dLong   );
+
+             tObjectPos.x = 0;
+             tObjectPos.y = 0;
+
+             UtilCalcPositionDelta ( dP1Lat  ,
+                                     dP1Long ,
+                                     dP2Lat  ,
+                                     dP2Long ,
+                                     &tObjectPos );
+
+             dRes = sqrt ( tObjectPos.x * tObjectPos.x +
+                           tObjectPos.y * tObjectPos.y );
+
+             deviation [ iIndex ] [ i ] = tObjectPos ;
+             distance  [ iIndex ] [ i ] = dRes       ;
+
+             printf ( "DGB : SV : iIndex = %d, i = %d, x = %f, y = %f, dRes %f \n",
+                      iIndex       ,
+                      i            ,
+                      tObjectPos.x ,
+                      tObjectPos.y ,
+                      dRes
+                      );
+           }
+           bestFitDone [ iIndex ] = 1;
+         }
+       } else {
+
+         ldm [ iIndex ][ ldm_act_step [ iIndex ] ] = monitor;
 
 #ifdef DEBUG
-      printf ( "DBG: SV i %d, s %d: t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
-               iIndex                                                    ,
-               ldm_act_step [ iIndex ]                                   ,
-               ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].timestamp      ,
-               ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].latitude       ,
-               ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].longitude      ,
-               ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].altitude       ,
-               ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].speed          ,
-               ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].heading        ,
-               ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].drivedirection );
-      fflush(stdout);
+         printf ( "DBG: SV i %d, s %d: t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
+                  iIndex                                                    ,
+                  ldm_act_step [ iIndex ]                                   ,
+                  ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].timestamp      ,
+                  ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].latitude       ,
+                  ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].longitude      ,
+                  ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].altitude       ,
+                  ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].speed          ,
+                  ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].heading        ,
+                  ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].drivedirection );
+         fflush(stdout);
 #endif
-      ldm_act_step[iIndex] = ++ldm_act_step[iIndex] % LDM_SIZE;
+         ldm_act_step[iIndex] = ++ldm_act_step[iIndex] % LDM_SIZE;
 
-      /* Check if passing line */
+         /* Check if passing line */
 
-      bzero(pcTempBuffer,512);
-      (void) iUtilGetParaConfFile("OrigoLatidude=", pcTempBuffer);
-      sscanf(pcTempBuffer, "%lf", &dP1Lat);
+         bzero(pcTempBuffer,512);
+         (void) iUtilGetParaConfFile("OrigoLatidude=", pcTempBuffer);
+         sscanf(pcTempBuffer, "%lf", &dP1Lat);
 
-      bzero(pcTempBuffer,512);
-      (void) iUtilGetParaConfFile("OrigoLongitude=", pcTempBuffer);
-      sscanf(pcTempBuffer, "%lf", &dP1Long);
+         bzero(pcTempBuffer,512);
+         (void) iUtilGetParaConfFile("OrigoLongitude=", pcTempBuffer);
+         sscanf(pcTempBuffer, "%lf", &dP1Long);
 
-      dP2Lat  = (double) latitude  / 10000000;
-      dP2Long = (double) longitude / 10000000;
+         dP2Lat  = (double) latitude  / 10000000;
+         dP2Long = (double) longitude / 10000000;
 
-      UtilCalcPositionDelta ( dP1Lat  ,
-                              dP1Long ,
-                              dP2Lat  ,
-                              dP2Long ,
+         UtilCalcPositionDelta ( dP1Lat  ,
+                                 dP1Long ,
+                                 dP2Lat  ,
+                                 dP2Long ,
                               &tObjectPos );
 
-      //double r = 6378137.0;
-      //double latmid=(dP1Lat+dP2Lat)/2;
-      //tObjectPos.x =(dP2Long-dP1Long)*(M_PI/180)*r*cos(latmid*M_PI/180);
-      //tObjectPos.y =(dP2Lat-dP1Lat)*(M_PI/180)*r;
+         //double r = 6378137.0;
+         //double latmid=(dP1Lat+dP2Lat)/2;
+         //tObjectPos.x =(dP2Long-dP1Long)*(M_PI/180)*r*cos(latmid*M_PI/180);
+         //tObjectPos.y =(dP2Lat-dP1Lat)*(M_PI/180)*r;
 
 #ifdef DEBUG
-      printf("INF: Object position latitude: %lf longitude: %lf \n",dP2Lat, dP2Long);
-      printf("INF: Origo position latitude: %lf longitude: %lf \n",dP1Lat, dP1Long);
-      printf("INF: Calculated value x: %lf y: %lf \n",tObjectPos.x, tObjectPos.y);
-      fflush(stdout);
+         printf("INF: Object position latitude: %lf longitude: %lf \n",dP2Lat, dP2Long);
+         printf("INF: Origo position latitude: %lf longitude: %lf \n",dP1Lat, dP1Long);
+         printf("INF: Calculated value x: %lf y: %lf \n",tObjectPos.x, tObjectPos.y);
+         fflush(stdout);
 #endif
 
       //double dRes = (tObjectPos.x-41.2)*(26.1-55.2)-(tObjectPos.y-55.2)*(65.2-41.2);
 
 
-      dRes = sqrt((x-tObjectPos.x)*(x-tObjectPos.x)+(y-tObjectPos.y)*(y-tObjectPos.y));
+         dRes = sqrt((x-tObjectPos.x)*(x-tObjectPos.x)+(y-tObjectPos.y)*(y-tObjectPos.y));
 
-      dRes = 0.0;
-      if(dRes > SAFETY_MARGIN)
-        {
-          printf("INF: Sending ABORT from supervisor\n");
-          fflush(stdout);
+         dRes = 0.0;
+         if(dRes > SAFETY_MARGIN)
+           {
+             printf("INF: Sending ABORT from supervisor\n");
+             fflush(stdout);
           //              (void)iCommSend(COMM_ABORT,NULL);
-        }
-
+           }
+       } // if ( doInitialAlignmentLoop == 1) .. else
     }
     else if (iCommand == COMM_REPLAY)
       {
