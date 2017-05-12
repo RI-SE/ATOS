@@ -151,5 +151,30 @@ int UtilAddTwoBytesMessageData(unsigned char *MessageBuffer, int StartIndex, uns
 int UtilAddOneByteMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned char Data);
 int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int Length, unsigned char *Data);
 
+typedef struct {
+  uint64_t timestamp;
+  int32_t  latitude;
+  int32_t  longitude;
+  int32_t  altitude;
+  uint16_t speed;
+  uint16_t heading;
+  uint8_t  drivedirection;
+} monitor_t;
+
+
+/*------------------------------------------------------------
+  -- Function traj2ldm
+  --  converts a traj file format to a ldm:monitor_t
+  ------------------------------------------------------------*/
+
+void traj2ldm ( float      time ,
+                double     x    ,
+                double     y    ,
+                double     z    ,
+                float      hdg  ,
+                float      vel  ,
+                monitor_t* ldm  );
+
+
 
 #endif //__UTIL_H_INCLUDED__
