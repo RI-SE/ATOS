@@ -31,9 +31,9 @@
 
 
 typedef enum {
-   idle_0, status_0, arm_0, start_0, stop_0, abort_0, replay_1, control_0, exit_0, cx_0, cc_0, cp_0, sb_0, cb_0, tp_0, tsp_1, tc_0, ts_0, help_0, nocommand
+   idle_0, status_0, arm_0, start_0, stop_0, abort_0, replay_1, control_0, exit_0, cx_0, cc_0, cp_0, sb_0, cb_0, tp_0, tsp_1, sx_0, sc_0, help_0, nocommand
 } UserControlCommand_t;
-const char* UserControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "start_0", "stop_0", "abort_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0", "cp_0", "sb_0", "cb_0", "tp_0", "tsp_1", "tc_0", "ts_0", "help_0" };
+const char* UserControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "start_0", "stop_0", "abort_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0", "cp_0", "sb_0", "cb_0", "tp_0", "tsp_1", "sx_0", "sc_0", "help_0" };
 UserControlCommand_t PreviousUserControlCommand = nocommand;
 char UserControlCommandArgCnt[USER_CONTROL_ARG_COUNT];
 char UserControlStrippedCommand[USER_CONTROL_COMMAND_MAX_LENGTH];
@@ -67,7 +67,7 @@ void usercontrol_task()
 	bzero(SendBuffer,IPC_BUFFER_SIZE*2);
 
 	printf("Connecting to server...\n");
-	int socketfd;
+	int socketfd=-1;
 	char object_address_name[50];
 	bzero(object_address_name,50);
 	strcat(object_address_name, USER_CONTROL_SYSTEM_CONTROL_IP);
@@ -75,14 +75,21 @@ void usercontrol_task()
 	UserControlConnectServer(&socketfd, object_address_name, object_tcp_port);
 	if (socketfd >= 0) 
   	{
-  		printf("UserControl client up.\n"); 
+  		printf("Client is connected.\n"); 
 		while(!iExit)
 		{
 			
 			bzero(pcBuffer,IPC_BUFFER_SIZE);
 			scanf("%49s",pcBuffer);
 		
-			if(strcmp(pcBuffer, "cc") != 0 && strcmp(pcBuffer, "cx") != 0 && strcmp(pcBuffer, "cp") != 0 && strcmp(pcBuffer, "sb") != 0 && strcmp(pcBuffer, "help") != 0 && strcmp(pcBuffer, "cb") != 0)
+			if(	strcmp(pcBuffer, "cc") != 0 && 
+				strcmp(pcBuffer, "cx") != 0 &&
+				strcmp(pcBuffer, "cp") != 0 &&
+				strcmp(pcBuffer, "sb") != 0 &&
+				strcmp(pcBuffer, "help") != 0 &&
+				strcmp(pcBuffer, "cb") != 0 &&
+				strcmp(pcBuffer, "sx") != 0 &&
+				strcmp(pcBuffer, "sc") != 0)
 			{
 				strncat(SendBufferPtr, pcBuffer, strlen(pcBuffer));
 				SendBuffer[strlen(SendBuffer)] = 32;
@@ -92,7 +99,6 @@ void usercontrol_task()
 			}			
 
 			UserControlFindCommand(pcBuffer, &UserControlCommand, &CommandArgCount);
-			
 			
 			switch(UserControlCommand)
 			{
@@ -164,14 +170,15 @@ void usercontrol_task()
 				case tp_0:
 					//UserControlCommand = idle_0;
 	//				UtilCalcPositionDelta(57.6626302333,12.1056869167,57.6626269972, 12.1057250694, &OP);
-
-					//UtilCalcPositionDelta(57.466397884,12.469130065,57.466397865, 12.469129955, &OP);
+					//‭429.4967295‬
+					//57,7773716
+					UtilCalcPositionDelta(57.7773716,12.7804630,57.7773717, 12.7804631, &OP);
 					//UtilCalcPositionDelta(57.7773298066,12.7818834416,57.777329775, 12.7818832583, &OP);
 					//UtilCalcPositionDelta(57.7771230833333,12.78156473, 57.777711,12.780829, &OP);
-					UtilCalcPositionDelta(57.777360,12.780472, 57.777711,12.780829, &OP);
+					//UtilCalcPositionDelta(57.777360,12.780472, 57.777711,12.780829, &OP);
 
 	//				UtilCalcPositionDelta(57.7773716086,12.7804629583,57.7773717086, 12.7804630583, &OP);
-					printf("p1(57.777125795, 12.781569353) -> p2(57.777156948, 12.781550638) => Calc d = %4.3f m, iterations = %d\n", OP.OrigoDistance, OP.CalcIterations);
+					printf("p1(57.777125795, 12.781569353) -> p2(57.777156948, 12.781550638) => Calc d = %4.4f m, iterations = %d\n", OP.OrigoDistance, OP.CalcIterations);
 					printf("Latitude = %3.10f \n", OP.Latitude);
 					printf("Longitude = %3.10f\n", OP.Longitude);
 					printf("ForwardAzimuth1 = %3.10f \n", OP.ForwardAzimuth1);
@@ -188,7 +195,6 @@ void usercontrol_task()
 
 				break;
 				case tsp_1:
-
 					if(CurrentCommandArgCount == 1)
 					{
 						if(!strcmp(pcBuffer,"-help"))
@@ -247,20 +253,14 @@ void usercontrol_task()
 						UserControlResetInputVariables();
 					} else CurrentCommandArgCount ++;
 				break;
-				case tc_0:
-					printf("Test to connect to server\n");
-					int socketfd;
-					char object_address_name[50];
-					bzero(object_address_name,50);
-					strcat(object_address_name, USER_CONTROL_SYSTEM_CONTROL_IP);
-					uint32_t object_tcp_port = USER_CONTROL_SYSTEM_CONTROL_PORT;
+				case sc_0:
 					UserControlConnectServer(&socketfd, object_address_name, object_tcp_port);
 					UserControlResetInputVariables();
-
 				break;
-				case ts_0:
-					UserControlSendString("tsp", &socketfd);
+				case sx_0:
 					UserControlDisconnectObject(&socketfd);
+					close(socketfd);
+					socketfd = -1;
 					UserControlResetInputVariables();
 				break;
 				case cb_0:
@@ -277,8 +277,10 @@ void usercontrol_task()
 					printf("start - Tell server to send \"START\".\n");
 					printf("stop - Tell server to send \"STOP\".\n");
 					printf("abort - Tell server to send \"ABORT\".\n");
-					printf("replay - Tell server to send \"REPLAY\". Write \"replay -help\" for more info\n");
+					printf("replay - Tell server to send \"REPLAY\". Write \"replay -help\" for more info.\n");
 					printf("exit - Tell server to send \"EXIT\" and quit this client.\n");
+					printf("sx - Close connection to server.\n");
+					printf("sc - Open connection to server.\n");
 				break;
 			
 				default:
@@ -333,7 +335,6 @@ void UserControlResetInputVariables()
 	UserControlCommand = idle_0;
 	CurrentCommandArgCount = 0;
 	CommandArgCount = 0;
-
 }
 
 
@@ -364,10 +365,10 @@ static void UserControlConnectServer(int* sockfd, const char* name, const uint32
   bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
   serv_addr.sin_port = htons(port);
   
-  //#ifdef DEBUG
+  #ifdef DEBUG
     printf("Try to connect to control socket: %s %i\n",name,port);
     fflush(stdout);
-  //#endif
+  #endif
   
   do
   {
@@ -389,13 +390,13 @@ static void UserControlConnectServer(int* sockfd, const char* name, const uint32
   } while(iResult < 0);
 
   //#ifdef DEBUG
-    printf("Connected to user control socket: %s %i\n",name,port);
+    printf("Client connected to server: %s %i\n",name,port);
     fflush(stdout);
   //#endif
 
 }
 
-static void UserControlSendString(const char* command, int* sockfd)
+static void UserControlSendString(const char *command, int *sockfd)
 {
   int n;
 
@@ -411,7 +412,7 @@ static void UserControlSendString(const char* command, int* sockfd)
 }
 
 
-static void UserControlDisconnectObject(int* sockfd)
+static void UserControlDisconnectObject(int *sockfd)
 {
   close(*sockfd);
 }

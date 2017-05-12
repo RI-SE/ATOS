@@ -95,9 +95,9 @@ int main(int argc, char *argv[])
   }
   if(pID[iIndex] == 0)
   {
-    //#ifdef DEBUG
+    #ifdef DEBUG
       printf("INF: usercontrol_task running in:  %i \n",getpid());
-    //#endif
+    #endif
     usercontrol_task();
     exit(EXIT_SUCCESS);
   }

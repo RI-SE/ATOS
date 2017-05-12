@@ -80,6 +80,8 @@
 #define TEST_CONF_FILE "./conf/test.conf"
 #define TRAJECTORY_PATH "./traj/"
 
+//#define BINARYBASED 
+
 //#define DEBUG
 
 typedef struct
@@ -142,7 +144,12 @@ float UtilCalculateTimeToSync(ObjectPosition *OP);
 int UtilCountFileRows(FILE *fd);
 int UtilReadLineCntSpecChars(FILE *fd, char *Buffer);
 char UtilGetch();
-
+int UtilAddEightBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned long Data);
+int UtilAddSixBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned long Data);
+int UtilAddFourBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned int Data);
+int UtilAddTwoBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned short Data);
+int UtilAddOneByteMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned char Data);
+int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int Length, unsigned char *Data);
 
 
 #endif //__UTIL_H_INCLUDED__
