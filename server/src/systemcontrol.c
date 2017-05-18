@@ -17,10 +17,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <unistd.h>  
 
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <poll.h>
 
 
 #include "systemcontrol.h"
@@ -55,9 +57,9 @@ typedef enum {
 
 
 typedef enum {
-   idle_0, status_0, arm_0, start_0, stop_0, abort_0, replay_1, control_0, exit_0, cx_0, cc_0, nocommand
+   idle_0, status_0, arm_0, start_0, stop_0, abort_0, replay_1, control_0, exit_0, cx_0, cc_0, listen_0, nocommand
 } SystemControlCommand_t;
-const char* SystemControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "start_0", "stop_0", "abort_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0"};
+const char* SystemControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "start_0", "stop_0", "abort_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0", "listen_0"};
 SystemControlCommand_t PreviousSystemControlCommand = nocommand;
 char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
 char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
@@ -68,7 +70,7 @@ char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT
   -- Function declarations.
   ------------------------------------------------------------*/
 SystemControlCommand_t SystemControlFindCommand(const char* CommandBuffer, SystemControlCommand_t *CurrentCommand, int *ArgCount);
-int SystemControlInitServer(int *ClientSocket);
+int SystemControlInitServer(int *ClientSocket, int *ServerHandle);
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
@@ -76,10 +78,11 @@ int SystemControlInitServer(int *ClientSocket);
 void systemcontrol_task()
 {
 
+	int ServerHandle;
 	int ClientSocket;
 	int ClientResult = 0;
 
-	ClientResult = SystemControlInitServer(&ClientSocket);
+	ClientResult = SystemControlInitServer(&ClientSocket, &ServerHandle);
 
 	state_t server_state = SERVER_STATUS_INIT;
 	SystemControlCommand_t SystemControlCommand = idle_0;
@@ -97,15 +100,22 @@ void systemcontrol_task()
 	while(!iExit)
 	{
 		bzero(pcBuffer,IPC_BUFFER_SIZE);
-		ClientResult = recv(ClientSocket, pcBuffer, IPC_BUFFER_SIZE, 0);
-				
-	  	if (ClientResult <= 0)
+		ClientResult = recv(ClientSocket, pcBuffer, IPC_BUFFER_SIZE,  0);
+
+	  	if (ClientResult <= -1)
 	  	{
 	    	if(errno != EAGAIN && errno != EWOULDBLOCK)
 	    	{
-		  		perror("ERR: Failed to receive from command socket");
+		  		perror("[Server]ERR: Failed to receive from command socket.");
 		  		exit(1);
-			}
+			} 
+	    }
+	    else if(ClientResult == 0) 
+	    {
+	    	printf("[Server]Client closed connection.\n");
+	    	close(ClientSocket);
+	    	close(ServerHandle);
+	    	SystemControlCommand = listen_0;
 	    }
 	    else
 	    {
@@ -128,11 +138,17 @@ void systemcontrol_task()
 		
 		switch(SystemControlCommand)
 		{
+
 			case idle_0:
  				CurrentCommandArgCounter = 0;
 			break;
+			case listen_0:
+				printf("[Server]Listening for new client connection...\n");
+				ClientResult = SystemControlInitServer(&ClientSocket, &ServerHandle);
+				SystemControlCommand = idle_0;
+			break;
 			case status_0:
-				printf("Server status: %d\n", server_state);
+				printf("[Server]Server status: %d\n", server_state);
 				SystemControlCommand = idle_0;
 				CurrentCommandArgCounter = 0;
 			break;
@@ -157,7 +173,7 @@ void systemcontrol_task()
 				sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";",0,uiTime);
 
 				//#ifdef DEBUG
-				printf("INF: System control Sending TRIG on IPC <%s>\n",pcBuffer);
+				printf("[Server]System control Sending TRIG on IPC <%s>\n",pcBuffer);
 				fflush(stdout);
 				//#endif
 
@@ -183,15 +199,15 @@ void systemcontrol_task()
 				{
 					if(!strcmp(SystemControlArgument[CurrentCommandArgCounter],"-help"))
 					{
-						printf("-----REPLAY-----\n");
-						printf("Syntax: replay [arg]\n");
-						printf("Ex: replay log/33/event.log\n");
+						printf("[Server]-----REPLAY-----\n");
+						printf("[Server]Syntax: replay [arg]\n");
+						printf("[Server]Ex: replay log/33/event.log\n");
 						fflush(stdout);
 					}
 					else
 					{
 						(void)iCommSend(COMM_REPLAY, SystemControlArgument[CurrentCommandArgCounter]);
-						printf("INF: System control sending REPLAY on IPC <%s>\n", SystemControlArgument[CurrentCommandArgCounter]);
+						printf("[Server]System control sending REPLAY on IPC <%s>\n", SystemControlArgument[CurrentCommandArgCounter]);
 						fflush(stdout);
 					}
 					SystemControlCommand = idle_0;
@@ -274,10 +290,9 @@ SystemControlCommand_t SystemControlFindCommand(const char* CommandBuffer, Syste
 
 
 
-int SystemControlInitServer(int *ClientSocket)
+int SystemControlInitServer(int *ClientSocket, int *ServerHandle)
 {
-	int command_server_socket_fd;
-	//int command_com_socket_fd;
+
 	struct sockaddr_in command_server_addr;
 	struct sockaddr_in cli_addr;
 	socklen_t cli_length;
@@ -286,13 +301,13 @@ int SystemControlInitServer(int *ClientSocket)
 	int result = 0;
 
 	/* Init user control socket */
-	printf("Init control socket\n");
+	printf("[Server]Init control socket\n");
 	fflush(stdout);
 	
-	command_server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (command_server_socket_fd < 0)
+	*ServerHandle = socket(AF_INET, SOCK_STREAM, 0);
+	if (*ServerHandle < 0)
 	{
-	  perror("ERR: Failed to create control socket");
+	  perror("[Server]ERR: Failed to create control socket");
 	  exit(1);
 	}
 	bzero((char *) &command_server_addr, sizeof(command_server_addr));
@@ -302,36 +317,36 @@ int SystemControlInitServer(int *ClientSocket)
 	command_server_addr.sin_port = htons(control_port);
 
 	optval = 1;
-	result = setsockopt(command_server_socket_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval);
+	result = setsockopt(*ServerHandle, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval);
 
 	if (result < 0)
 	{
-	  perror("ERR: Failed to call setsockopt");
+	  perror("[Server]ERR: Failed to call setsockopt");
 	  exit(1);
 	}
 
-	if (bind(command_server_socket_fd, (struct sockaddr *) &command_server_addr, sizeof(command_server_addr)) < 0) 
+	if (bind(*ServerHandle, (struct sockaddr *) &command_server_addr, sizeof(command_server_addr)) < 0) 
 	{
-	  perror("ERR: Failed to bind to control socket");
+	  perror("[Server]ERR: Failed to bind to control socket");
 	  exit(1);
 	}
 
 	/* Monitor and control sockets up. Wait for central to connect to control socket to get server address*/
-	printf("Listening for connection on user control socket ...\n");
+	printf("[Server]Listening for connection from client ...\n");
 	fflush(stdout);
 	
 
-	listen(command_server_socket_fd, 5);
+	listen(*ServerHandle, 1);
 	cli_length = sizeof(cli_addr);
 
-	printf("Connection received on user control socket: %i \n", htons(command_server_addr.sin_port));
+	printf("[Server]Connection received: %i \n", htons(command_server_addr.sin_port));
 	fflush(stdout);
 
 
-	*ClientSocket = accept(command_server_socket_fd, (struct sockaddr *) &cli_addr, &cli_length);
+	*ClientSocket = accept(*ServerHandle, (struct sockaddr *) &cli_addr, &cli_length);
 	if (*ClientSocket < 0) 
 	{
-	  perror("ERR: Failed to accept from central");
+	  perror("[Server]ERR: Failed to accept from central");
 	  exit(1);
 	}
 

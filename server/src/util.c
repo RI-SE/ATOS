@@ -43,6 +43,80 @@ void util_error(char* message)
   exit(EXIT_FAILURE);
 }
 
+
+int UtilAddEightBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned long Data)
+{
+  
+  int i;
+  for(i = 0; i < 8; i++)
+  {
+    *(MessageBuffer+StartIndex+i) = (char) (Data >> (7-i)*8);
+    //printf("[%d]=%x\n", (StartIndex+i), *(MessageBuffer+StartIndex+i));
+  }
+
+  return (StartIndex+i);
+}
+
+int UtilAddSixBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned long Data)
+{
+  
+  int i;
+  for(i = 0; i < 6; i++)
+  {
+    *(MessageBuffer+StartIndex+i) = (char) (Data >> (5-i)*8);
+    //printf("[%d]=%x\n", (StartIndex+i), *(MessageBuffer+StartIndex+i));
+  }
+
+  return (StartIndex+i);
+}
+
+
+int UtilAddFourBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned int Data)
+{
+  int i;
+  for(i = 0; i < 4; i++)
+  {
+    *(MessageBuffer+StartIndex+i) = (unsigned char) (Data >> (3-i)*8);
+    //printf("[%d]=%x\n", (StartIndex+i), *(MessageBuffer+StartIndex+i));
+  }
+
+  return StartIndex+i;
+}
+
+int UtilAddTwoBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned short Data)
+{
+  int i;
+  for(i = 0; i < 2; i++)
+  {
+    *(MessageBuffer+StartIndex+i) = (unsigned char) (Data >> (1-i)*8);
+    //printf("[%d]=%x\n", (StartIndex+i), *(MessageBuffer+StartIndex+i));
+  }
+
+  return StartIndex+i;
+}
+
+int UtilAddOneByteMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned char Data)
+{
+
+  *(MessageBuffer+StartIndex) = Data;
+  //printf("[%d]=%x\n", (StartIndex), *(MessageBuffer+StartIndex));
+  return StartIndex+1;
+}
+
+
+int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int Length, unsigned char *Data)
+{
+  int i;
+  for(i = 0; i < Length; i++)
+  {
+    *(MessageBuffer+StartIndex+i) = *(Data+i);
+    //printf("[%d]=%x\n", (StartIndex+i), *(MessageBuffer+StartIndex+i));
+  }
+
+  return StartIndex+i;
+}
+
+
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue) 
 {
   FILE *filefd;
@@ -62,6 +136,7 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue)
   {
     if((strstr(pcTemp, pcParameter)) != NULL) 
     {
+      
       /* Does contain any value? */
       if(strlen(pcTemp) > (strlen(pcParameter)+1))
       {
@@ -70,7 +145,11 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue)
         {
           pcTemp[strlen(pcTemp)-1] = 0;
         }
-        strcpy(pcValue,&pcTemp[strlen(pcParameter)+1]);
+        #ifdef BINARYBASED
+          strcpy(pcValue,&pcTemp[strlen(pcParameter)]+1);
+        #else
+          strcpy(pcValue,&pcTemp[strlen(pcParameter)]);
+        #endif
       }
       iFindResult = 1;
     }

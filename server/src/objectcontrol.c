@@ -26,6 +26,7 @@
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "util.h"
 
@@ -41,6 +42,33 @@
 #define HEARTBEAT_TIME_MS 10
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
+//#define BINARYBASED
+
+#define MESSAGE_HEADER_LENGTH 5
+#define COMMAND_CODE_INDEX 0
+#define COMMAND_MESSAGE_LENGTH_INDEX 1
+
+#define COMMAND_OSEM_CODE 2
+#define COMMAND_OSEM_MESSAGE_LENGTH 14 
+
+#define COMMAND_AROM_CODE 3
+#define COMMAND_AROM_MESSAGE_LENGTH 1
+
+#define COMMAND_STRT_CODE  4
+#define COMMAND_STRT_MESSAGE_LENGTH  7
+
+#define COMMAND_HEAB_CODE 5
+#define COMMAND_HEAB_MESSAGE_LENGTH 1
+
+#define COMMAND_LLCM_CODE 8
+#define COMMAND_LLCM_MESSAGE_LENGTH 5
+
+#define COMMAND_SYPM_CODE 9
+#define COMMAND_SYPM_MESSAGE_LENGTH 8
+
+#define COMMAND_MTPS_CODE 10
+#define COMMAND_MTPS_MESSAGE_LENGTH 6
+
 
 typedef enum {
   COMMAND_HEARBEAT_GO,
@@ -53,6 +81,7 @@ typedef enum {
 ------------------------------------------------------------*/
 static void vConnectObject(int* sockfd,const char* name,const uint32_t port);
 static void vSendString(const char* command,int* sockfd);
+static void vSendBytes(const char* command, int length, int* sockfd);
 static void vSendFile(const char* object_traj_file, int* sockfd);
 static void vDisconnectObject(int* sockfd);
 
@@ -61,6 +90,13 @@ static void vCreateSafetyChannel(const char* name,const uint32_t port,
 static void vCloseSafetyChannel(int* sockfd);
 static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatCommand_t tCommand);
 static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData);
+int ObjectControlBuildOSEMMessage(char* MessageBuffer, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug);
+int ObjectControlBuildSTRTMessage(char* MessageBuffer, unsigned char CommandOption, unsigned long TimeStamp, char debug);
+int ObjectControlBuildAROMMessage(char* MessageBuffer, unsigned char CommandOption, char debug);
+int ObjectControlBuildHEABMessage(char* MessageBuffer, unsigned char CommandOption, char debug);
+int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, unsigned short Curvature, unsigned char Mode, char debug);
+int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, unsigned int StopTime, char debug);
+int ObjectControlBuildMTPSMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug);
 
 static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], 
   char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
@@ -88,11 +124,11 @@ void objectcontrol_task()
   char pcRecvBuffer[RECV_MESSAGE_BUFFER];
   char pcBuffer[OBJECT_MESS_BUFFER_SIZE];
   char pcTempBuffer[512];
+  unsigned char MessageBuffer[512];
   int iIndex = 0;
   monitor_t ldm[MAX_OBJECTS];
   struct timespec sleep_time, ref_time;
   int iForceObjectToLocalhost = 0;
-  hearbeatCommand_t tServerStatus = COMMAND_HEARBEAT_GO;
 
   (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
@@ -117,52 +153,63 @@ void objectcontrol_task()
       object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT + iIndex*2;
     }
   }
-  
+
+#ifdef BINARYBASED
+  int MessageLength = ObjectControlBuildOSEMMessage(MessageBuffer, "57.7773716", "12.7804630", "202.93", "0.0"); 
+  MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, 3, 5, 0);
+  ObjectControlBuildAROMMessage(MessageBuffer, 0, 0);
+  ObjectControlBuildHEABMessage(MessageBuffer, 1, 0);
+  ObjectControlBuildLLCMMessage(MessageBuffer, 128, 256, 2, 0);
+  ObjectControlBuildSYPMMessage(MessageBuffer, 128, 256, 0);
+  ObjectControlBuildMTPSMessage(MessageBuffer, 512, 0);
+#else
 
   bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
   strcat(pcBuffer,"OSEM;");
   if(iUtilGetParaConfFile("OrigoLatidude",pcTempBuffer))
   {
-    strcat(pcBuffer,"OrigoLatidude=");
+    strcat(pcBuffer,"OrigoLatidude");
     strcat(pcBuffer,pcTempBuffer);
     strcat(pcBuffer,";");
   }
   if(iUtilGetParaConfFile("OrigoLongitude",pcTempBuffer))
   {
-    strcat(pcBuffer,"OrigoLongitude=");
+    strcat(pcBuffer,"OrigoLongitude");
     strcat(pcBuffer,pcTempBuffer);
     strcat(pcBuffer,";");
   }
   if(iUtilGetParaConfFile("OrigoAltitude",pcTempBuffer))
   {
-    strcat(pcBuffer,"OrigoAltitude=");
+    printf("%s\n",pcTempBuffer);
+    strcat(pcBuffer,"OrigoAltitude");
     strcat(pcBuffer,pcTempBuffer);
     strcat(pcBuffer,";");
   }
   if(iUtilGetParaConfFile("OrigoHeading",pcTempBuffer))
   {
-    strcat(pcBuffer,"OrigoHeading=");
+    printf("%s\n",pcTempBuffer);
+    strcat(pcBuffer,"OrigoHeading");
     strcat(pcBuffer,pcTempBuffer);
     strcat(pcBuffer,";");
   }
   strcat(pcBuffer,"ENDOSEM;");
 
-  #ifdef DEBUG
-    printf("INF: Created ODSM string <%s>\n",pcBuffer);
+    printf("[ObjectControl] Created OSEM: \"%s\"\n",pcBuffer);
     fflush(stdout);
-  #endif
 
-  /* Set status to go */
-  tServerStatus = COMMAND_HEARBEAT_GO;
+#endif
 
   /* Connect and send drive files */
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
     vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
 
-
-    /* Send ODSM command */
-    //vSendString(pcBuffer,&socket_fd[i]);
+    #ifdef BINARYBASED
+    vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex]);
+    #else
+    /* Send O command */
+    vSendString(pcBuffer,&socket_fd[iIndex]);
+    #endif
 
     /* Send DOPM command */
     vSendString("DOPM;",&socket_fd[iIndex]);
@@ -216,7 +263,7 @@ void objectcontrol_task()
       /* Should we send heart beat in this cycle */
       if(uiTimeCycle == 0)
       {
-        vSendHeartbeat(&safety_socket_fd[iIndex],&safety_object_addr[iIndex],tServerStatus);
+        vSendHeartbeat(&safety_socket_fd[iIndex],&safety_object_addr[iIndex],COMMAND_HEARBEAT_GO);
       }
     }
 
@@ -279,19 +326,8 @@ void objectcontrol_task()
         fflush(stdout);
       #endif
 
-      if(iCommand == COMM_ABORT)
+      if(iCommand == COMM_ARMD)
       {
-        printf("INF: Recieved abort command\n");
-        fflush(stdout);
-
-        tServerStatus = COMMAND_HEARBEAT_ABORT;
-      }
-      else if(iCommand == COMM_ARMD)
-      {
-        printf("INF: ObjectControl recieved armd\n");
-        fflush(stdout);
-
-        tServerStatus = COMMAND_HEARBEAT_GO;
         for(iIndex=0;iIndex<nbr_objects;++iIndex)
         {
           vSendString("AROM;ENDAROM;",&socket_fd[iIndex]); 
@@ -299,15 +335,19 @@ void objectcontrol_task()
       }
       else if(iCommand == COMM_TRIG)
       {  
-        //#ifdef DEBUG
+        #ifdef DEBUG
           printf("INF: Object control TRIG recvied string <%s>\n",pcRecvBuffer);
           fflush(stdout);
-        //#endif
+        #endif
 
-        bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
-        strncat(pcBuffer,"TRIG;",5);
-        strncat(pcBuffer,pcRecvBuffer,OBJECT_MESS_BUFFER_SIZE-13);
-        strncat(pcBuffer,"ENDTRIG;",8);
+        #ifdef BINARYBASED
+          MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, 0, 0, 0); 
+        #else
+          bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
+          strncat(pcBuffer,"TRIG;",5);
+          strncat(pcBuffer,pcRecvBuffer,OBJECT_MESS_BUFFER_SIZE-13);
+          strncat(pcBuffer,"ENDTRIG;",8);
+        #endif
 
         #ifdef DEBUG
           printf("INF: Sending TRIG from object control <%s>\n",pcBuffer);
@@ -377,6 +417,170 @@ void objectcontrol_task()
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
+
+int ObjectControlBuildOSEMMessage(char* MessageBuffer, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug)
+{
+
+
+  int MessageIndex = 0;
+  double Data;
+  
+  bzero(MessageBuffer, COMMAND_OSEM_MESSAGE_LENGTH + MESSAGE_HEADER_LENGTH);
+
+  UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_OSEM_CODE);
+  
+  //if(iUtilGetParaConfFile("OrigoLatitude",pcTempBuffer))
+  {
+    //printf("pcTempBuffer: %s\n", pcTempBuffer);
+    //Data = (atof("57.77737160") * 1e8)/10;
+    Data = (atof((char *)Latitude) * 1e8)/10;
+    MessageIndex = UtilAddFourBytesMessageData(MessageBuffer, MessageIndex+MESSAGE_HEADER_LENGTH, (unsigned int)Data);
+  }
+  //if(iUtilGetParaConfFile("OrigoLongitude",pcTempBuffer))
+  {
+    //printf("pcTempBuffer: %s\n", pcTempBuffer);
+    //Data = (atof("12.7804630") * 1e8)/10;
+    Data = (atof((char *)Longitude) * 1e8)/10;
+    MessageIndex = UtilAddFourBytesMessageData(MessageBuffer, MessageIndex, (unsigned int)Data);
+  }
+  //if(iUtilGetParaConfFile("OrigoAltitude",pcTempBuffer))
+  {
+    //printf("pcTempBuffer: %s\n", pcTempBuffer);
+    //Data = atof("202.934115075") * 1e2;
+    Data = atof((char *)Altitude) * 1e2;
+    MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
+  }
+  //if(iUtilGetParaConfFile("OrigoHeading",pcTempBuffer))
+  {
+    //printf("pcTempBuffer: %s\n", pcTempBuffer);
+    //Data = atof("0.0") * 1e2;
+    Data = atof((char *)Heading) * 1e2;
+    MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
+  }
+  
+  UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - MESSAGE_HEADER_LENGTH);
+
+  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+
+
+  return MessageIndex; //Total number of bytes = MESSAGE_HEADER_LENGTH + message data count
+}
+
+
+int ObjectControlBuildSTRTMessage(char* MessageBuffer, unsigned char CommandOption, unsigned long TimeStamp, char debug)
+{
+  int MessageIndex = 0;
+  
+  bzero(MessageBuffer, COMMAND_STRT_MESSAGE_LENGTH + MESSAGE_HEADER_LENGTH);
+
+  UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_STRT_CODE);
+ 
+  MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex+MESSAGE_HEADER_LENGTH, CommandOption);
+  
+  MessageIndex = UtilAddSixBytesMessageData(MessageBuffer, MessageIndex, TimeStamp);
+  
+  UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - MESSAGE_HEADER_LENGTH);
+
+  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+
+  return MessageIndex; //Total number of bytes = MESSAGE_HEADER_LENGTH + message data count
+}
+
+
+int ObjectControlBuildAROMMessage(char* MessageBuffer, unsigned char CommandOption, char debug)
+{
+  int MessageIndex = 0;
+  
+  bzero(MessageBuffer, COMMAND_AROM_MESSAGE_LENGTH + MESSAGE_HEADER_LENGTH);
+
+  UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_AROM_CODE);
+ 
+  MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex+MESSAGE_HEADER_LENGTH, CommandOption);
+    
+  UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - MESSAGE_HEADER_LENGTH);
+
+  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+
+  return MessageIndex; //Total number of bytes = MESSAGE_HEADER_LENGTH + message data count
+}
+
+
+int ObjectControlBuildHEABMessage(char* MessageBuffer, unsigned char CommandOption, char debug)
+{
+  int MessageIndex = 0;
+  
+  bzero(MessageBuffer, COMMAND_HEAB_MESSAGE_LENGTH + MESSAGE_HEADER_LENGTH);
+
+  UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_HEAB_CODE);
+ 
+  MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex+MESSAGE_HEADER_LENGTH, CommandOption);
+    
+  UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - MESSAGE_HEADER_LENGTH);
+
+  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+
+  return MessageIndex; //Total number of bytes = MESSAGE_HEADER_LENGTH + message data count
+}
+
+
+int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, unsigned short Curvature, unsigned char Mode, char debug)
+{
+  int MessageIndex = 0;
+  
+  bzero(MessageBuffer, COMMAND_LLCM_MESSAGE_LENGTH + MESSAGE_HEADER_LENGTH);
+
+  UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_LLCM_CODE);
+ 
+  MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex+MESSAGE_HEADER_LENGTH, Speed);
+  
+  MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, Curvature);
+
+  MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex, Mode);
+  
+  UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - MESSAGE_HEADER_LENGTH);
+
+  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+
+  return MessageIndex; //Total number of bytes = MESSAGE_HEADER_LENGTH + message data count
+}
+
+int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, unsigned int StopTime, char debug)
+{
+  int MessageIndex = 0;
+  
+  bzero(MessageBuffer, COMMAND_SYPM_MESSAGE_LENGTH + MESSAGE_HEADER_LENGTH);
+
+  UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_SYPM_CODE);
+ 
+  MessageIndex = UtilAddFourBytesMessageData(MessageBuffer, MessageIndex+MESSAGE_HEADER_LENGTH, SyncPoint);
+  
+  MessageIndex = UtilAddFourBytesMessageData(MessageBuffer, MessageIndex, StopTime);
+  
+  UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - MESSAGE_HEADER_LENGTH);
+
+  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+
+  return MessageIndex; //Total number of bytes = MESSAGE_HEADER_LENGTH + message data count
+}
+
+int ObjectControlBuildMTPSMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug)
+{
+  int MessageIndex = 0;
+  
+  bzero(MessageBuffer, COMMAND_MTPS_MESSAGE_LENGTH + MESSAGE_HEADER_LENGTH);
+
+  UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_MTPS_CODE);
+ 
+  MessageIndex = UtilAddSixBytesMessageData(MessageBuffer, MessageIndex+MESSAGE_HEADER_LENGTH, SyncTimestamp);
+  
+  UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - MESSAGE_HEADER_LENGTH);
+
+  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+
+  return MessageIndex; //Total number of bytes = MESSAGE_HEADER_LENGTH + message data count
+}
+
+
 static void vConnectObject(int* sockfd, const char* name, const uint32_t port)
 {
   struct sockaddr_in serv_addr;
@@ -455,6 +659,25 @@ static void vSendString(const char* command, int* sockfd)
     util_error("ERR: Failed to send on control socket");
   }
 }
+
+
+static void vSendBytes(const char* command, int length, int* sockfd)
+{
+  int n;
+
+  #ifdef DEBUG
+    printf("INF: Sending: <%s>\n",command);
+    fflush(stdout);
+  #endif
+
+  n = write(*sockfd, command, length);
+  if (n < 0)
+  {
+    util_error("ERR: Failed to send on control socket");
+  }
+}
+
+
 
 static void vSendFile(const char* object_traj_file, int* sockfd)
 {
@@ -566,8 +789,8 @@ static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatComman
     }
 
     #ifdef DEBUG
-     printf("INF: Sending: <%s>\n",pcCommand);
-     fflush(stdout);
+     // printf("INF: Sending: <%s>\n",pcCommand);
+     // fflush(stdout);
     #endif
 
     result = sendto(*sockfd,
@@ -663,3 +886,26 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
   }
   (void)closedir(traj_directory);
 }
+
+
+/*
+ printf("%4.10lf \n", Data);
+    unsigned long DataLong = (unsigned long)Data;
+    printf("%lu \n", DataLong);
+    MessageBuffer[1] = (char) (DataLong >> 56);  
+    printf("%d\n",(char)MessageBuffer[1]);
+    MessageBuffer[2] = (char) (DataLong >> 48);  
+    printf("%d\n",(char)MessageBuffer[2]);
+    MessageBuffer[3] = (char) (DataLong >> 40);  
+    printf("%d\n",(char)MessageBuffer[3]);
+    MessageBuffer[4] = (char) (DataLong >> 32);  
+    printf("%d\n",(char)MessageBuffer[4]);
+    MessageBuffer[5] = (char) (DataLong >> 24);  
+    printf("%d\n",(char)MessageBuffer[5]);
+    MessageBuffer[6] = (char) (DataLong >> 16);  
+    printf("%d\n",(char)MessageBuffer[6]);
+    MessageBuffer[7] = (char) (DataLong >> 8);  
+    printf("%d\n",(char)MessageBuffer[7]);
+    MessageBuffer[8] = (char) (DataLong >> 0);  
+    printf("%d\n",(char)MessageBuffer[8]);
+  */ 
