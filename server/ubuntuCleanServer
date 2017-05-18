@@ -1,0 +1,10 @@
+#!/bin/bash
+
+echo "Cleaning server ..."
+sudo netstat -anp | grep 53251
+sudo rm -rf /dev/mqueue/*
+kill $(pidof TEServer)
+kill $(pidof DefaultVisualizationAdapter)
+kill $(pidof UserControl)
+echo "Cleaning server done."
+
