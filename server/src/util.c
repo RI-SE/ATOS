@@ -145,11 +145,9 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue)
         {
           pcTemp[strlen(pcTemp)-1] = 0;
         }
-        #ifdef BINARYBASED
-          strcpy(pcValue,&pcTemp[strlen(pcParameter)]+1);
-        #else
-          strcpy(pcValue,&pcTemp[strlen(pcParameter)]);
-        #endif
+        
+        strcpy(pcValue,&pcTemp[strlen(pcParameter)+1]);
+        
       }
       iFindResult = 1;
     }
@@ -474,7 +472,9 @@ int UtilCountFileRows(FILE *fd)
 
   while(c != EOF)
   {
+    
     c = fgetc(fd);
+    //printf("%x-", c);
     if(c == '\n') rows++;
   }
 
@@ -489,7 +489,7 @@ int UtilReadLineCntSpecChars(FILE *fd, char *Buffer)
   while( (c != EOF) && (c != '\n') )
   {
     c = fgetc(fd);
-    //printf("%d", c);
+    //printf("%x-", c);
     if(c != '\n')
     {
       *Buffer = (char)c;
@@ -500,6 +500,60 @@ int UtilReadLineCntSpecChars(FILE *fd, char *Buffer)
 
   return SpecChars;
 }
+
+
+char* UtilSearchTextFile(char *Filename, char *Text1, char *Text2, char *Result)
+{
+
+  FILE *fd;
+  
+  char RowBuffer[MAX_ROW_SIZE];
+  char DataBuffer[MAX_ROW_SIZE];
+  char *PtrText1;
+  char *PtrText2;
+  int Length;
+  int Found = 0;
+  
+  fd = fopen (Filename, "r");
+  int RowCount = UtilCountFileRows(fd);
+  fclose(fd);
+  
+  fd = fopen (Filename, "r");
+  if(fd > 0)
+  {
+     do
+    {
+      bzero(RowBuffer, MAX_ROW_SIZE);
+      UtilReadLineCntSpecChars(fd, RowBuffer);
+      bzero(DataBuffer, MAX_ROW_SIZE);
+      PtrText1 = strstr(RowBuffer, (const char *)Text1); 
+      if(PtrText1 != NULL)
+      {
+        if(strlen(Text2) > 0)
+        {
+          PtrText2 = strstr((const char *)(PtrText1+1), (const char *)Text2);
+          if(PtrText2 != NULL)
+          {
+            strncpy(Result, PtrText1+strlen(Text1), strlen(RowBuffer) - strlen(Text1) - strlen(Text2));
+          }
+        }
+        else
+        {
+          strncpy(Result, PtrText1+strlen(Text1), strlen(RowBuffer) - strlen(Text1));
+        }
+        Found = 1;
+      }
+      RowCount--;
+ 
+    } while(Found == 0 && RowCount >= 0);
+
+    fclose(fd);
+  }
+
+  //printf("String found: %s\n", Result);
+  return Result;
+
+} 
 
 
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue)

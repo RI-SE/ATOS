@@ -65,6 +65,8 @@
 #define MAX_TIME_DIFF 5.0
 #define SYNC_POINT_BUFFER 30
 
+#define MAX_ROW_SIZE 1024
+
 
 /* Calculation: 
   34 years between 1970 and 2004 
@@ -80,7 +82,6 @@
 #define TEST_CONF_FILE "./conf/test.conf"
 #define TRAJECTORY_PATH "./traj/"
 
-//#define BINARYBASED 
 
 //#define DEBUG
 
@@ -150,6 +151,7 @@ int UtilAddFourBytesMessageData(unsigned char *MessageBuffer, int StartIndex, un
 int UtilAddTwoBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned short Data);
 int UtilAddOneByteMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned char Data);
 int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int Length, unsigned char *Data);
+char * UtilSearchTextFile(char *Filename, char *Text1, char *Text2, char *Result);
 
 typedef struct {
   uint64_t timestamp;

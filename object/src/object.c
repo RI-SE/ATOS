@@ -43,7 +43,7 @@
 #define SAVED_TRAJECTORY_LINES 100
 #define PI                     acos(-1)
 #define DEBUG
-#define TIME_FROM_DRIVE_FILE 1
+#define TIME_FROM_DRIVE_FILE 0
 
 /* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
@@ -683,3 +683,5 @@ int main(int argc, char *argv[])
 
   return 0;
 }
+
+
