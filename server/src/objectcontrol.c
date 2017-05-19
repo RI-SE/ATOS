@@ -786,7 +786,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
   char *src;
   
  
-  bzero(MessageBuffer, COMMAND_DOPM_ROW_MESSAGE_LENGTH*RowCount /*+ COMMAND_MESSAGE_HEADER_LENGTH*/);
+  bzero(MessageBuffer, COMMAND_DOPM_ROW_MESSAGE_LENGTH*RowCount);
 
    //printf("%d\n", RowCount);
   for(int i = 0; i <= RowCount - 1; i++)
@@ -831,7 +831,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*1e3;
+    Data = atof(DataBuffer)*1e2;
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -839,7 +839,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*1e3;
+    Data = atof(DataBuffer)*1e2;
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -847,7 +847,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*1e3;
+    Data = atof(DataBuffer)*1e2;
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -855,7 +855,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*1e3;
+    Data = atof(DataBuffer)*1e2;
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
