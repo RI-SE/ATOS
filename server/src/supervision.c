@@ -165,7 +165,7 @@ void supervision_task() {
 
 
   printf ("--------------------------------------------------\n");
-  printf ("INF : SV Supervision started.\n");
+  printf ("INF : SV : Supervision started.\n");
   printf ("--------------------------------------------------\n");
   fflush(stdout);
 
@@ -232,7 +232,7 @@ void supervision_task() {
     len = sizeof(bFileLine [ iIndex ] [0]);
     bzero ( &bFileLine [ iIndex ] [0], len );
     read = getline ( &bFileLine_p [ iIndex ], &len, fp [ iIndex ]);
-    printf ( "INF : SV line n = %ld \n -- s = %s",
+    printf ( "INF : SV : line n = %ld \n -- s = %s",
              (ssize_t)len,
              bFileLine [ iIndex ] [0] );
 
@@ -289,7 +289,7 @@ void supervision_task() {
       trajs [ iIndex ] [ i ].latitude   = traj.latitude  ;
       trajs [ iIndex ] [ i ].longitude  = traj.longitude ;
 
-      printf ( "DBG : SV %d %d : t %" PRIu64 ", lat %d, lon %d \n",
+      printf ( "DBG : SV : %d %d : t %" PRIu64 ", lat %d, lon %d \n",
                iIndex ,
                i      ,
                trajs [ iIndex ] [ i ].timestamp ,
@@ -323,7 +323,7 @@ void supervision_task() {
                        RECV_MESSAGE_BUFFER);
 
 #ifdef DEBUG
-    //    printf("INF : SV received a command: %s\n", cpBuffer);
+    //    printf("INF : SV : Received a command: %s\n", cpBuffer);
     fflush(stdout);
 #endif
 
@@ -392,7 +392,7 @@ void supervision_task() {
 
          if ( bestFitDone [ iIndex ] == 0 ) {
 
-           printf ( "DBG : SV i: Align object id  %d \n",
+           printf ( "DBG : SV : Align object id  %d \n",
                     iIndex );
 
            for ( i = 0 ;
@@ -469,7 +469,7 @@ void supervision_task() {
 
          /* Start correlating */
 
-         printf ( "DBG : SV i: Correlate object id  %d \n",
+         printf ( "DBG : SV : Correlate object id  %d \n",
                     iIndex );
 
          ldm [ iIndex ][ ldm_act_step [ iIndex ] ] = monitor;
@@ -477,7 +477,7 @@ void supervision_task() {
          ldm_act_step[iIndex] = ++ldm_act_step[iIndex] % LDM_SIZE;
 
 #ifdef DEBUG
-         printf ( "DBG : SV i %d, s %d: t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
+         printf ( "DBG : SV : i %d, s %d: t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
                   iIndex                                                    ,
                   ldm_act_step [ iIndex ]                                   ,
                   ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].timestamp      ,
@@ -532,11 +532,11 @@ void supervision_task() {
          for ( i = 0 ;
                i < 3 ;
                i++   ) {
-           if ( trajs [ iIndex ] [i].timestamp == monitor.timestamp ) {
+           if ( abs ( trajs [ iIndex ] [i].timestamp - monitor.timestamp ) <= 1 ) {
 
              trajIndex = i;
 
-             printf ( "DBG : SV i: Correlate object %d timestamp at index %d, tt = %" PRIu64 " & tm = %" PRIu64 " \n",
+             printf ( "DBG : SV : Correlate object %d timestamp at index %d, tt = %" PRIu64 " & tm = %" PRIu64 " \n",
                       iIndex                         ,
                       i                              ,
                       trajs [ iIndex ] [i].timestamp ,
@@ -586,7 +586,7 @@ void supervision_task() {
 
          if ( trajIndex != -1 ) {
 
-           printf ( "DBG : SV i: Shifting in a new line from trajectory file.\n" );
+           printf ( "DBG : SV : Shifting in a new line from trajectory file.\n" );
 
            for ( i = 0;
                  i < 2;
@@ -598,7 +598,7 @@ void supervision_task() {
            len = sizeof(bFileLine [ iIndex ] [ 2 ]);
            bzero ( &bFileLine [ iIndex ] [ 2 ], len);
            read = getline ( &bFileLine_p [ iIndex ] , &len, fp [ iIndex ] );
-           printf ( "INF : SV i = %d , line n = %ld \n -- s = %s",
+           printf ( "INF : SV : i = %d , line n = %ld \n -- s = %s",
                     2,
                     (ssize_t) len,
                     bFileLine [ iIndex ] [ 2 ]);
@@ -611,6 +611,14 @@ void supervision_task() {
                     &z    ,
                     &hdg  ,
                     &vel  );
+
+           printf ("DBG : SV : file : t %f, x %lf, y %lf, z %lf, h %f, v %f\n",
+                   time ,
+                   x    ,
+                   y    ,
+                   z    ,
+                   hdg  ,
+                   vel  );
 
            traj2ldm ( time  ,
                       x     ,
@@ -634,7 +642,6 @@ void supervision_task() {
                       trajs [ iIndex ] [ i ].latitude  ,
                       trajs [ iIndex ] [ i ].longitude );
            }
-
 
            if ( dRes > SAFETY_MARGIN ) {
              printf ("INF : SV : Sending ABORT.\n");
@@ -688,7 +695,7 @@ void supervision_task() {
 
     else {
 
-        printf ( "INF : Unhandled command in supervision\n" );
+        printf ( "INF : SV : Unhandled command.\n" );
         fflush(stdout);
 
     }
