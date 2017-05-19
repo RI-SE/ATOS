@@ -42,7 +42,7 @@
 #define HEARTBEAT_TIME_MS 10
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
-//#define BYTEBASED
+#define BYTEBASED
 
 #define COMMAND_MESSAGE_HEADER_LENGTH 5
 #define COMMAND_CODE_INDEX 0
@@ -120,7 +120,6 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
 int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, char debug);
 int ObjectControlSendHeartbeat(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
 int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag);
-//int ObjectControlBuildMONRMessage(unsigned char *MonrData, long unsigned int Timestamp, unsigned int Latitude, unsigned int Longitude, unsigned int Altitude, unsigned short Speed, unsigned short Heading, unsigned char DriveDirection);
 int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, int32_t *Latitude, int32_t * Longitude, int32_t *Altitude, uint16_t *Speed, uint16_t *Heading, uint8_t *DriveDirection);
 
 
