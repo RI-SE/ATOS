@@ -86,6 +86,8 @@
 #define SMALL_BUFFER_SIZE_0 20
 #define SMALL_BUFFER_SIZE_1 2
 
+#define TRAJECTORY_FILE_MAX_ROWS  4096
+
 typedef enum {
   COMMAND_HEARBEAT_GO,
   COMMAND_HEARBEAT_ABORT
@@ -166,6 +168,20 @@ void objectcontrol_task()
   char StatusFlag[SMALL_BUFFER_SIZE_1];
   int MessageLength;
 
+  ObjectPosition OP[MAX_OBJECTS];
+  float SpaceArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
+  float TimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
+  SpaceTime SpaceTimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
+  char OriginLatitude[SMALL_BUFFER_SIZE_0];
+  char OriginLongitude[SMALL_BUFFER_SIZE_0];
+  char OriginAltitude[SMALL_BUFFER_SIZE_0];
+  char OriginHeading[SMALL_BUFFER_SIZE_0];
+  double OriginLatitudeDbl;
+  double OriginLongitudeDbl;
+  double OriginAltitudeDbl;
+  double OriginHeadingDbl;
+
+
   unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
 
@@ -195,12 +211,17 @@ void objectcontrol_task()
 
 #ifdef BYTEBASED
   MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, 
-                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", Latitude),
-                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", Longitude),
-                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", Altitude),
-                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", Heading),
+                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
+                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
+                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
+                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
                                 0); 
  
+  OriginLatitudeDbl = atof(OriginLatitude);
+  OriginLongitudeDbl = atof(OriginLongitude);
+  OriginAltitudeDbl = atof(OriginAltitude);
+  OriginHeadingDbl = atof(OriginHeading);
+
 #else
 
   bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
@@ -249,14 +270,13 @@ void objectcontrol_task()
     #else
       //vSendString(pcBuffer,&socket_fd[iIndex]);
     #endif
-
-    /* Send DOPM command */
+   
     #ifdef BYTEBASED
-
-      fd = fopen (object_traj_file[0], "r");
+      fd = fopen (object_traj_file[iIndex], "r");
       int RowCount = UtilCountFileRows(fd) - 1;
       fclose (fd);
 
+      /*DOPM*/
       MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, RowCount-1, 0);
 
       /*Send DOPM header*/
@@ -265,13 +285,23 @@ void objectcontrol_task()
       /*Send DOPM data*/
       ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], 1);
 
+      /* Sync points...*/
+      /*
+      OP[iIndex].TrajectoryPositionCount = RowCount;
+      OP[iIndex].SpaceArr = SpaceArr[iIndex];
+      OP[iIndex].TimeArr = TimeArr[iIndex];
+      OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
+      UtilPopulateSpaceTimeArr(&OP[iIndex], object_traj_file[iIndex]);
+      */
+      
+
+
+
     #else
       vSendString("DOPM;",&socket_fd[iIndex]);
       vSendFile(object_traj_file[iIndex],&socket_fd[iIndex]);
       vSendString("ENDDOPM;",&socket_fd[iIndex]);
     #endif
-
-
   }
 
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -351,6 +381,10 @@ void objectcontrol_task()
             strcat(buffer, "MONR;"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
             strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
             strcat(buffer,DriveDirection); strcat(buffer,";"); //strcat(pcBuffer,StatusFlag); strcat(pcBuffer,";");
+
+            //UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]); 
+
+
         #else
         /* Get monitor data */
         sscanf(buffer,"MONR;%" SCNu64 ";%" SCNd32 ";%" SCNd32 ";%" SCNd32 ";%" SCNu16 ";%" SCNu16 ";%" SCNu8 ";",
@@ -787,7 +821,6 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
  
   bzero(MessageBuffer, COMMAND_DOPM_ROW_MESSAGE_LENGTH*RowCount);
 
-   //printf("%d\n", RowCount);
   for(int i = 0; i <= RowCount - 1; i++)
   {
     bzero(RowBuffer, 100);
@@ -866,10 +899,6 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex, (unsigned char)Data);
     //printf("DataBuffer=%s  float=%d\n", DataBuffer, (unsigned char)Data);
   }
-
-  //fclose(fd);
-
-  //UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);
 
   if(debug)
   {
