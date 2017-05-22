@@ -208,7 +208,7 @@ void objectcontrol_task()
     vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex]);
     #else
     /* Send O command */
-    vSendString(pcBuffer,&socket_fd[iIndex]);
+    //vSendString(pcBuffer,&socket_fd[iIndex]);
     #endif
 
     /* Send DOPM command */

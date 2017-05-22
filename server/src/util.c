@@ -145,11 +145,7 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue)
         {
           pcTemp[strlen(pcTemp)-1] = 0;
         }
-        #ifdef BINARYBASED
           strcpy(pcValue,&pcTemp[strlen(pcParameter)]+1);
-        #else
-          strcpy(pcValue,&pcTemp[strlen(pcParameter)]);
-        #endif
       }
       iFindResult = 1;
     }

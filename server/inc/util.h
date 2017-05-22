@@ -66,7 +66,7 @@
 #define SYNC_POINT_BUFFER 30
 
 
-/* Calculation: 
+/* Calculation: 	
   34 years between 1970 and 2004 
   8 days for leap year between 1970 and 2004 
 */

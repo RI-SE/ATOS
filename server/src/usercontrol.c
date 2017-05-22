@@ -19,7 +19,6 @@
 #include <errno.h>
 #include <unistd.h>
 
-#include "usercontrol.h"
 #include "util.h"
 
 #define IPC_BUFFER_SIZE   256
@@ -54,8 +53,10 @@ static void UserControlConnectServer(int* sockfd, const char* name, const uint32
 static void UserControlSendString(const char* command, int* sockfd);
 static void UserControlDisconnectObject(int* sockfd);
 
-
-void usercontrol_task()
+/*------------------------------------------------------------
+-- The main function.
+------------------------------------------------------------*/
+int main(int argc, char *argv[])
 {
 
 	char pcBuffer[IPC_BUFFER_SIZE];
