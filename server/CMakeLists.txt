@@ -33,6 +33,7 @@ add_executable(TEServer
   inc/supervision.h
   inc/systemcontrol.h
   inc/usercontrol.h
+  inc/util.h
 )
 
 # add the install targets

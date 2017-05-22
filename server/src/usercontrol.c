@@ -20,6 +20,7 @@
 #include <unistd.h>
 
 #include "usercontrol.h"
+#include "objectcontrol.h"
 #include "util.h"
 
 #define IPC_BUFFER_SIZE   256
@@ -29,11 +30,21 @@
 #define USER_CONTROL_ARG_COUNT 			2
 #define USER_CONTROL_COMMAND_MAX_LENGTH 	10
 
+#define COMMAND_MESSAGE_HEADER_LENGTH 5
+#define COMMAND_DOPM_ROW_MESSAGE_LENGTH 25 
+#define COMMAND_DOPM_ROWS_IN_TRANSMISSION  40
+
+
 
 typedef enum {
-   idle_0, status_0, arm_0, start_0, stop_0, abort_0, replay_1, control_0, exit_0, cx_0, cc_0, cp_0, sb_0, cb_0, tp_0, tsp_1, sx_0, sc_0, help_0, nocommand
+	idle_0,		status_0,		arm_0,		start_0,		stop_0,		abort_0,		replay_1,		control_0,		exit_0,		cx_0,		cc_0,
+	cp_0,		sb_0,			cb_0,		tp_0,			tsp_1,		sx_0,			sc_0,			help_0,			tosem_0,	tstrt_0,	tdopm_0,
+	tmonr_0,	nocommand
 } UserControlCommand_t;
-const char* UserControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "start_0", "stop_0", "abort_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0", "cp_0", "sb_0", "cb_0", "tp_0", "tsp_1", "sx_0", "sc_0", "help_0" };
+const char* UserControlCommandsArr[] = {
+	"idle_0",	"status_0",		"arm_0",	"start_0",		"stop_0",	"abort_0",		"replay_1",		"control_0",	"exit_0",	"cx_0",		"cc_0",
+	"cp_0", 	"sb_0", 		"cb_0", 	"tp_0", 		"tsp_1", 	"sx_0", 		"sc_0", 		"help_0", 		"tosem_0", 	"tstrt_0",	"tdopm_0",
+	"tmonr_0"};
 UserControlCommand_t PreviousUserControlCommand = nocommand;
 char UserControlCommandArgCnt[USER_CONTROL_ARG_COUNT];
 char UserControlStrippedCommand[USER_CONTROL_COMMAND_MAX_LENGTH];
@@ -65,6 +76,26 @@ void usercontrol_task()
 	ObjectPosition OP;
 	SendBufferPtr = SendBuffer;
 	bzero(SendBuffer,IPC_BUFFER_SIZE*2);
+
+	char Timestamp[20];
+	char Latitude[20];
+	char Longitude[20];
+	char Altitude[20];
+	char Heading[20];
+	char Speed[20];
+	char DriveDirection[2];
+	char StatusFlag[2];
+	char Buffer[100];
+
+	unsigned char TestBuffer[] = {7,200,65,36,135,231,3,111,230,191,0,190,10,254,0,0,86,195,44,236,1,104,0,6};
+
+	char MessageBuffer[100];
+	int MessageLength;
+	int RowCount, i, Rest;
+	char TrajBuffer[COMMAND_DOPM_ROWS_IN_TRANSMISSION*COMMAND_DOPM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH];
+	FILE *fd;
+
+
 
 	printf("Connecting to server...\n");
 	int socketfd=-1;
@@ -263,6 +294,76 @@ void usercontrol_task()
 					socketfd = -1;
 					UserControlResetInputVariables();
 				break;
+				case tosem_0:
+					 MessageLength = ObjectControlBuildOSEMMessage(MessageBuffer, 
+                                UtilSearchTextFile("conf/test.conf", "OrigoLatidude=", "", Latitude),
+                                UtilSearchTextFile("conf/test.conf", "OrigoLongitude=", "", Longitude),
+                                UtilSearchTextFile("conf/test.conf", "OrigoAltitude=", "", Altitude),
+                                UtilSearchTextFile("conf/test.conf", "OrigoHeading=", "", Heading),
+                                1); 
+
+					UserControlResetInputVariables();
+				break;
+				case tstrt_0:
+					MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, 1, 1024, 1);
+					UserControlResetInputVariables();
+				break;
+				case tdopm_0:
+					fd = fopen ("traj/192.168.0.1", "r");
+					RowCount = UtilCountFileRows(fd) - 1;
+					fclose (fd);
+
+					MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, RowCount-1, 1);
+					//MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, 2, 1);
+					/*Send DOPM header*/
+					
+					fd = fopen ("traj/192.168.0.1", "r");
+					UtilReadLineCntSpecChars(fd, TrajBuffer);//Read first line
+					Rest = 0, i = 0;
+					do
+					{
+						Rest = RowCount - COMMAND_DOPM_ROWS_IN_TRANSMISSION;
+						RowCount = RowCount - COMMAND_DOPM_ROWS_IN_TRANSMISSION; 
+						if(Rest >= COMMAND_DOPM_ROWS_IN_TRANSMISSION)
+						{
+							MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, COMMAND_DOPM_ROWS_IN_TRANSMISSION, 0);
+							//MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, 2, 1);
+						}
+						else
+						{
+						  MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, Rest, 0);
+						}
+						printf("Transmission %d: %d bytes left to send.\n", ++i, Rest*COMMAND_DOPM_ROW_MESSAGE_LENGTH);
+
+						/*Send DOPM data*/
+						
+					} while (Rest >= COMMAND_DOPM_ROWS_IN_TRANSMISSION /*i < 2*/); 
+
+					fclose (fd);
+					UserControlResetInputVariables();
+				break;
+				case tmonr_0:
+					ObjectControlMONRToASCII(TestBuffer, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
+					bzero(Buffer,100);
+					strcat(Buffer,Timestamp);
+					strcat(Buffer,";");
+					strcat(Buffer,Latitude);
+					strcat(Buffer,";");
+					strcat(Buffer,Longitude);
+					strcat(Buffer,";");
+					strcat(Buffer,Altitude);
+					strcat(Buffer,";");
+					strcat(Buffer,Speed);
+					strcat(Buffer,";");
+					strcat(Buffer,Heading);
+					strcat(Buffer,";");
+					strcat(Buffer,DriveDirection);
+					strcat(Buffer,";");
+					//strcat(Buffer,StatusFlag);
+					//strcat(Buffer,";");
+					printf("MONR message: %s\n", Buffer);
+					UserControlResetInputVariables();
+  				break;
 				case cb_0:
 					bzero(RecordBuffer, IPC_BUFFER_SIZE*2);
 				break;
@@ -281,6 +382,10 @@ void usercontrol_task()
 					printf("exit - Tell server to send \"EXIT\" and quit this client.\n");
 					printf("sx - Close connection to server.\n");
 					printf("sc - Open connection to server.\n");
+					printf("tosem - Test to build OSEM message.\n");
+					printf("tstrt - Test to build STRT message.\n");
+					printf("tdopm - Test to build DOPM message.\n");
+					printf("tmonr - Test to build MONR message.\n");
 				break;
 			
 				default:
@@ -407,7 +512,7 @@ static void UserControlSendString(const char *command, int *sockfd)
   n = write(*sockfd, command, strlen(command));
   if (n < 0)
   {
-    util_error("ERR: Failed to send on control socket");
+    util_error("[UserControl] ERR: Failed to send on control socket");
   }
 }
 
