@@ -19,8 +19,6 @@
 #include <errno.h>
 #include <unistd.h>
 
-#include "usercontrol.h"
-#include "objectcontrol.h"
 #include "util.h"
 
 #define IPC_BUFFER_SIZE   256
@@ -65,8 +63,10 @@ static void UserControlConnectServer(int* sockfd, const char* name, const uint32
 static void UserControlSendString(const char* command, int* sockfd);
 static void UserControlDisconnectObject(int* sockfd);
 
-
-void usercontrol_task()
+/*------------------------------------------------------------
+-- The main function.
+------------------------------------------------------------*/
+int main(int argc, char *argv[])
 {
 
 	char pcBuffer[IPC_BUFFER_SIZE];
@@ -97,12 +97,28 @@ void usercontrol_task()
 
 
 
-	printf("Connecting to server...\n");
 	int socketfd=-1;
 	char object_address_name[50];
 	bzero(object_address_name,50);
-	strcat(object_address_name, USER_CONTROL_SYSTEM_CONTROL_IP);
 	uint32_t object_tcp_port = USER_CONTROL_SYSTEM_CONTROL_PORT;
+
+	if (argc > 1)
+	{
+		strcat(object_address_name, argv[1]);
+  	}
+	else
+	{
+		strcat(object_address_name, USER_CONTROL_SYSTEM_CONTROL_IP);
+	}
+
+	if (argc > 2)
+	{
+      object_tcp_port = atoi(argv[2]);
+  	}
+
+  	printf("Connecting to server... %s %d \n",object_address_name,object_tcp_port);
+
+
 	UserControlConnectServer(&socketfd, object_address_name, object_tcp_port);
 	if (socketfd >= 0) 
   	{
@@ -294,76 +310,6 @@ void usercontrol_task()
 					socketfd = -1;
 					UserControlResetInputVariables();
 				break;
-				case tosem_0:
-					 MessageLength = ObjectControlBuildOSEMMessage(MessageBuffer, 
-                                UtilSearchTextFile("conf/test.conf", "OrigoLatidude=", "", Latitude),
-                                UtilSearchTextFile("conf/test.conf", "OrigoLongitude=", "", Longitude),
-                                UtilSearchTextFile("conf/test.conf", "OrigoAltitude=", "", Altitude),
-                                UtilSearchTextFile("conf/test.conf", "OrigoHeading=", "", Heading),
-                                1); 
-
-					UserControlResetInputVariables();
-				break;
-				case tstrt_0:
-					MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, 1, 1024, 1);
-					UserControlResetInputVariables();
-				break;
-				case tdopm_0:
-					fd = fopen ("traj/192.168.0.1", "r");
-					RowCount = UtilCountFileRows(fd) - 1;
-					fclose (fd);
-
-					MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, RowCount-1, 1);
-					//MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, 2, 1);
-					/*Send DOPM header*/
-					
-					fd = fopen ("traj/192.168.0.1", "r");
-					UtilReadLineCntSpecChars(fd, TrajBuffer);//Read first line
-					Rest = 0, i = 0;
-					do
-					{
-						Rest = RowCount - COMMAND_DOPM_ROWS_IN_TRANSMISSION;
-						RowCount = RowCount - COMMAND_DOPM_ROWS_IN_TRANSMISSION; 
-						if(Rest >= COMMAND_DOPM_ROWS_IN_TRANSMISSION)
-						{
-							MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, COMMAND_DOPM_ROWS_IN_TRANSMISSION, 0);
-							//MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, 2, 1);
-						}
-						else
-						{
-						  MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, Rest, 0);
-						}
-						printf("Transmission %d: %d bytes left to send.\n", ++i, Rest*COMMAND_DOPM_ROW_MESSAGE_LENGTH);
-
-						/*Send DOPM data*/
-						
-					} while (Rest >= COMMAND_DOPM_ROWS_IN_TRANSMISSION /*i < 2*/); 
-
-					fclose (fd);
-					UserControlResetInputVariables();
-				break;
-				case tmonr_0:
-					ObjectControlMONRToASCII(TestBuffer, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
-					bzero(Buffer,100);
-					strcat(Buffer,Timestamp);
-					strcat(Buffer,";");
-					strcat(Buffer,Latitude);
-					strcat(Buffer,";");
-					strcat(Buffer,Longitude);
-					strcat(Buffer,";");
-					strcat(Buffer,Altitude);
-					strcat(Buffer,";");
-					strcat(Buffer,Speed);
-					strcat(Buffer,";");
-					strcat(Buffer,Heading);
-					strcat(Buffer,";");
-					strcat(Buffer,DriveDirection);
-					strcat(Buffer,";");
-					//strcat(Buffer,StatusFlag);
-					//strcat(Buffer,";");
-					printf("MONR message: %s\n", Buffer);
-					UserControlResetInputVariables();
-  				break;
 				case cb_0:
 					bzero(RecordBuffer, IPC_BUFFER_SIZE*2);
 				break;

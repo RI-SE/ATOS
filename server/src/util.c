@@ -145,9 +145,7 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue)
         {
           pcTemp[strlen(pcTemp)-1] = 0;
         }
-        
         strcpy(pcValue,&pcTemp[strlen(pcParameter)+1]);
-        
       }
       iFindResult = 1;
     }

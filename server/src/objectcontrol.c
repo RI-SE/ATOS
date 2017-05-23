@@ -1247,4 +1247,3 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
   }
   (void)closedir(traj_directory);
 }
-

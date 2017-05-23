@@ -1,20 +1,20 @@
-# cproto
+# Chronos test server
 
 ## How to build and run server
-
 cd  server
-
 mkdir build && cd build
 
 ## Create project
 cmake -G "Unix Makefiles" ..
-
 ## Create project with debug data
 cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
 
-
 make
+cp -R ../conf/ .
+cp ../traj/0.traj ./traj/192.168.0.1
 ./TEServer
+# To communicate with server start program.
+./UserControl [IP] [port]
 
 ## How to build and run gui server
 cd server_gui
@@ -37,9 +37,6 @@ make
 # CentOS installation for server
 yum install cmake
 yum groupinstall 'Development Tools'
-
-
-# CentOS installation qt
 wget http://download.qt.io/official_releases/qt/5.7/5.7.1/qt-opensource-linux-x64-5.7.1.run
 ./http://download.qt.io/official_releases/qt/5.7/5.7.1/qt-opensource-linux-x64-5.7.1.run
 
@@ -54,15 +51,22 @@ mkdir build && cd build
 gcc -I../inc/ ../src/nmea2etsi.c ../src/object_rpi.c -o object_rpi
 ./object_rpi 
 
-#Eclipse project
+# Eclipse project
 cd /home/kj/Repos/chronos
-mkdir build_server_eclipse
-cd build_server_eclipse	
-cmake -G"Eclipse CDT4 - Unix Makefiles" -D CMAKE_BUILD_TYPE=Debug ./server/
-
+mkdir buildEclipse
+cd buildEclipse
+cmake -G"Eclipse CDT4 - Unix Makefiles" -D CMAKE_BUILD_TYPE=Debug ../server/
 Import project using Menu File->Import
 Select General->Existing projects into workspace:
-Browse root directory /home/kj/Repos/chronos/build_server_eclipse 
+Browse root directory /home/kj/Repos/chronos/build_server_eclipse
+
+# KDevelop ubuntu
+wget -O KDevelop.AppImage https://download.kde.org/stable/kdevelop/5.1.0/bin/linux/KDevelop-5.1.0-x86_64.AppImage
+chmod +x KDevelop.AppImage
+./KDevelop.AppImage
+Project -> Open/import cmake
+Build main, usercontrol & VisualizationAdapter
+Run -> Configure Launches
 
 # Compile and run RTKLIB
 cd rtklib/app
