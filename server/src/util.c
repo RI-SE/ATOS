@@ -159,6 +159,20 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue)
   return 1;
 }
 
+int UtilSetMasterObject(ObjectPosition *OP, char *Filename)
+{
+
+  return 0;
+}
+
+
+int UtilSetSlaveObject(ObjectPosition *OP, char *Filename)
+{
+
+  return 0;
+}
+
+
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP)
 {
 

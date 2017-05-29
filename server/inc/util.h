@@ -96,7 +96,8 @@ typedef struct
 
 typedef struct 
 {
-	double Latitude;
+	char Type;
+  double Latitude;
 	double Longitude;
 	double OrigoDistance;
 	double x;
@@ -152,6 +153,9 @@ int UtilAddTwoBytesMessageData(unsigned char *MessageBuffer, int StartIndex, uns
 int UtilAddOneByteMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned char Data);
 int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int Length, unsigned char *Data);
 char * UtilSearchTextFile(char *Filename, char *Text1, char *Text2, char *Result);
+int UtilSetMasterObject(ObjectPosition *OP, char *Filename);
+int UtilSetSlaveObject(ObjectPosition *OP, char *Filename);
+
 
 typedef struct {
   uint64_t timestamp;

@@ -119,7 +119,7 @@ int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, u
 int ObjectControlBuildMTPSMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug);
 int ObjectControlBuildDOPMMessageHeader(char* MessageBuffer, int RowCount, char debug);
 int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, char debug);
-int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, char debug);
+int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char debug);
 int ObjectControlSendHeartbeat(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
 int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag);
 int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, int32_t *Latitude, int32_t * Longitude, int32_t *Altitude, uint16_t *Speed, uint16_t *Heading, uint8_t *DriveDirection);
@@ -262,7 +262,8 @@ void objectcontrol_task()
   /* Connect and send drive files */
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
-    vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
+     vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
+
 
     /* Send OSEM command */
     #ifdef BYTEBASED
@@ -273,7 +274,7 @@ void objectcontrol_task()
    
     #ifdef BYTEBASED
       fd = fopen (object_traj_file[iIndex], "r");
-      int RowCount = UtilCountFileRows(fd) - 1;
+      int RowCount = UtilCountFileRows(fd);
       fclose (fd);
 
       /*DOPM*/
@@ -283,7 +284,7 @@ void objectcontrol_task()
       vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
 
       /*Send DOPM data*/
-      ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], 1);
+      ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], RowCount-1, 1);
 
       /* Sync points...*/
       /*
@@ -292,9 +293,10 @@ void objectcontrol_task()
       OP[iIndex].TimeArr = TimeArr[iIndex];
       OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
       UtilPopulateSpaceTimeArr(&OP[iIndex], object_traj_file[iIndex]);
-      */
       
-
+      UtilSetMasterObject(&OP[iIndex], object_traj_file[iIndex]);
+      UtilSetSlaveObject(&OP[iIndex], object_traj_file[iIndex]);
+      */
 
 
     #else
@@ -611,13 +613,13 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Lat
   return 0;
 }
 
-int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, char debug)
+int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char debug)
 {
 
   FILE *fd;
   fd = fopen (Filename, "r");
   UtilReadLineCntSpecChars(fd, TrajBuffer);//Read first line
-  int Rest = 0, i = 0, RowCount = 0, MessageLength = 0;
+  int Rest = 0, i = 0, MessageLength = 0;
   do
   {
     Rest = RowCount - COMMAND_DOPM_ROWS_IN_TRANSMISSION;

@@ -15,6 +15,12 @@ add_library(util
   inc/util.h
 )
 
+# Create library
+add_library(objctrl 
+  src/objectcontrol.c 
+  inc/objectcontrol.h
+)
+
 # add the executable
 add_executable(DefaultVisualizationAdapter 
   src/visualization.c
@@ -22,6 +28,7 @@ add_executable(DefaultVisualizationAdapter
 
 add_executable(UserControl 
   src/usercontrol.c
+  inc/objectcontrol.h
 )
 
 # add the executable
@@ -46,7 +53,7 @@ target_link_libraries(util rt m)
 target_link_libraries(util m)
 target_link_libraries(util rt)
 target_link_libraries(DefaultVisualizationAdapter util)
-target_link_libraries(UserControl util)
+target_link_libraries(UserControl util objctrl)
 target_link_libraries(TEServer util)
 
 
