@@ -286,7 +286,7 @@ void objectcontrol_task()
       /*Send DOPM data*/
       ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], RowCount-1, 1);
 
-      /* Sync points...*/
+      /* Adaptive Sync Points...*/
       /*
       OP[iIndex].TrajectoryPositionCount = RowCount;
       OP[iIndex].SpaceArr = SpaceArr[iIndex];
@@ -676,7 +676,7 @@ int ObjectControlBuildOSEMMessage(char* MessageBuffer, char *Latitude, char *Lon
     //printf("Altitude: %s\n", Altitude);
     //Data = atof("202.934115075") * 1e2;
     Data = atof((char *)Altitude) * 1e2;
-    MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
+    MessageIndex = UtilAddFourBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
   }
   //if(iUtilGetParaConfFile("OrigoHeading",pcTempBuffer))
   {

@@ -28,7 +28,6 @@ add_executable(DefaultVisualizationAdapter
 
 add_executable(UserControl 
   src/usercontrol.c
-  inc/objectcontrol.h
 )
 
 # add the executable
