@@ -53,51 +53,60 @@
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
 /*------------------------------------------------------------
+  -- Function declarations.
+  ------------------------------------------------------------*/
+
+uint8_t ReadOneUByteFromFile(FILE *f);
+uint16_t ReadTwoUBytesFromFile(FILE *f);
+uint32_t ReadFourUBytesFromFile(FILE *f);
+int8_t ReadOneSByteFromFile(FILE *f);
+int16_t ReadTwoSBytesFromFile(FILE *f);
+int32_t ReadFourSBytesFromFile(FILE *f);
+
+/*------------------------------------------------------------
   -- The main function.
   ------------------------------------------------------------*/
 
-int main(int argc, char *argv[])
+int32_t main(int32_t argc, int8_t *argv[])
 {
   FILE *fp;
-  char bFileName[6];
-  char *bFileLine;
-  //char *bFileLine_ptr = bFileLine;
+  int8_t bFileName[6];
+  int8_t *bFileLine;
+  //int8_t *bFileLine_ptr = bFileLine;
   size_t len;
   size_t read;
-  int monitor_socket_fd;
-  int command_server_socket_fd;
-  int command_com_socket_fd;
-  int n;
-  int pid;
-  int fpos;
+  int32_t monitor_socket_fd;
+  int32_t command_server_socket_fd;
+  int32_t command_com_socket_fd;
+  int32_t n;
+  int32_t pid;
+  int32_t fpos;
   socklen_t cli_length;
   struct sockaddr_in monitor_server_addr;
   struct sockaddr_in monitor_from_addr;
   struct sockaddr_in command_server_addr;
   struct sockaddr_in cli_addr;
   struct hostent *hp;
-  char buffer[256];
-  char bMonitorBuffer[256];
-  char pcPosition[256];
+  int8_t buffer[256];
+  int8_t bMonitorBuffer[25];
+  int8_t pcPosition[256];
   struct timespec sleep_time;
   struct timespec ref_time;
-  char pcTimeString[15];
-  char *ret = NULL;
-  char bCurrentCommand[10] = "NOOP"; 
-  const char bEndDOPM[10]= "ENDDOPM";
-  const char bEndTRIG[10]= "ENDTRIG";
-  char bData[DATALEN];
-  int newFileData = 0;
-  char bFileTrajName[100];
-  char bCommand[10];
-  char bFileCommand[10];
-  char bFileTraj[10];
-  char bLine[10];
-  char bEndLine[10];
+  int8_t pcTimeString[15];
+  int8_t *ret = NULL;
+  int8_t bCurrentCommand[10] = "NOOP"; 
+  int8_t bData[DATALEN];
+  int32_t newFileData = 0;
+  int8_t bFileTrajName[100];
+  int8_t bCommand[10];
+  int8_t bFileCommand[10];
+  int8_t bFileTraj[10];
+  int8_t bLine[10];
+  int8_t bEndLine[10];
   float fileTrajVersion;
-  int row = 0;
-  int fileRows = 0;
-  int result = 0;
+  int32_t row = 0;
+  int32_t fileRows = 0;
+  int32_t result = 0;
   float   time;
   double  x;
   double  y;
@@ -111,10 +120,10 @@ int main(int argc, char *argv[])
   double lat_start = ORIGIN_LATITUDE;
   double lon_start = ORIGIN_LONGITUDE;
   double alt_start = ORIGIN_ALTITUDE;
-  unsigned int safety_port = SAFETY_CHANNEL_PORT;
-  unsigned int control_port = CONTROL_CHANNEL_PORT;
-  int optval = 1;
-  unsigned long long msSinceEpochETSI = 0;
+  uint32_t safety_port = SAFETY_CHANNEL_PORT;
+  uint32_t control_port = CONTROL_CHANNEL_PORT;
+  int32_t optval = 1;
+  uint64_t msSinceEpochETSI = 0;
 
   uint16_t buffer_ptr = 0;
   uint32_t payload = 0;
@@ -127,6 +136,23 @@ int main(int argc, char *argv[])
   uint8_t start_type  = 0;
   uint64_t start_time = INT_MAX;
    
+  uint8_t arm_mode  = 0;
+
+  uint8_t  cmd  = 0;
+  uint32_t size = 0;
+  uint32_t btim = 0;
+  uint32_t bx   = 0;
+  uint32_t by   = 0;
+  uint32_t bz   = 0;
+  int16_t  bhdg = 0;
+  int16_t  bspd = 0;
+  int16_t  bacc = 0;
+  uint16_t bcur = 0;
+  uint8_t  mod  = 0;
+  uint8_t  mon_status = 0;
+  uint32_t dopm_bytes = 0;
+  uint8_t firstTime = 0;
+  
   struct timeval tv;
   
   if ( !( (argc == 1) || (argc == 4) || (argc == 6))){
@@ -203,7 +229,7 @@ int main(int argc, char *argv[])
       perror("ERR: Failed to create control socket");
       exit(1);
     }
-  bzero((char *) &command_server_addr, sizeof(command_server_addr));
+  bzero((int8_t *) &command_server_addr, sizeof(command_server_addr));
 
   command_server_addr.sin_family = AF_INET;
   command_server_addr.sin_addr.s_addr = INADDR_ANY; 
@@ -253,7 +279,7 @@ int main(int argc, char *argv[])
       exit(1);
     }
 
-  /* set socket to non-blocking */
+  /* Set socket to non-blocking */
   result = fcntl(command_com_socket_fd, F_SETFL, fcntl(command_com_socket_fd, F_GETFL, 0) | O_NONBLOCK);
 
 #ifdef DEBUG
@@ -262,8 +288,8 @@ int main(int argc, char *argv[])
 
   while(1)
     {
-      int receivedNewData = 0;
-      int commandSet = 0;
+      int32_t receivedNewData = 0;
+      int32_t commandSet = 0;
       bzero(bData,DATALEN);
       bzero(buffer,256);
       do
@@ -295,13 +321,13 @@ int main(int argc, char *argv[])
 	      buffer_ptr = 0;
 
 #ifdef DEBUG
-	      printf("INF: Received: Result = %d, <%d> <%x>\n",result, (unsigned char) buffer[buffer_ptr], (unsigned char) buffer[buffer_ptr]);
+	      printf("INF: Received: Result = %d, <%d> <%x>\n",result, (uint8_t) buffer[buffer_ptr], (uint8_t) buffer[buffer_ptr]);
 	      fflush(stdout);
 #endif
 
-	      /* int k = 0; */
+	      /* int32_t k = 0; */
 	      /* for (k = 0; k < result; k++) */
-	      /* 	printf("%x,",(unsigned char) buffer[k]); */
+	      /* 	printf("%x,",(uint8_t) buffer[k]); */
 	      /* printf("\n"); */
 
 	      do
@@ -317,11 +343,14 @@ int main(int argc, char *argv[])
 		      bzero(bCurrentCommand, 10);
 		      strcpy(bCurrentCommand, "DOPM");
 		      commandSet = 1;
-		      payload |= (unsigned char) buffer[buffer_ptr] << 24;
-		      payload |= (unsigned char) buffer[buffer_ptr+1] << 16;
-		      payload |= (unsigned char) buffer[buffer_ptr+2] << 8;
-		      payload |= (unsigned char) buffer[buffer_ptr+3];
+		      payload |= (uint8_t) buffer[buffer_ptr] << 24;
+		      payload |= (uint8_t) buffer[buffer_ptr+1] << 16;
+		      payload |= (uint8_t) buffer[buffer_ptr+2] << 8;
+		      payload |= (uint8_t) buffer[buffer_ptr+3];
 		      printf("Payload = %d\n", payload);
+		      dopm_bytes = payload;
+		      mon_status = 0x0;
+		      firstTime = 0;
 		      buffer_ptr--;
 		      break;
 		    case 0x02:
@@ -331,25 +360,25 @@ int main(int argc, char *argv[])
 		      bzero(bCurrentCommand, 10);
 		      strcpy(bCurrentCommand, "OSEM");
 		      commandSet = 1;
-		      payload |= (unsigned char) buffer[buffer_ptr++] << 24;
-		      payload |= (unsigned char) buffer[buffer_ptr++] << 16;
-		      payload |= (unsigned char) buffer[buffer_ptr++] << 8;
-		      payload |= (unsigned char) buffer[buffer_ptr++];
+		      payload |= (uint8_t) buffer[buffer_ptr++] << 24;
+		      payload |= (uint8_t) buffer[buffer_ptr++] << 16;
+		      payload |= (uint8_t) buffer[buffer_ptr++] << 8;
+		      payload |= (uint8_t) buffer[buffer_ptr++];
 		      printf("Payload = %d\n", payload);
-		      origin_latitude  |= (unsigned char) buffer[buffer_ptr++] << 24;
-		      origin_latitude  |= (unsigned char) buffer[buffer_ptr++] << 16;
-		      origin_latitude  |= (unsigned char) buffer[buffer_ptr++] << 8;
-		      origin_latitude  |= (unsigned char) buffer[buffer_ptr++];
-		      origin_longitude |= (unsigned char) buffer[buffer_ptr++] << 24;
-		      origin_longitude |= (unsigned char) buffer[buffer_ptr++] << 16;
-		      origin_longitude |= (unsigned char) buffer[buffer_ptr++] << 8;
-		      origin_longitude |= (unsigned char) buffer[buffer_ptr++];
-		      origin_altitude  |= (unsigned char) buffer[buffer_ptr++] << 24;
-		      origin_altitude  |= (unsigned char) buffer[buffer_ptr++] << 16;
-		      origin_altitude  |= (unsigned char) buffer[buffer_ptr++] << 8;
-		      origin_altitude  |= (unsigned char) buffer[buffer_ptr++];
-		      origin_heading   |= (unsigned char) buffer[buffer_ptr++] << 8;
-		      origin_heading   |= (unsigned char) buffer[buffer_ptr++];
+		      origin_latitude  |= (uint8_t) buffer[buffer_ptr++] << 24;
+		      origin_latitude  |= (uint8_t) buffer[buffer_ptr++] << 16;
+		      origin_latitude  |= (uint8_t) buffer[buffer_ptr++] << 8;
+		      origin_latitude  |= (uint8_t) buffer[buffer_ptr++];
+		      origin_longitude |= (uint8_t) buffer[buffer_ptr++] << 24;
+		      origin_longitude |= (uint8_t) buffer[buffer_ptr++] << 16;
+		      origin_longitude |= (uint8_t) buffer[buffer_ptr++] << 8;
+		      origin_longitude |= (uint8_t) buffer[buffer_ptr++];
+		      origin_altitude  |= (uint8_t) buffer[buffer_ptr++] << 24;
+		      origin_altitude  |= (uint8_t) buffer[buffer_ptr++] << 16;
+		      origin_altitude  |= (uint8_t) buffer[buffer_ptr++] << 8;
+		      origin_altitude  |= (uint8_t) buffer[buffer_ptr++];
+		      origin_heading   |= (uint8_t) buffer[buffer_ptr++] << 8;
+		      origin_heading   |= (uint8_t) buffer[buffer_ptr++];
 		      handled_payload += 14;
 		      commandSet = 0;
 		      printf("olat: %d <%x> olon: %d <%x> oalt: %d <%x> ohdg: %d <%x> Handled payload: %d\n", origin_latitude, origin_latitude, origin_longitude, origin_longitude, origin_altitude, origin_altitude, origin_heading, origin_heading, payload);
@@ -361,11 +390,25 @@ int main(int argc, char *argv[])
 		      bzero(bCurrentCommand, 10);
 		      strcpy(bCurrentCommand, "AROM");
 		      commandSet = 1;
-		      payload |= (unsigned char) buffer[buffer_ptr++] << 24;
-		      payload |= (unsigned char) buffer[buffer_ptr++] << 16;
-		      payload |= (unsigned char) buffer[buffer_ptr++] << 8;
-		      payload |= (unsigned char) buffer[buffer_ptr++];
+		      payload |= (uint8_t) buffer[buffer_ptr++] << 24;
+		      payload |= (uint8_t) buffer[buffer_ptr++] << 16;
+		      payload |= (uint8_t) buffer[buffer_ptr++] << 8;
+		      payload |= (uint8_t) buffer[buffer_ptr++];
 		      printf("Payload = %d\n", payload);
+		      arm_mode |= (uint8_t) buffer[buffer_ptr++];
+		      handled_payload += 1;
+		      if (arm_mode == 1){
+			printf("Armed.\n");
+			mon_status = 0x1;
+		      }
+		      else if (arm_mode == 2){
+			printf("Disarmed.\n");
+			mon_status = 0x0;
+		      }
+		      else{
+			printf("Unknown arm mode.\n");
+			mon_status = 0x4;
+		      }
 		      commandSet = 0;
 		      break;
 		    case 0x04:
@@ -375,21 +418,21 @@ int main(int argc, char *argv[])
 		      bzero(bCurrentCommand, 10);
 		      strcpy(bCurrentCommand, "STRT");
 		      commandSet = 1;
-		      payload |= (unsigned char) buffer[buffer_ptr++] << 24;
-		      payload |= (unsigned char) buffer[buffer_ptr++] << 16;
-		      payload |= (unsigned char) buffer[buffer_ptr++] << 8;
-		      payload |= (unsigned char) buffer[buffer_ptr++];
+		      payload |= (uint8_t) buffer[buffer_ptr++] << 24;
+		      payload |= (uint8_t) buffer[buffer_ptr++] << 16;
+		      payload |= (uint8_t) buffer[buffer_ptr++] << 8;
+		      payload |= (uint8_t) buffer[buffer_ptr++];
 		      printf("Payload = %d\n", payload);
-		      start_type |= (unsigned char) buffer[buffer_ptr++];
+		      start_type |= (uint8_t) buffer[buffer_ptr++];
 		      handled_payload += 1;
 		      printf("start_type: %d ",start_type);
 		      if (start_type == 2){
-			start_time |= (unsigned char) buffer[buffer_ptr++] << 40;
-			start_time |= (unsigned char) buffer[buffer_ptr++] << 32;
-			start_time |= (unsigned char) buffer[buffer_ptr++] << 24;
-			start_time |= (unsigned char) buffer[buffer_ptr++] << 16;
-			start_time |= (unsigned char) buffer[buffer_ptr++] << 8;
-			start_time |= (unsigned char) buffer[buffer_ptr++];
+			start_time |= (uint8_t) buffer[buffer_ptr++] << 40;
+			start_time |= (uint8_t) buffer[buffer_ptr++] << 32;
+			start_time |= (uint8_t) buffer[buffer_ptr++] << 24;
+			start_time |= (uint8_t) buffer[buffer_ptr++] << 16;
+			start_time |= (uint8_t) buffer[buffer_ptr++] << 8;
+			start_time |= (uint8_t) buffer[buffer_ptr++];
 			handled_payload += 6;
 			printf("start_time: %ld", start_time);
 		      }
@@ -422,237 +465,95 @@ int main(int argc, char *argv[])
 	    }
 	} while(result > 0);
 
-    
-/*       /\* Did we receive anything on command? *\/ */
-/*       if(receivedNewData) */
-/* 	{ */
-/* 	  if(!strncmp(bCurrentCommand, "DOPM", 4)) */
-/* 	    { */
-
-/* 	      rewind(fp); */
-/* 	      newFileData = 0; */
-/* 	      while(newFileData != 1) */
-/* 		{ */
-/* 		  read = getline(&bFileLine, &len, fp); */
-/* 		  if (read < 0) */
-/* 		    { */
-/* 		      if(errno != EAGAIN && errno != EWOULDBLOCK) */
-/* 			{ */
-/* 			  perror("ERR: Failed to read first line in drive file"); */
-/* 			  exit(1); */
-/* 			} */
-/* 		      else */
-/* 			{ */
-/* #ifdef DEBUG */
-/* 			  printf("INF: No data read from drive file\n"); */
-/* 			  fflush(stdout); */
-/* #endif */
-/* 			} */
-/* 		    } */
-/* 		  else */
-/* 		    newFileData = 1; */
-/* 		} */
-
-/* 	      int l = 0; */
-/* 	      int li = 0; */
-/* 	      for(l = 0; l <= len; l++){ */
-/* 		if(bFileLine[l] == ';'){ */
-/* 		  bFileLine[l] = '\0'; */
-/* 		  sscanf(&bFileLine[li],"%s",bFileCommand); */
-/* 		  li = l+1; */
-/* 		  break; */
-/* 		} */
-/* 	      } */
-/* 	      for(l; l <= len; l++){ */
-/* 		if(bFileLine[l] == ';'){ */
-/* 		  bFileLine[l] = '\0'; */
-/* 		  sscanf(&bFileLine[li],"%s",bFileTraj); */
-/* 		  li = l+1; */
-/* 		  break; */
-/* 		} */
-/* 	      } */
-/* 	      for(l; l <= len; l++){ */
-/* 		if(bFileLine[l] == ';'){ */
-/* 		  bFileLine[l] = '\0'; */
-/* 		  sscanf(&bFileLine[li],"%s",bFileTrajName); */
-/* 		  li = l+1; */
-/* 		  break; */
-/* 		} */
-/* 	      } */
-/* 	      for(l; l <= len; l++){ */
-/* 		if(bFileLine[l] == ';'){ */
-/* 		  bFileLine[l] = '\0'; */
-/* 		  sscanf(&bFileLine[li],"%f",&fileTrajVersion); */
-/* 		  li = l+1; */
-/* 		  break; */
-/* 		} */
-/* 	      } */
-/* 	      for(l; l <= len; l++){ */
-/* 		if(bFileLine[l] == ';'){ */
-/* 		  bFileLine[l] = '\0'; */
-/* 		  sscanf(&bFileLine[li],"%d",&fileRows); */
-/* 		  li = l+1; */
-/* 		  break; */
-/* 		} */
-/* 	      } */
-/* 	      fpos = ftell(fp); */
-	      
-/* 	    } // current command = DOPM */
-/* 	} // receivedNewData */
-
-/* #ifdef DEBUG */
-/*       printf("INF: Done handling incoming message\n"); */
-/* #endif */
-
-
       /* Send monitor start */
-      bzero(bMonitorBuffer, 256);
-      strcpy(bMonitorBuffer, "MONR;");
-
-      bzero(pcTimeString, 256);
+      bzero(bMonitorBuffer, 25);
       if (TIME_FROM_DRIVE_FILE)
 	{
-	  sprintf(pcTimeString, "%s", "0");
+	  msSinceEpochETSI = 0;
 	}
       else
 	{
 	  gettimeofday(&tv, NULL);
-	  
-	  msSinceEpochETSI = (unsigned long long) tv.tv_sec * 1000 + (unsigned long long) tv.tv_usec / 1000 - 
+	  msSinceEpochETSI = (uint64_t) tv.tv_sec * 1000 + (uint64_t) tv.tv_usec / 1000 - 
 	    MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
-	  
-	  sprintf(pcTimeString, "%llu", msSinceEpochETSI); 
 	}
 
-
-      static int sent_rows = 0;
+      static int32_t handled_bytes = 0;
       
 #ifdef DEBUG
-      printf("INF: start_time %ld sent_rows %d rows %d \n",start_time,sent_rows,fileRows);
+      printf("INF: start_time %ld handled_bytes %d bytes %d \n",start_time,handled_bytes,dopm_bytes);
 #endif
       
-      if (start_time < INT_MAX && sent_rows < fileRows)
+      if ((msSinceEpochETSI > start_time) && (sent_rows < fileRows))
 	{
 #ifdef DEBUG
 	  printf("INF: Create row %d from drive file.\n",sent_rows);
 #endif
-	  bzero(pcPosition,256);
-
-	  newFileData = 0;
-	  while(newFileData != 1)
-	    {
-	      read = getline(&bFileLine, &len, fp);
-	      if (read < 0)
-		{
-		  if(errno != EAGAIN && errno != EWOULDBLOCK)
-		    {
-		      perror("ERR: Failed to read line in drive file");
-		      exit(1);
-		    }
-		  else
-		    {
-#ifdef DEBUG
-		      printf("INF: No data to read from drive file\n");
-		      fflush(stdout);
-#endif
-		    }
-		}
-	      else
-		newFileData = 1;
-	    }
-
-	  sscanf(&bFileLine[5],"%f;%lf;%lf;%lf;%f;%f;",
-	  	 &time,
-	  	 &x,
-	  	 &y,
-	  	 &z,
-	  	 &hdg,
-	  	 &vel);
+	  if (firstTime == 1){
+	    cmd = ReadOneUByteFromFile(fd);
+	    size = ReadFourUBytesFromFile(fd);
+	    firstTime = 0;
+	  }
 	  
-	  cal_lat = ((y*180)/(PI*earth_radius)) + ORIGIN_LATITUDE;
-	  cal_lon = ((x*180)/(PI*earth_radius))*(1/(cos((PI/180)*(0.5*(ORIGIN_LATITUDE+cal_lat))))) + ORIGIN_LONGITUDE;
-	  cal_alt = z + ORIGIN_ALTITUDE;
-      
-	  sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;%.0f;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,vel*100,hdg*100);
-	  sent_rows++;
-	  
-	  bzero(pcTimeString, 256);
+	  btim = ReadFourUBytesFromFile(fd);
+	  bx = ReadFourUBytesFromFile(fd);
+	  by = ReadFourUBytesFromFile(fd);
+	  bz = ReadFourUBytesFromFile(fd);
+	  bhdg = ReadTwoSBytesFromFile(fd);
+	  bspd = ReadTwoSBytesFromFile(fd);
+	  bacc = ReadTwoSBytesFromFile(fd);
+	  bcur = ReadTwoUBytesFromFile(fd);
+	  mod = ReadOneUByteFromFile(fd);
+	  handled_bytes += 25;
+
+	  cal_lat = (((((double) by) / 1000) * 180) / (PI * earth_radius)) + (((double) origin_latitude) / 10000000);
+	  cal_lon = (((((double) bx) / 1000) * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * ((((double) origin_latitude) / 10000000)+cal_lat))))) + (((double) origin_longitude) / 10000000);
+	  cal_alt = (((double) bz) / 1000) + (((double) origin_altitude) / 100);
+
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
-	      sprintf(pcTimeString, "%.0f", time*100);
+	      msSinceEpochETSI = btime;
 	    }
 	  else
 	    {
 	      gettimeofday(&tv, NULL);
-	      
-	      msSinceEpochETSI = (unsigned long long) tv.tv_sec * 1000 + (unsigned long long) tv.tv_usec / 1000 - 
+	      msSinceEpochETSI = (uint64_t) tv.tv_sec * 1000 + (uint64_t) tv.tv_usec / 1000 - 
 		MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
-	      
-	      sprintf(pcTimeString, "%llu", msSinceEpochETSI); 
 	    }
 
 	}
-      else if (sent_rows == fileRows)
+      else if (handled_bytes == dopm_bytes)
 	{
-	  bzero(pcPosition,256);
-	  sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;%.0f;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,vel*100,hdg*100);
-	  
-	  bzero(pcTimeString, 256);
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
-	      sprintf(pcTimeString, "%.0f", time*100);
+	      msSinceEpochETSI = btime;
 	    }
 	  else
 	    {
 	      gettimeofday(&tv, NULL);
-	      
-	      msSinceEpochETSI = (unsigned long long) tv.tv_sec * 1000 + (unsigned long long) tv.tv_usec / 1000 - 
+	      msSinceEpochETSI = (uint64_t) tv.tv_sec * 1000 + (uint64_t) tv.tv_usec / 1000 - 
 		MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
-	      
-	      sprintf(pcTimeString, "%llu", msSinceEpochETSI); 
 	    }
 	}
       else
 	{
-
-	  fseek(fp,fpos,0);
-	  newFileData = 0;
-	  while(newFileData != 1)
-	    {
-	      read = getline(&bFileLine, &len, fp);
-	      if (read < 0)
-		{
-		  if(errno != EAGAIN && errno != EWOULDBLOCK)
-		    {
-		      perror("ERR: Failed to read line in drive file");
-		      exit(1);
-		    }
-		  else
-		    {
-#ifdef DEBUG
-		      printf("INF: No data to read from drive file\n");
-		      fflush(stdout);
-#endif
-		    }
-		}
-	      else
-		newFileData = 1;
-	    }
-
-	  sscanf(&bFileLine[5],"%f;%lf;%lf;%lf;%f;%f;",
-	  	 &time,
-	  	 &x,
-	  	 &y,
-	  	 &z,
-	  	 &hdg,
-	  	 &vel);
-	  
-	  cal_lat = ((y*180)/(PI*earth_radius)) + ORIGIN_LATITUDE;
-	  cal_lon = ((x*180)/(PI*earth_radius))*(1/(cos((PI/180)*(0.5*(ORIGIN_LATITUDE+cal_lat))))) + ORIGIN_LONGITUDE;
-	  cal_alt = z + ORIGIN_ALTITUDE;
-      
-	  sprintf(pcPosition,";%.0lf;%.0lf;%.0f;%.0f;%.0f;0;",cal_lat*10000000,cal_lon*10000000,cal_alt*100,vel*100,hdg*100);
-	  
+	  if (firstTime == 1){
+	    cmd = ReadOneUByteFromFile(fd);
+	    size = ReadFourUBytesFromFile(fd);
+	    btim = ReadFourUBytesFromFile(fd);
+	    bx = ReadFourUBytesFromFile(fd);
+	    by = ReadFourUBytesFromFile(fd);
+	    bz = ReadFourUBytesFromFile(fd);
+	    bhdg = ReadTwoSBytesFromFile(fd);
+	    bspd = ReadTwoSBytesFromFile(fd);
+	    bacc = ReadTwoSBytesFromFile(fd);
+	    bcur = ReadTwoUBytesFromFile(fd);
+	    mod = ReadOneUByteFromFile(fd);
+	  }
+	  frewind(fd);
+	  cal_lat = (((((double) by) / 1000) * 180) / (PI * earth_radius)) + (((double) origin_latitude) / 10000000);
+	  cal_lon = (((((double) bx) / 1000) * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * ((((double) origin_latitude) / 10000000)+cal_lat))))) + (((double) origin_longitude) / 10000000);
+	  cal_alt = (((double) bz) / 1000) + (((double) origin_altitude) / 100);
 	}
 
       strcat(bMonitorBuffer,pcTimeString);
@@ -682,4 +583,64 @@ int main(int argc, char *argv[])
   fclose(fp);
 
   return 0;
+}
+
+uint8_t ReadOneUByteFromFile(FILE *f){
+  uint8_t data = 0;
+  fread(&data, 1, 1, f);
+  return data;
+}
+
+uint16_t ReadTwoUBytesFromFile(FILE *f){
+  uint8_t tmp = 0;
+  uint16_t data = 0;
+  fread(&tmp, 1, 1, f);
+  data |= tmp << 8;
+  fread(&tmp, 1, 1, f);
+  data |= tmp;
+  return data;
+}
+
+uint32_t ReadFourUBytesFromFile(FILE *f){
+  uint8_t tmp = 0;
+  uint32_t data = 0;
+  fread(&tmp, 1, 1, f);
+  data |= tmp << 24;
+  fread(&tmp, 1, 1, f);
+  data |= tmp << 16;
+  fread(&tmp, 1, 1, f);
+  data |= tmp << 8;
+  fread(&tmp, 1, 1, f);
+  data |= tmp;
+  return data;
+}
+
+int8_t ReadOneSByteFromFile(FILE *f){
+  int8_t data = 0;
+  fread(&data, 1, 1, f);
+  return data;
+}
+
+int16_t ReadTwoSBytesFromFile(FILE *f){
+  uint8_t tmp = 0;
+  int16_t data = 0;
+  fread(&tmp, 1, 1, f);
+  data |= tmp << 8;
+  fread(&tmp, 1, 1, f);
+  data |= tmp;
+  return data;
+}
+
+  int32_t ReadFourSBytesFromFile(FILE *f){
+  uint8_t tmp = 0;
+  int32_t data = 0;
+  fread(&tmp, 1, 1, f);
+  data |= tmp << 24;
+  fread(&tmp, 1, 1, f);
+  data |= tmp << 16;
+  fread(&tmp, 1, 1, f);
+  data |= tmp << 8;
+  fread(&tmp, 1, 1, f);
+  data |= tmp;
+  return data;
 }
