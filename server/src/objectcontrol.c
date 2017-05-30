@@ -259,6 +259,8 @@ void objectcontrol_task()
 
 #endif
 
+//#define NOTCP
+#ifndef NOTCP
   /* Connect and send drive files */
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
@@ -305,6 +307,7 @@ void objectcontrol_task()
       vSendString("ENDDOPM;",&socket_fd[iIndex]);
     #endif
   }
+#endif // NOTCP
 
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
@@ -375,6 +378,11 @@ void objectcontrol_task()
 
       if(recievedNewData)
       {
+
+      	//#ifdef DEBUG
+      	  printf("INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
+	  fflush(stdout);
+      	//#endif
         
 
         #ifdef BYTEBASED
@@ -521,10 +529,12 @@ void objectcontrol_task()
     }
   }
 
+#ifndef NOTCP
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
     vDisconnectObject(&socket_fd[iIndex]);
   }
+#endif //NOTCP
 
     /* Close safety socket */
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
