@@ -27,6 +27,7 @@
   ------------------------------------------------------------*/
 #define MQ_NBR_QUEUES 4
 
+
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
@@ -161,6 +162,20 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue)
 
 int UtilSetMasterObject(ObjectPosition *OP, char *Filename)
 {
+  
+  FILE *filefd;
+  char FilenameBuffer[MAX_FILE_PATH];
+  bzero(FilenameBuffer,MAX_FILE_PATH);
+  strcat(FilenameBuffer,Filename);
+  strcat(FilenameBuffer, MASTER_FILE_EXTENSION);
+  filefd = fopen (FilenameBuffer, "r");
+  printf("Filename: %s\n", FilenameBuffer);  
+  if(filefd)
+  {     
+  
+    fclose(filefd);
+  }    
+
 
   return 0;
 }
