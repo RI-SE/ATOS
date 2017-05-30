@@ -690,7 +690,8 @@ int ObjectControlBuildOSEMMessage(char* MessageBuffer, char *Latitude, char *Lon
 
   if(debug)
   {
-    for(int i = 0; i < MessageIndex; i ++) printf("[%d]=%x\n", i, (unsigned char)MessageBuffer[i]);
+    int i = 0;
+    for(i = 0; i < MessageIndex; i ++) printf("[%d]=%x\n", i, (unsigned char)MessageBuffer[i]);
   }
 
 
@@ -712,7 +713,11 @@ int ObjectControlBuildSTRTMessage(char* MessageBuffer, unsigned char CommandOpti
   
   UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);
 
-  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  if(debug) 
+  {
+    int i = 0;
+    for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  }
 
   return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
 }
@@ -730,7 +735,11 @@ int ObjectControlBuildAROMMessage(char* MessageBuffer, unsigned char CommandOpti
     
   UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);
 
-  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  if(debug) 
+  {
+    int i = 0;
+    for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  }
 
   return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
 }
@@ -748,7 +757,11 @@ int ObjectControlBuildHEABMessage(char* MessageBuffer, unsigned char CommandOpti
     
   UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);
 
-  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  if(debug)
+  {
+    int i = 0;
+    for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  }
 
   return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
 }
@@ -770,7 +783,11 @@ int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, uns
   
   UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);
 
-  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  if(debug)
+  {
+    int i = 0;
+    for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  }
 
   return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
 }
@@ -789,7 +806,11 @@ int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, u
   
   UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);
 
-  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  if(debug)
+  {
+    int i = 0;
+    for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  }
 
   return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
 }
@@ -806,7 +827,11 @@ int ObjectControlBuildMTPSMessage(char* MessageBuffer, unsigned long SyncTimesta
   
   UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);
 
-  if(debug) for(int i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  if(debug)
+  {
+    int i = 0;
+    for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  }
 
   return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
 }
@@ -823,7 +848,8 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
  
   bzero(MessageBuffer, COMMAND_DOPM_ROW_MESSAGE_LENGTH*RowCount);
 
-  for(int i = 0; i <= RowCount - 1; i++)
+  int i = 0;
+  for(i = 0; i <= RowCount - 1; i++)
   {
     bzero(RowBuffer, 100);
     UtilReadLineCntSpecChars(fd, RowBuffer);
@@ -904,7 +930,8 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
 
   if(debug)
   {
-    for(int i = 0; i < MessageIndex; i ++)
+    int i = 0;
+    for(i = 0; i < MessageIndex; i ++)
     {
       if((unsigned char)MessageBuffer[i] >= 0 && (unsigned char)MessageBuffer[i] <= 15) printf("0");
       printf("%x-", (unsigned char)MessageBuffer[i]);
@@ -924,7 +951,11 @@ int ObjectControlBuildDOPMMessageHeader(char* MessageBuffer, int RowCount, char 
   
   UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, COMMAND_DOPM_ROW_MESSAGE_LENGTH*RowCount);
 
-  if(debug) for(int i = 0; i < COMMAND_MESSAGE_HEADER_LENGTH; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  if(debug)
+  {
+    int i = 0;
+    for(i = 0; i < COMMAND_MESSAGE_HEADER_LENGTH; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  }
 
   return COMMAND_MESSAGE_HEADER_LENGTH; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH
 }
