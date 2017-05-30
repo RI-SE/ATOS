@@ -82,6 +82,8 @@
 #define TEST_CONF_FILE "./conf/test.conf"
 #define TRAJECTORY_PATH "./traj/"
 
+#define MASTER_FILE_EXTENSION ".sync.m"
+#define SLAVE_FILE_EXTENSION ".sync.s"
 
 //#define DEBUG
 

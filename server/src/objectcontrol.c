@@ -262,6 +262,7 @@ void objectcontrol_task()
 //#define NOTCP
 #ifndef NOTCP
   /* Connect and send drive files */
+    printf("n objects: %d\n", nbr_objects);
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
      vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
@@ -280,17 +281,17 @@ void objectcontrol_task()
       fclose (fd);
 
       /*DOPM*/
-      MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, RowCount-1, 0);
+      MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, RowCount-1, 1);
 
       /*Send DOPM header*/
-      vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+      vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
 
       /*Send DOPM data*/
       ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], RowCount-1, 1);
 
       /* Adaptive Sync Points...*/
-      /*
-      OP[iIndex].TrajectoryPositionCount = RowCount;
+      
+      /*OP[iIndex].TrajectoryPositionCount = RowCount;
       OP[iIndex].SpaceArr = SpaceArr[iIndex];
       OP[iIndex].TimeArr = TimeArr[iIndex];
       OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
@@ -299,7 +300,6 @@ void objectcontrol_task()
       UtilSetMasterObject(&OP[iIndex], object_traj_file[iIndex]);
       UtilSetSlaveObject(&OP[iIndex], object_traj_file[iIndex]);
       */
-
 
     #else
       vSendString("DOPM;",&socket_fd[iIndex]);
@@ -1266,9 +1266,9 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
   while ((directory_entry = readdir(traj_directory)) && ((*nbr_objects) < MAX_OBJECTS))
   {
-    
+
     /* Check so it's not . or .. */
-    if (strncmp(directory_entry->d_name,".",1))
+    if (strncmp(directory_entry->d_name,".",1) && (strstr(directory_entry->d_name, "sync") == NULL) )
     {
       bzero(object_address_name[(*nbr_objects)],MAX_FILE_PATH);
 
