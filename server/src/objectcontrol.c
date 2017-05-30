@@ -121,7 +121,7 @@ int ObjectControlBuildDOPMMessageHeader(char* MessageBuffer, int RowCount, char 
 int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, char debug);
 int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char debug);
 int ObjectControlSendHeartbeat(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
-int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag);
+int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag);
 int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, int32_t *Latitude, int32_t * Longitude, int32_t *Altitude, uint16_t *Speed, uint16_t *Heading, uint8_t *DriveDirection);
 
 
@@ -158,6 +158,7 @@ void objectcontrol_task()
   int iForceObjectToLocalhost = 0;
   
   FILE *fd;
+  char Id[SMALL_BUFFER_SIZE_1];
   char Timestamp[SMALL_BUFFER_SIZE_0];
   char Latitude[SMALL_BUFFER_SIZE_0];
   char Longitude[SMALL_BUFFER_SIZE_0];
@@ -289,15 +290,25 @@ void objectcontrol_task()
 
       /* Adaptive Sync Points...*/
       
-      /*OP[iIndex].TrajectoryPositionCount = RowCount;
+      OP[iIndex].TrajectoryPositionCount = RowCount;
       OP[iIndex].SpaceArr = SpaceArr[iIndex];
       OP[iIndex].TimeArr = TimeArr[iIndex];
       OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
       UtilPopulateSpaceTimeArr(&OP[iIndex], object_traj_file[iIndex]);
       
-      UtilSetMasterObject(&OP[iIndex], object_traj_file[iIndex]);
-      UtilSetSlaveObject(&OP[iIndex], object_traj_file[iIndex]);
-      */
+      UtilSetMasterObject(&OP[iIndex], object_traj_file[iIndex], 1);
+      UtilSetSlaveObject(&OP[iIndex], object_traj_file[iIndex], 1);
+      UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, OP[iIndex].SyncTime);
+
+      if(OP[iIndex].Type == 'm' || OP[iIndex].Type == 's')
+      {
+
+        /*SYPM*/
+        MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, OP[iIndex].SyncTime, OP[iIndex].SyncStopTime, 1);
+        /*Send SYPM header*/
+        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+   
+      }
 
     #else
       vSendString("DOPM;",&socket_fd[iIndex]);
@@ -376,16 +387,14 @@ void objectcontrol_task()
       if(recievedNewData)
       {
         
-
         #ifdef BYTEBASED
-            ObjectControlMONRToASCII(buffer, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
+            ObjectControlMONRToASCII(buffer, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
             bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
-            strcat(buffer, "MONR;"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
+            strcat(buffer, "MONR;"); strcat(buffer,Id); strcat(buffer,";"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
             strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
             strcat(buffer,DriveDirection); strcat(buffer,";"); //strcat(pcBuffer,StatusFlag); strcat(pcBuffer,";");
 
             //UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]); 
-
 
         #else
         /* Get monitor data */
@@ -548,7 +557,7 @@ int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, 
 }
 
 
-int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *Heading, char *DriveDirection, char *StatusFlag)
+int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *Heading, char *DriveDirection, char *StatusFlag)
 {
   char Buffer[6];
   long unsigned int MonrValueU64;
@@ -557,6 +566,7 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Lat
   unsigned char MonrValueU8;
   int i,j;
 
+  bzero(Id, SMALL_BUFFER_SIZE_1);
   bzero(Timestamp, SMALL_BUFFER_SIZE_0);
   bzero(Latitude, SMALL_BUFFER_SIZE_0);
   bzero(Longitude, SMALL_BUFFER_SIZE_0);
@@ -566,6 +576,9 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Lat
   bzero(DriveDirection, SMALL_BUFFER_SIZE_1);
   bzero(StatusFlag, SMALL_BUFFER_SIZE_1);
 
+
+  //Index
+  sprintf(Id, "%" PRIu8, (unsigned char)Idn);
 
   //Timestamp
   MonrValueU64 = 0;
@@ -601,7 +614,7 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Lat
  
   //Driving direction
   MonrValueU8 = (unsigned char)*(MonrData+j);
-  printf("D: %d\n", MonrValueU8 );
+  //printf("D: %d\n", MonrValueU8 );
   j++;
   sprintf(DriveDirection, "%" PRIu8, MonrValueU8);
 

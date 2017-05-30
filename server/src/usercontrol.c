@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
 	SendBufferPtr = SendBuffer;
 	bzero(SendBuffer,IPC_BUFFER_SIZE*2);
 
+	char Id[2];
 	char Timestamp[20];
 	char Latitude[20];
 	char Longitude[20];
@@ -361,7 +362,7 @@ int main(int argc, char *argv[])
 					UserControlResetInputVariables();
 				break;
 				case tmonr_0:
-					ObjectControlMONRToASCII(TestBuffer, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
+					ObjectControlMONRToASCII(TestBuffer, 1, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
 					bzero(Buffer,100);
 					strcat(Buffer,Timestamp);
 					strcat(Buffer,";");

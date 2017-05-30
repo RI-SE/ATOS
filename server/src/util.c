@@ -160,20 +160,33 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue)
   return 1;
 }
 
-int UtilSetMasterObject(ObjectPosition *OP, char *Filename)
+int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug)
 {
   
   FILE *filefd;
   char FilenameBuffer[MAX_FILE_PATH];
+  char DataBuffer[20];
+  double Time;
   bzero(FilenameBuffer,MAX_FILE_PATH);
+  bzero(DataBuffer,20);
   strcat(FilenameBuffer,Filename);
   strcat(FilenameBuffer, MASTER_FILE_EXTENSION);
   filefd = fopen (FilenameBuffer, "r");
-  printf("Filename: %s\n", FilenameBuffer);  
+   
   if(filefd)
   {     
-  
+    UtilReadLineCntSpecChars(filefd, DataBuffer);
+    Time = atof(DataBuffer);
+    OP->Type = 'm';
+    OP->SyncTime = Time;
+    OP->SyncStopTime = 0;
     fclose(filefd);
+
+    if(debug) printf("Master object set: %s\n", FilenameBuffer);
+
+  } else {
+    OP->Type = 'u';
+    OP->SyncTime = 0;
   }    
 
 
@@ -181,8 +194,33 @@ int UtilSetMasterObject(ObjectPosition *OP, char *Filename)
 }
 
 
-int UtilSetSlaveObject(ObjectPosition *OP, char *Filename)
+int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug)
 {
+  FILE *filefd;
+  char FilenameBuffer[MAX_FILE_PATH];
+  char DataBuffer[20];
+  double Time;
+  bzero(FilenameBuffer,MAX_FILE_PATH);
+  bzero(DataBuffer,20);
+  strcat(FilenameBuffer,Filename);
+  strcat(FilenameBuffer, SLAVE_FILE_EXTENSION);
+  filefd = fopen (FilenameBuffer, "r");
+  
+  if(filefd)
+  {     
+    UtilReadLineCntSpecChars(filefd, DataBuffer);
+    Time = atof(DataBuffer);
+    OP->Type = 's';
+    OP->SyncTime = Time;
+    UtilReadLineCntSpecChars(filefd, DataBuffer);
+    Time = atof(DataBuffer);
+    OP->SyncStopTime = Time;
+    fclose(filefd);
+    if(debug) printf("Slave object set: %s\n", FilenameBuffer);
+  } else {
+    OP->Type = 'u';
+    OP->SyncTime = 0;
+  }    
 
   return 0;
 }
@@ -291,7 +329,7 @@ int UtilPopulateSpaceTimeArr(ObjectPosition *OP, char* TrajFile)
         src2 = strchr(src1+1, ';');
         strncpy(ValueStr, src1+1, (uint64_t)src2 - (uint64_t)src1);
         t = atof(ValueStr);
-        
+        //printf("%d :t = %3.3f\n", j, t);
         bzero(ValueStr, NUMBER_CHAR_LENGTH);
         src1 = strchr(src2, ';');
         src2 = strchr(src1+1, ';');
@@ -344,27 +382,49 @@ int UtilPopulateSpaceTimeArr(ObjectPosition *OP, char* TrajFile)
   return 0;
 }
 
-int UtilSetSyncPoint(ObjectPosition *OP, double x, double y, double z, double time)
+int UtilSetSyncPoint(ObjectPosition *OP, double x, double y, double z, double Time)
 {
 
   int i = 0;
   int Gate1Reached = 0, Gate2Reached = 0;
-  float R = (float)sqrt(pow(x,2) + pow(y,2));
-  while(i < (OP->TrajectoryPositionCount-1) && Gate1Reached == 0)
+  
+  if(Time == 0)
   {
-      
-      if( OP->SpaceArr[i] == R)
-      {
-        Gate1Reached = 1;
-        OP->SyncIndex = i;
-        //printf("Sync point found=%4.3f, Time=%4.3f, Index=%d\n", OP->SpaceArr[i], OP->TimeArr[i], i);
-       } 
-      else 
-      {
-        OP->SyncIndex = -1;
-      }
-     
-      i ++; 
+    float R = (float)sqrt(pow(x,2) + pow(y,2));
+    while(i < (OP->TrajectoryPositionCount-1) && Gate1Reached == 0)
+    {
+        
+        if( OP->SpaceArr[i] == R)
+        {
+          Gate1Reached = 1;
+          OP->SyncIndex = i;
+          //printf("Sync point found=%4.3f, Time=%4.3f, Index=%d\n", OP->SpaceArr[i], OP->TimeArr[i], i);
+         } 
+        else 
+        {
+          OP->SyncIndex = -1;
+        }
+       
+        i ++; 
+    }
+  } else {
+
+    while(i < (OP->TrajectoryPositionCount-1) && Gate1Reached == 0)
+    {
+        
+        if(Time >= OP->TimeArr[i]  &&  Time <= OP->TimeArr[i+1] )
+        {
+          Gate1Reached = 1;
+          OP->SyncIndex = i;
+          printf("Sync point found=%4.3f, Time=%4.3f, Index=%d\n", OP->SpaceArr[i], OP->TimeArr[i], i);
+         } 
+        else 
+        {
+          OP->SyncIndex = -1;
+        }
+        i ++; 
+    }
+
   }
 
 }
