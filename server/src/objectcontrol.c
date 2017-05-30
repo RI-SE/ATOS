@@ -1047,7 +1047,7 @@ static void vSendBytes(const char* data, int length, int* sockfd, int debug)
 {
   int n;
 
-  if(debug){ printf("Bytes sent: "); for(int i = 0; i < n; i++) printf("%x-", *(data+i)); printf("\n");}
+  if(debug){ printf("Bytes sent: "); int i = 0; for(i = 0; i < n; i++) printf("%x-", *(data+i)); printf("\n");}
 
   n = write(*sockfd, data, length);
   if (n < 0)
