@@ -502,9 +502,9 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  cal_lon = (((((double) bx) / 1000) * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * ((((double) origin_latitude) / 10000000)+cal_lat))))) + (((double) origin_longitude) / 10000000);
 	  cal_alt = (((double) bz) / 1000) + (((double) origin_altitude) / 100);
 
-	  blat = (uint32_t) cal_lat * 10000000; 
-	  blon = (uint32_t) cal_lon * 10000000; 
-	  balt = (uint32_t) cal_alt * 100;
+	  blat = (uint32_t) (cal_lat * 10000000); 
+	  blon = (uint32_t) (cal_lon * 10000000); 
+	  balt = (uint32_t) (cal_alt * 100);
 	  mon_status = 0x2;
 	  bdd = 0x0;
 	  
@@ -557,9 +557,9 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  cal_lon = (((((double) bx) / 1000) * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * ((((double) origin_latitude) / 10000000)+cal_lat))))) + (((double) origin_longitude) / 10000000);
 	  cal_alt = (((double) bz) / 1000) + (((double) origin_altitude) / 100);
 
-	  blat = (uint32_t) cal_lat * 10000000; 
-	  blon = (uint32_t) cal_lon * 10000000; 
-	  balt = (uint32_t) cal_alt * 100;
+	  blat = (uint32_t) (cal_lat * 10000000); 
+	  blon = (uint32_t) (cal_lon * 10000000); 
+	  balt = (uint32_t) (cal_alt * 100);
 
 	  printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
 	  printf("%lf %lf %lf\n",cal_lat,cal_lon,cal_alt);	  

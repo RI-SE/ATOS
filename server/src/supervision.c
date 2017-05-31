@@ -84,13 +84,13 @@ static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_P
         (void)strcat(object_address_name[(*nbr_objects)],LOCALHOST);
       }
 
-#ifdef DEBUG
-      printf ( "DBG : SV : otf = %s , oan = %s \n",
-               object_traj_file    [(*nbr_objects)],
-               object_address_name [(*nbr_objects)] );
-        ;
-      fflush(stdout);
-#endif
+/* #ifdef DEBUG */
+/*       printf ( "DBG : SV : otf = %s , oan = %s \n", */
+/*                object_traj_file    [(*nbr_objects)], */
+/*                object_address_name [(*nbr_objects)] ); */
+/*         ; */
+/*       fflush(stdout); */
+/* #endif */
 
       ++(*nbr_objects);
     }
@@ -164,10 +164,10 @@ void supervision_task() {
   double         dRes = 0.0;
 
 
-  printf ("--------------------------------------------------\n");
-  printf ("INF : SV : Supervision started.\n");
-  printf ("--------------------------------------------------\n");
-  fflush(stdout);
+  /* printf ("--------------------------------------------------\n"); */
+  /* printf ("INF : SV : Supervision started.\n"); */
+  /* printf ("--------------------------------------------------\n"); */
+  /* fflush(stdout); */
 
 
   /*----------------------------------------------------------------------
@@ -247,10 +247,10 @@ void supervision_task() {
       len = sizeof(bFileLine [ iIndex ] [i]);
       bzero ( &bFileLine [ iIndex ] [i], len);
       read = getline ( &bFileLine_p [ iIndex ] , &len, fp [ iIndex ] );
-      printf ( "INF : SV i = %d , line n = %ld \n -- s = %s",
-               i,
-               (ssize_t) len,
-               bFileLine [ iIndex ] [i]);
+      /* printf ( "INF : SV i = %d , line n = %ld \n -- s = %s", */
+      /*          i, */
+      /*          (ssize_t) len, */
+      /*          bFileLine [ iIndex ] [i]); */
     }
   } // for ( iIndex = 0
 
