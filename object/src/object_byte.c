@@ -72,15 +72,12 @@ int32_t main(int32_t argc, int8_t *argv[])
   FILE *fp;
   int8_t bFileName[6];
   int8_t *bFileLine;
-  //int8_t *bFileLine_ptr = bFileLine;
-  size_t len;
   size_t read;
   int32_t monitor_socket_fd;
   int32_t command_server_socket_fd;
   int32_t command_com_socket_fd;
   int32_t n;
   int32_t pid;
-  int32_t fpos;
   socklen_t cli_length;
   struct sockaddr_in monitor_server_addr;
   struct sockaddr_in monitor_from_addr;
@@ -88,24 +85,11 @@ int32_t main(int32_t argc, int8_t *argv[])
   struct sockaddr_in cli_addr;
   struct hostent *hp;
   int8_t buffer[256];
-  int8_t bMonitorBuffer[25];
-  int8_t pcPosition[256];
+  int8_t bMonitorBuffer[29];
   struct timespec sleep_time;
   struct timespec ref_time;
-  int8_t pcTimeString[15];
   int8_t *ret = NULL;
   int8_t bCurrentCommand[10] = "NOOP"; 
-  int8_t bData[DATALEN];
-  int32_t newFileData = 0;
-  int8_t bFileTrajName[100];
-  int8_t bCommand[10];
-  int8_t bFileCommand[10];
-  int8_t bFileTraj[10];
-  int8_t bLine[10];
-  int8_t bEndLine[10];
-  float fileTrajVersion;
-  int32_t row = 0;
-  int32_t fileRows = 0;
   int32_t result = 0;
   float   time;
   double  x;
@@ -138,17 +122,22 @@ int32_t main(int32_t argc, int8_t *argv[])
    
   uint8_t arm_mode  = 0;
 
-  uint8_t  cmd  = 0;
-  uint32_t size = 0;
-  uint32_t btim = 0;
-  uint32_t bx   = 0;
-  uint32_t by   = 0;
-  uint32_t bz   = 0;
-  int16_t  bhdg = 0;
-  int16_t  bspd = 0;
-  int16_t  bacc = 0;
-  uint16_t bcur = 0;
-  uint8_t  mod  = 0;
+  uint8_t  cmd   = 0;
+  uint32_t size  = 0;
+  uint32_t btim  = 0;
+  uint32_t bx    = 0;
+  uint32_t by    = 0;
+  uint32_t bz    = 0;
+  int16_t  bhdg  = 0;
+  int16_t  bspd  = 0;
+  int16_t  bacc  = 0;
+  uint16_t bcur  = 0;
+  uint8_t  mod   = 0;
+  uint64_t betim = 0;
+  uint32_t blat  = 0;
+  uint32_t blon  = 0;
+  uint32_t balt  = 0;
+  uint8_t  bdd   = 0;
   uint8_t  mon_status = 0;
   uint32_t dopm_bytes = 0;
   uint8_t firstTime = 0;
@@ -290,7 +279,6 @@ int32_t main(int32_t argc, int8_t *argv[])
     {
       int32_t receivedNewData = 0;
       int32_t commandSet = 0;
-      bzero(bData,DATALEN);
       bzero(buffer,256);
       do
 	{
@@ -350,7 +338,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 		      printf("Payload = %d\n", payload);
 		      dopm_bytes = payload;
 		      mon_status = 0x0;
-		      firstTime = 0;
+		      firstTime = 1;
 		      buffer_ptr--;
 		      break;
 		    case 0x02:
@@ -458,6 +446,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 			 fwrite(&buffer[buffer_ptr], sizeof(buffer[buffer_ptr]), 1, fp);
 			 buffer_ptr++;
 			 handled_payload++;
+			 printf("buffer_ptr: %d\n",buffer_ptr);
 		       }
 		   } 
 		} while(buffer_ptr < result);
@@ -466,7 +455,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	} while(result > 0);
 
       /* Send monitor start */
-      bzero(bMonitorBuffer, 25);
+      bzero(bMonitorBuffer, 29);
       if (TIME_FROM_DRIVE_FILE)
 	{
 	  msSinceEpochETSI = 0;
@@ -484,35 +473,47 @@ int32_t main(int32_t argc, int8_t *argv[])
       printf("INF: start_time %ld handled_bytes %d bytes %d \n",start_time,handled_bytes,dopm_bytes);
 #endif
       
-      if ((msSinceEpochETSI > start_time) && (sent_rows < fileRows))
+      if ((msSinceEpochETSI >= start_time) && (handled_bytes < dopm_bytes))
 	{
 #ifdef DEBUG
-	  printf("INF: Create row %d from drive file.\n",sent_rows);
+	  printf("INF: Bytes %d from drive file.\n",handled_bytes);
 #endif
 	  if (firstTime == 1){
-	    cmd = ReadOneUByteFromFile(fd);
-	    size = ReadFourUBytesFromFile(fd);
+	    cmd = ReadOneUByteFromFile(fp);
+	    size = ReadFourUBytesFromFile(fp);
 	    firstTime = 0;
+	    printf("c = %d (%x)\n", cmd, cmd); 
+	    printf("s = %d (%x)\n", size, size);
+	    printf("Bytes to read = %d\n",size);
 	  }
 	  
-	  btim = ReadFourUBytesFromFile(fd);
-	  bx = ReadFourUBytesFromFile(fd);
-	  by = ReadFourUBytesFromFile(fd);
-	  bz = ReadFourUBytesFromFile(fd);
-	  bhdg = ReadTwoSBytesFromFile(fd);
-	  bspd = ReadTwoSBytesFromFile(fd);
-	  bacc = ReadTwoSBytesFromFile(fd);
-	  bcur = ReadTwoUBytesFromFile(fd);
-	  mod = ReadOneUByteFromFile(fd);
+	  btim = ReadFourUBytesFromFile(fp);
+	  bx = ReadFourUBytesFromFile(fp);
+	  by = ReadFourUBytesFromFile(fp);
+	  bz = ReadFourUBytesFromFile(fp);
+	  bhdg = ReadTwoSBytesFromFile(fp);
+	  bspd = ReadTwoSBytesFromFile(fp);
+	  bacc = ReadTwoSBytesFromFile(fp);
+	  bcur = ReadTwoUBytesFromFile(fp);
+	  mod = ReadOneUByteFromFile(fp);
 	  handled_bytes += 25;
 
 	  cal_lat = (((((double) by) / 1000) * 180) / (PI * earth_radius)) + (((double) origin_latitude) / 10000000);
 	  cal_lon = (((((double) bx) / 1000) * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * ((((double) origin_latitude) / 10000000)+cal_lat))))) + (((double) origin_longitude) / 10000000);
 	  cal_alt = (((double) bz) / 1000) + (((double) origin_altitude) / 100);
 
+	  blat = (uint32_t) cal_lat * 10000000; 
+	  blon = (uint32_t) cal_lon * 10000000; 
+	  balt = (uint32_t) cal_alt * 100;
+	  mon_status = 0x2;
+	  bdd = 0x0;
+	  
+	  printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
+	  printf("%lf %lf %lf\n",cal_lat,cal_lon,cal_alt);	  
+	  
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
-	      msSinceEpochETSI = btime;
+	      msSinceEpochETSI = btim;
 	    }
 	  else
 	    {
@@ -526,7 +527,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	{
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
-	      msSinceEpochETSI = btime;
+	      msSinceEpochETSI = btim;
 	    }
 	  else
 	    {
@@ -534,31 +535,74 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      msSinceEpochETSI = (uint64_t) tv.tv_sec * 1000 + (uint64_t) tv.tv_usec / 1000 - 
 		MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
 	    }
+	  mon_status = 0x3;
 	}
       else
 	{
 	  if (firstTime == 1){
-	    cmd = ReadOneUByteFromFile(fd);
-	    size = ReadFourUBytesFromFile(fd);
-	    btim = ReadFourUBytesFromFile(fd);
-	    bx = ReadFourUBytesFromFile(fd);
-	    by = ReadFourUBytesFromFile(fd);
-	    bz = ReadFourUBytesFromFile(fd);
-	    bhdg = ReadTwoSBytesFromFile(fd);
-	    bspd = ReadTwoSBytesFromFile(fd);
-	    bacc = ReadTwoSBytesFromFile(fd);
-	    bcur = ReadTwoUBytesFromFile(fd);
-	    mod = ReadOneUByteFromFile(fd);
+	    cmd = ReadOneUByteFromFile(fp);
+	    size = ReadFourUBytesFromFile(fp);
+	    btim = ReadFourUBytesFromFile(fp);
+	    bx = ReadFourUBytesFromFile(fp);
+	    by = ReadFourUBytesFromFile(fp);
+	    bz = ReadFourUBytesFromFile(fp);
+	    bhdg = ReadTwoSBytesFromFile(fp);
+	    bspd = ReadTwoSBytesFromFile(fp);
+	    bacc = ReadTwoSBytesFromFile(fp);
+	    bcur = ReadTwoUBytesFromFile(fp);
+	    mod = ReadOneUByteFromFile(fp);
 	  }
-	  frewind(fd);
+	  rewind(fp);
 	  cal_lat = (((((double) by) / 1000) * 180) / (PI * earth_radius)) + (((double) origin_latitude) / 10000000);
 	  cal_lon = (((((double) bx) / 1000) * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * ((((double) origin_latitude) / 10000000)+cal_lat))))) + (((double) origin_longitude) / 10000000);
 	  cal_alt = (((double) bz) / 1000) + (((double) origin_altitude) / 100);
+
+	  blat = (uint32_t) cal_lat * 10000000; 
+	  blon = (uint32_t) cal_lon * 10000000; 
+	  balt = (uint32_t) cal_alt * 100;
+
+	  printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
+	  printf("%lf %lf %lf\n",cal_lat,cal_lon,cal_alt);	  
 	}
 
-      strcat(bMonitorBuffer,pcTimeString);
-      strcat(bMonitorBuffer,pcPosition);
+      bMonitorBuffer[0] = (uint8_t) ((0x06 >> 0) & 0xFF);
+      bMonitorBuffer[1] = (uint8_t) ((0x00 >> 24) & 0xFF);
+      bMonitorBuffer[2] = (uint8_t) ((0x00 >> 16) & 0xFF);
+      bMonitorBuffer[3] = (uint8_t) ((0x00 >> 8) & 0xFF);
+      bMonitorBuffer[4] = (uint8_t) ((0x19 >> 0) & 0xFF);
+            
+      bMonitorBuffer[5] = (uint8_t) ((msSinceEpochETSI >> 40) & 0xFF);
+      bMonitorBuffer[6] = (uint8_t) ((msSinceEpochETSI >> 32) & 0xFF);
+      bMonitorBuffer[7] = (uint8_t) ((msSinceEpochETSI >> 24) & 0xFF);
+      bMonitorBuffer[8] = (uint8_t) ((msSinceEpochETSI >> 16) & 0xFF);
+      bMonitorBuffer[9] = (uint8_t) ((msSinceEpochETSI >> 8) & 0xFF);
+      bMonitorBuffer[10] = (uint8_t) ((msSinceEpochETSI >> 0) & 0xFF);
 
+      bMonitorBuffer[11] = (uint8_t) ((blat >> 24) & 0xFF);
+      bMonitorBuffer[12] = (uint8_t) ((blat >> 16) & 0xFF);
+      bMonitorBuffer[13] = (uint8_t) ((blat >> 8) & 0xFF);
+      bMonitorBuffer[14] = (uint8_t) ((blat >> 0) & 0xFF);
+
+      bMonitorBuffer[15] = (uint8_t) ((blon >> 24) & 0xFF);
+      bMonitorBuffer[16] = (uint8_t) ((blon >> 16) & 0xFF);
+      bMonitorBuffer[17] = (uint8_t) ((blon >> 8) & 0xFF);
+      bMonitorBuffer[18] = (uint8_t) ((blon >> 0) & 0xFF);
+
+      bMonitorBuffer[19] = (uint8_t) ((balt >> 24) & 0xFF);
+      bMonitorBuffer[20] = (uint8_t) ((balt >> 16) & 0xFF);
+      bMonitorBuffer[21] = (uint8_t) ((balt >> 8) & 0xFF);
+      bMonitorBuffer[22] = (uint8_t) ((balt >> 0) & 0xFF);
+
+      bMonitorBuffer[23] = (uint8_t) ((bspd >> 8) & 0xFF);
+      bMonitorBuffer[24] = (uint8_t) ((bspd >> 0) & 0xFF);
+
+      bMonitorBuffer[25] = (uint8_t) ((bhdg >> 8) & 0xFF);
+      bMonitorBuffer[26] = (uint8_t) ((bhdg >> 0) & 0xFF);
+      
+      bMonitorBuffer[27] = (uint8_t) ((bdd >> 0) & 0xFF);
+
+      bMonitorBuffer[28] = (uint8_t) ((mon_status >> 0) & 0xFF);
+      
 #ifdef DEBUG
       printf("INF: Start send monitor message\n");
 #endif
@@ -570,7 +614,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	}
 
 #ifdef DEBUG
-      printf("INF: Sending: <%s>\n", bMonitorBuffer);
+      printf("INF: Sending: <%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x>\n", (uint8_t) bMonitorBuffer[0], (uint8_t) bMonitorBuffer[1], (uint8_t) bMonitorBuffer[2], (uint8_t) bMonitorBuffer[3], (uint8_t) bMonitorBuffer[4], (uint8_t) bMonitorBuffer[5], (uint8_t) bMonitorBuffer[6], (uint8_t) bMonitorBuffer[7],(uint8_t) bMonitorBuffer[8],(uint8_t) bMonitorBuffer[9], (uint8_t) bMonitorBuffer[10]);
 #endif
 
       sleep_time.tv_sec = 0;

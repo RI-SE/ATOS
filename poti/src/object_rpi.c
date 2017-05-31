@@ -565,8 +565,8 @@ while(1)
   }
 
   bzero(bMonitorBuffer, 256);
-  sprintf(bMonitorBuffer,"MONR;%s;%09d;%010d;%06d;%05d;%04d;0;",etsi_time_string,etsi_lat,etsi_lon,etsi_alt,etsi_speed,etsi_heading);
-  //sprintf(bMonitorBuffer,"MONR;%" PRIu64 ";%09d;%010d;%06d;%05d;%04d;0;",uiTime2,etsi_lat,etsi_lon,etsi_alt,etsi_speed,etsi_heading);
+  //sprintf(bMonitorBuffer,"MONR;%s;%09d;%010d;%06d;%05d;%04d;0;",etsi_time_string,etsi_lat,etsi_lon,etsi_alt,etsi_speed,etsi_heading);
+  sprintf(bMonitorBuffer,"MONR;%" PRIu64 ";%09d;%010d;%06d;%05d;%04d;0;",uiTime2,etsi_lat,etsi_lon,etsi_alt,etsi_speed,etsi_heading);
   #ifdef DEBUG
   //printf("INF: Before: Sending: <%s>\n", bMonitorBuffer);
   #endif
