@@ -125,9 +125,9 @@ int32_t main(int32_t argc, int8_t *argv[])
   uint8_t  cmd   = 0;
   uint32_t size  = 0;
   uint32_t btim  = 0;
-  uint32_t bx    = 0;
-  uint32_t by    = 0;
-  uint32_t bz    = 0;
+  int32_t bx    = 0;
+  int32_t by    = 0;
+  int32_t bz    = 0;
   int16_t  bhdg  = 0;
   int16_t  bspd  = 0;
   int16_t  bacc  = 0;
@@ -488,9 +488,9 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  }
 	  
 	  btim = ReadFourUBytesFromFile(fp);
-	  bx = ReadFourUBytesFromFile(fp);
-	  by = ReadFourUBytesFromFile(fp);
-	  bz = ReadFourUBytesFromFile(fp);
+	  bx = ReadFourSBytesFromFile(fp);
+	  by = ReadFourSBytesFromFile(fp);
+	  bz = ReadFourSBytesFromFile(fp);
 	  bhdg = ReadTwoSBytesFromFile(fp);
 	  bspd = ReadTwoSBytesFromFile(fp);
 	  bacc = ReadTwoSBytesFromFile(fp);
@@ -523,7 +523,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	    }
 
 	}
-      else if (handled_bytes == dopm_bytes)
+      else if (handled_bytes >= dopm_bytes)
 	{
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
@@ -543,9 +543,9 @@ int32_t main(int32_t argc, int8_t *argv[])
 	    cmd = ReadOneUByteFromFile(fp);
 	    size = ReadFourUBytesFromFile(fp);
 	    btim = ReadFourUBytesFromFile(fp);
-	    bx = ReadFourUBytesFromFile(fp);
-	    by = ReadFourUBytesFromFile(fp);
-	    bz = ReadFourUBytesFromFile(fp);
+	    bx = ReadFourSBytesFromFile(fp);
+	    by = ReadFourSBytesFromFile(fp);
+	    bz = ReadFourSBytesFromFile(fp);
 	    bhdg = ReadTwoSBytesFromFile(fp);
 	    bspd = ReadTwoSBytesFromFile(fp);
 	    bacc = ReadTwoSBytesFromFile(fp);
@@ -614,7 +614,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	}
 
 #ifdef DEBUG
-      printf("INF: Sending: <%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x>\n", (uint8_t) bMonitorBuffer[0], (uint8_t) bMonitorBuffer[1], (uint8_t) bMonitorBuffer[2], (uint8_t) bMonitorBuffer[3], (uint8_t) bMonitorBuffer[4], (uint8_t) bMonitorBuffer[5], (uint8_t) bMonitorBuffer[6], (uint8_t) bMonitorBuffer[7],(uint8_t) bMonitorBuffer[8],(uint8_t) bMonitorBuffer[9], (uint8_t) bMonitorBuffer[10]);
+      printf("INF: Sending: <%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x>\n", (uint8_t) bMonitorBuffer[0], (uint8_t) bMonitorBuffer[1], (uint8_t) bMonitorBuffer[2], (uint8_t) bMonitorBuffer[3], (uint8_t) bMonitorBuffer[4], (uint8_t) bMonitorBuffer[5], (uint8_t) bMonitorBuffer[6], (uint8_t) bMonitorBuffer[7],(uint8_t) bMonitorBuffer[8], (uint8_t) bMonitorBuffer[9], (uint8_t) bMonitorBuffer[10], (uint8_t) bMonitorBuffer[11], (uint8_t) bMonitorBuffer[12], (uint8_t) bMonitorBuffer[13], (uint8_t) bMonitorBuffer[14], (uint8_t) bMonitorBuffer[15], (uint8_t) bMonitorBuffer[16], (uint8_t) bMonitorBuffer[17], (uint8_t) bMonitorBuffer[18], (uint8_t) bMonitorBuffer[19], (uint8_t) bMonitorBuffer[20], (uint8_t) bMonitorBuffer[21], (uint8_t) bMonitorBuffer[22], (uint8_t) bMonitorBuffer[23], (uint8_t) bMonitorBuffer[24], (uint8_t) bMonitorBuffer[25], (uint8_t) bMonitorBuffer[26], (uint8_t) bMonitorBuffer[27], (uint8_t) bMonitorBuffer[28]);
 #endif
 
       sleep_time.tv_sec = 0;
@@ -675,7 +675,7 @@ int16_t ReadTwoSBytesFromFile(FILE *f){
   return data;
 }
 
-  int32_t ReadFourSBytesFromFile(FILE *f){
+int32_t ReadFourSBytesFromFile(FILE *f){
   uint8_t tmp = 0;
   int32_t data = 0;
   fread(&tmp, 1, 1, f);
