@@ -582,30 +582,29 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *T
 
   //Timestamp
   MonrValueU64 = 0;
-  j=0;
+  j=5;
   for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
   sprintf(Timestamp, "%" PRIu64, MonrValueU64);
   
   //Latitude
   MonrValueU32 = 0;
   for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-  sprintf(Latitude, "%" PRIu32, MonrValueU32);
+  sprintf(Latitude, "%" PRIi32, MonrValueU32);
     
   //Longitude
   MonrValueU32 = 0;
   for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-  sprintf(Longitude, "%" PRIu32, MonrValueU32);
+  sprintf(Longitude, "%" PRIi32, MonrValueU32);
 
   //Altitude
   MonrValueU32 = 0;
   for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-  sprintf(Altitude, "%" PRIu32, MonrValueU32);
+  sprintf(Altitude, "%" PRIi32, MonrValueU32);
   
   //Speed
   MonrValueU16 = 0;
   for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
   sprintf(Speed, "%" PRIu16, MonrValueU16);
-  printf("S: %s\n", Speed);
   
   //Heading
   MonrValueU16 = 0;
