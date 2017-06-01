@@ -168,6 +168,8 @@ void objectcontrol_task()
   char DriveDirection[SMALL_BUFFER_SIZE_1];
   char StatusFlag[SMALL_BUFFER_SIZE_1];
   int MessageLength;
+  char *MiscPtr;
+  uint64_t StartTime;
 
   ObjectPosition OP[MAX_OBJECTS];
   float SpaceArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
@@ -468,7 +470,11 @@ void objectcontrol_task()
         //#endif
 
         #ifdef BYTEBASED
-          MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_IMMEDIATELY, 0, 0);
+          bzero(Timestamp, SMALL_BUFFER_SIZE_0);
+          MiscPtr =strchr(pcRecvBuffer,';');
+          strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
+          StartTime = atol(Timestamp);
+          MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTime, 0);
         #else
           bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
           strncat(pcBuffer,"TRIG;",5);
@@ -484,7 +490,7 @@ void objectcontrol_task()
         for(iIndex=0;iIndex<nbr_objects;++iIndex)
         {
           #ifdef BYTEBASED
-            vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+            vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
           #else
             vSendString(pcBuffer,&socket_fd[iIndex]);
           #endif
@@ -1059,7 +1065,7 @@ static void vSendBytes(const char* data, int length, int* sockfd, int debug)
 {
   int n;
 
-  if(debug){ printf("Bytes sent: "); int i = 0; for(i = 0; i < n; i++) printf("%x-", *(data+i)); printf("\n");}
+  if(debug){ printf("Bytes sent: "); int i = 0; for(i = 0; i < n; i++) printf("%x-", (unsigned char)*(data+i)); printf("\n");}
 
   n = write(*sockfd, data, length);
   if (n < 0)
