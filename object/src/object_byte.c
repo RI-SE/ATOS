@@ -29,6 +29,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <signal.h>
 
 /*------------------------------------------------------------
   -- Defines.
@@ -62,6 +63,17 @@ uint32_t ReadFourUBytesFromFile(FILE *f);
 int8_t ReadOneSByteFromFile(FILE *f);
 int16_t ReadTwoSBytesFromFile(FILE *f);
 int32_t ReadFourSBytesFromFile(FILE *f);
+
+/*------------------------------------------------------------
+  -- Ctrl-c interrupt handling.
+  ------------------------------------------------------------*/
+
+static volatile int keepRunning = 1;
+
+void intHandler(int dummy){
+  printf("CTRL-C\n");
+  keepRunning = 0;
+}
 
 /*------------------------------------------------------------
   -- The main function.
@@ -143,6 +155,8 @@ int32_t main(int32_t argc, int8_t *argv[])
   uint8_t firstTime = 0;
   
   struct timeval tv;
+
+  signal(SIGINT, intHandler);
   
   if ( !( (argc == 1) || (argc == 4) || (argc == 6))){
     perror("Please use 0, 3, or 5 arguments: object <lat,lon,alt><safety port,control port>");
@@ -275,7 +289,7 @@ int32_t main(int32_t argc, int8_t *argv[])
   printf("INF: Received: <%s>\n", buffer);
 #endif
 
-  while(1)
+  while(keepRunning)
     {
       int32_t receivedNewData = 0;
       int32_t commandSet = 0;
@@ -286,6 +300,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  printf("INF: Start receive\n");
 #endif
 	  uint16_t handled_payload = 0;
+	  bzero(buffer,256);
 	  result = recv(command_com_socket_fd, buffer, 256, 0);
 
 	  if (result < 0)
@@ -446,7 +461,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 			 fwrite(&buffer[buffer_ptr], sizeof(buffer[buffer_ptr]), 1, fp);
 			 buffer_ptr++;
 			 handled_payload++;
-			 printf("buffer_ptr: %d\n",buffer_ptr);
+			 //printf("buffer_ptr: %d\n",buffer_ptr);
 		       }
 		   } 
 		} while(buffer_ptr < result);
@@ -625,7 +640,8 @@ int32_t main(int32_t argc, int8_t *argv[])
   close(monitor_socket_fd);
   close(command_com_socket_fd);
   fclose(fp);
-
+  printf("System teminated ok!\n");
+  
   return 0;
 }
 
