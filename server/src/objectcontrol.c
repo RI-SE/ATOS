@@ -27,13 +27,17 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 #include "util.h"
 
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
+
 #define LOCALHOST "127.0.0.1"
+#define USE_TEST_HOST 0
+#define TESTHOST "192.168.0.17"
 
 #define RECV_MESSAGE_BUFFER 1024
 #define OBJECT_MESS_BUFFER_SIZE 1024
@@ -89,8 +93,8 @@
 #define TRAJECTORY_FILE_MAX_ROWS  4096
 
 typedef enum {
-  COMMAND_HEARBEAT_GO,
-  COMMAND_HEARBEAT_ABORT
+  COMMAND_HEARTBEAT_GO,
+  COMMAND_HEARTBEAT_ABORT
 } hearbeatCommand_t;
 
 char TrajBuffer[COMMAND_DOPM_ROWS_IN_TRANSMISSION*COMMAND_DOPM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH];
@@ -120,7 +124,7 @@ int ObjectControlBuildMTPSMessage(char* MessageBuffer, unsigned long SyncTimesta
 int ObjectControlBuildDOPMMessageHeader(char* MessageBuffer, int RowCount, char debug);
 int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, char debug);
 int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char debug);
-int ObjectControlSendHeartbeat(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
+int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
 int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag);
 int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, int32_t *Latitude, int32_t * Longitude, int32_t *Altitude, uint16_t *Speed, uint16_t *Heading, uint8_t *DriveDirection);
 
@@ -169,7 +173,11 @@ void objectcontrol_task()
   char StatusFlag[SMALL_BUFFER_SIZE_1];
   int MessageLength;
   char *MiscPtr;
-  uint64_t StartTime;
+  uint64_t StartTimeU64 = 0;
+  uint64_t CurrentTimeU64 = 0;
+  uint64_t MasterTimeToSyncPointU64 = 0;
+  struct timeval CurrentTimeStruct;
+  int HeartbeatMessageCounter = 0;
 
   ObjectPosition OP[MAX_OBJECTS];
   float SpaceArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
@@ -199,7 +207,6 @@ void objectcontrol_task()
   
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
-
     if(0 == iForceObjectToLocalhost)
     {
       object_udp_port[iIndex] = SAFETY_CHANNEL_PORT;
@@ -272,8 +279,9 @@ void objectcontrol_task()
     /* Send OSEM command */
     #ifdef BYTEBASED
       vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+
     #else
-      //vSendString(pcBuffer,&socket_fd[iIndex]);
+      vSendString(pcBuffer,&socket_fd[iIndex]);
     #endif
    
     #ifdef BYTEBASED
@@ -282,17 +290,16 @@ void objectcontrol_task()
       fclose (fd);
 
       /*DOPM*/
-      MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, RowCount-1, 1);
+      MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, RowCount-2, 0);
 
       /*Send DOPM header*/
       vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
 
       /*Send DOPM data*/
-      ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], RowCount-1, 1);
+      ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], RowCount-2, 0);
 
       /* Adaptive Sync Points...*/
-      
-      OP[iIndex].TrajectoryPositionCount = RowCount;
+   /*   OP[iIndex].TrajectoryPositionCount = RowCount;
       OP[iIndex].SpaceArr = SpaceArr[iIndex];
       OP[iIndex].TimeArr = TimeArr[iIndex];
       OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
@@ -304,13 +311,11 @@ void objectcontrol_task()
 
       if(OP[iIndex].Type == 'm' || OP[iIndex].Type == 's')
       {
-
         /*SYPM*/
-        MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, OP[iIndex].SyncTime, OP[iIndex].SyncStopTime, 1);
+   //     MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, OP[iIndex].SyncTime, OP[iIndex].SyncStopTime, 1);
         /*Send SYPM header*/
-        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-   
-      }
+   //     vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+   //   }
 
     #else
       vSendString("DOPM;",&socket_fd[iIndex]);
@@ -344,35 +349,45 @@ void objectcontrol_task()
   {
     char buffer[RECV_MESSAGE_BUFFER];
     int recievedNewData = 0;
+    gettimeofday(&CurrentTimeStruct, NULL);
+    CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+
 
     #ifdef DEBUG
-/*
-      struct timeval tvTime;
-      gettimeofday(&tvTime, NULL);
-      uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - 
-        MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
-        DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-      printf("INF: Time: %" PRIu64 "\n",uiTime);
 /*
       struct timespec spec;
       clock_gettime(CLOCK_MONOTONIC, &spec);
       printf("INF: Time: %"PRIdMAX".%06ld \n",
         (intmax_t)spec.tv_sec, spec.tv_nsec);
 */
-      fflush(stdout);
+    fflush(stdout);
     #endif
 
+    /*HEAB*/
     for(iIndex=0;iIndex<nbr_objects;++iIndex)
     {
-      /* Should we send heartbeat in this cycle */
       if(uiTimeCycle == 0)
       {
         #ifdef BYTEBASED
+          HeartbeatMessageCounter ++;
           MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, ObjectControlServerStatus, 0);
-          ObjectControlSendHeartbeat(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+          ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
         #else
-          vSendHeartbeat(&safety_socket_fd[iIndex],&safety_object_addr[iIndex],COMMAND_HEARBEAT_GO);
+          vSendHeartbeat(&safety_socket_fd[iIndex],&safety_object_addr[iIndex],COMMAND_HEARTBEAT_GO);
         #endif
+      }
+    }
+
+    /*MTPS*/
+    if(HeartbeatMessageCounter == 10)
+    {
+      HeartbeatMessageCounter = 0;
+      for(iIndex=0;iIndex<nbr_objects;++iIndex)
+      {
+           #ifdef BYTEBASED
+            MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, (StartTimeU64+(uint64_t)OP[iIndex].SyncStopTime*1000));
+            ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+          #endif
       }
     }
 
@@ -396,7 +411,13 @@ void objectcontrol_task()
             strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
             strcat(buffer,DriveDirection); strcat(buffer,";"); //strcat(pcBuffer,StatusFlag); strcat(pcBuffer,";");
 
-            //UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]); 
+            if(OP[iIndex].Type == 'm')
+            {
+              UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
+              UtilFindCurrentTrajectoryPosition(&OP[iIndex], OP[iIndex].SyncIndex, (CurrentTimeU64-StartTimeU64)/1000, 0.2);
+              if(OP[iIndex].SyncIndex > -1) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)OP[iIndex].TimeToSyncPoint*1000;
+              else MasterTimeToSyncPointU64 = 0;
+            }
 
         #else
         /* Get monitor data */
@@ -473,8 +494,8 @@ void objectcontrol_task()
           bzero(Timestamp, SMALL_BUFFER_SIZE_0);
           MiscPtr =strchr(pcRecvBuffer,';');
           strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
-          StartTime = atol(Timestamp);
-          MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTime, 0);
+          StartTimeU64 = atol(Timestamp);
+          MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTimeU64, 0);
         #else
           bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
           strncat(pcBuffer,"TRIG;",5);
@@ -637,26 +658,28 @@ int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char
   FILE *fd;
   fd = fopen (Filename, "r");
   UtilReadLineCntSpecChars(fd, TrajBuffer);//Read first line
-  int Rest = 0, i = 0, MessageLength = 0;
-  do
+  int Rest = 0, i = 0, MessageLength = 0, SumMessageLength = 0, Modulo = 0, Transmissions = 0;
+  Transmissions = RowCount / COMMAND_DOPM_ROWS_IN_TRANSMISSION;
+  Rest = RowCount % COMMAND_DOPM_ROWS_IN_TRANSMISSION;
+ 
+  for(i = 0; i < Transmissions; i ++)
   {
-    Rest = RowCount - COMMAND_DOPM_ROWS_IN_TRANSMISSION;
-    RowCount = RowCount - COMMAND_DOPM_ROWS_IN_TRANSMISSION; 
-    if(Rest >= COMMAND_DOPM_ROWS_IN_TRANSMISSION)
-    {
-      MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, COMMAND_DOPM_ROWS_IN_TRANSMISSION, 0);
-    }
-    else
-    {
-      MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, Rest, 0);
-    }
     
-    if(debug) printf("Transmission %d: %d bytes left to send.\n", ++i, Rest*COMMAND_DOPM_ROW_MESSAGE_LENGTH);
-    
-    /*Send DOPM data*/
+    MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, COMMAND_DOPM_ROWS_IN_TRANSMISSION, 0);
     vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+    SumMessageLength = SumMessageLength + MessageLength;
+    if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
+  }
 
-  } while (Rest >= COMMAND_DOPM_ROWS_IN_TRANSMISSION); 
+  if(Rest > 0)
+  {
+    MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, Rest, 0);
+    vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+    SumMessageLength = SumMessageLength + MessageLength;
+    if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
+  }
+
+  if(debug) printf("%d bytes sent.\n", SumMessageLength);
 
   fclose (fd);
 
@@ -1164,7 +1187,7 @@ static void vCloseSafetyChannel(int* sockfd)
   close(*sockfd);
 }
 
-int ObjectControlSendHeartbeat(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
+int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
 {
     int result;
  
@@ -1191,7 +1214,7 @@ static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatComman
       //fflush(stdout);
     #endif
 
-    if(COMMAND_HEARBEAT_GO == tCommand)
+    if(COMMAND_HEARTBEAT_GO == tCommand)
     {
       strcat(pcCommand,"HEBT;g;");
     }
@@ -1290,7 +1313,8 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
       }
       else
       {
-        (void)strcat(object_address_name[(*nbr_objects)],LOCALHOST);
+        if(USE_TEST_HOST == 0) (void)strcat(object_address_name[(*nbr_objects)],LOCALHOST);
+        else if (USE_TEST_HOST == 1) (void)strcat(object_address_name[(*nbr_objects)],TESTHOST);
       }
 
       ++(*nbr_objects);

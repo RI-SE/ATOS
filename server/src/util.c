@@ -471,6 +471,8 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, float 
   int Gate1Reached = 0, Gate2Reached = 0, SampledSpaceIndex[SYNC_POINT_BUFFER];
   double Diff;
   
+  if(StartIndex == -1) StartIndex = 0;
+
   while(i < (OP->TrajectoryPositionCount-1) && Gate2Reached == 0)
   {
       Diff = fabs(OP->SpaceTimeArr[i].OrigoDistance - OP->OrigoDistance);
