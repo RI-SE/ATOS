@@ -44,7 +44,7 @@
 #define SAVED_TRAJECTORY_LINES 100
 #define PI                     acos(-1)
 #define DEBUG
-#define TIME_FROM_DRIVE_FILE 1
+#define TIME_FROM_DRIVE_FILE 0
 
 /* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
@@ -96,7 +96,7 @@ int32_t main(int32_t argc, int8_t *argv[])
   struct sockaddr_in command_server_addr;
   struct sockaddr_in cli_addr;
   struct hostent *hp;
-  int8_t buffer[256];
+  uint8_t buffer[256];
   int8_t bMonitorBuffer[29];
   struct timespec sleep_time;
   struct timespec ref_time;
@@ -118,6 +118,10 @@ int32_t main(int32_t argc, int8_t *argv[])
   double alt_start = ORIGIN_ALTITUDE;
   uint32_t safety_port = SAFETY_CHANNEL_PORT;
   uint32_t control_port = CONTROL_CHANNEL_PORT;
+  uint32_t tmp32 = 0;
+  uint16_t tmp16 = 0;
+  uint8_t tmp8 = 0;
+  
   int32_t optval = 1;
   uint64_t msSinceEpochETSI = 0;
 
@@ -130,7 +134,7 @@ int32_t main(int32_t argc, int8_t *argv[])
   uint16_t origin_heading   = 0;
 
   uint8_t start_type  = 0;
-  uint64_t start_time = INT_MAX;
+  uint64_t start_time = UINT64_MAX;
    
   uint8_t arm_mode  = 0;
 
@@ -335,126 +339,133 @@ int32_t main(int32_t argc, int8_t *argv[])
 
 	      do
 		{
-		  if (commandSet == 0){
-		    payload = 0;
-		    handled_payload = 0;
-		    switch(buffer[buffer_ptr++]){
-		    case 0x01:
+		  if (commandSet == 0)
+		    {
+		      payload = 0;
+		      handled_payload = 0;
+		      switch(buffer[buffer_ptr++]){
+		      case 0x01:
 #ifdef DEBUG
-		      printf("INF: Current command set to DOPM\n");
+			printf("INF: Current command set to DOPM\n");
 #endif
-		      bzero(bCurrentCommand, 10);
-		      strcpy(bCurrentCommand, "DOPM");
-		      commandSet = 1;
-		      payload |= (uint8_t) buffer[buffer_ptr] << 24;
-		      payload |= (uint8_t) buffer[buffer_ptr+1] << 16;
-		      payload |= (uint8_t) buffer[buffer_ptr+2] << 8;
-		      payload |= (uint8_t) buffer[buffer_ptr+3];
-		      printf("Payload = %d\n", payload);
-		      dopm_bytes = payload;
-		      mon_status = 0x0;
-		      firstTime = 1;
-		      buffer_ptr--;
-		      break;
-		    case 0x02:
-#ifdef DEBUG
-		      printf("INF: Current command set to OSEM\n");
-#endif
-		      bzero(bCurrentCommand, 10);
-		      strcpy(bCurrentCommand, "OSEM");
-		      commandSet = 1;
-		      payload |= (uint8_t) buffer[buffer_ptr++] << 24;
-		      payload |= (uint8_t) buffer[buffer_ptr++] << 16;
-		      payload |= (uint8_t) buffer[buffer_ptr++] << 8;
-		      payload |= (uint8_t) buffer[buffer_ptr++];
-		      printf("Payload = %d\n", payload);
-		      origin_latitude  |= (uint8_t) buffer[buffer_ptr++] << 24;
-		      origin_latitude  |= (uint8_t) buffer[buffer_ptr++] << 16;
-		      origin_latitude  |= (uint8_t) buffer[buffer_ptr++] << 8;
-		      origin_latitude  |= (uint8_t) buffer[buffer_ptr++];
-		      origin_longitude |= (uint8_t) buffer[buffer_ptr++] << 24;
-		      origin_longitude |= (uint8_t) buffer[buffer_ptr++] << 16;
-		      origin_longitude |= (uint8_t) buffer[buffer_ptr++] << 8;
-		      origin_longitude |= (uint8_t) buffer[buffer_ptr++];
-		      origin_altitude  |= (uint8_t) buffer[buffer_ptr++] << 24;
-		      origin_altitude  |= (uint8_t) buffer[buffer_ptr++] << 16;
-		      origin_altitude  |= (uint8_t) buffer[buffer_ptr++] << 8;
-		      origin_altitude  |= (uint8_t) buffer[buffer_ptr++];
-		      origin_heading   |= (uint8_t) buffer[buffer_ptr++] << 8;
-		      origin_heading   |= (uint8_t) buffer[buffer_ptr++];
-		      handled_payload += 14;
-		      commandSet = 0;
-		      printf("olat: %d <%x> olon: %d <%x> oalt: %d <%x> ohdg: %d <%x> Handled payload: %d\n", origin_latitude, origin_latitude, origin_longitude, origin_longitude, origin_altitude, origin_altitude, origin_heading, origin_heading, payload);
-		      break;
-		    case 0x03:
-#ifdef DEBUG
-		      printf("INF: Current command set to AROM\n");
-#endif
-		      bzero(bCurrentCommand, 10);
-		      strcpy(bCurrentCommand, "AROM");
-		      commandSet = 1;
-		      payload |= (uint8_t) buffer[buffer_ptr++] << 24;
-		      payload |= (uint8_t) buffer[buffer_ptr++] << 16;
-		      payload |= (uint8_t) buffer[buffer_ptr++] << 8;
-		      payload |= (uint8_t) buffer[buffer_ptr++];
-		      printf("Payload = %d\n", payload);
-		      arm_mode |= (uint8_t) buffer[buffer_ptr++];
-		      handled_payload += 1;
-		      if (arm_mode == 1){
-			printf("Armed.\n");
-			mon_status = 0x1;
-		      }
-		      else if (arm_mode == 2){
-			printf("Disarmed.\n");
+			bzero(bCurrentCommand, 10);
+			strcpy(bCurrentCommand, "DOPM");
+			commandSet = 1;
+			payload |= ((uint32_t) buffer[buffer_ptr]) << 24;
+			payload |= ((uint32_t) buffer[buffer_ptr+1]) << 16;
+			payload |= ((uint32_t) buffer[buffer_ptr+2]) << 8;
+			payload |= ((uint32_t) buffer[buffer_ptr+3]);
+			printf("Payload = %d\n", payload);
+			dopm_bytes = payload;
 			mon_status = 0x0;
-		      }
-		      else{
-			printf("Unknown arm mode.\n");
-			mon_status = 0x4;
-		      }
-		      commandSet = 0;
-		      break;
-		    case 0x04:
+			firstTime = 1;
+			buffer_ptr--;
+			break;
+		      case 0x02:
 #ifdef DEBUG
-		      printf("INF: Current command set to STRT\n");
+			printf("INF: Current command set to OSEM\n");
 #endif
-		      bzero(bCurrentCommand, 10);
-		      strcpy(bCurrentCommand, "STRT");
-		      commandSet = 1;
-		      payload |= (uint8_t) buffer[buffer_ptr++] << 24;
-		      payload |= (uint8_t) buffer[buffer_ptr++] << 16;
-		      payload |= (uint8_t) buffer[buffer_ptr++] << 8;
-		      payload |= (uint8_t) buffer[buffer_ptr++];
-		      printf("Payload = %d\n", payload);
-		      start_type |= (uint8_t) buffer[buffer_ptr++];
-		      handled_payload += 1;
-		      printf("start_type: %d ",start_type);
-		      if (start_type == 2){
-			start_time = 0;
-			start_time |= (uint8_t) buffer[buffer_ptr++] << 40;
-			start_time |= (uint8_t) buffer[buffer_ptr++] << 32;
-			start_time |= (uint8_t) buffer[buffer_ptr++] << 24;
-			start_time |= (uint8_t) buffer[buffer_ptr++] << 16;
-			start_time |= (uint8_t) buffer[buffer_ptr++] << 8;
-			start_time |= (uint8_t) buffer[buffer_ptr++];
-			handled_payload += 6;
-			printf("start_time: %ld", start_time);
-		      }
-		      else
-			start_time = 0;
-		      printf("\n");
-		      commandSet = 0;
-		      break;
-		    default:
+			bzero(bCurrentCommand, 10);
+			strcpy(bCurrentCommand, "OSEM");
+			commandSet = 1;
+			payload |= ((uint32_t) buffer[buffer_ptr++]) << 24;
+			payload |= ((uint32_t) buffer[buffer_ptr++]) << 16;
+			payload |= ((uint32_t) buffer[buffer_ptr++]) << 8;
+			payload |= ((uint32_t) buffer[buffer_ptr++]);
+			printf("Payload = %d\n", payload);
+			origin_latitude  |= ((int32_t) buffer[buffer_ptr++]) << 24;
+			origin_latitude  |= ((int32_t) buffer[buffer_ptr++]) << 16;
+			origin_latitude  |= ((int32_t) buffer[buffer_ptr++]) << 8;
+			origin_latitude  |= ((int32_t) buffer[buffer_ptr++]);
+			origin_longitude |= ((int32_t) buffer[buffer_ptr++]) << 24;
+			origin_longitude |= ((int32_t) buffer[buffer_ptr++]) << 16;
+			origin_longitude |= ((int32_t) buffer[buffer_ptr++]) << 8;
+			origin_longitude |= ((int32_t) buffer[buffer_ptr++]);
+			origin_altitude  |= ((int32_t) buffer[buffer_ptr++]) << 24;
+			origin_altitude  |= ((int32_t) buffer[buffer_ptr++]) << 16;
+			origin_altitude  |= ((int32_t) buffer[buffer_ptr++]) << 8;
+			origin_altitude  |= ((int32_t) buffer[buffer_ptr++]);
+			origin_heading   |= ((uint16_t) buffer[buffer_ptr++]) << 8;
+			origin_heading   |= ((uint16_t) buffer[buffer_ptr++]);
+			handled_payload += 14;
+			commandSet = 0;
+			printf("olat: %d <%x> olon: %d <%x> oalt: %d <%x> ohdg: %d <%x> Handled payload: %d\n", origin_latitude, origin_latitude, origin_longitude, origin_longitude, origin_altitude, origin_altitude, origin_heading, origin_heading, payload);
+			break;
+		      case 0x03:
 #ifdef DEBUG
-		      printf("INF: Unknown command\n");
+			printf("INF: Current command set to AROM\n");
 #endif
-		      bzero(bCurrentCommand, 10);
-		      strcpy(bCurrentCommand, "UKNW");
-		      commandSet = 0;
+			bzero(bCurrentCommand, 10);
+			strcpy(bCurrentCommand, "AROM");
+			commandSet = 1;
+			payload |= ((uint32_t) buffer[buffer_ptr++]) << 24;
+			payload |= ((uint32_t) buffer[buffer_ptr++]) << 16;
+			payload |= ((uint32_t) buffer[buffer_ptr++]) << 8;
+			payload |= ((uint32_t) buffer[buffer_ptr++]);
+			printf("Payload = %d\n", payload);
+			arm_mode |= (uint8_t) buffer[buffer_ptr++];
+			handled_payload += 1;
+			if (arm_mode == 1)
+			  {
+			    printf("Armed.\n");
+			    mon_status = 0x1;
+			  }
+			else if (arm_mode == 2)
+			  {
+			    printf("Disarmed.\n");
+			    mon_status = 0x0;
+			  }
+			else
+			  {
+			    printf("Unknown arm mode.\n");
+			    mon_status = 0x4;
+			  }
+			commandSet = 0;
+			break;
+		      case 0x04:
+#ifdef DEBUG
+			printf("INF: Current command set to STRT\n");
+#endif
+			bzero(bCurrentCommand, 10);
+			strcpy(bCurrentCommand, "STRT");
+			commandSet = 1;
+			payload |= ((uint32_t) buffer[buffer_ptr++]) << 24;
+			payload |= ((uint32_t) buffer[buffer_ptr++]) << 16;
+			payload |= ((uint32_t) buffer[buffer_ptr++]) << 8;
+			payload |= ((uint32_t) buffer[buffer_ptr++]);
+			printf("Payload = %d\n", payload);
+			start_type |= (uint8_t) buffer[buffer_ptr++];
+			handled_payload += 1;
+			printf("start_type: %d ",start_type);
+			if (start_type == 2)
+			  {
+			    start_time = 0;
+			    start_time |= ((uint64_t) buffer[buffer_ptr++]) << 40;
+			    start_time |= ((uint64_t) buffer[buffer_ptr++]) << 32;
+			    start_time |= ((uint64_t) buffer[buffer_ptr++]) << 24;
+			    start_time |= ((uint64_t) buffer[buffer_ptr++]) << 16;
+			    start_time |= ((uint64_t) buffer[buffer_ptr++]) << 8;
+			    start_time |= ((uint64_t) buffer[buffer_ptr++]);
+			    handled_payload += 6;
+			    printf("start_time: %ld", start_time);
+			  }
+			else
+			  {
+			    start_time = 0;
+			  }
+			printf("\n");
+			commandSet = 0;
+			break;
+		      default:
+#ifdef DEBUG
+			printf("INF: Unknown command\n");
+#endif
+			bzero(bCurrentCommand, 10);
+			strcpy(bCurrentCommand, "UKNW");
+			commandSet = 0;
+		      }
 		    }
-		  }
-
+		  
 		 if (!strncmp(bCurrentCommand, "DOPM", 4))
 		   {
 		     while ((buffer_ptr < result) && (buffer_ptr < 5 + payload))
@@ -464,6 +475,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 			 handled_payload++;
 			 //printf("buffer_ptr: %d\n",buffer_ptr);
 		       }
+		     //printf("buffer_ptr: %d\n",buffer_ptr);
 		   } 
 		} while(buffer_ptr < result);
 	      
@@ -488,11 +500,12 @@ int32_t main(int32_t argc, int8_t *argv[])
 #ifdef DEBUG
       printf("INF: start_time %ld handled_bytes %d bytes %d \n",start_time,handled_bytes,dopm_bytes);
 #endif
-      
+
+      //printf("t: %"PRIu64" st: %"PRIu64"\n",msSinceEpochETSI,start_time);
       if ((msSinceEpochETSI >= start_time) && (handled_bytes < dopm_bytes))
 	{
 #ifdef DEBUG
-	  printf("INF: Bytes %d from drive file.\n",handled_bytes);
+	  printf("INF: Bytes %d from drive file.\n", handled_bytes);
 #endif
 	  if (firstTime == 1){
 	    cmd = ReadOneUByteFromFile(fp);
@@ -524,8 +537,8 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  mon_status = 0x2;
 	  bdd = 0x0;
 	  
-	  printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
-	  printf("%lf %lf %lf\n",cal_lat,cal_lon,cal_alt);	  
+	  //printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
+	  //printf("%lf %lf %lf\n",cal_lat,cal_lon,cal_alt);	  
 	  
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
@@ -555,19 +568,20 @@ int32_t main(int32_t argc, int8_t *argv[])
 	}
       else
 	{
-	  if (firstTime == 1){
-	    cmd = ReadOneUByteFromFile(fp);
-	    size = ReadFourUBytesFromFile(fp);
-	    btim = ReadFourUBytesFromFile(fp);
-	    bx = ReadFourSBytesFromFile(fp);
-	    by = ReadFourSBytesFromFile(fp);
-	    bz = ReadFourSBytesFromFile(fp);
-	    bhdg = ReadTwoSBytesFromFile(fp);
-	    bspd = ReadTwoSBytesFromFile(fp);
-	    bacc = ReadTwoSBytesFromFile(fp);
-	    bcur = ReadTwoUBytesFromFile(fp);
-	    mod = ReadOneUByteFromFile(fp);
-	  }
+	  if (firstTime == 1)
+	    {
+	      cmd = ReadOneUByteFromFile(fp);
+	      size = ReadFourUBytesFromFile(fp);
+	      btim = ReadFourUBytesFromFile(fp);
+	      bx = ReadFourSBytesFromFile(fp);
+	      by = ReadFourSBytesFromFile(fp);
+	      bz = ReadFourSBytesFromFile(fp);
+	      bhdg = ReadTwoSBytesFromFile(fp);
+	      bspd = ReadTwoSBytesFromFile(fp);
+	      bacc = ReadTwoSBytesFromFile(fp);
+	      bcur = ReadTwoUBytesFromFile(fp);
+	      mod = ReadOneUByteFromFile(fp);
+	    }
 	  rewind(fp);
 	  cal_lat = (((((double) by) / 1000) * 180) / (PI * earth_radius)) + (((double) origin_latitude) / 10000000);
 	  cal_lon = (((((double) bx) / 1000) * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * ((((double) origin_latitude) / 10000000)+cal_lat))))) + (((double) origin_longitude) / 10000000);
@@ -577,8 +591,8 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  blon = (uint32_t) (cal_lon * 10000000); 
 	  balt = (uint32_t) (cal_alt * 100);
 
-	  printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
-	  printf("%lf %lf %lf\n",cal_lat,cal_lon,cal_alt);	  
+	  //printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
+	  //printf("%lf %lf %lf\n",cal_lat,cal_lon,cal_alt);	  
 	}
 
       bMonitorBuffer[0] = (uint8_t) ((0x06 >> 0) & 0xFF);
@@ -634,7 +648,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 #endif
 
       sleep_time.tv_sec = 0;
-      sleep_time.tv_nsec = 100000000;
+      sleep_time.tv_nsec = 10000000;
       (void) nanosleep(&sleep_time, &ref_time);
     }
 
@@ -656,9 +670,9 @@ uint16_t ReadTwoUBytesFromFile(FILE *f){
   uint8_t tmp = 0;
   uint16_t data = 0;
   fread(&tmp, 1, 1, f);
-  data |= tmp << 8;
+  data |= ((uint16_t) tmp) << 8;
   fread(&tmp, 1, 1, f);
-  data |= tmp;
+  data |= ((uint16_t) tmp);
   return data;
 }
 
@@ -666,13 +680,13 @@ uint32_t ReadFourUBytesFromFile(FILE *f){
   uint8_t tmp = 0;
   uint32_t data = 0;
   fread(&tmp, 1, 1, f);
-  data |= tmp << 24;
+  data |= ((uint32_t) tmp) << 24;
   fread(&tmp, 1, 1, f);
-  data |= tmp << 16;
+  data |= ((uint32_t) tmp) << 16;
   fread(&tmp, 1, 1, f);
-  data |= tmp << 8;
+  data |= ((uint32_t) tmp) << 8;
   fread(&tmp, 1, 1, f);
-  data |= tmp;
+  data |= ((uint32_t) tmp);
   return data;
 }
 
@@ -686,9 +700,9 @@ int16_t ReadTwoSBytesFromFile(FILE *f){
   uint8_t tmp = 0;
   int16_t data = 0;
   fread(&tmp, 1, 1, f);
-  data |= tmp << 8;
+  data |= ((uint16_t) tmp) << 8;
   fread(&tmp, 1, 1, f);
-  data |= tmp;
+  data |= ((uint16_t) tmp);
   return data;
 }
 
@@ -696,12 +710,12 @@ int32_t ReadFourSBytesFromFile(FILE *f){
   uint8_t tmp = 0;
   int32_t data = 0;
   fread(&tmp, 1, 1, f);
-  data |= tmp << 24;
+  data |= ((uint32_t) tmp) << 24;
   fread(&tmp, 1, 1, f);
-  data |= tmp << 16;
+  data |= ((uint32_t) tmp) << 16;
   fread(&tmp, 1, 1, f);
-  data |= tmp << 8;
+  data |= ((uint32_t) tmp) << 8;
   fread(&tmp, 1, 1, f);
-  data |= tmp;
+  data |= ((uint32_t) tmp);
   return data;
 }
