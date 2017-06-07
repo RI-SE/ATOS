@@ -430,6 +430,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 		      handled_payload += 1;
 		      printf("start_type: %d ",start_type);
 		      if (start_type == 2){
+			start_time = 0;
 			start_time |= (uint8_t) buffer[buffer_ptr++] << 40;
 			start_time |= (uint8_t) buffer[buffer_ptr++] << 32;
 			start_time |= (uint8_t) buffer[buffer_ptr++] << 24;
