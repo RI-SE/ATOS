@@ -299,23 +299,23 @@ void objectcontrol_task()
       ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], RowCount-2, 0);
 
       /* Adaptive Sync Points...*/
-   /*   OP[iIndex].TrajectoryPositionCount = RowCount;
+      OP[iIndex].TrajectoryPositionCount = RowCount;
       OP[iIndex].SpaceArr = SpaceArr[iIndex];
       OP[iIndex].TimeArr = TimeArr[iIndex];
       OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
       UtilPopulateSpaceTimeArr(&OP[iIndex], object_traj_file[iIndex]);
       
-      UtilSetMasterObject(&OP[iIndex], object_traj_file[iIndex], 1);
-      UtilSetSlaveObject(&OP[iIndex], object_traj_file[iIndex], 1);
+      UtilSetMasterObject(&OP[iIndex], object_traj_file[iIndex], 0);
+      UtilSetSlaveObject(&OP[iIndex], object_traj_file[iIndex], 0);
       UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, OP[iIndex].SyncTime);
 
       if(OP[iIndex].Type == 'm' || OP[iIndex].Type == 's')
       {
         /*SYPM*/
-   //     MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, OP[iIndex].SyncTime, OP[iIndex].SyncStopTime, 1);
+        MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, OP[iIndex].SyncTime, OP[iIndex].SyncStopTime, 0);
         /*Send SYPM header*/
-   //     vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-   //   }
+        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+      }
 
     #else
       vSendString("DOPM;",&socket_fd[iIndex]);
@@ -385,7 +385,7 @@ void objectcontrol_task()
       for(iIndex=0;iIndex<nbr_objects;++iIndex)
       {
            #ifdef BYTEBASED
-            MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, (StartTimeU64+(uint64_t)OP[iIndex].SyncStopTime*1000));
+            MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0); //(StartTimeU64+(uint64_t)OP[iIndex].SyncStopTime*1000)
             ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
           #endif
       }
