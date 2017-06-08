@@ -296,7 +296,7 @@ void objectcontrol_task()
       vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
 
       /*Send DOPM data*/
-      ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], RowCount-2, 0);
+      ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], RowCount-2, 1);
 
       /* Adaptive Sync Points...*/
       OP[iIndex].TrajectoryPositionCount = RowCount;
@@ -932,7 +932,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*1e2;
+    Data = atof(DataBuffer)*1e1;
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -948,7 +948,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*1e2;
+    Data = atof(DataBuffer)*1e1;
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -956,7 +956,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*1e2;
+    Data = atof(DataBuffer)*3e5;
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
