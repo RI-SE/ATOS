@@ -37,12 +37,12 @@
 
 
 typedef enum {
-	idle_0,		status_0,		arm_0,		start_0,		stop_0,		abort_0,		replay_1,		control_0,		exit_0,		cx_0,		cc_0,
+	idle_0,		status_0,		arm_0,		start_1,		stop_0,		abort_0,		replay_1,		control_0,		exit_0,		cx_0,		cc_0,
 	cp_0,		sb_0,			cb_0,		tp_0,			tsp_1,		sx_0,			sc_0,			help_0,			tosem_0,	tstrt_0,	tdopm_0,
 	tmonr_0,	nocommand
 } UserControlCommand_t;
 const char* UserControlCommandsArr[] = {
-	"idle_0",	"status_0",		"arm_0",	"start_0",		"stop_0",	"abort_0",		"replay_1",		"control_0",	"exit_0",	"cx_0",		"cc_0",
+	"idle_0",	"status_0",		"arm_0",	"start_1",		"stop_0",	"abort_0",		"replay_1",		"control_0",	"exit_0",	"cx_0",		"cc_0",
 	"cp_0", 	"sb_0", 		"cb_0", 	"tp_0", 		"tsp_1", 	"sx_0", 		"sc_0", 		"help_0", 		"tosem_0", 	"tstrt_0",	"tdopm_0",
 	"tmonr_0"};
 UserControlCommand_t PreviousUserControlCommand = nocommand;
@@ -163,9 +163,12 @@ int main(int argc, char *argv[])
 					UserControlSendString(SendBuffer, &socketfd);
 					UserControlResetInputVariables();
 				break;
-				case start_0:
-					UserControlSendString(SendBuffer, &socketfd);
-					UserControlResetInputVariables();
+				case start_1:
+					if(CurrentCommandArgCount == CommandArgCount)
+					{
+						UserControlSendString(SendBuffer, &socketfd);
+						UserControlResetInputVariables();
+					} else CurrentCommandArgCount ++;
 				break;
 				case stop_0:
 					UserControlSendString(SendBuffer, &socketfd);
