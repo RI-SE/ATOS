@@ -24,11 +24,7 @@
 #include <arpa/inet.h>
 #include <poll.h>
 
-
 #include "systemcontrol.h"
-
-
-
 #include "util.h"
 
 
@@ -106,13 +102,13 @@ void systemcontrol_task()
 	  	{
 	    	if(errno != EAGAIN && errno != EWOULDBLOCK)
 	    	{
-		  		perror("[Server]ERR: Failed to receive from command socket.");
+		  		perror("[SystemControl]ERR: Failed to receive from command socket.");
 		  		exit(1);
 			} 
 	    }
 	    else if(ClientResult == 0) 
 	    {
-	    	printf("[Server]Client closed connection.\n");
+	    	printf("[SystemControl]Client closed connection.\n");
 	    	close(ClientSocket);
 	    	close(ServerHandle);
 	    	SystemControlCommand = listen_0;
@@ -143,12 +139,12 @@ void systemcontrol_task()
  				CurrentCommandArgCounter = 0;
 			break;
 			case listen_0:
-				printf("[Server]Listening for new client connection...\n");
+				printf("[SystemControl] Listening for new client connection...\n");
 				ClientResult = SystemControlInitServer(&ClientSocket, &ServerHandle);
 				SystemControlCommand = idle_0;
 			break;
 			case status_0:
-				printf("[Server]Server status: %d\n", server_state);
+				printf("[SystemControl] Server status: %d\n", server_state);
 				SystemControlCommand = idle_0;
 				CurrentCommandArgCounter = 0;
 			break;
@@ -167,10 +163,10 @@ void systemcontrol_task()
 					/* Add seconds to get room for all objects to get command */
 					uiTime += atoi(SystemControlArgument[CurrentCommandArgCounter]);
 					sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";",0,uiTime);
-					printf("[Server]System control Sending STRT <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[CurrentCommandArgCounter]);
+					printf("[SystemControl] System control Sending STRT <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[CurrentCommandArgCounter]);
 					fflush(stdout);
 					
-					(void)iCommSend(COMM_TRIG,pcBuffer);
+					(void)iCommSend(COMM_STRT,pcBuffer);
 					server_state = SERVER_STATUS_RUNNING;
 					SystemControlCommand = idle_0;
 					CurrentCommandArgCounter = 0;
@@ -193,15 +189,15 @@ void systemcontrol_task()
 				{
 					if(!strcmp(SystemControlArgument[CurrentCommandArgCounter],"-help"))
 					{
-						printf("[Server]-----REPLAY-----\n");
-						printf("[Server]Syntax: replay [arg]\n");
-						printf("[Server]Ex: replay log/33/event.log\n");
+						printf("[SystemControl] -----REPLAY-----\n");
+						printf("[SystemControl] Syntax: replay [arg]\n");
+						printf("[SystemControl] Ex: replay log/33/event.log\n");
 						fflush(stdout);
 					}
 					else
 					{
 						(void)iCommSend(COMM_REPLAY, SystemControlArgument[CurrentCommandArgCounter]);
-						printf("[Server]System control sending REPLAY on IPC <%s>\n", SystemControlArgument[CurrentCommandArgCounter]);
+						printf("[SystemControl] System control sending REPLAY on IPC <%s>\n", SystemControlArgument[CurrentCommandArgCounter]);
 						fflush(stdout);
 					}
 					SystemControlCommand = idle_0;
@@ -231,8 +227,8 @@ void systemcontrol_task()
 				fflush(stdout);
 			break;
 			case cc_0:
-				printf("[Server]Command waiting for input: %s\n", SystemControlCommandsArr[PreviousSystemControlCommand]);				
-				printf("[Server]CurrentCommandArgCounter: %d\n", CurrentCommandArgCounter-1);
+				printf("[SystemControl] Command waiting for input: %s\n", SystemControlCommandsArr[PreviousSystemControlCommand]);				
+				printf("[SystemControl] CurrentCommandArgCounter: %d\n", CurrentCommandArgCounter-1);
 				fflush(stdout);
 				SystemControlCommand = PreviousSystemControlCommand;
 			break;

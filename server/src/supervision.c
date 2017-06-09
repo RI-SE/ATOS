@@ -331,7 +331,7 @@ void supervision_task() {
     --  TRIG
     --------------------------------------------------*/
 
-    if (iCommand == COMM_TRIG) {
+    if (iCommand == COMM_STRT) {
 
       /* printf ( "INF : SV : Received a TRIG message: %s\n", */
       /*          cpBuffer ); */

@@ -37,7 +37,7 @@
 
 #define LOCALHOST "127.0.0.1"
 #define USE_TEST_HOST 0
-#define TESTHOST "192.168.0.17"
+#define TESTHOST "10.130.254.31"
 
 #define RECV_MESSAGE_BUFFER 1024
 #define OBJECT_MESS_BUFFER_SIZE 1024
@@ -220,12 +220,6 @@ void objectcontrol_task()
   }
 
 #ifdef BYTEBASED
-  MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, 
-                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
-                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
-                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
-                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
-                                0); 
  
   OriginLatitudeDbl = atof(OriginLatitude);
   OriginLongitudeDbl = atof(OriginLongitude);
@@ -273,7 +267,15 @@ void objectcontrol_task()
     printf("[ObjectControl] Objects controlled by server: %d\n", nbr_objects);
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
-     vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
+
+    MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, 
+                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
+                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
+                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
+                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
+                                0); 
+ 
+    vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
 
 
     /* Send OSEM command */
@@ -296,7 +298,7 @@ void objectcontrol_task()
       vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
 
       /*Send DOPM data*/
-      ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], 0);
+      ObjectControlSendDOPMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], 0);
 
       /* Adaptive Sync Points...*/
       OP[iIndex].TrajectoryPositionCount = RowCount;
@@ -305,17 +307,17 @@ void objectcontrol_task()
       OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
       UtilPopulateSpaceTimeArr(&OP[iIndex], object_traj_file[iIndex]);
       
-      UtilSetMasterObject(&OP[iIndex], object_traj_file[iIndex], 0);
-      UtilSetSlaveObject(&OP[iIndex], object_traj_file[iIndex], 0);
-      UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, OP[iIndex].SyncTime);
+      //UtilSetMasterObject(&OP[iIndex], object_traj_file[iIndex], 0);
+      //UtilSetSlaveObject(&OP[iIndex], object_traj_file[iIndex], 0);
+      //UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, OP[iIndex].SyncTime);
 
-      if(OP[iIndex].Type == 'm' || OP[iIndex].Type == 's')
-      {
+      //if(OP[iIndex].Type == 'm' || OP[iIndex].Type == 's')
+      //{
         /*SYPM*/
-        MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, OP[iIndex].SyncTime, OP[iIndex].SyncStopTime, 0);
+      //  MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, OP[iIndex].SyncTime, OP[iIndex].SyncStopTime, 0);
         /*Send SYPM header*/
-        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-      }
+      //  vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+      //}
 
     #else
       vSendString("DOPM;",&socket_fd[iIndex]);
@@ -385,8 +387,8 @@ void objectcontrol_task()
       for(iIndex=0;iIndex<nbr_objects;++iIndex)
       {
            #ifdef BYTEBASED
-            MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0); //(StartTimeU64+(uint64_t)OP[iIndex].SyncStopTime*1000)
-            ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+            //MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0); //(StartTimeU64+(uint64_t)OP[iIndex].SyncStopTime*1000)
+            //ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
           #endif
       }
     }
@@ -413,10 +415,10 @@ void objectcontrol_task()
 
             if(OP[iIndex].Type == 'm')
             {
-              UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
-              UtilFindCurrentTrajectoryPosition(&OP[iIndex], OP[iIndex].SyncIndex, (CurrentTimeU64-StartTimeU64)/1000, 0.2);
-              if(OP[iIndex].SyncIndex > -1) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)OP[iIndex].TimeToSyncPoint*1000;
-              else MasterTimeToSyncPointU64 = 0;
+              //UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
+              //UtilFindCurrentTrajectoryPosition(&OP[iIndex], OP[iIndex].SyncIndex, (CurrentTimeU64-StartTimeU64)/1000, 0.2);
+              //if(OP[iIndex].SyncIndex > -1) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)OP[iIndex].TimeToSyncPoint*1000;
+              //else MasterTimeToSyncPointU64 = 0;
             }
 
         #else
@@ -483,10 +485,10 @@ void objectcontrol_task()
           #endif
         }
       }
-      else if(iCommand == COMM_TRIG)
+      else if(iCommand == COMM_STRT)
       {  
         //#ifdef DEBUG
-          printf("[ObjectControl] Object control START trig recieved string <%s>\n",pcRecvBuffer);
+          printf("[ObjectControl] STRT trig recieved <%s>\n",pcRecvBuffer);
           fflush(stdout);
         //#endif
 

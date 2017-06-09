@@ -35,7 +35,7 @@
 #define IPC_SEND       0x02
 #define IPC_RECV_SEND  0x03
 
-#define COMM_TRIG 1
+#define COMM_STRT 1
 #define COMM_STOP 2
 #define COMM_MONI 3
 #define COMM_EXIT 4

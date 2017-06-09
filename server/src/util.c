@@ -823,10 +823,10 @@ int iCommSend(const int iCommand,const char* cpData)
   
   bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
   
-  if(iCommand == COMM_TRIG)
+  if(iCommand == COMM_STRT)
     {
       uiMessagePrio = 100;
-      cpMessage[0] = (char)COMM_TRIG;
+      cpMessage[0] = (char)COMM_STRT;
     }
   else if(iCommand == COMM_ARMD)
     {
