@@ -50,6 +50,7 @@
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
 #define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
 
+
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
@@ -297,16 +298,26 @@ int32_t main(int32_t argc, int8_t *argv[])
     {
       int32_t receivedNewData = 0;
       int32_t commandSet = 0;
-      bzero(buffer,256);
+      //bzero(buffer,256);
+      memset(buffer,0,256);
       do
 	{
 #ifdef DEBUG
 	  printf("INF: Start receive\n");
 #endif
 	  uint16_t handled_payload = 0;
-	  bzero(buffer,256);
-	  result = recv(command_com_socket_fd, buffer, 256, 0);
-
+	  //bzero(buffer,256);
+	  memset(buffer,0,256);
+	  /* int32_t k = 0; */
+	  /*     printf("Received data 1: "); */
+	  /*     for (k = 0; k < result; k++) */
+	  /*     	printf("%d:%x,",k,(uint8_t) buffer[k]); */
+	  /*     printf("\n"); */
+	      result = recv(command_com_socket_fd, buffer, 256, 0);
+	      /* printf("Received data 2: "); */
+	      /* for (k = 0; k < result; k++) */
+	      /* 	printf("%d:%x,",k,(uint8_t) buffer[k]); */
+	      /* printf("\n"); */
 	  if (result < 0)
 	    {
 	      if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -332,9 +343,9 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      fflush(stdout);
 #endif
 
-	      /* int32_t k = 0; */
+	      /* printf("Received data 3: "); */
 	      /* for (k = 0; k < result; k++) */
-	      /* 	printf("%x,",(uint8_t) buffer[k]); */
+	      /* 	printf("%d:%x,",k,(uint8_t) buffer[k]); */
 	      /* printf("\n"); */
 
 	      do
@@ -447,7 +458,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 			    start_time |= ((uint64_t) buffer[buffer_ptr++]) << 8;
 			    start_time |= ((uint64_t) buffer[buffer_ptr++]);
 			    handled_payload += 6;
-			    printf("start_time: %ld", start_time);
+			    printf("start_time: %"PRIu64" ", start_time);
 			  }
 			else
 			  {
@@ -498,7 +509,7 @@ int32_t main(int32_t argc, int8_t *argv[])
       static int32_t handled_bytes = 0;
       
 #ifdef DEBUG
-      printf("INF: start_time %ld handled_bytes %d bytes %d \n",start_time,handled_bytes,dopm_bytes);
+      printf("INF: start_time %"PRIu64" handled_bytes %d bytes %d \n",start_time,handled_bytes,dopm_bytes);
 #endif
 
       //printf("t: %"PRIu64" st: %"PRIu64"\n",msSinceEpochETSI,start_time);
