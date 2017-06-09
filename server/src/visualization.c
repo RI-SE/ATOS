@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in visual_server_addr;
 	char cpBuffer[RECV_MESSAGE_BUFFER];
 
-	printf("DefaultVisualizationAdapter started\n");
+	printf("[Visualization] DefaultVisualizationAdapter started\n");
 	fflush(stdout);
 
 	(void)iCommInit(IPC_RECV,MQ_VA,0);
@@ -148,7 +148,7 @@ static void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr)
     strcat(pcTempBuffer,VISUAL_SERVER_NAME);
   }
 
-  printf("INF: UDP visualization sending to %s %d.\n",pcTempBuffer,VISUAL_SERVER_PORT);
+  printf("[Visualization] UDP visualization sending to %s %d\n",pcTempBuffer,VISUAL_SERVER_PORT);
   fflush(stdout);
 
   server = gethostbyname(pcTempBuffer);

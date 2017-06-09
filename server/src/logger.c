@@ -77,10 +77,10 @@ void logger_task()
   (void)strcpy(pcLogFile,pcLogFolder);
   (void)strcat(pcLogFile,LOG_FILE);
 
-  //#ifdef DEBUG
+  #ifdef DEBUG
     printf("INF: Open log file to use: <%s>\n",pcLogFile);
     fflush(stdout);
-  //#endif
+  #endif
   filefd = fopen (pcLogFile, "w+");
 
   bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);

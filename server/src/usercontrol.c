@@ -410,8 +410,8 @@ int main(int argc, char *argv[])
 				default:
 
 				break;
-
 			}
+			usleep(1);
 
 	  }
   } else printf("Failed to start UserControl client!\n"); 

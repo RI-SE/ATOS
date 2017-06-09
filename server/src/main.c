@@ -97,9 +97,9 @@ int main(int argc, char *argv[])
     }
     if(pID[iIndex] == 0)
     {
-     // #ifdef DEBUG
+      #ifdef DEBUG
         printf("INF: visualization 0 running in:  %i \n",getpid());
-     // #endif
+      #endif
 
       char *newargv[] = { NULL, NULL };
       char *newenviron[] = { NULL };
@@ -110,9 +110,9 @@ int main(int argc, char *argv[])
     ++iIndex;
   }
  
-  //#ifdef DEBUG
+  #ifdef DEBUG
     printf("INF: systemcontrol_task running in:  %i \n",getpid());
-  //#endif
+  #endif
     
   systemcontrol_task();
 }

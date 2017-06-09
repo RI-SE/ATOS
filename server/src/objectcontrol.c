@@ -123,7 +123,7 @@ int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, u
 int ObjectControlBuildMTPSMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug);
 int ObjectControlBuildDOPMMessageHeader(char* MessageBuffer, int RowCount, char debug);
 int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, char debug);
-int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char debug);
+int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, char debug);
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
 int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag);
 int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, int32_t *Latitude, int32_t * Longitude, int32_t *Altitude, uint16_t *Speed, uint16_t *Heading, uint8_t *DriveDirection);
@@ -270,7 +270,7 @@ void objectcontrol_task()
 #endif
 
   /* Connect and send drive files */
-    printf("n objects: %d\n", nbr_objects);
+    printf("[ObjectControl] Objects controlled by server: %d\n", nbr_objects);
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
      vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
@@ -296,7 +296,7 @@ void objectcontrol_task()
       vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
 
       /*Send DOPM data*/
-      ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], RowCount-2, 1);
+      ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], 0);
 
       /* Adaptive Sync Points...*/
       OP[iIndex].TrajectoryPositionCount = RowCount;
@@ -652,7 +652,7 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *T
   return 0;
 }
 
-int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char debug)
+int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, char debug)
 {
 
   FILE *fd;
@@ -679,7 +679,7 @@ int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char
     if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
   }
 
-  if(debug) printf("%d bytes sent.\n", SumMessageLength);
+  printf("[ObjectControl] %d DOPM bytes sent to %s\n", SumMessageLength, IP);
 
   fclose (fd);
 
@@ -1031,10 +1031,10 @@ static void vConnectObject(int* sockfd, const char* name, const uint32_t port)
   bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
   serv_addr.sin_port = htons(port);
   
-  //#ifdef DEBUG
+  #ifdef DEBUG
     printf("INF: Try to connect to socket: %s %i\n",name,port);
     fflush(stdout);
-  //#endif
+  #endif
   
   do
   {
@@ -1055,10 +1055,10 @@ static void vConnectObject(int* sockfd, const char* name, const uint32_t port)
     }
   } while(iResult < 0);
 
-  //#ifdef DEBUG
+  #ifdef DEBUG
     printf("INF: Connected to command socket: %s %i\n",name,port);
     fflush(stdout);
-  //#endif
+  #endif
 
 }
 

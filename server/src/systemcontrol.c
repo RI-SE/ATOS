@@ -246,8 +246,9 @@ void systemcontrol_task()
 			default:
 
 			break;
-
 		}
+
+		usleep(1);
 
   }
   (void)iCommClose();
