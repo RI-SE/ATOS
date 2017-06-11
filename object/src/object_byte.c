@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
   -- Copyright   : (C) 2016 CHRONOS project
   --------------------------------------------------------------------------------
-  -- File        : object.c
+  -- File        : object_byte.c
   -- Author      : Henrik Eriksson
   -- Description : CHRONOS software prototype object
   -- Purpose     :
@@ -548,8 +548,8 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  mon_status = 0x2;
 	  bdd = 0x0;
 	  
-	  //printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
-	  //printf("%lf %lf %lf\n",cal_lat,cal_lon,cal_alt);	  
+	  printf("%.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt);	  
+	  printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
 	  
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
@@ -598,12 +598,16 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  cal_lon = (((((double) bx) / 1000) * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * ((((double) origin_latitude) / 10000000)+cal_lat))))) + (((double) origin_longitude) / 10000000);
 	  cal_alt = (((double) bz) / 1000) + (((double) origin_altitude) / 100);
 
+	  printf("olat: %d %.9lf olon: %d %.9lf\n",origin_latitude,(((double) origin_latitude) / 10000000),origin_longitude,(((double) origin_longitude) / 10000000));
+
 	  blat = (uint32_t) (cal_lat * 10000000); 
 	  blon = (uint32_t) (cal_lon * 10000000); 
 	  balt = (uint32_t) (cal_alt * 100);
 
-	  //printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
-	  //printf("%lf %lf %lf\n",cal_lat,cal_lon,cal_alt);	  
+	  printf("Cal: %.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt);
+	  printf("Cal: bx: %.9lf by: %.9lf\n", (((double) bx) / 1000), (((double) by) / 1000));
+	  printf("Read: %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod);
+	  printf("Sent: %d %d %d\n",blat,blon,balt);
 	}
 
       bMonitorBuffer[0] = (uint8_t) ((0x06 >> 0) & 0xFF);
