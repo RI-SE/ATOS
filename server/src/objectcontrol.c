@@ -606,6 +606,15 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *T
   bzero(StatusFlag, SMALL_BUFFER_SIZE_1);
 
 
+//if(debug)
+  //{
+    //int i = 0;
+    for(i = 5; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
+  //}
+  printf("\n");
+
+
+
   //Index
   sprintf(Id, "%" PRIu8, (unsigned char)Idn);
 
@@ -934,7 +943,10 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*1e1;
+    Data = UtilRadToDeg(atof(DataBuffer)*1e1);
+    while(Data<0) Data+=3600;
+    while(Data>3600) Data-=3600;
+
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -958,7 +970,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*3e5;
+    Data = atof(DataBuffer)*3e4;
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
