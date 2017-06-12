@@ -158,6 +158,10 @@ int32_t main(int32_t argc, int8_t *argv[])
   uint8_t  mon_status = 0;
   uint32_t dopm_bytes = 0;
   uint8_t firstTime = 0;
+
+  uint32_t driveFileStep = 0; //Step in drivefile for time base calculation
+  uint32_t TimeBase = 0;      //Calculated time base (drive file time step/monitor message time step, forced > 1)
+  uint8_t TimeBaseCount = 1;  //Counter used for determining reads from drive file 
   
   struct timeval tv;
 
@@ -522,21 +526,24 @@ int32_t main(int32_t argc, int8_t *argv[])
 	    cmd = ReadOneUByteFromFile(fp);
 	    size = ReadFourUBytesFromFile(fp);
 	    firstTime = 0;
-	    printf("c = %d (%x)\n", cmd, cmd); 
-	    printf("s = %d (%x)\n", size, size);
-	    printf("Bytes to read = %d\n",size);
+	    /* printf("c = %d (%x)\n", cmd, cmd);  */
+	    /* printf("s = %d (%x)\n", size, size); */
+	    /* printf("Bytes to read = %d\n",size); */
 	  }
 	  
-	  btim = ReadFourUBytesFromFile(fp);
-	  bx = ReadFourSBytesFromFile(fp);
-	  by = ReadFourSBytesFromFile(fp);
-	  bz = ReadFourSBytesFromFile(fp);
-	  bhdg = ReadTwoSBytesFromFile(fp);
-	  bspd = ReadTwoSBytesFromFile(fp);
-	  bacc = ReadTwoSBytesFromFile(fp);
-	  bcur = ReadTwoUBytesFromFile(fp);
-	  mod = ReadOneUByteFromFile(fp);
-	  handled_bytes += 25;
+	  if (TimeBaseCount == TimeBase) {		//    TimeBaseCount typical to 10
+	    btim = ReadFourUBytesFromFile(fp);
+	    bx = ReadFourSBytesFromFile(fp);
+	    by = ReadFourSBytesFromFile(fp);
+	    bz = ReadFourSBytesFromFile(fp);
+	    bhdg = ReadTwoSBytesFromFile(fp);
+	    bspd = ReadTwoSBytesFromFile(fp);
+	    bacc = ReadTwoSBytesFromFile(fp);
+	    bcur = ReadTwoUBytesFromFile(fp);
+	    mod = ReadOneUByteFromFile(fp);
+	    handled_bytes += 25;
+	  }
+
 
 	  cal_lat = (((((double) by) / 1000) * 180) / (PI * earth_radius)) + (((double) origin_latitude) / 10000000);
 	  cal_lon = (((((double) bx) / 1000) * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * ((((double) origin_latitude) / 10000000)+cal_lat))))) + (((double) origin_longitude) / 10000000);
@@ -548,8 +555,8 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  mon_status = 0x2;
 	  bdd = 0x0;
 	  
-	  printf("%.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt);	  
-	  printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
+	  /* printf("%.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt);	   */
+	  /* printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude); */
 	  
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
@@ -592,22 +599,34 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      bacc = ReadTwoSBytesFromFile(fp);
 	      bcur = ReadTwoUBytesFromFile(fp);
 	      mod = ReadOneUByteFromFile(fp);
+	      driveFileStep = ReadFourUBytesFromFile(fp); // next four bytes are time again for time base calc
+              driveFileStep -= btim;		          // calcultate time step	
+	    }
+	
+	  TimeBase = (driveFileStep / (sleep_time.tv_nsec / 1000000));
+
+	  if (TimeBase < 1)
+	    {
+#ifdef DEBUG
+	      printf("INF: TimeBase too low, increase step in drive file!\n");
+#endif
+	      TimeBase = 1;
 	    }
 	  rewind(fp);
 	  cal_lat = (((((double) by) / 1000) * 180) / (PI * earth_radius)) + (((double) origin_latitude) / 10000000);
 	  cal_lon = (((((double) bx) / 1000) * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * ((((double) origin_latitude) / 10000000)+cal_lat))))) + (((double) origin_longitude) / 10000000);
 	  cal_alt = (((double) bz) / 1000) + (((double) origin_altitude) / 100);
 
-	  printf("olat: %d %.9lf olon: %d %.9lf\n",origin_latitude,(((double) origin_latitude) / 10000000),origin_longitude,(((double) origin_longitude) / 10000000));
+	  /* printf("olat: %d %.9lf olon: %d %.9lf\n",origin_latitude,(((double) origin_latitude) / 10000000),origin_longitude,(((double) origin_longitude) / 10000000)); */
 
 	  blat = (uint32_t) (cal_lat * 10000000); 
 	  blon = (uint32_t) (cal_lon * 10000000); 
 	  balt = (uint32_t) (cal_alt * 100);
 
-	  printf("Cal: %.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt);
-	  printf("Cal: bx: %.9lf by: %.9lf\n", (((double) bx) / 1000), (((double) by) / 1000));
-	  printf("Read: %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod);
-	  printf("Sent: %d %d %d\n",blat,blon,balt);
+	  /* printf("Cal: %.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt); */
+	  /* printf("Cal: bx: %.9lf by: %.9lf\n", (((double) bx) / 1000), (((double) by) / 1000)); */
+	  /* printf("Read: %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod); */
+	  /* printf("Sent: %d %d %d\n",blat,blon,balt); */
 	}
 
       bMonitorBuffer[0] = (uint8_t) ((0x06 >> 0) & 0xFF);
@@ -658,12 +677,19 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  exit(1);
 	}
 
+      TimeBaseCount = TimeBaseCount + 1;
+      if (TimeBaseCount == TimeBase + 1)
+	{
+	  TimeBaseCount = 1;
+	}
+
 #ifdef DEBUG
       printf("INF: Sending: <%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x>\n", (uint8_t) bMonitorBuffer[0], (uint8_t) bMonitorBuffer[1], (uint8_t) bMonitorBuffer[2], (uint8_t) bMonitorBuffer[3], (uint8_t) bMonitorBuffer[4], (uint8_t) bMonitorBuffer[5], (uint8_t) bMonitorBuffer[6], (uint8_t) bMonitorBuffer[7],(uint8_t) bMonitorBuffer[8], (uint8_t) bMonitorBuffer[9], (uint8_t) bMonitorBuffer[10], (uint8_t) bMonitorBuffer[11], (uint8_t) bMonitorBuffer[12], (uint8_t) bMonitorBuffer[13], (uint8_t) bMonitorBuffer[14], (uint8_t) bMonitorBuffer[15], (uint8_t) bMonitorBuffer[16], (uint8_t) bMonitorBuffer[17], (uint8_t) bMonitorBuffer[18], (uint8_t) bMonitorBuffer[19], (uint8_t) bMonitorBuffer[20], (uint8_t) bMonitorBuffer[21], (uint8_t) bMonitorBuffer[22], (uint8_t) bMonitorBuffer[23], (uint8_t) bMonitorBuffer[24], (uint8_t) bMonitorBuffer[25], (uint8_t) bMonitorBuffer[26], (uint8_t) bMonitorBuffer[27], (uint8_t) bMonitorBuffer[28]);
 #endif
 
       sleep_time.tv_sec = 0;
-      sleep_time.tv_nsec = 10000000;
+      sleep_time.tv_nsec = 10000000;	//nanosec 10000000 = 10 ms
+	
       (void) nanosleep(&sleep_time, &ref_time);
     }
 
