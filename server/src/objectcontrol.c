@@ -944,8 +944,8 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
     Data = UtilRadToDeg(atof(DataBuffer)*1e1);
-    while(Data<0) Data+=3600;
-    while(Data>3600) Data-=3600;
+    //while(Data<0) Data+=3600;
+    //while(Data>3600) Data-=3600;
 
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
