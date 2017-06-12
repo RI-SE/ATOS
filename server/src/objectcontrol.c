@@ -46,6 +46,7 @@
 #define HEARTBEAT_TIME_MS 10
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
+#define OBJECT_CONTROL_ABORT_MODE 1
 #define BYTEBASED
 
 #define COMMAND_MESSAGE_HEADER_LENGTH 5
@@ -525,6 +526,12 @@ void objectcontrol_task()
         printf("[ObjectControl] Object control REPLAY mode <%s>\n", pcRecvBuffer);
   			fflush(stdout);
   		}
+      else if(iCommand == COMM_ABORT)
+      {
+        ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+        printf("[ObjectControl] Object control ABORT mode <%s>\n", pcRecvBuffer);
+        fflush(stdout);
+      }
       else if(iCommand == COMM_CONTROL)
       {
         ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
