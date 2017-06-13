@@ -36,6 +36,7 @@ typedef enum {
   SERVER_STATUS_OBJECT_CONNECTED,
   SERVER_STATUS_OBJECT_LOADED,
   SERVER_STATUS_ARMED,
+  SERVER_STATUS_DISARMED,
   SERVER_STATUS_RUNNING,
   SERVER_STATUS_STOPPED,
   SERVER_STATUS_ABORTED,
@@ -53,9 +54,9 @@ typedef enum {
 
 
 typedef enum {
-   idle_0, status_0, arm_0, start_1, stop_0, abort_0, replay_1, control_0, exit_0, cx_0, cc_0, listen_0, nocommand
+   idle_0, status_0, arm_0, disarm_0, start_1, stop_0, abort_0, replay_1, control_0, exit_0, cx_0, cc_0, listen_0, nocommand
 } SystemControlCommand_t;
-const char* SystemControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "start_1", "stop_0", "abort_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0", "listen_0"};
+const char* SystemControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "disarm_0", "start_1", "stop_0", "abort_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0", "listen_0"};
 SystemControlCommand_t PreviousSystemControlCommand = nocommand;
 char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
 char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
@@ -149,8 +150,20 @@ void systemcontrol_task()
 				CurrentCommandArgCounter = 0;
 			break;
 			case arm_0:
-				(void)iCommSend(COMM_ARMD,NULL);
-			    server_state = SERVER_STATUS_ARMED;
+				bzero(pcBuffer, IPC_BUFFER_SIZE);
+				server_state = SERVER_STATUS_ARMED;
+				pcBuffer[0] = (unsigned char)server_state;
+				(void)iCommSend(COMM_ARMD,pcBuffer);
+				printf("[SystemControl] Sending ARMED: %d\n", server_state);
+				SystemControlCommand = idle_0;
+				CurrentCommandArgCounter = 0;
+			break;
+			case disarm_0:
+				bzero(pcBuffer, IPC_BUFFER_SIZE);
+				server_state = SERVER_STATUS_DISARMED;
+				pcBuffer[0] = (unsigned char)server_state;
+				(void)iCommSend(COMM_ARMD,pcBuffer);
+				printf("[SystemControl] Sending DISARMED: %d\n", server_state);
 				SystemControlCommand = idle_0;
 				CurrentCommandArgCounter = 0;
 			break;

@@ -63,7 +63,7 @@
 #define COMMAND_AROM_CODE 3
 #define COMMAND_AROM_MESSAGE_LENGTH 1
 #define COMMAND_AROM_OPT_SET_ARMED_STATE 1
-#define COMMAND_HEAB_OPT_SET_DISARMED_STATE 2 
+#define COMMAND_AROM_OPT_SET_DISARMED_STATE 2 
 
 #define COMMAND_STRT_CODE  4
 #define COMMAND_STRT_MESSAGE_LENGTH  7
@@ -474,7 +474,11 @@ void objectcontrol_task()
       if(iCommand == COMM_ARMD)
       {
         
-        MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, COMMAND_AROM_OPT_SET_ARMED_STATE, 0);
+        //MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, COMMAND_AROM_OPT_SET_ARMED_STATE, 0);
+
+        if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_ARMED_STATE) printf("[ObjectControl] Sending ARMED: %d\n", pcRecvBuffer[0]);
+        else if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_DISARMED_STATE) printf("[ObjectControl] Sending DISARMED: %d\n", pcRecvBuffer[0]);
+        MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, pcRecvBuffer[0], 0);
 
         for(iIndex=0;iIndex<nbr_objects;++iIndex)
         {
@@ -616,9 +620,9 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *T
 //if(debug)
   //{
     //int i = 0;
-    for(i = 5; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
+    //for(i = 5; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
   //}
-  printf("\n");
+  //printf("\n");
 
 
 

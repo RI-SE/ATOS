@@ -39,12 +39,12 @@
 typedef enum {
 	idle_0,		status_0,		arm_0,		start_1,		stop_0,		abort_0,		replay_1,		control_0,		exit_0,		cx_0,		cc_0,
 	cp_0,		sb_0,			cb_0,		tp_0,			tsp_1,		sx_0,			sc_0,			help_0,			tosem_0,	tstrt_0,	tdopm_0,
-	tmonr_0,	nocommand
+	tmonr_0,	disarm_0		,nocommand
 } UserControlCommand_t;
 const char* UserControlCommandsArr[] = {
 	"idle_0",	"status_0",		"arm_0",	"start_1",		"stop_0",	"abort_0",		"replay_1",		"control_0",	"exit_0",	"cx_0",		"cc_0",
 	"cp_0", 	"sb_0", 		"cb_0", 	"tp_0", 		"tsp_1", 	"sx_0", 		"sc_0", 		"help_0", 		"tosem_0", 	"tstrt_0",	"tdopm_0",
-	"tmonr_0"};
+	"tmonr_0", 	"disarm_0"	};
 UserControlCommand_t PreviousUserControlCommand = nocommand;
 char UserControlCommandArgCnt[USER_CONTROL_ARG_COUNT];
 char UserControlStrippedCommand[USER_CONTROL_COMMAND_MAX_LENGTH];
@@ -160,6 +160,10 @@ int main(int argc, char *argv[])
 					UserControlResetInputVariables();
 				break;
 				case arm_0:
+					UserControlSendString(SendBuffer, &socketfd);
+					UserControlResetInputVariables();
+				break;
+				case disarm_0:
 					UserControlSendString(SendBuffer, &socketfd);
 					UserControlResetInputVariables();
 				break;
@@ -397,6 +401,7 @@ int main(int argc, char *argv[])
 					printf("cb - Reset recorded buffer.\n");
 					printf("status - Query server status.\n");
 					printf("arm - Tell server to send \"ARM\".\n");
+					printf("disarm - Tell server to send \"DISARM\".\n");
 					printf("start - Tell server to send \"START\".\n");
 					printf("stop - Tell server to send \"STOP\".\n");
 					printf("abort - Tell server to send \"ABORT\".\n");
