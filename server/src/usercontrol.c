@@ -369,7 +369,7 @@ int main(int argc, char *argv[])
 					UserControlResetInputVariables();
 				break;
 				case tmonr_0:
-					ObjectControlMONRToASCII(TestBuffer, 1, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
+					ObjectControlMONRToASCII(TestBuffer, 1, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 1);
 					bzero(Buffer,100);
 					strcat(Buffer,Timestamp);
 					strcat(Buffer,";");
