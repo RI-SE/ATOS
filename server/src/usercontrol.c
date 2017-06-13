@@ -39,12 +39,12 @@
 typedef enum {
 	idle_0,		status_0,		arm_0,		start_1,		stop_0,		abort_0,		replay_1,		control_0,		exit_0,		cx_0,		cc_0,
 	cp_0,		sb_0,			cb_0,		tp_0,			tsp_1,		sx_0,			sc_0,			help_0,			tosem_0,	tstrt_0,	tdopm_0,
-	tmonr_0,	nocommand
+	tmonr_0,	disarm_0		,nocommand
 } UserControlCommand_t;
 const char* UserControlCommandsArr[] = {
 	"idle_0",	"status_0",		"arm_0",	"start_1",		"stop_0",	"abort_0",		"replay_1",		"control_0",	"exit_0",	"cx_0",		"cc_0",
 	"cp_0", 	"sb_0", 		"cb_0", 	"tp_0", 		"tsp_1", 	"sx_0", 		"sc_0", 		"help_0", 		"tosem_0", 	"tstrt_0",	"tdopm_0",
-	"tmonr_0"};
+	"tmonr_0", 	"disarm_0"	};
 UserControlCommand_t PreviousUserControlCommand = nocommand;
 char UserControlCommandArgCnt[USER_CONTROL_ARG_COUNT];
 char UserControlStrippedCommand[USER_CONTROL_COMMAND_MAX_LENGTH];
@@ -163,6 +163,10 @@ int main(int argc, char *argv[])
 					UserControlSendString(SendBuffer, &socketfd);
 					UserControlResetInputVariables();
 				break;
+				case disarm_0:
+					UserControlSendString(SendBuffer, &socketfd);
+					UserControlResetInputVariables();
+				break;
 				case start_1:
 					if(CurrentCommandArgCount == CommandArgCount)
 					{
@@ -225,7 +229,7 @@ int main(int argc, char *argv[])
 	//				UtilCalcPositionDelta(57.6626302333,12.1056869167,57.6626269972, 12.1057250694, &OP);
 					//‭429.4967295‬
 					//57,7773716
-					UtilCalcPositionDelta(57.7773716,12.7804630,57.7773717, 12.7804631, &OP);
+					UtilCalcPositionDelta(57.77737161,12.78046323,57.77737162,12.78046324, &OP);
 					//UtilCalcPositionDelta(57.7773298066,12.7818834416,57.777329775, 12.7818832583, &OP);
 					//UtilCalcPositionDelta(57.7771230833333,12.78156473, 57.777711,12.780829, &OP);
 					//UtilCalcPositionDelta(57.777360,12.780472, 57.777711,12.780829, &OP);
@@ -365,7 +369,7 @@ int main(int argc, char *argv[])
 					UserControlResetInputVariables();
 				break;
 				case tmonr_0:
-					ObjectControlMONRToASCII(TestBuffer, 1, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
+					ObjectControlMONRToASCII(TestBuffer, 1, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 1);
 					bzero(Buffer,100);
 					strcat(Buffer,Timestamp);
 					strcat(Buffer,";");
@@ -397,6 +401,7 @@ int main(int argc, char *argv[])
 					printf("cb - Reset recorded buffer.\n");
 					printf("status - Query server status.\n");
 					printf("arm - Tell server to send \"ARM\".\n");
+					printf("disarm - Tell server to send \"DISARM\".\n");
 					printf("start - Tell server to send \"START\".\n");
 					printf("stop - Tell server to send \"STOP\".\n");
 					printf("abort - Tell server to send \"ABORT\".\n");

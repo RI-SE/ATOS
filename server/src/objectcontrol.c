@@ -46,6 +46,7 @@
 #define HEARTBEAT_TIME_MS 10
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
+#define OBJECT_CONTROL_ABORT_MODE 1
 #define BYTEBASED
 
 #define COMMAND_MESSAGE_HEADER_LENGTH 5
@@ -62,7 +63,7 @@
 #define COMMAND_AROM_CODE 3
 #define COMMAND_AROM_MESSAGE_LENGTH 1
 #define COMMAND_AROM_OPT_SET_ARMED_STATE 1
-#define COMMAND_HEAB_OPT_SET_DISARMED_STATE 2 
+#define COMMAND_AROM_OPT_SET_DISARMED_STATE 2 
 
 #define COMMAND_STRT_CODE  4
 #define COMMAND_STRT_MESSAGE_LENGTH  7
@@ -125,7 +126,7 @@ int ObjectControlBuildDOPMMessageHeader(char* MessageBuffer, int RowCount, char 
 int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, char debug);
 int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, char debug);
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
-int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag);
+int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag, char debug);
 int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, int32_t *Latitude, int32_t * Longitude, int32_t *Altitude, uint16_t *Speed, uint16_t *Heading, uint8_t *DriveDirection);
 
 
@@ -263,6 +264,8 @@ void objectcontrol_task()
 
 #endif
 
+//#define NOTCP
+#ifndef NOTCP
   /* Connect and send drive files */
     printf("[ObjectControl] Objects controlled by server: %d\n", nbr_objects);
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -325,6 +328,7 @@ void objectcontrol_task()
       vSendString("ENDDOPM;",&socket_fd[iIndex]);
     #endif
   }
+#endif // NOTCP
 
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
@@ -405,9 +409,14 @@ void objectcontrol_task()
 
       if(recievedNewData)
       {
+
+      	#ifdef DEBUG
+      	  printf("INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
+	  fflush(stdout);
+      	#endif
         
         #ifdef BYTEBASED
-            ObjectControlMONRToASCII(buffer, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
+            ObjectControlMONRToASCII(buffer, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 1);
             bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
             strcat(buffer, "MONR;"); strcat(buffer,Id); strcat(buffer,";"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
             strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
@@ -473,7 +482,11 @@ void objectcontrol_task()
       if(iCommand == COMM_ARMD)
       {
         
-        MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, COMMAND_AROM_OPT_SET_ARMED_STATE, 0);
+        //MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, COMMAND_AROM_OPT_SET_ARMED_STATE, 0);
+
+        if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_ARMED_STATE) printf("[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]);
+        else if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_DISARMED_STATE) printf("[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]);
+        MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, pcRecvBuffer[0], 0);
 
         for(iIndex=0;iIndex<nbr_objects;++iIndex)
         {
@@ -525,6 +538,12 @@ void objectcontrol_task()
         printf("[ObjectControl] Object control REPLAY mode <%s>\n", pcRecvBuffer);
   			fflush(stdout);
   		}
+      else if(iCommand == COMM_ABORT)
+      {
+        ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+        printf("[ObjectControl] Object control ABORT mode <%s>\n", pcRecvBuffer);
+        fflush(stdout);
+      }
       else if(iCommand == COMM_CONTROL)
       {
         ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
@@ -559,10 +578,12 @@ void objectcontrol_task()
     }
   }
 
+#ifndef NOTCP
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
     vDisconnectObject(&socket_fd[iIndex]);
   }
+#endif //NOTCP
 
     /* Close safety socket */
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -586,7 +607,7 @@ int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, 
 }
 
 
-int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *Heading, char *DriveDirection, char *StatusFlag)
+int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *Heading, char *DriveDirection, char *StatusFlag, char debug)
 {
   char Buffer[6];
   long unsigned int MonrValueU64;
@@ -605,6 +626,13 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *T
   bzero(DriveDirection, SMALL_BUFFER_SIZE_1);
   bzero(StatusFlag, SMALL_BUFFER_SIZE_1);
 
+
+  if(debug)
+  {
+    for(i = 5; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
+    printf("\n");
+  }
+  
 
   //Index
   sprintf(Id, "%" PRIu8, (unsigned char)Idn);
@@ -666,7 +694,6 @@ int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char
  
   for(i = 0; i < Transmissions; i ++)
   {
-    
     MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, COMMAND_DOPM_ROWS_IN_TRANSMISSION, 0);
     vSendBytes(TrajBuffer, MessageLength, Socket, 0);
     SumMessageLength = SumMessageLength + MessageLength;
@@ -934,7 +961,10 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*1e1;
+    Data = UtilRadToDeg(atof(DataBuffer)*1e1);
+    while(Data<0) Data+=3600;
+    while(Data>3600) Data-=3600;
+
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -958,7 +988,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*3e5;
+    Data = atof(DataBuffer)*3e4;
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
