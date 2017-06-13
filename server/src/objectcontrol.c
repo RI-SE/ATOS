@@ -410,10 +410,10 @@ void objectcontrol_task()
       if(recievedNewData)
       {
 
-      	//#ifdef DEBUG
+      	#ifdef DEBUG
       	  printf("INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
 	  fflush(stdout);
-      	//#endif
+      	#endif
         
         #ifdef BYTEBASED
             ObjectControlMONRToASCII(buffer, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
