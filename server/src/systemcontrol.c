@@ -52,6 +52,10 @@ typedef enum {
 #define SYSTEM_CONTROL_ARG_MAX_COUNT	 	6
 #define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	80
 
+#define AROM_OPT_SET_ARMED_STATE 1
+#define AROM_OPT_SET_DISARMED_STATE 2 
+
+
 
 typedef enum {
    idle_0, status_0, arm_0, disarm_0, start_1, stop_0, abort_0, replay_1, control_0, exit_0, cx_0, cc_0, listen_0, nocommand
@@ -152,18 +156,18 @@ void systemcontrol_task()
 			case arm_0:
 				bzero(pcBuffer, IPC_BUFFER_SIZE);
 				server_state = SERVER_STATUS_ARMED;
-				pcBuffer[0] = (unsigned char)server_state;
+				pcBuffer[0] = AROM_OPT_SET_ARMED_STATE;
 				(void)iCommSend(COMM_ARMD,pcBuffer);
-				printf("[SystemControl] Sending ARMED: %d\n", server_state);
+				printf("[SystemControl] Sending ARM.\n");
 				SystemControlCommand = idle_0;
 				CurrentCommandArgCounter = 0;
 			break;
 			case disarm_0:
 				bzero(pcBuffer, IPC_BUFFER_SIZE);
 				server_state = SERVER_STATUS_DISARMED;
-				pcBuffer[0] = (unsigned char)server_state;
+				pcBuffer[0] = AROM_OPT_SET_DISARMED_STATE;
 				(void)iCommSend(COMM_ARMD,pcBuffer);
-				printf("[SystemControl] Sending DISARMED: %d\n", server_state);
+				printf("[SystemControl] Sending DISARM.\n");
 				SystemControlCommand = idle_0;
 				CurrentCommandArgCounter = 0;
 			break;
@@ -176,7 +180,7 @@ void systemcontrol_task()
 					/* Add seconds to get room for all objects to get command */
 					uiTime += atoi(SystemControlArgument[CurrentCommandArgCounter]);
 					sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";",0,uiTime);
-					printf("[SystemControl] System control Sending STRT <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[CurrentCommandArgCounter]);
+					printf("[SystemControl] System control sending STRT <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[CurrentCommandArgCounter]);
 					fflush(stdout);
 					
 					(void)iCommSend(COMM_STRT,pcBuffer);

@@ -484,8 +484,8 @@ void objectcontrol_task()
         
         //MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, COMMAND_AROM_OPT_SET_ARMED_STATE, 0);
 
-        if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_ARMED_STATE) printf("[ObjectControl] Sending ARMED: %d\n", pcRecvBuffer[0]);
-        else if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_DISARMED_STATE) printf("[ObjectControl] Sending DISARMED: %d\n", pcRecvBuffer[0]);
+        if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_ARMED_STATE) printf("[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]);
+        else if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_DISARMED_STATE) printf("[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]);
         MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, pcRecvBuffer[0], 0);
 
         for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -696,7 +696,6 @@ int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char
  
   for(i = 0; i < Transmissions; i ++)
   {
-    
     MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, COMMAND_DOPM_ROWS_IN_TRANSMISSION, 0);
     vSendBytes(TrajBuffer, MessageLength, Socket, 0);
     SumMessageLength = SumMessageLength + MessageLength;
