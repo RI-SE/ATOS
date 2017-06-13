@@ -35,7 +35,7 @@
 #define IPC_SEND       0x02
 #define IPC_RECV_SEND  0x03
 
-#define COMM_TRIG 1
+#define COMM_STRT 1
 #define COMM_STOP 2
 #define COMM_MONI 3
 #define COMM_EXIT 4
@@ -110,6 +110,8 @@ typedef struct
 	double ForwardAzimuth2;
   int TrajectoryPositionCount;
   int SyncIndex;
+  double SyncTime;
+  double SyncStopTime;
   int BestFoundTrajectoryIndex;
   float TimeToSyncPoint;
   float* SpaceArr;
@@ -118,6 +120,8 @@ typedef struct
   float InitialAltitude;
   float ReferenceAltitude;
   SpaceTime* SpaceTimeArr;
+  char IP[16];
+  int Id;
 } ObjectPosition; 
 
 
@@ -155,8 +159,8 @@ int UtilAddTwoBytesMessageData(unsigned char *MessageBuffer, int StartIndex, uns
 int UtilAddOneByteMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned char Data);
 int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int Length, unsigned char *Data);
 char * UtilSearchTextFile(char *Filename, char *Text1, char *Text2, char *Result);
-int UtilSetMasterObject(ObjectPosition *OP, char *Filename);
-int UtilSetSlaveObject(ObjectPosition *OP, char *Filename);
+int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
+int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 
 
 typedef struct {

@@ -27,13 +27,17 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 #include "util.h"
 
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
+
 #define LOCALHOST "127.0.0.1"
+#define USE_TEST_HOST 0
+#define TESTHOST "10.130.254.31"
 
 #define RECV_MESSAGE_BUFFER 1024
 #define OBJECT_MESS_BUFFER_SIZE 1024
@@ -42,6 +46,7 @@
 #define HEARTBEAT_TIME_MS 10
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
+#define OBJECT_CONTROL_ABORT_MODE 1
 #define BYTEBASED
 
 #define COMMAND_MESSAGE_HEADER_LENGTH 5
@@ -89,8 +94,8 @@
 #define TRAJECTORY_FILE_MAX_ROWS  4096
 
 typedef enum {
-  COMMAND_HEARBEAT_GO,
-  COMMAND_HEARBEAT_ABORT
+  COMMAND_HEARTBEAT_GO,
+  COMMAND_HEARTBEAT_ABORT
 } hearbeatCommand_t;
 
 char TrajBuffer[COMMAND_DOPM_ROWS_IN_TRANSMISSION*COMMAND_DOPM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH];
@@ -119,9 +124,9 @@ int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, u
 int ObjectControlBuildMTPSMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug);
 int ObjectControlBuildDOPMMessageHeader(char* MessageBuffer, int RowCount, char debug);
 int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, char debug);
-int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char debug);
-int ObjectControlSendHeartbeat(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
-int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag);
+int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, char debug);
+int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
+int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag);
 int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, int32_t *Latitude, int32_t * Longitude, int32_t *Altitude, uint16_t *Speed, uint16_t *Heading, uint8_t *DriveDirection);
 
 
@@ -158,6 +163,7 @@ void objectcontrol_task()
   int iForceObjectToLocalhost = 0;
   
   FILE *fd;
+  char Id[SMALL_BUFFER_SIZE_1];
   char Timestamp[SMALL_BUFFER_SIZE_0];
   char Latitude[SMALL_BUFFER_SIZE_0];
   char Longitude[SMALL_BUFFER_SIZE_0];
@@ -167,6 +173,12 @@ void objectcontrol_task()
   char DriveDirection[SMALL_BUFFER_SIZE_1];
   char StatusFlag[SMALL_BUFFER_SIZE_1];
   int MessageLength;
+  char *MiscPtr;
+  uint64_t StartTimeU64 = 0;
+  uint64_t CurrentTimeU64 = 0;
+  uint64_t MasterTimeToSyncPointU64 = 0;
+  struct timeval CurrentTimeStruct;
+  int HeartbeatMessageCounter = 0;
 
   ObjectPosition OP[MAX_OBJECTS];
   float SpaceArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
@@ -196,7 +208,6 @@ void objectcontrol_task()
   
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
-
     if(0 == iForceObjectToLocalhost)
     {
       object_udp_port[iIndex] = SAFETY_CHANNEL_PORT;
@@ -210,12 +221,6 @@ void objectcontrol_task()
   }
 
 #ifdef BYTEBASED
-  MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, 
-                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
-                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
-                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
-                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
-                                0); 
  
   OriginLatitudeDbl = atof(OriginLatitude);
   OriginLongitudeDbl = atof(OriginLongitude);
@@ -262,17 +267,26 @@ void objectcontrol_task()
 //#define NOTCP
 #ifndef NOTCP
   /* Connect and send drive files */
-    printf("n objects: %d\n", nbr_objects);
+    printf("[ObjectControl] Objects controlled by server: %d\n", nbr_objects);
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
-     vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
+
+    MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, 
+                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
+                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
+                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
+                                UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
+                                0); 
+ 
+    vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
 
 
     /* Send OSEM command */
     #ifdef BYTEBASED
       vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+
     #else
-      //vSendString(pcBuffer,&socket_fd[iIndex]);
+      vSendString(pcBuffer,&socket_fd[iIndex]);
     #endif
    
     #ifdef BYTEBASED
@@ -281,25 +295,32 @@ void objectcontrol_task()
       fclose (fd);
 
       /*DOPM*/
-      MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, RowCount-1, 1);
+      MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, RowCount-2, 0);
 
       /*Send DOPM header*/
       vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
 
       /*Send DOPM data*/
-      ObjectControlSendDOPMMEssage(object_traj_file[0], &socket_fd[iIndex], RowCount-1, 1);
+      ObjectControlSendDOPMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], 0);
 
       /* Adaptive Sync Points...*/
-      
-      /*OP[iIndex].TrajectoryPositionCount = RowCount;
+      OP[iIndex].TrajectoryPositionCount = RowCount;
       OP[iIndex].SpaceArr = SpaceArr[iIndex];
       OP[iIndex].TimeArr = TimeArr[iIndex];
       OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
       UtilPopulateSpaceTimeArr(&OP[iIndex], object_traj_file[iIndex]);
       
-      UtilSetMasterObject(&OP[iIndex], object_traj_file[iIndex]);
-      UtilSetSlaveObject(&OP[iIndex], object_traj_file[iIndex]);
-      */
+      //UtilSetMasterObject(&OP[iIndex], object_traj_file[iIndex], 0);
+      //UtilSetSlaveObject(&OP[iIndex], object_traj_file[iIndex], 0);
+      //UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, OP[iIndex].SyncTime);
+
+      //if(OP[iIndex].Type == 'm' || OP[iIndex].Type == 's')
+      //{
+        /*SYPM*/
+      //  MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, OP[iIndex].SyncTime, OP[iIndex].SyncStopTime, 0);
+        /*Send SYPM header*/
+      //  vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+      //}
 
     #else
       vSendString("DOPM;",&socket_fd[iIndex]);
@@ -334,35 +355,45 @@ void objectcontrol_task()
   {
     char buffer[RECV_MESSAGE_BUFFER];
     int recievedNewData = 0;
+    gettimeofday(&CurrentTimeStruct, NULL);
+    CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+
 
     #ifdef DEBUG
-/*
-      struct timeval tvTime;
-      gettimeofday(&tvTime, NULL);
-      uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - 
-        MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
-        DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-      printf("INF: Time: %" PRIu64 "\n",uiTime);
 /*
       struct timespec spec;
       clock_gettime(CLOCK_MONOTONIC, &spec);
       printf("INF: Time: %"PRIdMAX".%06ld \n",
         (intmax_t)spec.tv_sec, spec.tv_nsec);
 */
-      fflush(stdout);
+    fflush(stdout);
     #endif
 
+    /*HEAB*/
     for(iIndex=0;iIndex<nbr_objects;++iIndex)
     {
-      /* Should we send heartbeat in this cycle */
       if(uiTimeCycle == 0)
       {
         #ifdef BYTEBASED
+          HeartbeatMessageCounter ++;
           MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, ObjectControlServerStatus, 0);
-          ObjectControlSendHeartbeat(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+          ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
         #else
-          vSendHeartbeat(&safety_socket_fd[iIndex],&safety_object_addr[iIndex],COMMAND_HEARBEAT_GO);
+          vSendHeartbeat(&safety_socket_fd[iIndex],&safety_object_addr[iIndex],COMMAND_HEARTBEAT_GO);
         #endif
+      }
+    }
+
+    /*MTPS*/
+    if(HeartbeatMessageCounter == 10)
+    {
+      HeartbeatMessageCounter = 0;
+      for(iIndex=0;iIndex<nbr_objects;++iIndex)
+      {
+           #ifdef BYTEBASED
+            //MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0); //(StartTimeU64+(uint64_t)OP[iIndex].SyncStopTime*1000)
+            //ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+          #endif
       }
     }
 
@@ -384,16 +415,20 @@ void objectcontrol_task()
 	  fflush(stdout);
       	//#endif
         
-
         #ifdef BYTEBASED
-            ObjectControlMONRToASCII(buffer, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
+            ObjectControlMONRToASCII(buffer, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
             bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
-            strcat(buffer, "MONR;"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
+            strcat(buffer, "MONR;"); strcat(buffer,Id); strcat(buffer,";"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
             strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
             strcat(buffer,DriveDirection); strcat(buffer,";"); //strcat(pcBuffer,StatusFlag); strcat(pcBuffer,";");
 
-            //UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]); 
-
+            if(OP[iIndex].Type == 'm')
+            {
+              //UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
+              //UtilFindCurrentTrajectoryPosition(&OP[iIndex], OP[iIndex].SyncIndex, (CurrentTimeU64-StartTimeU64)/1000, 0.2);
+              //if(OP[iIndex].SyncIndex > -1) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)OP[iIndex].TimeToSyncPoint*1000;
+              //else MasterTimeToSyncPointU64 = 0;
+            }
 
         #else
         /* Get monitor data */
@@ -459,15 +494,19 @@ void objectcontrol_task()
           #endif
         }
       }
-      else if(iCommand == COMM_TRIG)
+      else if(iCommand == COMM_STRT)
       {  
         //#ifdef DEBUG
-          printf("[ObjectControl] Object control START trig recieved string <%s>\n",pcRecvBuffer);
+          printf("[ObjectControl] STRT trig recieved <%s>\n",pcRecvBuffer);
           fflush(stdout);
         //#endif
 
         #ifdef BYTEBASED
-          MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_IMMEDIATELY, 0, 0);
+          bzero(Timestamp, SMALL_BUFFER_SIZE_0);
+          MiscPtr =strchr(pcRecvBuffer,';');
+          strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
+          StartTimeU64 = atol(Timestamp);
+          MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTimeU64, 0);
         #else
           bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
           strncat(pcBuffer,"TRIG;",5);
@@ -483,7 +522,7 @@ void objectcontrol_task()
         for(iIndex=0;iIndex<nbr_objects;++iIndex)
         {
           #ifdef BYTEBASED
-            vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+            vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
           #else
             vSendString(pcBuffer,&socket_fd[iIndex]);
           #endif
@@ -495,6 +534,12 @@ void objectcontrol_task()
         printf("[ObjectControl] Object control REPLAY mode <%s>\n", pcRecvBuffer);
   			fflush(stdout);
   		}
+      else if(iCommand == COMM_ABORT)
+      {
+        ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+        printf("[ObjectControl] Object control ABORT mode <%s>\n", pcRecvBuffer);
+        fflush(stdout);
+      }
       else if(iCommand == COMM_CONTROL)
       {
         ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
@@ -558,7 +603,7 @@ int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, 
 }
 
 
-int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *Heading, char *DriveDirection, char *StatusFlag)
+int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *Heading, char *DriveDirection, char *StatusFlag)
 {
   char Buffer[6];
   long unsigned int MonrValueU64;
@@ -567,6 +612,7 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Lat
   unsigned char MonrValueU8;
   int i,j;
 
+  bzero(Id, SMALL_BUFFER_SIZE_1);
   bzero(Timestamp, SMALL_BUFFER_SIZE_0);
   bzero(Latitude, SMALL_BUFFER_SIZE_0);
   bzero(Longitude, SMALL_BUFFER_SIZE_0);
@@ -577,32 +623,43 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Lat
   bzero(StatusFlag, SMALL_BUFFER_SIZE_1);
 
 
+//if(debug)
+  //{
+    //int i = 0;
+    for(i = 5; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
+  //}
+  printf("\n");
+
+
+
+  //Index
+  sprintf(Id, "%" PRIu8, (unsigned char)Idn);
+
   //Timestamp
   MonrValueU64 = 0;
-  j=0;
+  j=5;
   for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
   sprintf(Timestamp, "%" PRIu64, MonrValueU64);
   
   //Latitude
   MonrValueU32 = 0;
   for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-  sprintf(Latitude, "%" PRIu32, MonrValueU32);
+  sprintf(Latitude, "%" PRIi32, MonrValueU32);
     
   //Longitude
   MonrValueU32 = 0;
   for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-  sprintf(Longitude, "%" PRIu32, MonrValueU32);
+  sprintf(Longitude, "%" PRIi32, MonrValueU32);
 
   //Altitude
   MonrValueU32 = 0;
   for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-  sprintf(Altitude, "%" PRIu32, MonrValueU32);
+  sprintf(Altitude, "%" PRIi32, MonrValueU32);
   
   //Speed
   MonrValueU16 = 0;
   for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
   sprintf(Speed, "%" PRIu16, MonrValueU16);
-  printf("S: %s\n", Speed);
   
   //Heading
   MonrValueU16 = 0;
@@ -611,7 +668,7 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Lat
  
   //Driving direction
   MonrValueU8 = (unsigned char)*(MonrData+j);
-  printf("D: %d\n", MonrValueU8 );
+  //printf("D: %d\n", MonrValueU8 );
   j++;
   sprintf(DriveDirection, "%" PRIu8, MonrValueU8);
 
@@ -623,32 +680,34 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, char *Timestamp, char *Lat
   return 0;
 }
 
-int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char debug)
+int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, char debug)
 {
 
   FILE *fd;
   fd = fopen (Filename, "r");
   UtilReadLineCntSpecChars(fd, TrajBuffer);//Read first line
-  int Rest = 0, i = 0, MessageLength = 0;
-  do
+  int Rest = 0, i = 0, MessageLength = 0, SumMessageLength = 0, Modulo = 0, Transmissions = 0;
+  Transmissions = RowCount / COMMAND_DOPM_ROWS_IN_TRANSMISSION;
+  Rest = RowCount % COMMAND_DOPM_ROWS_IN_TRANSMISSION;
+ 
+  for(i = 0; i < Transmissions; i ++)
   {
-    Rest = RowCount - COMMAND_DOPM_ROWS_IN_TRANSMISSION;
-    RowCount = RowCount - COMMAND_DOPM_ROWS_IN_TRANSMISSION; 
-    if(Rest >= COMMAND_DOPM_ROWS_IN_TRANSMISSION)
-    {
-      MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, COMMAND_DOPM_ROWS_IN_TRANSMISSION, 0);
-    }
-    else
-    {
-      MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, Rest, 0);
-    }
     
-    if(debug) printf("Transmission %d: %d bytes left to send.\n", ++i, Rest*COMMAND_DOPM_ROW_MESSAGE_LENGTH);
-    
-    /*Send DOPM data*/
+    MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, COMMAND_DOPM_ROWS_IN_TRANSMISSION, 0);
     vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+    SumMessageLength = SumMessageLength + MessageLength;
+    if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
+  }
 
-  } while (Rest >= COMMAND_DOPM_ROWS_IN_TRANSMISSION); 
+  if(Rest > 0)
+  {
+    MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, Rest, 0);
+    vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+    SumMessageLength = SumMessageLength + MessageLength;
+    if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
+  }
+
+  printf("[ObjectControl] %d DOPM bytes sent to %s\n", SumMessageLength, IP);
 
   fclose (fd);
 
@@ -901,7 +960,10 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*1e2;
+    Data = UtilRadToDeg(atof(DataBuffer)*1e1);
+    while(Data<0) Data+=3600;
+    while(Data>3600) Data-=3600;
+
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -917,7 +979,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*1e2;
+    Data = atof(DataBuffer)*1e1;
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -925,7 +987,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = atof(DataBuffer)*1e2;
+    Data = atof(DataBuffer)*3e4;
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -1000,10 +1062,10 @@ static void vConnectObject(int* sockfd, const char* name, const uint32_t port)
   bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
   serv_addr.sin_port = htons(port);
   
-  //#ifdef DEBUG
+  #ifdef DEBUG
     printf("INF: Try to connect to socket: %s %i\n",name,port);
     fflush(stdout);
-  //#endif
+  #endif
   
   do
   {
@@ -1024,10 +1086,10 @@ static void vConnectObject(int* sockfd, const char* name, const uint32_t port)
     }
   } while(iResult < 0);
 
-  //#ifdef DEBUG
+  #ifdef DEBUG
     printf("INF: Connected to command socket: %s %i\n",name,port);
     fflush(stdout);
-  //#endif
+  #endif
 
 }
 
@@ -1057,7 +1119,7 @@ static void vSendBytes(const char* data, int length, int* sockfd, int debug)
 {
   int n;
 
-  if(debug){ printf("Bytes sent: "); int i = 0; for(i = 0; i < n; i++) printf("%x-", *(data+i)); printf("\n");}
+  if(debug){ printf("Bytes sent: "); int i = 0; for(i = 0; i < n; i++) printf("%x-", (unsigned char)*(data+i)); printf("\n");}
 
   n = write(*sockfd, data, length);
   if (n < 0)
@@ -1156,7 +1218,7 @@ static void vCloseSafetyChannel(int* sockfd)
   close(*sockfd);
 }
 
-int ObjectControlSendHeartbeat(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
+int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
 {
     int result;
  
@@ -1183,7 +1245,7 @@ static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatComman
       //fflush(stdout);
     #endif
 
-    if(COMMAND_HEARBEAT_GO == tCommand)
+    if(COMMAND_HEARTBEAT_GO == tCommand)
     {
       strcat(pcCommand,"HEBT;g;");
     }
@@ -1282,7 +1344,8 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
       }
       else
       {
-        (void)strcat(object_address_name[(*nbr_objects)],LOCALHOST);
+        if(USE_TEST_HOST == 0) (void)strcat(object_address_name[(*nbr_objects)],LOCALHOST);
+        else if (USE_TEST_HOST == 1) (void)strcat(object_address_name[(*nbr_objects)],TESTHOST);
       }
 
       ++(*nbr_objects);
