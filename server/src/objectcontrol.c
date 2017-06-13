@@ -126,7 +126,7 @@ int ObjectControlBuildDOPMMessageHeader(char* MessageBuffer, int RowCount, char 
 int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, char debug);
 int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, char debug);
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
-int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag);
+int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag, char debug);
 int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, int32_t *Latitude, int32_t * Longitude, int32_t *Altitude, uint16_t *Speed, uint16_t *Heading, uint8_t *DriveDirection);
 
 
@@ -416,7 +416,7 @@ void objectcontrol_task()
       	#endif
         
         #ifdef BYTEBASED
-            ObjectControlMONRToASCII(buffer, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag);
+            ObjectControlMONRToASCII(buffer, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 1);
             bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
             strcat(buffer, "MONR;"); strcat(buffer,Id); strcat(buffer,";"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
             strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
@@ -607,7 +607,7 @@ int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, 
 }
 
 
-int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *Heading, char *DriveDirection, char *StatusFlag)
+int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *Heading, char *DriveDirection, char *StatusFlag, char debug)
 {
   char Buffer[6];
   long unsigned int MonrValueU64;
@@ -627,14 +627,12 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *T
   bzero(StatusFlag, SMALL_BUFFER_SIZE_1);
 
 
-//if(debug)
-  //{
-    //int i = 0;
-    //for(i = 5; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
-  //}
-  //printf("\n");
-
-
+  if(debug)
+  {
+    for(i = 5; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
+    printf("\n");
+  }
+  
 
   //Index
   sprintf(Id, "%" PRIu8, (unsigned char)Idn);
