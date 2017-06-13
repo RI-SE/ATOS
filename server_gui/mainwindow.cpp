@@ -39,6 +39,9 @@ MainWindow::MainWindow(QWidget *parent) :
     mKeyLeft = false;
     mKeyRight = false;
 
+    mSocket = NULL;
+    m_boArmed = false;
+
     qApp->installEventFilter(this);
 }
 
@@ -81,4 +84,110 @@ bool MainWindow::eventFilter(QObject *object, QEvent *e)
     }
 
     return false;
+}
+
+
+void MainWindow::on_connectButton_clicked()
+{
+    if(mSocket == NULL)
+    {
+        mSocket = new QTcpSocket(this);
+        mSocket->connectToHost("10.130.23.14",54241);
+
+        if(mSocket->waitForConnected(3000))
+        {
+           qDebug() << "Connected to server";
+           ui->connectButton->setText("Disconnect");
+        }
+        else
+        {
+            qDebug() << "Not able to connect";
+            ui->connectButton->setText("Connect");
+        }
+    }
+    else
+    {
+        mSocket->close();
+        mSocket = NULL;
+        ui->connectButton->setText("Connect");
+    }
+}
+
+void MainWindow::on_armButton_clicked()
+{
+    if(mSocket != NULL)
+    {
+       qDebug() << "Connected to server";
+
+       if(m_boArmed == false)
+       {
+            mSocket->write("arm");
+            ui->armButton->setText("Disarm");
+            //mSocket->waitForBytesWritten(3000);
+            qDebug() << "Sent: arm";
+           m_boArmed = true;
+       }
+       else
+       {
+           m_boArmed = false;
+           ui->armButton->setText("Disarm");
+           mSocket->write("disarm");
+           qDebug() << "Sent: disarm";
+       }
+    }
+    else
+    {
+        qDebug() << "No connection";
+    }
+}
+
+void MainWindow::on_startButton_clicked()
+{
+
+     QString qsCommand = "start " + ui->startTimeLineEdit->text();
+
+     if(mSocket != NULL)
+     {
+        qDebug() << "Connected to server";
+
+        mSocket->write(qsCommand.toLatin1().data());
+        //mSocket->waitForBytesWritten(3000);
+        qDebug() << "Sent: " << qsCommand;
+     }
+     else
+     {
+         qDebug() << "No connection";
+     }
+}
+
+void MainWindow::on_exitButton_clicked()
+{
+    if(mSocket != NULL)
+    {
+       qDebug() << "Connected to server";
+
+       mSocket->write("exit");
+       //mSocket->waitForBytesWritten(3000);
+       qDebug() << "Sent: exit";
+    }
+    else
+    {
+        qDebug() << "No connection";
+    }
+}
+
+void MainWindow::on_abortButton_clicked()
+{
+    if(mSocket != NULL)
+    {
+       qDebug() << "Connected to server";
+
+       mSocket->write("abort");
+       //mSocket->waitForBytesWritten(3000);
+       qDebug() << "Sent: abort";
+    }
+    else
+    {
+        qDebug() << "No connection";
+    }
 }
