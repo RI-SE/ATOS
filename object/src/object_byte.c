@@ -150,7 +150,7 @@ int32_t main(int32_t argc, int8_t *argv[])
   int32_t bx    = 0;
   int32_t by    = 0;
   int32_t bz    = 0;
-  int16_t  bhdg  = 0;
+  uint16_t  bhdg  = 0;
   int16_t  bspd  = 0;
   int16_t  bacc  = 0;
   uint16_t bcur  = 0;
@@ -317,16 +317,16 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  uint16_t handled_payload = 0;
 	  //bzero(buffer,256);
 	  memset(buffer,0,256);
-	  /* int32_t k = 0; */
+	  int32_t k = 0;
 	  /*     printf("Received data 1: "); */
 	  /*     for (k = 0; k < result; k++) */
 	  /*     	printf("%d:%x,",k,(uint8_t) buffer[k]); */
 	  /*     printf("\n"); */
 	      result = recv(command_com_socket_fd, buffer, 256, 0);
-	      /* printf("Received data 2: "); */
-	      /* for (k = 0; k < result; k++) */
-	      /* 	printf("%d:%x,",k,(uint8_t) buffer[k]); */
-	      /* printf("\n"); */
+	      printf("Received data 2: ");
+	      for (k = 0; k < result; k++)
+	      	printf("%d:%x,",k,(uint8_t) buffer[k]);
+	      printf("\n");
 	  if (result < 0)
 	    {
 	      if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -352,7 +352,8 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      fflush(stdout);
 #endif
 
-	      /* printf("Received data 3: "); */
+	      /* int k = 0; */
+	      /* printf("Received data: "); */
 	      /* for (k = 0; k < result; k++) */
 	      /* 	printf("%d:%x,",k,(uint8_t) buffer[k]); */
 	      /* printf("\n"); */
@@ -551,7 +552,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      bx = ReadFourSBytesFromFile(fp);
 	      by = ReadFourSBytesFromFile(fp);
 	      bz = ReadFourSBytesFromFile(fp);
-	      bhdg = ReadTwoSBytesFromFile(fp);
+	      bhdg = ReadTwoUBytesFromFile(fp);
 	      bspd = ReadTwoSBytesFromFile(fp);
 	      bacc = ReadTwoSBytesFromFile(fp);
 	      bcur = ReadTwoUBytesFromFile(fp);
@@ -571,7 +572,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  bdd = 0x0;
 	  
 	  /* printf("%.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt);	   */
-	  /* printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude); */
+	  printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
 	  
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
@@ -616,7 +617,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      bx = ReadFourSBytesFromFile(fp);
 	      by = ReadFourSBytesFromFile(fp);
 	      bz = ReadFourSBytesFromFile(fp);
-	      bhdg = ReadTwoSBytesFromFile(fp);
+	      bhdg = ReadTwoUBytesFromFile(fp);
 	      bspd = ReadTwoSBytesFromFile(fp);
 	      bacc = ReadTwoSBytesFromFile(fp);
 	      bcur = ReadTwoUBytesFromFile(fp);
@@ -647,7 +648,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 
 	  /* printf("Cal: %.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt); */
 	  /* printf("Cal: bx: %.9lf by: %.9lf\n", (((double) bx) / 1000), (((double) by) / 1000)); */
-	  /* printf("Read: %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod); */
+	  printf("Read: %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod);
 	  /* printf("Sent: %d %d %d\n",blat,blon,balt); */
 	}
 
