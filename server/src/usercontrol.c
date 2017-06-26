@@ -18,6 +18,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "objectcontrol.h"
 #include "util.h"
@@ -39,12 +40,12 @@
 typedef enum {
 	idle_0,		status_0,		arm_0,		start_1,		stop_0,		abort_0,		replay_1,		control_0,		exit_0,		cx_0,		cc_0,
 	cp_0,		sb_0,			cb_0,		tp_0,			tsp_1,		sx_0,			sc_0,			help_0,			tosem_0,	tstrt_0,	tdopm_0,
-	tmonr_0,	disarm_0		,nocommand
+	tmonr_0,	disarm_0,		tt_0,		nocommand
 } UserControlCommand_t;
 const char* UserControlCommandsArr[] = {
 	"idle_0",	"status_0",		"arm_0",	"start_1",		"stop_0",	"abort_0",		"replay_1",		"control_0",	"exit_0",	"cx_0",		"cc_0",
 	"cp_0", 	"sb_0", 		"cb_0", 	"tp_0", 		"tsp_1", 	"sx_0", 		"sc_0", 		"help_0", 		"tosem_0", 	"tstrt_0",	"tdopm_0",
-	"tmonr_0", 	"disarm_0"	};
+	"tmonr_0", 	"disarm_0",		"tt_0"};
 UserControlCommand_t PreviousUserControlCommand = nocommand;
 char UserControlCommandArgCnt[USER_CONTROL_ARG_COUNT];
 char UserControlStrippedCommand[USER_CONTROL_COMMAND_MAX_LENGTH];
@@ -74,6 +75,8 @@ int main(int argc, char *argv[])
 	char pcBuffer[IPC_BUFFER_SIZE];
 	char inchr;
 	struct timeval tvTime;
+	struct timespec tTime;
+
 	int iExit = 0;
 	ObjectPosition OP;
 	SendBufferPtr = SendBuffer;
@@ -97,8 +100,6 @@ int main(int argc, char *argv[])
 	int RowCount, i, Rest;
 	char TrajBuffer[COMMAND_DOPM_ROWS_IN_TRANSMISSION*COMMAND_DOPM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH];
 	FILE *fd;
-
-
 
 	int socketfd=-1;
 	char object_address_name[50];
@@ -224,6 +225,19 @@ int main(int argc, char *argv[])
 					UserControlSendString(SendBuffer, &socketfd);
 					UserControlResetInputVariables();
 				break;
+				case tt_0:
+					gettimeofday(&tvTime, NULL);
+					uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+					printf("Time: %lx\n",uiTime );
+					printf("Time: %ld\n",uiTime );
+
+					clock_gettime(CLOCK_MONOTONIC_RAW, &tTime);
+					uiTime = (uint64_t)tTime.tv_sec*1000 + (uint64_t)tTime.tv_nsec/1000000 - (uint64_t)MS_FROM_1970_TO_2004_NO_LEAP_SECS + (uint64_t)DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+					printf("Time: %lx\n",uiTime );
+					printf("Time: %ld\n",uiTime );
+
+					UserControlResetInputVariables();
+				break;
 				case tp_0:
 					//UserControlCommand = idle_0;
 	//				UtilCalcPositionDelta(57.6626302333,12.1056869167,57.6626269972, 12.1057250694, &OP);
@@ -268,7 +282,7 @@ int main(int argc, char *argv[])
 					if(CurrentCommandArgCount == CommandArgCount)
 					{
 						FILE *Trajfd;
-	  					Trajfd = fopen ("traj/192.168.0.1", "r");
+	  					Trajfd = fopen ("traj/192.168.0.17", "r");
 	    				OP.TrajectoryPositionCount = UtilCountFileRows(Trajfd) - 1;
 	    				float SpaceArr[OP.TrajectoryPositionCount];
 	    				float TimeArr[OP.TrajectoryPositionCount];
@@ -278,17 +292,17 @@ int main(int argc, char *argv[])
 						OP.TimeArr = TimeArr;
 						OP.SpaceTimeArr = SpaceTimeArr;
 						//UtilCalcPositionDelta(57.7773716086,12.7804629583, 57.7773620, 12.7819188, &OP); //1
-						UtilCalcPositionDelta(57.7773716086,12.7804629583,57.7776699,12.7808555, &OP); //2
+						UtilCalcPositionDelta(57.7773716086,12.7804629583,57.77743,12.7807153, &OP); //2
 						//UtilCalcPositionDelta(57.7773716086,12.7804629583,57.7776528,12.7812795, &OP); //3
 						//printf("OrigoDistance = %4.3f\n", OP.OrigoDistance);
 						if(OP.OrigoDistance > -1)
 						{	
-							UtilPopulateSpaceTimeArr(&OP, "traj/192.168.0.1");
-							UtilSetSyncPoint(&OP, 60.039, -25.547, 0, 0);
+							UtilPopulateSpaceTimeArr(&OP, "traj/192.168.0.17");
+							UtilSetSyncPoint(&OP, 57.0, 31.9, 0, 0.41);
 							if (OP.SyncIndex > -1)
 							{
 								printf("Sync point found=%4.3f, Time=%4.3f, Index=%d\n", OP.SpaceArr[OP.SyncIndex], OP.TimeArr[OP.SyncIndex], OP.SyncIndex);
-								double CurrentTime = 15.1;				
+								double CurrentTime = 0.11;				
 								//UtilFindCurrentTrajectoryPosition(&OP, 0, 30.9, 0.2);  //1
 								UtilFindCurrentTrajectoryPosition(&OP, 0, CurrentTime, 0.2);	//2
 								//UtilFindCurrentTrajectoryPosition(&OP, 0, 26.6, 0.2);	//3

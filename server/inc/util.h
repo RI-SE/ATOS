@@ -62,10 +62,17 @@
 #define TRAJECTORY_LINE_LENGTH 100
 #define NUMBER_CHAR_LENGTH 20
 
-#define MAX_TIME_DIFF 5.0
-#define SYNC_POINT_BUFFER 30
+#define MAX_TIME_DIFF 10.0
+#define SYNC_POINT_BUFFER 1000
 
 #define MAX_ROW_SIZE 1024
+
+#define MAX_ADAPTIVE_SYNC_POINTS  512
+
+#define USE_TEST_HOST 0
+#define TESTHOST_IP "192.168.0.17"
+#define TESTSERVER_IP "192.168.56.1"
+#define TEST_SYNC_POINTS 0
 
 
 /* Calculation: 	
@@ -81,6 +88,8 @@
 
 #define TEST_CONF_FILE "./conf/test.conf"
 #define TRAJECTORY_PATH "./traj/"
+
+#define ADAPTIVE_SYNC_POINT_CONF "./traj/adaptivesync.conf"
 
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
@@ -125,6 +134,15 @@ typedef struct
 } ObjectPosition; 
 
 
+//#master_ip;slave_ip;time_on_traj_master,time_on_traj_slave;slave_stop;
+typedef struct
+{
+  char MasterIP[16];
+  char SlaveIP[16];
+  float MasterTrajSyncTime;
+  float SlaveTrajSyncTime;
+  float SlaveSyncStopTime;
+} AdaptiveSyncPoint;
 
 
 
@@ -161,7 +179,8 @@ int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int L
 char * UtilSearchTextFile(char *Filename, char *Text1, char *Text2, char *Result);
 int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
-
+int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
+void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
 
 typedef struct {
   uint64_t timestamp;

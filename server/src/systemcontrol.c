@@ -17,7 +17,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <unistd.h>  
+#include <unistd.h>
+#include <time.h>  
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -98,6 +99,8 @@ void systemcontrol_task()
 	int i;
 	char *StartPtr, *StopPtr;
 
+	struct timespec tTime;
+
 	while(!iExit)
 	{
 		bzero(pcBuffer,IPC_BUFFER_SIZE);
@@ -176,8 +179,12 @@ void systemcontrol_task()
 				{
 					bzero(pcBuffer, IPC_BUFFER_SIZE);
 					gettimeofday(&tvTime, NULL);
+					//clock_gettime(CLOCK_MONOTONIC_COARSE, &tTime);
 					uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
 					/* Add seconds to get room for all objects to get command */
+					//uint64_t uiTime = (uint64_t)tTime.tv_sec*1000 + (uint64_t)tTime.tv_nsec/1000000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+
+					printf("Time: %ld\n",uiTime );
 					uiTime += atoi(SystemControlArgument[CurrentCommandArgCounter]);
 					sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";",0,uiTime);
 					printf("[SystemControl] System control sending STRT <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[CurrentCommandArgCounter]);

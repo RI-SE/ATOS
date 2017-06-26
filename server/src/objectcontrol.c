@@ -36,8 +36,6 @@
   ------------------------------------------------------------*/
 
 #define LOCALHOST "127.0.0.1"
-#define USE_TEST_HOST 0
-#define TESTHOST "10.130.254.31"
 
 #define RECV_MESSAGE_BUFFER 1024
 #define OBJECT_MESS_BUFFER_SIZE 1024
@@ -177,6 +175,7 @@ void objectcontrol_task()
   uint64_t StartTimeU64 = 0;
   uint64_t CurrentTimeU64 = 0;
   uint64_t MasterTimeToSyncPointU64 = 0;
+  double TimeToSyncPoint = 0;
   struct timeval CurrentTimeStruct;
   int HeartbeatMessageCounter = 0;
 
@@ -192,6 +191,8 @@ void objectcontrol_task()
   double OriginLongitudeDbl;
   double OriginAltitudeDbl;
   double OriginHeadingDbl;
+  AdaptiveSyncPoint ASP[MAX_ADAPTIVE_SYNC_POINTS];
+  int SyncPointCount = 0;
 
 
   unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
@@ -222,10 +223,16 @@ void objectcontrol_task()
 
 #ifdef BYTEBASED
  
-  OriginLatitudeDbl = atof(OriginLatitude);
-  OriginLongitudeDbl = atof(OriginLongitude);
-  OriginAltitudeDbl = atof(OriginAltitude);
-  OriginHeadingDbl = atof(OriginHeading);
+
+  
+  /*Setup Adaptive Sync Points (ASP)*/
+  fd = fopen (ADAPTIVE_SYNC_POINT_CONF, "r");
+  SyncPointCount = UtilCountFileRows(fd) - 1;
+  fclose (fd);
+  fd = fopen (ADAPTIVE_SYNC_POINT_CONF, "r");
+  UtilReadLineCntSpecChars(fd, pcTempBuffer); //Read header   
+  for(int i = 0; i < SyncPointCount; i++)  UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);      
+  fclose (fd);
 
 #else
 
@@ -262,14 +269,15 @@ void objectcontrol_task()
     printf("[ObjectControl] Created OSEM: \"%s\"\n",pcBuffer);
     fflush(stdout);
 
-#endif
+  #endif
 
-//#define NOTCP
-#ifndef NOTCP
+  
   /* Connect and send drive files */
-    printf("[ObjectControl] Objects controlled by server: %d\n", nbr_objects);
+  printf("[ObjectControl] Objects controlled by server: %d\n", nbr_objects);
+  printf("[ObjectControl] ASP in the system: %d\n", SyncPointCount);
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
+    UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
 
     MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, 
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
@@ -304,23 +312,34 @@ void objectcontrol_task()
       ObjectControlSendDOPMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], 0);
 
       /* Adaptive Sync Points...*/
-      OP[iIndex].TrajectoryPositionCount = RowCount;
+      OP[iIndex].TrajectoryPositionCount = RowCount-2;
       OP[iIndex].SpaceArr = SpaceArr[iIndex];
       OP[iIndex].TimeArr = TimeArr[iIndex];
       OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
       UtilPopulateSpaceTimeArr(&OP[iIndex], object_traj_file[iIndex]);
-      
-      //UtilSetMasterObject(&OP[iIndex], object_traj_file[iIndex], 0);
-      //UtilSetSlaveObject(&OP[iIndex], object_traj_file[iIndex], 0);
-      //UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, OP[iIndex].SyncTime);
 
-      //if(OP[iIndex].Type == 'm' || OP[iIndex].Type == 's')
-      //{
-        /*SYPM*/
-      //  MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, OP[iIndex].SyncTime, OP[iIndex].SyncStopTime, 0);
-        /*Send SYPM header*/
-      //  vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-      //}
+      for(int i = 0; i < SyncPointCount; i++)
+      {
+        if(TEST_SYNC_POINTS == 1 && iIndex != 0)
+        {
+          /*Send SYPM to slave*/
+          MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
+          vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+        }
+        else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL)
+        {
+          /*Send SYPM to slave*/
+          MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
+          vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+        }
+      }
+
+      /*Set Sync point in OP*/
+      for(int i = 0; i < SyncPointCount; i++)
+      {
+        if(TEST_SYNC_POINTS == 1 && iIndex == 0) UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, ASP[i].MasterTrajSyncTime);
+        else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL) UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, ASP[i].MasterTrajSyncTime); 
+      }
 
     #else
       vSendString("DOPM;",&socket_fd[iIndex]);
@@ -328,12 +347,19 @@ void objectcontrol_task()
       vSendString("ENDDOPM;",&socket_fd[iIndex]);
     #endif
   }
-#endif // NOTCP
 
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
+    if(USE_TEST_HOST == 0)
+    {
     vCreateSafetyChannel(object_address_name[iIndex],object_udp_port[iIndex],
       &safety_socket_fd[iIndex],&safety_object_addr[iIndex]);
+    }
+    else if(USE_TEST_HOST == 1)
+    {
+    vCreateSafetyChannel(TESTSERVER_IP,object_udp_port[iIndex],
+      &safety_socket_fd[iIndex],&safety_object_addr[iIndex]);
+    }
   }
 
   #ifdef DEBUG
@@ -350,24 +376,17 @@ void objectcontrol_task()
   /*Set server status*/
   ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;
   
-  /* Should we exit? */
+  OriginLatitudeDbl = atof(OriginLatitude);
+  OriginLongitudeDbl = atof(OriginLongitude);
+  OriginAltitudeDbl = atof(OriginAltitude);
+  OriginHeadingDbl = atof(OriginHeading);
+
   while(!iExit)
   {
     char buffer[RECV_MESSAGE_BUFFER];
     int recievedNewData = 0;
     gettimeofday(&CurrentTimeStruct, NULL);
     CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-
-
-    #ifdef DEBUG
-/*
-      struct timespec spec;
-      clock_gettime(CLOCK_MONOTONIC, &spec);
-      printf("INF: Time: %"PRIdMAX".%06ld \n",
-        (intmax_t)spec.tv_sec, spec.tv_nsec);
-*/
-    fflush(stdout);
-    #endif
 
     /*HEAB*/
     for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -390,10 +409,23 @@ void objectcontrol_task()
       HeartbeatMessageCounter = 0;
       for(iIndex=0;iIndex<nbr_objects;++iIndex)
       {
-           #ifdef BYTEBASED
-            //MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0); //(StartTimeU64+(uint64_t)OP[iIndex].SyncStopTime*1000)
-            //ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
-          #endif
+            #ifdef BYTEBASED
+            for(int i = 0; i < SyncPointCount; i++)
+            {
+              if(TEST_SYNC_POINTS == 1 && iIndex != 0)
+              {
+                  /*Send Master time to adaptive sync point*/
+                  MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
+                  ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+              }
+              else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL)
+              {
+                  /*Send Master time to adaptive sync point*/
+                  MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
+                  ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+              }
+            }
+            #endif
       }
     }
 
@@ -411,23 +443,33 @@ void objectcontrol_task()
       {
 
       	#ifdef DEBUG
-      	  printf("INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
-	  fflush(stdout);
+    	   printf("INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
+         fflush(stdout);
       	#endif
         
         #ifdef BYTEBASED
-            ObjectControlMONRToASCII(buffer, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 1);
+            ObjectControlMONRToASCII(buffer, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 0);
             bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
             strcat(buffer, "MONR;"); strcat(buffer,Id); strcat(buffer,";"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
             strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
             strcat(buffer,DriveDirection); strcat(buffer,";"); //strcat(pcBuffer,StatusFlag); strcat(pcBuffer,";");
 
-            if(OP[iIndex].Type == 'm')
+            for(int i = 0; i < SyncPointCount; i++)
             {
-              //UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
-              //UtilFindCurrentTrajectoryPosition(&OP[iIndex], OP[iIndex].SyncIndex, (CurrentTimeU64-StartTimeU64)/1000, 0.2);
-              //if(OP[iIndex].SyncIndex > -1) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)OP[iIndex].TimeToSyncPoint*1000;
-              //else MasterTimeToSyncPointU64 = 0;
+              if(strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && iIndex == 0)
+              {
+
+                UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
+                //printf("OrigoDistance = %3.5f\n", OP[iIndex].OrigoDistance );
+                //printf("Current time: %ld\n", CurrentTimeU64);
+                //printf("Current time: %ld\n", StartTimeU64);
+                //printf("Current time diff: %3.2f\n", (((double)CurrentTimeU64-(double)StartTimeU64)/1000));
+                UtilFindCurrentTrajectoryPosition(&OP[iIndex], 0, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), 0.2);
+                TimeToSyncPoint = (UtilCalculateTimeToSync(&OP[iIndex]) - ((((double)CurrentTimeU64-(double)StartTimeU64)/1000) - OP[iIndex].TimeArr[OP[iIndex].BestFoundTrajectoryIndex]));
+                if(atoi(Timestamp)%100 == 0) printf("Time to sync= %3.3f\n", TimeToSyncPoint);
+                if(TimeToSyncPoint > 0) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)(TimeToSyncPoint*1000);
+                else MasterTimeToSyncPointU64 = 0;
+               }
             }
 
         #else
@@ -441,22 +483,6 @@ void objectcontrol_task()
           "%" PRIu16 ";0;%" PRIu64 ";%" PRId32 ";%" PRId32 ";%" PRId32 ";%" PRIu16 ";%" PRIu16 ";%" PRIu8 ";",
           iIndex,ldm[iIndex].timestamp,ldm[iIndex].latitude,ldm[iIndex].longitude,
           ldm[iIndex].altitude,ldm[iIndex].speed,ldm[iIndex].heading,ldm[iIndex].drivedirection);
-        #endif
-
-        #ifdef DEBUG
-/*          struct timeval tvTime;
-          gettimeofday(&tvTime, NULL);
-          uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - 
-            MS_FROM_1970_TO_2004_NO_LEAP_SECS + 
-            DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-          printf("INF: Time: %" PRIu64 " Send MONITOR message: %s\n",uiTime,buffer);
-/*
-          struct timespec spec;
-          clock_gettime(CLOCK_MONOTONIC, &spec);
-          printf("INF: Time: %"PRIdMAX".%06ld Send MONITOR message: %s\n",
-            (intmax_t)spec.tv_sec, spec.tv_nsec,buffer);
-*/
-          fflush(stdout);
         #endif
 
         #ifdef DEBUG
@@ -481,9 +507,7 @@ void objectcontrol_task()
 
       if(iCommand == COMM_ARMD)
       {
-        
-        //MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, COMMAND_AROM_OPT_SET_ARMED_STATE, 0);
-
+         //MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, COMMAND_AROM_OPT_SET_ARMED_STATE, 0);
         if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_ARMED_STATE) printf("[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]);
         else if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_DISARMED_STATE) printf("[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]);
         MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, pcRecvBuffer[0], 0);
@@ -627,13 +651,6 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *T
   bzero(StatusFlag, SMALL_BUFFER_SIZE_1);
 
 
-  if(debug)
-  {
-    for(i = 5; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
-    printf("\n");
-  }
-  
-
   //Index
   sprintf(Id, "%" PRIu8, (unsigned char)Idn);
 
@@ -643,6 +660,12 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *T
   for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
   sprintf(Timestamp, "%" PRIu64, MonrValueU64);
   
+  if(debug && MonrValueU64%150 == 0)
+  {
+    for(i = 5; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
+    printf("\n");
+  }
+
   //Latitude
   MonrValueU32 = 0;
   for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
@@ -751,8 +774,8 @@ int ObjectControlBuildOSEMMessage(char* MessageBuffer, char *Latitude, char *Lon
   //if(iUtilGetParaConfFile("OrigoHeading",pcTempBuffer))
   {
     //printf("Heading: %s\n", Heading);
-    //Data = atof("0.0") * 1e2;
-    Data = atof((char *)Heading) * 1e2;
+    //Data = atof("0.0") * 1e1;
+    Data = UtilRadToDeg(atof((char *)Heading) * 1e1);
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
   }
   
@@ -1189,6 +1212,7 @@ static void vCreateSafetyChannel(const char* name,const uint32_t port,
 
   /* Set address to object */
   object = gethostbyname(name);
+  
   if (object==0)
   {
     util_error("ERR: Unknown host");
@@ -1242,8 +1266,8 @@ static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatComman
     bzero(pcCommand,10);
 
     #ifdef DEBUG
-      //printf("INF: Sending: <HEBT>\n");
-      //fflush(stdout);
+      printf("INF: Sending: <HEBT>\n");
+      fflush(stdout);
     #endif
 
     if(COMMAND_HEARTBEAT_GO == tCommand)
@@ -1293,8 +1317,8 @@ static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNew
         else
         {
           #ifdef DEBUG
-            //printf("INF: No data receive\n");
-            //fflush(stdout);
+            printf("INF: No data receive\n");
+            fflush(stdout);
           #endif
         }
       }
@@ -1302,8 +1326,8 @@ static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNew
       {
         *recievedNewData = 1;
         #ifdef DEBUG
-          //printf("INF: Received: <%s>\n",buffer);
-          //fflush(stdout);
+          printf("INF: Received: <%s>\n",buffer);
+          fflush(stdout);
         #endif
       }
     } while(result > 0 );
@@ -1346,7 +1370,7 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
       else
       {
         if(USE_TEST_HOST == 0) (void)strcat(object_address_name[(*nbr_objects)],LOCALHOST);
-        else if (USE_TEST_HOST == 1) (void)strcat(object_address_name[(*nbr_objects)],TESTHOST);
+        else if (USE_TEST_HOST == 1) (void)strcat(object_address_name[(*nbr_objects)],TESTHOST_IP);
       }
 
       ++(*nbr_objects);
