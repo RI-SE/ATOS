@@ -259,9 +259,9 @@ MapWidget::MapWidget(QWidget *parent) :
                     //qDebug() << "X: " << list[2] << " Y: " << list[3] << " Z: " << list[4];
 
                     // Transform  xyz to llh, hardcoded origo
-                    ref_llh[0] = 57.7773602; // LATb
-                    ref_llh[1] = 12.7804715; // LONb
-                    ref_llh[2] = 201.485;
+                    ref_llh[0] = 57.777569; // LATb
+                    ref_llh[1] = 12.780480; // LONb
+                    ref_llh[2] = 202.934115075;
 
                     xyz[0] = list[2].toDouble();
                     xyz[1] = list[3].toDouble();

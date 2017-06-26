@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   --------------------------------------------------------------------------------
   -- File        : object_byte.c
-  -- Author      : Henrik Eriksson
+  -- Author      : Henrik Eriksson, Martin Skoglund, RISE
   -- Description : CHRONOS software prototype object
   -- Purpose     :
   -- Reference   :
@@ -98,6 +98,7 @@ int32_t main(int32_t argc, int8_t *argv[])
   struct sockaddr_in cli_addr;
   struct hostent *hp;
   uint8_t buffer[256];
+  uint8_t hb_buffer[256];
   int8_t bMonitorBuffer[29];
   struct timespec sleep_time;
   struct timespec ref_time;
@@ -127,7 +128,9 @@ int32_t main(int32_t argc, int8_t *argv[])
   uint64_t msSinceEpochETSI = 0;
 
   uint16_t buffer_ptr = 0;
+  uint16_t hb_buffer_ptr = 0;
   uint32_t payload = 0;
+  uint32_t hb_payload = 0;
   
   int32_t  origin_latitude  = 0;
   int32_t  origin_longitude = 0;
@@ -139,13 +142,15 @@ int32_t main(int32_t argc, int8_t *argv[])
    
   uint8_t arm_mode  = 0;
 
+  uint8_t hb_flag  = 1;
+
   uint8_t  cmd   = 0;
   uint32_t size  = 0;
   uint32_t btim  = 0;
   int32_t bx    = 0;
   int32_t by    = 0;
   int32_t bz    = 0;
-  int16_t  bhdg  = 0;
+  uint16_t  bhdg  = 0;
   int16_t  bspd  = 0;
   int16_t  bacc  = 0;
   uint16_t bcur  = 0;
@@ -284,7 +289,7 @@ int32_t main(int32_t argc, int8_t *argv[])
     }
 
   /* Receive heartbeat from server just to save the server address */
-  n = recvfrom(monitor_socket_fd, buffer, 1024, 0, (struct sockaddr *) &monitor_from_addr, &fromlen);
+  n = recvfrom(monitor_socket_fd, hb_buffer, 1024, 0, (struct sockaddr *) &monitor_from_addr, &fromlen);
   if (n < 0) 
     {
       perror("ERR: Failed to receive from central");
@@ -312,16 +317,16 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  uint16_t handled_payload = 0;
 	  //bzero(buffer,256);
 	  memset(buffer,0,256);
-	  /* int32_t k = 0; */
+	  int32_t k = 0;
 	  /*     printf("Received data 1: "); */
 	  /*     for (k = 0; k < result; k++) */
 	  /*     	printf("%d:%x,",k,(uint8_t) buffer[k]); */
 	  /*     printf("\n"); */
 	      result = recv(command_com_socket_fd, buffer, 256, 0);
-	      /* printf("Received data 2: "); */
-	      /* for (k = 0; k < result; k++) */
-	      /* 	printf("%d:%x,",k,(uint8_t) buffer[k]); */
-	      /* printf("\n"); */
+	      printf("Received data 2: ");
+	      for (k = 0; k < result; k++)
+	      	printf("%d:%x,",k,(uint8_t) buffer[k]);
+	      printf("\n");
 	  if (result < 0)
 	    {
 	      if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -347,7 +352,8 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      fflush(stdout);
 #endif
 
-	      /* printf("Received data 3: "); */
+	      /* int k = 0; */
+	      /* printf("Received data: "); */
 	      /* for (k = 0; k < result; k++) */
 	      /* 	printf("%d:%x,",k,(uint8_t) buffer[k]); */
 	      /* printf("\n"); */
@@ -470,6 +476,13 @@ int32_t main(int32_t argc, int8_t *argv[])
 			  }
 			printf("\n");
 			commandSet = 0;
+			if (mon_status != 0x1)
+			  {
+#ifdef DEBUG
+			    printf("INF: Object must be in Armed mode to accept a start command!\n");
+#endif
+			    start_time =  UINT64_MAX; 
+			  }
 			break;
 		      default:
 #ifdef DEBUG
@@ -517,7 +530,9 @@ int32_t main(int32_t argc, int8_t *argv[])
 #endif
 
       //printf("t: %"PRIu64" st: %"PRIu64"\n",msSinceEpochETSI,start_time);
-      if ((msSinceEpochETSI >= start_time) && (handled_bytes < dopm_bytes))
+
+      
+      if ((msSinceEpochETSI >= start_time) && (handled_bytes < dopm_bytes) && (hb_flag == 1))
 	{
 #ifdef DEBUG
 	  printf("INF: Bytes %d from drive file.\n", handled_bytes);
@@ -531,18 +546,19 @@ int32_t main(int32_t argc, int8_t *argv[])
 	    /* printf("Bytes to read = %d\n",size); */
 	  }
 	  
-	  if (TimeBaseCount == TimeBase) {		//    TimeBaseCount typical to 10
-	    btim = ReadFourUBytesFromFile(fp);
-	    bx = ReadFourSBytesFromFile(fp);
-	    by = ReadFourSBytesFromFile(fp);
-	    bz = ReadFourSBytesFromFile(fp);
-	    bhdg = ReadTwoSBytesFromFile(fp);
-	    bspd = ReadTwoSBytesFromFile(fp);
-	    bacc = ReadTwoSBytesFromFile(fp);
-	    bcur = ReadTwoUBytesFromFile(fp);
-	    mod = ReadOneUByteFromFile(fp);
-	    handled_bytes += 25;
-	  }
+	  if (TimeBaseCount == TimeBase)
+	    {	
+	      btim = ReadFourUBytesFromFile(fp);
+	      bx = ReadFourSBytesFromFile(fp);
+	      by = ReadFourSBytesFromFile(fp);
+	      bz = ReadFourSBytesFromFile(fp);
+	      bhdg = ReadTwoUBytesFromFile(fp);
+	      bspd = ReadTwoSBytesFromFile(fp);
+	      bacc = ReadTwoSBytesFromFile(fp);
+	      bcur = ReadTwoUBytesFromFile(fp);
+	      mod = ReadOneUByteFromFile(fp);
+	      handled_bytes += 25;
+	    }
 
 
 	  cal_lat = (((((double) by) / 1000) * 180) / (PI * earth_radius)) + (((double) origin_latitude) / 10000000);
@@ -556,7 +572,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  bdd = 0x0;
 	  
 	  /* printf("%.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt);	   */
-	  /* printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude); */
+	  printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
 	  
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
@@ -570,7 +586,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	    }
 
 	}
-      else if (handled_bytes >= dopm_bytes)
+      else if ((handled_bytes >= dopm_bytes) || (hb_flag != 1))
 	{
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
@@ -582,7 +598,14 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      msSinceEpochETSI = (uint64_t) tv.tv_sec * 1000 + (uint64_t) tv.tv_usec / 1000 - 
 		MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
 	    }
-	  mon_status = 0x3;
+	  if (hb_flag == 1)
+	    {
+	      mon_status = 0x3;
+	    }
+	  else
+	    {
+	      mon_status = 0x5;
+	    }
 	}
       else
 	{
@@ -594,7 +617,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      bx = ReadFourSBytesFromFile(fp);
 	      by = ReadFourSBytesFromFile(fp);
 	      bz = ReadFourSBytesFromFile(fp);
-	      bhdg = ReadTwoSBytesFromFile(fp);
+	      bhdg = ReadTwoUBytesFromFile(fp);
 	      bspd = ReadTwoSBytesFromFile(fp);
 	      bacc = ReadTwoSBytesFromFile(fp);
 	      bcur = ReadTwoUBytesFromFile(fp);
@@ -625,7 +648,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 
 	  /* printf("Cal: %.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt); */
 	  /* printf("Cal: bx: %.9lf by: %.9lf\n", (((double) bx) / 1000), (((double) by) / 1000)); */
-	  /* printf("Read: %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod); */
+	  printf("Read: %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod);
 	  /* printf("Sent: %d %d %d\n",blat,blon,balt); */
 	}
 
@@ -687,6 +710,44 @@ int32_t main(int32_t argc, int8_t *argv[])
       printf("INF: Sending: <%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x>\n", (uint8_t) bMonitorBuffer[0], (uint8_t) bMonitorBuffer[1], (uint8_t) bMonitorBuffer[2], (uint8_t) bMonitorBuffer[3], (uint8_t) bMonitorBuffer[4], (uint8_t) bMonitorBuffer[5], (uint8_t) bMonitorBuffer[6], (uint8_t) bMonitorBuffer[7],(uint8_t) bMonitorBuffer[8], (uint8_t) bMonitorBuffer[9], (uint8_t) bMonitorBuffer[10], (uint8_t) bMonitorBuffer[11], (uint8_t) bMonitorBuffer[12], (uint8_t) bMonitorBuffer[13], (uint8_t) bMonitorBuffer[14], (uint8_t) bMonitorBuffer[15], (uint8_t) bMonitorBuffer[16], (uint8_t) bMonitorBuffer[17], (uint8_t) bMonitorBuffer[18], (uint8_t) bMonitorBuffer[19], (uint8_t) bMonitorBuffer[20], (uint8_t) bMonitorBuffer[21], (uint8_t) bMonitorBuffer[22], (uint8_t) bMonitorBuffer[23], (uint8_t) bMonitorBuffer[24], (uint8_t) bMonitorBuffer[25], (uint8_t) bMonitorBuffer[26], (uint8_t) bMonitorBuffer[27], (uint8_t) bMonitorBuffer[28]);
 #endif
 
+      n = recvfrom(monitor_socket_fd, hb_buffer, 1024, 0, (struct sockaddr *) &monitor_from_addr, &fromlen);
+      int32_t k = 0;
+      hb_buffer_ptr = 0;
+      switch(hb_buffer[hb_buffer_ptr++]){
+      case 0x05:
+	hb_flag = 0;
+	hb_payload |= ((uint32_t) hb_buffer[hb_buffer_ptr++]) << 24;
+	hb_payload |= ((uint32_t) hb_buffer[hb_buffer_ptr++]) << 16;
+	hb_payload |= ((uint32_t) hb_buffer[hb_buffer_ptr++]) << 8;
+	hb_payload |= ((uint32_t) hb_buffer[hb_buffer_ptr++]);
+	hb_flag |= (uint8_t) hb_buffer[hb_buffer_ptr++];
+	if (hb_flag == 1)
+	  {
+#ifdef DEBUG
+	    printf("Go.\n");
+#endif
+	  }
+	else if (hb_flag == 2)
+	  {
+#ifdef DEBUG
+	    printf("INF: Abort.\n");
+#endif
+	    mon_status = 0x5;
+	  }
+	else
+	  {
+#ifdef DEBUG
+	    printf("INF: Unknown heartbeat status.\n");
+#endif
+	    mon_status = 0x4;
+	  }
+	break;
+      default:
+#ifdef DEBUG
+	printf("INF: Unknown monitor server monitor message\n");
+#endif
+	break;
+      }      
       sleep_time.tv_sec = 0;
       sleep_time.tv_nsec = 10000000;	//nanosec 10000000 = 10 ms
 	

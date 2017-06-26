@@ -22,6 +22,7 @@
 #include <QList>
 #include <QTimer>
 #include <QLabel>
+#include <QTcpServer>
 
 namespace Ui {
 class MainWindow;
@@ -38,6 +39,16 @@ public:
 
 private slots:
 
+    void on_startButton_clicked();
+
+    void on_connectButton_clicked();
+
+    void on_exitButton_clicked();
+
+    void on_abortButton_clicked();
+
+    void on_armButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     QTimer *mTimer;
@@ -49,6 +60,9 @@ private:
     bool mKeyLeft;
     double mThrottle;
     double mSteering;
+    bool m_boArmed;
+
+    QTcpSocket* mSocket;
 
 };
 
