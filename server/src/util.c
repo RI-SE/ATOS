@@ -331,6 +331,7 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 		B = (u2/1024)*(256 + u2*(-128*u2*(74-47*u2)));
 		dsigma = B*sins*(cossm+0.25*B*(coss*(-1+2*pow(cossm,2)) - (1/6)*B*cossm*(-3+4*pow(sins,2))*(-3+4*pow(cossm,2))));	
 		s = b*A*(sigma-dsigma);
+    OP->DeltaOrigoDistance = s - OP->OrigoDistance;
 		OP->OrigoDistance = s;
 
 		cosU2 = cos(U2);

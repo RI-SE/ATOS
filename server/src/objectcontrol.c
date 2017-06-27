@@ -193,6 +193,7 @@ void objectcontrol_task()
   double OriginHeadingDbl;
   AdaptiveSyncPoint ASP[MAX_ADAPTIVE_SYNC_POINTS];
   int SyncPointCount = 0;
+  int SearchStartIndex = 0;
 
 
   unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
@@ -222,19 +223,19 @@ void objectcontrol_task()
   }
 
 #ifdef BYTEBASED
- 
-
-  
+   
   /*Setup Adaptive Sync Points (ASP)*/
   fd = fopen (ADAPTIVE_SYNC_POINT_CONF, "r");
-  SyncPointCount = UtilCountFileRows(fd) - 1;
-  fclose (fd);
-  fd = fopen (ADAPTIVE_SYNC_POINT_CONF, "r");
-  UtilReadLineCntSpecChars(fd, pcTempBuffer); //Read header   
-  
-  for(i = 0; i < SyncPointCount; i++)  UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);      
-  fclose (fd);
-
+  if(fd)
+  {
+    SyncPointCount = UtilCountFileRows(fd) - 1;
+    fclose (fd);
+    fd = fopen (ADAPTIVE_SYNC_POINT_CONF, "r");
+    UtilReadLineCntSpecChars(fd, pcTempBuffer); //Read header   
+    
+    for(i = 0; i < SyncPointCount; i++)  UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);      
+    fclose (fd);
+  }
 #else
 
   bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
@@ -457,7 +458,7 @@ void objectcontrol_task()
 
             for(i = 0; i < SyncPointCount; i++)
             {
-              if(strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && iIndex == 0)
+              if(strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL /*&& iIndex == 0*/)
               {
 
                 UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
@@ -465,13 +466,22 @@ void objectcontrol_task()
                 //printf("Current time: %ld\n", CurrentTimeU64);
                 //printf("Current time: %ld\n", StartTimeU64);
                 //printf("Current time diff: %3.2f\n", (((double)CurrentTimeU64-(double)StartTimeU64)/1000));
-                UtilFindCurrentTrajectoryPosition(&OP[iIndex], 0, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), 0.2);
-                TimeToSyncPoint = (UtilCalculateTimeToSync(&OP[iIndex]) - ((((double)CurrentTimeU64-(double)StartTimeU64)/1000) - OP[iIndex].TimeArr[OP[iIndex].BestFoundTrajectoryIndex]));
-                if(atoi(Timestamp)%100 == 0) printf("Time to sync= %3.3f\n", TimeToSyncPoint);
-                if(TimeToSyncPoint > 0) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)(TimeToSyncPoint*1000);
-                else MasterTimeToSyncPointU64 = 0;
+                //SearchStartIndex = OP[iIndex].BestFoundTrajectoryIndex - (int)fabs(OP[iIndex].DeltaOrigoDistance / TRAJ_RES) - TRAJ_STEP_BACK_INDEX;
+                UtilFindCurrentTrajectoryPosition(&OP[iIndex], 0, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), TRAJ_FIND_POSITION_THRESHOLD);
+               
+                if(OP[iIndex].BestFoundTrajectoryIndex >= 0)
+                {  
+                  TimeToSyncPoint = (UtilCalculateTimeToSync(&OP[iIndex]) - ((((double)CurrentTimeU64-(double)StartTimeU64)/1000) /*- OP[iIndex].TimeArr[OP[iIndex].BestFoundTrajectoryIndex]*/));
+                  if(atoi(Timestamp)%100 == 0) printf("Time to sync= %3.3f\n", TimeToSyncPoint);
+                  if(TimeToSyncPoint > 0) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)(TimeToSyncPoint*1000);
+                  else MasterTimeToSyncPointU64 = 0;
+                }
                }
             }
+
+
+            OP[iIndex].Speed = atof(Speed);
+
 
         #else
         /* Get monitor data */
