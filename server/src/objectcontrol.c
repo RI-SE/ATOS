@@ -413,13 +413,13 @@ void objectcontrol_task()
             #ifdef BYTEBASED
             for(i = 0; i < SyncPointCount; i++)
             {
-              if(TEST_SYNC_POINTS == 1 && iIndex != 0)
+              if(TEST_SYNC_POINTS == 1 && iIndex != 0 && MasterTimeToSyncPointU64 != 0)
               {
                   /*Send Master time to adaptive sync point*/
                   MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
                   ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
               }
-              else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL)
+              else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL && MasterTimeToSyncPointU64 != 0)
               {
                   /*Send Master time to adaptive sync point*/
                   MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
@@ -535,6 +535,7 @@ void objectcontrol_task()
           MiscPtr =strchr(pcRecvBuffer,';');
           strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
           StartTimeU64 = atol(Timestamp);
+          MasterTimeToSyncPointU64 = 0;
           MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTimeU64, 0);
         #else
           bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
