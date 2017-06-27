@@ -94,6 +94,10 @@
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
 
+#define TRAJ_RES 0.01   //m
+#define TRAJ_FIND_POSITION_THRESHOLD 0.2  //m
+#define TRAJ_STEP_BACK_INDEX 20
+
 //#define DEBUG
 
 typedef struct
@@ -111,7 +115,8 @@ typedef struct
   double Latitude;
 	double Longitude;
 	double OrigoDistance;
-	double x;
+	double DeltaOrigoDistance;
+  double x;
 	double y;
 	double z;
 	int CalcIterations;
@@ -131,6 +136,7 @@ typedef struct
   SpaceTime* SpaceTimeArr;
   char IP[16];
   int Id;
+  float Speed;
 } ObjectPosition; 
 
 
