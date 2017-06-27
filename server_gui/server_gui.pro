@@ -12,7 +12,7 @@ QT       += opengl
 QT       += websockets
 
 # OpenGL support
-#DEFINES += HAS_OPENGL
+DEFINES += HAS_OPENGL
 
 TARGET = server_gui
 TEMPLATE = app
