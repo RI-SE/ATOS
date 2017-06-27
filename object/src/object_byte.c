@@ -139,10 +139,15 @@ int32_t main(int32_t argc, int8_t *argv[])
 
   uint8_t start_type  = 0;
   uint64_t start_time = UINT64_MAX;
-   
+
+  uint32_t sync_time = UINT32_MAX;
+  uint32_t sync_stop_time = UINT32_MAX;
+
   uint8_t arm_mode  = 0;
 
   uint8_t hb_flag  = 1;
+
+  uint64_t hb_master_time  = UINT64_MAX;
 
   uint8_t  cmd   = 0;
   uint32_t size  = 0;
@@ -314,7 +319,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 #ifdef DEBUG
 	  printf("INF: Start receive\n");
 #endif
-	  uint16_t handled_payload = 0;
+	  uint32_t handled_payload = 0;
 	  //bzero(buffer,256);
 	  memset(buffer,0,256);
 	  int32_t k = 0;
@@ -323,10 +328,10 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  /*     	printf("%d:%x,",k,(uint8_t) buffer[k]); */
 	  /*     printf("\n"); */
 	      result = recv(command_com_socket_fd, buffer, 256, 0);
-	      printf("Received data 2: ");
-	      for (k = 0; k < result; k++)
-	      	printf("%d:%x,",k,(uint8_t) buffer[k]);
-	      printf("\n");
+	      /* printf("Received data 2: "); */
+	      /* for (k = 0; k < result; k++) */
+	      /* 	printf("%d:%x,",k,(uint8_t) buffer[k]); */
+	      /* printf("\n"); */
 	  if (result < 0)
 	    {
 	      if(errno != EAGAIN && errno != EWOULDBLOCK)
@@ -352,23 +357,23 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      fflush(stdout);
 #endif
 
-	      /* int k = 0; */
-	      /* printf("Received data: "); */
-	      /* for (k = 0; k < result; k++) */
-	      /* 	printf("%d:%x,",k,(uint8_t) buffer[k]); */
-	      /* printf("\n"); */
+	      int k = 0;
+	      printf("Received data: ");
+	      for (k = 0; k < result; k++)
+	      	printf("%d:%x,",k,(uint8_t) buffer[k]);
+	      printf("\n");
 
 	      do
 		{
 		  if (commandSet == 0)
 		    {
 		      payload = 0;
-		      handled_payload = 0;
 		      switch(buffer[buffer_ptr++]){
 		      case 0x01:
 #ifdef DEBUG
 			printf("INF: Current command set to DOPM\n");
 #endif
+			handled_payload = 0;
 			bzero(bCurrentCommand, 10);
 			strcpy(bCurrentCommand, "DOPM");
 			commandSet = 1;
@@ -386,6 +391,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 #ifdef DEBUG
 			printf("INF: Current command set to OSEM\n");
 #endif
+			handled_payload = 0;
 			bzero(bCurrentCommand, 10);
 			strcpy(bCurrentCommand, "OSEM");
 			commandSet = 1;
@@ -416,6 +422,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 #ifdef DEBUG
 			printf("INF: Current command set to AROM\n");
 #endif
+			handled_payload = 0;
 			bzero(bCurrentCommand, 10);
 			strcpy(bCurrentCommand, "AROM");
 			commandSet = 1;
@@ -447,6 +454,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 #ifdef DEBUG
 			printf("INF: Current command set to STRT\n");
 #endif
+			handled_payload = 0;
 			bzero(bCurrentCommand, 10);
 			strcpy(bCurrentCommand, "STRT");
 			commandSet = 1;
@@ -484,6 +492,33 @@ int32_t main(int32_t argc, int8_t *argv[])
 			    start_time =  UINT64_MAX; 
 			  }
 			break;
+		      case 0x09:
+#ifdef DEBUG
+			printf("INF: Current command set to SYPM\n");
+#endif
+			handled_payload = 0;
+			bzero(bCurrentCommand, 10);
+			strcpy(bCurrentCommand, "SYPM");
+			commandSet = 1;
+			payload |= ((uint32_t) buffer[buffer_ptr++]) << 24;
+			payload |= ((uint32_t) buffer[buffer_ptr++]) << 16;
+			payload |= ((uint32_t) buffer[buffer_ptr++]) << 8;
+			payload |= ((uint32_t) buffer[buffer_ptr++]);
+			printf("Payload = %d\n", payload);
+			sync_time = 0;
+			sync_stop_time = 0;
+			sync_time      |= ((uint32_t) buffer[buffer_ptr++]) << 24;
+			sync_time      |= ((uint32_t) buffer[buffer_ptr++]) << 16;
+			sync_time      |= ((uint32_t) buffer[buffer_ptr++]) << 8;
+			sync_time      |= ((uint32_t) buffer[buffer_ptr++]);
+			sync_stop_time |= ((uint32_t) buffer[buffer_ptr++]) << 24;
+			sync_stop_time |= ((uint32_t) buffer[buffer_ptr++]) << 16;
+			sync_stop_time |= ((uint32_t) buffer[buffer_ptr++]) << 8;
+			sync_stop_time |= ((uint32_t) buffer[buffer_ptr++]);
+			handled_payload += 8;
+			printf("handled payload: %d, sync time: %d, sync stop time: %d",handled_payload, sync_time, sync_stop_time);
+			commandSet = 0;
+			break;
 		      default:
 #ifdef DEBUG
 			printf("INF: Unknown command\n");
@@ -496,15 +531,18 @@ int32_t main(int32_t argc, int8_t *argv[])
 		  
 		 if (!strncmp(bCurrentCommand, "DOPM", 4))
 		   {
-		     while ((buffer_ptr < result) && (buffer_ptr < 5 + payload))
+		     while ((buffer_ptr < result) && (handled_payload < payload))
 		       {
 			 fwrite(&buffer[buffer_ptr], sizeof(buffer[buffer_ptr]), 1, fp);
 			 buffer_ptr++;
 			 handled_payload++;
 			 //printf("buffer_ptr: %d\n",buffer_ptr);
 		       }
-		     //printf("buffer_ptr: %d\n",buffer_ptr);
-		   } 
+		     printf("buffer_ptr: %d, handled_payload: %d, payload: %d\n",buffer_ptr, handled_payload, payload);
+		   }
+		 
+		 if (handled_payload == payload)
+		   commandSet = 0;
 		} while(buffer_ptr < result);
 	      
 	    }
@@ -713,6 +751,7 @@ int32_t main(int32_t argc, int8_t *argv[])
       n = recvfrom(monitor_socket_fd, hb_buffer, 1024, 0, (struct sockaddr *) &monitor_from_addr, &fromlen);
       int32_t k = 0;
       hb_buffer_ptr = 0;
+      hb_payload = 0;
       switch(hb_buffer[hb_buffer_ptr++]){
       case 0x05:
 	hb_flag = 0;
@@ -741,6 +780,13 @@ int32_t main(int32_t argc, int8_t *argv[])
 #endif
 	    mon_status = 0x4;
 	  }
+	break;
+      case 0x0A:
+	hb_payload |= ((uint32_t) hb_buffer[hb_buffer_ptr++]) << 24;
+	hb_payload |= ((uint32_t) hb_buffer[hb_buffer_ptr++]) << 16;
+	hb_payload |= ((uint32_t) hb_buffer[hb_buffer_ptr++]) << 8;
+	hb_payload |= ((uint32_t) hb_buffer[hb_buffer_ptr++]);
+	
 	break;
       default:
 #ifdef DEBUG
