@@ -155,7 +155,7 @@ void objectcontrol_task()
   char pcBuffer[OBJECT_MESS_BUFFER_SIZE];
   char pcTempBuffer[512];
   unsigned char MessageBuffer[512];
-  int iIndex = 0;
+  int iIndex = 0, i=0;
   monitor_t ldm[MAX_OBJECTS];
   struct timespec sleep_time, ref_time;
   int iForceObjectToLocalhost = 0;
@@ -231,7 +231,8 @@ void objectcontrol_task()
   fclose (fd);
   fd = fopen (ADAPTIVE_SYNC_POINT_CONF, "r");
   UtilReadLineCntSpecChars(fd, pcTempBuffer); //Read header   
-  for(int i = 0; i < SyncPointCount; i++)  UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);      
+  
+  for(i = 0; i < SyncPointCount; i++)  UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);      
   fclose (fd);
 
 #else
@@ -318,7 +319,7 @@ void objectcontrol_task()
       OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
       UtilPopulateSpaceTimeArr(&OP[iIndex], object_traj_file[iIndex]);
 
-      for(int i = 0; i < SyncPointCount; i++)
+      for(i = 0; i < SyncPointCount; i++)
       {
         if(TEST_SYNC_POINTS == 1 && iIndex != 0)
         {
@@ -335,7 +336,7 @@ void objectcontrol_task()
       }
 
       /*Set Sync point in OP*/
-      for(int i = 0; i < SyncPointCount; i++)
+      for(i = 0; i < SyncPointCount; i++)
       {
         if(TEST_SYNC_POINTS == 1 && iIndex == 0) UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, ASP[i].MasterTrajSyncTime);
         else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL) UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, ASP[i].MasterTrajSyncTime); 
@@ -410,7 +411,7 @@ void objectcontrol_task()
       for(iIndex=0;iIndex<nbr_objects;++iIndex)
       {
             #ifdef BYTEBASED
-            for(int i = 0; i < SyncPointCount; i++)
+            for(i = 0; i < SyncPointCount; i++)
             {
               if(TEST_SYNC_POINTS == 1 && iIndex != 0)
               {
@@ -454,7 +455,7 @@ void objectcontrol_task()
             strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
             strcat(buffer,DriveDirection); strcat(buffer,";"); //strcat(pcBuffer,StatusFlag); strcat(pcBuffer,";");
 
-            for(int i = 0; i < SyncPointCount; i++)
+            for(i = 0; i < SyncPointCount; i++)
             {
               if(strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && iIndex == 0)
               {
