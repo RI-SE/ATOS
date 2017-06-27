@@ -92,7 +92,7 @@ void MainWindow::on_connectButton_clicked()
     if(mSocket == NULL)
     {
         mSocket = new QTcpSocket(this);
-        mSocket->connectToHost("10.130.23.14",54241);
+        mSocket->connectToHost(ui->ipLineEdit->text(),54241);
 
         if(mSocket->waitForConnected(3000))
         {
