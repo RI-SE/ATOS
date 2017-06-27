@@ -130,7 +130,7 @@ void MainWindow::on_armButton_clicked()
        else
        {
            m_boArmed = false;
-           ui->armButton->setText("Disarm");
+           ui->armButton->setText("Arm");
            mSocket->write("disarm");
            qDebug() << "Sent: disarm";
        }
@@ -169,6 +169,8 @@ void MainWindow::on_exitButton_clicked()
        mSocket->write("exit");
        //mSocket->waitForBytesWritten(3000);
        qDebug() << "Sent: exit";
+       m_boArmed = false;
+       ui->armButton->setText("Arm");
     }
     else
     {

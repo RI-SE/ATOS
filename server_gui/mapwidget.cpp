@@ -218,10 +218,10 @@ MapWidget::MapWidget(QWidget *parent) :
         qDebug() << "UDP visualization not able to start";
     }
 
-    //mWebSocket = new QWebSocket(QString(),QWebSocketProtocol::VersionLatest,this);
-    //connect(mWebSocket, SIGNAL(connected()), this, SLOT(onConnected()));
-    //connect(mWebSocket, SIGNAL(disconnected()), mWebSocket, SLOT(close()));
-    //mWebSocket->open(QUrl(QStringLiteral("ws://localhost:53251")));
+    mWebSocket = new QWebSocket(QString(),QWebSocketProtocol::VersionLatest,this);
+    connect(mWebSocket, SIGNAL(connected()), this, SLOT(onConnected()));
+    connect(mWebSocket, SIGNAL(disconnected()), mWebSocket, SLOT(close()));
+    mWebSocket->open(QUrl(QStringLiteral("ws://10.130.23.14:53251")));
 
     //QList<QPointF> trajTemp;
     QDir dir("./traj/");
@@ -259,9 +259,9 @@ MapWidget::MapWidget(QWidget *parent) :
                     //qDebug() << "X: " << list[2] << " Y: " << list[3] << " Z: " << list[4];
 
                     // Transform  xyz to llh, hardcoded origo
-                    ref_llh[0] = 57.777569; // LATb
-                    ref_llh[1] = 12.780480; // LONb
-                    ref_llh[2] = 202.934115075;
+                    ref_llh[0] = 57.776800; // LATb
+                    ref_llh[1] = 12.780450; // LONb
+                    ref_llh[2] = 201.934115075;
 
                     xyz[0] = list[2].toDouble();
                     xyz[1] = list[3].toDouble();
@@ -302,15 +302,15 @@ MapWidget::MapWidget(QWidget *parent) :
 
 MapWidget::~MapWidget()
 {
-    //mWebSocket->close();
+    mWebSocket->close();
 }
 
 void MapWidget::onConnected()
 {
     qDebug() << "WebSocket connected";
 
-  //  connect(mWebSocket, SIGNAL(binaryMessageReceived(const QByteArray &)), this, SLOT(onBinaryMessageReceived(const QByteArray &)));
-    //connect(mWebSocket, SIGNAL(textMessageReceived(const QString &)), this, SLOT(onTextMessageReceived(const QString &)));
+    connect(mWebSocket, SIGNAL(binaryMessageReceived(const QByteArray &)), this, SLOT(onBinaryMessageReceived(const QByteArray &)));
+    connect(mWebSocket, SIGNAL(textMessageReceived(const QString &)), this, SLOT(onTextMessageReceived(const QString &)));
 }
 
 void MapWidget::onBinaryMessageReceived(const QByteArray &message)
@@ -323,9 +323,9 @@ void MapWidget::onBinaryMessageReceived(const QByteArray &message)
 void MapWidget::onTextMessageReceived(const QString &message)
 {
     (void)message;
-//    qDebug() << "Message received:" << message;
-//    QByteArray textTemp(message.toUtf8());
-//    displayMessage(textTemp);
+    qDebug() << "Message received:" << message;
+    QByteArray textTemp(message.toUtf8());
+    displayMessage(textTemp);
 }
 
 
