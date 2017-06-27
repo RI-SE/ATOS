@@ -312,22 +312,16 @@ int32_t main(int32_t argc, int8_t *argv[])
     {
       int32_t receivedNewData = 0;
       int32_t commandSet = 0;
-      //bzero(buffer,256);
+      uint32_t handled_payload = 0;
       memset(buffer,0,256);
       do
 	{
 #ifdef DEBUG
 	  printf("INF: Start receive\n");
 #endif
-	  uint32_t handled_payload = 0;
-	  //bzero(buffer,256);
 	  memset(buffer,0,256);
 	  int32_t k = 0;
-	  /*     printf("Received data 1: "); */
-	  /*     for (k = 0; k < result; k++) */
-	  /*     	printf("%d:%x,",k,(uint8_t) buffer[k]); */
-	  /*     printf("\n"); */
-	      result = recv(command_com_socket_fd, buffer, 256, 0);
+	  result = recv(command_com_socket_fd, buffer, 256, 0);
 	      /* printf("Received data 2: "); */
 	      /* for (k = 0; k < result; k++) */
 	      /* 	printf("%d:%x,",k,(uint8_t) buffer[k]); */
