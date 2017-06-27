@@ -1,5 +1,5 @@
 #!/bin/bash
 kill $(pidof object1.o)
 mkdir -p ./object/src/build && cd ./object/src/build
-cc ../object.c -lm -o ./object1.o
+cc ../object_byte.c -lm -o ./object1.o
 ./object1.o 57.7776566 12.7813082 123.43 53242 53243
