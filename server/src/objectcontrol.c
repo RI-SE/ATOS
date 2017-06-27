@@ -327,7 +327,7 @@ void objectcontrol_task()
           MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
           vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
         }
-        else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL)
+        else if(TEST_SYNC_POINTS == 0 /*&& strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL*/)
         {
           /*Send SYPM to slave*/
           MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
