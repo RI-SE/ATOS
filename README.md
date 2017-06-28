@@ -97,6 +97,7 @@ cd rtklib/app/rtkrcv/gcc/
 # shutdown         to exit rtkrcv
 
 # Compile and run RTKLIB Explorer
+# Make sure user is in dialout group (need to logout/login to make effect): sudo adduser [user] dialout
 cd rtklibexplorer/app
 make
 cp chronos/rtklib_conf/explorer/* rtklibexplorer/app/rtkrcv/gcc/
@@ -115,7 +116,7 @@ cp chronos/rtklib_conf/explorer/* rtklibexplorer/app/rtkrcv/gcc/
 #				  #ant2-pos1         =3328984.527 # (deg|m)
 #				  #ant2-pos2         =761910.265  # (deg|m)
 #				  #ant2-pos3         =5369033.689 # (m|m)
-cd rtklib/app/rtkrcv/gcc/
+cd rtklibexplorer/app/rtkrcv/gcc/
 ./rtkrcv -o rover_ubx_m8t.conf -s
 # Useful commands in rtkrcv (0.1 is the update frequency) all commands are terminated by ctrl-c:
 # status 0.1       to check solution status

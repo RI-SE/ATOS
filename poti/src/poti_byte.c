@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
    double lat_start = ORIGIN_LATITUDE;
   double lon_start = ORIGIN_LONGITUDE;
   double alt_start = ORIGIN_ALTITUDE;
-  useconds_t loop_delay = 100000;
+  useconds_t loop_delay = 10000;
   char pcTimeString[15];
   char *ret = NULL;
   char bCurrentCommand[10] = "NOOP"; 
