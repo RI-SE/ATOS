@@ -594,6 +594,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, float 
   {
     
     OP->BestFoundTrajectoryIndex = OP->SpaceTimeArr[PositionFound].Index;
+    OP->SpaceTimeFoundIndex = PositionFound;
     /*
     printf("BestFoundTrajectoryIndex=%d\n", OP->BestFoundTrajectoryIndex);
     printf("Current origo distance=%4.3f m\n", OP->OrigoDistance);

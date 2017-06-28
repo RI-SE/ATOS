@@ -53,8 +53,8 @@
 
 #define MAX_UTIL_VARIBLE_SIZE 512
 
-#define a	6378137.0							//meters in WGS84
-#define k	298.257223563 						//in WGS84, f = 1/298.257223563
+#define a	6378137.0							            //meters in WGS84
+#define k	298.257223563 						        //in WGS84, f = 1/298.257223563
 #define b	6356752.3142451794975639665996337	//b = (1-f)*a
 #define l	1e-12
 #define PI	3.141592653589793
@@ -70,8 +70,8 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.17"
-#define TESTSERVER_IP "192.168.56.1"
+#define TESTHOST_IP "10.130.23.63"
+#define TESTSERVER_IP "10.0.2.15"
 #define TEST_SYNC_POINTS 0
 
 
@@ -89,12 +89,12 @@
 #define TEST_CONF_FILE "./conf/test.conf"
 #define TRAJECTORY_PATH "./traj/"
 
-#define ADAPTIVE_SYNC_POINT_CONF "./traj/adaptivesync.conf"
+#define ADAPTIVE_SYNC_POINT_CONF "./conf/adaptivesync.conf"
 
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
 
-#define TRAJ_RES 0.01   //m
+#define TRAJ_RES 0.001   //m
 #define TRAJ_FIND_POSITION_THRESHOLD 0.2  //m
 #define TRAJ_STEP_BACK_INDEX 20
 
@@ -127,6 +127,7 @@ typedef struct
   double SyncTime;
   double SyncStopTime;
   int BestFoundTrajectoryIndex;
+  int SpaceTimeFoundIndex;
   float TimeToSyncPoint;
   float* SpaceArr;
   float* TimeArr;

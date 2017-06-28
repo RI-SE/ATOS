@@ -387,8 +387,6 @@ void objectcontrol_task()
   {
     char buffer[RECV_MESSAGE_BUFFER];
     int recievedNewData = 0;
-    gettimeofday(&CurrentTimeStruct, NULL);
-    CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
 
     /*HEAB*/
     for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -444,7 +442,10 @@ void objectcontrol_task()
       if(recievedNewData)
       {
 
-      	#ifdef DEBUG
+      	gettimeofday(&CurrentTimeStruct, NULL);
+        CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+
+        #ifdef DEBUG
     	   printf("INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
          fflush(stdout);
       	#endif
@@ -466,23 +467,22 @@ void objectcontrol_task()
                 //printf("Current time: %ld\n", CurrentTimeU64);
                 //printf("Current time: %ld\n", StartTimeU64);
                 //printf("Current time diff: %3.2f\n", (((double)CurrentTimeU64-(double)StartTimeU64)/1000));
-                //SearchStartIndex = OP[iIndex].BestFoundTrajectoryIndex - (int)fabs(OP[iIndex].DeltaOrigoDistance / TRAJ_RES) - TRAJ_STEP_BACK_INDEX;
-                UtilFindCurrentTrajectoryPosition(&OP[iIndex], 0, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), TRAJ_FIND_POSITION_THRESHOLD);
-               
+                SearchStartIndex = OP[iIndex].SpaceTimeFoundIndex - (int)fabs(OP[iIndex].DeltaOrigoDistance / TRAJ_RES) - TRAJ_STEP_BACK_INDEX;
+                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), TRAJ_FIND_POSITION_THRESHOLD);
+
                 if(OP[iIndex].BestFoundTrajectoryIndex >= 0)
                 {  
-                  TimeToSyncPoint = (UtilCalculateTimeToSync(&OP[iIndex]) - ((((double)CurrentTimeU64-(double)StartTimeU64)/1000) /*- OP[iIndex].TimeArr[OP[iIndex].BestFoundTrajectoryIndex]*/));
-                  if(atoi(Timestamp)%100 == 0) printf("Time to sync= %3.3f\n", TimeToSyncPoint);
+                  //TimeToSyncPoint = (UtilCalculateTimeToSync(&OP[iIndex]) - ((((double)CurrentTimeU64-(double)StartTimeU64)/1000) - OP[iIndex].TimeArr[OP[iIndex].BestFoundTrajectoryIndex]));
+                  UtilCalculateTimeToSync(&OP[iIndex]);
+                  TimeToSyncPoint = OP[iIndex].TimeToSyncPoint - (((double)CurrentTimeU64-(double)StartTimeU64)/1000);
+                  if(atoi(Timestamp)%50 == 0) printf("Time to sync= %3.3f\n", TimeToSyncPoint);
                   if(TimeToSyncPoint > 0) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)(TimeToSyncPoint*1000);
                   else MasterTimeToSyncPointU64 = 0;
                 }
                }
             }
 
-
             OP[iIndex].Speed = atof(Speed);
-
-
         #else
         /* Get monitor data */
         sscanf(buffer,"MONR;%" SCNu64 ";%" SCNd32 ";%" SCNd32 ";%" SCNd32 ";%" SCNu16 ";%" SCNu16 ";%" SCNu8 ";",
