@@ -24,9 +24,8 @@ make
 ./server_gui
 
 ## Visualization adaption
-cd websocket_visualization
-mkdir build && cd build
-"/home/kj/Qt/5.7/gcc_64/bin/qmake" ../websocket_visualization.pro -spec linux-g++ 
+mkdir build_websocket_visualization && cd build_websocket_visualization
+"/home/kj/Qt/5.7/gcc_64/bin/qmake" ../websocket_visualization/websocket_visualization.pro -spec linux-g++ 
 ("/opt/Qt5.7.1/5.7/gcc_64/bin/qmake"  ../websocket_visualization.pro -spec linux-g++)
 make
 ./websocket_visualization 53251 1 ./../data/ 100
@@ -45,7 +44,7 @@ sudo apt-get install qt-sdk
 sudo apt install libqt5websockets5_dev
 qmake -qt=5 ../websocket_visualization.pro -spec linux-g++
 
-# POTI
+# poti
 cd poti
 mkdir build && cd build
 gcc -I../inc/ ../src/nmea2etsi.c ../src/object_rpi.c -o object_rpi
