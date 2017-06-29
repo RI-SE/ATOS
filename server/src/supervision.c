@@ -129,8 +129,9 @@ void supervision_task() {
   double         distance    [ MAX_OBJECTS ] [3]          ;
   int            bestFit     [ MAX_OBJECTS ] [3]          ;
   double         align       [ MAX_OBJECTS ]              ;
+  uint64_t       timeX       [ MAX_OBJECTS ]              ;
+  uint64_t       time0       [ MAX_OBJECTS ]              ;
   int            bestFitDone [ MAX_OBJECTS ]              ;
-  int            trajIndex                                ;
 
   float     time       ;
   double    x          ;
@@ -166,7 +167,8 @@ void supervision_task() {
   double         dP2Long = 0 ;
   double         dLat        ;
   double         dLong       ;
-
+  uint64_t       dTime       ;
+  uint64_t       dTime0      ;
 
   char           pcTempBuffer [512];
 
@@ -228,60 +230,63 @@ void supervision_task() {
 
   for ( iIndex = 0           ;
         iIndex < nbr_objects ;
-        ++iIndex ) {
+        ++iIndex             )
+    {
 
-    /* printf ( "INF : SV : Open index = %d file %s \n", */
-    /*          iIndex, */
-    /*          object_traj_file [ iIndex ] ); */
+      /* printf ( "INF : SV : Open index = %d file %s \n", */
+      /*          iIndex, */
+      /*          object_traj_file [ iIndex ] ); */
 
-    fp [ iIndex ]  = fopen ( object_traj_file [ iIndex ], "rb");
-    if ( fp [ iIndex ] == NULL) {
-      util_error("ERR: Failed to open trajectory file");
-    }
-
-
-    bFileLine_p [ iIndex ] = bFileLine [ iIndex ] [0];
-
-    /* Just read the first line - header line - and ignore */
-
-    len = sizeof(bFileLine [ iIndex ] [0]);
-    bzero ( &bFileLine [ iIndex ] [0], len );
-    read = getline ( &bFileLine_p [ iIndex ], &len, fp [ iIndex ]);
+      fp [ iIndex ]  = fopen ( object_traj_file [ iIndex ], "rb");
+      if ( fp [ iIndex ] == NULL )
+        {
+          util_error("ERR: Failed to open trajectory file");
+        }
 
 
-    /* Then read the next lines, the real first 'LINE'
-       Put the first line twice into the buffer
-       this will make the first line appear twice in the buffer,
-       first position and center position
-       Then read the second 'LINE' from file and put it at end of buffer,
-       i.e. position 3 */
+      /* Just read the first line - header line - and ignore */
 
-    len = sizeof(bFileLine [ iIndex ] [0]);
-    bzero ( &bFileLine [ iIndex ] [0], len);
-    bzero ( &bFileLine [ iIndex ] [1], len);
-    bzero ( &bFileLine [ iIndex ] [2], len);
+      len = sizeof(bFileLine [ iIndex ] [0]);
+      bzero ( &bFileLine [ iIndex ] [0], len );
+      bFileLine_p [ iIndex ] = bFileLine [ iIndex ] [0];
+      read = getline ( &bFileLine_p [ iIndex ], &len, fp [ iIndex ]);
 
-    bFileLine_p [ iIndex ] = bFileLine [ iIndex ] [0];
-    read = getline ( &bFileLine_p [ iIndex ] ,
-                     &len,
-                     fp [ iIndex ] );
 
-    strcpy (bFileLine [ iIndex ] [1],
-            bFileLine [ iIndex ] [0]);
+      /* Then read the next lines, the real first 'LINE'
+         Put the first line twice into the buffer
+         this will make the first line appear twice in the buffer,
+         first position and center position
+         Then read the second 'LINE' from file and put it at end of buffer,
+         i.e. position 3 */
 
-    bFileLine_p [ iIndex ] = bFileLine [ iIndex ] [2];
-    read = getline ( &bFileLine_p [ iIndex ] ,
-                     &len ,
-                     fp [ iIndex ] );
+      len = sizeof(bFileLine [ iIndex ] [0]);
+      bzero ( &bFileLine [ iIndex ] [0], len);
+      bzero ( &bFileLine [ iIndex ] [1], len);
+      bzero ( &bFileLine [ iIndex ] [2], len);
 
-    for ( i = 0;
-          i < 3;
-          i++ ) {
-      printf ( "INF : SV : i = %d , s = %s",
-               i,
-               bFileLine [ iIndex ] [i] );
-    }
-  } // for ( iIndex = 0
+      bFileLine_p [ iIndex ] = bFileLine [ iIndex ] [0];
+      read = getline ( &bFileLine_p [ iIndex ] ,
+                       &len,
+                       fp [ iIndex ] );
+
+      strcpy (bFileLine [ iIndex ] [1],
+              bFileLine [ iIndex ] [0]);
+
+      bFileLine_p [ iIndex ] = bFileLine [ iIndex ] [2];
+      read = getline ( &bFileLine_p [ iIndex ] ,
+                       &len ,
+                       fp [ iIndex ] );
+
+      for ( i = 0;
+            i < 3;
+            i++ )
+        {
+          printf ( "INF : SV : i = %d , s = %s",
+                   i,
+                   bFileLine [ iIndex ] [i] );
+        }
+
+    } // for ( iIndex = 0
 
 
   printf ( "INF : SV : Opened all trajectory files.\n" );
@@ -365,9 +370,21 @@ void supervision_task() {
       {
         printf ( "INF : SV : Received a START message: %s\n",
                  cpBuffer );
+
+        for ( iIndex = 0           ;
+              iIndex < nbr_objects ;
+              ++iIndex             )
+          {
+            time0 [ iIndex ] = timeX [ iIndex ] ;
+            printf ( "INF : SV : index %d  time0 %" PRIu64 ".\n",
+                     iIndex,
+                     time0 [ iIndex ] );
+          }
+
         printf ( "INF : SV : Start correlation.\n" );
         doCorrelationtLoop = 1;
       }
+
 
     /*--------------------------------------------------
       --  ARM
@@ -429,6 +446,9 @@ void supervision_task() {
           #endif
         */
 
+        timeX [ iIndex  ] = timestamp;
+
+
         /*------------------------------------------------------------
           --
           ------------------------------------------------------------*/
@@ -468,13 +488,17 @@ void supervision_task() {
                     dLat  = dP1Lat  - dP2Lat;
                     dLong = dP1Long - dP2Long;
 
-#ifdef DEBUG1
-                    printf ( "DGB : SV : iIndex = %d, dP1Lat = %f, dP1Long = %f\n                       dP2Lat = %f, dP2Long = %f\n                       dLat   = %f,  dLong   = %f\n", */
+#ifdef DEBUG
+                    printf ( "DGB : SV : LatLong : iIndex = %d  %d \n",
                              iIndex  ,
+                             i       );
+                    printf ( "  dP1Lat = %f, dP1Long = %f\n",
                              dP1Lat  ,
-                             dP1Long ,
+                             dP1Long );
+                    printf ( "  dP2Lat = %f, dP2Long = %f\n",
                              dP2Lat  ,
-                             dP2Long ,
+                             dP2Long );
+                    printf ( "  dLat   = %f,  dLong   = %f\n",
                              dLat    ,
                              dLong   );
 #endif
@@ -494,14 +518,11 @@ void supervision_task() {
                     deviation [ iIndex ] [ i ] = tObjectPos ;
                     distance  [ iIndex ] [ i ] = devPos     ;
 
-#ifdef DEBUG1
-                    printf ( "DGB : SV : iIndex = %d, i = %d, x = %f, y = %f, devPos %f , algn = %f \n",
-                             iIndex            ,
-                             i                 ,
+#ifdef DEBUG
+                    printf ( "  x = %f, y = %f, devPos %f \n",
                              tObjectPos.x      ,
                              tObjectPos.y      ,
-                             devPos            ,
-                             align [ iIndex ]  );
+                             devPos            );
 #endif
 
                   } // for ( i
@@ -622,12 +643,13 @@ void supervision_task() {
         else if ( doCorrelationtLoop == 1 )
           {
 #ifdef DEBUG1
-            printf ( "INF : SV : Recieved MONITOR message: %s\n",
+            printf ( "INF : SV : Corr id %d - Recieved MONITOR message: %s\n",
+                     iIndex,
                      cpBuffer );
-            printf ( "DBG : SV : Correlate object id  %d \n",
-                     iIndex );
             fflush(stdout);
 #endif
+
+            /*  not used for the moment .....
 
             ldm [ iIndex ][ ldm_act_step [ iIndex ] ] = monitor;
 
@@ -647,40 +669,27 @@ void supervision_task() {
 
             ldm_act_step [ iIndex ] = ++ldm_act_step [ iIndex ] % LDM_SIZE;
 
-
-            /* >>> just kept for info, shall be removed - from here
-
-               Check if passing line
-
-               bzero(pcTempBuffer,512);
-               (void) iUtilGetParaConfFile("OrigoLatidude=", pcTempBuffer);
-               sscanf(pcTempBuffer, "%lf", &dP1Lat);
-
-               bzero(pcTempBuffer,512);
-               (void) iUtilGetParaConfFile("OrigoLongitude=", pcTempBuffer);
-               sscanf(pcTempBuffer, "%lf", &dP1Long);
-
-               dP2Lat  = (double) latitude  / 10000000;
-               dP2Long = (double) longitude / 10000000;
-
-               UtilCalcPositionDelta ( dP1Lat  ,
-               dP1Long ,
-               dP2Lat  ,
-               dP2Long ,
-               &tObjectPos );
-
-               devPos = sqrt((x-tObjectPos.x)*(x-tObjectPos.x)+(y-tObjectPos.y)*(y-tObjectPos.y));
+            not used for the moment ....*/
 
 
-               printf ("INF : Object position latitude: %lf longitude: %lf \n",dP2Lat, dP2Long);
-               printf ("INF : Origo position latitude: %lf longitude: %lf \n",dP1Lat, dP1Long);
-               printf ("INF : Calculated value x: %lf y: %lf \n",tObjectPos.x, tObjectPos.y);
-               fflush(stdout);
+            gettimeofday ( &tv, NULL );
+            msSinceEpochETSI =
+              (uint64_t) tv.tv_sec  * 1000 +
+              (uint64_t) tv.tv_usec / 1000 -
+              MS_FROM_1970_TO_2004_NO_LEAP_SECS +
+              DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
 
-               <<< shall be removed - from here to this */
+            if ( monitor.timestamp >= msSinceEpochETSI )
+              {
+                dTime  = monitor.timestamp - msSinceEpochETSI ;
+              } else
+              {
+                dTime  = msSinceEpochETSI - monitor.timestamp ;
+              }
+
+            dTime0 = monitor.timestamp - time0 [ iIndex ] ;
 
 
-            devPos                 = 0.0 ;
             bestFitDone [ iIndex ] = 0 ;
 
             while ( bestFitDone [ iIndex ] == 0 )
@@ -691,6 +700,7 @@ void supervision_task() {
                       i < 3 ;
                       i++   )
                   {
+                    dP1Lat  = (double) trajs [ iIndex ] [ i ].latitude  / 10000000;
                     dP1Long = (double) trajs [ iIndex ] [ i ].longitude / 10000000;
 
                     dP2Lat  = (double) monitor.latitude  / 10000000;
@@ -698,17 +708,6 @@ void supervision_task() {
 
                     dLat  = dP1Lat  - dP2Lat;
                     dLong = dP1Long - dP2Long;
-
-#ifdef DEBUG1
-                    printf ( "DGB : SV : iIndex = %d, dP1Lat = %f, dP1Long = %f\n                       dP2Lat = %f, dP2Long = %f\n                       dLat   = %f,  dLong   = %f\n",
-                             iIndex  ,
-                             dP1Lat  ,
-                             dP1Long ,
-                             dP2Lat  ,
-                             dP2Long ,
-                             dLat    ,
-                             dLong   );
-#endif
 
                     tObjectPos.x = 0;
                     tObjectPos.y = 0;
@@ -726,9 +725,23 @@ void supervision_task() {
                     distance  [ iIndex ] [ i ] = devPos     ;
 
 #ifdef DEBUG1
-                    printf ( "DGB : SV : iIndex = %d, i = %d, x = %f, y = %f, devPos %f \n",
-                             iIndex            ,
-                             trajIndex         ,
+                    printf ( "DGB : SV : LatLong : iIndex = %d  %d \n",
+                             iIndex  ,
+                             i       );
+                    printf ( "  dP1Lat = %f, dP1Long = %f\n",
+                             dP1Lat  ,
+                             dP1Long );
+                    printf ( "  dP2Lat = %f, dP2Long = %f\n",
+                             dP2Lat  ,
+                             dP2Long );
+                    printf ( "  dLat   = %f,  dLong   = %f\n",
+                             dLat    ,
+                             dLong   );
+                    printf ( "  dTime  = %" PRIu64 "\n",
+                             dTime    );
+                    printf ( "  dTime0 = %" PRIu64 "\n",
+                             dTime0   );
+                    printf ( "  x = %f, y = %f, devPos %f \n",
                              tObjectPos.x      ,
                              tObjectPos.y      ,
                              devPos            );
@@ -736,7 +749,95 @@ void supervision_task() {
 
                   } // for ( i
 
+
+                if ( ( distance  [ iIndex ] [ 0 ] >= distance  [ iIndex ] [ 1 ] ) &&
+                     ( distance  [ iIndex ] [ 1 ] <= distance  [ iIndex ] [ 2 ] ) )
+                  {
+                    // printf ( "DBG : SV : Correlation - Best fit on 1 - index %d ok.\n", iIndex );
+
+                    bestFitDone [ iIndex ] = 1 ;
+
+                  } else if ( distance  [ iIndex ] [ 1 ] <  distance  [ iIndex ] [ 2 ] )
+                  {
+                    printf ( "DBG : SV : Correlation - Worse on 2 - index %d ok.\n", iIndex );
+
+                    bestFitDone [ iIndex ] = 1 ;
+
+                    // exit (-1);
+
+                  } else
+                  {
+                    printf ( "DBG : SV : Correlation - Shifting in a new line from trajectory file.\n" );
+
+                    // exit (-1);
+
+                    trajs [ iIndex ] [ 0 ] = trajs [ iIndex ] [ 1 ];
+                    trajs [ iIndex ] [ 1 ] = trajs [ iIndex ] [ 2 ];
+
+                    bFileLine_p [ iIndex ] = bFileLine [ iIndex ] [ 2 ];
+                    len = sizeof(bFileLine [ iIndex ] [ 2 ]);
+                    bzero ( &bFileLine [ iIndex ] [ 2 ], len);
+                    read = getline ( &bFileLine_p [ iIndex ] ,
+                                     &len,
+                                     fp [ iIndex ] );
+                    printf ( "INF : SV : i = 2 , s = %s",
+                             bFileLine [ iIndex ] [ 2 ] );
+
+                    sscanf ( &bFileLine [ iIndex ] [ 2 ] [ 5 ],
+                             "%f;%lf;%lf;%lf;%f;%f;",
+                             &time ,
+                             &x    ,
+                             &y    ,
+                             &z    ,
+                             &hdg  ,
+                             &vel  );
+
+                    traj2ldm ( time  ,
+                               x     ,
+                               y     ,
+                               z     ,
+                               hdg   ,
+                               vel   ,
+                               &traj );
+
+                    trajs [ iIndex ] [ 2 ].timestamp  = traj.timestamp ;
+                    trajs [ iIndex ] [ 2 ].latitude   = traj.latitude  ;
+                    trajs [ iIndex ] [ 2 ].longitude  = traj.longitude ;
+
+                    for ( i = 0;
+                          i < 3;
+                          i++ )
+                      {
+                        printf ( "DBG : SV : trajs : %d %d : t %" PRIu64 ", lat %d, lon %d \n",
+                                 iIndex ,
+                                 i      ,
+                                 trajs [ iIndex ] [ i ].timestamp ,
+                                 trajs [ iIndex ] [ i ].latitude  ,
+                                 trajs [ iIndex ] [ i ].longitude );
+                      } // for
+
+                  } // if ... else ..
+
               } // while ( bestFitDone
+
+
+            devPos = distance  [ iIndex ] [ 1 ] ;
+            devTim = trajs     [ iIndex ] [ 1 ].timestamp * 1000 ;
+
+            if ( dTime0 >= devTim )
+              {
+                devTim = dTime0 - devTim ;
+              } else
+              {
+                devTim = devTim - dTime0 ;
+              }
+
+#ifdef DEBUG1
+            printf ( "DGB : SV : Correlation Dev : iIndex = %d   devPos %f  devTim %" PRIu64 "\n",
+                     iIndex ,
+                     devPos ,
+                     devTim );
+#endif
 
             if ( devPos > SAFETY_MARGIN_POS ||
                  devTim > SAFETY_MARGIN_TIM   )
