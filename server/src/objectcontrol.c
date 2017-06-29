@@ -787,9 +787,9 @@ int ObjectControlBuildOSEMMessage(char* MessageBuffer, char *Latitude, char *Lon
   {
     //printf("Heading: %s\n", Heading);
     //Data = atof("0.0") * 1e1;
-    Data = 450 - UtilRadToDeg(atof((char *)Heading) * 1e1);
-    while(Data<0) Data+=360;
-    while(Data>360) Data-=360;
+    Data = UtilRadToDeg(atof((char *)Heading) * 1e1);
+    while(Data<0) Data+=3600;
+    while(Data>3600) Data-=3600;
 
     MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
   }
