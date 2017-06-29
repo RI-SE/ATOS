@@ -525,7 +525,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 		  
 		 if (!strncmp(bCurrentCommand, "DOPM", 4))
 		   {
-		     while ((buffer_ptr < result) && (handled_payload < payload))
+		     while ((buffer_ptr < result) && (handled_payload < payload + 5))
 		       {
 			 fwrite(&buffer[buffer_ptr], sizeof(buffer[buffer_ptr]), 1, fp);
 			 buffer_ptr++;
@@ -641,6 +641,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	}
       else
 	{
+	  rewind(fp);
 	  if (firstTime == 1)
 	    {
 	      cmd = ReadOneUByteFromFile(fp);
@@ -655,9 +656,10 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      bcur = ReadTwoUBytesFromFile(fp);
 	      mod = ReadOneUByteFromFile(fp);
 	      driveFileStep = ReadFourUBytesFromFile(fp); // next four bytes are time again for time base calc
-              driveFileStep -= btim;		          // calcultate time step	
+              driveFileStep -= btim;		          // calcultate time step
+	      printf("Read1: %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod);
 	    }
-	
+
 	  TimeBase = (driveFileStep / (sleep_time.tv_nsec / 1000000));
 
 	  if (TimeBase < 1)
@@ -680,7 +682,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 
 	  /* printf("Cal: %.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt); */
 	  /* printf("Cal: bx: %.9lf by: %.9lf\n", (((double) bx) / 1000), (((double) by) / 1000)); */
-	  printf("Read: %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod);
+	  /* printf("Read3: %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod); */
 	  /* printf("Sent: %d %d %d\n",blat,blon,balt); */
 	}
 
