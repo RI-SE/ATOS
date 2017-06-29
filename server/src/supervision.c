@@ -32,7 +32,8 @@
 
 #define LDM_SIZE            5
 #define RECV_MESSAGE_BUFFER 1024
-#define SAFETY_MARGIN       0.5
+#define SAFETY_MARGIN_POS   0.5
+#define SAFETY_MARGIN_TIM   0.5
 #define DEBUG 1
 
 /* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
@@ -169,7 +170,8 @@ void supervision_task() {
 
   char           pcTempBuffer [512];
 
-  double         dRes = 0.0;
+  double         devPos = 0.0;
+  uint64_t       devTim = 0;
 
   struct timeval tv ;
   uint64_t msSinceEpochETSI ;
@@ -210,9 +212,8 @@ void supervision_task() {
 
   /*----------------------------------------------------------------------
     -- Open a drive file
+    --    get objects; name and drive file
     ----------------------------------------------------------------------*/
-
-  /* Get objects; name and drive file */
 
   vFindObjectsInfo ( object_traj_file,
                      object_address_name,
@@ -220,7 +221,10 @@ void supervision_task() {
 
   printf ( "DGB : SV : dir nr of files = %d\n", nbr_objects );
 
-  /* Read 2 first lines from each trajectory file and put into buffer. */
+
+  /*----------------------------------------------------------------------
+    -- Read the 2 (!) first lines from each trajectory file and put into buffer.
+    ----------------------------------------------------------------------*/
 
   for ( iIndex = 0           ;
         iIndex < nbr_objects ;
@@ -283,7 +287,9 @@ void supervision_task() {
   printf ( "INF : SV : Opened all trajectory files.\n" );
 
 
-  /* Convert all lines to internal representation, lat & long */
+  /*----------------------------------------------------------------------
+    -- Convert all lines to internal representation, lat & long
+    ----------------------------------------------------------------------*/
 
   for ( iIndex = 0           ;
         iIndex < nbr_objects ;
@@ -333,14 +339,12 @@ void supervision_task() {
                      MQ_SV    ,
                      0        );
 
-  /* Start sending and receiving HEAB, MONR and visualization */
-
   int iExit                  = 0 ;
   int iCommand                   ;
   int doInitialAlignmentLoop = 0 ;
   int doCorrelationtLoop     = 0 ;
 
-  while ( !iExit ) {
+  while ( ! iExit ) {
 
     bzero(cpBuffer, RECV_MESSAGE_BUFFER);
     (void) iCommRecv ( &iCommand,
@@ -348,7 +352,8 @@ void supervision_task() {
                        RECV_MESSAGE_BUFFER);
 
 #ifdef DEBUG1
-    printf("INF : SV : Received a command: %s\n", cpBuffer);
+    printf ( "INF : SV : Received a command: %s\n",
+             cpBuffer );
     fflush(stdout);
 #endif
 
@@ -356,479 +361,435 @@ void supervision_task() {
       --  TRIG
       --------------------------------------------------*/
 
-    if ( iCommand == COMM_STRT ) {
-
-      printf ( "INF : SV : Received a TRIG message: %s\n",
-               cpBuffer );
-      printf ( "INF : SV : Start correlating.\n" );
-      doCorrelationtLoop = 1;
-    }
+    if ( iCommand == COMM_STRT )
+      {
+        printf ( "INF : SV : Received a START message: %s\n",
+                 cpBuffer );
+        printf ( "INF : SV : Start correlation.\n" );
+        doCorrelationtLoop = 1;
+      }
 
     /*--------------------------------------------------
       --  ARM
       --------------------------------------------------*/
 
-    if ( iCommand == COMM_ARMD ) {
-
-      printf ( "INF : SV : Received an ARM message: %s\n",
-               cpBuffer );
-      printf ( "INF : SV : Start correlating.\n" );
-      doInitialAlignmentLoop = 1;
-    }
+    if ( iCommand == COMM_ARMD )
+      {
+        printf ( "INF : SV : Received an ARM message: %s\n",
+                 cpBuffer );
+        printf ( "INF : SV : Start initial alignment.\n" );
+        doInitialAlignmentLoop = 1;
+      }
 
 
     /*--------------------------------------------------
       --  MON
       --------------------------------------------------*/
 
-    else if ( iCommand == COMM_MONI ) {
-
+    else if ( iCommand == COMM_MONI )
+      {
 #ifdef DEBUG1
-      printf ( "INF : SV : Recieved MONITOR message: %s\n",
-               cpBuffer );
-      fflush(stdout);
-#endif
-
-      /* Start parsing messages */
-      sscanf ( cpBuffer,
-               "MONR;%" SCNu16 ";%" SCNu64 ";%" SCNd32 ";%" SCNd32 ";%" SCNd32 ";%" SCNu16 ";%" SCNu16 ";%" SCNu8 ";",
-               &iIndex,
-               &timestamp,
-               &latitude,
-               &longitude,
-               &altitude,
-               &speed,
-               &heading,
-               &drivedirection );
-
-      monitor.timestamp      = timestamp      ;
-      monitor.latitude       = latitude       ;
-      monitor.longitude      = longitude      ;
-      monitor.altitude       = altitude       ;
-      monitor.speed          = speed          ;
-      monitor.heading        = heading        ;
-      monitor.drivedirection = drivedirection ;
-
-      /*
-#ifdef DEBUG1
-      printf ( "DBG : SV : Rec MON : i %d : t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
-               iIndex                 ,
-               monitor.timestamp      ,
-               monitor.latitude       ,
-               monitor.longitude      ,
-               monitor.altitude       ,
-               monitor.speed          ,
-               monitor.heading        ,
-               monitor.drivedirection );
-      fflush(stdout);
-#endif
-      */
-
-      /*------------------------------------------------------------
-        --
-        ------------------------------------------------------------*/
-
-      if ( doInitialAlignmentLoop == 1 ) {
-
-#ifdef DEBUG
-        printf ( "DBG : SV : Rec MON : i %d : t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
-                 iIndex                 ,
-                 monitor.timestamp      ,
-                 monitor.latitude       ,
-                 monitor.longitude      ,
-                 monitor.altitude       ,
-                 monitor.speed          ,
-                 monitor.heading        ,
-                 monitor.drivedirection );
+        printf ( "INF : SV : Recieved MONITOR message: %s\n",
+                 cpBuffer );
         fflush(stdout);
 #endif
 
-        while ( bestFitDone [ iIndex ] == 0 ) {
+        /* Start parsing messages */
+        sscanf ( cpBuffer,
+                 "MONR;%" SCNu16 ";%" SCNu64 ";%" SCNd32 ";%" SCNd32 ";%" SCNd32 ";%" SCNu16 ";%" SCNu16 ";%" SCNu8 ";",
+                 &iIndex,
+                 &timestamp,
+                 &latitude,
+                 &longitude,
+                 &altitude,
+                 &speed,
+                 &heading,
+                 &drivedirection );
 
-          printf ( "DBG : SV : Align object id  %d \n",
-                   iIndex );
+        monitor.timestamp      = timestamp      ;
+        monitor.latitude       = latitude       ;
+        monitor.longitude      = longitude      ;
+        monitor.altitude       = altitude       ;
+        monitor.speed          = speed          ;
+        monitor.heading        = heading        ;
+        monitor.drivedirection = drivedirection ;
 
-          /* Calculate deviation (dRes) per buffer : 0 1 2 */
+        /*
+          #ifdef DEBUG1
+          printf ( "DBG : SV : Rec MON : i %d : t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
+          iIndex                 ,
+          monitor.timestamp      ,
+          monitor.latitude       ,
+          monitor.longitude      ,
+          monitor.altitude       ,
+          monitor.speed          ,
+          monitor.heading        ,
+          monitor.drivedirection );
+          fflush(stdout);
+          #endif
+        */
 
-          for ( i = 0 ;
-                i < 3 ;
-                i++   ) {
+        /*------------------------------------------------------------
+          --
+          ------------------------------------------------------------*/
 
-            dP1Lat  = (double) trajs [ iIndex ] [ i ].latitude  / 10000000;
-            dP1Long = (double) trajs [ iIndex ] [ i ].longitude / 10000000;
-
-            dP2Lat  = (double) latitude  / 10000000;
-            dP2Long = (double) longitude / 10000000;
-
-            dLat  = dP1Lat  - dP2Lat;
-            dLong = dP1Long - dP2Long;
-
-            /* printf ( "DGB : SV : iIndex = %d, dP1Lat = %f, dP1Long = %f\n                       dP2Lat = %f, dP2Long = %f\n                       dLat   = %f,  dLong   = %f\n", */
-            /*          iIndex  , */
-            /*          dP1Lat  , */
-            /*          dP1Long , */
-            /*          dP2Lat  , */
-            /*          dP2Long , */
-            /*          dLat    , */
-            /*          dLong   ); */
-
-            tObjectPos.x = 0;
-            tObjectPos.y = 0;
-
-            UtilCalcPositionDelta ( dP1Lat  ,
-                                    dP1Long ,
-                                    dP2Lat  ,
-                                    dP2Long ,
-                                    &tObjectPos );
-
-            dRes = sqrt ( tObjectPos.x * tObjectPos.x +
-                          tObjectPos.y * tObjectPos.y );
-
-            deviation [ iIndex ] [ i ] = tObjectPos ;
-            distance  [ iIndex ] [ i ] = dRes       ;
-
-
-            printf ( "DGB : SV : iIndex = %d, i = %d, x = %f, y = %f, dRes %f , algn = %f \n",
-                     iIndex            ,
-                     i                 ,
-                     tObjectPos.x      ,
-                     tObjectPos.y      ,
-                     dRes              ,
-                     align [ iIndex ]  );
-
-          } // for ( i
-
-          if ( ( distance  [ iIndex ] [ 0 ] >= distance  [ iIndex ] [ 1 ] ) &&
-               ( distance  [ iIndex ] [ 1 ] <= distance  [ iIndex ] [ 2 ] ) )
-            {
-              printf ( "DBG : SV : Initial align - best fit on 1 - index %d ok.\n", iIndex );
-              bestFitDone [ iIndex ] = 1 ;
-            } else if ( distance  [ iIndex ] [ 1 ] <  distance  [ iIndex ] [ 2 ] )
-            {
-              printf ( "DBG : SV : Initial align - worse on 2 - index %d ok.\n", iIndex );
-              bestFitDone [ iIndex ] = 1 ;
-            } else
-            {
-              printf ( "DBG : SV : Initial align - Shifting in a new line from trajectory file.\n" );
-              trajs [ iIndex ] [ 0 ] = trajs [ iIndex ] [ 1 ];
-              trajs [ iIndex ] [ 1 ] = trajs [ iIndex ] [ 2 ];
-
-              bFileLine_p [ iIndex ] = bFileLine [ iIndex ] [ 2 ];
-              len = sizeof(bFileLine [ iIndex ] [ 2 ]);
-              bzero ( &bFileLine [ iIndex ] [ 2 ], len);
-              read = getline ( &bFileLine_p [ iIndex ] ,
-                               &len,
-                               fp [ iIndex ] );
-              printf ( "INF : SV : i = 2 , s = %s",
-                       bFileLine [ iIndex ] [ 2 ] );
-
-              sscanf ( &bFileLine [ iIndex ] [ 2 ] [ 5 ],
-                       "%f;%lf;%lf;%lf;%f;%f;",
-                       &time ,
-                       &x    ,
-                       &y    ,
-                       &z    ,
-                       &hdg  ,
-                       &vel  );
-
-              traj2ldm ( time  ,
-                         x     ,
-                         y     ,
-                         z     ,
-                         hdg   ,
-                         vel   ,
-                         &traj );
-
-              trajs [ iIndex ] [ 2 ].timestamp  = traj.timestamp ;
-              trajs [ iIndex ] [ 2 ].latitude   = traj.latitude  ;
-              trajs [ iIndex ] [ 2 ].longitude  = traj.longitude ;
-
-              for ( i = 0;
-                    i < 3;
-                    i++ )
-                {
-                  printf ( "DBG : SV : %d %d : t %" PRIu64 ", lat %d, lon %d \n",
-                           iIndex ,
-                           i      ,
-                           trajs [ iIndex ] [ i ].timestamp ,
-                           trajs [ iIndex ] [ i ].latitude  ,
-                           trajs [ iIndex ] [ i ].longitude );
-                } // for
-            } // if ... else ..
-        } // while ( bestFitDone
-
-        /* Check to see if all nbr_objects has been aligned & correlated */
-
-        doInitialAlignmentLoop = 0;
-
-        for ( jIndex = 0           ;
-              jIndex < nbr_objects ;
-              ++jIndex             )
+        if ( doInitialAlignmentLoop == 1 )
           {
-            printf ( "DBG : SV : Initial align - bestFitDone index %d ok = %d.\n",
-                     jIndex,
-                     bestFitDone [ jIndex ] );
-            if ( bestFitDone [ jIndex ] == 0 ) doInitialAlignmentLoop = 1;
-          }
+#ifdef DEBUG
+            printf ( "DBG : SV : Rec MON : i %d : t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
+                     iIndex                 ,
+                     monitor.timestamp      ,
+                     monitor.latitude       ,
+                     monitor.longitude      ,
+                     monitor.altitude       ,
+                     monitor.speed          ,
+                     monitor.heading        ,
+                     monitor.drivedirection );
+            fflush(stdout);
+#endif
 
-        if ( doInitialAlignmentLoop == 0 )
-          {
-            gettimeofday ( &tv, NULL );
-            msSinceEpochETSI = (uint64_t) tv.tv_sec * 1000 + (uint64_t) tv.tv_usec / 1000 -
-              MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
+            while ( bestFitDone [ iIndex ] == 0 )
+              {
+                printf ( "DBG : SV : Align object id  %d \n",
+                         iIndex );
 
-            printf ( "DBG : SV : Initial align - all index ok.\n" );
-            printf ( "DBG : SV : Initial align - SV  time %" PRIu64 ".\n", msSinceEpochETSI  );
-            printf ( "DBG : SV : Initial align - MON time %" PRIu64 ".\n", monitor.timestamp );
+                /* Calculate deviation (devPos) per buffer : 0 1 2 */
+
+                for ( i = 0 ;
+                      i < 3 ;
+                      i++   )
+                  {
+                    dP1Lat  = (double) trajs [ iIndex ] [ i ].latitude  / 10000000;
+                    dP1Long = (double) trajs [ iIndex ] [ i ].longitude / 10000000;
+
+                    dP2Lat  = (double) latitude  / 10000000;
+                    dP2Long = (double) longitude / 10000000;
+
+                    dLat  = dP1Lat  - dP2Lat;
+                    dLong = dP1Long - dP2Long;
+
+#ifdef DEBUG1
+                    printf ( "DGB : SV : iIndex = %d, dP1Lat = %f, dP1Long = %f\n                       dP2Lat = %f, dP2Long = %f\n                       dLat   = %f,  dLong   = %f\n", */
+                             iIndex  ,
+                             dP1Lat  ,
+                             dP1Long ,
+                             dP2Lat  ,
+                             dP2Long ,
+                             dLat    ,
+                             dLong   );
+#endif
+
+                    tObjectPos.x = 0;
+                    tObjectPos.y = 0;
+
+                    UtilCalcPositionDelta ( dP1Lat  ,
+                                            dP1Long ,
+                                            dP2Lat  ,
+                                            dP2Long ,
+                                            &tObjectPos );
+
+                    devPos = sqrt ( tObjectPos.x * tObjectPos.x +
+                                    tObjectPos.y * tObjectPos.y );
+
+                    deviation [ iIndex ] [ i ] = tObjectPos ;
+                    distance  [ iIndex ] [ i ] = devPos     ;
+
+#ifdef DEBUG1
+                    printf ( "DGB : SV : iIndex = %d, i = %d, x = %f, y = %f, devPos %f , algn = %f \n",
+                             iIndex            ,
+                             i                 ,
+                             tObjectPos.x      ,
+                             tObjectPos.y      ,
+                             devPos            ,
+                             align [ iIndex ]  );
+#endif
+
+                  } // for ( i
+
+
+                if ( ( distance  [ iIndex ] [ 0 ] >= distance  [ iIndex ] [ 1 ] ) &&
+                     ( distance  [ iIndex ] [ 1 ] <= distance  [ iIndex ] [ 2 ] ) )
+                  {
+                    printf ( "DBG : SV : Initial align - Best fit on 1 - index %d ok.\n", iIndex );
+
+                    bestFitDone [ iIndex ] = 1 ;
+                  } else if ( distance  [ iIndex ] [ 1 ] <  distance  [ iIndex ] [ 2 ] )
+                  {
+                    printf ( "DBG : SV : Initial align - Worse on 2 - index %d ok.\n", iIndex );
+
+                    bestFitDone [ iIndex ] = 1 ;
+                  } else
+                  {
+                    printf ( "DBG : SV : Initial align - Shifting in a new line from trajectory file.\n" );
+
+                    trajs [ iIndex ] [ 0 ] = trajs [ iIndex ] [ 1 ];
+                    trajs [ iIndex ] [ 1 ] = trajs [ iIndex ] [ 2 ];
+
+                    bFileLine_p [ iIndex ] = bFileLine [ iIndex ] [ 2 ];
+                    len = sizeof(bFileLine [ iIndex ] [ 2 ]);
+                    bzero ( &bFileLine [ iIndex ] [ 2 ], len);
+                    read = getline ( &bFileLine_p [ iIndex ] ,
+                                     &len,
+                                     fp [ iIndex ] );
+                    printf ( "INF : SV : i = 2 , s = %s",
+                             bFileLine [ iIndex ] [ 2 ] );
+
+                    sscanf ( &bFileLine [ iIndex ] [ 2 ] [ 5 ],
+                             "%f;%lf;%lf;%lf;%f;%f;",
+                             &time ,
+                             &x    ,
+                             &y    ,
+                             &z    ,
+                             &hdg  ,
+                             &vel  );
+
+                    traj2ldm ( time  ,
+                               x     ,
+                               y     ,
+                               z     ,
+                               hdg   ,
+                               vel   ,
+                               &traj );
+
+                    trajs [ iIndex ] [ 2 ].timestamp  = traj.timestamp ;
+                    trajs [ iIndex ] [ 2 ].latitude   = traj.latitude  ;
+                    trajs [ iIndex ] [ 2 ].longitude  = traj.longitude ;
+
+                    for ( i = 0;
+                          i < 3;
+                          i++ )
+                      {
+                        printf ( "DBG : SV : trajs : %d %d : t %" PRIu64 ", lat %d, lon %d \n",
+                                 iIndex ,
+                                 i      ,
+                                 trajs [ iIndex ] [ i ].timestamp ,
+                                 trajs [ iIndex ] [ i ].latitude  ,
+                                 trajs [ iIndex ] [ i ].longitude );
+                      } // for
+
+                  } // if ... else ..
+
+              } // while ( bestFitDone
+
+
+            /* Check to see if all nbr_objects has been aligned & correlated */
+
+            doInitialAlignmentLoop = 0;
 
             for ( jIndex = 0           ;
                   jIndex < nbr_objects ;
                   ++jIndex             )
               {
-                printf ( "DBG : SV : Initial align - index %d  1.time = %" PRIu64 " .\n",
+                printf ( "DBG : SV : Initial align - bestFitDone index %d ok = %d.\n",
                          jIndex,
-                         trajs [ jIndex ] [ 1 ].timestamp );
+                         bestFitDone [ jIndex ] );
+                if ( bestFitDone [ jIndex ] == 0 ) doInitialAlignmentLoop = 1;
               }
-          }
-
-      } // if ( doInitialAlignmentLoop
 
 
-      /*------------------------------------------------------------
-        --
-        ------------------------------------------------------------*/
+            /*  Finished aligning all objects, just print status. */
 
-      else if ( doCorrelationtLoop == 1 ) {
+            if ( doInitialAlignmentLoop == 0 )
+              {
+                gettimeofday ( &tv, NULL );
+                msSinceEpochETSI =
+                  (uint64_t) tv.tv_sec  * 1000 +
+                  (uint64_t) tv.tv_usec / 1000 -
+                  MS_FROM_1970_TO_2004_NO_LEAP_SECS +
+                  DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
 
-        /* Start correlating */
+                printf ( "DBG : SV : Initial align - all index ok.\n" );
+                printf ( "DBG : SV : Initial align - SV  time %" PRIu64 ".\n", msSinceEpochETSI  );
+                printf ( "DBG : SV : Initial align - MON time %" PRIu64 ".\n", monitor.timestamp );
 
-        /* printf ( "DBG : SV : Correlate object id  %d \n", */
-        /*            iIndex ); */
+                for ( jIndex = 0           ;
+                      jIndex < nbr_objects ;
+                      ++jIndex             )
+                  {
+                    printf ( "DBG : SV : Initial align - index %d  1.time = %" PRIu64 " .\n",
+                             jIndex,
+                             trajs [ jIndex ] [ 1 ].timestamp );
+                  }
+              }
 
-        ldm [ iIndex ][ ldm_act_step [ iIndex ] ] = monitor;
+          } // if ( doInitialAlignmentLoop
 
-        ldm_act_step[iIndex] = ++ldm_act_step[iIndex] % LDM_SIZE;
 
-        /* #ifdef DEBUG */
-        /*          printf ( "DBG : SV : i %d, s %d: t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n", */
-        /*                   iIndex                                                    , */
-        /*                   ldm_act_step [ iIndex ]                                   , */
-        /*                   ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].timestamp      , */
-        /*                   ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].latitude       , */
-        /*                   ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].longitude      , */
-        /*                   ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].altitude       , */
-        /*                   ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].speed          , */
-        /*                   ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].heading        , */
-        /*                   ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].drivedirection ); */
-        /*          fflush(stdout); */
-        /* #endif */
+        /*------------------------------------------------------------
+          -- Supervision loop.
+          ------------------------------------------------------------*/
 
-        /* Check if passing line */
-        /* just kept for info, shall be removed - from here
-
-           bzero(pcTempBuffer,512);
-           (void) iUtilGetParaConfFile("OrigoLatidude=", pcTempBuffer);
-           sscanf(pcTempBuffer, "%lf", &dP1Lat);
-
-           bzero(pcTempBuffer,512);
-           (void) iUtilGetParaConfFile("OrigoLongitude=", pcTempBuffer);
-           sscanf(pcTempBuffer, "%lf", &dP1Long);
-
-           dP2Lat  = (double) latitude  / 10000000;
-           dP2Long = (double) longitude / 10000000;
-
-           UtilCalcPositionDelta ( dP1Lat  ,
-           dP1Long ,
-           dP2Lat  ,
-           dP2Long ,
-           &tObjectPos );
-
-           dRes = sqrt((x-tObjectPos.x)*(x-tObjectPos.x)+(y-tObjectPos.y)*(y-tObjectPos.y));
-
-           shall be removed - from here to this */
-
-#ifdef DEBUG
-        //         printf ("INF : Object position latitude: %lf longitude: %lf \n",dP2Lat, dP2Long);
-        //         printf ("INF : Origo position latitude: %lf longitude: %lf \n",dP1Lat, dP1Long);
-        //         printf ("INF : Calculated value x: %lf y: %lf \n",tObjectPos.x, tObjectPos.y);
-        fflush(stdout);
+        else if ( doCorrelationtLoop == 1 )
+          {
+#ifdef DEBUG1
+            printf ( "INF : SV : Recieved MONITOR message: %s\n",
+                     cpBuffer );
+            printf ( "DBG : SV : Correlate object id  %d \n",
+                     iIndex );
+            fflush(stdout);
 #endif
 
-        /* Check timestamp from MON against trajectory file and then correlate distance */
+            ldm [ iIndex ][ ldm_act_step [ iIndex ] ] = monitor;
 
-        dRes      = 0.0 ;
-        trajIndex = -1  ;
+#ifdef DEBUG1
+            printf ( "DBG : SV : i %d, s %d: t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
+                     iIndex                                                    ,
+                     ldm_act_step [ iIndex ]                                   ,
+                     ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].timestamp      ,
+                     ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].latitude       ,
+                     ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].longitude      ,
+                     ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].altitude       ,
+                     ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].speed          ,
+                     ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].heading        ,
+                     ldm [ iIndex ] [ ldm_act_step [ iIndex ] ].drivedirection );
+            fflush(stdout);
+#endif
 
-        for ( i = 0 ;
-              i < 3 ;
-              i++   ) {
-          if ( abs ( trajs [ iIndex ] [i].timestamp - monitor.timestamp ) <= 1 ) {
+            ldm_act_step [ iIndex ] = ++ldm_act_step [ iIndex ] % LDM_SIZE;
 
-            trajIndex = i;
 
-            /* printf ( "DBG : SV : Correlate object %d timestamp at index %d, tt = %" PRIu64 " & tm = %" PRIu64 " \n", */
-            /*          iIndex                         , */
-            /*          i                              , */
-            /*          trajs [ iIndex ] [i].timestamp , */
-            /*          monitor.timestamp */
-            /*          ); */
+            /* >>> just kept for info, shall be removed - from here
 
-            dP1Lat  = (double) trajs [ iIndex ] [ trajIndex ].latitude  / 10000000;
-            dP1Long = (double) trajs [ iIndex ] [ trajIndex ].longitude / 10000000;
+               Check if passing line
 
-            dP2Lat  = (double) monitor.latitude  / 10000000;
-            dP2Long = (double) monitor.longitude / 10000000;
+               bzero(pcTempBuffer,512);
+               (void) iUtilGetParaConfFile("OrigoLatidude=", pcTempBuffer);
+               sscanf(pcTempBuffer, "%lf", &dP1Lat);
 
-            dLat  = dP1Lat  - dP2Lat;
-            dLong = dP1Long - dP2Long;
+               bzero(pcTempBuffer,512);
+               (void) iUtilGetParaConfFile("OrigoLongitude=", pcTempBuffer);
+               sscanf(pcTempBuffer, "%lf", &dP1Long);
 
-            /* printf ( "DGB : SV : iIndex = %d, dP1Lat = %f, dP1Long = %f\n                       dP2Lat = %f, dP2Long = %f\n                       dLat   = %f,  dLong   = %f\n", */
-            /*          iIndex  , */
-            /*          dP1Lat  , */
-            /*          dP1Long , */
-            /*          dP2Lat  , */
-            /*          dP2Long , */
-            /*          dLat    , */
-            /*          dLong   ); */
+               dP2Lat  = (double) latitude  / 10000000;
+               dP2Long = (double) longitude / 10000000;
 
-            tObjectPos.x = 0;
-            tObjectPos.y = 0;
+               UtilCalcPositionDelta ( dP1Lat  ,
+               dP1Long ,
+               dP2Lat  ,
+               dP2Long ,
+               &tObjectPos );
 
-            UtilCalcPositionDelta ( dP1Lat  ,
-                                    dP1Long ,
-                                    dP2Lat  ,
-                                    dP2Long ,
-                                    &tObjectPos );
+               devPos = sqrt((x-tObjectPos.x)*(x-tObjectPos.x)+(y-tObjectPos.y)*(y-tObjectPos.y));
 
-            dRes = sqrt ( tObjectPos.x * tObjectPos.x +
-                          tObjectPos.y * tObjectPos.y );
 
-            /* printf ( "DGB : SV : iIndex = %d, i = %d, x = %f, y = %f, dRes %f \n", */
-            /*          iIndex            , */
-            /*          trajIndex         , */
-            /*          tObjectPos.x      , */
-            /*          tObjectPos.y      , */
-            /*          dRes              ); */
+               printf ("INF : Object position latitude: %lf longitude: %lf \n",dP2Lat, dP2Long);
+               printf ("INF : Origo position latitude: %lf longitude: %lf \n",dP1Lat, dP1Long);
+               printf ("INF : Calculated value x: %lf y: %lf \n",tObjectPos.x, tObjectPos.y);
+               fflush(stdout);
 
-          } //if ( trajs [ iIndex ] [i].timestamp == monitor.timestamp
+               <<< shall be removed - from here to this */
 
-        } // for
 
-        if ( trajIndex != -1 ) {
+            devPos                 = 0.0 ;
+            bestFitDone [ iIndex ] = 0 ;
 
-          /* printf ( "DBG : SV : Shifting in a new line from trajectory file.\n" ); */
+            while ( bestFitDone [ iIndex ] == 0 )
+              {
+                /* Calculate deviation (devPos) per buffer : 0 1 2 */
 
-          for ( i = 0;
-                i < 2;
-                i++ ) {
-            trajs     [ iIndex ] [ i ] = trajs     [ iIndex ] [ i + 1 ];
-          }
+                for ( i = 0 ;
+                      i < 3 ;
+                      i++   )
+                  {
+                    dP1Long = (double) trajs [ iIndex ] [ i ].longitude / 10000000;
 
-          bFileLine_p [ iIndex ] = bFileLine [ iIndex ] [ 2 ];
-          len = sizeof(bFileLine [ iIndex ] [ 2 ]);
-          bzero ( &bFileLine [ iIndex ] [ 2 ], len);
-          read = getline ( &bFileLine_p [ iIndex ] , &len, fp [ iIndex ] );
-          /* printf ( "INF : SV : i = %d , line n = %ld \n -- s = %s", */
-          /*          2, */
-          /*          (ssize_t) len, */
-          /*          bFileLine [ iIndex ] [ 2 ]); */
+                    dP2Lat  = (double) monitor.latitude  / 10000000;
+                    dP2Long = (double) monitor.longitude / 10000000;
 
-          sscanf ( &bFileLine [ iIndex ] [ 2 ] [5],
-                   "%f;%lf;%lf;%lf;%f;%f;",
-                   &time ,
-                   &x    ,
-                   &y    ,
-                   &z    ,
-                   &hdg  ,
-                   &vel  );
+                    dLat  = dP1Lat  - dP2Lat;
+                    dLong = dP1Long - dP2Long;
 
-          /* printf ("DBG : SV : file : t %f, x %lf, y %lf, z %lf, h %f, v %f\n", */
-          /*         time , */
-          /*         x    , */
-          /*         y    , */
-          /*         z    , */
-          /*         hdg  , */
-          /*         vel  ); */
+#ifdef DEBUG1
+                    printf ( "DGB : SV : iIndex = %d, dP1Lat = %f, dP1Long = %f\n                       dP2Lat = %f, dP2Long = %f\n                       dLat   = %f,  dLong   = %f\n",
+                             iIndex  ,
+                             dP1Lat  ,
+                             dP1Long ,
+                             dP2Lat  ,
+                             dP2Long ,
+                             dLat    ,
+                             dLong   );
+#endif
 
-          traj2ldm ( time  ,
-                     x     ,
-                     y     ,
-                     z     ,
-                     hdg   ,
-                     vel   ,
-                     &traj );
+                    tObjectPos.x = 0;
+                    tObjectPos.y = 0;
 
-          trajs [ iIndex ] [ 2 ].timestamp  = traj.timestamp ;
-          trajs [ iIndex ] [ 2 ].latitude   = traj.latitude  ;
-          trajs [ iIndex ] [ 2 ].longitude  = traj.longitude ;
+                    UtilCalcPositionDelta ( dP1Lat  ,
+                                            dP1Long ,
+                                            dP2Lat  ,
+                                            dP2Long ,
+                                            &tObjectPos );
 
-          for ( i = 0;
-                i < 3;
-                i++ ) {
-            /* printf ( "DBG : SV : trajs : %d %d : t %" PRIu64 ", lat %d, lon %d \n", */
-            /*          iIndex , */
-            /*          i      , */
-            /*          trajs [ iIndex ] [ i ].timestamp , */
-            /*          trajs [ iIndex ] [ i ].latitude  , */
-            /*          trajs [ iIndex ] [ i ].longitude ); */
-          }
+                    devPos = sqrt ( tObjectPos.x * tObjectPos.x +
+                                    tObjectPos.y * tObjectPos.y );
 
-          if ( dRes > SAFETY_MARGIN ) {
-            /* printf ("INF : SV : Sending ABORT.\n"); */
-            /* fflush(stdout); */
-            // (void)iCommSend(COMM_ABORT,NULL);
-          }
+                    deviation [ iIndex ] [ i ] = tObjectPos ;
+                    distance  [ iIndex ] [ i ] = devPos     ;
 
-        } // if ( trajIndex /= -1 )
+#ifdef DEBUG1
+                    printf ( "DGB : SV : iIndex = %d, i = %d, x = %f, y = %f, devPos %f \n",
+                             iIndex            ,
+                             trajIndex         ,
+                             tObjectPos.x      ,
+                             tObjectPos.y      ,
+                             devPos            );
+#endif
 
-        else {
+                  } // for ( i
 
-          /* printf ( "ERR : SV :Sending ABORT. Could not correlate object with iIndex = %d \n", */
-          /*          iIndex ); */
-          // (void)iCommSend(COMM_ABORT,NULL);
-        }
+              } // while ( bestFitDone
 
-      } // if ( doInitialAlignmentLoop == 1) .. else if (doCorrelationtLoop
+            if ( devPos > SAFETY_MARGIN_POS ||
+                 devTim > SAFETY_MARGIN_TIM   )
+              {
+                /* printf ("INF : SV : Sending ABORT.\n"); */
+                /* fflush(stdout); */
+                // (void) iCommSend ( COMM_ABORT, NULL );
+              }
 
-    } // if ( iCommand == COMM_MONI
+          } // if ( doInitialAlignmentLoop == 1 ) .. else if ( doCorrelationtLoop
+
+      } // if ( iCommand == COMM_MONI
 
 
     /*--------------------------------------------------
       --  REPLAY
       --------------------------------------------------*/
 
-    else if ( iCommand == COMM_REPLAY ) {
+    else if ( iCommand == COMM_REPLAY )
+      {
 
-      /* printf ( "INF : SV : Received REPLAY message: %s\n", */
-      /*          cpBuffer ); */
+        /* printf ( "INF : SV : Received REPLAY message: %s\n", */
+        /*          cpBuffer ); */
 
-    }
+      }
 
 
     /*--------------------------------------------------
       --  EXIT
       --------------------------------------------------*/
 
-    else if ( iCommand == COMM_EXIT ) {
+    else if ( iCommand == COMM_EXIT )
+      {
 
-      printf ( "INF : SV : Received EXIT message: %s\n",
-               cpBuffer );
+        printf ( "INF : SV : Received EXIT message: %s\n",
+                 cpBuffer );
 
-      iExit = 1;
+        iExit = 1;
 
-    }
+      }
 
 
     /*--------------------------------------------------
       --  ??
       --------------------------------------------------*/
 
-    else {
-
-      printf ( "INF : SV : Unhandled command.\n" );
-      fflush(stdout);
-
-    }
+    else
+      {
+        printf ( "INF : SV : Unhandled command.\n" );
+        printf ( "INF : SV : Received  command: %s\n",
+                 cpBuffer );
+        fflush(stdout);
+      }
 
   } // while(!iExit)
 
