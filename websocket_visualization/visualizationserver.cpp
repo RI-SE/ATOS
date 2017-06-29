@@ -61,8 +61,9 @@ void VisualizationServer::run()
 {
     int iCommand;
     char cpBuffer[100];
+    bool boExit = false;
 
-    while(true)
+    while(!boExit)
     {
         bzero(cpBuffer,100);
         (void)iCommRecv(&iCommand,cpBuffer,100);
@@ -71,6 +72,10 @@ void VisualizationServer::run()
         {
             QString qsTemp(cpBuffer);
             emit sendTextMessage(qsTemp);
+        }
+        else if(iCommand == COMM_EXIT)
+        {
+            boExit = true;
         }
     }
 }

@@ -453,7 +453,7 @@ void objectcontrol_task()
         #ifdef BYTEBASED
             ObjectControlMONRToASCII(buffer, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 1);
             bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
-            strcat(buffer, "MONR;"); strcat(buffer,Id); strcat(buffer,";"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
+            strcat(buffer,Id); strcat(buffer,";"); strcat(buffer, "0"); strcat(buffer,";"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
             strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
             strcat(buffer,DriveDirection); strcat(buffer,";"); //strcat(pcBuffer,StatusFlag); strcat(pcBuffer,";");
 
@@ -473,8 +473,8 @@ void objectcontrol_task()
                 if(OP[iIndex].BestFoundTrajectoryIndex >= 0)
                 {  
                   //TimeToSyncPoint = (UtilCalculateTimeToSync(&OP[iIndex]) - ((((double)CurrentTimeU64-(double)StartTimeU64)/1000) - OP[iIndex].TimeArr[OP[iIndex].BestFoundTrajectoryIndex]));
-                  UtilCalculateTimeToSync(&OP[iIndex]);
-                  TimeToSyncPoint = OP[iIndex].TimeToSyncPoint - (((double)CurrentTimeU64-(double)StartTimeU64)/1000);
+                  TimeToSyncPoint = UtilCalculateTimeToSync(&OP[iIndex]);
+                  //TimeToSyncPoint = OP[iIndex].TimeToSyncPoint - (((double)CurrentTimeU64-(double)StartTimeU64)/1000);
                   if(atoi(Timestamp)%50 == 0) printf("Time to sync= %3.3f\n", TimeToSyncPoint);
                   if(TimeToSyncPoint > 0) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)(TimeToSyncPoint*1000);
                   else MasterTimeToSyncPointU64 = 0;
