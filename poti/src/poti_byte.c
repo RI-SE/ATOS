@@ -65,7 +65,7 @@
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
-//GPS
+//GPS data fields from NMEA
 char nmea_msg[20]              = "N/A";
 char utc[20]                   = "N/A";
 char status[20]                = "N/A";
@@ -114,17 +114,11 @@ void getField(char* buffer, int index)
 
 int main(int argc, char *argv[])
 {
-  FILE *fp;
-  char bFileName[6];
-  char *bFileLine;
   size_t len;
-  //int read;
   int monitor_socket_fd;
   int command_server_socket_fd;
   int command_com_socket_fd;
   int n;
-  int pid;
-  int fpos;
   socklen_t cli_length;
   struct sockaddr_in monitor_server_addr;
   struct sockaddr_in monitor_from_addr_temp;
@@ -136,17 +130,11 @@ int main(int argc, char *argv[])
   char bMonitorBuffer[29];
   struct timespec sleep_time;
   struct timespec ref_time;
-   double lat_start = ORIGIN_LATITUDE;
+  double lat_start = ORIGIN_LATITUDE;
   double lon_start = ORIGIN_LONGITUDE;
   double alt_start = ORIGIN_ALTITUDE;
   useconds_t loop_delay = 10000;
-  char pcTimeString[15];
   char *ret = NULL;
-  char bCurrentCommand[10] = "NOOP"; 
-  const char bEndDOPM[10]= "ENDDOPM";
-  const char bEndTRIG[10]= "ENDTRIG";
-  char bData[DATALEN];
-  int newFileData = 0;
   int result = 0;
   float   time;
   unsigned int safety_port = SAFETY_CHANNEL_PORT;
@@ -258,15 +246,6 @@ int main(int argc, char *argv[])
   /* set socket to non-blocking */
   (void)fcntl(sd, F_SETFL, fcntl(sd, F_GETFL, 0) | O_NONBLOCK);
 
-
-  /* Open a drive file */
-  sprintf(bFileName,"%d",safety_port);
-  fp = fopen(bFileName, "w+");
-  if (fp == NULL)
-    {
-      perror("ERR: Failed to create local drive file");
-      exit(1);
-    }
 
   /* Init monitor socket */
 #ifdef DEBUG
@@ -430,23 +409,9 @@ int main(int argc, char *argv[])
 
       if(receivedNewData)
 	{
-#ifdef DEBUG
-	  //printf("INF: Received from RTK: %s \n", buffer);
-	  //fflush(stdout);
-#endif
-
-#ifdef DEBUG
-	  //printf("INF: workingBuffer before strncat: %s \n", workingBuffer);
-	  //fflush(stdout);
-#endif
 
 	  (void)strncat(&workingBuffer[nbrOfBytesLeft],buffer,RTK_RECV_BUFFER);
 	  iWorkbufferSize = strlen(workingBuffer);
-
-#ifdef DEBUG
-	  //printf("INF: workingBuffer after strncat: %s \n", workingBuffer);
-	  //fflush(stdout);
-#endif
 
 	  /* loop until message has been parsed */
 	  int i = 0;
@@ -471,11 +436,6 @@ int main(int argc, char *argv[])
 		  nbrOfBytesLeft = iWorkbufferSize-i;
 
 		  sentence[k] = '\0';
-
-#ifdef DEBUG
-		  //printf("INF: Message to handle: %s \n", sentence);
-		  //fflush(stdout);
-#endif
 
 		  getField(nmea_msg, 0);
 		  if (strcmp(nmea_msg, "$GPRMC") == 0) 
@@ -513,6 +473,7 @@ int main(int argc, char *argv[])
 		      getField(hdop, 5);
 		      getField(vdop, 6);
 		    }
+		  /* Convert from NMEA to ETSI format */
 		  etsi_lat          = ConvertLatitudeNMEAtoETSICDD(latitude, northsouth, status);
 		  etsi_lon          = ConvertLongitudeNMEAtoETSICDD(longitude, eastwest, status);
 		  etsi_speed        = ConvertSpeedValueNMEAtoETSICDD(gps_speed, status);
@@ -523,10 +484,6 @@ int main(int argc, char *argv[])
 		}
 	    }
     
-#ifdef DEBUG
-	  //printf("INF: nbrOfBytesLeft iWorkbufferSize i: %d %d %d \n", nbrOfBytesLeft,iWorkbufferSize,i);
-	  //fflush(stdout);
-#endif
 
 	  /* Copy bytes to beginning */
 	  if(nbrOfBytesLeft != 0)
@@ -542,7 +499,7 @@ int main(int argc, char *argv[])
 	      iWorkbufferSize = 0;
 	    }
 	}
-
+      /* Convert to byte-based format */
       bzero(bMonitorBuffer, 256);
       bMonitorBuffer[0] = (uint8_t) ((0x06 >> 0) & 0xFF);
       bMonitorBuffer[1] = (uint8_t) ((0x00 >> 24) & 0xFF);
@@ -600,7 +557,6 @@ int main(int argc, char *argv[])
   close(monitor_socket_fd);
   close(command_com_socket_fd);
   close(sd);
-  fclose(fp);
 
   return 0;
 }

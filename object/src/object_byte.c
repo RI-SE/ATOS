@@ -175,13 +175,16 @@ int32_t main(int32_t argc, int8_t *argv[])
   
   struct timeval tv;
 
+  /* For ctrl-c based interrupt */
   signal(SIGINT, intHandler);
-  
+
+  /* Check the number of supplied agruments */
   if ( !( (argc == 1) || (argc == 4) || (argc == 6))){
     perror("Please use 0, 3, or 5 arguments: object <lat,lon,alt><safety port,control port>");
     exit(1);
   }
-  
+
+  /* Use start latitude, longitude, and altitude if supplied */
   if (argc > 1){
     lat_start = atof(argv[1]);
     lon_start = atof(argv[2]);
@@ -191,7 +194,9 @@ int32_t main(int32_t argc, int8_t *argv[])
 #ifdef DEBUG
   printf("INF: Start point set to: lat:%.7lf lon:%.7lf alt:%f\n",lat_start,lon_start,alt_start);
 #endif
-  
+
+  /* Use different ports than default for safety (periodic) and control (event) msgs */
+  /* Used when several virtual object are run on the same machine */
   if (argc > 4){
     safety_port = atoi(argv[4]);
     control_port = atoi(argv[5]);
@@ -308,6 +313,7 @@ int32_t main(int32_t argc, int8_t *argv[])
   printf("INF: Received: <%s>\n", buffer);
 #endif
 
+  /* Run as long as ctrl-c not has been pressed (keepRunning = true) */
   while(keepRunning)
     {
       int32_t receivedNewData = 0;
@@ -351,12 +357,14 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      fflush(stdout);
 #endif
 
+	      /* This printout is for debugging, shall be removed */
 	      int k = 0;
 	      printf("Received data: ");
 	      for (k = 0; k < result; k++)
 	      	printf("%d:%x,",k,(uint8_t) buffer[k]);
 	      printf("\n");
 
+	      /* Check which command, all handled similarily except DOPM which is saved to disk since it can be very large */
 	      do
 		{
 		  if (commandSet == 0)
@@ -530,8 +538,8 @@ int32_t main(int32_t argc, int8_t *argv[])
 			 fwrite(&buffer[buffer_ptr], sizeof(buffer[buffer_ptr]), 1, fp);
 			 buffer_ptr++;
 			 handled_payload++;
-			 //printf("buffer_ptr: %d\n",buffer_ptr);
 		       }
+		     /* Debug printout, shall be removed */
 		     printf("buffer_ptr: %d, handled_payload: %d, payload: %d\n",buffer_ptr, handled_payload, payload);
 		   }
 		 
@@ -566,6 +574,7 @@ int32_t main(int32_t argc, int8_t *argv[])
       
       if ((msSinceEpochETSI >= start_time) && (handled_bytes < dopm_bytes) && (hb_flag == 1))
 	{
+	  /* Run drivefile */
 #ifdef DEBUG
 	  printf("INF: Bytes %d from drive file.\n", handled_bytes);
 #endif
@@ -573,9 +582,6 @@ int32_t main(int32_t argc, int8_t *argv[])
 	    cmd = ReadOneUByteFromFile(fp);
 	    size = ReadFourUBytesFromFile(fp);
 	    firstTime = 0;
-	    /* printf("c = %d (%x)\n", cmd, cmd);  */
-	    /* printf("s = %d (%x)\n", size, size); */
-	    /* printf("Bytes to read = %d\n",size); */
 	  }
 	  
 	  if (TimeBaseCount == TimeBase)
@@ -592,22 +598,24 @@ int32_t main(int32_t argc, int8_t *argv[])
 	      handled_bytes += 25;
 	    }
 
-
+	  /* Calculate lat, lon, and alt from xyz and origin */
 	  cal_lat = (((((double) by) / 1000) * 180) / (PI * earth_radius)) + (((double) origin_latitude) / 10000000);
 	  cal_lon = (((((double) bx) / 1000) * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * ((((double) origin_latitude) / 10000000)+cal_lat))))) + (((double) origin_longitude) / 10000000);
 	  cal_alt = (((double) bz) / 1000) + (((double) origin_altitude) / 100);
 
+	  /* Convert to byte format */
 	  blat = (uint32_t) (cal_lat * 10000000); 
 	  blon = (uint32_t) (cal_lon * 10000000); 
 	  balt = (uint32_t) (cal_alt * 100);
 	  mon_status = 0x2;
 	  bdd = 0x0;
 	  
-	  /* printf("%.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt);	   */
+	  /* Debug printout which shall be removed */
 	  printf("%d %d %d %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod,origin_latitude,origin_longitude,origin_altitude);
 	  
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
+	      /* Time from drivefile is only used during debugging */
 	      msSinceEpochETSI = btim;
 	    }
 	  else
@@ -620,6 +628,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	}
       else if ((handled_bytes >= dopm_bytes) || (hb_flag != 1))
 	{
+	  /* Drivefile completed */
 	  if (TIME_FROM_DRIVE_FILE)
 	    {
 	      msSinceEpochETSI = btim;
@@ -641,6 +650,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	}
       else
 	{
+	  /* Before drivefile, at start position */
 	  rewind(fp);
 	  if (firstTime == 1)
 	    {
@@ -674,18 +684,13 @@ int32_t main(int32_t argc, int8_t *argv[])
 	  cal_lon = (((((double) bx) / 1000) * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * ((((double) origin_latitude) / 10000000)+cal_lat))))) + (((double) origin_longitude) / 10000000);
 	  cal_alt = (((double) bz) / 1000) + (((double) origin_altitude) / 100);
 
-	  /* printf("olat: %d %.9lf olon: %d %.9lf\n",origin_latitude,(((double) origin_latitude) / 10000000),origin_longitude,(((double) origin_longitude) / 10000000)); */
-
 	  blat = (uint32_t) (cal_lat * 10000000); 
 	  blon = (uint32_t) (cal_lon * 10000000); 
 	  balt = (uint32_t) (cal_alt * 100);
 
-	  /* printf("Cal: %.9lf %.9lf %.9lf\n",cal_lat,cal_lon,cal_alt); */
-	  /* printf("Cal: bx: %.9lf by: %.9lf\n", (((double) bx) / 1000), (((double) by) / 1000)); */
-	  /* printf("Read3: %d %d %d %d %d %d %d %d %d %d\n",firstTime,btim,bx,by,bz,bhdg,bspd,bacc,bcur,mod); */
-	  /* printf("Sent: %d %d %d\n",blat,blon,balt); */
 	}
 
+      /* Add byte based data to MONR */
       bMonitorBuffer[0] = (uint8_t) ((0x06 >> 0) & 0xFF);
       bMonitorBuffer[1] = (uint8_t) ((0x00 >> 24) & 0xFF);
       bMonitorBuffer[2] = (uint8_t) ((0x00 >> 16) & 0xFF);
@@ -786,7 +791,7 @@ int32_t main(int32_t argc, int8_t *argv[])
 	break;
       default:
 #ifdef DEBUG
-	printf("INF: Unknown monitor server monitor message\n");
+	printf("INF: Unknown server monitor message\n");
 #endif
 	break;
       }      
@@ -803,6 +808,9 @@ int32_t main(int32_t argc, int8_t *argv[])
   
   return 0;
 }
+
+/* Support functions used to read unsigned or signed bytes of different lengths from a file */
+/* Used to read data from the byte-based drivefile which has been saved on disk */
 
 uint8_t ReadOneUByteFromFile(FILE *f){
   uint8_t data = 0;
