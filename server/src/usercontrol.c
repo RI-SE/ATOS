@@ -232,7 +232,7 @@ int main(int argc, char *argv[])
 					printf("Time: %ld\n",uiTime );
 
 					clock_gettime(CLOCK_MONOTONIC_RAW, &tTime);
-					uiTime = (uint64_t)tTime.tv_sec*1000 + (uint64_t)tTime.tv_nsec/1000000 - (uint64_t)MS_FROM_1970_TO_2004_NO_LEAP_SECS + (uint64_t)DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+					uiTime = (uint64_t)tTime.tv_sec*1000L + (uint64_t)tTime.tv_nsec/1000000L - (uint64_t)MS_FROM_1970_TO_2004_NO_LEAP_SECS + (uint64_t)DIFF_LEAP_SECONDS_UTC_ETSI*1000;
 					printf("Time: %lx\n",uiTime );
 					printf("Time: %ld\n",uiTime );
 
@@ -243,13 +243,14 @@ int main(int argc, char *argv[])
 	//				UtilCalcPositionDelta(57.6626302333,12.1056869167,57.6626269972, 12.1057250694, &OP);
 					//‭429.4967295‬
 					//57,7773716
-					UtilCalcPositionDelta(57.77737161,12.78046323,57.77737162,12.78046324, &OP);
+					UtilCalcPositionDelta(57.7773716086, 12.7804629583 ,57.7773716000, 12.7804629000, &OP);
+					//UtilCalcPositionDelta(57.7773716086, 12.7804629583 ,57.7782802000, 12.7807861000, &OP);
 					//UtilCalcPositionDelta(57.7773298066,12.7818834416,57.777329775, 12.7818832583, &OP);
 					//UtilCalcPositionDelta(57.7771230833333,12.78156473, 57.777711,12.780829, &OP);
 					//UtilCalcPositionDelta(57.777360,12.780472, 57.777711,12.780829, &OP);
 
 	//				UtilCalcPositionDelta(57.7773716086,12.7804629583,57.7773717086, 12.7804630583, &OP);
-					printf("p1(57.777125795, 12.781569353) -> p2(57.777156948, 12.781550638) => Calc d = %4.4f m, iterations = %d\n", OP.OrigoDistance, OP.CalcIterations);
+					printf("(57.7773716086, 12.7804629583 ,57.7773716000, 12.7804629000) => Calc d = %4.4f m, iterations = %d\n", OP.OrigoDistance, OP.CalcIterations);
 					printf("Latitude = %3.10f \n", OP.Latitude);
 					printf("Longitude = %3.10f\n", OP.Longitude);
 					printf("ForwardAzimuth1 = %3.10f \n", OP.ForwardAzimuth1);
@@ -282,8 +283,8 @@ int main(int argc, char *argv[])
 					if(CurrentCommandArgCount == CommandArgCount)
 					{
 						FILE *Trajfd;
-	  					Trajfd = fopen ("traj/192.168.0.17", "r");
-	    				OP.TrajectoryPositionCount = UtilCountFileRows(Trajfd) - 1;
+	  					Trajfd = fopen ("traj/192.168.0.16", "r");
+	    				OP.TrajectoryPositionCount = UtilCountFileRows(Trajfd) - 2;
 	    				float SpaceArr[OP.TrajectoryPositionCount];
 	    				float TimeArr[OP.TrajectoryPositionCount];
 	    				SpaceTime SpaceTimeArr[OP.TrajectoryPositionCount];
@@ -291,34 +292,67 @@ int main(int argc, char *argv[])
 	    				OP.SpaceArr = SpaceArr;
 						OP.TimeArr = TimeArr;
 						OP.SpaceTimeArr = SpaceTimeArr;
-						//UtilCalcPositionDelta(57.7773716086,12.7804629583, 57.7773620, 12.7819188, &OP); //1
-						UtilCalcPositionDelta(57.7773716086,12.7804629583,57.77743,12.7807153, &OP); //2
-						//UtilCalcPositionDelta(57.7773716086,12.7804629583,57.7776528,12.7812795, &OP); //3
-						//printf("OrigoDistance = %4.3f\n", OP.OrigoDistance);
+						double CurrentTime = 3.826;
+						UtilCalcPositionDelta(57.7773716086, 12.7804629583 ,57.7782782000, 12.7808594000, &OP); //2
+						printf("Calc d = %4.4f m, iterations = %d\n", OP.OrigoDistance, OP.CalcIterations);
+						printf("Latitude = %3.10f \n", OP.Latitude);
+						printf("Longitude = %3.10f\n", OP.Longitude);
+						printf("ForwardAzimuth1 = %3.10f \n", OP.ForwardAzimuth1);
+						printf("ForwardAzimuth2 = %3.10f\n", OP.ForwardAzimuth2);
+						printf("DeltaForwardAzimuth = %3.15f \n", OP.ForwardAzimuth1-OP.ForwardAzimuth2);
+						printf("x = %4.15lf\n", OP.x);
+						printf("y = %4.15lf\n", OP.y);
+
 						if(OP.OrigoDistance > -1)
 						{	
-							UtilPopulateSpaceTimeArr(&OP, "traj/192.168.0.17");
-							UtilSetSyncPoint(&OP, 57.0, 31.9, 0, 0.41);
+							UtilPopulateSpaceTimeArr(&OP, "traj/192.168.0.16");
+							UtilSetSyncPoint(&OP, 0, 0, 0, 11.4);
 							if (OP.SyncIndex > -1)
 							{
 								printf("Sync point found=%4.3f, Time=%4.3f, Index=%d\n", OP.SpaceArr[OP.SyncIndex], OP.TimeArr[OP.SyncIndex], OP.SyncIndex);
-								double CurrentTime = 0.11;				
-								//UtilFindCurrentTrajectoryPosition(&OP, 0, 30.9, 0.2);  //1
-								UtilFindCurrentTrajectoryPosition(&OP, 0, CurrentTime, 0.2);	//2
-								//UtilFindCurrentTrajectoryPosition(&OP, 0, 26.6, 0.2);	//3
+																
+								//Failed to find traj point... 1.183, 57.7773716086, 12.7804629583 ,57.7773716000, 12.7804629000
+								//Time to sync= 11.390, 1.234, 57.7773716086, 12.7804629583 ,57.7783191000, 12.7808307000, 1, 0, 1140
+
+								//Time to sync= 9.950, 3.430, 57.7773716086, 12.7804629583 ,57.7783037000, 12.7808414000, 145, 0, 1140
+								//Failed to find traj point... 3.452, 57.7773716086, 12.7804629583 ,57.7783034000, 12.7808416000, -1, 0, 1140
+
+								//Time to sync= -1.310, 7.713, 57.7773716086, 12.7804629583 ,57.7782233000, 12.7808983000, 1271, 0, 1140
+								
+								//Time to sync= 7.950, 7.647, 57.7773716086, 12.7804629583 ,57.7782209000, 12.7809000000, 345, 0, 1140
+								//Time to sync=-1.250, 7.670, 57.7773716086, 12.7804629583 ,57.7782204000, 12.7809003000, 1265, 0, 1140
+								//Time to sync= 7.930, 7.691, 57.7773716086, 12.7804629583 ,57.7782199000, 12.7809007000, 347, 0, 1140
+								//Failed to find traj point... 3.131, 57.7773716086, 12.7804629583 ,57.7783109000, 12.7808364000
+								//Failed to find traj point... 5.372, 57.7773716086, 12.7804629583 ,57.7782722000, 12.7808636000, -1, 0, 1140
+								//5.403, 57.7773716086, 12.7804629583 ,57.7782714000, 12.7808643000
+								//2.917, 57.7773716086, 12.7804629583 ,57.7783145000, 12.7808339000
+								//6.473, 57.7773716086, 12.7804629583 ,57.7782214000, 12.7808996000
+								//5.465, 57.7773716086, 12.7804629583 ,57.7782894000, 12.7808517000
+								//3.826, 57.7773716086, 12.7804629583 ,57.7782782000, 12.7808594000
+
+								UtilFindCurrentTrajectoryPosition(&OP, 0, CurrentTime, TRAJ_FIND_POSITION_THRESHOLD, 1);	//2
 								if(OP.BestFoundTrajectoryIndex > -1 && OP.SyncIndex > -1)
 								{	
-								    printf("Current origo distance=%4.3f m\n", OP.OrigoDistance);
+								    printf("\nCurrent origo distance=%4.3f m\n", OP.OrigoDistance);
 								    printf("Matched origo distance=%4.3f m\n", OP.SpaceArr[OP.BestFoundTrajectoryIndex]);
 								    printf("Distance error=%4.3f m\n", OP.OrigoDistance - OP.SpaceArr[OP.BestFoundTrajectoryIndex]);
 								    printf("Current time=%4.3f s\n", CurrentTime);
 								    printf("Expected time=%4.3f s (index=%d)\n", OP.TimeArr[OP.BestFoundTrajectoryIndex], OP.BestFoundTrajectoryIndex);
 								    printf("Time error=%4.3f s\n", CurrentTime - OP.TimeArr[OP.BestFoundTrajectoryIndex]);
-									printf("Time to sync point = %4.3f s\n", fabs(UtilCalculateTimeToSync(&OP) - (CurrentTime - OP.TimeArr[OP.BestFoundTrajectoryIndex]))); 
+									//printf("Time to sync point = %4.3f s\n", fabs(UtilCalculateTimeToSync(&OP) - (CurrentTime - OP.TimeArr[OP.BestFoundTrajectoryIndex]))); 
+									printf("Time to sync point = %4.3f\n", UtilCalculateTimeToSync(&OP)); 
 									printf("x=%4.3f m\n", OP.x);
 									printf("y=%4.3f m\n", OP.y);
-								} else printf("Failed to find current position in trajectory\n");
-							
+								} 
+				 				else if(OP.BestFoundTrajectoryIndex == -1) 
+				                {
+				                  printf("No trajectory position found.\n");
+				                }
+				                else if(OP.BestFoundTrajectoryIndex == -2)
+				                {
+				                  printf("Master not in time\n");
+				                }
+
 							} else printf("Failed to find sync point!\n");
 						} else printf("Distance calculation to origo failed to converge.\n");
 						UserControlResetInputVariables();

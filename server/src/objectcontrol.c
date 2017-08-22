@@ -174,6 +174,7 @@ void objectcontrol_task()
   char *MiscPtr;
   uint64_t StartTimeU64 = 0;
   uint64_t CurrentTimeU64 = 0;
+  uint64_t OldTimeU64 = 0;
   uint64_t MasterTimeToSyncPointU64 = 0;
   double TimeToSyncPoint = 0;
   struct timeval CurrentTimeStruct;
@@ -233,7 +234,11 @@ void objectcontrol_task()
     fd = fopen (ADAPTIVE_SYNC_POINT_CONF, "r");
     UtilReadLineCntSpecChars(fd, pcTempBuffer); //Read header   
     
-    for(i = 0; i < SyncPointCount; i++)  UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);      
+    for(i = 0; i < SyncPointCount; i++){
+
+      UtilSetAdaptiveSyncPoint(&ASP[i], fd, 1);      
+      if(TEST_SYNC_POINTS == 1) ASP[i].TestPort = SAFETY_CHANNEL_PORT;
+    }  
     fclose (fd);
   }
 #else
@@ -287,7 +292,7 @@ void objectcontrol_task()
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
                                 0); 
- 
+    printf("Address_name: %s, port: %d\n", object_address_name[iIndex] , object_tcp_port[iIndex]); 
     vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
 
 
@@ -311,6 +316,7 @@ void objectcontrol_task()
       vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
 
       /*Send DOPM data*/
+      printf("Trajfile: %s\n", object_traj_file[iIndex] ); 
       ObjectControlSendDOPMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], 0);
 
       /* Adaptive Sync Points...*/
@@ -322,7 +328,7 @@ void objectcontrol_task()
 
       for(i = 0; i < SyncPointCount; i++)
       {
-        if(TEST_SYNC_POINTS == 1 && iIndex != 0)
+        if(TEST_SYNC_POINTS == 1 && iIndex == 1)
         {
           /*Send SYPM to slave*/
           MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
@@ -352,16 +358,8 @@ void objectcontrol_task()
 
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
-    if(USE_TEST_HOST == 0)
-    {
-    vCreateSafetyChannel(object_address_name[iIndex],object_udp_port[iIndex],
-      &safety_socket_fd[iIndex],&safety_object_addr[iIndex]);
-    }
-    else if(USE_TEST_HOST == 1)
-    {
-    vCreateSafetyChannel(TESTSERVER_IP,object_udp_port[iIndex],
-      &safety_socket_fd[iIndex],&safety_object_addr[iIndex]);
-    }
+    if(USE_TEST_HOST == 0) vCreateSafetyChannel(object_address_name[iIndex], object_udp_port[iIndex], &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
+    else if(USE_TEST_HOST == 1) vCreateSafetyChannel(TESTSERVER_IP, object_udp_port[iIndex], &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
   }
 
   #ifdef DEBUG
@@ -412,7 +410,7 @@ void objectcontrol_task()
             #ifdef BYTEBASED
             for(i = 0; i < SyncPointCount; i++)
             {
-              if(TEST_SYNC_POINTS == 1 && iIndex != 0 && MasterTimeToSyncPointU64 != 0)
+              if(TEST_SYNC_POINTS == 1 && iIndex == 1 && MasterTimeToSyncPointU64 != 0 && OP[iIndex].BestFoundTrajectoryIndex > -1)
               {
                   /*Send Master time to adaptive sync point*/
                   MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
@@ -435,8 +433,8 @@ void objectcontrol_task()
       vRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
 
       #ifdef DEBUG
-      printf("INF: Did we recieve new data from %s %d: %d\n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData);
-       fflush(stdout);
+        printf("INF: Did we recieve new data from %s %d: %d\n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData);
+        fflush(stdout);
       #endif
 
       if(recievedNewData)
@@ -444,7 +442,8 @@ void objectcontrol_task()
 
       	gettimeofday(&CurrentTimeStruct, NULL);
         CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-
+        if(TIME_COMPENSATE_LAGING_VM) CurrentTimeU64 = CurrentTimeU64 - TIME_COMPENSATE_LAGING_VM_VAL;
+        
         #ifdef DEBUG
     	   printf("INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
          fflush(stdout);
@@ -457,28 +456,40 @@ void objectcontrol_task()
             strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
             strcat(buffer,DriveDirection); strcat(buffer,";"); //strcat(pcBuffer,StatusFlag); strcat(pcBuffer,";");
 
+            
             for(i = 0; i < SyncPointCount; i++)
             {
-              if(strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL /*&& iIndex == 0*/)
+              if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && StartTimeU64 > 0 && TimeToSyncPoint > -1 ||
+                  TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU64 > 0 && iIndex == 0 && TimeToSyncPoint > -1)
               {
 
                 UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
-                //printf("OrigoDistance = %3.5f\n", OP[iIndex].OrigoDistance );
-                //printf("Current time: %ld\n", CurrentTimeU64);
-                //printf("Current time: %ld\n", StartTimeU64);
-                //printf("Current time diff: %3.2f\n", (((double)CurrentTimeU64-(double)StartTimeU64)/1000));
-                SearchStartIndex = OP[iIndex].SpaceTimeFoundIndex - (int)fabs(OP[iIndex].DeltaOrigoDistance / TRAJ_RES) - TRAJ_STEP_BACK_INDEX;
-                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), TRAJ_FIND_POSITION_THRESHOLD);
+                if( OP[iIndex].BestFoundTrajectoryIndex == TRAJ_POSITION_NOT_FOUND ||
+                    OP[iIndex].BestFoundTrajectoryIndex == TRAJ_MASTER_LATE ) SearchStartIndex = 0;
+                else SearchStartIndex = OP[iIndex].SpaceTimeFoundIndex - TRAJ_STEP_BACK_INDEX;
+                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), TRAJ_FIND_POSITION_THRESHOLD, 0);
 
-                if(OP[iIndex].BestFoundTrajectoryIndex >= 0)
+                if(OP[iIndex].BestFoundTrajectoryIndex > TRAJ_POSITION_NOT_FOUND)
                 {  
-                  //TimeToSyncPoint = (UtilCalculateTimeToSync(&OP[iIndex]) - ((((double)CurrentTimeU64-(double)StartTimeU64)/1000) - OP[iIndex].TimeArr[OP[iIndex].BestFoundTrajectoryIndex]));
                   TimeToSyncPoint = UtilCalculateTimeToSync(&OP[iIndex]);
-                  //TimeToSyncPoint = OP[iIndex].TimeToSyncPoint - (((double)CurrentTimeU64-(double)StartTimeU64)/1000);
-                  if(atoi(Timestamp)%50 == 0) printf("Time to sync= %3.3f\n", TimeToSyncPoint);
+                  //if(atoi(Timestamp)%1 == 0)printf("TtS= %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n%3.10f, %d, %d, %d, %d\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, SearchStartIndex);
+                  if(atoi(Timestamp)%20 == 0)printf("TtS= %3.3f, %3.3f, %d, %d, %d\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex);
                   if(TimeToSyncPoint > 0) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)(TimeToSyncPoint*1000);
-                  else MasterTimeToSyncPointU64 = 0;
+                  else
+                  {
+                   MasterTimeToSyncPointU64 = 0;
+                   TimeToSyncPoint = -1;
+                  }                 
+                } 
+                else if(OP[iIndex].BestFoundTrajectoryIndex == TRAJ_POSITION_NOT_FOUND) 
+                {
+                  printf("TtS[no pos found] %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n%3.10f, %d, %d, %d, %d\n",TimeToSyncPoint,(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, SearchStartIndex);  
                 }
+                else if(OP[iIndex].BestFoundTrajectoryIndex == TRAJ_MASTER_LATE)
+                {
+                  printf("TtS[master late] %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n %3.10f, %d, %d, %d, %2.2f, %d\n",TimeToSyncPoint,(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, MAX_TIME_DIFF, SearchStartIndex);  
+                }
+                
                }
             }
 
@@ -546,6 +557,7 @@ void objectcontrol_task()
           strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
           StartTimeU64 = atol(Timestamp);
           MasterTimeToSyncPointU64 = 0;
+          TimeToSyncPoint = 0;
           MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTimeU64, 0);
         #else
           bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
@@ -1349,9 +1361,7 @@ static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNew
     } while(result > 0 );
 }
 
-void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], 
-  char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
-  int* nbr_objects)
+void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], char object_address_name[MAX_OBJECTS][MAX_FILE_PATH], int* nbr_objects)
 {
   DIR* traj_directory;
   struct dirent *directory_entry;

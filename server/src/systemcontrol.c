@@ -178,13 +178,18 @@ void systemcontrol_task()
 				if(CurrentCommandArgCounter == CommandArgCount)
 				{
 					bzero(pcBuffer, IPC_BUFFER_SIZE);
-					gettimeofday(&tvTime, NULL);
-					//clock_gettime(CLOCK_MONOTONIC_COARSE, &tTime);
+					gettimeofday(&tvTime, NULL);	
 					uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-					/* Add seconds to get room for all objects to get command */
-					//uint64_t uiTime = (uint64_t)tTime.tv_sec*1000 + (uint64_t)tTime.tv_nsec/1000000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+					if(TIME_COMPENSATE_LAGING_VM) uiTime = uiTime - TIME_COMPENSATE_LAGING_VM_VAL; 
 
-					printf("Time: %ld\n",uiTime );
+					printf("[SystemControl] Current timestamp (gtd): %lu\n",uiTime );
+
+					//clock_gettime(CLOCK_MONOTONIC_COARSE, &tTime);
+					//clock_gettime(CLOCK_REALTIME, &tTime);
+					//uiTime = (uint64_t)tTime.tv_sec*1000 + (uint64_t)tTime.tv_nsec/1000000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+					//printf("[SystemControl] Current timestamp (cgt): %lu\n",uiTime );
+
+					//printf("[SystemControl] Current timestamp: %lu\n",uiTime );
 					uiTime += atoi(SystemControlArgument[CurrentCommandArgCounter]);
 					sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";",0,uiTime);
 					printf("[SystemControl] System control sending STRT <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[CurrentCommandArgCounter]);

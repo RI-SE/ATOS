@@ -62,16 +62,16 @@
 #define TRAJECTORY_LINE_LENGTH 100
 #define NUMBER_CHAR_LENGTH 20
 
-#define MAX_TIME_DIFF 10.0
-#define SYNC_POINT_BUFFER 1000
+#define MAX_TIME_DIFF 2.0
+#define SYNC_POINT_BUFFER 8000
 
 #define MAX_ROW_SIZE 1024
 
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "10.130.23.63"
-#define TESTSERVER_IP "10.0.2.15"
+#define TESTHOST_IP "192.168.0.17"
+#define TESTSERVER_IP "192.168.0.17"
 #define TEST_SYNC_POINTS 0
 
 
@@ -97,6 +97,11 @@
 #define TRAJ_RES 0.001   //m
 #define TRAJ_FIND_POSITION_THRESHOLD 0.2  //m
 #define TRAJ_STEP_BACK_INDEX 20
+#define TRAJ_POSITION_NOT_FOUND -1
+#define TRAJ_MASTER_LATE -2
+
+#define TIME_COMPENSATE_LAGING_VM 0
+#define TIME_COMPENSATE_LAGING_VM_VAL 78000
 
 //#define DEBUG
 
@@ -149,6 +154,7 @@ typedef struct
   float MasterTrajSyncTime;
   float SlaveTrajSyncTime;
   float SlaveSyncStopTime;
+  uint32_t TestPort;
 } AdaptiveSyncPoint;
 
 
@@ -170,7 +176,7 @@ double UtilDegToRad(double Deg);
 double UtilRadToDeg(double Rad);
 int UtilPopulateSpaceTimeArr(ObjectPosition *OP, char* TrajFile);
 int UtilSortSpaceTimeAscending(ObjectPosition *OP);
-int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, float CurrentTime, float DistanceThreshold);
+int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, float CurrentTime, float DistanceThreshold, char debug);
 int UtilSetSyncPoint(ObjectPosition *OP, double x, double y, double z, double time);
 float UtilCalculateTimeToSync(ObjectPosition *OP);
 
