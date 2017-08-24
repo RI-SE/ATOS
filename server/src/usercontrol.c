@@ -292,8 +292,8 @@ int main(int argc, char *argv[])
 	    				OP.SpaceArr = SpaceArr;
 						OP.TimeArr = TimeArr;
 						OP.SpaceTimeArr = SpaceTimeArr;
-						double CurrentTime = 3.826;
-						UtilCalcPositionDelta(57.7773716086, 12.7804629583 ,57.7782782000, 12.7808594000, &OP); //2
+						double CurrentTime = 0.051;
+						UtilCalcPositionDelta(57.7773716086, 12.7804629583 ,57.7773716000, 12.7804629000, &OP); //2
 						printf("Calc d = %4.4f m, iterations = %d\n", OP.OrigoDistance, OP.CalcIterations);
 						printf("Latitude = %3.10f \n", OP.Latitude);
 						printf("Longitude = %3.10f\n", OP.Longitude);
@@ -329,8 +329,9 @@ int main(int argc, char *argv[])
 								//6.473, 57.7773716086, 12.7804629583 ,57.7782214000, 12.7808996000
 								//5.465, 57.7773716086, 12.7804629583 ,57.7782894000, 12.7808517000
 								//3.826, 57.7773716086, 12.7804629583 ,57.7782782000, 12.7808594000
+								//0.051, 57.7773716086, 12.7804629583 ,57.7773716000, 12.7804629000
 
-								UtilFindCurrentTrajectoryPosition(&OP, 0, CurrentTime, TRAJ_FIND_POSITION_THRESHOLD, 1);	//2
+								UtilFindCurrentTrajectoryPosition(&OP, 0, CurrentTime, 0.15, 2.5, 1);	//2
 								if(OP.BestFoundTrajectoryIndex > -1 && OP.SyncIndex > -1)
 								{	
 								    printf("\nCurrent origo distance=%4.3f m\n", OP.OrigoDistance);

@@ -520,7 +520,7 @@ int UtilSortSpaceTimeAscending(ObjectPosition *OP)
 }
 
 
-int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, float CurrentTime, float DistanceThreshold, char debug)
+int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double CurrentTime, double MaxTrajDiff, double MaxTimeDiff, char debug)
 {
 
   int i = StartIndex, j=0;
@@ -537,12 +537,12 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, float 
       Diff = fabs(OP->SpaceTimeArr[i].OrigoDistance - OP->OrigoDistance);
      //printf("%4.3f, %4.3f, %4.3f\n ", Diff,OP->SpaceTimeArr[i].OrigoDistance,OP->OrigoDistance);
      
-      if( Diff < DistanceThreshold  && Gate1Reached == 0)
+      if( Diff < MaxTrajDiff  && Gate1Reached == 0)
       {
         Gate1Reached = 1;
       }
 
-      if(Diff > DistanceThreshold  && Gate1Reached == 1)
+      if(Diff > MaxTrajDiff  && Gate1Reached == 1)
       {
         Gate2Reached = 1;
       }
@@ -575,7 +575,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, float 
     {
       Diff = fabs(OP->SpaceTimeArr[SampledSpaceIndex[i]].Time - CurrentTime);
       if(debug) printf("%4.3f, ", Diff);
-      if(Diff < MAX_TIME_DIFF)
+      if(Diff < MaxTimeDiff)
       { 
         SampledTimeIndex[kc] = SampledSpaceIndex[i];
         kc ++;

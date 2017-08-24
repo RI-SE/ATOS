@@ -188,6 +188,7 @@ void objectcontrol_task()
   char OriginLongitude[SMALL_BUFFER_SIZE_0];
   char OriginAltitude[SMALL_BUFFER_SIZE_0];
   char OriginHeading[SMALL_BUFFER_SIZE_0];
+  char TextBuffer[SMALL_BUFFER_SIZE_0];
   double OriginLatitudeDbl;
   double OriginLongitudeDbl;
   double OriginAltitudeDbl;
@@ -195,6 +196,11 @@ void objectcontrol_task()
   AdaptiveSyncPoint ASP[MAX_ADAPTIVE_SYNC_POINTS];
   int SyncPointCount = 0;
   int SearchStartIndex = 0;
+  double TimeDiff = 0;
+  double DistTraveled = 0;
+  double ASPMaxTimeDiff = 0;
+  double ASPMaxTrajDiff = 0;
+  int ASPStepBackCount = 0;
 
 
   unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
@@ -241,6 +247,17 @@ void objectcontrol_task()
     }  
     fclose (fd);
   }
+
+  bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+  UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTimeDiff=", "", TextBuffer);
+  ASPMaxTimeDiff = atof(TextBuffer);
+  bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+  UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTrajDiff=", "", TextBuffer);
+  ASPMaxTrajDiff = atof(TextBuffer);
+  bzero(TextBuffer, SMALL_BUFFER_SIZE_0); 
+  UtilSearchTextFile(CONF_FILE_PATH, "ASPStepBackCount=", "", TextBuffer);
+  ASPStepBackCount = atoi(TextBuffer);
+
 #else
 
   bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
@@ -299,7 +316,6 @@ void objectcontrol_task()
     /* Send OSEM command */
     #ifdef BYTEBASED
       vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-
     #else
       vSendString(pcBuffer,&socket_fd[iIndex]);
     #endif
@@ -465,15 +481,29 @@ void objectcontrol_task()
 
                 UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
                 if( OP[iIndex].BestFoundTrajectoryIndex == TRAJ_POSITION_NOT_FOUND ||
-                    OP[iIndex].BestFoundTrajectoryIndex == TRAJ_MASTER_LATE ) SearchStartIndex = 0;
-                else SearchStartIndex = OP[iIndex].SpaceTimeFoundIndex - TRAJ_STEP_BACK_INDEX;
-                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), TRAJ_FIND_POSITION_THRESHOLD, 0);
+                    OP[iIndex].BestFoundTrajectoryIndex == TRAJ_MASTER_LATE || SearchStartIndex < 0) SearchStartIndex = 0;
+                else
+                {
+                  DistTraveled = OP[iIndex].OrigoDistance - OP[iIndex].OldOrigoDistance;
+                  TimeDiff = (double)((CurrentTimeU64 - OldTimeU64))/1000;
+                  if(OP[iIndex].OrigoDistance < OP[iIndex].OldOrigoDistance)
+                  {
+                    SearchStartIndex = OP[iIndex].SpaceTimeFoundIndex - ((OP[iIndex].OrigoDistance - OP[iIndex].OldOrigoDistance)/TRAJ_RES) - ASPStepBackCount; 
+                    //printf("Dist: %d, %3.3f, %d, %d\n", OP[iIndex].SpaceTimeFoundIndex, (OP[iIndex].OrigoDistance - OP[iIndex].OldOrigoDistance)/TRAJ_RES, ASPStepBackCount, SearchStartIndex);
+                  } else SearchStartIndex = OP[iIndex].SpaceTimeFoundIndex - ASPStepBackCount;
+
+                  OP[iIndex].OldOrigoDistance = OP[iIndex].OrigoDistance;
+                }
+
+                OldTimeU64 = CurrentTimeU64;
+
+                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), ASPMaxTrajDiff, ASPMaxTimeDiff, 0);
 
                 if(OP[iIndex].BestFoundTrajectoryIndex > TRAJ_POSITION_NOT_FOUND)
                 {  
                   TimeToSyncPoint = UtilCalculateTimeToSync(&OP[iIndex]);
                   //if(atoi(Timestamp)%1 == 0)printf("TtS= %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n%3.10f, %d, %d, %d, %d\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, SearchStartIndex);
-                  if(atoi(Timestamp)%20 == 0)printf("TtS= %3.3f, %3.3f, %d, %d, %d\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex);
+                  if(atoi(Timestamp)%20 == 0)printf("TtS= %3.3f, %3.3f, %d, %d, %d, %3.2f, %3.3f\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, DistTraveled/TimeDiff, DistTraveled);
                   if(TimeToSyncPoint > 0) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)(TimeToSyncPoint*1000);
                   else
                   {
@@ -483,11 +513,13 @@ void objectcontrol_task()
                 } 
                 else if(OP[iIndex].BestFoundTrajectoryIndex == TRAJ_POSITION_NOT_FOUND) 
                 {
-                  printf("TtS[no pos found] %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n%3.10f, %d, %d, %d, %d\n",TimeToSyncPoint,(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, SearchStartIndex);  
+                  if(atoi(Timestamp)%20 == 0)printf("TtS[no pos found] %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n%3.10f, %d, %d, %d, %d\n",TimeToSyncPoint,(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, SearchStartIndex);  
                 }
                 else if(OP[iIndex].BestFoundTrajectoryIndex == TRAJ_MASTER_LATE)
                 {
-                  printf("TtS[master late] %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n %3.10f, %d, %d, %d, %2.2f, %d\n",TimeToSyncPoint,(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, MAX_TIME_DIFF, SearchStartIndex);  
+                  if(atoi(Timestamp)%20 == 0)printf("TtS[master late] %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n %3.10f, %d, %d, %d, %2.2f, %d\n",TimeToSyncPoint,(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, ASPMaxTimeDiff, SearchStartIndex);  
+                  MasterTimeToSyncPointU64 = 0;
+                  TimeToSyncPoint = -1;
                 }
                 
                }
@@ -558,6 +590,7 @@ void objectcontrol_task()
           StartTimeU64 = atol(Timestamp);
           MasterTimeToSyncPointU64 = 0;
           TimeToSyncPoint = 0;
+          SearchStartIndex = -1;
           MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTimeU64, 0);
         #else
           bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
@@ -1012,7 +1045,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
     Data = UtilRadToDeg(atof(DataBuffer)*1e1);
-    Data = 4500 - Data; //
+    Data = 4500 - Data; //Turn heading back pi/2 
     while(Data<0) Data+=3600;
     while(Data>3600) Data-=3600;
 
