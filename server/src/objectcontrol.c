@@ -344,7 +344,6 @@ void objectcontrol_task()
                                 0); 
     vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
 
-
     /* Send OSEM command */
     #ifdef BYTEBASED
       vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
@@ -507,6 +506,7 @@ void objectcontrol_task()
             
             for(i = 0; i < SyncPointCount; i++)
             {
+              printf("%s, %s\n", object_address_name[iIndex], ASP[i].MasterIP);
               if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && StartTimeU64 > 0 && TimeToSyncPoint > -1 ||
                   TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU64 > 0 && iIndex == 0 && TimeToSyncPoint > -1)
               {
@@ -749,7 +749,7 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *T
   for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
   sprintf(Timestamp, "%" PRIu64, MonrValueU64);
   
-  if(debug && MonrValueU64%200 == 0)
+  if(debug && MonrValueU64%400 == 0)
   {
     for(i = 5; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
     printf("\n");
