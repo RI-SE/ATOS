@@ -506,11 +506,11 @@ void objectcontrol_task()
             
             for(i = 0; i < SyncPointCount; i++)
             {
-              printf("%s, %s\n", object_address_name[iIndex], ASP[i].MasterIP);
               if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && StartTimeU64 > 0 && TimeToSyncPoint > -1 ||
                   TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU64 > 0 && iIndex == 0 && TimeToSyncPoint > -1)
               {
 
+                printf("Calc pos delta\n");
                 UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
                 if( OP[iIndex].BestFoundTrajectoryIndex == TRAJ_POSITION_NOT_FOUND ||
                     OP[iIndex].BestFoundTrajectoryIndex == TRAJ_MASTER_LATE || SearchStartIndex < 0) SearchStartIndex = 0;
