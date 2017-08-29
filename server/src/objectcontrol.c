@@ -474,6 +474,12 @@ void objectcontrol_task()
       }
     }
 
+
+    gettimeofday(&CurrentTimeStruct, NULL);
+    CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+    if(TIME_COMPENSATE_LAGING_VM) CurrentTimeU64 = CurrentTimeU64 - TIME_COMPENSATE_LAGING_VM_VAL;
+
+
     for(iIndex=0;iIndex<nbr_objects;++iIndex)
     {
       bzero(buffer,RECV_MESSAGE_BUFFER);
@@ -487,9 +493,6 @@ void objectcontrol_task()
       if(recievedNewData)
       {
 
-      	gettimeofday(&CurrentTimeStruct, NULL);
-        CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-        if(TIME_COMPENSATE_LAGING_VM) CurrentTimeU64 = CurrentTimeU64 - TIME_COMPENSATE_LAGING_VM_VAL;
         
         #ifdef DEBUG
     	   printf("INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
@@ -506,7 +509,7 @@ void objectcontrol_task()
             
             for(i = 0; i < SyncPointCount; i++)
             {
-              if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && StartTimeU64 > 0 && TimeToSyncPoint > -1 ||
+              if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && CurrentTimeU64 > StartTimeU64 && StartTimeU64 > 0 && TimeToSyncPoint > -1 ||
                   TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU64 > 0 && iIndex == 0 && TimeToSyncPoint > -1)
               {
 
