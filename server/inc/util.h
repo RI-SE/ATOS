@@ -95,9 +95,17 @@
 #define TRAJECTORY_PATH "./traj/"
 
 #define ADAPTIVE_SYNC_POINT_CONF "./conf/adaptivesync.conf"
+#define TRIGG_ACTION_CONF "./conf/triggeraction.conf"
+
+#define MAX_TRIGG_ACTIONS 20  
+
+
+#define TAA_SEND_START 1
+#define TAA_TEST_SIGNAL 2  
 
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
+
 
 //#define DEBUG
 
@@ -155,6 +163,18 @@ typedef struct
 } AdaptiveSyncPoint;
 
 
+typedef struct
+{
+  char TriggerIP[16];
+  char TriggerType[8];
+  char TriggerTypeVar[16];
+  char ActionType[24];
+  char ActionTypeVar[16];
+  int32_t Action;
+} TriggAction;
+
+
+
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -191,6 +211,7 @@ int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
+int UtilSetTriggActions(TriggAction *TAA, FILE *filefd, char debug);
 
 typedef struct {
   uint64_t timestamp;

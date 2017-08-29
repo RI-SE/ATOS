@@ -74,7 +74,6 @@
 #define COMMAND_HEAB_OPT_SERVER_STATUS_OK 1
 #define COMMAND_HEAB_OPT_SERVER_STATUS_ABORT 2 
 
-
 #define COMMAND_LLCM_CODE 8
 #define COMMAND_LLCM_MESSAGE_LENGTH 5
 
@@ -83,6 +82,20 @@
 
 #define COMMAND_MTPS_CODE 10
 #define COMMAND_MTPS_MESSAGE_LENGTH 6
+
+
+#define COMMAND_ACM_CODE 11  //Action Configuration Message: Server->Object, TCP
+#define COMMAND_ACM_MESSAGE_LENGTH 6 
+
+#define COMMAND_EAM_CODE 12  //Execution Action Message: Server->Object, UDP
+#define COMMAND_EAM_MESSAGE_LENGTH 6 
+
+#define COMMAND_TCM_CODE 13  //Trigger Configuration Message: Server->Object, TCP 
+#define COMMAND_TCM_MESSAGE_LENGTH 6 
+
+#define COMMAND_TOM_CODE 14  //Trigger Occurred Message: Object->Server, UDP
+#define COMMAND_TOM_MESSAGE_LENGTH 6 
+
 
 #define CONF_FILE_PATH  "conf/test.conf"
 
@@ -201,7 +214,8 @@ void objectcontrol_task()
   double ASPMaxTimeDiff = 0;
   double ASPMaxTrajDiff = 0;
   int ASPStepBackCount = 0;
-
+  TriggAction TAA[MAX_TRIGG_ACTIONS];
+  int TriggerActionCount = 0;
 
   unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
@@ -240,10 +254,27 @@ void objectcontrol_task()
     fd = fopen (ADAPTIVE_SYNC_POINT_CONF, "r");
     UtilReadLineCntSpecChars(fd, pcTempBuffer); //Read header   
     
-    for(i = 0; i < SyncPointCount; i++){
-
+    for(i = 0; i < SyncPointCount; i++)
+    {
       UtilSetAdaptiveSyncPoint(&ASP[i], fd, 1);      
       if(TEST_SYNC_POINTS == 1) ASP[i].TestPort = SAFETY_CHANNEL_PORT;
+    }  
+    fclose (fd);
+  }
+
+  /*Setup Trigger and Action*/
+  fd = fopen (TRIGG_ACTION_CONF, "r");
+  if(fd)
+  {
+    
+    TriggerActionCount = UtilCountFileRows(fd) - 1;
+    fclose (fd);
+    fd = fopen (TRIGG_ACTION_CONF, "r");
+    UtilReadLineCntSpecChars(fd, pcTempBuffer); //Read header   
+    
+    for(i = 0; i < TriggerActionCount; i++)
+    {
+      UtilSetTriggActions(&TAA[i], fd, 1);      
     }  
     fclose (fd);
   }
@@ -298,7 +329,9 @@ void objectcontrol_task()
   
   /* Connect and send drive files */
   printf("[ObjectControl] Objects controlled by server: %d\n", nbr_objects);
-  printf("[ObjectControl] ASP in the system: %d\n", SyncPointCount);
+  printf("[ObjectControl] ASP in system: %d\n", SyncPointCount);
+  printf("[ObjectControl] TAA in system: %d\n", TriggerActionCount);
+  
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
     UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
@@ -309,7 +342,6 @@ void objectcontrol_task()
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
                                 0); 
-    printf("Address_name: %s, port: %d\n", object_address_name[iIndex] , object_tcp_port[iIndex]); 
     vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
 
 

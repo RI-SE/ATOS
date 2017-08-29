@@ -216,6 +216,71 @@ int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug)
   return 0;
 }
 
+int UtilSetTriggActions(TriggAction *TAA, FILE *filefd, char debug)
+{
+  
+  char DataBuffer[MAX_FILE_PATH];
+  char RowBuffer[MAX_FILE_PATH];
+  char *ptr, *ptr1, *ptr2;
+  bzero(DataBuffer,MAX_FILE_PATH);
+  bzero(RowBuffer,MAX_FILE_PATH);
+  
+  bzero(RowBuffer, MAX_FILE_PATH);
+  UtilReadLineCntSpecChars(filefd, RowBuffer);
+
+  ptr = strchr(RowBuffer, ';');
+  strncpy(DataBuffer, RowBuffer, (uint64_t)ptr - (uint64_t)RowBuffer);
+  strncpy(TAA->TriggerIP, DataBuffer, strlen(DataBuffer));
+ 
+  bzero(DataBuffer, strlen(DataBuffer));
+  ptr1 = ptr+1;
+  ptr = strchr(ptr+2, '[');
+  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);  
+  strncpy(TAA->TriggerType, DataBuffer, strlen(DataBuffer));
+ 
+  bzero(DataBuffer, strlen(DataBuffer));
+  ptr1 = ptr+1;
+  ptr = strchr(ptr+2, ']');
+  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);  
+  strncpy(TAA->TriggerTypeVar, DataBuffer, strlen(DataBuffer));
+  ptr = strchr(ptr, ';');
+
+  bzero(DataBuffer, strlen(DataBuffer));
+  ptr1 = ptr+1;
+  ptr = strchr(ptr+2, '[');
+  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);  
+  strncpy(TAA->ActionType, DataBuffer, strlen(DataBuffer));
+
+  bzero(DataBuffer, strlen(DataBuffer));
+  ptr1 = ptr+1;
+  ptr = strchr(ptr+2, ']');
+  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);  
+  strncpy(TAA->ActionTypeVar, DataBuffer, strlen(DataBuffer));
+  ptr = strchr(ptr, ';');
+
+  bzero(DataBuffer, strlen(DataBuffer));
+  ptr1 = ptr+1;
+  ptr = strchr(ptr+2, ';');
+  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);  
+  
+  if(strstr(DataBuffer,"SEND_START") != NULL) TAA->Action = TAA_SEND_START;
+  else if(strstr(DataBuffer,"TEST_SIGNAL") != NULL) TAA->Action = TAA_TEST_SIGNAL;
+
+  if(debug)
+  { 
+    printf("TriggerIP: %s\n", TAA->TriggerIP);
+    printf("TriggerType: %s\n", TAA->TriggerType);
+    printf("TriggerTypeVar: %s\n", TAA->TriggerTypeVar);
+    printf("ActionType: %s\n", TAA->ActionType);
+    printf("ActionTypeVar: %s\n", TAA->ActionTypeVar);
+    printf("Action: %d\n", TAA->Action);
+  }
+
+  return 0;
+}
+
+
+
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP) { strncpy(OP->IP, IP, strlen(IP));}
 
 int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug)
@@ -643,7 +708,9 @@ int UtilCountFileRows(FILE *fd)
 int UtilReadLineCntSpecChars(FILE *fd, char *Buffer)
 {
   int c = 0;
+  int d = 0;
   int SpecChars = 0;
+  int comment = 0;
 
   while( (c != EOF) && (c != '\n') )
   {
@@ -651,12 +718,40 @@ int UtilReadLineCntSpecChars(FILE *fd, char *Buffer)
     //printf("%x-", c);
     if(c != '\n')
     {
-      *Buffer = (char)c;
-      Buffer++;
-      if(c == ';' || c == ':') SpecChars++;
+      if(c == '/')
+      {
+       comment++;
+       d = c;
+      } 
+
+      if(comment == 0)
+      {
+        *Buffer = (char)c;
+        Buffer++;
+        if(c == ';' || c == ':') SpecChars++;
+      }
+      else if (comment == 1 && c != '/')
+      {
+        *Buffer = (char)d;
+        Buffer++;
+        if(d == ';' || d == ':') SpecChars++;
+        *Buffer = (char)c;
+        Buffer++;
+        if(c == ';' || c == ':') SpecChars++;
+        comment = 0;
+      }
+      else if(comment == 2 && c == '\n') 
+      {
+        c = 1;
+        comment = 0;
+      } 
+      else if(comment == 2 && c != '\n')
+      {
+        //just continue
+      }
+      
     } 
   }
-
   return SpecChars;
 }
 
