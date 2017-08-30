@@ -541,7 +541,7 @@ void objectcontrol_task()
                   if(TimeToSyncPoint > 0) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)ASP[i].MasterTrajSyncTime*1000 + (CurrentTimeU64 - StartTimeU64 - (uint64_t)(TimeToSyncPoint*1000)); //StartTimeU64 + ((uint64_t)(TimeToSyncPoint*1000) - (CurrentTimeU64 - StartTimeU64));
                   else
                   {
-                   MasterTimeToSyncPointU64 = 0;
+                   MasterTimeToSyncPointU64 = 0; //
                    TimeToSyncPoint = -1;
                   }                 
                   if(atoi(Timestamp)%1 == 0)printf("TtS= %3.3f, %3.3f, %d, %d, %d, %3.2f, %3.3f, %ld\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, DistTraveled/TimeDiff, DistTraveled, MasterTimeToSyncPointU64);
