@@ -549,7 +549,7 @@ void objectcontrol_task()
                    MasterTimeToSyncPointU64 = 0; //
                    TimeToSyncPoint = -1;
                   }                 
-                  if(atoi(Timestamp)%1 == 0)printf("TtS= %3.3f, %3.3f, %d, %d, %d, %3.2f, %3.3f, %ld, %ld\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, DistTraveled/TimeDiff, DistTraveled, MasterTimeToSyncPointU64, DeltaTime);
+                  if(atoi(Timestamp)%1 == 0)printf("TtS= %3.3f, %3.3f, %d, %d, %d, %3.2f, %3.3f, %ld, DeltaTime=%ld\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, DistTraveled/TimeDiff, DistTraveled, MasterTimeToSyncPointU64, DeltaTime);
                 } 
                 else if(OP[iIndex].BestFoundTrajectoryIndex == TRAJ_POSITION_NOT_FOUND) 
                 {
