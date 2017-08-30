@@ -543,7 +543,7 @@ void objectcontrol_task()
                   {
                     
                     DeltaTime = CurrentTimeU64 - StartTimeU64 - (uint64_t)(TimeToSyncPoint*1000);
-                    printf("DeltaTime=%ld ", DeltaTime);
+                    printf("DeltaTime=%ld, Index=%d, TimeArr=%3.2f\n", DeltaTime, OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].TimeArr[OP[iIndex].BestFoundTrajectoryIndex]);
                     MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)ASP[i].MasterTrajSyncTime*1000;// + ((uint64_t)(TimeToSyncPoint*1000)); //StartTimeU64 + ((uint64_t)(TimeToSyncPoint*1000) - (CurrentTimeU64 - StartTimeU64));
                   }
                   else
