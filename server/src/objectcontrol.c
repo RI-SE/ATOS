@@ -538,7 +538,7 @@ void objectcontrol_task()
                 {  
                   TimeToSyncPoint = UtilCalculateTimeToSync(&OP[iIndex]);
                   //if(atoi(Timestamp)%1 == 0)printf("TtS= %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n%3.10f, %d, %d, %d, %d\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, SearchStartIndex);
-                  if(TimeToSyncPoint > 0) MasterTimeToSyncPointU64 = StartTimeU64 + ((uint64_t)(TimeToSyncPoint*1000) - (CurrentTimeU64 - StartTimeU64));
+                  if(TimeToSyncPoint > 0) MasterTimeToSyncPointU64 = CurrentTimeU64 + (uint64_t)(TimeToSyncPoint*1000); //StartTimeU64 + ((uint64_t)(TimeToSyncPoint*1000) - (CurrentTimeU64 - StartTimeU64));
                   else
                   {
                    MasterTimeToSyncPointU64 = 0;
