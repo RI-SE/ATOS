@@ -538,13 +538,13 @@ void objectcontrol_task()
                 {  
                   TimeToSyncPoint = UtilCalculateTimeToSync(&OP[iIndex]);
                   //if(atoi(Timestamp)%1 == 0)printf("TtS= %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n%3.10f, %d, %d, %d, %d\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, SearchStartIndex);
-                  if(atoi(Timestamp)%1 == 0)printf("TtS= %3.3f, %3.3f, %d, %d, %d, %3.2f, %3.3f\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, DistTraveled/TimeDiff, DistTraveled);
                   if(TimeToSyncPoint > 0) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)(TimeToSyncPoint*1000);
                   else
                   {
                    MasterTimeToSyncPointU64 = 0;
                    TimeToSyncPoint = -1;
                   }                 
+                  if(atoi(Timestamp)%1 == 0)printf("TtS= %3.3f, %3.3f, %d, %d, %d, %3.2f, %3.3f, %ld\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, DistTraveled/TimeDiff, DistTraveled, MasterTimeToSyncPointU64);
                 } 
                 else if(OP[iIndex].BestFoundTrajectoryIndex == TRAJ_POSITION_NOT_FOUND) 
                 {
