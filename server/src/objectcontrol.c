@@ -548,7 +548,7 @@ void objectcontrol_task()
                     if(PrevDeltaTime != 0)
                     {
                     	//printf("Reduce DeltaTime: %3.10f, %3.10f, %3.10f\n", OP[iIndex].OrigoDistance, OP[iIndex].OldOrigoDistance, OP[iIndex].OrigoDistance/OP[iIndex].OldOrigoDistance);
-						printf("Reduce DeltaTime: %3.10f\n", fabs((double)DeltaTime/(double)PrevDeltaTime));
+						printf("Reduce DeltaTime: %3.10f, %3.3f, %3.3f\n", fabs((double)DeltaTime/(double)PrevDeltaTime), (double)DeltaTime, (double)PrevDeltaTime);
                     	
                     	if( fabs((double)DeltaTime/(double)PrevDeltaTime) < 0.95 )
                     	//if( OP[iIndex].OrigoDistance/OP[iIndex].OldOrigoDistance < 0.9995 )
