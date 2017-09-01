@@ -216,7 +216,8 @@ void objectcontrol_task()
   int ASPStepBackCount = 0;
   TriggAction TAA[MAX_TRIGG_ACTIONS];
   int TriggerActionCount = 0;
-  uint64_t DeltaTime = 0;
+  int64_t DeltaTime = 0;
+  int64_t PrevDeltaTime = 0;
 
   unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
@@ -528,7 +529,7 @@ void objectcontrol_task()
                     //printf("Dist: %d, %3.3f, %d, %d\n", OP[iIndex].SpaceTimeFoundIndex, (OP[iIndex].OrigoDistance - OP[iIndex].OldOrigoDistance)/TRAJ_RES, ASPStepBackCount, SearchStartIndex);
                   } else SearchStartIndex = OP[iIndex].SpaceTimeFoundIndex - ASPStepBackCount;
 
-                  OP[iIndex].OldOrigoDistance = OP[iIndex].OrigoDistance;
+                  //OP[iIndex].OldOrigoDistance = OP[iIndex].OrigoDistance;
                 }
 
                 OldTimeU64 = CurrentTimeU64;
@@ -542,28 +543,50 @@ void objectcontrol_task()
                   if(TimeToSyncPoint > 0)
                   {
                     
-                    DeltaTime = CurrentTimeU64 - StartTimeU64 - OP[iIndex].TimeArr[OP[iIndex].BestFoundTrajectoryIndex]*1000;
+                    DeltaTime = (int64_t)CurrentTimeU64 - (int64_t)StartTimeU64 - OP[iIndex].TimeArr[OP[iIndex].BestFoundTrajectoryIndex]*1000;
                     //printf("DeltaTime=%ld, Index=%d, TimeArr=%3.2f, %ld, %ld\n", DeltaTime, OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].TimeArr[OP[iIndex].BestFoundTrajectoryIndex], CurrentTimeU64 - StartTimeU64, (uint64_t)(TimeToSyncPoint*1000));
+                    if(PrevDeltaTime != 0)
+                    {
+                    	//printf("Reduce DeltaTime: %3.10f, %3.10f, %3.10f\n", OP[iIndex].OrigoDistance, OP[iIndex].OldOrigoDistance, OP[iIndex].OrigoDistance/OP[iIndex].OldOrigoDistance);
+                    	if( fabs((double)DeltaTime/(double)PrevDeltaTime) < 0.95 )
+                    	//if( OP[iIndex].OrigoDistance/OP[iIndex].OldOrigoDistance < 0.9995 )
+                    	{ 
+                    		//printf("Reduce DeltaTime: %3.3f\n", ((double)DeltaTime)*0.1);
+                    		DeltaTime = PrevDeltaTime; //- ((double)DeltaTime)*0.1;
+                    	}
+                    	else if (fabs((double)DeltaTime/(double)PrevDeltaTime) > 1.05)
+                    	//if( OP[iIndex].OrigoDistance/OP[iIndex].OldOrigoDistance > 1.0005 )
+                    	{
+                    		//printf("Increase DeltaTime: %3.3f\n", ((double)DeltaTime)*0.1);
+                    		DeltaTime = PrevDeltaTime;// + ((double)DeltaTime)*0.1;
+                    	}
+                    }
+
                     MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)ASP[i].MasterTrajSyncTime*1000 + DeltaTime;// + ((uint64_t)(TimeToSyncPoint*1000)); //StartTimeU64 + ((uint64_t)(TimeToSyncPoint*1000) - (CurrentTimeU64 - StartTimeU64));
+                    PrevDeltaTime = DeltaTime;
                   }
                   else
                   {
                    MasterTimeToSyncPointU64 = 0; //
                    TimeToSyncPoint = -1;
                   }                 
-                  if(atoi(Timestamp)%1 == 0)printf("TtS= %3.3f, %3.3f, %d, %d, %d, %3.2f, %3.3f, %ld, %ld\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, DistTraveled/TimeDiff, DistTraveled, MasterTimeToSyncPointU64, DeltaTime);
+                  if(atoi(Timestamp)%1 == 0)
+                  	{
+                  		printf("TtS= %3.3f, %3.3f, %d, %d, %d, %3.2f, %3.3f, %ld, %ld\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, DistTraveled/TimeDiff, DistTraveled, MasterTimeToSyncPointU64, DeltaTime);
+                  		//printf("_______%3.3f, %3.10f, %3.10f ,%3.10f, %3.10f\n", (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7);  
+                  	}
                 } 
                 else if(OP[iIndex].BestFoundTrajectoryIndex == TRAJ_POSITION_NOT_FOUND) 
                 {
-                  if(atoi(Timestamp)%10 == 0)printf("TtS[no pos found] %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n%3.10f, %d, %d, %d, %d\n",TimeToSyncPoint,(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, SearchStartIndex);  
+                  if(atoi(Timestamp)%1 == 0)printf("TtS[no pos found] %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n%3.10f, %d, %d, %d, %d\n",TimeToSyncPoint,(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, SearchStartIndex);  
                 }
                 else if(OP[iIndex].BestFoundTrajectoryIndex == TRAJ_MASTER_LATE)
                 {
-                  if(atoi(Timestamp)%10 == 0)printf("TtS[master late] %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n %3.10f, %d, %d, %d, %2.2f, %d\n",TimeToSyncPoint,(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, ASPMaxTimeDiff, SearchStartIndex);  
+                  if(atoi(Timestamp)%1 == 0)printf("TtS[master late] %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n %3.10f, %d, %d, %d, %2.2f, %d\n",TimeToSyncPoint,(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, ASPMaxTimeDiff, SearchStartIndex);  
                   MasterTimeToSyncPointU64 = 0;
                   TimeToSyncPoint = -1;
                 }
-                
+                OP[iIndex].OldOrigoDistance = OP[iIndex].OrigoDistance;
                }
             }
 
@@ -633,6 +656,7 @@ void objectcontrol_task()
           MasterTimeToSyncPointU64 = 0;
           TimeToSyncPoint = 0;
           SearchStartIndex = -1;
+          PrevDeltaTime = 0;
           MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTimeU64, 0);
         #else
           bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);

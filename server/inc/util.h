@@ -68,7 +68,7 @@
 #define TRAJ_MASTER_LATE -2
 
 #define TIME_COMPENSATE_LAGING_VM 0
-#define TIME_COMPENSATE_LAGING_VM_VAL 80800
+#define TIME_COMPENSATE_LAGING_VM_VAL 86399
 
 #define MAX_ROW_SIZE 1024
 
@@ -114,6 +114,7 @@ typedef struct
   int Index;
   float Time;
   float OrigoDistance;
+  double bearing;
 
 } SpaceTime;
 

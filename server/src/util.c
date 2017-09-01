@@ -656,7 +656,8 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double
     while(i < kc)
     {
       if(Init == 1) PositionFound = SampledTimeIndex[i];
-      Diff = fabs(OP->SpaceTimeArr[SampledTimeIndex[i]].OrigoDistance - OP->OrigoDistance);
+      Diff = fabs(OP->SpaceTimeArr[SampledTimeIndex[i]].OrigoDistance - OP->OrigoDistance); //+ fabs(OP->SpaceTimeArr[SampledSpaceIndex[i]].Time - CurrentTime);
+      if(debug) printf("%4.3f, ", Diff);
       if(Diff < PrevDiff && Init == 0)
       {
        PositionFound = SampledTimeIndex[i];
@@ -665,7 +666,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double
       PrevDiff = Diff;
       i ++;
     }
-    
+     if(debug) printf("\n"); 
     if(PositionFound > TRAJ_POSITION_NOT_FOUND)
     {
       OP->BestFoundTrajectoryIndex = OP->SpaceTimeArr[PositionFound].Index;

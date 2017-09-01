@@ -292,8 +292,8 @@ int main(int argc, char *argv[])
 	    				OP.SpaceArr = SpaceArr;
 						OP.TimeArr = TimeArr;
 						OP.SpaceTimeArr = SpaceTimeArr;
-						double CurrentTime = 0.051;
-						UtilCalcPositionDelta(57.7773716086, 12.7804629583 ,57.7773716000, 12.7804629000, &OP); //2
+						double CurrentTime = 7.324;
+						UtilCalcPositionDelta(57.7773716086, 12.7804629583 ,57.7780243000, 12.7809759000, &OP); //2
 						printf("Calc d = %4.4f m, iterations = %d\n", OP.OrigoDistance, OP.CalcIterations);
 						printf("Latitude = %3.10f \n", OP.Latitude);
 						printf("Longitude = %3.10f\n", OP.Longitude);
@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
 						if(OP.OrigoDistance > -1)
 						{	
 							UtilPopulateSpaceTimeArr(&OP, "traj/192.168.0.16");
-							UtilSetSyncPoint(&OP, 0, 0, 0, 11.4);
+							UtilSetSyncPoint(&OP, 0, 0, 0, 15.5);
 							if (OP.SyncIndex > -1)
 							{
 								printf("Sync point found=%4.3f, Time=%4.3f, Index=%d\n", OP.SpaceArr[OP.SyncIndex], OP.TimeArr[OP.SyncIndex], OP.SyncIndex);
@@ -330,8 +330,15 @@ int main(int argc, char *argv[])
 								//5.465, 57.7773716086, 12.7804629583 ,57.7782894000, 12.7808517000
 								//3.826, 57.7773716086, 12.7804629583 ,57.7782782000, 12.7808594000
 								//0.051, 57.7773716086, 12.7804629583 ,57.7773716000, 12.7804629000
+								//7.538, 57.7773716086, 12.7804629583 ,57.7780106000, 12.7809957000
+//TtS= 6.150, 7.313, 935, 1550, 131, -8.93, -0.054, 431337603537, -2027
+//_______7.313, 57.7773716086, 12.7804629583 ,57.7780249000, 12.7809750000
+//TtS= 8.400, 7.324, 710, 1550, 116, -3.72, -0.041, 431337605798, 234
+//_______7.324, 57.7773716086, 12.7804629583 ,57.7780243000, 12.7809759000
 
-								UtilFindCurrentTrajectoryPosition(&OP, 0, CurrentTime, 0.15, 2.5, 1);	//2
+
+
+								UtilFindCurrentTrajectoryPosition(&OP, 0, CurrentTime, 0.75, 2.5, 1);	//2
 								if(OP.BestFoundTrajectoryIndex > -1 && OP.SyncIndex > -1)
 								{	
 								    printf("\nCurrent origo distance=%4.3f m\n", OP.OrigoDistance);
