@@ -478,6 +478,9 @@ int UtilPopulateSpaceTimeArr(ObjectPosition *OP, char* TrajFile)
         OP->SpaceTimeArr[j].Index = j;
         OP->SpaceTimeArr[j].Time = (float)t;
         OP->SpaceTimeArr[j].OrigoDistance = (float)sqrt(pow(x,2) + pow(y,2) + pow(z,2));
+        //OP->SpaceTimeArr[j].Bearing = tan(y/x);
+        //OP->SpaceTimeArr[j].x = x;
+        //OP->SpaceTimeArr[j].y = y;
         //printf("t = %5.3f\n", OP->TimeArr[j]);
         //printf("t = %5.3f\n", OP->TimeArr[j]);
         j ++;
@@ -594,7 +597,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double
   
   if(i == -1) i = 0;
   OP->BestFoundTrajectoryIndex = 0;
-  if(debug) printf("OPOrigoDistance=%4.3f\n", OP->OrigoDistance);      
+  if(debug) printf("OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f\n", OP->OrigoDistance, OP->x, OP->y);      
   
   while(i < (OP->TrajectoryPositionCount-1) && Gate2Reached == 0)
   {
@@ -614,7 +617,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double
 
       if(Gate1Reached == 1)
       {
-          if(j < SYNC_POINT_BUFFER-1 && OP->SpaceTimeArr[i].Index <= OP->SyncIndex)
+          if(j < SYNC_POINT_BUFFER-1 && OP->SpaceTimeArr[i].Index <= OP->SyncIndex && OP->SpaceTimeArr[i].Index > OP->BestFoundTrajectoryIndex)
           {
             SampledSpaceIndex[j] = i;
             j++;

@@ -68,15 +68,15 @@
 #define TRAJ_MASTER_LATE -2
 
 #define TIME_COMPENSATE_LAGING_VM 0
-#define TIME_COMPENSATE_LAGING_VM_VAL 86399
+#define TIME_COMPENSATE_LAGING_VM_VAL 88608
 
 #define MAX_ROW_SIZE 1024
 
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.17"
-#define TESTSERVER_IP "192.168.0.17"
+#define TESTHOST_IP "192.168.0.13"
+#define TESTSERVER_IP "192.168.0.13"
 #define TEST_SYNC_POINTS 0
 
 
@@ -114,7 +114,9 @@ typedef struct
   int Index;
   float Time;
   float OrigoDistance;
-  double bearing;
+  //double Bearing;
+  //float x;
+  //float y;
 
 } SpaceTime;
 
