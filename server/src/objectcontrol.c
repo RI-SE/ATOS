@@ -221,6 +221,7 @@ void objectcontrol_task()
   int TriggerActionCount = 0;
   int64_t DeltaTime = 0;
   int64_t PrevDeltaTime = 0;
+  struct timeval tvTime;
 
   unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
@@ -651,7 +652,7 @@ void objectcontrol_task()
       else if(iCommand == COMM_STRT)
       {  
         //#ifdef DEBUG
-          printf("[ObjectControl] STRT trig recieved <%s>\n",pcRecvBuffer);
+          printf("[ObjectControl] START recieved <%s>\n",pcRecvBuffer);
           fflush(stdout);
         //#endif
 
@@ -686,12 +687,12 @@ void objectcontrol_task()
           #endif
         }
       }
-    	else if(iCommand == COMM_REPLAY)
-    	{
-  			ObjectcontrolExecutionMode = OBJECT_CONTROL_REPLAY_MODE;
-        printf("[ObjectControl] Object control REPLAY mode <%s>\n", pcRecvBuffer);
-  			fflush(stdout);
-  		}
+	else if(iCommand == COMM_REPLAY)
+	{
+		ObjectcontrolExecutionMode = OBJECT_CONTROL_REPLAY_MODE;
+	printf("[ObjectControl] Object control REPLAY mode <%s>\n", pcRecvBuffer);
+		fflush(stdout);
+	}
       else if(iCommand == COMM_ABORT)
       {
         ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
@@ -702,6 +703,25 @@ void objectcontrol_task()
       {
         ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
         printf("[ObjectControl] Object control in CONTROL mode\n");     
+      }
+      if(iCommand == COMM_TOM)
+      {
+  
+		printf("[ObjectControl] External START received <%s>\n",pcRecvBuffer);
+		fflush(stdout);
+		gettimeofday(&tvTime, NULL);
+		StartTimeU64 = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+		MasterTimeToSyncPointU64 = 0;
+		TimeToSyncPoint = 0;
+		SearchStartIndex = -1;
+		PrevDeltaTime = 0;
+		MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTimeU64, 0);
+
+		for(iIndex=0;iIndex<nbr_objects;++iIndex)
+		{
+		    vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+		}
+
       }	
       else if(iCommand == COMM_EXIT)
       {
