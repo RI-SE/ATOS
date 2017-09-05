@@ -810,7 +810,7 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *T
   for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
   sprintf(Timestamp, "%" PRIu64, MonrValueU64);
   
-  if(debug && MonrValueU64%400 == 0)
+  if(debug && MonrValueU64%1 == 0)
   {
     for(i = 5; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
     printf("\n");
