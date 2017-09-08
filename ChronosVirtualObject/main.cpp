@@ -7,10 +7,6 @@ int main(int argc, char *argv[])
     MainWindow w;
     w.show();
 
-    Chronos chronos;
-    PacketInterface mPacketInt;
-
-    chronos.startServer(&mPacketInt);
 
 
     return a.exec();

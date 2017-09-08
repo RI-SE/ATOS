@@ -15,6 +15,9 @@ public:
     Chronos(QObject *parent = 0);
     bool startServer(PacketInterface *packet);
 
+signals:
+    void handle_osem(chronos_osem data);
+
 private slots:
     void tcpRx(QByteArray data);
     void tcpConnectionChanged(bool connected);

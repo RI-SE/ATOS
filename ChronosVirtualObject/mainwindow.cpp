@@ -6,11 +6,21 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    Chronos *chronos = new Chronos();
+    PacketInterface mPacketInt;
+
+    connect(chronos,SIGNAL(handle_osem(chronos_osem)),
+            this,SLOT(updateLabelOSEM(chronos_osem)));
+
+    chronos->startServer(0);
+
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+    delete chronos;
 }
 
 void MainWindow::on_updateButton_clicked(){
@@ -30,6 +40,25 @@ void MainWindow::on_updateButton_clicked(){
     snprintf(c_long,LABEL_TEXT_LENGTH,"%g",temp.longitude);
     snprintf(c_alt,LABEL_TEXT_LENGTH,"%g",temp.altitude);
     snprintf(c_head,LABEL_TEXT_LENGTH,"%d",temp.heading);
+
+    ui->lab_lat->setText(c_lat);
+    ui->lab_lon->setText(c_long);
+    ui->lab_alt->setText(c_alt);
+    ui->lab_head->setText(c_head);
+}
+
+void MainWindow::updateLabelOSEM(chronos_osem msg) {
+    //on_updateButton_clicked();
+
+    char c_lat[LABEL_TEXT_LENGTH];
+    char c_long[LABEL_TEXT_LENGTH];
+    char c_alt[LABEL_TEXT_LENGTH];
+    char c_head[LABEL_TEXT_LENGTH];
+
+    snprintf(c_lat,LABEL_TEXT_LENGTH,"%g",msg.lat);
+    snprintf(c_long,LABEL_TEXT_LENGTH,"%g",msg.lon);
+    snprintf(c_alt,LABEL_TEXT_LENGTH,"%g",msg.alt);
+    snprintf(c_head,LABEL_TEXT_LENGTH,"%g",msg.heading);
 
     ui->lab_lat->setText(c_lat);
     ui->lab_lon->setText(c_long);

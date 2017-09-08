@@ -221,17 +221,20 @@ bool Chronos::decodeMsg(quint8 type, quint32 len, QByteArray payload)
 void Chronos::processDopm(QVector<chronos_dopm_pt> path)
 {
     qDebug() << "DOPM RX";
-
-    mPacket->clearRoute(255);
+    if (mPacket) {
+        mPacket->clearRoute(255);
+    }
 
     for (chronos_dopm_pt pt: path) {
-//        qDebug() << "-- Point" <<
-//                    "X:" << pt.x <<
-//                    "Y:" << pt.y <<
-//                    "Z:" << pt.z <<
-//                    "T:" << pt.tRel <<
-//                    "Speed:" << pt.speed * 3.6;
 
+/*
+        qDebug() << "-- Point" <<
+                    "X:" << pt.x <<
+                    "Y:" << pt.y <<
+                    "Z:" << pt.z <<
+                    "T:" << pt.tRel <<
+                    "Speed:" << pt.speed * 3.6;
+*/
         if (mPacket) {
             QList<LocPoint> points;
             LocPoint lpt;
@@ -253,11 +256,13 @@ void Chronos::processOsem(chronos_osem osem)
     llh[1] = osem.lon;
     llh[2] = osem.alt;
 
+
     // TODO: Rotate route with heading
 
     if (mPacket) {
         mPacket->setEnuRef(255, llh);
     }
+    emit handle_osem(osem);
 }
 
 void Chronos::processOstm(chronos_ostm ostm)
