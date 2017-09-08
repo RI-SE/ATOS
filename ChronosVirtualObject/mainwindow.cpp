@@ -8,12 +8,14 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     Chronos *chronos = new Chronos();
-    PacketInterface mPacketInt;
+    //PacketInterface mPacketInt;
 
+    /* Listen for Chronos OSEM signal */
     connect(chronos,SIGNAL(handle_osem(chronos_osem)),
             this,SLOT(updateLabelOSEM(chronos_osem)));
 
-    chronos->startServer(0);
+    /* Start the chronos object */
+    chronos->startServer();
 
 }
 
@@ -26,7 +28,7 @@ MainWindow::~MainWindow()
 void MainWindow::on_updateButton_clicked(){
     //ui->label->setText(QString("apa\t Bepa"));
     OSEM_DATA temp;
-    temp.latitude = (float)(rand() % 100) / 100.0f;
+    temp.latitude = 4.56789f;//(float)(rand() % 100) / 100.0f;
     temp.longitude= 5.1f;
     temp.altitude = 5.3f;
     temp.heading = 1;

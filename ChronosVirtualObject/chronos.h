@@ -5,7 +5,8 @@
 #include <QUdpSocket>
 
 #include "tcpserversimple.h"
-#include "packetinterface.h"
+//#include "packetinterface.h"
+#include "datatypes.h"
 #include "vbytearray.h"
 
 class Chronos : public QObject
@@ -13,7 +14,8 @@ class Chronos : public QObject
     Q_OBJECT
 public:
     Chronos(QObject *parent = 0);
-    bool startServer(PacketInterface *packet);
+    bool startServer();
+    //bool startServer(PacketInterface *packet);
 
 signals:
     void handle_osem(chronos_osem data);
@@ -22,11 +24,11 @@ private slots:
     void tcpRx(QByteArray data);
     void tcpConnectionChanged(bool connected);
     void readPendingDatagrams();
-    void stateReceived(quint8 id, CAR_STATE state);
+    //void stateReceived(quint8 id, CAR_STATE state);
 
 private:
     TcpServerSimple *mTcpServer;
-    PacketInterface *mPacket;
+    //PacketInterface *mPacket;
     QUdpSocket *mUdpSocket;
     QHostAddress mUdpHostAddress;
     quint16 mUdpPort;

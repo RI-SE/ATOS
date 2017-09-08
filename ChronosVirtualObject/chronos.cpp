@@ -4,7 +4,7 @@
 
 Chronos::Chronos(QObject *parent) : QObject(parent)
 {
-    mPacket = 0;
+    //mPacket = 0;
     mTcpServer = new TcpServerSimple(this);
     mUdpSocket = new QUdpSocket(this);
 
@@ -25,9 +25,10 @@ Chronos::Chronos(QObject *parent) : QObject(parent)
             this, SLOT(readPendingDatagrams()));
 }
 
-bool Chronos::startServer(PacketInterface *packet)
+//bool Chronos::startServer(PacketInterface *packet)
+bool Chronos::startServer()
 {
-    mPacket = packet;
+    //mPacket = packet;
 
     bool res = mTcpServer->startServer(53241);
 
@@ -45,12 +46,12 @@ bool Chronos::startServer(PacketInterface *packet)
     }
 
     qDebug() << "Started CHRONOS server";
-
+/*
     if (res && mPacket) {
         connect(mPacket, SIGNAL(stateReceived(quint8,CAR_STATE)),
                 this, SLOT(stateReceived(quint8,CAR_STATE)));
     }
-
+*/
     return res;
 }
 
@@ -123,14 +124,14 @@ void Chronos::readPendingDatagrams()
         decodeMsg(type, len, vb);
     }
 }
-
+/*
 void Chronos::stateReceived(quint8 id, CAR_STATE state)
 {
     (void)id;
     (void)state;
 
     // TODO: Send monr message
-}
+}*/
 
 bool Chronos::decodeMsg(quint8 type, quint32 len, QByteArray payload)
 {
@@ -220,10 +221,11 @@ bool Chronos::decodeMsg(quint8 type, quint32 len, QByteArray payload)
 
 void Chronos::processDopm(QVector<chronos_dopm_pt> path)
 {
-    qDebug() << "DOPM RX";
+    qDebug() << "DOPM HANDLED";
+    /*
     if (mPacket) {
         mPacket->clearRoute(255);
-    }
+    }*/
 
     for (chronos_dopm_pt pt: path) {
 
@@ -235,6 +237,7 @@ void Chronos::processDopm(QVector<chronos_dopm_pt> path)
                     "T:" << pt.tRel <<
                     "Speed:" << pt.speed * 3.6;
 */
+        /*
         if (mPacket) {
             QList<LocPoint> points;
             LocPoint lpt;
@@ -244,13 +247,14 @@ void Chronos::processDopm(QVector<chronos_dopm_pt> path)
 
             mPacket->setRoutePoints(255, points);
         }
+        */
     }
 }
 
 void Chronos::processOsem(chronos_osem osem)
 {
-    qDebug() << "OSEM RX";
-
+    qDebug() << "OSEM HANDLED";
+    /*
     double llh[3];
     llh[0] = osem.lat;
     llh[1] = osem.lon;
@@ -261,7 +265,7 @@ void Chronos::processOsem(chronos_osem osem)
 
     if (mPacket) {
         mPacket->setEnuRef(255, llh);
-    }
+    }*/
     emit handle_osem(osem);
 }
 
@@ -275,17 +279,18 @@ void Chronos::processStrt(chronos_strt strt)
 {
     qDebug() << "STRT RX";
     (void)strt;
-
+/*
     if (mPacket) {
         mPacket->setApActive(255, true);
     }
+    */
 }
 
 void Chronos::processHeab(chronos_heab heab)
 {
 //    qDebug() << "HEAB RX";
     (void)heab;
-
+/*
     if (mPacket) {
         if (heab.status == 1) {
             mHeabPollCnt++;
@@ -298,6 +303,7 @@ void Chronos::processHeab(chronos_heab heab)
             mPacket->setApActive(255, false);
         }
     }
+    */
 }
 
 bool Chronos::sendMonr(chronos_monr monr)

@@ -1,7 +1,7 @@
 #ifndef CHRONOS_UTILITY_H
 #define CHRONOS_UTILITY_H
 
-#define LABEL_TEXT_LENGTH 100
+#define LABEL_TEXT_LENGTH 10
 
 typedef struct {
     float latitude;

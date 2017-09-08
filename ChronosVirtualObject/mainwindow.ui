@@ -20,8 +20,8 @@
    <widget class="QPushButton" name="updateButton">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>290</y>
+      <x>150</x>
+      <y>90</y>
       <width>89</width>
       <height>25</height>
      </rect>
@@ -42,9 +42,9 @@
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>0</x>
-      <y>10</y>
-      <width>211</width>
+      <x>10</x>
+      <y>350</y>
+      <width>181</width>
       <height>121</height>
      </rect>
     </property>

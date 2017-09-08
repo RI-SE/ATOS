@@ -30,7 +30,7 @@ SOURCES += \
         chronos.cpp \
         locpoint.cpp \
         packet.cpp \
-        packetinterface.cpp \
+        #packetinterface.cpp \
         tcpserversimple.cpp \
         vbytearray.cpp \
         utility.cpp
@@ -41,7 +41,7 @@ HEADERS += \
         chronos.h \
         locpoint.h \
         packet.h \
-        packetinterface.h \
+        #packetinterface.h \
         tcpserversimple.h \
         vbytearray.h \
         datatypes.h \
