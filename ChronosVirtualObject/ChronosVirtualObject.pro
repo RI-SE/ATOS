@@ -5,6 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui
+QT       += network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -25,12 +26,26 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+        chronos.cpp \
+        locpoint.cpp \
+        packet.cpp \
+        packetinterface.cpp \
+        tcpserversimple.cpp \
+        vbytearray.cpp \
+        utility.cpp
 
 HEADERS += \
         mainwindow.h \
-    chronos_utility.h \
-    util.h
+        util.h \
+        chronos.h \
+        locpoint.h \
+        packet.h \
+        packetinterface.h \
+        tcpserversimple.h \
+        vbytearray.h \
+        datatypes.h \
+        utility.h
 
 FORMS += \
         mainwindow.ui

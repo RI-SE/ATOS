@@ -26,10 +26,10 @@ void MainWindow::on_updateButton_clicked(){
     char c_alt[LABEL_TEXT_LENGTH];
     char c_head[LABEL_TEXT_LENGTH];
 
-    snprintf(c_lat,LABEL_TEXT_LENGTH,"Latitude: %g",temp.latitude);
-    snprintf(c_long,LABEL_TEXT_LENGTH,"Longitude: %g",temp.longitude);
-    snprintf(c_alt,LABEL_TEXT_LENGTH,"Altitude: %g",temp.altitude);
-    snprintf(c_head,LABEL_TEXT_LENGTH,"Heading: %d",temp.heading);
+    snprintf(c_lat,LABEL_TEXT_LENGTH,"%g",temp.latitude);
+    snprintf(c_long,LABEL_TEXT_LENGTH,"%g",temp.longitude);
+    snprintf(c_alt,LABEL_TEXT_LENGTH,"%g",temp.altitude);
+    snprintf(c_head,LABEL_TEXT_LENGTH,"%d",temp.heading);
 
     ui->lab_lat->setText(c_lat);
     ui->lab_lon->setText(c_long);
