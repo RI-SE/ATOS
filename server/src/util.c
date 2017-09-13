@@ -216,7 +216,7 @@ int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug)
   return 0;
 }
 
-int UtilSetTriggActions(TriggAction *TAA, FILE *filefd, char debug)
+int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug)
 {
   
   char DataBuffer[MAX_FILE_PATH];
@@ -232,6 +232,12 @@ int UtilSetTriggActions(TriggAction *TAA, FILE *filefd, char debug)
   strncpy(DataBuffer, RowBuffer, (uint64_t)ptr - (uint64_t)RowBuffer);
   strncpy(TAA->TriggerIP, DataBuffer, strlen(DataBuffer));
  
+  bzero(DataBuffer, strlen(DataBuffer));
+  ptr1 = ptr+1;
+  ptr = strchr(ptr+1, ';');
+  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);  
+  TAA->TriggerId = (uint8_t)atoi(DataBuffer);
+  
   bzero(DataBuffer, strlen(DataBuffer));
   ptr1 = ptr+1;
   ptr = strchr(ptr+2, '[');
@@ -263,12 +269,13 @@ int UtilSetTriggActions(TriggAction *TAA, FILE *filefd, char debug)
   ptr = strchr(ptr+2, ';');
   strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);  
   
-  if(strstr(DataBuffer,"SEND_START") != NULL) TAA->Action = TAA_SEND_START;
-  else if(strstr(DataBuffer,"TEST_SIGNAL") != NULL) TAA->Action = TAA_TEST_SIGNAL;
+  if(strstr(DataBuffer,"SEND_START") != NULL) TAA->Action = TAA_ACTION_EXT_START;
+  else if(strstr(DataBuffer,"TEST_SIGNAL") != NULL) TAA->Action = TAA_ACTION_TEST_SIGNAL;
 
   if(debug)
   { 
     printf("TriggerIP: %s\n", TAA->TriggerIP);
+    printf("TriggerId: %d\n", TAA->TriggerId);
     printf("TriggerType: %s\n", TAA->TriggerType);
     printf("TriggerTypeVar: %s\n", TAA->TriggerTypeVar);
     printf("ActionType: %s\n", TAA->ActionType);
@@ -909,6 +916,15 @@ int iCommInit(const unsigned int uiMode, const char* name, const int iNonBlockin
       }
       ++uiIndex;
     }
+    if(strcmp(name,MQ_SC))
+    {
+      ptMQSend[uiIndex] = mq_open(MQ_SC, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr);
+      if(ptMQSend[uiIndex] < 0)
+      {
+        util_error("ERR: Failed to open MQ_SC message queue");
+      }
+      ++uiIndex;
+    }
   }
 
   return 1;
@@ -1032,9 +1048,9 @@ int iCommSend(const int iCommand,const char* cpData)
       uiMessagePrio = 60;
       cpMessage[0] = (char)COMM_ABORT;
     }
-  else if (iCommand == COMM_ABORT)
+  else if (iCommand == COMM_TOM)
     {
-      uiMessagePrio = 100;
+      uiMessagePrio = 90;
       cpMessage[0] = (char)COMM_TOM;
     }
   else
@@ -1045,7 +1061,7 @@ int iCommSend(const int iCommand,const char* cpData)
   if(cpData != NULL)
   {
     (void)strncat(&cpMessage[1],cpData,strlen(cpData));
-	//printf("Util message data: %s\n", cpData);
+    //printf("Util message data: %s\n", cpData);
   }
 
   for(iIndex = 0; iIndex < MQ_NBR_QUEUES; ++iIndex)

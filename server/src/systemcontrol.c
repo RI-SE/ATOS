@@ -55,13 +55,20 @@ typedef enum {
 
 #define AROM_OPT_SET_ARMED_STATE 1
 #define AROM_OPT_SET_DISARMED_STATE 2 
+#define SC_RECV_MESSAGE_BUFFER 512
+
+#define SMALL_BUFFER_SIZE_16 16
+#define SMALL_BUFFER_SIZE_20 20
+#define SMALL_BUFFER_SIZE_6 6
+#define SMALL_BUFFER_SIZE_3 3
+#define SMALL_BUFFER_SIZE_2 2
 
 
 
 typedef enum {
-   idle_0, status_0, arm_0, disarm_0, start_1, stop_0, abort_0, replay_1, control_0, exit_0, cx_0, cc_0, listen_0, nocommand
+   idle_0, status_0, arm_0, disarm_0, start_1, stop_0, abort_0, replay_1, control_0, exit_0, cx_0, cc_0, listen_0, start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
-const char* SystemControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "disarm_0", "start_1", "stop_0", "abort_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0", "listen_0"};
+const char* SystemControlCommandsArr[] = { "idle_0", "status_0", "arm_0", "disarm_0", "start_1", "stop_0", "abort_0", "replay_1", "control_0", "exit_0", "cx_0", "cc_0", "listen_0", "start_ext_trigg_1" };
 SystemControlCommand_t PreviousSystemControlCommand = nocommand;
 char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
 char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
@@ -94,15 +101,25 @@ void systemcontrol_task()
 	char inchr;
 	struct timeval tvTime;
 	int iExit = 0;
-	(void)iCommInit(IPC_SEND,MQ_SC,0);
+	
 	ObjectPosition OP;
 	int i;
 	char *StartPtr, *StopPtr;
-
 	struct timespec tTime;
+	int iCommand;
+  	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
+	(void)iCommInit(IPC_RECV_SEND,MQ_SC,1);
+	char ObjectIP[SMALL_BUFFER_SIZE_16];
+	char ObjectPort[SMALL_BUFFER_SIZE_6];
+	char TriggId[SMALL_BUFFER_SIZE_6];
+	char TriggAction[SMALL_BUFFER_SIZE_6];
+	char TriggDelay[SMALL_BUFFER_SIZE_20];
+	uint64_t uiTime;
 
 	while(!iExit)
 	{
+		
+	
 		bzero(pcBuffer,IPC_BUFFER_SIZE);
 		ClientResult = recv(ClientSocket, pcBuffer, IPC_BUFFER_SIZE,  0);
 
@@ -116,7 +133,7 @@ void systemcontrol_task()
 	    }
 	    else if(ClientResult == 0) 
 	    {
-	    	printf("[SystemControl]Client closed connection.\n");
+	    	printf("[SystemControl] Client closed connection.\n");
 	    	close(ClientSocket);
 	    	close(ServerHandle);
 	    	SystemControlCommand = listen_0;
@@ -128,6 +145,7 @@ void systemcontrol_task()
 			CurrentInputArgCount = 0;
 			StartPtr = pcBuffer;
 			StopPtr = pcBuffer;
+			printf("pcBuffer: %s\n", pcBuffer);
 			while (StopPtr != NULL)
 			{
 				StopPtr = (char *)strchr(StartPtr, ' ');
@@ -140,11 +158,65 @@ void systemcontrol_task()
 	      	SystemControlFindCommand(SystemControlArgument[0], &SystemControlCommand, &CommandArgCount);
 	  	}
 		
+		
+
 		switch(SystemControlCommand)
 		{
 
 			case idle_0:
- 				CurrentCommandArgCounter = 0;
+	 			bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
+				iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
+
+			 	if(iCommand == COMM_TOM)
+				{
+					bzero(ObjectIP, SMALL_BUFFER_SIZE_16);
+					bzero(ObjectPort, SMALL_BUFFER_SIZE_6);
+					bzero(TriggId, SMALL_BUFFER_SIZE_6);
+					bzero(TriggAction, SMALL_BUFFER_SIZE_6);
+					bzero(TriggDelay, SMALL_BUFFER_SIZE_20);
+
+					StartPtr = pcRecvBuffer;
+					StopPtr = (char *)strchr(StartPtr, ';');
+					strncpy(ObjectIP, StartPtr, (uint64_t)StopPtr-(uint64_t)StartPtr);
+					StartPtr = StopPtr + 1; StopPtr = (char *)strchr(StartPtr, ';');
+					strncpy(ObjectPort, StartPtr, (uint64_t)StopPtr-(uint64_t)StartPtr);
+					StartPtr = StopPtr + 1; StopPtr = (char *)strchr(StartPtr, ';');
+					strncpy(TriggId, StartPtr, (uint64_t)StopPtr-(uint64_t)StartPtr);
+					StartPtr = StopPtr + 1; StopPtr = (char *)strchr(StartPtr, ';');
+					strncpy(TriggAction, StartPtr, (uint64_t)StopPtr-(uint64_t)StartPtr);
+					StartPtr = StopPtr + 1; StopPtr = (char *)strchr(StartPtr, ';');
+					strncpy(TriggDelay, StartPtr, (uint64_t)StopPtr-(uint64_t)StartPtr);
+					CurrentCommandArgCounter = 1;
+					strncpy(SystemControlArgument[CurrentCommandArgCounter], TriggDelay, strlen(TriggDelay));
+					printf("[SystemControl] TOM recieved from %s, port=%s, TriggId=%s, TriggAction=%s, TriggDelay=%s\n", ObjectIP, ObjectPort, TriggId ,TriggAction, TriggDelay);
+					fflush(stdout);
+					
+					if((uint8_t)atoi(TriggAction) == TAA_ACTION_EXT_START)
+					{
+						SystemControlCommand = start_ext_trigg_1;
+						CommandArgCount = 1;
+					}
+					else if ((uint8_t)atoi(TriggAction) == TAA_ACTION_TEST_SIGNAL)
+					{
+						printf("[SystemControl] Trigg action TEST_SIGNAL not supported by server.\n");
+						SystemControlCommand = idle_0;
+						CurrentCommandArgCounter = 0;
+						CommandArgCount = 0;
+					}
+					else
+					{
+						printf("[SystemControl] Unknown trigg action %s.\n", TriggAction);
+						SystemControlCommand = idle_0;
+						CurrentCommandArgCounter = 0;
+						CommandArgCount = 0;
+					}
+				} 
+				else
+				{
+					SystemControlCommand = idle_0;
+					CurrentCommandArgCounter = 0;
+				}
+				
 			break;
 			case listen_0:
 				printf("[SystemControl] Listening for new client connection...\n");
@@ -179,7 +251,7 @@ void systemcontrol_task()
 				{
 					bzero(pcBuffer, IPC_BUFFER_SIZE);
 					gettimeofday(&tvTime, NULL);	
-					uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+					uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
 					if(TIME_COMPENSATE_LAGING_VM) uiTime = uiTime - TIME_COMPENSATE_LAGING_VM_VAL; 
 
 					printf("[SystemControl] Current timestamp (gtd): %lu\n",uiTime );
@@ -192,7 +264,27 @@ void systemcontrol_task()
 					//printf("[SystemControl] Current timestamp: %lu\n",uiTime );
 					uiTime += atoi(SystemControlArgument[CurrentCommandArgCounter]);
 					sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";",0,uiTime);
-					printf("[SystemControl] System control sending STRT <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[CurrentCommandArgCounter]);
+					printf("[SystemControl] Sending START <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[CurrentCommandArgCounter]);
+					fflush(stdout);
+					
+					(void)iCommSend(COMM_STRT,pcBuffer);
+					server_state = SERVER_STATUS_RUNNING;
+					SystemControlCommand = idle_0;
+					CurrentCommandArgCounter = 0;
+				} else CurrentCommandArgCounter ++;
+			break;
+			case start_ext_trigg_1:
+				if(CurrentCommandArgCounter == CommandArgCount)
+				{
+					bzero(pcBuffer, IPC_BUFFER_SIZE);
+					uiTime = (uint64_t)atol(SystemControlArgument[CurrentCommandArgCounter]);
+					if(uiTime == 0)
+					{
+						gettimeofday(&tvTime, NULL);	
+						uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+					}
+					sprintf (pcBuffer,"%" PRIu8 ";%" PRIu64 ";",0,uiTime);
+					printf("[SystemControl] Sending START <%s> (externally trigged)\n", SystemControlArgument[CurrentCommandArgCounter]);
 					fflush(stdout);
 					
 					(void)iCommSend(COMM_STRT,pcBuffer);
@@ -264,12 +356,15 @@ void systemcontrol_task()
 			
 			default:
 
+	
 			break;
 		}
 
+		
 		usleep(1);
 
   }
+  
   (void)iCommClose();
 }
 

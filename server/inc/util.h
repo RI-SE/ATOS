@@ -25,7 +25,7 @@
 #define MQ_SV     "/TEServer-SV"
 #define MQ_OC     "/TEServer-OC"
 #define MQ_VA     "/TEServer-VA"
-#define MQ_SC     "/DUMMY"
+#define MQ_SC     "/TEServer-SC"  
 
 #define MQ_MAX_MESSAGE_LENGTH 4096
 #define MQ_MAX_MSG            10
@@ -40,10 +40,10 @@
 #define COMM_MONI 3
 #define COMM_EXIT 4
 #define COMM_ARMD 5
-#define COMM_REPLAY 6
+#define COMM_REPLAY 6378137 
 #define COMM_CONTROL 7
 #define COMM_ABORT 8
-#define COMM_TOM 14
+#define COMM_TOM 9
 #define COMM_INV 255
 
 #define SAFETY_CHANNEL_PORT 53240
@@ -76,8 +76,8 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.13"
-#define TESTSERVER_IP "192.168.0.13"
+#define TESTHOST_IP "10.168.224.170"
+#define TESTSERVER_IP "10.168.224.170"
 #define TEST_SYNC_POINTS 0
 
 
@@ -101,8 +101,14 @@
 #define MAX_TRIGG_ACTIONS 20  
 
 
-#define TAA_SEND_START 1
-#define TAA_TEST_SIGNAL 2  
+#define TAA_ACTION_EXT_START 1
+#define TAA_ACTION_TEST_SIGNAL 2  
+
+#define TAA_TRIGGER_DI_LOW  1
+#define TAA_TRIGGER_DI_HIGH  2
+#define TAA_TRIGGER_DI_RISING_EDGE 3 
+#define TAA_TRIGGER_DI_FALLING_EDGE 4
+
 
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
@@ -174,8 +180,9 @@ typedef struct
   char TriggerTypeVar[16];
   char ActionType[24];
   char ActionTypeVar[16];
+  uint8_t TriggerId;
   int32_t Action;
-} TriggAction;
+} TriggActionType;
 
 
 
@@ -215,7 +222,7 @@ int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
-int UtilSetTriggActions(TriggAction *TAA, FILE *filefd, char debug);
+int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug);
 
 typedef struct {
   uint64_t timestamp;
