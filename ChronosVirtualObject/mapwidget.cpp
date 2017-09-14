@@ -201,7 +201,7 @@ MapWidget::MapWidget(QWidget *parent) :
 /* START CHRONOS CODE */
 
 /* Chronos ref point*/
-    mRefLat = 57.777569;
+    mRefLat = 57.7;//57.777569;
     mRefLon = 12.781265;
     mRefHeight = 219.0;
 
@@ -223,6 +223,8 @@ MapWidget::MapWidget(QWidget *parent) :
     connect(mWebSocket, SIGNAL(disconnected()), mWebSocket, SLOT(close()));
     mWebSocket->open(QUrl(QStringLiteral("ws://10.130.23.14:53251")));
 
+
+    /* Load a trajectory file if there exists one */
     //QList<QPointF> trajTemp;
     QDir dir("./traj/");
 
@@ -342,6 +344,15 @@ void MapWidget::readPendingDatagrams()
 
         displayMessage(datagram);
     }
+}
+
+void MapWidget::chronosOSEM(chronos_osem msg) {
+    qDebug() << "Map recieved signal";
+/*
+    mRefLat = msg.lat;
+    mRefLon = msg.lon;
+    mRefHeight = msg.alt;*/
+
 }
 
 void MapWidget::displayMessage(const QByteArray& message)
@@ -679,7 +690,7 @@ void MapWidget::paintEvent(QPaintEvent *event)
 
     // Map coordinate transforms
     QTransform drawTrans;
-    ldrawTrans.translate(event->rect().width() / 2 + mXOffset, event->rect().height() / 2 - mYOffset);
+    drawTrans.translate(event->rect().width() / 2 + mXOffset, event->rect().height() / 2 - mYOffset);
     drawTrans.scale(mScaleFactor, -mScaleFactor);
     drawTrans.rotate(mRotation);
 

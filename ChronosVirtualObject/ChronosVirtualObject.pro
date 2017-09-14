@@ -6,6 +6,7 @@
 
 QT       += core gui
 QT       += network
+QT       += websockets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -33,7 +34,12 @@ SOURCES += \
         #packetinterface.cpp \
         tcpserversimple.cpp \
         vbytearray.cpp \
-        utility.cpp
+        utility.cpp \
+        mapwidget.cpp \
+        carinfo.cpp \
+        perspectivepixmap.cpp \
+        osmclient.cpp \
+        osmtile.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -45,7 +51,12 @@ HEADERS += \
         tcpserversimple.h \
         vbytearray.h \
         datatypes.h \
-        utility.h
+        utility.h \
+        carinfo.h \
+        perspectivepixmap.h \
+        osmclient.h \
+        osmtile.h \
+        mapwidget.h
 
 FORMS += \
         mainwindow.ui

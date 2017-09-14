@@ -9,11 +9,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
     Chronos *chronos = new Chronos();
     //PacketInterface mPacketInt;
-
+    MapWidget *map = ui->widget;
     /* Listen for Chronos OSEM signal */
     connect(chronos,SIGNAL(handle_osem(chronos_osem)),
             this,SLOT(updateLabelOSEM(chronos_osem)));
-
+    connect(chronos, SIGNAL(handle_osem(chronos_osem)),
+            map,SLOT(chronosOSEM(chronos_osem)));
     /* Start the chronos object */
     chronos->startServer();
 

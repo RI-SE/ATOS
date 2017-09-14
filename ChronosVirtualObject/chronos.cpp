@@ -219,6 +219,8 @@ bool Chronos::decodeMsg(quint8 type, quint32 len, QByteArray payload)
     return true;
 }
 
+/* TODO: Add possibility to save the DOPM message as a trajectory file */
+
 void Chronos::processDopm(QVector<chronos_dopm_pt> path)
 {
     qDebug() << "DOPM HANDLED";
@@ -226,6 +228,8 @@ void Chronos::processDopm(QVector<chronos_dopm_pt> path)
     if (mPacket) {
         mPacket->clearRoute(255);
     }*/
+
+
 
     for (chronos_dopm_pt pt: path) {
 

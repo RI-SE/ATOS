@@ -19,7 +19,7 @@
 #include <cmath>
 
 LocPoint::LocPoint(double x, double y, double alpha, double speed,
-                   double radius, double sigma, quint32 color, qint32 time) :
+                   double radius, double sigma, QColor color, qint32 time) :
     mX(x), mY(y), mAlpha(alpha), mSpeed(speed),
     mRadius(radius), mSigma(sigma), mColor(color), mTime(time)
 {
@@ -97,7 +97,7 @@ QString LocPoint::getInfo() const
     return mInfo;
 }
 
-quint32 LocPoint::getColor() const
+QColor LocPoint::getColor() const
 {
     return mColor;
 }
@@ -168,7 +168,7 @@ void LocPoint::setSigma(double sigma)
     mSigma = sigma;
 }
 
-void LocPoint::setColor(const quint32 &color)
+void LocPoint::setColor(const QColor &color)
 {
     mColor = color;
 }
