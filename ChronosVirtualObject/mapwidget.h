@@ -62,6 +62,12 @@ public:
     void setRotation(double rotation);
     void setXOffset(double offset);
     void setYOffset(double offset);
+
+    /* Display Tools Viktor Johansson */
+    int addInfoTrace(QList<LocPoint>);
+
+    /*--------------------------------*/
+
     void clearTrace();
     void addRoutePoint(double px, double py, double speed = 0.0, qint32 time = 0);
     QList<LocPoint> getRoute();
@@ -125,6 +131,7 @@ signals:
     void infoTraceChanged(int traceNow);
     // Chronos handling
     void handle_osem(chronos_osem data);
+    void handle_dopm(QVector<chronos_dopm_pt> data);
 
 private slots:
     void tileReady(OsmTile tile);
@@ -137,6 +144,7 @@ private slots:
 
     // Method for OSEM
     void chronosOSEM(chronos_osem data);
+    void chronosDOPM(QVector<chronos_dopm_pt> data);
 
 protected:
     void paintEvent(QPaintEvent *event);

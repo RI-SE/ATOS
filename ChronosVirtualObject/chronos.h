@@ -19,6 +19,7 @@ public:
 
 signals:
     void handle_osem(chronos_osem data);
+    void handle_dopm(QVector<chronos_dopm_pt>);
 
 private slots:
     void tcpRx(QByteArray data);

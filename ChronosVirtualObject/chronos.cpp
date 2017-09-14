@@ -228,12 +228,13 @@ void Chronos::processDopm(QVector<chronos_dopm_pt> path)
     if (mPacket) {
         mPacket->clearRoute(255);
     }*/
+    emit handle_dopm(path);
 
 
 
     for (chronos_dopm_pt pt: path) {
-
 /*
+
         qDebug() << "-- Point" <<
                     "X:" << pt.x <<
                     "Y:" << pt.y <<

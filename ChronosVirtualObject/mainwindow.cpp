@@ -15,6 +15,8 @@ MainWindow::MainWindow(QWidget *parent) :
             this,SLOT(updateLabelOSEM(chronos_osem)));
     connect(chronos, SIGNAL(handle_osem(chronos_osem)),
             map,SLOT(chronosOSEM(chronos_osem)));
+    connect(chronos,SIGNAL(handle_dopm(QVector<chronos_dopm_pt>)),
+            map,SLOT(chronosDOPM(QVector<chronos_dopm_pt>)));
     /* Start the chronos object */
     chronos->startServer();
 

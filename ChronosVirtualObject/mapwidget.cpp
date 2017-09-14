@@ -199,9 +199,12 @@ MapWidget::MapWidget(QWidget *parent) :
     setMouseTracking(true);
 
 /* START CHRONOS CODE */
+    CarInfo *car = new CarInfo();
 
+    addCar(*car);
 /* Chronos ref point*/
-    mRefLat = 57.7;//57.777569;
+/*
+    mRefLat = 57.777569;
     mRefLon = 12.781265;
     mRefHeight = 219.0;
 
@@ -224,7 +227,10 @@ MapWidget::MapWidget(QWidget *parent) :
     mWebSocket->open(QUrl(QStringLiteral("ws://10.130.23.14:53251")));
 
 
-    /* Load a trajectory file if there exists one */
+
+
+    // Load a trajectory file if there exists one
+
     //QList<QPointF> trajTemp;
     QDir dir("./traj/");
 
@@ -233,7 +239,7 @@ MapWidget::MapWidget(QWidget *parent) :
     double xyz[3];
 
     qDebug() << "Path: " << dir.absolutePath();
-
+    // TODO: Remove this from program, add method for reading and saving trajectoryfiles
     if ( dir.exists() )
     {
         QFileInfoList entries = dir.entryInfoList( QDir::NoDotAndDotDot | QDir::Files);
@@ -244,11 +250,12 @@ MapWidget::MapWidget(QWidget *parent) :
             QFile file(entries[i].absoluteFilePath());
             file.open(QIODevice::ReadOnly);
 
-            /* First already exist so create only for preeciding ones */
+            // First already exist so create only for preeciding ones
             if(i!=0)
             {
                 QList<LocPoint> emptyList;
                 mInfoTraces.append(emptyList);
+                mRoutes.append(emptyList);
             }
 
             QTextStream in(&file);
@@ -293,18 +300,22 @@ MapWidget::MapWidget(QWidget *parent) :
 
                     //trajTemp.append(QPointF(xyz[0],xyz[1]));
                     //mInfoTrace.append(LocPoint(xyz[0],xyz[1]));
-                    mInfoTraces[i].append(LocPoint(xyz[0],xyz[1]));
+
+                        mInfoTraces[i].append(LocPoint(xyz[0],xyz[1]));
+                        //mRoutes[i].append(LocPoint(xyz[0],xyz[1]));
                 }
 
             }
             file.close();
         }
     }
+    */
 }
 
 MapWidget::~MapWidget()
 {
     mWebSocket->close();
+    removeCar(0); // Remove the temporary car
 }
 
 void MapWidget::onConnected()
@@ -346,13 +357,47 @@ void MapWidget::readPendingDatagrams()
     }
 }
 
+
+/* Handles the signal from Chronos. */
 void MapWidget::chronosOSEM(chronos_osem msg) {
     qDebug() << "Map recieved signal";
-/*
+
     mRefLat = msg.lat;
     mRefLon = msg.lon;
-    mRefHeight = msg.alt;*/
+    mRefHeight = msg.alt;
 
+
+    CarInfo* temp = getCarInfo(0);
+    if (temp)
+    {
+        LocPoint apa = temp->getLocation();
+        QPointF bepa = apa.getPoint();
+        apa.setXY(3,0);
+        qDebug() << "Point: " << bepa;
+        temp->setLocation(apa);
+    }
+
+    update();
+
+
+}
+
+void MapWidget::chronosDOPM(QVector<chronos_dopm_pt> msg)
+{
+    QList<LocPoint> points;
+    for(chronos_dopm_pt pt : msg)
+    {
+        LocPoint point(pt.x,
+                       pt.y,
+                       0,
+                       pt.speed,
+                       1,
+                       0,
+                       Qt::cyan,
+                       pt.tRel);
+        points.append(point);
+    }
+    addInfoTrace(points);
 }
 
 void MapWidget::displayMessage(const QByteArray& message)
@@ -487,6 +532,15 @@ void MapWidget::setYOffset(double offset)
 {
     mYOffset = offset;
     update();
+}
+
+
+int MapWidget::addInfoTrace(QList<LocPoint> trace)
+{
+    mInfoTraces.append(trace);
+    update();
+    // returns list ID
+    return mInfoTraces.size()-1;
 }
 
 void MapWidget::clearTrace()
@@ -1471,6 +1525,7 @@ int MapWidget::getInfoTraceNow() const
     return mInfoTraceNow;
 }
 
+/* Changes the trace to run */
 void MapWidget::setInfoTraceNow(int infoTraceNow)
 {
     int infoTraceOld = mInfoTraceNow;
