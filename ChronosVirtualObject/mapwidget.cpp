@@ -317,9 +317,15 @@ MapWidget::MapWidget(QWidget *parent) :
     */
 }
 
+
 MapWidget::~MapWidget()
 {
  //   mWebSocket->close();
+
+
+    // TODO: Clean everything, i.e. remove cars and trajectories from list
+
+
     //removeCar(0); // Remove the temporary car
 }
 

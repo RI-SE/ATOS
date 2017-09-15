@@ -23,7 +23,7 @@ class VirtualObject : public QThread
 {
     Q_OBJECT
 public:
-    VirtualObject();
+    VirtualObject(qint8);
     ~VirtualObject();
 
     void run();
@@ -36,6 +36,7 @@ private:
 
     qint64 start_time;
     qint64 clock;
+    qint8 id;
 /*
     int status;
 

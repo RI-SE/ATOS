@@ -1,6 +1,6 @@
 #include "virtualobject.h"
 
-VirtualObject::VirtualObject()
+VirtualObject::VirtualObject(qint8 id)
 {
     /*
     mRefLat = 0;
@@ -20,6 +20,8 @@ VirtualObject::VirtualObject()
     //program_time = QDateTime::currentDateTime();
 
     start_time = 0;
+
+    this->id = id;
 
     updateTime();
 }

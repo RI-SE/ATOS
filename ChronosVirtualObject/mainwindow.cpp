@@ -65,14 +65,34 @@ void MainWindow::on_updateButton_clicked(){
 
 void MainWindow::on_playButton_clicked(){
 
-    VirtualObject *vobj = new VirtualObject();
+    qint8 ID = 0;
+    // Create virtual object as a new Thread
+    VirtualObject *vobj = new VirtualObject(ID);
+    MapWidget *map = ui->widget;
+
+    // Add a car to the map
+    // NOTE: the car and the thread must have the same ID
+    CarInfo* car = new CarInfo(ID);
+    map->addCar(car);
+
+
+
+    // Set SLOT to delete the object once it is finished running
     connect(vobj, SIGNAL(finished()), vobj, SLOT(deleteLater()));
+
+    // Disable the starting of a virtual object until it is done
+    ui->playButton->setEnabled(false);
+    // Set SLOT to enable the start of a virtual object upon termination
     connect(vobj, SIGNAL(finished()),this,SLOT(unlockRun()));
+
+    // Set SLOT to update the running time when signal is received from the virtual object
     connect(vobj, SIGNAL(updated_position(double,double,long)),
             this,SLOT(displayTime(double,double,long)));
+
     // Start the thread with the highest priority
     vobj->start(QThread::TimeCriticalPriority);
-    ui->playButton->setEnabled(false);
+
+
     //delete vobj;
 }
 
@@ -100,11 +120,12 @@ void MainWindow::unlockRun(){
 }
 
 void MainWindow::displayTime(double x, double y, long t){
+    // Display the time sent from the object
     char buffer[20];
-
     double d_t = (double) t/1000.0f;
-
     snprintf(buffer,20,"%g",d_t);
-
     ui->lab_runtime->setText(buffer);
+
+    // Update the car position
+
 }

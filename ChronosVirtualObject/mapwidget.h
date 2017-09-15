@@ -137,9 +137,11 @@ signals:
     void routePointAdded(LocPoint pos);
     void lastRoutePointRemoved(LocPoint pos);
     void infoTraceChanged(int traceNow);
+
     // Chronos handling
     void handle_osem(chronos_osem data);
     void handle_dopm(QVector<chronos_dopm_pt> data);
+
 
 private slots:
     void tileReady(OsmTile tile);
