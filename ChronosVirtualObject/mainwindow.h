@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include "chronos_utility.h"
 #include "chronos.h"
+#include "virtualobject.h"
 
 namespace Ui {
 class MainWindow;
@@ -23,7 +24,10 @@ signals:
 private slots:
 
     void on_updateButton_clicked();
+    void on_playButton_clicked();
     void updateLabelOSEM(chronos_osem msg);
+    void unlockRun();
+    void displayTime(double,double,long);
 
 private:
     Ui::MainWindow *ui;

@@ -175,6 +175,11 @@ MapWidget::MapWidget(QWidget *parent) :
     mInfoTraces.append(l);
 
     // Set this to the SP base station position for now
+
+    /*setRefPos(57.71495867,
+              12.89134921,
+              219.0);*/
+
     mRefLat = 57.71495867;
     mRefLon = 12.89134921;
     mRefHeight = 219.0;
@@ -199,9 +204,9 @@ MapWidget::MapWidget(QWidget *parent) :
     setMouseTracking(true);
 
 /* START CHRONOS CODE */
-    CarInfo *car = new CarInfo();
+    //CarInfo *car = new CarInfo();
 
-    addCar(*car);
+    //addCar(*car);
 /* Chronos ref point*/
 /*
     mRefLat = 57.777569;
@@ -314,8 +319,8 @@ MapWidget::MapWidget(QWidget *parent) :
 
 MapWidget::~MapWidget()
 {
-    mWebSocket->close();
-    removeCar(0); // Remove the temporary car
+ //   mWebSocket->close();
+    //removeCar(0); // Remove the temporary car
 }
 
 void MapWidget::onConnected()
@@ -541,6 +546,27 @@ int MapWidget::addInfoTrace(QList<LocPoint> trace)
     update();
     // returns list ID
     return mInfoTraces.size()-1;
+}
+
+void MapWidget::setRefPos(double lat, double lon, double alt)
+{
+    mRefLat = lat;
+    mRefLon = lon;
+    mRefHeight = alt;
+    update();
+}
+
+double MapWidget::getRefLat()
+{
+    return mRefLat;
+}
+double MapWidget::getRefLon()
+{
+    return mRefLon;
+}
+double MapWidget::getRefAlt()
+{
+    return mRefHeight;
 }
 
 void MapWidget::clearTrace()

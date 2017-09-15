@@ -63,10 +63,18 @@ public:
     void setXOffset(double offset);
     void setYOffset(double offset);
 
-    /* Display Tools Viktor Johansson */
+    /* Viktor Johansson */
+    /*---------------------------------------------------*/
+
+    /* Display Tools */
     int addInfoTrace(QList<LocPoint>);
 
-    /*--------------------------------*/
+    /* Utility Functions */
+    void setRefPos(double lat, double lon, double alt);
+    double getRefLat();
+    double getRefLon();
+    double getRefAlt();
+    /*---------------------------------------------------*/
 
     void clearTrace();
     void addRoutePoint(double px, double py, double speed = 0.0, qint32 time = 0);

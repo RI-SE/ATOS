@@ -39,7 +39,8 @@ SOURCES += \
         carinfo.cpp \
         perspectivepixmap.cpp \
         osmclient.cpp \
-        osmtile.cpp
+        osmtile.cpp \
+    virtualobject.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -56,7 +57,8 @@ HEADERS += \
         perspectivepixmap.h \
         osmclient.h \
         osmtile.h \
-        mapwidget.h
+        mapwidget.h \
+    virtualobject.h
 
 FORMS += \
         mainwindow.ui
