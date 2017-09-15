@@ -186,10 +186,10 @@ MapWidget::MapWidget(QWidget *parent) :
 
     // Hardcoded for now
     mOsm->setCacheDir("osm_tiles");
-        mOsm->setTileServerUrl("http://tile.openstreetmap.org");
+    //    mOsm->setTileServerUrl("http://tile.openstreetmap.org");
     //    mOsm->setTileServerUrl("http://c.osm.rrze.fau.de/osmhd"); // Also https
     //    mOsm->setTileServerUrl("http://tiles.vedder.se/osm_tiles");
-    //      mOsm->setTileServerUrl("http://tiles.vedder.se/osm_tiles_hd");
+    mOsm->setTileServerUrl("http://tiles.vedder.se/osm_tiles_hd");
 
     connect(mOsm, SIGNAL(tileReady(OsmTile)),
             this, SLOT(tileReady(OsmTile)));
