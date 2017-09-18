@@ -25,17 +25,22 @@ private slots:
 
     void on_updateButton_clicked();
     void on_playButton_clicked();
+    void on_init_vobj_clicked();
+    void on_delete_vobj_clicked();
     //void updateLabelOSEM(chronos_osem msg);
     void unlockRun();
     void handleUpdateState(VOBJ_DATA);
 
 private:
     Ui::MainWindow *ui;
-    Chronos *chronos;
+    //Chronos *chronos;
+    VirtualObject* vobj;
 
     void displayTime(qint64 t);
     void updateLabelOSEM(double lat,double lon,double alt);
 };
+
+
 
 
 

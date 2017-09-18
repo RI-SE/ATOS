@@ -7,5 +7,8 @@ int main(int argc, char *argv[])
     MainWindow w;
     w.show();
 
+    // Enable the meta data to be passed through signals and slots
+    qRegisterMetaType<VOBJ_DATA>();
+
     return a.exec();
 }

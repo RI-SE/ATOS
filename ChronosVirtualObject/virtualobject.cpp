@@ -55,7 +55,7 @@ void VirtualObject::run()
     qDebug() << "Virtual Object Started";
 
     qint64 elapsed_time = 0;
-    qint64 run_time_MS = 10000;
+    qint64 run_time_MS = 3000;
     int flag = 1;
 
     updateTime();
@@ -110,7 +110,46 @@ void VirtualObject::sendCurrentState()
                        mRefAlt);
 } */
 
+int VirtualObject::connectToServer(int udpSocket,int tcpSocket)
+{
+    // Perhaps check if sockets are not taken?
+    if (!cClient->startServer(udpSocket,tcpSocket)){
+        return -1;
+    }
+
+    // Make connections
+    // Connection to OSEM
+    connect(cClient,SIGNAL(handle_osem(chronos_osem)),
+            this,SLOT(handleOSEM(chronos_osem)));
+    return 0;
+}
+
+int VirtualObject::getID()
+{
+    return data.ID;
+}
+
 void VirtualObject::updateTime()
 {
     clock = QDateTime::currentMSecsSinceEpoch();
 }
+
+// SLOTS
+
+void VirtualObject::handleOSEM(chronos_osem msg)
+{
+    data.mRefLat = msg.lat;
+    data.mRefLon = msg.lon;
+    data.mRefAlt = msg.alt;
+    mRefHeading = msg.heading;
+    emit updated_state(data);
+}
+
+void VirtualObject::handleDOPM(chronos_dopm_pt msg)
+{
+
+}
+
+
+
+

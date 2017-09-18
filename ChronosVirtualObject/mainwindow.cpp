@@ -7,29 +7,29 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    qRegisterMetaType<VOBJ_DATA>();
 
-    Chronos *chronos = new Chronos();
+
+    //Chronos *chronos = new Chronos();
 
 
     //PacketInterface mPacketInt;
-    MapWidget *map = ui->widget;
+    //MapWidget *map = ui->widget;
     /* Listen for Chronos OSEM signal */
     //connect(chronos,SIGNAL(handle_osem(chronos_osem)),
     //        this,SLOT(updateLabelOSEM(chronos_osem)));
-    connect(chronos, SIGNAL(handle_osem(chronos_osem)),
-            map,SLOT(chronosOSEM(chronos_osem)));
-    connect(chronos,SIGNAL(handle_dopm(QVector<chronos_dopm_pt>)),
-            map,SLOT(chronosDOPM(QVector<chronos_dopm_pt>)));
+    //connect(chronos, SIGNAL(handle_osem(chronos_osem)),
+    //        map,SLOT(chronosOSEM(chronos_osem)));
+    //connect(chronos,SIGNAL(handle_dopm(QVector<chronos_dopm_pt>)),
+    //       map,SLOT(chronosDOPM(QVector<chronos_dopm_pt>)));
     /* Start the chronos object */
-    chronos->startServer(53240, 53241);
+    //chronos->startServer(53240, 53241);
 
 
 }
 
 MainWindow::~MainWindow()
 {
-    delete chronos;
+    //delete chronos;
     delete ui;
 }
 
@@ -67,9 +67,31 @@ void MainWindow::on_updateButton_clicked(){
 
 void MainWindow::on_playButton_clicked(){
 
+
+
+
+    // Disable the starting of a virtual object until it is done
+    ui->playButton->setEnabled(false);
+    ui->delete_vobj->setEnabled(false);
+
+    // Start the thread with the highest priority
+    vobj->start(QThread::TimeCriticalPriority);
+
+    //delete vobj;
+}
+
+void MainWindow::on_init_vobj_clicked()
+{
+    ui->playButton->setEnabled(true);
+    ui->delete_vobj->setEnabled(true);
+    ui->init_vobj->setEnabled(false);
+
     qint8 ID = 0;
     // Create virtual object as a new Thread
-    VirtualObject *vobj = new VirtualObject(ID);
+    vobj = new VirtualObject(ID);
+
+    vobj->connectToServer(53240, 53241);
+
     MapWidget *map = ui->widget;
 
 
@@ -82,10 +104,9 @@ void MainWindow::on_playButton_clicked(){
 
 
     // Set SLOT to delete the object once it is finished running
-    connect(vobj, SIGNAL(finished()), vobj, SLOT(deleteLater()));
+    //connect(vobj, SIGNAL(finished()), vobj, SLOT(deleteLater()));
 
-    // Disable the starting of a virtual object until it is done
-    ui->playButton->setEnabled(false);
+
     // Set SLOT to enable the start of a virtual object upon termination
     connect(vobj, SIGNAL(finished()),this,SLOT(unlockRun()));
 
@@ -99,11 +120,24 @@ void MainWindow::on_playButton_clicked(){
 
     connect(vobj,SIGNAL(updated_state(VOBJ_DATA)),
             this,SLOT(handleUpdateState(VOBJ_DATA)));
-    // Start the thread with the highest priority
-    vobj->start(QThread::TimeCriticalPriority);
 
 
-    //delete vobj;
+
+
+}
+void MainWindow::on_delete_vobj_clicked()
+{
+    ui->playButton->setEnabled(false);
+    ui->delete_vobj->setEnabled(false);
+    ui->init_vobj->setEnabled(true);
+
+    MapWidget *map = ui->widget;
+
+    int id = vobj->getID();
+    map->removeCar(id);
+    map->update();
+
+    delete vobj;
 }
 
 void MainWindow::updateLabelOSEM(double lat, double lon, double alt) {
@@ -127,6 +161,7 @@ void MainWindow::updateLabelOSEM(double lat, double lon, double alt) {
 
 void MainWindow::unlockRun(){
     ui->playButton->setEnabled(true);
+    ui->delete_vobj->setEnabled(true);
 }
 
 void MainWindow::displayTime(qint64 t){
@@ -147,7 +182,7 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     // Show the server reference values
     updateLabelOSEM(data.mRefLat,data.mRefLon,data.mRefAlt);
     // Update the map with the reference values
-    // map->setEnuRef(data.mRefLat,dlata.mRefLon,data.mRefAlt);
+    // map->setEnuRef(data.mRefLat,data.mRefLon,data.mRefAlt);
 
     // Update the car position
     LocPoint pos;

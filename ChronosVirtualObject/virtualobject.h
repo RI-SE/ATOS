@@ -43,6 +43,8 @@ public:
     ~VirtualObject();
 
     void run();
+    int connectToServer(int updSocket,int tcpSocket);
+    int getID();
 signals:
     //void updated_position(double x, double y, long t,int ID); // To be removed
 
@@ -51,7 +53,8 @@ signals:
     void send_monr(chronos_monr monr);
 
 private slots:
-
+    void handleOSEM(chronos_osem msg);
+    void handleDOPM(chronos_dopm_pt msg);
 
 private:
     //QDateTime program_time;
@@ -62,6 +65,11 @@ private:
 
     qint64 start_time;
     qint64 clock;
+
+
+    // Don't know what use these will be
+    double mRefHeading;
+
     /*
     int id;
     double x = 0;
@@ -86,6 +94,7 @@ private:
     */
 
     //void sendCurrentState();
+
     void updateTime();
 
 };
