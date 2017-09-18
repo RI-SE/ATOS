@@ -26,11 +26,11 @@ Chronos::Chronos(QObject *parent) : QObject(parent)
 }
 
 //bool Chronos::startServer(PacketInterface *packet)
-bool Chronos::startServer()
+bool Chronos::startServer(int udpSocket, int tcpSocket)
 {
     //mPacket = packet;
 
-    bool res = mTcpServer->startServer(53241);
+    bool res = mTcpServer->startServer(tcpSocket);//53241
 
     if (!res) {
         qWarning() << "Starting TCP server failed:" << mTcpServer->errorString();
@@ -38,7 +38,7 @@ bool Chronos::startServer()
 
     if (res) {
         mUdpSocket->close();
-        res = mUdpSocket->bind(QHostAddress::Any, 53240);
+        res = mUdpSocket->bind(QHostAddress::Any, udpSocket); //53240
     }
 
     if (!res) {

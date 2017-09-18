@@ -5,9 +5,24 @@
 #include <QDebug>
 #include <QDateTime>
 #include <QThread>
+#include "chronos.h"
 #include "locpoint.h"
 #include "datatypes.h"
 #include <string.h>
+
+
+// Object data of interest
+typedef struct {
+    int ID;
+    qint64 time;
+    double x;
+    double y;
+    double mRefLat;
+    double mRefLon;
+    double mRefAlt;
+} VOBJ_DATA;
+
+Q_DECLARE_METATYPE(VOBJ_DATA)
 
 typedef enum {
     IDLE = 0,
@@ -32,7 +47,7 @@ signals:
     //void updated_position(double x, double y, long t,int ID); // To be removed
 
 
-    void updated_state(int ID, qint32 t, double x, double y);
+    void updated_state(VOBJ_DATA currentState);
     void send_monr(chronos_monr monr);
 
 private slots:
@@ -41,8 +56,13 @@ private slots:
 private:
     //QDateTime program_time;
 
+    Chronos* cClient;
+
+    VOBJ_DATA data;
+
     qint64 start_time;
     qint64 clock;
+    /*
     int id;
     double x = 0;
     double y = 0;
@@ -50,8 +70,8 @@ private:
     double mRefLat = 57.71495867;
     double mRefLon = 12.89134921;
     double mRefAlt = 219.0;
-
-    LocPoint getCurrentState();
+*/
+    //LocPoint getCurrentState();
 /*
     int status;
 
@@ -65,6 +85,7 @@ private:
     double heading;
     */
 
+    //void sendCurrentState();
     void updateTime();
 
 };

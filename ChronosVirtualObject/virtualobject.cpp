@@ -20,13 +20,34 @@ VirtualObject::VirtualObject(int id)
     //program_time = QDateTime::currentDateTime();
 
     start_time = 0;
+    clock = 0;
 
-    this->id = id;
+    data= {
+        id, // id
+        0,  // time
+        0,  // x
+        0,  // y
+        57.71495867,  // ref lat
+        12.89134921,  // ref lon
+        219.0   // ref alt
+    };
+
+    //this->id = id;
 
     updateTime();
+
+    cClient = new Chronos();
+
+    // Connect signals to SLOTs
+
+
+    // Start the chronos object
+    //cClient->startServer(53240, 53241);
 }
 
-VirtualObject::~VirtualObject() {}
+VirtualObject::~VirtualObject() {
+    delete cClient;
+}
 
 
 void VirtualObject::run()
@@ -46,33 +67,48 @@ void VirtualObject::run()
         //clock = QDateTime::currentMSecsSinceEpoch();
         updateTime();
         elapsed_time = clock-start_time;
+        data.time = elapsed_time;
         if (run_time_MS/2 < elapsed_time && flag){
             qDebug() << "Reached half way.";
             flag = 0;
         }
         if (flag){
-            x=0; y=0;
-            emit updated_state(this->id,(qint32) elapsed_time,x,y);
+            data.x=0; data.y=0;
+            //emit updated_state(this->id,(qint32) elapsed_time,x,y);
+
         }
         else
         {
-            x=5; y=5;
-            emit updated_state(this->id,(qint32) elapsed_time,x,y);
+            data.x=5; data.y=5;
+            //emit updated_state(this->id,(qint32) elapsed_time,x,y);
+
         }
+        emit updated_state(data);
         QThread::msleep(10);
     }
     qDebug() << "Done.";
 
 
 }
-
+/*
 LocPoint VirtualObject::getCurrentState()
 {
     LocPoint ret_val;
     ret_val.setTime(clock-start_time);
     ret_val.setXY(x,y);
     return ret_val;
-}
+}*/
+/*
+void VirtualObject::sendCurrentState()
+{
+    emit updated_state(this->id,
+                       (qint32) elapsed_time,
+                       x,
+                       y,
+                       mRefLat,
+                       mRefLon,
+                       mRefAlt);
+} */
 
 void VirtualObject::updateTime()
 {

@@ -7,20 +7,22 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    qRegisterMetaType<VOBJ_DATA>();
+
     Chronos *chronos = new Chronos();
 
 
     //PacketInterface mPacketInt;
     MapWidget *map = ui->widget;
     /* Listen for Chronos OSEM signal */
-    connect(chronos,SIGNAL(handle_osem(chronos_osem)),
-            this,SLOT(updateLabelOSEM(chronos_osem)));
+    //connect(chronos,SIGNAL(handle_osem(chronos_osem)),
+    //        this,SLOT(updateLabelOSEM(chronos_osem)));
     connect(chronos, SIGNAL(handle_osem(chronos_osem)),
             map,SLOT(chronosOSEM(chronos_osem)));
     connect(chronos,SIGNAL(handle_dopm(QVector<chronos_dopm_pt>)),
             map,SLOT(chronosDOPM(QVector<chronos_dopm_pt>)));
     /* Start the chronos object */
-    chronos->startServer();
+    chronos->startServer(53240, 53241);
 
 
 }
@@ -88,12 +90,15 @@ void MainWindow::on_playButton_clicked(){
     connect(vobj, SIGNAL(finished()),this,SLOT(unlockRun()));
 
     // Set SLOT to update the running time when signal is received from the virtual object
-    connect(vobj, SIGNAL(updated_state(int,qint32,double,double)),
-            this,SLOT(displayTime(int,qint32,double,double)));
+    //connect(vobj, SIGNAL(updated_state(int,qint32,double,double)),
+    //        this,SLOT(displayTime(int,qint32,double,double)));
     // Set SLOT to update the visual car with the virtual object state
-    connect(vobj,SIGNAL(updated_state(int,qint32,double,double)),
-            map,SLOT(handleUpdatedCarState(int,qint32,double,double)));
+    //connect(vobj,SIGNAL(updated_state(int,qint32,double,double)),
+    //        map,SLOT(handleUpdatedCarState(int,qint32,double,double)));
 
+
+    connect(vobj,SIGNAL(updated_state(VOBJ_DATA)),
+            this,SLOT(handleUpdateState(VOBJ_DATA)));
     // Start the thread with the highest priority
     vobj->start(QThread::TimeCriticalPriority);
 
@@ -101,30 +106,30 @@ void MainWindow::on_playButton_clicked(){
     //delete vobj;
 }
 
-void MainWindow::updateLabelOSEM(chronos_osem msg) {
+void MainWindow::updateLabelOSEM(double lat, double lon, double alt) {
     //on_updateButton_clicked();
 
     char c_lat[LABEL_TEXT_LENGTH];
     char c_long[LABEL_TEXT_LENGTH];
     char c_alt[LABEL_TEXT_LENGTH];
-    char c_head[LABEL_TEXT_LENGTH];
+    //char c_head[LABEL_TEXT_LENGTH];
 
-    snprintf(c_lat,LABEL_TEXT_LENGTH,"%g",msg.lat);
-    snprintf(c_long,LABEL_TEXT_LENGTH,"%g",msg.lon);
-    snprintf(c_alt,LABEL_TEXT_LENGTH,"%g",msg.alt);
-    snprintf(c_head,LABEL_TEXT_LENGTH,"%g",msg.heading);
+    snprintf(c_lat,LABEL_TEXT_LENGTH,"%g",lat);
+    snprintf(c_long,LABEL_TEXT_LENGTH,"%g",lon);
+    snprintf(c_alt,LABEL_TEXT_LENGTH,"%g",alt);
+    //snprintf(c_head,LABEL_TEXT_LENGTH,"%g",heading);
 
     ui->lab_lat->setText(c_lat);
     ui->lab_lon->setText(c_long);
     ui->lab_alt->setText(c_alt);
-    ui->lab_head->setText(c_head);
+    //ui->lab_head->setText(c_head);
 }
 
 void MainWindow::unlockRun(){
     ui->playButton->setEnabled(true);
 }
 
-void MainWindow::displayTime(int ID, qint32 t, double x, double y){
+void MainWindow::displayTime(qint64 t){
     // Display the time sent from the object
     char buffer[20];
     double d_t = (double) t/1000.0f;
@@ -132,3 +137,29 @@ void MainWindow::displayTime(int ID, qint32 t, double x, double y){
     ui->lab_runtime->setText(buffer);
 
 }
+
+void MainWindow::handleUpdateState(VOBJ_DATA data){
+    MapWidget *map = ui->widget;
+
+    // Display time in the label
+    displayTime(data.time);
+
+    // Show the server reference values
+    updateLabelOSEM(data.mRefLat,data.mRefLon,data.mRefAlt);
+    // Update the map with the reference values
+    // map->setEnuRef(data.mRefLat,dlata.mRefLon,data.mRefAlt);
+
+    // Update the car position
+    LocPoint pos;
+
+    pos.setTime(data.time);
+    pos.setXY(data.x,data.y);
+
+    map->updateCarState(data.ID,pos);
+    map->update();
+
+
+
+}
+
+

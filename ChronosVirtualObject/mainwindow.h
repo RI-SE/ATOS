@@ -19,19 +19,22 @@ public:
     ~MainWindow();
 
 signals:
-    void handle_osem(chronos_osem data);
+    //void handle_osem(chronos_osem data);
 
 private slots:
 
     void on_updateButton_clicked();
     void on_playButton_clicked();
-    void updateLabelOSEM(chronos_osem msg);
+    //void updateLabelOSEM(chronos_osem msg);
     void unlockRun();
-    void displayTime(int ID, qint32 t, double x, double y);
+    void handleUpdateState(VOBJ_DATA);
 
 private:
     Ui::MainWindow *ui;
     Chronos *chronos;
+
+    void displayTime(qint64 t);
+    void updateLabelOSEM(double lat,double lon,double alt);
 };
 
 

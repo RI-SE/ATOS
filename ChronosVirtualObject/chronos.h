@@ -14,7 +14,7 @@ class Chronos : public QObject
     Q_OBJECT
 public:
     Chronos(QObject *parent = 0);
-    bool startServer();
+    bool startServer(int udpSocket, int tcpSocket);
     //bool startServer(PacketInterface *packet);
 
 signals:

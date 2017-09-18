@@ -158,7 +158,7 @@ private slots:
     void chronosDOPM(QVector<chronos_dopm_pt> data);
 
     // Update car pos
-    void handleUpdatedCarState(int ID, qint32 time, double xPos,double yPos);
+    //void handleUpdatedCarState(int ID, qint32 time, double xPos,double yPos);
 
 protected:
     void paintEvent(QPaintEvent *event);
