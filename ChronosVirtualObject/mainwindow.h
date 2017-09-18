@@ -27,7 +27,7 @@ private slots:
     void on_playButton_clicked();
     void updateLabelOSEM(chronos_osem msg);
     void unlockRun();
-    void displayTime(double,double,long);
+    void displayTime(int ID, qint32 t, double x, double y);
 
 private:
     Ui::MainWindow *ui;

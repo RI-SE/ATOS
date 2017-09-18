@@ -411,6 +411,18 @@ void MapWidget::chronosDOPM(QVector<chronos_dopm_pt> msg)
     addInfoTrace(points);
 }
 
+void MapWidget::handleUpdatedCarState(int ID, qint32 time, double xPos,double yPos)
+{
+    LocPoint point;
+    point.setTime(time);
+    point.setXY(xPos,yPos);
+    updateCarState(ID,point);
+
+    //updateCarState(ID,pos);
+    update();
+}
+
+
 void MapWidget::displayMessage(const QByteArray& message)
 {
     /* Handle incoming packet */
@@ -573,6 +585,22 @@ double MapWidget::getRefLon()
 double MapWidget::getRefAlt()
 {
     return mRefHeight;
+}
+
+int MapWidget::updateCarState(int ID, LocPoint pos){
+    CarInfo* car = getCarInfo(ID);
+    if (!car){
+        qDebug() << "Car ID: " << ID << " does not exsist.";
+        return -1;
+    }
+    // Only update the position and time
+    LocPoint newpos = car->getLocation();
+    newpos.setX(pos.getX());
+    newpos.setY(pos.getY());
+    newpos.setTime(pos.getTime());
+    car->setLocation(newpos);
+    car->setTime(pos.getTime());
+    return 0;
 }
 
 void MapWidget::clearTrace()

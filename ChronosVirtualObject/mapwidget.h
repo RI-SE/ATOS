@@ -74,6 +74,7 @@ public:
     double getRefLat();
     double getRefLon();
     double getRefAlt();
+    int updateCarState(int ID, LocPoint pos);
     /*---------------------------------------------------*/
 
     void clearTrace();
@@ -155,6 +156,9 @@ private slots:
     // Method for OSEM
     void chronosOSEM(chronos_osem data);
     void chronosDOPM(QVector<chronos_dopm_pt> data);
+
+    // Update car pos
+    void handleUpdatedCarState(int ID, qint32 time, double xPos,double yPos);
 
 protected:
     void paintEvent(QPaintEvent *event);

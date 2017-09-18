@@ -1,6 +1,6 @@
 #include "virtualobject.h"
 
-VirtualObject::VirtualObject(qint8 id)
+VirtualObject::VirtualObject(int id)
 {
     /*
     mRefLat = 0;
@@ -50,13 +50,28 @@ void VirtualObject::run()
             qDebug() << "Reached half way.";
             flag = 0;
         }
-        emit updated_position(0,0,(long) elapsed_time);
-
+        if (flag){
+            x=0; y=0;
+            emit updated_state(this->id,(qint32) elapsed_time,x,y);
+        }
+        else
+        {
+            x=5; y=5;
+            emit updated_state(this->id,(qint32) elapsed_time,x,y);
+        }
         QThread::msleep(10);
     }
     qDebug() << "Done.";
 
 
+}
+
+LocPoint VirtualObject::getCurrentState()
+{
+    LocPoint ret_val;
+    ret_val.setTime(clock-start_time);
+    ret_val.setXY(x,y);
+    return ret_val;
 }
 
 void VirtualObject::updateTime()

@@ -70,10 +70,12 @@ void MainWindow::on_playButton_clicked(){
     VirtualObject *vobj = new VirtualObject(ID);
     MapWidget *map = ui->widget;
 
+
     // Add a car to the map
     // NOTE: the car and the thread must have the same ID
-    CarInfo* car = new CarInfo(ID);
-    map->addCar(car);
+    //CarInfo* car = new CarInfo(ID);
+    map->removeCar(ID);
+    map->addCar(ID);
 
 
 
@@ -86,8 +88,11 @@ void MainWindow::on_playButton_clicked(){
     connect(vobj, SIGNAL(finished()),this,SLOT(unlockRun()));
 
     // Set SLOT to update the running time when signal is received from the virtual object
-    connect(vobj, SIGNAL(updated_position(double,double,long)),
-            this,SLOT(displayTime(double,double,long)));
+    connect(vobj, SIGNAL(updated_state(int,qint32,double,double)),
+            this,SLOT(displayTime(int,qint32,double,double)));
+    // Set SLOT to update the visual car with the virtual object state
+    connect(vobj,SIGNAL(updated_state(int,qint32,double,double)),
+            map,SLOT(handleUpdatedCarState(int,qint32,double,double)));
 
     // Start the thread with the highest priority
     vobj->start(QThread::TimeCriticalPriority);
@@ -119,13 +124,11 @@ void MainWindow::unlockRun(){
     ui->playButton->setEnabled(true);
 }
 
-void MainWindow::displayTime(double x, double y, long t){
+void MainWindow::displayTime(int ID, qint32 t, double x, double y){
     // Display the time sent from the object
     char buffer[20];
     double d_t = (double) t/1000.0f;
     snprintf(buffer,20,"%g",d_t);
     ui->lab_runtime->setText(buffer);
-
-    // Update the car position
 
 }
