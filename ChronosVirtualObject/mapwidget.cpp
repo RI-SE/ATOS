@@ -1280,16 +1280,17 @@ void MapWidget::paintEvent(QPaintEvent *event)
         QTime t = QTime::fromMSecsSinceStartOfDay(carInfo.getTime());
         txt.sprintf("%s\n"
                     "(%.3f, %.3f, %.0f)\n"
-                    "%02d:%02d:%02d:%03d",
+                    "%02d:%02d:%02d:%03d\n"
+                    "%s",
                     carInfo.getName().toLocal8Bit().data(),
                     pos.getX(), pos.getY(), angle,
-                    t.hour(), t.minute(), t.second(), t.msec());
+                    t.hour(), t.minute(), t.second(), t.msec(),carInfo.getInfo().toLocal8Bit().data());
         pt_txt.setX(x + 120 + (car_w - 190) * ((cos(pos.getAlpha()) + 1) / 2));
         pt_txt.setY(y);
         painter.setTransform(txtTrans);
         pt_txt = drawTrans.map(pt_txt);
         rect_txt.setCoords(pt_txt.x(), pt_txt.y() - 20,
-                           pt_txt.x() + 300, pt_txt.y() + 25);
+                           pt_txt.x() + 300, pt_txt.y() + 50);
         painter.drawText(rect_txt, txt);
     }
 

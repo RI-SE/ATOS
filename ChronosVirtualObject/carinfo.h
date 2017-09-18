@@ -41,6 +41,9 @@ public:
     qint32 getTime() const;
     void setTime(const qint32 &time);
 
+    QString getInfo() const;
+    void setInfo(QString info);
+
 private:
     int mId;
     QString mName;
@@ -49,6 +52,7 @@ private:
     LocPoint mApGoal;
     Qt::GlobalColor mColor;
     qint32 mTime;
+    QString mInfo;
 
 };
 

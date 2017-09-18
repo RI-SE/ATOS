@@ -97,9 +97,10 @@ void MainWindow::on_init_vobj_clicked()
 
     // Add a car to the map
     // NOTE: the car and the thread must have the same ID
-    //CarInfo* car = new CarInfo(ID);
+    CarInfo car;
+    car.setInfo("MASTER");
     map->removeCar(ID);
-    map->addCar(ID);
+    map->addCar(car);
 
 
 
@@ -182,7 +183,7 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     // Show the server reference values
     updateLabelOSEM(data.mRefLat,data.mRefLon,data.mRefAlt);
     // Update the map with the reference values
-    // map->setEnuRef(data.mRefLat,data.mRefLon,data.mRefAlt);
+    map->setEnuRef(data.mRefLat,data.mRefLon,data.mRefAlt);
 
     // Update the car position
     LocPoint pos;

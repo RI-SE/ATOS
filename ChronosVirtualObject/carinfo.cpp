@@ -101,3 +101,12 @@ LocPoint CarInfo::getLocation() const
     return mLocation;
 }
 
+QString CarInfo::getInfo() const
+{
+    return mInfo;
+}
+
+void CarInfo::setInfo(QString info)
+{
+    mInfo = info;
+}

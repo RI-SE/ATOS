@@ -55,7 +55,7 @@ void VirtualObject::run()
     qDebug() << "Virtual Object Started";
 
     qint64 elapsed_time = 0;
-    qint64 run_time_MS = 3000;
+    qint64 run_time_MS = 15000;
     int flag = 1;
 
     updateTime();
