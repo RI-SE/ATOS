@@ -35,7 +35,7 @@
 #include "carinfo.h"
 #include "perspectivepixmap.h"
 #include "osmclient.h"
-#include "chronos.h"
+//#include "chronos.h"
 
 // QWidget or QGLWidget
 #ifdef HAS_OPENGL
@@ -139,9 +139,9 @@ signals:
     void lastRoutePointRemoved(LocPoint pos);
     void infoTraceChanged(int traceNow);
 
-    // Chronos handling
-    void handle_osem(chronos_osem data);
-    void handle_dopm(QVector<chronos_dopm_pt> data);
+    // Chronos handling, to be removed
+    //void handle_osem(chronos_osem data);
+    //void handle_dopm(QVector<chronos_dopm_pt> data);
 
 
 private slots:
@@ -154,8 +154,8 @@ private slots:
     void displayMessage(const QByteArray &message);
 
     // Method for OSEM
-    void chronosOSEM(chronos_osem data);
-    void chronosDOPM(QVector<chronos_dopm_pt> data);
+    //void chronosOSEM(chronos_osem data);
+    //void chronosDOPM(QVector<chronos_dopm_pt> data);
 
     // Update car pos
     //void handleUpdatedCarState(int ID, qint32 time, double xPos,double yPos);

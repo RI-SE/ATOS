@@ -207,7 +207,7 @@
      </font>
     </property>
     <property name="text">
-     <string>Run</string>
+     <string>Start</string>
     </property>
     <property name="autoDefault">
      <bool>false</bool>

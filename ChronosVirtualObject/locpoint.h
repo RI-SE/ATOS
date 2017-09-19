@@ -66,7 +66,7 @@ private:
     double mAlpha;
     double mSpeed;
     double mRadius;
-    double mSigma;
+    double mSigma; // Standard deviation
     QString mInfo;
     QColor mColor;
     qint32 mTime;

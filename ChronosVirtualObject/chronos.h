@@ -17,9 +17,13 @@ public:
     bool startServer(int udpSocket, int tcpSocket);
     //bool startServer(PacketInterface *packet);
 
+
+    bool sendMonr(chronos_monr monr);
+
 signals:
     void handle_osem(chronos_osem data);
     void handle_dopm(QVector<chronos_dopm_pt>);
+    void handle_heab(chronos_heab heab);
 
 private slots:
     void tcpRx(QByteArray data);
@@ -49,7 +53,6 @@ private:
     void processStrt(chronos_strt strt);
     void processHeab(chronos_heab heab);
 
-    bool sendMonr(chronos_monr monr);
 
 };
 

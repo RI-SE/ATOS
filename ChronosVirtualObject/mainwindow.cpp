@@ -74,6 +74,11 @@ void MainWindow::on_playButton_clicked(){
     ui->playButton->setEnabled(false);
     ui->delete_vobj->setEnabled(false);
 
+    // Reset trace
+    ui->widget->clearTrace();
+    // Add red trace to the carl
+    ui->widget->setTraceCar(0);
+
     // Start the thread with the highest priority
     vobj->start(QThread::TimeCriticalPriority);
 
@@ -104,6 +109,7 @@ void MainWindow::on_init_vobj_clicked()
 
 
 
+
     // Set SLOT to delete the object once it is finished running
     //connect(vobj, SIGNAL(finished()), vobj, SLOT(deleteLater()));
 
@@ -121,6 +127,8 @@ void MainWindow::on_init_vobj_clicked()
 
     connect(vobj,SIGNAL(updated_state(VOBJ_DATA)),
             this,SLOT(handleUpdateState(VOBJ_DATA)));
+    connect(vobj,SIGNAL(new_trajectory(QVector<chronos_dopm_pt>)),
+            this,SLOT(handleNewTrajectory(QVector<chronos_dopm_pt>)));
 
 
 
@@ -134,6 +142,7 @@ void MainWindow::on_delete_vobj_clicked()
 
     MapWidget *map = ui->widget;
 
+    map->clearTrace();
     int id = vobj->getID();
     map->removeCar(id);
     map->update();
@@ -190,12 +199,27 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
 
     pos.setTime(data.time);
     pos.setXY(data.x,data.y);
+    pos.setAlpha(data.heading);
+
 
     map->updateCarState(data.ID,pos);
     map->update();
-
-
-
 }
 
-
+void MainWindow::handleNewTrajectory(QVector<chronos_dopm_pt> traj)
+{
+    QList<LocPoint> points;
+    for(chronos_dopm_pt pt : traj)
+    {
+        LocPoint point(pt.x,
+                       pt.y,
+                       0,
+                       pt.speed,
+                       1,
+                       0,
+                       Qt::cyan,
+                       pt.tRel);
+        points.append(point);
+    }
+    ui->widget->addInfoTrace(points);
+}

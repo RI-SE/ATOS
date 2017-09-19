@@ -30,6 +30,7 @@ private slots:
     //void updateLabelOSEM(chronos_osem msg);
     void unlockRun();
     void handleUpdateState(VOBJ_DATA);
+    void handleNewTrajectory(QVector<chronos_dopm_pt> traj);
 
 private:
     Ui::MainWindow *ui;

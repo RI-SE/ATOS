@@ -27,6 +27,9 @@ VirtualObject::VirtualObject(int id)
         0,  // time
         0,  // x
         0,  // y
+        0,  // heading
+        0,  // speed
+        0,  // acceleration
         57.71495867,  // ref lat
         12.89134921,  // ref lon
         219.0   // ref alt
@@ -58,14 +61,24 @@ void VirtualObject::run()
     qint64 run_time_MS = 15000;
     int flag = 1;
 
-    updateTime();
-    //clock = QDateTime::currentMSecsSinceEpoch();
+    //updateTime();
+    clock = QDateTime::currentMSecsSinceEpoch();
     start_time = clock;
-
+    status = RUNNING;
     while(elapsed_time < run_time_MS)
     {
-        //clock = QDateTime::currentMSecsSinceEpoch();
-        updateTime();
+        clock = QDateTime::currentMSecsSinceEpoch();
+
+        // Check if heartbeat deadline has passed
+        if(clock-heab_recieved_time > HEARTBEAT_TIME)
+        {
+            qDebug() << "ERROR: Heartbeat not recieved.";
+            status = STOPPED;
+            return;
+
+        }
+
+
         elapsed_time = clock-start_time;
         data.time = elapsed_time;
         if (run_time_MS/2 < elapsed_time && flag){
@@ -83,11 +96,17 @@ void VirtualObject::run()
             //emit updated_state(this->id,(qint32) elapsed_time,x,y);
 
         }
+
+        // Send monr
+        cClient->sendMonr(getMONR());
+
+
+
         emit updated_state(data);
         QThread::msleep(10);
     }
     qDebug() << "Done.";
-
+    status = IDLE;
 
 }
 /*
@@ -121,6 +140,14 @@ int VirtualObject::connectToServer(int udpSocket,int tcpSocket)
     // Connection to OSEM
     connect(cClient,SIGNAL(handle_osem(chronos_osem)),
             this,SLOT(handleOSEM(chronos_osem)));
+    connect(cClient,SIGNAL(handle_dopm(QVector<chronos_dopm_pt>)),
+            this,SLOT(handleDOPM(QVector<chronos_dopm_pt>)));
+
+    connect(cClient,SIGNAL(handle_heab(chronos_heab)),
+            this,SLOT(handleHEAB(chronos_heab)));
+    // make connection to send the MONR
+    //connect(this,SIGNAL(send_monr(chronos_monr)),
+    //        cClient,SLOT(transmitMONR(chronos_osem)));
     return 0;
 }
 
@@ -134,6 +161,19 @@ void VirtualObject::updateTime()
     clock = QDateTime::currentMSecsSinceEpoch();
 }
 
+chronos_monr VirtualObject::getMONR()
+{
+    chronos_monr monr;
+
+    utility::xyzToLlh(data.x,data.y,0,&monr.lat,&monr.lon,&monr.alt);
+    monr.heading = data.heading;
+    monr.speed = data.speed;
+    monr.direction = 0; // The car is drivning forward
+    monr.status = status;
+    monr.ts = data.time;
+    return monr;
+}
+
 // SLOTS
 
 void VirtualObject::handleOSEM(chronos_osem msg)
@@ -145,9 +185,45 @@ void VirtualObject::handleOSEM(chronos_osem msg)
     emit updated_state(data);
 }
 
-void VirtualObject::handleDOPM(chronos_dopm_pt msg)
+void VirtualObject::handleDOPM(QVector<chronos_dopm_pt> msg)
 {
+    switch (status) {
+    case IDLE:
+        traj = msg;
 
+        // Set the current position to be the first point in trajectory file
+        if (msg.size()>0){
+            chronos_dopm_pt firstPos = msg[0];
+            data.x = firstPos.x;
+            data.y = firstPos.y;
+            data.heading = firstPos.heading;
+            data.speed = firstPos.speed;
+            data.acc = firstPos.accel;
+
+            status = INIT;
+
+            emit new_trajectory(msg);
+            emit updated_state(data);
+        }
+        else
+        {
+            qDebug() << "ERROR: No points in DOPM.";
+        }
+
+
+
+        break;
+    default:
+        break;
+    }
+
+}
+void VirtualObject::handleHEAB(chronos_heab msg)
+{
+    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+    //qint64 e_time = currentTime-heab_recieved_time;
+    //qDebug() << QString::number(e_time);
+    heab_recieved_time = currentTime;
 }
 
 

@@ -124,6 +124,8 @@ void Chronos::readPendingDatagrams()
         decodeMsg(type, len, vb);
     }
 }
+
+
 /*
 void Chronos::stateReceived(quint8 id, CAR_STATE state)
 {
@@ -294,7 +296,9 @@ void Chronos::processStrt(chronos_strt strt)
 void Chronos::processHeab(chronos_heab heab)
 {
 //    qDebug() << "HEAB RX";
-    (void)heab;
+    //(void)heab;
+
+    emit handle_heab(heab);
 /*
     if (mPacket) {
         if (heab.status == 1) {
@@ -318,6 +322,8 @@ bool Chronos::sendMonr(chronos_monr monr)
     }
 
     VByteArray vb;
+    vb.vbAppendInt8(CHRONOS_MSG_MONR);
+    vb.vbAppendInt32(24);
     vb.vbAppendUint48(monr.ts);
     vb.vbAppendInt32((int32_t)(monr.lat * 1e7));
     vb.vbAppendInt32((int32_t)(monr.lon * 1e7));

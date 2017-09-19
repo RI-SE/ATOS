@@ -370,7 +370,7 @@ void MapWidget::readPendingDatagrams()
 
 
 /* Handles the signal from Chronos. */
-
+/*
 void MapWidget::chronosOSEM(chronos_osem msg) {
     qDebug() << "Map recieved signal";
 
@@ -411,7 +411,7 @@ void MapWidget::chronosDOPM(QVector<chronos_dopm_pt> msg)
     }
     addInfoTrace(points);
 }
-
+*/
 
 
 void MapWidget::displayMessage(const QByteArray& message)
@@ -584,6 +584,9 @@ int MapWidget::updateCarState(int ID, LocPoint pos){
         qDebug() << "Car ID: " << ID << " does not exsist.";
         return -1;
     }
+    car->setLocation(pos);
+    car->setTime(pos.getTime());
+    /*
     // Only update the position and time
     LocPoint newpos = car->getLocation();
     newpos.setX(pos.getX());
@@ -591,6 +594,7 @@ int MapWidget::updateCarState(int ID, LocPoint pos){
     newpos.setTime(pos.getTime());
     car->setLocation(newpos);
     car->setTime(pos.getTime());
+    */
     return 0;
 }
 
