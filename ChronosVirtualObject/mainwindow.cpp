@@ -77,7 +77,7 @@ void MainWindow::on_playButton_clicked(){
     // Reset trace
     ui->widget->clearTrace();
     // Add red trace to the carl
-    ui->widget->setTraceCar(0);
+    //ui->widget->setTraceCar(0);
 
     // Start the thread with the highest priority
     vobj->start(QThread::TimeCriticalPriority);
@@ -106,6 +106,8 @@ void MainWindow::on_init_vobj_clicked()
     car.setInfo("MASTER");
     map->removeCar(ID);
     map->addCar(car);
+    map->setSelectedCar(ID);
+    map->setFollowCar(ID);
 
 
 
@@ -199,7 +201,9 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
 
     pos.setTime(data.time);
     pos.setXY(data.x,data.y);
-    pos.setAlpha(data.heading);
+
+    double heading = (data.heading-90.0)*M_PI/180;
+    pos.setAlpha(heading);
 
 
     map->updateCarState(data.ID,pos);

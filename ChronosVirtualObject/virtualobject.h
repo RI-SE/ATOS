@@ -12,6 +12,7 @@
 #include "utility.h"
 
 #define HEARTBEAT_TIME 100 // maximum time to wait for a heartbeat
+#define EARTH_RADIUS 6367000
 
 // Object data of interest
 typedef struct {
@@ -19,6 +20,7 @@ typedef struct {
     qint64 time;
     double x;
     double y;
+    double z;
     double heading;
     double speed;
     double acc;
@@ -106,7 +108,10 @@ private:
     */
 
     //void sendCurrentState();
+    void control_object(int curr_idx_point);
     chronos_monr getMONR();
+    void xyz_to_llh(double *lat,double *lon, double *alt);
+
     void updateTime();
 
 };

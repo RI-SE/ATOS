@@ -27,6 +27,7 @@ VirtualObject::VirtualObject(int id)
         0,  // time
         0,  // x
         0,  // y
+        0,  // z
         0,  // heading
         0,  // speed
         0,  // acceleration
@@ -58,33 +59,69 @@ void VirtualObject::run()
     qDebug() << "Virtual Object Started";
 
     qint64 elapsed_time = 0;
+    qint64 ctrl_update = 0;
+    qint64 update_sent = 0;
     qint64 run_time_MS = 15000;
+    int index = 0;
     int flag = 1;
 
     //updateTime();
     clock = QDateTime::currentMSecsSinceEpoch();
     start_time = clock;
-    status = RUNNING;
-    while(elapsed_time < run_time_MS)
+
+    if (status != INIT)
     {
-        clock = QDateTime::currentMSecsSinceEpoch();
+        qDebug() << "Not initialized by server: " << "No trajectory available.";
+        qDebug() << "Terminating Virtual Object";
+        return;
+    }
+
+    status = RUNNING;
+    while(index < traj.size())
+    {
+        // Get the reference point
+        chronos_dopm_pt ref_point = traj[index];
+        while(ref_point.tRel < elapsed_time)
+        {
+            ref_point = traj[index++];
+        }
 
         // Check if heartbeat deadline has passed
-        if(clock-heab_recieved_time > HEARTBEAT_TIME)
+        /*if(clock-heab_recieved_time > HEARTBEAT_TIME)
         {
             qDebug() << "ERROR: Heartbeat not recieved.";
             status = STOPPED;
             return;
 
         }
+        */
 
+        // Calculate control signal ~ 100 Hz
+        // Send control signal ~ 100 Hz
+        clock = QDateTime::currentMSecsSinceEpoch();
+        elapsed_time = clock-start_time;
+        data.time = elapsed_time;
+        if (clock-ctrl_update > 5)
+        {
+            control_object(index);
+            ctrl_update = clock;
+        }
+
+        // Read and send information ~ 50Hz
+        clock = QDateTime::currentMSecsSinceEpoch();
+        elapsed_time = clock-start_time;
+        data.time = elapsed_time;
+        if (clock-update_sent > 20)
+        {
+            // Send monr
+            cClient->sendMonr(getMONR());
+            update_sent = clock;
+        }
 
         elapsed_time = clock-start_time;
         data.time = elapsed_time;
-        if (run_time_MS/2 < elapsed_time && flag){
-            qDebug() << "Reached half way.";
-            flag = 0;
-        }
+
+        /*
         if (flag){
             data.x=0; data.y=0;
             //emit updated_state(this->id,(qint32) elapsed_time,x,y);
@@ -95,18 +132,16 @@ void VirtualObject::run()
             data.x=5; data.y=5;
             //emit updated_state(this->id,(qint32) elapsed_time,x,y);
 
-        }
-
-        // Send monr
-        cClient->sendMonr(getMONR());
+        }*/
 
 
 
+        // Send vizualizer update
         emit updated_state(data);
-        QThread::msleep(10);
+        QThread::msleep(2);
     }
     qDebug() << "Done.";
-    status = IDLE;
+    status = INIT;
 
 }
 /*
@@ -161,18 +196,69 @@ void VirtualObject::updateTime()
     clock = QDateTime::currentMSecsSinceEpoch();
 }
 
+void VirtualObject::control_object(int curr_idx_point)
+{
+    // Only does object = ref_point
+    // TODO: add dynamics
+
+    if (curr_idx_point == 0 || curr_idx_point >= traj.size())
+        return;
+
+    chronos_dopm_pt next = traj[curr_idx_point];
+    chronos_dopm_pt prev = traj[curr_idx_point-1];
+
+    // Find the unity vector
+    double deltaY = next.y-prev.y;
+    double deltaX = next.x-prev.x;
+
+    double dist = sqrt(deltaY*deltaY+deltaX*deltaX);
+
+    double ex = dist ? deltaX/dist : deltaX;
+    double ey = dist ? deltaY/dist : deltaY;
+
+    data.x = prev.x + ex * data.speed / 1000.0 *(data.time-prev.tRel);
+    data.y = prev.y + ey * data.speed / 1000.0 *(data.time-prev.tRel);
+/*
+    data.acc = ref_point.accel;
+    data.heading = ref_point.heading;
+    data.speed = ref_point.speed;
+    data.x = ref_point.x;
+    data.y = ref_point.y;
+    */
+
+    data.acc = prev.accel;
+    data.heading = prev.heading;
+    data.speed = prev.speed;
+}
+
 chronos_monr VirtualObject::getMONR()
 {
     chronos_monr monr;
 
-    utility::xyzToLlh(data.x,data.y,0,&monr.lat,&monr.lon,&monr.alt);
+    //utility::xyzToLlh(data.x,data.y,0,&monr.lat,&monr.lon,&monr.alt);
+    xyz_to_llh(&monr.lat,&monr.lon,&monr.alt);
     monr.heading = data.heading;
     monr.speed = data.speed;
     monr.direction = 0; // The car is drivning forward
     monr.status = status;
-    monr.ts = data.time;
+
+    //QDate ETSI_date();
+    QDateTime ETSI_time(QDate(2004,01,01));
+    ETSI_time.setOffsetFromUtc(0);
+
+    monr.ts = QDateTime::currentMSecsSinceEpoch() - ETSI_time.toMSecsSinceEpoch();
+
+    //monr.ts = data.time;
     return monr;
 }
+
+void VirtualObject::xyz_to_llh(double *lat,double *lon, double *alt)
+{
+    *lat = data.mRefLat + data.y * 180.0 / (M_PI * (double) EARTH_RADIUS) ;
+    *lon = data.mRefLon + data.x * 180.0 / (M_PI * (double) EARTH_RADIUS * cos(*lat));
+    *alt = data.mRefAlt + data.z;
+}
+
 
 // SLOTS
 
@@ -181,6 +267,8 @@ void VirtualObject::handleOSEM(chronos_osem msg)
     data.mRefLat = msg.lat;
     data.mRefLon = msg.lon;
     data.mRefAlt = msg.alt;
+
+    //utility::llhToXyz(msg.lat,msg.lon,msg.alt,&data.x,&data.y,&data.z);
     mRefHeading = msg.heading;
     emit updated_state(data);
 }

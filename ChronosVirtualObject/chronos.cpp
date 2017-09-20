@@ -176,7 +176,7 @@ bool Chronos::decodeMsg(quint8 type, quint32 len, QByteArray payload)
             }
         }
 
-        processDopm(path_redued);
+        processDopm(path);
     } break;
 
     case CHRONOS_MSG_OSEM: {
