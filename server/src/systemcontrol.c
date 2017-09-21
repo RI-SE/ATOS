@@ -283,6 +283,9 @@ void systemcontrol_task()
 						gettimeofday(&tvTime, NULL);	
 						uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
 					}
+					
+					if(TIME_COMPENSATE_LAGING_VM) uiTime = uiTime - TIME_COMPENSATE_LAGING_VM_VAL;
+
 					sprintf (pcBuffer,"%" PRIu8 ";%" PRIu64 ";",0,uiTime);
 					printf("[SystemControl] Sending START <%s> (externally trigged)\n", SystemControlArgument[CurrentCommandArgCounter]);
 					fflush(stdout);

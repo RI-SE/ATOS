@@ -40,7 +40,7 @@
 #define COMM_MONI 3
 #define COMM_EXIT 4
 #define COMM_ARMD 5
-#define COMM_REPLAY 6378137 
+#define COMM_REPLAY 6
 #define COMM_CONTROL 7
 #define COMM_ABORT 8
 #define COMM_TOM 9
@@ -69,15 +69,15 @@
 #define TRAJ_MASTER_LATE -2
 
 #define TIME_COMPENSATE_LAGING_VM 0
-#define TIME_COMPENSATE_LAGING_VM_VAL 88608
+#define TIME_COMPENSATE_LAGING_VM_VAL 96820
 
 #define MAX_ROW_SIZE 1024
 
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "10.168.224.170"
-#define TESTSERVER_IP "10.168.224.170"
+#define TESTHOST_IP "10.168.252.254"
+#define TESTSERVER_IP "10.168.252.254"
 #define TEST_SYNC_POINTS 0
 
 
@@ -121,9 +121,9 @@ typedef struct
   int Index;
   float Time;
   float OrigoDistance;
-  //double Bearing;
-  //float x;
-  //float y;
+  double Bearing;
+  float x;
+  float y;
 
 } SpaceTime;
 
@@ -180,6 +180,7 @@ typedef struct
   char TriggerTypeVar[16];
   char ActionType[24];
   char ActionTypeVar[16];
+  char ActionDelay[8];
   uint8_t TriggerId;
   int32_t Action;
 } TriggActionType;
@@ -205,6 +206,7 @@ double UtilRadToDeg(double Rad);
 int UtilPopulateSpaceTimeArr(ObjectPosition *OP, char* TrajFile);
 int UtilSortSpaceTimeAscending(ObjectPosition *OP);
 int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double CurrentTime, double MaxTrajDiff, double MaxTimeDiff, char debug);
+int UtilFindCurrentTrajectoryPositionNew(ObjectPosition *OP, int StartIndex, double CurrentTime, double MaxTrajDiff, double MaxTimeDiff, char debug);
 int UtilSetSyncPoint(ObjectPosition *OP, double x, double y, double z, double time);
 float UtilCalculateTimeToSync(ObjectPosition *OP);
 

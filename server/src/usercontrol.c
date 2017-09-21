@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
 					if(CurrentCommandArgCount == CommandArgCount)
 					{
 						FILE *Trajfd;
-	  					Trajfd = fopen ("traj/192.168.0.16", "r");
+	  					Trajfd = fopen ("traj/10.168.252.254", "r");
 	    				OP.TrajectoryPositionCount = UtilCountFileRows(Trajfd) - 2;
 	    				float SpaceArr[OP.TrajectoryPositionCount];
 	    				float TimeArr[OP.TrajectoryPositionCount];
@@ -292,8 +292,8 @@ int main(int argc, char *argv[])
 	    				OP.SpaceArr = SpaceArr;
 						OP.TimeArr = TimeArr;
 						OP.SpaceTimeArr = SpaceTimeArr;
-						double CurrentTime = 19.472;
-						UtilCalcPositionDelta(57.7773716086, 12.7804629583 ,96.3421249000, 12.7816472000, &OP); //2
+						double CurrentTime = 11.631;
+						UtilCalcPositionDelta( 57.7773716000, 12.7804629000 ,57.7772593000, 12.7811329000, &OP); //2
 						printf("Calc d = %4.4f m, iterations = %d\n", OP.OrigoDistance, OP.CalcIterations);
 						printf("Latitude = %3.10f \n", OP.Latitude);
 						printf("Longitude = %3.10f\n", OP.Longitude);
@@ -305,17 +305,30 @@ int main(int argc, char *argv[])
 
 						if(OP.OrigoDistance > -1)
 						{	
-							UtilPopulateSpaceTimeArr(&OP, "traj/192.168.0.16");
-							UtilSetSyncPoint(&OP, 0, 0, 0, 27.0);
+							UtilPopulateSpaceTimeArr(&OP, "traj/10.168.252.254");
+							UtilSetSyncPoint(&OP, 0, 0, 0, 42.0);
 							if (OP.SyncIndex > -1)
 							{
 								printf("Sync point found=%4.3f, Time=%4.3f, Index=%d\n", OP.SpaceArr[OP.SyncIndex], OP.TimeArr[OP.SyncIndex], OP.SyncIndex);
 																
-								//1.647, 57.7773716086, 12.7804629583 ,57.7776690000, 12.7809532000
-								//19.472, 57.7773716086, 12.7804629583 ,96.3421249000, 12.7816472000
+								//8.681, 57.7773716086, 12.7804629583 ,57.7774471000, 12.7811036000
+								//8.781, 57.7773716086, 12.7804629583 ,57.7774438000, 12.7811060000
+								//8.804, 57.7773716086, 12.7804629583 ,57.7774438000, 12.7811060000
+								//9.833, 57.7773716086, 12.7804629583 ,57.7773810000, 12.7810642000
+								//8.633, 57.7773716086, 12.7804629583 ,57.7774625000, 12.7810930000
+								//9.739, 57.7773716086, 12.7804629583 ,57.7774015000, 12.7811354000
+								//1.168, 57.7773716000, 12.7804629000 ,57.7777199000, 12.7808221000
+								//1.00	57.7773716000, 12.7804629000, 57.7775815,12.7810111
+								//3.954, 57.7773716000, 12.7804629000 ,57.7776137000, 12.7809899000
+								//3.856, 57.7773716000, 12.7804629000 ,57.7776174000, 12.7809875000
+								//4.654, 57.7773716000, 12.7804629000 ,57.7775906000, 12.7810050000
+								//7.824, 57.7773716000, 12.7804629000 ,57.7774696000, 12.7810873000
+								//7.240, 57.7773716000, 12.7804629000 ,57.7774925000, 12.7810716000
+								//42.228, 57.7773716000, 12.7804629000 ,57.7778247000, 12.7808559000
+								//42.129, 57.7773716000, 12.7804629000 ,57.7778282000, 12.7808640000
+								//11.631, 57.7773716000, 12.7804629000 ,57.7772593000, 12.7811329000
 
-
-								UtilFindCurrentTrajectoryPosition(&OP, 0, CurrentTime, 0.75, 2.5, 1);	//2
+								UtilFindCurrentTrajectoryPosition(&OP, 0, CurrentTime, 0.75, 2.5, 2);	//2
 								if(OP.BestFoundTrajectoryIndex > -1 && OP.SyncIndex > -1)
 								{	
 								    printf("\nCurrent origo distance=%4.3f m\n", OP.OrigoDistance);

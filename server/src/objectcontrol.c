@@ -96,7 +96,7 @@
 #define COMMAND_EAM_MESSAGE_LENGTH 6 
 
 #define COMMAND_TCM_CODE 13  //Trigger Configuration Message: Server->Object, TCP 
-#define COMMAND_TCM_MESSAGE_LENGTH 3 
+#define COMMAND_TCM_MESSAGE_LENGTH 5 
 
 #define COMMAND_TOM_CODE 14  //Trigger Occurred Message: Object->Server, UDP
 #define COMMAND_TOM_MESSAGE_LENGTH 8 
@@ -138,10 +138,10 @@ int ObjectControlBuildAROMMessage(char* MessageBuffer, unsigned char CommandOpti
 int ObjectControlBuildHEABMessage(char* MessageBuffer, unsigned char CommandOption, char debug);
 int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, unsigned short Curvature, unsigned char Mode, char debug);
 int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, unsigned int StopTime, char debug);
-int ObjectControlBuildMTPSMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug);
+int ObjectControlBuildMTSPMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug);
 int ObjectControlBuildDOPMMessageHeader(char* MessageBuffer, int RowCount, char debug);
 int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, char debug);
-int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, char debug);
+int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, uint32_t Port,char debug);
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
 int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag, char debug);
 int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, int32_t *Latitude, int32_t * Longitude, int32_t *Altitude, uint16_t *Speed, uint16_t *Heading, uint8_t *DriveDirection);
@@ -195,9 +195,11 @@ void objectcontrol_task()
   char *MiscPtr;
   uint64_t StartTimeU64 = 0;
   uint64_t CurrentTimeU64 = 0;
+  uint64_t TimeAccumulatedU64 = 0;
   uint64_t OldTimeU64 = 0;
   uint64_t MasterTimeToSyncPointU64 = 0;
   double TimeToSyncPoint = 0;
+  double PrevTimeToSyncPoint = 0;
   struct timeval CurrentTimeStruct;
   int HeartbeatMessageCounter = 0;
 
@@ -222,12 +224,13 @@ void objectcontrol_task()
   double ASPMaxTimeDiff = 0;
   double ASPMaxTrajDiff = 0;
   double ASPFilterLevel = 0;
+  double TimeQuota = 0;
   int ASPMaxDeltaTime = 0;
   int ASPDebugRate = 1;
   int ASPStepBackCount = 0;
   TriggActionType TAA[MAX_TRIGG_ACTIONS];
   int TriggerActionCount = 0;
-  int64_t DeltaTime = 0;
+  double DeltaTime = 0;
   int64_t PrevDeltaTime = 0;
   struct timeval tvTime;
   char pcSendBuffer[MQ_MAX_MESSAGE_LENGTH];
@@ -395,8 +398,8 @@ void objectcontrol_task()
 
       /*Send DOPM data*/
       printf("Trajfile: %s\n", object_traj_file[iIndex] ); 
-      ObjectControlSendDOPMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], 0);
-
+      ObjectControlSendDOPMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], 0);
+      
       /* Adaptive Sync Points object configuration start...*/
       OP[iIndex].TrajectoryPositionCount = RowCount-2;
       OP[iIndex].SpaceArr = SpaceArr[iIndex];
@@ -432,8 +435,11 @@ void objectcontrol_task()
       /* Trigg And Action object configuration start...*/
       for(i = 0; i < TriggerActionCount; i++)
       {
-        MessageLength = ObjectControlBuildTCMMessage(MessageBuffer, &TAA[i], 0);      
-        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+        if(strstr(object_address_name[iIndex], TAA[i].TriggerIP) != NULL)
+        {
+          MessageLength = ObjectControlBuildTCMMessage(MessageBuffer, &TAA[i], 0);      
+          vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+        }
       }
       /* ...end*/
 
@@ -501,14 +507,14 @@ void objectcontrol_task()
               if(TEST_SYNC_POINTS == 1 && iIndex == 1 && MasterTimeToSyncPointU64 != 0 && OP[iIndex].BestFoundTrajectoryIndex > -1)
               {
                   /*Send Master time to adaptive sync point*/
-                  MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
+                  MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
                   ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                   //printf("MTPS: %ld\n", MasterTimeToSyncPointU64);
               }
               else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL && MasterTimeToSyncPointU64 != 0)
               {
                   /*Send Master time to adaptive sync point*/
-                  MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
+                  MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
                   ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
               }
             }
@@ -545,11 +551,12 @@ void objectcontrol_task()
           {
             for(i = 0; i < TriggerActionCount; i ++)
             {
+              printf("[ObjectControl] External trigg received. %s\n", TAA[i].TriggerIP);
               if(strstr(TAA[i].TriggerIP, object_address_name[iIndex]) != NULL)
               {
-                printf("[ObjectControl] External trigg received\n");
+                //printf("[ObjectControl] External trigg received\n");
                 fflush(stdout);            
-                ObjectControlTOMToASCII(buffer, TriggId, TriggAction, TriggDelay, 0);
+                ObjectControlTOMToASCII(buffer, TriggId, TriggAction, TriggDelay, 1);
                 bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
                 bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
                 bzero(ObjectPort, SMALL_BUFFER_SIZE_0);
@@ -593,29 +600,30 @@ void objectcontrol_task()
 
               }
 
-              OldTimeU64 = CurrentTimeU64;
-
-              UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), ASPMaxTrajDiff, ASPMaxTimeDiff, 0);
-
-              if(OP[iIndex].BestFoundTrajectoryIndex > TRAJ_POSITION_NOT_FOUND)
-              {  
+             
+              if(OP[iIndex].BestFoundTrajectoryIndex < OP[iIndex].SyncIndex && atof(Speed)/100 > 0)
+              {
+              
+                TimeAccumulatedU64 = TimeAccumulatedU64 + CurrentTimeU64 - OldTimeU64;
+                //UtilFindCurrentTrajectoryPosition(&OP[iIndex], 0, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), ASPMaxTrajDiff, ASPMaxTimeDiff, 1);
+                UtilFindCurrentTrajectoryPosition(&OP[iIndex], 0, ((double)TimeAccumulatedU64)/1000, ASPMaxTrajDiff, ASPMaxTimeDiff, 0);
+                
               	TimeToSyncPoint = UtilCalculateTimeToSync(&OP[iIndex]);
               	if(TimeToSyncPoint > 0)
               	{
-              		DeltaTime = ((OP[iIndex].OrigoDistance - OP[iIndex].OldOrigoDistance)/(atof(Speed)/100))*1000;
-              		if(PrevDeltaTime != 0)
-              		{
-              			if(atoi(Timestamp)%ASPDebugRate == 0) printf("DeltaTime: %3.3f, %3.3f, %3.3f, %3.6f\n", fabs((double)DeltaTime/(double)PrevDeltaTime), (double)DeltaTime/1000, (double)PrevDeltaTime/1000, (OP[iIndex].OrigoDistance - OP[iIndex].OldOrigoDistance)/(atof(Speed)/100));
 
-              			if( fabs((double)DeltaTime/(double)PrevDeltaTime) > ASPFilterLevel && ASPFilterLevel > 0)
-              			{ 
-              				if(DeltaTime < 0) DeltaTime = -1*abs(ASPMaxDeltaTime);
-              				else if(DeltaTime > 0) DeltaTime = abs(ASPMaxDeltaTime);
-              			}
-              		}
-
-              		MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)ASP[i].MasterTrajSyncTime*1000 + DeltaTime;
-              		PrevDeltaTime = DeltaTime;
+                  if(PrevTimeToSyncPoint != 0)
+                  {
+                  if(TimeToSyncPoint/PrevTimeToSyncPoint > (1 + ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint + 0.1;//TimeToSyncPoint*ASPFilterLevel/500;
+                  else if(TimeToSyncPoint/PrevTimeToSyncPoint < (1 - ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint - 0.1;//TimeToSyncPoint*ASPFilterLevel/500;
+                  }
+              		//MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)ASP[i].MasterTrajSyncTime*1000 + DeltaTime;
+                  //printf("%ld %3.3f %3.3f\n", CurrentTimeU64, ((double)OP[iIndex].SyncIndex)*100, ((double)OP[iIndex].BestFoundTrajectoryIndex)*100);
+                  //MasterTimeToSyncPointU64 = CurrentTimeU64 +  ((double)OP[iIndex].SyncIndex)*100 - ((double)OP[iIndex].BestFoundTrajectoryIndex)*100; //TimeToSyncPoint*1000;
+              		MasterTimeToSyncPointU64 = CurrentTimeU64 +  TimeToSyncPoint*1000;
+                  //PrevDeltaTime = DeltaTime;
+                  PrevTimeToSyncPoint = TimeToSyncPoint;
+                  OldTimeU64 = CurrentTimeU64;
               	}
               	else
               	{
@@ -625,7 +633,8 @@ void objectcontrol_task()
 
               	if(atoi(Timestamp)%ASPDebugRate == 0)
               	{
-              		printf("TtS= %3.3f, %3.3f, %d, %d, %d, %3.2f, %3.3f, %ld, %ld\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, DistTraveled/TimeDiff, DistTraveled, MasterTimeToSyncPointU64, DeltaTime);
+              		printf("TtS= %3.3f, %3.3f, %d, %d, %d, %3.2f, %3.3f, %ld, %d\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, DistTraveled/TimeDiff, DistTraveled, MasterTimeToSyncPointU64, iIndex);
+                  printf("%3.3f, %3.10f, %3.10f ,%3.10f, %3.10f\n\n",(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7);  
               	}
 
               }
@@ -708,7 +717,10 @@ void objectcontrol_task()
 				MasterTimeToSyncPointU64 = 0;
 				TimeToSyncPoint = 0;
 				SearchStartIndex = -1;
-				PrevDeltaTime = 0;
+				PrevTimeToSyncPoint = 0;
+        PrevDeltaTime = 0;
+        TimeAccumulatedU64 = 0;
+        OldTimeU64 = CurrentTimeU64;
 				MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTimeU64, 0);
 			#else
 				bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
@@ -803,6 +815,7 @@ int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char
 {
   int MessageIndex = 0;
   uint8_t MessageData = 0;
+  uint16_t MessageDataU16 = 0;
   
   bzero(MessageBuffer, COMMAND_TCM_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH);
 
@@ -823,7 +836,10 @@ int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char
   if(strstr(TAA->ActionType, "SERVER") != NULL && TAA->Action == TAA_ACTION_EXT_START) MessageData = TAA_ACTION_EXT_START;
   else if(strstr(TAA->ActionType, "SERVER") != NULL && TAA->Action == TAA_ACTION_TEST_SIGNAL) MessageData = TAA_ACTION_TEST_SIGNAL; 
   MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex, MessageData);
-   
+  
+  MessageDataU16 = atoi(TAA->ActionDelay);
+  MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, MessageDataU16);
+  
 
   UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);    
 
@@ -990,7 +1006,7 @@ int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId, char *TriggAc
 
 
 
-int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, char debug)
+int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, uint32_t Port,char debug)
 {
 
   FILE *fd;
@@ -1016,7 +1032,7 @@ int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char
     if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
   }
 
-  printf("[ObjectControl] %d DOPM bytes sent to %s\n", SumMessageLength, IP);
+  printf("[ObjectControl] %d DOPM bytes sent to %s, port %d\n", SumMessageLength, IP, Port);
 
   fclose (fd);
 
@@ -1196,7 +1212,7 @@ int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, u
   return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
 }
 
-int ObjectControlBuildMTPSMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug)
+int ObjectControlBuildMTSPMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug)
 {
   int MessageIndex = 0;
   
@@ -1654,7 +1670,8 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], char ob
       else
       {
         if(USE_TEST_HOST == 0) (void)strcat(object_address_name[(*nbr_objects)],LOCALHOST);
-        else if (USE_TEST_HOST == 1) (void)strcat(object_address_name[(*nbr_objects)],TESTHOST_IP);
+        else if (USE_TEST_HOST == 1)(void)strcat(object_address_name[(*nbr_objects)],TESTHOST_IP);
+        
       }
 
       ++(*nbr_objects);
