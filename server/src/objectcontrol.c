@@ -614,8 +614,8 @@ void objectcontrol_task()
 
                   if(PrevTimeToSyncPoint != 0)
                   {
-                  if(TimeToSyncPoint/PrevTimeToSyncPoint > (1 + ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint + 0.1;//TimeToSyncPoint*ASPFilterLevel/500;
-                  else if(TimeToSyncPoint/PrevTimeToSyncPoint < (1 - ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint - 0.1;//TimeToSyncPoint*ASPFilterLevel/500;
+                  if(TimeToSyncPoint/PrevTimeToSyncPoint > (1 + ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint + ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
+                  else if(TimeToSyncPoint/PrevTimeToSyncPoint < (1 - ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint - ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
                   }
               		//MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)ASP[i].MasterTrajSyncTime*1000 + DeltaTime;
                   //printf("%ld %3.3f %3.3f\n", CurrentTimeU64, ((double)OP[iIndex].SyncIndex)*100, ((double)OP[iIndex].BestFoundTrajectoryIndex)*100);
