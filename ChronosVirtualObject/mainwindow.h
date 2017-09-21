@@ -20,7 +20,7 @@ public:
 
 signals:
     //void handle_osem(chronos_osem data);
-
+    void stop_virtual_object();
 private slots:
 
     void on_updateButton_clicked();
@@ -31,6 +31,7 @@ private slots:
     void unlockRun();
     void handleUpdateState(VOBJ_DATA);
     void handleNewTrajectory(QVector<chronos_dopm_pt> traj);
+
 
 private:
     Ui::MainWindow *ui;

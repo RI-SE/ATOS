@@ -113,11 +113,14 @@ void MainWindow::on_init_vobj_clicked()
 
 
     // Set SLOT to delete the object once it is finished running
-    //connect(vobj, SIGNAL(finished()), vobj, SLOT(deleteLater()));
+    connect(vobj, SIGNAL(finished()), vobj, SLOT(deleteLater()));
 
 
     // Set SLOT to enable the start of a virtual object upon termination
     connect(vobj, SIGNAL(finished()),this,SLOT(unlockRun()));
+
+    connect(this,SIGNAL(stop_virtual_object()),
+            vobj,SLOT(stopSimulation()));
 
     // Set SLOT to update the running time when signal is received from the virtual object
     //connect(vobj, SIGNAL(updated_state(int,qint32,double,double)),
@@ -149,7 +152,8 @@ void MainWindow::on_delete_vobj_clicked()
     map->removeCar(id);
     map->update();
 
-    delete vobj;
+    emit stop_virtual_object();
+    //delete vobj;
 }
 
 void MainWindow::updateLabelOSEM(double lat, double lon, double alt) {
@@ -205,6 +209,8 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     double heading = (data.heading-90.0)*M_PI/180;
     pos.setAlpha(heading);
 
+    QString sStatus = "STATUS: ";
+    pos.setInfo(sStatus + QString::number(data.status));
 
     map->updateCarState(data.ID,pos);
     map->update();

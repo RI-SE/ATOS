@@ -278,14 +278,16 @@ void Chronos::processOsem(chronos_osem osem)
 
 void Chronos::processOstm(chronos_ostm ostm)
 {
-    qDebug() << "OSTM RX";
-    (void)ostm;
+    qDebug() << "OSTM HANDLED";
+    //(void)ostm;
+    emit handle_ostm(ostm);
 }
 
 void Chronos::processStrt(chronos_strt strt)
 {
-    qDebug() << "STRT RX";
-    (void)strt;
+    qDebug() << "STRT HANDLED";
+    //(void)strt;
+    emit handle_strt(strt);
 /*
     if (mPacket) {
         mPacket->setApActive(255, true);

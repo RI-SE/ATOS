@@ -13,6 +13,7 @@
 
 #define HEARTBEAT_TIME 100 // maximum time to wait for a heartbeat
 #define EARTH_RADIUS 6367000
+#define SOCKET_STACK_START 53240
 
 // Object data of interest
 typedef struct {
@@ -27,17 +28,19 @@ typedef struct {
     double mRefLat;
     double mRefLon;
     double mRefAlt;
+    qint8 status;
 } VOBJ_DATA;
 
 Q_DECLARE_METATYPE(VOBJ_DATA)
 
 typedef enum {
-    INIT = 0,
+    INIT = 1,
     ARMED,
+    DISARMED,
     RUNNING,
-    STOPPED,
-    ERROR,
-    IDLE
+    STOP,
+    ABORT,
+    ERROR
 } OBJ_STATUS;
 
 
@@ -60,15 +63,25 @@ signals:
     void new_trajectory(QVector<chronos_dopm_pt> traj);
     void send_monr(chronos_monr monr);
 
+
 private slots:
     void handleOSEM(chronos_osem msg);
     void handleDOPM(QVector<chronos_dopm_pt> msg);
     void handleHEAB(chronos_heab msg);
+    void handleOSTM(chronos_ostm msg);
+    void handleSTRT(chronos_strt msg);
+
+    void stopSimulation();
 
 private:
     //QDateTime program_time;
 
-    qint8 status = IDLE;
+    bool shutdown = false;
+    bool hasOSEM = false;
+    bool hasDOPM = false;
+
+    qint8 status = INIT;
+    qint8 pendingStatus = INIT;
     Chronos* cClient;
 
     VOBJ_DATA data;

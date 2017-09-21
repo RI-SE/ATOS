@@ -586,6 +586,8 @@ int MapWidget::updateCarState(int ID, LocPoint pos){
     }
     car->setLocation(pos);
     car->setTime(pos.getTime());
+    car->setInfo(pos.getInfo());
+
     /*
     // Only update the position and time
     LocPoint newpos = car->getLocation();

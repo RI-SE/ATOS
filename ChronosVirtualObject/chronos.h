@@ -22,8 +22,10 @@ public:
 
 signals:
     void handle_osem(chronos_osem data);
-    void handle_dopm(QVector<chronos_dopm_pt>);
+    void handle_dopm(QVector<chronos_dopm_pt> dopm);
     void handle_heab(chronos_heab heab);
+    void handle_ostm(chronos_ostm ostm);
+    void handle_strt(chronos_strt strt);
 
 private slots:
     void tcpRx(QByteArray data);

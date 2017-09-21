@@ -569,7 +569,7 @@ typedef struct {
 } chronos_osem;
 
 typedef struct {
-    bool armed;
+    uint8_t armed;
 } chronos_ostm;
 
 typedef struct {
