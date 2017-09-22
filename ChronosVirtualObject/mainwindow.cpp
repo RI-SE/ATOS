@@ -139,6 +139,9 @@ void MainWindow::on_init_vobj_clicked()
     // Connection to handle the stream of data passed from the object
     connect(vobj,SIGNAL(updated_state(VOBJ_DATA)),
             this,SLOT(handleUpdateState(VOBJ_DATA)));
+    // Handles new OSEM message
+    connect(vobj,SIGNAL(new_OSEM(chronos_osem)),
+            this,SLOT(handleNewOSEM(chronos_osem)));
     // Connection to show any new trajectory that has been loaded to object
     connect(vobj,SIGNAL(new_trajectory(int,QVector<chronos_dopm_pt>)),
             this,SLOT(handleNewTrajectory(int, QVector<chronos_dopm_pt>)));
