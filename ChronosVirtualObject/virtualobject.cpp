@@ -59,10 +59,11 @@ void VirtualObject::run()
 {
     qDebug() << "Virtual Object Started";
 
-    qint64 elapsed_time = 0;
-    qint64 ctrl_update = 0;
-    qint64 update_sent = 0;
+    qint64 elapsed_time = 0; // Time since the start of the execution
+    qint64 ctrl_update = 0; // Time since the last control signal update
+    qint64 update_sent = 0; // Time since the last MONR message
     int index = 0;
+    bool init_start = false;
 
 
 
@@ -101,6 +102,7 @@ void VirtualObject::run()
         {
             // Reset the running index to the first trajectory point
             index = 0;
+            init_start = true;
         }
         else if(status == DISARMED)
         {
@@ -111,9 +113,10 @@ void VirtualObject::run()
         {
             clock = QDateTime::currentMSecsSinceEpoch();
             // Is this the first iteration?
-            if (index == 0)
+            if (index == 0 && init_start)
             {
                 start_time = clock;
+                init_start = false;
             }
             if(index < traj.size())
             {
@@ -366,6 +369,7 @@ void VirtualObject::handleHEAB(chronos_heab msg)
     switch (msg.status) {
     case 0x02:
         pendingStatus = ABORT;
+        qDebug() << "ABOTRING!";
         break;
     default:
         break;
@@ -375,6 +379,7 @@ void VirtualObject::handleHEAB(chronos_heab msg)
 void VirtualObject::handleOSTM(chronos_ostm msg)
 {
 
+    qDebug() << "ARM-message!";
     switch (msg.armed) {
     case 0x01:
         if ((status == INIT || status == DISARMED ||

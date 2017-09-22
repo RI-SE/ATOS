@@ -94,7 +94,6 @@ void MainWindow::on_init_vobj_clicked()
     qint8 ID = 0;
     // Create virtual object as a new Thread
     vobj = new VirtualObject(ID);
-
     vobj->connectToServer(53240, 53241);
 
     MapWidget *map = ui->widget;
@@ -113,25 +112,16 @@ void MainWindow::on_init_vobj_clicked()
 
 
     // Set SLOT to delete the object once it is finished running
-    connect(vobj, SIGNAL(finished()), vobj, SLOT(deleteLater()));
-
-
-    // Set SLOT to enable the start of a virtual object upon termination
+    //connect(vobj, SIGNAL(finished()), vobj, SLOT(deleteLater()));
+    // Connection to handle cleanup after a finished object
     connect(vobj, SIGNAL(finished()),this,SLOT(removeObject()));
-
+    // Connection to do a shutdown of an object
     connect(this,SIGNAL(stop_virtual_object()),
             vobj,SLOT(stopSimulation()));
-
-    // Set SLOT to update the running time when signal is received from the virtual object
-    //connect(vobj, SIGNAL(updated_state(int,qint32,double,double)),
-    //        this,SLOT(displayTime(int,qint32,double,double)));
-    // Set SLOT to update the visual car with the virtual object state
-    //connect(vobj,SIGNAL(updated_state(int,qint32,double,double)),
-    //        map,SLOT(handleUpdatedCarState(int,qint32,double,double)));
-
-
+    // Connection to handle the stream of data passed from the object
     connect(vobj,SIGNAL(updated_state(VOBJ_DATA)),
             this,SLOT(handleUpdateState(VOBJ_DATA)));
+    // Connection to show any new trajectory that has been loaded to object
     connect(vobj,SIGNAL(new_trajectory(QVector<chronos_dopm_pt>)),
             this,SLOT(handleNewTrajectory(QVector<chronos_dopm_pt>)));
 
@@ -187,6 +177,8 @@ void MainWindow::removeObject(){
     int id = vobj->getID();
     map->removeCar(id);
     map->update();
+
+    delete vobj;
 
     ui->init_vobj->setEnabled(true);
 
