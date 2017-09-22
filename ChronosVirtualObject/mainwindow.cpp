@@ -7,7 +7,14 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    chronos_osem start_state;
 
+    start_state.lat = 57.71495867;
+    start_state.lon = 12.89134921;
+    start_state.alt = 219.0;
+    start_state.heading = 0;
+
+    handleNewOSEM(start_state);
 
     //Chronos *chronos = new Chronos();
 
@@ -90,23 +97,34 @@ void MainWindow::on_init_vobj_clicked()
     //ui->playButton->setEnabled(true);
     ui->delete_vobj->setEnabled(true);
     ui->init_vobj->setEnabled(false);
+    MapWidget *map = ui->widget;
+
 
     qint8 ID = 0;
     // Create virtual object as a new Thread
-    vobj = new VirtualObject(ID);
+    vobj = new VirtualObject(ID,
+                             map->getRefLat(),
+                             map->getRefLon(),
+                             map->getRefAlt());
     vobj->connectToServer(53240, 53241);
 
-    MapWidget *map = ui->widget;
+
+
+
+
+
 
 
     // Add a car to the map
     // NOTE: the car and the thread must have the same ID
     CarInfo car;
+    QList<LocPoint> points;
     car.setInfo("MASTER");
     map->removeCar(ID);
     map->addCar(car);
     map->setSelectedCar(ID);
     map->setFollowCar(ID);
+    map->addInfoTrace(points);
 
 
 
@@ -122,8 +140,8 @@ void MainWindow::on_init_vobj_clicked()
     connect(vobj,SIGNAL(updated_state(VOBJ_DATA)),
             this,SLOT(handleUpdateState(VOBJ_DATA)));
     // Connection to show any new trajectory that has been loaded to object
-    connect(vobj,SIGNAL(new_trajectory(QVector<chronos_dopm_pt>)),
-            this,SLOT(handleNewTrajectory(QVector<chronos_dopm_pt>)));
+    connect(vobj,SIGNAL(new_trajectory(int,QVector<chronos_dopm_pt>)),
+            this,SLOT(handleNewTrajectory(int, QVector<chronos_dopm_pt>)));
 
     // Reset trace
     ui->widget->clearTrace();
@@ -176,6 +194,7 @@ void MainWindow::removeObject(){
     map->clearTrace();
     int id = vobj->getID();
     map->removeCar(id);
+    map->removeInfoTrace(id);
     map->update();
 
     delete vobj;
@@ -200,10 +219,7 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     // Display time in the label
     displayTime(data.time);
 
-    // Show the server reference values
-    updateLabelOSEM(data.mRefLat,data.mRefLon,data.mRefAlt);
-    // Update the map with the reference values
-    map->setEnuRef(data.mRefLat,data.mRefLon,data.mRefAlt);
+
 
     // Update the car position
     LocPoint pos;
@@ -221,7 +237,15 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     map->update();
 }
 
-void MainWindow::handleNewTrajectory(QVector<chronos_dopm_pt> traj)
+void MainWindow::handleNewOSEM(chronos_osem msg)
+{
+    // Show the server reference values
+    updateLabelOSEM(msg.lat,msg.lon,msg.alt);
+    // Update the map with the reference values
+    ui->widget->setEnuRef(msg.lat,msg.lon,msg.alt);
+}
+
+void MainWindow::handleNewTrajectory(int ID, QVector<chronos_dopm_pt> traj)
 {
     QList<LocPoint> points;
     for(chronos_dopm_pt pt : traj)
@@ -236,5 +260,6 @@ void MainWindow::handleNewTrajectory(QVector<chronos_dopm_pt> traj)
                        pt.tRel);
         points.append(point);
     }
-    ui->widget->addInfoTrace(points);
+    //ui->widget->addInfoTrace(points);
+    ui->widget->setInfoTrace(ID,points);
 }

@@ -30,7 +30,8 @@ private slots:
     //void updateLabelOSEM(chronos_osem msg);
     void removeObject();
     void handleUpdateState(VOBJ_DATA);
-    void handleNewTrajectory(QVector<chronos_dopm_pt> traj);
+    void handleNewOSEM(chronos_osem);
+    void handleNewTrajectory(int ID,QVector<chronos_dopm_pt> traj);
 
 
 private:

@@ -36,7 +36,6 @@
 #include "perspectivepixmap.h"
 #include "osmclient.h"
 //#include "chronos.h"
-
 // QWidget or QGLWidget
 #ifdef HAS_OPENGL
 #include <QGLWidget>
@@ -68,6 +67,8 @@ public:
 
     /* Display Tools */
     int addInfoTrace(QList<LocPoint>);
+    int setInfoTrace(int ID, QList<LocPoint> trace);
+    int removeInfoTrace(int ID);
 
     /* Utility Functions */
     void setRefPos(double lat, double lon, double alt);

@@ -25,9 +25,6 @@ typedef struct {
     double heading;
     double speed;
     double acc;
-    double mRefLat;
-    double mRefLon;
-    double mRefAlt;
     qint8 status;
 } VOBJ_DATA;
 
@@ -50,6 +47,7 @@ class VirtualObject : public QThread
     Q_OBJECT
 public:
     VirtualObject(int);
+    VirtualObject(int,double rLat,double rLon,double rAlt);
     ~VirtualObject();
 
     void run();
@@ -60,7 +58,8 @@ signals:
 
 
     void updated_state(VOBJ_DATA currentState);
-    void new_trajectory(QVector<chronos_dopm_pt> traj);
+    void new_OSEM(chronos_osem msg);
+    void new_trajectory(int ID,QVector<chronos_dopm_pt> traj);
     void send_monr(chronos_monr monr);
 
 
@@ -93,32 +92,12 @@ private:
 
     QVector<chronos_dopm_pt> traj;
 
-
-    // Don't know what use these will be
-    double mRefHeading;
-
-    /*
-    int id;
-    double x = 0;
-    double y = 0;
-
     double mRefLat = 57.71495867;
     double mRefLon = 12.89134921;
     double mRefAlt = 219.0;
-*/
-    //LocPoint getCurrentState();
-/*
-    int status;
 
-
-
-    double mLat;
-    double mLon;
-    double mAlt;
-
-    double speed;
-    double heading;
-    */
+    // Don't know what use these will be
+    double mRefHeading;
 
     //void sendCurrentState();
     void control_object(int curr_idx_point);

@@ -2,22 +2,6 @@
 
 VirtualObject::VirtualObject(int id)
 {
-    /*
-    mRefLat = 0;
-    mRefLon = 0;
-    mRefAlt = 0;
-
-    mLat = 0;
-    mLon = 0;
-    mAlt = 0;
-
-    speed = 0;
-    heading = 0;
-
-    status = (int) IDLE;
-*/
-    //program_time = new QDateTime();
-    //program_time = QDateTime::currentDateTime();
 
     start_time = 0;
     clock = 0;
@@ -31,9 +15,6 @@ VirtualObject::VirtualObject(int id)
         0,  // heading
         0,  // speed
         0,  // acceleration
-        57.71495867,  // ref lat
-        12.89134921,  // ref lon
-        219.0,    // ref alt
         status    // status
     };
 
@@ -48,6 +29,34 @@ VirtualObject::VirtualObject(int id)
 
     // Start the chronos object
     //cClient->startServer(53240, 53241);
+}
+
+VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
+{
+
+    start_time = 0;
+    clock = 0;
+
+    data= {
+        id, // id
+        0,  // time
+        0,  // x
+        0,  // y
+        0,  // z
+        0,  // heading
+        0,  // speed
+        0,  // acceleration
+        status    // status
+    };
+
+    mRefLat = rLat;
+    mRefLon = rLon;
+    mRefAlt = rAlt;
+
+    updateTime();
+
+    cClient = new Chronos();
+
 }
 
 VirtualObject::~VirtualObject() {
@@ -106,7 +115,6 @@ void VirtualObject::run()
         }
         else if(status == DISARMED)
         {
-            int apa =0;
             // Do something during disarmed state
         }
         else if(status == RUNNING)
@@ -297,9 +305,9 @@ chronos_monr VirtualObject::getMONR()
 
 void VirtualObject::xyz_to_llh(double *lat,double *lon, double *alt)
 {
-    *lat = data.mRefLat + data.y * 180.0 / (M_PI * (double) EARTH_RADIUS) ;
-    *lon = data.mRefLon + data.x * 180.0 / (M_PI * (double) EARTH_RADIUS * cos(*lat));
-    *alt = data.mRefAlt + data.z;
+    *lat = mRefLat + data.y * 180.0 / (M_PI * (double) EARTH_RADIUS) ;
+    *lon = mRefLon + data.x * 180.0 / (M_PI * (double) EARTH_RADIUS * cos(*lat));
+    *alt = mRefAlt + data.z;
 }
 
 
@@ -310,16 +318,16 @@ void VirtualObject::handleOSEM(chronos_osem msg)
     switch (status) {
     case INIT:
     case DISARMED:
-        data.mRefLat = msg.lat;
-        data.mRefLon = msg.lon;
-        data.mRefAlt = msg.alt;
+        mRefLat = msg.lat;
+        mRefLon = msg.lon;
+        mRefAlt = msg.alt;
 
         //utility::llhToXyz(msg.lat,msg.lon,msg.alt,&data.x,&data.y,&data.z);
         mRefHeading = msg.heading;
 
         hasOSEM = true;
 
-        emit updated_state(data);
+        emit new_OSEM(msg);
         break;
     default:
         break;
@@ -348,7 +356,7 @@ void VirtualObject::handleDOPM(QVector<chronos_dopm_pt> msg)
 
             hasDOPM = true;
 
-            emit new_trajectory(msg);
+            emit new_trajectory(data.ID,msg);
             emit updated_state(data);
         }
         else

@@ -557,6 +557,22 @@ int MapWidget::addInfoTrace(QList<LocPoint> trace)
     return mInfoTraces.size()-1;
 }
 
+int MapWidget::setInfoTrace(int ID, QList<LocPoint> trace)
+{
+    if (ID >=mInfoTraces.size()) return -1;
+
+    mInfoTraces.replace(ID,trace);
+    return 0;
+}
+
+int MapWidget::removeInfoTrace(int ID)
+{
+    if (ID >=mInfoTraces.size()) return -1;
+
+    mInfoTraces.removeAt(ID);
+    return 0;
+}
+
 void MapWidget::setRefPos(double lat, double lon, double alt)
 {
     mRefLat = lat;
