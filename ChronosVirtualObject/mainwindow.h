@@ -23,12 +23,12 @@ signals:
     void stop_virtual_object();
 private slots:
 
-    void on_updateButton_clicked();
-    void on_playButton_clicked();
+    //void on_updateButton_clicked();
+    //void on_playButton_clicked();
     void on_init_vobj_clicked();
     void on_delete_vobj_clicked();
     //void updateLabelOSEM(chronos_osem msg);
-    void unlockRun();
+    void removeObject();
     void handleUpdateState(VOBJ_DATA);
     void handleNewTrajectory(QVector<chronos_dopm_pt> traj);
 

@@ -32,16 +32,16 @@ MainWindow::~MainWindow()
     //delete chronos;
     delete ui;
 }
-
+/*
 void MainWindow::on_updateButton_clicked(){
     //ui->label->setText(QString("apa\t Bepa"));
     OSEM_DATA temp;
-    /*
+
     temp.latitude = 4.56789f;//(float)(rand() % 100) / 100.0f;
     temp.longitude= 5.1f;
     temp.altitude = 5.3f;
     temp.heading = 1;
-*/
+
     char c_lat[LABEL_TEXT_LENGTH];
     char c_long[LABEL_TEXT_LENGTH];
     char c_alt[LABEL_TEXT_LENGTH];
@@ -63,8 +63,8 @@ void MainWindow::on_updateButton_clicked(){
     ui->lab_lon->setText(c_long);
     ui->lab_alt->setText(c_alt);
     ui->lab_head->setText(c_head);
-}
-
+}*/
+/*
 void MainWindow::on_playButton_clicked(){
 
 
@@ -83,11 +83,11 @@ void MainWindow::on_playButton_clicked(){
     vobj->start(QThread::TimeCriticalPriority);
 
     //delete vobj;
-}
+}*/
 
 void MainWindow::on_init_vobj_clicked()
 {
-    ui->playButton->setEnabled(true);
+    //ui->playButton->setEnabled(true);
     ui->delete_vobj->setEnabled(true);
     ui->init_vobj->setEnabled(false);
 
@@ -117,7 +117,7 @@ void MainWindow::on_init_vobj_clicked()
 
 
     // Set SLOT to enable the start of a virtual object upon termination
-    connect(vobj, SIGNAL(finished()),this,SLOT(unlockRun()));
+    connect(vobj, SIGNAL(finished()),this,SLOT(removeObject()));
 
     connect(this,SIGNAL(stop_virtual_object()),
             vobj,SLOT(stopSimulation()));
@@ -135,24 +135,26 @@ void MainWindow::on_init_vobj_clicked()
     connect(vobj,SIGNAL(new_trajectory(QVector<chronos_dopm_pt>)),
             this,SLOT(handleNewTrajectory(QVector<chronos_dopm_pt>)));
 
+    // Reset trace
+    ui->widget->clearTrace();
+    // Add red trace to the carl
+    //ui->widget->setTraceCar(0);
 
+    // Start the thread with the highest priority
+    vobj->start(QThread::TimeCriticalPriority);
 
 
 }
 void MainWindow::on_delete_vobj_clicked()
 {
-    ui->playButton->setEnabled(false);
+    //ui->playButton->setEnabled(false);
     ui->delete_vobj->setEnabled(false);
-    ui->init_vobj->setEnabled(true);
+    //ui->init_vobj->setEnabled(true);
 
-    MapWidget *map = ui->widget;
 
-    map->clearTrace();
-    int id = vobj->getID();
-    map->removeCar(id);
-    map->update();
 
     emit stop_virtual_object();
+
     //delete vobj;
 }
 
@@ -175,9 +177,20 @@ void MainWindow::updateLabelOSEM(double lat, double lon, double alt) {
     //ui->lab_head->setText(c_head);
 }
 
-void MainWindow::unlockRun(){
-    ui->playButton->setEnabled(true);
-    ui->delete_vobj->setEnabled(true);
+void MainWindow::removeObject(){
+    //ui->playButton->setEnabled(true);
+    //ui->delete_vobj->setEnabled(true);
+
+    MapWidget *map = ui->widget;
+
+    map->clearTrace();
+    int id = vobj->getID();
+    map->removeCar(id);
+    map->update();
+
+    ui->init_vobj->setEnabled(true);
+
+
 }
 
 void MainWindow::displayTime(qint64 t){
