@@ -569,6 +569,7 @@ int MapWidget::removeInfoTrace(int ID)
 {
     if (ID >=mInfoTraces.size()) return -1;
 
+
     mInfoTraces.removeAt(ID);
     return 0;
 }

@@ -41,7 +41,6 @@ typedef enum {
 } OBJ_STATUS;
 
 
-/* TODO: Integrate chronos */
 class VirtualObject : public QThread
 {
     Q_OBJECT
@@ -61,6 +60,7 @@ signals:
     void new_OSEM(chronos_osem msg);
     void new_trajectory(int ID,QVector<chronos_dopm_pt> traj);
     void send_monr(chronos_monr monr);
+    void thread_done(int ID);
 
 
 private slots:
@@ -88,7 +88,11 @@ private:
     qint64 start_time;
     qint64 clock;
 
+    qint64 time_adjustment;
+
     qint64 heab_recieved_time;
+
+    qint64 sleep_time = 2;
 
     QVector<chronos_dopm_pt> traj;
 
@@ -100,7 +104,7 @@ private:
     double mRefHeading;
 
     //void sendCurrentState();
-    void control_object(int curr_idx_point);
+    void control_object(int curr_idx_point,qint64 deltaT);
     chronos_monr getMONR();
     void xyz_to_llh(double *lat,double *lon, double *alt);
 

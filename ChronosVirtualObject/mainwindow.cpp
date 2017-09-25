@@ -97,63 +97,8 @@ void MainWindow::on_init_vobj_clicked()
     //ui->playButton->setEnabled(true);
     ui->delete_vobj->setEnabled(true);
     ui->init_vobj->setEnabled(false);
-    MapWidget *map = ui->widget;
-
-
-    qint8 ID = 0;
-    // Create virtual object as a new Thread
-    vobj = new VirtualObject(ID,
-                             map->getRefLat(),
-                             map->getRefLon(),
-                             map->getRefAlt());
-    vobj->connectToServer(53240, 53241);
-
-
-
-
-
-
-
-
-    // Add a car to the map
-    // NOTE: the car and the thread must have the same ID
-    CarInfo car;
-    QList<LocPoint> points;
-    car.setInfo("MASTER");
-    map->removeCar(ID);
-    map->addCar(car);
-    map->setSelectedCar(ID);
-    map->setFollowCar(ID);
-    map->addInfoTrace(points);
-
-
-
-
-    // Set SLOT to delete the object once it is finished running
-    //connect(vobj, SIGNAL(finished()), vobj, SLOT(deleteLater()));
-    // Connection to handle cleanup after a finished object
-    connect(vobj, SIGNAL(finished()),this,SLOT(removeObject()));
-    // Connection to do a shutdown of an object
-    connect(this,SIGNAL(stop_virtual_object()),
-            vobj,SLOT(stopSimulation()));
-    // Connection to handle the stream of data passed from the object
-    connect(vobj,SIGNAL(updated_state(VOBJ_DATA)),
-            this,SLOT(handleUpdateState(VOBJ_DATA)));
-    // Handles new OSEM message
-    connect(vobj,SIGNAL(new_OSEM(chronos_osem)),
-            this,SLOT(handleNewOSEM(chronos_osem)));
-    // Connection to show any new trajectory that has been loaded to object
-    connect(vobj,SIGNAL(new_trajectory(int,QVector<chronos_dopm_pt>)),
-            this,SLOT(handleNewTrajectory(int, QVector<chronos_dopm_pt>)));
-
-    // Reset trace
-    ui->widget->clearTrace();
-    // Add red trace to the carl
-    //ui->widget->setTraceCar(0);
-
-    // Start the thread with the highest priority
-    vobj->start(QThread::TimeCriticalPriority);
-
+    startObject(0,53240,53241);
+    startObject(1,53242,53243);
 
 }
 void MainWindow::on_delete_vobj_clicked()
@@ -188,19 +133,104 @@ void MainWindow::updateLabelOSEM(double lat, double lon, double alt) {
     //ui->lab_head->setText(c_head);
 }
 
-void MainWindow::removeObject(){
+void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
+
+    MapWidget *map = ui->widget;
+
+
+    //qint8 ID = 0;
+    // Create virtual object as a new Thread
+    VirtualObject *vobj = new VirtualObject(ID,
+                             map->getRefLat(),
+                             map->getRefLon(),
+                             map->getRefAlt());
+    //vobj->connectToServer(53240, 53241);
+    vobj->connectToServer(udpSocket,tcpSocket);
+
+
+
+
+
+
+    // Add a car to the map
+    // NOTE: the car and the thread must have the same ID
+    CarInfo car(ID,Qt::red);
+    QList<LocPoint> points;
+    car.setInfo("MASTER");
+    if (map->removeCar(ID)) qDebug() << "Car removed";
+    map->addCar(car);
+    //map->setSelectedCar(ID);
+    //map->setFollowCar(ID);
+    map->addInfoTrace(points);
+
+
+
+
+    // Set SLOT to delete the object once it is finished running
+    //connect(vobj, SIGNAL(finished()), vobj, SLOT(deleteLater()));
+    // Connection to handle cleanup after a finished object
+    //connect(vobj, SIGNAL(finished()),this,SLOT(removeObject()));
+    connect(vobj,SIGNAL(thread_done(int)),this,SLOT(removeObject(int)));
+    // Connection to do a shutdown of an object
+    connect(this,SIGNAL(stop_virtual_object()),
+            vobj,SLOT(stopSimulation()));
+    // Connection to handle the stream of data passed from the object
+    connect(vobj,SIGNAL(updated_state(VOBJ_DATA)),
+            this,SLOT(handleUpdateState(VOBJ_DATA)));
+    // Handles new OSEM message
+    connect(vobj,SIGNAL(new_OSEM(chronos_osem)),
+            this,SLOT(handleNewOSEM(chronos_osem)));
+    // Connection to show any new trajectory that has been loaded to object
+    connect(vobj,SIGNAL(new_trajectory(int,QVector<chronos_dopm_pt>)),
+            this,SLOT(handleNewTrajectory(int, QVector<chronos_dopm_pt>)));
+
+    // Reset trace
+    ui->widget->clearTrace();
+    // Add red trace to the carl
+    //ui->widget->setTraceCar(0);
+
+
+
+    // Start the thread with the highest priority
+    vobj->start(QThread::TimeCriticalPriority);
+    vobjs.append(vobj);
+
+}
+
+void MainWindow::removeObject(int ID){
     //ui->playButton->setEnabled(true);
     //ui->delete_vobj->setEnabled(true);
 
     MapWidget *map = ui->widget;
+    /*
+    for (VirtualObject *vobj : vobjs)
+    {
+        map->clearTrace();
+        int id = vobj->getID();
+        map->removeCar(id);
+        map->removeInfoTrace(id);
+        map->update();
 
-    map->clearTrace();
-    int id = vobj->getID();
-    map->removeCar(id);
-    map->removeInfoTrace(id);
-    map->update();
+        delete vobj;
+    }
+    vobjs.clear();*/
 
-    delete vobj;
+    if (ID <0 || vobjs.size() <= ID)
+    {
+        qDebug() << "Object does not exist.";
+        return;
+    }
+    map->removeCar(ID);
+    map->removeInfoTrace(ID);
+
+    int del_idx = 0;
+    for (del_idx = 0;del_idx<vobjs.size();del_idx++)
+    {
+        if (vobjs[del_idx]->getID() == ID) break;
+    }
+    delete vobjs[del_idx];
+    vobjs.remove(del_idx);
+
 
     ui->init_vobj->setEnabled(true);
 

@@ -214,6 +214,15 @@ bool Chronos::decodeMsg(quint8 type, quint32 len, QByteArray payload)
         processHeab(heab);
     } break;
 
+    case CHRONOS_MSG_SYPM: {
+        chronos_sypm sypm;
+        VByteArray vb(payload);
+
+        sypm.sync_point = vb.vbPopFrontUint32();
+        sypm.stop_point = vb.vbPopFrontUint32();
+        processSypm(sypm);
+    }
+
     default:
         break;
     }
@@ -315,6 +324,16 @@ void Chronos::processHeab(chronos_heab heab)
         }
     }
     */
+}
+
+void Chronos::processSypm(chronos_sypm sypm){
+    qDebug() << "SYPM message handled.";
+    emit handle_sypm(sypm);
+}
+
+void Chronos::processMtsp(chronos_mtsp mtsp){
+    qDebug() << "MTSP message handled.";
+    emit handle_mtsp(mtsp);
 }
 
 bool Chronos::sendMonr(chronos_monr monr)

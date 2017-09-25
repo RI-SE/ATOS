@@ -546,7 +546,11 @@ typedef enum {
     CHRONOS_MSG_OSTM,
     CHRONOS_MSG_STRT,
     CHRONOS_MSG_HEAB,
-    CHRONOS_MSG_MONR
+    CHRONOS_MSG_MONR,
+    CHRONOS_MSG_STAT,
+    CHRONOS_MSG_LLCM,
+    CHRONOS_MSG_SYPM,
+    CHRONOS_MSG_MPST
 } CHRONOS_MSG;
 
 typedef struct {
@@ -591,5 +595,14 @@ typedef struct {
     uint8_t direction;
     uint8_t status;
 } chronos_monr;
+
+typedef struct {
+    uint32_t sync_point;
+    uint32_t stop_point;
+} chronos_sypm;
+
+typedef struct {
+    uint32_t ts;
+} chronos_mtsp;
 
 #endif /* DATATYPES_H_ */

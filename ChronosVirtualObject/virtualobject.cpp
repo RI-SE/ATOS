@@ -36,6 +36,7 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
 
     start_time = 0;
     clock = 0;
+    time_adjustment=0;
 
     data= {
         id, // id
@@ -52,8 +53,6 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
     mRefLat = rLat;
     mRefLon = rLon;
     mRefAlt = rAlt;
-
-    updateTime();
 
     cClient = new Chronos();
 
@@ -112,6 +111,7 @@ void VirtualObject::run()
             // Reset the running index to the first trajectory point
             index = 0;
             init_start = true;
+            sleep_time = 20;
         }
         else if(status == DISARMED)
         {
@@ -119,6 +119,7 @@ void VirtualObject::run()
         }
         else if(status == RUNNING)
         {
+            sleep_time = 2;
             clock = QDateTime::currentMSecsSinceEpoch();
             // Is this the first iteration?
             if (index == 0 && init_start)
@@ -131,7 +132,7 @@ void VirtualObject::run()
                 elapsed_time = clock - start_time;
                 // Get the reference point
                 chronos_dopm_pt ref_point = traj[index];
-                while(ref_point.tRel < elapsed_time)
+                while(ref_point.tRel < elapsed_time && index < traj.size())
                 {
                     ref_point = traj[index++];
                 }
@@ -156,7 +157,7 @@ void VirtualObject::run()
                 data.time = elapsed_time;
                 if (clock - ctrl_update > 5)
                 {
-                    control_object(index);
+                    control_object(index,clock-ctrl_update);
                     ctrl_update = clock;
                 }
 
@@ -165,7 +166,10 @@ void VirtualObject::run()
                 elapsed_time = clock-start_time;
                 data.time = elapsed_time;
 
-
+                if (elapsed_time > 30000)
+                {
+                    //time_adjustment = 500;
+                }
 
             }
             else
@@ -185,10 +189,11 @@ void VirtualObject::run()
         // Send vizualizer update
         data.status = status;
         emit updated_state(data);
-        QThread::msleep(2);
+        QThread::msleep(sleep_time);
 
     }
     qDebug() << "Done.";
+    emit thread_done(data.ID);
 
 }
 /*
@@ -247,10 +252,12 @@ void VirtualObject::updateTime()
     clock = QDateTime::currentMSecsSinceEpoch();
 }
 
-void VirtualObject::control_object(int curr_idx_point)
+void VirtualObject::control_object(int curr_idx_point, qint64 deltaT)
 {
     // Only does object = ref_point
     // TODO: add dynamics
+
+    double t = (double) deltaT / 1000.0;
 
     if (curr_idx_point == 0 || curr_idx_point >= traj.size())
         return;
@@ -267,8 +274,13 @@ void VirtualObject::control_object(int curr_idx_point)
     double ex = dist ? deltaX/dist : deltaX;
     double ey = dist ? deltaY/dist : deltaY;
 
+    //double s = next.speed * t - 0.5 * next.accel * t * t;
+
     data.x = prev.x + ex * data.speed / 1000.0 *(data.time-prev.tRel);
     data.y = prev.y + ey * data.speed / 1000.0 *(data.time-prev.tRel);
+
+    //data.x = data.x + ex * s;
+    //data.y = data.y + ey * s;
 /*
     data.acc = ref_point.accel;
     data.heading = ref_point.heading;

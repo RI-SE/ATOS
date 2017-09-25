@@ -26,6 +26,8 @@ signals:
     void handle_heab(chronos_heab heab);
     void handle_ostm(chronos_ostm ostm);
     void handle_strt(chronos_strt strt);
+    void handle_sypm(chronos_sypm sysm);
+    void handle_mtsp(chronos_mtsp mtsp);
 
 private slots:
     void tcpRx(QByteArray data);
@@ -54,6 +56,8 @@ private:
     void processOstm(chronos_ostm ostm);
     void processStrt(chronos_strt strt);
     void processHeab(chronos_heab heab);
+    void processSypm(chronos_sypm sypm);
+    void processMtsp(chronos_mtsp mtsp);
 
 
 };
