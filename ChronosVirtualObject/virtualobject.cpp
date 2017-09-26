@@ -151,7 +151,7 @@ void VirtualObject::run()
                 if(clock-heab_recieved_time > HEARTBEAT_TIME)
                 {
                     qDebug() << "ERROR: Heartbeat not recieved.";
-                    //pendingStatus = ERROR;
+                    pendingStatus = ERROR;
 
                 }
 
