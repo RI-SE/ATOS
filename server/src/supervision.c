@@ -179,10 +179,10 @@ void supervision_task() {
   uint64_t msSinceEpochETSI ;
 
 
-  printf ("--------------------------------------------------\n");
-  printf ("INF : SV : Supervision started.\n");
-  printf ("--------------------------------------------------\n");
-  fflush(stdout);
+//  printf ("--------------------------------------------------\n");
+//  printf ("INF : SV : Supervision started.\n");
+//  printf ("--------------------------------------------------\n");
+//  fflush(stdout);
 
 
   /*----------------------------------------------------------------------
@@ -221,7 +221,7 @@ void supervision_task() {
                      object_address_name,
                      &nbr_objects);
 
-  printf ( "DGB : SV : dir nr of files = %d\n", nbr_objects );
+  //printf ( "DGB : SV : dir nr of files = %d\n", nbr_objects );
 
 
   /*----------------------------------------------------------------------
@@ -281,15 +281,15 @@ void supervision_task() {
             i < 3;
             i++ )
         {
-          printf ( "INF : SV : i = %d , s = %s",
-                   i,
-                   bFileLine [ iIndex ] [i] );
+         // printf ( "INF : SV : i = %d , s = %s",
+         //          i,
+         //          bFileLine [ iIndex ] [i] );
         }
 
     } // for ( iIndex = 0
 
 
-  printf ( "INF : SV : Opened all trajectory files.\n" );
+  //printf ( "INF : SV : Opened all trajectory files.\n" );
 
 
   /*----------------------------------------------------------------------
@@ -325,12 +325,12 @@ void supervision_task() {
       trajs [ iIndex ] [ i ].latitude   = traj.latitude  ;
       trajs [ iIndex ] [ i ].longitude  = traj.longitude ;
 
-      printf ( "DBG : SV : %d %d : t %" PRIu64 ", lat %d, lon %d \n",
-               iIndex ,
-               i      ,
-               trajs [ iIndex ] [ i ].timestamp ,
-               trajs [ iIndex ] [ i ].latitude  ,
-               trajs [ iIndex ] [ i ].longitude );
+      //printf ( "DBG : SV : %d %d : t %" PRIu64 ", lat %d, lon %d \n",
+      //         iIndex ,
+      //         i      ,
+      //         trajs [ iIndex ] [ i ].timestamp ,
+      //         trajs [ iIndex ] [ i ].latitude  ,
+      //         trajs [ iIndex ] [ i ].longitude );
     }
 
   } // for ( iIndex = 0
@@ -357,9 +357,9 @@ void supervision_task() {
                        RECV_MESSAGE_BUFFER);
 
 #ifdef DEBUG1
-    printf ( "INF : SV : Received a command: %s\n",
-             cpBuffer );
-    fflush(stdout);
+    //printf ( "INF : SV : Received a command: %s\n",
+    //         cpBuffer );
+    //fflush(stdout);
 #endif
 
     /*--------------------------------------------------
@@ -368,20 +368,20 @@ void supervision_task() {
 
     if ( iCommand == COMM_STRT )
       {
-        printf ( "INF : SV : Received a START message: %s\n",
-                 cpBuffer );
+        //printf ( "INF : SV : Received a START message: %s\n",
+        //         cpBuffer );
 
         for ( iIndex = 0           ;
               iIndex < nbr_objects ;
               ++iIndex             )
           {
             time0 [ iIndex ] = timeX [ iIndex ] ;
-            printf ( "INF : SV : index %d  time0 %" PRIu64 ".\n",
-                     iIndex,
-                     time0 [ iIndex ] );
+        //    printf ( "INF : SV : index %d  time0 %" PRIu64 ".\n",
+        //             iIndex,
+        //             time0 [ iIndex ] );
           }
 
-        printf ( "INF : SV : Start correlation.\n" );
+        //printf ( "INF : SV : Start correlation.\n" );
         doCorrelationtLoop = 1;
       }
 
@@ -392,9 +392,9 @@ void supervision_task() {
 
     if ( iCommand == COMM_ARMD )
       {
-        printf ( "INF : SV : Received an ARM message: %s\n",
-                 cpBuffer );
-        printf ( "INF : SV : Start initial alignment.\n" );
+        //printf ( "INF : SV : Received an ARM message: %s\n",
+        //         cpBuffer );
+        //printf ( "INF : SV : Start initial alignment.\n" );
         doInitialAlignmentLoop = 1;
       }
 
@@ -406,9 +406,9 @@ void supervision_task() {
     else if ( iCommand == COMM_MONI )
       {
 #ifdef DEBUG1
-        printf ( "INF : SV : Recieved MONITOR message: %s\n",
-                 cpBuffer );
-        fflush(stdout);
+        //printf ( "INF : SV : Recieved MONITOR message: %s\n",
+        //         cpBuffer );
+        //fflush(stdout);
 #endif
 
         /* Start parsing messages */
@@ -456,22 +456,24 @@ void supervision_task() {
         if ( doInitialAlignmentLoop == 1 )
           {
 #ifdef DEBUG
-            /*printf ( "DBG : SV : Rec MON : i %d : t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
-                     iIndex                 ,
-                     monitor.timestamp      ,
-                     monitor.latitude       ,
-                     monitor.longitude      ,
-                     monitor.altitude       ,
-                     monitor.speed          ,
-                     monitor.heading        ,
-                     monitor.drivedirection );*/
-            fflush(stdout);
+
+            //printf ( "DBG : SV : Rec MON : i %d : t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
+            //         iIndex                 ,
+            //         monitor.timestamp      ,
+            //         monitor.latitude       ,
+            //         monitor.longitude      ,
+            //         monitor.altitude       ,
+            //         monitor.speed          ,
+            //         monitor.heading        ,
+            //         monitor.drivedirection );
+            //fflush(stdout);
+
 #endif
 
             while ( bestFitDone [ iIndex ] == 0 )
               {
-                printf ( "DBG : SV : Align object id  %d \n",
-                         iIndex );
+                //printf ( "DBG : SV : Align object id  %d \n",
+                //         iIndex );
 
                 /* Calculate deviation (devPos) per buffer : 0 1 2 */
 
@@ -489,18 +491,18 @@ void supervision_task() {
                     dLong = dP1Long - dP2Long;
 
 #ifdef DEBUG
-                    printf ( "DGB : SV : LatLong : iIndex = %d  %d \n",
-                             iIndex  ,
-                             i       );
-                    printf ( "  dP1Lat = %f, dP1Long = %f\n",
-                             dP1Lat  ,
-                             dP1Long );
-                    printf ( "  dP2Lat = %f, dP2Long = %f\n",
-                             dP2Lat  ,
-                             dP2Long );
-                    printf ( "  dLat   = %f,  dLong   = %f\n",
-                             dLat    ,
-                             dLong   );
+                    //printf ( "DGB : SV : LatLong : iIndex = %d  %d \n",
+                    //         iIndex  ,
+                    //         i       );
+                    //printf ( "  dP1Lat = %f, dP1Long = %f\n",
+                    //         dP1Lat  ,
+                    //         dP1Long );
+                    //printf ( "  dP2Lat = %f, dP2Long = %f\n",
+                    //         dP2Lat  ,
+                    //         dP2Long );
+                    //printf ( "  dLat   = %f,  dLong   = %f\n",
+                    //         dLat    ,
+                    //         dLong   );
 #endif
 
                     tObjectPos.x = 0;
@@ -519,10 +521,10 @@ void supervision_task() {
                     distance  [ iIndex ] [ i ] = devPos     ;
 
 #ifdef DEBUG
-                    printf ( "  x = %f, y = %f, devPos %f \n",
-                             tObjectPos.x      ,
-                             tObjectPos.y      ,
-                             devPos            );
+                    //printf ( "  x = %f, y = %f, devPos %f \n",
+                    //         tObjectPos.x      ,
+                    //         tObjectPos.y      ,
+                    //         devPos            );
 #endif
 
                   } // for ( i
@@ -580,12 +582,12 @@ void supervision_task() {
                           i < 3;
                           i++ )
                       {
-                        printf ( "DBG : SV : trajs : %d %d : t %" PRIu64 ", lat %d, lon %d \n",
-                                 iIndex ,
-                                 i      ,
-                                 trajs [ iIndex ] [ i ].timestamp ,
-                                 trajs [ iIndex ] [ i ].latitude  ,
-                                 trajs [ iIndex ] [ i ].longitude );
+                       // printf ( "DBG : SV : trajs : %d %d : t %" PRIu64 ", lat %d, lon %d \n",
+                       //          iIndex ,
+                       //          i      ,
+                       //          trajs [ iIndex ] [ i ].timestamp ,
+                       //          trajs [ iIndex ] [ i ].latitude  ,
+                       //          trajs [ iIndex ] [ i ].longitude );
                       } // for
 
                   } // if ... else ..
@@ -601,9 +603,10 @@ void supervision_task() {
                   jIndex < nbr_objects ;
                   ++jIndex             )
               {
-                //  printf ( "DBG : SV : Initial align - bestFitDone index %d ok = %d.\n",
-                //         jIndex,
-                //         bestFitDone [ jIndex ] );
+
+              //  printf ( "DBG : SV : Initial align - bestFitDone index %d ok = %d.\n",
+              //           jIndex,
+              //           bestFitDone [ jIndex ] );
                 if ( bestFitDone [ jIndex ] == 0 ) doInitialAlignmentLoop = 1;
               }
 
@@ -619,17 +622,17 @@ void supervision_task() {
                   MS_FROM_1970_TO_2004_NO_LEAP_SECS +
                   DIFF_LEAP_SECONDS_UTC_ETSI * 1000;
 
-                printf ( "DBG : SV : Initial align - all index ok.\n" );
-                printf ( "DBG : SV : Initial align - SV  time %" PRIu64 ".\n", msSinceEpochETSI  );
-                printf ( "DBG : SV : Initial align - MON time %" PRIu64 ".\n", monitor.timestamp );
+                //printf ( "DBG : SV : Initial align - all index ok.\n" );
+                //printf ( "DBG : SV : Initial align - SV  time %" PRIu64 ".\n", msSinceEpochETSI  );
+                //printf ( "DBG : SV : Initial align - MON time %" PRIu64 ".\n", monitor.timestamp );
 
                 for ( jIndex = 0           ;
                       jIndex < nbr_objects ;
                       ++jIndex             )
                   {
-                    printf ( "DBG : SV : Initial align - index %d  1.time = %" PRIu64 " .\n",
-                             jIndex,
-                             trajs [ jIndex ] [ 1 ].timestamp );
+                  //  printf ( "DBG : SV : Initial align - index %d  1.time = %" PRIu64 " .\n",
+                  //           jIndex,
+                  //           trajs [ jIndex ] [ 1 ].timestamp );
                   }
               }
 
@@ -643,10 +646,10 @@ void supervision_task() {
         else if ( doCorrelationtLoop == 1 )
           {
 #ifdef DEBUG1
-            printf ( "INF : SV : Corr id %d - Recieved MONITOR message: %s\n",
-                     iIndex,
-                     cpBuffer );
-            fflush(stdout);
+            //printf ( "INF : SV : Corr id %d - Recieved MONITOR message: %s\n",
+            //         iIndex,
+            //         cpBuffer );
+            //fflush(stdout);
 #endif
 
             /*  not used for the moment .....
@@ -725,26 +728,26 @@ void supervision_task() {
                     distance  [ iIndex ] [ i ] = devPos     ;
 
 #ifdef DEBUG1
-                    printf ( "DGB : SV : LatLong : iIndex = %d  %d \n",
-                             iIndex  ,
-                             i       );
-                    printf ( "  dP1Lat = %f, dP1Long = %f\n",
-                             dP1Lat  ,
-                             dP1Long );
-                    printf ( "  dP2Lat = %f, dP2Long = %f\n",
-                             dP2Lat  ,
-                             dP2Long );
-                    printf ( "  dLat   = %f,  dLong   = %f\n",
-                             dLat    ,
-                             dLong   );
-                    printf ( "  dTime  = %" PRIu64 "\n",
-                             dTime    );
-                    printf ( "  dTime0 = %" PRIu64 "\n",
-                             dTime0   );
-                    printf ( "  x = %f, y = %f, devPos %f \n",
-                             tObjectPos.x      ,
-                             tObjectPos.y      ,
-                             devPos            );
+                   // printf ( "DGB : SV : LatLong : iIndex = %d  %d \n",
+                   //          iIndex  ,
+                   //          i       );
+                   // printf ( "  dP1Lat = %f, dP1Long = %f\n",
+                   //          dP1Lat  ,
+                   //          dP1Long );
+                   // printf ( "  dP2Lat = %f, dP2Long = %f\n",
+                   //          dP2Lat  ,
+                   //          dP2Long );
+                   // printf ( "  dLat   = %f,  dLong   = %f\n",
+                   //          dLat    ,
+                   //          dLong   );
+                   // printf ( "  dTime  = %" PRIu64 "\n",
+                   //          dTime    );
+                   // printf ( "  dTime0 = %" PRIu64 "\n",
+                   //          dTime0   );
+                   // printf ( "  x = %f, y = %f, devPos %f \n",
+                   //          tObjectPos.x      ,
+                   //          tObjectPos.y      ,
+                   //          devPos            );
 #endif
 
                   } // for ( i
@@ -759,7 +762,7 @@ void supervision_task() {
 
                   } else if ( distance  [ iIndex ] [ 1 ] <  distance  [ iIndex ] [ 2 ] )
                   {
-                    printf ( "DBG : SV : Correlation - Worse on 2 - index %d ok.\n", iIndex );
+                    //printf ( "DBG : SV : Correlation - Worse on 2 - index %d ok.\n", iIndex );
 
                     bestFitDone [ iIndex ] = 1 ;
 
@@ -767,7 +770,7 @@ void supervision_task() {
 
                   } else
                   {
-                    printf ( "DBG : SV : Correlation - Shifting in a new line from trajectory file.\n" );
+                    //printf ( "DBG : SV : Correlation - Shifting in a new line from trajectory file.\n" );
 
                     // exit (-1);
 
@@ -780,8 +783,8 @@ void supervision_task() {
                     read = getline ( &bFileLine_p [ iIndex ] ,
                                      &len,
                                      fp [ iIndex ] );
-                    printf ( "INF : SV : i = 2 , s = %s",
-                             bFileLine [ iIndex ] [ 2 ] );
+                    //printf ( "INF : SV : i = 2 , s = %s",
+                    //         bFileLine [ iIndex ] [ 2 ] );
 
                     sscanf ( &bFileLine [ iIndex ] [ 2 ] [ 5 ],
                              "%f;%lf;%lf;%lf;%f;%f;",
@@ -808,12 +811,12 @@ void supervision_task() {
                           i < 3;
                           i++ )
                       {
-                        printf ( "DBG : SV : trajs : %d %d : t %" PRIu64 ", lat %d, lon %d \n",
-                                 iIndex ,
-                                 i      ,
-                                 trajs [ iIndex ] [ i ].timestamp ,
-                                 trajs [ iIndex ] [ i ].latitude  ,
-                                 trajs [ iIndex ] [ i ].longitude );
+                        //printf ( "DBG : SV : trajs : %d %d : t %" PRIu64 ", lat %d, lon %d \n",
+                        //         iIndex ,
+                        //         i      ,
+                        //         trajs [ iIndex ] [ i ].timestamp ,
+                        //         trajs [ iIndex ] [ i ].latitude  ,
+                        //         trajs [ iIndex ] [ i ].longitude );
                       } // for
 
                   } // if ... else ..
@@ -833,10 +836,10 @@ void supervision_task() {
               }
 
 #ifdef DEBUG1
-            printf ( "DGB : SV : Correlation Dev : iIndex = %d   devPos %f  devTim %" PRIu64 "\n",
-                     iIndex ,
-                     devPos ,
-                     devTim );
+            //printf ( "DGB : SV : Correlation Dev : iIndex = %d   devPos %f  devTim %" PRIu64 "\n",
+            //         iIndex ,
+            //         devPos ,
+            //         devTim );
 #endif
 
             if ( devPos > SAFETY_MARGIN_POS ||
@@ -872,8 +875,8 @@ void supervision_task() {
     else if ( iCommand == COMM_EXIT )
       {
 
-        printf ( "INF : SV : Received EXIT message: %s\n",
-                 cpBuffer );
+        //printf ( "INF : SV : Received EXIT message: %s\n",
+        //         cpBuffer );
 
         iExit = 1;
 
@@ -886,9 +889,9 @@ void supervision_task() {
 
     else
       {
-        printf ( "INF : SV : Unhandled command.\n" );
-        printf ( "INF : SV : Received  command: %s\n",
-                 cpBuffer );
+        //printf ( "INF : SV : Unhandled command.\n" );
+        //printf ( "INF : SV : Received  command: %s\n",
+        //         cpBuffer );
         fflush(stdout);
       }
 

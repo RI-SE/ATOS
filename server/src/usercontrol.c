@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 	unsigned char TestBuffer[] = {7,200,65,36,135,231,3,111,230,191,0,190,10,254,0,0,86,195,44,236,1,104,0,6};
 
 	char MessageBuffer[100];
-	int MessageLength;
+	int MessageLength,j;
 	int RowCount, i, Rest;
 	char TrajBuffer[COMMAND_DOPM_ROWS_IN_TRANSMISSION*COMMAND_DOPM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH];
 	FILE *fd;
@@ -122,14 +122,13 @@ int main(int argc, char *argv[])
 
   	printf("Connecting to server... %s %d \n",object_address_name,object_tcp_port);
 
-
+  	j = 0;
 	UserControlConnectServer(&socketfd, object_address_name, object_tcp_port);
 	if (socketfd >= 0) 
   	{
   		printf("Client is connected.\n"); 
 		while(!iExit)
 		{
-			
 			bzero(pcBuffer,IPC_BUFFER_SIZE);
 			scanf("%49s",pcBuffer);
 		
@@ -283,7 +282,8 @@ int main(int argc, char *argv[])
 					if(CurrentCommandArgCount == CommandArgCount)
 					{
 						FILE *Trajfd;
-	  					Trajfd = fopen ("traj/10.168.252.254", "r");
+
+	  					Trajfd = fopen ("traj/10.168.11.20", "r");
 	    				OP.TrajectoryPositionCount = UtilCountFileRows(Trajfd) - 2;
 	    				float SpaceArr[OP.TrajectoryPositionCount];
 	    				float TimeArr[OP.TrajectoryPositionCount];
@@ -292,8 +292,10 @@ int main(int argc, char *argv[])
 	    				OP.SpaceArr = SpaceArr;
 						OP.TimeArr = TimeArr;
 						OP.SpaceTimeArr = SpaceTimeArr;
-						double CurrentTime = 11.631;
-						UtilCalcPositionDelta( 57.7773716000, 12.7804629000 ,57.7772593000, 12.7811329000, &OP); //2
+
+						double CurrentTime = 10.074;
+						UtilCalcPositionDelta( 57.7773716000, 12.7804629000 ,57.7773704000, 12.7811559000, &OP); //2
+
 						printf("Calc d = %4.4f m, iterations = %d\n", OP.OrigoDistance, OP.CalcIterations);
 						printf("Latitude = %3.10f \n", OP.Latitude);
 						printf("Longitude = %3.10f\n", OP.Longitude);
@@ -305,7 +307,9 @@ int main(int argc, char *argv[])
 
 						if(OP.OrigoDistance > -1)
 						{	
-							UtilPopulateSpaceTimeArr(&OP, "traj/10.168.252.254");
+
+							UtilPopulateSpaceTimeArr(&OP, "traj/10.168.11.20");
+
 							UtilSetSyncPoint(&OP, 0, 0, 0, 42.0);
 							if (OP.SyncIndex > -1)
 							{
@@ -327,6 +331,14 @@ int main(int argc, char *argv[])
 								//42.228, 57.7773716000, 12.7804629000 ,57.7778247000, 12.7808559000
 								//42.129, 57.7773716000, 12.7804629000 ,57.7778282000, 12.7808640000
 								//11.631, 57.7773716000, 12.7804629000 ,57.7772593000, 12.7811329000
+
+								//7.378, 57.7773716000, 12.7804629000 ,57.7774789000, 12.7809825000
+								//10.749, 57.7773716000, 12.7804629000 ,57.7773043000, 12.7811029000
+								//41.677, 57.7773716000, 12.7804629000 ,57.7778309000, 12.7808710000
+								//6.217, 57.7773716000, 12.7804629000 ,57.7775358000, 12.7810418000
+								//10.689, 57.7773716000, 12.7804629000 ,57.7773704000, 12.7811559000
+								//10.704, 57.7773716000, 12.7804629000 ,57.7773704000, 12.7811559000
+
 
 								UtilFindCurrentTrajectoryPosition(&OP, 0, CurrentTime, 0.75, 2.5, 2);	//2
 								if(OP.BestFoundTrajectoryIndex > -1 && OP.SyncIndex > -1)
@@ -465,9 +477,8 @@ int main(int argc, char *argv[])
 
 				break;
 			}
-			usleep(1);
-
-	  }
+			usleep(1000);
+	  	}
   } else printf("Failed to start UserControl client!\n"); 
 }
 

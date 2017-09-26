@@ -25,7 +25,7 @@
 #define MQ_SV     "/TEServer-SV"
 #define MQ_OC     "/TEServer-OC"
 #define MQ_VA     "/TEServer-VA"
-#define MQ_SC     "/DUMMY"
+#define MQ_SC     "/TEServer-SC"  
 
 #define MQ_MAX_MESSAGE_LENGTH 4096
 #define MQ_MAX_MSG            10
@@ -43,6 +43,7 @@
 #define COMM_REPLAY 6
 #define COMM_CONTROL 7
 #define COMM_ABORT 8
+#define COMM_TOM 9
 #define COMM_INV 255
 
 #define SAFETY_CHANNEL_PORT 53240
@@ -68,7 +69,7 @@
 #define TRAJ_MASTER_LATE -2
 
 #define TIME_COMPENSATE_LAGING_VM 0
-#define TIME_COMPENSATE_LAGING_VM_VAL 80800
+#define TIME_COMPENSATE_LAGING_VM_VAL 100160
 
 #define MAX_ROW_SIZE 1024
 
@@ -78,6 +79,7 @@
 #define TESTHOST_IP "127.0.0.1" //"192.168.0.17"
 #define TESTSERVER_IP "127.0.0.1" //"192.168.0.17"
 #define TEST_SYNC_POINTS 1
+
 
 
 /* Calculation: 	
@@ -95,9 +97,23 @@
 #define TRAJECTORY_PATH "./traj/"
 
 #define ADAPTIVE_SYNC_POINT_CONF "./conf/adaptivesync.conf"
+#define TRIGG_ACTION_CONF "./conf/triggeraction.conf"
+
+#define MAX_TRIGG_ACTIONS 20  
+
+
+#define TAA_ACTION_EXT_START 1
+#define TAA_ACTION_TEST_SIGNAL 2  
+
+#define TAA_TRIGGER_DI_LOW  1
+#define TAA_TRIGGER_DI_HIGH  2
+#define TAA_TRIGGER_DI_RISING_EDGE 3 
+#define TAA_TRIGGER_DI_FALLING_EDGE 4
+
 
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
+
 
 //#define DEBUG
 
@@ -106,6 +122,9 @@ typedef struct
   int Index;
   float Time;
   float OrigoDistance;
+  double Bearing;
+  float x;
+  float y;
 
 } SpaceTime;
 
@@ -155,6 +174,20 @@ typedef struct
 } AdaptiveSyncPoint;
 
 
+typedef struct
+{
+  char TriggerIP[16];
+  char TriggerType[8];
+  char TriggerTypeVar[16];
+  char ActionType[24];
+  char ActionTypeVar[16];
+  char ActionDelay[8];
+  uint8_t TriggerId;
+  int32_t Action;
+} TriggActionType;
+
+
+
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -174,6 +207,7 @@ double UtilRadToDeg(double Rad);
 int UtilPopulateSpaceTimeArr(ObjectPosition *OP, char* TrajFile);
 int UtilSortSpaceTimeAscending(ObjectPosition *OP);
 int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double CurrentTime, double MaxTrajDiff, double MaxTimeDiff, char debug);
+int UtilFindCurrentTrajectoryPositionNew(ObjectPosition *OP, int StartIndex, double CurrentTime, double MaxTrajDiff, double MaxTimeDiff, char debug);
 int UtilSetSyncPoint(ObjectPosition *OP, double x, double y, double z, double time);
 float UtilCalculateTimeToSync(ObjectPosition *OP);
 
@@ -191,6 +225,7 @@ int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
+int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug);
 
 typedef struct {
   uint64_t timestamp;

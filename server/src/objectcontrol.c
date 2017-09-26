@@ -31,6 +31,9 @@
 
 #include "util.h"
 
+
+  
+
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
@@ -47,7 +50,7 @@
 #define OBJECT_CONTROL_ABORT_MODE 1
 #define BYTEBASED
 
-#define COMMAND_MESSAGE_HEADER_LENGTH 5
+#define COMMAND_MESSAGE_HEADER_LENGTH 5 
 #define COMMAND_CODE_INDEX 0
 #define COMMAND_MESSAGE_LENGTH_INDEX 1
 
@@ -74,6 +77,8 @@
 #define COMMAND_HEAB_OPT_SERVER_STATUS_OK 1
 #define COMMAND_HEAB_OPT_SERVER_STATUS_ABORT 2 
 
+#define COMMAND_MONR_CODE 6
+#define COMMAND_MONR_LENGTH 24 
 
 #define COMMAND_LLCM_CODE 8
 #define COMMAND_LLCM_MESSAGE_LENGTH 5
@@ -84,10 +89,24 @@
 #define COMMAND_MTPS_CODE 10
 #define COMMAND_MTPS_MESSAGE_LENGTH 6
 
+#define COMMAND_ACM_CODE 11  //Action Configuration Message: Server->Object, TCP
+#define COMMAND_ACM_MESSAGE_LENGTH 6 
+ 
+#define COMMAND_EAM_CODE 12  //Execution Action Message: Server->Object, UDP
+#define COMMAND_EAM_MESSAGE_LENGTH 6 
+
+#define COMMAND_TCM_CODE 13  //Trigger Configuration Message: Server->Object, TCP 
+#define COMMAND_TCM_MESSAGE_LENGTH 5 
+
+#define COMMAND_TOM_CODE 14  //Trigger Occurred Message: Object->Server, UDP
+#define COMMAND_TOM_MESSAGE_LENGTH 8 
+
+
 #define CONF_FILE_PATH  "conf/test.conf"
 
 #define SMALL_BUFFER_SIZE_0 20
 #define SMALL_BUFFER_SIZE_1 2
+#define SMALL_BUFFER_SIZE_2 1
 
 #define TRAJECTORY_FILE_MAX_ROWS  4096
 
@@ -119,13 +138,15 @@ int ObjectControlBuildAROMMessage(char* MessageBuffer, unsigned char CommandOpti
 int ObjectControlBuildHEABMessage(char* MessageBuffer, unsigned char CommandOption, char debug);
 int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, unsigned short Curvature, unsigned char Mode, char debug);
 int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, unsigned int StopTime, char debug);
-int ObjectControlBuildMTPSMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug);
+int ObjectControlBuildMTSPMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug);
 int ObjectControlBuildDOPMMessageHeader(char* MessageBuffer, int RowCount, char debug);
 int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, char debug);
-int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, char debug);
+int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, uint32_t Port,char debug);
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
 int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed ,char *Heading, char *DriveDirection, char *StatusFlag, char debug);
 int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, int32_t *Latitude, int32_t * Longitude, int32_t *Altitude, uint16_t *Speed, uint16_t *Heading, uint8_t *DriveDirection);
+int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId ,char *TriggAction, char *TriggDelay, char debug);
+int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug);
 
 
 static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], 
@@ -177,6 +198,8 @@ void objectcontrol_task()
   uint64_t OldTimeU64 = 0;
   uint64_t MasterTimeToSyncPointU64 = 0;
   double TimeToSyncPoint = 0;
+  double PrevTimeToSyncPoint = 0;
+  double CurrentTimeDbl = 0;
   struct timeval CurrentTimeStruct;
   int HeartbeatMessageCounter = 0;
 
@@ -200,7 +223,21 @@ void objectcontrol_task()
   double DistTraveled = 0;
   double ASPMaxTimeDiff = 0;
   double ASPMaxTrajDiff = 0;
+  double ASPFilterLevel = 0;
+  double TimeQuota = 0;
+  double ASPMaxDeltaTime = 0;
+  int ASPDebugRate = 1;
   int ASPStepBackCount = 0;
+  TriggActionType TAA[MAX_TRIGG_ACTIONS];
+  int TriggerActionCount = 0;
+  double DeltaTime = 0;
+  struct timeval tvTime;
+  char pcSendBuffer[MQ_MAX_MESSAGE_LENGTH];
+  char ObjectIP[SMALL_BUFFER_SIZE_0];
+  char ObjectPort[SMALL_BUFFER_SIZE_0];
+  char TriggId[SMALL_BUFFER_SIZE_1];
+  char TriggAction[SMALL_BUFFER_SIZE_1];
+  char TriggDelay[SMALL_BUFFER_SIZE_0];
 
 
   unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
@@ -213,6 +250,7 @@ void objectcontrol_task()
 
 
   (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhost);
+  printf("ForceObjectToLocalhost = %d\n", iForceObjectToLocalhost);
 
   
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -240,23 +278,50 @@ void objectcontrol_task()
     fd = fopen (ADAPTIVE_SYNC_POINT_CONF, "r");
     UtilReadLineCntSpecChars(fd, pcTempBuffer); //Read header   
     
-    for(i = 0; i < SyncPointCount; i++){
-
+    for(i = 0; i < SyncPointCount; i++)
+    {
       UtilSetAdaptiveSyncPoint(&ASP[i], fd, 1);      
       if(TEST_SYNC_POINTS == 1) ASP[i].TestPort = SAFETY_CHANNEL_PORT;
     }  
     fclose (fd);
   }
 
-  bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-  UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTimeDiff=", "", TextBuffer);
-  ASPMaxTimeDiff = atof(TextBuffer);
-  bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-  UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTrajDiff=", "", TextBuffer);
-  ASPMaxTrajDiff = atof(TextBuffer);
-  bzero(TextBuffer, SMALL_BUFFER_SIZE_0); 
-  UtilSearchTextFile(CONF_FILE_PATH, "ASPStepBackCount=", "", TextBuffer);
-  ASPStepBackCount = atoi(TextBuffer);
+  /*Setup Trigger and Action*/
+  fd = fopen (TRIGG_ACTION_CONF, "r");
+  if(fd)
+  {
+    
+    TriggerActionCount = UtilCountFileRows(fd) - 1;
+    fclose (fd);
+    fd = fopen (TRIGG_ACTION_CONF, "r");
+    UtilReadLineCntSpecChars(fd, pcTempBuffer); //Read header   
+    
+    for(i = 0; i < TriggerActionCount; i++)
+    {
+      UtilSetTriggActions(&TAA[i], fd, 1);
+    }  
+    fclose (fd);
+  }
+
+	bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+	UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTimeDiff=", "", TextBuffer);
+	ASPMaxTimeDiff = atof(TextBuffer);
+	bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+	UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTrajDiff=", "", TextBuffer);
+	ASPMaxTrajDiff = atof(TextBuffer);
+	bzero(TextBuffer, SMALL_BUFFER_SIZE_0); 
+	UtilSearchTextFile(CONF_FILE_PATH, "ASPStepBackCount=", "", TextBuffer);
+	ASPStepBackCount = atoi(TextBuffer);
+	bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+	UtilSearchTextFile(CONF_FILE_PATH, "ASPFilterLevel=", "", TextBuffer);
+	ASPFilterLevel = atof(TextBuffer);
+	bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+	UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxDeltaTime=", "", TextBuffer);
+	ASPMaxDeltaTime = atof(TextBuffer);
+  printf("ASPMaxDeltaTime %3.3f\n", ASPMaxDeltaTime);
+	bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+	UtilSearchTextFile(CONF_FILE_PATH, "ASPDebugRate=", "", TextBuffer);
+	ASPDebugRate = atoi(TextBuffer);
 
 #else
 
@@ -298,7 +363,9 @@ void objectcontrol_task()
   
   /* Connect and send drive files */
   printf("[ObjectControl] Objects controlled by server: %d\n", nbr_objects);
-  printf("[ObjectControl] ASP in the system: %d\n", SyncPointCount);
+  printf("[ObjectControl] ASP in system: %d\n", SyncPointCount);
+  printf("[ObjectControl] TAA in system: %d\n", TriggerActionCount);
+  
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
     UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
@@ -309,9 +376,7 @@ void objectcontrol_task()
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
                                 0); 
-    printf("Address_name: %s, port: %d\n", object_address_name[iIndex] , object_tcp_port[iIndex]); 
     vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
-
 
     /* Send OSEM command */
     #ifdef BYTEBASED
@@ -332,10 +397,10 @@ void objectcontrol_task()
       vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
 
       /*Send DOPM data*/
-      printf("Trajfile: %s\n", object_traj_file[iIndex] ); 
-      ObjectControlSendDOPMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], 0);
-
-      /* Adaptive Sync Points...*/
+      if(TEST_SYNC_POINTS == 1) printf("Trajfile: %s\n", object_traj_file[iIndex] ); 
+      ObjectControlSendDOPMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], 0);
+      
+      /* Adaptive Sync Points object configuration start...*/
       OP[iIndex].TrajectoryPositionCount = RowCount-2;
       OP[iIndex].SpaceArr = SpaceArr[iIndex];
       OP[iIndex].TimeArr = TimeArr[iIndex];
@@ -364,6 +429,19 @@ void objectcontrol_task()
         if(TEST_SYNC_POINTS == 1 && iIndex == 0) UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, ASP[i].MasterTrajSyncTime);
         else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL) UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, ASP[i].MasterTrajSyncTime); 
       }
+      /* ...end*/
+
+      
+      /* Trigg And Action object configuration start...*/
+      for(i = 0; i < TriggerActionCount; i++)
+      {
+        if(strstr(object_address_name[iIndex], TAA[i].TriggerIP) != NULL)
+        {
+          MessageLength = ObjectControlBuildTCMMessage(MessageBuffer, &TAA[i], 0);      
+          vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+        }
+      }
+      /* ...end*/
 
     #else
       vSendString("DOPM;",&socket_fd[iIndex]);
@@ -426,22 +504,28 @@ void objectcontrol_task()
             #ifdef BYTEBASED
             for(i = 0; i < SyncPointCount; i++)
             {
-              if(TEST_SYNC_POINTS == 1 && iIndex == 1 && MasterTimeToSyncPointU64 != 0 && OP[iIndex].BestFoundTrajectoryIndex > -1)
+              if(TEST_SYNC_POINTS == 1 && iIndex == 1 && MasterTimeToSyncPointU64 != 0 && TimeToSyncPoint > -1 )
               {
                   /*Send Master time to adaptive sync point*/
-                  MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
+                  MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
                   ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
               }
-              else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL && MasterTimeToSyncPointU64 != 0)
+              else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL && MasterTimeToSyncPointU64 != 0 && TimeToSyncPoint > -1)
               {
                   /*Send Master time to adaptive sync point*/
-                  MessageLength =ObjectControlBuildMTPSMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
+                  MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
                   ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
               }
             }
             #endif
       }
     }
+
+
+    gettimeofday(&CurrentTimeStruct, NULL);
+    CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+    if(TIME_COMPENSATE_LAGING_VM) CurrentTimeU64 = CurrentTimeU64 - TIME_COMPENSATE_LAGING_VM_VAL;
+
 
     for(iIndex=0;iIndex<nbr_objects;++iIndex)
     {
@@ -456,76 +540,90 @@ void objectcontrol_task()
       if(recievedNewData)
       {
 
-      	gettimeofday(&CurrentTimeStruct, NULL);
-        CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-        if(TIME_COMPENSATE_LAGING_VM) CurrentTimeU64 = CurrentTimeU64 - TIME_COMPENSATE_LAGING_VM_VAL;
-        
         #ifdef DEBUG
-    	   printf("INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
-         fflush(stdout);
+          printf("INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
+          fflush(stdout);
       	#endif
         
         #ifdef BYTEBASED
-            ObjectControlMONRToASCII(buffer, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 1);
-            bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
-            strcat(buffer,Id); strcat(buffer,";"); strcat(buffer, "0"); strcat(buffer,";"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
-            strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
-            strcat(buffer,DriveDirection); strcat(buffer,";"); //strcat(pcBuffer,StatusFlag); strcat(pcBuffer,";");
-
-            
-            for(i = 0; i < SyncPointCount; i++)
+          if(buffer[0] == COMMAND_TOM_CODE)
+          {
+            for(i = 0; i < TriggerActionCount; i ++)
             {
-              if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && StartTimeU64 > 0 && TimeToSyncPoint > -1 ||
-                  TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU64 > 0 && iIndex == 0 && TimeToSyncPoint > -1)
+              printf("[ObjectControl] External trigg received. %s\n", TAA[i].TriggerIP);
+              if(strstr(TAA[i].TriggerIP, object_address_name[iIndex]) != NULL)
               {
-
-                UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
-                if( OP[iIndex].BestFoundTrajectoryIndex == TRAJ_POSITION_NOT_FOUND ||
-                    OP[iIndex].BestFoundTrajectoryIndex == TRAJ_MASTER_LATE || SearchStartIndex < 0) SearchStartIndex = 0;
-                else
-                {
-                  DistTraveled = OP[iIndex].OrigoDistance - OP[iIndex].OldOrigoDistance;
-                  TimeDiff = (double)((CurrentTimeU64 - OldTimeU64))/1000;
-                  if(OP[iIndex].OrigoDistance < OP[iIndex].OldOrigoDistance)
-                  {
-                    SearchStartIndex = OP[iIndex].SpaceTimeFoundIndex - ((OP[iIndex].OrigoDistance - OP[iIndex].OldOrigoDistance)/TRAJ_RES) - ASPStepBackCount; 
-                    //printf("Dist: %d, %3.3f, %d, %d\n", OP[iIndex].SpaceTimeFoundIndex, (OP[iIndex].OrigoDistance - OP[iIndex].OldOrigoDistance)/TRAJ_RES, ASPStepBackCount, SearchStartIndex);
-                  } else SearchStartIndex = OP[iIndex].SpaceTimeFoundIndex - ASPStepBackCount;
-
-                  OP[iIndex].OldOrigoDistance = OP[iIndex].OrigoDistance;
-                }
-
-                OldTimeU64 = CurrentTimeU64;
-
-                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), ASPMaxTrajDiff, ASPMaxTimeDiff, 0);
-
-                if(OP[iIndex].BestFoundTrajectoryIndex > TRAJ_POSITION_NOT_FOUND)
-                {  
-                  TimeToSyncPoint = UtilCalculateTimeToSync(&OP[iIndex]);
-                  //if(atoi(Timestamp)%1 == 0)printf("TtS= %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n%3.10f, %d, %d, %d, %d\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, SearchStartIndex);
-                  if(atoi(Timestamp)%20 == 0)printf("TtS= %3.3f, %3.3f, %d, %d, %d, %3.2f, %3.3f\n",TimeToSyncPoint, (((double)CurrentTimeU64-(double)StartTimeU64)/1000), OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, DistTraveled/TimeDiff, DistTraveled);
-                  if(TimeToSyncPoint > 0) MasterTimeToSyncPointU64 = StartTimeU64 + (uint64_t)(TimeToSyncPoint*1000);
-                  else
-                  {
-                   MasterTimeToSyncPointU64 = 0;
-                   TimeToSyncPoint = -1;
-                  }                 
-                } 
-                else if(OP[iIndex].BestFoundTrajectoryIndex == TRAJ_POSITION_NOT_FOUND) 
-                {
-                  if(atoi(Timestamp)%20 == 0)printf("TtS[no pos found] %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n%3.10f, %d, %d, %d, %d\n",TimeToSyncPoint,(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, SearchStartIndex);  
-                }
-                else if(OP[iIndex].BestFoundTrajectoryIndex == TRAJ_MASTER_LATE)
-                {
-                  if(atoi(Timestamp)%20 == 0)printf("TtS[master late] %3.3f, %3.3f, %3.10f, %3.10f ,%3.10f\n %3.10f, %d, %d, %d, %2.2f, %d\n",TimeToSyncPoint,(((double)CurrentTimeU64-(double)StartTimeU64)/1000), OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7, OP[iIndex].BestFoundTrajectoryIndex, iIndex, OP[iIndex].SyncIndex, ASPMaxTimeDiff, SearchStartIndex);  
-                  MasterTimeToSyncPointU64 = 0;
-                  TimeToSyncPoint = -1;
-                }
-                
-               }
+                //printf("[ObjectControl] External trigg received\n");
+                fflush(stdout);            
+                ObjectControlTOMToASCII(buffer, TriggId, TriggAction, TriggDelay, 1);
+                bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
+                bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
+                bzero(ObjectPort, SMALL_BUFFER_SIZE_0);
+                sprintf(ObjectPort, "%d", object_udp_port[iIndex]);
+                strcat(pcSendBuffer,object_address_name[iIndex]);strcat(pcSendBuffer,";");
+                strcat(pcSendBuffer, ObjectPort);strcat(pcSendBuffer,";");
+                strcat(pcSendBuffer,TriggId);strcat(pcSendBuffer,";");
+                strcat(pcSendBuffer,TriggAction);strcat(pcSendBuffer,";");
+                strcat(pcSendBuffer,TriggDelay);strcat(pcSendBuffer,";");
+                (void)iCommSend(COMM_TOM, pcSendBuffer);
+              }
             }
+          }
 
-            OP[iIndex].Speed = atof(Speed);
+          ObjectControlMONRToASCII(buffer, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 1);
+          bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
+          strcat(buffer,Id); strcat(buffer,";"); strcat(buffer, "0"); strcat(buffer,";"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
+          strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
+          strcat(buffer,DriveDirection); strcat(buffer,";"); //strcat(pcBuffer,StatusFlag); strcat(pcBuffer,";");
+
+          
+          for(i = 0; i < SyncPointCount; i++)
+          {
+            if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && CurrentTimeU64 > StartTimeU64 && StartTimeU64 > 0 && TimeToSyncPoint > -1 ||
+                TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU64 > 0 && iIndex == 0 && TimeToSyncPoint > -1)
+            {
+
+              UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
+             
+              if(OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex)
+              {
+              
+                CurrentTimeDbl = (((double)CurrentTimeU64-(double)StartTimeU64)/1000);
+                SearchStartIndex = OP[iIndex].BestFoundTrajectoryIndex - ASPStepBackCount;
+                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, CurrentTimeDbl, ASPMaxTrajDiff, ASPMaxTimeDiff, 1);
+                
+              	if(OP[iIndex].BestFoundTrajectoryIndex != TRAJ_POSITION_NOT_FOUND)
+                {
+                  TimeToSyncPoint = UtilCalculateTimeToSync(&OP[iIndex]);
+                	if(TimeToSyncPoint > 0)
+                	{
+                    if(PrevTimeToSyncPoint != 0 && ASPFilterLevel > 0)
+                    {
+                      if(TimeToSyncPoint/PrevTimeToSyncPoint > (1 + ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint + ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
+                      else if(TimeToSyncPoint/PrevTimeToSyncPoint < (1 - ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint - ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
+                    }
+                		MasterTimeToSyncPointU64 = CurrentTimeU64 + TimeToSyncPoint*1000;
+                    PrevTimeToSyncPoint = TimeToSyncPoint;
+                    OldTimeU64 = CurrentTimeU64;
+                	}
+                	else
+                	{
+                		MasterTimeToSyncPointU64 = 0;
+                		TimeToSyncPoint = -1;
+                	}                 
+                }
+
+              	if(atoi(Timestamp)%ASPDebugRate == 0)
+              	{
+              		printf("TtS= %3.3f, %d, %d, %d, %ld, %d\n",TimeToSyncPoint, OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, MasterTimeToSyncPointU64, iIndex);
+                  printf("%3.3f, %3.10f, %3.10f ,%3.10f, %3.10f\n\n",CurrentTimeDbl, OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7);  
+              	}
+
+              }
+            }
+          }
+
+          OP[iIndex].Speed = atof(Speed);
         #else
         /* Get monitor data */
         sscanf(buffer,"MONR;%" SCNu64 ";%" SCNd32 ";%" SCNd32 ";%" SCNd32 ";%" SCNu16 ";%" SCNu16 ";%" SCNu8 ";",
@@ -559,89 +657,90 @@ void objectcontrol_task()
         fflush(stdout);
       #endif
 
-      if(iCommand == COMM_ARMD)
-      {
-         //MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, COMMAND_AROM_OPT_SET_ARMED_STATE, 0);
-        if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_ARMED_STATE) printf("[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]);
-        else if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_DISARMED_STATE) printf("[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]);
-        MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, pcRecvBuffer[0], 0);
+		if(iCommand == COMM_ARMD)
+   	{
+			if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_ARMED_STATE) printf("[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]);
+			else if(pcRecvBuffer[0] == COMMAND_AROM_OPT_SET_DISARMED_STATE) printf("[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]);
+			MessageLength = ObjectControlBuildAROMMessage(MessageBuffer, pcRecvBuffer[0], 0);
 
-        for(iIndex=0;iIndex<nbr_objects;++iIndex)
-        {
-          #ifdef BYTEBASED
-            /*Send AROM message*/
-            vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-          #else
-            vSendString("AROM;ENDAROM;",&socket_fd[iIndex]);
-          #endif
-        }
-      }
-      else if(iCommand == COMM_STRT)
-      {  
-        //#ifdef DEBUG
-          printf("[ObjectControl] STRT trig recieved <%s>\n",pcRecvBuffer);
-          fflush(stdout);
-        //#endif
+			for(iIndex=0;iIndex<nbr_objects;++iIndex)
+			{
+			  #ifdef BYTEBASED
+			    /*Send AROM message*/
+			    vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+			  #else
+			    vSendString("AROM;ENDAROM;",&socket_fd[iIndex]);
+			  #endif
+			}
+    	}
+  	else if(iCommand == COMM_STRT)
+		{  
+			//#ifdef DEBUG
+			printf("[ObjectControl] START recieved <%s>\n",pcRecvBuffer);
+			fflush(stdout);
+			//#endif
 
-        #ifdef BYTEBASED
-          bzero(Timestamp, SMALL_BUFFER_SIZE_0);
-          MiscPtr =strchr(pcRecvBuffer,';');
-          strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
-          StartTimeU64 = atol(Timestamp);
-          MasterTimeToSyncPointU64 = 0;
-          TimeToSyncPoint = 0;
-          SearchStartIndex = -1;
-          MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTimeU64, 0);
-        #else
-          bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
-          strncat(pcBuffer,"TRIG;",5);
-          strncat(pcBuffer,pcRecvBuffer,OBJECT_MESS_BUFFER_SIZE-13);
-          strncat(pcBuffer,"ENDTRIG;",8);
-        #endif
+			#ifdef BYTEBASED
+				bzero(Timestamp, SMALL_BUFFER_SIZE_0);
+				MiscPtr =strchr(pcRecvBuffer,';');
+				strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
+				StartTimeU64 = atol(Timestamp);
+				MasterTimeToSyncPointU64 = 0;
+				TimeToSyncPoint = 0;
+				SearchStartIndex = -1;
+				PrevTimeToSyncPoint = 0;
+        OldTimeU64 = CurrentTimeU64;
+				MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTimeU64, 0);
+			#else
+				bzero(pcBuffer,OBJECT_MESS_BUFFER_SIZE);
+				strncat(pcBuffer,"TRIG;",5);
+				strncat(pcBuffer,pcRecvBuffer,OBJECT_MESS_BUFFER_SIZE-13);
+				strncat(pcBuffer,"ENDTRIG;",8);
+			#endif
 
-        #ifdef DEBUG
-          printf("INF: Sending START trig from object control <%s>\n",pcBuffer);
-          fflush(stdout);
-        #endif
+			#ifdef DEBUG
+				printf("INF: Sending START trig from object control <%s>\n",pcBuffer);
+				fflush(stdout);
+			#endif
 
-        for(iIndex=0;iIndex<nbr_objects;++iIndex)
-        {
-          #ifdef BYTEBASED
-            vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-          #else
-            vSendString(pcBuffer,&socket_fd[iIndex]);
-          #endif
-        }
-      }
-    	else if(iCommand == COMM_REPLAY)
-    	{
-  			ObjectcontrolExecutionMode = OBJECT_CONTROL_REPLAY_MODE;
-        printf("[ObjectControl] Object control REPLAY mode <%s>\n", pcRecvBuffer);
-  			fflush(stdout);
-  		}
-      else if(iCommand == COMM_ABORT)
-      {
-        ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
-        printf("[ObjectControl] Object control ABORT mode <%s>\n", pcRecvBuffer);
-        fflush(stdout);
-      }
-      else if(iCommand == COMM_CONTROL)
-      {
-        ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
-        printf("[ObjectControl] Object control in CONTROL mode\n");     
-      }	
-      else if(iCommand == COMM_EXIT)
-      {
-        iExit = 1;  
-      }
-      else
-      {
-          #ifdef DEBUG
-            printf("Unhandled command in object control\n");
-            fflush(stdout);
-          #endif
-      }
-    }
+			for(iIndex=0;iIndex<nbr_objects;++iIndex)
+			{
+				#ifdef BYTEBASED
+					vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+				#else
+					vSendString(pcBuffer,&socket_fd[iIndex]);
+				#endif
+			}
+		}
+		else if(iCommand == COMM_REPLAY)
+		{
+			ObjectcontrolExecutionMode = OBJECT_CONTROL_REPLAY_MODE;
+			printf("[ObjectControl] Object control REPLAY mode <%s>\n", pcRecvBuffer);
+			fflush(stdout);
+		}
+		else if(iCommand == COMM_ABORT)
+		{
+			ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+			printf("[ObjectControl] Object control ABORT mode <%s>\n", pcRecvBuffer);
+			fflush(stdout);
+		}
+		else if(iCommand == COMM_CONTROL)
+		{
+			ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
+			printf("[ObjectControl] Object control in CONTROL mode\n");     
+		}
+		else if(iCommand == COMM_EXIT)
+		{
+			iExit = 1;  
+		}
+		else
+		{
+		  #ifdef DEBUG
+		    printf("Unhandled command in object control\n");
+		    fflush(stdout);
+		  #endif
+		}
+	}
 
     if(!iExit)
     {
@@ -680,6 +779,73 @@ void objectcontrol_task()
   -- Private functions
   ------------------------------------------------------------*/
 
+
+int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug)
+{
+  int MessageIndex = 0;
+  uint8_t MessageData = 0;
+  uint16_t MessageDataU16 = 0;
+  
+  bzero(MessageBuffer, COMMAND_TCM_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH);
+
+
+  UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_TCM_CODE);
+
+
+  MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex+COMMAND_MESSAGE_HEADER_LENGTH, TAA->TriggerId);
+
+
+  if(strstr(TAA->TriggerType, "DI") != NULL && strstr(TAA->TriggerTypeVar, "LOW") != NULL) MessageData = TAA_TRIGGER_DI_LOW;
+  else if(strstr(TAA->TriggerType, "DI") != NULL && strstr(TAA->TriggerTypeVar, "HIGH") != NULL) MessageData = TAA_TRIGGER_DI_HIGH; 
+  else if(strstr(TAA->TriggerType, "DI") != NULL && strstr(TAA->TriggerTypeVar, "RISING_EDGE") != NULL) MessageData = TAA_TRIGGER_DI_RISING_EDGE; 
+  else if(strstr(TAA->TriggerType, "DI") != NULL && strstr(TAA->TriggerTypeVar, "FALLING_EDGE") != NULL) MessageData = TAA_TRIGGER_DI_FALLING_EDGE; 
+  MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex, MessageData);
+
+  MessageData = 0;
+  if(strstr(TAA->ActionType, "SERVER") != NULL && TAA->Action == TAA_ACTION_EXT_START) MessageData = TAA_ACTION_EXT_START;
+  else if(strstr(TAA->ActionType, "SERVER") != NULL && TAA->Action == TAA_ACTION_TEST_SIGNAL) MessageData = TAA_ACTION_TEST_SIGNAL; 
+  MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex, MessageData);
+  
+  MessageDataU16 = atoi(TAA->ActionDelay);
+  MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, MessageDataU16);
+  
+
+  UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);    
+
+  if(debug)
+  {
+    int i = 0;
+    for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  }
+
+  return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
+}
+
+int ObjectControlBuildACMMessage(char* MessageBuffer, TriggActionType *TAA, char debug)
+{
+  int MessageIndex = 0;
+  uint8_t MessageData = 0;
+  
+  bzero(MessageBuffer, COMMAND_TCM_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH);
+
+  UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_TCM_CODE);
+ 
+  MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex+COMMAND_MESSAGE_HEADER_LENGTH, (uint8_t)TAA->Action);
+  
+  UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);    
+
+  if(debug)
+  {
+    int i = 0;
+    for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+  }
+
+  return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
+}
+
+
+
+
 int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, int32_t *Latitude, int32_t * Longitude, int32_t *Altitude, uint16_t *Speed, uint16_t *Heading, uint8_t *DriveDirection)
 {
 
@@ -690,6 +856,81 @@ int ObjectControlBuildMONRMessage(unsigned char *MonrData, uint64_t *Timestamp, 
 
 int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *Heading, char *DriveDirection, char *StatusFlag, char debug)
 {
+	char Buffer[6];
+	long unsigned int MonrValueU64;
+	unsigned int MonrValueU32;
+	unsigned short MonrValueU16;
+	unsigned char MonrValueU8;
+	int i,j;
+
+	bzero(Id, SMALL_BUFFER_SIZE_1);
+	bzero(Timestamp, SMALL_BUFFER_SIZE_0);
+	bzero(Latitude, SMALL_BUFFER_SIZE_0);
+	bzero(Longitude, SMALL_BUFFER_SIZE_0);
+	bzero(Altitude, SMALL_BUFFER_SIZE_0);
+	bzero(Speed, SMALL_BUFFER_SIZE_0);
+	bzero(Heading, SMALL_BUFFER_SIZE_0);
+	bzero(DriveDirection, SMALL_BUFFER_SIZE_1);
+	bzero(StatusFlag, SMALL_BUFFER_SIZE_1);
+
+	if(*MonrData == COMMAND_MONR_CODE)
+	{
+		//Index
+		sprintf(Id, "%" PRIu8, (unsigned char)Idn);
+
+		//Timestamp
+		MonrValueU64 = 0;
+		j=5;
+		for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
+		sprintf(Timestamp, "%" PRIu64, MonrValueU64);
+
+		if(debug && MonrValueU64%400 == 0)
+		{
+		for(i = 0; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
+		printf("\n");
+		}
+
+		//Latitude
+		MonrValueU32 = 0;
+		for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
+		sprintf(Latitude, "%" PRIi32, MonrValueU32);
+
+		//Longitude
+		MonrValueU32 = 0;
+		for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
+		sprintf(Longitude, "%" PRIi32, MonrValueU32);
+
+		//Altitude
+		MonrValueU32 = 0;
+		for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
+		sprintf(Altitude, "%" PRIi32, MonrValueU32);
+
+		//Speed
+		MonrValueU16 = 0;
+		for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
+		sprintf(Speed, "%" PRIu16, MonrValueU16);
+
+		//Heading
+		MonrValueU16 = 0;
+		for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
+		sprintf(Heading, "%" PRIu16, MonrValueU16);
+
+		//Driving direction
+		MonrValueU8 = (unsigned char)*(MonrData+j);
+		//printf("D: %d\n", MonrValueU8 );
+		j++;
+		sprintf(DriveDirection, "%" PRIu8, MonrValueU8);
+
+		//Status flag
+		MonrValueU8 = (unsigned char)*(MonrData+j);
+		sprintf(StatusFlag, "%" PRIu8, MonrValueU8);
+	}
+
+  return 0;
+}
+
+int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId, char *TriggAction, char *TriggDelay, char debug)
+{
   char Buffer[6];
   long unsigned int MonrValueU64;
   unsigned int MonrValueU32;
@@ -697,72 +938,44 @@ int ObjectControlMONRToASCII(unsigned char *MonrData, int Idn, char *Id, char *T
   unsigned char MonrValueU8;
   int i,j;
 
-  bzero(Id, SMALL_BUFFER_SIZE_1);
-  bzero(Timestamp, SMALL_BUFFER_SIZE_0);
-  bzero(Latitude, SMALL_BUFFER_SIZE_0);
-  bzero(Longitude, SMALL_BUFFER_SIZE_0);
-  bzero(Altitude, SMALL_BUFFER_SIZE_0);
-  bzero(Speed, SMALL_BUFFER_SIZE_0);
-  bzero(Heading, SMALL_BUFFER_SIZE_0);
-  bzero(DriveDirection, SMALL_BUFFER_SIZE_1);
-  bzero(StatusFlag, SMALL_BUFFER_SIZE_1);
+  bzero(TriggId, SMALL_BUFFER_SIZE_1);
+  bzero(TriggAction, SMALL_BUFFER_SIZE_1);
+  bzero(TriggDelay, SMALL_BUFFER_SIZE_0);
 
-
-  //Index
-  sprintf(Id, "%" PRIu8, (unsigned char)Idn);
-
-  //Timestamp
-  MonrValueU64 = 0;
-  j=5;
-  for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
-  sprintf(Timestamp, "%" PRIu64, MonrValueU64);
-  
-  if(debug && MonrValueU64%200 == 0)
+  if(*TomData == COMMAND_TOM_CODE)
   {
-    for(i = 5; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
-    printf("\n");
-  }
-
-  //Latitude
-  MonrValueU32 = 0;
-  for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-  sprintf(Latitude, "%" PRIi32, MonrValueU32);
+  
+    if(debug == 1)
+    {
+      for(i = 0; i < COMMAND_MESSAGE_HEADER_LENGTH+COMMAND_TOM_MESSAGE_LENGTH; i ++) printf("%x-", (unsigned char)TomData[i]);
+      printf("\n");
+    }
     
-  //Longitude
-  MonrValueU32 = 0;
-  for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-  sprintf(Longitude, "%" PRIi32, MonrValueU32);
+    //Trigg id
+    j=5;
+    MonrValueU8 = (unsigned char)*(TomData+j);
+    sprintf(TriggId, "%" PRIu8, MonrValueU8);
+    j++;
 
-  //Altitude
-  MonrValueU32 = 0;
-  for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-  sprintf(Altitude, "%" PRIi32, MonrValueU32);
+    //Trigg type
+    MonrValueU8 = (unsigned char)*(TomData+j);
+    sprintf(TriggAction, "%" PRIu8, MonrValueU8);
+    j++;
   
-  //Speed
-  MonrValueU16 = 0;
-  for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
-  sprintf(Speed, "%" PRIu16, MonrValueU16);
-  
-  //Heading
-  MonrValueU16 = 0;
-  for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
-  sprintf(Heading, "%" PRIu16, MonrValueU16);
- 
-  //Driving direction
-  MonrValueU8 = (unsigned char)*(MonrData+j);
-  //printf("D: %d\n", MonrValueU8 );
-  j++;
-  sprintf(DriveDirection, "%" PRIu8, MonrValueU8);
+    //Delay
+    MonrValueU64 = 0;
+    for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(TomData+j) | (MonrValueU64 << 8);
+    sprintf(TriggDelay, "%" PRIu64, MonrValueU64);
 
-  //Status flag
-  MonrValueU8 = (unsigned char)*(MonrData+j);
-  sprintf(StatusFlag, "%" PRIu8, MonrValueU8);
-
+  }
 
   return 0;
 }
 
-int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, char debug)
+
+
+
+int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, uint32_t Port,char debug)
 {
 
   FILE *fd;
@@ -788,7 +1001,7 @@ int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char
     if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
   }
 
-  printf("[ObjectControl] %d DOPM bytes sent to %s\n", SumMessageLength, IP);
+  printf("[ObjectControl] %d DOPM bytes sent to %s, port %d\n", SumMessageLength, IP, Port);
 
   fclose (fd);
 
@@ -968,7 +1181,7 @@ int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, u
   return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
 }
 
-int ObjectControlBuildMTPSMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug)
+int ObjectControlBuildMTSPMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug)
 {
   int MessageIndex = 0;
   
@@ -1364,10 +1577,7 @@ static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNew
   *recievedNewData = 0;
     do
     {
-      result = recv(*sockfd, 
-        buffer,
-        length,
-        0);
+      result = recv(*sockfd, buffer, length, 0);
       
       if (result < 0)
       {
@@ -1429,7 +1639,8 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], char ob
       else
       {
         if(USE_TEST_HOST == 0) (void)strcat(object_address_name[(*nbr_objects)],LOCALHOST);
-        else if (USE_TEST_HOST == 1) (void)strcat(object_address_name[(*nbr_objects)],TESTHOST_IP);
+        else if (USE_TEST_HOST == 1)(void)strcat(object_address_name[(*nbr_objects)],TESTHOST_IP);
+        
       }
 
       ++(*nbr_objects);
