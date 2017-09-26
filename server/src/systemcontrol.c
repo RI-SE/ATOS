@@ -158,7 +158,6 @@ void systemcontrol_task()
 	      	SystemControlFindCommand(SystemControlArgument[0], &SystemControlCommand, &CommandArgCount);
 	  	}
 		
-		
 
 		switch(SystemControlCommand)
 		{
@@ -363,8 +362,8 @@ void systemcontrol_task()
 			break;
 		}
 
-		
-		usleep(1);
+		usleep(1000);
+
 
   }
   
