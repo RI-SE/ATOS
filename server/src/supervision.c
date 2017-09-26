@@ -456,7 +456,7 @@ void supervision_task() {
         if ( doInitialAlignmentLoop == 1 )
           {
 #ifdef DEBUG
-            printf ( "DBG : SV : Rec MON : i %d : t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
+            /*printf ( "DBG : SV : Rec MON : i %d : t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
                      iIndex                 ,
                      monitor.timestamp      ,
                      monitor.latitude       ,
@@ -464,7 +464,7 @@ void supervision_task() {
                      monitor.altitude       ,
                      monitor.speed          ,
                      monitor.heading        ,
-                     monitor.drivedirection );
+                     monitor.drivedirection );*/
             fflush(stdout);
 #endif
 
@@ -531,17 +531,17 @@ void supervision_task() {
                 if ( ( distance  [ iIndex ] [ 0 ] >= distance  [ iIndex ] [ 1 ] ) &&
                      ( distance  [ iIndex ] [ 1 ] <= distance  [ iIndex ] [ 2 ] ) )
                   {
-                    printf ( "DBG : SV : Initial align - Best fit on 1 - index %d ok.\n", iIndex );
+                    //printf ( "DBG : SV : Initial align - Best fit on 1 - index %d ok.\n", iIndex );
 
                     bestFitDone [ iIndex ] = 1 ;
                   } else if ( distance  [ iIndex ] [ 1 ] <  distance  [ iIndex ] [ 2 ] )
                   {
-                    printf ( "DBG : SV : Initial align - Worse on 2 - index %d ok.\n", iIndex );
+                    //printf ( "DBG : SV : Initial align - Worse on 2 - index %d ok.\n", iIndex );
 
                     bestFitDone [ iIndex ] = 1 ;
                   } else
                   {
-                    printf ( "DBG : SV : Initial align - Shifting in a new line from trajectory file.\n" );
+                    //printf ( "DBG : SV : Initial align - Shifting in a new line from trajectory file.\n" );
 
                     trajs [ iIndex ] [ 0 ] = trajs [ iIndex ] [ 1 ];
                     trajs [ iIndex ] [ 1 ] = trajs [ iIndex ] [ 2 ];
@@ -552,8 +552,8 @@ void supervision_task() {
                     read = getline ( &bFileLine_p [ iIndex ] ,
                                      &len,
                                      fp [ iIndex ] );
-                    printf ( "INF : SV : i = 2 , s = %s",
-                             bFileLine [ iIndex ] [ 2 ] );
+                    //printf ( "INF : SV : i = 2 , s = %s",
+                    //         bFileLine [ iIndex ] [ 2 ] );
 
                     sscanf ( &bFileLine [ iIndex ] [ 2 ] [ 5 ],
                              "%f;%lf;%lf;%lf;%f;%f;",
@@ -601,9 +601,9 @@ void supervision_task() {
                   jIndex < nbr_objects ;
                   ++jIndex             )
               {
-                printf ( "DBG : SV : Initial align - bestFitDone index %d ok = %d.\n",
-                         jIndex,
-                         bestFitDone [ jIndex ] );
+                //  printf ( "DBG : SV : Initial align - bestFitDone index %d ok = %d.\n",
+                //         jIndex,
+                //         bestFitDone [ jIndex ] );
                 if ( bestFitDone [ jIndex ] == 0 ) doInitialAlignmentLoop = 1;
               }
 

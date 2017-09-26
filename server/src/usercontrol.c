@@ -381,7 +381,7 @@ int main(int argc, char *argv[])
 					UserControlResetInputVariables();
 				break;
 				case tdopm_0:
-					fd = fopen ("traj/192.168.0.1", "r");
+                                        fd = fopen ("traj/195.0.0.10", "r");
 					RowCount = UtilCountFileRows(fd) - 1;
 					fclose (fd);
 
@@ -389,7 +389,7 @@ int main(int argc, char *argv[])
 					//MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, 2, 1);
 					/*Send DOPM header*/
 					
-					fd = fopen ("traj/192.168.0.1", "r");
+                                        fd = fopen ("traj/195.0.0.10", "r");
 					UtilReadLineCntSpecChars(fd, TrajBuffer);//Read first line
 					Rest = 0, i = 0;
 					do

@@ -74,10 +74,10 @@
 
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
-#define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.17"
-#define TESTSERVER_IP "192.168.0.17"
-#define TEST_SYNC_POINTS 0
+#define USE_TEST_HOST 1
+#define TESTHOST_IP "127.0.0.1" //"192.168.0.17"
+#define TESTSERVER_IP "127.0.0.1" //"192.168.0.17"
+#define TEST_SYNC_POINTS 1
 
 
 /* Calculation: 	
