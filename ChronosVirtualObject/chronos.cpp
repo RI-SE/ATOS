@@ -222,6 +222,13 @@ bool Chronos::decodeMsg(quint8 type, quint32 len, QByteArray payload)
         sypm.stop_point = vb.vbPopFrontUint32();
         processSypm(sypm);
     }
+    case CHRONOS_MSG_MPST: {
+        chronos_mtsp mtsp;
+        VByteArray vb(payload);
+
+        mtsp.ts = vb.vbPopFrontUint48();
+        processMtsp(mtsp);
+    }
 
     default:
         break;

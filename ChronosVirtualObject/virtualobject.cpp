@@ -3,8 +3,8 @@
 VirtualObject::VirtualObject(int id)
 {
 
-    start_time = 0;
-    clock = 0;
+    //start_time = 0;
+    //clock = 0;
 
     data= {
         id, // id
@@ -15,12 +15,13 @@ VirtualObject::VirtualObject(int id)
         0,  // heading
         0,  // speed
         0,  // acceleration
-        status    // status
+        status,    // status
+        isMaster    // MASTER?
     };
 
     //this->id = id;
 
-    updateTime();
+    //updateTime();
 
     cClient = new Chronos();
 
@@ -34,9 +35,9 @@ VirtualObject::VirtualObject(int id)
 VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
 {
 
-    start_time = 0;
-    clock = 0;
-    time_adjustment=0;
+    //start_time = 0;
+    //clock = 0;
+    //time_adjustment=0;
 
     data= {
         id, // id
@@ -47,7 +48,8 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
         0,  // heading
         0,  // speed
         0,  // acceleration
-        status    // status
+        status,    // status
+        isMaster    // MASTER?
     };
 
     mRefLat = rLat;
@@ -67,6 +69,8 @@ void VirtualObject::run()
 {
     qDebug() << "Virtual Object Started";
 
+    qint64 clock = 0;       // Current time
+    qint64 start_time = 0;  // Start time of the execution of a trajectory
     qint64 elapsed_time = 0; // Time since the start of the execution
     qint64 ctrl_update = 0; // Time since the last control signal update
     qint64 update_sent = 0; // Time since the last MONR message
@@ -111,7 +115,7 @@ void VirtualObject::run()
             // Reset the running index to the first trajectory point
             index = 0;
             init_start = true;
-            sleep_time = 20;
+            sleep_time = 50;
         }
         else if(status == DISARMED)
         {
@@ -119,7 +123,7 @@ void VirtualObject::run()
         }
         else if(status == RUNNING)
         {
-            sleep_time = 2;
+            sleep_time = 5;
             clock = QDateTime::currentMSecsSinceEpoch();
             // Is this the first iteration?
             if (index == 0 && init_start)
@@ -132,6 +136,7 @@ void VirtualObject::run()
                 elapsed_time = clock - start_time;
                 // Get the reference point
                 chronos_dopm_pt ref_point = traj[index];
+                // TODO: This loop has to change to enable sync points
                 while(ref_point.tRel < elapsed_time && index < traj.size())
                 {
                     ref_point = traj[index++];
@@ -151,17 +156,16 @@ void VirtualObject::run()
                 }
 
 
-                // Calculate control signal ~ 100 Hz
+                // Calculate control signal
                 clock = QDateTime::currentMSecsSinceEpoch();
                 elapsed_time = clock-start_time;
                 data.time = elapsed_time;
-                if (clock - ctrl_update > 5)
+                if (clock - ctrl_update > 10)
                 {
                     control_object(index,clock-ctrl_update);
                     ctrl_update = clock;
                 }
 
-                // Read and send information ~ 50Hz
                 clock = QDateTime::currentMSecsSinceEpoch();
                 elapsed_time = clock-start_time;
                 data.time = elapsed_time;
@@ -188,6 +192,7 @@ void VirtualObject::run()
 
         // Send vizualizer update
         data.status = status;
+        data.isMaster = isMaster;
         emit updated_state(data);
         QThread::msleep(sleep_time);
 
@@ -236,6 +241,10 @@ int VirtualObject::connectToServer(int udpSocket,int tcpSocket)
             this,SLOT(handleOSTM(chronos_ostm)));
     connect(cClient,SIGNAL(handle_strt(chronos_strt)),
             this,SLOT(handleSTRT(chronos_strt)));
+    connect(cClient,SIGNAL(handle_sypm(chronos_sypm)),
+            this,SLOT(handleSYPM(chronos_sypm)));
+    connect(cClient,SIGNAL(handle_mtsp(chronos_mtsp)),
+            this,SLOT(handleMTSP(chronos_mtsp)));
     // make connection to send the MONR
     //connect(this,SIGNAL(send_monr(chronos_monr)),
     //        cClient,SLOT(transmitMONR(chronos_osem)));
@@ -246,11 +255,11 @@ int VirtualObject::getID()
 {
     return data.ID;
 }
-
+/*
 void VirtualObject::updateTime()
 {
     clock = QDateTime::currentMSecsSinceEpoch();
-}
+}*/
 
 void VirtualObject::control_object(int curr_idx_point, qint64 deltaT)
 {
@@ -437,6 +446,25 @@ void VirtualObject::handleSTRT(chronos_strt msg)
         break;
     default:
         break;
+    }
+}
+
+void VirtualObject::handleSYPM(chronos_sypm msg)
+{
+    if (status == DISARMED || status == INIT)
+    {
+        isMaster = false;
+        qDebug() << "Object updated with SYPM";
+        // Do something
+    }
+}
+
+void VirtualObject::handleMTSP(chronos_mtsp msg)
+{
+    // Double-check what the status should be
+    if (status == ARMED || status == RUNNING)
+    {
+        // Do something
     }
 }
 

@@ -39,66 +39,22 @@ MainWindow::~MainWindow()
     //delete chronos;
     delete ui;
 }
-/*
-void MainWindow::on_updateButton_clicked(){
-    //ui->label->setText(QString("apa\t Bepa"));
-    OSEM_DATA temp;
 
-    temp.latitude = 4.56789f;//(float)(rand() % 100) / 100.0f;
-    temp.longitude= 5.1f;
-    temp.altitude = 5.3f;
-    temp.heading = 1;
-
-    char c_lat[LABEL_TEXT_LENGTH];
-    char c_long[LABEL_TEXT_LENGTH];
-    char c_alt[LABEL_TEXT_LENGTH];
-    char c_head[LABEL_TEXT_LENGTH];
-
-    MapWidget* map = ui->widget;
-
-    temp.latitude   = map->getRefLat();
-    temp.longitude  = map->getRefLon();
-    temp.altitude   = map->getRefAlt();
-    temp.heading    = 0;
-
-    snprintf(c_lat,LABEL_TEXT_LENGTH,"%g",temp.latitude);
-    snprintf(c_long,LABEL_TEXT_LENGTH,"%g",temp.longitude);
-    snprintf(c_alt,LABEL_TEXT_LENGTH,"%g",temp.altitude);
-    snprintf(c_head,LABEL_TEXT_LENGTH,"%d",temp.heading);
-
-    ui->lab_lat->setText(c_lat);
-    ui->lab_lon->setText(c_long);
-    ui->lab_alt->setText(c_alt);
-    ui->lab_head->setText(c_head);
-}*/
-/*
-void MainWindow::on_playButton_clicked(){
-
-
-
-
-    // Disable the starting of a virtual object until it is done
-    ui->playButton->setEnabled(false);
-    ui->delete_vobj->setEnabled(false);
-
-    // Reset trace
-    ui->widget->clearTrace();
-    // Add red trace to the carl
-    //ui->widget->setTraceCar(0);
-
-    // Start the thread with the highest priority
-    vobj->start(QThread::TimeCriticalPriority);
-
-    //delete vobj;
-}*/
 
 void MainWindow::on_init_vobj_clicked()
 {
     //ui->playButton->setEnabled(true);
     ui->delete_vobj->setEnabled(true);
     ui->init_vobj->setEnabled(false);
-    startObject(0,53240,53241);
-    startObject(1,53242,53243);
+    int obj_nr = 2;
+
+    for(int i = 0; i<obj_nr;i++)
+    {
+        startObject(i,53240+2*i,53241+2*i);
+    }
+
+    //startObject(0,53240,53241);
+    //startObject(1,53242,53243);
 
 }
 void MainWindow::on_delete_vobj_clicked()
@@ -161,7 +117,7 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
     map->addCar(car);
     //map->setSelectedCar(ID);
     //map->setFollowCar(ID);
-    map->addInfoTrace(points);
+    map->addInfoTrace(ID,points);
 
 
 
@@ -215,21 +171,32 @@ void MainWindow::removeObject(int ID){
     }
     vobjs.clear();*/
 
-    if (ID <0 || vobjs.size() <= ID)
+    if (ID <0)
     {
         qDebug() << "Object does not exist.";
         return;
     }
     map->removeCar(ID);
-    map->removeInfoTrace(ID);
+    if (map->removeInfoTrace(ID)){
+        qDebug() << "Failed to remove info Trace.";
+    }
 
     int del_idx = 0;
+    bool isFound = false;
     for (del_idx = 0;del_idx<vobjs.size();del_idx++)
     {
-        if (vobjs[del_idx]->getID() == ID) break;
+        if (vobjs[del_idx]->getID() == ID)
+        {
+            isFound = true;
+            break;
+        }
     }
-    delete vobjs[del_idx];
-    vobjs.remove(del_idx);
+    if (isFound)
+    {
+        delete vobjs[del_idx];
+        vobjs.remove(del_idx);
+    }
+    map->update();
 
 
     ui->init_vobj->setEnabled(true);
@@ -252,20 +219,27 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     // Display time in the label
     displayTime(data.time);
 
-
-
     // Update the car position
     LocPoint pos;
-
     pos.setTime(data.time);
     pos.setXY(data.x,data.y);
 
+    // Calculate and set the heading in the map
     double heading = (data.heading-90.0)*M_PI/180;
     pos.setAlpha(heading);
 
+    // Set Master or slave status on the car
     QString sStatus = "STATUS: ";
-    pos.setInfo(sStatus + QString::number(data.status));
+    QString status_text;
+    if (data.isMaster){
+        status_text = "MASTER";
+    }
+    else {
+        status_text = "SLAVE";
+    }
+    pos.setInfo(sStatus + QString::number(data.status) + "\n"+ status_text);
 
+    // Update the car on the map
     map->updateCarState(data.ID,pos);
     map->update();
 }
@@ -293,6 +267,6 @@ void MainWindow::handleNewTrajectory(int ID, QVector<chronos_dopm_pt> traj)
                        pt.tRel);
         points.append(point);
     }
-    //ui->widget->addInfoTrace(points);
-    ui->widget->setInfoTrace(ID,points);
+    ui->widget->addInfoTrace(ID,points);
+    //ui->widget->setInfoTrace(ID,points);
 }

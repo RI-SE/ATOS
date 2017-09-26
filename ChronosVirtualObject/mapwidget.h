@@ -66,8 +66,8 @@ public:
     /*---------------------------------------------------*/
 
     /* Display Tools */
-    int addInfoTrace(QList<LocPoint>);
-    int setInfoTrace(int ID, QList<LocPoint> trace);
+    int addInfoTrace(int ID,QList<LocPoint>);
+    //int setInfoTrace(int ID, QList<LocPoint> trace);
     int removeInfoTrace(int ID);
 
     /* Utility Functions */

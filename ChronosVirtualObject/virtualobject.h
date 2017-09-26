@@ -26,6 +26,7 @@ typedef struct {
     double speed;
     double acc;
     qint8 status;
+    bool isMaster;
 } VOBJ_DATA;
 
 Q_DECLARE_METATYPE(VOBJ_DATA)
@@ -69,6 +70,8 @@ private slots:
     void handleHEAB(chronos_heab msg);
     void handleOSTM(chronos_ostm msg);
     void handleSTRT(chronos_strt msg);
+    void handleSYPM(chronos_sypm msg);
+    void handleMTSP(chronos_mtsp msg);
 
     void stopSimulation();
 
@@ -83,13 +86,16 @@ private:
     qint8 pendingStatus = INIT;
     Chronos* cClient;
 
+    bool isMaster = true;
+
     VOBJ_DATA data;
 
-    qint64 start_time;
-    qint64 clock;
+    //qint64 start_time;
+    //qint64 clock;
 
-    qint64 time_adjustment;
-
+    // The time to adjust the trajectory file with
+    qint64 time_adjustment = 0;
+    // Needed in order to track when Heartbeat came in
     qint64 heab_recieved_time;
 
     qint64 sleep_time = 2;

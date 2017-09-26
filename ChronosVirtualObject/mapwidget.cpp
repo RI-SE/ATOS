@@ -549,14 +549,27 @@ void MapWidget::setYOffset(double offset)
 }
 
 
-int MapWidget::addInfoTrace(QList<LocPoint> trace)
+int MapWidget::addInfoTrace(int ID, QList<LocPoint> trace)
 {
-    mInfoTraces.append(trace);
-    update();
-    // returns list ID
-    return mInfoTraces.size()-1;
-}
+    if (ID < mInfoTraces.size() && ID >= 0)
+    {
+        mInfoTraces.replace(ID,trace);
+    }
+    else if (ID == mInfoTraces.size())
+    {
+        mInfoTraces.append(trace);
+    }
+    else
+    {
+        return -1;
+    }
 
+
+    update();
+
+    return 0;
+}
+/*
 int MapWidget::setInfoTrace(int ID, QList<LocPoint> trace)
 {
     if (ID >=mInfoTraces.size()) return -1;
@@ -564,15 +577,16 @@ int MapWidget::setInfoTrace(int ID, QList<LocPoint> trace)
     mInfoTraces.replace(ID,trace);
     return 0;
 }
-
+*/
 int MapWidget::removeInfoTrace(int ID)
 {
-    if (ID >=mInfoTraces.size()) return -1;
+    if (ID >=mInfoTraces.size() && ID < 0) return -1;
 
 
-    mInfoTraces.removeAt(ID);
+    mInfoTraces[ID].clear();
     return 0;
 }
+
 
 void MapWidget::setRefPos(double lat, double lon, double alt)
 {
@@ -1313,7 +1327,7 @@ void MapWidget::paintEvent(QPaintEvent *event)
         painter.setTransform(txtTrans);
         pt_txt = drawTrans.map(pt_txt);
         rect_txt.setCoords(pt_txt.x(), pt_txt.y() - 20,
-                           pt_txt.x() + 300, pt_txt.y() + 50);
+                           pt_txt.x() + 300, pt_txt.y() + 55);
         painter.drawText(rect_txt, txt);
     }
 
