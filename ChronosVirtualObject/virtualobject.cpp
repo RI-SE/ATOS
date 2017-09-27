@@ -123,7 +123,7 @@ void VirtualObject::run()
         }
         else if(status == RUNNING)
         {
-            sleep_time = 5;
+            sleep_time = 2;
             clock = QDateTime::currentMSecsSinceEpoch();
             // Is this the first iteration?
             if (index == 0 && init_start)
@@ -134,6 +134,7 @@ void VirtualObject::run()
             if(index < traj.size())
             {
                 elapsed_time = clock - start_time;
+                data.time = elapsed_time;
                 // Get the reference point
                 chronos_dopm_pt ref_point = traj[index];
                 // TODO: This loop has to change to enable sync points
@@ -148,27 +149,35 @@ void VirtualObject::run()
                     break;
                 }
                 // Check if heartbeat deadline has passed
-                if(clock-heab_recieved_time > HEARTBEAT_TIME)
+                if(QDateTime::currentMSecsSinceEpoch()-heab_recieved_time > HEARTBEAT_TIME)
                 {
                     qDebug() << "ERROR: Heartbeat not recieved.";
-                    pendingStatus = ERROR;
+                    //pendingStatus = ERROR;
 
                 }
 
 
                 // Calculate control signal
+                /*
                 clock = QDateTime::currentMSecsSinceEpoch();
                 elapsed_time = clock-start_time;
-                data.time = elapsed_time;
-                if (clock - ctrl_update > 10)
+                data.time = elapsed_time;*/
+                if (clock - ctrl_update > 5)
                 {
-                    control_object(index,clock-ctrl_update);
+                    double vel[2];
+                    // Calculate the desired control signal
+                    control_function(vel,ref_point,data);
+
+                    update_system(vel,clock-ctrl_update, ref_point);
+
+
+                    //control_object(index,clock-ctrl_update);
                     ctrl_update = clock;
                 }
 
                 clock = QDateTime::currentMSecsSinceEpoch();
                 elapsed_time = clock-start_time;
-                data.time = elapsed_time;
+                //data.time = elapsed_time;
 
                 if (elapsed_time > 30000)
                 {
@@ -331,6 +340,36 @@ void VirtualObject::xyz_to_llh(double *lat,double *lon, double *alt)
     *alt = mRefAlt + data.z;
 }
 
+void VirtualObject::control_function(double* vel,chronos_dopm_pt ref, VOBJ_DATA data )
+{
+
+    double deltaY = ref.y-data.y;
+    double deltaX = ref.x-data.x;
+
+    qint64 deltaT = (ref.tRel - data.time);
+    if (deltaT < 0.0) qDebug() << "Time is negative. Something is wrong.";
+
+    vel[0] = deltaT ? deltaX/ (double) deltaT : 0;
+    vel[1] = deltaT ? deltaY/ (double) deltaT : 0;
+}
+
+void VirtualObject::update_system(double *vel,qint64 deltaT, chronos_dopm_pt ref)
+{
+    double prev_x = data.x;
+    double prev_y = data.y;
+    double prev_v = data.speed;
+
+
+
+    data.x = prev_x + vel[0] * (double) deltaT;
+    data.y = prev_y + vel[1] * (double) deltaT;
+    data.z = ref.z;
+
+    data.speed = utility::twoNorm(vel,2);
+    data.acc = (data.speed - prev_v)/deltaT;
+    data.heading = ref.heading;
+    data.time += deltaT;
+}
 
 // SLOTS
 

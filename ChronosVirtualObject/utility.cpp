@@ -312,4 +312,14 @@ double buffer_get_double32_auto(const uint8_t *buffer, int32_t *index)
 
     return ldexpf(sig, e);
 }
+
+double twoNorm(double *vector, int vector_len)
+{
+    double res = 0;
+    for(int i = 0;i<vector_len;i++)
+    {
+        res += vector[i]*vector[i];
+    }
+    return sqrt(res);
+}
 }

@@ -53,6 +53,7 @@ public:
     void run();
     int connectToServer(int updSocket,int tcpSocket);
     int getID();
+    static void control_function(double* vel,chronos_dopm_pt ref, VOBJ_DATA data );
 signals:
     //void updated_position(double x, double y, long t,int ID); // To be removed
 
@@ -111,10 +112,11 @@ private:
 
     //void sendCurrentState();
     void control_object(int curr_idx_point,qint64 deltaT);
+    void update_system( double *vel, qint64 deltaT, chronos_dopm_pt ref);
     chronos_monr getMONR();
     void xyz_to_llh(double *lat,double *lon, double *alt);
 
-    void updateTime();
+
 
 };
 
