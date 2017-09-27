@@ -313,7 +313,8 @@ void Chronos::processStrt(chronos_strt strt)
 
 void Chronos::processHeab(chronos_heab heab)
 {
-//    qDebug() << "HEAB RX";
+    //qDebug() << "HEAB RX";
+
     //(void)heab;
 
     emit handle_heab(heab);

@@ -115,7 +115,6 @@ void VirtualObject::run()
             // Reset the running index to the first trajectory point
             index = 0;
             init_start = true;
-            sleep_time = 50;
         }
         else if(status == DISARMED)
         {
@@ -123,7 +122,7 @@ void VirtualObject::run()
         }
         else if(status == RUNNING)
         {
-            sleep_time = 2;
+            sleep_time = 50;
             clock = QDateTime::currentMSecsSinceEpoch();
             // Is this the first iteration?
             if (index == 0 && init_start)
@@ -148,11 +147,12 @@ void VirtualObject::run()
                     qDebug() << "ABORT: Aborting test scenario.";
                     break;
                 }
+                qint64 time_since_HB = clock-heab_recieved_time;
                 // Check if heartbeat deadline has passed
-                if(QDateTime::currentMSecsSinceEpoch()-heab_recieved_time > HEARTBEAT_TIME)
+                if(time_since_HB > HEARTBEAT_TIME)
                 {
                     qDebug() << "ERROR: Heartbeat not recieved.";
-                    //pendingStatus = ERROR;
+                    pendingStatus = ERROR;
 
                 }
 
@@ -164,26 +164,16 @@ void VirtualObject::run()
                 data.time = elapsed_time;*/
                 if (clock - ctrl_update > 5)
                 {
-                    double vel[2];
+                    //double vel[2];
                     // Calculate the desired control signal
-                    control_function(vel,ref_point,data);
+                    //control_function(vel,ref_point,data);
 
-                    update_system(vel,clock-ctrl_update, ref_point);
+                    //update_system(vel,clock-ctrl_update, ref_point);
 
 
-                    //control_object(index,clock-ctrl_update);
+                    control_object(index,clock-ctrl_update);
                     ctrl_update = clock;
                 }
-
-                clock = QDateTime::currentMSecsSinceEpoch();
-                elapsed_time = clock-start_time;
-                //data.time = elapsed_time;
-
-                if (elapsed_time > 30000)
-                {
-                    //time_adjustment = 500;
-                }
-
             }
             else
             {
@@ -349,8 +339,8 @@ void VirtualObject::control_function(double* vel,chronos_dopm_pt ref, VOBJ_DATA 
     qint64 deltaT = (ref.tRel - data.time);
     if (deltaT < 0.0) qDebug() << "Time is negative. Something is wrong.";
 
-    vel[0] = deltaT ? deltaX/ (double) deltaT : 0;
-    vel[1] = deltaT ? deltaY/ (double) deltaT : 0;
+    vel[0] = deltaT ? deltaX/ (double) (deltaT /1000.0) : 0;
+    vel[1] = deltaT ? deltaY/ (double) (deltaT /1000.0) : 0;
 }
 
 void VirtualObject::update_system(double *vel,qint64 deltaT, chronos_dopm_pt ref)
@@ -361,12 +351,12 @@ void VirtualObject::update_system(double *vel,qint64 deltaT, chronos_dopm_pt ref
 
 
 
-    data.x = prev_x + vel[0] * (double) deltaT;
-    data.y = prev_y + vel[1] * (double) deltaT;
+    data.x = prev_x + vel[0] * (double) deltaT/1000.0;
+    data.y = prev_y + vel[1] * (double) deltaT/1000.0;
     data.z = ref.z;
 
     data.speed = utility::twoNorm(vel,2);
-    data.acc = (data.speed - prev_v)/deltaT;
+    data.acc = (data.speed - prev_v)/(deltaT/1000.0);
     data.heading = ref.heading;
     data.time += deltaT;
 }
@@ -432,6 +422,7 @@ void VirtualObject::handleDOPM(QVector<chronos_dopm_pt> msg)
 void VirtualObject::handleHEAB(chronos_heab msg)
 {
     qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+    //qDebug() << "Time since last HB: " << QString::number(currentTime-heab_recieved_time);
     heab_recieved_time = currentTime;
 
     switch (msg.status) {

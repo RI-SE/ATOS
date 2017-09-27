@@ -11,7 +11,7 @@
 #include <string.h>
 #include "utility.h"
 
-#define HEARTBEAT_TIME 100 // maximum time to wait for a heartbeat
+#define HEARTBEAT_TIME 200 // maximum time to wait for a heartbeat
 #define EARTH_RADIUS 6367000
 #define SOCKET_STACK_START 53240
 
