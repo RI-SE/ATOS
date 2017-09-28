@@ -118,7 +118,7 @@ private:
     void update_system( double *vel, qint64 deltaT, chronos_dopm_pt ref);
     chronos_monr getMONR();
     void xyz_to_llh(double *lat,double *lon, double *alt);
-    int findRefPoint(quint64 tRel, uint fromIndex);
+    int findRefPoint(qint64 tRel, uint fromIndex,qint64 refTimeOffset);
 
 
 

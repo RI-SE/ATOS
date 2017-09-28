@@ -74,8 +74,10 @@ void VirtualObject::run()
     qint64 elapsed_time = 0; // Time since the start of the execution
     qint64 ctrl_update = 0; // Time since the last control signal update
     qint64 update_sent = 0; // Time since the last MONR message
-    int index = 0;
+    int ref_index= 0;
+    int pre_ref_index = 0;
     bool init_start = false;
+    bool mtps = false;
 
 
 
@@ -113,7 +115,7 @@ void VirtualObject::run()
         else if(status == ARMED)
         {
             // Reset the running index to the first trajectory point
-            index = 0;
+            ref_index = 0;
             init_start = true;
         }
         else if(status == DISARMED)
@@ -125,24 +127,44 @@ void VirtualObject::run()
             sleep_time = 50;
             clock = QDateTime::currentMSecsSinceEpoch();
             // Is this the first iteration?
-            if (index == 0 && init_start)
+            if (ref_index == 0 && init_start)
             {
-                index = 1;
+                ref_index = 1;
+                pre_ref_index = 0;
                 start_time = clock;
                 init_start = false;
             }
-            if(index < traj.size() - 1)
+            if(ref_index < traj.size() - 1)
             {
                 elapsed_time = clock - start_time;
                 data.time = elapsed_time;
                 // Get the reference point
-                chronos_dopm_pt ref_point = traj[index];
+
                 // TODO: This loop has to change to enable sync points
+                /*
                 while(ref_point.tRel < elapsed_time && index < traj.size()-1)
                 {
                     ref_point = traj[index++];
+                }*/
+                qint64 tmod = 0;
+                int ref_temp_idx = ref_index;
+
+                ref_index = findRefPoint(elapsed_time,ref_index,tmod);
+                if (elapsed_time >10000 && getID()==0 && !mtps)
+                {
+                    tmod=6000;
+                    mtps = true;
+                    traj[ref_index].tRel += tmod;
+                }
+                if (ref_index-ref_temp_idx)
+                {
+                    pre_ref_index = ref_temp_idx;
                 }
 
+                //if (getID()==0) qDebug() << "Index: " << QString::number(index) << " from " << QString::number(ibf);
+                //if (index == -1) return;
+                chronos_dopm_pt ref_point = traj[ref_index];
+                chronos_dopm_pt prev_ref_point = traj[pre_ref_index];
                 if (status == ABORT )
                 {
                     qDebug() << "ABORT: Aborting test scenario.";
@@ -172,7 +194,7 @@ void VirtualObject::run()
                     //update_system(vel,clock-ctrl_update, ref_point);
 
 
-                    control_object(traj[index],traj[index-1]);
+                    control_object(ref_point,prev_ref_point);
                     ctrl_update = clock;
                 }
             }
@@ -319,7 +341,7 @@ void VirtualObject::xyz_to_llh(double *lat,double *lon, double *alt)
     *alt = mRefAlt + data.z;
 }
 
-int VirtualObject::findRefPoint(quint64 tRel, uint fromIndex)
+int VirtualObject::findRefPoint(qint64 tRel, uint fromIndex, qint64 refTimeOffset)
 {
     if (traj.size()<2)
     {
@@ -329,18 +351,19 @@ int VirtualObject::findRefPoint(quint64 tRel, uint fromIndex)
 
     if (traj.last().tRel < tRel)
     {
-        qDebug() << "findRefPoint ERROR: Relative time out of reach";
-        return -1;
+        //qDebug() << "findRefPoint ERROR: Relative time out of reach";
+        return traj.size()-1;
     }
 
-    if (traj.size() <= fromIndex )
+    if (traj.size() <= (int)fromIndex )
     {
         qDebug() << "Index out of bounds";
     }
 
     for (int i = fromIndex; i<traj.size()-1;i++)
     {
-        if(traj[i+1].tRel > tRel && tRel > traj[i].tRel) return i+1;
+        if(traj[i+1].tRel + refTimeOffset > tRel ) return i;
+        //&& tRel > traj[i].tRel + refTimeOffset
     }
     qDebug() << "Cannot find a valid point";
     return -1;
@@ -507,7 +530,7 @@ void VirtualObject::handleSYPM(chronos_sypm msg)
         }
         else
         {
-            if (findRefPoint(msg.sync_point,0))
+            if (findRefPoint(msg.sync_point,0,0))
             {
                 sync_points.append(msg.sync_point);
                 qDebug() << "Object updated with SYPM\nTime t=" << QString::number(msg.sync_point);
