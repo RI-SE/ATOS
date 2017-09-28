@@ -11,7 +11,7 @@
 #include <string.h>
 #include "utility.h"
 
-#define HEARTBEAT_TIME 200 // maximum time to wait for a heartbeat
+#define HEARTBEAT_TIME 100 // maximum time to wait for a heartbeat
 #define EARTH_RADIUS 6367000
 #define SOCKET_STACK_START 53240
 
@@ -97,24 +97,28 @@ private:
     // The time to adjust the trajectory file with
     qint64 time_adjustment = 0;
     // Needed in order to track when Heartbeat came in
-    qint64 heab_recieved_time;
+    quint64 heab_recieved_time;
 
-    qint64 sleep_time = 2;
+    quint64 sleep_time = 2;
 
     QVector<chronos_dopm_pt> traj;
+    QVector<quint32> sync_points;
+
 
     double mRefLat = 57.71495867;
     double mRefLon = 12.89134921;
     double mRefAlt = 219.0;
 
-    // Don't know what use these will be
-    double mRefHeading;
+    double mRefHeading; // Don't know what use this will be
 
     //void sendCurrentState();
-    void control_object(int curr_idx_point,qint64 deltaT);
+
+    // Maybe add pointer to a VOBJ_DATA struct to make the function static
+    void control_object(chronos_dopm_pt next,chronos_dopm_pt prev);
     void update_system( double *vel, qint64 deltaT, chronos_dopm_pt ref);
     chronos_monr getMONR();
     void xyz_to_llh(double *lat,double *lon, double *alt);
+    int findRefPoint(quint64 tRel, uint fromIndex);
 
 
 

@@ -127,17 +127,18 @@ void VirtualObject::run()
             // Is this the first iteration?
             if (index == 0 && init_start)
             {
+                index = 1;
                 start_time = clock;
                 init_start = false;
             }
-            if(index < traj.size())
+            if(index < traj.size() - 1)
             {
                 elapsed_time = clock - start_time;
                 data.time = elapsed_time;
                 // Get the reference point
                 chronos_dopm_pt ref_point = traj[index];
                 // TODO: This loop has to change to enable sync points
-                while(ref_point.tRel < elapsed_time && index < traj.size())
+                while(ref_point.tRel < elapsed_time && index < traj.size()-1)
                 {
                     ref_point = traj[index++];
                 }
@@ -171,7 +172,7 @@ void VirtualObject::run()
                     //update_system(vel,clock-ctrl_update, ref_point);
 
 
-                    control_object(index,clock-ctrl_update);
+                    control_object(traj[index],traj[index-1]);
                     ctrl_update = clock;
                 }
             }
@@ -200,25 +201,7 @@ void VirtualObject::run()
     emit thread_done(data.ID);
 
 }
-/*
-LocPoint VirtualObject::getCurrentState()
-{
-    LocPoint ret_val;
-    ret_val.setTime(clock-start_time);
-    ret_val.setXY(x,y);
-    return ret_val;
-}*/
-/*
-void VirtualObject::sendCurrentState()
-{
-    emit updated_state(this->id,
-                       (qint32) elapsed_time,
-                       x,
-                       y,
-                       mRefLat,
-                       mRefLon,
-                       mRefAlt);
-} */
+
 
 int VirtualObject::connectToServer(int udpSocket,int tcpSocket)
 {
@@ -260,46 +243,52 @@ void VirtualObject::updateTime()
     clock = QDateTime::currentMSecsSinceEpoch();
 }*/
 
-void VirtualObject::control_object(int curr_idx_point, qint64 deltaT)
+void VirtualObject::control_object(chronos_dopm_pt next,chronos_dopm_pt prev)
 {
     // Only does object = ref_point
     // TODO: add dynamics
 
-    double t = (double) deltaT / 1000.0;
+    //double t = (double) deltaT / 1000.0;
 
-    if (curr_idx_point == 0 || curr_idx_point >= traj.size())
-        return;
+    //if (curr_idx_point == 0 || curr_idx_point >= traj.size())
+      //  return;
 
-    chronos_dopm_pt next = traj[curr_idx_point];
-    chronos_dopm_pt prev = traj[curr_idx_point-1];
+    //chronos_dopm_pt next = traj[curr_idx_point];
+    //chronos_dopm_pt prev = traj[curr_idx_point-1];
 
-    // Find the unity vector
+    // Find the change in both directions
     double deltaY = next.y-prev.y;
     double deltaX = next.x-prev.x;
 
-    double dist = sqrt(deltaY*deltaY+deltaX*deltaX);
+    // Calculate the constant velocity between the two reference points
+    double new_vx = deltaX / (double) (next.tRel-prev.tRel) ;
+    double new_vy = deltaY / (double) (next.tRel-prev.tRel) ;
 
-    double ex = dist ? deltaX/dist : deltaX;
-    double ey = dist ? deltaY/dist : deltaY;
-
-    //double s = next.speed * t - 0.5 * next.accel * t * t;
-
-    data.x = prev.x + ex * data.speed / 1000.0 *(data.time-prev.tRel);
-    data.y = prev.y + ey * data.speed / 1000.0 *(data.time-prev.tRel);
-
-    //data.x = data.x + ex * s;
-    //data.y = data.y + ey * s;
-/*
-    data.acc = ref_point.accel;
-    data.heading = ref_point.heading;
-    data.speed = ref_point.speed;
-    data.x = ref_point.x;
-    data.y = ref_point.y;
+    // Calculate the length of the velocity vector
+    double actual_speed = sqrt(new_vx*new_vx+new_vy*new_vy);
+    /*
+    qDebug() << "Speed Current: actual=" << QString::number(actual_speed)
+             << "\nSpeed REF: ref_speed_1=" << QString::number(next.speed)
+             << "\nSpeed REF: ref_speed_0=" << QString::number(prev.speed);
     */
+    //double dist = sqrt(deltaY*deltaY+deltaX*deltaX);
 
-    data.acc = prev.accel;
+    //double ex = dist ? deltaX/dist : deltaX;
+    //double ey = dist ? deltaY/dist : deltaY;
+
+    //data.x = prev.x + ex * actual_speed / 1000.0 *l(data.time-prev.tRel);
+    //data.y = prev.y + ey * actual_speed / 1000.0 *(data.time-prev.tRel);
+
+
+    // Update the current position based on the time that has
+    // passed since the last reference point
+    data.x = prev.x + new_vx * (double)(data.time-prev.tRel);
+    data.y = prev.y + new_vy * (double)(data.time-prev.tRel);
+
+    // Update the current state variables
+    data.acc = (actual_speed - data.speed)/(data.time-prev.tRel); //prev.accel;
     data.heading = prev.heading;
-    data.speed = prev.speed;
+    data.speed = actual_speed;//prev.speed;
 }
 
 chronos_monr VirtualObject::getMONR()
@@ -328,6 +317,34 @@ void VirtualObject::xyz_to_llh(double *lat,double *lon, double *alt)
     *lat = mRefLat + data.y * 180.0 / (M_PI * (double) EARTH_RADIUS) ;
     *lon = mRefLon + data.x * 180.0 / (M_PI * (double) EARTH_RADIUS * cos(*lat));
     *alt = mRefAlt + data.z;
+}
+
+int VirtualObject::findRefPoint(quint64 tRel, uint fromIndex)
+{
+    if (traj.size()<2)
+    {
+        qDebug() << "findRefPoint ERROR: No traj file loaded";
+        return -1;
+    }
+
+    if (traj.last().tRel < tRel)
+    {
+        qDebug() << "findRefPoint ERROR: Relative time out of reach";
+        return -1;
+    }
+
+    if (traj.size() <= fromIndex )
+    {
+        qDebug() << "Index out of bounds";
+    }
+
+    for (int i = fromIndex; i<traj.size()-1;i++)
+    {
+        if(traj[i+1].tRel > tRel && tRel > traj[i].tRel) return i+1;
+    }
+    qDebug() << "Cannot find a valid point";
+    return -1;
+
 }
 
 void VirtualObject::control_function(double* vel,chronos_dopm_pt ref, VOBJ_DATA data )
@@ -481,11 +498,22 @@ void VirtualObject::handleSTRT(chronos_strt msg)
 
 void VirtualObject::handleSYPM(chronos_sypm msg)
 {
-    if (status == DISARMED || status == INIT)
+    if ((status == DISARMED || status == INIT) &&
+            hasDOPM && hasOSEM)
     {
-        isMaster = false;
-        qDebug() << "Object updated with SYPM";
-        // Do something
+        if (traj.last().tRel < msg.sync_point)
+        {
+            qDebug() << "SYPM ERROR: Not a valid sync point";
+        }
+        else
+        {
+            if (findRefPoint(msg.sync_point,0))
+            {
+                sync_points.append(msg.sync_point);
+                qDebug() << "Object updated with SYPM\nTime t=" << QString::number(msg.sync_point);
+                isMaster = false;
+            }
+        }
     }
 }
 
