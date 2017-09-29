@@ -74,11 +74,16 @@ void VirtualObject::run()
     qint64 elapsed_time = 0; // Time since the start of the execution
     qint64 ctrl_update = 0; // Time since the last control signal update
     qint64 update_sent = 0; // Time since the last MONR message
+
+    qint64 tmod = 0;
+
     int ref_index= 0;
     int pre_ref_index = 0;
     bool init_start = false;
-    bool mtps = false;
+    int mtps = 0;
 
+    chronos_dopm_pt ref_point;
+    chronos_dopm_pt prev_ref_point;
 
 
     //updateTime();
@@ -124,13 +129,17 @@ void VirtualObject::run()
         }
         else if(status == RUNNING)
         {
-            sleep_time = 50;
+            sleep_time = 5;
             clock = QDateTime::currentMSecsSinceEpoch();
             // Is this the first iteration?
             if (ref_index == 0 && init_start)
             {
-                ref_index = 1;
-                pre_ref_index = 0;
+                //ref_index = 1;
+                //pre_ref_index = 0;
+
+                ref_point = traj[1];
+                prev_ref_point = traj[0];
+
                 start_time = clock;
                 init_start = false;
             }
@@ -146,25 +155,38 @@ void VirtualObject::run()
                 {
                     ref_point = traj[index++];
                 }*/
-                qint64 tmod = 0;
-                int ref_temp_idx = ref_index;
+
+
+                int index_before_update = ref_index;
 
                 ref_index = findRefPoint(elapsed_time,ref_index,tmod);
-                if (elapsed_time >10000 && getID()==0 && !mtps)
+                if (elapsed_time >10000 && getID()==0 && mtps == 0 && true)
                 {
-                    tmod=6000;
-                    mtps = true;
-                    traj[ref_index].tRel += tmod;
-                }
-                if (ref_index-ref_temp_idx)
-                {
-                    pre_ref_index = ref_temp_idx;
+                    //qDebug() << "Modifying refs";
+                    tmod=2000;
+                    mtps++;
+                    //traj[ref_index].tRel += tmod;
                 }
 
-                //if (getID()==0) qDebug() << "Index: " << QString::number(index) << " from " << QString::number(ibf);
+                if (ref_index-index_before_update)
+                {
+                    // When the index has changed, make sure that the previous reference
+                    // point is also updated.
+                    prev_ref_point = ref_point;
+                    // Set the new reference point
+                    ref_point = traj[ref_index];
+                    // Add time offset
+                    ref_point.tRel +=tmod;
+                }
+                else
+                {
+
+                }
+
+                if (getID()==0) qDebug() << "Index: " << QString::number(ref_index);
                 //if (index == -1) return;
-                chronos_dopm_pt ref_point = traj[ref_index];
-                chronos_dopm_pt prev_ref_point = traj[pre_ref_index];
+
+
                 if (status == ABORT )
                 {
                     qDebug() << "ABORT: Aborting test scenario.";
@@ -185,7 +207,7 @@ void VirtualObject::run()
                 clock = QDateTime::currentMSecsSinceEpoch();
                 elapsed_time = clock-start_time;
                 data.time = elapsed_time;*/
-                if (clock - ctrl_update > 5)
+                if (clock - ctrl_update > 0)
                 {
                     //double vel[2];
                     // Calculate the desired control signal
@@ -349,7 +371,7 @@ int VirtualObject::findRefPoint(qint64 tRel, uint fromIndex, qint64 refTimeOffse
         return -1;
     }
 
-    if (traj.last().tRel < tRel)
+    if (traj.last().tRel + refTimeOffset < tRel)
     {
         //qDebug() << "findRefPoint ERROR: Relative time out of reach";
         return traj.size()-1;
@@ -359,14 +381,14 @@ int VirtualObject::findRefPoint(qint64 tRel, uint fromIndex, qint64 refTimeOffse
     {
         qDebug() << "Index out of bounds";
     }
-
-    for (int i = fromIndex; i<traj.size()-1;i++)
+    int i=fromIndex;
+    for (; i<traj.size()-1;i++)
     {
-        if(traj[i+1].tRel + refTimeOffset > tRel ) return i;
+        if(traj[i].tRel + refTimeOffset > tRel ) return i;
         //&& tRel > traj[i].tRel + refTimeOffset
     }
     qDebug() << "Cannot find a valid point";
-    return -1;
+    return i;
 
 }
 
