@@ -51,7 +51,17 @@ void MainWindow::on_init_vobj_clicked()
     for(int i = 0; i<obj_nr;i++)
     {
         startObject(i,53240+2*i,53241+2*i);
+        //ui->carListWidget->addItem("Car " + QString::number(ID));
+        ObjectListWidget *item = new ObjectListWidget(i);
+        ui->carListWidget->addItem(item);
+        if (i==0) ui->carListWidget->item(i)->setSelected(true);
+
+
     }
+    if (obj_nr) {
+
+    }
+    //ui->carListWidget->SelectColumns
 
     //startObject(0,53240,53241);
     //startObject(1,53242,53243);
@@ -63,7 +73,7 @@ void MainWindow::on_delete_vobj_clicked()
     ui->delete_vobj->setEnabled(false);
     //ui->init_vobj->setEnabled(true);
 
-
+    ui->carListWidget->clear();
 
     emit stop_virtual_object();
 
@@ -91,6 +101,10 @@ void MainWindow::updateLabelOSEM(double lat, double lon, double alt) {
 
 void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
 
+
+
+    // Do Map-related stuff
+    /*-------------------------------------------*/
     MapWidget *map = ui->widget;
 
 
@@ -149,6 +163,7 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
 
     // Start the thread with the highest priority
     vobj->start(QThread::TimeCriticalPriority);
+    //vobj->start();
     vobjs.append(vobj);
 
 }

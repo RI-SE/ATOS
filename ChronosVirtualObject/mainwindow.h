@@ -5,10 +5,29 @@
 #include "chronos_utility.h"
 #include "chronos.h"
 #include "virtualobject.h"
+#include <QListWidget>
 
 namespace Ui {
 class MainWindow;
 }
+
+class ObjectListWidget : public QListWidgetItem
+{
+
+public:
+    ObjectListWidget(int i = 0){
+        id =  i;
+        setText("Car " + QString::number(i));
+    }
+    ~ObjectListWidget(){}
+
+    int getID(){
+        return id;
+    }
+private:
+    int id;
+
+};
 
 class MainWindow : public QMainWindow
 {

@@ -246,6 +246,19 @@
      <bool>false</bool>
     </property>
    </widget>
+   <widget class="QListWidget" name="carListWidget">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>320</y>
+      <width>181</width>
+      <height>192</height>
+     </rect>
+    </property>
+    <property name="selectionBehavior">
+     <enum>QAbstractItemView::SelectItems</enum>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
