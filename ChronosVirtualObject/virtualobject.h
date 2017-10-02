@@ -115,12 +115,11 @@ private:
 
     // Maybe add pointer to a VOBJ_DATA struct to make the function static
     void control_object(chronos_dopm_pt next,chronos_dopm_pt prev);
-    void update_system( double *vel, qint64 deltaT, chronos_dopm_pt ref);
-    chronos_monr getMONR();
-    void xyz_to_llh(double *lat,double *lon, double *alt);
+
+
     int findRefPoint(qint64 tRel, uint fromIndex,qint64 refTimeOffset);
 
-
+    chronos_monr getMONR();
 
 };
 

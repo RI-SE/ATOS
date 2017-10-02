@@ -75,19 +75,19 @@ void VirtualObject::run()
     qint64 ctrl_update = 0; // Time since the last control signal update
     qint64 update_sent = 0; // Time since the last MONR message
 
-    qint64 tmod = 0;
+    // Test variables
+    qint64 tmod = 0; // Adding or subtracting time (MTSP)
+    int mtps = 0; // Which mtsp test is currently checked
 
-    int ref_index= 0;
-    int pre_ref_index = 0;
+    int ref_index= 0; // Keeps track of which reference is currently followed
+
     bool init_start = false;
-    int mtps = 0;
 
-    chronos_dopm_pt ref_point;
-    chronos_dopm_pt prev_ref_point;
+    chronos_dopm_pt ref_point;      // Placeholder for the reference point
+    chronos_dopm_pt prev_ref_point; // Placeholder for the previous ref. point
 
-
-    //updateTime();
     while (!shutdown){
+        // Loop as long as a shutdown signal has been sent
 
         if (status == ERROR)
         {
@@ -96,10 +96,12 @@ void VirtualObject::run()
         }
         else
         {
-            if (status != pendingStatus)
+
+            if (status != pendingStatus) // Whenever a state is changed
             {
                 qDebug() << "STATUS: " << QString::number(pendingStatus);
             }
+
             // Update with any new pending status
             status = pendingStatus;
         }
@@ -122,6 +124,7 @@ void VirtualObject::run()
             // Reset the running index to the first trajectory point
             ref_index = 0;
             init_start = true;
+            mtps = 0;
         }
         else if(status == DISARMED)
         {
@@ -130,14 +133,15 @@ void VirtualObject::run()
         else if(status == RUNNING)
         {
             sleep_time = 5;
+
             clock = QDateTime::currentMSecsSinceEpoch();
             // Is this the first iteration?
             if (ref_index == 0 && init_start)
             {
                 //ref_index = 1;
                 //pre_ref_index = 0;
-
-                ref_point = traj[1];
+                ref_index = 1;
+                ref_point = traj[ref_index];
                 prev_ref_point = traj[0];
 
                 start_time = clock;
@@ -168,6 +172,16 @@ void VirtualObject::run()
                     //traj[ref_index].tRel += tmod;
                 }
 
+
+                if (elapsed_time >20000 && getID()==0 && mtps == 1 && true)
+                {
+                    //qDebug() << "Modifying refs";
+                    tmod=-1000;
+                    mtps++;
+                    //traj[ref_index].tRel += tmod;
+                }
+
+
                 if (ref_index-index_before_update)
                 {
                     // When the index has changed, make sure that the previous reference
@@ -183,7 +197,7 @@ void VirtualObject::run()
 
                 }
 
-                if (getID()==0) qDebug() << "Index: " << QString::number(ref_index);
+                //if (getID()==0) qDebug() << "Index: " << QString::number(ref_index);
                 //if (index == -1) return;
 
 
@@ -215,7 +229,8 @@ void VirtualObject::run()
 
                     //update_system(vel,clock-ctrl_update, ref_point);
 
-
+                    // Move the object along a linear trajectory
+                    // from the previous position to the new position
                     control_object(ref_point,prev_ref_point);
                     ctrl_update = clock;
                 }
@@ -232,6 +247,7 @@ void VirtualObject::run()
             // Send monr
             cClient->sendMonr(getMONR());
             update_sent = clock;
+            //if (!isMaster ) qDebug() << "ID:" << QString::number(getID()) << "MTPS=" << QString::number(time_adjustment);
         }
 
         // Send vizualizer update
@@ -256,7 +272,6 @@ int VirtualObject::connectToServer(int udpSocket,int tcpSocket)
     qDebug() << "Connected to Sockets:" << QString::number(udpSocket) << QString::number(tcpSocket);
 
     // Make connections
-    // Connection to OSEM
     connect(cClient,SIGNAL(handle_osem(chronos_osem)),
             this,SLOT(handleOSEM(chronos_osem)));
     connect(cClient,SIGNAL(handle_dopm(QVector<chronos_dopm_pt>)),
@@ -271,9 +286,7 @@ int VirtualObject::connectToServer(int udpSocket,int tcpSocket)
             this,SLOT(handleSYPM(chronos_sypm)));
     connect(cClient,SIGNAL(handle_mtsp(chronos_mtsp)),
             this,SLOT(handleMTSP(chronos_mtsp)));
-    // make connection to send the MONR
-    //connect(this,SIGNAL(send_monr(chronos_monr)),
-    //        cClient,SLOT(transmitMONR(chronos_osem)));
+
     return 0;
 }
 
@@ -281,25 +294,10 @@ int VirtualObject::getID()
 {
     return data.ID;
 }
-/*
-void VirtualObject::updateTime()
-{
-    clock = QDateTime::currentMSecsSinceEpoch();
-}*/
+
 
 void VirtualObject::control_object(chronos_dopm_pt next,chronos_dopm_pt prev)
 {
-    // Only does object = ref_point
-    // TODO: add dynamics
-
-    //double t = (double) deltaT / 1000.0;
-
-    //if (curr_idx_point == 0 || curr_idx_point >= traj.size())
-      //  return;
-
-    //chronos_dopm_pt next = traj[curr_idx_point];
-    //chronos_dopm_pt prev = traj[curr_idx_point-1];
-
     // Find the change in both directions
     double deltaY = next.y-prev.y;
     double deltaX = next.x-prev.x;
@@ -310,19 +308,6 @@ void VirtualObject::control_object(chronos_dopm_pt next,chronos_dopm_pt prev)
 
     // Calculate the length of the velocity vector
     double actual_speed = sqrt(new_vx*new_vx+new_vy*new_vy);
-    /*
-    qDebug() << "Speed Current: actual=" << QString::number(actual_speed)
-             << "\nSpeed REF: ref_speed_1=" << QString::number(next.speed)
-             << "\nSpeed REF: ref_speed_0=" << QString::number(prev.speed);
-    */
-    //double dist = sqrt(deltaY*deltaY+deltaX*deltaX);
-
-    //double ex = dist ? deltaX/dist : deltaX;
-    //double ey = dist ? deltaY/dist : deltaY;
-
-    //data.x = prev.x + ex * actual_speed / 1000.0 *l(data.time-prev.tRel);
-    //data.y = prev.y + ey * actual_speed / 1000.0 *(data.time-prev.tRel);
-
 
     // Update the current position based on the time that has
     // passed since the last reference point
@@ -339,8 +324,18 @@ chronos_monr VirtualObject::getMONR()
 {
     chronos_monr monr;
 
+    double xyz[3] = {data.x,data.y,data.z};
+    double llh[3] = { 0 , 0 , 0};
+    double iLlh[3] = { mRefLat , mRefLon , mRefAlt};
+
+    utility::enuToLlh(iLlh,xyz,llh);
+
+    monr.lat=llh[0];
+    monr.lon=llh[1];
+    monr.alt=llh[2];
+
     //utility::xyzToLlh(data.x,data.y,0,&monr.lat,&monr.lon,&monr.alt);
-    xyz_to_llh(&monr.lat,&monr.lon,&monr.alt);
+    //xyz_to_llh(&monr.lat,&monr.lon,&monr.alt);
     monr.heading = data.heading;
     monr.speed = data.speed;
     monr.direction = 0; // The car is drivning forward
@@ -356,12 +351,6 @@ chronos_monr VirtualObject::getMONR()
     return monr;
 }
 
-void VirtualObject::xyz_to_llh(double *lat,double *lon, double *alt)
-{
-    *lat = mRefLat + data.y * 180.0 / (M_PI * (double) EARTH_RADIUS) ;
-    *lon = mRefLon + data.x * 180.0 / (M_PI * (double) EARTH_RADIUS * cos(*lat));
-    *alt = mRefAlt + data.z;
-}
 
 int VirtualObject::findRefPoint(qint64 tRel, uint fromIndex, qint64 refTimeOffset)
 {
@@ -392,37 +381,6 @@ int VirtualObject::findRefPoint(qint64 tRel, uint fromIndex, qint64 refTimeOffse
 
 }
 
-void VirtualObject::control_function(double* vel,chronos_dopm_pt ref, VOBJ_DATA data )
-{
-
-    double deltaY = ref.y-data.y;
-    double deltaX = ref.x-data.x;
-
-    qint64 deltaT = (ref.tRel - data.time);
-    if (deltaT < 0.0) qDebug() << "Time is negative. Something is wrong.";
-
-    vel[0] = deltaT ? deltaX/ (double) (deltaT /1000.0) : 0;
-    vel[1] = deltaT ? deltaY/ (double) (deltaT /1000.0) : 0;
-}
-
-void VirtualObject::update_system(double *vel,qint64 deltaT, chronos_dopm_pt ref)
-{
-    double prev_x = data.x;
-    double prev_y = data.y;
-    double prev_v = data.speed;
-
-
-
-    data.x = prev_x + vel[0] * (double) deltaT/1000.0;
-    data.y = prev_y + vel[1] * (double) deltaT/1000.0;
-    data.z = ref.z;
-
-    data.speed = utility::twoNorm(vel,2);
-    data.acc = (data.speed - prev_v)/(deltaT/1000.0);
-    data.heading = ref.heading;
-    data.time += deltaT;
-}
-
 // SLOTS
 
 void VirtualObject::handleOSEM(chronos_osem msg)
@@ -436,6 +394,9 @@ void VirtualObject::handleOSEM(chronos_osem msg)
 
         //utility::llhToXyz(msg.lat,msg.lon,msg.alt,&data.x,&data.y,&data.z);
         mRefHeading = msg.heading;
+        qDebug() << "OSEM:\n" << QString::number(mRefLat,'f',8) << "\n"
+                 << QString::number(mRefLon,'f',8) << "\n"
+                 << QString::number(mRefAlt,'f',8);
 
         hasOSEM = true;
 
@@ -564,10 +525,13 @@ void VirtualObject::handleSYPM(chronos_sypm msg)
 
 void VirtualObject::handleMTSP(chronos_mtsp msg)
 {
+    qDebug() << "MTSP recieved";
     // Double-check what the status should be
     if (status == ARMED || status == RUNNING)
     {
         // Do something
+
+        time_adjustment = msg.ts;
     }
 }
 
