@@ -52,6 +52,8 @@ private slots:
     void handleNewOSEM(chronos_osem);
     void handleNewTrajectory(int ID,QVector<chronos_dopm_pt> traj);
 
+    void selectedCarChanged();
+
 
 private:
     Ui::MainWindow *ui;

@@ -16,6 +16,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     handleNewOSEM(start_state);
 
+    QListWidget *lwid = ui->carListWidget;
+
+    connect(lwid,SIGNAL(itemSelectionChanged()),
+            this,SLOT(selectedCarChanged()));
     //Chronos *chronos = new Chronos();
 
 
@@ -46,7 +50,8 @@ void MainWindow::on_init_vobj_clicked()
     //ui->playButton->setEnabled(true);
     ui->delete_vobj->setEnabled(true);
     ui->init_vobj->setEnabled(false);
-    int obj_nr = 2;
+
+    int obj_nr = ui->spinBox->value();
 
     for(int i = 0; i<obj_nr;i++)
     {
@@ -56,9 +61,6 @@ void MainWindow::on_init_vobj_clicked()
         ui->carListWidget->addItem(item);
         if (i==0) ui->carListWidget->item(i)->setSelected(true);
 
-
-    }
-    if (obj_nr) {
 
     }
     //ui->carListWidget->SelectColumns
@@ -284,4 +286,23 @@ void MainWindow::handleNewTrajectory(int ID, QVector<chronos_dopm_pt> traj)
     }
     ui->widget->addInfoTrace(ID,points);
     //ui->widget->setInfoTrace(ID,points);
+}
+
+void MainWindow::selectedCarChanged()
+{
+    QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
+    if (items.size()==0)
+    {
+        qDebug() << "No item selected";
+        return;
+    }
+    else if (items.size()>1)
+    {
+        qDebug() << "To many selected items.";
+        return;
+    }
+    ObjectListWidget *item = (ObjectListWidget*) items[0];
+
+    ui->widget->setSelectedCar(item->getID());
+
 }
