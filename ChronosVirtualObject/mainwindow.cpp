@@ -18,8 +18,16 @@ MainWindow::MainWindow(QWidget *parent) :
 
     QListWidget *lwid = ui->carListWidget;
 
+    render_timer = new QTimer(this);
+
+
     connect(lwid,SIGNAL(itemSelectionChanged()),
             this,SLOT(selectedCarChanged()));
+    connect(render_timer,SIGNAL(timeout()),
+            this, SLOT(renderWindow()));
+
+    render_timer->start(20);
+
     //Chronos *chronos = new Chronos();
 
 
@@ -41,6 +49,8 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     //delete chronos;
+    render_timer->stop();
+    delete render_timer;
     delete ui;
 }
 
@@ -258,7 +268,7 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
 
     // Update the car on the map
     map->updateCarState(data.ID,pos);
-    map->update();
+    //map->update();
 }
 
 void MainWindow::handleNewOSEM(chronos_osem msg)
@@ -305,4 +315,9 @@ void MainWindow::selectedCarChanged()
 
     ui->widget->setSelectedCar(item->getID());
 
+}
+
+void MainWindow::renderWindow()
+{
+    ui->widget->update();
 }

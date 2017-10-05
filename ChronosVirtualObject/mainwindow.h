@@ -54,12 +54,16 @@ private slots:
 
     void selectedCarChanged();
 
+    void renderWindow();
+
 
 private:
     Ui::MainWindow *ui;
     //Chronos *chronos;
     //VirtualObject* vobj;
     QVector<VirtualObject*> vobjs;
+    QTimer *render_timer;
+
 
     void startObject(int ID, int udpSocket, int tcpSocket);
     void displayTime(qint64 t);
