@@ -9,6 +9,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     chronos_osem start_state;
 
+    // Set start reference position
     start_state.lat = 57.71495867;
     start_state.lon = 12.89134921;
     start_state.alt = 219.0;
@@ -26,6 +27,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(render_timer,SIGNAL(timeout()),
             this, SLOT(renderWindow()));
 
+    // Set the render time to 20ms
     render_timer->start(20);
 
     //Chronos *chronos = new Chronos();
@@ -179,24 +181,12 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
     vobjs.append(vobj);
 
 }
-
+// Remove a car object based on ID
 void MainWindow::removeObject(int ID){
-    //ui->playButton->setEnabled(true);
-    //ui->delete_vobj->setEnabled(true);
+
 
     MapWidget *map = ui->widget;
-    /*
-    for (VirtualObject *vobj : vobjs)
-    {
-        map->clearTrace();
-        int id = vobj->getID();
-        map->removeCar(id);
-        map->removeInfoTrace(id);
-        map->update();
 
-        delete vobj;
-    }
-    vobjs.clear();*/
 
     if (ID <0)
     {

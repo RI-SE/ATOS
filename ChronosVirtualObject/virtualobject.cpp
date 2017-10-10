@@ -76,7 +76,7 @@ void VirtualObject::run()
     qint64 update_sent = 0; // Time since the last MONR message
 
     // Test variables
-    qint64 tmod = 0; // Adding or subtracting time (MTSP)
+    qint64 tmod = 0; // Adding or subtracting time (MTPS)
     int mtps = 0; // Which mtsp test is currently checked
 
     int ref_index= 0; // Keeps track of which reference is currently followed
@@ -164,6 +164,7 @@ void VirtualObject::run()
                 int index_before_update = ref_index;
 
                 ref_index = findRefPoint(elapsed_time,ref_index,tmod);
+                /*
                 if (elapsed_time >10000 && getID()==0 && mtps == 0 && true)
                 {
                     //qDebug() << "Modifying refs";
@@ -179,7 +180,7 @@ void VirtualObject::run()
                     tmod=-1000;
                     mtps++;
                     //traj[ref_index].tRel += tmod;
-                }
+                }*/
 
 
                 if (ref_index-index_before_update)
