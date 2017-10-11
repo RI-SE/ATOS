@@ -31,26 +31,11 @@ MainWindow::MainWindow(QWidget *parent) :
             this,SLOT(updateTime()));
     connect(ui->followCarBox,SIGNAL(toggled(bool)),
             this,SLOT(handleFollowCarToggled(bool)));
+    connect(ui->MONR_enable,SIGNAL(toggled(bool)),
+            this,SLOT(handleMONREnableToggled(bool)));
 
     // Set the render time to 20ms
     render_timer->start(20);
-
-    //Chronos *chronos = new Chronos();
-
-
-    //PacketInterface mPacketInt;
-    //MapWidget *map = ui->widget;
-    /* Listen for Chronos OSEM signal */
-    //connect(chronos,SIGNAL(handle_osem(chronos_osem)),
-    //        this,SLOT(updateLabelOSEM(chronos_osem)));
-    //connect(chronos, SIGNAL(handle_osem(chronos_osem)),
-    //        map,SLOT(chronosOSEM(chronos_osem)));
-    //connect(chronos,SIGNAL(handle_dopm(QVector<chronos_dopm_pt>)),
-    //       map,SLOT(chronosDOPM(QVector<chronos_dopm_pt>)));
-    /* Start the chronos object */
-    //chronos->startServer(53240, 53241);
-
-
 }
 
 MainWindow::~MainWindow()
@@ -147,9 +132,6 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
 
 
     // Set SLOT to delete the object once it is finished running
-    //connect(vobj, SIGNAL(finished()), vobj, SLOT(deleteLater()));
-    // Connection to handle cleanup after a finished object
-    //connect(vobj, SIGNAL(finished()),this,SLOT(removeObject()));
     connect(vobj,SIGNAL(thread_done(int)),this,SLOT(removeObject(int)));
     // Connection to do a shutdown of an object
     connect(this,SIGNAL(stop_virtual_object()),
@@ -167,6 +149,10 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
             this,SLOT(handleSimulationStart(int)));
     connect(vobj,SIGNAL(simulation_stop(int)),
             this,SLOT(handleSimulationStop(int)));
+
+
+    connect(this,SIGNAL(enableMONRchanged(int,bool)),
+            vobj,SLOT(MONREnabledChanged(int,bool)));
     // Reset trace
     ui->widget->clearTrace();
     // Add red trace to the carl
@@ -348,6 +334,7 @@ void MainWindow::selectedCarChanged()
         // Do not follow any car
         ui->widget->setFollowCar(-1);
     }
+    ui->MONR_enable->setChecked(item->isEnableMONR());
 
 }
 
@@ -373,6 +360,35 @@ void MainWindow::handleFollowCarToggled(bool checked)
     {
         ui->widget->setFollowCar(-1);
     }
+}
+
+void MainWindow::handleMONREnableToggled(bool checked)
+{
+    QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
+    if (items.size()==0)
+    {
+        qDebug() << "No item selected";
+        return;
+    }
+    else if (items.size()>1)
+    {
+        qDebug() << "To many selected items.";
+        return;
+    }
+    ObjectListWidget *item = (ObjectListWidget*) items[0];
+    item->setEnableMONR(checked);
+
+    VirtualObject *vobj = findVirtualObject(item->getID());
+
+    if (!vobj)
+    {
+        qDebug() << "Could not find the given virual object.";
+        return;
+    }
+
+    emit enableMONRchanged(item->getID(),checked);
+
+
 }
 
 void MainWindow::renderWindow()

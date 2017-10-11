@@ -24,8 +24,17 @@ public:
     int getID(){
         return id;
     }
+    bool isEnableMONR()
+    {
+        return enableMONR;
+    }
+    void setEnableMONR(bool enable)
+    {
+        enableMONR = enable;
+    }
 private:
     int id;
+    bool enableMONR = true;
 
 };
 
@@ -40,27 +49,30 @@ public:
 signals:
     //void handle_osem(chronos_osem data);
     void stop_virtual_object();
+    void enableMONRchanged(int,bool);
 private slots:
 
-    //void on_updateButton_clicked();
-    //void on_playButton_clicked();
     void on_init_vobj_clicked();
     void on_delete_vobj_clicked();
-    //void updateLabelOSEM(chronos_osem msg);
     void removeObject(int ID);
     void handleUpdateState(VOBJ_DATA);
     void handleNewOSEM(chronos_osem);
     void handleNewTrajectory(int ID,QVector<chronos_dopm_pt> traj);
+
+    // Slots for simulation time
     void handleSimulationStart(int ID);
     void handleSimulationStop(int ID);
+    // update the simulation time label
+    void updateTime();
 
+    // QWidgetList specific slots
     void selectedCarChanged();
-
+    // Checkbox slots
     void handleFollowCarToggled(bool);
-
+    void handleMONREnableToggled(bool);
     void renderWindow();
 
-    void updateTime();
+
 
 
 private:

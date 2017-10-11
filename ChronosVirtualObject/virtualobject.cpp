@@ -88,12 +88,15 @@ void VirtualObject::run()
     chronos_dopm_pt prev_ref_point; // Placeholder for the previous ref. point
 
     while (!shutdown){
-        // Loop as long as a shutdown signal has been sent
+        // Loop as long as a shutdown signal has not been sent
 
         if (status == ERROR)
         {
+
             // Do something error related
             // This will generate a deadlock
+
+            emit simulation_stop(getID());
         }
         else
         {
@@ -127,6 +130,8 @@ void VirtualObject::run()
             init_start = true;
             mtps = 0;
 
+            elapsed_time = 0;
+
             simulation_time = ((chronos_dopm_pt) (traj.last())).tRel;
         }
         else if(status == DISARMED)
@@ -141,8 +146,6 @@ void VirtualObject::run()
             // Is this the first iteration?
             if (ref_index == 0 && init_start)
             {
-                //ref_index = 1;
-                //pre_ref_index = 0;
                 ref_index = 1;
                 ref_point = traj[ref_index];
                 prev_ref_point = traj[0];
@@ -156,18 +159,10 @@ void VirtualObject::run()
                 elapsed_time = clock - start_time;
                 data.time = elapsed_time;
                 // Get the reference point
-
-                // TODO: This loop has to change to enable sync points
-                /*
-                while(ref_point.tRel < elapsed_time && index < traj.size()-1)
-                {
-                    ref_point = traj[index++];
-                }*/
-
-
                 int index_before_update = ref_index;
 
-                ref_index = elapsed_time > 20000 && getID() == 0
+                // Set a static point to start deviating
+                ref_index = false && elapsed_time > 20000 && getID() == 0
                         ? ref_index : findRefPoint(elapsed_time,ref_index,tmod);
                 /*
                 if (elapsed_time >10000 && getID()==0 && mtps == 0 && true)
@@ -198,13 +193,6 @@ void VirtualObject::run()
                     // Add time offset
                     ref_point.tRel +=tmod;
                 }
-                else
-                {
-
-                }
-
-                //if (getID()==0) qDebug() << "Index: " << QString::number(ref_index);
-                //if (index == -1) return;
 
 
                 if (status == ABORT )
@@ -220,22 +208,9 @@ void VirtualObject::run()
                     pendingStatus = ERROR;
 
                 }
-
-
-                // Calculate control signal
-                /*
-                clock = QDateTime::currentMSecsSinceEpoch();
-                elapsed_time = clock-start_time;
-                data.time = elapsed_time;*/
                 if (clock - ctrl_update > 0)
                 {
-                    //double vel[2];
-                    // Calculate the desired control signal
-                    //control_function(vel,ref_point,data);
-
-                    //update_system(vel,clock-ctrl_update, ref_point);
-
-                    // Move the object along a linear trajectory
+                    // Move the object along a linear trajectory with constant velocity
                     // from the previous position to the new position
                     control_object(ref_point,prev_ref_point);
                     ctrl_update = clock;
@@ -249,12 +224,12 @@ void VirtualObject::run()
         }
 
         clock = QDateTime::currentMSecsSinceEpoch();
-        if (clock - update_sent > 20)
+        if (clock - update_sent > 20 && sendMONREnabled)
         {
             // Send monr
             cClient->sendMonr(getMONR());
             update_sent = clock;
-            //if (!isMaster ) qDebug() << "ID:" << QString::number(getID()) << "MTPS=" << QString::number(time_adjustment);
+
         }
 
         // Send vizualizer update
@@ -540,6 +515,11 @@ void VirtualObject::handleMTSP(chronos_mtsp msg)
 
         time_adjustment = msg.ts;
     }
+}
+
+void VirtualObject::MONREnabledChanged(int ID, bool status)
+{
+    if (ID == getID()) sendMONREnabled = status;
 }
 
 void VirtualObject::stopSimulation()

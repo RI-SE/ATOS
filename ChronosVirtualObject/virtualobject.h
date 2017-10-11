@@ -76,6 +76,8 @@ private slots:
     void handleSYPM(chronos_sypm msg);
     void handleMTSP(chronos_mtsp msg);
 
+    void MONREnabledChanged(int ID, bool status);
+
     void stopSimulation();
 
 private:
@@ -84,6 +86,8 @@ private:
     bool shutdown = false;
     bool hasOSEM = false;
     bool hasDOPM = false;
+
+    bool sendMONREnabled = true;
 
     qint8 status = INIT;
     qint8 pendingStatus = INIT;

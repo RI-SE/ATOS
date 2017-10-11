@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1008</width>
-    <height>720</height>
+    <width>1000</width>
+    <height>800</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -15,6 +15,18 @@
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>600</width>
+    <height>400</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>1920</width>
+    <height>1080</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
@@ -145,8 +157,8 @@
      <rect>
       <x>200</x>
       <y>10</y>
-      <width>801</width>
-      <height>661</height>
+      <width>781</width>
+      <height>721</height>
      </rect>
     </property>
     <property name="currentIndex">
@@ -161,8 +173,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>801</width>
-        <height>631</height>
+        <width>781</width>
+        <height>691</height>
        </rect>
       </property>
      </widget>
@@ -177,7 +189,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>600</y>
+      <y>670</y>
       <width>181</width>
       <height>61</height>
      </rect>
@@ -304,13 +316,32 @@
      <string>Follow selected car</string>
     </property>
    </widget>
+   <widget class="QCheckBox" name="MONR_enable">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>540</y>
+      <width>181</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Send MONR</string>
+    </property>
+    <property name="checked">
+     <bool>true</bool>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1008</width>
+     <width>1000</width>
      <height>22</height>
     </rect>
    </property>
