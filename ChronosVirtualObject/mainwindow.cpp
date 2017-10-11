@@ -22,10 +22,13 @@ MainWindow::MainWindow(QWidget *parent) :
     render_timer = new QTimer(this);
 
 
+
     connect(lwid,SIGNAL(itemSelectionChanged()),
             this,SLOT(selectedCarChanged()));
     connect(render_timer,SIGNAL(timeout()),
             this, SLOT(renderWindow()));
+    connect(ui->followCarBox,SIGNAL(toggled(bool)),
+            this,SLOT(handleFollowCarToggled(bool)));
 
     // Set the render time to 20ms
     render_timer->start(20);
@@ -221,6 +224,14 @@ void MainWindow::removeObject(int ID){
 
 }
 
+VirtualObject* MainWindow::findVirtualObject(int ID)
+{
+    for(VirtualObject* v : vobjs){
+        if (v->getID() == ID) return v;
+    }
+    return 0;
+}
+
 void MainWindow::displayTime(qint64 t){
     // Display the time sent from the object
     char buffer[20];
@@ -302,9 +313,44 @@ void MainWindow::selectedCarChanged()
         return;
     }
     ObjectListWidget *item = (ObjectListWidget*) items[0];
+    int iID = item->getID();
+    ui->widget->setSelectedCar(iID);
+    //VirtualObject* temp = findVirtualObject(iID);
+    //qDebug() << QString::number((long) temp);
+    if (ui->followCarBox->isChecked())
+    {
+        ui->widget->setFollowCar(iID);
+    }
+    else
+    {
+        // Do not follow any car
+        ui->widget->setFollowCar(-1);
+    }
 
-    ui->widget->setSelectedCar(item->getID());
+}
 
+void MainWindow::handleFollowCarToggled(bool checked)
+{
+    QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
+    if (items.size()==0)
+    {
+        qDebug() << "No item selected";
+        return;
+    }
+    else if (items.size()>1)
+    {
+        qDebug() << "To many selected items.";
+        return;
+    }
+    if (checked)
+    {
+        ObjectListWidget *item = (ObjectListWidget*) items[0];
+        ui->widget->setFollowCar(item->getID());
+    }
+    else
+    {
+        ui->widget->setFollowCar(-1);
+    }
 }
 
 void MainWindow::renderWindow()

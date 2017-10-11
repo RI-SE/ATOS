@@ -54,6 +54,8 @@ private slots:
 
     void selectedCarChanged();
 
+    void handleFollowCarToggled(bool);
+
     void renderWindow();
 
 
@@ -64,6 +66,8 @@ private:
     QVector<VirtualObject*> vobjs;
     QTimer *render_timer;
 
+
+    VirtualObject* findVirtualObject(int ID);
 
     void startObject(int ID, int udpSocket, int tcpSocket);
     void displayTime(qint64 t);
