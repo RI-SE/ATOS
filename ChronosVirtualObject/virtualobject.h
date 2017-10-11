@@ -63,6 +63,8 @@ signals:
     void new_trajectory(int ID,QVector<chronos_dopm_pt> traj);
     void send_monr(chronos_monr monr);
     void thread_done(int ID);
+    void simulation_start(int ID);
+    void simulation_stop(int ID);
 
 
 private slots:

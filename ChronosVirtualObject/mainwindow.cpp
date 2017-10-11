@@ -20,13 +20,15 @@ MainWindow::MainWindow(QWidget *parent) :
     QListWidget *lwid = ui->carListWidget;
 
     render_timer = new QTimer(this);
-
+    simulation_timer = new QTimer(this);
 
 
     connect(lwid,SIGNAL(itemSelectionChanged()),
             this,SLOT(selectedCarChanged()));
     connect(render_timer,SIGNAL(timeout()),
             this, SLOT(renderWindow()));
+    connect(simulation_timer,SIGNAL(timeout()),
+            this,SLOT(updateTime()));
     connect(ui->followCarBox,SIGNAL(toggled(bool)),
             this,SLOT(handleFollowCarToggled(bool)));
 
@@ -55,6 +57,7 @@ MainWindow::~MainWindow()
 {
     //delete chronos;
     render_timer->stop();
+    delete simulation_timer;
     delete render_timer;
     delete ui;
 }
@@ -119,13 +122,8 @@ void MainWindow::updateLabelOSEM(double lat, double lon, double alt) {
 void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
 
 
-
-    // Do Map-related stuff
-    /*-------------------------------------------*/
     MapWidget *map = ui->widget;
 
-
-    //qint8 ID = 0;
     // Create virtual object as a new Thread
     VirtualObject *vobj = new VirtualObject(ID,
                              map->getRefLat(),
@@ -133,11 +131,6 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
                              map->getRefAlt());
     //vobj->connectToServer(53240, 53241);
     vobj->connectToServer(udpSocket,tcpSocket);
-
-
-
-
-
 
     // Add a car to the map
     // NOTE: the car and the thread must have the same ID
@@ -170,7 +163,10 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
     // Connection to show any new trajectory that has been loaded to object
     connect(vobj,SIGNAL(new_trajectory(int,QVector<chronos_dopm_pt>)),
             this,SLOT(handleNewTrajectory(int, QVector<chronos_dopm_pt>)));
-
+    connect(vobj,SIGNAL(simulation_start(int)),
+            this,SLOT(handleSimulationStart(int)));
+    connect(vobj,SIGNAL(simulation_stop(int)),
+            this,SLOT(handleSimulationStop(int)));
     // Reset trace
     ui->widget->clearTrace();
     // Add red trace to the carl
@@ -241,11 +237,18 @@ void MainWindow::displayTime(qint64 t){
 
 }
 
+void MainWindow::updateTime()
+{
+    qint64 time = QDateTime::currentMSecsSinceEpoch() - simulation_start_time;
+    double d_time = (double) time/1000.0;
+    ui->lab_runtime->setText(QString::number(d_time));
+}
+
 void MainWindow::handleUpdateState(VOBJ_DATA data){
     MapWidget *map = ui->widget;
 
     // Display time in the label
-    displayTime(data.time);
+    // displayTime(data.time);
 
     // Update the car position
     LocPoint pos;
@@ -297,6 +300,25 @@ void MainWindow::handleNewTrajectory(int ID, QVector<chronos_dopm_pt> traj)
     }
     ui->widget->addInfoTrace(ID,points);
     //ui->widget->setInfoTrace(ID,points);
+}
+
+void MainWindow::handleSimulationStart(int ID)
+{
+    running_processes++;
+    // ID implemented for future use
+    if (!simulation_timer->isActive())
+    {
+        simulation_timer->start(10);
+        simulation_start_time = QDateTime::currentMSecsSinceEpoch();
+    }
+}
+
+void MainWindow::handleSimulationStop(int ID)
+{
+    if (--running_processes == 0)
+    {
+        simulation_timer->stop();
+    }
 }
 
 void MainWindow::selectedCarChanged()

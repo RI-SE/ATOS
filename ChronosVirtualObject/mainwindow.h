@@ -51,12 +51,16 @@ private slots:
     void handleUpdateState(VOBJ_DATA);
     void handleNewOSEM(chronos_osem);
     void handleNewTrajectory(int ID,QVector<chronos_dopm_pt> traj);
+    void handleSimulationStart(int ID);
+    void handleSimulationStop(int ID);
 
     void selectedCarChanged();
 
     void handleFollowCarToggled(bool);
 
     void renderWindow();
+
+    void updateTime();
 
 
 private:
@@ -65,6 +69,11 @@ private:
     //VirtualObject* vobj;
     QVector<VirtualObject*> vobjs;
     QTimer *render_timer;
+    QTimer *simulation_timer;
+
+    qint64 simulation_start_time = 0;
+
+    int running_processes = 0;
 
 
     VirtualObject* findVirtualObject(int ID);

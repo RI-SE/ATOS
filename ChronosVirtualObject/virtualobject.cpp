@@ -71,6 +71,7 @@ void VirtualObject::run()
 
     qint64 clock = 0;       // Current time
     qint64 start_time = 0;  // Start time of the execution of a trajectory
+    qint64 simulation_time = 0;   // The total time for the entire simulation
     qint64 elapsed_time = 0; // Time since the start of the execution
     qint64 ctrl_update = 0; // Time since the last control signal update
     qint64 update_sent = 0; // Time since the last MONR message
@@ -125,6 +126,8 @@ void VirtualObject::run()
             ref_index = 0;
             init_start = true;
             mtps = 0;
+
+            simulation_time = ((chronos_dopm_pt) (traj.last())).tRel;
         }
         else if(status == DISARMED)
         {
@@ -146,8 +149,9 @@ void VirtualObject::run()
 
                 start_time = clock;
                 init_start = false;
+                emit simulation_start(getID());
             }
-            if(ref_index < traj.size() - 1)
+            if(ref_index < traj.size() - 1 && elapsed_time < simulation_time)
             {
                 elapsed_time = clock - start_time;
                 data.time = elapsed_time;
@@ -163,7 +167,8 @@ void VirtualObject::run()
 
                 int index_before_update = ref_index;
 
-                ref_index = findRefPoint(elapsed_time,ref_index,tmod);
+                ref_index = elapsed_time > 20000 && getID() == 0
+                        ? ref_index : findRefPoint(elapsed_time,ref_index,tmod);
                 /*
                 if (elapsed_time >10000 && getID()==0 && mtps == 0 && true)
                 {
@@ -239,6 +244,7 @@ void VirtualObject::run()
             else
             {
                 pendingStatus = STOP;
+                emit simulation_stop(getID());
             }
         }
 
