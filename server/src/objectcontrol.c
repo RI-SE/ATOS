@@ -188,6 +188,7 @@ void objectcontrol_task()
   char Heading[SMALL_BUFFER_SIZE_0];
   char DriveDirection[SMALL_BUFFER_SIZE_1];
   char StatusFlag[SMALL_BUFFER_SIZE_1];
+  char MTSP[SMALL_BUFFER_SIZE_0];
   int MessageLength;
   char *MiscPtr;
   uint64_t StartTimeU64 = 0;
@@ -504,7 +505,7 @@ void objectcontrol_task()
           bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
           strcat(buffer,Id); strcat(buffer,";"); strcat(buffer, "0"); strcat(buffer,";"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
           strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,Speed); strcat(buffer,";"); strcat(buffer,Heading); strcat(buffer,";");
-          strcat(buffer,DriveDirection); strcat(buffer,";"); //strcat(pcBuffer,StatusFlag); strcat(pcBuffer,";");
+          strcat(buffer,DriveDirection); strcat(buffer,";"); strcat(buffer,StatusFlag); strcat(buffer,";");
 
           
           for(i = 0; i < SyncPointCount; i++)
@@ -513,42 +514,47 @@ void objectcontrol_task()
                 TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU64 > 0 && iIndex == 0 && TimeToSyncPoint > -1)
             {
 
-              UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
+              if(Latitude != 0 && Longitude != 0)
+              { 
+                UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
              
-              if(OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex)
-              {
-              
-                CurrentTimeDbl = (((double)CurrentTimeU64-(double)StartTimeU64)/1000);
-                SearchStartIndex = OP[iIndex].BestFoundTrajectoryIndex - ASPStepBackCount;
-                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, CurrentTimeDbl, ASPMaxTrajDiff, ASPMaxTimeDiff, 1);
-                
-              	if(OP[iIndex].BestFoundTrajectoryIndex != TRAJ_POSITION_NOT_FOUND)
+                if(OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex)
                 {
-                  TimeToSyncPoint = UtilCalculateTimeToSync(&OP[iIndex]);
-                	if(TimeToSyncPoint > 0)
+                  CurrentTimeDbl = (((double)CurrentTimeU64-(double)StartTimeU64)/1000);
+                  SearchStartIndex = OP[iIndex].BestFoundTrajectoryIndex - ASPStepBackCount;
+                  UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, CurrentTimeDbl, ASPMaxTrajDiff, ASPMaxTimeDiff, 1);
+                  
+                	if(OP[iIndex].BestFoundTrajectoryIndex != TRAJ_POSITION_NOT_FOUND)
+                  {
+                    TimeToSyncPoint = UtilCalculateTimeToSync(&OP[iIndex]);
+                  	if(TimeToSyncPoint > 0)
+                  	{
+                      if(PrevTimeToSyncPoint != 0 && ASPFilterLevel > 0)
+                      {
+                        if(TimeToSyncPoint/PrevTimeToSyncPoint > (1 + ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint + ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
+                        else if(TimeToSyncPoint/PrevTimeToSyncPoint < (1 - ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint - ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
+                      }
+                  		MasterTimeToSyncPointU64 = CurrentTimeU64 + TimeToSyncPoint*1000;
+                      PrevTimeToSyncPoint = TimeToSyncPoint;
+                      OldTimeU64 = CurrentTimeU64;
+                  	}
+                  	else
+                  	{
+                  		MasterTimeToSyncPointU64 = 0;
+                  		TimeToSyncPoint = -1;
+                  	}
+                    
+                    bzero(MTSP, SMALL_BUFFER_SIZE_0);
+                    sprintf(MTSP, "%" PRIu64, MasterTimeToSyncPointU64);
+                    strcat(buffer, MTSP); strcat(buffer,";");                 
+                  }
+
+                	if(atoi(Timestamp)%ASPDebugRate == 0)
                 	{
-                    if(PrevTimeToSyncPoint != 0 && ASPFilterLevel > 0)
-                    {
-                      if(TimeToSyncPoint/PrevTimeToSyncPoint > (1 + ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint + ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
-                      else if(TimeToSyncPoint/PrevTimeToSyncPoint < (1 - ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint - ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
-                    }
-                		MasterTimeToSyncPointU64 = CurrentTimeU64 + TimeToSyncPoint*1000;
-                    PrevTimeToSyncPoint = TimeToSyncPoint;
-                    OldTimeU64 = CurrentTimeU64;
+                		printf("TtS= %3.3f, %d, %d, %d, %ld, %d\n",TimeToSyncPoint, OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, MasterTimeToSyncPointU64, iIndex);
+                    printf("%3.3f, %3.10f, %3.10f ,%3.10f, %3.10f\n\n",CurrentTimeDbl, OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7);  
                 	}
-                	else
-                	{
-                		MasterTimeToSyncPointU64 = 0;
-                		TimeToSyncPoint = -1;
-                	}                 
                 }
-
-              	if(atoi(Timestamp)%ASPDebugRate == 0)
-              	{
-              		printf("TtS= %3.3f, %d, %d, %d, %ld, %d\n",TimeToSyncPoint, OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, MasterTimeToSyncPointU64, iIndex);
-                  printf("%3.3f, %3.10f, %3.10f ,%3.10f, %3.10f\n\n",CurrentTimeDbl, OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7);  
-              	}
-
               }
             }
           }
