@@ -33,7 +33,10 @@ MainWindow::MainWindow(QWidget *parent) :
             this,SLOT(handleFollowCarToggled(bool)));
     connect(ui->MONR_enable,SIGNAL(toggled(bool)),
             this,SLOT(handleMONREnableToggled(bool)));
-
+    connect(ui->varianceEdit,SIGNAL(editingFinished()),
+            this,SLOT(handleVarianceChanged()));
+    connect(ui->measurementNoiseEnable,SIGNAL(toggled(bool)),
+            this,SLOT(handleMeasurementNoiseToggled(bool)));
     // Set the render time to 20ms
     render_timer->start(20);
 }
@@ -50,9 +53,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_init_vobj_clicked()
 {
-    //ui->playButton->setEnabled(true);
-    ui->delete_vobj->setEnabled(true);
-    ui->init_vobj->setEnabled(false);
+
 
     int obj_nr = ui->spinBox->value();
 
@@ -66,6 +67,18 @@ void MainWindow::on_init_vobj_clicked()
 
 
     }
+
+
+    ui->delete_vobj->setEnabled(true);
+    ui->init_vobj->setEnabled(false);
+    ui->followCarBox->setEnabled(true);
+    ui->MONR_enable->setEnabled(true);
+
+    QCheckBox *mcbx = ui->measurementNoiseEnable;
+    mcbx->setEnabled(true);
+
+    // Send signal to update the variance enabled state
+    emit(mcbx->toggled(mcbx->isChecked()));
     //ui->carListWidget->SelectColumns
 
     //startObject(0,53240,53241);
@@ -74,9 +87,21 @@ void MainWindow::on_init_vobj_clicked()
 }
 void MainWindow::on_delete_vobj_clicked()
 {
-    //ui->playButton->setEnabled(false);
+
     ui->delete_vobj->setEnabled(false);
-    //ui->init_vobj->setEnabled(true);
+
+
+    // Reset the checkbox states
+    ui->followCarBox->setChecked(false);
+    ui->MONR_enable->setChecked(true);
+    ui->measurementNoiseEnable->setChecked(false);
+
+    // Disable the checkboxes
+    ui->followCarBox->setEnabled(false);
+    ui->MONR_enable->setEnabled(false);
+    ui->measurementNoiseEnable->setEnabled(false);
+
+    //emit(ui->measurementNoiseEnable->toggled(false));
 
     ui->carListWidget->clear();
 
@@ -114,7 +139,6 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
                              map->getRefLat(),
                              map->getRefLon(),
                              map->getRefAlt());
-    //vobj->connectToServer(53240, 53241);
     vobj->connectToServer(udpSocket,tcpSocket);
 
     // Add a car to the map
@@ -130,6 +154,7 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
 
 
 
+    // Make connections according to: Virtual object -> UI
 
     // Set SLOT to delete the object once it is finished running
     connect(vobj,SIGNAL(thread_done(int)),this,SLOT(removeObject(int)));
@@ -151,8 +176,13 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
             this,SLOT(handleSimulationStop(int)));
 
 
+    // Make connections according to: UI -> Virtual object
+
     connect(this,SIGNAL(enableMONRchanged(int,bool)),
             vobj,SLOT(MONREnabledChanged(int,bool)));
+    connect(this,SIGNAL(measurement_noise_toggle(bool,double)),
+            vobj,SLOT(handleMeasurementNoiseToggle(bool,double)));
+
     // Reset trace
     ui->widget->clearTrace();
     // Add red trace to the carl
@@ -213,7 +243,7 @@ VirtualObject* MainWindow::findVirtualObject(int ID)
     }
     return 0;
 }
-
+/*
 void MainWindow::displayTime(qint64 t){
     // Display the time sent from the object
     char buffer[20];
@@ -221,7 +251,7 @@ void MainWindow::displayTime(qint64 t){
     snprintf(buffer,20,"%g",d_t);
     ui->lab_runtime->setText(buffer);
 
-}
+}*/
 
 void MainWindow::updateTime()
 {
@@ -323,8 +353,7 @@ void MainWindow::selectedCarChanged()
     ObjectListWidget *item = (ObjectListWidget*) items[0];
     int iID = item->getID();
     ui->widget->setSelectedCar(iID);
-    //VirtualObject* temp = findVirtualObject(iID);
-    //qDebug() << QString::number((long) temp);
+
     if (ui->followCarBox->isChecked())
     {
         ui->widget->setFollowCar(iID);
@@ -334,7 +363,12 @@ void MainWindow::selectedCarChanged()
         // Do not follow any car
         ui->widget->setFollowCar(-1);
     }
+    currentVariance = QString::number(item->getStddev(),'g',4);
+    ui->varianceEdit->setText(currentVariance);
     ui->MONR_enable->setChecked(item->isEnableMONR());
+    ui->measurementNoiseEnable->setChecked(item->isNoiseEnabled());
+
+    emit(ui->measurementNoiseEnable->toggled(item->isNoiseEnabled()));
 
 }
 
@@ -388,6 +422,67 @@ void MainWindow::handleMONREnableToggled(bool checked)
 
     emit enableMONRchanged(item->getID(),checked);
 
+
+}
+
+
+void MainWindow::handleMeasurementNoiseToggled(bool checked)
+{
+    QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
+    if (items.size()==0)
+    {
+        qDebug() << "No item selected";
+        return;
+    }
+    else if (items.size()>1)
+    {
+        qDebug() << "To many selected items.";
+        return;
+    }
+
+    ObjectListWidget *item = (ObjectListWidget*) items[0];
+
+    emit measurement_noise_toggle(checked,item->getStddev());
+
+    item->setNoiseEnabled(checked);
+
+    ui->varianceEdit->setEnabled(checked);
+    ui->lab_var->setEnabled(checked);
+}
+
+void MainWindow::handleVarianceChanged()
+{
+
+    QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
+    if (items.size()==0)
+    {
+        qDebug() << "No item selected";
+        return;
+    }
+    else if (items.size()>1)
+    {
+        qDebug() << "To many selected items.";
+        return;
+    }
+    ObjectListWidget *item = (ObjectListWidget*) items[0];
+
+
+    QLineEdit *inputLine = ui->varianceEdit;
+    QString input = inputLine->text();
+
+    bool isConversionOK = false;
+    double newVariance = input.toDouble(&isConversionOK);
+
+    if (isConversionOK)
+    {
+        //qDebug() << "OK Conversion";
+        currentVariance = QString::number(newVariance,'g',4);
+        item->setStddev(newVariance);
+        //emit()
+
+    }
+    inputLine->setText(currentVariance);
+    ui->varianceEdit->clearFocus();
 
 }
 

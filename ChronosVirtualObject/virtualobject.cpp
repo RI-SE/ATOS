@@ -1,37 +1,5 @@
 #include "virtualobject.h"
 
-VirtualObject::VirtualObject(int id)
-{
-
-    //start_time = 0;
-    //clock = 0;
-
-    data= {
-        id, // id
-        0,  // time
-        0,  // x
-        0,  // y
-        0,  // z
-        0,  // heading
-        0,  // speed
-        0,  // acceleration
-        status,    // status
-        isMaster    // MASTER?
-    };
-
-    //this->id = id;
-
-    //updateTime();
-
-    cClient = new Chronos();
-
-    // Connect signals to SLOTs
-
-
-    // Start the chronos object
-    //cClient->startServer(53240, 53241);
-}
-
 VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
 {
 
@@ -48,7 +16,7 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
         0,  // heading
         0,  // speed
         0,  // acceleration
-        status,    // status
+        status,    // statusF
         isMaster    // MASTER?
     };
 
@@ -58,9 +26,14 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
 
     cClient = new Chronos();
 
+    distribution = new std::normal_distribution<double>(0.0,1.0);
+
+
 }
 
 VirtualObject::~VirtualObject() {
+    traj.clear();
+    delete distribution;
     delete cClient;
 }
 
@@ -299,25 +272,31 @@ void VirtualObject::control_object(chronos_dopm_pt next,chronos_dopm_pt prev)
     // Update the current state variables
     data.acc = (actual_speed - data.speed)/(data.time-prev.tRel); //prev.accel;
     data.heading = prev.heading;
-    data.speed = actual_speed;//prev.speed;
+    data.speed = actual_speed;
 }
 
 chronos_monr VirtualObject::getMONR()
 {
-    chronos_monr monr;
+    chronos_monr monr;    
+    double x_noise = 0.0;//(*distribution)(generator);
+    double y_noise = 0.0;//(*distribution)(generator);
 
-    double xyz[3] = {data.x,data.y,data.z};
-    double llh[3] = { 0 , 0 , 0};
+    if (status == RUNNING)
+    {
+        x_noise = (*distribution)(generator);
+        y_noise = (*distribution)(generator);
+    }
+
+    double xyz[3] = {data.x + x_noise, data.y + y_noise, data.z};
     double iLlh[3] = { mRefLat , mRefLon , mRefAlt};
-
+    double llh[3] = { 0 , 0 , 0}; // Long/Lat pos for the object
+    // Calculate the Long/Lat pos from the ENU coordinates
     utility::enuToLlh(iLlh,xyz,llh);
+
 
     monr.lat=llh[0];
     monr.lon=llh[1];
     monr.alt=llh[2];
-
-    //utility::xyzToLlh(data.x,data.y,0,&monr.lat,&monr.lon,&monr.alt);
-    //xyz_to_llh(&monr.lat,&monr.lon,&monr.alt);
     monr.heading = data.heading;
     monr.speed = data.speed;
     monr.direction = 0; // The car is drivning forward
@@ -520,6 +499,17 @@ void VirtualObject::handleMTSP(chronos_mtsp msg)
 void VirtualObject::MONREnabledChanged(int ID, bool status)
 {
     if (ID == getID()) sendMONREnabled = status;
+}
+
+void VirtualObject::handleMeasurementNoiseToggle(bool checked, double stddev)
+{
+
+    if (abs(stddev - distribution->stddev()) > 0.000001)
+    {
+        delete distribution;
+        distribution = new std::normal_distribution<double>(0.0, stddev);
+    }
+    isMeasurementNoiseEnabled = checked;
 }
 
 void VirtualObject::stopSimulation()

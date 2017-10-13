@@ -32,9 +32,29 @@ public:
     {
         enableMONR = enable;
     }
+
+    double getStddev()
+    {
+        return noise_stddev;
+    }
+    void setStddev(double var)
+    {
+        noise_stddev = var;
+    }
+    void setNoiseEnabled(bool enable)
+    {
+        noiseEnabled = enable;
+    }
+    bool isNoiseEnabled()
+    {
+        return noiseEnabled;
+    }
 private:
     int id;
     bool enableMONR = true;
+    bool noiseEnabled = false;
+    double noise_mean = 0.0;
+    double noise_stddev = 0.0;
 
 };
 
@@ -50,6 +70,7 @@ signals:
     //void handle_osem(chronos_osem data);
     void stop_virtual_object();
     void enableMONRchanged(int,bool);
+    void measurement_noise_toggle(bool,double);
 private slots:
 
     void on_init_vobj_clicked();
@@ -67,9 +88,13 @@ private slots:
 
     // QWidgetList specific slots
     void selectedCarChanged();
+
+
     // Checkbox slots
     void handleFollowCarToggled(bool);
     void handleMONREnableToggled(bool);
+    void handleMeasurementNoiseToggled(bool);
+    void handleVarianceChanged();
     void renderWindow();
 
 
@@ -84,6 +109,7 @@ private:
     QTimer *simulation_timer;
 
     qint64 simulation_start_time = 0;
+    QString currentVariance = "0.0";
 
     int running_processes = 0;
 
