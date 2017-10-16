@@ -180,8 +180,8 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
 
     connect(this,SIGNAL(enableMONRchanged(int,bool)),
             vobj,SLOT(MONREnabledChanged(int,bool)));
-    connect(this,SIGNAL(measurement_noise_toggle(bool,double)),
-            vobj,SLOT(handleMeasurementNoiseToggle(bool,double)));
+    connect(this,SIGNAL(measurement_noise_toggle(int,bool,double)),
+            vobj,SLOT(handleMeasurementNoiseToggle(int,bool,double)));
 
     // Reset trace
     ui->widget->clearTrace();
@@ -442,7 +442,7 @@ void MainWindow::handleMeasurementNoiseToggled(bool checked)
 
     ObjectListWidget *item = (ObjectListWidget*) items[0];
 
-    emit measurement_noise_toggle(checked,item->getStddev());
+    emit measurement_noise_toggle(item->getID(),checked,item->getStddev());
 
     item->setNoiseEnabled(checked);
 
@@ -478,6 +478,7 @@ void MainWindow::handleVarianceChanged()
         //qDebug() << "OK Conversion";
         currentVariance = QString::number(newVariance,'g',4);
         item->setStddev(newVariance);
+        emit measurement_noise_toggle(item->getID(),item->isNoiseEnabled(),item->getStddev());
         //emit()
 
     }

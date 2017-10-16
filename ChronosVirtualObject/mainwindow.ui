@@ -57,7 +57,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Std. dev</string>
+      <string>Latitude</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_2">
@@ -70,7 +70,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Std. dev</string>
+      <string>Longitude</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_3">
@@ -83,7 +83,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Std. dev</string>
+      <string>Altitude</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_4">
@@ -96,7 +96,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Std. dev</string>
+      <string>Heading</string>
      </property>
     </widget>
     <widget class="QLabel" name="lab_head">
@@ -109,7 +109,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Std. dev</string>
+      <string>0</string>
      </property>
     </widget>
     <widget class="QLabel" name="lab_alt">
@@ -122,7 +122,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Std. dev</string>
+      <string>0</string>
      </property>
     </widget>
     <widget class="QLabel" name="lab_lat">
@@ -135,7 +135,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Std. dev</string>
+      <string>0</string>
      </property>
     </widget>
     <widget class="QLabel" name="lab_lon">
@@ -148,7 +148,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>Std. dev</string>
+      <string>0</string>
      </property>
     </widget>
    </widget>
@@ -267,7 +267,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Std. dev</string>
+     <string>Number of cars:</string>
     </property>
    </widget>
    <widget class="QCheckBox" name="followCarBox">

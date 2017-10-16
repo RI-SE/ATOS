@@ -79,7 +79,7 @@ private slots:
 
     // Slots for UI communication
     void MONREnabledChanged(int ID, bool status);
-    void handleMeasurementNoiseToggle(bool checked,double stddev);
+    void handleMeasurementNoiseToggle(int ID, bool checked,double stddev);
     void stopSimulation();
     //void handleChangedNoise(double mean, double variance);
 

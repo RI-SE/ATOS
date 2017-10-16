@@ -281,7 +281,7 @@ chronos_monr VirtualObject::getMONR()
     double x_noise = 0.0;//(*distribution)(generator);
     double y_noise = 0.0;//(*distribution)(generator);
 
-    if (status == RUNNING)
+    if (status == RUNNING && isMeasurementNoiseEnabled)
     {
         x_noise = (*distribution)(generator);
         y_noise = (*distribution)(generator);
@@ -501,14 +501,14 @@ void VirtualObject::MONREnabledChanged(int ID, bool status)
     if (ID == getID()) sendMONREnabled = status;
 }
 
-void VirtualObject::handleMeasurementNoiseToggle(bool checked, double stddev)
+void VirtualObject::handleMeasurementNoiseToggle(int ID, bool checked, double stddev)
 {
-
-    if (abs(stddev - distribution->stddev()) > 0.000001)
-    {
+    if (ID != getID()) return;
+    //if (abs(stddev - distribution->stddev()) > 0.000001)
+    //{
         delete distribution;
         distribution = new std::normal_distribution<double>(0.0, stddev);
-    }
+    //}
     isMeasurementNoiseEnabled = checked;
 }
 

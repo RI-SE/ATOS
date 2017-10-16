@@ -70,7 +70,7 @@ signals:
     //void handle_osem(chronos_osem data);
     void stop_virtual_object();
     void enableMONRchanged(int,bool);
-    void measurement_noise_toggle(bool,double);
+    void measurement_noise_toggle(int,bool,double);
 private slots:
 
     void on_init_vobj_clicked();
