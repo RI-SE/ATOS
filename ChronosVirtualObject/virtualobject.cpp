@@ -48,6 +48,7 @@ void VirtualObject::run()
     qint64 elapsed_time = 0; // Time since the start of the execution
     qint64 ctrl_update = 0; // Time since the last control signal update
     qint64 update_sent = 0; // Time since the last MONR message
+    quint64 current_ETSI_time = 0;
 
     // Test variables
     qint64 tmod = 0; // Adding or subtracting time (MTPS)
@@ -113,6 +114,12 @@ void VirtualObject::run()
         else if(status == DISARMED)
         {
             // Do something during disarmed state
+        }
+        else if(status == RUNNING_STANDBY)
+        {
+            current_ETSI_time = QDateTime::currentMSecsSinceEpoch() -
+                        MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+            if(current_ETSI_time>=start_ETSI_time) pendingStatus = RUNNING;
         }
         else if(status == RUNNING && traj_simulation_only)
         {
@@ -513,15 +520,20 @@ void VirtualObject::handleOSTM(chronos_ostm msg)
 void VirtualObject::handleSTRT(chronos_strt msg)
 {
     switch (msg.type) {
-    case 0x02:
+    case 0x01:
         if(status == ARMED)
         {
             pendingStatus = RUNNING;
         }
         break;
 
-    case 0x01:
+    case 0x02:
         // Add code for starting at specified time
+        if(status == ARMED)
+        {
+            start_ETSI_time = msg.ts;
+            pendingStatus = RUNNING_STANDBY;
+        }
         break;
     default:
         break;

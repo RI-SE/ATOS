@@ -161,8 +161,6 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
     car.setInfo("MASTER");
     if (map->removeCar(ID)) qDebug() << "Car removed";
     map->addCar(car);
-    //map->setSelectedCar(ID);
-    //map->setFollowCar(ID);
     map->addInfoTrace(ID,points);
 
 
@@ -401,8 +399,11 @@ void MainWindow::selectedCarChanged()
         // Do not follow any car
         ui->widget->setFollowCar(-1);
     }
+    // Save the new stddev value
     currentVariance = QString::number(item->getStddev(),'g',4);
+    // Set the label with the new value
     ui->varianceEdit->setText(currentVariance);
+    // Set the status of the checkboxes
     ui->MONR_enable->setChecked(item->isEnableMONR());
     ui->measurementNoiseEnable->setChecked(item->isNoiseEnabled());
 
