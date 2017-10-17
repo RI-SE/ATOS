@@ -16,6 +16,8 @@
 #define EARTH_RADIUS 6367000
 #define SOCKET_STACK_START 53240
 
+#define MONR_SEND_TIME_INTERVAL 10 // Time to wait between sending monr
+
 /* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
 #define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000

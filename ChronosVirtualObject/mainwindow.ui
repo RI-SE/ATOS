@@ -289,6 +289,9 @@
     <property name="text">
      <string>Follow selected car</string>
     </property>
+    <property name="checked">
+     <bool>true</bool>
+    </property>
    </widget>
    <widget class="QCheckBox" name="MONR_enable">
     <property name="enabled">

@@ -56,7 +56,8 @@ void VirtualObject::run()
     int ref_index= 0; // Keeps track of which reference is currently followed
 
     bool init_start = false;
-
+    bool traj_simulation_only = false; // Set true to only output the trajectory points
+    bool send_monr_idependently = true;
     chronos_dopm_pt ref_point;      // Placeholder for the reference point
     chronos_dopm_pt prev_ref_point; // Placeholder for the previous ref. point
 
@@ -112,6 +113,67 @@ void VirtualObject::run()
         else if(status == DISARMED)
         {
             // Do something during disarmed state
+        }
+        else if(status == RUNNING && traj_simulation_only)
+        {
+            sleep_time = 5;
+            clock = QDateTime::currentMSecsSinceEpoch();
+            if (ref_index == 0 && init_start)
+            {
+                //ref_index = 1;
+                //ref_point = traj[ref_index];
+                //prev_ref_point = traj[0];
+
+                ref_index = 0;
+                ref_point = traj[ref_index];
+
+                start_time = clock;
+                init_start = false;
+                emit simulation_start(getID());
+            }
+            if (status == ABORT )
+            {
+                qDebug() << "ABORT: Aborting test scenario.";
+                break;
+            }
+            qint64 time_since_HB = clock-heab_recieved_time;
+            // Check if heartbeat deadline has passed
+            if(time_since_HB > HEARTBEAT_TIME)
+            {
+                qDebug() << "ERROR: Heartbeat not recieved.";
+                pendingStatus = ERROR;
+                emit simulation_stop(getID());
+            }
+            if(ref_index < traj.size() - 1 && elapsed_time < simulation_time)
+            {
+                elapsed_time = clock - start_time;
+                if (elapsed_time > ref_point.tRel)
+                {
+                    // Update the state
+                    data.acc = ref_point.accel;
+                    data.heading = ref_point.heading;
+                    data.speed = ref_point.speed;
+                    data.time = elapsed_time;
+                    data.x = ref_point.x;
+                    data.y = ref_point.y;
+                    data.z = ref_point.z;
+
+                    // Send MONR
+                    if (sendMONREnabled && !send_monr_idependently)
+                    {
+                        cClient->sendMonr(getMONR());
+                    }
+                    // Update the point
+                    ref_index++;
+                    ref_point = traj[ref_index];
+                }
+            }
+            else
+            {
+                pendingStatus = STOP;
+                emit simulation_stop(getID());
+            }
+
         }
         else if(status == RUNNING)
         {
@@ -181,7 +243,7 @@ void VirtualObject::run()
                 {
                     qDebug() << "ERROR: Heartbeat not recieved.";
                     pendingStatus = ERROR;
-
+                    emit simulation_stop(getID());
                 }
                 if (clock - ctrl_update > 0)
                 {
@@ -199,12 +261,11 @@ void VirtualObject::run()
         }
 
         clock = QDateTime::currentMSecsSinceEpoch();
-        if (clock - update_sent > 20 && sendMONREnabled)
+        if (clock - update_sent > MONR_SEND_TIME_INTERVAL && sendMONREnabled && send_monr_idependently)
         {
             // Send monr
             cClient->sendMonr(getMONR());
             update_sent = clock;
-
         }
 
         // Send vizualizer update
@@ -314,6 +375,7 @@ chronos_monr VirtualObject::getMONR()
 
     return monr;
 }
+
 
 
 int VirtualObject::findRefPoint(qint64 tRel, uint fromIndex, qint64 refTimeOffset)
