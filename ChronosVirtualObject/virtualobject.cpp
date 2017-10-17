@@ -105,6 +105,8 @@ void VirtualObject::run()
 
             elapsed_time = 0;
 
+
+
             simulation_time = ((chronos_dopm_pt) (traj.last())).tRel;
         }
         else if(status == DISARMED)
@@ -302,13 +304,14 @@ chronos_monr VirtualObject::getMONR()
     monr.direction = 0; // The car is drivning forward
     monr.status = status;
 
-    //QDate ETSI_date();
-    QDateTime ETSI_time(QDate(2004,01,01));
-    ETSI_time.setOffsetFromUtc(0);
+    //QDateTime ETSI_time(QDate(2004,01,01));
+    //ETSI_time.setOffsetFromUtc(0);
+    //monr.ts = QDateTime::currentMSecsSinceEpoch() - ETSI_time.toMSecsSinceEpoch() + ;
 
-    monr.ts = QDateTime::currentMSecsSinceEpoch() - ETSI_time.toMSecsSinceEpoch();
+    monr.ts = QDateTime::currentMSecsSinceEpoch() -
+                MS_FROM_1970_TO_2004_NO_LEAP_SECS +
+                    DIFF_LEAP_SECONDS_UTC_ETSI*1000;
 
-    //monr.ts = data.time;
     return monr;
 }
 

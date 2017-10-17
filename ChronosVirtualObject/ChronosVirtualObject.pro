@@ -8,7 +8,7 @@ QT       += core gui
 QT       += network
 QT       += websockets
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
 TARGET = ChronosVirtualObject
 TEMPLATE = app
@@ -40,7 +40,8 @@ SOURCES += \
         perspectivepixmap.cpp \
         osmclient.cpp \
         osmtile.cpp \
-    virtualobject.cpp
+    virtualobject.cpp \
+    qcustomplot.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -58,7 +59,8 @@ HEADERS += \
         osmclient.h \
         osmtile.h \
         mapwidget.h \
-    virtualobject.h
+    virtualobject.h \
+    qcustomplot.h
 
 FORMS += \
         mainwindow.ui

@@ -19,7 +19,10 @@ public:
         id =  i;
         setText("Car " + QString::number(i));
     }
-    ~ObjectListWidget(){}
+    ~ObjectListWidget(){
+        delete obj_data;
+        delete obj_time;
+    }
 
     int getID(){
         return id;
@@ -49,12 +52,35 @@ public:
     {
         return noiseEnabled;
     }
+
+    void addItem(double time,double data)
+    {
+        obj_time->append(time);
+        obj_data->append(data);
+    }
+    void clearData()
+    {
+        obj_data->clear();
+        obj_time->clear();
+    }
+
+    QVector<double>* getData()
+    {
+        return obj_data;
+    }
+    QVector<double>* getTime()
+    {
+        return obj_time;
+    }
 private:
     int id;
     bool enableMONR = true;
     bool noiseEnabled = false;
     double noise_mean = 0.0;
     double noise_stddev = 0.0;
+
+    QVector<double> *obj_data = new QVector<double>();
+    QVector<double> *obj_time = new QVector<double>();
 
 };
 
@@ -107,6 +133,8 @@ private:
     QVector<VirtualObject*> vobjs;
     QTimer *render_timer;
     QTimer *simulation_timer;
+
+    QVector<double> *time_vector;
 
     qint64 simulation_start_time = 0;
     QString currentVariance = "0.0";

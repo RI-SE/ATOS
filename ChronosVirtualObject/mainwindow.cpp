@@ -38,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->measurementNoiseEnable,SIGNAL(toggled(bool)),
             this,SLOT(handleMeasurementNoiseToggled(bool)));
     // Set the render time to 20ms
-    render_timer->start(20);
+    render_timer->start(500);
 }
 
 MainWindow::~MainWindow()
@@ -54,9 +54,12 @@ MainWindow::~MainWindow()
 void MainWindow::on_init_vobj_clicked()
 {
 
+    QCustomPlot *plot = ui->plot1;
+
+    plot->addGraph();
+    plot->xAxis->setLabel("t(s)");
 
     int obj_nr = ui->spinBox->value();
-
     for(int i = 0; i<obj_nr;i++)
     {
         startObject(i,53240+2*i,53241+2*i);
@@ -65,8 +68,12 @@ void MainWindow::on_init_vobj_clicked()
         ui->carListWidget->addItem(item);
         if (i==0) ui->carListWidget->item(i)->setSelected(true);
 
-
+        plot->addGraph();
     }
+
+    plot->xAxis->setLabel("t : time");
+    plot->yAxis->setRange(0,0.00001);
+    plot->yAxis->setLabel("v : velocity");
 
 
     ui->delete_vobj->setEnabled(true);
@@ -261,11 +268,8 @@ void MainWindow::updateTime()
 }
 
 void MainWindow::handleUpdateState(VOBJ_DATA data){
-    MapWidget *map = ui->widget;
 
-    // Display time in the label
-    // displayTime(data.time);
-
+    /* Update the state of the car on the map */
     // Update the car position
     LocPoint pos;
     pos.setTime(data.time);
@@ -287,8 +291,34 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     pos.setInfo(sStatus + QString::number(data.status) + "\n"+ status_text);
 
     // Update the car on the map
-    map->updateCarState(data.ID,pos);
-    //map->update();
+    ui->widget->updateCarState(data.ID,pos);
+
+    /* Add points for plotting */
+
+    QCustomPlot *plot = ui->plot1;
+
+    QCPRange range = plot->yAxis->range();
+    // find the objective
+    QListWidget *temp = ui->carListWidget;
+    for (int i = 0; i < temp->count();i++){
+        ObjectListWidget *obj = (ObjectListWidget*)temp->item(i);
+
+        if (obj->getID() == data.ID)
+        {
+            //qDebug() << "Vel = " << QString::number(data.speed);
+            obj->addItem(data.time / 1000.0,data.speed);
+            /*
+            if (data.speed > range.maxRange)
+            {
+                plot->yAxis->setRange(range.minRange,data.speed);
+            }
+            else if (data.speed < range.minRange)
+            {
+                plot->yAxis->setRange(data.speed, range.maxRange);
+            }*/
+            break;
+        }
+    }
 }
 
 void MainWindow::handleNewOSEM(chronos_osem msg)
@@ -325,6 +355,7 @@ void MainWindow::handleSimulationStart(int ID)
     if (!simulation_timer->isActive())
     {
         simulation_timer->start(10);
+        render_timer->setInterval(50);
         simulation_start_time = QDateTime::currentMSecsSinceEpoch();
     }
 }
@@ -334,6 +365,7 @@ void MainWindow::handleSimulationStop(int ID)
     if (--running_processes == 0)
     {
         simulation_timer->stop();
+        render_timer->setInterval(500);
     }
 }
 
@@ -490,4 +522,22 @@ void MainWindow::handleVarianceChanged()
 void MainWindow::renderWindow()
 {
     ui->widget->update();
+
+    //int64_t cols[3] = {Qt::blue, Qt::red, Qt::yellow};
+
+    QCustomPlot *plot = ui->plot1;
+    QListWidget *temp = ui->carListWidget;
+    for (int i = 0; i < temp->count();i++){
+        ObjectListWidget *obj = (ObjectListWidget*)temp->item(i);
+        QVector<double> *time = obj->getTime();
+        QVector<double> *data = obj->getData();
+        plot->graph(i)->setData(*time,*data);
+        //plot->graph(i)->setPen(cols[i]);
+        plot->xAxis->setRange(0,(*time).last());
+        plot->yAxis->setRange(0,0.01); // Make dynamic
+
+
+    }
+
+    ui->plot1->replot();
 }
