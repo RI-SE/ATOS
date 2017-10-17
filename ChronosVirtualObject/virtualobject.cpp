@@ -17,7 +17,8 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
         0,  // speed
         0,  // acceleration
         status,    // statusF
-        isMaster    // MASTER?
+        isMaster,    // MASTER?
+        0
     };
 
     mRefLat = rLat;
@@ -569,7 +570,12 @@ void VirtualObject::handleMTSP(chronos_mtsp msg)
     {
         // Do something
 
-        time_adjustment = msg.ts;
+        time_adjustment = QDateTime::currentMSecsSinceEpoch()
+                - MS_FROM_1970_TO_2004_NO_LEAP_SECS
+                + DIFF_LEAP_SECONDS_UTC_ETSI
+                - msg.ts;
+        data.mtsp = time_adjustment;
+
     }
 }
 

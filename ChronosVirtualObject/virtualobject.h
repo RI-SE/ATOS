@@ -37,6 +37,7 @@ typedef struct {
     double acc;
     qint8 status;
     bool isMaster;
+    qint64 mtsp;
 } VOBJ_DATA;
 
 Q_DECLARE_METATYPE(VOBJ_DATA)

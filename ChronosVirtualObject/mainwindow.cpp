@@ -75,7 +75,7 @@ void MainWindow::on_init_vobj_clicked()
     }
 
     plot->xAxis->setLabel("t : time");
-    plot->yAxis->setLabel("v : velocity");
+    plot->yAxis->setLabel("MTSP");
     plot->legend->setVisible(true);
 
 
@@ -310,7 +310,7 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
         if (obj->getID() == data.ID)
         {
             //qDebug() << "Vel = " << QString::number(data.speed);
-            obj->addItem(data.time / 1000.0,data.speed);
+            obj->addItem(data.time / 1000.0,data.mtsp);
 /*
             if (data.speed > range.upper)
             {
@@ -354,6 +354,7 @@ void MainWindow::handleNewTrajectory(int ID, QVector<chronos_dopm_pt> traj)
 
 void MainWindow::handleSimulationStart(int ID)
 {
+    (void)ID;
     running_processes++;
     // ID implemented for future use
     if (!simulation_timer->isActive())
@@ -366,6 +367,7 @@ void MainWindow::handleSimulationStart(int ID)
 
 void MainWindow::handleSimulationStop(int ID)
 {
+    (void)ID;
     if (--running_processes == 0)
     {
         simulation_timer->stop();
