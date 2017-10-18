@@ -102,7 +102,7 @@ void MainWindow::on_delete_vobj_clicked()
 
 
     // Reset the checkbox states
-    ui->followCarBox->setChecked(false);
+    ui->followCarBox->setChecked(true);
     ui->MONR_enable->setChecked(true);
     ui->measurementNoiseEnable->setChecked(false);
 

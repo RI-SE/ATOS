@@ -133,8 +133,8 @@ private:
 
     // Time variables
     quint64 heab_recieved_time; // Needed in order to track when Heartbeat came in
-    quint64 sleep_time = 2;     // How long the process should be suspended
-    quint64 start_ETSI_time;
+    quint64 sleep_time = 20;     // How long the process should be suspended
+    quint64 start_ETSI_time;    // The ETSI time to start at
     // The trajectory to follow
     QVector<chronos_dopm_pt> traj;
 

@@ -114,6 +114,7 @@ void TcpServerSimple::tcpInputDataAvailable()
 void TcpServerSimple::tcpInputError(QAbstractSocket::SocketError socketError)
 {
     (void)socketError;
+    qDebug() << "SocketError: " << QString::number(socketError);
     mTcpSocket->close();
     delete mTcpSocket;
     mTcpSocket = 0;
