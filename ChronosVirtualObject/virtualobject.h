@@ -91,6 +91,7 @@ private slots:
     // Slots for UI communication
     void MONREnabledChanged(int ID, bool status);
     void handleMeasurementNoiseToggle(int ID, bool checked,double stddev);
+    void handleTrajSimDelayToggle(int ID, bool checked, double delayFactor);
     void stopSimulation();
     //void handleChangedNoise(double mean, double variance);
 
@@ -119,6 +120,11 @@ private:
     std::default_random_engine generator;
     //std::normal_distribution<double> distribution(0.0);
     std::normal_distribution<double> *distribution;
+
+    // Set true to only output the trajectory points
+    bool traj_simulation_only = false;
+    // Delay simulation factor
+    double delay_simulation_factor = 1.0;
 
 
     bool sendMONREnabled = true;

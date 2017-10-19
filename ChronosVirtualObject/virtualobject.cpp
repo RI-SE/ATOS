@@ -58,7 +58,9 @@ void VirtualObject::run()
     int ref_index= 0; // Keeps track of which reference is currently followed
 
     bool init_start = false;
-    bool traj_simulation_only = false; // Set true to only output the trajectory points
+
+
+    bool test_simulation = false;
     bool send_monr_idependently = true;
     chronos_dopm_pt ref_point;      // Placeholder for the reference point
     chronos_dopm_pt prev_ref_point; // Placeholder for the previous ref. point
@@ -108,7 +110,7 @@ void VirtualObject::run()
 
             elapsed_time = 0;
 
-
+            test_simulation = traj_simulation_only;
 
             simulation_time = ((chronos_dopm_pt) (traj.last())).tRel;
         }
@@ -122,7 +124,7 @@ void VirtualObject::run()
                         MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
             if(current_ETSI_time>=start_ETSI_time) pendingStatus = RUNNING;
         }
-        else if(status == RUNNING && traj_simulation_only)
+        else if(status == RUNNING && test_simulation)
         {
             sleep_time = 5;
             clock = QDateTime::currentMSecsSinceEpoch();
@@ -155,7 +157,7 @@ void VirtualObject::run()
             if(ref_index < traj.size() - 1 && elapsed_time < simulation_time)
             {
                 elapsed_time = clock - start_time;
-                if (elapsed_time > ref_point.tRel)
+                if ((double) elapsed_time > (double) ref_point.tRel*delay_simulation_factor)
                 {
                     // Update the state
                     data.acc = ref_point.accel;
@@ -593,6 +595,14 @@ void VirtualObject::handleMeasurementNoiseToggle(int ID, bool checked, double st
         distribution = new std::normal_distribution<double>(0.0, stddev);
     //}
     isMeasurementNoiseEnabled = checked;
+}
+
+void VirtualObject::handleTrajSimDelayToggle(int ID, bool checked, double delayFactor)
+{
+    if (ID != getID()) return;
+
+    traj_simulation_only = checked;
+    delay_simulation_factor = delayFactor;
 }
 
 void VirtualObject::stopSimulation()

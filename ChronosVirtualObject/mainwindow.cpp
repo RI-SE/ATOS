@@ -18,6 +18,11 @@ MainWindow::MainWindow(QWidget *parent) :
     handleNewOSEM(start_state);
 
     QListWidget *lwid = ui->carListWidget;
+    QSlider * slider = ui->delayTimeSlider;
+
+MainWindow::defaultTrajSimDelayValue = slider->minimum() + (slider->maximum()-slider->minimum()) / 2;
+    slider->setValue(MainWindow::defaultTrajSimDelayValue);
+
 
     render_timer = new QTimer(this);
     simulation_timer = new QTimer(this);
@@ -33,10 +38,16 @@ MainWindow::MainWindow(QWidget *parent) :
             this,SLOT(handleFollowCarToggled(bool)));
     connect(ui->MONR_enable,SIGNAL(toggled(bool)),
             this,SLOT(handleMONREnableToggled(bool)));
-    connect(ui->varianceEdit,SIGNAL(editingFinished()),
-            this,SLOT(handleVarianceChanged()));
     connect(ui->measurementNoiseEnable,SIGNAL(toggled(bool)),
             this,SLOT(handleMeasurementNoiseToggled(bool)));
+    connect(ui->varianceEdit,SIGNAL(editingFinished()),
+            this,SLOT(handleVarianceChanged()));
+    connect(ui->trajSimBox,SIGNAL(toggled(bool)),
+            this,SLOT(handleTrajSimToggled(bool)));
+    //connect(ui->delayTimeSlider,SIGNAL(sliderReleased()),
+    //        this,SLOT(handleDelayTimeSliderChanged()));
+    connect(ui->delayTimeSlider,SIGNAL(valueChanged(int)),
+            this,SLOT(handleDelayTimeSliderChanged()));
     // Set the render time to 20ms
     render_timer->start(500);
 }
@@ -63,7 +74,7 @@ void MainWindow::on_init_vobj_clicked()
     {
         startObject(i,53240+2*i,53241+2*i);
         //ui->carListWidget->addItem("Car " + QString::number(ID));
-        ObjectListWidget *item = new ObjectListWidget(i);
+        ObjectListWidget *item = new ObjectListWidget(i,defaultTrajSimDelayValue);
         ui->carListWidget->addItem(item);
         if (i==0) ui->carListWidget->item(i)->setSelected(true);
 
@@ -83,6 +94,7 @@ void MainWindow::on_init_vobj_clicked()
     ui->init_vobj->setEnabled(false);
     ui->followCarBox->setEnabled(true);
     ui->MONR_enable->setEnabled(true);
+    ui->trajSimBox->setEnabled(true);
 
     QCheckBox *mcbx = ui->measurementNoiseEnable;
     mcbx->setEnabled(true);
@@ -105,11 +117,13 @@ void MainWindow::on_delete_vobj_clicked()
     ui->followCarBox->setChecked(true);
     ui->MONR_enable->setChecked(true);
     ui->measurementNoiseEnable->setChecked(false);
+    ui->trajSimBox->setChecked(false);
 
     // Disable the checkboxes
     ui->followCarBox->setEnabled(false);
     ui->MONR_enable->setEnabled(false);
     ui->measurementNoiseEnable->setEnabled(false);
+    ui->trajSimBox->setEnabled(false);
 
     //emit(ui->measurementNoiseEnable->toggled(false));
 
@@ -193,7 +207,8 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
             vobj,SLOT(MONREnabledChanged(int,bool)));
     connect(this,SIGNAL(measurement_noise_toggle(int,bool,double)),
             vobj,SLOT(handleMeasurementNoiseToggle(int,bool,double)));
-
+    connect(this,SIGNAL(traj_sim_delay_toggle(int,bool,double)),
+            vobj,SLOT(handleTrajSimDelayToggle(int,bool,double)));
     // Reset trace
     ui->widget->clearTrace();
     // Add red trace to the carl
@@ -408,6 +423,10 @@ void MainWindow::selectedCarChanged()
     // Set the status of the checkboxes
     ui->MONR_enable->setChecked(item->isEnableMONR());
     ui->measurementNoiseEnable->setChecked(item->isNoiseEnabled());
+    ui->trajSimBox->setChecked(item->isTrajSimEnabled());
+
+    // Set the slider value
+    ui->delayTimeSlider->setValue(item->getTrajSimDelayFactor());
 
     emit(ui->measurementNoiseEnable->toggled(item->isNoiseEnabled()));
 
@@ -520,11 +539,52 @@ void MainWindow::handleVarianceChanged()
         currentVariance = QString::number(newVariance,'g',4);
         item->setStddev(newVariance);
         emit measurement_noise_toggle(item->getID(),item->isNoiseEnabled(),item->getStddev());
-        //emit()
-
     }
     inputLine->setText(currentVariance);
     ui->varianceEdit->clearFocus();
+
+}
+
+void MainWindow::handleTrajSimToggled(bool checked)
+{
+    QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
+    if (items.size()==0)
+    {
+        qDebug() << "No item selected";
+        return;
+    }
+    else if (items.size()>1)
+    {
+        qDebug() << "To many selected items.";
+        return;
+    }
+    ObjectListWidget *item = (ObjectListWidget*) items[0];
+
+    item->setTrajSimEnabled(checked);
+    ui->delayTimeSlider->setEnabled(checked);
+    emit traj_sim_delay_toggle(item->getID(),item->isTrajSimEnabled(),
+                               1+(item->getTrajSimDelayFactor()-defaultTrajSimDelayValue)/10);
+}
+
+void MainWindow::handleDelayTimeSliderChanged()
+{
+    QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
+    if (items.size()==0)
+    {
+        qDebug() << "No item selected";
+        return;
+    }
+    else if (items.size()>1)
+    {
+        qDebug() << "To many selected items.";
+        return;
+    }
+    ObjectListWidget *item = (ObjectListWidget*) items[0];
+    int slide_value = ui->delayTimeSlider->value();
+    item->setTrajSimDelayFactor(slide_value);
+    qDebug() << "Value Changed";
+    emit traj_sim_delay_toggle(item->getID(),item->isTrajSimEnabled(),
+                               1.0+(double)(slide_value-defaultTrajSimDelayValue)/50.0);
 
 }
 

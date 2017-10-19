@@ -15,8 +15,9 @@ class ObjectListWidget : public QListWidgetItem
 {
 
 public:
-    ObjectListWidget(int i = 0){
+    ObjectListWidget(int i = 0, int delayFactor = 0){
         id =  i;
+        traj_sim_delay_factor = delayFactor;
         setText("Car " + QString::number(i));
     }
     ~ObjectListWidget(){
@@ -36,6 +37,15 @@ public:
         enableMONR = enable;
     }
 
+    bool isTrajSimEnabled()
+    {
+        return trajSimEnabled;
+    }
+    void setTrajSimEnabled(bool isEnabled)
+    {
+        trajSimEnabled = isEnabled;
+    }
+
     double getStddev()
     {
         return noise_stddev;
@@ -43,6 +53,15 @@ public:
     void setStddev(double var)
     {
         noise_stddev = var;
+    }
+
+    void setTrajSimDelayFactor(int factor)
+    {
+        traj_sim_delay_factor  = factor;
+    }
+    int getTrajSimDelayFactor()
+    {
+       return traj_sim_delay_factor;
     }
     void setNoiseEnabled(bool enable)
     {
@@ -76,19 +95,26 @@ private:
     int id;
     bool enableMONR = true;
     bool noiseEnabled = false;
+    bool trajSimEnabled = false;
     double noise_mean = 0.0;
     double noise_stddev = 0.0;
+    int traj_sim_delay_factor = 6;
 
     QVector<double> *obj_data = new QVector<double>();
     QVector<double> *obj_time = new QVector<double>();
 
 };
 
+
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
+
+
+
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
@@ -97,6 +123,7 @@ signals:
     void stop_virtual_object();
     void enableMONRchanged(int,bool);
     void measurement_noise_toggle(int,bool,double);
+    void traj_sim_delay_toggle(int,bool,double);
 private slots:
 
     void on_init_vobj_clicked();
@@ -119,8 +146,10 @@ private slots:
     // Checkbox slots
     void handleFollowCarToggled(bool);
     void handleMONREnableToggled(bool);
-    void handleMeasurementNoiseToggled(bool);
+    void handleMeasurementNoiseToggled(bool);    
     void handleVarianceChanged();
+    void handleTrajSimToggled(bool);
+    void handleDelayTimeSliderChanged();
     void renderWindow();
 
 
@@ -138,6 +167,7 @@ private:
 
     qint64 simulation_start_time = 0;
     QString currentVariance = "0.0";
+    int defaultTrajSimDelayValue;
 
     int running_processes = 0;
 
@@ -148,7 +178,6 @@ private:
     void displayTime(qint64 t);
     void updateLabelOSEM(double lat,double lon,double alt);
 };
-
 
 
 
