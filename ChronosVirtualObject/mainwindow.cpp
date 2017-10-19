@@ -20,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QListWidget *lwid = ui->carListWidget;
     QSlider * slider = ui->delayTimeSlider;
 
-MainWindow::defaultTrajSimDelayValue = slider->minimum() + (slider->maximum()-slider->minimum()) / 2;
+    MainWindow::defaultTrajSimDelayValue = slider->minimum() ;//+ (slider->maximum()-slider->minimum()) / 2;
     slider->setValue(MainWindow::defaultTrajSimDelayValue);
 
 
@@ -563,7 +563,7 @@ void MainWindow::handleTrajSimToggled(bool checked)
     item->setTrajSimEnabled(checked);
     ui->delayTimeSlider->setEnabled(checked);
     emit traj_sim_delay_toggle(item->getID(),item->isTrajSimEnabled(),
-                               1+(item->getTrajSimDelayFactor()-defaultTrajSimDelayValue)/10);
+                               item->getTrajSimDelayFactor()-1);
 }
 
 void MainWindow::handleDelayTimeSliderChanged()
@@ -583,8 +583,8 @@ void MainWindow::handleDelayTimeSliderChanged()
     int slide_value = ui->delayTimeSlider->value();
     item->setTrajSimDelayFactor(slide_value);
     qDebug() << "Value Changed";
-    emit traj_sim_delay_toggle(item->getID(),item->isTrajSimEnabled(),
-                               1.0+(double)(slide_value-defaultTrajSimDelayValue)/50.0);
+    emit traj_sim_delay_toggle(item->getID(),item->isTrajSimEnabled(),slide_value-1);
+                               //1.0+(double)(slide_value-defaultTrajSimDelayValue)/50.0);
 
 }
 

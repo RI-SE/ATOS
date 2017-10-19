@@ -58,7 +58,7 @@ void VirtualObject::run()
     int ref_index= 0; // Keeps track of which reference is currently followed
 
     bool init_start = false;
-
+    qint64 time_since_update = 0; // Used in simulated trajectory
 
     bool test_simulation = false;
     bool send_monr_idependently = true;
@@ -110,6 +110,8 @@ void VirtualObject::run()
 
             elapsed_time = 0;
 
+            time_since_update = 0;
+
             test_simulation = traj_simulation_only;
 
             simulation_time = ((chronos_dopm_pt) (traj.last())).tRel;
@@ -130,9 +132,6 @@ void VirtualObject::run()
             clock = QDateTime::currentMSecsSinceEpoch();
             if (ref_index == 0 && init_start)
             {
-                //ref_index = 1;
-                //ref_point = traj[ref_index];
-                //prev_ref_point = traj[0];
 
                 ref_index = 0;
                 ref_point = traj[ref_index];
@@ -154,11 +153,13 @@ void VirtualObject::run()
                 pendingStatus = ERROR;
                 emit simulation_stop(getID());
             }
-            if(ref_index < traj.size() - 1 && elapsed_time < simulation_time)
+            if(ref_index < traj.size() - 1 )//&& elapsed_time < simulation_time)
             {
                 elapsed_time = clock - start_time;
-                if ((double) elapsed_time > (double) ref_point.tRel*delay_simulation_factor)
+                qint64 deltaT = clock - time_since_update;
+                if (double(deltaT) > 50.0 + 100.0*delay_simulation_factor)
                 {
+                    qDebug() << "Delay = " << QString::number(100*delay_simulation_factor);
                     // Update the state
                     data.acc = ref_point.accel;
                     data.heading = ref_point.heading;
@@ -176,6 +177,7 @@ void VirtualObject::run()
                     // Update the point
                     ref_index++;
                     ref_point = traj[ref_index];
+                    time_since_update = clock;
                 }
             }
             else
@@ -188,7 +190,6 @@ void VirtualObject::run()
         else if(status == RUNNING)
         {
             sleep_time = 5;
-
             clock = QDateTime::currentMSecsSinceEpoch();
             // Is this the first iteration?
             if (ref_index == 0 && init_start)

@@ -109,8 +109,7 @@ private:
     qint8 pendingStatus = INIT;
 
 
-
-    // Check to see if the messages
+    // Check to see if the messages has been received
     bool hasOSEM = false;
     bool hasDOPM = false;
 
@@ -118,7 +117,6 @@ private:
     bool isMeasurementNoiseEnabled = false;
 
     std::default_random_engine generator;
-    //std::normal_distribution<double> distribution(0.0);
     std::normal_distribution<double> *distribution;
 
     // Set true to only output the trajectory points
