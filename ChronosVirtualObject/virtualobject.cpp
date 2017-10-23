@@ -45,6 +45,7 @@ void VirtualObject::run()
 
     qint64 clock = 0;       // Current time
     qint64 start_time = 0;  // Start time of the execution of a trajectory
+    qint64 start_ETSI_time = 0;
     qint64 simulation_time = 0;   // The total time for the entire simulation
     qint64 elapsed_time = 0; // Time since the start of the execution
     qint64 ctrl_update = 0; // Time since the last control signal update
@@ -124,7 +125,10 @@ void VirtualObject::run()
         {
             current_ETSI_time = QDateTime::currentMSecsSinceEpoch() -
                         MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-            if(current_ETSI_time>=start_ETSI_time) pendingStatus = RUNNING;
+            if(current_ETSI_time>=start_ETSI_time)
+            {
+                pendingStatus = RUNNING;
+            }
         }
         else if(status == RUNNING && test_simulation)
         {
@@ -137,6 +141,8 @@ void VirtualObject::run()
                 ref_point = traj[ref_index];
 
                 start_time = clock;
+                start_ETSI_time = clock - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI *1000;
+                first_mtsp_received =false;
                 init_start = false;
                 emit simulation_start(getID());
             }
@@ -199,6 +205,8 @@ void VirtualObject::run()
                 prev_ref_point = traj[0];
 
                 start_time = clock;
+                start_ETSI_time = clock - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI *1000;
+                first_mtsp_received =false;
                 init_start = false;
                 emit simulation_start(getID());
             }
@@ -282,6 +290,7 @@ void VirtualObject::run()
         // Send vizualizer update
         data.status = status;
         data.isMaster = isMaster;
+        data.mtsp = time_adjustment;
         emit updated_state(data);
         QThread::msleep(sleep_time);
 
@@ -568,16 +577,25 @@ void VirtualObject::handleSYPM(chronos_sypm msg)
 void VirtualObject::handleMTSP(chronos_mtsp msg)
 {
     qDebug() << "MTSP recieved";
+    if (!first_mtsp_received)
+    {
+        first_mtsp = msg.ts;
+        first_mtsp_received =true;
+    }
     // Double-check what the status should be
     if (status == ARMED || status == RUNNING)
     {
         // Do something
 
-        time_adjustment = QDateTime::currentMSecsSinceEpoch()
+
+
+        qint64 temp = QDateTime::currentMSecsSinceEpoch()
                 - MS_FROM_1970_TO_2004_NO_LEAP_SECS
-                + DIFF_LEAP_SECONDS_UTC_ETSI
-                - msg.ts;
-        data.mtsp = time_adjustment;
+                + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+
+        time_adjustment = (qint64) (msg.ts - first_mtsp);
+        qDebug() << "MTSP: " << QString::number(time_adjustment);
+        //data.mtsp = time_adjustment;
 
     }
 }

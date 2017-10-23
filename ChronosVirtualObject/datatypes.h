@@ -550,7 +550,7 @@ typedef enum {
     CHRONOS_MSG_STAT,
     CHRONOS_MSG_LLCM,
     CHRONOS_MSG_SYPM,
-    CHRONOS_MSG_MPST
+    CHRONOS_MSG_MTSP
 } CHRONOS_MSG;
 
 typedef struct {
@@ -602,7 +602,7 @@ typedef struct {
 } chronos_sypm;
 
 typedef struct {
-    uint32_t ts;
+    uint64_t ts;
 } chronos_mtsp;
 
 #endif /* DATATYPES_H_ */

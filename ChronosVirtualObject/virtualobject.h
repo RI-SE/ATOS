@@ -131,6 +131,8 @@ private:
 
     //Syncronisation variables
     bool isMaster = true;
+    bool first_mtsp_received = false;
+    uint64_t first_mtsp = 0;
     qint64 time_adjustment = 0;
     QVector<quint32> sync_points;
 

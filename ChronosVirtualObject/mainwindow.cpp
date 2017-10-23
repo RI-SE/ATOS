@@ -109,6 +109,7 @@ void MainWindow::on_init_vobj_clicked()
 }
 void MainWindow::on_delete_vobj_clicked()
 {
+    simulation_timer->stop();
 
     ui->delete_vobj->setEnabled(false);
 
@@ -370,6 +371,13 @@ void MainWindow::handleNewTrajectory(int ID, QVector<chronos_dopm_pt> traj)
 void MainWindow::handleSimulationStart(int ID)
 {
     (void)ID;
+
+    // Clear the data in the plot
+    QListWidget *temp = ui->carListWidget;
+    ObjectListWidget *obj = (ObjectListWidget*) temp->item(ID);
+    obj->clearData();
+
+
     running_processes++;
     // ID implemented for future use
     if (!simulation_timer->isActive())
