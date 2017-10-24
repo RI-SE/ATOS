@@ -147,7 +147,7 @@ private slots:
     void handleFollowCarToggled(bool);
     void handleMONREnableToggled(bool);
     void handleMeasurementNoiseToggled(bool);    
-    void handleVarianceChanged();
+    void handleStddevChanged();
     void handleTrajSimToggled(bool);
     void handleDelayTimeSliderChanged();
     void renderWindow();
@@ -166,7 +166,7 @@ private:
     QVector<double> *time_vector;
 
     qint64 simulation_start_time = 0;
-    QString currentVariance = "0.0";
+    QString currentStddev = "0.0";
     int defaultTrajSimDelayValue;
 
     int running_processes = 0;

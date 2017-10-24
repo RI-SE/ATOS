@@ -14,7 +14,6 @@ MainWindow::MainWindow(QWidget *parent) :
     start_state.lon = 12.89134921;
     start_state.alt = 219.0;
     start_state.heading = 0;
-
     handleNewOSEM(start_state);
 
     QListWidget *lwid = ui->carListWidget;
@@ -41,21 +40,20 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->measurementNoiseEnable,SIGNAL(toggled(bool)),
             this,SLOT(handleMeasurementNoiseToggled(bool)));
     connect(ui->varianceEdit,SIGNAL(editingFinished()),
-            this,SLOT(handleVarianceChanged()));
+            this,SLOT(handleStddevChanged()));
     connect(ui->trajSimBox,SIGNAL(toggled(bool)),
             this,SLOT(handleTrajSimToggled(bool)));
-    //connect(ui->delayTimeSlider,SIGNAL(sliderReleased()),
-    //        this,SLOT(handleDelayTimeSliderChanged()));
     connect(ui->delayTimeSlider,SIGNAL(valueChanged(int)),
             this,SLOT(handleDelayTimeSliderChanged()));
-    // Set the render time to 20ms
+
+    // Set the render time to 500ms and start it
     render_timer->start(500);
 }
 
 MainWindow::~MainWindow()
 {
-    //delete chronos;
     render_timer->stop();
+    simulation_timer->stop();
     delete simulation_timer;
     delete render_timer;
     delete ui;
@@ -68,51 +66,50 @@ void MainWindow::on_init_vobj_clicked()
     QCustomPlot *plot = ui->plot1;
     QPen pen;
 
+    // Read the value from the spinbox and create that many objects
     int obj_nr = ui->spinBox->value();
-
     for(int i = 0; i<obj_nr;i++)
     {
+        // Create and start the virtual object
         startObject(i,53240+2*i,53241+2*i);
-        //ui->carListWidget->addItem("Car " + QString::number(ID));
+        // Create corresponding List Widged item to control the different objects
         ObjectListWidget *item = new ObjectListWidget(i,defaultTrajSimDelayValue);
+        // Add the created control to the list
         ui->carListWidget->addItem(item);
+        // Set the default selected car
         if (i==0) ui->carListWidget->item(i)->setSelected(true);
 
+        // Add corresponding plot
         plot->addGraph();
-
         pen.setColor(QColor(qSin(i*0.3)*100+100, qSin(i*1.6+0.7)*100+100, qSin(i*0.4+0.6)*100+100));
         plot->graph(i)->setPen(pen);
         plot->graph(i)->setName("Car " + QString::number(i));
     }
 
+    // Configure the plot
     plot->xAxis->setLabel("t : time");
     plot->yAxis->setLabel("MTSP");
     plot->legend->setVisible(true);
 
 
+    // Enable the checkboxes
     ui->delete_vobj->setEnabled(true);
     ui->init_vobj->setEnabled(false);
     ui->followCarBox->setEnabled(true);
     ui->MONR_enable->setEnabled(true);
     ui->trajSimBox->setEnabled(true);
-
-    QCheckBox *mcbx = ui->measurementNoiseEnable;
-    mcbx->setEnabled(true);
-
-    // Send signal to update the variance enabled state
-    emit(mcbx->toggled(mcbx->isChecked()));
-    //ui->carListWidget->SelectColumns
-
-    //startObject(0,53240,53241);
-    //startObject(1,53242,53243);
+    ui->measurementNoiseEnable->setEnabled(true);
 
 }
 void MainWindow::on_delete_vobj_clicked()
 {
+    // Stop the simulation timer
     simulation_timer->stop();
 
+    // Disable the delete button
     ui->delete_vobj->setEnabled(false);
-
+    // Enable the init button
+    ui->init_vobj->setEnabled(true);
 
     // Reset the checkbox states
     ui->followCarBox->setChecked(true);
@@ -126,37 +123,35 @@ void MainWindow::on_delete_vobj_clicked()
     ui->measurementNoiseEnable->setEnabled(false);
     ui->trajSimBox->setEnabled(false);
 
-    //emit(ui->measurementNoiseEnable->toggled(false));
-
+    // Clear the listbox
     ui->carListWidget->clear();
+
+    // Do they do anything?
     ui->plot1->clearGraphs();
     ui->plot1->legend->setVisible(false);
 
-
+    // Tell all virtual objects to stop running
     emit stop_virtual_object();
 
-    //delete vobj;
 }
 
+// Update the label containing the OSEM information
 void MainWindow::updateLabelOSEM(double lat, double lon, double alt) {
-    //on_updateButton_clicked();
 
     char c_lat[LABEL_TEXT_LENGTH];
     char c_long[LABEL_TEXT_LENGTH];
     char c_alt[LABEL_TEXT_LENGTH];
-    //char c_head[LABEL_TEXT_LENGTH];
 
     snprintf(c_lat,LABEL_TEXT_LENGTH,"%g",lat);
     snprintf(c_long,LABEL_TEXT_LENGTH,"%g",lon);
     snprintf(c_alt,LABEL_TEXT_LENGTH,"%g",alt);
-    //snprintf(c_head,LABEL_TEXT_LENGTH,"%g",heading);
 
     ui->lab_lat->setText(c_lat);
     ui->lab_lon->setText(c_long);
     ui->lab_alt->setText(c_alt);
-    //ui->lab_head->setText(c_head);
 }
 
+// Creates and starts a single object.
 void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
 
 
@@ -212,14 +207,9 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
             vobj,SLOT(handleTrajSimDelayToggle(int,bool,double)));
     // Reset trace
     ui->widget->clearTrace();
-    // Add red trace to the carl
-    //ui->widget->setTraceCar(0);
-
-
 
     // Start the thread with the highest priority
     vobj->start(QThread::TimeCriticalPriority);
-    //vobj->start();
     vobjs.append(vobj);
 
 }
@@ -228,8 +218,6 @@ void MainWindow::removeObject(int ID){
 
 
     MapWidget *map = ui->widget;
-
-
     if (ID <0)
     {
         qDebug() << "Object does not exist.";
@@ -241,26 +229,15 @@ void MainWindow::removeObject(int ID){
     }
 
     int del_idx = 0;
-    bool isFound = false;
     for (del_idx = 0;del_idx<vobjs.size();del_idx++)
     {
         if (vobjs[del_idx]->getID() == ID)
         {
-            isFound = true;
+            delete vobjs[del_idx];
+            vobjs.remove(del_idx);
             break;
         }
     }
-    if (isFound)
-    {
-        delete vobjs[del_idx];
-        vobjs.remove(del_idx);
-    }
-    map->update();
-
-
-    ui->init_vobj->setEnabled(true);
-
-
 }
 
 VirtualObject* MainWindow::findVirtualObject(int ID)
@@ -270,16 +247,8 @@ VirtualObject* MainWindow::findVirtualObject(int ID)
     }
     return 0;
 }
-/*
-void MainWindow::displayTime(qint64 t){
-    // Display the time sent from the object
-    char buffer[20];
-    double d_t = (double) t/1000.0f;
-    snprintf(buffer,20,"%g",d_t);
-    ui->lab_runtime->setText(buffer);
 
-}*/
-
+// Update the time label
 void MainWindow::updateTime()
 {
     qint64 time = QDateTime::currentMSecsSinceEpoch() - simulation_start_time;
@@ -299,7 +268,7 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     double heading = (data.heading-90.0)*M_PI/180;
     pos.setAlpha(heading);
 
-    // Set Master or slave status on the car
+    // Set Master or Slave status on the car
     QString sStatus = "STATUS: ";
     QString status_text;
     if (data.isMaster){
@@ -315,27 +284,12 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
 
     /* Add points for plotting */
 
-    QCustomPlot *plot = ui->plot1;
-
-    //QCPRange range = plot->yAxis->range();
-    // find the objective
     QListWidget *temp = ui->carListWidget;
     for (int i = 0; i < temp->count();i++){
         ObjectListWidget *obj = (ObjectListWidget*)temp->item(i);
-
         if (obj->getID() == data.ID)
         {
-            //qDebug() << "Vel = " << QString::number(data.speed);
             obj->addItem(data.time / 1000.0,data.mtsp);
-/*
-            if (data.speed > range.upper)
-            {
-                plot->yAxis->setRange(range.lower,data.speed);
-            }
-            else if (data.speed < range.lower)
-            {
-                plot->yAxis->setRange(data.speed, range.upper);
-            }*/
             break;
         }
     }
@@ -365,7 +319,6 @@ void MainWindow::handleNewTrajectory(int ID, QVector<chronos_dopm_pt> traj)
         points.append(point);
     }
     ui->widget->addInfoTrace(ID,points);
-    //ui->widget->setInfoTrace(ID,points);
 }
 
 void MainWindow::handleSimulationStart(int ID)
@@ -377,12 +330,15 @@ void MainWindow::handleSimulationStart(int ID)
     ObjectListWidget *obj = (ObjectListWidget*) temp->item(ID);
     obj->clearData();
 
-
+    // Keep track of the number of processes
     running_processes++;
-    // ID implemented for future use
+
+
     if (!simulation_timer->isActive())
     {
+        // Start the simulation
         simulation_timer->start(10);
+        // Speed up the rendering when objects are running
         render_timer->setInterval(50);
         simulation_start_time = QDateTime::currentMSecsSinceEpoch();
     }
@@ -391,15 +347,20 @@ void MainWindow::handleSimulationStart(int ID)
 void MainWindow::handleSimulationStop(int ID)
 {
     (void)ID;
+
+    // Don't stop simulation until all processes have stoped
     if (--running_processes == 0)
     {
         simulation_timer->stop();
+        // Slow down the rendering when no objects are running
         render_timer->setInterval(500);
     }
 }
 
 void MainWindow::selectedCarChanged()
 {
+
+    // Find the item that is selected
     QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
     if (items.size()==0)
     {
@@ -412,11 +373,17 @@ void MainWindow::selectedCarChanged()
         return;
     }
     ObjectListWidget *item = (ObjectListWidget*) items[0];
+
+
     int iID = item->getID();
+
+    // Change the seleced car in the map
     ui->widget->setSelectedCar(iID);
+
 
     if (ui->followCarBox->isChecked())
     {
+        // Set the car to follow
         ui->widget->setFollowCar(iID);
     }
     else
@@ -425,9 +392,9 @@ void MainWindow::selectedCarChanged()
         ui->widget->setFollowCar(-1);
     }
     // Save the new stddev value
-    currentVariance = QString::number(item->getStddev(),'g',4);
+    currentStddev = QString::number(item->getStddev(),'g',4);
     // Set the label with the new value
-    ui->varianceEdit->setText(currentVariance);
+    ui->varianceEdit->setText(currentStddev);
     // Set the status of the checkboxes
     ui->MONR_enable->setChecked(item->isEnableMONR());
     ui->measurementNoiseEnable->setChecked(item->isNoiseEnabled());
@@ -436,12 +403,11 @@ void MainWindow::selectedCarChanged()
     // Set the slider value
     ui->delayTimeSlider->setValue(item->getTrajSimDelayFactor());
 
-    emit(ui->measurementNoiseEnable->toggled(item->isNoiseEnabled()));
-
 }
 
 void MainWindow::handleFollowCarToggled(bool checked)
 {
+    // Find the item that is selected
     QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
     if (items.size()==0)
     {
@@ -466,6 +432,7 @@ void MainWindow::handleFollowCarToggled(bool checked)
 
 void MainWindow::handleMONREnableToggled(bool checked)
 {
+    // Find the item that is selected
     QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
     if (items.size()==0)
     {
@@ -478,24 +445,15 @@ void MainWindow::handleMONREnableToggled(bool checked)
         return;
     }
     ObjectListWidget *item = (ObjectListWidget*) items[0];
-    item->setEnableMONR(checked);
 
-    VirtualObject *vobj = findVirtualObject(item->getID());
-
-    if (!vobj)
-    {
-        qDebug() << "Could not find the given virual object.";
-        return;
-    }
-
+    // Send signal to the virtual object
     emit enableMONRchanged(item->getID(),checked);
-
-
 }
 
 
 void MainWindow::handleMeasurementNoiseToggled(bool checked)
 {
+    // Find the item that is selected
     QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
     if (items.size()==0)
     {
@@ -507,20 +465,22 @@ void MainWindow::handleMeasurementNoiseToggled(bool checked)
         qDebug() << "To many selected items.";
         return;
     }
-
     ObjectListWidget *item = (ObjectListWidget*) items[0];
 
-    emit measurement_noise_toggle(item->getID(),checked,item->getStddev());
-
+    // Se the item variable
     item->setNoiseEnabled(checked);
 
+    // Enable or disable the edit of noise standard devation
     ui->varianceEdit->setEnabled(checked);
     ui->lab_var->setEnabled(checked);
+
+    // Update the virtual object
+    emit measurement_noise_toggle(item->getID(),checked,item->getStddev());
 }
 
-void MainWindow::handleVarianceChanged()
+void MainWindow::handleStddevChanged()
 {
-
+    // Find the item that is selected
     QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
     if (items.size()==0)
     {
@@ -534,25 +494,26 @@ void MainWindow::handleVarianceChanged()
     }
     ObjectListWidget *item = (ObjectListWidget*) items[0];
 
-
+    // Get the Standard devation from the textbox
     QLineEdit *inputLine = ui->varianceEdit;
     QString input = inputLine->text();
 
+    // Makes sure that the textbox entry is an acceptable input
     bool isConversionOK = false;
     double newVariance = input.toDouble(&isConversionOK);
-
     if (isConversionOK)
     {
-        //qDebug() << "OK Conversion";
-        currentVariance = QString::number(newVariance,'g',4);
+        currentStddev = QString::number(newVariance,'g',4);
         item->setStddev(newVariance);
         emit measurement_noise_toggle(item->getID(),item->isNoiseEnabled(),item->getStddev());
     }
-    inputLine->setText(currentVariance);
+    // Set the textbox to either the previous value or the new value
+    inputLine->setText(currentStddev);
+    // Remove focus from the textbox
     ui->varianceEdit->clearFocus();
 
 }
-
+// To handle exact execution of a trajectory file, i.e. not interpolated
 void MainWindow::handleTrajSimToggled(bool checked)
 {
     QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
@@ -567,6 +528,7 @@ void MainWindow::handleTrajSimToggled(bool checked)
         return;
     }
     ObjectListWidget *item = (ObjectListWidget*) items[0];
+
 
     item->setTrajSimEnabled(checked);
     ui->delayTimeSlider->setEnabled(checked);
@@ -592,16 +554,15 @@ void MainWindow::handleDelayTimeSliderChanged()
     item->setTrajSimDelayFactor(slide_value);
     qDebug() << "Value Changed";
     emit traj_sim_delay_toggle(item->getID(),item->isTrajSimEnabled(),slide_value-1);
-                               //1.0+(double)(slide_value-defaultTrajSimDelayValue)/50.0);
 
 }
 
 void MainWindow::renderWindow()
 {
+    // Update mapp
     ui->widget->update();
 
-    //int64_t cols[3] = {Qt::blue, Qt::red, Qt::yellow};
-
+    // Add data point to plot
     QCustomPlot *plot = ui->plot1;
     QListWidget *temp = ui->carListWidget;
     for (int i = 0; i < temp->count();i++){
@@ -609,12 +570,8 @@ void MainWindow::renderWindow()
         QVector<double> *time = obj->getTime();
         QVector<double> *data = obj->getData();
         plot->graph(i)->setData(*time,*data);
-        //plot->graph(i)->setPen(cols[i]);
-        //plot->xAxis->setRange(0,(*time).last());
-        //plot->yAxis->setRange(0,0.01); // Make dynamic
-
-
     }
+    // Replot the graph
     plot->rescaleAxes();
     plot->replot();
 }

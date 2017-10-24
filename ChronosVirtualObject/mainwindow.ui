@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1400</width>
-    <height>800</height>
+    <width>1200</width>
+    <height>1000</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -160,7 +160,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>670</y>
+      <y>880</y>
       <width>181</width>
       <height>61</height>
      </rect>
@@ -317,8 +317,8 @@
      <rect>
       <x>200</x>
       <y>20</y>
-      <width>791</width>
-      <height>721</height>
+      <width>991</width>
+      <height>500</height>
      </rect>
     </property>
    </widget>
@@ -376,24 +376,11 @@
    <widget class="QCustomPlot" name="plot1" native="true">
     <property name="geometry">
      <rect>
-      <x>995</x>
-      <y>20</y>
-      <width>400</width>
-      <height>350</height>
+      <x>200</x>
+      <y>520</y>
+      <width>991</width>
+      <height>425</height>
      </rect>
-    </property>
-   </widget>
-   <widget class="Line" name="line">
-    <property name="geometry">
-     <rect>
-      <x>985</x>
-      <y>20</y>
-      <width>16</width>
-      <height>731</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Vertical</enum>
     </property>
    </widget>
    <widget class="QSlider" name="delayTimeSlider">
@@ -464,7 +451,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1400</width>
+     <width>1200</width>
      <height>22</height>
     </rect>
    </property>
