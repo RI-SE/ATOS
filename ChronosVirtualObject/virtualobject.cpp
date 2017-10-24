@@ -21,9 +21,11 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
         0
     };
 
+
     mRefLat = rLat;
     mRefLon = rLon;
     mRefAlt = rAlt;
+
 
     cClient = new Chronos();
 
@@ -45,7 +47,7 @@ void VirtualObject::run()
 
     qint64 clock = 0;       // Current time
     qint64 start_time = 0;  // Start time of the execution of a trajectory
-    qint64 start_ETSI_time = 0;
+    quint64 start_ETSI_time = 0;
     qint64 simulation_time = 0;   // The total time for the entire simulation
     qint64 elapsed_time = 0; // Time since the start of the execution
     qint64 ctrl_update = 0; // Time since the last control signal update
@@ -422,7 +424,7 @@ int VirtualObject::findRefPoint(qint64 tRel, uint fromIndex, qint64 refTimeOffse
         if(traj[i].tRel + refTimeOffset > tRel ) return i;
         //&& tRel > traj[i].tRel + refTimeOffset
     }
-    qDebug() << "Cannot find a valid point";
+    qDebug() << "End of trajectoy file.";
     return i;
 
 }
@@ -589,9 +591,9 @@ void VirtualObject::handleMTSP(chronos_mtsp msg)
 
 
 
-        qint64 temp = QDateTime::currentMSecsSinceEpoch()
-                - MS_FROM_1970_TO_2004_NO_LEAP_SECS
-                + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+        //qint64 temp = QDateTime::currentMSecsSinceEpoch()
+        //        - MS_FROM_1970_TO_2004_NO_LEAP_SECS
+        //        + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
 
         time_adjustment = (qint64) (msg.ts - first_mtsp);
         qDebug() << "MTSP: " << QString::number(time_adjustment);

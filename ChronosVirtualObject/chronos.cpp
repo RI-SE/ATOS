@@ -249,9 +249,9 @@ void Chronos::processDopm(QVector<chronos_dopm_pt> path)
     emit handle_dopm(path);
 
 
-
+/*l
     for (chronos_dopm_pt pt: path) {
-/*
+
 
         qDebug() << "-- Point" <<
                     "X:" << pt.x <<
@@ -270,8 +270,8 @@ void Chronos::processDopm(QVector<chronos_dopm_pt> path)
 
             mPacket->setRoutePoints(255, points);
         }
-        */
-    }
+
+    }*/
 }
 
 void Chronos::processOsem(chronos_osem osem)

@@ -317,7 +317,7 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
 
     QCustomPlot *plot = ui->plot1;
 
-    QCPRange range = plot->yAxis->range();
+    //QCPRange range = plot->yAxis->range();
     // find the objective
     QListWidget *temp = ui->carListWidget;
     for (int i = 0; i < temp->count();i++){
