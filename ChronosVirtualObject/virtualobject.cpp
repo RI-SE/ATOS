@@ -326,6 +326,10 @@ int VirtualObject::connectToServer(int udpSocket,int tcpSocket)
             this,SLOT(handleSYPM(chronos_sypm)));
     connect(cClient,SIGNAL(handle_mtsp(chronos_mtsp)),
             this,SLOT(handleMTSP(chronos_mtsp)));
+    connect(cClient,SIGNAL(handle_tcm(chronos_tcm)),
+            this,SLOT(handleTCM(chronos_tcm)));
+    connect(cClient,SIGNAL(handle_tom(chronos_tom)),
+            this,SLOT(handleTOM(chronos_tom)));
 
     return 0;
 }
@@ -600,6 +604,16 @@ void VirtualObject::handleMTSP(chronos_mtsp msg)
         //data.mtsp = time_adjustment;
 
     }
+}
+
+void VirtualObject::handleTCM(chronos_tcm msg)
+{
+    (void)msg;
+}
+
+void VirtualObject::handleTOM(chronos_tom msg)
+{
+    (void)msg;
 }
 
 void VirtualObject::MONREnabledChanged(int ID, bool status)

@@ -550,7 +550,11 @@ typedef enum {
     CHRONOS_MSG_STAT,
     CHRONOS_MSG_LLCM,
     CHRONOS_MSG_SYPM,
-    CHRONOS_MSG_MTSP
+    CHRONOS_MSG_MTSP,
+    CHRONOS_MSG_ACM,
+    CHRONOS_MSG_EAM,
+    CHRONOS_MSG_TCM,
+    CHRONOS_MSG_TOM
 } CHRONOS_MSG;
 
 typedef struct {
@@ -604,5 +608,18 @@ typedef struct {
 typedef struct {
     uint64_t ts;
 } chronos_mtsp;
+
+typedef struct {
+    uint8_t trigger_id;
+    uint8_t trigger_type;
+    uint8_t action;
+    uint16_t trigger_delay;
+} chronos_tcm;
+
+typedef struct {
+    uint8_t trigger_id;
+    uint8_t trigger_type;
+    uint64_t trigger_etsi_time;
+} chronos_tom;
 
 #endif /* DATATYPES_H_ */

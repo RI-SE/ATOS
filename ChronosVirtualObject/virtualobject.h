@@ -87,6 +87,8 @@ private slots:
     void handleSTRT(chronos_strt msg);
     void handleSYPM(chronos_sypm msg);
     void handleMTSP(chronos_mtsp msg);
+    void handleTCM(chronos_tcm msg);
+    void handleTOM(chronos_tom msg);
 
     // Slots for UI communication
     void MONREnabledChanged(int ID, bool status);

@@ -28,7 +28,6 @@ Chronos::Chronos(QObject *parent) : QObject(parent)
 //bool Chronos::startServer(PacketInterface *packet)
 bool Chronos::startServer(int udpSocket, int tcpSocket)
 {
-    //mPacket = packet;
 
     bool res = mTcpServer->startServer(tcpSocket);//53241
 
@@ -229,6 +228,18 @@ bool Chronos::decodeMsg(quint8 type, quint32 len, QByteArray payload)
         mtsp.ts = vb.vbPopFrontUint48();
         processMtsp(mtsp);
     }   break;
+    case CHRONOS_MSG_TCM: {
+        qDebug() << "TCM identified";
+        chronos_tcm tcm;
+        VByteArray vb(payload);
+
+        tcm.trigger_id = vb.vbPopFrontUint8();
+        tcm.trigger_type = vb.vbPopFrontUint8();
+        tcm.action = vb.vbPopFrontUint8();
+        tcm.trigger_delay = vb.vbPopFrontUint16();
+        processTCM(tcm);
+        break;
+    }
 
     default:
         break;
@@ -343,6 +354,17 @@ void Chronos::processMtsp(chronos_mtsp mtsp){
     qDebug() << "MTSP message handled.";
     emit handle_mtsp(mtsp);
 }
+void Chronos::processTCM(chronos_tcm tcm)
+{
+    qDebug() << "TCM message handled.";
+    emit handle_tcm(tcm);
+}
+
+void Chronos::processTOM(chronos_tom tom)
+{
+    qDebug() << "TOM message handled.";
+    emit handle_tom(tom);
+}
 
 bool Chronos::sendMonr(chronos_monr monr)
 {
@@ -361,6 +383,24 @@ bool Chronos::sendMonr(chronos_monr monr)
     vb.vbAppendUint16((uint16_t)(monr.heading * 1e1));
     vb.vbAppendUint8(monr.direction);
     vb.vbAppendUint8(monr.status);
+
+    mUdpSocket->writeDatagram(vb, mUdpHostAddress, mUdpPort);
+
+    return true;
+}
+
+bool Chronos::sendTOM(chronos_tom tom)
+{
+    if (QString::compare(mUdpHostAddress.toString(), "0.0.0.0") == 0) {
+        return false;
+    }
+
+    VByteArray vb;
+    vb.vbAppendUint8(CHRONOS_MSG_TOM);
+    //vb.vbAppendUint32(8); // Not present in the current system
+    vb.vbAppendUint8(tom.trigger_id);
+    vb.vbAppendUint8(tom.trigger_type);
+    vb.vbAppendUint48(tom.trigger_etsi_time);
 
     mUdpSocket->writeDatagram(vb, mUdpHostAddress, mUdpPort);
 
