@@ -332,7 +332,7 @@ void MainWindow::handleSimulationStart(int ID)
 
     // Keep track of the number of processes
     running_processes++;
-
+    qDebug() << "Number of Processes = " << QString::number(running_processes);
 
     if (!simulation_timer->isActive())
     {
@@ -348,13 +348,17 @@ void MainWindow::handleSimulationStop(int ID)
 {
     (void)ID;
 
+    --running_processes;
+    qDebug() << "Number of Processes = " << QString::number(running_processes);
+
     // Don't stop simulation until all processes have stoped
-    if (--running_processes == 0)
+    if (running_processes == 0)
     {
         simulation_timer->stop();
         // Slow down the rendering when no objects are running
         render_timer->setInterval(500);
     }
+
 }
 
 void MainWindow::selectedCarChanged()

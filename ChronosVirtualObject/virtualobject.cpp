@@ -391,10 +391,6 @@ chronos_monr VirtualObject::getMONR()
     monr.direction = 0; // The car is drivning forward
     monr.status = status;
 
-    //QDateTime ETSI_time(QDate(2004,01,01));
-    //ETSI_time.setOffsetFromUtc(0);
-    //monr.ts = QDateTime::currentMSecsSinceEpoch() - ETSI_time.toMSecsSinceEpoch() + ;
-
     monr.ts = QDateTime::currentMSecsSinceEpoch() -
                 MS_FROM_1970_TO_2004_NO_LEAP_SECS +
                     DIFF_LEAP_SECONDS_UTC_ETSI*1000;
@@ -575,6 +571,11 @@ void VirtualObject::handleSYPM(chronos_sypm msg)
                 sync_points.append(msg.sync_point);
                 qDebug() << "Object updated with SYPM\nTime t=" << QString::number(msg.sync_point);
                 isMaster = false;
+            }
+            if (findRefPoint(msg.stop_point,0,0))
+            {
+                sync_stop_points.append(msg.stop_point);
+                qDebug() << "Sync stop time = " << QString::number(msg.stop_point);
             }
         }
     }

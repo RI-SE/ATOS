@@ -137,6 +137,7 @@ private:
     uint64_t first_mtsp = 0;
     qint64 time_adjustment = 0;
     QVector<quint32> sync_points;
+    QVector<quint32> sync_stop_points;
 
 
     // Time variables
