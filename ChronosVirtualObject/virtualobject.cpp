@@ -17,8 +17,7 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
         0,  // speed
         0,  // acceleration
         status,    // statusF
-        isMaster,    // MASTER?
-        0
+        isMaster    // MASTER?
     };
 
 
@@ -292,7 +291,7 @@ void VirtualObject::run()
         // Send vizualizer update
         data.status = status;
         data.isMaster = isMaster;
-        data.mtsp = time_adjustment;
+        //data.mtsp = time_adjustment;
         emit updated_state(data);
         QThread::msleep(sleep_time);
 
@@ -328,8 +327,7 @@ int VirtualObject::connectToServer(int udpSocket,int tcpSocket)
             this,SLOT(handleMTSP(chronos_mtsp)));
     connect(cClient,SIGNAL(handle_tcm(chronos_tcm)),
             this,SLOT(handleTCM(chronos_tcm)));
-    connect(cClient,SIGNAL(handle_tom(chronos_tom)),
-            this,SLOT(handleTOM(chronos_tom)));
+
 
     return 0;
 }
@@ -602,6 +600,7 @@ void VirtualObject::handleMTSP(chronos_mtsp msg)
 
         time_adjustment = (qint64) (msg.ts - first_mtsp);
         qDebug() << "MTSP: " << QString::number(time_adjustment);
+        emit forward_mtsp(getID(),data.time,time_adjustment);
         //data.mtsp = time_adjustment;
 
     }
@@ -610,12 +609,26 @@ void VirtualObject::handleMTSP(chronos_mtsp msg)
 void VirtualObject::handleTCM(chronos_tcm msg)
 {
     (void)msg;
+    if (status == INIT || status == ARMED || status == DISARMED)
+    {
+        isTCMReceived = true;
+        TAA_delay = msg.trigger_delay;
+        emit forward_tcm(getID(),isTCMReceived);
+    }
+}
+void VirtualObject::triggerOccured(int ID)
+{
+    if (getID() == ID)
+    {
+        chronos_tom tom;
+        tom.trigger_id = 0;
+        tom.trigger_type = 0;
+        quint64 currentTime = QDateTime::currentMSecsSinceEpoch()-MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+        tom.trigger_etsi_time=currentTime + TAA_delay;
+        cClient->sendTOM(tom);
+    }
 }
 
-void VirtualObject::handleTOM(chronos_tom msg)
-{
-    (void)msg;
-}
 
 void VirtualObject::MONREnabledChanged(int ID, bool status)
 {

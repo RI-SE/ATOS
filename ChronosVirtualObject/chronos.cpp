@@ -397,7 +397,7 @@ bool Chronos::sendTOM(chronos_tom tom)
 
     VByteArray vb;
     vb.vbAppendUint8(CHRONOS_MSG_TOM);
-    //vb.vbAppendUint32(8); // Not present in the current system
+    vb.vbAppendUint32(8); // Not present in the current system
     vb.vbAppendUint8(tom.trigger_id);
     vb.vbAppendUint8(tom.trigger_type);
     vb.vbAppendUint48(tom.trigger_etsi_time);

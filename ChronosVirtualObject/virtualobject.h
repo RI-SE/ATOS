@@ -37,7 +37,6 @@ typedef struct {
     double acc;
     qint8 status;
     bool isMaster;
-    qint64 mtsp;
 } VOBJ_DATA;
 
 Q_DECLARE_METATYPE(VOBJ_DATA)
@@ -72,10 +71,14 @@ signals:
     void updated_state(VOBJ_DATA currentState);
     void new_OSEM(chronos_osem msg);
     void new_trajectory(int ID,QVector<chronos_dopm_pt> traj);
-    void send_monr(chronos_monr monr);
     void thread_done(int ID);
     void simulation_start(int ID);
     void simulation_stop(int ID);
+
+
+    //Not yet connected
+    void forward_tcm(int ID, bool active);
+    void forward_mtsp(int ID, qint64 sim_time, qint64 deltaT);
 
 
 private slots:
@@ -88,8 +91,8 @@ private slots:
     void handleSYPM(chronos_sypm msg);
     void handleMTSP(chronos_mtsp msg);
     void handleTCM(chronos_tcm msg);
-    void handleTOM(chronos_tom msg);
 
+    void triggerOccured(int);
     // Slots for UI communication
     void MONREnabledChanged(int ID, bool status);
     void handleMeasurementNoiseToggle(int ID, bool checked,double stddev);
@@ -130,6 +133,9 @@ private:
     bool sendMONREnabled = true;
 
 
+    // TAA vairables
+    bool isTCMReceived = false;
+    uint16_t TAA_delay = 0;
 
     //Syncronisation variables
     bool isMaster = true;

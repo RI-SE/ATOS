@@ -106,8 +106,10 @@ void MainWindow::on_delete_vobj_clicked()
     // Stop the simulation timer
     simulation_timer->stop();
 
-    // Disable the delete button
+    // Disable buttons
     ui->delete_vobj->setEnabled(false);
+    ui->triggerButton->setEnabled(false);
+
     // Enable the init button
     ui->init_vobj->setEnabled(true);
 
@@ -123,6 +125,8 @@ void MainWindow::on_delete_vobj_clicked()
     ui->measurementNoiseEnable->setEnabled(false);
     ui->trajSimBox->setEnabled(false);
 
+
+
     // Clear the listbox
     ui->carListWidget->clear();
 
@@ -133,6 +137,24 @@ void MainWindow::on_delete_vobj_clicked()
     // Tell all virtual objects to stop running
     emit stop_virtual_object();
 
+}
+
+void MainWindow::on_triggerButton_clicked()
+{
+    // Find the item that is selected
+    QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
+    if (items.size()==0)
+    {
+        qDebug() << "No item selected";
+        return;
+    }
+    else if (items.size()>1)
+    {
+        qDebug() << "To many selected items.";
+        return;
+    }
+    ObjectListWidget *item = (ObjectListWidget*) items[0];
+    emit trigger_occured(item->getID());
 }
 
 // Update the label containing the OSEM information
@@ -195,6 +217,10 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
             this,SLOT(handleSimulationStart(int)));
     connect(vobj,SIGNAL(simulation_stop(int)),
             this,SLOT(handleSimulationStop(int)));
+    connect(vobj,SIGNAL(forward_mtsp(int,qint64,qint64)),
+            this,SLOT(handleUpdateMTSP(int,qint64,qint64)));
+    connect(vobj,SIGNAL(forward_tcm(int,bool)),
+            this,SLOT(handleUpdateTCM(int,bool)));
 
 
     // Make connections according to: UI -> Virtual object
@@ -205,6 +231,8 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
             vobj,SLOT(handleMeasurementNoiseToggle(int,bool,double)));
     connect(this,SIGNAL(traj_sim_delay_toggle(int,bool,double)),
             vobj,SLOT(handleTrajSimDelayToggle(int,bool,double)));
+    connect(this,SIGNAL(trigger_occured(int)),
+            vobj,SLOT(triggerOccured(int)));
     // Reset trace
     ui->widget->clearTrace();
 
@@ -281,18 +309,6 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
 
     // Update the car on the map
     ui->widget->updateCarState(data.ID,pos);
-
-    /* Add points for plotting */
-
-    QListWidget *temp = ui->carListWidget;
-    for (int i = 0; i < temp->count();i++){
-        ObjectListWidget *obj = (ObjectListWidget*)temp->item(i);
-        if (obj->getID() == data.ID)
-        {
-            obj->addItem(data.time / 1000.0,data.mtsp);
-            break;
-        }
-    }
 }
 
 void MainWindow::handleNewOSEM(chronos_osem msg)
@@ -361,6 +377,53 @@ void MainWindow::handleSimulationStop(int ID)
 
 }
 
+void MainWindow::handleUpdateMTSP(int ID, qint64 sim_time,qint64 mtsp)
+{
+    /* Add points for plotting */
+    QListWidget *temp = ui->carListWidget;
+    for (int i = 0; i < temp->count();i++){
+        ObjectListWidget *obj = (ObjectListWidget*)temp->item(i);
+        if (obj->getID() == ID)
+        {
+            obj->addItem(sim_time / 1000.0,mtsp);
+            break;
+        }
+    }
+}
+
+void MainWindow::handleUpdateTCM(int ID, bool active)
+{
+    /* Add points for plotting */
+    QListWidget *temp = ui->carListWidget;
+    for (int i = 0; i < temp->count();i++){
+        ObjectListWidget *obj = (ObjectListWidget*)temp->item(i);
+        if (obj->getID() == ID)
+        {
+            obj->setTCMActive(active);
+            qDebug() << "Updated item " << QString::number(ID);
+            break;
+        }
+    }
+
+    // Find the item that is selected
+    QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
+    if (items.size()==0)
+    {
+        qDebug() << "No item selected";
+        return;
+    }
+    else if (items.size()>1)
+    {
+        qDebug() << "To many selected items.";
+        return;
+    }
+    ObjectListWidget *item = (ObjectListWidget*) items[0];
+    if (item->getID() == ID)
+    {
+        ui->triggerButton->setEnabled(active);
+    }
+}
+
 void MainWindow::selectedCarChanged()
 {
 
@@ -403,6 +466,10 @@ void MainWindow::selectedCarChanged()
     ui->MONR_enable->setChecked(item->isEnableMONR());
     ui->measurementNoiseEnable->setChecked(item->isNoiseEnabled());
     ui->trajSimBox->setChecked(item->isTrajSimEnabled());
+
+    // Enable/Disable the button
+    ui->triggerButton->setEnabled(item->getTCMActive());
+
 
     // Set the slider value
     ui->delayTimeSlider->setValue(item->getTrajSimDelayFactor());

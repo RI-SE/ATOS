@@ -91,11 +91,21 @@ public:
     {
         return obj_time;
     }
+
+    bool getTCMActive()
+    {
+        return isTCMActive;
+    }
+    void setTCMActive(bool active)
+    {
+        isTCMActive = active;
+    }
 private:
     int id;
     bool enableMONR = true;
     bool noiseEnabled = false;
     bool trajSimEnabled = false;
+    bool isTCMActive = false;
     double noise_mean = 0.0;
     double noise_stddev = 0.0;
     int traj_sim_delay_factor = 6;
@@ -124,12 +134,16 @@ signals:
     void enableMONRchanged(int,bool);
     void measurement_noise_toggle(int,bool,double);
     void traj_sim_delay_toggle(int,bool,double);
+    void trigger_occured(int);
 private slots:
 
     void on_init_vobj_clicked();
     void on_delete_vobj_clicked();
+    void on_triggerButton_clicked();
     void removeObject(int ID);
     void handleUpdateState(VOBJ_DATA);
+    void handleUpdateMTSP(int ID, qint64 sim_time,qint64 mtsp);
+    void handleUpdateTCM(int ID, bool active);
     void handleNewOSEM(chronos_osem);
     void handleNewTrajectory(int ID,QVector<chronos_dopm_pt> traj);
 
