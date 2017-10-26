@@ -8,6 +8,7 @@
 #include <QThread>
 
 #include "generator.h"
+#include "tcpserversimple.h"
 
 QT_FORWARD_DECLARE_CLASS(QWebSocketServer)
 QT_FORWARD_DECLARE_CLASS(QWebSocket)
@@ -18,7 +19,7 @@ class VisualizationServer : public QThread
 {
     Q_OBJECT
 public:
-    explicit VisualizationServer(Generator* gen, uint16_t genTime, quint16 port, bool debug, QObject *parent = Q_NULLPTR);
+    explicit VisualizationServer( Generator* gen, uint16_t genTime, quint16 port, bool debug, QObject *parent = Q_NULLPTR);
     ~VisualizationServer();
 
     void onSendTextMessage(QString message);
