@@ -133,9 +133,12 @@ private:
     bool sendMONREnabled = true;
 
 
-    // TAA vairables
+    // TAA vairables (can only handle on trigger)
     bool isTCMReceived = false;
     uint16_t TAA_delay = 0;
+    uint8_t TAA_ID = 0;
+    uint8_t TAA_action = 0;
+    uint8_t TAA_trigger_type = 0;
 
     //Syncronisation variables
     bool isMaster = true;

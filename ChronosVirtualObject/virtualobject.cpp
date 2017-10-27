@@ -612,6 +612,9 @@ void VirtualObject::handleTCM(chronos_tcm msg)
     if (status == INIT || status == ARMED || status == DISARMED)
     {
         isTCMReceived = true;
+        TAA_ID = msg.trigger_id;
+        TAA_trigger_type = msg.trigger_type;
+        TAA_action = msg.action;
         TAA_delay = msg.trigger_delay;
         emit forward_tcm(getID(),isTCMReceived);
     }
@@ -621,8 +624,8 @@ void VirtualObject::triggerOccured(int ID)
     if (getID() == ID)
     {
         chronos_tom tom;
-        tom.trigger_id = 0;
-        tom.trigger_type = 0;
+        tom.trigger_id = TAA_ID;
+        tom.trigger_type = TAA_trigger_type;
         quint64 currentTime = QDateTime::currentMSecsSinceEpoch()-MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
         tom.trigger_etsi_time=currentTime + TAA_delay;
         cClient->sendTOM(tom);

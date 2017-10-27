@@ -346,24 +346,18 @@ void Chronos::processHeab(chronos_heab heab)
 }
 
 void Chronos::processSypm(chronos_sypm sypm){
-    qDebug() << "SYPM message handled.";
+    qDebug() << "SYPM HANDLED.";
     emit handle_sypm(sypm);
 }
 
 void Chronos::processMtsp(chronos_mtsp mtsp){
-    qDebug() << "MTSP message handled.";
+    qDebug() << "MTSP HANDLED.";
     emit handle_mtsp(mtsp);
 }
 void Chronos::processTCM(chronos_tcm tcm)
 {
-    qDebug() << "TCM message handled.";
+    qDebug() << "TCM HANDLED.";
     emit handle_tcm(tcm);
-}
-
-void Chronos::processTOM(chronos_tom tom)
-{
-    qDebug() << "TOM message handled.";
-    emit handle_tom(tom);
 }
 
 bool Chronos::sendMonr(chronos_monr monr)

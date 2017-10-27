@@ -30,7 +30,6 @@ signals:
     void handle_sypm(chronos_sypm sysm);
     void handle_mtsp(chronos_mtsp mtsp);
     void handle_tcm(chronos_tcm tcm);
-    void handle_tom(chronos_tom tom);
 
 private slots:
     void tcpRx(QByteArray data);
@@ -62,7 +61,6 @@ private:
     void processSypm(chronos_sypm sypm);
     void processMtsp(chronos_mtsp mtsp);
     void processTCM(chronos_tcm tcm);
-    void processTOM(chronos_tom tom);
 
 
 };
