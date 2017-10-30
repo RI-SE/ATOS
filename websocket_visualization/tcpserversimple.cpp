@@ -28,6 +28,7 @@ TcpServerSimple::TcpServerSimple(QObject *parent) : QObject(parent)
 
 bool TcpServerSimple::startServer(int port)
 {
+
     if (!mTcpServer->listen(QHostAddress::Any,  port)) {
         return false;
     }

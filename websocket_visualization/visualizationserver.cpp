@@ -58,10 +58,7 @@ VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint
             (void)iCommInit(IPC_RECV,MQ_VA,0);
             break;
         case NMEA_TCP_SERVER:
-            mTcpServer = new TcpServerSimple(this);
 
-            connect(mTcpServer,SIGNAL(connectionChanged(bool)),
-                    this,SLOT(tcpServerConnectionChanged(bool)));
             break;
         default:
             break;
@@ -69,7 +66,7 @@ VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint
 
 
 
-        start();
+
         connect(this, &VisualizationServer::sendTextMessage,this, &VisualizationServer::onSendTextMessage);
     }
 
@@ -125,14 +122,18 @@ void VisualizationServer::run()
     }
         break;
     case NMEA_TCP_SERVER: {
+        mTcpServer = new TcpServerSimple();
+
+        connect(mTcpServer,SIGNAL(connectionChanged(bool)),
+                this,SLOT(tcpServerConnectionChanged(bool)));
         mTcpServer->startServer(TEST_PORT);
         bool shutdown = false;
         QTextStream s(stdin);
 
         while(!shutdown)
         {
-            printf("Input: ");
-            QString input = (s.readLine()).toLower();
+            //printf("Input: ");
+            QString input = "";//(s.readLine()).toLower();
             if(input.contains("exit"))
             {
                 shutdown = true;

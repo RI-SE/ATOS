@@ -45,5 +45,6 @@ int main(int argc, char *argv[])
 
 
     QObject::connect(server, &VisualizationServer::closed, &a, &QCoreApplication::quit);
+    server->start();
     return a.exec();
 }
