@@ -31,6 +31,8 @@ public:
     void stopServer();
     bool sendData(const QByteArray &data);
     QString errorString();
+    QString getIP();
+    QString getPORT();
 
 signals:
     void dataRx(const QByteArray &data);

@@ -31,12 +31,13 @@ bool TcpServerSimple::startServer(int port)
     if (!mTcpServer->listen(QHostAddress::Any,  port)) {
         return false;
     }
-
+    qDebug() << "Starting server on port " << QString::number(port);
     return true;
 }
 
 void TcpServerSimple::stopServer()
 {
+
     mTcpServer->close();
 
     if (mTcpSocket) {
@@ -45,6 +46,7 @@ void TcpServerSimple::stopServer()
         mTcpSocket = 0;
         emit connectionChanged(false);
     }
+    qDebug() << "Closing server.";
 }
 
 bool TcpServerSimple::sendData(const QByteArray &data)
@@ -64,6 +66,16 @@ QString TcpServerSimple::errorString()
     return mTcpServer->errorString();
 }
 
+QString TcpServerSimple::getIP()
+{
+    QHostAddress IP = mTcpServer->serverAddress();
+    return IP.toString();
+}
+
+QString TcpServerSimple::getPORT()
+{
+    return QString::number(mTcpSocket->peerPort());
+}
 
 void TcpServerSimple::newTcpConnection()
 {

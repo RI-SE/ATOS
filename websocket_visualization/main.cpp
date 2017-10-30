@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     {
         debug = argv[2];
     }
-
+    // Change the code bellow to handle multiple scenarios
     if(argc > 3)
     {
         gen = new Generator(argv[3]);
@@ -36,9 +36,14 @@ int main(int argc, char *argv[])
         generationTime = atoi(argv[4]);
     }
 
-    VisualizationServer* server = new VisualizationServer(gen, generationTime, port, debug);
+    VisualizationServer* server
+            = new VisualizationServer(gen,
+                                      generationTime,
+                                      port,
+                                      debug,
+                                      VisualizationServer::NMEA_TCP_SERVER);
+
 
     QObject::connect(server, &VisualizationServer::closed, &a, &QCoreApplication::quit);
-
     return a.exec();
 }
