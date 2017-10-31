@@ -44,7 +44,7 @@ bool Chronos::startServer(int udpSocket, int tcpSocket)
         qWarning() << "Starting UDP server failed:" << mUdpSocket->errorString();
     }
 
-    qDebug() << "Started CHRONOS server";
+    qDebug() << "Started CHRONOS client";
 /*
     if (res && mPacket) {
         connect(mPacket, SIGNAL(stateReceived(quint8,CAR_STATE)),

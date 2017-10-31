@@ -6,9 +6,10 @@
 QCoreApplication* createApplication(int &argc, char *argv[])
 {
     for (int i = 1; i < argc; ++i)
-        if (!qstrcmp(argv[i], "-gui"))
-            return new QApplication(argc, argv);
-    return new QCoreApplication(argc, argv);
+        if (!qstrcmp(argv[i], "-nogui"))
+            return new QCoreApplication(argc, argv);
+    return new QApplication(argc, argv);
+
 }
 
 // Handle interrupt
