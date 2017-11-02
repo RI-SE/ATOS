@@ -8,6 +8,7 @@
 #include <QThread>
 
 #include "generator.h"
+#include "tcpclientsimple.h"
 #include "tcpserversimple.h"
 #include "nmea2etsi.h"
 
@@ -51,7 +52,8 @@ public:
 
     typedef enum {
         CHRONOS_VIZUALIZATION_SERVER,
-        NMEA_TCP_SERVER
+        NMEA_TCP_SERVER,
+        NMEA_TCP_CLIENT
     } COM_TYPE;
 
     explicit VisualizationServer( Generator* gen, uint16_t genTime, quint16 port, bool debug, int com_type, QObject *parent = Q_NULLPTR);
@@ -79,11 +81,18 @@ private Q_SLOTS:
 
     void tcpServerConnectionChanged(bool);
 
+    void handleSocketError(QAbstractSocket::SocketError);
+
+
+
 private:
     QWebSocketServer *m_pWebSocketServer;
     QList<QWebSocket *> m_clients;
     Generator* m_gen;
+
     TcpServerSimple *mTcpServer;
+    TcpClientSimple *mTcpClient;
+
     bool m_debug;
     int mTimerId;
     uint32_t m_genTime;

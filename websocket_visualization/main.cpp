@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
                                       generationTime,
                                       port,
                                       debug,
-                                      VisualizationServer::NMEA_TCP_SERVER);
+                                      VisualizationServer::NMEA_TCP_CLIENT);
 
 
     QObject::connect(server, &VisualizationServer::closed, &a, &QCoreApplication::quit);

@@ -65,6 +65,16 @@ VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint
             connect(mTcpServer,SIGNAL(dataRx(QByteArray)),this,SLOT(processNMEAmsg(QByteArray)));
             mTcpServer->startServer(TEST_PORT);
             break;
+        case NMEA_TCP_CLIENT:
+            mTcpClient = new TcpClientSimple();
+
+            connect(mTcpClient,SIGNAL(connectionChanged(bool)),this,SLOT(tcpServerConnectionChanged(bool)));
+            connect(mTcpClient,SIGNAL(dataRx(QByteArray)),this,SLOT(processNMEAmsg(QByteArray)));
+            connect(mTcpClient,SIGNAL(socketError(QAbstractSocket::SocketError)),this,SLOT(handleSocketError(QAbstractSocket::SocketError)));
+            mTcpClient->connectToServer();
+            qDebug() << "Connecting to server";
+
+
         default:
             break;
         }
@@ -126,7 +136,8 @@ void VisualizationServer::run()
         }
     }
         break;
-    case NMEA_TCP_SERVER: {
+    case NMEA_TCP_SERVER:
+    case NMEA_TCP_CLIENT:{
 
         bool shutdown = false;
         QTextStream s(stdin);
@@ -255,6 +266,19 @@ void VisualizationServer::tcpServerConnectionChanged(bool connected)
     {
         qDebug() << "Disconnected from server";
         mTcpServer->stopServer();
+    }
+}
+
+void VisualizationServer::handleSocketError(QAbstractSocket::SocketError error)
+{
+    switch (error) {
+    case QAbstractSocket::ConnectionRefusedError:
+        msleep(1000);
+        //qDebug() << "Connection Refused.";
+        mTcpClient->connectToServer();
+        break;
+    default:
+        break;
     }
 }
 
