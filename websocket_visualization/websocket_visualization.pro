@@ -16,7 +16,8 @@ SOURCES += main.cpp \
     visualizationserver.cpp \
     generator.cpp \
     tcpserversimple.cpp \
-    nmea2etsi.cpp
+    nmea2etsi.cpp \
+    tcpclientsimple.cpp
 
 
 HEADERS += \
@@ -24,6 +25,7 @@ HEADERS += \
     generator.h \
     ../server/inc/util.h \
     tcpserversimple.h \
-    nmea2etsi.h
+    nmea2etsi.h \
+    tcpclientsimple.h
 
 DISTFILES +=
