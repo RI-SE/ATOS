@@ -9,6 +9,7 @@
 
 #include "generator.h"
 #include "tcpserversimple.h"
+#include "nmea2etsi.h"
 
 #define RTKEXPLORER_PORT 2948
 #define TEST_PORT 52340
@@ -36,6 +37,17 @@ public:
         double h_dop;
         double diff_age;
     } nmea_gga_info_t;
+
+    typedef struct {
+        bool GGA_rcvd;
+        bool RMC_rcvd;
+        uint32_t lat;
+        uint32_t lon;
+        int32_t alt;
+        uint16_t speed;
+        uint16_t heading;
+        uint64_t time;
+    } nmea_info_t;
 
     typedef enum {
         CHRONOS_VIZUALIZATION_SERVER,
@@ -77,8 +89,11 @@ private:
     uint32_t m_genTime;
     MessageQueueThread *m_Thread;
     int comm;
+    nmea_info_t msg_info={ 0,0,0,0,0,0,0,0 };
 
     int decodeNmeaGGA(QByteArray data, nmea_gga_info_t &gga);
+    int fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info);
+    QString infoToString(nmea_info_t &info);
 };
 
 #endif // SERVER_H

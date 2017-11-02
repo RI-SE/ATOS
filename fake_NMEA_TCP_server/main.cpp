@@ -1,6 +1,9 @@
 #include <QCoreApplication>
 
 #include "tcptextsender.h"
+
+
+
 int main(int argc, char *argv[])
 {
     // fnts [port] [filename]
@@ -13,8 +16,13 @@ int main(int argc, char *argv[])
     }
 
     QString filename = argv[2];
-    TCPTextSender *tts = new TCPTextSender(atoi(argv[1]), filename);
+    TCPTextSender *tts = new TCPTextSender(filename);
+    QObject::connect(tts,SIGNAL(finished()),&a,SLOT(quit()));
+    tts->connectToRec();
+
+
     tts->start();
+
 
 
     return a.exec();

@@ -69,8 +69,8 @@ QString TcpServerSimple::errorString()
 
 QString TcpServerSimple::getIP()
 {
-    QHostAddress IP = mTcpServer->serverAddress();
-    return IP.toString();
+    //QHostAddress IP = mTcpServer->serverAddress();
+    return mTcpSocket->peerAddress().toString();
 }
 
 QString TcpServerSimple::getPORT()
@@ -108,13 +108,16 @@ void TcpServerSimple::tcpInputDisconnected()
 
 void TcpServerSimple::tcpInputDataAvailable()
 {
+    //int length = mTcpSocket->bytesAvailable();
     QByteArray data = mTcpSocket->readAll();
+    //data[length] = '\0';
     emit dataRx(data);
 }
 
 void TcpServerSimple::tcpInputError(QAbstractSocket::SocketError socketError)
 {
     (void)socketError;
+    qDebug() << "Socket Error: "<< socketError;
     mTcpSocket->close();
     delete mTcpSocket;
     mTcpSocket = 0;

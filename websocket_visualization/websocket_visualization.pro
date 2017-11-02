@@ -15,12 +15,15 @@ TEMPLATE = app
 SOURCES += main.cpp \
     visualizationserver.cpp \
     generator.cpp \
-    tcpserversimple.cpp
+    tcpserversimple.cpp \
+    nmea2etsi.cpp
+
 
 HEADERS += \
     visualizationserver.h \
     generator.h \
     ../server/inc/util.h \
-    tcpserversimple.h
+    tcpserversimple.h \
+    nmea2etsi.h
 
 DISTFILES +=

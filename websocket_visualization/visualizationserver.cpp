@@ -58,7 +58,12 @@ VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint
             (void)iCommInit(IPC_RECV,MQ_VA,0);
             break;
         case NMEA_TCP_SERVER:
+            mTcpServer = new TcpServerSimple();
 
+            connect(mTcpServer,SIGNAL(connectionChanged(bool)),
+                    this,SLOT(tcpServerConnectionChanged(bool)));
+            connect(mTcpServer,SIGNAL(dataRx(QByteArray)),this,SLOT(processNMEAmsg(QByteArray)));
+            mTcpServer->startServer(TEST_PORT);
             break;
         default:
             break;
@@ -122,25 +127,21 @@ void VisualizationServer::run()
     }
         break;
     case NMEA_TCP_SERVER: {
-        mTcpServer = new TcpServerSimple();
 
-        connect(mTcpServer,SIGNAL(connectionChanged(bool)),
-                this,SLOT(tcpServerConnectionChanged(bool)));
-        mTcpServer->startServer(TEST_PORT);
         bool shutdown = false;
         QTextStream s(stdin);
 
         while(!shutdown)
         {
             //printf("Input: ");
-            QString input = "";//(s.readLine()).toLower();
+            QString input = (s.readLine()).toLower();
             if(input.contains("exit"))
             {
                 shutdown = true;
             }
         }
 
-        mTcpServer->stopServer();
+
     }
     default:
         break;
@@ -217,16 +218,28 @@ void VisualizationServer::socketDisconnected()
 
 void VisualizationServer::processNMEAmsg(QByteArray data)
 {
-    QTextStream in(data);
+    //QTextStream in(data);
 
-    while(!in.atEnd()) {
-        QString line = in.readLine();
-        nmea_gga_info_t gga;
-        int res = decodeNmeaGGA(line.toLocal8Bit(), gga);
+    //QString in(data);
+    //QStringList temp = in.split('\0');
 
-        qDebug() << "Received GAA";
-        // TODO: Add printing capabilities
-        //emit clientGgaRx(res, gga);
+    QList<QByteArray> temp = data.split('$');
+    //while(!in.atEnd()) {
+    for(int i = 0; i<temp.size();i++)
+    {
+        QString line(temp.at(i));
+        qDebug() << line;
+        //nmea_gga_info_t gga;
+        //int res = decodeNmeaGGA(line.toLocal8Bit(), gga);
+        //qDebug() << QString::number(NMEAtoVisualString(line,line));
+        int res = fetchNMEAinfo(line,msg_info);
+
+        if (msg_info.GGA_rcvd && msg_info.RMC_rcvd)
+        {
+            onSendTextMessage(infoToString(msg_info));
+            msg_info.GGA_rcvd = false;
+            msg_info.RMC_rcvd = false;
+        }
     }
 }
 
@@ -241,6 +254,7 @@ void VisualizationServer::tcpServerConnectionChanged(bool connected)
     else
     {
         qDebug() << "Disconnected from server";
+        mTcpServer->stopServer();
     }
 }
 
@@ -426,3 +440,100 @@ int VisualizationServer::decodeNmeaGGA(QByteArray data, VisualizationServer::nme
 
     return dec_fields;
 }
+
+int VisualizationServer::fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info)
+{
+    QString buffer = "";
+
+    QStringList fields = nmea_msg.split(',');
+    if (fields.size() == 0) return -1;
+
+
+
+    buffer = fields.at(0);
+    if(buffer.contains("RMC"))
+    {
+        /*
+        0   $GPRMC          Recommended Minimum sentence C
+        1   123519       Fix taken at 12:35:19 UTC
+        2   A            Status A=active or V=Void.
+        3   4807.038
+        4   N   Latitude 48 deg 07.038' N
+        5   01131.000,
+        6   E  Longitude 11 deg 31.000' E
+        7   022.4        Speed over the ground in knots
+        8   084.4        Track angle in degrees True
+        9   230394       Date - 23rd of March 1994
+        10   003.1,W      Magnetic Variation
+        11  *6A          The checksum data, always begins with *
+        */
+        char *strtime    = ((QString)fields.at(1)).toLocal8Bit().data();
+        char *status     = ((QString)fields.at(2)).toLocal8Bit().data();
+        char *lat        = ((QString)fields.at(3)).toLocal8Bit().data();
+        char *northsouth = ((QString)fields.at(4)).toLocal8Bit().data();
+        char *lon        = ((QString)fields.at(5)).toLocal8Bit().data();
+        char *eastwest   = ((QString)fields.at(6)).toLocal8Bit().data();
+        char *speed      = ((QString)fields.at(7)).toLocal8Bit().data();
+        char *heading    = ((QString)fields.at(8)).toLocal8Bit().data();
+        char *date       = ((QString)fields.at(9)).toLocal8Bit().data();
+
+        info.lat = ConvertLatitudeNMEAtoETSICDD(lat,northsouth);
+        info.lon = ConvertLongitudeNMEAtoETSICDD(lon,eastwest);
+        info.heading = ConvertHeadingValueNMEAtoETSICDD(heading);
+        info.speed = ConvertSpeedValueNMEAtoETSICDD(speed);
+        info.time = ConvertTimestapItsNMEAtoETSICDD(strtime,date);
+        info.RMC_rcvd = true;
+    }
+    else if (buffer.contains("GGA"))
+    {
+
+        /*
+        0   GGA          Global Positioning System Fix Data
+        1   123519       Fix taken at 12:35:19 UTC
+        2   4807.038
+        3   N   Latitude 48 deg 07.038' N
+        4   01131.000
+        5   E  Longitude 11 deg 31.000' E
+        6   1            Fix quality: 0 = invalid
+                                  1 = GPS fix (SPS)
+                                  2 = DGPS fix
+                                  3 = PPS fix
+                      4 = Real Time Kinematic
+                      5 = Float RTK
+                                  6 = estimated (dead reckoning) (2.3 feature)
+                      7 = Manual input mode
+                      8 = Simulation mode
+        7   08           Number of satellites being tracked
+        8   0.9          Horizontal dilution of position
+        9   545.4,M      Altitude, Meters, above mean sea level
+        10   46.9,M       Height of geoid (mean sea level) above WGS84
+                         ellipsoid
+        11  (empty field) time in seconds since last DGPS update
+        12  (empty field) DGPS station ID number
+        13  *47          the checksum data, always begins with *
+        * */
+        char *alt        = ((QString)fields.at(9)).toLocal8Bit().data();
+        info.alt = ConvertAltitudeValueNMEAtoETSICDD(alt);
+        info.GGA_rcvd = true;
+    }
+    else {
+        return -2;
+    }
+    return 0;
+}
+
+QString VisualizationServer::infoToString(nmea_info_t &info)
+{
+
+    QString visualString = "0;0;" +
+            QString::number(info.time) + ";" +
+            QString::number(info.lat) + ";" +
+            QString::number(info.lon) + ";" +
+            QString::number(info.alt) + ";" +
+            QString::number(info.speed) + ";" +
+            QString::number(info.heading) + ";" +
+            QString::number(0);//drive direction
+    qDebug() << visualString;
+    return visualString;
+}
+

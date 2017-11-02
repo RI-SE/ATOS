@@ -1,22 +1,19 @@
 #include "tcptextsender.h"
 
 
-TCPTextSender::TCPTextSender(uint16_t port, QString file, QObject *parent):
-mTcpServer(new TcpServerSimple)
+TCPTextSender::TCPTextSender(QString file, QObject *parent)
 {
-
-    //loadedTextFile = new QLinkedList<QString*>();
-    this->port = port;
+    connect(&client, SIGNAL(connected()),this,SLOT(handleConnected()));
+    connect(&client, SIGNAL(disconnected()),this,SLOT(handleDisconnected()));
+    connect(this,SIGNAL(sendData(QString)),this,SLOT(handleSendData(QString)));
+    //connect(this,SIGNAL(finished()),SLOT(quitApplication()));
+    connect(&client,SIGNAL(error(QAbstractSocket::SocketError)),
+            this, SLOT(handleSocketError(QAbstractSocket::SocketError)));
     filepath = file;
-
-    connect(mTcpServer,SIGNAL(connectionChanged(bool)),
-            this,SLOT(handleConnectionChanged(bool)));
-
 }
 
 TCPTextSender::~TCPTextSender(){
-    delete mTcpServer;
-    //delete loadedTextFile;
+    client.close();
 }
 
 int TCPTextSender::readTextFile(QString filepath, QVector<QString> &output)
@@ -31,7 +28,7 @@ int TCPTextSender::readTextFile(QString filepath, QVector<QString> &output)
     QTextStream in(&file);
     while(!in.atEnd())
     {
-        line = in.readLine();
+        line = in.readLine() + '\0';
         qDebug() << line;
         output.append(line);
     }
@@ -40,31 +37,41 @@ int TCPTextSender::readTextFile(QString filepath, QVector<QString> &output)
     return 0;
 }
 
+void TCPTextSender::connectToRec()
+{
+    QHostAddress addr("127.0.0.1");
+    client.connectToHost(addr, 52340);
+
+}
+
+void TCPTextSender::startTransfer()
+{
+  client.write("Hello, world", 13);
+}
+void TCPTextSender::quitApplication()
+{
+    qDebug() << "Exiting the application.";
+    exit(1);
+}
+
 void TCPTextSender::run()
 {
     QTextStream s(stdin);
     QVector<QString> temp;
-
-
-    //QString input(1024,'\0');
-
     int res = readTextFile(filepath,temp);
     if(res)
     {
         printf("Exiting\n");
         return;
     }
-    //qDebug() << "Size of return vector: " << QString::number(temp.size());
 
-    //mTcpServer->startServer(port);
-    mTcpServer->connectToRemote("127.0.0.1",port);
-    //while(mTcpServer->mTcpSocket->waitForConnected());
+    QByteArray ba;
 
     printf("Hit ENTER to send the file.\nType EXIT to close the program.\n");
     while(!shutdown)
     {
 
-        QString input = "";//(s.readLine()).toLower();
+        QString input = (s.readLine()).toLower();
         if(input.contains("exit"))
         {
             shutdown = true;
@@ -73,27 +80,66 @@ void TCPTextSender::run()
         {
             if(isConnected)
             {
+                //char data[10] = "apan";
+                //QString temp = "apan1apanapanapan";
+
+                for(int i = 0;i<temp.size();i++)
+                {
+
+                    ba.clear();
+                    ba = temp[i].toLatin1();
+                    //printf("Sending: %s with size=%d\n", ba.data(),ba.size());
+
+                    emit sendData(temp[i]);
+                    //client.write("apa",10);
+                    //client.write(ba.data());
+                    msleep(100);
+                }
                 printf("Files sent!\n");
+
+
             }
-
         }
+        //shutdown = true;
     }
-    temp.clear();
-    mTcpServer->stopServer();
+    //temp.clear();
+
 
 }
 
-void TCPTextSender::handleConnectionChanged(bool status)
+void TCPTextSender::handleConnected()
 {
-    isConnected = status;
-    if(isConnected)
-    {
-        qDebug() << "Connection established.";
-    }
-    else
-    {
-        qDebug() << "Disconnected.";
-    }
+    isConnected = true;
+    qDebug() << "Connected to server.";
 }
 
+void TCPTextSender::handleDisconnected()
+{
+    isConnected = false;
+    qDebug() << "Disconnected from server.";
+    //exit(1);
+}
 
+void TCPTextSender::handleSendData(QString in)
+{
+
+    qDebug() << "Sending: " << in.toLatin1().data();
+    QByteArray tosend = in.toLatin1();
+    client.write(tosend.data());
+
+}
+
+void TCPTextSender::handleSocketError(QAbstractSocket::SocketError error)
+{
+    //qDebug() << "Socket error " << error;
+
+    switch (error) {
+    case QAbstractSocket::ConnectionRefusedError:
+        msleep(1000);
+        //qDebug() << "Connection Refused.";
+        connectToRec();
+        break;
+    default:
+        break;
+    }
+}
