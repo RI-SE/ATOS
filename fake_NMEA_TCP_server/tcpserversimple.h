@@ -30,8 +30,6 @@ public:
     bool startServer(int port);
     void stopServer();
     bool sendData(const QByteArray &data);
-
-    void connectToRemote(QString IP_ADDR, int port);
     QString errorString();
     QString getIP();
     QString getPORT();
@@ -42,13 +40,10 @@ signals:
 
 public slots:
     void newTcpConnection();
-    void newTcpRemoteConnection();
     void tcpInputDisconnected();
     void tcpInputDataAvailable();
     void tcpInputError(QAbstractSocket::SocketError socketError);
     void dataToSend(QByteArray &data);
-
-    void handleHostFound();
 
 private:
     QTcpServer *mTcpServer;

@@ -19,7 +19,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += main.cpp \
-    tcptextsender.cpp
+    tcptextsender.cpp \
+    tcpserversimple.cpp
 
 
-HEADERS += tcptextsender.h
+HEADERS += tcptextsender.h \
+    tcpserversimple.h

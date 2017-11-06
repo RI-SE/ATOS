@@ -68,10 +68,11 @@ VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint
         case NMEA_TCP_CLIENT:
             mTcpClient = new TcpClientSimple();
 
-            connect(mTcpClient,SIGNAL(connectionChanged(bool)),this,SLOT(tcpServerConnectionChanged(bool)));
+            //connect(mTcpClient,SIGNAL(connectionChanged(bool)),this,SLOT(tcpServerConnectionChanged(bool)));
             connect(mTcpClient,SIGNAL(dataRx(QByteArray)),this,SLOT(processNMEAmsg(QByteArray)));
             connect(mTcpClient,SIGNAL(socketError(QAbstractSocket::SocketError)),this,SLOT(handleSocketError(QAbstractSocket::SocketError)));
-            mTcpClient->connectToServer();
+            connection_port = TEST_PORT;
+            mTcpClient->connectToServer(connection_port);
             qDebug() << "Connecting to server";
 
 
@@ -149,6 +150,14 @@ void VisualizationServer::run()
             if(input.contains("exit"))
             {
                 shutdown = true;
+            }
+            else if ("stat")
+            {
+                qDebug() << "------------" <<
+                            "\n#RCM: " << nr_rcm_rec <<
+                            "\n#GGA:" << nr_gga_rec <<
+                            "\n#Package sent: " << pack_sent <<
+                            "\n------------";
             }
         }
 
@@ -239,7 +248,7 @@ void VisualizationServer::processNMEAmsg(QByteArray data)
     for(int i = 0; i<temp.size();i++)
     {
         QString line(temp.at(i));
-        qDebug() << line;
+        //qDebug() << line;
         //nmea_gga_info_t gga;
         //int res = decodeNmeaGGA(line.toLocal8Bit(), gga);
         //qDebug() << QString::number(NMEAtoVisualString(line,line));
@@ -247,6 +256,7 @@ void VisualizationServer::processNMEAmsg(QByteArray data)
 
         if (msg_info.GGA_rcvd && msg_info.RMC_rcvd)
         {
+            pack_sent++;
             onSendTextMessage(infoToString(msg_info));
             msg_info.GGA_rcvd = false;
             msg_info.RMC_rcvd = false;
@@ -275,7 +285,7 @@ void VisualizationServer::handleSocketError(QAbstractSocket::SocketError error)
     case QAbstractSocket::ConnectionRefusedError:
         msleep(1000);
         //qDebug() << "Connection Refused.";
-        mTcpClient->connectToServer();
+        mTcpClient->connectToServer(connection_port);
         break;
     default:
         break;
@@ -477,6 +487,8 @@ int VisualizationServer::fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info)
     buffer = fields.at(0);
     if(buffer.contains("RMC"))
     {
+        qDebug() << "RMC handled";
+        nr_rcm_rec++;
         /*
         0   $GPRMC          Recommended Minimum sentence C
         1   123519       Fix taken at 12:35:19 UTC
@@ -491,22 +503,28 @@ int VisualizationServer::fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info)
         10   003.1,W      Magnetic Variation
         11  *6A          The checksum data, always begins with *
         */
-        char *strtime    = ((QString)fields.at(1)).toLocal8Bit().data();
-        char *status     = ((QString)fields.at(2)).toLocal8Bit().data();
-        char *lat        = ((QString)fields.at(3)).toLocal8Bit().data();
-        char *northsouth = ((QString)fields.at(4)).toLocal8Bit().data();
-        char *lon        = ((QString)fields.at(5)).toLocal8Bit().data();
-        char *eastwest   = ((QString)fields.at(6)).toLocal8Bit().data();
-        char *speed      = ((QString)fields.at(7)).toLocal8Bit().data();
-        char *heading    = ((QString)fields.at(8)).toLocal8Bit().data();
-        char *date       = ((QString)fields.at(9)).toLocal8Bit().data();
+        QByteArray strtime    = ((QString)fields.at(1)).toLocal8Bit();
+        QByteArray status     = ((QString)fields.at(2)).toLocal8Bit();
+        QByteArray lat        = ((QString)fields.at(3)).toLocal8Bit();
+        QByteArray northsouth = ((QString)fields.at(4)).toLocal8Bit();
+        QByteArray lon        = ((QString)fields.at(5)).toLocal8Bit();
+        QByteArray eastwest   = ((QString)fields.at(6)).toLocal8Bit();
+        QByteArray speed      = ((QString)fields.at(7)).toLocal8Bit();
+        QByteArray heading    = ((QString)fields.at(8)).toLocal8Bit();
+        QByteArray date       = ((QString)fields.at(9)).toLocal8Bit();
 
-        info.lat = ConvertLatitudeNMEAtoETSICDD(lat,northsouth);
-        info.lon = ConvertLongitudeNMEAtoETSICDD(lon,eastwest);
-        info.heading = ConvertHeadingValueNMEAtoETSICDD(heading);
-        info.speed = ConvertSpeedValueNMEAtoETSICDD(speed);
-        info.time = ConvertTimestapItsNMEAtoETSICDD(strtime,date);
+//        printf("%s,%s,%s,%s,%s,%s,%s,%s\n",strtime.data(),lat.data(),northsouth.data(),lon.data(),eastwest.data(),speed.data(),heading.data(),date.data());
+
+        info.lat = ConvertLatitudeNMEAtoETSICDD(lat.data(),northsouth.data());
+        info.lon = ConvertLongitudeNMEAtoETSICDD(lon.data(),eastwest.data());
+
+        //qDebug() << "Lat: " << info.lat << " Lon: " << info.lon;
+
+        info.heading = ConvertHeadingValueNMEAtoETSICDD(heading.data());
+        info.speed = ConvertSpeedValueNMEAtoETSICDD(speed.data());
+        info.time = ConvertTimestapItsNMEAtoETSICDD(strtime.data(),date.data());
         info.RMC_rcvd = true;
+
     }
     else if (buffer.contains("GGA"))
     {
@@ -536,8 +554,10 @@ int VisualizationServer::fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info)
         12  (empty field) DGPS station ID number
         13  *47          the checksum data, always begins with *
         * */
-        char *alt        = ((QString)fields.at(9)).toLocal8Bit().data();
-        info.alt = ConvertAltitudeValueNMEAtoETSICDD(alt);
+        qDebug() << "GGA handled";
+        nr_gga_rec++;
+        QByteArray alt        = ((QString)fields.at(9)).toLocal8Bit();
+        info.alt = ConvertAltitudeValueNMEAtoETSICDD(alt.data());
         info.GGA_rcvd = true;
     }
     else {
@@ -557,7 +577,7 @@ QString VisualizationServer::infoToString(nmea_info_t &info)
             QString::number(info.speed) + ";" +
             QString::number(info.heading) + ";" +
             QString::number(0);//drive direction
-    qDebug() << visualString;
+    qDebug() << "Sending:" << visualString;
     return visualString;
 }
 

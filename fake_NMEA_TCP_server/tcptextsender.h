@@ -7,7 +7,10 @@
 
 #include <QThread>
 #include <QFile>
-#include "client.h"
+#include <QTcpServer>
+#include <QTcpSocket>
+#include "tcpserversimple.h"
+//#include "client.h"
 
 class TCPTextSender : public QThread
 {
@@ -32,12 +35,15 @@ public slots:
 private slots:
     void handleConnected();
     void handleDisconnected();
+
+    void handleConnectionChanged(bool);
     void handleSocketError(QAbstractSocket::SocketError);
 
     void handleSendData(QString);
 
 private:
-    QTcpSocket client;
+    //QTcpSocket client;
+    TcpServerSimple mTcpServer;
 
     bool isConnected = false;
     uint16_t port;

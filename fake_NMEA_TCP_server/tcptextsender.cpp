@@ -3,17 +3,21 @@
 
 TCPTextSender::TCPTextSender(QString file, QObject *parent)
 {
+    /*
     connect(&client, SIGNAL(connected()),this,SLOT(handleConnected()));
     connect(&client, SIGNAL(disconnected()),this,SLOT(handleDisconnected()));
-    connect(this,SIGNAL(sendData(QString)),this,SLOT(handleSendData(QString)));
+
     //connect(this,SIGNAL(finished()),SLOT(quitApplication()));
     connect(&client,SIGNAL(error(QAbstractSocket::SocketError)),
             this, SLOT(handleSocketError(QAbstractSocket::SocketError)));
+    */
+    connect(this,SIGNAL(sendData(QString)),this,SLOT(handleSendData(QString)));
+    connect(&mTcpServer,SIGNAL(connectionChanged(bool)),this,SLOT(handleConnectionChanged(bool)));
     filepath = file;
 }
 
 TCPTextSender::~TCPTextSender(){
-    client.close();
+
 }
 
 int TCPTextSender::readTextFile(QString filepath, QVector<QString> &output)
@@ -39,14 +43,15 @@ int TCPTextSender::readTextFile(QString filepath, QVector<QString> &output)
 
 void TCPTextSender::connectToRec()
 {
-    QHostAddress addr("127.0.0.1");
-    client.connectToHost(addr, 52340);
+    //QHostAddress addr("127.0.0.1");
+    //client.connectToHost(addr, 52340);
+    mTcpServer.startServer(52340);
 
 }
 
 void TCPTextSender::startTransfer()
 {
-  client.write("Hello, world", 13);
+  //client.write("Hello, world", 13);
 }
 void TCPTextSender::quitApplication()
 {
@@ -120,12 +125,22 @@ void TCPTextSender::handleDisconnected()
     //exit(1);
 }
 
+void TCPTextSender::handleConnectionChanged(bool connected)
+{
+    isConnected = connected;
+    if (connected)
+        qDebug() << "Connected to client";
+    else
+        qDebug() << "Disconnected from client";
+}
+
 void TCPTextSender::handleSendData(QString in)
 {
 
     qDebug() << "Sending: " << in.toLatin1().data();
     QByteArray tosend = in.toLatin1();
-    client.write(tosend.data());
+    //client.write(tosend.data());
+    mTcpServer.dataToSend(tosend);
 
 }
 

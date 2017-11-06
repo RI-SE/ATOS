@@ -10,12 +10,12 @@ int main(int argc, char *argv[])
     QCoreApplication a(argc, argv);
 
     qDebug() << "argc=" << QString::number(argc);
-    if(argc != 3)
+    if(argc != 2)
     {
         exit(1);
     }
 
-    QString filename = argv[2];
+    QString filename = argv[1];
     TCPTextSender *tts = new TCPTextSender(filename);
     QObject::connect(tts,SIGNAL(finished()),&a,SLOT(quit()));
     tts->connectToRec();

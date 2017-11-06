@@ -7,10 +7,10 @@ TcpClientSimple::TcpClientSimple(QObject *parent) : QObject(parent)
     connect(&client,SIGNAL(error(QAbstractSocket::SocketError)),this,SLOT(handleSocketError(QAbstractSocket::SocketError)));
     connect(&client,SIGNAL(readyRead()),this,SLOT(handleInputDataAvailable()));
 }
-void TcpClientSimple::connectToServer()
+void TcpClientSimple::connectToServer(int port)
 {
     QString IP = "127.0.0.1";
-    int port = 2948;
+    //int port = 52340;
     QHostAddress addr(IP);
     client.connectToHost(addr, port);
     //qDebug() << "Connecting to server on " << IP << ":" << port;
@@ -18,13 +18,13 @@ void TcpClientSimple::connectToServer()
 
 void TcpClientSimple::handleConnected()
 {
-    //qDebug() << "Connected to server.";
+    qDebug() << "Connected to server.";
     emit connectionChanged(true);
 }
 
 void TcpClientSimple::handleDisconnected()
 {
-    //qDebug() << "Disconnected from server.";
+    qDebug() << "Disconnected from server.";
     emit connectionChanged(false);
 }
 

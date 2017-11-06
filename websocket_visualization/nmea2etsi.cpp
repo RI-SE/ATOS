@@ -11,6 +11,91 @@
 #include <inttypes.h>
 #include "nmea2etsi.h"
 
+
+
+
+static double nmea_parse_val(char *str) {
+    int ind = -1;
+    int len = strlen(str);
+    double retval = 0.0;
+
+    for (int i = 0;i < len;i++) {
+        if (str[i] == '.') {
+            ind = i;
+            break;
+        }
+    }
+
+    if (ind >= 0) {
+
+        char a[len + 1];
+
+        char *wptr = a;
+
+        int deg_idx = ind - 2;
+        int frac_idx = ind;
+
+        memcpy(a, str, deg_idx);
+        wptr += deg_idx;
+        *wptr = ' ';
+        wptr++;
+        memcpy(wptr, str + deg_idx, ind - deg_idx);
+        wptr += ind - deg_idx;
+        *wptr = ' ';
+        wptr++;
+        memcpy(wptr,str+ind+1,len-ind);
+
+        int deg,minl,minr;
+        if (sscanf(a, "%d %d %d", &deg, &minl, &minr) == 3)
+        {
+            retval = (double) deg + minl/60.0 + minr / (60.0 * 1000);
+        }
+        /*
+        double l1, l2;
+        if (sscanf(a, "%lf %lf", &l1, &l2) == 2) {
+            retval = l1 + l2 / 60.0;
+        }*/
+    }
+
+    return retval;
+}
+
+static double mystrtod(char *str)
+{
+
+
+    double retval = 0.0;
+
+    int ind = -1;
+    int len = strlen(str);
+
+
+    //sscanf(str," %1[-+0-9.]%[-+0-9A-Za-z.]")
+
+    for (int i = 0;i < len;i++) {
+        if (str[i] == '.') {
+            ind = i;
+            break;
+        }
+    }
+
+    if (ind >= 0)
+    {
+        char a[len];
+        memcpy(a,str,len);
+        a[ind] = ' ';
+
+        int num, frac;
+        if (sscanf(a,"%d %d",&num,&frac) == 2)
+        {
+            retval = (double)num + frac / 1000.0;
+        }
+    }
+
+
+    return retval;
+}
+
 uint32_t ConvertLatitudeNMEAtoETSICDD(char *lat, char *dir){
     int    latitude     = 900000001; //Init latitude to: latitude unavailable
     char  *dummy_ptr    = NULL;      //Dummy pointer for strtod function
@@ -18,20 +103,23 @@ uint32_t ConvertLatitudeNMEAtoETSICDD(char *lat, char *dir){
     int    deg_whole    = 0;         //Whole part of dd.ddddd format for latitude
     double deg_fraction = 0.0;       //Fractional part of dd.ddddd format for latitude
 
-
+    /*
     //Convert latitude string to ddmm.mmmm floating-point format
     deg = strtod(lat, &dummy_ptr);
+    double deg2 = strtod(lat, NULL);
 
     //Get whole part of dd.dddddd format
     deg_whole = (int) deg / 100;
 
     //Get fractional part of dd.ddddd format
     deg_fraction = deg - (100 * deg_whole);
-    deg_fraction /= 60;
+    deg_fraction /= 60.0;
+    */
+    deg = nmea_parse_val(lat);
 
     //Put on ETSI CDD dd.ddddd format
-    latitude = (deg_whole + deg_fraction) * 10000000;
-
+    //latitude = (deg_whole + deg_fraction) * 10000000;
+    latitude = deg * 10000000;
     //Change sign if southern hemisphere
     if ((!strcmp(dir, "s")) || (!strcmp(dir, "S"))){
         latitude *= -1;}
@@ -46,7 +134,7 @@ uint32_t ConvertLongitudeNMEAtoETSICDD(char *longit, char *dir){
     int    deg_whole    = 0;          //Whole part of dd.ddddd format for longitude
     double deg_fraction = 0.0;        //Fractional part of dd.ddddd format for longitude
 
-
+    /*
     //Convert longitude string to ddmm.mmmm floating-point format
     deg = strtod(longit, &dummy_ptr);
 
@@ -59,7 +147,9 @@ uint32_t ConvertLongitudeNMEAtoETSICDD(char *longit, char *dir){
 
     //Put on ETSI CDD dd.ddddd format
     longitude = (deg_whole + deg_fraction) * 10000000;
-
+    */
+    deg = nmea_parse_val(longit);
+    longitude = deg * 10000000;
     //Change sign if western hemisphere
     if ((!strcmp(dir, "w")) || (!strcmp(dir, "W"))){
         longitude *= -1;}
@@ -71,8 +161,8 @@ uint16_t ConvertSpeedValueNMEAtoETSICDD(char *spd){
     uint16_t speed = 0; //Init speed to: speed unavailable
     char *dummy_ptr  = NULL;                   //Dummy pointer for strtod function
 
-
-    speed = (uint16_t) (0.5144444 * 100 * strtod(spd, &dummy_ptr));
+    double temp = strtod(spd,&dummy_ptr);
+    speed = (uint16_t) (0.5144444 * 100 * temp);
 
     return speed;
 }
@@ -82,7 +172,7 @@ uint16_t ConvertHeadingValueNMEAtoETSICDD(char *hdg) {
     char *dummy_ptr = NULL;                          //Dummy pointer for strtod function
 
 
-    heading = (uint16_t) (10 * strtod(hdg, &dummy_ptr));
+    heading = (uint16_t) (10 * strtod(hdg,&dummy_ptr));
 
     return heading;
 }
@@ -92,7 +182,7 @@ int32_t ConvertAltitudeValueNMEAtoETSICDD(char *alt) {
     char *dummy_ptr = NULL;                             //Dummy pointer for strtod function
 
 
-    altitude = (int32_t) (100 * strtod(alt, &dummy_ptr));
+    altitude = (int32_t) (100 * strtod(alt,&dummy_ptr));
 
     //Set to max and min values if height is outside these bounds
     if (altitude > 800000)

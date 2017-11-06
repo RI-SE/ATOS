@@ -45,10 +45,15 @@ sudo apt install libqt5websockets5_dev
 qmake -qt=5 ../websocket_visualization.pro -spec linux-g++
 
 # poti
+# Make sure that the system has the correct locale, such that float numbers are defined with '.'
+# If not the right locale, do 
+sudo update-locale LC_NUMERIC="en_GB.UTF-8"
+# Make sure to log out, then perform
 cd poti
 mkdir build && cd build
-gcc -I../inc/ ../src/nmea2etsi.c ../src/object_rpi.c -o object_rpi
-./object_rpi 
+gcc -I../inc/ ../src/nmea2etsi.c ../src/poti_byte.c -o poti
+# Run the program
+./poti
 
 # Eclipse project
 cd /home/kj/Repos/chronos

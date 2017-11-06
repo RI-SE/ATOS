@@ -93,6 +93,13 @@ private:
     TcpServerSimple *mTcpServer;
     TcpClientSimple *mTcpClient;
 
+    int connection_port;
+    // Statistics variables
+
+    int nr_rcm_rec = 0;
+    int nr_gga_rec = 0;
+    int pack_sent = 0;
+
     bool m_debug;
     int mTimerId;
     uint32_t m_genTime;

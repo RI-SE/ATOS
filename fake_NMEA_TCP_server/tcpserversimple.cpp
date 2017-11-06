@@ -24,11 +24,11 @@ TcpServerSimple::TcpServerSimple(QObject *parent) : QObject(parent)
     mTcpSocket = 0;
 
     connect(mTcpServer, SIGNAL(newConnection()), this, SLOT(newTcpConnection()));
-
 }
 
 bool TcpServerSimple::startServer(int port)
 {
+
     if (!mTcpServer->listen(QHostAddress::Any,  port)) {
         return false;
     }
@@ -62,26 +62,6 @@ bool TcpServerSimple::sendData(const QByteArray &data)
     return res;
 }
 
-void TcpServerSimple::connectToRemote(QString IP_ADDR, int port)
-{
-    qDebug() << "Connecting to " << IP_ADDR << " on port" << QString::number(port);
-    mTcpSocket = new QTcpSocket(this);
-
-
-    connect(mTcpSocket,SIGNAL(hostFound()),this, SLOT(handleHostFound()));
-    connect(mTcpSocket, SIGNAL(connected()),this, SLOT(newTcpRemoteConnection()));
-    connect(mTcpSocket, SIGNAL(readyRead()), this, SLOT(tcpInputDataAvailable()));
-    connect(mTcpSocket, SIGNAL(disconnected()),
-            this, SLOT(tcpInputDisconnected()));
-    connect(mTcpSocket, SIGNAL(error(QAbstractSocket::SocketError)),
-            this, SLOT(tcpInputError(QAbstractSocket::SocketError)));
-
-    QHostAddress address(IP_ADDR);
-
-    mTcpSocket->connectToHost(address,port);
-
-}
-
 QString TcpServerSimple::errorString()
 {
     return mTcpServer->errorString();
@@ -89,8 +69,8 @@ QString TcpServerSimple::errorString()
 
 QString TcpServerSimple::getIP()
 {
-    QHostAddress IP = mTcpServer->serverAddress();
-    return IP.toString();
+    //QHostAddress IP = mTcpServer->serverAddress();
+    return mTcpSocket->peerAddress().toString();
 }
 
 QString TcpServerSimple::getPORT()
@@ -118,14 +98,6 @@ void TcpServerSimple::newTcpConnection()
         }
     }
 }
-void TcpServerSimple::newTcpRemoteConnection()
-{
-    qDebug() << "New remote connection established.";
-
-
-
-    emit connectionChanged(true);
-}
 
 void TcpServerSimple::tcpInputDisconnected()
 {
@@ -136,13 +108,16 @@ void TcpServerSimple::tcpInputDisconnected()
 
 void TcpServerSimple::tcpInputDataAvailable()
 {
+    //int length = mTcpSocket->bytesAvailable();
     QByteArray data = mTcpSocket->readAll();
+    //data[length] = '\0';
     emit dataRx(data);
 }
 
 void TcpServerSimple::tcpInputError(QAbstractSocket::SocketError socketError)
 {
     (void)socketError;
+    qDebug() << "Socket Error: "<< socketError;
     mTcpSocket->close();
     delete mTcpSocket;
     mTcpSocket = 0;
@@ -152,15 +127,5 @@ void TcpServerSimple::tcpInputError(QAbstractSocket::SocketError socketError)
 void TcpServerSimple::dataToSend(QByteArray &data)
 {
     sendData(data);
-}
-
-void TcpServerSimple::handleHostFound()
-{
-
-    qDebug() << "Host found! State: " << QString::number(mTcpSocket->state());
-
-    qDebug() << "Addr:" << mTcpSocket->peerAddress() << " IP: " << mTcpSocket->peerName()
-             << "Port:" << mTcpSocket->peerPort();
-
 }
 

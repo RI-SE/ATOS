@@ -12,7 +12,7 @@ public:
     TcpClientSimple(QObject *parent = nullptr);
     ~TcpClientSimple(){};
 
-    void connectToServer();
+    void connectToServer(int port);
 
 
 signals:
