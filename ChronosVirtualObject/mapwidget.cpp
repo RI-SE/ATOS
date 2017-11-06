@@ -739,7 +739,7 @@ void MapWidget::tileReady(OsmTile tile)
 
 void MapWidget::errorGetTile(QString reason)
 {
-    qWarning() << "OSM tile error:" << reason;
+    //qWarning() << "OSM tile error:" << reason;
 }
 
 void MapWidget::setFollowCar(int car)
