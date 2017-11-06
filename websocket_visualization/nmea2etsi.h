@@ -9,11 +9,11 @@
 
 //#include "poti.h"
 
-uint32_t    ConvertLatitudeNMEAtoETSICDD(char *latitude, char *ns);
-uint32_t    ConvertLongitudeNMEAtoETSICDD(char *longitude, char *ew);
-uint16_t    ConvertSpeedValueNMEAtoETSICDD(char *spd);
-uint16_t    ConvertHeadingValueNMEAtoETSICDD(char *hdg);
-int32_t     ConvertAltitudeValueNMEAtoETSICDD(char *alt);
-uint64_t    ConvertTimestapItsNMEAtoETSICDD(char *time, char *date);
+uint32_t    ConvertLatitudeNMEAtoETSICDD(char *latitude, char *ns, char *stat);
+uint32_t    ConvertLongitudeNMEAtoETSICDD(char *longitude, char *ew, char *stat);
+uint16_t    ConvertSpeedValueNMEAtoETSICDD(char *spd, char *stat);
+uint16_t    ConvertHeadingValueNMEAtoETSICDD(char *hdg, char *stat);
+int32_t     ConvertAltitudeValueNMEAtoETSICDD(char *alt, char *stat);
+uint64_t    ConvertTimestapItsNMEAtoETSICDD(char *time, char *date, char *stat);
 
 #endif

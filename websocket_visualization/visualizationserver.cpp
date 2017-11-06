@@ -10,32 +10,6 @@ extern "C" {
 #include "util.h"
 }
 
-static double nmea_parse_val(char *str) {
-    int ind = -1;
-    int len = strlen(str);
-    double retval = 0.0;
-
-    for (int i = 2;i < len;i++) {
-        if (str[i] == '.') {
-            ind = i - 2;
-            break;
-        }
-    }
-
-    if (ind >= 0) {
-        char a[len + 1];
-        memcpy(a, str, ind);
-        a[ind] = ' ';
-        memcpy(a + ind + 1, str + ind, len - ind);
-
-        double l1, l2;
-        if (sscanf(a, "%lf %lf", &l1, &l2) == 2) {
-            retval = l1 + l2 / 60.0;
-        }
-    }
-
-    return retval;
-}
 
 VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint16 port, bool debug,int com_type, QObject *parent):
     QThread(parent),
@@ -68,10 +42,10 @@ VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint
         case NMEA_TCP_CLIENT:
             mTcpClient = new TcpClientSimple();
 
-            //connect(mTcpClient,SIGNAL(connectionChanged(bool)),this,SLOT(tcpServerConnectionChanged(bool)));
+            // Create reading connection on the client side
             connect(mTcpClient,SIGNAL(dataRx(QByteArray)),this,SLOT(processNMEAmsg(QByteArray)));
             connect(mTcpClient,SIGNAL(socketError(QAbstractSocket::SocketError)),this,SLOT(handleSocketError(QAbstractSocket::SocketError)));
-            connection_port = TEST_PORT;
+            connection_port = RTKEXPLORER_PORT;
             mTcpClient->connectToServer(connection_port);
             qDebug() << "Connecting to server";
 
@@ -79,9 +53,6 @@ VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint
         default:
             break;
         }
-
-
-
 
         connect(this, &VisualizationServer::sendTextMessage,this, &VisualizationServer::onSendTextMessage);
     }
@@ -151,7 +122,7 @@ void VisualizationServer::run()
             {
                 shutdown = true;
             }
-            else if ("stat")
+            else
             {
                 qDebug() << "------------" <<
                             "\n#RCM: " << nr_rcm_rec <<
@@ -238,25 +209,17 @@ void VisualizationServer::socketDisconnected()
 
 void VisualizationServer::processNMEAmsg(QByteArray data)
 {
-    //QTextStream in(data);
-
-    //QString in(data);
-    //QStringList temp = in.split('\0');
 
     QList<QByteArray> temp = data.split('$');
-    //while(!in.atEnd()) {
     for(int i = 0; i<temp.size();i++)
     {
         QString line(temp.at(i));
-        //qDebug() << line;
-        //nmea_gga_info_t gga;
-        //int res = decodeNmeaGGA(line.toLocal8Bit(), gga);
-        //qDebug() << QString::number(NMEAtoVisualString(line,line));
-        int res = fetchNMEAinfo(line,msg_info);
+        fetchNMEAinfo(line,msg_info);
 
         if (msg_info.GGA_rcvd && msg_info.RMC_rcvd)
         {
             pack_sent++;
+            // send the information in the msg_info struct to the vizualizer
             onSendTextMessage(infoToString(msg_info));
             msg_info.GGA_rcvd = false;
             msg_info.RMC_rcvd = false;
@@ -284,7 +247,6 @@ void VisualizationServer::handleSocketError(QAbstractSocket::SocketError error)
     switch (error) {
     case QAbstractSocket::ConnectionRefusedError:
         msleep(1000);
-        //qDebug() << "Connection Refused.";
         mTcpClient->connectToServer(connection_port);
         break;
     default:
@@ -515,14 +477,14 @@ int VisualizationServer::fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info)
 
 //        printf("%s,%s,%s,%s,%s,%s,%s,%s\n",strtime.data(),lat.data(),northsouth.data(),lon.data(),eastwest.data(),speed.data(),heading.data(),date.data());
 
-        info.lat = ConvertLatitudeNMEAtoETSICDD(lat.data(),northsouth.data());
-        info.lon = ConvertLongitudeNMEAtoETSICDD(lon.data(),eastwest.data());
+        info.lat = ConvertLatitudeNMEAtoETSICDD(lat.data(),northsouth.data(),status.data());
+        info.lon = ConvertLongitudeNMEAtoETSICDD(lon.data(),eastwest.data(),status.data());
 
         //qDebug() << "Lat: " << info.lat << " Lon: " << info.lon;
 
-        info.heading = ConvertHeadingValueNMEAtoETSICDD(heading.data());
-        info.speed = ConvertSpeedValueNMEAtoETSICDD(speed.data());
-        info.time = ConvertTimestapItsNMEAtoETSICDD(strtime.data(),date.data());
+        info.heading = ConvertHeadingValueNMEAtoETSICDD(heading.data(),status.data());
+        info.speed = ConvertSpeedValueNMEAtoETSICDD(speed.data(),status.data());
+        info.time = ConvertTimestapItsNMEAtoETSICDD(strtime.data(),date.data(),status.data());
         info.RMC_rcvd = true;
 
     }
@@ -557,7 +519,8 @@ int VisualizationServer::fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info)
         qDebug() << "GGA handled";
         nr_gga_rec++;
         QByteArray alt        = ((QString)fields.at(9)).toLocal8Bit();
-        info.alt = ConvertAltitudeValueNMEAtoETSICDD(alt.data());
+        char a[2] = "A";
+        info.alt = ConvertAltitudeValueNMEAtoETSICDD(alt.data(),a);
         info.GGA_rcvd = true;
     }
     else {
