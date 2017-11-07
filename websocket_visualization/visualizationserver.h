@@ -107,7 +107,7 @@ private:
     int comm;
     nmea_info_t msg_info={ 0,0,0,0,0,0,0,0 };
 
-    int decodeNmeaGGA(QByteArray data, nmea_gga_info_t &gga);
+    //int decodeNmeaGGA(QByteArray data, nmea_gga_info_t &gga);
     int fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info);
     QString infoToString(nmea_info_t &info);
 };
