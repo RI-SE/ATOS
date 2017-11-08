@@ -76,8 +76,8 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "10.168.68.98"
-#define TESTSERVER_IP "10.168.68.98"
+#define TESTHOST_IP "192.168.0.166"
+#define TESTSERVER_IP "192.168.0.166"
 #define TEST_SYNC_POINTS 0
 
 
@@ -225,6 +225,12 @@ int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
 int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug);
+
+void llhToXyz(double lat, double lon, double height, double *x, double *y, double *z);
+void enuToLlh(const double *iLlh, const double *xyz, double *llh);
+void createEnuMatrix(double lat, double lon, double *enuMat);
+void xyzToLlh(double x, double y, double z, double *lat, double *lon, double *height);
+void llhToEnu(const double *iLlh, const double *llh, double *xyz);
 
 typedef struct {
   uint64_t timestamp;
