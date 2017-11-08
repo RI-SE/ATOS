@@ -201,9 +201,9 @@ MapWidget::MapWidget(QWidget *parent) :
 /* START CHRONOS CODE */
 
 /* Chronos ref point*/
-    mRefLat = 57.777569;
-    mRefLon = 12.781265;
-    mRefHeight = 219.0;
+    mRefLat = 57.777360; // LATb
+    mRefLon = 12.780472; // LONb
+    mRefHeight = 201.934115075;
 
     mUdpSocket = new QUdpSocket(this);
 
@@ -259,9 +259,9 @@ MapWidget::MapWidget(QWidget *parent) :
                     //qDebug() << "X: " << list[2] << " Y: " << list[3] << " Z: " << list[4];
 
                     // Transform  xyz to llh, hardcoded origo
-                    ref_llh[0] = 57.776800; // LATb
-                    ref_llh[1] = 12.780450; // LONb
-                    ref_llh[2] = 201.934115075;
+                    ref_llh[0] = mRefLat; // LATb
+                    ref_llh[1] = mRefLon; // LONb
+                    ref_llh[2] = mRefHeight;
 
                     xyz[0] = list[2].toDouble();
                     xyz[1] = list[3].toDouble();
@@ -274,6 +274,7 @@ MapWidget::MapWidget(QWidget *parent) :
 
                     // LAT = y / ((M_PI/180)*R) + LATb
                     // LON = x / ((M_PI/180)*R*cos(((LAT - LATb)/2)*(M_PI/180))) + LONb
+
 
                     llh[0] = xyz[1] / ((M_PI/180)*6378137.0) + ref_llh[0];
                     llh[1] = xyz[0] / ((M_PI/180)*6378137.0*cos(((llh[0] + ref_llh[0])/2)*(M_PI/180))) + ref_llh[1];
