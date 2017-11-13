@@ -46,7 +46,6 @@ SOURCES += \
 
 HEADERS += \
         mainwindow.h \
-        util.h \
         chronos.h \
         locpoint.h \
         packet.h \
