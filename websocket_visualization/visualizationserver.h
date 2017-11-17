@@ -93,6 +93,10 @@ private:
     TcpServerSimple *mTcpServer;
     TcpClientSimple *mTcpClient;
 
+    QFile *mLog;
+
+    quint64 timeSinceUpdate = 0;
+
     int connection_port;
     // Statistics variables
 

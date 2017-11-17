@@ -19,6 +19,9 @@ VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint
     m_debug(debug)
 {
 
+    mLog= new QFile("log");
+    mLog->open(QIODevice::ReadWrite);
+
     comm = com_type;
     if(gen != NULL)
     {
@@ -81,6 +84,7 @@ VisualizationServer::~VisualizationServer()
     }
     m_pWebSocketServer->close();
     qDeleteAll(m_clients.begin(), m_clients.end());
+    mLog->close();
 }
 
 void VisualizationServer::run()
@@ -170,6 +174,11 @@ void VisualizationServer::onSendTextMessage(QString message)
         qDebug() << times++ << " message to send :" << message;
     }
 
+    QTextStream stream(mLog);
+    stream << message << endl;
+    //mLog->write(message.toLocal8Bit());
+
+
     foreach(QWebSocket* client, m_clients)
     {
         client->sendTextMessage(message);
@@ -223,6 +232,15 @@ void VisualizationServer::processNMEAmsg(QByteArray data)
             onSendTextMessage(infoToString(msg_info));
             msg_info.GGA_rcvd = false;
             msg_info.RMC_rcvd = false;
+
+
+            quint64 time = QDateTime::currentMSecsSinceEpoch();
+
+            if (timeSinceUpdate != 0) qDebug() << "T=" << time - timeSinceUpdate;
+
+
+            timeSinceUpdate = time;
+
         }
     }
 }
@@ -283,6 +301,7 @@ int VisualizationServer::fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info)
         10   003.1,W      Magnetic Variation
         11  *6A          The checksum data, always begins with *
         */
+        qDebug() << "NMEA time: " << fields.at(1);
         QByteArray strtime    = ((QString)fields.at(1)).toLocal8Bit();
         QByteArray status     = ((QString)fields.at(2)).toLocal8Bit();
         QByteArray lat        = ((QString)fields.at(3)).toLocal8Bit();

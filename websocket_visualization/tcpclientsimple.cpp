@@ -35,14 +35,14 @@ void TcpClientSimple::handleSocketError(QAbstractSocket::SocketError error)
 /*
     switch (error) {
     case QAbstractSocket::ConnectionRefusedError:
-        //msleep(1000);
-        //qDebug() << "Connection Refused.";
+        msleep(1000);
+        qDebug() << "Connection Refused.";
         connectToServer();
         break;
     default:
         break;
-    }
-    */
+    }*/
+
 
 }
 

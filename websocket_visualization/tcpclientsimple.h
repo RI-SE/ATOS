@@ -27,6 +27,7 @@ private slots:
 public slots:
 private:
     QTcpSocket client;
+    int port;
 };
 
 #endif // TCPCLIENTSIMPLE_H
