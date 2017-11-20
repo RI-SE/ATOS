@@ -195,6 +195,7 @@ void objectcontrol_task()
   uint64_t CurrentTimeU64 = 0;
   uint64_t OldTimeU64 = 0;
   uint64_t MasterTimeToSyncPointU64 = 0;
+  uint64_t TimeCap1, TimeCap2;
   double TimeToSyncPoint = 0;
   double PrevTimeToSyncPoint = 0;
   double CurrentTimeDbl = 0;
@@ -431,7 +432,7 @@ void objectcontrol_task()
       }
     }
 
-    /*MTPS*/
+    /*MTSP*/
     if(HeartbeatMessageCounter == 10)
     {
       HeartbeatMessageCounter = 0;
@@ -516,6 +517,9 @@ void objectcontrol_task()
 
               if(Latitude != 0 && Longitude != 0)
               { 
+                gettimeofday(&CurrentTimeStruct, NULL);
+                TimeCap1 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
+
                 UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
              
                 if(OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex)
@@ -549,10 +553,13 @@ void objectcontrol_task()
                     strcat(buffer, MTSP); strcat(buffer,";");                 
                   }
 
+                  gettimeofday(&CurrentTimeStruct, NULL);
+                  TimeCap2 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
+
                 	if(atoi(Timestamp)%ASPDebugRate == 0)
                 	{
-                		printf("TtS= %3.3f, %d, %d, %d, %ld, %d\n",TimeToSyncPoint, OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, MasterTimeToSyncPointU64, iIndex);
-                    printf("%3.3f, %3.10f, %3.10f ,%3.10f, %3.10f\n\n",CurrentTimeDbl, OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7);  
+                		printf("TtS= %3.3f, %d, %d, %d, %ld, %d, %3.0f\n",TimeToSyncPoint, OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, MasterTimeToSyncPointU64, iIndex, ((double)(TimeCap2)-(double)TimeCap1));
+                    printf("%3.3f, %3.7f, %3.7f ,%3.7f, %3.7f\n\n",CurrentTimeDbl, OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7);  
                 	}
                 }
               }

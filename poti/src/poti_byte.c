@@ -353,6 +353,11 @@ int main(int argc, char *argv[])
   int nbrOfBytesLeft = 0;
   int iWorkbufferSize = 0;
   int receivedNewData = 0;
+  int recNMEAmsg = 0;
+
+  // char *filename = "nmea_out";
+  // FILE *NMEA_DATA = fopen(filename,"w");
+
   while(1)
     {
       gettimeofday(&tvTime2, NULL);
@@ -372,8 +377,8 @@ int main(int argc, char *argv[])
 	    }
 	  else
 	    {
-	      printf("INF: No data received\n");
-	      fflush(stdout);
+              //printf("INF: No data received\n");
+              //fflush(stdout);
 	    }
 	}
       else
@@ -398,8 +403,8 @@ int main(int argc, char *argv[])
 	    }
 	  else
 	    {
-	      printf("INF: No data received\n");
-	      fflush(stdout);
+              //printf("INF: No data received\n");
+              //fflush(stdout);
 	    }
 	}
       else
@@ -415,6 +420,7 @@ int main(int argc, char *argv[])
 
 	  /* loop until message has been parsed */
 	  int i = 0;
+          printf("-------------------------------------------\n");
 	  while(i < iWorkbufferSize)
 	    {
 	      int k = 0;
@@ -438,8 +444,9 @@ int main(int argc, char *argv[])
 		  sentence[k] = '\0';
 
 		  getField(nmea_msg, 0);
-		  if (strcmp(nmea_msg, "$GPRMC") == 0) 
+                  if (strcmp(nmea_msg, "$GPRMC") == 0)
 		    {
+                      printf("GPRMC recieved\n");
 		      getField(utc, 1);
 		      getField(status, 2);
 		      getField(latitude, 3);
@@ -449,9 +456,12 @@ int main(int argc, char *argv[])
 		      getField(gps_speed, 7);
 		      getField(gps_heading, 8);
 		      getField(date, 9);
-		    }
-		  else if (strcmp(nmea_msg, "$GPGGA") == 0) 
+                      recNMEAmsg = 1;
+                      printf("%s %s %s\n",utc,latitude,longitude);
+                    }
+                  if (strcmp(nmea_msg, "$GPGGA") == 0)
 		    {
+                      printf("GPGGA recieved\n");
 		      getField(utc, 1);
 		      getField(latitude, 2);
 		      getField(northsouth, 3);
@@ -460,19 +470,22 @@ int main(int argc, char *argv[])
 		      getField(gps_quality_indicator, 6);
 		      getField(satellites_used, 7);
 		      getField(antenna_altitude, 9);
-		      printf("%s %s%s %s%s %s %s %s\n",utc,latitude,northsouth,longitude,eastwest,antenna_altitude,gps_quality_indicator,satellites_used);
+                      printf("%s %s %s %s %s %s %s\n",utc,latitude,northsouth,longitude,eastwest,gps_quality_indicator,satellites_used);
+                      recNMEAmsg = 1;
 		      fflush(stdout);
-		    }
+                    }
 		  else if (strcmp(nmea_msg, "$GPGSV") == 0) 
 		    {
+                      printf("GPGSV recieved\n");
 		      getField(satellites_in_view, 3);
-		    }
+                    }
 		  else if (strcmp(nmea_msg, "$GPGSA") == 0) 
 		    {
+                      printf("GPGSA recieved\n");
 		      getField(pdop, 4);
 		      getField(hdop, 5);
 		      getField(vdop, 6);
-		    }
+                    }
 		  /* Convert from NMEA to ETSI format */
 		  etsi_lat          = ConvertLatitudeNMEAtoETSICDD(latitude, northsouth, status);
 		  etsi_lon          = ConvertLongitudeNMEAtoETSICDD(longitude, eastwest, status);
@@ -481,6 +494,8 @@ int main(int argc, char *argv[])
 		  etsi_alt          = ConvertAltitudeValueNMEAtoETSICDD(antenna_altitude, status);
 		  etsi_time         = ConvertTimestapItsNMEAtoETSICDD(utc, date, status);
 		  sprintf(etsi_time_string, "%" PRIu64 "", etsi_time);
+                  // Write to file
+                  //    printf("%s;%d;%d;\n",etsi_time_string,etsi_lat,etsi_lon);
 		}
 	    }
     
@@ -488,7 +503,7 @@ int main(int argc, char *argv[])
 	  /* Copy bytes to beginning */
 	  if(nbrOfBytesLeft != 0)
 	    {
-	      bzero(tempBuffer,WORK_BUFFER);
+              bzero(tempBuffer,WORK_BUFFER);
 	      strncpy(tempBuffer,&workingBuffer[iWorkbufferSize-nbrOfBytesLeft],nbrOfBytesLeft);
 	      bzero(workingBuffer,WORK_BUFFER);
 	      strncpy(workingBuffer,tempBuffer,nbrOfBytesLeft);
@@ -538,12 +553,17 @@ int main(int argc, char *argv[])
       bMonitorBuffer[27] = (uint8_t) ((1 >> 0) & 0xFF);
 
       bMonitorBuffer[28] = (uint8_t) ((atoi(gps_quality_indicator) >> 0) & 0xFF);
-      
-      n = sendto(monitor_socket_fd, bMonitorBuffer, sizeof(bMonitorBuffer), 0, (struct sockaddr *) &monitor_from_addr, fromlen);
-
+      //fprintf(NMEA_DATA,"%s;%s;%s;\n",etsi_time_string,latitude,longitude);
+      if (recNMEAmsg)
+      {
+        n = sendto(monitor_socket_fd, bMonitorBuffer, sizeof(bMonitorBuffer), 0, (struct sockaddr *) &monitor_from_addr, fromlen);
+        // Write to file
+        //fprintf(NMEA_DATA,"%s;%s;%s;\n",etsi_time_string,latitude,longitude);
+        recNMEAmsg = 0;
 #ifdef DEBUG
       printf("INF: Sending: <%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x-%x>\n", (uint8_t) bMonitorBuffer[0], (uint8_t) bMonitorBuffer[1], (uint8_t) bMonitorBuffer[2], (uint8_t) bMonitorBuffer[3], (uint8_t) bMonitorBuffer[4], (uint8_t) bMonitorBuffer[5], (uint8_t) bMonitorBuffer[6], (uint8_t) bMonitorBuffer[7],(uint8_t) bMonitorBuffer[8], (uint8_t) bMonitorBuffer[9], (uint8_t) bMonitorBuffer[10], (uint8_t) bMonitorBuffer[11], (uint8_t) bMonitorBuffer[12], (uint8_t) bMonitorBuffer[13], (uint8_t) bMonitorBuffer[14], (uint8_t) bMonitorBuffer[15], (uint8_t) bMonitorBuffer[16], (uint8_t) bMonitorBuffer[17], (uint8_t) bMonitorBuffer[18], (uint8_t) bMonitorBuffer[19], (uint8_t) bMonitorBuffer[20], (uint8_t) bMonitorBuffer[21], (uint8_t) bMonitorBuffer[22], (uint8_t) bMonitorBuffer[23], (uint8_t) bMonitorBuffer[24], (uint8_t) bMonitorBuffer[25], (uint8_t) bMonitorBuffer[26], (uint8_t) bMonitorBuffer[27], (uint8_t) bMonitorBuffer[28]);
 #endif
+      }
 
       if (n < 0)
 	{
@@ -553,7 +573,7 @@ int main(int argc, char *argv[])
 
       usleep(loop_delay);
     }
-
+  //fclose(NMEA_DATA);
   close(monitor_socket_fd);
   close(command_com_socket_fd);
   close(sd);
