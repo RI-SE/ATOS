@@ -19,8 +19,10 @@
 #define TCPSERVERSIMPLE_H
 
 #include <QObject>
+#include <QDateTime>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QFile>
 #include "packet.h"
 
 class TcpServerSimple : public QObject
@@ -52,6 +54,7 @@ private:
     QTcpSocket *mTcpSocket;
     Packet *mPacket;
     bool mUsePacket;
+    QStringList *log;
 
 };
 

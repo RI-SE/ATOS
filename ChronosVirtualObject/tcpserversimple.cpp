@@ -24,6 +24,7 @@ TcpServerSimple::TcpServerSimple(QObject *parent) : QObject(parent)
     mPacket = new Packet(this);
     mTcpSocket = 0;
     mUsePacket = false;
+    log = new QStringList();
 
     connect(mTcpServer, SIGNAL(newConnection()), this, SLOT(newTcpConnection()));
     connect(mPacket, SIGNAL(dataToSend(QByteArray&)),
@@ -89,6 +90,9 @@ void TcpServerSimple::newTcpConnection()
                     this, SLOT(tcpInputDisconnected()));
             connect(mTcpSocket, SIGNAL(error(QAbstractSocket::SocketError)),
                     this, SLOT(tcpInputError(QAbstractSocket::SocketError)));
+            QString temp = "<" + QDateTime::currentDateTime().toString() + "><Connected to server>";
+
+            log->append(temp);
             emit connectionChanged(true);
         }
     }
@@ -98,6 +102,23 @@ void TcpServerSimple::tcpInputDisconnected()
 {
     mTcpSocket->deleteLater();
     mTcpSocket = 0;
+    log->append("<" + QDateTime::currentDateTime().toString() + "><Disconnected>");
+
+    QFile outfile("com.log");
+    if (outfile.open(QIODevice::ReadWrite))
+    {
+        QTextStream outstream(&outfile);
+
+        for(int i = 0; i<log->size();i++)
+        {
+            outstream << log->at(i) << endl;
+        }
+        outfile.close();
+    }
+
+
+
+
     emit connectionChanged(false);
 }
 
@@ -113,8 +134,10 @@ void TcpServerSimple::tcpInputDataAvailable()
 
 void TcpServerSimple::tcpInputError(QAbstractSocket::SocketError socketError)
 {
-    (void)socketError;
-    qDebug() << "SocketError: " << QString::number(socketError);
+    QString temp = "<" + QDateTime::currentDateTime().toString() + "><SocketError: " + QString::number(socketError)+ ">";
+    //qDebug() << temp;
+
+    log->append(temp);
     mTcpSocket->close();
     delete mTcpSocket;
     mTcpSocket = 0;
