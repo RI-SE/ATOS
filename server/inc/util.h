@@ -76,8 +76,8 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.166"
-#define TESTSERVER_IP "192.168.0.166"
+#define TESTHOST_IP "192.168.0.26"
+#define TESTSERVER_IP "192.168.0.26"
 #define TEST_SYNC_POINTS 0
 
 
@@ -88,6 +88,9 @@
 
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
 #define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
+
+/* Calculation: 13 * 365 * 24 * 3600 * 1000 + 4 * 24 * 3600 * 1000 = 755568000 */
+#define MS_FROM_2004_TO_2017_NO_LEAP_SECS 755568000
 
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5

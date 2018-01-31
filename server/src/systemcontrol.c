@@ -127,6 +127,8 @@ void systemcontrol_task()
 	  	{
 	    	if(errno != EAGAIN && errno != EWOULDBLOCK)
 	    	{
+		  		usleep(5000000); //Wait 5 sec before sending exit, just so ObjectControl can send abort in HEAB before exit 
+		  		(void)iCommSend(COMM_EXIT,NULL);
 		  		perror("[SystemControl]ERR: Failed to receive from command socket.");
 		  		exit(1);
 			} 
@@ -136,7 +138,9 @@ void systemcontrol_task()
 	    	printf("[SystemControl] Client closed connection.\n");
 	    	close(ClientSocket);
 	    	close(ServerHandle);
-	    	SystemControlCommand = listen_0;
+	    	//SystemControlCommand = listen_0;
+	    	//Oops no client is connected, send abort to ObjectControl
+	    	SystemControlCommand = abort_0;
 	    }
 	    else
 	    {
