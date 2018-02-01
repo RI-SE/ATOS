@@ -47,7 +47,8 @@
 #define OBJECT_CONTROL_REPLAY_MODE 1
 #define OBJECT_CONTROL_ABORT_MODE 1
 
-#define COMMAND_MESSAGE_HEADER_LENGTH 5 
+#define COMMAND_MESSAGE_HEADER_LENGTH sizeof(HeaderType) 
+#define COMMAND_MESSAGE_FOOTER_LENGTH 2
 #define COMMAND_CODE_INDEX 0
 #define COMMAND_MESSAGE_LENGTH_INDEX 1
 
@@ -56,7 +57,9 @@
 #define COMMAND_DOPM_ROWS_IN_TRANSMISSION  40
 
 #define COMMAND_OSEM_CODE 2
-#define COMMAND_OSEM_MESSAGE_LENGTH 14 
+#define COMMAND_OSEM_NOFV 4
+//#define COMMAND_OSEM_MESSAGE_LENGTH 14
+#define COMMAND_OSEM_MESSAGE_LENGTH sizeof(OSEMType)
 
 #define COMMAND_AROM_CODE 3
 #define COMMAND_AROM_MESSAGE_LENGTH 1
@@ -129,7 +132,7 @@ static void vCreateSafetyChannel(const char* name,const uint32_t port,
 static void vCloseSafetyChannel(int* sockfd);
 static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatCommand_t tCommand);
 static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData);
-int ObjectControlBuildOSEMMessage(char* MessageBuffer, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug);
+int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug);
 int ObjectControlBuildSTRTMessage(char* MessageBuffer, unsigned char CommandOption, unsigned long TimeStamp, char debug);
 int ObjectControlBuildAROMMessage(char* MessageBuffer, unsigned char CommandOption, char debug);
 int ObjectControlBuildHEABMessage(char* MessageBuffer, unsigned char CommandOption, char debug);
@@ -237,7 +240,8 @@ void objectcontrol_task()
   char TriggId[SMALL_BUFFER_SIZE_1];
   char TriggAction[SMALL_BUFFER_SIZE_1];
   char TriggDelay[SMALL_BUFFER_SIZE_0];
-
+  HeaderType HeaderData;
+  OSEMType OSEMData;
 
   unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
@@ -328,7 +332,7 @@ void objectcontrol_task()
   {
     UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
 
-    MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, 
+    MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, 
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
@@ -921,39 +925,63 @@ int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char
 }
 
 
-int ObjectControlBuildOSEMMessage(char* MessageBuffer, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug)
+int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug)
 {
 
 
-  int MessageIndex = 0;
+  int MessageIndex = 0, i = 0;;
   double Data;
+  char *p;
   
-  bzero(MessageBuffer, COMMAND_OSEM_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH);
+  //bzero(MessageBuffer, COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_OSEM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
+  bzero(MessageBuffer, COMMAND_OSEM_MESSAGE_LENGTH);
+
+  OSEMData->Header.SyncWord = 0;
+  OSEMData->Header.TransmitterId = 0;
+  OSEMData->Header.MessageLength = sizeof(HeaderType) - sizeof(HeaderType);
+  OSEMData->Header.AckReq = 0;
+  OSEMData->MessageId = COMMAND_OSEM_CODE;
+  OSEMData->NOFValues = 4;
+  OSEMData->LatitudeValueId = VALUE_ID_LATITUDE;
+  OSEMData->LatitudeValueType = U32_CODE;
+  OSEMData->Latitude = (I32)(atof((char *)Latitude) * 1e8)/10;
+  OSEMData->LongitudeValueId = VALUE_ID_LATITUDE;
+  OSEMData->LongitudeValueType = U32_CODE;
+  OSEMData->Longitude = (I32)(atof((char *)Longitude) * 1e8)/10;
+  OSEMData->AltitudeValueId = VALUE_ID_LATITUDE;
+  OSEMData->AltitudeValueType = U32_CODE;
+  OSEMData->Altitude = (I32)(atof((char *)Altitude) * 1e2);
+  OSEMData->Footer.Crc = 0;
+
+  p=(char *)OSEMData;
+  for(i=0; i<sizeof(OSEMType); i++) 
+  {
+    MessageBuffer[*p++];
+  }
+
 
   UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_OSEM_CODE);
   
-  //if(iUtilGetParaConfFile("OrigoLatitude",pcTempBuffer))
   {
     //printf("Latitude: %s\n", Latitude);
     //Data = (atof("57.77737160") * 1e8)/10;
+    MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex+COMMAND_MESSAGE_HEADER_LENGTH, VALUE_ID_LATITUDE);
+    MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex, U32_CODE);
     Data = (atof((char *)Latitude) * 1e8)/10;
-    MessageIndex = UtilAddFourBytesMessageData(MessageBuffer, MessageIndex+COMMAND_MESSAGE_HEADER_LENGTH, (unsigned int)Data);
+    MessageIndex = UtilAddFourBytesMessageData(MessageBuffer, MessageIndex, (unsigned int)Data);
   }
-  //if(iUtilGetParaConfFile("OrigoLongitude",pcTempBuffer))
   {
     //printf("Longitude: %s\n", Longitude);
     //Data = (atof("12.7804630") * 1e8)/10;
     Data = (atof((char *)Longitude) * 1e8)/10;
     MessageIndex = UtilAddFourBytesMessageData(MessageBuffer, MessageIndex, (unsigned int)Data);
   }
-  //if(iUtilGetParaConfFile("OrigoAltitude",pcTempBuffer))
   {
     //printf("Altitude: %s\n", Altitude);
     //Data = atof("202.934115075") * 1e2;
     Data = atof((char *)Altitude) * 1e2;
     MessageIndex = UtilAddFourBytesMessageData(MessageBuffer, MessageIndex, (unsigned short)Data);
   }
-  //if(iUtilGetParaConfFile("OrigoHeading",pcTempBuffer))
   {
     //printf("Heading: %s\n", Heading);
     //Data = atof("0.0") * 1e1;
@@ -968,7 +996,7 @@ int ObjectControlBuildOSEMMessage(char* MessageBuffer, char *Latitude, char *Lon
 
   if(debug)
   {
-    int i = 0;
+    i = 0;
     for(i = 0; i < MessageIndex; i ++) printf("[%d]=%x\n", i, (unsigned char)MessageBuffer[i]);
   }
 

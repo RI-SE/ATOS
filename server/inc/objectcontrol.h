@@ -13,13 +13,14 @@
 
 #include <stdio.h>
 #include <inttypes.h>
+#include "util.h"
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
 void objectcontrol_task();
 
-int ObjectControlBuildOSEMMessage(char* MessageBuffer, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug);
+int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug);
 int ObjectControlBuildSTRTMessage(char* MessageBuffer, unsigned char CommandOption, unsigned long TimeStamp, char debug);
 int ObjectControlBuildAROMMessage(char* MessageBuffer, unsigned char CommandOption, char debug);
 int ObjectControlBuildHEABMessage(char* MessageBuffer, unsigned char CommandOption, char debug);

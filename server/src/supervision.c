@@ -69,6 +69,7 @@ static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_P
   (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",
                                 &iForceObjectToLocalhost);
 
+  printf("Filenames:\n");
   while ((directory_entry = readdir(traj_directory)) &&
          ((*nbr_objects) < MAX_OBJECTS))
     {
@@ -76,7 +77,7 @@ static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_P
       if (strncmp(directory_entry->d_name,".",1))
         {
           bzero(object_address_name[(*nbr_objects)],MAX_FILE_PATH);
-
+          printf("%s\n", directory_entry->d_name);
           bzero(object_traj_file[(*nbr_objects)],MAX_FILE_PATH);
           (void)strcat(object_traj_file[(*nbr_objects)],TRAJECTORY_PATH);
           (void)strcat(object_traj_file[(*nbr_objects)],directory_entry->d_name);

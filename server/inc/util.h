@@ -117,7 +117,83 @@
 #define SLAVE_FILE_EXTENSION ".sync.s"
 
 
+#define UNKNOWN 0
+#define C8_CODE  1
+#define U8_CODE  2
+#define I8_CODE  3
+#define U16_CODE  4
+#define I16_CODE  5
+#define U32_CODE  6
+#define I32_CODE  7
+#define U48_CODE  8
+#define I48_CODE  9
+#define U64_CODE  10
+#define I64_CODE  11
+#define DBL_CODE  12
+#define FLT_CODE  13
+#define STRUCT_CODE  254
+#define RESERVED_CODE  255
+
+#define VALUE_ID_NOT_DEF  0
+#define VALUE_ID_RELATIVE_TIME 1
+#define VALUE_ID_ABSOLUTE_TIME 2
+#define VALUE_ID_X_POSITION  10
+#define VALUE_ID_Y_POSITION  11
+#define VALUE_ID_Z_POSITION  12
+#define VALUE_ID_LATITUDE  20
+#define VALUE_ID_LONGITUDE 21
+#define VALUE_ID_ALTITUDE  22
+#define VALUE_ID_HEADING 30
+#define VALUE_ID_LONGITUDINAL_SPEED  40
+#define VALUE_ID_LATERAL_SPEED 41
+#define VALUE_ID_LONGITUDINAL_ACCELERATION 50
+#define VALUE_ID_LATERAL_ACCELERATION  51
+#define VALUE_ID_FLAG  60
+
+
+#define C8 uint8_t
+#define U8 uint8_t
+#define I8 int8_t
+#define U16 uint16_t
+#define I16 int16_t
+#define U32 uint32_t
+#define I32 int32_t
+#define U64 uint64_t
+#define I64 int64_t
+#define DBL double
+#define FLT float
+
 //#define DEBUG
+typedef struct
+{
+  U16 SyncWord;
+  U8 TransmitterId;
+  U32 MessageLength;
+  U8 AckReq;
+} HeaderType;
+
+typedef struct
+{
+  U16 Crc;
+} FooterType;
+
+typedef struct
+{
+  HeaderType Header;
+  U16 MessageId;
+  U16 NOFValues;
+  U16 LatitudeValueId;
+  U8 LatitudeValueType;
+  U32 Latitude;
+  U16 LongitudeValueId;
+  U8 LongitudeValueType;
+  U32 Longitude;
+  U16 AltitudeValueId;
+  U8 AltitudeValueType;
+  U32 Altitude;
+  FooterType Footer;
+} OSEMType;
+
 
 typedef struct
 {

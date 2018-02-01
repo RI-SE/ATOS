@@ -106,6 +106,8 @@ int main(int argc, char *argv[])
 	bzero(object_address_name,50);
 	uint32_t object_tcp_port = USER_CONTROL_SYSTEM_CONTROL_PORT;
 
+	OSEMType OSEMData;
+
 	if (argc > 1)
 	{
 		strcat(object_address_name, argv[1]);
@@ -362,7 +364,7 @@ int main(int argc, char *argv[])
 					UserControlResetInputVariables();
 				break;
 				case tosem_0:
-					 MessageLength = ObjectControlBuildOSEMMessage(MessageBuffer, 
+					MessageLength = ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData,
                                 UtilSearchTextFile("conf/test.conf", "OrigoLatidude=", "", Latitude),
                                 UtilSearchTextFile("conf/test.conf", "OrigoLongitude=", "", Longitude),
                                 UtilSearchTextFile("conf/test.conf", "OrigoAltitude=", "", Altitude),
