@@ -49,6 +49,10 @@ private slots:
 
     void on_armButton_clicked();
 
+    void on_loadtrajectories_triggered();
+
+    void on_actionClose_triggered();
+
 private:
     Ui::MainWindow *ui;
     QTimer *mTimer;

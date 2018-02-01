@@ -1701,3 +1701,79 @@ void MapWidget::getEnuRef(double *llh)
     llh[1] = mRefLon;
     llh[2] = mRefHeight;
 }
+
+bool MapWidget::loadTrajectoryFromFile(QString filepath)
+{
+    //QString filepath = "/home/viktorjo/repos/chronos/server/traj/GarageplanInnerring.traj";
+    //QList<QPointF> trajTemp;
+    QDir dir("./traj/");
+
+    double ref_llh[3];
+    double llh[3];
+    double xyz[3];
+
+    QString line;
+    QFile file(filepath);
+    if(!file.open(QIODevice::ReadOnly))
+    {
+        qDebug() << "Could not open file: " << filepath;
+    }
+
+    QList<LocPoint> trajectory;
+
+    QTextStream in(&file);
+    while(!in.atEnd())
+    {
+        line = in.readLine();
+        QStringList list = line.split(';');
+        if(list[0].compare("LINE") == 0)
+        {
+            //qDebug() << "X: " << list[2] << " Y: " << list[3] << " Z: " << list[4];
+
+            // Transform  xyz to llh, hardcoded origo
+            ref_llh[0] = mRefLat; // LATb
+            ref_llh[1] = mRefLon; // LONb
+            ref_llh[2] = mRefHeight;
+
+            xyz[0] = list[2].toDouble();
+            xyz[1] = list[3].toDouble();
+            xyz[2] = list[4].toDouble();
+            //utility::enuToLlh(ref_llh,xyz,llh);
+            //llh[2] = 219.0;
+
+            // x = (LON - LONb) * (M_PI/180)*R*cos(((LAT - LATb)/2)*(M_PI/180))
+            // y = (LAT - LATb) * (M_PI/180)*R
+
+            // LAT = y / ((M_PI/180)*R) + LATb
+            // LON = x / ((M_PI/180)*R*cos(((LAT - LATb)/2)*(M_PI/180))) + LONb
+
+
+            llh[0] = xyz[1] / ((M_PI/180)*6378137.0) + ref_llh[0];
+            llh[1] = xyz[0] / ((M_PI/180)*6378137.0*cos(((llh[0] + ref_llh[0])/2)*(M_PI/180))) + ref_llh[1];
+            llh[2] = ref_llh[2] + xyz[2];
+
+            //qDebug() << "LLH: " << QString::number(llh[0], 'g', 8) << " " << QString::number(llh[1], 'g', 8) << " " << QString::number(llh[2], 'g', 8);
+
+            // Transform to x,y,z according to getEnuRef
+            getEnuRef(ref_llh);
+            utility::llhToEnu(ref_llh, llh, xyz);
+
+            //qDebug() << "ref_llh: " << QString::number(ref_llh[0], 'g', 8) << " " << QString::number(ref_llh[1], 'g', 8) << " " << QString::number(ref_llh[2], 'g', 8);
+
+            //qDebug() << "ENU: " << xyz[0] << " " << xyz[1] << " " << xyz[2];
+
+            //trajTemp.append(QPointF(xyz[0],xyz[1]));
+            //mInfoTrace.append(LocPoint(xyz[0],xyz[1]));
+            trajectory.append(LocPoint(xyz[0],xyz[1]));
+        }
+
+    }
+    file.close();
+    if(trajectory.size() > 0)
+    {
+        mInfoTraces.append(trajectory);
+        return true;
+    }
+    return false;
+
+}

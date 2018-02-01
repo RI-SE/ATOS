@@ -30,6 +30,7 @@
 #include <QTimer>
 #include <QUdpSocket>
 #include <QWebSocket>
+#include <QFileDialog>
 
 #include "locpoint.h"
 #include "carinfo.h"
@@ -114,6 +115,8 @@ public:
 
     int getInfoTraceNow() const;
     void setInfoTraceNow(int infoTraceNow);
+
+    bool loadTrajectoryFromFile(QString filepath);
 
 signals:
     void scaleChanged(double newScale);
