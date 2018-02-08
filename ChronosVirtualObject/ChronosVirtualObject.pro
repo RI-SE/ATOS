@@ -42,7 +42,8 @@ SOURCES += \
         osmclient.cpp \
         osmtile.cpp \
     virtualobject.cpp \
-    qcustomplot.cpp
+    qcustomplot.cpp \
+    isocom.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -60,7 +61,8 @@ HEADERS += \
         osmtile.h \
         mapwidget.h \
     virtualobject.h \
-    qcustomplot.h
+    qcustomplot.h \
+    isocom.h
 
 FORMS += \
         mainwindow.ui

@@ -5,7 +5,8 @@
 #include <QDebug>
 #include <QDateTime>
 #include <QThread>
-#include "chronos.h"
+//#include "chronos.h"
+#include "isocom.h"
 #include "locpoint.h"
 #include "datatypes.h"
 #include <string.h>
