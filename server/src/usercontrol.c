@@ -374,7 +374,7 @@ int main(int argc, char *argv[])
 					UserControlResetInputVariables();
 				break;
 				case tstrt_0:
-					MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, 1, 1024, 1);
+					//MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, 1, 1024, 1);
 					UserControlResetInputVariables();
 				break;
 				case tdopm_0:

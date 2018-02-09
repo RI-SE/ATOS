@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : supervision.c
-  -- Author      : Karl-Johan Ode
+  -- Author      : 
   -- Description : CHRONOS
   -- Purpose     :
   -- Reference   :
@@ -57,6 +57,7 @@ static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_P
   DIR*           traj_directory;
   struct dirent* directory_entry;
   int            iForceObjectToLocalhost;
+  int i = 0;
 
   iForceObjectToLocalhost = 0;
 
@@ -77,7 +78,7 @@ static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_P
       if (strncmp(directory_entry->d_name,".",1))
         {
           bzero(object_address_name[(*nbr_objects)],MAX_FILE_PATH);
-          printf("%s\n", directory_entry->d_name);
+          printf("Id %d = %s\n", i++, directory_entry->d_name);
           bzero(object_traj_file[(*nbr_objects)],MAX_FILE_PATH);
           (void)strcat(object_traj_file[(*nbr_objects)],TRAJECTORY_PATH);
           (void)strcat(object_traj_file[(*nbr_objects)],directory_entry->d_name);

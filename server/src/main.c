@@ -3,7 +3,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   --------------------------------------------------------------------------------
   -- File        : main.c
-  -- Author      : Karl-Johan Ode, Sebastian Loh Lindholm
+  -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS main
   -- Purpose     :
   -- Reference   :

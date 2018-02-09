@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : util.h
-  -- Author      : Karl-Johan Ode, Sebastian Loh Lindholm
+  -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS
   -- Purpose     :
   -- Reference   :
@@ -75,9 +75,9 @@
 
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
-#define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.26"
-#define TESTSERVER_IP "192.168.0.26"
+#define USE_TEST_HOST 1
+#define TESTHOST_IP "192.168.0.22"
+#define TESTSERVER_IP "192.168.0.22"
 #define TEST_SYNC_POINTS 0
 
 
@@ -163,37 +163,72 @@
 #define DBL double
 #define FLT float
 
+#pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
+
+#define SYNC_WORD 0x7e7e
 //#define DEBUG
 typedef struct
 {
-  U16 SyncWord;
-  U8 TransmitterId;
-  U32 MessageLength;
-  U8 AckReq;
-} HeaderType;
+  U16 SyncWordU16;
+  U8 TransmitterIdU8;
+  U8 PackageCounterU8;
+  U8 AckReqU8;
+  U32 MessageLengthU32;
+} HeaderType; //9 bytes
 
 typedef struct
 {
   U16 Crc;
-} FooterType;
+} FooterType; //2 bytes
 
 typedef struct
 {
   HeaderType Header;
-  U16 MessageId;
-  U16 NOFValues;
-  U16 LatitudeValueId;
-  U8 LatitudeValueType;
-  U32 Latitude;
-  U16 LongitudeValueId;
-  U8 LongitudeValueType;
-  U32 Longitude;
-  U16 AltitudeValueId;
-  U8 AltitudeValueType;
-  U32 Altitude;
-  FooterType Footer;
-} OSEMType;
+  U16 MessageIdU16;
+  U32 NOFValuesU32;
+  U16 LatitudeValueIdU16;
+  U8 LatitudeValueTypeU8;
+  I32 LatitudeI32;
+  U16 LongitudeValueIdU16;
+  U8 LongitudeValueTypeU8;
+  I32 LongitudeI32;
+  U16 AltitudeValueIdU16;
+  U8 AltitudeValueTypeU8;
+  I32 AltitudeI32;
+} OSEMType; //36 bytes
 
+typedef struct
+{
+  HeaderType Header;
+  U16 MessageIdU16;
+  U32 NOFValuesU32;
+  U16 StartTimeValueIdU16;
+  U8 StartTimeValueTypeU8;
+  U64 StartTimeU64;
+} STRTType; //26 bytes
+
+typedef struct
+{
+  HeaderType Header;
+  U16 MessageIdU16;
+  U32 NOFValuesU32;
+  U16 StateValueIdU16;
+  U8 StateValueTypeU8;
+  U8 StateU8;
+} OSTMType; //19 bytes
+
+typedef struct
+{
+  HeaderType Header;
+  U16 MessageIdU16;
+  U32 NOFValuesU32;
+  U16 TimeValueIdU16;
+  U8 TimeValueTypeU8;
+  U64 TimeU64;
+  U16 StatusValueIdU16;
+  U8 StatusValueTypeU8;
+  U8 StatusU8;
+} HEABType; //30 bytes
 
 typedef struct
 {
@@ -310,6 +345,8 @@ void enuToLlh(const double *iLlh, const double *xyz, double *llh);
 void createEnuMatrix(double lat, double lon, double *enuMat);
 void xyzToLlh(double x, double y, double z, double *lat, double *lon, double *height);
 void llhToEnu(const double *iLlh, const double *llh, double *xyz);
+uint16_t crc_16( const unsigned char *input_str, uint16_t num_bytes );
+
 
 typedef struct {
   uint64_t timestamp;
