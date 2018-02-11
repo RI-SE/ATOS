@@ -75,9 +75,9 @@
 
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
-#define USE_TEST_HOST 1
-#define TESTHOST_IP "192.168.0.22"
-#define TESTSERVER_IP "192.168.0.22"
+#define USE_TEST_HOST 0
+#define TESTHOST_IP "192.168.0.33"
+#define TESTSERVER_IP "192.168.0.33"
 #define TEST_SYNC_POINTS 0
 
 
@@ -229,6 +229,49 @@ typedef struct
   U8 StatusValueTypeU8;
   U8 StatusU8;
 } HEABType; //30 bytes
+
+typedef struct
+{
+  HeaderType Header;
+  U16 MessageIdU16;
+  U32 NOFValuesU32;
+  U16 PositionTimeValueIdU16;
+  U8 PositionTimeValueTypeU8;
+  U64 PositionTimeU64;
+  U16 XPositionValueIdU16;
+  U8 XPositionValueTypeU8;
+  I32 XPositionI32;
+  U16 YPositionValueIdU16;
+  U8 YPositionValueTypeU8;
+  I32 YPositionI32;
+  U16 ZPositionValueIdU16;
+  U8 ZPositionValueTypeU8;
+  I32 ZPositionI32;
+  U16 HeadingValueIdU16;
+  U8 HeadingValueTypeU8;
+  U16 HeadingU16;
+  U16 LongitudinalSpeedValueIdU16;
+  U8 LongitudinalSpeedValueTypeU8;
+  I16 LongitudinalSpeedI16;
+  U16 LateralSpeedValueIdU16;
+  U8 LateralSpeedValueTypeU8;
+  I16 LateralSpeedI16;
+  U16 LongitudinalAccValueIdU16;
+  U8 LongitudinalAccValueTypeU8;
+  I16 LongitudinalAccI16;
+  U16 LateralAccValueIdU16;
+  U8 LateralAccValueTypeU8;
+  I16 LateralAccI16;
+  U16 DriveDirectionValueIdU16;
+  U8 DriveDirectionValueTypeU8;
+  U8 DriveDirectionU8;
+  U16 StateValueIdU16;
+  U8 StateValueTypeU8;
+  U8 StateU8;
+  U16 StatusValueIdU16;
+  U8 StatusValueTypeU8;
+  U8 StatusU8;
+} MONRType;
 
 typedef struct
 {

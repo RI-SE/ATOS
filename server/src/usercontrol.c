@@ -107,6 +107,7 @@ int main(int argc, char *argv[])
 	uint32_t object_tcp_port = USER_CONTROL_SYSTEM_CONTROL_PORT;
 
 	OSEMType OSEMData;
+	MONRType MONRData;
 
 	if (argc > 1)
 	{
@@ -412,7 +413,7 @@ int main(int argc, char *argv[])
 					UserControlResetInputVariables();
 				break;
 				case tmonr_0:
-					ObjectControlMONRToASCII(TestBuffer, 1, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 1);
+					//ObjectControlMONRToASCII(TestBuffer, 1, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 1);
 					bzero(Buffer,100);
 					strcat(Buffer,Timestamp);
 					strcat(Buffer,";");
