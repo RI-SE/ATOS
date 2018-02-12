@@ -26,7 +26,9 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
     mRefAlt = rAlt;
 
 
-    cClient = new Chronos();
+    //cClient = new Chronos();
+
+    iClient = new ISOcom();
 
     distribution = new std::normal_distribution<double>(0.0,1.0);
 
@@ -36,7 +38,7 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
 VirtualObject::~VirtualObject() {
     traj.clear();
     delete distribution;
-    delete cClient;
+    delete iClient;
 }
 
 
@@ -179,7 +181,7 @@ void VirtualObject::run()
                     // Send MONR
                     if (sendMONREnabled && !send_monr_idependently)
                     {
-                        cClient->sendMonr(getMONR());
+                        //iClient->sendMonr(getMONR());
                     }
                     // Update the point
                     ref_index++;
@@ -284,7 +286,7 @@ void VirtualObject::run()
         if (clock - update_sent > MONR_SEND_TIME_INTERVAL && sendMONREnabled && send_monr_idependently)
         {
             // Send monr
-            cClient->sendMonr(getMONR());
+            //iClient->sendMonr(getMONR());
             update_sent = clock;
         }
 
@@ -305,28 +307,29 @@ void VirtualObject::run()
 int VirtualObject::connectToServer(int udpSocket,int tcpSocket)
 {
     // Perhaps check if sockets are not taken?
-    if (!cClient->startServer(udpSocket,tcpSocket)){
+    if (!iClient->startServer(udpSocket,tcpSocket)){
         return -1;
     }
     qDebug() << "Connected to Sockets:" << QString::number(udpSocket) << QString::number(tcpSocket);
 
     // Make connections
-    connect(cClient,SIGNAL(handle_osem(chronos_osem)),
+    connect(iClient,SIGNAL(handle_osem(chronos_osem)),
             this,SLOT(handleOSEM(chronos_osem)));
-    connect(cClient,SIGNAL(handle_dopm(QVector<chronos_dopm_pt>)),
+    /*
+    connect(iClient,SIGNAL(handle_dopm(QVector<chronos_dopm_pt>)),
             this,SLOT(handleDOPM(QVector<chronos_dopm_pt>)));
-    connect(cClient,SIGNAL(handle_heab(chronos_heab)),
+    connect(iClient,SIGNAL(handle_heab(chronos_heab)),
             this,SLOT(handleHEAB(chronos_heab)));
-    connect(cClient,SIGNAL(handle_ostm(chronos_ostm)),
+    connect(iClient,SIGNAL(handle_ostm(chronos_ostm)),
             this,SLOT(handleOSTM(chronos_ostm)));
-    connect(cClient,SIGNAL(handle_strt(chronos_strt)),
+    connect(iClient,SIGNAL(handle_strt(chronos_strt)),
             this,SLOT(handleSTRT(chronos_strt)));
-    connect(cClient,SIGNAL(handle_sypm(chronos_sypm)),
+    connect(iClient,SIGNAL(handle_sypm(chronos_sypm)),
             this,SLOT(handleSYPM(chronos_sypm)));
-    connect(cClient,SIGNAL(handle_mtsp(chronos_mtsp)),
+    connect(iClient,SIGNAL(handle_mtsp(chronos_mtsp)),
             this,SLOT(handleMTSP(chronos_mtsp)));
-    connect(cClient,SIGNAL(handle_tcm(chronos_tcm)),
-            this,SLOT(handleTCM(chronos_tcm)));
+    connect(iClient,SIGNAL(handle_tcm(chronos_tcm)),
+            this,SLOT(handleTCM(chronos_tcm)));*/
 
 
     return 0;
@@ -628,7 +631,7 @@ void VirtualObject::triggerOccured(int ID)
         tom.trigger_type = TAA_trigger_type;
         quint64 currentTime = QDateTime::currentMSecsSinceEpoch()-MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
         tom.trigger_etsi_time=currentTime + TAA_delay;
-        cClient->sendTOM(tom);
+        //iClient->sendTOM(tom);
     }
 }
 

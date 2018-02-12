@@ -2,7 +2,7 @@
 #include <QDebug>
 #include <cmath>
 
-ISOcom::Chronos(QObject *parent) : QObject(parent)
+ISOcom::ISOcom(QObject *parent) : QObject(parent)
 {
     //mPacket = 0;
     mTcpServer = new TcpServerSimple(this);
@@ -11,14 +11,10 @@ ISOcom::Chronos(QObject *parent) : QObject(parent)
     mUdpHostAddress = QHostAddress("0.0.0.0");
     mUdpPort = 0;
 
-    mTcpState = 0;
-    mTcpType = 0;
-    mTcpLen = 0;
-
     mHeabPollCnt = 0;
 
     connect(mTcpServer, SIGNAL(dataRx(QByteArray)),
-            this, SLOT(tcpRx(QByteArray)));
+            this, SLOT(PacketRx(QByteArray)));
     connect(mTcpServer, SIGNAL(connectionChanged(bool)),
             this, SLOT(tcpConnectionChanged(bool)));
     connect(mUdpSocket, SIGNAL(readyRead()),
@@ -54,48 +50,99 @@ bool ISOcom::startServer(int udpSocket, int tcpSocket)
     return res;
 }
 
-void ISOcom::tcpRx(QByteArray data)
+void ISOcom::PacketRx(QByteArray data)
 {
+    ISO_PACKAGE_INFO info;
+
+    uint8_t mPacketState = 0;
+    QByteArray message_queue;
+
+    bool MSG_CRC_OK = false;
+    bool MSG_REC = false;
+
     for (char c: data) {
-        switch (mTcpState) {
+        switch (mPacketState) {
+        //---------------------------------------
+        // Check for the sync word
         case 0:
+            /*
             mTcpType = (quint8)c;
             mTcpLen = 0;
             mTcpData.clear();
-            mTcpState++;
-            break;
+            mPacketState++;
+            */
+            // Clear the data types
+            message_queue.clear();
+            info.ACK_REQ = 0;
+            info.PACKAGE_COUNTER = 0;
+            info.PACKAGE_LENGTH = 0;
+            info.TxID = 0;
 
+
+            mPacketState = (uint8_t)c && ISO_PART_SYNC_WORD ? mPacketState + 1 : 0;
+            break;
         case 1:
-            mTcpLen = ((quint8)c) << 24;
-            mTcpState++;
-            break;
 
+            mPacketState = (uint8_t)c && ISO_PART_SYNC_WORD ? mPacketState + 1 : 0;
+            break;
+        //---------------------------------------
+        // Transmitter ID
         case 2:
-            mTcpLen |= ((quint8)c) << 16;
-            mTcpState++;
+            info.TxID = (uint8_t) c;
+            mPacketState++;
             break;
-
+        //---------------------------------------
+        // Package Counter
         case 3:
-            mTcpLen |= ((quint8)c) << 8;
-            mTcpState++;
+            info.PACKAGE_COUNTER = (uint8_t)c;
+            mPacketState++;
             break;
-
+        //---------------------------------------
+        // Ack Request
         case 4:
-            mTcpLen |= (quint8)c;
-            mTcpState++;
+            info.ACK_REQ = (uint8_t)c;
+            mPacketState++;
             break;
-
         case 5:
-            mTcpData.append(c);
-            if (mTcpData.size() >= (int)mTcpLen) {
-                mTcpState = 0;
-                decodeMsg(mTcpType, mTcpLen, mTcpData);
+            info.PACKAGE_LENGTH |= ((quint8)c) << 24;
+            mPacketState++;
+            break;
+        case 6:
+            info.PACKAGE_LENGTH |= ((quint8)c) << 16;
+            mPacketState++;
+            break;
+        case 7:
+            info.PACKAGE_LENGTH |= ((quint8)c) << 8;
+            mPacketState++;
+            break;
+        case 8:
+            info.PACKAGE_LENGTH |= ((quint8)c);
+            mPacketState++;
+            break;
+        case 9:
+            message_queue.append(c);
+            if ((uint32_t)message_queue.size() >= info.PACKAGE_LENGTH) {
+                mPacketState++;
+                qDebug() << "All messages recieved!";
+                MSG_REC = true;
             }
             break;
-
+        case 10:
+            info.CRC |= (uint8_t)c << 8;
+            mPacketState++;
+            break;
+        case 11:
+            info.CRC |= (uint8_t)c;
+            qDebug() << "Whole package recieved!";
+            // Calculate CRC correct
+            MSG_CRC_OK = true;
+            break;
         default:
             break;
         }
+        if (MSG_REC && MSG_CRC_OK)
+            qDebug() << "processing messages";
+            //process message
     }
 }
 
@@ -141,43 +188,6 @@ bool ISOcom::decodeMsg(quint8 type, quint32 len, QByteArray payload)
     (void)payload;
 
     switch (type) {
-    case CHRONOS_MSG_DOPM: {
-        QVector<chronos_dopm_pt> path;
-        VByteArray vb(payload);
-
-        while (vb.size() >= 25) {
-            chronos_dopm_pt pt;
-            pt.tRel = vb.vbPopFrontUint32();
-            pt.x = vb.vbPopFrontDouble32(1e3);
-            pt.y = vb.vbPopFrontDouble32(1e3);
-            pt.z = vb.vbPopFrontDouble32(1e3);
-            pt.heading = vb.vbPopFrontDouble16(1e1);
-            pt.speed = vb.vbPopFrontDouble16(1e2);
-            pt.accel = vb.vbPopFrontInt16();
-            pt.curvature = vb.vbPopFrontInt16();
-            pt.mode = vb.vbPopFrontUint8();
-            path.append(pt);
-        }
-
-        // Subsample points
-        QVector<chronos_dopm_pt> path_redued;
-
-        if (path.size() > 0) {
-            path_redued.append(path.first());
-            for (chronos_dopm_pt pt: path) {
-                chronos_dopm_pt pt_last = path_redued.last();
-
-                if (sqrt((pt.x - pt_last.x) * (pt.x - pt_last.x) +
-                         (pt.y - pt_last.y) * (pt.y - pt_last.y) +
-                         (pt.z - pt_last.z) * (pt.z - pt_last.z)) > 0.5) {
-                    path_redued.append(pt);
-                }
-            }
-        }
-
-        processDopm(path);
-    } break;
-
     case CHRONOS_MSG_OSEM: {
         chronos_osem osem;
         VByteArray vb(payload);
@@ -185,61 +195,9 @@ bool ISOcom::decodeMsg(quint8 type, quint32 len, QByteArray payload)
         osem.lon = vb.vbPopFrontDouble32(1e7);
         osem.alt = vb.vbPopFrontDouble32(1e2);
         osem.heading = vb.vbPopFrontDouble16(1e1);
-        processOsem(osem);
+        //processOsem(osem);
     } break;
 
-    case CHRONOS_MSG_OSTM: {
-        chronos_ostm ostm;
-        ostm.armed = payload.at(0);
-        processOstm(ostm);
-    } break;
-
-    case CHRONOS_MSG_STRT: {
-        chronos_strt strt;
-        VByteArray vb(payload);
-
-        strt.type = vb.vbPopFrontUint8();
-
-        if (vb.size() >= 6) {
-            strt.ts = vb.vbPopFrontUint48();
-        }
-
-        processStrt(strt);
-    } break;
-
-    case CHRONOS_MSG_HEAB: {
-        chronos_heab heab;
-        heab.status = payload.at(0);
-        processHeab(heab);
-    } break;
-
-    case CHRONOS_MSG_SYPM: {
-        chronos_sypm sypm;
-        VByteArray vb(payload);
-
-        sypm.sync_point = vb.vbPopFrontUint32();
-        sypm.stop_point = vb.vbPopFrontUint32();
-        processSypm(sypm);
-    }   break;
-    case CHRONOS_MSG_MTSP: {
-        chronos_mtsp mtsp;
-        VByteArray vb(payload);
-
-        mtsp.ts = vb.vbPopFrontUint48();
-        processMtsp(mtsp);
-    }   break;
-    case CHRONOS_MSG_TCM: {
-        qDebug() << "TCM identified";
-        chronos_tcm tcm;
-        VByteArray vb(payload);
-
-        tcm.trigger_id = vb.vbPopFrontUint8();
-        tcm.trigger_type = vb.vbPopFrontUint8();
-        tcm.action = vb.vbPopFrontUint8();
-        tcm.trigger_delay = vb.vbPopFrontUint16();
-        processTCM(tcm);
-        break;
-    }
 
     default:
         break;
@@ -247,119 +205,7 @@ bool ISOcom::decodeMsg(quint8 type, quint32 len, QByteArray payload)
 
     return true;
 }
-
-/* TODO: Add possibility to save the DOPM message as a trajectory file */
-
-void ISOcom::processDopm(QVector<chronos_dopm_pt> path)
-{
-    qDebug() << "DOPM HANDLED";
-    /*
-    if (mPacket) {
-        mPacket->clearRoute(255);
-    }*/
-    emit handle_dopm(path);
-
-
-/*l
-    for (chronos_dopm_pt pt: path) {
-
-
-        qDebug() << "-- Point" <<
-                    "X:" << pt.x <<
-                    "Y:" << pt.y <<
-                    "Z:" << pt.z <<
-                    "T:" << pt.tRel <<
-                    "Speed:" << pt.speed * 3.6;
-*/
-        /*
-        if (mPacket) {
-            QList<LocPoint> points;
-            LocPoint lpt;
-            lpt.setXY(pt.x, pt.y);
-            lpt.setSpeed(pt.speed);
-            points.append(lpt);
-
-            mPacket->setRoutePoints(255, points);
-        }
-
-    }*/
-}
-
-void ISOcom::processOsem(chronos_osem osem)
-{
-    qDebug() << "OSEM HANDLED";
-    /*
-    double llh[3];
-    llh[0] = osem.lat;
-    llh[1] = osem.lon;
-    llh[2] = osem.alt;
-
-
-    // TODO: Rotate route with heading
-
-    if (mPacket) {
-        mPacket->setEnuRef(255, llh);
-    }*/
-    emit handle_osem(osem);
-}
-
-void ISOcom::processOstm(chronos_ostm ostm)
-{
-    qDebug() << "OSTM HANDLED";
-    //(void)ostm;
-    emit handle_ostm(ostm);
-}
-
-void ISOcom::processStrt(chronos_strt strt)
-{
-    qDebug() << "STRT HANDLED";
-    //(void)strt;
-    emit handle_strt(strt);
 /*
-    if (mPacket) {
-        mPacket->setApActive(255, true);
-    }
-    */
-}
-
-void ISOcom::processHeab(chronos_heab heab)
-{
-    //qDebug() << "HEAB RX";
-
-    //(void)heab;
-
-    emit handle_heab(heab);
-/*
-    if (mPacket) {
-        if (heab.status == 1) {
-            mHeabPollCnt++;
-
-            if (mHeabPollCnt >= 4) {
-                mHeabPollCnt = 0;
-                mPacket->getState(255);
-            }
-        } else {
-            mPacket->setApActive(255, false);
-        }
-    }
-    */
-}
-
-void ISOcom::processSypm(chronos_sypm sypm){
-    qDebug() << "SYPM HANDLED.";
-    emit handle_sypm(sypm);
-}
-
-void ISOcom::processMtsp(chronos_mtsp mtsp){
-    qDebug() << "MTSP HANDLED.";
-    emit handle_mtsp(mtsp);
-}
-void ISOcom::processTCM(chronos_tcm tcm)
-{
-    qDebug() << "TCM HANDLED.";
-    emit handle_tcm(tcm);
-}
-
 bool ISOcom::sendMonr(chronos_monr monr)
 {
     if (QString::compare(mUdpHostAddress.toString(), "0.0.0.0") == 0) {
@@ -400,3 +246,5 @@ bool ISOcom::sendTOM(chronos_tom tom)
 
     return true;
 }
+
+*/

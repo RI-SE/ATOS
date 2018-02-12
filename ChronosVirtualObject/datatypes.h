@@ -538,6 +538,23 @@ typedef struct {
     uint8_t utc_standard;
 } ubx_cfg_nav5;
 
+// ISO information
+#define ISO_SYNC_WORD 0x7E7E
+#define ISO_PART_SYNC_WORD 0x7E
+
+typedef enum {
+    ISO_MSG_OSEM = 2
+} ISO_MSG;
+
+typedef struct
+{
+    uint8_t TxID;
+    uint8_t PACKAGE_COUNTER;
+    uint8_t ACK_REQ;
+    uint32_t PACKAGE_LENGTH;
+    uint16_t CRC;
+} ISO_PACKAGE_INFO;
+
 // Chronos messages
 
 typedef enum {

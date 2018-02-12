@@ -108,7 +108,10 @@ private:
     VOBJ_DATA data;
 
     // Chronos client
-    Chronos* cClient;
+    //Chronos* cClient;
+
+    // ISO client
+    ISOcom* iClient;
 
     // Status variables
     qint8 status = INIT;
