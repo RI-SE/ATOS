@@ -60,6 +60,8 @@ void ISOcom::PacketRx(QByteArray data)
     bool MSG_CRC_OK = false;
     bool MSG_REC = false;
 
+    // TODO: change this to use VByteArray instead of char looping
+
     for (char c: data) {
         switch (mPacketState) {
         //---------------------------------------
@@ -135,14 +137,18 @@ void ISOcom::PacketRx(QByteArray data)
             info.CRC |= (uint8_t)c;
             qDebug() << "Whole package recieved!";
             // Calculate CRC correct
-            MSG_CRC_OK = true;
+            //if (info.CRC == 0)
+                MSG_CRC_OK = true;
             break;
         default:
             break;
         }
         if (MSG_REC && MSG_CRC_OK)
+        {
             qDebug() << "processing messages";
             //process message
+            processMessages(message_queue);
+        }
     }
 }
 
@@ -205,6 +211,126 @@ bool ISOcom::decodeMsg(quint8 type, quint32 len, QByteArray payload)
 
     return true;
 }
+
+bool ISOcom::processMessages(QByteArray data)
+{
+    VByteArray msg_data(data);
+    uint16_t MSG_ID = 0;
+    uint32_t MSG_NR_CONTENT = 0;
+    while(msg_data.size()>2)
+        //As long as MSG ID exists
+    {
+        MSG_ID = msg_data.vbPopFrontUint16();
+        MSG_NR_CONTENT = msg_data.vbPopFrontUint32();
+        switch (MSG_ID) {
+        case ISO_MSG_OSEM:
+        {
+            if (MSG_NR_CONTENT != 3 && false)
+            {
+                qDebug() << "OSEM NoC = 3, MSG NoC = " << MSG_NR_CONTENT;
+                return false;
+            }
+            osem origin;
+            origin.lat = 1;
+            origin.lon = 0;
+            origin.alt = 0;
+            if(!getValidContent(&(origin.lat),msg_data,ISO_VALUE_ID_LAT_POS,ISO_TYPE_ID_I32)) {return false;}
+            double dlat = (double) origin.lat  / 1e7;
+            if(!getValidContent(&(origin.lon),msg_data,ISO_VALUE_ID_LON_POS,ISO_TYPE_ID_I32)) return false;
+            if(!getValidContent(&(origin.alt),msg_data,ISO_VALUE_ID_ALT_POS,ISO_TYPE_ID_I32)) return false;
+            break;
+        }
+        default:
+            break;
+        }
+    }
+    return true;
+}
+
+bool ISOcom::getValidContent(void *data_loc, VByteArray &vb,uint16_t VALUE_ID, uint8_t TYPE_ID)
+{
+    uint16_t read_VALUE_ID = vb.vbPopFrontUint16();
+    uint8_t read_TYPE_ID = vb.vbPopFrontUint8();
+    if(read_VALUE_ID == VALUE_ID && read_TYPE_ID == TYPE_ID)
+    {
+        switch (read_TYPE_ID) {
+        case ISO_TYPE_ID_CHAR:
+            *((char*)data_loc) = vb.vbPopFrontInt8();
+            break;
+        case ISO_TYPE_ID_U8:
+            *((uint8_t*)data_loc) = vb.vbPopFrontUint8();
+            break;
+        case ISO_TYPE_ID_I8:
+            *((int8_t*)data_loc) = vb.vbPopFrontInt8();
+            break;
+        case ISO_TYPE_ID_U16:
+            *((uint16_t*)data_loc) = vb.vbPopFrontUint16();
+            break;
+        case ISO_TYPE_ID_I16:
+            *((int16_t*)data_loc) = vb.vbPopFrontInt16();
+            break;
+        case ISO_TYPE_ID_U32:
+            *((uint32_t*)data_loc) = vb.vbPopFrontUint32();
+            break;
+        case ISO_TYPE_ID_I32:
+        {
+            int32_t apa = vb.vbPopFrontInt32();
+            *((int32_t*)data_loc) = apa;
+            break;
+        }
+        default:
+        {
+            qDebug() << "TypeID" << TYPE_ID << "does not exist.";
+            return false;
+        }
+        }
+    }
+    else {
+        qDebug() << "Value ID and Type ID does not match.";
+        return false;
+    }
+    return true;
+}
+
+/*
+bool ISOcom::processContent(void* data_loc, VByteArray vb, int NR_CONTENTS)
+{
+    uint16_t VALUE_ID = 0;
+    uint8_t TYPE_ID = 0;
+    for (int i = 0; i < NR_CONTENTS;i++)
+    {
+        VALUE_ID = vb.vbPopFrontUint16();
+        TYPE_ID = vb.vbPopFrontUint8();
+        switch (TYPE_ID) {
+        case ISO_TYPE_CHAR:
+            *((char*)data_loc) = vb.vbPopFrontInt8();
+            break;
+        case ISO_TYPE_U8:
+            *((uint8_t*)data_loc) = vb.vbPopFrontUint8();
+            break;
+        case ISO_TYPE_I8:
+            *((int8_t*)data_loc) = vb.vbPopFrontInt8();
+            break;
+        case ISO_TYPE_U16:
+            *((uint16_t*)data_loc) = vb.vbPopFrontUInt16();
+            break;
+        case ISO_TYPE_I16:
+            *((int16_t*)data_loc) = vb.vbPopFrontInt16();
+            break;
+        case ISO_TYPE_U32:
+            *((uint32_t*)data_loc) = vb.vbPopFrontUint32();
+            break;
+        case ISO_TYPE_I32:
+            *((int32_t*)data_loc) = vb.vbPopFrontInt32();
+            break;
+        default:
+            qDebug() << "TypeID" << TYPE_ID << "does not exist.";
+            return false;
+        }
+    }
+    return true;
+}
+*/
 /*
 bool ISOcom::sendMonr(chronos_monr monr)
 {

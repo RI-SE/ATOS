@@ -49,15 +49,19 @@ private:
 
     //int mTcpState;
     //quint8 mTcpType;
-    //quint32 mTcpLen;
+    //quint32 mTcpLen;l
     //QByteArray mTcpData;
 
     int mHeabPollCnt;
 
     bool decodeMsg(quint8 type, quint32 len, QByteArray payload);
 
-    void processOsem(chronos_osem osem);
+    bool processMessages(QByteArray data);
+
+    bool getValidContent(void* data_loc,VByteArray &vb,uint16_t VALUE_ID, uint8_t TYPE_ID);
     /*
+    void processOsem(chronos_osem osem);
+
     void processDopm(QVector<chronos_dopm_pt> path);
 
     void processOstm(chronos_ostm ostm);
