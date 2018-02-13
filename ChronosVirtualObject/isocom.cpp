@@ -225,17 +225,30 @@ bool ISOcom::processMessages(QByteArray data)
         switch (MSG_ID) {
         case ISO_MSG_OSEM:
         {
-            if (MSG_NR_CONTENT != 3)
+            if (MSG_NR_CONTENT != ISO_MSG_OSEM_NoC)
             {
-                qDebug() << "OSEM NoC = 3, MSG NoC = " << MSG_NR_CONTENT;
+                qDebug() << "OSEM NoC = " << ISO_MSG_OSEM_NoC << ", MSG NoC = " << MSG_NR_CONTENT;
                 return false;
             }
             osem origin;
             if(!getValidContent(&(origin.lat),msg_data,ISO_VALUE_ID_LAT_POS,ISO_TYPE_ID_I32)) return false;
             if(!getValidContent(&(origin.lon),msg_data,ISO_VALUE_ID_LON_POS,ISO_TYPE_ID_I32)) return false;
             if(!getValidContent(&(origin.alt),msg_data,ISO_VALUE_ID_ALT_POS,ISO_TYPE_ID_I32)) return false;
+            qDebug() << "OSEM Recieved and handled.";
             emit osem_processed(origin);
             break;
+        }
+        case ISO_MSG_OSTM:
+        {
+            if (MSG_NR_CONTENT != ISO_MSG_OSTM_NoC)
+            {
+                qDebug() << "OSEM NoC = " << ISO_MSG_OSTM_NoC << ", MSG NoC = " << MSG_NR_CONTENT;
+                return false;
+            }
+            ostm state;
+            if(!getValidContent(&(state.state_change),msg_data,ISO_VALUE_ID_FLAG,ISO_TYPE_ID_U8)) return false;
+            qDebug() << "State change = " << state.state_change << "requested.";
+            emit ostm_processed(state);
         }
         default:
             break;

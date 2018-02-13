@@ -610,6 +610,11 @@ typedef struct {
     int32_t alt;
 } osem;
 
+typedef struct
+{
+    uint8_t state_change;
+} ostm;
+
 // Chronos messages
 
 typedef enum {
