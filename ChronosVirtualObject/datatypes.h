@@ -538,6 +538,117 @@ typedef struct {
     uint8_t utc_standard;
 } ubx_cfg_nav5;
 
+// ISO information
+
+// Object states
+#define ISO_OBJECT_STATE_INIT       0x01
+#define ISO_OBJECT_STATE_ARMED      0x02
+#define ISO_OBJECT_STATE_DISARMED   0x03
+#define ISO_OBJECT_STATE_RUNNING    0x04
+#define ISO_OBJECT_STATE_POST_RUN   0x05
+
+// Packet defines
+#define ISO_SYNC_WORD 0x7E7E
+#define ISO_PART_SYNC_WORD 0x7E
+
+// Message types
+
+#define ISO_MSG_DOTM 0x0001
+#define ISO_MSG_OSEM 0x0002
+#define ISO_MSG_OSTM 0x0003
+#define ISO_MSG_STRT 0x0004
+#define ISO_MSG_HEAB 0x0005
+#define ISO_MSG_MONR 0x0006
+
+// Message types number of contents
+
+#define ISO_MSG_DOTM_POINT_NoC 9
+#define ISO_MSG_OSEM_NoC 3
+#define ISO_MSG_OSTM_NoC 1
+#define ISO_MSG_STRT_NoC 1
+#define ISO_MSG_HEAB_NoC 2
+#define ISO_MSG_MONR_NoC 12
+
+// VALUE ID
+
+#define ISO_VALUE_ID_REL_TIME 1
+#define ISO_VALUE_ID_ABS_TIME 2
+#define ISO_VALUE_ID_X_POS 10
+#define ISO_VALUE_ID_Y_POS 11
+#define ISO_VALUE_ID_Z_POS 12
+#define ISO_VALUE_ID_LAT_POS 20
+#define ISO_VALUE_ID_LON_POS 21
+#define ISO_VALUE_ID_ALT_POS 22
+#define ISO_VALUE_ID_HEADING 30
+#define ISO_VALUE_ID_LON_SPEED 40
+#define ISO_VALUE_ID_LAT_SPEED 41
+#define ISO_VALUE_ID_LON_ACC 50
+#define ISO_VALUE_ID_LAT_ACC 51
+#define ISO_VALUE_ID_FLAG 60
+
+#define ISO_NOT_DEFINED 0
+
+// TYPE ID
+#define ISO_TYPE_ID_CHAR 1
+#define ISO_TYPE_ID_U8 2
+#define ISO_TYPE_ID_I8 3
+#define ISO_TYPE_ID_U16 4
+#define ISO_TYPE_ID_I16 5
+#define ISO_TYPE_ID_U32 6
+#define ISO_TYPE_ID_I32 7
+#define ISO_TYPE_ID_U48 8
+#define ISO_TYPE_ID_I48 9
+#define ISO_TYPE_ID_U64 10
+#define ISO_TYPE_ID_I64 11
+#define ISO_TYPE_ID_FLOAT 12
+#define ISO_TYPE_ID_DOUBLE 13
+#define ISO_TYPE_ID_STRUCT 254
+#define ISO_TYPE_ID_RESERVED 255
+
+typedef struct
+{
+    uint8_t TxID;
+    uint8_t PACKAGE_COUNTER;
+    uint8_t ACK_REQ;
+    uint32_t PACKAGE_LENGTH;
+    uint16_t CRC;
+} ISO_PACKAGE_INFO;
+
+typedef struct {
+    int32_t lat;
+    int32_t lon;
+    int32_t alt;
+} osem;
+
+typedef struct
+{
+    uint8_t state_change;
+} ostm;
+
+typedef struct
+{
+    uint64_t abs_start_time;
+} strt;
+
+typedef struct
+{
+    uint64_t tx_time;
+    uint8_t cc_status;
+} heab;
+
+typedef struct
+{
+    uint32_t rel_time;
+    int32_t x;
+    int32_t y;
+    int32_t z;
+    uint16_t heading;
+    int16_t lon_speed;
+    int16_t lat_speed;
+    int16_t lon_acc;
+    int16_t lat_acc;
+} dotm_pt;
+
 // Chronos messages
 
 typedef enum {

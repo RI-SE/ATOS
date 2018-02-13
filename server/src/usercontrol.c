@@ -106,6 +106,9 @@ int main(int argc, char *argv[])
 	bzero(object_address_name,50);
 	uint32_t object_tcp_port = USER_CONTROL_SYSTEM_CONTROL_PORT;
 
+	OSEMType OSEMData;
+	MONRType MONRData;
+
 	if (argc > 1)
 	{
 		strcat(object_address_name, argv[1]);
@@ -368,7 +371,7 @@ int main(int argc, char *argv[])
 					UserControlResetInputVariables();
 				break;
 				case tosem_0:
-					 MessageLength = ObjectControlBuildOSEMMessage(MessageBuffer, 
+					MessageLength = ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData,
                                 UtilSearchTextFile("conf/test.conf", "OrigoLatidude=", "", Latitude),
                                 UtilSearchTextFile("conf/test.conf", "OrigoLongitude=", "", Longitude),
                                 UtilSearchTextFile("conf/test.conf", "OrigoAltitude=", "", Altitude),
@@ -378,7 +381,7 @@ int main(int argc, char *argv[])
 					UserControlResetInputVariables();
 				break;
 				case tstrt_0:
-					MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, 1, 1024, 1);
+					//MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, 1, 1024, 1);
 					UserControlResetInputVariables();
 				break;
 				case tdopm_0:
@@ -416,7 +419,7 @@ int main(int argc, char *argv[])
 					UserControlResetInputVariables();
 				break;
 				case tmonr_0:
-					ObjectControlMONRToASCII(TestBuffer, 1, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 1);
+					//ObjectControlMONRToASCII(TestBuffer, 1, Id, Timestamp, Latitude, Longitude, Altitude, Speed, Heading, DriveDirection, StatusFlag, 1);
 					bzero(Buffer,100);
 					strcat(Buffer,Timestamp);
 					strcat(Buffer,";");
