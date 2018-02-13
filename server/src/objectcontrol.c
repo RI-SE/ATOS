@@ -56,7 +56,7 @@
 #define COMMAND_DOPM_ROWS_IN_TRANSMISSION  40
 
 #define COMMAND_OSEM_CODE 2
-#define COMMAND_OSEM_NOFV 4
+#define COMMAND_OSEM_NOFV 3
 #define COMMAND_OSEM_MESSAGE_LENGTH sizeof(OSEMType)
 
 #define COMMAND_OSTM_CODE 3
@@ -1141,15 +1141,15 @@ int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, char 
   OSEMData->MessageIdU16 = (COMMAND_OSEM_CODE << 8 | COMMAND_OSEM_CODE >> 8);
   OSEMData->NOFValuesU32 = ((COMMAND_OSEM_NOFV << 24)&0xFF000000 | (COMMAND_OSEM_NOFV << 8)&0x00FF0000 | (COMMAND_OSEM_NOFV >> 8)&0x0000FF00 | (COMMAND_OSEM_NOFV >> 24)&0x000000FF);
   OSEMData->LatitudeValueIdU16 = (VALUE_ID_LATITUDE << 8 | VALUE_ID_LATITUDE >> 8);
-  OSEMData->LatitudeValueTypeU8 = U32_CODE;
-  OSEMData->LatitudeI32 = (I32)(atof((char *)Latitude) * 1e8)/10;
+  OSEMData->LatitudeValueTypeU8 = I32_CODE;
+  OSEMData->LatitudeI32 = (I32) ((atof((char *)Latitude) * 1e8)/10);
   OSEMData->LatitudeI32 = ((OSEMData->LatitudeI32 << 24)&0xFF000000 | (OSEMData->LatitudeI32 << 8)&0x00FF0000 | (OSEMData->LatitudeI32 >> 8)&0x0000FF00 | (OSEMData->LatitudeI32 >> 24)&0x000000FF);
-  OSEMData->LongitudeValueIdU16 = VALUE_ID_LONGITUDE;
-  OSEMData->LongitudeValueTypeU8 = U32_CODE;
-  OSEMData->LongitudeI32 = (I32)(atof((char *)Longitude) * 1e8)/10;
+  OSEMData->LongitudeValueIdU16 = (VALUE_ID_LONGITUDE << 8 | VALUE_ID_LONGITUDE >> 8);
+  OSEMData->LongitudeValueTypeU8 = I32_CODE;
+  OSEMData->LongitudeI32 = (I32)((atof((char *)Longitude) * 1e8)/10);
   OSEMData->LongitudeI32 = ((OSEMData->LongitudeI32 << 24)&0xFF000000 | (OSEMData->LongitudeI32 << 8)&0x00FF0000 | (OSEMData->LongitudeI32 >> 8)&0x0000FF00 | (OSEMData->LongitudeI32 >> 24)&0x000000FF);
-  OSEMData->AltitudeValueIdU16 = VALUE_ID_ALTITUDE;
-  OSEMData->AltitudeValueTypeU8 = U32_CODE;
+  OSEMData->AltitudeValueIdU16 = (VALUE_ID_ALTITUDE << 8 | VALUE_ID_ALTITUDE >> 8);
+  OSEMData->AltitudeValueTypeU8 = I32_CODE;
   OSEMData->AltitudeI32 = (I32)(atof((char *)Altitude) * 1e2);
   OSEMData->AltitudeI32 = ((OSEMData->AltitudeI32 << 24)&0xFF000000 | (OSEMData->AltitudeI32 << 8)&0x00FF0000 | (OSEMData->AltitudeI32 >> 8)&0x0000FF00 | (OSEMData->AltitudeI32 >> 24)&0x000000FF);
 

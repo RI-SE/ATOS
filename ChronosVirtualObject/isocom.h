@@ -23,9 +23,9 @@ public:
     //bool sendTOM(chronos_tom tom);
 
 signals:
-
-    void handle_osem(chronos_osem data);
+    void osem_processed(osem data);
     /*
+    void handle_osem(chronos_osem data);
     void handle_dopm(QVector<chronos_dopm_pt> dopm);
     void handle_heab(chronos_heab heab);
     void handle_ostm(chronos_ostm ostm);

@@ -584,8 +584,8 @@ typedef struct {
 #define ISO_TYPE_ID_I8 3
 #define ISO_TYPE_ID_U16 4
 #define ISO_TYPE_ID_I16 5
-#define ISO_TYPE_ID_U32 7
-#define ISO_TYPE_ID_I32 6
+#define ISO_TYPE_ID_U32 6
+#define ISO_TYPE_ID_I32 7
 #define ISO_TYPE_ID_U48 8
 #define ISO_TYPE_ID_I48 9
 #define ISO_TYPE_ID_U64 10

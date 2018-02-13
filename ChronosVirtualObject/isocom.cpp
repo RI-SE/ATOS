@@ -225,19 +225,16 @@ bool ISOcom::processMessages(QByteArray data)
         switch (MSG_ID) {
         case ISO_MSG_OSEM:
         {
-            if (MSG_NR_CONTENT != 3 && false)
+            if (MSG_NR_CONTENT != 3)
             {
                 qDebug() << "OSEM NoC = 3, MSG NoC = " << MSG_NR_CONTENT;
                 return false;
             }
             osem origin;
-            origin.lat = 1;
-            origin.lon = 0;
-            origin.alt = 0;
-            if(!getValidContent(&(origin.lat),msg_data,ISO_VALUE_ID_LAT_POS,ISO_TYPE_ID_I32)) {return false;}
-            double dlat = (double) origin.lat  / 1e7;
+            if(!getValidContent(&(origin.lat),msg_data,ISO_VALUE_ID_LAT_POS,ISO_TYPE_ID_I32)) return false;
             if(!getValidContent(&(origin.lon),msg_data,ISO_VALUE_ID_LON_POS,ISO_TYPE_ID_I32)) return false;
             if(!getValidContent(&(origin.alt),msg_data,ISO_VALUE_ID_ALT_POS,ISO_TYPE_ID_I32)) return false;
+            emit osem_processed(origin);
             break;
         }
         default:
@@ -274,8 +271,7 @@ bool ISOcom::getValidContent(void *data_loc, VByteArray &vb,uint16_t VALUE_ID, u
             break;
         case ISO_TYPE_ID_I32:
         {
-            int32_t apa = vb.vbPopFrontInt32();
-            *((int32_t*)data_loc) = apa;
+            *((int32_t*)data_loc) = vb.vbPopFrontInt32();
             break;
         }
         default:
