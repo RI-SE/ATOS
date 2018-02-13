@@ -2,10 +2,11 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "chronos_utility.h"
+//#include "chronos_utility.h"
 #include "chronos.h"
 #include "virtualobject.h"
 #include <QListWidget>
+#include "utility.h"
 
 namespace Ui {
 class MainWindow;
@@ -135,11 +136,14 @@ signals:
     void measurement_noise_toggle(int,bool,double);
     void traj_sim_delay_toggle(int,bool,double);
     void trigger_occured(int);
+    void send_trajectory(int,QVector<chronos_dopm_pt>);
 private slots:
 
     void on_init_vobj_clicked();
     void on_delete_vobj_clicked();
     void on_triggerButton_clicked();
+    void on_loadtraj_clicked();
+
     void removeObject(int ID);
     void handleUpdateState(VOBJ_DATA);
     void handleUpdateMTSP(int ID, qint64 sim_time,qint64 mtsp);
@@ -191,6 +195,7 @@ private:
     void startObject(int ID, int udpSocket, int tcpSocket);
     void displayTime(qint64 t);
     void updateLabelOSEM(double lat,double lon,double alt);
+    bool loadTrajectoryFromFile(QString filepath);
 };
 
 

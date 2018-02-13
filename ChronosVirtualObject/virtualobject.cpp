@@ -59,6 +59,8 @@ void VirtualObject::run()
     qint64 tmod = 0; // Adding or subtracting time (MTPS)
     int mtps = 0; // Which mtsp test is currently checked
 
+
+
     int ref_index= 0; // Keeps track of which reference is currently followed
 
     bool init_start = false;
@@ -77,8 +79,9 @@ void VirtualObject::run()
 
             // Do something error related
             // This will generate a deadlock
-
-            emit simulation_stop(getID());
+            //qDebug() << "ERROR";
+            //emit simulation_stop(getID());
+            //shutdown = true;
         }
         else
         {
@@ -261,7 +264,7 @@ void VirtualObject::run()
                 }
                 qint64 time_since_HB = clock-heab_recieved_time;
                 // Check if heartbeat deadline has passed
-                if(time_since_HB > HEARTBEAT_TIME)
+                if(time_since_HB > HEARTBEAT_TIME && false)
                 {
                     qDebug() << "ERROR: Heartbeat not recieved.";
                     pendingStatus = ERROR;
@@ -318,6 +321,8 @@ int VirtualObject::connectToServer(int udpSocket,int tcpSocket)
             this,SLOT(handleOSEM(osem)));
     connect(iClient,SIGNAL(ostm_processed(ostm)),
             this,SLOT(handleOSTM(ostm)));
+    connect(iClient,SIGNAL(strt_processed(strt)),
+            this,SLOT(handleSTRT(strt)));
     /*
     connect(iClient,SIGNAL(handle_osem(chronos_osem)),
             this,SLOT(handleOSEM(chronos_osem)));
@@ -346,6 +351,12 @@ int VirtualObject::getID()
     return data.ID;
 }
 
+void VirtualObject::getRefLLH(double &lat, double &lon, double &alt)
+{
+    lat = mRefLat;
+    lon = mRefLon;
+    alt = mRefAlt;
+}
 
 void VirtualObject::control_object(chronos_dopm_pt next,chronos_dopm_pt prev)
 {
@@ -497,6 +508,13 @@ void VirtualObject::handleDOPM(QVector<chronos_dopm_pt> msg)
     }
 
 }
+
+void VirtualObject::handleLoadedDOPM(int ID, QVector<chronos_dopm_pt> msg)
+{
+    if (getID() != ID) return;
+    handleDOPM(msg);
+}
+
 void VirtualObject::handleHEAB(chronos_heab msg)
 {
     qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
@@ -541,26 +559,12 @@ void VirtualObject::handleOSTM(ostm msg)
         break;
     }
 }
-void VirtualObject::handleSTRT(chronos_strt msg)
+void VirtualObject::handleSTRT(strt msg)
 {
-    switch (msg.type) {
-    case 0x01:
-        if(status == ARMED)
-        {
-            pendingStatus = RUNNING;
-        }
-        break;
-
-    case 0x02:
-        // Add code for starting at specified time
-        if(status == ARMED)
-        {
-            start_ETSI_time = msg.ts;
-            pendingStatus = RUNNING_STANDBY;
-        }
-        break;
-    default:
-        break;
+    if(status == ARMED)
+    {
+        start_ETSI_time = msg.abs_start_time;
+        pendingStatus = RUNNING;//RUNNING_STANDBY;
     }
 }
 

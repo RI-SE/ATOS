@@ -64,6 +64,7 @@ public:
     void run();
     int connectToServer(int updSocket,int tcpSocket);
     int getID();
+    void getRefLLH(double&,double&,double&);
     static void control_function(double* vel,chronos_dopm_pt ref, VOBJ_DATA data );
 signals:
     //void updated_position(double x, double y, long t,int ID); // To be removed
@@ -86,9 +87,10 @@ private slots:
     // Slots for Chronos communication
     void handleOSEM(osem msg);
     void handleDOPM(QVector<chronos_dopm_pt> msg);
+    void handleLoadedDOPM(int ID, QVector<chronos_dopm_pt> msg);
     void handleHEAB(chronos_heab msg);
     void handleOSTM(ostm msg);
-    void handleSTRT(chronos_strt msg);
+    void handleSTRT(strt msg);
     void handleSYPM(chronos_sypm msg);
     void handleMTSP(chronos_mtsp msg);
     void handleTCM(chronos_tcm msg);

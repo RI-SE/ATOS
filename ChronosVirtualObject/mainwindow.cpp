@@ -99,6 +99,7 @@ void MainWindow::on_init_vobj_clicked()
     ui->MONR_enable->setEnabled(true);
     ui->trajSimBox->setEnabled(true);
     ui->measurementNoiseEnable->setEnabled(true);
+    ui->loadtraj->setEnabled(true);
 
 }
 void MainWindow::on_delete_vobj_clicked()
@@ -124,6 +125,7 @@ void MainWindow::on_delete_vobj_clicked()
     ui->MONR_enable->setEnabled(false);
     ui->measurementNoiseEnable->setEnabled(false);
     ui->trajSimBox->setEnabled(false);
+    ui->loadtraj->setEnabled(false);
 
 
 
@@ -157,16 +159,28 @@ void MainWindow::on_triggerButton_clicked()
     emit trigger_occured(item->getID());
 }
 
+void MainWindow::on_loadtraj_clicked()
+{
+    //qDebug() << "Load trajectory clicked!";
+    QString file = QFileDialog::getOpenFileName(
+                this,
+                "Select one or more files to open.",
+                "./"
+                );
+    loadTrajectoryFromFile(file);
+
+}
+
 // Update the label containing the OSEM information
 void MainWindow::updateLabelOSEM(double lat, double lon, double alt) {
 
-    char c_lat[LABEL_TEXT_LENGTH];
-    char c_long[LABEL_TEXT_LENGTH];
-    char c_alt[LABEL_TEXT_LENGTH];
+    char c_lat[10];
+    char c_long[10];
+    char c_alt[10];
 
-    snprintf(c_lat,LABEL_TEXT_LENGTH,"%g",lat);
-    snprintf(c_long,LABEL_TEXT_LENGTH,"%g",lon);
-    snprintf(c_alt,LABEL_TEXT_LENGTH,"%g",alt);
+    snprintf(c_lat,10,"%g",lat);
+    snprintf(c_long,10,"%g",lon);
+    snprintf(c_alt,10,"%g",alt);
 
     ui->lab_lat->setText(c_lat);
     ui->lab_lon->setText(c_long);
@@ -233,6 +247,8 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
             vobj,SLOT(handleTrajSimDelayToggle(int,bool,double)));
     connect(this,SIGNAL(trigger_occured(int)),
             vobj,SLOT(triggerOccured(int)));
+    connect(this,SIGNAL(send_trajectory(int,QVector<chronos_dopm_pt>)),
+            vobj,SLOT(handleLoadedDOPM(int,QVector<chronos_dopm_pt>)));
     // Reset trace
     ui->widget->clearTrace();
 
@@ -630,7 +646,7 @@ void MainWindow::handleDelayTimeSliderChanged()
 
 void MainWindow::renderWindow()
 {
-    // Update mapp
+    // Update map
     ui->widget->update();
 
     // Add data point to plot
@@ -645,4 +661,86 @@ void MainWindow::renderWindow()
     // Replot the graph
     plot->rescaleAxes();
     plot->replot();
+}
+
+bool MainWindow::loadTrajectoryFromFile(QString filepath)
+{
+
+
+
+
+    QString line;
+    QFile file(filepath);
+    if(!file.open(QIODevice::ReadOnly))
+    {
+        qDebug() << "Could not open file: " << filepath;
+    }
+
+
+    // Find the item/car that is selected
+    QList<QListWidgetItem*> items = ui->carListWidget->selectedItems();
+    if (items.size()==0)
+    {
+        qDebug() << "No item selected";
+        return false;
+    }
+    else if (items.size()>1)
+    {
+        qDebug() << "To many selected items.";
+        return false;
+    }
+    double ref_llh[3];
+    double llh[3] = {0,0,0};
+    double xyz[3];
+
+    ObjectListWidget *item = (ObjectListWidget*) items[0];
+    VirtualObject* obj = findVirtualObject(item->getID());
+    obj->getRefLLH(ref_llh[0],ref_llh[1],ref_llh[2]);
+
+
+    QList<LocPoint> drawtraj;
+    QVector<chronos_dopm_pt> traj;
+
+    QTextStream in(&file);
+    while(!in.atEnd())
+    {
+        line = in.readLine();
+        QStringList list = line.split(';');
+        chronos_dopm_pt point;
+        if(list[0].compare("LINE") == 0)
+        {
+
+            xyz[0] = list[2].toDouble();
+            xyz[1] = list[3].toDouble();
+            xyz[2] = list[4].toDouble();
+
+            llh[0] = xyz[1] / ((M_PI/180)*6378137.0) + ref_llh[0];
+            llh[1] = xyz[0] / ((M_PI/180)*6378137.0*cos(((llh[0] + ref_llh[0])/2)*(M_PI/180))) + ref_llh[1];
+            llh[2] = ref_llh[2] + xyz[2];
+
+            utility::llhToEnu(ref_llh, llh, xyz);
+
+            point.tRel = (uint32_t) (list[1].toDouble()*1000.0f);
+            point.x = xyz[0];
+            point.y = xyz[1];
+            point.z = xyz[2];
+            point.heading = (list[5].toDouble())*180/M_PI;
+            point.speed = list[6].toDouble();
+            point.accel = list[7].toUInt();
+            point.curvature = list[8].toUInt();
+            point.mode = list[9].toUInt();
+
+            traj.append(point);
+            drawtraj.append(LocPoint(xyz[0],xyz[1]));
+        }
+
+    }
+    file.close();
+    if(traj.size() > 0)
+    {
+        emit send_trajectory(obj->getID(),traj);
+        return true;
+    }
+    return false;
+
 }
