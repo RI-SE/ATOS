@@ -144,7 +144,7 @@ private slots:
     void handleUpdateState(VOBJ_DATA);
     void handleUpdateMTSP(int ID, qint64 sim_time,qint64 mtsp);
     void handleUpdateTCM(int ID, bool active);
-    void handleNewOSEM(chronos_osem);
+    void handleNewOrigin(double,double,double);
     void handleNewTrajectory(int ID,QVector<chronos_dopm_pt> traj);
 
     // Slots for simulation time

@@ -14,7 +14,7 @@ MainWindow::MainWindow(QWidget *parent) :
     start_state.lon = 12.89134921;
     start_state.alt = 219.0;
     start_state.heading = 0;
-    handleNewOSEM(start_state);
+    handleNewOrigin(start_state.lat,start_state.lon,start_state.alt);
 
     QListWidget *lwid = ui->carListWidget;
     QSlider * slider = ui->delayTimeSlider;
@@ -208,8 +208,8 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
     connect(vobj,SIGNAL(updated_state(VOBJ_DATA)),
             this,SLOT(handleUpdateState(VOBJ_DATA)));
     // Handles new OSEM message
-    connect(vobj,SIGNAL(new_OSEM(chronos_osem)),
-            this,SLOT(handleNewOSEM(chronos_osem)));
+    connect(vobj,SIGNAL(new_origin(double,double,double)),
+            this,SLOT(handleNewOrigin(double,double,double)));
     // Connection to show any new trajectory that has been loaded to object
     connect(vobj,SIGNAL(new_trajectory(int,QVector<chronos_dopm_pt>)),
             this,SLOT(handleNewTrajectory(int, QVector<chronos_dopm_pt>)));
@@ -311,12 +311,12 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     ui->widget->updateCarState(data.ID,pos);
 }
 
-void MainWindow::handleNewOSEM(chronos_osem msg)
+void MainWindow::handleNewOrigin(double lat, double lon, double alt)
 {
     // Show the server reference values
-    updateLabelOSEM(msg.lat,msg.lon,msg.alt);
+    updateLabelOSEM(lat,lon,alt);
     // Update the map with the reference values
-    ui->widget->setEnuRef(msg.lat,msg.lon,msg.alt);
+    ui->widget->setEnuRef(lat,lon,alt);
 }
 
 void MainWindow::handleNewTrajectory(int ID, QVector<chronos_dopm_pt> traj)
