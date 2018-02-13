@@ -553,6 +553,7 @@ typedef struct {
 
 // Message types number of contents
 
+#define ISO_MSG_DOTM_POINT_NoC 9
 #define ISO_MSG_OSEM_NoC 3
 #define ISO_MSG_OSTM_NoC 1
 #define ISO_MSG_STRT_NoC 1
@@ -614,6 +615,30 @@ typedef struct
 {
     uint8_t state_change;
 } ostm;
+
+typedef struct
+{
+    uint64_t abs_start_time;
+} strt;
+
+typedef struct
+{
+    uint64_t tx_time;
+    uint8_t cc_status;
+} heab;
+
+typedef struct
+{
+    uint32_t rel_time;
+    int32_t x;
+    int32_t y;
+    int32_t z;
+    uint16_t heading;
+    int16_t lon_speed;
+    int16_t lat_speed;
+    int16_t lon_acc;
+    int16_t lat_acc;
+} dotm_pt;
 
 // Chronos messages
 

@@ -25,6 +25,9 @@ public:
 signals:
     void osem_processed(osem data);
     void ostm_processed(ostm data);
+    void strt_processed(strt data);
+    void dotm_processed(QVector<dotm_pt> data);
+    void heab_processed(heab data);
     /*
     void handle_osem(chronos_osem data);
     void handle_dopm(QVector<chronos_dopm_pt> dopm);

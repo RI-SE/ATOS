@@ -125,7 +125,7 @@ void ISOcom::PacketRx(QByteArray data)
             message_queue.append(c);
             if ((uint32_t)message_queue.size() >= info.PACKAGE_LENGTH) {
                 mPacketState++;
-                qDebug() << "All messages recieved!";
+                //qDebug() << "All messages recieved!";
                 MSG_REC = true;
             }
             break;
@@ -135,7 +135,7 @@ void ISOcom::PacketRx(QByteArray data)
             break;
         case 11:
             info.CRC |= (uint8_t)c;
-            qDebug() << "Whole package recieved!";
+            //qDebug() << "Whole package recieved!";
             // Calculate CRC correct
             //if (info.CRC == 0)
                 MSG_CRC_OK = true;
@@ -145,7 +145,7 @@ void ISOcom::PacketRx(QByteArray data)
         }
         if (MSG_REC && MSG_CRC_OK)
         {
-            qDebug() << "processing messages";
+            /qDebug() << "processing messages";
             //process message
             processMessages(message_queue);
         }
@@ -170,10 +170,12 @@ void ISOcom::readPendingDatagrams()
         mUdpSocket->readDatagram(datagram.data(), datagram.size(),
                                 &mUdpHostAddress, &mUdpPort);
 
+        PacketRx(datagram);
+/*
         VByteArray vb(datagram);
         quint8 type = vb.vbPopFrontUint8();
         quint16 len = vb.vbPopFrontUint32();
-        decodeMsg(type, len, vb);
+        decodeMsg(type, len, vb);*/
     }
 }
 
@@ -223,6 +225,34 @@ bool ISOcom::processMessages(QByteArray data)
         MSG_ID = msg_data.vbPopFrontUint16();
         MSG_NR_CONTENT = msg_data.vbPopFrontUint32();
         switch (MSG_ID) {
+        case ISO_MSG_DOTM:
+        {
+            if (MSG_NR_CONTENT % ISO_MSG_DOTM_POINT_NoC > 0)
+            {
+                qDebug() << "DOPM NoC is not consistent with the amount of points recieved.";
+                return false;
+            }
+            QVector<dotm_pt> trajectory;
+            dotm_pt point;
+            uint32_t remaining_content = MSG_NR_CONTENT;
+            while (remaining_content >= ISO_MSG_DOTM_POINT_NoC)
+            {
+                if(!getValidContent(&(point.rel_time),msg_data,ISO_VALUE_ID_REL_TIME,ISO_TYPE_ID_U32)) return false;
+                if(!getValidContent(&(point.x),msg_data,ISO_VALUE_ID_X_POS,ISO_TYPE_ID_I32)) return false;
+                if(!getValidContent(&(point.y),msg_data,ISO_VALUE_ID_X_POS,ISO_TYPE_ID_I32)) return false;
+                if(!getValidContent(&(point.z),msg_data,ISO_VALUE_ID_X_POS,ISO_TYPE_ID_I32)) return false;
+                if(!getValidContent(&(point.heading),msg_data,ISO_VALUE_ID_HEADING,ISO_TYPE_ID_U16)) return false;
+                if(!getValidContent(&(point.lon_speed),msg_data,ISO_VALUE_ID_LON_SPEED,ISO_TYPE_ID_I16)) return false;
+                if(!getValidContent(&(point.lat_speed),msg_data,ISO_VALUE_ID_LAT_SPEED,ISO_TYPE_ID_I16)) return false;
+                if(!getValidContent(&(point.lon_acc),msg_data,ISO_VALUE_ID_LON_ACC,ISO_TYPE_ID_I16)) return false;
+                if(!getValidContent(&(point.lat_acc),msg_data,ISO_VALUE_ID_LAT_ACC,ISO_TYPE_ID_I16)) return false;
+                trajectory.append(point);
+                remaining_content -= ISO_MSG_DOTM_POINT_NoC;
+            }
+            qDebug() << "STRT received and handled.";
+            emit dotm_processed(trajectory);
+
+        }
         case ISO_MSG_OSEM:
         {
             if (MSG_NR_CONTENT != ISO_MSG_OSEM_NoC)
@@ -234,7 +264,7 @@ bool ISOcom::processMessages(QByteArray data)
             if(!getValidContent(&(origin.lat),msg_data,ISO_VALUE_ID_LAT_POS,ISO_TYPE_ID_I32)) return false;
             if(!getValidContent(&(origin.lon),msg_data,ISO_VALUE_ID_LON_POS,ISO_TYPE_ID_I32)) return false;
             if(!getValidContent(&(origin.alt),msg_data,ISO_VALUE_ID_ALT_POS,ISO_TYPE_ID_I32)) return false;
-            qDebug() << "OSEM Recieved and handled.";
+            qDebug() << "OSEM received and handled.";
             emit osem_processed(origin);
             break;
         }
@@ -242,13 +272,40 @@ bool ISOcom::processMessages(QByteArray data)
         {
             if (MSG_NR_CONTENT != ISO_MSG_OSTM_NoC)
             {
-                qDebug() << "OSEM NoC = " << ISO_MSG_OSTM_NoC << ", MSG NoC = " << MSG_NR_CONTENT;
+                qDebug() << "Number of Contents (NoC) not recognized.";
+                qDebug() << "OSTM NoC = " << ISO_MSG_OSTM_NoC << ", MSG NoC = " << MSG_NR_CONTENT;
                 return false;
             }
             ostm state;
             if(!getValidContent(&(state.state_change),msg_data,ISO_VALUE_ID_FLAG,ISO_TYPE_ID_U8)) return false;
+            qDebug() << "OSTM received and handled.";
             qDebug() << "State change = " << state.state_change << "requested.";
             emit ostm_processed(state);
+        }
+        case ISO_MSG_STRT:
+        {
+            if (MSG_NR_CONTENT != ISO_MSG_STRT_NoC)
+            {
+                qDebug() << "STRT NoC = " << ISO_MSG_STRT_NoC << ", MSG NoC = " << MSG_NR_CONTENT;
+                return false;
+            }
+            strt msg;
+            if(!getValidContent(&(msg.abs_start_time),msg_data,ISO_VALUE_ID_ABS_TIME,ISO_TYPE_ID_U48)) return false;
+            qDebug() << "STRT received and handled.";
+            emit strt_processed(msg);
+        }
+        case ISO_MSG_HEAB:
+        {
+            if (MSG_NR_CONTENT != ISO_MSG_HEAB_NoC)
+            {
+                qDebug() << "HEAB NoC = " << ISO_MSG_HEAB_NoC << ", MSG NoC = " << MSG_NR_CONTENT;
+                return false;
+            }
+            heab heartbeat;
+            if(!getValidContent(&(heartbeat.tx_time),msg_data,ISO_VALUE_ID_ABS_TIME,ISO_TYPE_ID_U48)) return false;
+            if(!getValidContent(&(heartbeat.cc_status),msg_data,ISO_VALUE_ID_FLAG,ISO_TYPE_ID_U8)) return false;
+            qDebug() << "HEAB received and handled.";
+            emit heab_processed(heartbeat);
         }
         default:
             break;
@@ -283,10 +340,11 @@ bool ISOcom::getValidContent(void *data_loc, VByteArray &vb,uint16_t VALUE_ID, u
             *((uint32_t*)data_loc) = vb.vbPopFrontUint32();
             break;
         case ISO_TYPE_ID_I32:
-        {
             *((int32_t*)data_loc) = vb.vbPopFrontInt32();
             break;
-        }
+        case ISO_TYPE_ID_U48:
+            *((uint64_t*)data_loc) = vb.vbPopFrontUint48();
+            break;
         default:
         {
             qDebug() << "TypeID" << TYPE_ID << "does not exist.";
@@ -295,7 +353,7 @@ bool ISOcom::getValidContent(void *data_loc, VByteArray &vb,uint16_t VALUE_ID, u
         }
     }
     else {
-        qDebug() << "Value ID and Type ID does not match.";
+        qDebug() << "Value ID and Type ID does not match the valid combination.";
         return false;
     }
     return true;
