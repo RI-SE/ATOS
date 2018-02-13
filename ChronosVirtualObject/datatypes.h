@@ -539,6 +539,15 @@ typedef struct {
 } ubx_cfg_nav5;
 
 // ISO information
+
+// Object states
+#define ISO_OBJECT_STATE_INIT       0x01
+#define ISO_OBJECT_STATE_ARMED      0x02
+#define ISO_OBJECT_STATE_DISARMED   0x03
+#define ISO_OBJECT_STATE_RUNNING    0x04
+#define ISO_OBJECT_STATE_POST_RUN   0x05
+
+// Packet defines
 #define ISO_SYNC_WORD 0x7E7E
 #define ISO_PART_SYNC_WORD 0x7E
 

@@ -145,7 +145,7 @@ void ISOcom::PacketRx(QByteArray data)
         }
         if (MSG_REC && MSG_CRC_OK)
         {
-            /qDebug() << "processing messages";
+            //qDebug() << "processing messages";
             //process message
             processMessages(message_queue);
         }
@@ -251,6 +251,7 @@ bool ISOcom::processMessages(QByteArray data)
             }
             qDebug() << "STRT received and handled.";
             emit dotm_processed(trajectory);
+            break;
 
         }
         case ISO_MSG_OSEM:
@@ -281,6 +282,7 @@ bool ISOcom::processMessages(QByteArray data)
             qDebug() << "OSTM received and handled.";
             qDebug() << "State change = " << state.state_change << "requested.";
             emit ostm_processed(state);
+            break;
         }
         case ISO_MSG_STRT:
         {
@@ -293,6 +295,7 @@ bool ISOcom::processMessages(QByteArray data)
             if(!getValidContent(&(msg.abs_start_time),msg_data,ISO_VALUE_ID_ABS_TIME,ISO_TYPE_ID_U48)) return false;
             qDebug() << "STRT received and handled.";
             emit strt_processed(msg);
+            break;
         }
         case ISO_MSG_HEAB:
         {
@@ -304,8 +307,9 @@ bool ISOcom::processMessages(QByteArray data)
             heab heartbeat;
             if(!getValidContent(&(heartbeat.tx_time),msg_data,ISO_VALUE_ID_ABS_TIME,ISO_TYPE_ID_U48)) return false;
             if(!getValidContent(&(heartbeat.cc_status),msg_data,ISO_VALUE_ID_FLAG,ISO_TYPE_ID_U8)) return false;
-            qDebug() << "HEAB received and handled.";
+            //qDebug() << "HEAB received and handled.";
             emit heab_processed(heartbeat);
+            break;
         }
         default:
             break;

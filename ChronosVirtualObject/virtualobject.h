@@ -70,7 +70,7 @@ signals:
 
 
     void updated_state(VOBJ_DATA currentState);
-    void new_OSEM(chronos_osem msg);
+    void new_origin(double lat, double lon, double alt);
     void new_trajectory(int ID,QVector<chronos_dopm_pt> traj);
     void thread_done(int ID);
     void simulation_start(int ID);
@@ -84,10 +84,10 @@ signals:
 
 private slots:
     // Slots for Chronos communication
-    void handleOSEM(chronos_osem msg);
+    void handleOSEM(osem msg);
     void handleDOPM(QVector<chronos_dopm_pt> msg);
     void handleHEAB(chronos_heab msg);
-    void handleOSTM(chronos_ostm msg);
+    void handleOSTM(ostm msg);
     void handleSTRT(chronos_strt msg);
     void handleSYPM(chronos_sypm msg);
     void handleMTSP(chronos_mtsp msg);

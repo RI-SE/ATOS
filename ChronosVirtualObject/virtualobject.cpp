@@ -313,9 +313,15 @@ int VirtualObject::connectToServer(int udpSocket,int tcpSocket)
     qDebug() << "Connected to Sockets:" << QString::number(udpSocket) << QString::number(tcpSocket);
 
     // Make connections
+
+    connect(iClient,SIGNAL(osem_processed(osem)),
+            this,SLOT(handleOSEM(osem)));
+    connect(iClient,SIGNAL(ostm_processed(ostm)),
+            this,SLOT(handleOSTM(ostm)));
+    /*
     connect(iClient,SIGNAL(handle_osem(chronos_osem)),
             this,SLOT(handleOSEM(chronos_osem)));
-    /*
+
     connect(iClient,SIGNAL(handle_dopm(QVector<chronos_dopm_pt>)),
             this,SLOT(handleDOPM(QVector<chronos_dopm_pt>)));
     connect(iClient,SIGNAL(handle_heab(chronos_heab)),
@@ -432,24 +438,24 @@ int VirtualObject::findRefPoint(qint64 tRel, uint fromIndex, qint64 refTimeOffse
 
 // SLOTS
 
-void VirtualObject::handleOSEM(chronos_osem msg)
+void VirtualObject::handleOSEM(osem msg)
 {
     switch (status) {
     case INIT:
     case DISARMED:
-        mRefLat = msg.lat;
-        mRefLon = msg.lon;
-        mRefAlt = msg.alt;
+        mRefLat = (double) msg.lat / 1e7;
+        mRefLon = (double) msg.lon / 1e7;
+        mRefAlt = (double) msg.alt /1e2;
 
         //utility::llhToXyz(msg.lat,msg.lon,msg.alt,&data.x,&data.y,&data.z);
-        mRefHeading = msg.heading;
+        //mRefHeading = msg.heading;
         qDebug() << "OSEM:\n" << QString::number(mRefLat,'f',8) << "\n"
                  << QString::number(mRefLon,'f',8) << "\n"
                  << QString::number(mRefAlt,'f',8);
 
         hasOSEM = true;
 
-        emit new_OSEM(msg);
+        emit new_origin(mRefLat,mRefLon,mRefAlt);
         break;
     default:
         break;
@@ -507,25 +513,27 @@ void VirtualObject::handleHEAB(chronos_heab msg)
     }
 }
 
-void VirtualObject::handleOSTM(chronos_ostm msg)
+void VirtualObject::handleOSTM(ostm msg)
 {
 
     qDebug() << "ARM-message!";
-    switch (msg.armed) {
-    case 0x01:
+    switch (msg.state_change) {
+    case ISO_OBJECT_STATE_ARMED:
         if ((status == INIT || status == DISARMED ||
                 status == STOP || status == ABORT) &&
                 hasDOPM && hasOSEM)
             // Maybe status == ERROR as well
         {
+            qDebug() << "ARMING";
             pendingStatus = ARMED;
         }
         break;
-    case 0x02:
+    case ISO_OBJECT_STATE_DISARMED:
         if (status == STOP || status == ABORT ||
-                status == ARMED)
+                status == ARMED || status == INIT)
             // Maybe status == ERROR as well
         {
+            qDebug() << "DISARMING";
             pendingStatus = DISARMED;
         }
         break;
