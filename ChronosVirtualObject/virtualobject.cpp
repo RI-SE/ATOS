@@ -290,7 +290,7 @@ void VirtualObject::run()
         if (clock - update_sent > MONR_SEND_TIME_INTERVAL && sendMONREnabled && send_monr_idependently)
         {
             // Send monr
-            //iClient->sendMonr(getMONR());
+            iClient->sendMonr(getMONR());
             update_sent = clock;
         }
 
@@ -385,9 +385,10 @@ void VirtualObject::control_object(chronos_dopm_pt next,chronos_dopm_pt prev)
     data.speed = actual_speed;
 }
 
-chronos_monr VirtualObject::getMONR()
+monr VirtualObject::getMONR()
 {
-    chronos_monr monr;    
+    monr msg;
+    /*
     double x_noise = 0.0;//(*distribution)(generator);
     double y_noise = 0.0;//(*distribution)(generator);
 
@@ -407,16 +408,47 @@ chronos_monr VirtualObject::getMONR()
     monr.lat=llh[0];
     monr.lon=llh[1];
     monr.alt=llh[2];
-    monr.heading = data.heading;
-    monr.speed = data.speed;
-    monr.direction = 0; // The car is drivning forward
-    monr.status = status;
+    */
+    msg.time_stamp = utility::getCurrentETSItimeMS();
+    msg.x = (int32_t)(data.x * 1e3);
+    msg.y = (int32_t)(data.y * 1e3);
+    msg.z = (int32_t)(data.z * 1e3);
+    msg.heading = (uint16_t)(data.heading * 1e1);
+    msg.lon_speed = (int16_t)(data.speed*1e2);
+    msg.lat_speed = 0;
+    msg.lon_acc = (int16_t)(data.acc*1e1);
+    msg.lat_acc = 0;
+    msg.drive_direction = 0;
+    switch (status) {
+    case INIT:
+        msg.object_state = ISO_OBJECT_STATE_INIT;
+        msg.ready_to_arm = ISO_OBJECT_INTERNAL_STATE_NOT_READY_TO_ARM;
+        break;
+    case ARMED:
+        msg.object_state = ISO_OBJECT_STATE_ARMED;
+        msg.ready_to_arm = ISO_OBJECT_INTERNAL_STATE_READY_TO_ARM;
+        break;
+    case DISARMED:
+        msg.object_state = ISO_OBJECT_STATE_DISARMED;
+        msg.ready_to_arm = ISO_OBJECT_INTERNAL_STATE_READY_TO_ARM;
+        break;
+    case RUNNING:
+    case RUNNING_STANDBY:
+        msg.object_state = ISO_OBJECT_STATE_RUNNING;
+        msg.ready_to_arm = ISO_OBJECT_INTERNAL_STATE_NOT_READY_TO_ARM;
+        break;
+    case STOP:
+    case ABORT:
+    case ERROR:
+        msg.object_state = ISO_OBJECT_STATE_POST_RUN;
+        msg.ready_to_arm = ISO_OBJECT_INTERNAL_STATE_NOT_READY_TO_ARM;
+        break;
+    default:
+        break;
+    }
 
-    monr.ts = QDateTime::currentMSecsSinceEpoch() -
-                MS_FROM_1970_TO_2004_NO_LEAP_SECS +
-                    DIFF_LEAP_SECONDS_UTC_ETSI*1000;
 
-    return monr;
+    return msg;
 }
 
 

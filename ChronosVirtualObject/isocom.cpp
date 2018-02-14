@@ -366,14 +366,79 @@ bool ISOcom::getValidContent(void *data_loc, VByteArray &vb,uint16_t VALUE_ID, u
 }
 
 
-/*
-bool ISOcom::sendMonr(chronos_monr monr)
+
+bool ISOcom::sendMonr(monr msg)
 {
     if (QString::compare(mUdpHostAddress.toString(), "0.0.0.0") == 0) {
         return false;
     }
 
-    VByteArray vb;
+
+    VByteArray monr_msg;
+    monr_msg.vbAppendUint16(ISO_MSG_MONR);
+    monr_msg.vbAppendUint32(ISO_MSG_MONR_NoC);
+
+    monr_msg.vbAppendUint16(ISO_VALUE_ID_ABS_TIME); // VALUE ID
+    monr_msg.vbAppendUint8(ISO_TYPE_ID_U48);  // TYPE ID
+    monr_msg.vbAppendUint48(msg.time_stamp); // DATA
+
+    monr_msg.vbAppendUint16(ISO_VALUE_ID_X_POS); // VALUE ID
+    monr_msg.vbAppendUint8(ISO_TYPE_ID_I32);  // TYPE ID
+    monr_msg.vbAppendInt32(msg.x); // DATA
+
+    monr_msg.vbAppendUint16(ISO_VALUE_ID_Y_POS); // VALUE ID
+    monr_msg.vbAppendUint8(ISO_TYPE_ID_I32);  // TYPE ID
+    monr_msg.vbAppendInt32(msg.y); // DATA
+
+    monr_msg.vbAppendUint16(ISO_VALUE_ID_Z_POS); // VALUE ID
+    monr_msg.vbAppendUint8(ISO_TYPE_ID_I32);  // TYPE ID
+    monr_msg.vbAppendInt32(msg.z); // DATA
+
+    monr_msg.vbAppendUint16(ISO_VALUE_ID_HEADING); // VALUE ID
+    monr_msg.vbAppendUint8(ISO_TYPE_ID_U16);  // TYPE ID
+    monr_msg.vbAppendInt16(msg.heading); // DATA
+
+    monr_msg.vbAppendUint16(ISO_VALUE_ID_LON_SPEED); // VALUE ID
+    monr_msg.vbAppendUint8(ISO_TYPE_ID_I16);  // TYPE ID
+    monr_msg.vbAppendInt16(msg.lon_speed); // DATA
+
+    monr_msg.vbAppendUint16(ISO_VALUE_ID_LAT_SPEED); // VALUE ID
+    monr_msg.vbAppendUint8(ISO_TYPE_ID_I16);  // TYPE ID
+    monr_msg.vbAppendInt16(msg.lat_speed); // DATA
+
+    monr_msg.vbAppendInt16(ISO_VALUE_ID_LON_ACC); // VALUE ID
+    monr_msg.vbAppendInt8(ISO_TYPE_ID_I16);  // TYPE ID
+    monr_msg.vbAppendInt16(msg.lon_acc); // DATA
+
+    monr_msg.vbAppendUint16(ISO_VALUE_ID_LAT_ACC); // VALUE ID
+    monr_msg.vbAppendUint8(ISO_TYPE_ID_I16);  // TYPE ID
+    monr_msg.vbAppendInt16(msg.lat_acc); // DATA
+
+    monr_msg.vbAppendUint16(ISO_VALUE_ID_FLAG); // VALUE ID
+    monr_msg.vbAppendUint8(ISO_TYPE_ID_U8);  // TYPE ID
+    monr_msg.vbAppendUint8(msg.drive_direction); // DATA
+
+    monr_msg.vbAppendUint16(ISO_VALUE_ID_FLAG); // VALUE ID
+    monr_msg.vbAppendUint8(ISO_TYPE_ID_U8);  // TYPE ID
+    monr_msg.vbAppendUint8(msg.object_state); // DATA
+
+    monr_msg.vbAppendUint16(ISO_VALUE_ID_FLAG); // VALUE ID
+    monr_msg.vbAppendUint8(ISO_TYPE_ID_U8);  // TYPE ID
+    monr_msg.vbAppendUint8(msg.ready_to_arm); // DATA
+
+
+    VByteArray package_header;
+    //Build package header
+    package_header.vbAppendUint16(ISO_SYNC_WORD);
+    package_header.vbAppendUint8(0); // Tx ID
+    package_header.vbAppendUint8(0); // Pkg counter
+    package_header.vbAppendUint8(0); // Ack request
+    package_header.vbAppendUint32(monr_msg.size());
+
+    VByteArray to_send = package_header.append(monr_msg);
+    to_send.vbAppendUint16(0); //CRC
+
+    /*
     vb.vbAppendInt8(CHRONOS_MSG_MONR);
     vb.vbAppendInt32(24);
     vb.vbAppendUint48(monr.ts);
@@ -383,13 +448,13 @@ bool ISOcom::sendMonr(chronos_monr monr)
     vb.vbAppendUint16((uint16_t)(monr.speed * 1e2));
     vb.vbAppendUint16((uint16_t)(monr.heading * 1e1));
     vb.vbAppendUint8(monr.direction);
-    vb.vbAppendUint8(monr.status);
+    vb.vbAppendUint8(monr.status);*/
 
-    mUdpSocket->writeDatagram(vb, mUdpHostAddress, mUdpPort);
+    mUdpSocket->writeDatagram(to_send, mUdpHostAddress, mUdpPort);
 
     return true;
 }
-
+/*
 bool ISOcom::sendTOM(chronos_tom tom)
 {
     if (QString::compare(mUdpHostAddress.toString(), "0.0.0.0") == 0) {

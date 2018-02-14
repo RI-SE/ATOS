@@ -174,7 +174,7 @@ private:
     int findRefPoint(qint64 tRel, uint fromIndex,qint64 refTimeOffset);
 
     // Construct a MONR message from the VirtualObject data
-    chronos_monr getMONR();
+    monr getMONR();
 
 };
 

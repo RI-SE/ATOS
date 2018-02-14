@@ -544,6 +544,10 @@ typedef struct {
 #define ISO_CC_STATUS_OK 0x01
 #define ISO_CC_STATUS_EMERGENCY_ABORT 0x02
 
+// Object internal state
+#define ISO_OBJECT_INTERNAL_STATE_READY_TO_ARM 0x00
+#define ISO_OBJECT_INTERNAL_STATE_NOT_READY_TO_ARM 0x01
+
 // Object states
 #define ISO_OBJECT_STATE_INIT       0x01
 #define ISO_OBJECT_STATE_ARMED      0x02
@@ -652,6 +656,22 @@ typedef struct
     int16_t lon_acc;
     int16_t lat_acc;
 } dotm_pt;
+
+typedef struct
+{
+    uint64_t time_stamp;
+    int32_t x;
+    int32_t y;
+    int32_t z;
+    uint16_t heading;
+    int16_t lon_speed;
+    int16_t lat_speed;
+    int16_t lon_acc;
+    int16_t lat_acc;
+    uint8_t drive_direction;
+    uint8_t object_state;
+    uint8_t ready_to_arm;
+} monr;
 
 // Chronos messages
 

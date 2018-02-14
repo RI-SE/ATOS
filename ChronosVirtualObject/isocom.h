@@ -20,7 +20,7 @@ public:
     //bool startServer(PacketInterface *packet);
 
 
-    //bool sendMonr(chronos_monr monr);
+    bool sendMonr(monr msg);
     //bool sendTOM(chronos_tom tom);
 
 signals:
