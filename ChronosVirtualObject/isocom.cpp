@@ -148,6 +148,7 @@ void ISOcom::PacketRx(QByteArray data)
             //qDebug() << "processing messages";
             //process message
             processMessages(message_queue);
+            //qDebug() << "T_ID:"<< info.TxID << "PKG_C:" << info.PACKAGE_COUNTER << "ACK_REQ:" << info.ACK_REQ;
         }
     }
 }
@@ -249,7 +250,7 @@ bool ISOcom::processMessages(QByteArray data)
                 trajectory.append(point);
                 remaining_content -= ISO_MSG_DOTM_POINT_NoC;
             }
-            qDebug() << "STRT received and handled.";
+            qDebug() << "DOTM received and handled.";
             emit dotm_processed(trajectory);
             break;
 
@@ -293,6 +294,7 @@ bool ISOcom::processMessages(QByteArray data)
             }
             strt msg;
             if(!getValidContent(&(msg.abs_start_time),msg_data,ISO_VALUE_ID_ABS_TIME,ISO_TYPE_ID_U48)) return false;
+            //uint64_t cTime = utility::getCurrentETSItimeMS();
             qDebug() << "STRT received and handled.";
             emit strt_processed(msg);
             break;
@@ -363,45 +365,7 @@ bool ISOcom::getValidContent(void *data_loc, VByteArray &vb,uint16_t VALUE_ID, u
     return true;
 }
 
-/*
-bool ISOcom::processContent(void* data_loc, VByteArray vb, int NR_CONTENTS)
-{
-    uint16_t VALUE_ID = 0;
-    uint8_t TYPE_ID = 0;
-    for (int i = 0; i < NR_CONTENTS;i++)
-    {
-        VALUE_ID = vb.vbPopFrontUint16();
-        TYPE_ID = vb.vbPopFrontUint8();
-        switch (TYPE_ID) {
-        case ISO_TYPE_CHAR:
-            *((char*)data_loc) = vb.vbPopFrontInt8();
-            break;
-        case ISO_TYPE_U8:
-            *((uint8_t*)data_loc) = vb.vbPopFrontUint8();
-            break;
-        case ISO_TYPE_I8:
-            *((int8_t*)data_loc) = vb.vbPopFrontInt8();
-            break;
-        case ISO_TYPE_U16:
-            *((uint16_t*)data_loc) = vb.vbPopFrontUInt16();
-            break;
-        case ISO_TYPE_I16:
-            *((int16_t*)data_loc) = vb.vbPopFrontInt16();
-            break;
-        case ISO_TYPE_U32:
-            *((uint32_t*)data_loc) = vb.vbPopFrontUint32();
-            break;
-        case ISO_TYPE_I32:
-            *((int32_t*)data_loc) = vb.vbPopFrontInt32();
-            break;
-        default:
-            qDebug() << "TypeID" << TYPE_ID << "does not exist.";
-            return false;
-        }
-    }
-    return true;
-}
-*/
+
 /*
 bool ISOcom::sendMonr(chronos_monr monr)
 {

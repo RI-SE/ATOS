@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include <QDebug>
-#include <QDateTime>
 #include <QThread>
 //#include "chronos.h"
 #include "isocom.h"
@@ -19,12 +18,7 @@
 
 #define MONR_SEND_TIME_INTERVAL 10 // Time to wait between sending monr
 
-/* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
-/* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
-#define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
 
-/* Difference of leap seconds between UTC and ETSI */
-#define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
 // Object data of interest
 typedef struct {
@@ -65,7 +59,8 @@ public:
     int connectToServer(int updSocket,int tcpSocket);
     int getID();
     void getRefLLH(double&,double&,double&);
-    static void control_function(double* vel,chronos_dopm_pt ref, VOBJ_DATA data );
+    //static void control_function(double* vel,chronos_dopm_pt ref, VOBJ_DATA data );
+
 signals:
     //void updated_position(double x, double y, long t,int ID); // To be removed
 
@@ -88,7 +83,7 @@ private slots:
     void handleOSEM(osem msg);
     void handleDOPM(QVector<chronos_dopm_pt> msg);
     void handleLoadedDOPM(int ID, QVector<chronos_dopm_pt> msg);
-    void handleHEAB(chronos_heab msg);
+    void handleHEAB(heab msg);
     void handleOSTM(ostm msg);
     void handleSTRT(strt msg);
     void handleSYPM(chronos_sypm msg);
@@ -156,7 +151,7 @@ private:
 
 
     // Time variables
-    quint64 heab_recieved_time; // Needed in order to track when Heartbeat came in
+    quint64 last_received_heab_time_from_server; // Needed in order to track when Heartbeat came in
     quint64 sleep_time = 20;     // How long the process should be suspended
     quint64 start_ETSI_time;    // The ETSI time to start at
     // The trajectory to follow

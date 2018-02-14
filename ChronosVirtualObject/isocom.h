@@ -8,6 +8,7 @@
 #include "tcpserversimple.h"
 //#include "packetinterface.h"
 #include "datatypes.h"
+#include "utility.h"
 #include "vbytearray.h"
 
 class ISOcom : public QObject

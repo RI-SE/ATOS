@@ -29,6 +29,33 @@ namespace utility {
 #define FE_WGS84        (1.0/298.257223563) // earth flattening (WGS84)
 #define RE_WGS84        6378137.0           // earth semimajor axis (WGS84) (m)
 
+uint64_t getCurrentETSItimeMS()
+{
+/*
+    struct timeval CurrentTimeStruct;
+    gettimeofday(&CurrentTimeStruct, 0);
+    uint64_t ETSItime = (uint64_t)CurrentTimeStruct.tv_sec*1000 +
+                        (uint64_t)CurrentTimeStruct.tv_usec/1000 -
+                        MS_FROM_1970_TO_2004_NO_LEAP_SECS +
+                        DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+                        */
+    return getETSItimeFromUTCtimeMS(getCurrentUTCtimeMS());
+}
+
+
+uint64_t getETSItimeFromUTCtimeMS(uint64_t UTCtime)
+{
+    return UTCtime - MS_FROM_1970_TO_2004_NO_LEAP_SECS +
+            DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+}
+uint64_t getCurrentUTCtimeMS()
+{
+    struct timeval CurrentTimeStruct;
+    gettimeofday(&CurrentTimeStruct, 0);
+    return (uint64_t)CurrentTimeStruct.tv_sec*1000 +
+            (uint64_t)CurrentTimeStruct.tv_usec/1000;
+}
+
 void buffer_append_int64(uint8_t *buffer, int64_t number, int32_t *index)
 {
     buffer[(*index)++] = number >> 56;

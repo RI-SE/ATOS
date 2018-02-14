@@ -19,8 +19,20 @@
 #define BUFFER_H_
 
 #include <stdint.h>
+#include <sys/time.h>
 
 namespace utility {
+
+/* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
+/* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
+#define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
+
+/* Difference of leap seconds between UTC and ETSI */
+#define DIFF_LEAP_SECONDS_UTC_ETSI 5
+
+uint64_t getCurrentETSItimeMS();
+uint64_t getETSItimeFromUTCtimeMS(uint64_t UTCtime);
+uint64_t getCurrentUTCtimeMS();
 
 void buffer_append_int64(uint8_t* buffer, int64_t number, int32_t *index);
 void buffer_append_uint64(uint8_t *buffer, uint64_t number, int32_t *index);

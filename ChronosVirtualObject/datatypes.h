@@ -540,6 +540,10 @@ typedef struct {
 
 // ISO information
 
+// Control Center status
+#define ISO_CC_STATUS_OK 0x01
+#define ISO_CC_STATUS_EMERGENCY_ABORT 0x02
+
 // Object states
 #define ISO_OBJECT_STATE_INIT       0x01
 #define ISO_OBJECT_STATE_ARMED      0x02

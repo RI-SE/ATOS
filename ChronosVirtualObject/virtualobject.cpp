@@ -129,8 +129,7 @@ void VirtualObject::run()
         }
         else if(status == RUNNING_STANDBY)
         {
-            current_ETSI_time = QDateTime::currentMSecsSinceEpoch() -
-                        MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+            current_ETSI_time = utility::getCurrentETSItimeMS();
             if(current_ETSI_time>=start_ETSI_time)
             {
                 pendingStatus = RUNNING;
@@ -139,7 +138,7 @@ void VirtualObject::run()
         else if(status == RUNNING && test_simulation)
         {
             sleep_time = 5;
-            clock = QDateTime::currentMSecsSinceEpoch();
+            clock = utility::getCurrentUTCtimeMS();
             if (ref_index == 0 && init_start)
             {
 
@@ -147,7 +146,7 @@ void VirtualObject::run()
                 ref_point = traj[ref_index];
 
                 start_time = clock;
-                start_ETSI_time = clock - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI *1000;
+                start_ETSI_time = utility::getETSItimeFromUTCtimeMS(clock);
                 first_mtsp_received =false;
                 init_start = false;
                 emit simulation_start(getID());
@@ -157,7 +156,8 @@ void VirtualObject::run()
                 qDebug() << "ABORT: Aborting test scenario.";
                 break;
             }
-            qint64 time_since_HB = clock-heab_recieved_time;
+            qint64 time_since_HB = utility::getETSItimeFromUTCtimeMS(clock)
+                    -last_received_heab_time_from_server;
             // Check if heartbeat deadline has passed
             if(time_since_HB > HEARTBEAT_TIME)
             {
@@ -202,7 +202,7 @@ void VirtualObject::run()
         else if(status == RUNNING)
         {
             sleep_time = 5;
-            clock = QDateTime::currentMSecsSinceEpoch();
+            clock = utility::getCurrentUTCtimeMS();
             // Is this the first iteration?
             if (ref_index == 0 && init_start)
             {
@@ -211,7 +211,7 @@ void VirtualObject::run()
                 prev_ref_point = traj[0];
 
                 start_time = clock;
-                start_ETSI_time = clock - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI *1000;
+                start_ETSI_time = utility::getETSItimeFromUTCtimeMS(clock);
                 first_mtsp_received =false;
                 init_start = false;
                 emit simulation_start(getID());
@@ -262,7 +262,8 @@ void VirtualObject::run()
                     qDebug() << "ABORT: Aborting test scenario.";
                     break;
                 }
-                qint64 time_since_HB = clock-heab_recieved_time;
+                qint64 time_since_HB = utility::getETSItimeFromUTCtimeMS(clock)
+                        -last_received_heab_time_from_server;
                 // Check if heartbeat deadline has passed
                 if(time_since_HB > HEARTBEAT_TIME && false)
                 {
@@ -285,7 +286,7 @@ void VirtualObject::run()
             }
         }
 
-        clock = QDateTime::currentMSecsSinceEpoch();
+        clock = utility::getCurrentUTCtimeMS();
         if (clock - update_sent > MONR_SEND_TIME_INTERVAL && sendMONREnabled && send_monr_idependently)
         {
             // Send monr
@@ -323,6 +324,8 @@ int VirtualObject::connectToServer(int udpSocket,int tcpSocket)
             this,SLOT(handleOSTM(ostm)));
     connect(iClient,SIGNAL(strt_processed(strt)),
             this,SLOT(handleSTRT(strt)));
+    connect(iClient,SIGNAL(heab_processed(heab)),
+            this,SLOT(handleHEAB(heab)));
     /*
     connect(iClient,SIGNAL(handle_osem(chronos_osem)),
             this,SLOT(handleOSEM(chronos_osem)));
@@ -515,16 +518,18 @@ void VirtualObject::handleLoadedDOPM(int ID, QVector<chronos_dopm_pt> msg)
     handleDOPM(msg);
 }
 
-void VirtualObject::handleHEAB(chronos_heab msg)
+void VirtualObject::handleHEAB(heab msg)
 {
-    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-    //qDebug() << "Time since last HB: " << QString::number(currentTime-heab_recieved_time);
-    heab_recieved_time = currentTime;
+    //qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+    //qDebug() << "Time since last HB: " << QString::number(currentTime-last_received_heab_time_from_server);
+    last_received_heab_time_from_server = msg.tx_time;
 
-    switch (msg.status) {
-    case 0x02:
+    switch (msg.cc_status) {
+    case ISO_CC_STATUS_EMERGENCY_ABORT:
         pendingStatus = ABORT;
         qDebug() << "ABOTRING!";
+        break;
+    case ISO_CC_STATUS_OK:
         break;
     default:
         break;
