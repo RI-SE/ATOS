@@ -56,6 +56,25 @@ uint64_t getCurrentUTCtimeMS()
             (uint64_t)CurrentTimeStruct.tv_usec/1000;
 }
 
+void getDateTimeFromUTCtime(uint64_t utc_ms, char *buffer, int size_t)
+{
+     time_t time_seconds = utc_ms / 1000;
+     time_t rest_time_ms = utc_ms - time_seconds;
+    if (size_t < 26) return;
+
+    bzero(buffer,size_t);
+
+    strcpy(buffer,ctime(&time_seconds));
+    //strcat(buffer,)
+
+}
+
+void getDateTimeFromETSItime(uint64_t etsi_time_ms, char *buffer, int size_t)
+{
+    uint64_t utc_time = etsi_time_ms + MS_FROM_1970_TO_2004_NO_LEAP_SECS - DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+    getDateTimeFromUTCtime(utc_time,buffer,size_t);
+}
+
 void buffer_append_int64(uint8_t *buffer, int64_t number, int32_t *index)
 {
     buffer[(*index)++] = number >> 56;

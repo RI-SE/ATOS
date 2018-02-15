@@ -601,6 +601,15 @@ void VirtualObject::handleSTRT(strt msg)
     if(status == ARMED)
     {
         start_ETSI_time = msg.abs_start_time;
+
+        char buffer[30];
+        utility::getDateTimeFromUTCtime(utility::getCurrentUTCtimeMS(),buffer,30);
+
+        qDebug() << "Time at receiving: " << buffer;
+
+        utility::getDateTimeFromETSItime(msg.abs_start_time,buffer,30);
+
+        qDebug() << "Start time received: " << buffer;
         pendingStatus = RUNNING;//RUNNING_STANDBY;
     }
 }

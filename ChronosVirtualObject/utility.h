@@ -19,7 +19,9 @@
 #define BUFFER_H_
 
 #include <stdint.h>
+#include <time.h>
 #include <sys/time.h>
+#include <string.h>
 
 namespace utility {
 
@@ -33,6 +35,8 @@ namespace utility {
 uint64_t getCurrentETSItimeMS();
 uint64_t getETSItimeFromUTCtimeMS(uint64_t UTCtime);
 uint64_t getCurrentUTCtimeMS();
+void getDateTimeFromUTCtime(uint64_t utc_ms, char *buffer, int size_t);
+void getDateTimeFromETSItime(uint64_t etsi_time_ms, char *buffer, int size_t);
 
 void buffer_append_int64(uint8_t* buffer, int64_t number, int32_t *index);
 void buffer_append_uint64(uint8_t *buffer, uint64_t number, int32_t *index);
