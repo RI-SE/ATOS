@@ -330,15 +330,15 @@ void objectcontrol_task()
 	bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
 	UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxDeltaTime=", "", TextBuffer);
 	ASPMaxDeltaTime = atof(TextBuffer);
-  printf("ASPMaxDeltaTime %3.3f\n", ASPMaxDeltaTime);
+  //printf("ASPMaxDeltaTime %3.3f\n", ASPMaxDeltaTime);
 	bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
 	UtilSearchTextFile(CONF_FILE_PATH, "ASPDebugRate=", "", TextBuffer);
 	ASPDebugRate = atoi(TextBuffer);
   
   /* Connect and send drive files */
-  printf("[ObjectControl] Objects controlled by server: %d\n", nbr_objects);
-  printf("[ObjectControl] ASP in system: %d\n", SyncPointCount);
-  printf("[ObjectControl] TAA in system: %d\n", TriggerActionCount);
+  printf("[ObjectControl] Objects to be controlled by server: %d\n", nbr_objects);
+  //printf("[ObjectControl] ASP in system: %d\n", SyncPointCount);
+  //printf("[ObjectControl] TAA in system: %d\n", TriggerActionCount);
   
   for(iIndex=0;iIndex<nbr_objects;++iIndex)
   {
@@ -530,7 +530,7 @@ void objectcontrol_task()
           strcat(buffer,Heading); strcat(buffer,";");
           strcat(buffer,DriveDirection); strcat(buffer,";"); strcat(buffer,StatusFlag); strcat(buffer,";");
           strcat(buffer,StateFlag); strcat(buffer,";");
-          printf("<%s>\n",buffer);
+          //printf("<%s>\n",buffer);
           
           for(i = 0; i < SyncPointCount; i++)
           {
@@ -1560,7 +1560,7 @@ static void vConnectObject(int* sockfd, const char* name, const uint32_t port)
     {
       if(errno == ECONNREFUSED)
       {
-        printf("WAR: Was not able to connect to object, retry in 3 sec...\n");
+        printf("WARNiNG: Was not able to connect to object, [IP: %s] [PORT: %d], retry in 3 sec...\n",name,port);
         fflush(stdout);
         (void)sleep(3);
       }
