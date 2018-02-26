@@ -530,7 +530,9 @@ void objectcontrol_task()
           strcat(buffer,Heading); strcat(buffer,";");
           strcat(buffer,DriveDirection); strcat(buffer,";"); strcat(buffer,StatusFlag); strcat(buffer,";");
           strcat(buffer,StateFlag); strcat(buffer,";");
+
           //printf("<%s>\n",buffer);
+
           
           for(i = 0; i < SyncPointCount; i++)
           {

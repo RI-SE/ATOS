@@ -458,6 +458,7 @@ void supervision_task() {
         if ( doInitialAlignmentLoop == 1 )
           {
 #ifdef DEBUG
+
             //printf ( "DBG : SV : Rec MON : i %d : t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
             //         iIndex                 ,
             //         monitor.timestamp      ,
@@ -468,6 +469,7 @@ void supervision_task() {
             //         monitor.heading        ,
             //         monitor.drivedirection );
             //fflush(stdout);
+
 #endif
 
             while ( bestFitDone [ iIndex ] == 0 )
@@ -603,6 +605,7 @@ void supervision_task() {
                   jIndex < nbr_objects ;
                   ++jIndex             )
               {
+
               //  printf ( "DBG : SV : Initial align - bestFitDone index %d ok = %d.\n",
               //           jIndex,
               //           bestFitDone [ jIndex ] );
