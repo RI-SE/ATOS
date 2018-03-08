@@ -615,8 +615,8 @@ void objectcontrol_task()
 
 		if(iCommand == COMM_ARMD)
    	{
-			if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_ARMED_STATE) printf("[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]);
-			else if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE) printf("[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]);
+			if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_ARMED_STATE) printf("[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]);
+			else if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE) printf("[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]);
 			MessageLength = ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, pcRecvBuffer[0], 0);
 
 			for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -961,13 +961,21 @@ int ObjectControlMONRToASCII(MONRType *MONRData, int Idn, char *Id, char *Timest
 	unsigned short MonrValueU16;
 	unsigned char MonrValueU8;
 	int i,j;
+  double LatitudeDbl;
+  double LongitudeDbl;
+  double AltitudeDbl;
+  double HeadingDbl;
+  double iLlh[3] = { 47.37183325 , 14.98796672 , 610.98};
+  double xyz[3] = {0, 0, 0};
+  double Llh[3] = {0, 0, 0};
+
 
 	bzero(Id, SMALL_BUFFER_SIZE_1);
 	bzero(Timestamp, SMALL_BUFFER_SIZE_0);
 	bzero(Latitude, SMALL_BUFFER_SIZE_0);
 	bzero(Longitude, SMALL_BUFFER_SIZE_0);
 	bzero(Altitude, SMALL_BUFFER_SIZE_0);
-    bzero(LongitudinalSpeed, SMALL_BUFFER_SIZE_0);
+  bzero(LongitudinalSpeed, SMALL_BUFFER_SIZE_0);
   bzero(LateralSpeed, SMALL_BUFFER_SIZE_0);
   bzero(LongitudinalAcc, SMALL_BUFFER_SIZE_0); 
   bzero(LateralAcc, SMALL_BUFFER_SIZE_0);  
@@ -989,30 +997,50 @@ int ObjectControlMONRToASCII(MONRType *MONRData, int Idn, char *Id, char *Timest
 
 		if(debug && MONRData->PositionTimeU64%400 == 0)
 		{
-		//for(i = 0; i < 29; i ++) printf("%x-", (unsigned char)MonrData[i]);
-		//printf("\n");
+  		//for(i = 0; i < 29; i ++) printf("%x-", (unsigned char)*(MONRData+i));
+  		//printf("\n");
+
+      printf("%x-", MONRData->MessageIdU16);
+      printf("%x-", MONRData->Header.SyncWordU16);
+      printf("%x-", MONRData->Header.TransmitterIdU8);
+      printf("%x-", MONRData->Header.PackageCounterU8);
+      printf("%x-", MONRData->Header.AckReqU8);
+      printf("%x-", MONRData->Header.MessageLengthU32);
+      printf("%x-", MONRData->NOFValuesU32);
+      printf("%ld-", MONRData->PositionTimeU64);
+      printf("%d-", MONRData->XPositionI32);
+      printf("%d-", MONRData->YPositionI32);
+      printf("%d-", MONRData->ZPositionI32);
+      printf("\n");
 		}
 
+    xyz[0] = ((double)MONRData->XPositionI32)/1000;
+    xyz[1] = ((double)MONRData->YPositionI32)/1000;
+    xyz[2] = ((double)MONRData->ZPositionI32)/1000;
+
+    enuToLlh(iLlh, xyz, Llh);
+
+    //xyzToLlh(, , , &LatitudeDbl, &LongitudeDbl, &AltitudeDbl);
 
 		//Latitude
 		MonrValueU32 = 0;
 		//for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-		sprintf(Latitude, "%" PRIi32, MONRData->XPositionI32);
+		sprintf(Latitude, "%" PRIi32, (I32)(Llh[0]*1e7));
 
 		//Longitude
 		MonrValueU32 = 0;
 		//for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-		sprintf(Longitude, "%" PRIi32, MONRData->YPositionI32);
+		sprintf(Longitude, "%" PRIi32, (I32)(Llh[1]*1e7));
 
 		//Altitude
 		MonrValueU32 = 0;
 		//for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-		sprintf(Altitude, "%" PRIi32, MONRData->ZPositionI32);
+		sprintf(Altitude, "%" PRIi32, (I32)(Llh[2]));
 
 		//Speed
 		MonrValueU16 = 0;
 		//for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
-        sprintf(LongitudinalSpeed, "%" PRIi16, MONRData->LongitudinalSpeedI16);
+    sprintf(LongitudinalSpeed, "%" PRIi16, MONRData->LongitudinalSpeedI16);
 
     //LatSpeed
     MonrValueU16 = 0;
@@ -1166,6 +1194,7 @@ int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, char 
   p=(char *)OSEMData;
   for(i=0; i<sizeof(OSEMType); i++) *(MessageBuffer + i) = *p++;
   Crc = crc_16((const unsigned char *)MessageBuffer, sizeof(OSEMType));
+  Crc = 0;
   *(MessageBuffer + i++) = (U8)(Crc >> 8);
   *(MessageBuffer + i++) = (U8)(Crc);
   MessageIndex = i;
@@ -1209,6 +1238,7 @@ int ObjectControlBuildSTRTMessage(char* MessageBuffer, STRTType *STRTData, unsig
   p=(char *)STRTData;
   for(i=0; i<sizeof(STRTType) - 2; i++) *(MessageBuffer + i) = *p++;
   Crc = crc_16((const unsigned char *)MessageBuffer, sizeof(STRTType) - 2);
+  Crc = 0;
   *(MessageBuffer + i++) = (U8)(Crc >> 8);
   *(MessageBuffer + i++) = (U8)(Crc);
   MessageIndex = i;
@@ -1251,6 +1281,7 @@ int ObjectControlBuildOSTMMessage(char* MessageBuffer, OSTMType *OSTMData, unsig
   p=(char *)OSTMData;
   for(i=0; i<sizeof(OSTMType); i++) *(MessageBuffer + i) = *p++;
   Crc = crc_16((const unsigned char *)MessageBuffer, sizeof(OSTMType));
+  Crc = 0;
   *(MessageBuffer + i++) = (U8)(Crc >> 8);
   *(MessageBuffer + i++) = (U8)(Crc);
   MessageIndex = i;
@@ -1302,6 +1333,7 @@ int ObjectControlBuildHEABMessage(char* MessageBuffer, HEABType *HEABData, unsig
   *(MessageBuffer + i++) = HEABData->StatusValueTypeU8;
   *(MessageBuffer + i++) = HEABData->StatusU8;
   Crc = crc_16((const unsigned char *)MessageBuffer, sizeof(HEABType)-2);
+  Crc = 0;
   *(MessageBuffer + i++) = (U8)(Crc >> 8);
   *(MessageBuffer + i++) = (U8)(Crc);
   MessageIndex = i;
