@@ -146,7 +146,7 @@ int ObjectControlBuildDOPMMessageHeader(char* MessageBuffer, int RowCount, char 
 int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, char debug);
 int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, uint32_t Port,char debug);
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
-int ObjectControlMONRToASCII(MONRType *MONRData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *LateralSpeed, char *LongitudinalAcc, char *LateralAcc, char *Heading, char *DriveDirection, char *StatusFlag, char *StateFlag, char debug);
+int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *LateralSpeed, char *LongitudinalAcc, char *LateralAcc, char *Heading, char *DriveDirection, char *StatusFlag, char *StateFlag, char debug);
 int ObjectControlBuildMONRMessage(unsigned char *MonrData, MONRType *MONRData, char debug);
 int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId ,char *TriggAction, char *TriggDelay, char debug);
 int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug);
@@ -253,7 +253,8 @@ void objectcontrol_task()
   STRTType STRTData;
   OSTMType OSTMData;
   HEABType HEABData;
-  MONRType MONRData; 
+  MONRType MONRData;
+  GeoPosition OriginPosition;
 
   unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
@@ -432,6 +433,11 @@ void objectcontrol_task()
   OriginAltitudeDbl = atof(OriginAltitude);
   OriginHeadingDbl = atof(OriginHeading);
 
+  OriginPosition.Latitude = OriginLatitudeDbl;
+  OriginPosition.Longitude = OriginLongitudeDbl;
+  OriginPosition.Altitude = OriginAltitudeDbl;
+  OriginPosition.Heading = OriginHeadingDbl;
+
   while(!iExit)
   {
     char buffer[RECV_MESSAGE_BUFFER];
@@ -520,7 +526,7 @@ void objectcontrol_task()
           }
 
           ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
-          ObjectControlMONRToASCII(&MONRData, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
+          ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
           bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
           strcat(buffer,object_address_name[iIndex]); strcat(buffer,";"); strcat(buffer, "0"); strcat(buffer,";"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
           strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,LongitudinalSpeed); strcat(buffer,";");
@@ -953,7 +959,7 @@ int ObjectControlBuildMONRMessage(unsigned char *MonrData, MONRType *MONRData, c
 
 
 //int ObjectControlMONRToASCII(MONRType *MONRData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *Heading, char *DriveDirection, char *StatusFlag, char debug)
-int ObjectControlMONRToASCII(MONRType *MONRData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *LongitudinalSpeed, char *LateralSpeed, char *LongitudinalAcc, char *LateralAcc, char *Heading, char *DriveDirection, char *StatusFlag, char *StateFlag, char debug)
+int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *LongitudinalSpeed, char *LateralSpeed, char *LongitudinalAcc, char *LateralAcc, char *Heading, char *DriveDirection, char *StatusFlag, char *StateFlag, char debug)
 {
 	char Buffer[6];
 	long unsigned int MonrValueU64;
@@ -965,7 +971,7 @@ int ObjectControlMONRToASCII(MONRType *MONRData, int Idn, char *Id, char *Timest
   double LongitudeDbl;
   double AltitudeDbl;
   double HeadingDbl;
-  double iLlh[3] = { 47.37183325 , 14.98796672 , 610.98};
+  double iLlh[3] = {0, 0, 0};
   double xyz[3] = {0, 0, 0};
   double Llh[3] = {0, 0, 0};
 
@@ -983,6 +989,7 @@ int ObjectControlMONRToASCII(MONRType *MONRData, int Idn, char *Id, char *Timest
 	bzero(DriveDirection, SMALL_BUFFER_SIZE_1);
 	bzero(StatusFlag, SMALL_BUFFER_SIZE_1);
   bzero(StateFlag, SMALL_BUFFER_SIZE_1);
+
 
 	if(MONRData->MessageIdU16 == COMMAND_MONR_CODE)
 	{
@@ -1014,13 +1021,15 @@ int ObjectControlMONRToASCII(MONRType *MONRData, int Idn, char *Id, char *Timest
       printf("\n");
 		}
 
+    iLlh[0] = OriginPosition->Latitude;
+    iLlh[1] = OriginPosition->Longitude;
+    iLlh[2] = OriginPosition->Altitude;
+
     xyz[0] = ((double)MONRData->XPositionI32)/1000;
     xyz[1] = ((double)MONRData->YPositionI32)/1000;
     xyz[2] = ((double)MONRData->ZPositionI32)/1000;
 
     enuToLlh(iLlh, xyz, Llh);
-
-    //xyzToLlh(, , , &LatitudeDbl, &LongitudeDbl, &AltitudeDbl);
 
 		//Latitude
 		MonrValueU32 = 0;

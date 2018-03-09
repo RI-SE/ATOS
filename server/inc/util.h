@@ -168,6 +168,16 @@
 
 #define SYNC_WORD 0x7e7e
 //#define DEBUG
+
+typedef struct
+{
+  double Latitude;
+  double Longitude;
+  double Altitude;
+  double Heading;
+} GeoPosition;
+
+
 typedef struct
 {
   U16 SyncWordU16;
