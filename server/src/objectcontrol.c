@@ -350,7 +350,7 @@ void objectcontrol_task()
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
-                                0); 
+                                1); 
     vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex]);
 
     /* Send OSEM command */
@@ -383,13 +383,13 @@ void objectcontrol_task()
       {
         /*Send SYPM to slave*/
         MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
-       // vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
       }
       else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL)
       {
         /*Send SYPM to slave*/
         MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
-       //vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
       }
     }
 
@@ -408,7 +408,7 @@ void objectcontrol_task()
       if(strstr(object_address_name[iIndex], TAA[i].TriggerIP) != NULL)
       {
         MessageLength = ObjectControlBuildTCMMessage(MessageBuffer, &TAA[i], 0);      
-        //vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
       }
     }
     /* ...end*/
