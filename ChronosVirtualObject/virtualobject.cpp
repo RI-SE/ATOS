@@ -7,6 +7,17 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
     //clock = 0;
     //time_adjustment=0;
 
+    data.ID = id;
+    data.time = 0;
+    data.x = 0.0;
+    data.y = 0.0;
+    data.z = 0.0;
+    data.heading = 0.0;
+    data.speed = 0.0;
+    data.acc = 0.0;
+    data.status = status;
+    data.isMaster = isMaster;
+/*
     data= {
         id, // id
         0,  // time
@@ -18,7 +29,7 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
         0,  // acceleration
         status,    // statusF
         isMaster    // MASTER?
-    };
+    };*/
 
 
     mRefLat = rLat;
@@ -407,8 +418,10 @@ monr VirtualObject::getMONR()
 
     monr.lat=llh[0];
     monr.lon=llh[1];
-    monr.alt=llh[2];
-    */
+    monr.alt=llh[2];*/
+
+    data.z = 30;
+
     msg.time_stamp = utility::getCurrentETSItimeMS();
     msg.x = (int32_t)(data.x * 1e3);
     msg.y = (int32_t)(data.y * 1e3);
@@ -447,10 +460,9 @@ monr VirtualObject::getMONR()
         break;
     }
 
-
+    printf("<Time:%ld;X:%f;Y:%f;Z:%f;H:%f;V:%f;>\n",msg.time_stamp,data.x,data.y,data.z,data.heading,data.speed);
     return msg;
 }
-
 
 
 int VirtualObject::findRefPoint(qint64 tRel, uint fromIndex, qint64 refTimeOffset)
@@ -522,8 +534,8 @@ void VirtualObject::handleDOPM(QVector<chronos_dopm_pt> msg)
             data.x = firstPos.x;
             data.y = firstPos.y;
             data.heading = firstPos.heading;
-            data.speed = firstPos.speed;
-            data.acc = firstPos.accel;
+            //data.speed = firstPos.speed;
+            //data.acc = firstPos.accel;
 
             // set the new trajectory
             traj = msg;
