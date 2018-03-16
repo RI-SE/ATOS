@@ -399,34 +399,13 @@ void VirtualObject::control_object(chronos_dopm_pt next,chronos_dopm_pt prev)
 monr VirtualObject::getMONR()
 {
     monr msg;
-    /*
-    double x_noise = 0.0;//(*distribution)(generator);
-    double y_noise = 0.0;//(*distribution)(generator);
-
-    if (status == RUNNING && isMeasurementNoiseEnabled)
-    {
-        x_noise = (*distribution)(generator);
-        y_noise = (*distribution)(generator);
-    }
-
-    double xyz[3] = {data.x + x_noise, data.y + y_noise, data.z};
-    double iLlh[3] = { mRefLat , mRefLon , mRefAlt};
-    double llh[3] = { 0 , 0 , 0}; // Long/Lat pos for the object
-    // Calculate the Long/Lat pos from the ENU coordinates
-    utility::enuToLlh(iLlh,xyz,llh);
-
-
-    monr.lat=llh[0];
-    monr.lon=llh[1];
-    monr.alt=llh[2];*/
-
-    data.z = 30;
 
     msg.time_stamp = utility::getCurrentETSItimeMS();
     msg.x = (int32_t)(data.x * 1e3);
     msg.y = (int32_t)(data.y * 1e3);
     msg.z = (int32_t)(data.z * 1e3);
-    msg.heading = (uint16_t)(data.heading * 1e1);
+    msg.heading = (uint16_t)(data.heading  * 1e2);
+    qDebug() << "MONR Heading: " << msg.heading;
     msg.lon_speed = (int16_t)(data.speed*1e2);
     msg.lat_speed = 0;
     msg.lon_acc = (int16_t)(data.acc*1e1);
@@ -460,7 +439,7 @@ monr VirtualObject::getMONR()
         break;
     }
 
-    printf("<Time:%ld;X:%f;Y:%f;Z:%f;H:%f;V:%f;>\n",msg.time_stamp,data.x,data.y,data.z,data.heading,data.speed);
+    //printf("<Time:%ld;X:%f;Y:%f;Z:%f;H:%f;V:%f;>\n",msg.time_stamp,data.x,data.y,data.z,data.heading,data.speed);
     return msg;
 }
 

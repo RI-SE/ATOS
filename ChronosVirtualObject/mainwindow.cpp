@@ -724,7 +724,13 @@ bool MainWindow::loadTrajectoryFromFile(QString filepath)
             point.x = xyz[0];
             point.y = xyz[1];
             point.z = xyz[2];
-            point.heading = (list[5].toDouble())*180/M_PI;
+
+            // Change the heading to from Cartesian to ENU xyz
+            double heading = 90.0-(list[5].toDouble())*180/M_PI;
+            while(heading<0.0) heading+=360.0;
+            while(heading>360.0) heading-=360.0;
+            point.heading = heading;
+
             point.speed = list[6].toDouble();
             point.accel = list[7].toUInt();
             point.curvature = list[8].toUInt();
