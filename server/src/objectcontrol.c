@@ -528,14 +528,20 @@ void objectcontrol_task()
           ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
           ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
           bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
-          strcat(buffer,object_address_name[iIndex]); strcat(buffer,";"); strcat(buffer, "0"); strcat(buffer,";"); strcat(buffer,Timestamp); strcat(buffer,";"); strcat(buffer,Latitude); strcat(buffer,";"); strcat(buffer,Longitude);
-          strcat(buffer,";"); strcat(buffer,Altitude); strcat(buffer,";"); strcat(buffer,LongitudinalSpeed); strcat(buffer,";");
+          strcat(buffer,object_address_name[iIndex]); strcat(buffer,";");
+          strcat(buffer, "0"); strcat(buffer,";");
+          strcat(buffer,Timestamp); strcat(buffer,";");
+          strcat(buffer,Latitude); strcat(buffer,";");
+          strcat(buffer,Longitude); strcat(buffer,";");
+          strcat(buffer,Altitude); strcat(buffer,";");
+          strcat(buffer,Heading); strcat(buffer,";");
+          strcat(buffer,LongitudinalSpeed); strcat(buffer,";");
           strcat(buffer,LateralSpeed); strcat(buffer,";");
           strcat(buffer,LongitudinalAcc); strcat(buffer,";");
           strcat(buffer,LateralAcc); strcat(buffer,";");
-          strcat(buffer,Heading); strcat(buffer,";");
           strcat(buffer,DriveDirection); strcat(buffer,";"); strcat(buffer,StatusFlag); strcat(buffer,";");
           strcat(buffer,StateFlag); strcat(buffer,";");
+          strcat(buffer,StatusFlag); strcat(buffer,";");
 
           //printf("<%s>\n",buffer);
 
@@ -1018,6 +1024,9 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
       printf("%d-", MONRData->XPositionI32);
       printf("%d-", MONRData->YPositionI32);
       printf("%d-", MONRData->ZPositionI32);
+      printf("%d-", MONRData->LongitudinalSpeedI16);
+      printf("%d-", MONRData->HeadingU16);
+      printf("%d-", MONRData->DriveDirectionU8);
       printf("\n");
 		}
 
@@ -1069,7 +1078,7 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
 		//Heading
 		MonrValueU16 = 0;
 		//for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
-		sprintf(Heading, "%" PRIu16, MONRData->HeadingU16);
+        sprintf(Heading, "%" PRIu16, MONRData->HeadingU16);
 
 		//Driving direction
 		//MonrValueU8 = (unsigned char)*(MonrData+j);
