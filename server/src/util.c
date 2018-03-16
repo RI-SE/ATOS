@@ -542,6 +542,78 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 	return s;
 }
 
+int UtilVincentyDirect(double refLat, double refLon, double a1, double distance, double *resLat, double *resLon, double *a2)
+{
+    /* Algorithm based on 07032018 website https://en.wikipedia.org/wiki/Vincenty%27s_formulae */
+
+
+    // Variables only calculated once
+    double U1, f = 1/k, sigma1, sina, pow2cosa, pow2u, A, B, C, L, lambda;
+    // Iterative variables
+    double sigma, deltaSigma, sigma2m;
+    // Temporary iterative variables
+    double prev_sigma;
+
+    U1 = atan((1-f)*tan(UtilDegToRad(refLat)));
+    sigma1 = atan2(tan(U1),cos(a1));
+
+    sina = cos(U1)*sin(a1);
+
+    pow2cosa = 1-pow(sina,2);
+    pow2u = pow2cosa * (pow(a,2)-pow(b,2))/pow(b,2);
+
+    A = 1 + pow2u/16384.0*(4096.0 + pow2u*(-768.0 + pow2u*(320.0-175.0*pow2u)));
+    B = pow2u / 1024.0 * (256.0 + pow2u*(-128.0 + pow2u*(74.0 - 47.0*pow2u)));
+
+
+    int iterations = 0;
+    double init_sigma = distance / (b*A);
+    sigma = init_sigma;
+    do
+    {
+        if (++iterations > 100) {
+            return -1;
+        }
+        prev_sigma = sigma;
+
+        sigma2m = 2*sigma1 + sigma;
+        deltaSigma = B*sin(sigma) * (
+                    cos(sigma2m) + 0.25 * B * (
+                        cos(sigma) * (-1.0 + 2.0*pow(cos(sigma2m),2)) -
+                        B/6*cos(sigma2m) * (-3.0 + 4.0*pow(sin(sigma),2.0)) * (-3.0 + 4.0*pow(cos(sigma2m),2))
+                        )
+                    );
+        sigma = init_sigma + deltaSigma;
+    } while(fabs(sigma-prev_sigma) > l);
+
+
+    *resLat = UtilRadToDeg(atan2(
+                sin(U1) * cos(sigma) + cos(U1) * sin(sigma) * cos(a1),
+                (1-f)*sqrt(pow(sina,2) + pow(sin(U1)*sin(sigma) - cos(U1)*cos(sigma)*cos(a1),2))
+                ));
+
+    lambda = atan2(
+                sin(sigma) * sin(a1),
+                cos(U1)*cos(sigma) - sin(U1)*sin(sigma)*cos(a1)
+                );
+
+    C = f/16*pow2cosa*(4 + f*(4-3*pow2cosa));
+
+    L = lambda - (1 - C)*f*sina*(
+                sigma + C*sin(sigma)*(
+                    cos(sigma2m) + C*cos(sigma)*(-1 + 2*pow(cos(sigma2m),2))
+                    )
+                );
+
+    *resLon = UtilRadToDeg(L) + refLon;
+
+    *a2 = atan2(
+                sina,
+                -sin(U1)*sin(sigma) + cos(U1)*cos(sigma)*cos(a1)
+                );
+
+    return 0;
+}
 
 double UtilDegToRad(double Deg){return (PI*Deg/180);}
 double UtilRadToDeg(double Rad){return (180*Rad/PI);}
