@@ -1,5 +1,7 @@
 # Chronos test server
 
+# This is a test line
+
 ## How to build and run server
 cd  server
 mkdir build && cd build
