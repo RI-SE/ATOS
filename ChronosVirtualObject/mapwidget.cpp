@@ -175,6 +175,11 @@ MapWidget::MapWidget(QWidget *parent) :
     mInfoTraces.append(l);
 
     // Set this to the SP base station position for now
+
+    /*setRefPos(57.71495867,
+              12.89134921,
+              219.0);*/
+
     mRefLat = 57.71495867;
     mRefLon = 12.89134921;
     mRefHeight = 219.0;
@@ -199,11 +204,14 @@ MapWidget::MapWidget(QWidget *parent) :
     setMouseTracking(true);
 
 /* START CHRONOS CODE */
+    //CarInfo *car = new CarInfo();
 
+    //addCar(*car);
 /* Chronos ref point*/
-    mRefLat = 57.777360; // LATb
-    mRefLon = 12.780472; // LONb
-    mRefHeight = 201.934115075;
+/*
+    mRefLat = 57.777569;
+    mRefLon = 12.781265;
+    mRefHeight = 219.0;
 
     mUdpSocket = new QUdpSocket(this);
 
@@ -223,6 +231,11 @@ MapWidget::MapWidget(QWidget *parent) :
     connect(mWebSocket, SIGNAL(disconnected()), mWebSocket, SLOT(close()));
     mWebSocket->open(QUrl(QStringLiteral("ws://10.130.23.14:53251")));
 
+
+
+
+    // Load a trajectory file if there exists one
+
     //QList<QPointF> trajTemp;
     QDir dir("./traj/");
 
@@ -231,7 +244,7 @@ MapWidget::MapWidget(QWidget *parent) :
     double xyz[3];
 
     qDebug() << "Path: " << dir.absolutePath();
-
+    // TODO: Remove this from program, add method for reading and saving trajectoryfiles
     if ( dir.exists() )
     {
         QFileInfoList entries = dir.entryInfoList( QDir::NoDotAndDotDot | QDir::Files);
@@ -242,11 +255,12 @@ MapWidget::MapWidget(QWidget *parent) :
             QFile file(entries[i].absoluteFilePath());
             file.open(QIODevice::ReadOnly);
 
-            /* First already exist so create only for preeciding ones */
+            // First already exist so create only for preeciding ones
             if(i!=0)
             {
                 QList<LocPoint> emptyList;
                 mInfoTraces.append(emptyList);
+                mRoutes.append(emptyList);
             }
 
             QTextStream in(&file);
@@ -259,9 +273,9 @@ MapWidget::MapWidget(QWidget *parent) :
                     //qDebug() << "X: " << list[2] << " Y: " << list[3] << " Z: " << list[4];
 
                     // Transform  xyz to llh, hardcoded origo
-                    ref_llh[0] = mRefLat; // LATb
-                    ref_llh[1] = mRefLon; // LONb
-                    ref_llh[2] = mRefHeight;
+                    ref_llh[0] = 57.776800; // LATb
+                    ref_llh[1] = 12.780450; // LONb
+                    ref_llh[2] = 201.934115075;
 
                     xyz[0] = list[2].toDouble();
                     xyz[1] = list[3].toDouble();
@@ -274,7 +288,6 @@ MapWidget::MapWidget(QWidget *parent) :
 
                     // LAT = y / ((M_PI/180)*R) + LATb
                     // LON = x / ((M_PI/180)*R*cos(((LAT - LATb)/2)*(M_PI/180))) + LONb
-
 
                     llh[0] = xyz[1] / ((M_PI/180)*6378137.0) + ref_llh[0];
                     llh[1] = xyz[0] / ((M_PI/180)*6378137.0*cos(((llh[0] + ref_llh[0])/2)*(M_PI/180))) + ref_llh[1];
@@ -292,18 +305,28 @@ MapWidget::MapWidget(QWidget *parent) :
 
                     //trajTemp.append(QPointF(xyz[0],xyz[1]));
                     //mInfoTrace.append(LocPoint(xyz[0],xyz[1]));
-                    mInfoTraces[i].append(LocPoint(xyz[0],xyz[1]));
+
+                        mInfoTraces[i].append(LocPoint(xyz[0],xyz[1]));
+                        //mRoutes[i].append(LocPoint(xyz[0],xyz[1]));
                 }
 
             }
             file.close();
         }
     }
+    */
 }
+
 
 MapWidget::~MapWidget()
 {
-    mWebSocket->close();
+ //   mWebSocket->close();
+
+
+    // TODO: Clean everything, i.e. remove cars and trajectories from list
+
+
+    //removeCar(0); // Remove the temporary car
 }
 
 void MapWidget::onConnected()
@@ -344,6 +367,52 @@ void MapWidget::readPendingDatagrams()
         displayMessage(datagram);
     }
 }
+
+
+/* Handles the signal from Chronos. */
+/*
+void MapWidget::chronosOSEM(chronos_osem msg) {
+    qDebug() << "Map recieved signal";
+
+    mRefLat = msg.lat;
+    mRefLon = msg.lon;
+    mRefHeight = msg.alt;
+
+
+    CarInfo* temp = getCarInfo(0);
+    if (temp)
+    {
+        LocPoint apa = temp->getLocation();
+        QPointF bepa = apa.getPoint();
+        apa.setXY(3,0);
+        qDebug() << "Point: " << bepa;
+        temp->setLocation(apa);
+    }
+
+    update();
+
+
+}
+
+void MapWidget::chronosDOPM(QVector<chronos_dopm_pt> msg)
+{
+    QList<LocPoint> points;
+    for(chronos_dopm_pt pt : msg)
+    {
+        LocPoint point(pt.x,
+                       pt.y,
+                       0,
+                       pt.speed,
+                       1,
+                       0,
+                       Qt::cyan,
+                       pt.tRel);
+        points.append(point);
+    }
+    addInfoTrace(points);
+}
+*/
+
 
 void MapWidget::displayMessage(const QByteArray& message)
 {
@@ -479,6 +548,89 @@ void MapWidget::setYOffset(double offset)
     update();
 }
 
+
+int MapWidget::addInfoTrace(int ID, QList<LocPoint> trace)
+{
+    if (ID < mInfoTraces.size() && ID >= 0)
+    {
+        mInfoTraces.replace(ID,trace);
+    }
+    else if (ID == mInfoTraces.size())
+    {
+        mInfoTraces.append(trace);
+    }
+    else
+    {
+        return -1;
+    }
+
+
+    update();
+
+    return 0;
+}
+/*
+int MapWidget::setInfoTrace(int ID, QList<LocPoint> trace)
+{
+    if (ID >=mInfoTraces.size()) return -1;
+
+    mInfoTraces.replace(ID,trace);
+    return 0;
+}
+*/
+int MapWidget::removeInfoTrace(int ID)
+{
+    if (ID >=mInfoTraces.size() && ID < 0) return -1;
+
+
+    mInfoTraces[ID].clear();
+    return 0;
+}
+
+
+void MapWidget::setRefPos(double lat, double lon, double alt)
+{
+    mRefLat = lat;
+    mRefLon = lon;
+    mRefHeight = alt;
+    update();
+}
+
+double MapWidget::getRefLat()
+{
+    return mRefLat;
+}
+double MapWidget::getRefLon()
+{
+    return mRefLon;
+}
+double MapWidget::getRefAlt()
+{
+    return mRefHeight;
+}
+
+int MapWidget::updateCarState(int ID, LocPoint pos){
+    CarInfo* car = getCarInfo(ID);
+    if (!car){
+        qDebug() << "Car ID: " << ID << " does not exsist.";
+        return -1;
+    }
+    car->setLocation(pos);
+    car->setTime(pos.getTime());
+    car->setInfo(pos.getInfo());
+
+    /*
+    // Only update the position and time
+    LocPoint newpos = car->getLocation();
+    newpos.setX(pos.getX());
+    newpos.setY(pos.getY());
+    newpos.setTime(pos.getTime());
+    car->setLocation(newpos);
+    car->setTime(pos.getTime());
+    */
+    return 0;
+}
+
 void MapWidget::clearTrace()
 {
     mCarTrace.clear();
@@ -587,7 +739,7 @@ void MapWidget::tileReady(OsmTile tile)
 
 void MapWidget::errorGetTile(QString reason)
 {
-    qWarning() << "OSM tile error:" << reason;
+    //qWarning() << "OSM tile error:" << reason;
 }
 
 void MapWidget::setFollowCar(int car)
@@ -1165,16 +1317,17 @@ void MapWidget::paintEvent(QPaintEvent *event)
         QTime t = QTime::fromMSecsSinceStartOfDay(carInfo.getTime());
         txt.sprintf("%s\n"
                     "(%.3f, %.3f, %.0f)\n"
-                    "%02d:%02d:%02d:%03d",
+                    "%02d:%02d:%02d:%03d\n"
+                    "%s",
                     carInfo.getName().toLocal8Bit().data(),
                     pos.getX(), pos.getY(), angle,
-                    t.hour(), t.minute(), t.second(), t.msec());
+                    t.hour(), t.minute(), t.second(), t.msec(),carInfo.getInfo().toLocal8Bit().data());
         pt_txt.setX(x + 120 + (car_w - 190) * ((cos(pos.getAlpha()) + 1) / 2));
         pt_txt.setY(y);
         painter.setTransform(txtTrans);
         pt_txt = drawTrans.map(pt_txt);
         rect_txt.setCoords(pt_txt.x(), pt_txt.y() - 20,
-                           pt_txt.x() + 300, pt_txt.y() + 25);
+                           pt_txt.x() + 300, pt_txt.y() + 55);
         painter.drawText(rect_txt, txt);
     }
 
@@ -1461,6 +1614,7 @@ int MapWidget::getInfoTraceNow() const
     return mInfoTraceNow;
 }
 
+/* Changes the trace to run */
 void MapWidget::setInfoTraceNow(int infoTraceNow)
 {
     int infoTraceOld = mInfoTraceNow;
@@ -1700,80 +1854,4 @@ void MapWidget::getEnuRef(double *llh)
     llh[0] = mRefLat;
     llh[1] = mRefLon;
     llh[2] = mRefHeight;
-}
-
-bool MapWidget::loadTrajectoryFromFile(QString filepath)
-{
-    //QString filepath = "/home/viktorjo/repos/chronos/server/traj/GarageplanInnerring.traj";
-    //QList<QPointF> trajTemp;
-    QDir dir("./traj/");
-
-    double ref_llh[3];
-    double llh[3];
-    double xyz[3];
-
-    QString line;
-    QFile file(filepath);
-    if(!file.open(QIODevice::ReadOnly))
-    {
-        qDebug() << "Could not open file: " << filepath;
-    }
-
-    QList<LocPoint> trajectory;
-
-    QTextStream in(&file);
-    while(!in.atEnd())
-    {
-        line = in.readLine();
-        QStringList list = line.split(';');
-        if(list[0].compare("LINE") == 0)
-        {
-            //qDebug() << "X: " << list[2] << " Y: " << list[3] << " Z: " << list[4];
-
-            // Transform  xyz to llh, hardcoded origo
-            ref_llh[0] = mRefLat; // LATb
-            ref_llh[1] = mRefLon; // LONb
-            ref_llh[2] = mRefHeight;
-
-            xyz[0] = list[2].toDouble();
-            xyz[1] = list[3].toDouble();
-            xyz[2] = list[4].toDouble();
-            //utility::enuToLlh(ref_llh,xyz,llh);
-            //llh[2] = 219.0;
-
-            // x = (LON - LONb) * (M_PI/180)*R*cos(((LAT - LATb)/2)*(M_PI/180))
-            // y = (LAT - LATb) * (M_PI/180)*R
-
-            // LAT = y / ((M_PI/180)*R) + LATb
-            // LON = x / ((M_PI/180)*R*cos(((LAT - LATb)/2)*(M_PI/180))) + LONb
-
-
-            llh[0] = xyz[1] / ((M_PI/180)*6378137.0) + ref_llh[0];
-            llh[1] = xyz[0] / ((M_PI/180)*6378137.0*cos(((llh[0] + ref_llh[0])/2)*(M_PI/180))) + ref_llh[1];
-            llh[2] = ref_llh[2] + xyz[2];
-
-            //qDebug() << "LLH: " << QString::number(llh[0], 'g', 8) << " " << QString::number(llh[1], 'g', 8) << " " << QString::number(llh[2], 'g', 8);
-
-            // Transform to x,y,z according to getEnuRef
-            getEnuRef(ref_llh);
-            utility::llhToEnu(ref_llh, llh, xyz);
-
-            //qDebug() << "ref_llh: " << QString::number(ref_llh[0], 'g', 8) << " " << QString::number(ref_llh[1], 'g', 8) << " " << QString::number(ref_llh[2], 'g', 8);
-
-            //qDebug() << "ENU: " << xyz[0] << " " << xyz[1] << " " << xyz[2];
-
-            //trajTemp.append(QPointF(xyz[0],xyz[1]));
-            //mInfoTrace.append(LocPoint(xyz[0],xyz[1]));
-            trajectory.append(LocPoint(xyz[0],xyz[1]));
-        }
-
-    }
-    file.close();
-    if(trajectory.size() > 0)
-    {
-        mInfoTraces.append(trajectory);
-        return true;
-    }
-    return false;
-
 }

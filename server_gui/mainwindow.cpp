@@ -193,3 +193,33 @@ void MainWindow::on_abortButton_clicked()
         qDebug() << "No connection";
     }
 }
+
+void MainWindow::on_loadtrajectories_triggered()
+{
+    qDebug() << "Load trajectories... Clicked!";
+
+    QStringList files = QFileDialog::getOpenFileNames(
+                this,
+                "Select one or more files to open.",
+                "./"
+                );
+
+    for (QString file : files){
+
+        if(!ui->mapWidget->loadTrajectoryFromFile(file))
+        {
+            qDebug() << "Could not load file: " << file;
+        }
+        else {
+            qDebug() << "Loaded: " << file;
+        }
+    }
+
+
+}
+
+void MainWindow::on_actionClose_triggered()
+{
+    qDebug() << "Closing application.";
+    QApplication::quit();
+}
