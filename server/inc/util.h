@@ -78,6 +78,9 @@
 #define USE_TEST_HOST 0
 #define TESTHOST_IP "195.0.0.250"
 #define TESTSERVER_IP "195.0.0.250"
+#define USE_LOCAL_USER_CONTROL  0
+#define LOCAL_USER_CONTROL_IP "10.168.22.97" 
+#define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
 
@@ -353,6 +356,12 @@ typedef struct
   int32_t Action;
 } TriggActionType;
 
+typedef struct
+{
+  U32 SessionIdU32;
+  U32 UserIdU32;
+  U8 UserTypeU8;
+} ServiceSessionType; //9 bytes
 
 
 

@@ -16,12 +16,33 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <poll.h>
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
 
 #include "objectcontrol.h"
 #include "util.h"
+
+/*
+#include <mqueue.h>
+#include <sys/time.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <unistd.h>
+#include <time.h>  
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <poll.h>
+
+#include "remotecontrol.h"
+#include "systemcontrol.h"
+#include "util.h"
+*/
 
 
 #define IPC_BUFFER_SIZE   256
