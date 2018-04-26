@@ -1,12 +1,17 @@
 import QtQuick 2.9
-import QtQuick.Window 2.2
+import QtQuick.Controls 2.2
+import io.qt.examples.backend 1.0
 
-Window {
+ApplicationWindow {
     id: window
     visible: true
     width: 640
     height: 480
-    title: qsTr("Hello World")
+    //title: qsTr("GUC")
+
+    BackEnd {
+        id: backend
+    }
 
     Rectangle {
         property string orgColor: "#21e736"
@@ -47,6 +52,15 @@ Window {
                 font.pixelSize: 20
             }
         }
+    }
+
+    TextField {
+        x: 220
+        y: 346
+        text: backend.userName
+        anchors.horizontalCenter: rectangle.horizontalCenter
+        placeholderText: qsTr("User Name")
+        onTextChanged: backend.userName = text
     }
 
 }
