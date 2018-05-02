@@ -71,10 +71,11 @@ ApplicationWindow {
             anchors.horizontalCenterOffset: 0
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            onClicked: backend.connect()
+            onClicked: backend.initConnect()
         }
 
         TextField {
+            property int isValid : 0
             width: 250
             height: 40
             text: backend.userName
@@ -86,19 +87,30 @@ ApplicationWindow {
             anchors.horizontalCenterOffset: 0
             anchors.horizontalCenter: parent.horizontalCenter
             placeholderText: qsTr("IP Address")
-            onTextChanged: backend.userName = text
+            onTextChanged: {
+                backend.userName = text
+
+                isValid = backend.addressValid(text)
+
+                if (isValid == 0)
+                {
+                    color = "red"
+                }
+                else
+                {
+                    color = "green"
+                }
+            }
         }
 
-        Text {
-            id: text1
-            x: 175
-            text: qsTr("Text")
-            anchors.horizontalCenterOffset: 0
+        Label {
+            id: label
+            x: 171
+            text: backend.connectionText
+            horizontalAlignment: Text.AlignHCenter
+            anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: conn.bottom
             anchors.topMargin: 30
-            anchors.horizontalCenter: parent.horizontalCenter
-            visible: false
-            font.pixelSize: 20
         }
     }
 
