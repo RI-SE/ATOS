@@ -1,5 +1,7 @@
 #include "tcphandler.h"
 
+
+
 TCPhandler::TCPhandler(QObject *parent)
 {
 
@@ -8,7 +10,11 @@ TCPhandler::TCPhandler(QObject *parent)
 
 bool TCPhandler::establishConnection(QString IP_addr, int port)
 {
-    if (!isValidIP(IP_addr)) return false;
+    if (!isValidIP(IP_addr))
+    {
+        emit debugComMsg("Incorrect IP-address.");
+        return false;
+    }
 
     if (mTcpServer)
     {
@@ -27,6 +33,10 @@ bool TCPhandler::establishConnection(QString IP_addr, int port)
 
     connect(mTcpSocket,SIGNAL(connected()),
             this, SLOT(connectionEstablished()));
+    connect(mTcpSocket,SIGNAL(disconnected()),
+            this,SLOT(connectionTerminated()));
+    connect(mTcpSocket,SIGNAL(stateChanged(QAbstractSocket::SocketState)),
+            this,SLOT(connectionStateChanged(QAbstractSocket::SocketState)));
     connect(mTcpSocket,SIGNAL(error(QAbstractSocket::SocketError)),
             this,SLOT(handleConnectionError(QAbstractSocket::SocketError)));
     emit debugComMsg("Connecting to host...");
@@ -62,11 +72,30 @@ void TCPhandler::connectionEstablished()
             QString::number(mTcpSocket->peerPort()) ;
     qDebug() << msg;
 
+    emit connectionChanged(TCP_STATE_CONNECTED);
+    emit debugComMsg(msg);
+}
+
+void TCPhandler::connectionTerminated()
+{
+    QString msg = "Disconnected";
+    qDebug() << msg;
+    emit connectionChanged(TCP_STATE_DISCONNECTED);
+    emit debugComMsg(msg);
+}
+
+void TCPhandler::connectionStateChanged(QAbstractSocket::SocketState state)
+{
+
+    //TODO: Add state text
+    QString msg = "Connection State Changed: " + QString::number(state);
+    qDebug() << msg;
     emit debugComMsg(msg);
 }
 
 void TCPhandler::handleConnectionError(QAbstractSocket::SocketError error)
 {
+    //TODO: Add error text
     QString msg = "Connection error: " + QString::number(error);
     qDebug() << msg;
     emit debugComMsg(msg);

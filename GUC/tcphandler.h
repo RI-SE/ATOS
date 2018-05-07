@@ -7,6 +7,9 @@
 #include <QDebug>
 #include <QHostAddress>
 
+#define TCP_STATE_DISCONNECTED 0x00
+#define TCP_STATE_CONNECTED 0x01
+
 // Handles one server or client TCP connection
 class TCPhandler : public QObject
 {
@@ -23,12 +26,15 @@ public:
 
 signals:
     void debugComMsg(const QString &msg);
+    void connectionChanged(const int &isConnected);
 private:
     QTcpServer *mTcpServer = NULL;
     QTcpSocket *mTcpSocket = NULL;
 
 private slots:
     void connectionEstablished();
+    void connectionTerminated();
+    void connectionStateChanged(QAbstractSocket::SocketState);
     void handleConnectionError(QAbstractSocket::SocketError);
 };
 

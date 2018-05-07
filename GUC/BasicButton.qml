@@ -8,7 +8,7 @@ Rectangle { // size controlled by height
     signal clicked(); // onClicked: print('onClicked')
 
 // private
-    width: 250;  height: 50
+    width: parent.width * 0.7;  height: 50
     color: "#dcd2c8" // default size
     radius:       0.5  * root.height
     border.width: 3

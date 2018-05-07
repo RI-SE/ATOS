@@ -2,5 +2,8 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file>BasicButton.qml</file>
+        <file>ConnectScreen.qml</file>
+        <file>RoundedSquare.qml</file>
+        <file>OperatingView.qml</file>
     </qresource>
 </RCC>

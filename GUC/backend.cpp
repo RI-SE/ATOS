@@ -10,20 +10,25 @@ BackEnd::BackEnd(QObject *parent) :
     //mTcphandler->establishConnection("127.0.0.1",53241);
     QObject::connect(mTcphandler, SIGNAL(debugComMsg(QString)),
             this,SLOT(handleDebugComMsg(QString)));
+    QObject::connect(mTcphandler,SIGNAL(connectionChanged(int)),
+                     this,SLOT(handleConnectionChanged(int)));
 }
 
-QString BackEnd::userName()
+QString BackEnd::hostName()
 {
-    return m_userName;
+    qDebug() << "Host name fetched";
+    return m_hostName;
 }
 
-void BackEnd::setUserName(const QString &userName)
+void BackEnd::setHostName(const QString &hostName)
 {
-    if (userName == m_userName)
+    qDebug() << "Setting host name.";
+    if (hostName == m_hostName)
         return;
-
-    m_userName = userName;
-    emit userNameChanged();
+    m_addressValidity = addressValid(hostName);
+    qDebug() << "IP_VALID:" << m_addressValidity;
+    m_hostName = hostName;
+    emit hostNameChanged();
 }
 
 QString BackEnd::connectionText()
@@ -38,8 +43,28 @@ void BackEnd::setConnectionText(const QString &connectionText)
     emit connectionTextChanged();
 }
 
+int BackEnd::addressValidity()
+{
+    return m_addressValidity;
+}
+
+
 // SLOTS
 void BackEnd::handleDebugComMsg(const QString &msg)
 {
     setConnectionText(msg);
+}
+
+void BackEnd::handleConnectionChanged(const int &isConnected)
+{
+    switch (isConnected) {
+    case TCP_STATE_CONNECTED:
+        emit enterStartScreen();
+        break;
+    case TCP_STATE_DISCONNECTED:
+        emit enterConnectionScreen();
+        break;
+    default:
+        break;
+    }
 }
