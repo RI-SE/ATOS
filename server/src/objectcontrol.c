@@ -62,8 +62,8 @@
 #define COMMAND_OSTM_CODE 3
 #define COMMAND_OSTM_NOFV 1  
 #define COMMAND_OSTM_MESSAGE_LENGTH sizeof(OSTMType)
-#define COMMAND_OSTM_OPT_SET_ARMED_STATE 1
-#define COMMAND_OSTM_OPT_SET_DISARMED_STATE 2 
+#define COMMAND_OSTM_OPT_SET_ARMED_STATE 2
+#define COMMAND_OSTM_OPT_SET_DISARMED_STATE 3 
 
 #define COMMAND_STRT_CODE  4
 #define COMMAND_STRT_NOFV 1
@@ -627,8 +627,8 @@ void objectcontrol_task()
 
 		if(iCommand == COMM_ARMD)
    	{
-			if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_ARMED_STATE) printf("[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]);
-			else if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE) printf("[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]);
+      if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_ARMED_STATE) printf("[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]);
+			else if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE) printf("[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]);
 			MessageLength = ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, pcRecvBuffer[0], 0);
 
 			for(iIndex=0;iIndex<nbr_objects;++iIndex)

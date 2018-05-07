@@ -26,8 +26,6 @@
 
 #define BUF_SIZE 500
 
-
-
 #define REMOTE_CONTROL_CONF_FILE_PATH  "conf/test.conf"
 #define REMOTE_CONTROL_BUFFER_SIZE_20 20
 #define REMOTE_CONTROL_HTTP_HEADER "POST /esss HTTP/1.1\r\nHost: maestro.sebart.net\r\n"
@@ -44,8 +42,8 @@ static void RemoteControlSendBytes(const char* data, int length, int* sockfd, in
 
 //U32 RemoteControlSignIn(I32 ServerSocketI32, C8 *TablenameC8, C8 *UsernameC8, C8 *PasswordC8, U8 Debug);
 
-
 void getIP();
+
 
 C8 httpbuffer[REMOTE_CONTROL_HTTP_BUFFER];
 C8 recvbuffer[REMOTE_CONTROL_RECV_BUFFER];
