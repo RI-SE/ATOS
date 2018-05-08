@@ -1,5 +1,6 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
+import QtQuick.Controls.Styles 1.4
 import io.qt.examples.backend 1.0
 import QtGraphicalEffects 1.0
 
@@ -23,20 +24,62 @@ ApplicationWindow {
             console.log("Wanting to reach connection screen.");
             stackView.pop()
         }
+        onConnectionTextChanged: {
+            textArea.append(backend.connectionText)
+            console.log("appending text to TextArea.")
+        }
+
     }
+
+    Rectangle {
+        id: header
+        width: parent.width
+        height: 50
+        color: "green"
+    }
+
+    Rectangle {
+        id: footer
+        width: parent.width
+        height: 100
+        color: "black"
+        anchors.bottom: parent.bottom
+
+            TextArea {
+                id: textArea
+                //text: backend.connectionText
+                font.capitalization: Font.AllUppercase
+                verticalAlignment: Text.AlignBottom
+                anchors.fill: parent
+                color: "white"
+
+            }
+
+
+
+
+    }
+
+
 
     StackView {
         id: stackView
-        anchors.fill: parent
+        //anchors.fill: parent
         initialItem: csrcn
+        anchors.top: header.bottom
+        anchors.bottom: footer.top
+        width: parent.width
+        //height: parent.height - header.height
     }
+
+
 
     Component
     {
         id: csrcn
         ConnectScreen {
             connectText: backend.connectionText
-            rootText: qsTr("10.111.144.28")
+            rootText: qsTr("127.0.0.1")
 
             onClicked: backend.initConnect()
             onRootTextChanged:
@@ -60,6 +103,7 @@ ApplicationWindow {
     Component {
         id: buttonView
         OperatingView {
+            anchors.horizontalCenter: window.horizontalCenter
         }
     }
 }
