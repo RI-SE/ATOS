@@ -79,7 +79,7 @@
 #define TESTHOST_IP "195.0.0.250"
 #define TESTSERVER_IP "195.0.0.250"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "10.168.51.185" 
+#define LOCAL_USER_CONTROL_IP "192.168.0.10" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -171,6 +171,7 @@
 
 #define SYNC_WORD 0x7e7e
 //#define DEBUG
+
 
 typedef struct
 {
