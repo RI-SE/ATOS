@@ -63,6 +63,15 @@ bool TCPhandler::listenForConnection(int port)
     return true;
 }
 
+bool TCPhandler::sendData(const QByteArray &data)
+{
+    if (mTcpSocket){
+        mTcpSocket->write(data);
+        return true;
+    }
+    return false;
+}
+
 
 // PRIVATE SLOTS
 void TCPhandler::connectionEstablished()
@@ -70,7 +79,10 @@ void TCPhandler::connectionEstablished()
     QString msg = "Established TCP connection. IP: " +
             mTcpSocket->peerAddress().toString() + " port: " +
             QString::number(mTcpSocket->peerPort()) ;
-    qDebug() << msg;
+    //qDebug() << msg;
+
+    connect(mTcpSocket,SIGNAL(readyRead()),
+            this,SLOT(dataAvailable()));
 
     emit connectionChanged(TCP_STATE_CONNECTED);
     emit debugComMsg(msg);
@@ -99,6 +111,13 @@ void TCPhandler::handleConnectionError(QAbstractSocket::SocketError error)
     QString msg = "Connection error: " + QString::number(error);
     qDebug() << msg;
     emit debugComMsg(msg);
+}
+
+void TCPhandler::dataAvailable()
+{
+    QByteArray input_data = mTcpSocket->readAll();
+    emit receivedData(input_data);
+    emit debugComMsg("DATA_RX: " + QString(input_data.toHex()));
 }
 
 

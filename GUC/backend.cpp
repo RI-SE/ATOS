@@ -4,10 +4,8 @@
 BackEnd::BackEnd(QObject *parent) :
     QObject(parent)
 {
-    //IPConnecitonHandler *iph = new IPConnecitonHandler();
-    //iph->destroy();
+
     mTcphandler = new TCPhandler();
-    //mTcphandler->establishConnection("127.0.0.1",53241);
     QObject::connect(mTcphandler, SIGNAL(debugComMsg(QString)),
             this,SLOT(handleDebugComMsg(QString)));
     QObject::connect(mTcphandler,SIGNAL(connectionChanged(int)),
@@ -39,7 +37,6 @@ QString BackEnd::connectionText()
 void BackEnd::setConnectionText(const QString &connectionText)
 {
     m_connectionText = connectionText;
-
     emit connectionTextChanged();
 }
 
@@ -48,11 +45,30 @@ int BackEnd::addressValidity()
     return m_addressValidity;
 }
 
+void BackEnd::handleDebugMessage(const QString &msg)
+{
+
+    //QDateTime datetime = QDateTime::currentDateTime();
+    QDate date = QDate::currentDate();
+    QTime time = QTime::currentTime();
+    QString datetime_string = "["
+            + QString::number(date.year()) + "/"
+            + QString::number(date.month()) + "/"
+            + QString::number(date.day())   + " "
+            + QString::number(time.hour())  + ":"
+            + QString::number(time.minute()) + ":"
+            + QString::number(time.second()) + ":"
+            + QString::number(time.msec()) + "]: ";
+
+    emit newDebugMessage( datetime_string + msg );
+}
+
 
 // SLOTS
 void BackEnd::handleDebugComMsg(const QString &msg)
 {
     setConnectionText(msg);
+    handleDebugMessage(msg);
 }
 
 void BackEnd::handleConnectionChanged(const int &isConnected)

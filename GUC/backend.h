@@ -4,19 +4,18 @@
 #include <QObject>
 #include <QString>
 #include <QDebug>
+#include <QDateTime>
 
 #include "tcphandler.h"
-
-
+#include "mscp.h"
 
 
 class BackEnd : public QObject
 {
     Q_OBJECT
-    //Q_PROPERTY(QString hostName READ hostName WRITE setHostName NOTIFY hostNameChanged)
     Q_PROPERTY(QString connectionText READ connectionText WRITE setConnectionText NOTIFY connectionTextChanged)
     Q_PROPERTY(int addressValidity READ addressValidity NOTIFY addressValidityChanged)
-    //Q_PROPERTY(int backendState READ backendState WRITE setBackendState NOTIFY backendStateChanged)
+
 public:
 
 
@@ -38,10 +37,14 @@ public:
     void setConnectionText(const QString &connectionText);
 
     int addressValidity();
+
+    void handleDebugMessage(const QString &msg);
 signals:
     void hostNameChanged();
     void connectionTextChanged();
     void addressValidityChanged();
+
+    void newDebugMessage(QString debugText);
 
     void enterStartScreen();
     void enterConnectionScreen();

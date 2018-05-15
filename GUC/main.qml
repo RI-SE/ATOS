@@ -14,19 +14,19 @@ ApplicationWindow {
 
     BackEnd {
         id: backend
+
+
         onEnterStartScreen:
         {
-            console.log("Start Screen connected")
-            stackView.push(buttonView)
+            stackView.pushFirst()
         }
         onEnterConnectionScreen:
         {
-            console.log("Wanting to reach connection screen.");
             stackView.pop()
         }
-        onConnectionTextChanged: {
-            textArea.append(backend.connectionText)
-            console.log("appending text to TextArea.")
+        onNewDebugMessage: {
+            //console.log(debugText)
+            textArea.append(debugText)
         }
 
     }
@@ -36,6 +36,22 @@ ApplicationWindow {
         width: parent.width
         height: 50
         color: "green"
+
+        Button {
+            id: back
+            x: 8
+            y: 5
+            text: qsTr("<")
+            onClicked: stackView.pop()
+        }
+
+        Button {
+            id: forward
+            x: 532
+            y: 5
+            text: qsTr(">")
+            onClicked: stackView.pushFirst()
+        }
     }
 
     Rectangle {
@@ -52,12 +68,7 @@ ApplicationWindow {
                 verticalAlignment: Text.AlignBottom
                 anchors.fill: parent
                 color: "white"
-
             }
-
-
-
-
     }
 
 
@@ -70,6 +81,14 @@ ApplicationWindow {
         anchors.bottom: footer.top
         width: parent.width
         //height: parent.height - header.height
+
+        function pushFirst(){
+            if (stackView.depth < 2) {
+                stackView.push(buttonView)
+            }
+        }
+
+
     }
 
 
@@ -91,15 +110,7 @@ ApplicationWindow {
             anchors.horizontalCenter: parent.horizontalCenter
         }
     }
-    Component
-    {
-        id: rect
-        RoundedSquare {
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.horizontalCenter: parent.horizontalCenter
-            onClicked: stackView.pop()
-        }
-    }
+
     Component {
         id: buttonView
         OperatingView {

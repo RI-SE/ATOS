@@ -24,9 +24,12 @@ public:
 
     static bool isValidIP(QString IP_addr);
 
+    bool sendData(const QByteArray &data);
+
 signals:
     void debugComMsg(const QString &msg);
     void connectionChanged(const int &isConnected);
+    void receivedData(const QByteArray &data);
 private:
     QTcpServer *mTcpServer = NULL;
     QTcpSocket *mTcpSocket = NULL;
@@ -36,6 +39,7 @@ private slots:
     void connectionTerminated();
     void connectionStateChanged(QAbstractSocket::SocketState);
     void handleConnectionError(QAbstractSocket::SocketError);
+    void dataAvailable();
 };
 
 #endif // TCPHANDLER_H
