@@ -22,9 +22,19 @@ public:
     explicit BackEnd(QObject *parent = nullptr);
 
     Q_INVOKABLE void initConnect(){
-        qDebug() << "Connect clicked!";
-        mTcphandler->establishConnection(hostName(),53241);
+        mTcphandler->establishConnection(hostName(),54241);
     }
+
+    Q_INVOKABLE void serverDisconnect(){
+        mTcphandler->closeConnection();
+    }
+
+    // Button functions
+    Q_INVOKABLE bool sendArmToHost();
+    Q_INVOKABLE bool sendDisarmToHost();
+    Q_INVOKABLE bool sendStartToHost(int delayms);
+    Q_INVOKABLE bool sendAbortToHost();
+
 
     Q_INVOKABLE int addressValid(QString ip_addr){
         return (int) TCPhandler::isValidIP(ip_addr);
@@ -54,6 +64,12 @@ private:
     QString m_connectionText = "test";
     TCPhandler *mTcphandler;
     int m_addressValidity;
+
+    void sendToHost(const QByteArray &data)
+    {
+        emit newDebugMessage("Created Message:\n" + QString(data));
+        mTcphandler->sendData(data);
+    }
 
 private slots:
     void handleDebugComMsg(const QString &msg);

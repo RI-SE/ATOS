@@ -10,8 +10,48 @@ BackEnd::BackEnd(QObject *parent) :
             this,SLOT(handleDebugComMsg(QString)));
     QObject::connect(mTcphandler,SIGNAL(connectionChanged(int)),
                      this,SLOT(handleConnectionChanged(int)));
+
 }
 
+//****************************************
+// Public Q_INVOKABLE methods
+//****************************************
+
+bool BackEnd::sendArmToHost()
+{
+    QByteArray data;
+    MSCP::buildArmMsgByteArray(m_hostName,data);
+    sendToHost(data);
+    return true;
+}
+
+bool BackEnd::sendDisarmToHost()
+{
+    QByteArray data;
+    MSCP::buildDisarmMsgByteArray(m_hostName,data);
+    sendToHost(data);
+    return true;
+}
+
+bool BackEnd::sendStartToHost(int delayms)
+{
+    QByteArray data;
+    MSCP::buildStartMsgByteArray(m_hostName,delayms,data);
+    sendToHost(data);
+    return true;
+}
+bool BackEnd::sendAbortToHost()
+{
+    QByteArray data;
+    MSCP::buildArmMsgByteArray(m_hostName,data);
+    sendToHost(data);
+    return true;
+}
+
+
+//****************************************
+// Public Q_Property methods
+//****************************************
 QString BackEnd::hostName()
 {
     qDebug() << "Host name fetched";
@@ -40,10 +80,16 @@ void BackEnd::setConnectionText(const QString &connectionText)
     emit connectionTextChanged();
 }
 
+
+//****************************************
+// Public common methods
+//****************************************
 int BackEnd::addressValidity()
 {
     return m_addressValidity;
 }
+
+
 
 void BackEnd::handleDebugMessage(const QString &msg)
 {
@@ -64,7 +110,9 @@ void BackEnd::handleDebugMessage(const QString &msg)
 }
 
 
+//****************************************
 // SLOTS
+//****************************************
 void BackEnd::handleDebugComMsg(const QString &msg)
 {
     setConnectionText(msg);

@@ -61,14 +61,18 @@ ApplicationWindow {
         color: "black"
         anchors.bottom: parent.bottom
 
+        ScrollView {
+            id: view
+            anchors.fill: parent
             TextArea {
                 id: textArea
                 //text: backend.connectionText
-                font.capitalization: Font.AllUppercase
+                //font.capitalization: Font.AllUppercase
                 verticalAlignment: Text.AlignBottom
                 anchors.fill: parent
                 color: "white"
             }
+        }
     }
 
 
@@ -98,7 +102,7 @@ ApplicationWindow {
         id: csrcn
         ConnectScreen {
             connectText: backend.connectionText
-            rootText: qsTr("127.0.0.1")
+            rootText: qsTr("10.111.144.21")
 
             onClicked: backend.initConnect()
             onRootTextChanged:
@@ -115,6 +119,10 @@ ApplicationWindow {
         id: buttonView
         OperatingView {
             anchors.horizontalCenter: window.horizontalCenter
+            onArmClicked: backend.sendArmToHost()
+            onDisarmClicked: backend.sendDisarmToHost()
+            onStartClicked: backend.sendStartToHost(1000)
+            onAbortClicked: backend.sendAbortToHost()
         }
     }
 }

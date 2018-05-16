@@ -21,5 +21,27 @@ namespace MSCP {
         bytearray = string_holder.toLocal8Bit();
         return true;
     }
+
+    bool buildArmMsgByteArray(const QString &IPaddress, QByteArray &bytearray)
+    {
+        msgToHTTPPOSTByteArray(IPaddress,QString(ARM_CMD_STR) + "();",bytearray);
+        return true;
+    }
+    bool buildDisarmMsgByteArray(const QString &IPaddress, QByteArray &bytearray)
+    {
+        msgToHTTPPOSTByteArray(IPaddress,QString(DISARM_CMD_STR) + "();",bytearray);
+        return true;
+    }
+    bool buildStartMsgByteArray(const QString &IPaddress, int delayms, QByteArray &bytearray)
+    {
+        msgToHTTPPOSTByteArray(IPaddress,QString(START_CMD_STR) + "(" + QString::number(delayms) +");",bytearray);
+        return true;
+    }
+
+    bool buildAbortMsgByteArray(const QString &IPaddress, QByteArray &bytearray)
+    {
+        msgToHTTPPOSTByteArray(IPaddress,QString(ABORT_CMD_STR) + "();",bytearray);
+        return true;
+    }
 }
 

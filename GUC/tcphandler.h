@@ -20,11 +20,23 @@ public:
 
     bool establishConnection(QString IP_addr, int port);
 
+    void closeConnection();
+
     bool listenForConnection(int port);
 
     static bool isValidIP(QString IP_addr);
 
     bool sendData(const QByteArray &data);
+
+    int getConnectionState();
+
+    bool isConnected()
+    {
+        if (!mTcpSocket) return false;
+
+        return mTcpSocket->state() == QAbstractSocket::ConnectedState;
+    }
+
 
 signals:
     void debugComMsg(const QString &msg);

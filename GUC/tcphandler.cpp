@@ -18,13 +18,13 @@ bool TCPhandler::establishConnection(QString IP_addr, int port)
 
     if (mTcpServer)
     {
-        qDebug() << "Closing down TCP server connection.";
+        //qDebug() << "Closing down TCP server connection.";
         mTcpServer->close();
         delete mTcpServer;
     }
     if (mTcpSocket)
     {
-        qDebug() << "Closing down TCP socket connection.";
+        //qDebug() << "Closing down TCP socket connection.";
         mTcpSocket->close();
         delete mTcpSocket;
     }
@@ -39,13 +39,16 @@ bool TCPhandler::establishConnection(QString IP_addr, int port)
             this,SLOT(connectionStateChanged(QAbstractSocket::SocketState)));
     connect(mTcpSocket,SIGNAL(error(QAbstractSocket::SocketError)),
             this,SLOT(handleConnectionError(QAbstractSocket::SocketError)));
-    emit debugComMsg("Connecting to host...");
+    emit debugComMsg("Connecting to host [" + IP_addr + ";" + QString::number(port) + "]");
 
 
     mTcpSocket->connectToHost(IP_addr,port);
 
-
     return true;
+}
+
+void TCPhandler::closeConnection() {
+    if (mTcpSocket) mTcpSocket->close();
 }
 
 bool TCPhandler::isValidIP(QString IP_addr)
@@ -67,18 +70,25 @@ bool TCPhandler::sendData(const QByteArray &data)
 {
     if (mTcpSocket){
         mTcpSocket->write(data);
+        emit debugComMsg("Sending " + QString::number(data.length()) + "B:" + QString(data.toHex()));
         return true;
     }
     return false;
 }
 
+int TCPhandler::getConnectionState()
+{
+    if (!mTcpSocket) return -1;
+
+    return mTcpSocket->state();
+}
 
 // PRIVATE SLOTS
 void TCPhandler::connectionEstablished()
 {
-    QString msg = "Established TCP connection. IP: " +
+    QString msg = "Established TCP connection."; /* +
             mTcpSocket->peerAddress().toString() + " port: " +
-            QString::number(mTcpSocket->peerPort()) ;
+            QString::number(mTcpSocket->peerPort()) ;*/
     //qDebug() << msg;
 
     connect(mTcpSocket,SIGNAL(readyRead()),
@@ -87,6 +97,7 @@ void TCPhandler::connectionEstablished()
     emit connectionChanged(TCP_STATE_CONNECTED);
     emit debugComMsg(msg);
 }
+
 
 void TCPhandler::connectionTerminated()
 {
