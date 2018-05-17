@@ -1501,6 +1501,31 @@ int iCommSend(const int iCommand,const char* cpData)
       uiMessagePrio = 90;
       cpMessage[0] = (char)COMM_TOM;
     }
+  else if (iCommand == COMM_INIT)
+    {
+      uiMessagePrio = 110;
+      cpMessage[0] = (char)COMM_INIT;
+    }
+  else if (iCommand == COMM_CONNECT)
+    {
+      uiMessagePrio = 110;
+      cpMessage[0] = (char)COMM_CONNECT;
+    }
+  else if (iCommand == COMM_OBC_STATE)
+    {
+      uiMessagePrio = 160;
+      cpMessage[0] = (char)COMM_OBC_STATE;
+    }
+  else if (iCommand == COMM_DISCONNECT)
+    {
+      uiMessagePrio = 110;
+      cpMessage[0] = (char)COMM_DISCONNECT;
+    }
+  else if (iCommand == COMM_LOG)
+    {
+      uiMessagePrio = 160;
+      cpMessage[0] = (char)COMM_LOG;
+    }
   else
     {
       util_error("ERR: Unknown command");

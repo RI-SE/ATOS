@@ -82,16 +82,20 @@ typedef enum {
 
 
 typedef enum {
-	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0, replay_1, 
-	control_0, Exit_0, start_ext_trigg_1, nocommand
+	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0, InitializeObjectControl_0,
+	ConnectObject_0, DisconnectObject_0, 
+	replay_1, control_0, Exit_0, start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 const char* SystemControlCommandsArr[] = 
 { 	
-	"Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0", "AbortScenario_0", "replay_1", 
-	"control_0", "Exit_0", "start_ext_trigg_1"
+	"Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0", "AbortScenario_0", "InitializeObjectControl_0",
+	"ConnectObject_0", "DisconnectObject_0", 
+	"replay_1", "control_0", "Exit_0", "start_ext_trigg_1"
 };
 
-const char* SystemControlSeverStatesArr[] = { "UNDEFINED", "INIT", "IDLE", "READY", "RUNNING", "INWORK", "FAIL"};
+const char* SystemControlStatesArr[] = { "UNDEFINED", "INIT", "IDLE", "READY", "RUNNING", "INWORK", "ERROR"};
+const char* SystemControlOBCStatesArr[] = { "UNDEFINED", "IDLE", "INITIALIZED", "CONNECTED", "ARMED", "RUNNING", "ERROR"};
+
 
 char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
 char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
@@ -107,6 +111,7 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle);
 static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint32_t port);
 static void SystemControlSendBytes(const char* data, int length, int* sockfd, int debug);
 void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8* ResponseData, I32 ResponseDataLength, I32* Sockfd, U8 Debug);
+void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug);
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
@@ -158,6 +163,7 @@ void systemcontrol_task()
  	U64 OldTimeU64 = 0;
  	U64 PollRateU64 = 0;
  	C8 ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
+ 	U8 OBCStateU8;
 
 	bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
 	UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerMode=", "", TextBufferC8);
@@ -299,15 +305,16 @@ void systemcontrol_task()
 			else if (server_state == SERVER_STATE_RUNNING && SystemControlCommand == AbortScenario_0) SystemControlCommand = SystemControlCommand;
 			else if(SystemControlCommand == GetServerStatus_0)
 			{
-				printf("[SystemControl] Server status: %s\n", SystemControlSeverStatesArr[server_state]);
+				printf("[SystemControl] State: %s, OBCState: %s\n", SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8]);
 			 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 			 	ControlResponseBuffer[0] = server_state;
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 1, &ClientSocket, 0);
+			 	ControlResponseBuffer[1] = OBCStateU8;
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 2, &ClientSocket, 0);
 				SystemControlCommand = PreviousSystemControlCommand;
 			} 
 			else if(SystemControlCommand != PreviousSystemControlCommand)
 			{				
-				printf("[SystemControl] Command not allowed, server is busy in state %s\n", SystemControlSeverStatesArr[server_state]);
+				printf("[SystemControl] Command not allowed, SystemControl is busy in state %s\n", SystemControlStatesArr[server_state]);
 				bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_BUSY, "ServerBusy:", ControlResponseBuffer, 0, &ClientSocket, 0);
 				SystemControlCommand = PreviousSystemControlCommand;
@@ -371,23 +378,59 @@ void systemcontrol_task()
 					CurrentCommandArgCounter = 0;
 				}
 				*/
+				if (iCommand == COMM_OBC_STATE)
+				{
+					OBCStateU8 = (U8)*pcRecvBuffer;
+				} 
+				else if(iCommand == COMM_LOG)
+				{
+					SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
+				}
+
 			break;
 			case GetServerStatus_0:
-				printf("[SystemControl] Server status: %s\n", SystemControlSeverStatesArr[server_state]);
+				printf("[SystemControl] State: %s, OBCState: %s\n", SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8]);
 				SystemControlCommand = Idle_0;
 			 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 			 	ControlResponseBuffer[0] = server_state;
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 1, &ClientSocket, 0);
+			 	ControlResponseBuffer[1] = OBCStateU8;
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 2, &ClientSocket, 0);
+			break;
+			case InitializeObjectControl_0:
+				(void)iCommSend(COMM_INIT,pcBuffer);
+				printf("[SystemControl] Sending INIT.\n");
+				SystemControlCommand = Idle_0;
+			 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			 	//ControlResponseBuffer[0] = server_state;
+			 	//ControlResponseBuffer[1] = OBCStateU8;
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeObjectControl:", ControlResponseBuffer, 0, &ClientSocket, 0);
+			break;
+			case ConnectObject_0:
+				(void)iCommSend(COMM_CONNECT,pcBuffer);
+				printf("[SystemControl] Sending CONNECT.\n");
+				SystemControlCommand = Idle_0;
+			 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			 	//ControlResponseBuffer[0] = server_state;
+			 	//ControlResponseBuffer[1] = OBCStateU8;
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ConnectObject:", ControlResponseBuffer, 0, &ClientSocket, 0);
+			break;
+			case DisconnectObject_0:
+				(void)iCommSend(COMM_DISCONNECT,pcBuffer);
+				printf("[SystemControl] Sending DISCONNECT.\n");
+				SystemControlCommand = Idle_0;
+			 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			 	//ControlResponseBuffer[0] = server_state;
+			 	//ControlResponseBuffer[1] = OBCStateU8;
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DisconnectObject:", ControlResponseBuffer, 0, &ClientSocket, 0);
 			break;
 			case ArmScenario_0:
-				if( server_state == SERVER_STATE_IDLE)
+				if( server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL)
 				{
 					bzero(pcBuffer, IPC_BUFFER_SIZE);
 					server_state = SERVER_STATE_INWORK;
 					pcBuffer[0] = OSTM_OPT_SET_ARMED_STATE;
 					(void)iCommSend(COMM_ARMD,pcBuffer);
 					printf("[SystemControl] Sending ARM.\n");
-					//SystemControlCommand = Idle_0;
 				 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ArmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 				} 
@@ -398,43 +441,68 @@ void systemcontrol_task()
 					SystemControlCommand = Idle_0;
 					server_state = SERVER_STATE_READY;
 				}
+				else
+				{
+					SystemControlSendLog("[SystemControl] ARM received, state errors!\n", &ClientSocket, 0);
+					SystemControlCommand = Idle_0;
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+				}
 			break;
 			case DisarmScenario_0:
-				bzero(pcBuffer, IPC_BUFFER_SIZE);
-				server_state = SERVER_STATE_IDLE;
-				pcBuffer[0] = OSTM_OPT_SET_DISARMED_STATE;
-				(void)iCommSend(COMM_ARMD,pcBuffer);
-				printf("[SystemControl] Sending DISARM.\n");
-				//SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DisarmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+				if( server_state == SERVER_STATE_READY && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL)
+				{
+					bzero(pcBuffer, IPC_BUFFER_SIZE);
+					server_state = SERVER_STATE_IDLE;
+					pcBuffer[0] = OSTM_OPT_SET_DISARMED_STATE;
+					(void)iCommSend(COMM_ARMD,pcBuffer);
+					printf("[SystemControl] Sending DISARM.\n");
+					SystemControlCommand = Idle_0;
+					bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DisarmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+				}
+				else
+				{
+					SystemControlSendLog("[SystemControl] DISARM received, state errors!\n", &ClientSocket, 0);
+					SystemControlCommand = Idle_0;
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+				}
 			break;
 			case StartScenario_1:
 				if(CurrentInputArgCount == CommandArgCount)
 				{
-					bzero(pcBuffer, IPC_BUFFER_SIZE);
-					gettimeofday(&tvTime, NULL);	
-					uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-					if(TIME_COMPENSATE_LAGING_VM) uiTime = uiTime - TIME_COMPENSATE_LAGING_VM_VAL; 
+					if( server_state == SERVER_STATE_READY && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL)
+					{
+						bzero(pcBuffer, IPC_BUFFER_SIZE);
+						gettimeofday(&tvTime, NULL);	
+						uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+						if(TIME_COMPENSATE_LAGING_VM) uiTime = uiTime - TIME_COMPENSATE_LAGING_VM_VAL; 
 
-					printf("[SystemControl] Current timestamp (gtd): %lu\n",uiTime );
+						printf("[SystemControl] Current timestamp (gtd): %lu\n",uiTime );
 
-					//clock_gettime(CLOCK_MONOTONIC_COARSE, &tTime);
-					//clock_gettime(CLOCK_REALTIME, &tTime);
-					//uiTime = (uint64_t)tTime.tv_sec*1000 + (uint64_t)tTime.tv_nsec/1000000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-					//printf("[SystemControl] Current timestamp (cgt): %lu\n",uiTime );
+						//clock_gettime(CLOCK_MONOTONIC_COARSE, &tTime);
+						//clock_gettime(CLOCK_REALTIME, &tTime);
+						//uiTime = (uint64_t)tTime.tv_sec*1000 + (uint64_t)tTime.tv_nsec/1000000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+						//printf("[SystemControl] Current timestamp (cgt): %lu\n",uiTime );
 
-					//printf("[SystemControl] Current timestamp: %lu\n",uiTime );
-					uiTime += atoi(SystemControlArgument[0]);
-					sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";",0,uiTime);
-					printf("[SystemControl] Sending START <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[0]);
-					fflush(stdout);
-					
-					(void)iCommSend(COMM_STRT,pcBuffer);
-					server_state = SERVER_STATE_RUNNING;
-					SystemControlCommand = Idle_0;
-					bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+						//printf("[SystemControl] Current timestamp: %lu\n",uiTime );
+						uiTime += atoi(SystemControlArgument[0]);
+						sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";",0,uiTime);
+						printf("[SystemControl] Sending START <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[0]);
+						fflush(stdout);
+						
+						(void)iCommSend(COMM_STRT,pcBuffer);
+						server_state = SERVER_STATE_RUNNING;
+						SystemControlCommand = Idle_0;
+						bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+						SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+					} 
+					else
+					{
+						SystemControlSendLog("[SystemControl] START received, state errors!\n", &ClientSocket, 0);
+						SystemControlCommand = Idle_0;
+						SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+					}
+
 				} else printf("START command parameter count error.\n");
 			break;
 			/*
@@ -561,6 +629,20 @@ SystemControlCommand_t SystemControlFindCommand(const char* CommandBuffer, Syste
         }
     }
     return nocommand;
+}
+
+
+void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
+{
+	int i, n;
+	C8 Length[4];
+	C8 Header[5] = "Log: ";
+
+	n = strlen(LogString) + strlen(Header);
+	Length[0] = (C8)(n >> 24); Length[1] = (C8)(n >> 16); Length[2] = (C8)(n >> 8); Length[3] = (C8)n;
+	SystemControlSendBytes(Length, 4, Sockfd, Debug);
+	SystemControlSendBytes(Header, 5, Sockfd, Debug);
+	SystemControlSendBytes(LogString, strlen(LogString), Sockfd, Debug);
 }
 
 
