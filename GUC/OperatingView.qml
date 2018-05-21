@@ -3,20 +3,31 @@ import QtQuick.Controls 2.2
 
 Column {
     id: root
-    property int buttons: 4
-    property int buttonHeight: (height - (buttons - 1) * 10)/buttons
+
+    spacing: 10
+    property int buttons: 7
+    property int buttonHeight: (height - (buttons - 1) * spacing)/buttons
     property int buttonWidth: width
 
 
+    signal initClicked();
     signal armClicked();
-    signal disarmClicked();
+    signal connectClicked();
     signal startClicked();
     signal abortClicked();
+    signal disconnectClicked();
+    signal statusClicked();
 
-    spacing: 10
 
+    BasicButton {
+        id: initButton
+        text: qsTr("INIT")
+        height: root.buttonHeight
+        width: root.buttonWidth
+        onClicked: root.initClicked();
+    }
 
-    Button {
+    BasicButton {
         id: armButton
         text: qsTr("ARM")
         height: root.buttonHeight
@@ -25,36 +36,49 @@ Column {
     }
 
 
-    Button {
-        id: disarmButton
-        text: qsTr("DISARM")
+    BasicButton {
+        id: connectButton
+        text: qsTr("CONNECT OBJECTS")
         height: root.buttonHeight
         width: root.buttonWidth
-        onClicked: root.disarmClicked()
+        onClicked: root.connectClicked()
     }
 
 
-    Button {
+    BasicButton {
         id: startButton
         text: qsTr("START")
         height: root.buttonHeight
         width: root.buttonWidth
         onClicked: root.startClicked()
+        color: "green"
     }
 
 
-    Button {
+    BasicButton {
         id: abortButton
         text: qsTr("ABORT")
         height: root.buttonHeight
         width: root.buttonWidth
         onClicked: root.abortClicked()
+        color: "red"
     }
 
-    Column {
-        id: column
-        width: 200
-        height: 400
+    BasicButton {
+        id: statusButton
+        text: qsTr("GetStatus()")
+        height: root.buttonHeight
+        width: root.buttonWidth
+        onClicked: root.statusClicked()
+        color: "orange"
+    }
+
+    BasicButton {
+        id: disconnectButton
+        text: qsTr("Disconnect...")
+        height: root.buttonHeight
+        width: root.buttonWidth
+        onClicked: root.disconnectClicked()
     }
 }
 

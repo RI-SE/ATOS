@@ -7,6 +7,9 @@
 #define DISARM_CMD_STR "DisarmScenario"
 #define START_CMD_STR "StartScenario"
 #define ABORT_CMD_STR "AbortScenario"
+#define GETSTATUS_CMD_STR "GetStatus"
+#define INITIALIZE_OBJECT_CONTROL_CMD_STR "InitializeObjectControl"
+#define CONNECT_OBJ_CMD_STR "ConnectObject"
 
 namespace MSCP {
 
@@ -16,10 +19,14 @@ namespace MSCP {
 
     bool msgToHTTPPOSTByteArray(const QString &IPaddress,const QString &msg, QByteArray &bytearray);
 
-    bool buildArmMsgByteArray(const QString &IPaddress, QByteArray &bytearray);
-    bool buildDisarmMsgByteArray(const QString &IPaddress, QByteArray &bytearray);
-    bool buildStartMsgByteArray(const QString &IPaddress, int delayms, QByteArray &bytearray);
-    bool buildAbortMsgByteArray(const QString &IPaddress, QByteArray &bytearray);
+    bool build_Arm(const QString &IPaddress, QByteArray &bytearray);
+    bool build_Disarm(const QString &IPaddress, QByteArray &bytearray);
+    bool build_Start(const QString &IPaddress, int delayms, QByteArray &bytearray);
+    bool build_Abort(const QString &IPaddress, QByteArray &bytearray);
+
+    bool build_GetStatus(const QString &IPaddress, QByteArray &bytearray);
+    bool build_InitializeObjectControl(const QString &IPaddress, QByteArray &bytearray);
+    bool build_ConnectObject(const QString &IPaddress, QByteArray &bytearray);
 }
 
 

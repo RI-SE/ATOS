@@ -15,7 +15,8 @@ class BackEnd : public QObject
     Q_OBJECT
     Q_PROPERTY(QString connectionText READ connectionText WRITE setConnectionText NOTIFY connectionTextChanged)
     Q_PROPERTY(int addressValidity READ addressValidity NOTIFY addressValidityChanged)
-
+    Q_PROPERTY(int sysCtrlStatus READ sysCtrlStatus WRITE setSysCtrlStatus NOTIFY sysCtrlStatusChanged)
+    Q_PROPERTY(int objCtrlStatus READ objCtrlStatus WRITE setObjCtrlStatus NOTIFY objCtrlStatusChanged)
 public:
 
 
@@ -34,6 +35,9 @@ public:
     Q_INVOKABLE bool sendDisarmToHost();
     Q_INVOKABLE bool sendStartToHost(int delayms);
     Q_INVOKABLE bool sendAbortToHost();
+    Q_INVOKABLE bool sendGetStatus();
+    Q_INVOKABLE bool sendInitializeObjectControl();
+    Q_INVOKABLE bool sendConnectObject();
 
 
     Q_INVOKABLE int addressValid(QString ip_addr){
@@ -48,11 +52,19 @@ public:
 
     int addressValidity();
 
+    int sysCtrlStatus();
+    void setSysCtrlStatus(int status);
+
+    int objCtrlStatus();
+    void setObjCtrlStatus(int status);
+
     void handleDebugMessage(const QString &msg);
 signals:
     void hostNameChanged();
     void connectionTextChanged();
     void addressValidityChanged();
+    void sysCtrlStatusChanged();
+    void objCtrlStatusChanged();
 
     void newDebugMessage(QString debugText);
 
@@ -64,6 +76,9 @@ private:
     QString m_connectionText = "test";
     TCPhandler *mTcphandler;
     int m_addressValidity;
+
+    int m_sysCtrlStatus = 0;
+    int m_objCtrlStatus = 0;
 
     void sendToHost(const QByteArray &data)
     {

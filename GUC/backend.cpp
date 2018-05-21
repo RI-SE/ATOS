@@ -20,15 +20,16 @@ BackEnd::BackEnd(QObject *parent) :
 bool BackEnd::sendArmToHost()
 {
     QByteArray data;
-    MSCP::buildArmMsgByteArray(m_hostName,data);
+    MSCP::build_Arm(m_hostName,data);
     sendToHost(data);
+    setSysCtrlStatus(2);
     return true;
 }
 
 bool BackEnd::sendDisarmToHost()
 {
     QByteArray data;
-    MSCP::buildDisarmMsgByteArray(m_hostName,data);
+    MSCP::build_Disarm(m_hostName,data);
     sendToHost(data);
     return true;
 }
@@ -36,18 +37,41 @@ bool BackEnd::sendDisarmToHost()
 bool BackEnd::sendStartToHost(int delayms)
 {
     QByteArray data;
-    MSCP::buildStartMsgByteArray(m_hostName,delayms,data);
+    MSCP::build_Start(m_hostName,delayms,data);
     sendToHost(data);
     return true;
 }
 bool BackEnd::sendAbortToHost()
 {
     QByteArray data;
-    MSCP::buildArmMsgByteArray(m_hostName,data);
+    MSCP::build_Abort(m_hostName,data);
     sendToHost(data);
     return true;
 }
 
+bool BackEnd::sendGetStatus()
+{
+    QByteArray data;
+    MSCP::build_GetStatus(m_hostName,data);
+    sendToHost(data);
+    return true;
+}
+
+bool BackEnd::sendInitializeObjectControl()
+{
+    QByteArray data;
+    MSCP::build_InitializeObjectControl(m_hostName,data);
+    sendToHost(data);
+    return true;
+}
+
+bool BackEnd::sendConnectObject()
+{
+    QByteArray data;
+    MSCP::build_ConnectObject(m_hostName,data);
+    sendToHost(data);
+    return true;
+}
 
 //****************************************
 // Public Q_Property methods
@@ -60,11 +84,9 @@ QString BackEnd::hostName()
 
 void BackEnd::setHostName(const QString &hostName)
 {
-    qDebug() << "Setting host name.";
     if (hostName == m_hostName)
         return;
     m_addressValidity = addressValid(hostName);
-    qDebug() << "IP_VALID:" << m_addressValidity;
     m_hostName = hostName;
     emit hostNameChanged();
 }
@@ -80,15 +102,38 @@ void BackEnd::setConnectionText(const QString &connectionText)
     emit connectionTextChanged();
 }
 
-
-//****************************************
-// Public common methods
-//****************************************
 int BackEnd::addressValidity()
 {
     return m_addressValidity;
 }
 
+int BackEnd::sysCtrlStatus()
+{
+    return m_sysCtrlStatus;
+}
+
+void BackEnd::setSysCtrlStatus(int status)
+{
+    if (status == m_sysCtrlStatus) return;
+    m_sysCtrlStatus = status;
+    emit sysCtrlStatusChanged();
+}
+
+int BackEnd::objCtrlStatus()
+{
+    return m_objCtrlStatus;
+}
+
+void BackEnd::setObjCtrlStatus(int status)
+{
+    if (status == m_objCtrlStatus) return;
+    m_objCtrlStatus = status;
+    emit objCtrlStatusChanged();
+}
+
+//****************************************
+// Public common methods
+//****************************************
 
 
 void BackEnd::handleDebugMessage(const QString &msg)

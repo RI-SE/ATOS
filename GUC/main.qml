@@ -7,8 +7,8 @@ import QtGraphicalEffects 1.0
 ApplicationWindow {
     id: window
     visible: true
-    width: 640
-    height: 480
+    width: 800
+    height: 600
     //title: qsTr("GUC")
 
 
@@ -29,26 +29,29 @@ ApplicationWindow {
             textArea.append(debugText)
         }
 
+
     }
 
     Rectangle {
         id: header
         width: parent.width
         height: 50
-        color: "green"
+        color: "#bbbbbb"
 
         Button {
             id: back
-            x: 8
             y: 5
             text: qsTr("<")
+            anchors.left: parent.left
+            anchors.leftMargin: 8
             onClicked: stackView.pop()
         }
 
         Button {
             id: forward
-            x: 532
             y: 5
+            anchors.right: parent.right
+            anchors.rightMargin: 8
             text: qsTr(">")
             onClicked: stackView.pushFirst()
         }
@@ -88,7 +91,7 @@ ApplicationWindow {
 
         function pushFirst(){
             if (stackView.depth < 2) {
-                stackView.push(buttonView)
+                stackView.push(controlView)
             }
         }
 
@@ -115,14 +118,19 @@ ApplicationWindow {
         }
     }
 
+
     Component {
-        id: buttonView
-        OperatingView {
-            anchors.horizontalCenter: window.horizontalCenter
+        id: controlView
+        ActionView {
             onArmClicked: backend.sendArmToHost()
-            onDisarmClicked: backend.sendDisarmToHost()
             onStartClicked: backend.sendStartToHost(1000)
             onAbortClicked: backend.sendAbortToHost()
+            onStatusClicked: backend.sendGetStatus()
+            onInitClicked: backend.sendInitializeObjectControl()
+            onConnectClicked: backend.sendConnectObject()
+            sysCtrlStatus:  backend.sysCtrlStatus
+
+
         }
     }
 }

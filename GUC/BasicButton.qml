@@ -10,7 +10,7 @@ Rectangle { // size controlled by height
 // private
     width: parent.width * 0.7;  height: 50
     color: "#dcd2c8" // default size
-    radius:       0.5  * root.height
+    radius:       0.2  * root.height
     border.width: 3
     opacity:      enabled? 1: 0.3 // disabled state
 

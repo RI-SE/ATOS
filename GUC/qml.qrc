@@ -5,5 +5,8 @@
         <file>ConnectScreen.qml</file>
         <file>RoundedSquare.qml</file>
         <file>OperatingView.qml</file>
+        <file>StatusView.qml</file>
+        <file>LEDandText.qml</file>
+        <file>ActionView.qml</file>
     </qresource>
 </RCC>

@@ -22,25 +22,43 @@ namespace MSCP {
         return true;
     }
 
-    bool buildArmMsgByteArray(const QString &IPaddress, QByteArray &bytearray)
+    bool build_Arm(const QString &IPaddress, QByteArray &bytearray)
     {
         msgToHTTPPOSTByteArray(IPaddress,QString(ARM_CMD_STR) + "();",bytearray);
         return true;
     }
-    bool buildDisarmMsgByteArray(const QString &IPaddress, QByteArray &bytearray)
+    bool build_Disarm(const QString &IPaddress, QByteArray &bytearray)
     {
         msgToHTTPPOSTByteArray(IPaddress,QString(DISARM_CMD_STR) + "();",bytearray);
         return true;
     }
-    bool buildStartMsgByteArray(const QString &IPaddress, int delayms, QByteArray &bytearray)
+    bool build_Start(const QString &IPaddress, int delayms, QByteArray &bytearray)
     {
         msgToHTTPPOSTByteArray(IPaddress,QString(START_CMD_STR) + "(" + QString::number(delayms) +");",bytearray);
         return true;
     }
 
-    bool buildAbortMsgByteArray(const QString &IPaddress, QByteArray &bytearray)
+    bool build_Abort(const QString &IPaddress, QByteArray &bytearray)
     {
         msgToHTTPPOSTByteArray(IPaddress,QString(ABORT_CMD_STR) + "();",bytearray);
+        return true;
+    }
+
+    bool build_GetStatus(const QString &IPaddress, QByteArray &bytearray)
+    {
+        msgToHTTPPOSTByteArray(IPaddress,QString(GETSTATUS_CMD_STR)+ "();", bytearray);
+        return true;
+    }
+
+    bool build_InitializeObjectControl(const QString &IPaddress, QByteArray &bytearray)
+    {
+        msgToHTTPPOSTByteArray(IPaddress,QString(INITIALIZE_OBJECT_CONTROL_CMD_STR) + "();", bytearray);
+        return true;
+    }
+
+    bool build_ConnectObject(const QString &IPaddress, QByteArray &bytearray)
+    {
+        msgToHTTPPOSTByteArray(IPaddress,QString(CONNECT_OBJ_CMD_STR) + "(-1);",bytearray);
         return true;
     }
 }
