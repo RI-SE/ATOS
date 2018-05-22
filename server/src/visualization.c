@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "util.h"
 
@@ -30,6 +31,7 @@
 #define VISUAL_CONTROL_MODE 0
 #define VISUAL_REPLAY_MODE 1
 
+#define SMALL_ITEM_TEXT_BUFFER_SIZE 20
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -38,6 +40,8 @@ static void vDisconnectVisualizationChannel(int* sockfd);
 static void vSendVisualization(int* sockfd, 
   struct sockaddr_in* addr,
   const char* message);
+
+void vISOtoCHRONOSmsg(char* ISOmsg,char* tarCHRONOSmsg,int MSG_size);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -50,7 +54,8 @@ int main(int argc, char *argv[])
 {
 	int visual_server;
 	struct sockaddr_in visual_server_addr;
-	char cpBuffer[RECV_MESSAGE_BUFFER];
+    char cpBuffer[RECV_MESSAGE_BUFFER];
+    char chronosbuff[RECV_MESSAGE_BUFFER];
 
 	printf("[Visualization] DefaultVisualizationAdapter started\n");
 	fflush(stdout);
@@ -83,7 +88,9 @@ int main(int argc, char *argv[])
         fflush(stdout);
       #endif
 
-      vSendVisualization(&visual_server,&visual_server_addr,cpBuffer);
+      vISOtoCHRONOSmsg(cpBuffer,chronosbuff,RECV_MESSAGE_BUFFER);
+      vSendVisualization(&visual_server,&visual_server_addr,chronosbuff);
+
     }
 	else if(iCommand == COMM_REPLAY)
 	{
@@ -191,3 +198,57 @@ static void vSendVisualization(int* sockfd, struct sockaddr_in* addr,const char*
       util_error("ERR: Failed to send on monitor socket");
     }
 }
+
+void vISOtoCHRONOSmsg(char* ISOmsg,char* tarCHRONOSmsg, int MSG_size)
+{
+    char IP_address[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char ID[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char Timestamp[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char Latitude[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char Longitude[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char Altitude[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char Heading[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char LonSpeed[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char LatSpeed[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char LonAcc[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char LatAcc[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char DriveDirection[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char StateFlag[SMALL_ITEM_TEXT_BUFFER_SIZE];
+    char StatusFlag[SMALL_ITEM_TEXT_BUFFER_SIZE];
+
+    bzero(tarCHRONOSmsg,MSG_size);
+
+    char* item_p = strtok(ISOmsg,";");
+    int item_num = 0; // The placement incoming message
+    while(item_p != NULL)
+    {
+        // What to do with each item at the current placement
+        switch (item_num) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 11:
+        case 12:
+            strcat(tarCHRONOSmsg,item_p); strcat(tarCHRONOSmsg,";");
+            break;
+        case 6:
+            bzero(Heading,SMALL_ITEM_TEXT_BUFFER_SIZE);
+            int mod_heading = atoi(item_p)/10;
+            sprintf(Heading,"%d;",mod_heading);
+            break;
+        case 7:
+            strcat(tarCHRONOSmsg,item_p); strcat(tarCHRONOSmsg,";");
+            strcat(tarCHRONOSmsg,Heading);
+            break;
+        default:
+            break;
+        }
+        item_num++;
+        item_p = strtok(NULL,";");
+    }
+
+}
+

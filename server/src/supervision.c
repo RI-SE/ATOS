@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : supervision.c
-  -- Author      : Karl-Johan Ode
+  -- Author      : 
   -- Description : CHRONOS
   -- Purpose     :
   -- Reference   :
@@ -57,6 +57,7 @@ static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_P
   DIR*           traj_directory;
   struct dirent* directory_entry;
   int            iForceObjectToLocalhost;
+  int i = 0;
 
   iForceObjectToLocalhost = 0;
 
@@ -69,6 +70,7 @@ static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_P
   (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",
                                 &iForceObjectToLocalhost);
 
+  //printf("Filenames:\n");
   while ((directory_entry = readdir(traj_directory)) &&
          ((*nbr_objects) < MAX_OBJECTS))
     {
@@ -76,7 +78,7 @@ static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_P
       if (strncmp(directory_entry->d_name,".",1))
         {
           bzero(object_address_name[(*nbr_objects)],MAX_FILE_PATH);
-
+          //printf("Id %d = %s\n", i++, directory_entry->d_name);
           bzero(object_traj_file[(*nbr_objects)],MAX_FILE_PATH);
           (void)strcat(object_traj_file[(*nbr_objects)],TRAJECTORY_PATH);
           (void)strcat(object_traj_file[(*nbr_objects)],directory_entry->d_name);
@@ -456,6 +458,7 @@ void supervision_task() {
         if ( doInitialAlignmentLoop == 1 )
           {
 #ifdef DEBUG
+
             //printf ( "DBG : SV : Rec MON : i %d : t %" PRIu64 ", lat %d, lon %d, a %d, s %d, h %d, d %d \n",
             //         iIndex                 ,
             //         monitor.timestamp      ,
@@ -466,6 +469,7 @@ void supervision_task() {
             //         monitor.heading        ,
             //         monitor.drivedirection );
             //fflush(stdout);
+
 #endif
 
             while ( bestFitDone [ iIndex ] == 0 )
@@ -601,6 +605,7 @@ void supervision_task() {
                   jIndex < nbr_objects ;
                   ++jIndex             )
               {
+
               //  printf ( "DBG : SV : Initial align - bestFitDone index %d ok = %d.\n",
               //           jIndex,
               //           bestFitDone [ jIndex ] );

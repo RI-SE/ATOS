@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : systemcontrol.c
-  -- Author      : Karl-Johan Ode, Sebastian Loh Lindholm
+  -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS
   -- Purpose     :
   -- Reference   :
@@ -53,8 +53,8 @@ typedef enum {
 #define SYSTEM_CONTROL_ARG_MAX_COUNT	 	6
 #define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	80
 
-#define AROM_OPT_SET_ARMED_STATE 1
-#define AROM_OPT_SET_DISARMED_STATE 2 
+#define OSTM_OPT_SET_ARMED_STATE 2
+#define OSTM_OPT_SET_DISARMED_STATE 3 
 #define SC_RECV_MESSAGE_BUFFER 512
 
 #define SMALL_BUFFER_SIZE_16 16
@@ -234,7 +234,7 @@ void systemcontrol_task()
 			case arm_0:
 				bzero(pcBuffer, IPC_BUFFER_SIZE);
 				server_state = SERVER_STATUS_ARMED;
-				pcBuffer[0] = AROM_OPT_SET_ARMED_STATE;
+				pcBuffer[0] = OSTM_OPT_SET_ARMED_STATE;
 				(void)iCommSend(COMM_ARMD,pcBuffer);
 				printf("[SystemControl] Sending ARM.\n");
 				SystemControlCommand = idle_0;
@@ -243,7 +243,7 @@ void systemcontrol_task()
 			case disarm_0:
 				bzero(pcBuffer, IPC_BUFFER_SIZE);
 				server_state = SERVER_STATUS_DISARMED;
-				pcBuffer[0] = AROM_OPT_SET_DISARMED_STATE;
+				pcBuffer[0] = OSTM_OPT_SET_DISARMED_STATE;
 				(void)iCommSend(COMM_ARMD,pcBuffer);
 				printf("[SystemControl] Sending DISARM.\n");
 				SystemControlCommand = idle_0;

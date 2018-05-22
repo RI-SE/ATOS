@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : logger.c
-  -- Author      : Karl-Johan Ode, Sebastian Loh Lindholm
+  -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS
   -- Purpose     :
   -- Reference   :

@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : util.h
-  -- Author      : Karl-Johan Ode, Sebastian Loh Lindholm
+  -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS
   -- Purpose     :
   -- Reference   :
@@ -76,9 +76,10 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.26"
-#define TESTSERVER_IP "192.168.0.26"
+#define TESTHOST_IP "195.0.0.250"
+#define TESTSERVER_IP "195.0.0.250"
 #define TEST_SYNC_POINTS 0
+
 
 
 /* Calculation: 	
@@ -117,7 +118,171 @@
 #define SLAVE_FILE_EXTENSION ".sync.s"
 
 
+#define UNKNOWN 0
+#define C8_CODE  1
+#define U8_CODE  2
+#define I8_CODE  3
+#define U16_CODE  4
+#define I16_CODE  5
+#define U32_CODE  6
+#define I32_CODE  7
+#define U48_CODE  8
+#define I48_CODE  9
+#define U64_CODE  10
+#define I64_CODE  11
+#define DBL_CODE  12
+#define FLT_CODE  13
+#define STRUCT_CODE  254
+#define RESERVED_CODE  255
+
+#define VALUE_ID_NOT_DEF  0
+#define VALUE_ID_RELATIVE_TIME 1
+#define VALUE_ID_ABSOLUTE_TIME 2
+#define VALUE_ID_X_POSITION  10
+#define VALUE_ID_Y_POSITION  11
+#define VALUE_ID_Z_POSITION  12
+#define VALUE_ID_LATITUDE  20
+#define VALUE_ID_LONGITUDE 21
+#define VALUE_ID_ALTITUDE  22
+#define VALUE_ID_HEADING 30
+#define VALUE_ID_LONGITUDINAL_SPEED  40
+#define VALUE_ID_LATERAL_SPEED 41
+#define VALUE_ID_LONGITUDINAL_ACCELERATION 50
+#define VALUE_ID_LATERAL_ACCELERATION  51
+#define VALUE_ID_FLAG  60
+
+
+#define C8 uint8_t
+#define U8 uint8_t
+#define I8 int8_t
+#define U16 uint16_t
+#define I16 int16_t
+#define U32 uint32_t
+#define I32 int32_t
+#define U64 uint64_t
+#define I64 int64_t
+#define DBL double
+#define FLT float
+
+#pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
+
+#define SYNC_WORD 0x7e7e
 //#define DEBUG
+
+typedef struct
+{
+  double Latitude;
+  double Longitude;
+  double Altitude;
+  double Heading;
+} GeoPosition;
+
+
+typedef struct
+{
+  U16 SyncWordU16;
+  U8 TransmitterIdU8;
+  U8 PackageCounterU8;
+  U8 AckReqU8;
+  U32 MessageLengthU32;
+} HeaderType; //9 bytes
+
+typedef struct
+{
+  U16 Crc;
+} FooterType; //2 bytes
+
+typedef struct
+{
+  HeaderType Header;
+  U16 MessageIdU16;
+  U32 NOFValuesU32;
+  U16 LatitudeValueIdU16;
+  U8 LatitudeValueTypeU8;
+  I32 LatitudeI32;
+  U16 LongitudeValueIdU16;
+  U8 LongitudeValueTypeU8;
+  I32 LongitudeI32;
+  U16 AltitudeValueIdU16;
+  U8 AltitudeValueTypeU8;
+  I32 AltitudeI32;
+} OSEMType; //36 bytes
+
+typedef struct
+{
+  HeaderType Header;
+  U16 MessageIdU16;
+  U32 NOFValuesU32;
+  U16 StartTimeValueIdU16;
+  U8 StartTimeValueTypeU8;
+  U64 StartTimeU64;
+} STRTType; //26 bytes
+
+typedef struct
+{
+  HeaderType Header;
+  U16 MessageIdU16;
+  U32 NOFValuesU32;
+  U16 StateValueIdU16;
+  U8 StateValueTypeU8;
+  U8 StateU8;
+} OSTMType; //19 bytes
+
+typedef struct
+{
+  HeaderType Header;
+  U16 MessageIdU16;
+  U32 NOFValuesU32;
+  U16 TimeValueIdU16;
+  U8 TimeValueTypeU8;
+  U64 TimeU64;
+  U16 StatusValueIdU16;
+  U8 StatusValueTypeU8;
+  U8 StatusU8;
+} HEABType; //30 bytes
+
+typedef struct
+{
+  HeaderType Header;
+  U16 MessageIdU16;
+  U32 NOFValuesU32;
+  U16 PositionTimeValueIdU16;
+  U8 PositionTimeValueTypeU8;
+  U64 PositionTimeU64;
+  U16 XPositionValueIdU16;
+  U8 XPositionValueTypeU8;
+  I32 XPositionI32;
+  U16 YPositionValueIdU16;
+  U8 YPositionValueTypeU8;
+  I32 YPositionI32;
+  U16 ZPositionValueIdU16;
+  U8 ZPositionValueTypeU8;
+  I32 ZPositionI32;
+  U16 HeadingValueIdU16;
+  U8 HeadingValueTypeU8;
+  U16 HeadingU16;
+  U16 LongitudinalSpeedValueIdU16;
+  U8 LongitudinalSpeedValueTypeU8;
+  I16 LongitudinalSpeedI16;
+  U16 LateralSpeedValueIdU16;
+  U8 LateralSpeedValueTypeU8;
+  I16 LateralSpeedI16;
+  U16 LongitudinalAccValueIdU16;
+  U8 LongitudinalAccValueTypeU8;
+  I16 LongitudinalAccI16;
+  U16 LateralAccValueIdU16;
+  U8 LateralAccValueTypeU8;
+  I16 LateralAccI16;
+  U16 DriveDirectionValueIdU16;
+  U8 DriveDirectionValueTypeU8;
+  U8 DriveDirectionU8;
+  U16 StateValueIdU16;
+  U8 StateValueTypeU8;
+  U8 StateU8;
+  U16 StatusValueIdU16;
+  U8 StatusValueTypeU8;
+  U8 StatusU8;
+} MONRType;
 
 typedef struct
 {
@@ -204,6 +369,7 @@ int iCommRecv(int*, char*, const int);
 int iCommSend(const int,const char*);
 
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
+int UtilVincentyDirect(double refLat, double refLon, double a1, double distance, double *resLat, double *resLon, double *a2);
 double UtilDegToRad(double Deg);
 double UtilRadToDeg(double Rad);
 int UtilPopulateSpaceTimeArr(ObjectPosition *OP, char* TrajFile);
@@ -234,6 +400,8 @@ void enuToLlh(const double *iLlh, const double *xyz, double *llh);
 void createEnuMatrix(double lat, double lon, double *enuMat);
 void xyzToLlh(double x, double y, double z, double *lat, double *lon, double *height);
 void llhToEnu(const double *iLlh, const double *llh, double *xyz);
+uint16_t crc_16( const unsigned char *input_str, uint16_t num_bytes );
+
 
 typedef struct {
   uint64_t timestamp;
