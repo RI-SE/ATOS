@@ -7,7 +7,7 @@
 #define DISARM_CMD_STR "DisarmScenario"
 #define START_CMD_STR "StartScenario"
 #define ABORT_CMD_STR "AbortScenario"
-#define GETSTATUS_CMD_STR "GetStatus"
+#define GETSERVERSTATUS_CMD_STR "GetServerStatus"
 #define INITIALIZE_OBJECT_CONTROL_CMD_STR "InitializeObjectControl"
 #define CONNECT_OBJ_CMD_STR "ConnectObject"
 

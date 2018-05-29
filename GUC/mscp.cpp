@@ -46,7 +46,7 @@ namespace MSCP {
 
     bool build_GetStatus(const QString &IPaddress, QByteArray &bytearray)
     {
-        msgToHTTPPOSTByteArray(IPaddress,QString(GETSTATUS_CMD_STR)+ "();", bytearray);
+        msgToHTTPPOSTByteArray(IPaddress,QString(GETSERVERSTATUS_CMD_STR)+ "();", bytearray);
         return true;
     }
 

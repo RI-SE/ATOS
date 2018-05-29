@@ -105,7 +105,7 @@ ApplicationWindow {
         id: csrcn
         ConnectScreen {
             connectText: backend.connectionText
-            rootText: qsTr("10.111.144.21")
+            rootText: qsTr("10.130.23.60")
 
             onClicked: backend.initConnect()
             onRootTextChanged:
