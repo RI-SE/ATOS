@@ -28,6 +28,7 @@
 
 #define REMOTE_CONTROL_CONF_FILE_PATH  "conf/test.conf"
 #define REMOTE_CONTROL_BUFFER_SIZE_20 20
+#define REMOTE_CONTROL_BUFFER_SIZE_52 52
 #define REMOTE_CONTROL_HTTP_HEADER "POST /esss HTTP/1.1\r\nHost: maestro.sebart.net\r\n"
 
 #define REMOTE_CONTROL_HTTP_BUFFER 2048
@@ -41,6 +42,9 @@ static void RemoteControlSendBytes(const char* data, int length, int* sockfd, in
 //void RemoteControlConnectServer(int* sockfd, const char* name, const uint32_t port);
 
 //U32 RemoteControlSignIn(I32 ServerSocketI32, C8 *TablenameC8, C8 *UsernameC8, C8 *PasswordC8, U8 Debug);
+static void vCreateTimeChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
+static void vRecvTime(int* sockfd, char* buffer, int length, int* recievedNewData);
+int SendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
 
 void getIP();
 
@@ -60,6 +64,12 @@ int remotecontrol_task()
   C8 ServerIPC8[REMOTE_CONTROL_BUFFER_SIZE_20];
   U16 ServerPortU16;
   I32 SocketfdI32=-1;
+  struct sockaddr_in time_addr;
+  I32 iExit = 0;
+  C8 TimeBuffer[REMOTE_CONTROL_BUFFER_SIZE_52];
+  I32 RecievedNewData, i;
+  C8 SendData[1] = {10};
+
 
   UtilSearchTextFile(REMOTE_CONTROL_CONF_FILE_PATH, "RemoteMode=", "", TextBufferC8);
   ModeU8 = (U8)atoi(TextBufferC8);
@@ -68,6 +78,22 @@ int remotecontrol_task()
   strcat(ServerIPC8, TextBufferC8);
   UtilSearchTextFile(REMOTE_CONTROL_CONF_FILE_PATH, "RemoteServerPort=", "", TextBufferC8);
   ServerPortU16 = (U16)atoi(TextBufferC8);
+
+  vCreateTimeChannel("192.168.0.42", 53000, &SocketfdI32,  &time_addr);
+  SendUDPData(&SocketfdI32, &time_addr, SendData, 1, 1);
+  printf("Checking time...\n");
+  while(!iExit)
+  {
+
+    bzero(TimeBuffer,REMOTE_CONTROL_BUFFER_SIZE_52);
+    vRecvTime(&SocketfdI32,TimeBuffer, REMOTE_CONTROL_BUFFER_SIZE_52, &RecievedNewData);
+    if(RecievedNewData)
+    {
+      for(i=0; i < REMOTE_CONTROL_BUFFER_SIZE_52; i++) printf("%x-", TimeBuffer[i]);
+      printf("\n");
+    }
+
+  }
 
 
 }
@@ -338,7 +364,99 @@ void getIP()
 
 
             freeaddrinfo(result);           /* No longer needed */
-
-
-
  }
+
+
+
+ static void vCreateTimeChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr)
+{
+  int result;
+  struct hostent *object;
+
+  /* Connect to object safety socket */
+  //#ifdef DEBUG
+    printf("INF: Creating safety socket\n");
+    fflush(stdout);
+  //#endif
+
+  *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
+  if (*sockfd < 0)
+  {
+    util_error("ERR: Failed to connect to monitor socket");
+  }
+
+  /* Set address to object */
+  object = gethostbyname(name);
+  
+  if (object==0)
+  {
+    util_error("ERR: Unknown host");
+  }
+
+  bcopy((char *) object->h_addr, 
+    (char *)&addr->sin_addr.s_addr, object->h_length);
+  addr->sin_family = AF_INET;
+  addr->sin_port = htons(port);
+
+   /* set socket to non-blocking */
+  result = fcntl(*sockfd, F_SETFL, 
+    fcntl(*sockfd, F_GETFL, 0) | O_NONBLOCK);
+  if (result < 0)
+  {
+    util_error("ERR: calling fcntl");
+  }
+
+  //#ifdef DEBUG
+    printf("INF: Created socket and safety address: %s %d\n",name,port);
+    fflush(stdout);
+  //#endif
+
+}
+
+
+static void vRecvTime(int* sockfd, char* buffer, int length, int* recievedNewData)
+{
+  int result;
+  *recievedNewData = 0;
+    do
+    {
+      result = recv(*sockfd, buffer, length, 0);
+
+      if (result < 0)
+      {
+        if(errno != EAGAIN && errno != EWOULDBLOCK)
+        {
+          util_error("ERR: Failed to receive from monitor socket");
+        }
+        else
+        {
+          #ifdef DEBUG
+            printf("INF: No data receive\n");
+            fflush(stdout);
+          #endif
+        }
+      }
+      else
+      {
+        *recievedNewData = 1;
+        #ifdef DEBUG
+          printf("INF: Received: <%s>\n",buffer);
+          fflush(stdout);
+        #endif
+      }
+    } while(result > 0 );
+}
+
+int SendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
+{
+    int result;
+ 
+    result = sendto(*sockfd, SendData, Length, 0, (const struct sockaddr *) addr, sizeof(struct sockaddr_in));
+
+    if (result < 0)
+    {
+      util_error("ERR: Failed to send on monitor socket");
+    }
+
+    return 0;
+}

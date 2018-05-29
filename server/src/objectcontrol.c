@@ -143,8 +143,7 @@ static void vSendBytes(const char* command, int length, int* sockfd, int debug);
 static void vSendFile(const char* object_traj_file, int* sockfd);
 static void vDisconnectObject(int* sockfd);
 
-static void vCreateSafetyChannel(const char* name,const uint32_t port,
-  int* sockfd, struct sockaddr_in* addr);
+static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static void vCloseSafetyChannel(int* sockfd);
 static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatCommand_t tCommand);
 static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData);
@@ -521,7 +520,7 @@ void objectcontrol_task()
   			printf("[ObjectControl] Object control REPLAY mode <%s>\n", pcRecvBuffer);
   			fflush(stdout);
   		}
-  		else if(iCommand == COMM_ABORT)
+  		else if(iCommand == COMM_ABORT && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING))
   		{
   			ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
   			sprintf(LogBuffer, "[ObjectControl] ABORT received.\n"); ObjectControlSendLog(LogBuffer);
@@ -634,25 +633,11 @@ void objectcontrol_task()
                                       UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
                                       UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
                                       0); 
-
-
           DisconnectU8 = 0;
 
           do
           {
             
-            bzero(pcRecvBuffer,RECV_MESSAGE_BUFFER);
-            //Have we recieved a command?
-            if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER))
-            {
-              if(iCommand == COMM_DISCONNECT)
-              {
-                DisconnectU8 = 1;
-                sprintf(LogBuffer, "[ObjectControl] DISCONNECT received.\n"); ObjectControlSendLog(LogBuffer);
-              }
-
-            }
-
             iResult = vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex], &DisconnectU8);
 
             if ( iResult < 0) 
@@ -668,6 +653,19 @@ void objectcontrol_task()
                 util_error("ERR: Failed to connect to control socket");
               }
             }
+
+            bzero(pcRecvBuffer,RECV_MESSAGE_BUFFER);
+            //Have we recieved a command?
+            if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER))
+            {
+              if(iCommand == COMM_DISCONNECT)
+              {
+                DisconnectU8 = 1;
+                sprintf(LogBuffer, "[ObjectControl] DISCONNECT received.\n"); ObjectControlSendLog(LogBuffer);
+              }
+
+            }
+
           } while(iResult < 0 && DisconnectU8 == 0);
 
           if(iResult > 0)
@@ -1804,8 +1802,7 @@ static void vSendFile(const char* object_traj_file, int* sockfd)
   fclose(filefd);
 }
 
-static void vCreateSafetyChannel(const char* name,const uint32_t port,
-  int* sockfd, struct sockaddr_in* addr)
+static void vCreateSafetyChannel(const char* name, const uint32_t port, int* sockfd, struct sockaddr_in* addr)
 {
   int result;
   struct hostent *object;
@@ -1830,8 +1827,7 @@ static void vCreateSafetyChannel(const char* name,const uint32_t port,
     util_error("ERR: Unknown host");
   }
 
-  bcopy((char *) object->h_addr, 
-    (char *)&addr->sin_addr.s_addr, object->h_length);
+  bcopy((char *) object->h_addr, (char *)&addr->sin_addr.s_addr, object->h_length);
   addr->sin_family = AF_INET;
   addr->sin_port = htons(port);
 
