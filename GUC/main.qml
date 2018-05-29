@@ -7,8 +7,8 @@ import QtGraphicalEffects 1.0
 ApplicationWindow {
     id: window
     visible: true
-    width: 800
-    height: 600
+    width: 1240
+    height: 800
     //title: qsTr("GUC")
 
 
@@ -60,7 +60,7 @@ ApplicationWindow {
     Rectangle {
         id: footer
         width: parent.width
-        height: 100
+        height: 300
         color: "black"
         anchors.bottom: parent.bottom
 
@@ -105,7 +105,7 @@ ApplicationWindow {
         id: csrcn
         ConnectScreen {
             connectText: backend.connectionText
-            rootText: qsTr("10.130.23.60")
+            rootText: qsTr("192.168.1.14")
 
             onClicked: backend.initConnect()
             onRootTextChanged:
@@ -122,12 +122,12 @@ ApplicationWindow {
     Component {
         id: controlView
         ActionView {
-            onArmClicked: backend.sendArmToHost()
-            onStartClicked: backend.sendStartToHost(1000)
-            onAbortClicked: backend.sendAbortToHost()
+            //onArmClicked: backend.sendArmToHost()
+            //onStartClicked: backend.sendStartToHost(1000)
+            //onAbortClicked: backend.sendAbortToHost()
             onStatusClicked: backend.sendGetStatus()
-            onInitClicked: backend.sendInitializeObjectControl()
-            onConnectClicked: backend.sendConnectObject()
+            //onInitClicked: backend.sendInitializeObjectControl()
+            //onConnectClicked: backend.sendConnectObject()
             sysCtrlStatus:  backend.sysCtrlStatus
 
 

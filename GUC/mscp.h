@@ -2,31 +2,53 @@
 #define MSCPITERPRETER_H
 #include <QDebug>
 #include <QByteArray>
+#include <QDataStream>
 
 #define ARM_CMD_STR "ArmScenario"
 #define DISARM_CMD_STR "DisarmScenario"
 #define START_CMD_STR "StartScenario"
 #define ABORT_CMD_STR "AbortScenario"
 #define GETSERVERSTATUS_CMD_STR "GetServerStatus"
-#define INITIALIZE_OBJECT_CONTROL_CMD_STR "InitializeObjectControl"
+#define INITIALIZE_SCENARIO_CMD_STR "InitializeScenario"
 #define CONNECT_OBJ_CMD_STR "ConnectObject"
+
+#define RESPONSE_LENGTH_BYTES 4
+#define RESPONSE_CODE_BYTES 2
 
 namespace MSCP {
 
+    typedef struct
+    {
+        qint8 system_ctrl;
+        qint8 object_ctrl;
+    } server_status;
 
+    enum RESPONSE_ID
+    {
+        SERVER_STATUS = 0
+    };
 
-    void readServerResponse();
+    bool readServerResponse(QByteArray &bytearray);
+    bool readGetStatusMsg(const QByteArray &bytearray,qint16 &responsecode, server_status &status);
 
     bool msgToHTTPPOSTByteArray(const QString &IPaddress,const QString &msg, QByteArray &bytearray);
 
-    bool build_Arm(const QString &IPaddress, QByteArray &bytearray);
-    bool build_Disarm(const QString &IPaddress, QByteArray &bytearray);
-    bool build_Start(const QString &IPaddress, int delayms, QByteArray &bytearray);
-    bool build_Abort(const QString &IPaddress, QByteArray &bytearray);
+    // Done with new iplementation
 
-    bool build_GetStatus(const QString &IPaddress, QByteArray &bytearray);
-    bool build_InitializeObjectControl(const QString &IPaddress, QByteArray &bytearray);
-    bool build_ConnectObject(const QString &IPaddress, QByteArray &bytearray);
+
+    qint8 build_InitializeScenario(const QString &IPaddress, QByteArray &bytearray);
+    qint8 build_GetStatus(const QString &IPaddress, QByteArray &bytearray);
+
+
+
+    // Not done
+    qint8 build_Arm(const QString &IPaddress, QByteArray &bytearray);
+    qint8 build_Disarm(const QString &IPaddress, QByteArray &bytearray);
+    qint8 build_Start(const QString &IPaddress, int delayms, QByteArray &bytearray);
+    qint8 build_Abort(const QString &IPaddress, QByteArray &bytearray);
+
+
+    qint8 build_ConnectObject(const QString &IPaddress, QByteArray &bytearray);
 }
 
 

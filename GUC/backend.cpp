@@ -7,9 +7,11 @@ BackEnd::BackEnd(QObject *parent) :
 
     mTcphandler = new TCPhandler();
     QObject::connect(mTcphandler, SIGNAL(debugComMsg(QString)),
-            this,SLOT(handleDebugComMsg(QString)));
+                     this,SLOT(handleDebugComMsg(QString)));
     QObject::connect(mTcphandler,SIGNAL(connectionChanged(int)),
                      this,SLOT(handleConnectionChanged(int)));
+    QObject::connect(mTcphandler, SIGNAL(receivedData(QByteArray)),
+                     this,SLOT(handleReceivedData(QByteArray)));
 
 }
 
@@ -21,7 +23,7 @@ bool BackEnd::sendArmToHost()
 {
     QByteArray data;
     MSCP::build_Arm(m_hostName,data);
-    sendToHost(data);
+    sendToHost(data,-1);
     setSysCtrlStatus(2);
     return true;
 }
@@ -30,7 +32,7 @@ bool BackEnd::sendDisarmToHost()
 {
     QByteArray data;
     MSCP::build_Disarm(m_hostName,data);
-    sendToHost(data);
+    sendToHost(data,-1);
     return true;
 }
 
@@ -38,30 +40,30 @@ bool BackEnd::sendStartToHost(int delayms)
 {
     QByteArray data;
     MSCP::build_Start(m_hostName,delayms,data);
-    sendToHost(data);
+    sendToHost(data,-1);
     return true;
 }
 bool BackEnd::sendAbortToHost()
 {
     QByteArray data;
     MSCP::build_Abort(m_hostName,data);
-    sendToHost(data);
+    sendToHost(data,-1);
     return true;
 }
 
 bool BackEnd::sendGetStatus()
 {
     QByteArray data;
-    MSCP::build_GetStatus(m_hostName,data);
-    sendToHost(data);
+    qint8 id = MSCP::build_GetStatus(m_hostName,data);
+    sendToHost(data,id);
     return true;
 }
 
-bool BackEnd::sendInitializeObjectControl()
+bool BackEnd::sendInit()
 {
     QByteArray data;
-    MSCP::build_InitializeObjectControl(m_hostName,data);
-    sendToHost(data);
+    MSCP::build_InitializeScenario(m_hostName,data);
+    sendToHost(data,-1);
     return true;
 }
 
@@ -69,7 +71,7 @@ bool BackEnd::sendConnectObject()
 {
     QByteArray data;
     MSCP::build_ConnectObject(m_hostName,data);
-    sendToHost(data);
+    sendToHost(data,-1);
     return true;
 }
 
@@ -176,4 +178,30 @@ void BackEnd::handleConnectionChanged(const int &isConnected)
     default:
         break;
     }
+}
+
+void BackEnd::handleReceivedData(const QByteArray &data)
+{
+    switch (expected_response_id) {
+    case MSCP::SERVER_STATUS:
+        MSCP::server_status status;
+        qint16 response_code;
+        if (MSCP::readGetStatusMsg(data,response_code,status))
+        {
+            setSysCtrlStatus(status.system_ctrl);
+            setObjCtrlStatus(status.object_ctrl);
+        }
+        else
+        {
+            handleDebugMessage("Failed to read message.");
+        }
+        break;
+    case -1:
+        handleDebugMessage("Received unexpected response.");
+        break;
+    default:
+        handleDebugMessage("Unknown response id.");
+        break;
+    }
+
 }

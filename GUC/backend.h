@@ -36,7 +36,7 @@ public:
     Q_INVOKABLE bool sendStartToHost(int delayms);
     Q_INVOKABLE bool sendAbortToHost();
     Q_INVOKABLE bool sendGetStatus();
-    Q_INVOKABLE bool sendInitializeObjectControl();
+    Q_INVOKABLE bool sendInit();
     Q_INVOKABLE bool sendConnectObject();
 
 
@@ -80,15 +80,19 @@ private:
     int m_sysCtrlStatus = 0;
     int m_objCtrlStatus = 0;
 
-    void sendToHost(const QByteArray &data)
+    qint8 expected_response_id = -1;
+
+    void sendToHost(const QByteArray &data, const qint8 expected_return_code)
     {
         emit newDebugMessage("Created Message:\n" + QString(data));
+        expected_response_id = expected_return_code;
         mTcphandler->sendData(data);
     }
 
 private slots:
     void handleDebugComMsg(const QString &msg);
     void handleConnectionChanged(const int &isConnected);
+    void handleReceivedData(const QByteArray &data);
 };
 
 #endif // BACKEND_H
