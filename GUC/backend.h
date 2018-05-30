@@ -5,11 +5,14 @@
 #include <QString>
 #include <QDebug>
 #include <QDateTime>
+#include <QQueue>
 
 #include "tcphandler.h"
 #include "mscp.h"
 
 #define SERVER_PORT 54241
+
+#define MAX_RESPONSE_QUEUE_LENGTH 1024
 
 class BackEnd : public QObject
 {
@@ -33,12 +36,12 @@ public:
 
     // Button functions
     Q_INVOKABLE bool sendArmToHost();
-    Q_INVOKABLE bool sendDisarmToHost();
     Q_INVOKABLE bool sendStartToHost(int delayms);
     Q_INVOKABLE bool sendAbortToHost();
     Q_INVOKABLE bool sendGetStatus();
     Q_INVOKABLE bool sendInit();
     Q_INVOKABLE bool sendConnectObject();
+    Q_INVOKABLE bool sendDisconnectObject();
 
 
     Q_INVOKABLE int addressValid(QString ip_addr){
@@ -81,12 +84,20 @@ private:
     int m_sysCtrlStatus = 0;
     int m_objCtrlStatus = 0;
 
-    qint8 expected_response_id = -1;
+    //QQueue<qint8> *expected_response_id;
+    QList<qint8> *expected_response_id;
+
+    bool addExpectedResponseID(qint8 msg_id)
+    {
+        // TODO add check to not add too many arguments
+        expected_response_id->append(msg_id);
+        return true;
+    }
 
     void sendToHost(const QByteArray &data, const qint8 expected_return_code)
     {
         emit newDebugMessage("Created Message:\n" + QString(data));
-        expected_response_id = expected_return_code;
+        queueExpectedResponse(expected_return_code);
         mTcphandler->sendData(data);
     }
 

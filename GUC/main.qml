@@ -122,12 +122,14 @@ ApplicationWindow {
     Component {
         id: controlView
         ActionView {
-            //onArmClicked: backend.sendArmToHost()
-            //onStartClicked: backend.sendStartToHost(1000)
-            //onAbortClicked: backend.sendAbortToHost()
+            onArmClicked: backend.sendArmToHost()
+            onStartClicked: backend.sendStartToHost(1000)
+            onAbortClicked: backend.sendAbortToHost()
             onStatusClicked: backend.sendGetStatus()
-            //onInitClicked: backend.sendInit()
-            //onConnectClicked: backend.sendConnectObject()
+            onInitClicked: backend.sendInit()
+            onConnectClicked: backend.sendConnectObject()
+            onDisconnectClicked: backend.sendDisconnectObject()
+
             sysCtrlStatus:  backend.sysCtrlStatus
             objCtrlStatus: backend.objCtrlStatus
 

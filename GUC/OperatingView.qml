@@ -27,14 +27,6 @@ Column {
         onClicked: root.initClicked();
     }
 
-    BasicButton {
-        id: armButton
-        text: qsTr("ARM")
-        height: root.buttonHeight
-        width: root.buttonWidth
-        onClicked: root.armClicked();
-    }
-
 
     BasicButton {
         id: connectButton
@@ -44,6 +36,13 @@ Column {
         onClicked: root.connectClicked()
     }
 
+    BasicButton {
+        id: armButton
+        text: qsTr("ARM")
+        height: root.buttonHeight
+        width: root.buttonWidth
+        onClicked: root.armClicked();
+    }
 
     BasicButton {
         id: startButton

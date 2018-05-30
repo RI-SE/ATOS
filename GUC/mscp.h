@@ -11,11 +11,20 @@
 #define GETSERVERSTATUS_CMD_STR "GetServerStatus"
 #define INITIALIZE_SCENARIO_CMD_STR "InitializeScenario"
 #define CONNECT_OBJ_CMD_STR "ConnectObject"
+#define DISCONNECT_OBJ_CMD_STR "DisconnectObject"
 
 #define RESPONSE_LENGTH_BYTES 4
 #define RESPONSE_CODE_BYTES 2
+#define HEADER_LENGTH_BYTES RESPONSE_LENGTH_BYTES + RESPONSE_CODE_BYTES
 
 namespace MSCP {
+
+    typedef struct
+    {
+        quint32 msg_length;
+        qint16 code;
+        qint8 msg_id;
+    }response_header;
 
     typedef struct
     {
@@ -25,12 +34,18 @@ namespace MSCP {
 
     enum RESPONSE_ID
     {
-        SERVER_STATUS = 0
+        SERVER_STATUS = 0,
+        INIT_SCENARIO,
+        CONNECT_OBJ,
+        DISCONNECT_OBJ,
+        ARM,
+        START,
+        ABORT
     };
 
 
 
-    bool readServerResponse(QByteArray &bytearray);
+    bool readServerResponseHeader(const QByteArray &data, response_header &header ,QByteArray &tail);
 
     bool readGetStatusMsg(const QByteArray &bytearray,qint16 &responsecode, server_status &status);
 
@@ -46,12 +61,13 @@ namespace MSCP {
 
     // Not done
     qint8 build_Arm(const QString &IPaddress, QByteArray &bytearray);
-    qint8 build_Disarm(const QString &IPaddress, QByteArray &bytearray);
+
     qint8 build_Start(const QString &IPaddress, int delayms, QByteArray &bytearray);
     qint8 build_Abort(const QString &IPaddress, QByteArray &bytearray);
 
 
     qint8 build_ConnectObject(const QString &IPaddress, QByteArray &bytearray);
+    qint8 build_DisconnectObject(const QString &IPaddress, QByteArray &bytearray);
 }
 
 
