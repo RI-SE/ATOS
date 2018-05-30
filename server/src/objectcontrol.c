@@ -494,7 +494,7 @@ void objectcontrol_task()
     	else if(iCommand == COMM_STRT && OBCState == OBC_STATE_ARMED)
   		{
         
-        sprintf(LogBuffer, "[ObjectControl] START recieved <%s>\n",pcRecvBuffer); ObjectControlSendLog(LogBuffer);
+        sprintf(LogBuffer, "[ObjectControl] START received <%s>\n",pcRecvBuffer); ObjectControlSendLog(LogBuffer);
   			bzero(Timestamp, SMALL_BUFFER_SIZE_0);
   			MiscPtr =strchr(pcRecvBuffer,';');
   			strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
@@ -522,7 +522,8 @@ void objectcontrol_task()
   		}
   		else if(iCommand == COMM_ABORT && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING))
   		{
-  			ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+  			OBCState = OBC_STATE_CONNECTED;
+        ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
   			sprintf(LogBuffer, "[ObjectControl] ABORT received.\n"); ObjectControlSendLog(LogBuffer);
   		}
   		else if(iCommand == COMM_CONTROL)
