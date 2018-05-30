@@ -8,8 +8,6 @@ Item {
     property bool sysLed2: false
     property bool sysLed3: false
     property bool sysLed4: false
-    property bool sysLed5: false
-    property bool sysLed6: false
 
     property bool objLed1: false
     property bool objLed2: false
@@ -18,7 +16,7 @@ Item {
     property bool objLed5: false
     property bool objLed6: false
 
-    property int nrColElems: 15
+    property int nrColElems: 13
     property int elemHeight: root.height / nrColElems
 
     Column {
@@ -33,7 +31,7 @@ Item {
         LEDandText {
             id: sysi1
             height: elemHeight
-            text: qsTr("INIT")
+            text: qsTr("INITIALIZED")
             lightOn: root.sysLed1
         }
         LEDandText {
@@ -45,27 +43,16 @@ Item {
         LEDandText {
             id: sysi3
             height: elemHeight
-            text: qsTr("READY")
+            text: qsTr("INWORK")
             lightOn: root.sysLed3
         }
         LEDandText {
             id: sysi4
             height: elemHeight
-            text: qsTr("RUNNING")
+            text: qsTr("FAIL")
             lightOn: root.sysLed4
         }
-        LEDandText {
-            id: sysi5
-            height: elemHeight
-            text: qsTr("INWORK")
-            lightOn: root.sysLed5
-        }
-        LEDandText {
-            id: sysi6
-            height: elemHeight
-            text: qsTr("ERROR")
-            lightOn: root.sysLed6
-        }
+
         Rectangle {
             width: root.width
             height: elemHeight
@@ -93,7 +80,7 @@ Item {
         LEDandText {
             id: obji3
             height: elemHeight
-            text: qsTr("OBJECTS CONNECTED")
+            text: qsTr("CONNECTED")
             lightOn: root.objLed3
         }
         LEDandText {

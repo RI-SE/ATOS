@@ -9,6 +9,7 @@
 #include "tcphandler.h"
 #include "mscp.h"
 
+#define SERVER_PORT 54241
 
 class BackEnd : public QObject
 {
@@ -23,7 +24,7 @@ public:
     explicit BackEnd(QObject *parent = nullptr);
 
     Q_INVOKABLE void initConnect(){
-        mTcphandler->establishConnection(hostName(),54241);
+        mTcphandler->establishConnection(hostName(),SERVER_PORT);
     }
 
     Q_INVOKABLE void serverDisconnect(){

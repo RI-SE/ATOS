@@ -28,7 +28,10 @@ namespace MSCP {
         SERVER_STATUS = 0
     };
 
+
+
     bool readServerResponse(QByteArray &bytearray);
+
     bool readGetStatusMsg(const QByteArray &bytearray,qint16 &responsecode, server_status &status);
 
     bool msgToHTTPPOSTByteArray(const QString &IPaddress,const QString &msg, QByteArray &bytearray);

@@ -1,6 +1,9 @@
 #include "mscp.h"
 
 namespace MSCP {
+
+
+
     bool readServerResponse(QByteArray &bytearray)
     {
 
@@ -12,13 +15,42 @@ namespace MSCP {
     }
     bool readGetStatusMsg(const QByteArray &bytearray,qint16 &responsecode, server_status &status)
     {
-        // TODO: insert sanity checks
-        if (bytearray.size() < RESPONSE_LENGTH_BYTES + RESPONSE_CODE_BYTES) return false;
+        int header_length = RESPONSE_LENGTH_BYTES + RESPONSE_CODE_BYTES;
+        int array_size = bytearray.size();
+        if (array_size < header_length) return false;
 
-        QDataStream stream(bytearray);
         quint32 msg_length = 0;
+        //QDataStream stream(bytearray.mid(0,header_length));
+        QDataStream stream(bytearray);
         stream >> msg_length;
-        return true;
+        stream >> responsecode;
+
+        qint8 letter;
+
+        QByteArray command;
+        bool command_found = false;
+
+        while(!stream.atEnd())
+        {
+            stream >> letter;
+            if ((char)letter == ':')
+            {
+                command_found = true;
+                break;
+            }
+            command.push_back(letter);
+        }
+
+        if (!command_found) return false;
+
+        if (QString::compare(command,GETSERVERSTATUS_CMD_STR) == 0)
+        {
+            stream >> status.system_ctrl;
+            stream >> status.object_ctrl;
+            return true;
+        }
+
+        return false;
 
     }
 

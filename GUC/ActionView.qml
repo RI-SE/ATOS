@@ -25,8 +25,6 @@ Item {
         statusView.sysLed2 = isSame(root.sysCtrlStatus,2)
         statusView.sysLed3 = isSame(root.sysCtrlStatus,3)
         statusView.sysLed4 = isSame(root.sysCtrlStatus,4)
-        statusView.sysLed5 = isSame(root.sysCtrlStatus,5)
-        statusView.sysLed6 = isSame(root.sysCtrlStatus,6)
     }
     onObjCtrlStatusChanged:
     {

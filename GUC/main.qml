@@ -105,7 +105,7 @@ ApplicationWindow {
         id: csrcn
         ConnectScreen {
             connectText: backend.connectionText
-            rootText: qsTr("192.168.1.14")
+            rootText: qsTr("10.111.144.21")
 
             onClicked: backend.initConnect()
             onRootTextChanged:
@@ -126,9 +126,10 @@ ApplicationWindow {
             //onStartClicked: backend.sendStartToHost(1000)
             //onAbortClicked: backend.sendAbortToHost()
             onStatusClicked: backend.sendGetStatus()
-            //onInitClicked: backend.sendInitializeObjectControl()
+            //onInitClicked: backend.sendInit()
             //onConnectClicked: backend.sendConnectObject()
             sysCtrlStatus:  backend.sysCtrlStatus
+            objCtrlStatus: backend.objCtrlStatus
 
 
         }

@@ -190,6 +190,10 @@ void BackEnd::handleReceivedData(const QByteArray &data)
         {
             setSysCtrlStatus(status.system_ctrl);
             setObjCtrlStatus(status.object_ctrl);
+            handleDebugMessage("Server status read. Sys="
+                               + QString::number(status.system_ctrl)
+                               + " Obj="
+                               +QString::number(status.object_ctrl));
         }
         else
         {
