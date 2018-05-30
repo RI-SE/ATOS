@@ -655,7 +655,7 @@ void objectcontrol_task()
             }
 
             bzero(pcRecvBuffer,RECV_MESSAGE_BUFFER);
-            //Have we recieved a command?
+            //Have we received a command?
             if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER))
             {
               if(iCommand == COMM_DISCONNECT)
@@ -668,9 +668,10 @@ void objectcontrol_task()
 
           } while(iResult < 0 && DisconnectU8 == 0);
 
-          if(iResult > 0)
+          if(iResult >= 0)
           {
             /* Send OSEM command */
+            sprintf(LogBuffer, "[ObjectControl] Sending OSEM.\n"); ObjectControlSendLog(LogBuffer);
             vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
 
             fd = fopen (object_traj_file[iIndex], "r");
