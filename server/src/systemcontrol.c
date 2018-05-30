@@ -412,10 +412,10 @@ void systemcontrol_task()
 				if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "IDLE") != NULL)
 				{
 					(void)iCommSend(COMM_INIT,pcBuffer);
-					SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
 					server_state = SERVER_STATE_INWORK;
 				 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeObjectControl:", ControlResponseBuffer, 0, &ClientSocket, 0);
+					SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
 				}
 				else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "INITIALIZED") != NULL)
 				{
@@ -435,10 +435,10 @@ void systemcontrol_task()
 				if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "INITIALIZED") != NULL)
 				{
 					(void)iCommSend(COMM_CONNECT,pcBuffer);
-					SystemControlSendLog("[SystemControl] Sending CONNECT.\n", &ClientSocket, 0);
 					SystemControlCommand = Idle_0;
 				 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ConnectObject:", ControlResponseBuffer, 0, &ClientSocket, 0);
+					SystemControlSendLog("[SystemControl] Sending CONNECT.\n", &ClientSocket, 0);
 				}
 				else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL)
 				{
@@ -458,10 +458,10 @@ void systemcontrol_task()
 				if(server_state == SERVER_STATE_IDLE)
 				{
 					(void)iCommSend(COMM_DISCONNECT,pcBuffer);
-					SystemControlSendLog("[SystemControl] Sending DISCONNECT.\n", &ClientSocket, 0);
 					SystemControlCommand = Idle_0;
 				 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DisconnectObject:", ControlResponseBuffer, 0, &ClientSocket, 0);
+					SystemControlSendLog("[SystemControl] Sending DISCONNECT.\n", &ClientSocket, 0);
 				}
 				else
 				{
@@ -476,9 +476,9 @@ void systemcontrol_task()
 					server_state = SERVER_STATE_INWORK;
 					pcBuffer[0] = OSTM_OPT_SET_ARMED_STATE;
 					(void)iCommSend(COMM_ARMD,pcBuffer);
-					SystemControlSendLog("[SystemControl] Sending ARM.\n", &ClientSocket, 0);
 				 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ArmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+					SystemControlSendLog("[SystemControl] Sending ARM.\n", &ClientSocket, 0);
 				} 
 				else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL)
 				{
@@ -489,9 +489,9 @@ void systemcontrol_task()
 				}
 				else
 				{
-					SystemControlSendLog("[SystemControl] ARM received, state errors!\n", &ClientSocket, 0);
 					SystemControlCommand = Idle_0;
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+					SystemControlSendLog("[SystemControl] ARM received, state errors!\n", &ClientSocket, 0);
 				}
 			break;
 			case DisarmScenario_0:
@@ -501,9 +501,9 @@ void systemcontrol_task()
 					server_state = SERVER_STATE_IDLE;
 					pcBuffer[0] = OSTM_OPT_SET_DISARMED_STATE;
 					(void)iCommSend(COMM_ARMD,pcBuffer);
-					SystemControlSendLog("[SystemControl] Sending DISARM.\n", &ClientSocket, 0);
 					bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DisarmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+					SystemControlSendLog("[SystemControl] Sending DISARM.\n", &ClientSocket, 0);
 				}
 				else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL)
 				{
@@ -512,9 +512,9 @@ void systemcontrol_task()
 				}
 				else
 				{
-					SystemControlSendLog("[SystemControl] DISARM received, state errors!\n", &ClientSocket, 0);
 					SystemControlCommand = Idle_0;
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+					SystemControlSendLog("[SystemControl] DISARM received, state errors!\n", &ClientSocket, 0);
 				}
 			break;
 			case StartScenario_1:
@@ -553,9 +553,9 @@ void systemcontrol_task()
 					}
 					else
 					{
-						SystemControlSendLog("[SystemControl] START received, state errors!\n", &ClientSocket, 0);
 						SystemControlCommand = Idle_0;
 						SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+						SystemControlSendLog("[SystemControl] START received, state errors!\n", &ClientSocket, 0);
 					}
 
 				} else printf("START command parameter count error.\n");
@@ -607,9 +607,9 @@ void systemcontrol_task()
 				{
 					if(ClientSocket >= 0)
 					{
-						SystemControlSendLog("[SystemControl] ABORT received, state errors!\n", &ClientSocket, 0);
 						bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 						SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "AbortScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+						SystemControlSendLog("[SystemControl] ABORT received, state errors!\n", &ClientSocket, 0);
 					}
 					server_state = SERVER_STATE_IDLE;
 					SystemControlCommand = Idle_0;
