@@ -480,7 +480,7 @@ void systemcontrol_task()
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ArmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 					SystemControlSendLog("[SystemControl] Sending ARM.\n", &ClientSocket, 0);
 				} 
-				else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL)
+				else if(server_state == SERVER_STATE_INWORK /*&& strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/)
 				{
 					SystemControlSendLog("[SystemControl] IN_WORK: Simulate that all objects becomes armed.\n", &ClientSocket, 0);
 					
