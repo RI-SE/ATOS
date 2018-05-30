@@ -427,8 +427,7 @@ void systemcontrol_task()
 				else
 				{
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "InitializeObjectControl:", ControlResponseBuffer, 0, &ClientSocket, 0);
-					SystemControlCommand = Idle_0;
-					server_state = SERVER_STATE_IDLE;
+
 				}
 			break;
 			case ConnectObject_0:
@@ -450,8 +449,6 @@ void systemcontrol_task()
 				else
 				{
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "ConnectObject:", ControlResponseBuffer, 0, &ClientSocket, 0);
-					SystemControlCommand = Idle_0;
-					server_state = SERVER_STATE_IDLE;
 				}
 			break;
 			case DisconnectObject_0:
@@ -489,7 +486,6 @@ void systemcontrol_task()
 				}
 				else
 				{
-					//SystemControlCommand = Idle_0;
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 					SystemControlSendLog("[SystemControl] ARM received, state errors!\n", &ClientSocket, 0);
 				}
@@ -512,7 +508,6 @@ void systemcontrol_task()
 				}
 				else
 				{
-					SystemControlCommand = Idle_0;
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 					SystemControlSendLog("[SystemControl] DISARM received, state errors!\n", &ClientSocket, 0);
 				}
@@ -553,7 +548,6 @@ void systemcontrol_task()
 					}
 					else
 					{
-						SystemControlCommand = Idle_0;
 						SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 						SystemControlSendLog("[SystemControl] START received, state errors!\n", &ClientSocket, 0);
 					}
@@ -706,15 +700,23 @@ SystemControlCommand_t SystemControlFindCommand(const char* CommandBuffer, Syste
 
 void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
 {
-	int i, n;
+	int i, n, j, t;
 	C8 Length[4];
 	C8 Header[5] = "Log: ";
+	C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
 
+	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 	n = strlen(LogString) + strlen(Header);
 	Length[0] = (C8)(n >> 24); Length[1] = (C8)(n >> 16); Length[2] = (C8)(n >> 8); Length[3] = (C8)n;
-	SystemControlSendBytes(Length, 4, Sockfd, Debug);
-	SystemControlSendBytes(Header, 5, Sockfd, Debug);
-	SystemControlSendBytes(LogString, strlen(LogString), Sockfd, Debug);
+
+	if(n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE)
+	{
+		for(i = 0, j = 0; i < 4; i++, j++) Data[j] = Length[i];
+		for(i = 0; i < 2; i++, j++) Data[j] = Header[i];
+		t = strlen(LogString);
+		for(i = 0; i < t; i++, j++) Data[j] = *(LogString+i);
+		SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+	} else printf("[SystemControl] Log string longer then %d bytes!\n", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
 
 
@@ -731,12 +733,15 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8
 	Length[0] = (C8)(n >> 24); Length[1] = (C8)(n >> 16); Length[2] = (C8)(n >> 8); Length[3] = (C8)n;
 	Status[0] = (C8)(ResponseStatus >> 8); Status[1] = (C8)ResponseStatus; 
 
-	for(i = 0, j = 0; i < 4; i++, j++) Data[j] = Length[i];
-	for(i = 0; i < 2; i++, j++) Data[j] = Status[i];
-	t = strlen(ResponseString);
-	for(i = 0; i < t; i++, j++) Data[j] = *(ResponseString+i);
-	for(i = 0; i < ResponseDataLength; i++, j++) Data[j] = ResponseData[i];
-	SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+	if(n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE)
+	{
+		for(i = 0, j = 0; i < 4; i++, j++) Data[j] = Length[i];
+		for(i = 0; i < 2; i++, j++) Data[j] = Status[i];
+		t = strlen(ResponseString);
+		for(i = 0; i < t; i++, j++) Data[j] = *(ResponseString+i);
+		for(i = 0; i < ResponseDataLength; i++, j++) Data[j] = ResponseData[i];
+		SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+	} else printf("[SystemControl] Response data more then %d bytes!\n", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
 
 
