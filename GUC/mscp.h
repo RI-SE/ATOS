@@ -43,7 +43,7 @@ namespace MSCP {
         ABORT
     };
 
-
+    qint8 mapMSCPCommand(QByteArray &textBuffer);
 
     bool readServerResponseHeader(const QByteArray &data, response_header &header ,QByteArray &tail);
 

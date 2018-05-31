@@ -85,7 +85,7 @@ private:
     int m_objCtrlStatus = 0;
 
     //QQueue<qint8> *expected_response_id;
-    QList<qint8> *expected_response_id;
+    QLinkedList<qint8> *expected_response_id;
 
     bool addExpectedResponseID(qint8 msg_id)
     {
@@ -97,7 +97,7 @@ private:
     void sendToHost(const QByteArray &data, const qint8 expected_return_code)
     {
         emit newDebugMessage("Created Message:\n" + QString(data));
-        queueExpectedResponse(expected_return_code);
+        addExpectedResponseID(expected_return_code);
         mTcphandler->sendData(data);
     }
 

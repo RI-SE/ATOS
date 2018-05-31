@@ -13,7 +13,7 @@ BackEnd::BackEnd(QObject *parent) :
     QObject::connect(mTcphandler, SIGNAL(receivedData(QByteArray)),
                      this,SLOT(handleReceivedData(QByteArray)));
 
-    expected_response_id = new QList<qint8>();
+    expected_response_id = new QLinkedList<qint8>();
 }
 //****************************************
 // Public Q_INVOKABLE methods
@@ -194,13 +194,17 @@ void BackEnd::handleConnectionChanged(const int &isConnected)
 
 void BackEnd::handleReceivedData(const QByteArray &data)
 {
-    if (!expected_response_id->size())
+
+    MSCP::response_header header;
+    QByteArray command_data;
+    if (!MSCP::readServerResponseHeader(data,header,command_data))
     {
-        handleDebugMessage("Received unexpected response.");
+        handleDebugMessage("Invalid message header.");
         return;
     }
 
-    switch (msg_id) {
+
+    switch (header.code) {
     case MSCP::SERVER_STATUS:
         MSCP::server_status status;
         qint16 response_code;

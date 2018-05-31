@@ -2,7 +2,20 @@
 
 namespace MSCP {
 
+qint8 mapMSCPCommand(QByteArray &textBuffer)
+{
+    QString command(textBuffer);
 
+    if (QString::compare(command,GETSERVERSTATUS_CMD_STR) == 0) return SERVER_STATUS;
+    else if (QString::compare(command,INITIALIZE_SCENARIO_CMD_STR) == 0) return INIT_SCENARIO;
+    else if (QString::compare(command,CONNECT_OBJ_CMD_STR) == 0) return CONNECT_OBJ;
+    else if (QString::compare(command,DISCONNECT_OBJ_CMD_STR) == 0) return DISCONNECT_OBJ;
+    else if (QString::compare(command,INITIALIZE_SCENARIO_CMD_STR) == 0) return INIT_SCENARIO;
+    else if (QString::compare(command,ARM_CMD_STR) == 0) return ARM;
+    else if (QString::compare(command,START_CMD_STR) == 0) return START;
+    else if (QString::compare(command,ABORT_CMD_STR) == 0) return ARM;
+    else return -1;
+}
 
 bool readServerResponseHeader(const QByteArray &data, response_header &header ,QByteArray &tail)
 {
@@ -34,11 +47,10 @@ bool readServerResponseHeader(const QByteArray &data, response_header &header ,Q
     if (!command_found) return false;
 
     // Find the command code
+    qint8 command_id = mapMSCPCommand(command);
 
     // Create the tail with data
     int tail_length = array_size - HEADER_LENGTH_BYTES - command.size();
-    if (tail_length < 1) return false;
-
     tail = data.mid(HEADER_LENGTH_BYTES + command.size(),tail_length);
 
     return true;
