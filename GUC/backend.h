@@ -5,14 +5,14 @@
 #include <QString>
 #include <QDebug>
 #include <QDateTime>
-#include <QQueue>
+#include <QLinkedList>
 
 #include "tcphandler.h"
 #include "mscp.h"
 
 #define SERVER_PORT 54241
 
-#define MAX_RESPONSE_QUEUE_LENGTH 1024
+#define MAX_RESPONSE_LIST_LENGTH 1024
 
 class BackEnd : public QObject
 {
@@ -90,8 +90,24 @@ private:
     bool addExpectedResponseID(qint8 msg_id)
     {
         // TODO add check to not add too many arguments
+        if (expected_response_id->size() > MAX_RESPONSE_LIST_LENGTH) return false;
         expected_response_id->append(msg_id);
         return true;
+    }
+
+    bool isExpectedResponse(qint8 msg_id){
+
+        QLinkedList<qint8>::iterator i;
+        for(i = expected_response_id->begin(); i != expected_response_id->end();++i)
+        {
+            //qDebug() << "LinkedList:" <<*i;
+            if(*i == msg_id){
+                expected_response_id->erase(i);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     void sendToHost(const QByteArray &data, const qint8 expected_return_code)

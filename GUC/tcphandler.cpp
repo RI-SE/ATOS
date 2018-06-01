@@ -128,7 +128,7 @@ void TCPhandler::dataAvailable()
 {
     QByteArray input_data = mTcpSocket->readAll();
     emit receivedData(input_data);
-    emit debugComMsg("DATA_RX: " + QString(input_data.toHex()));
+    //emit debugComMsg("DATA_RX: " + QString(input_data.toHex()));
 }
 
 

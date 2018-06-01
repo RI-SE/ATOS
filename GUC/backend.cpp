@@ -156,7 +156,7 @@ void BackEnd::handleDebugMessage(const QString &msg)
     //QDateTime datetime = QDateTime::currentDateTime();
     QDate date = QDate::currentDate();
     QTime time = QTime::currentTime();
-    QString datetime_string = "["
+    QString datetime_string = "[DEBUG]["
             + QString::number(date.year()) + "/"
             + QString::number(date.month()) + "/"
             + QString::number(date.day())   + " "
@@ -165,6 +165,7 @@ void BackEnd::handleDebugMessage(const QString &msg)
             + QString::number(time.second()) + ":"
             + QString::number(time.msec()) + "]: ";
 
+    qDebug() << datetime_string << msg;
     emit newDebugMessage( datetime_string + msg );
 }
 
@@ -200,14 +201,26 @@ void BackEnd::handleReceivedData(const QByteArray &data)
     if (!MSCP::readServerResponseHeader(data,header,command_data))
     {
         handleDebugMessage("Invalid message header.");
+        //handleDebugMessage("DATA: " + QString(data));
         return;
     }
 
+    if (!isExpectedResponse(header.msg_id))
+    {
+        handleDebugMessage("Received unexpected response. ID:" + QString::number(header.msg_id));
+        //handleDebugMessage("DATA: " + QString(data));
+        return;
+    }
 
-    switch (header.code) {
+    switch (header.msg_id) {
     case MSCP::SERVER_STATUS:
         MSCP::server_status status;
-        qint16 response_code;
+        MSCP::readGetStatusData(command_data,status);
+
+        setSysCtrlStatus(status.system_ctrl);
+        setObjCtrlStatus(status.object_ctrl);
+        handleDebugMessage("Response Code :" + QString::number(header.code) +". Server status read. Sys=" + QString::number(status.system_ctrl) + " Obj=" +QString::number(status.object_ctrl));
+        /*
         if (MSCP::readGetStatusMsg(data,response_code,status))
         {
             setSysCtrlStatus(status.system_ctrl);
@@ -218,6 +231,7 @@ void BackEnd::handleReceivedData(const QByteArray &data)
         {
             handleDebugMessage("Failed to read message.");
         }
+        */
         break;
     case MSCP::INIT_SCENARIO:
         //sendGetStatus();

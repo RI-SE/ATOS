@@ -15,7 +15,6 @@
 
 #define RESPONSE_LENGTH_BYTES 4
 #define RESPONSE_CODE_BYTES 2
-#define HEADER_LENGTH_BYTES RESPONSE_LENGTH_BYTES + RESPONSE_CODE_BYTES
 
 namespace MSCP {
 
@@ -47,7 +46,9 @@ namespace MSCP {
 
     bool readServerResponseHeader(const QByteArray &data, response_header &header ,QByteArray &tail);
 
-    bool readGetStatusMsg(const QByteArray &bytearray,qint16 &responsecode, server_status &status);
+    //bool readGetStatusMsg(const QByteArray &bytearray,qint16 &responsecode, server_status &status);
+
+    void readGetStatusData(const QByteArray &data,server_status &status);
 
     bool msgToHTTPPOSTByteArray(const QString &IPaddress,const QString &msg, QByteArray &bytearray);
 

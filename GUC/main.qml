@@ -26,7 +26,7 @@ ApplicationWindow {
         }
         onNewDebugMessage: {
             //console.log(debugText)
-            textArea.append(debugText)
+            //textArea.append(debugText)
         }
 
 
@@ -56,7 +56,7 @@ ApplicationWindow {
             onClicked: stackView.pushFirst()
         }
     }
-
+/*
     Rectangle {
         id: footer
         width: parent.width
@@ -76,7 +76,7 @@ ApplicationWindow {
                 color: "white"
             }
         }
-    }
+    } */
 
 
 
@@ -85,7 +85,7 @@ ApplicationWindow {
         //anchors.fill: parent
         initialItem: csrcn
         anchors.top: header.bottom
-        anchors.bottom: footer.top
+        anchors.bottom: parent.bottom
         width: parent.width
         //height: parent.height - header.height
 
@@ -105,7 +105,7 @@ ApplicationWindow {
         id: csrcn
         ConnectScreen {
             connectText: backend.connectionText
-            rootText: qsTr("192.168.1.14")
+            rootText: qsTr("10.130.0.10")
             onClicked: backend.initConnect()
             onRootTextChanged:
             {
