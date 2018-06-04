@@ -14,6 +14,6 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-void supervision_task();
+void supervision_task(TimeType *GPSTime);
 
 #endif //__SUPERVISION_H_INCLUDED__

@@ -56,7 +56,7 @@ C8 recvbuffer[REMOTE_CONTROL_RECV_BUFFER];
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
-int remotecontrol_task()
+int remotecontrol_task(TimeType *GPSTime)
 {
 
   U8 ModeU8 = 0;
@@ -68,7 +68,7 @@ int remotecontrol_task()
   I32 iExit = 0;
   C8 TimeBuffer[REMOTE_CONTROL_BUFFER_SIZE_52];
   I32 RecievedNewData, i;
-  C8 SendData[1] = {10};
+  C8 SendData[4] = {0, 0, 3, 0xe8};
 
 
   UtilSearchTextFile(REMOTE_CONTROL_CONF_FILE_PATH, "RemoteMode=", "", TextBufferC8);
@@ -78,9 +78,9 @@ int remotecontrol_task()
   strcat(ServerIPC8, TextBufferC8);
   UtilSearchTextFile(REMOTE_CONTROL_CONF_FILE_PATH, "RemoteServerPort=", "", TextBufferC8);
   ServerPortU16 = (U16)atoi(TextBufferC8);
-
+  /*
   vCreateTimeChannel("192.168.0.42", 53000, &SocketfdI32,  &time_addr);
-  SendUDPData(&SocketfdI32, &time_addr, SendData, 1, 1);
+  SendUDPData(&SocketfdI32, &time_addr, SendData, 4, 1);
   printf("Checking time...\n");
   while(!iExit)
   {
@@ -94,7 +94,8 @@ int remotecontrol_task()
     }
 
   }
-
+  */
+  usleep(1000);
 
 }
 
@@ -368,7 +369,7 @@ void getIP()
 
 
 
- static void vCreateTimeChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr)
+static void vCreateTimeChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr)
 {
   int result;
   struct hostent *object;

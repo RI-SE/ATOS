@@ -27,8 +27,8 @@
 #include <netdb.h>
 
 #include "remotecontrol.h"
-#include "systemcontrol.h"
 #include "util.h"
+#include "systemcontrol.h"
 
 
 
@@ -117,7 +117,7 @@ void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug);
   -- Public functions
   ------------------------------------------------------------*/
 
-void systemcontrol_task()
+void systemcontrol_task(TimeType *GPSTime)
 {
 
 	int ServerHandle;
@@ -309,7 +309,7 @@ void systemcontrol_task()
 		}
 
 		
-		if(server_state != SERVER_STATE_IDLE)
+		if(server_state == SERVER_STATE_INWORK)
 		{
 			if(SystemControlCommand == AbortScenario_0)
 			{
@@ -317,7 +317,7 @@ void systemcontrol_task()
 			}
 			else if(SystemControlCommand == GetServerStatus_0)
 			{
-				printf("[SystemControl] State: %s, OBCState: %s\n", SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8]);
+				printf("[SystemControl1] State: %s, OBCState: %s, PreviousCommand: %s\n", SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8], SystemControlCommandsArr[PreviousSystemControlCommand]);
 			 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 			 	ControlResponseBuffer[0] = server_state;
 			 	ControlResponseBuffer[1] = OBCStateU8;
@@ -326,20 +326,32 @@ void systemcontrol_task()
 			} 
 			else if(SystemControlCommand != PreviousSystemControlCommand)
 			{				
-				printf("[SystemControl] Command not allowed, SystemControl is busy in state %s\n", SystemControlStatesArr[server_state]);
+				printf("[SystemControl] Command not allowed, SystemControl is busy in state %s, PreviousCommand: %s\n", SystemControlStatesArr[server_state], SystemControlCommandsArr[PreviousSystemControlCommand]);
+				SystemControlSendLog("[SystemControl] Command not allowed, SystemControl is busy in state INWORK.\n", &ClientSocket, 0);
 				bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_BUSY, "ServerBusy:", ControlResponseBuffer, 0, &ClientSocket, 0);
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "", ControlResponseBuffer, 0, &ClientSocket, 0);
 				SystemControlCommand = PreviousSystemControlCommand;
 			}
 		}
 		
+		bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
+		iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
+		if (iCommand == COMM_OBC_STATE)
+		{
+			OBCStateU8 = (U8)*pcRecvBuffer;
+		} 
+		else if(iCommand == COMM_LOG)
+		{
+			SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
+		}
+
 		switch(SystemControlCommand)
 		{
 
 			case Idle_0:
-	 			bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
+	 			/*bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
 				iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
-				/*
+				
 			 	if(iCommand == COMM_TOM)
 				{
 					bzero(ObjectIP, SMALL_BUFFER_SIZE_16);
@@ -389,7 +401,7 @@ void systemcontrol_task()
 					SystemControlCommand = Idle_0;
 					CurrentCommandArgCounter = 0;
 				}
-				*/
+				
 				if (iCommand == COMM_OBC_STATE)
 				{
 					OBCStateU8 = (U8)*pcRecvBuffer;
@@ -398,6 +410,7 @@ void systemcontrol_task()
 				{
 					SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
 				}
+				*/
 
 			break;
 			case GetServerStatus_0:
@@ -406,6 +419,7 @@ void systemcontrol_task()
 			 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 			 	ControlResponseBuffer[0] = server_state;
 			 	ControlResponseBuffer[1] = OBCStateU8;
+			 	//printf("GPSMillisecondsU64: %ld\n", GPSTime->GPSMillisecondsU64);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 2, &ClientSocket, 0);
 			break;
 			case InitializeScenario_0:
@@ -414,20 +428,21 @@ void systemcontrol_task()
 					(void)iCommSend(COMM_INIT,pcBuffer);
 					server_state = SERVER_STATE_INWORK;
 				 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeObjectControl:", ControlResponseBuffer, 0, &ClientSocket, 0);
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 					SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
 				}
 				else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "INITIALIZED") != NULL)
 				{
-					SystemControlSendLog("[SystemControl] IN_WORK: Simulate that all objects becomes successfully configured.\n", &ClientSocket, 0);
+					SystemControlSendLog("[SystemControl] Simulate that all objects becomes successfully configured.\n", &ClientSocket, 0);
 					
 					SystemControlCommand = Idle_0;
 					server_state = SERVER_STATE_IDLE;
 				}
-				else
+				else if(server_state == SERVER_STATE_IDLE)
 				{
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "InitializeObjectControl:", ControlResponseBuffer, 0, &ClientSocket, 0);
-
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "InitializeScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+					SystemControlSendLog("[SystemControl] INIT received, state errors!\n", &ClientSocket, 0);
+					SystemControlCommand = PreviousSystemControlCommand;
 				}
 			break;
 			case ConnectObject_0:
@@ -441,14 +456,16 @@ void systemcontrol_task()
 				}
 				else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL)
 				{
-					SystemControlSendLog("[SystemControl] IN_WORK: Simulate that all objects are connected.\n", &ClientSocket, 0);
+					SystemControlSendLog("[SystemControl] Simulate that all objects are connected.\n", &ClientSocket, 0);
 					
 					SystemControlCommand = Idle_0;
 					server_state = SERVER_STATE_IDLE;
 				}
-				else
+				else if(server_state == SERVER_STATE_IDLE)
 				{
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "ConnectObject:", ControlResponseBuffer, 0, &ClientSocket, 0);
+					SystemControlSendLog("[SystemControl] CONNECT received, state errors!\n", &ClientSocket, 0);
+					SystemControlCommand = PreviousSystemControlCommand;
 				}
 			break;
 			case DisconnectObject_0:
@@ -463,7 +480,8 @@ void systemcontrol_task()
 				else
 				{
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "ConnectObject:", ControlResponseBuffer, 0, &ClientSocket, 0);
-					SystemControlCommand = Idle_0;
+					SystemControlSendLog("[SystemControl] DISCONNECT received, state errors!\n", &ClientSocket, 0);
+					SystemControlCommand = PreviousSystemControlCommand;
 				}
 			break;
 			case ArmScenario_0:
@@ -479,15 +497,16 @@ void systemcontrol_task()
 				} 
 				else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL)
 				{
-					SystemControlSendLog("[SystemControl] IN_WORK: Simulate that all objects becomes armed.\n", &ClientSocket, 0);
+					SystemControlSendLog("[SystemControl] Simulate that all objects becomes armed.\n", &ClientSocket, 0);
 					
 					SystemControlCommand = Idle_0;
 					server_state = SERVER_STATE_IDLE;
 				}
-				else
+				else if(server_state == SERVER_STATE_IDLE)
 				{
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 					SystemControlSendLog("[SystemControl] ARM received, state errors!\n", &ClientSocket, 0);
+					SystemControlCommand = PreviousSystemControlCommand;
 				}
 			break;
 			case DisarmScenario_0:
@@ -506,10 +525,11 @@ void systemcontrol_task()
 					SystemControlCommand = Idle_0;
 					server_state = SERVER_STATE_IDLE;
 				}
-				else
+				else if(server_state == SERVER_STATE_IDLE)
 				{
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 					SystemControlSendLog("[SystemControl] DISARM received, state errors!\n", &ClientSocket, 0);
+					SystemControlCommand = PreviousSystemControlCommand;
 				}
 			break;
 			case StartScenario_1:
@@ -546,10 +566,11 @@ void systemcontrol_task()
 						SystemControlCommand = Idle_0;
 						server_state = SERVER_STATE_IDLE;
 					}
-					else
+					else if(server_state == SERVER_STATE_IDLE)
 					{
 						SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 						SystemControlSendLog("[SystemControl] START received, state errors!\n", &ClientSocket, 0);
+						SystemControlCommand = PreviousSystemControlCommand;
 					}
 
 				} else printf("START command parameter count error.\n");
@@ -657,9 +678,7 @@ void systemcontrol_task()
 		}
 
 		usleep(100);
-
-
-  }
+  	}
   
   (void)iCommClose();
 }
@@ -708,7 +727,12 @@ void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
 	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 	n = strlen(LogString) + strlen(Header);
 	Length[0] = (C8)(n >> 24); Length[1] = (C8)(n >> 16); Length[2] = (C8)(n >> 8); Length[3] = (C8)n;
+	
+	SystemControlSendBytes(Length, 4, Sockfd, 0);
+	SystemControlSendBytes(Header, 5, Sockfd, 0);
+	SystemControlSendBytes(LogString, strlen(LogString), Sockfd, 0);
 
+	/*
 	if(n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE)
 	{
 		for(i = 0, j = 0; i < 4; i++, j++) Data[j] = Length[i];
@@ -717,6 +741,7 @@ void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
 		for(i = 0; i < t; i++, j++) Data[j] = *(LogString+i);
 		SystemControlSendBytes(Data, n + 4, Sockfd, 0);
 	} else printf("[SystemControl] Log string longer then %d bytes!\n", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+	*/
 }
 
 

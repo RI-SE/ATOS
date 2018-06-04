@@ -175,7 +175,7 @@ static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
-void objectcontrol_task()
+void objectcontrol_task(TimeType *GPSTime)
 {
   int safety_socket_fd[MAX_OBJECTS];
   struct sockaddr_in safety_object_addr[MAX_OBJECTS];
@@ -284,6 +284,7 @@ void objectcontrol_task()
 
   while(!iExit)
   {
+    
     if(OBCState == OBC_STATE_RUNNING)
     {
       char buffer[RECV_MESSAGE_BUFFER];
@@ -617,6 +618,7 @@ void objectcontrol_task()
 
         
         OBCState = OBC_STATE_INITIALIZED;
+        sprintf(LogBuffer, "[ObjectControl] ObjectControl is initialized.\n"); ObjectControlSendLog(LogBuffer);
       }
       else if(iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED)
       {

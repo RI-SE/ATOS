@@ -113,7 +113,7 @@ static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_P
   -- Task
   ------------------------------------------------------------*/
 
-void supervision_task() {
+void supervision_task(TimeType *GPSTime) {
 
   char           object_traj_file    [ MAX_OBJECTS ][ MAX_FILE_PATH ];
   char           object_address_name [ MAX_OBJECTS ][ MAX_FILE_PATH ];

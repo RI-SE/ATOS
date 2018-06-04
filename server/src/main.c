@@ -18,24 +18,34 @@
 #include <strings.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
+
+#include "util.h"
 #include "logger.h"
 #include "objectcontrol.h"
 #include "systemcontrol.h"
 #include "supervision.h"
-#include "util.h"
 #include "remotecontrol.h"
+#include "timecontrol.h"
 
 /*------------------------------------------------------------
 -- Defines
 ------------------------------------------------------------*/
 
+static TimeType *GPSTime;
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
 int main(int argc, char *argv[])
-  {
-  pid_t pID[5];
+{
+
+  /*Share time between child processes*/
+  GPSTime = mmap(NULL, sizeof *GPSTime, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+  pid_t pID[6];
   int iIndex = 0;
   #ifdef DEBUG
     printf("INF: Central started\n");
@@ -57,6 +67,7 @@ int main(int argc, char *argv[])
   }
   ++iIndex;
 
+
   pID[iIndex] = fork();
   if(pID[iIndex] < 0)
   {
@@ -67,10 +78,11 @@ int main(int argc, char *argv[])
     #ifdef DEBUG
       printf("INF: supervision_task running in:  %i \n",getpid());
     #endif
-    supervision_task();
+    supervision_task(GPSTime);
     exit(EXIT_SUCCESS);
   }
   ++iIndex;
+
 
   pID[iIndex] = fork();
   if(pID[iIndex] < 0)
@@ -82,7 +94,7 @@ int main(int argc, char *argv[])
     #ifdef DEBUG
       printf("INF: objectcontrol_task running in:  %i \n",getpid());
     #endif
-    objectcontrol_task();
+    objectcontrol_task(GPSTime);
     exit(EXIT_SUCCESS);
   }
   ++iIndex;
@@ -121,15 +133,29 @@ int main(int argc, char *argv[])
     #ifdef DEBUG
       printf("INF: remotecontrol_task running in:  %i \n",getpid());
     #endif
-    remotecontrol_task();
+    remotecontrol_task(GPSTime);
     exit(EXIT_SUCCESS);
   }
   ++iIndex;
 
+  pID[iIndex] = fork();
+  if(pID[iIndex] < 0)
+  {
+    util_error("ERR: Failed to fork");
+  }
+  if(pID[iIndex] == 0)
+  {
+    #ifdef DEBUG
+      printf("INF: timecontrol_task running in:  %i \n",getpid());
+    #endif
+    timecontrol_task(GPSTime);
+    exit(EXIT_SUCCESS);
+  }
+  ++iIndex;
 
   #ifdef DEBUG
     printf("INF: systemcontrol_task running in:  %i \n",getpid());
   #endif
     
-  systemcontrol_task();
+  systemcontrol_task(GPSTime);
 }

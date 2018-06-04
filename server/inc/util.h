@@ -84,7 +84,7 @@
 #define TESTHOST_IP "10.168.141.138"
 #define TESTSERVER_IP "10.168.141.138"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "10.168.141.138" 
+#define LOCAL_USER_CONTROL_IP "192.168.0.168" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -176,7 +176,6 @@
 
 #define SYNC_WORD 0x7e7e
 //#define DEBUG
-
 
 typedef struct
 {
@@ -292,6 +291,29 @@ typedef struct
   U8 StatusValueTypeU8;
   U8 StatusU8;
 } MONRType;
+
+
+typedef struct
+{
+  U8 ProtocolVersionU8;
+  U16 YearU16;
+  U8 MonthU8;
+  U8 DayU8;
+  U8 HourU8;
+  U8 MinuteU8;
+  U8 SecondU8;
+  U16 MillisecondU16;
+  U32 SecondCounterU32;
+  U64 GPSMillisecondsU64;
+  U32 GPSMinutesU32;
+  U16 GPSWeekU16;
+  U32 GPSSecondsOfWeekU32;
+  U32 GPSSecondsOfDayU32;
+  U64 ETSIMillisecondsU64;
+  U32 LatitudeU32;
+  U32 LongitudeU32;
+} TimeType;
+
 
 typedef struct
 {
