@@ -5,7 +5,7 @@ Column {
     id: root
 
     spacing: 10
-    property int buttons: 7
+    property int buttons: 5
     property int buttonHeight: (height - (buttons - 1) * spacing)/buttons
     property int buttonWidth: width
 
@@ -27,14 +27,14 @@ Column {
         onClicked: root.initClicked();
     }
 
-
+/*
     BasicButton {
         id: connectButton
         text: qsTr("CONNECT OBJECTS")
         height: root.buttonHeight
         width: root.buttonWidth
         onClicked: root.connectClicked()
-    }
+    }*/
 
     BasicButton {
         id: armButton
@@ -62,7 +62,7 @@ Column {
         onClicked: root.abortClicked()
         color: "red"
     }
-
+/*
     BasicButton {
         id: statusButton
         text: qsTr("GetStatus()")
@@ -71,7 +71,7 @@ Column {
         onClicked: root.statusClicked()
         color: "orange"
     }
-
+*/
     BasicButton {
         id: disconnectButton
         text: qsTr("Disconnect...")

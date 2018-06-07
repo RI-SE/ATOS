@@ -45,11 +45,11 @@ Item {
             height: root.height
             onInitClicked: root.initClicked()
             onArmClicked: root.armClicked()
-            onConnectClicked: root.connectClicked()
+            //onConnectClicked: root.connectClicked()
             onStartClicked: root.startClicked()
             onAbortClicked: root.abortClicked()
             onDisconnectClicked: root.disconnectClicked()
-            onStatusClicked: root.statusClicked()
+            //onStatusClicked: root.statusClicked()
         }
 
         StatusView {

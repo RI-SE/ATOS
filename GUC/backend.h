@@ -6,6 +6,7 @@
 #include <QDebug>
 #include <QDateTime>
 #include <QLinkedList>
+#include <QTimer>
 
 #include "tcphandler.h"
 #include "mscp.h"
@@ -87,6 +88,8 @@ private:
     //QQueue<qint8> *expected_response_id;
     QLinkedList<qint8> *expected_response_id;
 
+    QTimer *timer;
+
     bool addExpectedResponseID(qint8 msg_id)
     {
         // TODO add check to not add too many arguments
@@ -121,6 +124,7 @@ private slots:
     void handleDebugComMsg(const QString &msg);
     void handleConnectionChanged(const int &isConnected);
     void handleReceivedData(const QByteArray &data);
+    void update();
 };
 
 #endif // BACKEND_H

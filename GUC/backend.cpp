@@ -6,14 +6,19 @@ BackEnd::BackEnd(QObject *parent) :
 {
 
     mTcphandler = new TCPhandler();
+    timer = new QTimer();
     QObject::connect(mTcphandler, SIGNAL(debugComMsg(QString)),
                      this,SLOT(handleDebugComMsg(QString)));
     QObject::connect(mTcphandler,SIGNAL(connectionChanged(int)),
                      this,SLOT(handleConnectionChanged(int)));
     QObject::connect(mTcphandler, SIGNAL(receivedData(QByteArray)),
                      this,SLOT(handleReceivedData(QByteArray)));
+    QObject::connect(timer, SIGNAL(timeout()),
+                     this,SLOT(update()));
 
     expected_response_id = new QLinkedList<qint8>();
+    timer->start(500);
+
 }
 //****************************************
 // Public Q_INVOKABLE methods
@@ -219,7 +224,7 @@ void BackEnd::handleReceivedData(const QByteArray &data)
 
         setSysCtrlStatus(status.system_ctrl);
         setObjCtrlStatus(status.object_ctrl);
-        handleDebugMessage("Response Code :" + QString::number(header.code) +". Server status read. Sys=" + QString::number(status.system_ctrl) + " Obj=" +QString::number(status.object_ctrl));
+        //handleDebugMessage("Response Code :" + QString::number(header.code) +". Server status read. Sys=" + QString::number(status.system_ctrl) + " Obj=" +QString::number(status.object_ctrl));
         /*
         if (MSCP::readGetStatusMsg(data,response_code,status))
         {
@@ -236,7 +241,7 @@ void BackEnd::handleReceivedData(const QByteArray &data)
     case MSCP::INIT_SCENARIO:
         //sendGetStatus();
         handleDebugMessage("Init Scenario response received");
-        //sendGetStatus();
+        sendConnectObject();
         break;
     case MSCP::CONNECT_OBJ:
         handleDebugMessage("Connect Scenario response received");
@@ -258,5 +263,12 @@ void BackEnd::handleReceivedData(const QByteArray &data)
         //sendGetStatus();
         break;
     }
+}
 
+void BackEnd::update()
+{
+    if (mTcphandler->isConnected())
+    {
+        sendGetStatus();
+    }
 }

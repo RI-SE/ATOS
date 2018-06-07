@@ -13,7 +13,7 @@ qint8 mapMSCPCommand(QByteArray &textBuffer)
     else if (QString::compare(command,INITIALIZE_SCENARIO_CMD_STR) == 0) return INIT_SCENARIO;
     else if (QString::compare(command,ARM_CMD_STR) == 0) return ARM;
     else if (QString::compare(command,START_CMD_STR) == 0) return START;
-    else if (QString::compare(command,ABORT_CMD_STR) == 0) return ARM;
+    else if (QString::compare(command,ABORT_CMD_STR) == 0) return ABORT;
     else {
         qDebug() << "COMMAND: " << command;
         return -1;
@@ -118,7 +118,7 @@ bool msgToHTTPPOSTByteArray(const QString &IPaddress, const QString &msg, QByteA
     string_holder += "POST /maestro HTTP/1.1\n";
     string_holder += "Host: " + IPaddress + "\n";
     string_holder += msg;
-    qDebug() << string_holder;
+    //qDebug() << string_holder;
 
     bytearray.clear();
     bytearray = string_holder.toLocal8Bit();

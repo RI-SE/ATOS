@@ -70,7 +70,7 @@ bool TCPhandler::sendData(const QByteArray &data)
 {
     if (mTcpSocket){
         mTcpSocket->write(data);
-        emit debugComMsg("Sending " + QString::number(data.length()) + "B:" + QString(data.toHex()));
+        //emit debugComMsg("Sending " + QString::number(data.length()) + "B:" + QString(data.toHex()));
         return true;
     }
     return false;
