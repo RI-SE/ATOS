@@ -285,6 +285,20 @@ void objectcontrol_task(TimeType *GPSTime)
   while(!iExit)
   {
     
+    if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED)
+    {
+     /*HEAB*/
+      for(iIndex=0;iIndex<nbr_objects;++iIndex)
+      {
+        if(uiTimeCycle == 0)
+        {
+          HeartbeatMessageCounter ++;
+          MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, CurrentTimeU64, ObjectControlServerStatus, 0);
+          ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+        }
+      }
+    }
+
     if(OBCState == OBC_STATE_RUNNING)
     {
       char buffer[RECV_MESSAGE_BUFFER];
@@ -295,6 +309,7 @@ void objectcontrol_task(TimeType *GPSTime)
       if(TIME_COMPENSATE_LAGING_VM) CurrentTimeU64 = CurrentTimeU64 - TIME_COMPENSATE_LAGING_VM_VAL;
 
       /*HEAB*/
+      /*
       for(iIndex=0;iIndex<nbr_objects;++iIndex)
       {
         if(uiTimeCycle == 0)
@@ -304,6 +319,7 @@ void objectcontrol_task(TimeType *GPSTime)
           ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
         }
       }
+      */
 
       /*MTSP*/
       if(HeartbeatMessageCounter == 10)
