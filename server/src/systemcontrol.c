@@ -721,11 +721,11 @@ void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
 {
 	int i, n, j, t;
 	C8 Length[4];
-	C8 Header[5] = "Log: ";
+	C8 Header[2] = {0,2};
 	C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
 
 	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
-	n = strlen(LogString) + strlen(Header);
+	n = 2 + strlen(LogString);
 	Length[0] = (C8)(n >> 24); Length[1] = (C8)(n >> 16); Length[2] = (C8)(n >> 8); Length[3] = (C8)n;
 	
 	//SystemControlSendBytes(Length, 4, Sockfd, 0);
@@ -736,7 +736,7 @@ void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
 	if(n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE)
 	{
 		for(i = 0, j = 0; i < 4; i++, j++) Data[j] = Length[i];
-		for(i = 0; i < 5; i++, j++) Data[j] = Header[i];
+		for(i = 0; i < 2; i++, j++) Data[j] = Header[i];
 		t = strlen(LogString);
 		for(i = 0; i < t; i++, j++) Data[j] = *(LogString+i);
 		SystemControlSendBytes(Data, n + 4, Sockfd, 0);
