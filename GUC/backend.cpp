@@ -271,4 +271,10 @@ void BackEnd::update()
     {
         sendGetStatus();
     }
+
+    if (m_sysCtrlStatus == MSCP_SYSTEM_CONTROL_STATE_IDLE &&
+            m_objCtrlStatus == MSCP_OBJECT_CONTROL_STATE_INITIALIZED)
+    {
+        sendConnectObject();
+    }
 }

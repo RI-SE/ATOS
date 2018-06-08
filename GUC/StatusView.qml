@@ -100,6 +100,7 @@ Item {
             height: elemHeight
             text: qsTr("ERROR")
             lightOn: root.objLed6
+            color: "red"
         }
     }
 }

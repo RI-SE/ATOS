@@ -5,6 +5,7 @@ import QtQuick.Extras 1.4
 Item {
     id: root
     property string text: "Text"
+    property string color: "green"
     property bool lightOn: false
     width: 300
     height: 150
@@ -12,6 +13,7 @@ Item {
         id: statusIndicator
         width: root.height * 0.8
         height: root.height * 0.8
+        color: root.color
         anchors.verticalCenter: parent.verticalCenter
 
         active: lightOn
