@@ -1,22 +1,22 @@
 /*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2018 MAESTRO project
+  -- Copyright   : (C) 2018 CHRONOS II project
   ------------------------------------------------------------------------------
-  -- File        : timecontrol.h
+  -- File        : citscontrol.h
   -- Author      : Sebastian Loh Lindholm
-  -- Description : MAESTRO
+  -- Description : CHRONOS II
   -- Purpose     :
   -- Reference   :
   ------------------------------------------------------------------------------*/
 
-#ifndef __TIMECONTROL_H_INCLUDED__
-#define __TIMECONTROL_H_INCLUDED__
+#ifndef __CITSCONTROL_H_INCLUDED__
+#define __CITSCONTROL_H_INCLUDED__
 
 
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-int timecontrol_task(TimeType *GPSTime);
+int citscontrol_task(TimeType *GPSTime);
 
 
 #endif 

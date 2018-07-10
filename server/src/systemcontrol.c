@@ -49,6 +49,7 @@ typedef enum {
 #define SYSTEM_CONTROL_SERVICE_POLL_TIME_MS 5000
 
 #define SYSTEM_CONTROL_CONTROL_PORT   54241       // Default port, control channel
+#define SYSTEM_CONTROL_PROCESS_PORT   54242       // Default port, process channel
 #define IPC_BUFFER_SIZE   1024
 #define SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE 64
 
@@ -419,7 +420,7 @@ void systemcontrol_task(TimeType *GPSTime)
 			 	bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 			 	ControlResponseBuffer[0] = server_state;
 			 	ControlResponseBuffer[1] = OBCStateU8;
-			 	//printf("GPSMillisecondsU64: %ld\n", GPSTime->GPSMillisecondsU64);
+			 	printf("GPSMillisecondsU64: %ld\n", GPSTime->GPSMillisecondsU64);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 2, &ClientSocket, 0);
 			break;
 			case InitializeScenario_0:
@@ -661,14 +662,14 @@ void systemcontrol_task(TimeType *GPSTime)
 			case Exit_0:
 				(void)iCommSend(COMM_EXIT,NULL);
 				iExit = 1;
+				usleep(1000000);
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "Exit:", ControlResponseBuffer, 0, &ClientSocket, 0);
 				close(ClientSocket); ClientSocket = -1;
 		    	if(USE_LOCAL_USER_CONTROL == 0) { close(ServerHandle); ServerHandle = -1;}
-
-				printf("[SystemControl] Server closing.\n");
-				exit(1);
+		    	printf("[SystemControl] Server closing.\n");
+				
 			break;
 			
 			default:
@@ -679,7 +680,7 @@ void systemcontrol_task(TimeType *GPSTime)
 
 		usleep(100);
   	}
-  
+
   (void)iCommClose();
 }
 

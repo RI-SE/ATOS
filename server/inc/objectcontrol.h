@@ -20,7 +20,7 @@
   ------------------------------------------------------------*/
 void objectcontrol_task(TimeType *GPSTime);
 
-int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug);
+int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug);
 int ObjectControlBuildSTRTMessage(char* MessageBuffer, STRTType *STRTData, unsigned char CommandOption, unsigned long TimeStamp, char debug);
 int ObjectControlBuildOSTMMessage(char* MessageBuffer, OSTMType *OSTMData, unsigned char CommandOption, char debug);
 int ObjectControlBuildHEABMessage(char* MessageBuffer, HEABType *HEABData, unsigned long TimeStamp, unsigned char CommandOption, char debug);

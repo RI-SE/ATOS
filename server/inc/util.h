@@ -21,6 +21,9 @@
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
+#define ISO_PROTOCOL_VERSION 2
+#define ACK_REQ 0
+
 #define MQ_LG     "/TEServer-LG"
 #define MQ_SV     "/TEServer-SV"
 #define MQ_OC     "/TEServer-OC"
@@ -81,8 +84,8 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "10.168.141.138"
-#define TESTSERVER_IP "10.168.141.138"
+#define TESTHOST_IP "192.168.0.163"
+#define TESTSERVER_IP "192.168.0.163"
 #define USE_LOCAL_USER_CONTROL  0
 #define LOCAL_USER_CONTROL_IP "192.168.0.163" 
 #define LOCAL_USER_CONTROL_PORT 54240  
@@ -143,21 +146,26 @@
 #define STRUCT_CODE  254
 #define RESERVED_CODE  255
 
-#define VALUE_ID_NOT_DEF  0
-#define VALUE_ID_RELATIVE_TIME 1
-#define VALUE_ID_ABSOLUTE_TIME 2
-#define VALUE_ID_X_POSITION  10
-#define VALUE_ID_Y_POSITION  11
-#define VALUE_ID_Z_POSITION  12
-#define VALUE_ID_LATITUDE  20
-#define VALUE_ID_LONGITUDE 21
-#define VALUE_ID_ALTITUDE  22
-#define VALUE_ID_HEADING 30
-#define VALUE_ID_LONGITUDINAL_SPEED  40
-#define VALUE_ID_LATERAL_SPEED 41
-#define VALUE_ID_LONGITUDINAL_ACCELERATION 50
-#define VALUE_ID_LATERAL_ACCELERATION  51
-#define VALUE_ID_FLAG  60
+#define VALUE_ID_NOT_DEF                    0
+#define VALUE_ID_RELATIVE_TIME              1
+#define VALUE_ID_GPS_SECOND_OF_WEEK         2
+#define VALUE_ID_GPS_WEEK                   3
+#define VALUE_ID_DATE_ISO8601               4
+#define VALUE_ID_X_POSITION                 10
+#define VALUE_ID_Y_POSITION                 11
+#define VALUE_ID_Z_POSITION                 12
+#define VALUE_ID_LATITUDE                   20
+#define VALUE_ID_LONGITUDE                  21
+#define VALUE_ID_ALTITUDE                   22
+#define VALUE_ID_HEADING                    30
+#define VALUE_ID_LONGITUDINAL_SPEED         40
+#define VALUE_ID_LATERAL_SPEED              41
+#define VALUE_ID_LONGITUDINAL_ACCELERATION  50
+#define VALUE_ID_LATERAL_ACCELERATION       51
+#define VALUE_ID_FLAG                       60
+#define VALUE_ID_MAX_WAY_DEVIATION          70
+#define VALUE_ID_MAX_LATERAL_DEVIATION      72
+#define VALUE_ID_MIN_POS_ACCURACY           74 
 
 
 #define C8 uint8_t
@@ -190,10 +198,11 @@ typedef struct
 {
   U16 SyncWordU16;
   U8 TransmitterIdU8;
-  U8 PackageCounterU8;
-  U8 AckReqU8;
+  U8 MessageCounterU8;
+  U8 AckReqProtVerU8;
+  U16 MessageIdU16;
   U32 MessageLengthU32;
-} HeaderType; //9 bytes
+} HeaderType; //11 bytes
 
 typedef struct
 {
@@ -203,18 +212,25 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  U16 MessageIdU16;
-  U32 NOFValuesU32;
   U16 LatitudeValueIdU16;
-  U8 LatitudeValueTypeU8;
-  I32 LatitudeI32;
+  I64 LatitudeI64;
   U16 LongitudeValueIdU16;
-  U8 LongitudeValueTypeU8;
-  I32 LongitudeI32;
+  I64 LongitudeI64;
   U16 AltitudeValueIdU16;
-  U8 AltitudeValueTypeU8;
   I32 AltitudeI32;
-} OSEMType; //36 bytes
+  U16 DateValueIdU16;
+  U32 DateU32;
+  U16 GPSWeekValueIdU16;
+  U16 GPSWeekU16;
+  U16 GPSSOWValueIdU16;
+  U32 GPSSOWU32;
+  U16 MaxWayDeviationValueIdU16;
+  U16 MaxWayDeviationU16;
+  U16 MaxLateralDeviationValueIdU16;
+  U16 MaxLateralDeviationU16;
+  U16 MinPosAccuracyValueIdU16;
+  U16 MinPosAccuracyU16;
+} OSEMType; //67 bytes
 
 typedef struct
 {
@@ -439,6 +455,12 @@ void xyzToLlh(double x, double y, double z, double *lat, double *lon, double *he
 void llhToEnu(const double *iLlh, const double *llh, double *xyz);
 uint16_t crc_16( const unsigned char *input_str, uint16_t num_bytes );
 
+U16 SwapU16(U16 val);
+I16 SwapI16(I16 val); 
+U32 SwapU32(U32 val);
+I32 SwapI32(I32 val);
+I64 SwapI64(I64 val);
+U64 SwapU64(U64 val);
 
 typedef struct {
   uint64_t timestamp;

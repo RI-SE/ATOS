@@ -57,7 +57,7 @@
 
 #define COMMAND_OSEM_CODE 2
 #define COMMAND_OSEM_NOFV 3
-#define COMMAND_OSEM_MESSAGE_LENGTH sizeof(OSEMType)
+#define COMMAND_OSEM_MESSAGE_LENGTH sizeof(OSEMType)-4
 
 #define COMMAND_OSTM_CODE 3
 #define COMMAND_OSTM_NOFV 1  
@@ -147,7 +147,7 @@ static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sock
 static void vCloseSafetyChannel(int* sockfd);
 static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatCommand_t tCommand);
 static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData);
-int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug);
+int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug);
 int ObjectControlBuildSTRTMessage(char* MessageBuffer, STRTType *STRTData, unsigned char CommandOption, unsigned long TimeStamp, char debug);
 int ObjectControlBuildOSTMMessage(char* MessageBuffer, OSTMType *OSTMData, unsigned char CommandOption, char debug);
 int ObjectControlBuildHEABMessage(char* MessageBuffer, HEABType *HEABData, unsigned long TimeStamp, unsigned char CommandOption, char debug);
@@ -646,7 +646,7 @@ void objectcontrol_task(TimeType *GPSTime)
         {
           UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
 
-          MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, 
+          MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, GPSTime,
                                       UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
                                       UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
                                       UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
@@ -924,8 +924,8 @@ int ObjectControlBuildMONRMessage(unsigned char *MonrData, MONRType *MONRData, c
   U16Data = U16Data | *(MonrData+1);
   MONRData->Header.SyncWordU16 = U16Data;
   MONRData->Header.TransmitterIdU8 = *(MonrData+2);
-  MONRData->Header.PackageCounterU8 = *(MonrData+3);
-  MONRData->Header.AckReqU8 = *(MonrData+4);
+  MONRData->Header.MessageCounterU8 = *(MonrData+3);
+  MONRData->Header.AckReqProtVerU8 = *(MonrData+4);
   U32Data = (U32Data | *(MonrData+5)) << 8;
   U32Data = (U32Data | *(MonrData+6)) << 8;
   U32Data = (U32Data | *(MonrData+7)) << 8;
@@ -1070,8 +1070,8 @@ int ObjectControlBuildMONRMessage(unsigned char *MonrData, MONRType *MONRData, c
   {
     printf("SyncWord = %d\n", MONRData->Header.SyncWordU16);
     printf("TransmitterId = %d\n", MONRData->Header.TransmitterIdU8);
-    printf("PackageCounter = %d\n", MONRData->Header.PackageCounterU8);
-    printf("AckReq = %d\n", MONRData->Header.AckReqU8);
+    printf("PackageCounter = %d\n", MONRData->Header.MessageCounterU8);
+    printf("AckReq = %d\n", MONRData->Header.AckReqProtVerU8);
     printf("MessageLength = %d\n", MONRData->Header.MessageLengthU32);
     printf("NOFValues = %d\n", MONRData->NOFValuesU32);
   } 
@@ -1132,8 +1132,8 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
       printf("%x-", MONRData->MessageIdU16);
       printf("%x-", MONRData->Header.SyncWordU16);
       printf("%x-", MONRData->Header.TransmitterIdU8);
-      printf("%x-", MONRData->Header.PackageCounterU8);
-      printf("%x-", MONRData->Header.AckReqU8);
+      printf("%x-", MONRData->Header.MessageCounterU8);
+      printf("%x-", MONRData->Header.AckReqProtVerU8);
       printf("%x-", MONRData->Header.MessageLengthU32);
       printf("%x-", MONRData->NOFValuesU32);
       printf("%ld-", MONRData->PositionTimeU64);
@@ -1294,7 +1294,7 @@ int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char
 }
 
 
-int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug)
+int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug)
 {
   int MessageIndex = 0, i = 0;
   double Data;
@@ -1303,31 +1303,30 @@ int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, char 
   
   bzero(MessageBuffer, COMMAND_OSEM_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH);
 
-  OSEMData->Header.SyncWordU16 = (U16)(SYNC_WORD << 8 | SYNC_WORD >> 8);
+  OSEMData->Header.SyncWordU16 = SYNC_WORD;
   OSEMData->Header.TransmitterIdU8 = 0;
-  OSEMData->Header.PackageCounterU8 = 0;
-  OSEMData->Header.AckReqU8 = 0;
-  OSEMData->Header.MessageLengthU32 = sizeof(OSEMType) - sizeof(HeaderType);
-  OSEMData->Header.MessageLengthU32 = ((OSEMData->Header.MessageLengthU32 << 24)&0xFF000000 | (OSEMData->Header.MessageLengthU32 << 8)&0x00FF0000 | (OSEMData->Header.MessageLengthU32 >> 8)&0x0000FF00 | (OSEMData->Header.MessageLengthU32 >> 24)&0x000000FF);
-  OSEMData->MessageIdU16 = (COMMAND_OSEM_CODE << 8 | COMMAND_OSEM_CODE >> 8);
-  OSEMData->NOFValuesU32 = ((COMMAND_OSEM_NOFV << 24)&0xFF000000 | (COMMAND_OSEM_NOFV << 8)&0x00FF0000 | (COMMAND_OSEM_NOFV >> 8)&0x0000FF00 | (COMMAND_OSEM_NOFV >> 24)&0x000000FF);
-  OSEMData->LatitudeValueIdU16 = (VALUE_ID_LATITUDE << 8 | VALUE_ID_LATITUDE >> 8);
-  OSEMData->LatitudeValueTypeU8 = I32_CODE;
-  OSEMData->LatitudeI32 = (I32) ((atof((char *)Latitude) * 1e8)/10);
-  OSEMData->LatitudeI32 = ((OSEMData->LatitudeI32 << 24)&0xFF000000 | (OSEMData->LatitudeI32 << 8)&0x00FF0000 | (OSEMData->LatitudeI32 >> 8)&0x0000FF00 | (OSEMData->LatitudeI32 >> 24)&0x000000FF);
-  OSEMData->LongitudeValueIdU16 = (VALUE_ID_LONGITUDE << 8 | VALUE_ID_LONGITUDE >> 8);
-  OSEMData->LongitudeValueTypeU8 = I32_CODE;
-  OSEMData->LongitudeI32 = (I32)((atof((char *)Longitude) * 1e8)/10);
-  OSEMData->LongitudeI32 = ((OSEMData->LongitudeI32 << 24)&0xFF000000 | (OSEMData->LongitudeI32 << 8)&0x00FF0000 | (OSEMData->LongitudeI32 >> 8)&0x0000FF00 | (OSEMData->LongitudeI32 >> 24)&0x000000FF);
-  OSEMData->AltitudeValueIdU16 = (VALUE_ID_ALTITUDE << 8 | VALUE_ID_ALTITUDE >> 8);
-  OSEMData->AltitudeValueTypeU8 = I32_CODE;
+  OSEMData->Header.MessageCounterU8 = 0;
+  OSEMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
+  OSEMData->Header.MessageLengthU32 = sizeof(OSEMType) - sizeof(HeaderType) - 4;
+  OSEMData->LatitudeValueIdU16 = VALUE_ID_LATITUDE;
+  OSEMData->LatitudeI64 = (I64) ((atof((char *)Latitude) * 1e10));
+  OSEMData->LongitudeValueIdU16 = VALUE_ID_LONGITUDE;
+  OSEMData->LongitudeI64 = (I64)((atof((char *)Longitude) * 1e10));
+  OSEMData->AltitudeValueIdU16 = VALUE_ID_ALTITUDE;
   OSEMData->AltitudeI32 = (I32)(atof((char *)Altitude) * 1e2);
-  OSEMData->AltitudeI32 = ((OSEMData->AltitudeI32 << 24)&0xFF000000 | (OSEMData->AltitudeI32 << 8)&0x00FF0000 | (OSEMData->AltitudeI32 >> 8)&0x0000FF00 | (OSEMData->AltitudeI32 >> 24)&0x000000FF);
-
+  OSEMData->DateValueIdU16 = VALUE_ID_DATE_ISO8601;
+  OSEMData->DateU32 = GPSTime->YearU16;
+  OSEMData->DateU32 = (OSEMData->DateU32 << 8) | GPSTime->MonthU8;
+  OSEMData->DateU32 = (OSEMData->DateU32 << 8) | GPSTime->DayU8;
  
   p=(char *)OSEMData;
-  for(i=0; i<sizeof(OSEMType); i++) *(MessageBuffer + i) = *p++;
-  Crc = crc_16((const unsigned char *)MessageBuffer, sizeof(OSEMType));
+  for(i=0; i<17; i++) *(MessageBuffer + i) = *p++;
+  *p++; *p++;
+  for(; i<23; i++) *(MessageBuffer + i) = *p++;
+  *p++; *p++;
+  for(; i<sizeof(OSEMType)-4; i++) *(MessageBuffer + i) = *p++;
+
+  Crc = crc_16((const unsigned char *)MessageBuffer, sizeof(OSEMType)-4);
   Crc = 0;
   *(MessageBuffer + i++) = (U8)(Crc >> 8);
   *(MessageBuffer + i++) = (U8)(Crc);
@@ -1337,11 +1336,12 @@ int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, char 
   {
     printf("OSEM total length = %d bytes (header+message+footer)\n", (int)(COMMAND_OSEM_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
     printf("----HEADER----\n");
-    for(i = 0;i < sizeof(HeaderType); i ++) printf("[%d]=%d\n", i, (unsigned char)MessageBuffer[i]);
-    printf("----MESSAGE----\n");
-    for(;i < sizeof(OSEMType); i ++) printf("[%d]=%d\n", i, (unsigned char)MessageBuffer[i]);
-    printf("----FOOTER----\n");
-    for(;i < MessageIndex; i ++) printf("[%d]=%d\n", i, (unsigned char)MessageBuffer[i]);
+    for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+    printf("\n----MESSAGE----\n");
+    for(;i < sizeof(OSEMType)-4; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+    printf("\n----FOOTER----\n");
+    for(;i < MessageIndex; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+    printf("\n");
   }
   return MessageIndex; //Total number of bytes 
 }
@@ -1357,13 +1357,13 @@ int ObjectControlBuildSTRTMessage(char* MessageBuffer, STRTType *STRTData, unsig
 
   STRTData->Header.SyncWordU16 = (U16)(SYNC_WORD << 8 | SYNC_WORD >> 8);
   STRTData->Header.TransmitterIdU8 = 0;
-  STRTData->Header.PackageCounterU8 = 0;
-  STRTData->Header.AckReqU8 = 0;
+  STRTData->Header.MessageCounterU8 = 0;
+  STRTData->Header.AckReqProtVerU8 = 0;
   STRTData->Header.MessageLengthU32 = sizeof(STRTType) - 2  - sizeof(HeaderType);
   STRTData->Header.MessageLengthU32 = ((STRTData->Header.MessageLengthU32 << 24)&0xFF000000 | (STRTData->Header.MessageLengthU32 << 8)&0x00FF0000 | (STRTData->Header.MessageLengthU32 >> 8)&0x0000FF00 | (STRTData->Header.MessageLengthU32 >> 24)&0x000000FF);
   STRTData->MessageIdU16 = (COMMAND_STRT_CODE << 8 | COMMAND_STRT_CODE >> 8);
   STRTData->NOFValuesU32 = ((COMMAND_STRT_NOFV << 24)&0xFF000000 | (COMMAND_STRT_NOFV << 8)&0x00FF0000 | (COMMAND_STRT_NOFV >> 8)&0x0000FF00 | (COMMAND_STRT_NOFV >> 24)&0x000000FF);
-  STRTData->StartTimeValueIdU16 = (VALUE_ID_ABSOLUTE_TIME << 8 | VALUE_ID_ABSOLUTE_TIME >> 8);
+  STRTData->StartTimeValueIdU16 = (VALUE_ID_GPS_SECOND_OF_WEEK << 8 | VALUE_ID_GPS_SECOND_OF_WEEK >> 8);
   STRTData->StartTimeValueTypeU8 = U48_CODE;
   STRTData->StartTimeU64 = TimeStamp;
   STRTData->StartTimeU64 = ((STRTData->StartTimeU64 << 40)&0xFF0000000000 | (STRTData->StartTimeU64 << 24)&0x00FF00000000 | (STRTData->StartTimeU64 << 8)&0x0000FF000000 |
@@ -1402,8 +1402,8 @@ int ObjectControlBuildOSTMMessage(char* MessageBuffer, OSTMType *OSTMData, unsig
 
   OSTMData->Header.SyncWordU16 = (U16)(SYNC_WORD << 8 | SYNC_WORD >> 8);
   OSTMData->Header.TransmitterIdU8 = 0;
-  OSTMData->Header.PackageCounterU8 = 0;
-  OSTMData->Header.AckReqU8 = 0;
+  OSTMData->Header.MessageCounterU8 = 0;
+  OSTMData->Header.AckReqProtVerU8 = 0;
   OSTMData->Header.MessageLengthU32 = sizeof(OSTMType) - sizeof(HeaderType);
   OSTMData->Header.MessageLengthU32 = ((OSTMData->Header.MessageLengthU32 << 24)&0xFF000000 | (OSTMData->Header.MessageLengthU32 << 8)&0x00FF0000 | (OSTMData->Header.MessageLengthU32 >> 8)&0x0000FF00 | (OSTMData->Header.MessageLengthU32 >> 24)&0x000000FF);
   OSTMData->MessageIdU16 = (COMMAND_OSTM_CODE << 8 | COMMAND_OSTM_CODE >> 8);
@@ -1445,13 +1445,13 @@ int ObjectControlBuildHEABMessage(char* MessageBuffer, HEABType *HEABData, unsig
 
   HEABData->Header.SyncWordU16 = (U16)(SYNC_WORD << 8 | SYNC_WORD >> 8);
   HEABData->Header.TransmitterIdU8 = 0;
-  HEABData->Header.PackageCounterU8 = 0;
-  HEABData->Header.AckReqU8 = 0;
+  HEABData->Header.MessageCounterU8 = 0;
+  HEABData->Header.AckReqProtVerU8 = 0;
   HEABData->Header.MessageLengthU32 = sizeof(HEABType) - 2 - sizeof(HeaderType);
   HEABData->Header.MessageLengthU32 = ((HEABData->Header.MessageLengthU32 << 24)&0xFF000000 | (HEABData->Header.MessageLengthU32 << 8)&0x00FF0000 | (HEABData->Header.MessageLengthU32 >> 8)&0x0000FF00 | (HEABData->Header.MessageLengthU32 >> 24)&0x000000FF);
   HEABData->MessageIdU16 = (COMMAND_HEAB_CODE << 8 | COMMAND_HEAB_CODE >> 8);
   HEABData->NOFValuesU32 = ((COMMAND_HEAB_NOFV << 24)&0xFF000000 | (COMMAND_HEAB_NOFV << 8)&0x00FF0000 | (COMMAND_HEAB_NOFV >> 8)&0x0000FF00 | (COMMAND_HEAB_NOFV >> 24)&0x000000FF);
-  HEABData->TimeValueIdU16 = (VALUE_ID_ABSOLUTE_TIME << 8 | VALUE_ID_ABSOLUTE_TIME >> 8);
+  HEABData->TimeValueIdU16 = (VALUE_ID_GPS_SECOND_OF_WEEK << 8 | VALUE_ID_GPS_SECOND_OF_WEEK >> 8);
   HEABData->TimeValueTypeU8 = U48_CODE;
   HEABData->TimeU64 = TimeStamp;
   HEABData->TimeU64 = ((HEABData->TimeU64 << 40)&0xFF0000000000 | (HEABData->TimeU64 << 24)&0x00FF00000000 | (HEABData->TimeU64 << 8)&0x0000FF000000 |

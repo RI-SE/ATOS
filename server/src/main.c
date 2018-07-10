@@ -30,6 +30,8 @@
 #include "supervision.h"
 #include "remotecontrol.h"
 #include "timecontrol.h"
+#include "simulatorcontrol.h"
+#include "citscontrol.h"
 
 /*------------------------------------------------------------
 -- Defines
@@ -45,7 +47,7 @@ int main(int argc, char *argv[])
   /*Share time between child processes*/
   GPSTime = mmap(NULL, sizeof *GPSTime, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-  pid_t pID[6];
+  pid_t pID[8];
   int iIndex = 0;
   #ifdef DEBUG
     printf("INF: Central started\n");
@@ -149,6 +151,36 @@ int main(int argc, char *argv[])
       printf("INF: timecontrol_task running in:  %i \n",getpid());
     #endif
     timecontrol_task(GPSTime);
+    exit(EXIT_SUCCESS);
+  }
+  ++iIndex;
+
+  pID[iIndex] = fork();
+  if(pID[iIndex] < 0)
+  {
+    util_error("ERR: Failed to fork");
+  }
+  if(pID[iIndex] == 0)
+  {
+    #ifdef DEBUG
+      printf("INF: simulatorcontrol_task running in:  %i \n",getpid());
+    #endif
+    simulatorcontrol_task(GPSTime);
+    exit(EXIT_SUCCESS);
+  }
+  ++iIndex;
+
+  pID[iIndex] = fork();
+  if(pID[iIndex] < 0)
+  {
+    util_error("ERR: Failed to fork");
+  }
+  if(pID[iIndex] == 0)
+  {
+    #ifdef DEBUG
+      printf("INF: citscontrol_task running in:  %i \n",getpid());
+    #endif
+    citscontrol_task(GPSTime);
     exit(EXIT_SUCCESS);
   }
   ++iIndex;

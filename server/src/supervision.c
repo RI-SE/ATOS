@@ -904,7 +904,7 @@ void supervision_task(TimeType *GPSTime) {
     --  Clean upp.
     --------------------------------------------------*/
 
-  (void) iCommClose();
+ (void) iCommClose();
 
   for ( iIndex = 0           ;
         iIndex < nbr_objects ;

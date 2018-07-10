@@ -1,9 +1,9 @@
 /*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2016 CHRONOS project
+  -- Copyright   : (C) 2018 MAESTRO project
   ------------------------------------------------------------------------------
   -- File        : timecontrol.c
   -- Author      : Sebastian Loh Lindholm
-  -- Description : CHRONOS
+  -- Description : MAESTRO
   -- Purpose     :
   -- Reference   :
   ------------------------------------------------------------------------------*/
@@ -56,12 +56,14 @@ int timecontrol_task(TimeType *GPSTime)
   U16 ServerPortU16;
   I32 SocketfdI32=-1;
   struct sockaddr_in time_addr;
-  I32 iExit = 0;
+  I32 iExit = 0, iCommand;
   C8 TimeBuffer[TIME_CONTROL_BUFFER_SIZE_52];
   I32 ReceivedNewData, i;
   C8 SendData[4] = {0, 0, 0, 250};
   struct timespec sleep_time, ref_time;
+  C8 MqRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
 
+  (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
 
   bzero(TextBufferC8, TIME_CONTROL_BUFFER_SIZE_20);
   UtilSearchTextFile(TEST_CONF_FILE, "TimeServerIP=", "", TextBufferC8);
@@ -71,15 +73,14 @@ int timecontrol_task(TimeType *GPSTime)
   UtilSearchTextFile(TEST_CONF_FILE, "TimeServerPort=", "", TextBufferC8);
   ServerPortU16 = (U16)atoi(TextBufferC8);
 
-
   TimeControlCreateTimeChannel(ServerIPC8, ServerPortU16, &SocketfdI32,  &time_addr);
-  TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, 4, 1);
+  TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, 4, 0);
   printf("Checking time...\n");
   while(!iExit)
   {
 
     bzero(TimeBuffer,TIME_CONTROL_BUFFER_SIZE_52);
-    TimeControlRecvTime(&SocketfdI32,TimeBuffer, TIME_CONTROL_BUFFER_SIZE_52, &ReceivedNewData);
+    TimeControlRecvTime(&SocketfdI32, TimeBuffer, TIME_CONTROL_BUFFER_SIZE_52, &ReceivedNewData);
     if(ReceivedNewData)
     {
       //for(i=0; i < TIME_CONTROL_BUFFER_SIZE_52; i++) printf("%x-", TimeBuffer[i]);
@@ -124,6 +125,19 @@ int timecontrol_task(TimeType *GPSTime)
 
     }
 
+
+    bzero(MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
+    (void)iCommRecv(&iCommand,MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
+
+    if(iCommand == COMM_EXIT)
+    {
+      iExit = 1;
+      printf("timecontrol exiting.\n");
+      (void)iCommClose();
+    }
+    
+
+
   }
 
 
@@ -135,6 +149,7 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
   int result;
   struct hostent *object;
 
+  printf("Time source IP: %s, port: %d\n", name, port);
   /* Connect to object safety socket */
   #ifdef DEBUG
     printf("INF: Creating time socket\n");
@@ -179,9 +194,16 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
 
 static int TimeControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
 {
-    int result;
+    int result, i;
  
     result = sendto(*sockfd, SendData, Length, 0, (const struct sockaddr *) addr, sizeof(struct sockaddr_in));
+
+  
+    if(debug)
+    {
+      for(i = 0;i < Length; i ++) printf("[%d]=%x ", i, (C8)*(SendData+i));
+      printf("\n");
+    }
 
     if (result < 0)
     {
@@ -209,7 +231,7 @@ static void TimeControlRecvTime(int* sockfd, char* buffer, int length, int* reci
         else
         {
           #ifdef DEBUG
-            printf("INF: No data receive\n");
+            printf("INF: No data receive, result=%d\n", result);
             fflush(stdout);
           #endif
         }
@@ -218,7 +240,7 @@ static void TimeControlRecvTime(int* sockfd, char* buffer, int length, int* reci
       {
         *recievedNewData = 1;
         #ifdef DEBUG
-          printf("INF: Received: <%s>\n",buffer);
+          printf("INF: Received: <%s>, %d\n",buffer, result);
           fflush(stdout);
         #endif
       }

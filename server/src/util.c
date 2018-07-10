@@ -1429,7 +1429,7 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize)
     
   if(iResult < 0 && errno != EAGAIN)
   {
-    util_error ("ERR: Error when recieveing");
+    util_error ("ERR: Message queue error when recieveing in iCommRecv().");
   }
   else if((iResult >= 0))
   {
@@ -1669,3 +1669,42 @@ uint16_t crc_16( const unsigned char *input_str, uint16_t num_bytes ) {
   return crc;
 
 }  /* crc_16 */
+
+
+
+
+U16 SwapU16(U16 val) 
+{
+    return (val << 8) | (val >> 8 );
+}
+
+I16 SwapI16(I16 val) 
+{
+    return (val << 8) | ((val >> 8) & 0xFF);
+}
+
+U32 SwapU32(U32 val)
+{
+    val = ((val << 8) & 0xFF00FF00 ) | ((val >> 8) & 0xFF00FF ); 
+    return (val << 16) | (val >> 16);
+}
+
+I32 SwapI32(I32 val)
+{
+    val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF ); 
+    return (val << 16) | ((val >> 16) & 0xFFFF);
+}
+
+I64 SwapI64(I64 val)
+{
+    val = ((val << 8) & 0xFF00FF00FF00FF00ULL ) | ((val >> 8) & 0x00FF00FF00FF00FFULL );
+    val = ((val << 16) & 0xFFFF0000FFFF0000ULL ) | ((val >> 16) & 0x0000FFFF0000FFFFULL );
+    return (val << 32) | ((val >> 32) & 0xFFFFFFFFULL);
+}
+
+U64 SwapU64(U64 val)
+{
+    val = ((val << 8) & 0xFF00FF00FF00FF00ULL ) | ((val >> 8) & 0x00FF00FF00FF00FFULL );
+    val = ((val << 16) & 0xFFFF0000FFFF0000ULL ) | ((val >> 16) & 0x0000FFFF0000FFFFULL );
+    return (val << 32) | (val >> 32);
+}
