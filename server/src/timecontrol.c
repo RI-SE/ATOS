@@ -93,6 +93,7 @@ int timecontrol_task(TimeType *GPSTime)
       GPSTime->MinuteU8 = TimeBuffer[6];
       GPSTime->SecondU8 = TimeBuffer[7];
       GPSTime->MillisecondU16 = ((U16)TimeBuffer[8]) << 8 | TimeBuffer[9];
+      GPSTime->MicroSecondU16 = 0;
       GPSTime->SecondCounterU32 = ((U32)TimeBuffer[10]) << 24 | ((U32)TimeBuffer[11]) << 16 | ((U32)TimeBuffer[12]) << 8 | TimeBuffer[13];
       GPSTime->GPSMillisecondsU64 = ((U64)TimeBuffer[14]) << 56 | ((U64)TimeBuffer[15]) << 48 | ((U64)TimeBuffer[16]) << 40 | ((U64)TimeBuffer[17]) << 32 |
                                 ((U64)TimeBuffer[18]) << 24 | ((U64)TimeBuffer[19]) << 16 | ((U64)TimeBuffer[20]) << 8 | TimeBuffer[21];

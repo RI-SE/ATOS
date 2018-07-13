@@ -147,10 +147,10 @@ static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sock
 static void vCloseSafetyChannel(int* sockfd);
 static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatCommand_t tCommand);
 static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData);
-int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug);
-int ObjectControlBuildSTRTMessage(char* MessageBuffer, STRTType *STRTData, unsigned char CommandOption, unsigned long TimeStamp, char debug);
-int ObjectControlBuildOSTMMessage(char* MessageBuffer, OSTMType *OSTMData, unsigned char CommandOption, char debug);
-int ObjectControlBuildHEABMessage(char* MessageBuffer, HEABType *HEABData, unsigned long TimeStamp, unsigned char CommandOption, char debug);
+I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug);
+I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U8 debug);
+I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
+I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 debug);
 int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, unsigned short Curvature, unsigned char Mode, char debug);
 int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, unsigned int StopTime, char debug);
 int ObjectControlBuildMTSPMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug);
@@ -159,7 +159,7 @@ int ObjectControlBuildDOPMMessage(char* MessageBuffer, FILE *fd, int RowCount, c
 int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char *IP, uint32_t Port,char debug);
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
 int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *LateralSpeed, char *LongitudinalAcc, char *LateralAcc, char *Heading, char *DriveDirection, char *StatusFlag, char *StateFlag, char debug);
-int ObjectControlBuildMONRMessage(unsigned char *MonrData, MONRType *MONRData, char debug);
+I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug);
 int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId ,char *TriggAction, char *TriggDelay, char debug);
 int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug);
 static void ObjectControlSendLog(C8 *Message);
@@ -214,11 +214,12 @@ void objectcontrol_task(TimeType *GPSTime)
   char MTSP[SMALL_BUFFER_SIZE_0];
   int MessageLength;
   char *MiscPtr;
-  uint64_t StartTimeU64 = 0;
-  uint64_t CurrentTimeU64 = 0;
-  uint64_t OldTimeU64 = 0;
-  uint64_t MasterTimeToSyncPointU64 = 0;
-  uint64_t TimeCap1, TimeCap2;
+  U64 StartTimeU64 = 0;
+  U32 DelayedStartU32 = 0;
+  U64 CurrentTimeU64 = 0;
+  U64 OldTimeU64 = 0;
+  U64 MasterTimeToSyncPointU64 = 0;
+  U64 TimeCap1, TimeCap2;
   double TimeToSyncPoint = 0;
   double PrevTimeToSyncPoint = 0;
   double CurrentTimeDbl = 0;
@@ -293,7 +294,7 @@ void objectcontrol_task(TimeType *GPSTime)
         if(uiTimeCycle == 0)
         {
           HeartbeatMessageCounter ++;
-          MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, CurrentTimeU64, ObjectControlServerStatus, 0);
+          MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus, 0);
           ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
         }
       }
@@ -515,8 +516,13 @@ void objectcontrol_task(TimeType *GPSTime)
   			bzero(Timestamp, SMALL_BUFFER_SIZE_0);
   			MiscPtr =strchr(pcRecvBuffer,';');
   			strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
-  			StartTimeU64 = atol(Timestamp);
-  			MasterTimeToSyncPointU64 = 0;
+        StartTimeU64 = atol(Timestamp);
+        bzero(Timestamp, SMALL_BUFFER_SIZE_0);
+        MiscPtr += 1;
+        MiscPtr =strchr(pcRecvBuffer,';');
+        strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
+  			DelayedStartU32 = atoi(Timestamp);
+        MasterTimeToSyncPointU64 = 0;
   			TimeToSyncPoint = 0;
   			SearchStartIndex = -1;
   			PrevTimeToSyncPoint = 0;
@@ -527,7 +533,7 @@ void objectcontrol_task(TimeType *GPSTime)
   				printf("INF: Sending START trig from object control <%s>\n",pcBuffer);
   				fflush(stdout);
   			#endif
-        MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, COMMAND_STRT_OPT_START_AT_TIMESTAMP, StartTimeU64, 0);
+        MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, GPSTime, (U32)StartTimeU64, DelayedStartU32, 1);
   			for(iIndex=0;iIndex<nbr_objects;++iIndex) { vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);}
         OBCState = OBC_STATE_RUNNING;
   		}
@@ -651,7 +657,7 @@ void objectcontrol_task(TimeType *GPSTime)
                                       UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
                                       UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
                                       UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
-                                      0); 
+                                      1); 
           DisconnectU8 = 0;
 
           do
@@ -909,162 +915,93 @@ int ObjectControlBuildACMMessage(char* MessageBuffer, TriggActionType *TAA, char
 }
 
 
-int ObjectControlBuildMONRMessage(unsigned char *MonrData, MONRType *MONRData, char debug)
+I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
 {
-  int MessageIndex = 0, i = 0;
-  double Data;
+  I32 MessageIndex = 0, i = 0;
+  dbl Data;
   U16 Crc = 0, U16Data = 0;
   I16 I16Data = 0;
   U32 U32Data = 0;
   I32 I32Data = 0;
   U64 U64Data = 0;
-  char *p;
+  C8 *p;
 
-  U16Data = (U16Data | *MonrData) << 8;
-  U16Data = U16Data | *(MonrData+1);
+  U16Data = (U16Data | *(MonrData+1)) << 8;
+  U16Data = U16Data | *MonrData;
+  
   MONRData->Header.SyncWordU16 = U16Data;
   MONRData->Header.TransmitterIdU8 = *(MonrData+2);
   MONRData->Header.MessageCounterU8 = *(MonrData+3);
   MONRData->Header.AckReqProtVerU8 = *(MonrData+4);
-  U32Data = (U32Data | *(MonrData+5)) << 8;
-  U32Data = (U32Data | *(MonrData+6)) << 8;
-  U32Data = (U32Data | *(MonrData+7)) << 8;
-  U32Data = U32Data | *(MonrData+8);
-  MONRData->Header.MessageLengthU32 = U32Data;
   
   U16Data = 0;
-  U16Data = (U16Data | *(MonrData+9)) << 8;
-  U16Data = U16Data | *(MonrData+10);
-  MONRData->MessageIdU16 = U16Data;
-  U32Data = 0;
-  U32Data = (U32Data | *(MonrData+11)) << 8;
-  U32Data = (U32Data | *(MonrData+12)) << 8;
-  U32Data = (U32Data | *(MonrData+13)) << 8;
-  U32Data = U32Data | *(MonrData+14);
-  MONRData->NOFValuesU32 = U32Data;
+  U16Data = (U16Data | *(MonrData+6)) << 8;
+  U16Data = U16Data | *(MonrData+5);
+  MONRData->Header.MessageIdU16 = U16Data;
 
-  U16Data = 0;
-  U16Data = (U16Data | *(MonrData+15)) << 8;
-  U16Data = U16Data | *(MonrData+16);
-  MONRData->PositionTimeValueIdU16 = U16Data;
-  MONRData->PositionTimeValueTypeU8 = *(MonrData+17);
-  U64Data = 0;
-  U64Data = (U64Data | *(MonrData+18)) << 8;
-  U64Data = (U64Data | *(MonrData+19)) << 8;
-  U64Data = (U64Data | *(MonrData+20)) << 8;
-  U64Data = (U64Data | *(MonrData+21)) << 8;
-  U64Data = (U64Data | *(MonrData+22)) << 8;
-  U64Data = U64Data | *(MonrData+23);
-  MONRData->PositionTimeU64 = U64Data;
+  U32Data = (U32Data | *(MonrData+10)) << 8;
+  U32Data = (U32Data | *(MonrData+9)) << 8;
+  U32Data = (U32Data | *(MonrData+8)) << 8;
+  U32Data = U32Data | *(MonrData+7);
+  MONRData->Header.MessageLengthU32 = U32Data;
+    
+  U32Data = 0;
+  U32Data = (U32Data | *(MonrData+14)) << 8;
+  U32Data = (U32Data | *(MonrData+13)) << 8;
+  U32Data = (U32Data | *(MonrData+12)) << 8;
+  U32Data = U32Data | *(MonrData+11);
+  MONRData->GPSSOWU32 = U32Data;
   
-  U16Data = 0;
-  U16Data = (U16Data | *(MonrData+24)) << 8;
-  U16Data = U16Data | *(MonrData+25);
-  MONRData->XPositionValueIdU16 = U16Data;
-  MONRData->XPositionValueTypeU8 = *(MonrData+26);
   I32Data = 0;
-  I32Data = (I32Data | *(MonrData+27)) << 8;
-  I32Data = (I32Data | *(MonrData+28)) << 8;
-  I32Data = (I32Data | *(MonrData+29)) << 8;
-  I32Data = I32Data | *(MonrData+30);
+  I32Data = (I32Data | *(MonrData+18)) << 8;
+  I32Data = (I32Data | *(MonrData+17)) << 8;
+  I32Data = (I32Data | *(MonrData+16)) << 8;
+  I32Data = I32Data | *(MonrData+15);
   MONRData->XPositionI32 = I32Data;
   
-  U16Data = 0;
-  U16Data = (U16Data | *(MonrData+31)) << 8;
-  U16Data = U16Data | *(MonrData+32);
-  MONRData->YPositionValueIdU16 = U16Data;
-  MONRData->YPositionValueTypeU8 = *(MonrData+33);
   I32Data = 0;
-  I32Data = (I32Data | *(MonrData+34)) << 8;
-  I32Data = (I32Data | *(MonrData+35)) << 8;
-  I32Data = (I32Data | *(MonrData+36)) << 8;
-  I32Data = I32Data | *(MonrData+37);
-  MONRData->YPositionI32 = (I32)I32Data;
+  I32Data = (I32Data | *(MonrData+22)) << 8;
+  I32Data = (I32Data | *(MonrData+21)) << 8;
+  I32Data = (I32Data | *(MonrData+20)) << 8;
+  I32Data = I32Data | *(MonrData+19);
+  MONRData->YPositionI32 = I32Data;
   
-  U16Data = 0;
-  U16Data = (U16Data | *(MonrData+38)) << 8;
-  U16Data = U16Data | *(MonrData+39);
-  MONRData->ZPositionValueIdU16 = U16Data;
-  MONRData->ZPositionValueTypeU8 = *(MonrData+40);
   I32Data = 0;
-  I32Data = (I32Data | *(MonrData+41)) << 8;
-  I32Data = (I32Data | *(MonrData+42)) << 8;
-  I32Data = (I32Data | *(MonrData+43)) << 8;
-  I32Data = I32Data | *(MonrData+44);
-  MONRData->ZPositionI32 = (I32)I32Data;
+  I32Data = (I32Data | *(MonrData+26)) << 8;
+  I32Data = (I32Data | *(MonrData+25)) << 8;
+  I32Data = (I32Data | *(MonrData+24)) << 8;
+  I32Data = I32Data | *(MonrData+23);
+  MONRData->ZPositionI32 = I32Data;
 
   U16Data = 0;
-  U16Data = (U16Data | *(MonrData+45)) << 8;
-  U16Data = U16Data | *(MonrData+46);
-  MONRData->HeadingValueIdU16 = U16Data;
-  MONRData->HeadingValueTypeU8 = *(MonrData+47);
-  U16Data = 0;
-  U16Data = (U16Data | *(MonrData+48)) << 8;
-  U16Data = U16Data | *(MonrData+49);
+  U16Data = (U16Data | *(MonrData+28)) << 8;
+  U16Data = U16Data | *(MonrData+27);
   MONRData->HeadingU16 = U16Data;
 
-  U16Data = 0;
-  U16Data = (U16Data | *(MonrData+50)) << 8;
-  U16Data = U16Data | *(MonrData+51);
-  MONRData->LongitudinalSpeedValueIdU16 = U16Data;
-  MONRData->LongitudinalSpeedValueTypeU8 = *(MonrData+52);
   I16Data = 0;
-  I16Data = (I16Data | *(MonrData+53)) << 8;
-  I16Data = I16Data | *(MonrData+54);
+  I16Data = (I16Data | *(MonrData+30)) << 8;
+  I16Data = I16Data | *(MonrData+29);
   MONRData->LongitudinalSpeedI16 = I16Data;
 
-  U16Data = 0;
-  U16Data = (U16Data | *(MonrData+55)) << 8;
-  U16Data = U16Data | *(MonrData+56);
-  MONRData->LateralSpeedValueIdU16 = U16Data;
-  MONRData->LateralSpeedValueTypeU8 = *(MonrData+57);
   I16Data = 0;
-  I16Data = (I16Data | *(MonrData+58)) << 8;
-  I16Data = I16Data | *(MonrData+59);
+  I16Data = (I16Data | *(MonrData+32)) << 8;
+  I16Data = I16Data | *(MonrData+31);
   MONRData->LateralSpeedI16 = I16Data;
 
-  U16Data = 0;
-  U16Data = (U16Data | *(MonrData+60)) << 8;
-  U16Data = U16Data | *(MonrData+61);
-  MONRData->LongitudinalAccValueIdU16 = U16Data;
-  MONRData->LongitudinalAccValueTypeU8 = *(MonrData+62);
   I16Data = 0;
-  I16Data = (I16Data | *(MonrData+63)) << 8;
-  I16Data = I16Data | *(MonrData+64);
+  I16Data = (I16Data | *(MonrData+34)) << 8;
+  I16Data = I16Data | *(MonrData+33);
   MONRData->LongitudinalAccI16 = I16Data;
 
-  U16Data = 0;
-  U16Data = (U16Data | *(MonrData+65)) << 8;
-  U16Data = U16Data | *(MonrData+66);
-  MONRData->LateralAccValueIdU16 = U16Data;
-  MONRData->LateralAccValueTypeU8 = *(MonrData+67);
   I16Data = 0;
-  I16Data = (I16Data | *(MonrData+68)) << 8;
-  I16Data = I16Data | *(MonrData+69);
+  I16Data = (I16Data | *(MonrData+36)) << 8;
+  I16Data = I16Data | *(MonrData+35);
   MONRData->LateralAccI16 = I16Data;
 
-  U16Data = 0;
-  U16Data = (U16Data | *(MonrData+70)) << 8;
-  U16Data = U16Data | *(MonrData+71);
-  MONRData->DriveDirectionValueIdU16 = U16Data;
-  MONRData->DriveDirectionValueTypeU8 = *(MonrData+72);
-  MONRData->DriveDirectionU8 = *(MonrData+73);
-
-  U16Data = 0;
-  U16Data = (U16Data | *(MonrData+74)) << 8;
-  U16Data = U16Data | *(MonrData+75);
-  MONRData->StateValueIdU16 = U16Data;
-  MONRData->StateValueTypeU8 = *(MonrData+76);
-  MONRData->StateU8 = *(MonrData+77);
-
-  U16Data = 0;
-  U16Data = (U16Data | *(MonrData+78)) << 8;
-  U16Data = U16Data | *(MonrData+79);
-  MONRData->StatusValueIdU16 = U16Data;
-  MONRData->StatusValueTypeU8 = *(MonrData+80);
-  MONRData->StatusU8 = *(MonrData+81);
-
-
+  MONRData->DriveDirectionU8 = *(MonrData+37);
+  MONRData->StateU8 = *(MonrData+38);
+  MONRData->ReadyToArmU8 = *(MonrData+39);
+  MONRData->ErrorStatusU8 = *(MonrData+40);
 
   if(debug)
   {
@@ -1073,7 +1010,6 @@ int ObjectControlBuildMONRMessage(unsigned char *MonrData, MONRType *MONRData, c
     printf("PackageCounter = %d\n", MONRData->Header.MessageCounterU8);
     printf("AckReq = %d\n", MONRData->Header.AckReqProtVerU8);
     printf("MessageLength = %d\n", MONRData->Header.MessageLengthU32);
-    printf("NOFValues = %d\n", MONRData->NOFValuesU32);
   } 
 
   return 0;
@@ -1113,36 +1049,38 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
   bzero(StateFlag, SMALL_BUFFER_SIZE_1);
 
 
-	if(MONRData->MessageIdU16 == COMMAND_MONR_CODE)
+	if(MONRData->Header.MessageIdU16 == COMMAND_MONR_CODE)
 	{
 		//Index
-		sprintf(Id, "%" PRIu8, (unsigned char)Idn);
+		sprintf(Id, "%" PRIu8, (C8)Idn);
 
 		//Timestamp
 		MonrValueU64 = 0;
 		j=5;
 		//for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
-		sprintf(Timestamp, "%" PRIu64, MONRData->PositionTimeU64);
+		sprintf(Timestamp, "%" PRIu32, MONRData->GPSSOWU32);
 
-		if(debug && MONRData->PositionTimeU64%400 == 0)
+		if(debug && MONRData->GPSSOWU32%400 == 0)
 		{
   		//for(i = 0; i < 29; i ++) printf("%x-", (unsigned char)*(MONRData+i));
   		//printf("\n");
 
-      printf("%x-", MONRData->MessageIdU16);
+      printf("%x-", MONRData->Header.MessageIdU16);
       printf("%x-", MONRData->Header.SyncWordU16);
       printf("%x-", MONRData->Header.TransmitterIdU8);
       printf("%x-", MONRData->Header.MessageCounterU8);
       printf("%x-", MONRData->Header.AckReqProtVerU8);
       printf("%x-", MONRData->Header.MessageLengthU32);
-      printf("%x-", MONRData->NOFValuesU32);
-      printf("%ld-", MONRData->PositionTimeU64);
+      printf("%d-", MONRData->GPSSOWU32);
       printf("%d-", MONRData->XPositionI32);
       printf("%d-", MONRData->YPositionI32);
       printf("%d-", MONRData->ZPositionI32);
       printf("%d-", MONRData->LongitudinalSpeedI16);
       printf("%d-", MONRData->HeadingU16);
       printf("%d-", MONRData->DriveDirectionU8);
+      printf("%d-", MONRData->StateU8);
+      printf("%d-", MONRData->ReadyToArmU8);
+      printf("%d-", MONRData->ErrorStatusU8);
       printf("\n");
 		}
 
@@ -1150,9 +1088,9 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
     iLlh[1] = OriginPosition->Longitude;
     iLlh[2] = OriginPosition->Altitude;
 
-    xyz[0] = ((double)MONRData->XPositionI32)/1000;
-    xyz[1] = ((double)MONRData->YPositionI32)/1000;
-    xyz[2] = ((double)MONRData->ZPositionI32)/1000;
+    xyz[0] = ((dbl)MONRData->XPositionI32)/1000;
+    xyz[1] = ((dbl)MONRData->YPositionI32)/1000;
+    xyz[2] = ((dbl)MONRData->ZPositionI32)/1000;
 
     enuToLlh(iLlh, xyz, Llh);
 
@@ -1194,7 +1132,7 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
 		//Heading
 		MonrValueU16 = 0;
 		//for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
-        sprintf(Heading, "%" PRIu16, MONRData->HeadingU16);
+    sprintf(Heading, "%" PRIu16, MONRData->HeadingU16);
 
 		//Driving direction
 		//MonrValueU8 = (unsigned char)*(MonrData+j);
@@ -1202,13 +1140,18 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
 		j++;
 		sprintf(DriveDirection, "%" PRIu8, MONRData->DriveDirectionU8);
 
-		//Status flag
+		//State
 		//MonrValueU8 = (unsigned char)*(MonrData+j);
-		sprintf(StatusFlag, "%" PRIu8, MONRData->StatusU8);
+		sprintf(StatusFlag, "%" PRIu8, MONRData->StateU8);
   
-    //State flag
+    //ReadyToArmU8
     //MonrValueU8 = (unsigned char)*(MonrData+j);
-    sprintf(StateFlag, "%" PRIu8, MONRData->StateU8);
+    sprintf(StateFlag, "%" PRIu8, MONRData->ReadyToArmU8);
+
+    //ErrorStatusU8
+    //MonrValueU8 = (unsigned char)*(MonrData+j);
+    sprintf(StateFlag, "%" PRIu8, MONRData->ErrorStatusU8);
+
 	}
 
   return 0;
@@ -1294,12 +1237,12 @@ int ObjectControlSendDOPMMEssage(char* Filename, int *Socket, int RowCount, char
 }
 
 
-int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, char *Latitude, char *Longitude, char *Altitude, char *Heading, char debug)
+I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug)
 {
-  int MessageIndex = 0, i = 0;
-  double Data;
+  I32 MessageIndex = 0, i = 0;
+  dbl Data;
   U16 Crc = 0;
-  char *p;
+  C8 *p;
   
   bzero(MessageBuffer, COMMAND_OSEM_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH);
 
@@ -1307,6 +1250,7 @@ int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, TimeT
   OSEMData->Header.TransmitterIdU8 = 0;
   OSEMData->Header.MessageCounterU8 = 0;
   OSEMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
+  OSEMData->Header.MessageIdU16 = COMMAND_OSEM_CODE;
   OSEMData->Header.MessageLengthU32 = sizeof(OSEMType) - sizeof(HeaderType) - 4;
   OSEMData->LatitudeValueIdU16 = VALUE_ID_LATITUDE;
   OSEMData->LatitudeI64 = (I64) ((atof((char *)Latitude) * 1e10));
@@ -1318,18 +1262,29 @@ int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, TimeT
   OSEMData->DateU32 = GPSTime->YearU16;
   OSEMData->DateU32 = (OSEMData->DateU32 << 8) | GPSTime->MonthU8;
   OSEMData->DateU32 = (OSEMData->DateU32 << 8) | GPSTime->DayU8;
- 
-  p=(char *)OSEMData;
+  OSEMData->GPSWeekValueIdU16 = VALUE_ID_GPS_WEEK;
+  OSEMData->GPSWeekU16 = GPSTime->GPSWeekU16;
+  OSEMData->GPSSOWValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
+  OSEMData->GPSSOWU32 = GPSTime->GPSSecondsOfWeekU32 << 2 + GPSTime->MicroSecondU16;
+  OSEMData->MaxWayDeviationValueIdU16 = VALUE_ID_MAX_WAY_DEVIATION;
+  OSEMData->MaxWayDeviationU16 = 65535;
+  OSEMData->MaxLateralDeviationValueIdU16 = VALUE_ID_MAX_LATERAL_DEVIATION;
+  OSEMData->MaxLateralDeviationU16 = 65535;
+  OSEMData->MinPosAccuracyValueIdU16 = VALUE_ID_MIN_POS_ACCURACY;
+  OSEMData->MinPosAccuracyU16 = 65535;
+
+  p=(C8 *)OSEMData;
   for(i=0; i<17; i++) *(MessageBuffer + i) = *p++;
   *p++; *p++;
   for(; i<23; i++) *(MessageBuffer + i) = *p++;
   *p++; *p++;
   for(; i<sizeof(OSEMType)-4; i++) *(MessageBuffer + i) = *p++;
 
-  Crc = crc_16((const unsigned char *)MessageBuffer, sizeof(OSEMType)-4);
+  Crc = crc_16((const C8*)MessageBuffer, sizeof(OSEMType)-4);
   Crc = 0;
-  *(MessageBuffer + i++) = (U8)(Crc >> 8);
   *(MessageBuffer + i++) = (U8)(Crc);
+  *(MessageBuffer + i++) = (U8)(Crc >> 8);
+
   MessageIndex = i;
    
   if(debug)
@@ -1347,74 +1302,69 @@ int ObjectControlBuildOSEMMessage(char* MessageBuffer, OSEMType *OSEMData, TimeT
 }
 
 
-int ObjectControlBuildSTRTMessage(char* MessageBuffer, STRTType *STRTData, unsigned char CommandOption, unsigned long TimeStamp, char debug)
+int ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U8 debug)
 {
-  int MessageIndex = 0, i = 0;
+  I32 MessageIndex = 0, i = 0;
   U16 Crc = 0;
-  char *p;
+  C8 *p;
   
   bzero(MessageBuffer, COMMAND_STRT_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH);
 
-  STRTData->Header.SyncWordU16 = (U16)(SYNC_WORD << 8 | SYNC_WORD >> 8);
+  STRTData->Header.SyncWordU16 = SYNC_WORD;
   STRTData->Header.TransmitterIdU8 = 0;
   STRTData->Header.MessageCounterU8 = 0;
   STRTData->Header.AckReqProtVerU8 = 0;
-  STRTData->Header.MessageLengthU32 = sizeof(STRTType) - 2  - sizeof(HeaderType);
-  STRTData->Header.MessageLengthU32 = ((STRTData->Header.MessageLengthU32 << 24)&0xFF000000 | (STRTData->Header.MessageLengthU32 << 8)&0x00FF0000 | (STRTData->Header.MessageLengthU32 >> 8)&0x0000FF00 | (STRTData->Header.MessageLengthU32 >> 24)&0x000000FF);
-  STRTData->MessageIdU16 = (COMMAND_STRT_CODE << 8 | COMMAND_STRT_CODE >> 8);
-  STRTData->NOFValuesU32 = ((COMMAND_STRT_NOFV << 24)&0xFF000000 | (COMMAND_STRT_NOFV << 8)&0x00FF0000 | (COMMAND_STRT_NOFV >> 8)&0x0000FF00 | (COMMAND_STRT_NOFV >> 24)&0x000000FF);
-  STRTData->StartTimeValueIdU16 = (VALUE_ID_GPS_SECOND_OF_WEEK << 8 | VALUE_ID_GPS_SECOND_OF_WEEK >> 8);
-  STRTData->StartTimeValueTypeU8 = U48_CODE;
-  STRTData->StartTimeU64 = TimeStamp;
-  STRTData->StartTimeU64 = ((STRTData->StartTimeU64 << 40)&0xFF0000000000 | (STRTData->StartTimeU64 << 24)&0x00FF00000000 | (STRTData->StartTimeU64 << 8)&0x0000FF000000 |
-                            (STRTData->StartTimeU64 >> 8)&0x000000FF0000 | (STRTData->StartTimeU64 >> 24)&0x00000000FF00 | (STRTData->StartTimeU64 >> 40)&0x0000000000FF);
-  
+  STRTData->Header.MessageIdU16 = COMMAND_STRT_CODE;
+  STRTData->Header.MessageLengthU32 = sizeof(STRTType) - sizeof(HeaderType);
+  STRTData->StartTimeValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
+  STRTData->StartTimeU32 = GPSTime->GPSSecondsOfWeekU32 + ScenarioStartTime;
+  STRTData->DelayStartValueIdU16 = VALUE_ID_DELAYED_START;
+  STRTData->DelayStartU32 = DelayStart;
+
   p=(char *)STRTData;
-  for(i=0; i<sizeof(STRTType) - 2; i++) *(MessageBuffer + i) = *p++;
-  Crc = crc_16((const unsigned char *)MessageBuffer, sizeof(STRTType) - 2);
+  for(i=0; i<sizeof(STRTType); i++) *(MessageBuffer + i) = *p++;
+  Crc = crc_16((const unsigned char *)MessageBuffer, sizeof(STRTType));
   Crc = 0;
-  *(MessageBuffer + i++) = (U8)(Crc >> 8);
   *(MessageBuffer + i++) = (U8)(Crc);
+  *(MessageBuffer + i++) = (U8)(Crc >> 8);
   MessageIndex = i;
    
   if(debug)
   {
     printf("STRT total length = %d bytes (header+message+footer)\n", (int)(COMMAND_STRT_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
     printf("----HEADER----\n");
-    for(i = 0;i < sizeof(HeaderType); i ++) printf("[%d]=%x\n", i, (unsigned char)MessageBuffer[i]);
-    printf("----MESSAGE----\n");
-    for(;i < sizeof(STRTType) - 2; i ++) printf("[%d]=%x\n", i, (unsigned char)MessageBuffer[i]);
-    printf("----FOOTER----\n");
-    for(;i < MessageIndex; i ++) printf("[%d]=%x\n", i, (unsigned char)MessageBuffer[i]);
+    for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+    printf("\n----MESSAGE----\n");
+    for(;i < sizeof(STRTType) - 2; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+    printf("\n----FOOTER----\n");
+    for(;i < MessageIndex; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+    printf("\n");
   }
   
   return MessageIndex; //Total number of bytes 
 }
 
 
-int ObjectControlBuildOSTMMessage(char* MessageBuffer, OSTMType *OSTMData, unsigned char CommandOption, char debug)
+I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug)
 {
-  int MessageIndex = 0, i;
+  I32 MessageIndex = 0, i;
   U16 Crc = 0;
-  char *p;
+  C8 *p;
   
   bzero(MessageBuffer, COMMAND_OSTM_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH);
 
-  OSTMData->Header.SyncWordU16 = (U16)(SYNC_WORD << 8 | SYNC_WORD >> 8);
+  OSTMData->Header.SyncWordU16 = SYNC_WORD;
   OSTMData->Header.TransmitterIdU8 = 0;
   OSTMData->Header.MessageCounterU8 = 0;
   OSTMData->Header.AckReqProtVerU8 = 0;
+  OSTMData->Header.MessageIdU16 = COMMAND_OSTM_CODE;
   OSTMData->Header.MessageLengthU32 = sizeof(OSTMType) - sizeof(HeaderType);
-  OSTMData->Header.MessageLengthU32 = ((OSTMData->Header.MessageLengthU32 << 24)&0xFF000000 | (OSTMData->Header.MessageLengthU32 << 8)&0x00FF0000 | (OSTMData->Header.MessageLengthU32 >> 8)&0x0000FF00 | (OSTMData->Header.MessageLengthU32 >> 24)&0x000000FF);
-  OSTMData->MessageIdU16 = (COMMAND_OSTM_CODE << 8 | COMMAND_OSTM_CODE >> 8);
-  OSTMData->NOFValuesU32 = ((COMMAND_OSTM_NOFV << 24)&0xFF000000 | (COMMAND_OSTM_NOFV << 8)&0x00FF0000 | (COMMAND_OSTM_NOFV >> 8)&0x0000FF00 | (COMMAND_OSTM_NOFV >> 24)&0x000000FF);
-  OSTMData->StateValueIdU16 = (VALUE_ID_FLAG << 8 | VALUE_ID_FLAG >> 8);
-  OSTMData->StateValueTypeU8 = U8_CODE;
+  OSTMData->StateValueIdU16 = VALUE_ID_STATE_CHANGE_REQUEST;
   OSTMData->StateU8 = (U8)CommandOption;
   
-  p=(char *)OSTMData;
+  p=(C8 *)OSTMData;
   for(i=0; i<sizeof(OSTMType); i++) *(MessageBuffer + i) = *p++;
-  Crc = crc_16((const unsigned char *)MessageBuffer, sizeof(OSTMType));
+  Crc = crc_16((const C8 *)MessageBuffer, sizeof(OSTMType));
   Crc = 0;
   *(MessageBuffer + i++) = (U8)(Crc >> 8);
   *(MessageBuffer + i++) = (U8)(Crc);
@@ -1424,63 +1374,57 @@ int ObjectControlBuildOSTMMessage(char* MessageBuffer, OSTMType *OSTMData, unsig
   {
     printf("OSTM total length = %d bytes (header+message+footer)\n", (int)(COMMAND_OSTM_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
     printf("----HEADER----\n");
-    for(i = 0;i < sizeof(HeaderType); i ++) printf("[%d]=%d\n", i, (unsigned char)MessageBuffer[i]);
-    printf("----MESSAGE----\n");
-    for(;i < sizeof(OSTMType); i ++) printf("[%d]=%d\n", i, (unsigned char)MessageBuffer[i]);
-    printf("----FOOTER----\n");
-    for(;i < MessageIndex; i ++) printf("[%d]=%d\n", i, (unsigned char)MessageBuffer[i]);
+    for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+    printf("\n----MESSAGE----\n");
+    for(;i < sizeof(OSTMType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+    printf("\n----FOOTER----\n");
+    for(;i < MessageIndex; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+    printf("\n");
   }
 
   return MessageIndex; //Total number of bytes 
 }
 
 
-int ObjectControlBuildHEABMessage(char* MessageBuffer, HEABType *HEABData, unsigned long TimeStamp, unsigned char CommandOption, char debug)
+I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 debug)
 {
-  int MessageIndex = 0, i;
+  I32 MessageIndex = 0, i;
   U16 Crc = 0;
-  char *p;
+  C8 *p;
   
   bzero(MessageBuffer, COMMAND_HEAB_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH);
 
-  HEABData->Header.SyncWordU16 = (U16)(SYNC_WORD << 8 | SYNC_WORD >> 8);
+  HEABData->Header.SyncWordU16 = SYNC_WORD;
   HEABData->Header.TransmitterIdU8 = 0;
   HEABData->Header.MessageCounterU8 = 0;
-  HEABData->Header.AckReqProtVerU8 = 0;
-  HEABData->Header.MessageLengthU32 = sizeof(HEABType) - 2 - sizeof(HeaderType);
-  HEABData->Header.MessageLengthU32 = ((HEABData->Header.MessageLengthU32 << 24)&0xFF000000 | (HEABData->Header.MessageLengthU32 << 8)&0x00FF0000 | (HEABData->Header.MessageLengthU32 >> 8)&0x0000FF00 | (HEABData->Header.MessageLengthU32 >> 24)&0x000000FF);
-  HEABData->MessageIdU16 = (COMMAND_HEAB_CODE << 8 | COMMAND_HEAB_CODE >> 8);
-  HEABData->NOFValuesU32 = ((COMMAND_HEAB_NOFV << 24)&0xFF000000 | (COMMAND_HEAB_NOFV << 8)&0x00FF0000 | (COMMAND_HEAB_NOFV >> 8)&0x0000FF00 | (COMMAND_HEAB_NOFV >> 24)&0x000000FF);
-  HEABData->TimeValueIdU16 = (VALUE_ID_GPS_SECOND_OF_WEEK << 8 | VALUE_ID_GPS_SECOND_OF_WEEK >> 8);
-  HEABData->TimeValueTypeU8 = U48_CODE;
-  HEABData->TimeU64 = TimeStamp;
-  HEABData->TimeU64 = ((HEABData->TimeU64 << 40)&0xFF0000000000 | (HEABData->TimeU64 << 24)&0x00FF00000000 | (HEABData->TimeU64 << 8)&0x0000FF000000 |
-                       (HEABData->TimeU64 >> 8)&0x000000FF0000 | (HEABData->TimeU64 >> 24)&0x00000000FF00 | (HEABData->TimeU64 >> 40)&0x0000000000FF);
-  HEABData->StatusValueIdU16 = (VALUE_ID_FLAG << 8 | VALUE_ID_FLAG >> 8);
-  HEABData->StatusValueTypeU8 = U8_CODE;
-  HEABData->StatusU8 = (U8)CommandOption;
+  HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
+  HEABData->Header.MessageIdU16 = COMMAND_HEAB_CODE;
+  HEABData->Header.MessageLengthU32 = sizeof(HEABType) - sizeof(HeaderType);
+  HEABData->GPSSOWU32 = GPSTime->GPSSecondsOfWeekU32 << 2 + GPSTime->MicroSecondU16;;
+  HEABData->CCStatusU8 = CCStatus;
   
-  p=(char *)HEABData;
-  for(i=0; i<sizeof(HEABType)-6; i++) *(MessageBuffer + i) = *p++;
-  *(MessageBuffer + i++) = (U8)(HEABData->StatusValueIdU16);
-  *(MessageBuffer + i++) = (U8)(HEABData->StatusValueIdU16 >> 8);
-  *(MessageBuffer + i++) = HEABData->StatusValueTypeU8;
-  *(MessageBuffer + i++) = HEABData->StatusU8;
-  Crc = crc_16((const unsigned char *)MessageBuffer, sizeof(HEABType)-2);
+  p=(C8 *)HEABData;
+  for(i=0; i<sizeof(HEABType)/*-6*/; i++) *(MessageBuffer + i) = *p++;
+  //*(MessageBuffer + i++) = (U8)(HEABData->StatusValueIdU16);
+  //*(MessageBuffer + i++) = (U8)(HEABData->StatusValueIdU16 >> 8);
+  //*(MessageBuffer + i++) = HEABData->StatusValueTypeU8;
+  //*(MessageBuffer + i++) = HEABData->StatusU8;
+  Crc = crc_16((const C8*)MessageBuffer, sizeof(HEABType));
   Crc = 0;
-  *(MessageBuffer + i++) = (U8)(Crc >> 8);
   *(MessageBuffer + i++) = (U8)(Crc);
+  *(MessageBuffer + i++) = (U8)(Crc >> 8);
   MessageIndex = i;
    
   if(debug)
   {
     printf("HEAB total length = %d bytes (header+message+footer)\n", (int)(COMMAND_HEAB_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
     printf("----HEADER----\n");
-    for(i = 0;i < sizeof(HeaderType); i ++) printf("[%d]=%d\n", i, (unsigned char)MessageBuffer[i]);
-    printf("----MESSAGE----\n");
-    for(;i < sizeof(HEABType)-2; i ++) printf("[%d]=%d\n", i, (unsigned char)MessageBuffer[i]);
-    printf("----FOOTER----\n");
-    for(;i < MessageIndex; i ++) printf("[%d]=%d\n", i, (unsigned char)MessageBuffer[i]);
+    for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+    printf("\n----MESSAGE----\n");
+    for(;i < sizeof(HEABType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+    printf("\n----FOOTER----\n");
+    for(;i < MessageIndex; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+    printf("\n");
   }
   
   return MessageIndex; //Total number of bytes 

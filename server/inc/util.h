@@ -147,7 +147,7 @@
 #define RESERVED_CODE  255
 
 #define VALUE_ID_NOT_DEF                    0
-#define VALUE_ID_RELATIVE_TIME              1
+#define VALUE_ID_DELAYED_START              1
 #define VALUE_ID_GPS_SECOND_OF_WEEK         2
 #define VALUE_ID_GPS_WEEK                   3
 #define VALUE_ID_DATE_ISO8601               4
@@ -162,7 +162,7 @@
 #define VALUE_ID_LATERAL_SPEED              41
 #define VALUE_ID_LONGITUDINAL_ACCELERATION  50
 #define VALUE_ID_LATERAL_ACCELERATION       51
-#define VALUE_ID_FLAG                       60
+#define VALUE_ID_STATE_CHANGE_REQUEST       64
 #define VALUE_ID_MAX_WAY_DEVIATION          70
 #define VALUE_ID_MAX_LATERAL_DEVIATION      72
 #define VALUE_ID_MIN_POS_ACCURACY           74 
@@ -177,8 +177,8 @@
 #define I32 int32_t
 #define U64 uint64_t
 #define I64 int64_t
-#define DBL double
-#define FLT float
+#define dbl double
+#define flt float
 
 #pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
 
@@ -235,78 +235,43 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  U16 MessageIdU16;
-  U32 NOFValuesU32;
   U16 StartTimeValueIdU16;
-  U8 StartTimeValueTypeU8;
-  U64 StartTimeU64;
-} STRTType; //26 bytes
+  U32 StartTimeU32;
+  U16 DelayStartValueIdU16;
+  U32 DelayStartU32;
+} STRTType; //23 bytes
 
 typedef struct
 {
   HeaderType Header;
-  U16 MessageIdU16;
-  U32 NOFValuesU32;
   U16 StateValueIdU16;
-  U8 StateValueTypeU8;
   U8 StateU8;
-} OSTMType; //19 bytes
+} OSTMType; //14 bytes
 
 typedef struct
 {
   HeaderType Header;
-  U16 MessageIdU16;
-  U32 NOFValuesU32;
-  U16 TimeValueIdU16;
-  U8 TimeValueTypeU8;
-  U64 TimeU64;
-  U16 StatusValueIdU16;
-  U8 StatusValueTypeU8;
-  U8 StatusU8;
-} HEABType; //30 bytes
+  U32 GPSSOWU32;
+  U8 CCStatusU8;
+} HEABType; //16 bytes
 
 typedef struct
 {
   HeaderType Header;
-  U16 MessageIdU16;
-  U32 NOFValuesU32;
-  U16 PositionTimeValueIdU16;
-  U8 PositionTimeValueTypeU8;
-  U64 PositionTimeU64;
-  U16 XPositionValueIdU16;
-  U8 XPositionValueTypeU8;
+  U32 GPSSOWU32;
   I32 XPositionI32;
-  U16 YPositionValueIdU16;
-  U8 YPositionValueTypeU8;
   I32 YPositionI32;
-  U16 ZPositionValueIdU16;
-  U8 ZPositionValueTypeU8;
   I32 ZPositionI32;
-  U16 HeadingValueIdU16;
-  U8 HeadingValueTypeU8;
   U16 HeadingU16;
-  U16 LongitudinalSpeedValueIdU16;
-  U8 LongitudinalSpeedValueTypeU8;
   I16 LongitudinalSpeedI16;
-  U16 LateralSpeedValueIdU16;
-  U8 LateralSpeedValueTypeU8;
   I16 LateralSpeedI16;
-  U16 LongitudinalAccValueIdU16;
-  U8 LongitudinalAccValueTypeU8;
   I16 LongitudinalAccI16;
-  U16 LateralAccValueIdU16;
-  U8 LateralAccValueTypeU8;
   I16 LateralAccI16;
-  U16 DriveDirectionValueIdU16;
-  U8 DriveDirectionValueTypeU8;
   U8 DriveDirectionU8;
-  U16 StateValueIdU16;
-  U8 StateValueTypeU8;
   U8 StateU8;
-  U16 StatusValueIdU16;
-  U8 StatusValueTypeU8;
-  U8 StatusU8;
-} MONRType;
+  U8 ReadyToArmU8;
+  U8 ErrorStatusU8;
+} MONRType; //41 bytes
 
 
 typedef struct
@@ -319,6 +284,7 @@ typedef struct
   U8 MinuteU8;
   U8 SecondU8;
   U16 MillisecondU16;
+  U16 MicroSecondU16;
   U32 SecondCounterU32;
   U64 GPSMillisecondsU64;
   U32 GPSMinutesU32;

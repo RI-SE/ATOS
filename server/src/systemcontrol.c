@@ -148,7 +148,8 @@ void systemcontrol_task(TimeType *GPSTime)
 	char TriggId[SMALL_BUFFER_SIZE_6];
 	char TriggAction[SMALL_BUFFER_SIZE_6];
 	char TriggDelay[SMALL_BUFFER_SIZE_20];
-	uint64_t uiTime;
+	U64 uiTime;
+	U32 DelayedStartU32;
 	U8 ModeU8 = 0;
 	C8 TextBufferC8[SMALL_BUFFER_SIZE_20];
 	C8 ServerIPC8[SMALL_BUFFER_SIZE_20];
@@ -549,11 +550,13 @@ void systemcontrol_task(TimeType *GPSTime)
 						//clock_gettime(CLOCK_REALTIME, &tTime);
 						//uiTime = (uint64_t)tTime.tv_sec*1000 + (uint64_t)tTime.tv_nsec/1000000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
 						//printf("[SystemControl] Current timestamp (cgt): %lu\n",uiTime );
-
 						//printf("[SystemControl] Current timestamp: %lu\n",uiTime );
-						uiTime += atoi(SystemControlArgument[0]);
-						sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";",0,uiTime);
-						printf("[SystemControl] Sending START <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[0]);
+						
+						//uiTime += atoi(SystemControlArgument[0]);
+						uiTime = atoi(SystemControlArgument[0]);
+						DelayedStartU32 = atoi(SystemControlArgument[1]); 
+						sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";%" PRIu32 ";", 0, uiTime, DelayedStartU32);
+						printf("[SystemControl] Sending START <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[1]);
 						fflush(stdout);
 						
 						(void)iCommSend(COMM_STRT,pcBuffer);
