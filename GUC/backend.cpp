@@ -174,6 +174,10 @@ void BackEnd::handleDebugMessage(const QString &msg)
     emit newDebugMessage( datetime_string + msg );
 }
 
+void BackEnd::handleRecDataDebugMessage(const QString &msg)
+{
+    handleDebugMessage("[TCP_REC]"+msg);
+}
 
 //****************************************
 // SLOTS
@@ -203,19 +207,42 @@ void BackEnd::handleReceivedData(const QByteArray &data)
 
     MSCP::response_header header;
     QByteArray command_data;
-    if (!MSCP::readServerResponseHeader(data,header,command_data))
-    {
-        handleDebugMessage("Invalid message header.");
-        //handleDebugMessage("DATA: " + QString(data));
+
+    qint8 HEADER_ERROR_CODE = MSCP::readServerResponseHeader(data,header,command_data);
+
+    switch (HEADER_ERROR_CODE) {
+    case MSCP::HEADER_OK:
+
+        if (!isExpectedResponse(header.msg_id))
+        {
+            handleDebugMessage("Received unexpected response. ID:" + QString::number(header.msg_id));
+            return;
+        }
+        //handleDebugMessage("Command received: " + QString(header.command_text));
+        break;
+
+    case MSCP::HEADER_LENGTH_ERROR:
+        handleDebugMessage("Invalid header format: Length too short.");
+        return;
+    case MSCP::HEADER_MSG_LENGTH_ERROR:
+        handleDebugMessage("Packet length error: Length too short.");
+        return;
+    case MSCP::HEADER_COMMAND_NOT_FOUND:
+        handleDebugMessage("Packet contains no command.");
+        handleDebugMessage("REC_DATA: " + QString(command_data));
+        return;
+    case MSCP::HEADER_INVALID_MSG_ID:
+        // Most likely log data from server
+        handleDebugMessage("Unrecognized command.");
+        handleDebugMessage("REC_DATA: " + QString(command_data));
+        return;
+    default:
+
         return;
     }
 
-    if (!isExpectedResponse(header.msg_id))
-    {
-        handleDebugMessage("Received unexpected response. ID:" + QString::number(header.msg_id));
-        //handleDebugMessage("DATA: " + QString(data));
-        return;
-    }
+
+
 
     switch (header.msg_id) {
     case MSCP::SERVER_STATUS:
@@ -224,39 +251,27 @@ void BackEnd::handleReceivedData(const QByteArray &data)
 
         setSysCtrlStatus(status.system_ctrl);
         setObjCtrlStatus(status.object_ctrl);
-        //handleDebugMessage("Response Code :" + QString::number(header.code) +". Server status read. Sys=" + QString::number(status.system_ctrl) + " Obj=" +QString::number(status.object_ctrl));
-        /*
-        if (MSCP::readGetStatusMsg(data,response_code,status))
-        {
-            setSysCtrlStatus(status.system_ctrl);
-            setObjCtrlStatus(status.object_ctrl);
-            handleDebugMessage("Response Code :" + QString::number(response_code) +". Server status read. Sys=" + QString::number(status.system_ctrl) + " Obj=" +QString::number(status.object_ctrl));
-        }
-        else
-        {
-            handleDebugMessage("Failed to read message.");
-        }
-        */
+
         break;
     case MSCP::INIT_SCENARIO:
         //sendGetStatus();
-        handleDebugMessage("Init Scenario response received");
-        sendConnectObject();
+        handleDebugMessage("INIT SCENARIO");
+        //sendConnectObject();
         break;
     case MSCP::CONNECT_OBJ:
-        handleDebugMessage("Connect Scenario response received");
+        handleDebugMessage("CONNECT");
         //sendGetStatus();
         break;
     case MSCP::ARM:
-        handleDebugMessage("ARM response received");
+        handleDebugMessage("ARM");
         //sendGetStatus();
         break;
     case MSCP::START:
-        handleDebugMessage("START response received");
+        handleDebugMessage("START");
         //sendGetStatus();
         break;
     case MSCP::ABORT:
-        handleDebugMessage("ABORT response received");
+        handleDebugMessage("ABORT");
         //sendGetStatus();
     default:
         handleDebugMessage("Unknown response id.");

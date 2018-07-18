@@ -15,49 +15,69 @@ qint8 mapMSCPCommand(QByteArray &textBuffer)
     else if (QString::compare(command,START_CMD_STR) == 0) return START;
     else if (QString::compare(command,ABORT_CMD_STR) == 0) return ABORT;
     else {
-        qDebug() << "COMMAND: " << command;
         return -1;
     }
 
 }
 
-bool readServerResponseHeader(const QByteArray &data, response_header &header ,QByteArray &tail)
+int readServerResponseHeader(const QByteArray &data, response_header &header ,QByteArray &tail)
 {
 
     int header_length = RESPONSE_LENGTH_BYTES + RESPONSE_CODE_BYTES;
+    int tail_length = 0;
     int array_size = data.size();
-    if (array_size < header_length) return false;
-
     QDataStream stream(data);
+    qint8 ASCII_data = 0;
+    QByteArray command;
+    bool command_found = false;
+    int return_data = HEADER_OK;
+
+    if (array_size < header_length) return HEADER_LENGTH_ERROR; // Change the name of the error signal
+
+    std::fill_n(header.command_text,RESPONSE_COMMAND_TEXT_BYTES,'\0');
     stream >> header.msg_length;
     stream >> header.code;
 
-    qint8 letter;
-
-    QByteArray command;
-    bool command_found = false;
+    // Check if the length is correct
+    if (array_size - header_length < header_length) return HEADER_MSG_LENGTH_ERROR;
 
     while(!stream.atEnd())
     {
-        stream >> letter;
-        if ((char)letter == ':')
+        stream >> ASCII_data;
+        if ((char)ASCII_data == ':')
         {
             command_found = true;
             break;
         }
-        command.push_back(letter);
+        command.push_back(ASCII_data);
     }
 
-    if (!command_found) return false;
-
-    // Find the command code
-    header.msg_id = mapMSCPCommand(command);
+    if (command_found){
+        // Read the command name
+        if (command.size() <= RESPONSE_COMMAND_TEXT_BYTES)
+        {
+            strcpy(header.command_text,command.data());
+        }
+        // Find the command code
+        if ((header.msg_id = mapMSCPCommand(command)) < 0)
+        {
+            tail_length = array_size - header_length;
+            return_data = HEADER_INVALID_MSG_ID;
+        }
+        else {
+            tail_length = array_size - (header_length + command.size() + 1); // +1 for the colon
+            return_data = HEADER_OK;
+        }
+    }
+    else{
+        tail_length = array_size - header_length;
+        return_data = HEADER_COMMAND_NOT_FOUND;
+    }
 
     // Create the tail with data
-    int tail_length = array_size - (header_length + command.size() + 1); // +1 for the colon
     tail = data.mid(array_size-tail_length,tail_length);
 
-    return true;
+    return return_data;
 }
 /*
 bool readGetStatusMsg(const QByteArray &bytearray,qint16 &responsecode, server_status &status)

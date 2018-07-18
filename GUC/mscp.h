@@ -27,6 +27,7 @@
 
 #define RESPONSE_LENGTH_BYTES 4
 #define RESPONSE_CODE_BYTES 2
+#define RESPONSE_COMMAND_TEXT_BYTES 100
 
 namespace MSCP {
 
@@ -35,6 +36,7 @@ namespace MSCP {
         quint32 msg_length;
         qint16 code;
         qint8 msg_id;
+        char command_text[RESPONSE_COMMAND_TEXT_BYTES];
     }response_header;
 
     typedef struct
@@ -54,9 +56,18 @@ namespace MSCP {
         ABORT
     };
 
+    enum HEADER_ERROR_CODE
+    {
+        HEADER_OK = 0,
+        HEADER_LENGTH_ERROR,
+        HEADER_COMMAND_NOT_FOUND,
+        HEADER_INVALID_MSG_ID,
+        HEADER_MSG_LENGTH_ERROR
+    };
+
     qint8 mapMSCPCommand(QByteArray &textBuffer);
 
-    bool readServerResponseHeader(const QByteArray &data, response_header &header ,QByteArray &tail);
+    int readServerResponseHeader(const QByteArray &data, response_header &header ,QByteArray &tail);
 
     //bool readGetStatusMsg(const QByteArray &bytearray,qint16 &responsecode, server_status &status);
 

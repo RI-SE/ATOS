@@ -38,6 +38,7 @@ public:
     }
 
 
+
 signals:
     void debugComMsg(const QString &msg);
     void connectionChanged(const int &isConnected);

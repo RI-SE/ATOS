@@ -64,6 +64,7 @@ public:
     void setObjCtrlStatus(int status);
 
     void handleDebugMessage(const QString &msg);
+    void handleRecDataDebugMessage(const QString &msg);
 signals:
     void hostNameChanged();
     void connectionTextChanged();

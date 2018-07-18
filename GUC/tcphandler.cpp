@@ -83,6 +83,9 @@ int TCPhandler::getConnectionState()
     return mTcpSocket->state();
 }
 
+
+
+
 // PRIVATE SLOTS
 void TCPhandler::connectionEstablished()
 {

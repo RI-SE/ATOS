@@ -41,11 +41,11 @@ Item {
         spacing: 20
         OperatingView {
             id: view1
-            width: (root.width - row.spacing) /2
+            width: (root.width - row.spacing) / 2
             height: root.height
             onInitClicked: root.initClicked()
             onArmClicked: root.armClicked()
-            //onConnectClicked: root.connectClicked()
+            onConnectClicked: root.connectClicked()
             onStartClicked: root.startClicked()
             onAbortClicked: root.abortClicked()
             onDisconnectClicked: root.disconnectClicked()
