@@ -57,7 +57,6 @@ int simulatorcontrol_task(TimeType *GPSTime)
 
     bzero(MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
     (void)iCommRecv(&iCommand,MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
-    GPSTime->SecondU8;
 
     if(iCommand == COMM_EXIT)
     {

@@ -147,7 +147,7 @@
 #define RESERVED_CODE  255
 
 #define VALUE_ID_NOT_DEF                    0
-#define VALUE_ID_DELAYED_START              1
+#define VALUE_ID_RELATIVE_TIME              1
 #define VALUE_ID_GPS_SECOND_OF_WEEK         2
 #define VALUE_ID_GPS_WEEK                   3
 #define VALUE_ID_DATE_ISO8601               4
@@ -165,7 +165,8 @@
 #define VALUE_ID_STATE_CHANGE_REQUEST       64
 #define VALUE_ID_MAX_WAY_DEVIATION          70
 #define VALUE_ID_MAX_LATERAL_DEVIATION      72
-#define VALUE_ID_MIN_POS_ACCURACY           74 
+#define VALUE_ID_MIN_POS_ACCURACY           74
+#define VALUE_ID_CURVATURE                  0xA000
 
 
 #define C8 uint8_t
@@ -272,6 +273,31 @@ typedef struct
   U8 ReadyToArmU8;
   U8 ErrorStatusU8;
 } MONRType; //41 bytes
+
+
+typedef struct
+{
+  U16 RelativeTimeValueIdU16;
+  U32 RelativeTimeU32;
+  U16 XPositionValueIdU16;
+  I32 XPositionI32;
+  U16 YPositionValueIdU16;
+  I32 YPositionI32;
+  U16 ZPositionValueIdU16;
+  I32 ZPositionI32;
+  U16 HeadingValueIdU16;
+  U16 HeadingU16;
+  U16 LongitudinalSpeedValueIdU16;
+  I16 LongitudinalSpeedI16;
+  U16 LateralSpeedValueIdU16;
+  I16 LateralSpeedI16;
+  U16 LongitudinalAccValueIdU16;
+  I16 LongitudinalAccI16;
+  U16 LateralAccValueIdU16;
+  I16 LateralAccI16;
+  U16 CurvatureValueIdU16;
+  I32 CurvatureI32;
+} DOTMType; //50 bytes
 
 
 typedef struct

@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
   }
   ++iIndex;
 
-  pID[iIndex] = fork();
+ pID[iIndex] = fork();
   if(pID[iIndex] < 0)
   {
     util_error("ERR: Failed to fork");

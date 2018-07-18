@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <time.h>  
 
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -43,6 +44,7 @@
 static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static int TimeControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
 static void TimeControlRecvTime(int* sockfd, char* buffer, int length, int* recievedNewData);
+U32 TimeControlIPStringToInt(C8 *IP);
 
 
 /*------------------------------------------------------------
@@ -62,26 +64,51 @@ int timecontrol_task(TimeType *GPSTime)
   C8 SendData[4] = {0, 0, 0, 250};
   struct timespec sleep_time, ref_time;
   C8 MqRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
-
+  struct timeval tv;
+  struct tm *tm;
+  
+  U32 IpU32;
+  U8 PrevSecondU8;
+  U16 PrevMilliSecondU16;
+  
   (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
+
+
 
   bzero(TextBufferC8, TIME_CONTROL_BUFFER_SIZE_20);
   UtilSearchTextFile(TEST_CONF_FILE, "TimeServerIP=", "", TextBufferC8);
   bzero(ServerIPC8, TIME_CONTROL_BUFFER_SIZE_20);
   strcat(ServerIPC8, TextBufferC8);
+  IpU32 = TimeControlIPStringToInt(ServerIPC8);
+
+  if(IpU32 == 0)
+  {
+    GPSTime->MicroSecondU16 = 0;
+    GPSTime->GPSMillisecondsU64 = 0;
+    GPSTime->GPSSecondsOfWeekU32 = 0;
+    GPSTime->GPSMinutesU32 = 0;
+    GPSTime->GPSWeekU16 = 2006;
+  }
+
   bzero(TextBufferC8, TIME_CONTROL_BUFFER_SIZE_20);
   UtilSearchTextFile(TEST_CONF_FILE, "TimeServerPort=", "", TextBufferC8);
   ServerPortU16 = (U16)atoi(TextBufferC8);
-
-  TimeControlCreateTimeChannel(ServerIPC8, ServerPortU16, &SocketfdI32,  &time_addr);
-  TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, 4, 0);
+  if(IpU32 != 0)
+  {
+    TimeControlCreateTimeChannel(ServerIPC8, ServerPortU16, &SocketfdI32,  &time_addr);
+    TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, 4, 0);
+  }
   printf("Checking time...\n");
   while(!iExit)
   {
 
-    bzero(TimeBuffer,TIME_CONTROL_BUFFER_SIZE_52);
-    TimeControlRecvTime(&SocketfdI32, TimeBuffer, TIME_CONTROL_BUFFER_SIZE_52, &ReceivedNewData);
-    if(ReceivedNewData)
+    if(IpU32 != 0)
+    {
+      bzero(TimeBuffer,TIME_CONTROL_BUFFER_SIZE_52);
+      TimeControlRecvTime(&SocketfdI32, TimeBuffer, TIME_CONTROL_BUFFER_SIZE_52, &ReceivedNewData);
+    }
+    
+    if(ReceivedNewData && IpU32 != 0)
     {
       //for(i=0; i < TIME_CONTROL_BUFFER_SIZE_52; i++) printf("%x-", TimeBuffer[i]);
       //printf("\n");
@@ -125,6 +152,54 @@ int timecontrol_task(TimeType *GPSTime)
       //printf("LongitudeU32: %d\n", GPSTime->LongitudeU32);
 
     }
+    else if( GPSTime->MicroSecondU16 == 0)
+    {
+      gettimeofday(&tv, NULL);
+
+      tm = localtime(&tv.tv_sec);
+
+      // Add 1900 to get the right year value
+       GPSTime->YearU16 =  (U16)tm->tm_year + 1900;
+      // Months are 0 based in struct tm
+      GPSTime->MonthU8 =  (U8)tm->tm_mon + 1;
+      GPSTime->DayU8 = (U8)tm->tm_mday;
+      GPSTime->HourU8 = (U8)tm->tm_hour;
+      GPSTime->MinuteU8 = (U8)tm->tm_min;
+      GPSTime->SecondU8 = (U8)tm->tm_sec;
+      GPSTime->MillisecondU16 = (U16) (tv.tv_usec / 1000);
+      
+      if(GPSTime->MillisecondU16 != PrevMilliSecondU16)
+      {
+
+        if(GPSTime->MillisecondU16 < PrevMilliSecondU16)
+        {
+          GPSTime->GPSMillisecondsU64 = GPSTime->GPSMillisecondsU64 + GPSTime->MillisecondU16 + (1000 - PrevMilliSecondU16);
+           //printf("< %ld, %d, %d, %d\n", GPSTime->GPSMillisecondsU64, (1000 - PrevMilliSecondU16), GPSTime->MillisecondU16, PrevMilliSecondU16);
+        } 
+        else
+        {
+          GPSTime->GPSMillisecondsU64 = GPSTime->GPSMillisecondsU64 + abs(PrevMilliSecondU16 - GPSTime->MillisecondU16);
+          //printf("> %ld, %d, %d, %d\n", GPSTime->GPSMillisecondsU64, abs(GPSTime->MillisecondU16 - PrevMilliSecondU16), GPSTime->MillisecondU16, PrevMilliSecondU16);
+        }
+        PrevMilliSecondU16 = GPSTime->MillisecondU16;
+      }
+
+      if(GPSTime->SecondU8 != PrevSecondU8)
+      {
+        PrevSecondU8 = GPSTime->SecondU8;
+        GPSTime->SecondCounterU32 ++;
+        if(GPSTime->GPSSecondsOfDayU32 >= 86400) GPSTime->GPSSecondsOfDayU32 = 0;
+        else GPSTime->GPSSecondsOfDayU32 ++;
+        
+        if(GPSTime->GPSSecondsOfWeekU32 >= 604800)
+        {
+          GPSTime->GPSSecondsOfWeekU32 = 0;
+          GPSTime->GPSWeekU16 ++;
+        } else GPSTime->GPSSecondsOfWeekU32 ++;
+
+        if(GPSTime->SecondCounterU32 % 60 == 0) GPSTime->GPSMinutesU32 ++;
+      }
+    }
 
 
     bzero(MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
@@ -137,8 +212,6 @@ int timecontrol_task(TimeType *GPSTime)
       (void)iCommClose();
     }
     
-
-
   }
 
 
@@ -191,6 +264,47 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
 
 }
 
+
+U32 TimeControlIPStringToInt(C8 *IP)
+{
+    C8 *p, *ps;
+    C8 Buffer[3];
+    U32 IpU32 = 0;
+
+    ps = IP;
+    p = strchr(IP,'.');
+    if(p != NULL)
+    {
+      bzero(Buffer,3);
+      strncpy(Buffer, ps, (U64)p - (U64)ps);
+      IpU32 = (IpU32 | (U32)atoi(Buffer)) << 8;
+
+      ps = p + 1;
+      p = strchr(ps,'.');
+      bzero(Buffer,3);
+      strncpy(Buffer, ps, (U64)p - (U64)ps);
+
+      IpU32 = (IpU32 | (U32)atoi(Buffer)) << 8;
+
+      ps = p + 1;
+      p = strchr(ps,'.');
+      bzero(Buffer,3);
+      strncpy(Buffer, ps, (U64)p - (U64)ps);
+
+      IpU32 = (IpU32 | (U32)atoi(Buffer)) << 8;
+
+      ps = p + 1;
+      p = strchr(ps, 0);
+      bzero(Buffer,3);
+      strncpy(Buffer, ps, (U64)p - (U64)ps);
+
+      IpU32 = (IpU32 | (U32)atoi(Buffer));
+
+      printf("IpU32 = %x\n", IpU32);
+    }
+
+    return IpU32;
+}
 
 
 static int TimeControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)

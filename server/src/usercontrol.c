@@ -53,8 +53,8 @@
 #define USER_CONTROL_COMMAND_MAX_LENGTH 	10
 
 #define COMMAND_MESSAGE_HEADER_LENGTH 5
-#define COMMAND_DOPM_ROW_MESSAGE_LENGTH 25 
-#define COMMAND_DOPM_ROWS_IN_TRANSMISSION  40
+#define COMMAND_DOTM_ROW_MESSAGE_LENGTH 25 
+#define COMMAND_DOTM_ROWS_IN_TRANSMISSION  40
 
 
 
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 	char MessageBuffer[100];
 	int MessageLength,j;
 	int RowCount, i, Rest;
-	char TrajBuffer[COMMAND_DOPM_ROWS_IN_TRANSMISSION*COMMAND_DOPM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH];
+	char TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION*COMMAND_DOTM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH];
 	FILE *fd;
 
 	int socketfd=-1;
@@ -410,31 +410,31 @@ int main(int argc, char *argv[])
 					RowCount = UtilCountFileRows(fd) - 1;
 					fclose (fd);
 
-					MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, RowCount-1, 1);
-					//MessageLength = ObjectControlBuildDOPMMessageHeader(TrajBuffer, 2, 1);
-					/*Send DOPM header*/
+					//MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-1, 1);
+					//MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, 2, 1);
+					/*Send DOTM header*/
 					
                     fd = fopen ("traj/195.0.0.10", "r");
 					UtilReadLineCntSpecChars(fd, TrajBuffer);//Read first line
 					Rest = 0, i = 0;
 					do
 					{
-						Rest = RowCount - COMMAND_DOPM_ROWS_IN_TRANSMISSION;
-						RowCount = RowCount - COMMAND_DOPM_ROWS_IN_TRANSMISSION; 
-						if(Rest >= COMMAND_DOPM_ROWS_IN_TRANSMISSION)
+						Rest = RowCount - COMMAND_DOTM_ROWS_IN_TRANSMISSION;
+						RowCount = RowCount - COMMAND_DOTM_ROWS_IN_TRANSMISSION; 
+						if(Rest >= COMMAND_DOTM_ROWS_IN_TRANSMISSION)
 						{
-							MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, COMMAND_DOPM_ROWS_IN_TRANSMISSION, 0);
-							//MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, 2, 1);
+							//MessageLength = ObjectControlBuildDOTMMessage(TrajBuffer, fd, COMMAND_DOTM_ROWS_IN_TRANSMISSION, 0);
+							//MessageLength = ObjectControlBuildDOTMMessage(TrajBuffer, fd, 2, 1);
 						}
 						else
 						{
-						  MessageLength = ObjectControlBuildDOPMMessage(TrajBuffer, fd, Rest, 0);
+						  //MessageLength = ObjectControlBuildDOTMMessage(TrajBuffer, fd, Rest, 0);
 						}
-						printf("Transmission %d: %d bytes left to send.\n", ++i, Rest*COMMAND_DOPM_ROW_MESSAGE_LENGTH);
+						printf("Transmission %d: %d bytes left to send.\n", ++i, Rest*COMMAND_DOTM_ROW_MESSAGE_LENGTH);
 
-						/*Send DOPM data*/
+						/*Send DOTM data*/
 						
-					} while (Rest >= COMMAND_DOPM_ROWS_IN_TRANSMISSION /*i < 2*/); 
+					} while (Rest >= COMMAND_DOTM_ROWS_IN_TRANSMISSION /*i < 2*/); 
 
 					fclose (fd);
 					UserControlResetInputVariables();
@@ -482,7 +482,7 @@ int main(int argc, char *argv[])
 					printf("sc - Open connection to server.\n");
 					printf("tosem - Test to build OSEM message.\n");
 					printf("tstrt - Test to build STRT message.\n");
-					printf("tdopm - Test to build DOPM message.\n");
+					printf("tdopm - Test to build DOTM message.\n");
 					printf("tmonr - Test to build MONR message.\n");
 				break;
 			
