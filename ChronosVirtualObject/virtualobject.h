@@ -23,7 +23,7 @@
 // Object data of interest
 typedef struct {
     int ID;
-    qint64 time;
+    quint64 time;
     double x;
     double y;
     double z;
@@ -34,6 +34,15 @@ typedef struct {
     bool isMaster;
 } VOBJ_DATA;
 
+typedef struct {
+    quint64 clock; // Holding the current time value
+    quint64 test_start_time;
+    quint64 elapsed_time;
+    quint64 HEAB_rec_time;
+    quint64 ctrl_update_time;
+    quint64 monr_send_time;
+} VOBJ_TIME_DATA;
+
 Q_DECLARE_METATYPE(VOBJ_DATA)
 
 typedef enum {
@@ -41,10 +50,8 @@ typedef enum {
     ARMED,
     DISARMED,
     RUNNING,
-    STOP,
-    ABORT,
-    ERROR,
-    RUNNING_STANDBY
+    POSTRUN,
+    REMOTECTRL
 } OBJ_STATUS;
 
 
@@ -59,6 +66,7 @@ public:
     int connectToServer(int updSocket,int tcpSocket);
     int getID();
     void getRefLLH(double&,double&,double&);
+    bool initObjectState();
     //static void control_function(double* vel,chronos_dopm_pt ref, VOBJ_DATA data );
 
 signals:
@@ -104,8 +112,7 @@ private:
     // Object data
     VOBJ_DATA data;
 
-    // Chronos client
-    //Chronos* cClient;
+    VOBJ_TIME_DATA timedata;
 
     // ISO client
     ISOcom* iClient;
@@ -151,12 +158,14 @@ private:
 
 
     // Time variables
-    quint64 last_received_heab_time_from_server; // Needed in order to track when Heartbeat came in
+    //quint64 last_received_heab_time_from_server; // Needed in order to track when Heartbeat came in
     quint64 sleep_time = 20;     // How long the process should be suspended
     quint64 start_ETSI_time;    // The ETSI time to start at
-    // The trajectory to follow
-    QVector<chronos_dopm_pt> traj;
 
+
+    // Trajectory
+    int reference_point_index = 0; // Index for the reference point
+    QVector<chronos_dopm_pt> traj; // The trajectory to follow
 
     // The Reference coordinates
     double mRefLat = 57.71495867;

@@ -81,22 +81,22 @@ void ISOcom::PacketRx(QByteArray data)
             info.TxID = 0;
 
 
-            mPacketState = (uint8_t)c && ISO_PART_SYNC_WORD ? mPacketState + 1 : 0;
+            mPacketState = c && ISO_PART_SYNC_WORD ? mPacketState + 1 : 0;
             break;
         case 1:
 
-            mPacketState = (uint8_t)c && ISO_PART_SYNC_WORD ? mPacketState + 1 : 0;
+            mPacketState = c && ISO_PART_SYNC_WORD ? mPacketState + 1 : 0;
             break;
         //---------------------------------------
         // Transmitter ID
         case 2:
-            info.TxID = (uint8_t) c;
+            info.TxID = c;
             mPacketState++;
             break;
         //---------------------------------------
         // Package Counter
         case 3:
-            info.PACKAGE_COUNTER = (uint8_t)c;
+            info.PACKAGE_COUNTER = c;
             mPacketState++;
             break;
         //---------------------------------------

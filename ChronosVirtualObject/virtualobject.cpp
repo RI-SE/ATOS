@@ -56,88 +56,89 @@ VirtualObject::~VirtualObject() {
 void VirtualObject::run()
 {
     qDebug() << "Virtual Object Started";
-
-    qint64 clock = 0;       // Current time
-    qint64 start_time = 0;  // Start time of the execution of a trajectory
-    quint64 start_ETSI_time = 0;
-    qint64 simulation_time = 0;   // The total time for the entire simulation
-    qint64 elapsed_time = 0; // Time since the start of the execution
-    qint64 ctrl_update = 0; // Time since the last control signal update
-    qint64 update_sent = 0; // Time since the last MONR message
-    quint64 current_ETSI_time = 0;
-
-    // Test variables
-    qint64 tmod = 0; // Adding or subtracting time (MTPS)
-    int mtps = 0; // Which mtsp test is currently checked
-
-
-
-    int ref_index= 0; // Keeps track of which reference is currently followed
-
-    bool init_start = false;
-    qint64 time_since_update = 0; // Used in simulated trajectory
-
-    bool test_simulation = false;
     bool send_monr_idependently = true;
+
     chronos_dopm_pt ref_point;      // Placeholder for the reference point
-    chronos_dopm_pt prev_ref_point; // Placeholder for the previous ref. point
 
     while (!shutdown){
         // Loop as long as a shutdown signal has not been sent
 
-        if (status == ERROR)
-        {
+        status = pendingStatus;
 
-            // Do something error related
-            // This will generate a deadlock
-            //qDebug() << "ERROR";
-            //emit simulation_stop(getID());
-            //shutdown = true;
-        }
-        else
-        {
+        switch (status) {
+        case INIT:
+            initObjectState();
+            pendingStatus = DISARMED;
+            break;
+        case DISARMED:
+            break;
+        case ARMED:
+            break;
+        case RUNNING:
 
-            if (status != pendingStatus) // Whenever a state is changed
+            sleep_time = 5;
+            timedata.clock = utility::getCurrentUTCtimeMS();
+            timedata.elapsed_time = timedata.clock - timedata.test_start_time;
+            /*
+            if (ref_index == 0 && init_start)
             {
-                qDebug() << "STATUS: " << QString::number(pendingStatus);
+
+                ref_index = 0;
+                ref_point = traj[ref_index];
+
+                start_time = clock;
+                start_ETSI_time = utility::getETSItimeFromUTCtimeMS(clock);
+                first_mtsp_received =false;
+                init_start = false;
+                emit simulation_start(getID());
+            }*/
+
+
+            // Check if heartbeat deadline has passed
+            if(utility::getCurrentUTCtimeMS()-timedata.HEAB_rec_time > HEARTBEAT_TIME)
+            {
+                qDebug() << "ERROR: Heartbeat not recieved.";
+                pendingStatus = POSTRUN;
+                emit simulation_stop(getID());
+            }
+            if(reference_point_index < traj.size() - 1 )
+            {
+                // Update the reference point
+
+                if (traj[reference_point_index].tRel < timedata.elapsed_time)
+                {
+                    qDebug() << "Delay = " << QString::number(100*delay_simulation_factor);
+                    // Update the state
+                    data.acc = ref_point.accel;
+                    data.heading = ref_point.heading;
+                    data.speed = ref_point.speed;
+                    //data.time = timedata.elapsed_time;
+                    data.x = ref_point.x;
+                    data.y = ref_point.y;
+                    data.z = ref_point.z;
+
+
+                    // Update the point
+                    reference_point_index++;
+                }
+            }
+            else
+            {
+                pendingStatus = POSTRUN;
+                emit simulation_stop(getID());
             }
 
-            // Update with any new pending status
-            status = pendingStatus;
+
+            break;
+        case POSTRUN:
+            break;
+        case REMOTECTRL:
+            break;
+        default:
+            break;
         }
 
-        if(status == STOP)
-        {
-            // Do something during stopped state
-        }
-        else if(status == ABORT)
-        {
-            // Do something during abort
-        }
-
-        if (status == INIT)
-        {
-            // Do something in the init state
-        }
-        else if(status == ARMED)
-        {
-            // Reset the running index to the first trajectory point
-            ref_index = 0;
-            init_start = true;
-            mtps = 0;
-
-            elapsed_time = 0;
-
-            time_since_update = 0;
-
-            test_simulation = traj_simulation_only;
-
-            simulation_time = ((chronos_dopm_pt) (traj.last())).tRel;
-        }
-        else if(status == DISARMED)
-        {
-            // Do something during disarmed state
-        }
+/*
         else if(status == RUNNING_STANDBY)
         {
             current_ETSI_time = utility::getCurrentETSItimeMS();
@@ -167,7 +168,7 @@ void VirtualObject::run()
                 qDebug() << "ABORT: Aborting test scenario.";
                 break;
             }
-            qint64 time_since_HB = utility::getETSItimeFromUTCtimeMS(clock)
+            time_since_HB = utility::getETSItimeFromUTCtimeMS(clock)
                     -last_received_heab_time_from_server;
             // Check if heartbeat deadline has passed
             if(time_since_HB > HEARTBEAT_TIME)
@@ -176,10 +177,10 @@ void VirtualObject::run()
                 pendingStatus = ERROR;
                 emit simulation_stop(getID());
             }
-            if(ref_index < traj.size() - 1 )//&& elapsed_time < simulation_time)
+            if(ref_index < traj.size() - 1 )
             {
                 elapsed_time = clock - start_time;
-                qint64 deltaT = clock - time_since_update;
+                deltaT = clock - time_since_update;
                 if (double(deltaT) > 50.0 + 100.0*delay_simulation_factor)
                 {
                     qDebug() << "Delay = " << QString::number(100*delay_simulation_factor);
@@ -210,6 +211,7 @@ void VirtualObject::run()
             }
 
         }
+
         else if(status == RUNNING)
         {
             sleep_time = 5;
@@ -237,23 +239,6 @@ void VirtualObject::run()
                 // Set a static point to start deviating
                 ref_index = false && elapsed_time > 20000 && getID() == 0
                         ? ref_index : findRefPoint(elapsed_time,ref_index,tmod);
-                /*
-                if (elapsed_time >10000 && getID()==0 && mtps == 0 && true)
-                {
-                    //qDebug() << "Modifying refs";
-                    tmod=2000;
-                    mtps++;
-                    //traj[ref_index].tRel += tmod;
-                }
-
-
-                if (elapsed_time >20000 && getID()==0 && mtps == 1 && true)
-                {
-                    //qDebug() << "Modifying refs";
-                    tmod=-1000;
-                    mtps++;
-                    //traj[ref_index].tRel += tmod;
-                }*/
 
 
                 if (ref_index-index_before_update)
@@ -273,7 +258,7 @@ void VirtualObject::run()
                     qDebug() << "ABORT: Aborting test scenario.";
                     break;
                 }
-                qint64 time_since_HB = utility::getETSItimeFromUTCtimeMS(clock)
+                time_since_HB = utility::getETSItimeFromUTCtimeMS(clock)
                         -last_received_heab_time_from_server;
                 // Check if heartbeat deadline has passed
                 if(time_since_HB > HEARTBEAT_TIME && false)
@@ -295,19 +280,20 @@ void VirtualObject::run()
                 pendingStatus = STOP;
                 emit simulation_stop(getID());
             }
-        }
+        }*/
 
-        clock = utility::getCurrentUTCtimeMS();
-        if (clock - update_sent > MONR_SEND_TIME_INTERVAL && sendMONREnabled && send_monr_idependently)
+        timedata.clock = utility::getCurrentUTCtimeMS();
+        if (timedata.clock - timedata.monr_send_time > MONR_SEND_TIME_INTERVAL && sendMONREnabled && send_monr_idependently)
         {
             // Send monr
             iClient->sendMonr(getMONR());
-            update_sent = clock;
+            timedata.monr_send_time = timedata.clock;
         }
 
         // Send vizualizer update
         data.status = status;
         data.isMaster = isMaster;
+        data.time = timedata.elapsed_time;
         //data.mtsp = time_adjustment;
         emit updated_state(data);
         QThread::msleep(sleep_time);
@@ -372,6 +358,40 @@ void VirtualObject::getRefLLH(double &lat, double &lon, double &alt)
     alt = mRefAlt;
 }
 
+bool VirtualObject::initObjectState()
+{
+    if (status == RUNNING) return false;
+
+    reference_point_index = 0;
+
+    // Init time struct
+    timedata.test_start_time = 0;
+    timedata.elapsed_time = 0;
+    timedata.HEAB_rec_time = 0;
+    timedata.ctrl_update_time = 0;
+
+    if(hasDOPM)
+    {
+        data.x = traj[0].x;
+        data.y = traj[0].y;
+        data.z = traj[0].z;
+        data.acc = 0;
+        data.speed  = 0;
+        data.heading = traj[0].heading;
+    }
+    else
+    {
+        data.x = 0;
+        data.y = 0;
+        data.z = 0;
+        data.acc = 0;
+        data.speed  = 0;
+        data.heading = 0;
+    }
+
+    return true;
+}
+
 void VirtualObject::control_object(chronos_dopm_pt next,chronos_dopm_pt prev)
 {
     // Find the change in both directions
@@ -379,16 +399,16 @@ void VirtualObject::control_object(chronos_dopm_pt next,chronos_dopm_pt prev)
     double deltaX = next.x-prev.x;
 
     // Calculate the constant velocity between the two reference points
-    double new_vx = deltaX / (double) (next.tRel-prev.tRel) ;
-    double new_vy = deltaY / (double) (next.tRel-prev.tRel) ;
+    double new_vx = deltaX / static_cast<double> (next.tRel-prev.tRel) ;
+    double new_vy = deltaY / static_cast<double> (next.tRel-prev.tRel) ;
 
     // Calculate the length of the velocity vector
     double actual_speed = sqrt(new_vx*new_vx+new_vy*new_vy);
 
     // Update the current position based on the time that has
     // passed since the last reference point
-    data.x = prev.x + new_vx * (double)(data.time-prev.tRel);
-    data.y = prev.y + new_vy * (double)(data.time-prev.tRel);
+    data.x = prev.x + new_vx * static_cast<double>(data.time-prev.tRel);
+    data.y = prev.y + new_vy * static_cast<double>(data.time-prev.tRel);
 
     // Update the current state variables
     data.acc = (actual_speed - data.speed)/(data.time-prev.tRel); //prev.accel;
@@ -401,14 +421,14 @@ monr VirtualObject::getMONR()
     monr msg;
 
     msg.time_stamp = utility::getCurrentETSItimeMS();
-    msg.x = (int32_t)(data.x * 1e3);
-    msg.y = (int32_t)(data.y * 1e3);
-    msg.z = (int32_t)(data.z * 1e3);
-    msg.heading = (uint16_t)(data.heading  * 1e2);
+    msg.x = static_cast<int32_t>(data.x * 1e3);
+    msg.y = static_cast<int32_t>(data.y * 1e3);
+    msg.z = static_cast<int32_t>(data.z * 1e3);
+    msg.heading = static_cast<uint16_t>(data.heading  * 1e2);
     qDebug() << "MONR Heading: " << msg.heading;
-    msg.lon_speed = (int16_t)(data.speed*1e2);
+    msg.lon_speed = static_cast<int16_t>(data.speed*1e2);
     msg.lat_speed = 0;
-    msg.lon_acc = (int16_t)(data.acc*1e1);
+    msg.lon_acc = static_cast<int16_t>(data.acc*1e1);
     msg.lat_acc = 0;
     msg.drive_direction = 0;
     switch (status) {
@@ -425,16 +445,7 @@ monr VirtualObject::getMONR()
         msg.ready_to_arm = ISO_OBJECT_INTERNAL_STATE_READY_TO_ARM;
         break;
     case RUNNING:
-    case RUNNING_STANDBY:
-        msg.object_state = ISO_OBJECT_STATE_RUNNING;
-        msg.ready_to_arm = ISO_OBJECT_INTERNAL_STATE_NOT_READY_TO_ARM;
-        break;
-    case STOP:
-    case ABORT:
-    case ERROR:
-        msg.object_state = ISO_OBJECT_STATE_POST_RUN;
-        msg.ready_to_arm = ISO_OBJECT_INTERNAL_STATE_NOT_READY_TO_ARM;
-        break;
+
     default:
         break;
     }
@@ -458,11 +469,11 @@ int VirtualObject::findRefPoint(qint64 tRel, uint fromIndex, qint64 refTimeOffse
         return traj.size()-1;
     }
 
-    if (traj.size() <= (int)fromIndex )
+    if (traj.size() <= static_cast<int>(fromIndex) )
     {
         qDebug() << "Index out of bounds";
     }
-    int i=fromIndex;
+    int i=static_cast<int>(fromIndex);
     for (; i<traj.size()-1;i++)
     {
         if(traj[i].tRel + refTimeOffset > tRel ) return i;
@@ -480,9 +491,9 @@ void VirtualObject::handleOSEM(osem msg)
     switch (status) {
     case INIT:
     case DISARMED:
-        mRefLat = (double) msg.lat / 1e7;
-        mRefLon = (double) msg.lon / 1e7;
-        mRefAlt = (double) msg.alt /1e2;
+        mRefLat = static_cast<double>(msg.lat / 1e7);
+        mRefLon = static_cast<double>(msg.lon / 1e7);
+        mRefAlt = static_cast<double>(msg.alt /1e2);
 
         //utility::llhToXyz(msg.lat,msg.lon,msg.alt,&data.x,&data.y,&data.z);
         //mRefHeading = msg.heading;
@@ -545,11 +556,17 @@ void VirtualObject::handleHEAB(heab msg)
 {
     //qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
     //qDebug() << "Time since last HB: " << QString::number(currentTime-last_received_heab_time_from_server);
-    last_received_heab_time_from_server = msg.tx_time;
+
+
+    //last_received_heab_time_from_server = msg.tx_time;
+
+    // TODO: make use of the time sent from the server
+
+    timedata.HEAB_rec_time = utility::getCurrentUTCtimeMS();
 
     switch (msg.cc_status) {
     case ISO_CC_STATUS_EMERGENCY_ABORT:
-        pendingStatus = ABORT;
+        pendingStatus = POSTRUN;
         qDebug() << "ABOTRING!";
         break;
     case ISO_CC_STATUS_OK:
@@ -566,7 +583,7 @@ void VirtualObject::handleOSTM(ostm msg)
     switch (msg.state_change) {
     case ISO_OBJECT_STATE_ARMED:
         if ((status == INIT || status == DISARMED ||
-                status == STOP || status == ABORT) &&
+                status == POSTRUN ) &&
                 hasDOPM && hasOSEM)
             // Maybe status == ERROR as well
         {
@@ -575,7 +592,7 @@ void VirtualObject::handleOSTM(ostm msg)
         }
         break;
     case ISO_OBJECT_STATE_DISARMED:
-        if (status == STOP || status == ABORT ||
+        if (status == POSTRUN ||
                 status == ARMED || status == INIT)
             // Maybe status == ERROR as well
         {
