@@ -37,10 +37,12 @@ add_executable(TEServer
   src/objectcontrol.c 
   src/supervision.c
   src/systemcontrol.c
+  src/remotecontrol.c
   inc/logger.h
   inc/objectcontrol.h
   inc/supervision.h
   inc/systemcontrol.h
+  inc/remotecontrol.h
 )
 
 # add the install targets

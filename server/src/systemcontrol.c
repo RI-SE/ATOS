@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : systemcontrol.c
-  -- Author      : Karl-Johan Ode, Sebastian Loh Lindholm
+  -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS
   -- Purpose     :
   -- Reference   :
@@ -24,9 +24,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <poll.h>
+#include <netdb.h>
 
+#include "remotecontrol.h"
 #include "systemcontrol.h"
 #include "util.h"
+
 
 
 /*------------------------------------------------------------
@@ -45,6 +48,8 @@ typedef enum {
 } state_t;
 
 
+#define SYSTEM_CONTROL_SERVICE_POLL_TIME_MS 5000
+
 #define SYSTEM_CONTROL_CONTROL_PORT   54241       // Default port, control channel
 #define IPC_BUFFER_SIZE   256
 
@@ -53,8 +58,8 @@ typedef enum {
 #define SYSTEM_CONTROL_ARG_MAX_COUNT	 	6
 #define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	80
 
-#define AROM_OPT_SET_ARMED_STATE 1
-#define AROM_OPT_SET_DISARMED_STATE 2 
+#define OSTM_OPT_SET_ARMED_STATE 2
+#define OSTM_OPT_SET_DISARMED_STATE 3 
 #define SC_RECV_MESSAGE_BUFFER 512
 
 #define SMALL_BUFFER_SIZE_16 16
@@ -63,7 +68,7 @@ typedef enum {
 #define SMALL_BUFFER_SIZE_3 3
 #define SMALL_BUFFER_SIZE_2 2
 
-
+#define SYSTEM_CONTROL_CONF_FILE_PATH  "conf/test.conf"
 
 typedef enum {
    idle_0, status_0, arm_0, disarm_0, start_1, stop_0, abort_0, replay_1, control_0, exit_0, cx_0, cc_0, listen_0, start_ext_trigg_1, nocommand
@@ -79,7 +84,8 @@ char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT
   -- Function declarations.
   ------------------------------------------------------------*/
 SystemControlCommand_t SystemControlFindCommand(const char* CommandBuffer, SystemControlCommand_t *CurrentCommand, int *ArgCount);
-int SystemControlInitServer(int *ClientSocket, int *ServerHandle);
+static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle);
+static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint32_t port);
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
@@ -91,7 +97,6 @@ void systemcontrol_task()
 	int ClientSocket;
 	int ClientResult = 0;
 
-	ClientResult = SystemControlInitServer(&ClientSocket, &ServerHandle);
 
 	state_t server_state = SERVER_STATUS_INIT;
 	SystemControlCommand_t SystemControlCommand = idle_0;
@@ -103,7 +108,7 @@ void systemcontrol_task()
 	int iExit = 0;
 	
 	ObjectPosition OP;
-	int i;
+	int i,i1;
 	char *StartPtr, *StopPtr;
 	struct timespec tTime;
 	int iCommand;
@@ -115,53 +120,150 @@ void systemcontrol_task()
 	char TriggAction[SMALL_BUFFER_SIZE_6];
 	char TriggDelay[SMALL_BUFFER_SIZE_20];
 	uint64_t uiTime;
+	U8 ModeU8 = 0;
+	C8 TextBufferC8[SMALL_BUFFER_SIZE_20];
+	C8 ServerIPC8[SMALL_BUFFER_SIZE_20];
+	C8 UsernameC8[SMALL_BUFFER_SIZE_20];
+	C8 PasswordC8[SMALL_BUFFER_SIZE_20];
+	U16 ServerPortU16;
+	I32 ServerSocketI32=0;
+	ServiceSessionType SessionData;
+	C8 RemoteServerRxData[1024];
+	struct timespec sleep_time1, ref_time1;
+	struct timeval CurrentTimeStruct;
+ 	U64 CurrentTimeU64 = 0;
+ 	U64 TimeDiffU64 = 0;
+ 	U64 OldTimeU64 = 0;
+ 	U64 PollRateU64 = 0;
+
+	bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
+	UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerMode=", "", TextBufferC8);
+	ModeU8 = (U8)atoi(TextBufferC8);
+	
+	bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
+	UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerIP=", "", TextBufferC8);
+	bzero(ServerIPC8, SMALL_BUFFER_SIZE_20);
+	strcat(ServerIPC8, TextBufferC8);
+	
+	bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
+	UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerPort=", "", TextBufferC8);
+	ServerPortU16 = (U16)atoi(TextBufferC8);
+	
+	bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
+	UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerUsername=", "", TextBufferC8);
+	bzero(UsernameC8, SMALL_BUFFER_SIZE_20);
+	strcat(UsernameC8, TextBufferC8);
+	
+	bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
+	UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerPassword=", "", TextBufferC8);
+	bzero(PasswordC8, SMALL_BUFFER_SIZE_20);
+	strcat(PasswordC8, TextBufferC8);
+
+
+	printf("Mode: %d\n", ModeU8);
+	printf("ServerIP: %s\n", ServerIPC8);
+	printf("ServerPort: %d\n", ServerPortU16);
+	printf("UsernameC8: %s\n", UsernameC8);
+	printf("PasswordC8: %s\n", PasswordC8);
+	if(ModeU8 == 0)
+	{
+
+	}
+	else if(ModeU8 == 1) 
+	{
+		SessionData.SessionIdU32 = 0;
+		SessionData.UserIdU32 = 0;
+		SessionData.UserTypeU8 = 0;
+
+		/* */
+		PollRateU64 = SYSTEM_CONTROL_SERVICE_POLL_TIME_MS;
+		CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
+		OldTimeU64 = CurrentTimeU64;
+
+	}
+
 
 	while(!iExit)
 	{
-		
-	
-		bzero(pcBuffer,IPC_BUFFER_SIZE);
-		ClientResult = recv(ClientSocket, pcBuffer, IPC_BUFFER_SIZE,  0);
 
-	  	if (ClientResult <= -1)
-	  	{
-	    	if(errno != EAGAIN && errno != EWOULDBLOCK)
-	    	{
-		  		usleep(5000000); //Wait 5 sec before sending exit, just so ObjectControl can send abort in HEAB before exit 
-		  		(void)iCommSend(COMM_EXIT,NULL);
-		  		perror("[SystemControl]ERR: Failed to receive from command socket.");
-		  		exit(1);
-			} 
-	    }
-	    else if(ClientResult == 0) 
-	    {
-	    	printf("[SystemControl] Client closed connection.\n");
-	    	close(ClientSocket);
-	    	close(ServerHandle);
-	    	//SystemControlCommand = listen_0;
-	    	//Oops no client is connected, send abort to ObjectControl
-	    	SystemControlCommand = abort_0;
-	    }
-	    else
-	    {
-
-			for(i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i ++ ) bzero(SystemControlArgument[i],SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
-			CurrentInputArgCount = 0;
-			StartPtr = pcBuffer;
-			StopPtr = pcBuffer;
-			printf("pcBuffer: %s\n", pcBuffer);
-			while (StopPtr != NULL)
-			{
-				StopPtr = (char *)strchr(StartPtr, ' ');
-				if(StopPtr != NULL) strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr-(uint64_t)StartPtr);
-				else strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, strlen(StartPtr));
-				StartPtr = StopPtr+1;
-				CurrentInputArgCount ++;
+		if(ModeU8 == 0)
+		{
+			
+			if(ClientSocket <= 0)
+			{	
+				if(USE_LOCAL_USER_CONTROL == 0) ClientResult = SystemControlInitServer(&ClientSocket, &ServerHandle);
+				if(USE_LOCAL_USER_CONTROL == 1) ClientResult = SystemControlConnectServer(&ClientSocket, LOCAL_USER_CONTROL_IP, LOCAL_USER_CONTROL_PORT);
 			}
 
-	      	SystemControlFindCommand(SystemControlArgument[0], &SystemControlCommand, &CommandArgCount);
-	  	}
-		
+			bzero(pcBuffer,IPC_BUFFER_SIZE);
+			ClientResult = recv(ClientSocket, pcBuffer, IPC_BUFFER_SIZE,  0);
+
+		  	if (ClientResult <= -1)
+		  	{
+		    	if(errno != EAGAIN && errno != EWOULDBLOCK)
+		    	{
+			  		usleep(5000000); //Wait 5 sec before sending exit, just so ObjectControl can send abort in HEAB before exit 
+			  		(void)iCommSend(COMM_EXIT,NULL);
+			  		perror("[SystemControl] ERR: Failed to receive from command socket.");
+			  		exit(1);
+				} 
+		    }
+		    else if(ClientResult == 0) 
+		    {
+		    	printf("[SystemControl] Client closed connection.\n");
+		    	close(ClientSocket);
+		    	if(USE_LOCAL_USER_CONTROL == 0) close(ServerHandle);
+		    	//SystemControlCommand = listen_0;
+		    	//Oops no client is connected, send abort to ObjectControl
+		    	SystemControlCommand = abort_0;
+		    }
+		    else
+		    {
+				for(i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i ++ ) bzero(SystemControlArgument[i],SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
+				CurrentInputArgCount = 0;
+				StartPtr = pcBuffer;
+				StopPtr = pcBuffer;
+				printf("pcBuffer: %s\n", pcBuffer);
+				while (StopPtr != NULL)
+				{
+					StopPtr = (char *)strchr(StartPtr, ' ');
+					if(StopPtr != NULL) strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr-(uint64_t)StartPtr);
+					else strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, strlen(StartPtr));
+					StartPtr = StopPtr+1;
+					CurrentInputArgCount ++;
+				}
+
+				SystemControlFindCommand(SystemControlArgument[0], &SystemControlCommand, &CommandArgCount);
+			}
+		}
+		else if(ModeU8 == 1)
+		{
+			gettimeofday(&CurrentTimeStruct, NULL);
+    		CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
+    		TimeDiffU64 = CurrentTimeU64 - OldTimeU64;
+			
+			if(ServerSocketI32 <= 0) RemoteControlConnectServer(&ServerSocketI32, ServerIPC8, ServerPortU16);
+
+			if(ServerSocketI32 > 0 && SessionData.SessionIdU32 <= 0)
+			{
+				RemoteControlSignIn(ServerSocketI32, "users", UsernameC8, PasswordC8, &SessionData, 0);
+				printf("SessionId: %u\n", SessionData.SessionIdU32);
+				printf("UserId: %u\n", SessionData.UserIdU32);
+				printf("Usertype: %d\n", SessionData.UserTypeU8);
+				if(SessionData.SessionIdU32 > 0) { printf("Sign in success!\n");} else { printf("Sign in failed!\n");}
+			}
+
+			if(ServerSocketI32 > 0 && SessionData.SessionIdU32 > 0 && TimeDiffU64 > PollRateU64)
+			{
+				OldTimeU64 = CurrentTimeU64;
+				bzero(RemoteServerRxData, 1024);
+				RemoteControlSendServerStatus(ServerSocketI32, &SessionData, ++i1, 0);
+
+			}
+			//usleep(1000000);
+	
+
+		}
 
 		switch(SystemControlCommand)
 		{
@@ -234,7 +336,7 @@ void systemcontrol_task()
 			case arm_0:
 				bzero(pcBuffer, IPC_BUFFER_SIZE);
 				server_state = SERVER_STATUS_ARMED;
-				pcBuffer[0] = AROM_OPT_SET_ARMED_STATE;
+				pcBuffer[0] = OSTM_OPT_SET_ARMED_STATE;
 				(void)iCommSend(COMM_ARMD,pcBuffer);
 				printf("[SystemControl] Sending ARM.\n");
 				SystemControlCommand = idle_0;
@@ -243,7 +345,7 @@ void systemcontrol_task()
 			case disarm_0:
 				bzero(pcBuffer, IPC_BUFFER_SIZE);
 				server_state = SERVER_STATUS_DISARMED;
-				pcBuffer[0] = AROM_OPT_SET_DISARMED_STATE;
+				pcBuffer[0] = OSTM_OPT_SET_DISARMED_STATE;
 				(void)iCommSend(COMM_ARMD,pcBuffer);
 				printf("[SystemControl] Sending DISARM.\n");
 				SystemControlCommand = idle_0;
@@ -411,7 +513,7 @@ SystemControlCommand_t SystemControlFindCommand(const char* CommandBuffer, Syste
 
 
 
-int SystemControlInitServer(int *ClientSocket, int *ServerHandle)
+static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle)
 {
 
 	struct sockaddr_in command_server_addr;
@@ -422,13 +524,13 @@ int SystemControlInitServer(int *ClientSocket, int *ServerHandle)
 	int result = 0;
 
 	/* Init user control socket */
-	printf("[Server]Init control socket\n");
+	printf("[SystemControl] Init control socket\n");
 	fflush(stdout);
 	
 	*ServerHandle = socket(AF_INET, SOCK_STREAM, 0);
 	if (*ServerHandle < 0)
 	{
-	  perror("[Server]ERR: Failed to create control socket");
+	  perror("[SystemControl] ERR: Failed to create control socket");
 	  exit(1);
 	}
 	bzero((char *) &command_server_addr, sizeof(command_server_addr));
@@ -442,32 +544,41 @@ int SystemControlInitServer(int *ClientSocket, int *ServerHandle)
 
 	if (result < 0)
 	{
-	  perror("[Server]ERR: Failed to call setsockopt");
+	  perror("[SystemControl] ERR: Failed to call setsockopt");
 	  exit(1);
 	}
 
 	if (bind(*ServerHandle, (struct sockaddr *) &command_server_addr, sizeof(command_server_addr)) < 0) 
 	{
-	  perror("[Server]ERR: Failed to bind to control socket");
+	  perror("[SystemControl] ERR: Failed to bind to control socket");
 	  exit(1);
 	}
 
 	/* Monitor and control sockets up. Wait for central to connect to control socket to get server address*/
-	printf("[Server]Listening for connection from client ...\n");
+	printf("[SystemControl] Listening for connection from client ...\n");
 	fflush(stdout);
 	
 
 	listen(*ServerHandle, 1);
 	cli_length = sizeof(cli_addr);
 
-	printf("[Server]Connection received: %i \n", htons(command_server_addr.sin_port));
+	
 	fflush(stdout);
 
 
-	*ClientSocket = accept(*ServerHandle, (struct sockaddr *) &cli_addr, &cli_length);
+	while( *ClientSocket = accept(*ServerHandle, (struct sockaddr *) &cli_addr, &cli_length))
+	{
+
+		printf("[SystemControl] Connection accepted!\n");
+		break;
+
+	}
+	
+	printf("[SystemControl] Connection received: %i\n", htons(command_server_addr.sin_port));
+
 	if (*ClientSocket < 0) 
 	{
-	  perror("[Server]ERR: Failed to accept from central");
+	  perror("[SystemControl] ERR: Failed to accept from central");
 	  exit(1);
 	}
 
@@ -477,3 +588,64 @@ int SystemControlInitServer(int *ClientSocket, int *ServerHandle)
 	return result;
 }
 
+
+
+static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint32_t port)
+{
+  struct sockaddr_in serv_addr;
+  struct hostent *server;
+  
+  char buffer[256];
+  int iResult;
+
+  *sockfd = socket(AF_INET, SOCK_STREAM, 0);
+   
+  if (*sockfd < 0) 
+  {
+    util_error("[SystemControl] ERR: Failed to open control socket");
+  }
+
+  server = gethostbyname(name);
+  if (server == NULL) 
+  {
+    util_error("[SystemControl] ERR: Unknown host ");
+  }
+  
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  
+  bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+  serv_addr.sin_port = htons(port);
+  
+  #ifdef DEBUG
+    printf("[SystemControl] Try to connect to control socket: %s %i\n",name,port);
+    fflush(stdout);
+  #endif
+  
+  do
+  {
+    iResult = connect(*sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr));
+
+    if ( iResult < 0) 
+    {
+      if(errno == ECONNREFUSED)
+      {
+        printf("[SystemControl] Was not able to connect to UserControl, retry in 3 sec...\n");
+        fflush(stdout);
+        (void)sleep(3);
+      }
+      else
+      {
+        util_error("[SystemControl] ERR: Failed to connect to control socket");
+      }
+    }
+  } while(iResult < 0);
+
+  //#ifdef DEBUG
+    printf("[SystemControl] Maestro connected to UserControl: %s %i\n",name,port);
+    fflush(stdout);
+  //#endif
+
+  return iResult;
+
+}

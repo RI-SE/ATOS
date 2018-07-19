@@ -3,7 +3,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   --------------------------------------------------------------------------------
   -- File        : main.c
-  -- Author      : Karl-Johan Ode, Sebastian Loh Lindholm
+  -- Author      : Sebastian Loh Lindholm
   -- Description : CHRONOS main
   -- Purpose     :
   -- Reference   :
@@ -24,6 +24,7 @@
 #include "systemcontrol.h"
 #include "supervision.h"
 #include "util.h"
+#include "remotecontrol.h"
 
 /*------------------------------------------------------------
 -- Defines
@@ -34,7 +35,7 @@
 ------------------------------------------------------------*/
 int main(int argc, char *argv[])
   {
-  pid_t pID[4];
+  pid_t pID[5];
   int iIndex = 0;
   #ifdef DEBUG
     printf("INF: Central started\n");
@@ -110,6 +111,22 @@ int main(int argc, char *argv[])
     ++iIndex;
   }
  
+  pID[iIndex] = fork();
+  if(pID[iIndex] < 0)
+  {
+    util_error("ERR: Failed to fork");
+  }
+  if(pID[iIndex] == 0)
+  {
+    #ifdef DEBUG
+      printf("INF: remotecontrol_task running in:  %i \n",getpid());
+    #endif
+    remotecontrol_task();
+    exit(EXIT_SUCCESS);
+  }
+  ++iIndex;
+
+
   #ifdef DEBUG
     printf("INF: systemcontrol_task running in:  %i \n",getpid());
   #endif
