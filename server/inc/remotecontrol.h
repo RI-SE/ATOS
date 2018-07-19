@@ -18,7 +18,7 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-void remotecontrol_task();
+void remotecontrol_task(TimeType *GPSTime);
 void RemoteControlConnectServer(int* sockfd, const char* name, const uint32_t port);
 U32 RemoteControlSignIn(I32 ServerSocketI32, C8 *TablenameC8, C8 *UsernameC8, C8 *PasswordC8, ServiceSessionType *SSData, U8 Debug);
 U32 RemoteControlSendServerStatus(I32 ServerSocketI32, ServiceSessionType *SessionData, U32 StatusU32, U8 Debug);

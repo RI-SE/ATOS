@@ -21,6 +21,9 @@
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
+#define ISO_PROTOCOL_VERSION 2
+#define ACK_REQ 0
+
 #define MQ_LG     "/TEServer-LG"
 #define MQ_SV     "/TEServer-SV"
 #define MQ_OC     "/TEServer-OC"
@@ -44,6 +47,11 @@
 #define COMM_CONTROL 7
 #define COMM_ABORT 8
 #define COMM_TOM 9
+#define COMM_INIT 10
+#define COMM_CONNECT 11
+#define COMM_OBC_STATE 12
+#define COMM_DISCONNECT 13  
+#define COMM_LOG 14
 #define COMM_INV 255
 
 #define SAFETY_CHANNEL_PORT 53240
@@ -76,10 +84,10 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "195.0.0.250"
-#define TESTSERVER_IP "195.0.0.250"
+#define TESTHOST_IP "192.168.0.163"
+#define TESTSERVER_IP "192.168.0.163"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "10.168.22.97" 
+#define LOCAL_USER_CONTROL_IP "192.168.0.163" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -138,21 +146,27 @@
 #define STRUCT_CODE  254
 #define RESERVED_CODE  255
 
-#define VALUE_ID_NOT_DEF  0
-#define VALUE_ID_RELATIVE_TIME 1
-#define VALUE_ID_ABSOLUTE_TIME 2
-#define VALUE_ID_X_POSITION  10
-#define VALUE_ID_Y_POSITION  11
-#define VALUE_ID_Z_POSITION  12
-#define VALUE_ID_LATITUDE  20
-#define VALUE_ID_LONGITUDE 21
-#define VALUE_ID_ALTITUDE  22
-#define VALUE_ID_HEADING 30
-#define VALUE_ID_LONGITUDINAL_SPEED  40
-#define VALUE_ID_LATERAL_SPEED 41
-#define VALUE_ID_LONGITUDINAL_ACCELERATION 50
-#define VALUE_ID_LATERAL_ACCELERATION  51
-#define VALUE_ID_FLAG  60
+#define VALUE_ID_NOT_DEF                    0
+#define VALUE_ID_RELATIVE_TIME              1
+#define VALUE_ID_GPS_SECOND_OF_WEEK         2
+#define VALUE_ID_GPS_WEEK                   3
+#define VALUE_ID_DATE_ISO8601               4
+#define VALUE_ID_X_POSITION                 10
+#define VALUE_ID_Y_POSITION                 11
+#define VALUE_ID_Z_POSITION                 12
+#define VALUE_ID_LATITUDE                   20
+#define VALUE_ID_LONGITUDE                  21
+#define VALUE_ID_ALTITUDE                   22
+#define VALUE_ID_HEADING                    30
+#define VALUE_ID_LONGITUDINAL_SPEED         40
+#define VALUE_ID_LATERAL_SPEED              41
+#define VALUE_ID_LONGITUDINAL_ACCELERATION  50
+#define VALUE_ID_LATERAL_ACCELERATION       51
+#define VALUE_ID_STATE_CHANGE_REQUEST       64
+#define VALUE_ID_MAX_WAY_DEVIATION          70
+#define VALUE_ID_MAX_LATERAL_DEVIATION      72
+#define VALUE_ID_MIN_POS_ACCURACY           74
+#define VALUE_ID_CURVATURE                  0xA000
 
 
 #define C8 uint8_t
@@ -164,8 +178,8 @@
 #define I32 int32_t
 #define U64 uint64_t
 #define I64 int64_t
-#define DBL double
-#define FLT float
+#define dbl double
+#define flt float
 
 #pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
 
@@ -185,10 +199,11 @@ typedef struct
 {
   U16 SyncWordU16;
   U8 TransmitterIdU8;
-  U8 PackageCounterU8;
-  U8 AckReqU8;
+  U8 MessageCounterU8;
+  U8 AckReqProtVerU8;
+  U16 MessageIdU16;
   U32 MessageLengthU32;
-} HeaderType; //9 bytes
+} HeaderType; //11 bytes
 
 typedef struct
 {
@@ -198,94 +213,115 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  U16 MessageIdU16;
-  U32 NOFValuesU32;
   U16 LatitudeValueIdU16;
-  U8 LatitudeValueTypeU8;
-  I32 LatitudeI32;
+  I64 LatitudeI64;
   U16 LongitudeValueIdU16;
-  U8 LongitudeValueTypeU8;
-  I32 LongitudeI32;
+  I64 LongitudeI64;
   U16 AltitudeValueIdU16;
-  U8 AltitudeValueTypeU8;
   I32 AltitudeI32;
-} OSEMType; //36 bytes
+  U16 DateValueIdU16;
+  U32 DateU32;
+  U16 GPSWeekValueIdU16;
+  U16 GPSWeekU16;
+  U16 GPSSOWValueIdU16;
+  U32 GPSSOWU32;
+  U16 MaxWayDeviationValueIdU16;
+  U16 MaxWayDeviationU16;
+  U16 MaxLateralDeviationValueIdU16;
+  U16 MaxLateralDeviationU16;
+  U16 MinPosAccuracyValueIdU16;
+  U16 MinPosAccuracyU16;
+} OSEMType; //67 bytes
 
 typedef struct
 {
   HeaderType Header;
-  U16 MessageIdU16;
-  U32 NOFValuesU32;
   U16 StartTimeValueIdU16;
-  U8 StartTimeValueTypeU8;
-  U64 StartTimeU64;
-} STRTType; //26 bytes
+  U32 StartTimeU32;
+  U16 DelayStartValueIdU16;
+  U32 DelayStartU32;
+} STRTType; //23 bytes
 
 typedef struct
 {
   HeaderType Header;
-  U16 MessageIdU16;
-  U32 NOFValuesU32;
   U16 StateValueIdU16;
-  U8 StateValueTypeU8;
   U8 StateU8;
-} OSTMType; //19 bytes
+} OSTMType; //14 bytes
 
 typedef struct
 {
   HeaderType Header;
-  U16 MessageIdU16;
-  U32 NOFValuesU32;
-  U16 TimeValueIdU16;
-  U8 TimeValueTypeU8;
-  U64 TimeU64;
-  U16 StatusValueIdU16;
-  U8 StatusValueTypeU8;
-  U8 StatusU8;
-} HEABType; //30 bytes
+  U32 GPSSOWU32;
+  U8 CCStatusU8;
+} HEABType; //16 bytes
 
 typedef struct
 {
   HeaderType Header;
-  U16 MessageIdU16;
-  U32 NOFValuesU32;
-  U16 PositionTimeValueIdU16;
-  U8 PositionTimeValueTypeU8;
-  U64 PositionTimeU64;
+  U32 GPSSOWU32;
+  I32 XPositionI32;
+  I32 YPositionI32;
+  I32 ZPositionI32;
+  U16 HeadingU16;
+  I16 LongitudinalSpeedI16;
+  I16 LateralSpeedI16;
+  I16 LongitudinalAccI16;
+  I16 LateralAccI16;
+  U8 DriveDirectionU8;
+  U8 StateU8;
+  U8 ReadyToArmU8;
+  U8 ErrorStatusU8;
+} MONRType; //41 bytes
+
+
+typedef struct
+{
+  U16 RelativeTimeValueIdU16;
+  U32 RelativeTimeU32;
   U16 XPositionValueIdU16;
-  U8 XPositionValueTypeU8;
   I32 XPositionI32;
   U16 YPositionValueIdU16;
-  U8 YPositionValueTypeU8;
   I32 YPositionI32;
   U16 ZPositionValueIdU16;
-  U8 ZPositionValueTypeU8;
   I32 ZPositionI32;
   U16 HeadingValueIdU16;
-  U8 HeadingValueTypeU8;
   U16 HeadingU16;
   U16 LongitudinalSpeedValueIdU16;
-  U8 LongitudinalSpeedValueTypeU8;
   I16 LongitudinalSpeedI16;
   U16 LateralSpeedValueIdU16;
-  U8 LateralSpeedValueTypeU8;
   I16 LateralSpeedI16;
   U16 LongitudinalAccValueIdU16;
-  U8 LongitudinalAccValueTypeU8;
   I16 LongitudinalAccI16;
   U16 LateralAccValueIdU16;
-  U8 LateralAccValueTypeU8;
   I16 LateralAccI16;
-  U16 DriveDirectionValueIdU16;
-  U8 DriveDirectionValueTypeU8;
-  U8 DriveDirectionU8;
-  U16 StateValueIdU16;
-  U8 StateValueTypeU8;
-  U8 StateU8;
-  U16 StatusValueIdU16;
-  U8 StatusValueTypeU8;
-  U8 StatusU8;
-} MONRType;
+  U16 CurvatureValueIdU16;
+  I32 CurvatureI32;
+} DOTMType; //50 bytes
+
+
+typedef struct
+{
+  U8 ProtocolVersionU8;
+  U16 YearU16;
+  U8 MonthU8;
+  U8 DayU8;
+  U8 HourU8;
+  U8 MinuteU8;
+  U8 SecondU8;
+  U16 MillisecondU16;
+  U16 MicroSecondU16;
+  U32 SecondCounterU32;
+  U64 GPSMillisecondsU64;
+  U32 GPSMinutesU32;
+  U16 GPSWeekU16;
+  U32 GPSSecondsOfWeekU32;
+  U32 GPSSecondsOfDayU32;
+  U64 ETSIMillisecondsU64;
+  U32 LatitudeU32;
+  U32 LongitudeU32;
+} TimeType;
+
 
 typedef struct
 {
@@ -411,6 +447,12 @@ void xyzToLlh(double x, double y, double z, double *lat, double *lon, double *he
 void llhToEnu(const double *iLlh, const double *llh, double *xyz);
 uint16_t crc_16( const unsigned char *input_str, uint16_t num_bytes );
 
+U16 SwapU16(U16 val);
+I16 SwapI16(I16 val); 
+U32 SwapU32(U32 val);
+I32 SwapI32(I32 val);
+I64 SwapI64(I64 val);
+U64 SwapU64(U64 val);
 
 typedef struct {
   uint64_t timestamp;
