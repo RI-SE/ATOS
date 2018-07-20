@@ -38,6 +38,7 @@
 ------------------------------------------------------------*/
 
 static TimeType *GPSTime;
+static GSDType *GSD;
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
@@ -46,6 +47,7 @@ int main(int argc, char *argv[])
 
   /*Share time between child processes*/
   GPSTime = mmap(NULL, sizeof *GPSTime, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  GSD = mmap(NULL, sizeof *GSD, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
   pid_t pID[8];
   int iIndex = 0;
@@ -96,7 +98,7 @@ int main(int argc, char *argv[])
     #ifdef DEBUG
       printf("INF: objectcontrol_task running in:  %i \n",getpid());
     #endif
-    objectcontrol_task(GPSTime);
+    objectcontrol_task(GPSTime, GSD);
     exit(EXIT_SUCCESS);
   }
   ++iIndex;
@@ -150,7 +152,7 @@ int main(int argc, char *argv[])
     #ifdef DEBUG
       printf("INF: timecontrol_task running in:  %i \n",getpid());
     #endif
-    timecontrol_task(GPSTime);
+    timecontrol_task(GPSTime, GSD);
     exit(EXIT_SUCCESS);
   }
   ++iIndex;
@@ -189,5 +191,5 @@ int main(int argc, char *argv[])
     printf("INF: systemcontrol_task running in:  %i \n",getpid());
   #endif
     
-  systemcontrol_task(GPSTime);
+  systemcontrol_task(GPSTime, GSD);
 }
