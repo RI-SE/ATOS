@@ -175,7 +175,7 @@ static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
-void objectcontrol_task(TimeType *GPSTime)
+void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 {
   int safety_socket_fd[MAX_OBJECTS];
   struct sockaddr_in safety_object_addr[MAX_OBJECTS];

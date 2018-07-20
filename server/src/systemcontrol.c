@@ -52,6 +52,7 @@ typedef enum {
 #define SYSTEM_CONTROL_PROCESS_PORT   54242       // Default port, process channel
 #define IPC_BUFFER_SIZE   1024
 #define SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE 64
+#define SYSTEM_CONTROL_PROCESS_DATA_BUFFER	128
 
 #define SYSTEM_CONTROL_ARG_CHAR_COUNT 		2
 #define SYSTEM_CONTROL_COMMAND_MAX_LENGTH 	32
@@ -109,22 +110,26 @@ char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT
   ------------------------------------------------------------*/
 //SystemControlCommand_t SystemControlFindCommandOld(const char* CommandBuffer, SystemControlCommand_t *CurrentCommand, int *ArgCount);
 SystemControlCommand_t SystemControlFindCommand(const char* CommandBuffer, SystemControlCommand_t *CurrentCommand, int *ArgCount);
-static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle);
+static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct in_addr *ip_addr);
 static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint32_t port);
 static void SystemControlSendBytes(const char* data, int length, int* sockfd, int debug);
 void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8* ResponseData, I32 ResponseDataLength, I32* Sockfd, U8 Debug);
 void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug);
+static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I32 *sockfd, struct sockaddr_in* addr);
+I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
 
-void systemcontrol_task(TimeType *GPSTime)
+void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 {
 
-	int ServerHandle;
-	int ClientSocket;
-	int ClientResult = 0;
-
+	I32 ServerHandle;
+	I32 ClientSocket;
+	I32 ClientResult = 0;
+	struct sockaddr_in ProcessChannelAddr;
+	struct in_addr ip_addr;
+	I32 ProcessChannelSocket;
 
 	ServerState_t server_state = SERVER_STATE_UNDEFINED;
 	SystemControlCommand_t SystemControlCommand = Idle_0;
@@ -167,6 +172,9 @@ void systemcontrol_task(TimeType *GPSTime)
  	U64 PollRateU64 = 0;
  	C8 ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
  	U8 OBCStateU8;
+ 	C8 UserControlIPC8[SMALL_BUFFER_SIZE_20];
+ 	C8 ProcessControlData[SYSTEM_CONTROL_PROCESS_DATA_BUFFER];
+ 	U32 ProcessControlSendCounterU32 = 0;
 
 	bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
 	UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerMode=", "", TextBufferC8);
@@ -215,6 +223,7 @@ void systemcontrol_task(TimeType *GPSTime)
 	}
 
 
+
 	while(!iExit)
 	{
 
@@ -230,8 +239,21 @@ void systemcontrol_task(TimeType *GPSTime)
 					server_state = SERVER_STATE_INITIALIZED;
 				}
 
-				if(USE_LOCAL_USER_CONTROL == 0) ClientResult = SystemControlInitServer(&ClientSocket, &ServerHandle);
-				if(USE_LOCAL_USER_CONTROL == 1) ClientResult = SystemControlConnectServer(&ClientSocket, LOCAL_USER_CONTROL_IP, LOCAL_USER_CONTROL_PORT);
+				if(USE_LOCAL_USER_CONTROL == 0)
+				{
+
+					ClientResult = SystemControlInitServer(&ClientSocket, &ServerHandle, &ip_addr);
+					bzero(UserControlIPC8, SMALL_BUFFER_SIZE_20);
+					sprintf(UserControlIPC8, "%s", inet_ntoa(ip_addr));
+				    printf("[SystemControl] UserControl IP address is %s\n", inet_ntoa(ip_addr));
+					SystemControlCreateProcessChannel(UserControlIPC8, SYSTEM_CONTROL_PROCESS_PORT, &ProcessChannelSocket, &ProcessChannelAddr);
+						
+				} 
+				if(USE_LOCAL_USER_CONTROL == 1)
+				{
+					ClientResult = SystemControlConnectServer(&ClientSocket, LOCAL_USER_CONTROL_IP, LOCAL_USER_CONTROL_PORT);
+					SystemControlCreateProcessChannel(LOCAL_USER_CONTROL_IP, SYSTEM_CONTROL_PROCESS_PORT, &ProcessChannelSocket, &ProcessChannelAddr);
+				}
 
 				server_state = SERVER_STATE_IDLE;
 			}
@@ -305,9 +327,7 @@ void systemcontrol_task(TimeType *GPSTime)
 				OldTimeU64 = CurrentTimeU64;
 				bzero(RemoteServerRxData, 1024);
 				RemoteControlSendServerStatus(ServerSocketI32, &SessionData, ++i1, 0);
-
 			}
-			//usleep(1000000);
 		}
 
 		
@@ -346,6 +366,28 @@ void systemcontrol_task(TimeType *GPSTime)
 		{
 			SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
 		}
+		
+		++ProcessControlSendCounterU32;
+
+		if(ProcessChannelSocket != 0 && ProcessControlSendCounterU32 == 40)
+		{
+			ProcessControlSendCounterU32 = 0;
+			bzero(ProcessControlData, SYSTEM_CONTROL_PROCESS_DATA_BUFFER);
+
+			ProcessControlData[0] =	(U8)(GPSTime->GPSMillisecondsU64 >> 56);
+			ProcessControlData[1] =	(U8)(GPSTime->GPSMillisecondsU64 >> 48);
+			ProcessControlData[2] =	(U8)(GPSTime->GPSMillisecondsU64 >> 40);
+			ProcessControlData[3] =	(U8)(GPSTime->GPSMillisecondsU64 >> 32);
+			ProcessControlData[4] =	(U8)(GPSTime->GPSMillisecondsU64 >> 24);
+			ProcessControlData[5] =	(U8)(GPSTime->GPSMillisecondsU64 >> 16);
+			ProcessControlData[6] =	(U8)(GPSTime->GPSMillisecondsU64 >> 8);
+			ProcessControlData[7] =	(U8)(GPSTime->GPSMillisecondsU64);
+			ProcessControlData[8] = server_state;
+			ProcessControlData[9] = OBCStateU8;
+			SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, 10, 0);
+		}
+
+
 
 		switch(SystemControlCommand)
 		{
@@ -681,7 +723,7 @@ void systemcontrol_task(TimeType *GPSTime)
 			break;
 		}
 
-		usleep(100);
+		usleep(1000);
   	}
 
   (void)iCommClose();
@@ -789,7 +831,7 @@ static void SystemControlSendBytes(const char* data, int length, int* sockfd, in
 
 
 
-static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle)
+static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct in_addr *ip_addr)
 {
 
 	struct sockaddr_in command_server_addr;
@@ -850,7 +892,9 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle)
 
 	}
 	
-	printf("[SystemControl] Connection received: %i\n", htons(command_server_addr.sin_port));
+	printf("[SystemControl] Connection received: %x, %i\n", htons(cli_addr.sin_addr.s_addr), htons(command_server_addr.sin_port));
+
+	ip_addr->s_addr = cli_addr.sin_addr.s_addr; //Set IP-address of Usercontrol
 
 	if (*ClientSocket < 0) 
 	{
@@ -927,3 +971,63 @@ static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint3
   return iResult;
 
 }
+
+
+static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I32 *sockfd, struct sockaddr_in* addr)
+{
+  int result;
+  struct hostent *object;
+
+  /* Connect to object safety socket */
+  #ifdef DEBUG
+    printf("[SystemControl] Creating CPC socket\n");
+    fflush(stdout);
+  #endif
+
+  *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
+  if (*sockfd < 0)
+  {
+    util_error("[SystemControl] ERR: Failed to connect to CPC socket");
+  }
+
+  /* Set address to object */
+  object = gethostbyname(name);
+  
+  if (object==0)
+  {
+    util_error("[SystemControl] ERR: Unknown host");
+  }
+
+  bcopy((char *) object->h_addr, (char *)&addr->sin_addr.s_addr, object->h_length);
+  addr->sin_family = AF_INET;
+  addr->sin_port = htons(port);
+
+   /* set socket to non-blocking */
+  result = fcntl(*sockfd, F_SETFL, 
+    fcntl(*sockfd, F_GETFL, 0) | O_NONBLOCK);
+  if (result < 0)
+  {
+    util_error("[SystemControl] ERR: calling fcntl");
+  }
+
+  //#ifdef DEBUG
+    printf("[SystemControl] Created CPC socket and address: %s %d\n",name,port);
+    fflush(stdout);
+  //#endif
+
+}
+
+I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug)
+{
+    I32 result;
+ 
+    result = sendto(*sockfd, SendData, Length, 0, (const struct sockaddr *) addr, sizeof(struct sockaddr_in));
+
+    if (result < 0)
+    {
+      util_error("[SystemControl] Failed to send on process control socket.");
+    }
+
+    return 0;
+}
+
