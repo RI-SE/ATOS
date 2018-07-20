@@ -325,6 +325,11 @@ typedef struct
 
 typedef struct
 {
+  U8 MiscU8;
+} GSDType;
+
+typedef struct
+{
   int Index;
   float Time;
   float OrigoDistance;

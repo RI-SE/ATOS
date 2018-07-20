@@ -16,7 +16,7 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-int timecontrol_task(TimeType *GPSTime);
+int timecontrol_task(TimeType *GPSTime,  GSDType *GSD);
 
 
 #endif 

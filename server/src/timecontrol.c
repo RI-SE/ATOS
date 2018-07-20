@@ -50,7 +50,7 @@ U32 TimeControlIPStringToInt(C8 *IP);
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
-int timecontrol_task(TimeType *GPSTime)
+int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 {
 
   C8 TextBufferC8[TIME_CONTROL_BUFFER_SIZE_20];
@@ -72,8 +72,6 @@ int timecontrol_task(TimeType *GPSTime)
   U16 PrevMilliSecondU16;
   
   (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
-
-
 
   bzero(TextBufferC8, TIME_CONTROL_BUFFER_SIZE_20);
   UtilSearchTextFile(TEST_CONF_FILE, "TimeServerIP=", "", TextBufferC8);
@@ -201,7 +199,6 @@ int timecontrol_task(TimeType *GPSTime)
       }
     }
 
-
     bzero(MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
     (void)iCommRecv(&iCommand,MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
 
@@ -211,10 +208,7 @@ int timecontrol_task(TimeType *GPSTime)
       printf("timecontrol exiting.\n");
       (void)iCommClose();
     }
-    
   }
-
-
 }
 
 
@@ -300,7 +294,7 @@ U32 TimeControlIPStringToInt(C8 *IP)
 
       IpU32 = (IpU32 | (U32)atoi(Buffer));
 
-      printf("IpU32 = %x\n", IpU32);
+      //printf("IpU32 = %x\n", IpU32);
     }
 
     return IpU32;
