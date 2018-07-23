@@ -43,7 +43,7 @@
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
-int citscontrol_task(TimeType *GPSTime)
+int citscontrol_task(TimeType *GPSTime, GSDType *GSD)
 {
 
   I32 iExit = 0, iCommand;

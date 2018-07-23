@@ -84,10 +84,10 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.163"
-#define TESTSERVER_IP "192.168.0.163"
+#define TESTHOST_IP "10.168.6.248"
+#define TESTSERVER_IP "10.168.6.248"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.163" 
+#define LOCAL_USER_CONTROL_IP "10.168.6.248" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -147,25 +147,25 @@
 #define RESERVED_CODE  255
 
 #define VALUE_ID_NOT_DEF                    0
-#define VALUE_ID_RELATIVE_TIME              1
-#define VALUE_ID_GPS_SECOND_OF_WEEK         2
-#define VALUE_ID_GPS_WEEK                   3
-#define VALUE_ID_DATE_ISO8601               4
-#define VALUE_ID_X_POSITION                 10
-#define VALUE_ID_Y_POSITION                 11
-#define VALUE_ID_Z_POSITION                 12
-#define VALUE_ID_LATITUDE                   20
-#define VALUE_ID_LONGITUDE                  21
-#define VALUE_ID_ALTITUDE                   22
-#define VALUE_ID_HEADING                    30
-#define VALUE_ID_LONGITUDINAL_SPEED         40
-#define VALUE_ID_LATERAL_SPEED              41
-#define VALUE_ID_LONGITUDINAL_ACCELERATION  50
-#define VALUE_ID_LATERAL_ACCELERATION       51
-#define VALUE_ID_STATE_CHANGE_REQUEST       64
-#define VALUE_ID_MAX_WAY_DEVIATION          70
-#define VALUE_ID_MAX_LATERAL_DEVIATION      72
-#define VALUE_ID_MIN_POS_ACCURACY           74
+#define VALUE_ID_RELATIVE_TIME              0x1
+#define VALUE_ID_GPS_SECOND_OF_WEEK         0x2
+#define VALUE_ID_GPS_WEEK                   0x3
+#define VALUE_ID_DATE_ISO8601               0x4
+#define VALUE_ID_X_POSITION                 0x10
+#define VALUE_ID_Y_POSITION                 0x11
+#define VALUE_ID_Z_POSITION                 0x12
+#define VALUE_ID_LATITUDE                   0x20
+#define VALUE_ID_LONGITUDE                  0x21
+#define VALUE_ID_ALTITUDE                   0x22
+#define VALUE_ID_HEADING                    0x30
+#define VALUE_ID_LONGITUDINAL_SPEED         0x40
+#define VALUE_ID_LATERAL_SPEED              0x41
+#define VALUE_ID_LONGITUDINAL_ACCELERATION  0x50
+#define VALUE_ID_LATERAL_ACCELERATION       0x51
+#define VALUE_ID_STATE_CHANGE_REQUEST       0x64
+#define VALUE_ID_MAX_WAY_DEVIATION          0x70
+#define VALUE_ID_MAX_LATERAL_DEVIATION      0x72
+#define VALUE_ID_MIN_POS_ACCURACY           0x74
 #define VALUE_ID_CURVATURE                  0xA000
 
 
@@ -338,6 +338,7 @@ typedef struct
   U16 SystemControlExecTimeU16;
   U16 ObjectControlExecTimeU16;
   U16 SimulatorControlExecTimeU16;
+  U8 ExitU8;
 } GSDType;
 
 typedef struct

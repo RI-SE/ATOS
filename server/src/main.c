@@ -46,8 +46,11 @@ int main(int argc, char *argv[])
 {
 
   /*Share time between child processes*/
+
   GPSTime = mmap(NULL, sizeof *GPSTime, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   GSD = mmap(NULL, sizeof *GSD, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+  GSD->ExitU8 = 0;
 
   pid_t pID[8];
   int iIndex = 0;
@@ -167,7 +170,7 @@ int main(int argc, char *argv[])
     #ifdef DEBUG
       printf("INF: simulatorcontrol_task running in:  %i \n",getpid());
     #endif
-    simulatorcontrol_task(GPSTime);
+    simulatorcontrol_task(GPSTime, GSD);
     exit(EXIT_SUCCESS);
   }
   ++iIndex;
@@ -182,7 +185,7 @@ int main(int argc, char *argv[])
     #ifdef DEBUG
       printf("INF: citscontrol_task running in:  %i \n",getpid());
     #endif
-    citscontrol_task(GPSTime);
+    citscontrol_task(GPSTime, GSD);
     exit(EXIT_SUCCESS);
   }
   ++iIndex;

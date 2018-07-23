@@ -720,6 +720,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 			case Exit_0:
 				(void)iCommSend(COMM_EXIT,NULL);
 				iExit = 1;
+				GSD->ExitU8 = 1;
 				usleep(1000000);
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);

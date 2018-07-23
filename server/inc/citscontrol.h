@@ -16,7 +16,7 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-int citscontrol_task(TimeType *GPSTime);
+int citscontrol_task(TimeType *GPSTime, GSDType *GSD);
 
 
 #endif 

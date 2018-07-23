@@ -70,8 +70,10 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
   U32 IpU32;
   U8 PrevSecondU8;
   U16 CurrentMilliSecondU16, PrevMilliSecondU16;
-  
-  (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
+
+  gettimeofday(&ExecTime, NULL);
+  CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
+  PrevMilliSecondU16 = CurrentMilliSecondU16;
 
   bzero(TextBufferC8, TIME_CONTROL_BUFFER_SIZE_20);
   UtilSearchTextFile(TEST_CONF_FILE, "TimeServerIP=", "", TextBufferC8);
@@ -95,8 +97,9 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
   {
     TimeControlCreateTimeChannel(ServerIPC8, ServerPortU16, &SocketfdI32,  &time_addr);
     TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, 4, 0);
-  }
-  printf("Checking time...\n");
+    printf("Get time from GPS.\n");
+  } else printf("Count fake time.\n");
+
   while(!iExit)
   {
 
@@ -148,7 +151,6 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
       //printf("ETSIMillisecondsU64: %ld\n", GPSTime->ETSIMillisecondsU64);
       //printf("LatitudeU32: %d\n", GPSTime->LatitudeU32);
       //printf("LongitudeU32: %d\n", GPSTime->LongitudeU32);
-
     }
     else if( GPSTime->MicroSecondU16 == 0)
     {
@@ -201,26 +203,24 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 
 
     gettimeofday(&ExecTime, NULL);
-    if(CurrentMilliSecondU16 != PrevMilliSecondU16)
+    CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
+    //if(CurrentMilliSecondU16 != PrevMilliSecondU16)
     {
-      CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
-      if(CurrentMilliSecondU16 < PrevMilliSecondU16)GSD->TimeControlExecTimeU16 = GPSTime->MillisecondU16 + (1000 - PrevMilliSecondU16);
-      else GSD->TimeControlExecTimeU16 = abs(PrevMilliSecondU16 - GPSTime->MillisecondU16);
+      if(CurrentMilliSecondU16 < PrevMilliSecondU16) GSD->TimeControlExecTimeU16 = CurrentMilliSecondU16 + (1000 - PrevMilliSecondU16);
+      else GSD->TimeControlExecTimeU16 = abs(PrevMilliSecondU16 - CurrentMilliSecondU16);
       PrevMilliSecondU16 = CurrentMilliSecondU16;
       //printf("%d\n", GSD->TimeControlExecTimeU16);
     }
 
-
-
-    bzero(MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
-    (void)iCommRecv(&iCommand,MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
-
-    if(iCommand == COMM_EXIT)
+    if(GSD->ExitU8 == 1)
     {
+      SendData[0] = 0, SendData[1] = 0, SendData[2] = 0, SendData[3] = 0;
+      TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, 4, 0);
       iExit = 1;
-      printf("timecontrol exiting.\n");
+      printf("[TimeControl] Timecontrol exiting.\n");
       (void)iCommClose();
     }
+
   }
 }
 
@@ -230,17 +230,17 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
   int result;
   struct hostent *object;
 
-  printf("Time source IP: %s, port: %d\n", name, port);
+  printf("[TimeControl] Time source IP: %s, port: %d\n", name, port);
   /* Connect to object safety socket */
   #ifdef DEBUG
-    printf("INF: Creating time socket\n");
+    printf("[TimeControl] Creating time socket\n");
     fflush(stdout);
   #endif
 
   *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
   if (*sockfd < 0)
   {
-    util_error("ERR: Failed to connect to time socket");
+    util_error("[TimeControl] ERR: Failed to connect to time socket");
   }
 
   /* Set address to object */
@@ -248,7 +248,7 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
   
   if (object==0)
   {
-    util_error("ERR: Unknown host");
+    util_error("[TimeControl] ERR: Unknown host");
   }
 
   bcopy((char *) object->h_addr, 
@@ -268,13 +268,13 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
     fcntl(*sockfd, F_GETFL, 0) | O_NONBLOCK);
   if (result < 0)
   {
-    util_error("ERR: calling fcntl");
+    util_error("[TimeControl] ERR: calling fcntl");
   }
 
  
 
   #ifdef DEBUG
-    printf("INF: Created socket and time address: %s %d\n",name,port);
+    printf("[TimeControl] Created socket and time address: %s %d\n",name,port);
     fflush(stdout);
   #endif
 
@@ -338,7 +338,7 @@ static int TimeControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* S
 
     if (result < 0)
     {
-      util_error("ERR: Failed to send on time socket");
+      util_error("[TimeControl] ERR: Failed to send on time socket");
     }
 
     return 0;
@@ -357,12 +357,12 @@ static void TimeControlRecvTime(int* sockfd, char* buffer, int length, int* reci
       {
         if(errno != EAGAIN && errno != EWOULDBLOCK)
         {
-          util_error("ERR: Failed to receive from time socket");
+          util_error("[TimeControl] ERR: Failed to receive from time socket");
         }
         else
         {
           #ifdef DEBUG
-            printf("INF: No data receive, result=%d\n", result);
+            printf("[TimeControl]  No data receive, result=%d\n", result);
             fflush(stdout);
           #endif
         }
@@ -371,7 +371,7 @@ static void TimeControlRecvTime(int* sockfd, char* buffer, int length, int* reci
       {
         *recievedNewData = 1;
         #ifdef DEBUG
-          printf("INF: Received: <%s>, %d\n",buffer, result);
+          printf("[TimeControl] Received data: <%s>, %d\n",buffer, result);
           fflush(stdout);
         #endif
       }
