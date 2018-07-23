@@ -64,12 +64,12 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
   C8 SendData[4] = {0, 0, 0, 250};
   struct timespec sleep_time, ref_time;
   C8 MqRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
-  struct timeval tv;
+  struct timeval tv, ExecTime;
   struct tm *tm;
   
   U32 IpU32;
   U8 PrevSecondU8;
-  U16 PrevMilliSecondU16;
+  U16 CurrentMilliSecondU16, PrevMilliSecondU16;
   
   (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
 
@@ -199,6 +199,19 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
       }
     }
 
+
+    gettimeofday(&ExecTime, NULL);
+    if(CurrentMilliSecondU16 != PrevMilliSecondU16)
+    {
+      CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
+      if(CurrentMilliSecondU16 < PrevMilliSecondU16)GSD->TimeControlExecTimeU16 = GPSTime->MillisecondU16 + (1000 - PrevMilliSecondU16);
+      else GSD->TimeControlExecTimeU16 = abs(PrevMilliSecondU16 - GPSTime->MillisecondU16);
+      PrevMilliSecondU16 = CurrentMilliSecondU16;
+      //printf("%d\n", GSD->TimeControlExecTimeU16);
+    }
+
+
+
     bzero(MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
     (void)iCommRecv(&iCommand,MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
 
@@ -243,6 +256,13 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
   addr->sin_family = AF_INET;
   addr->sin_port = htons(port);
 
+
+  struct timeval timeout;      
+  timeout.tv_sec = 0;
+  timeout.tv_usec = 0;
+  if (setsockopt (*sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) util_error("setsockopt failed\n");
+
+
    /* set socket to non-blocking */
   result = fcntl(*sockfd, F_SETFL, 
     fcntl(*sockfd, F_GETFL, 0) | O_NONBLOCK);
@@ -250,6 +270,8 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
   {
     util_error("ERR: calling fcntl");
   }
+
+ 
 
   #ifdef DEBUG
     printf("INF: Created socket and time address: %s %d\n",name,port);

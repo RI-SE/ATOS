@@ -175,6 +175,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
  	C8 UserControlIPC8[SMALL_BUFFER_SIZE_20];
  	C8 ProcessControlData[SYSTEM_CONTROL_PROCESS_DATA_BUFFER];
  	U32 ProcessControlSendCounterU32 = 0;
+ 	U32	PCDMessageLengthU32;
+	U16	PCDMessageCodeU16;
+
 
 	bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
 	UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerMode=", "", TextBufferC8);
@@ -374,17 +377,27 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 			ProcessControlSendCounterU32 = 0;
 			bzero(ProcessControlData, SYSTEM_CONTROL_PROCESS_DATA_BUFFER);
 
-			ProcessControlData[0] =	(U8)(GPSTime->GPSMillisecondsU64 >> 56);
-			ProcessControlData[1] =	(U8)(GPSTime->GPSMillisecondsU64 >> 48);
-			ProcessControlData[2] =	(U8)(GPSTime->GPSMillisecondsU64 >> 40);
-			ProcessControlData[3] =	(U8)(GPSTime->GPSMillisecondsU64 >> 32);
-			ProcessControlData[4] =	(U8)(GPSTime->GPSMillisecondsU64 >> 24);
-			ProcessControlData[5] =	(U8)(GPSTime->GPSMillisecondsU64 >> 16);
-			ProcessControlData[6] =	(U8)(GPSTime->GPSMillisecondsU64 >> 8);
-			ProcessControlData[7] =	(U8)(GPSTime->GPSMillisecondsU64);
-			ProcessControlData[8] = server_state;
-			ProcessControlData[9] = OBCStateU8;
-			SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, 10, 0);
+			PCDMessageLengthU32 = 12;
+			PCDMessageCodeU16 = 1;
+			ProcessControlData[0] =	(U8)(PCDMessageLengthU32 >> 24);
+			ProcessControlData[1] =	(U8)(PCDMessageLengthU32 >> 16);
+			ProcessControlData[2] =	(U8)(PCDMessageLengthU32 >> 8);
+			ProcessControlData[3] =	(U8) PCDMessageLengthU32;
+			ProcessControlData[4] =	(U8)(PCDMessageCodeU16 >> 8);
+			ProcessControlData[5] =	(U8) PCDMessageCodeU16;
+			ProcessControlData[6] =	(U8)(GPSTime->GPSMillisecondsU64 >> 56);
+			ProcessControlData[7] =	(U8)(GPSTime->GPSMillisecondsU64 >> 48);
+			ProcessControlData[8] =	(U8)(GPSTime->GPSMillisecondsU64 >> 40);
+			ProcessControlData[9] =	(U8)(GPSTime->GPSMillisecondsU64 >> 32);
+			ProcessControlData[10] =	(U8)(GPSTime->GPSMillisecondsU64 >> 24);
+			ProcessControlData[11] =	(U8)(GPSTime->GPSMillisecondsU64 >> 16);
+			ProcessControlData[12] =	(U8)(GPSTime->GPSMillisecondsU64 >> 8);
+			ProcessControlData[13] =	(U8)(GPSTime->GPSMillisecondsU64);
+			ProcessControlData[14] = server_state;
+			ProcessControlData[15] = OBCStateU8;
+			ProcessControlData[16] = (U8)(GSD->TimeControlExecTimeU16 >> 8);
+			ProcessControlData[17] = (U8) GSD->TimeControlExecTimeU16;
+			SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, PCDMessageLengthU32 + 6, 1);
 		}
 
 

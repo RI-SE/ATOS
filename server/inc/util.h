@@ -214,24 +214,33 @@ typedef struct
 {
   HeaderType Header;
   U16 LatitudeValueIdU16;
+  U16 LatitudeContentLengthU16;
   I64 LatitudeI64;
   U16 LongitudeValueIdU16;
+  U16 LongitudeContentLengthU16;
   I64 LongitudeI64;
   U16 AltitudeValueIdU16;
+  U16 AltitudeContentLengthU16;
   I32 AltitudeI32;
   U16 DateValueIdU16;
+  U16 DateContentLengthU16;
   U32 DateU32;
   U16 GPSWeekValueIdU16;
+  U16 GPSWeekContentLengthU16;
   U16 GPSWeekU16;
   U16 GPSSOWValueIdU16;
+  U16 GPSSOWContentLengthU16;
   U32 GPSSOWU32;
   U16 MaxWayDeviationValueIdU16;
+  U16 MaxWayDeviationContentLengthU16;
   U16 MaxWayDeviationU16;
   U16 MaxLateralDeviationValueIdU16;
+  U16 MaxLateralDeviationContentLengthU16;
   U16 MaxLateralDeviationU16;
   U16 MinPosAccuracyValueIdU16;
+  U16 MinPosAccuracyContentLengthU16;
   U16 MinPosAccuracyU16;
-} OSEMType; //67 bytes
+} OSEMType; //85 bytes
 
 typedef struct
 {
@@ -325,7 +334,10 @@ typedef struct
 
 typedef struct
 {
-  U8 MiscU8;
+  U16 TimeControlExecTimeU16;
+  U16 SystemControlExecTimeU16;
+  U16 ObjectControlExecTimeU16;
+  U16 SimulatorControlExecTimeU16;
 } GSDType;
 
 typedef struct
