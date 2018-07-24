@@ -62,7 +62,7 @@ void getDateTimeFromUTCtime(uint64_t utc_ms, char *buffer, int size_t)
      time_t rest_time_ms = utc_ms - time_seconds;
     if (size_t < 26) return;
 
-    bzero(buffer,size_t);
+    //bzero(buffer,size_t);
 
     strcpy(buffer,ctime(&time_seconds));
     //strcat(buffer,)

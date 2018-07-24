@@ -41,7 +41,7 @@ bool ISOcom::startServer(int udpSocket, int tcpSocket)
     }
 
     qDebug() << "Started CHRONOS client";
-/*
+    /*
     if (res && mPacket) {
         connect(mPacket, SIGNAL(stateReceived(quint8,CAR_STATE)),
                 this, SLOT(stateReceived(quint8,CAR_STATE)));
@@ -52,103 +52,102 @@ bool ISOcom::startServer(int udpSocket, int tcpSocket)
 
 void ISOcom::PacketRx(QByteArray data)
 {
-    ISO_PACKAGE_INFO info;
 
-    uint8_t mPacketState = 0;
-    QByteArray message_queue;
-
-    bool MSG_CRC_OK = false;
-    bool MSG_REC = false;
-
-    // TODO: change this to use VByteArray instead of char looping
-
+    quint64 data_len = 0;
+    //qDebug() << "PACKAGE REC";
     for (char c: data) {
-        switch (mPacketState) {
+        switch (message_state) {
         //---------------------------------------
         // Check for the sync word
         case 0:
-            /*
-            mTcpType = (quint8)c;
-            mTcpLen = 0;
-            mTcpData.clear();
-            mPacketState++;
-            */
             // Clear the data types
-            message_queue.clear();
-            info.ACK_REQ = 0;
-            info.PACKAGE_COUNTER = 0;
-            info.PACKAGE_LENGTH = 0;
-            info.TxID = 0;
+            message_data.clear();
+            message_info.TxID = 0;
+            message_info.MESSAGE_COUNTER = 0;
+            message_info.ACK_REQ = 0;
+            message_info.PROTOCOL_VERSION = 0;
+            message_info.MESSAGE_ID = 0;
+            message_info.MESSAGE_LENGTH = 0;
+            message_info.CRC = 0;
 
-
-            mPacketState = c && ISO_PART_SYNC_WORD ? mPacketState + 1 : 0;
+            message_state = c && ISO_PART_SYNC_WORD ? message_state + 1 : message_state;
             break;
         case 1:
 
-            mPacketState = c && ISO_PART_SYNC_WORD ? mPacketState + 1 : 0;
+            message_state = c && ISO_PART_SYNC_WORD ? message_state + 1 : message_state - 1;
             break;
-        //---------------------------------------
-        // Transmitter ID
+            //---------------------------------------
+            // Transmitter ID
         case 2:
-            info.TxID = c;
-            mPacketState++;
+            message_info.TxID = c;
+            message_state++;
             break;
-        //---------------------------------------
-        // Package Counter
+            //---------------------------------------
+            // Message Counter
         case 3:
-            info.PACKAGE_COUNTER = c;
-            mPacketState++;
+            message_info.MESSAGE_COUNTER = c;
+            message_state++;
             break;
-        //---------------------------------------
-        // Ack Request
+            //---------------------------------------
+            // Ack Request
         case 4:
-            info.ACK_REQ = (uint8_t)c;
-            mPacketState++;
+            message_info.ACK_REQ = static_cast<uint8_t>(c) & 128;
+            message_info.PROTOCOL_VERSION = static_cast<uint8_t>(c) & 127;
+            message_state++;
             break;
         case 5:
-            info.PACKAGE_LENGTH |= ((quint8)c) << 24;
-            mPacketState++;
+            message_info.MESSAGE_ID = static_cast<uint8_t>(c);
+            message_state++;
             break;
         case 6:
-            info.PACKAGE_LENGTH |= ((quint8)c) << 16;
-            mPacketState++;
+            message_info.MESSAGE_ID |= static_cast<uint8_t>(c) << 8;
+            message_state++;
             break;
         case 7:
-            info.PACKAGE_LENGTH |= ((quint8)c) << 8;
-            mPacketState++;
+            if (message_info.MESSAGE_ID == 1)
+            {
+                qDebug() << "DOPM ID REC";
+            }
+            message_info.MESSAGE_LENGTH = static_cast<uint8_t>(c);
+            message_state++;
             break;
         case 8:
-            info.PACKAGE_LENGTH |= ((quint8)c);
-            mPacketState++;
+            message_info.MESSAGE_LENGTH |= static_cast<uint8_t>(c) << 8;
+            message_state++;
             break;
         case 9:
-            message_queue.append(c);
-            if ((uint32_t)message_queue.size() >= info.PACKAGE_LENGTH) {
-                mPacketState++;
-                //qDebug() << "All messages recieved!";
-                MSG_REC = true;
-            }
+            message_info.MESSAGE_LENGTH |= static_cast<uint8_t>(c) << 16;
+            message_state++;
             break;
         case 10:
-            info.CRC |= (uint8_t)c << 8;
-            mPacketState++;
+            message_info.MESSAGE_LENGTH |= static_cast<uint8_t>(c) << 24;
+            message_state++;
             break;
         case 11:
-            info.CRC |= (uint8_t)c;
-            //qDebug() << "Whole package recieved!";
+            message_data.append(c);
+            data_len = message_data.size();
+
+            if ((uint32_t)message_data.size() >= message_info.MESSAGE_LENGTH)
+            {
+                message_state++;
+            }
+            break;
+
+        case 12:
+            message_info.CRC |= static_cast<uint8_t>(c);
+            message_state++;
+            break;
+        case 13:
+            message_info.CRC |= static_cast<uint8_t>(c) << 8;
             // Calculate CRC correct
-            //if (info.CRC == 0)
-                MSG_CRC_OK = true;
+            if(message_info.CRC == 0 || true)
+            {
+                processMessage(message_data,message_info.MESSAGE_ID,message_info.MESSAGE_LENGTH,message_info.PROTOCOL_VERSION);
+            }
+            message_state = 0;
             break;
         default:
             break;
-        }
-        if (MSG_REC && MSG_CRC_OK)
-        {
-            //qDebug() << "processing messages";
-            //process message
-            processMessages(message_queue);
-            //qDebug() << "T_ID:"<< info.TxID << "PKG_C:" << info.PACKAGE_COUNTER << "ACK_REQ:" << info.ACK_REQ;
         }
     }
 }
@@ -169,10 +168,10 @@ void ISOcom::readPendingDatagrams()
         datagram.resize(mUdpSocket->pendingDatagramSize());
 
         mUdpSocket->readDatagram(datagram.data(), datagram.size(),
-                                &mUdpHostAddress, &mUdpPort);
+                                 &mUdpHostAddress, &mUdpPort);
 
         PacketRx(datagram);
-/*
+        /*
         VByteArray vb(datagram);
         quint8 type = vb.vbPopFrontUint8();
         quint16 len = vb.vbPopFrontUint32();
@@ -181,198 +180,379 @@ void ISOcom::readPendingDatagrams()
 }
 
 
-/*
-void ISOcom::stateReceived(quint8 id, CAR_STATE state)
+qint64 ISOcom::streamPop6Bytes(QDataStream &data)
 {
-    (void)id;
-    (void)state;
 
-    // TODO: Send monr message
-}*/
+    qint64 return_val = 0;
+    quint8 readData[6];
+    //if (data.readRawData(readData,6) < 0){ return 0; qDebug() << "Unable to read data.";}
 
-bool ISOcom::decodeMsg(quint8 type, quint32 len, QByteArray payload)
+    data >> readData[0];
+    data >> readData[1];
+    data >> readData[2];
+    data >> readData[3];
+    data >> readData[4];
+    data >> readData[5];
+
+    if (data.byteOrder() == QDataStream::BigEndian)
+    {
+        return_val = static_cast<quint64>(readData[0]) << 40;
+        return_val |= static_cast<quint64>(readData[1]) << 32;
+        return_val |= static_cast<quint64>(readData[2]) << 24;
+        return_val |= static_cast<quint64>(readData[3]) << 16;
+        return_val |= static_cast<quint64>(readData[4]) << 8;
+        return_val |= static_cast<quint64>(readData[5]);
+    }
+    else
+    {
+        return_val = static_cast<quint64>(readData[0]) ;
+        return_val |= static_cast<quint64>(readData[1]) << 8;
+        return_val |= static_cast<quint64>(readData[2]) << 16;
+        return_val |= static_cast<quint64>(readData[3]) << 24;
+        return_val |= static_cast<quint64>(readData[4]) << 32;
+        return_val |= static_cast<quint64>(readData[5]) << 40;
+    }
+    return return_val;
+}
+
+bool ISOcom::processMessage(const QByteArray &data,const quint16 &msg_id,const quint32 &msg_len,const quint8 &protocol_version)
 {
-    (void)type;
-    (void)len;
-    (void)payload;
+    QDataStream msg_data(data);
+    msg_data.setByteOrder(QDataStream::LittleEndian);
 
-    switch (type) {
-    case CHRONOS_MSG_OSEM: {
-        chronos_osem osem;
-        VByteArray vb(payload);
-        osem.lat = vb.vbPopFrontDouble32(1e7);
-        osem.lon = vb.vbPopFrontDouble32(1e7);
-        osem.alt = vb.vbPopFrontDouble32(1e2);
-        osem.heading = vb.vbPopFrontDouble16(1e1);
-        //processOsem(osem);
-    } break;
+    switch (msg_id) {
+    case ISO_MSG_HEAB:
 
+        heab heab_msg;
+        if (!processHEAB(msg_data,msg_len,heab_msg)) return false;
+        emit heab_processed(heab_msg);
+        break;
 
-    default:
+    case ISO_MSG_OSEM:
+    {
+        osem osem_msg;
+        if (!processOSEM(msg_data,msg_len,osem_msg)) return false;
+        emit osem_processed(osem_msg);
         break;
     }
+    case ISO_MSG_DOTM:
+        QVector<dotm_pt> traj;
+        if (!processDOTM(msg_data,msg_len,traj)) return false;
+        emit dotm_processed(traj);
+        break;
+    case ISO_MSG_OSTM:
 
-    return true;
-}
-
-bool ISOcom::processMessages(QByteArray data)
-{
-    VByteArray msg_data(data);
-    uint16_t MSG_ID = 0;
-    uint32_t MSG_NR_CONTENT = 0;
-    while(msg_data.size()>2)
-        //As long as MSG ID exists
-    {
-        MSG_ID = msg_data.vbPopFrontUint16();
-        MSG_NR_CONTENT = msg_data.vbPopFrontUint32();
-        switch (MSG_ID) {
-        case ISO_MSG_DOTM:
-        {
-            if (MSG_NR_CONTENT % ISO_MSG_DOTM_POINT_NoC > 0)
-            {
-                qDebug() << "DOPM NoC is not consistent with the amount of points recieved.";
-                return false;
-            }
-            QVector<dotm_pt> trajectory;
-            dotm_pt point;
-            uint32_t remaining_content = MSG_NR_CONTENT;
-            while (remaining_content >= ISO_MSG_DOTM_POINT_NoC)
-            {
-                if(!getValidContent(&(point.rel_time),msg_data,ISO_VALUE_ID_REL_TIME,ISO_TYPE_ID_U32)) return false;
-                if(!getValidContent(&(point.x),msg_data,ISO_VALUE_ID_X_POS,ISO_TYPE_ID_I32)) return false;
-                if(!getValidContent(&(point.y),msg_data,ISO_VALUE_ID_X_POS,ISO_TYPE_ID_I32)) return false;
-                if(!getValidContent(&(point.z),msg_data,ISO_VALUE_ID_X_POS,ISO_TYPE_ID_I32)) return false;
-                if(!getValidContent(&(point.heading),msg_data,ISO_VALUE_ID_HEADING,ISO_TYPE_ID_U16)) return false;
-                if(!getValidContent(&(point.lon_speed),msg_data,ISO_VALUE_ID_LON_SPEED,ISO_TYPE_ID_I16)) return false;
-                if(!getValidContent(&(point.lat_speed),msg_data,ISO_VALUE_ID_LAT_SPEED,ISO_TYPE_ID_I16)) return false;
-                if(!getValidContent(&(point.lon_acc),msg_data,ISO_VALUE_ID_LON_ACC,ISO_TYPE_ID_I16)) return false;
-                if(!getValidContent(&(point.lat_acc),msg_data,ISO_VALUE_ID_LAT_ACC,ISO_TYPE_ID_I16)) return false;
-                trajectory.append(point);
-                remaining_content -= ISO_MSG_DOTM_POINT_NoC;
-            }
-            qDebug() << "DOTM received and handled.";
-            emit dotm_processed(trajectory);
-            break;
-
-        }
-        case ISO_MSG_OSEM:
-        {
-            if (MSG_NR_CONTENT != ISO_MSG_OSEM_NoC)
-            {
-                qDebug() << "OSEM NoC = " << ISO_MSG_OSEM_NoC << ", MSG NoC = " << MSG_NR_CONTENT;
-                return false;
-            }
-            osem origin;
-            if(!getValidContent(&(origin.lat),msg_data,ISO_VALUE_ID_LAT_POS,ISO_TYPE_ID_I32)) return false;
-            if(!getValidContent(&(origin.lon),msg_data,ISO_VALUE_ID_LON_POS,ISO_TYPE_ID_I32)) return false;
-            if(!getValidContent(&(origin.alt),msg_data,ISO_VALUE_ID_ALT_POS,ISO_TYPE_ID_I32)) return false;
-            qDebug() << "OSEM received and handled.";
-            emit osem_processed(origin);
-            break;
-        }
-        case ISO_MSG_OSTM:
-        {
-            if (MSG_NR_CONTENT != ISO_MSG_OSTM_NoC)
-            {
-                qDebug() << "Number of Contents (NoC) not recognized.";
-                qDebug() << "OSTM NoC = " << ISO_MSG_OSTM_NoC << ", MSG NoC = " << MSG_NR_CONTENT;
-                return false;
-            }
-            ostm state;
-            if(!getValidContent(&(state.state_change),msg_data,ISO_VALUE_ID_FLAG,ISO_TYPE_ID_U8)) return false;
-            qDebug() << "OSTM received and handled.";
-            qDebug() << "State change = " << state.state_change << "requested.";
-            emit ostm_processed(state);
-            break;
-        }
-        case ISO_MSG_STRT:
-        {
-            if (MSG_NR_CONTENT != ISO_MSG_STRT_NoC)
-            {
-                qDebug() << "STRT NoC = " << ISO_MSG_STRT_NoC << ", MSG NoC = " << MSG_NR_CONTENT;
-                return false;
-            }
-            strt msg;
-            if(!getValidContent(&(msg.abs_start_time),msg_data,ISO_VALUE_ID_ABS_TIME,ISO_TYPE_ID_U48)) return false;
-            //uint64_t cTime = utility::getCurrentETSItimeMS();
-            qDebug() << "STRT received and handled.";
-            emit strt_processed(msg);
-            break;
-        }
-        case ISO_MSG_HEAB:
-        {
-            if (MSG_NR_CONTENT != ISO_MSG_HEAB_NoC)
-            {
-                qDebug() << "HEAB NoC = " << ISO_MSG_HEAB_NoC << ", MSG NoC = " << MSG_NR_CONTENT;
-                return false;
-            }
-            heab heartbeat;
-            if(!getValidContent(&(heartbeat.tx_time),msg_data,ISO_VALUE_ID_ABS_TIME,ISO_TYPE_ID_U48)) return false;
-            if(!getValidContent(&(heartbeat.cc_status),msg_data,ISO_VALUE_ID_FLAG,ISO_TYPE_ID_U8)) return false;
-            //qDebug() << "HEAB received and handled.";
-            emit heab_processed(heartbeat);
-            break;
-        }
-        default:
-            break;
-        }
+        ostm ostm_msg;
+        if (!processOSTM(msg_data,msg_len,ostm_msg)) return false;
+        emit ostm_processed(ostm_msg);
+        break;
+    case ISO_MSG_STRT:
+        strt strt_msg;
+        if (!processSTRT(msg_data,msg_len,strt_msg)) return false;
+        emit strt_processed(strt_msg);
+        break;
+    default:
+        qDebug() << "Unknown message recieved";
+        return false;
+        break;
     }
+    //}
     return true;
 }
 
-bool ISOcom::getValidContent(void *data_loc, VByteArray &vb,uint16_t VALUE_ID, uint8_t TYPE_ID)
+
+bool ISOcom::processOSEM(QDataStream &msg_stream, const quint32 &msg_len, osem &osem_msg)
 {
-    uint16_t read_VALUE_ID = vb.vbPopFrontUint16();
-    uint8_t read_TYPE_ID = vb.vbPopFrontUint8();
-    if(read_VALUE_ID == VALUE_ID && read_TYPE_ID == TYPE_ID)
+    quint32 remaining_content = msg_len;
+
+    quint16 value_id = 0;
+    quint16 content_len = 0;
+
+    //const quint16 expected_mandatory_content = 0x01FF;
+    qint16 mandatory_content_check = 0;
+
+    while(!msg_stream.atEnd())
     {
-        switch (read_TYPE_ID) {
-        case ISO_TYPE_ID_CHAR:
-            *((char*)data_loc) = vb.vbPopFrontInt8();
-            break;
-        case ISO_TYPE_ID_U8:
-            *((uint8_t*)data_loc) = vb.vbPopFrontUint8();
-            break;
-        case ISO_TYPE_ID_I8:
-            *((int8_t*)data_loc) = vb.vbPopFrontInt8();
-            break;
-        case ISO_TYPE_ID_U16:
-            *((uint16_t*)data_loc) = vb.vbPopFrontUint16();
-            break;
-        case ISO_TYPE_ID_I16:
-            *((int16_t*)data_loc) = vb.vbPopFrontInt16();
-            break;
-        case ISO_TYPE_ID_U32:
-            *((uint32_t*)data_loc) = vb.vbPopFrontUint32();
-            break;
-        case ISO_TYPE_ID_I32:
-            *((int32_t*)data_loc) = vb.vbPopFrontInt32();
-            break;
-        case ISO_TYPE_ID_U48:
-            *((uint64_t*)data_loc) = vb.vbPopFrontUint48();
-            break;
-        default:
-        {
-            qDebug() << "TypeID" << TYPE_ID << "does not exist.";
+        if (remaining_content < ISO_MIN_CONTENT_DATA) {
+            qDebug() << "OSEM_ERROR: Not enough data to fill content";
             return false;
         }
+        // Read Content Header
+        msg_stream >> value_id;
+        msg_stream >> content_len;
+        remaining_content -= (content_len + sizeof(value_id) + sizeof(content_len));
+
+        switch (value_id) {
+        case ISO_VALUE_ID_LAT:
+            osem_msg.lat = streamPop6Bytes(msg_stream);
+            mandatory_content_check |= CONTENT_BINARY_ID_0;
+            break;
+        case ISO_VALUE_ID_LON:
+            osem_msg.lon = streamPop6Bytes(msg_stream);
+            mandatory_content_check |= CONTENT_BINARY_ID_1;
+            break;
+        case ISO_VALUE_ID_ALT:
+            msg_stream >> osem_msg.alt;
+            mandatory_content_check |= CONTENT_BINARY_ID_2;
+            break;
+        case ISO_VALUE_ID_DateISO8601:
+            msg_stream >> osem_msg.dateISO8601;
+            mandatory_content_check |= CONTENT_BINARY_ID_3;
+            break;
+        case ISO_VALUE_ID_GPS_WEEK:
+            msg_stream >> osem_msg.GPSweek;
+            mandatory_content_check |= CONTENT_BINARY_ID_4;
+            break;
+        case ISO_VALUE_ID_GPS_SEC_OF_WEEK:
+            msg_stream >> osem_msg.GPSsecOfWeek;
+            mandatory_content_check |= CONTENT_BINARY_ID_5;
+            break;
+        case ISO_VALUE_ID_MAX_WAY_DEV:
+            msg_stream >> osem_msg.MaxWayDev;
+            mandatory_content_check |= CONTENT_BINARY_ID_6;
+            break;
+        case ISO_VALUE_ID_MAX_LATERAL_DEV:
+            msg_stream >> osem_msg.MaxLatDev;
+            mandatory_content_check |= CONTENT_BINARY_ID_7;
+            break;
+        case ISO_VALUE_ID_MIN_POS_ACCURACY:
+            msg_stream >> osem_msg.MinPosAccuracy;
+            mandatory_content_check |= CONTENT_BINARY_ID_8;
+            break;
+        default:
+            msg_stream.skipRawData(content_len);
+            qDebug() << "OSEM_WARNING: Unrecognized content. ID:" << value_id;
+            break;
         }
     }
-    else {
-        qDebug() << "Value ID and Type ID does not match the valid combination.";
+    // Print OSEM
+    qDebug() << "OSEM:" <<
+                "\nLAT:" << osem_msg.lat <<
+                "\nLON:" << osem_msg.lon <<
+                "\nALT:" << osem_msg.alt <<
+                "\nDate:" << osem_msg.dateISO8601 <<
+                "\nGPSW:" << osem_msg.GPSweek <<
+                "\nGPSS:" << osem_msg.GPSsecOfWeek <<
+                "\nWAYDEV:" << osem_msg.MaxWayDev <<
+                "\nLATDEV:" << osem_msg.MaxLatDev <<
+                "\nMINPOSACC:" << osem_msg.MinPosAccuracy;
+    if(mandatory_content_check!=OSEM_MANDATORY_CONTENT)
+    {
+        qDebug() << "OSEM_ERROR: Missing mandatory content";
+        return false;
+    }
+    return true;
+
+}
+
+bool ISOcom::processDOTM(QDataStream &msg_stream, const quint32 &msg_len, QVector<dotm_pt> &traj)
+{
+    quint32 remaining_content = msg_len;
+
+    quint16 value_id = 0;
+    quint16 content_len = 0;
+
+    //const quint16 expected_mandatory_content = 0x01FF;
+    qint16 mandatory_content_check = 0;
+
+    dotm_pt dotm_msg;
+    dotm_msg.heading = 0;
+    dotm_msg.lat_acc = 0;
+    dotm_msg.lat_speed = 0;
+    dotm_msg.lon_acc = 0;
+    dotm_msg.lon_speed = 0;
+    dotm_msg.rel_time = 0;
+    dotm_msg.x = 0;
+    dotm_msg.y = 0;
+    dotm_msg.z = 0;
+
+
+    while(!msg_stream.atEnd())
+    {
+
+        if (remaining_content < ISO_MIN_CONTENT_DATA) {
+            qDebug() << "DOTM_ERROR: Not enough data to fill content";
+            return false;
+        }
+        // Read Content Header
+        msg_stream >> value_id;
+        msg_stream >> content_len;
+        remaining_content -= (content_len + sizeof(value_id) + sizeof(content_len));
+
+        switch (value_id) {
+        case ISO_VALUE_ID_REL_TIME:
+            msg_stream >> dotm_msg.rel_time;
+            mandatory_content_check |= CONTENT_BINARY_ID_0;
+            break;
+        case ISO_VALUE_ID_X_POS:
+            msg_stream >> dotm_msg.x;
+            mandatory_content_check |= CONTENT_BINARY_ID_1;
+            break;
+        case ISO_VALUE_ID_Y_POS:
+            msg_stream >> dotm_msg.y;
+            mandatory_content_check |= CONTENT_BINARY_ID_2;
+            break;
+        case ISO_VALUE_ID_Z_POS:
+            msg_stream >> dotm_msg.z;
+            mandatory_content_check |= CONTENT_BINARY_ID_3;
+            break;
+        case ISO_VALUE_ID_HEADING:
+            msg_stream >> dotm_msg.heading;
+            mandatory_content_check |= CONTENT_BINARY_ID_4;
+            break;
+        case ISO_VALUE_ID_LONG_SPEED:
+            msg_stream >> dotm_msg.lon_speed;
+            mandatory_content_check |= CONTENT_BINARY_ID_5;
+            break;
+        case ISO_VALUE_ID_LAT_SPEED:
+            msg_stream >> dotm_msg.lat_speed;
+            mandatory_content_check |= CONTENT_BINARY_ID_6;
+            break;
+        case ISO_VALUE_ID_LONG_ACC:
+            msg_stream >> dotm_msg.lon_acc;
+            mandatory_content_check |= CONTENT_BINARY_ID_7;
+            break;
+        case ISO_VALUE_ID_LAT_ACC:
+            msg_stream >> dotm_msg.lat_acc;
+            mandatory_content_check |= CONTENT_BINARY_ID_8;
+            break;
+        default:
+            msg_stream.skipRawData(content_len);
+            qDebug() << "OSEM_WARNING: Unrecognized content. ID:" << value_id;
+            break;
+        }
+
+        if (mandatory_content_check == DOTM_MANDATORY_CONTENT){
+
+            traj.append(dotm_msg);
+            // Clear data
+            dotm_msg.heading = 0;
+            dotm_msg.lat_acc = 0;
+            dotm_msg.lat_speed = 0;
+            dotm_msg.lon_acc = 0;
+            dotm_msg.lon_speed = 0;
+            dotm_msg.rel_time = 0;
+            dotm_msg.x = 0;
+            dotm_msg.y = 0;
+            dotm_msg.z = 0;
+
+            mandatory_content_check = 0;
+        }
+    }
+
+    return true;
+}
+
+bool ISOcom::processOSTM(QDataStream &msg_stream, const quint32 &msg_len, ostm &ostm_msg)
+{
+
+    quint32 remaining_content = msg_len;
+
+    quint16 value_id = 0;
+    quint16 content_len = 0;
+
+    //const quint16 expected_mandatory_content = 0x01FF;
+    qint16 mandatory_content_check = 0;
+
+    while(!msg_stream.atEnd())
+    {
+        if (remaining_content < ISO_MIN_CONTENT_DATA) {
+            qDebug() << "OSTM_ERROR: Not enough data to fill content";
+            return false;
+        }
+        // Read Content Header
+        msg_stream >> value_id;
+        msg_stream >> content_len;
+        remaining_content -= (content_len + sizeof(value_id) + sizeof(content_len));
+
+        switch (value_id) {
+        case ISO_VALUE_ID_STATE_CHANGE_REQ:
+            msg_stream >> ostm_msg.state_change;
+            mandatory_content_check |= CONTENT_BINARY_ID_0;
+            break;
+        default:
+            msg_stream.skipRawData(content_len);
+            qDebug() << "OSEM_WARNING: Unrecognized content. ID:" << value_id;
+            break;
+        }
+    }
+    // Print OSTM
+    qDebug() << "OSTM:" <<
+                "\nSTATE_CHANGE_REC:" << ostm_msg.state_change;
+
+    if(mandatory_content_check!=OSTM_MANDATORY_CONTENT)
+    {
+        qDebug() << "OSTM_ERROR: Missing mandatory content";
+        return false;
+    }
+    return true;
+}
+
+bool ISOcom::processSTRT(QDataStream &msg_stream, const quint32 &msg_len, strt &strt_msg)
+{
+
+    quint32 remaining_content = msg_len;
+
+    quint16 value_id = 0;
+    quint16 content_len = 0;
+
+    //const quint16 expected_mandatory_content = 0x01FF;
+    qint16 mandatory_content_check = 0;
+
+    while(!msg_stream.atEnd())
+    {
+        if (remaining_content < ISO_MIN_CONTENT_DATA) {
+            qDebug() << "STRT_ERROR: Not enough data to fill content";
+            return false;
+        }
+        // Read Content Header
+        msg_stream >> value_id;
+        msg_stream >> content_len;
+        remaining_content -= (content_len + sizeof(value_id) + sizeof(content_len));
+
+        switch (value_id) {
+        case ISO_VALUE_ID_GPS_SEC_OF_WEEK:
+            msg_stream >> strt_msg.GPSsecOfWeek_start_time;
+            mandatory_content_check |= CONTENT_BINARY_ID_0;
+            break;
+        case ISO_VALUE_ID_DELAYED_START:
+            msg_stream >> strt_msg.delay_ms;
+            mandatory_content_check |= CONTENT_BINARY_ID_1;
+            break;
+        default:
+            msg_stream.skipRawData(content_len);
+            qDebug() << "STRT_WARNING: Unrecognized content. ID:" << value_id;
+            break;
+        }
+    }
+    // Print STRT
+    qDebug() << "STRT:" <<
+                "\nGPSS:" << strt_msg.GPSsecOfWeek_start_time <<
+                "\nDELAY:" << strt_msg.delay_ms;
+
+    if(mandatory_content_check!=STRT_MANDATORY_CONTENT)
+    {
+        qDebug() << "OSTM_ERROR: Missing mandatory content";
         return false;
     }
     return true;
 }
 
 
+bool ISOcom::processHEAB(QDataStream &msg_stream, const quint32 &msg_len, heab &heab_msg)
+{
+    if (msg_len != 5) return false;
+    msg_stream >> heab_msg.GPSsecOfWeek;
+    msg_stream >> heab_msg.cc_status;
+    return true;
+}
 
 bool ISOcom::sendMonr(monr msg)
 {
     if (QString::compare(mUdpHostAddress.toString(), "0.0.0.0") == 0) {
         return false;
     }
-
+    /*
 
     VByteArray monr_msg;
     monr_msg.vbAppendUint16(ISO_MSG_MONR);
@@ -438,39 +618,9 @@ bool ISOcom::sendMonr(monr msg)
     VByteArray to_send = package_header.append(monr_msg);
     to_send.vbAppendUint16(0); //CRC
 
-    /*
-    vb.vbAppendInt8(CHRONOS_MSG_MONR);
-    vb.vbAppendInt32(24);
-    vb.vbAppendUint48(monr.ts);
-    vb.vbAppendInt32((int32_t)(monr.lat * 1e7));
-    vb.vbAppendInt32((int32_t)(monr.lon * 1e7));
-    vb.vbAppendInt32((int32_t)(monr.alt * 1e2));
-    vb.vbAppendUint16((uint16_t)(monr.speed * 1e2));
-    vb.vbAppendUint16((uint16_t)(monr.heading * 1e1));
-    vb.vbAppendUint8(monr.direction);
-    vb.vbAppendUint8(monr.status);*/
 
     mUdpSocket->writeDatagram(to_send, mUdpHostAddress, mUdpPort);
-
-    return true;
-}
-/*
-bool ISOcom::sendTOM(chronos_tom tom)
-{
-    if (QString::compare(mUdpHostAddress.toString(), "0.0.0.0") == 0) {
-        return false;
-    }
-
-    VByteArray vb;
-    vb.vbAppendUint8(CHRONOS_MSG_TOM);
-    vb.vbAppendUint32(8); // Not present in the current system
-    vb.vbAppendUint8(tom.trigger_id);
-    vb.vbAppendUint8(tom.trigger_type);
-    vb.vbAppendUint48(tom.trigger_etsi_time);
-
-    mUdpSocket->writeDatagram(vb, mUdpHostAddress, mUdpPort);
-
-    return true;
-}
-
 */
+    return true;
+}
+

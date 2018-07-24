@@ -3,10 +3,6 @@
 VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
 {
 
-    //start_time = 0;
-    //clock = 0;
-    //time_adjustment=0;
-
     data.ID = id;
     data.time = 0;
     data.x = 0.0;
@@ -17,27 +13,12 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
     data.acc = 0.0;
     data.status = status;
     data.isMaster = isMaster;
-/*
-    data= {
-        id, // id
-        0,  // time
-        0,  // x
-        0,  // y
-        0,  // z
-        0,  // heading
-        0,  // speed
-        0,  // acceleration
-        status,    // statusF
-        isMaster    // MASTER?
-    };*/
+
 
 
     mRefLat = rLat;
     mRefLon = rLon;
     mRefAlt = rAlt;
-
-
-    //cClient = new Chronos();
 
     iClient = new ISOcom();
 
@@ -56,7 +37,6 @@ VirtualObject::~VirtualObject() {
 void VirtualObject::run()
 {
     qDebug() << "Virtual Object Started";
-    bool send_monr_idependently = true;
 
     chronos_dopm_pt ref_point;      // Placeholder for the reference point
 
@@ -79,23 +59,9 @@ void VirtualObject::run()
             sleep_time = 5;
             timedata.clock = utility::getCurrentUTCtimeMS();
             timedata.elapsed_time = timedata.clock - timedata.test_start_time;
-            /*
-            if (ref_index == 0 && init_start)
-            {
-
-                ref_index = 0;
-                ref_point = traj[ref_index];
-
-                start_time = clock;
-                start_ETSI_time = utility::getETSItimeFromUTCtimeMS(clock);
-                first_mtsp_received =false;
-                init_start = false;
-                emit simulation_start(getID());
-            }*/
-
 
             // Check if heartbeat deadline has passed
-            if(utility::getCurrentUTCtimeMS()-timedata.HEAB_rec_time > HEARTBEAT_TIME)
+            if(utility::getCurrentUTCtimeMS()-timedata.HEAB_rec_time > HEARTBEAT_TIME && false)
             {
                 qDebug() << "ERROR: Heartbeat not recieved.";
                 pendingStatus = POSTRUN;
@@ -104,10 +70,12 @@ void VirtualObject::run()
             if(reference_point_index < traj.size() - 1 )
             {
                 // Update the reference point
+                ref_point = traj[reference_point_index];
 
-                if (traj[reference_point_index].tRel < timedata.elapsed_time)
+                if (ref_point.tRel < timedata.elapsed_time)
                 {
-                    qDebug() << "Delay = " << QString::number(100*delay_simulation_factor);
+                    qDebug() << "EST_TIME:" << timedata.elapsed_time;
+                    //qDebug() << "Delay = " << QString::number(100*delay_simulation_factor);
                     // Update the state
                     data.acc = ref_point.accel;
                     data.heading = ref_point.heading;
@@ -120,6 +88,7 @@ void VirtualObject::run()
 
                     // Update the point
                     reference_point_index++;
+
                 }
             }
             else
@@ -131,6 +100,7 @@ void VirtualObject::run()
 
             break;
         case POSTRUN:
+            pendingStatus = DISARMED;
             break;
         case REMOTECTRL:
             break;
@@ -138,155 +108,15 @@ void VirtualObject::run()
             break;
         }
 
-/*
-        else if(status == RUNNING_STANDBY)
-        {
-            current_ETSI_time = utility::getCurrentETSItimeMS();
-            if(current_ETSI_time>=start_ETSI_time)
-            {
-                pendingStatus = RUNNING;
-            }
-        }
-        else if(status == RUNNING && test_simulation)
-        {
-            sleep_time = 5;
-            clock = utility::getCurrentUTCtimeMS();
-            if (ref_index == 0 && init_start)
-            {
-
-                ref_index = 0;
-                ref_point = traj[ref_index];
-
-                start_time = clock;
-                start_ETSI_time = utility::getETSItimeFromUTCtimeMS(clock);
-                first_mtsp_received =false;
-                init_start = false;
-                emit simulation_start(getID());
-            }
-            if (status == ABORT )
-            {
-                qDebug() << "ABORT: Aborting test scenario.";
-                break;
-            }
-            time_since_HB = utility::getETSItimeFromUTCtimeMS(clock)
-                    -last_received_heab_time_from_server;
-            // Check if heartbeat deadline has passed
-            if(time_since_HB > HEARTBEAT_TIME)
-            {
-                qDebug() << "ERROR: Heartbeat not recieved.";
-                pendingStatus = ERROR;
-                emit simulation_stop(getID());
-            }
-            if(ref_index < traj.size() - 1 )
-            {
-                elapsed_time = clock - start_time;
-                deltaT = clock - time_since_update;
-                if (double(deltaT) > 50.0 + 100.0*delay_simulation_factor)
-                {
-                    qDebug() << "Delay = " << QString::number(100*delay_simulation_factor);
-                    // Update the state
-                    data.acc = ref_point.accel;
-                    data.heading = ref_point.heading;
-                    data.speed = ref_point.speed;
-                    data.time = elapsed_time;
-                    data.x = ref_point.x;
-                    data.y = ref_point.y;
-                    data.z = ref_point.z;
-
-                    // Send MONR
-                    if (sendMONREnabled && !send_monr_idependently)
-                    {
-                        //iClient->sendMonr(getMONR());
-                    }
-                    // Update the point
-                    ref_index++;
-                    ref_point = traj[ref_index];
-                    time_since_update = clock;
-                }
-            }
-            else
-            {
-                pendingStatus = STOP;
-                emit simulation_stop(getID());
-            }
-
-        }
-
-        else if(status == RUNNING)
-        {
-            sleep_time = 5;
-            clock = utility::getCurrentUTCtimeMS();
-            // Is this the first iteration?
-            if (ref_index == 0 && init_start)
-            {
-                ref_index = 1;
-                ref_point = traj[ref_index];
-                prev_ref_point = traj[0];
-
-                start_time = clock;
-                start_ETSI_time = utility::getETSItimeFromUTCtimeMS(clock);
-                first_mtsp_received =false;
-                init_start = false;
-                emit simulation_start(getID());
-            }
-            if(ref_index < traj.size() - 1 && elapsed_time < simulation_time)
-            {
-                elapsed_time = clock - start_time;
-                data.time = elapsed_time;
-                // Get the reference point
-                int index_before_update = ref_index;
-
-                // Set a static point to start deviating
-                ref_index = false && elapsed_time > 20000 && getID() == 0
-                        ? ref_index : findRefPoint(elapsed_time,ref_index,tmod);
-
-
-                if (ref_index-index_before_update)
-                {
-                    // When the index has changed, make sure that the previous reference
-                    // point is also updated.
-                    prev_ref_point = ref_point;
-                    // Set the new reference point
-                    ref_point = traj[ref_index];
-                    // Add time offset
-                    ref_point.tRel +=tmod;
-                }
-
-
-                if (status == ABORT )
-                {
-                    qDebug() << "ABORT: Aborting test scenario.";
-                    break;
-                }
-                time_since_HB = utility::getETSItimeFromUTCtimeMS(clock)
-                        -last_received_heab_time_from_server;
-                // Check if heartbeat deadline has passed
-                if(time_since_HB > HEARTBEAT_TIME && false)
-                {
-                    qDebug() << "ERROR: Heartbeat not recieved.";
-                    pendingStatus = ERROR;
-                    emit simulation_stop(getID());
-                }
-                if (clock - ctrl_update > 0)
-                {
-                    // Move the object along a linear trajectory with constant velocity
-                    // from the previous position to the new position
-                    control_object(ref_point,prev_ref_point);
-                    ctrl_update = clock;
-                }
-            }
-            else
-            {
-                pendingStatus = STOP;
-                emit simulation_stop(getID());
-            }
-        }*/
 
         timedata.clock = utility::getCurrentUTCtimeMS();
-        if (timedata.clock - timedata.monr_send_time > MONR_SEND_TIME_INTERVAL && sendMONREnabled && send_monr_idependently)
+        if (timedata.clock - timedata.monr_send_time > MONR_SEND_TIME_INTERVAL)
         {
-            // Send monr
-            iClient->sendMonr(getMONR());
+            if (sendMONREnabled){
+                // Send monr
+                iClient->sendMonr(getMONR());
+            }
+
             timedata.monr_send_time = timedata.clock;
         }
 
@@ -425,7 +255,6 @@ monr VirtualObject::getMONR()
     msg.y = static_cast<int32_t>(data.y * 1e3);
     msg.z = static_cast<int32_t>(data.z * 1e3);
     msg.heading = static_cast<uint16_t>(data.heading  * 1e2);
-    qDebug() << "MONR Heading: " << msg.heading;
     msg.lon_speed = static_cast<int16_t>(data.speed*1e2);
     msg.lat_speed = 0;
     msg.lon_acc = static_cast<int16_t>(data.acc*1e1);
@@ -491,8 +320,8 @@ void VirtualObject::handleOSEM(osem msg)
     switch (status) {
     case INIT:
     case DISARMED:
-        mRefLat = static_cast<double>(msg.lat / 1e7);
-        mRefLon = static_cast<double>(msg.lon / 1e7);
+        mRefLat = static_cast<double>(msg.lat / 1e10);
+        mRefLon = static_cast<double>(msg.lon / 1e10);
         mRefAlt = static_cast<double>(msg.alt /1e2);
 
         //utility::llhToXyz(msg.lat,msg.lon,msg.alt,&data.x,&data.y,&data.z);
@@ -567,7 +396,7 @@ void VirtualObject::handleHEAB(heab msg)
     switch (msg.cc_status) {
     case ISO_CC_STATUS_EMERGENCY_ABORT:
         pendingStatus = POSTRUN;
-        qDebug() << "ABOTRING!";
+        qDebug() << "ABORT RECEIVED";
         break;
     case ISO_CC_STATUS_OK:
         break;
@@ -579,21 +408,20 @@ void VirtualObject::handleHEAB(heab msg)
 void VirtualObject::handleOSTM(ostm msg)
 {
 
-    qDebug() << "ARM-message!";
+    qDebug() << "OSTM received";
     switch (msg.state_change) {
     case ISO_OBJECT_STATE_ARMED:
-        if ((status == INIT || status == DISARMED ||
-                status == POSTRUN ) &&
+        if ((status == DISARMED ) &&
                 hasDOPM && hasOSEM)
             // Maybe status == ERROR as well
         {
             qDebug() << "ARMING";
+            initObjectState();
             pendingStatus = ARMED;
         }
         break;
     case ISO_OBJECT_STATE_DISARMED:
-        if (status == POSTRUN ||
-                status == ARMED || status == INIT)
+        if (status == POSTRUN)
             // Maybe status == ERROR as well
         {
             qDebug() << "DISARMING";
@@ -601,6 +429,7 @@ void VirtualObject::handleOSTM(ostm msg)
         }
         break;
     default:
+        qDebug() << "Unable to handle OSTM.";
         break;
     }
 }
@@ -608,14 +437,16 @@ void VirtualObject::handleSTRT(strt msg)
 {
     if(status == ARMED)
     {
-        start_ETSI_time = msg.abs_start_time;
+        //start_ETSI_time = msg.GPSsecOfWeek_start_time;
+
+        timedata.test_start_time = utility::getCurrentUTCtimeMS();
 
         char buffer[30];
         utility::getDateTimeFromUTCtime(utility::getCurrentUTCtimeMS(),buffer,30);
 
         qDebug() << "Time at receiving: " << buffer;
 
-        utility::getDateTimeFromETSItime(msg.abs_start_time,buffer,30);
+        //utility::getDateTimeFromETSItime(msg.abs_start_time,buffer,30);
 
         qDebug() << "Start time received: " << buffer;
         pendingStatus = RUNNING;//RUNNING_STANDBY;
