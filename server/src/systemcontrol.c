@@ -226,16 +226,12 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 	}
 
 
-
 	while(!iExit)
 	{
-
 		if(ModeU8 == 0)
 		{
-			
 			if(ClientSocket <= 0)
 			{	
-
 				if(server_state == SERVER_STATE_UNDEFINED)
 				{
 					//Do some initialization

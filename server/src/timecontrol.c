@@ -97,8 +97,8 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
   {
     TimeControlCreateTimeChannel(ServerIPC8, ServerPortU16, &SocketfdI32,  &time_addr);
     TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, 4, 0);
-    printf("Get time from GPS.\n");
-  } else printf("Count fake time.\n");
+    printf("[TimeControl] Get time from GPS.\n");
+  } else printf("[TimeControl] Count fake time.\n");
 
   while(!iExit)
   {

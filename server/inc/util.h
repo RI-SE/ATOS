@@ -246,17 +246,20 @@ typedef struct
 {
   HeaderType Header;
   U16 StartTimeValueIdU16;
+  U16 StartTimeContentLengthU16;
   U32 StartTimeU32;
   U16 DelayStartValueIdU16;
+  U16 DelayStartContentLengthU16;
   U32 DelayStartU32;
-} STRTType; //23 bytes
+} STRTType; //27 bytes
 
 typedef struct
 {
   HeaderType Header;
   U16 StateValueIdU16;
+  U16 StateContentLengthU16;
   U8 StateU8;
-} OSTMType; //14 bytes
+} OSTMType; //16 bytes
 
 typedef struct
 {
@@ -287,26 +290,36 @@ typedef struct
 typedef struct
 {
   U16 RelativeTimeValueIdU16;
+  U16 RelativeTimeContentLengthU16;
   U32 RelativeTimeU32;
   U16 XPositionValueIdU16;
+  U16 XPositionContentLengthU16;
   I32 XPositionI32;
   U16 YPositionValueIdU16;
+  U16 YPositionContentLengthU16;
   I32 YPositionI32;
   U16 ZPositionValueIdU16;
+  U16 ZPositionContentLengthU16;
   I32 ZPositionI32;
   U16 HeadingValueIdU16;
+  U16 HeadingContentLengthU16;
   U16 HeadingU16;
   U16 LongitudinalSpeedValueIdU16;
+  U16 LongitudinalSpeedContentLengthU16;
   I16 LongitudinalSpeedI16;
   U16 LateralSpeedValueIdU16;
+  U16 LateralSpeedContentLengthU16;
   I16 LateralSpeedI16;
   U16 LongitudinalAccValueIdU16;
+  U16 LongitudinalAccContentLengthU16;
   I16 LongitudinalAccI16;
   U16 LateralAccValueIdU16;
+  U16 LateralAccContentLengthU16;
   I16 LateralAccI16;
   U16 CurvatureValueIdU16;
+  U16 CurvatureContentLengthU16;
   I32 CurvatureI32;
-} DOTMType; //50 bytes
+} DOTMType; //70 bytes
 
 
 typedef struct
