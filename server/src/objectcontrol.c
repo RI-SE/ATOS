@@ -1250,7 +1250,7 @@ I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeTyp
   p=(C8 *)OSEMData;
   for(i=0; i<21 /*17*/; i++) *(MessageBuffer + i) = *p++;
   *p++; *p++;
-  for(; i<27 /*23*/; i++) *(MessageBuffer + i) = *p++;
+  for(; i<31 /*23*/; i++) *(MessageBuffer + i) = *p++;
   *p++; *p++;
   for(; i<sizeof(OSEMType)-4; i++) *(MessageBuffer + i) = *p++;
 

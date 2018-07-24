@@ -61,7 +61,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
   I32 iExit = 0, iCommand;
   C8 TimeBuffer[TIME_CONTROL_BUFFER_SIZE_52];
   I32 ReceivedNewData, i;
-  C8 SendData[4] = {0, 0, 0, 250};
+  C8 SendData[4] = {0, 0, 3, 0xe8};
   struct timespec sleep_time, ref_time;
   C8 MqRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
   struct timeval tv, ExecTime;
@@ -102,6 +102,14 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 
   while(!iExit)
   {
+
+    gettimeofday(&ExecTime, NULL);
+    CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
+    if(CurrentMilliSecondU16 < PrevMilliSecondU16) GSD->TimeControlExecTimeU16 = CurrentMilliSecondU16 + (1000 - PrevMilliSecondU16);
+    else GSD->TimeControlExecTimeU16 = abs(PrevMilliSecondU16 - CurrentMilliSecondU16);
+    PrevMilliSecondU16 = CurrentMilliSecondU16;
+    //printf("%d\n", GSD->TimeControlExecTimeU16);
+
 
     if(IpU32 != 0)
     {
@@ -151,6 +159,12 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
       //printf("ETSIMillisecondsU64: %ld\n", GPSTime->ETSIMillisecondsU64);
       //printf("LatitudeU32: %d\n", GPSTime->LatitudeU32);
       //printf("LongitudeU32: %d\n", GPSTime->LongitudeU32);
+    }
+    else if(ReceivedNewData == 0 && IpU32 != 0)
+    {
+        GPSTime->MillisecondU16  = GPSTime->MillisecondU16 + GSD->TimeControlExecTimeU16;
+        GPSTime->GPSMillisecondsU64 = GPSTime->GPSMillisecondsU64 + GSD->TimeControlExecTimeU16;
+        GPSTime->ETSIMillisecondsU64 = GPSTime->ETSIMillisecondsU64 + GSD->TimeControlExecTimeU16;
     }
     else if( GPSTime->MicroSecondU16 == 0)
     {
@@ -202,15 +216,6 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
     }
 
 
-    gettimeofday(&ExecTime, NULL);
-    CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
-    //if(CurrentMilliSecondU16 != PrevMilliSecondU16)
-    {
-      if(CurrentMilliSecondU16 < PrevMilliSecondU16) GSD->TimeControlExecTimeU16 = CurrentMilliSecondU16 + (1000 - PrevMilliSecondU16);
-      else GSD->TimeControlExecTimeU16 = abs(PrevMilliSecondU16 - CurrentMilliSecondU16);
-      PrevMilliSecondU16 = CurrentMilliSecondU16;
-      //printf("%d\n", GSD->TimeControlExecTimeU16);
-    }
 
     if(GSD->ExitU8 == 1)
     {
@@ -220,6 +225,12 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
       printf("[TimeControl] Timecontrol exiting.\n");
       (void)iCommClose();
     }
+
+     /* Make call periodic */
+    sleep_time.tv_sec = 0;
+    sleep_time.tv_nsec = 10;
+
+    (void)nanosleep(&sleep_time,&ref_time);
 
   }
 }
