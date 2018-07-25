@@ -89,13 +89,17 @@
 
 #define OSEM_MANDATORY_CONTENT 0x01FF
 #define OSTM_MANDATORY_CONTENT 0x0001
-#define STRT_MANDATORY_CONTENT 0x0002
+#define STRT_MANDATORY_CONTENT 0x0003
 #define DOTM_MANDATORY_CONTENT 0x01FF
 
 // DATA
 #define ISO_MIN_CONTENT_DATA 5
 
+#define ISO_TCP_STATE_READ_HEADER 0
+#define ISO_TCP_STATE_READ_DATA 1
+#define ISO_TCP_STATE_READ_FOOTER 2
 
+#define ISO_MESSAGE_HEADER_BYTE_LENGTH 10
 typedef struct
 {
     quint8 TxID;
@@ -104,9 +108,11 @@ typedef struct
     quint8 PROTOCOL_VERSION;
     quint16 MESSAGE_ID;
     quint32 MESSAGE_LENGTH;
-    quint16 CRC;
 } ISO_MESSAGE_HEADER;
 
+typedef struct {
+    quint16 CRC;
+} ISO_MESSAGE_FOOTER;
 
 typedef struct {
     qint64 lat;
@@ -179,6 +185,11 @@ public:
     bool sendMonr(monr msg);
     //bool sendTOM(chronos_tom tom);
 
+    static bool packetHeaderRx(QDataStream &data, ISO_MESSAGE_HEADER &header);
+    static bool packetDataRx(QDataStream &data, const quint32 data_length, QByteArray &packet_data);
+    static bool packetFooterRx(QDataStream &data, ISO_MESSAGE_FOOTER &footer);
+    static qint64 streamPop6Bytes(QDataStream &data);
+    static qint64 streamPush6Bytes(QDataStream &data);
 
 
 signals:
@@ -198,9 +209,9 @@ signals:
     void handle_tcm(chronos_tcm tcm);
     */
 private slots:
-    void PacketRx(QByteArray data);
+    void tcpPacketRx(QByteArray data);
     void tcpConnectionChanged(bool connected);
-    void readPendingDatagrams();
+    void udpPacketRx();
     //void stateReceived(quint8 id, CAR_STATE state);
 
 private:
@@ -213,15 +224,19 @@ private:
     //int mTcpState;
     //quint8 mTcpType;
     //quint32 mTcpLen;
-    QByteArray message_data;
-    ISO_MESSAGE_HEADER message_info;
-    quint8 message_state = 0;
-    //uint8_t message_state = 0;
+
+    //ISO_MESSAGE_HEADER message_info;
+    //QByteArray message_data;
+    //quint8 message_state = 0;
+
+    quint8 mTcpPacketState = 0;
+    ISO_MESSAGE_HEADER mTcpMessageHeader;
+    ISO_MESSAGE_FOOTER mTcpMessageFooter;
+    QByteArray mTcpMessageData;
 
     int mHeabPollCnt;
 
-    static qint64 streamPop6Bytes(QDataStream &data);
-    static qint64 streamPush6Bytes(QDataStream &data);
+
 
     bool decodeMsg(quint8 type, quint32 len, QByteArray payload);
 

@@ -383,11 +383,6 @@ void VirtualObject::handleLoadedDOPM(int ID, QVector<chronos_dopm_pt> msg)
 
 void VirtualObject::handleHEAB(heab msg)
 {
-    //qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-    //qDebug() << "Time since last HB: " << QString::number(currentTime-last_received_heab_time_from_server);
-
-
-    //last_received_heab_time_from_server = msg.tx_time;
 
     // TODO: make use of the time sent from the server
 
@@ -413,7 +408,6 @@ void VirtualObject::handleOSTM(ostm msg)
     case ISO_OBJECT_STATE_ARMED:
         if ((status == DISARMED ) &&
                 hasDOPM && hasOSEM)
-            // Maybe status == ERROR as well
         {
             qDebug() << "ARMING";
             initObjectState();
@@ -421,8 +415,7 @@ void VirtualObject::handleOSTM(ostm msg)
         }
         break;
     case ISO_OBJECT_STATE_DISARMED:
-        if (status == POSTRUN)
-            // Maybe status == ERROR as well
+        if (status == POSTRUN || status == ARMED)
         {
             qDebug() << "DISARMING";
             pendingStatus = DISARMED;

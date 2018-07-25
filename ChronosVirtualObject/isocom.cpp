@@ -14,11 +14,11 @@ ISOcom::ISOcom(QObject *parent) : QObject(parent)
     mHeabPollCnt = 0;
 
     connect(mTcpServer, SIGNAL(dataRx(QByteArray)),
-            this, SLOT(PacketRx(QByteArray)));
+            this, SLOT(tcpPacketRx(QByteArray)));
     connect(mTcpServer, SIGNAL(connectionChanged(bool)),
             this, SLOT(tcpConnectionChanged(bool)));
     connect(mUdpSocket, SIGNAL(readyRead()),
-            this, SLOT(readPendingDatagrams()));
+            this, SLOT(udpPacketRx()));
 }
 
 //bool ISOcomstartServer(PacketInterface *packet)
@@ -41,114 +41,112 @@ bool ISOcom::startServer(int udpSocket, int tcpSocket)
     }
 
     qDebug() << "Started CHRONOS client";
-    /*
-    if (res && mPacket) {
-        connect(mPacket, SIGNAL(stateReceived(quint8,CAR_STATE)),
-                this, SLOT(stateReceived(quint8,CAR_STATE)));
-    }
-*/
     return res;
 }
 
-void ISOcom::PacketRx(QByteArray data)
+bool ISOcom::packetHeaderRx(QDataStream &data, ISO_MESSAGE_HEADER &header)
 {
+    //if (data.size() < ISO_MESSAGE_HEADER_BYTE_LENGTH) return false;
 
-    quint64 data_len = 0;
-    //qDebug() << "PACKAGE REC";
-    for (char c: data) {
-        switch (message_state) {
-        //---------------------------------------
-        // Check for the sync word
+    quint8 one_byte;
+    quint8 packetState = 0;
+    header.TxID = 0;
+    header.MESSAGE_COUNTER = 0;
+    header.ACK_REQ = 0;
+    header.PROTOCOL_VERSION = 0;
+    header.MESSAGE_ID = 0;
+    header.MESSAGE_LENGTH = 0;
+
+    while( !data.atEnd() )
+    {
+        switch (packetState) {
         case 0:
-            // Clear the data types
-            message_data.clear();
-            message_info.TxID = 0;
-            message_info.MESSAGE_COUNTER = 0;
-            message_info.ACK_REQ = 0;
-            message_info.PROTOCOL_VERSION = 0;
-            message_info.MESSAGE_ID = 0;
-            message_info.MESSAGE_LENGTH = 0;
-            message_info.CRC = 0;
-
-            message_state = c && ISO_PART_SYNC_WORD ? message_state + 1 : message_state;
+            data >> one_byte;
+            packetState = one_byte && ISO_PART_SYNC_WORD ? packetState + 1 : packetState;
             break;
         case 1:
-
-            message_state = c && ISO_PART_SYNC_WORD ? message_state + 1 : message_state - 1;
+            data >> one_byte;
+            packetState = one_byte && ISO_PART_SYNC_WORD ? packetState + 1 : 0;
             break;
-            //---------------------------------------
-            // Transmitter ID
         case 2:
-            message_info.TxID = c;
-            message_state++;
+            data >> header.TxID;
+            packetState++;
             break;
-            //---------------------------------------
-            // Message Counter
         case 3:
-            message_info.MESSAGE_COUNTER = c;
-            message_state++;
+            data >> header.MESSAGE_COUNTER;
+            packetState++;
             break;
-            //---------------------------------------
-            // Ack Request
         case 4:
-            message_info.ACK_REQ = static_cast<uint8_t>(c) & 128;
-            message_info.PROTOCOL_VERSION = static_cast<uint8_t>(c) & 127;
-            message_state++;
+            data >> one_byte;
+            header.ACK_REQ = one_byte >> 7;
+            header.PROTOCOL_VERSION = one_byte & 127;
+            packetState++;
             break;
         case 5:
-            message_info.MESSAGE_ID = static_cast<uint8_t>(c);
-            message_state++;
+            data >> header.MESSAGE_ID;
+            packetState++;
             break;
         case 6:
-            message_info.MESSAGE_ID |= static_cast<uint8_t>(c) << 8;
-            message_state++;
-            break;
-        case 7:
-            if (message_info.MESSAGE_ID == 1)
-            {
-                qDebug() << "DOPM ID REC";
-            }
-            message_info.MESSAGE_LENGTH = static_cast<uint8_t>(c);
-            message_state++;
-            break;
-        case 8:
-            message_info.MESSAGE_LENGTH |= static_cast<uint8_t>(c) << 8;
-            message_state++;
-            break;
-        case 9:
-            message_info.MESSAGE_LENGTH |= static_cast<uint8_t>(c) << 16;
-            message_state++;
-            break;
-        case 10:
-            message_info.MESSAGE_LENGTH |= static_cast<uint8_t>(c) << 24;
-            message_state++;
-            break;
-        case 11:
-            message_data.append(c);
-            data_len = message_data.size();
-
-            if ((uint32_t)message_data.size() >= message_info.MESSAGE_LENGTH)
-            {
-                message_state++;
-            }
-            break;
-
-        case 12:
-            message_info.CRC |= static_cast<uint8_t>(c);
-            message_state++;
-            break;
-        case 13:
-            message_info.CRC |= static_cast<uint8_t>(c) << 8;
-            // Calculate CRC correct
-            if(message_info.CRC == 0 || true)
-            {
-                processMessage(message_data,message_info.MESSAGE_ID,message_info.MESSAGE_LENGTH,message_info.PROTOCOL_VERSION);
-            }
-            message_state = 0;
-            break;
+            data >> header.MESSAGE_LENGTH;
+            return true;
         default:
             break;
         }
+    }
+    return false;
+}
+
+bool ISOcom::packetDataRx(QDataStream &data, quint32 data_length, QByteArray &packet_data)
+{
+    quint8 read_byte = 0;
+    quint32 bytes_read = 0;
+    while(!data.atEnd())
+    {
+        data >> read_byte;
+        packet_data.append(read_byte);
+        bytes_read++;
+        if(bytes_read >= data_length) return true;
+    }
+    return false;
+}
+
+bool ISOcom::packetFooterRx(QDataStream &data, ISO_MESSAGE_FOOTER &footer)
+{
+    data >> footer.CRC;
+    return data.status() == QDataStream::Ok;
+}
+
+void ISOcom::tcpPacketRx(QByteArray data)
+{
+
+    QDataStream stream(data);
+    stream.setByteOrder(QDataStream::LittleEndian);
+
+
+    switch (mTcpPacketState) {
+    case ISO_TCP_STATE_READ_HEADER:
+        if(!packetHeaderRx(stream,mTcpMessageHeader)) break;
+        mTcpMessageData.clear();
+        mTcpPacketState = ISO_TCP_STATE_READ_DATA;
+    case ISO_TCP_STATE_READ_DATA:
+        if(!packetDataRx(stream,mTcpMessageHeader.MESSAGE_LENGTH,mTcpMessageData)) break;
+        mTcpPacketState = ISO_TCP_STATE_READ_FOOTER;
+    case ISO_TCP_STATE_READ_FOOTER:
+        packetFooterRx(stream,mTcpMessageFooter);
+        mTcpPacketState = ISO_TCP_STATE_READ_HEADER;
+        if(mTcpMessageFooter.CRC == 0){
+            processMessage( mTcpMessageData,
+                            mTcpMessageHeader.MESSAGE_ID,
+                            mTcpMessageHeader.MESSAGE_LENGTH,
+                            mTcpMessageHeader.PROTOCOL_VERSION);
+        }
+        else
+        {
+            qDebug() << "CRC not correct:" << mTcpMessageFooter.CRC;
+        }
+        break;
+    default:
+        break;
     }
 }
 
@@ -161,7 +159,7 @@ void ISOcom::tcpConnectionChanged(bool connected)
     }
 }
 
-void ISOcom::readPendingDatagrams()
+void ISOcom::udpPacketRx()
 {
     while (mUdpSocket->hasPendingDatagrams()) {
         QByteArray datagram;
@@ -170,12 +168,19 @@ void ISOcom::readPendingDatagrams()
         mUdpSocket->readDatagram(datagram.data(), datagram.size(),
                                  &mUdpHostAddress, &mUdpPort);
 
-        PacketRx(datagram);
-        /*
-        VByteArray vb(datagram);
-        quint8 type = vb.vbPopFrontUint8();
-        quint16 len = vb.vbPopFrontUint32();
-        decodeMsg(type, len, vb);*/
+        ISO_MESSAGE_HEADER header;
+        QByteArray msg_data;
+        ISO_MESSAGE_FOOTER footer;
+        QDataStream stream(datagram);
+        stream.setByteOrder(QDataStream::LittleEndian);
+
+        if(!packetHeaderRx(stream, header)) continue;
+        if(!packetDataRx(stream,header.MESSAGE_LENGTH,msg_data)) continue;
+        if(!packetFooterRx(stream,footer)) continue;
+
+        // TODO: add crc check
+        processMessage(msg_data,header.MESSAGE_ID,header.MESSAGE_LENGTH,header.PROTOCOL_VERSION);
+
     }
 }
 
@@ -222,12 +227,12 @@ bool ISOcom::processMessage(const QByteArray &data,const quint16 &msg_id,const q
 
     switch (msg_id) {
     case ISO_MSG_HEAB:
-
+    {
         heab heab_msg;
         if (!processHEAB(msg_data,msg_len,heab_msg)) return false;
         emit heab_processed(heab_msg);
         break;
-
+    }
     case ISO_MSG_OSEM:
     {
         osem osem_msg;
@@ -236,25 +241,32 @@ bool ISOcom::processMessage(const QByteArray &data,const quint16 &msg_id,const q
         break;
     }
     case ISO_MSG_DOTM:
+    {
+        qDebug() << "DOTM Registered";
         QVector<dotm_pt> traj;
         if (!processDOTM(msg_data,msg_len,traj)) return false;
         emit dotm_processed(traj);
         break;
+    }
     case ISO_MSG_OSTM:
-
+    {
         ostm ostm_msg;
         if (!processOSTM(msg_data,msg_len,ostm_msg)) return false;
         emit ostm_processed(ostm_msg);
         break;
+    }
     case ISO_MSG_STRT:
+    {
         strt strt_msg;
         if (!processSTRT(msg_data,msg_len,strt_msg)) return false;
         emit strt_processed(strt_msg);
         break;
+    }
     default:
+    {
         qDebug() << "Unknown message recieved";
         return false;
-        break;
+    }
     }
     //}
     return true;
@@ -418,7 +430,7 @@ bool ISOcom::processDOTM(QDataStream &msg_stream, const quint32 &msg_len, QVecto
             break;
         default:
             msg_stream.skipRawData(content_len);
-            qDebug() << "OSEM_WARNING: Unrecognized content. ID:" << value_id;
+            qDebug() << "DOTM_WARNING: Unrecognized content. ID:" << value_id;
             break;
         }
 
@@ -532,7 +544,7 @@ bool ISOcom::processSTRT(QDataStream &msg_stream, const quint32 &msg_len, strt &
 
     if(mandatory_content_check!=STRT_MANDATORY_CONTENT)
     {
-        qDebug() << "OSTM_ERROR: Missing mandatory content";
+        qDebug() << "STRT_ERROR: Missing mandatory content";
         return false;
     }
     return true;
