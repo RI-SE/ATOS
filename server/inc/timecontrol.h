@@ -17,6 +17,7 @@
   -- Function declarations.
   ------------------------------------------------------------*/
 int timecontrol_task(TimeType *GPSTime,  GSDType *GSD);
+U16 TimeControlGetMillisecond(TimeType *GPSTime);
 
 
 #endif 

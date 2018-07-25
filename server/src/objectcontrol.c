@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include "util.h"
+#include "timecontrol.h"
  
 
 /*------------------------------------------------------------
@@ -658,7 +659,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                       UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
                                       UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
                                       UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
-                                      1); 
+                                      0); 
           DisconnectU8 = 0;
 
           do
@@ -705,13 +706,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             fclose (fd);
 
             /*DOTM*/
-            MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-2, &HeaderData, 0);
+            MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-2, &HeaderData, 1);
 
             /*Send DOTM header*/
             vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
 
             /*Send DOTM data*/
-            ObjectControlSendDOTMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 0);
+            ObjectControlSendDOTMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 1);
 
             /* Adaptive Sync Points object configuration start...*/
             if(TEST_SYNC_POINTS == 1) printf("Trajfile: %s\n", object_traj_file[iIndex] ); 
@@ -1248,9 +1249,9 @@ I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeTyp
   OSEMData->MinPosAccuracyU16 = 65535;
 
   p=(C8 *)OSEMData;
-  for(i=0; i<21 /*17*/; i++) *(MessageBuffer + i) = *p++;
+  for(i=0; i<21; i++) *(MessageBuffer + i) = *p++;
   *p++; *p++;
-  for(; i<31 /*23*/; i++) *(MessageBuffer + i) = *p++;
+  for(; i<31; i++) *(MessageBuffer + i) = *p++;
   *p++; *p++;
   for(; i<sizeof(OSEMType)-4; i++) *(MessageBuffer + i) = *p++;
 
@@ -1292,7 +1293,7 @@ int ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeTyp
   STRTData->Header.MessageLengthU32 = sizeof(STRTType) - sizeof(HeaderType);
   STRTData->StartTimeValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
   STRTData->StartTimeContentLengthU16 = 4;
-  STRTData->StartTimeU32 = (GPSTime->GPSSecondsOfWeekU32*1000 + GPSTime->MillisecondU16) << 2  + GPSTime->MicroSecondU16 + ScenarioStartTime << 2;
+  STRTData->StartTimeU32 = (GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2  + GPSTime->MicroSecondU16 + ScenarioStartTime << 2;
   STRTData->DelayStartValueIdU16 = VALUE_ID_RELATIVE_TIME;
   STRTData->DelayStartContentLengthU16 = 4;
   STRTData->DelayStartU32 = DelayStart;
@@ -1377,7 +1378,7 @@ I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeTyp
   HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
   HEABData->Header.MessageIdU16 = COMMAND_HEAB_CODE;
   HEABData->Header.MessageLengthU32 = sizeof(HEABType) - sizeof(HeaderType);
-  HEABData->GPSSOWU32 = (GPSTime->GPSSecondsOfWeekU32*1000 + GPSTime->MillisecondU16) << 2 + GPSTime->MicroSecondU16;;
+  HEABData->GPSSOWU32 = (GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2 + GPSTime->MicroSecondU16;;
   HEABData->CCStatusU8 = CCStatus;
   
   p=(C8 *)HEABData;
@@ -1479,40 +1480,6 @@ int ObjectControlBuildMTSPMessage(char* MessageBuffer, unsigned long SyncTimesta
 }
 
 
-I32 ObjectControlSendDOTMMEssage(C8* Filename, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug)
-{
-
-  FILE *fd;
-  fd = fopen (Filename, "r");
-  UtilReadLineCntSpecChars(fd, TrajBuffer);//Read first line
-  int Rest = 0, i = 0, MessageLength = 0, SumMessageLength = 0, Modulo = 0, Transmissions = 0;
-  Transmissions = RowCount / COMMAND_DOTM_ROWS_IN_TRANSMISSION;
-  Rest = RowCount % COMMAND_DOTM_ROWS_IN_TRANSMISSION;
- 
-  for(i = 0; i < Transmissions; i ++)
-  {
-    MessageLength = ObjectControlBuildDOTMMessage(TrajBuffer, fd, COMMAND_DOTM_ROWS_IN_TRANSMISSION, DOTMData, 0);
-    vSendBytes(TrajBuffer, MessageLength, Socket, 0);
-    SumMessageLength = SumMessageLength + MessageLength;
-    if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
-  }
-
-  if(Rest > 0)
-  {
-    MessageLength = ObjectControlBuildDOTMMessage(TrajBuffer, fd, Rest, DOTMData, 0);
-    vSendBytes(TrajBuffer, MessageLength, Socket, 0);
-    SumMessageLength = SumMessageLength + MessageLength;
-    if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
-  }
-
-  printf("[ObjectControl] %d DOTM bytes sent to %s, port %d\n", SumMessageLength, IP, Port);
-
-  fclose (fd);
-
-  return 0;
-}
-
-
 I32 ObjectControlBuildDOTMMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, U8 debug)
 {
   I32 MessageIndex = 0, i;
@@ -1547,6 +1514,58 @@ I32 ObjectControlBuildDOTMMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderT
 
 
 
+I32 ObjectControlSendDOTMMEssage(C8* Filename, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug)
+{
+
+  FILE *fd;
+  fd = fopen (Filename, "r");
+  UtilReadLineCntSpecChars(fd, TrajBuffer);//Read first line
+  int Rest = 0, i = 0, MessageLength = 0, SumMessageLength = 0, Modulo = 0, Transmissions = 0;
+  Transmissions = RowCount / COMMAND_DOTM_ROWS_IN_TRANSMISSION;
+  Rest = RowCount % COMMAND_DOTM_ROWS_IN_TRANSMISSION;
+  U16 CrcU16 = 0;
+ 
+  for(i = 0; i < Transmissions; i ++)
+  {
+    MessageLength = ObjectControlBuildDOTMMessage(TrajBuffer, fd, COMMAND_DOTM_ROWS_IN_TRANSMISSION, DOTMData, 0);
+
+    if(i == Transmissions && Rest == 0)
+    {
+      TrajBuffer[MessageLength] = (U8)(CrcU16);
+      TrajBuffer[MessageLength+1] = (U8)(CrcU16 >> 8);
+      MessageLength = MessageLength + 2;
+      vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+      SumMessageLength = SumMessageLength + MessageLength;
+    }
+    else
+    {    
+      vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+      SumMessageLength = SumMessageLength + MessageLength;
+    }
+    
+    if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
+  }
+
+  if(Rest > 0)
+  {
+    MessageLength = ObjectControlBuildDOTMMessage(TrajBuffer, fd, Rest, DOTMData, 0);
+    TrajBuffer[MessageLength] = (U8)(CrcU16);
+    TrajBuffer[MessageLength+1] = (U8)(CrcU16 >> 8);
+    MessageLength = MessageLength + 2;
+    vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+    SumMessageLength = SumMessageLength + MessageLength;
+    if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
+  }
+
+  printf("[ObjectControl] %d DOTM bytes sent to %s, port %d\n", SumMessageLength, IP, Port);
+
+  fclose (fd);
+
+  return 0;
+}
+
+
+
 I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOTMType *DOTMData, U8 debug)
 {
   I32 MessageIndex = 0;
@@ -1558,7 +1577,7 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
   
   bzero(MessageBuffer, COMMAND_DOTM_ROW_MESSAGE_LENGTH*RowCount);
 
-  int i = 0;
+  I32 i = 0, j = 0, n = 0;
   for(i = 0; i <= RowCount - 1; i++)
   {
     bzero(RowBuffer, 100);
@@ -1668,16 +1687,11 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
     DOTMData->CurvatureI32 = (I32)Data;
    //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
+    p=(C8 *)DOTMData;
+    for(j=0; j<sizeof(DOTMType); j++, n++) *(MessageBuffer + n) = *p++;
+    MessageIndex = n;
   }
-
   
-  p=(C8 *)DOTMData;
-  for(i=0; i<sizeof(DOTMType); i++) *(MessageBuffer + i) = *p++;
-  Crc = crc_16((const C8*)MessageBuffer, sizeof(DOTMType));
-  Crc = 0;
-  *(MessageBuffer + i++) = (U8)(Crc);
-  *(MessageBuffer + i++) = (U8)(Crc >> 8);
-  MessageIndex = i;
    
   if(debug)
   {

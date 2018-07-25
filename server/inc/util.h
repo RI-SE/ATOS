@@ -84,10 +84,10 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "10.168.7.250"
-#define TESTSERVER_IP "10.168.7.250"
+#define TESTHOST_IP "192.168.0.178"
+#define TESTSERVER_IP "192.168.0.178"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "10.168.7.250" 
+#define LOCAL_USER_CONTROL_IP "192.168.0.178" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -342,6 +342,7 @@ typedef struct
   U64 ETSIMillisecondsU64;
   U32 LatitudeU32;
   U32 LongitudeU32;
+  U16 LocalMillisecondU16;
 } TimeType;
 
 

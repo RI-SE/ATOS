@@ -29,6 +29,7 @@
 #include "remotecontrol.h"
 #include "util.h"
 #include "systemcontrol.h"
+#include "timecontrol.h"
 
 
 
@@ -164,7 +165,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 	I32 ServerSocketI32=0;
 	ServiceSessionType SessionData;
 	C8 RemoteServerRxData[1024];
-	struct timespec sleep_time1, ref_time1;
+	struct timespec sleep_time, ref_time;
 	struct timeval CurrentTimeStruct;
  	U64 CurrentTimeU64 = 0;
  	U64 TimeDiffU64 = 0;
@@ -177,6 +178,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
  	U32 ProcessControlSendCounterU32 = 0;
  	U32	PCDMessageLengthU32;
 	U16	PCDMessageCodeU16;
+	struct timeval now;
+	U16 MilliU16 = 0, NowU16 = 0;
+	U64 GPSmsU64 = 0;
 
 
 	bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
@@ -368,27 +372,42 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 		
 		++ProcessControlSendCounterU32;
 
-		if(ProcessChannelSocket != 0 && ProcessControlSendCounterU32 == 40)
+		if(ProcessChannelSocket != 0 && ProcessControlSendCounterU32 == 1)
 		{
 			ProcessControlSendCounterU32 = 0;
 			bzero(ProcessControlData, SYSTEM_CONTROL_PROCESS_DATA_BUFFER);
-
 			PCDMessageLengthU32 = 12;
 			PCDMessageCodeU16 = 1;
+			
+			//gettimeofday(&now, NULL);
+			//MilliU16 = abs((I16) (now.tv_usec / 1000) - (I16) GPSTime->LocalMillisecondU16);
+			//printf("Result= %d, now= %d, local= %d \n", MilliU16, (I16) (now.tv_usec / 1000), (I16)GPSTime->LocalMillisecondU16);
+			
+			//gettimeofday(&now, NULL);
+			//NowU16 = (U16)(now.tv_usec / 1000);
+			//if(NowU16 >= GPSTime->LocalMillisecondU16) MilliU16 = NowU16 - GPSTime->LocalMillisecondU16;
+			//else if(NowU16 < GPSTime->LocalMillisecondU16) MilliU16 = 1000 + NowU16 - GPSTime->LocalMillisecondU16;
+			//printf("Result= %d, now= %d, local= %d \n", MilliU16, NowU16, GPSTime->LocalMillisecondU16);
+
+
+			
+			//printf("Result= %d, now= %d, local= %d, GPS1ms= %ld, GPS2ms= %ld\n", MilliU16, NowU16, GPSTime->LocalMillisecondU16, GPSTime->GPSMillisecondsU64, GPSTime->GPSMillisecondsU64 + MilliU16);			
+			//GPSTime->GPSMillisecondsU64 = GPSTime->GPSMillisecondsU64 + (U64)MilliU16;
+			GPSmsU64 = GPSTime->GPSMillisecondsU64 + (U64)TimeControlGetMillisecond(GPSTime);
 			ProcessControlData[0] =	(U8)(PCDMessageLengthU32 >> 24);
 			ProcessControlData[1] =	(U8)(PCDMessageLengthU32 >> 16);
 			ProcessControlData[2] =	(U8)(PCDMessageLengthU32 >> 8);
 			ProcessControlData[3] =	(U8) PCDMessageLengthU32;
 			ProcessControlData[4] =	(U8)(PCDMessageCodeU16 >> 8);
 			ProcessControlData[5] =	(U8) PCDMessageCodeU16;
-			ProcessControlData[6] =	(U8)(GPSTime->GPSMillisecondsU64 >> 56);
-			ProcessControlData[7] =	(U8)(GPSTime->GPSMillisecondsU64 >> 48);
-			ProcessControlData[8] =	(U8)(GPSTime->GPSMillisecondsU64 >> 40);
-			ProcessControlData[9] =	(U8)(GPSTime->GPSMillisecondsU64 >> 32);
-			ProcessControlData[10] =	(U8)(GPSTime->GPSMillisecondsU64 >> 24);
-			ProcessControlData[11] =	(U8)(GPSTime->GPSMillisecondsU64 >> 16);
-			ProcessControlData[12] =	(U8)(GPSTime->GPSMillisecondsU64 >> 8);
-			ProcessControlData[13] =	(U8)(GPSTime->GPSMillisecondsU64);
+			ProcessControlData[6] =	(U8)(GPSmsU64 >> 56);
+			ProcessControlData[7] =	(U8)(GPSmsU64 >> 48);
+			ProcessControlData[8] =	(U8)(GPSmsU64 >> 40);
+			ProcessControlData[9] =	(U8)(GPSmsU64 >> 32);
+			ProcessControlData[10] =	(U8)(GPSmsU64 >> 24);
+			ProcessControlData[11] =	(U8)(GPSmsU64 >> 16);
+			ProcessControlData[12] =	(U8)(GPSmsU64 >> 8);
+			ProcessControlData[13] =	(U8)(GPSmsU64);
 			ProcessControlData[14] = server_state;
 			ProcessControlData[15] = OBCStateU8;
 			ProcessControlData[16] = (U8)(GSD->TimeControlExecTimeU16 >> 8);
@@ -733,7 +752,12 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 			break;
 		}
 
-		usleep(1000);
+		
+  		sleep_time.tv_sec = 0;
+      	sleep_time.tv_nsec = 100000000;
+      	nanosleep(&sleep_time,&ref_time);
+
+
   	}
 
   (void)iCommClose();
