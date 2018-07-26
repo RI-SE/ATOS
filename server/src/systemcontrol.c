@@ -379,20 +379,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 			PCDMessageLengthU32 = 12;
 			PCDMessageCodeU16 = 1;
 			
-			//gettimeofday(&now, NULL);
-			//MilliU16 = abs((I16) (now.tv_usec / 1000) - (I16) GPSTime->LocalMillisecondU16);
-			//printf("Result= %d, now= %d, local= %d \n", MilliU16, (I16) (now.tv_usec / 1000), (I16)GPSTime->LocalMillisecondU16);
-			
-			//gettimeofday(&now, NULL);
-			//NowU16 = (U16)(now.tv_usec / 1000);
-			//if(NowU16 >= GPSTime->LocalMillisecondU16) MilliU16 = NowU16 - GPSTime->LocalMillisecondU16;
-			//else if(NowU16 < GPSTime->LocalMillisecondU16) MilliU16 = 1000 + NowU16 - GPSTime->LocalMillisecondU16;
-			//printf("Result= %d, now= %d, local= %d \n", MilliU16, NowU16, GPSTime->LocalMillisecondU16);
-
-
-			
-			//printf("Result= %d, now= %d, local= %d, GPS1ms= %ld, GPS2ms= %ld\n", MilliU16, NowU16, GPSTime->LocalMillisecondU16, GPSTime->GPSMillisecondsU64, GPSTime->GPSMillisecondsU64 + MilliU16);			
-			//GPSTime->GPSMillisecondsU64 = GPSTime->GPSMillisecondsU64 + (U64)MilliU16;
 			GPSmsU64 = GPSTime->GPSMillisecondsU64 + (U64)TimeControlGetMillisecond(GPSTime);
 			ProcessControlData[0] =	(U8)(PCDMessageLengthU32 >> 24);
 			ProcessControlData[1] =	(U8)(PCDMessageLengthU32 >> 16);
@@ -754,7 +740,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
 		
   		sleep_time.tv_sec = 0;
-      	sleep_time.tv_nsec = 100000000;
+      	sleep_time.tv_nsec = 10000000;
       	nanosleep(&sleep_time,&ref_time);
 
 

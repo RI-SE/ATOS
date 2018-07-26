@@ -221,7 +221,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
       (void)iCommClose();
     }
 
-    if(ReceivedNewData == 1 && IpU32 == 1)
+    if(ReceivedNewData == 1 && IpU32 != 0)
     {
        /* Make call periodic */
       sleep_time.tv_sec = 0;
