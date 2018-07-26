@@ -320,6 +320,8 @@ void VirtualObject::handleOSEM(osem msg)
     switch (status) {
     case INIT:
     case DISARMED:
+
+
         mRefLat = static_cast<double>(msg.lat / 1e10);
         mRefLon = static_cast<double>(msg.lon / 1e10);
         mRefAlt = static_cast<double>(msg.alt /1e2);

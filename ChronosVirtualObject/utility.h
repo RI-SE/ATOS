@@ -32,6 +32,21 @@ namespace utility {
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
+// Between 1970 01 01 and 1980 01 06 there is 365*10 days, plus 2 for 2 leap years and plus 5 for the remaining days
+// in total we have MStime= (3650 + 2 + 5) * 24 * 3600 * 1000 = 315964800000
+#define MS_TIME_DIFF_UTC_GPS 315964800000
+// Difference is 18 leap seconds between utc and gps
+#define MS_LEAP_SEC_DIFF_UTC_GPS 180000
+
+// 7 * 24 * 3600 * 1000
+#define WEEK_TIME_MS 604800000
+
+// GPS TIME FUNCTIONS
+uint64_t getGPSmsFromUTCms(uint64_t UTCms);
+uint64_t getUTCmsFromGPSms(uint64_t GPSms);
+uint64_t getMSfromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek);
+void getGPStimeFromMS(uint64_t GPSms, uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek);
+// ETSI FUNCTIONS
 uint64_t getCurrentETSItimeMS();
 uint64_t getETSItimeFromUTCtimeMS(uint64_t UTCtime);
 uint64_t getCurrentUTCtimeMS();

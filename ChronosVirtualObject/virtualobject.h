@@ -114,8 +114,6 @@ private:
 
     VOBJ_TIME_DATA timedata;
 
-    quint
-
     // ISO client
     ISOcom* iClient;
 

@@ -29,6 +29,29 @@ namespace utility {
 #define FE_WGS84        (1.0/298.257223563) // earth flattening (WGS84)
 #define RE_WGS84        6378137.0           // earth semimajor axis (WGS84) (m)
 
+
+// GPS TIME FUNCTIONS
+uint64_t getGPSmsFromUTCms(uint64_t UTCms)
+{
+    return UTCms - MS_TIME_DIFF_UTC_GPS - MS_LEAP_SEC_DIFF_UTC_GPS;
+}
+uint64_t getUTCmsFromGPSms(uint64_t GPSms)
+{
+    return GPSms + MS_TIME_DIFF_UTC_GPS + MS_LEAP_SEC_DIFF_UTC_GPS;
+}
+
+uint64_t getMSfromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek)
+{
+    return GPSweek * WEEK_TIME_MS + (GPSquarterMSofWeek >> 2);
+}
+
+void getGPStimeFromMS(uint64_t GPSms, uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek)
+{
+    GPSweek = GPSms / WEEK_TIME_MS;
+    GPSquarterMSofWeek = GPSms - GPSweek * WEEK_TIME_MS;
+}
+
+
 uint64_t getCurrentETSItimeMS()
 {
 /*

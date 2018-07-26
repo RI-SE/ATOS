@@ -99,6 +99,8 @@
 #define ISO_TCP_STATE_READ_DATA 1
 #define ISO_TCP_STATE_READ_FOOTER 2
 
+#define LEAP_MSEC_DIFF_UTC_GPS 18000
+
 #define ISO_MESSAGE_HEADER_BYTE_LENGTH 10
 typedef struct
 {
@@ -191,6 +193,14 @@ public:
     static qint64 streamPop6Bytes(QDataStream &data);
     static qint64 streamPush6Bytes(QDataStream &data);
 
+    static quint64 gpsMStoUTCms(quint64 gps_time_ms)
+    {
+        return gps_time_ms + LEAP_MSEC_DIFF_UTC_GPS;
+    }
+    static quint64 utcMStoGPSms(quint64 utc_time_ms)
+    {
+        return utc_time_ms - LEAP_MSEC_DIFF_UTC_GPS;
+    }
 
 signals:
     void osem_processed(osem data);
@@ -198,36 +208,17 @@ signals:
     void strt_processed(strt data);
     void dotm_processed(QVector<dotm_pt> data);
     void heab_processed(heab data);
-    /*
-    void handle_osem(chronos_osem data);
-    void handle_dopm(QVector<chronos_dopm_pt> dopm);
-    void handle_heab(chronos_heab heab);
-    void handle_ostm(chronos_ostm ostm);
-    void handle_strt(chronos_strt strt);
-    void handle_sypm(chronos_sypm sysm);
-    void handle_mtsp(chronos_mtsp mtsp);
-    void handle_tcm(chronos_tcm tcm);
-    */
+
 private slots:
     void tcpPacketRx(QByteArray data);
     void tcpConnectionChanged(bool connected);
     void udpPacketRx();
-    //void stateReceived(quint8 id, CAR_STATE state);
 
 private:
     TcpServerSimple *mTcpServer;
-    //PacketInterface *mPacket;
     QUdpSocket *mUdpSocket;
     QHostAddress mUdpHostAddress;
     quint16 mUdpPort;
-
-    //int mTcpState;
-    //quint8 mTcpType;
-    //quint32 mTcpLen;
-
-    //ISO_MESSAGE_HEADER message_info;
-    //QByteArray message_data;
-    //quint8 message_state = 0;
 
     quint8 mTcpPacketState = 0;
     ISO_MESSAGE_HEADER mTcpMessageHeader;
@@ -235,8 +226,6 @@ private:
     QByteArray mTcpMessageData;
 
     int mHeabPollCnt;
-
-
 
     bool decodeMsg(quint8 type, quint32 len, QByteArray payload);
 

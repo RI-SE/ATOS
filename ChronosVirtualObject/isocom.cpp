@@ -122,14 +122,17 @@ void ISOcom::tcpPacketRx(QByteArray data)
     QDataStream stream(data);
     stream.setByteOrder(QDataStream::LittleEndian);
 
+    qDebug() << "########## PACKET_REC ##########";
 
     switch (mTcpPacketState) {
     case ISO_TCP_STATE_READ_HEADER:
         if(!packetHeaderRx(stream,mTcpMessageHeader)) break;
+        qDebug() << "MSG_LEN: " << mTcpMessageHeader.MESSAGE_LENGTH;
         mTcpMessageData.clear();
         mTcpPacketState = ISO_TCP_STATE_READ_DATA;
     case ISO_TCP_STATE_READ_DATA:
         if(!packetDataRx(stream,mTcpMessageHeader.MESSAGE_LENGTH,mTcpMessageData)) break;
+        qDebug() << "MSG_BYTES_READ:" << mTcpMessageData.size();
         mTcpPacketState = ISO_TCP_STATE_READ_FOOTER;
     case ISO_TCP_STATE_READ_FOOTER:
         packetFooterRx(stream,mTcpMessageFooter);
