@@ -39,6 +39,7 @@ typedef struct {
     quint64 test_start_time;
     quint64 elapsed_time;
     quint64 HEAB_rec_time;
+    quint64 HEAB_server_send_time;
     quint64 ctrl_update_time;
     quint64 monr_send_time;
 } VOBJ_TIME_DATA;

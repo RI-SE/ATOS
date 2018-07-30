@@ -67,7 +67,7 @@ void VirtualObject::run()
                 pendingStatus = POSTRUN;
                 emit simulation_stop(getID());
             }
-            if(reference_point_index < traj.size() - 1 )
+            if(reference_point_index < traj.size() - 1)
             {
                 // Update the reference point
                 ref_point = traj[reference_point_index];
@@ -199,6 +199,7 @@ bool VirtualObject::initObjectState()
     timedata.elapsed_time = 0;
     timedata.HEAB_rec_time = 0;
     timedata.ctrl_update_time = 0;
+    timedata.HEAB_server_send_time = 0;
 
     if(hasDOPM)
     {
@@ -320,8 +321,6 @@ void VirtualObject::handleOSEM(osem msg)
     switch (status) {
     case INIT:
     case DISARMED:
-
-
         mRefLat = static_cast<double>(msg.lat / 1e10);
         mRefLon = static_cast<double>(msg.lon / 1e10);
         mRefAlt = static_cast<double>(msg.alt /1e2);
@@ -385,9 +384,13 @@ void VirtualObject::handleLoadedDOPM(int ID, QVector<chronos_dopm_pt> msg)
 
 void VirtualObject::handleHEAB(heab msg)
 {
-
+    if (timedata.HEAB_server_send_time == 0)
+        timedata.HEAB_server_send_time = msg.GPSsecOfWeek;
     // TODO: make use of the time sent from the server
-
+    if(msg.GPSsecOfWeek-timedata.HEAB_server_send_time > HEARTBEAT_TIME && timedata.HEAB_server_send_time != 0){
+        qDebug() << "Warning! More than " << HEARTBEAT_TIME << "ms since last HEAB send time";
+    }
+    timedata.HEAB_server_send_time = msg.GPSsecOfWeek;
     timedata.HEAB_rec_time = utility::getCurrentUTCtimeMS();
 
     switch (msg.cc_status) {
@@ -404,8 +407,6 @@ void VirtualObject::handleHEAB(heab msg)
 
 void VirtualObject::handleOSTM(ostm msg)
 {
-
-    qDebug() << "OSTM received";
     switch (msg.state_change) {
     case ISO_OBJECT_STATE_ARMED:
         if ((status == DISARMED ) &&
@@ -433,15 +434,20 @@ void VirtualObject::handleSTRT(strt msg)
     if(status == ARMED)
     {
         //start_ETSI_time = msg.GPSsecOfWeek_start_time;
-
-        timedata.test_start_time = utility::getCurrentUTCtimeMS();
+        quint64 current_utc_time = utility::getCurrentUTCtimeMS();
+        //Find current GPS week
+        uint16_t GPSWeek;
+        uint32_t GPSqmsOfWeek;
+        utility::getGPStimeFromMS(utility::getGPSmsFromUTCms(current_utc_time),GPSWeek,GPSqmsOfWeek);
+        //Save start time in utc ms
+        timedata.test_start_time =utility::getUTCmsFromGPSms(utility::getMSfromGPStime(GPSWeek,msg.GPSsecOfWeek_start_time)+msg.delay_ms);
 
         char buffer[30];
-        utility::getDateTimeFromUTCtime(utility::getCurrentUTCtimeMS(),buffer,30);
+        utility::getDateTimeFromUTCtime(current_utc_time,buffer,30);
 
         qDebug() << "Time at receiving: " << buffer;
 
-        //utility::getDateTimeFromETSItime(msg.abs_start_time,buffer,30);
+        utility::getDateTimeFromUTCtime(timedata.test_start_time,buffer,30);
 
         qDebug() << "Start time received: " << buffer;
         pendingStatus = RUNNING;//RUNNING_STANDBY;

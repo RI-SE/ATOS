@@ -33,11 +33,11 @@ namespace utility {
 // GPS TIME FUNCTIONS
 uint64_t getGPSmsFromUTCms(uint64_t UTCms)
 {
-    return UTCms - MS_TIME_DIFF_UTC_GPS - MS_LEAP_SEC_DIFF_UTC_GPS;
+    return UTCms - MS_TIME_DIFF_UTC_GPS + MS_LEAP_SEC_DIFF_UTC_GPS;
 }
 uint64_t getUTCmsFromGPSms(uint64_t GPSms)
 {
-    return GPSms + MS_TIME_DIFF_UTC_GPS + MS_LEAP_SEC_DIFF_UTC_GPS;
+    return GPSms + MS_TIME_DIFF_UTC_GPS - MS_LEAP_SEC_DIFF_UTC_GPS;
 }
 
 uint64_t getMSfromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek)
@@ -48,7 +48,27 @@ uint64_t getMSfromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek)
 void getGPStimeFromMS(uint64_t GPSms, uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek)
 {
     GPSweek = GPSms / WEEK_TIME_MS;
-    GPSquarterMSofWeek = GPSms - GPSweek * WEEK_TIME_MS;
+    uint64_t remainder = GPSms - (uint64_t)GPSweek * WEEK_TIME_MS;
+    GPSquarterMSofWeek = remainder;
+
+    uint16_t GPSday = remainder / DAY_TIME_MS;
+    remainder -= (uint64_t)GPSday * DAY_TIME_MS;
+    uint16_t GPShour = remainder / HOUR_TIME_MS;
+    remainder -= (uint64_t)GPShour * HOUR_TIME_MS;
+    uint16_t GPSminute = remainder / MINUTE_TIME_MS;
+    remainder -= (uint64_t)GPSminute * HOUR_TIME_MS;
+    /*
+    qDebug() << "GPSWEEK:" << GPSweek <<
+                "\nGPSSec" << GPSquarterMSofWeek;
+    qDebug() << "GPSTIME: " << GPSweek <<
+                ":" << GPSday <<
+                ":" << GPShour <<
+                ":" << GPSminute;
+
+    qDebug() << "GPS WEEK: " << GPSweek <<
+                "\nGPS DAY: " << GPSday <<
+                "\nGPS HOUR:" << GPShour <<
+                "\nGPS MINUTE:" << GPSminute;*/
 }
 
 
