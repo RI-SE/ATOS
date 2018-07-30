@@ -316,10 +316,10 @@ typedef struct
   U16 LateralAccValueIdU16;
   U16 LateralAccContentLengthU16;
   I16 LateralAccI16;
-  U16 CurvatureValueIdU16;
-  U16 CurvatureContentLengthU16;
-  I32 CurvatureI32;
-} DOTMType; //70 bytes
+  //U16 CurvatureValueIdU16;
+  //U16 CurvatureContentLengthU16;
+  //I32 CurvatureI32;
+} DOTMType; //62 bytes
 
 
 typedef struct

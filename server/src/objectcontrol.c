@@ -1493,7 +1493,7 @@ I32 ObjectControlBuildDOTMMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderT
   HeaderData->MessageCounterU8 = 0;
   HeaderData->AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
   HeaderData->MessageIdU16 = COMMAND_DOTM_CODE;
-  HeaderData->MessageLengthU32 = COMMAND_DOTM_ROW_MESSAGE_LENGTH*RowCount + COMMAND_MESSAGE_FOOTER_LENGTH;
+  HeaderData->MessageLengthU32 = COMMAND_DOTM_ROW_MESSAGE_LENGTH*RowCount;
   
   p=(C8 *)HeaderData;
   for(i=0; i< COMMAND_MESSAGE_HEADER_LENGTH; i++) *(MessageBuffer + i) = *p++;
@@ -1633,7 +1633,7 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
     while(Data<0) Data+=3600;
     while(Data>3600) Data-=3600;
     DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
-    DOTMData->HeadingContentLengthU16 = 4;
+    DOTMData->HeadingContentLengthU16 = 2;
     DOTMData->HeadingU16 = (U16)Data;
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -1643,7 +1643,7 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
     Data = atof(DataBuffer)*1e2;
     DOTMData->LongitudinalSpeedValueIdU16 = VALUE_ID_LONGITUDINAL_SPEED;
-    DOTMData->LongitudinalSpeedContentLengthU16 = 4;
+    DOTMData->LongitudinalSpeedContentLengthU16 = 2;
     DOTMData->LongitudinalSpeedI16 = (I16)Data;
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -1653,7 +1653,7 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
     Data = atof(DataBuffer)*1e2;
     DOTMData->LateralSpeedValueIdU16 = VALUE_ID_LATERAL_SPEED;
-    DOTMData->LateralSpeedContentLengthU16 = 4;
+    DOTMData->LateralSpeedContentLengthU16 = 2;
     DOTMData->LateralSpeedI16 = (I16)Data;
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -1663,7 +1663,7 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
     Data = atof(DataBuffer)*1e2;
     DOTMData->LongitudinalAccValueIdU16 = VALUE_ID_LONGITUDINAL_ACCELERATION;
-    DOTMData->LongitudinalAccContentLengthU16 = 4;
+    DOTMData->LongitudinalAccContentLengthU16 = 2;
     DOTMData->LongitudinalAccI16 = (I16)Data;
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
@@ -1673,11 +1673,12 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
     Data = atof(DataBuffer)*1e2;
     DOTMData->LateralAccValueIdU16 = VALUE_ID_LATERAL_ACCELERATION;
-    DOTMData->LateralAccContentLengthU16 = 4;
+    DOTMData->LateralAccContentLengthU16 = 2;
     DOTMData->LateralAccI16 = (I16)Data;
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
     //Curvature
+    /*
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
@@ -1685,6 +1686,7 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
     DOTMData->CurvatureValueIdU16 = VALUE_ID_CURVATURE;
     DOTMData->CurvatureContentLengthU16 = 4;
     DOTMData->CurvatureI32 = (I32)Data;
+    */
    //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
     p=(C8 *)DOTMData;
