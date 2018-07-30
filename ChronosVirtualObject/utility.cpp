@@ -42,14 +42,14 @@ uint64_t getUTCmsFromGPSms(uint64_t GPSms)
 
 uint64_t getMSfromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek)
 {
-    return GPSweek * WEEK_TIME_MS + (GPSquarterMSofWeek >> 2);
+    return (int64_t)GPSweek * WEEK_TIME_MS + (int64_t)(GPSquarterMSofWeek >> 2);
 }
 
 void getGPStimeFromMS(uint64_t GPSms, uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek)
 {
     GPSweek = GPSms / WEEK_TIME_MS;
-    uint64_t remainder = GPSms - (uint64_t)GPSweek * WEEK_TIME_MS;
-    GPSquarterMSofWeek = remainder;
+    int64_t remainder = GPSms - (uint64_t)GPSweek * WEEK_TIME_MS;
+    GPSquarterMSofWeek = remainder << 2;
 
     uint16_t GPSday = remainder / DAY_TIME_MS;
     remainder -= (uint64_t)GPSday * DAY_TIME_MS;
@@ -99,7 +99,7 @@ uint64_t getCurrentUTCtimeMS()
             (uint64_t)CurrentTimeStruct.tv_usec/1000;
 }
 
-void getDateTimeFromUTCtime(uint64_t utc_ms, char *buffer, int size_t)
+void getDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t)
 {
      time_t time_seconds = utc_ms / 1000;
      time_t rest_time_ms = utc_ms - time_seconds;

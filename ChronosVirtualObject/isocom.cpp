@@ -99,13 +99,11 @@ bool ISOcom::packetHeaderRx(QDataStream &data, ISO_MESSAGE_HEADER &header)
 bool ISOcom::packetDataRx(QDataStream &data, quint32 data_length, QByteArray &packet_data)
 {
     quint8 read_byte = 0;
-    quint32 bytes_read = 0;
     while(!data.atEnd())
     {
         data >> read_byte;
         packet_data.append(read_byte);
-        bytes_read++;
-        if(bytes_read >= data_length) return true;
+        if(packet_data.size() >= data_length) return true;
     }
     return false;
 }
@@ -123,34 +121,43 @@ void ISOcom::tcpPacketRx(QByteArray data)
     stream.setByteOrder(QDataStream::LittleEndian);
 
     qDebug() << "########## PACKET_REC ##########";
+    qDebug() << "STEAM_DATA(BYTES):" << data.size();
 
-    switch (mTcpPacketState) {
-    case ISO_TCP_STATE_READ_HEADER:
-        if(!packetHeaderRx(stream,mTcpMessageHeader)) break;
-        qDebug() << "MSG_LEN: " << mTcpMessageHeader.MESSAGE_LENGTH;
-        mTcpMessageData.clear();
-        mTcpPacketState = ISO_TCP_STATE_READ_DATA;
-    case ISO_TCP_STATE_READ_DATA:
-        if(!packetDataRx(stream,mTcpMessageHeader.MESSAGE_LENGTH,mTcpMessageData)) break;
-        qDebug() << "MSG_BYTES_READ:" << mTcpMessageData.size();
-        mTcpPacketState = ISO_TCP_STATE_READ_FOOTER;
-    case ISO_TCP_STATE_READ_FOOTER:
-        packetFooterRx(stream,mTcpMessageFooter);
-        mTcpPacketState = ISO_TCP_STATE_READ_HEADER;
-        if(mTcpMessageFooter.CRC == 0){
-            processMessage( mTcpMessageData,
-                            mTcpMessageHeader.MESSAGE_ID,
-                            mTcpMessageHeader.MESSAGE_LENGTH,
-                            mTcpMessageHeader.PROTOCOL_VERSION);
+    while(!stream.atEnd())
+    {
+        switch (mTcpPacketState) {
+        case ISO_TCP_STATE_READ_HEADER:
+            if(!packetHeaderRx(stream,mTcpMessageHeader)) break;
+            qDebug() << "MSG_LEN: " << mTcpMessageHeader.MESSAGE_LENGTH;
+            mTcpMessageData.clear();
+            mTcpPacketState = ISO_TCP_STATE_READ_DATA;
+        case ISO_TCP_STATE_READ_DATA:
+            if(!packetDataRx(stream,mTcpMessageHeader.MESSAGE_LENGTH,mTcpMessageData))
+            {
+                qDebug() << "PART BYTES READ: " << mTcpMessageData.size();
+                break;
+            }
+            qDebug() << "MSG_BYTES_READ:" << mTcpMessageData.size();
+            mTcpPacketState = ISO_TCP_STATE_READ_FOOTER;
+        case ISO_TCP_STATE_READ_FOOTER:
+            packetFooterRx(stream,mTcpMessageFooter);
+            mTcpPacketState = ISO_TCP_STATE_READ_HEADER;
+            if(mTcpMessageFooter.CRC == 0){
+                processMessage( mTcpMessageData,
+                                mTcpMessageHeader.MESSAGE_ID,
+                                mTcpMessageHeader.MESSAGE_LENGTH,
+                                mTcpMessageHeader.PROTOCOL_VERSION);
+            }
+            else
+            {
+                qDebug() << "CRC not correct:" << mTcpMessageFooter.CRC;
+            }
+            break;
+        default:
+            break;
         }
-        else
-        {
-            qDebug() << "CRC not correct:" << mTcpMessageFooter.CRC;
-        }
-        break;
-    default:
-        break;
     }
+
 }
 
 void ISOcom::tcpConnectionChanged(bool connected)
@@ -362,7 +369,7 @@ bool ISOcom::processOSEM(QDataStream &msg_stream, const quint32 &msg_len, osem &
 
 bool ISOcom::processDOTM(QDataStream &msg_stream, const quint32 &msg_len, QVector<dotm_pt> &traj)
 {
-    quint32 remaining_content = msg_len;
+    qint64 remaining_content = msg_len;
 
     quint16 value_id = 0;
     quint16 content_len = 0;
@@ -370,7 +377,8 @@ bool ISOcom::processDOTM(QDataStream &msg_stream, const quint32 &msg_len, QVecto
     //const quint16 expected_mandatory_content = 0x01FF;
     qint16 mandatory_content_check = 0;
 
-    dotm_pt dotm_msg;
+    dotm_pt traj_point;
+    dotm_pt_raw dotm_msg;
     dotm_msg.heading = 0;
     dotm_msg.lat_acc = 0;
     dotm_msg.lat_speed = 0;
@@ -439,7 +447,17 @@ bool ISOcom::processDOTM(QDataStream &msg_stream, const quint32 &msg_len, QVecto
 
         if (mandatory_content_check == DOTM_MANDATORY_CONTENT){
 
-            traj.append(dotm_msg);
+            traj_point.rel_time = dotm_msg.rel_time;
+            traj_point.x = dotm_msg.x / 1000.0;
+            traj_point.y = dotm_msg.y / 1000.0;
+            traj_point.z = dotm_msg.z / 1000.0;
+            traj_point.heading = dotm_msg.heading / 100.0;
+            traj_point.lon_speed = dotm_msg.lon_speed / 100.0;
+            traj_point.lat_speed = dotm_msg.lat_speed / 100.0;
+            traj_point.lon_acc = dotm_msg.lon_acc / 1000.0;
+            traj_point.lon_acc = dotm_msg.lat_acc / 1000.0;
+            traj.append(traj_point);
+
             // Clear data
             dotm_msg.heading = 0;
             dotm_msg.lat_acc = 0;
@@ -567,75 +585,51 @@ bool ISOcom::sendMonr(monr msg)
     if (QString::compare(mUdpHostAddress.toString(), "0.0.0.0") == 0) {
         return false;
     }
-    /*
 
-    VByteArray monr_msg;
-    monr_msg.vbAppendUint16(ISO_MSG_MONR);
-    monr_msg.vbAppendUint32(ISO_MSG_MONR_NoC);
+    QByteArray to_send;
 
-    monr_msg.vbAppendUint16(ISO_VALUE_ID_ABS_TIME); // VALUE ID
-    monr_msg.vbAppendUint8(ISO_TYPE_ID_U48);  // TYPE ID
-    monr_msg.vbAppendUint48(msg.time_stamp); // DATA
+    QDataStream data_to_send(&to_send,QIODevice::WriteOnly);
+    data_to_send.setByteOrder(QDataStream::LittleEndian);
 
-    monr_msg.vbAppendUint16(ISO_VALUE_ID_X_POS); // VALUE ID
-    monr_msg.vbAppendUint8(ISO_TYPE_ID_I32);  // TYPE ID
-    monr_msg.vbAppendInt32(msg.x); // DATA
+    msg_counter++;
 
-    monr_msg.vbAppendUint16(ISO_VALUE_ID_Y_POS); // VALUE ID
-    monr_msg.vbAppendUint8(ISO_TYPE_ID_I32);  // TYPE ID
-    monr_msg.vbAppendInt32(msg.y); // DATA
+    // Build header
+    ISO_MESSAGE_HEADER header;
+    header.TxID = 0;
+    header.MESSAGE_COUNTER = msg_counter;
+    header.ACK_REQ = 0;
+    header.PROTOCOL_VERSION = 0;
+    header.MESSAGE_ID = ISO_MSG_MONR;
+    header.MESSAGE_LENGTH = ISO_MESSAGE_MONR_BYTE_LENGTH;
 
-    monr_msg.vbAppendUint16(ISO_VALUE_ID_Z_POS); // VALUE ID
-    monr_msg.vbAppendUint8(ISO_TYPE_ID_I32);  // TYPE ID
-    monr_msg.vbAppendInt32(msg.z); // DATA
+    // Add header to stream
+    data_to_send << (quint16) ISO_SYNC_WORD;
+    data_to_send << header.TxID;
+    data_to_send << header.MESSAGE_COUNTER;
+    data_to_send << (quint8)(header.ACK_REQ | header.PROTOCOL_VERSION);
+    data_to_send << header.MESSAGE_ID;
+    data_to_send << header.MESSAGE_LENGTH;
 
-    monr_msg.vbAppendUint16(ISO_VALUE_ID_HEADING); // VALUE ID
-    monr_msg.vbAppendUint8(ISO_TYPE_ID_U16);  // TYPE ID
-    monr_msg.vbAppendInt16(msg.heading); // DATA
+    // Write data to stream
+    data_to_send << msg.GPSSecondOfWeek;
+    data_to_send << msg.x;
+    data_to_send << msg.y;
+    data_to_send << msg.z;
+    data_to_send << msg.heading;
+    data_to_send << msg.lon_speed;
+    data_to_send << msg.lat_speed;
+    data_to_send << msg.lon_acc;
+    data_to_send << msg.lat_acc;
+    data_to_send << msg.drive_direction;
+    data_to_send << msg.object_state;
+    data_to_send << msg.ready_to_arm;
+    data_to_send << msg.object_error_state;
 
-    monr_msg.vbAppendUint16(ISO_VALUE_ID_LON_SPEED); // VALUE ID
-    monr_msg.vbAppendUint8(ISO_TYPE_ID_I16);  // TYPE ID
-    monr_msg.vbAppendInt16(msg.lon_speed); // DATA
-
-    monr_msg.vbAppendUint16(ISO_VALUE_ID_LAT_SPEED); // VALUE ID
-    monr_msg.vbAppendUint8(ISO_TYPE_ID_I16);  // TYPE ID
-    monr_msg.vbAppendInt16(msg.lat_speed); // DATA
-
-    monr_msg.vbAppendInt16(ISO_VALUE_ID_LON_ACC); // VALUE ID
-    monr_msg.vbAppendInt8(ISO_TYPE_ID_I16);  // TYPE ID
-    monr_msg.vbAppendInt16(msg.lon_acc); // DATA
-
-    monr_msg.vbAppendUint16(ISO_VALUE_ID_LAT_ACC); // VALUE ID
-    monr_msg.vbAppendUint8(ISO_TYPE_ID_I16);  // TYPE ID
-    monr_msg.vbAppendInt16(msg.lat_acc); // DATA
-
-    monr_msg.vbAppendUint16(ISO_VALUE_ID_FLAG); // VALUE ID
-    monr_msg.vbAppendUint8(ISO_TYPE_ID_U8);  // TYPE ID
-    monr_msg.vbAppendUint8(msg.drive_direction); // DATA
-
-    monr_msg.vbAppendUint16(ISO_VALUE_ID_FLAG); // VALUE ID
-    monr_msg.vbAppendUint8(ISO_TYPE_ID_U8);  // TYPE ID
-    monr_msg.vbAppendUint8(msg.object_state); // DATA
-
-    monr_msg.vbAppendUint16(ISO_VALUE_ID_FLAG); // VALUE ID
-    monr_msg.vbAppendUint8(ISO_TYPE_ID_U8);  // TYPE ID
-    monr_msg.vbAppendUint8(msg.ready_to_arm); // DATA
-
-
-    VByteArray package_header;
-    //Build package header
-    package_header.vbAppendUint16(ISO_SYNC_WORD);
-    package_header.vbAppendUint8(0); // Tx ID
-    package_header.vbAppendUint8(0); // Pkg counter
-    package_header.vbAppendUint8(0); // Ack request
-    package_header.vbAppendUint32(monr_msg.size());
-
-    VByteArray to_send = package_header.append(monr_msg);
-    to_send.vbAppendUint16(0); //CRC
-
+    // Write CRC to stream
+    data_to_send << (quint16) 0;
 
     mUdpSocket->writeDatagram(to_send, mUdpHostAddress, mUdpPort);
-*/
+
     return true;
 }
 

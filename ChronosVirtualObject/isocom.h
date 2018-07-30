@@ -21,15 +21,16 @@
 #define ISO_CC_STATUS_EMERGENCY_ABORT 0x02
 
 // Object internal state
-#define ISO_OBJECT_INTERNAL_STATE_READY_TO_ARM 0x00
-#define ISO_OBJECT_INTERNAL_STATE_NOT_READY_TO_ARM 0x01
+#define ISO_OBJECT_INTERNAL_STATE_NOT_READY_TO_ARM 0x00
+#define ISO_OBJECT_INTERNAL_STATE_READY_TO_ARM 0x01
+#define ISO_OBJECT_INTERNAL_STATE_UNAVAILABLE 0x02
 
 // Object states
 #define ISO_OBJECT_STATE_INIT       0x01
 #define ISO_OBJECT_STATE_ARMED      0x02
 #define ISO_OBJECT_STATE_DISARMED   0x03
 #define ISO_OBJECT_STATE_RUNNING    0x04
-#define ISO_OBJECT_STATE_POST_RUN   0x05
+#define ISO_OBJECT_STATE_POSTRUN   0x05
 
 // Packet defines
 #define ISO_SYNC_WORD 0x7E7E
@@ -102,6 +103,7 @@
 #define LEAP_MSEC_DIFF_UTC_GPS 18000
 
 #define ISO_MESSAGE_HEADER_BYTE_LENGTH 10
+#define ISO_MESSAGE_MONR_BYTE_LENGTH 30
 typedef struct
 {
     quint8 TxID;
@@ -156,22 +158,36 @@ typedef struct
     qint16 lat_speed;
     qint16 lon_acc;
     qint16 lat_acc;
+} dotm_pt_raw;
+
+typedef struct
+{
+    quint32 rel_time;
+    double x; // m
+    double y; // m
+    double z; // m
+    double heading; // Degrees
+    double lon_speed; // m/s
+    double lat_speed; // m/s
+    double lon_acc; // m/(s*s)
+    double lat_acc; // m/(s*s)
 } dotm_pt;
 
 typedef struct
 {
-    uint64_t time_stamp;
-    int32_t x;
-    int32_t y;
-    int32_t z;
-    uint16_t heading;
-    int16_t lon_speed;
-    int16_t lat_speed;
-    int16_t lon_acc;
-    int16_t lat_acc;
-    uint8_t drive_direction;
-    uint8_t object_state;
-    uint8_t ready_to_arm;
+    quint32 GPSSecondOfWeek;
+    qint32 x;
+    qint32 y;
+    qint32 z;
+    quint16 heading;
+    qint16 lon_speed;
+    qint16 lat_speed;
+    qint16 lon_acc;
+    qint16 lat_acc;
+    quint8 drive_direction;
+    quint8 object_state;
+    quint8 ready_to_arm;
+    quint8 object_error_state;
 } monr;
 
 
@@ -226,6 +242,8 @@ private:
     QByteArray mTcpMessageData;
 
     int mHeabPollCnt;
+
+    quint8 msg_counter = 0;
 
     bool decodeMsg(quint8 type, quint32 len, QByteArray payload);
 

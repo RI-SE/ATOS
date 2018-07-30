@@ -37,7 +37,8 @@ typedef struct {
 typedef struct {
     quint64 clock; // Holding the current time value
     quint64 test_start_time;
-    quint64 elapsed_time;
+    qint64 elapsed_time;
+    quint64 position_update_time;
     quint64 HEAB_rec_time;
     quint64 HEAB_server_send_time;
     quint64 ctrl_update_time;
@@ -76,7 +77,7 @@ signals:
 
     void updated_state(VOBJ_DATA currentState);
     void new_origin(double lat, double lon, double alt);
-    void new_trajectory(int ID,QVector<chronos_dopm_pt> traj);
+    void new_trajectory(int ID,QVector<dotm_pt> traj);
     void thread_done(int ID);
     void simulation_start(int ID);
     void simulation_stop(int ID);
@@ -90,8 +91,8 @@ signals:
 private slots:
     // Slots for Chronos communication
     void handleOSEM(osem msg);
-    void handleDOPM(QVector<chronos_dopm_pt> msg);
-    void handleLoadedDOPM(int ID, QVector<chronos_dopm_pt> msg);
+    void handleDOPM(QVector<dotm_pt> msg);
+    void handleLoadedDOPM(int ID, QVector<dotm_pt> msg);
     void handleHEAB(heab msg);
     void handleOSTM(ostm msg);
     void handleSTRT(strt msg);
@@ -166,7 +167,7 @@ private:
 
     // Trajectory
     int reference_point_index = 0; // Index for the reference point
-    QVector<chronos_dopm_pt> traj; // The trajectory to follow
+    QVector<dotm_pt> traj; // The trajectory to follow
 
     // The Reference coordinates
     double mRefLat = 57.71495867;
