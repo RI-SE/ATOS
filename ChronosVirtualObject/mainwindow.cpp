@@ -309,7 +309,8 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     pos.setXY(data.x,data.y);
 
     // Calculate and set the heading in the map
-    double heading = (data.heading-90.0)*M_PI/180;
+
+    double heading = (360-data.heading) * M_PI/180;//(data.heading-90.0)*M_PI/180;
     pos.setAlpha(heading);
 
     // Set Master or Slave status on the car
@@ -321,7 +322,7 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     else {
         status_text = "SLAVE";
     }
-    pos.setInfo(sStatus + QString::number(data.status) + "\n"+ status_text);
+    pos.setInfo(sStatus + QString::number(data.status) + "\n"+ QString::number(data.heading));
 
     // Update the car on the map
     ui->widget->updateCarState(data.ID,pos);

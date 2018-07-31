@@ -52,6 +52,11 @@ uint64_t getGPSmsFromUTCms(uint64_t UTCms);
 uint64_t getUTCmsFromGPSms(uint64_t GPSms);
 uint64_t getMSfromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek);
 void getGPStimeFromMS(uint64_t GPSms, uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek);
+// GPS collective functions
+void getGPStimeFromUTCms(uint64_t UTCms,uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek);
+uint64_t getUTCmsFromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek);
+void getCurrentGPStime(uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek);
+
 // ETSI FUNCTIONS
 uint64_t getCurrentETSItimeMS();
 uint64_t getETSItimeFromUTCtimeMS(uint64_t UTCtime);

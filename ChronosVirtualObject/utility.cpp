@@ -71,6 +71,22 @@ void getGPStimeFromMS(uint64_t GPSms, uint16_t &GPSweek, uint32_t &GPSquarterMSo
                 "\nGPS MINUTE:" << GPSminute;*/
 }
 
+void getGPStimeFromUTCms(uint64_t UTCms,uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek)
+{
+    getGPStimeFromMS(getGPSmsFromUTCms(UTCms),
+                     GPSweek,
+                     GPSquarterMSofWeek);
+}
+uint64_t getUTCmsFromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek)
+{
+    return getUTCmsFromGPSms(getMSfromGPStime(GPSweek,GPSquarterMSofWeek));
+}
+
+
+void getCurrentGPStime(uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek)
+{
+    getGPStimeFromUTCms(getCurrentUTCtimeMS(),GPSweek,GPSquarterMSofWeek);
+}
 
 uint64_t getCurrentETSItimeMS()
 {
