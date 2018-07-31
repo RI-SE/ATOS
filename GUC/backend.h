@@ -94,7 +94,7 @@ private:
     bool addExpectedResponseID(qint8 msg_id)
     {
         // TODO add check to not add too many arguments
-        if (expected_response_id->size() > MAX_RESPONSE_LIST_LENGTH) return false;
+        if (expected_response_id->size() > MAX_RESPONSE_LIST_LENGTH) {return false; qDebug() << "SEND LIST IS FULL";}
         expected_response_id->append(msg_id);
         return true;
     }

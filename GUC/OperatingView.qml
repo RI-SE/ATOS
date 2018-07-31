@@ -30,7 +30,7 @@ Column {
 
     BasicButton {
         id: connectButton
-        text: qsTr("CONNECT OBJECTS")
+        text: qsTr("CONNECT")
         height: root.buttonHeight
         width: root.buttonWidth
         onClicked: root.connectClicked()
