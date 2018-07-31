@@ -1628,13 +1628,14 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
     src = strchr(src + 1, ';');
     bzero(DataBuffer, 20);
     strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-    Data = UtilRadToDeg(atof(DataBuffer)*1e2);
-    Data = 4500 - Data; //Turn heading back pi/2 
-    while(Data<0) Data+=3600;
-    while(Data>3600) Data-=3600;
+    Data = UtilRadToDeg(atof(DataBuffer));
+    printf("HEADING: %f\n",Data);
+    //Data = 4500 - Data; //Turn heading back pi/2
+    while(Data<0) Data+=360.0;
+    while(Data>3600) Data-=360.0;
     DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
     DOTMData->HeadingContentLengthU16 = 2;
-    DOTMData->HeadingU16 = (U16)Data;
+    DOTMData->HeadingU16 = (U16)(Data*1e2);
     //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
     //Longitudinal speed
