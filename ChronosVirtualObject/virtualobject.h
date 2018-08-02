@@ -22,11 +22,11 @@
 
 // Object data of interest
 typedef struct {
-    int ID;
-    quint64 time;
-    double x;
-    double y;
-    double z;
+    int ID;             // Virtual Object ID
+    quint64 time;       // Object perception of the current time
+    double x;           // x-coordinate
+    double y;           // y-coordinate
+    double z;           // z-coordinate
     double heading;
     double speed;
     double acc;
@@ -35,15 +35,23 @@ typedef struct {
 } VOBJ_DATA;
 
 typedef struct {
-    quint64 clock; // Holding the current time value
-    quint64 test_start_time;
-    qint64 elapsed_time;
-    quint64 position_update_time;
-    quint64 HEAB_rec_time;
-    quint64 HEAB_server_send_time;
-    quint64 ctrl_update_time;
-    quint64 monr_send_time;
+    quint64 clock;                      // Holding the current time value [ms] (UTC)
+    quint64 test_start_time;            // Start time [ms] (UTC)
+    qint64 elapsed_time;                // Time since start of test
+    quint64 position_update_time;       // Time at the latest position update [ms] (UTC)
+    quint64 HEAB_rec_time;              // Time at which the latest HEAB message was received [ms] (UTC)
+    quint64 monr_send_time;             // Time at the most recent sent MONR message [ms] (UTC)
+    quint64 sleep_time;                 // Decides downtime between loops during runtime [ms]
+    quint64 runtime_start;              // The time at which the object entered its running state
+    quint64 time_since_runtime_start;   // The time since runtime start
 } VOBJ_TIME_DATA;
+
+typedef struct {
+    quint32 date;                   // GPS date sent from server represented as integer ex. 20180801 for 1st of august 2018
+    quint16 gps_week;               // GPS week sent from server
+    quint32 gps_qmsOfWeek;          // Quarter ms of the current week sent from server
+    quint64 HEAB_server_send_time;  // Time of transmission from server to object
+} SRV_TIME_DATA;
 
 Q_DECLARE_METATYPE(VOBJ_DATA)
 
@@ -53,7 +61,8 @@ typedef enum {
     DISARMED,
     RUNNING,
     POSTRUN,
-    REMOTECTRL
+    REMOTECTRL,
+    PRERUN
 } OBJ_STATUS;
 
 
@@ -116,6 +125,7 @@ private:
 
     VOBJ_TIME_DATA timedata;
 
+
     // ISO client
     ISOcom* iClient;
 
@@ -162,7 +172,7 @@ private:
     // Time variables
     //quint64 last_received_heab_time_from_server; // Needed in order to track when Heartbeat came in
     quint64 sleep_time = 20;     // How long the process should be suspended
-    quint64 start_ETSI_time;    // The ETSI time to start at
+
 
 
     // Trajectory
@@ -175,6 +185,9 @@ private:
     double mRefAlt = 219.0;
 
     double mRefHeading; // Don't know what use this will be
+
+    SRV_TIME_DATA srv_timedata;
+
 
     /* METHODS */
 

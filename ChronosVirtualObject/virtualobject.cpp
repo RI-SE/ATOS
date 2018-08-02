@@ -15,6 +15,10 @@ VirtualObject::VirtualObject(int id,double rLat,double rLon,double rAlt)
     data.isMaster = isMaster;
 
 
+    srv_timedata.date = 0;
+    srv_timedata.gps_week = 0;
+    srv_timedata.gps_qmsOfWeek = 0;
+    srv_timedata.HEAB_server_send_time = 0;
 
     mRefLat = rLat;
     mRefLon = rLon;
@@ -54,11 +58,18 @@ void VirtualObject::run()
             break;
         case ARMED:
             break;
+        case PRERUN:
+            sleep_time = 5;
+            simulation_start(getID());
+            timedata.runtime_start = utility::getCurrentUTCtimeMS();
+            pendingStatus = RUNNING;
+            break;
         case RUNNING:
 
-            sleep_time = 5;
+
             timedata.clock = utility::getCurrentUTCtimeMS();
             timedata.elapsed_time = timedata.clock - timedata.test_start_time;
+            timedata.time_since_runtime_start = timedata.clock - timedata.runtime_start;
 
             // Check if heartbeat deadline has passed
             if(utility::getCurrentUTCtimeMS()-timedata.HEAB_rec_time > HEARTBEAT_TIME && false)
@@ -69,7 +80,7 @@ void VirtualObject::run()
             }
             if(reference_point_index < traj.size() - 1)
             {
-                qDebug() << "Time:" << timedata.elapsed_time;
+                //qDebug() << "Time:" << timedata.elapsed_time;
                 // Update the reference point
                 ref_point = traj[reference_point_index];
 
@@ -122,7 +133,7 @@ void VirtualObject::run()
         // Send vizualizer update
         data.status = status;
         data.isMaster = isMaster;
-        data.time = timedata.elapsed_time;
+        data.time = timedata.time_since_runtime_start;
         //data.mtsp = time_adjustment;
         emit updated_state(data);
         QThread::msleep(sleep_time);
@@ -180,10 +191,12 @@ bool VirtualObject::initObjectState()
     timedata.test_start_time = 0;
     timedata.elapsed_time = 0;
     timedata.HEAB_rec_time = 0;
-    timedata.HEAB_server_send_time = 0;
-    timedata.ctrl_update_time = 0;
     timedata.monr_send_time = 0;
     timedata.position_update_time = 0;
+    timedata.runtime_start = 0;
+    timedata.time_since_runtime_start;
+
+    srv_timedata.HEAB_server_send_time = 0;
 
     if(hasDOPM)
     {
@@ -263,6 +276,7 @@ monr VirtualObject::getMONR()
         msg.object_state = ISO_OBJECT_STATE_DISARMED;
         msg.ready_to_arm = hasDOPM && hasOSEM ? ISO_OBJECT_INTERNAL_STATE_READY_TO_ARM : ISO_OBJECT_INTERNAL_STATE_NOT_READY_TO_ARM;
         break;
+    case PRERUN:
     case RUNNING:
         msg.object_state = ISO_OBJECT_STATE_RUNNING;
         break;
@@ -314,6 +328,11 @@ void VirtualObject::handleOSEM(osem msg)
     switch (status) {
     case INIT:
     case DISARMED:
+
+        srv_timedata.date = msg.dateISO8601;
+        srv_timedata.gps_week = msg.GPSweek;
+        srv_timedata.gps_qmsOfWeek = msg.GPSsecOfWeek;
+
         mRefLat = static_cast<double>(msg.lat / 1e10);
         mRefLon = static_cast<double>(msg.lon / 1e10);
         mRefAlt = static_cast<double>(msg.alt /1e2);
@@ -322,7 +341,9 @@ void VirtualObject::handleOSEM(osem msg)
         //mRefHeading = msg.heading;
         qDebug() << "OSEM:\n" << QString::number(mRefLat,'f',8) << "\n"
                  << QString::number(mRefLon,'f',8) << "\n"
-                 << QString::number(mRefAlt,'f',8);
+                 << QString::number(mRefAlt,'f',8) << "\n"
+                 << "Date: "
+                 << "Timediff: " << utility::getUTCmsFromGPStime(srv_timedata.gps_week,srv_timedata.gps_qmsOfWeek)-utility::getCurrentUTCtimeMS();
 
         hasOSEM = true;
 
@@ -379,14 +400,21 @@ void VirtualObject::handleLoadedDOPM(int ID, QVector<dotm_pt> msg)
 
 void VirtualObject::handleHEAB(heab msg)
 {
-    if (timedata.HEAB_server_send_time == 0)
-        timedata.HEAB_server_send_time = msg.GPSsecOfWeek;
+    if (srv_timedata.HEAB_server_send_time == 0)
+        srv_timedata.HEAB_server_send_time = msg.GPSsecOfWeek;
     // TODO: make use of the time sent from the server
-    if(msg.GPSsecOfWeek-timedata.HEAB_server_send_time > HEARTBEAT_TIME && timedata.HEAB_server_send_time != 0){
+    if(msg.GPSsecOfWeek-srv_timedata.HEAB_server_send_time > HEARTBEAT_TIME && srv_timedata.HEAB_server_send_time != 0){
         qDebug() << "Warning! More than " << HEARTBEAT_TIME << "ms since last HEAB send time";
     }
-    timedata.HEAB_server_send_time = msg.GPSsecOfWeek;
+    srv_timedata.HEAB_server_send_time = msg.GPSsecOfWeek;
     timedata.HEAB_rec_time = utility::getCurrentUTCtimeMS();
+/*
+    char buff[30];
+
+    utility::getDateTimeFromUTCtime(timedata.HEAB_rec_time,buff,30);
+    qDebug() << "Current Time: " << buff;
+    utility::getDateTimeFromUTCtime(utility::getUTCmsFromGPStime(2012,msg.GPSsecOfWeek),buff,30);
+    qDebug() << "Server Time: " << buff;*/
 
     switch (msg.cc_status) {
     case ISO_CC_STATUS_EMERGENCY_ABORT:
@@ -436,8 +464,8 @@ void VirtualObject::handleSTRT(strt msg)
         uint32_t GPSqmsOfWeek;
         utility::getGPStimeFromMS(current_gps_time,GPSWeek,GPSqmsOfWeek);
         //Save start time in utc ms
-        timedata.test_start_time = current_utc_time;
-                //utility::getUTCmsFromGPSms(utility::getMSfromGPStime(GPSWeek,msg.GPSsecOfWeek_start_time)+msg.delay_ms);
+        timedata.test_start_time =
+                utility::getUTCmsFromGPSms(utility::getMSfromGPStime(GPSWeek,msg.GPSsecOfWeek_start_time)+msg.delay_ms);
 
         char buffer[30];
         utility::getDateTimeFromUTCtime(current_utc_time,buffer,30);
@@ -447,7 +475,7 @@ void VirtualObject::handleSTRT(strt msg)
         utility::getDateTimeFromUTCtime(timedata.test_start_time,buffer,30);
 
         qDebug() << "Start time received: " << buffer;
-        pendingStatus = RUNNING;//RUNNING_STANDBY;
+        pendingStatus = PRERUN;
     }
 }
 
