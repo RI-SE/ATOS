@@ -24,15 +24,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     render_timer = new QTimer(this);
-    simulation_timer = new QTimer(this);
 
 
     connect(lwid,SIGNAL(itemSelectionChanged()),
             this,SLOT(selectedCarChanged()));
     connect(render_timer,SIGNAL(timeout()),
             this, SLOT(renderWindow()));
-    connect(simulation_timer,SIGNAL(timeout()),
-            this,SLOT(updateTime()));
     connect(ui->followCarBox,SIGNAL(toggled(bool)),
             this,SLOT(handleFollowCarToggled(bool)));
     connect(ui->MONR_enable,SIGNAL(toggled(bool)),
@@ -53,8 +50,6 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     render_timer->stop();
-    simulation_timer->stop();
-    delete simulation_timer;
     delete render_timer;
     delete ui;
 }
@@ -104,8 +99,6 @@ void MainWindow::on_init_vobj_clicked()
 }
 void MainWindow::on_delete_vobj_clicked()
 {
-    // Stop the simulation timer
-    simulation_timer->stop();
 
     // Disable buttons
     ui->delete_vobj->setEnabled(false);
@@ -195,9 +188,9 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
 
     // Create virtual object as a new Thread
     VirtualObject *vobj = new VirtualObject(ID,
-                             map->getRefLat(),
-                             map->getRefLon(),
-                             map->getRefAlt());
+                                            map->getRefLat(),
+                                            map->getRefLon(),
+                                            map->getRefAlt());
     vobj->connectToServer(udpSocket,tcpSocket);
 
     // Add a car to the map
@@ -292,14 +285,6 @@ VirtualObject* MainWindow::findVirtualObject(int ID)
     return 0;
 }
 
-// Update the time label
-void MainWindow::updateTime()
-{
-    qint64 time = QDateTime::currentMSecsSinceEpoch() - simulation_start_time;
-    double d_time = (double) time/1000.0;
-    ui->lab_runtime->setText(QString::number(d_time));
-}
-
 void MainWindow::handleUpdateState(VOBJ_DATA data){
 
     /* Update the state of the car on the map */
@@ -364,18 +349,14 @@ void MainWindow::handleSimulationStart(int ID)
     obj->clearData();
 
     // Keep track of the number of processes
-    running_processes++;
+    ++running_processes;
     qDebug() << "Number of Processes = " << QString::number(running_processes);
 
-    if (!simulation_timer->isActive())
-    {
-        // Start the simulation
-        simulation_timer->start(10);
-        // Speed up the rendering when objects are running
-        render_timer->setInterval(50);
-        simulation_start_time = QDateTime::currentMSecsSinceEpoch();
-    }
+
+    // Speed up the rendering when objects are running
+    render_timer->setInterval(50);
 }
+
 
 void MainWindow::handleSimulationStop(int ID)
 {
@@ -387,11 +368,9 @@ void MainWindow::handleSimulationStop(int ID)
     // Don't stop simulation until all processes have stoped
     if (running_processes == 0)
     {
-        simulation_timer->stop();
         // Slow down the rendering when no objects are running
         render_timer->setInterval(500);
     }
-
 }
 
 void MainWindow::handleUpdateMTSP(int ID, qint64 sim_time,qint64 mtsp)

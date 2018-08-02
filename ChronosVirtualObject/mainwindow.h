@@ -154,8 +154,6 @@ private slots:
     // Slots for simulation time
     void handleSimulationStart(int ID);
     void handleSimulationStop(int ID);
-    // update the simulation time label
-    void updateTime();
 
     // QWidgetList specific slots
     void selectedCarChanged();
@@ -179,11 +177,10 @@ private:
     //VirtualObject* vobj;
     QVector<VirtualObject*> vobjs;
     QTimer *render_timer;
-    QTimer *simulation_timer;
+    //QTimer *simulation_timer;
 
     QVector<double> *time_vector;
 
-    qint64 simulation_start_time = 0;
     QString currentStddev = "0.0";
     int defaultTrajSimDelayValue;
 
