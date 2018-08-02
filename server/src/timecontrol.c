@@ -92,7 +92,8 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
     GPSTime->GPSMillisecondsU64 = 0;
     GPSTime->GPSSecondsOfWeekU32 = 0;
     GPSTime->GPSMinutesU32 = 0;
-    GPSTime->GPSWeekU16 = 2006;
+    GPSTime->GPSWeekU16 = 2012;
+    GPSTime->isGPSenabled = 0;
   }
 
   bzero(TextBufferC8, TIME_CONTROL_BUFFER_SIZE_20);
@@ -102,6 +103,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
   {
     TimeControlCreateTimeChannel(ServerIPC8, ServerPortU16, &SocketfdI32, &time_addr);
     TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, 4, 0);
+    GPSTime->isGPSenabled = 1;
     printf("[TimeControl] Get time from GPS.\n");
   } else printf("[TimeControl] Count fake time.\n");
 

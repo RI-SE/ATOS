@@ -107,6 +107,23 @@
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
+
+// Between 1970 01 01 and 1980 01 06 there is 365*10 days, plus 2 for 2 leap years and plus 5 for the remaining days
+// in total we have MStime= (3650 + 2 + 5) * 24 * 3600 * 1000 = 315964800000
+#define MS_TIME_DIFF_UTC_GPS 315964800000
+// Difference is 18 leap seconds between utc and gps
+#define MS_LEAP_SEC_DIFF_UTC_GPS 18000
+
+// 7 * 24 * 3600 * 1000
+#define WEEK_TIME_MS 604800000
+// 24 * 3600 * 1000
+#define DAY_TIME_MS 86400000
+// 3600 * 1000
+#define HOUR_TIME_MS 3600000
+// 60 * 1000
+#define MINUTE_TIME_MS 60000
+
+
 #define TEST_CONF_FILE "./conf/test.conf"
 #define TRAJECTORY_PATH "./traj/"
 
@@ -324,6 +341,7 @@ typedef struct
 
 typedef struct
 {
+  U8 isGPSenabled;
   U8 ProtocolVersionU8;
   U16 YearU16;
   U8 MonthU8;
@@ -436,6 +454,22 @@ typedef struct
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
+
+// GPS TIME FUNCTIONS
+uint64_t UtilgetGPSmsFromUTCms(uint64_t UTCms);
+uint64_t UtilgetUTCmsFromGPSms(uint64_t GPSms);
+uint64_t UtilgetMSfromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek);
+void UtilgetGPStimeFromMS(uint64_t GPSms, uint16_t *GPSweek, uint32_t *GPSquarterMSofWeek);
+// GPS collective functions
+void UtilgetGPStimeFromUTCms(uint64_t UTCms,uint16_t *GPSweek, uint32_t *GPSquarterMSofWeek);
+uint64_t UtilgetUTCmsFromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek);
+void UtilgetCurrentGPStime(uint16_t *GPSweek, uint32_t *GPSquarterMSofWeek);
+
+// Get time function
+uint64_t UtilgetCurrentUTCtimeMS();
+uint32_t UtilgetIntDateFromMS(uint64_t ms);
+void UtilgetDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t);
+
 void util_error(char* message);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);

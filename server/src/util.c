@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 #include <stdbool.h>
 
 #include "util.h"
@@ -47,6 +48,89 @@ static char pcMessageQueueName[1024];
 /*---------------------------------------------s---------------
   -- Public functions
   ------------------------------------------------------------*/
+
+// GPS TIME FUNCTIONS
+uint64_t UtilgetGPSmsFromUTCms(uint64_t UTCms)
+{
+    return UTCms - MS_TIME_DIFF_UTC_GPS + MS_LEAP_SEC_DIFF_UTC_GPS;
+}
+uint64_t UtilgetUTCmsFromGPSms(uint64_t GPSms)
+{
+    return GPSms + MS_TIME_DIFF_UTC_GPS - MS_LEAP_SEC_DIFF_UTC_GPS;
+}
+
+uint64_t UtilgetMSfromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek)
+{
+    return (uint64_t)GPSweek * WEEK_TIME_MS + (uint64_t)(GPSquarterMSofWeek >> 2);
+}
+
+void UtilgetGPStimeFromMS(uint64_t GPSms, uint16_t *GPSweek, uint32_t *GPSquarterMSofWeek)
+{
+    uint16_t tempGPSweek = (uint16_t)(GPSms / WEEK_TIME_MS);
+    if (GPSweek) *GPSweek = tempGPSweek;
+    uint64_t remainder = GPSms - (uint64_t)tempGPSweek * WEEK_TIME_MS;
+    if (GPSquarterMSofWeek) *GPSquarterMSofWeek = (uint32_t)(remainder << 2);
+/*
+    uint16_t GPSday = remainder / DAY_TIME_MS;
+    remainder -= (uint64_t)GPSday * DAY_TIME_MS;
+    uint16_t GPShour = remainder / HOUR_TIME_MS;
+    remainder -= (uint64_t)GPShour * HOUR_TIME_MS;
+    uint16_t GPSminute = remainder / MINUTE_TIME_MS;
+    remainder -= (uint64_t)GPSminute * HOUR_TIME_MS;
+
+    qDebug() << "GPSWEEK:" << GPSweek <<
+                "\nGPSSec" << GPSquarterMSofWeek;
+    qDebug() << "GPSTIME: " << GPSweek <<
+                ":" << GPSday <<
+                ":" << GPShour <<
+                ":" << GPSminute;
+
+    qDebug() << "GPS WEEK: " << GPSweek <<
+                "\nGPS DAY: " << GPSday <<
+                "\nGPS HOUR:" << GPShour <<
+                "\nGPS MINUTE:" << GPSminute;*/
+}
+
+void UtilgetGPStimeFromUTCms(uint64_t UTCms,uint16_t *GPSweek, uint32_t *GPSquarterMSofWeek)
+{
+    UtilgetGPStimeFromMS(UtilgetGPSmsFromUTCms(UTCms),
+                     GPSweek,
+                     GPSquarterMSofWeek);
+}
+uint64_t UtilgetUTCmsFromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek)
+{
+    return UtilgetUTCmsFromGPSms(UtilgetMSfromGPStime(GPSweek,GPSquarterMSofWeek));
+}
+
+
+void UtilgetCurrentGPStime(uint16_t *GPSweek, uint32_t *GPSquarterMSofWeek)
+{
+    UtilgetGPStimeFromUTCms(UtilgetCurrentUTCtimeMS(),GPSweek,GPSquarterMSofWeek);
+}
+
+uint64_t UtilgetCurrentUTCtimeMS()
+{
+    struct timeval CurrentTimeStruct;
+    gettimeofday(&CurrentTimeStruct, 0);
+    return (uint64_t)CurrentTimeStruct.tv_sec*1000 +
+            (uint64_t)CurrentTimeStruct.tv_usec/1000;
+}
+
+uint32_t UtilgetIntDateFromMS(uint64_t ms)
+{
+    struct tm date_time;
+    time_t seconds = (time_t)(ms / 1000);
+    localtime_r(&seconds,&date_time);
+    return  (uint32_t)((date_time.tm_year+1900)*10000 + (date_time.tm_mon+1)*100 + date_time.tm_mday);
+}
+
+void UtilgetDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t)
+{
+     time_t time_seconds = utc_ms / 1000;
+    if (size_t < 26) return;
+    strcpy(buffer,ctime(&time_seconds));
+}
+
 void util_error(char* message)
 {
   perror(message);
