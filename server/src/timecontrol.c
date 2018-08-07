@@ -256,12 +256,8 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
   int result;
   struct hostent *object;
 
-  printf("[TimeControl] Time source IP: %s, port: %d\n", name, port);
+  DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"[TimeControl] Time source IP: %s, port: %d\n", name, port);
   /* Connect to object safety socket */
-  #ifdef DEBUG
-    printf("[TimeControl] Creating time socket\n");
-    fflush(stdout);
-  #endif
 
   *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
   if (*sockfd < 0)
@@ -297,14 +293,7 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
   {
     util_error("[TimeControl] ERR: calling fcntl");
   }
-   
- 
-
-  #ifdef DEBUG
-    printf("[TimeControl] Created socket and time address: %s %d\n",name,port);
-    fflush(stdout);
-  #endif
-
+  DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"[TimeControl] Created socket and time address: %s %d\n",name,port);
 }
 
 
@@ -389,19 +378,16 @@ static void TimeControlRecvTime(int* sockfd, char* buffer, int length, int* reci
         }
         else
         {
-          #ifdef DEBUG
-            printf("[TimeControl]  No data receive, result=%d\n", result);
-            fflush(stdout);
-          #endif
+
+          DEBUG_LPRINT(DEBUG_LEVEL_LOW,"[TimeControl]  No data receive, result=%d\n", result);
+
         }
       }
       else
       {
         *recievedNewData = 1;
-        #ifdef DEBUG
-          printf("[TimeControl] Received data: <%s>, %d\n",buffer, result);
-          fflush(stdout);
-        #endif
+        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"[TimeControl] Received data: <%s>, %d\n",buffer, result);
+
       }
     } while(result > 0 );
 }

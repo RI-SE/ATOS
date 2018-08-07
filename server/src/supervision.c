@@ -34,7 +34,6 @@
 #define RECV_MESSAGE_BUFFER 1024
 #define SAFETY_MARGIN_POS   0.5
 #define SAFETY_MARGIN_TIM   0.5
-#define DEBUG 1
 
 /* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */

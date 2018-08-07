@@ -17,6 +17,8 @@
 #include <inttypes.h>
 #include <mqueue.h>
 #include <math.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 /*------------------------------------------------------------
   -- Defines
@@ -53,6 +55,7 @@
 #define COMM_DISCONNECT 13  
 #define COMM_LOG 14
 #define COMM_INV 255
+
 
 #define SAFETY_CHANNEL_PORT 53240
 #define CONTROL_CHANNEL_PORT 53241
@@ -201,7 +204,36 @@
 #pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
 
 #define SYNC_WORD 0x7e7e
-//#define DEBUG
+
+
+/* DEBUGGING DEFINES */
+
+#define DEBUG_LEVEL_LOW 1
+#define DEBUG_LEVEL_MEDIUM 2
+#define DEBUG_LEVEL_HIGH 3
+
+// Enable debugging by defining DEBUG
+#define DEBUG
+
+
+
+#ifdef DEBUG
+// Set level of DEBUG
+#define DEBUG_TEST 1
+#else
+#define DEBUG_TEST 0
+#endif
+
+// The do - while loop makes sure that each function call is properly handled using macros
+#define DEBUG_PRINT(fmt,...) do {if(DEBUG_TEST) {fprintf(stdout,"[%s]: " fmt "\n",__func__,__VA_ARGS__);fflush(stdout);}} while (0)
+#define DEBUG_ERR_PRINT(...) do {if(DEBUG_TEST) {fprintf(stderr,__VA_ARGS__);fflush(stderr);}} while (0)
+
+#define DEBUG_LPRINT(level,...) do {if(DEBUG_TEST) dbg_printf(level,__VA_ARGS__); } while(0)
+
+#define LOG_SEND(buf, ...) \
+    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf);printf("%s",buf);fflush(stdout);} while (0)
+
+
 
 typedef struct
 {
@@ -454,6 +486,11 @@ typedef struct
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
+// DEBUG functions
+void dbg_setdebug(int level);
+int dbg_getdebug(void);
+void dbg_printf(int level, const char *fmt, ...);
+
 
 // GPS TIME FUNCTIONS
 uint64_t UtilgetGPSmsFromUTCms(uint64_t UTCms);

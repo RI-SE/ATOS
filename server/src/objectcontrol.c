@@ -163,7 +163,6 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
 I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug);
 int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId ,char *TriggAction, char *TriggDelay, char debug);
 int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug);
-static void ObjectControlSendLog(C8 *Message);
 
 static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], 
                              char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
@@ -279,7 +278,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     while(!iExit)
     {
-
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED)
         {
             /*HEAB*/
@@ -346,24 +344,21 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(buffer,RECV_MESSAGE_BUFFER);
                 vRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
 
-#ifdef DEBUG
-                printf("INF: Did we recieve new data from %s %d: %d\n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData);
-                fflush(stdout);
-#endif
+
+                DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Did we recieve new data from %s %d: %d\n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData);
+
 
                 if(recievedNewData)
                 {
 
-#ifdef DEBUG
-                    printf("INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
-                    fflush(stdout);
-#endif
+                    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
+
 
                     if(buffer[0] == COMMAND_TOM_CODE)
                     {
                         for(i = 0; i < TriggerActionCount; i ++)
                         {
-                            sprintf(LogBuffer, "[ObjectControl] External trigg received. %s\n", TAA[i].TriggerIP); ObjectControlSendLog(LogBuffer);
+                            LOG_SEND(LogBuffer,"[ObjectControl] External trigg received. %s\n", TAA[i].TriggerIP);
                             if(strstr(TAA[i].TriggerIP, object_address_name[iIndex]) != NULL)
                             {
                                 //printf("[ObjectControl] External trigg received\n");
@@ -461,10 +456,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                     OP[iIndex].Speed = atof(Speed);
 
-#ifdef DEBUG
-                    printf("INF: Send MONITOR message: %s\n",buffer);
-                    fflush(stdout);
-#endif
+
+                    DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Send MONITOR message: %s\n",buffer);
+
 
                     if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) (void)iCommSend(COMM_MONI,buffer);
                 }
@@ -476,21 +470,19 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
         if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER))
         {
 
-#ifdef DEBUG
-            printf("INF: Object control command %d\n",iCommand);
-            fflush(stdout);
-#endif
+            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Object control command %d\n",iCommand);
+
 
             if(iCommand == COMM_ARMD && OBCState == OBC_STATE_CONNECTED)
             {
                 if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_ARMED_STATE)
                 {
-                    sprintf(LogBuffer, "[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]); ObjectControlSendLog(LogBuffer);
+                    LOG_SEND(LogBuffer,"[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]);
                     OBCState = OBC_STATE_ARMED;
                 }
                 else if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE)
                 {
-                    sprintf(LogBuffer, "[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]); ObjectControlSendLog(LogBuffer);
+                    LOG_SEND(LogBuffer,"[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]);
                     OBCState = OBC_STATE_CONNECTED;
                 }
                 MessageLength = ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, pcRecvBuffer[0], 0);
@@ -503,8 +495,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_STRT && OBCState == OBC_STATE_ARMED)
             {
-
-                sprintf(LogBuffer, "[ObjectControl] START received <%s>\n",pcRecvBuffer); ObjectControlSendLog(LogBuffer);
+                LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>\n",pcRecvBuffer);
                 bzero(Timestamp, SMALL_BUFFER_SIZE_0);
                 MiscPtr =strchr(pcRecvBuffer,';');
                 strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
@@ -520,11 +511,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 PrevTimeToSyncPoint = 0;
                 OldTimeU64 = CurrentTimeU64;
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;
-
-#ifdef DEBUG
-                printf("INF: Sending START trig from object control <%s>\n",pcBuffer);
-                fflush(stdout);
-#endif
                 MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, GPSTime, (U32)StartTimeU64, DelayedStartU32, 1);
                 for(iIndex=0;iIndex<nbr_objects;++iIndex) { vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);}
                 OBCState = OBC_STATE_RUNNING;
@@ -539,7 +525,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 OBCState = OBC_STATE_CONNECTED;
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
-                sprintf(LogBuffer, "[ObjectControl] ABORT received.\n"); ObjectControlSendLog(LogBuffer);
+                LOG_SEND(LogBuffer, "[ObjectControl] ABORT received.\n");
             }
             else if(iCommand == COMM_CONTROL)
             {
@@ -548,15 +534,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_INIT)
             {
-
-                sprintf(LogBuffer, "[ObjectControl] INIT received.\n"); ObjectControlSendLog(LogBuffer);
+                LOG_SEND(LogBuffer, "[ObjectControl] INIT received.\n");
                 /* Get objects; name and drive file */
                 nbr_objects = 0;
                 vFindObjectsInfo(object_traj_file,object_address_name,&nbr_objects);
 
                 (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhost);
-                //printf("ForceObjectToLocalhost = %d\n", iForceObjectToLocalhost);
-                sprintf(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d\n", iForceObjectToLocalhost); ObjectControlSendLog(LogBuffer);
+                LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d\n", iForceObjectToLocalhost);
 
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
@@ -625,19 +609,19 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 UtilSearchTextFile(CONF_FILE_PATH, "ASPDebugRate=", "", TextBuffer);
                 ASPDebugRate = atoi(TextBuffer);
 
-                sprintf(LogBuffer, "[ObjectControl] Objects to be controlled by server: %d\n", nbr_objects); ObjectControlSendLog(LogBuffer);
-                sprintf(LogBuffer, "[ObjectControl] ASP in system: %d\n", SyncPointCount); ObjectControlSendLog(LogBuffer);
-                sprintf(LogBuffer, "[ObjectControl] TAA in system: %d\n", TriggerActionCount); ObjectControlSendLog(LogBuffer);
+                LOG_SEND(LogBuffer,"[ObjectControl] Objects to be controlled by server: %d\n", nbr_objects);
+                LOG_SEND(LogBuffer, "[ObjectControl] ASP in system: %d\n", SyncPointCount);
+                LOG_SEND(LogBuffer, "[ObjectControl] TAA in system: %d\n", TriggerActionCount);
 
 
 
                 OBCState = OBC_STATE_INITIALIZED;
-                sprintf(LogBuffer, "[ObjectControl] ObjectControl is initialized.\n"); ObjectControlSendLog(LogBuffer);
+                LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.\n");
             }
             else if(iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED)
             {
 
-                sprintf(LogBuffer, "[ObjectControl] CONNECT received.\n"); ObjectControlSendLog(LogBuffer);
+                LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.\n");
 
                 /* Connect and send drive files */
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -662,7 +646,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             if(errno == ECONNREFUSED)
                             {
 
-                                sprintf(LogBuffer, "[ObjectControl] Was not able to connect to object, [IP: %s] [PORT: %d], retry in %d sec...\n",object_address_name[iIndex],object_tcp_port[iIndex], (!(1 & DisconnectU8))*3); ObjectControlSendLog(LogBuffer);
+                                LOG_SEND(LogBuffer, "[ObjectControl] Was not able to connect to object, [IP: %s] [PORT: %d], retry in %d sec...\n",object_address_name[iIndex],object_tcp_port[iIndex], (!(1 & DisconnectU8))*3);
                                 (void)sleep(3);
                             }
                             else
@@ -678,7 +662,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             if(iCommand == COMM_DISCONNECT)
                             {
                                 DisconnectU8 = 1;
-                                sprintf(LogBuffer, "[ObjectControl] DISCONNECT received.\n"); ObjectControlSendLog(LogBuffer);
+                                LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.\n");
                             }
 
                         }
@@ -688,7 +672,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     if(iResult >= 0)
                     {
                         /* Send OSEM command */
-                        sprintf(LogBuffer, "[ObjectControl] Sending OSEM.\n"); ObjectControlSendLog(LogBuffer);
+                        LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.\n");
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
 
                         fd = fopen (object_traj_file[iIndex], "r");
@@ -786,7 +770,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 }
 #endif //NOTCP
 
-                sprintf(LogBuffer, "[ObjectControl] DISCONNECT received.\n"); ObjectControlSendLog(LogBuffer);
+                LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.\n");
                 /* Close safety socket */
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
@@ -801,10 +785,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else
             {
-#ifdef DEBUG
-                printf("Unhandled command in object control\n");
-                fflush(stdout);
-#endif
+                DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Unhandled command in object control\n");
             }
         }
 
@@ -833,14 +814,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
-
-
-static void ObjectControlSendLog(C8* Message)
-{
-    (void)iCommSend(COMM_LOG, Message);
-    printf("%s", Message);
-    fflush(stdout);
-}
 
 
 int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug)
@@ -1738,10 +1711,7 @@ static I32 vConnectObject(int* sockfd, const char* name, const uint32_t port, U8
     bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(port);
 
-#ifdef DEBUG
-    printf("INF: Try to connect to socket: %s %i\n",name,port);
-    fflush(stdout);
-#endif
+    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"INF: Try to connect to socket: %s %i\n",name,port);
 
     // do
     {
@@ -1762,10 +1732,7 @@ static I32 vConnectObject(int* sockfd, const char* name, const uint32_t port, U8
     }
     //} while(iResult < 0 && *Disconnect == 0);
 
-#ifdef DEBUG
-    printf("INF: Connected to command socket: %s %i\n",name,port);
-    fflush(stdout);
-#endif
+    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"INF: Connected to command socket: %s %i\n",name,port);
 
     return iResult;
 }
@@ -1777,13 +1744,8 @@ static void vDisconnectObject(int* sockfd)
 
 static void vSendString(const char* command, int* sockfd)
 {
-    int n;
-
-#ifdef DEBUG
-    printf("INF: Sending: <%s>\n",command);
-    fflush(stdout);
-#endif
-
+    long n;
+    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Sending: <%s>\n",command);
     n = write(*sockfd, command, strlen(command));
     if (n < 0)
     {
@@ -1811,12 +1773,10 @@ static void vSendFile(const char* object_traj_file, int* sockfd)
 {
     FILE *filefd;
     char buffer[1024];
-    int n;
+    long n;
     size_t readBytes;
 
-#ifdef DEBUG
-    printf("INF: Open file %s\n",object_traj_file);
-#endif
+    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open file %s\n",object_traj_file);
 
     filefd = fopen (object_traj_file, "rb");
     if (filefd == NULL)
@@ -1829,11 +1789,8 @@ static void vSendFile(const char* object_traj_file, int* sockfd)
         readBytes = fread(buffer,1,1024,filefd);
         if(readBytes > 0)
         {
-#ifdef DEBUG
-            printf("INF: Sending: <%s>\n",buffer);
-            printf("INF: Try to sending nbr of bytes: <%lu>\n",readBytes);
-            fflush(stdout);
-#endif
+            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Sending: <%s>",buffer);
+            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Try to sending nbr of bytes: <%lu>",readBytes);
             n = write(*sockfd, buffer, readBytes);
             if (n < 0)
             {
@@ -1851,10 +1808,7 @@ static void vCreateSafetyChannel(const char* name, const uint32_t port, int* soc
     struct hostent *object;
 
     /* Connect to object safety socket */
-#ifdef DEBUG
-    printf("INF: Creating safety socket\n");
-    fflush(stdout);
-#endif
+    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Creating safety socket");
 
     *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
     if (*sockfd < 0)
@@ -1882,10 +1836,7 @@ static void vCreateSafetyChannel(const char* name, const uint32_t port, int* soc
         util_error("ERR: calling fcntl");
     }
 
-#ifdef DEBUG
-    printf("INF: Created socket and safety address: %s %d\n",name,port);
-    fflush(stdout);
-#endif
+    DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Created socket and safety address: %s %d\n",name,port);
 
 }
 
@@ -1896,7 +1847,7 @@ static void vCloseSafetyChannel(int* sockfd)
 
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
 {
-    int result;
+    ssize_t result;
 
     result = sendto(*sockfd, SendData, Length, 0, (const struct sockaddr *) addr, sizeof(struct sockaddr_in));
 
@@ -1911,15 +1862,12 @@ int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendDa
 
 static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatCommand_t tCommand)
 {
-    int result;
+    ssize_t result;
     char pcCommand[10];
 
     bzero(pcCommand,10);
 
-#ifdef DEBUG
-    printf("INF: Sending: <HEBT>\n");
-    fflush(stdout);
-#endif
+    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Sending: <HEBT>");
 
     if(COMMAND_HEARTBEAT_GO == tCommand)
     {
@@ -1929,11 +1877,6 @@ static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatComman
     {
         strcat(pcCommand,"HEBT;A;");
     }
-
-#ifdef DEBUG
-    // printf("INF: Sending: <%s>\n",pcCommand);
-    // fflush(stdout);
-#endif
 
     result = sendto(*sockfd,
                     pcCommand,
@@ -1964,19 +1907,13 @@ static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNew
             }
             else
             {
-#ifdef DEBUG
-                printf("INF: No data receive\n");
-                fflush(stdout);
-#endif
+                DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: No data receive\n");
             }
         }
         else
         {
             *recievedNewData = 1;
-#ifdef DEBUG
-            printf("INF: Received: <%s>\n",buffer);
-            fflush(stdout);
-#endif
+            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Received: <%s>\n",buffer);
         }
     } while(result > 0 );
 }
