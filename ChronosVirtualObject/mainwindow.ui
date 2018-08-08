@@ -156,32 +156,6 @@
      </property>
     </widget>
    </widget>
-   <widget class="QGroupBox" name="groupBox_2">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>880</y>
-      <width>181</width>
-      <height>61</height>
-     </rect>
-    </property>
-    <property name="title">
-     <string>Running Time:</string>
-    </property>
-    <widget class="QLabel" name="lab_runtime">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>30</y>
-       <width>67</width>
-       <height>17</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>0</string>
-     </property>
-    </widget>
-   </widget>
    <widget class="QPushButton" name="init_vobj">
     <property name="geometry">
      <rect>
@@ -405,10 +379,10 @@
      <number>10</number>
     </property>
     <property name="value">
-     <number>1</number>
+     <number>6</number>
     </property>
     <property name="sliderPosition">
-     <number>1</number>
+     <number>6</number>
     </property>
     <property name="orientation">
      <enum>Qt::Horizontal</enum>
@@ -493,7 +467,7 @@
      <x>0</x>
      <y>0</y>
      <width>1200</width>
-     <height>22</height>
+     <height>20</height>
     </rect>
    </property>
   </widget>

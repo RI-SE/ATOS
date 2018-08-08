@@ -34,7 +34,6 @@
 #define RECV_MESSAGE_BUFFER 1024
 #define SAFETY_MARGIN_POS   0.5
 #define SAFETY_MARGIN_TIM   0.5
-#define DEBUG 1
 
 /* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
@@ -113,7 +112,7 @@ static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_P
   -- Task
   ------------------------------------------------------------*/
 
-void supervision_task() {
+void supervision_task(TimeType *GPSTime) {
 
   char           object_traj_file    [ MAX_OBJECTS ][ MAX_FILE_PATH ];
   char           object_address_name [ MAX_OBJECTS ][ MAX_FILE_PATH ];
@@ -904,7 +903,7 @@ void supervision_task() {
     --  Clean upp.
     --------------------------------------------------*/
 
-  (void) iCommClose();
+ (void) iCommClose();
 
   for ( iIndex = 0           ;
         iIndex < nbr_objects ;

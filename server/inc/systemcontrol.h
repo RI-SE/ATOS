@@ -16,6 +16,6 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-void systemcontrol_task();
+void systemcontrol_task(TimeType *GPSTime,  GSDType *GSD);
 
 #endif //__SYSTEMCONTROL_H_INCLUDED__

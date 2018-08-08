@@ -38,8 +38,8 @@
 static void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr);
 static void vDisconnectVisualizationChannel(int* sockfd);
 static void vSendVisualization(int* sockfd, 
-  struct sockaddr_in* addr,
-  const char* message);
+                               struct sockaddr_in* addr,
+                               const char* message);
 
 void vISOtoCHRONOSmsg(char* ISOmsg,char* tarCHRONOSmsg,int MSG_size);
 
@@ -52,77 +52,65 @@ void vISOtoCHRONOSmsg(char* ISOmsg,char* tarCHRONOSmsg,int MSG_size);
   ------------------------------------------------------------*/
 int main(int argc, char *argv[])
 {
-	int visual_server;
-	struct sockaddr_in visual_server_addr;
+    int visual_server;
+    struct sockaddr_in visual_server_addr;
     char cpBuffer[RECV_MESSAGE_BUFFER];
     char chronosbuff[RECV_MESSAGE_BUFFER];
 
-	printf("[Visualization] DefaultVisualizationAdapter started\n");
-	fflush(stdout);
+    printf("[Visualization] DefaultVisualizationAdapter started\n");
+    fflush(stdout);
 
-	(void)iCommInit(IPC_RECV,MQ_VA,0);
+    (void)iCommInit(IPC_RECV,MQ_VA,0);
 
-	vConnectVisualizationChannel(&visual_server,&visual_server_addr);
+    vConnectVisualizationChannel(&visual_server,&visual_server_addr);
 
-	/* Listen for commands */
-	int iExit = 0;
-	int iCommand;
+    /* Listen for commands */
+    int iExit = 0;
+    int iCommand;
 
-	/* Execution mode*/
-	int VisualExecutionMode = VISUAL_CONTROL_MODE;
+    /* Execution mode*/
+    int VisualExecutionMode = VISUAL_CONTROL_MODE;
 
-  while(!iExit)
-  {
-    bzero(cpBuffer,RECV_MESSAGE_BUFFER);
-    (void)iCommRecv(&iCommand,cpBuffer,RECV_MESSAGE_BUFFER);
-    
-    #ifdef DEBUG
-      printf("INF: VA received a command: %s\n",cpBuffer);
-      fflush(stdout);
-    #endif
-
-    if(iCommand == COMM_MONI)
+    while(!iExit)
     {
-      #ifdef DEBUG
-        printf("INF: Recieved MONITOR message: %s\n",cpBuffer);
-        fflush(stdout);
-      #endif
+        bzero(cpBuffer,RECV_MESSAGE_BUFFER);
+        (void)iCommRecv(&iCommand,cpBuffer,RECV_MESSAGE_BUFFER);
 
-      vISOtoCHRONOSmsg(cpBuffer,chronosbuff,RECV_MESSAGE_BUFFER);
-      vSendVisualization(&visual_server,&visual_server_addr,chronosbuff);
+        if(iCommand == COMM_MONI)
+        {
+            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Recieved MONITOR message: %s\n",cpBuffer);
 
+            vISOtoCHRONOSmsg(cpBuffer,chronosbuff,RECV_MESSAGE_BUFFER);
+            vSendVisualization(&visual_server,&visual_server_addr,chronosbuff);
+
+        }
+        else if(iCommand == COMM_REPLAY)
+        {
+            VisualExecutionMode = VISUAL_REPLAY_MODE;
+            DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"Visualization in REPLAY mode: %s\n",cpBuffer);
+        }
+        else if(iCommand == COMM_CONTROL)
+        {
+            VisualExecutionMode = VISUAL_CONTROL_MODE;
+            DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"Visualization in CONTROL mode: %s\n", cpBuffer);
+        }
+        else if(iCommand == COMM_EXIT)
+        {
+            iExit = 1;
+        }
+        else if (iCommand == COMM_OBC_STATE) {
+
+        }
+        else
+        {
+            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Vizualization unhandled command: %d",iCommand);
+        }
     }
-	else if(iCommand == COMM_REPLAY)
-	{
-		VisualExecutionMode = VISUAL_REPLAY_MODE;
-    #ifdef DEBUG
-    printf("Visualization in REPLAY mode: %s\n",cpBuffer);
-	 #endif
-  }
-	else if(iCommand == COMM_CONTROL)
-	{
-		VisualExecutionMode = VISUAL_CONTROL_MODE;
-		#ifdef DEBUG
-     printf("Visualization in CONTROL mode: %s\n", cpBuffer);
-    #endif
-	}
-    else if(iCommand == COMM_EXIT)
-    {
-      iExit = 1;  
-    }
-    else
-    {
-      #ifdef DEBUG
-        printf("INF: Unhandled command in visualization adapter\n");
-        fflush(stdout);
-      #endif
-    }
-  }  
 
-  /* Close visualization socket */
-  vDisconnectVisualizationChannel(&visual_server);
+    /* Close visualization socket */
+    vDisconnectVisualizationChannel(&visual_server);
 
-  (void)iCommClose();
+    (void)iCommClose();
 }
 
 /*------------------------------------------------------------
@@ -130,72 +118,67 @@ int main(int argc, char *argv[])
   ------------------------------------------------------------*/
 static void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr)
 {
-  struct hostent *server;
-  char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
+    struct hostent *server;
+    char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
 
-  /* Setup connection to visualization */
-  #ifdef DEBUG
-    printf("INF: Creating visualization socket.\n");
-  #endif
+    /* Setup connection to visualization */
+    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"%s","INF: Creating visualization socket.\n");
 
-  *sockfd = socket ( AF_INET,
-                    SOCK_DGRAM,
-                    IPPROTO_UDP );
+    *sockfd = socket ( AF_INET,
+                       SOCK_DGRAM,
+                       IPPROTO_UDP );
 
-  if (*sockfd < 0)
-  {
-    util_error("ERR: Failed to create visualization socket");
-  }
-  
-  bzero((char *)addr, sizeof(*addr));
+    if (*sockfd < 0)
+    {
+        util_error("ERR: Failed to create visualization socket");
+    }
 
-  bzero(pcTempBuffer,MAX_UTIL_VARIBLE_SIZE);
-  if(!iUtilGetParaConfFile("VisualizationServerName",pcTempBuffer))
-  {
-    strcat(pcTempBuffer,VISUAL_SERVER_NAME);
-  }
+    bzero((char *)addr, sizeof(*addr));
 
-  printf("[Visualization] UDP visualization sending to %s %d\n",pcTempBuffer,VISUAL_SERVER_PORT);
-  fflush(stdout);
+    bzero(pcTempBuffer,MAX_UTIL_VARIBLE_SIZE);
+    if(!iUtilGetParaConfFile("VisualizationServerName",pcTempBuffer))
+    {
+        strcat(pcTempBuffer,VISUAL_SERVER_NAME);
+    }
 
-  server = gethostbyname(pcTempBuffer);
+    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"[Visualization] UDP visualization sending to %s %d\n",pcTempBuffer,VISUAL_SERVER_PORT);
 
-  if (server == NULL) 
-  {
-    util_error("ERR: Unkonown host\n");
-  }    
-  bcopy((char *) server->h_addr, 
-    (char *)&addr->sin_addr.s_addr, server->h_length);
 
-  addr->sin_family = AF_INET;
-  addr->sin_port   = htons(VISUAL_SERVER_PORT);
+    server = gethostbyname(pcTempBuffer);
+
+    if (server == NULL)
+    {
+        util_error("ERR: Unkonown host\n");
+    }
+    bcopy((char *) server->h_addr,
+          (char *)&addr->sin_addr.s_addr, server->h_length);
+
+    addr->sin_family = AF_INET;
+    addr->sin_port   = htons(VISUAL_SERVER_PORT);
 }
 
 static void vDisconnectVisualizationChannel(int* sockfd)
 {
-  close(*sockfd);
+    close(*sockfd);
 }
 
 static void vSendVisualization(int* sockfd, struct sockaddr_in* addr,const char* message)
 {
-  char buffer[1024];
-  int result;
+    char buffer[1024];
+    int result;
 
-  #ifdef DEBUG
-    printf("INF: Buffer to visualization: <%s>\n",message);
-    fflush(stdout);
-  #endif
+    DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Buffer to visualization: <%s>\n",message);
 
-  result = sendto(*sockfd,
-    message,
-    strlen (message),
-    0,
-    (const struct sockaddr *) addr,
-    sizeof(struct sockaddr_in));
+    result = sendto(*sockfd,
+                    message,
+                    strlen (message),
+                    0,
+                    (const struct sockaddr *) addr,
+                    sizeof(struct sockaddr_in));
 
     if (result < 0)
     {
-      util_error("ERR: Failed to send on monitor socket");
+        util_error("ERR: Failed to send on monitor socket");
     }
 }
 

@@ -394,7 +394,7 @@ void MapWidget::displayMessage(const QByteArray& message)
     {
         heading = 0;
     }
-    heading = (heading-90.0)*M_PI/180;
+    heading = (360-heading)*M_PI/180;
 
 
 

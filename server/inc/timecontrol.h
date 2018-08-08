@@ -1,19 +1,23 @@
 /*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2016 CHRONOS project
+  -- Copyright   : (C) 2018 MAESTRO project
   ------------------------------------------------------------------------------
-  -- File        : supervision.h
-  -- Author      : Karl-Johan Ode
-  -- Description : CHRONOS
+  -- File        : timecontrol.h
+  -- Author      : Sebastian Loh Lindholm
+  -- Description : MAESTRO
   -- Purpose     :
   -- Reference   :
   ------------------------------------------------------------------------------*/
 
-#ifndef __SUPERVISION_H_INCLUDED__
-#define __SUPERVISION_H_INCLUDED__
+#ifndef __TIMECONTROL_H_INCLUDED__
+#define __TIMECONTROL_H_INCLUDED__
+
+
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-void supervision_task(TimeType *GPSTime);
+int timecontrol_task(TimeType *GPSTime,  GSDType *GSD);
+U16 TimeControlGetMillisecond(TimeType *GPSTime);
 
-#endif //__SUPERVISION_H_INCLUDED__
+
+#endif 

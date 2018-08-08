@@ -22,17 +22,36 @@
 
 // Object data of interest
 typedef struct {
-    int ID;
-    qint64 time;
-    double x;
-    double y;
-    double z;
+    int ID;             // Virtual Object ID
+    quint64 time;       // Object perception of the current time
+    double x;           // x-coordinate
+    double y;           // y-coordinate
+    double z;           // z-coordinate
     double heading;
     double speed;
     double acc;
     qint8 status;
     bool isMaster;
 } VOBJ_DATA;
+
+typedef struct {
+    quint64 clock;                      // Holding the current time value [ms] (UTC)
+    quint64 test_start_time;            // Start time [ms] (UTC)
+    qint64 elapsed_time;                // Time since start of test
+    quint64 position_update_time;       // Time at the latest position update [ms] (UTC)
+    quint64 HEAB_rec_time;              // Time at which the latest HEAB message was received [ms] (UTC)
+    quint64 monr_send_time;             // Time at the most recent sent MONR message [ms] (UTC)
+    quint64 sleep_time;                 // Decides downtime between loops during runtime [ms]
+    quint64 runtime_start;              // The time at which the object entered its running state
+    quint64 time_since_runtime_start;   // The time since runtime start
+} VOBJ_TIME_DATA;
+
+typedef struct {
+    quint32 date;                   // GPS date sent from server represented as integer ex. 20180801 for 1st of august 2018
+    quint16 gps_week;               // GPS week sent from server
+    quint32 gps_qmsOfWeek;          // Quarter ms of the current week sent from server
+    quint64 HEAB_server_send_time;  // Time of transmission from server to object
+} SRV_TIME_DATA;
 
 Q_DECLARE_METATYPE(VOBJ_DATA)
 
@@ -41,10 +60,9 @@ typedef enum {
     ARMED,
     DISARMED,
     RUNNING,
-    STOP,
-    ABORT,
-    ERROR,
-    RUNNING_STANDBY
+    POSTRUN,
+    REMOTECTRL,
+    PRERUN
 } OBJ_STATUS;
 
 
@@ -59,6 +77,7 @@ public:
     int connectToServer(int updSocket,int tcpSocket);
     int getID();
     void getRefLLH(double&,double&,double&);
+    bool initObjectState();
     //static void control_function(double* vel,chronos_dopm_pt ref, VOBJ_DATA data );
 
 signals:
@@ -67,7 +86,7 @@ signals:
 
     void updated_state(VOBJ_DATA currentState);
     void new_origin(double lat, double lon, double alt);
-    void new_trajectory(int ID,QVector<chronos_dopm_pt> traj);
+    void new_trajectory(int ID,QVector<dotm_pt> traj);
     void thread_done(int ID);
     void simulation_start(int ID);
     void simulation_stop(int ID);
@@ -81,8 +100,8 @@ signals:
 private slots:
     // Slots for Chronos communication
     void handleOSEM(osem msg);
-    void handleDOPM(QVector<chronos_dopm_pt> msg);
-    void handleLoadedDOPM(int ID, QVector<chronos_dopm_pt> msg);
+    void handleDOPM(QVector<dotm_pt> msg);
+    void handleLoadedDOPM(int ID, QVector<dotm_pt> msg);
     void handleHEAB(heab msg);
     void handleOSTM(ostm msg);
     void handleSTRT(strt msg);
@@ -104,8 +123,8 @@ private:
     // Object data
     VOBJ_DATA data;
 
-    // Chronos client
-    //Chronos* cClient;
+    VOBJ_TIME_DATA timedata;
+
 
     // ISO client
     ISOcom* iClient;
@@ -151,12 +170,14 @@ private:
 
 
     // Time variables
-    quint64 last_received_heab_time_from_server; // Needed in order to track when Heartbeat came in
+    //quint64 last_received_heab_time_from_server; // Needed in order to track when Heartbeat came in
     quint64 sleep_time = 20;     // How long the process should be suspended
-    quint64 start_ETSI_time;    // The ETSI time to start at
-    // The trajectory to follow
-    QVector<chronos_dopm_pt> traj;
 
+
+
+    // Trajectory
+    int reference_point_index = 0; // Index for the reference point
+    QVector<dotm_pt> traj; // The trajectory to follow
 
     // The Reference coordinates
     double mRefLat = 57.71495867;
@@ -164,6 +185,9 @@ private:
     double mRefAlt = 219.0;
 
     double mRefHeading; // Don't know what use this will be
+
+    SRV_TIME_DATA srv_timedata;
+
 
     /* METHODS */
 

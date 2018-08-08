@@ -29,7 +29,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-        chronos.cpp \
         locpoint.cpp \
         packet.cpp \
         #packetinterface.cpp \
@@ -47,7 +46,6 @@ SOURCES += \
 
 HEADERS += \
         mainwindow.h \
-        chronos.h \
         locpoint.h \
         packet.h \
         #packetinterface.h \
@@ -66,3 +64,6 @@ HEADERS += \
 
 FORMS += \
         mainwindow.ui
+
+RESOURCES += \
+    resources.qrc

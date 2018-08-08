@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 #include <stdbool.h>
 
 #include "util.h"
@@ -31,6 +32,11 @@
 #define FE_WGS84        (1.0/298.257223563) // earth flattening (WGS84)
 #define RE_WGS84        6378137.0           // earth semimajor axis (WGS84) (m)
 
+/*------------------------------------------------------------
+-- Public variables
+------------------------------------------------------------*/
+
+static int debug = DEBUG_LEVEL_HIGH;
 
 /*------------------------------------------------------------
 -- Private variables
@@ -42,6 +48,103 @@ static char pcMessageQueueName[1024];
 /*---------------------------------------------s---------------
   -- Public functions
   ------------------------------------------------------------*/
+
+void dbg_setdebug(int level) {debug = level;}
+int dbg_getdebug(void){ return debug;}
+
+void dbg_printf(int level, const char *fmt, ...)
+{
+    if (level < debug) return;
+    va_list args;
+    va_start(args,fmt);
+    vfprintf(stdout,fmt,args);
+    va_end(args);
+    fflush(stdout);
+}
+
+
+// GPS TIME FUNCTIONS
+uint64_t UtilgetGPSmsFromUTCms(uint64_t UTCms)
+{
+    return UTCms - MS_TIME_DIFF_UTC_GPS + MS_LEAP_SEC_DIFF_UTC_GPS;
+}
+uint64_t UtilgetUTCmsFromGPSms(uint64_t GPSms)
+{
+    return GPSms + MS_TIME_DIFF_UTC_GPS - MS_LEAP_SEC_DIFF_UTC_GPS;
+}
+
+uint64_t UtilgetMSfromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek)
+{
+    return (uint64_t)GPSweek * WEEK_TIME_MS + (uint64_t)(GPSquarterMSofWeek >> 2);
+}
+
+void UtilgetGPStimeFromMS(uint64_t GPSms, uint16_t *GPSweek, uint32_t *GPSquarterMSofWeek)
+{
+    uint16_t tempGPSweek = (uint16_t)(GPSms / WEEK_TIME_MS);
+    if (GPSweek) *GPSweek = tempGPSweek;
+    uint64_t remainder = GPSms - (uint64_t)tempGPSweek * WEEK_TIME_MS;
+    if (GPSquarterMSofWeek) *GPSquarterMSofWeek = (uint32_t)(remainder << 2);
+/*
+    uint16_t GPSday = remainder / DAY_TIME_MS;
+    remainder -= (uint64_t)GPSday * DAY_TIME_MS;
+    uint16_t GPShour = remainder / HOUR_TIME_MS;
+    remainder -= (uint64_t)GPShour * HOUR_TIME_MS;
+    uint16_t GPSminute = remainder / MINUTE_TIME_MS;
+    remainder -= (uint64_t)GPSminute * HOUR_TIME_MS;
+
+    qDebug() << "GPSWEEK:" << GPSweek <<
+                "\nGPSSec" << GPSquarterMSofWeek;
+    qDebug() << "GPSTIME: " << GPSweek <<
+                ":" << GPSday <<
+                ":" << GPShour <<
+                ":" << GPSminute;
+
+    qDebug() << "GPS WEEK: " << GPSweek <<
+                "\nGPS DAY: " << GPSday <<
+                "\nGPS HOUR:" << GPShour <<
+                "\nGPS MINUTE:" << GPSminute;*/
+}
+
+void UtilgetGPStimeFromUTCms(uint64_t UTCms,uint16_t *GPSweek, uint32_t *GPSquarterMSofWeek)
+{
+    UtilgetGPStimeFromMS(UtilgetGPSmsFromUTCms(UTCms),
+                     GPSweek,
+                     GPSquarterMSofWeek);
+}
+uint64_t UtilgetUTCmsFromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek)
+{
+    return UtilgetUTCmsFromGPSms(UtilgetMSfromGPStime(GPSweek,GPSquarterMSofWeek));
+}
+
+
+void UtilgetCurrentGPStime(uint16_t *GPSweek, uint32_t *GPSquarterMSofWeek)
+{
+    UtilgetGPStimeFromUTCms(UtilgetCurrentUTCtimeMS(),GPSweek,GPSquarterMSofWeek);
+}
+
+uint64_t UtilgetCurrentUTCtimeMS()
+{
+    struct timeval CurrentTimeStruct;
+    gettimeofday(&CurrentTimeStruct, 0);
+    return (uint64_t)CurrentTimeStruct.tv_sec*1000 +
+            (uint64_t)CurrentTimeStruct.tv_usec/1000;
+}
+
+uint32_t UtilgetIntDateFromMS(uint64_t ms)
+{
+    struct tm date_time;
+    time_t seconds = (time_t)(ms / 1000);
+    localtime_r(&seconds,&date_time);
+    return  (uint32_t)((date_time.tm_year+1900)*10000 + (date_time.tm_mon+1)*100 + date_time.tm_mday);
+}
+
+void UtilgetDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t)
+{
+     time_t time_seconds = utc_ms / 1000;
+    if (size_t < 26) return;
+    strcpy(buffer,ctime(&time_seconds));
+}
+
 void util_error(char* message)
 {
   perror(message);
@@ -1424,7 +1527,7 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize)
     
   if(iResult < 0 && errno != EAGAIN)
   {
-    util_error ("ERR: Error when recieveing");
+    util_error ("ERR: Message queue error when recieveing in iCommRecv().");
   }
   else if((iResult >= 0))
   {
@@ -1500,6 +1603,31 @@ int iCommSend(const int iCommand,const char* cpData)
     {
       uiMessagePrio = 90;
       cpMessage[0] = (char)COMM_TOM;
+    }
+  else if (iCommand == COMM_INIT)
+    {
+      uiMessagePrio = 110;
+      cpMessage[0] = (char)COMM_INIT;
+    }
+  else if (iCommand == COMM_CONNECT)
+    {
+      uiMessagePrio = 110;
+      cpMessage[0] = (char)COMM_CONNECT;
+    }
+  else if (iCommand == COMM_OBC_STATE)
+    {
+      uiMessagePrio = 160;
+      cpMessage[0] = (char)COMM_OBC_STATE;
+    }
+  else if (iCommand == COMM_DISCONNECT)
+    {
+      uiMessagePrio = 110;
+      cpMessage[0] = (char)COMM_DISCONNECT;
+    }
+  else if (iCommand == COMM_LOG)
+    {
+      uiMessagePrio = 160;
+      cpMessage[0] = (char)COMM_LOG;
     }
   else
     {
@@ -1639,3 +1767,42 @@ uint16_t crc_16( const unsigned char *input_str, uint16_t num_bytes ) {
   return crc;
 
 }  /* crc_16 */
+
+
+
+
+U16 SwapU16(U16 val) 
+{
+    return (val << 8) | (val >> 8 );
+}
+
+I16 SwapI16(I16 val) 
+{
+    return (val << 8) | ((val >> 8) & 0xFF);
+}
+
+U32 SwapU32(U32 val)
+{
+    val = ((val << 8) & 0xFF00FF00 ) | ((val >> 8) & 0xFF00FF ); 
+    return (val << 16) | (val >> 16);
+}
+
+I32 SwapI32(I32 val)
+{
+    val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF ); 
+    return (val << 16) | ((val >> 16) & 0xFFFF);
+}
+
+I64 SwapI64(I64 val)
+{
+    val = ((val << 8) & 0xFF00FF00FF00FF00ULL ) | ((val >> 8) & 0x00FF00FF00FF00FFULL );
+    val = ((val << 16) & 0xFFFF0000FFFF0000ULL ) | ((val >> 16) & 0x0000FFFF0000FFFFULL );
+    return (val << 32) | ((val >> 32) & 0xFFFFFFFFULL);
+}
+
+U64 SwapU64(U64 val)
+{
+    val = ((val << 8) & 0xFF00FF00FF00FF00ULL ) | ((val >> 8) & 0x00FF00FF00FF00FFULL );
+    val = ((val << 16) & 0xFFFF0000FFFF0000ULL ) | ((val >> 16) & 0x0000FFFF0000FFFFULL );
+    return (val << 32) | (val >> 32);
+}
