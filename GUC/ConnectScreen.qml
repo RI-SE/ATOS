@@ -44,7 +44,7 @@ Item {
             height: 40
             text: root.rootText
             font.bold: true
-            font.pointSize: 11
+            font.pointSize: 18
             horizontalAlignment: Text.AlignHCenter
             anchors.bottom: conn.top
             anchors.bottomMargin: 30

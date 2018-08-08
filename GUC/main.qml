@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
-import QtQuick.Controls.Styles 1.4
+//import QtQuick.Controls 1.0
+//import QtQuick.Controls.Styles 1.4
 import io.qt.examples.backend 1.0
 import QtGraphicalEffects 1.0
 
@@ -19,6 +20,7 @@ ApplicationWindow {
         onEnterStartScreen:
         {
             stackView.pushFirst()
+            console.log("flipped screen")
         }
         onEnterConnectionScreen:
         {
@@ -105,7 +107,6 @@ ApplicationWindow {
         id: csrcn
         ConnectScreen {
             connectText: backend.connectionText
-            rootText: qsTr("10.111.144.4")
             onClicked: backend.initConnect()
             onRootTextChanged:
             {
@@ -114,6 +115,7 @@ ApplicationWindow {
             }
             anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter
+            rootText: qsTr("127.0.0.1")
         }
     }
 

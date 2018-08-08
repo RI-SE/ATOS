@@ -8,5 +8,6 @@
         <file>StatusView.qml</file>
         <file>LEDandText.qml</file>
         <file>ActionView.qml</file>
+        <file>MyLED.qml</file>
     </qresource>
 </RCC>

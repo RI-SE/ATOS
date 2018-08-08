@@ -33,6 +33,7 @@ Item {
             height: elemHeight
             text: qsTr("INITIALIZED")
             lightOn: root.sysLed1
+            onLightOnChanged: console.log("LEDandText1 changed")
         }
         LEDandText {
             id: sysi2

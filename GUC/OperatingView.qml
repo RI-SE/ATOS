@@ -74,7 +74,7 @@ Column {
 */
     BasicButton {
         id: disconnectButton
-        text: qsTr("Disconnect...")
+        text: qsTr("Disconnect")
         height: root.buttonHeight
         width: root.buttonWidth
         onClicked: root.disconnectClicked()
