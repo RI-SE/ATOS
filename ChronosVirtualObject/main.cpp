@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include <QApplication>
 #include <signal.h>
+#include <QFontDatabase>
+#include <QFont>
 
 // Create either a terminal application or a gui application
 QCoreApplication* createApplication(int &argc, char *argv[])
@@ -36,6 +38,18 @@ int main(int argc, char *argv[])
         // Create the gui
         QApplication *a = (QApplication*) app.data();
         MainWindow w;
+        // Load the embedded font.
+        QString fontPath = ":fonts/OpenSans-Regular.ttf";
+        int fontId = QFontDatabase::addApplicationFont(fontPath);
+        if (fontId != -1)
+        {
+            QFont font("OpenSans");
+            a->setFont(font);
+            w.setFont(font);
+        }
+        else{
+            qDebug() << "Could not load font";
+        }
         w.show();
         return a->exec();
     } else {
