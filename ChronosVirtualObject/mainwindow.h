@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 //#include "chronos_utility.h"
-#include "chronos.h"
+//#include "chronos.h"
 #include "virtualobject.h"
 #include <QListWidget>
 #include "utility.h"
@@ -136,7 +136,7 @@ signals:
     void measurement_noise_toggle(int,bool,double);
     void traj_sim_delay_toggle(int,bool,double);
     void trigger_occured(int);
-    void send_trajectory(int,QVector<chronos_dopm_pt>);
+    void send_trajectory(int,QVector<dotm_pt>);
 private slots:
 
     void on_init_vobj_clicked();
@@ -149,13 +149,11 @@ private slots:
     void handleUpdateMTSP(int ID, qint64 sim_time,qint64 mtsp);
     void handleUpdateTCM(int ID, bool active);
     void handleNewOrigin(double,double,double);
-    void handleNewTrajectory(int ID,QVector<chronos_dopm_pt> traj);
+    void handleNewTrajectory(int ID,QVector<dotm_pt> traj);
 
     // Slots for simulation time
     void handleSimulationStart(int ID);
     void handleSimulationStop(int ID);
-    // update the simulation time label
-    void updateTime();
 
     // QWidgetList specific slots
     void selectedCarChanged();
@@ -179,11 +177,10 @@ private:
     //VirtualObject* vobj;
     QVector<VirtualObject*> vobjs;
     QTimer *render_timer;
-    QTimer *simulation_timer;
+    //QTimer *simulation_timer;
 
     QVector<double> *time_vector;
 
-    qint64 simulation_start_time = 0;
     QString currentStddev = "0.0";
     int defaultTrajSimDelayValue;
 

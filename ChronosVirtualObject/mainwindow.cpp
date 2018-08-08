@@ -24,15 +24,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     render_timer = new QTimer(this);
-    simulation_timer = new QTimer(this);
 
 
     connect(lwid,SIGNAL(itemSelectionChanged()),
             this,SLOT(selectedCarChanged()));
     connect(render_timer,SIGNAL(timeout()),
             this, SLOT(renderWindow()));
-    connect(simulation_timer,SIGNAL(timeout()),
-            this,SLOT(updateTime()));
     connect(ui->followCarBox,SIGNAL(toggled(bool)),
             this,SLOT(handleFollowCarToggled(bool)));
     connect(ui->MONR_enable,SIGNAL(toggled(bool)),
@@ -53,8 +50,6 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     render_timer->stop();
-    simulation_timer->stop();
-    delete simulation_timer;
     delete render_timer;
     delete ui;
 }
@@ -104,8 +99,6 @@ void MainWindow::on_init_vobj_clicked()
 }
 void MainWindow::on_delete_vobj_clicked()
 {
-    // Stop the simulation timer
-    simulation_timer->stop();
 
     // Disable buttons
     ui->delete_vobj->setEnabled(false);
@@ -195,9 +188,9 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
 
     // Create virtual object as a new Thread
     VirtualObject *vobj = new VirtualObject(ID,
-                             map->getRefLat(),
-                             map->getRefLon(),
-                             map->getRefAlt());
+                                            map->getRefLat(),
+                                            map->getRefLon(),
+                                            map->getRefAlt());
     vobj->connectToServer(udpSocket,tcpSocket);
 
     // Add a car to the map
@@ -225,8 +218,8 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
     connect(vobj,SIGNAL(new_origin(double,double,double)),
             this,SLOT(handleNewOrigin(double,double,double)));
     // Connection to show any new trajectory that has been loaded to object
-    connect(vobj,SIGNAL(new_trajectory(int,QVector<chronos_dopm_pt>)),
-            this,SLOT(handleNewTrajectory(int, QVector<chronos_dopm_pt>)));
+    connect(vobj,SIGNAL(new_trajectory(int,QVector<dotm_pt>)),
+            this,SLOT(handleNewTrajectory(int, QVector<dotm_pt>)));
     connect(vobj,SIGNAL(simulation_start(int)),
             this,SLOT(handleSimulationStart(int)));
     connect(vobj,SIGNAL(simulation_stop(int)),
@@ -247,8 +240,8 @@ void MainWindow::startObject(int ID, int udpSocket, int tcpSocket){
             vobj,SLOT(handleTrajSimDelayToggle(int,bool,double)));
     connect(this,SIGNAL(trigger_occured(int)),
             vobj,SLOT(triggerOccured(int)));
-    connect(this,SIGNAL(send_trajectory(int,QVector<chronos_dopm_pt>)),
-            vobj,SLOT(handleLoadedDOPM(int,QVector<chronos_dopm_pt>)));
+    connect(this,SIGNAL(send_trajectory(int,QVector<dotm_pt>)),
+            vobj,SLOT(handleLoadedDOPM(int,QVector<dotm_pt>)));
     // Reset trace
     ui->widget->clearTrace();
 
@@ -292,14 +285,6 @@ VirtualObject* MainWindow::findVirtualObject(int ID)
     return 0;
 }
 
-// Update the time label
-void MainWindow::updateTime()
-{
-    qint64 time = QDateTime::currentMSecsSinceEpoch() - simulation_start_time;
-    double d_time = (double) time/1000.0;
-    ui->lab_runtime->setText(QString::number(d_time));
-}
-
 void MainWindow::handleUpdateState(VOBJ_DATA data){
 
     /* Update the state of the car on the map */
@@ -309,7 +294,8 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     pos.setXY(data.x,data.y);
 
     // Calculate and set the heading in the map
-    double heading = (data.heading-90.0)*M_PI/180;
+
+    double heading = (360-data.heading) * M_PI/180;//(data.heading-90.0)*M_PI/180;
     pos.setAlpha(heading);
 
     // Set Master or Slave status on the car
@@ -321,7 +307,7 @@ void MainWindow::handleUpdateState(VOBJ_DATA data){
     else {
         status_text = "SLAVE";
     }
-    pos.setInfo(sStatus + QString::number(data.status) + "\n"+ status_text);
+    pos.setInfo(sStatus + QString::number(data.status) + "\n"+ QString::number(data.heading));
 
     // Update the car on the map
     ui->widget->updateCarState(data.ID,pos);
@@ -335,19 +321,19 @@ void MainWindow::handleNewOrigin(double lat, double lon, double alt)
     ui->widget->setEnuRef(lat,lon,alt);
 }
 
-void MainWindow::handleNewTrajectory(int ID, QVector<chronos_dopm_pt> traj)
+void MainWindow::handleNewTrajectory(int ID, QVector<dotm_pt> traj)
 {
     QList<LocPoint> points;
-    for(chronos_dopm_pt pt : traj)
+    for(dotm_pt pt : traj)
     {
         LocPoint point(pt.x,
                        pt.y,
                        0,
-                       pt.speed,
+                       pt.lon_speed,
                        1,
                        0,
                        Qt::cyan,
-                       pt.tRel);
+                       pt.rel_time);
         points.append(point);
     }
     ui->widget->addInfoTrace(ID,points);
@@ -363,18 +349,14 @@ void MainWindow::handleSimulationStart(int ID)
     obj->clearData();
 
     // Keep track of the number of processes
-    running_processes++;
+    ++running_processes;
     qDebug() << "Number of Processes = " << QString::number(running_processes);
 
-    if (!simulation_timer->isActive())
-    {
-        // Start the simulation
-        simulation_timer->start(10);
-        // Speed up the rendering when objects are running
-        render_timer->setInterval(50);
-        simulation_start_time = QDateTime::currentMSecsSinceEpoch();
-    }
+
+    // Speed up the rendering when objects are running
+    render_timer->setInterval(50);
 }
+
 
 void MainWindow::handleSimulationStop(int ID)
 {
@@ -386,11 +368,9 @@ void MainWindow::handleSimulationStop(int ID)
     // Don't stop simulation until all processes have stoped
     if (running_processes == 0)
     {
-        simulation_timer->stop();
         // Slow down the rendering when no objects are running
         render_timer->setInterval(500);
     }
-
 }
 
 void MainWindow::handleUpdateMTSP(int ID, qint64 sim_time,qint64 mtsp)
@@ -699,14 +679,14 @@ bool MainWindow::loadTrajectoryFromFile(QString filepath)
 
 
     QList<LocPoint> drawtraj;
-    QVector<chronos_dopm_pt> traj;
+    QVector<dotm_pt> traj;
 
     QTextStream in(&file);
     while(!in.atEnd())
     {
         line = in.readLine();
         QStringList list = line.split(';');
-        chronos_dopm_pt point;
+        dotm_pt point;
         if(list[0].compare("LINE") == 0)
         {
 
@@ -720,7 +700,7 @@ bool MainWindow::loadTrajectoryFromFile(QString filepath)
 
             utility::llhToEnu(ref_llh, llh, xyz);
 
-            point.tRel = (uint32_t) (list[1].toDouble()*1000.0f);
+            point.rel_time = (uint32_t) (list[1].toDouble()*1000.0f);
             point.x = xyz[0];
             point.y = xyz[1];
             point.z = xyz[2];
@@ -731,10 +711,12 @@ bool MainWindow::loadTrajectoryFromFile(QString filepath)
             while(heading>360.0) heading-=360.0;
             point.heading = heading;
 
-            point.speed = list[6].toDouble();
-            point.accel = list[7].toUInt();
-            point.curvature = list[8].toUInt();
-            point.mode = list[9].toUInt();
+            point.lon_speed = list[6].toDouble();
+            point.lon_acc = list[7].toUInt();
+            //point.curvature = list[8].toUInt();
+            //point.mode = list[9].toUInt();
+            point.lat_acc = 0;
+            point.lat_speed = 0;
 
             traj.append(point);
             drawtraj.append(LocPoint(xyz[0],xyz[1]));

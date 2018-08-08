@@ -16,7 +16,7 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-int simulatorcontrol_task(TimeType *GPSTime);
+int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD);
 
 
 #endif 

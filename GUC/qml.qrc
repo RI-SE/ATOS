@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>BasicButton.qml</file>
+        <file>ConnectScreen.qml</file>
+        <file>RoundedSquare.qml</file>
+        <file>OperatingView.qml</file>
+        <file>StatusView.qml</file>
+        <file>LEDandText.qml</file>
+        <file>ActionView.qml</file>
+        <file>MyLED.qml</file>
+    </qresource>
+</RCC>

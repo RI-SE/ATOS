@@ -280,11 +280,9 @@ void RemoteControlConnectServer(int* sockfd, const char* name, const uint32_t po
   
   bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
   serv_addr.sin_port = htons(port);
-  
-  #ifdef DEBUG
-    printf("Try to connect to control socket: %s %i\n",name,port);
-    fflush(stdout);
-  #endif
+
+  DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Try to connect to control socket: %s %i\n",name,port);
+
   
   do
   {
@@ -294,8 +292,7 @@ void RemoteControlConnectServer(int* sockfd, const char* name, const uint32_t po
     {
       if(errno == ECONNREFUSED)
       {
-        printf("WAR: Was not able to connect to object, retry in 3 sec...\n");
-        fflush(stdout);
+        DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"WAR: Was not able to connect to object, retry in 3 sec...\n");
         (void)sleep(3);
       }
       else
@@ -309,10 +306,7 @@ void RemoteControlConnectServer(int* sockfd, const char* name, const uint32_t po
   /* set socket to non-blocking */
     //iResult = fcntl(*sockfd, F_SETFL, fcntl(*sockfd, F_GETFL, 0) | O_NONBLOCK);
 
-  //#ifdef DEBUG
-    printf("Client connected to server: %s %i\n",name,port);
-    fflush(stdout);
-  //#endif
+    DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"Client connected to server: %s %i\n",name,port);
 
 }
 
@@ -375,10 +369,9 @@ static void vCreateTimeChannel(const char* name,const uint32_t port, int* sockfd
   struct hostent *object;
 
   /* Connect to object safety socket */
-  //#ifdef DEBUG
-    printf("INF: Creating safety socket\n");
-    fflush(stdout);
-  //#endif
+
+    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Creating safety socket\n");
+
 
   *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
   if (*sockfd < 0)
@@ -407,10 +400,8 @@ static void vCreateTimeChannel(const char* name,const uint32_t port, int* sockfd
     util_error("ERR: calling fcntl");
   }
 
-  //#ifdef DEBUG
-    printf("INF: Created socket and safety address: %s %d\n",name,port);
-    fflush(stdout);
-  //#endif
+    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Created socket and safety address: %s %d\n",name,port);
+
 
 }
 
@@ -431,19 +422,15 @@ static void vRecvTime(int* sockfd, char* buffer, int length, int* recievedNewDat
         }
         else
         {
-          #ifdef DEBUG
-            printf("INF: No data receive\n");
-            fflush(stdout);
-          #endif
+            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: No data receive\n");
+
         }
       }
       else
       {
-        *recievedNewData = 1;
-        #ifdef DEBUG
-          printf("INF: Received: <%s>\n",buffer);
-          fflush(stdout);
-        #endif
+
+          DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Received: <%s>\n",buffer);
+
       }
     } while(result > 0 );
 }

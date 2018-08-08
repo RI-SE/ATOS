@@ -29,6 +29,65 @@ namespace utility {
 #define FE_WGS84        (1.0/298.257223563) // earth flattening (WGS84)
 #define RE_WGS84        6378137.0           // earth semimajor axis (WGS84) (m)
 
+
+// GPS TIME FUNCTIONS
+uint64_t getGPSmsFromUTCms(uint64_t UTCms)
+{
+    return UTCms - MS_TIME_DIFF_UTC_GPS + MS_LEAP_SEC_DIFF_UTC_GPS;
+}
+uint64_t getUTCmsFromGPSms(uint64_t GPSms)
+{
+    return GPSms + MS_TIME_DIFF_UTC_GPS - MS_LEAP_SEC_DIFF_UTC_GPS;
+}
+
+uint64_t getMSfromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek)
+{
+    return (int64_t)GPSweek * WEEK_TIME_MS + (int64_t)(GPSquarterMSofWeek >> 2);
+}
+
+void getGPStimeFromMS(uint64_t GPSms, uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek)
+{
+    GPSweek = GPSms / WEEK_TIME_MS;
+    int64_t remainder = GPSms - (uint64_t)GPSweek * WEEK_TIME_MS;
+    GPSquarterMSofWeek = remainder << 2;
+
+    uint16_t GPSday = remainder / DAY_TIME_MS;
+    remainder -= (uint64_t)GPSday * DAY_TIME_MS;
+    uint16_t GPShour = remainder / HOUR_TIME_MS;
+    remainder -= (uint64_t)GPShour * HOUR_TIME_MS;
+    uint16_t GPSminute = remainder / MINUTE_TIME_MS;
+    remainder -= (uint64_t)GPSminute * HOUR_TIME_MS;
+    /*
+    qDebug() << "GPSWEEK:" << GPSweek <<
+                "\nGPSSec" << GPSquarterMSofWeek;
+    qDebug() << "GPSTIME: " << GPSweek <<
+                ":" << GPSday <<
+                ":" << GPShour <<
+                ":" << GPSminute;
+
+    qDebug() << "GPS WEEK: " << GPSweek <<
+                "\nGPS DAY: " << GPSday <<
+                "\nGPS HOUR:" << GPShour <<
+                "\nGPS MINUTE:" << GPSminute;*/
+}
+
+void getGPStimeFromUTCms(uint64_t UTCms,uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek)
+{
+    getGPStimeFromMS(getGPSmsFromUTCms(UTCms),
+                     GPSweek,
+                     GPSquarterMSofWeek);
+}
+uint64_t getUTCmsFromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek)
+{
+    return getUTCmsFromGPSms(getMSfromGPStime(GPSweek,GPSquarterMSofWeek));
+}
+
+
+void getCurrentGPStime(uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek)
+{
+    getGPStimeFromUTCms(getCurrentUTCtimeMS(),GPSweek,GPSquarterMSofWeek);
+}
+
 uint64_t getCurrentETSItimeMS()
 {
 /*
@@ -56,13 +115,13 @@ uint64_t getCurrentUTCtimeMS()
             (uint64_t)CurrentTimeStruct.tv_usec/1000;
 }
 
-void getDateTimeFromUTCtime(uint64_t utc_ms, char *buffer, int size_t)
+void getDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t)
 {
      time_t time_seconds = utc_ms / 1000;
      time_t rest_time_ms = utc_ms - time_seconds;
     if (size_t < 26) return;
 
-    bzero(buffer,size_t);
+    //bzero(buffer,size_t);
 
     strcpy(buffer,ctime(&time_seconds));
     //strcat(buffer,)

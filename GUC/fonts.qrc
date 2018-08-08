@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>OpenSans-Regular.ttf</file>
+        <file>Pacifico.ttf</file>
+    </qresource>
+</RCC>

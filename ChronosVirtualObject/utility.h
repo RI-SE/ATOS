@@ -32,10 +32,36 @@ namespace utility {
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
+// Between 1970 01 01 and 1980 01 06 there is 365*10 days, plus 2 for 2 leap years and plus 5 for the remaining days
+// in total we have MStime= (3650 + 2 + 5) * 24 * 3600 * 1000 = 315964800000
+#define MS_TIME_DIFF_UTC_GPS 315964800000
+// Difference is 18 leap seconds between utc and gps
+#define MS_LEAP_SEC_DIFF_UTC_GPS 18000
+
+// 7 * 24 * 3600 * 1000
+#define WEEK_TIME_MS 604800000
+// 24 * 3600 * 1000
+#define DAY_TIME_MS 86400000
+// 3600 * 1000
+#define HOUR_TIME_MS 3600000
+// 60 * 1000
+#define MINUTE_TIME_MS 60000
+
+// GPS TIME FUNCTIONS
+uint64_t getGPSmsFromUTCms(uint64_t UTCms);
+uint64_t getUTCmsFromGPSms(uint64_t GPSms);
+uint64_t getMSfromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek);
+void getGPStimeFromMS(uint64_t GPSms, uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek);
+// GPS collective functions
+void getGPStimeFromUTCms(uint64_t UTCms,uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek);
+uint64_t getUTCmsFromGPStime(uint16_t GPSweek,uint32_t GPSquarterMSofWeek);
+void getCurrentGPStime(uint16_t &GPSweek, uint32_t &GPSquarterMSofWeek);
+
+// ETSI FUNCTIONS
 uint64_t getCurrentETSItimeMS();
 uint64_t getETSItimeFromUTCtimeMS(uint64_t UTCtime);
 uint64_t getCurrentUTCtimeMS();
-void getDateTimeFromUTCtime(uint64_t utc_ms, char *buffer, int size_t);
+void getDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t);
 void getDateTimeFromETSItime(uint64_t etsi_time_ms, char *buffer, int size_t);
 
 void buffer_append_int64(uint8_t* buffer, int64_t number, int32_t *index);
