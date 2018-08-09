@@ -18,8 +18,34 @@ BackEnd::BackEnd(QObject *parent) :
 
     expected_response_id = new QLinkedList<qint8>();
     timer->start(500);
-
+    readConfigurationSettings();
 }
+
+BackEnd::~BackEnd()
+{
+    setConfigurationSettings();
+}
+
+//****************************************
+// Private methods
+//****************************************
+void BackEnd::readConfigurationSettings()
+{
+    QSettings settings(__COMPANY__,__APP_NAME__);
+
+    settings.beginGroup("BackEnd");
+    setHostName(settings.value("hostName","").toString());
+    settings.endGroup();
+}
+void BackEnd::setConfigurationSettings()
+{
+    QSettings settings(__COMPANY__,__APP_NAME__);
+
+    settings.beginGroup("BackEnd");
+    settings.setValue("hostName",hostName());
+    settings.endGroup();
+}
+
 //****************************************
 // Public Q_INVOKABLE methods
 //****************************************
@@ -86,7 +112,6 @@ bool BackEnd::sendDisconnectObject()
 //****************************************
 QString BackEnd::hostName()
 {
-    qDebug() << "Host name fetched";
     return m_hostName;
 }
 
@@ -94,7 +119,7 @@ void BackEnd::setHostName(const QString &hostName)
 {
     if (hostName == m_hostName)
         return;
-    m_addressValidity = addressValid(hostName);
+    //m_addressValidity = addressValid(hostName);
     m_hostName = hostName;
     emit hostNameChanged();
 }

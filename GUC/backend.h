@@ -7,6 +7,7 @@
 #include <QDateTime>
 #include <QLinkedList>
 #include <QTimer>
+#include <QSettings>
 
 #include "tcphandler.h"
 #include "mscp.h"
@@ -15,6 +16,9 @@
 
 #define MAX_RESPONSE_LIST_LENGTH 1024
 
+#define __COMPANY__ "AstaZero"
+#define __APP_NAME__ "UserControl"
+
 class BackEnd : public QObject
 {
     Q_OBJECT
@@ -22,13 +26,19 @@ class BackEnd : public QObject
     Q_PROPERTY(int addressValidity READ addressValidity NOTIFY addressValidityChanged)
     Q_PROPERTY(int sysCtrlStatus READ sysCtrlStatus WRITE setSysCtrlStatus NOTIFY sysCtrlStatusChanged)
     Q_PROPERTY(int objCtrlStatus READ objCtrlStatus WRITE setObjCtrlStatus NOTIFY objCtrlStatusChanged)
+    Q_PROPERTY(QString hostName READ hostName WRITE setHostName NOTIFY hostNameChanged)
 public:
 
 
     explicit BackEnd(QObject *parent = nullptr);
+    ~BackEnd();
 
     Q_INVOKABLE void initConnect(){
         mTcphandler->establishConnection(hostName(),SERVER_PORT);
+    }
+
+    Q_INVOKABLE void closeConnect(){
+        mTcphandler->closeConnection();
     }
 
     Q_INVOKABLE void serverDisconnect(){
@@ -50,7 +60,7 @@ public:
     }
 
     QString hostName();
-    Q_INVOKABLE void setHostName(const QString &hostName);
+    void setHostName(const QString &hostName);
 
     QString connectionText();
     void setConnectionText(const QString &connectionText);
@@ -78,8 +88,10 @@ signals:
     void enterConnectionScreen();
 
 private:
+    QSettings configuration;
+
     QString m_hostName = "";
-    QString m_connectionText = "test";
+    QString m_connectionText = "";
     TCPhandler *mTcphandler;
     int m_addressValidity;
 
@@ -90,6 +102,9 @@ private:
     QLinkedList<qint8> *expected_response_id;
 
     QTimer *timer;
+
+    void readConfigurationSettings();
+    void setConfigurationSettings();
 
     bool addExpectedResponseID(qint8 msg_id)
     {

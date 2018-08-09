@@ -15,8 +15,6 @@ ApplicationWindow {
 
     BackEnd {
         id: backend
-
-
         onEnterStartScreen:
         {
             stackView.pushFirst()
@@ -33,7 +31,7 @@ ApplicationWindow {
 
 
     }
-
+/*
     Rectangle {
         id: header
         width: parent.width
@@ -58,6 +56,7 @@ ApplicationWindow {
             onClicked: stackView.pushFirst()
         }
     }
+    */
 /*
     Rectangle {
         id: footer
@@ -86,7 +85,7 @@ ApplicationWindow {
         id: stackView
         //anchors.fill: parent
         initialItem: csrcn
-        anchors.top: header.bottom
+        anchors.top: parent.top//header.bottom
         anchors.bottom: parent.bottom
         width: parent.width
         //height: parent.height - header.height
@@ -106,16 +105,17 @@ ApplicationWindow {
     {
         id: csrcn
         ConnectScreen {
+            rootText: backend.hostName //qsTr("10.111.144.4")//qsTr("127.0.0.1")
             connectText: backend.connectionText
             onClicked: backend.initConnect()
             onRootTextChanged:
             {
-                backend.setHostName(rootText)
+                backend.hostName = rootText
                 setIPstatus(backend.addressValid(rootText))
             }
             anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter
-            rootText: qsTr("127.0.0.1")
+
         }
     }
 
@@ -129,7 +129,8 @@ ApplicationWindow {
             //onStatusClicked: backend.sendGetStatus()
             onInitClicked: backend.sendInit()
             onConnectClicked: backend.sendConnectObject()
-            onDisconnectClicked: backend.sendDisconnectObject()
+            onDisconnectClicked: backend.closeConnect()
+            onResetClicked: backend.sendDisconnectObject()
 
             sysCtrlStatus:  backend.sysCtrlStatus
             objCtrlStatus: backend.objCtrlStatus

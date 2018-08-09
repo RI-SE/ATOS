@@ -22,6 +22,9 @@ int main(int argc, char *argv[])
         qDebug() << "Could not load font";
     }
 
+    // Configure application settings
+    QCoreApplication::setOrganizationName(__COMPANY__);
+    QCoreApplication::setApplicationName(__APP_NAME__);
 
     qmlRegisterType<BackEnd>("io.qt.examples.backend", 1, 0, "BackEnd");
 

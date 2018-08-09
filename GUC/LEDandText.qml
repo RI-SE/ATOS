@@ -9,7 +9,6 @@ Item {
     property bool lightOn: false
     width: 300
     height: 150
-    onLightOnChanged: console.log("LED changed")
     /*
     StatusIndicator {
         id: statusIndicator

@@ -11,6 +11,7 @@ Item {
     signal connectClicked();
     signal startClicked();
     signal abortClicked();
+    signal resetClicked();
     signal disconnectClicked();
     signal statusClicked();
 
@@ -48,6 +49,7 @@ Item {
             onConnectClicked: root.connectClicked()
             onStartClicked: root.startClicked()
             onAbortClicked: root.abortClicked()
+            onResetClicked: root.resetClicked()
             onDisconnectClicked: root.disconnectClicked()
             //onStatusClicked: root.statusClicked()
         }
