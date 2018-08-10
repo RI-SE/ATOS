@@ -27,6 +27,7 @@ class BackEnd : public QObject
     Q_PROPERTY(int sysCtrlStatus READ sysCtrlStatus WRITE setSysCtrlStatus NOTIFY sysCtrlStatusChanged)
     Q_PROPERTY(int objCtrlStatus READ objCtrlStatus WRITE setObjCtrlStatus NOTIFY objCtrlStatusChanged)
     Q_PROPERTY(QString hostName READ hostName WRITE setHostName NOTIFY hostNameChanged)
+    Q_PROPERTY(QString debugMessage READ debugMessage WRITE setDebugMessage NOTIFY debugMessageChanged)
 public:
 
 
@@ -40,11 +41,6 @@ public:
     Q_INVOKABLE void closeConnect(){
         mTcphandler->closeConnection();
     }
-
-    Q_INVOKABLE void serverDisconnect(){
-        mTcphandler->closeConnection();
-    }
-
     // Button functions
     Q_INVOKABLE bool sendArmToHost();
     Q_INVOKABLE bool sendStartToHost(int delayms);
@@ -62,6 +58,9 @@ public:
     QString hostName();
     void setHostName(const QString &hostName);
 
+    QString debugMessage();
+    void setDebugMessage(const QString &hostName);
+
     QString connectionText();
     void setConnectionText(const QString &connectionText);
 
@@ -76,6 +75,7 @@ public:
     void handleDebugMessage(const QString &msg);
     void handleRecDataDebugMessage(const QString &msg);
 signals:
+    void debugMessageChanged();
     void hostNameChanged();
     void connectionTextChanged();
     void addressValidityChanged();
@@ -91,6 +91,7 @@ private:
     QSettings configuration;
 
     QString m_hostName = "";
+    QString m_debugMessage = "";
     QString m_connectionText = "";
     TCPhandler *mTcphandler;
     int m_addressValidity;

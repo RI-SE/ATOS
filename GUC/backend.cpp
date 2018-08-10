@@ -110,6 +110,20 @@ bool BackEnd::sendDisconnectObject()
 //****************************************
 // Public Q_Property methods
 //****************************************
+QString BackEnd::debugMessage()
+{
+    return m_debugMessage;
+}
+
+void BackEnd::setDebugMessage(const QString &debugMessage)
+{
+    if (debugMessage == m_debugMessage)
+        return;
+    //m_addressValidity = addressValid(hostName);
+    m_debugMessage = debugMessage;
+    emit debugMessageChanged();
+}
+
 QString BackEnd::hostName()
 {
     return m_hostName;
@@ -196,7 +210,8 @@ void BackEnd::handleDebugMessage(const QString &msg)
             + QString::number(time.msec()) + "]: ";
 
     qDebug() << datetime_string << msg;
-    emit newDebugMessage( datetime_string + msg );
+    setDebugMessage(datetime_string + msg);
+    //emit newDebugMessage( datetime_string + msg );
 }
 
 void BackEnd::handleRecDataDebugMessage(const QString &msg)
@@ -310,11 +325,5 @@ void BackEnd::update()
     if (mTcphandler->isConnected())
     {
         sendGetStatus();
-    }
-
-    if (m_sysCtrlStatus == MSCP_SYSTEM_CONTROL_STATE_IDLE &&
-            m_objCtrlStatus == MSCP_OBJECT_CONTROL_STATE_INITIALIZED)
-    {
-        sendConnectObject();
     }
 }
