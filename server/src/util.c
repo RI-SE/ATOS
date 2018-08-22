@@ -1806,3 +1806,217 @@ U64 SwapU64(U64 val)
     val = ((val << 16) & 0xFFFF0000FFFF0000ULL ) | ((val >> 16) & 0x0000FFFF0000FFFFULL );
     return (val << 32) | (val >> 32);
 }
+
+
+I32 UtilConnectTCPChannel(const C8* Module, I32* Sockfd, const C8* IP, const U32 Port)
+{
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+
+    char buffer[256];
+    int iResult;
+
+    *Sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (*Sockfd < 0)    {
+        DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] ERR: Failed to open control socket", Module);
+    }
+
+    server = gethostbyname(IP);
+    if (server == NULL)
+    {
+        DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] ERR: Unknown host ", Module);
+    }
+
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+
+    bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+    serv_addr.sin_port = htons(Port);
+
+
+    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] Try to connect to control socket: %s %i\n", Module, IP, Port);
+
+    do
+    {
+        iResult = connect(*Sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr));
+
+        if ( iResult < 0)
+        {
+            if(errno == ECONNREFUSED)
+            {
+                DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] Was not able to connect to %s port %d, retry in 3 sec...\n", Module, IP, Port);
+                fflush(stdout);
+                (void)sleep(3);
+            }
+            else
+            {
+                 DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] ERR: Failed to connect to control socket\n", Module);
+            }
+        }
+    } while(iResult < 0);
+
+
+    iResult = fcntl(*Sockfd, F_SETFL, fcntl(*Sockfd, F_GETFL, 0) | O_NONBLOCK);
+
+    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] Maestro connected to %s port %d\n", Module, IP, Port);
+    return iResult;
+
+}
+
+
+void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, U8 Debug)
+{
+    I32 i, n;
+
+    if(Debug == 1){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
+
+    n = write(*Sockfd, Data, Length);
+    if (n < 0)
+    {
+        DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] ERR: Failed to send on control socket\n", Module);
+    }
+}
+
+
+I32 UtilReceiveTCPData(const C8* Module, I32* Sockfd, C8* Data, U8 Debug)
+{
+    I32 i, Result;
+
+    Result = recv(*Sockfd, Data, TCP_RX_BUFFER,  0);
+
+    if(Debug == 1 && Result > 0){ printf("[%s] Received TCP data: ", Module); i = 0; for(i = 0; i < Result; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
+
+    return Result;
+}
+
+
+
+
+void UtilCreateUDPChannel(const C8* Module, I32 *Sockfd, const C8* IP, const U32 Port, struct sockaddr_in* Addr)
+{
+    int result;
+    struct hostent *object;
+
+    //DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[%s] Creating UDP channel\n", Module);
+
+    *Sockfd= socket(AF_INET, SOCK_DGRAM, 0);
+    if (*Sockfd < 0)
+    {
+        DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[%s] ERR: Failed to connect to CPC socket", Module);
+    }
+
+    /* Set address to object */
+    object = gethostbyname(IP);
+
+    if (object==0)
+    {
+        DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[%s] ERR: Unknown host", Module);
+    }
+
+    bcopy((char *) object->h_addr, (char *)&Addr->sin_addr.s_addr, object->h_length);
+    Addr->sin_family = AF_INET;
+    Addr->sin_port = htons(Port);
+
+    /* set socket to non-blocking */
+    result = fcntl(*Sockfd, F_SETFL,
+                   fcntl(*Sockfd, F_GETFL, 0) | O_NONBLOCK);
+    if (result < 0)
+    {
+        DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[%s] ERR: calling fcntl", Module);
+    }
+
+    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] Created UDP channel to address: %s port %d\n", Module, IP, Port);
+
+
+}
+
+
+void UtilSendUDPData(const C8* Module, I32 *Sockfd, struct sockaddr_in* Addr, C8 *Data, I32 Length, U8 Debug)
+{
+    I32 result, i;
+
+
+    result = sendto(*Sockfd, Data, Length, 0, (const struct sockaddr *) Addr, sizeof(struct sockaddr_in));
+
+    if(Debug == 1){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%x-", (unsigned char)*(Data+i)); printf("\n");}
+
+    if (result < 0)
+    {
+        DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[%s] ERR: Failed to send on process control socket.", Module);
+    }
+
+}
+
+
+void UtilReceiveUDPData(const C8* Module, I32* Sockfd, C8* Data, I32 Length, I32* ReceivedNewData, U8 Debug)
+{
+    I32 Result, i;
+    *ReceivedNewData = 0;
+    do
+    {
+        Result = recv(*Sockfd, Data, Length, 0);
+
+        if (Result < 0)
+        {
+            if(errno != EAGAIN && errno != EWOULDBLOCK)
+            {
+                DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[%s] ERR: Failed to receive from monitor socket", Module);
+            }
+            else
+            {
+                DEBUG_LPRINT(DEBUG_LEVEL_LOW, "[%s] INF: No data receive\n", Module);
+            }
+        }
+        else
+        {
+            *ReceivedNewData = 1;
+            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Received: <%s>\n", Data);
+            if(Debug == 1){ printf("[%s] Received UDP data: ", Module); i = 0; for(i = 0; i < Result; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
+
+        }
+
+    } while(Result > 0 );
+}
+
+
+U32 UtilIPStringToInt(C8 *IP)
+{
+    C8 *p, *ps;
+    C8 Buffer[3];
+    U32 IpU32 = 0;
+
+    ps = IP;
+    p = strchr(IP,'.');
+    if(p != NULL)
+    {
+      bzero(Buffer,3);
+      strncpy(Buffer, ps, (U64)p - (U64)ps);
+      IpU32 = (IpU32 | (U32)atoi(Buffer)) << 8;
+
+      ps = p + 1;
+      p = strchr(ps,'.');
+      bzero(Buffer,3);
+      strncpy(Buffer, ps, (U64)p - (U64)ps);
+
+      IpU32 = (IpU32 | (U32)atoi(Buffer)) << 8;
+
+      ps = p + 1;
+      p = strchr(ps,'.');
+      bzero(Buffer,3);
+      strncpy(Buffer, ps, (U64)p - (U64)ps);
+
+      IpU32 = (IpU32 | (U32)atoi(Buffer)) << 8;
+
+      ps = p + 1;
+      p = strchr(ps, 0);
+      bzero(Buffer,3);
+      strncpy(Buffer, ps, (U64)p - (U64)ps);
+
+      IpU32 = (IpU32 | (U32)atoi(Buffer));
+
+      //printf("IpU32 = %x\n", IpU32);
+    }
+
+    return IpU32;
+}

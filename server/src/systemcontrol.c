@@ -25,6 +25,7 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
+#include <unistd.h>
 
 #include "remotecontrol.h"
 #include "util.h"
