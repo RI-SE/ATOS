@@ -32,7 +32,7 @@
 
 #define TIME_CONTROL_CONF_FILE_PATH  "conf/test.conf"
 #define TIME_CONTROL_BUFFER_SIZE_20 20
-#define TIME_CONTROL_BUFFER_SIZE_52 52
+#define TIME_CONTROL_BUFFER_SIZE_54 54
 #define TIME_CONTROL_TASK_PERIOD_MS 1
 #define LOG_PATH "./timelog/"
 #define LOG_FILE "time.log"
@@ -63,10 +63,10 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
   struct sockaddr_in time_addr;
   
   I32 iExit = 0, iCommand, result;
-  C8 TimeBuffer[TIME_CONTROL_BUFFER_SIZE_52];
+  C8 TimeBuffer[TIME_CONTROL_BUFFER_SIZE_54];
   I32 ReceivedNewData, i;
-  //C8 SendData[4] = {0, 0, 3, 0xe8};
-  C8 SendData[4] = {0, 0, 0, 1};
+  C8 SendData[4] = {0, 0, 3, 0xe8};
+  //C8 SendData[4] = {0, 0, 0, 1};
   struct timespec sleep_time, ref_time;
   C8 MqRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
   struct timeval tv, ExecTime;
@@ -75,6 +75,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
   U32 IpU32;
   U8 PrevSecondU8;
   U16 CurrentMilliSecondU16, PrevMilliSecondU16;
+  U8 CycleCount = 0;
 
   gettimeofday(&ExecTime, NULL);
   CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
@@ -113,21 +114,29 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     gettimeofday(&ExecTime, NULL);
     CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
-    if(CurrentMilliSecondU16 < PrevMilliSecondU16) GSD->TimeControlExecTimeU16 = CurrentMilliSecondU16 + (1000 - PrevMilliSecondU16);
-    else GSD->TimeControlExecTimeU16 = abs(PrevMilliSecondU16 - CurrentMilliSecondU16);
+    if(CurrentMilliSecondU16 < PrevMilliSecondU16)
+    { 
+      GSD->TimeControlExecTimeU16 = CurrentMilliSecondU16 + (1000 - PrevMilliSecondU16);
+      //printf("%d\n", GSD->TimeControlExecTimeU16);
+    }
+    else 
+    {
+      GSD->TimeControlExecTimeU16 = abs(PrevMilliSecondU16 - CurrentMilliSecondU16);
+      //printf("%d\n", GSD->TimeControlExecTimeU16);
+    }
     PrevMilliSecondU16 = CurrentMilliSecondU16;
-    //printf("%d\n", GSD->TimeControlExecTimeU16);
+
 
 
     if(IpU32 != 0)
     {
-      bzero(TimeBuffer,TIME_CONTROL_BUFFER_SIZE_52);
-      TimeControlRecvTime(&SocketfdI32, TimeBuffer, TIME_CONTROL_BUFFER_SIZE_52, &ReceivedNewData);
+      bzero(TimeBuffer,TIME_CONTROL_BUFFER_SIZE_54);
+      TimeControlRecvTime(&SocketfdI32, TimeBuffer, TIME_CONTROL_BUFFER_SIZE_54, &ReceivedNewData);
     }
     
     if(ReceivedNewData && IpU32 != 0)
     {
-      //for(i=0; i < TIME_CONTROL_BUFFER_SIZE_52; i++) printf("%x-", TimeBuffer[i]);
+      //for(i=0; i < TIME_CONTROL_BUFFER_SIZE_54; i++) printf("%x-", TimeBuffer[i]);
       //printf("\n");
       
       GPSTime->ProtocolVersionU8 = TimeBuffer[0];
@@ -150,6 +159,8 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
                                 ((U64)TimeBuffer[40]) << 24 | ((U64)TimeBuffer[41]) << 16 | ((U64)TimeBuffer[42]) << 8 | TimeBuffer[43];
       GPSTime->LatitudeU32 = ((U32)TimeBuffer[44]) << 24 | ((U32)TimeBuffer[45]) << 16 | ((U32)TimeBuffer[46]) << 8 | TimeBuffer[47];
       GPSTime->LongitudeU32 = ((U32)TimeBuffer[48]) << 24 | ((U32)TimeBuffer[49]) << 16 | ((U32)TimeBuffer[50]) << 8 | TimeBuffer[51];
+      GPSTime->FixQualityU8 = TimeBuffer[52];
+      GPSTime->NSatellitesU8 = TimeBuffer[53];
 
       gettimeofday(&tv, NULL);
 
@@ -174,6 +185,8 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
       //printf("LatitudeU32: %d\n", GPSTime->LatitudeU32);
       //printf("LongitudeU32: %d\n", GPSTime->LongitudeU32);
       //printf("LocalMillisecondU16: %d\n", GPSTime->LocalMillisecondU16);
+      //printf("FixQualityU8: %d\n", GPSTime->FixQualityU8);
+      //printf("NSatellitesU8: %d\n", GPSTime->NSatellitesU8);
     }
     else if(IpU32 == 0)
     {
@@ -234,7 +247,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
     else if (IpU32 == 0)
     {
       sleep_time.tv_sec = 1;
-      sleep_time.tv_nsec = 0;
+      sleep_time.tv_nsec = 0;//100000000;
       nanosleep(&sleep_time,&ref_time); 
     }
   }

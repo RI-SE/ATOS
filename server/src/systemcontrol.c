@@ -63,7 +63,7 @@ typedef enum {
 
 #define OSTM_OPT_SET_ARMED_STATE 2
 #define OSTM_OPT_SET_DISARMED_STATE 3 
-#define SC_RECV_MESSAGE_BUFFER 512
+#define SC_RECV_MESSAGE_BUFFER 1024
 
 #define SMALL_BUFFER_SIZE_16 16
 #define SMALL_BUFFER_SIZE_20 20
@@ -377,7 +377,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         {
             ProcessControlSendCounterU32 = 0;
             bzero(ProcessControlData, SYSTEM_CONTROL_PROCESS_DATA_BUFFER);
-            PCDMessageLengthU32 = 12;
+            PCDMessageLengthU32 = 14;
             PCDMessageCodeU16 = 1;
 
             GPSmsU64 = GPSTime->GPSMillisecondsU64 + (U64)TimeControlGetMillisecond(GPSTime);
@@ -399,6 +399,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             ProcessControlData[15] = OBCStateU8;
             ProcessControlData[16] = (U8)(GSD->TimeControlExecTimeU16 >> 8);
             ProcessControlData[17] = (U8) GSD->TimeControlExecTimeU16;
+            ProcessControlData[18] = (U8) GPSTime->FixQualityU8;
+            ProcessControlData[19] = (U8) GPSTime->NSatellitesU8;
+
             SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, PCDMessageLengthU32 + 6, 1);
         }
 

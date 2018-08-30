@@ -95,10 +95,10 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "195.0.0.10"
-#define TESTSERVER_IP "195.0.0.10"
+#define TESTHOST_IP "192.168.0.163"
+#define TESTSERVER_IP "192.168.0.163"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "195.0.0.10" 
+#define LOCAL_USER_CONTROL_IP "192.168.0.163" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -401,6 +401,8 @@ typedef struct
   U32 LatitudeU32;
   U32 LongitudeU32;
   U16 LocalMillisecondU16;
+  U8 FixQualityU8;
+  U8 NSatellitesU8;
 } TimeType;
 
 
