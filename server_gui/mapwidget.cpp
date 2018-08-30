@@ -221,7 +221,7 @@ MapWidget::MapWidget(QWidget *parent) :
     mWebSocket = new QWebSocket(QString(),QWebSocketProtocol::VersionLatest,this);
     connect(mWebSocket, SIGNAL(connected()), this, SLOT(onConnected()));
     connect(mWebSocket, SIGNAL(disconnected()), mWebSocket, SLOT(close()));
-    mWebSocket->open(QUrl(QStringLiteral("ws://10.130.23.14:53251")));
+    mWebSocket->open(QUrl(QStringLiteral("ws://127.0.0.1:53251")));
 
     //QList<QPointF> trajTemp;
     QDir dir("./traj/");

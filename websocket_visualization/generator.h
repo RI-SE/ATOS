@@ -14,6 +14,7 @@ public:
     ~Generator();
 
     QList<QString> GetNextMessages();
+    void rewind();
 private:
     uint16_t mRow;
     QList<QList<QString>> mFileLines;
