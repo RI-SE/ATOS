@@ -61,6 +61,7 @@
 #define COMM_OBC_STATE 12
 #define COMM_DISCONNECT 13  
 #define COMM_LOG 14
+#define COMM_VIOP 15
 #define COMM_INV 255
 
 
@@ -95,10 +96,10 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.163"
-#define TESTSERVER_IP "192.168.0.163"
+#define TESTHOST_IP "192.168.0.253"
+#define TESTSERVER_IP "192.168.0.253"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.163" 
+#define LOCAL_USER_CONTROL_IP "192.168.0.253" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -413,6 +414,8 @@ typedef struct
   U16 ObjectControlExecTimeU16;
   U16 SimulatorControlExecTimeU16;
   U8 ExitU8;
+  U32 ScenarioStartTimeU32;
+  U8 VOILData[1024];
 } GSDType;
 
 typedef struct
@@ -490,6 +493,31 @@ typedef struct
   U32 UserIdU32;
   U8 UserTypeU8;
 } ServiceSessionType; //9 bytes
+
+
+typedef struct
+{
+  U8 ObjectIdU8;
+  U8 ObjectStateU8;
+  I32 XPositionI32;
+  I32 YPositionI32;
+  I32 ZPositionI32;
+  U16 HeadingU16;
+  U16 PitchU16;
+  U16 RollU16;
+  I16 SpeedI16;
+} Sim1Type;
+
+
+typedef struct
+{
+  HeaderType Header;
+  U32 GPSSOWU32;
+  U8 WorldStateU8;
+  U8 ObjectCountU8;
+  Sim1Type SimObjects[16];
+
+} VOILType;
 
 
 

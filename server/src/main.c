@@ -57,6 +57,7 @@ int main(int argc, char *argv[])
     GSD = mmap(NULL, sizeof *GSD, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
     GSD->ExitU8 = 0;
+    GSD->ScenarioStartTimeU32 = 0;
 
     pid_t pID[8];
     int iIndex = 0;

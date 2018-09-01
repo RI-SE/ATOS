@@ -1554,7 +1554,7 @@ int iCommSend(const int iCommand,const char* cpData)
 {
   int iResult;
   unsigned int uiMessagePrio = 0;
-  int iIndex = 0;
+  int iIndex = 0, i;
   char cpMessage[MQ_MAX_MESSAGE_LENGTH];
   
   bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
@@ -1628,6 +1628,11 @@ int iCommSend(const int iCommand,const char* cpData)
     {
       uiMessagePrio = 160;
       cpMessage[0] = (char)COMM_LOG;
+    }
+  else if (iCommand == COMM_VIOP)
+    {
+      uiMessagePrio = 80;
+      cpMessage[0] = (char)COMM_VIOP;
     }
   else
     {
@@ -1869,7 +1874,7 @@ void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, 
 {
     I32 i, n;
 
-    if(Debug == 1){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
+    if(Debug == 1){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%d-", (C8)*(Data+i)); printf("\n");}
 
     n = write(*Sockfd, Data, Length);
     if (n < 0)

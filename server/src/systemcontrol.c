@@ -597,7 +597,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         case StartScenario_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
-                if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL)
+                if(server_state == SERVER_STATE_IDLE /*&& strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/) //Temporary!
                 {
                     bzero(pcBuffer, IPC_BUFFER_SIZE);
                     gettimeofday(&tvTime, NULL);
@@ -622,7 +622,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     (void)iCommSend(COMM_STRT,pcBuffer);
                     bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                     SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
-                    server_state = SERVER_STATE_INWORK;
+                    server_state = SERVER_STATE_INWORK; 
+                    //server_state = SERVER_STATE_IDLE; //Temporary!
+                    //SystemControlCommand = Idle_0; //Temporary!
                 }
                 else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "RUNNING") != NULL)
                 {
