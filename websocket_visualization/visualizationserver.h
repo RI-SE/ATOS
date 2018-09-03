@@ -4,6 +4,7 @@
 #include <QtCore/QObject>
 #include <QtCore/QList>
 #include <QtCore/QByteArray>
+#include <QUdpSocket>
 
 #include <QThread>
 
@@ -14,6 +15,7 @@
 
 #define RTKEXPLORER_PORT 2948
 #define TEST_PORT 52340
+#define UDP_TEST_PORT 53000
 
 QT_FORWARD_DECLARE_CLASS(QWebSocketServer)
 QT_FORWARD_DECLARE_CLASS(QWebSocket)
@@ -54,9 +56,16 @@ public:
         CHRONOS_VIZUALIZATION_SERVER,
         NMEA_TCP_SERVER,
         NMEA_TCP_CLIENT
-    } COM_TYPE;
+    } INPUT_COM_TYPE;
 
-    explicit VisualizationServer( Generator* gen, uint16_t genTime, quint16 port, bool debug, int com_type, QObject *parent = Q_NULLPTR);
+    typedef enum {
+        WEBSOCKET,
+        UDPSOCKET
+    } OUTPUT_COM_TYPE;
+
+    explicit VisualizationServer( Generator* gen, uint16_t genTime, QHostAddress addr, quint16 port,
+                                  bool debug, int input_com_type, int output_com_type,
+                                  QObject *parent = Q_NULLPTR);
     ~VisualizationServer();
 
     void onSendTextMessage(QString message);
@@ -83,12 +92,23 @@ private Q_SLOTS:
 
     void handleSocketError(QAbstractSocket::SocketError);
 
+    void newUdpMessage();
+
 
 
 private:
+    // WEBSOCKET
     QWebSocketServer *m_pWebSocketServer;
     QList<QWebSocket *> m_clients;
-    Generator* m_gen;
+
+    // UDP
+    QUdpSocket *m_pUdpSocket;
+    QHostAddress m_UdpAddress;
+    quint16 m_UdpPort;
+    bool isSendingUDP = false;
+
+
+    Generator* m_gen = NULL;
 
     TcpServerSimple *mTcpServer;
     TcpClientSimple *mTcpClient;
@@ -108,7 +128,8 @@ private:
     int mTimerId;
     uint32_t m_genTime;
     MessageQueueThread *m_Thread;
-    int comm;
+    int input_com;
+    int output_com;
     nmea_info_t msg_info={ 0,0,0,0,0,0,0,0 };
 
     //int decodeNmeaGGA(QByteArray data, nmea_gga_info_t &gga);

@@ -11,26 +11,29 @@ extern "C" {
 }
 
 
-VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint16 port, bool debug,int com_type, QObject *parent):
+VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, QHostAddress addr, quint16 port, bool debug,int input_com_type, int output_com_type, QObject *parent):
     QThread(parent),
     m_pWebSocketServer(new QWebSocketServer(QStringLiteral("Websocket Visualization Server"),
                                             QWebSocketServer::NonSecureMode, this)),
     m_clients(),
+    m_pUdpSocket(new QUdpSocket(this)),
     m_debug(debug)
 {
 
     mLog= new QFile("log");
     mLog->open(QIODevice::ReadWrite);
 
-    comm = com_type;
-    if(gen != NULL)
+    input_com = input_com_type;
+    output_com = output_com_type;
+    if(gen)
     {
         m_gen = gen;
-        mTimerId = startTimer(genTime);
+        m_genTime = genTime;
+        mTimerId = startTimer(m_genTime);
     }
     else
     {
-        switch (comm) {
+        switch (input_com) {
         case CHRONOS_VIZUALIZATION_SERVER:
             (void)iCommInit(IPC_RECV,MQ_VA,0);
             break;
@@ -52,6 +55,8 @@ VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint
             mTcpClient->connectToServer(connection_port);
             qDebug() << "Connecting to server";
 
+            break;
+
 
         default:
             break;
@@ -60,21 +65,40 @@ VisualizationServer::VisualizationServer(Generator* gen, uint16_t genTime, quint
         connect(this, &VisualizationServer::sendTextMessage,this, &VisualizationServer::onSendTextMessage);
     }
 
-    if (m_pWebSocketServer->listen(QHostAddress::Any, port))
-    {
-        if (m_debug)
+    switch (output_com) {
+    case WEBSOCKET:
+        if (m_pWebSocketServer->listen(addr, port))
         {
-            qDebug() << "Websocket Visualization Adapter listening on port" << port;
+            if (m_debug)
+            {
+                qDebug() << "Websocket Visualization Adapter listening on port" << port;
+            }
+            connect(m_pWebSocketServer, &QWebSocketServer::newConnection,
+                    this, &VisualizationServer::onNewConnection);
+            connect(m_pWebSocketServer, &QWebSocketServer::closed, this, &VisualizationServer::closed);
         }
-        connect(m_pWebSocketServer, &QWebSocketServer::newConnection,
-                this, &VisualizationServer::onNewConnection);
-        connect(m_pWebSocketServer, &QWebSocketServer::closed, this, &VisualizationServer::closed);
+        break;
+    case UDPSOCKET:
+
+        m_UdpAddress = addr;
+        m_UdpPort = port;
+
+        if (m_pUdpSocket->bind(QHostAddress::Any,UDP_TEST_PORT))
+        {
+            connect(m_pUdpSocket,SIGNAL(readyRead()),
+                    this,SLOT(newUdpMessage()));
+
+        }
+        break;
+    default:
+        break;
     }
+
 }
 
 VisualizationServer::~VisualizationServer()
 {
-    if(m_gen != NULL)
+    if(m_gen)
     {
         killTimer(mTimerId);
     }
@@ -89,8 +113,39 @@ VisualizationServer::~VisualizationServer()
 
 void VisualizationServer::run()
 {
-    switch (comm) {
+
+    bool shutdown = false;
+    QTextStream s(stdin);
+
+    while(!shutdown)
+    {
+        //printf("Input: ");
+        QString input = (s.readLine()).toLower();
+        if(input.contains("exit"))
+        {
+            shutdown = true;
+        }
+        if (0 == QString::compare(input,"go",Qt::CaseInsensitive))
+        {
+            if(m_gen)
+            {
+                m_gen->rewind();
+
+            }
+        }
+        else
+        {
+            qDebug() << "------------" <<
+                        "\n#RCM: " << nr_rcm_rec <<
+                        "\n#GGA:" << nr_gga_rec <<
+                        "\n#Package sent: " << pack_sent <<
+                        "\n------------";
+        }
+    }
+    /*
+    switch (input_com) {
     case CHRONOS_VIZUALIZATION_SERVER: {
+
         int iCommand;
         char cpBuffer[100];
         bool boExit = false;
@@ -113,34 +168,11 @@ void VisualizationServer::run()
     }
         break;
     case NMEA_TCP_SERVER:
-    case NMEA_TCP_CLIENT:{
-
-        bool shutdown = false;
-        QTextStream s(stdin);
-
-        while(!shutdown)
-        {
-            //printf("Input: ");
-            QString input = (s.readLine()).toLower();
-            if(input.contains("exit"))
-            {
-                shutdown = true;
-            }
-            else
-            {
-                qDebug() << "------------" <<
-                            "\n#RCM: " << nr_rcm_rec <<
-                            "\n#GGA:" << nr_gga_rec <<
-                            "\n#Package sent: " << pack_sent <<
-                            "\n------------";
-            }
-        }
-
-
-    }
+    case NMEA_TCP_CLIENT:
     default:
         break;
     }
+    */
     qDebug() << "Exiting the application";
     emit closed();
 }
@@ -151,7 +183,8 @@ void VisualizationServer::timerEvent(QTimerEvent *event)
     QList<QString> messages = m_gen->GetNextMessages();
     foreach(QString mess, messages)
     {
-        onSendTextMessage(mess);
+        //onSendTextMessage(mess);
+        processNMEAmsg(mess.toLocal8Bit());
     }
 }
 
@@ -179,10 +212,19 @@ void VisualizationServer::onSendTextMessage(QString message)
     //mLog->write(message.toLocal8Bit());
 
 
-    foreach(QWebSocket* client, m_clients)
-    {
-        client->sendTextMessage(message);
+    switch (output_com) {
+    case WEBSOCKET:
+        foreach(QWebSocket* client, m_clients)
+        {
+            client->sendTextMessage(message);
+        }
+        break;
+    case UDPSOCKET:
+        qDebug() << "Sending message: " << message;
+        m_pUdpSocket->writeDatagram(message.toLocal8Bit(),m_UdpAddress,m_UdpPort);
+        break;
     }
+
 
 }
 
@@ -236,7 +278,7 @@ void VisualizationServer::processNMEAmsg(QByteArray data)
 
             quint64 time = QDateTime::currentMSecsSinceEpoch();
 
-            if (timeSinceUpdate != 0) qDebug() << "T=" << time - timeSinceUpdate;
+            //if (timeSinceUpdate != 0) qDebug() << "T=" << time - timeSinceUpdate;
 
 
             timeSinceUpdate = time;
@@ -272,6 +314,30 @@ void VisualizationServer::handleSocketError(QAbstractSocket::SocketError error)
     }
 }
 
+void VisualizationServer::newUdpMessage()
+{
+    while(m_pUdpSocket->hasPendingDatagrams())
+    {
+        QByteArray datagram;
+        datagram.resize(m_pUdpSocket->pendingDatagramSize());
+        m_pUdpSocket->readDatagram(datagram.data(),datagram.size(),
+                                   &m_UdpAddress,&m_UdpPort);
+
+        if (m_debug) qDebug() << "Message rec: " << datagram;
+        /*
+        switch (datagram[0]) {
+        case 0:
+            isSendingUDP = false;
+            break;
+
+        default:
+            isSendingUDP = true;
+            break;
+        }
+        */
+    }
+
+}
 
 int VisualizationServer::fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info)
 {
@@ -285,7 +351,7 @@ int VisualizationServer::fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info)
     buffer = fields.at(0);
     if(buffer.contains("RMC"))
     {
-        qDebug() << "RMC handled";
+        //qDebug() << "RMC handled";
         nr_rcm_rec++;
         /*
         0   $GPRMC          Recommended Minimum sentence C
@@ -301,7 +367,7 @@ int VisualizationServer::fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info)
         10   003.1,W      Magnetic Variation
         11  *6A          The checksum data, always begins with *
         */
-        qDebug() << "NMEA time: " << fields.at(1);
+        //qDebug() << "NMEA time: " << fields.at(1);
         QByteArray strtime    = ((QString)fields.at(1)).toLocal8Bit();
         QByteArray status     = ((QString)fields.at(2)).toLocal8Bit();
         QByteArray lat        = ((QString)fields.at(3)).toLocal8Bit();
@@ -353,7 +419,7 @@ int VisualizationServer::fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info)
         12  (empty field) DGPS station ID number
         13  *47          the checksum data, always begins with *
         * */
-        qDebug() << "GGA handled";
+        //qDebug() << "GGA handled";
         nr_gga_rec++;
         QByteArray alt        = ((QString)fields.at(9)).toLocal8Bit();
         char a[2] = "A";
@@ -369,15 +435,16 @@ int VisualizationServer::fetchNMEAinfo(QString &nmea_msg,nmea_info_t &info)
 QString VisualizationServer::infoToString(nmea_info_t &info)
 {
 
-    QString visualString = "0;0;" +
-            QString::number(info.time) + ";" +
+    QString visualString = //"0;0;" +
+            //QString::number(info.time) + ";" +
+            QString::number(QDateTime::currentMSecsSinceEpoch()) + ";" +
             QString::number(info.lat) + ";" +
             QString::number(info.lon) + ";" +
             QString::number(info.alt) + ";" +
             QString::number(info.speed) + ";" +
-            QString::number(info.heading) + ";" +
-            QString::number(0);//drive direction
-    qDebug() << "Sending:" << visualString;
+            QString::number(info.heading);
+            //QString::number(0);//drive direction
+    //qDebug() << "Sending:" << visualString;
     return visualString;
 }
 

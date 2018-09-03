@@ -29,11 +29,14 @@ Generator::Generator(QString path, QObject *parent) :
             mFileLines.append(stringList);
         }
     }
+
 }
 
 Generator::~Generator()
 {
 }
+
+void Generator::rewind(){ mRow = 0;}
 
 QList<QString> Generator::GetNextMessages()
 {
