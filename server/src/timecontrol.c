@@ -65,7 +65,8 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
   I32 iExit = 0, iCommand, result;
   C8 TimeBuffer[TIME_CONTROL_BUFFER_SIZE_52];
   I32 ReceivedNewData, i;
-  C8 SendData[4] = {0, 0, 3, 0xe8};
+  //C8 SendData[4] = {0, 0, 3, 0xe8};
+  C8 SendData[4] = {0, 0, 0, 1};
   struct timespec sleep_time, ref_time;
   C8 MqRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
   struct timeval tv, ExecTime;

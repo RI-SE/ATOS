@@ -28,9 +28,9 @@
 #include "objectcontrol.h"
 #include "systemcontrol.h"
 #include "supervision.h"
-//#include "remotecontrol.h"
+#include "remotecontrol.h"
 #include "timecontrol.h"
-//#include "simulatorcontrol.h"
+#include "simulatorcontrol.h"
 //#include "citscontrol.h"
 
 /*------------------------------------------------------------
@@ -133,22 +133,20 @@ int main(int argc, char *argv[])
         ++iIndex;
     }
 
-    /*
-  pID[iIndex] = fork();
-  if(pID[iIndex] < 0)
-  {
-    util_error("ERR: Failed to fork");
-  }
-  if(pID[iIndex] == 0)
-  {
+    pID[iIndex] = fork();
+    if(pID[iIndex] < 0)
+    {
+      util_error("ERR: Failed to fork");
+    }
+    if(pID[iIndex] == 0)
+    {
 
-      DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: remotecontrol_task running in:  %i \n",getpid());
+        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: remotecontrol_task running in:  %i \n",getpid());
 
-    remotecontrol_task(GPSTime);
-    exit(EXIT_SUCCESS);
-  }
-  ++iIndex;
-  */
+      remotecontrol_task(GPSTime);
+      exit(EXIT_SUCCESS);
+    }
+    ++iIndex;
 
     pID[iIndex] = fork();
     if(pID[iIndex] < 0)
@@ -164,22 +162,23 @@ int main(int argc, char *argv[])
         exit(EXIT_SUCCESS);
     }
     ++iIndex;
-    /*
-  pID[iIndex] = fork();
-  if(pID[iIndex] < 0)
-  {
-    util_error("ERR: Failed to fork");
-  }
-  if(pID[iIndex] == 0)
-  {
+  
+    pID[iIndex] = fork();
+    if(pID[iIndex] < 0)
+    {
+      util_error("ERR: Failed to fork");
+    }
+    if(pID[iIndex] == 0)
+    {
 
-      DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: simulatorcontrol_task running in:  %i \n",getpid());
+        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: simulatorcontrol_task running in:  %i \n",getpid());
 
-    simulatorcontrol_task(GPSTime, GSD);
-    exit(EXIT_SUCCESS);
-  }
-  ++iIndex;
-
+      simulatorcontrol_task(GPSTime, GSD);
+      exit(EXIT_SUCCESS);
+    }
+    ++iIndex;
+  
+  /*
  pID[iIndex] = fork();
   if(pID[iIndex] < 0)
   {

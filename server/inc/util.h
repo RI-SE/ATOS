@@ -19,6 +19,13 @@
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <unistd.h>
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <poll.h>
+#include <netdb.h>
 
 /*------------------------------------------------------------
   -- Defines
@@ -84,13 +91,14 @@
 
 #define MAX_ROW_SIZE 1024
 
+#define TCP_RX_BUFFER 1024
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "10.168.10.136"
-#define TESTSERVER_IP "10.168.10.136"
+#define TESTHOST_IP "195.0.0.10"
+#define TESTSERVER_IP "195.0.0.10"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "10.168.10.136" 
+#define LOCAL_USER_CONTROL_IP "195.0.0.10" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -556,6 +564,15 @@ U32 SwapU32(U32 val);
 I32 SwapI32(I32 val);
 I64 SwapI64(I64 val);
 U64 SwapU64(U64 val);
+
+I32 UtilConnectTCPChannel(const C8* Module, I32* Sockfd, const C8* IP, const U32 Port);
+void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, U8 Debug);
+I32 UtilReceiveTCPData(const C8* Module, I32* Sockfd, C8* Data, U8 Debug);
+void UtilCreateUDPChannel(const C8* Module, I32 *Sockfd, const C8* IP, const U32 Port, struct sockaddr_in* Addr);
+void UtilSendUDPData(const C8* Module, I32 *Sockfd, struct sockaddr_in* Addr, C8 *Data, I32 Length, U8 Debug);
+void UtilReceiveUDPData(const C8* Module, I32* Sockfd, C8* Buffer, I32 Length, I32* ReceivedNewData, U8 Debug);
+U32 UtilIPStringToInt(C8 *IP);
+
 
 typedef struct {
   uint64_t timestamp;
