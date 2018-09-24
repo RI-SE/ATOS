@@ -21,7 +21,8 @@ SOURCES += \
     oshandler.cpp \
     oscactor.cpp \
     oscaction.cpp \
-    osccondition.cpp
+    osccondition.cpp \
+    osclib.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

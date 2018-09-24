@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <OpenSCENARIO>
-
+	
 	<FileHeader revMajor="0" revMinor="9" date="2017-06-09T10:00:00" description="LTAP-OD" author="Fredrik Persson, Emil Knabe"/>
 
-    <!-- Brief description of this scenario: 																-->
+    <!-- Brief description of this scenario: 																-->		
 	<!-- Key Scenario: LTAP-OD																				-->
 	<!-- Variant A: Both cars driving initially. Ego car controlled externally, e.g. by human-in-the-loop	-->
 	<!--     Other possible variants: B: Both cars controlled by the scenario C: Target waiting in crossing	-->
@@ -15,41 +15,19 @@
 	<!--   o Target car will reach a "meeting" point in the crossing 1 sec before the Ego car. This is 		-->
 	<!--     to synchronize the scene before the target makes the left turn.								-->
 	<!--   o After synchronization, the target car continue its route, turning left, at initial speed		-->
-	<!--   o Probably there will be a crash																	-->
+	<!--   o Probably there will be a crash																	-->	
 
 	<ParameterDeclaration>
+		<Parameter name="$HostVehicle" type="string" default="Volvo_XC90_Red"/>
+		<Parameter name="$TargetVehicle" type="string" default="AudiA4_red_147kW"/>
 		<Parameter name="$HostSpeed" type="double" default="20"/>
 		<Parameter name="$TargetSpeed" type="double" default="7"/>
 	</ParameterDeclaration>
-
+  
 	<Catalogs>  <!-- Should probably be in a seperate file -->
-		<Catalog name="RouteCatalog">  <!-- Inline catalog proably not allowed, but desired. -->
-			<Route name="HostStraightRoute" closed="false">
-				<Waypoint strategy="shortest">
-					<Position>
-						<Lane roadId="0" laneId="1" offset="0" s="0" />		<!-- road 0 facing from intersection -->
-					</Position>
-					<Position>
-						<Lane roadId="2" laneId="1" offset="0" s="0" />		<!-- road 2 facing from intersection -->
-					</Position>
-				</Waypoint>
-			</Route>
-
-			<Route name="TargetLeftTurnRoute" closed="false">
-				<!-- Target car shall drive west towards crossing, then turn left -->
-				<Waypoint strategy="shortest">
-					<Position>
-						<Lane roadId="2" laneId="-1" offset="0" s="0" />
-					</Position>
-				</Waypoint>
-				<Waypoint strategy="shortest">
-					<Position>
-						<Lane roadId="1" laneId="-1" offset="0" s="0" />	<!-- all roads head towards crossing -->
-					</Position>
-				</Waypoint>
-			</Route>
-		</Catalog>
-
+		<RouteCatalog>
+			<Directory path="Catalogs/RoutingCatalog"/>
+		</RouteCatalog>
 		<VehicleCatalog>
 			<Directory path="Catalogs/VehicleCatalogs"/>
 		</VehicleCatalog>
@@ -57,22 +35,22 @@
 			<Directory path="Catalogs/DriverCatalogs"/>
 		</DriverCatalog>
 	</Catalogs>
-
+		
 	<RoadNetwork>
-		<Logics filepath="city_4-way_crossing.xodr"/>
-		<SceneGraph filepath="city_4-way_crossing.opt.osgb"/>
+		<Logics filepath="../../resources/xodr/Fabriksgatan-Gudmundsgatan_OSM_ROD.xodr"/>
+		<SceneGraph filepath="../../resources/models/Fabriksgatan-Gudmundsgatan-OSM-ROD-styles-one-LOD.opt.osgb"/>
 	</RoadNetwork>
-
+	
 	<Entities>
 		<Object name="Ego">
-			<CatalogReference catalogName="VechicleCatalog" entryName="Volvo_XC90_Red"/>
+			<CatalogReference catalogName="VechicleCatalog" entryName="$HostVehicle"/>
 			<!-- Ego car controlled by an external system, e.g. HIL simulator  -->
 			<Properties>
 				<Property name="control" value="external" />
 			</Properties>
 		</Object>
 		<Object name="Target">
-			<CatalogReference catalogName="VechicleCatalog" entryName="AudiA4_red_147kW"/>
+			<CatalogReference catalogName="VechicleCatalog" entryName="$TargetVehicle"/>
 			<Controller>
 				<!-- Target car controlled by a default (standard?) driver model -->
 				<CatalogReference catalogName="DriverCatalog" entryName="DefaultDriver"/>
@@ -94,11 +72,11 @@
 					<Action>
 						<Position>
 							<Route>  <!-- Start at the route, 100m from the start of the route -->
-								<RouteRef>
+								<RouteRef> 
 									<CatalogReference catalogName="RouteCatalog" entryName="TargetLeftTurnRoute"/>
 								</RouteRef>
 								<Position>
-									<LaneCoord pathS="100" laneId="-1"/>
+									<LaneCoord pathS="100" laneId="-1"/>  
 								</Position>
 							</Route>
 						</Position>
@@ -114,11 +92,11 @@
 						</Longitudinal>
 					</Action>
 					<Action name="TargetSyncAction">
-						<Meeting mode="route">
+						<Meeting mode="route" >
 							<Position>
 								<Lane roadId="2" laneId="-1" offset="0" s="100" />
 							</Position>
-							<Relative mode="route" object="Ego" offsetTime="1" continuous="true" >
+							<Relative mode="route" object="Ego" offsetTime="1" continuous="true" > 
 								<Position>
 									<Lane roadId="1" laneId="-1" offset="0" s="70" />
 								</Position>
@@ -135,7 +113,7 @@
 				</Private>
 			</Actions>
 		</Init>
-
+		
 		<Story name="LTAPStory" owner="Target">
 			<Act name="LTAPAct">
 				<Sequence name="LTAPSequence" numberOfExecutions="1">
@@ -175,7 +153,7 @@
 						<ConditionGroup>
 							<Condition name="" delay="0" edge="rising">
 								<ByValue>
-									<SimulationTime value="0" rule="equal-to"/>
+									<SimulationTime value="0" rule="equal_to"/>
 								</ByValue>
 							</Condition>
 						</ConditionGroup>

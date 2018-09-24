@@ -20,7 +20,11 @@ public:
 
     typedef enum {
         NO_ERROR = 0,
-        NODE_EMPTY = -1
+        NODE_EMPTY = -1,
+        CHILD_NODE_EMPTY = -2,
+        NODE_NOT_EXISTS = -3,
+        ATTR_NOT_EXIST = -4,
+        NODE_INVALID_ACTOR = -5
     } DOMErrorCode;
 
     OSCReader();
@@ -42,9 +46,11 @@ private:
 
     QVector<OSCActor> m_actors;
 
+    bool actorExists(const QString &actorName);
 
     // Read specific parts of the OSC file
-    qint8 readActors(const QDomNode &node);
+    qint8 readActors(const QDomElement &root);
+    qint8 readInitActions(const QDomElement &root);
 
 };
 

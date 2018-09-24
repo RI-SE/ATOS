@@ -20,6 +20,7 @@ int main(int argc, char *argv[])
 
     reader.readtoDOMdoc(args[1]);
     reader.printDOMdoc();
+    reader.loadDomdoc();
 
     //return a.exec();
     return 0;
