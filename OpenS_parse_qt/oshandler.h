@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QXmlDefaultHandler>
 #include <QDebug>
+#include "osclib.h"
 
 class OSHandler : public QXmlDefaultHandler
 {

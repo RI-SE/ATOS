@@ -18,7 +18,10 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
     oscreader.cpp \
-    oshandler.cpp
+    oshandler.cpp \
+    oscactor.cpp \
+    oscaction.cpp \
+    osccondition.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -27,4 +30,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     oscreader.h \
-    oshandler.h
+    oshandler.h \
+    oscdata.h \
+    oscactor.h \
+    oscaction.h \
+    osclib.h \
+    osccondition.h

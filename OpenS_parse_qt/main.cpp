@@ -16,7 +16,11 @@ int main(int argc, char *argv[])
     }
 
 
-    reader.parseOSFile(args[1]);
+    //reader.parseOSFile(args[1]);
 
-    return a.exec();
+    reader.readtoDOMdoc(args[1]);
+    reader.printDOMdoc();
+
+    //return a.exec();
+    return 0;
 }

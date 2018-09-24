@@ -21,7 +21,7 @@ bool OSHandler::startEntity(const QString &name)
     QString outstring = "";
     /*
     for(int i= 0; i < index;i++){
-        outstring += " ";
+        outstring += "\t";
     }*/
     outstring.fill(' ',index);
     outstring += name;
@@ -46,7 +46,8 @@ bool OSHandler::startElement(const QString & namespaceURI,
     (void) localName;
     (void) atts;
     //startEntity(qName);
-    qDebug() << qName;
+    qDebug() << namespaceURI << ";" << localName << ";" << qName << ";";
+    
     return true;
 }
 
