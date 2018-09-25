@@ -37,3 +37,6 @@ HEADERS += \
     oscaction.h \
     osclib.h \
     osccondition.h
+
+DISTFILES += \
+    notes

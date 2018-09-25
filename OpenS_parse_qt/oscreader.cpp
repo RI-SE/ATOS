@@ -23,12 +23,13 @@ qint8 OSCReader::readtoDOMdoc(const QString &file_path)
         return DOM_SET_CONTENT_ERROR;
     }
     file.close();
+    reader_state = DOC_READ;
     return FILE_READ_OK;
 }
 
 qint8 OSCReader::printDOMdoc()
 {
-    if (!m_dom.hasChildNodes()) return FILE_NO_CONTENT;
+    if (reader_state < DOC_READ) return FILE_NO_CONTENT;
     // print out the element names of all elements that are direct children
     // of the outermost element.
     QDomElement docElem = m_dom.documentElement();
@@ -45,6 +46,7 @@ qint8 OSCReader::printDOMdoc()
         }
         n = n.nextSibling();
     } */
+    return 0;
 }
 
 qint8 OSCReader::printDOMdocTree(const QDomNode &node,int level)
@@ -59,13 +61,34 @@ qint8 OSCReader::printDOMdocTree(const QDomNode &node,int level)
 
 qint8 OSCReader::loadDomdoc()
 {
-    if (!m_dom.hasChildNodes()) return FILE_NO_CONTENT;
+    if (reader_state < DOC_READ) return FILE_NO_CONTENT;
 
     QDomElement docElem = m_dom.documentElement();
     //QDomNode firstnode = docElem.firstChild();
 
-    qDebug() << "ECODE:" << readActors(docElem);
-    qDebug() << "ECODE:" << readInitActions(docElem);
+    qDebug() << "ECODE(actors):" << readActors(docElem);
+    qDebug() << "ECODE(actions):" << readInitActions(docElem);
+
+
+    reader_state = DOC_LOADED;
+    return 0;
+}
+
+qint8 OSCReader::printLoadedDomDoc()
+{
+    if(reader_state < DOC_LOADED) return DOM_NOT_LOADED;
+
+    qDebug() << "# Loaded DOM Doc #";
+
+    foreach(OSCActor actor, m_actors)
+    {
+        actor.printobject();
+    }
+
+    foreach(OSCAction action, m_actions)
+    {
+        action.printobject();
+    }
 
     return 0;
 }
@@ -94,6 +117,15 @@ bool OSCReader::actorExists(const QString &actorName)
     return false;
 }
 
+qint32 OSCReader::findActorIndex(const QString &actorName)
+{
+    for (int i = 0; i < m_actors.size();++i)
+    {
+        if(m_actors[i].isSame(actorName)) return i;
+    }
+    return -1;
+}
+
 
 qint8 OSCReader::readActors(const QDomElement &root)
 {
@@ -120,17 +152,39 @@ qint8 OSCReader::readInitActions(const QDomElement &root)
     QDomElement e = root.firstChildElement(OSC_KEYWORD_STORYBOARD);
     if (e.isNull()) return NODE_NOT_EXISTS;
 
+    e = e.firstChildElement(OSC_KEYWORD_INIT);
+    if (e.isNull()) return NODE_NOT_EXISTS;
+
     QDomNodeList actors = e.elementsByTagName(OSC_KEYWORD_PRIVATE);
+    QDomNodeList actor_actions;
+    QDomElement actorElem;
+    QString actorName;
+    QDomElement actionElem;
+
+    QVector<OSCAction> temp_actions;
+    qint32 actor_index;
     for(int i = 0; i < actors.size(); i++)
     {
-        QDomElement actorElem = actors.at(i).toElement();
-        QString actorName = actorElem.attribute("object","");
+        actorElem = actors.at(i).toElement();
+        actorName = actorElem.attribute("object","");
         // Find the actor among all parsed actors
-        qDebug() << "Finding Actor: " << actorName;
-        if (!actorExists(actorName)) return NODE_INVALID_ACTOR;
-        qDebug() << "Actor (" << actorName << ") exists";
+
+        actor_index = findActorIndex(actorName);
+        if (actor_index < 0) return NODE_INVALID_ACTOR;
+
         // Add all actions which is now bound to the actor
+        actor_actions = actorElem.elementsByTagName(OSC_KEYWORD_ACTION);
+        for (int j = 0; j < actor_actions.size(); ++j) {
+
+            // Find the type of action
+            actionElem = actor_actions.at(j).toElement();
+            temp_actions.append(OSCAction(&m_actors[actor_index],actionElem.firstChildElement().tagName()));
+
+        }
     }
+
+    m_actions = temp_actions;
+    qDebug() << "#actions: " << m_actions.size();
 
     return NO_ERROR;
 }

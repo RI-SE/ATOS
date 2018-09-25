@@ -19,8 +19,9 @@ int main(int argc, char *argv[])
     //reader.parseOSFile(args[1]);
 
     reader.readtoDOMdoc(args[1]);
-    reader.printDOMdoc();
+    //reader.printDOMdoc();
     reader.loadDomdoc();
+    reader.printLoadedDomDoc();
 
     //return a.exec();
     return 0;

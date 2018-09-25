@@ -24,8 +24,15 @@ public:
         CHILD_NODE_EMPTY = -2,
         NODE_NOT_EXISTS = -3,
         ATTR_NOT_EXIST = -4,
-        NODE_INVALID_ACTOR = -5
+        NODE_INVALID_ACTOR = -5,
+        DOM_NOT_LOADED = -6
     } DOMErrorCode;
+
+    typedef enum {
+        INIT = 0,
+        DOC_READ,
+        DOC_LOADED
+    } OSCReader_INTERNAL_STATE;
 
     OSCReader();
     ~OSCReader();
@@ -34,19 +41,24 @@ public:
     qint8 printDOMdocTree(const QDomNode &node, int level);
 
     qint8 loadDomdoc();
+    qint8 printLoadedDomDoc();
 
     qint8 parseOSFile(const QString &file_path);
 
 
 private:
 
+    qint8 reader_state = INIT;
+
     OSHandler *m_handler;
     QXmlSimpleReader m_xmlReader;
     QDomDocument m_dom;
 
     QVector<OSCActor> m_actors;
+    QVector<OSCAction> m_actions;
 
     bool actorExists(const QString &actorName);
+    qint32 findActorIndex(const QString &actorName);
 
     // Read specific parts of the OSC file
     qint8 readActors(const QDomElement &root);
