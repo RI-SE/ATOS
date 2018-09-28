@@ -80,12 +80,12 @@ qint8 OSCReader::printLoadedDomDoc()
 
     qDebug() << "# Loaded DOM Doc #";
 
-    foreach(OSCActor actor, m_actors)
+    foreach(OSCObject actor, m_actors)
     {
         actor.printobject();
     }
 
-    foreach(OSCAction action, m_actions)
+    foreach(OSCPrivateAction action, m_initActions)
     {
         action.printobject();
     }
@@ -110,7 +110,7 @@ qint8 OSCReader::parseOSFile(const QString &file_path)
 
 bool OSCReader::actorExists(const QString &actorName)
 {
-    foreach(OSCActor actor, m_actors)
+    foreach(OSCObject actor, m_actors)
     {
         if(actor.isSame(actorName)) return true;
     }
@@ -140,7 +140,7 @@ qint8 OSCReader::readActors(const QDomElement &root)
     {
         QDomAttr a = dlist.item(i).toElement().attributeNode("name");
         if (a.isNull()) return ATTR_NOT_EXIST;
-        m_actors.append(OSCActor(a.value()));
+        m_actors.append(OSCObject(a.value()));
     }
     return NO_ERROR;
 }
@@ -161,7 +161,7 @@ qint8 OSCReader::readInitActions(const QDomElement &root)
     QString actorName;
     QDomElement actionElem;
 
-    QVector<OSCAction> temp_actions;
+    QVector<OSCPrivateAction> temp_actions;
     qint32 actor_index;
     for(int i = 0; i < actors.size(); i++)
     {
@@ -178,13 +178,42 @@ qint8 OSCReader::readInitActions(const QDomElement &root)
 
             // Find the type of action
             actionElem = actor_actions.at(j).toElement();
-            temp_actions.append(OSCAction(&m_actors[actor_index],actionElem.firstChildElement().tagName()));
+            temp_actions.append(OSCPrivateAction(&m_actors[actor_index],actionElem.firstChildElement().tagName()));
 
         }
     }
 
-    m_actions = temp_actions;
-    qDebug() << "#actions: " << m_actions.size();
+    m_initActions = temp_actions;
+    qDebug() << "#actions: " << m_initActions.size();
+
+    return NO_ERROR;
+}
+
+qint8 OSCReader::readGlobalParameterDeclarations(const QDomElement &root)
+{
+
+    if(root.isNull()) return NODE_EMPTY;
+
+    QDomElement e = root.firstChildElement(OSC_KEYWORD_PARAMETERDECLARATION);
+    if (e.isNull()) return NODE_NOT_EXISTS;
+
+
+    QDomNodeList parameters = e.elementsByTagName(OSC_KEYWORD_PARAMETER);
+    QDomElement parameterElement;
+
+    QDomAttr paramName;
+    QDomAttr paramType;
+    QDomAttr paramValue;
+
+    for(int i = 0; i < parameters.size();++i)
+    {
+        parameterElement = parameters.item(i).toElement();
+        if (parameterElement.isNull()) continue;
+        paramName = parameterElement.attributeNode("name");
+        paramType = parameterElement.attributeNode("type");
+        paramValue = parameterElement.attributeNode("default");
+
+    }
 
     return NO_ERROR;
 }

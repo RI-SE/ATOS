@@ -19,10 +19,12 @@ SOURCES += \
         main.cpp \
     oscreader.cpp \
     oshandler.cpp \
-    oscactor.cpp \
-    oscaction.cpp \
     osccondition.cpp \
-    osclib.cpp
+    osclib.cpp \
+    oscstoryboard.cpp \
+    oscobject.cpp \
+    oscprivateaction.cpp \
+    oscparameter.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -33,10 +35,12 @@ HEADERS += \
     oscreader.h \
     oshandler.h \
     oscdata.h \
-    oscactor.h \
-    oscaction.h \
     osclib.h \
-    osccondition.h
+    osccondition.h \
+    oscstoryboard.h \
+    oscobject.h \
+    oscprivateaction.h \
+    oscparameter.h
 
 DISTFILES += \
-    notes
+    notes.md

@@ -54,8 +54,11 @@ private:
     QXmlSimpleReader m_xmlReader;
     QDomDocument m_dom;
 
-    QVector<OSCActor> m_actors;
-    QVector<OSCAction> m_actions;
+    QVector<OSCObject> m_actors;
+    QVector<OSCPrivateAction> m_initActions;
+    QVector<OSCPrivateAction> m_storyActions;
+    QVector<OSCParameter> m_parameters;
+
 
     bool actorExists(const QString &actorName);
     qint32 findActorIndex(const QString &actorName);
@@ -63,6 +66,7 @@ private:
     // Read specific parts of the OSC file
     qint8 readActors(const QDomElement &root);
     qint8 readInitActions(const QDomElement &root);
+    qint8 readGlobalParameterDeclarations(const QDomElement &root);
 
 };
 

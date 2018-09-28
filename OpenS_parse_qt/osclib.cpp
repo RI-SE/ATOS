@@ -1,3 +1,3 @@
 #include "osclib.h"
 
-OSCObject::~OSCObject() {}
+OSCType::~OSCType() {}

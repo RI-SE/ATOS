@@ -8,9 +8,9 @@
 class OSCCondition : public QObject
 {
 public:
-    OSCCondition(QString name = "",OSCAction *action = 0);
+    OSCCondition(QString name = "",OSCPrivateAction *action = 0);
 private:
-    OSCAction *m_action;
+    OSCPrivateAction *m_action;
     QString m_name;
 };
 

@@ -1,6 +1,6 @@
 #include "oscaction.h"
 
-OSCAction::OSCAction(OSCActor *actor, QString actionType)
+OSCAction::OSCAction(OSCObject *actor, QString actionType)
 {
     this->m_owner = actor;
     this->m_actionType = actionType;

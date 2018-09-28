@@ -5,11 +5,11 @@
 #include <QObject>
 #include "osclib.h"
 
-class OSCAction : public QObject, public OSCObject
+class OSCAction : public QObject, public OSCType
 {
 public:
 
-    OSCAction(OSCActor *actor = 0, QString actionType = "");
+    OSCAction(OSCObject *actor = 0, QString actionType = "");
     OSCAction(const OSCAction & other);
 
     ~OSCAction();
@@ -18,7 +18,7 @@ public:
 
     void printobject();
 private:
-    OSCActor *m_owner;
+    OSCObject *m_owner;
     QString m_actionType = "";
 };
 
