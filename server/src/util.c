@@ -733,7 +733,7 @@ int UtilPopulateSpaceTimeArr(ObjectPosition *OP, char* TrajFile)
   if(Trajfd)
   {
     Rows = OP->TrajectoryPositionCount;
-    printf("Rows = %d\n", Rows);
+    //printf("Rows = %d\n", Rows);
     double x, y, z;
     float t;
     char ValueStr[NUMBER_CHAR_LENGTH];

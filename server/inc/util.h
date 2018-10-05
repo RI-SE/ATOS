@@ -96,10 +96,10 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.253"
-#define TESTSERVER_IP "192.168.0.253"
+#define TESTHOST_IP "195.0.0.10"
+#define TESTSERVER_IP "195.0.0.10"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.253" 
+#define LOCAL_USER_CONTROL_IP "195.0.0.10" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -415,7 +415,7 @@ typedef struct
   U16 SimulatorControlExecTimeU16;
   U8 ExitU8;
   U32 ScenarioStartTimeU32;
-  U8 VOILData[1024];
+  U8 VOILData[400];
 } GSDType;
 
 typedef struct
@@ -518,6 +518,19 @@ typedef struct
   Sim1Type SimObjects[16];
 
 } VOILType;
+
+
+typedef struct
+{
+  U16 MessageIdU16;
+  U32 ObjectIPU32;
+  U32 GPSSOWU32;
+  I32 XPositionI32;
+  I32 YPositionI32;
+  I32 ZPositionI32;
+  U16 HeadingU16;
+  I16 SpeedI16;
+} ObjectMonitorType; 
 
 
 

@@ -114,6 +114,7 @@
 #define SMALL_BUFFER_SIZE_0 20
 #define SMALL_BUFFER_SIZE_1 2
 #define SMALL_BUFFER_SIZE_2 1
+#define SMALL_BUFFER_SIZE_254 254
 
 #define TRAJECTORY_FILE_MAX_ROWS  4096
 
@@ -277,6 +278,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     C8 Buffer2[SMALL_BUFFER_SIZE_1];
     C8 LogBuffer[LOG_BUFFER_LENGTH];
+    C8 VOILReceivers[SMALL_BUFFER_SIZE_254];
 
     U8 DisconnectU8 = 0;
     I32 iResult;
@@ -495,6 +497,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     /*Send AROM message*/
                     vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
                 }
+
+                ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
             }
             else if(iCommand == COMM_STRT && (OBCState == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED)*/)  //OBC_STATE_INITIALIZED is temporary!
             {
@@ -513,19 +517,26 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 SearchStartIndex = -1;
                 PrevTimeToSyncPoint = 0;
                 OldTimeU64 = CurrentTimeU64;
-                ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;
-                MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, GPSTime, (U32)StartTimeU64, DelayedStartU32, &OutgoingStartTimeU32, 1);
+                ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
+                MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, GPSTime, (U32)StartTimeU64, DelayedStartU32, &OutgoingStartTimeU32, 0);
                 for(iIndex=0;iIndex<nbr_objects;++iIndex) { vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);}
                 OBCState = OBC_STATE_RUNNING;
                 //OBCState = OBC_STATE_INITIALIZED; //This is temporary!
-                printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
+                //printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
                 GSD->ScenarioStartTimeU32 = OutgoingStartTimeU32;
             }
             else if(iCommand == COMM_VIOP && OBC_STATE_RUNNING/*OBC_STATE_INITIALIZED*/)
             {
+                /*Build the VOIL message*/
                 MessageLength = ObjectControlBuildVOILMessage(MessageBuffer, &VOILData, (C8*)GSD->VOILData, 0);
-                printf("MessageLength= %d\n", MessageLength);
-                for(iIndex=0;iIndex<nbr_objects;++iIndex) { ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 1);}
+                for(iIndex=0;iIndex<nbr_objects;++iIndex) 
+                { 
+                    /*Here we send the VOIL message, if IP-address found*/
+                    if(strstr(VOILReceivers, object_address_name[iIndex]))
+                    {
+                        ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+                    }
+                }
 
             }
             else if(iCommand == COMM_REPLAY)
@@ -537,7 +548,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             else if(iCommand == COMM_ABORT && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING))
             {
                 OBCState = OBC_STATE_CONNECTED;
-                ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+                ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT; //Set server to ABORT
                 LOG_SEND(LogBuffer, "[ObjectControl] ABORT received.\n");
             }
             else if(iCommand == COMM_CONTROL)
@@ -621,6 +632,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
                 UtilSearchTextFile(CONF_FILE_PATH, "ASPDebugRate=", "", TextBuffer);
                 ASPDebugRate = atoi(TextBuffer);
+                bzero(VOILReceivers, SMALL_BUFFER_SIZE_254);
+                UtilSearchTextFile(CONF_FILE_PATH, "VOILReceivers=", "", VOILReceivers);
+                
 
                 LOG_SEND(LogBuffer,"[ObjectControl] Objects to be controlled by server: %d\n", nbr_objects);
                 LOG_SEND(LogBuffer, "[ObjectControl] ASP in system: %d\n", SyncPointCount);
@@ -636,9 +650,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                 LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.\n");
 
+                
                 /* Connect and send drive files */
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
+
                     UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
 
                     MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, GPSTime,
@@ -686,7 +702,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     {
                         /* Send OSEM command */
                         LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.\n");
-                        printf("MessageLength: %d\n", MessageLength);
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
 
                         fd = fopen (object_traj_file[iIndex], "r");
@@ -694,13 +709,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         fclose (fd);
 
                         /*DOTM*/
-                        //MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-2, &HeaderData, 1);
+                        MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-2, &HeaderData, 0);
 
                         /*Send DOTM header*/
-                        //vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
+                        vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
 
                         /*Send DOTM data*/
-                        //ObjectControlSendDOTMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 1);
+                        ObjectControlSendDOTMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 0);
 
                         /* Adaptive Sync Points object configuration start...*/
                         if(TEST_SYNC_POINTS == 1) printf("Trajfile: %s\n", object_traj_file[iIndex] );
@@ -747,20 +762,21 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         /* ...end*/
                     }
 
-                    for(iIndex=0;iIndex<nbr_objects;++iIndex)
-                    {
-                        if(USE_TEST_HOST == 0) vCreateSafetyChannel(object_address_name[iIndex], object_udp_port[iIndex], &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
-                        else if(USE_TEST_HOST == 1) vCreateSafetyChannel(TESTSERVER_IP, object_udp_port[iIndex], &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
-                    }
-
                 }
+                
+                for(iIndex=0;iIndex<nbr_objects;++iIndex)
+                {
+                    if(USE_TEST_HOST == 0) vCreateSafetyChannel(object_address_name[iIndex], object_udp_port[iIndex], &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
+                    else if(USE_TEST_HOST == 1) vCreateSafetyChannel(TESTSERVER_IP, object_udp_port[iIndex], &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
+                }
+
                 uiTimeCycle = 0;
 
                 /* Execution mode*/
                 ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
 
                 /*Set server status*/
-                ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;
+                ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
 
                 OriginLatitudeDbl = atof(OriginLatitude);
                 OriginLongitudeDbl = atof(OriginLongitude);
@@ -1200,17 +1216,20 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
         //Latitude
         MonrValueU32 = 0;
         //for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-        sprintf(Latitude, "%" PRIi32, (I32)(Llh[0]*1e7));
+        //sprintf(Latitude, "%" PRIi32, (I32)(Llh[0]*1e7));
+        sprintf(Latitude, "%" PRIi32, MONRData->XPositionI32);
 
         //Longitude
         MonrValueU32 = 0;
         //for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-        sprintf(Longitude, "%" PRIi32, (I32)(Llh[1]*1e7));
+        //sprintf(Longitude, "%" PRIi32, (I32)(Llh[1]*1e7));
+        sprintf(Longitude, "%" PRIi32, MONRData->YPositionI32);
 
         //Altitude
         MonrValueU32 = 0;
         //for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-        sprintf(Altitude, "%" PRIi32, (I32)(Llh[2]));
+        //sprintf(Altitude, "%" PRIi32, (I32)(Llh[2]));
+        sprintf(Altitude, "%" PRIi32, MONRData->ZPositionI32);
 
         //Speed
         MonrValueU16 = 0;
@@ -1413,7 +1432,6 @@ int ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeTyp
 
     if(!GPSTime->isGPSenabled)
     {
-        printf("STRT!\n");
         UtilgetCurrentGPStime(NULL,&STRTData->StartTimeU32);
     }
 
@@ -1499,6 +1517,7 @@ I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeTyp
     HEABData->Header.MessageLengthU32 = sizeof(HEABType) - sizeof(HeaderType);
     //HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16; 
     HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
+    //HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 0);
     HEABData->CCStatusU8 = CCStatus;
 
     if(!GPSTime->isGPSenabled){
@@ -1911,7 +1930,6 @@ static void vSendBytes(const char* data, int length, int* sockfd, int debug)
 
     if(debug){ printf("Bytes sent: "); int i = 0; for(i = 0; i < length; i++) printf("%x-", (unsigned char)*(data+i)); printf("\n");}
 
-    printf("Length: %d\n", length);
     n = write(*sockfd, data, length);
     if (n < 0)
     {
