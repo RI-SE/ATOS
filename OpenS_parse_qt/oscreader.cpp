@@ -66,6 +66,7 @@ qint8 OSCReader::loadDomdoc()
     QDomElement docElem = m_dom.documentElement();
     //QDomNode firstnode = docElem.firstChild();
 
+    qDebug() << "ECODE(parameters):" << readGlobalParameterDeclarations(docElem);
     qDebug() << "ECODE(actors):" << readActors(docElem);
     qDebug() << "ECODE(actions):" << readInitActions(docElem);
 
@@ -90,6 +91,10 @@ qint8 OSCReader::printLoadedDomDoc()
         action.printobject();
     }
 
+    foreach(OSCParameter param, m_parameters)
+    {
+        param.printobject();
+    }
     return 0;
 }
 
@@ -212,7 +217,7 @@ qint8 OSCReader::readGlobalParameterDeclarations(const QDomElement &root)
         paramName = parameterElement.attributeNode("name");
         paramType = parameterElement.attributeNode("type");
         paramValue = parameterElement.attributeNode("default");
-
+        m_parameters.append(OSCParameter(paramName.value(),paramType.value(),paramValue.value()));
     }
 
     return NO_ERROR;

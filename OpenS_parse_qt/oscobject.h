@@ -5,7 +5,7 @@
 #include <QObject>
 #include "osclib.h"
 
-class OSCObject : public QObject, public OSCType
+class OSCObject : public OSCType
 {
 public:
     OSCObject(QString name = "");

@@ -8,7 +8,7 @@
 
 typedef qint8 OSCParameterType;
 
-class OSCParameter : public QObject, public OSCType
+class OSCParameter : public OSCType
 {
 public:
 
@@ -25,9 +25,13 @@ public:
                             const QString &type = "",
                             const QString &value = "");
 
+    OSCParameter(const OSCParameter &other);
     ~OSCParameter();
 
     OSCParameterType getOSCParameterType();
+
+    void printobject();
+
 
 private:
     QString m_name;

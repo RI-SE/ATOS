@@ -5,7 +5,7 @@
 #include <QObject>
 #include "osclib.h"
 
-class OSCPrivateAction : public QObject, public OSCType
+class OSCPrivateAction : public OSCType
 {
 public:
     OSCPrivateAction(OSCObject *actor = 0, QString actionType = "");
