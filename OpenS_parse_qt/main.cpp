@@ -16,12 +16,15 @@ int main(int argc, char *argv[])
     }
 
 
+    // Print arguments
+    qDebug() << "Reading file: " << args[1];
+
     //reader.parseOSFile(args[1]);
 
-    reader.readtoDOMdoc(args[1]);
+    qDebug() << "ReadToDoc:" << reader.readtoDOMdoc(args[1]);
     //reader.printDOMdoc();
-    reader.loadDomdoc();
-    reader.printLoadedDomDoc();
+    qDebug() << "LoadDoc:" << reader.loadDomdoc();
+    qDebug() << "ReadLoadedDoc" << reader.printLoadedDomDoc();
 
     //return a.exec();
     return 0;

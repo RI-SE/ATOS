@@ -9,17 +9,24 @@ OSCReader::OSCReader()
 
 OSCReader::~OSCReader()
 {
+    foreach(OSCPrivateAction* actionptr, m_initActions)
+    {
+        delete actionptr;
+    }
     delete m_handler;
 }
 
 
 qint8 OSCReader::readtoDOMdoc(const QString &file_path)
 {
+    QString domError;
+    int errorLine;
     QFile file(file_path);
     if (!file.open(QIODevice::ReadOnly))
         return FILE_OPEN_ERROR;
-    if (!m_dom.setContent(&file)) {
+    if (!m_dom.setContent(&file,&domError,&errorLine)) {
         file.close();
+        qDebug() << domError << errorLine;
         return DOM_SET_CONTENT_ERROR;
     }
     file.close();
@@ -66,9 +73,11 @@ qint8 OSCReader::loadDomdoc()
     QDomElement docElem = m_dom.documentElement();
     //QDomNode firstnode = docElem.firstChild();
 
+    qDebug() << "ECODE(CatalogRef)" << readCatalogReferences(docElem);
     qDebug() << "ECODE(parameters):" << readGlobalParameterDeclarations(docElem);
     qDebug() << "ECODE(actors):" << readActors(docElem);
     qDebug() << "ECODE(actions):" << readInitActions(docElem);
+
 
 
     reader_state = DOC_LOADED;
@@ -86,14 +95,19 @@ qint8 OSCReader::printLoadedDomDoc()
         actor.printobject();
     }
 
-    foreach(OSCPrivateAction action, m_initActions)
+    foreach(OSCPrivateAction* action, m_initActions)
     {
-        action.printobject();
+        action->printobject();
     }
 
     foreach(OSCParameter param, m_parameters)
     {
         param.printobject();
+    }
+
+    foreach(OSCCatalogReference catalog, m_catalogs)
+    {
+        catalog.printobject();
     }
     return 0;
 }
@@ -132,6 +146,7 @@ qint32 OSCReader::findActorIndex(const QString &actorName)
 }
 
 
+
 qint8 OSCReader::readActors(const QDomElement &root)
 {
     if(root.isNull()) return NODE_EMPTY;
@@ -166,7 +181,8 @@ qint8 OSCReader::readInitActions(const QDomElement &root)
     QString actorName;
     QDomElement actionElem;
 
-    QVector<OSCPrivateAction> temp_actions;
+    QVector<OSCPrivateAction*> temp_actions;
+    OSCPrivateAction* loaded_action;
     qint32 actor_index;
     for(int i = 0; i < actors.size(); i++)
     {
@@ -183,13 +199,24 @@ qint8 OSCReader::readInitActions(const QDomElement &root)
 
             // Find the type of action
             actionElem = actor_actions.at(j).toElement();
-            temp_actions.append(OSCPrivateAction(&m_actors[actor_index],actionElem.firstChildElement().tagName()));
+            
+
+            switch (OSCPrivateAction::mapOSCPrivateAction(actionElem.nodeName())) {
+            case OSCPrivateAction::MEETING_ACTION:
+                loaded_action = new OSCPrivateAction(&m_actors[actor_index],actionElem.firstChildElement().tagName());
+                break;
+            default:
+                qDebug() << "Unknown Action:" << actionElem.nodeName();
+                loaded_action = new OSCPrivateAction(&m_actors[actor_index],actionElem.firstChildElement().tagName());
+            }
+
+            temp_actions.append(loaded_action);
 
         }
     }
 
     m_initActions = temp_actions;
-    qDebug() << "#actions: " << m_initActions.size();
+    //qDebug() << "#actions: " << m_initActions.size();
 
     return NO_ERROR;
 }
@@ -218,6 +245,37 @@ qint8 OSCReader::readGlobalParameterDeclarations(const QDomElement &root)
         paramType = parameterElement.attributeNode("type");
         paramValue = parameterElement.attributeNode("default");
         m_parameters.append(OSCParameter(paramName.value(),paramType.value(),paramValue.value()));
+    }
+
+    return NO_ERROR;
+}
+
+qint8 OSCReader::readCatalogReferences(const QDomElement &root)
+{
+
+    if(root.isNull()) return NODE_EMPTY;
+
+    QDomElement e = root.firstChildElement(OSC_KEYWORD_CATALOG);
+    if (e.isNull()) return NODE_NOT_EXISTS;
+
+
+    QDomNodeList catalogs = e.childNodes();
+    QDomElement catalogElem;
+    QDomElement directoryElem;
+    QDomAttr paramPath;
+
+    qDebug() << "Catalog elements: "<< catalogs.size();
+    for(int i = 0; i < catalogs.size();++i)
+    {
+        catalogElem = catalogs.item(i).toElement();
+        if (catalogElem.isNull()) {
+            qDebug() << catalogs.item(i).nodeName();
+            continue;
+        }
+        directoryElem = catalogElem.firstChildElement(OSC_KEWORD_DIRECTORY);
+        if (directoryElem.isNull()) return NODE_EMPTY;
+        paramPath = directoryElem.attributeNode("path");
+        m_catalogs.append(OSCCatalogReference(catalogElem.nodeName(),paramPath.value()));
     }
 
     return NO_ERROR;

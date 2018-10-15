@@ -9,8 +9,13 @@
 #define OSC_KEYWORD_PARAMETER "Parameter"
 #define OSC_KEYWORD_INIT "Init"
 #define OSC_KEYWORD_ACTIONS "Actions"
-#define OSC_KEYWORD_ACTION "Action"
 #define OSC_KEYWORD_PRIVATE "Private"
+#define OSC_KEYWORD_CATALOG "Catalogs"
+#define OSC_KEWORD_DIRECTORY "Directory"
+
+
+#define OSC_KEYWORD_ACTION "Action"
+#define OSC_KEYWORD_MEETING_ACTION "Meeting"
 
 #include <QDebug>
 #include <QSharedPointer>
@@ -19,11 +24,9 @@ class OSCObject;
 class OSCPrivateAction;
 class OSCCondition;
 class OSCParameter;
+class OSCCatalogReference;
 
-typedef  QSharedPointer<OSCObject> ObjectPtr;
-typedef  QSharedPointer<OSCPrivateAction> ActionPtr;
-typedef  QSharedPointer<OSCCondition> ConditionPtr;
-typedef  QSharedPointer<OSCParameter> ParameterPtr;
+
 
 class OSCType
 {
@@ -36,5 +39,6 @@ public:
 #include "oscprivateaction.h"
 #include "osccondition.h"
 #include "oscparameter.h"
+#include "osccatalogreference.h"
 
 #endif // OSCLIB_H

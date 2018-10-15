@@ -18,6 +18,8 @@
 	<!--   o Probably there will be a crash																	-->
 
 	<ParameterDeclaration>
+		<Parameter name="$TargetTrajectory" type="string" default="TargetLeftTurn"/>
+		<Parameter name="$EgoTrajectory" type="string" default="EgoStraight"/>
 		<Parameter name="$HostVehicle" type="string" default="Volvo_XC90_Red"/>
 		<Parameter name="$TargetVehicle" type="string" default="AudiA4_red_147kW"/>
 		<Parameter name="$HostSpeed" type="double" default="20"/>
@@ -65,29 +67,34 @@
 		<Init>
 			<Actions>
 				<Private object="Target">
+                                        <!-- Changes STARTS here, meeting scenario with trajectories instead of road -->
 					<Action>
-						<FollowTrajectory>
-							<CatalogReference catalogName="TrajectoryCatalog" entryName="TargetLeftTurn"/>
-						</FollowTrajectory>
-					</Action>
-					<Action>
-						<Longitudinal>
-							<Speed>  <!-- Initial speed, which then will be overriden by the meeting synchronization -->
-								<Dynamics shape="step"/>
-								<Target>
-									<Absolute value="$TargetSpeed" />
-								</Target>
-							</Speed>
-						</Longitudinal>
+	          <Routing>
+	            <FollowTrajectory>
+	              <CatalogReference catalogName="TrajectoryCatalog" entryName="$TargetTrajectory"/>
+	              <Longitudinal>
+	                      <None/>
+	              </Longitudinal>
+	            </FollowTrajectory>
+	          </Routing>
+
 					</Action>
 					<Action name="TargetSyncAction">
-						<Meeting mode="route" >
+						<Meeting mode="trajectory" >
 							<Position>
-								<Lane roadId="2" laneId="-1" offset="0" s="100" />
+								<!-- <Lane roadId="2" laneId="-1" offset="0" s="100" /> -->
+								<Trajectory id="$TargetTrajectory" index="10"/>
 							</Position>
-							<Relative mode="route" object="Ego" offsetTime="1" continuous="true" >
+							<!--<Relative mode="route" object="Ego" offsetTime="1" continuous="true" >-->
+							<Relative mode="trajectory" object="Ego" offsetTime="1" continuous="true">
 								<Position>
-									<Lane roadId="1" laneId="-1" offset="0" s="70" />
+									<!--<Lane roadId="1" laneId="-1" offset="0" s="70" />-->
+									<!--<Trajectory id="$EgoTrajectory" index="2"/>-->
+									<Route>
+						        <RouteRef>
+		                	<CatalogRederence catalogName="TrajectoryCatalog" entryName="$EgoTrajectory"/>
+						        </RouteRef>
+									</Route>
 								</Position>
 							</Relative>
 						</Meeting>
@@ -95,11 +102,14 @@
 				</Private>
 				<Private object="Ego">
 					<Action>
-						<Position>
-							<Lane roadId="1" laneId="-1" s="10" />
-						</Position>
+	          <Routing>
+	            <FollowTrajectory>
+	              <CatalogReference catalogName="TrajectoryCatalog" entryName="$EgoTrajectory"/>
+	            </FollowTrajectory>
+	          </Routing>
 					</Action>
 				</Private>
+                                <!-- Changes ENDS here -->
 			</Actions>
 		</Init>
 

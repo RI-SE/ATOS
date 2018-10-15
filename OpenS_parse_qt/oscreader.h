@@ -7,6 +7,11 @@
 #include <QDebug>
 #include "oshandler.h"
 
+
+
+
+
+
 class OSCReader : public QObject
 {
 public:
@@ -34,6 +39,8 @@ public:
         DOC_LOADED
     } OSCReader_INTERNAL_STATE;
 
+
+
     OSCReader();
     ~OSCReader();
     qint8 readtoDOMdoc(const QString &file_path);
@@ -55,9 +62,10 @@ private:
     QDomDocument m_dom;
 
     QVector<OSCObject> m_actors;
-    QVector<OSCPrivateAction> m_initActions;
+    QVector<OSCPrivateAction*> m_initActions;
     QVector<OSCPrivateAction> m_storyActions;
     QVector<OSCParameter> m_parameters;
+    QVector<OSCCatalogReference> m_catalogs;
 
 
     bool actorExists(const QString &actorName);
@@ -67,6 +75,9 @@ private:
     qint8 readActors(const QDomElement &root);
     qint8 readInitActions(const QDomElement &root);
     qint8 readGlobalParameterDeclarations(const QDomElement &root);
+    qint8 readCatalogReferences(const QDomElement &root);
+
+
 
 };
 

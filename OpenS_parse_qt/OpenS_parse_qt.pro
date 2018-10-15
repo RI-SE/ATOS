@@ -24,7 +24,8 @@ SOURCES += \
     oscstoryboard.cpp \
     oscobject.cpp \
     oscprivateaction.cpp \
-    oscparameter.cpp
+    oscparameter.cpp \
+    osccatalogreference.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -40,7 +41,8 @@ HEADERS += \
     oscstoryboard.h \
     oscobject.h \
     oscprivateaction.h \
-    oscparameter.h
+    oscparameter.h \
+    osccatalogreference.h
 
 DISTFILES += \
     notes.md
