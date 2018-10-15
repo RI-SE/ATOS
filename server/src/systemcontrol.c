@@ -1128,7 +1128,7 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
             if (ptr2 == NULL) ptr2 = ptr1; //No comment found 
             if(ptr1 != NULL && (U64)ptr2 >= (U64)ptr1 && ParameterFound == 0)
             {
-                ParameterFound == 1;
+                ParameterFound = 1;
                 bzero(NewRow, SMALL_BUFFER_SIZE_128);
                 strncpy(NewRow, Row, (U64)ptr1 - (U64)Row + strlen(Parameter));
                 strcat(NewRow, NewValue);
