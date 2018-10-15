@@ -65,6 +65,8 @@ typedef enum {
 #define OSTM_OPT_SET_DISARMED_STATE 3 
 #define SC_RECV_MESSAGE_BUFFER 1024
 
+#define SMALL_BUFFER_SIZE_128 128
+#define SMALL_BUFFER_SIZE_64 64
 #define SMALL_BUFFER_SIZE_16 16
 #define SMALL_BUFFER_SIZE_20 20
 #define SMALL_BUFFER_SIZE_6 6
@@ -73,6 +75,10 @@ typedef enum {
 #define SYSTEM_CONTROL_SEND_BUFFER_SIZE 1024
 
 #define SYSTEM_CONTROL_CONF_FILE_PATH  "conf/test.conf"
+#define SYSTEM_CONTROL_TEMP_CONF_FILE_PATH  "conf/temp.conf"
+
+#define SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE 1024
+
 
 #define SYSTEM_CONTROL_RESPONSE_CODE_OK 						0x0001
 #define SYSTEM_CONTROL_RESPONSE_CODE_ERROR 						0x0F10
@@ -84,17 +90,18 @@ typedef enum {
 #define SYSTEM_CONTROL_RESPONSE_CODE_INVALID_SCRIPT				0x0F50
 #define SYSTEM_CONTROL_RESPONSE_CODE_INVALID_ENCRYPTION_CODE	0x0F60
 #define SYSTEM_CONTROL_RESPONSE_CODE_DECRYPTION_ERROR			0x0F61
+#define SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA                    0x0F62
 
 
 typedef enum {
     Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0, InitializeScenario_0,
-    ConnectObject_0, DisconnectObject_0,
+    ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
     replay_1, control_0, Exit_0, start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 const char* SystemControlCommandsArr[] = 
 { 	
     "Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0", "AbortScenario_0", "InitializeScenario_0",
-    "ConnectObject_0", "DisconnectObject_0",
+    "ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2", "GetServerParameter_1",
     "replay_1", "control_0", "Exit_0", "start_ext_trigg_1"
 };
 
@@ -119,6 +126,9 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8
 void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I32 *sockfd, struct sockaddr_in* addr);
 I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
+I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 debug);
+I32 SystemControlReadServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
+I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
@@ -138,7 +148,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
     SystemControlCommand_t PreviousSystemControlCommand = Idle_0;
 
     int CommandArgCount=0, /*CurrentCommandArgCounter=0,*/ CurrentInputArgCount=0;
-    char pcBuffer[IPC_BUFFER_SIZE];
+    C8 pcBuffer[IPC_BUFFER_SIZE];
     char inchr;
     struct timeval tvTime;
     int iExit = 0;
@@ -182,6 +192,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
     struct timeval now;
     U16 MilliU16 = 0, NowU16 = 0;
     U64 GPSmsU64 = 0;
+    C8 ParameterListC8[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
 
 
     bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
@@ -483,7 +494,33 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             ControlResponseBuffer[1] = OBCStateU8;
             DEBUG_LPRINT(DEBUG_LEVEL_LOW,"GPSMillisecondsU64: %ld\n", GPSTime->GPSMillisecondsU64);
             SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 2, &ClientSocket, 0);
-            break;
+        break;
+        case GetServerParameterList_0:
+            SystemControlCommand = Idle_0;
+            bzero(ParameterListC8, SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE);
+            SystemControlReadServerParameterList(ParameterListC8, 0);
+            SystemControlSendControlResponse(strlen(ParameterListC8) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameterList:", ParameterListC8, strlen(ParameterListC8), &ClientSocket, 0);
+        break;
+        case GetServerParameter_1:
+            if(CurrentInputArgCount == CommandArgCount)
+            {
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlReadServerParameter(SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlSendControlResponse(strlen(ControlResponseBuffer) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameter:", ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
+
+            } else { printf("[SystemControl] Err: Wrong parameter count in GetServerParameter(Name)!\n"); SystemControlCommand = Idle_0;}
+        break;
+        case SetServerParameter_2:
+            if(CurrentInputArgCount == CommandArgCount)
+            {
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlWriteServerParameter(SystemControlArgument[0], SystemControlArgument[1], 0);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:", ControlResponseBuffer, 0, &ClientSocket, 0);
+
+            } else { printf("[SystemControl] Err: Wrong parameter count in SetServerParameter(Name, Value)!\n"); SystemControlCommand = Idle_0;}
+        break;
         case InitializeScenario_0:
             if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "IDLE") != NULL)
             {
@@ -639,7 +676,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     SystemControlCommand = PreviousSystemControlCommand;
                 }
 
-            } else printf("START command parameter count error.\n");
+            } else printf("[SystemControl] START command parameter count error.\n");
             break;
             /*
             case start_ext_trigg_1:
@@ -1048,3 +1085,149 @@ I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData
     return 0;
 }
 
+
+
+I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
+{
+
+    I32 RowCount, i;
+    C8 Parameter[SMALL_BUFFER_SIZE_64];
+    C8 Row[SMALL_BUFFER_SIZE_128];
+    C8 NewRow[SMALL_BUFFER_SIZE_128];
+    FILE *fd, *TempFd;
+    C8 *ptr1, *ptr2;
+    U8 ParameterFound = 0;
+    bzero(Parameter, SMALL_BUFFER_SIZE_64);
+
+    strcat(Parameter, ParameterName);
+    strcat(Parameter, "=");
+
+    //Remove temporary file
+    remove(SYSTEM_CONTROL_TEMP_CONF_FILE_PATH);
+
+    //Create temporary file
+    TempFd = fopen (SYSTEM_CONTROL_TEMP_CONF_FILE_PATH, "w+");
+    
+    //Open configuration file
+    fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
+    
+
+    if(fd > 0)
+    {
+        RowCount = UtilCountFileRows(fd);
+        fclose(fd);
+        fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
+    
+        for(i = 0; i < RowCount; i++)
+        {
+            bzero(Row, SMALL_BUFFER_SIZE_128);
+            UtilReadLine(fd, Row);
+            
+            ptr1 = strstr(Row, Parameter);
+            ptr2 = strstr(Row, "//");
+            if (ptr2 == NULL) ptr2 = ptr1; //No comment found 
+            if(ptr1 != NULL && (U64)ptr2 >= (U64)ptr1 && ParameterFound == 0)
+            {
+                ParameterFound == 1;
+                bzero(NewRow, SMALL_BUFFER_SIZE_128);
+                strncpy(NewRow, Row, (U64)ptr1 - (U64)Row + strlen(Parameter));
+                strcat(NewRow, NewValue);
+                if((U64)ptr2 > (U64)ptr1)
+                { 
+                    strcat(NewRow, " "); // Add space
+                    strcat(NewRow, ptr2); // Add the comment
+                }
+
+                if(Debug)
+                {
+                    printf("[SystemControl] Changed parameter: %s\n", NewRow);
+                }
+
+                strcat(NewRow, "\n");
+                (void)fwrite(NewRow,1,strlen(NewRow),TempFd);
+
+            } 
+            else
+            {
+                strcat(Row, "\n");
+                (void)fwrite(Row,1,strlen(Row),TempFd);
+            }
+        }
+    
+        fclose(TempFd);
+        fclose(fd);
+    
+        //Remove test.conf
+        remove(SYSTEM_CONTROL_CONF_FILE_PATH);
+
+        //Rename temp.conf to test.conf
+        rename(SYSTEM_CONTROL_TEMP_CONF_FILE_PATH, SYSTEM_CONTROL_CONF_FILE_PATH);
+
+        //Remove temporary file
+        remove(SYSTEM_CONTROL_TEMP_CONF_FILE_PATH);
+
+    }
+
+
+    return 0;
+}
+
+
+
+I32 SystemControlReadServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug)
+{
+
+    I32 RowCount, i;
+    C8 TextBuffer[SMALL_BUFFER_SIZE_128];
+
+    bzero(TextBuffer, SMALL_BUFFER_SIZE_128);
+
+    strcat(TextBuffer, ParameterName);
+    strcat(TextBuffer, "=");
+
+    UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, TextBuffer, "", ReturnValue);
+
+    if(Debug)
+    {
+        printf("[SystemControl] %s = %s\n", ParameterName, ReturnValue);
+    }
+
+    return strlen(ReturnValue);
+}
+
+
+I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 Debug)
+{
+
+    I32 RowCount, i;
+    C8 TextBuffer[SMALL_BUFFER_SIZE_128];
+    FILE *fd;
+
+    fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
+    if(fd > 0)
+    {
+        RowCount = UtilCountFileRows(fd);
+        fclose(fd);
+        fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
+    
+        for(i = 0; i < RowCount; i++)
+        {
+            bzero(TextBuffer, SMALL_BUFFER_SIZE_128);
+            UtilReadLineCntSpecChars(fd, TextBuffer);
+            if(strlen(TextBuffer) > 0)
+            {
+                strcat(ParameterList, TextBuffer);
+                strcat(ParameterList, ";");        
+            }
+        }
+    
+        fclose(fd);
+    }
+
+    if(Debug)
+    {
+        printf("[SystemControl] ParameterList = %s\n", ParameterList);
+    }
+
+    return strlen(ParameterList);
+}

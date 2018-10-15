@@ -96,10 +96,10 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "195.0.0.10"
-#define TESTSERVER_IP "195.0.0.10"
+#define TESTHOST_IP "192.168.0.163"
+#define TESTSERVER_IP "192.168.0.163"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "195.0.0.10" 
+#define LOCAL_USER_CONTROL_IP "192.168.0.163" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -580,6 +580,7 @@ float UtilCalculateTimeToSync(ObjectPosition *OP);
 
 int UtilCountFileRows(FILE *fd);
 int UtilReadLineCntSpecChars(FILE *fd, char *Buffer);
+int UtilReadLine(FILE *fd, char *Buffer);
 char UtilGetch();
 int UtilAddEightBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned long Data);
 int UtilAddSixBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned long Data);
@@ -587,7 +588,7 @@ int UtilAddFourBytesMessageData(unsigned char *MessageBuffer, int StartIndex, un
 int UtilAddTwoBytesMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned short Data);
 int UtilAddOneByteMessageData(unsigned char *MessageBuffer, int StartIndex, unsigned char Data);
 int UtilAddNBytesMessageData(unsigned char *MessageBuffer, int StartIndex, int Length, unsigned char *Data);
-char * UtilSearchTextFile(char *Filename, char *Text1, char *Text2, char *Result);
+C8 * UtilSearchTextFile(C8 *Filename, C8 *Text1, C8 *Text2, C8 *Result);
 int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);

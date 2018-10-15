@@ -1318,7 +1318,30 @@ int UtilReadLineCntSpecChars(FILE *fd, char *Buffer)
 }
 
 
-char* UtilSearchTextFile(char *Filename, char *Text1, char *Text2, char *Result)
+int UtilReadLine(FILE *fd, char *Buffer)
+{
+  int c = 0;
+  int d = 0;
+  int SpecChars = 0;
+  int comment = 0;
+
+  while( (c != EOF) && (c != '\n') )
+  {
+    c = fgetc(fd);
+    //printf("%x-", c);
+    if(c != '\n')
+    {
+        *Buffer = (char)c;
+        Buffer++;
+        d++;
+     } 
+  }
+  return d;
+}
+
+
+
+C8 * UtilSearchTextFile(C8 *Filename, C8 *Text1, C8 *Text2, C8 *Result)
 {
 
   FILE *fd;
@@ -1328,7 +1351,7 @@ char* UtilSearchTextFile(char *Filename, char *Text1, char *Text2, char *Result)
   char *PtrText1;
   char *PtrText2;
   int Length;
-  int Found = 0;
+  U8 Found = 0;
   
   fd = fopen (Filename, "r");
   int RowCount = UtilCountFileRows(fd);
