@@ -120,6 +120,10 @@
 
 #define LOG_BUFFER_LENGTH 128
 
+#define USE_TEMP_LOGFILE 0
+#define TEMP_LOG_FILE "log/temp.log"
+
+
 typedef enum {
     COMMAND_HEARTBEAT_GO,
     COMMAND_HEARTBEAT_ABORT
@@ -282,6 +286,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     U8 DisconnectU8 = 0;
     I32 iResult;
+
+    FILE *TempFd;
+
     (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
     while(!iExit)
@@ -538,6 +545,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     }
                 }
 
+                if(USE_TEMP_LOGFILE) (void)fwrite(MessageBuffer,1,MessageLength,TempFd); //Write VOIL data to file
             }
             else if(iCommand == COMM_REPLAY)
             {
@@ -640,10 +648,20 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 LOG_SEND(LogBuffer, "[ObjectControl] ASP in system: %d\n", SyncPointCount);
                 LOG_SEND(LogBuffer, "[ObjectControl] TAA in system: %d\n", TriggerActionCount);
 
-
-
                 OBCState = OBC_STATE_INITIALIZED;
                 LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.\n");
+
+                
+                if(TempFd != NULL) fclose(TempFd);
+                
+                //Remove temporary file
+                remove(TEMP_LOG_FILE);
+                
+                if(USE_TEMP_LOGFILE)
+                {
+                    //Create temporary file
+                    TempFd = fopen (TEMP_LOG_FILE, "w+");
+                }
             }
             else if(iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED)
             {
