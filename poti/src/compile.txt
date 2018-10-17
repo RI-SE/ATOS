@@ -1,1 +1,0 @@
-gcc -I../inc nmea2etsi.c poti_byte.c -o test
