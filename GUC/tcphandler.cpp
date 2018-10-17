@@ -4,31 +4,7 @@
 
 TCPhandler::TCPhandler(QObject *parent)
 {
-
-}
-
-
-bool TCPhandler::establishConnection(QString IP_addr, int port)
-{
-    if (!isValidIP(IP_addr))
-    {
-        emit debugComMsg("Incorrect IP-address.");
-        return false;
-    }
-
-    if (mTcpServer)
-    {
-        //qDebug() << "Closing down TCP server connection.";
-        mTcpServer->close();
-        delete mTcpServer;
-    }
-    if (mTcpSocket)
-    {
-        //qDebug() << "Closing down TCP socket connection.";
-        mTcpSocket->close();
-        delete mTcpSocket;
-    }
-
+    ipaddr = new QHostAddress();
     mTcpSocket = new QTcpSocket(this);
 
     connect(mTcpSocket,SIGNAL(connected()),
@@ -39,16 +15,32 @@ bool TCPhandler::establishConnection(QString IP_addr, int port)
             this,SLOT(connectionStateChanged(QAbstractSocket::SocketState)));
     connect(mTcpSocket,SIGNAL(error(QAbstractSocket::SocketError)),
             this,SLOT(handleConnectionError(QAbstractSocket::SocketError)));
-    emit debugComMsg("Connecting to host [" + IP_addr + ";" + QString::number(port) + "]");
+    connect(mTcpSocket,SIGNAL(readyRead()),
+            this,SLOT(dataAvailable()));
 
+}
+TCPhandler::~TCPhandler(){
+    delete ipaddr;
+    delete mTcpSocket;
+}
+
+
+bool TCPhandler::establishConnection(QString IP_addr, int port)
+{
+    if (!ipaddr->setAddress(IP_addr))
+    {
+        emit debugComMsg("Incorrect IP-address: " + IP_addr);
+        return false;
+    }
 
     mTcpSocket->connectToHost(IP_addr,port);
-
+    emit debugComMsg("Connecting to host [" + IP_addr + ";" + QString::number(port) + "]");
     return true;
 }
 
 void TCPhandler::closeConnection() {
-    if (mTcpSocket) mTcpSocket->close();
+
+    mTcpSocket->close();
 }
 
 bool TCPhandler::isValidIP(QString IP_addr)
@@ -63,13 +55,14 @@ bool TCPhandler::isValidIP(QString IP_addr)
 bool TCPhandler::listenForConnection(int port)
 {
     //TODO
-    return true;
+    return false;
 }
 
 bool TCPhandler::sendData(const QByteArray &data)
 {
     if (mTcpSocket){
-        mTcpSocket->write(data);
+        if(mTcpSocket->state() == QAbstractSocket::ConnectedState)
+            mTcpSocket->write(data);
         //emit debugComMsg("Sending " + QString::number(data.length()) + "B:" + QString(data.toHex()));
         return true;
     }
@@ -78,8 +71,6 @@ bool TCPhandler::sendData(const QByteArray &data)
 
 int TCPhandler::getConnectionState()
 {
-    if (!mTcpSocket) return -1;
-
     return mTcpSocket->state();
 }
 
@@ -94,8 +85,7 @@ void TCPhandler::connectionEstablished()
             QString::number(mTcpSocket->peerPort()) ;*/
     //qDebug() << msg;
 
-    connect(mTcpSocket,SIGNAL(readyRead()),
-            this,SLOT(dataAvailable()));
+
 
     emit connectionChanged(TCP_STATE_CONNECTED);
     emit debugComMsg(msg);
@@ -113,7 +103,6 @@ void TCPhandler::connectionTerminated()
 void TCPhandler::connectionStateChanged(QAbstractSocket::SocketState state)
 {
 
-    //TODO: Add state text
     QString msg = "Connection State Changed: " + QString::number(state);
     qDebug() << msg;
     emit debugComMsg(msg);
@@ -121,7 +110,6 @@ void TCPhandler::connectionStateChanged(QAbstractSocket::SocketState state)
 
 void TCPhandler::handleConnectionError(QAbstractSocket::SocketError error)
 {
-    //TODO: Add error text
     QString msg = "Connection error: " + QString::number(error);
     qDebug() << msg;
     emit debugComMsg(msg);

@@ -18,8 +18,34 @@ BackEnd::BackEnd(QObject *parent) :
 
     expected_response_id = new QLinkedList<qint8>();
     timer->start(500);
-
+    readConfigurationSettings();
 }
+
+BackEnd::~BackEnd()
+{
+    setConfigurationSettings();
+}
+
+//****************************************
+// Private methods
+//****************************************
+void BackEnd::readConfigurationSettings()
+{
+    QSettings settings(__COMPANY__,__APP_NAME__);
+
+    settings.beginGroup("BackEnd");
+    setHostName(settings.value("hostName","").toString());
+    settings.endGroup();
+}
+void BackEnd::setConfigurationSettings()
+{
+    QSettings settings(__COMPANY__,__APP_NAME__);
+
+    settings.beginGroup("BackEnd");
+    settings.setValue("hostName",hostName());
+    settings.endGroup();
+}
+
 //****************************************
 // Public Q_INVOKABLE methods
 //****************************************
@@ -84,9 +110,22 @@ bool BackEnd::sendDisconnectObject()
 //****************************************
 // Public Q_Property methods
 //****************************************
+QString BackEnd::debugMessage()
+{
+    return m_debugMessage;
+}
+
+void BackEnd::setDebugMessage(const QString &debugMessage)
+{
+    if (debugMessage == m_debugMessage)
+        return;
+    //m_addressValidity = addressValid(hostName);
+    m_debugMessage = debugMessage;
+    emit debugMessageChanged();
+}
+
 QString BackEnd::hostName()
 {
-    qDebug() << "Host name fetched";
     return m_hostName;
 }
 
@@ -94,7 +133,7 @@ void BackEnd::setHostName(const QString &hostName)
 {
     if (hostName == m_hostName)
         return;
-    m_addressValidity = addressValid(hostName);
+    //m_addressValidity = addressValid(hostName);
     m_hostName = hostName;
     emit hostNameChanged();
 }
@@ -171,7 +210,8 @@ void BackEnd::handleDebugMessage(const QString &msg)
             + QString::number(time.msec()) + "]: ";
 
     qDebug() << datetime_string << msg;
-    emit newDebugMessage( datetime_string + msg );
+    setDebugMessage(datetime_string + msg);
+    //emit newDebugMessage( datetime_string + msg );
 }
 
 void BackEnd::handleRecDataDebugMessage(const QString &msg)
@@ -285,11 +325,5 @@ void BackEnd::update()
     if (mTcphandler->isConnected())
     {
         sendGetStatus();
-    }
-
-    if (m_sysCtrlStatus == MSCP_SYSTEM_CONTROL_STATE_IDLE &&
-            m_objCtrlStatus == MSCP_OBJECT_CONTROL_STATE_INITIALIZED)
-    {
-        sendConnectObject();
     }
 }

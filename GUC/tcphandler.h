@@ -17,6 +17,7 @@ class TCPhandler : public QObject
 
 public:
     explicit TCPhandler(QObject *parent = nullptr);
+    ~TCPhandler();
 
     bool establishConnection(QString IP_addr, int port);
 
@@ -44,8 +45,8 @@ signals:
     void connectionChanged(const int &isConnected);
     void receivedData(const QByteArray &data);
 private:
-    QTcpServer *mTcpServer = NULL;
     QTcpSocket *mTcpSocket = NULL;
+    QHostAddress *ipaddr = NULL;
 
 private slots:
     void connectionEstablished();

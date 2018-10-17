@@ -10,17 +10,16 @@ ApplicationWindow {
     visible: true
     width: 1240
     height: 800
-    //title: qsTr("GUC")
+
+    property bool isConsoleShowing: false
+    property bool testbool: false
 
 
     BackEnd {
         id: backend
-
-
         onEnterStartScreen:
         {
             stackView.pushFirst()
-            console.log("flipped screen")
         }
         onEnterConnectionScreen:
         {
@@ -28,7 +27,6 @@ ApplicationWindow {
         }
         onNewDebugMessage: {
             //console.log(debugText)
-            //textArea.append(debugText)
         }
 
 
@@ -40,6 +38,41 @@ ApplicationWindow {
         height: 50
         color: "#bbbbbb"
 
+        Button {
+            text: "Show/Hide Console"
+            width: parent.width / 3
+            height: parent.height
+            anchors.horizontalCenter: parent.horizontalCenter
+
+            onClicked:
+            {
+                if (window.isConsoleShowing)
+                {
+                    isConsoleShowing = false
+
+                }
+                else
+                {
+                    isConsoleShowing = true
+                }
+
+                /*
+                if (window.isConsoleShowing){
+                    console.log("Popping")
+                    stackView.pop()
+                    window.isConsoleShowing = false
+                }
+                else
+                {
+                    console.log("Pushing")
+                    stackView.push(scrollcomponent)
+                    window.isConsoleShowing = true
+                }
+                */
+            }
+        }
+
+        /*
         Button {
             id: back
             y: 5
@@ -56,9 +89,10 @@ ApplicationWindow {
             anchors.rightMargin: 8
             text: qsTr(">")
             onClicked: stackView.pushFirst()
-        }
+        }*/
     }
-/*
+
+    /*
     Rectangle {
         id: footer
         width: parent.width
@@ -80,16 +114,27 @@ ApplicationWindow {
         }
     } */
 
-
+    Console {
+        id:myConsole
+        visible: window.isConsoleShowing
+        width: parent.width
+        height: (parent.height - header.height) / 3
+        anchors.bottom: parent.bottom
+        displayMessage: backend.debugMessage
+    }
 
     StackView {
         id: stackView
+        property alias customHeight : window.height
+        property alias isResizing: window.isConsoleShowing
         //anchors.fill: parent
+        onCustomHeightChanged: heightResize()
+        onIsResizingChanged: heightResize()
+
         initialItem: csrcn
         anchors.top: header.bottom
-        anchors.bottom: parent.bottom
         width: parent.width
-        //height: parent.height - header.height
+        height: parent.height - header.height
 
         function pushFirst(){
             if (stackView.depth < 2) {
@@ -97,8 +142,21 @@ ApplicationWindow {
             }
         }
 
-
+        function heightResize()
+        {
+            if (stackView.isResizing)
+            {
+                stackView.height = (parent.height - header.height) / 3 * 2
+            }
+            else
+            {
+                stackView.height = parent.height - header.height
+            }
+        }
     }
+
+
+
 
 
 
@@ -106,34 +164,47 @@ ApplicationWindow {
     {
         id: csrcn
         ConnectScreen {
+            rootText: backend.hostName //qsTr("10.111.144.4")//qsTr("127.0.0.1")
             connectText: backend.connectionText
             onClicked: backend.initConnect()
             onRootTextChanged:
             {
-                backend.setHostName(rootText)
+                backend.hostName = rootText
                 setIPstatus(backend.addressValid(rootText))
             }
             anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter
-            rootText: qsTr("127.0.0.1")
+
         }
     }
 
 
     Component {
         id: controlView
+
+
         ActionView {
+
             onArmClicked: backend.sendArmToHost()
             onStartClicked: backend.sendStartToHost(1000)
             onAbortClicked: backend.sendAbortToHost()
             //onStatusClicked: backend.sendGetStatus()
             onInitClicked: backend.sendInit()
             onConnectClicked: backend.sendConnectObject()
-            onDisconnectClicked: backend.sendDisconnectObject()
+            onDisconnectClicked: backend.closeConnect()
+            onResetClicked: backend.sendDisconnectObject()
 
             sysCtrlStatus:  backend.sysCtrlStatus
             objCtrlStatus: backend.objCtrlStatus
 
+        }
+
+
+
+    }
+    Component {
+        id: scrollcomponent
+        Console {
 
         }
     }
