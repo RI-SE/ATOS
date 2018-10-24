@@ -1,20 +1,33 @@
 # Chronos test server
 
-# This is a test line
-
 ## How to build and run server
+```sh
 cd  server
 mkdir build && cd build
-
+```
 ## Create project
+```sh
 cmake -G "Unix Makefiles" ..
-## Create project with debug data
-cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
+```
 
+### With debug data
+```sh
+cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
+```
+
+```sh
 make
 cp -R ../conf/ .
-cp ../traj/0.traj ./traj/192.168.0.1
+cp ../traj/0.traj ./traj/192.168.0.1  
+```
+
+
+
+```sh
 ./TEServer
+
+```
+
 # To communicate with server start program.
 ./UserControl [IP] [port]
 
