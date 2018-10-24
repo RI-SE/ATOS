@@ -18,11 +18,16 @@ For debug data add the following:
 cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
 ```
 
-make the project. Look into fixing -> [cp ../traj/0.traj ./traj/192.168.0.1  
+make the project
 ]
 ```sh
 make
 cp -R ../conf/ .
+```
+
+Create a folder for Trajectory files in /build and move one of the existing trajectory files to this folder. 
+```sh
+mkdr traj
 cp ../traj/0.traj ./traj/192.168.0.1  
 ```
 
