@@ -1,31 +1,34 @@
 # Chronos test server
 
-## How to build and run server
+## How to build and run the server
+
+Navigate to the the repo and enter the build folder 
+
 ```sh
 cd  server
 mkdir build && cd build
 ```
-## Create project
+create project
 ```sh
 cmake -G "Unix Makefiles" ..
 ```
+For debug data add the following: 
 
-### With debug data
 ```sh
 cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
 ```
 
+make the project. Look into fixing -> [cp ../traj/0.traj ./traj/192.168.0.1  
+]
 ```sh
 make
 cp -R ../conf/ .
 cp ../traj/0.traj ./traj/192.168.0.1  
 ```
 
-
-
+Start the server
 ```sh
 ./TEServer
-
 ```
 
 # To communicate with server start program.
