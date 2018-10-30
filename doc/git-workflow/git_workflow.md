@@ -43,7 +43,7 @@ Working branches should be named: `[initials]_[branch_name]`
 2. Create branch
     - Always create a new branch from the place it will be merged back into
     - names should be kept short and descriptive. 
-    - prefixed with initials (eg. `JB_banch_name`)
+    - prefixed with initials (eg. `JB_branch_name`)
 
 ### Pushing and Commiting Changes
 
