@@ -56,7 +56,7 @@ Working branches should be named: `[initials]_[branch_name]`
 
 ### Pull Request
 
-7. Open pull request into relevant branch7
+7. Open pull request into relevant branch
     - Write a descriptive title of task
     - Bullet points with descriptions of changes
     - assign one or two people to review changes. 
