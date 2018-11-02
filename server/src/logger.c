@@ -114,14 +114,17 @@ void logger_task()
 
         if(LoggerExecutionMode == LOG_CONTROL_MODE)
         {
-            /* Write time, command, buffer */
-            gettimeofday(&tvTime, NULL);
-            uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 -
-                    MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-            bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-            sprintf ( pcBuffer,"%" PRIu64 ": %d %s\n", uiTime, iCommand, pcRecvBuffer);
-            //printf("INF: Data written to logfile <%s>", pcBuffer);
-            (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+            if(iCommand != COMM_OBC_STATE) //Don't log COMM_OBC_STATE
+            {
+                /* Write time, command, buffer */
+                gettimeofday(&tvTime, NULL);
+                uint64_t uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 -
+                        MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                sprintf ( pcBuffer,"%" PRIu64 ": %d %s\n", uiTime, iCommand, pcRecvBuffer);
+                //printf("INF: Data written to logfile <%s>", pcBuffer);
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+            }
         }
 
         if(iCommand == COMM_REPLAY)

@@ -96,10 +96,10 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.15"
-#define TESTSERVER_IP "192.168.0.15"
-#define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.15" 
+#define TESTHOST_IP "10.130.23.67"
+#define TESTSERVER_IP "10.130.23.67"
+#define USE_LOCAL_USER_CONTROL  1
+#define LOCAL_USER_CONTROL_IP "10.130.23.67" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -195,8 +195,10 @@
 #define VALUE_ID_MAX_WAY_DEVIATION          0x70
 #define VALUE_ID_MAX_LATERAL_DEVIATION      0x72
 #define VALUE_ID_MIN_POS_ACCURACY           0x74
-#define VALUE_ID_CURVATURE                  0xA000
-
+#define VALUE_ID_CURVATURE                  0x52
+#define VALUE_ID_TRAJECTORY_ID              0x101
+#define VALUE_ID_TRAJECTORY_NAME            0x102
+#define VALUE_ID_TRAJECTORY_VERSION         0x103
 
 #define C8 uint8_t
 #define U8 uint8_t
@@ -347,6 +349,18 @@ typedef struct
 
 typedef struct
 {
+  U16 TrajectoryIDValueIdU16;
+  U16 TrajectoryIDContentLengthU16;
+  U16 TrajectoryIDU16;
+
+  U16 TrajectoryNameValueIdU16;
+  U16 TrajectoryNameContentLengthU16;
+  C8 TrajectoryNameC8[64];
+
+  U16 TrajectoryVersionValueIdU16;
+  U16 TrajectoryVersionContentLengthU16;
+  U16 TrajectoryVersionU16;
+
   U16 RelativeTimeValueIdU16;
   U16 RelativeTimeContentLengthU16;
   U32 RelativeTimeU32;
@@ -374,10 +388,10 @@ typedef struct
   U16 LateralAccValueIdU16;
   U16 LateralAccContentLengthU16;
   I16 LateralAccI16;
-  //U16 CurvatureValueIdU16;
-  //U16 CurvatureContentLengthU16;
-  //I32 CurvatureI32;
-} DOTMType; //62 bytes
+  U16 CurvatureValueIdU16;
+  U16 CurvatureContentLengthU16;
+  I32 CurvatureI32;
+} DOTMType; //70 bytes
 
 
 typedef struct
@@ -416,6 +430,8 @@ typedef struct
   U8 ExitU8;
   U32 ScenarioStartTimeU32;
   U8 VOILData[400];
+  U32 ChunkSize;
+  U8 Chunk[1200];
 } GSDType;
 
 typedef struct
