@@ -52,7 +52,7 @@
   ------------------------------------------------------------*/
 
 void SimulatorControlSendHeartbeat( I32 *Sockfd, struct sockaddr_in *Addr, TimeType *GPSTime, U8 Debug);
-void SimulatorControlInitiateSimulator( I32 *Sockfd, U8 SimulatorMode, U8 Debug);
+void SimulatorControlInitSimulator( I32 *Sockfd, U8 SimulatorMode, C8 *FunctionReqResponse, U8 Debug);
 void SimulatorControlStartScenario( I32 *Sockfd, C8 *StartTime, U8 Debug);
 void SimulatorControlSendMONR( I32 *Sockfd, struct sockaddr_in *Addr, C8 *MonrData, U8 Debug);
 U32 SimulatorControlBuildObjectMonitorMessage(C8* MessageBuffer, C8 *MONRData, ObjectMonitorType *ObjectMonitorData, U8 debug);
@@ -104,6 +104,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   C8 Timestamp[SIM_CONTROL_BUFFER_SIZE_20];
   ObjectMonitorType ObjectMonitorData;
   U32 LengthU32;
+  C8 SimulatorControlFunctionReqResponse[SIM_CONTROL_BUFFER_SIZE_128];
 
   gettimeofday(&ExecTime, NULL);
   CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
@@ -150,12 +151,12 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
             SimulatorTCPSocketfdI32 = -1;
             SimulatorInitiatedU8 = 0;
         }
-        
+
         if(SimulatorInitiatedReqU8 == 0 && SimulatorTCPSocketfdI32 > 0)
         {
           
           /*Initiate the simulator if not initialized and a there is a valid TCP connection */
-          SimulatorControlInitiateSimulator(&SimulatorTCPSocketfdI32, SIM_CONTROL_DTM_MODE, 0);
+          SimulatorControlInitSimulator(&SimulatorTCPSocketfdI32, SIM_CONTROL_DTM_MODE, SimulatorControlFunctionReqResponse, 0);
           SimulatorInitiatedReqU8 = 1;
         }
         
@@ -170,7 +171,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
           //Ok, received data on TCP, do something with the data
 
-          if( ReceiveBuffer[19] == 1 && ReceiveBuffer[20] == 2 && SimulatorInitiatedU8 == 0)
+          if( ReceiveBuffer[0] == 1 && ReceiveBuffer[20] == 2 && SimulatorInitiatedU8 == 0)
           {
             SimulatorInitiatedU8 = 1;
             SimulatorControlObjectAddressList(&SimulatorTCPSocketfdI32, "10.130.23.220", 1);
@@ -179,12 +180,10 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           {
               //Binary data is received from simulator, send to binary message manager
               SimulatorControlBinaryMessageManager(ClientResultI32, ReceiveBuffer, GSD, 1);
-          }
-
+          }      
         }
 
-        
-        /*Check if we received UDP data from the simulator*/
+         /*Check if we received UDP data from the simulator*/
         bzero(ReceiveBuffer, SIM_CONTROL_BUFFER_SIZE_400);
         UtilReceiveUDPData("SimulatorControl", &SimulatorUDPSocketfdI32, ReceiveBuffer, 100, &ReceivedNewData, 0);
 
@@ -301,7 +300,7 @@ void SimulatorControlStartScenario( I32 *Sockfd, C8 *StartTime, U8 Debug)
 }
 
 
-void SimulatorControlInitiateSimulator( I32 *Sockfd, U8 SimulatorMode, U8 Debug)
+void SimulatorControlInitSimulator( I32 *Sockfd, U8 SimulatorMode, C8 *FunctionReqResponse, U8 Debug)
 {
   C8 SendData[SIM_CONTROL_BUFFER_SIZE_128];
   C8 SendLength[4] = {0,0,0,0};
@@ -312,8 +311,8 @@ void SimulatorControlInitiateSimulator( I32 *Sockfd, U8 SimulatorMode, U8 Debug)
   
   sprintf(Mode, "%" PRIu8, SimulatorMode);
   strcat(SendData, Mode);
-  strcat(SendData, ")");
-  
+  strcat(SendData, ")"); 
+
   Length = (I32)(strlen(SendData));
   SendLength[3] = (U8)Length;
     
