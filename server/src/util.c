@@ -1657,6 +1657,11 @@ int iCommSend(const int iCommand,const char* cpData)
       uiMessagePrio = 80;
       cpMessage[0] = (char)COMM_VIOP;
     }
+  else if (iCommand == COMM_TRAJ)
+    {
+      uiMessagePrio = 80;
+      cpMessage[0] = (char)COMM_TRAJ;
+    }
   else
     {
       util_error("ERR: Unknown command");
@@ -1897,7 +1902,7 @@ void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, 
 {
     I32 i, n;
 
-    if(Debug == 1){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%d-", (C8)*(Data+i)); printf("\n");}
+    if(Debug == 1){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
 
     n = write(*Sockfd, Data, Length);
     if (n < 0)
@@ -2047,4 +2052,80 @@ U32 UtilIPStringToInt(C8 *IP)
     }
 
     return IpU32;
+}
+
+
+U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug)
+{
+  U32 i, j = 0;
+  C8 Bin;
+  C8 Hex;
+
+  printf("UtilHexTextToBinary: %d\n", DataLength);
+  for(i = 0; i < DataLength; )
+  {
+
+    Hex = *(Text + i++);
+    if(Hex >= 0x30 && Hex <= 0x39) Hex = Hex - 0x30;
+    else if (Hex >= 0x41 && Hex <= 0x46) Hex = Hex - 0x37;
+    Bin = Hex << 4;
+
+    Hex = *(Text + i++);
+    if(Hex >= 0x30 && Hex <= 0x39) Hex = Hex - 0x30;
+    else if (Hex >= 0x41 && Hex <= 0x46) Hex = Hex - 0x37;
+    Bin = Bin | Hex;
+
+    *(Binary + j++) = Bin;
+
+  }
+
+ if(Debug)
+  {
+    printf("[Util:UtilHexTextToBinary] Length = %d: ", DataLength/2);
+    for(i = 0;i < DataLength/2; i ++) printf("%x ", *(Binary + i));
+    printf("\n");
+  }
+
+
+  return j;
+}
+
+
+U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug)
+{
+    U32 i, j=0;
+    C8 Hex;
+    
+
+    for(i = 0; i < DataLength; i++)
+    {
+      Hex = *(Binary + i) >> 4;
+      //Hex = Hex >> 4;
+      //printf("%x\n", Hex);
+      if(Hex >= 0 && Hex <= 9) Hex = Hex + 0x30;
+      else if (Hex >= 10 && Hex <= 15) Hex = Hex + 0x37;
+      //printf("%x\n", Hex);
+      *(Text + j++) = Hex;
+      
+      Hex = *(Binary + i) & 0x0F;
+      //printf("%x\n", Hex);
+      //Hex = Hex & 0x0F;
+      //printf("%x\n", Hex);
+      if(Hex >= 0 && Hex <= 9) Hex = Hex + 0x30;
+      else if (Hex >= 10 && Hex <= 15) Hex = Hex + 0x37;
+      //printf("%x", Hex);
+      *(Text + j++) = Hex;
+    }
+
+
+   if(Debug)
+    {
+      printf("[Util:UtilBinaryToHexText] Length = %d: ", j);
+      for(i = 0;i < j; i ++) printf("%x ", *(Text + i));
+      printf("\n");
+    }
+
+
+
+    return j;
 }

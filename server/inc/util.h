@@ -62,6 +62,7 @@
 #define COMM_DISCONNECT 13  
 #define COMM_LOG 14
 #define COMM_VIOP 15
+#define COMM_TRAJ 16  
 #define COMM_INV 255
 
 
@@ -98,7 +99,7 @@
 #define USE_TEST_HOST 0
 #define TESTHOST_IP "10.130.23.67"
 #define TESTSERVER_IP "10.130.23.67"
-#define USE_LOCAL_USER_CONTROL  0
+#define USE_LOCAL_USER_CONTROL  1
 #define LOCAL_USER_CONTROL_IP "10.130.23.67" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
@@ -349,18 +350,6 @@ typedef struct
 
 typedef struct
 {
-  U16 TrajectoryIDValueIdU16;
-  U16 TrajectoryIDContentLengthU16;
-  U16 TrajectoryIDU16;
-
-  U16 TrajectoryNameValueIdU16;
-  U16 TrajectoryNameContentLengthU16;
-  C8 TrajectoryNameC8[64];
-
-  U16 TrajectoryVersionValueIdU16;
-  U16 TrajectoryVersionContentLengthU16;
-  U16 TrajectoryVersionU16;
-
   U16 RelativeTimeValueIdU16;
   U16 RelativeTimeContentLengthU16;
   U32 RelativeTimeU32;
@@ -391,7 +380,25 @@ typedef struct
   U16 CurvatureValueIdU16;
   U16 CurvatureContentLengthU16;
   I32 CurvatureI32;
-} DOTMType; //70 bytes
+} DOTMType; //158 bytes
+
+
+typedef struct 
+{
+  U16 TrajectoryIDValueIdU16;
+  U16 TrajectoryIDContentLengthU16;
+  U16 TrajectoryIDU16;
+  U16 TrajectoryNameValueIdU16;
+  U16 TrajectoryNameContentLengthU16;
+  C8 TrajectoryNameC8[64];
+  U16 TrajectoryVersionValueIdU16;
+  U16 TrajectoryVersionContentLengthU16;
+  U16 TrajectoryVersionU16;
+  U16 IpAddressValueIdU16;
+  U16 IpAddressContentLengthU16;
+  I32 IpAddressU32;
+
+} TRAJInfoType;
 
 
 typedef struct
@@ -433,6 +440,9 @@ typedef struct
   U32 ChunkSize;
   U8 Chunk[1200];
 } GSDType;
+
+
+
 
 typedef struct
 {
@@ -632,7 +642,8 @@ void UtilCreateUDPChannel(const C8* Module, I32 *Sockfd, const C8* IP, const U32
 void UtilSendUDPData(const C8* Module, I32 *Sockfd, struct sockaddr_in* Addr, C8 *Data, I32 Length, U8 Debug);
 void UtilReceiveUDPData(const C8* Module, I32* Sockfd, C8* Buffer, I32 Length, I32* ReceivedNewData, U8 Debug);
 U32 UtilIPStringToInt(C8 *IP);
-
+U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug);
+U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 typedef struct {
   uint64_t timestamp;
