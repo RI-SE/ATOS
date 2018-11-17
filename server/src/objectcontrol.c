@@ -38,7 +38,7 @@
 
 #define LOCALHOST "127.0.0.1"
 
-#define RECV_MESSAGE_BUFFER 1024
+#define RECV_MESSAGE_BUFFER 6200
 #define OBJECT_MESS_BUFFER_SIZE 1024
 
 #define TASK_PERIOD_MS 1
@@ -299,6 +299,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     I32 iResult;
 
     FILE *TempFd;
+    U16 MiscU16;
 
     (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
@@ -532,30 +533,43 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_TRAJ && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
             {
-                /*Build the DTM TRAJ message*/
-                //I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
-                //MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, &VOILData, (C8*)GSD->VOILData, 0);
                 
-                DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 1);
-                printf("%x %x %x %x\n", (C8)TrajBuffer[0], (C8)TrajBuffer[1], (C8)TrajBuffer[2], (C8)TrajBuffer[3] );
+                DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
                 DTMIpU32 = (C8)TrajBuffer[0];
                 DTMIpU32 = (C8)TrajBuffer[1] | (DTMIpU32 << 8);
                 DTMIpU32 = (C8)TrajBuffer[2] | (DTMIpU32 << 8);
                 DTMIpU32 = (C8)TrajBuffer[3] | (DTMIpU32 << 8);
-                printf("DTMIp: %x\n", DTMIpU32);
+                TRAJInfoData.IpAddressU32 = DTMIpU32;
+
+                MiscU16 = (C8)TrajBuffer[4];
+                MiscU16 = (C8)TrajBuffer[5] | (MiscU16 << 8);
+                TRAJInfoData.TrajectoryIDU16 = MiscU16;
+                i = 0;
+                do
+                {
+                    TRAJInfoData.TrajectoryNameC8[i] = (C8)TrajBuffer[i + 6];
+                    i ++;
+                } while(TRAJInfoData.TrajectoryNameC8[i-1] != 0);
+
+                MiscU16 = (C8)TrajBuffer[70];
+                MiscU16 = (C8)TrajBuffer[71] | (MiscU16 << 8);
+
+                TRAJInfoData.TrajectoryVersionU16 = MiscU16;
+
+                MiscU16 = 72; //Number of bytes in [Ip, Id, Name, Version]  
 
                 /*DTM*/
                 for(iIndex=0;iIndex<nbr_objects;++iIndex) 
                 { 
-                    printf("ObjectControl ip = %x\n", UtilIPStringToInt(object_address_name[iIndex]));
+                    printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
                     if( DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
                     {
                         /*DTM Header*/
-                        MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, DTMLengthU32/COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 1);
+                        MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-MiscU16)/COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
                         /*Send DTM header*/
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
                         /*DTM Data*/
-                        MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer+4, DTMLengthU32/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 1);
+                        MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer+MiscU16, (DTMLengthU32-MiscU16)/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
                         /*Send DTM data*/
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
                     }
@@ -1699,28 +1713,15 @@ I32 ObjectControlBuildDOTMMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderT
 
     TRAJInfoData->TrajectoryIDValueIdU16 = VALUE_ID_TRAJECTORY_ID;
     TRAJInfoData->TrajectoryIDContentLengthU16 = 2;
-    TRAJInfoData->TrajectoryIDU16 = 1;
 
     TRAJInfoData->TrajectoryNameValueIdU16 = VALUE_ID_TRAJECTORY_NAME;
     TRAJInfoData->TrajectoryNameContentLengthU16 = 64;
-    TRAJInfoData->TrajectoryNameC8[0] = 'F';
-    TRAJInfoData->TrajectoryNameC8[1] = 'i';
-    TRAJInfoData->TrajectoryNameC8[2] = 'l';
-    TRAJInfoData->TrajectoryNameC8[3] = 'e';
-    TRAJInfoData->TrajectoryNameC8[4] = 'n';
-    TRAJInfoData->TrajectoryNameC8[5] = 'a';
-    TRAJInfoData->TrajectoryNameC8[6] = 'm';
-    TRAJInfoData->TrajectoryNameC8[7] = 'e';
 
     TRAJInfoData->TrajectoryVersionValueIdU16 = VALUE_ID_TRAJECTORY_VERSION;
     TRAJInfoData->TrajectoryVersionContentLengthU16 = 2;
-    TRAJInfoData->TrajectoryVersionU16 = 1;
 
     TRAJInfoData->IpAddressValueIdU16 = 0xA000;
     TRAJInfoData->IpAddressContentLengthU16 = 4;
-    TRAJInfoData->IpAddressU32 = 0x22334455;
-
-
 
     p=(C8 *)TRAJInfoData;
     for(; i< COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH; i++) *(MessageBuffer + i) = *p++;
@@ -1735,6 +1736,9 @@ I32 ObjectControlBuildDOTMMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderT
         for(i = 0;i < sizeof(HeaderType) + sizeof(TRAJInfoType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
         printf("\n");
         printf("DOTM message total length = %d bytes.\n", (int)HeaderData->MessageLengthU32);
+        printf("TrajectoryID = %d\n", TRAJInfoData->TrajectoryIDU16);
+        printf("TrajectoryName = %s\n", TRAJInfoData->TrajectoryNameC8);
+        printf("TrajectoryVersion = %d\n", TRAJInfoData->TrajectoryVersionU16);
         printf("\n----MESSAGE----\n");
     }
 
@@ -1962,20 +1966,6 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
 
     bzero(MessageBuffer, COMMAND_DOTM_ROW_MESSAGE_LENGTH*RowCount);
 
-
-    /*DOTMData->TrajectoryIDValueIdU16 = VALUE_ID_TRAJECTORY_ID;
-    DOTMData->TrajectoryIDContentLengthU16 = 2;
-    DOTMData->TrajectoryIDU16 = 1;
-
-    DOTMData->TrajectoryNameValueIdU16 = VALUE_ID_TRAJECTORY_NAME;
-    DOTMData->TrajectoryNameContentLengthU16 = 64;
-    DOTMData->TrajectoryNameC8[0] = 'D';
-
-    DOTMData->TrajectoryVersionValueIdU16 = VALUE_ID_TRAJECTORY_VERSION;
-    DOTMData->TrajectoryVersionContentLengthU16 = 2;
-    DOTMData->TrajectoryVersionU16 = 1;
-    */
-
     I32 i = 0, j = 0, n = 0;
     for(i = 0; i < RowCount; i++)
     {
@@ -1987,8 +1977,8 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         Data = (Data<<8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW*i + 0);
         DOTMData->RelativeTimeValueIdU16 = VALUE_ID_RELATIVE_TIME;
         DOTMData->RelativeTimeContentLengthU16 = 4;
-        DOTMData->RelativeTimeU32 = (U32)Data;
-        //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
+        DOTMData->RelativeTimeU32 = SwapU32((U32)Data);
+        if(debug) printf("Time=%d \n", DOTMData->RelativeTimeU32);
 
         //x
         Data = 0;
@@ -1998,8 +1988,8 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         Data = (Data<<8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW*i + 4);
         DOTMData->XPositionValueIdU16 = VALUE_ID_X_POSITION;
         DOTMData->XPositionContentLengthU16 = 4;
-        DOTMData->XPositionI32 = (I32)Data;
-        //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
+        DOTMData->XPositionI32 = SwapI32((I32)Data);
+        if(debug) printf("X=%d \n", DOTMData->XPositionI32);
 
         //y
         Data = 0;
@@ -2009,8 +1999,8 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         Data = (Data<<8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW*i + 8);
         DOTMData->YPositionValueIdU16 = VALUE_ID_Y_POSITION;
         DOTMData->YPositionContentLengthU16 = 4;
-        DOTMData->YPositionI32 = (I32)Data;
-        //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
+        DOTMData->YPositionI32 = SwapI32((I32)Data);
+        if(debug) printf("Y=%d \n", DOTMData->YPositionI32);
 
         //z
         Data = 0;
@@ -2020,8 +2010,8 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         Data = (Data<<8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW*i + 12);
         DOTMData->ZPositionValueIdU16 = VALUE_ID_Z_POSITION;
         DOTMData->ZPositionContentLengthU16 = 4;
-        DOTMData->ZPositionI32 = (I32)Data;
-        //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
+        DOTMData->ZPositionI32 = SwapI32((I32)Data);
+        if(debug) printf("Z=%d \n", DOTMData->ZPositionI32);
 
         //Heading
         Data = 0;
@@ -2033,8 +2023,8 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         //while(Data>3600) Data-=360.0;
         DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
         DOTMData->HeadingContentLengthU16 = 2;
-        DOTMData->HeadingU16 = (U16)(Data);
-        //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
+        DOTMData->HeadingU16 = SwapU16((U16)(Data));
+        if(debug) printf("Heading=%d \n", DOTMData->HeadingU16);
 
         //Longitudinal speed
         Data = 0;
@@ -2042,8 +2032,8 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         Data = (Data<<8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW*i + 18);
         DOTMData->LongitudinalSpeedValueIdU16 = VALUE_ID_LONGITUDINAL_SPEED;
         DOTMData->LongitudinalSpeedContentLengthU16 = 2;
-        DOTMData->LongitudinalSpeedI16 = (I16)Data;
-        //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
+        DOTMData->LongitudinalSpeedI16 = SwapI16((I16)Data);
+        if(debug) printf("LongitudinalSpeedI16=%d \n", DOTMData->LongitudinalSpeedI16);
 
         //Lateral speed
         Data = 0;
@@ -2051,8 +2041,8 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         Data = (Data<<8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW*i + 20);
         DOTMData->LateralSpeedValueIdU16 = VALUE_ID_LATERAL_SPEED;
         DOTMData->LateralSpeedContentLengthU16 = 2;
-        DOTMData->LateralSpeedI16 = (I16)Data;
-        //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
+        DOTMData->LateralSpeedI16 = SwapI16((I16)Data);
+        if(debug) printf("LateralSpeedI16=%d \n", DOTMData->LateralSpeedI16);
 
         //Longitudinal acceleration
         Data = 0;
@@ -2060,8 +2050,8 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         Data = (Data<<8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW*i + 22);
         DOTMData->LongitudinalAccValueIdU16 = VALUE_ID_LONGITUDINAL_ACCELERATION;
         DOTMData->LongitudinalAccContentLengthU16 = 2;
-        DOTMData->LongitudinalAccI16 = (I16)Data;
-        //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
+        DOTMData->LongitudinalAccI16 = SwapI16((I16)Data);
+        if(debug) printf("LongitudinalAccI16=%d \n", DOTMData->LongitudinalAccI16);
 
         //Lateral acceleration
         Data = 0;
@@ -2069,8 +2059,8 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         Data = (Data<<8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW*i + 24);
         DOTMData->LateralAccValueIdU16 = VALUE_ID_LATERAL_ACCELERATION;
         DOTMData->LateralAccContentLengthU16 = 2;
-        DOTMData->LateralAccI16 = (I16)Data;
-        //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
+        DOTMData->LateralAccI16 = SwapI16((I16)Data);
+        if(debug) printf("LateralAccI16=%d \n", DOTMData->LateralAccI16);
 
         //Curvature
         Data = 0;
@@ -2080,9 +2070,8 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         Data = (Data<<8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW*i + 26);
         DOTMData->CurvatureValueIdU16 = VALUE_ID_CURVATURE;
         DOTMData->CurvatureContentLengthU16 = 4;
-        DOTMData->CurvatureI32 = (I32)Data;
-
-        //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
+        DOTMData->CurvatureI32 = SwapI32((I32)Data);
+        if(debug) printf("CurvatureI32=%d \n", DOTMData->CurvatureI32);
 
         p=(C8 *)DOTMData;
         for(j=0; j<sizeof(DOTMType); j++, n++) *(MessageBuffer + n) = *p++;
