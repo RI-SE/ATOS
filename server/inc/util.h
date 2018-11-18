@@ -97,10 +97,10 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.15"
-#define TESTSERVER_IP "192.168.0.15"
+#define TESTHOST_IP "192.168.0.163"
+#define TESTSERVER_IP "192.168.0.163"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.15" 
+#define LOCAL_USER_CONTROL_IP "192.168.0.163" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -380,7 +380,7 @@ typedef struct
   U16 CurvatureValueIdU16;
   U16 CurvatureContentLengthU16;
   I32 CurvatureI32;
-} DOTMType; //158 bytes
+} DOTMType; //70 bytes
 
 
 typedef struct 

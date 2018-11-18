@@ -768,6 +768,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.\n");
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
 
+                     
                         /*Here we send DOTM, if the IP-address not is found*/
                         if(strstr(DTMReceivers, object_address_name[iIndex]) == NULL)
                         {
@@ -775,6 +776,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             fd = fopen (object_traj_file[iIndex], "r");
                             
                             RowCount = UtilCountFileRows(fd);
+                            printf("RowCount: %d\n", RowCount);
                             fclose (fd);
 
                             /*DOTM*/
@@ -1739,6 +1741,7 @@ I32 ObjectControlBuildDOTMMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderT
         printf("TrajectoryID = %d\n", TRAJInfoData->TrajectoryIDU16);
         printf("TrajectoryName = %s\n", TRAJInfoData->TrajectoryNameC8);
         printf("TrajectoryVersion = %d\n", TRAJInfoData->TrajectoryVersionU16);
+        printf("IpAddress = %d\n", TRAJInfoData->IpAddressU32);
         printf("\n----MESSAGE----\n");
     }
 
@@ -1860,7 +1863,7 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
         bzero(DataBuffer, 20);
         strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
         Data = UtilRadToDeg(atof(DataBuffer));
-        //Data = 4500 - Data; //Turn heading back pi/2
+        Data = 4500 - Data; //Turn heading back pi/2
         while(Data<0) Data+=360.0;
         while(Data>3600) Data-=360.0;
         DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
@@ -1915,7 +1918,7 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
         Data = atof(DataBuffer)*3e4;
         DOTMData->CurvatureValueIdU16 = VALUE_ID_CURVATURE;
         DOTMData->CurvatureContentLengthU16 = 4;
-        DOTMData->CurvatureI32 = 0xFFEEAABB;//(I32)Data;
+        DOTMData->CurvatureI32 = (I32)Data;
 
         //printf("DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
 
