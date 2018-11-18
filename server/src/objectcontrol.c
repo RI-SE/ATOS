@@ -1678,7 +1678,7 @@ I32 ObjectControlBuildSYPMMessage(C8* MessageBuffer, SYPMType *SYPMData, U32 Syn
 
     p=(C8 *)SYPMData;
     for(i=0; i<sizeof(SYPMData); i++) *(MessageBuffer + i) = *p++;
-    Crc = crc_16((const C8 *)MessageBuffer, sizeof(SYPMData));
+    Crc = crc_16((const C8 *)MessageBuffer, sizeof(SYPMType));
     Crc = 0;
     *(MessageBuffer + i++) = (U8)(Crc >> 8);
     *(MessageBuffer + i++) = (U8)(Crc);
@@ -1690,7 +1690,7 @@ I32 ObjectControlBuildSYPMMessage(C8* MessageBuffer, SYPMType *SYPMData, U32 Syn
         printf("----HEADER----\n");
         for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
         printf("\n----MESSAGE----\n");
-        for(;i < sizeof(OSTMType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        for(;i < sizeof(SYPMType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
         printf("\n----FOOTER----\n");
         for(;i < MessageIndex; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
         printf("\n");
@@ -1721,7 +1721,7 @@ I32 ObjectControlBuildMTSPMessage(C8* MessageBuffer, MTSPType *MTSPData, U32 Syn
 
     p=(C8 *)MTSPData;
     for(i=0; i<sizeof(MTSPData); i++) *(MessageBuffer + i) = *p++;
-    Crc = crc_16((const C8 *)MessageBuffer, sizeof(MTSPData));
+    Crc = crc_16((const C8 *)MessageBuffer, sizeof(MTSPType));
     Crc = 0;
     *(MessageBuffer + i++) = (U8)(Crc >> 8);
     *(MessageBuffer + i++) = (U8)(Crc);
@@ -1733,7 +1733,7 @@ I32 ObjectControlBuildMTSPMessage(C8* MessageBuffer, MTSPType *MTSPData, U32 Syn
         printf("----HEADER----\n");
         for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
         printf("\n----MESSAGE----\n");
-        for(;i < sizeof(OSTMType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        for(;i < sizeof(MTSPType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
         printf("\n----FOOTER----\n");
         for(;i < MessageIndex; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
         printf("\n");
