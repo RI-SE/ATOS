@@ -93,11 +93,11 @@
 #define COMMAND_LLCM_CODE 8
 #define COMMAND_LLCM_MESSAGE_LENGTH 5
 
-#define COMMAND_SYPM_CODE 9
-#define COMMAND_SYPM_MESSAGE_LENGTH 8
+#define COMMAND_SYPM_CODE 0xA101
+#define COMMAND_SYPM_MESSAGE_LENGTH sizeof(SYPMType)
 
-#define COMMAND_MTPS_CODE 10
-#define COMMAND_MTPS_MESSAGE_LENGTH 6
+#define COMMAND_MTSP_CODE 0xA102
+#define COMMAND_MTSP_MESSAGE_LENGTH sizeof(MTSPType)
 
 #define COMMAND_ACM_CODE 11  //Action Configuration Message: Server->Object, TCP
 #define COMMAND_ACM_MESSAGE_LENGTH 6 
@@ -164,8 +164,8 @@ I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeTyp
 I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
 I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 debug);
 int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, unsigned short Curvature, unsigned char Mode, char debug);
-int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, unsigned int StopTime, char debug);
-int ObjectControlBuildMTSPMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug);
+I32 ObjectControlBuildSYPMMessage(C8* MessageBuffer, SYPMType *SYPMData, U32 SyncPoint, U32 StopTime, U8 debug);
+I32 ObjectControlBuildMTSPMessage(C8* MessageBuffer, MTSPType *MTSPData, U32 SyncTimestamp, U8 debug);
 I32 ObjectControlBuildDOTMMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 debug);
 //I32 ObjectControlBuildDOTMMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, U8 debug);
 I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOTMType *DOTMData, U8 debug);
@@ -278,6 +278,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     DOTMType DOTMData;
     TRAJInfoType TRAJInfoData;
     VOILType VOILData;
+    SYPMType SYPMData;
+    MTSPType MTSPData;
     GeoPosition OriginPosition;
 
     unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
@@ -339,13 +341,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         if(TEST_SYNC_POINTS == 1 && iIndex == 1 && MasterTimeToSyncPointU64 > 0 && TimeToSyncPoint > -1 )
                         {
                             /*Send Master time to adaptive sync point*/
-                            MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
+                            MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, MasterTimeToSyncPointU64, 0);
                             ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                         }
                         else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL && MasterTimeToSyncPointU64 > 0 && TimeToSyncPoint > -1)
                         {
                             /*Send Master time to adaptive sync point*/
-                            MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, MasterTimeToSyncPointU64, 0);
+                            MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, MasterTimeToSyncPointU64, 0);
                             ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                         }
                     }
@@ -419,7 +421,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             gettimeofday(&CurrentTimeStruct, NULL);
                             TimeCap1 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
 
-                            UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
+                            //UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
+                            OP[iIndex].x = atoi(Latitude);
+                            OP[iIndex].y = atoi(Longitude);
 
                             if(OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex)
                             {
@@ -803,13 +807,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             if(TEST_SYNC_POINTS == 1 && iIndex == 1)
                             {
                                 /*Send SYPM to slave*/
-                                MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
+                                MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, &SYPMData, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
                                 vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
                             }
                             else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL)
                             {
                                 /*Send SYPM to slave*/
-                                MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
+                                MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, &SYPMData, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
                                 vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
                             }
                         }
@@ -1649,48 +1653,93 @@ int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, uns
     return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
 }
 
-int ObjectControlBuildSYPMMessage(char* MessageBuffer, unsigned int SyncPoint, unsigned int StopTime, char debug)
+I32 ObjectControlBuildSYPMMessage(C8* MessageBuffer, SYPMType *SYPMData, U32 SyncPoint, U32 StopTime, U8 debug)
 {
-    int MessageIndex = 0;
+    
+    I32 MessageIndex = 0, i;
+    U16 Crc = 0;
+    C8 *p;
 
-    bzero(MessageBuffer, COMMAND_SYPM_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH);
+    bzero(MessageBuffer, COMMAND_SYPM_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH);
 
-    UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_SYPM_CODE);
+    SYPMData->Header.SyncWordU16 = SYNC_WORD;
+    SYPMData->Header.TransmitterIdU8 = 0;
+    SYPMData->Header.MessageCounterU8 = 0;
+    SYPMData->Header.AckReqProtVerU8 = 0;
+    SYPMData->Header.MessageIdU16 = COMMAND_SYPM_CODE;
+    SYPMData->Header.MessageLengthU32 = sizeof(SYPMType) - sizeof(HeaderType);
+    SYPMData->SyncPointTimeValueIdU16 = 1;
+    SYPMData->SyncPointTimeContentLengthU16 = 4;
+    SYPMData->FreezeTimeU32 = SyncPoint;
+    SYPMData->FreezeTimeValueIdU16 = 1;
+    SYPMData->FreezeTimeContentLengthU16 = 4;
+    SYPMData->FreezeTimeU32 = StopTime;
 
-    MessageIndex = UtilAddFourBytesMessageData(MessageBuffer, MessageIndex+COMMAND_MESSAGE_HEADER_LENGTH, SyncPoint);
 
-    MessageIndex = UtilAddFourBytesMessageData(MessageBuffer, MessageIndex, StopTime);
-
-    UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);
+    p=(C8 *)SYPMData;
+    for(i=0; i<sizeof(SYPMData); i++) *(MessageBuffer + i) = *p++;
+    Crc = crc_16((const C8 *)MessageBuffer, sizeof(SYPMData));
+    Crc = 0;
+    *(MessageBuffer + i++) = (U8)(Crc >> 8);
+    *(MessageBuffer + i++) = (U8)(Crc);
+    MessageIndex = i;
 
     if(debug)
     {
-        int i = 0;
-        for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+        printf("SYPM total length = %d bytes (header+message+footer)\n", (int)(COMMAND_SYPM_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
+        printf("----HEADER----\n");
+        for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n----MESSAGE----\n");
+        for(;i < sizeof(OSTMType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n----FOOTER----\n");
+        for(;i < MessageIndex; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n");
     }
 
-    return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
+    return MessageIndex; //Total number of bytes
 }
 
-int ObjectControlBuildMTSPMessage(char* MessageBuffer, unsigned long SyncTimestamp, char debug)
+I32 ObjectControlBuildMTSPMessage(C8* MessageBuffer, MTSPType *MTSPData, U32 SyncTimestamp, U8 debug)
 {
-    int MessageIndex = 0;
 
-    bzero(MessageBuffer, COMMAND_MTPS_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH);
+    I32 MessageIndex = 0, i;
+    U16 Crc = 0;
+    C8 *p;
 
-    UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_MTPS_CODE);
+    bzero(MessageBuffer, COMMAND_MTSP_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH);
 
-    MessageIndex = UtilAddSixBytesMessageData(MessageBuffer, MessageIndex+COMMAND_MESSAGE_HEADER_LENGTH, SyncTimestamp);
+    MTSPData->Header.SyncWordU16 = SYNC_WORD;
+    MTSPData->Header.TransmitterIdU8 = 0;
+    MTSPData->Header.MessageCounterU8 = 0;
+    MTSPData->Header.AckReqProtVerU8 = 0;
+    MTSPData->Header.MessageIdU16 = COMMAND_MTSP_CODE;
+    MTSPData->Header.MessageLengthU32 = sizeof(MTSPType) - sizeof(HeaderType);
+    MTSPData->EstSyncPointTimeValueIdU16 = 1;
+    MTSPData->EstSyncPointTimeContentLengthU16 = 4;
+    MTSPData->EstSyncPointTimeU32 = SyncTimestamp;
 
-    UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);
+
+    p=(C8 *)MTSPData;
+    for(i=0; i<sizeof(MTSPData); i++) *(MessageBuffer + i) = *p++;
+    Crc = crc_16((const C8 *)MessageBuffer, sizeof(MTSPData));
+    Crc = 0;
+    *(MessageBuffer + i++) = (U8)(Crc >> 8);
+    *(MessageBuffer + i++) = (U8)(Crc);
+    MessageIndex = i;
 
     if(debug)
     {
-        int i = 0;
-        for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+        printf("MTSPData total length = %d bytes (header+message+footer)\n", (int)(COMMAND_MTSP_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
+        printf("----HEADER----\n");
+        for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n----MESSAGE----\n");
+        for(;i < sizeof(OSTMType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n----FOOTER----\n");
+        for(;i < MessageIndex; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n");
     }
 
-    return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
+    return MessageIndex; //Total number of bytes
 }
 
 
@@ -1818,6 +1867,7 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
         UtilReadLineCntSpecChars(fd, RowBuffer);
 
         //Read to ';' in row = LINE;0.00;21.239000;39.045000;0.000000;-1.240001;0.029103;0.004005;0.000000;3;ENDLINE;
+        printf("i index = %d\n", i);
         //Time
         src = strchr(RowBuffer, ';');
         bzero(DataBuffer, 20);
@@ -1895,7 +1945,7 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
         src = strchr(src + 1, ';');
         bzero(DataBuffer, 20);
         strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-        Data = atof(DataBuffer)*1e2;
+        Data = atof(DataBuffer)*1e3;
         DOTMData->LongitudinalAccValueIdU16 = VALUE_ID_LONGITUDINAL_ACCELERATION;
         DOTMData->LongitudinalAccContentLengthU16 = 2;
         DOTMData->LongitudinalAccI16 = (I16)Data;
@@ -1905,7 +1955,7 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
         //src = strchr(src + 1, ';');
         //bzero(DataBuffer, 20);
         //strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
-        //Data = atof(DataBuffer)*1e2;
+        //Data = atof(DataBuffer)*1e3;
         DOTMData->LateralAccValueIdU16 = VALUE_ID_LATERAL_ACCELERATION;
         DOTMData->LateralAccContentLengthU16 = 2;
         DOTMData->LateralAccI16 = -32000;

@@ -322,6 +322,28 @@ typedef struct
   U8 StateU8;
 } OSTMType; //16 bytes
 
+
+typedef struct
+{
+  HeaderType Header;
+  U16 SyncPointTimeValueIdU16;
+  U16 SyncPointTimeContentLengthU16;
+  U32 SyncPointTimeU32;
+  U16 FreezeTimeValueIdU16;
+  U16 FreezeTimeContentLengthU16;
+  U32 FreezeTimeU32;
+} SYPMType; //
+
+
+typedef struct
+{
+  HeaderType Header;
+  U16 EstSyncPointTimeValueIdU16;
+  U16 EstSyncPointTimeContentLengthU16;
+  U32 EstSyncPointTimeU32;
+} MTSPType; //
+
+
 typedef struct
 {
   HeaderType Header;
