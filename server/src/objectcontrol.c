@@ -428,7 +428,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     }
 
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
-                    UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &buffer, sizeof(MONRData), 0);
+                    //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &buffer, sizeof(MONRData), 0);
 
                     ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
                     bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
@@ -510,6 +510,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
 
                     DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Send MONITOR message: %s\n",buffer);
+                    UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &buffer, sizeof(buffer), 0);
 
 
                     if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) (void)iCommSend(COMM_MONI,buffer);
