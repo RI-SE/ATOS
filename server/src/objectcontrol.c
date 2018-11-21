@@ -47,13 +47,13 @@
 #define OBJECT_CONTROL_REPLAY_MODE 1
 #define OBJECT_CONTROL_ABORT_MODE 1
 
-#define COMMAND_MESSAGE_HEADER_LENGTH sizeof(HeaderType) 
+#define COMMAND_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
 #define COMMAND_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
 #define COMMAND_CODE_INDEX 0
 #define COMMAND_MESSAGE_LENGTH_INDEX 1
 
 #define COMMAND_DOTM_CODE 1
-#define COMMAND_DOTM_ROW_MESSAGE_LENGTH sizeof(DOTMType) 
+#define COMMAND_DOTM_ROW_MESSAGE_LENGTH sizeof(DOTMType)
 #define COMMAND_DOTM_ROWS_IN_TRANSMISSION  40
 
 #define COMMAND_OSEM_CODE 2
@@ -61,23 +61,23 @@
 #define COMMAND_OSEM_MESSAGE_LENGTH sizeof(OSEMType)-4
 
 #define COMMAND_OSTM_CODE 3
-#define COMMAND_OSTM_NOFV 1  
+#define COMMAND_OSTM_NOFV 1
 #define COMMAND_OSTM_MESSAGE_LENGTH sizeof(OSTMType)
 #define COMMAND_OSTM_OPT_SET_ARMED_STATE 2
-#define COMMAND_OSTM_OPT_SET_DISARMED_STATE 3 
+#define COMMAND_OSTM_OPT_SET_DISARMED_STATE 3
 
 #define COMMAND_STRT_CODE  4
 #define COMMAND_STRT_NOFV 1
 #define COMMAND_STRT_MESSAGE_LENGTH sizeof(STRTType)
 #define COMMAND_STRT_OPT_START_IMMEDIATELY 1
-#define COMMAND_STRT_OPT_START_AT_TIMESTAMP 2  
+#define COMMAND_STRT_OPT_START_AT_TIMESTAMP 2
 
 #define COMMAND_HEAB_CODE 5
 #define COMMAND_HEAB_NOFV 2
 #define COMMAND_HEAB_MESSAGE_LENGTH sizeof(HEABType)
 #define COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING 0
 #define COMMAND_HEAB_OPT_SERVER_STATUS_OK 1
-#define COMMAND_HEAB_OPT_SERVER_STATUS_ABORT 2 
+#define COMMAND_HEAB_OPT_SERVER_STATUS_ABORT 2
 
 #define COMMAND_MONR_CODE 6
 #define COMMAND_MONR_NOFV 12
@@ -97,16 +97,16 @@
 #define COMMAND_MTPS_MESSAGE_LENGTH 6
 
 #define COMMAND_ACM_CODE 11  //Action Configuration Message: Server->Object, TCP
-#define COMMAND_ACM_MESSAGE_LENGTH 6 
+#define COMMAND_ACM_MESSAGE_LENGTH 6
 
 #define COMMAND_EAM_CODE 12  //Execution Action Message: Server->Object, UDP
-#define COMMAND_EAM_MESSAGE_LENGTH 6 
+#define COMMAND_EAM_MESSAGE_LENGTH 6
 
-#define COMMAND_TCM_CODE 13  //Trigger Configuration Message: Server->Object, TCP 
-#define COMMAND_TCM_MESSAGE_LENGTH 5 
+#define COMMAND_TCM_CODE 13  //Trigger Configuration Message: Server->Object, TCP
+#define COMMAND_TCM_MESSAGE_LENGTH 5
 
 #define COMMAND_TOM_CODE 14  //Trigger Occurred Message: Object->Server, UDP
-#define COMMAND_TOM_MESSAGE_LENGTH 8 
+#define COMMAND_TOM_MESSAGE_LENGTH 8
 
 
 #define CONF_FILE_PATH  "conf/test.conf"
@@ -173,7 +173,9 @@ int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId ,char *TriggAc
 int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug);
 I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* SimData, U8 debug);
 
-static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], 
+void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug);
+
+static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
                              char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
                              int* nbr_objects);
 
@@ -291,6 +293,41 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
+//TODO
+    //UPD setup
+    U16 ObjectControlTCPPortU16;
+    U16 ObjectControlUDPPortU16;
+
+    I32 ObjectControlUDPSocketfdI32=-1;
+
+    C8 TextBufferC8[20];
+    C8 SimulatorServerIPC8[20];
+      U32 SimulatorIpU32;
+
+      struct sockaddr_in simulator_addr;
+
+      //GET IP
+      bzero(TextBufferC8, 20);
+      UtilSearchTextFile(TEST_CONF_FILE, "ObjectControlIP=", "", TextBufferC8);
+      bzero(SimulatorServerIPC8, 20);
+      strcat(SimulatorServerIPC8, TextBufferC8);
+      printf("IP: %s\n", TextBufferC8);
+      SimulatorIpU32 = UtilIPStringToInt(SimulatorServerIPC8);
+
+
+    bzero(TextBufferC8,20);
+    UtilSearchTextFile(TEST_CONF_FILE, "ObjectControlTCPPort=", "", TextBufferC8);
+    ObjectControlTCPPortU16 = (U16)atoi(TextBufferC8);
+    bzero(TextBufferC8, 20);
+    UtilSearchTextFile(TEST_CONF_FILE, "ObjectControlUDPPort=", "", TextBufferC8);
+    ObjectControlUDPPortU16 = (U16)atoi(TextBufferC8);
+
+    printf("ObjectControlTCPPort = %d\n", ObjectControlTCPPortU16);
+    printf("ObjectControlUDPPort = %d\n", ObjectControlUDPPortU16);
+    //ReceivedNewData = 1;
+    UtilCreateUDPChannel("ObjectControl", &ObjectControlUDPSocketfdI32, (const C8*)SimulatorServerIPC8, ObjectControlUDPPortU16, &simulator_addr);
+
+    //
     while(!iExit)
     {
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED)
@@ -359,7 +396,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(buffer,RECV_MESSAGE_BUFFER);
                 vRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
 
-                
+
                 if(recievedNewData)
                 {
 
@@ -391,6 +428,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     }
 
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
+                    UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &buffer, sizeof(MONRData), 0);
+
                     ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
                     bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
                     strcat(buffer,object_address_name[iIndex]); strcat(buffer,";");
@@ -408,7 +447,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     strcat(buffer,StateFlag); strcat(buffer,";");
                     strcat(buffer,StatusFlag); strcat(buffer,";");
 
-                    //printf("<%s>\n",buffer);
+                    printf("<%s>\n",buffer);
+
 
 
                     for(i = 0; i < SyncPointCount; i++)
@@ -536,8 +576,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 /*Build the VOIL message*/
                 MessageLength = ObjectControlBuildVOILMessage(MessageBuffer, &VOILData, (C8*)GSD->VOILData, 0);
-                for(iIndex=0;iIndex<nbr_objects;++iIndex) 
-                { 
+                for(iIndex=0;iIndex<nbr_objects;++iIndex)
+                {
                     /*Here we send the VOIL message, if IP-address found*/
                     if(strstr(VOILReceivers, object_address_name[iIndex]))
                     {
@@ -642,7 +682,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 ASPDebugRate = atoi(TextBuffer);
                 bzero(VOILReceivers, SMALL_BUFFER_SIZE_254);
                 UtilSearchTextFile(CONF_FILE_PATH, "VOILReceivers=", "", VOILReceivers);
-                
+
 
                 LOG_SEND(LogBuffer,"[ObjectControl] Objects to be controlled by server: %d\n", nbr_objects);
                 LOG_SEND(LogBuffer, "[ObjectControl] ASP in system: %d\n", SyncPointCount);
@@ -651,12 +691,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 OBCState = OBC_STATE_INITIALIZED;
                 LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.\n");
 
-                
+
                 if(TempFd != NULL) fclose(TempFd);
-                
+
                 //Remove temporary file
                 remove(TEMP_LOG_FILE);
-                
+
                 if(USE_TEMP_LOGFILE)
                 {
                     //Create temporary file
@@ -668,7 +708,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                 LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.\n");
 
-                
+
                 /* Connect and send drive files */
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
@@ -781,7 +821,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     }
 
                 }
-                
+
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
                     if(USE_TEST_HOST == 0) vCreateSafetyChannel(object_address_name[iIndex], object_udp_port[iIndex], &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
@@ -892,9 +932,9 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     U32Data = (U32Data | *(SimData+9));
     U32 GPSSOW = U32Data;
     //printf("GPSSOW = %x\n", GPSSOW);
-    
+
     U8 DynamicWorldState = *(SimData+10);
-    
+
     U8 ObjectCount = *(SimData+11);
     //printf("ObjectCount = %d\n", ObjectCount);
 
@@ -930,7 +970,7 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     U16Data = (U16Data | *(SimData+28)) << 8;
     U16Data = (U16Data | *(SimData+29));
     U16 Pitch = U16Data;
-   
+
     U16Data = 0;
     U16Data = (U16Data | *(SimData+30)) << 8;
     U16Data = (U16Data | *(SimData+31));
@@ -966,7 +1006,7 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     VOILData->SimObjects[0].RollU16 = Roll;
     VOILData->SimObjects[0].SpeedI16 = Speed;
 
-    
+
 
     p=(C8 *)VOILData;
     for(i=0; i < ObjectCount*sizeof(Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH; i++) *(MessageBuffer + i) = *p++;
@@ -1086,7 +1126,7 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     U32Data = (U32Data | *(MonrData+8)) << 8;
     U32Data = U32Data | *(MonrData+7);
     MONRData->Header.MessageLengthU32 = U32Data;
-    
+
     U32Data = 0;
     U32Data = (U32Data | *(MonrData+14)) << 8;
     U32Data = (U32Data | *(MonrData+13)) << 8;
@@ -1101,12 +1141,14 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     I32Data = I32Data | *(MonrData+15);
     MONRData->XPositionI32 = I32Data;
 
+
     I32Data = 0;
     I32Data = (I32Data | *(MonrData+22)) << 8;
     I32Data = (I32Data | *(MonrData+21)) << 8;
     I32Data = (I32Data | *(MonrData+20)) << 8;
     I32Data = I32Data | *(MonrData+19);
     MONRData->YPositionI32 = I32Data;
+
 
     I32Data = 0;
     I32Data = (I32Data | *(MonrData+26)) << 8;
@@ -1144,6 +1186,18 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     MONRData->StateU8 = *(MonrData+38);
     MONRData->ReadyToArmU8 = *(MonrData+39);
     MONRData->ErrorStatusU8 = *(MonrData+40);
+
+
+        if(1)
+        {
+          printf("SyncWord = %d\n", MONRData->Header.SyncWordU16);
+          printf("TransmitterId = %d\n", MONRData->Header.TransmitterIdU8);
+          printf("PackageCounter = %d\n", MONRData->Header.MessageCounterU8);
+          printf("AckReq = %d\n", MONRData->Header.AckReqProtVerU8);
+          printf("MessageID = %d\n", MONRData->Header.MessageIdU16);
+          printf("MessageLength = %d\n", MONRData->Header.MessageLengthU32);
+
+        }
 
     if(debug)
     {
@@ -1533,7 +1587,7 @@ I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeTyp
     HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
     HEABData->Header.MessageIdU16 = COMMAND_HEAB_CODE;
     HEABData->Header.MessageLengthU32 = sizeof(HEABType) - sizeof(HeaderType);
-    //HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16; 
+    //HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
     HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
     //HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 0);
     HEABData->CCStatusU8 = CCStatus;
@@ -2031,6 +2085,18 @@ static void vCreateSafetyChannel(const char* name, const uint32_t port, int* soc
 static void vCloseSafetyChannel(int* sockfd)
 {
     close(*sockfd);
+}
+
+void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug){
+  C8 Data[128];
+
+  bzero(Data,128);
+  Data[3] = strlen(MonrData);
+  Data[5] = 2;
+  strcat((Data+6), MonrData);
+
+
+  UtilSendUDPData("ObjectControl", Sockfd, Addr, Data, strlen(MonrData) + 6, Debug);
 }
 
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
