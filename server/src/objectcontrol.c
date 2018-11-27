@@ -344,7 +344,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
         }
 
-        if(OBCState == OBC_STATE_RUNNING)
+        if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED)
         {
             char buffer[RECV_MESSAGE_BUFFER];
             int recievedNewData = 0;
@@ -428,7 +428,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     }
 
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
-                    //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &buffer, sizeof(MONRData), 0);
+                    //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
 
                     ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
                     bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
@@ -447,7 +447,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     strcat(buffer,StateFlag); strcat(buffer,";");
                     strcat(buffer,StatusFlag); strcat(buffer,";");
 
-                    printf("<%s>\n",buffer);
+                    //printf("<%s>\n",buffer);
 
 
 
@@ -510,7 +510,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
 
                     DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Send MONITOR message: %s\n",buffer);
-                    UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &buffer, sizeof(buffer), 0);
 
 
                     if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) (void)iCommSend(COMM_MONI,buffer);
@@ -1189,18 +1188,8 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     MONRData->ErrorStatusU8 = *(MonrData+40);
 
 
-        if(1)
-        {
-          printf("SyncWord = %d\n", MONRData->Header.SyncWordU16);
-          printf("TransmitterId = %d\n", MONRData->Header.TransmitterIdU8);
-          printf("PackageCounter = %d\n", MONRData->Header.MessageCounterU8);
-          printf("AckReq = %d\n", MONRData->Header.AckReqProtVerU8);
-          printf("MessageID = %d\n", MONRData->Header.MessageIdU16);
-          printf("MessageLength = %d\n", MONRData->Header.MessageLengthU32);
 
-        }
-
-    if(debug)
+    if(debug == 1)
     {
         printf("SyncWord = %d\n", MONRData->Header.SyncWordU16);
         printf("TransmitterId = %d\n", MONRData->Header.TransmitterIdU8);
@@ -1516,7 +1505,7 @@ int ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeTyp
     *(MessageBuffer + i++) = (U8)(Crc >> 8);
     MessageIndex = i;
 
-    if(debug)
+    if(debug == 1)
     {
         printf("STRT total length = %d bytes (header+message+footer)\n", (int)(COMMAND_STRT_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");

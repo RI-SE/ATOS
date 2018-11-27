@@ -21,7 +21,7 @@
 #include <string.h>
 
 #include <sys/stat.h>
-#include <sys/time.h> 
+#include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
 
@@ -37,7 +37,7 @@
 #define TASK_PERIOD_MS 1
 #define HEARTBEAT_TIME_MS 10
 #define TIMESTAMP_BUFFER_LENGTH 20
-#define SPECIFIC_CHAR_THRESHOLD_COUNT 10  
+#define SPECIFIC_CHAR_THRESHOLD_COUNT 10
 
 /*------------------------------------------------------------
   -- Function declarations.
