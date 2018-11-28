@@ -37,7 +37,7 @@
 #define MQ_SV     "/TEServer-SV"
 #define MQ_OC     "/TEServer-OC"
 #define MQ_VA     "/TEServer-VA"
-#define MQ_SC     "/TEServer-SC"  
+#define MQ_SC     "/TEServer-SC"
 
 #define MQ_MAX_MESSAGE_LENGTH 4096
 #define MQ_MAX_MSG            10
@@ -59,7 +59,7 @@
 #define COMM_INIT 10
 #define COMM_CONNECT 11
 #define COMM_OBC_STATE 12
-#define COMM_DISCONNECT 13  
+#define COMM_DISCONNECT 13
 #define COMM_LOG 14
 #define COMM_VIOP 15
 #define COMM_INV 255
@@ -99,15 +99,15 @@
 #define TESTHOST_IP "192.168.0.15"
 #define TESTSERVER_IP "192.168.0.15"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.15" 
-#define LOCAL_USER_CONTROL_PORT 54240  
+#define LOCAL_USER_CONTROL_IP "192.168.0.15"
+#define LOCAL_USER_CONTROL_PORT 54240
 #define TEST_SYNC_POINTS 0
 
 
 
-/* Calculation: 	
-  34 years between 1970 and 2004 
-  8 days for leap year between 1970 and 2004 
+/* Calculation:
+  34 years between 1970 and 2004
+  8 days for leap year between 1970 and 2004
 */
 
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
@@ -142,15 +142,15 @@
 #define ADAPTIVE_SYNC_POINT_CONF "./conf/adaptivesync.conf"
 #define TRIGG_ACTION_CONF "./conf/triggeraction.conf"
 
-#define MAX_TRIGG_ACTIONS 20  
+#define MAX_TRIGG_ACTIONS 20
 
 
 #define TAA_ACTION_EXT_START 1
-#define TAA_ACTION_TEST_SIGNAL 2  
+#define TAA_ACTION_TEST_SIGNAL 2
 
 #define TAA_TRIGGER_DI_LOW  1
 #define TAA_TRIGGER_DI_HIGH  2
-#define TAA_TRIGGER_DI_RISING_EDGE 3 
+#define TAA_TRIGGER_DI_RISING_EDGE 3
 #define TAA_TRIGGER_DI_FALLING_EDGE 4
 
 
@@ -430,7 +430,7 @@ typedef struct
 } SpaceTime;
 
 
-typedef struct 
+typedef struct
 {
 	char Type;
   double Latitude;
@@ -460,7 +460,7 @@ typedef struct
   char IP[16];
   int Id;
   float Speed;
-} ObjectPosition; 
+} ObjectPosition;
 
 
 //#master_ip;slave_ip;time_on_traj_master,time_on_traj_slave;slave_stop;
@@ -530,7 +530,7 @@ typedef struct
   I32 ZPositionI32;
   U16 HeadingU16;
   I16 SpeedI16;
-} ObjectMonitorType; 
+} ObjectMonitorType;
 
 
 
@@ -556,7 +556,10 @@ void UtilgetCurrentGPStime(uint16_t *GPSweek, uint32_t *GPSquarterMSofWeek);
 // Get time function
 uint64_t UtilgetCurrentUTCtimeMS();
 uint32_t UtilgetIntDateFromMS(uint64_t ms);
+uint64_t UtilgetETSIfromUTCMS(uint64_t utc_sec, uint64_t utc_usec);
+
 void UtilgetDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t);
+void UtilgetDateTimefromUTCtimeNewformat(int64_t utc_ms, char *buffer, int size_t);
 
 void util_error(char* message);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
@@ -564,7 +567,7 @@ int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
 int iCommInit(const unsigned int, const char*, const int);
 int iCommClose();
-int iCommRecv(int*, char*, const int);
+int iCommRecv(int*, char*, const int, char*);
 int iCommSend(const int,const char*);
 
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
@@ -603,7 +606,7 @@ void llhToEnu(const double *iLlh, const double *llh, double *xyz);
 uint16_t crc_16( const unsigned char *input_str, uint16_t num_bytes );
 
 U16 SwapU16(U16 val);
-I16 SwapI16(I16 val); 
+I16 SwapI16(I16 val);
 U32 SwapU32(U32 val);
 I32 SwapI32(I32 val);
 I64 SwapI64(I64 val);

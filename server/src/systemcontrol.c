@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
-#include <time.h>  
+#include <time.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -62,7 +62,7 @@ typedef enum {
 #define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	80
 
 #define OSTM_OPT_SET_ARMED_STATE 2
-#define OSTM_OPT_SET_DISARMED_STATE 3 
+#define OSTM_OPT_SET_DISARMED_STATE 3
 #define SC_RECV_MESSAGE_BUFFER 1024
 
 #define SMALL_BUFFER_SIZE_128 128
@@ -82,8 +82,8 @@ typedef enum {
 
 #define SYSTEM_CONTROL_RESPONSE_CODE_OK 						0x0001
 #define SYSTEM_CONTROL_RESPONSE_CODE_ERROR 						0x0F10
-#define SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE 	0x0F20  
-#define SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE  		 	0x0F25  
+#define SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE 	0x0F20
+#define SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE  		 	0x0F25
 
 #define SYSTEM_CONTROL_RESPONSE_CODE_INVALID_LENGTH				0x0F30
 #define SYSTEM_CONTROL_RESPONSE_CODE_BUSY						0x0F40
@@ -98,8 +98,8 @@ typedef enum {
     ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
     replay_1, control_0, Exit_0, start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
-const char* SystemControlCommandsArr[] = 
-{ 	
+const char* SystemControlCommandsArr[] =
+{
     "Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0", "AbortScenario_0", "InitializeScenario_0",
     "ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2", "GetServerParameter_1",
     "replay_1", "control_0", "Exit_0", "start_ext_trigg_1"
@@ -321,9 +321,11 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
         }
         else if(ModeU8 == 1)
-        {
+        {   /* use util.c function to call time
             gettimeofday(&CurrentTimeStruct, NULL);
             CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
+            */
+            CurrentTimeU64 = UtilgetCurrentUTCtimeMS();
             TimeDiffU64 = CurrentTimeU64 - OldTimeU64;
 
             if(ServerSocketI32 <= 0) RemoteControlConnectServer(&ServerSocketI32, ServerIPC8, ServerPortU16);
@@ -372,7 +374,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         }
 
         bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
-        iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
+        iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
         if (iCommand == COMM_OBC_STATE)
         {
             OBCStateU8 = (U8)*pcRecvBuffer;
@@ -420,10 +422,10 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
         switch(SystemControlCommand)
         {
-
+        // can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
         case Idle_0:
             /*bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
-                iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
+                iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
 
                 if(iCommand == COMM_TOM)
                 {
@@ -492,15 +494,15 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
             ControlResponseBuffer[0] = server_state;
             ControlResponseBuffer[1] = OBCStateU8;
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"GPSMillisecondsU64: %ld\n", GPSTime->GPSMillisecondsU64);
+            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"GPSMillisecondsU64: %ld\n", GPSTime->GPSMillisecondsU64); // GPSTime just ticks from 0 up shouldent it be in the global GPStime?
             SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 2, &ClientSocket, 0);
-        break;
+            break;
         case GetServerParameterList_0:
             SystemControlCommand = Idle_0;
             bzero(ParameterListC8, SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE);
             SystemControlReadServerParameterList(ParameterListC8, 0);
             SystemControlSendControlResponse(strlen(ParameterListC8) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameterList:", ParameterListC8, strlen(ParameterListC8), &ClientSocket, 0);
-        break;
+            break;
         case GetServerParameter_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
@@ -508,9 +510,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlReadServerParameter(SystemControlArgument[0], ControlResponseBuffer, 0);
                 SystemControlSendControlResponse(strlen(ControlResponseBuffer) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameter:", ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
-
             } else { printf("[SystemControl] Err: Wrong parameter count in GetServerParameter(Name)!\n"); SystemControlCommand = Idle_0;}
-        break;
+            break;
         case SetServerParameter_2:
             if(CurrentInputArgCount == CommandArgCount)
             {
@@ -520,7 +521,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:", ControlResponseBuffer, 0, &ClientSocket, 0);
 
             } else { printf("[SystemControl] Err: Wrong parameter count in SetServerParameter(Name, Value)!\n"); SystemControlCommand = Idle_0;}
-        break;
+            break;
         case InitializeScenario_0:
             if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "IDLE") != NULL)
             {
@@ -634,11 +635,14 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         case StartScenario_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
-                if(server_state == SERVER_STATE_IDLE /*&& strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/) //Temporary!
+                if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL) //Temporary!
                 {
                     bzero(pcBuffer, IPC_BUFFER_SIZE);
+                    /* Lest use UTC time everywhere instead of etsi and gps time
                     gettimeofday(&tvTime, NULL);
                     uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+                    */
+                    uiTime = UtilgetCurrentUTCtimeMS();
                     if(TIME_COMPENSATE_LAGING_VM) uiTime = uiTime - TIME_COMPENSATE_LAGING_VM_VAL;
 
                     printf("[SystemControl] Current timestamp (gtd): %lu\n",uiTime );
@@ -659,9 +663,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     (void)iCommSend(COMM_STRT,pcBuffer);
                     bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                     SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
-                    server_state = SERVER_STATE_INWORK; 
-                    //server_state = SERVER_STATE_IDLE; //Temporary!
-                    //SystemControlCommand = Idle_0; //Temporary!
+                    server_state = SERVER_STATE_INWORK;
+                    server_state = SERVER_STATE_IDLE; //Temporary!
+                    SystemControlCommand = Idle_0; //Temporary!
                 }
                 else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "RUNNING") != NULL)
                 {
@@ -1107,25 +1111,25 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
 
     //Create temporary file
     TempFd = fopen (SYSTEM_CONTROL_TEMP_CONF_FILE_PATH, "w+");
-    
+
     //Open configuration file
     fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
-    
+
 
     if(fd > 0)
     {
         RowCount = UtilCountFileRows(fd);
         fclose(fd);
         fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
-    
+
         for(i = 0; i < RowCount; i++)
         {
             bzero(Row, SMALL_BUFFER_SIZE_128);
             UtilReadLine(fd, Row);
-            
+
             ptr1 = strstr(Row, Parameter);
             ptr2 = strstr(Row, "//");
-            if (ptr2 == NULL) ptr2 = ptr1; //No comment found 
+            if (ptr2 == NULL) ptr2 = ptr1; //No comment found
             if(ptr1 != NULL && (U64)ptr2 >= (U64)ptr1 && ParameterFound == 0)
             {
                 ParameterFound = 1;
@@ -1133,7 +1137,7 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
                 strncpy(NewRow, Row, (U64)ptr1 - (U64)Row + strlen(Parameter));
                 strcat(NewRow, NewValue);
                 if((U64)ptr2 > (U64)ptr1)
-                { 
+                {
                     strcat(NewRow, " "); // Add space
                     strcat(NewRow, ptr2); // Add the comment
                 }
@@ -1146,17 +1150,17 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
                 strcat(NewRow, "\n");
                 (void)fwrite(NewRow,1,strlen(NewRow),TempFd);
 
-            } 
+            }
             else
             {
                 strcat(Row, "\n");
                 (void)fwrite(Row,1,strlen(Row),TempFd);
             }
         }
-    
+
         fclose(TempFd);
         fclose(fd);
-    
+
         //Remove test.conf
         remove(SYSTEM_CONTROL_CONF_FILE_PATH);
 
@@ -1209,7 +1213,7 @@ I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 Debug)
         RowCount = UtilCountFileRows(fd);
         fclose(fd);
         fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
-    
+
         for(i = 0; i < RowCount; i++)
         {
             bzero(TextBuffer, SMALL_BUFFER_SIZE_128);
@@ -1217,10 +1221,10 @@ I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 Debug)
             if(strlen(TextBuffer) > 0)
             {
                 strcat(ParameterList, TextBuffer);
-                strcat(ParameterList, ";");        
+                strcat(ParameterList, ";");
             }
         }
-    
+
         fclose(fd);
     }
 
