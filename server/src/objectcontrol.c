@@ -47,13 +47,13 @@
 #define OBJECT_CONTROL_REPLAY_MODE 1
 #define OBJECT_CONTROL_ABORT_MODE 1
 
-#define COMMAND_MESSAGE_HEADER_LENGTH sizeof(HeaderType) 
+#define COMMAND_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
 #define COMMAND_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
 #define COMMAND_CODE_INDEX 0
 #define COMMAND_MESSAGE_LENGTH_INDEX 1
 
 #define COMMAND_DOTM_CODE 1
-#define COMMAND_DOTM_ROW_MESSAGE_LENGTH sizeof(DOTMType) 
+#define COMMAND_DOTM_ROW_MESSAGE_LENGTH sizeof(DOTMType)
 #define COMMAND_DOTM_ROWS_IN_TRANSMISSION  40
 
 #define COMMAND_OSEM_CODE 2
@@ -61,23 +61,23 @@
 #define COMMAND_OSEM_MESSAGE_LENGTH sizeof(OSEMType)-4
 
 #define COMMAND_OSTM_CODE 3
-#define COMMAND_OSTM_NOFV 1  
+#define COMMAND_OSTM_NOFV 1
 #define COMMAND_OSTM_MESSAGE_LENGTH sizeof(OSTMType)
 #define COMMAND_OSTM_OPT_SET_ARMED_STATE 2
-#define COMMAND_OSTM_OPT_SET_DISARMED_STATE 3 
+#define COMMAND_OSTM_OPT_SET_DISARMED_STATE 3
 
 #define COMMAND_STRT_CODE  4
 #define COMMAND_STRT_NOFV 1
 #define COMMAND_STRT_MESSAGE_LENGTH sizeof(STRTType)
 #define COMMAND_STRT_OPT_START_IMMEDIATELY 1
-#define COMMAND_STRT_OPT_START_AT_TIMESTAMP 2  
+#define COMMAND_STRT_OPT_START_AT_TIMESTAMP 2
 
 #define COMMAND_HEAB_CODE 5
 #define COMMAND_HEAB_NOFV 2
 #define COMMAND_HEAB_MESSAGE_LENGTH sizeof(HEABType)
 #define COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING 0
 #define COMMAND_HEAB_OPT_SERVER_STATUS_OK 1
-#define COMMAND_HEAB_OPT_SERVER_STATUS_ABORT 2 
+#define COMMAND_HEAB_OPT_SERVER_STATUS_ABORT 2
 
 #define COMMAND_MONR_CODE 6
 #define COMMAND_MONR_NOFV 12
@@ -97,16 +97,16 @@
 #define COMMAND_MTPS_MESSAGE_LENGTH 6
 
 #define COMMAND_ACM_CODE 11  //Action Configuration Message: Server->Object, TCP
-#define COMMAND_ACM_MESSAGE_LENGTH 6 
+#define COMMAND_ACM_MESSAGE_LENGTH 6
 
 #define COMMAND_EAM_CODE 12  //Execution Action Message: Server->Object, UDP
-#define COMMAND_EAM_MESSAGE_LENGTH 6 
+#define COMMAND_EAM_MESSAGE_LENGTH 6
 
-#define COMMAND_TCM_CODE 13  //Trigger Configuration Message: Server->Object, TCP 
-#define COMMAND_TCM_MESSAGE_LENGTH 5 
+#define COMMAND_TCM_CODE 13  //Trigger Configuration Message: Server->Object, TCP
+#define COMMAND_TCM_MESSAGE_LENGTH 5
 
 #define COMMAND_TOM_CODE 14  //Trigger Occurred Message: Object->Server, UDP
-#define COMMAND_TOM_MESSAGE_LENGTH 8 
+#define COMMAND_TOM_MESSAGE_LENGTH 8
 
 
 #define CONF_FILE_PATH  "conf/test.conf"
@@ -173,7 +173,7 @@ int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId ,char *TriggAc
 int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug);
 I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* SimData, U8 debug);
 
-static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], 
+static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
                              char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
                              int* nbr_objects);
 
@@ -205,6 +205,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     FILE *fd;
     char Id[SMALL_BUFFER_SIZE_0];
+    char GPSWeek[SMALL_BUFFER_SIZE_0];
     char Timestamp[SMALL_BUFFER_SIZE_0];
     char Latitude[SMALL_BUFFER_SIZE_0];
     char Longitude[SMALL_BUFFER_SIZE_0];
@@ -307,13 +308,15 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
         }
 
-        if(OBCState == OBC_STATE_RUNNING)
+        if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED || OBCState ==OBC_STATE_ARMED)
         {
             char buffer[RECV_MESSAGE_BUFFER];
             int recievedNewData = 0;
-
-            gettimeofday(&CurrentTimeStruct, NULL);
+            // this is etsi time lets remov it ans use utc instead
+            /*gettimeofday(&CurrentTimeStruct, NULL);
             CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+            */
+            CurrentTimeU64 = UtilgetCurrentUTCtimeMS();
             if(TIME_COMPENSATE_LAGING_VM) CurrentTimeU64 = CurrentTimeU64 - TIME_COMPENSATE_LAGING_VM_VAL;
 
             /*HEAB*/
@@ -359,7 +362,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(buffer,RECV_MESSAGE_BUFFER);
                 vRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
 
-                
+
                 if(recievedNewData)
                 {
 
@@ -411,15 +414,16 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     //printf("<%s>\n",buffer);
 
 
-                    for(i = 0; i < SyncPointCount; i++)
+                    for(i = 0; i < SyncPointCount; i++) //dose this need to be done before monr message is sent?
                     {
                         if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && CurrentTimeU64 > StartTimeU64 && StartTimeU64 > 0 && TimeToSyncPoint > -1 ||
                                 TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU64 > 0 && iIndex == 0 && TimeToSyncPoint > -1)
                         {
-
-                            gettimeofday(&CurrentTimeStruct, NULL);
+                            // Use the util.c function for time here but it soent mather
+                            /*gettimeofday(&CurrentTimeStruct, NULL);
                             TimeCap1 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
-
+                            */
+                            TimeCap1 = UtilgetCurrentUTCtimeMS();
                             UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
 
                             if(OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex)
@@ -452,9 +456,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                     sprintf(MTSP, "%" PRIu64, MasterTimeToSyncPointU64);
                                     strcat(buffer, MTSP); strcat(buffer,";");
                                 }
-
-                                gettimeofday(&CurrentTimeStruct, NULL);
+                                // same here changed so that we use the util.c function
+                                /*gettimeofday(&CurrentTimeStruct, NULL);
                                 TimeCap2 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
+                                */
+                                TimeCap2 = UtilgetCurrentUTCtimeMS();
 
                                 if(atoi(Timestamp)%ASPDebugRate == 0)
                                 {
@@ -468,7 +474,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                     OP[iIndex].Speed = atof(Speed);
 
-
                     DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Send MONITOR message: %s\n",buffer);
 
 
@@ -479,7 +484,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
         bzero(pcRecvBuffer,RECV_MESSAGE_BUFFER);
         //Have we recieved a command?
-        if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER))
+        if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER,NULL))
         {
 
             DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Object control command %d\n",iCommand);
@@ -536,8 +541,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 /*Build the VOIL message*/
                 MessageLength = ObjectControlBuildVOILMessage(MessageBuffer, &VOILData, (C8*)GSD->VOILData, 0);
-                for(iIndex=0;iIndex<nbr_objects;++iIndex) 
-                { 
+                for(iIndex=0;iIndex<nbr_objects;++iIndex)
+                {
                     /*Here we send the VOIL message, if IP-address found*/
                     if(strstr(VOILReceivers, object_address_name[iIndex]))
                     {
@@ -642,7 +647,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 ASPDebugRate = atoi(TextBuffer);
                 bzero(VOILReceivers, SMALL_BUFFER_SIZE_254);
                 UtilSearchTextFile(CONF_FILE_PATH, "VOILReceivers=", "", VOILReceivers);
-                
 
                 LOG_SEND(LogBuffer,"[ObjectControl] Objects to be controlled by server: %d\n", nbr_objects);
                 LOG_SEND(LogBuffer, "[ObjectControl] ASP in system: %d\n", SyncPointCount);
@@ -651,12 +655,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 OBCState = OBC_STATE_INITIALIZED;
                 LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.\n");
 
-                
                 if(TempFd != NULL) fclose(TempFd);
-                
                 //Remove temporary file
                 remove(TEMP_LOG_FILE);
-                
                 if(USE_TEMP_LOGFILE)
                 {
                     //Create temporary file
@@ -665,10 +666,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED)
             {
-
                 LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.\n");
 
-                
                 /* Connect and send drive files */
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
@@ -681,6 +680,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                                                  UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
                                                                  UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
                                                                  0);
+
+
                     DisconnectU8 = 0;
 
                     do
@@ -704,7 +705,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                         bzero(pcRecvBuffer,RECV_MESSAGE_BUFFER);
                         //Have we received a command?
-                        if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER))
+                        if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER,NULL))
                         {
                             if(iCommand == COMM_DISCONNECT)
                             {
@@ -718,8 +719,17 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                     if(iResult >= 0)
                     {
-                        /* Send OSEM command */
+                        /* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates)*/
                         LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.\n");
+                        ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, Latitude, Longitude, Altitude );
+                        bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
+                        strcat(pcSendBuffer,"GPSWeek:");
+                        strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,"; Origin GPSLongitude:");
+                        strcat(pcSendBuffer,Longitude);strcat(pcSendBuffer,"; Origin GPSLatitude:");
+                        strcat(pcSendBuffer,Latitude);strcat(pcSendBuffer,"; Origin GPSAltitude:");
+                        strcat(pcSendBuffer,Altitude);
+
+                        iCommSend(COMM_LOG,pcSendBuffer);
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
 
                         fd = fopen (object_traj_file[iIndex], "r");
@@ -781,7 +791,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     }
 
                 }
-                
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
                     if(USE_TEST_HOST == 0) vCreateSafetyChannel(object_address_name[iIndex], object_udp_port[iIndex], &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
@@ -892,9 +901,7 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     U32Data = (U32Data | *(SimData+9));
     U32 GPSSOW = U32Data;
     //printf("GPSSOW = %x\n", GPSSOW);
-    
     U8 DynamicWorldState = *(SimData+10);
-    
     U8 ObjectCount = *(SimData+11);
     //printf("ObjectCount = %d\n", ObjectCount);
 
@@ -930,7 +937,6 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     U16Data = (U16Data | *(SimData+28)) << 8;
     U16Data = (U16Data | *(SimData+29));
     U16 Pitch = U16Data;
-   
     U16Data = 0;
     U16Data = (U16Data | *(SimData+30)) << 8;
     U16Data = (U16Data | *(SimData+31));
@@ -966,7 +972,6 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     VOILData->SimObjects[0].RollU16 = Roll;
     VOILData->SimObjects[0].SpeedI16 = Speed;
 
-    
 
     p=(C8 *)VOILData;
     for(i=0; i < ObjectCount*sizeof(Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH; i++) *(MessageBuffer + i) = *p++;
@@ -1067,7 +1072,6 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     I32 I32Data = 0;
     U64 U64Data = 0;
     C8 *p;
-
     U16Data = (U16Data | *(MonrData+1)) << 8;
     U16Data = U16Data | *MonrData;
 
@@ -1086,7 +1090,7 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     U32Data = (U32Data | *(MonrData+8)) << 8;
     U32Data = U32Data | *(MonrData+7);
     MONRData->Header.MessageLengthU32 = U32Data;
-    
+
     U32Data = 0;
     U32Data = (U32Data | *(MonrData+14)) << 8;
     U32Data = (U32Data | *(MonrData+13)) << 8;
@@ -1169,7 +1173,7 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
     double iLlh[3] = {0, 0, 0};
     double xyz[3] = {0, 0, 0};
     double Llh[3] = {0, 0, 0};
-
+    uint64_t ConvertGPStoUTC;
 
     bzero(Id, SMALL_BUFFER_SIZE_1);
     bzero(Timestamp, SMALL_BUFFER_SIZE_0);
@@ -1194,6 +1198,7 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
         //Timestamp
         MonrValueU64 = 0;
         //for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
+        ConvertGPStoUTC =
         sprintf(Timestamp, "%" PRIu32, MONRData->GPSSOWU32);
 
         if(debug && MONRData->GPSSOWU32%400 == 0)
@@ -1232,45 +1237,45 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
         enuToLlh(iLlh, xyz, Llh);
 
         //Latitude
-        MonrValueU32 = 0;
+        //MonrValueU32 = 0;
         //for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
         //sprintf(Latitude, "%" PRIi32, (I32)(Llh[0]*1e7));
         sprintf(Latitude, "%" PRIi32, MONRData->XPositionI32);
 
         //Longitude
-        MonrValueU32 = 0;
+        //MonrValueU32 = 0;
         //for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
         //sprintf(Longitude, "%" PRIi32, (I32)(Llh[1]*1e7));
         sprintf(Longitude, "%" PRIi32, MONRData->YPositionI32);
 
         //Altitude
-        MonrValueU32 = 0;
+        //MonrValueU32 = 0;
         //for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
         //sprintf(Altitude, "%" PRIi32, (I32)(Llh[2]));
         sprintf(Altitude, "%" PRIi32, MONRData->ZPositionI32);
 
         //Speed
-        MonrValueU16 = 0;
+        //MonrValueU16 = 0;
         //for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
         sprintf(LongitudinalSpeed, "%" PRIi16, MONRData->LongitudinalSpeedI16);
 
         //LatSpeed
-        MonrValueU16 = 0;
+        //MonrValueU16 = 0;
         //for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
         sprintf(LateralSpeed, "%" PRIi16, MONRData->LateralSpeedI16);
 
         //LongAcc
-        MonrValueU16 = 0;
+        //MonrValueU16 = 0;
         //for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
         sprintf(LongitudinalAcc, "%" PRIi16, MONRData->LongitudinalAccI16);
 
         //LatAcc
-        MonrValueU16 = 0;
+        //MonrValueU16 = 0;
         //for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
         sprintf(LateralAcc, "%" PRIi16, MONRData->LateralAccI16);
 
         //Heading
-        MonrValueU16 = 0;
+        //MonrValueU16 = 0;
         //for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
         sprintf(Heading, "%" PRIu16, MONRData->HeadingU16);
 
@@ -1421,7 +1426,26 @@ I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeTyp
     return MessageIndex; //Total number of bytes
 }
 
+int ObjectControlOSEMtoASCII(OSEMType *OSEMData, char *GPSWeek, char *GPSLatitude, char *GPSLongitude, char *GPSAltitude)
+{
+    // what do i want? in my mq? gps week, origin in lat and long coordinates
+    bzero(GPSWeek,SMALL_BUFFER_SIZE_0);
+    bzero(GPSLatitude,SMALL_BUFFER_SIZE_0);
+    bzero(GPSLongitude,SMALL_BUFFER_SIZE_0);
+    bzero(GPSAltitude,SMALL_BUFFER_SIZE_0);
 
+    if (OSEMData->Header.MessageIdU16 == COMMAND_OSEM_CODE)
+    {
+        sprintf(GPSWeek,"%" PRIu16 ,OSEMData->GPSWeekU16);
+
+        sprintf(GPSLatitude,"%" PRIi64, OSEMData->LongitudeI64);
+
+        sprintf(GPSLongitude,"%" PRIi64,OSEMData->LatitudeI64);
+
+        sprintf(GPSAltitude,"%" PRIi32, OSEMData->AltitudeI32);
+    }
+    return 0;
+}
 int ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug)
 {
     I32 MessageIndex = 0, i = 0;
@@ -1533,7 +1557,7 @@ I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeTyp
     HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
     HEABData->Header.MessageIdU16 = COMMAND_HEAB_CODE;
     HEABData->Header.MessageLengthU32 = sizeof(HEABType) - sizeof(HeaderType);
-    //HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16; 
+    //HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
     HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
     //HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 0);
     HEABData->CCStatusU8 = CCStatus;
