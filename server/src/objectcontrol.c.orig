@@ -173,8 +173,11 @@ int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId ,char *TriggAc
 int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug);
 I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* SimData, U8 debug);
 
+<<<<<<< HEAD
 void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug);
 
+=======
+>>>>>>> dev
 static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
                              char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
                              int* nbr_objects);
@@ -345,7 +348,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
         }
 
+<<<<<<< HEAD
+        if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED)
+=======
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED || OBCState ==OBC_STATE_ARMED)
+>>>>>>> dev
         {
             char buffer[RECV_MESSAGE_BUFFER];
             int recievedNewData = 0;
@@ -453,7 +460,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     //printf("<%s>\n",buffer);
 
 
+<<<<<<< HEAD
+
+                    for(i = 0; i < SyncPointCount; i++)
+=======
                     for(i = 0; i < SyncPointCount; i++) //dose this need to be done before monr message is sent?
+>>>>>>> dev
                     {
                         if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && CurrentTimeU64 > StartTimeU64 && StartTimeU64 > 0 && TimeToSyncPoint > -1 ||
                                 TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU64 > 0 && iIndex == 0 && TimeToSyncPoint > -1)
@@ -686,6 +698,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 ASPDebugRate = atoi(TextBuffer);
                 bzero(VOILReceivers, SMALL_BUFFER_SIZE_254);
                 UtilSearchTextFile(CONF_FILE_PATH, "VOILReceivers=", "", VOILReceivers);
+<<<<<<< HEAD
+
+=======
+>>>>>>> dev
 
                 LOG_SEND(LogBuffer,"[ObjectControl] Objects to be controlled by server: %d\n", nbr_objects);
                 LOG_SEND(LogBuffer, "[ObjectControl] ASP in system: %d\n", SyncPointCount);
@@ -694,9 +710,18 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 OBCState = OBC_STATE_INITIALIZED;
                 LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.\n");
 
+<<<<<<< HEAD
+
+                if(TempFd != NULL) fclose(TempFd);
+
+                //Remove temporary file
+                remove(TEMP_LOG_FILE);
+
+=======
                 if(TempFd != NULL) fclose(TempFd);
                 //Remove temporary file
                 remove(TEMP_LOG_FILE);
+>>>>>>> dev
                 if(USE_TEMP_LOGFILE)
                 {
                     //Create temporary file
@@ -707,6 +732,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.\n");
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> dev
                 /* Connect and send drive files */
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
@@ -830,6 +859,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     }
 
                 }
+<<<<<<< HEAD
+
+=======
+>>>>>>> dev
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
                     if(USE_TEST_HOST == 0) vCreateSafetyChannel(object_address_name[iIndex], object_udp_port[iIndex], &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
@@ -940,7 +973,13 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     U32Data = (U32Data | *(SimData+9));
     U32 GPSSOW = U32Data;
     //printf("GPSSOW = %x\n", GPSSOW);
+<<<<<<< HEAD
+
     U8 DynamicWorldState = *(SimData+10);
+
+=======
+    U8 DynamicWorldState = *(SimData+10);
+>>>>>>> dev
     U8 ObjectCount = *(SimData+11);
     //printf("ObjectCount = %d\n", ObjectCount);
 
@@ -976,6 +1015,10 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     U16Data = (U16Data | *(SimData+28)) << 8;
     U16Data = (U16Data | *(SimData+29));
     U16 Pitch = U16Data;
+<<<<<<< HEAD
+
+=======
+>>>>>>> dev
     U16Data = 0;
     U16Data = (U16Data | *(SimData+30)) << 8;
     U16Data = (U16Data | *(SimData+31));
@@ -1011,6 +1054,10 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     VOILData->SimObjects[0].RollU16 = Roll;
     VOILData->SimObjects[0].SpeedI16 = Speed;
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> dev
 
     p=(C8 *)VOILData;
     for(i=0; i < ObjectCount*sizeof(Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH; i++) *(MessageBuffer + i) = *p++;

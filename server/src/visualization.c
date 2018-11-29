@@ -37,7 +37,7 @@
   ------------------------------------------------------------*/
 static void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr);
 static void vDisconnectVisualizationChannel(int* sockfd);
-static void vSendVisualization(int* sockfd, 
+static void vSendVisualization(int* sockfd,
                                struct sockaddr_in* addr,
                                const char* message);
 
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     while(!iExit)
     {
         bzero(cpBuffer,RECV_MESSAGE_BUFFER);
-        (void)iCommRecv(&iCommand,cpBuffer,RECV_MESSAGE_BUFFER);
+        (void)iCommRecv(&iCommand,cpBuffer,RECV_MESSAGE_BUFFER, NULL);
 
         if(iCommand == COMM_MONI)
         {
@@ -234,4 +234,3 @@ void vISOtoCHRONOSmsg(char* ISOmsg,char* tarCHRONOSmsg, int MSG_size)
     }
 
 }
-

@@ -556,7 +556,10 @@ void UtilgetCurrentGPStime(uint16_t *GPSweek, uint32_t *GPSquarterMSofWeek);
 // Get time function
 uint64_t UtilgetCurrentUTCtimeMS();
 uint32_t UtilgetIntDateFromMS(uint64_t ms);
+uint64_t UtilgetETSIfromUTCMS(uint64_t utc_sec, uint64_t utc_usec);
+
 void UtilgetDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t);
+void UtilgetDateTimefromUTCtimeNewformat(int64_t utc_ms, char *buffer, int size_t);
 
 void util_error(char* message);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
@@ -564,7 +567,7 @@ int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
 int iCommInit(const unsigned int, const char*, const int);
 int iCommClose();
-int iCommRecv(int*, char*, const int);
+int iCommRecv(int*, char*, const int, char*);
 int iCommSend(const int,const char*);
 
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);

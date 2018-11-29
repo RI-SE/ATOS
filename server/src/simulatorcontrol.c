@@ -228,7 +228,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
 
       bzero(MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
-      (void)iCommRecv(&iCommand,MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
+      (void)iCommRecv(&iCommand,MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH, NULL);
 
 
       if(iCommand == COMM_EXIT)

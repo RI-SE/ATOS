@@ -39,8 +39,12 @@
 #define HEARTBEAT_TIME_MS 10
 #define TIMESTAMP_BUFFER_LENGTH 20
 #define SPECIFIC_CHAR_THRESHOLD_COUNT 10
+<<<<<<< HEAD
+
+=======
 #define MQ_MAX_UTC_LENGTH 30
 #define TRAJ_FILE_NAME  "127.0.0.1"// IN THE FUTURE THIS ONE SHOULD BE READ FROM THE CONF FILE BUT THEN I NEED TO SWITCH THE ORDER DOWN BELOW AND FIX SO THAT WE READ THE PATH TO THE TRAJ FILE
+>>>>>>> dev
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/

@@ -27,7 +27,7 @@ cp -R ../conf/ .
 
 Create a folder for Trajectory files in /build and move one of the existing trajectory files to this folder. 
 ```sh
-mkdr traj
+mkdir traj
 cp ../traj/0.traj ./traj/192.168.0.1  
 ```
 
