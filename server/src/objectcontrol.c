@@ -327,7 +327,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             int recievedNewData = 0;
 
             gettimeofday(&CurrentTimeStruct, NULL);
-            CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+
+            //CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+            CurrentTimeU64 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
+            
             if(TIME_COMPENSATE_LAGING_VM) CurrentTimeU64 = CurrentTimeU64 - TIME_COMPENSATE_LAGING_VM_VAL;
 
             /*MTSP*/
@@ -341,13 +344,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         if(TEST_SYNC_POINTS == 1 && iIndex == 1 && MasterTimeToSyncPointU64 > 0 && TimeToSyncPoint > -1 )
                         {
                             /*Send Master time to adaptive sync point*/
-                            MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, MasterTimeToSyncPointU64, 0);
+                            MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, (U32)MasterTimeToSyncPointU64, 0);
                             ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                         }
                         else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL && MasterTimeToSyncPointU64 > 0 && TimeToSyncPoint > -1)
                         {
                             /*Send Master time to adaptive sync point*/
-                            MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, MasterTimeToSyncPointU64, 0);
+                            MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, (U32)MasterTimeToSyncPointU64, 0);
                             ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                         }
                     }
@@ -422,8 +425,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             TimeCap1 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
 
                             //UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
-                            OP[iIndex].x = atoi(Latitude);
-                            OP[iIndex].y = atoi(Longitude);
+                            OP[iIndex].x = ((dbl)atoi(Latitude))/1000;
+                            OP[iIndex].y = ((dbl)atoi(Longitude))/1000;
 
                             if(OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex)
                             {
@@ -1913,12 +1916,9 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
         bzero(DataBuffer, 20);
         strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
         Data = UtilRadToDeg(atof(DataBuffer));
-        printf("Read data: %f\n",Data);
-        //Data = Data*1e2;
         Data = 450 - Data; //Turn heading back pi/2
         while(Data<0) Data+=360.0;
         while(Data>360) Data-=360.0;
-        printf("Formated data: %f\n",Data);
         DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
         DOTMData->HeadingContentLengthU16 = 2;
         DOTMData->HeadingU16 = (U16)(Data*1e2);
