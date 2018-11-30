@@ -784,13 +784,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             fclose (fd);
 
                             /*DOTM*/
-                            MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-1, &HeaderData, &TRAJInfoData, 1);
+                            MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-2, &HeaderData, &TRAJInfoData, 1);
 
                             /*Send DOTM header*/
                             vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 1);
 
                             /*Send DOTM data*/
-                            ObjectControlSendDOTMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-1, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 1);
+                            ObjectControlSendDOTMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 1);
                         }
 
 
@@ -807,14 +807,14 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             if(TEST_SYNC_POINTS == 1 && iIndex == 1)
                             {
                                 /*Send SYPM to slave*/
-                                MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, &SYPMData, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
-                                vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+                                MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, &SYPMData, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 1);
+                                vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                             }
                             else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL)
                             {
                                 /*Send SYPM to slave*/
-                                MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, &SYPMData, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 0);
-                                vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+                                MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, &SYPMData, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 1);
+                                vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                             }
                         }
 
@@ -1913,9 +1913,12 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
         bzero(DataBuffer, 20);
         strncpy(DataBuffer, src+1, (uint64_t)strchr(src+1, ';') - (uint64_t)src - 1);
         Data = UtilRadToDeg(atof(DataBuffer));
-        Data = 4500 - Data; //Turn heading back pi/2
+        printf("Read data: %f\n",Data);
+        //Data = Data*1e2;
+        Data = 450 - Data; //Turn heading back pi/2
         while(Data<0) Data+=360.0;
-        while(Data>3600) Data-=360.0;
+        while(Data>360) Data-=360.0;
+        printf("Formated data: %f\n",Data);
         DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
         DOTMData->HeadingContentLengthU16 = 2;
         DOTMData->HeadingU16 = (U16)(Data*1e2);
