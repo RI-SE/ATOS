@@ -294,41 +294,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
-//TODO
-    //UPD setup
-    U16 ObjectControlTCPPortU16;
-    U16 ObjectControlUDPPortU16;
 
-    I32 ObjectControlUDPSocketfdI32=-1;
-
-    C8 TextBufferC8[20];
-    C8 SimulatorServerIPC8[20];
-      U32 SimulatorIpU32;
-
-      struct sockaddr_in simulator_addr;
-
-      //GET IP
-      bzero(TextBufferC8, 20);
-      UtilSearchTextFile(TEST_CONF_FILE, "ObjectControlIP=", "", TextBufferC8);
-      bzero(SimulatorServerIPC8, 20);
-      strcat(SimulatorServerIPC8, TextBufferC8);
-      printf("IP: %s\n", TextBufferC8);
-      SimulatorIpU32 = UtilIPStringToInt(SimulatorServerIPC8);
-
-
-    bzero(TextBufferC8,20);
-    UtilSearchTextFile(TEST_CONF_FILE, "ObjectControlTCPPort=", "", TextBufferC8);
-    ObjectControlTCPPortU16 = (U16)atoi(TextBufferC8);
-    bzero(TextBufferC8, 20);
-    UtilSearchTextFile(TEST_CONF_FILE, "ObjectControlUDPPort=", "", TextBufferC8);
-    ObjectControlUDPPortU16 = (U16)atoi(TextBufferC8);
-
-    printf("ObjectControlTCPPort = %d\n", ObjectControlTCPPortU16);
-    printf("ObjectControlUDPPort = %d\n", ObjectControlUDPPortU16);
-    //ReceivedNewData = 1;
-    UtilCreateUDPChannel("ObjectControl", &ObjectControlUDPSocketfdI32, (const C8*)SimulatorServerIPC8, ObjectControlUDPPortU16, &simulator_addr);
-
-    //
     while(!iExit)
     {
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED)
