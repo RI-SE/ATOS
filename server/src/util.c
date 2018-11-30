@@ -587,7 +587,8 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 	
 	int i = ORIGO_DISTANCE_CALC_ITERATIONS;
 	OP->CalcIterations = 0;	
-	do
+	/*
+  do
 	{
 		sins = sqrt( pow((cos(U2)*sin(lambda)),2) + pow((cos(U1)*sin(U2) - sin(U1)*cos(U2)*cos(lambda)),2) );
 		if (sins==0) return 0; //co-incident points
@@ -610,38 +611,37 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 		OP->OrigoDistance = -1;
 	}
 	else
-	{
-		u2 = cosalpha2*((pow(a,2) - pow(b,2))/pow(b,2));
-		A = 1 +(u2/16384)*(4096+u2*(-768+u2*(320-175*u2)));
-		B = (u2/1024)*(256 + u2*(-128*u2*(74-47*u2)));
-		dsigma = B*sins*(cossm+0.25*B*(coss*(-1+2*pow(cossm,2)) - (1/6)*B*cossm*(-3+4*pow(sins,2))*(-3+4*pow(cossm,2))));	
-		s = b*A*(sigma-dsigma);
+	{*/
+		//u2 = cosalpha2*((pow(a,2) - pow(b,2))/pow(b,2));
+		//A = 1 +(u2/16384)*(4096+u2*(-768+u2*(320-175*u2)));
+		//B = (u2/1024)*(256 + u2*(-128*u2*(74-47*u2)));
+		//dsigma = B*sins*(cossm+0.25*B*(coss*(-1+2*pow(cossm,2)) - (1/6)*B*cossm*(-3+4*pow(sins,2))*(-3+4*pow(cossm,2))));	
+		//s = b*A*(sigma-dsigma);
+    s = sqrt(pow(OP->x,2) + pow(OP->y,2));
     OP->DeltaOrigoDistance = s - OP->OrigoDistance;
 		OP->OrigoDistance = s;
 
-		cosU2 = cos(U2);
+
+		/*
+    cosU2 = cos(U2);
 		sinU2 = sin(U2); 
 		cosU1 = cos(U1);
 		sinU1 = sin(U1); 
 		sinlambda = sin(lambda);
 		coslambda = cos(lambda);
-
-		OP->ForwardAzimuth1 = atan2(cosU2*sinlambda,(cosU1*sinU2-sinU1*cosU2*coslambda));
-		OP->ForwardAzimuth2 = atan2(cosU1*sinlambda,(sinU1*cosU2*-1+cosU1*sinU2*coslambda));
-    //OP->x = s*sin((OP->ForwardAzimuth1));
-    //OP->y = s*cos((OP->ForwardAzimuth1));
-    //OP->x = s*sin((OP->ForwardAzimuth2));
-    //OP->y = s*cos((OP->ForwardAzimuth2));
+    */
+		
+    //OP->ForwardAzimuth1 = atan2(cosU2*sinlambda,(cosU1*sinU2-sinU1*cosU2*coslambda));
+		//OP->ForwardAzimuth2 = atan2(cosU1*sinlambda,(sinU1*cosU2*-1+cosU1*sinU2*coslambda));
       
-    llhToEnu(iLlh, Llh, xyz);
+    //llhToEnu(iLlh, Llh, xyz);
 
-    //OP->x = (P2LongRad-P1LongRad)*cos(P1LatRad)*a;
-    //OP->y = (P2LatRad-P1LatRad)*a;
-    OP->x = xyz[0];
-    OP->y = xyz[1];
+    
+    //OP->x = xyz[0];
+    //OP->y = xyz[1];
 
 
-	}
+	//}
 	return s;
 }
 

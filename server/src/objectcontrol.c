@@ -423,10 +423,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                             gettimeofday(&CurrentTimeStruct, NULL);
                             TimeCap1 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
-
-                            //UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
                             OP[iIndex].x = ((dbl)atoi(Latitude))/1000;
                             OP[iIndex].y = ((dbl)atoi(Longitude))/1000;
+                            UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
 
                             if(OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex)
                             {
@@ -465,7 +464,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                 if(atoi(Timestamp)%ASPDebugRate == 0)
                                 {
                                     printf("TtS= %3.3f, %d, %d, %d, %ld, %d, %3.0f\n",TimeToSyncPoint, OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, MasterTimeToSyncPointU64, iIndex, ((double)(TimeCap2)-(double)TimeCap1));
-                                    printf("%3.3f, %3.7f, %3.7f ,%3.7f, %3.7f\n\n",CurrentTimeDbl, OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7);
+                                    //printf("%3.3f, %3.7f, %3.7f ,%3.7f, %3.7f\n\n",CurrentTimeDbl, OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7);
+                                    printf("%3.3f, %3.7f, %3.7f\n\n",CurrentTimeDbl, OP[iIndex].x,OP[iIndex].y);
                                 }
                             }
 
