@@ -65,6 +65,7 @@ typedef enum {
 #define OSTM_OPT_SET_DISARMED_STATE 3 
 #define SC_RECV_MESSAGE_BUFFER 1024
 
+#define SMALL_BUFFER_SIZE_1024 1024
 #define SMALL_BUFFER_SIZE_128 128
 #define SMALL_BUFFER_SIZE_64 64
 #define SMALL_BUFFER_SIZE_16 16
@@ -193,6 +194,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
     U16 MilliU16 = 0, NowU16 = 0;
     U64 GPSmsU64 = 0;
     C8 ParameterListC8[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
+    U32 LengthU32 = 0;
+    C8 BinBuffer[SMALL_BUFFER_SIZE_1024];
+
 
 
     bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
@@ -381,6 +385,26 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         {
             SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
         }
+        
+        if(GSD->ASPDebugDataSetU8 == 1)
+        {
+            GSD->ASPDebugDataSetU8 = 0;
+            //LengthU32 = strlen(pcRecvBuffer);
+            LengthU32 = sizeof(ASPType);
+            bzero(BinBuffer, LengthU32 + 6);
+            //UtilHexTextToBinary(LengthU32, pcRecvBuffer, BinBuffer + 6, 0);
+            PCDMessageCodeU16 = 2;
+            BinBuffer[0] = (U8)(LengthU32 >> 24);
+            BinBuffer[1] = (U8)(LengthU32 >> 16);
+            BinBuffer[2] = (U8)(LengthU32 >> 8);
+            BinBuffer[3] = (U8) LengthU32;
+            BinBuffer[4] = (U8)(PCDMessageCodeU16 >> 8);
+            BinBuffer[5] = (U8) PCDMessageCodeU16;
+            for(I32 i = 0; i < LengthU32; i++) BinBuffer[i+6] = GSD->ASPDebugDataU8[i];
+            SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, BinBuffer, LengthU32 + 6, 0);
+        }
+
+
 
         ++ProcessControlSendCounterU32;
 
@@ -413,7 +437,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             ProcessControlData[18] = (U8) GPSTime->FixQualityU8;
             ProcessControlData[19] = (U8) GPSTime->NSatellitesU8;
 
-            SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, PCDMessageLengthU32 + 6, 1);
+            SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, PCDMessageLengthU32 + 6, 0);
         }
 
 

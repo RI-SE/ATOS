@@ -1662,6 +1662,11 @@ int iCommSend(const int iCommand,const char* cpData)
       uiMessagePrio = 80;
       cpMessage[0] = (char)COMM_TRAJ;
     }
+  else if (iCommand == COMM_ASP)
+    {
+      uiMessagePrio = 110;
+      cpMessage[0] = (char)COMM_ASP;
+    }
   else
     {
       util_error("ERR: Unknown command");
@@ -2061,7 +2066,6 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug)
   C8 Bin;
   C8 Hex;
 
-  printf("UtilHexTextToBinary: %d\n", DataLength);
   for(i = 0; i < DataLength; )
   {
 

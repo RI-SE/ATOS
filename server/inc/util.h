@@ -62,7 +62,9 @@
 #define COMM_DISCONNECT 13  
 #define COMM_LOG 14
 #define COMM_VIOP 15
-#define COMM_TRAJ 16  
+#define COMM_TRAJ 16
+#define COMM_TRAJ1 17
+#define COMM_ASP 18     
 #define COMM_INV 255
 
 
@@ -452,6 +454,19 @@ typedef struct
 
 typedef struct
 {
+  U32 MTSPU32;
+  dbl CurrentTimeDbl;
+  dbl TimeToSyncPointDbl;
+  dbl PrevTimeToSyncPointDbl;
+  I32 SyncPointIndexI32;
+  U32 CurrentTimeU32;
+  I32 BestFoundIndexI32;
+  U16 IterationTimeU16;
+} ASPType;
+
+
+typedef struct
+{
   U16 TimeControlExecTimeU16;
   U16 SystemControlExecTimeU16;
   U16 ObjectControlExecTimeU16;
@@ -461,9 +476,9 @@ typedef struct
   U8 VOILData[400];
   U32 ChunkSize;
   U8 Chunk[1200];
+  U8 ASPDebugDataSetU8;
+  U8 ASPDebugDataU8[sizeof(ASPType)];
 } GSDType;
-
-
 
 
 typedef struct
@@ -493,7 +508,7 @@ typedef struct
 	double ForwardAzimuth1;
 	double ForwardAzimuth2;
   int TrajectoryPositionCount;
-  int SyncIndex;
+  I32 SyncIndex;
   double SyncTime;
   double SyncStopTime;
   int BestFoundTrajectoryIndex;

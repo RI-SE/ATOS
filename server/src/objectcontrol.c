@@ -111,6 +111,7 @@
 #define COMMAND_TOM_CODE 14  //Trigger Occurred Message: Object->Server, UDP
 #define COMMAND_TOM_MESSAGE_LENGTH 8 
 
+#define ASP_MESSAGE_LENGTH sizeof(ASPType)
 
 #define CONF_FILE_PATH  "conf/test.conf"
 
@@ -178,6 +179,7 @@ int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char
 I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* SimData, U8 debug);
 I32 ObjectControlSendDTMMEssage(C8 *DTMData, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug);
 I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
+I32 ObjectControlBuildASPMessage(C8* MessageBuffer, ASPType *ASPData, U8 debug);
 
 static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], 
                              char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
@@ -227,16 +229,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     char MTSP[SMALL_BUFFER_SIZE_0];
     int MessageLength;
     char *MiscPtr;
-    U64 StartTimeU64 = 0;
+    U32 StartTimeU32 = 0;
     U32 OutgoingStartTimeU32 = 0;
     U32 DelayedStartU32 = 0;
-    U64 CurrentTimeU64 = 0;
-    U64 OldTimeU64 = 0;
-    U64 MasterTimeToSyncPointU64 = 0;
+    U32 CurrentTimeU32 = 0;
+    U32 OldTimeU32 = 0;
     U64 TimeCap1, TimeCap2;
-    double TimeToSyncPoint = 0;
-    double PrevTimeToSyncPoint = 0;
-    double CurrentTimeDbl = 0;
     struct timeval CurrentTimeStruct;
     int HeartbeatMessageCounter = 0;
 
@@ -253,15 +251,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     double OriginLongitudeDbl;
     double OriginAltitudeDbl;
     double OriginHeadingDbl;
-    AdaptiveSyncPoint ASP[MAX_ADAPTIVE_SYNC_POINTS];
-    int SyncPointCount = 0;
-    int SearchStartIndex = 0;
-    double ASPMaxTimeDiff = 0;
-    double ASPMaxTrajDiff = 0;
-    double ASPFilterLevel = 0;
-    double ASPMaxDeltaTime = 0;
-    int ASPDebugRate = 1;
-    int ASPStepBackCount = 0;
     TriggActionType TAA[MAX_TRIGG_ACTIONS];
     int TriggerActionCount = 0;
     char pcSendBuffer[MQ_MAX_MESSAGE_LENGTH];
@@ -281,6 +270,22 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     SYPMType SYPMData;
     MTSPType MTSPData;
     GeoPosition OriginPosition;
+    ASPType ASPData;
+    ASPData.MTSPU32 = 0;
+    ASPData.TimeToSyncPointDbl = 0;
+    ASPData.PrevTimeToSyncPointDbl = 0;
+    ASPData.CurrentTimeDbl = 0;
+    AdaptiveSyncPoint ASP[MAX_ADAPTIVE_SYNC_POINTS];
+    int SyncPointCount = 0;
+    int SearchStartIndex = 0;
+    double ASPMaxTimeDiff = 0;
+    double ASPMaxTrajDiff = 0;
+    double ASPFilterLevel = 0;
+    double ASPMaxDeltaTime = 0;
+    int ASPDebugRate = 1;
+    int ASPStepBackCount = 0;
+
+
 
     unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
@@ -302,6 +307,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     FILE *TempFd;
     U16 MiscU16;
+    I32 j = 0;
+
 
     (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
@@ -314,7 +321,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 if(uiTimeCycle == 0)
                 {
-                    HeartbeatMessageCounter ++;
+                    //HeartbeatMessageCounter ++;
                     MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus, 0);
                     ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                 }
@@ -328,31 +335,30 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
             gettimeofday(&CurrentTimeStruct, NULL);
 
-            //CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-            CurrentTimeU64 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
+            CurrentTimeU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
             
-            if(TIME_COMPENSATE_LAGING_VM) CurrentTimeU64 = CurrentTimeU64 - TIME_COMPENSATE_LAGING_VM_VAL;
+            if(TIME_COMPENSATE_LAGING_VM) CurrentTimeU32 = CurrentTimeU32 - TIME_COMPENSATE_LAGING_VM_VAL;
 
             /*MTSP*/
-            if(HeartbeatMessageCounter == 10)
+            if(HeartbeatMessageCounter == 0)
             {
                 HeartbeatMessageCounter = 0;
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
                     for(i = 0; i < SyncPointCount; i++)
                     {
-                        if(TEST_SYNC_POINTS == 1 && iIndex == 1 && MasterTimeToSyncPointU64 > 0 && TimeToSyncPoint > -1 )
+                        if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL && ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1)
                         {
                             /*Send Master time to adaptive sync point*/
-                            MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, (U32)MasterTimeToSyncPointU64, 0);
+                            MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, ASPData.MTSPU32, 0);
                             ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                         }
-                        else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL && MasterTimeToSyncPointU64 > 0 && TimeToSyncPoint > -1)
+                        /*else if(TEST_SYNC_POINTS == 1 && iIndex == 1 && ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1 )
                         {
-                            /*Send Master time to adaptive sync point*/
-                            MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, (U32)MasterTimeToSyncPointU64, 0);
+                            Send Master time to adaptive sync point
+                            MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, (U32)ASPData.MTSPU32, 0);
                             ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
-                        }
+                        }*/
                     }
                 }
             }
@@ -412,13 +418,24 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     strcat(buffer,StateFlag); strcat(buffer,";");
                     strcat(buffer,StatusFlag); strcat(buffer,";");
 
-                    //printf("<%s>\n",buffer);
+                    if(ASPData.MTSPU32 != 0)
+                    {
+                        //Add MTSP to MONR if not 0
+                        bzero(MTSP, SMALL_BUFFER_SIZE_0);
+                        sprintf(MTSP, "%" PRIu32, ASPData.MTSPU32);
+                        strcat(buffer, MTSP); strcat(buffer,";");
+                    }
+                    
+                    DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Send MONITOR message: %s\n",buffer);
+                    if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) (void)iCommSend(COMM_MONI,buffer);
 
 
+
+                    //Ok, let's do the ASP
                     for(i = 0; i < SyncPointCount; i++)
                     {
-                        if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && CurrentTimeU64 > StartTimeU64 && StartTimeU64 > 0 && TimeToSyncPoint > -1 ||
-                                TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU64 > 0 && iIndex == 0 && TimeToSyncPoint > -1)
+                        if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && CurrentTimeU32 > StartTimeU32 && StartTimeU32 > 0 && ASPData.TimeToSyncPointDbl > -1 
+                            /*|| TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU32 > 0 && iIndex == 0 && TimeToSyncPoint > -1*/)
                         {
 
                             gettimeofday(&CurrentTimeStruct, NULL);
@@ -429,56 +446,71 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                             if(OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex)
                             {
-                                CurrentTimeDbl = (((double)CurrentTimeU64-(double)StartTimeU64)/1000);
+                                ASPData.CurrentTimeU32 = CurrentTimeU32;
+                                ASPData.CurrentTimeDbl = (((double)CurrentTimeU32-(double)StartTimeU32)/1000);
                                 SearchStartIndex = OP[iIndex].BestFoundTrajectoryIndex - ASPStepBackCount;
-                                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, CurrentTimeDbl, ASPMaxTrajDiff, ASPMaxTimeDiff, 1);
+                                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, ASPData.CurrentTimeDbl, ASPMaxTrajDiff, ASPMaxTimeDiff, 0);
+                                ASPData.BestFoundIndexI32 = OP[iIndex].BestFoundTrajectoryIndex;
 
                                 if(OP[iIndex].BestFoundTrajectoryIndex != TRAJ_POSITION_NOT_FOUND)
                                 {
-                                    TimeToSyncPoint = UtilCalculateTimeToSync(&OP[iIndex]);
-                                    if(TimeToSyncPoint > 0)
+                                    ASPData.TimeToSyncPointDbl = UtilCalculateTimeToSync(&OP[iIndex]);
+                                    if(ASPData.TimeToSyncPointDbl > 0)
                                     {
-                                        if(PrevTimeToSyncPoint != 0 && ASPFilterLevel > 0)
+                                        if(ASPData.PrevTimeToSyncPointDbl != 0 && ASPFilterLevel > 0)
                                         {
-                                            if(TimeToSyncPoint/PrevTimeToSyncPoint > (1 + ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint + ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
-                                            else if(TimeToSyncPoint/PrevTimeToSyncPoint < (1 - ASPFilterLevel/100)) TimeToSyncPoint = PrevTimeToSyncPoint - ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
+                                            if(ASPData.TimeToSyncPointDbl/ASPData.PrevTimeToSyncPointDbl > (1 + ASPFilterLevel/100)) ASPData.TimeToSyncPointDbl = ASPData.PrevTimeToSyncPointDbl + ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
+                                            else if(ASPData.TimeToSyncPointDbl/ASPData.PrevTimeToSyncPointDbl < (1 - ASPFilterLevel/100)) ASPData.TimeToSyncPointDbl = ASPData.PrevTimeToSyncPointDbl - ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
                                         }
-                                        MasterTimeToSyncPointU64 = CurrentTimeU64 + TimeToSyncPoint*1000;
-                                        PrevTimeToSyncPoint = TimeToSyncPoint;
-                                        OldTimeU64 = CurrentTimeU64;
+                                        ASPData.MTSPU32 = CurrentTimeU32 + (U32)(ASPData.TimeToSyncPointDbl*4000);
+
+                                        ASPData.PrevTimeToSyncPointDbl = ASPData.TimeToSyncPointDbl;
+                                        OldTimeU32 = CurrentTimeU32;
                                     }
                                     else
                                     {
-                                        MasterTimeToSyncPointU64 = 0;
-                                        TimeToSyncPoint = -1;
+                                        CurrentTimeU32 = 0;
+                                        ASPData.TimeToSyncPointDbl = -1;
                                     }
 
-                                    bzero(MTSP, SMALL_BUFFER_SIZE_0);
-                                    sprintf(MTSP, "%" PRIu64, MasterTimeToSyncPointU64);
-                                    strcat(buffer, MTSP); strcat(buffer,";");
                                 }
 
                                 gettimeofday(&CurrentTimeStruct, NULL);
                                 TimeCap2 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
 
+                                ASPData.SyncPointIndexI32 = OP[iIndex].SyncIndex;
+                                ASPData.IterationTimeU16 = (U16)(TimeCap2 - TimeCap1);
+                                //Build ASP debug data and set to GSD
+                                bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
+                                ObjectControlBuildASPMessage(buffer, &ASPData, 0);
+                                for(j = 0; j < sizeof(ASPType); j ++) GSD->ASPDebugDataU8[j] = buffer[j];
+                                GSD->ASPDebugDataSetU8 = 1;
+
                                 if(atoi(Timestamp)%ASPDebugRate == 0)
                                 {
-                                    printf("TtS= %3.3f, %d, %d, %d, %ld, %d, %3.0f\n",TimeToSyncPoint, OP[iIndex].BestFoundTrajectoryIndex, OP[iIndex].SyncIndex, SearchStartIndex, MasterTimeToSyncPointU64, iIndex, ((double)(TimeCap2)-(double)TimeCap1));
-                                    //printf("%3.3f, %3.7f, %3.7f ,%3.7f, %3.7f\n\n",CurrentTimeDbl, OriginLatitudeDbl,OriginLongitudeDbl, atof(Latitude)/1e7, atof(Longitude)/1e7);
-                                    printf("%3.3f, %3.7f, %3.7f\n\n",CurrentTimeDbl, OP[iIndex].x,OP[iIndex].y);
+                                    printf("%d, %d, %3.3f, %s, %s\n", CurrentTimeU32, StartTimeU32, ASPData.TimeToSyncPointDbl, object_address_name[iIndex], ASP[i].MasterIP);
+                                    printf("TtS=%3.3f, BestIndex=%d, MTSP=%d, iIndex=%d, IterationTime=%3.0f ms\n",ASPData.TimeToSyncPointDbl, OP[iIndex].BestFoundTrajectoryIndex, ASPData.MTSPU32, iIndex, ((double)(TimeCap2)-(double)TimeCap1));
+                                    printf("CurrentTime=%3.3f, x=%3.3f mm, y=%3.3f\n\n",ASPData.CurrentTimeDbl, OP[iIndex].x, OP[iIndex].y);
+                                    
+                                    //Build and send ASP on message queue
+                                    //(void)iCommSend(COMM_ASP,buffer);
                                 }
+
+
+
+
+
                             }
+                            
+
+
+
 
                         }
                     }
 
                     OP[iIndex].Speed = atof(Speed);
 
-
-                    DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Send MONITOR message: %s\n",buffer);
-
-
-                    if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) (void)iCommSend(COMM_MONI,buffer);
                 }
             }
         }
@@ -519,19 +551,19 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(Timestamp, SMALL_BUFFER_SIZE_0);
                 MiscPtr =strchr(pcRecvBuffer,';');
                 strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
-                StartTimeU64 = atol(Timestamp);
+                StartTimeU32 = atol(Timestamp);
                 bzero(Timestamp, SMALL_BUFFER_SIZE_0);
                 MiscPtr += 1;
                 MiscPtr =strchr(pcRecvBuffer,';');
                 strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
                 DelayedStartU32 = atoi(Timestamp);
-                MasterTimeToSyncPointU64 = 0;
-                TimeToSyncPoint = 0;
+                ASPData.MTSPU32 = 0;
+                ASPData.TimeToSyncPointDbl = 0;
                 SearchStartIndex = -1;
-                PrevTimeToSyncPoint = 0;
-                OldTimeU64 = CurrentTimeU64;
+                ASPData.PrevTimeToSyncPointDbl = 0;
+                OldTimeU32 = CurrentTimeU32;
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
-                MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, GPSTime, (U32)StartTimeU64, DelayedStartU32, &OutgoingStartTimeU32, 0);
+                MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, GPSTime, (U32)StartTimeU32, DelayedStartU32, &OutgoingStartTimeU32, 0);
                 for(iIndex=0;iIndex<nbr_objects;++iIndex) { vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);}
                 OBCState = OBC_STATE_RUNNING;
                 //OBCState = OBC_STATE_INITIALIZED; //This is temporary!
@@ -783,22 +815,22 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             fd = fopen (object_traj_file[iIndex], "r");
                             
                             RowCount = UtilCountFileRows(fd);
-                            printf("RowCount: %d\n", RowCount);
+                            //printf("RowCount: %d\n", RowCount);
                             fclose (fd);
 
                             /*DOTM*/
-                            MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-2, &HeaderData, &TRAJInfoData, 1);
+                            MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-2, &HeaderData, &TRAJInfoData, 0);
 
                             /*Send DOTM header*/
-                            vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 1);
+                            vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
 
                             /*Send DOTM data*/
-                            ObjectControlSendDOTMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 1);
+                            ObjectControlSendDOTMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 0);
                         }
 
 
                         /* Adaptive Sync Points object configuration start...*/
-                        if(TEST_SYNC_POINTS == 1) printf("Trajfile: %s\n", object_traj_file[iIndex] );
+                        if(TEST_SYNC_POINTS == 1) printf("Trajfile: %s\n", object_traj_file[iIndex]);
                         OP[iIndex].TrajectoryPositionCount = RowCount-2;
                         OP[iIndex].SpaceArr = SpaceArr[iIndex];
                         OP[iIndex].TimeArr = TimeArr[iIndex];
@@ -1498,14 +1530,10 @@ int ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeTyp
     STRTData->Header.MessageLengthU32 = sizeof(STRTType) - sizeof(HeaderType);
     STRTData->StartTimeValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
     STRTData->StartTimeContentLengthU16 = 4;
-    //printf("GPSTime->GPSSecondsOfWeekU32 = %d\n", GPSTime->GPSSecondsOfWeekU32*1000);
-    //printf("Millisecond = %d\n", (U32)TimeControlGetMillisecond(GPSTime));
-    //printf("ScenarioStartTime = %d\n", ScenarioStartTime);
     STRTData->StartTimeU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime) + ScenarioStartTime) << 2) + GPSTime->MicroSecondU16;
     STRTData->DelayStartValueIdU16 = VALUE_ID_RELATIVE_TIME;
     STRTData->DelayStartContentLengthU16 = 4;
     STRTData->DelayStartU32 = DelayStart;
-    //printf("STRTData->StartTimeU32 = %d\n", STRTData->StartTimeU32);
     *OutgoingStartTime = (STRTData->StartTimeU32) >> 2;
 
     if(!GPSTime->isGPSenabled)
@@ -1870,7 +1898,6 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
         UtilReadLineCntSpecChars(fd, RowBuffer);
 
         //Read to ';' in row = LINE;0.00;21.239000;39.045000;0.000000;-1.240001;0.029103;0.004005;0.000000;3;ENDLINE;
-        printf("i index = %d\n", i);
         //Time
         src = strchr(RowBuffer, ';');
         bzero(DataBuffer, 20);
@@ -1995,6 +2022,29 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
     return MessageIndex; //Total number of bytes
 
 }
+
+
+I32 ObjectControlBuildASPMessage(C8* MessageBuffer, ASPType *ASPData, U8 debug)
+{
+    I32 MessageIndex = 0, i;
+    C8 *p;
+
+    bzero(MessageBuffer, ASP_MESSAGE_LENGTH);
+    p=(C8 *)ASPData;
+    for(i=0; i<sizeof(ASPType); i++) *(MessageBuffer + i) = *p++;
+    MessageIndex = i;
+
+    if(debug)
+    {
+        printf("ASP total length = %d bytes \n", (int)(ASP_MESSAGE_LENGTH));
+        printf("\n----MESSAGE----\n");
+        for(i = 0;i < sizeof(ASPType); i ++) printf("%x ", (C8)MessageBuffer[i]);
+        printf("\n");
+    }
+
+    return MessageIndex; //Total number of bytes
+}
+
 
 
 I32 ObjectControlSendDTMMEssage(C8 *DTMData, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug)
