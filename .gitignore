@@ -34,6 +34,7 @@
 
 # User files
 *.pro.user
+*.orig
 *kdev4
 # Catalogs
 build*/
