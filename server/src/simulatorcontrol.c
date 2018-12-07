@@ -239,7 +239,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
       }
       else if(iCommand == COMM_MONI)
       {
-        printf("Monr sim %s\n", MqRecvBuffer);
+        //printf("Monr sim %s\n", MqRecvBuffer);
         LengthU32 = SimulatorControlBuildObjectMonitorMessage(SendBuffer, MqRecvBuffer, &ObjectMonitorData, 0);
         UtilSendUDPData("SimulatorControl", &SimulatorUDPSocketfdI32, &simulator_addr, SendBuffer, LengthU32, 0);
       }
