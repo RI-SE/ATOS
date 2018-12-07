@@ -173,6 +173,8 @@ int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId ,char *TriggAc
 int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug);
 I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* SimData, U8 debug);
 
+void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug);
+
 static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
                              char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
                              int* nbr_objects);
@@ -292,6 +294,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
+
     while(!iExit)
     {
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED)
@@ -394,6 +397,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     }
 
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
+                    //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
+
                     ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
                     bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
                     strcat(buffer,object_address_name[iIndex]); strcat(buffer,";");
@@ -1105,12 +1110,14 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     I32Data = I32Data | *(MonrData+15);
     MONRData->XPositionI32 = I32Data;
 
+
     I32Data = 0;
     I32Data = (I32Data | *(MonrData+22)) << 8;
     I32Data = (I32Data | *(MonrData+21)) << 8;
     I32Data = (I32Data | *(MonrData+20)) << 8;
     I32Data = I32Data | *(MonrData+19);
     MONRData->YPositionI32 = I32Data;
+
 
     I32Data = 0;
     I32Data = (I32Data | *(MonrData+26)) << 8;
@@ -1149,7 +1156,9 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     MONRData->ReadyToArmU8 = *(MonrData+39);
     MONRData->ErrorStatusU8 = *(MonrData+40);
 
-    if(debug)
+
+
+    if(debug == 1)
     {
         printf("SyncWord = %d\n", MONRData->Header.SyncWordU16);
         printf("TransmitterId = %d\n", MONRData->Header.TransmitterIdU8);
@@ -1485,7 +1494,7 @@ int ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeTyp
     *(MessageBuffer + i++) = (U8)(Crc >> 8);
     MessageIndex = i;
 
-    if(debug)
+    if(debug == 1)
     {
         printf("STRT total length = %d bytes (header+message+footer)\n", (int)(COMMAND_STRT_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");
@@ -2055,6 +2064,18 @@ static void vCreateSafetyChannel(const char* name, const uint32_t port, int* soc
 static void vCloseSafetyChannel(int* sockfd)
 {
     close(*sockfd);
+}
+
+void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug){
+  C8 Data[128];
+
+  bzero(Data,128);
+  Data[3] = strlen(MonrData);
+  Data[5] = 2;
+  strcat((Data+6), MonrData);
+
+
+  UtilSendUDPData("ObjectControl", Sockfd, Addr, Data, strlen(MonrData) + 6, Debug);
 }
 
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)

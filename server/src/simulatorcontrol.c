@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
-#include <time.h>  
+#include <time.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -61,7 +61,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
 
   printf("Starting simulator control...\n");
-  
+
   C8 TextBufferC8[SIM_CONTROL_BUFFER_SIZE_20];
   C8 SimulatorServerIPC8[SIM_CONTROL_BUFFER_SIZE_20];
   U32 SimulatorIpU32 = 0;
@@ -71,7 +71,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   I32 SimulatorUDPSocketfdI32=-1;
 
   struct sockaddr_in simulator_addr;
-  
+
   I32 ClientResultI32;
   C8 ReceiveBuffer[SIM_CONTROL_BUFFER_SIZE_400];
   C8 SendBuffer[SIM_CONTROL_BUFFER_SIZE_128];
@@ -80,7 +80,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   struct timespec sleep_time, ref_time;
   struct timeval tv, ExecTime;
   struct tm *tm;
-  
+
 
   U8 PrevSecondU8;
   U16 CurrentMilliSecondU16, PrevMilliSecondU16;
@@ -115,7 +115,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
     bzero(TextBufferC8, SIM_CONTROL_BUFFER_SIZE_20);
     UtilSearchTextFile(TEST_CONF_FILE, "SimulatorUDPPort=", "", TextBufferC8);
     SimulatorUDPPortU16 = (U16)atoi(TextBufferC8);
-        
+
     printf("SimulatorTCPPort = %d\n", SimulatorTCPPortU16);
     printf("SimulatorUDPPort = %d\n", SimulatorUDPPortU16);
     //ReceivedNewData = 1;
@@ -141,27 +141,27 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
             SimulatorTCPSocketfdI32 = -1;
             SimulatorInitiatedU8 = 0;
         }
-        
+
         if(SimulatorInitiatedU8 == 0 && SimulatorTCPSocketfdI32 > 0)
         {
-          
+
           /*Initiate the simulator if not initialized and a there is a valid TCP connection */
           SimulatorControlInitiateSimulator(&SimulatorTCPSocketfdI32, 1, 0);
           SimulatorInitiatedU8 = 1;
         }
-        
+
         if(ClientResultI32 > 0)
         {
           //Ok, received data on TCP, do something with the data
           printf("[SimulatorControl] %s\n", ReceiveBuffer);
         }
 
-        
+
         /*Check if we received data from the simulator*/
         bzero(ReceiveBuffer, SIM_CONTROL_BUFFER_SIZE_400);
         UtilReceiveUDPData("SimulatorControl", &SimulatorUDPSocketfdI32, ReceiveBuffer, 100, &ReceivedNewData, 0);
 
-        
+
         if(ReceivedNewData)
         {
           /*
@@ -190,15 +190,15 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
           /*We received data...*/
           /*Add binary data to global data*/
-          
+
           //printf("FROM HIL: ");
           for(i = 0; i < ReceiveBuffer[3] + 4; i++)
-          { 
+          {
             GSD->VOILData[i] = (U8)ReceiveBuffer[i];
             //printf("%x-", GSD->VOILData[i]);
           }
            // printf("\n");
-          
+
           /*Make ASCII data from binary data*/
           bzero(VOILString, SIM_CONTROL_LOG_BUFFER_LENGTH);
           SimulatorControlVOILToASCII(ReceiveBuffer, VOILString);
@@ -228,15 +228,15 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
 
       bzero(MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
-      (void)iCommRecv(&iCommand,MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
+      (void)iCommRecv(&iCommand,MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH, NULL);
 
-      
+
       if(iCommand == COMM_EXIT)
       {
-        iExit = 1;  
+        iExit = 1;
         printf("simulatorcontrol exiting.\n");
         (void)iCommClose();
-      } 
+      }
       else if(iCommand == COMM_MONI)
       {
         //printf("Monr sim %s\n", MqRecvBuffer);
@@ -249,6 +249,8 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
       sleep_time.tv_sec = 0;
       sleep_time.tv_nsec = SIM_CONTROL_TASK_PERIOD_MS*1000000;
       (void)nanosleep(&sleep_time,&ref_time);
+
+
     }
   }
 }
@@ -264,7 +266,7 @@ void SimulatorControlStartScenario( I32 *Sockfd, C8 *StartTime, U8 Debug)
   strcat(SendData,"StartScenario(");
   strcat(SendData, StartTime);
   strcat(SendData, ")");
-  
+
   Length = (I32)(strlen(SendData));
   SendLength[3] = (U8)Length;
   UtilSendTCPData("SimulatorControl", (const C8*)SendLength, 4, Sockfd, Debug);
@@ -280,14 +282,14 @@ void SimulatorControlInitiateSimulator( I32 *Sockfd, U8 SimulatorMode, U8 Debug)
   I32 Length = 0;
   bzero(SendData, SIM_CONTROL_BUFFER_SIZE_128);
   strcat(SendData,"InitSimulator(");
-  
+
   sprintf(Mode, "%" PRIu8, SimulatorMode);
   strcat(SendData, Mode);
   strcat(SendData, ")");
-  
+
   Length = (I32)(strlen(SendData));
   SendLength[3] = (U8)Length;
-    
+
   UtilSendTCPData("SimulatorControl", (const C8*)SendLength, 4, Sockfd, Debug);
   UtilSendTCPData("SimulatorControl", (const C8*)SendData, Length, Sockfd, Debug);
 }
@@ -308,7 +310,7 @@ void SimulatorControlSendHeartbeat( I32 *Sockfd, struct sockaddr_in *Addr, TimeT
   Data[8] = (U8)(GPSSOWms >> 8);
   Data[9] = (U8)GPSSOWms;
   //printf("%d\n", GPSSOWms);
- 
+
   UtilSendUDPData("SimulatorControl", Sockfd, Addr, Data, 10, Debug);
 
 }
@@ -329,7 +331,7 @@ U32 SimulatorControlBuildObjectMonitorMessage(C8* MessageBuffer, C8 *MONRData, O
   bzero(TextBuffer, SIM_CONTROL_BUFFER_SIZE_20);
   strncpy(TextBuffer, ptr, (uint64_t)strchr(ptr, ';') - (uint64_t)ptr);
   ObjectMonitorData->ObjectIPU32 = SwapU32(UtilIPStringToInt(TextBuffer));
-  
+
   /*Get GPSSOW*/
   ptr = strchr(ptr+1, ';');
   ptr = strchr(ptr+1, ';');
@@ -399,8 +401,8 @@ void SimulatorControlSendMONR( I32 *Sockfd, struct sockaddr_in *Addr, C8 *MonrDa
   Data[3] = strlen(MonrData);
   Data[5] = 2;
   strcat((Data+6), MonrData);
-  
- 
+
+
   UtilSendUDPData("SimulatorControl", Sockfd, Addr, Data, strlen(MonrData) + 6, Debug);
 
 }
@@ -421,10 +423,10 @@ U32 SimulatorControlVOILToASCII(C8 *VOILData, C8 *VOILString)
     WordU16 = *(VOILData + 4);
     WordU16 = (WordU16 << 8) | *(VOILData+5);
 
-    
+
     if(WordU16 == 0xA100)
     {
-        
+
         bzero(TextBuffer, SIM_CONTROL_BUFFER_SIZE_400);
         //GPSSOW
         bzero(Buffer, SIM_CONTROL_BUFFER_SIZE_5);
@@ -435,7 +437,7 @@ U32 SimulatorControlVOILToASCII(C8 *VOILData, C8 *VOILString)
         WordU32 = (WordU32 << 8) | *(VOILData+9);
         sprintf(Buffer, "%" PRIu32, WordU32);
         strcat(TextBuffer, Buffer); strcat(TextBuffer,";");
-        
+
         //Dynamic World state
         bzero(Buffer, SIM_CONTROL_BUFFER_SIZE_5);
         sprintf(Buffer, "%" PRIu8, *(VOILData+10));
@@ -446,19 +448,19 @@ U32 SimulatorControlVOILToASCII(C8 *VOILData, C8 *VOILString)
         sprintf(Buffer, "%" PRIu8, *(VOILData+11));
         strcat(TextBuffer, Buffer); strcat(TextBuffer,";");
 
-        C8 *StartPtr = (VOILData+12); 
+        C8 *StartPtr = (VOILData+12);
         for(i=0; i < *(VOILData+11); i++)
         {
           //Object Id
           bzero(Buffer, SIM_CONTROL_BUFFER_SIZE_5);
-          sprintf(Buffer, "%" PRIu8, *(StartPtr+VoilSize*i+0)); 
-          strcat(TextBuffer, Buffer); strcat(TextBuffer,";");         
-          
+          sprintf(Buffer, "%" PRIu8, *(StartPtr+VoilSize*i+0));
+          strcat(TextBuffer, Buffer); strcat(TextBuffer,";");
+
           //Object State
           bzero(Buffer, SIM_CONTROL_BUFFER_SIZE_5);
           sprintf(Buffer, "%" PRIu8, *(StartPtr+VoilSize*i+1));
           strcat(TextBuffer, Buffer); strcat(TextBuffer,";");
-          
+
           //XPosition
           bzero(Buffer, SIM_CONTROL_BUFFER_SIZE_5);
           WordI32 = 0;
@@ -468,7 +470,7 @@ U32 SimulatorControlVOILToASCII(C8 *VOILData, C8 *VOILString)
           WordI32 = (WordI32 << 8) | *(StartPtr+VoilSize*i+5);
           sprintf(Buffer, "%" PRIi32, WordI32);
           strcat(TextBuffer, Buffer); strcat(TextBuffer,";");
-          
+
           //YPosition
           bzero(Buffer, SIM_CONTROL_BUFFER_SIZE_5);
           WordI32 = 0;
@@ -525,7 +527,7 @@ U32 SimulatorControlVOILToASCII(C8 *VOILData, C8 *VOILString)
 
     strncpy(VOILString, (const C8*)TextBuffer, strlen(TextBuffer) );
 
-  
+
 
 
     return 0;

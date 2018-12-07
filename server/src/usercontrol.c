@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
-#include <time.h>  
+#include <time.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -46,14 +46,15 @@
 
 
 #define IPC_BUFFER_SIZE   256
-#define USER_CONTROL_SYSTEM_CONTROL_IP "127.0.0.1"  
+#define USER_CONTROL_SYSTEM_CONTROL_IP "127.0.0.1"
 #define USER_CONTROL_SYSTEM_CONTROL_PORT 54241
+
 
 #define USER_CONTROL_ARG_COUNT 			2
 #define USER_CONTROL_COMMAND_MAX_LENGTH 	10
 
 #define COMMAND_MESSAGE_HEADER_LENGTH 5
-#define COMMAND_DOTM_ROW_MESSAGE_LENGTH 25 
+#define COMMAND_DOTM_ROW_MESSAGE_LENGTH 25
 #define COMMAND_DOTM_ROWS_IN_TRANSMISSION  40
 
 
@@ -148,15 +149,15 @@ int main(int argc, char *argv[])
 
   	j = 0;
 	UserControlConnectServer(&socketfd, object_address_name, object_tcp_port);
-	if (socketfd >= 0) 
+	if (socketfd >= 0)
   	{
-  		printf("Client is connected.\n"); 
+  		printf("Client is connected.\n");
 		while(!iExit)
 		{
 			bzero(pcBuffer,IPC_BUFFER_SIZE);
 			scanf("%49s",pcBuffer);
-		
-			if(	strcmp(pcBuffer, "cc") != 0 && 
+
+			if(	strcmp(pcBuffer, "cc") != 0 &&
 				strcmp(pcBuffer, "cx") != 0 &&
 				strcmp(pcBuffer, "cp") != 0 &&
 				strcmp(pcBuffer, "sb") != 0 &&
@@ -170,10 +171,10 @@ int main(int argc, char *argv[])
 				SendBufferPtr = SendBuffer + strlen(SendBuffer);
 				bzero(RecordBuffer, IPC_BUFFER_SIZE*2);
 				strncpy(RecordBuffer, SendBuffer, strlen(SendBuffer));
-			}			
+			}
 
 			UserControlFindCommand(pcBuffer, &UserControlCommand, &CommandArgCount);
-			
+
 			switch(UserControlCommand)
 			{
 				case idle_0:
@@ -345,7 +346,7 @@ int main(int argc, char *argv[])
 						printf("y = %4.15lf\n", OP.y);
 
 						if(OP.OrigoDistance > -1)
-						{	
+						{
 
 							UtilPopulateSpaceTimeArr(&OP, "traj/192.168.0.119");
 							UtilSetSyncPoint(&OP, 0, 0, 0, 36.5);
@@ -355,19 +356,19 @@ int main(int argc, char *argv[])
 								UtilFindCurrentTrajectoryPosition(&OP, 0, CurrentTime, 1.75, 2.5, 2);	//2
 
 								if(OP.BestFoundTrajectoryIndex > -1 && OP.SyncIndex > -1)
-								{	
+								{
 								    printf("\nCurrent origo distance=%4.3f m\n", OP.OrigoDistance);
 								    printf("Matched origo distance=%4.3f m\n", OP.SpaceArr[OP.BestFoundTrajectoryIndex]);
 								    printf("Distance error=%4.3f m\n", OP.OrigoDistance - OP.SpaceArr[OP.BestFoundTrajectoryIndex]);
 								    printf("Current time=%4.3f s\n", CurrentTime);
 								    printf("Expected time=%4.3f s (index=%d)\n", OP.TimeArr[OP.BestFoundTrajectoryIndex], OP.BestFoundTrajectoryIndex);
 								    printf("Time error=%4.3f s\n", CurrentTime - OP.TimeArr[OP.BestFoundTrajectoryIndex]);
-									//printf("Time to sync point = %4.3f s\n", fabs(UtilCalculateTimeToSync(&OP) - (CurrentTime - OP.TimeArr[OP.BestFoundTrajectoryIndex]))); 
-									printf("Time to sync point = %4.3f\n", UtilCalculateTimeToSync(&OP)); 
+									//printf("Time to sync point = %4.3f s\n", fabs(UtilCalculateTimeToSync(&OP) - (CurrentTime - OP.TimeArr[OP.BestFoundTrajectoryIndex])));
+									printf("Time to sync point = %4.3f\n", UtilCalculateTimeToSync(&OP));
 									printf("x=%4.3f m\n", OP.x);
 									printf("y=%4.3f m\n", OP.y);
-								} 
-				 				else if(OP.BestFoundTrajectoryIndex == -1) 
+								}
+				 				else if(OP.BestFoundTrajectoryIndex == -1)
 				                {
 				                  printf("No trajectory position found.\n");
 				                }
@@ -397,7 +398,7 @@ int main(int argc, char *argv[])
                                 UtilSearchTextFile("conf/test.conf", "OrigoLongitude=", "", Longitude),
                                 UtilSearchTextFile("conf/test.conf", "OrigoAltitude=", "", Altitude),
                                 UtilSearchTextFile("conf/test.conf", "OrigoHeading=", "", Heading),
-                                1); 
+                                1);
 					*/
 					UserControlResetInputVariables();
 				break;
@@ -413,14 +414,14 @@ int main(int argc, char *argv[])
 					//MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-1, 1);
 					//MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, 2, 1);
 					/*Send DOTM header*/
-					
+
                     fd = fopen ("traj/195.0.0.10", "r");
 					UtilReadLineCntSpecChars(fd, TrajBuffer);//Read first line
 					Rest = 0, i = 0;
 					do
 					{
 						Rest = RowCount - COMMAND_DOTM_ROWS_IN_TRANSMISSION;
-						RowCount = RowCount - COMMAND_DOTM_ROWS_IN_TRANSMISSION; 
+						RowCount = RowCount - COMMAND_DOTM_ROWS_IN_TRANSMISSION;
 						if(Rest >= COMMAND_DOTM_ROWS_IN_TRANSMISSION)
 						{
 							//MessageLength = ObjectControlBuildDOTMMessage(TrajBuffer, fd, COMMAND_DOTM_ROWS_IN_TRANSMISSION, 0);
@@ -433,8 +434,8 @@ int main(int argc, char *argv[])
 						printf("Transmission %d: %d bytes left to send.\n", ++i, Rest*COMMAND_DOTM_ROW_MESSAGE_LENGTH);
 
 						/*Send DOTM data*/
-						
-					} while (Rest >= COMMAND_DOTM_ROWS_IN_TRANSMISSION /*i < 2*/); 
+
+					} while (Rest >= COMMAND_DOTM_ROWS_IN_TRANSMISSION /*i < 2*/);
 
 					fclose (fd);
 					UserControlResetInputVariables();
@@ -485,14 +486,14 @@ int main(int argc, char *argv[])
 					printf("tdopm - Test to build DOTM message.\n");
 					printf("tmonr - Test to build MONR message.\n");
 				break;
-			
+
 				default:
 
 				break;
 			}
 			usleep(1000);
 	  	}
-  } else printf("Failed to start UserControl client!\n"); 
+  } else printf("Failed to start UserControl client!\n");
 }
 
 /*------------------------------------------------------------
@@ -502,23 +503,23 @@ int main(int argc, char *argv[])
 UserControlCommand_t UserControlFindCommand(const char* CommandBuffer, UserControlCommand_t *CurrentCommand, int *CommandArgCount)
 {
 
-	UserControlCommand_t command; 	
-	
+	UserControlCommand_t command;
+
 	for (command = idle_0; command != nocommand; command++)
     {
-		bzero(UserControlCommandArgCnt, USER_CONTROL_ARG_COUNT);    
+		bzero(UserControlCommandArgCnt, USER_CONTROL_ARG_COUNT);
         bzero(UserControlStrippedCommand, USER_CONTROL_COMMAND_MAX_LENGTH);
 		strncpy(UserControlStrippedCommand, UserControlCommandsArr[(int)command], (uint64_t)strchr(UserControlCommandsArr[(int)command],'_') - (uint64_t)UserControlCommandsArr[(int)command] );
 		strncpy(UserControlCommandArgCnt, strchr(UserControlCommandsArr[(int)command],'_')+1, strlen(UserControlCommandsArr[(int)command]) - ((uint64_t)strchr(UserControlCommandsArr[(int)command],'_') - (uint64_t)UserControlCommandsArr[(int)command] + 1));
-		
+
 		if (!strcmp(UserControlStrippedCommand, CommandBuffer))
         {
 			if(command != cc_0)
 			{
-				*CommandArgCount = atoi(UserControlCommandArgCnt);				
-				*CurrentCommand = command;            
+				*CommandArgCount = atoi(UserControlCommandArgCnt);
+				*CurrentCommand = command;
 				return command;
-			} 
+			}
 			else
 			{
 				PreviousUserControlCommand = *CurrentCommand;
@@ -544,39 +545,39 @@ static void UserControlConnectServer(int* sockfd, const char* name, const uint32
 {
   struct sockaddr_in serv_addr;
   struct hostent *server;
-  
+
   char buffer[256];
   int iResult;
 
   *sockfd = socket(AF_INET, SOCK_STREAM, 0);
-   
-  if (*sockfd < 0) 
+
+  if (*sockfd < 0)
   {
     util_error("ERR: Failed to open control socket");
   }
 
   server = gethostbyname(name);
-  if (server == NULL) 
+  if (server == NULL)
   {
     util_error("ERR: Unknown host ");
   }
-  
+
   bzero((char *) &serv_addr, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
-  
+
   bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
   serv_addr.sin_port = htons(port);
-  
+
   #ifdef DEBUG
     printf("Try to connect to control socket: %s %i\n",name,port);
     fflush(stdout);
   #endif
-  
+
   do
   {
     iResult = connect(*sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr));
 
-    if ( iResult < 0) 
+    if ( iResult < 0)
     {
       if(errno == ECONNREFUSED)
       {
@@ -604,7 +605,7 @@ static void UserControlSendString(const char *command, int *sockfd)
 
   printf("Sending: %s\n",command);
   fflush(stdout);
-  
+
 
   n = write(*sockfd, command, strlen(command));
   if (n < 0)

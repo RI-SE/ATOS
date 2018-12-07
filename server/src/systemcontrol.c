@@ -124,6 +124,7 @@ static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint3
 static void SystemControlSendBytes(const char* data, int length, int* sockfd, int debug);
 void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8* ResponseData, I32 ResponseDataLength, I32* Sockfd, U8 Debug);
 void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug);
+void SystemControlSendMONR(C8* LogString, I32* Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I32 *sockfd, struct sockaddr_in* addr);
 I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
 I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 debug);
@@ -382,6 +383,19 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         else if(iCommand == COMM_LOG)
         {
             SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
+        }
+
+        else if(iCommand == COMM_MONI){
+          //printf("Monr sys %s\n", pcRecvBuffer);
+          C8 Data[strlen(pcRecvBuffer) + 11];
+          bzero(Data,strlen(Data));
+
+          Data[3] = strlen(pcRecvBuffer);
+          Data[5] = 2;
+
+          strcat((Data + 11), pcRecvBuffer);
+
+          UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, &Data, sizeof(Data), 0);
         }
 
         ++ProcessControlSendCounterU32;
@@ -827,6 +841,27 @@ SystemControlCommand_t SystemControlFindCommand(const char* CommandBuffer, Syste
         }
     }
     return nocommand;
+}
+
+void SystemControlSendMONR(C8* MONRStr, I32* Sockfd, U8 Debug){
+  int i, n, j, t;
+  C8 Length[4];
+  C8 Header[2] = {0 ,2};
+  C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
+
+  bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+  n = 2 + strlen(MONRStr);
+  Length[0] = (C8)(n >> 24); Length[1] = (C8)(n >> 16); Length[2] = (C8)(n >> 8); Length[3] = (C8)n;
+
+
+  if(n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE)
+  {
+      for(i = 0, j = 0; i < 4; i++, j++) Data[j] = Length[i];
+      for(i = 0; i < 2; i++, j++) Data[j] = Header[i];
+      t = strlen(MONRStr);
+      for(i = 0; i < t; i++, j++) Data[j] = *(MONRStr+i);
+      SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+  } else printf("[SystemControl] MONR string longer then %d bytes!\n", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
 
 

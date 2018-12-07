@@ -2005,7 +2005,8 @@ void UtilSendUDPData(const C8* Module, I32 *Sockfd, struct sockaddr_in* Addr, C8
 
     result = sendto(*Sockfd, Data, Length, 0, (const struct sockaddr *) Addr, sizeof(struct sockaddr_in));
 
-    if(Debug == 1){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%x-", (unsigned char)*(Data+i)); printf("\n");}
+
+    if(Debug){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%x-", (unsigned char)*(Data+i)); printf("\n");}
 
     if (result < 0)
     {
