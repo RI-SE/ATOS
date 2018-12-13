@@ -161,11 +161,26 @@ void UtilgetDateTimefromUTCtimeNewformat(int64_t utc_ms, char *buffer, int size_
   tmp_ms = tmp_ms -utc_ms/1000;
 
   ms = round(tmp_ms*1000);
+  strftime(buffer, size_t, "%Y;%m;%d;%H;%M;%S;",&date_time);
+  sprintf(tmp_buffer_ms,"%" PRIi64,ms);
+  strcat(buffer,tmp_buffer_ms);
+}
+void UtilgetDateTimeMapName(int64_t utc_ms, char *buffer, int size_t)
+{
+  struct tm date_time;
+  char tmp_buffer_ms[10];
+  int64_t ms;
+  double tmp_ms;
+  time_t time_seconds = (time_t) (utc_ms/1000);
+  localtime_r(&time_seconds,&date_time);
+  tmp_ms = (double) (utc_ms)/1000;
+  tmp_ms = tmp_ms -utc_ms/1000;
+
+  ms = round(tmp_ms*1000);
   strftime(buffer, size_t, "%Y-%m-%d_%H:%M:%S:",&date_time);
   sprintf(tmp_buffer_ms,"%" PRIi64,ms);
   strcat(buffer,tmp_buffer_ms);
 }
-
 void util_error(char* message)
 {
   perror(message);

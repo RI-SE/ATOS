@@ -60,6 +60,7 @@ void logger_task()
     char pcCommand[100];
     char pcLogFolder[MAX_FILE_PATH];
     char pcLogFile[MAX_FILE_PATH];
+    char pcLogFileComp[MAX_FILE_PATH];
     char pcBuffer[MQ_MAX_MESSAGE_LENGTH+100];
     char pcRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
     char TimeStampUTCBufferRecv[MQ_MAX_UTC_LENGTH];
@@ -70,7 +71,7 @@ void logger_task()
     struct timeval tvTime ;
     uint64_t LogTimeStart;
 
-    FILE *filefd,*fileread,*replayfd;
+    FILE *filefd,*fileread,*replayfd, *filefdComp;
     struct timespec sleep_time, ref_time;
 
     gettimeofday(&tvTime,NULL);
@@ -80,13 +81,13 @@ void logger_task()
     bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
     //Calculate the date when the logfile is created more or less
     LogTimeStart = UtilgetCurrentUTCtimeMS();
-    UtilgetDateTimefromUTCtimeNewformat((int64_t)LogTimeStart, DateBuffer,sizeof(DateBuffer));
-    //UtilgetDateTimefromUTCtimeNewformat((int64_t)tvTime.tv_sec, DateBuffer,sizeof(DateBuffer));
+    UtilgetDateTimeMapName((int64_t)LogTimeStart, DateBuffer,sizeof(DateBuffer));
+
     bzero(pcLogFolder,MAX_FILE_PATH);
     bzero(pcLogFile,MAX_FILE_PATH);
     (void)strcpy(pcLogFolder,LOG_PATH);
     (void)strcat(pcLogFolder,DateBuffer);
-
+    printf("%s\n",DateBuffer );
 
     (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
     //(void)iCommInit(IPC_SEND,MQ_LG_1,0);
@@ -96,7 +97,11 @@ void logger_task()
     (void)strcpy(pcLogFile,pcLogFolder);
     (void)strcat(pcLogFile,Forward_slash);
     (void)strcat(pcLogFile,DateBuffer);
+    bzero(pcLogFileComp,MAX_FILE_PATH);
+    (void)strcpy(pcLogFileComp,pcLogFile);
+    (void)strcat(pcLogFileComp,"Csv");
     (void)strcat(pcLogFile,LOG_FILE);
+    (void)strcat(pcLogFileComp,LOG_FILE);
 
 
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open log file to use: <%s>\n",pcLogFile);
@@ -167,12 +172,27 @@ void logger_task()
 
     // added some information about the standard log file format and what is what in the MONR message
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer, "\n------------------------------------------\nInformation about log structure\n------------------------------------------\nLog started; Date:%s\nGenerall structure <Date> <UTC Time ms>: <Command message nr> <Data>\nMonor message structure(command message nr = 3): <Date> <UTC time ms>: <Command message nr> <Object_address (IP number)>;<0>;<GPS Second of week (unit 0.25 milliseconds)>;<x-position, unit 0.001 meter>;<y-position, unit 0.001 meter>;<z-position, unit 0.001>;<heading, unit 0.01 degrees>;<Logitudinal speed, unit 0.01 m/s>;<Lateral speed, unit 0.01 m/s>;<Longitudinal Acceleration, unit 0.001 m/s^2>;<Lateral Acceleration, unit 0.001 m/s^2>;<Driving direction>;<Object state>;<Ready to ARM>;<ErrorState>\n",DateBuffer); // add more her if we want more data
+    sprintf(pcBuffer, "\n------------------------------------------\nInformation about log structure\n------------------------------------------\nLog started; Date:%s\nGenerall structure:\n",DateBuffer);
+    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+    sprintf(pcBuffer,"<Year>;<Month>;<Day>;<Hour>;<Minute>;<Second>;<Millisecond>;<UTC Time ms>;<Command message nr>;<Data>\n");
+    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+    sprintf(pcBuffer,"Monor message structure(command message nr = 3):\n<Year>;<Month>;<Day>;<Hour>;<Minute>;<Second>;<Millisecond>;<UTC Time ms>;<Command message nr>;<Data>;<Object_address (IP number)>;<0>;");
+    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+    sprintf(pcBuffer,"<GPS Second of week (unit 0.25 milliseconds)>;<x-position, unit 0.001 meter>;<y-position, unit 0.001 meter>;<z-position, unit0.001>;<heading, unit 0.01 degrees>;<Logitudinal speed,");
+    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+    sprintf(pcBuffer,"unit 0.01 m/s>;<Lateral speed, unit 0.01 m/s>;<Longitudinal Acceleration, unit 0.001 m/s^2>;<Lateral Acceleration, unit 0.001 m/s^2>;<Driving direction>;<Object state>;<Ready to ARM>;<ErrorState>\n"); // add more her if we want more data
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     sprintf(pcBuffer, "Command message nr:\nCOMM_START:%d\nCOMM_STOP:%d\nCOMM_MONI%d\nCOMM_EXIT:%d\nCOMM_ARMD:%d\nCOMM_REPLAY:%d\nCOMM_CONTROL:%d\nCOMM_ABORT:%d\nCOMM_TOM:%d\nCOMM_INIT:%d\nCOMM_CONNECT:%d\nCOMM_OBC_STATE:%d\nCOMM_DISCONNECT:%d\nCOMM_LOG:%d\nCOMM_VIOP:%d\nCOMM_INV:%d\n------------------------------------------\n Log start\n------------------------------------------\n",COMM_STRT,COMM_STOP,COMM_MONI,COMM_EXIT,COMM_ARMD,COMM_REPLAY,COMM_CONTROL,COMM_ABORT,COMM_TOM,COMM_INIT,COMM_CONNECT,COMM_OBC_STATE,COMM_DISCONNECT,COMM_LOG,COMM_VIOP,COMM_INV);
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-
+    filefdComp = fopen(pcLogFileComp,"w+");
     while(!iExit)
     {
         bzero(pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
@@ -185,8 +205,9 @@ void logger_task()
                bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
                UtilgetDateTimefromUTCtimeNewformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-               sprintf ( pcBuffer,"%s %s: %d %s\n", DateBuffer,TimeStampUTCBufferRecv, iCommand, pcRecvBuffer);
+               sprintf ( pcBuffer,"%s;%s;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, iCommand, pcRecvBuffer);
                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+               (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
         }
 
         if(iCommand == COMM_REPLAY)
@@ -294,10 +315,12 @@ void logger_task()
     (void)iCommClose();
 
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    strcpy(pcBuffer, "Log closed...\n");
+    strcpy(pcBuffer, "Log closed\n");
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
 
     fclose(filefd);
+    fclose(filefdComp);
 }
 
 /*------------------------------------------------------------
