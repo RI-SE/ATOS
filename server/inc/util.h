@@ -240,7 +240,7 @@
 #define DEBUG_LPRINT(level,...) do {if(DEBUG_TEST) dbg_printf(level,__VA_ARGS__); } while(0)
 
 #define LOG_SEND(buf, ...) \
-    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf);printf("%s",buf);fflush(stdout);} while (0)
+    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf);printf("%s\n",buf);fflush(stdout);} while (0)
 
 
 

@@ -402,7 +402,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
                     bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
                     strcat(buffer,object_address_name[iIndex]); strcat(buffer,";");
-                    strcat(buffer, "0"); strcat(buffer,";");
+                    strcat(buffer,"0"); strcat(buffer,";");
                     strcat(buffer,Timestamp); strcat(buffer,";");
                     strcat(buffer,Latitude); strcat(buffer,";");
                     strcat(buffer,Longitude); strcat(buffer,";");
@@ -492,19 +492,19 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
         if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER,NULL))
         {
 
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Object control command %d\n",iCommand);
+            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Object control command %d",iCommand);
 
 
             if(iCommand == COMM_ARMD && OBCState == OBC_STATE_CONNECTED)
             {
                 if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_ARMED_STATE)
                 {
-                    LOG_SEND(LogBuffer,"[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]);
+                    LOG_SEND(LogBuffer,"[ObjectControl] Sending ARM %d", pcRecvBuffer[0]);
                     OBCState = OBC_STATE_ARMED;
                 }
                 else if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE)
                 {
-                    LOG_SEND(LogBuffer,"[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]);
+                    LOG_SEND(LogBuffer,"[ObjectControl] Sending DISARM: %d", pcRecvBuffer[0]);
                     OBCState = OBC_STATE_CONNECTED;
                 }
                 MessageLength = ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, pcRecvBuffer[0], 0);
@@ -519,7 +519,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_STRT && (OBCState == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED)*/)  //OBC_STATE_INITIALIZED is temporary!
             {
-                LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>\n",pcRecvBuffer);
+                LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>",pcRecvBuffer);
                 bzero(Timestamp, SMALL_BUFFER_SIZE_0);
                 MiscPtr =strchr(pcRecvBuffer,';');
                 strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
@@ -567,7 +567,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 OBCState = OBC_STATE_CONNECTED;
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT; //Set server to ABORT
-                LOG_SEND(LogBuffer, "[ObjectControl] ABORT received.\n");
+                LOG_SEND(LogBuffer, "[ObjectControl] ABORT received.");
             }
             else if(iCommand == COMM_CONTROL)
             {
@@ -576,13 +576,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_INIT)
             {
-                LOG_SEND(LogBuffer, "[ObjectControl] INIT received.\n");
+                LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
                 /* Get objects; name and drive file */
                 nbr_objects = 0;
                 vFindObjectsInfo(object_traj_file,object_address_name,&nbr_objects);
 
                 (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhost);
-                LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d\n", iForceObjectToLocalhost);
+                LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d", iForceObjectToLocalhost);
 
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
@@ -653,12 +653,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(VOILReceivers, SMALL_BUFFER_SIZE_254);
                 UtilSearchTextFile(CONF_FILE_PATH, "VOILReceivers=", "", VOILReceivers);
 
-                LOG_SEND(LogBuffer,"[ObjectControl] Objects to be controlled by server: %d\n", nbr_objects);
-                LOG_SEND(LogBuffer, "[ObjectControl] ASP in system: %d\n", SyncPointCount);
-                LOG_SEND(LogBuffer, "[ObjectControl] TAA in system: %d\n", TriggerActionCount);
+                LOG_SEND(LogBuffer,"[ObjectControl] Objects to be controlled by server; %d", nbr_objects);
+                LOG_SEND(LogBuffer, "[ObjectControl] ASP in system; %d", SyncPointCount);
+                LOG_SEND(LogBuffer, "[ObjectControl] TAA in system; %d", TriggerActionCount);
 
                 OBCState = OBC_STATE_INITIALIZED;
-                LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.\n");
+                LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
 
                 if(TempFd != NULL) fclose(TempFd);
                 //Remove temporary file
@@ -671,7 +671,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED)
             {
-                LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.\n");
+                LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.");
 
                 /* Connect and send drive files */
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -699,7 +699,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             if(errno == ECONNREFUSED)
                             {
 
-                                LOG_SEND(LogBuffer, "[ObjectControl] Was not able to connect to object, [IP: %s] [PORT: %d], retry in %d sec...\n",object_address_name[iIndex],object_tcp_port[iIndex], (!(1 & DisconnectU8))*3);
+                                LOG_SEND(LogBuffer, "[ObjectControl] Was not able to connect to object, [IP: %s] [PORT: %d], retry in %d sec...",object_address_name[iIndex],object_tcp_port[iIndex], (!(1 & DisconnectU8))*3);
                                 (void)sleep(3);
                             }
                             else
@@ -715,7 +715,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             if(iCommand == COMM_DISCONNECT)
                             {
                                 DisconnectU8 = 1;
-                                LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.\n");
+                                LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.");
                             }
 
                         }
@@ -725,13 +725,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     if(iResult >= 0)
                     {
                         /* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates)*/
-                        LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.\n");
+                        LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.");
                         ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, Latitude, Longitude, Altitude );
                         bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
                         strcat(pcSendBuffer,"GPSWeek:");
-                        strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,"; Origin GPSLongitude:");
-                        strcat(pcSendBuffer,Longitude);strcat(pcSendBuffer,"; Origin GPSLatitude:");
-                        strcat(pcSendBuffer,Latitude);strcat(pcSendBuffer,"; Origin GPSAltitude:");
+                        strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";OriginGPSLongitude;");
+                        strcat(pcSendBuffer,Longitude);strcat(pcSendBuffer,";OriginGPSLatitude;");
+                        strcat(pcSendBuffer,Latitude);strcat(pcSendBuffer,";OriginGPSAltitude;");
                         strcat(pcSendBuffer,Altitude);
 
                         iCommSend(COMM_LOG,pcSendBuffer);
@@ -832,7 +832,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 }
 #endif //NOTCP
 
-                LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.\n");
+                LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.");
                 /* Close safety socket */
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
@@ -2066,7 +2066,7 @@ static void vCloseSafetyChannel(int* sockfd)
     close(*sockfd);
 }
 
-void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug){
+/*void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug){
   C8 Data[128];
 
   bzero(Data,128);
@@ -2076,7 +2076,7 @@ void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *Monr
 
 
   UtilSendUDPData("ObjectControl", Sockfd, Addr, Data, strlen(MonrData) + 6, Debug);
-}
+}*/
 
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
 {
