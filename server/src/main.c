@@ -45,7 +45,13 @@ static GSDType *GSD;
 ------------------------------------------------------------*/
 int main(int argc, char *argv[])
 {
-
+    char VersionBuffer[100];
+    FILE *fileread;
+    // read Version.txt and print
+    fileread = fopen("./conf/Version.txt","r");
+    UtilReadLineCntSpecChars(fileread,VersionBuffer);
+    //print version number
+    printf("%s\n",VersionBuffer);
     // Set the debug level
     // TODO: make debug level a starting parameter
     // make sure that the same debug parameter is passed to all processes
@@ -165,7 +171,7 @@ int main(int argc, char *argv[])
         exit(EXIT_SUCCESS);
     }
     ++iIndex;
-  
+
     pID[iIndex] = fork();
     if(pID[iIndex] < 0)
     {
@@ -180,7 +186,7 @@ int main(int argc, char *argv[])
       exit(EXIT_SUCCESS);
     }
     ++iIndex;
-  
+
   /*
  pID[iIndex] = fork();
   if(pID[iIndex] < 0)
@@ -201,6 +207,6 @@ int main(int argc, char *argv[])
 
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: systemcontrol_task running in:  %i \n",getpid());
 
-    
+
     systemcontrol_task(GPSTime, GSD);
 }
