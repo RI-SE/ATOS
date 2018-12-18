@@ -2066,7 +2066,7 @@ static void vCloseSafetyChannel(int* sockfd)
     close(*sockfd);
 }
 
-void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug){
+/*void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug){
   C8 Data[128];
 
   bzero(Data,128);
@@ -2076,7 +2076,7 @@ void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *Monr
 
 
   UtilSendUDPData("ObjectControl", Sockfd, Addr, Data, strlen(MonrData) + 6, Debug);
-}
+}*/
 
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
 {
