@@ -40,7 +40,6 @@
 #define TIMESTAMP_BUFFER_LENGTH 20
 #define SPECIFIC_CHAR_THRESHOLD_COUNT 10
 #define MQ_MAX_UTC_LENGTH 30
-#define TRAJ_FILE_NAME  "127.0.0.1"// IN THE FUTURE THIS ONE SHOULD BE READ FROM THE CONF FILE BUT THEN I NEED TO SWITCH THE ORDER DOWN BELOW AND FIX SO THAT WE READ THE PATH TO THE TRAJ FILE
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -62,14 +61,15 @@ void logger_task()
     char pcLogFile[MAX_FILE_PATH];
     char pcBuffer[MQ_MAX_MESSAGE_LENGTH+100];
     char pcRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
-    char TimeStampUTCBufferRecv[MQ_MAX_UTC_LENGTH];pcBuffer
+    char TimeStampUTCBufferRecv[MQ_MAX_UTC_LENGTH];
     char DateBuffer[MQ_MAX_MESSAGE_LENGTH];
     char pcSendBuffer[MQ_MAX_MESSAGE_LENGTH];
     char pcReadBuffer[MQ_MAX_MESSAGE_LENGTH];
     char read;
     struct timeval tvTime ;
     uint64_t LogTimeStart;
-
+    DIR *dir;
+    struct dirent *ent;
     FILE *filefd,*fileread,*replayfd;
     struct timespec sleep_time, ref_time;
 
@@ -102,7 +102,7 @@ void logger_task()
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open log file to use: <%s>\n",pcLogFile);
     filefd = fopen(pcLogFile, "w+");
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer,"------------------------------------------\nWhole Trajectory file:\n------------------------------------------\n");
+    sprintf(pcBuffer,"------------------------------------------\nWhole Trajectory files:\n------------------------------------------\n");
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
 
@@ -113,32 +113,36 @@ void logger_task()
     (void)strcat(pcCommand,pcLogFolder);
     (void)system(pcCommand);
 
-    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    strcpy(pcBuffer,TRAJECTORY_PATH);
-    strcat(pcBuffer,TRAJ_FILE_NAME);
 
-
-    /* If traj file exist and we have reader permission do*/
-    if (0 == access(pcBuffer,0))
+    // Open directory ./traj/
+    if ((dir=opendir(TRAJECTORY_PATH))!=NULL)
     {
-      /*read the trajectory file and print it in to the .log file */
-      fileread = fopen(pcBuffer,"r");
-      read = fgetc(fileread);
-      while(read != EOF)
+      while((ent=readdir(dir))!=NULL)
       {
-          fputc(read,filefd);
+        //copy all files in trajectory and add them to the log file
+        bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+        strcpy(pcBuffer,TRAJECTORY_PATH);
+        strcat(pcBuffer,ent->d_name);
+        if (0==access(pcBuffer,0))
+        {
+          fileread = fopen(pcBuffer,"r");
           read = fgetc(fileread);
+          while(read != EOF)
+          {
+              fputc(read,filefd);
+              read = fgetc(fileread);
+          }
+          fclose(fileread);
+        }
       }
-      fclose(fileread);
-
+      closedir(dir);
     }
     else
     {
-      DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Can not open .traj file; %s\n",TRAJ_FILE_NAME);
-      bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-      sprintf(pcBuffer,"Failed to Open .traj file;%s\n",TRAJ_FILE_NAME);
-      (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+      perror("No traj folder exist, wrong path or access denied\n" );
     }
+    /* If traj file exist and we have reader permission do*/
+
 
     /* Copy conf file */
     (void)strcpy(pcCommand,"cp ");
