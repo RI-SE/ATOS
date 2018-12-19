@@ -559,8 +559,8 @@ uint32_t UtilgetIntDateFromMS(uint64_t ms);
 uint64_t UtilgetETSIfromUTCMS(uint64_t utc_sec, uint64_t utc_usec);
 
 void UtilgetDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t);
-void UtilgetDateTimefromUTCtimeNewformat(int64_t utc_ms, char *buffer, int size_t);
-void UtilgetDateTimeMapName(int64_t utc_ms, char *buffer, int size_t);
+void UtilgetDateTimefromUTCCSVformat(int64_t utc_ms, char *buffer, int size_t);
+void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int size_t);
 
 void util_error(char* message);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);

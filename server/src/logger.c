@@ -81,13 +81,12 @@ void logger_task()
     bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
     //Calculate the date when the logfile is created more or less
     LogTimeStart = UtilgetCurrentUTCtimeMS();
-    UtilgetDateTimeMapName((int64_t)LogTimeStart, DateBuffer,sizeof(DateBuffer));
+    UtilgetDateTimeFromUTCForMapNameCreation((int64_t)LogTimeStart, DateBuffer,sizeof(DateBuffer));
 
     bzero(pcLogFolder,MAX_FILE_PATH);
     bzero(pcLogFile,MAX_FILE_PATH);
     (void)strcpy(pcLogFolder,LOG_PATH);
     (void)strcat(pcLogFolder,DateBuffer);
-    printf("%s\n",DateBuffer );
 
     (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
     //(void)iCommInit(IPC_SEND,MQ_LG_1,0);
@@ -203,7 +202,7 @@ void logger_task()
 
                Timestamp = atol(TimeStampUTCBufferRecv);
                bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
-               UtilgetDateTimefromUTCtimeNewformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
+               UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
                sprintf ( pcBuffer,"%s;%s;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, iCommand, pcRecvBuffer);
                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);

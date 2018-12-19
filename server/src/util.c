@@ -149,7 +149,7 @@ void UtilgetDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t)
     if (size_t < 26) return;
     strcpy(buffer,ctime(&time_seconds));
 }
-void UtilgetDateTimefromUTCtimeNewformat(int64_t utc_ms, char *buffer, int size_t)
+void UtilgetDateTimefromUTCCSVformat(int64_t utc_ms, char *buffer, int size_t)
 {
   struct tm date_time;
   char tmp_buffer_ms[10];
@@ -165,7 +165,7 @@ void UtilgetDateTimefromUTCtimeNewformat(int64_t utc_ms, char *buffer, int size_
   sprintf(tmp_buffer_ms,"%" PRIi64,ms);
   strcat(buffer,tmp_buffer_ms);
 }
-void UtilgetDateTimeMapName(int64_t utc_ms, char *buffer, int size_t)
+void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int size_t)
 {
   struct tm date_time;
   char tmp_buffer_ms[10];
