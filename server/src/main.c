@@ -44,15 +44,10 @@ static GSDType *GSD;
 ------------------------------------------------------------*/
 int main(int argc, char *argv[])
 {
-    char VersionBuffer[100];
-    FILE *fileread;
-    // read Version.txt and print
-
-
-    printf("Version %s\n",MaestroVersion );
     // Set the debug level
     // TODO: make debug level a starting parameter
     // make sure that the same debug parameter is passed to all processes
+    printf("Version %s\n",MaestroVersion );
     dbg_setdebug(DEBUG_LEVEL_HIGH);
 
     /*Share time between child processes*/
