@@ -39,7 +39,6 @@
 
 static TimeType *GPSTime;
 static GSDType *GSD;
-#define VERSION_PATH "../conf/Version.txt"
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
@@ -49,15 +48,8 @@ int main(int argc, char *argv[])
     FILE *fileread;
     // read Version.txt and print
 
-    if (0 == access(VERSION_PATH,0))
-    {
-      fileread = fopen(VERSION_PATH,"r");
-      UtilReadLineCntSpecChars(fileread,VersionBuffer);
-      fclose(fileread);
-      //print version number
-      printf("%s\n",VersionBuffer);
-    }
 
+    printf("Version %s\n",MaestroVersion );
     // Set the debug level
     // TODO: make debug level a starting parameter
     // make sure that the same debug parameter is passed to all processes

@@ -62,7 +62,7 @@ void logger_task()
     char pcLogFile[MAX_FILE_PATH];
     char pcBuffer[MQ_MAX_MESSAGE_LENGTH+100];
     char pcRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
-    char TimeStampUTCBufferRecv[MQ_MAX_UTC_LENGTH];
+    char TimeStampUTCBufferRecv[MQ_MAX_UTC_LENGTH];pcBuffer
     char DateBuffer[MQ_MAX_MESSAGE_LENGTH];
     char pcSendBuffer[MQ_MAX_MESSAGE_LENGTH];
     char pcReadBuffer[MQ_MAX_MESSAGE_LENGTH];
@@ -104,6 +104,8 @@ void logger_task()
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     sprintf(pcBuffer,"------------------------------------------\nWhole Trajectory file:\n------------------------------------------\n");
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+
     /* Copy drive files */
     (void)strcpy(pcCommand,"cp -R ");
     (void)strcat(pcCommand,TRAJECTORY_PATH);
@@ -114,20 +116,29 @@ void logger_task()
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     strcpy(pcBuffer,TRAJECTORY_PATH);
     strcat(pcBuffer,TRAJ_FILE_NAME);
-    /*read the trajectory file and print it in to the .log file */
-    fileread = fopen(pcBuffer,"r");
-    if (fileread ==NULL)
-    {
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Cant open traj file <%s>\n",pcBuffer);
-    }
 
-    read = fgetc(fileread);
-    while(read != EOF)
+
+    /* If traj file exist and we have reader permission do*/
+    if (0 == access(pcBuffer,0))
     {
-        fputc(read,filefd);
-        read = fgetc(fileread);
+      /*read the trajectory file and print it in to the .log file */
+      fileread = fopen(pcBuffer,"r");
+      read = fgetc(fileread);
+      while(read != EOF)
+      {
+          fputc(read,filefd);
+          read = fgetc(fileread);
+      }
+      fclose(fileread);
+
     }
-    fclose(fileread);
+    else
+    {
+      DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Can not open .traj file; %s\n",TRAJ_FILE_NAME);
+      bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+      sprintf(pcBuffer,"Failed to Open .traj file;%s\n",TRAJ_FILE_NAME);
+      (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+    }
 
     /* Copy conf file */
     (void)strcpy(pcCommand,"cp ");
@@ -139,19 +150,29 @@ void logger_task()
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     sprintf(pcBuffer, "------------------------------------------\nWhole Config file:\n------------------------------------------\n");
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-    /*read the .conf file and print it in to the .log file */
-    fileread = fopen(TEST_CONF_FILE,"r");
-    if (fileread !=NULL)
+
+    /* If file conf file exist and we have reader permission do*/
+    if (0==access(TEST_CONF_FILE,0))
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Cant open .conf file <%s>\n",pcBuffer);
+      /*read the .conf file and print it in to the .log file */
+      fileread = fopen(TEST_CONF_FILE,"r");
+      read = fgetc(fileread);
+      while(read!= EOF)
+      {
+          fputc(read,filefd);
+          read = fgetc(fileread);
+      }
+      fclose(fileread);
     }
-    read = fgetc(fileread);
-    while(read!= EOF)
+    else
     {
-        fputc(read,filefd);
-        read = fgetc(fileread);
+        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Cant open .conf file; %s\n",TEST_CONF_FILE);
+        bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+        sprintf(pcBuffer,"Failed to Open .conf file;%s\n",TEST_CONF_FILE);
+        (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
     }
-    fclose(fileread);
+
     /* Listen for commands */
     int iExit = 0;
     int iCommand;
@@ -172,6 +193,12 @@ void logger_task()
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     sprintf(pcBuffer, "Command message nr:\nCOMM_START:%d\nCOMM_STOP:%d\nCOMM_MONI%d\nCOMM_EXIT:%d\nCOMM_ARMD:%d\nCOMM_REPLAY:%d\nCOMM_CONTROL:%d\nCOMM_ABORT:%d\nCOMM_TOM:%d\nCOMM_INIT:%d\nCOMM_CONNECT:%d\nCOMM_OBC_STATE:%d\nCOMM_DISCONNECT:%d\nCOMM_LOG:%d\nCOMM_VIOP:%d\nCOMM_INV:%d\n------------------------------------------\n Log start\n------------------------------------------\n",COMM_STRT,COMM_STOP,COMM_MONI,COMM_EXIT,COMM_ARMD,COMM_REPLAY,COMM_CONTROL,COMM_ABORT,COMM_TOM,COMM_INIT,COMM_CONNECT,COMM_OBC_STATE,COMM_DISCONNECT,COMM_LOG,COMM_VIOP,COMM_INV);
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+    sprintf(pcBuffer,"Version;%s\n",MaestroVersion);
+    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+
 
     while(!iExit)
     {
