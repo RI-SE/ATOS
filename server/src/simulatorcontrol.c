@@ -221,7 +221,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         bzero(Timestamp, SIM_CONTROL_BUFFER_SIZE_20);
         sprintf(Timestamp, "%" PRIu32, GSD->ScenarioStartTimeU32);
         printf("[SimulatorControl] Sending StartScenario(%s)\n", Timestamp);
-        //LOG_SEND(LogBuffer, "[SimulatorControl] Sending StartScenario(%s)\n", Timestamp);
+        //LOG_SEND(LogBuffer, "[SimulatorControl] Sending StartScenario(%s)", Timestamp);
         SimulatorControlStartScenario( &SimulatorTCPSocketfdI32, Timestamp, 0);
         GSD->ScenarioStartTimeU32 = 0;
       }
