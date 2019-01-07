@@ -40,7 +40,6 @@
 #define TIMESTAMP_BUFFER_LENGTH 20
 #define SPECIFIC_CHAR_THRESHOLD_COUNT 10
 #define MQ_MAX_UTC_LENGTH 30
-#define TRAJ_FILE_NAME  "127.0.0.1"// IN THE FUTURE THIS ONE SHOULD BE READ FROM THE CONF FILE BUT THEN I NEED TO SWITCH THE ORDER DOWN BELOW AND FIX SO THAT WE READ THE PATH TO THE TRAJ FILE
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -70,8 +69,9 @@ void logger_task()
     char read;
     struct timeval tvTime ;
     uint64_t LogTimeStart;
-
-    FILE *filefd,*fileread,*replayfd, *filefdComp;
+    DIR *dir;
+    struct dirent *ent;
+    FILE *filefd,*fileread,*replayfd;
     struct timespec sleep_time, ref_time;
 
     gettimeofday(&tvTime,NULL);
@@ -106,8 +106,10 @@ void logger_task()
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open log file to use: <%s>\n",pcLogFile);
     filefd = fopen(pcLogFile, "w+");
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer,"------------------------------------------\nWhole Trajectory file:\n------------------------------------------\n");
+    sprintf(pcBuffer,"------------------------------------------\nWhole Trajectory files:\n------------------------------------------\n");
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+
     /* Copy drive files */
     (void)strcpy(pcCommand,"cp -R ");
     (void)strcat(pcCommand,TRAJECTORY_PATH);
@@ -115,23 +117,36 @@ void logger_task()
     (void)strcat(pcCommand,pcLogFolder);
     (void)system(pcCommand);
 
-    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    strcpy(pcBuffer,TRAJECTORY_PATH);
-    strcat(pcBuffer,TRAJ_FILE_NAME);
-    /*read the trajectory file and print it in to the .log file */
-    fileread = fopen(pcBuffer,"r");
-    if (fileread ==NULL)
-    {
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Cant open traj file <%s>\n",pcBuffer);
-    }
 
-    read = fgetc(fileread);
-    while(read != EOF)
+    // Open directory ./traj/
+    if ((dir=opendir(TRAJECTORY_PATH))!=NULL)
     {
-        fputc(read,filefd);
-        read = fgetc(fileread);
+      while((ent=readdir(dir))!=NULL)
+      {
+        //copy all files in trajectory and add them to the log file
+        bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+        strcpy(pcBuffer,TRAJECTORY_PATH);
+        strcat(pcBuffer,ent->d_name);
+        if (0==access(pcBuffer,0))
+        {
+          fileread = fopen(pcBuffer,"r");
+          read = fgetc(fileread);
+          while(read != EOF)
+          {
+              fputc(read,filefd);
+              read = fgetc(fileread);
+          }
+          fclose(fileread);
+        }
+      }
+      closedir(dir);
     }
-    fclose(fileread);
+    else
+    {
+      perror("No traj folder exist, wrong path or access denied\n" );
+    }
+    /* If traj file exist and we have reader permission do*/
+
 
     /* Copy conf file */
     (void)strcpy(pcCommand,"cp ");
@@ -143,19 +158,29 @@ void logger_task()
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     sprintf(pcBuffer, "------------------------------------------\nWhole Config file:\n------------------------------------------\n");
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-    /*read the .conf file and print it in to the .log file */
-    fileread = fopen(TEST_CONF_FILE,"r");
-    if (fileread !=NULL)
+
+    /* If file conf file exist and we have reader permission do*/
+    if (0==access(TEST_CONF_FILE,0))
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Cant open .conf file <%s>\n",pcBuffer);
+      /*read the .conf file and print it in to the .log file */
+      fileread = fopen(TEST_CONF_FILE,"r");
+      read = fgetc(fileread);
+      while(read!= EOF)
+      {
+          fputc(read,filefd);
+          read = fgetc(fileread);
+      }
+      fclose(fileread);
     }
-    read = fgetc(fileread);
-    while(read!= EOF)
+    else
     {
-        fputc(read,filefd);
-        read = fgetc(fileread);
+        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Cant open .conf file; %s\n",TEST_CONF_FILE);
+        bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+        sprintf(pcBuffer,"Failed to Open .conf file;%s\n",TEST_CONF_FILE);
+        (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
     }
-    fclose(fileread);
+
     /* Listen for commands */
     int iExit = 0;
     int iCommand;
@@ -186,12 +211,17 @@ void logger_task()
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+
+    sprintf(pcBuffer,"Version;%s\n",MaestroVersion);
+    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
     sprintf(pcBuffer,"unit 0.01 m/s>;<Lateral speed, unit 0.01 m/s>;<Longitudinal Acceleration, unit 0.001 m/s^2>;<Lateral Acceleration, unit 0.001 m/s^2>;<Driving direction>;<Object state>;<Ready to ARM>;<ErrorState>\n"); // add more her if we want more data
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     sprintf(pcBuffer, "Command message nr:\nCOMM_START:%d\nCOMM_STOP:%d\nCOMM_MONI%d\nCOMM_EXIT:%d\nCOMM_ARMD:%d\nCOMM_REPLAY:%d\nCOMM_CONTROL:%d\nCOMM_ABORT:%d\nCOMM_TOM:%d\nCOMM_INIT:%d\nCOMM_CONNECT:%d\nCOMM_OBC_STATE:%d\nCOMM_DISCONNECT:%d\nCOMM_LOG:%d\nCOMM_VIOP:%d\nCOMM_INV:%d\n------------------------------------------\n Log start\n------------------------------------------\n",COMM_STRT,COMM_STOP,COMM_MONI,COMM_EXIT,COMM_ARMD,COMM_REPLAY,COMM_CONTROL,COMM_ABORT,COMM_TOM,COMM_INIT,COMM_CONNECT,COMM_OBC_STATE,COMM_DISCONNECT,COMM_LOG,COMM_VIOP,COMM_INV);
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
     filefdComp = fopen(pcLogFileComp,"w+");
+
     while(!iExit)
     {
         bzero(pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH);

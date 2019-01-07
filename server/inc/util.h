@@ -30,6 +30,8 @@
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
+#define MaestroVersion  "Maestro 0.1.x"
+
 #define ISO_PROTOCOL_VERSION 2
 #define ACK_REQ 0
 
@@ -141,6 +143,7 @@
 
 #define ADAPTIVE_SYNC_POINT_CONF "./conf/adaptivesync.conf"
 #define TRIGG_ACTION_CONF "./conf/triggeraction.conf"
+#define VERSION_PATH "../conf/Version.txt"
 
 #define MAX_TRIGG_ACTIONS 20
 
