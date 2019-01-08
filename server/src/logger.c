@@ -71,7 +71,7 @@ void logger_task()
     uint64_t LogTimeStart;
     DIR *dir;
     struct dirent *ent;
-    FILE *filefd,*fileread,*replayfd;
+    FILE *filefd,*fileread,*replayfd, *filefdComp;
     struct timespec sleep_time, ref_time;
 
     gettimeofday(&tvTime,NULL);
