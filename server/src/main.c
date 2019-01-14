@@ -31,7 +31,9 @@
 #include "remotecontrol.h"
 #include "timecontrol.h"
 #include "simulatorcontrol.h"
+#include "supervisorcontrol.h"
 //#include "citscontrol.h"
+
 
 /*------------------------------------------------------------
 -- Defines
@@ -196,7 +198,24 @@ int main(int argc, char *argv[])
     exit(EXIT_SUCCESS);
   }
   ++iIndex;
-  */
+  
+
+
+    pID[iIndex] = fork();
+    if(pID[iIndex] < 0)
+    {
+        util_error("ERR: Failed to fork");
+    }
+    if(pID[iIndex] == 0)
+    {
+
+        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: citscontrol_task running in:  %i \n",getpid());
+        supervisorcontrol_task(GPSTime, GSD);
+        exit(EXIT_SUCCESS);
+    }
+    ++iIndex;
+    */
+
 
 
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: systemcontrol_task running in:  %i \n",getpid());

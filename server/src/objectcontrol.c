@@ -134,15 +134,7 @@ typedef enum {
 } hearbeatCommand_t;
 
 
-typedef enum {
-    OBC_STATE_UNDEFINED,
-    OBC_STATE_IDLE,
-    OBC_STATE_INITIALIZED,
-    OBC_STATE_CONNECTED,
-    OBC_STATE_ARMED,
-    OBC_STATE_RUNNING,
-    OBC_STATE_ERROR,
-} OBCState_t;
+
 
 char TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION*COMMAND_DOTM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH];
 
@@ -172,7 +164,7 @@ I32 ObjectControlBuildDOTMMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderT
 I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 ObjectControlSendDOTMMEssage(C8* Filename, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug);
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug);
-int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *LateralSpeed, char *LongitudinalAcc, char *LateralAcc, char *Heading, char *DriveDirection, char *StatusFlag, char *StateFlag, char debug);
+I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I32 Idn, C8 *Id, C8 *Timestamp, C8 *XPosition, C8 *YPosition, C8 *ZPosition, C8 *LongitudinalSpeed, C8 *LateralSpeed, C8 *LongitudinalAcc, C8 *LateralAcc, C8 *Heading, C8 *DriveDirection, C8 *StatusFlag, C8 *StateFlag, C8 debug);
 I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug);
 int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId ,char *TriggAction, char *TriggDelay, char debug);
 int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug);
@@ -214,9 +206,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     FILE *fd;
     char Id[SMALL_BUFFER_SIZE_0];
     char Timestamp[SMALL_BUFFER_SIZE_0];
-    char Latitude[SMALL_BUFFER_SIZE_0];
-    char Longitude[SMALL_BUFFER_SIZE_0];
-    char Altitude[SMALL_BUFFER_SIZE_0];
+    char XPosition[SMALL_BUFFER_SIZE_0];
+    char YPosition[SMALL_BUFFER_SIZE_0];
+    char ZPosition[SMALL_BUFFER_SIZE_0];
     char Speed[SMALL_BUFFER_SIZE_0];
     char LongitudinalSpeed[SMALL_BUFFER_SIZE_0];
     char LateralSpeed[SMALL_BUFFER_SIZE_0];
@@ -229,6 +221,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     char MTSP[SMALL_BUFFER_SIZE_0];
     int MessageLength;
     char *MiscPtr;
+    C8 MiscText[SMALL_BUFFER_SIZE_0];
     U32 StartTimeU32 = 0;
     U32 OutgoingStartTimeU32 = 0;
     U32 DelayedStartU32 = 0;
@@ -401,14 +394,14 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     }
 
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
-                    ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, Latitude, Longitude, Altitude, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
+                    ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, XPosition, YPosition, ZPosition, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
                     bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
                     strcat(buffer,object_address_name[iIndex]); strcat(buffer,";");
                     strcat(buffer, "0"); strcat(buffer,";");
                     strcat(buffer,Timestamp); strcat(buffer,";");
-                    strcat(buffer,Latitude); strcat(buffer,";");
-                    strcat(buffer,Longitude); strcat(buffer,";");
-                    strcat(buffer,Altitude); strcat(buffer,";");
+                    strcat(buffer,XPosition); strcat(buffer,";");
+                    strcat(buffer,YPosition); strcat(buffer,";");
+                    strcat(buffer,ZPosition); strcat(buffer,";");
                     strcat(buffer,Heading); strcat(buffer,";");
                     strcat(buffer,LongitudinalSpeed); strcat(buffer,";");
                     strcat(buffer,LateralSpeed); strcat(buffer,";");
@@ -438,11 +431,16 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             /*|| TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU32 > 0 && iIndex == 0 && TimeToSyncPoint > -1*/)
                         {
 
-                            gettimeofday(&CurrentTimeStruct, NULL);
-                            TimeCap1 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
-                            OP[iIndex].x = ((dbl)atoi(Latitude))/1000;
-                            OP[iIndex].y = ((dbl)atoi(Longitude))/1000;
-                            UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(Latitude)/1e7,atof(Longitude)/1e7, &OP[iIndex]);
+                            gettimeofday(&CurrentTimeStruct, NULL); //Capture time
+
+                            TimeCap1 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000; //Calculate initial timestamp
+                            
+                            OP[iIndex].x = ((dbl)atoi(XPosition))/1000; //Set x and y on OP (ObjectPosition)
+                            OP[iIndex].y = ((dbl)atoi(YPosition))/1000;
+                            
+                            //OP[iIndex].OrigoDistance = sqrt(pow(OP[iIndex].x,2) + pow(OP[iIndex].y,2)); //Calculate hypotenuse
+
+                            UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(XPosition)/1e7,atof(YPosition)/1e7, &OP[iIndex]);
 
                             if(OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex)
                             {
@@ -495,17 +493,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                     //Build and send ASP on message queue
                                     //(void)iCommSend(COMM_ASP,buffer);
                                 }
-
-
-
-
-
                             }
-                            
-
-
-
-
                         }
                     }
 
@@ -547,7 +535,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_STRT && (OBCState == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED)*/)  //OBC_STATE_INITIALIZED is temporary!
             {
-                LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>\n",pcRecvBuffer);
                 bzero(Timestamp, SMALL_BUFFER_SIZE_0);
                 MiscPtr =strchr(pcRecvBuffer,';');
                 strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
@@ -569,6 +556,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 //OBCState = OBC_STATE_INITIALIZED; //This is temporary!
                 //printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
                 GSD->ScenarioStartTimeU32 = OutgoingStartTimeU32;
+                bzero(MiscText, SMALL_BUFFER_SIZE_0);
+                sprintf(MiscText, "%" PRIu32, GSD->ScenarioStartTimeU32 << 2);
+                LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>, GPS time <%s>\n",pcRecvBuffer, MiscText);
+
             }
             else if(iCommand == COMM_TRAJ && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
             {
@@ -783,7 +774,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             }
                             else
                             {
-                                util_error("ERR: Failed to connect to control socket");
+                                util_error("[ObjectControl] ERR: Failed to connect to control socket");
                             }
                         }
 
@@ -1252,8 +1243,7 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
 }
 
 
-//int ObjectControlMONRToASCII(MONRType *MONRData, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *Speed, char *Heading, char *DriveDirection, char *StatusFlag, char debug)
-int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, int Idn, char *Id, char *Timestamp, char *Latitude, char *Longitude, char *Altitude, char *LongitudinalSpeed, char *LateralSpeed, char *LongitudinalAcc, char *LateralAcc, char *Heading, char *DriveDirection, char *StatusFlag, char *StateFlag, char debug)
+I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I32 Idn, C8 *Id, C8 *Timestamp, C8 *XPosition, C8 *YPosition, C8 *ZPosition, C8 *LongitudinalSpeed, C8 *LateralSpeed, C8 *LongitudinalAcc, C8 *LateralAcc, C8 *Heading, C8 *DriveDirection, C8 *StatusFlag, C8 *StateFlag, C8 debug)
 {
     char Buffer[6];
     long unsigned int MonrValueU64;
@@ -1267,9 +1257,9 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
 
     bzero(Id, SMALL_BUFFER_SIZE_1);
     bzero(Timestamp, SMALL_BUFFER_SIZE_0);
-    bzero(Latitude, SMALL_BUFFER_SIZE_0);
-    bzero(Longitude, SMALL_BUFFER_SIZE_0);
-    bzero(Altitude, SMALL_BUFFER_SIZE_0);
+    bzero(XPosition, SMALL_BUFFER_SIZE_0);
+    bzero(YPosition, SMALL_BUFFER_SIZE_0);
+    bzero(ZPosition, SMALL_BUFFER_SIZE_0);
     bzero(LongitudinalSpeed, SMALL_BUFFER_SIZE_0);
     bzero(LateralSpeed, SMALL_BUFFER_SIZE_0);
     bzero(LongitudinalAcc, SMALL_BUFFER_SIZE_0);
@@ -1326,23 +1316,23 @@ int ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, in
 
         enuToLlh(iLlh, xyz, Llh);
 
-        //Latitude
+        //XPosition
         MonrValueU32 = 0;
         //for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
         //sprintf(Latitude, "%" PRIi32, (I32)(Llh[0]*1e7));
-        sprintf(Latitude, "%" PRIi32, MONRData->XPositionI32);
+        sprintf(XPosition, "%" PRIi32, MONRData->XPositionI32);
 
-        //Longitude
+        //YPosition
         MonrValueU32 = 0;
         //for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
         //sprintf(Longitude, "%" PRIi32, (I32)(Llh[1]*1e7));
-        sprintf(Longitude, "%" PRIi32, MONRData->YPositionI32);
+        sprintf(YPosition, "%" PRIi32, MONRData->YPositionI32);
 
-        //Altitude
+        //ZPosition
         MonrValueU32 = 0;
         //for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
         //sprintf(Altitude, "%" PRIi32, (I32)(Llh[2]));
-        sprintf(Altitude, "%" PRIi32, MONRData->ZPositionI32);
+        sprintf(ZPosition, "%" PRIi32, MONRData->ZPositionI32);
 
         //Speed
         MonrValueU16 = 0;
@@ -1621,21 +1611,17 @@ I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeTyp
     HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
     HEABData->Header.MessageIdU16 = COMMAND_HEAB_CODE;
     HEABData->Header.MessageLengthU32 = sizeof(HEABType) - sizeof(HeaderType);
-    //HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16; 
+    //HEABData->HeabStructValueIdU16 = 0;
+    //HEABData->HeabStructContentLengthU16 = sizeof(HEABType) - sizeof(HeaderType) - 4;
     HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
-    //HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 0);
     HEABData->CCStatusU8 = CCStatus;
 
     if(!GPSTime->isGPSenabled){
         UtilgetCurrentGPStime(NULL,&HEABData->GPSSOWU32);
     }
-    //printf("%d\n", HEABData->GPSSOWU32);
+
     p=(C8 *)HEABData;
-    for(i=0; i<sizeof(HEABType)/*-6*/; i++) *(MessageBuffer + i) = *p++;
-    //*(MessageBuffer + i++) = (U8)(HEABData->StatusValueIdU16);
-    //*(MessageBuffer + i++) = (U8)(HEABData->StatusValueIdU16 >> 8);
-    //*(MessageBuffer + i++) = HEABData->StatusValueTypeU8;
-    //*(MessageBuffer + i++) = HEABData->StatusU8;
+    for(i=0; i<sizeof(HEABType); i++) *(MessageBuffer + i) = *p++;
     Crc = crc_16((const C8*)MessageBuffer, sizeof(HEABType));
     Crc = 0;
     *(MessageBuffer + i++) = (U8)(Crc);
@@ -2221,13 +2207,13 @@ static I32 vConnectObject(int* sockfd, const char* name, const uint32_t port, U8
 
     if (*sockfd < 0)
     {
-        util_error("ERR: Failed to open control socket");
+        util_error("[ObjectControl] ERR: Failed to open control socket");
     }
 
     server = gethostbyname(name);
     if (server == NULL)
     {
-        util_error("ERR: Unknown host ");
+        util_error("[ObjectControl] ERR: Unknown host ");
     }
 
     bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -2236,7 +2222,7 @@ static I32 vConnectObject(int* sockfd, const char* name, const uint32_t port, U8
     bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(port);
 
-    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"INF: Try to connect to socket: %s %i\n",name,port);
+    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[ObjectControl] Try to connect to socket: %s %i\n",name,port);
 
     // do
     {
@@ -2257,7 +2243,7 @@ static I32 vConnectObject(int* sockfd, const char* name, const uint32_t port, U8
     }
     //} while(iResult < 0 && *Disconnect == 0);
 
-    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"INF: Connected to command socket: %s %i\n",name,port);
+    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[ObjectControl] Connected to command socket: %s %i\n",name,port);
 
     return iResult;
 }
@@ -2361,7 +2347,8 @@ static void vCreateSafetyChannel(const char* name, const uint32_t port, int* soc
         util_error("ERR: calling fcntl");
     }
 
-    DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Created socket and safety address: %s %d\n",name,port);
+    printf("[ObjectControl] Created socket and safety address: %s %d\n",name,port);
+    //DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Created socket and safety address: %s %d\n",name,port);
 
 }
 

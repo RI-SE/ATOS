@@ -41,6 +41,7 @@ add_executable(TEServer
   src/timecontrol.c
   src/simulatorcontrol.c
   src/citscontrol.c
+  src/supervisorcontrol.c
   inc/logger.h
   inc/objectcontrol.h
   inc/supervision.h
@@ -49,6 +50,7 @@ add_executable(TEServer
   inc/timecontrol.h
   inc/simulatorcontrol.h
   inc/citscontrol.h
+  inc/supervisorcontrol.h
 )
 
 # add the install targets

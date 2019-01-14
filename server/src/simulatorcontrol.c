@@ -125,6 +125,9 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   U8 WaitAllDataU8 = 0;
   U8 DataChunkedU8 = 0;
 
+  OBCState_t OBCStateStatus = OBC_STATE_IDLE;
+  U8 ObjectAddressListSentU8 = 0;
+
 
   gettimeofday(&ExecTime, NULL);
   CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
@@ -173,15 +176,22 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
             SimulatorInitiatedU8 = 0;
         }
 
+        /*Initiate the simulator if not initialized and a there is a valid TCP connection */
         if(SimulatorInitiatedReqU8 == 0 && SimulatorTCPSocketfdI32 > 0)
         {
-          
-          /*Initiate the simulator if not initialized and a there is a valid TCP connection */
           SimulatorControlInitSimulator(&SimulatorTCPSocketfdI32, SIM_CONTROL_DTM_MODE, SimFuncReqResponse, 0);
-
           SimulatorInitiatedReqU8 = 1;
         }
         
+
+        //Send ObjectAddressList if in correct mode and ObjectControl is in armed state
+        if(OBCStateStatus == OBC_STATE_ARMED && (SMGD.SimulatorModeU8 == SIM_CONTROL_DTM_MODE || SMGD.SimulatorModeU8 == SIM_CONTROL_VIM_DTM_MODE) && ObjectAddressListSentU8 == 0)
+        {
+          SimulatorControlObjectAddressList(&SimulatorTCPSocketfdI32, "192.168.0.4", SimFuncReqResponse, 0);
+          ObjectAddressListSentU8 = 1;
+        }
+
+
         if(ClientResultI32 > 0 || WaitAllDataU8 == 1)
         {
 
@@ -241,6 +251,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           
           if(1)
           {
+            printf("[SimulatorControl]");
             for(int i = 0;i < RxTotalDataU32; i ++) printf("%x ", ReceiveBuffer[i]);
             printf("\n");
           }
@@ -288,7 +299,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 {
                   //printf("Do ObjectAddressList\n");
                   if(ReceiveBuffer[ResponseDataIndexU16] >= SIM_CONTROL_VIM_MODE && ReceiveBuffer[ResponseDataIndexU16] <= SIM_CONTROL_DEBUG_MODE) SMGD.SimulatorModeU8 = ReceiveBuffer[ResponseDataIndexU16];
-                  SimulatorControlObjectAddressList(&SimulatorTCPSocketfdI32, "10.130.23.66", SimFuncReqResponse, 0);
+                  
                 }            
                 else if(strcmp(SimFuncReqResponse, "ObjectAddressList") == 0)
                 {
@@ -385,7 +396,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         sprintf(Timestamp, "%" PRIu32, GSD->ScenarioStartTimeU32);
         printf("[SimulatorControl] Sending StartScenario(%s)\n", Timestamp);
         //LOG_SEND(LogBuffer, "[SimulatorControl] Sending StartScenario(%s)\n", Timestamp);
-        SimulatorControlStartScenario( &SimulatorTCPSocketfdI32, Timestamp, 0);
+        SimulatorControlStartScenario( &SimulatorTCPSocketfdI32, Timestamp, 1);
         GSD->ScenarioStartTimeU32 = 0;
       }
 
@@ -403,11 +414,17 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
       else if(iCommand == COMM_MONI)
       {
         //printf("Monr sim %s\n", MqRecvBuffer);
-
         //Monitor message received, we send it to simulator
         LengthU32 = SimulatorControlBuildObjectMonitorMessage(SendBuffer, MqRecvBuffer, &ObjectMonitorData, 0);
         UtilSendUDPData("SimulatorControl", &SimulatorUDPSocketfdI32, &simulator_addr, SendBuffer, LengthU32, 0);
       }
+      else if (iCommand == COMM_OBC_STATE)
+      {
+            OBCStateStatus = (U8)*MqRecvBuffer;
+            //Prepare to send ObjectAddressList
+            if(OBCStateStatus == OBC_STATE_CONNECTED) ObjectAddressListSentU8 = 0;
+      }
+ 
 
        ++CycleU16;
       if(CycleU16 >= SIM_CONTROL_HEARTBEAT_TIME_MS/SIM_CONTROL_TASK_PERIOD_MS) CycleU16 = 0;

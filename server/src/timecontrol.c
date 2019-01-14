@@ -259,8 +259,12 @@ U16 TimeControlGetMillisecond(TimeType *GPSTime)
   U16 MilliU16 = 0, NowU16 = 0;
   gettimeofday(&now, NULL);
   NowU16 = (U16)(now.tv_usec / 1000);
+  //if(NowU16 >= GPSTime->LocalMillisecondU16) MilliU16 = NowU16 - GPSTime->LocalMillisecondU16;
+  //else if(NowU16 < GPSTime->LocalMillisecondU16) MilliU16 = 1000 + ((I16)NowU16 - (I16)GPSTime->LocalMillisecondU16);
+
   if(NowU16 >= GPSTime->LocalMillisecondU16) MilliU16 = NowU16 - GPSTime->LocalMillisecondU16;
-  else if(NowU16 < GPSTime->LocalMillisecondU16) MilliU16 = 1000 + NowU16 - GPSTime->LocalMillisecondU16;
+  else if(NowU16 < GPSTime->LocalMillisecondU16) MilliU16 = 1000 - GPSTime->LocalMillisecondU16 + NowU16;
+
   //printf("Result= %d, now= %d, local= %d \n", MilliU16, NowU16, GPSTime->LocalMillisecondU16);
   return MilliU16;
 }
