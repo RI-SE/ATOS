@@ -575,10 +575,14 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlPrepFileRx(SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 0);
                 SystemControlSendControlResponse(strlen(ControlResponseBuffer) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "PrepareFileRx:", ControlResponseBuffer, 1, &ClientSocket, 0);
-                if(ControlResponseBuffer[0] = 1) //Server is ready to receive data
+                if(ControlResponseBuffer[0] == 1) //Server is ready to receive data
                 {
-                    SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 1);
-                }
+                    SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 0);
+                
+                } else ControlResponseBuffer[0] = 2; //Set second response code
+                
+                SystemControlSendControlResponse(strlen(ControlResponseBuffer) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "PrepareFileRx:", ControlResponseBuffer, 1, &ClientSocket, 0);
+
 
             } else { printf("[SystemControl] Err: Wrong parameter count in PrepFileRx(path, filesize, packetsize)!\n"); SystemControlCommand = Idle_0;}
         break;
@@ -1432,6 +1436,9 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
 
         fclose(fd);
 
+        if(TotalRxCount == FileSizeU32) *ReturnValue = 1;
+        else *ReturnValue = 2;
+        
         if(Debug) printf("Received data = %d, Expected data = %d\n", TotalRxCount, FileSizeU32);
 
     }
