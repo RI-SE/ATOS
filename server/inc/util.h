@@ -99,10 +99,10 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.10"
-#define TESTSERVER_IP "192.168.0.10"
+#define TESTHOST_IP "192.168.0.163"
+#define TESTSERVER_IP "192.168.0.163"
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.10" 
+#define LOCAL_USER_CONTROL_IP "192.168.0.163" 
 #define LOCAL_USER_CONTROL_PORT 54240  
 #define TEST_SYNC_POINTS 0
 
@@ -349,6 +349,8 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
+  //U16 HeabStructValueIdU16;
+  //U16 HeabStructContentLengthU16;
   U32 GPSSOWU32;
   U8 CCStatusU8;
 } HEABType; //16 bytes
@@ -356,6 +358,8 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
+  //U16 MonrStructValueIdU16;
+  //U16 MonrStructContentLengthU16;
   U32 GPSSOWU32;
   I32 XPositionI32;
   I32 YPositionI32;
@@ -595,6 +599,16 @@ typedef struct
   I16 SpeedI16;
 } ObjectMonitorType; 
 
+
+typedef enum {
+    OBC_STATE_UNDEFINED,
+    OBC_STATE_IDLE,
+    OBC_STATE_INITIALIZED,
+    OBC_STATE_CONNECTED,
+    OBC_STATE_ARMED,
+    OBC_STATE_RUNNING,
+    OBC_STATE_ERROR,
+} OBCState_t;
 
 
 /*------------------------------------------------------------
