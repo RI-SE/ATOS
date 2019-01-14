@@ -269,6 +269,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 {
                     ClientResult = SystemControlConnectServer(&ClientSocket, LOCAL_USER_CONTROL_IP, LOCAL_USER_CONTROL_PORT);
                     SystemControlCreateProcessChannel(LOCAL_USER_CONTROL_IP, SYSTEM_CONTROL_PROCESS_PORT, &ProcessChannelSocket, &ProcessChannelAddr);
+
                 }
 
                 server_state = SERVER_STATE_IDLE;
@@ -997,7 +998,7 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
     printf("[SystemControl] Connection received: %x, %i\n", htons(cli_addr.sin_addr.s_addr), htons(command_server_addr.sin_port));
 
     ip_addr->s_addr = cli_addr.sin_addr.s_addr; //Set IP-address of Usercontrol
-
+    //printf("%d", ip_addr->s_addr);
     if (*ClientSocket < 0)
     {
         perror("[SystemControl] ERR: Failed to accept from central");
