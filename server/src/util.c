@@ -13,6 +13,7 @@
   ------------------------------------------------------------*/
 
 #include <stdio.h>
+#include <dirent.h>
 #include <math.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -2132,4 +2133,72 @@ U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug)
 
 
     return j;
+}
+
+
+#define NORMAL_COLOR  "\x1B[0m"
+#define GREEN  "\x1B[32m"
+#define BLUE  "\x1B[34m"
+
+U32 UtilGetDirContent(C8* DirPath, C8* TempPath)
+{
+  
+  FILE *fd;
+  C8 Filename[MAX_PATH_LENGTH];
+  C8 CompletePath[MAX_PATH_LENGTH];
+  bzero(CompletePath, MAX_PATH_LENGTH);
+  GetCurrentDir(CompletePath, MAX_PATH_LENGTH);
+  strcat(CompletePath, DirPath);//Concatenate dir path
+
+  DIR * d = opendir(CompletePath); // open the path
+  if(d==NULL) return 1; // if was not able return
+  struct dirent * dir; // for the directory entries
+  
+  bzero(CompletePath, MAX_PATH_LENGTH);
+  GetCurrentDir(CompletePath, MAX_PATH_LENGTH);
+  strcat(CompletePath, TempPath); //Concatenate temp file path
+
+  fd = fopen(CompletePath, "r");
+  if(fd != NULL)
+  {
+      fclose(fd);
+      remove(CompletePath); //Remove file if exist
+  }
+
+  fd = fopen(CompletePath, "w+"); //Create the file
+  if(fd == NULL) //return if failing to create file
+  {
+      return 2;
+  }
+
+  while ((dir = readdir(d)) != NULL) // if we were able to read somehting from the directory
+  {
+    bzero(Filename, MAX_PATH_LENGTH);
+
+    if(dir-> d_type != DT_DIR) 
+      //printf("%s%s\n",BLUE, dir->d_name); // if the type is not directory just print it with blue
+      sprintf(Filename, "F-%s\n", dir->d_name);
+    else
+    if(dir -> d_type == DT_DIR && strcmp(dir->d_name,".")!=0 && strcmp(dir->d_name,"..")!=0 ) // if it is a directory
+    {
+      sprintf(Filename, "D-%s\n", dir->d_name);
+      //printf("%s%s\n", GREEN, dir->d_name); // print its name in green
+      //printf("D-%s\n", dir->d_name); // print its name in green
+      //char d_path[255]; // here I am using sprintf which is safer than strcat
+      //sprintf(d_path, "%s/%s", Path, dir->d_name);
+      //UtilGetDirContent(d_path, TempPath); // recall with the new path
+    }
+
+    if(strlen(Filename) > 0)
+    {
+      printf("%s\n", Filename);
+      fwrite(Filename, 1, strlen(Filename), fd); //write dir content to file
+      fflush(fd);
+    }
+  }
+  closedir(d); // close the directory
+
+  fclose(fd); //close the file
+
+  return 0;
 }
