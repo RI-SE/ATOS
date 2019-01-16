@@ -56,6 +56,7 @@ typedef enum {
 #define SYSTEM_CONTROL_CONTROL_PORT   54241       // Default port, control channel
 #define SYSTEM_CONTROL_PROCESS_PORT   54242       // Default port, process channel
 #define SYSTEM_CONTROL_RX_PACKET_SIZE 1280
+#define SYSTEM_CONTROL_TX_PACKET_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
 #define SYSTEM_CONTROL_MAX_PATH_LENGTH 255
 #define IPC_BUFFER_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
 #define SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE 64
@@ -99,19 +100,21 @@ typedef enum {
 #define SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA                    0x0F62
 
 #define GetCurrentDir getcwd
+#define REMOVE_FILE 1
+#define KEEP_FILE 0
 
 
 
 typedef enum {
     Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0, InitializeScenario_0,
-    ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_3, CheckFFExist_1, GetDirectoryContent_1,
-    replay_1, control_0, Exit_0, start_ext_trigg_1, nocommand
+    ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetDirectoryContent_1,
+    DeleteFileDirectory_1, CreateDirectory_1, replay_1, control_0, Exit_0, start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 const char* SystemControlCommandsArr[] = 
 { 	
     "Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0", "AbortScenario_0", "InitializeScenario_0",
-    "ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2", "GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFFExist_1", "GetDirectoryContent_1",
-    "replay_1", "control_0", "Exit_0", "start_ext_trigg_1"
+    "ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2", "GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1", "GetDirectoryContent_1",
+    "DeleteFileDirectory_1", "CreateDirectory_1", "replay_1", "control_0", "Exit_0", "start_ext_trigg_1"
 };
 
 const char* SystemControlStatesArr[] = { "UNDEFINED", "INITIALIZED", "IDLE", "READY", "RUNNING", "INWORK", "ERROR"};
@@ -122,6 +125,7 @@ char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
 char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
 char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH];
 C8 *STR_SYSTEM_CONTROL_RX_PACKET_SIZE = "1280";
+C8 *STR_SYSTEM_CONTROL_TX_PACKET_SIZE = "1200";
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -138,10 +142,13 @@ I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData
 I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 debug);
 I32 SystemControlReadServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
 I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
-I32 SystemControlCheckFFExist(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
+I32 SystemControlCheckFileDirectoryExist(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
 I32 SystemControlUploadFile(C8 *Path, C8 *FileSize, C8 *PacketSize, C8 *ReturnValue, U8 Debug);
 I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSize, C8 *ReturnValue, U8 Debug);
-I32 SystemControlRemoveFF(C8 *Path, C8 *ReturnValue, U8 Debug);
+I32 SystemControlDeleteFileDirectory(C8 *Path, C8 *ReturnValue, U8 Debug);
+I32 SystemControlBuildFileContentInfo(C8 *Path, C8 *ReturnValue, U8 Debug);
+I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *ReturnValue, U8 Remove, U8 Debug);
+I32 SystemControlCreateDirectory(C8 *Path, C8 *ReturnValue, U8 Debug);
 
 /*------------------------------------------------------------
   -- Public functions
@@ -210,7 +217,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
     U32 LengthU32 = 0;
     C8 BinBuffer[SMALL_BUFFER_SIZE_1024];
  
-
+    C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
 
     bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
     UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerMode=", "", TextBufferC8);
@@ -558,36 +565,69 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
             } else { printf("[SystemControl] Err: Wrong parameter count in SetServerParameter(Name, Value)!\n"); SystemControlCommand = Idle_0;}
         break;
-        case CheckFFExist_1:
+        case CheckFileDirectoryExist_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
                 SystemControlCommand = Idle_0;
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                
-                SystemControlCheckFFExist(SystemControlArgument[0], ControlResponseBuffer, 0);
-               
-                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "CheckFFExist:", ControlResponseBuffer, 1, &ClientSocket, 0);
+                SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "CheckFileDirectoryExist:", ControlResponseBuffer, 1, &ClientSocket, 0);
 
             } else { printf("[SystemControl] Err: Wrong parameter count in CheckFFExist(path)!\n"); SystemControlCommand = Idle_0;}
+        break;
+        case DeleteFileDirectory_1:
+            if(CurrentInputArgCount == CommandArgCount)
+            {
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlDeleteFileDirectory(SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteFileDirectory:", ControlResponseBuffer, 1, &ClientSocket, 0);
+
+            } else { printf("[SystemControl] Err: Wrong parameter count in DeleteFileDirectory(path)!\n"); SystemControlCommand = Idle_0;}
+        break;
+        case CreateDirectory_1:
+            if(CurrentInputArgCount == CommandArgCount)
+            {
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlCreateDirectory(SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "CreateDirectory:", ControlResponseBuffer, 1, &ClientSocket, 0);
+
+            } else { printf("[SystemControl] Err: Wrong parameter count in CreateDirectory(path)!\n"); SystemControlCommand = Idle_0;}
         break;
         case GetDirectoryContent_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
                 SystemControlCommand = Idle_0;
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                
-                SystemControlCheckFFExist(SystemControlArgument[0], ControlResponseBuffer, 0);
-                UtilGetDirContent(SystemControlArgument[0], "/dir.info");
-                FILE *fd;
-                struct stat st;
-                stat("/dir.info", &st);
-                ControlResponseBuffer[0] = 1;
-                ControlResponseBuffer[1] = (U8)(st.st_size >> 24);
-                ControlResponseBuffer[2] = (U8)(st.st_size >> 16);
-                ControlResponseBuffer[3] = (U8)(st.st_size >> 8);
-                ControlResponseBuffer[4] = (U8)st.st_size;
+                SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetDirectoryContent:", ControlResponseBuffer, 1, &ClientSocket, 0);
-                fd = fopen("/dir.info", "r");
+                if(ControlResponseBuffer[0] == FOLDER_EXIST)
+                {
+                    UtilCreateDirContent(SystemControlArgument[0], "/dir.info");
+                    bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                    SystemControlBuildFileContentInfo("/dir.info", ControlResponseBuffer, 0);
+                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetDirectoryContent:", ControlResponseBuffer, 4, &ClientSocket, 0);
+                    SystemControlSendFileContent(&ClientSocket, "/dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE, ControlResponseBuffer, REMOVE_FILE, 0);
+                }
+
+            } else { printf("[SystemControl] Err: Wrong parameter count in GetDirectoryContent(path)!\n"); SystemControlCommand = Idle_0;}
+        break;
+        case DownloadFile_1:
+            if(CurrentInputArgCount == CommandArgCount)
+            {
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DownloadFile:", ControlResponseBuffer, 1, &ClientSocket, 0);
+                if(ControlResponseBuffer[0] == FILE_EXIST)
+                {
+                    UtilCreateDirContent(SystemControlArgument[0], SystemControlArgument[0]);
+                    bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                    SystemControlBuildFileContentInfo(SystemControlArgument[0], ControlResponseBuffer, 0);
+                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DownloadFile:", ControlResponseBuffer, 4, &ClientSocket, 0);
+                    SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0], STR_SYSTEM_CONTROL_TX_PACKET_SIZE, ControlResponseBuffer, KEEP_FILE, 0);
+                }
 
             } else { printf("[SystemControl] Err: Wrong parameter count in GetDirectoryContent(path)!\n"); SystemControlCommand = Idle_0;}
         break;
@@ -603,13 +643,12 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 {
                     printf("[SystemControl] Receiving file: %s\n", SystemControlArgument[0]);
                     SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0], SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
-                    ControlResponseBuffer[0] = SERVER_PREPARED_BIG_PACKET_SIZE;
                 } 
                 else if (ControlResponseBuffer[0] == PATH_INVALID_MISSING)
                 { 
                     printf("[SystemControl] Failed receiving file: %s\n", SystemControlArgument[0]);
                     SystemControlReceiveRxData(&ClientSocket, "/file.tmp", SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
-                    SystemControlRemoveFF("/file.tmp", ControlResponseBuffer, 0);
+                    SystemControlDeleteFileDirectory("/file.tmp", ControlResponseBuffer, 0);
                     ControlResponseBuffer[0] = PATH_INVALID_MISSING;
                 }
                 else
@@ -617,7 +656,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     printf("[SystemControl] Receiving file: %s\n", SystemControlArgument[0]);
                     SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 0);  
                 }  
-                
+
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:", ControlResponseBuffer, 1, &ClientSocket, 0);
 
             } else { printf("[SystemControl] Err: Wrong parameter count in PrepFileRx(path, filesize, packetsize)!\n"); SystemControlCommand = Idle_0;}
@@ -986,8 +1025,8 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8
 static void SystemControlSendBytes(const char* data, int length, int* sockfd, int debug)
 {
     int i, n;
-
-    if(debug == 1){ printf("Bytes sent: "); int i = 0; for(i = 0; i < length; i++) printf("%d-", (unsigned char)*(data+i)); printf("\n");}
+    
+    if(debug == 1){ printf("Bytes sent: "); int i = 0; for(i = 0; i < length; i++) printf("%d:%d ", i, (C8)*(data+i)); printf("\n");}
 
     n = write(*sockfd, data, length);
     if (n < 0)
@@ -1336,7 +1375,27 @@ I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 Debug)
     return strlen(ParameterList);
 }
 
-I32 SystemControlCheckFFExist(C8 *ParameterName, C8 *ReturnValue, U8 Debug)
+I32 SystemControlBuildFileContentInfo(C8 *Path, C8 *ReturnValue, U8 Debug)
+{
+                
+    struct stat st;
+    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
+    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    strcat(CompletePath, Path);
+     
+    stat(CompletePath, &st);
+    *(ReturnValue+0) = (U8)(st.st_size >> 24);
+    *(ReturnValue+1) = (U8)(st.st_size >> 16);
+    *(ReturnValue+2) = (U8)(st.st_size >> 8);
+    *(ReturnValue+3) = (U8)st.st_size;
+    
+    if(Debug) printf("Filesize %d of %s\n", (I32)st.st_size, CompletePath);
+
+    return 0;
+}
+
+I32 SystemControlCheckFileDirectoryExist(C8 *ParameterName, C8 *ReturnValue, U8 Debug)
 {
                 
     DIR *pDir;
@@ -1364,15 +1423,64 @@ I32 SystemControlCheckFFExist(C8 *ParameterName, C8 *ReturnValue, U8 Debug)
         closedir(pDir);
     }
     
-    //if(*ReturnValue == FOLDER_EXIST) { UtilGetDirContent(CompletePath, CompletePath); printf("\n");}
-
     if(Debug) printf("%d %s\n", *ReturnValue, CompletePath);
 
     return 0;
 }
 
 
-I32 SystemControlRemoveFF(C8 *Path, C8 *ReturnValue, U8 Debug)
+I32 SystemControlDeleteFileDirectory(C8 *Path, C8 *ReturnValue, U8 Debug)
+{
+                
+    DIR *pDir;
+    FILE *fd;
+    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
+    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    strcat(CompletePath, Path);
+     
+    *ReturnValue = PATH_INVALID_MISSING; 
+    
+    pDir = opendir(CompletePath);
+    if(pDir == NULL)
+    {
+        fd = fopen(CompletePath, "r");
+        if(fd == NULL)
+        {
+            *ReturnValue = PATH_INVALID_MISSING; //Missing file
+        }
+        else
+        {
+            if(0 == remove(CompletePath)) //Delete file
+            {    
+                *ReturnValue = SUCCEDED_DELETE; 
+            }
+            else
+            {
+                *ReturnValue = FAILED_DELETE;
+            }
+        }
+    }
+    else 
+    {
+            if(0 == remove(CompletePath)) //Delete directory
+            {    
+                *ReturnValue = SUCCEDED_DELETE; 
+            }
+            else
+            {
+                *ReturnValue = FAILED_DELETE;
+            }
+    }
+    
+    if(*ReturnValue == SUCCEDED_DELETE) printf("[SystemControl] Deleted: %s\n", CompletePath);
+    else if(*ReturnValue == FAILED_DELETE) printf("[SystemControl] Failed to delete: %s\n", CompletePath);
+
+    return 0;
+}
+
+
+I32 SystemControlCreateDirectory(C8 *Path, C8 *ReturnValue, U8 Debug)
 {
                 
     DIR *pDir;
@@ -1390,22 +1498,34 @@ I32 SystemControlRemoveFF(C8 *Path, C8 *ReturnValue, U8 Debug)
         fd = fopen(CompletePath, "r");
         if(fd != NULL)
         {
-         *ReturnValue = FILE_EXISTED; //File existed
-         fclose(fd);
+            *ReturnValue = FILE_EXIST; //This is a file!
+            fclose(fd);
         }
-        remove(CompletePath);
+        else
+        {
+            if(0 == mkdir(CompletePath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)) //Make the new directory
+            {    
+                *ReturnValue = SUCCEDED_CREATE_FOLDER; 
+            }
+            else
+            {
+                *ReturnValue = FAILED_CREATE_FOLDER;
+            }
+        }
     }
     else 
     {
-        *ReturnValue = FOLDER_EXISTED; //Directory exist
+        *ReturnValue = FOLDER_EXIST; //Directory exist
         closedir(pDir);
-        remove(CompletePath);
     }
     
     if(Debug) printf("%d %s\n", *(ReturnValue), CompletePath);
 
+    if(*ReturnValue == SUCCEDED_CREATE_FOLDER) printf("[SystemControl] Folder created: %s\n", CompletePath);
+    
     return 0;
 }
+
 
 
 
@@ -1541,6 +1661,65 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
         } 
         
         printf("[SystemControl] Rec count = %d, Req count = %d\n", TotalRxCount, FileSizeU32);
+
+    }
+ 
+    return 0;
+}
+
+
+I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *ReturnValue, U8 Remove, U8 Debug)
+{
+
+    FILE *fd;
+    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
+    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    strcat(CompletePath, Path);
+    U32 FileSizeU32 = 0;
+    U16 PacketSizeU16 = atoi(PacketSize);
+    I32 ClientStatus = 0, Time1 = 0, Time2 = 0, TimeDiff = 0, i = 0, j = 0;
+    C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
+    U32 TotalRxCount = 0, TransmissionCount = 0, RestCount = 0;
+    struct timeval CurTime;
+    struct stat st;
+     
+    stat(CompletePath, &st);
+    TransmissionCount = (U32)(st.st_size) / PacketSizeU16;
+    RestCount = (U32)(st.st_size) % PacketSizeU16;
+
+    if(Debug)
+    {
+        printf("%s\n", Path);
+        //printf("%s\n", FileSize);
+        printf("%s\n", PacketSize);
+        printf("%s\n", CompletePath);
+    }
+
+    fd = fopen(CompletePath, "r");
+   
+    if(fd != NULL)
+    {
+
+        for(i = 0; i < TransmissionCount; i++)
+        {
+            bzero(TxBuffer, PacketSizeU16);
+            fread(TxBuffer,1,PacketSizeU16,fd);
+            SystemControlSendBytes(TxBuffer, PacketSizeU16, sockfd, 0); //Send a packet
+        }
+
+        if(RestCount > 0)
+        {
+            bzero(TxBuffer, PacketSizeU16);
+            fread(TxBuffer,1,RestCount,fd);
+            SystemControlSendBytes(TxBuffer, RestCount, sockfd, 0); //Send the rest
+        }
+               
+        fclose(fd);
+
+        if(Remove) remove(CompletePath);
+        
+        printf("[SystemControl] Sent file: %s, total size = %d, transmissions = %d\n", CompletePath, (PacketSizeU16*TransmissionCount+RestCount), i + 1);
 
     }
  

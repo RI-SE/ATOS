@@ -226,9 +226,13 @@
 #define FILE_UPLOADED 0x04  
 #define TIME_OUT 0x05
 #define FILE_EXIST 0x01
-#define FOLDER_EXIST 0x01
+#define FOLDER_EXIST 0x02
 #define FILE_EXISTED 0x01
 #define FOLDER_EXISTED 0x02
+#define SUCCEDED_CREATE_FOLDER 0x03
+#define FAILED_CREATE_FOLDER 0x04
+#define SUCCEDED_DELETE 0x01
+#define FAILED_DELETE 0x02
 
 /* DEBUGGING DEFINES */
 
@@ -707,7 +711,7 @@ U32 UtilIPStringToInt(C8 *IP);
 U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug);
 U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
-U32 UtilGetDirContent(C8* DirPath, C8* TempPath);
+U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 
 typedef struct {
   uint64_t timestamp;

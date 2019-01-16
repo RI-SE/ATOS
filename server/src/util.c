@@ -2140,7 +2140,7 @@ U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug)
 #define GREEN  "\x1B[32m"
 #define BLUE  "\x1B[34m"
 
-U32 UtilGetDirContent(C8* DirPath, C8* TempPath)
+U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
 {
   
   FILE *fd;
@@ -2186,16 +2186,19 @@ U32 UtilGetDirContent(C8* DirPath, C8* TempPath)
       //printf("D-%s\n", dir->d_name); // print its name in green
       //char d_path[255]; // here I am using sprintf which is safer than strcat
       //sprintf(d_path, "%s/%s", Path, dir->d_name);
-      //UtilGetDirContent(d_path, TempPath); // recall with the new path
+      //UtilCreateDirContent(d_path, TempPath); // recall with the new path
     }
 
     if(strlen(Filename) > 0)
     {
-      printf("%s\n", Filename);
+      //printf("%s", Filename);
       fwrite(Filename, 1, strlen(Filename), fd); //write dir content to file
       fflush(fd);
     }
   }
+  //printf("\n");
+  //printf("%s\n", CompletePath);
+  
   closedir(d); // close the directory
 
   fclose(fd); //close the file
