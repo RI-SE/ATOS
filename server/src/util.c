@@ -1432,27 +1432,80 @@ int iUtilGetIntParaConfFile(char* pcParameter, int* iValue)
   return iResult;
 }
 
+/* First of all when we are using the messageque we are working with the
+ * following functions in our util.c file: iCommInit, iCommRecv ,
+ * iCommSend, iCommClose.
+ *
+ * So we are using the POSIX message que built in to Linux os. and it is called
+ * With the function mq_..., The commands we use are mq_open, mq_close,
+ * mq_unlink, mq_send and mq_receive.
+ *
+ * In generall I would say that you can think of the POSIX messageque as a fifo
+ * (first in first out)que but you can determen what message is put first
+ * by adding a priority number
+ */
+
+/* iCommInit calls on mq_open which will open a messageque, this should be
+ * among the first things done in our modules otherwise there exist no way
+ * of sending data to the specific module(no internal connection)
+ *
+ * input to iCommInit is the uimode which explains if the created messageque
+ * should be able to read messages, send messages or both recive and send
+ * messages.
+ *
+ * The name is one of the defined files in util.h ~row 38 at the moment we have
+ * the following.
+ * #define MQ_LG     "/TEServer-LG"
+ * #define MQ_SV     "/TEServer-SV"
+ * #define MQ_OC     "/TEServer-OC"
+ * #define MQ_VA     "/TEServer-VA"
+ * #define MQ_SC     "/TEServer-SC"
+ *
+ * The reson we have 5 messageques is that becous of how POSIX is structured there
+ * is no way of readin the message without deleting it from the messageque.
+ * therefore to make sure that no moduel removes messages for all the other
+ * modules multiple mesage ques are used.
+ *
+ * you can find the messagesques at the following path /dev/mqueue.
+ * If you open one of the files you will get a document looking like This
+ *
+ * QSIZE:0          NOTIFY:0     SIGNO:0     NOTIFY_PID:0
+ *
+ * Most importent here is QSIZE which tells you how many bytes that is currently
+ * in use for the messageque, all the messages currently on the messagesques
+ * total number of bytes.
+ *
+ * iNonBlocking tels you if the O_NONBLOCK flag should be activated or not for
+ * the recive message handler 1=yes 0 =no. If i remeber correctly the
+ * O_NONBLOCK gives you a warning/error if the messageque is full when
+ * trying to read or send data on the specific messageque,(returns -1)
+ * if no O_NONBLOCK fald is used it will wait until the message que has space
+ * before sending or reading from the messageque again  .
+ */
+
 int iCommInit(const unsigned int uiMode, const char* name, const int iNonBlocking)
 {
-  struct mq_attr attr;
-  int iResult;
-  int iOFlag;
-  unsigned int uiIndex;
+  struct mq_attr attr; //messageque struc
+  int iResult; //return value
+  int iOFlag; // O_NONBLOCK flag for recive mq handler
+  unsigned int uiIndex; // index for which messageque
 
-  attr.mq_maxmsg = MQ_MAX_MSG;
-  attr.mq_msgsize = MQ_MAX_MESSAGE_LENGTH;
+  // gere we set the parrameters for all our created messageques,Like number of messages and each message size
+
+  attr.mq_maxmsg = MQ_MAX_MSG; // totla number of messages aloud on to the messageque before it is full set in util.h currently 10 msg I think
+  attr.mq_msgsize = MQ_MAX_MESSAGE_LENGTH;// The larges size each message is alloud to be currently 4096bytes i think
   attr.mq_flags = 0;
   attr.mq_curmsgs = 0;
-
+  // zeroing messageque reciv name
   tMQRecv = 0;
-
+  // zeroing all the other messageques that send data
   for(uiIndex=0;uiIndex < MQ_NBR_QUEUES;++uiIndex)
   {
     ptMQSend[uiIndex] = 0;
   }
 
   strcpy(pcMessageQueueName,name);
-
+  //create our specific messageque handler that will read from the messageque
   if(uiMode & IPC_RECV)
   {
     iOFlag = O_RDONLY | O_CREAT;
@@ -1461,20 +1514,31 @@ int iCommInit(const unsigned int uiMode, const char* name, const int iNonBlockin
       iOFlag |= O_NONBLOCK;
     }
 
-    tMQRecv = mq_open(name, iOFlag, MQ_PERMISSION, &attr);
+    tMQRecv = mq_open(name, iOFlag, MQ_PERMISSION, &attr);// here we create the messageque handler with the following name, flags and stuff
     if(tMQRecv < 0)
     {
       util_error("ERR: Failed to open receiving message queue");
     }
   }
-
+  // create the specific messageque hander that can send data to the declared
+  // messageque with variabel name
   if(uiMode & IPC_SEND)
   {
     uiIndex = 0;
+    /* this if case will find the corresponding messagequehandler that will be
+     * alloud to send messages, it's just a stringcomparison to find the correct
+     * messageques to the correct uiIndex, which means in this case that
+     * MQ_LG have uiIndex = 0
+     * MQ_OC have uiIndex = 1
+     * MQ_SV have uiIndex = 2
+     * MQ_VA have uiIndex = 3
+     * MQ_SV have uiIndex = 4
+     *
+    */
 
     if(strcmp(name,MQ_LG))
     {
-      ptMQSend[uiIndex] = mq_open(MQ_LG, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr);
+      ptMQSend[uiIndex] = mq_open(MQ_LG, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr); // creat the messageque handler that is aloud to send data to the MQ_LG messageque
       if(ptMQSend[uiIndex] < 0)
       {
         util_error("ERR: Failed to open MQ_LG message queue");
@@ -1524,7 +1588,10 @@ int iCommInit(const unsigned int uiMode, const char* name, const int iNonBlockin
 
   return 1;
 }
-
+/* iCommClose will close the messageque usally among the last function called
+ * in a model. Where we vall mq_unlink followed by mq_close which will close
+ * and remove the given messageque
+*/
 int iCommClose()
 {
   int iIndex = 0;
@@ -1562,7 +1629,23 @@ int iCommClose()
 to when a messege is recived from message que this argument can be put to NULL
 then no UTC timestamp is created, The UTC timestamp is used for logging
 purposes*/
-int iCommRecv(int* iCommand, char* cpData, const int iMessageSize,char* TimeETSIRecv)
+
+/* iCommRecv reads from the messageque handler that was opened for reading in
+ * iCommInit in each model. When you read from the POSIX messageque you also
+ * remove the message that you read.
+ *
+ * iCommand is the variabel reciving the command number from the message que
+ * which alwaays is located first. The rest is put in to the string
+ * cpData (Always ASCII) that has the data you wanted to send
+ *
+ *
+ * iMessageSize describes the max size of the message
+ *
+ * TimeUTCRecv is a UTC timestamp that can be added to the message, usally only
+ * Logging becouse we want to know when we send the message and when it is
+ * recived
+ */
+int iCommRecv(int* iCommand, char* cpData, const int iMessageSize,char* TimeUTCRecv)
 {
   int iResult;
   char cpMessage[MQ_MAX_MESSAGE_LENGTH];
@@ -1572,12 +1655,12 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize,char* TimeETSI
 
   bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
 
-  iResult = mq_receive(tMQRecv, cpMessage, MQ_MAX_MESSAGE_LENGTH, &prio);
-  if (TimeETSIRecv !=NULL)/* create our UTC timestamp*/
+  iResult = mq_receive(tMQRecv, cpMessage, MQ_MAX_MESSAGE_LENGTH, &prio); // read the message from the POSIX message que, tMQRecv is the message que handler, cpMessage recives the message
+  if (TimeUTCRecv !=NULL)/* create our UTC timestamp*/
   {
-    TimeNow = UtilgetCurrentUTCtimeMS();
+    TimeNow = UtilgetCurrentUTCtimeMS(); // get UTC timestamp
   //uint64_t TimeNow = UtilgetETSIfromUTCMS((uint64_t)tvTime.tv_sec,(uint64_t)tvTime.tv_usec);
-    (void)sprintf(TimeETSIRecv,"%" PRIu64,TimeNow);
+    (void)sprintf(TimeUTCRecv,"%" PRIu64,TimeNow);
   }
   if(iResult < 0 && errno != EAGAIN)
   {
@@ -1604,20 +1687,23 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize,char* TimeETSI
 
   return iResult;
 }
-
+/* iCommSend sends a given message cpData and command icommand out on all
+ * the five message ques. but first ut prioritis the messages depending on
+ * iCommand
+ *
+ *
+ */
 int iCommSend(const int iCommand,const char* cpData)
 {
   int iResult;
   unsigned int uiMessagePrio = 0;
   int iIndex = 0, i;
   char cpMessage[MQ_MAX_MESSAGE_LENGTH];
-  //char DateBuffer[MQ_MAX_MESSAGE_LENGTH];
-  //uint64_t TimeSend;
-  //TimeSend = UtilgetCurrentUTCtimeMS();
 
   bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
-  //bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
-
+/* this if else case asigne a priority to all different messeges that we might
+ * have.
+ */
   if(iCommand == COMM_STRT)
     {
       uiMessagePrio = 100;
@@ -1701,16 +1787,27 @@ int iCommSend(const int iCommand,const char* cpData)
   if(cpData != NULL)
   {
     (void)strncat(&cpMessage[1],cpData,strlen(cpData));
-    //sprintf(DateBuffer,"Time UTC:%" PRIu64, TimeSend);
-    //strncat(cpMessage,DateBuffer,strlen(DateBuffer));
-    //printf("%s\n",cpMessage );
   }
-
+/* To be able to send all the data out on all five messageques we have this
+ * for loop. If you read in Icomminit we specified a index uiIndex for every
+ * messageque read it to know which index corresponds to which messageque
+ *
+ */
   for(iIndex = 0; iIndex < MQ_NBR_QUEUES; ++iIndex)
   {
     if(ptMQSend[iIndex] != 0)
     {
-      iResult = mq_send(ptMQSend[iIndex],cpMessage,strlen(cpMessage),uiMessagePrio);
+      /* what I think is a problem here is that if we get a warning we recive
+       * iResult = -1. for example one messageque is full and becouse of the
+       * flag O_NONBLOCK we get a warning if any messageque is full when sending
+       * a message. which will end in us returning 0 ending the function.
+       * Which means that if MQ_OC has index 0 and MQ_SC has index 4 and lest
+       * say MQ_SV is full and has index 2 then we will have sent the message
+       * to message que with index 0 and 1, becouse 2 is full nothing is sent on
+       * that messageque and then we retun which means nothing is sent on
+       * messageque with index 3 and 4.
+       */
+      iResult = mq_send(ptMQSend[iIndex],cpMessage,strlen(cpMessage),uiMessagePrio); // here we send the inormation out on the POSIX message que.
       if(iResult < 0)
       {
         return 0;
