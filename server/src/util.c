@@ -25,6 +25,7 @@
 
 #include "util.h"
 
+
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
@@ -2205,3 +2206,337 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
 
   return 0;
 }
+
+
+
+I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 CommandOption, U8 Debug)
+{
+    I32 MessageIndex = 0, i;
+    U16 Crc = 0;
+    C8 *p;
+
+    bzero(MessageBuffer, ISO_INSUP_MESSAGE_LENGTH+ISO_MESSAGE_FOOTER_LENGTH);
+
+    INSUPData->Header.SyncWordU16 = SYNC_WORD;
+    INSUPData->Header.TransmitterIdU8 = 0;
+    INSUPData->Header.MessageCounterU8 = 0;
+    INSUPData->Header.AckReqProtVerU8 = 0;
+    INSUPData->Header.MessageIdU16 = ISO_INSUP_CODE;
+    INSUPData->Header.MessageLengthU32 = sizeof(INSUPType) - sizeof(HeaderType);
+    //INSUPData->StateValueIdU16 = VALUE_ID_STATE_CHANGE_REQUEST;
+    //INSUPData->StateContentLengthU16 = 1;
+    //INSUPData->StateU8 = (U8)CommandOption;
+
+    p=(C8 *)INSUPData;
+    for(i=0; i<sizeof(INSUPType); i++) *(MessageBuffer + i) = *p++;
+    Crc = crc_16((const C8 *)MessageBuffer, sizeof(OSTMType));
+    Crc = 0;
+    *(MessageBuffer + i++) = (U8)(Crc >> 8);
+    *(MessageBuffer + i++) = (U8)(Crc);
+    MessageIndex = i;
+
+    if(debug)
+    {
+        printf("INSUP total length = %d bytes (header+message+footer)\n", (int)(ISO_INSUP_MESSAGE_LENGTH+ISO_MESSAGE_FOOTER_LENGTH));
+        printf("----HEADER----\n");
+        for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n----MESSAGE----\n");
+        for(;i < sizeof(INSUPType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n----FOOTER----\n");
+        for(;i < MessageIndex; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n");
+    }
+
+    return MessageIndex; //Total number of bytes
+}
+
+I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 Debug)
+{
+    I32 MessageIndex = 0, i;
+    U16 Crc = 0;
+    C8 *p;
+
+    bzero(MessageBuffer, ISO_HEAB_MESSAGE_LENGTH+ISO_MESSAGE_FOOTER_LENGTH);
+
+    HEABData->Header.SyncWordU16 = SYNC_WORD;
+    HEABData->Header.TransmitterIdU8 = 0;
+    HEABData->Header.MessageCounterU8 = 0;
+    HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
+    HEABData->Header.MessageIdU16 = ISO_HEAB_CODE;
+    HEABData->Header.MessageLengthU32 = sizeof(HEABType) - sizeof(HeaderType);
+    //HEABData->HeabStructValueIdU16 = 0;
+    //HEABData->HeabStructContentLengthU16 = sizeof(HEABType) - sizeof(HeaderType) - 4;
+    HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)UtilGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
+    HEABData->CCStatusU8 = CCStatus;
+
+    if(!GPSTime->isGPSenabled){
+        UtilgetCurrentGPStime(NULL,&HEABData->GPSSOWU32);
+    }
+
+    p=(C8 *)HEABData;
+    for(i=0; i<sizeof(HEABType); i++) *(MessageBuffer + i) = *p++;
+    Crc = crc_16((const C8*)MessageBuffer, sizeof(HEABType));
+    Crc = 0;
+    *(MessageBuffer + i++) = (U8)(Crc);
+    *(MessageBuffer + i++) = (U8)(Crc >> 8);
+    MessageIndex = i;
+
+    if(debug)
+    {
+        printf("HEAB total length = %d bytes (header+message+footer)\n", (int)(ISO_HEAB_MESSAGE_LENGTH + ISO_MESSAGE_FOOTER_LENGTH));
+        printf("----HEADER----\n");
+        for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n----MESSAGE----\n");
+        for(;i < sizeof(HEABType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n----FOOTER----\n");
+        for(;i < MessageIndex; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n");
+    }
+
+    return MessageIndex; //Total number of bytes
+}
+
+
+U16 UtilGetMillisecond(TimeType *GPSTime)
+{
+  struct timeval now;
+  U16 MilliU16 = 0, NowU16 = 0;
+  gettimeofday(&now, NULL);
+  NowU16 = (U16)(now.tv_usec / 1000);
+
+  if(NowU16 >= GPSTime->LocalMillisecondU16) MilliU16 = NowU16 - GPSTime->LocalMillisecondU16;
+  else if(NowU16 < GPSTime->LocalMillisecondU16) MilliU16 = 1000 - GPSTime->LocalMillisecondU16 + NowU16;
+
+  //printf("Result= %d, now= %d, local= %d \n", MilliU16, NowU16, GPSTime->LocalMillisecondU16);
+  return MilliU16;
+}
+
+I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 debug)
+{
+    I32 MessageIndex = 0, i;
+    U16 Crc = 0;
+    C8 *p;
+
+    bzero(MessageBuffer, ISO_MESSAGE_HEADER_LENGTH + ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH);
+
+    HeaderData->SyncWordU16 = SYNC_WORD;
+    HeaderData->TransmitterIdU8 = 0;
+    HeaderData->MessageCounterU8 = 0;
+    HeaderData->AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
+    HeaderData->MessageIdU16 = ISO_TRAJ_CODE;
+    HeaderData->MessageLengthU32 = ISO_DTM_ROW_MESSAGE_LENGTH*RowCount + ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH;
+
+    p=(C8 *)HeaderData;
+    for(i=0; i< ISO_MESSAGE_HEADER_LENGTH; i++) *(MessageBuffer + i) = *p++;
+
+
+    TRAJInfoData->TrajectoryIDValueIdU16 = VALUE_ID_TRAJECTORY_ID;
+    TRAJInfoData->TrajectoryIDContentLengthU16 = 2;
+
+    TRAJInfoData->TrajectoryNameValueIdU16 = VALUE_ID_TRAJECTORY_NAME;
+    TRAJInfoData->TrajectoryNameContentLengthU16 = 64;
+
+    TRAJInfoData->TrajectoryVersionValueIdU16 = VALUE_ID_TRAJECTORY_VERSION;
+    TRAJInfoData->TrajectoryVersionContentLengthU16 = 2;
+
+    TRAJInfoData->IpAddressValueIdU16 = 0xA000;
+    TRAJInfoData->IpAddressContentLengthU16 = 4;
+
+    p=(C8 *)TRAJInfoData;
+    for(; i< ISO_MESSAGE_HEADER_LENGTH + ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH; i++) *(MessageBuffer + i) = *p++;
+
+    MessageIndex = i;
+
+
+    if(debug)
+    {
+        printf("Header + TRAJInfo total length = %d bytes\n", (int)(ISO_MESSAGE_HEADER_LENGTH + ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH));
+        printf("----HEADER + TRAJInfo----\n");
+        for(i = 0;i < sizeof(HeaderType) + sizeof(TRAJInfoType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n");
+        printf("DOTM message total length = %d bytes.\n", (int)HeaderData->MessageLengthU32);
+        printf("TrajectoryID = %d\n", TRAJInfoData->TrajectoryIDU16);
+        printf("TrajectoryName = %s\n", TRAJInfoData->TrajectoryNameC8);
+        printf("TrajectoryVersion = %d\n", TRAJInfoData->TrajectoryVersionU16);
+        printf("IpAddress = %d\n", TRAJInfoData->IpAddressU32);
+        printf("\n----MESSAGE----\n");
+    }
+
+    return MessageIndex; //Total number of bytes = ISO_MESSAGE_HEADER_LENGTH
+}
+
+I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug)
+{
+    I32 MessageIndex = 0;
+    U32 Data;
+    C8 *src, *p;
+    U16 Crc = 0;
+
+    bzero(MessageBuffer, ISO_DTM_ROW_MESSAGE_LENGTH*RowCount);
+
+    I32 i = 0, j = 0, n = 0;
+    for(i = 0; i < RowCount; i++)
+    {
+        //Time
+        Data = 0;
+        Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 3);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 2);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 1);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 0);
+        DOTMData->RelativeTimeValueIdU16 = VALUE_ID_RELATIVE_TIME;
+        DOTMData->RelativeTimeContentLengthU16 = 4;
+        DOTMData->RelativeTimeU32 = SwapU32((U32)Data);
+        if(debug) printf("Time=%d \n", DOTMData->RelativeTimeU32);
+
+        //x
+        Data = 0;
+        Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 7);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 6);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 5);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 4);
+        DOTMData->XPositionValueIdU16 = VALUE_ID_X_POSITION;
+        DOTMData->XPositionContentLengthU16 = 4;
+        DOTMData->XPositionI32 = SwapI32((I32)Data);
+        if(debug) printf("X=%d \n", DOTMData->XPositionI32);
+
+        //y
+        Data = 0;
+        Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 11);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 10);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 9);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 8);
+        DOTMData->YPositionValueIdU16 = VALUE_ID_Y_POSITION;
+        DOTMData->YPositionContentLengthU16 = 4;
+        DOTMData->YPositionI32 = SwapI32((I32)Data);
+        if(debug) printf("Y=%d \n", DOTMData->YPositionI32);
+
+        //z
+        Data = 0;
+        Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 15);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 14);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 13);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 12);
+        DOTMData->ZPositionValueIdU16 = VALUE_ID_Z_POSITION;
+        DOTMData->ZPositionContentLengthU16 = 4;
+        DOTMData->ZPositionI32 = SwapI32((I32)Data);
+        if(debug) printf("Z=%d \n", DOTMData->ZPositionI32);
+
+        //Heading
+        Data = 0;
+        Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 17);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 16);
+        //Data = UtilRadToDeg(Data);
+        //Data = 4500 - Data; //Turn heading back pi/2
+        //while(Data<0) Data+=360.0;
+        //while(Data>3600) Data-=360.0;
+        DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
+        DOTMData->HeadingContentLengthU16 = 2;
+        DOTMData->HeadingU16 = SwapU16((U16)(Data));
+        if(debug) printf("Heading=%d \n", DOTMData->HeadingU16);
+
+        //Longitudinal speed
+        Data = 0;
+        Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 19);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 18);
+        DOTMData->LongitudinalSpeedValueIdU16 = VALUE_ID_LONGITUDINAL_SPEED;
+        DOTMData->LongitudinalSpeedContentLengthU16 = 2;
+        DOTMData->LongitudinalSpeedI16 = SwapI16((I16)Data);
+        if(debug) printf("LongitudinalSpeedI16=%d \n", DOTMData->LongitudinalSpeedI16);
+
+        //Lateral speed
+        Data = 0;
+        Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 21);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 20);
+        DOTMData->LateralSpeedValueIdU16 = VALUE_ID_LATERAL_SPEED;
+        DOTMData->LateralSpeedContentLengthU16 = 2;
+        DOTMData->LateralSpeedI16 = SwapI16((I16)Data);
+        if(debug) printf("LateralSpeedI16=%d \n", DOTMData->LateralSpeedI16);
+
+        //Longitudinal acceleration
+        Data = 0;
+        Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 23);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 22);
+        DOTMData->LongitudinalAccValueIdU16 = VALUE_ID_LONGITUDINAL_ACCELERATION;
+        DOTMData->LongitudinalAccContentLengthU16 = 2;
+        DOTMData->LongitudinalAccI16 = SwapI16((I16)Data);
+        if(debug) printf("LongitudinalAccI16=%d \n", DOTMData->LongitudinalAccI16);
+
+        //Lateral acceleration
+        Data = 0;
+        Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 25);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 24);
+        DOTMData->LateralAccValueIdU16 = VALUE_ID_LATERAL_ACCELERATION;
+        DOTMData->LateralAccContentLengthU16 = 2;
+        DOTMData->LateralAccI16 = SwapI16((I16)Data);
+        if(debug) printf("LateralAccI16=%d \n", DOTMData->LateralAccI16);
+
+        //Curvature
+        Data = 0;
+        Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 29);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 28);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 27);
+        Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 26);
+        DOTMData->CurvatureValueIdU16 = VALUE_ID_CURVATURE;
+        DOTMData->CurvatureContentLengthU16 = 4;
+        DOTMData->CurvatureI32 = SwapI32((I32)Data);
+        if(debug) printf("CurvatureI32=%d \n", DOTMData->CurvatureI32);
+
+        p=(C8 *)DOTMData;
+        for(j=0; j<sizeof(DOTMType); j++, n++) *(MessageBuffer + n) = *p++;
+        MessageIndex = n;
+    }
+
+
+    Crc = crc_16((const C8*)MessageBuffer, sizeof(DOTMType));
+    Crc = 0;
+    *(MessageBuffer + MessageIndex++) = (U8)(Crc);
+    *(MessageBuffer + MessageIndex++) = (U8)(Crc >> 8);
+
+
+    if(debug)
+    {
+        int i = 0;
+        for(i = 0; i < MessageIndex; i ++)
+        {
+            if((unsigned char)MessageBuffer[i] >= 0 && (unsigned char)MessageBuffer[i] <= 15) printf("0");
+            printf("%x-", (unsigned char)MessageBuffer[i]);
+        }
+        printf("\n");
+    }
+
+    return MessageIndex; //Total number of bytes
+}
+
+I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
+{
+    I32 MessageIndex = 0, i = 0;
+    dbl Data;
+    U16 Crc = 0, U16Data = 0;
+    I16 I16Data = 0;
+    U32 U32Data = 0;
+    I32 I32Data = 0;
+    U64 U64Data = 0;
+    C8 *p;
+
+    U16Data = (U16Data | *(MessageBuffer+1)) << 8;
+    U16Data = U16Data | *MessageBuffer;
+
+    HeaderData->SyncWordU16 = U16Data;
+    HeaderData->TransmitterIdU8 = *(MessageBuffer+2);
+    HeaderData->MessageCounterU8 = *(MessageBuffer+3);
+    HeaderData->AckReqProtVerU8 = *(MessageBuffer+4);
+
+    U16Data = 0;
+    U16Data = (U16Data | *(MessageBuffer+6)) << 8;
+    U16Data = U16Data | *(MessageBuffer+5);
+    HeaderData->MessageIdU16 = U16Data;
+
+    U32Data = (U32Data | *(MessageBuffer+10)) << 8;
+    U32Data = (U32Data | *(MessageBuffer+9)) << 8;
+    U32Data = (U32Data | *(MessageBuffer+8)) << 8;
+    U32Data = U32Data | *(MessageBuffer+7);
+    HeaderData->MessageLengthU32 = U32Data;
+
+    return 0;
+}
+

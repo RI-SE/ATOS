@@ -63,7 +63,7 @@
 #define COMM_LOG 14
 #define COMM_VIOP 15
 #define COMM_TRAJ 16
-#define COMM_TRAJ1 17
+#define COMM_TRAJ_SUP 17
 #define COMM_ASP 18     
 #define COMM_INV 255
 
@@ -100,7 +100,7 @@
 
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.163" 
+#define LOCAL_USER_CONTROL_IP "10.168.89.114" 
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -233,6 +233,7 @@
 #define FAILED_CREATE_FOLDER 0x04
 #define SUCCEDED_DELETE 0x01
 #define FAILED_DELETE 0x02
+#define FILE_TO_MUCH_DATA 0x06
 
 /* DEBUGGING DEFINES */
 
@@ -263,6 +264,34 @@
 
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
+
+#define ISO_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
+
+#define ISO_INSUP_CODE 0xA102
+#define ISO_INSUP_NOFV 1  
+#define ISO_INSUP_MESSAGE_LENGTH sizeof(OSTMType)
+#define ISO_INSUP_OPT_SET_ARMED_STATE 2
+#define ISO_INSUP_OPT_SET_DISARMED_STATE 3 
+
+#define ISO_HEAB_CODE 5
+#define ISO_HEAB_NOFV 2
+#define ISO_HEAB_MESSAGE_LENGTH sizeof(HEABType)
+#define ISO_HEAB_OPT_SERVER_STATUS_BOOTING 0
+#define ISO_HEAB_OPT_SERVER_STATUS_OK 1
+#define ISO_HEAB_OPT_SERVER_STATUS_ABORT 2
+
+#define ISO_TRAJ_CODE 1
+#define ISO_DTM_ROWS_IN_TRANSMISSION 40
+#define ISO_DTM_ROW_MESSAGE_LENGTH sizeof(DOTMType)
+
+#define ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH sizeof(TRAJInfoType)
+#define SIM_TRAJ_BYTES_IN_ROW  30
+
+
+
+#define ISO_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
+
+
 
 typedef struct
 {
@@ -338,6 +367,15 @@ typedef struct
   U16 StateContentLengthU16;
   U8 StateU8;
 } OSTMType; //16 bytes
+
+
+typedef struct
+{
+  HeaderType Header;
+  U16 StateValueIdU16;
+  U16 StateContentLengthU16;
+  U8 StateU8;
+} INSUPType; //16 bytes
 
 
 typedef struct
@@ -712,6 +750,12 @@ U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug);
 U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
+U16 UtilGetMillisecond(TimeType *GPSTime);
+I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug);
+I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 CommandOption, U8 Debug);
+I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 Debug);
+I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
+I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 
 typedef struct {
   uint64_t timestamp;

@@ -83,6 +83,10 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   I32 SimulatorTCPSocketfdI32=-1;
   U16 SimulatorUDPPortU16;
   I32 SimulatorUDPSocketfdI32=-1;
+  C8 SupervisorServerIPC8[SIM_CONTROL_BUFFER_SIZE_20];
+  U32 SupervisorIpU32 = 0;
+  
+
 
   struct sockaddr_in simulator_addr;
   
@@ -92,7 +96,6 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   C8 UDPReceiveBuffer[SIM_CONTROL_BUFFER_SIZE_400];
   C8 SendBuffer[SIM_CONTROL_BUFFER_SIZE_128];
   I32 ReceivedNewData, i, j;
-  C8 SendData[4] = {0, 0, 3, 0xe8};
   struct timespec sleep_time, ref_time;
   struct timeval tv, ExecTime;
   struct tm *tm;
@@ -133,6 +136,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
   PrevMilliSecondU16 = CurrentMilliSecondU16;
 
+  //Get the Simulator IP
   bzero(TextBufferC8, SIM_CONTROL_BUFFER_SIZE_20);
   UtilSearchTextFile(TEST_CONF_FILE, "SimulatorIP=", "", TextBufferC8);
   bzero(SimulatorServerIPC8, SIM_CONTROL_BUFFER_SIZE_20);
@@ -140,8 +144,16 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   printf("IP: %s\n", TextBufferC8);
   SimulatorIpU32 = UtilIPStringToInt(SimulatorServerIPC8);
 
+  //Get the Supervisor IP
+  bzero(TextBufferC8, SIM_CONTROL_BUFFER_SIZE_20);
+  UtilSearchTextFile(TEST_CONF_FILE, "SupervisorIP=", "", TextBufferC8);
+  bzero(SupervisorServerIPC8, SIM_CONTROL_BUFFER_SIZE_20);
+  strcat(SupervisorServerIPC8, TextBufferC8);
+  printf("IP: %s\n", TextBufferC8);
+  SupervisorIpU32 = UtilIPStringToInt(SupervisorServerIPC8);
 
-  if(SimulatorIpU32 != 0)
+  
+  if(SimulatorIpU32 != 0) //Do stuff if IP is defined
   {
     bzero(TextBufferC8, SIM_CONTROL_BUFFER_SIZE_20);
     UtilSearchTextFile(TEST_CONF_FILE, "SimulatorTCPPort=", "", TextBufferC8);
@@ -155,8 +167,6 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     while(!iExit)
     {
-
-
       if(SimulatorTCPSocketfdI32 <= 0)
       {
         ClientResultI32 =  UtilConnectTCPChannel("SimulatorControl", &SimulatorTCPSocketfdI32, (const C8*)SimulatorServerIPC8, SimulatorTCPPortU16);
@@ -183,7 +193,6 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           SimulatorInitiatedReqU8 = 1;
         }
         
-
         //Send ObjectAddressList if in correct mode and ObjectControl is in armed state
         if(OBCStateStatus == OBC_STATE_ARMED && (SMGD.SimulatorModeU8 == SIM_CONTROL_DTM_MODE || SMGD.SimulatorModeU8 == SIM_CONTROL_VIM_DTM_MODE) && ObjectAddressListSentU8 == 0)
         {
@@ -271,7 +280,9 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
               bzero(MsgQueBuffer, SIM_CONTROL_BUFFER_SIZE_6200);
               SimulatorControlBinaryMessageManager(RxTotalDataU32, ReceiveBuffer, MsgQueBuffer, 0);
               //printf("[SimulatorControl] To MsgQueue: %s\n", MsgQueBuffer);
-              (void)iCommSend(COMM_TRAJ, MsgQueBuffer);
+              
+              if(SupervisorIpU32 == 0)  (void)iCommSend(COMM_TRAJ, MsgQueBuffer); //COMM_TRAJ will be received by ObjectControl
+              else (void)iCommSend(COMM_TRAJ_SUP, MsgQueBuffer); //COMM_TRAJ_SUP will be received by SupervisorControl
               SimRxCodeU16 = 0;
             }
             else if(SimRxCodeU16 == 10)

@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
     if(pID[iIndex] == 0)
     {
 
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: citscontrol_task running in:  %i \n",getpid());
+        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: supervisorcontrol_task running in:  %i \n",getpid());
         supervisorcontrol_task(GPSTime, GSD);
         exit(EXIT_SUCCESS);
     }

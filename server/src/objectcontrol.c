@@ -39,6 +39,7 @@
 #define LOCALHOST "127.0.0.1"
 
 #define RECV_MESSAGE_BUFFER 6200
+#define BUFFER_SIZE_3100 3100
 #define OBJECT_MESS_BUFFER_SIZE 1024
 
 #define TASK_PERIOD_MS 1
@@ -93,10 +94,10 @@
 #define COMMAND_LLCM_CODE 8
 #define COMMAND_LLCM_MESSAGE_LENGTH 5
 
-#define COMMAND_SYPM_CODE 0xA101
+#define COMMAND_SYPM_CODE 0xA103
 #define COMMAND_SYPM_MESSAGE_LENGTH sizeof(SYPMType)
 
-#define COMMAND_MTSP_CODE 0xA102
+#define COMMAND_MTSP_CODE 0xA104
 #define COMMAND_MTSP_MESSAGE_LENGTH sizeof(MTSPType)
 
 #define COMMAND_ACM_CODE 11  //Action Configuration Message: Server->Object, TCP
@@ -198,7 +199,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     int iCommand;
     char pcRecvBuffer[RECV_MESSAGE_BUFFER];
     char pcTempBuffer[512];
-    unsigned char MessageBuffer[512];
+    C8 MessageBuffer[BUFFER_SIZE_3100];
     int iIndex = 0, i=0;
     struct timespec sleep_time, ref_time;
     int iForceObjectToLocalhost = 0;

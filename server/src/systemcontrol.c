@@ -65,7 +65,8 @@ typedef enum {
 #define SYSTEM_CONTROL_ARG_CHAR_COUNT 		2
 #define SYSTEM_CONTROL_COMMAND_MAX_LENGTH 	32
 #define SYSTEM_CONTROL_ARG_MAX_COUNT	 	6
-#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	80
+#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	32
+#define SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH SYSTEM_CONTROL_ARG_CHAR_COUNT + SYSTEM_CONTROL_COMMAND_MAX_LENGTH + SYSTEM_CONTROL_ARG_MAX_COUNT*SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH 
 
 #define OSTM_OPT_SET_ARMED_STATE 2
 #define OSTM_OPT_SET_DISARMED_STATE 3 
@@ -322,7 +323,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 SystemControlCommand = AbortScenario_0; //Oops no client is connected, go to AbortScenario_0
                 server_state == SERVER_STATE_UNDEFINED;
             }
-            else
+            else if(ClientResult > 0 && ClientResult < SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH)
             {
                 for(i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i ++ ) bzero(SystemControlArgument[i],SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
                 CurrentInputArgCount = 0;
@@ -1621,7 +1622,7 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
         gettimeofday(&CurTime, NULL);
         Time1 = CurTime.tv_sec*1000 + CurTime.tv_usec/1000;
            
-        while (TotalRxCount != FileSizeU32 && TimeDiff < 3000)
+        while (TotalRxCount < FileSizeU32 && TimeDiff < 3000)
         {
             gettimeofday(&CurTime, NULL);
             Time2 = CurTime.tv_sec*1000 + CurTime.tv_usec/1000; 
@@ -1654,6 +1655,10 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
         if(TotalRxCount == FileSizeU32)
         { 
             *ReturnValue = FILE_UPLOADED;
+        }
+        else if(TotalRxCount > FileSizeU32)
+        {
+            *ReturnValue = FILE_TO_MUCH_DATA;
         }
         else
         {
