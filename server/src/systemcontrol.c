@@ -243,12 +243,12 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
     bzero(PasswordC8, SMALL_BUFFER_SIZE_20);
     strcat(PasswordC8, TextBufferC8);
 
+    //printf("[SystemControl] Mode: %d\n", ModeU8);
+    //printf("[SystemControl] Remote server IP: %s\n", ServerIPC8);
+    //printf("[SystemControl] Remote server port: %d\n", ServerPortU16);
+    //printf("[SystemControl] Username: %s\n", UsernameC8);
+    //printf("[SystemControl] Password: %s\n", PasswordC8);
 
-    printf("Mode: %d\n", ModeU8);
-    printf("ServerIP: %s\n", ServerIPC8);
-    printf("ServerPort: %d\n", ServerPortU16);
-    printf("UsernameC8: %s\n", UsernameC8);
-    printf("PasswordC8: %s\n", PasswordC8);
     if(ModeU8 == 0)
     {
 
@@ -425,10 +425,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, BinBuffer, LengthU32 + 6, 0);
         }
 
-
-
         ++ProcessControlSendCounterU32;
-
         if(ProcessChannelSocket != 0 && ProcessControlSendCounterU32 == 1)
         {
             ProcessControlSendCounterU32 = 0;
@@ -753,7 +750,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL)
             {
                 bzero(pcBuffer, IPC_BUFFER_SIZE);
-                server_state = SERVER_STATE_IDLE;
+                server_state = SERVER_STATE_INWORK;
                 pcBuffer[0] = OSTM_OPT_SET_DISARMED_STATE;
                 (void)iCommSend(COMM_ARMD,pcBuffer);
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -762,6 +759,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL)
             {
+                SystemControlSendLog("[SystemControl] Simulate that all objects becomes disarmed.\n", &ClientSocket, 0);
                 SystemControlCommand = Idle_0;
                 server_state = SERVER_STATE_IDLE;
             }
@@ -978,18 +976,14 @@ void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
     n = 2 + strlen(LogString);
     Length[0] = (C8)(n >> 24); Length[1] = (C8)(n >> 16); Length[2] = (C8)(n >> 8); Length[3] = (C8)n;
 
-    //SystemControlSendBytes(Length, 4, Sockfd, 0);
-    //SystemControlSendBytes(Header, 5, Sockfd, 0);
-    //SystemControlSendBytes(LogString, strlen(LogString), Sockfd, 0);
-
-
+    if(Debug) printf("%s", LogString);
     if(n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE)
     {
         for(i = 0, j = 0; i < 4; i++, j++) Data[j] = Length[i];
         for(i = 0; i < 2; i++, j++) Data[j] = Header[i];
         t = strlen(LogString);
         for(i = 0; i < t; i++, j++) Data[j] = *(LogString+i);
-        SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+        SystemControlSendBytes(Data, n + 4, Sockfd, Debug);
     } else printf("[SystemControl] Log string longer then %d bytes!\n", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 
 }
@@ -1027,7 +1021,7 @@ static void SystemControlSendBytes(const char* data, int length, int* sockfd, in
 {
     int i, n;
     
-    if(debug == 1){ printf("Bytes sent: "); int i = 0; for(i = 0; i < length; i++) printf("%d:%d ", i, (C8)*(data+i)); printf("\n");}
+    if(debug == 1){ printf("Bytes sent: "); int i = 0; for(i = 0; i < length; i++) printf("%d ", (C8)*(data+i)); printf("\n");}
 
     n = write(*sockfd, data, length);
     if (n < 0)

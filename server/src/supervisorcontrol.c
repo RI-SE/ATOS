@@ -41,6 +41,9 @@
 #define SUP_MESSAGE_BUFFER 1024
 #define SUP_DEBUG_TCP_RX_DATA 0
 
+#define SUP_MODE_NORMAL 1
+#define SUP_MODE_DEBUG 2
+
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -63,6 +66,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   
   I32 ClientResultI32;
   C8 RxBuffer[SUP_CONTROL_BUFFER_SIZE_2048];
+  C8 TxBuffer[SUP_CONTROL_BUFFER_SIZE_2048];
   U8 SupervisorInitiatedU8 = 0;
 
   U32 RxTotalDataU32 = 0;
@@ -126,10 +130,11 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
   I32 iExit = 0, iCommand;
   C8 MqBuffer[SUP_MQ_MAX_SIZE];
-  (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
+  (void)iCommInit(IPC_RECV_SEND,MQ_SV,0);
+  GSD->SupChunkSize = 0;
+  U16 IterationCounter = 0;
 
-
-  printf("Starting supervisor control...\n");
+  printf("[SupervisorControl] Starting supervisor control...\n");
  
 
 
@@ -179,8 +184,9 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         /*Initiate the simulator if not initialized and a there is a valid TCP connection */
         if(SupervisorInitiatedU8 == 0 && SupervisorTCPSocketfdI32 > 0)
         {
-          UtilISOBuildINSUPMessage(RxBuffer, &INSUPData, 0, 0);
-          UtilISOBuildHEABMessage(RxBuffer, &HEABData, GPSTime, 0, 0);
+          UtilISOBuildINSUPMessage(TxBuffer, &INSUPData, SUP_MODE_NORMAL, 0);
+          UtilSendTCPData("SupervisorControl", TxBuffer, INSUPData.Header.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH, &SupervisorTCPSocketfdI32, 0);
+          //UtilISOBuildHEABMessage(RxBuffer, &HEABData, GPSTime, 0, 0);
           SupervisorInitiatedU8 = 1;
         }
         
@@ -217,7 +223,8 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           {
             WaitAllDataU8 = 1;
             DataChunkedU8 = 1;
-            for(i = 0; i < ClientResultI32; i++, j++) ReceiveBuffer[j] = RxBuffer[i]; 
+            for(i = 0; i < ClientResultI32; i++, j++) ReceiveBuffer[j] = RxBuffer[i];
+            
           }
           else
           {
@@ -235,6 +242,8 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
             printf("[SupervisorControl] ClientResultI32= %d\n", ClientResultI32);
             printf("[SupervisorControl] DataChunkedU8= %d\n", DataChunkedU8);
           }
+
+          if(WaitAllDataU8 == 1) ClientResultI32 = 0; 
         }
         
         if(WaitAllDataU8 == 0 && ClientResultI32 > 0)
@@ -242,23 +251,31 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
           if(HeaderData.MessageIdU16 == ISO_TRAJ_CODE)
           {
-
-            bzero(MqBuffer,SUP_MQ_MAX_SIZE);
-
-            UtilBinaryToHexText(RxTotalDataU32, ReceiveBuffer, MqBuffer, 0);
-            (void)iCommSend(COMM_TRAJ, MqBuffer);
-
+            //bzero(MqBuffer,SUP_MQ_MAX_SIZE);
+            //UtilBinaryToHexText(RxTotalDataU32, ReceiveBuffer, MqBuffer, 0);
+            printf("%d. Send COMM_TRAJ_FROMSUP\n", ++IterationCounter);
+            //(void)iCommSend(COMM_TRAJ_FROMSUP, MqBuffer);
+            for(i = 0; i < HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH; i ++){
+             GSD->SupChunk[i] = ReceiveBuffer[i];
+             //if (i < 100) printf("%x ", GSD->SupChunk[i]);
+            }
+            GSD->SupChunkSize = HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH;
+            printf("[SupervisorControl] SupChunkSize %d\n", GSD->SupChunkSize );
           }
 
+          RxTotalDataU32 = 0;
           ClientResultI32 = 0;
         }
       }  
 
       bzero(MqBuffer,SUP_MQ_MAX_SIZE);
       (void)iCommRecv(&iCommand,MqBuffer,SUP_MQ_MAX_SIZE);
-      if(iCommand == COMM_TRAJ_SUP)
+      if(/*iCommand == COMM_TRAJ_TOSUP*/ GSD->ChunkSize > 0)
       {
-
+        
+        bzero(MqBuffer,SUP_MQ_MAX_SIZE);
+        for(i = 0; i < GSD->ChunkSize; i ++) MqBuffer[i] = GSD->Chunk[i];
+        printf("[SupervisorControl] Receiving COMM_TRAJ_TOSUP\n");
         DTMLengthU32 = UtilHexTextToBinary(strlen(MqBuffer), MqBuffer, DTMTrajBuffer, 0);
         DTMIpU32 = (C8)DTMTrajBuffer[0];
         DTMIpU32 = (C8)DTMTrajBuffer[1] | (DTMIpU32 << 8);
@@ -291,9 +308,11 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         MessageLength = UtilISOBuildTRAJMessage(MessageBuffer, DTMTrajBuffer+MiscU16, (DTMLengthU32-MiscU16)/SIM_TRAJ_BYTES_IN_ROW, &DOTMData, 0);
         /*Send DTM data*/
         UtilSendTCPData("SupervisorControl", MessageBuffer, MessageLength, &SupervisorTCPSocketfdI32, 0);
+        GSD->ChunkSize = 0;
 
       }
-      else if(iCommand == COMM_EXIT)
+      
+      if(iCommand == COMM_EXIT)
       {
         iExit = 1;
         printf("supervisor control exiting.\n");

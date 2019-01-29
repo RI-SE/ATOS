@@ -37,7 +37,8 @@
 #define MQ_SV     "/TEServer-SV"
 #define MQ_OC     "/TEServer-OC"
 #define MQ_VA     "/TEServer-VA"
-#define MQ_SC     "/TEServer-SC"  
+#define MQ_SC     "/TEServer-SC"
+#define MQ_SI     "/TEServer-SI"  
 
 #define MQ_MAX_MESSAGE_LENGTH 4096
 #define MQ_MAX_MSG            10
@@ -63,8 +64,9 @@
 #define COMM_LOG 14
 #define COMM_VIOP 15
 #define COMM_TRAJ 16
-#define COMM_TRAJ_SUP 17
-#define COMM_ASP 18     
+#define COMM_TRAJ_TOSUP 17
+#define COMM_TRAJ_FROMSUP 18
+#define COMM_ASP 19     
 #define COMM_INV 255
 
 
@@ -100,7 +102,7 @@
 
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "10.168.89.114" 
+#define LOCAL_USER_CONTROL_IP "192.168.0.15" 
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -203,6 +205,8 @@
 #define VALUE_ID_TRAJECTORY_ID              0x101
 #define VALUE_ID_TRAJECTORY_NAME            0x102
 #define VALUE_ID_TRAJECTORY_VERSION         0x103
+
+#define VALUE_ID_INSUP_MODE                 0x200
 
 #define C8 uint8_t
 #define U8 uint8_t
@@ -372,9 +376,9 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  U16 StateValueIdU16;
-  U16 StateContentLengthU16;
-  U8 StateU8;
+  U16 ModeValueIdU16;
+  U16 ModeContentLengthU16;
+  U8 ModeU8;
 } INSUPType; //16 bytes
 
 
@@ -532,9 +536,11 @@ typedef struct
   U32 ScenarioStartTimeU32;
   U8 VOILData[400];
   U32 ChunkSize;
-  U8 Chunk[1200];
+  U8 Chunk[3000];
   U8 ASPDebugDataSetU8;
   U8 ASPDebugDataU8[sizeof(ASPType)];
+  U32 SupChunkSize;
+  U8 SupChunk[3000];
 } GSDType;
 
 
@@ -756,6 +762,7 @@ I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 Command
 I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 Debug);
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
+I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
 
 typedef struct {
   uint64_t timestamp;

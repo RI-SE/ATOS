@@ -1501,6 +1501,15 @@ int iCommInit(const unsigned int uiMode, const char* name, const int iNonBlockin
       }
       ++uiIndex;
     }
+    if(strcmp(name,MQ_SI))
+    {
+      ptMQSend[uiIndex] = mq_open(MQ_SI, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr);
+      if(ptMQSend[uiIndex] < 0)
+      {
+        util_error("ERR: Failed to open MQ_SI message queue");
+      }
+      ++uiIndex;
+    }
   }
 
   return 1;
@@ -1668,6 +1677,16 @@ int iCommSend(const int iCommand,const char* cpData)
     {
       uiMessagePrio = 110;
       cpMessage[0] = (char)COMM_ASP;
+    }
+  else if (iCommand == COMM_TRAJ_TOSUP)
+    {
+      uiMessagePrio = 80;
+      cpMessage[0] = (char)COMM_TRAJ_TOSUP;
+    }
+  else if (iCommand == COMM_TRAJ_FROMSUP)
+    {
+      uiMessagePrio = 80;
+      cpMessage[0] = (char)COMM_TRAJ_FROMSUP;
     }
   else
     {
@@ -2223,9 +2242,9 @@ I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 Command
     INSUPData->Header.AckReqProtVerU8 = 0;
     INSUPData->Header.MessageIdU16 = ISO_INSUP_CODE;
     INSUPData->Header.MessageLengthU32 = sizeof(INSUPType) - sizeof(HeaderType);
-    //INSUPData->StateValueIdU16 = VALUE_ID_STATE_CHANGE_REQUEST;
-    //INSUPData->StateContentLengthU16 = 1;
-    //INSUPData->StateU8 = (U8)CommandOption;
+    INSUPData->ModeValueIdU16 = VALUE_ID_INSUP_MODE;
+    INSUPData->ModeContentLengthU16 = 1;
+    INSUPData->ModeU8 = (U8)CommandOption;
 
     p=(C8 *)INSUPData;
     for(i=0; i<sizeof(INSUPType); i++) *(MessageBuffer + i) = *p++;
@@ -2310,6 +2329,85 @@ U16 UtilGetMillisecond(TimeType *GPSTime)
   //printf("Result= %d, now= %d, local= %d \n", MilliU16, NowU16, GPSTime->LocalMillisecondU16);
   return MilliU16;
 }
+
+I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug)
+{
+    I32 MessageIndex = 0, i;
+
+    U16 Crc = 0, U16Data = 0;
+    I16 I16Data = 0;
+    U32 U32Data = 0;
+    I32 I32Data = 0;
+    U64 U64Data = 0;
+    C8 *p;
+
+    U16Data = 0;
+    U16Data = (U16Data | *(MessageBuffer+1)) << 8;
+    U16Data = U16Data | *MessageBuffer;
+    TRAJInfoData->TrajectoryIDValueIdU16 = U16Data;
+    U16Data = 0;
+    U16Data = (U16Data | *(MessageBuffer+3)) << 8;
+    U16Data = U16Data | *(MessageBuffer+2);
+    TRAJInfoData->TrajectoryIDContentLengthU16 = U16Data;
+    U16Data = 0;
+    U16Data = (U16Data | *(MessageBuffer+5)) << 8;
+    U16Data = U16Data | *(MessageBuffer+4);
+    TRAJInfoData->TrajectoryIDU16 = U16Data;
+
+    U16Data = 0;
+    U16Data = (U16Data | *(MessageBuffer+7)) << 8;
+    U16Data = U16Data | *(MessageBuffer+6);
+    TRAJInfoData->TrajectoryNameValueIdU16 = U16Data;
+    U16Data = 0;
+    U16Data = (U16Data | *(MessageBuffer+9)) << 8;
+    U16Data = U16Data | *(MessageBuffer+8);
+    TRAJInfoData->TrajectoryNameContentLengthU16 = U16Data;
+    for(i = 0; i < TRAJInfoData->TrajectoryNameContentLengthU16; i ++) TRAJInfoData->TrajectoryNameC8[i] = *(MessageBuffer + 10 + i);
+
+    U16Data = 0;
+    U16Data = (U16Data | *(MessageBuffer+65)) << 8;
+    U16Data = U16Data | *(MessageBuffer+64);
+    TRAJInfoData->TrajectoryVersionValueIdU16 = U16Data;
+    U16Data = 0;
+    U16Data = (U16Data | *(MessageBuffer+67)) << 8;
+    U16Data = U16Data | *(MessageBuffer+66);
+    TRAJInfoData->TrajectoryVersionContentLengthU16 = U16Data;
+    U16Data = 0;
+    U16Data = (U16Data | *(MessageBuffer+69)) << 8;
+    U16Data = U16Data | *(MessageBuffer+68);
+    TRAJInfoData->TrajectoryVersionU16 = U16Data;
+
+    U16Data = 0;
+    U16Data = (U16Data | *(MessageBuffer+71)) << 8;
+    U16Data = U16Data | *(MessageBuffer+70);
+    TRAJInfoData->IpAddressValueIdU16 = U16Data;
+    U16Data = 0;
+    U16Data = (U16Data | *(MessageBuffer+73)) << 8;
+    U16Data = U16Data | *(MessageBuffer+72);
+    TRAJInfoData->IpAddressContentLengthU16 = U16Data;
+    U32Data = 0;
+    U32Data = (U32Data | *(MessageBuffer+77)) << 8;
+    U32Data = (U32Data | *(MessageBuffer+76)) << 8;
+    U32Data = (U32Data | *(MessageBuffer+75)) << 8;
+    U32Data = U32Data | *(MessageBuffer+74);
+    TRAJInfoData->IpAddressU32 = U32Data;
+
+    if(debug)
+    {
+        printf("TRAJInfo total length = %d bytes\n", (int)(ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH));
+        printf("----TRAJInfo----\n");
+        for(i = 0;i < sizeof(TRAJInfoType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n");
+        printf("TrajectoryID = %d\n", TRAJInfoData->TrajectoryIDU16);
+        printf("TrajectoryName = %s\n", TRAJInfoData->TrajectoryNameC8);
+        printf("TrajectoryVersion = %d\n", TRAJInfoData->TrajectoryVersionU16);
+        printf("IpAddress = %d\n", TRAJInfoData->IpAddressU32);
+        printf("\n----MESSAGE----\n");
+    }
+
+    return 0; 
+}
+
 
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 debug)
 {
@@ -2519,7 +2617,7 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
     C8 *p;
 
     U16Data = (U16Data | *(MessageBuffer+1)) << 8;
-    U16Data = U16Data | *MessageBuffer;
+    U16Data = U16Data | *(MessageBuffer+0);
 
     HeaderData->SyncWordU16 = U16Data;
     HeaderData->TransmitterIdU8 = *(MessageBuffer+2);
@@ -2536,6 +2634,16 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
     U32Data = (U32Data | *(MessageBuffer+8)) << 8;
     U32Data = U32Data | *(MessageBuffer+7);
     HeaderData->MessageLengthU32 = U32Data;
+
+    if(Debug)
+    {
+      printf("SyncWordU16 = %x\n", HeaderData->SyncWordU16);
+      printf("TransmitterIdU8 = %x\n", HeaderData->TransmitterIdU8);
+      printf("MessageCounterU8 = %x\n", HeaderData->MessageCounterU8);
+      printf("AckReqProtVerU8 = %x\n", HeaderData->AckReqProtVerU8);
+      printf("MessageIdU16 = %x\n", HeaderData->MessageIdU16);
+      printf("MessageLengthU32 = %x\n", HeaderData->MessageLengthU32);
+    }
 
     return 0;
 }
