@@ -198,7 +198,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
       tm = localtime(&tv.tv_sec);
 
       // Add 1900 to get the right year value
-       GPSTime->YearU16 =  (U16)tm->tm_year + 1900;
+      GPSTime->YearU16 =  (U16)tm->tm_year + 1900;
       // Months are 0 based in struct tm
       GPSTime->MonthU8 =  (U8)tm->tm_mon + 1;
       GPSTime->DayU8 = (U8)tm->tm_mday;
