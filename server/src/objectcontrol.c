@@ -1688,7 +1688,7 @@ I32 ObjectControlBuildSYPMMessage(C8* MessageBuffer, SYPMType *SYPMData, U32 Syn
     SYPMData->SyncPointTimeValueIdU16 = 1;
     SYPMData->SyncPointTimeContentLengthU16 = 4;
     SYPMData->SyncPointTimeU32 = SyncPoint;
-    SYPMData->FreezeTimeValueIdU16 = 1;
+    SYPMData->FreezeTimeValueIdU16 = 2;
     SYPMData->FreezeTimeContentLengthU16 = 4;
     SYPMData->FreezeTimeU32 = StopTime;
 
