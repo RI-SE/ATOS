@@ -716,6 +716,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                 break;
                             case ETIMEDOUT:
                                 util_error("[ObjectControl] Connection timed out");
+                                break;
                             default:
                                 util_error("ERR: Failed to connect to control socket");
                                 break;
