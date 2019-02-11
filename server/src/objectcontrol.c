@@ -304,6 +304,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 if(uiTimeCycle == 0)
                 {
+                    // Note: Won't this cause the MTSP send frequency (later) to depend on the number of connected objects?
                     HeartbeatMessageCounter ++;
                     MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus, 0);
                     ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
