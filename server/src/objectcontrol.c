@@ -721,16 +721,32 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                         if ( iResult < 0)
                         {
-                            if(errno == ECONNREFUSED)
+                            switch (errno)
                             {
-
+                            case ECONNREFUSED:
                                 LOG_SEND(LogBuffer, "[ObjectControl] Was not able to connect to object, [IP: %s] [PORT: %d], retry in %d sec...",object_address_name[iIndex],object_tcp_port[iIndex], (!(1 & DisconnectU8))*3);
                                 (void)sleep(3);
-                            }
-                            else
-                            {
+                                break;
+                            case EADDRINUSE:
+                                util_error("[ObjectControl] Local address/port already in use");
+                                break;
+                            case EALREADY:
+                                util_error("[ObjectControl] Previous connection attempt still in progress");
+                                break;
+                            case EISCONN:
+                                util_error("[ObjectControl] Socket is already connected");
+                                break;
+                            case ENETUNREACH:
+                                util_error("[ObjectControl] Network unreachable");
+                                break;
+                            case ETIMEDOUT:
+                                util_error("[ObjectControl] Connection timed out");
+                                break;
+                            default:
                                 util_error("ERR: Failed to connect to control socket");
+                                break;
                             }
+
                         }
 
                         bzero(pcRecvBuffer,RECV_MESSAGE_BUFFER);
