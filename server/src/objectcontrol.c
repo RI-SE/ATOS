@@ -151,6 +151,7 @@ static void vSendString(const char* command,int* sockfd);
 static void vSendBytes(const char* command, int length, int* sockfd, int debug);
 static void vSendFile(const char* object_traj_file, int* sockfd);
 static void vDisconnectObject(int* sockfd);
+static I32 vCheckRemoteDisconnected(int* sockfd);
 
 static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static void vCloseSafetyChannel(int* sockfd);
@@ -304,9 +305,33 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 if(uiTimeCycle == 0)
                 {
+                    // Note: Won't this cause the MTSP send frequency (later) to depend on the number of connected objects?
                     HeartbeatMessageCounter ++;
                     MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus, 0);
                     ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+                }
+            }
+
+            // Check if any object has disconnected - if so, disconnect all objects and return to idle
+            DisconnectU8 = 0;
+            for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+            {
+                DisconnectU8 |= vCheckRemoteDisconnected(&socket_fd[iIndex]);
+                if (DisconnectU8){
+                    LOG_SEND(LogBuffer, "[ObjectControl] Lost connection to IP %s - returning to IDLE.",object_address_name[iIndex]);
+
+                    for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+                    {
+                        vDisconnectObject(&socket_fd[iIndex]);
+                    }
+
+                    /* Close safety socket */
+                    for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+                    {
+                        vCloseSafetyChannel(&safety_socket_fd[iIndex]);
+                    }
+                    OBCState = OBC_STATE_IDLE;
+                    break;
                 }
             }
         }
@@ -563,7 +588,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 printf("[ObjectControl] Object control REPLAY mode <%s>\n", pcRecvBuffer);
                 fflush(stdout);
             }
-            else if(iCommand == COMM_ABORT && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING))
+            else if(iCommand == COMM_ABORT && OBCState == OBC_STATE_RUNNING)
             {
                 OBCState = OBC_STATE_CONNECTED;
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT; //Set server to ABORT
@@ -1953,6 +1978,9 @@ static I32 vConnectObject(int* sockfd, const char* name, const uint32_t port, U8
     }
     //} while(iResult < 0 && *Disconnect == 0);
 
+    // Enable polling of status to detect remote disconnect
+    fcntl(*sockfd, F_SETFL, O_NONBLOCK);
+
     DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"INF: Connected to command socket: %s %i\n",name,port);
 
     return iResult;
@@ -1982,6 +2010,7 @@ static void vSendBytes(const char* data, int length, int* sockfd, int debug)
     if(debug){ printf("Bytes sent: "); int i = 0; for(i = 0; i < length; i++) printf("%x-", (unsigned char)*(data+i)); printf("\n");}
 
     n = write(*sockfd, data, length);
+
     if (n < 0)
     {
         util_error("[ObjectControl] ERR: Failed to send on control socket");
@@ -2064,6 +2093,37 @@ static void vCreateSafetyChannel(const char* name, const uint32_t port, int* soc
 static void vCloseSafetyChannel(int* sockfd)
 {
     close(*sockfd);
+}
+
+static I32 vCheckRemoteDisconnected(int* sockfd)
+{
+    char dummy;
+    ssize_t x = recv(*sockfd, &dummy, 1, MSG_PEEK);
+
+    // Remote has disconnected: EOF => x=0
+    if (x == 0)
+    {
+        return 1;
+    }
+
+    if (x == -1)
+    {
+        // Everything is normal - no communication has been received
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
+
+        // Other error occurred
+        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Error when checking connection status");
+        return 1;
+    }
+
+    // Something has been received on socket
+    if (x > 0)
+    {
+        DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"INF: Received unexpected communication from object on command channel");
+        return 0;
+    }
+
+    return 1;
 }
 
 /*void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug){
