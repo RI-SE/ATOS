@@ -563,7 +563,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 printf("[ObjectControl] Object control REPLAY mode <%s>\n", pcRecvBuffer);
                 fflush(stdout);
             }
-            else if(iCommand == COMM_ABORT && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING))
+            else if(iCommand == COMM_ABORT && OBCState == OBC_STATE_RUNNING)
             {
                 OBCState = OBC_STATE_CONNECTED;
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT; //Set server to ABORT
