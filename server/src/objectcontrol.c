@@ -140,6 +140,8 @@ typedef enum {
     OBC_STATE_ERROR,
 } OBCState_t;
 
+typedef int8_t (*StateTransition)(OBCState_t *currentState, OBCState_t requestedState);
+
 char TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION*COMMAND_DOTM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH];
 
 
@@ -178,6 +180,16 @@ void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *Monr
 static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
                              char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
                              int* nbr_objects);
+
+int8_t vSetState(OBCState_t *currentState, OBCState_t requestedState);
+StateTransition tGetTransition(OBCState_t fromState);
+int8_t tFromIdle(OBCState_t *currentState, OBCState_t requestedState);
+int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState);
+int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState);
+int8_t tFromArmed(OBCState_t *currentState, OBCState_t requestedState);
+int8_t tFromRunning(OBCState_t *currentState, OBCState_t requestedState);
+int8_t tFromError(OBCState_t *currentState, OBCState_t requestedState);
+int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -311,7 +323,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
         }
 
-        if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED || OBCState ==OBC_STATE_ARMED)
+        if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED)
         {
             char buffer[RECV_MESSAGE_BUFFER];
             int recievedNewData = 0;
@@ -500,12 +512,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_ARMED_STATE)
                 {
                     LOG_SEND(LogBuffer,"[ObjectControl] Sending ARM %d", pcRecvBuffer[0]);
-                    OBCState = OBC_STATE_ARMED;
+                    vSetState(&OBCState, OBC_STATE_ARMED);
                 }
                 else if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE)
                 {
                     LOG_SEND(LogBuffer,"[ObjectControl] Sending DISARM: %d", pcRecvBuffer[0]);
-                    OBCState = OBC_STATE_CONNECTED;
+                    vSetState(&OBCState, OBC_STATE_CONNECTED);
                 }
                 MessageLength = ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, pcRecvBuffer[0], 0);
 
@@ -537,7 +549,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
                 MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, GPSTime, (U32)StartTimeU64, DelayedStartU32, &OutgoingStartTimeU32, 0);
                 for(iIndex=0;iIndex<nbr_objects;++iIndex) { vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);}
-                OBCState = OBC_STATE_RUNNING;
+                vSetState(&OBCState, OBC_STATE_RUNNING);
                 //OBCState = OBC_STATE_INITIALIZED; //This is temporary!
                 //printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
                 GSD->ScenarioStartTimeU32 = OutgoingStartTimeU32;
@@ -565,7 +577,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_ABORT && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING))
             {
-                OBCState = OBC_STATE_CONNECTED;
+                vSetState(&OBCState, OBC_STATE_CONNECTED);
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT; //Set server to ABORT
                 LOG_SEND(LogBuffer, "[ObjectControl] ABORT received.");
             }
@@ -657,7 +669,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 LOG_SEND(LogBuffer, "[ObjectControl] ASP in system; %d", SyncPointCount);
                 LOG_SEND(LogBuffer, "[ObjectControl] TAA in system; %d", TriggerActionCount);
 
-                OBCState = OBC_STATE_INITIALIZED;
+                vSetState(&OBCState, OBC_STATE_INITIALIZED);
                 LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
 
                 if(TempFd != NULL) fclose(TempFd);
@@ -820,8 +832,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 OriginPosition.Altitude = OriginAltitudeDbl;
                 OriginPosition.Heading = OriginHeadingDbl;
 
-                if(DisconnectU8 == 0) OBCState = OBC_STATE_CONNECTED;
-                else if(DisconnectU8 == 1) OBCState = OBC_STATE_IDLE;
+                if(DisconnectU8 == 0) vSetState(&OBCState, OBC_STATE_CONNECTED);
+                else if(DisconnectU8 == 1) vSetState(&OBCState, OBC_STATE_IDLE);
             }
             else if(iCommand == COMM_DISCONNECT)
             {
@@ -838,7 +850,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 {
                     vCloseSafetyChannel(&safety_socket_fd[iIndex]);
                 }
-                OBCState = OBC_STATE_IDLE;
+                vSetState(&OBCState, OBC_STATE_IDLE);
             }
             else if(iCommand == COMM_EXIT)
             {
@@ -2196,4 +2208,120 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], char ob
         }
     }
     (void)closedir(traj_directory);
+}
+
+
+int8_t vSetState(OBCState_t *currentState, OBCState_t requestedState)
+{
+    StateTransition transitionFunction;
+    int8_t retval;
+
+    // Always allow transitions to these two states
+    if (requestedState == OBC_STATE_ERROR || requestedState == OBC_STATE_UNDEFINED)
+    {
+        *currentState = requestedState;
+        retval = 0;
+    }
+    else if (requestedState == *currentState)
+    {
+        retval = 0;
+    }
+    else
+    {
+        transitionFunction = tGetTransition(*currentState);
+        retval = transitionFunction(currentState, requestedState);
+    }
+
+    if (retval == -1)
+    {
+        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Invalid transition requested: from %d to %d\n",currentState,&requestedState);
+    }
+    return retval;
+}
+
+
+StateTransition tGetTransition(OBCState_t fromState)
+{
+    switch (fromState)
+    {
+    case OBC_STATE_IDLE:
+        return &tFromIdle;
+    case OBC_STATE_INITIALIZED:
+        return &tFromInitialized;
+    case OBC_STATE_CONNECTED:
+        return &tFromConnected;
+    case OBC_STATE_ARMED:
+        return &tFromArmed;
+    case OBC_STATE_RUNNING:
+        return &tFromRunning;
+    case OBC_STATE_ERROR:
+        return &tFromError;
+    case OBC_STATE_UNDEFINED:
+        return &tFromUndefined;
+    }
+}
+
+int8_t tFromIdle(OBCState_t *currentState, OBCState_t requestedState)
+{
+    if (requestedState == OBC_STATE_INITIALIZED)
+    {
+        *currentState = requestedState;
+        return 0;
+    }
+    return -1;
+}
+
+int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState)
+{
+    if (requestedState == OBC_STATE_CONNECTED)
+    {
+        *currentState = requestedState;
+        return 0;
+    }
+    return -1;
+}
+
+int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState)
+{
+    if (requestedState == OBC_STATE_ARMED)
+    {
+        *currentState = requestedState;
+        return 0;
+    }
+    return -1;
+}
+
+int8_t tFromArmed(OBCState_t *currentState, OBCState_t requestedState)
+{
+    if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_RUNNING)
+    {
+        *currentState = requestedState;
+        return 0;
+    }
+    return -1;
+}
+
+int8_t tFromRunning(OBCState_t *currentState, OBCState_t requestedState)
+{
+    if (requestedState == OBC_STATE_CONNECTED)
+    {
+        *currentState = requestedState;
+        return 0;
+    }
+    return -1;
+}
+
+int8_t tFromError(OBCState_t *currentState, OBCState_t requestedState)
+{
+    if (requestedState == OBC_STATE_IDLE)
+    {
+        *currentState = requestedState;
+        return 0;
+    }
+    return -1;
+}
+
+int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState)
+{
+    return -1;
 }
