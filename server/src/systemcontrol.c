@@ -59,6 +59,7 @@ typedef enum {
 #define SYSTEM_CONTROL_TX_PACKET_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
 #define SYSTEM_CONTROL_MAX_PATH_LENGTH 255
 #define IPC_BUFFER_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
+//#define IPC_BUFFER_SIZE   1024
 #define SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE 64
 #define SYSTEM_CONTROL_PROCESS_DATA_BUFFER	128
 
@@ -67,6 +68,7 @@ typedef enum {
 #define SYSTEM_CONTROL_ARG_MAX_COUNT	 	6
 #define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	32
 #define SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH SYSTEM_CONTROL_ARG_CHAR_COUNT + SYSTEM_CONTROL_COMMAND_MAX_LENGTH + SYSTEM_CONTROL_ARG_MAX_COUNT*SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH 
+//#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	80
 
 #define OSTM_OPT_SET_ARMED_STATE 2
 #define OSTM_OPT_SET_DISARMED_STATE 3 
@@ -138,6 +140,7 @@ static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint3
 static void SystemControlSendBytes(const char* data, int length, int* sockfd, int debug);
 void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8* ResponseData, I32 ResponseDataLength, I32* Sockfd, U8 Debug);
 void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug);
+void SystemControlSendMONR(C8* LogString, I32* Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I32 *sockfd, struct sockaddr_in* addr);
 I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
 I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 debug);
@@ -348,9 +351,11 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
         }
         else if(ModeU8 == 1)
-        {
+        {   /* use util.c function to call time
             gettimeofday(&CurrentTimeStruct, NULL);
             CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
+            */
+            CurrentTimeU64 = UtilgetCurrentUTCtimeMS();
             TimeDiffU64 = CurrentTimeU64 - OldTimeU64;
 
             if(ServerSocketI32 <= 0) RemoteControlConnectServer(&ServerSocketI32, ServerIPC8, ServerPortU16);
@@ -408,23 +413,18 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         {
             SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
         }
-        
-        if(GSD->ASPDebugDataSetU8 == 1)
-        {
-            GSD->ASPDebugDataSetU8 = 0;
-            //LengthU32 = strlen(pcRecvBuffer);
-            LengthU32 = sizeof(ASPType);
-            bzero(BinBuffer, LengthU32 + 6);
-            //UtilHexTextToBinary(LengthU32, pcRecvBuffer, BinBuffer + 6, 0);
-            PCDMessageCodeU16 = 2;
-            BinBuffer[0] = (U8)(LengthU32 >> 24);
-            BinBuffer[1] = (U8)(LengthU32 >> 16);
-            BinBuffer[2] = (U8)(LengthU32 >> 8);
-            BinBuffer[3] = (U8) LengthU32;
-            BinBuffer[4] = (U8)(PCDMessageCodeU16 >> 8);
-            BinBuffer[5] = (U8) PCDMessageCodeU16;
-            for(I32 i = 0; i < LengthU32; i++) BinBuffer[i+6] = GSD->ASPDebugDataU8[i];
-            SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, BinBuffer, LengthU32 + 6, 0);
+
+        else if(iCommand == COMM_MONI){
+          //printf("Monr sys %s\n", pcRecvBuffer);
+          C8 Data[strlen(pcRecvBuffer) + 11];
+          bzero(Data,strlen(Data));
+
+          Data[3] = strlen(pcRecvBuffer);
+          Data[5] = 2;
+
+          strcat((Data + 11), pcRecvBuffer);
+
+          UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, &Data, sizeof(Data), 0);
         }
 
         ++ProcessControlSendCounterU32;
@@ -457,17 +457,17 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             ProcessControlData[18] = (U8) GPSTime->FixQualityU8;
             ProcessControlData[19] = (U8) GPSTime->NSatellitesU8;
 
-            SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, PCDMessageLengthU32 + 6, 0);
+            SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, PCDMessageLengthU32 + 6, 1);
         }
 
 
 
         switch(SystemControlCommand)
         {
-
+        // can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
         case Idle_0:
             /*bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
-                iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
+                iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
 
                 if(iCommand == COMM_TOM)
                 {
@@ -536,15 +536,15 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
             ControlResponseBuffer[0] = server_state;
             ControlResponseBuffer[1] = OBCStateU8;
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"GPSMillisecondsU64: %ld\n", GPSTime->GPSMillisecondsU64);
+            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"GPSMillisecondsU64: %ld\n", GPSTime->GPSMillisecondsU64); // GPSTime just ticks from 0 up shouldent it be in the global GPStime?
             SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 2, &ClientSocket, 0);
-        break;
+            break;
         case GetServerParameterList_0:
             SystemControlCommand = Idle_0;
             bzero(ParameterListC8, SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE);
             SystemControlReadServerParameterList(ParameterListC8, 0);
             SystemControlSendControlResponse(strlen(ParameterListC8) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameterList:", ParameterListC8, strlen(ParameterListC8), &ClientSocket, 0);
-        break;
+            break;
         case GetServerParameter_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
@@ -552,9 +552,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlReadServerParameter(SystemControlArgument[0], ControlResponseBuffer, 0);
                 SystemControlSendControlResponse(strlen(ControlResponseBuffer) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameter:", ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
-
             } else { printf("[SystemControl] Err: Wrong parameter count in GetServerParameter(Name)!\n"); SystemControlCommand = Idle_0;}
-        break;
+            break;
         case SetServerParameter_2:
             if(CurrentInputArgCount == CommandArgCount)
             {
@@ -752,7 +751,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL)
             {
                 bzero(pcBuffer, IPC_BUFFER_SIZE);
-                server_state = SERVER_STATE_INWORK;
+                server_state = SERVER_STATE_IDLE;
                 pcBuffer[0] = OSTM_OPT_SET_DISARMED_STATE;
                 (void)iCommSend(COMM_ARMD,pcBuffer);
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -775,11 +774,14 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         case StartScenario_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
-                if(server_state == SERVER_STATE_IDLE /*&& strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/) //Temporary!
+                if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL) //Temporary!
                 {
                     bzero(pcBuffer, IPC_BUFFER_SIZE);
+                    /* Lest use UTC time everywhere instead of etsi and gps time
                     gettimeofday(&tvTime, NULL);
                     uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+                    */
+                    uiTime = UtilgetCurrentUTCtimeMS();
                     if(TIME_COMPENSATE_LAGING_VM) uiTime = uiTime - TIME_COMPENSATE_LAGING_VM_VAL;
 
                     printf("[SystemControl] Current timestamp (gtd): %lu\n",uiTime );
@@ -966,6 +968,27 @@ SystemControlCommand_t SystemControlFindCommand(const char* CommandBuffer, Syste
     return nocommand;
 }
 
+void SystemControlSendMONR(C8* MONRStr, I32* Sockfd, U8 Debug){
+  int i, n, j, t;
+  C8 Length[4];
+  C8 Header[2] = {0 ,2};
+  C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
+
+  bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+  n = 2 + strlen(MONRStr);
+  Length[0] = (C8)(n >> 24); Length[1] = (C8)(n >> 16); Length[2] = (C8)(n >> 8); Length[3] = (C8)n;
+
+
+  if(n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE)
+  {
+      for(i = 0, j = 0; i < 4; i++, j++) Data[j] = Length[i];
+      for(i = 0; i < 2; i++, j++) Data[j] = Header[i];
+      t = strlen(MONRStr);
+      for(i = 0; i < t; i++, j++) Data[j] = *(MONRStr+i);
+      SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+  } else printf("[SystemControl] MONR string longer then %d bytes!\n", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+}
+
 
 void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
 {
@@ -978,14 +1001,18 @@ void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
     n = 2 + strlen(LogString);
     Length[0] = (C8)(n >> 24); Length[1] = (C8)(n >> 16); Length[2] = (C8)(n >> 8); Length[3] = (C8)n;
 
-    if(Debug) printf("%s", LogString);
+    //SystemControlSendBytes(Length, 4, Sockfd, 0);
+    //SystemControlSendBytes(Header, 5, Sockfd, 0);
+    //SystemControlSendBytes(LogString, strlen(LogString), Sockfd, 0);
+
+
     if(n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE)
     {
         for(i = 0, j = 0; i < 4; i++, j++) Data[j] = Length[i];
         for(i = 0; i < 2; i++, j++) Data[j] = Header[i];
         t = strlen(LogString);
         for(i = 0; i < t; i++, j++) Data[j] = *(LogString+i);
-        SystemControlSendBytes(Data, n + 4, Sockfd, Debug);
+        SystemControlSendBytes(Data, n + 4, Sockfd, 0);
     } else printf("[SystemControl] Log string longer then %d bytes!\n", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 
 }
