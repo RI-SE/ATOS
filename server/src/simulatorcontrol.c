@@ -274,20 +274,20 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
             if(SimRxCodeU16 == 0x7E7E && SMGD.SimulatorModeU8 == SIM_CONTROL_DTM_MODE)
             {
 
-              //Binary data is received from simulator, send to binary message manager
-              bzero(MsgQueBuffer, SIM_CONTROL_BUFFER_SIZE_6200);
-              SimulatorControlBinaryMessageManager(RxTotalDataU32, ReceiveBuffer, MsgQueBuffer, 0);
-              //printf("[SimulatorControl] To MsgQueue: %s\n", MsgQueBuffer);
 
               if(SupervisorIpU32 == 0)
               { 
+                //Binary data is received from simulator, send to binary message manager when Supervisor not is available
+                bzero(MsgQueBuffer, SIM_CONTROL_BUFFER_SIZE_6200);
+                SimulatorControlBinaryMessageManager(RxTotalDataU32, ReceiveBuffer, MsgQueBuffer, 0);
+                //printf("[SimulatorControl] To MsgQueue: %s\n", MsgQueBuffer);
                 (void)iCommSend(COMM_TRAJ, MsgQueBuffer); //COMM_TRAJ will be received by ObjectControl
               }
               else
               {
 
-               for(i = 0; i < strlen(MsgQueBuffer); i ++) GSD->Chunk[i] = MsgQueBuffer[i];
-               GSD->ChunkSize = strlen(MsgQueBuffer);
+                for(i = 0; i < RxTotalDataU32-8; i ++) GSD->Chunk[i] = MsgQueBuffer[i+8];
+                GSD->ChunkSize = RxTotalDataU32-8;
                 
                //(void)iCommSend(COMM_TRAJ_TOSUP, MsgQueBuffer); //COMM_TRAJ_TOSUP will be received by SupervisorControl
               }

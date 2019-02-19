@@ -528,6 +528,7 @@ typedef struct
 
 typedef struct
 {
+
   U16 TimeControlExecTimeU16;
   U16 SystemControlExecTimeU16;
   U16 ObjectControlExecTimeU16;
@@ -541,6 +542,19 @@ typedef struct
   U8 ASPDebugDataU8[sizeof(ASPType)];
   U32 SupChunkSize;
   U8 SupChunk[3000];
+
+  U8 MONRSizeU8;
+  U8 MONRData[100];
+  U8 HEABSizeU8;
+  U8 HEABData[100];
+  //U8 OSTMSizeU8;
+  //U8 OSTMData[100];
+  //U8 STRTSizeU8;
+  //U8 STRTData[100];
+  //U8 OSEMSizeU8;
+  //U8 OSEMData[100];
+
+
 } GSDType;
 
 

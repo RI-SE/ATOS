@@ -220,6 +220,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
  
     C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
 
+    //C8 SIDSData[128][10000][8];
+
     bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
     UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerMode=", "", TextBufferC8);
     ModeU8 = (U8)atoi(TextBufferC8);

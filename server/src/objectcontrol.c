@@ -299,7 +299,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     FILE *TempFd;
     U16 MiscU16;
     I32 j = 0;
-
+    GSD->MONRSizeU8 = 0;
+    GSD->HEABSizeU8 = 0;
+    //GSD->OSTMSizeU8 = 0;
+    //GSD->STRTSizeU8 = 0;
+    //GSD->OSEMSizeU8 = 0;
+    U8 OSEMSentU8 = 0;
+    U8 STRTSentU8 = 0;
 
     (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
@@ -317,6 +323,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                 }
             }
+            
+            //Store HEAB in GSD
+            //for(j = 0; j < MessageLength; j++) GSD->HEABData[j] = MessageBuffer[j];
+            //GSD->HEABSizeU8 = (U8)MessageLength;
         }
 
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED)
@@ -391,7 +401,14 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         }
                     }
 
+
+
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
+
+                    //Store MONR in GSD
+                    for(i = 0; i < (MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH); i++) GSD->MONRData[i] = buffer[i];
+                    GSD->MONRSizeU8 = MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH;
+
                     ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, XPosition, YPosition, ZPosition, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
                     bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
                     strcat(buffer,object_address_name[iIndex]); strcat(buffer,";");
@@ -408,6 +425,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     strcat(buffer,DriveDirection); strcat(buffer,";"); strcat(buffer,StatusFlag); strcat(buffer,";");
                     strcat(buffer,StateFlag); strcat(buffer,";");
                     strcat(buffer,StatusFlag); strcat(buffer,";");
+
 
                     if(ASPData.MTSPU32 != 0)
                     {
@@ -565,9 +583,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
-                    /*Send AROM message*/
-                    vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+                    /*Send OSTM message*/
+                    vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                 }
+
+                //Store OSTM in GSD
+                //for(i = 0; i < MessageLength; i++) GSD->OSTMData[i] = MessageBuffer[i];
+                //GSD->OSTMSizeU8 = (U8)MessageLength;
 
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
             }
@@ -591,6 +613,14 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, GPSTime, (U32)StartTimeU32, DelayedStartU32, &OutgoingStartTimeU32, 0);
                 for(iIndex=0;iIndex<nbr_objects;++iIndex) { vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);}
                 OBCState = OBC_STATE_RUNNING;
+
+                //Store STRT in GSD
+                if(STRTSentU8 == 0)
+                {
+                    //for(i = 0; i < MessageLength; i++) GSD->STRTData[i] = MessageBuffer[i];
+                    //GSD->STRTSizeU8 = (U8)MessageLength;
+                    STRTSentU8 = 1;
+                }
                 //OBCState = OBC_STATE_INITIALIZED; //This is temporary!
                 //printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
                 GSD->ScenarioStartTimeU32 = OutgoingStartTimeU32;
@@ -805,6 +835,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     //Create temporary file
                     TempFd = fopen (TEMP_LOG_FILE, "w+");
                 }
+
+                OSEMSentU8 = 0;
+                STRTSentU8 = 0;
             }
             else if(iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED)
             {
@@ -865,7 +898,17 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.\n");
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
 
-                     
+
+                        //Store OSEM in GSD
+                        if(OSEMSentU8 == 0)
+                        {
+                            //for(i = 0; i < MessageLength; i++) GSD->OSEMData[i] = MessageBuffer[i];
+                            //GSD->OSEMSizeU8 = (U8)MessageLength;
+                            OSEMSentU8 = 1;
+                            //printf("OSEMSentU8 = %d\n", OSEMSentU8);
+                        }
+
+
                         /*Here we send DOTM, if the IP-address not is found*/
                         if(strstr(DTMReceivers, object_address_name[iIndex]) == NULL)
                         {

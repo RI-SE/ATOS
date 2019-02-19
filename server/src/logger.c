@@ -66,7 +66,7 @@ void logger_task()
     FILE *filefd;
     FILE *replayfd;
     struct timespec sleep_time, ref_time;
-
+    U8 FirstInitU8 = 0;
 
     (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
     //(void)iCommInit(IPC_SEND,MQ_LG_1,0);
@@ -75,7 +75,6 @@ void logger_task()
     vCreateLogFolder(pcLogFolder);
     (void)strcpy(pcLogFile,pcLogFolder);
     (void)strcat(pcLogFile,LOG_FILE);
-
 
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open log file to use: <%s>\n",pcLogFile);
     filefd = fopen (pcLogFile, "w+");
@@ -219,8 +218,37 @@ void logger_task()
 
             iExit = 1;
         }
-        else if (iCommand == COMM_OBC_STATE) {
+        else if (iCommand == COMM_INIT)
+        {
+            if(FirstInitU8 == 1)
+            {
+                /* Create folder and event.log file */
+                vCreateLogFolder(pcLogFolder);
+                (void)strcpy(pcLogFile,pcLogFolder);
+                (void)strcat(pcLogFile,LOG_FILE);
 
+                DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open log file to use: <%s>\n",pcLogFile);
+                filefd = fopen (pcLogFile, "w+");
+
+                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                strcpy(pcBuffer, "Log started...\n");
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+                /* Copy drive files */
+                (void)strcpy(pcCommand,"cp -R ");
+                (void)strcat(pcCommand,TRAJECTORY_PATH);
+                (void)strcat(pcCommand," ");
+                (void)strcat(pcCommand,pcLogFolder);
+                (void)system(pcCommand);
+
+                /* Copy conf file */
+                (void)strcpy(pcCommand,"cp ");
+                (void)strcat(pcCommand,TEST_CONF_FILE);
+                (void)strcat(pcCommand," ");
+                (void)strcat(pcCommand,pcLogFolder);
+                (void)system(pcCommand);
+            }
+            FirstInitU8 = 1;
         }
         else
         {
