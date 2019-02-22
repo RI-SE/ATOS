@@ -424,7 +424,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
           strcat((Data + 11), pcRecvBuffer);
 
-          UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, &Data, sizeof(Data), 0);
+          UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, Data, sizeof(Data), 0);
         }
 
         ++ProcessControlSendCounterU32;
