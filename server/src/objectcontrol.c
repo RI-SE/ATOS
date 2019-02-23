@@ -665,11 +665,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         /*DTM Header*/
                         MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-MiscU16)/ COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
                         /*Send DTM header*/
-                        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+                        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                         /*DTM Data*/
                         MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer+MiscU16, (DTMLengthU32-MiscU16)/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
                         /*Send DTM data*/
-                        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+                        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                     }
                 }
 
