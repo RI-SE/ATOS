@@ -100,7 +100,6 @@
 #define TCP_RX_BUFFER 1024
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
-
 #define USE_LOCAL_USER_CONTROL  0
 #define LOCAL_USER_CONTROL_IP "192.168.0.15" 
 #define USE_TEST_HOST 0
@@ -537,11 +536,11 @@ typedef struct
   U32 ScenarioStartTimeU32;
   U8 VOILData[400];
   U32 ChunkSize;
-  U8 Chunk[3000];
+  U8 Chunk[6200];
   U8 ASPDebugDataSetU8;
   U8 ASPDebugDataU8[sizeof(ASPType)];
   U32 SupChunkSize;
-  U8 SupChunk[3000];
+  U8 SupChunk[6200];
 
   U8 MONRSizeU8;
   U8 MONRData[100];
@@ -761,7 +760,7 @@ U64 SwapU64(U64 val);
 
 I32 UtilConnectTCPChannel(const C8* Module, I32* Sockfd, const C8* IP, const U32 Port);
 void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, U8 Debug);
-I32 UtilReceiveTCPData(const C8* Module, I32* Sockfd, C8* Data, U8 Debug);
+I32 UtilReceiveTCPData(const C8* Module, I32* Sockfd, C8* Data, I32 Length, U8 Debug);
 void UtilCreateUDPChannel(const C8* Module, I32 *Sockfd, const C8* IP, const U32 Port, struct sockaddr_in* Addr);
 void UtilSendUDPData(const C8* Module, I32 *Sockfd, struct sockaddr_in* Addr, C8 *Data, I32 Length, U8 Debug);
 void UtilReceiveUDPData(const C8* Module, I32* Sockfd, C8* Buffer, I32 Length, I32* ReceivedNewData, U8 Debug);

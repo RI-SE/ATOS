@@ -123,6 +123,7 @@ void logger_task()
                 sprintf ( pcBuffer,"%" PRIu64 ": %d %s\n", uiTime, iCommand, pcRecvBuffer);
                 //printf("INF: Data written to logfile <%s>", pcBuffer);
                 (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+                fflush(filefd);
             }
         }
 
@@ -220,9 +221,10 @@ void logger_task()
         }
         else if (iCommand == COMM_INIT)
         {
+            /*
             if(FirstInitU8 == 1)
             {
-                /* Create folder and event.log file */
+                // Create folder and event.log file 
                 vCreateLogFolder(pcLogFolder);
                 (void)strcpy(pcLogFile,pcLogFolder);
                 (void)strcat(pcLogFile,LOG_FILE);
@@ -234,21 +236,21 @@ void logger_task()
                 strcpy(pcBuffer, "Log started...\n");
                 (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
-                /* Copy drive files */
+                // Copy drive files
                 (void)strcpy(pcCommand,"cp -R ");
                 (void)strcat(pcCommand,TRAJECTORY_PATH);
                 (void)strcat(pcCommand," ");
                 (void)strcat(pcCommand,pcLogFolder);
                 (void)system(pcCommand);
 
-                /* Copy conf file */
+                // Copy conf file
                 (void)strcpy(pcCommand,"cp ");
                 (void)strcat(pcCommand,TEST_CONF_FILE);
                 (void)strcat(pcCommand," ");
                 (void)strcat(pcCommand,pcLogFolder);
                 (void)system(pcCommand);
             }
-            FirstInitU8 = 1;
+            FirstInitU8 = 1;*/
         }
         else
         {

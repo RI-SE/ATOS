@@ -22,6 +22,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <stdbool.h>
+#include <netinet/tcp.h>
 
 #include "util.h"
 
@@ -1926,25 +1927,43 @@ I32 UtilConnectTCPChannel(const C8* Module, I32* Sockfd, const C8* IP, const U32
 
 void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, U8 Debug)
 {
-    I32 i, n;
+    I32 i, n, error = 0;
+
+    socklen_t len = sizeof(error);
+    I32 retval;
 
     if(Debug == 1){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
 
     n = write(*Sockfd, Data, Length);
+    
+    retval = getsockopt(*Sockfd, SOL_SOCKET, SO_ERROR, &error, &len);
+
+    if(retval != 0)
+    {
+      printf("[%s] Failed to get socket error code = %s\n", Module, strerror(retval));
+    }
+
+    if(error != 0)
+    {
+      printf("[%s] Socket error: %s\n", Module, strerror(error));
+    }
+
     if (n < 0)
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] ERR: Failed to send on control socket\n", Module);
+        printf("[%s] ERR: Failed to send on control socket, length=%d\n", Module, Length);
+        //DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] ERR: Failed to send on control socket\n", Module);
     }
 }
 
 
-I32 UtilReceiveTCPData(const C8* Module, I32* Sockfd, C8* Data, U8 Debug)
+I32 UtilReceiveTCPData(const C8* Module, I32* Sockfd, C8* Data, I32 Length, U8 Debug)
 {
     I32 i, Result;
 
-    Result = recv(*Sockfd, Data, TCP_RX_BUFFER,  0);
+    if(Length <= 0) Result = recv(*Sockfd, Data, TCP_RX_BUFFER,  0);
+    else Result = recv(*Sockfd, Data, Length,  0);
 
-    if(Debug == 1 && Result > 0){ printf("[%s] Received TCP data: ", Module); i = 0; for(i = 0; i < Result; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
+    if(Debug == 1 && Result < 0){ printf("[%s] Received TCP data: ", Module); i = 0; for(i = 0; i < Result; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
 
     return Result;
 }
@@ -2478,13 +2497,17 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         //Time
         Data = 0;
         Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 3);
+        //if(debug) printf("%x-",Data);
         Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 2);
+        //if(debug) printf("%x-",Data);
         Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 1);
+        //if(debug) printf("%x-",Data);
         Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 0);
+        //if(debug) printf("%x- ",Data);
         DOTMData->RelativeTimeValueIdU16 = VALUE_ID_RELATIVE_TIME;
         DOTMData->RelativeTimeContentLengthU16 = 4;
         DOTMData->RelativeTimeU32 = SwapU32((U32)Data);
-        if(debug) printf("Time=%d \n", DOTMData->RelativeTimeU32);
+        if(debug) printf("%d. Time=%d, ", i, DOTMData->RelativeTimeU32);
 
         //x
         Data = 0;
@@ -2495,7 +2518,7 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->XPositionValueIdU16 = VALUE_ID_X_POSITION;
         DOTMData->XPositionContentLengthU16 = 4;
         DOTMData->XPositionI32 = SwapI32((I32)Data);
-        if(debug) printf("X=%d \n", DOTMData->XPositionI32);
+        if(debug) printf("X=%d, ", DOTMData->XPositionI32);
 
         //y
         Data = 0;
@@ -2506,7 +2529,7 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->YPositionValueIdU16 = VALUE_ID_Y_POSITION;
         DOTMData->YPositionContentLengthU16 = 4;
         DOTMData->YPositionI32 = SwapI32((I32)Data);
-        if(debug) printf("Y=%d \n", DOTMData->YPositionI32);
+        if(debug) printf("Y=%d, ", DOTMData->YPositionI32);
 
         //z
         Data = 0;
@@ -2517,7 +2540,7 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->ZPositionValueIdU16 = VALUE_ID_Z_POSITION;
         DOTMData->ZPositionContentLengthU16 = 4;
         DOTMData->ZPositionI32 = SwapI32((I32)Data);
-        if(debug) printf("Z=%d \n", DOTMData->ZPositionI32);
+        if(debug) printf("Z=%d, ", DOTMData->ZPositionI32);
 
         //Heading
         Data = 0;
@@ -2530,7 +2553,7 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
         DOTMData->HeadingContentLengthU16 = 2;
         DOTMData->HeadingU16 = SwapU16((U16)(Data));
-        if(debug) printf("Heading=%d \n", DOTMData->HeadingU16);
+        if(debug) printf("Heading=%d, ", DOTMData->HeadingU16);
 
         //Longitudinal speed
         Data = 0;
@@ -2539,7 +2562,7 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->LongitudinalSpeedValueIdU16 = VALUE_ID_LONGITUDINAL_SPEED;
         DOTMData->LongitudinalSpeedContentLengthU16 = 2;
         DOTMData->LongitudinalSpeedI16 = SwapI16((I16)Data);
-        if(debug) printf("LongitudinalSpeedI16=%d \n", DOTMData->LongitudinalSpeedI16);
+        if(debug) printf("LongitudinalSpeedI16=%d, ", DOTMData->LongitudinalSpeedI16);
 
         //Lateral speed
         Data = 0;
@@ -2548,7 +2571,7 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->LateralSpeedValueIdU16 = VALUE_ID_LATERAL_SPEED;
         DOTMData->LateralSpeedContentLengthU16 = 2;
         DOTMData->LateralSpeedI16 = SwapI16((I16)Data);
-        if(debug) printf("LateralSpeedI16=%d \n", DOTMData->LateralSpeedI16);
+        if(debug) printf("LateralSpeedI16=%d, ", DOTMData->LateralSpeedI16);
 
         //Longitudinal acceleration
         Data = 0;
@@ -2557,7 +2580,7 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->LongitudinalAccValueIdU16 = VALUE_ID_LONGITUDINAL_ACCELERATION;
         DOTMData->LongitudinalAccContentLengthU16 = 2;
         DOTMData->LongitudinalAccI16 = SwapI16((I16)Data);
-        if(debug) printf("LongitudinalAccI16=%d \n", DOTMData->LongitudinalAccI16);
+        if(debug) printf("LongitudinalAccI16=%d, ", DOTMData->LongitudinalAccI16);
 
         //Lateral acceleration
         Data = 0;
@@ -2566,7 +2589,7 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->LateralAccValueIdU16 = VALUE_ID_LATERAL_ACCELERATION;
         DOTMData->LateralAccContentLengthU16 = 2;
         DOTMData->LateralAccI16 = SwapI16((I16)Data);
-        if(debug) printf("LateralAccI16=%d \n", DOTMData->LateralAccI16);
+        if(debug) printf("LateralAccI16=%d, ", DOTMData->LateralAccI16);
 
         //Curvature
         Data = 0;
@@ -2577,7 +2600,7 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->CurvatureValueIdU16 = VALUE_ID_CURVATURE;
         DOTMData->CurvatureContentLengthU16 = 4;
         DOTMData->CurvatureI32 = SwapI32((I32)Data);
-        if(debug) printf("CurvatureI32=%d \n", DOTMData->CurvatureI32);
+        if(debug) printf("CurvatureI32=%d\n", DOTMData->CurvatureI32);
 
         p=(C8 *)DOTMData;
         for(j=0; j<sizeof(DOTMType); j++, n++) *(MessageBuffer + n) = *p++;
@@ -2591,7 +2614,7 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
     *(MessageBuffer + MessageIndex++) = (U8)(Crc >> 8);
 
 
-    if(debug)
+    if(debug == 2)
     {
         int i = 0;
         for(i = 0; i < MessageIndex; i ++)

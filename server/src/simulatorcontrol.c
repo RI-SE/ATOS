@@ -182,7 +182,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
       else
       {
         bzero(RxBuffer, SIM_CONTROL_BUFFER_SIZE_2048);
-        ClientResultI32 = UtilReceiveTCPData("SimulatorControl", &SimulatorTCPSocketfdI32, RxBuffer, 0); //Data length resides in ClientResultI32
+        ClientResultI32 = UtilReceiveTCPData("SimulatorControl", &SimulatorTCPSocketfdI32, RxBuffer, 0, 0); //Data length resides in ClientResultI32
         if(ClientResultI32 == 0)
         {
             DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[SimulatorControl] Client closed connection.\n");
@@ -274,20 +274,20 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
             if(SimRxCodeU16 == 0x7E7E && SMGD.SimulatorModeU8 == SIM_CONTROL_DTM_MODE)
             {
 
+              //Binary data is received from simulator, send to binary message manager when Supervisor not is available
+              bzero(MsgQueBuffer, SIM_CONTROL_BUFFER_SIZE_6200);
+              SimulatorControlBinaryMessageManager(RxTotalDataU32, ReceiveBuffer, MsgQueBuffer, 0);
 
               if(SupervisorIpU32 == 0)
               { 
-                //Binary data is received from simulator, send to binary message manager when Supervisor not is available
-                bzero(MsgQueBuffer, SIM_CONTROL_BUFFER_SIZE_6200);
-                SimulatorControlBinaryMessageManager(RxTotalDataU32, ReceiveBuffer, MsgQueBuffer, 0);
                 //printf("[SimulatorControl] To MsgQueue: %s\n", MsgQueBuffer);
                 (void)iCommSend(COMM_TRAJ, MsgQueBuffer); //COMM_TRAJ will be received by ObjectControl
               }
               else
               {
 
-                for(i = 0; i < RxTotalDataU32-8; i ++) GSD->Chunk[i] = MsgQueBuffer[i+8];
-                GSD->ChunkSize = RxTotalDataU32-8;
+                for(i = 0; i < strlen(MsgQueBuffer); i ++) GSD->Chunk[i] = MsgQueBuffer[i];
+                GSD->ChunkSize = strlen(MsgQueBuffer);
                 
                //(void)iCommSend(COMM_TRAJ_TOSUP, MsgQueBuffer); //COMM_TRAJ_TOSUP will be received by SupervisorControl
               }
@@ -762,7 +762,7 @@ U32 SimulatorControlBinaryMessageManager(I32 DataLength, C8* ReceiveBuffer, C8 *
   if(Debug)
   {
     printf("[SimulatorControl] Binary data length = %d: ", DataLength);
-    for(j = 0;j < DataLength; j ++) printf("%x ", (C8)ReceiveBuffer[j]);
+    for(j = 80;j < DataLength; j ++) printf("%x ", (C8)ReceiveBuffer[j]); //j = 80 is where first timestamp is
     printf("\n");
   }
 
@@ -771,7 +771,7 @@ U32 SimulatorControlBinaryMessageManager(I32 DataLength, C8* ReceiveBuffer, C8 *
 
   if(MessageIdU16 == 0x0001) //TRAJ
   {
-    UtilBinaryToHexText(DataLength-8, ReceiveBuffer+8, MsgQueBuffer, Debug);
+    UtilBinaryToHexText(DataLength-8, ReceiveBuffer+8, MsgQueBuffer, 0);
   }
   
 
