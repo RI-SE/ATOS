@@ -172,6 +172,9 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
     printf("[SimulatorControl] SimulatorTCPPort = %d\n", SimulatorTCPPortU16);
     printf("[SimulatorControl] SimulatorUDPPort = %d\n", SimulatorUDPPortU16);
 
+
+    while (GPSTime->TimeInitiatedU8 == 0) { usleep(100); }
+    
     while(!iExit)
     {
       if(SimulatorTCPSocketfdI32 <= 0)

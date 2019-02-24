@@ -2660,12 +2660,12 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 
     if(Debug)
     {
-      printf("SyncWordU16 = %x\n", HeaderData->SyncWordU16);
-      printf("TransmitterIdU8 = %x\n", HeaderData->TransmitterIdU8);
-      printf("MessageCounterU8 = %x\n", HeaderData->MessageCounterU8);
-      printf("AckReqProtVerU8 = %x\n", HeaderData->AckReqProtVerU8);
-      printf("MessageIdU16 = %x\n", HeaderData->MessageIdU16);
-      printf("MessageLengthU32 = %x\n", HeaderData->MessageLengthU32);
+      printf("SyncWordU16 = 0x%x\n", HeaderData->SyncWordU16);
+      printf("TransmitterIdU8 = %d\n", HeaderData->TransmitterIdU8);
+      printf("MessageCounterU8 = %d\n", HeaderData->MessageCounterU8);
+      printf("AckReqProtVerU8 = %d\n", HeaderData->AckReqProtVerU8);
+      printf("MessageIdU16 = %d\n", HeaderData->MessageIdU16);
+      printf("MessageLengthU32 = %d\n", HeaderData->MessageLengthU32);
     }
 
     return 0;

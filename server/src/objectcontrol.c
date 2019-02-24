@@ -1006,12 +1006,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_DISCONNECT)
             {
-                #ifndef NOTCP
+                //#ifndef NOTCP
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
                     vDisconnectObject(&socket_fd[iIndex]);
                 }
-                #endif //NOTCP
+                //#endif //NOTCP
 
                 LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.\n");
                 /* Close safety socket */

@@ -509,6 +509,7 @@ typedef struct
   U16 LocalMillisecondU16;
   U8 FixQualityU8;
   U8 NSatellitesU8;
+  U8 TimeInitiatedU8;
 } TimeType;
 
 

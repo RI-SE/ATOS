@@ -86,7 +86,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
   bzero(ServerIPC8, TIME_CONTROL_BUFFER_SIZE_20);
   strcat(ServerIPC8, TextBufferC8);
   IpU32 = TimeControlIPStringToInt(ServerIPC8);
-
+  
 
   if(IpU32 == 0)
   {
@@ -99,6 +99,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
     GPSTime->GPSSecondsOfDayU32 = (GPSTime->GPSMillisecondsU64 % DAY_TIME_MS) / 1000;
     GPSTime->GPSMinutesU32 = (GPSTime->GPSSecondsOfDayU32 / 60) % 60;
     GPSTime->isGPSenabled = 0;
+    GPSTime->TimeInitiatedU8 = 1;
   }
 
   bzero(TextBufferC8, TIME_CONTROL_BUFFER_SIZE_20);
@@ -129,8 +130,6 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
     }
     PrevMilliSecondU16 = CurrentMilliSecondU16;
 
-
-
     if(IpU32 != 0)
     {
       bzero(TimeBuffer,TIME_CONTROL_BUFFER_SIZE_54);
@@ -141,7 +140,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
     {
       //for(i=0; i < TIME_CONTROL_BUFFER_SIZE_54; i++) printf("%x-", TimeBuffer[i]);
       //printf("\n");
-      
+      GPSTime->TimeInitiatedU8 = 1;
       GPSTime->ProtocolVersionU8 = TimeBuffer[0];
       GPSTime->YearU16 = ((U16)TimeBuffer[1]) << 8 | TimeBuffer[2];
       GPSTime->MonthU8 = TimeBuffer[3];

@@ -44,7 +44,7 @@
 
 #define SUP_MODE_NORMAL 1
 #define SUP_MODE_DEBUG 2
-
+#define SUP_ISO_MESSAGE_RX_TIMEOUT 1000
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -92,56 +92,18 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   U16 MiscU16;
   C8 DTMTrajBuffer[ISO_DTM_ROWS_IN_TRANSMISSION*ISO_DTM_ROW_MESSAGE_LENGTH + ISO_MESSAGE_HEADER_LENGTH + ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH];
   U8 ISOMessageStartedU8 = 0;
-
-
-
- /* C8 UDPReceiveBuffer[SIM_CONTROL_BUFFER_SIZE_400];
-  C8 SendBuffer[SIM_CONTROL_BUFFER_SIZE_128];
-  I32 ReceivedNewData, i, j;
-  C8 SendData[4] = {0, 0, 3, 0xe8};
-  struct timespec sleep_time, ref_time;
-  struct timeval tv, ExecTime;
-  struct tm *tm;
-  
-
-  U8 PrevSecondU8;
-  U16 CurrentMilliSecondU16, PrevMilliSecondU16;
-  U16 CycleU16;
-  U8 ServerStatusU8 = 0;
-
-  U8 SimulatorInitiatedU8 = 0;
-  C8 *MiscPtr;
-  U64 StartTimeU64;
-  C8 LogBuffer[SIM_CONTROL_LOG_BUFFER_LENGTH];
-  C8 VOILString[SIM_CONTROL_LOG_BUFFER_LENGTH];
-  C8 Timestamp[SIM_CONTROL_BUFFER_SIZE_20];
-  ObjectMonitorType ObjectMonitorData;
-  U32 LengthU32;
-  C8 SimFuncReqResponse[SIM_CONTROL_BUFFER_SIZE_64];
-  C8 SimFuncRx[SIM_CONTROL_BUFFER_SIZE_64];
-  U16 SimRxCodeU16 = 0;
-  U16 ResponseDataIndexU16 = 0;
-  C8 MsgQueBuffer[SIM_CONTROL_BUFFER_SIZE_6200];
-
-  SMGDType SMGD;
-
-  SMGD.SimulatorModeU8 = 0;
-  
-  OBCState_t OBCStateStatus = OBC_STATE_IDLE;
-  U8 ObjectAddressListSentU8 = 0;*/
+  U8 ISOMessageReadRestU8 = 0;
+  U8 ISOMessageReceivedU8 = 0;
 
   I32 iExit = 0, iCommand;
   C8 MqBuffer[SUP_MQ_MAX_SIZE];
   (void)iCommInit(IPC_RECV_SEND,MQ_SV,0);
   GSD->SupChunkSize = 0;
   U16 IterationCounter = 0;
+  U32 TimestampU32 = 0;
 
   printf("[SupervisorControl] Starting supervisor control...\n");
-
-  /*gettimeofday(&ExecTime, NULL);
-  CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
-  PrevMilliSecondU16 = CurrentMilliSecondU16;*/
-
+ 
   bzero(TextBufferC8, SUP_CONTROL_BUFFER_SIZE_20);
   UtilSearchTextFile(TEST_CONF_FILE, "SupervisorIP=", "", TextBufferC8);
   bzero(SupervisorServerIpC8, SUP_CONTROL_BUFFER_SIZE_20);
@@ -170,15 +132,17 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         {
           printf("[SupervisorControl] Failed to set socket option code = %d\n", result);
         }
-
       }
       else
       {
-        bzero(RxBuffer, SUP_CONTROL_BUFFER_SIZE_2048);
-        
-        ClientResultI32 = UtilReceiveTCPData("SupervisorControl", &SupervisorTCPSocketfdI32, RxBuffer, 0, 0); //Data length resides in ClientResultI32
-
-        if(ClientResultI32 == 0)
+       
+        if(ISOMessageStartedU8 == 0 && ISOMessageReadRestU8 == 0) 
+        {
+          RxTotalDataU32 = 0;
+          ClientResultI32 = UtilReceiveTCPData("SupervisorControl", &SupervisorTCPSocketfdI32, RxBuffer, 2, 0); //Data length resides in ClientResultI32
+          if(ClientResultI32 > 0) RxTotalDataU32 = RxTotalDataU32 + ClientResultI32;
+        }
+        else if(ClientResultI32 == 0)
         {
             printf("[SupervisorControl] Client closed connection.\n");
             close(SupervisorTCPSocketfdI32);
@@ -191,65 +155,89 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         {
           UtilISOBuildINSUPMessage(TxBuffer, &INSUPData, SUP_MODE_NORMAL, 0);
           UtilSendTCPData("SupervisorControl", TxBuffer, INSUPData.Header.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH, &SupervisorTCPSocketfdI32, 0);
-          //UtilISOBuildHEABMessage(RxBuffer, &HEABData, GPSTime, 0, 0);
           SupervisorInitiatedU8 = 1;
         }
         
         //Check if Sync word
-        if(RxBuffer[0] == 0x7E && RxBuffer[1] == 0x7E) ISOMessageStartedU8 = 1;
-        else ISOMessageStartedU8 = 0;
-
-
-        if(ClientResultI32 > 0 || WaitAllDataU8 == 1)
+        if(RxBuffer[0] == 0x7E && RxBuffer[1] == 0x7E && ISOMessageStartedU8 == 0 && ISOMessageReadRestU8 == 0) 
         {
+          ISOMessageStartedU8 = 1;
+          TimestampU32 = (U32)UtilgetCurrentUTCtimeMS();
+          if(SUP_DEBUG_TCP_RX_DATA) printf("[SupervisorControl] Rx SYNC word.\n");
+        } 
 
-          RxTotalDataU32 = RxTotalDataU32 + ClientResultI32;
-          if(WaitAllDataU8 == 0)
+        //Get start of message
+        if(ISOMessageStartedU8 == 1)
+        {
+          bzero(RxBuffer + 2, ISO_MESSAGE_HEADER_LENGTH - 2);
+          ClientResultI32 = UtilReceiveTCPData("SupervisorControl", &SupervisorTCPSocketfdI32, RxBuffer+2, ISO_MESSAGE_HEADER_LENGTH-2, 0); //Data length resides in ClientResultI32
+          if(ClientResultI32 > 0)
           {
-            UtilISOBuildHeader(RxBuffer, &HeaderData, 0);
-            ReqRxLengthU32 = HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH;
-            bzero(ReceiveBuffer, SUP_CONTROL_BUFFER_SIZE_3100);
-            j = 0;
-          }
-          
-          if(ClientResultI32 > 0 && SUP_DEBUG_TCP_RX_DATA)
-          {
-            printf("[SupervisorControl] TCP Rx length = %d data: ", ClientResultI32);
-            for(int i = 0;i < ClientResultI32; i ++) printf("%x ", (C8)RxBuffer[i]);
-            printf("\n");
-            printf("[SupervisorControl] ReqRxLengthU32= %d\n", ReqRxLengthU32);
-          }
-
-          if (RxTotalDataU32 < ReqRxLengthU32)
-          {
-            WaitAllDataU8 = 1;
-            DataChunkedU8 = 1;
-            for(i = 0; i < ClientResultI32; i++, j++) ReceiveBuffer[j] = RxBuffer[i];
             
+            RxTotalDataU32 = RxTotalDataU32 + ClientResultI32;
+            if(SUP_DEBUG_TCP_RX_DATA) printf("[SupervisorControl] Read Header. Total received bytes %d\n", RxTotalDataU32);
+            if(RxTotalDataU32 == 11)
+            {
+              UtilISOBuildHeader(RxBuffer, &HeaderData, SUP_DEBUG_TCP_RX_DATA);
+              ReqRxLengthU32 = HeaderData.MessageLengthU32 + ISO_MESSAGE_FOOTER_LENGTH;
+              bzero(RxBuffer+ISO_MESSAGE_HEADER_LENGTH, ReqRxLengthU32);
+              ISOMessageStartedU8 = 0;
+              ISOMessageReadRestU8 = 1;
+              ClientResultI32 = 0;
+              RxTotalDataU32 = 0;
+              TimestampU32 = (U32)UtilgetCurrentUTCtimeMS();  
+            }
           }
-          else
+          else if (ClientResultI32 == 0)
           {
-            if(DataChunkedU8 == 1) for(i = 0; i < ClientResultI32; i++, j++) ReceiveBuffer[j] = RxBuffer[i]; 
-            else if(DataChunkedU8 == 0) for(j = 0; j < RxTotalDataU32; j++) ReceiveBuffer[j] = RxBuffer[j];
-            DataChunkedU8 = 0;
-            ReqRxLengthU32 = 0;
-            WaitAllDataU8 = 0; 
+            ISOMessageStartedU8 = 0;
+            SupervisorTCPSocketfdI32 = -1;
+            SupervisorInitiatedU8 = 0;
           }
-
-          if(ClientResultI32 > 0 && SUP_DEBUG_TCP_RX_DATA)
+          else if((U32)UtilgetCurrentUTCtimeMS() - TimestampU32 > SUP_ISO_MESSAGE_RX_TIMEOUT)
           {
-            printf("[SupervisorControl] WaitAllDataU8= %d\n", WaitAllDataU8);
-            printf("[SupervisorControl] RxTotalDataU32= %d\n", RxTotalDataU32);
-            printf("[SupervisorControl] ClientResultI32= %d\n", ClientResultI32);
-            printf("[SupervisorControl] DataChunkedU8= %d\n", DataChunkedU8);
+            ISOMessageStartedU8 = 0;
           }
+         } 
 
-          if(WaitAllDataU8 == 1) ClientResultI32 = 0; 
-        }
-        
-        if(WaitAllDataU8 == 0 && ClientResultI32 > 0)
+        //Get the rest of the message
+        if(ISOMessageReadRestU8 == 1)
         {
+          ReqRxLengthU32 = ReqRxLengthU32 - ClientResultI32;
+          ClientResultI32 = UtilReceiveTCPData("SupervisorControl", &SupervisorTCPSocketfdI32, RxBuffer+ClientResultI32+ISO_MESSAGE_HEADER_LENGTH, ReqRxLengthU32, 0); //Data length resides in ClientResultI32
+          if(ClientResultI32 > 0)
+          {
+            RxTotalDataU32 = RxTotalDataU32 + ClientResultI32;
+            if(SUP_DEBUG_TCP_RX_DATA) printf("[SupervisorControl] Read %d requested bytes, so far %d bytes read.\n", (U32)(HeaderData.MessageLengthU32+ISO_MESSAGE_FOOTER_LENGTH), RxTotalDataU32); 
+            if(RxTotalDataU32 == HeaderData.MessageLengthU32 + ISO_MESSAGE_FOOTER_LENGTH)
+            {
+              ISOMessageStartedU8 = 0;
+              ISOMessageReadRestU8 = 0;
+              ISOMessageReceivedU8 = 1;
+              if(SUP_DEBUG_TCP_RX_DATA)
+              { 
+                printf("[SupervisorControl] ISO Message received!\n");  
+                //for(i = 0; i < (ISO_MESSAGE_HEADER_LENGTH + HeaderData.MessageLengthU32 + ISO_MESSAGE_FOOTER_LENGTH); i ++) printf("%x ", RxBuffer[i]);
+                //printf("\n");
+              }
+            }
+          }
+          else if (ClientResultI32 == 0)
+          {
+            ISOMessageReadRestU8 = 0;
+            SupervisorTCPSocketfdI32 = -1;
+            SupervisorInitiatedU8 = 0;
+          }
+          else if((U32)UtilgetCurrentUTCtimeMS() - TimestampU32 > SUP_ISO_MESSAGE_RX_TIMEOUT)
+          {
+            ISOMessageReadRestU8 = 0;
+          }
+        } 
 
+        if(ISOMessageReceivedU8 == 1)
+        {
+          if(SUP_DEBUG_TCP_RX_DATA) printf("[SupervisorControl] MessageId %d handled.\n", HeaderData.MessageIdU16);
+          
           if(HeaderData.MessageIdU16 == ISO_TRAJ_CODE)
           {
             //bzero(MqBuffer,SUP_MQ_MAX_SIZE);
@@ -258,7 +246,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
             //(void)iCommSend(COMM_TRAJ_FROMSUP, MqBuffer);
             for(i = 0; i < HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH; i ++)
             {
-              GSD->SupChunk[i] = ReceiveBuffer[i];
+              GSD->SupChunk[i] = RxBuffer[i];
             }
             GSD->SupChunkSize = HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH;
             printf("[SupervisorControl] %d. Sending chunk to ObjectControl, size is %d bytes.\n", ++IterationCounter, GSD->SupChunkSize);
@@ -268,6 +256,9 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
             //printf("[SupervisorControl] HEAB.\n");
           }
 
+          
+          bzero(RxBuffer, ISO_MESSAGE_HEADER_LENGTH + HeaderData.MessageLengthU32 + ISO_MESSAGE_FOOTER_LENGTH);
+          ISOMessageReceivedU8 = 0;
           RxTotalDataU32 = 0;
           ClientResultI32 = 0;
         }

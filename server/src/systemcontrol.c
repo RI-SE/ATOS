@@ -139,6 +139,7 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
 static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint32_t port);
 static void SystemControlSendBytes(const char* data, int length, int* sockfd, int debug);
 void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8* ResponseData, I32 ResponseDataLength, I32* Sockfd, U8 Debug);
+I32 SystemControlBuildControlResponse(U16 ResponseStatus, C8* ResponseString, C8* ResponseData, I32 ResponseDataLength, U8 Debug);
 void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug);
 void SystemControlSendMONR(C8* LogString, I32* Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I32 *sockfd, struct sockaddr_in* addr);
@@ -1043,6 +1044,37 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8
  
         SystemControlSendBytes(Data, n + 4, Sockfd, 0);
     } else printf("[SystemControl] Response data more then %d bytes!\n", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+}
+
+
+I32 SystemControlBuildControlResponse(U16 ResponseStatus, C8* ResponseString, C8* ResponseData, I32 ResponseDataLength, U8 Debug)
+{
+    int i=0, n=0, j=0, t=0;
+    C8 Length[4];
+    C8 Status[2];
+    C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
+
+    bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+    n = 2 + strlen(ResponseString) + ResponseDataLength;
+    Length[0] = (C8)(n >> 24); Length[1] = (C8)(n >> 16); Length[2] = (C8)(n >> 8); Length[3] = (C8)n;
+    Status[0] = (C8)(ResponseStatus >> 8); Status[1] = (C8)ResponseStatus;
+
+    if(n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE)
+    {
+        for(i = 0, j = 0; i < 4; i++, j++) Data[j] = Length[i];
+        for(i = 0; i < 2; i++, j++) Data[j] = Status[i];
+        t = strlen(ResponseString);
+        for(i = 0; i < t; i++, j++) Data[j] = *(ResponseString+i);
+        for(i = 0; i < ResponseDataLength; i++, j++) Data[j] = ResponseData[i];
+
+        for(i = 0; i < n; i++) *(ResponseData + i) = Data[i];   //Copy back
+
+        if(Debug) { for(i = 0; i < n + 4; i++) printf("%x-", Data[i]); printf("\n"); }
+ 
+    } else printf("[SystemControl] Response data more then %d bytes!\n", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+
+
+    return n;
 }
 
 

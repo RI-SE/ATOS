@@ -60,6 +60,7 @@ int main(int argc, char *argv[])
 
     GSD->ExitU8 = 0;
     GSD->ScenarioStartTimeU32 = 0;
+    GPSTime->TimeInitiatedU8 = 0;
 
     pid_t pID[8];
     int iIndex = 0;
