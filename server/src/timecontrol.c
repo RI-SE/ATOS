@@ -90,11 +90,14 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 
   if(IpU32 == 0)
   {
+    gettimeofday(&tv, NULL);
+
     GPSTime->MicroSecondU16 = 0;
-    GPSTime->GPSMillisecondsU64 = 0;
-    GPSTime->GPSSecondsOfWeekU32 = 0;
-    GPSTime->GPSMinutesU32 = 0;
-    GPSTime->GPSWeekU16 = 2012;
+    GPSTime->GPSMillisecondsU64 = tv.tv_sec*1000 + tv.tv_usec/1000 - MS_TIME_DIFF_UTC_GPS + MS_LEAP_SEC_DIFF_UTC_GPS;
+    GPSTime->GPSWeekU16 = (U16)(GPSTime->GPSMillisecondsU64 / WEEK_TIME_MS);
+    GPSTime->GPSSecondsOfWeekU32 = (U32)((GPSTime->GPSMillisecondsU64 - (U64)(GPSTime->GPSWeekU16) * WEEK_TIME_MS) / 1000);
+    GPSTime->GPSSecondsOfDayU32 = (GPSTime->GPSMillisecondsU64 % DAY_TIME_MS) / 1000;
+    GPSTime->GPSMinutesU32 = (GPSTime->GPSSecondsOfDayU32 / 60) % 60;
     GPSTime->isGPSenabled = 0;
   }
 
@@ -195,7 +198,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
       tm = localtime(&tv.tv_sec);
 
       // Add 1900 to get the right year value
-       GPSTime->YearU16 =  (U16)tm->tm_year + 1900;
+      GPSTime->YearU16 =  (U16)tm->tm_year + 1900;
       // Months are 0 based in struct tm
       GPSTime->MonthU8 =  (U8)tm->tm_mon + 1;
       GPSTime->DayU8 = (U8)tm->tm_mday;
