@@ -140,6 +140,14 @@ typedef enum {
     OBC_STATE_ERROR,
 } OBCState_t;
 
+/* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
+   returning nothing) where the function foo(int a, float b) is declared elsewhere:
+      void (*fooptr)(int,float) = foo;
+      fooptr(10,1.5);
+   
+   Consequently, the below typedef defines a StateTransition type as a function pointer to a function taking
+   (OBCState_t, OBCState_t) as input, and returning an int8_t
+*/ 
 typedef int8_t (*StateTransition)(OBCState_t *currentState, OBCState_t requestedState);
 
 char TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION*COMMAND_DOTM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH];
