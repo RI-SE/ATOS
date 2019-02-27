@@ -1825,7 +1825,7 @@ int iCommSend(const int iCommand,const char* cpData)
       iResult = mq_send(ptMQSend[iIndex],cpMessage,strlen(cpMessage),uiMessagePrio); // here we send the inormation out on the POSIX message que.
       if(iResult < 0)
       {
-        return 0;
+        continue;
       }
     }
   }
