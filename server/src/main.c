@@ -30,8 +30,6 @@
 #include "supervision.h"
 #include "remotecontrol.h"
 #include "timecontrol.h"
-#include "simulatorcontrol.h"
-//#include "citscontrol.h"
 
 /*------------------------------------------------------------
 -- Defines
@@ -165,6 +163,7 @@ int main(int argc, char *argv[])
     }
     ++iIndex;
 
+/*
     pID[iIndex] = fork();
     if(pID[iIndex] < 0)
     {
@@ -179,6 +178,7 @@ int main(int argc, char *argv[])
       exit(EXIT_SUCCESS);
     }
     ++iIndex;
+  */
 
   /*
  pID[iIndex] = fork();
