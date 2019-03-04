@@ -1,7 +1,4 @@
 #!/bin/sh
-sudo git clone https://github.com/RI-SE/Maestro.git
-cd Maestro
-sudo git checkout $1
 cd server
 mkdir ./build
 cd build
