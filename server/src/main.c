@@ -30,9 +30,7 @@
 #include "supervision.h"
 #include "remotecontrol.h"
 #include "timecontrol.h"
-#include "simulatorcontrol.h"
 #include "supervisorcontrol.h"
-//#include "citscontrol.h"
 
 
 /*------------------------------------------------------------
@@ -41,16 +39,15 @@
 
 static TimeType *GPSTime;
 static GSDType *GSD;
-
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
 int main(int argc, char *argv[])
 {
-
     // Set the debug level
     // TODO: make debug level a starting parameter
     // make sure that the same debug parameter is passed to all processes
+    printf("Version %s\n",MaestroVersion );
     dbg_setdebug(DEBUG_LEVEL_HIGH);
 
     /*Share time between child processes*/
@@ -114,7 +111,7 @@ int main(int argc, char *argv[])
     }
     ++iIndex;
 
-    char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
+  /*  char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
     bzero(pcTempBuffer,MAX_UTIL_VARIBLE_SIZE);
     if(iUtilGetParaConfFile("VisualizationAdapter",pcTempBuffer))
     {
@@ -136,7 +133,7 @@ int main(int argc, char *argv[])
         }
         ++iIndex;
     }
-
+*/
 /*
     pID[iIndex] = fork();
     if(pID[iIndex] < 0)
@@ -168,7 +165,8 @@ int main(int argc, char *argv[])
         exit(EXIT_SUCCESS);
     }
     ++iIndex;
-  
+
+/*
     pID[iIndex] = fork();
     if(pID[iIndex] < 0)
     {
@@ -183,7 +181,8 @@ int main(int argc, char *argv[])
       exit(EXIT_SUCCESS);
     }
     ++iIndex;
-  
+  */
+
   /*
  pID[iIndex] = fork();
   if(pID[iIndex] < 0)
@@ -220,6 +219,6 @@ int main(int argc, char *argv[])
 
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: systemcontrol_task running in:  %i \n",getpid());
 
-    
+
     systemcontrol_task(GPSTime, GSD);
 }

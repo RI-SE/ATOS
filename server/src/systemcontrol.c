@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
-#include <time.h>  
+#include <time.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -71,7 +71,7 @@ typedef enum {
 //#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	80
 
 #define OSTM_OPT_SET_ARMED_STATE 2
-#define OSTM_OPT_SET_DISARMED_STATE 3 
+#define OSTM_OPT_SET_DISARMED_STATE 3
 #define SC_RECV_MESSAGE_BUFFER 1024
 
 #define SMALL_BUFFER_SIZE_1024 1024
@@ -92,8 +92,8 @@ typedef enum {
 
 #define SYSTEM_CONTROL_RESPONSE_CODE_OK 						0x0001
 #define SYSTEM_CONTROL_RESPONSE_CODE_ERROR 						0x0F10
-#define SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE 	0x0F20  
-#define SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE  		 	0x0F25  
+#define SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE 	0x0F20
+#define SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE  		 	0x0F25
 
 #define SYSTEM_CONTROL_RESPONSE_CODE_INVALID_LENGTH				0x0F30
 #define SYSTEM_CONTROL_RESPONSE_CODE_BUSY						0x0F40
@@ -113,8 +113,8 @@ typedef enum {
     ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetDirectoryContent_1,
     DeleteFileDirectory_1, CreateDirectory_1, replay_1, control_0, Exit_0, start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
-const char* SystemControlCommandsArr[] = 
-{ 	
+const char* SystemControlCommandsArr[] =
+{
     "Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0", "AbortScenario_0", "InitializeScenario_0",
     "ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2", "GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1", "GetDirectoryContent_1",
     "DeleteFileDirectory_1", "CreateDirectory_1", "replay_1", "control_0", "Exit_0", "start_ext_trigg_1"
@@ -405,7 +405,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         }
 
         bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
-        iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
+        iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
         if (iCommand == COMM_OBC_STATE)
         {
             OBCStateU8 = (U8)*pcRecvBuffer;
@@ -417,18 +417,15 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
         else if(iCommand == COMM_MONI){
           //printf("Monr sys %s\n", pcRecvBuffer);
-          C8 Data[strlen(pcRecvBuffer) + 11];
-          bzero(Data,strlen(Data));
+	  C8 data[strlen(pcRecvBuffer)];
+	  bzero(data, strlen(data));
+	  strcat(data, pcRecvBuffer);
 
-          Data[3] = strlen(pcRecvBuffer);
-          Data[5] = 2;
-
-          strcat((Data + 11), pcRecvBuffer);
-
-          UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, Data, sizeof(Data), 0);
+          UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, data, sizeof(data), 0);
         }
 
         ++ProcessControlSendCounterU32;
+
         if(ProcessChannelSocket != 0 && ProcessControlSendCounterU32 == 1)
         {
             ProcessControlSendCounterU32 = 0;
@@ -564,7 +561,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:", ControlResponseBuffer, 0, &ClientSocket, 0);
 
             } else { printf("[SystemControl] Err: Wrong parameter count in SetServerParameter(Name, Value)!\n"); SystemControlCommand = Idle_0;}
-        break;
+            break;
         case CheckFileDirectoryExist_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
@@ -1306,25 +1303,25 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
 
     //Create temporary file
     TempFd = fopen (SYSTEM_CONTROL_TEMP_CONF_FILE_PATH, "w+");
-    
+
     //Open configuration file
     fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
-    
+
 
     if(fd > 0)
     {
         RowCount = UtilCountFileRows(fd);
         fclose(fd);
         fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
-    
+
         for(i = 0; i < RowCount; i++)
         {
             bzero(Row, SMALL_BUFFER_SIZE_128);
             UtilReadLine(fd, Row);
-            
+
             ptr1 = strstr(Row, Parameter);
             ptr2 = strstr(Row, "//");
-            if (ptr2 == NULL) ptr2 = ptr1; //No comment found 
+            if (ptr2 == NULL) ptr2 = ptr1; //No comment found
             if(ptr1 != NULL && (U64)ptr2 >= (U64)ptr1 && ParameterFound == 0)
             {
                 ParameterFound = 1;
@@ -1332,7 +1329,7 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
                 strncpy(NewRow, Row, (U64)ptr1 - (U64)Row + strlen(Parameter));
                 strcat(NewRow, NewValue);
                 if((U64)ptr2 > (U64)ptr1)
-                { 
+                {
                     strcat(NewRow, " "); // Add space
                     strcat(NewRow, ptr2); // Add the comment
                 }
@@ -1345,17 +1342,17 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
                 strcat(NewRow, "\n");
                 (void)fwrite(NewRow,1,strlen(NewRow),TempFd);
 
-            } 
+            }
             else
             {
                 strcat(Row, "\n");
                 (void)fwrite(Row,1,strlen(Row),TempFd);
             }
         }
-    
+
         fclose(TempFd);
         fclose(fd);
-    
+
         //Remove test.conf
         remove(SYSTEM_CONTROL_CONF_FILE_PATH);
 
@@ -1408,7 +1405,7 @@ I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 Debug)
         RowCount = UtilCountFileRows(fd);
         fclose(fd);
         fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
-    
+
         for(i = 0; i < RowCount; i++)
         {
             bzero(TextBuffer, SMALL_BUFFER_SIZE_128);
@@ -1416,10 +1413,10 @@ I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 Debug)
             if(strlen(TextBuffer) > 0)
             {
                 strcat(ParameterList, TextBuffer);
-                strcat(ParameterList, ";");        
+                strcat(ParameterList, ";");
             }
         }
-    
+
         fclose(fd);
     }
 

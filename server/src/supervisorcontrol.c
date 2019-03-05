@@ -265,7 +265,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
       }  
 
       bzero(MqBuffer,SUP_MQ_MAX_SIZE);
-      (void)iCommRecv(&iCommand,MqBuffer,SUP_MQ_MAX_SIZE);
+      (void)iCommRecv(&iCommand,MqBuffer,SUP_MQ_MAX_SIZE,NULL);
       if(/*iCommand == COMM_TRAJ_TOSUP*/ GSD->ChunkSize > 0)
       {
 

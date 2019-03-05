@@ -48,13 +48,13 @@
 #define OBJECT_CONTROL_REPLAY_MODE 1
 #define OBJECT_CONTROL_ABORT_MODE 1
 
-#define COMMAND_MESSAGE_HEADER_LENGTH sizeof(HeaderType) 
+#define COMMAND_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
 #define COMMAND_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
 #define COMMAND_CODE_INDEX 0
 #define COMMAND_MESSAGE_LENGTH_INDEX 1
 
 #define COMMAND_DOTM_CODE 1
-#define COMMAND_DOTM_ROW_MESSAGE_LENGTH sizeof(DOTMType) 
+#define COMMAND_DOTM_ROW_MESSAGE_LENGTH sizeof(DOTMType)
 #define COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH sizeof(TRAJInfoType) 
 #define COMMAND_DOTM_ROWS_IN_TRANSMISSION  40
 #define COMMAND_DTM_BYTES_IN_ROW  30
@@ -65,23 +65,23 @@
 #define COMMAND_OSEM_MESSAGE_LENGTH sizeof(OSEMType)-4
 
 #define COMMAND_OSTM_CODE 3
-#define COMMAND_OSTM_NOFV 1  
+#define COMMAND_OSTM_NOFV 1
 #define COMMAND_OSTM_MESSAGE_LENGTH sizeof(OSTMType)
 #define COMMAND_OSTM_OPT_SET_ARMED_STATE 2
-#define COMMAND_OSTM_OPT_SET_DISARMED_STATE 3 
+#define COMMAND_OSTM_OPT_SET_DISARMED_STATE 3
 
 #define COMMAND_STRT_CODE  4
 #define COMMAND_STRT_NOFV 1
 #define COMMAND_STRT_MESSAGE_LENGTH sizeof(STRTType)
 #define COMMAND_STRT_OPT_START_IMMEDIATELY 1
-#define COMMAND_STRT_OPT_START_AT_TIMESTAMP 2  
+#define COMMAND_STRT_OPT_START_AT_TIMESTAMP 2
 
 #define COMMAND_HEAB_CODE 5
 #define COMMAND_HEAB_NOFV 2
 #define COMMAND_HEAB_MESSAGE_LENGTH sizeof(HEABType)
 #define COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING 0
 #define COMMAND_HEAB_OPT_SERVER_STATUS_OK 1
-#define COMMAND_HEAB_OPT_SERVER_STATUS_ABORT 2 
+#define COMMAND_HEAB_OPT_SERVER_STATUS_ABORT 2
 
 #define COMMAND_MONR_CODE 6
 #define COMMAND_MONR_NOFV 12
@@ -101,16 +101,16 @@
 #define COMMAND_MTSP_MESSAGE_LENGTH sizeof(MTSPType)
 
 #define COMMAND_ACM_CODE 11  //Action Configuration Message: Server->Object, TCP
-#define COMMAND_ACM_MESSAGE_LENGTH 6 
+#define COMMAND_ACM_MESSAGE_LENGTH 6
 
 #define COMMAND_EAM_CODE 12  //Execution Action Message: Server->Object, UDP
-#define COMMAND_EAM_MESSAGE_LENGTH 6 
+#define COMMAND_EAM_MESSAGE_LENGTH 6
 
-#define COMMAND_TCM_CODE 13  //Trigger Configuration Message: Server->Object, TCP 
-#define COMMAND_TCM_MESSAGE_LENGTH 5 
+#define COMMAND_TCM_CODE 13  //Trigger Configuration Message: Server->Object, TCP
+#define COMMAND_TCM_MESSAGE_LENGTH 5
 
 #define COMMAND_TOM_CODE 14  //Trigger Occurred Message: Object->Server, UDP
-#define COMMAND_TOM_MESSAGE_LENGTH 8 
+#define COMMAND_TOM_MESSAGE_LENGTH 8
 
 #define ASP_MESSAGE_LENGTH sizeof(ASPType)
 
@@ -136,6 +136,15 @@ typedef enum {
 
 
 
+/* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
+   returning nothing) where the function foo(int a, float b) is declared elsewhere:
+      void (*fooptr)(int,float) = foo;
+      fooptr(10,1.5);
+   
+   Consequently, the below typedef defines a StateTransition type as a function pointer to a function taking
+   (OBCState_t, OBCState_t) as input, and returning an int8_t
+*/ 
+typedef int8_t (*StateTransition)(OBCState_t *currentState, OBCState_t requestedState);
 
 C8 TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION*COMMAND_DOTM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH];
 
@@ -148,6 +157,7 @@ static void vSendString(const char* command,int* sockfd);
 static void vSendBytes(const char* command, int length, int* sockfd, int debug);
 static void vSendFile(const char* object_traj_file, int* sockfd);
 static void vDisconnectObject(int* sockfd);
+static I32 vCheckRemoteDisconnected(int* sockfd);
 
 static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static void vCloseSafetyChannel(int* sockfd);
@@ -174,9 +184,21 @@ I32 ObjectControlSendDTMMEssage(C8 *DTMData, I32 *Socket, I32 RowCount, C8 *IP, 
 I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 ObjectControlBuildASPMessage(C8* MessageBuffer, ASPType *ASPData, U8 debug);
 
-static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], 
+void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug);
+
+static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
                              char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
                              int* nbr_objects);
+
+int8_t vSetState(OBCState_t *currentState, OBCState_t requestedState);
+StateTransition tGetTransition(OBCState_t fromState);
+int8_t tFromIdle(OBCState_t *currentState, OBCState_t requestedState);
+int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState);
+int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState);
+int8_t tFromArmed(OBCState_t *currentState, OBCState_t requestedState);
+int8_t tFromRunning(OBCState_t *currentState, OBCState_t requestedState);
+int8_t tFromError(OBCState_t *currentState, OBCState_t requestedState);
+int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -206,6 +228,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     FILE *fd;
     char Id[SMALL_BUFFER_SIZE_0];
+    char GPSWeek[SMALL_BUFFER_SIZE_0];
     char Timestamp[SMALL_BUFFER_SIZE_0];
     char XPosition[SMALL_BUFFER_SIZE_0];
     char YPosition[SMALL_BUFFER_SIZE_0];
@@ -309,6 +332,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
+
     while(!iExit)
     {
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED)
@@ -327,18 +351,40 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             //Store HEAB in GSD
             //for(j = 0; j < MessageLength; j++) GSD->HEABData[j] = MessageBuffer[j];
             //GSD->HEABSizeU8 = (U8)MessageLength;
+
+            // Check if any object has disconnected - if so, disconnect all objects and return to idle
+            DisconnectU8 = 0;
+            for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+            {
+                DisconnectU8 |= vCheckRemoteDisconnected(&socket_fd[iIndex]);
+                if (DisconnectU8){
+                    LOG_SEND(LogBuffer, "[ObjectControl] Lost connection to IP %s - returning to IDLE.",object_address_name[iIndex]);
+
+                    for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+                    {
+                        vDisconnectObject(&socket_fd[iIndex]);
+                    }
+
+                    /* Close safety socket */
+                    for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+                    {
+                        vCloseSafetyChannel(&safety_socket_fd[iIndex]);
+                    }
+                    OBCState = OBC_STATE_IDLE;
+                    break;
+                }
+            }
         }
 
-        if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED)
+        if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED)
         {
             char buffer[RECV_MESSAGE_BUFFER];
             int recievedNewData = 0;
-
-            gettimeofday(&CurrentTimeStruct, NULL);
+            // this is etsi time lets remov it ans use utc instead
+            /*gettimeofday(&CurrentTimeStruct, NULL);
 
             CurrentTimeU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
             
-            if(TIME_COMPENSATE_LAGING_VM) CurrentTimeU32 = CurrentTimeU32 - TIME_COMPENSATE_LAGING_VM_VAL;
 
             /*MTSP*/
             if(HeartbeatMessageCounter == 0)
@@ -370,7 +416,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(buffer,RECV_MESSAGE_BUFFER);
                 vRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
 
-                
+
                 if(recievedNewData)
                 {
 
@@ -406,13 +452,15 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
 
                     //Store MONR in GSD
+                    //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
+
                     for(i = 0; i < (MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH); i++) GSD->MONRData[i] = buffer[i];
                     GSD->MONRSizeU8 = MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH;
 
                     ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, XPosition, YPosition, ZPosition, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
                     bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
                     strcat(buffer,object_address_name[iIndex]); strcat(buffer,";");
-                    strcat(buffer, "0"); strcat(buffer,";");
+                    strcat(buffer,"0"); strcat(buffer,";");
                     strcat(buffer,Timestamp); strcat(buffer,";");
                     strcat(buffer,XPosition); strcat(buffer,";");
                     strcat(buffer,YPosition); strcat(buffer,";");
@@ -446,7 +494,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && CurrentTimeU32 > StartTimeU32 && StartTimeU32 > 0 && ASPData.TimeToSyncPointDbl > -1 
                             /*|| TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU32 > 0 && iIndex == 0 && TimeToSyncPoint > -1*/)
                         {
-
+                            // Use the util.c function for time here but it soent mather
                             gettimeofday(&CurrentTimeStruct, NULL); //Capture time
 
                             TimeCap1 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000; //Calculate initial timestamp
@@ -520,7 +568,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
         }
 
 
-
         if(GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
         {
             
@@ -561,23 +608,23 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
         bzero(pcRecvBuffer,RECV_MESSAGE_BUFFER);
         //Have we recieved a command?
-        if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER))
+        if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER,NULL))
         {
 
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Object control command %d\n",iCommand);
+            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Object control command %d",iCommand);
 
 
             if(iCommand == COMM_ARMD && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED))
             {
                 if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_ARMED_STATE)
                 {
-                    LOG_SEND(LogBuffer,"[ObjectControl] Sending ARM: %d\n", pcRecvBuffer[0]);
-                    OBCState = OBC_STATE_ARMED;
+                    LOG_SEND(LogBuffer,"[ObjectControl] Sending ARM %d", pcRecvBuffer[0]);
+                    vSetState(&OBCState, OBC_STATE_ARMED);
                 }              
                 else if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE)
                 {
-                    LOG_SEND(LogBuffer,"[ObjectControl] Sending DISARM: %d\n", pcRecvBuffer[0]);
-                    OBCState = OBC_STATE_CONNECTED;
+                    LOG_SEND(LogBuffer,"[ObjectControl] Sending DISARM: %d", pcRecvBuffer[0]);
+                    vSetState(&OBCState, OBC_STATE_CONNECTED);
                 }
                 MessageLength = ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, pcRecvBuffer[0], 0);
 
@@ -612,7 +659,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
                 MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, GPSTime, (U32)StartTimeU32, DelayedStartU32, &OutgoingStartTimeU32, 0);
                 for(iIndex=0;iIndex<nbr_objects;++iIndex) { vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);}
-                OBCState = OBC_STATE_RUNNING;
+                vSetState(&OBCState, OBC_STATE_RUNNING);
 
                 //Store STRT in GSD
                 if(STRTSentU8 == 0)
@@ -709,8 +756,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 /*Build the VOIL message*/
                 MessageLength = ObjectControlBuildVOILMessage(MessageBuffer, &VOILData, (C8*)GSD->VOILData, 0);
-                for(iIndex=0;iIndex<nbr_objects;++iIndex) 
-                { 
+                for(iIndex=0;iIndex<nbr_objects;++iIndex)
+                {
                     /*Here we send the VOIL message, if IP-address found*/
                     if(strstr(VOILReceivers, object_address_name[iIndex]))
                     {
@@ -726,11 +773,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 printf("[ObjectControl] Object control REPLAY mode <%s>\n", pcRecvBuffer);
                 fflush(stdout);
             }
-            else if(iCommand == COMM_ABORT && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING))
+            else if(iCommand == COMM_ABORT && OBCState == OBC_STATE_RUNNING)
             {
-                OBCState = OBC_STATE_CONNECTED;
+                vSetState(&OBCState, OBC_STATE_CONNECTED);
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT; //Set server to ABORT
-                LOG_SEND(LogBuffer, "[ObjectControl] ABORT received.\n");
+                LOG_SEND(LogBuffer, "[ObjectControl] ABORT received.");
             }
             else if(iCommand == COMM_CONTROL)
             {
@@ -739,12 +786,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_INIT)
             {
-                LOG_SEND(LogBuffer, "[ObjectControl] INIT received.\n");
+                LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
                 /* Get objects; name and drive file */
                 nbr_objects = 0;
                 vFindObjectsInfo(object_traj_file,object_address_name,&nbr_objects);
                 (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhost);
-                LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d\n", iForceObjectToLocalhost);
+                LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d", iForceObjectToLocalhost);
 
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
@@ -815,21 +862,14 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 UtilSearchTextFile(CONF_FILE_PATH, "VOILReceivers=", "", VOILReceivers);
                 bzero(DTMReceivers, SMALL_BUFFER_SIZE_254);
                 UtilSearchTextFile(CONF_FILE_PATH, "DTMReceivers=", "", DTMReceivers);
-                                
 
-                LOG_SEND(LogBuffer,"[ObjectControl] Objects to be controlled by server: %d\n", nbr_objects);
-                LOG_SEND(LogBuffer, "[ObjectControl] ASP in system: %d\n", SyncPointCount);
-                LOG_SEND(LogBuffer, "[ObjectControl] TAA in system: %d\n", TriggerActionCount);
 
-                OBCState = OBC_STATE_INITIALIZED;
-                LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.\n");
+                vSetState(&OBCState, OBC_STATE_INITIALIZED);
+                LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
 
-                
                 if(TempFd != NULL) fclose(TempFd);
-                
                 //Remove temporary file
                 remove(TEMP_LOG_FILE);
-                
                 if(USE_TEMP_LOGFILE)
                 {
                     //Create temporary file
@@ -841,10 +881,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED)
             {
+                LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.");
 
-                LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.\n");
-
-                
                 /* Connect and send drive files */
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
@@ -857,6 +895,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                                                  UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
                                                                  UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
                                                                  0);
+
+
                     DisconnectU8 = 0;
 
                     do
@@ -866,26 +906,42 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                         if ( iResult < 0)
                         {
-                            if(errno == ECONNREFUSED)
+                            switch (errno)
                             {
-
-                                LOG_SEND(LogBuffer, "[ObjectControl] Was not able to connect to object, [IP: %s] [PORT: %d], retry in %d sec...\n",object_address_name[iIndex],object_tcp_port[iIndex], (!(1 & DisconnectU8))*3);
+                            case ECONNREFUSED:
+                                LOG_SEND(LogBuffer, "[ObjectControl] Was not able to connect to object, [IP: %s] [PORT: %d], retry in %d sec...",object_address_name[iIndex],object_tcp_port[iIndex], (!(1 & DisconnectU8))*3);
                                 (void)sleep(3);
+                                break;
+                            case EADDRINUSE:
+                                util_error("[ObjectControl] Local address/port already in use");
+                                break;
+                            case EALREADY:
+                                util_error("[ObjectControl] Previous connection attempt still in progress");
+                                break;
+                            case EISCONN:
+                                util_error("[ObjectControl] Socket is already connected");
+                                break;
+                            case ENETUNREACH:
+                                util_error("[ObjectControl] Network unreachable");
+                                break;
+                            case ETIMEDOUT:
+                                util_error("[ObjectControl] Connection timed out");
+                                break;
+                            default:
+                                util_error("ERR: Failed to connect to control socket");
+                                break;
                             }
-                            else
-                            {
-                                util_error("[ObjectControl] ERR: Failed to connect to control socket");
-                            }
+
                         }
 
                         bzero(pcRecvBuffer,RECV_MESSAGE_BUFFER);
                         //Have we received a command?
-                        if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER))
+                        if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER,NULL))
                         {
                             if(iCommand == COMM_DISCONNECT)
                             {
                                 DisconnectU8 = 1;
-                                LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.\n");
+                                LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.");
                             }
 
                         }
@@ -894,8 +950,17 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                     if(iResult >= 0)
                     {
-                        /* Send OSEM command */
-                        LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.\n");
+                        /* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates)*/
+                        LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.");
+                        ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, OriginLatitude, OriginLongitude, OriginAltitude );
+                        bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
+                        strcat(pcSendBuffer,"GPSWeek:");
+                        strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";OriginGPSLongitude;");
+                        strcat(pcSendBuffer,OriginLongitude);strcat(pcSendBuffer,";OriginGPSLatitude;");
+                        strcat(pcSendBuffer,OriginLatitude);strcat(pcSendBuffer,";OriginGPSAltitude;");
+                        strcat(pcSendBuffer,OriginAltitude);
+
+                        iCommSend(COMM_LOG,pcSendBuffer);
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
 
 
@@ -976,7 +1041,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     }
 
                 }
-                
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
                     if(USE_TEST_HOST == 0) vCreateSafetyChannel(object_address_name[iIndex], object_udp_port[iIndex], &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
@@ -1001,8 +1065,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 OriginPosition.Altitude = OriginAltitudeDbl;
                 OriginPosition.Heading = OriginHeadingDbl;
 
-                if(DisconnectU8 == 0) OBCState = OBC_STATE_CONNECTED;
-                else if(DisconnectU8 == 1) OBCState = OBC_STATE_IDLE;
+                if(DisconnectU8 == 0) vSetState(&OBCState, OBC_STATE_CONNECTED);
+                else if(DisconnectU8 == 1) vSetState(&OBCState, OBC_STATE_IDLE);
             }
             else if(iCommand == COMM_DISCONNECT)
             {
@@ -1013,13 +1077,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 }
                 //#endif //NOTCP
 
-                LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.\n");
+                LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.");
                 /* Close safety socket */
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
                     vCloseSafetyChannel(&safety_socket_fd[iIndex]);
                 }
-                OBCState = OBC_STATE_IDLE;
+                vSetState(&OBCState, OBC_STATE_IDLE);
             }
             else if(iCommand == COMM_EXIT)
             {
@@ -1087,9 +1151,7 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     U32Data = (U32Data | *(SimData+9));
     U32 GPSSOW = U32Data;
     //printf("GPSSOW = %x\n", GPSSOW);
-    
     U8 DynamicWorldState = *(SimData+10);
-    
     U8 ObjectCount = *(SimData+11);
     //printf("ObjectCount = %d\n", ObjectCount);
 
@@ -1125,7 +1187,6 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     U16Data = (U16Data | *(SimData+28)) << 8;
     U16Data = (U16Data | *(SimData+29));
     U16 Pitch = U16Data;
-   
     U16Data = 0;
     U16Data = (U16Data | *(SimData+30)) << 8;
     U16Data = (U16Data | *(SimData+31));
@@ -1161,7 +1222,6 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     VOILData->SimObjects[0].RollU16 = Roll;
     VOILData->SimObjects[0].SpeedI16 = Speed;
 
-    
 
     p=(C8 *)VOILData;
     for(i=0; i < ObjectCount*sizeof(Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH; i++) *(MessageBuffer + i) = *p++;
@@ -1262,7 +1322,6 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     I32 I32Data = 0;
     U64 U64Data = 0;
     C8 *p;
-
     U16Data = (U16Data | *(MonrData+1)) << 8;
     U16Data = U16Data | *MonrData;
 
@@ -1281,7 +1340,7 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     U32Data = (U32Data | *(MonrData+8)) << 8;
     U32Data = U32Data | *(MonrData+7);
     MONRData->Header.MessageLengthU32 = U32Data;
-    
+
     U32Data = 0;
     U32Data = (U32Data | *(MonrData+14)) << 8;
     U32Data = (U32Data | *(MonrData+13)) << 8;
@@ -1296,12 +1355,14 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     I32Data = I32Data | *(MonrData+15);
     MONRData->XPositionI32 = I32Data;
 
+
     I32Data = 0;
     I32Data = (I32Data | *(MonrData+22)) << 8;
     I32Data = (I32Data | *(MonrData+21)) << 8;
     I32Data = (I32Data | *(MonrData+20)) << 8;
     I32Data = I32Data | *(MonrData+19);
     MONRData->YPositionI32 = I32Data;
+
 
     I32Data = 0;
     I32Data = (I32Data | *(MonrData+26)) << 8;
@@ -1340,7 +1401,9 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     MONRData->ReadyToArmU8 = *(MonrData+39);
     MONRData->ErrorStatusU8 = *(MonrData+40);
 
-    if(debug)
+
+
+    if(debug == 1)
     {
         printf("SyncWord = %d\n", MONRData->Header.SyncWordU16);
         printf("TransmitterId = %d\n", MONRData->Header.TransmitterIdU8);
@@ -1363,7 +1426,7 @@ I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I3
     double iLlh[3] = {0, 0, 0};
     double xyz[3] = {0, 0, 0};
     double Llh[3] = {0, 0, 0};
-
+    uint64_t ConvertGPStoUTC;
 
     bzero(Id, SMALL_BUFFER_SIZE_1);
     bzero(Timestamp, SMALL_BUFFER_SIZE_0);
@@ -1388,6 +1451,7 @@ I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I3
         //Timestamp
         MonrValueU64 = 0;
         //for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
+        ConvertGPStoUTC =
         sprintf(Timestamp, "%" PRIu32, MONRData->GPSSOWU32);
 
         if(debug && MONRData->GPSSOWU32%400 == 0)
@@ -1427,45 +1491,45 @@ I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I3
         enuToLlh(iLlh, xyz, Llh);
 
         //XPosition
-        MonrValueU32 = 0;
+        //MonrValueU32 = 0;
         //for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
         //sprintf(Latitude, "%" PRIi32, (I32)(Llh[0]*1e7));
         sprintf(XPosition, "%" PRIi32, MONRData->XPositionI32);
 
         //YPosition
-        MonrValueU32 = 0;
+        //MonrValueU32 = 0;
         //for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
         //sprintf(Longitude, "%" PRIi32, (I32)(Llh[1]*1e7));
         sprintf(YPosition, "%" PRIi32, MONRData->YPositionI32);
 
         //ZPosition
-        MonrValueU32 = 0;
+        //MonrValueU32 = 0;
         //for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
         //sprintf(Altitude, "%" PRIi32, (I32)(Llh[2]));
         sprintf(ZPosition, "%" PRIi32, MONRData->ZPositionI32);
 
         //Speed
-        MonrValueU16 = 0;
+        //MonrValueU16 = 0;
         //for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
         sprintf(LongitudinalSpeed, "%" PRIi16, MONRData->LongitudinalSpeedI16);
 
         //LatSpeed
-        MonrValueU16 = 0;
+        //MonrValueU16 = 0;
         //for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
         sprintf(LateralSpeed, "%" PRIi16, MONRData->LateralSpeedI16);
 
         //LongAcc
-        MonrValueU16 = 0;
+        //MonrValueU16 = 0;
         //for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
         sprintf(LongitudinalAcc, "%" PRIi16, MONRData->LongitudinalAccI16);
 
         //LatAcc
-        MonrValueU16 = 0;
+        //MonrValueU16 = 0;
         //for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
         sprintf(LateralAcc, "%" PRIi16, MONRData->LateralAccI16);
 
         //Heading
-        MonrValueU16 = 0;
+        //MonrValueU16 = 0;
         //for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
         sprintf(Heading, "%" PRIu16, MONRData->HeadingU16);
 
@@ -1613,7 +1677,26 @@ I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeTyp
     return MessageIndex; //Total number of bytes
 }
 
+int ObjectControlOSEMtoASCII(OSEMType *OSEMData, char *GPSWeek, char *GPSLatitude, char *GPSLongitude, char *GPSAltitude)
+{
+    // what do i want? in my mq? gps week, origin in lat and long coordinates
+    bzero(GPSWeek,SMALL_BUFFER_SIZE_0);
+    bzero(GPSLatitude,SMALL_BUFFER_SIZE_0);
+    bzero(GPSLongitude,SMALL_BUFFER_SIZE_0);
+    bzero(GPSAltitude,SMALL_BUFFER_SIZE_0);
 
+    if (OSEMData->Header.MessageIdU16 == COMMAND_OSEM_CODE)
+    {
+        sprintf(GPSWeek,"%" PRIu16 ,OSEMData->GPSWeekU16);
+
+        sprintf(GPSLatitude,"%" PRIi64, OSEMData->LongitudeI64);
+
+        sprintf(GPSLongitude,"%" PRIi64,OSEMData->LatitudeI64);
+
+        sprintf(GPSAltitude,"%" PRIi32, OSEMData->AltitudeI32);
+    }
+    return 0;
+}
 int ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug)
 {
     I32 MessageIndex = 0, i = 0;
@@ -2354,6 +2437,9 @@ static I32 vConnectObject(int* sockfd, const char* name, const uint32_t port, U8
     //} while(iResult < 0 && *Disconnect == 0);
 
     DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[ObjectControl] Connected to command socket: %s %i\n",name,port);
+    // Enable polling of status to detect remote disconnect
+    fcntl(*sockfd, F_SETFL, O_NONBLOCK);
+
 
     return iResult;
 }
@@ -2382,6 +2468,7 @@ static void vSendBytes(const char* data, int length, int* sockfd, int debug)
     if(debug){ printf("Bytes sent: "); int i = 0; for(i = 0; i < length; i++) printf("%x-", (unsigned char)*(data+i)); printf("\n");}
 
     n = write(*sockfd, data, length);
+
     if (n < 0)
     {
         util_error("[ObjectControl] ERR: Failed to send on control socket");
@@ -2466,6 +2553,49 @@ static void vCloseSafetyChannel(int* sockfd)
 {
     close(*sockfd);
 }
+
+static I32 vCheckRemoteDisconnected(int* sockfd)
+{
+    char dummy;
+    ssize_t x = recv(*sockfd, &dummy, 1, MSG_PEEK);
+
+    // Remote has disconnected: EOF => x=0
+    if (x == 0)
+    {
+        return 1;
+    }
+
+    if (x == -1)
+    {
+        // Everything is normal - no communication has been received
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
+
+        // Other error occurred
+        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Error when checking connection status");
+        return 1;
+    }
+
+    // Something has been received on socket
+    if (x > 0)
+    {
+        DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"INF: Received unexpected communication from object on command channel");
+        return 0;
+    }
+
+    return 1;
+}
+
+/*void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug){
+  C8 Data[128];
+
+  bzero(Data,128);
+  Data[3] = strlen(MonrData);
+  Data[5] = 2;
+  strcat((Data+6), MonrData);
+
+
+  UtilSendUDPData("ObjectControl", Sockfd, Addr, Data, strlen(MonrData) + 6, Debug);
+}*/
 
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
 {
@@ -2585,4 +2715,120 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], char ob
         }
     }
     (void)closedir(traj_directory);
+}
+
+
+int8_t vSetState(OBCState_t *currentState, OBCState_t requestedState)
+{
+    StateTransition transitionFunction;
+    int8_t retval;
+
+    // Always allow transitions to these two states
+    if (requestedState == OBC_STATE_ERROR || requestedState == OBC_STATE_UNDEFINED)
+    {
+        *currentState = requestedState;
+        retval = 0;
+    }
+    else if (requestedState == *currentState)
+    {
+        retval = 0;
+    }
+    else
+    {
+        transitionFunction = tGetTransition(*currentState);
+        retval = transitionFunction(currentState, requestedState);
+    }
+
+    if (retval == -1)
+    {
+        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Invalid transition requested: from %d to %d\n",currentState,&requestedState);
+    }
+    return retval;
+}
+
+
+StateTransition tGetTransition(OBCState_t fromState)
+{
+    switch (fromState)
+    {
+    case OBC_STATE_IDLE:
+        return &tFromIdle;
+    case OBC_STATE_INITIALIZED:
+        return &tFromInitialized;
+    case OBC_STATE_CONNECTED:
+        return &tFromConnected;
+    case OBC_STATE_ARMED:
+        return &tFromArmed;
+    case OBC_STATE_RUNNING:
+        return &tFromRunning;
+    case OBC_STATE_ERROR:
+        return &tFromError;
+    case OBC_STATE_UNDEFINED:
+        return &tFromUndefined;
+    }
+}
+
+int8_t tFromIdle(OBCState_t *currentState, OBCState_t requestedState)
+{
+    if (requestedState == OBC_STATE_INITIALIZED)
+    {
+        *currentState = requestedState;
+        return 0;
+    }
+    return -1;
+}
+
+int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState)
+{
+    if (requestedState == OBC_STATE_CONNECTED)
+    {
+        *currentState = requestedState;
+        return 0;
+    }
+    return -1;
+}
+
+int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState)
+{
+    if (requestedState == OBC_STATE_ARMED)
+    {
+        *currentState = requestedState;
+        return 0;
+    }
+    return -1;
+}
+
+int8_t tFromArmed(OBCState_t *currentState, OBCState_t requestedState)
+{
+    if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_RUNNING)
+    {
+        *currentState = requestedState;
+        return 0;
+    }
+    return -1;
+}
+
+int8_t tFromRunning(OBCState_t *currentState, OBCState_t requestedState)
+{
+    if (requestedState == OBC_STATE_CONNECTED)
+    {
+        *currentState = requestedState;
+        return 0;
+    }
+    return -1;
+}
+
+int8_t tFromError(OBCState_t *currentState, OBCState_t requestedState)
+{
+    if (requestedState == OBC_STATE_IDLE)
+    {
+        *currentState = requestedState;
+        return 0;
+    }
+    return -1;
+}
+
+int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState)
+{
+    return -1;
 }
