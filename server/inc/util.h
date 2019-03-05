@@ -40,6 +40,7 @@
 #define MQ_OC     "/TEServer-OC"
 #define MQ_VA     "/TEServer-VA"
 #define MQ_SC     "/TEServer-SC"
+#define MQ_SI     "/TEServer-SI"  
 
 #define MQ_MAX_MESSAGE_LENGTH 4096
 #define MQ_MAX_MSG            10
@@ -64,6 +65,10 @@
 #define COMM_DISCONNECT 13
 #define COMM_LOG 14
 #define COMM_VIOP 15
+#define COMM_TRAJ 16
+#define COMM_TRAJ_TOSUP 17
+#define COMM_TRAJ_FROMSUP 18
+#define COMM_ASP 19     
 #define COMM_INV 255
 
 
@@ -97,11 +102,11 @@
 #define TCP_RX_BUFFER 1024
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
-#define USE_TEST_HOST 0
-#define TESTHOST_IP "192.168.0.15"
-#define TESTSERVER_IP "192.168.0.15"
 #define USE_LOCAL_USER_CONTROL  0
 #define LOCAL_USER_CONTROL_IP "192.168.0.15"
+#define USE_TEST_HOST 0
+#define TESTHOST_IP LOCAL_USER_CONTROL_IP
+#define TESTSERVER_IP LOCAL_USER_CONTROL_IP
 #define LOCAL_USER_CONTROL_PORT 54240
 #define TEST_SYNC_POINTS 0
 
@@ -198,8 +203,12 @@
 #define VALUE_ID_MAX_WAY_DEVIATION          0x70
 #define VALUE_ID_MAX_LATERAL_DEVIATION      0x72
 #define VALUE_ID_MIN_POS_ACCURACY           0x74
-#define VALUE_ID_CURVATURE                  0xA000
+#define VALUE_ID_CURVATURE                  0x52
+#define VALUE_ID_TRAJECTORY_ID              0x101
+#define VALUE_ID_TRAJECTORY_NAME            0x102
+#define VALUE_ID_TRAJECTORY_VERSION         0x103
 
+#define VALUE_ID_INSUP_MODE                 0x200
 
 #define C8 uint8_t
 #define U8 uint8_t
@@ -217,6 +226,20 @@
 
 #define SYNC_WORD 0x7e7e
 
+#define SERVER_PREPARED 0x01
+#define SERVER_PREPARED_BIG_PACKET_SIZE 0x02
+#define PATH_INVALID_MISSING 0x03
+#define FILE_UPLOADED 0x04  
+#define TIME_OUT 0x05
+#define FILE_EXIST 0x01
+#define FOLDER_EXIST 0x02
+#define FILE_EXISTED 0x01
+#define FOLDER_EXISTED 0x02
+#define SUCCEDED_CREATE_FOLDER 0x03
+#define FAILED_CREATE_FOLDER 0x04
+#define SUCCEDED_DELETE 0x01
+#define FAILED_DELETE 0x02
+#define FILE_TO_MUCH_DATA 0x06
 
 /* DEBUGGING DEFINES */
 
@@ -244,6 +267,35 @@
 
 #define LOG_SEND(buf, ...) \
     do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf);printf("%s\n",buf);fflush(stdout);} while (0)
+
+#define GetCurrentDir getcwd
+#define MAX_PATH_LENGTH 255
+
+#define ISO_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
+
+#define ISO_INSUP_CODE 0xA102
+#define ISO_INSUP_NOFV 1  
+#define ISO_INSUP_MESSAGE_LENGTH sizeof(OSTMType)
+#define ISO_INSUP_OPT_SET_ARMED_STATE 2
+#define ISO_INSUP_OPT_SET_DISARMED_STATE 3 
+
+#define ISO_HEAB_CODE 5
+#define ISO_HEAB_NOFV 2
+#define ISO_HEAB_MESSAGE_LENGTH sizeof(HEABType)
+#define ISO_HEAB_OPT_SERVER_STATUS_BOOTING 0
+#define ISO_HEAB_OPT_SERVER_STATUS_OK 1
+#define ISO_HEAB_OPT_SERVER_STATUS_ABORT 2
+
+#define ISO_TRAJ_CODE 1
+#define ISO_DTM_ROWS_IN_TRANSMISSION 40
+#define ISO_DTM_ROW_MESSAGE_LENGTH sizeof(DOTMType)
+
+#define ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH sizeof(TRAJInfoType)
+#define SIM_TRAJ_BYTES_IN_ROW  30
+
+
+
+#define ISO_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
 
 
 
@@ -322,9 +374,42 @@ typedef struct
   U8 StateU8;
 } OSTMType; //16 bytes
 
+
 typedef struct
 {
   HeaderType Header;
+  U16 ModeValueIdU16;
+  U16 ModeContentLengthU16;
+  U8 ModeU8;
+} INSUPType; //16 bytes
+
+
+typedef struct
+{
+  HeaderType Header;
+  U16 SyncPointTimeValueIdU16;
+  U16 SyncPointTimeContentLengthU16;
+  U32 SyncPointTimeU32;
+  U16 FreezeTimeValueIdU16;
+  U16 FreezeTimeContentLengthU16;
+  U32 FreezeTimeU32;
+} SYPMType; //
+
+
+typedef struct
+{
+  HeaderType Header;
+  U16 EstSyncPointTimeValueIdU16;
+  U16 EstSyncPointTimeContentLengthU16;
+  U32 EstSyncPointTimeU32;
+} MTSPType; //
+
+
+typedef struct
+{
+  HeaderType Header;
+  //U16 HeabStructValueIdU16;
+  //U16 HeabStructContentLengthU16;
   U32 GPSSOWU32;
   U8 CCStatusU8;
 } HEABType; //16 bytes
@@ -332,6 +417,8 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
+  //U16 MonrStructValueIdU16;
+  //U16 MonrStructContentLengthU16;
   U32 GPSSOWU32;
   I32 XPositionI32;
   I32 YPositionI32;
@@ -377,10 +464,28 @@ typedef struct
   U16 LateralAccValueIdU16;
   U16 LateralAccContentLengthU16;
   I16 LateralAccI16;
-  //U16 CurvatureValueIdU16;
-  //U16 CurvatureContentLengthU16;
-  //I32 CurvatureI32;
-} DOTMType; //62 bytes
+  U16 CurvatureValueIdU16;
+  U16 CurvatureContentLengthU16;
+  I32 CurvatureI32;
+} DOTMType; //70 bytes
+
+
+typedef struct 
+{
+  U16 TrajectoryIDValueIdU16;
+  U16 TrajectoryIDContentLengthU16;
+  U16 TrajectoryIDU16;
+  U16 TrajectoryNameValueIdU16;
+  U16 TrajectoryNameContentLengthU16;
+  C8 TrajectoryNameC8[64];
+  U16 TrajectoryVersionValueIdU16;
+  U16 TrajectoryVersionContentLengthU16;
+  U16 TrajectoryVersionU16;
+  U16 IpAddressValueIdU16;
+  U16 IpAddressContentLengthU16;
+  I32 IpAddressU32;
+
+} TRAJInfoType;
 
 
 typedef struct
@@ -407,11 +512,26 @@ typedef struct
   U16 LocalMillisecondU16;
   U8 FixQualityU8;
   U8 NSatellitesU8;
+  U8 TimeInitiatedU8;
 } TimeType;
 
 
 typedef struct
 {
+  U32 MTSPU32;
+  dbl CurrentTimeDbl;
+  dbl TimeToSyncPointDbl;
+  dbl PrevTimeToSyncPointDbl;
+  I32 SyncPointIndexI32;
+  U32 CurrentTimeU32;
+  I32 BestFoundIndexI32;
+  U16 IterationTimeU16;
+} ASPType;
+
+
+typedef struct
+{
+
   U16 TimeControlExecTimeU16;
   U16 SystemControlExecTimeU16;
   U16 ObjectControlExecTimeU16;
@@ -419,7 +539,27 @@ typedef struct
   U8 ExitU8;
   U32 ScenarioStartTimeU32;
   U8 VOILData[400];
+  U32 ChunkSize;
+  U8 Chunk[6200];
+  U8 ASPDebugDataSetU8;
+  U8 ASPDebugDataU8[sizeof(ASPType)];
+  U32 SupChunkSize;
+  U8 SupChunk[6200];
+
+  U8 MONRSizeU8;
+  U8 MONRData[100];
+  U8 HEABSizeU8;
+  U8 HEABData[100];
+  //U8 OSTMSizeU8;
+  //U8 OSTMData[100];
+  //U8 STRTSizeU8;
+  //U8 STRTData[100];
+  //U8 OSEMSizeU8;
+  //U8 OSEMData[100];
+
+
 } GSDType;
+
 
 typedef struct
 {
@@ -448,7 +588,7 @@ typedef struct
 	double ForwardAzimuth1;
 	double ForwardAzimuth2;
   int TrajectoryPositionCount;
-  int SyncIndex;
+  I32 SyncIndex;
   double SyncTime;
   double SyncStopTime;
   int BestFoundTrajectoryIndex;
@@ -536,6 +676,16 @@ typedef struct
 } ObjectMonitorType;
 
 
+typedef enum {
+    OBC_STATE_UNDEFINED,
+    OBC_STATE_IDLE,
+    OBC_STATE_INITIALIZED,
+    OBC_STATE_CONNECTED,
+    OBC_STATE_ARMED,
+    OBC_STATE_RUNNING,
+    OBC_STATE_ERROR,
+} OBCState_t;
+
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -618,12 +768,22 @@ U64 SwapU64(U64 val);
 
 I32 UtilConnectTCPChannel(const C8* Module, I32* Sockfd, const C8* IP, const U32 Port);
 void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, U8 Debug);
-I32 UtilReceiveTCPData(const C8* Module, I32* Sockfd, C8* Data, U8 Debug);
+I32 UtilReceiveTCPData(const C8* Module, I32* Sockfd, C8* Data, I32 Length, U8 Debug);
 void UtilCreateUDPChannel(const C8* Module, I32 *Sockfd, const C8* IP, const U32 Port, struct sockaddr_in* Addr);
 void UtilSendUDPData(const C8* Module, I32 *Sockfd, struct sockaddr_in* Addr, C8 *Data, I32 Length, U8 Debug);
 void UtilReceiveUDPData(const C8* Module, I32* Sockfd, C8* Buffer, I32 Length, I32* ReceivedNewData, U8 Debug);
 U32 UtilIPStringToInt(C8 *IP);
+U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug);
+U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
+U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
+U16 UtilGetMillisecond(TimeType *GPSTime);
+I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug);
+I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 CommandOption, U8 Debug);
+I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 Debug);
+I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
+I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
+I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
 
 typedef struct {
   uint64_t timestamp;

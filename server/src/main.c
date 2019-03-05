@@ -30,6 +30,8 @@
 #include "supervision.h"
 #include "remotecontrol.h"
 #include "timecontrol.h"
+#include "supervisorcontrol.h"
+
 
 /*------------------------------------------------------------
 -- Defines
@@ -55,6 +57,7 @@ int main(int argc, char *argv[])
 
     GSD->ExitU8 = 0;
     GSD->ScenarioStartTimeU32 = 0;
+    GPSTime->TimeInitiatedU8 = 0;
 
     pid_t pID[8];
     int iIndex = 0;
@@ -195,7 +198,23 @@ int main(int argc, char *argv[])
     exit(EXIT_SUCCESS);
   }
   ++iIndex;
-  */
+  
+*/
+
+    pID[iIndex] = fork();
+    if(pID[iIndex] < 0)
+    {
+        util_error("ERR: Failed to fork");
+    }
+    if(pID[iIndex] == 0)
+    {
+
+        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: supervisorcontrol_task running in:  %i \n",getpid());
+        supervisorcontrol_task(GPSTime, GSD);
+        exit(EXIT_SUCCESS);
+    }
+    ++iIndex;
+  
 
 
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: systemcontrol_task running in:  %i \n",getpid());

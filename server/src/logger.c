@@ -73,7 +73,7 @@ void logger_task()
     struct dirent *ent;
     FILE *filefd,*fileread,*replayfd, *filefdComp;
     struct timespec sleep_time, ref_time;
-
+    U8 FirstInitU8 = 0;
     gettimeofday(&tvTime,NULL);
 
 
@@ -101,7 +101,6 @@ void logger_task()
     (void)strcat(pcLogFileComp,"Csv");
     (void)strcat(pcLogFile,LOG_FILE);
     (void)strcat(pcLogFileComp,LOG_FILE);
-
 
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open log file to use: <%s>\n",pcLogFile);
     filefd = fopen(pcLogFile, "w+");
@@ -230,13 +229,14 @@ void logger_task()
         if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE)
         {
 
-               Timestamp = atol(TimeStampUTCBufferRecv);
-               bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
-               UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
-               bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-               sprintf ( pcBuffer,"%s;%s;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, iCommand, pcRecvBuffer);
-               (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-               (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+            Timestamp = atol(TimeStampUTCBufferRecv);
+            bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
+            UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
+            bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+            sprintf ( pcBuffer,"%s;%s;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, iCommand, pcRecvBuffer);
+            (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+            (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+
         }
 
         if(iCommand == COMM_REPLAY)
@@ -332,14 +332,45 @@ void logger_task()
 
             iExit = 1;
         }
-        else if (iCommand == COMM_OBC_STATE) {
+        else if (iCommand == COMM_INIT)
+        {
+            /*
+            if(FirstInitU8 == 1)
+            {
+                // Create folder and event.log file
+                vCreateLogFolder(pcLogFolder);
+                (void)strcpy(pcLogFile,pcLogFolder);
+                (void)strcat(pcLogFile,LOG_FILE);
 
+                DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open log file to use: <%s>\n",pcLogFile);
+                filefd = fopen (pcLogFile, "w+");
+
+                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                strcpy(pcBuffer, "Log started...\n");
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+                // Copy drive files
+                (void)strcpy(pcCommand,"cp -R ");
+                (void)strcat(pcCommand,TRAJECTORY_PATH);
+                (void)strcat(pcCommand," ");
+                (void)strcat(pcCommand,pcLogFolder);
+                (void)system(pcCommand);
+
+                // Copy conf file
+                (void)strcpy(pcCommand,"cp ");
+                (void)strcat(pcCommand,TEST_CONF_FILE);
+                (void)strcat(pcCommand," ");
+                (void)strcat(pcCommand,pcLogFolder);
+                (void)system(pcCommand);
+            }
+            FirstInitU8 = 1;*/
         }
         else
         {
             DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Unhandled command in logger: %d",iCommand);
         }
     }
+
 
     (void)iCommClose();
 

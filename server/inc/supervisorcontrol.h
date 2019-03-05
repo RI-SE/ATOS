@@ -1,19 +1,22 @@
 /*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2016 CHRONOS project
+  -- Copyright   : (C) 2018 CHRONOS II project
   ------------------------------------------------------------------------------
-  -- File        : supervision.h
-  -- Author      : Karl-Johan Ode
-  -- Description : CHRONOS
+  -- File        : citscontrol.h
+  -- Author      : Sebastian Loh Lindholm
+  -- Description : CHRONOS II
   -- Purpose     :
   -- Reference   :
   ------------------------------------------------------------------------------*/
 
-#ifndef __SUPERVISION_H_INCLUDED__
-#define __SUPERVISION_H_INCLUDED__
+#ifndef __SUPERVISORCONTROL_H_INCLUDED__
+#define __SUPERVISORCONTROL_H_INCLUDED__
+
+
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-void supervision_task(TimeType *GPSTime);
+int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD);
 
-#endif //__SUPERVISION_H_INCLUDED__
+
+#endif 
