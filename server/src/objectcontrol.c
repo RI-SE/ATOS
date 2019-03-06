@@ -370,7 +370,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     {
                         vCloseSafetyChannel(&safety_socket_fd[iIndex]);
                     }
-                    OBCState = OBC_STATE_IDLE;
+                    vSetState(&OBCState, OBC_STATE_IDLE);
                     break;
                 }
             }
