@@ -2330,11 +2330,14 @@ U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug)
 #define GREEN  "\x1B[32m"
 #define BLUE  "\x1B[34m"
 
+// "F-<filename>\n" and "D-<filename>\n" is 4 bytes longer than only the filename
+#define FILE_INFO_LENGTH (MAX_PATH_LENGTH+4)
+
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
 {
   
   FILE *fd;
-  C8 Filename[MAX_PATH_LENGTH];
+  C8 Filename[FILE_INFO_LENGTH];
   C8 CompletePath[MAX_PATH_LENGTH];
   bzero(CompletePath, MAX_PATH_LENGTH);
   GetCurrentDir(CompletePath, MAX_PATH_LENGTH);
@@ -2363,7 +2366,7 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
 
   while ((dir = readdir(d)) != NULL) // if we were able to read somehting from the directory
   {
-    bzero(Filename, MAX_PATH_LENGTH);
+    bzero(Filename, FILE_INFO_LENGTH);
 
     if(dir-> d_type != DT_DIR) 
       //printf("%s%s\n",BLUE, dir->d_name); // if the type is not directory just print it with blue
