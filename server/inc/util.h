@@ -690,6 +690,8 @@ typedef enum {
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
+static void _mkdir(const char *dir);
+
 // DEBUG functions
 void dbg_setdebug(int level);
 int dbg_getdebug(void);
