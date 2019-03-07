@@ -851,7 +851,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "stop:", ControlResponseBuffer, 0, &ClientSocket, 0);
             break;
         case AbortScenario_0:
-            if(strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL || strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL || strstr(SystemControlOBCStatesArr[OBCStateU8], "RUNNING") != NULL)
+            if(strstr(SystemControlOBCStatesArr[OBCStateU8], "RUNNING") != NULL
+                    /* || strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL
+                     * || strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/ ) // Abort should only be allowed in running state
             {
                 (void)iCommSend(COMM_ABORT,NULL);
                 server_state = SERVER_STATE_IDLE;
