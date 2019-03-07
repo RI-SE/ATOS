@@ -92,6 +92,14 @@ void logger_task()
     //(void)iCommInit(IPC_SEND,MQ_LG_1,0);
 
     /* Create folder with date as name and .log file with date as name */
+  
+    struct stat st = {0};
+    if (stat(LOG_PATH, &st) == -1) 
+	{
+		vCreateLogFolder(LOG_PATH);	
+	}
+
+
     vCreateLogFolder(pcLogFolder);
     (void)strcpy(pcLogFile,pcLogFolder);
     (void)strcat(pcLogFile,Forward_slash);
@@ -396,6 +404,7 @@ void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
     int iMaxFolder = 0;
 
     directory = opendir(logFolder);
+    
     if(directory == NULL)
     {
         iResult = mkdir(logFolder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
