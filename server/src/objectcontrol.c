@@ -401,8 +401,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         }
                     }
 
-
-
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
 
                     //Store MONR in GSD
@@ -426,7 +424,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     strcat(buffer,StateFlag); strcat(buffer,";");
                     strcat(buffer,StatusFlag); strcat(buffer,";");
 
-
                     if(ASPData.MTSPU32 != 0)
                     {
                         //Add MTSP to MONR if not 0
@@ -437,8 +434,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     
                     DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Send MONITOR message: %s\n",buffer);
                     if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) (void)iCommSend(COMM_MONI,buffer);
-
-
 
                     //Ok, let's do the ASP
                     for(i = 0; i < SyncPointCount; i++)
@@ -527,7 +522,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             //bzero(TrajBuffer, strlen(pcRecvBuffer));
             //DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
             //UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 1);
-
+            UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 0);
             //MiscU16 = sizeof(TRAJInfoType); //72 = Number of bytes in [Ip, Id, Name, Version]
             DTMIpU32 = 0; 
             DTMIpU32 = (C8)GSD->SupChunk[98];
@@ -537,19 +532,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             /*DTM*/
             for(iIndex=0;iIndex<nbr_objects;++iIndex) 
             { 
-                printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
+                //printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
                 if(DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
                 {
-                    //UtilSendTCPData("[ObjectControl]", TrajBuffer, DTMLengthU32, &socket_fd[iIndex], 0);
-                    /*DTM Header*/
-                    //MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
-                    /*Send DTM header*/
-                    //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-                    /*DTM Data*/
-                    //MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
-                    /*Send DTM data*/
-                    //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-                    //printf("Send to object\n");
+                    printf("[ObjectControl] Sending TRAJ chunk to %d.%d.%d.%d, size %d bytes \n", (U8)(DTMIpU32>>24), (U8)(DTMIpU32>>16), (U8)(DTMIpU32>>8), (U8)DTMIpU32, GSD->SupChunkSize);
                     UtilSendTCPData("[ObjectControl]", GSD->SupChunk, GSD->SupChunkSize, &socket_fd[iIndex], 0);
                 }
             }
@@ -632,6 +618,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             else if(iCommand == COMM_TRAJ && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
             {
                 
+                printf("[ObjectControl] COMM_TRAJ received.\n");
                 DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
                 DTMIpU32 = (C8)TrajBuffer[0];
                 DTMIpU32 = (C8)TrajBuffer[1] | (DTMIpU32 << 8);
@@ -659,55 +646,55 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 /*DTM*/
                 for(iIndex=0;iIndex<nbr_objects;++iIndex) 
                 { 
-                    printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
                     if( DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
                     {
+                        printf("[ObjectControl] Sending TRAj data to ObjectIp = %x (DTMIp = %x)\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
                         /*DTM Header*/
-                        MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-MiscU16)/ COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
+                        MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-MiscU16)/ COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 1);
                         /*Send DTM header*/
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                         /*DTM Data*/
-                        MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer+MiscU16, (DTMLengthU32-MiscU16)/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
+                        MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer+MiscU16, (DTMLengthU32-MiscU16)/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 1);
                         /*Send DTM data*/
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                     }
                 }
 
             }
-            else if(/*iCommand == COMM_TRAJ_FROMSUP*/ GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
-            {
-                
-                //bzero(TrajBuffer, strlen(pcRecvBuffer));
-                //DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
-                UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 0);
-
-                //MiscU16 = sizeof(TRAJInfoType); //72 = Number of bytes in [Ip, Id, Name, Version]
-                printf("[ObjectControl] Send DTM %d\n", DTMLengthU32);
-                /*DTM*/
-                for(iIndex=0;iIndex<nbr_objects;++iIndex) 
-                { 
-                    printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), TRAJInfoData.IpAddressU32);
-                    if(TRAJInfoData.IpAddressU32 == UtilIPStringToInt(object_address_name[iIndex]))
-                    {
-                        //UtilSendTCPData("[ObjectControl]", TrajBuffer, DTMLengthU32, &socket_fd[iIndex], 0);
-                        /*DTM Header*/
-                        //MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
-                        /*Send DTM header*/
-                        //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-                        /*DTM Data*/
-                        //MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
-                        /*Send DTM data*/
-                        //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-                        UtilSendTCPData("[ObjectControl]", GSD->SupChunk, GSD->SupChunkSize, &socket_fd[iIndex], 0);
-                    }
-                }
-
-                GSD->SupChunkSize = 0;
-
-            }
-            else if(iCommand == COMM_VIOP && OBCState == OBC_STATE_RUNNING/*OBC_STATE_INITIALIZED*/)
-            {
-                /*Build the VOIL message*/
+//            else if(/*iCommand == COMM_TRAJ_FROMSUP*/ GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED/* || OBCState == OBC_STATE_RUNNING*/) )
+//            {
+//                
+//                //bzero(TrajBuffer, strlen(pcRecvBuffer));
+//                //DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
+//                UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 0);
+//
+//                //MiscU16 = sizeof(TRAJInfoType); //72 = Number of bytes in [Ip, Id, Name, Version]
+//                printf("[ObjectControl] Send TRAJ chunk size %d bytes\n", DTMLengthU32);
+//                /*DTM*/
+//                for(iIndex=0;iIndex<nbr_objects;++iIndex) 
+//                { 
+//                    printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), TRAJInfoData.IpAddressU32);
+//                    if(TRAJInfoData.IpAddressU32 == UtilIPStringToInt(object_address_name[iIndex]))
+//                    {
+//                        //UtilSendTCPData("[ObjectControl]", TrajBuffer, DTMLengthU32, &socket_fd[iIndex], 0);
+//                        /*DTM Header*/
+//                        //MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
+//                        /*Send DTM header*/
+//                        //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+//                        /*DTM Data*/
+//                        //MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
+//                        /*Send DTM data*/
+//                        //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+//                        UtilSendTCPData("[ObjectControl]", GSD->SupChunk, GSD->SupChunkSize, &socket_fd[iIndex], 1);
+//                    }
+//                }
+//
+//                GSD->SupChunkSize = 0;
+//
+//            }
+             else if(iCommand == COMM_VIOP && OBCState == OBC_STATE_RUNNING/*OBC_STATE_INITIALIZED*/)
+              {
+//                /*Build the VOIL message*/
                 MessageLength = ObjectControlBuildVOILMessage(MessageBuffer, &VOILData, (C8*)GSD->VOILData, 0);
                 for(iIndex=0;iIndex<nbr_objects;++iIndex) 
                 { 

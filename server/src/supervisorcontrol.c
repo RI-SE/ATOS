@@ -118,7 +118,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
     UtilSearchTextFile(TEST_CONF_FILE, "SupervisorTCPPort=", "", TextBufferC8);
     SupervisorTCPPortU16 = (U16)atoi(TextBufferC8);
         
-    printf("SupervisorTCPPort = %d\n", SupervisorTCPPortU16);
+    printf("[SupervisorControl] SupervisorTCPPort = %d\n", SupervisorTCPPortU16);
 
     while(!iExit)
     {
@@ -153,7 +153,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         //Initiate the simulator if not initialized and a there is a valid TCP connection
         if(SupervisorInitiatedU8 == 0 && SupervisorTCPSocketfdI32 > 0)
         {
-          UtilISOBuildINSUPMessage(TxBuffer, &INSUPData, SUP_MODE_NORMAL, 0);
+          UtilISOBuildINSUPMessage(TxBuffer, &INSUPData, SUP_MODE_NORMAL, 1);
           UtilSendTCPData("SupervisorControl", TxBuffer, INSUPData.Header.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH, &SupervisorTCPSocketfdI32, 0);
           SupervisorInitiatedU8 = 1;
         }

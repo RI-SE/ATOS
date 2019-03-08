@@ -271,7 +271,6 @@ void logger_task()
   -- Private functions
   ------------------------------------------------------------*/
 
-
 void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
 {
     int iResult;

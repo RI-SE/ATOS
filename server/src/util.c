@@ -1707,6 +1707,7 @@ int iCommSend(const int iCommand,const char* cpData)
       iResult = mq_send(ptMQSend[iIndex],cpMessage,strlen(cpMessage),uiMessagePrio);
       if(iResult < 0)
       {
+        //continue;
         return 0;
       }
     }
