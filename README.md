@@ -1,20 +1,41 @@
 # Chronos test server
 
-# This is a test line
+## How to build and run the server
 
-## How to build and run server
+Navigate to the the repo and enter the build folder 
+
+```sh
 cd  server
 mkdir build && cd build
-
-## Create project
+```
+create project
+```sh
 cmake -G "Unix Makefiles" ..
-## Create project with debug data
-cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
+```
+For debug data add the following: 
 
+```sh
+cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
+```
+
+make the project
+]
+```sh
 make
 cp -R ../conf/ .
-cp ../traj/0.traj ./traj/192.168.0.1
+```
+
+Create a folder for Trajectory files in /build and move one of the existing trajectory files to this folder. 
+```sh
+mkdir traj
+cp ../traj/0.traj ./traj/192.168.0.1  
+```
+
+Start the server
+```sh
 ./TEServer
+```
+
 # To communicate with server start program.
 ./UserControl [IP] [port]
 

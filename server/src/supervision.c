@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : supervision.c
-  -- Author      : 
+  -- Author      :
   -- Description : CHRONOS
   -- Purpose     :
   -- Reference   :
@@ -355,7 +355,7 @@ void supervision_task(TimeType *GPSTime) {
     bzero(cpBuffer, RECV_MESSAGE_BUFFER);
     (void) iCommRecv ( &iCommand,
                        cpBuffer,
-                       RECV_MESSAGE_BUFFER);
+                       RECV_MESSAGE_BUFFER, NULL);
 
 #ifdef DEBUG1
     //printf ( "INF : SV : Received a command: %s\n",

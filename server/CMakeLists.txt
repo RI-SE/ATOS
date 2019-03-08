@@ -10,37 +10,31 @@ project (ChronosProject)
 include_directories(inc)
 
 # Create library
-add_library(util 
-  src/util.c 
+add_library(util
+  src/util.c
   inc/util.h
 )
 
 # Create library
-add_library(objctrl 
-  src/objectcontrol.c 
+add_library(objctrl
+  src/objectcontrol.c
   inc/objectcontrol.h
 )
 
-# add the executable
-add_executable(DefaultVisualizationAdapter 
-  src/visualization.c
-)
 
-add_executable(UserControl 
+add_executable(UserControl
   src/usercontrol.c
 )
 
 # add the executable
-add_executable(TEServer 
+add_executable(TEServer
   src/main.c
   src/logger.c
-  src/objectcontrol.c 
+  src/objectcontrol.c
   src/supervision.c
   src/systemcontrol.c
   src/remotecontrol.c
   src/timecontrol.c
-  src/simulatorcontrol.c
-  src/citscontrol.c
   src/supervisorcontrol.c
   inc/logger.h
   inc/objectcontrol.h
@@ -48,21 +42,16 @@ add_executable(TEServer
   inc/systemcontrol.h
   inc/remotecontrol.h
   inc/timecontrol.h
-  inc/simulatorcontrol.h
-  inc/citscontrol.h
+
   inc/supervisorcontrol.h
 )
 
 # add the install targets
-install (TARGETS DefaultVisualizationAdapter DESTINATION bin)
 install (TARGETS TEServer DESTINATION bin)
 
 # add linking to message queue
 target_link_libraries(util rt m)
 target_link_libraries(util m)
 target_link_libraries(util rt)
-target_link_libraries(DefaultVisualizationAdapter util)
 target_link_libraries(UserControl util objctrl)
 target_link_libraries(TEServer util)
-
-
