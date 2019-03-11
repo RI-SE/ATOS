@@ -55,7 +55,7 @@
 
 #define COMMAND_DOTM_CODE 1
 #define COMMAND_DOTM_ROW_MESSAGE_LENGTH sizeof(DOTMType)
-#define COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH sizeof(TRAJInfoType) 
+#define COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH sizeof(TRAJInfoType)
 #define COMMAND_DOTM_ROWS_IN_TRANSMISSION  40
 #define COMMAND_DTM_BYTES_IN_ROW  30
 
@@ -140,10 +140,10 @@ typedef enum {
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
       void (*fooptr)(int,float) = foo;
       fooptr(10,1.5);
-   
+
    Consequently, the below typedef defines a StateTransition type as a function pointer to a function taking
    (OBCState_t, OBCState_t) as input, and returning an int8_t
-*/ 
+*/
 typedef int8_t (*StateTransition)(OBCState_t *currentState, OBCState_t requestedState);
 
 C8 TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION*COMMAND_DOTM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH];
@@ -347,7 +347,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                 }
             }
-            
+
             //Store HEAB in GSD
             //for(j = 0; j < MessageLength; j++) GSD->HEABData[j] = MessageBuffer[j];
             //GSD->HEABSizeU8 = (U8)MessageLength;
@@ -384,7 +384,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             /*gettimeofday(&CurrentTimeStruct, NULL);
 
             CurrentTimeU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
-            
+
 
             /*MTSP*/
             if(HeartbeatMessageCounter == 0)
@@ -482,7 +482,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         sprintf(MTSP, "%" PRIu32, ASPData.MTSPU32);
                         strcat(buffer, MTSP); strcat(buffer,";");
                     }
-                    
+
                     DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Send MONITOR message: %s\n",buffer);
                     if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) (void)iCommSend(COMM_MONI,buffer);
 
@@ -491,17 +491,17 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     //Ok, let's do the ASP
                     for(i = 0; i < SyncPointCount; i++)
                     {
-                        if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && CurrentTimeU32 > StartTimeU32 && StartTimeU32 > 0 && ASPData.TimeToSyncPointDbl > -1 
+                        if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && CurrentTimeU32 > StartTimeU32 && StartTimeU32 > 0 && ASPData.TimeToSyncPointDbl > -1
                             /*|| TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU32 > 0 && iIndex == 0 && TimeToSyncPoint > -1*/)
                         {
                             // Use the util.c function for time here but it soent mather
                             gettimeofday(&CurrentTimeStruct, NULL); //Capture time
 
                             TimeCap1 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000; //Calculate initial timestamp
-                            
+
                             OP[iIndex].x = ((dbl)atoi(XPosition))/1000; //Set x and y on OP (ObjectPosition)
                             OP[iIndex].y = ((dbl)atoi(YPosition))/1000;
-                            
+
                             //OP[iIndex].OrigoDistance = sqrt(pow(OP[iIndex].x,2) + pow(OP[iIndex].y,2)); //Calculate hypotenuse
 
                             UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(XPosition)/1e7,atof(YPosition)/1e7, &OP[iIndex]);
@@ -553,7 +553,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                     printf("%d, %d, %3.3f, %s, %s\n", CurrentTimeU32, StartTimeU32, ASPData.TimeToSyncPointDbl, object_address_name[iIndex], ASP[i].MasterIP);
                                     printf("TtS=%3.3f, BestIndex=%d, MTSP=%d, iIndex=%d, IterationTime=%3.0f ms\n",ASPData.TimeToSyncPointDbl, OP[iIndex].BestFoundTrajectoryIndex, ASPData.MTSPU32, iIndex, ((double)(TimeCap2)-(double)TimeCap1));
                                     printf("CurrentTime=%3.3f, x=%3.3f mm, y=%3.3f\n\n",ASPData.CurrentTimeDbl, OP[iIndex].x, OP[iIndex].y);
-                                    
+
                                     //Build and send ASP on message queue
                                     //(void)iCommSend(COMM_ASP,buffer);
                                 }
@@ -570,20 +570,20 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
         if(GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
         {
-            
+
             //bzero(TrajBuffer, strlen(pcRecvBuffer));
             //DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
             //UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 1);
 
             //MiscU16 = sizeof(TRAJInfoType); //72 = Number of bytes in [Ip, Id, Name, Version]
-            DTMIpU32 = 0; 
+            DTMIpU32 = 0;
             DTMIpU32 = (C8)GSD->SupChunk[98];
             DTMIpU32 = (C8)GSD->SupChunk[97] | (DTMIpU32 << 8);
             DTMIpU32 = (C8)GSD->SupChunk[96] | (DTMIpU32 << 8);
             DTMIpU32 = (C8)GSD->SupChunk[95] | (DTMIpU32 << 8);
             /*DTM*/
-            for(iIndex=0;iIndex<nbr_objects;++iIndex) 
-            { 
+            for(iIndex=0;iIndex<nbr_objects;++iIndex)
+            {
                 printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
                 if(DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
                 {
@@ -620,7 +620,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 {
                     LOG_SEND(LogBuffer,"[ObjectControl] Sending ARM %d", pcRecvBuffer[0]);
                     vSetState(&OBCState, OBC_STATE_ARMED);
-                }              
+                }
                 else if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE)
                 {
                     LOG_SEND(LogBuffer,"[ObjectControl] Sending DISARM: %d", pcRecvBuffer[0]);
@@ -678,7 +678,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_TRAJ && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
             {
-                
+
                 DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
                 DTMIpU32 = (C8)TrajBuffer[0];
                 DTMIpU32 = (C8)TrajBuffer[1] | (DTMIpU32 << 8);
@@ -704,8 +704,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 MiscU16 = 72; //Number of bytes in [Ip, Id, Name, Version]
 
                 /*DTM*/
-                for(iIndex=0;iIndex<nbr_objects;++iIndex) 
-                { 
+                for(iIndex=0;iIndex<nbr_objects;++iIndex)
+                {
                     printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
                     if( DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
                     {
@@ -723,7 +723,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(/*iCommand == COMM_TRAJ_FROMSUP*/ GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
             {
-                
+
                 //bzero(TrajBuffer, strlen(pcRecvBuffer));
                 //DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
                 UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 0);
@@ -731,8 +731,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 //MiscU16 = sizeof(TRAJInfoType); //72 = Number of bytes in [Ip, Id, Name, Version]
                 printf("[ObjectControl] Send DTM %d\n", DTMLengthU32);
                 /*DTM*/
-                for(iIndex=0;iIndex<nbr_objects;++iIndex) 
-                { 
+                for(iIndex=0;iIndex<nbr_objects;++iIndex)
+                {
                     printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), TRAJInfoData.IpAddressU32);
                     if(TRAJInfoData.IpAddressU32 == UtilIPStringToInt(object_address_name[iIndex]))
                     {
@@ -977,9 +977,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         /*Here we send DOTM, if the IP-address not is found*/
                         if(strstr(DTMReceivers, object_address_name[iIndex]) == NULL)
                         {
-                       
+
                             fd = fopen (object_traj_file[iIndex], "r");
-                            
+
                             RowCount = UtilCountFileRows(fd);
                             //printf("RowCount: %d\n", RowCount);
                             fclose (fd);
@@ -1243,7 +1243,7 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
         printf("\n");
     }
 
-    
+
     return ObjectCount*sizeof(Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH; //Total number of bytes
 
 }
@@ -1865,7 +1865,7 @@ int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, uns
 
 I32 ObjectControlBuildSYPMMessage(C8* MessageBuffer, SYPMType *SYPMData, U32 SyncPoint, U32 StopTime, U8 debug)
 {
-    
+
     I32 MessageIndex = 0, i;
     U16 Crc = 0;
     C8 *p;

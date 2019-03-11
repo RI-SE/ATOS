@@ -28,10 +28,10 @@
 #include "objectcontrol.h"
 #include "systemcontrol.h"
 #include "supervision.h"
-#include "remotecontrol.h"
+//#include "remotecontrol.h"
 #include "timecontrol.h"
-#include "supervisorcontrol.h"
-
+//#include "simulatorcontrol.h"
+//#include "citscontrol.h"
 
 /*------------------------------------------------------------
 -- Defines
@@ -39,15 +39,16 @@
 
 static TimeType *GPSTime;
 static GSDType *GSD;
+
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
 int main(int argc, char *argv[])
 {
+
     // Set the debug level
     // TODO: make debug level a starting parameter
     // make sure that the same debug parameter is passed to all processes
-    printf("Version %s\n",MaestroVersion );
     dbg_setdebug(DEBUG_LEVEL_HIGH);
 
     /*Share time between child processes*/
@@ -57,7 +58,6 @@ int main(int argc, char *argv[])
 
     GSD->ExitU8 = 0;
     GSD->ScenarioStartTimeU32 = 0;
-    GPSTime->TimeInitiatedU8 = 0;
 
     pid_t pID[8];
     int iIndex = 0;
@@ -111,7 +111,8 @@ int main(int argc, char *argv[])
     }
     ++iIndex;
 
-  /*  char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
+/*
+    char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
     bzero(pcTempBuffer,MAX_UTIL_VARIBLE_SIZE);
     if(iUtilGetParaConfFile("VisualizationAdapter",pcTempBuffer))
     {
@@ -133,7 +134,7 @@ int main(int argc, char *argv[])
         }
         ++iIndex;
     }
-*/
+/*
 /*
     pID[iIndex] = fork();
     if(pID[iIndex] < 0)
@@ -181,8 +182,7 @@ int main(int argc, char *argv[])
       exit(EXIT_SUCCESS);
     }
     ++iIndex;
-  */
-
+*/
   /*
  pID[iIndex] = fork();
   if(pID[iIndex] < 0)
@@ -198,23 +198,7 @@ int main(int argc, char *argv[])
     exit(EXIT_SUCCESS);
   }
   ++iIndex;
-  
-*/
-
-    pID[iIndex] = fork();
-    if(pID[iIndex] < 0)
-    {
-        util_error("ERR: Failed to fork");
-    }
-    if(pID[iIndex] == 0)
-    {
-
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: supervisorcontrol_task running in:  %i \n",getpid());
-        supervisorcontrol_task(GPSTime, GSD);
-        exit(EXIT_SUCCESS);
-    }
-    ++iIndex;
-  
+  */
 
 
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: systemcontrol_task running in:  %i \n",getpid());
