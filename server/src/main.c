@@ -28,7 +28,7 @@
 #include "objectcontrol.h"
 #include "systemcontrol.h"
 #include "supervision.h"
-#include "remotecontrol.h"
+//#include "remotecontrol.h"
 #include "timecontrol.h"
 #include "supervisorcontrol.h"
 
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
     exit(EXIT_SUCCESS);
   }
   ++iIndex;
-  
+
 */
 
     pID[iIndex] = fork();
@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
         exit(EXIT_SUCCESS);
     }
     ++iIndex;
-  
+
 
 
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: systemcontrol_task running in:  %i \n",getpid());

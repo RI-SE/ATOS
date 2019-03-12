@@ -40,7 +40,7 @@
 #define MQ_OC     "/TEServer-OC"
 #define MQ_VA     "/TEServer-VA"
 #define MQ_SC     "/TEServer-SC"
-#define MQ_SI     "/TEServer-SI"  
+#define MQ_SI     "/TEServer-SI"
 
 #define MQ_MAX_MESSAGE_LENGTH 4096
 #define MQ_MAX_MSG            10
@@ -51,10 +51,10 @@
 #define IPC_RECV_SEND  0x03
 
 #define COMM_STRT 1
-#define COMM_STOP 2
-#define COMM_MONI 3
-#define COMM_EXIT 4
-#define COMM_ARMD 5
+#define COMM_ARMD 2
+#define COMM_STOP 3
+#define COMM_MONI 4
+#define COMM_EXIT 5
 #define COMM_REPLAY 6
 #define COMM_CONTROL 7
 #define COMM_ABORT 8
@@ -68,7 +68,7 @@
 #define COMM_TRAJ 16
 #define COMM_TRAJ_TOSUP 17
 #define COMM_TRAJ_FROMSUP 18
-#define COMM_ASP 19     
+#define COMM_ASP 19
 #define COMM_INV 255
 
 
@@ -229,7 +229,7 @@
 #define SERVER_PREPARED 0x01
 #define SERVER_PREPARED_BIG_PACKET_SIZE 0x02
 #define PATH_INVALID_MISSING 0x03
-#define FILE_UPLOADED 0x04  
+#define FILE_UPLOADED 0x04
 #define TIME_OUT 0x05
 #define FILE_EXIST 0x01
 #define FOLDER_EXIST 0x02
@@ -274,10 +274,10 @@
 #define ISO_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
 
 #define ISO_INSUP_CODE 0xA102
-#define ISO_INSUP_NOFV 1  
+#define ISO_INSUP_NOFV 1
 #define ISO_INSUP_MESSAGE_LENGTH sizeof(OSTMType)
 #define ISO_INSUP_OPT_SET_ARMED_STATE 2
-#define ISO_INSUP_OPT_SET_DISARMED_STATE 3 
+#define ISO_INSUP_OPT_SET_DISARMED_STATE 3
 
 #define ISO_HEAB_CODE 5
 #define ISO_HEAB_NOFV 2
@@ -470,7 +470,7 @@ typedef struct
 } DOTMType; //70 bytes
 
 
-typedef struct 
+typedef struct
 {
   U16 TrajectoryIDValueIdU16;
   U16 TrajectoryIDContentLengthU16;
