@@ -12,7 +12,7 @@
   -- Include files.
   ------------------------------------------------------------*/
 #include "logger.h"
-
+#include <signal.h>
 #include <dirent.h>
 #include <errno.h>
 #include <mqueue.h>
@@ -54,6 +54,10 @@ static int CountFileRows(FILE *fd);
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
+
+void  INThandler(int);
+
+
 void logger_task()
 {
     char pcCommand[100];
@@ -92,11 +96,11 @@ void logger_task()
     //(void)iCommInit(IPC_SEND,MQ_LG_1,0);
 
     /* Create folder with date as name and .log file with date as name */
-  
+
     struct stat st = {0};
-    if (stat(LOG_PATH, &st) == -1) 
+    if (stat(LOG_PATH, &st) == -1)
 	{
-		vCreateLogFolder(LOG_PATH);	
+		vCreateLogFolder(LOG_PATH);
 	}
 
 
@@ -231,6 +235,7 @@ void logger_task()
 
     while(!iExit)
     {
+        signal(SIGINT, INThandler);
         bzero(pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
         bzero(TimeStampUTCBufferRecv,MQ_MAX_UTC_LENGTH);
         (void)iCommRecv(&iCommand,pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
@@ -241,6 +246,14 @@ void logger_task()
             bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
             UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
             bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+
+            //Remove newlines in http Requests for nicer printouts.
+            for (int i = 0; i < strlen(pcRecvBuffer); i++){
+                if(pcRecvBuffer[i] == '\n'){
+                  pcRecvBuffer[i] = ' ';
+                }
+            }
+
             sprintf ( pcBuffer,"%s;%s;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, iCommand, pcRecvBuffer);
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
@@ -392,6 +405,32 @@ void logger_task()
 }
 
 /*------------------------------------------------------------
+  -- SIGINT functions
+  ------------------------------------------------------------*/
+void  INThandler(int sig)
+{
+     char  c;
+     signal(sig, SIG_IGN);
+    printf("\nLogger is kill\n");
+    char pcBuffer[MQ_MAX_MESSAGE_LENGTH+100];
+    FILE *filefd, *filefdComp;
+    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+    strcpy(pcBuffer, "Logger is kill\n");
+
+    /*
+    filefd = fopen(filefd, "w+");
+    filefdComp = fopen(filefdComp, "w+");
+    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+    fclose(filefd);
+    fclose(filefdComp);
+    */
+
+    signal(SIGINT, INThandler);
+}
+
+
+/*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
 
@@ -404,7 +443,7 @@ void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
     int iMaxFolder = 0;
 
     directory = opendir(logFolder);
-    
+
     if(directory == NULL)
     {
         iResult = mkdir(logFolder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
