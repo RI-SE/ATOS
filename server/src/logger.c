@@ -12,7 +12,6 @@
   -- Include files.
   ------------------------------------------------------------*/
 #include "logger.h"
-#include <signal.h>
 #include <dirent.h>
 #include <errno.h>
 #include <mqueue.h>
@@ -235,7 +234,6 @@ void logger_task()
 
     while(!iExit)
     {
-        signal(SIGINT, INThandler);
         bzero(pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
         bzero(TimeStampUTCBufferRecv,MQ_MAX_UTC_LENGTH);
         (void)iCommRecv(&iCommand,pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
@@ -404,30 +402,6 @@ void logger_task()
     fclose(filefdComp);
 }
 
-/*------------------------------------------------------------
-  -- SIGINT functions
-  ------------------------------------------------------------*/
-void  INThandler(int sig)
-{
-     char  c;
-     signal(sig, SIG_IGN);
-    printf("\nLogger is kill\n");
-    char pcBuffer[MQ_MAX_MESSAGE_LENGTH+100];
-    FILE *filefd, *filefdComp;
-    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    strcpy(pcBuffer, "Logger is kill\n");
-
-    /*
-    filefd = fopen(filefd, "w+");
-    filefdComp = fopen(filefdComp, "w+");
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
-    fclose(filefd);
-    fclose(filefdComp);
-    */
-
-    signal(SIGINT, INThandler);
-}
 
 
 /*------------------------------------------------------------
