@@ -2790,7 +2790,7 @@ int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState)
 
 int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState)
 {
-    if (requestedState == OBC_STATE_ARMED)
+    if (requestedState == OBC_STATE_ARMED || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
         return 0;
