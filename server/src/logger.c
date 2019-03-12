@@ -53,10 +53,6 @@ static int CountFileRows(FILE *fd);
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
-
-void  INThandler(int);
-
-
 void logger_task()
 {
     char pcCommand[100];
