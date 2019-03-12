@@ -359,7 +359,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             CurrentTimeU64 = UtilgetCurrentUTCtimeMS();
             TimeDiffU64 = CurrentTimeU64 - OldTimeU64;
 
-            /*
+            /* Uneccesarry checks to currently non-existing remote control serversocket. Login and session data not used either.
             if(ServerSocketI32 <= 0) RemoteControlConnectServer(&ServerSocketI32, ServerIPC8, ServerPortU16);
 
             if(ServerSocketI32 > 0 && SessionData.SessionIdU32 <= 0)
