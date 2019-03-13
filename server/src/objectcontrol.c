@@ -954,10 +954,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.");
                         ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, OriginLatitude, OriginLongitude, OriginAltitude );
                         bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
-                        strcat(pcSendBuffer,"GPSWeek:");
-                        strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";OriginGPSLongitude;");
-                        strcat(pcSendBuffer,OriginLongitude);strcat(pcSendBuffer,";OriginGPSLatitude;");
-                        strcat(pcSendBuffer,OriginLatitude);strcat(pcSendBuffer,";OriginGPSAltitude;");
+                        strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";");
+                        strcat(pcSendBuffer,OriginLongitude);strcat(pcSendBuffer,";");
+                        strcat(pcSendBuffer,OriginLatitude);strcat(pcSendBuffer,";");
                         strcat(pcSendBuffer,OriginAltitude);
 
                         iCommSend(COMM_LOG,pcSendBuffer);
@@ -2790,7 +2789,7 @@ int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState)
 
 int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState)
 {
-    if (requestedState == OBC_STATE_ARMED || requestedState == OBC_STATE_IDLE)
+    if (requestedState == OBC_STATE_ARMED)
     {
         *currentState = requestedState;
         return 0;
