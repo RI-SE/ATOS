@@ -52,7 +52,6 @@ int main(int argc, char *argv[])
     // TODO: make debug level a starting parameter
     // make sure that the same debug parameter is passed to all processes
     printf("Version %s\n",MaestroVersion );
-    dbg_setdebug(DEBUG_LEVEL_HIGH);
 
     LogInit(MODULE_NAME,logLevel);
 

@@ -52,20 +52,6 @@ static char pcMessageQueueName[1024];
   -- Public functions
   ------------------------------------------------------------*/
 
-void dbg_setdebug(int level) {debug = level;}
-int dbg_getdebug(void){ return debug;}
-
-void dbg_printf(int level, const char *fmt, ...)
-{
-    if (level < debug) return;
-    va_list args;
-    va_start(args,fmt);
-    vfprintf(stdout,fmt,args);
-    va_end(args);
-    fflush(stdout);
-}
-
-
 // GPS TIME FUNCTIONS
 uint64_t UtilgetGPSmsFromUTCms(uint64_t UTCms)
 {

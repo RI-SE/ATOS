@@ -690,11 +690,6 @@ typedef enum {
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-// DEBUG functions
-void dbg_setdebug(int level);
-int dbg_getdebug(void);
-void dbg_printf(int level, const char *fmt, ...);
-
 
 // GPS TIME FUNCTIONS
 uint64_t UtilgetGPSmsFromUTCms(uint64_t UTCms);
