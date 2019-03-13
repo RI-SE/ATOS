@@ -21,6 +21,11 @@ add_library(objctrl
   inc/objectcontrol.h
 )
 
+# Create library
+add_library(logging
+  src/logging.c
+  inc/logging.h
+)
 
 add_executable(UserControl
   src/usercontrol.c
@@ -54,4 +59,4 @@ target_link_libraries(util rt m)
 target_link_libraries(util m)
 target_link_libraries(util rt)
 target_link_libraries(UserControl util objctrl)
-target_link_libraries(TEServer util)
+target_link_libraries(TEServer util logging)
