@@ -181,9 +181,9 @@ void supervision_task(TimeType *GPSTime) {
 
   struct timeval tv ;
   uint64_t msSinceEpochETSI ;
-  init_log(MODULE_NAME,logLevel);
+  LogInit(MODULE_NAME,logLevel);
 
-  log_message( LOG_LEVEL_INFO, "Supervision task running with PID: %i", getpid());
+  LogMessage( LOG_LEVEL_INFO, "Supervision task running with PID: %i", getpid());
 
 //  printf ("--------------------------------------------------\n");
 //  printf ("INF : SV : Supervision started.\n");

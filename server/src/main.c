@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     printf("Version %s\n",MaestroVersion );
     dbg_setdebug(DEBUG_LEVEL_HIGH);
 
-    init_log(MODULE_NAME,logLevel);
+    LogInit(MODULE_NAME,logLevel);
 
     /*Share time between child processes*/
 
@@ -68,8 +68,7 @@ int main(int argc, char *argv[])
     pid_t pID[8];
     int iIndex = 0;
 
-    log_message( LOG_LEVEL_INFO, "Central started");
-
+    LogMessage( LOG_LEVEL_INFO, "Central started");
 
     pID[iIndex] = fork();
     if(pID[iIndex] < 0)
