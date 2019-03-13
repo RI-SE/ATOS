@@ -118,7 +118,7 @@ void log_message(LOG *log, LOG_LEVEL messageLevel, const char* format, ...)
             fp = fopen(logging_meta_info.fullLogPath, "a");
             if (fp != NULL)
             {
-                printf("[%s]: Unable to open log file for writing: %s\n", log->logModuleName, log->fullLogPath);
+                printf("[%s] Unable to open log file for writing: %s\n", log->logModuleName, log->fullLogPath);
                 fprintf(fp, "[%s|ERR]: Unable to open log file for writing: %s\n", dateStr, log->fullLogPath);
                 fclose(fp);
             }

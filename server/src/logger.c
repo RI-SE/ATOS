@@ -26,6 +26,7 @@
 #include <time.h>
 
 #include "util.h"
+#include "logging.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -50,6 +51,9 @@ static int CountFileRows(FILE *fd);
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
+#define MODULE_NAME "Logger"
+static LOG moduleLog;
+static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 
 /*------------------------------------------------------------
   -- Public functions
@@ -67,6 +71,10 @@ void logger_task()
     char pcSendBuffer[MQ_MAX_MESSAGE_LENGTH];
     char pcReadBuffer[MQ_MAX_MESSAGE_LENGTH];
     char read;
+
+    moduleLog = init_log(MODULE_NAME,logLevel); // TODO: Start using this
+    log_message(&moduleLog,LOG_LEVEL_INFO,"Logger task running with PID: %d",getpid());
+
     struct timeval tvTime ;
     uint64_t LogTimeStart;
     DIR *dir;
@@ -102,7 +110,7 @@ void logger_task()
     (void)strcat(pcLogFile,LOG_FILE);
     (void)strcat(pcLogFileComp,LOG_FILE);
 
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open log file to use: <%s>\n",pcLogFile);
+    log_message(&moduleLog,LOG_LEVEL_INFO,"Opening log file to use: <%s>",pcLogFile);
     filefd = fopen(pcLogFile, "w+");
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     sprintf(pcBuffer,"------------------------------------------\nWhole Trajectory files:\n------------------------------------------\n");
@@ -142,7 +150,7 @@ void logger_task()
     }
     else
     {
-      perror("No traj folder exist, wrong path or access denied\n" );
+        log_message(&moduleLog,LOG_LEVEL_ERROR,"No traj directory <%s> exists - wrong path or access denied",TRAJECTORY_PATH);
     }
     /* If traj file exist and we have reader permission do*/
 
@@ -173,7 +181,7 @@ void logger_task()
     }
     else
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Cant open .conf file; %s\n",TEST_CONF_FILE);
+        log_message(&moduleLog,LOG_LEVEL_WARNING,"Cant open .conf file; %s",TEST_CONF_FILE);
         bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
         sprintf(pcBuffer,"Failed to Open .conf file;%s\n",TEST_CONF_FILE);
         (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
@@ -242,14 +250,14 @@ void logger_task()
         if(iCommand == COMM_REPLAY)
         {
             LoggerExecutionMode = LOG_REPLAY_MODE;
-            printf("Logger in REPLAY mode <%s>\n", pcRecvBuffer);
+            log_message(&moduleLog,LOG_LEVEL_INFO,"Logger in REPLAY mode <%s>",pcRecvBuffer);
             //replayfd = fopen ("log/33/event.log", "r");
             replayfd = fopen (pcRecvBuffer, "r");
             RowCount = UtilCountFileRows(replayfd);
             fclose(replayfd);
             //replayfd = fopen ("log/33/event.log", "r");
             replayfd = fopen (pcRecvBuffer, "r");
-            printf("Rows %d\n", RowCount);
+            log_message(&moduleLog,LOG_LEVEL_INFO,"Rows: %d",RowCount);;
             if(replayfd)
             {
                 UtilReadLineCntSpecChars(replayfd, pcReadBuffer);//Just read first line
@@ -295,7 +303,7 @@ void logger_task()
                         FirstIteration = 0;
                         OldTimestamp = NewTimestamp;
                     };
-                    printf("%d:%d:%d<%s>\n", RowCount, j, SpecChars, pcSendBuffer);
+                    log_message(&moduleLog,LOG_LEVEL_INFO,"%d:%d:%d<%s>",RowCount,j,SpecChars,pcSendBuffer);
 
                     /*
                     bzero(TimeStampUTCBufferRecv,MQ_ETSI_LENGTH);
@@ -312,10 +320,10 @@ void logger_task()
             }
             else
             {
-                printf("Failed to open file:%s\n",  pcRecvBuffer);
+                log_message(&moduleLog,LOG_LEVEL_WARNING,"Failed to open file: %s",pcRecvBuffer);
             }
 
-            printf("Replay done.\n");
+            log_message(&moduleLog,LOG_LEVEL_INFO,"Replay done");
             //(void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
             (void)iCommSend(COMM_CONTROL, NULL);
 
@@ -323,12 +331,12 @@ void logger_task()
         else if(iCommand == COMM_CONTROL)
         {
             LoggerExecutionMode = LOG_CONTROL_MODE;
-            printf("Logger in CONTROL mode\n");
+            log_message(&moduleLog,LOG_LEVEL_INFO,"Logger in CONTROL mode");
         }
         else if(iCommand == COMM_EXIT)
         {
 
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"%s","Logger exit\n");
+            log_message(&moduleLog,LOG_LEVEL_INFO,"Logger exiting");
 
             iExit = 1;
         }
@@ -342,7 +350,7 @@ void logger_task()
                 (void)strcpy(pcLogFile,pcLogFolder);
                 (void)strcat(pcLogFile,LOG_FILE);
 
-                DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open log file to use: <%s>\n",pcLogFile);
+                log_message(&moduleLog,LOG_LEVEL_INFO,"Opening log file to use: <%s>",pcLogFile);
                 filefd = fopen (pcLogFile, "w+");
 
                 bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
@@ -367,7 +375,7 @@ void logger_task()
         }
         else
         {
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Unhandled command in logger: %d",iCommand);
+            log_message(&moduleLog,LOG_LEVEL_DEBUG,"Unhandled command in logger: %d",iCommand);
         }
     }
 

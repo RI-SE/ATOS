@@ -28,6 +28,7 @@
 
 #include "util.h"
 #include "logger.h"
+#include "logging.h"
 
 
 /*------------------------------------------------------------
@@ -50,7 +51,15 @@
   ------------------------------------------------------------*/
 
 
+/*------------------------------------------------------------
+-- Private variables
+------------------------------------------------------------*/
 
+#define MODULE_NAME "SupervisorControl"
+static LOG moduleLog;
+static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
+
+/*-------
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
@@ -102,14 +111,15 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   U16 IterationCounter = 0;
   U32 TimestampU32 = 0;
 
-  printf("[SupervisorControl] Starting supervisor control...\n");
+  moduleLog = init_log(MODULE_NAME,logLevel);
+  log_message(&moduleLog, LOG_LEVEL_INFO, "Supervisor control task running with PID: %i", getpid());
  
   bzero(TextBufferC8, SUP_CONTROL_BUFFER_SIZE_20);
   UtilSearchTextFile(TEST_CONF_FILE, "SupervisorIP=", "", TextBufferC8);
   bzero(SupervisorServerIpC8, SUP_CONTROL_BUFFER_SIZE_20);
   strcat(SupervisorServerIpC8, TextBufferC8);
 
-  printf("[SupervisorControl] Supervisor IP: %s\n", TextBufferC8);
+  log_message(&moduleLog,LOG_LEVEL_INFO,"Supervisor IP: %s", TextBufferC8);
   SupervisorIpU32 = UtilIPStringToInt(SupervisorServerIpC8);
 
   if(SupervisorIpU32 != 0)
@@ -118,7 +128,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
     UtilSearchTextFile(TEST_CONF_FILE, "SupervisorTCPPort=", "", TextBufferC8);
     SupervisorTCPPortU16 = (U16)atoi(TextBufferC8);
         
-    printf("SupervisorTCPPort = %d\n", SupervisorTCPPortU16);
+    log_message(&moduleLog,LOG_LEVEL_INFO,"SupervisorTCPPort = %d", SupervisorTCPPortU16);
 
     while(!iExit)
     {
@@ -130,7 +140,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         int result = setsockopt(SupervisorTCPSocketfdI32, IPPROTO_TCP, TCP_NODELAY, (char *) &yes, sizeof(int));
         if(result < 0 )
         {
-          printf("[SupervisorControl] Failed to set socket option code = %d\n", result);
+          log_message(&moduleLog,LOG_LEVEL_WARNING,"Failed to set socket option code = %d", result);
         }
       }
       else
@@ -144,7 +154,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         }
         else if(ClientResultI32 == 0)
         {
-            printf("[SupervisorControl] Client closed connection.\n");
+            log_message(&moduleLog,LOG_LEVEL_INFO,"Client closed connection");
             close(SupervisorTCPSocketfdI32);
             SupervisorTCPSocketfdI32 = -1;
             SupervisorInitiatedU8 = 0;
@@ -163,7 +173,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         {
           ISOMessageStartedU8 = 1;
           TimestampU32 = (U32)UtilgetCurrentUTCtimeMS();
-          if(SUP_DEBUG_TCP_RX_DATA) printf("[SupervisorControl] Rx SYNC word.\n");
+          if(SUP_DEBUG_TCP_RX_DATA) log_message(&moduleLog,LOG_LEVEL_DEBUG,"Rx SYNC word");
         } 
 
         //Get start of message
@@ -175,7 +185,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           {
             
             RxTotalDataU32 = RxTotalDataU32 + ClientResultI32;
-            if(SUP_DEBUG_TCP_RX_DATA) printf("[SupervisorControl] Read Header. Total received bytes %d\n", RxTotalDataU32);
+            if(SUP_DEBUG_TCP_RX_DATA) log_message(&moduleLog,LOG_LEVEL_DEBUG,"Read Header. Total received bytes %d", RxTotalDataU32);
             if(RxTotalDataU32 == 11)
             {
               UtilISOBuildHeader(RxBuffer, &HeaderData, SUP_DEBUG_TCP_RX_DATA);
@@ -208,7 +218,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           if(ClientResultI32 > 0)
           {
             RxTotalDataU32 = RxTotalDataU32 + ClientResultI32;
-            if(SUP_DEBUG_TCP_RX_DATA) printf("[SupervisorControl] Read %d requested bytes, so far %d bytes read.\n", (U32)(HeaderData.MessageLengthU32+ISO_MESSAGE_FOOTER_LENGTH), RxTotalDataU32); 
+            if(SUP_DEBUG_TCP_RX_DATA) log_message(&moduleLog,LOG_LEVEL_DEBUG,"Read %d requested bytes, so far %d bytes read", (U32)(HeaderData.MessageLengthU32+ISO_MESSAGE_FOOTER_LENGTH), RxTotalDataU32);
             if(RxTotalDataU32 == HeaderData.MessageLengthU32 + ISO_MESSAGE_FOOTER_LENGTH)
             {
               ISOMessageStartedU8 = 0;
@@ -216,7 +226,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
               ISOMessageReceivedU8 = 1;
               if(SUP_DEBUG_TCP_RX_DATA)
               { 
-                printf("[SupervisorControl] ISO Message received!\n");  
+                log_message(&moduleLog,LOG_LEVEL_DEBUG,"ISO Message received!");
                 //for(i = 0; i < (ISO_MESSAGE_HEADER_LENGTH + HeaderData.MessageLengthU32 + ISO_MESSAGE_FOOTER_LENGTH); i ++) printf("%x ", RxBuffer[i]);
                 //printf("\n");
               }
@@ -236,7 +246,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
         if(ISOMessageReceivedU8 == 1)
         {
-          if(SUP_DEBUG_TCP_RX_DATA) printf("[SupervisorControl] MessageId %d handled.\n", HeaderData.MessageIdU16);
+          if(SUP_DEBUG_TCP_RX_DATA) log_message(&moduleLog,LOG_LEVEL_DEBUG,"MessageId %d handled", HeaderData.MessageIdU16);
           
           if(HeaderData.MessageIdU16 == ISO_TRAJ_CODE)
           {
@@ -249,7 +259,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
               GSD->SupChunk[i] = RxBuffer[i];
             }
             GSD->SupChunkSize = HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH;
-            printf("[SupervisorControl] %d. Sending chunk to ObjectControl, size is %d bytes.\n", ++IterationCounter, GSD->SupChunkSize);
+            log_message(&moduleLog,LOG_LEVEL_INFO,"%d. Sending chunk to ObjectControl, size is %d bytes", ++IterationCounter, GSD->SupChunkSize);
           } 
           else if(HeaderData.MessageIdU16 == ISO_HEAB_CODE)
           {
@@ -274,7 +284,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         for(i = 0; i < GSD->ChunkSize; i ++) MqBuffer[i] = GSD->Chunk[i];
         DTMLengthU32 = UtilHexTextToBinary(strlen(MqBuffer), MqBuffer, DTMTrajBuffer, 0);
 
-        printf("[SupervisorControl] Sending chunk to Supervisor, size is %d == %d bytes\n", GSD->ChunkSize, (I32)strlen(MqBuffer));
+        log_message(&moduleLog,LOG_LEVEL_INFO,"Sending chunk to Supervisor, size is %d == %d bytes", GSD->ChunkSize, (I32)strlen(MqBuffer));
         
         //for(i = 0; i < GSD->ChunkSize; i ++) DTMTrajBuffer[i] = GSD->Chunk[i];
         //DTMLengthU32 = GSD->ChunkSize;
@@ -352,7 +362,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
       if(iCommand == COMM_EXIT)
       {
         iExit = 1;
-        printf("supervisor control exiting.\n");
+        log_message(&moduleLog,LOG_LEVEL_INFO,"Supervisor control exiting");
         (void)iCommClose();
       }
     }
