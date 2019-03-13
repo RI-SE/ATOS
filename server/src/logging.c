@@ -3,6 +3,14 @@
 #include <time.h>
 #include <string.h>
 
+
+// Colors for the log
+#define COLOR_ERROR "\x1b[31m"
+#define COLOR_WARNING "\x1b[33m"
+#define COLOR_INFO "\x1b[34m"
+#define COLOR_DEBUG "\x1b[32m"
+#define COLOR_RESET "\x1b[0m"
+
 // String used to create the log file
 #define FILENAME_DATESTR_MAX_LENGTH 100
 #define FILENAME_DATESTR_FORMAT "%Y-%m-%d"
@@ -11,7 +19,6 @@
 // String used for each log entry
 #define LOG_DATESTR_MAX_LENGTH 100
 #define LOG_DATESTR_FORMAT "%Y-%m-%d|%H:%M:%S"
-
 
 // Used as reference to a log
 typedef struct
@@ -62,7 +69,7 @@ void LogInit(char* logName, LOG_LEVEL logMinLevel)
     strcat(logging_meta_info.fullLogPath, ".log");
 
     // Ensure any file issues are caught early by printing to the file here
-    LogMessage(LOG_LEVEL_INFO, "Log initialized.");
+    LogMessage(LOG_LEVEL_INFO, "Log initialized");
 }
 
 void LogPrint(const char* format, ...)
@@ -137,16 +144,16 @@ void LogMessage(LOG_LEVEL messageLevel, const char* format, ...)
             switch (messageLevel)
             {
             case LOG_LEVEL_ERROR:
-                fprintf(fp, "ERR");
+                fprintf(fp, COLOR_ERROR "ERR" COLOR_RESET);
                 break;
             case LOG_LEVEL_WARNING:
-                fprintf(fp, "WRN");
+                fprintf(fp, COLOR_WARNING "WRN" COLOR_RESET);
                 break;
             case LOG_LEVEL_INFO:
-                fprintf(fp, "IFO");
+                fprintf(fp, COLOR_INFO "IFO" COLOR_RESET);
                 break;
             case LOG_LEVEL_DEBUG:
-                fprintf(fp, "DBG");
+                fprintf(fp, COLOR_DEBUG "DBG" COLOR_RESET);
                 break;
             }
             va_start(args, format);
