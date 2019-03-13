@@ -42,7 +42,6 @@ static TimeType *GPSTime;
 static GSDType *GSD;
 
 #define MODULE_NAME "Central"
-static LOG moduleLog;
 static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 /*------------------------------------------------------------
 -- The main function.
@@ -55,7 +54,7 @@ int main(int argc, char *argv[])
     printf("Version %s\n",MaestroVersion );
     dbg_setdebug(DEBUG_LEVEL_HIGH);
 
-    moduleLog = init_log(MODULE_NAME,logLevel);
+    init_log(MODULE_NAME,logLevel);
 
     /*Share time between child processes*/
 
@@ -69,7 +68,7 @@ int main(int argc, char *argv[])
     pid_t pID[8];
     int iIndex = 0;
 
-    log_message(&moduleLog, LOG_LEVEL_INFO, "Central started");
+    log_message( LOG_LEVEL_INFO, "Central started");
 
 
     pID[iIndex] = fork();
@@ -121,7 +120,7 @@ int main(int argc, char *argv[])
         }
         if(pID[iIndex] == 0)
         {
-            log_message(&moduleLog,LOG_LEVEL_INFO,"Visualization 0 running in:  %i",getpid());
+            log_message(LOG_LEVEL_INFO,"Visualization 0 running in:  %i",getpid());
 
 
             char *newargv[] = { NULL, NULL };
@@ -169,7 +168,7 @@ int main(int argc, char *argv[])
     if(pID[iIndex] == 0)
     {
 
-        log_message(&moduleLog,LOG_LEVEL_INFO,"simulatorcontrol_task running in:  %i",getpid());
+        log_message(LOG_LEVEL_INFO,"simulatorcontrol_task running in:  %i",getpid());
 
       simulatorcontrol_task(GPSTime, GSD);
       exit(EXIT_SUCCESS);
@@ -186,7 +185,7 @@ int main(int argc, char *argv[])
   if(pID[iIndex] == 0)
   {
 
-      log_message(&moduleLog,LOG_LEVEL_INFO,"citscontrol_task running in:  %i",getpid());
+      log_message(LOG_LEVEL_INFO,"citscontrol_task running in:  %i",getpid());
 
     citscontrol_task(GPSTime, GSD);
     exit(EXIT_SUCCESS);

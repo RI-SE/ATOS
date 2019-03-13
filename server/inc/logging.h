@@ -19,14 +19,6 @@ typedef enum
     LOG_LEVEL_DEBUG=3
 } LOG_LEVEL;
 
-// Used as reference to a log
-typedef struct
-{
-    LOG_LEVEL level;
-    char logModuleName[LOG_MODULE_NAME_MAX_LENGTH];
-    char fullLogPath[PATH_MAX];
-} LOG;
-
 /* init_log(logName, logMinLevel):
 *   Initialize (or reinitialize) a log for writing. Creates a new file in the specified directory,
 *   including the specified logName and date of creation. If such a file already exists, a reference
@@ -42,7 +34,7 @@ typedef struct
 *     // This creates a log named "foo_log-2019-03-08.log" which filters out debug messages
 *     LOG myLog = init_log("foo_log", INFO);
 */
-LOG init_log(char* logName, LOG_LEVEL logMinLevel);
+void init_log(char* logName, LOG_LEVEL logMinLevel);
 
 /* log_message(log, messageLevel, format, ...):
 *   Write an entry into the specified log, with a specified message level attached to the message.
@@ -58,6 +50,6 @@ LOG init_log(char* logName, LOG_LEVEL logMinLevel);
 *     // This enters the following string into myLog: "[2019-03-08|09:58:23|ERR]: Division by zero (0)!"
 *     log_message(&myLog, ERROR, "Division by %s (%d)!", "zero", 0);
 */
-void log_message(LOG * log, LOG_LEVEL messageLevel, const char* format, ...);
+void log_message(LOG_LEVEL messageLevel, const char* format, ...);
 
 #endif

@@ -44,7 +44,6 @@
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
 #define MODULE_NAME "Supervisor"
-static LOG moduleLog;
 static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 
 /*------------------------------------------------------------
@@ -182,9 +181,9 @@ void supervision_task(TimeType *GPSTime) {
 
   struct timeval tv ;
   uint64_t msSinceEpochETSI ;
-  moduleLog = init_log(MODULE_NAME,logLevel);
+  init_log(MODULE_NAME,logLevel);
 
-  log_message(&moduleLog, LOG_LEVEL_INFO, "Supervision task running with PID: %i", getpid());
+  log_message( LOG_LEVEL_INFO, "Supervision task running with PID: %i", getpid());
 
 //  printf ("--------------------------------------------------\n");
 //  printf ("INF : SV : Supervision started.\n");
