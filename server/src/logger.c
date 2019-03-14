@@ -211,7 +211,7 @@ void logger_task()
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer,"Monor message structure(command message nr = 3):\n<Year>;<Month>;<Day>;<Hour>;<Minute>;<Second>;<Millisecond>;<UTC Time ms>;<Command message nr>;<Data>;<Object_address (IP number)>;<0>;");
+    sprintf(pcBuffer,"Monor message structure(command message nr = 3):\n<Year>;<Month>;<Day>;<Hour>;<Minute>;<Second>;<Millisecond>;<UTC Time ms>;<GPS Time ms>;<Command message nr>;<Data>;<Object_address (IP number)>;<0>;");
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
@@ -236,9 +236,8 @@ void logger_task()
         bzero(TimeStampUTCBufferRecv,MQ_MAX_UTC_LENGTH);
         (void)iCommRecv(&iCommand,pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
 
-        if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE)
+        if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE && iCommand!=COMM_MONI )
         {
-
             Timestamp = atol(TimeStampUTCBufferRecv);
             bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
             UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
@@ -255,18 +254,30 @@ void logger_task()
           str = malloc(sizeof(pcRecvBuffer) + 1);
           strcpy(str,pcRecvBuffer);
 
-          // Returns first datapoint of MONR (IP)
-          char* token = strtok(pcRecvBuffer, ";");
+          char* GPSSecondOfWeek = strtok(str, ";");
 
           // Get GPS second of week
           int counter = 0;
-          while (token != NULL && counter < 2) {
+          while (GPSSecondOfWeek != NULL && counter < 2) {
             //printf("%s\n", token);
-            token = strtok(NULL, ";");
+            GPSSecondOfWeek = strtok(NULL, ";");
             counter++;
           }
-          printf("UTC ms: %lu\n", UtilgetUTCmsFromGPStime(2044, atoi(token)));
-          printf("GPSfromUTC: %lu\n", UtilgetGPSmsFromUTCms(UtilgetUTCmsFromGPStime(2044, atoi(token))));
+
+          //printf("UTC ms: %lu\n", UtilgetUTCmsFromGPStime(2044, atoi(GPSSecondOfWeek)));
+          //printf("GPSfromUTC: %lu\n", UtilgetGPSmsFromUTCms(UtilgetUTCmsFromGPStime(2044, atoi(GPSSecondOfWeek))));
+
+          //Calculate GPSms
+          uint64_t GPSms = UtilgetGPSmsFromUTCms(UtilgetUTCmsFromGPStime(2044, atoi(GPSSecondOfWeek)));
+
+          Timestamp = atol(TimeStampUTCBufferRecv);
+          bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
+          UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
+          bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+          sprintf ( pcBuffer,"%s;%s;%lu;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, GPSms, iCommand, pcRecvBuffer);
+          (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+          (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+
 
         }
 
