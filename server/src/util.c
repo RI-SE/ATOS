@@ -654,7 +654,7 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 		//u2 = cosalpha2*((pow(a,2) - pow(b,2))/pow(b,2));
 		//A = 1 +(u2/16384)*(4096+u2*(-768+u2*(320-175*u2)));
 		//B = (u2/1024)*(256 + u2*(-128*u2*(74-47*u2)));
-		//dsigma = B*sins*(cossm+0.25*B*(coss*(-1+2*pow(cossm,2)) - (1/6)*B*cossm*(-3+4*pow(sins,2))*(-3+4*pow(cossm,2))));	
+		//dsigma = B*sins*(cossm+0.25*B*(coss*(-1+2*pow(cossm,2)) - (1/6)*B*cossm*(-3+4*pow(sins,2))*(-3+4*pow(cossm,2))));
 		//s = b*A*(sigma-dsigma);
     s = sqrt(pow(OP->x,2) + pow(OP->y,2));
     OP->DeltaOrigoDistance = s - OP->OrigoDistance;
@@ -669,13 +669,13 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 		sinlambda = sin(lambda);
 		coslambda = cos(lambda);
     */
-		
+
     //OP->ForwardAzimuth1 = atan2(cosU2*sinlambda,(cosU1*sinU2-sinU1*cosU2*coslambda));
 		//OP->ForwardAzimuth2 = atan2(cosU1*sinlambda,(sinU1*cosU2*-1+cosU1*sinU2*coslambda));
 
     //llhToEnu(iLlh, Llh, xyz);
 
-    
+
     //OP->x = xyz[0];
     //OP->y = xyz[1];
 
@@ -1801,6 +1801,11 @@ int iCommSend(const int iCommand,const char* cpData)
       uiMessagePrio = 160;
       cpMessage[0] = (char)COMM_LOG;
     }
+  else if (iCommand == COMM_OSEM)
+    {
+      uiMessagePrio = 160;
+      cpMessage[0] = (char)COMM_OSEM;
+    }
   else if (iCommand == COMM_VIOP)
     {
       uiMessagePrio = 80;
@@ -2085,7 +2090,7 @@ void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, 
     if(Debug == 1){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
 
     n = write(*Sockfd, Data, Length);
-    
+
     retval = getsockopt(*Sockfd, SOL_SOCKET, SO_ERROR, &error, &len);
 
     if(retval != 0)
@@ -2290,7 +2295,7 @@ U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug)
 {
     U32 i, j=0;
     C8 Hex;
-    
+
 
     for(i = 0; i < DataLength; i++)
     {
@@ -2301,7 +2306,7 @@ U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug)
       else if (Hex >= 10 && Hex <= 15) Hex = Hex + 0x37;
       //printf("%x\n", Hex);
       *(Text + j++) = Hex;
-      
+
       Hex = *(Binary + i) & 0x0F;
       //printf("%x\n", Hex);
       //Hex = Hex & 0x0F;
@@ -2335,7 +2340,7 @@ U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug)
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
 {
-  
+
   FILE *fd;
   C8 Filename[FILE_INFO_LENGTH];
   C8 CompletePath[MAX_PATH_LENGTH];
@@ -2346,7 +2351,7 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
   DIR * d = opendir(CompletePath); // open the path
   if(d==NULL) return 1; // if was not able return
   struct dirent * dir; // for the directory entries
-  
+
   bzero(CompletePath, MAX_PATH_LENGTH);
   GetCurrentDir(CompletePath, MAX_PATH_LENGTH);
   strcat(CompletePath, TempPath); //Concatenate temp file path
@@ -2368,7 +2373,7 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
   {
     bzero(Filename, FILE_INFO_LENGTH);
 
-    if(dir-> d_type != DT_DIR) 
+    if(dir-> d_type != DT_DIR)
       //printf("%s%s\n",BLUE, dir->d_name); // if the type is not directory just print it with blue
       sprintf(Filename, "F-%s\n", dir->d_name);
     else
@@ -2391,7 +2396,7 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
   }
   //printf("\n");
   //printf("%s\n", CompletePath);
-  
+
   closedir(d); // close the directory
 
   fclose(fd); //close the file
@@ -2578,7 +2583,7 @@ I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug
         printf("\n----MESSAGE----\n");
     }
 
-    return 0; 
+    return 0;
 }
 
 
@@ -2824,4 +2829,3 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 
     return 0;
 }
-

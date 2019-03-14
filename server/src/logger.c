@@ -67,6 +67,7 @@ void logger_task()
     char pcSendBuffer[MQ_MAX_MESSAGE_LENGTH];
     char pcReadBuffer[MQ_MAX_MESSAGE_LENGTH];
     char read;
+    int GPSweek;
     struct timeval tvTime ;
     uint64_t LogTimeStart;
     DIR *dir;
@@ -92,11 +93,11 @@ void logger_task()
     //(void)iCommInit(IPC_SEND,MQ_LG_1,0);
 
     /* Create folder with date as name and .log file with date as name */
-  
+
     struct stat st = {0};
-    if (stat(LOG_PATH, &st) == -1) 
+    if (stat(LOG_PATH, &st) == -1)
 	{
-		vCreateLogFolder(LOG_PATH);	
+		vCreateLogFolder(LOG_PATH);
 	}
 
 
@@ -234,6 +235,7 @@ void logger_task()
         bzero(pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
         bzero(TimeStampUTCBufferRecv,MQ_MAX_UTC_LENGTH);
         (void)iCommRecv(&iCommand,pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
+
         if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE)
         {
 
@@ -246,6 +248,29 @@ void logger_task()
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
 
         }
+
+        if(iCommand == COMM_OSEM){
+
+          char *str;
+          str = malloc(sizeof(pcRecvBuffer) + 1);
+          strcpy(str,pcRecvBuffer);
+
+          // Returns first datapoint of OSEM
+          char* token = strtok(pcRecvBuffer, ";");
+          printf("First token: %s\n", token);
+
+          // Rest of OSEM if needed
+          /*
+          while (token != NULL) {
+            printf("%s\n", token);
+            token = strtok(NULL, ";");
+          }
+          */
+
+          GPSweek = atoi(token);
+
+        }
+
 
         if(iCommand == COMM_REPLAY)
         {
@@ -404,7 +429,7 @@ void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
     int iMaxFolder = 0;
 
     directory = opendir(logFolder);
-    
+
     if(directory == NULL)
     {
         iResult = mkdir(logFolder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);

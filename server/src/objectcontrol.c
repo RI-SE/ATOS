@@ -954,13 +954,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.");
                         ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, OriginLatitude, OriginLongitude, OriginAltitude );
                         bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
-                        strcat(pcSendBuffer,"GPSWeek:");
-                        strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";OriginGPSLongitude;");
-                        strcat(pcSendBuffer,OriginLongitude);strcat(pcSendBuffer,";OriginGPSLatitude;");
-                        strcat(pcSendBuffer,OriginLatitude);strcat(pcSendBuffer,";OriginGPSAltitude;");
+                        strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";");
+                        strcat(pcSendBuffer,OriginLongitude);strcat(pcSendBuffer,";");
+                        strcat(pcSendBuffer,OriginLatitude);strcat(pcSendBuffer,";");
                         strcat(pcSendBuffer,OriginAltitude);
 
-                        iCommSend(COMM_LOG,pcSendBuffer);
+                        iCommSend(COMM_OSEM,pcSendBuffer);
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
 
 
