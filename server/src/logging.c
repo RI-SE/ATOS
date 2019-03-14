@@ -7,7 +7,7 @@
 // Colors for the log
 #define COLOR_ERROR "\x1b[31m"
 #define COLOR_WARNING "\x1b[33m"
-#define COLOR_INFO "\x1b[34m"
+#define COLOR_INFO "\x1b[0m"
 #define COLOR_DEBUG "\x1b[32m"
 #define COLOR_RESET "\x1b[0m"
 
