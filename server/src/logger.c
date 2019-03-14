@@ -249,15 +249,36 @@ void logger_task()
 
         }
 
+        if(iCommand == COMM_MONI){
+
+          char *str;
+          str = malloc(sizeof(pcRecvBuffer) + 1);
+          strcpy(str,pcRecvBuffer);
+
+          // Returns first datapoint of MONR (IP)
+          char* token = strtok(pcRecvBuffer, ";");
+
+          // Get GPS second of week
+          int counter = 0;
+          while (token != NULL && counter < 2) {
+            //printf("%s\n", token);
+            token = strtok(NULL, ";");
+            counter++;
+          }
+          printf("UTC ms: %lu\n", UtilgetUTCmsFromGPStime(2044, atoi(token)));
+          printf("GPSfromUTC: %lu\n", UtilgetGPSmsFromUTCms(UtilgetUTCmsFromGPStime(2044, atoi(token))));
+
+        }
+
         if(iCommand == COMM_OSEM){
 
           char *str;
           str = malloc(sizeof(pcRecvBuffer) + 1);
           strcpy(str,pcRecvBuffer);
 
-          // Returns first datapoint of OSEM
+          // Returns first datapoint of OSEM (GPSWeek)
           char* token = strtok(pcRecvBuffer, ";");
-          printf("First token: %s\n", token);
+          GPSweek = atoi(token);
 
           // Rest of OSEM if needed
           /*
@@ -266,8 +287,6 @@ void logger_task()
             token = strtok(NULL, ";");
           }
           */
-
-          GPSweek = atoi(token);
 
         }
 
