@@ -248,27 +248,23 @@ void logger_task()
 
         }
 
-        if(iCommand == COMM_MONI){
-
+        if(iCommand == COMM_MONI)
+        {
           char *str;
           str = malloc(sizeof(pcRecvBuffer) + 1);
           strcpy(str,pcRecvBuffer);
 
           char* GPSSecondOfWeek = strtok(str, ";");
 
-          // Get GPS second of week
           int counter = 0;
-          while (GPSSecondOfWeek != NULL && counter < 2) {
+          while (GPSSecondOfWeek != NULL && counter < 2)  // Get GPS second of week
+          {
             //printf("%s\n", token);
             GPSSecondOfWeek = strtok(NULL, ";");
             counter++;
           }
 
-          //printf("UTC ms: %lu\n", UtilgetUTCmsFromGPStime(2044, atoi(GPSSecondOfWeek)));
-          //printf("GPSfromUTC: %lu\n", UtilgetGPSmsFromUTCms(UtilgetUTCmsFromGPStime(2044, atoi(GPSSecondOfWeek))));
-
-          //Calculate GPSms
-          uint64_t GPSms = UtilgetGPSmsFromUTCms(UtilgetUTCmsFromGPStime(2044, atoi(GPSSecondOfWeek)));
+          uint64_t GPSms = UtilgetGPSmsFromUTCms(UtilgetUTCmsFromGPStime(2044, atoi(GPSSecondOfWeek))); //Calculate GPSms
 
           Timestamp = atol(TimeStampUTCBufferRecv);
           bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
