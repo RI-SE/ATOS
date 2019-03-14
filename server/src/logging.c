@@ -10,6 +10,7 @@
 #define COLOR_INFO "\x1b[0m"
 #define COLOR_DEBUG "\x1b[32m"
 #define COLOR_RESET "\x1b[0m"
+#define COLOR_BYTES "\x1b[35m"
 
 // String used to create the log file
 #define FILENAME_DATESTR_MAX_LENGTH 100
@@ -144,6 +145,45 @@ void LogMessage(LOG_LEVEL messageLevel, const char* format, ...)
             }
         }
     }
+}
+
+
+void LogPrintBytes(char * byteArray, unsigned long int firstIndex, unsigned long int length)
+{
+    if (firstIndex >= length)
+    {
+        printf("[%s] Cannot start at index larger than byte array length\n", moduleLog.logModuleName);
+        return;
+    }
+
+    time_t rawTime;
+    struct tm * timeInfo;
+    char dateStr[LOG_DATESTR_MAX_LENGTH];
+    FILE* fp;
+
+    // Print to log file
+    fp = fopen(moduleLog.fullLogPath, LOG_FILE_WRITE_MODE);
+    time(&rawTime);
+    timeInfo = localtime(&rawTime);
+    strftime(dateStr, LOG_DATESTR_MAX_LENGTH, LOG_DATESTR_FORMAT, timeInfo);
+
+    if (fp == NULL)
+    {
+        printf("[%s] Unable to open log file for writing: %s\n", moduleLog.logModuleName, moduleLog.fullLogPath);
+        return;
+    }
+
+    fprintf(fp, "[%s|" COLOR_BYTES "N/A" COLOR_RESET "]: ", dateStr);
+    printf("[%s] ", moduleLog.logModuleName);
+    for (unsigned long int i = firstIndex; i < length; ++i)
+    {
+        fprintf(fp,"%X ", byteArray[i]);
+    }
+
+    fprintf(fp, "\n");
+    printf("\n");
+
+    fclose(fp);
 }
 
 

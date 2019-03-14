@@ -50,6 +50,8 @@ void LogInit(char* logName, LOG_LEVEL logMinLevel);
 */
 void LogMessage(LOG_LEVEL messageLevel, const char* format, ...);
 
+void LogPrintBytes(char * byteArray, unsigned long int firstIndex, unsigned long int length);
+
 /* LogPrint(format, ...):
 ******  THIS FUNCTION IS INTENDED FOR QUICK DEBUGGING AND SHOULD NOT TO BE USED IN FINAL CODE ******
 *   Write an entry into the specified log, without specifying the log level. The log entry contains the
