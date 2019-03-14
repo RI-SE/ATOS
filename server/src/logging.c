@@ -72,41 +72,6 @@ void LogInit(char* logName, LOG_LEVEL logMinLevel)
     LogMessage(LOG_LEVEL_INFO, "Log initialized");
 }
 
-void LogPrint(const char* format, ...)
-{
-    time_t rawTime;
-    struct tm * timeInfo;
-    char dateStr[LOG_DATESTR_MAX_LENGTH];
-    FILE* fp;
-    va_list args;
-
-    // Do a printout of the message
-    va_start(args, format);
-    printf("[%s] ", moduleLog.logModuleName);
-    vprintf(format, args);
-    printf("\n");
-    va_end(args);
-
-    // Print to log file
-    fp = fopen(moduleLog.fullLogPath, LOG_FILE_WRITE_MODE);
-    time(&rawTime);
-    timeInfo = localtime(&rawTime);
-    strftime(dateStr, LOG_DATESTR_MAX_LENGTH, LOG_DATESTR_FORMAT, timeInfo);
-    if (fp != NULL)
-    {
-        va_start(args, format);
-        fprintf(fp, "[%s|N/A]: ", dateStr);
-        vfprintf(fp, format, args);
-        fprintf(fp, "\n");
-        va_end(args);
-
-        fclose(fp);
-    }
-    else
-    {
-        printf("[%s] Unable to open log file for writing: %s\n", moduleLog.logModuleName, moduleLog.fullLogPath);
-    }
-}
 
 void LogMessage(LOG_LEVEL messageLevel, const char* format, ...)
 {
@@ -182,3 +147,38 @@ void LogMessage(LOG_LEVEL messageLevel, const char* format, ...)
 }
 
 
+void LogPrint(const char* format, ...)
+{
+    time_t rawTime;
+    struct tm * timeInfo;
+    char dateStr[LOG_DATESTR_MAX_LENGTH];
+    FILE* fp;
+    va_list args;
+
+    // Do a printout of the message
+    va_start(args, format);
+    printf("[%s] ", moduleLog.logModuleName);
+    vprintf(format, args);
+    printf("\n");
+    va_end(args);
+
+    // Print to log file
+    fp = fopen(moduleLog.fullLogPath, LOG_FILE_WRITE_MODE);
+    time(&rawTime);
+    timeInfo = localtime(&rawTime);
+    strftime(dateStr, LOG_DATESTR_MAX_LENGTH, LOG_DATESTR_FORMAT, timeInfo);
+    if (fp != NULL)
+    {
+        va_start(args, format);
+        fprintf(fp, "[%s|N/A]: ", dateStr);
+        vfprintf(fp, format, args);
+        fprintf(fp, "\n");
+        va_end(args);
+
+        fclose(fp);
+    }
+    else
+    {
+        printf("[%s] Unable to open log file for writing: %s\n", moduleLog.logModuleName, moduleLog.fullLogPath);
+    }
+}
