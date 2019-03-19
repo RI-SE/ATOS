@@ -12,7 +12,6 @@
   -- Include files.
   ------------------------------------------------------------*/
 #include "logger.h"
-
 #include <dirent.h>
 #include <errno.h>
 #include <mqueue.h>
@@ -242,6 +241,14 @@ void logger_task()
             bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
             UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
             bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+
+            //Remove newlines in http Requests for nicer printouts.
+            for (int i = 0; i < strlen(pcRecvBuffer); i++){
+                if(pcRecvBuffer[i] == '\n'){
+                  pcRecvBuffer[i] = ' ';
+                }
+            }
+
             sprintf ( pcBuffer,"%s;%s;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, iCommand, pcRecvBuffer);
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
@@ -441,6 +448,8 @@ void logger_task()
     fclose(filefd);
     fclose(filefdComp);
 }
+
+
 
 /*------------------------------------------------------------
   -- Private functions
