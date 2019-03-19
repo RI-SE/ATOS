@@ -271,7 +271,7 @@ void logger_task()
             counter++;
           }
 
-          uint64_t GPSms = UtilgetGPSmsFromUTCms(UtilgetUTCmsFromGPStime(2044, atoi(GPSSecondOfWeek))); //Calculate GPSms
+          uint64_t GPSms = UtilgetGPSmsFromUTCms(UtilgetUTCmsFromGPStime(GPSweek, atoi(GPSSecondOfWeek))); //Calculate GPSms
 
           Timestamp = atol(TimeStampUTCBufferRecv);
           bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
