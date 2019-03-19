@@ -67,6 +67,7 @@ void logger_task()
     char pcSendBuffer[MQ_MAX_MESSAGE_LENGTH];
     char pcReadBuffer[MQ_MAX_MESSAGE_LENGTH];
     char read;
+    int GPSweek;
     struct timeval tvTime ;
     uint64_t LogTimeStart;
     DIR *dir;
@@ -92,11 +93,11 @@ void logger_task()
     //(void)iCommInit(IPC_SEND,MQ_LG_1,0);
 
     /* Create folder with date as name and .log file with date as name */
-  
+
     struct stat st = {0};
-    if (stat(LOG_PATH, &st) == -1) 
+    if (stat(LOG_PATH, &st) == -1)
 	{
-		vCreateLogFolder(LOG_PATH);	
+		vCreateLogFolder(LOG_PATH);
 	}
 
 
@@ -210,7 +211,7 @@ void logger_task()
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer,"Monor message structure(command message nr = 3):\n<Year>;<Month>;<Day>;<Hour>;<Minute>;<Second>;<Millisecond>;<UTC Time ms>;<Command message nr>;<Data>;<Object_address (IP number)>;<0>;");
+    sprintf(pcBuffer,"Monor message structure(command message nr = 3):\n<Year>;<Month>;<Day>;<Hour>;<Minute>;<Second>;<Millisecond>;<UTC Time ms>;<GPS Time ms>;<Command message nr>;<Data>;<Object_address (IP number)>;<0>;");
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
@@ -234,9 +235,9 @@ void logger_task()
         bzero(pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
         bzero(TimeStampUTCBufferRecv,MQ_MAX_UTC_LENGTH);
         (void)iCommRecv(&iCommand,pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
-        if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE)
-        {
 
+        if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE && iCommand!=COMM_MONI )
+        {
             Timestamp = atol(TimeStampUTCBufferRecv);
             bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
             UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
@@ -246,6 +247,56 @@ void logger_task()
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
 
         }
+
+        if(iCommand == COMM_MONI)
+        {
+          char *str;
+          str = malloc(sizeof(pcRecvBuffer) + 1);
+          strcpy(str,pcRecvBuffer);
+
+          char* GPSSecondOfWeek = strtok(str, ";");
+
+          int counter = 0;
+          while (GPSSecondOfWeek != NULL && counter < 2)  // Get GPS second of week
+          {
+            //printf("%s\n", token);
+            GPSSecondOfWeek = strtok(NULL, ";");
+            counter++;
+          }
+
+          uint64_t GPSms = UtilgetGPSmsFromUTCms(UtilgetUTCmsFromGPStime(2044, atoi(GPSSecondOfWeek))); //Calculate GPSms
+
+          Timestamp = atol(TimeStampUTCBufferRecv);
+          bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
+          UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
+          bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+          sprintf ( pcBuffer,"%s;%s;%lu;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, GPSms, iCommand, pcRecvBuffer);
+          (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+          (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+
+
+        }
+
+        if(iCommand == COMM_OSEM){
+
+          char *str;
+          str = malloc(sizeof(pcRecvBuffer) + 1);
+          strcpy(str,pcRecvBuffer);
+
+          // Returns first datapoint of OSEM (GPSWeek)
+          char* token = strtok(pcRecvBuffer, ";");
+          GPSweek = atoi(token);
+
+          // Rest of OSEM if needed
+          /*
+          while (token != NULL) {
+            printf("%s\n", token);
+            token = strtok(NULL, ";");
+          }
+          */
+
+        }
+
 
         if(iCommand == COMM_REPLAY)
         {
@@ -404,7 +455,7 @@ void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
     int iMaxFolder = 0;
 
     directory = opendir(logFolder);
-    
+
     if(directory == NULL)
     {
         iResult = mkdir(logFolder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);

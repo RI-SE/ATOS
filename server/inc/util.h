@@ -69,6 +69,7 @@
 #define COMM_TRAJ_TOSUP 17
 #define COMM_TRAJ_FROMSUP 18
 #define COMM_ASP 19
+#define COMM_OSEM 20
 #define COMM_INV 255
 
 
@@ -128,7 +129,7 @@
 
 
 // Between 1970 01 01 and 1980 01 06 there is 365*10 days, plus 2 for 2 leap years and plus 5 for the remaining days
-// in total we have MStime= (3650 + 2 + 5) * 24 * 3600 * 1000 = 315964800000
+// in total we have MStime= ((365 * 10) + 2 + 5) * 24 * 3600 * 1000 = 315964800000
 #define MS_TIME_DIFF_UTC_GPS 315964800000
 // Difference is 18 leap seconds between utc and gps
 #define MS_LEAP_SEC_DIFF_UTC_GPS 18000
