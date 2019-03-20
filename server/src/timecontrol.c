@@ -54,7 +54,7 @@ U16 TimeControlGetMillisecond(TimeType *GPSTime);
   -- Private variables.
   ------------------------------------------------------------*/
 #define MODULE_NAME "TimeControl"
-static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
+static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 
 
 /*------------------------------------------------------------

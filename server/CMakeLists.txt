@@ -9,6 +9,7 @@ include(GNUInstallDirs)
 # add include directories
 include_directories(inc)
 include_directories(${CMAKE_INSTALL_INCLUDEDIR})
+include_directories(${CMAKE_INSTALL_LIBDIR})
 
 # Add logging library
 find_library(MAESTRO_LOGGING_PATH MaestroLogging)
