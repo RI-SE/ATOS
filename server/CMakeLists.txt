@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 project (ChronosProject)
-
+include(GNUInstallDirs)
 # copy needed file
 #configure_file(traj/0.traj traj/192.168.0.1 COPYONLY)
 #configure_file(traj/1.traj traj/192.168.0.2 COPYONLY)
@@ -8,6 +8,13 @@ project (ChronosProject)
 
 # add include directories
 include_directories(inc)
+include_directories(${CMAKE_INSTALL_INCLUDEDIR})
+include_directories(${CMAKE_INSTALL_LIBDIR})
+
+# Add logging library
+find_library(MAESTRO_LOGGING_PATH MaestroLogging)
+add_library(MaestroLogging SHARED IMPORTED)
+set_property(TARGET MaestroLogging PROPERTY IMPORTED_LOCATION ${MAESTRO_LOGGING_PATH})
 
 # Create library
 add_library(util
@@ -20,7 +27,6 @@ add_library(objctrl
   src/objectcontrol.c
   inc/objectcontrol.h
 )
-
 
 add_executable(UserControl
   src/usercontrol.c
@@ -48,8 +54,12 @@ add_executable(TEServer
 install (TARGETS TEServer DESTINATION bin)
 
 # add linking to message queue
+#target_include_directories(TEServer PRIVATE ${CMAKE_INSTALL_INCLUDEDIRS})
+#target_include_directories(util PRIVATE ${CMAKE_INSTALL_INCLUDEDIRS})
 target_link_libraries(util rt m)
 target_link_libraries(util m)
 target_link_libraries(util rt)
-target_link_libraries(UserControl util objctrl)
+target_link_libraries(UserControl util objctrl MaestroLogging)
+target_link_libraries(util MaestroLogging)
 target_link_libraries(TEServer util)
+target_link_libraries(TEServer MaestroLogging)

@@ -31,6 +31,7 @@
 //#include "remotecontrol.h"
 #include "timecontrol.h"
 #include "supervisorcontrol.h"
+#include "logging.h"
 
 
 /*------------------------------------------------------------
@@ -39,6 +40,9 @@
 
 static TimeType *GPSTime;
 static GSDType *GSD;
+
+#define MODULE_NAME "Central"
+static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
@@ -48,7 +52,8 @@ int main(int argc, char *argv[])
     // TODO: make debug level a starting parameter
     // make sure that the same debug parameter is passed to all processes
     printf("Version %s\n",MaestroVersion );
-    dbg_setdebug(DEBUG_LEVEL_HIGH);
+
+    LogInit(MODULE_NAME,logLevel);
 
     /*Share time between child processes*/
 
@@ -62,9 +67,7 @@ int main(int argc, char *argv[])
     pid_t pID[8];
     int iIndex = 0;
 
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Central started\n");
-    fflush(stdout);
-
+    LogMessage( LOG_LEVEL_INFO, "Central started");
 
     pID[iIndex] = fork();
     if(pID[iIndex] < 0)
@@ -73,9 +76,6 @@ int main(int argc, char *argv[])
     }
     if(pID[iIndex] == 0)
     {
-
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: logger_task running in:  %i \n",getpid());
-
         logger_task();
         exit(EXIT_SUCCESS);
     }
@@ -89,8 +89,6 @@ int main(int argc, char *argv[])
     }
     if(pID[iIndex] == 0)
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: supervision_task running in:  %i \n",getpid());
-
         supervision_task(GPSTime);
         exit(EXIT_SUCCESS);
     }
@@ -104,8 +102,6 @@ int main(int argc, char *argv[])
     }
     if(pID[iIndex] == 0)
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: objectcontrol_task running in:  %i \n",getpid());
-
         objectcontrol_task(GPSTime, GSD);
         exit(EXIT_SUCCESS);
     }
@@ -122,7 +118,7 @@ int main(int argc, char *argv[])
         }
         if(pID[iIndex] == 0)
         {
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: visualization 0 running in:  %i \n",getpid());
+            log_message(LOG_LEVEL_INFO,"Visualization 0 running in:  %i",getpid());
 
 
             char *newargv[] = { NULL, NULL };
@@ -143,8 +139,6 @@ int main(int argc, char *argv[])
     if(pID[iIndex] == 0)
     {
 
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: remotecontrol_task running in:  %i \n",getpid());
-
       remotecontrol_task(GPSTime);
       exit(EXIT_SUCCESS);
     }
@@ -158,9 +152,6 @@ int main(int argc, char *argv[])
     }
     if(pID[iIndex] == 0)
     {
-
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: timecontrol_task running in:  %i \n",getpid());
-
         timecontrol_task(GPSTime, GSD);
         exit(EXIT_SUCCESS);
     }
@@ -175,7 +166,7 @@ int main(int argc, char *argv[])
     if(pID[iIndex] == 0)
     {
 
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: simulatorcontrol_task running in:  %i \n",getpid());
+        log_message(LOG_LEVEL_INFO,"simulatorcontrol_task running in:  %i",getpid());
 
       simulatorcontrol_task(GPSTime, GSD);
       exit(EXIT_SUCCESS);
@@ -192,7 +183,7 @@ int main(int argc, char *argv[])
   if(pID[iIndex] == 0)
   {
 
-      DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: citscontrol_task running in:  %i \n",getpid());
+      log_message(LOG_LEVEL_INFO,"citscontrol_task running in:  %i",getpid());
 
     citscontrol_task(GPSTime, GSD);
     exit(EXIT_SUCCESS);
@@ -208,17 +199,10 @@ int main(int argc, char *argv[])
     }
     if(pID[iIndex] == 0)
     {
-
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: supervisorcontrol_task running in:  %i \n",getpid());
         supervisorcontrol_task(GPSTime, GSD);
         exit(EXIT_SUCCESS);
     }
     ++iIndex;
-
-
-
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: systemcontrol_task running in:  %i \n",getpid());
-
 
     systemcontrol_task(GPSTime, GSD);
 }
