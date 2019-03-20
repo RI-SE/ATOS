@@ -33,7 +33,7 @@
 *.su
 
 # User files
-*.pro.user
+*.user
 *.orig
 *kdev4
 # Catalogs
