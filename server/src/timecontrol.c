@@ -298,7 +298,7 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
   /* Set address to object */
   object = gethostbyname(name);
   
-  if (object==0)
+  if (object==NULL)
   {
     util_error("[TimeControl] ERR: Unknown host");
   }
