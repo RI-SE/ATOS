@@ -2801,7 +2801,7 @@ int8_t tFromIdle(OBCState_t *currentState, OBCState_t requestedState)
 
 int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState)
 {
-    if (requestedState == OBC_STATE_CONNECTED)
+    if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
         return 0;
@@ -2821,7 +2821,7 @@ int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState)
 
 int8_t tFromArmed(OBCState_t *currentState, OBCState_t requestedState)
 {
-    if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_RUNNING)
+    if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_RUNNING || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
         return 0;
@@ -2831,7 +2831,7 @@ int8_t tFromArmed(OBCState_t *currentState, OBCState_t requestedState)
 
 int8_t tFromRunning(OBCState_t *currentState, OBCState_t requestedState)
 {
-    if (requestedState == OBC_STATE_CONNECTED)
+    if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
         return 0;
