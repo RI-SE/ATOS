@@ -1,5 +1,6 @@
 #!/bin/sh
 MAESTRODIR=$(pwd)
+git submodule update --init --recursive
 cd util/C
 cmake -G "Unix Makefiles" .
 make
@@ -10,6 +11,5 @@ cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
 cp -R ../conf/ .
 mkdir traj && mkdir log
 cp ../traj/0.traj ./traj/127.0.0.1
-cd build
 make
 cd $MAESTRODIR
