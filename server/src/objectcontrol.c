@@ -2762,7 +2762,7 @@ int8_t vSetState(OBCState_t *currentState, OBCState_t requestedState)
 
     if (retval == -1)
     {
-        LogMessage(LOG_LEVEL_WARNING,"Invalid transition requested: from %d to %d",currentState,&requestedState);
+        LogMessage(LOG_LEVEL_WARNING,"Invalid transition requested: from %d to %d",*currentState,requestedState);
     }
     return retval;
 }
