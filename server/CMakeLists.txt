@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 project (ChronosProject)
-include(GNUInstallDirs)
+
 # copy needed file
 #configure_file(traj/0.traj traj/192.168.0.1 COPYONLY)
 #configure_file(traj/1.traj traj/192.168.0.2 COPYONLY)
@@ -8,11 +8,16 @@ include(GNUInstallDirs)
 
 # add include directories
 include_directories(inc)
-include_directories(${CMAKE_INSTALL_INCLUDEDIR})
-include_directories(${CMAKE_INSTALL_LIBDIR})
+include_directories(../util/C/logging)
+include(GNUInstallDirs)
 
-# Add logging library
-find_library(MAESTRO_LOGGING_PATH MaestroLogging)
+# Add logging library (hint at some locations)
+find_library(MAESTRO_LOGGING_PATH
+    NAMES MaestroLogging
+    PATHS "../util/C/logging"
+          "../util/C"
+          ${CMAKE_INSTALL_LIBDIR}
+          ${CMAKE_INSTALL_INCLUDEDIR})
 add_library(MaestroLogging SHARED IMPORTED)
 set_property(TARGET MaestroLogging PROPERTY IMPORTED_LOCATION ${MAESTRO_LOGGING_PATH})
 
@@ -54,8 +59,6 @@ add_executable(TEServer
 install (TARGETS TEServer DESTINATION bin)
 
 # add linking to message queue
-#target_include_directories(TEServer PRIVATE ${CMAKE_INSTALL_INCLUDEDIRS})
-#target_include_directories(util PRIVATE ${CMAKE_INSTALL_INCLUDEDIRS})
 target_link_libraries(util rt m)
 target_link_libraries(util m)
 target_link_libraries(util rt)
