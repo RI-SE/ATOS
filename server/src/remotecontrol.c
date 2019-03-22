@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include "objectcontrol.h"
 #include "util.h"
+#include "logging.h"
 
 #define BUF_SIZE 500
 
@@ -52,6 +53,11 @@ void getIP();
 C8 httpbuffer[REMOTE_CONTROL_HTTP_BUFFER];
 C8 recvbuffer[REMOTE_CONTROL_RECV_BUFFER];
 
+/*------------------------------------------------------------
+-- Private variables
+------------------------------------------------------------*/
+#define MODULE_NAME "RemoteControl"
+static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 
 /*------------------------------------------------------------
 -- The main function.
@@ -69,6 +75,9 @@ int remotecontrol_task(TimeType *GPSTime)
   C8 TimeBuffer[REMOTE_CONTROL_BUFFER_SIZE_52];
   I32 RecievedNewData, i;
   C8 SendData[4] = {0, 0, 3, 0xe8};
+
+  LogInit(MODULE_NAME,logLevel);
+  LogMessage(LOG_LEVEL_INFO,"Remote control task running with PID: %i",getpid());
 
 
   UtilSearchTextFile(REMOTE_CONTROL_CONF_FILE_PATH, "RemoteMode=", "", TextBufferC8);
@@ -110,14 +119,14 @@ U32 RemoteControlSendServerStatus(I32 ServerSocketI32, ServiceSessionType *Sessi
   C8 LengthC8[4];
   U32 LengthU32;
   C8 FirstResponseC8[5];
-  
+
   bzero(FirstResponseC8, 5);
   bzero(StatusC8, 20);
   sprintf(StatusC8, "%" PRIu32, StatusU32);
-  
+
   bzero(UserIdC8, 20);
   sprintf(UserIdC8, "%" PRIu32, SessionData->UserIdU32);
-  
+
 
   bzero(httpbuffer, REMOTE_CONTROL_HTTP_BUFFER);
   bzero(recvbuffer, REMOTE_CONTROL_RECV_BUFFER);
@@ -161,9 +170,9 @@ U32 RemoteControlSendServerStatus(I32 ServerSocketI32, ServiceSessionType *Sessi
     {
       perror("[RemoteControl]ERR: Failed to receive from command socket.");
       exit(1);
-    } 
+    }
   }
-  else if(ClientResultI32 == 0) 
+  else if(ClientResultI32 == 0)
   {
       printf("[RemoteControl] Client closed connection.\n");
       close(ServerSocketI32);
@@ -179,7 +188,7 @@ U32 RemoteControlSendServerStatus(I32 ServerSocketI32, ServiceSessionType *Sessi
     }
   }
 
-  return 0;  
+  return 0;
 }
 
 
@@ -205,7 +214,7 @@ U32 RemoteControlSignIn(I32 ServerSocketI32, C8 *TablenameC8, C8 *UsernameC8, C8
   strcat(httpbuffer, PasswordC8);
   strcat(httpbuffer, ");");
   printf("httpbuffer = %s\n", httpbuffer);
-  
+
   RemoteControlSendBytes(httpbuffer, strlen(httpbuffer), &ServerSocketI32, 0);
 
   struct timeval tv;
@@ -221,9 +230,9 @@ U32 RemoteControlSignIn(I32 ServerSocketI32, C8 *TablenameC8, C8 *UsernameC8, C8
     {
       perror("[RemoteControl]ERR: Failed to receive from command socket.");
       exit(1);
-    } 
+    }
   }
-  else if(ClientResultI32 == 0) 
+  else if(ClientResultI32 == 0)
   {
       printf("[RemoteControl] Client closed connection.\n");
       close(ServerSocketI32);
@@ -241,7 +250,7 @@ U32 RemoteControlSignIn(I32 ServerSocketI32, C8 *TablenameC8, C8 *UsernameC8, C8
     SessionData->SessionIdU32 = (SessionData->SessionIdU32<<8) | recvbuffer[7];
     SessionData->SessionIdU32 = (SessionData->SessionIdU32<<8) | recvbuffer[8];
     SessionData->SessionIdU32 = (SessionData->SessionIdU32<<8) | recvbuffer[9];
-      
+
     SessionData->UserIdU32 = recvbuffer[10];
     SessionData->UserIdU32 = (SessionData->UserIdU32<<8) | recvbuffer[11];
     SessionData->UserIdU32 = (SessionData->UserIdU32<<8) | recvbuffer[12];
@@ -250,7 +259,7 @@ U32 RemoteControlSignIn(I32 ServerSocketI32, C8 *TablenameC8, C8 *UsernameC8, C8
     SessionData->UserTypeU8 = recvbuffer[14];
   }
 
-  return 0;  
+  return 0;
 }
 
 
@@ -258,41 +267,41 @@ void RemoteControlConnectServer(int* sockfd, const char* name, const uint32_t po
 {
   struct sockaddr_in serv_addr;
   struct hostent *server;
-  
+
   char buffer[256];
   int iResult;
 
   *sockfd = socket(AF_INET, SOCK_STREAM, 0);
-   
-  if (*sockfd < 0) 
+
+  if (*sockfd < 0)
   {
     util_error("ERR: Failed to open control socket");
   }
 
   server = gethostbyname(name);
-  if (server == NULL) 
+  if (server == NULL)
   {
     util_error("ERR: Unknown host ");
   }
-  
+
   bzero((char *) &serv_addr, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
-  
+
   bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
   serv_addr.sin_port = htons(port);
 
-  DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Try to connect to control socket: %s %i\n",name,port);
+  LogMessage(LOG_LEVEL_INFO,"Attempting to connect to control socket: %s:%i",name,port);
 
-  
+
   do
   {
     iResult = connect(*sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr));
 
-    if ( iResult < 0) 
+    if ( iResult < 0)
     {
       if(errno == ECONNREFUSED)
       {
-        DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"WAR: Was not able to connect to object, retry in 3 sec...\n");
+          LogMessage(LOG_LEVEL_WARNING,"Unable to connect to object, retrying in 3 sec...");
         (void)sleep(3);
       }
       else
@@ -305,8 +314,7 @@ void RemoteControlConnectServer(int* sockfd, const char* name, const uint32_t po
 
   /* set socket to non-blocking */
     //iResult = fcntl(*sockfd, F_SETFL, fcntl(*sockfd, F_GETFL, 0) | O_NONBLOCK);
-
-    DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"Client connected to server: %s %i\n",name,port);
+    LogMessage(LOG_LEVEL_INFO,"Client connected to server: %s:%i",name,port);
 
 }
 
@@ -335,7 +343,7 @@ void getIP()
            ssize_t nread;
            char buf[BUF_SIZE];
           const char *hostm = "maestro.sebart.net";
-  
+
            /* Obtain address(es) matching host/port */
 
           printf("Maestro check address\n");
@@ -369,8 +377,7 @@ static void vCreateTimeChannel(const char* name,const uint32_t port, int* sockfd
   struct hostent *object;
 
   /* Connect to object safety socket */
-
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Creating safety socket\n");
+    LogMessage(LOG_LEVEL_INFO,"Creating safety socket");
 
 
   *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
@@ -381,26 +388,25 @@ static void vCreateTimeChannel(const char* name,const uint32_t port, int* sockfd
 
   /* Set address to object */
   object = gethostbyname(name);
-  
+
   if (object==0)
   {
     util_error("ERR: Unknown host");
   }
 
-  bcopy((char *) object->h_addr, 
+  bcopy((char *) object->h_addr,
     (char *)&addr->sin_addr.s_addr, object->h_length);
   addr->sin_family = AF_INET;
   addr->sin_port = htons(port);
 
    /* set socket to non-blocking */
-  result = fcntl(*sockfd, F_SETFL, 
+  result = fcntl(*sockfd, F_SETFL,
     fcntl(*sockfd, F_GETFL, 0) | O_NONBLOCK);
   if (result < 0)
   {
     util_error("ERR: calling fcntl");
   }
-
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Created socket and safety address: %s %d\n",name,port);
+    LogMessage(LOG_LEVEL_INFO,"Created socket and safety address: %s:%d",name,port);
 
 
 }
@@ -422,14 +428,14 @@ static void vRecvTime(int* sockfd, char* buffer, int length, int* recievedNewDat
         }
         else
         {
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: No data receive\n");
+            LogMessage(LOG_LEVEL_DEBUG,"No data received");
 
         }
       }
       else
       {
 
-          DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Received: <%s>\n",buffer);
+          LogMessage(LOG_LEVEL_DEBUG,"Received: <%s>",buffer);
 
       }
     } while(result > 0 );
@@ -438,7 +444,7 @@ static void vRecvTime(int* sockfd, char* buffer, int length, int* recievedNewDat
 int SendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
 {
     int result;
- 
+
     result = sendto(*sockfd, SendData, Length, 0, (const struct sockaddr *) addr, sizeof(struct sockaddr_in));
 
     if (result < 0)

@@ -2,7 +2,7 @@
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : supervision.c
-  -- Author      : 
+  -- Author      :
   -- Description : CHRONOS
   -- Purpose     :
   -- Reference   :
@@ -23,6 +23,7 @@
 
 #include "util.h"
 #include "supervision.h"
+#include "logging.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -42,6 +43,8 @@
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
+#define MODULE_NAME "Supervisor"
+static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 
 /*------------------------------------------------------------
   -- Function declarations & definitions.
@@ -178,7 +181,9 @@ void supervision_task(TimeType *GPSTime) {
 
   struct timeval tv ;
   uint64_t msSinceEpochETSI ;
+  LogInit(MODULE_NAME,logLevel);
 
+  LogMessage( LOG_LEVEL_INFO, "Supervision task running with PID: %i", getpid());
 
 //  printf ("--------------------------------------------------\n");
 //  printf ("INF : SV : Supervision started.\n");
@@ -355,7 +360,7 @@ void supervision_task(TimeType *GPSTime) {
     bzero(cpBuffer, RECV_MESSAGE_BUFFER);
     (void) iCommRecv ( &iCommand,
                        cpBuffer,
-                       RECV_MESSAGE_BUFFER);
+                       RECV_MESSAGE_BUFFER, NULL);
 
 #ifdef DEBUG1
     //printf ( "INF : SV : Received a command: %s\n",

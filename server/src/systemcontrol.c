@@ -13,12 +13,15 @@
   ------------------------------------------------------------*/
 #include <mqueue.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
-#include <time.h>  
+#include <time.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -27,10 +30,11 @@
 #include <netdb.h>
 #include <unistd.h>
 
-#include "remotecontrol.h"
+//#include "remotecontrol.h"
 #include "util.h"
 #include "systemcontrol.h"
 #include "timecontrol.h"
+#include "logging.h"
 
 
 
@@ -52,19 +56,26 @@ typedef enum {
 
 #define SYSTEM_CONTROL_CONTROL_PORT   54241       // Default port, control channel
 #define SYSTEM_CONTROL_PROCESS_PORT   54242       // Default port, process channel
-#define IPC_BUFFER_SIZE   1024
+#define SYSTEM_CONTROL_RX_PACKET_SIZE 1280
+#define SYSTEM_CONTROL_TX_PACKET_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
+#define SYSTEM_CONTROL_MAX_PATH_LENGTH 255
+#define IPC_BUFFER_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
+//#define IPC_BUFFER_SIZE   1024
 #define SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE 64
 #define SYSTEM_CONTROL_PROCESS_DATA_BUFFER	128
 
 #define SYSTEM_CONTROL_ARG_CHAR_COUNT 		2
 #define SYSTEM_CONTROL_COMMAND_MAX_LENGTH 	32
 #define SYSTEM_CONTROL_ARG_MAX_COUNT	 	6
-#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	80
+#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	32
+#define SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH SYSTEM_CONTROL_ARG_CHAR_COUNT + SYSTEM_CONTROL_COMMAND_MAX_LENGTH + SYSTEM_CONTROL_ARG_MAX_COUNT*SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH
+//#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	80
 
 #define OSTM_OPT_SET_ARMED_STATE 2
-#define OSTM_OPT_SET_DISARMED_STATE 3 
+#define OSTM_OPT_SET_DISARMED_STATE 3
 #define SC_RECV_MESSAGE_BUFFER 1024
 
+#define SMALL_BUFFER_SIZE_1024 1024
 #define SMALL_BUFFER_SIZE_128 128
 #define SMALL_BUFFER_SIZE_64 64
 #define SMALL_BUFFER_SIZE_16 16
@@ -82,8 +93,8 @@ typedef enum {
 
 #define SYSTEM_CONTROL_RESPONSE_CODE_OK 						0x0001
 #define SYSTEM_CONTROL_RESPONSE_CODE_ERROR 						0x0F10
-#define SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE 	0x0F20  
-#define SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE  		 	0x0F25  
+#define SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE 	0x0F20
+#define SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE  		 	0x0F25
 
 #define SYSTEM_CONTROL_RESPONSE_CODE_INVALID_LENGTH				0x0F30
 #define SYSTEM_CONTROL_RESPONSE_CODE_BUSY						0x0F40
@@ -92,17 +103,22 @@ typedef enum {
 #define SYSTEM_CONTROL_RESPONSE_CODE_DECRYPTION_ERROR			0x0F61
 #define SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA                    0x0F62
 
+#define GetCurrentDir getcwd
+#define REMOVE_FILE 1
+#define KEEP_FILE 0
+
+
 
 typedef enum {
     Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0, InitializeScenario_0,
-    ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
-    replay_1, control_0, Exit_0, start_ext_trigg_1, nocommand
+    ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetDirectoryContent_1,
+    DeleteFileDirectory_1, CreateDirectory_1, replay_1, control_0, Exit_0, start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
-const char* SystemControlCommandsArr[] = 
-{ 	
+const char* SystemControlCommandsArr[] =
+{
     "Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0", "AbortScenario_0", "InitializeScenario_0",
-    "ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2", "GetServerParameter_1",
-    "replay_1", "control_0", "Exit_0", "start_ext_trigg_1"
+    "ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2", "GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1", "GetDirectoryContent_1",
+    "DeleteFileDirectory_1", "CreateDirectory_1", "replay_1", "control_0", "Exit_0", "start_ext_trigg_1"
 };
 
 const char* SystemControlStatesArr[] = { "UNDEFINED", "INITIALIZED", "IDLE", "READY", "RUNNING", "INWORK", "ERROR"};
@@ -112,7 +128,8 @@ const char* SystemControlOBCStatesArr[] = { "UNDEFINED", "IDLE", "INITIALIZED", 
 char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
 char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
 char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH];
-
+C8 *STR_SYSTEM_CONTROL_RX_PACKET_SIZE = "1280";
+C8 *STR_SYSTEM_CONTROL_TX_PACKET_SIZE = "1200";
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -123,12 +140,29 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
 static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint32_t port);
 static void SystemControlSendBytes(const char* data, int length, int* sockfd, int debug);
 void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8* ResponseData, I32 ResponseDataLength, I32* Sockfd, U8 Debug);
+I32 SystemControlBuildControlResponse(U16 ResponseStatus, C8* ResponseString, C8* ResponseData, I32 ResponseDataLength, U8 Debug);
 void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug);
+void SystemControlSendMONR(C8* LogString, I32* Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I32 *sockfd, struct sockaddr_in* addr);
 I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
 I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 debug);
 I32 SystemControlReadServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
 I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
+I32 SystemControlCheckFileDirectoryExist(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
+I32 SystemControlUploadFile(C8 *Path, C8 *FileSize, C8 *PacketSize, C8 *ReturnValue, U8 Debug);
+I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSize, C8 *ReturnValue, U8 Debug);
+I32 SystemControlDeleteFileDirectory(C8 *Path, C8 *ReturnValue, U8 Debug);
+I32 SystemControlBuildFileContentInfo(C8 *Path, C8 *ReturnValue, U8 Debug);
+I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *ReturnValue, U8 Remove, U8 Debug);
+I32 SystemControlCreateDirectory(C8 *Path, C8 *ReturnValue, U8 Debug);
+
+/*------------------------------------------------------------
+-- Private variables
+------------------------------------------------------------*/
+
+#define MODULE_NAME "SystemControl"
+static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
+
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
@@ -137,7 +171,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 {
 
     I32 ServerHandle;
-    I32 ClientSocket;
+    I32 ClientSocket = 0;
     I32 ClientResult = 0;
     struct sockaddr_in ProcessChannelAddr;
     struct in_addr ip_addr;
@@ -193,7 +227,15 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
     U16 MilliU16 = 0, NowU16 = 0;
     U64 GPSmsU64 = 0;
     C8 ParameterListC8[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
+    U32 LengthU32 = 0;
+    C8 BinBuffer[SMALL_BUFFER_SIZE_1024];
 
+    C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
+
+    //C8 SIDSData[128][10000][8];
+
+    LogInit(MODULE_NAME,logLevel);
+    LogMessage(LOG_LEVEL_INFO,"System control task running with PID: %i",getpid());
 
     bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
     UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerMode=", "", TextBufferC8);
@@ -218,12 +260,12 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
     bzero(PasswordC8, SMALL_BUFFER_SIZE_20);
     strcat(PasswordC8, TextBufferC8);
 
+    //printf("[SystemControl] Mode: %d\n", ModeU8);
+    //printf("[SystemControl] Remote server IP: %s\n", ServerIPC8);
+    //printf("[SystemControl] Remote server port: %d\n", ServerPortU16);
+    //printf("[SystemControl] Username: %s\n", UsernameC8);
+    //printf("[SystemControl] Password: %s\n", PasswordC8);
 
-    printf("Mode: %d\n", ModeU8);
-    printf("ServerIP: %s\n", ServerIPC8);
-    printf("ServerPort: %d\n", ServerPortU16);
-    printf("UsernameC8: %s\n", UsernameC8);
-    printf("PasswordC8: %s\n", PasswordC8);
     if(ModeU8 == 0)
     {
 
@@ -260,7 +302,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     ClientResult = SystemControlInitServer(&ClientSocket, &ServerHandle, &ip_addr);
                     bzero(UserControlIPC8, SMALL_BUFFER_SIZE_20);
                     sprintf(UserControlIPC8, "%s", inet_ntoa(ip_addr));
-                    printf("[SystemControl] UserControl IP address is %s\n", inet_ntoa(ip_addr));
+                    LogMessage(LOG_LEVEL_INFO,"UserControl IP address is %s", inet_ntoa(ip_addr));
                     SystemControlCreateProcessChannel(UserControlIPC8, SYSTEM_CONTROL_PROCESS_PORT, &ProcessChannelSocket, &ProcessChannelAddr);
 
                 }
@@ -281,24 +323,25 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 if(errno != EAGAIN && errno != EWOULDBLOCK)
                 {
-                    printf("[SystemControl] Wait 5 sec before exiting.\n");
+                    LogMessage(LOG_LEVEL_ERROR,"Failed to receive from command socket");
+                    LogMessage(LOG_LEVEL_ERROR,"Waiting 5 sec before exiting");
                     usleep(5000000); //Wait 5 sec before sending exit, just so ObjectControl can send abort in HEAB before exit
                     (void)iCommSend(COMM_EXIT,NULL);
-                    perror("[SystemControl] ERR: Failed to receive from command socket.");
+                    LogMessage(LOG_LEVEL_ERROR,"System control exiting");
                     exit(1);
                 }
             }
             else if(ClientResult == 0)
             {
-                printf("[SystemControl] Client closed connection.\n");
+                LogMessage(LOG_LEVEL_INFO,"Client closed connection");
                 close(ClientSocket);
                 ClientSocket = -1;
                 if(USE_LOCAL_USER_CONTROL == 0) { close(ServerHandle); ServerHandle = -1;}
 
                 SystemControlCommand = AbortScenario_0; //Oops no client is connected, go to AbortScenario_0
-                server_state == SERVER_STATE_UNDEFINED;
+                server_state == SERVER_STATE_UNDEFINED; // TODO: Should this be an assignment?
             }
-            else
+            else if(ClientResult > 0 && ClientResult < SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH)
             {
                 for(i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i ++ ) bzero(SystemControlArgument[i],SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
                 CurrentInputArgCount = 0;
@@ -321,20 +364,23 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
         }
         else if(ModeU8 == 1)
-        {
+        {   /* use util.c function to call time
             gettimeofday(&CurrentTimeStruct, NULL);
             CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
+            */
+            CurrentTimeU64 = UtilgetCurrentUTCtimeMS();
             TimeDiffU64 = CurrentTimeU64 - OldTimeU64;
 
+            /* Uneccesarry checks to currently non-existing remote control serversocket. Login and session data not used either.
             if(ServerSocketI32 <= 0) RemoteControlConnectServer(&ServerSocketI32, ServerIPC8, ServerPortU16);
 
             if(ServerSocketI32 > 0 && SessionData.SessionIdU32 <= 0)
             {
                 RemoteControlSignIn(ServerSocketI32, "users", UsernameC8, PasswordC8, &SessionData, 0);
-                printf("SessionId: %u\n", SessionData.SessionIdU32);
-                printf("UserId: %u\n", SessionData.UserIdU32);
-                printf("Usertype: %d\n", SessionData.UserTypeU8);
-                if(SessionData.SessionIdU32 > 0) { printf("Sign in success!\n");} else { printf("Sign in failed!\n");}
+                LogMessage(LOG_LEVEL_INFO,"SessionId: %u", SessionData.SessionIdU32);
+                LogMessage(LOG_LEVEL_INFO,"UserId: %u", SessionData.UserIdU32);
+                LogMessage(LOG_LEVEL_INFO,"Usertype: %d", SessionData.UserTypeU8);
+                if(SessionData.SessionIdU32 > 0) { LogMessage(LOG_LEVEL_INFO,"Sign in success!");} else { LogMessage(LOG_LEVEL_INFO,"Sign in failed!");}
             }
 
             if(ServerSocketI32 > 0 && SessionData.SessionIdU32 > 0 && TimeDiffU64 > PollRateU64)
@@ -342,7 +388,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 OldTimeU64 = CurrentTimeU64;
                 bzero(RemoteServerRxData, 1024);
                 RemoteControlSendServerStatus(ServerSocketI32, &SessionData, ++i1, 0);
-            }
+            }*/
         }
 
 
@@ -354,7 +400,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(SystemControlCommand == GetServerStatus_0)
             {
-                printf("[SystemControl1] State: %s, OBCState: %s, PreviousCommand: %s\n", SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8], SystemControlCommandsArr[PreviousSystemControlCommand]);
+                LogMessage(LOG_LEVEL_INFO,"State: %s, OBCState: %s, PreviousCommand: %s", SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8], SystemControlCommandsArr[PreviousSystemControlCommand]);
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 ControlResponseBuffer[0] = server_state;
                 ControlResponseBuffer[1] = OBCStateU8;
@@ -363,7 +409,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(SystemControlCommand != PreviousSystemControlCommand)
             {
-                printf("[SystemControl] Command not allowed, SystemControl is busy in state %s, PreviousCommand: %s\n", SystemControlStatesArr[server_state], SystemControlCommandsArr[PreviousSystemControlCommand]);
+                LogMessage(LOG_LEVEL_WARNING,"Command not allowed, SystemControl is busy in state %s, PreviousCommand: %s", SystemControlStatesArr[server_state], SystemControlCommandsArr[PreviousSystemControlCommand]);
                 SystemControlSendLog("[SystemControl] Command not allowed, SystemControl is busy in state INWORK.\n", &ClientSocket, 0);
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "", ControlResponseBuffer, 0, &ClientSocket, 0);
@@ -372,7 +418,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         }
 
         bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
-        iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
+        iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
         if (iCommand == COMM_OBC_STATE)
         {
             OBCStateU8 = (U8)*pcRecvBuffer;
@@ -380,6 +426,15 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         else if(iCommand == COMM_LOG)
         {
             SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
+        }
+
+        else if(iCommand == COMM_MONI){
+          //printf("Monr sys %s\n", pcRecvBuffer);
+	  C8 data[strlen(pcRecvBuffer)];
+	  bzero(data, strlen(data));
+	  strcat(data, pcRecvBuffer);
+
+          UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, data, sizeof(data), 0);
         }
 
         ++ProcessControlSendCounterU32;
@@ -420,10 +475,10 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
         switch(SystemControlCommand)
         {
-
+        // can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
         case Idle_0:
             /*bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
-                iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
+                iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
 
                 if(iCommand == COMM_TOM)
                 {
@@ -487,20 +542,20 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
             break;
         case GetServerStatus_0:
-            DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[SystemControl] State: %s, OBCState: %s\n", SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8]);
+            LogMessage(LOG_LEVEL_INFO,"State: %s, OBCState: %s",SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8]);
             SystemControlCommand = Idle_0;
             bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
             ControlResponseBuffer[0] = server_state;
             ControlResponseBuffer[1] = OBCStateU8;
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"GPSMillisecondsU64: %ld\n", GPSTime->GPSMillisecondsU64);
+            LogMessage(LOG_LEVEL_DEBUG,"GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64); // GPSTime just ticks from 0 up shouldent it be in the global GPStime?
             SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 2, &ClientSocket, 0);
-        break;
+            break;
         case GetServerParameterList_0:
             SystemControlCommand = Idle_0;
             bzero(ParameterListC8, SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE);
             SystemControlReadServerParameterList(ParameterListC8, 0);
             SystemControlSendControlResponse(strlen(ParameterListC8) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameterList:", ParameterListC8, strlen(ParameterListC8), &ClientSocket, 0);
-        break;
+            break;
         case GetServerParameter_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
@@ -508,9 +563,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlReadServerParameter(SystemControlArgument[0], ControlResponseBuffer, 0);
                 SystemControlSendControlResponse(strlen(ControlResponseBuffer) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameter:", ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
-
-            } else { printf("[SystemControl] Err: Wrong parameter count in GetServerParameter(Name)!\n"); SystemControlCommand = Idle_0;}
-        break;
+            } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in GetServerParameter(Name)!"); SystemControlCommand = Idle_0;}
+            break;
         case SetServerParameter_2:
             if(CurrentInputArgCount == CommandArgCount)
             {
@@ -519,7 +573,105 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 SystemControlWriteServerParameter(SystemControlArgument[0], SystemControlArgument[1], 0);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:", ControlResponseBuffer, 0, &ClientSocket, 0);
 
-            } else { printf("[SystemControl] Err: Wrong parameter count in SetServerParameter(Name, Value)!\n"); SystemControlCommand = Idle_0;}
+            } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in SetServerParameter(Name, Value)!"); SystemControlCommand = Idle_0;}
+            break;
+        case CheckFileDirectoryExist_1:
+            if(CurrentInputArgCount == CommandArgCount)
+            {
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "CheckFileDirectoryExist:", ControlResponseBuffer, 1, &ClientSocket, 0);
+
+            } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in CheckFFExist(path)!"); SystemControlCommand = Idle_0;}
+        break;
+        case DeleteFileDirectory_1:
+            if(CurrentInputArgCount == CommandArgCount)
+            {
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlDeleteFileDirectory(SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteFileDirectory:", ControlResponseBuffer, 1, &ClientSocket, 0);
+
+            } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in DeleteFileDirectory(path)!"); SystemControlCommand = Idle_0;}
+        break;
+        case CreateDirectory_1:
+            if(CurrentInputArgCount == CommandArgCount)
+            {
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlCreateDirectory(SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "CreateDirectory:", ControlResponseBuffer, 1, &ClientSocket, 0);
+
+            } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in CreateDirectory(path)!"); SystemControlCommand = Idle_0;}
+        break;
+        case GetDirectoryContent_1:
+            if(CurrentInputArgCount == CommandArgCount)
+            {
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetDirectoryContent:", ControlResponseBuffer, 1, &ClientSocket, 0);
+                if(ControlResponseBuffer[0] == FOLDER_EXIST)
+                {
+                    UtilCreateDirContent(SystemControlArgument[0], "/dir.info");
+                    bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                    SystemControlBuildFileContentInfo("/dir.info", ControlResponseBuffer, 0);
+                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetDirectoryContent:", ControlResponseBuffer, 4, &ClientSocket, 0);
+                    SystemControlSendFileContent(&ClientSocket, "/dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE, ControlResponseBuffer, REMOVE_FILE, 0);
+                }
+
+            } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in GetDirectoryContent(path)!"); SystemControlCommand = Idle_0;}
+        break;
+        case DownloadFile_1:
+            if(CurrentInputArgCount == CommandArgCount)
+            {
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DownloadFile:", ControlResponseBuffer, 1, &ClientSocket, 0);
+                if(ControlResponseBuffer[0] == FILE_EXIST)
+                {
+                    UtilCreateDirContent(SystemControlArgument[0], SystemControlArgument[0]);
+                    bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                    SystemControlBuildFileContentInfo(SystemControlArgument[0], ControlResponseBuffer, 0);
+                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DownloadFile:", ControlResponseBuffer, 4, &ClientSocket, 0);
+                    SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0], STR_SYSTEM_CONTROL_TX_PACKET_SIZE, ControlResponseBuffer, KEEP_FILE, 0);
+                }
+
+            } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in GetDirectoryContent(path)!"); SystemControlCommand = Idle_0;}
+        break;
+        case UploadFile_3:
+            if(CurrentInputArgCount == CommandArgCount)
+            {
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlUploadFile(SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 0);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK , "UploadFile:", ControlResponseBuffer, 1, &ClientSocket, 0);
+
+                if(ControlResponseBuffer[0] == SERVER_PREPARED_BIG_PACKET_SIZE) //Server is ready to receive data
+                {
+                    LogMessage(LOG_LEVEL_INFO,"Receiving file: %s", SystemControlArgument[0]);
+                    SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0], SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
+                }
+                else if (ControlResponseBuffer[0] == PATH_INVALID_MISSING)
+                { 
+                    LogMessage(LOG_LEVEL_INFO,"Failed receiving file: %s", SystemControlArgument[0]);
+
+                    SystemControlReceiveRxData(&ClientSocket, "/file.tmp", SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
+                    SystemControlDeleteFileDirectory("/file.tmp", ControlResponseBuffer, 0);
+                    ControlResponseBuffer[0] = PATH_INVALID_MISSING;
+                }
+                else
+                {
+
+                    LogMessage(LOG_LEVEL_INFO,"Receiving file: %s", SystemControlArgument[0]);
+                    SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 0);  
+                }  
+
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:", ControlResponseBuffer, 1, &ClientSocket, 0);
+
+            } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in PrepFileRx(path, filesize, packetsize)!"); SystemControlCommand = Idle_0;}
         break;
         case InitializeScenario_0:
             if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "IDLE") != NULL)
@@ -621,6 +773,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL)
             {
+                SystemControlSendLog("[SystemControl] Simulate that all objects becomes disarmed.\n", &ClientSocket, 0);
                 SystemControlCommand = Idle_0;
                 server_state = SERVER_STATE_IDLE;
             }
@@ -634,14 +787,17 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         case StartScenario_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
-                if(server_state == SERVER_STATE_IDLE /*&& strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/) //Temporary!
+                if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL) //Temporary!
                 {
                     bzero(pcBuffer, IPC_BUFFER_SIZE);
+                    /* Lest use UTC time everywhere instead of etsi and gps time
                     gettimeofday(&tvTime, NULL);
                     uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
+                    */
+                    uiTime = UtilgetCurrentUTCtimeMS();
                     if(TIME_COMPENSATE_LAGING_VM) uiTime = uiTime - TIME_COMPENSATE_LAGING_VM_VAL;
 
-                    printf("[SystemControl] Current timestamp (gtd): %lu\n",uiTime );
+                    LogMessage(LOG_LEVEL_INFO,"Current timestamp (gtd): %lu",uiTime );
 
                     //clock_gettime(CLOCK_MONOTONIC_COARSE, &tTime);
                     //clock_gettime(CLOCK_REALTIME, &tTime);
@@ -653,13 +809,12 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     uiTime = atoi(SystemControlArgument[0]);
                     DelayedStartU32 = atoi(SystemControlArgument[1]);
                     sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";%" PRIu32 ";", 0, uiTime, DelayedStartU32);
-                    printf("[SystemControl] Sending START <%s> (delayed +%s ms)\n",pcBuffer, SystemControlArgument[1]);
-                    fflush(stdout);
+                    LogMessage(LOG_LEVEL_INFO,"Sending START <%s> (delayed +%s ms)",pcBuffer, SystemControlArgument[1]);
 
                     (void)iCommSend(COMM_STRT,pcBuffer);
                     bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                     SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
-                    server_state = SERVER_STATE_INWORK; 
+                    server_state = SERVER_STATE_INWORK;
                     //server_state = SERVER_STATE_IDLE; //Temporary!
                     //SystemControlCommand = Idle_0; //Temporary!
                 }
@@ -676,7 +831,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     SystemControlCommand = PreviousSystemControlCommand;
                 }
 
-            } else printf("[SystemControl] START command parameter count error.\n");
+            } else LogMessage(LOG_LEVEL_WARNING,"START command parameter count error");
             break;
             /*
             case start_ext_trigg_1:
@@ -710,7 +865,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "stop:", ControlResponseBuffer, 0, &ClientSocket, 0);
             break;
         case AbortScenario_0:
-            if(strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL || strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL || strstr(SystemControlOBCStatesArr[OBCStateU8], "RUNNING") != NULL)
+            if(strstr(SystemControlOBCStatesArr[OBCStateU8], "RUNNING") != NULL
+                    /* || strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL
+                     * || strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/ ) // Abort should only be allowed in running state
             {
                 (void)iCommSend(COMM_ABORT,NULL);
                 server_state = SERVER_STATE_IDLE;
@@ -771,7 +928,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "Exit:", ControlResponseBuffer, 0, &ClientSocket, 0);
             close(ClientSocket); ClientSocket = -1;
             if(USE_LOCAL_USER_CONTROL == 0) { close(ServerHandle); ServerHandle = -1;}
-            printf("[SystemControl] Server closing.\n");
+            LogMessage(LOG_LEVEL_INFO,"Server closing");
 
             break;
 
@@ -825,6 +982,27 @@ SystemControlCommand_t SystemControlFindCommand(const char* CommandBuffer, Syste
     return nocommand;
 }
 
+void SystemControlSendMONR(C8* MONRStr, I32* Sockfd, U8 Debug){
+  int i, n, j, t;
+  C8 Length[4];
+  C8 Header[2] = {0 ,2};
+  C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
+
+  bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+  n = 2 + strlen(MONRStr);
+  Length[0] = (C8)(n >> 24); Length[1] = (C8)(n >> 16); Length[2] = (C8)(n >> 8); Length[3] = (C8)n;
+
+
+  if(n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE)
+  {
+      for(i = 0, j = 0; i < 4; i++, j++) Data[j] = Length[i];
+      for(i = 0; i < 2; i++, j++) Data[j] = Header[i];
+      t = strlen(MONRStr);
+      for(i = 0; i < t; i++, j++) Data[j] = *(MONRStr+i);
+      SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+  } else LogMessage(LOG_LEVEL_ERROR,"MONR string longer than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+}
+
 
 void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
 {
@@ -849,7 +1027,7 @@ void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
         t = strlen(LogString);
         for(i = 0; i < t; i++, j++) Data[j] = *(LogString+i);
         SystemControlSendBytes(Data, n + 4, Sockfd, 0);
-    } else printf("[SystemControl] Log string longer then %d bytes!\n", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+    } else LogMessage(LOG_LEVEL_ERROR,"Log string longer than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 
 }
 
@@ -874,8 +1052,44 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8
         t = strlen(ResponseString);
         for(i = 0; i < t; i++, j++) Data[j] = *(ResponseString+i);
         for(i = 0; i < ResponseDataLength; i++, j++) Data[j] = ResponseData[i];
+
+        if(Debug) { for(i = 0; i < n + 4; i++) printf("%x-", Data[i]); printf("\n"); }
+
         SystemControlSendBytes(Data, n + 4, Sockfd, 0);
-    } else printf("[SystemControl] Response data more then %d bytes!\n", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+    } else LogMessage(LOG_LEVEL_ERROR,"Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+}
+
+
+I32 SystemControlBuildControlResponse(U16 ResponseStatus, C8* ResponseString, C8* ResponseData, I32 ResponseDataLength, U8 Debug)
+{
+    int i=0, n=0, j=0, t=0;
+    C8 Length[4];
+    C8 Status[2];
+    C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
+
+    bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+    n = 2 + strlen(ResponseString) + ResponseDataLength;
+    Length[0] = (C8)(n >> 24); Length[1] = (C8)(n >> 16); Length[2] = (C8)(n >> 8); Length[3] = (C8)n;
+    Status[0] = (C8)(ResponseStatus >> 8); Status[1] = (C8)ResponseStatus;
+
+    if(n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE)
+    {
+        for(i = 0, j = 0; i < 4; i++, j++) Data[j] = Length[i];
+        for(i = 0; i < 2; i++, j++) Data[j] = Status[i];
+        t = strlen(ResponseString);
+        for(i = 0; i < t; i++, j++) Data[j] = *(ResponseString+i);
+        for(i = 0; i < ResponseDataLength; i++, j++) Data[j] = ResponseData[i];
+
+        for(i = 0; i < n; i++) *(ResponseData + i) = Data[i];   //Copy back
+
+        if(Debug) { for(i = 0; i < n + 4; i++) printf("%x-", Data[i]); printf("\n"); }
+
+    } else LogMessage(LOG_LEVEL_ERROR,"Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+
+
+
+
+    return n;
 }
 
 
@@ -883,7 +1097,7 @@ static void SystemControlSendBytes(const char* data, int length, int* sockfd, in
 {
     int i, n;
 
-    if(debug == 1){ printf("Bytes sent: "); int i = 0; for(i = 0; i < length; i++) printf("%d-", (unsigned char)*(data+i)); printf("\n");}
+    if(debug == 1){ printf("Bytes sent: "); int i = 0; for(i = 0; i < length; i++) printf("%d ", (C8)*(data+i)); printf("\n");}
 
     n = write(*sockfd, data, length);
     if (n < 0)
@@ -905,8 +1119,7 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
     int result = 0;
 
     /* Init user control socket */
-    printf("[SystemControl] Init control socket\n");
-    fflush(stdout);
+    LogMessage(LOG_LEVEL_INFO,"Init control socket");
 
     *ServerHandle = socket(AF_INET, SOCK_STREAM, 0);
     if (*ServerHandle < 0)
@@ -936,26 +1149,22 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
     }
 
     /* Monitor and control sockets up. Wait for central to connect to control socket to get server address*/
-    printf("[SystemControl] Listening for connection from client ...\n");
-    fflush(stdout);
-
+    LogMessage(LOG_LEVEL_INFO,"Listening for connection from client...");
 
     listen(*ServerHandle, 1);
     cli_length = sizeof(cli_addr);
 
 
-    fflush(stdout);
-
 
     while( *ClientSocket = accept(*ServerHandle, (struct sockaddr *) &cli_addr, &cli_length))
     {
 
-        printf("[SystemControl] Connection accepted!\n");
+        LogMessage( LOG_LEVEL_INFO,"Connection accepted!");
         break;
 
     }
 
-    printf("[SystemControl] Connection received: %x, %i\n", htons(cli_addr.sin_addr.s_addr), htons(command_server_addr.sin_port));
+    LogMessage( LOG_LEVEL_INFO,"Connection received: %s:%i", inet_ntoa(cli_addr.sin_addr), htons(command_server_addr.sin_port));
 
     ip_addr->s_addr = cli_addr.sin_addr.s_addr; //Set IP-address of Usercontrol
 
@@ -1000,8 +1209,7 @@ static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint3
     bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(port);
 
-
-    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[SystemControl] Try to connect to control socket: %s %i\n",name,port);
+    LogMessage(LOG_LEVEL_INFO,"Attempting to connect to control socket: %s:%i",name,port);
 
     do
     {
@@ -1011,8 +1219,7 @@ static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint3
         {
             if(errno == ECONNREFUSED)
             {
-                printf("[SystemControl] Was not able to connect to UserControl, retry in 3 sec...\n");
-                fflush(stdout);
+                LogMessage(LOG_LEVEL_WARNING,"Unable to connect to UserControl, retrying in 3 sec...");
                 (void)sleep(3);
             }
             else
@@ -1025,7 +1232,7 @@ static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint3
 
     iResult = fcntl(*sockfd, F_SETFL, fcntl(*sockfd, F_GETFL, 0) | O_NONBLOCK);
 
-    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[SystemControl] Maestro connected to UserControl: %s %i\n",name,port);
+    LogMessage(LOG_LEVEL_DEBUG,"Maestro connected to UserControl: %s:%i",name,port);
     return iResult;
 
 }
@@ -1038,12 +1245,12 @@ static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I3
 
     /* Connect to object safety socket */
 
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"%s","[SystemControl] Creating CPC socket\n");
+    LogMessage(LOG_LEVEL_DEBUG,"Creating process channel socket");
 
     *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
     if (*sockfd < 0)
     {
-        util_error("[SystemControl] ERR: Failed to connect to CPC socket");
+        util_error("[SystemControl] ERR: Failed to connect to process channel socket");
     }
 
     /* Set address to object */
@@ -1066,9 +1273,7 @@ static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I3
         util_error("[SystemControl] ERR: calling fcntl");
     }
 
-    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[SystemControl] Created CPC socket and address: %s %d\n",name,port);
-
-
+    LogMessage(LOG_LEVEL_INFO,"Created process channel socket and address: %s:%d",name,port);
 }
 
 I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug)
@@ -1107,25 +1312,25 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
 
     //Create temporary file
     TempFd = fopen (SYSTEM_CONTROL_TEMP_CONF_FILE_PATH, "w+");
-    
+
     //Open configuration file
     fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
-    
+
 
     if(fd > 0)
     {
         RowCount = UtilCountFileRows(fd);
         fclose(fd);
         fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
-    
+
         for(i = 0; i < RowCount; i++)
         {
             bzero(Row, SMALL_BUFFER_SIZE_128);
             UtilReadLine(fd, Row);
-            
+
             ptr1 = strstr(Row, Parameter);
             ptr2 = strstr(Row, "//");
-            if (ptr2 == NULL) ptr2 = ptr1; //No comment found 
+            if (ptr2 == NULL) ptr2 = ptr1; //No comment found
             if(ptr1 != NULL && (U64)ptr2 >= (U64)ptr1 && ParameterFound == 0)
             {
                 ParameterFound = 1;
@@ -1133,30 +1338,30 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
                 strncpy(NewRow, Row, (U64)ptr1 - (U64)Row + strlen(Parameter));
                 strcat(NewRow, NewValue);
                 if((U64)ptr2 > (U64)ptr1)
-                { 
+                {
                     strcat(NewRow, " "); // Add space
                     strcat(NewRow, ptr2); // Add the comment
                 }
 
                 if(Debug)
                 {
-                    printf("[SystemControl] Changed parameter: %s\n", NewRow);
+                    LogMessage(LOG_LEVEL_DEBUG,"Changed parameter: %s", NewRow);
                 }
 
                 strcat(NewRow, "\n");
                 (void)fwrite(NewRow,1,strlen(NewRow),TempFd);
 
-            } 
+            }
             else
             {
                 strcat(Row, "\n");
                 (void)fwrite(Row,1,strlen(Row),TempFd);
             }
         }
-    
+
         fclose(TempFd);
         fclose(fd);
-    
+
         //Remove test.conf
         remove(SYSTEM_CONTROL_CONF_FILE_PATH);
 
@@ -1189,7 +1394,7 @@ I32 SystemControlReadServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debu
 
     if(Debug)
     {
-        printf("[SystemControl] %s = %s\n", ParameterName, ReturnValue);
+        LogMessage(LOG_LEVEL_DEBUG,"%s = %s\n", ParameterName, ReturnValue);
     }
 
     return strlen(ReturnValue);
@@ -1209,7 +1414,7 @@ I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 Debug)
         RowCount = UtilCountFileRows(fd);
         fclose(fd);
         fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
-    
+
         for(i = 0; i < RowCount; i++)
         {
             bzero(TextBuffer, SMALL_BUFFER_SIZE_128);
@@ -1217,17 +1422,378 @@ I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 Debug)
             if(strlen(TextBuffer) > 0)
             {
                 strcat(ParameterList, TextBuffer);
-                strcat(ParameterList, ";");        
+                strcat(ParameterList, ";");
             }
         }
-    
+
         fclose(fd);
     }
 
     if(Debug)
     {
-        printf("[SystemControl] ParameterList = %s\n", ParameterList);
+        LogMessage(LOG_LEVEL_DEBUG,"ParameterList = %s\n", ParameterList);
     }
 
     return strlen(ParameterList);
+}
+
+I32 SystemControlBuildFileContentInfo(C8 *Path, C8 *ReturnValue, U8 Debug)
+{
+
+    struct stat st;
+    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
+    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    strcat(CompletePath, Path);
+
+    stat(CompletePath, &st);
+    *(ReturnValue+0) = (U8)(st.st_size >> 24);
+    *(ReturnValue+1) = (U8)(st.st_size >> 16);
+    *(ReturnValue+2) = (U8)(st.st_size >> 8);
+    *(ReturnValue+3) = (U8)st.st_size;
+
+    
+    if(Debug) LogMessage(LOG_LEVEL_DEBUG,"Filesize %d of %s", (I32)st.st_size, CompletePath);
+
+    return 0;
+}
+
+I32 SystemControlCheckFileDirectoryExist(C8 *ParameterName, C8 *ReturnValue, U8 Debug)
+{
+
+    DIR *pDir;
+    FILE *fd;
+    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
+    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    strcat(CompletePath, ParameterName);
+
+    *ReturnValue = PATH_INVALID_MISSING;
+
+    pDir = opendir(CompletePath);
+    if(pDir == NULL)
+    {
+        fd = fopen(CompletePath, "r");
+        if(fd != NULL)
+        {
+         *ReturnValue = FILE_EXIST; //File exist
+         fclose(fd);
+        }
+    }
+    else
+    {
+        *ReturnValue = FOLDER_EXIST; //Directory exist
+        closedir(pDir);
+    }
+
+    
+    if(Debug) LogMessage(LOG_LEVEL_DEBUG,"%d %s", *ReturnValue, CompletePath);
+
+
+    return 0;
+}
+
+
+I32 SystemControlDeleteFileDirectory(C8 *Path, C8 *ReturnValue, U8 Debug)
+{
+
+    DIR *pDir;
+    FILE *fd;
+    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
+    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    strcat(CompletePath, Path);
+
+    *ReturnValue = PATH_INVALID_MISSING;
+
+    pDir = opendir(CompletePath);
+    if(pDir == NULL)
+    {
+        fd = fopen(CompletePath, "r");
+        if(fd == NULL)
+        {
+            *ReturnValue = PATH_INVALID_MISSING; //Missing file
+        }
+        else
+        {
+            if(0 == remove(CompletePath)) //Delete file
+            {
+                *ReturnValue = SUCCEDED_DELETE;
+            }
+            else
+            {
+                *ReturnValue = FAILED_DELETE;
+            }
+        }
+    }
+    else
+    {
+            if(0 == remove(CompletePath)) //Delete directory
+            {
+                *ReturnValue = SUCCEDED_DELETE;
+            }
+            else
+            {
+                *ReturnValue = FAILED_DELETE;
+            }
+    }
+
+    if(*ReturnValue == SUCCEDED_DELETE) LogMessage(LOG_LEVEL_INFO,"Deleted %s", CompletePath);
+    else if(*ReturnValue == FAILED_DELETE) LogMessage(LOG_LEVEL_INFO,"Failed to delete %s", CompletePath);
+
+    return 0;
+}
+
+
+I32 SystemControlCreateDirectory(C8 *Path, C8 *ReturnValue, U8 Debug)
+{
+
+    DIR *pDir;
+    FILE *fd;
+    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
+    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    strcat(CompletePath, Path);
+
+    *ReturnValue = PATH_INVALID_MISSING;
+
+    pDir = opendir(CompletePath);
+    if(pDir == NULL)
+    {
+        fd = fopen(CompletePath, "r");
+        if(fd != NULL)
+        {
+            *ReturnValue = FILE_EXIST; //This is a file!
+            fclose(fd);
+        }
+        else
+        {
+            if(0 == mkdir(CompletePath, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)) //Make the new directory
+            {
+                *ReturnValue = SUCCEDED_CREATE_FOLDER;
+            }
+            else
+            {
+                *ReturnValue = FAILED_CREATE_FOLDER;
+            }
+        }
+    }
+    else
+    {
+        *ReturnValue = FOLDER_EXIST; //Directory exist
+        closedir(pDir);
+    }
+
+    if(Debug) LogMessage(LOG_LEVEL_DEBUG,"%d %s", *(ReturnValue), CompletePath);
+
+    if(*ReturnValue == SUCCEDED_CREATE_FOLDER) LogMessage(LOG_LEVEL_INFO,"Directory created: %s", CompletePath);
+
+    return 0;
+}
+
+
+
+
+I32 SystemControlUploadFile(C8 *Path, C8 *FileSize, C8 *PacketSize, C8 *ReturnValue, U8 Debug)
+{
+
+    FILE *fd;
+    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
+    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    strcat(CompletePath, Path);
+
+    if(Debug)
+    {
+        LogMessage(LOG_LEVEL_DEBUG,"Upload file:");
+        LogMessage(LOG_LEVEL_DEBUG,"%s", Path);
+        LogMessage(LOG_LEVEL_DEBUG,"%s", FileSize);
+        LogMessage(LOG_LEVEL_DEBUG,"%s", PacketSize);
+        LogMessage(LOG_LEVEL_DEBUG,"%s", CompletePath);
+    }
+
+    if(atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE) //Check packet size
+    {
+        *ReturnValue = SERVER_PREPARED_BIG_PACKET_SIZE;
+        return 0;
+    }
+
+    fd = fopen(CompletePath, "r");
+    if(fd != NULL)
+    {
+        fclose(fd);
+        remove(CompletePath); //Remove file if exist
+    }
+
+    fd = fopen(CompletePath, "w+"); //Create the file
+    if(fd != NULL)
+    {
+        *ReturnValue = SERVER_PREPARED;//Server prepared
+        fclose(fd);
+        return 0;
+    }
+    else
+    {
+        //ok, path invalid create temporary file
+        bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+        GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+        strcat(CompletePath, "/file.tmp");
+        fd = fopen(CompletePath, "r");
+        if(fd != NULL)
+        {
+            fclose(fd);
+            remove(CompletePath); //Remove file if exist
+        }
+        fd = fopen(CompletePath, "w+"); //Create the temporary file
+
+        *ReturnValue = PATH_INVALID_MISSING;
+
+        return 0;
+    }
+
+    return 0;
+}
+
+I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSize, C8 *ReturnValue, U8 Debug)
+{
+
+    FILE *fd;
+    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
+    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    strcat(CompletePath, Path);
+    U32 FileSizeU32 = atoi(FileSize);
+    U16 PacketSizeU16 = atoi(PacketSize);
+    I32 ClientStatus = 0, Time1 = 0, Time2 = 0, TimeDiff = 0, i = 0, j = 0;
+    C8 RxBuffer[SYSTEM_CONTROL_RX_PACKET_SIZE];
+    U32 TotalRxCount = 0, TransmissionCount = 0, RestCount = 0;
+    struct timeval CurTime;
+
+
+    if(Debug)
+    {
+        LogMessage(LOG_LEVEL_DEBUG,"Receive Rx data:");
+        LogMessage(LOG_LEVEL_DEBUG,"%s", Path);
+        LogMessage(LOG_LEVEL_DEBUG,"%s", FileSize);
+        LogMessage(LOG_LEVEL_DEBUG,"%s", PacketSize);
+        LogMessage(LOG_LEVEL_DEBUG,"%s", CompletePath);
+    }
+
+
+
+    fd = fopen(CompletePath, "w+");
+    if(fd != NULL)
+    {
+
+        gettimeofday(&CurTime, NULL);
+        Time1 = CurTime.tv_sec*1000 + CurTime.tv_usec/1000;
+
+        while (TotalRxCount < FileSizeU32 && TimeDiff < 3000)
+        {
+            gettimeofday(&CurTime, NULL);
+            Time2 = CurTime.tv_sec*1000 + CurTime.tv_usec/1000;
+
+            bzero(RxBuffer,PacketSizeU16);
+            ClientStatus = recv(*sockfd, RxBuffer, PacketSizeU16, MSG_WAITALL);
+
+            if (ClientStatus > 0)
+            {
+                i ++;
+                fwrite(RxBuffer, 1, ClientStatus, fd);
+                fflush(fd);
+                if(Debug)
+                {
+                    printf("%d, %d, %d, %d :", i, ClientStatus, TotalRxCount, TimeDiff);
+                    for(j = 0; j < 10; j ++ ) printf("%x-", RxBuffer[j]);
+                    printf("...\n");
+                }
+                TotalRxCount = TotalRxCount + ClientStatus;
+                gettimeofday(&CurTime, NULL);
+                Time1 = CurTime.tv_sec*1000 + CurTime.tv_usec/1000;
+            }
+
+
+            TimeDiff = abs(Time1 - Time2);
+        }
+
+        fclose(fd);
+
+        if(TotalRxCount == FileSizeU32)
+        {
+            *ReturnValue = FILE_UPLOADED;
+        }
+        else if(TotalRxCount > FileSizeU32)
+        {
+            *ReturnValue = FILE_TO_MUCH_DATA;
+        }
+        else
+        {
+            *ReturnValue = TIME_OUT;
+        } 
+        
+        LogMessage(LOG_LEVEL_DEBUG,"Rec count = %d, Req count = %d", TotalRxCount, FileSizeU32);
+
+    }
+
+    return 0;
+}
+
+
+I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *ReturnValue, U8 Remove, U8 Debug)
+{
+
+    FILE *fd;
+    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
+    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    strcat(CompletePath, Path);
+    U32 FileSizeU32 = 0;
+    U16 PacketSizeU16 = atoi(PacketSize);
+    I32 ClientStatus = 0, Time1 = 0, Time2 = 0, TimeDiff = 0, i = 0, j = 0;
+    C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
+    U32 TotalRxCount = 0, TransmissionCount = 0, RestCount = 0;
+    struct timeval CurTime;
+    struct stat st;
+
+    stat(CompletePath, &st);
+    TransmissionCount = (U32)(st.st_size) / PacketSizeU16;
+    RestCount = (U32)(st.st_size) % PacketSizeU16;
+
+    if(Debug)
+    {
+        LogMessage(LOG_LEVEL_DEBUG,"Send file content:");
+        LogMessage(LOG_LEVEL_DEBUG,"%s", Path);
+        //printf("%s\n", FileSize);
+        LogMessage(LOG_LEVEL_DEBUG,"%s", PacketSize);
+        LogMessage(LOG_LEVEL_DEBUG,"%s", CompletePath);
+    }
+
+    fd = fopen(CompletePath, "r");
+
+    if(fd != NULL)
+    {
+
+        for(i = 0; i < TransmissionCount; i++)
+        {
+            bzero(TxBuffer, PacketSizeU16);
+            fread(TxBuffer,1,PacketSizeU16,fd);
+            SystemControlSendBytes(TxBuffer, PacketSizeU16, sockfd, 0); //Send a packet
+        }
+
+        if(RestCount > 0)
+        {
+            bzero(TxBuffer, PacketSizeU16);
+            fread(TxBuffer,1,RestCount,fd);
+            SystemControlSendBytes(TxBuffer, RestCount, sockfd, 0); //Send the rest
+        }
+
+        fclose(fd);
+
+        if(Remove) remove(CompletePath);
+        
+        LogMessage(LOG_LEVEL_INFO,"Sent file: %s, total size = %d, transmissions = %d", CompletePath, (PacketSizeU16*TransmissionCount+RestCount), i + 1);
+
+    }
+
+    return 0;
 }

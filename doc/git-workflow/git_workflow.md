@@ -5,6 +5,8 @@ Git Workflow - Draft
 
 Of course there is no One True Way™ of working with code across teams, and no document should keep you from improving things or doing something you using your best judgment find necessary.
 
+![Image description](git_workflow_img.jpg)
+
 ## The Master Branch
 
 The **Master Branch** should be considered sacred, the code should always be working and be ready to use. 

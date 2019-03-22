@@ -12,6 +12,12 @@
 #define __SIMULATORCONTROL_H_INCLUDED__
 
 
+typedef struct
+{
+  U8 SimulatorModeU8;
+} SMGDType;
+
+
 
 /*------------------------------------------------------------
   -- Function declarations.
