@@ -97,7 +97,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
   I32 iExit = 0, iCommand;
   C8 MqBuffer[SUP_MQ_MAX_SIZE];
-  (void)iCommInit(IPC_RECV_SEND,MQ_SV,0);
+  (void)iCommInit(IPC_RECV_SEND,MQ_SU,0);
   GSD->SupChunkSize = 0;
   U16 IterationCounter = 0;
   U32 TimestampU32 = 0;
@@ -266,18 +266,23 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
       bzero(MqBuffer,SUP_MQ_MAX_SIZE);
       (void)iCommRecv(&iCommand,MqBuffer,SUP_MQ_MAX_SIZE,NULL);
-      if(/*iCommand == COMM_TRAJ_TOSUP*/ GSD->ChunkSize > 0)
-      {
 
-       
-        bzero(MqBuffer,SUP_MQ_MAX_SIZE);
-        for(i = 0; i < GSD->ChunkSize; i ++) MqBuffer[i] = GSD->Chunk[i];
+      if(iCommand == COMM_TRAJ_TOSUP /*GSD->ChunkSize > 0*/)
+      {
+      
+        //bzero(MqBuffer,SUP_MQ_MAX_SIZE);
+        //for(i = 0; i < GSD->ChunkSize; i ++) MqBuffer[i] = GSD->Chunk[i];
+        //DTMLengthU32 = UtilHexTextToBinary(strlen(MqBuffer), MqBuffer, DTMTrajBuffer, 0);
+        
+        //bzero(MqBuffer,SUP_MQ_MAX_SIZE);
+        //for(i = 0; i < GSD->ChunkSize; i ++) MqBuffer[i] = GSD->Chunk[i];
         DTMLengthU32 = UtilHexTextToBinary(strlen(MqBuffer), MqBuffer, DTMTrajBuffer, 0);
+
 
         printf("[SupervisorControl] Sending chunk to Supervisor, size is %d == %d bytes\n", GSD->ChunkSize, (I32)strlen(MqBuffer));
         
         //for(i = 0; i < GSD->ChunkSize; i ++) DTMTrajBuffer[i] = GSD->Chunk[i];
-        //DTMLengthU32 = GSD->ChunkSize;
+        //DTMLengthU32 = GSD-ChunkSize;
         DTMIpU32 = (C8)DTMTrajBuffer[0];
         DTMIpU32 = (C8)DTMTrajBuffer[1] | (DTMIpU32 << 8);
         DTMIpU32 = (C8)DTMTrajBuffer[2] | (DTMIpU32 << 8);
@@ -311,45 +316,41 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         UtilSendTCPData("SupervisorControl", MessageBuffer, MessageLength, &SupervisorTCPSocketfdI32, 0);
         GSD->ChunkSize = 0;
       }
-      
-     else if(GSD->MONRSizeU8 > 0)
+      else if(iCommand == COMM_MONI_BIN /*GSD->MONRSizeU8 > 0*/)
       {
         //Send MONR data
-        UtilSendTCPData("SupervisorControl", GSD->MONRData, GSD->MONRSizeU8, &SupervisorTCPSocketfdI32, 0);  
-        GSD->MONRSizeU8 = 0;
-      }
-/*
-      if(GSD->HEABSizeU8 > 0)
-      {
-        //Send HEAB data
-        UtilSendTCPData("SupervisorControl-HEAB", GSD->HEABData, GSD->HEABSizeU8, &SupervisorTCPSocketfdI32, 0);  
-        GSD->HEABSizeU8 = 0;
-      }      
+        if (strlen(MqBuffer) > 0)
+        {
+          UtilHexTextToBinary(strlen(MqBuffer), MqBuffer, DTMTrajBuffer, 0);
+          UtilSendTCPData("SupervisorControl", DTMTrajBuffer, sizeof(MONRType)+2, &SupervisorTCPSocketfdI32, 0);
+        }
 
-      if(GSD->OSTMSizeU8 > 0)
+      }
+      else if(iCommand == COMM_OSTM)
       {
         //Send OSTM data
-        UtilSendTCPData("SupervisorControl-OSTM", GSD->OSTMData, GSD->OSTMSizeU8, &SupervisorTCPSocketfdI32, 1);  
-        GSD->OSTMSizeU8 = 0;
+        UtilHexTextToBinary(strlen(MqBuffer), MqBuffer, DTMTrajBuffer, 0);
+        UtilSendTCPData("SupervisorControl", DTMTrajBuffer, sizeof(OSTMType)+2, &SupervisorTCPSocketfdI32, 0);
       }
-      
-      if(GSD->OSEMSizeU8 > 0)
+      else if(iCommand == COMM_OSEM)
       {
         //Send OSEM data
-        UtilSendTCPData("SupervisorControl-OSEM", GSD->OSEMData, GSD->OSEMSizeU8, &SupervisorTCPSocketfdI32, 1);  
-        GSD->OSEMSizeU8 = 0;
+        UtilHexTextToBinary(strlen(MqBuffer), MqBuffer, DTMTrajBuffer, 0);
+        UtilSendTCPData("SupervisorControl", DTMTrajBuffer, sizeof(OSEMType)-2, &SupervisorTCPSocketfdI32, 0);
       }
-
-      if(GSD->STRTSizeU8 > 0)
+      else if(iCommand == COMM_OBJ_STRT)
       {
         //Send STRT data
-        UtilSendTCPData("SupervisorControl-STRT", GSD->STRTData, GSD->STRTSizeU8, &SupervisorTCPSocketfdI32, 1);  
-        GSD->STRTSizeU8 = 0;
+        UtilHexTextToBinary(strlen(MqBuffer), MqBuffer, DTMTrajBuffer, 0);
+        UtilSendTCPData("SupervisorControl", DTMTrajBuffer, sizeof(STRTType)+2, &SupervisorTCPSocketfdI32, 0);
       }
-*/
-
-
-      if(iCommand == COMM_EXIT)
+      else if(iCommand == COMM_HEAB)
+      {
+        //Send HEAB data
+        UtilHexTextToBinary(strlen(MqBuffer), MqBuffer, DTMTrajBuffer, 0);
+        UtilSendTCPData("SupervisorControl", DTMTrajBuffer, sizeof(HEABType)+2, &SupervisorTCPSocketfdI32, 0);
+      }
+      else if(iCommand == COMM_EXIT)
       {
         iExit = 1;
         printf("supervisor control exiting.\n");

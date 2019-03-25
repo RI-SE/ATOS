@@ -234,7 +234,7 @@ void logger_task()
         bzero(pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
         bzero(TimeStampUTCBufferRecv,MQ_MAX_UTC_LENGTH);
         (void)iCommRecv(&iCommand,pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
-        if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE)
+        if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE && iCommand != COMM_HEAB)
         {
 
             Timestamp = atol(TimeStampUTCBufferRecv);

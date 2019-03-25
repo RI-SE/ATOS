@@ -74,8 +74,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
   I32 iExit = 0, iCommand;
   C8 MqRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
-  (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
-
+  (void)iCommInit(IPC_RECV_SEND,MQ_SI,0);
   printf("[SimulatorControl] Starting simulator control...\n");
 
   C8 TextBufferC8[SIM_CONTROL_BUFFER_SIZE_20];
@@ -288,11 +287,10 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
               }
               else
               {
-
-                for(i = 0; i < strlen(MsgQueBuffer); i ++) GSD->Chunk[i] = MsgQueBuffer[i];
-                GSD->ChunkSize = strlen(MsgQueBuffer);
-                
-               //(void)iCommSend(COMM_TRAJ_TOSUP, MsgQueBuffer); //COMM_TRAJ_TOSUP will be received by SupervisorControl
+                //printf("Sending COMM_TRAJ_TOSUP.\n");
+                //for(i = 0; i < strlen(MsgQueBuffer); i ++) GSD->Chunk[i] = MsgQueBuffer[i];
+                //GSD->ChunkSize = strlen(MsgQueBuffer);
+               (void)iCommSend(COMM_TRAJ_TOSUP, MsgQueBuffer); //COMM_TRAJ_TOSUP will be received by SupervisorControl
               }
               SimRxCodeU16 = 0;
             }

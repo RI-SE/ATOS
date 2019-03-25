@@ -41,8 +41,9 @@
 #define MQ_VA     "/TEServer-VA"
 #define MQ_SC     "/TEServer-SC"
 #define MQ_SI     "/TEServer-SI"  
+#define MQ_SU     "/TEServer-SU"
 
-#define MQ_MAX_MESSAGE_LENGTH 4096
+#define MQ_MAX_MESSAGE_LENGTH 6200//4096
 #define MQ_MAX_MSG            10
 #define MQ_PERMISSION         0660
 
@@ -68,7 +69,12 @@
 #define COMM_TRAJ 16
 #define COMM_TRAJ_TOSUP 17
 #define COMM_TRAJ_FROMSUP 18
-#define COMM_ASP 19     
+#define COMM_ASP 19
+#define COMM_MONI_BIN 20
+#define COMM_OSTM 21
+#define COMM_OSEM 22
+#define COMM_OBJ_STRT 23
+#define COMM_HEAB 24  
 #define COMM_INV 255
 
 
@@ -103,7 +109,7 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.15"
+#define LOCAL_USER_CONTROL_IP "10.130.23.74"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -361,6 +367,9 @@ typedef struct
   U16 StartTimeValueIdU16;
   U16 StartTimeContentLengthU16;
   U32 StartTimeU32;
+  U16 GPSWeekValueIdU16;
+  U16 GPSWeekContentLengthU16;
+  U16 GPSWeekU16;  
   U16 DelayStartValueIdU16;
   U16 DelayStartContentLengthU16;
   U32 DelayStartU32;
@@ -513,6 +522,7 @@ typedef struct
   U8 FixQualityU8;
   U8 NSatellitesU8;
   U8 TimeInitiatedU8;
+  U8 LockedU8;
 } TimeType;
 
 

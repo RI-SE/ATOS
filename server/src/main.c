@@ -31,6 +31,7 @@
 #include "remotecontrol.h"
 #include "timecontrol.h"
 #include "supervisorcontrol.h"
+#include "simulatorcontrol.h"
 
 
 /*------------------------------------------------------------
@@ -58,6 +59,7 @@ int main(int argc, char *argv[])
     GSD->ExitU8 = 0;
     GSD->ScenarioStartTimeU32 = 0;
     GPSTime->TimeInitiatedU8 = 0;
+    GPSTime->LockedU8 = 0;
 
     pid_t pID[8];
     int iIndex = 0;
@@ -82,7 +84,7 @@ int main(int argc, char *argv[])
     ++iIndex;
 
 
-    pID[iIndex] = fork();
+   /* pID[iIndex] = fork();
     if(pID[iIndex] < 0)
     {
         util_error("ERR: Failed to fork");
@@ -94,7 +96,7 @@ int main(int argc, char *argv[])
         supervision_task(GPSTime);
         exit(EXIT_SUCCESS);
     }
-    ++iIndex;
+    ++iIndex;*/
 
 
     pID[iIndex] = fork();
@@ -166,7 +168,7 @@ int main(int argc, char *argv[])
     }
     ++iIndex;
 
-/*
+
     pID[iIndex] = fork();
     if(pID[iIndex] < 0)
     {
@@ -181,7 +183,7 @@ int main(int argc, char *argv[])
       exit(EXIT_SUCCESS);
     }
     ++iIndex;
-  */
+
 
   /*
  pID[iIndex] = fork();

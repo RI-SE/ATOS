@@ -30,7 +30,7 @@
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-#define MQ_NBR_QUEUES 4
+#define MQ_NBR_QUEUES 7
 
 #define FE_WGS84        (1.0/298.257223563) // earth flattening (WGS84)
 #define RE_WGS84        6378137.0           // earth semimajor axis (WGS84) (m)
@@ -1611,6 +1611,16 @@ int iCommInit(const unsigned int uiMode, const char* name, const int iNonBlockin
       }
       ++uiIndex;
     }
+    if(strcmp(name,MQ_SU))
+    {
+      ptMQSend[uiIndex] = mq_open(MQ_SU, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr);
+      if(ptMQSend[uiIndex] < 0)
+      {
+        util_error("ERR: Failed to open MQ_SU message queue");
+      }
+      ++uiIndex;
+    }
+
   }
 
   return 1;
@@ -1825,6 +1835,31 @@ int iCommSend(const int iCommand,const char* cpData)
     {
       uiMessagePrio = 80;
       cpMessage[0] = (char)COMM_TRAJ_FROMSUP;
+    }
+  else if (iCommand == COMM_MONI_BIN)
+    {
+      uiMessagePrio = 80;
+      cpMessage[0] = (char)COMM_MONI_BIN;
+    }
+  else if (iCommand == COMM_OSTM)
+    {
+      uiMessagePrio = 100;
+      cpMessage[0] = (char)COMM_OSTM;
+    }
+  else if (iCommand == COMM_OSEM)
+    {
+      uiMessagePrio = 100;
+      cpMessage[0] = (char)COMM_OSEM;
+    }
+  else if (iCommand == COMM_OBJ_STRT)
+    {
+      uiMessagePrio = 100;
+      cpMessage[0] = (char)COMM_OBJ_STRT;
+    }
+  else if (iCommand == COMM_HEAB)
+    {
+      uiMessagePrio = 100;
+      cpMessage[0] = (char)COMM_HEAB;
     }
   else
     {
@@ -2082,7 +2117,7 @@ void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, 
     socklen_t len = sizeof(error);
     I32 retval;
 
-    if(Debug == 1){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
+    if(Debug == 1){ printf("[%s] %d TCP bytes sent: ", Module, Length); i = 0; for(i = 0; i < Length; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
 
     n = write(*Sockfd, Data, Length);
     
@@ -2700,14 +2735,16 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         Data = 0;
         Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 17);
         Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 16);
+        
         //Data = UtilRadToDeg(Data);
         //Data = 4500 - Data; //Turn heading back pi/2
         //while(Data<0) Data+=360.0;
         //while(Data>3600) Data-=360.0;
+        
         DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
         DOTMData->HeadingContentLengthU16 = 2;
         DOTMData->HeadingU16 = SwapU16((U16)(Data));
-        if(debug) printf("Heading=%d, ", DOTMData->HeadingU16);
+        if(debug) printf("Heading=%d, %x\n", DOTMData->HeadingU16, Data);
 
         //Longitudinal speed
         Data = 0;
