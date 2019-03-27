@@ -154,14 +154,11 @@ C8 TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION*COMMAND_DOTM_ROW_MESSAGE_LENGTH 
 -- Function declarations.
 ------------------------------------------------------------*/
 static I32 vConnectObject(int* sockfd,const char* name,const uint32_t port, U8 *Disconnect);
-static void vSendString(const char* command,int* sockfd);
-static void vSendFile(const char* object_traj_file, int* sockfd);
 static void vDisconnectObject(int* sockfd);
 static I32 vCheckRemoteDisconnected(int* sockfd);
 
 static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static void vCloseSafetyChannel(int* sockfd);
-static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatCommand_t tCommand);
 static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData);
 I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug);
 I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug);
@@ -183,8 +180,6 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
 I32 ObjectControlSendDTMMessage(C8 *DTMData, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug);
 I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 ObjectControlBuildASPMessage(C8* MessageBuffer, ASPType *ASPData, U8 debug);
-
-void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug);
 
 static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
                              char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
@@ -350,7 +345,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 {
                     //HeartbeatMessageCounter ++;
                     MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus, 0);
-                    ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+                    //ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+                    UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                 }
             }
 
@@ -404,7 +400,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         {
                             /*Send Master time to adaptive sync point*/
                             MessageLength =ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, ASPData.MTSPU32, 0);
-                            ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+                            //ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+                            UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                         }
                         /*else if(TEST_SYNC_POINTS == 1 && iIndex == 1 && ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1 )
                         {
@@ -767,7 +764,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     /*Here we send the VOIL message, if IP-address found*/
                     if(strstr(VOILReceivers, object_address_name[iIndex]))
                     {
-                        ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+                        //ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+                        UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                     }
                 }
 
@@ -2472,50 +2470,6 @@ static void vDisconnectObject(int* sockfd)
     close(*sockfd);
 }
 
-static void vSendString(const char* command, int* sockfd)
-{
-    long n;
-    LogMessage(LOG_LEVEL_DEBUG,"Sending: <%s>",command);
-    n = write(*sockfd, command, strlen(command));
-    if (n < 0)
-    {
-        util_error("[ObjectControl] ERR: Failed to send on control socket");
-    }
-}
-
-
-static void vSendFile(const char* object_traj_file, int* sockfd)
-{
-    FILE *filefd;
-    char buffer[1024];
-    long n;
-    size_t readBytes;
-
-    LogMessage(LOG_LEVEL_DEBUG,"Open file %s",object_traj_file);
-
-    filefd = fopen (object_traj_file, "rb");
-    if (filefd == NULL)
-    {
-        util_error("ERR: Failed to open trajectory file");
-    }
-
-    do
-    {
-        readBytes = fread(buffer,1,1024,filefd);
-        if(readBytes > 0)
-        {
-            LogMessage(LOG_LEVEL_DEBUG,"Sending: <%s>",buffer);
-            LogMessage(LOG_LEVEL_DEBUG,"Attempting send of <%lu> bytes",readBytes);
-            n = write(*sockfd, buffer, readBytes);
-            if (n < 0)
-            {
-                util_error("ERR: Failed to send on control socket");
-            }
-        }
-    } while(readBytes > 0);
-
-    fclose(filefd);
-}
 
 static void vCreateSafetyChannel(const char* name, const uint32_t port, int* sockfd, struct sockaddr_in* addr)
 {
@@ -2590,18 +2544,6 @@ static I32 vCheckRemoteDisconnected(int* sockfd)
     return 1;
 }
 
-/*void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug){
-  C8 Data[128];
-
-  bzero(Data,128);
-  Data[3] = strlen(MonrData);
-  Data[5] = 2;
-  strcat((Data+6), MonrData);
-
-
-  UtilSendUDPData("ObjectControl", Sockfd, Addr, Data, strlen(MonrData) + 6, Debug);
-}*/
-
 int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendData, int Length, char debug)
 {
     ssize_t result;
@@ -2619,37 +2561,6 @@ int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendDa
     return 0;
 }
 
-
-static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatCommand_t tCommand)
-{
-    ssize_t result;
-    char pcCommand[10];
-
-    bzero(pcCommand,10);
-
-    LogMessage(LOG_LEVEL_DEBUG,"Sending: <HEBT>");
-
-    if(COMMAND_HEARTBEAT_GO == tCommand)
-    {
-        strcat(pcCommand,"HEBT;g;");
-    }
-    else
-    {
-        strcat(pcCommand,"HEBT;A;");
-    }
-
-    result = sendto(*sockfd,
-                    pcCommand,
-                    10,
-                    0,
-                    (const struct sockaddr *) addr,
-                    sizeof(struct sockaddr_in));
-
-    if (result < 0)
-    {
-        util_error("ERR: Failed to send on monitor socket");
-    }
-}
 
 static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData)
 {
