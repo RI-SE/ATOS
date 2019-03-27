@@ -636,7 +636,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
                     /*Send OSTM message*/
-                    vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+                    //vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+                    UtilSendTCPData("[Object Control test]", MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                 }
 
                 //Store OSTM in GSD
@@ -663,7 +664,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 OldTimeU32 = CurrentTimeU32;
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
                 MessageLength = ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, GPSTime, (U32)StartTimeU32, DelayedStartU32, &OutgoingStartTimeU32, 0);
-                for(iIndex=0;iIndex<nbr_objects;++iIndex) { vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);}
+                for(iIndex=0;iIndex<nbr_objects;++iIndex) {
+                  //vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+                  UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+                }
                 vSetState(&OBCState, OBC_STATE_RUNNING);
 
                 //Store STRT in GSD
@@ -717,11 +721,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         /*DTM Header*/
                         MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-MiscU16)/ COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
                         /*Send DTM header*/
-                        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+                        //vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+                        UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                         /*DTM Data*/
                         MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer+MiscU16, (DTMLengthU32-MiscU16)/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
                         /*Send DTM data*/
-                        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+                        //vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+                        UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                     }
                 }
 
@@ -971,7 +977,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         strcat(pcSendBuffer,OriginAltitude);
 
                         iCommSend(COMM_OSEM,pcSendBuffer);
-                        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+                        //vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+                        UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
 
 
                         //Store OSEM in GSD
@@ -998,7 +1005,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-2, &HeaderData, &TRAJInfoData, 0);
 
                             /*Send DOTM header*/
-                            vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
+                            //vSendBytes(TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
+                            UtilSendTCPData("Object Control", TrajBuffer, MessageLength, &socket_fd[iIndex], 0);
 
                             /*Send DOTM data*/
                             ObjectControlSendDOTMMEssage(object_traj_file[iIndex], &socket_fd[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 0);
@@ -1019,13 +1027,15 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             {
                                 /*Send SYPM to slave*/
                                 MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, &SYPMData, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 1);
-                                vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+                                //vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+                                UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                             }
                             else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL)
                             {
                                 /*Send SYPM to slave*/
                                 MessageLength =ObjectControlBuildSYPMMessage(MessageBuffer, &SYPMData, ASP[i].SlaveTrajSyncTime*1000, ASP[i].SlaveSyncStopTime*1000, 1);
-                                vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+                                //vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+                                UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                             }
                         }
 
@@ -1044,7 +1054,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             if(strstr(object_address_name[iIndex], TAA[i].TriggerIP) != NULL)
                             {
                                 MessageLength = ObjectControlBuildTCMMessage(MessageBuffer, &TAA[i], 0);
-                                vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+                                //vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+                                UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
                             }
                         }
                         /* ...end*/
@@ -2047,12 +2058,14 @@ I32 ObjectControlSendDOTMMEssage(C8* Filename, I32 *Socket, I32 RowCount, C8 *IP
             TrajBuffer[MessageLength] = (U8)(CrcU16);
             TrajBuffer[MessageLength+1] = (U8)(CrcU16 >> 8);
             MessageLength = MessageLength + 2;
-            vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+            //vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+            UtilSendTCPData("Object Control", TrajBuffer, MessageLength, Socket, 0);
             SumMessageLength = SumMessageLength + MessageLength;
         }
         else
         {
-            vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+            //vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+            UtilSendTCPData("Object Control", TrajBuffer, MessageLength, Socket, 0);
             SumMessageLength = SumMessageLength + MessageLength;
         }
 
@@ -2065,7 +2078,8 @@ I32 ObjectControlSendDOTMMEssage(C8* Filename, I32 *Socket, I32 RowCount, C8 *IP
         TrajBuffer[MessageLength] = (U8)(CrcU16);
         TrajBuffer[MessageLength+1] = (U8)(CrcU16 >> 8);
         MessageLength = MessageLength + 2;
-        vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+        //vSendBytes(TrajBuffer, MessageLength, Socket, 0);
+        UtilSendTCPData("Object Control", TrajBuffer, MessageLength, Socket, 0);
         SumMessageLength = SumMessageLength + MessageLength;
         if(debug) LogMessage(LOG_LEVEL_DEBUG,"Transmission %d: %d bytes sent.\n", i, MessageLength);
     }
