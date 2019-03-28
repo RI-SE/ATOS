@@ -45,6 +45,7 @@
 
 #define LOG_PATH "./timelog/"
 #define LOG_FILE "time.log"
+#define LOG_BUFFER_LENGTH 128
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -80,6 +81,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     I32 iExit = 0, iCommand, result;
     C8 TimeBuffer[TIME_CONTROL_RECEIVE_BUFFER_SIZE];
+    C8 LogBuffer[LOG_BUFFER_LENGTH];
     I32 ReceivedNewData, i;
     C8 SendData[TIME_INTERVAL_NUMBER_BYTES] = {0, 0, 3, 0xe8};
     //C8 SendData[4] = {0, 0, 0, 1};
@@ -127,8 +129,10 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
         }
         else
         {
-            LogMessage(LOG_LEVEL_WARNING,"Unable to connect to time server: defaulting to system time");
-            // TODO: warn over MQ
+            LogMessage(LOG_LEVEL_WARNING, "Unable to connect to time server: defaulting to system time");
+
+            // Send warning over MQ
+            LOG_SEND(LogBuffer, "Unable to connect to time server");
         }
 
     }
