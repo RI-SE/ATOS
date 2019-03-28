@@ -32,8 +32,8 @@
 
 
 #define TIME_CONTROL_CONF_FILE_PATH  "conf/test.conf"
-#define TIME_CONTROL_BUFFER_SIZE_20 20
-#define TIME_CONTROL_BUFFER_SIZE_54 54
+#define TIME_CONTROL_HOSTNAME_BUFFER_SIZE 20
+#define TIME_CONTROL_RECEIVE_BUFFER_SIZE 54
 #define TIME_CONTROL_TASK_PERIOD_MS 1
 #define TIME_INTERVAL_NUMBER_BYTES 4
 #define REPLY_TIMEOUT_S 2
@@ -72,14 +72,14 @@ static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 {
 
-    C8 TextBufferC8[TIME_CONTROL_BUFFER_SIZE_20];
-    C8 ServerIPC8[TIME_CONTROL_BUFFER_SIZE_20];
+    C8 TextBufferC8[TIME_CONTROL_HOSTNAME_BUFFER_SIZE];
+    C8 ServerIPC8[TIME_CONTROL_HOSTNAME_BUFFER_SIZE];
     U16 ServerPortU16;
     I32 SocketfdI32=-1;
     struct sockaddr_in time_addr;
 
     I32 iExit = 0, iCommand, result;
-    C8 TimeBuffer[TIME_CONTROL_BUFFER_SIZE_54];
+    C8 TimeBuffer[TIME_CONTROL_RECEIVE_BUFFER_SIZE];
     I32 ReceivedNewData, i;
     C8 SendData[TIME_INTERVAL_NUMBER_BYTES] = {0, 0, 3, 0xe8};
     //C8 SendData[4] = {0, 0, 0, 1};
@@ -103,14 +103,14 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
     PrevMilliSecondU16 = CurrentMilliSecondU16;
 
     // Search .conf file for time server IP
-    bzero(TextBufferC8, TIME_CONTROL_BUFFER_SIZE_20);
+    bzero(TextBufferC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
     UtilSearchTextFile(TEST_CONF_FILE, "TimeServerIP=", "", TextBufferC8);
-    bzero(ServerIPC8, TIME_CONTROL_BUFFER_SIZE_20);
+    bzero(ServerIPC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
     strcat(ServerIPC8, TextBufferC8);
     IpU32 = TimeControlIPStringToInt(ServerIPC8);
 
     // Search .conf file for time server port
-    bzero(TextBufferC8, TIME_CONTROL_BUFFER_SIZE_20);
+    bzero(TextBufferC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
     UtilSearchTextFile(TEST_CONF_FILE, "TimeServerPort=", "", TextBufferC8);
     ServerPortU16 = (U16)atoi(TextBufferC8);
 
@@ -166,8 +166,8 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 
         if(GPSTime->isGPSenabled)
         {
-            bzero(TimeBuffer,TIME_CONTROL_BUFFER_SIZE_54);
-            TimeControlRecvTime(&SocketfdI32, TimeBuffer, TIME_CONTROL_BUFFER_SIZE_54, &ReceivedNewData);
+            bzero(TimeBuffer,TIME_CONTROL_RECEIVE_BUFFER_SIZE);
+            TimeControlRecvTime(&SocketfdI32, TimeBuffer, TIME_CONTROL_RECEIVE_BUFFER_SIZE, &ReceivedNewData);
 
             if(ReceivedNewData) TimeControlDecodeTimeBuffer(GPSTime, TimeBuffer, 0);
         }
@@ -256,8 +256,8 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
 {
     int result;
     struct hostent *object;
-    const char packetIntervalMs[TIME_INTERVAL_NUMBER_BYTES] = {0,0,0,100};
-    C8 timeBuffer[TIME_CONTROL_BUFFER_SIZE_54];
+    char packetIntervalMs[TIME_INTERVAL_NUMBER_BYTES] = {0,0,0,100}; // Make server send with this interval while waiting for first reply
+    C8 timeBuffer[TIME_CONTROL_RECEIVE_BUFFER_SIZE];
     int receivedNewData = 0;
     struct timeval timeout = {REPLY_TIMEOUT_S, 0};
     struct timeval tEnd,tCurr;
@@ -309,7 +309,7 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
     do
     {
         gettimeofday(&tCurr, NULL);
-        TimeControlRecvTime(sockfd, timeBuffer, TIME_CONTROL_BUFFER_SIZE_54, &receivedNewData);
+        TimeControlRecvTime(sockfd, timeBuffer, TIME_CONTROL_RECEIVE_BUFFER_SIZE, &receivedNewData);
     } while (!receivedNewData && timercmp(&tCurr,&tEnd,<));
 
     return receivedNewData;
@@ -447,7 +447,7 @@ static void TimeControlDecodeTimeBuffer(TimeType* GPSTime, C8* TimeBuffer, C8 de
     if (debug)
     {
         //TimeControlGetMillisecond(GPSTime);
-        LogPrintBytes(TimeBuffer,0,TIME_CONTROL_BUFFER_SIZE_54);
+        LogPrintBytes(TimeBuffer,0,TIME_CONTROL_RECEIVE_BUFFER_SIZE);
         LogPrint("ProtocolVersionU8: %d", GPSTime->ProtocolVersionU8);
         LogPrint("YearU16: %d", GPSTime->YearU16);
         LogPrint("MonthU8: %d", GPSTime->MonthU8);
