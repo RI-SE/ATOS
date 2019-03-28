@@ -36,7 +36,13 @@
 #define TIME_CONTROL_BUFFER_SIZE_54 54
 #define TIME_CONTROL_TASK_PERIOD_MS 1
 #define TIME_INTERVAL_NUMBER_BYTES 4
-#define TIMEOUT_S 2
+#define REPLY_TIMEOUT_S 2
+
+#define SLEEP_TIME_GPS_CONNECTED_S 0
+#define SLEEP_TIME_GPS_CONNECTED_NS 500000000
+#define SLEEP_TIME_NO_GPS_CONNECTED_S 1
+#define SLEEP_TIME_NO_GPS_CONNECTED_NS 0
+
 #define LOG_PATH "./timelog/"
 #define LOG_FILE "time.log"
 
@@ -217,8 +223,8 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
         if(ReceivedNewData && GPSTime->isGPSenabled)
         {
             /* Make call periodic */
-            sleep_time.tv_sec = 0;
-            sleep_time.tv_nsec = 500000000;
+            sleep_time.tv_sec = SLEEP_TIME_GPS_CONNECTED_S;
+            sleep_time.tv_nsec = SLEEP_TIME_GPS_CONNECTED_NS;
             nanosleep(&sleep_time,&ref_time);
         }
         else if (!GPSTime->isGPSenabled)
@@ -253,7 +259,7 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
     const char packetIntervalMs[TIME_INTERVAL_NUMBER_BYTES] = {0,0,0,100};
     C8 timeBuffer[TIME_CONTROL_BUFFER_SIZE_54];
     int receivedNewData = 0;
-    struct timeval timeout = {TIMEOUT_S, 0};
+    struct timeval timeout = {REPLY_TIMEOUT_S, 0};
     struct timeval tEnd,tCurr;
 
     LogMessage(LOG_LEVEL_INFO,"Time source address: %s:%d",name,port);
