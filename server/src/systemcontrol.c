@@ -1001,7 +1001,8 @@ void SystemControlSendMONR(C8* MONRStr, I32* Sockfd, U8 Debug){
       for(i = 0; i < 2; i++, j++) Data[j] = Header[i];
       t = strlen(MONRStr);
       for(i = 0; i < t; i++, j++) Data[j] = *(MONRStr+i);
-      SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+      //SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+      UtilSendTCPData("System Control", Data, n + 4, Sockfd, 0);
   } else LogMessage(LOG_LEVEL_ERROR,"MONR string longer than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
 
@@ -1028,7 +1029,8 @@ void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
         for(i = 0; i < 2; i++, j++) Data[j] = Header[i];
         t = strlen(LogString);
         for(i = 0; i < t; i++, j++) Data[j] = *(LogString+i);
-        SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+        //SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+        UtilSendTCPData("System Control", Data, n + 4, Sockfd, 0);
     } else LogMessage(LOG_LEVEL_ERROR,"Log string longer than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 
 }
@@ -1057,7 +1059,8 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8
 
         if(Debug) { for(i = 0; i < n + 4; i++) printf("%x-", Data[i]); printf("\n"); }
 
-        SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+        //SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+        UtilSendTCPData("System Control", Data, n + 4, Sockfd, 0);
     } else LogMessage(LOG_LEVEL_ERROR,"Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
 
@@ -1185,7 +1188,7 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
 
 
 static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint32_t port)
-{
+{Tom kha gai
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
@@ -1780,14 +1783,16 @@ I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *Retu
         {
             bzero(TxBuffer, PacketSizeU16);
             fread(TxBuffer,1,PacketSizeU16,fd);
-            SystemControlSendBytes(TxBuffer, PacketSizeU16, sockfd, 0); //Send a packet
+            //SystemControlSendBytes(TxBuffer, PacketSizeU16, sockfd, 0); //Send a packet
+            UtilSendTCPData("System Control", TxBuffer, PacketSizeU16, Sockfd, 0);
         }
 
         if(RestCount > 0)
         {
             bzero(TxBuffer, PacketSizeU16);
             fread(TxBuffer,1,RestCount,fd);
-            SystemControlSendBytes(TxBuffer, RestCount, sockfd, 0); //Send the rest
+            //SystemControlSendBytes(TxBuffer, RestCount, sockfd, 0); //Send the rest
+            UtilSendTCPData("System Control", TxBuffer, RestCount, Sockfd, 0);
         }
 
         fclose(fd);
