@@ -216,7 +216,10 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
         {
             if(GPSTime->isGPSenabled)
             {
-                SendData[0] = 0, SendData[1] = 0, SendData[2] = 0, SendData[3] = 0;
+                SendData[0] = 0;
+                SendData[1] = 0;
+                SendData[2] = 0;
+                SendData[3] = 0;
                 TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, TIME_INTERVAL_NUMBER_BYTES, 0);
             }
             iExit = 1;
@@ -233,8 +236,8 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
         }
         else if (!GPSTime->isGPSenabled)
         {
-            sleep_time.tv_sec = 1;
-            sleep_time.tv_nsec = 0;//100000000;
+            sleep_time.tv_sec = SLEEP_TIME_NO_GPS_CONNECTED_S;
+            sleep_time.tv_nsec = SLEEP_TIME_NO_GPS_CONNECTED_NS;
             nanosleep(&sleep_time,&ref_time);
         }
     }
