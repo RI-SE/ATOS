@@ -527,7 +527,6 @@ typedef struct
   U16 IterationTimeU16;
 } ASPType;
 
-
 typedef struct
 {
 
