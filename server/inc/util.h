@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
+#include "MQTTClient.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -292,10 +293,18 @@
 #define ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH sizeof(TRAJInfoType)
 #define SIM_TRAJ_BYTES_IN_ROW  30
 
-
-
 #define ISO_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
 
+
+
+//MQTT
+#define ADDRESS     "tcp://localhost:1883"
+#define CLIENTID    "ExampleClientPub"
+#define TOPIC       "MQTT Examples"
+#define PAYLOAD     "Hello World!"
+#define QOS         1
+#define TIMEOUT     10000L
+volatile MQTTClient_deliveryToken deliveredtoken;
 
 
 typedef struct
@@ -778,6 +787,13 @@ I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPS
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
+
+void MQTTSendMessage(char *_topic, char *_payload);
+void connlost(void *context, char *cause);
+int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message);
+void delivered(void *context, MQTTClient_deliveryToken dt);
+
+
 
 typedef struct {
   uint64_t timestamp;

@@ -11,6 +11,17 @@ include_directories(inc)
 include_directories(../util/C/logging)
 include(GNUInstallDirs)
 
+
+find_package(OpenSSL REQUIRED)
+#find_library(paho-mqttpp3 NAMES libpaho-mqttpp3.a REQUIRED)
+find_library(paho-mqtt3c NAMES libpaho-mqtt3c.so REQUIRED)
+
+#add_library(pahottpp STATIC IMPORTED)
+#set_target_properties(pahottpp PROPERTIES IMPORTED_LOCATION ${paho-mqttpp3})
+
+add_library(pahomqtt3c SHARED IMPORTED)
+set_property(TARGET pahomqtt3c PROPERTY IMPORTED_LOCATION ${paho-mqtt3c})
+
 # Add logging library (hint at some locations)
 find_library(MAESTRO_LOGGING_PATH
     NAMES MaestroLogging
@@ -66,3 +77,5 @@ target_link_libraries(UserControl util objctrl MaestroLogging)
 target_link_libraries(util MaestroLogging)
 target_link_libraries(TEServer util)
 target_link_libraries(TEServer MaestroLogging)
+#target_link_libraries(util pahottpp)
+target_link_libraries(util pahomqtt3c)

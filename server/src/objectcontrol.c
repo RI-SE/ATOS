@@ -490,6 +490,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                     LogMessage(LOG_LEVEL_DEBUG, "Sending MONR message: %s", buffer);
 
+                    MQTTSendMessage("test", buffer);
                     if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) (void)iCommSend(COMM_MONI,buffer);
 
 

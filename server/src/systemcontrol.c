@@ -681,6 +681,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
                 SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
+                MQTTSendMessage("test", "INIT");
             }
             else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "INITIALIZED") != NULL)
             {
