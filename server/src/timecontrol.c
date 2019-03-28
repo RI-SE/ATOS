@@ -256,7 +256,7 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
 {
     int result;
     struct hostent *object;
-    char packetIntervalMs[TIME_INTERVAL_NUMBER_BYTES] = {0,0,0,100}; // Make server send with this interval while waiting for first reply
+    C8 packetIntervalMs[TIME_INTERVAL_NUMBER_BYTES] = {0,0,0,100}; // Make server send with this interval while waiting for first reply
     C8 timeBuffer[TIME_CONTROL_RECEIVE_BUFFER_SIZE];
     int receivedNewData = 0;
     struct timeval timeout = {REPLY_TIMEOUT_S, 0};
