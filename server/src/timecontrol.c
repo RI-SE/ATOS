@@ -138,7 +138,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
         GPSTime->GPSSecondsOfWeekU32 = (U32)((GPSTime->GPSMillisecondsU64 - (U64)(GPSTime->GPSWeekU16) * WEEK_TIME_MS) / 1000);
         GPSTime->GPSSecondsOfDayU32 = (GPSTime->GPSMillisecondsU64 % DAY_TIME_MS) / 1000;
         GPSTime->GPSMinutesU32 = (GPSTime->GPSSecondsOfDayU32 / 60) % 60;
-        GPSTime->TimeInitiatedU8 = 1;
+        GPSTime->isTimeInitializedU8 = 1;
     }
 
     while(!iExit)
@@ -158,19 +158,14 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
         }
         PrevMilliSecondU16 = CurrentMilliSecondU16;
 
-        if(IpU32 != 0)
+        if(GPSTime->isGPSenabled)
         {
             bzero(TimeBuffer,TIME_CONTROL_BUFFER_SIZE_54);
             TimeControlRecvTime(&SocketfdI32, TimeBuffer, TIME_CONTROL_BUFFER_SIZE_54, &ReceivedNewData);
+
+            if(ReceivedNewData) TimeControlDecodeTimeBuffer(GPSTime, TimeBuffer, 0);
         }
-
-        if(ReceivedNewData && IpU32 != 0)
-        {
-
-            TimeControlDecodeTimeBuffer(GPSTime, TimeBuffer, 0);
-
-        }
-        else if(IpU32 == 0)
+        else if(!GPSTime->isGPSenabled)
         {
             gettimeofday(&tv, NULL);
 
@@ -209,24 +204,24 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 
         if(GSD->ExitU8 == 1)
         {
-            if(IpU32)
+            if(GPSTime->isGPSenabled)
             {
                 SendData[0] = 0, SendData[1] = 0, SendData[2] = 0, SendData[3] = 0;
-                TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, 4, 0);
+                TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, TIME_INTERVAL_NUMBER_BYTES, 0);
             }
             iExit = 1;
             LogMessage(LOG_LEVEL_INFO,"Time control exiting");
             (void)iCommClose();
         }
 
-        if(ReceivedNewData == 1 && IpU32 != 0)
+        if(ReceivedNewData && GPSTime->isGPSenabled)
         {
             /* Make call periodic */
             sleep_time.tv_sec = 0;
             sleep_time.tv_nsec = 500000000;
             nanosleep(&sleep_time,&ref_time);
         }
-        else if (IpU32 == 0)
+        else if (!GPSTime->isGPSenabled)
         {
             sleep_time.tv_sec = 1;
             sleep_time.tv_nsec = 0;//100000000;
@@ -441,7 +436,7 @@ static void TimeControlDecodeTimeBuffer(TimeType* GPSTime, C8* TimeBuffer, C8 de
 
     GPSTime->LocalMillisecondU16 = (U16) (tv.tv_usec / 1000);
 
-    GPSTime->TimeInitiatedU8 = 1;
+    GPSTime->isTimeInitializedU8 = 1;
 
     if (debug)
     {
