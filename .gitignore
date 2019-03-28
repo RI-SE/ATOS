@@ -39,3 +39,6 @@
 # Catalogs
 build*/
 PlaygroundPlatform*/
+
+# Autosave files
+*.save
