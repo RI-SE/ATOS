@@ -511,7 +511,7 @@ typedef struct
   volatile U16 LocalMillisecondU16;
   volatile U8 FixQualityU8;
   volatile U8 NSatellitesU8;
-  volatile U8 TimeInitiatedU8;
+  volatile U8 isTimeInitializedU8;
 } TimeType;
 
 
