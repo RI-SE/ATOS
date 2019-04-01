@@ -1784,7 +1784,7 @@ I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *Retu
             bzero(TxBuffer, PacketSizeU16);
             fread(TxBuffer,1,PacketSizeU16,fd);
             //SystemControlSendBytes(TxBuffer, PacketSizeU16, sockfd, 0); //Send a packet
-            UtilSendTCPData("System Control", TxBuffer, PacketSizeU16, Sockfd, 0);
+            UtilSendTCPData("System Control", TxBuffer, PacketSizeU16, sockfd, 0);
         }
 
         if(RestCount > 0)
@@ -1792,7 +1792,7 @@ I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *Retu
             bzero(TxBuffer, PacketSizeU16);
             fread(TxBuffer,1,RestCount,fd);
             //SystemControlSendBytes(TxBuffer, RestCount, sockfd, 0); //Send the rest
-            UtilSendTCPData("System Control", TxBuffer, RestCount, Sockfd, 0);
+            UtilSendTCPData("System Control", TxBuffer, RestCount, sockfd, 0);
         }
 
         fclose(fd);
