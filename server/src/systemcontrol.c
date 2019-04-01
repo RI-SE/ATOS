@@ -1188,7 +1188,7 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
 
 
 static I32 SystemControlConnectServer(int* sockfd, const char* name, const uint32_t port)
-{Tom kha gai
+{
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
