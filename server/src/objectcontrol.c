@@ -383,7 +383,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             char buffer[RECV_MESSAGE_BUFFER];
             int recievedNewData = 0;
             // this is etsi time lets remov it ans use utc instead
-            /*gettimeofday(&CurrentTimeStruct, NULL);
+            //gettimeofday(&CurrentTimeStruct, NULL);
 
             CurrentTimeU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
 
