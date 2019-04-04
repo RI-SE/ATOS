@@ -80,7 +80,7 @@ void logger_task()
     struct dirent *ent;
     FILE *filefd,*fileread,*replayfd, *filefdComp;
     struct timespec sleep_time, ref_time;
-    U8 FirstInitU8 = 0;
+    U8 FirstInitU8 = 1;
     gettimeofday(&tvTime,NULL);
 
 
@@ -234,7 +234,11 @@ void logger_task()
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     sprintf(pcBuffer, "Command message nr:\nCOMM_START:%d\nCOMM_STOP:%d\nCOMM_MONI%d\nCOMM_EXIT:%d\nCOMM_ARMD:%d\nCOMM_REPLAY:%d\nCOMM_CONTROL:%d\nCOMM_ABORT:%d\nCOMM_TOM:%d\nCOMM_INIT:%d\nCOMM_CONNECT:%d\nCOMM_OBC_STATE:%d\nCOMM_DISCONNECT:%d\nCOMM_LOG:%d\nCOMM_VIOP:%d\nCOMM_INV:%d\n------------------------------------------\n Log start\n------------------------------------------\n",COMM_STRT,COMM_STOP,COMM_MONI,COMM_EXIT,COMM_ARMD,COMM_REPLAY,COMM_CONTROL,COMM_ABORT,COMM_TOM,COMM_INIT,COMM_CONNECT,COMM_OBC_STATE,COMM_DISCONNECT,COMM_LOG,COMM_VIOP,COMM_INV);
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-    filefdComp = fopen(pcLogFileComp,"w+");
+
+    // Close the files until next write operation
+    fclose(filefd);
+
+    vCreateLogFolder("./loginit/");
 
     while(!iExit)
     {
@@ -257,8 +261,14 @@ void logger_task()
             }
 
             sprintf ( pcBuffer,"%s;%s;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, iCommand, pcRecvBuffer);
+            filefd = fopen(pcLogFile,"a");
+            filefdComp = fopen(pcLogFileComp,"a");
+
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+
+            fclose(filefd);
+            fclose(filefdComp);
 
         }
 
@@ -407,8 +417,21 @@ void logger_task()
         }
         else if (iCommand == COMM_INIT)
         {
+
+            if(FirstInitU8)
+            {
+                vCreateLogFolder("./loginit/some_date/");
+                LogPrint("123");
+
+                filefd = fopen("./loginit/some_date/test1.test","a+");
+                fwrite("Hej test",1,strlen("Hej test"),filefd);
+                fclose(filefd);
+
+                FirstInitU8 = 0;
+            }
+
             /*
-            if(FirstInitU8 == 1)
+            if(FirstInitU8 == 1)  // Should be 0
             {
                 // Create folder and event.log file
                 vCreateLogFolder(pcLogFolder);
@@ -449,7 +472,7 @@ void logger_task()
 
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     strcpy(pcBuffer, "Log closed\n");
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+    //(void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
 
     fclose(filefd);
@@ -472,6 +495,7 @@ void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
 
     directory = opendir(logFolder);
 
+    // If the directory does not exist, create it
     if(directory == NULL)
     {
         iResult = mkdir(logFolder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -481,30 +505,6 @@ void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
         }
     }
 
-  /*  while (directory_entry = readdir(directory))
-    {
-        // Check so it's not . or ..
-        if (strncmp(directory_entry->d_name,".",1))
-        {
-
-            int iTemp = atoi(directory_entry->d_name);
-
-            if( iTemp > iMaxFolder)
-            {
-                iMaxFolder = iTemp;
-            }
-        }
-    }*/
     (void)closedir(directory);
 
-    /* step up one to create a new folder */
-    //++iMaxFolder;
-    //bzero(logFolder,MAX_FILE_PATH);
-    //sprintf(logFolder,"%s%d/",LOG_PATH,iMaxFolder);
-
-  /*  iResult = mkdir(logFolder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    if (iResult < 0)
-    {
-        util_error("ERR: Failed to create dir");
-    }*/
 }
