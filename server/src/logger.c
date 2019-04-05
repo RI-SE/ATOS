@@ -102,9 +102,9 @@ void logger_task()
 
     struct stat st = {0};
     if (stat(LOG_PATH, &st) == -1)
-	{
-		vCreateLogFolder(LOG_PATH);
-	}
+    {
+        vCreateLogFolder(LOG_PATH);
+    }
 
 
     vCreateLogFolder(pcLogFolder);
@@ -238,7 +238,7 @@ void logger_task()
     // Close the files until next write operation
     fclose(filefd);
 
-    vCreateLogFolder("./loginit/");
+    vCreateLogFolder("./log/");
 
     while(!iExit)
     {
@@ -420,10 +420,37 @@ void logger_task()
 
             if(FirstInitU8)
             {
-                vCreateLogFolder("./loginit/some_date/");
-                LogPrint("123");
+                bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
+                //Calculate the date when the logfile is created more or less
+                LogTimeStart = UtilgetCurrentUTCtimeMS();
+                UtilgetDateTimeFromUTCForMapNameCreation((int64_t)LogTimeStart, DateBuffer,sizeof(DateBuffer));
 
-                filefd = fopen("./loginit/some_date/test1.test","a+");
+                bzero(pcLogFolder,MAX_FILE_PATH);
+                bzero(pcLogFile,MAX_FILE_PATH);
+
+                (void)strcpy(pcLogFolder,LOG_PATH);
+                (void)strcat(pcLogFolder,DateBuffer);
+
+                vCreateLogFolder(pcLogFolder);
+
+                (void)strcpy(pcLogFile,pcLogFolder);
+                (void)strcat(pcLogFolder,Forward_slash);
+                (void)strcat(pcLogFile,Forward_slash);
+                LogMessage(LOG_LEVEL_INFO,"Trying to open: %s",pcLogFile);
+
+                (void)strcat(pcLogFile,DateBuffer);
+
+                bzero(pcLogFileComp,MAX_FILE_PATH);
+
+                (void)strcpy(pcLogFileComp,pcLogFile);
+
+                (void)strcat(pcLogFileComp,"Csv");
+
+                (void)strcat(pcLogFile,LOG_FILE);
+                (void)strcat(pcLogFileComp,LOG_FILE);
+
+
+                filefd = fopen(pcLogFile,"a+");
                 fwrite("Hej test",1,strlen("Hej test"),filefd);
                 fclose(filefd);
 
