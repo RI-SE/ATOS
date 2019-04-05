@@ -274,6 +274,9 @@ void logger_task()
 
         if(iCommand == COMM_MONI)
         {
+
+          filefd = fopen(pcLogFile, "a+");
+
           char *str;
           str = malloc(sizeof(pcRecvBuffer) + 1);
           strcpy(str,pcRecvBuffer);
@@ -295,8 +298,11 @@ void logger_task()
           UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
           bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
           sprintf ( pcBuffer,"%s;%s;%lu;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, GPSms, iCommand, pcRecvBuffer);
+
           (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-          (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+          //(void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+
+          fclose(filefd);
 
 
         }
@@ -436,18 +442,90 @@ void logger_task()
                 (void)strcpy(pcLogFile,pcLogFolder);
                 (void)strcat(pcLogFolder,Forward_slash);
                 (void)strcat(pcLogFile,Forward_slash);
-                LogMessage(LOG_LEVEL_INFO,"Trying to open: %s",pcLogFile);
-
                 (void)strcat(pcLogFile,DateBuffer);
-
                 bzero(pcLogFileComp,MAX_FILE_PATH);
-
                 (void)strcpy(pcLogFileComp,pcLogFile);
-
                 (void)strcat(pcLogFileComp,"Csv");
 
                 (void)strcat(pcLogFile,LOG_FILE);
                 (void)strcat(pcLogFileComp,LOG_FILE);
+
+
+                LogMessage(LOG_LEVEL_INFO,"Opening log file to use: <%s>",pcLogFile);
+                filefd = fopen(pcLogFile, "w+");
+                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                sprintf(pcBuffer,"------------------------------------------\nWhole Trajectory files:\n------------------------------------------\n");
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+
+                /* Copy drive files */
+                (void)strcpy(pcCommand,"cp -R ");
+                (void)strcat(pcCommand,TRAJECTORY_PATH);
+                (void)strcat(pcCommand," ");
+                (void)strcat(pcCommand,pcLogFolder);
+                (void)system(pcCommand);
+
+
+                // Open directory ./traj/
+                if ((dir=opendir(TRAJECTORY_PATH))!=NULL)
+                {
+                  while((ent=readdir(dir))!=NULL)
+                  {
+                    //copy all files in trajectory and add them to the log file
+                    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                    strcpy(pcBuffer,TRAJECTORY_PATH);
+                    strcat(pcBuffer,ent->d_name);
+                    if (0==access(pcBuffer,0))
+                    {
+                      fileread = fopen(pcBuffer,"r");
+                      read = fgetc(fileread);
+                      while(read != EOF)
+                      {
+                          fputc(read,filefd);
+                          read = fgetc(fileread);
+                      }
+                      //fclose(fileread);
+                    }
+                  }
+                  closedir(dir);
+                }
+                else
+                {
+                    LogMessage(LOG_LEVEL_ERROR,"No traj directory <%s> exists - wrong path or access denied",TRAJECTORY_PATH);
+                }
+
+
+                /* Copy conf file */
+                (void)strcpy(pcCommand,"cp ");
+                (void)strcat(pcCommand,TEST_CONF_FILE);
+                (void)strcat(pcCommand," ");
+                (void)strcat(pcCommand,pcLogFolder);
+                (void)system(pcCommand);
+
+                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                sprintf(pcBuffer, "------------------------------------------\nWhole Config file:\n------------------------------------------\n");
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+
+                /* If file conf file exist and we have reader permission do*/
+                if (0==access(TEST_CONF_FILE,0))
+                {
+                  /*read the .conf file and print it in to the .log file */
+                  fileread = fopen(TEST_CONF_FILE,"r");
+                  read = fgetc(fileread);
+                  while(read!= EOF)
+                  {
+                      fputc(read,filefd);
+                      read = fgetc(fileread);
+                  }
+                  fclose(fileread);
+                }
+                else
+                {
+                    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                    sprintf(pcBuffer,"Failed to Open .conf file;%s\n",TEST_CONF_FILE);
+                    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+                }
 
 
                 filefd = fopen(pcLogFile,"a+");
