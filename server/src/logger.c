@@ -80,7 +80,7 @@ void logger_task()
     struct dirent *ent;
     FILE *filefd,*fileread,*replayfd, *filefdComp;
     struct timespec sleep_time, ref_time;
-    U8 FirstInitU8 = 1;
+    U8 isFirstInit = 1;
     gettimeofday(&tvTime,NULL);
 
     (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
@@ -142,6 +142,11 @@ void logger_task()
 
             fclose(filefd);
             fclose(filefdComp);
+
+        }
+
+        if(iCommand == COMM_ABORT){
+          isFirstInit = 1;
 
         }
 
@@ -297,7 +302,7 @@ void logger_task()
         else if (iCommand == COMM_INIT)
         {
 
-            if(FirstInitU8)
+            if(isFirstInit)
             {
                 bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
                 //Calculate the date when the logfile is created more or less
@@ -431,42 +436,12 @@ void logger_task()
                 (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
 
-                fwrite("Hej test",1,strlen("Hej test"),filefd);
-                fclose(filefd);
 
-                FirstInitU8 = 0;
+
+                isFirstInit = 0;
             }
 
-            /*
-            if(FirstInitU8 == 1)  // Should be 0
-            {
-                // Create folder and event.log file
-                vCreateLogFolder(pcLogFolder);
-                (void)strcpy(pcLogFile,pcLogFolder);
-                (void)strcat(pcLogFile,LOG_FILE);
 
-                log_message(LOG_LEVEL_INFO,"Opening log file to use: <%s>",pcLogFile);
-                filefd = fopen (pcLogFile, "w+");
-
-                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-                strcpy(pcBuffer, "Log started...\n");
-                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-
-                // Copy drive files
-                (void)strcpy(pcCommand,"cp -R ");
-                (void)strcat(pcCommand,TRAJECTORY_PATH);
-                (void)strcat(pcCommand," ");
-                (void)strcat(pcCommand,pcLogFolder);
-                (void)system(pcCommand);
-
-                // Copy conf file
-                (void)strcpy(pcCommand,"cp ");
-                (void)strcat(pcCommand,TEST_CONF_FILE);
-                (void)strcat(pcCommand," ");
-                (void)strcat(pcCommand,pcLogFolder);
-                (void)system(pcCommand);
-            }
-            FirstInitU8 = 1;*/
         }
         else
         {
