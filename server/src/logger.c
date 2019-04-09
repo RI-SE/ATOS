@@ -436,7 +436,7 @@ void logger_task()
                 (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
 
-
+                fclose(filefd);
 
                 isFirstInit = 0;
             }
@@ -454,11 +454,11 @@ void logger_task()
 
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     strcpy(pcBuffer, "Log closed\n");
-    //(void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+    //(void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
 
     fclose(filefd);
-    fclose(filefdComp);
+    //fclose(filefdComp);
 }
 
 
