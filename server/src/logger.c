@@ -80,20 +80,8 @@ void logger_task()
     struct dirent *ent;
     FILE *filefd,*fileread,*replayfd, *filefdComp;
     struct timespec sleep_time, ref_time;
-    U8 FirstInitU8 = 0;
+    U8 isFirstInit = 1;
     gettimeofday(&tvTime,NULL);
-
-
-    bzero(pcBuffer, MQ_MAX_MESSAGE_LENGTH+100);
-    bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
-    //Calculate the date when the logfile is created more or less
-    LogTimeStart = UtilgetCurrentUTCtimeMS();
-    UtilgetDateTimeFromUTCForMapNameCreation((int64_t)LogTimeStart, DateBuffer,sizeof(DateBuffer));
-
-    bzero(pcLogFolder,MAX_FILE_PATH);
-    bzero(pcLogFile,MAX_FILE_PATH);
-    (void)strcpy(pcLogFolder,LOG_PATH);
-    (void)strcat(pcLogFolder,DateBuffer);
 
     (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
     //(void)iCommInit(IPC_SEND,MQ_LG_1,0);
@@ -102,98 +90,13 @@ void logger_task()
 
     struct stat st = {0};
     if (stat(LOG_PATH, &st) == -1)
-	{
-		vCreateLogFolder(LOG_PATH);
-	}
-
-
-    vCreateLogFolder(pcLogFolder);
-    (void)strcpy(pcLogFile,pcLogFolder);
-    (void)strcat(pcLogFile,Forward_slash);
-    (void)strcat(pcLogFile,DateBuffer);
-    bzero(pcLogFileComp,MAX_FILE_PATH);
-    (void)strcpy(pcLogFileComp,pcLogFile);
-    (void)strcat(pcLogFileComp,"Csv");
-    (void)strcat(pcLogFile,LOG_FILE);
-    (void)strcat(pcLogFileComp,LOG_FILE);
-
-    LogMessage(LOG_LEVEL_INFO,"Opening log file to use: <%s>",pcLogFile);
-    filefd = fopen(pcLogFile, "w+");
-    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer,"------------------------------------------\nWhole Trajectory files:\n------------------------------------------\n");
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-
-
-    /* Copy drive files */
-    (void)strcpy(pcCommand,"cp -R ");
-    (void)strcat(pcCommand,TRAJECTORY_PATH);
-    (void)strcat(pcCommand," ");
-    (void)strcat(pcCommand,pcLogFolder);
-    (void)system(pcCommand);
-
-
-    // Open directory ./traj/
-    if ((dir=opendir(TRAJECTORY_PATH))!=NULL)
     {
-      while((ent=readdir(dir))!=NULL)
-      {
-        //copy all files in trajectory and add them to the log file
-        bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-        strcpy(pcBuffer,TRAJECTORY_PATH);
-        strcat(pcBuffer,ent->d_name);
-        if (0==access(pcBuffer,0))
-        {
-          fileread = fopen(pcBuffer,"r");
-          read = fgetc(fileread);
-          while(read != EOF)
-          {
-              fputc(read,filefd);
-              read = fgetc(fileread);
-          }
-          fclose(fileread);
-        }
-      }
-      closedir(dir);
+        vCreateLogFolder(LOG_PATH);
     }
-    else
-    {
-        LogMessage(LOG_LEVEL_ERROR,"No traj directory <%s> exists - wrong path or access denied",TRAJECTORY_PATH);
-    }
-    /* If traj file exist and we have reader permission do*/
 
+    (void)strcat(pcLogFile," ");
+    (void)strcat(pcLogFileComp," ");
 
-    /* Copy conf file */
-    (void)strcpy(pcCommand,"cp ");
-    (void)strcat(pcCommand,TEST_CONF_FILE);
-    (void)strcat(pcCommand," ");
-    (void)strcat(pcCommand,pcLogFolder);
-    (void)system(pcCommand);
-
-    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer, "------------------------------------------\nWhole Config file:\n------------------------------------------\n");
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-
-    /* If file conf file exist and we have reader permission do*/
-    if (0==access(TEST_CONF_FILE,0))
-    {
-      /*read the .conf file and print it in to the .log file */
-      fileread = fopen(TEST_CONF_FILE,"r");
-      read = fgetc(fileread);
-      while(read!= EOF)
-      {
-          fputc(read,filefd);
-          read = fgetc(fileread);
-      }
-      fclose(fileread);
-    }
-    else
-    {
-        LogMessage(LOG_LEVEL_WARNING,"Cant open .conf file; %s",TEST_CONF_FILE);
-        bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-        sprintf(pcBuffer,"Failed to Open .conf file;%s\n",TEST_CONF_FILE);
-        (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-
-    }
 
     /* Listen for commands */
     int iExit = 0;
@@ -208,33 +111,7 @@ void logger_task()
     char *src;
     uint64_t NewTimestamp, OldTimestamp,Timestamp;
 
-    // added some information about the standard log file format and what is what in the MONR message
-    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer, "\n------------------------------------------\nInformation about log structure\n------------------------------------------\nLog started; Date:%s\nGenerall structure:\n",DateBuffer);
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer,"<Year>;<Month>;<Day>;<Hour>;<Minute>;<Second>;<Millisecond>;<UTC Time ms>;<Command message nr>;<Data>\n");
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-
-    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer,"Monor message structure(command message nr = 3):\n<Year>;<Month>;<Day>;<Hour>;<Minute>;<Second>;<Millisecond>;<UTC Time ms>;<GPS Time ms>;<Command message nr>;<Data>;<Object_address (IP number)>;<0>;");
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-
-    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer,"<GPS Second of week (unit 0.25 milliseconds)>;<x-position, unit 0.001 meter>;<y-position, unit 0.001 meter>;<z-position, unit0.001>;<heading, unit 0.01 degrees>;<Logitudinal speed,");
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-
-    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-
-    sprintf(pcBuffer,"Version;%s\n",MaestroVersion);
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-
-    sprintf(pcBuffer,"unit 0.01 m/s>;<Lateral speed, unit 0.01 m/s>;<Longitudinal Acceleration, unit 0.001 m/s^2>;<Lateral Acceleration, unit 0.001 m/s^2>;<Driving direction>;<Object state>;<Ready to ARM>;<ErrorState>\n"); // add more her if we want more data
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer, "Command message nr:\nCOMM_START:%d\nCOMM_STOP:%d\nCOMM_MONI%d\nCOMM_EXIT:%d\nCOMM_ARMD:%d\nCOMM_REPLAY:%d\nCOMM_CONTROL:%d\nCOMM_ABORT:%d\nCOMM_TOM:%d\nCOMM_INIT:%d\nCOMM_CONNECT:%d\nCOMM_OBC_STATE:%d\nCOMM_DISCONNECT:%d\nCOMM_LOG:%d\nCOMM_VIOP:%d\nCOMM_INV:%d\n------------------------------------------\n Log start\n------------------------------------------\n",COMM_STRT,COMM_STOP,COMM_MONI,COMM_EXIT,COMM_ARMD,COMM_REPLAY,COMM_CONTROL,COMM_ABORT,COMM_TOM,COMM_INIT,COMM_CONNECT,COMM_OBC_STATE,COMM_DISCONNECT,COMM_LOG,COMM_VIOP,COMM_INV);
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-    filefdComp = fopen(pcLogFileComp,"w+");
+    vCreateLogFolder("./log/");
 
     while(!iExit)
     {
@@ -257,13 +134,27 @@ void logger_task()
             }
 
             sprintf ( pcBuffer,"%s;%s;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, iCommand, pcRecvBuffer);
+            filefd = fopen(pcLogFile,"a");
+            filefdComp = fopen(pcLogFileComp,"a");
+
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+
+            fclose(filefd);
+            fclose(filefdComp);
+
+        }
+
+        if(iCommand == COMM_ABORT){
+          isFirstInit = 1;
 
         }
 
         if(iCommand == COMM_MONI)
         {
+
+          filefd = fopen(pcLogFile, "a+");
+
           char *str;
           str = malloc(sizeof(pcRecvBuffer) + 1);
           strcpy(str,pcRecvBuffer);
@@ -285,8 +176,11 @@ void logger_task()
           UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
           bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
           sprintf ( pcBuffer,"%s;%s;%lu;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, GPSms, iCommand, pcRecvBuffer);
+
           (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-          (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+          //void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+
+          fclose(filefd);
 
 
         }
@@ -407,36 +301,147 @@ void logger_task()
         }
         else if (iCommand == COMM_INIT)
         {
-            /*
-            if(FirstInitU8 == 1)
+
+            if(isFirstInit)
             {
-                // Create folder and event.log file
+                bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
+                //Calculate the date when the logfile is created more or less
+                LogTimeStart = UtilgetCurrentUTCtimeMS();
+                UtilgetDateTimeFromUTCForMapNameCreation((int64_t)LogTimeStart, DateBuffer,sizeof(DateBuffer));
+
+                bzero(pcLogFolder,MAX_FILE_PATH);
+                bzero(pcLogFile,MAX_FILE_PATH);
+
+                (void)strcpy(pcLogFolder,LOG_PATH);
+                (void)strcat(pcLogFolder,DateBuffer);
+
                 vCreateLogFolder(pcLogFolder);
+
                 (void)strcpy(pcLogFile,pcLogFolder);
+                (void)strcat(pcLogFolder,Forward_slash);
+                (void)strcat(pcLogFile,Forward_slash);
+                (void)strcat(pcLogFile,DateBuffer);
+                bzero(pcLogFileComp,MAX_FILE_PATH);
+                (void)strcpy(pcLogFileComp,pcLogFile);
+                (void)strcat(pcLogFileComp,"Csv");
+
                 (void)strcat(pcLogFile,LOG_FILE);
+                (void)strcat(pcLogFileComp,LOG_FILE);
 
-                log_message(LOG_LEVEL_INFO,"Opening log file to use: <%s>",pcLogFile);
-                filefd = fopen (pcLogFile, "w+");
 
+                LogMessage(LOG_LEVEL_INFO,"Opening log file to use: <%s>",pcLogFile);
+                filefd = fopen(pcLogFile, "w+");
                 bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-                strcpy(pcBuffer, "Log started...\n");
+                sprintf(pcBuffer,"------------------------------------------\nWhole Trajectory files:\n------------------------------------------\n");
                 (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
-                // Copy drive files
+
+                /* Copy drive files */
                 (void)strcpy(pcCommand,"cp -R ");
                 (void)strcat(pcCommand,TRAJECTORY_PATH);
                 (void)strcat(pcCommand," ");
                 (void)strcat(pcCommand,pcLogFolder);
                 (void)system(pcCommand);
 
-                // Copy conf file
+
+                // Open directory ./traj/
+                if ((dir=opendir(TRAJECTORY_PATH))!=NULL)
+                {
+                  while((ent=readdir(dir))!=NULL)
+                  {
+                    //copy all files in trajectory and add them to the log file
+                    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                    strcpy(pcBuffer,TRAJECTORY_PATH);
+                    strcat(pcBuffer,ent->d_name);
+                    if (0==access(pcBuffer,0))
+                    {
+                      fileread = fopen(pcBuffer,"r");
+                      read = fgetc(fileread);
+                      while(read != EOF)
+                      {
+                          fputc(read,filefd);
+                          read = fgetc(fileread);
+                      }
+                      fclose(fileread);
+                    }
+                  }
+                  closedir(dir);
+                }
+                else
+                {
+                    LogMessage(LOG_LEVEL_ERROR,"No traj directory <%s> exists - wrong path or access denied",TRAJECTORY_PATH);
+                }
+                fclose(filefd);
+
+
+                /* Copy conf file */
                 (void)strcpy(pcCommand,"cp ");
                 (void)strcat(pcCommand,TEST_CONF_FILE);
                 (void)strcat(pcCommand," ");
                 (void)strcat(pcCommand,pcLogFolder);
                 (void)system(pcCommand);
+
+                filefd = fopen(pcLogFile,"a+");
+
+                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                sprintf(pcBuffer, "\n------------------------------------------\nWhole Config file:\n------------------------------------------\n");
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+
+                /* If file conf file exist and we have reader permission do*/
+                if (0==access(TEST_CONF_FILE,0))
+                {
+                  /*read the .conf file and print it in to the .log file */
+                  fileread = fopen(TEST_CONF_FILE,"r");
+                  read = fgetc(fileread);
+                  while(read!= EOF)
+                  {
+                      fputc(read,filefd);
+                      read = fgetc(fileread);
+                  }
+                  fclose(fileread);
+                }
+                else
+                {
+                    bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                    sprintf(pcBuffer,"Failed to Open .conf file;%s\n",TEST_CONF_FILE);
+                    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+                }
+
+                // added some information about the standard log file format and what is what in the MONR message
+                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                sprintf(pcBuffer, "\n------------------------------------------\nInformation about log structure\n------------------------------------------\nLog started; Date:%s\nGenerall structure:\n",DateBuffer);
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                sprintf(pcBuffer,"<Year>;<Month>;<Day>;<Hour>;<Minute>;<Second>;<Millisecond>;<UTC Time ms>;<Command message nr>;<Data>\n");
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                sprintf(pcBuffer,"Monor message structure(command message nr = 3):\n<Year>;<Month>;<Day>;<Hour>;<Minute>;<Second>;<Millisecond>;<UTC Time ms>;<GPS Time ms>;<Command message nr>;<Data>;<Object_address (IP number)>;<0>;");
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                sprintf(pcBuffer,"<GPS Second of week (unit 0.25 milliseconds)>;<x-position, unit 0.001 meter>;<y-position, unit 0.001 meter>;<z-position, unit0.001>;<heading, unit 0.01 degrees>;<Logitudinal speed,");
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+
+                sprintf(pcBuffer,"Version;%s\n",MaestroVersion);
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+                sprintf(pcBuffer,"unit 0.01 m/s>;<Lateral speed, unit 0.01 m/s>;<Longitudinal Acceleration, unit 0.001 m/s^2>;<Lateral Acceleration, unit 0.001 m/s^2>;<Driving direction>;<Object state>;<Ready to ARM>;<ErrorState>\n"); // add more her if we want more data
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+                bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+                sprintf(pcBuffer, "Command message nr:\nCOMM_START:%d\nCOMM_STOP:%d\nCOMM_MONI%d\nCOMM_EXIT:%d\nCOMM_ARMD:%d\nCOMM_REPLAY:%d\nCOMM_CONTROL:%d\nCOMM_ABORT:%d\nCOMM_TOM:%d\nCOMM_INIT:%d\nCOMM_CONNECT:%d\nCOMM_OBC_STATE:%d\nCOMM_DISCONNECT:%d\nCOMM_LOG:%d\nCOMM_VIOP:%d\nCOMM_INV:%d\n------------------------------------------\n Log start\n------------------------------------------\n",COMM_STRT,COMM_STOP,COMM_MONI,COMM_EXIT,COMM_ARMD,COMM_REPLAY,COMM_CONTROL,COMM_ABORT,COMM_TOM,COMM_INIT,COMM_CONNECT,COMM_OBC_STATE,COMM_DISCONNECT,COMM_LOG,COMM_VIOP,COMM_INV);
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+
+
+                fclose(filefd);
+
+                isFirstInit = 0;
             }
-            FirstInitU8 = 1;*/
+
+
         }
         else
         {
@@ -450,10 +455,10 @@ void logger_task()
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     strcpy(pcBuffer, "Log closed\n");
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-    (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+    //(void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
 
     fclose(filefd);
-    fclose(filefdComp);
+    //fclose(filefdComp);
 }
 
 
@@ -472,6 +477,7 @@ void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
 
     directory = opendir(logFolder);
 
+    // If the directory does not exist, create it
     if(directory == NULL)
     {
         iResult = mkdir(logFolder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -481,30 +487,6 @@ void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
         }
     }
 
-  /*  while (directory_entry = readdir(directory))
-    {
-        // Check so it's not . or ..
-        if (strncmp(directory_entry->d_name,".",1))
-        {
-
-            int iTemp = atoi(directory_entry->d_name);
-
-            if( iTemp > iMaxFolder)
-            {
-                iMaxFolder = iTemp;
-            }
-        }
-    }*/
     (void)closedir(directory);
 
-    /* step up one to create a new folder */
-    //++iMaxFolder;
-    //bzero(logFolder,MAX_FILE_PATH);
-    //sprintf(logFolder,"%s%d/",LOG_PATH,iMaxFolder);
-
-  /*  iResult = mkdir(logFolder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    if (iResult < 0)
-    {
-        util_error("ERR: Failed to create dir");
-    }*/
 }
