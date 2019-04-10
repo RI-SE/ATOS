@@ -483,7 +483,7 @@ void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
         iResult = mkdir(logFolder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
         if (iResult < 0)
         {
-            util_error("ERR: Failed to create LOG dir");
+            util_error("Failed to create LOG dir");
         }
     }
 

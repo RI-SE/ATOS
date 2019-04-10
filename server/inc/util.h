@@ -489,29 +489,29 @@ typedef struct
 
 typedef struct
 {
-  U8 isGPSenabled;
-  U8 ProtocolVersionU8;
-  U16 YearU16;
-  U8 MonthU8;
-  U8 DayU8;
-  U8 HourU8;
-  U8 MinuteU8;
-  U8 SecondU8;
-  U16 MillisecondU16;
-  U16 MicroSecondU16;
-  U32 SecondCounterU32;
-  U64 GPSMillisecondsU64;
-  U32 GPSMinutesU32;
-  U16 GPSWeekU16;
-  U32 GPSSecondsOfWeekU32;
-  U32 GPSSecondsOfDayU32;
-  U64 ETSIMillisecondsU64;
-  U32 LatitudeU32;
-  U32 LongitudeU32;
-  U16 LocalMillisecondU16;
-  U8 FixQualityU8;
-  U8 NSatellitesU8;
-  U8 TimeInitiatedU8;
+  volatile U8 isGPSenabled;
+  volatile U8 ProtocolVersionU8;
+  volatile U16 YearU16;
+  volatile U8 MonthU8;
+  volatile U8 DayU8;
+  volatile U8 HourU8;
+  volatile U8 MinuteU8;
+  volatile U8 SecondU8;
+  volatile U16 MillisecondU16;
+  volatile U16 MicroSecondU16;
+  volatile U32 SecondCounterU32;
+  volatile U64 GPSMillisecondsU64;
+  volatile U32 GPSMinutesU32;
+  volatile U16 GPSWeekU16;
+  volatile U32 GPSSecondsOfWeekU32;
+  volatile U32 GPSSecondsOfDayU32;
+  volatile U64 ETSIMillisecondsU64;
+  volatile U32 LatitudeU32;
+  volatile U32 LongitudeU32;
+  volatile U16 LocalMillisecondU16;
+  volatile U8 FixQualityU8;
+  volatile U8 NSatellitesU8;
+  volatile U8 isTimeInitializedU8;
 } TimeType;
 
 
@@ -526,7 +526,6 @@ typedef struct
   I32 BestFoundIndexI32;
   U16 IterationTimeU16;
 } ASPType;
-
 
 typedef struct
 {

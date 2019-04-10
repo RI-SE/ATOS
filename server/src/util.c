@@ -1701,6 +1701,7 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize,char* TimeUTCR
 
   return iResult;
 }
+
 /* iCommSend sends a given message cpData and command icommand out on all
  * the five message ques. but first ut prioritis the messages depending on
  * iCommand
