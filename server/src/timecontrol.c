@@ -36,7 +36,7 @@
 #define TIME_CONTROL_RECEIVE_BUFFER_SIZE 54
 #define TIME_CONTROL_TASK_PERIOD_MS 1
 #define TIME_INTERVAL_NUMBER_BYTES 4
-#define REPLY_TIMEOUT_S 2
+#define REPLY_TIMEOUT_S 3
 
 #define SLEEP_TIME_GPS_CONNECTED_S 0
 #define SLEEP_TIME_GPS_CONNECTED_NS 500000000
@@ -454,26 +454,26 @@ static void TimeControlDecodeTimeBuffer(TimeType* GPSTime, C8* TimeBuffer, C8 de
     if (debug)
     {
         //TimeControlGetMillisecond(GPSTime);
-        LogPrintBytes(TimeBuffer,0,TIME_CONTROL_RECEIVE_BUFFER_SIZE);
-        LogPrint("ProtocolVersionU8: %d", GPSTime->ProtocolVersionU8);
-        LogPrint("YearU16: %d", GPSTime->YearU16);
-        LogPrint("MonthU8: %d", GPSTime->MonthU8);
-        LogPrint("DayU8: %d", GPSTime->DayU8);
-        LogPrint("HourU8: %d", GPSTime->HourU8);
-        LogPrint("MinuteU8: %d", GPSTime->MinuteU8);
-        LogPrint("SecondU8: %d", GPSTime->SecondU8);
-        LogPrint("MillisecondU16: %d", GPSTime->MillisecondU16);
-        LogPrint("SecondCounterU32: %d", GPSTime->SecondCounterU32);
-        LogPrint("GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);
-        LogPrint("GPSMinutesU32: %d", GPSTime->GPSMinutesU32);
-        LogPrint("GPSWeekU16: %d", GPSTime->GPSWeekU16);
-        LogPrint("GPSSecondsOfWeekU32: %d", GPSTime->GPSSecondsOfWeekU32);
-        LogPrint("GPSSecondsOfDayU32: %d", GPSTime->GPSSecondsOfDayU32);
-        LogPrint("ETSIMillisecondsU64: %ld", GPSTime->ETSIMillisecondsU64);
-        LogPrint("LatitudeU32: %d", GPSTime->LatitudeU32);
-        LogPrint("LongitudeU32: %d", GPSTime->LongitudeU32);
-        LogPrint("LocalMillisecondU16: %d", GPSTime->LocalMillisecondU16);
-        LogPrint("FixQualityU8: %d", GPSTime->FixQualityU8);
-        LogPrint("NSatellitesU8: %d", GPSTime->NSatellitesU8);
+        //LogPrintBytes(TimeBuffer,0,TIME_CONTROL_RECEIVE_BUFFER_SIZE);
+        //LogPrint("ProtocolVersionU8: %d", GPSTime->ProtocolVersionU8);
+        //LogPrint("YearU16: %d", GPSTime->YearU16);
+        //LogPrint("MonthU8: %d", GPSTime->MonthU8);
+        //LogPrint("DayU8: %d", GPSTime->DayU8);
+        LogPrint("Time: %d:%d:%d", GPSTime->HourU8, GPSTime->MinuteU8, GPSTime->SecondU8);
+        //LogPrint("MinuteU8: %d", GPSTime->MinuteU8);
+        //LogPrint("SecondU8: %d", GPSTime->SecondU8);
+        //LogPrint("MillisecondU16: %d", GPSTime->MillisecondU16);
+        //LogPrint("SecondCounterU32: %d", GPSTime->SecondCounterU32);
+        //LogPrint("GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);
+        //LogPrint("GPSMinutesU32: %d", GPSTime->GPSMinutesU32);
+        //LogPrint("GPSWeekU16: %d", GPSTime->GPSWeekU16);
+        //LogPrint("GPSSecondsOfWeekU32: %d", GPSTime->GPSSecondsOfWeekU32);
+        //LogPrint("GPSSecondsOfDayU32: %d", GPSTime->GPSSecondsOfDayU32);
+        //LogPrint("ETSIMillisecondsU64: %ld", GPSTime->ETSIMillisecondsU64);
+        //LogPrint("LatitudeU32: %d", GPSTime->LatitudeU32);
+        //LogPrint("LongitudeU32: %d", GPSTime->LongitudeU32);
+        //LogPrint("LocalMillisecondU16: %d", GPSTime->LocalMillisecondU16);
+        //LogPrint("FixQualityU8: %d", GPSTime->FixQualityU8);
+        //LogPrint("NSatellitesU8: %d", GPSTime->NSatellitesU8);
     }
 }
