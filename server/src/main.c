@@ -67,7 +67,6 @@ int main(int argc, char *argv[])
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Central started\n");
     fflush(stdout);
 
-
     pID[iIndex] = fork();
     if(pID[iIndex] < 0)
     {

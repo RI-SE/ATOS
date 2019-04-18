@@ -109,7 +109,7 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "10.130.23.74"
+#define LOCAL_USER_CONTROL_IP "10.130.24.51"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -299,7 +299,8 @@
 #define ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH sizeof(TRAJInfoType)
 #define SIM_TRAJ_BYTES_IN_ROW  30
 
-
+#define ISO_OPRO_CODE 0x0B
+#define ISO_OPRO_MESSAGE_LENGTH sizeof(OPROType)
 
 #define ISO_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
 
@@ -446,6 +447,32 @@ typedef struct
 
 typedef struct
 {
+  HeaderType Header;
+  U16 IPAddrValueIdU16;
+  U16 IPAddrContentLengthU16;
+  U32 IPAddrU32;
+  U16 ObjectTypeValueIdU16;
+  U16 ObjectTypeContentLengthU16;
+  U8 ObjectTypeU8;
+  U16 OperationModeTypeValueIdU16;
+  U16 OperationModeContentLengthU16;
+  U8 OperationModeU8;
+  U16 WeightTypeValueIdU16;
+  U16 WeightContentLengthU16;
+  U32 WeightU32;
+  U16 XTypeValueIdU16;
+  U16 XContentLengthU16;
+  U32 XU32;
+  U16 YTypeValueIdU16;
+  U16 YContentLengthU16;
+  U32 YU32;
+  U16 ZTypeValueIdU16;
+  U16 ZContentLengthU16;
+  U32 ZXU32;
+} OPROType; //16 bytes
+
+typedef struct
+{
   U16 RelativeTimeValueIdU16;
   U16 RelativeTimeContentLengthU16;
   U32 RelativeTimeU32;
@@ -566,8 +593,6 @@ typedef struct
   //U8 STRTData[100];
   //U8 OSEMSizeU8;
   //U8 OSEMData[100];
-
-
 } GSDType;
 
 
@@ -805,6 +830,11 @@ typedef struct {
   uint8_t  drivedirection;
 } monitor_t;
 
+/*
+I32 SearchJsonFile(FILE *fd, JsonObjectType *JsonObject, U8 Debug);
+I32 SearchJsonObject(C8 *StrObj, U32 *CurrentIndex, JsonObjectType *JsonObject, U8 Debug);
+I32 SetAppParameters(JsonObjectType *JsonObject, U8 Debug);
+*/
 
 /*------------------------------------------------------------
   -- Function traj2ldm

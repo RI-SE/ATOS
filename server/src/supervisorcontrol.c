@@ -38,6 +38,7 @@
 #define SUP_CONTROL_BUFFER_SIZE_20  20
 #define SUP_CONTROL_BUFFER_SIZE_2048 2048
 #define SUP_CONTROL_BUFFER_SIZE_3100 3100
+#define SUP_CONTROL_BUFFER_SIZE_6200 6200
 #define SUP_MQ_MAX_SIZE 6200
 #define SUP_MESSAGE_BUFFER 1024
 #define SUP_DEBUG_TCP_RX_DATA 0
@@ -75,7 +76,8 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   U8 WaitAllDataU8 = 0;
   U8 DataChunkedU8 = 0;
  
-  C8 ReceiveBuffer[SUP_CONTROL_BUFFER_SIZE_3100];
+  C8 ReceiveBuffer[SUP_CONTROL_BUFFER_SIZE_6200];
+  C8 ASCIIBuffer[SUP_CONTROL_BUFFER_SIZE_6200];
 
   I32 i,j;
  
@@ -240,16 +242,19 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           
           if(HeaderData.MessageIdU16 == ISO_TRAJ_CODE)
           {
-            //bzero(MqBuffer,SUP_MQ_MAX_SIZE);
-            //UtilBinaryToHexText(RxTotalDataU32, ReceiveBuffer, MqBuffer, 0);
-            //printf("%d. Send COMM_TRAJ_FROMSUP\n", ++IterationCounter);
-            //(void)iCommSend(COMM_TRAJ_FROMSUP, MqBuffer);
+            /*
             for(i = 0; i < HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH; i ++)
             {
               GSD->SupChunk[i] = RxBuffer[i];
             }
             GSD->SupChunkSize = HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH;
-            printf("[SupervisorControl] %d. Sending chunk to ObjectControl, size is %d bytes.\n", ++IterationCounter, GSD->SupChunkSize);
+            */
+            bzero(ASCIIBuffer, (HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH)*2 + 1);
+            UtilBinaryToHexText((HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH), RxBuffer, ASCIIBuffer, 0);
+            iCommSend(COMM_TRAJ_FROMSUP, ASCIIBuffer);
+            
+
+            printf("[SupervisorControl] %d. Sending chunk to ObjectControl, size is %d bytes.\n", ++IterationCounter, HeaderData.MessageLengthU32);
           } 
           else if(HeaderData.MessageIdU16 == ISO_HEAB_CODE)
           {
@@ -279,7 +284,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         DTMLengthU32 = UtilHexTextToBinary(strlen(MqBuffer), MqBuffer, DTMTrajBuffer, 0);
 
 
-        printf("[SupervisorControl] Sending chunk to Supervisor, size is %d == %d bytes\n", GSD->ChunkSize, (I32)strlen(MqBuffer));
+        printf("[SupervisorControl] Sending chunk to Supervisor, size is %d bytes\n", (I32)strlen(MqBuffer));
         
         //for(i = 0; i < GSD->ChunkSize; i ++) DTMTrajBuffer[i] = GSD->Chunk[i];
         //DTMLengthU32 = GSD-ChunkSize;

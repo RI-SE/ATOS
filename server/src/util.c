@@ -1378,8 +1378,6 @@ int UtilReadLine(FILE *fd, char *Buffer)
   return d;
 }
 
-
-
 C8 * UtilSearchTextFile(C8 *Filename, C8 *Text1, C8 *Text2, C8 *Result)
 {
 
@@ -1449,6 +1447,8 @@ int iUtilGetIntParaConfFile(char* pcParameter, int* iValue)
 
   return iResult;
 }
+
+
 
 /* First of all when we are using the messageque we are working with the
  * following functions in our util.c file: iCommInit, iCommRecv ,
@@ -2860,5 +2860,48 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
     }
 
     return 0;
+}
+
+
+I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 Debug)
+{
+    I32 MessageIndex = 0, i;
+    U16 Crc = 0;
+    C8 *p;
+
+    bzero(MessageBuffer, ISO_OPRO_MESSAGE_LENGTH+ISO_MESSAGE_FOOTER_LENGTH);
+
+    OPROData->Header.SyncWordU16 = SYNC_WORD;
+    OPROData->Header.TransmitterIdU8 = 0;
+    OPROData->Header.MessageCounterU8 = 0;
+    OPROData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
+    OPROData->Header.MessageIdU16 = ISO_OPRO_CODE;
+    OPROData->Header.MessageLengthU32 = sizeof(OPROType) - sizeof(HeaderType);
+    OPROData->IPAddrValueIdU16 = 0;
+    OPROData->IPAddrContentLengthU16 = 4;
+    OPROData->IPAddrU32 = IPAddress;
+  
+    p=(C8 *)OPROData;
+    for(i=0; i<sizeof(OPROType); i++) *(MessageBuffer + i) = *p++;
+    Crc = crc_16((const C8*)MessageBuffer, sizeof(OPROType));
+    Crc = 0;
+    *(MessageBuffer + i++) = (U8)(Crc);
+    *(MessageBuffer + i++) = (U8)(Crc >> 8);
+    MessageIndex = i;
+
+    if(debug)
+    {
+        printf("OPRO total length = %d bytes (header+message+footer)\n", (int)(ISO_OPRO_MESSAGE_LENGTH+ISO_MESSAGE_FOOTER_LENGTH));
+        printf("----HEADER----\n");
+        for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n----MESSAGE----\n");
+        for(;i < sizeof(OPROType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n----FOOTER----\n");
+        for(;i < MessageIndex; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n");
+    }
+
+    return MessageIndex; //Total number of bytes
+
 }
 

@@ -158,6 +158,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   //Get object addresses used in DTM mode
   bzero(DTMObjectAddressesC8, SIM_CONTROL_BUFFER_SIZE_128);
   UtilSearchTextFile(TEST_CONF_FILE, "DTMReceivers=", "", DTMObjectAddressesC8);
+  printf("[SimulatorControl] DTMReceivers: %s\n", DTMObjectAddressesC8);
   
   if(SimulatorIpU32 != 0) //Do stuff if IP is defined
   {
@@ -203,7 +204,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         //Send ObjectAddressList if in correct mode and ObjectControl is in armed state
         if(OBCStateStatus == OBC_STATE_ARMED && (SMGD.SimulatorModeU8 == SIM_CONTROL_DTM_MODE || SMGD.SimulatorModeU8 == SIM_CONTROL_VIM_DTM_MODE) && ObjectAddressListSentU8 == 0)
         {
-          SimulatorControlObjectAddressList(&SimulatorTCPSocketfdI32, DTMObjectAddressesC8/*"192.168.0.15"*/, SimFuncReqResponse, 0);
+          SimulatorControlObjectAddressList(&SimulatorTCPSocketfdI32, DTMObjectAddressesC8/*"192.168.0.15"*/, SimFuncReqResponse, 1);
           ObjectAddressListSentU8 = 1;
         }
 
@@ -509,6 +510,10 @@ void SimulatorControlObjectAddressList( I32 *Sockfd, C8 *AddressList, C8 *Functi
   strcat(SendData,"ObjectAddressList(");
   strcat(SendData, AddressList);
   strcat(SendData, ")");
+  if(Debug)
+  {
+    printf("[SimulatorControl] Sending: %s\n", SendData);
+  }
   
   Length = (I32)(strlen(SendData));
   SendLength[0] = (U8)(Length>>24);
