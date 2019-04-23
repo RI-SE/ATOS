@@ -108,7 +108,7 @@
 #define TCP_RX_BUFFER 1024
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
-#define USE_LOCAL_USER_CONTROL  0
+#define USE_LOCAL_USER_CONTROL  1
 #define LOCAL_USER_CONTROL_IP "10.130.24.51"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
@@ -210,6 +210,10 @@
 #define VALUE_ID_MAX_LATERAL_DEVIATION      0x72
 #define VALUE_ID_MIN_POS_ACCURACY           0x74
 #define VALUE_ID_CURVATURE                  0x52
+#define VALUE_IP_ADDRESS                    0x53
+#define VALUE_OBJECT_TYPE                   0x54
+#define VALUE_OBJECT_MODE                   0x55
+#define VALUE_OBJECT_MASS                   0x56
 #define VALUE_ID_TRAJECTORY_ID              0x101
 #define VALUE_ID_TRAJECTORY_NAME            0x102
 #define VALUE_ID_TRAJECTORY_VERSION         0x103
@@ -576,12 +580,12 @@ typedef struct
   U8 ExitU8;
   U32 ScenarioStartTimeU32;
   U8 VOILData[400];
-  U32 ChunkSize;
-  U8 Chunk[6200];
+  //U32 ChunkSize;
+  //U8 Chunk[6200];
   U8 ASPDebugDataSetU8;
   U8 ASPDebugDataU8[sizeof(ASPType)];
-  U32 SupChunkSize;
-  U8 SupChunk[6200];
+ // U32 SupChunkSize;
+ // U8 SupChunk[6200];
 
   U8 MONRSizeU8;
   U8 MONRData[100];

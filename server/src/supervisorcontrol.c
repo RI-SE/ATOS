@@ -100,7 +100,6 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   I32 iExit = 0, iCommand;
   C8 MqBuffer[SUP_MQ_MAX_SIZE];
   (void)iCommInit(IPC_RECV_SEND,MQ_SU,0);
-  GSD->SupChunkSize = 0;
   U16 IterationCounter = 0;
   U32 TimestampU32 = 0;
 
@@ -242,18 +241,10 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           
           if(HeaderData.MessageIdU16 == ISO_TRAJ_CODE)
           {
-            /*
-            for(i = 0; i < HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH; i ++)
-            {
-              GSD->SupChunk[i] = RxBuffer[i];
-            }
-            GSD->SupChunkSize = HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH;
-            */
             bzero(ASCIIBuffer, (HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH)*2 + 1);
             UtilBinaryToHexText((HeaderData.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH), RxBuffer, ASCIIBuffer, 0);
             iCommSend(COMM_TRAJ_FROMSUP, ASCIIBuffer);
             
-
             printf("[SupervisorControl] %d. Sending chunk to ObjectControl, size is %d bytes.\n", ++IterationCounter, HeaderData.MessageLengthU32);
           } 
           else if(HeaderData.MessageIdU16 == ISO_HEAB_CODE)
@@ -319,7 +310,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         MessageLength = UtilISOBuildTRAJMessage(MessageBuffer, DTMTrajBuffer+MiscU16, (DTMLengthU32-MiscU16)/SIM_TRAJ_BYTES_IN_ROW, &DOTMData, 0);
         /*Send DTM data*/
         UtilSendTCPData("SupervisorControl", MessageBuffer, MessageLength, &SupervisorTCPSocketfdI32, 0);
-        GSD->ChunkSize = 0;
+
       }
       else if(iCommand == COMM_MONI_BIN /*GSD->MONRSizeU8 > 0*/)
       {

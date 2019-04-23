@@ -570,33 +570,33 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
         }
 
         //Send DTM chuncks 
-        if(GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
-        {
-            
-            //bzero(TrajBuffer, strlen(pcRecvBuffer));
-            //DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
-            //UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 1);
-            UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 0);
-            //MiscU16 = sizeof(TRAJInfoType); //72 = Number of bytes in [Ip, Id, Name, Version]
-            DTMIpU32 = 0; 
-            DTMIpU32 = (C8)GSD->SupChunk[98];
-            DTMIpU32 = (C8)GSD->SupChunk[97] | (DTMIpU32 << 8);
-            DTMIpU32 = (C8)GSD->SupChunk[96] | (DTMIpU32 << 8);
-            DTMIpU32 = (C8)GSD->SupChunk[95] | (DTMIpU32 << 8);
-            /*DTM*/
-            for(iIndex=0;iIndex<nbr_objects;++iIndex) 
-            { 
-                //printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
-                if(DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
-                {
-                    printf("[ObjectControl] Sending TRAJ chunk to %d.%d.%d.%d, size %d bytes \n", (U8)(DTMIpU32>>24), (U8)(DTMIpU32>>16), (U8)(DTMIpU32>>8), (U8)DTMIpU32, GSD->SupChunkSize);
-                    UtilSendTCPData("[ObjectControl]", GSD->SupChunk, GSD->SupChunkSize, &socket_fd[iIndex], 0);
-                }
-            }
-
-            GSD->SupChunkSize = 0;
-
-        }
+//        if(GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
+//        {
+//            
+//            //bzero(TrajBuffer, strlen(pcRecvBuffer));
+//            //DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
+//            //UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 1);
+//            UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 0);
+//            //MiscU16 = sizeof(TRAJInfoType); //72 = Number of bytes in [Ip, Id, Name, Version]
+//            DTMIpU32 = 0; 
+//            DTMIpU32 = (C8)GSD->SupChunk[98];
+//            DTMIpU32 = (C8)GSD->SupChunk[97] | (DTMIpU32 << 8);
+//            DTMIpU32 = (C8)GSD->SupChunk[96] | (DTMIpU32 << 8);
+//            DTMIpU32 = (C8)GSD->SupChunk[95] | (DTMIpU32 << 8);
+//            /*DTM*/
+//            for(iIndex=0;iIndex<nbr_objects;++iIndex) 
+//            { 
+//                //printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
+//                if(DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
+//                {
+//                    printf("[ObjectControl] Sending TRAJ chunk to %d.%d.%d.%d, size %d bytes \n", (U8)(DTMIpU32>>24), (U8)(DTMIpU32>>16), (U8)(DTMIpU32>>8), (U8)DTMIpU32, GSD->SupChunkSize);
+//                    UtilSendTCPData("[ObjectControl]", GSD->SupChunk, GSD->SupChunkSize, &socket_fd[iIndex], 0);
+//                }
+//            }
+//
+//            GSD->SupChunkSize = 0;
+//
+//        }
 
 
         bzero(pcRecvBuffer,RECV_MESSAGE_BUFFER);

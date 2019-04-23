@@ -2863,7 +2863,7 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 }
 
 
-I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 Debug)
+I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 ObjectType, U8 OperationMode, U32 ObjectMass, U8 Debug)
 {
     I32 MessageIndex = 0, i;
     U16 Crc = 0;
@@ -2877,10 +2877,19 @@ I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPA
     OPROData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
     OPROData->Header.MessageIdU16 = ISO_OPRO_CODE;
     OPROData->Header.MessageLengthU32 = sizeof(OPROType) - sizeof(HeaderType);
-    OPROData->IPAddrValueIdU16 = 0;
+    OPROData->IPAddrValueIdU16 = VALUE_IP_ADDRESS;
     OPROData->IPAddrContentLengthU16 = 4;
     OPROData->IPAddrU32 = IPAddress;
-  
+    OPROData->ObjectTypeValueIdU16 = VALUE_OBJECT_TYPE;
+    OPROData->ObjectTypeContentLengthU16 = 1;
+    OPROData->ObjectTypeU8 = ObjectType;
+    OPROData->OperationModeTypeValueIdU16 = VALUE_OBJECT_MODE;
+    OPROData->OperationModeContentLengthU16 = 1;
+    OPROData->OperationModeU8 = OperationMode;
+    OPROData->WeightTypeValueIdU16 = VALUE_OBJECT_MASS;
+    OPROData->WeightContentLengthU16 = 4;
+    OPROData->WeightU32 = ObjectMass;
+
     p=(C8 *)OPROData;
     for(i=0; i<sizeof(OPROType); i++) *(MessageBuffer + i) = *p++;
     Crc = crc_16((const C8*)MessageBuffer, sizeof(OPROType));
