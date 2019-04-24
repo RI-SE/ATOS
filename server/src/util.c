@@ -21,6 +21,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
+#include <dirent.h>
 #include <stdbool.h>
 #include <netinet/tcp.h>
 
@@ -1908,6 +1909,50 @@ void traj2ldm ( float      time ,
 
 }
 
+void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], char object_address_name[MAX_OBJECTS][MAX_FILE_PATH], int* nbr_objects)
+{
+  DIR* traj_directory;
+  struct dirent *directory_entry;
+  int iForceObjectToLocalhost;
+
+  iForceObjectToLocalhost = 0;
+
+  traj_directory = opendir(TRAJECTORY_PATH);
+  if(traj_directory == NULL)
+  {
+    util_error("ERR: Failed to open trajectory directory");
+  }
+
+  (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhost);
+
+  while ((directory_entry = readdir(traj_directory)) && ((*nbr_objects) < MAX_OBJECTS))
+  {
+
+    /* Check so it's not . or .. */
+    if (strncmp(directory_entry->d_name,".",1) && (strstr(directory_entry->d_name, "sync") == NULL) )
+    {
+      bzero(object_address_name[(*nbr_objects)],MAX_FILE_PATH);
+
+      bzero(object_traj_file[(*nbr_objects)],MAX_FILE_PATH);
+      (void)strcat(object_traj_file[(*nbr_objects)],TRAJECTORY_PATH);
+      (void)strcat(object_traj_file[(*nbr_objects)],directory_entry->d_name);
+
+      if(0 == iForceObjectToLocalhost)
+      {
+        (void)strncat(object_address_name[(*nbr_objects)],directory_entry->d_name,strlen(directory_entry->d_name));
+      }
+      else
+      {
+        if(USE_TEST_HOST == 0) (void)strcat(object_address_name[(*nbr_objects)],LOCALHOST);
+        else if (USE_TEST_HOST == 1)(void)strcat(object_address_name[(*nbr_objects)],TESTHOST_IP);
+
+      }
+
+      ++(*nbr_objects);
+    }
+  }
+  (void)closedir(traj_directory);
+}
 
 static void             init_crc16_tab( void );
 

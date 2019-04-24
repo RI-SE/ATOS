@@ -35,6 +35,7 @@
 #define ISO_PROTOCOL_VERSION 2
 #define ACK_REQ 0
 
+#define LOCALHOST "127.0.0.1"
 #define MQ_LG     "/TEServer-LG"
 #define MQ_SV     "/TEServer-SV"
 #define MQ_OC     "/TEServer-OC"
@@ -128,6 +129,7 @@
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
 
+<<<<<<< HEAD
 // Between 1970 01 01 and 1980 01 06 there is 365*10 days, plus 2 for 2 leap years and plus 5 for the remaining days
 // in total we have MStime= ((365 * 10) + 2 + 5) * 24 * 3600 * 1000 = 315964800000
 #define MS_TIME_DIFF_UTC_GPS 315964800000
@@ -145,6 +147,14 @@
 
 
 #define TEST_CONF_FILE "./conf/test.conf"
+=======
+
+/* Adding conf file path here. For one place to edit when changing.
+   Really this should be an env variable! So recompilation not needed*/
+
+#define CONF_FILE_PATH "./conf/test.conf"
+#define TEST_CONF_FILE CONF_FILE_PATH
+>>>>>>> 0b7cb4faa4eebcad7a5244c83897fd7de13278b5
 #define TRAJECTORY_PATH "./traj/"
 
 #define ADAPTIVE_SYNC_POINT_CONF "./conf/adaptivesync.conf"
@@ -801,6 +811,11 @@ void traj2ldm ( float      time ,
                 float      hdg  ,
                 float      vel  ,
                 monitor_t* ldm  );
+
+
+void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
+  char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
+  int* nbr_objects);
 
 
 

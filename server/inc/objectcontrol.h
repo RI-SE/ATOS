@@ -36,5 +36,5 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
 I32 ObjectControlSendDOTMMEssage(C8* Filename, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug);
 //I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, int Idn, char *Id, char *Timestamp, char *XPosition, char *YPosition, char *ZPosition, char *LongitudinalSpeed, char *LateralSpeed, char *LongitudinalAcc, char *LateralAcc, char *Heading, char *DriveDirection, char *StatusFlag, char *StateFlag, char debug)
 I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I32 Idn, C8 *Id, C8 *Timestamp, C8 *XPosition, C8 *YPosition, C8 *ZPosition, C8 *LongitudinalSpeed, C8 *LateralSpeed, C8 *LongitudinalAcc, C8 *LateralAcc, C8 *Heading, C8 *DriveDirection, C8 *StatusFlag, C8 *StateFlag, C8 debug);
-int ObjectControlOSEMtoASCII(OSEMType *OSEMData,char *GPSWeek, char *GPSLatitude, char *GPSLongitude, char *GPSAltitude);  
+int ObjectControlOSEMtoASCII(OSEMType *OSEMData,char *GPSWeek, char *GPSLatitude, char *GPSLongitude, char *GPSAltitude);
 #endif //__OBJECTCONTROL_H_INCLUDED__

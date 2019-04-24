@@ -115,7 +115,8 @@
 
 #define ASP_MESSAGE_LENGTH sizeof(ASPType)
 
-#define CONF_FILE_PATH  "conf/test.conf"
+// Now in util.h
+//#define CONF_FILE_PATH  "conf/test.conf"
 
 #define SMALL_BUFFER_SIZE_0 20
 #define SMALL_BUFFER_SIZE_1 2

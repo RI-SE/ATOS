@@ -55,6 +55,11 @@ add_executable(TEServer
   inc/supervisorcontrol.h
 )
 
+# add the executable
+add_executable(trajchecker
+  src/trajchecker.c
+)
+
 # add the install targets
 install (TARGETS TEServer DESTINATION bin)
 
@@ -65,4 +70,6 @@ target_link_libraries(util rt)
 target_link_libraries(UserControl util objctrl MaestroLogging)
 target_link_libraries(util MaestroLogging)
 target_link_libraries(TEServer util)
+
 target_link_libraries(TEServer MaestroLogging)
+target_link_libraries(trajchecker util)
