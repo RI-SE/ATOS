@@ -1106,9 +1106,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
         }
 
-        bzero(Buffer2, SMALL_BUFFER_SIZE_1);
-        Buffer2[0] = OBCState;
-        (void)iCommSend(COMM_OBC_STATE,Buffer2);
+
 
         if(!iExit)
         {
@@ -1119,6 +1117,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             ++uiTimeCycle;
             if(uiTimeCycle >= HEARTBEAT_TIME_MS/TASK_PERIOD_MS)
             {
+                bzero(Buffer2, SMALL_BUFFER_SIZE_1);
+                Buffer2[0] = OBCState;
+                (void)iCommSend(COMM_OBC_STATE,Buffer2);
                 uiTimeCycle = 0;
             }
 
