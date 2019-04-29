@@ -30,7 +30,7 @@
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-#define MQ_NBR_QUEUES 4
+#define MQ_NBR_QUEUES 7
 
 #define FE_WGS84        (1.0/298.257223563) // earth flattening (WGS84)
 #define RE_WGS84        6378137.0           // earth semimajor axis (WGS84) (m)
@@ -1364,8 +1364,6 @@ int UtilReadLine(FILE *fd, char *Buffer)
   return d;
 }
 
-
-
 C8 * UtilSearchTextFile(C8 *Filename, C8 *Text1, C8 *Text2, C8 *Result)
 {
 
@@ -1435,6 +1433,8 @@ int iUtilGetIntParaConfFile(char* pcParameter, int* iValue)
 
   return iResult;
 }
+
+
 
 /* First of all when we are using the messageque we are working with the
  * following functions in our util.c file: iCommInit, iCommRecv ,
@@ -1597,6 +1597,16 @@ int iCommInit(const unsigned int uiMode, const char* name, const int iNonBlockin
       }
       ++uiIndex;
     }
+    if(strcmp(name,MQ_SU))
+    {
+      ptMQSend[uiIndex] = mq_open(MQ_SU, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr);
+      if(ptMQSend[uiIndex] < 0)
+      {
+        util_error("ERR: Failed to open MQ_SU message queue");
+      }
+      ++uiIndex;
+    }
+
   }
 
   return 1;
@@ -1816,6 +1826,31 @@ int iCommSend(const int iCommand,const char* cpData)
     {
       uiMessagePrio = 80;
       cpMessage[0] = (char)COMM_TRAJ_FROMSUP;
+    }
+  else if (iCommand == COMM_MONI_BIN)
+    {
+      uiMessagePrio = 80;
+      cpMessage[0] = (char)COMM_MONI_BIN;
+    }
+  else if (iCommand == COMM_OSTM)
+    {
+      uiMessagePrio = 100;
+      cpMessage[0] = (char)COMM_OSTM;
+    }
+  else if (iCommand == COMM_OSEM)
+    {
+      uiMessagePrio = 100;
+      cpMessage[0] = (char)COMM_OSEM;
+    }
+  else if (iCommand == COMM_OBJ_STRT)
+    {
+      uiMessagePrio = 100;
+      cpMessage[0] = (char)COMM_OBJ_STRT;
+    }
+  else if (iCommand == COMM_HEAB)
+    {
+      uiMessagePrio = 100;
+      cpMessage[0] = (char)COMM_HEAB;
     }
   else
     {
@@ -2073,8 +2108,9 @@ void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, 
     socklen_t len = sizeof(error);
     I32 retval;
 
-    // TODO: Change this when bytes thingy has been implemented in logging
-    if(Debug == 1){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
+
+    if(Debug == 1){ printf("[%s] %d TCP bytes sent: ", Module, Length); i = 0; for(i = 0; i < Length; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
+
 
     n = write(*Sockfd, Data, Length);
 
@@ -2694,13 +2730,18 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         Data = 0;
         Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 17);
         Data = (Data<<8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW*i + 16);
+        
         //Data = UtilRadToDeg(Data);
         //Data = 4500 - Data; //Turn heading back pi/2
         //while(Data<0) Data+=360.0;
         //while(Data>3600) Data-=360.0;
+        
         DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
         DOTMData->HeadingContentLengthU16 = 2;
         DOTMData->HeadingU16 = SwapU16((U16)(Data));
+
+        if(debug) printf("Heading=%d, %x\n", DOTMData->HeadingU16, Data);
+
 
         //Longitudinal speed
         Data = 0;
@@ -2888,5 +2929,56 @@ void MQTTSendMessage(char *_topic, char *_payload)
     MQTTClient_disconnect(client, 10000);
     MQTTClient_destroy(&client);
     return rc;
+
+
+I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 ObjectType, U8 OperationMode, U32 ObjectMass, U8 Debug)
+{
+    I32 MessageIndex = 0, i;
+    U16 Crc = 0;
+    C8 *p;
+
+    bzero(MessageBuffer, ISO_OPRO_MESSAGE_LENGTH+ISO_MESSAGE_FOOTER_LENGTH);
+
+    OPROData->Header.SyncWordU16 = SYNC_WORD;
+    OPROData->Header.TransmitterIdU8 = 0;
+    OPROData->Header.MessageCounterU8 = 0;
+    OPROData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
+    OPROData->Header.MessageIdU16 = ISO_OPRO_CODE;
+    OPROData->Header.MessageLengthU32 = sizeof(OPROType) - sizeof(HeaderType);
+    OPROData->IPAddrValueIdU16 = VALUE_IP_ADDRESS;
+    OPROData->IPAddrContentLengthU16 = 4;
+    OPROData->IPAddrU32 = IPAddress;
+    OPROData->ObjectTypeValueIdU16 = VALUE_OBJECT_TYPE;
+    OPROData->ObjectTypeContentLengthU16 = 1;
+    OPROData->ObjectTypeU8 = ObjectType;
+    OPROData->OperationModeTypeValueIdU16 = VALUE_OBJECT_MODE;
+    OPROData->OperationModeContentLengthU16 = 1;
+    OPROData->OperationModeU8 = OperationMode;
+    OPROData->WeightTypeValueIdU16 = VALUE_OBJECT_MASS;
+    OPROData->WeightContentLengthU16 = 4;
+    OPROData->WeightU32 = ObjectMass;
+
+    p=(C8 *)OPROData;
+    for(i=0; i<sizeof(OPROType); i++) *(MessageBuffer + i) = *p++;
+    Crc = crc_16((const C8*)MessageBuffer, sizeof(OPROType));
+    Crc = 0;
+    *(MessageBuffer + i++) = (U8)(Crc);
+    *(MessageBuffer + i++) = (U8)(Crc >> 8);
+    MessageIndex = i;
+
+    if(debug)
+    {
+        printf("OPRO total length = %d bytes (header+message+footer)\n", (int)(ISO_OPRO_MESSAGE_LENGTH+ISO_MESSAGE_FOOTER_LENGTH));
+        printf("----HEADER----\n");
+        for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n----MESSAGE----\n");
+        for(;i < sizeof(OPROType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n----FOOTER----\n");
+        for(;i < MessageIndex; i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
+        printf("\n");
+    }
+
+    return MessageIndex; //Total number of bytes
+
 }
 

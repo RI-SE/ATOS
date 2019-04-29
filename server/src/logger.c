@@ -242,6 +242,9 @@ void logger_task()
         bzero(TimeStampUTCBufferRecv,MQ_MAX_UTC_LENGTH);
         (void)iCommRecv(&iCommand,pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
 
+        if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE && iCommand != COMM_HEAB)
+        {
+
         if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE && iCommand!=COMM_MONI )
         {
             Timestamp = atol(TimeStampUTCBufferRecv);
@@ -461,7 +464,6 @@ void logger_task()
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
-
 
 void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
 {

@@ -41,9 +41,11 @@
 #define MQ_OC     "/TEServer-OC"
 #define MQ_VA     "/TEServer-VA"
 #define MQ_SC     "/TEServer-SC"
-#define MQ_SI     "/TEServer-SI"
+#define MQ_SI     "/TEServer-SI"  
+#define MQ_SU     "/TEServer-SU"
 
-#define MQ_MAX_MESSAGE_LENGTH 4096
+
+#define MQ_MAX_MESSAGE_LENGTH 6200//4096
 #define MQ_MAX_MSG            10
 #define MQ_PERMISSION         0660
 
@@ -70,7 +72,11 @@
 #define COMM_TRAJ_TOSUP 17
 #define COMM_TRAJ_FROMSUP 18
 #define COMM_ASP 19
-#define COMM_OSEM 20
+#define COMM_MONI_BIN 20
+#define COMM_OSTM 21
+#define COMM_OSEM 22
+#define COMM_OBJ_STRT 23
+#define COMM_HEAB 24
 #define COMM_INV 255
 
 
@@ -104,8 +110,8 @@
 #define TCP_RX_BUFFER 1024
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
-#define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.15"
+#define USE_LOCAL_USER_CONTROL  1
+#define LOCAL_USER_CONTROL_IP "10.130.24.51"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -206,6 +212,10 @@
 #define VALUE_ID_MAX_LATERAL_DEVIATION      0x72
 #define VALUE_ID_MIN_POS_ACCURACY           0x74
 #define VALUE_ID_CURVATURE                  0x52
+#define VALUE_IP_ADDRESS                    0x53
+#define VALUE_OBJECT_TYPE                   0x54
+#define VALUE_OBJECT_MODE                   0x55
+#define VALUE_OBJECT_MASS                   0x56
 #define VALUE_ID_TRAJECTORY_ID              0x101
 #define VALUE_ID_TRAJECTORY_NAME            0x102
 #define VALUE_ID_TRAJECTORY_VERSION         0x103
@@ -294,7 +304,8 @@
 #define SIM_TRAJ_BYTES_IN_ROW  30
 
 #define ISO_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
-
+#define ISO_OPRO_CODE 0x0B
+#define ISO_OPRO_MESSAGE_LENGTH sizeof(OPROType)
 
 
 //MQTT
@@ -369,6 +380,9 @@ typedef struct
   U16 StartTimeValueIdU16;
   U16 StartTimeContentLengthU16;
   U32 StartTimeU32;
+  U16 GPSWeekValueIdU16;
+  U16 GPSWeekContentLengthU16;
+  U16 GPSWeekU16;  
   U16 DelayStartValueIdU16;
   U16 DelayStartContentLengthU16;
   U32 DelayStartU32;
@@ -442,6 +456,32 @@ typedef struct
   U8 ErrorStatusU8;
 } MONRType; //41 bytes
 
+
+typedef struct
+{
+  HeaderType Header;
+  U16 IPAddrValueIdU16;
+  U16 IPAddrContentLengthU16;
+  U32 IPAddrU32;
+  U16 ObjectTypeValueIdU16;
+  U16 ObjectTypeContentLengthU16;
+  U8 ObjectTypeU8;
+  U16 OperationModeTypeValueIdU16;
+  U16 OperationModeContentLengthU16;
+  U8 OperationModeU8;
+  U16 WeightTypeValueIdU16;
+  U16 WeightContentLengthU16;
+  U32 WeightU32;
+  U16 XTypeValueIdU16;
+  U16 XContentLengthU16;
+  U32 XU32;
+  U16 YTypeValueIdU16;
+  U16 YContentLengthU16;
+  U32 YU32;
+  U16 ZTypeValueIdU16;
+  U16 ZContentLengthU16;
+  U32 ZXU32;
+} OPROType; //16 bytes
 
 typedef struct
 {
@@ -521,6 +561,7 @@ typedef struct
   U8 FixQualityU8;
   U8 NSatellitesU8;
   U8 TimeInitiatedU8;
+  U8 LockedU8;
 } TimeType;
 
 
@@ -547,12 +588,12 @@ typedef struct
   U8 ExitU8;
   U32 ScenarioStartTimeU32;
   U8 VOILData[400];
-  U32 ChunkSize;
-  U8 Chunk[6200];
+  //U32 ChunkSize;
+  //U8 Chunk[6200];
   U8 ASPDebugDataSetU8;
   U8 ASPDebugDataU8[sizeof(ASPType)];
-  U32 SupChunkSize;
-  U8 SupChunk[6200];
+ // U32 SupChunkSize;
+ // U8 SupChunk[6200];
 
   U8 MONRSizeU8;
   U8 MONRData[100];
@@ -564,8 +605,6 @@ typedef struct
   //U8 STRTData[100];
   //U8 OSEMSizeU8;
   //U8 OSEMData[100];
-
-
 } GSDType;
 
 
@@ -805,6 +844,11 @@ typedef struct {
   uint8_t  drivedirection;
 } monitor_t;
 
+/*
+I32 SearchJsonFile(FILE *fd, JsonObjectType *JsonObject, U8 Debug);
+I32 SearchJsonObject(C8 *StrObj, U32 *CurrentIndex, JsonObjectType *JsonObject, U8 Debug);
+I32 SetAppParameters(JsonObjectType *JsonObject, U8 Debug);
+*/
 
 /*------------------------------------------------------------
   -- Function traj2ldm

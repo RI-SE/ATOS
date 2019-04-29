@@ -123,6 +123,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
     LogMessage(LOG_LEVEL_INFO,"Getting time from GPS");
   } else LogMessage(LOG_LEVEL_INFO,"Count fake time");
 
+
   while(!iExit)
   {
 
@@ -150,6 +151,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
     {
       //for(i=0; i < TIME_CONTROL_BUFFER_SIZE_54; i++) printf("%x-", TimeBuffer[i]);
       //printf("\n");
+      GPSTime->LockedU8 = 1;
       GPSTime->TimeInitiatedU8 = 1;
       GPSTime->ProtocolVersionU8 = TimeBuffer[0];
       GPSTime->YearU16 = ((U16)TimeBuffer[1]) << 8 | TimeBuffer[2];
@@ -165,7 +167,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
                                 ((U64)TimeBuffer[18]) << 24 | ((U64)TimeBuffer[19]) << 16 | ((U64)TimeBuffer[20]) << 8 | TimeBuffer[21];
       GPSTime->GPSMinutesU32 = ((U32)TimeBuffer[22]) << 24 | ((U32)TimeBuffer[23]) << 16 | ((U32)TimeBuffer[24]) << 8 | TimeBuffer[25];
       GPSTime->GPSWeekU16 = ((U16)TimeBuffer[26]) << 8 | TimeBuffer[27];
-      GPSTime->GPSSecondsOfWeekU32 = ((U32)TimeBuffer[28]) << 24 | ((U32)TimeBuffer[29]) << 16 | ((U32)TimeBuffer[30]) << 8 | TimeBuffer[31];
+      GPSTime->GPSSecondsOfWeekU32 = (((U32)TimeBuffer[28]) << 24 | ((U32)TimeBuffer[29]) << 16 | ((U32)TimeBuffer[30]) << 8 | TimeBuffer[31]) + 18;
       GPSTime->GPSSecondsOfDayU32 = ((U32)TimeBuffer[32]) << 24 | ((U32)TimeBuffer[33]) << 16 | ((U32)TimeBuffer[34]) << 8 | TimeBuffer[35];
       GPSTime->ETSIMillisecondsU64 = ((U64)TimeBuffer[36]) << 56 | ((U64)TimeBuffer[37]) << 48 | ((U64)TimeBuffer[38]) << 40 | ((U64)TimeBuffer[39]) << 32 |
                                 ((U64)TimeBuffer[40]) << 24 | ((U64)TimeBuffer[41]) << 16 | ((U64)TimeBuffer[42]) << 8 | TimeBuffer[43];
@@ -178,6 +180,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 
       GPSTime->LocalMillisecondU16 = (U16) (tv.tv_usec / 1000);
       
+      GPSTime->LockedU8 = 0;
       //TimeControlGetMillisecond(GPSTime);
       //printf("ProtocolVersionU8: %d\n", GPSTime->ProtocolVersionU8);
       //printf("YearU16: %d\n", GPSTime->YearU16);
@@ -269,6 +272,7 @@ U16 TimeControlGetMillisecond(TimeType *GPSTime)
 {
   struct timeval now;
   U16 MilliU16 = 0, NowU16 = 0;
+  while(GPSTime->LockedU8 == 1);
   gettimeofday(&now, NULL);
   NowU16 = (U16)(now.tv_usec / 1000);
   //if(NowU16 >= GPSTime->LocalMillisecondU16) MilliU16 = NowU16 - GPSTime->LocalMillisecondU16;

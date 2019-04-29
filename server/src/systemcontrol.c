@@ -427,14 +427,13 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         {
             SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
         }
-
-        else if(iCommand == COMM_MONI){
+        else if(iCommand == COMM_MONI)
+        {
           //printf("Monr sys %s\n", pcRecvBuffer);
-	  C8 data[strlen(pcRecvBuffer)];
-	  bzero(data, strlen(data));
-	  strcat(data, pcRecvBuffer);
-
-          UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, data, sizeof(data), 0);
+    	   C8 data[strlen(pcRecvBuffer)];
+	       bzero(data, strlen(data));
+	       strcat(data, pcRecvBuffer);
+           UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, data, sizeof(data), 0);
         }
 
         ++ProcessControlSendCounterU32;

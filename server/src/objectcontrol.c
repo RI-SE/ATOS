@@ -86,7 +86,7 @@
 
 #define COMMAND_MONR_CODE 6
 #define COMMAND_MONR_NOFV 12
-#define COMMAND_MONR_MESSAGE_LENGTH sizeof(MONRType)-2
+#define COMMAND_MONR_MESSAGE_LENGTH sizeof(MONRType)
 
 #define COMMAND_VOIL_CODE 0xA100
 //#define COMMAND_VOIL_NOFV 2
@@ -226,6 +226,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     char pcRecvBuffer[RECV_MESSAGE_BUFFER];
     char pcTempBuffer[512];
     C8 MessageBuffer[BUFFER_SIZE_3100];
+    C8 ASCIIBuffer[BUFFER_SIZE_3100];
     int iIndex = 0, i=0;
     struct timespec sleep_time, ref_time;
     int iForceObjectToLocalhost = 0;
@@ -331,8 +332,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     //GSD->OSTMSizeU8 = 0;
     //GSD->STRTSizeU8 = 0;
     //GSD->OSEMSizeU8 = 0;
-    U8 OSEMSentU8 = 0;
-    U8 STRTSentU8 = 0;
+    U8 OSEMSentToMsqU8 = 0;
+    U8 STRTSentToMsqU8 = 0;
 
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO, "Object control task running with PID: %i", getpid());
@@ -354,10 +355,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                 }
             }
-
-            //Store HEAB in GSD
-            //for(j = 0; j < MessageLength; j++) GSD->HEABData[j] = MessageBuffer[j];
-            //GSD->HEABSizeU8 = (U8)MessageLength;
+          
+            if(uiTimeCycle == 0)
+            {
+                bzero(ASCIIBuffer, MessageLength*2 + 1);
+                UtilBinaryToHexText(MessageLength, MessageBuffer, ASCIIBuffer, 0);
+                iCommSend(COMM_HEAB, ASCIIBuffer);
+            }
 
             // Check if any object has disconnected - if so, disconnect all objects and return to idle
             DisconnectU8 = 0;
@@ -452,15 +456,15 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         }
                     }
 
-
-
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
 
                     //Store MONR in GSD
-                    //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
-
-                    for(i = 0; i < (MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH); i++) GSD->MONRData[i] = buffer[i];
-                    GSD->MONRSizeU8 = MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH;
+                    //for(i = 0; i < (MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH); i++) GSD->MONRData[i] = buffer[i];
+                    //GSD->MONRSizeU8 = MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH;
+                    bzero(ASCIIBuffer, MONRData.Header.MessageLengthU32+COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH+1 );
+                    UtilBinaryToHexText(MONRData.Header.MessageLengthU32+COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH, buffer, ASCIIBuffer, 0);
+                    //Send binary MONR on message queue
+                    (void)iCommSend(COMM_MONI_BIN, ASCIIBuffer);
 
                     ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, XPosition, YPosition, ZPosition, LongitudinalSpeed, LateralSpeed, LongitudinalAcc, LateralAcc, Heading, DriveDirection, StatusFlag, StateFlag, 1);
                     bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
@@ -479,7 +483,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     strcat(buffer,StateFlag); strcat(buffer,";");
                     strcat(buffer,StatusFlag); strcat(buffer,";");
 
-
                     if(ASPData.MTSPU32 != 0)
                     {
                         //Add MTSP to MONR if not 0
@@ -492,8 +495,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                     MQTTSendMessage("test", buffer);
                     if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) (void)iCommSend(COMM_MONI,buffer);
-
-
 
                     //Ok, let's do the ASP
                     for(i = 0; i < SyncPointCount; i++)
@@ -575,42 +576,34 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
         }
 
 
-        if(GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
-        {
-
-            //bzero(TrajBuffer, strlen(pcRecvBuffer));
-            //DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
-            //UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 1);
-
-            //MiscU16 = sizeof(TRAJInfoType); //72 = Number of bytes in [Ip, Id, Name, Version]
-            DTMIpU32 = 0;
-            DTMIpU32 = (C8)GSD->SupChunk[98];
-            DTMIpU32 = (C8)GSD->SupChunk[97] | (DTMIpU32 << 8);
-            DTMIpU32 = (C8)GSD->SupChunk[96] | (DTMIpU32 << 8);
-            DTMIpU32 = (C8)GSD->SupChunk[95] | (DTMIpU32 << 8);
-            /*DTM*/
-            for(iIndex=0;iIndex<nbr_objects;++iIndex)
-            {
-                printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
-                if(DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
-                {
-                    //UtilSendTCPData("[ObjectControl]", TrajBuffer, DTMLengthU32, &socket_fd[iIndex], 0);
-                    /*DTM Header*/
-                    //MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
-                    /*Send DTM header*/
-                    //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-                    /*DTM Data*/
-                    //MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
-                    /*Send DTM data*/
-                    //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-                    //printf("Send to object\n");
-                    UtilSendTCPData("[ObjectControl]", GSD->SupChunk, GSD->SupChunkSize, &socket_fd[iIndex], 0);
-                }
-            }
-
-            GSD->SupChunkSize = 0;
-
-        }
+        //Send DTM chuncks 
+//        if(GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
+//        {
+//            
+//            //bzero(TrajBuffer, strlen(pcRecvBuffer));
+//            //DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
+//            //UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 1);
+//            UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 0);
+//            //MiscU16 = sizeof(TRAJInfoType); //72 = Number of bytes in [Ip, Id, Name, Version]
+//            DTMIpU32 = 0; 
+//            DTMIpU32 = (C8)GSD->SupChunk[98];
+//            DTMIpU32 = (C8)GSD->SupChunk[97] | (DTMIpU32 << 8);
+//            DTMIpU32 = (C8)GSD->SupChunk[96] | (DTMIpU32 << 8);
+//            DTMIpU32 = (C8)GSD->SupChunk[95] | (DTMIpU32 << 8);
+//            /*DTM*/
+//            for(iIndex=0;iIndex<nbr_objects;++iIndex) 
+//            { 
+//                //printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
+//                if(DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
+//                {
+//                    printf("[ObjectControl] Sending TRAJ chunk to %d.%d.%d.%d, size %d bytes \n", (U8)(DTMIpU32>>24), (U8)(DTMIpU32>>16), (U8)(DTMIpU32>>8), (U8)DTMIpU32, GSD->SupChunkSize);
+//                    UtilSendTCPData("[ObjectControl]", GSD->SupChunk, GSD->SupChunkSize, &socket_fd[iIndex], 0);
+//                }
+//            }
+//
+//            GSD->SupChunkSize = 0;
+//
+//        }
 
 
         bzero(pcRecvBuffer,RECV_MESSAGE_BUFFER);
@@ -637,12 +630,15 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
                     /*Send OSTM message*/
-                    vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
+                    vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
                 }
 
                 //Store OSTM in GSD
                 //for(i = 0; i < MessageLength; i++) GSD->OSTMData[i] = MessageBuffer[i];
                 //GSD->OSTMSizeU8 = (U8)MessageLength;
+                bzero(ASCIIBuffer, (OSTMData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH)*2 + 1);
+                UtilBinaryToHexText(OSTMData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH, MessageBuffer, ASCIIBuffer, 0);
+                iCommSend(COMM_OSTM, ASCIIBuffer);
 
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
             }
@@ -668,11 +664,14 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 vSetState(&OBCState, OBC_STATE_RUNNING);
 
                 //Store STRT in GSD
-                if(STRTSentU8 == 0)
+                if(STRTSentToMsqU8 == 0)
                 {
                     //for(i = 0; i < MessageLength; i++) GSD->STRTData[i] = MessageBuffer[i];
                     //GSD->STRTSizeU8 = (U8)MessageLength;
-                    STRTSentU8 = 1;
+                    bzero(ASCIIBuffer, MessageLength*2 + 1);
+                    UtilBinaryToHexText(MessageLength, MessageBuffer, ASCIIBuffer, 0);
+                    iCommSend(COMM_OBJ_STRT, ASCIIBuffer);
+                    STRTSentToMsqU8 = 1;
                 }
                 //OBCState = OBC_STATE_INITIALIZED; //This is temporary!
                 //printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
@@ -684,7 +683,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_TRAJ && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
             {
-
+                
+                printf("[ObjectControl] COMM_TRAJ received.\n");
                 DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
                 DTMIpU32 = (C8)TrajBuffer[0];
                 DTMIpU32 = (C8)TrajBuffer[1] | (DTMIpU32 << 8);
@@ -710,52 +710,50 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 MiscU16 = 72; //Number of bytes in [Ip, Id, Name, Version]
 
                 /*DTM*/
-                for(iIndex=0;iIndex<nbr_objects;++iIndex)
-                {
-                    printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
+
+                for(iIndex=0;iIndex<nbr_objects;++iIndex) 
+                { 
                     if( DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
                     {
+                        printf("[ObjectControl] Sending TRAj data to ObjectIp = %x (DTMIp = %x)\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
                         /*DTM Header*/
-                        MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-MiscU16)/ COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
+                        MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-MiscU16)/ COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 1);
                         /*Send DTM header*/
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                         /*DTM Data*/
-                        MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer+MiscU16, (DTMLengthU32-MiscU16)/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
+                        MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer+MiscU16, (DTMLengthU32-MiscU16)/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 1);
                         /*Send DTM data*/
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 1);
                     }
                 }
 
             }
-            else if(/*iCommand == COMM_TRAJ_FROMSUP*/ GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
+            else if(iCommand == COMM_TRAJ_FROMSUP && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
             {
 
-                //bzero(TrajBuffer, strlen(pcRecvBuffer));
-                //DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
-                UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 0);
-
-                //MiscU16 = sizeof(TRAJInfoType); //72 = Number of bytes in [Ip, Id, Name, Version]
-                printf("[ObjectControl] Send DTM %d\n", DTMLengthU32);
-                /*DTM*/
-                for(iIndex=0;iIndex<nbr_objects;++iIndex)
+                if(strlen(pcRecvBuffer) > 0)
                 {
-                    printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), TRAJInfoData.IpAddressU32);
-                    if(TRAJInfoData.IpAddressU32 == UtilIPStringToInt(object_address_name[iIndex]))
-                    {
-                        //UtilSendTCPData("[ObjectControl]", TrajBuffer, DTMLengthU32, &socket_fd[iIndex], 0);
-                        /*DTM Header*/
-                        //MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
-                        /*Send DTM header*/
-                        //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-                        /*DTM Data*/
-                        //MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
-                        /*Send DTM data*/
-                        //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-                        UtilSendTCPData("[ObjectControl]", GSD->SupChunk, GSD->SupChunkSize, &socket_fd[iIndex], 0);
-                    }
-                }
+                    bzero(MessageBuffer, strlen(pcRecvBuffer)/2 + 1);
+                    UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, MessageBuffer, 0);
+                    UtilISOBuildTRAJInfo(MessageBuffer, &TRAJInfoData, 0);
 
-                GSD->SupChunkSize = 0;
+                    DTMIpU32 = 0; 
+                    DTMIpU32 = (C8)MessageBuffer[98];
+                    DTMIpU32 = (C8)MessageBuffer[97] | (DTMIpU32 << 8);
+                    DTMIpU32 = (C8)MessageBuffer[96] | (DTMIpU32 << 8);
+                    DTMIpU32 = (C8)MessageBuffer[95] | (DTMIpU32 << 8);
+                    /*DTM*/
+                    for(iIndex=0;iIndex<nbr_objects;++iIndex) 
+                    { 
+                        //printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
+                        if(DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
+                        {
+                            printf("[ObjectControl] Sending TRAJ_FROMSUP chunk to %d.%d.%d.%d, size %ld bytes \n", (U8)(DTMIpU32>>24), (U8)(DTMIpU32>>16), (U8)(DTMIpU32>>8), (U8)DTMIpU32, strlen(pcRecvBuffer)/2);
+                            UtilSendTCPData("[ObjectControl]", MessageBuffer, strlen(pcRecvBuffer)/2, &socket_fd[iIndex], 0);
+                        }
+                    }
+
+                }
 
             }
             else if(iCommand == COMM_VIOP && OBCState == OBC_STATE_RUNNING/*OBC_STATE_INITIALIZED*/)
@@ -885,8 +883,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     TempFd = fopen (TEMP_LOG_FILE, "w+");
                 }
 
-                OSEMSentU8 = 0;
-                STRTSentU8 = 0;
+                OSEMSentToMsqU8 = 0;
+                STRTSentToMsqU8 = 0;
             }
             else if(iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED)
             {
@@ -905,7 +903,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                                                  UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
                                                                  UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
                                                                  0);
-
 
                     DisconnectU8 = 0;
 
@@ -975,15 +972,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
 
 
-                        //Store OSEM in GSD
-                        if(OSEMSentU8 == 0)
-                        {
-                            //for(i = 0; i < MessageLength; i++) GSD->OSEMData[i] = MessageBuffer[i];
-                            //GSD->OSEMSizeU8 = (U8)MessageLength;
-                            OSEMSentU8 = 1;
-                            //printf("OSEMSentU8 = %d\n", OSEMSentU8);
-                        }
-
+                        
 
                         /*Here we send DOTM, if the IP-address not is found*/
                         if(strstr(DTMReceivers, object_address_name[iIndex]) == NULL)
@@ -1078,6 +1067,19 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                 if(DisconnectU8 == 0) vSetState(&OBCState, OBC_STATE_CONNECTED);
                 else if(DisconnectU8 == 1) vSetState(&OBCState, OBC_STATE_IDLE);
+
+                //Send OSEM on Msq once
+                bzero(MessageBuffer, COMMAND_MESSAGE_HEADER_LENGTH+COMMAND_OSEM_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH);
+                MessageLength = ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, GPSTime,
+                                                             UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
+                                                             UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
+                                                             UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
+                                                             UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
+                                                             0);
+
+                bzero(ASCIIBuffer, MessageLength*2 + 1);
+                UtilBinaryToHexText(MessageLength, MessageBuffer, ASCIIBuffer, 0);
+                iCommSend(COMM_OSEM, ASCIIBuffer);
             }
             else if(iCommand == COMM_DISCONNECT)
             {
@@ -1344,7 +1346,6 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     MONRData->Header.TransmitterIdU8 = *(MonrData+2);
     MONRData->Header.MessageCounterU8 = *(MonrData+3);
     MONRData->Header.AckReqProtVerU8 = *(MonrData+4);
-
     U16Data = 0;
     U16Data = (U16Data | *(MonrData+6)) << 8;
     U16Data = U16Data | *(MonrData+5);
@@ -1726,6 +1727,9 @@ int ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeTyp
     STRTData->StartTimeValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
     STRTData->StartTimeContentLengthU16 = 4;
     STRTData->StartTimeU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime) + ScenarioStartTime) << 2) + GPSTime->MicroSecondU16;
+    STRTData->GPSWeekValueIdU16 = VALUE_ID_GPS_WEEK;
+    STRTData->GPSWeekContentLengthU16 = 2;
+    STRTData->GPSWeekU16 = GPSTime->GPSWeekU16;
     STRTData->DelayStartValueIdU16 = VALUE_ID_RELATIVE_TIME;
     STRTData->DelayStartContentLengthU16 = 4;
     STRTData->DelayStartU32 = DelayStart;

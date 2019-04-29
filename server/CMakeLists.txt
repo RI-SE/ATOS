@@ -57,12 +57,13 @@ add_executable(TEServer
   src/systemcontrol.c
   src/timecontrol.c
   src/supervisorcontrol.c
+  src/simulatorcontrol.c
   inc/logger.h
   inc/objectcontrol.h
   inc/supervision.h
   inc/systemcontrol.h
   inc/timecontrol.h
-
+  inc/simulatorcontrol.h
   inc/supervisorcontrol.h
 )
 
