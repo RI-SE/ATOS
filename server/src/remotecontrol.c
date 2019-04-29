@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include "objectcontrol.h"
 #include "util.h"
+#include "logging.h"
 
 #define BUF_SIZE 500
 
@@ -52,6 +53,11 @@ void getIP();
 C8 httpbuffer[REMOTE_CONTROL_HTTP_BUFFER];
 C8 recvbuffer[REMOTE_CONTROL_RECV_BUFFER];
 
+/*------------------------------------------------------------
+-- Private variables
+------------------------------------------------------------*/
+#define MODULE_NAME "RemoteControl"
+static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 
 /*------------------------------------------------------------
 -- The main function.
@@ -69,6 +75,9 @@ int remotecontrol_task(TimeType *GPSTime)
   C8 TimeBuffer[REMOTE_CONTROL_BUFFER_SIZE_52];
   I32 RecievedNewData, i;
   C8 SendData[4] = {0, 0, 3, 0xe8};
+
+  LogInit(MODULE_NAME,logLevel);
+  LogMessage(LOG_LEVEL_INFO,"Remote control task running with PID: %i",getpid());
 
 
   UtilSearchTextFile(REMOTE_CONTROL_CONF_FILE_PATH, "RemoteMode=", "", TextBufferC8);
@@ -281,7 +290,7 @@ void RemoteControlConnectServer(int* sockfd, const char* name, const uint32_t po
   bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
   serv_addr.sin_port = htons(port);
 
-  DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Try to connect to control socket: %s %i\n",name,port);
+  LogMessage(LOG_LEVEL_INFO,"Attempting to connect to control socket: %s:%i",name,port);
 
 
   do
@@ -292,7 +301,7 @@ void RemoteControlConnectServer(int* sockfd, const char* name, const uint32_t po
     {
       if(errno == ECONNREFUSED)
       {
-        DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"WAR: Was not able to connect to object, retry in 3 sec...\n");
+          LogMessage(LOG_LEVEL_WARNING,"Unable to connect to object, retrying in 3 sec...");
         (void)sleep(3);
       }
       else
@@ -305,8 +314,7 @@ void RemoteControlConnectServer(int* sockfd, const char* name, const uint32_t po
 
   /* set socket to non-blocking */
     //iResult = fcntl(*sockfd, F_SETFL, fcntl(*sockfd, F_GETFL, 0) | O_NONBLOCK);
-
-    DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"Client connected to server: %s %i\n",name,port);
+    LogMessage(LOG_LEVEL_INFO,"Client connected to server: %s:%i",name,port);
 
 }
 
@@ -369,8 +377,7 @@ static void vCreateTimeChannel(const char* name,const uint32_t port, int* sockfd
   struct hostent *object;
 
   /* Connect to object safety socket */
-
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Creating safety socket\n");
+    LogMessage(LOG_LEVEL_INFO,"Creating safety socket");
 
 
   *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
@@ -399,8 +406,7 @@ static void vCreateTimeChannel(const char* name,const uint32_t port, int* sockfd
   {
     util_error("ERR: calling fcntl");
   }
-
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Created socket and safety address: %s %d\n",name,port);
+    LogMessage(LOG_LEVEL_INFO,"Created socket and safety address: %s:%d",name,port);
 
 
 }
@@ -422,14 +428,14 @@ static void vRecvTime(int* sockfd, char* buffer, int length, int* recievedNewDat
         }
         else
         {
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: No data receive\n");
+            LogMessage(LOG_LEVEL_DEBUG,"No data received");
 
         }
       }
       else
       {
 
-          DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Received: <%s>\n",buffer);
+          LogMessage(LOG_LEVEL_DEBUG,"Received: <%s>",buffer);
 
       }
     } while(result > 0 );

@@ -8,6 +8,29 @@ project (ChronosProject)
 
 # add include directories
 include_directories(inc)
+include_directories(../util/C/logging)
+include(GNUInstallDirs)
+
+
+find_package(OpenSSL REQUIRED)
+#find_library(paho-mqttpp3 NAMES libpaho-mqttpp3.a REQUIRED)
+find_library(paho-mqtt3c NAMES libpaho-mqtt3c.so REQUIRED)
+
+#add_library(pahottpp STATIC IMPORTED)
+#set_target_properties(pahottpp PROPERTIES IMPORTED_LOCATION ${paho-mqttpp3})
+
+add_library(pahomqtt3c SHARED IMPORTED)
+set_property(TARGET pahomqtt3c PROPERTY IMPORTED_LOCATION ${paho-mqtt3c})
+
+# Add logging library (hint at some locations)
+find_library(MAESTRO_LOGGING_PATH
+    NAMES MaestroLogging
+    PATHS "../util/C/logging"
+          "../util/C"
+          ${CMAKE_INSTALL_LIBDIR}
+          ${CMAKE_INSTALL_INCLUDEDIR})
+add_library(MaestroLogging SHARED IMPORTED)
+set_property(TARGET MaestroLogging PROPERTY IMPORTED_LOCATION ${MAESTRO_LOGGING_PATH})
 
 # Create library
 add_library(util
@@ -21,7 +44,6 @@ add_library(objctrl
   inc/objectcontrol.h
 )
 
-
 add_executable(UserControl
   src/usercontrol.c
 )
@@ -33,7 +55,6 @@ add_executable(TEServer
   src/objectcontrol.c
   src/supervision.c
   src/systemcontrol.c
-  src/remotecontrol.c
   src/timecontrol.c
   src/supervisorcontrol.c
   src/simulatorcontrol.c
@@ -41,7 +62,6 @@ add_executable(TEServer
   inc/objectcontrol.h
   inc/supervision.h
   inc/systemcontrol.h
-  inc/remotecontrol.h
   inc/timecontrol.h
   inc/simulatorcontrol.h
   inc/supervisorcontrol.h
@@ -54,5 +74,9 @@ install (TARGETS TEServer DESTINATION bin)
 target_link_libraries(util rt m)
 target_link_libraries(util m)
 target_link_libraries(util rt)
-target_link_libraries(UserControl util objctrl)
+target_link_libraries(UserControl util objctrl MaestroLogging)
+target_link_libraries(util MaestroLogging)
 target_link_libraries(TEServer util)
+target_link_libraries(TEServer MaestroLogging)
+#target_link_libraries(util pahottpp)
+target_link_libraries(util pahomqtt3c)

@@ -25,7 +25,7 @@
 #include <netinet/tcp.h>
 
 #include "util.h"
-
+#include "logging.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -39,7 +39,7 @@
 -- Public variables
 ------------------------------------------------------------*/
 
-static int debug = DEBUG_LEVEL_HIGH;
+//static int debug = DEBUG_LEVEL_HIGH;
 
 /*------------------------------------------------------------
 -- Private variables
@@ -51,20 +51,6 @@ static char pcMessageQueueName[1024];
 /*---------------------------------------------s---------------
   -- Public functions
   ------------------------------------------------------------*/
-
-void dbg_setdebug(int level) {debug = level;}
-int dbg_getdebug(void){ return debug;}
-
-void dbg_printf(int level, const char *fmt, ...)
-{
-    if (level < debug) return;
-    va_list args;
-    va_start(args,fmt);
-    vfprintf(stdout,fmt,args);
-    va_end(args);
-    fflush(stdout);
-}
-
 
 // GPS TIME FUNCTIONS
 uint64_t UtilgetGPSmsFromUTCms(uint64_t UTCms)
@@ -186,7 +172,7 @@ void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int 
 }
 void util_error(char* message)
 {
-  perror(message);
+  LogMessage(LOG_LEVEL_ERROR,message);
   exit(EXIT_FAILURE);
 }
 
@@ -445,11 +431,11 @@ int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug)
 
   if(debug)
   {
-    printf("MasterIP: %s\n", ASP->MasterIP);
-    printf("SlaveIP: %s\n", ASP->SlaveIP);
-    printf("MasterTrajSyncTime %3.2f\n", ASP->MasterTrajSyncTime);
-    printf("SlaveTrajSyncTime %3.2f\n", ASP->SlaveTrajSyncTime);
-    printf("SlaveSyncStopTime %3.2f\n", ASP->SlaveSyncStopTime);
+    LogPrint("MasterIP: %s", ASP->MasterIP);
+    LogPrint("SlaveIP: %s", ASP->SlaveIP);
+    LogPrint("MasterTrajSyncTime %3.2f", ASP->MasterTrajSyncTime);
+    LogPrint("SlaveTrajSyncTime %3.2f", ASP->SlaveTrajSyncTime);
+    LogPrint("SlaveSyncStopTime %3.2f", ASP->SlaveSyncStopTime);
   }
 
   return 0;
@@ -519,14 +505,14 @@ int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug)
 
   if(debug)
   {
-    printf("TriggerIP: %s\n", TAA->TriggerIP);
-    printf("TriggerId: %d\n", TAA->TriggerId);
-    printf("TriggerType: %s\n", TAA->TriggerType);
-    printf("TriggerTypeVar: %s\n", TAA->TriggerTypeVar);
-    printf("ActionType: %s\n", TAA->ActionType);
-    printf("ActionTypeVar: %s\n", TAA->ActionTypeVar);
-    printf("Action: %d\n", TAA->Action);
-    printf("ActionDelay: %s\n", TAA->ActionDelay);
+    LogPrint("TriggerIP: %s", TAA->TriggerIP);
+    LogPrint("TriggerId: %d", TAA->TriggerId);
+    LogPrint("TriggerType: %s", TAA->TriggerType);
+    LogPrint("TriggerTypeVar: %s", TAA->TriggerTypeVar);
+    LogPrint("ActionType: %s", TAA->ActionType);
+    LogPrint("ActionTypeVar: %s", TAA->ActionTypeVar);
+    LogPrint("Action: %d", TAA->Action);
+    LogPrint("ActionDelay: %s", TAA->ActionDelay);
   }
 
   return 0;
@@ -558,7 +544,7 @@ int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug)
     OP->SyncStopTime = 0;
     fclose(filefd);
 
-    if(debug) printf("Master object set: %s, SyncTime: %3.4f\n", FilenameBuffer, Time);
+    if(debug) LogPrint("Master object set: %s, SyncTime: %3.4f", FilenameBuffer, Time);
 
   } else {
     OP->Type = 'u';
@@ -592,7 +578,7 @@ int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug)
     Time = atof(DataBuffer);
     OP->SyncStopTime = Time;
     fclose(filefd);
-    if(debug) printf("Slave object set: %s, SyncTime: %3.4f\n", FilenameBuffer, Time);
+    if(debug) LogPrint("Slave object set: %s, SyncTime: %3.4f", FilenameBuffer, Time);
   }
 
 
@@ -654,7 +640,7 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 		//u2 = cosalpha2*((pow(a,2) - pow(b,2))/pow(b,2));
 		//A = 1 +(u2/16384)*(4096+u2*(-768+u2*(320-175*u2)));
 		//B = (u2/1024)*(256 + u2*(-128*u2*(74-47*u2)));
-		//dsigma = B*sins*(cossm+0.25*B*(coss*(-1+2*pow(cossm,2)) - (1/6)*B*cossm*(-3+4*pow(sins,2))*(-3+4*pow(cossm,2))));	
+		//dsigma = B*sins*(cossm+0.25*B*(coss*(-1+2*pow(cossm,2)) - (1/6)*B*cossm*(-3+4*pow(sins,2))*(-3+4*pow(cossm,2))));
 		//s = b*A*(sigma-dsigma);
     s = sqrt(pow(OP->x,2) + pow(OP->y,2));
     OP->DeltaOrigoDistance = s - OP->OrigoDistance;
@@ -669,13 +655,13 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 		sinlambda = sin(lambda);
 		coslambda = cos(lambda);
     */
-		
+
     //OP->ForwardAzimuth1 = atan2(cosU2*sinlambda,(cosU1*sinU2-sinU1*cosU2*coslambda));
 		//OP->ForwardAzimuth2 = atan2(cosU1*sinlambda,(sinU1*cosU2*-1+cosU1*sinU2*coslambda));
 
     //llhToEnu(iLlh, Llh, xyz);
 
-    
+
     //OP->x = xyz[0];
     //OP->y = xyz[1];
 
@@ -837,7 +823,7 @@ int UtilPopulateSpaceTimeArr(ObjectPosition *OP, char* TrajFile)
   }
   else
   {
-    printf("Failed to open file:%s\n",  TrajFile);
+    LogMessage(LOG_LEVEL_ERROR,"Failed to open file:%s",  TrajFile);
   }
 
   return 0;
@@ -933,7 +919,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double
 
   if(i <= -1) i = 0;
   //OP->BestFoundTrajectoryIndex = 0;
-  if(debug) printf("OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d\n", OP->OrigoDistance, OP->x, OP->y, OP->SyncIndex);
+  if(debug) LogPrint("OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d", OP->OrigoDistance, OP->x, OP->y, OP->SyncIndex);
 
   Init = 1;
   while(i < (OP->TrajectoryPositionCount-1) && i <= OP->SyncIndex)
@@ -957,7 +943,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double
     {
       R1 = sqrt(pow(OP->SpaceTimeArr[i].x,2)+pow(OP->SpaceTimeArr[i].y,2));
       R2 = sqrt(pow(OP->x,2) + pow(OP->y,2));
-      printf("%d, %3.5f, %3.5f, %3.5f, %d, %d, %3.6f\n", i, fabs(R1-R2), fabs(R1-OP->OrigoDistance) ,fabs(Angle1-Angle2), Q1, Q2, fabs(Angle1 - OP->ForwardAzimuth1));
+      LogPrint("%d, %3.5f, %3.5f, %3.5f, %d, %d, %3.6f", i, fabs(R1-R2), fabs(R1-OP->OrigoDistance) ,fabs(Angle1-Angle2), Q1, Q2, fabs(Angle1 - OP->ForwardAzimuth1));
     }
 
 
@@ -973,7 +959,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double
         if((AngleDiff < PrevAngleDiff) && (i > OP->BestFoundTrajectoryIndex) && RDiff <= MaxTrajDiff)
         {
             PositionFound = i;
-            if(debug == 2) printf("Minimum: %d, %3.6f, %3.6f\n ", i, AngleDiff, RDiff);
+            if(debug == 2) LogPrint("Minimum: %d, %3.6f, %3.6f", i, AngleDiff, RDiff);
             PrevAngleDiff = AngleDiff;
         }
       }
@@ -986,7 +972,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double
     i ++;
   }
 
-  if(debug) printf("Selected time: %3.3f\n", OP->SpaceTimeArr[PositionFound].Time);
+  if(debug) LogPrint("Selected time: %3.3f", OP->SpaceTimeArr[PositionFound].Time);
 
   if(PositionFound == -1)  OP->BestFoundTrajectoryIndex = TRAJ_POSITION_NOT_FOUND;
   else if(PositionFound > TRAJ_POSITION_NOT_FOUND)
@@ -997,13 +983,13 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double
 
   if(debug == 2)
   {
-    printf("BestFoundTrajectoryIndex=%d\n", OP->BestFoundTrajectoryIndex);
-    printf("Current origo distance=%4.3f m\n", OP->OrigoDistance);
-    printf("Current time=%4.3f s\n", CurrentTime);
-    printf("Matched origo distance=%4.3f m\n", OP->SpaceTimeArr[PositionFound].OrigoDistance);
-    printf("Distance error=%4.3f m\n", OP->OrigoDistance - OP->SpaceTimeArr[PositionFound].OrigoDistance);
-    printf("Expected time=%4.3f s (index=%d)\n", OP->SpaceTimeArr[PositionFound].Time, OP->SpaceTimeArr[PositionFound].Index);
-    printf("Time error=%4.3f s\n", CurrentTime - OP->SpaceTimeArr[PositionFound].Time);
+    LogPrint("BestFoundTrajectoryIndex=%d", OP->BestFoundTrajectoryIndex);
+    LogPrint("Current origo distance=%4.3f m", OP->OrigoDistance);
+    LogPrint("Current time=%4.3f s", CurrentTime);
+    LogPrint("Matched origo distance=%4.3f m", OP->SpaceTimeArr[PositionFound].OrigoDistance);
+    LogPrint("Distance error=%4.3f m", OP->OrigoDistance - OP->SpaceTimeArr[PositionFound].OrigoDistance);
+    LogPrint("Expected time=%4.3f s (index=%d)", OP->SpaceTimeArr[PositionFound].Time, OP->SpaceTimeArr[PositionFound].Index);
+    LogPrint("Time error=%4.3f s", CurrentTime - OP->SpaceTimeArr[PositionFound].Time);
   }
 
   return PositionFound;
@@ -1019,7 +1005,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition *OP, int StartIndex, dou
 
   if(i <= -1) i = 0;
   OP->BestFoundTrajectoryIndex = 0;
-  printf("OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d\n", OP->OrigoDistance, OP->x, OP->y, OP->SyncIndex);
+  LogMessage(LOG_LEVEL_DEBUG,"OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d", OP->OrigoDistance, OP->x, OP->y, OP->SyncIndex);
 
   Init = 1;
   while(i < (OP->TrajectoryPositionCount-1) && i <= OP->SyncIndex)
@@ -1046,7 +1032,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition *OP, int StartIndex, dou
 
     R1 = sqrt(pow(OP->SpaceTimeArr[i].x,2)+pow(OP->SpaceTimeArr[i].y,2));
     R2 = sqrt(pow(OP->x,2) + pow(OP->y,2));
-    if(debug == 2) printf("%d, %3.5f, %3.5f, %3.5f, %d, %d, %3.6f\n", i, fabs(R1-R2), fabs(R1-OP->OrigoDistance) ,fabs(Angle1-Angle2), Q1, Q2, fabs(Angle1 - OP->ForwardAzimuth1));
+    if(debug == 2) LogPrint("%d, %3.5f, %3.5f, %3.5f, %d, %d, %3.6f", i, fabs(R1-R2), fabs(R1-OP->OrigoDistance) ,fabs(Angle1-Angle2), Q1, Q2, fabs(Angle1 - OP->ForwardAzimuth1));
 
     if(Q1 == Q2)
     {
@@ -1061,7 +1047,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition *OP, int StartIndex, dou
             PositionFound = i;
             //SampledSpaceIndex[j] = i;
             //j++ ;
-            if(debug == 2) printf("Minimum: %d, %3.6f, %3.6f\n ", i, AngleDiff, RDiff);
+            if(debug == 2) LogPrint("Minimum: %d, %3.6f, %3.6f", i, AngleDiff, RDiff);
             PrevAngleDiff = AngleDiff;
         }
 
@@ -1075,7 +1061,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition *OP, int StartIndex, dou
     i ++;
   }
 
-  if(debug) printf("Selected time: %3.3f\n", OP->SpaceTimeArr[PositionFound].Time);
+  if(debug) LogPrint("Selected time: %3.3f", OP->SpaceTimeArr[PositionFound].Time);
 
   if(PositionFound == -1)  OP->BestFoundTrajectoryIndex = TRAJ_POSITION_NOT_FOUND;
   else if(PositionFound > TRAJ_POSITION_NOT_FOUND)
@@ -1108,7 +1094,7 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition *OP, int StartIndex, do
 
   if(i <= -1) i = 2;
   OP->BestFoundTrajectoryIndex = 0;
-  printf("OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d\n", OP->OrigoDistance, OP->x, OP->y, OP->SyncIndex);
+  LogMessage(LOG_LEVEL_DEBUG,"OPOrigoDistance=%4.3f, x=%4.3f, y=%4.3f, SyncIndex=%d", OP->OrigoDistance, OP->x, OP->y, OP->SyncIndex);
 
   Init = 1;
   while(i < (OP->TrajectoryPositionCount-1) && i <= OP->SyncIndex)
@@ -1119,7 +1105,7 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition *OP, int StartIndex, do
     FutDiff = (fabs(OP->SpaceTimeArr[i+2].OrigoDistance - OP->OrigoDistance));
     BearingDiff = fabs(OP->SpaceTimeArr[i].Bearing - OP->ForwardAzimuth2);
 
-    if(debug == 2) printf("%d, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.6f\n ", i, PrevDiff,Diff, FutDiff, OP->SpaceTimeArr[i].x,  OP->x, OP->SpaceTimeArr[i].y, OP->y, fabs(OP->SpaceTimeArr[i].Bearing - tan(OP->y/OP->x)));
+    if(debug == 2) LogPrint("%d, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.6f", i, PrevDiff,Diff, FutDiff, OP->SpaceTimeArr[i].x,  OP->x, OP->SpaceTimeArr[i].y, OP->y, fabs(OP->SpaceTimeArr[i].Bearing - tan(OP->y/OP->x)));
 
     if(Init == 0)
     {
@@ -1130,7 +1116,7 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition *OP, int StartIndex, do
           PositionFound = i;
           SampledSpaceIndex[j] = i;
           j++ ;
-          if(debug == 1) printf("Minimum: %d, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.6f\n ", i, PrevDiff,Diff, FutDiff, OP->SpaceTimeArr[i].x,  OP->x, OP->SpaceTimeArr[i].y, OP->y, fabs(OP->SpaceTimeArr[i].Bearing - tan(OP->y/OP->x)));
+          if(debug == 1) LogPrint("Minimum: %d, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.3f, %3.6f", i, PrevDiff,Diff, FutDiff, OP->SpaceTimeArr[i].x,  OP->x, OP->SpaceTimeArr[i].y, OP->y, fabs(OP->SpaceTimeArr[i].Bearing - tan(OP->y/OP->x)));
       }
     }
 
@@ -1154,7 +1140,7 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition *OP, int StartIndex, do
     MinDiff = Diff;
   }
 
-  if(debug) printf("Selected time: %3.3f\n", OP->SpaceTimeArr[PositionFound].Time);
+  if(debug) LogPrint("Selected time: %3.3f", OP->SpaceTimeArr[PositionFound].Time);
 
   if(PositionFound == -1)  OP->BestFoundTrajectoryIndex = TRAJ_POSITION_NOT_FOUND;
   else if(PositionFound > TRAJ_POSITION_NOT_FOUND)
@@ -1178,7 +1164,7 @@ int UtilFindCurrentTrajectoryPositionPrev(ObjectPosition *OP, int StartIndex, do
 
 
 
-
+//TODO THIS IS UNUSED - DELETE?
 int UtilFindCurrentTrajectoryPositionOld(ObjectPosition *OP, int StartIndex, double CurrentTime, double MaxTrajDiff, double MaxTimeDiff, char debug)
 {
 
@@ -1701,7 +1687,7 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize,char* TimeUTCR
   }
   if(iResult < 0 && errno != EAGAIN)
   {
-    util_error ("ERR: Message queue error when recieveing in iCommRecv().");
+    util_error ("Message queue error when receiving in iCommRecv().");
   }
   else if((iResult >= 0))
   {
@@ -1811,6 +1797,11 @@ int iCommSend(const int iCommand,const char* cpData)
       uiMessagePrio = 160;
       cpMessage[0] = (char)COMM_LOG;
     }
+  else if (iCommand == COMM_OSEM)
+    {
+      uiMessagePrio = 160;
+      cpMessage[0] = (char)COMM_OSEM;
+    }
   else if (iCommand == COMM_VIOP)
     {
       uiMessagePrio = 80;
@@ -1863,7 +1854,7 @@ int iCommSend(const int iCommand,const char* cpData)
     }
   else
     {
-      util_error("ERR: Unknown command");
+      util_error("Unknown command");
     }
 
   if(cpData != NULL)
@@ -2064,13 +2055,13 @@ I32 UtilConnectTCPChannel(const C8* Module, I32* Sockfd, const C8* IP, const U32
     *Sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (*Sockfd < 0)    {
-        DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] ERR: Failed to open control socket", Module);
+        LogMessage(LOG_LEVEL_ERROR,"Failed to open control socket");
     }
 
     server = gethostbyname(IP);
     if (server == NULL)
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] ERR: Unknown host ", Module);
+        LogMessage(LOG_LEVEL_ERROR,"Unknown host");
     }
 
     bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -2080,7 +2071,7 @@ I32 UtilConnectTCPChannel(const C8* Module, I32* Sockfd, const C8* IP, const U32
     serv_addr.sin_port = htons(Port);
 
 
-    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] Try to connect to control socket: %s %i\n", Module, IP, Port);
+    LogMessage(LOG_LEVEL_INFO,"Attempting to connect to control socket: %s:%i", IP, Port);
 
     do
     {
@@ -2090,13 +2081,13 @@ I32 UtilConnectTCPChannel(const C8* Module, I32* Sockfd, const C8* IP, const U32
         {
             if(errno == ECONNREFUSED)
             {
-                DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] Was not able to connect to %s port %d, retry in 3 sec...\n", Module, IP, Port);
+                LogMessage(LOG_LEVEL_WARNING,"Unable to connect to %s port %d, retrying in 3 sec...", IP, Port);
                 fflush(stdout);
                 (void)sleep(3);
             }
             else
             {
-                 DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] ERR: Failed to connect to control socket\n", Module);
+                 LogMessage(LOG_LEVEL_ERROR,"Failed to connect to control socket");
             }
         }
     } while(iResult < 0);
@@ -2104,7 +2095,7 @@ I32 UtilConnectTCPChannel(const C8* Module, I32* Sockfd, const C8* IP, const U32
 
     iResult = fcntl(*Sockfd, F_SETFL, fcntl(*Sockfd, F_GETFL, 0) | O_NONBLOCK);
 
-    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] Maestro connected to %s port %d\n", Module, IP, Port);
+    LogMessage(LOG_LEVEL_INFO,"Maestro connected to %s:%d", IP, Port);
     return iResult;
 
 }
@@ -2117,26 +2108,27 @@ void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, 
     socklen_t len = sizeof(error);
     I32 retval;
 
+
     if(Debug == 1){ printf("[%s] %d TCP bytes sent: ", Module, Length); i = 0; for(i = 0; i < Length; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
 
+
     n = write(*Sockfd, Data, Length);
-    
+
     retval = getsockopt(*Sockfd, SOL_SOCKET, SO_ERROR, &error, &len);
 
     if(retval != 0)
     {
-      printf("[%s] Failed to get socket error code = %s\n", Module, strerror(retval));
+      LogMessage(LOG_LEVEL_ERROR,"Failed to get socket error code = %s", strerror(retval));
     }
 
     if(error != 0)
     {
-      printf("[%s] Socket error: %s\n", Module, strerror(error));
+      LogMessage(LOG_LEVEL_ERROR,"Socket error: %s", strerror(error));
     }
 
     if (n < 0)
     {
-        printf("[%s] ERR: Failed to send on control socket, length=%d\n", Module, Length);
-        //DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] ERR: Failed to send on control socket\n", Module);
+        LogMessage(LOG_LEVEL_ERROR,"Failed to send on control socket, length = %d", Length);
     }
 }
 
@@ -2148,6 +2140,7 @@ I32 UtilReceiveTCPData(const C8* Module, I32* Sockfd, C8* Data, I32 Length, U8 D
     if(Length <= 0) Result = recv(*Sockfd, Data, TCP_RX_BUFFER,  0);
     else Result = recv(*Sockfd, Data, Length,  0);
 
+    // TODO: Change this when bytes thingy has been implemented in logging
     if(Debug == 1 && Result < 0){ printf("[%s] Received TCP data: ", Module); i = 0; for(i = 0; i < Result; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
 
     return Result;
@@ -2161,12 +2154,11 @@ void UtilCreateUDPChannel(const C8* Module, I32 *Sockfd, const C8* IP, const U32
     int result;
     struct hostent *object;
 
-    //DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[%s] Creating UDP channel\n", Module);
 
     *Sockfd= socket(AF_INET, SOCK_DGRAM, 0);
     if (*Sockfd < 0)
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[%s] ERR: Failed to connect to CPC socket", Module);
+        LogMessage(LOG_LEVEL_ERROR,"Failed to connect to CPC socket");
     }
 
     /* Set address to object */
@@ -2174,7 +2166,7 @@ void UtilCreateUDPChannel(const C8* Module, I32 *Sockfd, const C8* IP, const U32
 
     if (object==0)
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[%s] ERR: Unknown host", Module);
+        LogMessage(LOG_LEVEL_ERROR,"Unknown host");
     }
 
     bcopy((char *) object->h_addr, (char *)&Addr->sin_addr.s_addr, object->h_length);
@@ -2186,10 +2178,10 @@ void UtilCreateUDPChannel(const C8* Module, I32 *Sockfd, const C8* IP, const U32
                    fcntl(*Sockfd, F_GETFL, 0) | O_NONBLOCK);
     if (result < 0)
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[%s] ERR: calling fcntl", Module);
+        LogMessage(LOG_LEVEL_ERROR,"Error calling fcntl");
     }
 
-    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[%s] Created UDP channel to address: %s port %d\n", Module, IP, Port);
+    LogMessage(LOG_LEVEL_INFO,"Created UDP channel to address: %s:%d", IP, Port);
 
 
 }
@@ -2202,12 +2194,12 @@ void UtilSendUDPData(const C8* Module, I32 *Sockfd, struct sockaddr_in* Addr, C8
 
     result = sendto(*Sockfd, Data, Length, 0, (const struct sockaddr *) Addr, sizeof(struct sockaddr_in));
 
-
+    // TODO: Change this when bytes thingy has been implemented in logging
     if(Debug){ printf("[%s] Bytes sent: ", Module); i = 0; for(i = 0; i < Length; i++) printf("%x-", (unsigned char)*(Data+i)); printf("\n");}
 
     if (result < 0)
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[%s] ERR: Failed to send on process control socket.", Module);
+        LogMessage(LOG_LEVEL_ERROR,"Failed to send on process control socket");
     }
 
 }
@@ -2225,17 +2217,18 @@ void UtilReceiveUDPData(const C8* Module, I32* Sockfd, C8* Data, I32 Length, I32
         {
             if(errno != EAGAIN && errno != EWOULDBLOCK)
             {
-                DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[%s] ERR: Failed to receive from monitor socket", Module);
+                LogMessage(LOG_LEVEL_ERROR,"Failed to receive from monitor socket");
             }
             else
             {
-                DEBUG_LPRINT(DEBUG_LEVEL_LOW, "[%s] INF: No data receive\n", Module);
+                LogMessage(LOG_LEVEL_DEBUG, "No data received");
             }
         }
         else
         {
             *ReceivedNewData = 1;
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Received: <%s>\n", Data);
+            LogMessage(LOG_LEVEL_DEBUG,"Received: <%s>", Data);
+            // TODO: Change this when bytes thingy has been implemented in logging
             if(Debug == 1){ printf("[%s] Received UDP data: ", Module); i = 0; for(i = 0; i < Result; i++) printf("%x-", (C8)*(Data+i)); printf("\n");}
 
         }
@@ -2311,6 +2304,7 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug)
 
  if(Debug)
   {
+     // TODO: Change this when bytes thingy has been implemented in logging
     printf("[Util:UtilHexTextToBinary] Length = %d: ", DataLength/2);
     for(i = 0;i < DataLength/2; i ++) printf("%x ", *(Binary + i));
     printf("\n");
@@ -2325,7 +2319,7 @@ U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug)
 {
     U32 i, j=0;
     C8 Hex;
-    
+
 
     for(i = 0; i < DataLength; i++)
     {
@@ -2336,7 +2330,7 @@ U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug)
       else if (Hex >= 10 && Hex <= 15) Hex = Hex + 0x37;
       //printf("%x\n", Hex);
       *(Text + j++) = Hex;
-      
+
       Hex = *(Binary + i) & 0x0F;
       //printf("%x\n", Hex);
       //Hex = Hex & 0x0F;
@@ -2350,6 +2344,7 @@ U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug)
 
    if(Debug)
     {
+       // TODO: Change this when bytes thingy has been implemented in logging
       printf("[Util:UtilBinaryToHexText] Length = %d: ", j);
       for(i = 0;i < j; i ++) printf("%x ", *(Text + i));
       printf("\n");
@@ -2370,7 +2365,7 @@ U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug)
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
 {
-  
+
   FILE *fd;
   C8 Filename[FILE_INFO_LENGTH];
   C8 CompletePath[MAX_PATH_LENGTH];
@@ -2381,7 +2376,7 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
   DIR * d = opendir(CompletePath); // open the path
   if(d==NULL) return 1; // if was not able return
   struct dirent * dir; // for the directory entries
-  
+
   bzero(CompletePath, MAX_PATH_LENGTH);
   GetCurrentDir(CompletePath, MAX_PATH_LENGTH);
   strcat(CompletePath, TempPath); //Concatenate temp file path
@@ -2403,7 +2398,7 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
   {
     bzero(Filename, FILE_INFO_LENGTH);
 
-    if(dir-> d_type != DT_DIR) 
+    if(dir-> d_type != DT_DIR)
       //printf("%s%s\n",BLUE, dir->d_name); // if the type is not directory just print it with blue
       sprintf(Filename, "F-%s\n", dir->d_name);
     else
@@ -2426,7 +2421,7 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
   }
   //printf("\n");
   //printf("%s\n", CompletePath);
-  
+
   closedir(d); // close the directory
 
   fclose(fd); //close the file
@@ -2462,8 +2457,9 @@ I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 Command
     *(MessageBuffer + i++) = (U8)(Crc);
     MessageIndex = i;
 
-    if(debug)
+    if(Debug)
     {
+        // TODO: Change this when bytes thingy has been implemented in logging
         printf("INSUP total length = %d bytes (header+message+footer)\n", (int)(ISO_INSUP_MESSAGE_LENGTH+ISO_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");
         for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
@@ -2508,8 +2504,9 @@ I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPS
     *(MessageBuffer + i++) = (U8)(Crc >> 8);
     MessageIndex = i;
 
-    if(debug)
+    if(Debug)
     {
+        // TODO: Change this when bytes thingy has been implemented in logging
         printf("HEAB total length = %d bytes (header+message+footer)\n", (int)(ISO_HEAB_MESSAGE_LENGTH + ISO_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");
         for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
@@ -2602,6 +2599,7 @@ I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug
 
     if(debug)
     {
+        // TODO: Change this when bytes thingy has been implemented in logging
         printf("TRAJInfo total length = %d bytes\n", (int)(ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH));
         printf("----TRAJInfo----\n");
         for(i = 0;i < sizeof(TRAJInfoType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
@@ -2613,7 +2611,7 @@ I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug
         printf("\n----MESSAGE----\n");
     }
 
-    return 0; 
+    return 0;
 }
 
 
@@ -2656,6 +2654,7 @@ I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *H
 
     if(debug)
     {
+        // TODO: Change this when bytes thingy has been implemented in logging
         printf("Header + TRAJInfo total length = %d bytes\n", (int)(ISO_MESSAGE_HEADER_LENGTH + ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH));
         printf("----HEADER + TRAJInfo----\n");
         for(i = 0;i < sizeof(HeaderType) + sizeof(TRAJInfoType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
@@ -2696,7 +2695,6 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->RelativeTimeValueIdU16 = VALUE_ID_RELATIVE_TIME;
         DOTMData->RelativeTimeContentLengthU16 = 4;
         DOTMData->RelativeTimeU32 = SwapU32((U32)Data);
-        if(debug) printf("%d. Time=%d, ", i, DOTMData->RelativeTimeU32);
 
         //x
         Data = 0;
@@ -2707,7 +2705,6 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->XPositionValueIdU16 = VALUE_ID_X_POSITION;
         DOTMData->XPositionContentLengthU16 = 4;
         DOTMData->XPositionI32 = SwapI32((I32)Data);
-        if(debug) printf("X=%d, ", DOTMData->XPositionI32);
 
         //y
         Data = 0;
@@ -2718,7 +2715,6 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->YPositionValueIdU16 = VALUE_ID_Y_POSITION;
         DOTMData->YPositionContentLengthU16 = 4;
         DOTMData->YPositionI32 = SwapI32((I32)Data);
-        if(debug) printf("Y=%d, ", DOTMData->YPositionI32);
 
         //z
         Data = 0;
@@ -2729,7 +2725,6 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->ZPositionValueIdU16 = VALUE_ID_Z_POSITION;
         DOTMData->ZPositionContentLengthU16 = 4;
         DOTMData->ZPositionI32 = SwapI32((I32)Data);
-        if(debug) printf("Z=%d, ", DOTMData->ZPositionI32);
 
         //Heading
         Data = 0;
@@ -2744,7 +2739,9 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
         DOTMData->HeadingContentLengthU16 = 2;
         DOTMData->HeadingU16 = SwapU16((U16)(Data));
+
         if(debug) printf("Heading=%d, %x\n", DOTMData->HeadingU16, Data);
+
 
         //Longitudinal speed
         Data = 0;
@@ -2753,7 +2750,6 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->LongitudinalSpeedValueIdU16 = VALUE_ID_LONGITUDINAL_SPEED;
         DOTMData->LongitudinalSpeedContentLengthU16 = 2;
         DOTMData->LongitudinalSpeedI16 = SwapI16((I16)Data);
-        if(debug) printf("LongitudinalSpeedI16=%d, ", DOTMData->LongitudinalSpeedI16);
 
         //Lateral speed
         Data = 0;
@@ -2762,7 +2758,6 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->LateralSpeedValueIdU16 = VALUE_ID_LATERAL_SPEED;
         DOTMData->LateralSpeedContentLengthU16 = 2;
         DOTMData->LateralSpeedI16 = SwapI16((I16)Data);
-        if(debug) printf("LateralSpeedI16=%d, ", DOTMData->LateralSpeedI16);
 
         //Longitudinal acceleration
         Data = 0;
@@ -2771,7 +2766,6 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->LongitudinalAccValueIdU16 = VALUE_ID_LONGITUDINAL_ACCELERATION;
         DOTMData->LongitudinalAccContentLengthU16 = 2;
         DOTMData->LongitudinalAccI16 = SwapI16((I16)Data);
-        if(debug) printf("LongitudinalAccI16=%d, ", DOTMData->LongitudinalAccI16);
 
         //Lateral acceleration
         Data = 0;
@@ -2780,7 +2774,6 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->LateralAccValueIdU16 = VALUE_ID_LATERAL_ACCELERATION;
         DOTMData->LateralAccContentLengthU16 = 2;
         DOTMData->LateralAccI16 = SwapI16((I16)Data);
-        if(debug) printf("LateralAccI16=%d, ", DOTMData->LateralAccI16);
 
         //Curvature
         Data = 0;
@@ -2791,11 +2784,25 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
         DOTMData->CurvatureValueIdU16 = VALUE_ID_CURVATURE;
         DOTMData->CurvatureContentLengthU16 = 4;
         DOTMData->CurvatureI32 = SwapI32((I32)Data);
-        if(debug) printf("CurvatureI32=%d\n", DOTMData->CurvatureI32);
 
         p=(C8 *)DOTMData;
         for(j=0; j<sizeof(DOTMType); j++, n++) *(MessageBuffer + n) = *p++;
         MessageIndex = n;
+
+        if (debug)
+        {
+            LogPrint("%d. Time=%d, X=%d, Y=%d, Z=%d, Heading=%d, LongitudinalSpeedI16=%d, LateralSpeedI16=%d, LongitudinalAccI16=%d, LateralAccI16=%d, CurvatureI32=%d",
+                     i, DOTMData->RelativeTimeU32,
+                     DOTMData->XPositionI32,
+                     DOTMData->YPositionI32,
+                     DOTMData->ZPositionI32,
+                     DOTMData->HeadingU16,
+                     DOTMData->LongitudinalSpeedI16,
+                     DOTMData->LateralSpeedI16,
+                     DOTMData->LongitudinalAccI16,
+                     DOTMData->LateralAccI16,
+                     DOTMData->CurvatureI32);
+        }
     }
 
 
@@ -2807,6 +2814,7 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
 
     if(debug == 2)
     {
+        // TODO: Replace this when bytes thingy has been implemented
         int i = 0;
         for(i = 0; i < MessageIndex; i ++)
         {
@@ -2851,16 +2859,76 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 
     if(Debug)
     {
-      printf("SyncWordU16 = 0x%x\n", HeaderData->SyncWordU16);
-      printf("TransmitterIdU8 = %d\n", HeaderData->TransmitterIdU8);
-      printf("MessageCounterU8 = %d\n", HeaderData->MessageCounterU8);
-      printf("AckReqProtVerU8 = %d\n", HeaderData->AckReqProtVerU8);
-      printf("MessageIdU16 = %d\n", HeaderData->MessageIdU16);
-      printf("MessageLengthU32 = %d\n", HeaderData->MessageLengthU32);
+      LogPrint("SyncWordU16 = 0x%x", HeaderData->SyncWordU16);
+      LogPrint("TransmitterIdU8 = 0x%x", HeaderData->TransmitterIdU8);
+      LogPrint("MessageCounterU8 = 0x%x", HeaderData->MessageCounterU8);
+      LogPrint("AckReqProtVerU8 = 0x%x", HeaderData->AckReqProtVerU8);
+      LogPrint("MessageIdU16 = 0x%x", HeaderData->MessageIdU16);
+      LogPrint("MessageLengthU32 = 0x%x", HeaderData->MessageLengthU32);
     }
 
     return 0;
 }
+
+void delivered(void *context, MQTTClient_deliveryToken dt)
+{
+    printf("Message with token value %d delivery confirmed\n", dt);
+    deliveredtoken = dt;
+}
+int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message)
+{
+    int i;
+    char* payloadptr;
+    printf("Message arrived\n");
+    printf("     topic: %s\n", topicName);
+    printf("   message: ");
+    payloadptr = message->payload;
+    for(i=0; i<message->payloadlen; i++)
+    {
+        putchar(*payloadptr++);
+    }
+    putchar('\n');
+    MQTTClient_freeMessage(&message);
+    MQTTClient_free(topicName);
+    return 1;
+}
+void connlost(void *context, char *cause)
+{
+    printf("\nConnection lost\n");
+    printf("     cause: %s\n", cause);
+}
+
+void MQTTSendMessage(char *_topic, char *_payload)
+{
+    MQTTClient client;
+    MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
+    MQTTClient_message pubmsg = MQTTClient_message_initializer;
+    MQTTClient_deliveryToken token;
+    int rc;
+    
+    MQTTClient_create(&client, ADDRESS, CLIENTID,
+        MQTTCLIENT_PERSISTENCE_NONE, NULL);
+    conn_opts.keepAliveInterval = 20;
+    conn_opts.cleansession = 1;
+    MQTTClient_setCallbacks(client, NULL, connlost, msgarrvd, delivered);
+    if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS)
+    {
+        printf("Failed to connect, return code %d\n", rc);
+        exit(EXIT_FAILURE);
+    }
+    pubmsg.payload = _payload;
+    pubmsg.payloadlen = strlen(_payload);
+    pubmsg.qos = QOS;
+    pubmsg.retained = 0;
+    deliveredtoken = 0;
+    MQTTClient_publishMessage(client, _topic, &pubmsg, &token);
+    printf("Waiting for publication of %s\n"
+            "on topic %s for client with ClientID: %s\n",
+            _payload, _topic, CLIENTID);
+    while(deliveredtoken != token);
+    MQTTClient_disconnect(client, 10000);
+    MQTTClient_destroy(&client);
+    return rc;
 
 
 I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 ObjectType, U8 OperationMode, U32 ObjectMass, U8 Debug)

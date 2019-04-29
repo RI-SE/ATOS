@@ -28,6 +28,7 @@
 
 #include "util.h"
 #include "logger.h"
+#include "logging.h"
 
 
 #define TIME_CONTROL_CONF_FILE_PATH  "conf/test.conf"
@@ -48,6 +49,12 @@ static void TimeControlRecvTime(int* sockfd, char* buffer, int length, int* reci
 U32 TimeControlIPStringToInt(C8 *IP);
 U16 TimeControlGetMillisecond(TimeType *GPSTime);
 
+
+/*------------------------------------------------------------
+  -- Private variables.
+  ------------------------------------------------------------*/
+#define MODULE_NAME "TimeControl"
+static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 
 
 /*------------------------------------------------------------
@@ -71,11 +78,14 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
   C8 MqRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
   struct timeval tv, ExecTime;
   struct tm *tm;
-  
+
   U32 IpU32;
   U8 PrevSecondU8;
   U16 CurrentMilliSecondU16, PrevMilliSecondU16;
   U8 CycleCount = 0;
+
+  LogInit(MODULE_NAME,logLevel);
+  LogMessage(LOG_LEVEL_INFO,"Time control task running with PID: %i",getpid());
 
   gettimeofday(&ExecTime, NULL);
   CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
@@ -110,8 +120,8 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
     TimeControlCreateTimeChannel(ServerIPC8, ServerPortU16, &SocketfdI32, &time_addr);
     TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, 4, 0);
     GPSTime->isGPSenabled = 1;
-    printf("[TimeControl] Get time from GPS.\n");
-  } else printf("[TimeControl] Count fake time.\n");
+    LogMessage(LOG_LEVEL_INFO,"Getting time from GPS");
+  } else LogMessage(LOG_LEVEL_INFO,"Count fake time");
 
 
   while(!iExit)
@@ -238,7 +248,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
         TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, 4, 0);
       }
       iExit = 1;
-      printf("[TimeControl] Timecontrol exiting.\n");
+      LogMessage(LOG_LEVEL_INFO,"Time control exiting");
       (void)iCommClose();
     }
 
@@ -280,7 +290,7 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
   int result;
   struct hostent *object;
 
-  DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"[TimeControl] Time source IP: %s, port: %d\n", name, port);
+  LogMessage(LOG_LEVEL_INFO,"Time source address: %s:%d",name,port);
   /* Connect to object safety socket */
 
   *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
@@ -292,7 +302,7 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
   /* Set address to object */
   object = gethostbyname(name);
   
-  if (object==0)
+  if (object==NULL)
   {
     util_error("[TimeControl] ERR: Unknown host");
   }
@@ -317,7 +327,7 @@ static void TimeControlCreateTimeChannel(const char* name,const uint32_t port, i
   {
     util_error("[TimeControl] ERR: calling fcntl");
   }
-  DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"[TimeControl] Created socket and time address: %s %d\n",name,port);
+  LogMessage(LOG_LEVEL_INFO,"Created socket and time address: %s:%d",name,port);
 }
 
 
@@ -372,6 +382,7 @@ static int TimeControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* S
   
     if(debug)
     {
+        // TODO: Change to log write when bytes thingy has been implemented
       for(i = 0;i < Length; i ++) printf("[%d]=%x ", i, (C8)*(SendData+i));
       printf("\n");
     }
@@ -402,15 +413,13 @@ static void TimeControlRecvTime(int* sockfd, char* buffer, int length, int* reci
         }
         else
         {
-
-          DEBUG_LPRINT(DEBUG_LEVEL_LOW,"[TimeControl]  No data receive, result=%d\n", result);
-
+          LogMessage(LOG_LEVEL_DEBUG,"No data received, result=%d", result);
         }
       }
       else
       {
         *recievedNewData = 1;
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"[TimeControl] Received data: <%s>, %d\n",buffer, result);
+        LogMessage(LOG_LEVEL_DEBUG,"Received data: <%s>, result=%d",buffer, result);
 
       }
     } while(result > 0 );

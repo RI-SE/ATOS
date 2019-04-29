@@ -12,7 +12,6 @@
   -- Include files.
   ------------------------------------------------------------*/
 #include "logger.h"
-
 #include <dirent.h>
 #include <errno.h>
 #include <mqueue.h>
@@ -26,6 +25,7 @@
 #include <time.h>
 
 #include "util.h"
+#include "logging.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -50,6 +50,8 @@ static int CountFileRows(FILE *fd);
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
+#define MODULE_NAME "Logger"
+static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 
 /*------------------------------------------------------------
   -- Public functions
@@ -67,6 +69,11 @@ void logger_task()
     char pcSendBuffer[MQ_MAX_MESSAGE_LENGTH];
     char pcReadBuffer[MQ_MAX_MESSAGE_LENGTH];
     char read;
+
+    LogInit(MODULE_NAME,logLevel); // TODO: Start using this
+    LogMessage(LOG_LEVEL_INFO,"Logger task running with PID: %d",getpid());
+
+    int GPSweek;
     struct timeval tvTime ;
     uint64_t LogTimeStart;
     DIR *dir;
@@ -92,11 +99,11 @@ void logger_task()
     //(void)iCommInit(IPC_SEND,MQ_LG_1,0);
 
     /* Create folder with date as name and .log file with date as name */
-  
+
     struct stat st = {0};
-    if (stat(LOG_PATH, &st) == -1) 
+    if (stat(LOG_PATH, &st) == -1)
 	{
-		vCreateLogFolder(LOG_PATH);	
+		vCreateLogFolder(LOG_PATH);
 	}
 
 
@@ -110,7 +117,7 @@ void logger_task()
     (void)strcat(pcLogFile,LOG_FILE);
     (void)strcat(pcLogFileComp,LOG_FILE);
 
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open log file to use: <%s>\n",pcLogFile);
+    LogMessage(LOG_LEVEL_INFO,"Opening log file to use: <%s>",pcLogFile);
     filefd = fopen(pcLogFile, "w+");
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
     sprintf(pcBuffer,"------------------------------------------\nWhole Trajectory files:\n------------------------------------------\n");
@@ -150,7 +157,7 @@ void logger_task()
     }
     else
     {
-      perror("No traj folder exist, wrong path or access denied\n" );
+        LogMessage(LOG_LEVEL_ERROR,"No traj directory <%s> exists - wrong path or access denied",TRAJECTORY_PATH);
     }
     /* If traj file exist and we have reader permission do*/
 
@@ -181,7 +188,7 @@ void logger_task()
     }
     else
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Cant open .conf file; %s\n",TEST_CONF_FILE);
+        LogMessage(LOG_LEVEL_WARNING,"Cant open .conf file; %s",TEST_CONF_FILE);
         bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
         sprintf(pcBuffer,"Failed to Open .conf file;%s\n",TEST_CONF_FILE);
         (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
@@ -210,7 +217,7 @@ void logger_task()
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-    sprintf(pcBuffer,"Monor message structure(command message nr = 3):\n<Year>;<Month>;<Day>;<Hour>;<Minute>;<Second>;<Millisecond>;<UTC Time ms>;<Command message nr>;<Data>;<Object_address (IP number)>;<0>;");
+    sprintf(pcBuffer,"Monor message structure(command message nr = 3):\n<Year>;<Month>;<Day>;<Hour>;<Minute>;<Second>;<Millisecond>;<UTC Time ms>;<GPS Time ms>;<Command message nr>;<Data>;<Object_address (IP number)>;<0>;");
     (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
     bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
@@ -234,30 +241,91 @@ void logger_task()
         bzero(pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
         bzero(TimeStampUTCBufferRecv,MQ_MAX_UTC_LENGTH);
         (void)iCommRecv(&iCommand,pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
+
         if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE && iCommand != COMM_HEAB)
         {
 
+        if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE && iCommand!=COMM_MONI )
+        {
             Timestamp = atol(TimeStampUTCBufferRecv);
             bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
             UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
             bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+
+            //Remove newlines in http Requests for nicer printouts.
+            for (int i = 0; i < strlen(pcRecvBuffer); i++){
+                if(pcRecvBuffer[i] == '\n'){
+                  pcRecvBuffer[i] = ' ';
+                }
+            }
+
             sprintf ( pcBuffer,"%s;%s;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, iCommand, pcRecvBuffer);
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
 
         }
 
+        if(iCommand == COMM_MONI)
+        {
+          char *str;
+          str = malloc(sizeof(pcRecvBuffer) + 1);
+          strcpy(str,pcRecvBuffer);
+
+          char* GPSSecondOfWeek = strtok(str, ";");
+
+          int counter = 0;
+          while (GPSSecondOfWeek != NULL && counter < 2)  // Get GPS second of week
+          {
+            //printf("%s\n", token);
+            GPSSecondOfWeek = strtok(NULL, ";");
+            counter++;
+          }
+
+          uint64_t GPSms = UtilgetGPSmsFromUTCms(UtilgetUTCmsFromGPStime(GPSweek, atoi(GPSSecondOfWeek))); //Calculate GPSms
+
+          Timestamp = atol(TimeStampUTCBufferRecv);
+          bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
+          UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
+          bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+          sprintf ( pcBuffer,"%s;%s;%lu;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, GPSms, iCommand, pcRecvBuffer);
+          (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+          (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+
+
+        }
+
+        if(iCommand == COMM_OSEM){
+
+          char *str;
+          str = malloc(sizeof(pcRecvBuffer) + 1);
+          strcpy(str,pcRecvBuffer);
+
+          // Returns first datapoint of OSEM (GPSWeek)
+          char* token = strtok(pcRecvBuffer, ";");
+          GPSweek = atoi(token);
+
+          // Rest of OSEM if needed
+          /*
+          while (token != NULL) {
+            printf("%s\n", token);
+            token = strtok(NULL, ";");
+          }
+          */
+
+        }
+
+
         if(iCommand == COMM_REPLAY)
         {
             LoggerExecutionMode = LOG_REPLAY_MODE;
-            printf("Logger in REPLAY mode <%s>\n", pcRecvBuffer);
+            LogMessage(LOG_LEVEL_INFO,"Logger in REPLAY mode <%s>",pcRecvBuffer);
             //replayfd = fopen ("log/33/event.log", "r");
             replayfd = fopen (pcRecvBuffer, "r");
             RowCount = UtilCountFileRows(replayfd);
             fclose(replayfd);
             //replayfd = fopen ("log/33/event.log", "r");
             replayfd = fopen (pcRecvBuffer, "r");
-            printf("Rows %d\n", RowCount);
+            LogMessage(LOG_LEVEL_INFO,"Rows: %d",RowCount);;
             if(replayfd)
             {
                 UtilReadLineCntSpecChars(replayfd, pcReadBuffer);//Just read first line
@@ -303,7 +371,7 @@ void logger_task()
                         FirstIteration = 0;
                         OldTimestamp = NewTimestamp;
                     };
-                    printf("%d:%d:%d<%s>\n", RowCount, j, SpecChars, pcSendBuffer);
+                    LogMessage(LOG_LEVEL_INFO,"%d:%d:%d<%s>",RowCount,j,SpecChars,pcSendBuffer);
 
                     /*
                     bzero(TimeStampUTCBufferRecv,MQ_ETSI_LENGTH);
@@ -320,10 +388,10 @@ void logger_task()
             }
             else
             {
-                printf("Failed to open file:%s\n",  pcRecvBuffer);
+                LogMessage(LOG_LEVEL_WARNING,"Failed to open file: %s",pcRecvBuffer);
             }
 
-            printf("Replay done.\n");
+            LogMessage(LOG_LEVEL_INFO,"Replay done");
             //(void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
             (void)iCommSend(COMM_CONTROL, NULL);
 
@@ -331,12 +399,12 @@ void logger_task()
         else if(iCommand == COMM_CONTROL)
         {
             LoggerExecutionMode = LOG_CONTROL_MODE;
-            printf("Logger in CONTROL mode\n");
+            LogMessage(LOG_LEVEL_INFO,"Logger in CONTROL mode");
         }
         else if(iCommand == COMM_EXIT)
         {
 
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"%s","Logger exit\n");
+            LogMessage(LOG_LEVEL_INFO,"Logger exiting");
 
             iExit = 1;
         }
@@ -350,7 +418,7 @@ void logger_task()
                 (void)strcpy(pcLogFile,pcLogFolder);
                 (void)strcat(pcLogFile,LOG_FILE);
 
-                DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open log file to use: <%s>\n",pcLogFile);
+                log_message(LOG_LEVEL_INFO,"Opening log file to use: <%s>",pcLogFile);
                 filefd = fopen (pcLogFile, "w+");
 
                 bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
@@ -375,7 +443,7 @@ void logger_task()
         }
         else
         {
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Unhandled command in logger: %d",iCommand);
+            LogMessage(LOG_LEVEL_DEBUG,"Unhandled command in logger: %d",iCommand);
         }
     }
 
@@ -391,6 +459,8 @@ void logger_task()
     fclose(filefdComp);
 }
 
+
+
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
@@ -403,7 +473,7 @@ void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
     int iMaxFolder = 0;
 
     directory = opendir(logFolder);
-    
+
     if(directory == NULL)
     {
         iResult = mkdir(logFolder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);

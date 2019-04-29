@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
+#include "MQTTClient.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -43,6 +44,7 @@
 #define MQ_SI     "/TEServer-SI"  
 #define MQ_SU     "/TEServer-SU"
 
+
 #define MQ_MAX_MESSAGE_LENGTH 6200//4096
 #define MQ_MAX_MSG            10
 #define MQ_PERMISSION         0660
@@ -52,10 +54,10 @@
 #define IPC_RECV_SEND  0x03
 
 #define COMM_STRT 1
-#define COMM_STOP 2
-#define COMM_MONI 3
-#define COMM_EXIT 4
-#define COMM_ARMD 5
+#define COMM_ARMD 2
+#define COMM_STOP 3
+#define COMM_MONI 4
+#define COMM_EXIT 5
 #define COMM_REPLAY 6
 #define COMM_CONTROL 7
 #define COMM_ABORT 8
@@ -74,7 +76,7 @@
 #define COMM_OSTM 21
 #define COMM_OSEM 22
 #define COMM_OBJ_STRT 23
-#define COMM_HEAB 24  
+#define COMM_HEAB 24
 #define COMM_INV 255
 
 
@@ -134,7 +136,7 @@
 
 
 // Between 1970 01 01 and 1980 01 06 there is 365*10 days, plus 2 for 2 leap years and plus 5 for the remaining days
-// in total we have MStime= (3650 + 2 + 5) * 24 * 3600 * 1000 = 315964800000
+// in total we have MStime= ((365 * 10) + 2 + 5) * 24 * 3600 * 1000 = 315964800000
 #define MS_TIME_DIFF_UTC_GPS 315964800000
 // Difference is 18 leap seconds between utc and gps
 #define MS_LEAP_SEC_DIFF_UTC_GPS 18000
@@ -239,7 +241,7 @@
 #define SERVER_PREPARED 0x01
 #define SERVER_PREPARED_BIG_PACKET_SIZE 0x02
 #define PATH_INVALID_MISSING 0x03
-#define FILE_UPLOADED 0x04  
+#define FILE_UPLOADED 0x04
 #define TIME_OUT 0x05
 #define FILE_EXIST 0x01
 #define FOLDER_EXIST 0x02
@@ -269,12 +271,10 @@
 #define DEBUG_TEST 0
 #endif
 
+//#define DEBUG_PRINT(fmt,...) do {if(DEBUG_TEST) {fprintf(stdout,"[%s]: " fmt "\n",__func__,__VA_ARGS__);fflush(stdout);}} while (0)
+//#define DEBUG_ERR_PRINT(...) do {if(DEBUG_TEST) {fprintf(stderr,__VA_ARGS__);fflush(stderr);}} while (0)
+
 // The do - while loop makes sure that each function call is properly handled using macros
-#define DEBUG_PRINT(fmt,...) do {if(DEBUG_TEST) {fprintf(stdout,"[%s]: " fmt "\n",__func__,__VA_ARGS__);fflush(stdout);}} while (0)
-#define DEBUG_ERR_PRINT(...) do {if(DEBUG_TEST) {fprintf(stderr,__VA_ARGS__);fflush(stderr);}} while (0)
-
-#define DEBUG_LPRINT(level,...) do {if(DEBUG_TEST) dbg_printf(level,__VA_ARGS__); } while(0)
-
 #define LOG_SEND(buf, ...) \
     do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf);printf("%s\n",buf);fflush(stdout);} while (0)
 
@@ -284,10 +284,10 @@
 #define ISO_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
 
 #define ISO_INSUP_CODE 0xA102
-#define ISO_INSUP_NOFV 1  
+#define ISO_INSUP_NOFV 1
 #define ISO_INSUP_MESSAGE_LENGTH sizeof(OSTMType)
 #define ISO_INSUP_OPT_SET_ARMED_STATE 2
-#define ISO_INSUP_OPT_SET_DISARMED_STATE 3 
+#define ISO_INSUP_OPT_SET_DISARMED_STATE 3
 
 #define ISO_HEAB_CODE 5
 #define ISO_HEAB_NOFV 2
@@ -303,11 +303,19 @@
 #define ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH sizeof(TRAJInfoType)
 #define SIM_TRAJ_BYTES_IN_ROW  30
 
+#define ISO_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
 #define ISO_OPRO_CODE 0x0B
 #define ISO_OPRO_MESSAGE_LENGTH sizeof(OPROType)
 
-#define ISO_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
 
+//MQTT
+#define ADDRESS     "tcp://localhost:1883"
+#define CLIENTID    "ExampleClientPub"
+#define TOPIC       "MQTT Examples"
+#define PAYLOAD     "Hello World!"
+#define QOS         1
+#define TIMEOUT     10000L
+volatile MQTTClient_deliveryToken deliveredtoken;
 
 
 typedef struct
@@ -510,7 +518,7 @@ typedef struct
 } DOTMType; //70 bytes
 
 
-typedef struct 
+typedef struct
 {
   U16 TrajectoryIDValueIdU16;
   U16 TrajectoryIDContentLengthU16;
@@ -729,11 +737,6 @@ typedef enum {
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-// DEBUG functions
-void dbg_setdebug(int level);
-int dbg_getdebug(void);
-void dbg_printf(int level, const char *fmt, ...);
-
 
 // GPS TIME FUNCTIONS
 uint64_t UtilgetGPSmsFromUTCms(uint64_t UTCms);
@@ -823,6 +826,13 @@ I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPS
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
+
+void MQTTSendMessage(char *_topic, char *_payload);
+void connlost(void *context, char *cause);
+int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message);
+void delivered(void *context, MQTTClient_deliveryToken dt);
+
+
 
 typedef struct {
   uint64_t timestamp;

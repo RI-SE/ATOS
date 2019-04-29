@@ -30,6 +30,7 @@
 #include <sys/time.h>
 #include "util.h"
 #include "timecontrol.h"
+#include "logging.h"
 
 
 /*------------------------------------------------------------
@@ -55,7 +56,7 @@
 
 #define COMMAND_DOTM_CODE 1
 #define COMMAND_DOTM_ROW_MESSAGE_LENGTH sizeof(DOTMType)
-#define COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH sizeof(TRAJInfoType) 
+#define COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH sizeof(TRAJInfoType)
 #define COMMAND_DOTM_ROWS_IN_TRANSMISSION  40
 #define COMMAND_DTM_BYTES_IN_ROW  30
 
@@ -140,10 +141,10 @@ typedef enum {
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
       void (*fooptr)(int,float) = foo;
       fooptr(10,1.5);
-   
+
    Consequently, the below typedef defines a StateTransition type as a function pointer to a function taking
    (OBCState_t, OBCState_t) as input, and returning an int8_t
-*/ 
+*/
 typedef int8_t (*StateTransition)(OBCState_t *currentState, OBCState_t requestedState);
 
 C8 TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION*COMMAND_DOTM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH];
@@ -180,7 +181,7 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug);
 int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId ,char *TriggAction, char *TriggDelay, char debug);
 int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug);
 I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* SimData, U8 debug);
-I32 ObjectControlSendDTMMEssage(C8 *DTMData, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug);
+I32 ObjectControlSendDTMMessage(C8 *DTMData, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug);
 I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 ObjectControlBuildASPMessage(C8* MessageBuffer, ASPType *ASPData, U8 debug);
 
@@ -203,6 +204,9 @@ int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
+
+#define MODULE_NAME "ObjectControl"
+static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 
 /*------------------------------------------------------------
   -- Public functions
@@ -331,6 +335,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     U8 OSEMSentToMsqU8 = 0;
     U8 STRTSentToMsqU8 = 0;
 
+    LogInit(MODULE_NAME,logLevel);
+    LogMessage(LOG_LEVEL_INFO, "Object control task running with PID: %i", getpid());
+
     (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
 
@@ -348,8 +355,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
                 }
             }
-            
-            //Send HEAB on Msq
+          
             if(uiTimeCycle == 0)
             {
                 bzero(ASCIIBuffer, MessageLength*2 + 1);
@@ -363,7 +369,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 DisconnectU8 |= vCheckRemoteDisconnected(&socket_fd[iIndex]);
                 if (DisconnectU8){
-                    LOG_SEND(LogBuffer, "[ObjectControl] Lost connection to IP %s - returning to IDLE.",object_address_name[iIndex]);
+                    LogMessage(LOG_LEVEL_WARNING,"Lost connection to IP %s - returning to IDLE",object_address_name[iIndex]);
 
                     for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
                     {
@@ -389,7 +395,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             /*gettimeofday(&CurrentTimeStruct, NULL);
 
             CurrentTimeU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
-            
+
 
             /*MTSP*/
             if(HeartbeatMessageCounter == 0)
@@ -424,9 +430,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                 if(recievedNewData)
                 {
-
-                    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Did we recieve new data from %s %d %d: %s \n",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
-
+                    LogMessage(LOG_LEVEL_DEBUG,"Recieved new data from %s %d %d: %s",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
 
                     if(buffer[0] == COMMAND_TOM_CODE)
                     {
@@ -486,24 +490,26 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         sprintf(MTSP, "%" PRIu32, ASPData.MTSPU32);
                         strcat(buffer, MTSP); strcat(buffer,";");
                     }
-                    
-                    DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Send MONITOR message: %s\n",buffer);
+
+                    LogMessage(LOG_LEVEL_DEBUG, "Sending MONR message: %s", buffer);
+
+                    MQTTSendMessage("test", buffer);
                     if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) (void)iCommSend(COMM_MONI,buffer);
 
                     //Ok, let's do the ASP
                     for(i = 0; i < SyncPointCount; i++)
                     {
-                        if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && CurrentTimeU32 > StartTimeU32 && StartTimeU32 > 0 && ASPData.TimeToSyncPointDbl > -1 
+                        if( TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL && CurrentTimeU32 > StartTimeU32 && StartTimeU32 > 0 && ASPData.TimeToSyncPointDbl > -1
                             /*|| TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU32 > 0 && iIndex == 0 && TimeToSyncPoint > -1*/)
                         {
                             // Use the util.c function for time here but it soent mather
                             gettimeofday(&CurrentTimeStruct, NULL); //Capture time
 
                             TimeCap1 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000; //Calculate initial timestamp
-                            
+
                             OP[iIndex].x = ((dbl)atoi(XPosition))/1000; //Set x and y on OP (ObjectPosition)
                             OP[iIndex].y = ((dbl)atoi(YPosition))/1000;
-                            
+
                             //OP[iIndex].OrigoDistance = sqrt(pow(OP[iIndex].x,2) + pow(OP[iIndex].y,2)); //Calculate hypotenuse
 
                             UtilCalcPositionDelta(OriginLatitudeDbl,OriginLongitudeDbl,atof(XPosition)/1e7,atof(YPosition)/1e7, &OP[iIndex]);
@@ -555,7 +561,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                     printf("%d, %d, %3.3f, %s, %s\n", CurrentTimeU32, StartTimeU32, ASPData.TimeToSyncPointDbl, object_address_name[iIndex], ASP[i].MasterIP);
                                     printf("TtS=%3.3f, BestIndex=%d, MTSP=%d, iIndex=%d, IterationTime=%3.0f ms\n",ASPData.TimeToSyncPointDbl, OP[iIndex].BestFoundTrajectoryIndex, ASPData.MTSPU32, iIndex, ((double)(TimeCap2)-(double)TimeCap1));
                                     printf("CurrentTime=%3.3f, x=%3.3f mm, y=%3.3f\n\n",ASPData.CurrentTimeDbl, OP[iIndex].x, OP[iIndex].y);
-                                    
+
                                     //Build and send ASP on message queue
                                     //(void)iCommSend(COMM_ASP,buffer);
                                 }
@@ -568,6 +574,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 }
             }
         }
+
 
         //Send DTM chuncks 
 //        if(GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
@@ -603,8 +610,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
         //Have we recieved a command?
         if(iCommRecv(&iCommand,pcRecvBuffer,RECV_MESSAGE_BUFFER,NULL))
         {
-
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Object control command %d",iCommand);
+            LogMessage(LOG_LEVEL_INFO, "Received command %d", iCommand);
 
 
             if(iCommand == COMM_ARMD && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED))
@@ -613,7 +619,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 {
                     LOG_SEND(LogBuffer,"[ObjectControl] Sending ARM %d", pcRecvBuffer[0]);
                     vSetState(&OBCState, OBC_STATE_ARMED);
-                }              
+                }
                 else if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE)
                 {
                     LOG_SEND(LogBuffer,"[ObjectControl] Sending DISARM: %d", pcRecvBuffer[0]);
@@ -704,6 +710,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 MiscU16 = 72; //Number of bytes in [Ip, Id, Name, Version]
 
                 /*DTM*/
+
                 for(iIndex=0;iIndex<nbr_objects;++iIndex) 
                 { 
                     if( DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
@@ -767,13 +774,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             else if(iCommand == COMM_REPLAY)
             {
                 ObjectcontrolExecutionMode = OBJECT_CONTROL_REPLAY_MODE;
-                printf("[ObjectControl] Object control REPLAY mode <%s>\n", pcRecvBuffer);
-                fflush(stdout);
+                LogMessage(LOG_LEVEL_INFO,"Entering REPLAY mode <%s>", pcRecvBuffer);
             }
             else if(iCommand == COMM_ABORT && OBCState == OBC_STATE_RUNNING)
             {
                 vSetState(&OBCState, OBC_STATE_CONNECTED);
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT; //Set server to ABORT
+                LogMessage(LOG_LEVEL_WARNING,"ABORT received");
                 LOG_SEND(LogBuffer, "[ObjectControl] ABORT received.");
             }
             else if(iCommand == COMM_CONTROL)
@@ -783,11 +790,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_INIT)
             {
+                LogMessage(LOG_LEVEL_INFO,"INIT received");
                 LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
                 /* Get objects; name and drive file */
                 nbr_objects = 0;
                 vFindObjectsInfo(object_traj_file,object_address_name,&nbr_objects);
                 (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhost);
+                LogMessage(LOG_LEVEL_INFO,"ForceObjectToLocalhost = %d", iForceObjectToLocalhost);
                 LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d", iForceObjectToLocalhost);
 
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -862,6 +871,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
 
                 vSetState(&OBCState, OBC_STATE_INITIALIZED);
+                LogMessage(LOG_LEVEL_INFO,"ObjectControl is initialized");
                 LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
 
                 if(TempFd != NULL) fclose(TempFd);
@@ -878,6 +888,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED)
             {
+                LogMessage(LOG_LEVEL_INFO,"CONNECT received");
                 LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.");
 
                 /* Connect and send drive files */
@@ -905,8 +916,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                             switch (errno)
                             {
                             case ECONNREFUSED:
+                                LogMessage(LOG_LEVEL_INFO,"Unable to connect to object %s:%d, retry in %d sec...",object_address_name[iIndex],object_tcp_port[iIndex], (!(1 & DisconnectU8))*3);
                                 LOG_SEND(LogBuffer, "[ObjectControl] Was not able to connect to object, [IP: %s] [PORT: %d], retry in %d sec...",object_address_name[iIndex],object_tcp_port[iIndex], (!(1 & DisconnectU8))*3);
-                                (void)sleep(3);
+                                (void)sleep(3); // TODO: Move this to the rest of the sleep operations? Also, remove the hardcoded 3
                                 break;
                             case EADDRINUSE:
                                 util_error("[ObjectControl] Local address/port already in use");
@@ -947,16 +959,16 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     if(iResult >= 0)
                     {
                         /* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates)*/
+                        LogMessage(LOG_LEVEL_INFO,"Sending OSEM");
                         LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.");
                         ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, OriginLatitude, OriginLongitude, OriginAltitude );
                         bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
-                        strcat(pcSendBuffer,"GPSWeek:");
-                        strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";OriginGPSLongitude;");
-                        strcat(pcSendBuffer,OriginLongitude);strcat(pcSendBuffer,";OriginGPSLatitude;");
-                        strcat(pcSendBuffer,OriginLatitude);strcat(pcSendBuffer,";OriginGPSAltitude;");
+                        strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";");
+                        strcat(pcSendBuffer,OriginLongitude);strcat(pcSendBuffer,";");
+                        strcat(pcSendBuffer,OriginLatitude);strcat(pcSendBuffer,";");
                         strcat(pcSendBuffer,OriginAltitude);
 
-                        iCommSend(COMM_LOG,pcSendBuffer);
+                        iCommSend(COMM_OSEM,pcSendBuffer);
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
 
 
@@ -965,9 +977,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         /*Here we send DOTM, if the IP-address not is found*/
                         if(strstr(DTMReceivers, object_address_name[iIndex]) == NULL)
                         {
-                       
+
                             fd = fopen (object_traj_file[iIndex], "r");
-                            
+
                             RowCount = UtilCountFileRows(fd);
                             //printf("RowCount: %d\n", RowCount);
                             fclose (fd);
@@ -1078,6 +1090,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 }
                 //#endif //NOTCP
 
+                LogMessage(LOG_LEVEL_INFO,"DISCONNECT received");
                 LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.");
                 /* Close safety socket */
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -1093,7 +1106,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else
             {
-                DEBUG_LPRINT(DEBUG_LEVEL_LOW,"Unhandled command in object control\n");
+                LogMessage(LOG_LEVEL_WARNING,"Unhandled command in object control: %d",iCommand);
             }
         }
 
@@ -1234,6 +1247,7 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
 
     if(debug)
     {
+        // TODO: use byte printout from logging when it has been implemented
         printf("VOILData total length = %d bytes (header+message+footer)\n", (int)(ObjectCount*sizeof(Sim1Type) + 6 + COMMAND_MESSAGE_FOOTER_LENGTH +COMMAND_MESSAGE_HEADER_LENGTH));
         printf("----HEADER----\n");
         for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
@@ -1244,7 +1258,7 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
         printf("\n");
     }
 
-    
+
     return ObjectCount*sizeof(Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH; //Total number of bytes
 
 }
@@ -1284,7 +1298,8 @@ int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char
     if(debug)
     {
         int i = 0;
-        for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+        LogMessage(LOG_LEVEL_DEBUG,"TCM:");
+        for(i = 0; i < MessageIndex; i ++) LogMessage(LOG_LEVEL_DEBUG,"[%d]= %x", i, (unsigned char)MessageBuffer[i]);
     }
 
     return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
@@ -1306,7 +1321,8 @@ int ObjectControlBuildACMMessage(char* MessageBuffer, TriggActionType *TAA, char
     if(debug)
     {
         int i = 0;
-        for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+        LogMessage(LOG_LEVEL_DEBUG,"ACM:");
+        for(i = 0; i < MessageIndex; i ++) LogMessage(LOG_LEVEL_DEBUG,"[%d]= %x", i, (unsigned char)MessageBuffer[i]);
     }
 
     return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
@@ -1405,11 +1421,12 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
 
     if(debug == 1)
     {
-        printf("SyncWord = %d\n", MONRData->Header.SyncWordU16);
-        printf("TransmitterId = %d\n", MONRData->Header.TransmitterIdU8);
-        printf("PackageCounter = %d\n", MONRData->Header.MessageCounterU8);
-        printf("AckReq = %d\n", MONRData->Header.AckReqProtVerU8);
-        printf("MessageLength = %d\n", MONRData->Header.MessageLengthU32);
+        LogMessage(LOG_LEVEL_DEBUG,"MONR:");
+        LogMessage(LOG_LEVEL_DEBUG,"SyncWord = %d", MONRData->Header.SyncWordU16);
+        LogMessage(LOG_LEVEL_DEBUG,"TransmitterId = %d", MONRData->Header.TransmitterIdU8);
+        LogMessage(LOG_LEVEL_DEBUG,"PackageCounter = %d", MONRData->Header.MessageCounterU8);
+        LogMessage(LOG_LEVEL_DEBUG,"AckReq = %d", MONRData->Header.AckReqProtVerU8);
+        LogMessage(LOG_LEVEL_DEBUG,"MessageLength = %d", MONRData->Header.MessageLengthU32);
     }
 
     return 0;
@@ -1455,29 +1472,24 @@ I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I3
         sprintf(Timestamp, "%" PRIu32, MONRData->GPSSOWU32);
 
         if(debug && MONRData->GPSSOWU32%400 == 0)
-        //if(debug && MONRData->GPSSOWU32%1 == 0)
         {
-            //for(i = 0; i < 29; i ++) printf("%x-", (unsigned char)*(MONRData+i));
-            //printf("\n");
-
-            printf("[ObjectControl] MONR = ");
-            printf("%x-", MONRData->Header.MessageIdU16);
-            printf("%x-", MONRData->Header.SyncWordU16);
-            printf("%x-", MONRData->Header.TransmitterIdU8);
-            printf("%x-", MONRData->Header.MessageCounterU8);
-            printf("%x-", MONRData->Header.AckReqProtVerU8);
-            printf("%x-", MONRData->Header.MessageLengthU32);
-            printf("%d-", MONRData->GPSSOWU32);
-            printf("%d-", MONRData->XPositionI32);
-            printf("%d-", MONRData->YPositionI32);
-            printf("%d-", MONRData->ZPositionI32);
-            printf("%d-", MONRData->LongitudinalSpeedI16);
-            printf("%d-", MONRData->HeadingU16);
-            printf("%d-", MONRData->DriveDirectionU8);
-            printf("%d-", MONRData->StateU8);
-            printf("%d-", MONRData->ReadyToArmU8);
-            printf("%d", MONRData->ErrorStatusU8);
-            printf("\n");
+            LogMessage(LOG_LEVEL_DEBUG,"MONR = %x-%x-%x-%x-%x-%x-%d-%d-%d-%d-%d-%d-%d-%d-%d-%d",
+                        MONRData->Header.MessageIdU16,
+                        MONRData->Header.SyncWordU16,
+                        MONRData->Header.TransmitterIdU8,
+                        MONRData->Header.MessageCounterU8,
+                        MONRData->Header.AckReqProtVerU8,
+                        MONRData->Header.MessageLengthU32,
+                        MONRData->GPSSOWU32,
+                        MONRData->XPositionI32,
+                        MONRData->YPositionI32,
+                        MONRData->ZPositionI32,
+                        MONRData->LongitudinalSpeedI16,
+                        MONRData->HeadingU16,
+                        MONRData->DriveDirectionU8,
+                        MONRData->StateU8,
+                        MONRData->ReadyToArmU8,
+                        MONRData->ErrorStatusU8);
         }
 
         iLlh[0] = OriginPosition->Latitude;
@@ -1665,6 +1677,7 @@ I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeTyp
 
     if(debug)
     {
+        // TODO: Change to log printout when byte thingy has been implemented
         printf("OSEM total length = %d bytes (header+message+footer)\n", (int)(COMMAND_OSEM_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");
         for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
@@ -1737,6 +1750,7 @@ int ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeTyp
 
     if(debug)
     {
+        // TODO: Change to log printout when byte thingy has been implemented
         printf("STRT total length = %d bytes (header+message+footer)\n", (int)(COMMAND_STRT_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");
         for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
@@ -1779,6 +1793,7 @@ I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 Comm
 
     if(debug)
     {
+        // TODO: Change to log printout when byte thingy has been implemented
         printf("OSTM total length = %d bytes (header+message+footer)\n", (int)(COMMAND_OSTM_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");
         for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
@@ -1826,6 +1841,7 @@ I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeTyp
 
     if(debug)
     {
+        // TODO: Change to log printout when byte thingy has been implemented
         printf("HEAB total length = %d bytes (header+message+footer)\n", (int)(COMMAND_HEAB_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");
         for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
@@ -1860,7 +1876,8 @@ int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, uns
     if(debug)
     {
         int i = 0;
-        for(i = 0; i < MessageIndex; i ++) printf("[%d]= %x\n", i, (unsigned char)MessageBuffer[i]);
+        LogMessage(LOG_LEVEL_DEBUG,"LLCM:");
+        for(i = 0; i < MessageIndex; i ++) LogMessage(LOG_LEVEL_DEBUG,"[%d]= %x", i, (unsigned char)MessageBuffer[i]);
     }
 
     return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
@@ -1868,7 +1885,7 @@ int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, uns
 
 I32 ObjectControlBuildSYPMMessage(C8* MessageBuffer, SYPMType *SYPMData, U32 SyncPoint, U32 StopTime, U8 debug)
 {
-    
+
     I32 MessageIndex = 0, i;
     U16 Crc = 0;
     C8 *p;
@@ -1899,6 +1916,7 @@ I32 ObjectControlBuildSYPMMessage(C8* MessageBuffer, SYPMType *SYPMData, U32 Syn
 
     if(debug)
     {
+        // TODO: Change to log printout when byte thingy has been implemented
         printf("SYPM total length = %d bytes (header+message+footer)\n", (int)(COMMAND_SYPM_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");
         for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
@@ -1942,6 +1960,7 @@ I32 ObjectControlBuildMTSPMessage(C8* MessageBuffer, MTSPType *MTSPData, U32 Syn
 
     if(debug)
     {
+        // TODO: Change to log printout when byte thingy has been implemented
         printf("MTSPData total length = %d bytes (header+message+footer)\n", (int)(COMMAND_MTSP_MESSAGE_LENGTH+COMMAND_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");
         for(i = 0;i < sizeof(HeaderType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
@@ -1995,6 +2014,7 @@ I32 ObjectControlBuildDOTMMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderT
 
     if(debug)
     {
+        // TODO: Change to log printout when byte thingy has been implemented
         printf("Header + TRAJInfo total length = %d bytes\n", (int)(COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH));
         printf("----HEADER + TRAJInfo----\n");
         for(i = 0;i < sizeof(HeaderType) + sizeof(TRAJInfoType); i ++) printf("%x ", (unsigned char)MessageBuffer[i]);
@@ -2041,7 +2061,7 @@ I32 ObjectControlSendDOTMMEssage(C8* Filename, I32 *Socket, I32 RowCount, C8 *IP
             SumMessageLength = SumMessageLength + MessageLength;
         }
 
-        if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
+        if(debug) LogMessage(LOG_LEVEL_DEBUG,"Transmission %d: %d bytes sent", i, MessageLength);
     }
 
     if(Rest > 0)
@@ -2052,10 +2072,10 @@ I32 ObjectControlSendDOTMMEssage(C8* Filename, I32 *Socket, I32 RowCount, C8 *IP
         MessageLength = MessageLength + 2;
         vSendBytes(TrajBuffer, MessageLength, Socket, 0);
         SumMessageLength = SumMessageLength + MessageLength;
-        if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
+        if(debug) LogMessage(LOG_LEVEL_DEBUG,"Transmission %d: %d bytes sent.\n", i, MessageLength);
     }
 
-    printf("[ObjectControl] %d DOTM bytes sent to %s, port %d\n", SumMessageLength, IP, Port);
+    LogMessage(LOG_LEVEL_INFO,"%d DOTM bytes sent to %s:%d", SumMessageLength, IP, Port);
 
     fclose (fd);
 
@@ -2195,6 +2215,7 @@ I32 ObjectControlBuildDOTMMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOT
         int i = 0;
         for(i = 0; i < MessageIndex; i ++)
         {
+            // TODO: Write to log when bytes thingy has been implemented
             if((unsigned char)MessageBuffer[i] >= 0 && (unsigned char)MessageBuffer[i] <= 15) printf("0");
             printf("%x-", (unsigned char)MessageBuffer[i]);
         }
@@ -2218,6 +2239,7 @@ I32 ObjectControlBuildASPMessage(C8* MessageBuffer, ASPType *ASPData, U8 debug)
 
     if(debug)
     {
+        // TODO: Write to log when bytes thingy has been implemented
         printf("ASP total length = %d bytes \n", (int)(ASP_MESSAGE_LENGTH));
         printf("\n----MESSAGE----\n");
         for(i = 0;i < sizeof(ASPType); i ++) printf("%x ", (C8)MessageBuffer[i]);
@@ -2229,7 +2251,7 @@ I32 ObjectControlBuildASPMessage(C8* MessageBuffer, ASPType *ASPData, U8 debug)
 
 
 
-I32 ObjectControlSendDTMMEssage(C8 *DTMData, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug)
+I32 ObjectControlSendDTMMessage(C8 *DTMData, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug)
 {
 
     U32 Rest = 0, i = 0, MessageLength = 0, SumMessageLength = 0, Modulo = 0, Transmissions = 0;
@@ -2237,9 +2259,9 @@ I32 ObjectControlSendDTMMEssage(C8 *DTMData, I32 *Socket, I32 RowCount, C8 *IP, 
 
     MessageLength = ObjectControlBuildDTMMessage(TrajBuffer, DTMData, COMMAND_DOTM_ROWS_IN_TRANSMISSION, DOTMData, 0);
 
-    if(debug) printf("Transmission %d: %d bytes sent.\n", i, MessageLength);
+    if(debug) LogMessage(LOG_LEVEL_DEBUG,"Transmission %d: %d bytes sent", i, MessageLength);
 
-    printf("[ObjectControl] %d DTM bytes sent to %s, port %d\n", SumMessageLength, IP, Port);
+    LogMessage(LOG_LEVEL_INFO,"%d DTM bytes sent to %s:%d", SumMessageLength, IP, Port);
 
     return 0;
 }
@@ -2257,6 +2279,7 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
     I32 i = 0, j = 0, n = 0;
     for(i = 0; i < RowCount; i++)
     {
+        if(debug) LogMessage(LOG_LEVEL_DEBUG,"DOTM row:");
         //Time
         Data = 0;
         Data = *(DTMData + COMMAND_DTM_BYTES_IN_ROW*i + 3);
@@ -2266,7 +2289,7 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         DOTMData->RelativeTimeValueIdU16 = VALUE_ID_RELATIVE_TIME;
         DOTMData->RelativeTimeContentLengthU16 = 4;
         DOTMData->RelativeTimeU32 = SwapU32((U32)Data);
-        if(debug) printf("Time=%d \n", DOTMData->RelativeTimeU32);
+        if(debug) LogMessage(LOG_LEVEL_DEBUG,"Time=%d", DOTMData->RelativeTimeU32);
 
         //x
         Data = 0;
@@ -2277,7 +2300,7 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         DOTMData->XPositionValueIdU16 = VALUE_ID_X_POSITION;
         DOTMData->XPositionContentLengthU16 = 4;
         DOTMData->XPositionI32 = SwapI32((I32)Data);
-        if(debug) printf("X=%d \n", DOTMData->XPositionI32);
+        if(debug) LogMessage(LOG_LEVEL_DEBUG,"X=%d", DOTMData->XPositionI32);
 
         //y
         Data = 0;
@@ -2288,7 +2311,7 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         DOTMData->YPositionValueIdU16 = VALUE_ID_Y_POSITION;
         DOTMData->YPositionContentLengthU16 = 4;
         DOTMData->YPositionI32 = SwapI32((I32)Data);
-        if(debug) printf("Y=%d \n", DOTMData->YPositionI32);
+        if(debug) LogMessage(LOG_LEVEL_DEBUG,"Y=%d", DOTMData->YPositionI32);
 
         //z
         Data = 0;
@@ -2299,7 +2322,7 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         DOTMData->ZPositionValueIdU16 = VALUE_ID_Z_POSITION;
         DOTMData->ZPositionContentLengthU16 = 4;
         DOTMData->ZPositionI32 = SwapI32((I32)Data);
-        if(debug) printf("Z=%d \n", DOTMData->ZPositionI32);
+        if(debug) LogMessage(LOG_LEVEL_DEBUG,"Z=%d", DOTMData->ZPositionI32);
 
         //Heading
         Data = 0;
@@ -2312,7 +2335,7 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
         DOTMData->HeadingContentLengthU16 = 2;
         DOTMData->HeadingU16 = SwapU16((U16)(Data));
-        if(debug) printf("Heading=%d \n", DOTMData->HeadingU16);
+        if(debug) LogMessage(LOG_LEVEL_DEBUG,"Heading=%d", DOTMData->HeadingU16);
 
         //Longitudinal speed
         Data = 0;
@@ -2321,7 +2344,7 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         DOTMData->LongitudinalSpeedValueIdU16 = VALUE_ID_LONGITUDINAL_SPEED;
         DOTMData->LongitudinalSpeedContentLengthU16 = 2;
         DOTMData->LongitudinalSpeedI16 = SwapI16((I16)Data);
-        if(debug) printf("LongitudinalSpeedI16=%d \n", DOTMData->LongitudinalSpeedI16);
+        if(debug) LogMessage(LOG_LEVEL_DEBUG,"LongitudinalSpeedI16=%d", DOTMData->LongitudinalSpeedI16);
 
         //Lateral speed
         Data = 0;
@@ -2330,7 +2353,7 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         DOTMData->LateralSpeedValueIdU16 = VALUE_ID_LATERAL_SPEED;
         DOTMData->LateralSpeedContentLengthU16 = 2;
         DOTMData->LateralSpeedI16 = SwapI16((I16)Data);
-        if(debug) printf("LateralSpeedI16=%d \n", DOTMData->LateralSpeedI16);
+        if(debug) LogMessage(LOG_LEVEL_DEBUG,"LateralSpeedI16=%d", DOTMData->LateralSpeedI16);
 
         //Longitudinal acceleration
         Data = 0;
@@ -2339,7 +2362,7 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         DOTMData->LongitudinalAccValueIdU16 = VALUE_ID_LONGITUDINAL_ACCELERATION;
         DOTMData->LongitudinalAccContentLengthU16 = 2;
         DOTMData->LongitudinalAccI16 = SwapI16((I16)Data);
-        if(debug) printf("LongitudinalAccI16=%d \n", DOTMData->LongitudinalAccI16);
+        if(debug) LogMessage(LOG_LEVEL_DEBUG,"LongitudinalAccI16=%d", DOTMData->LongitudinalAccI16);
 
         //Lateral acceleration
         Data = 0;
@@ -2348,7 +2371,7 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         DOTMData->LateralAccValueIdU16 = VALUE_ID_LATERAL_ACCELERATION;
         DOTMData->LateralAccContentLengthU16 = 2;
         DOTMData->LateralAccI16 = SwapI16((I16)Data);
-        if(debug) printf("LateralAccI16=%d \n", DOTMData->LateralAccI16);
+        if(debug) LogMessage(LOG_LEVEL_DEBUG,"LateralAccI16=%d", DOTMData->LateralAccI16);
 
         //Curvature
         Data = 0;
@@ -2378,6 +2401,7 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
         int i = 0;
         for(i = 0; i < MessageIndex; i ++)
         {
+            // TODO: Write to log when bytes thingy has been implemented
             if((unsigned char)MessageBuffer[i] >= 0 && (unsigned char)MessageBuffer[i] <= 15) printf("0");
             printf("%x-", (unsigned char)MessageBuffer[i]);
         }
@@ -2418,7 +2442,7 @@ static I32 vConnectObject(int* sockfd, const char* name, const uint32_t port, U8
     bcopy((char *) server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(port);
 
-    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[ObjectControl] Try to connect to socket: %s %i\n",name,port);
+    LogMessage(LOG_LEVEL_INFO,"Attempting to connect to socket: %s %i",name,port);
 
     // do
     {
@@ -2439,7 +2463,7 @@ static I32 vConnectObject(int* sockfd, const char* name, const uint32_t port, U8
     }
     //} while(iResult < 0 && *Disconnect == 0);
 
-    DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"[ObjectControl] Connected to command socket: %s %i\n",name,port);
+    LogMessage(LOG_LEVEL_INFO,"Connected to command socket: %s %i",name,port);
     // Enable polling of status to detect remote disconnect
     fcntl(*sockfd, F_SETFL, O_NONBLOCK);
 
@@ -2455,7 +2479,7 @@ static void vDisconnectObject(int* sockfd)
 static void vSendString(const char* command, int* sockfd)
 {
     long n;
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Sending: <%s>\n",command);
+    LogMessage(LOG_LEVEL_DEBUG,"Sending: <%s>",command);
     n = write(*sockfd, command, strlen(command));
     if (n < 0)
     {
@@ -2487,7 +2511,7 @@ static void vSendFile(const char* object_traj_file, int* sockfd)
     long n;
     size_t readBytes;
 
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Open file %s\n",object_traj_file);
+    LogMessage(LOG_LEVEL_DEBUG,"Open file %s",object_traj_file);
 
     filefd = fopen (object_traj_file, "rb");
     if (filefd == NULL)
@@ -2500,8 +2524,8 @@ static void vSendFile(const char* object_traj_file, int* sockfd)
         readBytes = fread(buffer,1,1024,filefd);
         if(readBytes > 0)
         {
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Sending: <%s>",buffer);
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Try to sending nbr of bytes: <%lu>",readBytes);
+            LogMessage(LOG_LEVEL_DEBUG,"Sending: <%s>",buffer);
+            LogMessage(LOG_LEVEL_DEBUG,"Attempting send of <%lu> bytes",readBytes);
             n = write(*sockfd, buffer, readBytes);
             if (n < 0)
             {
@@ -2519,7 +2543,7 @@ static void vCreateSafetyChannel(const char* name, const uint32_t port, int* soc
     struct hostent *object;
 
     /* Connect to object safety socket */
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Creating safety socket");
+    LogMessage(LOG_LEVEL_DEBUG,"Creating safety socket");
 
     *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
     if (*sockfd < 0)
@@ -2547,9 +2571,7 @@ static void vCreateSafetyChannel(const char* name, const uint32_t port, int* soc
         util_error("ERR: calling fcntl");
     }
 
-    printf("[ObjectControl] Created socket and safety address: %s %d\n",name,port);
-    //DEBUG_LPRINT(DEBUG_LEVEL_MEDIUM,"INF: Created socket and safety address: %s %d\n",name,port);
-
+    LogMessage(LOG_LEVEL_INFO,"Created socket and safety address: %s:%d",name,port);
 }
 
 static void vCloseSafetyChannel(int* sockfd)
@@ -2574,14 +2596,14 @@ static I32 vCheckRemoteDisconnected(int* sockfd)
         if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
 
         // Other error occurred
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Error when checking connection status");
+        LogMessage(LOG_LEVEL_WARNING,"Error when checking connection status");
         return 1;
     }
 
     // Something has been received on socket
     if (x > 0)
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_HIGH,"INF: Received unexpected communication from object on command channel");
+        LogMessage(LOG_LEVEL_INFO,"Received unexpected communication from object on command channel");
         return 0;
     }
 
@@ -2604,6 +2626,7 @@ int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendDa
 {
     ssize_t result;
 
+    // TODO: Change to log write when bytes thingy has been implemented
     if(debug){ printf("Bytes sent: "); int i = 0; for(i = 0; i < Length; i++) printf("%x-", (unsigned char)*(SendData+i)); printf("\n");}
 
     result = sendto(*sockfd, SendData, Length, 0, (const struct sockaddr *) addr, sizeof(struct sockaddr_in));
@@ -2624,7 +2647,7 @@ static void vSendHeartbeat(int* sockfd, struct sockaddr_in* addr, hearbeatComman
 
     bzero(pcCommand,10);
 
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Sending: <HEBT>");
+    LogMessage(LOG_LEVEL_DEBUG,"Sending: <HEBT>");
 
     if(COMMAND_HEARTBEAT_GO == tCommand)
     {
@@ -2664,13 +2687,13 @@ static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNew
             }
             else
             {
-                DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: No data receive\n");
+                LogMessage(LOG_LEVEL_DEBUG,"No data received");
             }
         }
         else
         {
             *recievedNewData = 1;
-            DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Received: <%s>\n",buffer);
+            LogMessage(LOG_LEVEL_DEBUG,"Received: <%s>",buffer);
         }
     } while(result > 0 );
 }
@@ -2744,7 +2767,7 @@ int8_t vSetState(OBCState_t *currentState, OBCState_t requestedState)
 
     if (retval == -1)
     {
-        DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Invalid transition requested: from %d to %d\n",currentState,&requestedState);
+        LogMessage(LOG_LEVEL_WARNING,"Invalid transition requested: from %d to %d",*currentState,requestedState);
     }
     return retval;
 }
@@ -2783,7 +2806,7 @@ int8_t tFromIdle(OBCState_t *currentState, OBCState_t requestedState)
 
 int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState)
 {
-    if (requestedState == OBC_STATE_CONNECTED)
+    if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
         return 0;
@@ -2793,7 +2816,7 @@ int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState)
 
 int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState)
 {
-    if (requestedState == OBC_STATE_ARMED)
+    if (requestedState == OBC_STATE_ARMED || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
         return 0;
@@ -2803,7 +2826,7 @@ int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState)
 
 int8_t tFromArmed(OBCState_t *currentState, OBCState_t requestedState)
 {
-    if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_RUNNING)
+    if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_RUNNING || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
         return 0;
@@ -2813,7 +2836,7 @@ int8_t tFromArmed(OBCState_t *currentState, OBCState_t requestedState)
 
 int8_t tFromRunning(OBCState_t *currentState, OBCState_t requestedState)
 {
-    if (requestedState == OBC_STATE_CONNECTED)
+    if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
         return 0;
