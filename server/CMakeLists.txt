@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
-project (ChronosProject)
+project (Maestro)
 
 # copy needed file
 #configure_file(traj/0.traj traj/192.168.0.1 COPYONLY)
