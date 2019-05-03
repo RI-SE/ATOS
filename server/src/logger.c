@@ -86,7 +86,7 @@ void logger_task()
     struct stat st = {0};
     if (stat(LOG_PATH, &st) == -1)
     {
-        LogMessage(LOG_LEVEL_INFO,"Nonexistent log directory - will be created");
+        LogMessage(LOG_LEVEL_INFO,"Creating log directory");
         vCreateLogFolder(LOG_PATH);
     }
 
