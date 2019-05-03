@@ -74,14 +74,9 @@ void logger_task()
     LogMessage(LOG_LEVEL_INFO,"Logger task running with PID: %d",getpid());
 
     int GPSweek;
-    struct timeval tvTime ;
-    uint64_t LogTimeStart;
-    DIR *dir;
-    struct dirent *ent;
-    FILE *filefd,*fileread,*replayfd, *filefdComp;
+    FILE *filefd,*replayfd, *filefdComp;
     struct timespec sleep_time, ref_time;
     U8 isFirstInit = 1;
-    TimeSetToCurrentSystemTime(&tvTime);
 
     (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
     //(void)iCommInit(IPC_SEND,MQ_LG_1,0);
