@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
 
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -49,12 +50,15 @@ static void vCreateLogFolder(char logFolder[MAX_FILE_PATH]);
 static void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvLogFilePath, unsigned int csvFilePathLength);
 static int ReadLogLine(FILE *fd, char *Buffer);
 static int CountFileRows(FILE *fd);
+static void sigint_handler(int signo);
 
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
 #define MODULE_NAME "Logger"
 static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
+
+static volatile int iExit = 0;
 
 /*------------------------------------------------------------
   -- Public functions
@@ -93,9 +97,13 @@ void logger_task()
     (void)strcat(pcLogFile," ");
     (void)strcat(pcLogFileComp," ");
 
+    if (signal(SIGINT, sigint_handler) == SIG_ERR)
+    {
+        util_error("Unable to create SIGINT handler.");
+    }
+    iExit = 0;
 
     /* Listen for commands */
-    int iExit = 0;
     int iCommand;
 
     /* Execution mode*/
@@ -115,7 +123,7 @@ void logger_task()
         bzero(TimeStampUTCBufferRecv,MQ_MAX_UTC_LENGTH);
         (void)iCommRecv(&iCommand,pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
 
-        if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand!=COMM_OBC_STATE && iCommand!=COMM_MONI )
+        if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand != COMM_OBC_STATE && iCommand != COMM_MONI )
         {
             Timestamp = atol(TimeStampUTCBufferRecv);
             bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
@@ -178,7 +186,7 @@ void logger_task()
             char* GPSSecondOfWeek = strtok(str, ";");
 
             int counter = 0;
-            while (GPSSecondOfWeek != NULL && counter < 2)  // Get GPS second of week
+            while (GPSSecondOfWeek != NULL && counter < 2 && !iExit)  // Get GPS second of week
             {
               //printf("%s\n", token);
               GPSSecondOfWeek = strtok(NULL, ";");
@@ -292,7 +300,7 @@ void logger_task()
                         (void)iCommSend(COMM_CONTROL, NULL);
                     }*/
 
-                } while(--RowCount >= 0);
+                } while(--RowCount >= 0 && !iExit);
 
             }
             else
@@ -448,7 +456,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     // Open directory ./traj/
     if ((dir = opendir(TRAJECTORY_PATH)) != NULL)
     {
-        while ((ent = readdir(dir)) != NULL)
+        while ((ent = readdir(dir)) != NULL && !iExit)
         {
             // Copy all files in trajectory and add them to the log file
             bzero(pcBuffer, sizeof(pcBuffer));
@@ -458,7 +466,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
             {
                 fileread = fopen(pcBuffer, "r");
                 read = fgetc(fileread);
-                while (read != EOF)
+                while (read != EOF && !iExit)
                 {
                     fputc(read,filefd);
                     read = fgetc(fileread);
@@ -492,7 +500,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
       /*read the .conf file and print it in to the .log file */
       fileread = fopen(TEST_CONF_FILE,"r");
       read = fgetc(fileread);
-      while(read!= EOF)
+      while(read!= EOF && !iExit)
       {
           fputc(read,filefd);
           read = fgetc(fileread);
@@ -533,5 +541,11 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
 
 
     fclose(filefd);
+}
+
+
+void sigint_handler(int signo)
+{
+    iExit = 1;
 }
 
