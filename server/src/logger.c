@@ -546,6 +546,14 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
 
 void sigint_handler(int signo)
 {
-    iExit = 1;
+    switch (signo)
+    {
+    case SIGINT:
+        LogMessage(LOG_LEVEL_WARNING,"Caught SIGINT; attempting graceful exit...");
+        iExit = 1;
+        break;
+    default:
+        LogMessage(LOG_LEVEL_WARNING,"Unhandled signal");
+    }
 }
 
