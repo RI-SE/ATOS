@@ -122,7 +122,7 @@ void logger_task()
             UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
             bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
 
-            //Remove newlines in http Requests for nicer printouts.
+            // Remove newlines in http Requests for nicer printouts.
             for (int i = 0; i < strlen(pcRecvBuffer); i++){
                 if(pcRecvBuffer[i] == '\n'){
                   pcRecvBuffer[i] = ' ';
@@ -130,14 +130,28 @@ void logger_task()
             }
 
             sprintf ( pcBuffer,"%s;%s;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, iCommand, pcRecvBuffer);
+
             filefd = fopen(pcLogFile,"a");
+            if (filefd != NULL)
+            {
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
+                fclose(filefd);
+            }
+            else
+            {
+                LogMessage(LOG_LEVEL_ERROR,"Unable to open file <%s>",pcLogFile);
+            }
+
             filefdComp = fopen(pcLogFileComp,"a");
-
-            (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-            (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
-
-            fclose(filefd);
-            fclose(filefdComp);
+            if (filefdComp != NULL)
+            {
+                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+                fclose(filefdComp);
+            }
+            else
+            {
+                LogMessage(LOG_LEVEL_ERROR,"Unable to open file <%s>",pcLogFileComp);
+            }
 
         }
 
