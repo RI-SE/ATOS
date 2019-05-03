@@ -343,24 +343,46 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(ClientResult > 0 && ClientResult < SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH)
             {
-                for(i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i ++ ) bzero(SystemControlArgument[i],SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
+
+                for(i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i ++ )
+                    bzero(SystemControlArgument[i],SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
+
                 CurrentInputArgCount = 0;
                 StartPtr = pcBuffer;
                 StopPtr = pcBuffer;
-                CmdPtr = strchr(strchr(pcBuffer,'\n')+1,'\n')+1;
-                StartPtr = strchr(pcBuffer, '(')+1;
-                //printf("pcBuffer: %s\n", pcBuffer);
-                while (StopPtr != NULL)
+                CmdPtr = NULL;
+
+                if (strstr(pcBuffer,"POST") != NULL)
                 {
-                    StopPtr = (char *)strchr(StartPtr, ',');
-                    if(StopPtr == NULL) strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)strchr(StartPtr, ')') - (uint64_t)StartPtr);
-                    else strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
-                    StartPtr = StopPtr+1;
-                    CurrentInputArgCount ++;
-                    //printf("CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount-1]);
+                    CmdPtr = strchr(pcBuffer,'\n');
+                    if (CmdPtr != NULL && strstr(CmdPtr+1,"Host") != NULL)
+                    {
+                        CmdPtr = strchr(CmdPtr+1,'\n');
+                        if (CmdPtr != NULL)
+                        {
+                            CmdPtr++;
+                            StartPtr = strchr(pcBuffer, '(')+1;
+                            //printf("pcBuffer: %s\n", pcBuffer);
+                            while (StopPtr != NULL)
+                            {
+                                StopPtr = (char *)strchr(StartPtr, ',');
+                                if(StopPtr == NULL) strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)strchr(StartPtr, ')') - (uint64_t)StartPtr);
+                                else strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
+                                StartPtr = StopPtr+1;
+                                CurrentInputArgCount ++;
+                                //printf("CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount-1]);
+                            }
+
+                            SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+                        }
+                    }
+                    else {CmdPtr = NULL; /* If we don't find "Host" */}
                 }
 
-                SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+                if (CmdPtr == NULL)
+                {
+                    LogMessage(LOG_LEVEL_WARNING,"Received badly formatted data");
+                }
             }
         }
         else if(ModeU8 == 1)
