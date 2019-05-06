@@ -11,7 +11,7 @@
 #ifndef __TIMECONTROL_H_INCLUDED__
 #define __TIMECONTROL_H_INCLUDED__
 
-
+#include "util.h"
 
 /*------------------------------------------------------------
   -- Function declarations.

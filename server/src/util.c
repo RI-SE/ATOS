@@ -1710,6 +1710,7 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize,char* TimeUTCR
 
   return iResult;
 }
+
 /* iCommSend sends a given message cpData and command icommand out on all
  * the five message ques. but first ut prioritis the messages depending on
  * iCommand
@@ -2928,8 +2929,8 @@ void MQTTSendMessage(char *_topic, char *_payload)
     while(deliveredtoken != token);
     MQTTClient_disconnect(client, 10000);
     MQTTClient_destroy(&client);
-    return rc;
-
+    //return rc;
+}
 
 I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 ObjectType, U8 OperationMode, U32 ObjectMass, U8 Debug)
 {
@@ -2966,7 +2967,7 @@ I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPA
     *(MessageBuffer + i++) = (U8)(Crc >> 8);
     MessageIndex = i;
 
-    if(debug)
+    if(Debug)
     {
         printf("OPRO total length = %d bytes (header+message+footer)\n", (int)(ISO_OPRO_MESSAGE_LENGTH+ISO_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");

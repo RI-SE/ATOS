@@ -144,7 +144,7 @@ I32 SystemControlBuildControlResponse(U16 ResponseStatus, C8* ResponseString, C8
 void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug);
 void SystemControlSendMONR(C8* LogString, I32* Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I32 *sockfd, struct sockaddr_in* addr);
-I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
+//I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
 I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 debug);
 I32 SystemControlReadServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
 I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
@@ -467,7 +467,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             ProcessControlData[18] = (U8) GPSTime->FixQualityU8;
             ProcessControlData[19] = (U8) GPSTime->NSatellitesU8;
 
-            SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, PCDMessageLengthU32 + 6, 1);
+            //SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, PCDMessageLengthU32 + 6, 1);
+            UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, PCDMessageLengthU32 + 6, 0);
+
         }
 
 
@@ -654,7 +656,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0], SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
                 }
                 else if (ControlResponseBuffer[0] == PATH_INVALID_MISSING)
-                { 
+                {
                     LogMessage(LOG_LEVEL_INFO,"Failed receiving file: %s", SystemControlArgument[0]);
 
                     SystemControlReceiveRxData(&ClientSocket, "/file.tmp", SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
@@ -665,8 +667,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 {
 
                     LogMessage(LOG_LEVEL_INFO,"Receiving file: %s", SystemControlArgument[0]);
-                    SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 0);  
-                }  
+                    SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 0);
+                }
 
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:", ControlResponseBuffer, 1, &ClientSocket, 0);
 
@@ -999,7 +1001,8 @@ void SystemControlSendMONR(C8* MONRStr, I32* Sockfd, U8 Debug){
       for(i = 0; i < 2; i++, j++) Data[j] = Header[i];
       t = strlen(MONRStr);
       for(i = 0; i < t; i++, j++) Data[j] = *(MONRStr+i);
-      SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+      //SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+      UtilSendTCPData("System Control", Data, n + 4, Sockfd, 0);
   } else LogMessage(LOG_LEVEL_ERROR,"MONR string longer than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
 
@@ -1026,7 +1029,8 @@ void SystemControlSendLog(C8* LogString, I32* Sockfd, U8 Debug)
         for(i = 0; i < 2; i++, j++) Data[j] = Header[i];
         t = strlen(LogString);
         for(i = 0; i < t; i++, j++) Data[j] = *(LogString+i);
-        SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+        //SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+        UtilSendTCPData("System Control", Data, n + 4, Sockfd, 0);
     } else LogMessage(LOG_LEVEL_ERROR,"Log string longer than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 
 }
@@ -1055,7 +1059,8 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8* ResponseString, C8
 
         if(Debug) { for(i = 0; i < n + 4; i++) printf("%x-", Data[i]); printf("\n"); }
 
-        SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+        //SystemControlSendBytes(Data, n + 4, Sockfd, 0);
+        UtilSendTCPData("System Control", Data, n + 4, Sockfd, 0);
     } else LogMessage(LOG_LEVEL_ERROR,"Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
 
@@ -1276,6 +1281,7 @@ static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I3
     LogMessage(LOG_LEVEL_INFO,"Created process channel socket and address: %s:%d",name,port);
 }
 
+/*
 I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug)
 {
     I32 result;
@@ -1289,7 +1295,7 @@ I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData
 
     return 0;
 }
-
+*/
 
 
 I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
@@ -1452,7 +1458,7 @@ I32 SystemControlBuildFileContentInfo(C8 *Path, C8 *ReturnValue, U8 Debug)
     *(ReturnValue+2) = (U8)(st.st_size >> 8);
     *(ReturnValue+3) = (U8)st.st_size;
 
-    
+
     if(Debug) LogMessage(LOG_LEVEL_DEBUG,"Filesize %d of %s", (I32)st.st_size, CompletePath);
 
     return 0;
@@ -1486,7 +1492,7 @@ I32 SystemControlCheckFileDirectoryExist(C8 *ParameterName, C8 *ReturnValue, U8 
         closedir(pDir);
     }
 
-    
+
     if(Debug) LogMessage(LOG_LEVEL_DEBUG,"%d %s", *ReturnValue, CompletePath);
 
 
@@ -1729,8 +1735,8 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
         else
         {
             *ReturnValue = TIME_OUT;
-        } 
-        
+        }
+
         LogMessage(LOG_LEVEL_DEBUG,"Rec count = %d, Req count = %d", TotalRxCount, FileSizeU32);
 
     }
@@ -1777,20 +1783,22 @@ I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *Retu
         {
             bzero(TxBuffer, PacketSizeU16);
             fread(TxBuffer,1,PacketSizeU16,fd);
-            SystemControlSendBytes(TxBuffer, PacketSizeU16, sockfd, 0); //Send a packet
+            //SystemControlSendBytes(TxBuffer, PacketSizeU16, sockfd, 0); //Send a packet
+            UtilSendTCPData("System Control", TxBuffer, PacketSizeU16, sockfd, 0);
         }
 
         if(RestCount > 0)
         {
             bzero(TxBuffer, PacketSizeU16);
             fread(TxBuffer,1,RestCount,fd);
-            SystemControlSendBytes(TxBuffer, RestCount, sockfd, 0); //Send the rest
+            //SystemControlSendBytes(TxBuffer, RestCount, sockfd, 0); //Send the rest
+            UtilSendTCPData("System Control", TxBuffer, RestCount, sockfd, 0);
         }
 
         fclose(fd);
 
         if(Remove) remove(CompletePath);
-        
+
         LogMessage(LOG_LEVEL_INFO,"Sent file: %s, total size = %d, transmissions = %d", CompletePath, (PacketSizeU16*TransmissionCount+RestCount), i + 1);
 
     }
