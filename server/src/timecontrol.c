@@ -47,6 +47,10 @@
 #define LOG_FILE "time.log"
 #define LOG_BUFFER_LENGTH 128
 
+#define FIX_QUALITY_NONE 0
+#define FIX_QUALITY_BASIC 1
+#define FIX_QUALITY_DIFFERENTIAL 2
+
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -129,7 +133,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
         }
         else
         {
-            LogMessage(LOG_LEVEL_WARNING, "Defaulting to system time");
+            LogMessage(LOG_LEVEL_INFO, "Defaulting to system time");
 
             // Send warning over MQ
             LOG_SEND(LogBuffer, "Unable to connect to time server");
@@ -270,7 +274,7 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
     struct timeval tEnd,tCurr;
     TimeType tempGPSTime;
 
-    LogMessage(LOG_LEVEL_INFO,"Time source address: %s:%d",name,port);
+    LogMessage(LOG_LEVEL_INFO,"Specified time server address: %s:%d",name,port);
     /* Connect to object safety socket */
 
     *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
@@ -303,7 +307,7 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
     {
         util_error("Error calling fcntl");
     }
-    LogMessage(LOG_LEVEL_INFO,"Created socket and time address: %s:%d",name,port);
+    LogMessage(LOG_LEVEL_INFO,"Created socket and time address: %s:%d", name, port);
 
     // Check for existence of remote server
     LogMessage(LOG_LEVEL_INFO,"Awaiting reply from time server...");
@@ -323,17 +327,23 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
             TimeControlDecodeTimeBuffer(&tempGPSTime, timeBuffer, 0);
             switch (tempGPSTime.FixQualityU8)
             {
-            case 0:
-                LogMessage(LOG_LEVEL_WARNING, "Received reply from time server but it had no satellite fix");
+            case FIX_QUALITY_NONE:
+                LogMessage(LOG_LEVEL_WARNING, "Received reply from time server: no satellite fix");
                 return 0;
-            default:
-                LogMessage(LOG_LEVEL_INFO, "Received reply from time server");
+            case FIX_QUALITY_BASIC:
+                LogMessage(LOG_LEVEL_INFO, "Received reply from time server: non-differential fix");
                 return 1;
+            case FIX_QUALITY_DIFFERENTIAL:
+                LogMessage(LOG_LEVEL_INFO, "Received reply from time server: non-differential fix");
+                return 1;
+            default:
+                LogMessage(LOG_LEVEL_ERROR, "Received reply from time server: unexpected fix quality parameter");
+                return 0;
             }
         }
     } while (timercmp(&tCurr,&tEnd,<));
 
-    LogMessage(LOG_LEVEL_WARNING, "Unable to connect to time server");
+    LogMessage(LOG_LEVEL_WARNING, "Unable to connect to specified time server: %s:%d", name, port);
     return 0;
 }
 
