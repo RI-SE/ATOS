@@ -415,33 +415,45 @@ static int TimeControlSendUDPData(int* sockfd, struct sockaddr_in* addr, C8* Sen
 }
 
 
-static void TimeControlRecvTime(int* sockfd, C8* buffer, int length, int* recievedNewData)
+static void TimeControlRecvTime(int* sockfd, C8* buffer, int length, int* receivedNewData)
 {
     int result;
-    *recievedNewData = 0;
+    *receivedNewData = 0;
     do
     {
-
         result = recv(*sockfd, buffer, length, 0);
 
         if (result < 0)
         {
+            // If we received a _real_ error, report it. Otherwise, nothing was received
             if(errno != EAGAIN && errno != EWOULDBLOCK)
-            {
                 util_error("Failed to receive from time socket");
-            }
             else
-            {
-                LogMessage(LOG_LEVEL_DEBUG,"No data received, result=%d", result);
-            }
+                return;
+        }
+        else if (result == 0)
+        {
+            // EOF received
+            LogMessage(LOG_LEVEL_ERROR,"Time server disconnected");
+            return;
         }
         else
         {
-            *recievedNewData = 1;
-            LogMessage(LOG_LEVEL_DEBUG,"Received data: <%s>, result=%d",buffer, result);
+            // If message size is equal to what is expected according to the format, keep reading until the newest has been read
+            if (result == length)
+            {
+                *receivedNewData = 1;
+                LogMessage(LOG_LEVEL_DEBUG,"Received data: <%s>, result=%d", buffer, result);
+            }
+            else
+            {
+                *receivedNewData = 0;
+                LogMessage(LOG_LEVEL_ERROR,"Received badly formatted message from time server");
+            }
 
         }
-    } while(result > 0 );
+    } while (result > 0);
+    return;
 }
 
 static void TimeControlDecodeTimeBuffer(TimeType* GPSTime, C8* TimeBuffer, C8 debug)
@@ -463,7 +475,7 @@ static void TimeControlDecodeTimeBuffer(TimeType* GPSTime, C8* TimeBuffer, C8 de
                                                                                                                                                      ((U64)TimeBuffer[18]) << 24 | ((U64)TimeBuffer[19]) << 16 | ((U64)TimeBuffer[20]) << 8 | TimeBuffer[21];
     GPSTime->GPSMinutesU32 = ((U32)TimeBuffer[22]) << 24 | ((U32)TimeBuffer[23]) << 16 | ((U32)TimeBuffer[24]) << 8 | TimeBuffer[25];
     GPSTime->GPSWeekU16 = ((U16)TimeBuffer[26]) << 8 | TimeBuffer[27];
-    GPSTime->GPSSecondsOfWeekU32 = ((U32)TimeBuffer[28]) << 24 | ((U32)TimeBuffer[29]) << 16 | ((U32)TimeBuffer[30]) << 8 | TimeBuffer[31];
+    GPSTime->GPSSecondsOfWeekU32 = ((U32)TimeBuffer[28]) << 24 | ((U32)TimeBuffer[29]) << 16 | ((U32)TimeBuffer[30]) << 8 | TimeBuffer[31] + MS_LEAP_SEC_DIFF_UTC_GPS/1000;
     GPSTime->GPSSecondsOfDayU32 = ((U32)TimeBuffer[32]) << 24 | ((U32)TimeBuffer[33]) << 16 | ((U32)TimeBuffer[34]) << 8 | TimeBuffer[35];
     GPSTime->ETSIMillisecondsU64 = ((U64)TimeBuffer[36]) << 56 | ((U64)TimeBuffer[37]) << 48 | ((U64)TimeBuffer[38]) << 40 | ((U64)TimeBuffer[39]) << 32 |
                                                                                                                                                       ((U64)TimeBuffer[40]) << 24 | ((U64)TimeBuffer[41]) << 16 | ((U64)TimeBuffer[42]) << 8 | TimeBuffer[43];
