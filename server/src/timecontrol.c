@@ -331,11 +331,11 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
                 LogMessage(LOG_LEVEL_WARNING, "Received reply from time server: no satellite fix");
                 return 0;
             case FIX_QUALITY_BASIC:
-                LogMessage(LOG_LEVEL_INFO, "Received reply from time server: non-differential fix on %d satellites",
+                LogMessage(LOG_LEVEL_INFO, "Received reply from time server: non-differential fix on %d satellite(s)",
                            tempGPSTime.NSatellitesU8);
                 return 1;
             case FIX_QUALITY_DIFFERENTIAL:
-                LogMessage(LOG_LEVEL_INFO, "Received reply from time server: differential fix on %d satellites",
+                LogMessage(LOG_LEVEL_INFO, "Received reply from time server: differential fix on %d satellite(s)",
                            tempGPSTime.NSatellitesU8);
                 return 1;
             default:
