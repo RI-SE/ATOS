@@ -187,9 +187,7 @@ I32 ObjectControlBuildASPMessage(C8* MessageBuffer, ASPType *ASPData, U8 debug);
 
 void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug);
 
-static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
-                             char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
-                             int* nbr_objects);
+static void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH], I32* nbr_objects);
 
 int8_t vSetState(OBCState_t *currentState, OBCState_t requestedState);
 StateTransition tGetTransition(OBCState_t fromState);
@@ -213,23 +211,23 @@ static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
   ------------------------------------------------------------*/
 void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 {
-    int safety_socket_fd[MAX_OBJECTS];
+    I32 safety_socket_fd[MAX_OBJECTS];
     struct sockaddr_in safety_object_addr[MAX_OBJECTS];
-    int socket_fd[MAX_OBJECTS];
-    char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH];
-    char object_address_name[MAX_OBJECTS][MAX_FILE_PATH];
-    uint32_t object_udp_port[MAX_OBJECTS];
-    uint32_t object_tcp_port[MAX_OBJECTS];
-    int nbr_objects=0;
-    int iExit = 0;
-    int iCommand;
-    char pcRecvBuffer[RECV_MESSAGE_BUFFER];
-    char pcTempBuffer[512];
+    I32 socket_fd[MAX_OBJECTS];
+    C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH];
+    C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH];
+    U32 object_udp_port[MAX_OBJECTS];
+    U32 object_tcp_port[MAX_OBJECTS];
+    I32 nbr_objects=0;
+    I32 iExit = 0;
+    I32 iCommand;
+    C8 pcRecvBuffer[RECV_MESSAGE_BUFFER];
+    C8 pcTempBuffer[512];
     C8 MessageBuffer[BUFFER_SIZE_3100];
     C8 ASCIIBuffer[BUFFER_SIZE_3100];
-    int iIndex = 0, i=0;
+    I32 iIndex = 0, i=0;
     struct timespec sleep_time, ref_time;
-    int iForceObjectToLocalhost = 0;
+    I32 iForceObjectToLocalhost = 0;
 
     FILE *fd;
     char Id[SMALL_BUFFER_SIZE_0];
@@ -1110,10 +1108,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
         }
 
-        bzero(Buffer2, SMALL_BUFFER_SIZE_1);
-        Buffer2[0] = OBCState;
-        (void)iCommSend(COMM_OBC_STATE,Buffer2);
-
         if(!iExit)
         {
             /* Make call periodic */
@@ -1124,6 +1118,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             if(uiTimeCycle >= HEARTBEAT_TIME_MS/TASK_PERIOD_MS)
             {
                 uiTimeCycle = 0;
+                
+                //Send OBCState on message queue
+                bzero(Buffer2, SMALL_BUFFER_SIZE_1);
+                Buffer2[0] = OBCState;
+                (void)iCommSend(COMM_OBC_STATE,Buffer2);
             }
 
             (void)nanosleep(&sleep_time,&ref_time);
@@ -2698,7 +2697,7 @@ static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNew
     } while(result > 0 );
 }
 
-void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], char object_address_name[MAX_OBJECTS][MAX_FILE_PATH], int* nbr_objects)
+void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH], I32* nbr_objects)
 {
     DIR* traj_directory;
     struct dirent *directory_entry;

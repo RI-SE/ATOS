@@ -43,10 +43,14 @@
 #define SUP_MQ_MAX_SIZE 6200
 #define SUP_MESSAGE_BUFFER 1024
 #define SUP_DEBUG_TCP_RX_DATA 0
+#define SUP_TEXT_ROW_LENGTH 256
 
 #define SUP_MODE_NORMAL 1
 #define SUP_MODE_DEBUG 2
 #define SUP_ISO_MESSAGE_RX_TIMEOUT 1000
+#define SUP_TEXT_BUFFER_20 20
+
+#define SUP_OBJ_PROP_FILE "../conf/objprop.conf"
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -105,6 +109,22 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   U8 ISOMessageReadRestU8 = 0;
   U8 ISOMessageReceivedU8 = 0;
 
+  OPROType OPROData; 
+  C8 ObjectTrajPath[MAX_OBJECTS][MAX_FILE_PATH];
+  C8 ObjectIPAddress[MAX_OBJECTS][MAX_FILE_PATH];
+  I32 ObjectCountI32;
+  FILE *fd;
+  C8 TextRow[SUP_TEXT_ROW_LENGTH];
+  C8 ValueBuffer[SUP_TEXT_BUFFER_20];
+  C8 *C8Ptr;
+  U32 IpU32 = 0;
+  U8 ObjectTypeU8 = 0;
+  U8 OperationModeU8 = 0;
+  U32 MassU32 = 0;
+  U32 DimensionXU32 = 0;
+  U32 DimensionYU32 = 0;
+  U32 DimensionZU32 = 0;
+
   I32 iExit = 0, iCommand;
   C8 MqBuffer[SUP_MQ_MAX_SIZE];
   (void)iCommInit(IPC_RECV_SEND,MQ_SU,0);
@@ -121,6 +141,8 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
   LogMessage(LOG_LEVEL_INFO,"Supervisor IP: %s", TextBufferC8);
   SupervisorIpU32 = UtilIPStringToInt(SupervisorServerIpC8);
+
+  //UtilGetObjectsInfo(ObjectTrajPath, ObjectIPAddress, &ObjectCountI32);
 
   if(SupervisorIpU32 != 0)
   {
@@ -167,7 +189,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         {
           UtilISOBuildINSUPMessage(TxBuffer, &INSUPData, SUP_MODE_NORMAL, 1);
           UtilSendTCPData("SupervisorControl", TxBuffer, INSUPData.Header.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH, &SupervisorTCPSocketfdI32, 0);
-          SupervisorInitiatedU8 = 1;
+ 
         }
         
         //Check if Sync word
@@ -264,7 +286,69 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           {
             //printf("[SupervisorControl] HEAB.\n");
           }
+          else if(HeaderData.MessageIdU16 == ISO_INSUP_CODE)
+          {
+            printf("[SupervisorControl] INSUP Received");
+            SupervisorInitiatedU8 = 1; //Check the INSUP response data before setting this variable...
 
+            if(SupervisorInitiatedU8 == 1)
+            {
+              //Build and send OPRO 
+              fd = fopen(SUP_OBJ_PROP_FILE, "r");
+              if(fd)
+              {
+                ObjectCountI32 = UtilCountFileRows(fd) - 1;
+                fclose(fd);
+                fd = fopen(SUP_OBJ_PROP_FILE, "r");
+                UtilReadLine(fd, TextRow); //Read first line
+                for(i = 0; i < ObjectCountI32; i ++)
+                {
+                  bzero(TextRow, SUP_TEXT_ROW_LENGTH);
+                  UtilReadLine(fd, TextRow);
+                  C8Ptr = TextRow;
+                  for(j = 0; j < 7; j ++)
+                  {
+                    bzero(ValueBuffer, SUP_TEXT_BUFFER_20);
+                    strncpy(ValueBuffer, C8Ptr, (U64)strstr(C8Ptr, ";") - (U64)C8Ptr);
+                    C8Ptr = C8Ptr + (U64)strlen(ValueBuffer) + 1;
+                    switch(j)
+                    {
+                      case 0:
+                        IpU32 = UtilIPStringToInt(ValueBuffer);
+                      break;
+                      case 1:
+                        ObjectTypeU8 = atoi(ValueBuffer);
+                      break;
+                      case 2:
+                        OperationModeU8 = atoi(ValueBuffer);
+                      break;
+                      case 3:
+                        MassU32 = atoi(ValueBuffer);
+                      break;
+                      case 4:
+                        DimensionXU32 = atoi(ValueBuffer);
+                      break;
+                      case 5:
+                        DimensionYU32 = atoi(ValueBuffer);
+                      break;
+                      case 6:
+                        DimensionZU32 = atoi(ValueBuffer);
+                      break;
+
+                      default:
+                      break;
+                    }
+                  }
+                }
+
+                UtilISOBuildOPROMessage(TxBuffer, &OPROData, UtilIPStringToInt(ObjectIPAddress[i]), ObjectTypeU8, OperationModeU8, MassU32, DimensionXU32, DimensionYU32, DimensionZU32, 0);
+                UtilSendTCPData("SupervisorControl", TxBuffer, OPROData.Header.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH, &SupervisorTCPSocketfdI32, 0);
+
+                fclose(fd);
+              }
+
+            }
+          }
           
           bzero(RxBuffer, ISO_MESSAGE_HEADER_LENGTH + HeaderData.MessageLengthU32 + ISO_MESSAGE_FOOTER_LENGTH);
           ISOMessageReceivedU8 = 0;
@@ -276,22 +360,10 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
       bzero(MqBuffer,SUP_MQ_MAX_SIZE);
       (void)iCommRecv(&iCommand,MqBuffer,SUP_MQ_MAX_SIZE,NULL);
 
-      if(iCommand == COMM_TRAJ_TOSUP /*GSD->ChunkSize > 0*/)
+      if(iCommand == COMM_TRAJ_TOSUP)
       {
-      
-        //bzero(MqBuffer,SUP_MQ_MAX_SIZE);
-        //for(i = 0; i < GSD->ChunkSize; i ++) MqBuffer[i] = GSD->Chunk[i];
-        //DTMLengthU32 = UtilHexTextToBinary(strlen(MqBuffer), MqBuffer, DTMTrajBuffer, 0);
-        
-        //bzero(MqBuffer,SUP_MQ_MAX_SIZE);
-        //for(i = 0; i < GSD->ChunkSize; i ++) MqBuffer[i] = GSD->Chunk[i];
         DTMLengthU32 = UtilHexTextToBinary(strlen(MqBuffer), MqBuffer, DTMTrajBuffer, 0);
-
         printf("[SupervisorControl] Sending chunk to Supervisor, size is %d bytes\n", (I32)strlen(MqBuffer));
-
-        
-        //for(i = 0; i < GSD->ChunkSize; i ++) DTMTrajBuffer[i] = GSD->Chunk[i];
-        //DTMLengthU32 = GSD-ChunkSize;
         DTMIpU32 = (C8)DTMTrajBuffer[0];
         DTMIpU32 = (C8)DTMTrajBuffer[1] | (DTMIpU32 << 8);
         DTMIpU32 = (C8)DTMTrajBuffer[2] | (DTMIpU32 << 8);

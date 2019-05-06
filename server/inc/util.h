@@ -110,7 +110,7 @@
 #define TCP_RX_BUFFER 1024
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
-#define USE_LOCAL_USER_CONTROL  1
+#define USE_LOCAL_USER_CONTROL  0
 #define LOCAL_USER_CONTROL_IP "10.130.24.51"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
@@ -480,7 +480,7 @@ typedef struct
   U32 YU32;
   U16 ZTypeValueIdU16;
   U16 ZContentLengthU16;
-  U32 ZXU32;
+  U32 ZU32;
 } OPROType; //16 bytes
 
 typedef struct
@@ -826,6 +826,9 @@ I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPS
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
+I32 UtilISOBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 ObjectType, U8 OperationMode, U32 ObjectMass, U32 ObjectDimX, U32 ObjectDimY, U32 ObjectDimZ, U8 Debug);
+
+void UtilGetObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH], I32* nbr_objects);
 
 void MQTTSendMessage(char *_topic, char *_payload);
 void connlost(void *context, char *cause);

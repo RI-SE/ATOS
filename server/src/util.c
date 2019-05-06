@@ -2928,10 +2928,11 @@ void MQTTSendMessage(char *_topic, char *_payload)
     while(deliveredtoken != token);
     MQTTClient_disconnect(client, 10000);
     MQTTClient_destroy(&client);
-    return rc;
+    //return rc;
+}
 
 
-I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 ObjectType, U8 OperationMode, U32 ObjectMass, U8 Debug)
+I32 UtilISOBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 ObjectType, U8 OperationMode, U32 ObjectMass, U32 ObjectDimX, U32 ObjectDimY, U32 ObjectDimZ, U8 Debug)
 {
     I32 MessageIndex = 0, i;
     U16 Crc = 0;
@@ -2957,6 +2958,15 @@ I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPA
     OPROData->WeightTypeValueIdU16 = VALUE_OBJECT_MASS;
     OPROData->WeightContentLengthU16 = 4;
     OPROData->WeightU32 = ObjectMass;
+    OPROData->XTypeValueIdU16 = VALUE_ID_X_POSITION;
+    OPROData->XContentLengthU16 = 4;
+    OPROData->XU32 = ObjectDimX;
+    OPROData->YTypeValueIdU16 = VALUE_ID_Y_POSITION;
+    OPROData->YContentLengthU16 = 4;
+    OPROData->YU32 = ObjectDimY;
+    OPROData->ZTypeValueIdU16 = VALUE_ID_Z_POSITION;
+    OPROData->ZContentLengthU16 = 4;
+    OPROData->ZU32 = ObjectDimZ;
 
     p=(C8 *)OPROData;
     for(i=0; i<sizeof(OPROType); i++) *(MessageBuffer + i) = *p++;
@@ -2966,7 +2976,7 @@ I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPA
     *(MessageBuffer + i++) = (U8)(Crc >> 8);
     MessageIndex = i;
 
-    if(debug)
+    if(Debug)
     {
         printf("OPRO total length = %d bytes (header+message+footer)\n", (int)(ISO_OPRO_MESSAGE_LENGTH+ISO_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");
@@ -2982,3 +2992,102 @@ I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPA
 
 }
 
+
+void UtilGetObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH], I32* nbr_objects)
+{
+    DIR* traj_directory;
+    struct dirent *directory_entry;
+    int iForceObjectToLocalhost;
+
+    iForceObjectToLocalhost = 0;
+
+    traj_directory = opendir(TRAJECTORY_PATH);
+    if(traj_directory == NULL)
+    {
+        util_error("ERR: Failed to open trajectory directory");
+    }
+
+    while ((directory_entry = readdir(traj_directory)) && ((*nbr_objects) < MAX_OBJECTS))
+    {
+
+        /* Check so it's not . or .. */
+        if (strncmp(directory_entry->d_name,".",1) )
+        {
+            bzero(object_address_name[(*nbr_objects)],MAX_FILE_PATH);
+
+            bzero(object_traj_file[(*nbr_objects)],MAX_FILE_PATH);
+            (void)strcat(object_traj_file[(*nbr_objects)],TRAJECTORY_PATH);
+            (void)strcat(object_traj_file[(*nbr_objects)],directory_entry->d_name);
+
+            (void)strncat(object_address_name[(*nbr_objects)],directory_entry->d_name,strlen(directory_entry->d_name));
+
+            ++(*nbr_objects);
+        }
+    }
+    (void)closedir(traj_directory);
+}
+
+
+
+
+//Test code
+
+   //Build and send OPRO 
+/*               
+              fd = fopen("../conf/objprop.conf", "r");
+              if(fd)
+              {
+                printf("File open!!\n");
+                ObjectCountI32 = UtilCountFileRows(fd) - 1;
+                printf("Object count %d\n", ObjectCountI32);
+                fclose(fd);
+                fd = fopen("../conf/objprop.conf", "r");
+                UtilReadLine(fd, TextRow); //Read first line
+                printf("First line: %s\n", TextRow);
+                for(i = 0; i < ObjectCountI32; i ++)
+                {
+                  bzero(TextRow, SUP_TEXT_ROW_LENGTH);
+                  UtilReadLine(fd, TextRow);
+                  printf("Object line: %s\n", TextRow);
+                  //192.168.1.10;1;2;1200000;3000;2000;1700; 
+                  C8Ptr = TextRow;
+                  U64 step;
+                  for(j = 0; j < 7; j ++)
+                  {
+                    bzero(ValueBuffer, SUP_TEXT_BUFFER_20);
+                    strncpy(ValueBuffer, C8Ptr, (U64)strstr(C8Ptr, ";") - (U64)C8Ptr);
+                    C8Ptr = C8Ptr + (U64)strlen(ValueBuffer) + 1;
+
+                    switch(j)
+                    {
+                      case 0:
+                        IpU32 = UtilIPStringToInt(ValueBuffer);
+                      break;
+                      case 1:
+                        ObjectTypeU8 = atoi(ValueBuffer);
+                      break;
+                      case 2:
+                        OperationModeU8 = atoi(ValueBuffer);
+                      break;
+                      case 3:
+                        MassU32 = atoi(ValueBuffer);
+                      break;
+                      case 4:
+                        DimensionXU32 = atoi(ValueBuffer);
+                      break;
+                      case 5:
+                        DimensionYU32 = atoi(ValueBuffer);
+                      break;
+                      case 6:
+                        DimensionZU32 = atoi(ValueBuffer);
+                      break;
+
+                      default:
+                      break;
+                    }
+                  }
+                }
+                fclose(fd);
+              }
+  //        
+*/
