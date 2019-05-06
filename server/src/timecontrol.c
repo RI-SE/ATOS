@@ -334,7 +334,7 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
                 LogMessage(LOG_LEVEL_INFO, "Received reply from time server: non-differential fix");
                 return 1;
             case FIX_QUALITY_DIFFERENTIAL:
-                LogMessage(LOG_LEVEL_INFO, "Received reply from time server: non-differential fix");
+                LogMessage(LOG_LEVEL_INFO, "Received reply from time server: differential fix");
                 return 1;
             default:
                 LogMessage(LOG_LEVEL_ERROR, "Received reply from time server: unexpected fix quality parameter");
