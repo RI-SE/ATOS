@@ -123,13 +123,13 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 
         if (TimeControlCreateTimeChannel(ServerIPC8, ServerPortU16, &SocketfdI32, &time_addr))
         {
-            LogMessage(LOG_LEVEL_INFO, "Established connection to time server");
+            LogMessage(LOG_LEVEL_INFO, "Using time server reference");
             TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, TIME_INTERVAL_NUMBER_BYTES, 0);
             GPSTime->isGPSenabled = 1;
         }
         else
         {
-            LogMessage(LOG_LEVEL_WARNING, "Unable to connect to time server: defaulting to system time");
+            LogMessage(LOG_LEVEL_WARNING, "Defaulting to system time");
 
             // Send warning over MQ
             LOG_SEND(LogBuffer, "Unable to connect to time server");
@@ -268,6 +268,7 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
     int receivedNewData = 0;
     struct timeval timeout = {REPLY_TIMEOUT_S, 0};
     struct timeval tEnd,tCurr;
+    TimeType tempGPSTime;
 
     LogMessage(LOG_LEVEL_INFO,"Time source address: %s:%d",name,port);
     /* Connect to object safety socket */
@@ -317,9 +318,23 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
     {
         gettimeofday(&tCurr, NULL);
         TimeControlRecvTime(sockfd, timeBuffer, TIME_CONTROL_RECEIVE_BUFFER_SIZE, &receivedNewData);
-    } while (!receivedNewData && timercmp(&tCurr,&tEnd,<));
+        if (receivedNewData)
+        {
+            TimeControlDecodeTimeBuffer(&tempGPSTime, timeBuffer, 0);
+            switch (tempGPSTime.FixQualityU8)
+            {
+            case 0:
+                LogMessage(LOG_LEVEL_WARNING, "Received reply from time server but it had no satellite fix");
+                return 0;
+            default:
+                LogMessage(LOG_LEVEL_INFO, "Received reply from time server");
+                return 1;
+            }
+        }
+    } while (timercmp(&tCurr,&tEnd,<));
 
-    return receivedNewData;
+    LogMessage(LOG_LEVEL_WARNING, "Unable to connect to time server");
+    return 0;
 }
 
 
