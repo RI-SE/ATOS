@@ -29,6 +29,7 @@
 #include "logger.h"
 #include "timecontrol.h"
 #include "simulatorcontrol.h"
+#include "logging.h"
 
 
 #define SIM_CONTROL_CONF_FILE_PATH  "conf/test.conf"
@@ -66,6 +67,12 @@ U32 SimulatorControlVOILToASCII(C8 *VOILData, C8 *VOILString);
 U32 SimulatorControlBinaryMessageManager(I32 DataLength, C8* ReceiveBuffer, C8 *MsgQueBuffer, U8 Debug);
 void SimulatorControlObjectAddressList( I32 *Sockfd, C8 *AddressList, C8 *FunctionReqResponse, U8 Debug);
 U32 SimulatorControlTextMessageManager(C8 *RxData, C8 *ReqFunction, SMGDType *SMGD, U8 Debug);
+
+
+
+#define MODULE_NAME "SimulatorControl"
+static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
+
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
@@ -128,6 +135,8 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   U8 ObjectAddressListSentU8 = 0;
   U8 SupervisorModeU8 = 0;
 
+  LogInit(MODULE_NAME,logLevel);
+
   gettimeofday(&ExecTime, NULL);
   CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
   PrevMilliSecondU16 = CurrentMilliSecondU16;
@@ -172,7 +181,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
     printf("[SimulatorControl] SimulatorUDPPort = %d\n", SimulatorUDPPortU16);
 
 
-    while (GPSTime->TimeInitiatedU8 == 0) { usleep(100); }
+    while (GPSTime->isTimeInitializedU8 == 0) { usleep(100); }
     
     while(!iExit)
     {
@@ -187,7 +196,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         ClientResultI32 = UtilReceiveTCPData("SimulatorControl", &SimulatorTCPSocketfdI32, RxBuffer, 0, 0); //Data length resides in ClientResultI32
         if(ClientResultI32 == 0)
         {
-            DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[SimulatorControl] Client closed connection.\n");
+            LogMessage(LOG_LEVEL_INFO, "Client closed connection.\n");
             close(SimulatorTCPSocketfdI32);
             SimulatorTCPSocketfdI32 = -1;
             SimulatorInitiatedU8 = 0;
@@ -404,7 +413,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         if(CycleU16 == 0)
         {
           /*Send hearbeat to the simulator*/
-          SimulatorControlSendHeartbeat( &SimulatorUDPSocketfdI32, &simulator_addr, GPSTime, 0);
+          SimulatorControlSendHeartbeat( &SimulatorUDPSocketfdI32, &simulator_addr, GPSTime, 1);
         }
 
       }

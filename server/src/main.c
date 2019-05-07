@@ -63,14 +63,13 @@ int main(int argc, char *argv[])
 
     GSD->ExitU8 = 0;
     GSD->ScenarioStartTimeU32 = 0;
-    GPSTime->TimeInitiatedU8 = 0;
+    GPSTime->isTimeInitializedU8 = 0;
     GPSTime->LockedU8 = 0;
 
     pid_t pID[8];
     int iIndex = 0;
 
     LogMessage( LOG_LEVEL_INFO, "Central started");
-    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Central started\n");
     fflush(stdout);
 
     pID[iIndex] = fork();
@@ -170,7 +169,7 @@ int main(int argc, char *argv[])
     if(pID[iIndex] == 0)
     {
 
-        log_message(LOG_LEVEL_INFO,"simulatorcontrol_task running in:  %i",getpid());
+        LogMessage(LOG_LEVEL_INFO,"simulatorcontrol_task running in:  %i",getpid());
 
       simulatorcontrol_task(GPSTime, GSD);
       exit(EXIT_SUCCESS);

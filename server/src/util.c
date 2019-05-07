@@ -1710,6 +1710,7 @@ int iCommRecv(int* iCommand, char* cpData, const int iMessageSize,char* TimeUTCR
 
   return iResult;
 }
+
 /* iCommSend sends a given message cpData and command icommand out on all
  * the five message ques. but first ut prioritis the messages depending on
  * iCommand
@@ -2930,7 +2931,6 @@ void MQTTSendMessage(char *_topic, char *_payload)
     MQTTClient_destroy(&client);
     //return rc;
 }
-
 
 I32 UtilISOBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 ObjectType, U8 OperationMode, U32 ObjectMass, U32 ObjectDimX, U32 ObjectDimY, U32 ObjectDimZ, U8 Debug)
 {
