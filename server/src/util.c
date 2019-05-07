@@ -49,9 +49,114 @@ static mqd_t tMQRecv;
 static mqd_t ptMQSend[MQ_NBR_QUEUES];
 static char pcMessageQueueName[1024];
 
+
+/*---------------------------------------------s---------------
+  -- Private functions
+  ------------------------------------------------------------*/
+void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetContainerSize, const char* fieldName);
+
+void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetContainerSize, const char* fieldName)
+{
+    char *firstPos, *lastPos;
+    char *matchPos = strstr(request, fieldName);
+    unsigned long fieldLength = 0;
+
+    if (matchPos == NULL)
+    {
+        targetContainer[0] = '\0';
+        return;
+    }
+
+    matchPos += strlen(fieldName);
+    if (matchPos[0] == ':' || matchPos[0] == ';')
+        matchPos++;
+    else {
+        targetContainer[0] = '\0';
+        return;
+    }
+
+    while (1)
+    {
+        if (matchPos[0] == ' ' || matchPos[0] == '\t')
+        {
+            // Skip white space
+            matchPos++;
+        }
+        else if (matchPos[0] == '\r' || matchPos[0] == '\n' || matchPos[0] == '\0')
+        {
+            // Empty field? Return empty string
+            targetContainer[0] = '\0';
+            return;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    firstPos = matchPos;
+
+    // Find end of field
+    while (1)
+    {
+        if (matchPos[0] == '\r' || matchPos[0] == '\n' || matchPos[0] == '\0')
+        {
+            lastPos = matchPos;
+            break;
+        }
+        else
+        {
+            matchPos++;
+        }
+    }
+
+    // Check length
+    fieldLength = lastPos - firstPos;
+    if (fieldLength > targetContainerSize)
+    {
+        LogMessage(LOG_LEVEL_WARNING, "Received too long HTTP header field: %s", fieldName);
+        targetContainer[0] = '\0';
+        return;
+    }
+    else
+    {
+        strncpy(targetContainer, firstPos, fieldLength);
+    }
+
+}
+
 /*---------------------------------------------s---------------
   -- Public functions
   ------------------------------------------------------------*/
+
+static const HTTPHeaderContent headerFieldNames = {
+                                 "Accept-Charset", "Accept-Encoding", "Accept-Language",
+                                 "Authorization", "Expect", "From", "Host", "If-Match", "If-Modified-Since",
+                                 "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards",
+                                 "Proxy-Authorization", "Range", "Referer", "TE", "User-Agent"
+};
+// HTTP header decoder
+void UtilDecodeHTTPRequestHeader(char* request, HTTPHeaderContent* header)
+{
+    CopyHTTPHeaderField(request, header->AcceptCharset, HTTP_HEADER_MAX_LENGTH, headerFieldNames.AcceptCharset);
+    CopyHTTPHeaderField(request, header->AcceptEncoding, HTTP_HEADER_MAX_LENGTH, headerFieldNames.AcceptEncoding);
+    CopyHTTPHeaderField(request, header->AcceptLanguage, HTTP_HEADER_MAX_LENGTH, headerFieldNames.AcceptLanguage);
+    CopyHTTPHeaderField(request, header->Authorization, HTTP_HEADER_MAX_LENGTH, headerFieldNames.Authorization);
+    CopyHTTPHeaderField(request, header->Expect, HTTP_HEADER_MAX_LENGTH, headerFieldNames.Expect);
+    CopyHTTPHeaderField(request, header->From, HTTP_HEADER_MAX_LENGTH, headerFieldNames.From);
+    CopyHTTPHeaderField(request, header->Host, HTTP_HEADER_MAX_LENGTH, headerFieldNames.Host);
+    CopyHTTPHeaderField(request, header->IfMatch, HTTP_HEADER_MAX_LENGTH, headerFieldNames.IfMatch);
+    CopyHTTPHeaderField(request, header->IfModifiedSince, HTTP_HEADER_MAX_LENGTH, headerFieldNames.IfModifiedSince);
+    CopyHTTPHeaderField(request, header->IfRange, HTTP_HEADER_MAX_LENGTH, headerFieldNames.IfRange);
+    CopyHTTPHeaderField(request, header->IfNoneMatch, HTTP_HEADER_MAX_LENGTH, headerFieldNames.IfNoneMatch);
+    CopyHTTPHeaderField(request, header->IfUnmodifiedSince, HTTP_HEADER_MAX_LENGTH, headerFieldNames.IfUnmodifiedSince);
+    CopyHTTPHeaderField(request, header->MaxForwards, HTTP_HEADER_MAX_LENGTH, headerFieldNames.MaxForwards);
+    CopyHTTPHeaderField(request, header->ProxyAuthorization, HTTP_HEADER_MAX_LENGTH, headerFieldNames.ProxyAuthorization);
+    CopyHTTPHeaderField(request, header->Range, HTTP_HEADER_MAX_LENGTH, headerFieldNames.Range);
+    CopyHTTPHeaderField(request, header->Referer, HTTP_HEADER_MAX_LENGTH, headerFieldNames.Referer);
+    CopyHTTPHeaderField(request, header->TE, HTTP_HEADER_MAX_LENGTH, headerFieldNames.TE);
+    CopyHTTPHeaderField(request, header->UserAgent, HTTP_HEADER_MAX_LENGTH, headerFieldNames.UserAgent);
+}
 
 // GPS TIME FUNCTIONS
 uint64_t UtilgetGPSmsFromUTCms(uint64_t UTCms)

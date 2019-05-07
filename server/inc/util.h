@@ -684,10 +684,35 @@ typedef enum {
     OBC_STATE_ERROR,
 } OBCState_t;
 
+#define HTTP_HEADER_MAX_LENGTH 64
+typedef struct {
+    char AcceptCharset[HTTP_HEADER_MAX_LENGTH];
+    char AcceptEncoding[HTTP_HEADER_MAX_LENGTH];
+    char AcceptLanguage[HTTP_HEADER_MAX_LENGTH];
+    char Authorization[HTTP_HEADER_MAX_LENGTH];
+    char Expect[HTTP_HEADER_MAX_LENGTH];
+    char From[HTTP_HEADER_MAX_LENGTH];
+    char Host[HTTP_HEADER_MAX_LENGTH];
+    char IfMatch[HTTP_HEADER_MAX_LENGTH];
+    char IfModifiedSince[HTTP_HEADER_MAX_LENGTH];
+    char IfNoneMatch[HTTP_HEADER_MAX_LENGTH];
+    char IfRange[HTTP_HEADER_MAX_LENGTH];
+    char IfUnmodifiedSince[HTTP_HEADER_MAX_LENGTH];
+    char MaxForwards[HTTP_HEADER_MAX_LENGTH];
+    char ProxyAuthorization[HTTP_HEADER_MAX_LENGTH];
+    char Range[HTTP_HEADER_MAX_LENGTH];
+    char Referer[HTTP_HEADER_MAX_LENGTH];
+    char TE[HTTP_HEADER_MAX_LENGTH];
+    char UserAgent[HTTP_HEADER_MAX_LENGTH];
+} HTTPHeaderContent;
+
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
+
+// HTTP decoding functions
+void UtilDecodeHTTPRequestHeader(char* request, HTTPHeaderContent* header);
 
 // GPS TIME FUNCTIONS
 uint64_t UtilgetGPSmsFromUTCms(uint64_t UTCms);
