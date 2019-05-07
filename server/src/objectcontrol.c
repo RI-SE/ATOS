@@ -1131,6 +1131,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
 
             (void)nanosleep(&sleep_time,&ref_time);
+
+            bzero(Buffer2, SMALL_BUFFER_SIZE_1);
+            Buffer2[0] = OBCState;
+            (void)iCommSend(COMM_OBC_STATE,Buffer2);
+
         }
     }
 }
