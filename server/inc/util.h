@@ -109,7 +109,7 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  1
-#define LOCAL_USER_CONTROL_IP "10.130.24.51"
+#define LOCAL_USER_CONTROL_IP "192.168.0.15"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -472,8 +472,9 @@ typedef struct
   U32 YU32;
   U16 ZTypeValueIdU16;
   U16 ZContentLengthU16;
-  U32 ZXU32;
+  U32 ZU32;
 } OPROType; //16 bytes
+
 
 typedef struct
 {

@@ -127,7 +127,6 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   OBCState_t OBCStateStatus = OBC_STATE_IDLE;
   U8 ObjectAddressListSentU8 = 0;
   U8 SupervisorModeU8 = 0;
-  GSD->ChunkSize = 0;
 
   gettimeofday(&ExecTime, NULL);
   CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);

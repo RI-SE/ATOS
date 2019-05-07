@@ -48,6 +48,10 @@
 #define SUP_ISO_MESSAGE_RX_TIMEOUT 1000
 
 #define SUP_OBJ_PROP_FILE "../conf/objprop.conf"
+#define SUP_TEXT_ROW_LENGTH 1024
+#define SUP_TEXT_BUFFER_20 20
+
+
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -324,7 +328,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
                   }
                 }
 
-                UtilISOBuildOPROMessage(TxBuffer, &OPROData, UtilIPStringToInt(ObjectIPAddress[i]), ObjectTypeU8, OperationModeU8, MassU32, DimensionXU32, DimensionYU32, DimensionZU32, 0);
+                UtilISOBuildOPROMessage(TxBuffer, &OPROData, UtilIPStringToInt(ObjectIPAddress[i]), ObjectTypeU8, OperationModeU8, MassU32, DimensionXU32, DimensionYU32, DimensionZU32, 1);
                 UtilSendTCPData("SupervisorControl", TxBuffer, OPROData.Header.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH, &SupervisorTCPSocketfdI32, 0);
 
                 fclose(fd);
