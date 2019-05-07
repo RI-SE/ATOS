@@ -47,7 +47,7 @@
 #define SUP_MODE_DEBUG 2
 #define SUP_ISO_MESSAGE_RX_TIMEOUT 1000
 
-#define SUP_OBJ_PROP_FILE "../conf/objprop.conf"
+#define SUP_OBJ_PROP_FILE "conf/objprop.conf"
 #define SUP_TEXT_ROW_LENGTH 1024
 #define SUP_TEXT_BUFFER_20 20
 
@@ -113,6 +113,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   C8 *C8Ptr;
   U32 IpU32 = 0;
   U8 ObjectTypeU8 = 0;
+  U8 ActorTypeU8 = 0;
   U8 OperationModeU8 = 0;
   U32 MassU32 = 0;
   U32 DimensionXU32 = 0;
@@ -275,7 +276,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           }
           else if(HeaderData.MessageIdU16 == ISO_INSUP_CODE)
           {
-            printf("[SupervisorControl] INSUP Received");
+            printf("[SupervisorControl] INSUP Received\n");
             SupervisorInitiatedU8 = 1; //Check the INSUP response data before setting this variable...
 
             if(SupervisorInitiatedU8 == 1)
@@ -293,7 +294,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
                   bzero(TextRow, SUP_TEXT_ROW_LENGTH);
                   UtilReadLine(fd, TextRow);
                   C8Ptr = TextRow;
-                  for(j = 0; j < 7; j ++)
+                  for(j = 0; j < 8; j ++)
                   {
                     bzero(ValueBuffer, SUP_TEXT_BUFFER_20);
                     strncpy(ValueBuffer, C8Ptr, (U64)strstr(C8Ptr, ";") - (U64)C8Ptr);
@@ -307,18 +308,21 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         ObjectTypeU8 = atoi(ValueBuffer);
                       break;
                       case 2:
-                        OperationModeU8 = atoi(ValueBuffer);
+                        ActorTypeU8 = atoi(ValueBuffer);
                       break;
                       case 3:
-                        MassU32 = atoi(ValueBuffer);
+                        OperationModeU8 = atoi(ValueBuffer);
                       break;
                       case 4:
-                        DimensionXU32 = atoi(ValueBuffer);
+                        MassU32 = atoi(ValueBuffer);
                       break;
                       case 5:
-                        DimensionYU32 = atoi(ValueBuffer);
+                        DimensionXU32 = atoi(ValueBuffer);
                       break;
                       case 6:
+                        DimensionYU32 = atoi(ValueBuffer);
+                      break;
+                      case 7:
                         DimensionZU32 = atoi(ValueBuffer);
                       break;
 
@@ -326,11 +330,9 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
                       break;
                     }
                   }
+                  UtilISOBuildOPROMessage(TxBuffer, &OPROData, IpU32, ObjectTypeU8, ActorTypeU8, OperationModeU8, MassU32, DimensionXU32, DimensionYU32, DimensionZU32, 1);
+                  UtilSendTCPData("SupervisorControl", TxBuffer, OPROData.Header.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH, &SupervisorTCPSocketfdI32, 0);
                 }
-
-                UtilISOBuildOPROMessage(TxBuffer, &OPROData, UtilIPStringToInt(ObjectIPAddress[i]), ObjectTypeU8, OperationModeU8, MassU32, DimensionXU32, DimensionYU32, DimensionZU32, 1);
-                UtilSendTCPData("SupervisorControl", TxBuffer, OPROData.Header.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH, &SupervisorTCPSocketfdI32, 0);
-
                 fclose(fd);
               }
 
