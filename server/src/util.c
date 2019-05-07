@@ -2863,7 +2863,7 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 }
 
 
-I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 ObjectType, U8 OperationMode, U32 ObjectMass, U8 Debug)
+I32 UtilISOBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 ObjectType, U8 OperationMode, U32 ObjectMass, U32 ObjectDimX, U32 ObjectDimY, U32 ObjectDimZ, U8 Debug)
 {
     I32 MessageIndex = 0, i;
     U16 Crc = 0;
@@ -2889,6 +2889,15 @@ I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPA
     OPROData->WeightTypeValueIdU16 = VALUE_OBJECT_MASS;
     OPROData->WeightContentLengthU16 = 4;
     OPROData->WeightU32 = ObjectMass;
+    OPROData->XTypeValueIdU16 = VALUE_ID_X_POSITION;
+    OPROData->XContentLengthU16 = 4;
+    OPROData->XU32 = ObjectDimX;
+    OPROData->YTypeValueIdU16 = VALUE_ID_Y_POSITION;
+    OPROData->YContentLengthU16 = 4;
+    OPROData->YU32 = ObjectDimY;
+    OPROData->ZTypeValueIdU16 = VALUE_ID_Z_POSITION;
+    OPROData->ZContentLengthU16 = 4;
+    OPROData->ZU32 = ObjectDimZ;
 
     p=(C8 *)OPROData;
     for(i=0; i<sizeof(OPROType); i++) *(MessageBuffer + i) = *p++;
@@ -2898,7 +2907,7 @@ I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPA
     *(MessageBuffer + i++) = (U8)(Crc >> 8);
     MessageIndex = i;
 
-    if(debug)
+    if(Debug)
     {
         printf("OPRO total length = %d bytes (header+message+footer)\n", (int)(ISO_OPRO_MESSAGE_LENGTH+ISO_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");
@@ -2913,4 +2922,3 @@ I32 ObjectControlBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPA
     return MessageIndex; //Total number of bytes
 
 }
-
