@@ -309,6 +309,15 @@ typedef struct
 
 typedef struct
 {
+    double xCoord_m;
+    double yCoord_m;
+    double zCoord_m;
+    double heading_deg;
+} CartesianPosition;
+
+
+typedef struct
+{
   U16 SyncWordU16;
   U8 TransmitterIdU8;
   U8 MessageCounterU8;
@@ -717,6 +726,7 @@ int iCommClose();
 int iCommRecv(int*, char*, const int, char*);
 int iCommSend(const int,const char*);
 
+char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
 int UtilVincentyDirect(double refLat, double refLon, double a1, double distance, double *resLat, double *resLon, double *a2);
 double UtilDegToRad(double Deg);
