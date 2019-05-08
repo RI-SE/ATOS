@@ -1,7 +1,16 @@
 #!/bin/sh
 MAESTRODIR=$(pwd)
+
+apt-get install -y build-essential gcc make cmake cmake-gui cmake-curses-gui
+apt-get install -y fakeroot fakeroot devscripts dh-make lsb-release libssl-dev
+
+git clone https://github.com/eclipse/paho.mqtt.c.git
+cd paho.mqtt.c
+make
+make install
+
 git submodule update --init --recursive
-cd util/C
+cd $MAESTRODIR/util/C
 cmake -G "Unix Makefiles" .
 make
 cd $MAESTRODIR/server

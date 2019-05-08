@@ -489,13 +489,13 @@ void SimulatorControlInitSimulator( I32 *Sockfd, U8 SimulatorMode, C8 *FunctionR
 {
   C8 SendData[SIM_CONTROL_BUFFER_SIZE_128];
   C8 SendLength[4] = {0,0,0,0};
-  C8 Mode[1] ={0};
+  C8 Mode[2] ="";
   I32 Length = 0;
   bzero(SendData, SIM_CONTROL_BUFFER_SIZE_128);
   bzero(FunctionReqResponse, SIM_CONTROL_BUFFER_SIZE_128);
   strcat(FunctionReqResponse,"InitSimulator");
   strcat(SendData,"InitSimulator(");
-  sprintf(Mode, "%" PRIu8, SimulatorMode);
+  sprintf(Mode, "%c", SimulatorMode);
   strcat(SendData, Mode);
   strcat(SendData, ")"); 
 
