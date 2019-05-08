@@ -8,7 +8,7 @@ git clone https://github.com/eclipse/paho.mqtt.c.git
 cd paho.mqtt.c
 make
 make install
-
+cd $MAESTRODIR
 git submodule update --init --recursive
 cd $MAESTRODIR/util/C
 cmake -G "Unix Makefiles" .
