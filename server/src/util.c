@@ -55,7 +55,6 @@ static char pcMessageQueueName[1024];
 ------------------------------------------------------------*/
 
 static char rayFromPointIntersectsLine(double pointX, double pointY, double polyPointAX, double polyPointAY, double polyPointBX, double polyPointBY);
-static char roughlyEqualsTo(double num1, double num2, double eps);
 
 /*---------------------------------------------s---------------
   -- Public functions
@@ -1011,11 +1010,6 @@ static char rayFromPointIntersectsLine(double pointX, double pointY,
         return 1;
     else
         return 0;
-}
-
-static char roughlyEqualsTo(double num1, double num2, double eps)
-{
-    return 0;
 }
 
 
