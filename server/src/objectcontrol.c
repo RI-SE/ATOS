@@ -1126,6 +1126,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             (void)nanosleep(&sleep_time,&ref_time);
         }
     }
+    LogMessage(LOG_LEVEL_INFO,"Object control exiting");
 }
 
 
