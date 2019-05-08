@@ -897,7 +897,7 @@ float UtilCalculateTimeToSync(ObjectPosition *OP)
 
 /*!
  * \brief UtilIsPointInPolygon Checks if a point lies within a polygon specified by a number of vertices using
- * the ray casting algorithm.
+ * the ray casting algorithm (see http://rosettacode.org/wiki/Ray-casting_algorithm).
  * \param pointX X coordinate of the point to check
  * \param pointY Y coordinate of the point to check
  * \param verticesX X coordinates of the vertex points defining the polygon to check
@@ -919,7 +919,7 @@ char UtilIsPointInPolygon(double pointX, double pointY, double * verticesX, doub
     }
 
     // If the first and last points are different, the polygon segment between them must also be included
-    if (verticesX[0] != verticesX[nPtsInPolygon-1] || verticesY[0] != verticesY[nPtsInPolygon-1])
+    if (fabs(verticesX[0] - verticesX[nPtsInPolygon-1]) > (double)(2*FLT_EPSILON) || fabs(verticesY[0] - verticesY[nPtsInPolygon-1]) > (double)(2*FLT_EPSILON) )
     {
         if (rayFromPointIntersectsLine(pointX, pointY,
                   verticesX[0], verticesY[0], verticesX[nPtsInPolygon-1], verticesY[nPtsInPolygon-1]))
@@ -936,8 +936,8 @@ char UtilIsPointInPolygon(double pointX, double pointY, double * verticesX, doub
 }
 
 /*!
- * \brief rayFromPointIntersectsLine checks whether ray in X axis direction from point intersects
- * a line AB between two points A and B
+ * \brief rayFromPointIntersectsLine Checks whether a ray in positive x direction, parallel to the x axis,
+ * from a point intersects a line AB between two points A and B
  * \param pointX X coordinate of the point from which ray originates
  * \param pointY Y coordinate of the point from which ray originates
  * \param linePointAX X coordinate of the point A
