@@ -594,6 +594,23 @@ int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug)
 }
 
 
+/*!
+ * \brief UtilIsPositionNearTarget Checks if position lies within or on a sphere with radius equal to tolerance_m
+ * and centre at target.
+ * \param position Position to verify
+ * \param target Target position
+ * \param tolerance_m Radius around target position defining "near"
+ * \return true if position is within tolerance_m of target, false otherwise
+ */
+char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m)
+{
+    double distance = 0;
+    distance = sqrt( pow(position.xCoord_m-target.xCoord_m, 2)
+                   + pow(position.yCoord_m-target.yCoord_m, 2)
+                   + pow(position.zCoord_m-target.zCoord_m, 2) );
+    return distance <= tolerance_m;
+}
+
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP)
 {
 
