@@ -11,9 +11,11 @@
 #ifndef __SUPERVISION_H_INCLUDED__
 #define __SUPERVISION_H_INCLUDED__
 
+#include "util.h"
+
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-void supervision_task(TimeType *GPSTime);
+void supervision_task(TimeType *GPSTime, GSDType *GSD);
 
 #endif //__SUPERVISION_H_INCLUDED__

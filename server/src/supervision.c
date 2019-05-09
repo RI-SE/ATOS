@@ -21,7 +21,6 @@
 #include <time.h>
 #include <sys/time.h>
 
-#include "util.h"
 #include "supervision.h"
 #include "logging.h"
 
@@ -115,7 +114,7 @@ static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_P
   -- Task
   ------------------------------------------------------------*/
 
-void supervision_task(TimeType *GPSTime) {
+void supervision_task(TimeType *GPSTime, GSDType *GSD) {
 
   char           object_traj_file    [ MAX_OBJECTS ][ MAX_FILE_PATH ];
   char           object_address_name [ MAX_OBJECTS ][ MAX_FILE_PATH ];
