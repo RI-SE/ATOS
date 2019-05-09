@@ -74,7 +74,7 @@ static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
-int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
+void timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 {
 
     C8 TextBufferC8[TIME_CONTROL_HOSTNAME_BUFFER_SIZE];
