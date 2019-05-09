@@ -47,6 +47,7 @@ static TimeType *GPSTime;
 static GSDType *GSD;
 
 const static ModuleTask allModules[] = {logger_task, timecontrol_task, supervision_task, supervisorcontrol_task, systemcontrol_task, objectcontrol_task};
+const static size_t numberOfModules = sizeof(allModules) / sizeof(ModuleTask);
 
 #define MODULE_NAME "Central"
 static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
