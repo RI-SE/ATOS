@@ -33,6 +33,11 @@
 #include "supervisorcontrol.h"
 #include "logging.h"
 
+/*------------------------------------------------------------
+-- Types
+------------------------------------------------------------*/
+typedef void (*ModuleTask)(TimeType*, GSDType*); //! Function pointer type for module "main" functions
+
 
 /*------------------------------------------------------------
 -- Defines
@@ -40,6 +45,8 @@
 
 static TimeType *GPSTime;
 static GSDType *GSD;
+
+const static ModuleTask allModules[] = {logger_task, timecontrol_task, supervision_task, supervisorcontrol_task, systemcontrol_task, objectcontrol_task};
 
 #define MODULE_NAME "Central"
 static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
