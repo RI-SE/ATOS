@@ -33,6 +33,8 @@
 #include "supervisorcontrol.h"
 #include "logging.h"
 
+
+
 /*------------------------------------------------------------
 -- Types
 ------------------------------------------------------------*/
@@ -45,14 +47,22 @@ typedef struct
 /*------------------------------------------------------------
 -- Defines
 ------------------------------------------------------------*/
-
 static TimeType *GPSTime;
 static GSDType *GSD;
 
-static const ModuleTask allModules[] = {logger_task, timecontrol_task, supervision_task, supervisorcontrol_task, systemcontrol_task, objectcontrol_task};
+/*------------------------------------------------------------
+-- Server modules
+------------------------------------------------------------*/
+//! allModules contains the tasks to be run in the server. To enable or disable a task, add the main module function in this array
+static const ModuleTask allModules[] = {
+    logger_task,
+    timecontrol_task,
+    supervision_task,
+    supervisorcontrol_task,
+    systemcontrol_task,
+    objectcontrol_task
+};
 static const size_t numberOfModules = sizeof(allModules) / sizeof(ModuleTask);
-
-#define MODULE_NAME "Central"
 
 /*------------------------------------------------------------
 -- Private functions
@@ -64,6 +74,7 @@ void printHelp(char* progName);
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
+#define MODULE_NAME "Central"
 int main(int argc, char *argv[])
 {
     unsigned int moduleNumber = 0;
