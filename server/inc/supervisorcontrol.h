@@ -12,11 +12,12 @@
 #define __SUPERVISORCONTROL_H_INCLUDED__
 
 
+#include "util.h"
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD);
+void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD);
 
 
 #endif 

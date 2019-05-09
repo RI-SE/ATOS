@@ -26,7 +26,6 @@
 #include <poll.h>
 #include <netdb.h>
 
-#include "util.h"
 #include "logger.h"
 #include "logging.h"
 
@@ -62,7 +61,7 @@ static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
-int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
+void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 {
 
   C8 TextBufferC8[SUP_CONTROL_BUFFER_SIZE_20];
