@@ -435,6 +435,7 @@ static void TimeControlRecvTime(int* sockfd, C8* buffer, int length, int* receiv
         {
             // EOF received
             LogMessage(LOG_LEVEL_ERROR,"Time server disconnected");
+            *receivedNewData = 0;
             return;
         }
         else
