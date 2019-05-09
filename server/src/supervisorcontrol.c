@@ -27,7 +27,6 @@
 #include <netdb.h>
 
 #include "logger.h"
-#include "logging.h"
 
 
 /*------------------------------------------------------------
@@ -55,13 +54,11 @@
 ------------------------------------------------------------*/
 
 #define MODULE_NAME "SupervisorControl"
-static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 
-/*-------
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
-void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
+void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
 
   C8 TextBufferC8[SUP_CONTROL_BUFFER_SIZE_20];

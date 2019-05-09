@@ -12,11 +12,12 @@
 #define __TIMECONTROL_H_INCLUDED__
 
 #include "util.h"
+#include "logging.h"
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-void timecontrol_task(TimeType *GPSTime,  GSDType *GSD);
+void timecontrol_task(TimeType *GPSTime,  GSDType *GSD, LOG_LEVEL logLevel);
 U16 TimeControlGetMillisecond(TimeType *GPSTime);
 
 

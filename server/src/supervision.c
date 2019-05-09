@@ -22,7 +22,6 @@
 #include <sys/time.h>
 
 #include "supervision.h"
-#include "logging.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -43,7 +42,6 @@
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
 #define MODULE_NAME "Supervisor"
-static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 
 /*------------------------------------------------------------
   -- Function declarations & definitions.
@@ -114,7 +112,7 @@ static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_P
   -- Task
   ------------------------------------------------------------*/
 
-void supervision_task(TimeType *GPSTime, GSDType *GSD) {
+void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel) {
 
   char           object_traj_file    [ MAX_OBJECTS ][ MAX_FILE_PATH ];
   char           object_address_name [ MAX_OBJECTS ][ MAX_FILE_PATH ];

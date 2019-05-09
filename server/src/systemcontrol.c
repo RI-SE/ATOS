@@ -31,10 +31,8 @@
 #include <unistd.h>
 
 //#include "remotecontrol.h"
-#include "util.h"
 #include "systemcontrol.h"
 #include "timecontrol.h"
-#include "logging.h"
 
 
 
@@ -161,13 +159,12 @@ I32 SystemControlCreateDirectory(C8 *Path, C8 *ReturnValue, U8 Debug);
 ------------------------------------------------------------*/
 
 #define MODULE_NAME "SystemControl"
-static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
 
-void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
+void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
 
     I32 ServerHandle;

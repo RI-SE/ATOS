@@ -28,9 +28,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/time.h>
-#include "util.h"
 #include "timecontrol.h"
-#include "logging.h"
 
 
 /*------------------------------------------------------------
@@ -200,12 +198,11 @@ int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
 ------------------------------------------------------------*/
 
 #define MODULE_NAME "ObjectControl"
-static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
-void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
+void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
     int safety_socket_fd[MAX_OBJECTS];
     struct sockaddr_in safety_object_addr[MAX_OBJECTS];

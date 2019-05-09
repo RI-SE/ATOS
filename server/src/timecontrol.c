@@ -28,7 +28,6 @@
 
 #include "timecontrol.h"
 #include "logger.h"
-#include "logging.h"
 
 
 #define TIME_CONTROL_CONF_FILE_PATH  "conf/test.conf"
@@ -68,13 +67,11 @@ static void TimeControlDecodeTimeBuffer(TimeType* GPSTime, C8* TimeBuffer, C8 de
   -- Private variables.
   ------------------------------------------------------------*/
 #define MODULE_NAME "TimeControl"
-static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
-
 
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
-void timecontrol_task(TimeType *GPSTime, GSDType *GSD)
+void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
 
     C8 TextBufferC8[TIME_CONTROL_HOSTNAME_BUFFER_SIZE];

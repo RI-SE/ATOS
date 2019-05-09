@@ -36,7 +36,7 @@
 /*------------------------------------------------------------
 -- Types
 ------------------------------------------------------------*/
-typedef void (*ModuleTask)(TimeType*, GSDType*); //! Function pointer type for module "main" functions
+typedef void (*ModuleTask)(TimeType*, GSDType*, LOG_LEVEL); //! Function pointer type for module "main" functions
 
 
 /*------------------------------------------------------------

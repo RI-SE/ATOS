@@ -13,11 +13,12 @@
 
 
 #include "util.h"
+#include "logging.h"
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD);
+void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel);
 
 
 #endif 

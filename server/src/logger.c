@@ -24,8 +24,6 @@
 #include <sys/types.h>
 #include <time.h>
 
-#include "util.h"
-#include "logging.h"
 #include "maestroTime.h"
 
 /*------------------------------------------------------------
@@ -55,12 +53,11 @@ static void sigint_handler(int signo);
 -- Private variables
 ------------------------------------------------------------*/
 #define MODULE_NAME "Logger"
-static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
-void logger_task()
+void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
     char pcLogFile[MAX_FILE_PATH];
     char pcLogFileComp[MAX_FILE_PATH];
