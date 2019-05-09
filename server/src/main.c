@@ -82,7 +82,6 @@ int main(int argc, char *argv[])
     unsigned int moduleNumber = 0;
     Options options;
     pid_t pID[numberOfModules];
-    int result = 0;
 
     if (readArgumentList(argc, argv, &options))
         exit(EXIT_FAILURE);
