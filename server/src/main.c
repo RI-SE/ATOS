@@ -138,7 +138,7 @@ int initializeMessageQueueBus(void)
     switch (result)
     {
     case MQBUS_OK:
-        LogMessage(LOG_LEVEL_INFO, "Initialized message queue bus");
+        LogMessage(LOG_LEVEL_DEBUG, "Initialized message queue bus");
         return 0;
     case MQBUS_INVALID_INPUT_ARGUMENT:
         LogMessage(LOG_LEVEL_ERROR, "Invalid number of message queues specified upon initialization: %d", nbrOfQueues);
