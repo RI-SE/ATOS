@@ -328,8 +328,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO, "Object control task running with PID: %i", getpid());
 
-    (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
-
+    if (iCommInit())
+        util_error("Unable to connect to message queue bus");
 
     while(!iExit)
     {
