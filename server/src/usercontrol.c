@@ -23,6 +23,7 @@
 
 #include "objectcontrol.h"
 #include "util.h"
+#include "maestroTime.h"
 
 /*
 #include <mqueue.h>
