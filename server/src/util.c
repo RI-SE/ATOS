@@ -37,7 +37,7 @@
 #define FE_WGS84        (1.0/298.257223563) // earth flattening (WGS84)
 #define RE_WGS84        6378137.0           // earth semimajor axis (WGS84) (m)
 
-// Message priorities
+// Message priorities on message queue
 #define PRIO_COMM_STRT 100
 #define PRIO_COMM_ARMD 110
 #define PRIO_COMM_STOP 120
@@ -1599,7 +1599,9 @@ int iUtilGetIntParaConfFile(char* pcParameter, int* iValue)
   return iResult;
 }
 
-
+/*******************************************************
+* Message queue bus wrapper functions
+********************************************************/
 /*!
  * \brief iCommInit Connects to the message queue bus
  * \return 0 upon success, -1 if there was an error
@@ -1651,52 +1653,41 @@ int iCommInit(void)
     }
     return -1;
 }
-/* iCommClose will close the messageque usally among the last function called
- * in a model. Where we vall mq_unlink followed by mq_close which will close
- * and remove the given messageque
-*/
+
+
+/*!
+ * \brief iCommClose Releases the claimed slot on the message bus so that it can be claimed by others.
+ * \return 0 upon success, -1 on error
+ */
 int iCommClose()
 {
-  int iIndex = 0;
-  int iResult;
+    enum MQBUS_ERROR result = MQBusDisconnect();
 
-  if(tMQRecv != 0 && pcMessageQueueName != NULL)
-  {
-    iResult = mq_unlink(pcMessageQueueName);
-    if(iResult < 0)
+    switch (result)
     {
-      return 0;
-    }
-    iResult = mq_close(tMQRecv);
-    if(iResult < 0)
-    {
-      return 0;
-    }
-  }
-
-  for(iIndex = 0; iIndex < MQ_NBR_QUEUES; ++iIndex)
-  {
-    if(ptMQSend[iIndex] != 0)
-    {
-      iResult = mq_close(ptMQSend[iIndex]);
-      if(iResult < 0)
-      {
+    case MQBUS_OK:
         return 0;
-      }
+    case MQBUS_RESOURCE_NOT_EXIST:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to release claimed message bus slot");
+        return -1;
+    case MQBUS_NO_READABLE_MQ:
+        LogMessage(LOG_LEVEL_WARNING, "Attempted to release message bus slot when none was claimed");
+        return 0;
+    default:
+        LogMessage(LOG_LEVEL_WARNING, "Unexpected message bus error when closing");
+        return -1;
     }
-  }
-
-  return 1;
 }
 
 
 /*!
- * \brief iCommRecv
- * \param command
- * \param data
- * \param messageSize
- * \param timeRecvUTC
- * \return
+ * \brief iCommRecv Poll message queue bus for received data in a nonblocking way, returning the oldest message
+ * with lowest priority value found on the queue, as well as the command identifier and time of receipt in UTC
+ * \param command Received command output variable
+ * \param data Received command data output variable
+ * \param messageSize Size of data array
+ * \param timeRecvUTC Receive time output variable
+ * \return Size (in bytes) of received data
  */
 ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, char* timeRecvUTC)
 {
@@ -1710,18 +1701,20 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, char
 
     if (timeRecvUTC != NULL)
     {
+        // Store time of receipt
         TimeSetToCurrentSystemTime(&tvTime);
         sprintf(timeRecvUTC, "%" PRId64, TimeGetAsUTCms(&tvTime));
     }
 
     if (result > 0)
     {
+        // A message was received: extract the command and data
         *command = message[0];
         if((strlen(message) > 1) && (data != NULL))
         {
             if(messageSize < result )
             {
-                LogMessage(LOG_LEVEL_WARNING, "Array too small to hold received message");
+                LogMessage(LOG_LEVEL_WARNING, "Array too small to hold received message data");
                 result = messageSize;
             }
             strncat(data, &message[1], (unsigned long)result);
@@ -1729,6 +1722,7 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, char
     }
     else
     {
+        // Result was less than 0, and errno is EAGAIN meaning no data was received
         *command = COMM_INV;
         result = 0;
     }
@@ -1736,10 +1730,10 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, char
 }
 
 /*!
- * \brief iCommSend
- * \param iCommand
- * \param cpData
- * \return
+ * \brief iCommSend Sends a command over the message bus
+ * \param iCommand Command number
+ * \param cpData Command data
+ * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
  */
 int iCommSend(const enum COMMAND iCommand, const char* cpData)
 {
@@ -1843,13 +1837,16 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData)
         util_error("Unknown command");
     }
 
+    // Append message to command
     if(cpData != NULL)
     {
         (void)strncat(&cpMessage[1], cpData, strlen(cpData));
     }
 
+    // Send message
     sendResult = MQBusSend(cpMessage, strlen(cpMessage), uiMessagePrio);
 
+    // Check for send success
     switch (sendResult)
     {
     case MQBUS_OK:

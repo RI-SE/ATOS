@@ -15,7 +15,6 @@
   -- Include files.
   ------------------------------------------------------------*/
 #include <inttypes.h>
-#include <mqueue.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -26,8 +25,8 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
-
 #include "mqbus.h"
+
 
 /*------------------------------------------------------------
   -- Defines
@@ -37,16 +36,11 @@
 #define ISO_PROTOCOL_VERSION 2
 #define ACK_REQ 0
 
-#define MQ_LG     "/TEServer-LG"
-#define MQ_SV     "/TEServer-SV"
-#define MQ_OC     "/TEServer-OC"
-#define MQ_VA     "/TEServer-VA"
-#define MQ_SC     "/TEServer-SC"
-#define MQ_SI     "/TEServer-SI"
+#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1)
 
-#define IPC_RECV       0x01
-#define IPC_SEND       0x02
-#define IPC_RECV_SEND  0x03
+//#define IPC_RECV       0x01
+//#define IPC_SEND       0x02
+//#define IPC_RECV_SEND  0x03
 
 #define SAFETY_CHANNEL_PORT 53240
 #define CONTROL_CHANNEL_PORT 53241
