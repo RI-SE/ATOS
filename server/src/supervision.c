@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <signal.h>
 #include <sys/time.h>
 
 #include "util.h"
@@ -51,6 +52,22 @@ static const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
   ------------------------------------------------------------*/
 
 /* This code is a straight copy from objectcontrol.c */
+
+void sig_handlerSV(int signo)
+  {
+    if (signo == SIGINT)
+          printf("received SIGINT in Supervision\n");
+          printf("Shutting down Supervision\n");
+          exit(1);
+
+    if (signo == SIGUSR1)
+          printf("received SIGUSR1\n");
+    if (signo == SIGKILL)
+          printf("received SIGKILL\n");
+    if (signo == SIGSTOP)
+          printf("received SIGSTOP\n");
+  }
+
 
 static void vFindObjectsInfo ( char object_traj_file    [MAX_OBJECTS][MAX_FILE_PATH],
                                char object_address_name [MAX_OBJECTS][MAX_FILE_PATH],
@@ -901,6 +918,8 @@ void supervision_task(TimeType *GPSTime) {
         fflush(stdout);
       }
 
+      if (signal(SIGINT, sig_handlerSV) == SIG_ERR)
+        printf("\ncan't catch SIGINT\n");
   } // while(!iExit)
 
 

@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
 
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -56,6 +57,23 @@ static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
+
+void sig_handlerLogger(int signo)
+  {
+    if (signo == SIGINT)
+          printf("received SIGINT in Logger\n");
+          printf("Shutting down Logger\n");
+          exit(1);
+
+    if (signo == SIGUSR1)
+          printf("received SIGUSR1\n");
+    if (signo == SIGKILL)
+          printf("received SIGKILL\n");
+    if (signo == SIGSTOP)
+          printf("received SIGSTOP\n");
+  }
+
+
 void logger_task()
 {
     char pcCommand[100];
@@ -447,6 +465,10 @@ void logger_task()
         {
             LogMessage(LOG_LEVEL_DEBUG,"Unhandled command in logger: %d",iCommand);
         }
+
+        if (signal(SIGINT, sig_handlerLogger) == SIG_ERR)
+          printf("\ncan't catch SIGINT\n");
+
     }
 
 

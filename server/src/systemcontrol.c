@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
+#include<signal.h>
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -170,6 +171,21 @@ static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
+  void sig_handler(int signo)
+  {
+    if (signo == SIGINT)
+          printf("received SIGINT in SystemControl\n");
+          printf("Shutting down SystemControl\n");
+          exit(1);
+
+    if (signo == SIGUSR1)
+          printf("received SIGUSR1\n");
+    if (signo == SIGKILL)
+          printf("received SIGKILL\n");
+    if (signo == SIGSTOP)
+          printf("received SIGSTOP\n");
+  }
+
 
 void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 {
@@ -1022,6 +1038,17 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         sleep_time.tv_nsec = 10000000;
         nanosleep(&sleep_time,&ref_time);
 
+        if (signal(SIGINT, sig_handler) == SIG_ERR)
+          printf("\ncan't catch SIGINT\n");
+
+/*
+        if (signal(SIGUSR1, sig_handler) == SIG_ERR)
+          printf("\ncan't catch SIGUSR1\n");
+        if (signal(SIGKILL, sig_handler) == SIG_ERR)
+          printf("\ncan't catch SIGKILL\n");
+        if (signal(SIGSTOP, sig_handler) == SIG_ERR)
+          printf("\ncan't catch SIGSTOP\n");
+*/
 
     }
 

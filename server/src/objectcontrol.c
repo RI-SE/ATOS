@@ -22,6 +22,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <signal.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <time.h>
@@ -205,6 +206,22 @@ static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
+  void sig_handlerOC(int signo)
+  {
+    if (signo == SIGINT)
+          printf("received SIGINT in ObjectControl\n");
+          printf("Shutting down ObjectControl\n");
+          exit(1);
+
+    if (signo == SIGUSR1)
+          printf("received SIGUSR1\n");
+    if (signo == SIGKILL)
+          printf("received SIGKILL\n");
+    if (signo == SIGSTOP)
+          printf("received SIGSTOP\n");
+  }
+
+
 void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 {
     int safety_socket_fd[MAX_OBJECTS];
@@ -1125,6 +1142,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
             (void)nanosleep(&sleep_time,&ref_time);
         }
+
+            if (signal(SIGINT, sig_handlerOC) == SIG_ERR)
+            printf("\ncan't catch SIGINT\n");
+
     }
 }
 
