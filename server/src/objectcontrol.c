@@ -213,7 +213,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     uint32_t object_tcp_port[MAX_OBJECTS];
     int nbr_objects=0;
     int iExit = 0;
-    int iCommand;
+    enum COMMAND iCommand;
     char pcRecvBuffer[RECV_MESSAGE_BUFFER];
     char pcTempBuffer[512];
     C8 MessageBuffer[BUFFER_SIZE_3100];
@@ -265,7 +265,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     double OriginHeadingDbl;
     TriggActionType TAA[MAX_TRIGG_ACTIONS];
     int TriggerActionCount = 0;
-    char pcSendBuffer[MQ_MAX_MESSAGE_LENGTH];
+    char pcSendBuffer[MBUS_MAX_DATALEN];
     char ObjectPort[SMALL_BUFFER_SIZE_0];
     char TriggId[SMALL_BUFFER_SIZE_1];
     char TriggAction[SMALL_BUFFER_SIZE_1];
@@ -333,6 +333,14 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     while(!iExit)
     {
+        if(OBCState == OBC_STATE_ERROR)
+        {
+            ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+            MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus, 0);
+            UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+
+        }
+
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED)
         {
             /*HEAB*/
@@ -431,8 +439,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                                 //printf("[ObjectControl] External trigg received\n");
                                 fflush(stdout);
                                 ObjectControlTOMToASCII(buffer, TriggId, TriggAction, TriggDelay, 1);
-                                bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
-                                bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
+                                bzero(buffer, OBJECT_MESS_BUFFER_SIZE);
+                                bzero(pcSendBuffer, sizeof(pcSendBuffer));
                                 bzero(ObjectPort, SMALL_BUFFER_SIZE_0);
                                 sprintf(ObjectPort, "%d", object_udp_port[iIndex]);
                                 strcat(pcSendBuffer,object_address_name[iIndex]);strcat(pcSendBuffer,";");
@@ -440,7 +448,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                                 strcat(pcSendBuffer,TriggId);strcat(pcSendBuffer,";");
                                 strcat(pcSendBuffer,TriggAction);strcat(pcSendBuffer,";");
                                 strcat(pcSendBuffer,TriggDelay);strcat(pcSendBuffer,";");
-                                (void)iCommSend(COMM_TOM, pcSendBuffer);
+                                if(iCommSend(COMM_TOM, pcSendBuffer) < 0)
+                                {
+                                    LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending TOM command - entering error state");
+                                    vSetState(&OBCState, OBC_STATE_ERROR);
+                                    ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+
+                                }
                             }
                         }
                     }
@@ -483,7 +497,15 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                     LogMessage(LOG_LEVEL_DEBUG, "Sending MONR message: %s", buffer);
 
-                    if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) (void)iCommSend(COMM_MONI,buffer);
+                    if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE)
+                    {
+                        if(iCommSend(COMM_MONI,buffer) < 0)
+                        {
+                            LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONI command - entering error state");
+                            vSetState(&OBCState,OBC_STATE_ERROR);
+                            ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+                        }
+                    }
 
 
 
@@ -960,13 +982,18 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         LogMessage(LOG_LEVEL_INFO,"Sending OSEM");
                         LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.");
                         ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, OriginLatitude, OriginLongitude, OriginAltitude );
-                        bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
+                        bzero(pcSendBuffer, sizeof(pcSendBuffer));
                         strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";");
                         strcat(pcSendBuffer,OriginLongitude);strcat(pcSendBuffer,";");
                         strcat(pcSendBuffer,OriginLatitude);strcat(pcSendBuffer,";");
                         strcat(pcSendBuffer,OriginAltitude);
 
-                        iCommSend(COMM_OSEM,pcSendBuffer);
+                        if(iCommSend(COMM_OSEM,pcSendBuffer) < 0)
+                        {
+                            LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OSEM command - entering error state");
+                            vSetState(&OBCState,OBC_STATE_ERROR);
+                            ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+                        }
                         UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
 
 
@@ -1094,8 +1121,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             else if(iCommand == COMM_EXIT)
             {
-                (void)iCommClose();
                 iExit = 1;
+                iCommClose();
             }
             else
             {
@@ -1116,13 +1143,20 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             {
                 bzero(Buffer2, SMALL_BUFFER_SIZE_1);
                 Buffer2[0] = OBCState;
-                (void)iCommSend(COMM_OBC_STATE,Buffer2);
+                //LogPrint("Sending: %d (%s or %u)",OBCState,Buffer2, Buffer2[0]);
+                if(iCommSend(COMM_OBC_STATE,Buffer2) < 0)
+                {
+                    LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OBC_STATE command - entering error state");
+                    vSetState(&OBCState,OBC_STATE_ERROR);
+                    ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+                }
                 uiTimeCycle = 0;
             }
 
             (void)nanosleep(&sleep_time,&ref_time);
         }
     }
+
     LogMessage(LOG_LEVEL_INFO,"Object control exiting");
 }
 
