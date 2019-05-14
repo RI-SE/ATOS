@@ -343,12 +343,11 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel) {
     -- Listen loop.
     ----------------------------------------------------------------------*/
 
-  (void) iCommInit ( IPC_RECV ,
-                     MQ_SV    ,
-                     0        );
+  if(iCommInit())
+      util_error("Unable to connect to message bus");
 
   int iExit                  = 0 ;
-  int iCommand                   ;
+  enum COMMAND iCommand          ;
   int doInitialAlignmentLoop = 0 ;
   int doCorrelationtLoop     = 0 ;
 
@@ -905,7 +904,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel) {
     --  Clean upp.
     --------------------------------------------------*/
 
- (void) iCommClose();
+ (void)iCommClose();
 
   for ( iIndex = 0           ;
         iIndex < nbr_objects ;
