@@ -24,11 +24,13 @@
 #include <time.h>
 
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <ifaddrs.h>
 
 //#include "remotecontrol.h"
 #include "systemcontrol.h"
@@ -122,6 +124,7 @@ const char* SystemControlCommandsArr[] =
 const char* SystemControlStatesArr[] = { "UNDEFINED", "INITIALIZED", "IDLE", "READY", "RUNNING", "INWORK", "ERROR"};
 const char* SystemControlOBCStatesArr[] = { "UNDEFINED", "IDLE", "INITIALIZED", "CONNECTED", "ARMED", "RUNNING", "ERROR"};
 
+const char* POSTRequestMandatoryContent[] = { "POST", "HTTP/1.1", "\r\n\r\n" };
 
 char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
 char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
@@ -153,6 +156,7 @@ I32 SystemControlDeleteFileDirectory(C8 *Path, C8 *ReturnValue, U8 Debug);
 I32 SystemControlBuildFileContentInfo(C8 *Path, C8 *ReturnValue, U8 Debug);
 I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *ReturnValue, U8 Remove, U8 Debug);
 I32 SystemControlCreateDirectory(C8 *Path, C8 *ReturnValue, U8 Debug);
+static C8 SystemControlVerifyHostAddress(char* ip);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -186,7 +190,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     ObjectPosition OP;
     int i,i1;
-    char *StartPtr, *StopPtr, *CmdPtr;
+    char *StartPtr, *StopPtr, *CmdPtr, *StringPos;
     struct timespec tTime;
     enum COMMAND iCommand;
     char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
@@ -227,6 +231,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     C8 BinBuffer[SMALL_BUFFER_SIZE_1024];
 
     C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
+
+    HTTPHeaderContent HTTPHeader;
 
     //C8 SIDSData[128][10000][8];
 
@@ -349,24 +355,95 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             else if(ClientResult > 0 && ClientResult < SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH)
             {
-                for(i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i ++ ) bzero(SystemControlArgument[i],SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
+
+                for(i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i ++ )
+                    bzero(SystemControlArgument[i],SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
+
                 CurrentInputArgCount = 0;
                 StartPtr = pcBuffer;
                 StopPtr = pcBuffer;
-                CmdPtr = strchr(strchr(pcBuffer,'\n')+1,'\n')+1;
-                StartPtr = strchr(pcBuffer, '(')+1;
-                //printf("pcBuffer: %s\n", pcBuffer);
-                while (StopPtr != NULL)
+                CmdPtr = NULL;
+                StringPos = pcBuffer;
+
+                /*
+                if (strstr(pcBuffer,"POST ") != NULL)
                 {
-                    StopPtr = (char *)strchr(StartPtr, ',');
-                    if(StopPtr == NULL) strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)strchr(StartPtr, ')') - (uint64_t)StartPtr);
-                    else strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
-                    StartPtr = StopPtr+1;
-                    CurrentInputArgCount ++;
-                    //printf("CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount-1]);
+
+                    CmdPtr = strchr(pcBuffer,'\n');
+                    if (CmdPtr != NULL && strstr(CmdPtr+1,"Host;") != NULL)
+                    {
+                        CmdPtr = strchr(CmdPtr+1,'\n');
+                        if (CmdPtr != NULL)
+                        {
+                            CmdPtr++;
+                            StartPtr = strchr(pcBuffer, '(')+1;
+                            //printf("pcBuffer: %s\n", pcBuffer);
+                            while (StopPtr != NULL)
+                            {
+                                StopPtr = (char *)strchr(StartPtr, ',');
+                                if(StopPtr == NULL) strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)strchr(StartPtr, ')') - (uint64_t)StartPtr);
+                                else strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
+                                StartPtr = StopPtr+1;
+                                CurrentInputArgCount ++;
+                                //printf("CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount-1]);
+                            }
+
+                            SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+                        }
+                    }
+                    else {CmdPtr = NULL;  If we don't find "Host" }
+                }
+                */
+
+                // Check so that all POST request mandatory content is contained in the message
+                for (i = 0; i < sizeof(POSTRequestMandatoryContent)/sizeof(POSTRequestMandatoryContent[0]); ++i)
+                {
+                    StringPos = strstr(StringPos,POSTRequestMandatoryContent[i]);
+                    if (StringPos == NULL)
+                    {
+                        CmdPtr = NULL;
+                        break;
+                    }
+                    else
+                    {
+                        CmdPtr = StringPos + strlen(POSTRequestMandatoryContent[i]);
+                    }
                 }
 
-                SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+
+                if (CmdPtr != NULL)
+                {
+                    // It is now known that the request contains "POST" and "\r\n\r\n", so we can decode the header
+                    UtilDecodeHTTPRequestHeader(pcBuffer, &HTTPHeader);
+
+                    if (HTTPHeader.Host[0] == '\0')
+                    {
+                        LogMessage(LOG_LEVEL_INFO, "Unspecified host in request <%s>",pcBuffer);
+                    }
+                    else if (SystemControlVerifyHostAddress(HTTPHeader.Host))
+                    {
+                        StartPtr = strchr(CmdPtr, '(')+1;
+                        while (StopPtr != NULL)
+                        {
+                            StopPtr = (char *)strchr(StartPtr, ',');
+                            if(StopPtr == NULL) strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)strchr(StartPtr, ')') - (uint64_t)StartPtr);
+                            else strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
+                            StartPtr = StopPtr+1;
+                            CurrentInputArgCount ++;
+                            //printf("CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount-1]);
+                        }
+
+                        SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+
+                    }
+                    else {
+                        LogMessage(LOG_LEVEL_INFO, "Request specified host <%s> not among known local addresses",HTTPHeader.Host);
+                    }
+                }
+                else
+                {
+                    LogMessage(LOG_LEVEL_WARNING,"Received badly formatted HTTP request: <%s>, must contain \"POST\" and \"\\r\\n\\r\\n\"",pcBuffer);
+                }
             }
         }
         else if(ModeU8 == 1)
@@ -1332,6 +1409,62 @@ static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I3
     }
 
     LogMessage(LOG_LEVEL_INFO,"Created process channel socket and address: %s:%d",name,port);
+}
+
+/*!
+ * \brief SystemControlVerifyHostAddress Checks if addr matches any of Maesto's own ip addresses
+ * \param addr IP address to match against own IPs
+ * \return true if match, false if not
+ */
+C8 SystemControlVerifyHostAddress(char* addr)
+{
+    struct ifaddrs *ifaddr, *ifa;
+    int family, s, n;
+    char host[NI_MAXHOST];
+
+    if (getifaddrs(&ifaddr) == -1)
+    {
+        LogMessage(LOG_LEVEL_ERROR,"Could not get interface data");
+        freeifaddrs(ifaddr);
+        return 0;
+    }
+
+    // Iterate over linked list using ifa
+    for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++)
+    {
+        if (ifa->ifa_addr == NULL)
+        {
+            // Interface had no addresses, skip to next
+            continue;
+        }
+
+        family = ifa->ifa_addr->sa_family;
+        if (family == AF_INET || family == AF_INET6)
+        {
+            s = getnameinfo(ifa->ifa_addr,
+                                       (family == AF_INET) ? sizeof(struct sockaddr_in) :
+                                                             sizeof(struct sockaddr_in6),
+                                       host, NI_MAXHOST,
+                                       NULL, 0, NI_NUMERICHOST);
+            if (s != 0)
+            {
+                LogMessage(LOG_LEVEL_ERROR,"getnameinfo() failed: %s", gai_strerror(s));
+                continue;
+            }
+
+            if (strcmp(host,addr) == 0)
+                return 1;
+            else
+                continue;
+        }
+        else
+        {
+            continue;
+        }
+    }
+
+    freeifaddrs(ifaddr);
+    return 0;
 }
 
 /*
