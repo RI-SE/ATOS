@@ -99,16 +99,20 @@ void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
   U8 ISOMessageReadRestU8 = 0;
   U8 ISOMessageReceivedU8 = 0;
 
-  I32 iExit = 0, iCommand;
+  I32 iExit = 0;
+  enum COMMAND iCommand;
   C8 MqBuffer[SUP_MQ_MAX_SIZE];
-  (void)iCommInit(IPC_RECV_SEND,MQ_SV,0);
+
   GSD->SupChunkSize = 0;
   U16 IterationCounter = 0;
   U32 TimestampU32 = 0;
 
   LogInit(MODULE_NAME,logLevel);
   LogMessage( LOG_LEVEL_INFO, "Supervisor control task running with PID: %i", getpid());
- 
+
+  if(iCommInit())
+      util_error("Unable to connect to message bus");
+
   bzero(TextBufferC8, SUP_CONTROL_BUFFER_SIZE_20);
   UtilSearchTextFile(TEST_CONF_FILE, "SupervisorIP=", "", TextBufferC8);
   bzero(SupervisorServerIpC8, SUP_CONTROL_BUFFER_SIZE_20);
