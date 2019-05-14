@@ -1686,24 +1686,22 @@ int iCommClose()
  * \param command Received command output variable
  * \param data Received command data output variable
  * \param messageSize Size of data array
- * \param timeRecvUTC Receive time output variable
+ * \param timeRecv Receive time output variable
  * \return Size (in bytes) of received data
  */
-ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, char* timeRecvUTC)
+ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, struct timeval *timeRecv)
 {
     char message[MQ_MSG_SIZE];
-    struct timeval tvTime;
     ssize_t result = MQBusRecv(message, MQ_MSG_SIZE);
 
 
     if (result < 1 && errno != EAGAIN)
         util_error("Message queue error when receiving");
 
-    if (timeRecvUTC != NULL)
+    if (timeRecv != NULL)
     {
         // Store time of receipt
-        TimeSetToCurrentSystemTime(&tvTime);
-        sprintf(timeRecvUTC, "%" PRId64, TimeGetAsUTCms(&tvTime));
+        TimeSetToCurrentSystemTime(timeRecv);
     }
 
     if (result > 0)
@@ -1852,7 +1850,7 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData)
     case MQBUS_OK:
         return 0;
     case MQBUS_MQ_FULL:
-        LogMessage(LOG_LEVEL_WARNING, "Attempted to write to full message queue - messages may be lost");
+        //LogMessage(LOG_LEVEL_WARNING, "Attempted to write to full message queue - message may be lost: <%d><%s>", iCommand, cpData);
         return 1;
     case MQBUS_INVALID_INPUT_ARGUMENT:
         LogMessage(LOG_LEVEL_WARNING, "Invalid message queue message length");

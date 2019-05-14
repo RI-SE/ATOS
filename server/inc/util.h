@@ -36,7 +36,7 @@
 #define ISO_PROTOCOL_VERSION 2
 #define ACK_REQ 0
 
-#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1)
+#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1) // Message queue data minus one byte for the command
 
 //#define IPC_RECV       0x01
 //#define IPC_SEND       0x02
@@ -50,6 +50,7 @@
 
 #define MAX_UTIL_VARIBLE_SIZE 512
 
+// TODO: Make these constants have more descriptive names
 #define a	6378137.0							            //meters in WGS84
 #define k	298.257223563 						        //in WGS84, f = 1/298.257223563
 #define b	6356752.3142451794975639665996337	//b = (1-f)*a
@@ -684,7 +685,7 @@ typedef enum {
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
     OBC_STATE_RUNNING,
-    OBC_STATE_ERROR,
+    OBC_STATE_ERROR
 } OBCState_t;
 
 
@@ -717,7 +718,7 @@ int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
 int iCommInit(void);
 int iCommClose();
-ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, char* timeRecvUTC);
+ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, struct timeval *timeRecv);
 int iCommSend(const enum COMMAND iCommand, const char* data);
 
 char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
