@@ -87,7 +87,7 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     C8 SendData[TIME_INTERVAL_NUMBER_BYTES] = {0, 0, 3, 0xe8};
     //C8 SendData[4] = {0, 0, 0, 1};
     struct timespec sleep_time, ref_time;
-    C8 MqRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
+    C8 MqRecvBuffer[MBUS_MAX_DATALEN];
     struct timeval tv, ExecTime;
     struct tm *tm;
 
@@ -224,7 +224,6 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, TIME_INTERVAL_NUMBER_BYTES, 0);
             }
             iExit = 1;
-            LogMessage(LOG_LEVEL_INFO,"Time control exiting");
             (void)iCommClose();
         }
 
@@ -242,6 +241,8 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             nanosleep(&sleep_time,&ref_time);
         }
     }
+
+    LogMessage(LOG_LEVEL_INFO,"Time control exiting");
 }
 
 U16 TimeControlGetMillisecond(TimeType *GPSTime)
