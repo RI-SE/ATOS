@@ -29,6 +29,7 @@
 #include "util.h"
 #include "logger.h"
 #include "logging.h"
+#include "datadictionary.h"
 
 
 /*------------------------------------------------------------
@@ -113,13 +114,14 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   LogInit(MODULE_NAME,logLevel);
   LogMessage( LOG_LEVEL_INFO, "Supervisor control task running with PID: %i", getpid());
  
-  bzero(TextBufferC8, SUP_CONTROL_BUFFER_SIZE_20);
-  UtilSearchTextFile(TEST_CONF_FILE, "SupervisorIP=", "", TextBufferC8);
-  bzero(SupervisorServerIpC8, SUP_CONTROL_BUFFER_SIZE_20);
-  strcat(SupervisorServerIpC8, TextBufferC8);
+  //bzero(TextBufferC8, SUP_CONTROL_BUFFER_SIZE_20);
+  //UtilSearchTextFile(TEST_CONF_FILE, "SupervisorIP=", "", TextBufferC8);
+  //bzero(SupervisorServerIpC8, SUP_CONTROL_BUFFER_SIZE_20);
+  //strcat(SupervisorServerIpC8, TextBufferC8);
 
-  LogMessage(LOG_LEVEL_INFO,"Supervisor IP: %s", TextBufferC8);
-  SupervisorIpU32 = UtilIPStringToInt(SupervisorServerIpC8);
+  //LogMessage(LOG_LEVEL_INFO,"Supervisor IP: %s", TextBufferC8);
+  //SupervisorIpU32 = UtilIPStringToInt(SupervisorServerIpC8);
+  SupervisorIpU32 = DataDictionaryGetExternalSupervisorIPU32();
 
   if(SupervisorIpU32 != 0)
   {

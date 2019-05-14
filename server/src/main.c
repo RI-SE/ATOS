@@ -28,7 +28,7 @@
 #include "objectcontrol.h"
 #include "systemcontrol.h"
 #include "supervision.h"
-//#include "remotecontrol.h"
+#include "datadictionary.h"
 #include "timecontrol.h"
 #include "supervisorcontrol.h"
 #include "logging.h"
@@ -63,6 +63,8 @@ int main(int argc, char *argv[])
     GSD->ExitU8 = 0;
     GSD->ScenarioStartTimeU32 = 0;
     GPSTime->isTimeInitializedU8 = 0;
+
+    DataDictionaryConstructor();
 
     pid_t pID[8];
     int iIndex = 0;
