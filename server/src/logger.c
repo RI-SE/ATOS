@@ -39,7 +39,17 @@
 #define HEARTBEAT_TIME_MS 10
 #define TIMESTAMP_BUFFER_LENGTH 20
 #define SPECIFIC_CHAR_THRESHOLD_COUNT 10
-#define MQ_MAX_UTC_LENGTH 30
+#define MAX_UTC_TIMESTAMP_STRLEN 21 // Maximum string length of an uint64 UTC timestamp is strlen("%u",1.8447e19)+1 i.e. 21
+#define MAX_DATE_STRLEN 25 // Maximum string length of a time stamp on the format "2035;12;31;24;59;59;1000" is 25
+
+#define MAX_LOG_ROW_LENGTH (MAX_DATE_STRLEN + strlen(";") + 2*(MAX_UTC_TIMESTAMP_STRLEN + strlen(";")) + strlen("255") + strlen(";") + MBUS_MAX_DATALEN + strlen("\n") + 1)
+
+#define ACCESS_MODE_READ "r"
+#define ACCESS_MODE_WRITE "w"
+#define ACCESS_MODE_WRITE_AND_READ "w+"
+#define ACCESS_MODE_APPEND "a"
+#define ACCESS_MODE_APPEND_AND_READ "a+"
+
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -59,32 +69,38 @@ static void sigint_handler(int signo);
   ------------------------------------------------------------*/
 void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
-    char pcLogFile[MAX_FILE_PATH];
-    char pcLogFileComp[MAX_FILE_PATH];
-    char pcBuffer[MQ_MAX_MESSAGE_LENGTH+100];
-    char pcRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
-    char TimeStampUTCBufferRecv[MQ_MAX_UTC_LENGTH];
-    char DateBuffer[MQ_MAX_MESSAGE_LENGTH];
-    char pcSendBuffer[MQ_MAX_MESSAGE_LENGTH];
-    char pcReadBuffer[MQ_MAX_MESSAGE_LENGTH];
+    char pcLogFile[MAX_FILE_PATH];                          //!< Log file path and name buffer
+    char pcLogFileComp[MAX_FILE_PATH];                      //!< CSV log file path and name buffer
+    char busReceiveBuffer[MBUS_MAX_DATALEN];                //!< Buffer for receiving from message bus
+    char busSendBuffer[MBUS_MAX_DATALEN];                   //!< Buffer for sending to message bus
+    char DateBuffer[MAX_DATE_STRLEN];                       //!< Buffer for holding a timestamp in human readable text format
+    char pcReadBuffer[MAX_LOG_ROW_LENGTH];                  //!< Buffer for reading files
+    char pcBuffer[MAX_LOG_ROW_LENGTH];                      //!< General purpose buffer
+    char subStrings[MBUS_MAX_DATALEN];
+    struct timeval time, recvTime;
 
-    LogInit(MODULE_NAME,logLevel);
-    LogMessage(LOG_LEVEL_INFO,"Logger task running with PID: %d",getpid());
+    // Listen for commands
+    enum COMMAND command;
+    int iExit = 0;
 
     int GPSweek;
     FILE *filefd,*replayfd, *filefdComp;
     struct timespec sleep_time, ref_time;
     U8 isFirstInit = 1;
 
-    (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
-    //(void)iCommInit(IPC_SEND,MQ_LG_1,0);
+    // Initialize log
+    LogInit(MODULE_NAME, logLevel);
+    LogMessage(LOG_LEVEL_INFO, "Logger task running with PID: %d", getpid());
 
-    /* Create folder with date as name and .log file with date as name */
+    // Initialize message bus connection
+    if(iCommInit())
+        util_error("Unable to initialize connection to message bus");
 
+    // Create folder with date as name and .log file with date as name
     struct stat st = {0};
     if (stat(LOG_PATH, &st) == -1)
     {
-        LogMessage(LOG_LEVEL_INFO,"Creating log directory");
+        LogMessage(LOG_LEVEL_INFO, "Creating log directory");
         vCreateLogFolder(LOG_PATH);
     }
 
@@ -92,11 +108,8 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     (void)strcat(pcLogFileComp," ");
 
 
-    /* Listen for commands */
-    int iCommand;
-    int iExit = 0;
 
-    /* Execution mode*/
+    // Execution mode
     int LoggerExecutionMode = LOG_CONTROL_MODE;
     //int test =100;
     int RowCount = 0;
@@ -105,33 +118,29 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     char *src;
     uint64_t NewTimestamp, OldTimestamp,Timestamp;
 
-    //vCreateLogFolder("./log/");
-
     while(!iExit)
     {
 
-        bzero(pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
-        bzero(TimeStampUTCBufferRecv,MQ_MAX_UTC_LENGTH);
+        bzero(busReceiveBuffer, sizeof(busReceiveBuffer));
 
-        (void)iCommRecv(&iCommand,pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
+        (void)iCommRecv(&command, busReceiveBuffer, sizeof(busReceiveBuffer), &recvTime);
 
-        if(LoggerExecutionMode == LOG_CONTROL_MODE && iCommand != COMM_OBC_STATE && iCommand != COMM_MONI )
+        if(LoggerExecutionMode == LOG_CONTROL_MODE && command != COMM_OBC_STATE && command != COMM_MONI )
         {
-            Timestamp = atol(TimeStampUTCBufferRecv);
-            bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
-            UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
-            bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
+            bzero(DateBuffer, sizeof(DateBuffer));
+            TimeGetAsDateTime(&recvTime, "Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof(DateBuffer));
 
             // Remove newlines in http Requests for nicer printouts.
-            for (int i = 0; i < strlen(pcRecvBuffer); i++){
-                if(pcRecvBuffer[i] == '\n'){
-                  pcRecvBuffer[i] = ' ';
+            for (unsigned long i = 0; i < strlen(busReceiveBuffer); i++){
+                if(busReceiveBuffer[i] == '\n'){
+                  busReceiveBuffer[i] = ' ';
                 }
             }
 
-            sprintf ( pcBuffer,"%s;%s;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, iCommand, pcRecvBuffer);
+            bzero(pcBuffer, sizeof(pcBuffer));
+            sprintf ( pcBuffer,"%s;%ld;%d;%s\n", DateBuffer, TimeGetAsUTCms(&recvTime), (char)command, busReceiveBuffer);
 
-            filefd = fopen(pcLogFile,"a");
+            filefd = fopen(pcLogFile, ACCESS_MODE_APPEND);
             if (filefd != NULL)
             {
                 (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
@@ -139,13 +148,13 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             else
             {
-                LogMessage(LOG_LEVEL_ERROR,"Unable to open file <%s>",pcLogFile);
+                LogMessage(LOG_LEVEL_ERROR, "Unable to open file <%s>", pcLogFile);
             }
 
-            filefdComp = fopen(pcLogFileComp,"a");
+            filefdComp = fopen(pcLogFileComp, ACCESS_MODE_APPEND);
             if (filefdComp != NULL)
             {
-                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
+                (void)fwrite(pcBuffer, 1, strlen(pcBuffer), filefdComp);
                 fclose(filefdComp);
             }
             else
@@ -155,7 +164,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
         }
 
-        switch(iCommand)
+        switch(command)
         {
         case COMM_DISCONNECT:
 
@@ -169,13 +178,11 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
         case COMM_MONI:
 
-            filefd = fopen(pcLogFile, "a+");
+            filefd = fopen(pcLogFile, ACCESS_MODE_APPEND_AND_READ);
 
-            char *str;
-            str = malloc(sizeof(pcRecvBuffer) + 1);
-            strcpy(str,pcRecvBuffer);
+            strcpy(subStrings,busReceiveBuffer);
 
-            char* GPSSecondOfWeek = strtok(str, ";");
+            char* GPSSecondOfWeek = strtok(subStrings, ";");
 
             int counter = 0;
             while (GPSSecondOfWeek != NULL && counter < 2)  // Get GPS second of week
@@ -185,16 +192,15 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
               counter++;
             }
 
-            uint64_t GPSms = UtilgetGPSmsFromUTCms(UtilgetUTCmsFromGPStime(GPSweek, atoi(GPSSecondOfWeek))); //Calculate GPSms
+            TimeSetToGPStime(&time, (uint16_t)GPSweek, (uint32_t)(atoi(GPSSecondOfWeek)*4));
 
-            Timestamp = atol(TimeStampUTCBufferRecv);
-            bzero(DateBuffer,MQ_MAX_MESSAGE_LENGTH);
-            UtilgetDateTimefromUTCCSVformat ((int64_t) Timestamp, DateBuffer,sizeof(DateBuffer));
-            bzero(pcBuffer,MQ_MAX_MESSAGE_LENGTH+100);
-            sprintf ( pcBuffer,"%s;%s;%lu;%d;%s\n", DateBuffer,TimeStampUTCBufferRecv, GPSms, iCommand, pcRecvBuffer);
+            bzero(DateBuffer, sizeof(DateBuffer));
+            TimeGetAsDateTime(&recvTime, "Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof(DateBuffer));
+
+            bzero(pcBuffer, sizeof(pcBuffer));
+            sprintf (pcBuffer, "%s;%ld;%ld;%d;%s\n", DateBuffer, TimeGetAsUTCms(&time), TimeGetAsGPSms(&time), command, busReceiveBuffer);
 
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-            //void)fwrite(pcBuffer,1,strlen(pcBuffer),filefdComp);
 
             fclose(filefd);
 
@@ -202,12 +208,13 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
         case COMM_OSEM:
 
-            str = malloc(sizeof(pcRecvBuffer) + 1);
-            strcpy(str,pcRecvBuffer);
+            strcpy(subStrings, busReceiveBuffer);
 
             // Returns first datapoint of OSEM (GPSWeek)
-            char* token = strtok(pcRecvBuffer, ";");
+            char* token = strtok(busReceiveBuffer, ";");
             GPSweek = atoi(token);
+
+            LogMessage(LOG_LEVEL_INFO, "GPS week of OSEM: %d", GPSweek);
 
             // Rest of OSEM if needed
             /*
@@ -227,17 +234,17 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case COMM_REPLAY:
 
             LoggerExecutionMode = LOG_REPLAY_MODE;
-            LogMessage(LOG_LEVEL_INFO,"Logger in REPLAY mode <%s>",pcRecvBuffer);
-            //replayfd = fopen ("log/33/event.log", "r");
-            replayfd = fopen (pcRecvBuffer, "r");
+            LogMessage(LOG_LEVEL_INFO, "Logger in REPLAY mode <%s>", busReceiveBuffer);
+
+            replayfd = fopen (busReceiveBuffer, ACCESS_MODE_READ);
             RowCount = UtilCountFileRows(replayfd);
             fclose(replayfd);
-            //replayfd = fopen ("log/33/event.log", "r");
-            replayfd = fopen (pcRecvBuffer, "r");
-            LogMessage(LOG_LEVEL_INFO,"Rows: %d",RowCount);;
+
+            replayfd = fopen (busReceiveBuffer, ACCESS_MODE_READ);
+            LogMessage(LOG_LEVEL_INFO, "Rows: %d", RowCount);;
             if(replayfd)
             {
-                UtilReadLineCntSpecChars(replayfd, pcReadBuffer);//Just read first line
+                UtilReadLineCntSpecChars(replayfd, pcReadBuffer); //Just read first line
                 int SpecChars = 0, j=0;
                 char TimestampBuffer[TIMESTAMP_BUFFER_LENGTH];
                 int FirstIteration = 1;
@@ -245,7 +252,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 //uint64_t NewTimestamp, OldTimestamp;
                 do
                 {
-                    bzero(pcReadBuffer,MQ_MAX_MESSAGE_LENGTH);
+                    bzero(pcReadBuffer, sizeof(pcReadBuffer));
                     SpecChars = UtilReadLineCntSpecChars(replayfd, pcReadBuffer);
 
                     j++;
@@ -273,18 +280,20 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         /* Read to second ' ' in row = 418571059920: 3 1;0;418571059920;577776566;127813082;0;0;3600;0; */
                         src = strchr(pcReadBuffer, ' ');
                         src = strchr(src+1, ' ');
-                        bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
-                        //strcpy(pcSendBuffer, "MONR;");
-                        strcat(pcSendBuffer, src+1);
-                        (void)iCommSend(COMM_MONI, pcSendBuffer);
+                        bzero(busSendBuffer, sizeof(busSendBuffer));
+                        //strcpy(busSendBuffer, "MONR;");
+                        strcat(busSendBuffer, src+1);
+                        if(iCommSend(COMM_MONI, busSendBuffer) < 0)
+                            util_error("Communication error - exiting");
+
                         FirstIteration = 0;
                         OldTimestamp = NewTimestamp;
                     };
-                    LogMessage(LOG_LEVEL_INFO,"%d:%d:%d<%s>",RowCount,j,SpecChars,pcSendBuffer);
+                    LogMessage(LOG_LEVEL_INFO,"%d:%d:%d<%s>",RowCount,j,SpecChars,busSendBuffer);
 
                     /*
                     bzero(TimeStampUTCBufferRecv,MQ_ETSI_LENGTH);
-                    (void)iCommRecv(&iCommand,pcRecvBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
+                    (void)iCommRecv(&iCommand,busReceiveBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
 
                     if(iCommand == COMM_STOP)
                     {
@@ -297,12 +306,13 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             else
             {
-                LogMessage(LOG_LEVEL_WARNING, "Failed to open file: %s", pcRecvBuffer);
+                LogMessage(LOG_LEVEL_WARNING, "Failed to open file: %s", busReceiveBuffer);
             }
 
             LogMessage(LOG_LEVEL_INFO,"Replay done");
-            //(void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
-            (void)iCommSend(COMM_CONTROL, NULL);
+
+            if(iCommSend(COMM_CONTROL, NULL) < 0)
+                util_error("Communication error - exiting");
 
             break;
 
@@ -333,7 +343,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
 
         default:
-            LogMessage(LOG_LEVEL_WARNING,"Unhandled command in logger: %d",iCommand);
+            LogMessage(LOG_LEVEL_WARNING,"Unhandled command in logger: %d", (char)command);
         }
 
     }
@@ -381,7 +391,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     FILE *filefd, *fileread;
     char msString[10];
     char sysCommand[100];
-    char pcBuffer[MQ_MAX_MESSAGE_LENGTH+100];
+    char pcBuffer[MAX_LOG_ROW_LENGTH];
     DIR *dir;
     struct dirent *ent;
     int read;
@@ -439,7 +449,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
 
     // Print trajectory files to log
     LogMessage(LOG_LEVEL_DEBUG, "Printing trajectories to log");
-    filefd = fopen(logFilePath, "w+");
+    filefd = fopen(logFilePath, ACCESS_MODE_WRITE_AND_READ);
 
     bzero(pcBuffer, sizeof(pcBuffer));
     sprintf(pcBuffer,"------------------------------------------\nWhole Trajectory files:\n------------------------------------------\n");
@@ -456,7 +466,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
             strcat(pcBuffer, ent->d_name);
             if (access(pcBuffer, 0) == 0)
             {
-                fileread = fopen(pcBuffer, "r");
+                fileread = fopen(pcBuffer, ACCESS_MODE_READ);
                 read = fgetc(fileread);
                 while (read != EOF)
                 {
@@ -479,7 +489,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
 
     // Print configuration to log
     LogMessage(LOG_LEVEL_DEBUG, "Printing configuration to log");
-    filefd = fopen(logFilePath,"a+");
+    filefd = fopen(logFilePath, ACCESS_MODE_APPEND_AND_READ);
 
     bzero(pcBuffer, sizeof(pcBuffer));
     sprintf(pcBuffer, "\n------------------------------------------\nWhole Config file:\n------------------------------------------\n");
@@ -490,7 +500,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     if (access(TEST_CONF_FILE, 0) == 0)
     {
       /*read the .conf file and print it in to the .log file */
-      fileread = fopen(TEST_CONF_FILE,"r");
+      fileread = fopen(TEST_CONF_FILE, ACCESS_MODE_READ);
       read = fgetc(fileread);
       while(read!= EOF)
       {
