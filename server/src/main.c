@@ -54,7 +54,7 @@ static GSDType *GSD;
 /*------------------------------------------------------------
 -- Server modules
 ------------------------------------------------------------*/
-//! allModules contains the tasks to be run in the server. To enable or disable a task, add the main module function in this array
+//! allModules contains the tasks to be run in the server. To enable or disable a task, add or remove the main module function in this array
 static const ModuleTask allModules[] = {
     logger_task,
     timecontrol_task,
