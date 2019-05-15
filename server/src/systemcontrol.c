@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
+#include<signal.h>
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -167,6 +168,24 @@ static C8 SystemControlVerifyHostAddress(char* ip);
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
+  void sig_handler(int signo)
+  {
+    if (signo == SIGINT)
+          printf("received SIGINT in SystemControl\n");
+          printf("Shutting down SystemControl with pid: %d\n", getpid());
+          pid_t iPid = getpid(); /* Process gets its id.*/
+          //kill(iPid, SIGINT);
+          exit(1);
+
+
+    if (signo == SIGUSR1)
+          printf("received SIGUSR1\n");
+    if (signo == SIGKILL)
+          printf("received SIGKILL\n");
+    if (signo == SIGSTOP)
+          printf("received SIGSTOP\n");
+  }
+
 
 void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
@@ -1073,6 +1092,17 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         sleep_time.tv_nsec = 10000000;
         nanosleep(&sleep_time,&ref_time);
 
+        if (signal(SIGINT, sig_handler) == SIG_ERR)
+          printf("\ncan't catch SIGINT\n");
+
+/*
+        if (signal(SIGUSR1, sig_handler) == SIG_ERR)
+          printf("\ncan't catch SIGUSR1\n");
+        if (signal(SIGKILL, sig_handler) == SIG_ERR)
+          printf("\ncan't catch SIGKILL\n");
+        if (signal(SIGSTOP, sig_handler) == SIG_ERR)
+          printf("\ncan't catch SIGSTOP\n");
+*/
 
     }
 

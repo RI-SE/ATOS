@@ -17,7 +17,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
-#include <time.h>  
+#include <time.h>
+#include <signal.h>
 
 
 #include <sys/socket.h>
@@ -67,6 +68,27 @@ static void TimeControlDecodeTimeBuffer(TimeType* GPSTime, C8* TimeBuffer, C8 de
   -- Private variables.
   ------------------------------------------------------------*/
 #define MODULE_NAME "TimeControl"
+
+/*------------------------------------------------------------
+-- SigInt handler function.
+------------------------------------------------------------*/
+void sig_handlerTimeControl(int signo)
+  {
+    if (signo == SIGINT)
+          printf("received SIGINT in timecontrol\n");
+          printf("Shutting down timecontrol with pid: %d\n", getpid());
+          pid_t iPid = getpid(); /* Process gets its id.*/
+          //kill(iPid, SIGINT);
+          exit(1);
+
+
+    if (signo == SIGUSR1)
+          printf("received SIGUSR1\n");
+    if (signo == SIGKILL)
+          printf("received SIGKILL\n");
+    if (signo == SIGSTOP)
+          printf("received SIGSTOP\n");
+  }
 
 /*------------------------------------------------------------
 -- The main function.
