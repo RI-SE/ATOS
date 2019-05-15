@@ -194,7 +194,7 @@ int8_t tFromRunning(OBCState_t *currentState, OBCState_t requestedState);
 int8_t tFromError(OBCState_t *currentState, OBCState_t requestedState);
 int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
 
-void signal_handler(int signo);
+static void signal_handler(int signo);
 
 /*------------------------------------------------------------
 -- Private variables
