@@ -175,8 +175,11 @@ static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
   {
     if (signo == SIGINT)
           printf("received SIGINT in SystemControl\n");
-          printf("Shutting down SystemControl\n");
+          printf("Shutting down SystemControl with pid: %d\n", getpid());
+          pid_t iPid = getpid(); /* Process gets its id.*/
+          //kill(iPid, SIGINT);
           exit(1);
+
 
     if (signo == SIGUSR1)
           printf("received SIGUSR1\n");

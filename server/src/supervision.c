@@ -57,8 +57,11 @@ void sig_handlerSV(int signo)
   {
     if (signo == SIGINT)
           printf("received SIGINT in Supervision\n");
-          printf("Shutting down Supervision\n");
+          printf("Shutting down Supervision with pid: %d\n", getpid());
+          pid_t iPid = getpid(); /* Process gets its id.*/
+          //kill(iPid, SIGINT);
           exit(1);
+
 
     if (signo == SIGUSR1)
           printf("received SIGUSR1\n");

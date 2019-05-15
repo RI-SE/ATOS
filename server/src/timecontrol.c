@@ -75,8 +75,11 @@ void sig_handlerTimeControl(int signo)
   {
     if (signo == SIGINT)
           printf("received SIGINT in timecontrol\n");
-          printf("Shutting down timecontrol\n");
+          printf("Shutting down timecontrol with pid: %d\n", getpid());
+          pid_t iPid = getpid(); /* Process gets its id.*/
+          //kill(iPid, SIGINT);
           exit(1);
+
 
     if (signo == SIGUSR1)
           printf("received SIGUSR1\n");
