@@ -56,6 +56,8 @@ typedef struct
 static TimeType *GPSTime;
 static GSDType *GSD;
 static struct timespec childPollPeriodTime = {CHILD_POLL_PERIOD_S, CHILD_POLL_PERIOD_NS};
+static char doShutdown = 0;
+static struct timeval waitStartTime, waitedTime;
 
 /*------------------------------------------------------------
 -- Server modules
@@ -79,7 +81,6 @@ void printHelp(char* progName);
 int initializeMessageQueueBus(void);
 int shutdownMessageQueueBus(void);
 int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExitStatus[]);
-void signal_handler(int signo);
 
 /*------------------------------------------------------------
 -- The main function.
@@ -114,7 +115,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
 
     // For all modules in allModules, start corresponding process in a fork
-    for (moduleNumber = 0; moduleNumber < numberOfModules; ++moduleNumber)
+    for (moduleNumber = 0; moduleNumber < numberOfModules-1; ++moduleNumber)
     {
         pID[moduleNumber] = fork();
         if (pID[moduleNumber] < 0)
@@ -130,11 +131,9 @@ int main(int argc, char *argv[])
     }
 
     // Use the main fork for the final task
-    //(*allModules[moduleNumber])(GPSTime, GSD, options.commonLogLevel);
-    if (signal(SIGINT,signal_handler) == SIG_ERR)
-        util_error("Unable to create signal handler");
-    else
-        (void)waitForModuleExit(pID,numberOfModules,moduleExitStatus);
+    (*allModules[moduleNumber])(GPSTime, GSD, options.commonLogLevel);
+
+    (void)waitForModuleExit(pID,numberOfModules,moduleExitStatus);
 
     LogMessage(LOG_LEVEL_INFO, "Cleaning up message bus resources");
     if(shutdownMessageQueueBus())
@@ -227,16 +226,15 @@ int shutdownMessageQueueBus(void)
  * \return
  */
 int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExitStatus[]){
-    struct timeval waitStartTime, waitedTime;
     unsigned int moduleNumber,nExitedModules = 0;
     int status;
 
     TimeSetToCurrentSystemTime(&waitStartTime);
-    LogMessage(LOG_LEVEL_INFO, "Awaiting shutdown signal...");
+    LogMessage(LOG_LEVEL_INFO, "Waiting for modules to terminate...");
     do
     {
         // Loop over all modules which have not yet exited
-        for (moduleNumber = 0; moduleNumber < numberOfModules; ++moduleNumber)
+        for (moduleNumber = 0; moduleNumber < numberOfModules-1; ++moduleNumber)
         {
             if (moduleExitStatus[moduleNumber])
                 continue;
@@ -272,17 +270,14 @@ int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExi
             LogMessage(LOG_LEVEL_ERROR, "Timed out while waiting for modules to exit");
             break;
         }
-
-        LogMessage(LOG_LEVEL_INFO,"zzz... ");
-        nanosleep(&childPollPeriodTime, NULL);
-
-    } while (nExitedModules < numberOfModules);
+        // TODO: Sleep?
+    } while (nExitedModules < numberOfModules-1);
 
     // Loop over all exited modules to report exit manner
     if (nExitedModules < numberOfModules-1)
     {
         LogMessage(LOG_LEVEL_WARNING,"Modules exited erroneously:");
-        for (moduleNumber = 0; moduleNumber < numberOfModules-1; ++moduleNumber)
+        for (moduleNumber = 0; moduleNumber < numberOfModules; ++moduleNumber)
         {
             switch (moduleExitStatus[moduleNumber]) {
             case 0:
@@ -364,3 +359,4 @@ void printHelp(char* progName)
     printf("  -v, --verbose \tcreate detailed logs\n");
     printf("  -h, --help \t\tdisplay this help and exit\n");
 }
+

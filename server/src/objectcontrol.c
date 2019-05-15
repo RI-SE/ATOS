@@ -22,7 +22,6 @@
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <signal.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <time.h>
@@ -194,8 +193,6 @@ int8_t tFromRunning(OBCState_t *currentState, OBCState_t requestedState);
 int8_t tFromError(OBCState_t *currentState, OBCState_t requestedState);
 int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
 
-static void signal_handler(int signo);
-
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
@@ -333,10 +330,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     // Create log
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO, "Object control task running with PID: %i", getpid());
-
-    // Set up signal handler
-    if (signal(SIGINT, signal_handler) == SIG_ERR)
-        util_error("Unable to create SIGINT handler");
 
     // Set up message bus connection
     if (iCommInit())
@@ -2795,23 +2788,3 @@ int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState)
     return -1;
 }
 
-// ********* Signal handlers *****************
-void signal_handler(int signo)
-{
-  if (signo == SIGINT)
-  {
-        printf("received SIGINT in ObjectControl\n");
-        printf("Shutting down ObjectControl with pid: %d\n", getpid());
-        pid_t iPid = getpid(); /* Process gets its id.*/
-        //kill(iPid, SIGINT);
-        exit(1);
-  }
-
-
-  if (signo == SIGUSR1)
-        printf("received SIGUSR1\n");
-  if (signo == SIGKILL)
-        printf("received SIGKILL\n");
-  if (signo == SIGSTOP)
-        printf("received SIGSTOP\n");
-}

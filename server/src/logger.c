@@ -58,7 +58,6 @@ static void vCreateLogFolder(char logFolder[MAX_FILE_PATH]);
 static void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvLogFilePath, unsigned int csvFilePathLength);
 static int ReadLogLine(FILE *fd, char *Buffer);
 static int CountFileRows(FILE *fd);
-static void signal_handler(int signo);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -119,9 +118,6 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     char *find_time;
     char *src;
     uint64_t NewTimestamp, OldTimestamp,Timestamp;
-
-    if (signal(SIGINT, signal_handler) == SIG_ERR)
-        util_error("Unable to create signal handler");
 
     while(!iExit)
     {
@@ -549,25 +545,3 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
 
     fclose(filefd);
 }
-
-
-void signal_handler(int signo)
-{
-    if (signo == SIGINT)
-    {
-        printf("received SIGINT in Logger\n");
-        printf("Shutting down Logger with pid: %d\n", getpid());
-        pid_t iPid = getpid(); /* Process gets its id.*/
-        //kill(iPid, SIGINT);
-        exit(1);
-    }
-
-
-    if (signo == SIGUSR1)
-        printf("received SIGUSR1\n");
-    if (signo == SIGKILL)
-        printf("received SIGKILL\n");
-    if (signo == SIGSTOP)
-        printf("received SIGSTOP\n");
-}
-
