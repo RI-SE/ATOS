@@ -49,15 +49,17 @@ typedef struct
 /*------------------------------------------------------------
 -- Defines
 ------------------------------------------------------------*/
-#define PROCESS_WAIT_TIMEOUT_MS 3000 //!< Time to wait for all modules to exit before closing message bus
-#define CHILD_POLL_PERIOD_S 2
-#define CHILD_POLL_PERIOD_NS 0
+#define PROCESS_WAIT_TIMEOUT_MS 3000            //!< Time to wait for all modules to exit before closing message bus
+#define CHILD_POLL_PERIOD_S 2                   //!< Time period (seconds) between process status polls when no shutdown signal has been received
+#define CHILD_POLL_PERIOD_NS 0                  //!< Time period (nanoseconds) between process status polls when no shutdown signal has been received
+#define CHILD_POLL_PERIOD_SHUTDOWN_S 0          //!< Time period (seconds) between process status polls when a shutdown signal has been received
+#define CHILD_POLL_PERIOD_SHUTDOWN_NS 1000*1000 //!< Time period (nanoseconds) between process status polls when a shutdown signal has been received
 
 static TimeType *GPSTime;
 static GSDType *GSD;
-static struct timespec childPollPeriodTime = {CHILD_POLL_PERIOD_S, CHILD_POLL_PERIOD_NS};
-static char doShutdown = 0;
-static struct timeval waitStartTime, waitedTime;
+static struct timespec childPollPeriodTime = {CHILD_POLL_PERIOD_S, CHILD_POLL_PERIOD_NS};  //!< Time period between process polls
+static char doShutdown = 0;                                                                //!< Exit boolean
+static struct timeval waitStartTime, waitedTime;                                           //!< Poll timeout timers
 
 /*------------------------------------------------------------
 -- Server modules
@@ -134,9 +136,11 @@ int main(int argc, char *argv[])
     if (signal(SIGINT, signal_handler) == SIG_ERR)
         util_error("Unable to create signal handler");
 
+    // Enter hold function while server is running
     (void)waitForModuleExit(pID,numberOfModules,moduleExitStatus);
 
-    LogMessage(LOG_LEVEL_INFO, "Cleaning up message bus resources");
+    // Perform final cleanup
+    LogMessage(LOG_LEVEL_DEBUG, "Cleaning up message bus resources");
     if(shutdownMessageQueueBus())
         util_error("Unable to successfully clean up message bus resources");
     else
@@ -220,11 +224,12 @@ int shutdownMessageQueueBus(void)
 }
 
 /*!
- * \brief waitForModuleExit
- * \param pIDs
- * \param numberOfModules
- * \param moduleExitStatus
- * \return
+ * \brief waitForModuleExit When doShutdown has been set to 1, waits a preset number of seconds for all child
+ * processes to exit cleanly, then returns
+ * \param pIDs Array holding PIDs for child processes
+ * \param numberOfModules Number of elements in pIDs
+ * \param moduleExitStatus Exit status array to hold exit status of each child
+ * \return 0 if all child processes exited cleanly, -1 otherwise
  */
 int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExitStatus[]){
     unsigned int moduleNumber,nExitedModules = 0;
@@ -263,6 +268,7 @@ int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExi
             }
         }
 
+        // If shutdown is desired, wait specified amount of time before forcing return
         TimeSetToCurrentSystemTime(&waitedTime);
         timersub(&waitedTime, &waitStartTime, &waitedTime);
 
@@ -271,7 +277,8 @@ int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExi
             LogMessage(LOG_LEVEL_ERROR, "Timed out while waiting for modules to exit");
             break;
         }
-        // TODO: Sleep?
+
+        nanosleep(&childPollPeriodTime,NULL);
     } while (nExitedModules < numberOfModules);
 
     // Loop over all exited modules to report exit manner
@@ -350,8 +357,8 @@ int readArgumentList(int argc, char *argv[], Options *opts)
 }
 
 /*!
- * \brief printHelp
- * \param progName
+ * \brief printHelp Prints help text with list of all possible execution options
+ * \param progName Name of the program as called
  */
 void printHelp(char* progName)
 {
@@ -362,15 +369,18 @@ void printHelp(char* progName)
 }
 
 /*!
- * \brief signal_handler
- * \param signo
+ * \brief signal_handler Handles signals (e.g. SIGINT) - forces exit if it catches an unimplemented signal
+ * \param signo Signal number
  */
 void signal_handler(int signo)
 {
     switch (signo) {
     case SIGINT:
-        LogMessage(LOG_LEVEL_INFO,"Initiating shutdown of modules - waiting %.3f seconds before forcing shutdown", PROCESS_WAIT_TIMEOUT_MS/1000.0);
+        LogMessage(LOG_LEVEL_INFO,"Waiting for shutdown of all modules...");
+        LogMessage(LOG_LEVEL_DEBUG,"Waiting %.3f seconds before forcing shutdown", PROCESS_WAIT_TIMEOUT_MS/1000.0);
         TimeSetToCurrentSystemTime(&waitStartTime);
+        childPollPeriodTime.tv_sec = CHILD_POLL_PERIOD_SHUTDOWN_S;
+        childPollPeriodTime.tv_nsec = CHILD_POLL_PERIOD_SHUTDOWN_NS;
         doShutdown = 1;
         break;
     default:
