@@ -38,10 +38,6 @@
 
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1) // Message queue data minus one byte for the command
 
-//#define IPC_RECV       0x01
-//#define IPC_SEND       0x02
-//#define IPC_RECV_SEND  0x03
-
 #define SAFETY_CHANNEL_PORT 53240
 #define CONTROL_CHANNEL_PORT 53241
 
