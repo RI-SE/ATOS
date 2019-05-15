@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <signal.h>
 
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -341,7 +340,8 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
 
             break;
-
+        case COMM_INV:
+            break;
         default:
             LogMessage(LOG_LEVEL_WARNING,"Unhandled command in logger: %d", (char)command);
         }
