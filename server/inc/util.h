@@ -88,19 +88,12 @@
   8 days for leap year between 1970 and 2004
 */
 
-/* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
-#define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
-
 /* Calculation: 13 * 365 * 24 * 3600 * 1000 + 4 * 24 * 3600 * 1000 = 755568000 */
 #define MS_FROM_2004_TO_2017_NO_LEAP_SECS 755568000
 
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
-
-// Between 1970 01 01 and 1980 01 06 there is 365*10 days, plus 2 for 2 leap years and plus 5 for the remaining days
-// in total we have MStime= ((365 * 10) + 2 + 5) * 24 * 3600 * 1000 = 315964800000
-#define MS_TIME_DIFF_UTC_GPS 315964800000
 // Difference is 18 leap seconds between utc and gps
 #define MS_LEAP_SEC_DIFF_UTC_GPS 18000
 

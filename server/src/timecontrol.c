@@ -29,6 +29,7 @@
 
 #include "timecontrol.h"
 #include "logger.h"
+#include "maestroTime.h"
 
 
 #define TIME_CONTROL_CONF_FILE_PATH  "conf/test.conf"

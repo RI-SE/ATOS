@@ -81,7 +81,9 @@ install (TARGETS TEServer DESTINATION bin)
 target_link_libraries(util rt m)
 target_link_libraries(util m)
 target_link_libraries(util rt)
-target_link_libraries(UserControl util objctrl MaestroLogging)
 target_link_libraries(util MaestroLogging MaestroTime MQBus)
+
+target_link_libraries(UserControl util objctrl MaestroLogging MaestroTime)
+
 target_link_libraries(TEServer util)
 target_link_libraries(TEServer MaestroLogging MaestroTime MQBus)
