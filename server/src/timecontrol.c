@@ -100,6 +100,9 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO,"Time control task running with PID: %i",getpid());
 
+    if(iCommInit())
+        util_error("Unable to initialize message bus connection");
+
     GPSTime->isGPSenabled = 0;
 
     gettimeofday(&ExecTime, NULL);

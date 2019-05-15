@@ -49,7 +49,7 @@ typedef struct
 /*------------------------------------------------------------
 -- Defines
 ------------------------------------------------------------*/
-#define PROCESS_WAIT_TIME_MS 3000 //!< Time to wait for all modules to exit before closing message bus
+#define PROCESS_WAIT_TIMEOUT_MS 3000 //!< Time to wait for all modules to exit before closing message bus
 #define CHILD_POLL_PERIOD_S 2
 #define CHILD_POLL_PERIOD_NS 0
 
@@ -81,6 +81,7 @@ void printHelp(char* progName);
 int initializeMessageQueueBus(void);
 int shutdownMessageQueueBus(void);
 int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExitStatus[]);
+void signal_handler(int signo);
 
 /*------------------------------------------------------------
 -- The main function.
@@ -115,7 +116,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
 
     // For all modules in allModules, start corresponding process in a fork
-    for (moduleNumber = 0; moduleNumber < numberOfModules-1; ++moduleNumber)
+    for (moduleNumber = 0; moduleNumber < numberOfModules; ++moduleNumber)
     {
         pID[moduleNumber] = fork();
         if (pID[moduleNumber] < 0)
@@ -130,8 +131,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Use the main fork for the final task
-    (*allModules[moduleNumber])(GPSTime, GSD, options.commonLogLevel);
+    if (signal(SIGINT, signal_handler) == SIG_ERR)
+        util_error("Unable to create signal handler");
 
     (void)waitForModuleExit(pID,numberOfModules,moduleExitStatus);
 
@@ -229,12 +230,12 @@ int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExi
     unsigned int moduleNumber,nExitedModules = 0;
     int status;
 
-    TimeSetToCurrentSystemTime(&waitStartTime);
-    LogMessage(LOG_LEVEL_INFO, "Waiting for modules to terminate...");
+    bzero(moduleExitStatus,numberOfModules);
+    LogMessage(LOG_LEVEL_INFO, "Awaiting shutdown signal...");
     do
     {
         // Loop over all modules which have not yet exited
-        for (moduleNumber = 0; moduleNumber < numberOfModules-1; ++moduleNumber)
+        for (moduleNumber = 0; moduleNumber < numberOfModules; ++moduleNumber)
         {
             if (moduleExitStatus[moduleNumber])
                 continue;
@@ -265,23 +266,23 @@ int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExi
         TimeSetToCurrentSystemTime(&waitedTime);
         timersub(&waitedTime, &waitStartTime, &waitedTime);
 
-        if (TimeGetAsUTCms(&waitedTime) > PROCESS_WAIT_TIME_MS)
+        if (doShutdown && TimeGetAsUTCms(&waitedTime) > PROCESS_WAIT_TIMEOUT_MS)
         {
             LogMessage(LOG_LEVEL_ERROR, "Timed out while waiting for modules to exit");
             break;
         }
         // TODO: Sleep?
-    } while (nExitedModules < numberOfModules-1);
+    } while (nExitedModules < numberOfModules);
 
     // Loop over all exited modules to report exit manner
-    if (nExitedModules < numberOfModules-1)
+    if (nExitedModules < numberOfModules)
     {
         LogMessage(LOG_LEVEL_WARNING,"Modules exited erroneously:");
         for (moduleNumber = 0; moduleNumber < numberOfModules; ++moduleNumber)
         {
             switch (moduleExitStatus[moduleNumber]) {
             case 0:
-                LogMessage(LOG_LEVEL_WARNING,"PID %d did not exit during wait period of %.3f seconds",pIDs[moduleNumber], PROCESS_WAIT_TIME_MS/1000.0);
+                LogMessage(LOG_LEVEL_WARNING,"PID %d did not exit during wait period of %.3f seconds",pIDs[moduleNumber], PROCESS_WAIT_TIMEOUT_MS/1000.0);
                 break;
             case -1:
                 LogMessage(LOG_LEVEL_WARNING,"PID %d exited with an error code",pIDs[moduleNumber]);
@@ -360,3 +361,19 @@ void printHelp(char* progName)
     printf("  -h, --help \t\tdisplay this help and exit\n");
 }
 
+/*!
+ * \brief signal_handler
+ * \param signo
+ */
+void signal_handler(int signo)
+{
+    switch (signo) {
+    case SIGINT:
+        LogMessage(LOG_LEVEL_INFO,"Initiating shutdown of modules - waiting %.3f seconds before forcing shutdown", PROCESS_WAIT_TIMEOUT_MS/1000.0);
+        TimeSetToCurrentSystemTime(&waitStartTime);
+        doShutdown = 1;
+        break;
+    default:
+        util_error("Caught unhandled signal");
+    }
+}
