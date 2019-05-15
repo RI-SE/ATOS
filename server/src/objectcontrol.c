@@ -16,7 +16,6 @@
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <errno.h>
-#include <mqueue.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <inttypes.h>

@@ -26,7 +26,6 @@
 #include "maestroTime.h"
 
 /*
-#include <mqueue.h>
 #include <sys/time.h>
 #include <stdio.h>
 #include <string.h>

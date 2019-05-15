@@ -14,7 +14,6 @@
 #include "logger.h"
 #include <dirent.h>
 #include <errno.h>
-#include <mqueue.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

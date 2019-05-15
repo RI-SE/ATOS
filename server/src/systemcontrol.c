@@ -11,7 +11,6 @@
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
-#include <mqueue.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
