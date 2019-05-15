@@ -77,6 +77,7 @@ int initializeMessageQueueBus(void);
 int shutdownMessageQueueBus(void);
 int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExitStatus[]);
 
+
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
@@ -280,7 +281,7 @@ int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExi
                 LogMessage(LOG_LEVEL_WARNING,"PID %d did not exit during wait period of %.3f seconds",pIDs[moduleNumber], PROCESS_WAIT_TIME_MS/1000.0);
                 break;
             case -1:
-                LogMessage(LOG_LEVEL_WARNING,"PID %d exited with an error code");
+                LogMessage(LOG_LEVEL_WARNING,"PID %d exited with an error code",pIDs[moduleNumber]);
                 break;
             }
         }
