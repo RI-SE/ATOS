@@ -33,6 +33,7 @@
 #include "supervisorcontrol.h"
 #include "logging.h"
 #include "mqbus.h"
+#include "maestroTime.h"
 
 
 
@@ -48,6 +49,8 @@ typedef struct
 /*------------------------------------------------------------
 -- Defines
 ------------------------------------------------------------*/
+#define PROCESS_WAIT_TIME_MS 3000 //!< Time to wait for all modules to exit before closing message bus
+
 static TimeType *GPSTime;
 static GSDType *GSD;
 
@@ -71,7 +74,8 @@ static const size_t numberOfModules = sizeof(allModules) / sizeof(ModuleTask);
 int readArgumentList(int argc, char *argv[], Options *opts);
 void printHelp(char* progName);
 int initializeMessageQueueBus(void);
-
+int shutdownMessageQueueBus(void);
+int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExitStatus[]);
 
 /*------------------------------------------------------------
 -- The main function.
@@ -82,6 +86,7 @@ int main(int argc, char *argv[])
     unsigned int moduleNumber = 0;
     Options options;
     pid_t pID[numberOfModules];
+    char moduleExitStatus[numberOfModules];
 
     if (readArgumentList(argc, argv, &options))
         exit(EXIT_FAILURE);
@@ -122,7 +127,14 @@ int main(int argc, char *argv[])
 
     // Use the main fork for the final task
     (*allModules[moduleNumber])(GPSTime, GSD, options.commonLogLevel);
-    exit(EXIT_SUCCESS);
+
+    (void)waitForModuleExit(pID,numberOfModules,moduleExitStatus);
+
+    LogMessage(LOG_LEVEL_INFO, "Cleaning up message bus resources");
+    if(shutdownMessageQueueBus())
+        util_error("Unable to successfully clean up message bus resources");
+    else
+        exit(EXIT_SUCCESS);
 }
 
 /*!
@@ -170,10 +182,116 @@ int initializeMessageQueueBus(void)
     case MQBUS_MQ_COULD_NOT_BE_DESTROYED:
         LogMessage(LOG_LEVEL_ERROR, "Could not delete message queue");
         break;
+    case MQBUS_MQ_FULL:
+        LogMessage(LOG_LEVEL_ERROR, "Message bus slot full");
+        break;
+    case MQBUS_WRITE_FAIL:
+        LogMessage(LOG_LEVEL_ERROR, "Message bus write failed");
+        break;
     }
     return -1;
 }
 
+/*!
+ * \brief shutdownMessageQueueBus Deletes all message queues
+ * \return 0 on success, -1 on error
+ */
+int shutdownMessageQueueBus(void)
+{
+    enum MQBUS_ERROR result = MQBusDelete();
+
+    // Printouts according to result
+    switch (result)
+    {
+    case MQBUS_OK:
+        LogMessage(LOG_LEVEL_DEBUG, "Deleted message queue bus");
+        return 0;
+    default:
+        LogMessage(LOG_LEVEL_ERROR, "Error while deleting message bus");
+        break;
+    }
+    return -1;
+}
+
+/*!
+ * \brief waitForModuleExit
+ * \param pIDs
+ * \param numberOfModules
+ * \param moduleExitStatus
+ * \return
+ */
+int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExitStatus[]){
+    struct timeval waitStartTime, waitedTime;
+    unsigned int moduleNumber,nExitedModules = 0;
+    int status;
+
+    TimeSetToCurrentSystemTime(&waitStartTime);
+    LogMessage(LOG_LEVEL_INFO, "Waiting for all modules to exit...");
+    do
+    {
+        // Loop over all modules which have not yet exited
+        for (moduleNumber = 0; moduleNumber < numberOfModules-1; ++moduleNumber)
+        {
+            if (moduleExitStatus[moduleNumber])
+                continue;
+
+            switch(waitpid(pIDs[moduleNumber], &status, WNOHANG))
+            {
+            case -1:
+                util_error("wait() error");
+            case 0:
+                // Module still running
+                break;
+            default:
+                // Module exited, record exit manner and increase
+                if (WIFEXITED(status))
+                {
+                    moduleExitStatus[moduleNumber] = 1;
+                    nExitedModules++;
+                }
+                else
+                {
+                    moduleExitStatus[moduleNumber] = -1;
+                    nExitedModules++;
+                }
+                break;
+            }
+        }
+
+        TimeSetToCurrentSystemTime(&waitedTime);
+        timersub(&waitedTime, &waitStartTime, &waitedTime);
+
+        if (TimeGetAsUTCms(&waitedTime) > PROCESS_WAIT_TIME_MS)
+        {
+            LogMessage(LOG_LEVEL_ERROR, "Timed out while waiting for modules to exit");
+            break;
+        }
+        // TODO: Sleep?
+    } while (nExitedModules < numberOfModules-1);
+
+    // Loop over all exited modules to report exit manner
+    if (nExitedModules < numberOfModules-1)
+    {
+        LogMessage(LOG_LEVEL_WARNING,"Modules exited erroneously:");
+        for (moduleNumber = 0; moduleNumber < numberOfModules-1; ++moduleNumber)
+        {
+            switch (moduleExitStatus[moduleNumber]) {
+            case 0:
+                LogMessage(LOG_LEVEL_WARNING,"PID %d did not exit during wait period of %.3f seconds",pIDs[moduleNumber], PROCESS_WAIT_TIME_MS/1000.0);
+                break;
+            case -1:
+                LogMessage(LOG_LEVEL_WARNING,"PID %d exited with an error code");
+                break;
+            }
+        }
+        return -1;
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_INFO,"All modules exited successfully");
+        return 0;
+    }
+}
 
 /*!
  * \brief readArgumentList Decodes the list of input arguments and fills an options struct
