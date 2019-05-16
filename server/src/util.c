@@ -69,17 +69,12 @@
 -- Private variables
 ------------------------------------------------------------*/
 
-/*------------------------------------------------------------
--- Private functions
-------------------------------------------------------------*/
-
-static char rayFromPointIntersectsLine(double pointX, double pointY, double polyPointAX, double polyPointAY, double polyPointBX, double polyPointBY);
-
-
 /*---------------------------------------------s---------------
   -- Private functions
   ------------------------------------------------------------*/
-void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetContainerSize, const char* fieldName);
+static void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetContainerSize, const char* fieldName);
+static char rayFromPointIntersectsLine(double pointX, double pointY, double polyPointAX, double polyPointAY, double polyPointBX, double polyPointBY);
+
 
 void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetContainerSize, const char* fieldName)
 {
@@ -150,6 +145,7 @@ void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetCont
     }
 
 }
+
 
 /*---------------------------------------------s---------------
   -- Public functions
