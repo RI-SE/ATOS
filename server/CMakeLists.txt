@@ -9,6 +9,7 @@ project (Maestro)
 # add include directories
 include_directories(inc)
 include_directories(../util/C/logging)
+include_directories(../util/C/time)
 include(GNUInstallDirs)
 
 # Add logging library (hint at some locations)
@@ -26,6 +27,11 @@ include(GNUInstallDirs)
 add_library(MaestroLogging
   ../util/C/logging/logging.h
   ../util/C/logging/logging.c
+)
+
+add_library(MaestroTime
+  ../util/C/time/maestroTime.h
+  ../util/C/time/maestroTime.c
 )
 
 # Create library
@@ -69,7 +75,7 @@ install (TARGETS TEServer DESTINATION bin)
 target_link_libraries(util rt m)
 target_link_libraries(util m)
 target_link_libraries(util rt)
-target_link_libraries(UserControl util objctrl MaestroLogging)
-target_link_libraries(util MaestroLogging)
+target_link_libraries(UserControl util objctrl MaestroLogging MaestroTime)
+target_link_libraries(util MaestroLogging MaestroTime)
 target_link_libraries(TEServer util)
-target_link_libraries(TEServer MaestroLogging)
+target_link_libraries(TEServer MaestroLogging MaestroTime)

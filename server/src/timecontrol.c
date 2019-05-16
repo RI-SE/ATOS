@@ -29,6 +29,7 @@
 #include "timecontrol.h"
 #include "logger.h"
 #include "logging.h"
+#include "maestroTime.h"
 
 
 #define TIME_CONTROL_CONF_FILE_PATH  "conf/test.conf"
@@ -46,6 +47,10 @@
 #define LOG_PATH "./timelog/"
 #define LOG_FILE "time.log"
 #define LOG_BUFFER_LENGTH 128
+
+#define FIX_QUALITY_NONE 0
+#define FIX_QUALITY_BASIC 1
+#define FIX_QUALITY_DIFFERENTIAL 2
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -123,13 +128,13 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 
         if (TimeControlCreateTimeChannel(ServerIPC8, ServerPortU16, &SocketfdI32, &time_addr))
         {
-            LogMessage(LOG_LEVEL_INFO, "Established connection to time server");
+            LogMessage(LOG_LEVEL_INFO, "Using time server reference");
             TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, TIME_INTERVAL_NUMBER_BYTES, 0);
             GPSTime->isGPSenabled = 1;
         }
         else
         {
-            LogMessage(LOG_LEVEL_WARNING, "Unable to connect to time server: defaulting to system time");
+            LogMessage(LOG_LEVEL_INFO, "Defaulting to system time");
 
             // Send warning over MQ
             LOG_SEND(LogBuffer, "Unable to connect to time server");
@@ -268,8 +273,9 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
     int receivedNewData = 0;
     struct timeval timeout = {REPLY_TIMEOUT_S, 0};
     struct timeval tEnd,tCurr;
+    TimeType tempGPSTime;
 
-    LogMessage(LOG_LEVEL_INFO,"Time source address: %s:%d",name,port);
+    LogMessage(LOG_LEVEL_INFO,"Specified time server address: %s:%d",name,port);
     /* Connect to object safety socket */
 
     *sockfd= socket(AF_INET, SOCK_DGRAM, 0);
@@ -302,7 +308,7 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
     {
         util_error("Error calling fcntl");
     }
-    LogMessage(LOG_LEVEL_INFO,"Created socket and time address: %s:%d",name,port);
+    LogMessage(LOG_LEVEL_INFO,"Created socket and time address: %s:%d", name, port);
 
     // Check for existence of remote server
     LogMessage(LOG_LEVEL_INFO,"Awaiting reply from time server...");
@@ -317,9 +323,31 @@ static int TimeControlCreateTimeChannel(const char* name,const uint32_t port, in
     {
         gettimeofday(&tCurr, NULL);
         TimeControlRecvTime(sockfd, timeBuffer, TIME_CONTROL_RECEIVE_BUFFER_SIZE, &receivedNewData);
-    } while (!receivedNewData && timercmp(&tCurr,&tEnd,<));
+        if (receivedNewData)
+        {
+            TimeControlDecodeTimeBuffer(&tempGPSTime, timeBuffer, 0);
+            switch (tempGPSTime.FixQualityU8)
+            {
+            case FIX_QUALITY_NONE:
+                LogMessage(LOG_LEVEL_WARNING, "Received reply from time server: no satellite fix");
+                return 0;
+            case FIX_QUALITY_BASIC:
+                LogMessage(LOG_LEVEL_INFO, "Received reply from time server: non-differential fix on %d satellite(s)",
+                           tempGPSTime.NSatellitesU8);
+                return 1;
+            case FIX_QUALITY_DIFFERENTIAL:
+                LogMessage(LOG_LEVEL_INFO, "Received reply from time server: differential fix on %d satellite(s)",
+                           tempGPSTime.NSatellitesU8);
+                return 1;
+            default:
+                LogMessage(LOG_LEVEL_ERROR, "Received reply from time server: unexpected fix quality parameter");
+                return 0;
+            }
+        }
+    } while (timercmp(&tCurr, &tEnd, <));
 
-    return receivedNewData;
+    LogMessage(LOG_LEVEL_WARNING, "Unable to connect to specified time server: %s:%d", name, port);
+    return 0;
 }
 
 
@@ -388,33 +416,46 @@ static int TimeControlSendUDPData(int* sockfd, struct sockaddr_in* addr, C8* Sen
 }
 
 
-static void TimeControlRecvTime(int* sockfd, C8* buffer, int length, int* recievedNewData)
+static void TimeControlRecvTime(int* sockfd, C8* buffer, int length, int* receivedNewData)
 {
     int result;
-    *recievedNewData = 0;
+    *receivedNewData = 0;
     do
     {
-
         result = recv(*sockfd, buffer, length, 0);
 
         if (result < 0)
         {
+            // If we received a _real_ error, report it. Otherwise, nothing was received
             if(errno != EAGAIN && errno != EWOULDBLOCK)
-            {
                 util_error("Failed to receive from time socket");
-            }
             else
-            {
-                LogMessage(LOG_LEVEL_DEBUG,"No data received, result=%d", result);
-            }
+                return;
+        }
+        else if (result == 0)
+        {
+            // EOF received
+            LogMessage(LOG_LEVEL_ERROR,"Time server disconnected");
+            *receivedNewData = 0;
+            return;
         }
         else
         {
-            *recievedNewData = 1;
-            LogMessage(LOG_LEVEL_DEBUG,"Received data: <%s>, result=%d",buffer, result);
+            // If message size is equal to what is expected according to the format, keep reading until the newest has been read
+            if (result == length)
+            {
+                *receivedNewData = 1;
+                LogMessage(LOG_LEVEL_DEBUG,"Received data: <%s>, result=%d", buffer, result);
+            }
+            else
+            {
+                *receivedNewData = 0;
+                LogMessage(LOG_LEVEL_ERROR,"Received badly formatted message from time server");
+            }
 
         }
-    } while(result > 0 );
+    } while (result > 0);
+    return;
 }
 
 static void TimeControlDecodeTimeBuffer(TimeType* GPSTime, C8* TimeBuffer, C8 debug)
@@ -436,7 +477,7 @@ static void TimeControlDecodeTimeBuffer(TimeType* GPSTime, C8* TimeBuffer, C8 de
                                                                                                                                                      ((U64)TimeBuffer[18]) << 24 | ((U64)TimeBuffer[19]) << 16 | ((U64)TimeBuffer[20]) << 8 | TimeBuffer[21];
     GPSTime->GPSMinutesU32 = ((U32)TimeBuffer[22]) << 24 | ((U32)TimeBuffer[23]) << 16 | ((U32)TimeBuffer[24]) << 8 | TimeBuffer[25];
     GPSTime->GPSWeekU16 = ((U16)TimeBuffer[26]) << 8 | TimeBuffer[27];
-    GPSTime->GPSSecondsOfWeekU32 = ((U32)TimeBuffer[28]) << 24 | ((U32)TimeBuffer[29]) << 16 | ((U32)TimeBuffer[30]) << 8 | TimeBuffer[31];
+    GPSTime->GPSSecondsOfWeekU32 = ((U32)TimeBuffer[28]) << 24 | ((U32)TimeBuffer[29]) << 16 | ((U32)TimeBuffer[30]) << 8 | TimeBuffer[31] + MS_LEAP_SEC_DIFF_UTC_GPS/1000;
     GPSTime->GPSSecondsOfDayU32 = ((U32)TimeBuffer[32]) << 24 | ((U32)TimeBuffer[33]) << 16 | ((U32)TimeBuffer[34]) << 8 | TimeBuffer[35];
     GPSTime->ETSIMillisecondsU64 = ((U64)TimeBuffer[36]) << 56 | ((U64)TimeBuffer[37]) << 48 | ((U64)TimeBuffer[38]) << 40 | ((U64)TimeBuffer[39]) << 32 |
                                                                                                                                                       ((U64)TimeBuffer[40]) << 24 | ((U64)TimeBuffer[41]) << 16 | ((U64)TimeBuffer[42]) << 8 | TimeBuffer[43];

@@ -118,19 +118,12 @@
   8 days for leap year between 1970 and 2004
 */
 
-/* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
-#define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
-
 /* Calculation: 13 * 365 * 24 * 3600 * 1000 + 4 * 24 * 3600 * 1000 = 755568000 */
 #define MS_FROM_2004_TO_2017_NO_LEAP_SECS 755568000
 
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
-
-// Between 1970 01 01 and 1980 01 06 there is 365*10 days, plus 2 for 2 leap years and plus 5 for the remaining days
-// in total we have MStime= ((365 * 10) + 2 + 5) * 24 * 3600 * 1000 = 315964800000
-#define MS_TIME_DIFF_UTC_GPS 315964800000
 // Difference is 18 leap seconds between utc and gps
 #define MS_LEAP_SEC_DIFF_UTC_GPS 18000
 
@@ -305,6 +298,15 @@ typedef struct
   double Altitude;
   double Heading;
 } GeoPosition;
+
+
+typedef struct
+{
+    double xCoord_m;
+    double yCoord_m;
+    double zCoord_m;
+    double heading_deg;
+} CartesianPosition;
 
 
 typedef struct
@@ -742,6 +744,7 @@ int iCommClose();
 int iCommRecv(int*, char*, const int, char*);
 int iCommSend(const int,const char*);
 
+char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
 int UtilVincentyDirect(double refLat, double refLon, double a1, double distance, double *resLat, double *resLon, double *a2);
 double UtilDegToRad(double Deg);
@@ -752,6 +755,8 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition *OP, int StartIndex, double
 int UtilFindCurrentTrajectoryPositionNew(ObjectPosition *OP, int StartIndex, double CurrentTime, double MaxTrajDiff, double MaxTimeDiff, char debug);
 int UtilSetSyncPoint(ObjectPosition *OP, double x, double y, double z, double time);
 float UtilCalculateTimeToSync(ObjectPosition *OP);
+
+char UtilIsPointInPolygon(double pointX, double pointY, double * polyX, double * polyY, int nPtsInPolygon);
 
 int UtilCountFileRows(FILE *fd);
 int UtilReadLineCntSpecChars(FILE *fd, char *Buffer);

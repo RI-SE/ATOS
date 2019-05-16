@@ -23,9 +23,11 @@
 #include <sys/time.h>
 #include <stdbool.h>
 #include <netinet/tcp.h>
+#include <float.h>
 
 #include "util.h"
 #include "logging.h"
+#include "maestroTime.h"
 
 
 /*------------------------------------------------------------
@@ -49,11 +51,11 @@ static mqd_t tMQRecv;
 static mqd_t ptMQSend[MQ_NBR_QUEUES];
 static char pcMessageQueueName[1024];
 
-
 /*---------------------------------------------s---------------
   -- Private functions
   ------------------------------------------------------------*/
-void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetContainerSize, const char* fieldName);
+static void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetContainerSize, const char* fieldName);
+static char rayFromPointIntersectsLine(double pointX, double pointY, double polyPointAX, double polyPointAY, double polyPointBX, double polyPointBY);
 
 void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetContainerSize, const char* fieldName)
 {
@@ -124,6 +126,7 @@ void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetCont
     }
 
 }
+
 
 /*---------------------------------------------s---------------
   -- Public functions
@@ -692,6 +695,23 @@ int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug)
 }
 
 
+/*!
+ * \brief UtilIsPositionNearTarget Checks if position lies within or on a sphere with radius equal to tolerance_m
+ * and centre at target.
+ * \param position Position to verify
+ * \param target Target position
+ * \param tolerance_m Radius around target position defining "near"
+ * \return true if position is within tolerance_m of target, false otherwise
+ */
+char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m)
+{
+    double distance = 0;
+    distance = sqrt( pow(position.xCoord_m-target.xCoord_m, 2)
+                   + pow(position.yCoord_m-target.yCoord_m, 2)
+                   + pow(position.zCoord_m-target.zCoord_m, 2) );
+    return distance <= tolerance_m;
+}
+
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP)
 {
 
@@ -990,6 +1010,125 @@ float UtilCalculateTimeToSync(ObjectPosition *OP)
   return t;
 }
 
+
+
+
+/*!
+ * \brief UtilIsPointInPolygon Checks if a point lies within a polygon specified by a number of vertices using
+ * the ray casting algorithm (see http://rosettacode.org/wiki/Ray-casting_algorithm).
+ * \param pointX X coordinate of the point to check
+ * \param pointY Y coordinate of the point to check
+ * \param verticesX X coordinates of the vertex points defining the polygon to check
+ * \param verticesY Y coordinates of the vertex points defining the polygon to check
+ * \param nPtsInPolygon length of the two vertex arrays
+ * \return true if the point lies within the polygon, false otherwise
+ */
+char UtilIsPointInPolygon(double pointX, double pointY, double * verticesX, double * verticesY, int nPtsInPolygon)
+{
+    int nIntersects = 0;
+
+    // Count the number of intersections with the polygon
+    for (int i = 0; i < nPtsInPolygon-1; ++i)
+    {
+        if (rayFromPointIntersectsLine(pointX, pointY, verticesX[i], verticesY[i], verticesX[i+1], verticesY[i+1]))
+        {
+            nIntersects++;
+        }
+    }
+
+    // If the first and last points are different, the polygon segment between them must also be included
+    if (fabs(verticesX[0] - verticesX[nPtsInPolygon-1]) > (double)(2*FLT_EPSILON) || fabs(verticesY[0] - verticesY[nPtsInPolygon-1]) > (double)(2*FLT_EPSILON) )
+    {
+        if (rayFromPointIntersectsLine(pointX, pointY,
+                  verticesX[0], verticesY[0], verticesX[nPtsInPolygon-1], verticesY[nPtsInPolygon-1]))
+        {
+            nIntersects++;
+        }
+    }
+
+    // If the number of ray intersections with the polygon is even, the point must be outside the polygon
+    if (nIntersects % 2 == 0)
+        return 0;
+    else
+        return 1;
+}
+
+/*!
+ * \brief rayFromPointIntersectsLine Checks whether a ray in positive x direction, parallel to the x axis,
+ * from a point intersects a line AB between two points A and B
+ * \param pointX X coordinate of the point from which ray originates
+ * \param pointY Y coordinate of the point from which ray originates
+ * \param linePointAX X coordinate of the point A
+ * \param linePointAY Y coordinate of the point A
+ * \param linePointBX X coordinate of the point B
+ * \param linePointBY Y coordinate of the point B
+ * \return true if ray intersects line AB, false otherwise
+ */
+static char rayFromPointIntersectsLine(double pointX, double pointY,
+           double linePointAX, double linePointAY, double linePointBX, double linePointBY)
+{
+    double tmp, maxVal, minVal, slopeAB, slopeAP;
+
+    // Need 2x eps because machine epsilon is too small
+    // Need to use float epsilon in case the double points are just promoted floats
+    const double algorithmEpsilon = (double)(2*FLT_EPSILON);
+
+    // The algorithm assumes the Y coordinate of A is smaller than that of B
+    // -> if this is not the case, swap the points
+    if (linePointBY < linePointAY)
+    {
+        tmp = linePointAX;
+        linePointAX = linePointBX;
+        linePointBX = tmp;
+
+        tmp = linePointAY;
+        linePointAY = linePointBY;
+        linePointBY = tmp;
+    }
+
+    // If the ray casting would cause intersection with a vertex the result is undefined,
+    // so we perform a heuristic to avoid this situation:
+    if (pointY == linePointAY || pointY == linePointBY)
+    {
+        pointY += algorithmEpsilon;
+    }
+
+    // A ray in X axis direction will not intersect if Y coordinates are outside of the range
+    // spanned by the line AB
+    if (pointY < linePointAY || pointY > linePointBY)
+        return 0;
+
+    // A ray in X axis direction will not intersect if it starts at a larger X coordinate than
+    // any in the range of the line AB
+    maxVal = linePointAX > linePointBX ? linePointAX : linePointBX;
+    if (pointX >= maxVal)
+        return 0;
+
+    // A ray in X axis direction will intersect if it starts at a smaller X coordinate than
+    // any in the range of the line AB
+    minVal = linePointAX < linePointBX ? linePointAX : linePointBX;
+    if (pointX < minVal)
+        return 1;
+
+    // Having filtered away all the situations where the point lies outside the rectangle
+    // defined by the two points A and B, it is necessary to do some more costly processing
+
+    // Compare the slopes of the lines AB and AP - if the slope of AB is larger than that of AP
+    // then a ray in X axis direction will not intersect AB
+    if (linePointAX != linePointBX)
+        slopeAB = (linePointBY - linePointAY) / (linePointBX - linePointAX);
+    else
+        slopeAB = (double)INFINITY;
+    if (linePointAX != pointX)
+        slopeAP = (pointY - linePointAY) / (pointX - linePointAX);
+    else
+        slopeAP = (double)INFINITY;
+
+    if (slopeAP >= slopeAB)
+        return 1;
+    else
+        return 0;
+}
 
 
 int UtilSortSpaceTimeAscending(ObjectPosition *OP)
