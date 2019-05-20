@@ -27,6 +27,7 @@
 
 #include "util.h"
 #include "logger.h"
+#include "logging.h"
 
 
 #define SUPERVISION_CONTROL_CONF_FILE_PATH  "conf/test.conf"
@@ -51,7 +52,8 @@ int supervision_task(TimeType *GPSTime, GSDType *GSD)
   (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
 
 
-  printf("Starting supervision control...\n");
+  LogMessage(LOG_LEVEL_INFO, "Supervision running with PID: %i", getpid());
+
   while(!iExit)
   {
 
@@ -62,7 +64,7 @@ int supervision_task(TimeType *GPSTime, GSDType *GSD)
     if(iCommand == COMM_EXIT)
     {
       iExit = 1;
-      printf("supervision exiting.\n");
+      LogMessage(LOG_LEVEL_INFO, "Supervision exiting...");
       (void)iCommClose();
     }
 
