@@ -395,7 +395,7 @@ int main(int argc, char *argv[])
 				break;
 				case tosem_0:
 					/*MessageLength = ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData,
-                                UtilSearchTextFile("conf/test.conf", "OrigoLatidude=", "", Latitude),
+                                UtilSearchTextFile("conf/test.conf", "OrigoLatitude=", "", Latitude),
                                 UtilSearchTextFile("conf/test.conf", "OrigoLongitude=", "", Longitude),
                                 UtilSearchTextFile("conf/test.conf", "OrigoAltitude=", "", Altitude),
                                 UtilSearchTextFile("conf/test.conf", "OrigoHeading=", "", Heading),

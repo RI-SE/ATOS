@@ -898,7 +898,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
 
                     MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, GPSTime,
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
+                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatitude=", "", OriginLatitude),
                                                                  UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
                                                                  UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
                                                                  UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
