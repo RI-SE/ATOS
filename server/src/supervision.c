@@ -47,30 +47,30 @@
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
-int supervision_task(TimeType *GPSTime, GSDType *GSD)
+void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
 
-  I32 iExit = 0, iCommand;
-  C8 MqRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
-  (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
+    I32 iExit = 0;
+    char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
 
+    enum COMMAND command;
 
-  LogMessage(LOG_LEVEL_INFO, "Supervision running with PID: %i", getpid());
+    (void)iCommInit();
+    LogInit(MODULE_NAME,LOG_LEVEL_INFO);
+    LogMessage(LOG_LEVEL_INFO, "Supervision running with PID: %i", getpid());
 
-  while(!iExit)
-  {
-
-
-    bzero(MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
-    (void)iCommRecv(&iCommand,MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH, NULL);
-
-    if(iCommand == COMM_EXIT)
+    while(!iExit)
     {
-      iExit = 1;
-      LogMessage(LOG_LEVEL_INFO, "Supervision exiting...");
-      (void)iCommClose();
+
+
+        bzero(busReceiveBuffer, sizeof(busReceiveBuffer));
+        (void)iCommRecv(&command,busReceiveBuffer, sizeof(busReceiveBuffer), NULL);
+
+        if(command == COMM_EXIT)
+        {
+            iExit = 1;
+            LogMessage(LOG_LEVEL_INFO, "Supervision exiting...");
+            (void)iCommClose();
+        }
     }
-  }
-
-
 }
