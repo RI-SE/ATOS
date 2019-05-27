@@ -2025,7 +2025,7 @@ void traj2ldm ( float      time ,
   ldm->heading   = (uint16_t) (hdg * 100);
 
   bzero(pcTempBuffer,512);
-  iUtilGetParaConfFile("OrigoLatidude=", pcTempBuffer);
+  iUtilGetParaConfFile("OrigoLatitude=", pcTempBuffer);
   sscanf(pcTempBuffer, "%lf", &lat_origin);
 
   bzero(pcTempBuffer,512);
