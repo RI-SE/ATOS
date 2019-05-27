@@ -11,7 +11,6 @@
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
-#include <mqueue.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -33,10 +32,8 @@
 #include <ifaddrs.h>
 
 //#include "remotecontrol.h"
-#include "util.h"
 #include "systemcontrol.h"
 #include "timecontrol.h"
-#include "logging.h"
 
 
 
@@ -165,13 +162,12 @@ static C8 SystemControlVerifyHostAddress(char* ip);
 ------------------------------------------------------------*/
 
 #define MODULE_NAME "SystemControl"
-static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
 
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
 
-void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
+void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
 
     I32 ServerHandle;
@@ -195,9 +191,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
     int i,i1;
     char *StartPtr, *StopPtr, *CmdPtr, *StringPos;
     struct timespec tTime;
-    int iCommand;
+    enum COMMAND iCommand;
     char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
-    (void)iCommInit(IPC_RECV_SEND,MQ_SC,1);
     char ObjectIP[SMALL_BUFFER_SIZE_16];
     char ObjectPort[SMALL_BUFFER_SIZE_6];
     char TriggId[SMALL_BUFFER_SIZE_6];
@@ -242,6 +237,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO,"System control task running with PID: %i",getpid());
+
+    if(iCommInit())
+        util_error("Unable to connect to message bus");
 
     bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
     UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerMode=", "", TextBufferC8);
@@ -292,6 +290,12 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     while(!iExit)
     {
+        if (server_state == SERVER_STATE_ERROR)
+        {
+            iCommSend(COMM_ABORT, NULL);
+            continue;
+        }
+
         if(ModeU8 == 0)
         {
             if(ClientSocket <= 0)
@@ -330,11 +334,12 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 if(errno != EAGAIN && errno != EWOULDBLOCK)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Failed to receive from command socket");
-                    LogMessage(LOG_LEVEL_ERROR,"Waiting 5 sec before exiting");
+                    LogMessage(LOG_LEVEL_ERROR,"Waiting 5 seconds before exiting");
                     usleep(5000000); //Wait 5 sec before sending exit, just so ObjectControl can send abort in HEAB before exit
-                    (void)iCommSend(COMM_EXIT,NULL);
+                    if(iCommSend(COMM_EXIT,NULL) < 0)
+                        util_error("Fatal communication fault when sending EXIT command");
                     LogMessage(LOG_LEVEL_ERROR,"System control exiting");
-                    exit(1);
+                    exit(EXIT_FAILURE);
                 }
             }
             else if(ClientResult == 0)
@@ -471,6 +476,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
         bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
         iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
+
         if (iCommand == COMM_OBC_STATE)
         {
             OBCStateU8 = (U8)*pcRecvBuffer;
@@ -730,7 +736,11 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         case InitializeScenario_0:
             if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "IDLE") != NULL)
             {
-                (void)iCommSend(COMM_INIT,pcBuffer);
+                if (iCommSend(COMM_INIT, pcBuffer) < 0)
+                {
+                    LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending INIT command");
+                    server_state = SERVER_STATE_ERROR;
+                }
                 server_state = SERVER_STATE_INWORK;
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
@@ -753,7 +763,11 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         case ConnectObject_0:
             if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "INITIALIZED") != NULL)
             {
-                (void)iCommSend(COMM_CONNECT,pcBuffer);
+                if (iCommSend(COMM_CONNECT, pcBuffer) < 0)
+                {
+                    LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending CONNECT command");
+                    server_state = SERVER_STATE_ERROR;
+                }
                 SystemControlCommand = Idle_0;
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ConnectObject:", ControlResponseBuffer, 0, &ClientSocket, 0);
@@ -776,7 +790,11 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         case DisconnectObject_0:
             if(server_state == SERVER_STATE_IDLE)
             {
-                (void)iCommSend(COMM_DISCONNECT,pcBuffer);
+                if (iCommSend(COMM_DISCONNECT, pcBuffer) < 0)
+                {
+                    LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending DISCONNECT command");
+                    server_state = SERVER_STATE_ERROR;
+                }
                 SystemControlCommand = Idle_0;
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DisconnectObject:", ControlResponseBuffer, 0, &ClientSocket, 0);
@@ -795,7 +813,11 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(pcBuffer, IPC_BUFFER_SIZE);
                 server_state = SERVER_STATE_INWORK;
                 pcBuffer[0] = OSTM_OPT_SET_ARMED_STATE;
-                (void)iCommSend(COMM_ARMD,pcBuffer);
+                if (iCommSend(COMM_ARMD, pcBuffer) < 0)
+                {
+                    LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending ARMD command");
+                    server_state = SERVER_STATE_ERROR;
+                }
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ArmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
                 SystemControlSendLog("[SystemControl] Sending ARM.\n", &ClientSocket, 0);
@@ -820,7 +842,11 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(pcBuffer, IPC_BUFFER_SIZE);
                 server_state = SERVER_STATE_IDLE;
                 pcBuffer[0] = OSTM_OPT_SET_DISARMED_STATE;
-                (void)iCommSend(COMM_ARMD,pcBuffer);
+                if (iCommSend(COMM_ARMD, pcBuffer) < 0)
+                {
+                    LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending ARMD command");
+                    server_state = SERVER_STATE_ERROR;
+                }
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DisarmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
                 SystemControlSendLog("[SystemControl] Sending DISARM.\n", &ClientSocket, 0);
@@ -865,7 +891,11 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";%" PRIu32 ";", 0, uiTime, DelayedStartU32);
                     LogMessage(LOG_LEVEL_INFO,"Sending START <%s> (delayed +%s ms)",pcBuffer, SystemControlArgument[1]);
 
-                    (void)iCommSend(COMM_STRT,pcBuffer);
+                    if (iCommSend(COMM_STRT, pcBuffer) < 0)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending STRT command");
+                        server_state = SERVER_STATE_ERROR;
+                    }
                     bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                     SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "StartScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
                     server_state = SERVER_STATE_INWORK;
@@ -912,24 +942,38 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 } else CurrentCommandArgCounter ++;
             break;*/
         case stop_0:
-            (void)iCommSend(COMM_STOP,NULL);
-            server_state = SERVER_STATE_IDLE;
-            SystemControlCommand = Idle_0;
-            bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-            SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "stop:", ControlResponseBuffer, 0, &ClientSocket, 0);
+            if (iCommSend(COMM_STOP, NULL) < 0)
+            {
+                LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending STOP command");
+                server_state = SERVER_STATE_ERROR;
+            }
+            else
+            {
+                server_state = SERVER_STATE_IDLE;
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "stop:", ControlResponseBuffer, 0, &ClientSocket, 0);
+            }
             break;
         case AbortScenario_0:
             if(strstr(SystemControlOBCStatesArr[OBCStateU8], "RUNNING") != NULL
                     /* || strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL
                      * || strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/ ) // Abort should only be allowed in running state
             {
-                (void)iCommSend(COMM_ABORT,NULL);
-                server_state = SERVER_STATE_IDLE;
-                SystemControlCommand = Idle_0;
-                if(ClientSocket >= 0)
+                if (iCommSend(COMM_ABORT, NULL) < 0)
                 {
-                    bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "AbortScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+                    LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending ABORT command");
+                    server_state = SERVER_STATE_ERROR;
+                }
+                else
+                {
+                    server_state = SERVER_STATE_IDLE;
+                    SystemControlCommand = Idle_0;
+                    if(ClientSocket >= 0)
+                    {
+                        bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                        SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "AbortScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+                    }
                 }
             }
             else
@@ -973,17 +1017,23 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 CurrentCommandArgCounter = 0;
             break;*/
         case Exit_0:
-            (void)iCommSend(COMM_EXIT,NULL);
-            iExit = 1;
-            GSD->ExitU8 = 1;
-            usleep(1000000);
-            SystemControlCommand = Idle_0;
-            bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-            SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "Exit:", ControlResponseBuffer, 0, &ClientSocket, 0);
-            close(ClientSocket); ClientSocket = -1;
-            if(USE_LOCAL_USER_CONTROL == 0) { close(ServerHandle); ServerHandle = -1;}
-            LogMessage(LOG_LEVEL_INFO,"Server closing");
-
+            if (iCommSend(COMM_EXIT, NULL) < 0)
+            {
+                LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending EXIT command");
+                server_state = SERVER_STATE_ERROR;
+            }
+            else
+            {
+                iExit = 1;
+                GSD->ExitU8 = 1;
+                usleep(1000000);
+                SystemControlCommand = Idle_0;
+                bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "Exit:", ControlResponseBuffer, 0, &ClientSocket, 0);
+                close(ClientSocket); ClientSocket = -1;
+                if(USE_LOCAL_USER_CONTROL == 0) { close(ServerHandle); ServerHandle = -1;}
+                LogMessage(LOG_LEVEL_INFO,"Server closing");
+            }
             break;
 
         default:
@@ -997,10 +1047,11 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         sleep_time.tv_nsec = 10000000;
         nanosleep(&sleep_time,&ref_time);
 
-
     }
 
     (void)iCommClose();
+
+    LogMessage(LOG_LEVEL_INFO,"Exiting");
 }
 
 /*------------------------------------------------------------

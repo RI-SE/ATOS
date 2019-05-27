@@ -33,10 +33,31 @@
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-#define MQ_NBR_QUEUES 4
 
 #define FE_WGS84        (1.0/298.257223563) // earth flattening (WGS84)
 #define RE_WGS84        6378137.0           // earth semimajor axis (WGS84) (m)
+
+// Message priorities on message queue
+#define PRIO_COMM_STRT 100
+#define PRIO_COMM_ARMD 110
+#define PRIO_COMM_STOP 120
+#define PRIO_COMM_MONI 80
+#define PRIO_COMM_EXIT 140
+#define PRIO_COMM_REPLAY 160
+#define PRIO_COMM_CONTROL 180
+#define PRIO_COMM_ABORT 60
+#define PRIO_COMM_TOM 90
+#define PRIO_COMM_INIT 110
+#define PRIO_COMM_CONNECT 110
+#define PRIO_COMM_OBC_STATE 160
+#define PRIO_COMM_DISCONNECT 110
+#define PRIO_COMM_LOG 160
+#define PRIO_COMM_VIOP 80
+#define PRIO_COMM_TRAJ 80
+#define PRIO_COMM_TRAJ_TOSUP 80
+#define PRIO_COMM_TRAJ_FROMSUP 80
+#define PRIO_COMM_ASP 110
+#define PRIO_COMM_OSEM 160
 
 /*------------------------------------------------------------
 -- Public variables
@@ -47,15 +68,13 @@
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
-static mqd_t tMQRecv;
-static mqd_t ptMQSend[MQ_NBR_QUEUES];
-static char pcMessageQueueName[1024];
 
 /*---------------------------------------------s---------------
   -- Private functions
   ------------------------------------------------------------*/
 static void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetContainerSize, const char* fieldName);
 static char rayFromPointIntersectsLine(double pointX, double pointY, double polyPointAX, double polyPointAY, double polyPointBX, double polyPointBY);
+
 
 void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetContainerSize, const char* fieldName)
 {
@@ -1681,424 +1700,299 @@ int iUtilGetIntParaConfFile(char* pcParameter, int* iValue)
   return iResult;
 }
 
-/* First of all when we are using the messageque we are working with the
- * following functions in our util.c file: iCommInit, iCommRecv ,
- * iCommSend, iCommClose.
- *
- * So we are using the POSIX message que built in to Linux os. and it is called
- * With the function mq_..., The commands we use are mq_open, mq_close,
- * mq_unlink, mq_send and mq_receive.
- *
- * In generall I would say that you can think of the POSIX messageque as a fifo
- * (first in first out)que but you can determen what message is put first
- * by adding a priority number
+/*******************************************************
+* Message queue bus wrapper functions
+********************************************************/
+/*!
+ * \brief iCommInit Connects to the message queue bus
+ * \return 0 upon success, -1 if there was an error
  */
-
-/* iCommInit calls on mq_open which will open a messageque, this should be
- * among the first things done in our modules otherwise there exist no way
- * of sending data to the specific module(no internal connection)
- *
- * input to iCommInit is the uimode which explains if the created messageque
- * should be able to read messages, send messages or both recive and send
- * messages.
- *
- * The name is one of the defined files in util.h ~row 38 at the moment we have
- * the following.
- * #define MQ_LG     "/TEServer-LG"
- * #define MQ_SV     "/TEServer-SV"
- * #define MQ_OC     "/TEServer-OC"
- * #define MQ_VA     "/TEServer-VA"
- * #define MQ_SC     "/TEServer-SC"
- *
- * The reson we have 5 messageques is that becous of how POSIX is structured there
- * is no way of readin the message without deleting it from the messageque.
- * therefore to make sure that no moduel removes messages for all the other
- * modules multiple mesage ques are used.
- *
- * you can find the messagesques at the following path /dev/mqueue.
- * If you open one of the files you will get a document looking like This
- *
- * QSIZE:0          NOTIFY:0     SIGNO:0     NOTIFY_PID:0
- *
- * Most importent here is QSIZE which tells you how many bytes that is currently
- * in use for the messageque, all the messages currently on the messagesques
- * total number of bytes.
- *
- * iNonBlocking tels you if the O_NONBLOCK flag should be activated or not for
- * the recive message handler 1=yes 0 =no. If i remeber correctly the
- * O_NONBLOCK gives you a warning/error if the messageque is full when
- * trying to read or send data on the specific messageque,(returns -1)
- * if no O_NONBLOCK fald is used it will wait until the message que has space
- * before sending or reading from the messageque again  .
- */
-
-int iCommInit(const unsigned int uiMode, const char* name, const int iNonBlocking)
+int iCommInit(void)
 {
-  struct mq_attr attr; //messageque struc
-  int iResult; //return value
-  int iOFlag; // O_NONBLOCK flag for recive mq handler
-  unsigned int uiIndex; // index for which messageque
-
-  // gere we set the parrameters for all our created messageques,Like number of messages and each message size
-
-  attr.mq_maxmsg = MQ_MAX_MSG; // totla number of messages aloud on to the messageque before it is full set in util.h currently 10 msg I think
-  attr.mq_msgsize = MQ_MAX_MESSAGE_LENGTH;// The larges size each message is alloud to be currently 4096bytes i think
-  attr.mq_flags = 0;
-  attr.mq_curmsgs = 0;
-  // zeroing messageque reciv name
-  tMQRecv = 0;
-  // zeroing all the other messageques that send data
-  for(uiIndex=0;uiIndex < MQ_NBR_QUEUES;++uiIndex)
-  {
-    ptMQSend[uiIndex] = 0;
-  }
-
-  strcpy(pcMessageQueueName,name);
-  //create our specific messageque handler that will read from the messageque
-  if(uiMode & IPC_RECV)
-  {
-    iOFlag = O_RDONLY | O_CREAT;
-    if(iNonBlocking)
+    enum MQBUS_ERROR result = MQBusConnect();
+    switch (result)
     {
-      iOFlag |= O_NONBLOCK;
+    case MQBUS_OK:
+        LogMessage(LOG_LEVEL_DEBUG, "Connected to message queue bus");
+        return 0;
+    case MQBUS_QUEUE_NOT_EXIST:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to fetch available message queue bus slots");
+        break;
+    case MQBUS_OPEN_FAIL:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to open message queue");
+        break;
+    case MQBUS_MAX_QUEUES_LIMIT_REACHED:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to find an available message queue slot");
+        break;
+    case MQBUS_EMPTY:
+        LogMessage(LOG_LEVEL_ERROR, "Message queue empty");
+        break;
+    case MQBUS_CLOSE_FAIL:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to close message queue");
+        break;
+    case MQBUS_NO_READABLE_MQ:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to find assigned message queue slot");
+        break;
+    case MQBUS_RESOURCE_NOT_EXIST:
+        LogMessage(LOG_LEVEL_ERROR, "Resource queue unavailable");
+        break;
+    case MQBUS_DESCRIPTOR_NOT_FOUND:
+        LogMessage(LOG_LEVEL_ERROR, "Message queue descriptor not found");
+        break;
+    case MQBUS_INVALID_INPUT_ARGUMENT:
+        LogMessage(LOG_LEVEL_ERROR, "Invalid argument to message queue connect");
+        break;
+    case MQBUS_MQ_COULD_NOT_BE_DESTROYED:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to delete message queue");
+        break;
+    case MQBUS_MQ_FULL:
+        LogMessage(LOG_LEVEL_ERROR, "Message queue full");
+        break;
+    case MQBUS_WRITE_FAIL:
+        LogMessage(LOG_LEVEL_ERROR, "Message queue write failed");
+        break;
     }
-
-    tMQRecv = mq_open(name, iOFlag, MQ_PERMISSION, &attr);// here we create the messageque handler with the following name, flags and stuff
-    if(tMQRecv < 0)
-    {
-      util_error("ERR: Failed to open receiving message queue");
-    }
-  }
-  // create the specific messageque hander that can send data to the declared
-  // messageque with variabel name
-  if(uiMode & IPC_SEND)
-  {
-    uiIndex = 0;
-    /* this if case will find the corresponding messagequehandler that will be
-     * alloud to send messages, it's just a stringcomparison to find the correct
-     * messageques to the correct uiIndex, which means in this case that
-     * MQ_LG have uiIndex = 0
-     * MQ_OC have uiIndex = 1
-     * MQ_SV have uiIndex = 2
-     * MQ_VA have uiIndex = 3
-     * MQ_SV have uiIndex = 4
-     *
-    */
-
-    if(strcmp(name,MQ_LG))
-    {
-      ptMQSend[uiIndex] = mq_open(MQ_LG, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr); // creat the messageque handler that is aloud to send data to the MQ_LG messageque
-      if(ptMQSend[uiIndex] < 0)
-      {
-        util_error("ERR: Failed to open MQ_LG message queue");
-      }
-      ++uiIndex;
-    }
-
-    if(strcmp(name,MQ_OC))
-    {
-      ptMQSend[uiIndex] = mq_open(MQ_OC, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr);
-      if(ptMQSend[uiIndex] < 0)
-      {
-        util_error("ERR: Failed to open MQ_OC message queue");
-      }
-      ++uiIndex;
-    }
-
-    if(strcmp(name,MQ_SV))
-    {
-      ptMQSend[uiIndex] = mq_open(MQ_SV, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr);
-      if(ptMQSend[uiIndex] < 0)
-      {
-        util_error("ERR: Failed to open MQ_SV message queue");
-      }
-      ++uiIndex;
-    }
-
-    if(strcmp(name,MQ_VA))
-    {
-      ptMQSend[uiIndex] = mq_open(MQ_VA, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr);
-      if(ptMQSend[uiIndex] < 0)
-      {
-        util_error("ERR: Failed to open MQ_VA message queue");
-      }
-      ++uiIndex;
-    }
-    if(strcmp(name,MQ_SC))
-    {
-      ptMQSend[uiIndex] = mq_open(MQ_SC, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr);
-      if(ptMQSend[uiIndex] < 0)
-      {
-        util_error("ERR: Failed to open MQ_SC message queue");
-      }
-      ++uiIndex;
-    }
-    if(strcmp(name,MQ_SI))
-    {
-      ptMQSend[uiIndex] = mq_open(MQ_SI, O_WRONLY | O_NONBLOCK | O_CREAT, MQ_PERMISSION, &attr);
-      if(ptMQSend[uiIndex] < 0)
-      {
-        util_error("ERR: Failed to open MQ_SI message queue");
-      }
-      ++uiIndex;
-    }
-  }
-
-  return 1;
+    return -1;
 }
-/* iCommClose will close the messageque usally among the last function called
- * in a model. Where we vall mq_unlink followed by mq_close which will close
- * and remove the given messageque
-*/
+
+
+/*!
+ * \brief iCommClose Releases the claimed slot on the message bus so that it can be claimed by others.
+ * \return 0 upon success, -1 on error
+ */
 int iCommClose()
 {
-  int iIndex = 0;
-  int iResult;
+    enum MQBUS_ERROR result = MQBusDisconnect();
 
-  if(tMQRecv != 0 && pcMessageQueueName != NULL)
-  {
-    iResult = mq_unlink(pcMessageQueueName);
-    if(iResult < 0)
+    switch (result)
     {
-      return 0;
-    }
-    iResult = mq_close(tMQRecv);
-    if(iResult < 0)
-    {
-      return 0;
-    }
-  }
-
-  for(iIndex = 0; iIndex < MQ_NBR_QUEUES; ++iIndex)
-  {
-    if(ptMQSend[iIndex] != 0)
-    {
-      iResult = mq_close(ptMQSend[iIndex]);
-      if(iResult < 0)
-      {
+    case MQBUS_OK:
         return 0;
-      }
+    case MQBUS_RESOURCE_NOT_EXIST:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to release claimed message bus slot");
+        return -1;
+    case MQBUS_NO_READABLE_MQ:
+        LogMessage(LOG_LEVEL_WARNING, "Attempted to release message bus slot when none was claimed");
+        return 0;
+    default:
+        LogMessage(LOG_LEVEL_WARNING, "Unexpected message bus error when closing");
+        return -1;
     }
-  }
-
-  return 1;
-}
-/* added a 4:th argument that creates a UTC timestamp as close as possible
-to when a messege is recived from message que this argument can be put to NULL
-then no UTC timestamp is created, The UTC timestamp is used for logging
-purposes*/
-
-/* iCommRecv reads from the messageque handler that was opened for reading in
- * iCommInit in each model. When you read from the POSIX messageque you also
- * remove the message that you read.
- *
- * iCommand is the variabel reciving the command number from the message que
- * which alwaays is located first. The rest is put in to the string
- * cpData (Always ASCII) that has the data you wanted to send
- *
- *
- * iMessageSize describes the max size of the message
- *
- * TimeUTCRecv is a UTC timestamp that can be added to the message, usally only
- * Logging becouse we want to know when we send the message and when it is
- * recived
- */
-int iCommRecv(int* iCommand, char* cpData, const int iMessageSize,char* TimeUTCRecv)
-{
-  int iResult;
-  char cpMessage[MQ_MAX_MESSAGE_LENGTH];
-  unsigned int prio;
-  struct timeval tvTime;
-  uint64_t TimeNow;
-
-  bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
-
-  iResult = mq_receive(tMQRecv, cpMessage, MQ_MAX_MESSAGE_LENGTH, &prio); // read the message from the POSIX message que, tMQRecv is the message que handler, cpMessage recives the message
-  if (TimeUTCRecv !=NULL)/* create our UTC timestamp*/
-  {
-    TimeNow = UtilgetCurrentUTCtimeMS(); // get UTC timestamp
-  //uint64_t TimeNow = UtilgetETSIfromUTCMS((uint64_t)tvTime.tv_sec,(uint64_t)tvTime.tv_usec);
-    (void)sprintf(TimeUTCRecv,"%" PRIu64,TimeNow);
-  }
-  if(iResult < 0 && errno != EAGAIN)
-  {
-    util_error ("Message queue error when receiving in iCommRecv().");
-  }
-  else if((iResult >= 0))
-  {
-    *iCommand = cpMessage[0];
-    if((strlen(cpMessage) > 1) && (cpData != NULL))
-    {
-      if(iMessageSize <  iResult )
-      {
-        iResult = iMessageSize;
-      }
-      (void)strncat(cpData,&cpMessage[1],iResult);
-
-    }
-  }
-  else
-  {
-    *iCommand = COMM_INV;
-    iResult = 0;
-  }
-
-  return iResult;
 }
 
-/* iCommSend sends a given message cpData and command icommand out on all
- * the five message ques. but first ut prioritis the messages depending on
- * iCommand
- *
- *
+
+/*!
+ * \brief iCommRecv Poll message queue bus for received data in a nonblocking way, returning the oldest message
+ * with lowest priority value found on the queue, as well as the command identifier and time of receipt in UTC
+ * \param command Received command output variable
+ * \param data Received command data output variable
+ * \param messageSize Size of data array
+ * \param timeRecv Receive time output variable
+ * \return Size (in bytes) of received data
  */
-int iCommSend(const int iCommand,const char* cpData)
+ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, struct timeval *timeRecv)
 {
-  int iResult;
-  unsigned int uiMessagePrio = 0;
-  int iIndex = 0, i;
-  char cpMessage[MQ_MAX_MESSAGE_LENGTH];
+    char message[MQ_MSG_SIZE];
+    ssize_t result = MQBusRecv(message, MQ_MSG_SIZE);
 
-  bzero(cpMessage,MQ_MAX_MESSAGE_LENGTH);
-/* this if else case asigne a priority to all different messeges that we might
- * have.
- */
-  if(iCommand == COMM_STRT)
+
+    if (result < 1 && errno != EAGAIN)
+        util_error("Message queue error when receiving");
+
+    if (timeRecv != NULL)
     {
-      uiMessagePrio = 100;
-      cpMessage[0] = (char)COMM_STRT;
-    }
-  else if(iCommand == COMM_ARMD)
-    {
-      uiMessagePrio = 110;
-      cpMessage[0] = (char)COMM_ARMD;
-    }
-  else if(iCommand == COMM_STOP)
-    {
-      uiMessagePrio = 120;
-      cpMessage[0] = (char)COMM_STOP;
-    }
-  else if(iCommand == COMM_MONI)
-    {
-      uiMessagePrio = 80;
-      cpMessage[0] = (char)COMM_MONI;
-    }
-  else if(iCommand == COMM_EXIT)
-    {
-      uiMessagePrio = 140;
-      cpMessage[0] = (char)COMM_EXIT;
-    }
-  else if (iCommand == COMM_REPLAY)
-    {
-      uiMessagePrio = 160;
-      cpMessage[0] = (char)COMM_REPLAY;
-    }
-  else if (iCommand == COMM_CONTROL)
-    {
-      uiMessagePrio = 180;
-      cpMessage[0] = (char)COMM_CONTROL;
-    }
-  else if (iCommand == COMM_ABORT)
-    {
-      uiMessagePrio = 60;
-      cpMessage[0] = (char)COMM_ABORT;
-    }
-  else if (iCommand == COMM_TOM)
-    {
-      uiMessagePrio = 90;
-      cpMessage[0] = (char)COMM_TOM;
-    }
-  else if (iCommand == COMM_INIT)
-    {
-      uiMessagePrio = 110;
-      cpMessage[0] = (char)COMM_INIT;
-    }
-  else if (iCommand == COMM_CONNECT)
-    {
-      uiMessagePrio = 110;
-      cpMessage[0] = (char)COMM_CONNECT;
-    }
-  else if (iCommand == COMM_OBC_STATE)
-    {
-      uiMessagePrio = 160;
-      cpMessage[0] = (char)COMM_OBC_STATE;
-    }
-  else if (iCommand == COMM_DISCONNECT)
-    {
-      uiMessagePrio = 110;
-      cpMessage[0] = (char)COMM_DISCONNECT;
-    }
-  else if (iCommand == COMM_LOG)
-    {
-      uiMessagePrio = 160;
-      cpMessage[0] = (char)COMM_LOG;
-    }
-  else if (iCommand == COMM_OSEM)
-    {
-      uiMessagePrio = 160;
-      cpMessage[0] = (char)COMM_OSEM;
-    }
-  else if (iCommand == COMM_VIOP)
-    {
-      uiMessagePrio = 80;
-      cpMessage[0] = (char)COMM_VIOP;
-    }
-  else if (iCommand == COMM_TRAJ)
-    {
-      uiMessagePrio = 80;
-      cpMessage[0] = (char)COMM_TRAJ;
-    }
-  else if (iCommand == COMM_ASP)
-    {
-      uiMessagePrio = 110;
-      cpMessage[0] = (char)COMM_ASP;
-    }
-  else if (iCommand == COMM_TRAJ_TOSUP)
-    {
-      uiMessagePrio = 80;
-      cpMessage[0] = (char)COMM_TRAJ_TOSUP;
-    }
-  else if (iCommand == COMM_TRAJ_FROMSUP)
-    {
-      uiMessagePrio = 80;
-      cpMessage[0] = (char)COMM_TRAJ_FROMSUP;
-    }
-  else
-    {
-      util_error("Unknown command");
+        // Store time of receipt
+        TimeSetToCurrentSystemTime(timeRecv);
     }
 
-  if(cpData != NULL)
-  {
-    (void)strncat(&cpMessage[1],cpData,strlen(cpData));
-  }
-/* To be able to send all the data out on all five messageques we have this
- * for loop. If you read in Icomminit we specified a index uiIndex for every
- * messageque read it to know which index corresponds to which messageque
- *
- */
-  for(iIndex = 0; iIndex < MQ_NBR_QUEUES; ++iIndex)
-  {
-    if(ptMQSend[iIndex] != 0)
+    if (result > 0)
     {
-      /* what I think is a problem here is that if we get a warning we recive
-       * iResult = -1. for example one messageque is full and becouse of the
-       * flag O_NONBLOCK we get a warning if any messageque is full when sending
-       * a message. which will end in us returning 0 ending the function.
-       * Which means that if MQ_OC has index 0 and MQ_SC has index 4 and lest
-       * say MQ_SV is full and has index 2 then we will have sent the message
-       * to message que with index 0 and 1, becouse 2 is full nothing is sent on
-       * that messageque and then we retun which means nothing is sent on
-       * messageque with index 3 and 4.
-       */
-      iResult = mq_send(ptMQSend[iIndex],cpMessage,strlen(cpMessage),uiMessagePrio); // here we send the inormation out on the POSIX message que.
-      if(iResult < 0)
-      {
-        continue;
-      }
+        // A message was received: extract the command and data
+        *command = message[0];
+        if((strlen(message) > 1) && (data != NULL))
+        {
+            if(messageSize < result )
+            {
+                LogMessage(LOG_LEVEL_WARNING, "Array too small to hold received message data");
+                result = messageSize;
+            }
+            strncat(data, &message[1], (unsigned long)result);
+        }
     }
-  }
-  return 1;
+    else
+    {
+        // Result was less than 0, and errno is EAGAIN meaning no data was received
+        *command = COMM_INV;
+        result = 0;
+    }
+    return result;
+}
+
+/*!
+ * \brief iCommSend Sends a command over the message bus
+ * \param iCommand Command number
+ * \param cpData Command data
+ * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
+ */
+int iCommSend(const enum COMMAND iCommand, const char* cpData)
+{
+    unsigned int uiMessagePrio = 0;
+    char cpMessage[MQ_MSG_SIZE];
+    char hej = 0;
+    unsigned long dataLength = 0;
+    enum MQBUS_ERROR sendResult;
+
+    if (cpData != NULL)
+        dataLength = strlen(cpData);
+
+    if (dataLength > MQ_MSG_SIZE+1)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Cannot send message %d of size %lu: maximum size is %lu", iCommand, dataLength+1, MQ_MSG_SIZE);
+        return -1;
+    }
+
+    bzero(cpMessage, MQ_MSG_SIZE);
+
+    // Map command to a priority
+    switch (iCommand)
+    {
+    case COMM_STRT:
+        uiMessagePrio = PRIO_COMM_STRT;
+        cpMessage[0] = (char)COMM_STRT;
+        break;
+    case COMM_ARMD:
+        uiMessagePrio = PRIO_COMM_ARMD;
+        cpMessage[0] = (char)COMM_ARMD;
+        break;
+    case COMM_STOP:
+        uiMessagePrio = PRIO_COMM_STOP;
+        cpMessage[0] = (char)COMM_STOP;
+        break;
+    case COMM_MONI:
+        uiMessagePrio = PRIO_COMM_MONI;
+        cpMessage[0] = (char)COMM_MONI;
+        break;
+    case COMM_EXIT:
+        uiMessagePrio = PRIO_COMM_EXIT;
+        cpMessage[0] = (char)COMM_EXIT;
+        break;
+    case COMM_REPLAY:
+        uiMessagePrio = PRIO_COMM_REPLAY;
+        cpMessage[0] = (char)COMM_REPLAY;
+        break;
+    case COMM_CONTROL:
+        uiMessagePrio = PRIO_COMM_CONTROL;
+        cpMessage[0] = (char)COMM_CONTROL;
+        break;
+    case COMM_ABORT:
+        uiMessagePrio = PRIO_COMM_ABORT;
+        cpMessage[0] = (char)COMM_ABORT;
+        break;
+    case COMM_TOM:
+        uiMessagePrio = PRIO_COMM_TOM;
+        cpMessage[0] = (char)COMM_TOM;
+        break;
+    case COMM_INIT:
+        uiMessagePrio = PRIO_COMM_INIT;
+        cpMessage[0] = (char)COMM_INIT;
+        break;
+    case COMM_CONNECT:
+        uiMessagePrio = PRIO_COMM_CONNECT;
+        cpMessage[0] = (char)COMM_CONNECT;
+        break;
+    case COMM_OBC_STATE:
+        uiMessagePrio = PRIO_COMM_OBC_STATE;
+        cpMessage[0] = (char)COMM_OBC_STATE;
+        break;
+    case COMM_DISCONNECT:
+        uiMessagePrio = PRIO_COMM_DISCONNECT;
+        cpMessage[0] = (char)COMM_DISCONNECT;
+        break;
+    case COMM_LOG:
+        uiMessagePrio = PRIO_COMM_LOG;
+        cpMessage[0] = (char)COMM_LOG;
+        break;
+    case COMM_OSEM:
+        uiMessagePrio = PRIO_COMM_OSEM;
+        cpMessage[0] = (char)COMM_OSEM;
+        break;
+    case COMM_VIOP:
+        uiMessagePrio = PRIO_COMM_VIOP;
+        cpMessage[0] = (char)COMM_VIOP;
+        break;
+    case COMM_TRAJ:
+        uiMessagePrio = PRIO_COMM_TRAJ;
+        cpMessage[0] = (char)COMM_TRAJ;
+        break;
+    case COMM_ASP:
+        uiMessagePrio = PRIO_COMM_ASP;
+        cpMessage[0] = (char)COMM_ASP;
+        break;
+    case COMM_TRAJ_TOSUP:
+        uiMessagePrio = PRIO_COMM_TRAJ_TOSUP;
+        cpMessage[0] = (char)COMM_TRAJ_TOSUP;
+        break;
+    case COMM_TRAJ_FROMSUP:
+        uiMessagePrio = PRIO_COMM_TRAJ_FROMSUP;
+        cpMessage[0] = (char)COMM_TRAJ_FROMSUP;
+        break;
+    default:
+        util_error("Unknown command");
+    }
+
+    // Append message to command
+    if(cpData != NULL)
+    {
+        (void)strncat(&cpMessage[1], cpData, strlen(cpData));
+    }
+
+    // Send message
+    sendResult = MQBusSend(cpMessage, strlen(cpMessage), uiMessagePrio);
+
+    // Check for send success
+    switch (sendResult)
+    {
+    case MQBUS_OK:
+        return 0;
+    case MQBUS_MQ_FULL:
+        LogMessage(LOG_LEVEL_WARNING, "Attempted to write to full message queue - message may be lost: <%d><%s>", iCommand, cpData);
+        return 1;
+    case MQBUS_INVALID_INPUT_ARGUMENT:
+        LogMessage(LOG_LEVEL_WARNING, "Invalid message queue message length");
+        return 1;
+    case MQBUS_WRITE_FAIL:
+        LogMessage(LOG_LEVEL_ERROR, "Failed to write to message queue");
+        break;
+    case MQBUS_QUEUE_NOT_EXIST:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to fetch available message queue bus slots");
+        break;
+    case MQBUS_OPEN_FAIL:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to open message queue");
+        break;
+    case MQBUS_MAX_QUEUES_LIMIT_REACHED:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to find an available message queue slot");
+        break;
+    case MQBUS_EMPTY:
+        LogMessage(LOG_LEVEL_ERROR, "Message queue empty");
+        break;
+    case MQBUS_CLOSE_FAIL:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to close message queue");
+        break;
+    case MQBUS_NO_READABLE_MQ:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to find assigned message queue slot");
+        break;
+    case MQBUS_RESOURCE_NOT_EXIST:
+        LogMessage(LOG_LEVEL_ERROR, "Resource queue unavailable");
+        break;
+    case MQBUS_DESCRIPTOR_NOT_FOUND:
+        LogMessage(LOG_LEVEL_ERROR, "Message queue descriptor not found");
+        break;
+    case MQBUS_MQ_COULD_NOT_BE_DESTROYED:
+        LogMessage(LOG_LEVEL_ERROR, "Unable to delete message queue");
+        break;
+    }
+
+    return -1;
 }
 
 /*------------------------------------------------------------
