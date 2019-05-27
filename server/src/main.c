@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     }
     if(pID[iIndex] == 0)
     {
-        supervision_task(GPSTime);
+        supervision_task(GPSTime, GSD);
         exit(EXIT_SUCCESS);
     }
     ++iIndex;
