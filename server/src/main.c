@@ -144,6 +144,7 @@ int main(int argc, char *argv[])
     if(shutdownMessageQueueBus())
         util_error("Unable to successfully clean up message bus resources");
     else
+
         exit(EXIT_SUCCESS);
 }
 

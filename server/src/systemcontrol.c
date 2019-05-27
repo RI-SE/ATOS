@@ -364,36 +364,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 CmdPtr = NULL;
                 StringPos = pcBuffer;
 
-                /*
-                if (strstr(pcBuffer,"POST ") != NULL)
-                {
-
-                    CmdPtr = strchr(pcBuffer,'\n');
-                    if (CmdPtr != NULL && strstr(CmdPtr+1,"Host;") != NULL)
-                    {
-                        CmdPtr = strchr(CmdPtr+1,'\n');
-                        if (CmdPtr != NULL)
-                        {
-                            CmdPtr++;
-                            StartPtr = strchr(pcBuffer, '(')+1;
-                            //printf("pcBuffer: %s\n", pcBuffer);
-                            while (StopPtr != NULL)
-                            {
-                                StopPtr = (char *)strchr(StartPtr, ',');
-                                if(StopPtr == NULL) strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)strchr(StartPtr, ')') - (uint64_t)StartPtr);
-                                else strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
-                                StartPtr = StopPtr+1;
-                                CurrentInputArgCount ++;
-                                //printf("CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount-1]);
-                            }
-
-                            SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
-                        }
-                    }
-                    else {CmdPtr = NULL;  If we don't find "Host" }
-                }
-                */
-
                 // Check so that all POST request mandatory content is contained in the message
                 for (i = 0; i < sizeof(POSTRequestMandatoryContent)/sizeof(POSTRequestMandatoryContent[0]); ++i)
                 {
@@ -409,7 +379,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     }
                 }
 
-
                 if (CmdPtr != NULL)
                 {
                     // It is now known that the request contains "POST" and "\r\n\r\n", so we can decode the header
@@ -421,19 +390,25 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     }
                     else if (SystemControlVerifyHostAddress(HTTPHeader.Host))
                     {
-                        StartPtr = strchr(CmdPtr, '(')+1;
-                        while (StopPtr != NULL)
+                        StartPtr = strchr(CmdPtr, '(');
+                        if (StartPtr == NULL || strchr(StartPtr,')') == NULL)
+                            LogMessage(LOG_LEVEL_WARNING, "Received command not conforming to MSCP standards");
+                        else
                         {
-                            StopPtr = (char *)strchr(StartPtr, ',');
-                            if(StopPtr == NULL) strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)strchr(StartPtr, ')') - (uint64_t)StartPtr);
-                            else strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
-                            StartPtr = StopPtr+1;
-                            CurrentInputArgCount ++;
-                            //printf("CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount-1]);
+                            StartPtr++;
+                            while (StopPtr != NULL)
+                            {
+                                StopPtr = (char *)strchr(StartPtr, ',');
+                                if(StopPtr == NULL)
+                                    strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)strchr(StartPtr, ')') - (uint64_t)StartPtr);
+                                else
+                                    strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
+                                StartPtr = StopPtr+1;
+                                CurrentInputArgCount ++;
+                            }
+
+                            SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
                         }
-
-                        SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
-
                     }
                     else {
                         LogMessage(LOG_LEVEL_INFO, "Request specified host <%s> not among known local addresses",HTTPHeader.Host);
