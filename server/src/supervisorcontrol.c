@@ -121,7 +121,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
   //LogMessage(LOG_LEVEL_INFO,"Supervisor IP: %s", TextBufferC8);
   //SupervisorIpU32 = UtilIPStringToInt(SupervisorServerIpC8);
-  SupervisorIpU32 = DataDictionaryGetExternalSupervisorIPU32();
+  DataDictionaryGetExternalSupervisorIPU32(&SupervisorIpU32);
 
   if(SupervisorIpU32 != 0)
   {

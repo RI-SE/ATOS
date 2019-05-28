@@ -30,11 +30,11 @@
 #include <netdb.h>
 #include <unistd.h>
 
-//#include "remotecontrol.h"
 #include "util.h"
 #include "systemcontrol.h"
 #include "timecontrol.h"
 #include "logging.h"
+#include "datadictionary.h"
 
 
 
@@ -53,6 +53,9 @@ typedef enum {
 
 
 #define SYSTEM_CONTROL_SERVICE_POLL_TIME_MS 5000
+#define SYSTEM_CONTROL_TASK_PERIOD_MS 1
+#define SYSTEM_CONTROL_RVSS_TIME_MS 10
+
 
 #define SYSTEM_CONTROL_CONTROL_PORT   54241       // Default port, control channel
 #define SYSTEM_CONTROL_PROCESS_PORT   54242       // Default port, process channel
@@ -62,7 +65,7 @@ typedef enum {
 #define IPC_BUFFER_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
 //#define IPC_BUFFER_SIZE   1024
 #define SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE 64
-#define SYSTEM_CONTROL_PROCESS_DATA_BUFFER	128
+#define SYSTEM_CONTROL_RVSS_DATA_BUFFER	128
 
 #define SYSTEM_CONTROL_ARG_CHAR_COUNT 		2
 #define SYSTEM_CONTROL_COMMAND_MAX_LENGTH 	32
@@ -107,6 +110,10 @@ typedef enum {
 #define REMOVE_FILE 1
 #define KEEP_FILE 0
 
+#define RVSS_TIME_CHANNEL 1
+#define RVSS_MONR_CHANNEL 2
+#define RVSS_ASP_CHANNEL 8
+
 
 
 typedef enum {
@@ -146,8 +153,10 @@ void SystemControlSendMONR(C8* LogString, I32* Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I32 *sockfd, struct sockaddr_in* addr);
 //I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
 I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 debug);
+I32 SystemControlGetServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
 I32 SystemControlReadServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
 I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
+I32 SystemControlSetServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 I32 SystemControlCheckFileDirectoryExist(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
 I32 SystemControlUploadFile(C8 *Path, C8 *FileSize, C8 *PacketSize, C8 *ReturnValue, U8 Debug);
 I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSize, C8 *ReturnValue, U8 Debug);
@@ -155,6 +164,9 @@ I32 SystemControlDeleteFileDirectory(C8 *Path, C8 *ReturnValue, U8 Debug);
 I32 SystemControlBuildFileContentInfo(C8 *Path, C8 *ReturnValue, U8 Debug);
 I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *ReturnValue, U8 Remove, U8 Debug);
 I32 SystemControlCreateDirectory(C8 *Path, C8 *ReturnValue, U8 Debug);
+I32 SystemControlBuildRVSSTimeChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, TimeType *GPSTime, U8 Debug);
+I32 SystemControlBuildRVSSAspChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, U8 Debug);
+I32 SystemControlBuildRVSSMONRChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, C8 *MonrData, U8 Debug);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -173,9 +185,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
     I32 ServerHandle;
     I32 ClientSocket = 0;
     I32 ClientResult = 0;
-    struct sockaddr_in ProcessChannelAddr;
+    struct sockaddr_in RVSSChannelAddr;
     struct in_addr ip_addr;
-    I32 ProcessChannelSocket;
+    I32 RVSSChannelSocket;
 
     ServerState_t server_state = SERVER_STATE_UNDEFINED;
     SystemControlCommand_t SystemControlCommand = Idle_0;
@@ -219,10 +231,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
     C8 ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
     U8 OBCStateU8;
     C8 UserControlIPC8[SMALL_BUFFER_SIZE_20];
-    C8 ProcessControlData[SYSTEM_CONTROL_PROCESS_DATA_BUFFER];
-    U32 ProcessControlSendCounterU32 = 0;
-    U32	PCDMessageLengthU32;
-    U16	PCDMessageCodeU16;
     struct timeval now;
     U16 MilliU16 = 0, NowU16 = 0;
     U64 GPSmsU64 = 0;
@@ -234,38 +242,28 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     //C8 SIDSData[128][10000][8];
 
+    C8 RVSSData[SYSTEM_CONTROL_RVSS_DATA_BUFFER];
+    U16 RVSSSendCounterU16 = 0;
+    U32 RVSSConfigU32;
+    U32 RVSSMessageLengthU32;
+    U16 PCDMessageCodeU16;
+
+    DataDictionaryConstructor();
+
+
+    DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
+    LogMessage(LOG_LEVEL_INFO,"RVSSConfigU32 = %d", RVSSConfigU32);
+
+    U8 RVSSRateU8;
+    dbl RVSSRateDbl;
+    DataDictionaryGetRVSSRateU8(&RVSSRateU8);
+    RVSSRateDbl = RVSSRateU8;
+    RVSSRateDbl = (1/RVSSRateDbl)*1000;
+    LogMessage(LOG_LEVEL_INFO,"RVSSRateU8 = %d", RVSSRateU8);
+
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO,"System control task running with PID: %i",getpid());
-
-    bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
-    UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerMode=", "", TextBufferC8);
-    ModeU8 = (U8)atoi(TextBufferC8);
-
-    bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
-    UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerIP=", "", TextBufferC8);
-    bzero(ServerIPC8, SMALL_BUFFER_SIZE_20);
-    strcat(ServerIPC8, TextBufferC8);
-
-    bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
-    UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerPort=", "", TextBufferC8);
-    ServerPortU16 = (U16)atoi(TextBufferC8);
-
-    bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
-    UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerUsername=", "", TextBufferC8);
-    bzero(UsernameC8, SMALL_BUFFER_SIZE_20);
-    strcat(UsernameC8, TextBufferC8);
-
-    bzero(TextBufferC8, SMALL_BUFFER_SIZE_20);
-    UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, "RemoteServerPassword=", "", TextBufferC8);
-    bzero(PasswordC8, SMALL_BUFFER_SIZE_20);
-    strcat(PasswordC8, TextBufferC8);
-
-    //printf("[SystemControl] Mode: %d\n", ModeU8);
-    //printf("[SystemControl] Remote server IP: %s\n", ServerIPC8);
-    //printf("[SystemControl] Remote server port: %d\n", ServerPortU16);
-    //printf("[SystemControl] Username: %s\n", UsernameC8);
-    //printf("[SystemControl] Password: %s\n", PasswordC8);
-
+    
     if(ModeU8 == 0)
     {
 
@@ -303,13 +301,13 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     bzero(UserControlIPC8, SMALL_BUFFER_SIZE_20);
                     sprintf(UserControlIPC8, "%s", inet_ntoa(ip_addr));
                     LogMessage(LOG_LEVEL_INFO,"UserControl IP address is %s", inet_ntoa(ip_addr));
-                    SystemControlCreateProcessChannel(UserControlIPC8, SYSTEM_CONTROL_PROCESS_PORT, &ProcessChannelSocket, &ProcessChannelAddr);
+                    SystemControlCreateProcessChannel(UserControlIPC8, SYSTEM_CONTROL_PROCESS_PORT, &RVSSChannelSocket, &RVSSChannelAddr);
 
                 }
                 if(USE_LOCAL_USER_CONTROL == 1)
                 {
                     ClientResult = SystemControlConnectServer(&ClientSocket, LOCAL_USER_CONTROL_IP, LOCAL_USER_CONTROL_PORT);
-                    SystemControlCreateProcessChannel(LOCAL_USER_CONTROL_IP, SYSTEM_CONTROL_PROCESS_PORT, &ProcessChannelSocket, &ProcessChannelAddr);
+                    SystemControlCreateProcessChannel(LOCAL_USER_CONTROL_IP, SYSTEM_CONTROL_PROCESS_PORT, &RVSSChannelSocket, &RVSSChannelAddr);
                 }
 
                 server_state = SERVER_STATE_IDLE;
@@ -370,25 +368,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             */
             CurrentTimeU64 = UtilgetCurrentUTCtimeMS();
             TimeDiffU64 = CurrentTimeU64 - OldTimeU64;
-
-            /* Uneccesarry checks to currently non-existing remote control serversocket. Login and session data not used either.
-            if(ServerSocketI32 <= 0) RemoteControlConnectServer(&ServerSocketI32, ServerIPC8, ServerPortU16);
-
-            if(ServerSocketI32 > 0 && SessionData.SessionIdU32 <= 0)
-            {
-                RemoteControlSignIn(ServerSocketI32, "users", UsernameC8, PasswordC8, &SessionData, 0);
-                LogMessage(LOG_LEVEL_INFO,"SessionId: %u", SessionData.SessionIdU32);
-                LogMessage(LOG_LEVEL_INFO,"UserId: %u", SessionData.UserIdU32);
-                LogMessage(LOG_LEVEL_INFO,"Usertype: %d", SessionData.UserTypeU8);
-                if(SessionData.SessionIdU32 > 0) { LogMessage(LOG_LEVEL_INFO,"Sign in success!");} else { LogMessage(LOG_LEVEL_INFO,"Sign in failed!");}
-            }
-
-            if(ServerSocketI32 > 0 && SessionData.SessionIdU32 > 0 && TimeDiffU64 > PollRateU64)
-            {
-                OldTimeU64 = CurrentTimeU64;
-                bzero(RemoteServerRxData, 1024);
-                RemoteControlSendServerStatus(ServerSocketI32, &SessionData, ++i1, 0);
-            }*/
         }
 
 
@@ -427,53 +406,15 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         {
             SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
         }
-
-        else if(iCommand == COMM_MONI){
-          //printf("Monr sys %s\n", pcRecvBuffer);
-	  C8 data[strlen(pcRecvBuffer)];
-	  bzero(data, strlen(data));
-	  strcat(data, pcRecvBuffer);
-
-          UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, data, sizeof(data), 0);
-        }
-
-        ++ProcessControlSendCounterU32;
-
-        if(ProcessChannelSocket != 0 && ProcessControlSendCounterU32 == 1)
+        else if(iCommand == COMM_MONI)
         {
-            ProcessControlSendCounterU32 = 0;
-            bzero(ProcessControlData, SYSTEM_CONTROL_PROCESS_DATA_BUFFER);
-            PCDMessageLengthU32 = 14;
-            PCDMessageCodeU16 = 1;
-
-            GPSmsU64 = GPSTime->GPSMillisecondsU64 + (U64)TimeControlGetMillisecond(GPSTime);
-            ProcessControlData[0] =	(U8)(PCDMessageLengthU32 >> 24);
-            ProcessControlData[1] =	(U8)(PCDMessageLengthU32 >> 16);
-            ProcessControlData[2] =	(U8)(PCDMessageLengthU32 >> 8);
-            ProcessControlData[3] =	(U8) PCDMessageLengthU32;
-            ProcessControlData[4] =	(U8)(PCDMessageCodeU16 >> 8);
-            ProcessControlData[5] =	(U8) PCDMessageCodeU16;
-            ProcessControlData[6] =	(U8)(GPSmsU64 >> 56);
-            ProcessControlData[7] =	(U8)(GPSmsU64 >> 48);
-            ProcessControlData[8] =	(U8)(GPSmsU64 >> 40);
-            ProcessControlData[9] =	(U8)(GPSmsU64 >> 32);
-            ProcessControlData[10] =	(U8)(GPSmsU64 >> 24);
-            ProcessControlData[11] =	(U8)(GPSmsU64 >> 16);
-            ProcessControlData[12] =	(U8)(GPSmsU64 >> 8);
-            ProcessControlData[13] =	(U8)(GPSmsU64);
-            ProcessControlData[14] = server_state;
-            ProcessControlData[15] = OBCStateU8;
-            ProcessControlData[16] = (U8)(GSD->TimeControlExecTimeU16 >> 8);
-            ProcessControlData[17] = (U8) GSD->TimeControlExecTimeU16;
-            ProcessControlData[18] = (U8) GPSTime->FixQualityU8;
-            ProcessControlData[19] = (U8) GPSTime->NSatellitesU8;
-
-            //SystemControlSendUDPData(&ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, PCDMessageLengthU32 + 6, 1);
-            UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, ProcessControlData, PCDMessageLengthU32 + 6, 0);
-
+            //printf("Monr sys %s\n", pcRecvBuffer);
+            if(RVSSConfigU32 & RVSS_MONR_CHANNEL)
+            {
+                SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, pcRecvBuffer, 0);
+                UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 0);
+            }
         }
-
-
 
         switch(SystemControlCommand)
         {
@@ -563,7 +504,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 SystemControlCommand = Idle_0;
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                SystemControlReadServerParameter(SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlGetServerParameter(SystemControlArgument[0], ControlResponseBuffer, 0);
                 SystemControlSendControlResponse(strlen(ControlResponseBuffer) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameter:", ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
             } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in GetServerParameter(Name)!"); SystemControlCommand = Idle_0;}
             break;
@@ -572,7 +513,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 SystemControlCommand = Idle_0;
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                SystemControlWriteServerParameter(SystemControlArgument[0], SystemControlArgument[1], 0);
+                SystemControlSetServerParameter(SystemControlArgument[0], SystemControlArgument[1], 0);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:", ControlResponseBuffer, 0, &ClientSocket, 0);
 
             } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in SetServerParameter(Name, Value)!"); SystemControlCommand = Idle_0;}
@@ -659,14 +600,12 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 else if (ControlResponseBuffer[0] == PATH_INVALID_MISSING)
                 {
                     LogMessage(LOG_LEVEL_INFO,"Failed receiving file: %s", SystemControlArgument[0]);
-
                     SystemControlReceiveRxData(&ClientSocket, "/file.tmp", SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
                     SystemControlDeleteFileDirectory("/file.tmp", ControlResponseBuffer, 0);
                     ControlResponseBuffer[0] = PATH_INVALID_MISSING;
                 }
                 else
                 {
-
                     LogMessage(LOG_LEVEL_INFO,"Receiving file: %s", SystemControlArgument[0]);
                     SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 0);
                 }
@@ -687,7 +626,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "INITIALIZED") != NULL)
             {
                 SystemControlSendLog("[SystemControl] Simulate that all objects becomes successfully configured.\n", &ClientSocket, 0);
-
                 SystemControlCommand = Idle_0;
                 server_state = SERVER_STATE_IDLE;
             }
@@ -710,7 +648,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL)
             {
                 SystemControlSendLog("[SystemControl] Simulate that all objects are connected.\n", &ClientSocket, 0);
-
                 SystemControlCommand = Idle_0;
                 server_state = SERVER_STATE_IDLE;
             }
@@ -942,7 +879,36 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
 
         sleep_time.tv_sec = 0;
-        sleep_time.tv_nsec = 10000000;
+        sleep_time.tv_nsec = SYSTEM_CONTROL_TASK_PERIOD_MS*1000000;
+        ++ RVSSSendCounterU16;
+        if(RVSSSendCounterU16 >= ((U16)RVSSRateDbl))
+        {
+            RVSSSendCounterU16 = 0;            
+            DataDictionaryGetRVSSRateU8(&RVSSRateU8);
+            RVSSRateDbl = RVSSRateU8;
+            RVSSRateDbl = (1/RVSSRateDbl)*1000;
+
+            if(RVSSChannelSocket != 0 && RVSSSendCounterU16 == 0 && RVSSConfigU32 > 0)
+            {
+                bzero(RVSSData, SYSTEM_CONTROL_RVSS_DATA_BUFFER);
+
+                if(RVSSConfigU32 & RVSS_TIME_CHANNEL)
+                {
+                    SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
+                    UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 0);
+                }
+
+                if(RVSSConfigU32 & RVSS_ASP_CHANNEL)
+                {
+                    SystemControlBuildRVSSAspChannelMessage(RVSSData, &RVSSMessageLengthU32, 0);
+                    UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 0);
+                }
+                
+            }
+
+
+        }
+
         nanosleep(&sleep_time,&ref_time);
 
 
@@ -1297,6 +1263,48 @@ I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData
 }
 */
 
+I32 SystemControlGetServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug)
+{
+    bzero(ReturnValue, 20);
+    dbl ValueDbl = 0;
+    U32 ValueU32 = 0;
+    U8 ValueU8 = 0;
+ 
+    if(strcmp("OrigoLatidude", ParameterName) == 0)
+    {
+        DataDictionaryGetOriginLatitudeDbl(&ValueDbl);
+        sprintf(ReturnValue, "%3.12f", ValueDbl);
+    }
+    else if(strcmp("OrigoLongitude", ParameterName) == 0)
+    {
+        DataDictionaryGetOriginLatitudeDbl(&ValueDbl);
+        sprintf(ReturnValue, "%3.12f", ValueDbl);
+    }
+    else if(strcmp("RVSSConfig", ParameterName) == 0)
+    {
+        DataDictionaryGetRVSSConfigU32(&ValueU32);
+        sprintf(ReturnValue, "%" PRIu32, ValueU32);
+    }
+    else if(strcmp("RVSSRate", ParameterName) == 0)
+    {
+        DataDictionaryGetRVSSRateU8(&ValueU8);
+        sprintf(ReturnValue, "%" PRIu8, ValueU8);
+    }
+
+}
+
+
+
+I32 SystemControlSetServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
+{
+
+    if(strcmp("OrigoLatidude", ParameterName) == 0) DataDictionarySetOriginLatitudeDbl(NewValue);
+    else if(strcmp("OrigoLongitude", ParameterName) == 0) DataDictionarySetOriginLongitudeDbl(NewValue);
+    else if(strcmp("RVSSConfig", ParameterName) == 0) DataDictionarySetRVSSConfigU32((U32)atoi(NewValue));
+    else if(strcmp("RVSSRate", ParameterName) == 0) DataDictionarySetRVSSRateU8((U32)atoi(NewValue));
+}
+
+
 
 I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
 {
@@ -1321,7 +1329,6 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
 
     //Open configuration file
     fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
-
 
     if(fd > 0)
     {
@@ -1364,7 +1371,6 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
                 (void)fwrite(Row,1,strlen(Row),TempFd);
             }
         }
-
         fclose(TempFd);
         fclose(fd);
 
@@ -1376,9 +1382,7 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
 
         //Remove temporary file
         remove(SYSTEM_CONTROL_TEMP_CONF_FILE_PATH);
-
     }
-
 
     return 0;
 }
@@ -1747,7 +1751,6 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
 
 I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *ReturnValue, U8 Remove, U8 Debug)
 {
-
     FILE *fd;
     C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
     bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
@@ -1802,6 +1805,78 @@ I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *Retu
         LogMessage(LOG_LEVEL_INFO,"Sent file: %s, total size = %d, transmissions = %d", CompletePath, (PacketSizeU16*TransmissionCount+RestCount), i + 1);
 
     }
+
+    return 0;
+}
+
+
+I32 SystemControlBuildRVSSTimeChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, TimeType *GPSTime, U8 Debug)
+{
+    I32 MessageIndex = 0, i;
+    C8 *p;
+
+    RVSSTimeType RVSSTimeData;
+    RVSSTimeData.MessageLengthU32 = SwapU32((U32)sizeof(RVSSTimeType)-4); 
+    RVSSTimeData.ChannelCodeU32 = SwapU32((U32)RVSS_TIME_CHANNEL);
+    RVSSTimeData.YearU16 = SwapU16(GPSTime->YearU16);
+    RVSSTimeData.MonthU8 = GPSTime->MonthU8;
+    RVSSTimeData.DayU8 = GPSTime->DayU8;
+    RVSSTimeData.HourU8 = GPSTime->HourU8;
+    RVSSTimeData.MinuteU8 = GPSTime->MinuteU8;
+    RVSSTimeData.SecondU8 = GPSTime->SecondU8;
+    RVSSTimeData.MillisecondU16 = SwapU16(TimeControlGetMillisecond(GPSTime));
+    RVSSTimeData.SecondCounterU32 = SwapU32(GPSTime->SecondCounterU32);
+    RVSSTimeData.GPSMillisecondsU64 = SwapU64(GPSTime->GPSMillisecondsU64 + (U64)TimeControlGetMillisecond(GPSTime));
+    RVSSTimeData.GPSMinutesU32 = SwapU32(GPSTime->GPSMinutesU32);
+    RVSSTimeData.GPSWeekU16 = SwapU16(GPSTime->GPSWeekU16);
+    RVSSTimeData.GPSSecondsOfWeekU32 = SwapU32(GPSTime->GPSSecondsOfWeekU32);
+    RVSSTimeData.GPSSecondsOfDayU32 = SwapU32(GPSTime->GPSSecondsOfDayU32);
+    RVSSTimeData.FixQualityU8 = GPSTime->FixQualityU8;
+    RVSSTimeData.NSatellitesU8 = GPSTime->NSatellitesU8;
+
+    p=(C8 *)&RVSSTimeData;
+    for(i=0; i<sizeof(RVSSTimeType); i++) *(RVSSData + i) = *p++;
+    *RVSSDataLengthU32 = i;
+
+    if(Debug)
+    {
+     
+    }
+
+    return 0;
+}
+
+
+I32 SystemControlBuildRVSSMONRChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, C8 *MonrData, U8 Debug)
+{
+    I32 MessageLength = 0;
+
+    MessageLength = strlen(MonrData) + 8;
+    bzero(RVSSData, MessageLength);
+    *RVSSDataLengthU32 = MessageLength;
+
+    *(RVSSData+0) = (C8)(MessageLength >> 24);
+    *(RVSSData+1) = (C8)(MessageLength >> 16);
+    *(RVSSData+2) = (C8)(MessageLength >> 8);
+    *(RVSSData+3) = (C8)(MessageLength);
+    *(RVSSData+7) = (C8)(RVSS_MONR_CHANNEL);
+    strcat(RVSSData+8, MonrData);
+
+    if(Debug)
+    {
+     
+    }
+
+    return 0;
+}
+
+
+I32 SystemControlBuildRVSSAspChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, U8 Debug)
+{
+    RVSSTimeType RVSSTimeData;
+
+
+
 
     return 0;
 }

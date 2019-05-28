@@ -103,8 +103,8 @@
 #define TCP_RX_BUFFER 1024
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
-#define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.15"
+#define USE_LOCAL_USER_CONTROL  1
+#define LOCAL_USER_CONTROL_IP "10.168.161.95"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -519,14 +519,16 @@ typedef struct
 
 typedef struct
 {
-  U32 MTSPU32;
-  dbl CurrentTimeDbl;
-  dbl TimeToSyncPointDbl;
-  dbl PrevTimeToSyncPointDbl;
-  I32 SyncPointIndexI32;
-  U32 CurrentTimeU32;
-  I32 BestFoundIndexI32;
-  U16 IterationTimeU16;
+  volatile U32 MessageLengthU32;
+  volatile U32 ChannelCodeU32;
+  volatile U32 MTSPU32;
+  volatile dbl CurrentTimeDbl;
+  volatile dbl TimeToSyncPointDbl;
+  volatile dbl PrevTimeToSyncPointDbl;
+  volatile I32 SyncPointIndexI32;
+  volatile U32 CurrentTimeU32;
+  volatile I32 BestFoundIndexI32;
+  volatile U16 IterationTimeU16;
 } ASPType;
 
 typedef struct
@@ -687,6 +689,39 @@ typedef enum {
 } OBCState_t;
 
 
+typedef enum {
+    UNDEFINED,
+    WRITE_OK,
+    READ_OK,
+    READ_WRITE_OK,
+    PARAMETER_NOTFOUND,
+    OUT_OF_RANGE
+} ReadWriteAccess_t;
+
+
+typedef struct
+{
+  volatile U32 MessageLengthU32;
+  volatile U32 ChannelCodeU32;
+  volatile U16 YearU16;
+  volatile U8 MonthU8;
+  volatile U8 DayU8;
+  volatile U8 HourU8;
+  volatile U8 MinuteU8;
+  volatile U8 SecondU8;
+  volatile U16 MillisecondU16;
+  volatile U32 SecondCounterU32;
+  volatile U64 GPSMillisecondsU64;
+  volatile U32 GPSMinutesU32;
+  volatile U16 GPSWeekU16;
+  volatile U32 GPSSecondsOfWeekU32;
+  volatile U32 GPSSecondsOfDayU32;
+  volatile U8 FixQualityU8;
+  volatile U8 NSatellitesU8;
+
+} RVSSTimeType;
+
+
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -782,6 +817,7 @@ I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPS
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
+I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 
 typedef struct {
   uint64_t timestamp;

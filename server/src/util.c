@@ -39,6 +39,11 @@
 #define FE_WGS84        (1.0/298.257223563) // earth flattening (WGS84)
 #define RE_WGS84        6378137.0           // earth semimajor axis (WGS84) (m)
 
+#define TEMP_CONF_FILE_PATH  "conf/temp.conf"
+#define CONF_FILE_PATH  "conf/test.conf"
+#define SMALL_BUFFER_SIZE_128 128
+#define SMALL_BUFFER_SIZE_64 64
+
 /*------------------------------------------------------------
 -- Public variables
 ------------------------------------------------------------*/
@@ -2974,4 +2979,86 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
     }
 
     return 0;
+}
+
+
+I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
+{
+
+    I32 RowCount, i;
+    C8 Parameter[SMALL_BUFFER_SIZE_64];
+    C8 Row[SMALL_BUFFER_SIZE_128];
+    C8 NewRow[SMALL_BUFFER_SIZE_128];
+    FILE *fd, *TempFd;
+    C8 *ptr1, *ptr2;
+    U8 ParameterFound = 0;
+    bzero(Parameter, SMALL_BUFFER_SIZE_64);
+
+    strcat(Parameter, ParameterName);
+    strcat(Parameter, "=");
+
+    //Remove temporary file
+    remove(TEMP_CONF_FILE_PATH);
+
+    //Create temporary file
+    TempFd = fopen (TEMP_CONF_FILE_PATH, "w+");
+
+    //Open configuration file
+    fd = fopen (CONF_FILE_PATH, "r");
+
+    if(fd > 0)
+    {
+        RowCount = UtilCountFileRows(fd);
+        fclose(fd);
+        fd = fopen (CONF_FILE_PATH, "r");
+
+        for(i = 0; i < RowCount; i++)
+        {
+            bzero(Row, SMALL_BUFFER_SIZE_128);
+            UtilReadLine(fd, Row);
+
+            ptr1 = strstr(Row, Parameter);
+            ptr2 = strstr(Row, "//");
+            if (ptr2 == NULL) ptr2 = ptr1; //No comment found
+            if(ptr1 != NULL && (U64)ptr2 >= (U64)ptr1 && ParameterFound == 0)
+            {
+                ParameterFound = 1;
+                bzero(NewRow, SMALL_BUFFER_SIZE_128);
+                strncpy(NewRow, Row, (U64)ptr1 - (U64)Row + strlen(Parameter));
+                strcat(NewRow, NewValue);
+                if((U64)ptr2 > (U64)ptr1)
+                {
+                    strcat(NewRow, " "); // Add space
+                    strcat(NewRow, ptr2); // Add the comment
+                }
+
+                if(Debug)
+                {
+                    LogMessage(LOG_LEVEL_DEBUG,"Changed parameter: %s", NewRow);
+                }
+
+                strcat(NewRow, "\n");
+                (void)fwrite(NewRow,1,strlen(NewRow),TempFd);
+
+            }
+            else
+            {
+                strcat(Row, "\n");
+                (void)fwrite(Row,1,strlen(Row),TempFd);
+            }
+        }
+        fclose(TempFd);
+        fclose(fd);
+
+        //Remove test.conf
+        remove(CONF_FILE_PATH);
+
+        //Rename temp.conf to test.conf
+        rename(TEMP_CONF_FILE_PATH, CONF_FILE_PATH);
+
+        //Remove temporary file
+        remove(TEMP_CONF_FILE_PATH);
+    }
+
+    return (I32)ParameterFound;
 }

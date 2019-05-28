@@ -136,7 +136,7 @@ static void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr)
     bzero((char *)addr, sizeof(*addr));
 
     bzero(pcTempBuffer,MAX_UTIL_VARIBLE_SIZE);
-    if(!iUtilGetParaConfFile("VisualizationServerName",pcTempBuffer))
+    if(!iUtilGetParaConfFile("VisualizationServer",pcTempBuffer))
     {
         strcat(pcTempBuffer,VISUAL_SERVER_NAME);
     }

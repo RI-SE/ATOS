@@ -31,6 +31,7 @@
 #include "util.h"
 #include "timecontrol.h"
 #include "logging.h"
+#include "datadictionary.h"
 
 
 /*------------------------------------------------------------
@@ -160,7 +161,7 @@ static I32 vCheckRemoteDisconnected(int* sockfd);
 static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static void vCloseSafetyChannel(int* sockfd);
 static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData);
-I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug);
+I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, U8 debug);
 I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug);
 I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
 I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 debug);
@@ -545,10 +546,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                 ASPData.SyncPointIndexI32 = OP[iIndex].SyncIndex;
                                 ASPData.IterationTimeU16 = (U16)(TimeCap2 - TimeCap1);
                                 //Build ASP debug data and set to GSD
-                                bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
-                                ObjectControlBuildASPMessage(buffer, &ASPData, 0);
-                                for(j = 0; j < sizeof(ASPType); j ++) GSD->ASPDebugDataU8[j] = buffer[j];
-                                GSD->ASPDebugDataSetU8 = 1;
+                                //bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
+                                //ObjectControlBuildASPMessage(buffer, &ASPData, 0);
+                                DataDictionarySetRVSSAsp(&ASPData);
+                                //for(j = 0; j < sizeof(ASPType); j ++) GSD->ASPDebugDataU8[j] = buffer[j];
+                                //GSD->ASPDebugDataSetU8 = 1;
 
                                 if(atoi(Timestamp)%ASPDebugRate == 0)
                                 {
@@ -901,7 +903,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                                                  UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
                                                                  UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
                                                                  UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
                                                                  0);
 
 
@@ -1611,7 +1612,7 @@ int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId, char *TriggAc
 }
 
 
-I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug)
+I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, U8 debug)
 {
     I32 MessageIndex = 0, i = 0;
     dbl Data;

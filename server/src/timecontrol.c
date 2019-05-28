@@ -152,7 +152,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
         GPSTime->GPSWeekU16 = (U16)(GPSTime->GPSMillisecondsU64 / WEEK_TIME_MS);
         GPSTime->GPSSecondsOfWeekU32 = (U32)((GPSTime->GPSMillisecondsU64 - (U64)(GPSTime->GPSWeekU16) * WEEK_TIME_MS) / 1000);
         GPSTime->GPSSecondsOfDayU32 = (GPSTime->GPSMillisecondsU64 % DAY_TIME_MS) / 1000;
-        GPSTime->GPSMinutesU32 = (GPSTime->GPSSecondsOfDayU32 / 60) % 60;
+        GPSTime->GPSMinutesU32 = (GPSTime->GPSMillisecondsU64 / 1000) / 60;
         GPSTime->isTimeInitializedU8 = 1;
     }
 
@@ -213,7 +213,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
                     GPSTime->GPSWeekU16 ++;
                 } else GPSTime->GPSSecondsOfWeekU32 ++;
 
-                if(GPSTime->SecondCounterU32 % 60 == 0) GPSTime->GPSMinutesU32 ++;
+                if(GPSTime->SecondU8  == 0) GPSTime->GPSMinutesU32 ++;
             }
         }
 

@@ -64,8 +64,6 @@ int main(int argc, char *argv[])
     GSD->ScenarioStartTimeU32 = 0;
     GPSTime->isTimeInitializedU8 = 0;
 
-    DataDictionaryConstructor();
-
     pid_t pID[8];
     int iIndex = 0;
 
