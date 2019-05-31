@@ -330,6 +330,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     //GSD->OSEMSizeU8 = 0;
     U8 OSEMSentToMsqU8 = 0;
     U8 STRTSentToMsqU8 = 0;
+    U8 OBCStateCntU8 = 0;
 
     (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
 
@@ -1097,10 +1098,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
         }
 
-        bzero(Buffer2, SMALL_BUFFER_SIZE_1);
-        Buffer2[0] = OBCState;
-        (void)iCommSend(COMM_OBC_STATE,Buffer2);
-
+        
         if(!iExit)
         {
             /* Make call periodic */
@@ -1111,6 +1109,14 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             if(uiTimeCycle >= HEARTBEAT_TIME_MS/TASK_PERIOD_MS)
             {
                 uiTimeCycle = 0;
+                ++OBCStateCntU8;
+                if(OBCStateCntU8 == 10)
+                {
+                    bzero(Buffer2, SMALL_BUFFER_SIZE_1);
+                    Buffer2[0] = OBCState;
+                    (void)iCommSend(COMM_OBC_STATE,Buffer2);
+                    OBCStateCntU8 = 0;
+                }
             }
 
             (void)nanosleep(&sleep_time,&ref_time);
