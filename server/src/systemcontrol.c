@@ -119,13 +119,13 @@ typedef enum {
 typedef enum {
     Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0, InitializeScenario_0,
     ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetDirectoryContent_1,
-    DeleteFileDirectory_1, CreateDirectory_1, replay_1, control_0, Exit_0, start_ext_trigg_1, nocommand
+    DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0, start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 const char* SystemControlCommandsArr[] =
 {
     "Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0", "AbortScenario_0", "InitializeScenario_0",
     "ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2", "GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1", "GetDirectoryContent_1",
-    "DeleteFileDirectory_1", "CreateDirectory_1", "replay_1", "control_0", "Exit_0", "start_ext_trigg_1"
+    "DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0" ,"replay_1", "control_0", "Exit_0", "start_ext_trigg_1"
 };
 
 const char* SystemControlStatesArr[] = { "UNDEFINED", "INITIALIZED", "IDLE", "READY", "RUNNING", "INWORK", "ERROR"};
@@ -492,13 +492,22 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             ControlResponseBuffer[1] = OBCStateU8;
             LogMessage(LOG_LEVEL_DEBUG,"GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64); // GPSTime just ticks from 0 up shouldent it be in the global GPStime?
             SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 2, &ClientSocket, 0);
-            break;
+        break;
         case GetServerParameterList_0:
             SystemControlCommand = Idle_0;
             bzero(ParameterListC8, SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE);
             SystemControlReadServerParameterList(ParameterListC8, 0);
             SystemControlSendControlResponse(strlen(ParameterListC8) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameterList:", ParameterListC8, strlen(ParameterListC8), &ClientSocket, 0);
-            break;
+        break;
+        case GetTestOrigin_0:
+            SystemControlCommand = Idle_0;
+            bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+            DataDictionaryGetOriginLatitudeC8(ControlResponseBuffer);strcat(ControlResponseBuffer,";");
+            DataDictionaryGetOriginLongitudeC8(ControlResponseBuffer);strcat(ControlResponseBuffer,";");
+            DataDictionaryGetOriginAltitudeC8(ControlResponseBuffer);strcat(ControlResponseBuffer,";");
+            iCommSend(COMM_OSEM,ControlResponseBuffer);
+            SystemControlSendControlResponse(strlen(ParameterListC8) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetTestOrigin:", ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
+        break;
         case GetServerParameter_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
@@ -507,7 +516,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 SystemControlGetServerParameter(SystemControlArgument[0], ControlResponseBuffer, 0);
                 SystemControlSendControlResponse(strlen(ControlResponseBuffer) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameter:", ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
             } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in GetServerParameter(Name)!"); SystemControlCommand = Idle_0;}
-            break;
+        break;
         case SetServerParameter_2:
             if(CurrentInputArgCount == CommandArgCount)
             {
@@ -517,7 +526,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:", ControlResponseBuffer, 0, &ClientSocket, 0);
 
             } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in SetServerParameter(Name, Value)!"); SystemControlCommand = Idle_0;}
-            break;
+        break;
         case CheckFileDirectoryExist_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
@@ -869,12 +878,11 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             if(USE_LOCAL_USER_CONTROL == 0) { close(ServerHandle); ServerHandle = -1;}
             LogMessage(LOG_LEVEL_INFO,"Server closing");
 
-            break;
+        break;
 
         default:
-
-
-            break;
+            DataDictionaryConstructor();
+        break;
         }
 
 

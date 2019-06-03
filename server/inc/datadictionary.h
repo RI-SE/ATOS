@@ -16,14 +16,17 @@
 I32 DataDictionaryInitOriginLatitudeDbl(void);
 I32 DataDictionarySetOriginLatitudeDbl(C8 *Latitude);
 I32 DataDictionaryGetOriginLatitudeDbl(dbl *Latitude);
+I32 DataDictionaryGetOriginLatitudeC8(C8 *Latitude);
 
 I32 DataDictionaryInitOriginLongitudeDbl(void);
 I32 DataDictionarySetOriginLongitudeDbl(C8 *Longitude);
 I32 DataDictionaryGetOriginLongitudeDbl(dbl *Longitude);
+I32 DataDictionaryGetOriginLongitudeC8(C8 *Longitude);
 
 I32 DataDictionaryInitOriginAltitudeDbl(void);
 I32 DataDictionarySetOriginAltitudeDbl(C8 *Altitude);
 I32 DataDictionaryGetOriginAltitudeDbl(dbl *Altitude);
+I32 DataDictionaryGetOriginAltitudeC8(C8 *Altitude);
 
 I32 DataDictionaryInitVisualizationServerU32(void);
 I32 DataDictionarySetVisualizationServerU32(C8 *IP);

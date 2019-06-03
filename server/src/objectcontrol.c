@@ -326,7 +326,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     //GSD->OSTMSizeU8 = 0;
     //GSD->STRTSizeU8 = 0;
     //GSD->OSEMSizeU8 = 0;
-    U8 OSEMSentU8 = 0;
+    //U8 OSEMSentU8 = 0;
     U8 STRTSentU8 = 0;
 
     LogInit(MODULE_NAME,logLevel);
@@ -885,7 +885,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     TempFd = fopen (TEMP_LOG_FILE, "w+");
                 }
 
-                OSEMSentU8 = 0;
+                //OSEMSentU8 = 0;
                 STRTSentU8 = 0;
             }
             else if(iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED)
@@ -899,10 +899,15 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                     UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
 
+//                    MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, GPSTime,
+//                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
+//                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
+//                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
+//                                                                 0);
                     MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, GPSTime,
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
+                                                                 OriginLatitude,
+                                                                 OriginLongitude,
+                                                                 OriginAltitude,
                                                                  0);
 
 
@@ -963,25 +968,25 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         /* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates)*/
                         LogMessage(LOG_LEVEL_INFO,"Sending OSEM");
                         LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.");
-                        ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, OriginLatitude, OriginLongitude, OriginAltitude );
-                        bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
-                        strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";");
-                        strcat(pcSendBuffer,OriginLongitude);strcat(pcSendBuffer,";");
-                        strcat(pcSendBuffer,OriginLatitude);strcat(pcSendBuffer,";");
-                        strcat(pcSendBuffer,OriginAltitude);
-
-                        iCommSend(COMM_OSEM,pcSendBuffer);
                         UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+                        //ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, OriginLatitude, OriginLongitude, OriginAltitude );
+                        //bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
+                        //strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";");
+                        //strcat(pcSendBuffer,OriginLongitude);strcat(pcSendBuffer,";");
+                        //strcat(pcSendBuffer,OriginLatitude);strcat(pcSendBuffer,";");
+                        //strcat(pcSendBuffer,OriginAltitude);
+
+                        //iCommSend(COMM_OSEM,pcSendBuffer);
 
 
                         //Store OSEM in GSD
-                        if(OSEMSentU8 == 0)
-                        {
+                        //if(OSEMSentU8 == 0)
+                        //{
                             //for(i = 0; i < MessageLength; i++) GSD->OSEMData[i] = MessageBuffer[i];
                             //GSD->OSEMSizeU8 = (U8)MessageLength;
-                            OSEMSentU8 = 1;
+                        //    OSEMSentU8 = 1;
                             //printf("OSEMSentU8 = %d\n", OSEMSentU8);
-                        }
+                        //}
 
 
                         /*Here we send DOTM, if the IP-address not is found*/
@@ -1065,6 +1070,21 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 /*Set server status*/
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
 
+                if(DisconnectU8 == 0) vSetState(&OBCState, OBC_STATE_CONNECTED);
+                else if(DisconnectU8 == 1) vSetState(&OBCState, OBC_STATE_IDLE);
+            }
+            else if(iCommand == COMM_OSEM)
+            {
+                C8 *p = pcRecvBuffer, *pi = pcRecvBuffer;
+                for(i = 0; i < 3; i ++)
+                {
+                   p = strstr(pi,";");
+                   if(i == 0) strncpy(OriginLatitude, pi, p-pi);
+                   else if(i == 1) strncpy(OriginLongitude, pi, p-pi);
+                   else if(i == 2) strncpy(OriginAltitude, pi, p-pi);
+                   pi = p + 1;
+                }
+                
                 OriginLatitudeDbl = atof(OriginLatitude);
                 OriginLongitudeDbl = atof(OriginLongitude);
                 OriginAltitudeDbl = atof(OriginAltitude);
@@ -1074,9 +1094,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 OriginPosition.Longitude = OriginLongitudeDbl;
                 OriginPosition.Altitude = OriginAltitudeDbl;
                 OriginPosition.Heading = OriginHeadingDbl;
-
-                if(DisconnectU8 == 0) vSetState(&OBCState, OBC_STATE_CONNECTED);
-                else if(DisconnectU8 == 1) vSetState(&OBCState, OBC_STATE_IDLE);
             }
             else if(iCommand == COMM_DISCONNECT)
             {

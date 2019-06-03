@@ -40,8 +40,11 @@
 // Parameters and variables
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 volatile dbl OriginLatitudeDbl = 0;
+C8 OriginLatitudeC8[DD_CONTROL_BUFFER_SIZE_20];
 volatile dbl OriginLongitudeDbl = 0;
+C8 OriginLongitudeC8[DD_CONTROL_BUFFER_SIZE_20];
 volatile dbl OriginAltitudeDbl = 0;
+C8 OriginAltitudeC8[DD_CONTROL_BUFFER_SIZE_20];
 volatile U32 VisualizationServerU32 = 0;
 volatile U8 ForceObjectToLocalhostU8 = 0;
 volatile dbl ASPMaxTimeDiffDbl = 0;
@@ -115,6 +118,8 @@ I32 DataDictionaryInitOriginLatitudeDbl(void)
     Res = READ_OK;
     pthread_mutex_lock(&mutex);
     OriginLatitudeDbl = atof(ResultBufferC8);
+    bzero(OriginLatitudeC8, DD_CONTROL_BUFFER_SIZE_20);
+    strcat(OriginLatitudeC8, ResultBufferC8);
     pthread_mutex_unlock(&mutex);
   }
   else
@@ -134,6 +139,8 @@ I32 DataDictionarySetOriginLatitudeDbl(C8 *Latitude)
     Res = WRITE_OK;
     pthread_mutex_lock(&mutex);
     OriginLatitudeDbl = atof(Latitude);
+    bzero(OriginLatitudeC8, DD_CONTROL_BUFFER_SIZE_20);
+    strcat(OriginLatitudeC8, Latitude);
     pthread_mutex_unlock(&mutex);
   } else Res = PARAMETER_NOTFOUND; 
   return Res; 
@@ -146,6 +153,15 @@ I32 DataDictionaryGetOriginLatitudeDbl(dbl *Latitude)
   pthread_mutex_unlock(&mutex);
   return (I32) READ_OK;
  }
+
+I32 DataDictionaryGetOriginLatitudeC8(C8 *Latitude)
+{
+  pthread_mutex_lock(&mutex);
+  strcat(Latitude, OriginLatitudeC8);
+  pthread_mutex_unlock(&mutex);
+  return (I32) READ_OK;
+ }
+
 /*END of Origin Latitude*/
 
 /*Origin Longitude*/
@@ -158,6 +174,8 @@ I32 DataDictionaryInitOriginLongitudeDbl(void)
     Res = READ_OK;
     pthread_mutex_lock(&mutex);
     OriginLongitudeDbl = atof(ResultBufferC8);
+    bzero(OriginLongitudeC8, DD_CONTROL_BUFFER_SIZE_20);
+    strcat(OriginLongitudeC8, ResultBufferC8);
     pthread_mutex_unlock(&mutex);
   }
   else
@@ -177,6 +195,8 @@ I32 DataDictionarySetOriginLongitudeDbl(C8 *Longitude)
     Res = WRITE_OK;
     pthread_mutex_lock(&mutex);
     OriginLongitudeDbl = atof(Longitude);
+    bzero(OriginLongitudeC8, DD_CONTROL_BUFFER_SIZE_20);
+    strcat(OriginLongitudeC8, Longitude);
     pthread_mutex_unlock(&mutex);
   } else Res = PARAMETER_NOTFOUND; 
   return Res; 
@@ -185,7 +205,15 @@ I32 DataDictionarySetOriginLongitudeDbl(C8 *Longitude)
 I32 DataDictionaryGetOriginLongitudeDbl(dbl *Longitude)
 {
   pthread_mutex_lock(&mutex);
-  *Longitude = OriginLatitudeDbl;
+  *Longitude = OriginLongitudeDbl;
+  pthread_mutex_unlock(&mutex);
+  return (I32) READ_OK;
+ }
+
+I32 DataDictionaryGetOriginLongitudeC8(C8 *Longitude)
+{
+  pthread_mutex_lock(&mutex);
+  strcat(Longitude, OriginLongitudeC8);
   pthread_mutex_unlock(&mutex);
   return (I32) READ_OK;
  }
@@ -201,6 +229,8 @@ I32 DataDictionaryInitOriginAltitudeDbl(void)
     Res = READ_OK;
     pthread_mutex_lock(&mutex);
     OriginAltitudeDbl = atof(ResultBufferC8);
+    bzero(OriginAltitudeC8, DD_CONTROL_BUFFER_SIZE_20);
+    strcat(OriginAltitudeC8, ResultBufferC8);
     pthread_mutex_unlock(&mutex);
   }
   else
@@ -220,6 +250,8 @@ I32 DataDictionarySetOriginAltitudeDbl(C8 *Altitude)
     Res = WRITE_OK;
     pthread_mutex_lock(&mutex);
     OriginAltitudeDbl = atof(Altitude);
+    bzero(OriginAltitudeC8, DD_CONTROL_BUFFER_SIZE_20);
+    strcat(OriginAltitudeC8, Altitude);
     pthread_mutex_unlock(&mutex);
   } else Res = PARAMETER_NOTFOUND; 
   return Res; 
@@ -232,6 +264,15 @@ I32 DataDictionaryGetOriginAltitudeDbl(dbl *Altitude)
   pthread_mutex_unlock(&mutex);
   return (I32) READ_OK;
  }
+
+I32 DataDictionaryGetOriginAltitudeC8(C8 *Altitude)
+{
+  pthread_mutex_lock(&mutex);
+  strcat(Altitude, OriginAltitudeC8);
+  pthread_mutex_unlock(&mutex);
+  return (I32) READ_OK;
+ }
+
 /*END of Origin Altitude*/
 
 /*VisualizationServer*/
