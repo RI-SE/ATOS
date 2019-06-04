@@ -734,7 +734,7 @@ int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 int iCommInit(void);
 int iCommClose();
 ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, struct timeval *timeRecv);
-int iCommSend(const enum COMMAND iCommand, const char* data, unsigned long dataLength);
+int iCommSend(const enum COMMAND iCommand, const char* data, size_t dataLength);
 
 char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
