@@ -1858,90 +1858,75 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData)
     {
     case COMM_STRT:
         uiMessagePrio = PRIO_COMM_STRT;
-        cpMessage[0] = (char)COMM_STRT;
         break;
     case COMM_ARMD:
         uiMessagePrio = PRIO_COMM_ARMD;
-        cpMessage[0] = (char)COMM_ARMD;
         break;
     case COMM_STOP:
         uiMessagePrio = PRIO_COMM_STOP;
-        cpMessage[0] = (char)COMM_STOP;
         break;
     case COMM_MONI:
         uiMessagePrio = PRIO_COMM_MONI;
-        cpMessage[0] = (char)COMM_MONI;
         break;
     case COMM_MONR:
         uiMessagePrio = PRIO_COMM_MONR;
-        cpMessage[0] = (char)COMM_MONR;
+        break;
     case COMM_EXIT:
         uiMessagePrio = PRIO_COMM_EXIT;
-        cpMessage[0] = (char)COMM_EXIT;
         break;
     case COMM_REPLAY:
         uiMessagePrio = PRIO_COMM_REPLAY;
-        cpMessage[0] = (char)COMM_REPLAY;
         break;
     case COMM_CONTROL:
         uiMessagePrio = PRIO_COMM_CONTROL;
-        cpMessage[0] = (char)COMM_CONTROL;
         break;
     case COMM_ABORT:
         uiMessagePrio = PRIO_COMM_ABORT;
-        cpMessage[0] = (char)COMM_ABORT;
         break;
     case COMM_TOM:
         uiMessagePrio = PRIO_COMM_TOM;
-        cpMessage[0] = (char)COMM_TOM;
         break;
     case COMM_INIT:
         uiMessagePrio = PRIO_COMM_INIT;
-        cpMessage[0] = (char)COMM_INIT;
         break;
     case COMM_CONNECT:
         uiMessagePrio = PRIO_COMM_CONNECT;
-        cpMessage[0] = (char)COMM_CONNECT;
         break;
     case COMM_OBC_STATE:
         uiMessagePrio = PRIO_COMM_OBC_STATE;
-        cpMessage[0] = (char)COMM_OBC_STATE;
         break;
     case COMM_DISCONNECT:
         uiMessagePrio = PRIO_COMM_DISCONNECT;
-        cpMessage[0] = (char)COMM_DISCONNECT;
         break;
     case COMM_LOG:
         uiMessagePrio = PRIO_COMM_LOG;
-        cpMessage[0] = (char)COMM_LOG;
         break;
     case COMM_OSEM:
         uiMessagePrio = PRIO_COMM_OSEM;
-        cpMessage[0] = (char)COMM_OSEM;
         break;
     case COMM_VIOP:
         uiMessagePrio = PRIO_COMM_VIOP;
-        cpMessage[0] = (char)COMM_VIOP;
         break;
     case COMM_TRAJ:
         uiMessagePrio = PRIO_COMM_TRAJ;
-        cpMessage[0] = (char)COMM_TRAJ;
         break;
     case COMM_ASP:
         uiMessagePrio = PRIO_COMM_ASP;
-        cpMessage[0] = (char)COMM_ASP;
         break;
     case COMM_TRAJ_TOSUP:
         uiMessagePrio = PRIO_COMM_TRAJ_TOSUP;
-        cpMessage[0] = (char)COMM_TRAJ_TOSUP;
         break;
     case COMM_TRAJ_FROMSUP:
         uiMessagePrio = PRIO_COMM_TRAJ_FROMSUP;
-        cpMessage[0] = (char)COMM_TRAJ_FROMSUP;
         break;
     default:
         util_error("Unknown command");
     }
+
+    cpMessage[0] = (char)iCommand;
+
+    memcpy(cpMessage + sizeof(char), &dataLength, sizeof(dataLength));
+
 
     // Append message to command
     if(cpData != NULL)
