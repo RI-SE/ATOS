@@ -1833,13 +1833,13 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, stru
  * \brief iCommSend Sends a command over the message bus
  * \param iCommand Command number
  * \param cpData Command data
+ * \param dataLength Length of command data array
  * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
  */
-int iCommSend(const enum COMMAND iCommand, const char* cpData)
+int iCommSend(const enum COMMAND iCommand, const char* cpData, unsigned long dataLength)
 {
     unsigned int uiMessagePrio = 0;
     char cpMessage[MQ_MSG_SIZE];
-    unsigned long dataLength = 0;
     enum MQBUS_ERROR sendResult;
 
     if (cpData != NULL)
@@ -1931,7 +1931,7 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData)
     // Append message to command
     if(cpData != NULL)
     {
-        (void)strncat(&cpMessage[1], cpData, strlen(cpData));
+        (void)strncat(&cpMessage[sizeof(char)+sizeof(dataLength)], cpData, strlen(cpData));
     }
 
     // Send message
