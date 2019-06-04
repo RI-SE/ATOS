@@ -68,7 +68,7 @@ static int CountFileRows(FILE *fd);
 void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
 {
-    char pcLogFile[MAX_FILE_PATH];                          //!< Log file path and name buffer
+    char pcLogFile[MAX_FILE_PATH]= "";                          //!< Log file path and name buffer
     char pcLogFileComp[MAX_FILE_PATH];                      //!< CSV log file path and name buffer
     char busReceiveBuffer[MBUS_MAX_DATALEN];                //!< Buffer for receiving from message bus
     char busSendBuffer[MBUS_MAX_DATALEN];                   //!< Buffer for sending to message bus
@@ -79,7 +79,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     struct timeval time, recvTime;
 
     // Listen for commands
-    enum COMMAND command;
+    enum COMMAND command = COMM_INV;
     int iExit = 0;
 
     int GPSweek;
@@ -120,14 +120,16 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     while(!iExit)
     {
 
+        //LogPrint("Här är boven: %s, command: %d",pcLogFile, command);
+
         bzero(busReceiveBuffer, sizeof(busReceiveBuffer));
 
         (void)iCommRecv(&command, busReceiveBuffer, sizeof(busReceiveBuffer), &recvTime);
 
-        if(LoggerExecutionMode == LOG_CONTROL_MODE && command != COMM_OBC_STATE && command != COMM_MONI )
+        if(LoggerExecutionMode == LOG_CONTROL_MODE && command != COMM_OBC_STATE && command != COMM_MONI && command != COMM_INV)
         {
             bzero(DateBuffer, sizeof(DateBuffer));
-            TimeGetAsDateTime(&recvTime, "Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof(DateBuffer));
+            TimeGetAsDateTime(&recvTime, "%Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof(DateBuffer));
 
             // Remove newlines in http Requests for nicer printouts.
             for (unsigned long i = 0; i < strlen(busReceiveBuffer); i++){
@@ -194,7 +196,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             TimeSetToGPStime(&time, (uint16_t)GPSweek, (uint32_t)(atoi(GPSSecondOfWeek)*4));
 
             bzero(DateBuffer, sizeof(DateBuffer));
-            TimeGetAsDateTime(&recvTime, "Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof(DateBuffer));
+            TimeGetAsDateTime(&recvTime, "%Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof(DateBuffer));
 
             bzero(pcBuffer, sizeof(pcBuffer));
             sprintf (pcBuffer, "%s;%ld;%ld;%d;%s\n", DateBuffer, TimeGetAsUTCms(&time), TimeGetAsGPSms(&time), command, busReceiveBuffer);
@@ -331,7 +333,9 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             if(isFirstInit)
             {
                 LogMessage(LOG_LEVEL_INFO,"Initializing test log...");
+                LogPrint("Innan: %s",pcLogFile);
                 vInitializeLog(pcLogFile, sizeof(pcLogFile), pcLogFileComp, sizeof(pcLogFileComp));
+                LogPrint("Efter: %s",pcLogFile);
                 isFirstInit = 0;
             }
             else
@@ -436,6 +440,8 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     (void)strcat(sysCommand, " ");
     (void)strcat(sysCommand, logFileDirectoryPath);
     (void)system(sysCommand);
+
+    // TODO: Copy geofence files
 
     // Create filenames using date and time
     (void)strcpy(logFilePath, logFileDirectoryPath);
