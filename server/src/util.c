@@ -1842,10 +1842,17 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
     char cpMessage[MQ_MSG_SIZE];
     enum MQBUS_ERROR sendResult;
 
-    if (dataLength > MQ_MSG_SIZE+1)
+    if (dataLength + sizeof (char) + sizeof(dataLength) > MQ_MSG_SIZE)
     {
         LogMessage(LOG_LEVEL_ERROR, "Cannot send message %d of size %lu: maximum size is %lu", iCommand, dataLength+1, MQ_MSG_SIZE);
         return -1;
+    }
+
+    // Force array and its length to be coupled
+    if (cpData == NULL || dataLength == 0)
+    {
+        cpData = NULL;
+        dataLength = 0;
     }
 
     bzero(cpMessage, MQ_MSG_SIZE);
@@ -1922,17 +1929,15 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
 
     cpMessage[0] = (char)iCommand;
 
+    // Append data length to command data
     memcpy(cpMessage + sizeof(char), &dataLength, sizeof(dataLength));
 
-
-    // Append message to command
+    // Append message to command data
     if(dataLength != 0)
-    {
         memcpy(cpMessage + sizeof(char) + sizeof(dataLength), cpData, dataLength);
-    }
 
     // Send message
-    sendResult = MQBusSend(cpMessage, strlen(cpMessage), uiMessagePrio);
+    sendResult = MQBusSend(cpMessage, dataLength + sizeof(char) + sizeof(dataLength), uiMessagePrio);
 
     // Check for send success
     switch (sendResult)
