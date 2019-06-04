@@ -1036,31 +1036,36 @@ float UtilCalculateTimeToSync(ObjectPosition *OP)
 /*!
  * \brief UtilIsPointInPolygon Checks if a point lies within a polygon specified by a number of vertices using
  * the ray casting algorithm (see http://rosettacode.org/wiki/Ray-casting_algorithm).
- * \param pointX X coordinate of the point to check
- * \param pointY Y coordinate of the point to check
- * \param verticesX X coordinates of the vertex points defining the polygon to check
- * \param verticesY Y coordinates of the vertex points defining the polygon to check
- * \param nPtsInPolygon length of the two vertex arrays
+ * \param point Coordinate of the point to check
+ * \param vertices Coordinates of the vertex points defining the polygon to check
+ * \param nPtsInPolygon length of the vertex array
  * \return true if the point lies within the polygon, false otherwise
  */
-char UtilIsPointInPolygon(double pointX, double pointY, double * verticesX, double * verticesY, int nPtsInPolygon)
+char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition *vertices, unsigned int nPtsInPolygon)
 {
     int nIntersects = 0;
 
+    // Reshape CartesianPositions to be double arrays (TODO: make underlying functions use CartesianPositi)
+    double pointX = point.xCoord_m;
+    double pointY = point.yCoord_m;
+
     // Count the number of intersections with the polygon
-    for (int i = 0; i < nPtsInPolygon-1; ++i)
+    for (unsigned int i = 0; i < nPtsInPolygon-1; ++i)
     {
-        if (rayFromPointIntersectsLine(pointX, pointY, verticesX[i], verticesY[i], verticesX[i+1], verticesY[i+1]))
+        if (rayFromPointIntersectsLine(pointX, pointY, vertices[i].xCoord_m, vertices[i].yCoord_m,
+                                       vertices[i+1].xCoord_m, vertices[i+1].yCoord_m))
         {
             nIntersects++;
         }
     }
 
     // If the first and last points are different, the polygon segment between them must also be included
-    if (fabs(verticesX[0] - verticesX[nPtsInPolygon-1]) > (double)(2*FLT_EPSILON) || fabs(verticesY[0] - verticesY[nPtsInPolygon-1]) > (double)(2*FLT_EPSILON) )
+    if (fabs(vertices[0].xCoord_m - vertices[nPtsInPolygon-1].xCoord_m) > (double)(2*FLT_EPSILON)
+            || fabs(vertices[0].yCoord_m - vertices[nPtsInPolygon-1].yCoord_m) > (double)(2*FLT_EPSILON) )
     {
         if (rayFromPointIntersectsLine(pointX, pointY,
-                  verticesX[0], verticesY[0], verticesX[nPtsInPolygon-1], verticesY[nPtsInPolygon-1]))
+                  vertices[0].xCoord_m, vertices[0].yCoord_m,
+                  vertices[nPtsInPolygon-1].xCoord_m, vertices[nPtsInPolygon-1].yCoord_m))
         {
             nIntersects++;
         }

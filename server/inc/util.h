@@ -748,7 +748,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition *OP, int StartIndex, dou
 int UtilSetSyncPoint(ObjectPosition *OP, double x, double y, double z, double time);
 float UtilCalculateTimeToSync(ObjectPosition *OP);
 
-char UtilIsPointInPolygon(double pointX, double pointY, double * polyX, double * polyY, int nPtsInPolygon);
+char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition *polygonPoints, unsigned int nPtsInPolygon);
 
 int UtilCountFileRows(FILE *fd);
 int UtilReadLineCntSpecChars(FILE *fd, char *Buffer);
