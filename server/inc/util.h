@@ -224,7 +224,7 @@
 
 // The do - while loop makes sure that each function call is properly handled using macros
 #define LOG_SEND(buf, ...) \
-    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);LogPrint("%s",buf);fflush(stdout);} while (0)
+    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);printf("%s\n",buf);fflush(stdout);} while (0)
 
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
