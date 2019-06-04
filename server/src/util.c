@@ -1045,14 +1045,10 @@ char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition *vertices, 
 {
     int nIntersects = 0;
 
-    // Reshape CartesianPositions to be double arrays (TODO: make underlying functions use CartesianPositi)
-    double pointX = point.xCoord_m;
-    double pointY = point.yCoord_m;
-
     // Count the number of intersections with the polygon
     for (unsigned int i = 0; i < nPtsInPolygon-1; ++i)
     {
-        if (rayFromPointIntersectsLine(pointX, pointY, vertices[i].xCoord_m, vertices[i].yCoord_m,
+        if (rayFromPointIntersectsLine(point.xCoord_m, point.yCoord_m, vertices[i].xCoord_m, vertices[i].yCoord_m,
                                        vertices[i+1].xCoord_m, vertices[i+1].yCoord_m))
         {
             nIntersects++;
@@ -1063,7 +1059,7 @@ char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition *vertices, 
     if (fabs(vertices[0].xCoord_m - vertices[nPtsInPolygon-1].xCoord_m) > (double)(2*FLT_EPSILON)
             || fabs(vertices[0].yCoord_m - vertices[nPtsInPolygon-1].yCoord_m) > (double)(2*FLT_EPSILON) )
     {
-        if (rayFromPointIntersectsLine(pointX, pointY,
+        if (rayFromPointIntersectsLine(point.xCoord_m, point.yCoord_m,
                   vertices[0].xCoord_m, vertices[0].yCoord_m,
                   vertices[nPtsInPolygon-1].xCoord_m, vertices[nPtsInPolygon-1].yCoord_m))
         {
