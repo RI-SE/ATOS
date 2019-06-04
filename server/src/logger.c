@@ -120,8 +120,6 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     while(!iExit)
     {
 
-        //LogPrint("Här är boven: %s, command: %d",pcLogFile, command);
-
         bzero(busReceiveBuffer, sizeof(busReceiveBuffer));
 
         (void)iCommRecv(&command, busReceiveBuffer, sizeof(busReceiveBuffer), &recvTime);
@@ -333,9 +331,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             if(isFirstInit)
             {
                 LogMessage(LOG_LEVEL_INFO,"Initializing test log...");
-                LogPrint("Innan: %s",pcLogFile);
                 vInitializeLog(pcLogFile, sizeof(pcLogFile), pcLogFileComp, sizeof(pcLogFileComp));
-                LogPrint("Efter: %s",pcLogFile);
                 isFirstInit = 0;
             }
             else
