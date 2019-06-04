@@ -53,6 +53,12 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     I32 iExit = 0;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
 
+    const int nPts = 4;
+    double poly1PtsX[nPts] = {-5, 15, 15, -5};
+    double poly1PtsY[nPts] = {-10, -10, 10, 10};
+    double poly2PtsX[nPts] = {-15, 5, 5, -15};
+    double poly2PtsY[nPts] = {-10, -10, 10, 10};
+
     enum COMMAND command;
 
     (void)iCommInit();
@@ -66,11 +72,31 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         bzero(busReceiveBuffer, sizeof(busReceiveBuffer));
         (void)iCommRecv(&command,busReceiveBuffer, sizeof(busReceiveBuffer), NULL);
 
-        if(command == COMM_EXIT)
+        if (command == COMM_ABORT)
+        {
+            // TODO:
+        }
+
+        if (command == COMM_EXIT)
         {
             iExit = 1;
             LogMessage(LOG_LEVEL_INFO, "Supervision exiting...");
             (void)iCommClose();
+        }
+
+        switch (command)
+        {
+        case COMM_INIT:
+            // TODO: Read geofence file for each object and populate data structure
+            break;
+        case COMM_MONI:
+            // TODO: Check so that point lies outside all forbidden polygons
+            // TODO: Check so that point lies within all permitted polygons
+            break;
+        case COMM_INV:
+            break;
+        default:
+            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %d", command);
         }
     }
 }
