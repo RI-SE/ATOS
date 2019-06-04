@@ -292,7 +292,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     {
         if (server_state == SERVER_STATE_ERROR)
         {
-            iCommSend(COMM_ABORT, NULL);
+            iCommSend(COMM_ABORT, NULL, 0);
             continue;
         }
 
@@ -336,7 +336,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     LogMessage(LOG_LEVEL_ERROR,"Failed to receive from command socket");
                     LogMessage(LOG_LEVEL_ERROR,"Waiting 5 seconds before exiting");
                     usleep(5000000); //Wait 5 sec before sending exit, just so ObjectControl can send abort in HEAB before exit
-                    if(iCommSend(COMM_EXIT,NULL) < 0)
+                    if(iCommSend(COMM_EXIT, NULL, 0) < 0)
                         util_error("Fatal communication fault when sending EXIT command");
                     LogMessage(LOG_LEVEL_ERROR,"System control exiting");
                     exit(EXIT_FAILURE);
@@ -736,7 +736,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case InitializeScenario_0:
             if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "IDLE") != NULL)
             {
-                if (iCommSend(COMM_INIT, pcBuffer) < 0)
+                if (iCommSend(COMM_INIT, pcBuffer, strlen(pcBuffer)+1) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending INIT command");
                     server_state = SERVER_STATE_ERROR;
@@ -763,7 +763,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case ConnectObject_0:
             if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "INITIALIZED") != NULL)
             {
-                if (iCommSend(COMM_CONNECT, pcBuffer) < 0)
+                if (iCommSend(COMM_CONNECT, pcBuffer, strlen(pcBuffer)+1) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending CONNECT command");
                     server_state = SERVER_STATE_ERROR;
@@ -790,7 +790,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case DisconnectObject_0:
             if(server_state == SERVER_STATE_IDLE)
             {
-                if (iCommSend(COMM_DISCONNECT, pcBuffer) < 0)
+                if (iCommSend(COMM_DISCONNECT, pcBuffer, strlen(pcBuffer)+1) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending DISCONNECT command");
                     server_state = SERVER_STATE_ERROR;
@@ -813,7 +813,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 bzero(pcBuffer, IPC_BUFFER_SIZE);
                 server_state = SERVER_STATE_INWORK;
                 pcBuffer[0] = OSTM_OPT_SET_ARMED_STATE;
-                if (iCommSend(COMM_ARMD, pcBuffer) < 0)
+                if (iCommSend(COMM_ARMD, pcBuffer, strlen(pcBuffer)+1) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending ARMD command");
                     server_state = SERVER_STATE_ERROR;
@@ -824,7 +824,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL)
             {
-                SystemControlSendLog("[SystemControl] Simulate that all objects becomes armed.\n", &ClientSocket, 0);
+                SystemControlSendLog("[SystemControl] Simulate that all objects become armed.\n", &ClientSocket, 0);
 
                 SystemControlCommand = Idle_0;
                 server_state = SERVER_STATE_IDLE;
@@ -842,7 +842,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 bzero(pcBuffer, IPC_BUFFER_SIZE);
                 server_state = SERVER_STATE_IDLE;
                 pcBuffer[0] = OSTM_OPT_SET_DISARMED_STATE;
-                if (iCommSend(COMM_ARMD, pcBuffer) < 0)
+                if (iCommSend(COMM_ARMD, pcBuffer, strlen(pcBuffer)+1) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending ARMD command");
                     server_state = SERVER_STATE_ERROR;
@@ -891,7 +891,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     sprintf ( pcBuffer,"%" PRIu8 ";%" PRIu64 ";%" PRIu32 ";", 0, uiTime, DelayedStartU32);
                     LogMessage(LOG_LEVEL_INFO,"Sending START <%s> (delayed +%s ms)",pcBuffer, SystemControlArgument[1]);
 
-                    if (iCommSend(COMM_STRT, pcBuffer) < 0)
+                    if (iCommSend(COMM_STRT, pcBuffer, strlen(pcBuffer)+1) < 0)
                     {
                         LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending STRT command");
                         server_state = SERVER_STATE_ERROR;
@@ -942,7 +942,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 } else CurrentCommandArgCounter ++;
             break;*/
         case stop_0:
-            if (iCommSend(COMM_STOP, NULL) < 0)
+            if (iCommSend(COMM_STOP, NULL, 0) < 0)
             {
                 LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending STOP command");
                 server_state = SERVER_STATE_ERROR;
@@ -960,7 +960,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     /* || strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL
                      * || strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/ ) // Abort should only be allowed in running state
             {
-                if (iCommSend(COMM_ABORT, NULL) < 0)
+                if (iCommSend(COMM_ABORT, NULL, 0) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending ABORT command");
                     server_state = SERVER_STATE_ERROR;
@@ -1017,7 +1017,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 CurrentCommandArgCounter = 0;
             break;*/
         case Exit_0:
-            if (iCommSend(COMM_EXIT, NULL) < 0)
+            if (iCommSend(COMM_EXIT, NULL, 0) < 0)
             {
                 LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending EXIT command");
                 server_state = SERVER_STATE_ERROR;

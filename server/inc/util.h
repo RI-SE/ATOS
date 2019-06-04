@@ -224,7 +224,7 @@
 
 // The do - while loop makes sure that each function call is properly handled using macros
 #define LOG_SEND(buf, ...) \
-    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf);printf("%s\n",buf);fflush(stdout);} while (0)
+    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);printf("%s\n",buf);fflush(stdout);} while (0)
 
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
@@ -278,6 +278,7 @@ COMM_TRAJ_TOSUP = 17,
 COMM_TRAJ_FROMSUP = 18,
 COMM_ASP = 19,
 COMM_OSEM = 20,
+COMM_MONR = 239,
 COMM_INV = 255
 };
 
@@ -732,8 +733,8 @@ int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
 int iCommInit(void);
 int iCommClose();
-ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, struct timeval *timeRecv);
-int iCommSend(const enum COMMAND iCommand, const char* data);
+ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, struct timeval *timeRecv);
+int iCommSend(const enum COMMAND iCommand, const char* data, size_t dataLength);
 
 char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
@@ -798,6 +799,8 @@ I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPS
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
+
+I32 UtilPopulateMONRStruct(C8* rawMONR, MONRType *MONR, U8 debug);
 
 typedef struct {
   uint64_t timestamp;

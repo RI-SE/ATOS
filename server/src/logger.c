@@ -282,7 +282,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         bzero(busSendBuffer, sizeof(busSendBuffer));
                         //strcpy(busSendBuffer, "MONR;");
                         strcat(busSendBuffer, src+1);
-                        if(iCommSend(COMM_MONI, busSendBuffer) < 0)
+                        if(iCommSend(COMM_MONI, busSendBuffer, strlen(busSendBuffer)+1) < 0)
                             util_error("Communication error - exiting");
 
                         FirstIteration = 0;
@@ -310,7 +310,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
             LogMessage(LOG_LEVEL_INFO,"Replay done");
 
-            if(iCommSend(COMM_CONTROL, NULL) < 0)
+            if(iCommSend(COMM_CONTROL, NULL, 0) < 0)
                 util_error("Communication error - exiting");
 
             break;
