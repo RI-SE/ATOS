@@ -2981,3 +2981,110 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 
     return 0;
 }
+
+
+
+I32 UtilPopulateMONRStruct(C8* rawMONR, MONRType *MONR, U8 debug)
+{
+    U16 Crc = 0, U16Data = 0;
+    I16 I16Data = 0;
+    U32 U32Data = 0;
+    I32 I32Data = 0;
+    U64 U64Data = 0;
+    C8 *rdPtr = rawMONR;
+
+    memcpy(&U16Data, rdPtr, sizeof(U16Data));
+    MONR->Header.SyncWordU16 = U16Data;
+    rdPtr += sizeof(U16Data);
+
+    MONR->Header.TransmitterIdU8 = *(rdPtr++);
+    MONR->Header.MessageCounterU8 = *(rdPtr++);
+    MONR->Header.AckReqProtVerU8 = *(rdPtr++);
+
+    U16Data = 0;
+    memcpy(&U16Data, rdPtr, sizeof(U16Data));
+    rdPtr += sizeof (U16Data)
+    U16Data = (U16Data | *(rawMONR+6)) << 8;
+    U16Data = U16Data | *(rawMONR+5);
+    MONR->Header.MessageIdU16 = U16Data;
+
+    U32Data = (U32Data | *(rawMONR+10)) << 8;
+    U32Data = (U32Data | *(rawMONR+9)) << 8;
+    U32Data = (U32Data | *(rawMONR+8)) << 8;
+    U32Data = U32Data | *(rawMONR+7);
+    MONR->Header.MessageLengthU32 = U32Data;
+
+    U32Data = 0;
+    U32Data = (U32Data | *(rawMONR+14)) << 8;
+    U32Data = (U32Data | *(rawMONR+13)) << 8;
+    U32Data = (U32Data | *(rawMONR+12)) << 8;
+    U32Data = U32Data | *(rawMONR+11);
+    MONR->GPSSOWU32 = U32Data;
+
+    I32Data = 0;
+    I32Data = (I32Data | *(rawMONR+18)) << 8;
+    I32Data = (I32Data | *(rawMONR+17)) << 8;
+    I32Data = (I32Data | *(rawMONR+16)) << 8;
+    I32Data = I32Data | *(rawMONR+15);
+    MONR->XPositionI32 = I32Data;
+
+
+    I32Data = 0;
+    I32Data = (I32Data | *(rawMONR+22)) << 8;
+    I32Data = (I32Data | *(rawMONR+21)) << 8;
+    I32Data = (I32Data | *(rawMONR+20)) << 8;
+    I32Data = I32Data | *(rawMONR+19);
+    MONR->YPositionI32 = I32Data;
+
+
+    I32Data = 0;
+    I32Data = (I32Data | *(rawMONR+26)) << 8;
+    I32Data = (I32Data | *(rawMONR+25)) << 8;
+    I32Data = (I32Data | *(rawMONR+24)) << 8;
+    I32Data = I32Data | *(rawMONR+23);
+    MONR->ZPositionI32 = I32Data;
+
+    U16Data = 0;
+    U16Data = (U16Data | *(rawMONR+28)) << 8;
+    U16Data = U16Data | *(rawMONR+27);
+    MONR->HeadingU16 = U16Data;
+
+    I16Data = 0;
+    I16Data = (I16Data | *(rawMONR+30)) << 8;
+    I16Data = I16Data | *(rawMONR+29);
+    MONR->LongitudinalSpeedI16 = I16Data;
+
+    I16Data = 0;
+    I16Data = (I16Data | *(rawMONR+32)) << 8;
+    I16Data = I16Data | *(rawMONR+31);
+    MONR->LateralSpeedI16 = I16Data;
+
+    I16Data = 0;
+    I16Data = (I16Data | *(rawMONR+34)) << 8;
+    I16Data = I16Data | *(rawMONR+33);
+    MONR->LongitudinalAccI16 = I16Data;
+
+    I16Data = 0;
+    I16Data = (I16Data | *(rawMONR+36)) << 8;
+    I16Data = I16Data | *(rawMONR+35);
+    MONR->LateralAccI16 = I16Data;
+
+    MONR->DriveDirectionU8 = *(rawMONR+37);
+    MONR->StateU8 = *(rawMONR+38);
+    MONR->ReadyToArmU8 = *(rawMONR+39);
+    MONR->ErrorStatusU8 = *(rawMONR+40);
+
+
+
+    if(debug == 1)
+    {
+        LogMessage(LOG_LEVEL_DEBUG,"MONR:");
+        LogMessage(LOG_LEVEL_DEBUG,"SyncWord = %d", MONR->Header.SyncWordU16);
+        LogMessage(LOG_LEVEL_DEBUG,"TransmitterId = %d", MONR->Header.TransmitterIdU8);
+        LogMessage(LOG_LEVEL_DEBUG,"PackageCounter = %d", MONR->Header.MessageCounterU8);
+        LogMessage(LOG_LEVEL_DEBUG,"AckReq = %d", MONR->Header.AckReqProtVerU8);
+        LogMessage(LOG_LEVEL_DEBUG,"MessageLength = %d", MONR->Header.MessageLengthU32);
+    }
+
+    return 0;
+}
