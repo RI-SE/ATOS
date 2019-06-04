@@ -34,6 +34,9 @@
   -- Defines
   ------------------------------------------------------------*/
 
+// Macro for determining individual struct member sizes
+#define member_sizeof(type, member) sizeof(((type *)0)->member)
+
 #define LOCALHOST "127.0.0.1"
 
 #define RECV_MESSAGE_BUFFER 6200
@@ -83,7 +86,7 @@
 
 #define COMMAND_MONR_CODE 6
 #define COMMAND_MONR_NOFV 12
-#define COMMAND_MONR_MESSAGE_LENGTH sizeof(MONRType)-2
+#define COMMAND_MONR_MESSAGE_LENGTH sizeof(MONRType)
 
 #define COMMAND_VOIL_CODE 0xA100
 //#define COMMAND_VOIL_NOFV 2
@@ -275,7 +278,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     STRTType STRTData;
     OSTMType OSTMData;
     HEABType HEABData;
-    MONRType MONRData;
+    MONRType MONRData, MONR_DATA_2;
     DOTMType DOTMData;
     TRAJInfoType TRAJInfoData;
     VOILType VOILData;
@@ -333,6 +336,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     // Set up message bus connection
     if (iCommInit())
         util_error("Unable to connect to message queue bus");
+
+    LogPrint("MONR bytelens: %d, %d", COMMAND_MONR_MESSAGE_LENGTH, sizeof(MONRType));
+    exit(0);
 
     while(!iExit)
     {
@@ -463,8 +469,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     }
 
 
-
-                    ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
+                    ObjectControlBuildMONRMessage(buffer, &MONRData, 1);
 
                     //Store MONR in GSD
                     //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
@@ -511,7 +516,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         }
 
                         // Send MONR message on new byte format
-                        if(iCommSend(COMM_MONR,0,0) < 0)
+                        if(iCommSend(COMM_MONR, buffer, COMMAND_MONR_MESSAGE_LENGTH) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONR command - entering error state");
                             vSetState(&OBCState,OBC_STATE_ERROR);
