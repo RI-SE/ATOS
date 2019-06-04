@@ -42,6 +42,7 @@
 #define PRIO_COMM_ARMD 110
 #define PRIO_COMM_STOP 120
 #define PRIO_COMM_MONI 80
+#define PRIO_COMM_MONR 80
 #define PRIO_COMM_EXIT 140
 #define PRIO_COMM_REPLAY 160
 #define PRIO_COMM_CONTROL 180
@@ -1872,6 +1873,9 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData)
         uiMessagePrio = PRIO_COMM_MONI;
         cpMessage[0] = (char)COMM_MONI;
         break;
+    case COMM_MONR:
+        uiMessagePrio = PRIO_COMM_MONR;
+        cpMessage[0] = (char)COMM_MONR;
     case COMM_EXIT:
         uiMessagePrio = PRIO_COMM_EXIT;
         cpMessage[0] = (char)COMM_EXIT;
