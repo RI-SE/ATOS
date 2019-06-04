@@ -224,7 +224,7 @@
 
 // The do - while loop makes sure that each function call is properly handled using macros
 #define LOG_SEND(buf, ...) \
-    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf);printf("%s\n",buf);fflush(stdout);} while (0)
+    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);LogPrint("%s",buf);fflush(stdout);} while (0)
 
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
@@ -733,7 +733,7 @@ int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
 int iCommInit(void);
 int iCommClose();
-ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, struct timeval *timeRecv);
+ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, struct timeval *timeRecv);
 int iCommSend(const enum COMMAND iCommand, const char* data, size_t dataLength);
 
 char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);

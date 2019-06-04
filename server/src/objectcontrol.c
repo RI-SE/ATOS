@@ -451,7 +451,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                                 strcat(pcSendBuffer,TriggId);strcat(pcSendBuffer,";");
                                 strcat(pcSendBuffer,TriggAction);strcat(pcSendBuffer,";");
                                 strcat(pcSendBuffer,TriggDelay);strcat(pcSendBuffer,";");
-                                if(iCommSend(COMM_TOM, pcSendBuffer) < 0)
+                                if(iCommSend(COMM_TOM, pcSendBuffer, strlen(pcSendBuffer)+1) < 0)
                                 {
                                     LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending TOM command - entering error state");
                                     vSetState(&OBCState, OBC_STATE_ERROR);
@@ -991,7 +991,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         strcat(pcSendBuffer,OriginLatitude);strcat(pcSendBuffer,";");
                         strcat(pcSendBuffer,OriginAltitude);
 
-                        if(iCommSend(COMM_OSEM,pcSendBuffer) < 0)
+                        if(iCommSend(COMM_OSEM,pcSendBuffer,strlen(pcSendBuffer)+1) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OSEM command - entering error state");
                             vSetState(&OBCState,OBC_STATE_ERROR);
@@ -1147,7 +1147,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 bzero(Buffer2, SMALL_BUFFER_SIZE_1);
                 Buffer2[0] = OBCState;
                 //LogPrint("Sending: %d (%s or %u)",OBCState,Buffer2, Buffer2[0]);
-                if(iCommSend(COMM_OBC_STATE,Buffer2) < 0)
+                if(iCommSend(COMM_OBC_STATE,Buffer2,SMALL_BUFFER_SIZE_1) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OBC_STATE command - entering error state");
                     vSetState(&OBCState,OBC_STATE_ERROR);

@@ -1791,11 +1791,12 @@ int iCommClose()
  * \param timeRecv Receive time output variable
  * \return Size (in bytes) of received data
  */
-ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, struct timeval *timeRecv)
+ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, struct timeval *timeRecv)
 {
     char message[MQ_MSG_SIZE];
     ssize_t result = MQBusRecv(message, MQ_MSG_SIZE);
     size_t dataLength = 0;
+    const size_t headerSize = sizeof(char) + sizeof(dataLength);
 
     if (result < 1 && errno != EAGAIN)
         util_error("Message queue error when receiving");
@@ -1811,14 +1812,22 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, stru
         // A message was received: extract the command, data length and data
         *command = message[0];
         memcpy(&dataLength, message + sizeof(char), sizeof(dataLength));
-        if((strlen(message) > 1) && (data != NULL))
+
+        if (dataLength != (size_t)(result) )
         {
-            if(messageSize < result )
+            LogMessage(LOG_LEVEL_ERROR, "Received message with invalid length specification of %d (expected %d)", dataLength, result);
+            *command = COMM_INV;
+            return 0;
+        }
+        else if ( dataLength > headerSize && data != NULL )
+        {
+            if(messageSize < dataLength-headerSize )
             {
-                LogMessage(LOG_LEVEL_WARNING, "Array too small to hold received message data");
-                result = messageSize;
+                LogMessage(LOG_LEVEL_ERROR, "Array too small to hold received message data");
+                *command = COMM_INV;
+                return 0;
             }
-            strncat(data, &message[1], (unsigned long)result);
+            memcpy(data, message+headerSize, dataLength-headerSize);
         }
     }
     else if (result > 0)
