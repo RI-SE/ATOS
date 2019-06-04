@@ -502,7 +502,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                     if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE)
                     {
-                        if(iCommSend(COMM_MONI,buffer) < 0)
+                        if(iCommSend(COMM_MONI,buffer,strlen(buffer)) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONI command - entering error state");
                             vSetState(&OBCState,OBC_STATE_ERROR);
