@@ -1464,12 +1464,13 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
 
     if(debug == 1)
     {
-        LogMessage(LOG_LEVEL_DEBUG,"MONR:");
-        LogMessage(LOG_LEVEL_DEBUG,"SyncWord = %d", MONRData->Header.SyncWordU16);
-        LogMessage(LOG_LEVEL_DEBUG,"TransmitterId = %d", MONRData->Header.TransmitterIdU8);
-        LogMessage(LOG_LEVEL_DEBUG,"PackageCounter = %d", MONRData->Header.MessageCounterU8);
-        LogMessage(LOG_LEVEL_DEBUG,"AckReq = %d", MONRData->Header.AckReqProtVerU8);
-        LogMessage(LOG_LEVEL_DEBUG,"MessageLength = %d", MONRData->Header.MessageLengthU32);
+        LogPrint("MONR:");
+        LogPrint("SyncWord = %d", MONRData->Header.SyncWordU16);
+        LogPrint("TransmitterId = %d", MONRData->Header.TransmitterIdU8);
+        LogPrint("PackageCounter = %d", MONRData->Header.MessageCounterU8);
+        LogPrint("AckReq = %d", MONRData->Header.AckReqProtVerU8);
+        LogPrint("MessageLength = %d", MONRData->Header.MessageLengthU32);
+        LogPrint("GPSSOW = %u",MONRData->GPSSOWU32);
     }
 
     return 0;
