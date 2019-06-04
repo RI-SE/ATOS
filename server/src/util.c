@@ -1839,7 +1839,6 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData)
 {
     unsigned int uiMessagePrio = 0;
     char cpMessage[MQ_MSG_SIZE];
-    char hej = 0;
     unsigned long dataLength = 0;
     enum MQBUS_ERROR sendResult;
 
