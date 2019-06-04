@@ -1810,6 +1810,7 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, stru
     {
         // A message was received: extract the command, data length and data
         *command = message[0];
+        memcpy(&dataLength, message + sizeof(char), sizeof(dataLength));
         if((strlen(message) > 1) && (data != NULL))
         {
             if(messageSize < result )
@@ -1848,12 +1849,7 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
     unsigned int uiMessagePrio = 0;
     char cpMessage[MQ_MSG_SIZE];
     enum MQBUS_ERROR sendResult;
-
-    if (dataLength + sizeof (char) + sizeof(dataLength) > MQ_MSG_SIZE)
-    {
-        LogMessage(LOG_LEVEL_ERROR, "Cannot send message %d of size %lu: maximum size is %lu", iCommand, dataLength+1, MQ_MSG_SIZE);
-        return -1;
-    }
+    const size_t headerSize = sizeof(char) + sizeof(dataLength);
 
     // Force array and its length to be coupled
     if (cpData == NULL || dataLength == 0)
@@ -1862,6 +1858,17 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
         dataLength = 0;
     }
 
+    // Include header in data length
+    dataLength += headerSize;
+
+    // Check if message is too large to send
+    if (dataLength > MQ_MSG_SIZE)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Cannot send message %d of size %lu: maximum size is %lu", iCommand, dataLength+1, MQ_MSG_SIZE);
+        return -1;
+    }
+
+    // Clear send array
     bzero(cpMessage, MQ_MSG_SIZE);
 
     // Map command to a priority
@@ -1936,15 +1943,15 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
 
     cpMessage[0] = (char)iCommand;
 
-    // Append data length to command data
+    // Append message length to command data
     memcpy(cpMessage + sizeof(char), &dataLength, sizeof(dataLength));
 
     // Append message to command data
-    if(dataLength != 0)
-        memcpy(cpMessage + sizeof(char) + sizeof(dataLength), cpData, dataLength);
+    if(dataLength > headerSize)
+        memcpy(cpMessage + headerSize, cpData, dataLength-headerSize);
 
     // Send message
-    sendResult = MQBusSend(cpMessage, dataLength + sizeof(char) + sizeof(dataLength), uiMessagePrio);
+    sendResult = MQBusSend(cpMessage, dataLength, uiMessagePrio);
 
     // Check for send success
     switch (sendResult)
