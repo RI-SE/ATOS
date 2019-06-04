@@ -1795,7 +1795,7 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, stru
 {
     char message[MQ_MSG_SIZE];
     ssize_t result = MQBusRecv(message, MQ_MSG_SIZE);
-
+    size_t dataLength = 0;
 
     if (result < 1 && errno != EAGAIN)
         util_error("Message queue error when receiving");
@@ -1806,9 +1806,9 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, stru
         TimeSetToCurrentSystemTime(timeRecv);
     }
 
-    if (result > 0)
+    if ( result >= (ssize_t)(sizeof (char)+sizeof(dataLength)) )
     {
-        // A message was received: extract the command and data
+        // A message was received: extract the command, data length and data
         *command = message[0];
         if((strlen(message) > 1) && (data != NULL))
         {
@@ -1819,6 +1819,13 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, stru
             }
             strncat(data, &message[1], (unsigned long)result);
         }
+    }
+    else if (result > 0)
+    {
+        // Message length was not long enough to hold message length
+        LogMessage(LOG_LEVEL_ERROR, "Received message bus message with incorrect format");
+        *command = COMM_INV;
+        result = -1;
     }
     else
     {
