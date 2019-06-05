@@ -32,17 +32,29 @@
 /* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
 #define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
+#define MAX_GEOFENCE_NAME_LEN 256
 
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
 #define MODULE_NAME "Supervisor"
 
+/*------------------------------------------------------------
+  -- Type definitions.
+  ------------------------------------------------------------*/
+typedef struct
+{
+    U16 numberOfPoints;
+    I8 isPermitted;
+    char name[MAX_GEOFENCE_NAME_LEN];
+    CartesianPosition *polygonPoints;
+} GeofenceType;
+
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-
+int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, char numberOfGeofences);
 
 /*------------------------------------------------------------
 -- The main function.
@@ -52,12 +64,62 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     I32 iExit = 0;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
+    MONRType MONRMessage;
 
+
+    /* TODO: replace with permanent */
     const int nPts = 4;
-    double poly1PtsX[nPts] = {-5, 15, 15, -5};
-    double poly1PtsY[nPts] = {-10, -10, 10, 10};
-    double poly2PtsX[nPts] = {-15, 5, 5, -15};
-    double poly2PtsY[nPts] = {-10, -10, 10, 10};
+    const int nGeof = 3;
+
+    GeofenceType geoPtrs[nGeof];
+    GeofenceType perm1, perm2, forb1;
+
+    perm1.numberOfPoints = nPts;
+    perm2.numberOfPoints = nPts;
+    forb1.numberOfPoints = nPts;
+
+    perm1.isPermitted = 1;
+    perm2.isPermitted = 1;
+    forb1.isPermitted = 0;
+
+    perm1.polygonPoints = (CartesianPosition*)malloc(nPts*sizeof(CartesianPosition));
+    perm2.polygonPoints = (CartesianPosition*)malloc(nPts*sizeof(CartesianPosition));
+    forb1.polygonPoints = (CartesianPosition*)malloc(nPts*sizeof(CartesianPosition));
+
+    perm1.polygonPoints[0].xCoord_m = -5;
+    perm1.polygonPoints[1].xCoord_m = 15;
+    perm1.polygonPoints[2].xCoord_m = 15;
+    perm1.polygonPoints[3].xCoord_m = -5;
+
+    perm1.polygonPoints[0].yCoord_m = -10;
+    perm1.polygonPoints[1].yCoord_m = 10;
+    perm1.polygonPoints[2].yCoord_m = 10;
+    perm1.polygonPoints[3].yCoord_m = -10;
+
+    perm2.polygonPoints[0].xCoord_m = -15;
+    perm2.polygonPoints[1].xCoord_m = 5;
+    perm2.polygonPoints[2].xCoord_m = 5;
+    perm2.polygonPoints[3].xCoord_m = -15;
+
+    perm2.polygonPoints[0].yCoord_m = -10;
+    perm2.polygonPoints[1].yCoord_m = 10;
+    perm2.polygonPoints[2].yCoord_m = 10;
+    perm2.polygonPoints[3].yCoord_m = -10;
+
+    forb1.polygonPoints[0].xCoord_m = -1;
+    forb1.polygonPoints[1].xCoord_m = 1;
+    forb1.polygonPoints[2].xCoord_m = 1;
+    forb1.polygonPoints[3].xCoord_m = -1;
+
+    forb1.polygonPoints[0].yCoord_m = -1;
+    forb1.polygonPoints[1].yCoord_m = -1;
+    forb1.polygonPoints[2].yCoord_m = 1;
+    forb1.polygonPoints[3].yCoord_m = 1;
+
+    geoPtrs[0] = perm1;
+    geoPtrs[1] = perm2;
+    geoPtrs[2] = forb1;
+    /* end */
 
     enum COMMAND command;
 
@@ -89,9 +151,10 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case COMM_INIT:
             // TODO: Read geofence file for each object and populate data structure
             break;
-        case COMM_MONI:
-            // TODO: Check so that point lies outside all forbidden polygons
-            // TODO: Check so that point lies within all permitted polygons
+        case COMM_MONR:
+            UtilPopulateMONRStruct(busReceiveBuffer, &MONRMessage, 0);
+            // TODO: react to output from SupervisionCheckGeofences
+            SupervisionCheckGeofences(MONRMessage, geoPtrs, nGeof);
             break;
         case COMM_INV:
             break;
@@ -99,4 +162,37 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %d", command);
         }
     }
+
+    // TODO: Temporary
+    free(perm1.polygonPoints);
+    free(perm2.polygonPoints);
+    free(forb1.polygonPoints);
+}
+
+int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, char numberOfGeofences)
+{
+    CartesianPosition monrPoint = {MONRdata.XPositionI32/1000.0, MONRdata.YPositionI32/1000.0, MONRdata.ZPositionI32/1000.0, 0.0};
+    char isInPolygon = 0;
+    int retval = 0;
+
+    for (int i = 0; i < numberOfGeofences; i++)
+    {
+        isInPolygon = UtilIsPointInPolygon(monrPoint, geofences[i].polygonPoints, geofences[i].numberOfPoints);
+        if ( (geofences[i].isPermitted && isInPolygon)
+             || (!geofences[i].isPermitted && !isInPolygon) )
+        {
+            // Inside the polygon if it is permitted, alt. outside the polygon if it is forbidden: all is fine
+        }
+        else
+        {
+            if (geofences[i].isPermitted)
+                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is outside the permitted area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
+            else
+                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is inside the forbidden area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
+
+            retval = -1;
+        }
+    }
+
+    return retval;
 }
