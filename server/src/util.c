@@ -1811,7 +1811,7 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, s
     if ( result >= (ssize_t)(sizeof (char)+sizeof(dataLength)) )
     {
         // A message was received: extract the command, data length and data
-        *command = message[0];
+        *command = (unsigned char)message[0];
         memcpy(&dataLength, message + sizeof(char), sizeof(dataLength));
 
         if (dataLength != (size_t)(result) )
