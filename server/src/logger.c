@@ -345,7 +345,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case COMM_INV:
             break;
         default:
-            LogMessage(LOG_LEVEL_WARNING,"Unhandled message bus command: %u", (char)command);
+            LogMessage(LOG_LEVEL_WARNING,"Unhandled message bus command: %u", command);
         }
 
     }
