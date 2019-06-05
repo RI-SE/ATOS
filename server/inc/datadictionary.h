@@ -10,13 +10,14 @@
 #ifndef __DATADICTIONARY_H_INCLUDED__
 #define __DATADICTIONARY_H_INCLUDED__
 
+//#include "util.h"
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-I32 DataDictionaryInitOriginLatitudeDbl(void);
-I32 DataDictionarySetOriginLatitudeDbl(C8 *Latitude);
-I32 DataDictionaryGetOriginLatitudeDbl(dbl *Latitude);
-I32 DataDictionaryGetOriginLatitudeC8(C8 *Latitude);
+I32 DataDictionaryInitOriginLatitudeDbl(GSDType *GSD);
+I32 DataDictionarySetOriginLatitudeDbl(GSDType *GSD, C8 *Latitude);
+I32 DataDictionaryGetOriginLatitudeDbl(GSDType *GSD, dbl *Latitude);
+I32 DataDictionaryGetOriginLatitudeC8(GSDType *GSD, C8 *Latitude);
 
 I32 DataDictionaryInitOriginLongitudeDbl(void);
 I32 DataDictionarySetOriginLongitudeDbl(C8 *Longitude);
@@ -48,13 +49,13 @@ I32 DataDictionaryInitASPStepBackCountU32(void);
 I32 DataDictionarySetASPStepBackCountU32(C8 *ASPStepBackCount);
 I32 DataDictionaryGetASPStepBackCountU32(U32 *ASPStepBackCount);
 
-I32 DataDictionaryInitASPFilterLevelU16(void);
-I32 DataDictionarySetASPFilterLevelU16(C8 *ASPFilterLevel);
-I32 DataDictionaryGetASPFilterLevelU16(U16 *ASPFilterLevel);
+I32 DataDictionaryInitASPFilterLevelDbl(void);
+I32 DataDictionarySetASPFilterLevelDbl(C8 *ASPFilterLevel);
+I32 DataDictionaryGetASPFilterLevelDbl(dbl *ASPFilterLevel);
 
 I32 DataDictionaryInitASPMaxDeltaTimeDbl(void);
 I32 DataDictionarySetASPMaxDeltaTimeDbl(C8 *ASPMaxDeltaTime);
-I32 DataDictionaryGetASPMaxDeltaTimeDbl(U16 *ASPMaxDeltaTime);
+I32 DataDictionaryGetASPMaxDeltaTimeDbl(dbl *ASPMaxDeltaTime);
 
 I32 DataDictionaryInitTimeServerIPU32(void);
 I32 DataDictionarySetTimeServerIPU32(C8 *TimeServerIP);
@@ -112,7 +113,11 @@ I32 DataDictionarySetMiscDataC8(C8 *MiscData);
 I32 DataDictionaryGetMiscDataC8(C8 *MiscData);
 
 
-void DataDictionaryConstructor(void);
+I32 DataDictionarySetOBCStateU8(GSDType *GSD, U8 OBCState);
+U8 DataDictionaryGetOBCStateU8(GSDType *GSD);
+
+
+void DataDictionaryConstructor(GSDType *GSD);
 
 #endif 
 

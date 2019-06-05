@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
+#include <pthread.h>
 
 /*------------------------------------------------------------
   -- Defines
@@ -70,6 +71,7 @@
 #define COMM_TRAJ_FROMSUP 18
 #define COMM_ASP 19
 #define COMM_OSEM 20
+#define COMM_DATA_DICT 21
 #define COMM_INV 255
 
 
@@ -104,7 +106,7 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  1
-#define LOCAL_USER_CONTROL_IP "10.168.161.95"
+#define LOCAL_USER_CONTROL_IP "192.168.0.7"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -289,7 +291,10 @@
 
 #define ISO_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
 
-
+#define DD_CONTROL_BUFFER_SIZE_1024 1024
+#define DD_CONTROL_BUFFER_SIZE_20 20
+#define DD_CONTROL_BUFFER_SIZE_52 52
+#define DD_CONTROL_TASK_PERIOD_MS 1
 
 typedef struct
 {
@@ -558,6 +563,34 @@ typedef struct
   //U8 STRTData[100];
   //U8 OSEMSizeU8;
   //U8 OSEMData[100];
+  volatile dbl OriginLatitudeDbl;
+  C8 OriginLatitudeC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile dbl OriginLongitudeDbl;
+  C8 OriginLongitudeC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile dbl OriginAltitudeDbl;
+  C8 OriginAltitudeC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile U32 VisualizationServerU32;
+  volatile U8 ForceObjectToLocalhostU8;
+  volatile dbl ASPMaxTimeDiffDbl;
+  volatile dbl ASPMaxTrajDiffDbl;
+  volatile U32 ASPStepBackCountU32;
+  volatile dbl ASPFilterLevelDbl;
+  volatile dbl ASPMaxDeltaTimeDbl;
+  volatile U32 TimeServerIPU32;
+  volatile U16 TimeServerPortU16;
+  volatile U32 SimulatorIPU32;
+  volatile U16 SimulatorTCPPortU16;
+  volatile U16 SimulatorUDPPortU16;
+  volatile U8 SimulatorModeU8;
+  C8 VOILReceiversC8[DD_CONTROL_BUFFER_SIZE_1024];
+  C8 DTMReceiversC8[DD_CONTROL_BUFFER_SIZE_1024];
+  volatile U32 ExternalSupervisorIPU32;
+  volatile U16 SupervisorTCPPortU16;
+  volatile U32 DataDictionaryRVSSConfigU32;
+  volatile U32 DataDictionaryRVSSRateU8;
+  volatile ASPType ASPData;
+  C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
+  volatile U8 OBCStateU8;
 
 
 } GSDType;

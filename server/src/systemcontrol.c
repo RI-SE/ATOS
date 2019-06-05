@@ -153,10 +153,10 @@ void SystemControlSendMONR(C8* LogString, I32* Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I32 *sockfd, struct sockaddr_in* addr);
 //I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
 I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 debug);
-I32 SystemControlGetServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
+I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnValue, U8 Debug);
 I32 SystemControlReadServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
 I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
-I32 SystemControlSetServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
+I32 SystemControlSetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *NewValue, U8 Debug);
 I32 SystemControlCheckFileDirectoryExist(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
 I32 SystemControlUploadFile(C8 *Path, C8 *FileSize, C8 *PacketSize, C8 *ReturnValue, U8 Debug);
 I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSize, C8 *ReturnValue, U8 Debug);
@@ -248,8 +248,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
     U32 RVSSMessageLengthU32;
     U16 PCDMessageCodeU16;
 
-    DataDictionaryConstructor();
-
 
     DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
     LogMessage(LOG_LEVEL_INFO,"RVSSConfigU32 = %d", RVSSConfigU32);
@@ -281,6 +279,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     }
 
+        U8 d1;
 
     while(!iExit)
     {
@@ -291,6 +290,10 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 if(server_state == SERVER_STATE_UNDEFINED)
                 {
                     //Do some initialization
+                    
+                    //Send COMM_DATA_DICT to notify to update data from DataDictionary
+                    iCommSend(COMM_DATA_DICT,ControlResponseBuffer);
+                    
                     server_state = SERVER_STATE_INITIALIZED;
                 }
 
@@ -382,7 +385,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 LogMessage(LOG_LEVEL_INFO,"State: %s, OBCState: %s, PreviousCommand: %s", SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8], SystemControlCommandsArr[PreviousSystemControlCommand]);
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 ControlResponseBuffer[0] = server_state;
-                ControlResponseBuffer[1] = OBCStateU8;
+                ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD);//OBCStateU8;
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 2, &ClientSocket, 0);
                 SystemControlCommand = PreviousSystemControlCommand;
             }
@@ -416,6 +419,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
         }
 
+        
         switch(SystemControlCommand)
         {
         // can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
@@ -485,11 +489,11 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
             break;
         case GetServerStatus_0:
-            LogMessage(LOG_LEVEL_INFO,"State: %s, OBCState: %s",SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8]);
+            LogMessage(LOG_LEVEL_INFO,"State: %s, OBCState: %s, %d",SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8], DataDictionaryGetOBCStateU8(GSD));
             SystemControlCommand = Idle_0;
             bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
             ControlResponseBuffer[0] = server_state;
-            ControlResponseBuffer[1] = OBCStateU8;
+            ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD); //OBCStateU8;
             LogMessage(LOG_LEVEL_DEBUG,"GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64); // GPSTime just ticks from 0 up shouldent it be in the global GPStime?
             SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:", ControlResponseBuffer, 2, &ClientSocket, 0);
         break;
@@ -502,7 +506,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         case GetTestOrigin_0:
             SystemControlCommand = Idle_0;
             bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-            DataDictionaryGetOriginLatitudeC8(ControlResponseBuffer);strcat(ControlResponseBuffer,";");
+            DataDictionaryGetOriginLatitudeC8(GSD, ControlResponseBuffer);strcat(ControlResponseBuffer,";");
             DataDictionaryGetOriginLongitudeC8(ControlResponseBuffer);strcat(ControlResponseBuffer,";");
             DataDictionaryGetOriginAltitudeC8(ControlResponseBuffer);strcat(ControlResponseBuffer,";");
             iCommSend(COMM_OSEM,ControlResponseBuffer);
@@ -513,7 +517,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 SystemControlCommand = Idle_0;
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                SystemControlGetServerParameter(SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlGetServerParameter(GSD, SystemControlArgument[0], ControlResponseBuffer, 0);
                 SystemControlSendControlResponse(strlen(ControlResponseBuffer) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameter:", ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
             } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in GetServerParameter(Name)!"); SystemControlCommand = Idle_0;}
         break;
@@ -522,8 +526,10 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 SystemControlCommand = Idle_0;
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                SystemControlSetServerParameter(SystemControlArgument[0], SystemControlArgument[1], 0);
+                SystemControlSetServerParameter(GSD, SystemControlArgument[0], SystemControlArgument[1], 0);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:", ControlResponseBuffer, 0, &ClientSocket, 0);
+                //Send COMM_DATA_DICT to notify to update data from DataDictionary    
+                iCommSend(COMM_DATA_DICT,ControlResponseBuffer);
 
             } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in SetServerParameter(Name, Value)!"); SystemControlCommand = Idle_0;}
         break;
@@ -881,7 +887,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         break;
 
         default:
-            DataDictionaryConstructor();
+
         break;
         }
 
@@ -902,7 +908,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                 if(RVSSConfigU32 & RVSS_TIME_CHANNEL)
                 {
-                    SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
+                    SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 1);
                     UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 0);
                 }
 
@@ -1271,7 +1277,7 @@ I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData
 }
 */
 
-I32 SystemControlGetServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug)
+I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnValue, U8 Debug)
 {
     bzero(ReturnValue, 20);
     dbl ValueDbl = 0;
@@ -1280,12 +1286,12 @@ I32 SystemControlGetServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug
  
     if(strcmp("OrigoLatidude", ParameterName) == 0)
     {
-        DataDictionaryGetOriginLatitudeDbl(&ValueDbl);
+        DataDictionaryGetOriginLatitudeDbl(GSD, &ValueDbl);
         sprintf(ReturnValue, "%3.12f", ValueDbl);
     }
     else if(strcmp("OrigoLongitude", ParameterName) == 0)
     {
-        DataDictionaryGetOriginLatitudeDbl(&ValueDbl);
+        DataDictionaryGetOriginLongitudeDbl(&ValueDbl);
         sprintf(ReturnValue, "%3.12f", ValueDbl);
     }
     else if(strcmp("RVSSConfig", ParameterName) == 0)
@@ -1303,10 +1309,9 @@ I32 SystemControlGetServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug
 
 
 
-I32 SystemControlSetServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
+I32 SystemControlSetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *NewValue, U8 Debug)
 {
-
-    if(strcmp("OrigoLatidude", ParameterName) == 0) DataDictionarySetOriginLatitudeDbl(NewValue);
+    if(strcmp("OrigoLatidude", ParameterName) == 0) DataDictionarySetOriginLatitudeDbl(GSD, NewValue);
     else if(strcmp("OrigoLongitude", ParameterName) == 0) DataDictionarySetOriginLongitudeDbl(NewValue);
     else if(strcmp("RVSSConfig", ParameterName) == 0) DataDictionarySetRVSSConfigU32((U32)atoi(NewValue));
     else if(strcmp("RVSSRate", ParameterName) == 0) DataDictionarySetRVSSRateU8((U32)atoi(NewValue));

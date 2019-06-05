@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
 
     pid_t pID[8];
     int iIndex = 0;
+    DataDictionaryConstructor(GSD);
 
     LogMessage( LOG_LEVEL_INFO, "Central started");
 

@@ -223,7 +223,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     C8 MessageBuffer[BUFFER_SIZE_3100];
     int iIndex = 0, i=0;
     struct timespec sleep_time, ref_time;
-    int iForceObjectToLocalhost = 0;
+    U8 iForceObjectToLocalhostU8 = 0;
 
     FILE *fd;
     char Id[SMALL_BUFFER_SIZE_0];
@@ -294,10 +294,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     AdaptiveSyncPoint ASP[MAX_ADAPTIVE_SYNC_POINTS];
     int SyncPointCount = 0;
     int SearchStartIndex = 0;
-    double ASPMaxTimeDiff = 0;
-    double ASPMaxTrajDiff = 0;
-    double ASPFilterLevel = 0;
-    double ASPMaxDeltaTime = 0;
+    double ASPMaxTimeDiffDbl = 0;
+    double ASPMaxTrajDiffDbl = 0;
+    double ASPFilterLevelDbl = 0;
+    double ASPMaxDeltaTimeDbl = 0;
     int ASPDebugRate = 1;
     int ASPStepBackCount = 0;
 
@@ -332,11 +332,14 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO, "Object control task running with PID: %i", getpid());
 
+    DataDictionarySetOBCStateU8(GSD, OBCState);
+
     (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
-
-
+   
     while(!iExit)
     {
+        
+
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED)
         {
             /*HEAB*/
@@ -514,7 +517,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                 ASPData.CurrentTimeU32 = CurrentTimeU32;
                                 ASPData.CurrentTimeDbl = (((double)CurrentTimeU32-(double)StartTimeU32)/1000);
                                 SearchStartIndex = OP[iIndex].BestFoundTrajectoryIndex - ASPStepBackCount;
-                                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, ASPData.CurrentTimeDbl, ASPMaxTrajDiff, ASPMaxTimeDiff, 0);
+                                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, ASPData.CurrentTimeDbl, ASPMaxTrajDiffDbl, ASPMaxTimeDiffDbl, 0);
                                 ASPData.BestFoundIndexI32 = OP[iIndex].BestFoundTrajectoryIndex;
 
                                 if(OP[iIndex].BestFoundTrajectoryIndex != TRAJ_POSITION_NOT_FOUND)
@@ -522,10 +525,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                     ASPData.TimeToSyncPointDbl = UtilCalculateTimeToSync(&OP[iIndex]);
                                     if(ASPData.TimeToSyncPointDbl > 0)
                                     {
-                                        if(ASPData.PrevTimeToSyncPointDbl != 0 && ASPFilterLevel > 0)
+                                        if(ASPData.PrevTimeToSyncPointDbl != 0 && ASPFilterLevelDbl > 0)
                                         {
-                                            if(ASPData.TimeToSyncPointDbl/ASPData.PrevTimeToSyncPointDbl > (1 + ASPFilterLevel/100)) ASPData.TimeToSyncPointDbl = ASPData.PrevTimeToSyncPointDbl + ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
-                                            else if(ASPData.TimeToSyncPointDbl/ASPData.PrevTimeToSyncPointDbl < (1 - ASPFilterLevel/100)) ASPData.TimeToSyncPointDbl = ASPData.PrevTimeToSyncPointDbl - ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
+                                            if(ASPData.TimeToSyncPointDbl/ASPData.PrevTimeToSyncPointDbl > (1 + ASPFilterLevelDbl/100)) ASPData.TimeToSyncPointDbl = ASPData.PrevTimeToSyncPointDbl + ASPMaxDeltaTimeDbl;//TimeToSyncPoint*ASPFilterLevelDbl/500;
+                                            else if(ASPData.TimeToSyncPointDbl/ASPData.PrevTimeToSyncPointDbl < (1 - ASPFilterLevelDbl/100)) ASPData.TimeToSyncPointDbl = ASPData.PrevTimeToSyncPointDbl - ASPMaxDeltaTimeDbl;//TimeToSyncPoint*ASPFilterLevelDbl/500;
                                         }
                                         ASPData.MTSPU32 = CurrentTimeU32 + (U32)(ASPData.TimeToSyncPointDbl*4000);
 
@@ -797,13 +800,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 /* Get objects; name and drive file */
                 nbr_objects = 0;
                 vFindObjectsInfo(object_traj_file,object_address_name,&nbr_objects);
-                (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhost);
-                LogMessage(LOG_LEVEL_INFO,"ForceObjectToLocalhost = %d", iForceObjectToLocalhost);
-                LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d", iForceObjectToLocalhost);
+//                (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhostU8);
+//                LogMessage(LOG_LEVEL_INFO,"ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
+//                LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
 
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
-                    if(0 == iForceObjectToLocalhost)
+                    if(0 == iForceObjectToLocalhostU8)
                     {
                         object_udp_port[iIndex] = SAFETY_CHANNEL_PORT;
                         object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT;
@@ -848,35 +851,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     fclose (fd);
                 }
 
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-                UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTimeDiff=", "", TextBuffer);
-                ASPMaxTimeDiff = atof(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-                UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTrajDiff=", "", TextBuffer);
-                ASPMaxTrajDiff = atof(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-                UtilSearchTextFile(CONF_FILE_PATH, "ASPStepBackCount=", "", TextBuffer);
-                ASPStepBackCount = atoi(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-                UtilSearchTextFile(CONF_FILE_PATH, "ASPFilterLevel=", "", TextBuffer);
-                ASPFilterLevel = atof(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-                UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxDeltaTime=", "", TextBuffer);
-                ASPMaxDeltaTime = atof(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-                UtilSearchTextFile(CONF_FILE_PATH, "ASPDebugRate=", "", TextBuffer);
-                ASPDebugRate = atoi(TextBuffer);
-                bzero(VOILReceivers, SMALL_BUFFER_SIZE_254);
-                UtilSearchTextFile(CONF_FILE_PATH, "VOILReceivers=", "", VOILReceivers);
-                bzero(DTMReceivers, SMALL_BUFFER_SIZE_254);
-                UtilSearchTextFile(CONF_FILE_PATH, "DTMReceivers=", "", DTMReceivers);
-
 
                 vSetState(&OBCState, OBC_STATE_INITIALIZED);
                 LogMessage(LOG_LEVEL_INFO,"ObjectControl is initialized");
                 LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
-
-                if(TempFd != NULL) fclose(TempFd);
+                DataDictionarySetOBCStateU8(GSD, OBCState);
+                printf("State = %d\n", DataDictionaryGetOBCStateU8(GSD));
                 //Remove temporary file
                 remove(TEMP_LOG_FILE);
                 if(USE_TEMP_LOGFILE)
@@ -1073,8 +1053,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 if(DisconnectU8 == 0) vSetState(&OBCState, OBC_STATE_CONNECTED);
                 else if(DisconnectU8 == 1) vSetState(&OBCState, OBC_STATE_IDLE);
             }
-            else if(iCommand == COMM_OSEM)
+            else if(iCommand == COMM_DATA_DICT)
             {
+                
+                LogMessage(LOG_LEVEL_INFO,"Updating variables from DataDictionary.");
+               /*
                 C8 *p = pcRecvBuffer, *pi = pcRecvBuffer;
                 for(i = 0; i < 3; i ++)
                 {
@@ -1084,16 +1067,39 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                    else if(i == 2) strncpy(OriginAltitude, pi, p-pi);
                    pi = p + 1;
                 }
+                */                
+                DataDictionaryGetOriginLatitudeC8(GSD, OriginLatitude);
+                DataDictionaryGetOriginLongitudeC8(OriginLongitude);
+                DataDictionaryGetOriginAltitudeC8(OriginAltitude);
+                
+                DataDictionaryGetOriginLatitudeDbl(GSD, &OriginLatitudeDbl);
+                DataDictionaryGetOriginLongitudeDbl(&OriginLongitudeDbl);
+                DataDictionaryGetOriginAltitudeDbl(&OriginAltitudeDbl);
                 
                 OriginLatitudeDbl = atof(OriginLatitude);
                 OriginLongitudeDbl = atof(OriginLongitude);
                 OriginAltitudeDbl = atof(OriginAltitude);
                 OriginHeadingDbl = atof(OriginHeading);
-
                 OriginPosition.Latitude = OriginLatitudeDbl;
                 OriginPosition.Longitude = OriginLongitudeDbl;
                 OriginPosition.Altitude = OriginAltitudeDbl;
                 OriginPosition.Heading = OriginHeadingDbl;
+
+                DataDictionaryGetForceToLocalhostU8(&iForceObjectToLocalhostU8);
+                LogMessage(LOG_LEVEL_INFO,"ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
+                LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
+
+                DataDictionaryGetASPMaxTimeDiffDbl(&ASPMaxTimeDiffDbl);
+                DataDictionaryGetASPMaxTrajDiffDbl(&ASPMaxTrajDiffDbl);
+                DataDictionaryGetASPStepBackCountU32(&ASPStepBackCount);
+                DataDictionaryGetASPFilterLevelDbl(&ASPFilterLevelDbl);
+                DataDictionaryGetASPMaxDeltaTimeDbl(&ASPMaxDeltaTimeDbl);
+                ASPDebugRate = 1;
+                bzero(VOILReceivers, SMALL_BUFFER_SIZE_254);
+                DataDictionaryGetVOILReceiversC8(VOILReceivers);
+                bzero(DTMReceivers, SMALL_BUFFER_SIZE_254);
+                DataDictionaryGetDTMReceiversC8(DTMReceivers);
+
             }
             else if(iCommand == COMM_DISCONNECT)
             {
@@ -1135,9 +1141,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             ++uiTimeCycle;
             if(uiTimeCycle >= HEARTBEAT_TIME_MS/TASK_PERIOD_MS)
             {
+                
                 bzero(Buffer2, SMALL_BUFFER_SIZE_1);
                 Buffer2[0] = OBCState;
                 (void)iCommSend(COMM_OBC_STATE,Buffer2);
+                
                 uiTimeCycle = 0;
             }
 

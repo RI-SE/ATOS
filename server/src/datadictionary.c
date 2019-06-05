@@ -33,6 +33,7 @@
 
 
 #define DD_CONTROL_CONF_FILE_PATH  "conf/test.conf"
+#define DD_CONTROL_BUFFER_SIZE_1024 1024
 #define DD_CONTROL_BUFFER_SIZE_20 20
 #define DD_CONTROL_BUFFER_SIZE_52 52
 #define DD_CONTROL_TASK_PERIOD_MS 1
@@ -50,7 +51,7 @@ volatile U8 ForceObjectToLocalhostU8 = 0;
 volatile dbl ASPMaxTimeDiffDbl = 0;
 volatile dbl ASPMaxTrajDiffDbl = 0;
 volatile U32 ASPStepBackCountU32 = 0;
-volatile U16 ASPFilterLevelU16 = 0;
+volatile dbl ASPFilterLevelDbl = 0;
 volatile dbl ASPMaxDeltaTimeDbl = 0;
 volatile U32 TimeServerIPU32 = 0;
 volatile U16 TimeServerPortU16 = 0;
@@ -58,23 +59,24 @@ volatile U32 SimulatorIPU32 = 0;
 volatile U16 SimulatorTCPPortU16 = 0;
 volatile U16 SimulatorUDPPortU16 = 0;
 volatile U8 SimulatorModeU8 = 0;
-C8 VOILReceiversC8[1024];
-C8 DTMReceiversC8[1024];
+C8 VOILReceiversC8[DD_CONTROL_BUFFER_SIZE_1024];
+C8 DTMReceiversC8[DD_CONTROL_BUFFER_SIZE_1024];
 volatile U32 ExternalSupervisorIPU32 = 0;
 volatile U16 SupervisorTCPPortU16 = 0;
 volatile U32 DataDictionaryRVSSConfigU32 = 0;
 volatile U32 DataDictionaryRVSSRateU8 = 0;
 volatile ASPType ASPData;
-C8 MiscDataC8[1024];
+C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
+volatile U8 OBCStateU8 = 0;
 
 I32 DataDictionarySearchParameter(C8 *ParameterName, C8 *ResultBuffer);
 
 /*------------------------------------------------------------
   -- Functions
   ------------------------------------------------------------*/
-void DataDictionaryConstructor(void)
+void DataDictionaryConstructor(GSDType *GSD)
 {
-  DataDictionaryInitOriginLatitudeDbl();
+  DataDictionaryInitOriginLatitudeDbl(GSD);
   DataDictionaryInitOriginLongitudeDbl();
   DataDictionaryInitOriginAltitudeDbl();
   DataDictionaryInitVisualizationServerU32();
@@ -82,7 +84,7 @@ void DataDictionaryConstructor(void)
   DataDictionaryInitASPMaxTimeDiffDbl();
   DataDictionaryInitASPMaxTrajDiffDbl();
   DataDictionaryInitASPStepBackCountU32();
-  DataDictionaryInitASPFilterLevelU16();
+  DataDictionaryInitASPFilterLevelDbl();
   DataDictionaryInitASPMaxDeltaTimeDbl();
   DataDictionaryInitTimeServerIPU32();
   DataDictionaryInitTimeServerPortU16();
@@ -97,7 +99,7 @@ void DataDictionaryConstructor(void)
   DataDictionaryInitRVSSRateU8();
   DataDictionaryInitSupervisorTCPPortU16();
   DataDictionaryInitMiscDataC8();
-
+  DataDictionarySetOBCStateU8(GSD, OBC_STATE_IDLE);
 }
 
 //  I32 Return
@@ -109,17 +111,17 @@ void DataDictionaryConstructor(void)
 
 
 /*Origin Latitude*/
-I32 DataDictionaryInitOriginLatitudeDbl(void)
+I32 DataDictionaryInitOriginLatitudeDbl(GSDType *GSD)
 {
   I32 Res = UNDEFINED;
   C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-  if(Res = DataDictionarySearchParameter("OriginLatidude=", ResultBufferC8))
+  if(Res = DataDictionarySearchParameter("OrigoLatidude=", ResultBufferC8))
   {
     Res = READ_OK;
     pthread_mutex_lock(&mutex);
-    OriginLatitudeDbl = atof(ResultBufferC8);
-    bzero(OriginLatitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-    strcat(OriginLatitudeC8, ResultBufferC8);
+    GSD->OriginLatitudeDbl = atof(ResultBufferC8);
+    bzero(GSD->OriginLatitudeC8, DD_CONTROL_BUFFER_SIZE_20);
+    strcat(GSD->OriginLatitudeC8, ResultBufferC8);
     pthread_mutex_unlock(&mutex);
   }
   else
@@ -131,33 +133,33 @@ I32 DataDictionaryInitOriginLatitudeDbl(void)
   return Res;
 }
 
-I32 DataDictionarySetOriginLatitudeDbl(C8 *Latitude)
+I32 DataDictionarySetOriginLatitudeDbl(GSDType *GSD, C8 *Latitude)
 {
   I32 Res;
-  if(Res = UtilWriteConfigurationParameter("OriginLatidude", Latitude, 0))
+  if(Res = UtilWriteConfigurationParameter("OrigoLatidude", Latitude, 0))
   {
     Res = WRITE_OK;
     pthread_mutex_lock(&mutex);
-    OriginLatitudeDbl = atof(Latitude);
-    bzero(OriginLatitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-    strcat(OriginLatitudeC8, Latitude);
+    GSD->OriginLatitudeDbl = atof(Latitude);
+    bzero(GSD->OriginLatitudeC8, DD_CONTROL_BUFFER_SIZE_20);
+    strcat(GSD->OriginLatitudeC8, Latitude);
     pthread_mutex_unlock(&mutex);
   } else Res = PARAMETER_NOTFOUND; 
   return Res; 
 }
 
-I32 DataDictionaryGetOriginLatitudeDbl(dbl *Latitude)
+I32 DataDictionaryGetOriginLatitudeDbl(GSDType *GSD, dbl *Latitude)
 {
   pthread_mutex_lock(&mutex);
-  *Latitude = OriginLatitudeDbl;
+  *Latitude = GSD->OriginLatitudeDbl;
   pthread_mutex_unlock(&mutex);
   return (I32) READ_OK;
  }
 
-I32 DataDictionaryGetOriginLatitudeC8(C8 *Latitude)
+I32 DataDictionaryGetOriginLatitudeC8(GSDType *GSD, C8 *Latitude)
 {
   pthread_mutex_lock(&mutex);
-  strcat(Latitude, OriginLatitudeC8);
+  strcat(Latitude, GSD->OriginLatitudeC8);
   pthread_mutex_unlock(&mutex);
   return (I32) READ_OK;
  }
@@ -169,7 +171,7 @@ I32 DataDictionaryInitOriginLongitudeDbl(void)
 {
   I32 Res = UNDEFINED;
   C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-  if(Res = DataDictionarySearchParameter("OriginLongitude=", ResultBufferC8))
+  if(Res = DataDictionarySearchParameter("OrigoLongitude=", ResultBufferC8))
   {
     Res = READ_OK;
     pthread_mutex_lock(&mutex);
@@ -190,7 +192,7 @@ I32 DataDictionaryInitOriginLongitudeDbl(void)
 I32 DataDictionarySetOriginLongitudeDbl(C8 *Longitude)
 {
   I32 Res;
-  if(Res = UtilWriteConfigurationParameter("OriginLongitude", Longitude, 0))
+  if(Res = UtilWriteConfigurationParameter("OrigoLongitude", Longitude, 0))
   {
     Res = WRITE_OK;
     pthread_mutex_lock(&mutex);
@@ -224,7 +226,7 @@ I32 DataDictionaryInitOriginAltitudeDbl(void)
 {
   I32 Res = UNDEFINED;
   C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-  if(Res = DataDictionarySearchParameter("OriginAltitude=", ResultBufferC8))
+  if(Res = DataDictionarySearchParameter("OrigoAltitude=", ResultBufferC8))
   {
     Res = READ_OK;
     pthread_mutex_lock(&mutex);
@@ -245,7 +247,7 @@ I32 DataDictionaryInitOriginAltitudeDbl(void)
 I32 DataDictionarySetOriginAltitudeDbl(C8 *Altitude)
 {
   I32 Res;
-  if(Res = UtilWriteConfigurationParameter("OriginAltitude", Altitude, 0))
+  if(Res = UtilWriteConfigurationParameter("OrigoAltitude", Altitude, 0))
   {
     Res = WRITE_OK;
     pthread_mutex_lock(&mutex);
@@ -280,7 +282,7 @@ I32 DataDictionaryInitVisualizationServerU32(void)
 {
   I32 Res = UNDEFINED;
   C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-  if(Res = DataDictionarySearchParameter("VisualizationServer=", ResultBufferC8))
+  if(Res = DataDictionarySearchParameter("VisualizationServerName=", ResultBufferC8))
   {
     Res = READ_OK;
     pthread_mutex_lock(&mutex);
@@ -290,7 +292,7 @@ I32 DataDictionaryInitVisualizationServerU32(void)
   else
   {
     Res = PARAMETER_NOTFOUND;
-    LogMessage(LOG_LEVEL_INFO,"VisualizationServer not found!");
+    LogMessage(LOG_LEVEL_INFO,"VisualizationServerName not found!");
   }
 
   return Res;
@@ -299,7 +301,7 @@ I32 DataDictionaryInitVisualizationServerU32(void)
 I32 DataDictionarySetVisualizationServerU32(C8 *IP)
 {
   I32 Res;
-  if(Res = UtilWriteConfigurationParameter("VisualizationServer", IP, 0))
+  if(Res = UtilWriteConfigurationParameter("VisualizationServerName", IP, 0))
   {
     Res = WRITE_OK;
     pthread_mutex_lock(&mutex);
@@ -493,7 +495,7 @@ I32 DataDictionaryGetASPStepBackCountU32(U32 *ASPStepBackCount)
 /*END of ASPStepBackCount*/
 
 /*ASPFilterLevel*/
-I32 DataDictionaryInitASPFilterLevelU16(void)
+I32 DataDictionaryInitASPFilterLevelDbl(void)
 {
   I32 Res = UNDEFINED;
   C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
@@ -501,7 +503,7 @@ I32 DataDictionaryInitASPFilterLevelU16(void)
   {
     Res = READ_OK;
     pthread_mutex_lock(&mutex);
-    ASPFilterLevelU16 = atoi(ResultBufferC8);
+    ASPFilterLevelDbl = atof(ResultBufferC8);
     pthread_mutex_unlock(&mutex);
   }
   else
@@ -513,23 +515,23 @@ I32 DataDictionaryInitASPFilterLevelU16(void)
   return Res;
 }
 
-I32 DataDictionarySetASPFilterLevelU16(C8 *ASPFilterLevel)
+I32 DataDictionarySetASPFilterLevelDbl(C8 *ASPFilterLevel)
 {
   I32 Res;
   if(Res = UtilWriteConfigurationParameter("ASPFilterLevel", ASPFilterLevel, 0))
   {
     Res = WRITE_OK;
     pthread_mutex_lock(&mutex);
-    ASPFilterLevelU16 = atoi(ASPFilterLevel);
+    ASPFilterLevelDbl = atof(ASPFilterLevel);
     pthread_mutex_unlock(&mutex);
   } else Res = PARAMETER_NOTFOUND; 
   return Res; 
 }
 
-I32 DataDictionaryGetASPFilterLevelU16(U16 *ASPFilterLevel)
+I32 DataDictionaryGetASPFilterLevelDbl(dbl *ASPFilterLevel)
 {
   pthread_mutex_lock(&mutex);
-  *ASPFilterLevel = ASPFilterLevelU16;
+  *ASPFilterLevel = ASPFilterLevelDbl;
   pthread_mutex_unlock(&mutex);
   return (I32) READ_OK;
  }
@@ -569,7 +571,7 @@ I32 DataDictionarySetASPMaxDeltaTimeDbl(C8 *ASPMaxDeltaTime)
   return Res; 
 }
 
-I32 DataDictionaryGetASPMaxDeltaTimeDbl(U16 *ASPMaxDeltaTime)
+I32 DataDictionaryGetASPMaxDeltaTimeDbl(dbl *ASPMaxDeltaTime)
 {
   pthread_mutex_lock(&mutex);
   *ASPMaxDeltaTime = ASPMaxDeltaTimeDbl;
@@ -843,7 +845,7 @@ I32 DataDictionaryGetSimulatorModeU8(U8 *SimulatorMode)
 I32 DataDictionaryInitVOILReceiversC8(void)
 {
   I32 Res = UNDEFINED;
-  C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
+  C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
   if(Res = DataDictionarySearchParameter("VOILReceivers=", ResultBufferC8))
   {
     Res = READ_OK;
@@ -886,7 +888,7 @@ I32 DataDictionaryGetVOILReceiversC8(U8 *VOILReceivers)
 I32 DataDictionaryInitDTMReceiversC8(void)
 {
   I32 Res = UNDEFINED;
-  C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
+  C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
   if(Res = DataDictionarySearchParameter("DTMReceivers=", ResultBufferC8))
   {
     Res = READ_OK;
@@ -894,7 +896,7 @@ I32 DataDictionaryInitDTMReceiversC8(void)
     strcpy(DTMReceiversC8, ResultBufferC8);
     pthread_mutex_unlock(&mutex);
   }
-  else
+else
   {
     Res = PARAMETER_NOTFOUND;
     LogMessage(LOG_LEVEL_INFO,"DTMReceivers not found!");
@@ -1159,6 +1161,7 @@ I32 DataDictionarySetMiscDataC8(C8 *MiscData)
   {
     Res = WRITE_OK;
     pthread_mutex_lock(&mutex);
+    bzero(MiscDataC8, DD_CONTROL_BUFFER_SIZE_1024);
     strcpy(MiscDataC8, MiscData);
     pthread_mutex_unlock(&mutex);
   } else Res = PARAMETER_NOTFOUND; 
@@ -1175,11 +1178,22 @@ I32 DataDictionaryGetMiscDataC8(U8 *MiscData)
 /*END of MiscData*/
 
 
+/*OBCState*/
+I32 DataDictionarySetOBCStateU8(GSDType *GSD, U8 OBCState)
+{
+  I32 Res;
+  Res = WRITE_OK;
+  pthread_mutex_lock(&mutex);
+  GSD->OBCStateU8 = OBCState;
+  pthread_mutex_unlock(&mutex);
+  return Res; 
+}
 
-
-
-
-
+U8 DataDictionaryGetOBCStateU8(GSDType *GSD)
+{
+  return GSD->OBCStateU8;
+ }
+/*END OBCState*/
 
 I32 DataDictionarySearchParameter(C8 *ParameterName, C8 *ResultBuffer)
 {

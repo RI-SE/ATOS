@@ -1969,6 +1969,11 @@ int iCommSend(const int iCommand,const char* cpData)
       uiMessagePrio = 80;
       cpMessage[0] = (char)COMM_TRAJ_FROMSUP;
     }
+  else if (iCommand == COMM_DATA_DICT)
+    {
+      uiMessagePrio = 100;
+      cpMessage[0] = (char)COMM_DATA_DICT;
+    }
   else
     {
       util_error("Unknown command");

@@ -335,6 +335,11 @@ void logger_task()
 
             break;
 
+        case COMM_DATA_DICT:
+
+            LogMessage(LOG_LEVEL_INFO,"Notification that DataDictionary has been modified.");
+            break;
+
         default:
             LogMessage(LOG_LEVEL_WARNING,"Unhandled command in logger: %d",iCommand);
         }
