@@ -156,6 +156,8 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             // TODO: react to output from SupervisionCheckGeofences
             SupervisionCheckGeofences(MONRMessage, geoPtrs, nGeof);
             break;
+        case COMM_OBC_STATE:
+            break;
         case COMM_INV:
             break;
         default:
