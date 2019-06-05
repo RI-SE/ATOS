@@ -161,10 +161,12 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
         case COMM_OBC_STATE:
             break;
+        case COMM_LOG:
+            break;
         case COMM_INV:
             break;
         default:
-            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", (char)command);
+            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
         }
     }
 
