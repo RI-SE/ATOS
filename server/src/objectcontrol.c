@@ -278,7 +278,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     STRTType STRTData;
     OSTMType OSTMData;
     HEABType HEABData;
-    MONRType MONRData, MONR_DATA_2;
+    MONRType MONRData;
     DOTMType DOTMData;
     TRAJInfoType TRAJInfoData;
     VOILType VOILData;
