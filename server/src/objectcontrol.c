@@ -337,9 +337,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     if (iCommInit())
         util_error("Unable to connect to message queue bus");
 
-    LogPrint("MONR bytelens: %d, %d", COMMAND_MONR_MESSAGE_LENGTH, sizeof(MONRType));
-    exit(0);
-
     while(!iExit)
     {
         if(OBCState == OBC_STATE_ERROR)
