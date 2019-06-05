@@ -54,7 +54,9 @@ typedef struct
   -- Function declarations.
   ------------------------------------------------------------*/
 int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, char numberOfGeofences);
-int loadGeofences();
+int loadGeofences(GeofenceType *geofences, int *numberOfGeofences);
+int parseGeofencefile(char* geofenceFile, GeofenceType *geofences, int *numberOfGeofences);
+
 
 /*------------------------------------------------------------
 -- The main function.
@@ -66,12 +68,12 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
     MONRType MONRMessage;
 
+    int nGeof = 0;
+    GeofenceType* geoPtrs;
 
-    /* TODO: replace with permanent */
+    /* TODO: replace with permanent
     const int nPts = 4;
-    const int nGeof = 3;
 
-    GeofenceType geoPtrs[nGeof];
     GeofenceType perm1, perm2, forb1;
 
     perm1.numberOfPoints = nPts;
@@ -86,39 +88,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     perm2.polygonPoints = (CartesianPosition*)malloc(nPts*sizeof(CartesianPosition));
     forb1.polygonPoints = (CartesianPosition*)malloc(nPts*sizeof(CartesianPosition));
 
-    perm1.polygonPoints[0].xCoord_m = -5;
-    perm1.polygonPoints[1].xCoord_m = 15;
-    perm1.polygonPoints[2].xCoord_m = 15;
-    perm1.polygonPoints[3].xCoord_m = -5;
 
-    perm1.polygonPoints[0].yCoord_m = -10;
-    perm1.polygonPoints[1].yCoord_m = 10;
-    perm1.polygonPoints[2].yCoord_m = 10;
-    perm1.polygonPoints[3].yCoord_m = -10;
-
-    perm2.polygonPoints[0].xCoord_m = -15;
-    perm2.polygonPoints[1].xCoord_m = 5;
-    perm2.polygonPoints[2].xCoord_m = 5;
-    perm2.polygonPoints[3].xCoord_m = -15;
-
-    perm2.polygonPoints[0].yCoord_m = -10;
-    perm2.polygonPoints[1].yCoord_m = 10;
-    perm2.polygonPoints[2].yCoord_m = 10;
-    perm2.polygonPoints[3].yCoord_m = -10;
-
-    forb1.polygonPoints[0].xCoord_m = -1;
-    forb1.polygonPoints[1].xCoord_m = 1;
-    forb1.polygonPoints[2].xCoord_m = 1;
-    forb1.polygonPoints[3].xCoord_m = -1;
-
-    forb1.polygonPoints[0].yCoord_m = -1;
-    forb1.polygonPoints[1].yCoord_m = -1;
-    forb1.polygonPoints[2].yCoord_m = 1;
-    forb1.polygonPoints[3].yCoord_m = 1;
-
-    geoPtrs[0] = perm1;
-    geoPtrs[1] = perm2;
-    geoPtrs[2] = forb1;
     /* end */
 
     enum COMMAND command;
@@ -150,7 +120,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         {
         case COMM_INIT:
             // TODO: Read geofence file for each object and populate data structure
-            loadGeofences();
+            loadGeofences(geoPtrs, nGeof);
             break;
         case COMM_MONR:
             UtilPopulateMONRStruct(busReceiveBuffer, &MONRMessage, 0);
@@ -165,14 +135,9 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %d", command);
         }
     }
-
-    // TODO: Temporary
-    free(perm1.polygonPoints);
-    free(perm2.polygonPoints);
-    free(forb1.polygonPoints);
 }
 
-int loadGeofences(){
+int loadGeofences(GeofenceType *geofences, int *numberOfGeofences){
         LogMessage(LOG_LEVEL_INFO,"Loading Geofences");
 
         int len;
@@ -187,10 +152,43 @@ int loadGeofences(){
 
           while ((pDirent = readdir(pDir)) != NULL) {
                LogMessage(LOG_LEVEL_INFO,"[%s]\n", pDirent->d_name);
+
+               //TODO: double check if .geofence file
+               parseGeofencefile(pDirent->d_name, geofences, numberOfGeofences);
           }
           closedir (pDir);
           return 0;
 
+}
+
+int parseGeofencefile(char* geofenceFile, GeofenceType *geofences, int *numberOfGeofences){
+
+    char pcFileNameBuffer[MAX_FILE_PATH] = "";
+    strcat(pcFileNameBuffer, FENCE_DIRECTORY);
+    strcat(pcFileNameBuffer, geofenceFile);
+
+    FILE *fp;
+    char str[MAX_FILE_PATH];
+
+    fp = fopen(pcFileNameBuffer, "r");
+        if ( fp != NULL )
+        {
+           char line [ 128 ]; /* or other suitable maximum line size */
+           /*while ( fgets ( line, sizeof line, fp ) != NULL ) /* read a line */
+           {
+              fputs ( line, stdout ); /* write the line */
+              LogMessage(LOG_LEVEL_INFO,"Looping....");
+              strcpy(geofences[0].name, line);
+              LogMessage(LOG_LEVEL_INFO, geofences[0].name);
+
+           }
+           fclose ( fp );
+        }
+        else
+        {
+           perror ( pcFileNameBuffer ); /* why didn't the file open? */
+        }
+    return 0;
 }
 
 int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, char numberOfGeofences)

@@ -20,5 +20,4 @@
   ------------------------------------------------------------*/
 void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel);
 
-
 #endif //__SUPERVISION_H_INCLUDED__
