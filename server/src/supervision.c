@@ -151,6 +151,9 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case COMM_INIT:
             // TODO: Read geofence file for each object and populate data structure
             break;
+        case COMM_MONI:
+            // Ignore old style MONR data
+            break;
         case COMM_MONR:
             UtilPopulateMONRStruct(busReceiveBuffer, &MONRMessage, 0);
             // TODO: react to output from SupervisionCheckGeofences
@@ -161,7 +164,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case COMM_INV:
             break;
         default:
-            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %d", command);
+            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", (char)command);
         }
     }
 

@@ -174,7 +174,9 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
             isFirstInit = 1;
             break;
-
+        case COMM_MONR:
+            // TODO: use new MONR message
+            break;
         case COMM_MONI:
 
             filefd = fopen(pcLogFile, ACCESS_MODE_APPEND_AND_READ);
@@ -343,7 +345,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case COMM_INV:
             break;
         default:
-            LogMessage(LOG_LEVEL_WARNING,"Unhandled command in logger: %d", (char)command);
+            LogMessage(LOG_LEVEL_WARNING,"Unhandled message bus command: %u", (char)command);
         }
 
     }
