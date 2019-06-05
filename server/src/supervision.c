@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
+#include <dirent.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -27,13 +28,11 @@
 
 #include "supervision.h"
 
-
-
 /* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
 #define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
 #define MAX_GEOFENCE_NAME_LEN 256
-
+#define FENCE_DIRECTORY "./fence/"
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
@@ -55,6 +54,7 @@ typedef struct
   -- Function declarations.
   ------------------------------------------------------------*/
 int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, char numberOfGeofences);
+int loadGeofences();
 
 /*------------------------------------------------------------
 -- The main function.
@@ -150,6 +150,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         {
         case COMM_INIT:
             // TODO: Read geofence file for each object and populate data structure
+            loadGeofences();
             break;
         case COMM_MONR:
             UtilPopulateMONRStruct(busReceiveBuffer, &MONRMessage, 0);
@@ -169,6 +170,27 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     free(perm1.polygonPoints);
     free(perm2.polygonPoints);
     free(forb1.polygonPoints);
+}
+
+int loadGeofences(){
+        LogMessage(LOG_LEVEL_INFO,"Loading Geofences");
+
+        int len;
+          struct dirent *pDirent;
+          DIR *pDir;
+
+          pDir = opendir (FENCE_DIRECTORY);
+          if (pDir == NULL) {
+              LogMessage(LOG_LEVEL_INFO,"Cannot open directory");
+              return 1;
+          }
+
+          while ((pDirent = readdir(pDir)) != NULL) {
+               LogMessage(LOG_LEVEL_INFO,"[%s]\n", pDirent->d_name);
+          }
+          closedir (pDir);
+          return 0;
+
 }
 
 int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, char numberOfGeofences)
