@@ -2987,6 +2987,7 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 
 I32 UtilPopulateMONRStruct(C8* rawMONR, MONRType *MONR, U8 debug)
 {
+    // TODO: size of rawMONR
     U16 Crc = 0, U16Data = 0;
     I16 I16Data = 0;
     U32 U32Data = 0;
