@@ -468,6 +468,17 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         }
                     }
 
+                    if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE)
+                    {
+                        // Send MONR message on new byte format
+                        LogMessage(LOG_LEVEL_DEBUG, "Sending raw MONR message", buffer);
+                        if(iCommSend(COMM_MONR, buffer, COMMAND_MONR_MESSAGE_LENGTH) < 0)
+                        {
+                            LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONR command - entering error state");
+                            vSetState(&OBCState,OBC_STATE_ERROR);
+                            ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+                        }
+                    }
 
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 1);
 
@@ -511,14 +522,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         if(iCommSend(COMM_MONI,buffer,strlen(buffer)) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONI command - entering error state");
-                            vSetState(&OBCState,OBC_STATE_ERROR);
-                            ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
-                        }
-
-                        // Send MONR message on new byte format
-                        if(iCommSend(COMM_MONR, buffer, COMMAND_MONR_MESSAGE_LENGTH) < 0)
-                        {
-                            LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONR command - entering error state");
                             vSetState(&OBCState,OBC_STATE_ERROR);
                             ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
                         }
