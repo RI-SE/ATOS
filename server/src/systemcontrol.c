@@ -247,14 +247,17 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
     U32 RVSSConfigU32;
     U32 RVSSMessageLengthU32;
     U16 PCDMessageCodeU16;
+    U8 FnuttFoundU8 = 0;
+    C8 *StartFnuttPtr;
+    C8 *EndFnuttPtr;
 
 
-    DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
+    DataDictionaryGetRVSSConfigU32(GSD, &RVSSConfigU32);
     LogMessage(LOG_LEVEL_INFO,"RVSSConfigU32 = %d", RVSSConfigU32);
 
     U8 RVSSRateU8;
     dbl RVSSRateDbl;
-    DataDictionaryGetRVSSRateU8(&RVSSRateU8);
+    DataDictionaryGetRVSSRateU8(GSD, &RVSSRateU8);
     RVSSRateDbl = RVSSRateU8;
     RVSSRateDbl = (1/RVSSRateDbl)*1000;
     LogMessage(LOG_LEVEL_INFO,"RVSSRateU8 = %d", RVSSRateU8);
@@ -354,12 +357,65 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 while (StopPtr != NULL)
                 {
                     StopPtr = (char *)strchr(StartPtr, ',');
-                    if(StopPtr == NULL) strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)strchr(StartPtr, ')') - (uint64_t)StartPtr);
-                    else strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
-                    StartPtr = StopPtr+1;
-                    CurrentInputArgCount ++;
-                    //printf("CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount-1]);
+ 
+                    //Check for fnutts
+                    if(StopPtr != NULL)
+                    {
+                        StartFnuttPtr = NULL;
+                        EndFnuttPtr = NULL;
+                        
+                        i = 0;
+                        while(i < StopPtr-StartPtr)
+                        {
+                            if(*(StartPtr+i) == '"') FnuttFoundU8 = 1;
+                            i ++;
+                        }
+
+                        if(FnuttFoundU8 == 1)
+                        {
+                            i = 0;
+                            while(StartFnuttPtr == NULL || EndFnuttPtr == NULL) 
+                            {
+                                if(*(StartPtr+i) == '"' && StartFnuttPtr == NULL) StartFnuttPtr = StartPtr+i+1;
+                                else if (*(StartPtr+i) == '"' && EndFnuttPtr == NULL) EndFnuttPtr = StartPtr+i;
+                                i ++;
+                                if(i > strlen(pcBuffer))
+                                {
+                                    StartFnuttPtr = pcBuffer;
+                                    EndFnuttPtr = pcBuffer;
+                                    FnuttFoundU8 = 0;
+                                }
+                            } 
+                            //printf("Fnutt length: %ld\n", (uint64_t)EndFnuttPtr - (uint64_t)StartFnuttPtr);
+                        }
+                    }
+
+                    if(FnuttFoundU8 == 1)
+                    { 
+                        
+                        FnuttFoundU8 = 0;
+                        strncpy(SystemControlArgument[CurrentInputArgCount], StartFnuttPtr, (uint64_t)EndFnuttPtr - (uint64_t)StartFnuttPtr);
+                        //printf("Between fnutts: %s\n", SystemControlArgument[CurrentInputArgCount]);
+                        StartPtr = EndFnuttPtr + 1;
+                        //printf("1. CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount]);
+                        //CurrentInputArgCount ++;
+                        
+                    }                  
+                    else if(StopPtr == NULL)
+                    {
+                        strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)strchr(StartPtr, ')') - (uint64_t)StartPtr);
+                        //printf("2. CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount]);
+                        CurrentInputArgCount ++;
+                    } 
+                    else
+                    {
+                        strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
+                        StartPtr = StopPtr+1;
+                        //printf("3. CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount]);
+                        CurrentInputArgCount ++;
+                    }
                 }
+                //printf("4. CurrentInputArgCount=%d\n", CurrentInputArgCount);
 
                 SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
             }
@@ -507,8 +563,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             SystemControlCommand = Idle_0;
             bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
             DataDictionaryGetOriginLatitudeC8(GSD, ControlResponseBuffer);strcat(ControlResponseBuffer,";");
-            DataDictionaryGetOriginLongitudeC8(ControlResponseBuffer);strcat(ControlResponseBuffer,";");
-            DataDictionaryGetOriginAltitudeC8(ControlResponseBuffer);strcat(ControlResponseBuffer,";");
+            DataDictionaryGetOriginLongitudeC8(GSD, ControlResponseBuffer);strcat(ControlResponseBuffer,";");
+            DataDictionaryGetOriginAltitudeC8(GSD, ControlResponseBuffer);strcat(ControlResponseBuffer,";");
             iCommSend(COMM_OSEM,ControlResponseBuffer);
             SystemControlSendControlResponse(strlen(ParameterListC8) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetTestOrigin:", ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
         break;
@@ -526,7 +582,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 SystemControlCommand = Idle_0;
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                SystemControlSetServerParameter(GSD, SystemControlArgument[0], SystemControlArgument[1], 0);
+                SystemControlSetServerParameter(GSD, SystemControlArgument[0], SystemControlArgument[1], 1);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:", ControlResponseBuffer, 0, &ClientSocket, 0);
                 //Send COMM_DATA_DICT to notify to update data from DataDictionary    
                 iCommSend(COMM_DATA_DICT,ControlResponseBuffer);
@@ -898,7 +954,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         if(RVSSSendCounterU16 >= ((U16)RVSSRateDbl))
         {
             RVSSSendCounterU16 = 0;            
-            DataDictionaryGetRVSSRateU8(&RVSSRateU8);
+            DataDictionaryGetRVSSRateU8(GSD, &RVSSRateU8);
             RVSSRateDbl = RVSSRateU8;
             RVSSRateDbl = (1/RVSSRateDbl)*1000;
 
@@ -1282,6 +1338,7 @@ I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnV
     bzero(ReturnValue, 20);
     dbl ValueDbl = 0;
     U32 ValueU32 = 0;
+    U16 ValueU16 = 0;
     U8 ValueU8 = 0;
  
     if(strcmp("OrigoLatidude", ParameterName) == 0)
@@ -1291,17 +1348,105 @@ I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnV
     }
     else if(strcmp("OrigoLongitude", ParameterName) == 0)
     {
-        DataDictionaryGetOriginLongitudeDbl(&ValueDbl);
+        DataDictionaryGetOriginLongitudeDbl(GSD, &ValueDbl);
         sprintf(ReturnValue, "%3.12f", ValueDbl);
+    }
+    else if(strcmp("OrigoAltitude", ParameterName) == 0)
+    {
+        DataDictionaryGetOriginAltitudeDbl(GSD, &ValueDbl);
+        sprintf(ReturnValue, "%3.12f", ValueDbl);
+    }
+    else if(strcmp("VisualizationServerName", ParameterName) == 0)
+    {
+        DataDictionaryGetVisualizationServerC8(GSD, ReturnValue);
+    }
+    else if(strcmp("ForceObjectToLocalhost", ParameterName) == 0)
+    {
+        DataDictionaryGetForceToLocalhostU8(GSD, &ValueU8);
+        sprintf(ReturnValue, "%" PRIu8, ValueU8);
+    }
+    else if(strcmp("ASPMaxTimeDiff", ParameterName) == 0)
+    {
+        DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ValueDbl);
+        sprintf(ReturnValue, "%3.3f" , ValueDbl);
+    }
+    else if(strcmp("ASPMaxTrajDiff", ParameterName) == 0)
+    {
+        DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ValueDbl);
+        sprintf(ReturnValue, "%3.3f" , ValueDbl);
+    }
+    else if(strcmp("ASPStepBackCount", ParameterName) == 0)
+    {
+        DataDictionaryGetASPStepBackCountU32(GSD, &ValueU32);
+        sprintf(ReturnValue, "%" PRIu32 , ValueU32);
+    }
+    else if(strcmp("ASPFilterLevel", ParameterName) == 0)
+    {
+        DataDictionaryGetASPFilterLevelDbl(GSD, &ValueDbl);
+        sprintf(ReturnValue, "%3.3f" , ValueDbl);
+    }
+    else if(strcmp("ASPMaxDeltaTime", ParameterName) == 0)
+    {
+        DataDictionaryGetASPMaxDeltaTimeDbl(GSD, &ValueDbl);
+        sprintf(ReturnValue, "%3.3f" , ValueDbl);
+    }
+    else if(strcmp("TimeServerIP", ParameterName) == 0)
+    {
+        DataDictionaryGetTimeServerIPC8(GSD, ReturnValue);
+    }
+    else if(strcmp("TimeServerPort", ParameterName) == 0)
+    {
+        DataDictionaryGetTimeServerPortU16(GSD, &ValueU16);
+        sprintf(ReturnValue, "%" PRIu16 , ValueU16);
+    }
+    else if(strcmp("SimulatorIP", ParameterName) == 0)
+    {
+        DataDictionaryGetSimulatorIPC8(GSD, ReturnValue);
+    }
+    else if(strcmp("SimulatorTCPPort", ParameterName) == 0)
+    {
+        DataDictionaryGetSimulatorTCPPortU16(GSD, &ValueU16);
+        sprintf(ReturnValue, "%" PRIu16 , ValueU16);
+    }
+    else if(strcmp("SimulatorUDPPort", ParameterName) == 0)
+    {
+        DataDictionaryGetSimulatorUDPPortU16(GSD, &ValueU16);
+        sprintf(ReturnValue, "%" PRIu16 , ValueU16);
+    }
+    else if(strcmp("SimulatorMode", ParameterName) == 0)
+    {
+        DataDictionaryGetSimulatorModeU8(GSD, &ValueU8);
+        sprintf(ReturnValue, "%" PRIu8 , ValueU8);
+    }
+    else if(strcmp("VOILReceivers", ParameterName) == 0)
+    {
+        DataDictionaryGetVOILReceiversC8(GSD, ReturnValue);
+    }
+    else if(strcmp("DTMReceivers", ParameterName) == 0)
+    {
+        DataDictionaryGetDTMReceiversC8(GSD, ReturnValue);
+    }
+    else if(strcmp("SupervisorIP", ParameterName) == 0)
+    {
+       DataDictionaryGetExternalSupervisorIPC8(GSD, ReturnValue);
+    }
+    else if(strcmp("SupervisorTCPPort", ParameterName) == 0)
+    {
+        DataDictionaryGetSupervisorTCPPortU16(GSD, &ValueU16);
+        sprintf(ReturnValue, "%" PRIu16 , ValueU16);
+    }
+    else if(strcmp("MiscData", ParameterName) == 0)
+    {
+        DataDictionaryGetMiscDataC8(GSD, ReturnValue);
     }
     else if(strcmp("RVSSConfig", ParameterName) == 0)
     {
-        DataDictionaryGetRVSSConfigU32(&ValueU32);
+        DataDictionaryGetRVSSConfigU32(GSD, &ValueU32);
         sprintf(ReturnValue, "%" PRIu32, ValueU32);
     }
     else if(strcmp("RVSSRate", ParameterName) == 0)
     {
-        DataDictionaryGetRVSSRateU8(&ValueU8);
+        DataDictionaryGetRVSSRateU8(GSD, &ValueU8);
         sprintf(ReturnValue, "%" PRIu8, ValueU8);
     }
 
@@ -1311,10 +1456,30 @@ I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnV
 
 I32 SystemControlSetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *NewValue, U8 Debug)
 {
+    if(Debug) printf("[SystemControl] SetServerParameter: %s = %s\n", ParameterName, NewValue);
     if(strcmp("OrigoLatidude", ParameterName) == 0) DataDictionarySetOriginLatitudeDbl(GSD, NewValue);
-    else if(strcmp("OrigoLongitude", ParameterName) == 0) DataDictionarySetOriginLongitudeDbl(NewValue);
-    else if(strcmp("RVSSConfig", ParameterName) == 0) DataDictionarySetRVSSConfigU32((U32)atoi(NewValue));
-    else if(strcmp("RVSSRate", ParameterName) == 0) DataDictionarySetRVSSRateU8((U32)atoi(NewValue));
+    else if(strcmp("OrigoLongitude", ParameterName) == 0) DataDictionarySetOriginLongitudeDbl(GSD, NewValue);
+    else if(strcmp("OrigoAltitude", ParameterName) == 0) DataDictionarySetOriginAltitudeDbl(GSD, NewValue);
+    else if(strcmp("VisualizationServerName", ParameterName) == 0) DataDictionarySetVisualizationServerU32(GSD, NewValue);
+    else if(strcmp("ForceObjectToLocalhost", ParameterName) == 0) DataDictionarySetForceToLocalhostU8(GSD, NewValue);
+    else if(strcmp("ASPMaxTimeDiff", ParameterName) == 0) DataDictionarySetASPMaxTimeDiffDbl(GSD, NewValue);
+    else if(strcmp("ASPMaxTrajDiff", ParameterName) == 0) DataDictionarySetASPMaxTrajDiffDbl(GSD, NewValue);
+    else if(strcmp("ASPStepBackCount", ParameterName) == 0) DataDictionarySetASPStepBackCountU32(GSD, NewValue);
+    else if(strcmp("ASPFilterLevel", ParameterName) == 0) DataDictionarySetASPFilterLevelDbl(GSD, NewValue);
+    else if(strcmp("ASPMaxDeltaTime", ParameterName) == 0) DataDictionarySetASPMaxDeltaTimeDbl(GSD, NewValue);
+    else if(strcmp("TimeServerIP", ParameterName) == 0) DataDictionarySetTimeServerIPU32(GSD, NewValue);
+    else if(strcmp("TimeServerPort", ParameterName) == 0) DataDictionarySetTimeServerPortU16(GSD, NewValue);
+    else if(strcmp("SimulatorIP", ParameterName) == 0) DataDictionarySetSimulatorIPU32(GSD, NewValue);
+    else if(strcmp("SimulatorTCPPort", ParameterName) == 0) DataDictionarySetSimulatorTCPPortU16(GSD, NewValue);
+    else if(strcmp("SimulatorUDPPort", ParameterName) == 0) DataDictionarySetSimulatorUDPPortU16(GSD, NewValue);
+    else if(strcmp("SimulatorMode", ParameterName) == 0) DataDictionarySetSimulatorModeU8(GSD, NewValue);
+    else if(strcmp("VOILReceivers", ParameterName) == 0) DataDictionarySetVOILReceiversC8(GSD, NewValue);
+    else if(strcmp("DTMReceivers", ParameterName) == 0) DataDictionarySetDTMReceiversC8(GSD, NewValue);
+    else if(strcmp("SupervisorIP", ParameterName) == 0) DataDictionarySetExternalSupervisorIPU32(GSD, NewValue);
+    else if(strcmp("SupervisorTCPPort", ParameterName) == 0) DataDictionarySetSupervisorTCPPortU16(GSD, NewValue);
+    else if(strcmp("MiscData", ParameterName) == 0) DataDictionarySetMiscDataC8(GSD, NewValue);
+    else if(strcmp("RVSSConfig", ParameterName) == 0) DataDictionarySetRVSSConfigU32(GSD, (U32)atoi(NewValue));
+    else if(strcmp("RVSSRate", ParameterName) == 0) DataDictionarySetRVSSRateU8(GSD, (U32)atoi(NewValue));
 }
 
 

@@ -105,7 +105,7 @@
 #define TCP_RX_BUFFER 1024
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
-#define USE_LOCAL_USER_CONTROL  1
+#define USE_LOCAL_USER_CONTROL  0
 #define LOCAL_USER_CONTROL_IP "192.168.0.7"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
@@ -570,6 +570,7 @@ typedef struct
   volatile dbl OriginAltitudeDbl;
   C8 OriginAltitudeC8[DD_CONTROL_BUFFER_SIZE_20];
   volatile U32 VisualizationServerU32;
+  C8 VisualizationServerC8[DD_CONTROL_BUFFER_SIZE_20];
   volatile U8 ForceObjectToLocalhostU8;
   volatile dbl ASPMaxTimeDiffDbl;
   volatile dbl ASPMaxTrajDiffDbl;
@@ -577,14 +578,17 @@ typedef struct
   volatile dbl ASPFilterLevelDbl;
   volatile dbl ASPMaxDeltaTimeDbl;
   volatile U32 TimeServerIPU32;
+  C8 TimeServerIPC8[DD_CONTROL_BUFFER_SIZE_20];
   volatile U16 TimeServerPortU16;
   volatile U32 SimulatorIPU32;
+  C8 SimulatorIPC8[DD_CONTROL_BUFFER_SIZE_20];
   volatile U16 SimulatorTCPPortU16;
   volatile U16 SimulatorUDPPortU16;
   volatile U8 SimulatorModeU8;
   C8 VOILReceiversC8[DD_CONTROL_BUFFER_SIZE_1024];
   C8 DTMReceiversC8[DD_CONTROL_BUFFER_SIZE_1024];
   volatile U32 ExternalSupervisorIPU32;
+  C8 ExternalSupervisorIPC8[DD_CONTROL_BUFFER_SIZE_20];
   volatile U16 SupervisorTCPPortU16;
   volatile U32 DataDictionaryRVSSConfigU32;
   volatile U32 DataDictionaryRVSSRateU8;

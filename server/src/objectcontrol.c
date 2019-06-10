@@ -551,7 +551,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                 //Build ASP debug data and set to GSD
                                 //bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
                                 //ObjectControlBuildASPMessage(buffer, &ASPData, 0);
-                                DataDictionarySetRVSSAsp(&ASPData);
+                                DataDictionarySetRVSSAsp(GSD, &ASPData);
                                 //for(j = 0; j < sizeof(ASPType); j ++) GSD->ASPDebugDataU8[j] = buffer[j];
                                 //GSD->ASPDebugDataSetU8 = 1;
 
@@ -1069,12 +1069,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 }
                 */                
                 DataDictionaryGetOriginLatitudeC8(GSD, OriginLatitude);
-                DataDictionaryGetOriginLongitudeC8(OriginLongitude);
-                DataDictionaryGetOriginAltitudeC8(OriginAltitude);
+                DataDictionaryGetOriginLongitudeC8(GSD, OriginLongitude);
+                DataDictionaryGetOriginAltitudeC8(GSD, OriginAltitude);
                 
                 DataDictionaryGetOriginLatitudeDbl(GSD, &OriginLatitudeDbl);
-                DataDictionaryGetOriginLongitudeDbl(&OriginLongitudeDbl);
-                DataDictionaryGetOriginAltitudeDbl(&OriginAltitudeDbl);
+                DataDictionaryGetOriginLongitudeDbl(GSD, &OriginLongitudeDbl);
+                DataDictionaryGetOriginAltitudeDbl(GSD, &OriginAltitudeDbl);
                 
                 OriginLatitudeDbl = atof(OriginLatitude);
                 OriginLongitudeDbl = atof(OriginLongitude);
@@ -1085,20 +1085,20 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 OriginPosition.Altitude = OriginAltitudeDbl;
                 OriginPosition.Heading = OriginHeadingDbl;
 
-                DataDictionaryGetForceToLocalhostU8(&iForceObjectToLocalhostU8);
+                DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
                 LogMessage(LOG_LEVEL_INFO,"ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
                 LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
 
-                DataDictionaryGetASPMaxTimeDiffDbl(&ASPMaxTimeDiffDbl);
-                DataDictionaryGetASPMaxTrajDiffDbl(&ASPMaxTrajDiffDbl);
-                DataDictionaryGetASPStepBackCountU32(&ASPStepBackCount);
-                DataDictionaryGetASPFilterLevelDbl(&ASPFilterLevelDbl);
-                DataDictionaryGetASPMaxDeltaTimeDbl(&ASPMaxDeltaTimeDbl);
+                DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ASPMaxTimeDiffDbl);
+                DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ASPMaxTrajDiffDbl);
+                DataDictionaryGetASPStepBackCountU32(GSD, &ASPStepBackCount);
+                DataDictionaryGetASPFilterLevelDbl(GSD, &ASPFilterLevelDbl);
+                DataDictionaryGetASPMaxDeltaTimeDbl(GSD, &ASPMaxDeltaTimeDbl);
                 ASPDebugRate = 1;
                 bzero(VOILReceivers, SMALL_BUFFER_SIZE_254);
-                DataDictionaryGetVOILReceiversC8(VOILReceivers);
+                DataDictionaryGetVOILReceiversC8(GSD, VOILReceivers);
                 bzero(DTMReceivers, SMALL_BUFFER_SIZE_254);
-                DataDictionaryGetDTMReceiversC8(DTMReceivers);
+                DataDictionaryGetDTMReceiversC8(GSD, DTMReceivers);
 
             }
             else if(iCommand == COMM_DISCONNECT)
