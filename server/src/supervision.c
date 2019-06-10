@@ -86,40 +86,44 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     perm2.polygonPoints = (CartesianPosition*)malloc(nPts*sizeof(CartesianPosition));
     forb1.polygonPoints = (CartesianPosition*)malloc(nPts*sizeof(CartesianPosition));
 
-    perm1.polygonPoints[0].xCoord_m = -5;
-    perm1.polygonPoints[1].xCoord_m = 15;
-    perm1.polygonPoints[2].xCoord_m = 15;
-    perm1.polygonPoints[3].xCoord_m = -5;
+    perm1.polygonPoints[0].xCoord_m = -100;
+    perm1.polygonPoints[1].xCoord_m = 80;
+    perm1.polygonPoints[2].xCoord_m = 80;
+    perm1.polygonPoints[3].xCoord_m = -100;
 
-    perm1.polygonPoints[0].yCoord_m = -10;
-    perm1.polygonPoints[1].yCoord_m = 10;
-    perm1.polygonPoints[2].yCoord_m = 10;
-    perm1.polygonPoints[3].yCoord_m = -10;
+    perm1.polygonPoints[0].yCoord_m = -100;
+    perm1.polygonPoints[1].yCoord_m = -100;
+    perm1.polygonPoints[2].yCoord_m = 60;
+    perm1.polygonPoints[3].yCoord_m = 60;
 
-    perm2.polygonPoints[0].xCoord_m = -15;
-    perm2.polygonPoints[1].xCoord_m = 5;
-    perm2.polygonPoints[2].xCoord_m = 5;
-    perm2.polygonPoints[3].xCoord_m = -15;
+    perm2.polygonPoints[0].xCoord_m = -100;
+    perm2.polygonPoints[1].xCoord_m = 100;
+    perm2.polygonPoints[2].xCoord_m = 100;
+    perm2.polygonPoints[3].xCoord_m = -100;
 
-    perm2.polygonPoints[0].yCoord_m = -10;
-    perm2.polygonPoints[1].yCoord_m = 10;
-    perm2.polygonPoints[2].yCoord_m = 10;
-    perm2.polygonPoints[3].yCoord_m = -10;
+    perm2.polygonPoints[0].yCoord_m = -25;
+    perm2.polygonPoints[1].yCoord_m = -25;
+    perm2.polygonPoints[2].yCoord_m = 100;
+    perm2.polygonPoints[3].yCoord_m = 100;
 
-    forb1.polygonPoints[0].xCoord_m = -1;
-    forb1.polygonPoints[1].xCoord_m = 1;
-    forb1.polygonPoints[2].xCoord_m = 1;
-    forb1.polygonPoints[3].xCoord_m = -1;
+    forb1.polygonPoints[0].xCoord_m = 40;
+    forb1.polygonPoints[1].xCoord_m = 50;
+    forb1.polygonPoints[2].xCoord_m = 50;
+    forb1.polygonPoints[3].xCoord_m = 40;
 
-    forb1.polygonPoints[0].yCoord_m = -1;
-    forb1.polygonPoints[1].yCoord_m = -1;
-    forb1.polygonPoints[2].yCoord_m = 1;
-    forb1.polygonPoints[3].yCoord_m = 1;
+    forb1.polygonPoints[0].yCoord_m = 50;
+    forb1.polygonPoints[1].yCoord_m = 50;
+    forb1.polygonPoints[2].yCoord_m = 60;
+    forb1.polygonPoints[3].yCoord_m = 60;
 
     geoPtrs[0] = perm1;
     geoPtrs[1] = perm2;
     geoPtrs[2] = forb1;
     /* end */
+
+    perm1.name[0] = '1';
+    perm2.name[0] = '2';
+    forb1.name[0] = 'f';
 
     enum COMMAND command;
 
@@ -178,7 +182,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
 int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, char numberOfGeofences)
 {
-    CartesianPosition monrPoint = {MONRdata.XPositionI32/1000.0, MONRdata.YPositionI32/1000.0, MONRdata.ZPositionI32/1000.0, 0.0};
+    const CartesianPosition monrPoint = {MONRdata.XPositionI32/1000.0, MONRdata.YPositionI32/1000.0, MONRdata.ZPositionI32/1000.0, 0.0};
     char isInPolygon = 0;
     int retval = 0;
 
@@ -193,9 +197,9 @@ int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, char n
         else
         {
             if (geofences[i].isPermitted)
-                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is outside the permitted area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
+                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is outside a permitted area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
             else
-                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is inside the forbidden area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
+                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is inside a forbidden area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
 
             retval = -1;
         }
