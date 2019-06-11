@@ -105,6 +105,9 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case COMM_INIT:
             loadGeofences(geoPtrs, &nGeof);
             break;
+        case COMM_MONI:
+            // Ignore old style MONR data
+            break;
         case COMM_MONR:
             UtilPopulateMONRStruct(busReceiveBuffer, &MONRMessage, 0);
             // TODO: react to output from SupervisionCheckGeofences
@@ -113,10 +116,12 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
         case COMM_OBC_STATE:
             break;
+        case COMM_LOG:
+            break;
         case COMM_INV:
             break;
         default:
-            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %d", command);
+            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
         }
     }
 }
@@ -227,7 +232,7 @@ int parseGeofencefile(char* geofenceFile, GeofenceType *geofences, int index){
 
 int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, char numberOfGeofences)
 {
-    CartesianPosition monrPoint = {MONRdata.XPositionI32/1000.0, MONRdata.YPositionI32/1000.0, MONRdata.ZPositionI32/1000.0, 0.0};
+    const CartesianPosition monrPoint = {MONRdata.XPositionI32/1000.0, MONRdata.YPositionI32/1000.0, MONRdata.ZPositionI32/1000.0, 0.0};
     char isInPolygon = 0;
     int retval = 0;
 
@@ -242,9 +247,9 @@ int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, char n
         else
         {
             if (geofences[i].isPermitted)
-                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is outside the permitted area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
+                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is outside a permitted area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
             else
-                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is inside the forbidden area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
+                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is inside a forbidden area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
 
             retval = -1;
         }

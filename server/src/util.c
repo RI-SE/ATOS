@@ -1811,7 +1811,7 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, s
     if ( result >= (ssize_t)(sizeof (char)+sizeof(dataLength)) )
     {
         // A message was received: extract the command, data length and data
-        *command = message[0];
+        *command = (unsigned char)message[0];
         memcpy(&dataLength, message + sizeof(char), sizeof(dataLength));
 
         if (dataLength != (size_t)(result) )
@@ -2987,6 +2987,7 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 
 I32 UtilPopulateMONRStruct(C8* rawMONR, MONRType *MONR, U8 debug)
 {
+    // TODO: size of rawMONR
     U16 Crc = 0, U16Data = 0;
     I16 I16Data = 0;
     U32 U32Data = 0;
