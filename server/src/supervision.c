@@ -49,12 +49,11 @@ typedef struct
     CartesianPosition *polygonPoints;
 } GeofenceType;
 
-int nGeof = 0;
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
 int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, char numberOfGeofences);
-int loadGeofences(GeofenceType *geofences);
+int loadGeofences(GeofenceType *geofences, int *nGeof);
 int parseGeofencefile(char* geofenceFile, GeofenceType *geofences, int index);
 
 
@@ -68,8 +67,9 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
     MONRType MONRMessage;
 
+    int nGeof = 0;
     GeofenceType *geoPtrs;
-    geoPtrs = malloc(sizeof (GeofenceType));
+    geoPtrs = (GeofenceType*)malloc(sizeof (GeofenceType) * 10);
 
 
 
@@ -111,13 +111,13 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         }
 
         if( command == COMM_CONNECT){
-            printf("nnConnected...\n");
-            printf("\nnGeof: %d\n", nGeof);
+
         }
 
         if (command == COMM_EXIT)
         {
             iExit = 1;
+            free(geoPtrs);
             LogMessage(LOG_LEVEL_INFO, "Supervision exiting...");
             (void)iCommClose();
         }
@@ -126,15 +126,37 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         {
         case COMM_INIT:
             // TODO: Read geofence file for each object and populate data structure
-            loadGeofences(geoPtrs);
+            loadGeofences(geoPtrs, &nGeof);
 
-            printf("Geof: %d\n", nGeof);
+
+            /*DEBUG PRINT*/
+            printf("\nParsing finished with %d objects \n", nGeof);
+
+            for (int i = 0; i < nGeof; i++) {
+                printf("Namn: %s\n", geoPtrs[i].name);
+                printf("Coordinates: %d\n", geoPtrs[i].numberOfPoints);
+
+                if(geoPtrs[i].isPermitted == 1){
+                    printf("Type: Permitted\n");
+                }
+                else{
+                     printf("Type: Forbidden\n");
+                }
+
+                printf("Points: \n");
+
+                for (int j = 0; j < geoPtrs[i].numberOfPoints; j++) {
+                    printf("X: %f\n", geoPtrs[i].polygonPoints[j].xCoord_m);
+                    printf("Y: %f\n", geoPtrs[i].polygonPoints[j].yCoord_m);
+                }
+            }
 
             break;
         case COMM_MONR:
             UtilPopulateMONRStruct(busReceiveBuffer, &MONRMessage, 0);
             // TODO: react to output from SupervisionCheckGeofences
             SupervisionCheckGeofences(MONRMessage, geoPtrs, nGeof);
+
             break;
         case COMM_OBC_STATE:
             break;
@@ -146,38 +168,30 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     }
 }
 
-int loadGeofences(GeofenceType *geofences){
+int loadGeofences(GeofenceType *geofences, int *nGeof){
         LogMessage(LOG_LEVEL_INFO,"Loading Geofences");
+        struct dirent *pDirent;
+        DIR *pDir;
 
-          struct dirent *pDirent;
-          DIR *pDir;
+        pDir = opendir (FENCE_DIRECTORY);
+        if (pDir == NULL) {
+            LogMessage(LOG_LEVEL_INFO,"Cannot open Geofence directory");
+            return 1;
+        }
 
-          pDir = opendir (FENCE_DIRECTORY);
-          if (pDir == NULL) {
-              LogMessage(LOG_LEVEL_INFO,"Cannot open directory");
-              return 1;
+        while ((pDirent = readdir(pDir)) != NULL) {
+            const char *ext = strrchr(pDirent->d_name, '.');
+                if(strcmp(ext, ".geofence") != 0){
+                    LogMessage(LOG_LEVEL_INFO, "File [%s] is not a valid .geofencefence file\n", pDirent->d_name);
+                }
+                else{
+                    LogMessage(LOG_LEVEL_INFO,"Opening [%s]\n", pDirent->d_name);
+                    parseGeofencefile(pDirent->d_name, geofences, *nGeof);
+                    (*nGeof)++;
+               }
           }
-
-          while ((pDirent = readdir(pDir)) != NULL) {
-               LogMessage(LOG_LEVEL_INFO,"Opening [%s]\n", pDirent->d_name);
-
-               const char *ext = strrchr(pDirent->d_name, '.');
-                   if(!ext || ext == pDirent->d_name){
-                        printf("Not a valid file");
-                   }
-                   else{
-                       nGeof++;
-                       geofences = realloc(geofences, (sizeof(GeofenceType) * (int)nGeof));
-
-                       int index = nGeof - 1;
-                       parseGeofencefile(pDirent->d_name, geofences, index);
-
-                  }
-          }
-
           closedir (pDir);
           return 0;
-
 }
 
 int parseGeofencefile(char* geofenceFile, GeofenceType *geofences, int index){
@@ -191,67 +205,64 @@ int parseGeofencefile(char* geofenceFile, GeofenceType *geofences, int index){
     size_t len = 0;
     ssize_t read;
 
-
     fp = fopen(pcFileNameBuffer, "r");
         if ( fp != NULL )
         {
            while ((read = getline(&line, &len, fp)) != -1) {
-                   //printf("Retrieved line of length %u :\n", read);
-                    //printf("%s", line);
-
-
-
-
+                   static int lineCount = 0;
                    char delim[] = ";";
                    char *ptr = strtok(line, delim);
-                   int pointCount = 0;
 
                    while (ptr != NULL)
                    {
                        if(strcmp( ptr,  "GEOFENCE" ) == 0){ //PARSE HEADER
+                           lineCount = 0;
+
                            ptr = strtok(NULL, delim);
-                           printf("Name: %s\n", ptr);
                            strcpy (geofences[ index ].name, ptr);
 
                            ptr = strtok(NULL, delim);
-                           printf("PointCount: %s\n", ptr);
                            geofences[ index ].numberOfPoints = atoi(ptr);
 
-                           geofences[index].polygonPoints = (CartesianPosition*)malloc(geofences[ index ].numberOfPoints*sizeof(CartesianPosition)); // allocate for points
-
+                           geofences[index].polygonPoints = (CartesianPosition*)malloc(geofences[ index ].numberOfPoints*sizeof(CartesianPosition));
                            ptr = strtok(NULL, delim);
 
                            if(strcmp( ptr,  "permitted" ) == 0){
                                 geofences[ index ].isPermitted = 1;
-                           }else {
+                           }
+                           else
+                           {
                                geofences[ index ].isPermitted = 0;
                            }
 
-                           printf("Type: %s\n", ptr);
-
-                           //strcpy (geofences[ index ].isPermitted, ptr);
                            ptr = strtok(NULL, delim);
-                           printf("Min Height: %s\n", ptr);
+                           // printf("Min Height: %s\n", ptr);
                            ptr = strtok(NULL, delim);
-                           printf("Max Height: %s\n", ptr);
+                           // printf("Max Height: %s\n", ptr);
                            ptr = strtok(NULL, delim);
                        }
 
                        if(strcmp( ptr, "LINE" ) == 0){
                            ptr = strtok(NULL, delim);
-                           printf("X: %s\n", ptr);
-                           geofences[index].polygonPoints[pointCount].xCoord_m = 0.12345;
+                          // printf("X: %s\n", ptr);
+                           geofences[index].polygonPoints[lineCount].xCoord_m = atof(ptr);
 
 
+                           printf("Saved X value: %f\n", geofences[index].polygonPoints[lineCount].xCoord_m);
                            ptr = strtok(NULL, delim);
-                           printf("Y: %s\n", ptr);
+                          // printf("Y: %s\n", ptr);
 
-                           geofences[index].polygonPoints[pointCount].yCoord_m = 0.12345;
-                           pointCount++;
+                          geofences[index].polygonPoints[lineCount].yCoord_m = atof(ptr);
+
+
+                           lineCount++;
                        }
                        ptr = strtok(NULL, delim);
+
                    }
+
                }
+
            LogMessage(LOG_LEVEL_INFO, "Closed [%s]\n", pcFileNameBuffer);
            fclose ( fp );
         }
