@@ -104,6 +104,22 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         {
         case COMM_INIT:
             loadGeofences(geoPtrs, &nGeof);
+
+            for (int i = 0; i < nGeof; i++) {
+                            printf("Namn: %s\n", geoPtrs[i].name);
+                            printf("Coordinates: %d\n", geoPtrs[i].numberOfPoints);
+                            if(geoPtrs[i].isPermitted == 1){
+                                printf("Type: Permitted\n");
+                            }
+                            else{
+                                 printf("Type: Forbidden\n");
+                            }
+                            printf("Points: \n");
+                            for (int j = 0; j < geoPtrs[i].numberOfPoints; j++) {
+                                printf("X: %f\n", geoPtrs[i].polygonPoints[j].xCoord_m);
+                                printf("Y: %f\n", geoPtrs[i].polygonPoints[j].yCoord_m);
+                            }
+                        }
             break;
         case COMM_MONI:
             // Ignore old style MONR data
@@ -205,8 +221,6 @@ int parseGeofencefile(char* geofenceFile, GeofenceType *geofences, int index){
                           // printf("X: %s\n", ptr);
                            geofences[index].polygonPoints[lineCount].xCoord_m = atof(ptr);
 
-
-                           printf("Saved X value: %f\n", geofences[index].polygonPoints[lineCount].xCoord_m);
                            ptr = strtok(NULL, delim);
                           // printf("Y: %s\n", ptr);
 
