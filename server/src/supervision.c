@@ -71,28 +71,6 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     GeofenceType *geoPtrs;
     geoPtrs = (GeofenceType*)malloc(sizeof (GeofenceType) * 10);
 
-
-
-    /* TODO: replace with permanent
-    const int nPts = 4;
-
-    GeofenceType perm1, perm2, forb1;
-
-    perm1.numberOfPoints = nPts;
-    perm2.numberOfPoints = nPts;
-    forb1.numberOfPoints = nPts;
-
-    perm1.isPermitted = 1;
-    perm2.isPermitted = 1;
-    forb1.isPermitted = 0;
-
-    perm1.polygonPoints = (CartesianPosition*)malloc(nPts*sizeof(CartesianPosition));
-    perm2.polygonPoints = (CartesianPosition*)malloc(nPts*sizeof(CartesianPosition));
-    forb1.polygonPoints = (CartesianPosition*)malloc(nPts*sizeof(CartesianPosition));
-
-
-    /* end */
-
     enum COMMAND command;
 
     (void)iCommInit();
@@ -125,38 +103,9 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         switch (command)
         {
         case COMM_INIT:
-            // TODO: Read geofence file for each object and populate data structure
             loadGeofences(geoPtrs, &nGeof);
-
-
-            /*DEBUG PRINT PARSED GEOFECES*/
-            /*
-            printf("\nParsing finished with %d objects \n", nGeof);
-
-            for (int i = 0; i < nGeof; i++) {
-                printf("Namn: %s\n", geoPtrs[i].name);
-                printf("Coordinates: %d\n", geoPtrs[i].numberOfPoints);
-
-                if(geoPtrs[i].isPermitted == 1){
-                    printf("Type: Permitted\n");
-                }
-                else{
-                     printf("Type: Forbidden\n");
-                }
-
-                printf("Points: \n");
-
-                for (int j = 0; j < geoPtrs[i].numberOfPoints; j++) {
-                    printf("X: %f\n", geoPtrs[i].polygonPoints[j].xCoord_m);
-                    printf("Y: %f\n", geoPtrs[i].polygonPoints[j].yCoord_m);
-                }
-            }
-            */
-
             break;
         case COMM_MONR:
-            LogMessage(LOG_LEVEL_WARNING, "MONR :)");
-
             UtilPopulateMONRStruct(busReceiveBuffer, &MONRMessage, 0);
             // TODO: react to output from SupervisionCheckGeofences
             SupervisionCheckGeofences(MONRMessage, geoPtrs, nGeof);
@@ -264,7 +213,6 @@ int parseGeofencefile(char* geofenceFile, GeofenceType *geofences, int index){
                        ptr = strtok(NULL, delim);
 
                    }
-
                }
 
            LogMessage(LOG_LEVEL_INFO, "Closed [%s]\n", pcFileNameBuffer);
