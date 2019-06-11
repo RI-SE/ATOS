@@ -129,7 +129,8 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             loadGeofences(geoPtrs, &nGeof);
 
 
-            /*DEBUG PRINT*/
+            /*DEBUG PRINT PARSED GEOFECES*/
+            /*
             printf("\nParsing finished with %d objects \n", nGeof);
 
             for (int i = 0; i < nGeof; i++) {
@@ -150,9 +151,12 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     printf("Y: %f\n", geoPtrs[i].polygonPoints[j].yCoord_m);
                 }
             }
+            */
 
             break;
         case COMM_MONR:
+            LogMessage(LOG_LEVEL_WARNING, "MONR :)");
+
             UtilPopulateMONRStruct(busReceiveBuffer, &MONRMessage, 0);
             // TODO: react to output from SupervisionCheckGeofences
             SupervisionCheckGeofences(MONRMessage, geoPtrs, nGeof);
