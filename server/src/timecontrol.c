@@ -30,6 +30,7 @@
 #include "logger.h"
 #include "logging.h"
 #include "maestroTime.h"
+#include "datadictionary.h"
 
 
 #define TIME_CONTROL_CONF_FILE_PATH  "conf/test.conf"
@@ -109,18 +110,14 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
     CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
     PrevMilliSecondU16 = CurrentMilliSecondU16;
 
-    // Search .conf file for time server IP
-    bzero(TextBufferC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
-    UtilSearchTextFile(TEST_CONF_FILE, "TimeServerIP=", "", TextBufferC8);
+    // Set time server IP
     bzero(ServerIPC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
-    strcat(ServerIPC8, TextBufferC8);
-    IpU32 = TimeControlIPStringToInt(ServerIPC8);
+    DataDictionaryGetTimeServerIPC8(GSD, ServerIPC8);
+    DataDictionaryGetTimeServerIPU32(GSD, &IpU32);
 
-    // Search .conf file for time server port
-    bzero(TextBufferC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
-    UtilSearchTextFile(TEST_CONF_FILE, "TimeServerPort=", "", TextBufferC8);
-    ServerPortU16 = (U16)atoi(TextBufferC8);
-
+    // Set time server port
+    DataDictionaryGetTimeServerPortU16(GSD, &ServerPortU16);
+    
     // If time server is specified, connect to it
     if(IpU32 != 0)
     {

@@ -800,9 +800,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 /* Get objects; name and drive file */
                 nbr_objects = 0;
                 vFindObjectsInfo(object_traj_file,object_address_name,&nbr_objects);
-//                (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhostU8);
-//                LogMessage(LOG_LEVEL_INFO,"ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
-//                LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
+                DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
@@ -856,7 +854,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 LogMessage(LOG_LEVEL_INFO,"ObjectControl is initialized");
                 LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
                 DataDictionarySetOBCStateU8(GSD, OBCState);
-                printf("State = %d\n", DataDictionaryGetOBCStateU8(GSD));
                 //Remove temporary file
                 remove(TEMP_LOG_FILE);
                 if(USE_TEMP_LOGFILE)
@@ -879,17 +876,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                     UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
 
-//                    MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, GPSTime,
-//                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
-//                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
-//                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
-//                                                                 0);
                     MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, GPSTime,
                                                                  OriginLatitude,
                                                                  OriginLongitude,
                                                                  OriginAltitude,
                                                                  0);
-
 
                     DisconnectU8 = 0;
 
