@@ -34,6 +34,9 @@
   -- Defines
   ------------------------------------------------------------*/
 
+// Macro for determining individual struct member sizes
+#define member_sizeof(type, member) sizeof(((type *)0)->member)
+
 #define LOCALHOST "127.0.0.1"
 
 #define RECV_MESSAGE_BUFFER 6200
@@ -83,7 +86,7 @@
 
 #define COMMAND_MONR_CODE 6
 #define COMMAND_MONR_NOFV 12
-#define COMMAND_MONR_MESSAGE_LENGTH sizeof(MONRType)-2
+#define COMMAND_MONR_MESSAGE_LENGTH sizeof(MONRType)
 
 #define COMMAND_VOIL_CODE 0xA100
 //#define COMMAND_VOIL_NOFV 2
@@ -451,7 +454,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                                 strcat(pcSendBuffer,TriggId);strcat(pcSendBuffer,";");
                                 strcat(pcSendBuffer,TriggAction);strcat(pcSendBuffer,";");
                                 strcat(pcSendBuffer,TriggDelay);strcat(pcSendBuffer,";");
-                                if(iCommSend(COMM_TOM, pcSendBuffer) < 0)
+                                if(iCommSend(COMM_TOM, pcSendBuffer, strlen(pcSendBuffer)+1) < 0)
                                 {
                                     LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending TOM command - entering error state");
                                     vSetState(&OBCState, OBC_STATE_ERROR);
@@ -462,7 +465,17 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         }
                     }
 
-
+                    if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE)
+                    {
+                        // Send MONR message on new byte format
+                        LogMessage(LOG_LEVEL_DEBUG, "Sending raw MONR message", buffer);
+                        if(iCommSend(COMM_MONR, buffer, COMMAND_MONR_MESSAGE_LENGTH) < 0)
+                        {
+                            LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONR command - entering error state");
+                            vSetState(&OBCState,OBC_STATE_ERROR);
+                            ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+                        }
+                    }
 
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
 
@@ -502,7 +515,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                     if(ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE)
                     {
-                        if(iCommSend(COMM_MONI,buffer) < 0)
+                        // Send MONR message on old (ASCII) format
+                        if(iCommSend(COMM_MONI,buffer,strlen(buffer)) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONI command - entering error state");
                             vSetState(&OBCState,OBC_STATE_ERROR);
@@ -991,7 +1005,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         strcat(pcSendBuffer,OriginLatitude);strcat(pcSendBuffer,";");
                         strcat(pcSendBuffer,OriginAltitude);
 
-                        if(iCommSend(COMM_OSEM,pcSendBuffer) < 0)
+                        if(iCommSend(COMM_OSEM,pcSendBuffer,strlen(pcSendBuffer)+1) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OSEM command - entering error state");
                             vSetState(&OBCState,OBC_STATE_ERROR);
@@ -1147,7 +1161,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 bzero(Buffer2, SMALL_BUFFER_SIZE_1);
                 Buffer2[0] = OBCState;
                 //LogPrint("Sending: %d (%s or %u)",OBCState,Buffer2, Buffer2[0]);
-                if(iCommSend(COMM_OBC_STATE,Buffer2) < 0)
+                if(iCommSend(COMM_OBC_STATE,Buffer2,SMALL_BUFFER_SIZE_1) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OBC_STATE command - entering error state");
                     vSetState(&OBCState,OBC_STATE_ERROR);
@@ -1455,12 +1469,13 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
 
     if(debug == 1)
     {
-        LogMessage(LOG_LEVEL_DEBUG,"MONR:");
-        LogMessage(LOG_LEVEL_DEBUG,"SyncWord = %d", MONRData->Header.SyncWordU16);
-        LogMessage(LOG_LEVEL_DEBUG,"TransmitterId = %d", MONRData->Header.TransmitterIdU8);
-        LogMessage(LOG_LEVEL_DEBUG,"PackageCounter = %d", MONRData->Header.MessageCounterU8);
-        LogMessage(LOG_LEVEL_DEBUG,"AckReq = %d", MONRData->Header.AckReqProtVerU8);
-        LogMessage(LOG_LEVEL_DEBUG,"MessageLength = %d", MONRData->Header.MessageLengthU32);
+        LogPrint("MONR:");
+        LogPrint("SyncWord = %d", MONRData->Header.SyncWordU16);
+        LogPrint("TransmitterId = %d", MONRData->Header.TransmitterIdU8);
+        LogPrint("PackageCounter = %d", MONRData->Header.MessageCounterU8);
+        LogPrint("AckReq = %d", MONRData->Header.AckReqProtVerU8);
+        LogPrint("MessageLength = %d", MONRData->Header.MessageLengthU32);
+        LogPrint("GPSSOW = %u",MONRData->GPSSOWU32);
     }
 
     return 0;

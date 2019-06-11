@@ -42,6 +42,7 @@
 #define PRIO_COMM_ARMD 110
 #define PRIO_COMM_STOP 120
 #define PRIO_COMM_MONI 80
+#define PRIO_COMM_MONR 80
 #define PRIO_COMM_EXIT 140
 #define PRIO_COMM_REPLAY 160
 #define PRIO_COMM_CONTROL 180
@@ -1035,31 +1036,32 @@ float UtilCalculateTimeToSync(ObjectPosition *OP)
 /*!
  * \brief UtilIsPointInPolygon Checks if a point lies within a polygon specified by a number of vertices using
  * the ray casting algorithm (see http://rosettacode.org/wiki/Ray-casting_algorithm).
- * \param pointX X coordinate of the point to check
- * \param pointY Y coordinate of the point to check
- * \param verticesX X coordinates of the vertex points defining the polygon to check
- * \param verticesY Y coordinates of the vertex points defining the polygon to check
- * \param nPtsInPolygon length of the two vertex arrays
+ * \param point Coordinate of the point to check
+ * \param vertices Coordinates of the vertex points defining the polygon to check
+ * \param nPtsInPolygon length of the vertex array
  * \return true if the point lies within the polygon, false otherwise
  */
-char UtilIsPointInPolygon(double pointX, double pointY, double * verticesX, double * verticesY, int nPtsInPolygon)
+char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition *vertices, unsigned int nPtsInPolygon)
 {
     int nIntersects = 0;
 
     // Count the number of intersections with the polygon
-    for (int i = 0; i < nPtsInPolygon-1; ++i)
+    for (unsigned int i = 0; i < nPtsInPolygon-1; ++i)
     {
-        if (rayFromPointIntersectsLine(pointX, pointY, verticesX[i], verticesY[i], verticesX[i+1], verticesY[i+1]))
+        if (rayFromPointIntersectsLine(point.xCoord_m, point.yCoord_m, vertices[i].xCoord_m, vertices[i].yCoord_m,
+                                       vertices[i+1].xCoord_m, vertices[i+1].yCoord_m))
         {
             nIntersects++;
         }
     }
 
     // If the first and last points are different, the polygon segment between them must also be included
-    if (fabs(verticesX[0] - verticesX[nPtsInPolygon-1]) > (double)(2*FLT_EPSILON) || fabs(verticesY[0] - verticesY[nPtsInPolygon-1]) > (double)(2*FLT_EPSILON) )
+    if (fabs(vertices[0].xCoord_m - vertices[nPtsInPolygon-1].xCoord_m) > (double)(2*FLT_EPSILON)
+            || fabs(vertices[0].yCoord_m - vertices[nPtsInPolygon-1].yCoord_m) > (double)(2*FLT_EPSILON) )
     {
-        if (rayFromPointIntersectsLine(pointX, pointY,
-                  verticesX[0], verticesY[0], verticesX[nPtsInPolygon-1], verticesY[nPtsInPolygon-1]))
+        if (rayFromPointIntersectsLine(point.xCoord_m, point.yCoord_m,
+                  vertices[0].xCoord_m, vertices[0].yCoord_m,
+                  vertices[nPtsInPolygon-1].xCoord_m, vertices[nPtsInPolygon-1].yCoord_m))
         {
             nIntersects++;
         }
@@ -1790,11 +1792,12 @@ int iCommClose()
  * \param timeRecv Receive time output variable
  * \return Size (in bytes) of received data
  */
-ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, struct timeval *timeRecv)
+ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, struct timeval *timeRecv)
 {
     char message[MQ_MSG_SIZE];
     ssize_t result = MQBusRecv(message, MQ_MSG_SIZE);
-
+    size_t dataLength = 0;
+    const size_t headerSize = sizeof(char) + sizeof(dataLength);
 
     if (result < 1 && errno != EAGAIN)
         util_error("Message queue error when receiving");
@@ -1805,19 +1808,35 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, stru
         TimeSetToCurrentSystemTime(timeRecv);
     }
 
-    if (result > 0)
+    if ( result >= (ssize_t)(sizeof (char)+sizeof(dataLength)) )
     {
-        // A message was received: extract the command and data
-        *command = message[0];
-        if((strlen(message) > 1) && (data != NULL))
+        // A message was received: extract the command, data length and data
+        *command = (unsigned char)message[0];
+        memcpy(&dataLength, message + sizeof(char), sizeof(dataLength));
+
+        if (dataLength != (size_t)(result) )
         {
-            if(messageSize < result )
-            {
-                LogMessage(LOG_LEVEL_WARNING, "Array too small to hold received message data");
-                result = messageSize;
-            }
-            strncat(data, &message[1], (unsigned long)result);
+            LogMessage(LOG_LEVEL_ERROR, "Received message with invalid length specification of %d (expected %d)", dataLength, result);
+            *command = COMM_INV;
+            return 0;
         }
+        else if ( dataLength > headerSize && data != NULL )
+        {
+            if(messageSize < dataLength-headerSize )
+            {
+                LogMessage(LOG_LEVEL_ERROR, "Array too small to hold received message data");
+                *command = COMM_INV;
+                return 0;
+            }
+            memcpy(data, message+headerSize, dataLength-headerSize);
+        }
+    }
+    else if (result > 0)
+    {
+        // Message length was not long enough to hold message length
+        LogMessage(LOG_LEVEL_ERROR, "Received message bus message with incorrect format");
+        *command = COMM_INV;
+        result = -1;
     }
     else
     {
@@ -1832,25 +1851,34 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const int messageSize, stru
  * \brief iCommSend Sends a command over the message bus
  * \param iCommand Command number
  * \param cpData Command data
+ * \param dataLength Length of command data array
  * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
  */
-int iCommSend(const enum COMMAND iCommand, const char* cpData)
+int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength)
 {
     unsigned int uiMessagePrio = 0;
     char cpMessage[MQ_MSG_SIZE];
-    char hej = 0;
-    unsigned long dataLength = 0;
     enum MQBUS_ERROR sendResult;
+    const size_t headerSize = sizeof(char) + sizeof(dataLength);
 
-    if (cpData != NULL)
-        dataLength = strlen(cpData);
+    // Force array and its length to be coupled
+    if (cpData == NULL || dataLength == 0)
+    {
+        cpData = NULL;
+        dataLength = 0;
+    }
 
-    if (dataLength > MQ_MSG_SIZE+1)
+    // Include header in data length
+    dataLength += headerSize;
+
+    // Check if message is too large to send
+    if (dataLength > MQ_MSG_SIZE)
     {
         LogMessage(LOG_LEVEL_ERROR, "Cannot send message %d of size %lu: maximum size is %lu", iCommand, dataLength+1, MQ_MSG_SIZE);
         return -1;
     }
 
+    // Clear send array
     bzero(cpMessage, MQ_MSG_SIZE);
 
     // Map command to a priority
@@ -1858,96 +1886,82 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData)
     {
     case COMM_STRT:
         uiMessagePrio = PRIO_COMM_STRT;
-        cpMessage[0] = (char)COMM_STRT;
         break;
     case COMM_ARMD:
         uiMessagePrio = PRIO_COMM_ARMD;
-        cpMessage[0] = (char)COMM_ARMD;
         break;
     case COMM_STOP:
         uiMessagePrio = PRIO_COMM_STOP;
-        cpMessage[0] = (char)COMM_STOP;
         break;
     case COMM_MONI:
         uiMessagePrio = PRIO_COMM_MONI;
-        cpMessage[0] = (char)COMM_MONI;
+        break;
+    case COMM_MONR:
+        uiMessagePrio = PRIO_COMM_MONR;
         break;
     case COMM_EXIT:
         uiMessagePrio = PRIO_COMM_EXIT;
-        cpMessage[0] = (char)COMM_EXIT;
         break;
     case COMM_REPLAY:
         uiMessagePrio = PRIO_COMM_REPLAY;
-        cpMessage[0] = (char)COMM_REPLAY;
         break;
     case COMM_CONTROL:
         uiMessagePrio = PRIO_COMM_CONTROL;
-        cpMessage[0] = (char)COMM_CONTROL;
         break;
     case COMM_ABORT:
         uiMessagePrio = PRIO_COMM_ABORT;
-        cpMessage[0] = (char)COMM_ABORT;
         break;
     case COMM_TOM:
         uiMessagePrio = PRIO_COMM_TOM;
-        cpMessage[0] = (char)COMM_TOM;
         break;
     case COMM_INIT:
         uiMessagePrio = PRIO_COMM_INIT;
-        cpMessage[0] = (char)COMM_INIT;
         break;
     case COMM_CONNECT:
         uiMessagePrio = PRIO_COMM_CONNECT;
-        cpMessage[0] = (char)COMM_CONNECT;
         break;
     case COMM_OBC_STATE:
         uiMessagePrio = PRIO_COMM_OBC_STATE;
-        cpMessage[0] = (char)COMM_OBC_STATE;
         break;
     case COMM_DISCONNECT:
         uiMessagePrio = PRIO_COMM_DISCONNECT;
-        cpMessage[0] = (char)COMM_DISCONNECT;
         break;
     case COMM_LOG:
         uiMessagePrio = PRIO_COMM_LOG;
-        cpMessage[0] = (char)COMM_LOG;
         break;
     case COMM_OSEM:
         uiMessagePrio = PRIO_COMM_OSEM;
-        cpMessage[0] = (char)COMM_OSEM;
         break;
     case COMM_VIOP:
         uiMessagePrio = PRIO_COMM_VIOP;
-        cpMessage[0] = (char)COMM_VIOP;
         break;
     case COMM_TRAJ:
         uiMessagePrio = PRIO_COMM_TRAJ;
-        cpMessage[0] = (char)COMM_TRAJ;
         break;
     case COMM_ASP:
         uiMessagePrio = PRIO_COMM_ASP;
-        cpMessage[0] = (char)COMM_ASP;
         break;
     case COMM_TRAJ_TOSUP:
         uiMessagePrio = PRIO_COMM_TRAJ_TOSUP;
-        cpMessage[0] = (char)COMM_TRAJ_TOSUP;
         break;
     case COMM_TRAJ_FROMSUP:
         uiMessagePrio = PRIO_COMM_TRAJ_FROMSUP;
-        cpMessage[0] = (char)COMM_TRAJ_FROMSUP;
         break;
     default:
         util_error("Unknown command");
     }
 
-    // Append message to command
-    if(cpData != NULL)
-    {
-        (void)strncat(&cpMessage[1], cpData, strlen(cpData));
-    }
+    cpMessage[0] = (char)iCommand;
+
+    // Append message length to command data
+    memcpy(cpMessage + sizeof(char), &dataLength, sizeof(dataLength));
+
+    // Append message to command data
+    if(dataLength > headerSize)
+        memcpy(cpMessage + headerSize, cpData, dataLength-headerSize);
 
     // Send message
-    sendResult = MQBusSend(cpMessage, strlen(cpMessage), uiMessagePrio);
+    sendResult = MQBusSend(cpMessage, dataLength, uiMessagePrio);
 
     // Check for send success
     switch (sendResult)
@@ -2964,6 +2978,101 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
       LogPrint("AckReqProtVerU8 = 0x%x", HeaderData->AckReqProtVerU8);
       LogPrint("MessageIdU16 = 0x%x", HeaderData->MessageIdU16);
       LogPrint("MessageLengthU32 = 0x%x", HeaderData->MessageLengthU32);
+    }
+
+    return 0;
+}
+
+
+
+I32 UtilPopulateMONRStruct(C8* rawMONR, MONRType *MONR, U8 debug)
+{
+    // TODO: size of rawMONR
+    U16 Crc = 0, U16Data = 0;
+    I16 I16Data = 0;
+    U32 U32Data = 0;
+    I32 I32Data = 0;
+    U64 U64Data = 0;
+    C8 *rdPtr = rawMONR; // Pointer to keep track of where in rawMONR we are currently reading
+
+    memcpy(&U16Data, rdPtr, sizeof(U16Data));
+    MONR->Header.SyncWordU16 = U16Data;
+    rdPtr += sizeof(U16Data);
+    U16Data = 0;
+
+    MONR->Header.TransmitterIdU8 = *(rdPtr++);
+    MONR->Header.MessageCounterU8 = *(rdPtr++);
+    MONR->Header.AckReqProtVerU8 = *(rdPtr++);
+
+    memcpy(&U16Data, rdPtr, sizeof(U16Data));
+    MONR->Header.MessageIdU16 = U16Data;
+    rdPtr += sizeof(U16Data);
+    U16Data = 0;
+
+    memcpy(&U32Data, rdPtr, sizeof(U32Data));
+    MONR->Header.MessageLengthU32 = U32Data;
+    rdPtr += sizeof(U32Data);
+    U32Data = 0;
+
+    memcpy(&U32Data, rdPtr, sizeof(U32Data));
+    MONR->GPSSOWU32 = U32Data;
+    rdPtr += sizeof(U32Data);
+    U32Data = 0;
+
+    memcpy(&I32Data, rdPtr, sizeof(I32Data));
+    MONR->XPositionI32 = I32Data;
+    rdPtr += sizeof(I32Data);
+    I32Data = 0;
+
+    memcpy(&I32Data, rdPtr, sizeof(I32Data));
+    MONR->YPositionI32 = I32Data;
+    rdPtr += sizeof(I32Data);
+    I32Data = 0;
+
+    memcpy(&I32Data, rdPtr, sizeof(I32Data));
+    MONR->ZPositionI32 = I32Data;
+    rdPtr += sizeof(I32Data);
+    I32Data = 0;
+
+    memcpy(&U16Data, rdPtr, sizeof(U16Data));
+    MONR->HeadingU16 = U16Data;
+    rdPtr += sizeof(U16Data);
+    U16Data = 0;
+
+    memcpy(&I16Data, rdPtr, sizeof(I16Data));
+    MONR->LongitudinalSpeedI16 = I16Data;
+    rdPtr += sizeof(I16Data);
+    I16Data = 0;
+
+    memcpy(&I16Data, rdPtr, sizeof(I16Data));
+    MONR->LateralSpeedI16 = I16Data;
+    rdPtr += sizeof(I16Data);
+    I16Data = 0;
+
+    memcpy(&I16Data, rdPtr, sizeof(I16Data));
+    MONR->LongitudinalAccI16 = I16Data;
+    rdPtr += sizeof(I16Data);
+    I16Data = 0;
+
+    memcpy(&I16Data, rdPtr, sizeof(I16Data));
+    MONR->LateralAccI16 = I16Data;
+    rdPtr += sizeof(I16Data);
+    I16Data = 0;
+
+    MONR->DriveDirectionU8 = *(rdPtr++);
+    MONR->StateU8 = *(rdPtr++);
+    MONR->ReadyToArmU8 = *(rdPtr++);
+    MONR->ErrorStatusU8 = *(rdPtr++);
+
+    if(debug == 1)
+    {
+        LogPrint("MONR:");
+        LogPrint("SyncWord = %d", MONR->Header.SyncWordU16);
+        LogPrint("TransmitterId = %d", MONR->Header.TransmitterIdU8);
+        LogPrint("PackageCounter = %d", MONR->Header.MessageCounterU8);
+        LogPrint("AckReq = %d", MONR->Header.AckReqProtVerU8);
+        LogPrint("MessageLength = %d", MONR->Header.MessageLengthU32);
+        LogPrint("GPSSOW = %u",MONR->GPSSOWU32);
     }
 
     return 0;
