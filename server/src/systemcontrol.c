@@ -200,7 +200,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     ObjectPosition OP;
     int i,i1;
-    char *StartPtr, *StopPtr, *CmdPtr, *StringPos;
+    char *StartPtr, *StopPtr, *CmdPtr, *OpeningQuotationMarkPtr, *ClosingQuotationMarkPtr, *StringPos;
     struct timespec tTime;
     enum COMMAND iCommand;
     char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
@@ -247,9 +247,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     U32 RVSSConfigU32;
     U32 RVSSMessageLengthU32;
     U16 PCDMessageCodeU16;
-    U8 FnuttFoundU8 = 0;
-    C8 *StartFnuttPtr;
-    C8 *EndFnuttPtr;
   
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO,"System control task running with PID: %i",getpid());
@@ -303,7 +300,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     //Do some initialization
                     
                     //Send COMM_DATA_DICT to notify to update data from DataDictionary
-                    iCommSend(COMM_DATA_DICT,ControlResponseBuffer);
+                    iCommSend(COMM_DATA_DICT, ControlResponseBuffer, sizeof(ControlResponseBuffer));
                     
                     server_state = SERVER_STATE_INITIALIZED;
                 }
@@ -356,7 +353,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             else if(ClientResult > 0 && ClientResult < SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH)
             {
-
+                // TODO: Move this entire decoding process into a separate function
                 for(i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i ++ )
                     bzero(SystemControlArgument[i],SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
 
@@ -369,65 +366,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 // Check so that all POST request mandatory content is contained in the message
                 for (i = 0; i < sizeof(POSTRequestMandatoryContent)/sizeof(POSTRequestMandatoryContent[0]); ++i)
                 {
-// FIXAFIXAFIXA <<<<<<< feature_DataDictionaryAndRVSS
-                    StopPtr = (char *)strchr(StartPtr, ',');
- 
-                    //Check for fnutts
-                    if(StopPtr != NULL)
-                    {
-                        StartFnuttPtr = NULL;
-                        EndFnuttPtr = NULL;
-                        
-                        i = 0;
-                        while(i < StopPtr-StartPtr)
-                        {
-                            if(*(StartPtr+i) == '"') FnuttFoundU8 = 1;
-                            i ++;
-                        }
 
-                        if(FnuttFoundU8 == 1)
-                        {
-                            i = 0;
-                            while(StartFnuttPtr == NULL || EndFnuttPtr == NULL) 
-                            {
-                                if(*(StartPtr+i) == '"' && StartFnuttPtr == NULL) StartFnuttPtr = StartPtr+i+1;
-                                else if (*(StartPtr+i) == '"' && EndFnuttPtr == NULL) EndFnuttPtr = StartPtr+i;
-                                i ++;
-                                if(i > strlen(pcBuffer))
-                                {
-                                    StartFnuttPtr = pcBuffer;
-                                    EndFnuttPtr = pcBuffer;
-                                    FnuttFoundU8 = 0;
-                                }
-                            } 
-                            //printf("Fnutt length: %ld\n", (uint64_t)EndFnuttPtr - (uint64_t)StartFnuttPtr);
-                        }
-                    }
-
-                    if(FnuttFoundU8 == 1)
-                    { 
-                        
-                        FnuttFoundU8 = 0;
-                        strncpy(SystemControlArgument[CurrentInputArgCount], StartFnuttPtr, (uint64_t)EndFnuttPtr - (uint64_t)StartFnuttPtr);
-                        //printf("Between fnutts: %s\n", SystemControlArgument[CurrentInputArgCount]);
-                        StartPtr = EndFnuttPtr + 1;
-                        //printf("1. CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount]);
-                        //CurrentInputArgCount ++;
-                        
-                    }                  
-                    else if(StopPtr == NULL)
-                    {
-                        strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)strchr(StartPtr, ')') - (uint64_t)StartPtr);
-                        //printf("2. CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount]);
-                        CurrentInputArgCount ++;
-                    } 
-                    else
-                    {
-                        strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
-                        StartPtr = StopPtr+1;
-                        //printf("3. CurrentInputArgCount=%d, value=%s\n", CurrentInputArgCount, SystemControlArgument[CurrentInputArgCount]);
-                        CurrentInputArgCount ++;
-// FIXAFIXAFIXA =======
                     StringPos = strstr(StringPos,POSTRequestMandatoryContent[i]);
                     if (StringPos == NULL)
                     {
@@ -437,10 +376,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     else
                     {
                         CmdPtr = StringPos + strlen(POSTRequestMandatoryContent[i]);
-// FIXAFIXAFIXA >>>>>>> dev
                     }
                 }
-                //printf("4. CurrentInputArgCount=%d\n", CurrentInputArgCount);
 
                 if (CmdPtr != NULL)
                 {
@@ -453,7 +390,10 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     }
                     else if (SystemControlVerifyHostAddress(HTTPHeader.Host))
                     {
+                        // Find opening parenthesis
                         StartPtr = strchr(CmdPtr, '(');
+
+                        // If there was no opening or closing parenthesis, the format is not correct
                         if (StartPtr == NULL || strchr(StartPtr,')') == NULL)
                             LogMessage(LOG_LEVEL_WARNING, "Received command not conforming to MSCP standards");
                         else
@@ -462,15 +402,52 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                             while (StopPtr != NULL)
                             {
                                 StopPtr = (char *)strchr(StartPtr, ',');
-                                if(StopPtr == NULL)
+
+                                // If there are no commas past this point, just copy the rest
+                                if (StopPtr == NULL)
+                                {
                                     strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)strchr(StartPtr, ')') - (uint64_t)StartPtr);
+                                }
+                                // Otherwise, check if the comma we found was inside quotation marks
                                 else
-                                    strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
+                                {
+                                    OpeningQuotationMarkPtr = (char *)strchr(StartPtr,'"');
+
+                                    if (OpeningQuotationMarkPtr == NULL)
+                                    {
+                                        // It was not within quotation marks: copy until the next comma
+                                        strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)StopPtr - (uint64_t)StartPtr);
+                                    }
+                                    else if (OpeningQuotationMarkPtr != NULL && OpeningQuotationMarkPtr < StopPtr)
+                                    {
+                                        // A quotation mark was found and it was before the next comma: find the closing quotation mark
+                                        ClosingQuotationMarkPtr = (char *)strchr(OpeningQuotationMarkPtr+1,'"');
+
+
+                                        if (ClosingQuotationMarkPtr == NULL)
+                                        {
+                                            CmdPtr = NULL;
+                                            StopPtr = NULL;
+                                            LogMessage(LOG_LEVEL_WARNING,"Received MSCP command with single quotation mark");
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            // Copy all arguments within quotation marks including the quotation marks
+                                            strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)(ClosingQuotationMarkPtr+1) - (uint64_t)StartPtr);
+                                            // Find next comma after closing quotation mark
+                                            StopPtr = strchr(ClosingQuotationMarkPtr, ',');
+                                        }
+                                    }
+                                }
                                 StartPtr = StopPtr+1;
                                 CurrentInputArgCount ++;
                             }
 
-                            SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+                            if (CmdPtr != NULL)
+                                SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+                            else
+                                LogMessage(LOG_LEVEL_WARNING, "Invalid MSCP command received");
                         }
                     }
                     else {
@@ -629,7 +606,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             DataDictionaryGetOriginLatitudeC8(GSD, ControlResponseBuffer);strcat(ControlResponseBuffer,";");
             DataDictionaryGetOriginLongitudeC8(GSD, ControlResponseBuffer);strcat(ControlResponseBuffer,";");
             DataDictionaryGetOriginAltitudeC8(GSD, ControlResponseBuffer);strcat(ControlResponseBuffer,";");
-            iCommSend(COMM_OSEM,ControlResponseBuffer);
+            iCommSend(COMM_OSEM, ControlResponseBuffer, sizeof(ControlResponseBuffer));
             SystemControlSendControlResponse(strlen(ParameterListC8) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetTestOrigin:", ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
         break;
         case GetServerParameter_1:
@@ -649,7 +626,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 SystemControlSetServerParameter(GSD, SystemControlArgument[0], SystemControlArgument[1], 1);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:", ControlResponseBuffer, 0, &ClientSocket, 0);
                 //Send COMM_DATA_DICT to notify to update data from DataDictionary    
-                iCommSend(COMM_DATA_DICT,ControlResponseBuffer);
+                iCommSend(COMM_DATA_DICT, ControlResponseBuffer, sizeof(ControlResponseBuffer));
 
             } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in SetServerParameter(Name, Value)!"); SystemControlCommand = Idle_0;}
         break;
