@@ -371,7 +371,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         vDisconnectObject(&socket_fd[iIndex]);
                     }
 
-                    /* Close safety socket */
+                    // Close safety socket
                     for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
                     {
                         vCloseSafetyChannel(&safety_socket_fd[iIndex]);
@@ -753,7 +753,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             else if(iCommand == COMM_VIOP && OBCState == OBC_STATE_RUNNING/*OBC_STATE_INITIALIZED*/)
             {
                 /*Build the VOIL message*/
-                MessageLength = ObjectControlBuildVOILMessage(MessageBuffer, &VOILData, (C8*)GSD->VOILData, 0);
+                MessageLength = ObjectControlBuildVOILMessage(MessageBuffer, &VOILData, (C8*)GSD->VOILData, 1);
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
                     /*Here we send the VOIL message, if IP-address found*/
@@ -788,6 +788,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 /* Get objects; name and drive file */
                 nbr_objects = 0;
                 vFindObjectsInfo(object_traj_file,object_address_name,&nbr_objects);
+                printf("[ObjectControl] Number of objects = %d\n", nbr_objects);
                 (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhost);
                 LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d", iForceObjectToLocalhost);
 
@@ -1120,8 +1121,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
 
             (void)nanosleep(&sleep_time,&ref_time);
+
         }
     }
+
 }
 
 
