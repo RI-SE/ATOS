@@ -12,11 +12,13 @@
 #define __SUPERVISORCONTROL_H_INCLUDED__
 
 
+#include "util.h"
+#include "logging.h"
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD);
+void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel);
 
 
 #endif 

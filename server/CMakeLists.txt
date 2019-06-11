@@ -10,6 +10,7 @@ project (Maestro)
 include_directories(inc)
 include_directories(../util/C/logging)
 include_directories(../util/C/time)
+include_directories(../util/C/MQBus)
 include(GNUInstallDirs)
 
 # Add logging library (hint at some locations)
@@ -32,6 +33,11 @@ add_library(MaestroLogging
 add_library(MaestroTime
   ../util/C/time/maestroTime.h
   ../util/C/time/maestroTime.c
+)
+
+add_library(MQBus
+  ../util/C/MQBus/mqbus.h
+  ../util/C/MQBus/mqbus.c
 )
 
 # Create library
@@ -76,7 +82,9 @@ install (TARGETS TEServer DESTINATION bin)
 target_link_libraries(util rt m)
 target_link_libraries(util m)
 target_link_libraries(util rt)
+target_link_libraries(util MaestroLogging MaestroTime MQBus)
+
 target_link_libraries(UserControl util objctrl MaestroLogging MaestroTime)
-target_link_libraries(util MaestroLogging MaestroTime)
+
 target_link_libraries(TEServer util)
-target_link_libraries(TEServer MaestroLogging MaestroTime)
+target_link_libraries(TEServer MaestroLogging MaestroTime MQBus)

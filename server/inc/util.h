@@ -15,7 +15,6 @@
   -- Include files.
   ------------------------------------------------------------*/
 #include <inttypes.h>
-#include <mqueue.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -27,6 +26,7 @@
 #include <poll.h>
 #include <netdb.h>
 #include <pthread.h>
+#include "mqbus.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -36,44 +36,7 @@
 #define ISO_PROTOCOL_VERSION 2
 #define ACK_REQ 0
 
-#define MQ_LG     "/TEServer-LG"
-#define MQ_SV     "/TEServer-SV"
-#define MQ_OC     "/TEServer-OC"
-#define MQ_VA     "/TEServer-VA"
-#define MQ_SC     "/TEServer-SC"
-#define MQ_SI     "/TEServer-SI"
-
-#define MQ_MAX_MESSAGE_LENGTH 4096
-#define MQ_MAX_MSG            10
-#define MQ_PERMISSION         0660
-
-#define IPC_RECV       0x01
-#define IPC_SEND       0x02
-#define IPC_RECV_SEND  0x03
-
-#define COMM_STRT 1
-#define COMM_ARMD 2
-#define COMM_STOP 3
-#define COMM_MONI 4
-#define COMM_EXIT 5
-#define COMM_REPLAY 6
-#define COMM_CONTROL 7
-#define COMM_ABORT 8
-#define COMM_TOM 9
-#define COMM_INIT 10
-#define COMM_CONNECT 11
-#define COMM_OBC_STATE 12
-#define COMM_DISCONNECT 13
-#define COMM_LOG 14
-#define COMM_VIOP 15
-#define COMM_TRAJ 16
-#define COMM_TRAJ_TOSUP 17
-#define COMM_TRAJ_FROMSUP 18
-#define COMM_ASP 19
-#define COMM_OSEM 20
-#define COMM_DATA_DICT 21
-#define COMM_INV 255
-
+#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1) // Message queue data minus one byte for the command
 
 #define SAFETY_CHANNEL_PORT 53240
 #define CONTROL_CHANNEL_PORT 53241
@@ -83,6 +46,7 @@
 
 #define MAX_UTIL_VARIBLE_SIZE 512
 
+// TODO: Make these constants have more descriptive names
 #define a	6378137.0							            //meters in WGS84
 #define k	298.257223563 						        //in WGS84, f = 1/298.257223563
 #define b	6356752.3142451794975639665996337	//b = (1-f)*a
@@ -260,7 +224,7 @@
 
 // The do - while loop makes sure that each function call is properly handled using macros
 #define LOG_SEND(buf, ...) \
-    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf);printf("%s\n",buf);fflush(stdout);} while (0)
+    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);printf("%s\n",buf);fflush(stdout);} while (0)
 
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
@@ -295,6 +259,34 @@
 #define DD_CONTROL_BUFFER_SIZE_20 20
 #define DD_CONTROL_BUFFER_SIZE_52 52
 #define DD_CONTROL_TASK_PERIOD_MS 1
+
+//! Internal message queue communication identifiers
+enum COMMAND
+{
+COMM_STRT = 1,
+COMM_ARMD = 2,
+COMM_STOP = 3,
+COMM_MONI = 4,
+COMM_EXIT = 5,
+COMM_REPLAY = 6,
+COMM_CONTROL = 7,
+COMM_ABORT = 8,
+COMM_TOM = 9,
+COMM_INIT = 10,
+COMM_CONNECT = 11,
+COMM_OBC_STATE = 12,
+COMM_DISCONNECT = 13,
+COMM_LOG = 14,
+COMM_VIOP = 15,
+COMM_TRAJ = 16,
+COMM_TRAJ_TOSUP = 17,
+COMM_TRAJ_FROMSUP = 18,
+COMM_ASP = 19,
+COMM_OSEM = 20,
+COMM_DATA_DICT = 21,
+COMM_MONR = 239,
+COMM_INV = 255
+};
 
 typedef struct
 {
@@ -722,8 +714,30 @@ typedef enum {
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
     OBC_STATE_RUNNING,
-    OBC_STATE_ERROR,
+    OBC_STATE_ERROR
 } OBCState_t;
+
+#define HTTP_HEADER_MAX_LENGTH 64
+typedef struct {
+    char AcceptCharset[HTTP_HEADER_MAX_LENGTH];
+    char AcceptEncoding[HTTP_HEADER_MAX_LENGTH];
+    char AcceptLanguage[HTTP_HEADER_MAX_LENGTH];
+    char Authorization[HTTP_HEADER_MAX_LENGTH];
+    char Expect[HTTP_HEADER_MAX_LENGTH];
+    char From[HTTP_HEADER_MAX_LENGTH];
+    char Host[HTTP_HEADER_MAX_LENGTH];
+    char IfMatch[HTTP_HEADER_MAX_LENGTH];
+    char IfModifiedSince[HTTP_HEADER_MAX_LENGTH];
+    char IfNoneMatch[HTTP_HEADER_MAX_LENGTH];
+    char IfRange[HTTP_HEADER_MAX_LENGTH];
+    char IfUnmodifiedSince[HTTP_HEADER_MAX_LENGTH];
+    char MaxForwards[HTTP_HEADER_MAX_LENGTH];
+    char ProxyAuthorization[HTTP_HEADER_MAX_LENGTH];
+    char Range[HTTP_HEADER_MAX_LENGTH];
+    char Referer[HTTP_HEADER_MAX_LENGTH];
+    char TE[HTTP_HEADER_MAX_LENGTH];
+    char UserAgent[HTTP_HEADER_MAX_LENGTH];
+} HTTPHeaderContent;
 
 
 typedef enum {
@@ -763,6 +777,9 @@ typedef struct
   -- Function declarations.
   ------------------------------------------------------------*/
 
+// HTTP decoding functions
+void UtilDecodeHTTPRequestHeader(char* request, HTTPHeaderContent* header);
+
 // GPS TIME FUNCTIONS
 uint64_t UtilgetGPSmsFromUTCms(uint64_t UTCms);
 uint64_t UtilgetUTCmsFromGPSms(uint64_t GPSms);
@@ -786,10 +803,10 @@ void util_error(char* message);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
-int iCommInit(const unsigned int, const char*, const int);
+int iCommInit(void);
 int iCommClose();
-int iCommRecv(int*, char*, const int, char*);
-int iCommSend(const int,const char*);
+ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, struct timeval *timeRecv);
+int iCommSend(const enum COMMAND iCommand, const char* data, size_t dataLength);
 
 char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
@@ -803,7 +820,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition *OP, int StartIndex, dou
 int UtilSetSyncPoint(ObjectPosition *OP, double x, double y, double z, double time);
 float UtilCalculateTimeToSync(ObjectPosition *OP);
 
-char UtilIsPointInPolygon(double pointX, double pointY, double * polyX, double * polyY, int nPtsInPolygon);
+char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition *polygonPoints, unsigned int nPtsInPolygon);
 
 int UtilCountFileRows(FILE *fd);
 int UtilReadLineCntSpecChars(FILE *fd, char *Buffer);
@@ -855,6 +872,8 @@ I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *H
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
 I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
+
+I32 UtilPopulateMONRStruct(C8* rawMONR, MONRType *MONR, U8 debug);
 
 typedef struct {
   uint64_t timestamp;

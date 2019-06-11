@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
-#include <time.h>  
+#include <time.h>
 
 
 #include <sys/socket.h>
@@ -28,7 +28,6 @@
 
 #include "timecontrol.h"
 #include "logger.h"
-#include "logging.h"
 #include "maestroTime.h"
 #include "datadictionary.h"
 
@@ -70,13 +69,11 @@ static void TimeControlDecodeTimeBuffer(TimeType* GPSTime, C8* TimeBuffer, C8 de
   -- Private variables.
   ------------------------------------------------------------*/
 #define MODULE_NAME "TimeControl"
-static const LOG_LEVEL logLevel = LOG_LEVEL_INFO;
-
 
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
-int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
+void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
 
     C8 TextBufferC8[TIME_CONTROL_HOSTNAME_BUFFER_SIZE];
@@ -92,7 +89,7 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
     C8 SendData[TIME_INTERVAL_NUMBER_BYTES] = {0, 0, 3, 0xe8};
     //C8 SendData[4] = {0, 0, 0, 1};
     struct timespec sleep_time, ref_time;
-    C8 MqRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
+    C8 MqRecvBuffer[MBUS_MAX_DATALEN];
     struct timeval tv, ExecTime;
     struct tm *tm;
 
@@ -103,6 +100,9 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
 
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO,"Time control task running with PID: %i",getpid());
+
+    if(iCommInit())
+        util_error("Unable to initialize message bus connection");
 
     GPSTime->isGPSenabled = 0;
 
@@ -225,7 +225,6 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
                 TimeControlSendUDPData(&SocketfdI32, &time_addr, SendData, TIME_INTERVAL_NUMBER_BYTES, 0);
             }
             iExit = 1;
-            LogMessage(LOG_LEVEL_INFO,"Time control exiting");
             (void)iCommClose();
         }
 
@@ -243,6 +242,8 @@ int timecontrol_task(TimeType *GPSTime, GSDType *GSD)
             nanosleep(&sleep_time,&ref_time);
         }
     }
+
+    LogMessage(LOG_LEVEL_INFO,"Time control exiting");
 }
 
 U16 TimeControlGetMillisecond(TimeType *GPSTime)
