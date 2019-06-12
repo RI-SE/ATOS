@@ -468,7 +468,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE)
                     {
                         // Send MONR message on new byte format
-                        LogMessage(LOG_LEVEL_DEBUG, "Sending raw MONR message", buffer);
+                        LogMessage(LOG_LEVEL_INFO, "Sending raw MONR message");
                         if(iCommSend(COMM_MONR, buffer, COMMAND_MONR_MESSAGE_LENGTH) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONR command - entering error state");
