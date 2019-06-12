@@ -113,7 +113,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             // Ignore old style MONR data
             break;
         case COMM_MONR:
-            UtilPopulateMONRStruct(busReceiveBuffer, &MONRMessage, 0);
+            UtilPopulateMONRStruct(busReceiveBuffer, sizeof(busReceiveBuffer), &MONRMessage, 0);
             // TODO: react to output from SupervisionCheckGeofences
             SupervisionCheckGeofences(MONRMessage, geoPtrs, nGeof);
 
