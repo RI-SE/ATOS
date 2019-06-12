@@ -487,10 +487,10 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         }
 
         else if(iCommand == COMM_MONI){
-          //printf("Monr sys %s\n", pcRecvBuffer);
-	  C8 data[strlen(pcRecvBuffer)];
-	  bzero(data, strlen(data));
-	  strcat(data, pcRecvBuffer);
+          printf("Monr sys %s\n", pcRecvBuffer);
+            C8 data[strlen(pcRecvBuffer)];
+            bzero(data, strlen(data));
+            strcat(data, pcRecvBuffer);
 
           UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, data, sizeof(data), 0);
         }

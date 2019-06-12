@@ -1816,7 +1816,7 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, s
 
         if (dataLength != (size_t)(result) )
         {
-            LogMessage(LOG_LEVEL_ERROR, "Received message with invalid length specification of %d (expected %d)", dataLength, result);
+            LogMessage(LOG_LEVEL_ERROR, "Received message with invalid length specification field: %d bytes, but %d bytes were received", dataLength, result);
             *command = COMM_INV;
             return 0;
         }
@@ -2984,8 +2984,15 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 }
 
 
-
-I32 UtilPopulateMONRStruct(C8* rawMONR, MONRType *MONR, U8 debug)
+/*!
+ * \brief UtilPopulateMONRStruct Takes an array of raw MONR data and fills a MONRType struct with the content
+ * \param rawMONR Array of raw MONR data
+ * \param rawMONRsize Size of raw MONR data array
+ * \param MONR Struct where MONR data should be placed
+ * \param debug Boolean enabling debug printouts
+ * \return -1 on failure, 0 on success
+ */
+I32 UtilPopulateMONRStruct(C8* rawMONR, size_t rawMONRsize, MONRType *MONR, U8 debug)
 {
     // TODO: size of rawMONR
     U16 Crc = 0, U16Data = 0;
@@ -2994,6 +3001,12 @@ I32 UtilPopulateMONRStruct(C8* rawMONR, MONRType *MONR, U8 debug)
     I32 I32Data = 0;
     U64 U64Data = 0;
     C8 *rdPtr = rawMONR; // Pointer to keep track of where in rawMONR we are currently reading
+
+    if (rawMONRsize < sizeof (MONRType))
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Raw MONR array too small to hold all necessary MONR data");
+        return -1;
+    }
 
     memcpy(&U16Data, rdPtr, sizeof(U16Data));
     MONR->Header.SyncWordU16 = U16Data;
