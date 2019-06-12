@@ -239,6 +239,7 @@ int parseGeofenceFile(char* geofenceFile, GeofenceType *geofences, unsigned int 
                }
 
            LogMessage(LOG_LEVEL_INFO, "Closed [%s]\n", pcFileNameBuffer);
+
            fclose ( fp );
         }
         else
