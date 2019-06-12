@@ -337,9 +337,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     if (iCommInit())
         util_error("Unable to connect to message queue bus");
 
-    LogPrint("MONR bytelens: %d, %d", COMMAND_MONR_MESSAGE_LENGTH, sizeof(MONRType));
-    exit(0);
-
     while(!iExit)
     {
         if(OBCState == OBC_STATE_ERROR)
@@ -1163,7 +1160,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             {
                 bzero(Buffer2, SMALL_BUFFER_SIZE_1);
                 Buffer2[0] = OBCState;
-                //LogPrint("Sending: %d (%s or %u)",OBCState,Buffer2, Buffer2[0]);
                 if(iCommSend(COMM_OBC_STATE,Buffer2,SMALL_BUFFER_SIZE_1) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OBC_STATE command - entering error state");
