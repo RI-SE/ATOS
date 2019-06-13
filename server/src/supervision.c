@@ -19,7 +19,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <dirent.h>
-
+#include <signal.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -58,6 +58,26 @@ int parseGeofenceFile(char* geofenceFile, GeofenceType *geofences, unsigned int 
 
 void freeGeofences(GeofenceType *geoFence, unsigned int *nGeof);
 void printFences(GeofenceType *geoFence, unsigned int nGeof);
+
+
+/*------------------------------------------------------------
+-- Public functions
+------------------------------------------------------------*/
+void sig_handlerSV(int signo)
+  {
+    if (signo == SIGINT)
+          printf("received SIGINT in Supervision\n");
+          printf("Shutting down Supervision with pid: %d\n", getpid());
+          pid_t iPid = getpid(); /* Process gets its id.*/
+          //kill(iPid, SIGINT);
+          exit(1);
+    if (signo == SIGUSR1)
+          printf("received SIGUSR1\n");
+    if (signo == SIGKILL)
+          printf("received SIGKILL\n");
+    if (signo == SIGSTOP)
+          printf("received SIGSTOP\n");
+}
 
 /*------------------------------------------------------------
 -- The main function.
@@ -113,7 +133,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             // Ignore old style MONR data
             break;
         case COMM_MONR:
-            UtilPopulateMONRStruct(busReceiveBuffer, &MONRMessage, 0);
+            UtilPopulateMONRStruct(busReceiveBuffer, sizeof(busReceiveBuffer), &MONRMessage, 0);
             // TODO: react to output from SupervisionCheckGeofences
             SupervisionCheckGeofences(MONRMessage, geoPtrs, nGeof);
 
@@ -127,6 +147,8 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         default:
             LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
         }
+        if (signal(SIGINT, sig_handlerSV) == SIG_ERR)
+            printf("\ncan't catch SIGINT\n");
     }
 }
 
