@@ -1045,6 +1045,11 @@ char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition *vertices, 
 {
     int nIntersects = 0;
 
+    if (nPtsInPolygon == 0)
+    {
+        return -1;
+    }
+
     // Count the number of intersections with the polygon
     for (unsigned int i = 0; i < nPtsInPolygon-1; ++i)
     {
@@ -1054,7 +1059,6 @@ char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition *vertices, 
             nIntersects++;
         }
     }
-
     // If the first and last points are different, the polygon segment between them must also be included
     if (fabs(vertices[0].xCoord_m - vertices[nPtsInPolygon-1].xCoord_m) > (double)(2*FLT_EPSILON)
             || fabs(vertices[0].yCoord_m - vertices[nPtsInPolygon-1].yCoord_m) > (double)(2*FLT_EPSILON) )
