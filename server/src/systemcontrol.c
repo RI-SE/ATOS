@@ -419,6 +419,10 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     LogMessage(LOG_LEVEL_WARNING,"Received badly formatted HTTP request: <%s>, must contain \"POST\" and \"\\r\\n\\r\\n\"",pcBuffer);
                 }
             }
+            else
+            {
+                LogMessage(LOG_LEVEL_WARNING, "Ignored received TCP message which was too large to handle");
+            }
         }
         else if(ModeU8 == 1)
         {   /* use util.c function to call time
