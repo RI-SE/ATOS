@@ -434,7 +434,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                                         else
                                         {
                                             // Copy all arguments within quotation marks including the quotation marks
-                                            strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr, (uint64_t)(ClosingQuotationMarkPtr+1) - (uint64_t)StartPtr);
+                                            strncpy(SystemControlArgument[CurrentInputArgCount], OpeningQuotationMarkPtr+1, (uint64_t)(ClosingQuotationMarkPtr) - (uint64_t)(OpeningQuotationMarkPtr+1));
+                                            LogPrint("inside fnutts: <%s>",SystemControlArgument[CurrentInputArgCount]);
                                             // Find next comma after closing quotation mark
                                             StopPtr = strchr(ClosingQuotationMarkPtr, ',');
                                         }
