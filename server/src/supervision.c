@@ -33,8 +33,6 @@
 #define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
 #define MAX_GEOFENCE_NAME_LEN 256
 #define GEOFENCE_DIRECTORY "./geofence/"
-/* Difference of leap seconds between UTC and ETSI */
-#define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
 #define MODULE_NAME "Supervisor"
 
@@ -49,15 +47,18 @@ typedef struct
     CartesianPosition *polygonPoints;
 } GeofenceType;
 
+
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
+
 int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, unsigned int numberOfGeofences);
 int loadGeofenceFiles(GeofenceType *geofences[], unsigned int *nGeof);
 int parseGeofenceFile(char* geofenceFile, GeofenceType *geofence);
 
 void freeGeofences(GeofenceType *geoFence, unsigned int *nGeof);
 void printFences(GeofenceType *geoFence, unsigned int nGeof);
+
 
 /*------------------------------------------------------------
 -- The main function.
@@ -106,6 +107,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
             if (loadGeofenceFiles(&geofenceArray, &numberOfGeofences) == -1)
                 util_error("Unable to load geofences");
+
             break;
         case COMM_MONI:
             // Ignore old style MONR data
@@ -291,11 +293,11 @@ int parseGeofenceFile(char* geofenceFile, GeofenceType *geofence){
 }
 
 /*!
- * \brief SupervisionCheckGeofences
- * \param MONRdata
- * \param geofences
- * \param numberOfGeofences
- * \return
+ * \brief SupervisionCheckGeofences Checks all geofences to verify that the point represented by the MONR data lies within all permitted geofences and outside all forbidden geofences
+ * \param MONRdata MONR struct containing the object coordinate data
+ * \param geofences Struct array containing all geofences
+ * \param numberOfGeofences Length of struct array
+ * \return 1 if MONR coordinate violates a geofence, 0 if not. -1 on error
  */
 int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, unsigned int numberOfGeofences)
 {
@@ -325,7 +327,7 @@ int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, unsign
             else
                 LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is inside a forbidden area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
 
-            retval = -1;
+            retval = 1;
         }
     }
 
@@ -333,14 +335,14 @@ int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, unsign
 }
 
 /*!
- * \brief freeGeofences
- * \param geofences
- * \param nGeof
+ * \brief freeGeofences Frees allocated memory for geofence struct array
+ * \param geofences Struct array containing geofences
+ * \param nGeofences Length of struct array
  */
-void freeGeofences(GeofenceType *geofences, unsigned int *nGeof){
-    for(unsigned int i = 0; i < *nGeof; i++){
+void freeGeofences(GeofenceType *geofences, unsigned int *nGeofences){
+    for(unsigned int i = 0; i < *nGeofences; i++){
         free(geofences[i].polygonPoints);
     }
     free(geofences);
-    *nGeof = 0;
+    *nGeofences = 0;
 }
