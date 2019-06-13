@@ -801,7 +801,7 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
 int iCommInit(void);
-int iCommClose();
+int iCommClose(void);
 ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, struct timeval *timeRecv);
 int iCommSend(const enum COMMAND iCommand, const char* data, size_t dataLength);
 
@@ -870,7 +870,7 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
 I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 
-I32 UtilPopulateMONRStruct(C8* rawMONR, MONRType *MONR, U8 debug);
+I32 UtilPopulateMONRStruct(C8* rawMONR, size_t rawMONRsize, MONRType *MONR, U8 debug);
 
 typedef struct {
   uint64_t timestamp;

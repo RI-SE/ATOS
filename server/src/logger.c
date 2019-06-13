@@ -106,8 +106,6 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     (void)strcat(pcLogFile," ");
     (void)strcat(pcLogFileComp," ");
 
-
-
     // Execution mode
     int LoggerExecutionMode = LOG_CONTROL_MODE;
     //int test =100;
@@ -119,7 +117,6 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     while(!iExit)
     {
-
         bzero(busReceiveBuffer, sizeof(busReceiveBuffer));
 
         (void)iCommRecv(&command, busReceiveBuffer, sizeof(busReceiveBuffer), &recvTime);

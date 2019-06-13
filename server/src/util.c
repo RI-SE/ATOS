@@ -1052,6 +1052,11 @@ char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition *vertices, 
 {
     int nIntersects = 0;
 
+    if (nPtsInPolygon == 0)
+    {
+        return -1;
+    }
+
     // Count the number of intersections with the polygon
     for (unsigned int i = 0; i < nPtsInPolygon-1; ++i)
     {
@@ -1061,7 +1066,6 @@ char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition *vertices, 
             nIntersects++;
         }
     }
-
     // If the first and last points are different, the polygon segment between them must also be included
     if (fabs(vertices[0].xCoord_m - vertices[nPtsInPolygon-1].xCoord_m) > (double)(2*FLT_EPSILON)
             || fabs(vertices[0].yCoord_m - vertices[nPtsInPolygon-1].yCoord_m) > (double)(2*FLT_EPSILON) )
@@ -1642,53 +1646,65 @@ int UtilReadLine(FILE *fd, char *Buffer)
 C8 * UtilSearchTextFile(C8 *Filename, C8 *Text1, C8 *Text2, C8 *Result)
 {
 
-  FILE *fd;
+    FILE *fd;
 
-  char RowBuffer[MAX_ROW_SIZE];
-  char DataBuffer[MAX_ROW_SIZE];
-  char *PtrText1;
-  char *PtrText2;
-  int Length;
-  U8 Found = 0;
+    char RowBuffer[MAX_ROW_SIZE];
+    char DataBuffer[MAX_ROW_SIZE];
+    char *PtrText1;
+    char *PtrText2;
+    int Length;
+    U8 Found = 0;
+    int RowCount = 0;
 
-  fd = fopen (Filename, "r");
-  int RowCount = UtilCountFileRows(fd);
-  fclose(fd);
+    fd = fopen (Filename, "r");
 
-  fd = fopen (Filename, "r");
-  if(fd > 0)
-  {
-     do
-    {
-      bzero(RowBuffer, MAX_ROW_SIZE);
-      UtilReadLineCntSpecChars(fd, RowBuffer);
-      bzero(DataBuffer, MAX_ROW_SIZE);
-      PtrText1 = strstr(RowBuffer, (const char *)Text1);
-      if(PtrText1 != NULL)
-      {
-        if(strlen(Text2) > 0)
-        {
-          PtrText2 = strstr((const char *)(PtrText1+1), (const char *)Text2);
-          if(PtrText2 != NULL)
-          {
-            strncpy(Result, PtrText1+strlen(Text1), strlen(RowBuffer) - strlen(Text1) - strlen(Text2));
-          }
-        }
-        else
-        {
-          strncpy(Result, PtrText1+strlen(Text1), strlen(RowBuffer) - strlen(Text1));
-        }
-        Found = 1;
-      }
-      RowCount--;
+    if (fd == NULL){
+        sprintf(RowBuffer, "Unable to open file <%s>", Filename);
+        util_error(RowBuffer);
+    }
 
-    } while(Found == 0 && RowCount >= 0);
-
+    RowCount = UtilCountFileRows(fd);
     fclose(fd);
-  }
 
-  //printf("String found: %s\n", Result);
-  return Result;
+    fd = fopen (Filename, "r");
+    if(fd != NULL)
+    {
+        do
+        {
+            bzero(RowBuffer, MAX_ROW_SIZE);
+            UtilReadLineCntSpecChars(fd, RowBuffer);
+            bzero(DataBuffer, MAX_ROW_SIZE);
+            PtrText1 = strstr(RowBuffer, (const char *)Text1);
+            if(PtrText1 != NULL)
+            {
+                if(strlen(Text2) > 0)
+                {
+                    PtrText2 = strstr((const char *)(PtrText1+1), (const char *)Text2);
+                    if(PtrText2 != NULL)
+                    {
+                        strncpy(Result, PtrText1+strlen(Text1), strlen(RowBuffer) - strlen(Text1) - strlen(Text2));
+                    }
+                }
+                else
+                {
+                    strncpy(Result, PtrText1+strlen(Text1), strlen(RowBuffer) - strlen(Text1));
+                }
+                Found = 1;
+            }
+            RowCount--;
+
+        } while(Found == 0 && RowCount >= 0);
+
+        fclose(fd);
+    }
+    else
+    {
+        sprintf(RowBuffer, "Unable to open file <%s>", Filename);
+        util_error(RowBuffer);
+    }
+
+    //printf("String found: %s\n", Result);
+    return Result;
 
 }
 
@@ -1823,7 +1839,7 @@ ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, s
 
         if (dataLength != (size_t)(result) )
         {
-            LogMessage(LOG_LEVEL_ERROR, "Received message with invalid length specification of %d (expected %d)", dataLength, result);
+            LogMessage(LOG_LEVEL_ERROR, "Received message with invalid length specification field: %d bytes, but %d bytes were received", dataLength, result);
             *command = COMM_INV;
             return 0;
         }
@@ -2994,6 +3010,7 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 }
 
 
+
 /*
 UtilWriteConfigurationParameter updates parameters in the file test.conf.
 
@@ -3082,7 +3099,15 @@ I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
     return (I32)ParameterFound;
 }
 
-I32 UtilPopulateMONRStruct(C8* rawMONR, MONRType *MONR, U8 debug)
+/*!
+ * \brief UtilPopulateMONRStruct Takes an array of raw MONR data and fills a MONRType struct with the content
+ * \param rawMONR Array of raw MONR data
+ * \param rawMONRsize Size of raw MONR data array
+ * \param MONR Struct where MONR data should be placed
+ * \param debug Boolean enabling debug printouts
+ * \return -1 on failure, 0 on success
+ */
+I32 UtilPopulateMONRStruct(C8* rawMONR, size_t rawMONRsize, MONRType *MONR, U8 debug)
 {
     // TODO: size of rawMONR
     U16 Crc = 0, U16Data = 0;
@@ -3091,6 +3116,12 @@ I32 UtilPopulateMONRStruct(C8* rawMONR, MONRType *MONR, U8 debug)
     I32 I32Data = 0;
     U64 U64Data = 0;
     C8 *rdPtr = rawMONR; // Pointer to keep track of where in rawMONR we are currently reading
+
+    if (rawMONRsize < sizeof (MONRType))
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Raw MONR array too small to hold all necessary MONR data");
+        return -1;
+    }
 
     memcpy(&U16Data, rdPtr, sizeof(U16Data));
     MONR->Header.SyncWordU16 = U16Data;

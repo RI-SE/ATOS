@@ -471,7 +471,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE)
                     {
                         // Send MONR message on new byte format
-                        LogMessage(LOG_LEVEL_DEBUG, "Sending raw MONR message", buffer);
+                        //LogMessage(LOG_LEVEL_INFO, "Sending raw MONR message");
                         if(iCommSend(COMM_MONR, buffer, COMMAND_MONR_MESSAGE_LENGTH) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONR command - entering error state");
@@ -1161,12 +1161,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             ++uiTimeCycle;
             if(uiTimeCycle >= HEARTBEAT_TIME_MS/TASK_PERIOD_MS)
             {
-                
-                bzero(Buffer2, SMALL_BUFFER_SIZE_1);
-                Buffer2[0] = OBCState;
-              
-                
-                uiTimeCycle = 0;
+               uiTimeCycle = 0;
             }
 
             (void)nanosleep(&sleep_time,&ref_time);
