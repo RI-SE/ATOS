@@ -362,6 +362,29 @@ void freeGeofences(GeofenceType *geofences, unsigned int *nGeofences){
     for(unsigned int i = 0; i < *nGeofences; i++){
         free(geofences[i].polygonPoints);
     }
+<<<<<<< HEAD
     free(geofences);
     *nGeofences = 0;
 }
+=======
+    free(geoFence);
+}
+
+void printFences(GeofenceType *geoPtrs, unsigned int nGeof){
+    for (int i = 0; i < nGeof; i++) {
+                    printf("Namn: %s\n", geoPtrs[i].name);
+                    printf("Coordinates: %d\n", geoPtrs[i].numberOfPoints);
+                    if(geoPtrs[i].isPermitted == 1){
+                        printf("Type: Permitted\n");
+                    }
+                    else{
+                         printf("Type: Forbidden\n");
+                    }
+                    printf("Points: \n");
+                    for (int j = 0; j < geoPtrs[i].numberOfPoints; j++) {
+                        printf("X: %f\n", geoPtrs[i].polygonPoints[j].xCoord_m);
+                        printf("Y: %f\n", geoPtrs[i].polygonPoints[j].yCoord_m);
+                    }
+                }
+}
+>>>>>>> 1380760fa4e8c6d172adff106542e6b4ae94d838
