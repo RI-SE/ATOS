@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+ #include <signal.h>
 
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -65,6 +66,24 @@ static int CountFileRows(FILE *fd);
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
+void sig_handlerLogger(int signo)
+{
+   if (signo == SIGINT)
+         printf("received SIGINT in Logger\n");
+         printf("Shutting down Logger with pid: %d\n", getpid());
+         pid_t iPid = getpid(); /* Process gets its id.*/
+         //kill(iPid, SIGINT);
+         exit(1);
+
+
+   if (signo == SIGUSR1)
+         printf("received SIGUSR1\n");
+   if (signo == SIGKILL)
+         printf("received SIGKILL\n");
+   if (signo == SIGSTOP)
+         printf("received SIGSTOP\n");
+}
+
 void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
 {
@@ -344,6 +363,9 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         default:
             LogMessage(LOG_LEVEL_WARNING,"Unhandled message bus command: %u", command);
         }
+
+        if (signal(SIGINT, sig_handlerLogger) == SIG_ERR)
+            printf("\ncan't catch SIGINT\n");
 
     }
 
