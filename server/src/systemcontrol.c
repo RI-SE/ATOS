@@ -67,8 +67,9 @@ typedef enum {
 #define SYSTEM_CONTROL_COMMAND_MAX_LENGTH 	32
 #define SYSTEM_CONTROL_ARG_MAX_COUNT	 	6
 #define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	32
-#define SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH SYSTEM_CONTROL_ARG_CHAR_COUNT + SYSTEM_CONTROL_COMMAND_MAX_LENGTH + SYSTEM_CONTROL_ARG_MAX_COUNT*SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH
+//#define SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH SYSTEM_CONTROL_ARG_CHAR_COUNT + SYSTEM_CONTROL_COMMAND_MAX_LENGTH + SYSTEM_CONTROL_ARG_MAX_COUNT*SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH
 //#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	80
+#define TCP_RECV_BUFFER_SIZE 2048
 
 #define OSTM_OPT_SET_ARMED_STATE 2
 #define OSTM_OPT_SET_DISARMED_STATE 3
@@ -352,7 +353,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 SystemControlCommand = AbortScenario_0; //Oops no client is connected, go to AbortScenario_0
                 server_state == SERVER_STATE_UNDEFINED; // TODO: Should this be an assignment?
             }
-            else if(ClientResult > 0 && ClientResult < SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH)
+            else if(ClientResult > 0 && ClientResult < TCP_RECV_BUFFER_SIZE)
             {
 
                 for(i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i ++ )
