@@ -25,7 +25,6 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
-#include <pthread.h>
 #include "mqbus.h"
 
 /*------------------------------------------------------------
@@ -582,13 +581,11 @@ typedef struct
   volatile U32 ExternalSupervisorIPU32;
   C8 ExternalSupervisorIPC8[DD_CONTROL_BUFFER_SIZE_20];
   volatile U16 SupervisorTCPPortU16;
-  volatile U32 DataDictionaryRVSSConfigU32;
-  volatile U32 DataDictionaryRVSSRateU8;
+  U32 DataDictionaryRVSSConfigU32;
+  U32 DataDictionaryRVSSRateU8;
   volatile ASPType ASPData;
   C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
   volatile U8 OBCStateU8;
-
-
 } GSDType;
 
 

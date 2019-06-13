@@ -281,7 +281,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     }
 
-        U8 d1; // TODO: Delete?
 
     while(!iExit)
     {
@@ -2131,6 +2130,15 @@ I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *Retu
 }
 
 
+/*
+SystemControlBuildRVSSTimeChannelMessage builds a message from data in *GPSTime. The message is stored in *RVSSData.
+See the architecture document for the protocol of RVSS. 
+
+- *RVSSData the buffer the message
+- *RVSSDataLengthU32 the length of the message
+- *GPSTime current time data
+- Debug enable(1)/disable(0) debug printouts (Not used)
+*/
 I32 SystemControlBuildRVSSTimeChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, TimeType *GPSTime, U8 Debug)
 {
     I32 MessageIndex = 0, i;
@@ -2167,6 +2175,15 @@ I32 SystemControlBuildRVSSTimeChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU3
     return 0;
 }
 
+/*
+SystemControlBuildRVSSMONRChannelMessage builds a message from data in *MonrData. The message is stored in *RVSSData.
+See the architecture document for the protocol of RVSS. 
+
+- *RVSSData the buffer the message
+- *RVSSDataLengthU32 the length of the message
+- *MonrData MONR data from an object
+- Debug enable(1)/disable(0) debug printouts (Not used)
+*/
 
 I32 SystemControlBuildRVSSMONRChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, C8 *MonrData, U8 Debug)
 {
@@ -2191,6 +2208,16 @@ I32 SystemControlBuildRVSSMONRChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU3
     return 0;
 }
 
+
+/*
+SystemControlBuildRVSSAspChannelMessage shall be used for sending ASP-debug data. The message is stored in *RVSSData.
+See the architecture document for the protocol of RVSS. 
+
+- *RVSSData the buffer the message
+- *RVSSDataLengthU32 the length of the message
+- *ASPdata TBD
+- Debug enable(1)/disable(0) debug printouts (Not used)
+*/
 
 I32 SystemControlBuildRVSSAspChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, U8 Debug)
 {

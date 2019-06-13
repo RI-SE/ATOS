@@ -10,7 +10,7 @@
 #ifndef __DATADICTIONARY_H_INCLUDED__
 #define __DATADICTIONARY_H_INCLUDED__
 
-//#include "util.h"
+#include "util.h"
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -119,7 +119,7 @@ I32 DataDictionaryGetMiscDataC8(GSDType *GSD, C8 *MiscData);
 I32 DataDictionarySetOBCStateU8(GSDType *GSD, U8 OBCState);
 U8 DataDictionaryGetOBCStateU8(GSDType *GSD);
 
-void DataDictionaryConstructor(GSDType *GSD);
+I32 DataDictionaryConstructor(GSDType *GSD);
 
 #endif 
 

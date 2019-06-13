@@ -587,8 +587,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                                 //bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
                                 //ObjectControlBuildASPMessage(buffer, &ASPData, 0);
                                 DataDictionarySetRVSSAsp(GSD, &ASPData);
-                                //for(j = 0; j < sizeof(ASPType); j ++) GSD->ASPDebugDataU8[j] = buffer[j];
-                                //GSD->ASPDebugDataSetU8 = 1;
 
                                 if(atoi(Timestamp)%ASPDebugRate == 0)
                                 {

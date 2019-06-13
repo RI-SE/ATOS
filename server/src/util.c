@@ -39,7 +39,7 @@
 #define RE_WGS84        6378137.0           // earth semimajor axis (WGS84) (m)
 
 #define TEMP_CONF_FILE_PATH  "conf/temp.conf"
-#define CONF_FILE_PATH  "conf/test.conf"
+//#define CONF_FILE_PATH  "conf/test.conf"
 #define SMALL_BUFFER_SIZE_128 128
 #define SMALL_BUFFER_SIZE_64 64
 
@@ -2994,7 +2994,13 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 }
 
 
+/*
+UtilWriteConfigurationParameter updates parameters in the file test.conf.
 
+- *ParameterName the name of the parameter in test.conf
+- *NewValue the value of the parameter.
+- Debug enable(1)/disable(0) debug printouts
+*/
 I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
 {
 
@@ -3017,13 +3023,13 @@ I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
     TempFd = fopen (TEMP_CONF_FILE_PATH, "w+");
 
     //Open configuration file
-    fd = fopen (CONF_FILE_PATH, "r");
+    fd = fopen (TEST_CONF_FILE, "r");
 
     if(fd > 0)
     {
         RowCount = UtilCountFileRows(fd);
         fclose(fd);
-        fd = fopen (CONF_FILE_PATH, "r");
+        fd = fopen (TEST_CONF_FILE, "r");
 
         for(i = 0; i < RowCount; i++)
         {
@@ -3064,10 +3070,10 @@ I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
         fclose(fd);
 
         //Remove test.conf
-        remove(CONF_FILE_PATH);
+        remove(TEST_CONF_FILE);
 
         //Rename temp.conf to test.conf
-        rename(TEMP_CONF_FILE_PATH, CONF_FILE_PATH);
+        rename(TEMP_CONF_FILE_PATH, TEST_CONF_FILE);
 
         //Remove temporary file
         remove(TEMP_CONF_FILE_PATH);
