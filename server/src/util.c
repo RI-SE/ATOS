@@ -1635,53 +1635,65 @@ int UtilReadLine(FILE *fd, char *Buffer)
 C8 * UtilSearchTextFile(C8 *Filename, C8 *Text1, C8 *Text2, C8 *Result)
 {
 
-  FILE *fd;
+    FILE *fd;
 
-  char RowBuffer[MAX_ROW_SIZE];
-  char DataBuffer[MAX_ROW_SIZE];
-  char *PtrText1;
-  char *PtrText2;
-  int Length;
-  U8 Found = 0;
+    char RowBuffer[MAX_ROW_SIZE];
+    char DataBuffer[MAX_ROW_SIZE];
+    char *PtrText1;
+    char *PtrText2;
+    int Length;
+    U8 Found = 0;
+    int RowCount = 0;
 
-  fd = fopen (Filename, "r");
-  int RowCount = UtilCountFileRows(fd);
-  fclose(fd);
+    fd = fopen (Filename, "r");
 
-  fd = fopen (Filename, "r");
-  if(fd > 0)
-  {
-     do
-    {
-      bzero(RowBuffer, MAX_ROW_SIZE);
-      UtilReadLineCntSpecChars(fd, RowBuffer);
-      bzero(DataBuffer, MAX_ROW_SIZE);
-      PtrText1 = strstr(RowBuffer, (const char *)Text1);
-      if(PtrText1 != NULL)
-      {
-        if(strlen(Text2) > 0)
-        {
-          PtrText2 = strstr((const char *)(PtrText1+1), (const char *)Text2);
-          if(PtrText2 != NULL)
-          {
-            strncpy(Result, PtrText1+strlen(Text1), strlen(RowBuffer) - strlen(Text1) - strlen(Text2));
-          }
-        }
-        else
-        {
-          strncpy(Result, PtrText1+strlen(Text1), strlen(RowBuffer) - strlen(Text1));
-        }
-        Found = 1;
-      }
-      RowCount--;
+    if (fd == NULL){
+        sprintf(RowBuffer, "Unable to open file <%s>", Filename);
+        util_error(RowBuffer);
+    }
 
-    } while(Found == 0 && RowCount >= 0);
-
+    RowCount = UtilCountFileRows(fd);
     fclose(fd);
-  }
 
-  //printf("String found: %s\n", Result);
-  return Result;
+    fd = fopen (Filename, "r");
+    if(fd != NULL)
+    {
+        do
+        {
+            bzero(RowBuffer, MAX_ROW_SIZE);
+            UtilReadLineCntSpecChars(fd, RowBuffer);
+            bzero(DataBuffer, MAX_ROW_SIZE);
+            PtrText1 = strstr(RowBuffer, (const char *)Text1);
+            if(PtrText1 != NULL)
+            {
+                if(strlen(Text2) > 0)
+                {
+                    PtrText2 = strstr((const char *)(PtrText1+1), (const char *)Text2);
+                    if(PtrText2 != NULL)
+                    {
+                        strncpy(Result, PtrText1+strlen(Text1), strlen(RowBuffer) - strlen(Text1) - strlen(Text2));
+                    }
+                }
+                else
+                {
+                    strncpy(Result, PtrText1+strlen(Text1), strlen(RowBuffer) - strlen(Text1));
+                }
+                Found = 1;
+            }
+            RowCount--;
+
+        } while(Found == 0 && RowCount >= 0);
+
+        fclose(fd);
+    }
+    else
+    {
+        sprintf(RowBuffer, "Unable to open file <%s>", Filename);
+        util_error(RowBuffer);
+    }
+
+    //printf("String found: %s\n", Result);
+    return Result;
 
 }
 
