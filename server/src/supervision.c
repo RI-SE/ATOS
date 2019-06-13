@@ -66,8 +66,6 @@ void sig_handlerSV(int signo)
     if (signo == SIGINT)
           printf("received SIGINT in Supervision\n");
           printf("Shutting down Supervision with pid: %d\n", getpid());
-          pid_t iPid = getpid(); /* Process gets its id.*/
-          //kill(iPid, SIGINT);
           exit(1);
     if (signo == SIGUSR1)
           printf("received SIGUSR1\n");
@@ -362,12 +360,8 @@ void freeGeofences(GeofenceType *geofences, unsigned int *nGeofences){
     for(unsigned int i = 0; i < *nGeofences; i++){
         free(geofences[i].polygonPoints);
     }
-<<<<<<< HEAD
     free(geofences);
     *nGeofences = 0;
-}
-=======
-    free(geoFence);
 }
 
 void printFences(GeofenceType *geoPtrs, unsigned int nGeof){
@@ -387,4 +381,3 @@ void printFences(GeofenceType *geoPtrs, unsigned int nGeof){
                     }
                 }
 }
->>>>>>> 1380760fa4e8c6d172adff106542e6b4ae94d838
