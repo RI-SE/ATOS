@@ -425,9 +425,13 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
 
     // Check if ./traj directory exists
     if ((dir = opendir(TRAJECTORY_PATH)) == NULL)
-        LogMessage(LOG_LEVEL_ERROR,"No traj directory <%s> exists - wrong path or access denied",TRAJECTORY_PATH);
+    {
+        sprintf(sysCommand,"Unable to open traj directory <%s>",TRAJECTORY_PATH);
+        util_error(sysCommand);
+    }
     else
         closedir(dir);
+
     // Copy trajectory files to subdirectory
     LogMessage(LOG_LEVEL_INFO, "Copying trajectory files to log directory");
     (void)strcpy(sysCommand, "cp -R ");
@@ -484,7 +488,8 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     }
     else
     {
-        LogMessage(LOG_LEVEL_ERROR, "No traj directory <%s> exists - wrong path or access denied", TRAJECTORY_PATH);
+        sprintf(sysCommand,"Unable to open traj directory <%s>",TRAJECTORY_PATH);
+        util_error(sysCommand);
     }
     fclose(filefd);
 
@@ -512,7 +517,8 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     }
     else
     {
-        LogMessage(LOG_LEVEL_ERROR, "Failed to open <%s>", TEST_CONF_FILE);
+        sprintf(sysCommand,"Unable to open <%s>",TEST_CONF_FILE);
+        util_error(sysCommand);
     }
 
     // Add some information about the standard log file format and what is what in the MONR message
