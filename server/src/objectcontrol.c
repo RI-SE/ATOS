@@ -1269,7 +1269,7 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     VOILData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
     VOILData->Header.MessageIdU16 = COMMAND_VOIL_CODE;
     VOILData->Header.MessageLengthU32 = ObjectCount*sizeof(Sim1Type) + 6 - COMMAND_MESSAGE_HEADER_LENGTH;
-    VOILData->GPSSOWU32 = GPSSOW;
+    VOILData->GPSQmsOfWeekU32 = GPSSOW;
     VOILData->WorldStateU8 = DynamicWorldState;
     VOILData->ObjectCountU8 = ObjectCount;
     VOILData->SimObjects[0].ObjectIdU8 = ObjectId;
@@ -1409,7 +1409,7 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     U32Data = (U32Data | *(MonrData+13)) << 8;
     U32Data = (U32Data | *(MonrData+12)) << 8;
     U32Data = U32Data | *(MonrData+11);
-    MONRData->GPSSOWU32 = U32Data;
+    MONRData->GPSQmsOfWeekU32 = U32Data;
 
     I32Data = 0;
     I32Data = (I32Data | *(MonrData+18)) << 8;
@@ -1474,7 +1474,7 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
         LogPrint("PackageCounter = %d", MONRData->Header.MessageCounterU8);
         LogPrint("AckReq = %d", MONRData->Header.AckReqProtVerU8);
         LogPrint("MessageLength = %d", MONRData->Header.MessageLengthU32);
-        LogPrint("GPSSOW = %u",MONRData->GPSSOWU32);
+        LogPrint("GPSSOW = %u",MONRData->GPSQmsOfWeekU32);
     }
 
     return 0;
@@ -1517,9 +1517,9 @@ I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I3
         MonrValueU64 = 0;
         //for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
         ConvertGPStoUTC =
-        sprintf(Timestamp, "%" PRIu32, MONRData->GPSSOWU32);
+        sprintf(Timestamp, "%" PRIu32, MONRData->GPSQmsOfWeekU32);
 
-        if(debug && MONRData->GPSSOWU32%400 == 0)
+        if(debug && MONRData->GPSQmsOfWeekU32%400 == 0)
         {
             LogMessage(LOG_LEVEL_DEBUG,"MONR = %x-%x-%x-%x-%x-%x-%d-%d-%d-%d-%d-%d-%d-%d-%d-%d",
                         MONRData->Header.MessageIdU16,
@@ -1528,7 +1528,7 @@ I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I3
                         MONRData->Header.MessageCounterU8,
                         MONRData->Header.AckReqProtVerU8,
                         MONRData->Header.MessageLengthU32,
-                        MONRData->GPSSOWU32,
+                        MONRData->GPSQmsOfWeekU32,
                         MONRData->XPositionI32,
                         MONRData->YPositionI32,
                         MONRData->ZPositionI32,
@@ -1692,7 +1692,7 @@ I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeTyp
     OSEMData->GPSWeekU16 = GPSTime->GPSWeekU16;
     OSEMData->GPSSOWValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
     OSEMData->GPSSOWContentLengthU16 = 4;
-    OSEMData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + GPSTime->MillisecondU16) << 2) + GPSTime->MicroSecondU16;
+    OSEMData->GPSQmsOfWeekU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + GPSTime->MillisecondU16) << 2) + GPSTime->MicroSecondU16;
     OSEMData->MaxWayDeviationValueIdU16 = VALUE_ID_MAX_WAY_DEVIATION;
     OSEMData->MaxWayDeviationContentLengthU16 = 2;
     OSEMData->MaxWayDeviationU16 = 65535;
@@ -1706,7 +1706,7 @@ I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeTyp
     if (!GPSTime->isGPSenabled)
     {
         OSEMData->DateU32 = UtilgetIntDateFromMS(UtilgetCurrentUTCtimeMS());
-        UtilgetCurrentGPStime(&OSEMData->GPSWeekU16,&OSEMData->GPSSOWU32);
+        UtilgetCurrentGPStime(&OSEMData->GPSWeekU16,&OSEMData->GPSQmsOfWeekU32);
     }
 
     p=(C8 *)OSEMData;
@@ -1869,11 +1869,11 @@ I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeTyp
     HEABData->Header.MessageLengthU32 = sizeof(HEABType) - sizeof(HeaderType);
     //HEABData->HeabStructValueIdU16 = 0;
     //HEABData->HeabStructContentLengthU16 = sizeof(HEABType) - sizeof(HeaderType) - 4;
-    HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
+    HEABData->GPSQmsOfWeekU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
     HEABData->CCStatusU8 = CCStatus;
 
     if(!GPSTime->isGPSenabled){
-        UtilgetCurrentGPStime(NULL,&HEABData->GPSSOWU32);
+        UtilgetCurrentGPStime(NULL,&HEABData->GPSQmsOfWeekU32);
     }
 
     p=(C8 *)HEABData;

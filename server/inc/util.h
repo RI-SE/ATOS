@@ -336,7 +336,7 @@ typedef struct
   U16 GPSWeekU16;
   U16 GPSSOWValueIdU16;
   U16 GPSSOWContentLengthU16;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   U16 MaxWayDeviationValueIdU16;
   U16 MaxWayDeviationContentLengthU16;
   U16 MaxWayDeviationU16;
@@ -403,7 +403,7 @@ typedef struct
   HeaderType Header;
   //U16 HeabStructValueIdU16;
   //U16 HeabStructContentLengthU16;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   U8 CCStatusU8;
 } HEABType; //16 bytes
 
@@ -412,7 +412,7 @@ typedef struct
   HeaderType Header;
   //U16 MonrStructValueIdU16;
   //U16 MonrStructContentLengthU16;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   I32 XPositionI32;
   I32 YPositionI32;
   I32 ZPositionI32;
@@ -647,7 +647,7 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   U8 WorldStateU8;
   U8 ObjectCountU8;
   Sim1Type SimObjects[16];
@@ -659,7 +659,7 @@ typedef struct
 {
   U16 MessageIdU16;
   U32 ObjectIPU32;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   I32 XPositionI32;
   I32 YPositionI32;
   I32 ZPositionI32;
