@@ -31,6 +31,7 @@
 //#include "remotecontrol.h"
 #include "timecontrol.h"
 #include "supervisorcontrol.h"
+#include "citscontrol.h"
 #include "logging.h"
 #include "mqbus.h"
 #include "maestroTime.h"
@@ -71,7 +72,8 @@ static const ModuleTask allModules[] = {
     supervision_task,
     supervisorcontrol_task,
     systemcontrol_task,
-    objectcontrol_task
+    objectcontrol_task,
+    citscontrol_task
 };
 static const size_t numberOfModules = sizeof(allModules) / sizeof(ModuleTask);
 
