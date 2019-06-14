@@ -56,6 +56,7 @@ static void vCreateLogFolder(char logFolder[MAX_FILE_PATH]);
 static void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvLogFilePath, unsigned int csvFilePathLength);
 static int ReadLogLine(FILE *fd, char *Buffer);
 static int CountFileRows(FILE *fd);
+void vLogCommand(enum COMMAND command, char *commandData, struct timeval recvTime, char *pcLogFile, char *pcLogFileComp);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -68,7 +69,7 @@ static int CountFileRows(FILE *fd);
 void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
 {
-    char pcLogFile[MAX_FILE_PATH]= "";                          //!< Log file path and name buffer
+    char pcLogFile[MAX_FILE_PATH];                          //!< Log file path and name buffer
     char pcLogFileComp[MAX_FILE_PATH];                      //!< CSV log file path and name buffer
     char busReceiveBuffer[MBUS_MAX_DATALEN];                //!< Buffer for receiving from message bus
     char busSendBuffer[MBUS_MAX_DATALEN];                   //!< Buffer for sending to message bus
@@ -77,6 +78,8 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     char pcBuffer[MAX_LOG_ROW_LENGTH];                      //!< General purpose buffer
     char subStrings[MBUS_MAX_DATALEN];
     struct timeval time, recvTime;
+
+    struct stat st = {0};
 
     // Listen for commands
     enum COMMAND command = COMM_INV;
@@ -87,6 +90,10 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     struct timespec sleep_time, ref_time;
     U8 isFirstInit = 1;
 
+    // Execution mode
+    int LoggerExecutionMode = LOG_CONTROL_MODE;
+    int RowCount = 0;
+
     // Initialize log
     LogInit(MODULE_NAME, logLevel);
     LogMessage(LOG_LEVEL_INFO, "Logger task running with PID: %d", getpid());
@@ -95,25 +102,13 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     if(iCommInit())
         util_error("Unable to initialize connection to message bus");
 
-    // Create folder with date as name and .log file with date as name
-    struct stat st = {0};
-    if (stat(LOG_PATH, &st) == -1)
-    {
-        LogMessage(LOG_LEVEL_INFO, "Creating log directory");
-        vCreateLogFolder(LOG_PATH);
-    }
+    // Create log directory if it does not exist
+    vCreateLogFolder(LOG_PATH);
 
-    (void)strcat(pcLogFile," ");
-    (void)strcat(pcLogFileComp," ");
-
-    // Execution mode
-    int LoggerExecutionMode = LOG_CONTROL_MODE;
-    //int test =100;
-    int RowCount = 0;
     // our time
     char *find_time;
     char *src;
-    uint64_t NewTimestamp, OldTimestamp,Timestamp;
+    uint64_t NewTimestamp, OldTimestamp, Timestamp;
 
     while(!iExit)
     {
@@ -121,61 +116,49 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
         (void)iCommRecv(&command, busReceiveBuffer, sizeof(busReceiveBuffer), &recvTime);
 
-        if(LoggerExecutionMode == LOG_CONTROL_MODE && command != COMM_OBC_STATE && command != COMM_MONI && command != COMM_INV)
-        {
-            bzero(DateBuffer, sizeof(DateBuffer));
-            TimeGetAsDateTime(&recvTime, "%Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof(DateBuffer));
-
-            // Remove newlines in http Requests for nicer printouts.
-            for (unsigned long i = 0; i < strlen(busReceiveBuffer); i++){
-                if(busReceiveBuffer[i] == '\n'){
-                  busReceiveBuffer[i] = ' ';
-                }
-            }
-
-            bzero(pcBuffer, sizeof(pcBuffer));
-            sprintf ( pcBuffer,"%s;%ld;%d;%s\n", DateBuffer, TimeGetAsUTCms(&recvTime), (char)command, busReceiveBuffer);
-
-            filefd = fopen(pcLogFile, ACCESS_MODE_APPEND);
-            if (filefd != NULL)
-            {
-                (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-                fclose(filefd);
-            }
-            else
-            {
-                LogMessage(LOG_LEVEL_ERROR, "Unable to open file <%s>", pcLogFile);
-            }
-
-            filefdComp = fopen(pcLogFileComp, ACCESS_MODE_APPEND);
-            if (filefdComp != NULL)
-            {
-                (void)fwrite(pcBuffer, 1, strlen(pcBuffer), filefdComp);
-                fclose(filefdComp);
-            }
-            else
-            {
-                LogMessage(LOG_LEVEL_ERROR,"Unable to open file <%s>",pcLogFileComp);
-            }
-
-        }
-
         switch(command)
         {
-        case COMM_DISCONNECT:
-
-            isFirstInit = 1;
-            break;
-
         case COMM_ABORT:
-
             isFirstInit = 1;
             break;
+
+        case COMM_INIT:
+            if(isFirstInit)
+            {
+                LogMessage(LOG_LEVEL_INFO,"Initializing test log...");
+                vInitializeLog(pcLogFile, sizeof(pcLogFile), pcLogFileComp, sizeof(pcLogFileComp));
+                isFirstInit = 0;
+            }
+            else
+            {
+                LogMessage(LOG_LEVEL_WARNING,"Received unexpected INIT command");
+            }
+
+            break;
+
+        case COMM_STRT:
+        case COMM_ARMD:
+        case COMM_STOP:
+        case COMM_TOM:
+        case COMM_CONNECT:
+        case COMM_VIOP:
+        case COMM_TRAJ:
+        case COMM_TRAJ_TOSUP:
+        case COMM_TRAJ_FROMSUP:
+        case COMM_ASP:
+        case COMM_LOG:
+            vLogCommand(command, busReceiveBuffer, recvTime, pcLogFile, pcLogFileComp);
+            break;
+
+        case COMM_DISCONNECT:
+            isFirstInit = 1;
+            break;
+
         case COMM_MONR:
             // TODO: use new MONR message
             break;
-        case COMM_MONI:
 
+        case COMM_MONI:
             filefd = fopen(pcLogFile, ACCESS_MODE_APPEND_AND_READ);
 
             strcpy(subStrings,busReceiveBuffer);
@@ -205,7 +188,6 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
 
         case COMM_OSEM:
-
             strcpy(subStrings, busReceiveBuffer);
 
             // Returns first datapoint of OSEM (GPSWeek)
@@ -225,12 +207,10 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
 
         case COMM_OBC_STATE:
-
             LogMessage(LOG_LEVEL_DEBUG,"Disregarding object control state reporting");
             break;
 
         case COMM_REPLAY:
-
             LoggerExecutionMode = LOG_REPLAY_MODE;
             LogMessage(LOG_LEVEL_INFO, "Logger in REPLAY mode <%s>", busReceiveBuffer);
 
@@ -315,30 +295,14 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
 
         case COMM_CONTROL:
-
             LoggerExecutionMode = LOG_CONTROL_MODE;
             LogMessage(LOG_LEVEL_INFO,"Logger in CONTROL mode");
             break;
 
         case COMM_EXIT:
-
             iExit = 1;
             break;
 
-        case COMM_INIT:
-
-            if(isFirstInit)
-            {
-                LogMessage(LOG_LEVEL_INFO,"Initializing test log...");
-                vInitializeLog(pcLogFile, sizeof(pcLogFile), pcLogFileComp, sizeof(pcLogFileComp));
-                isFirstInit = 0;
-            }
-            else
-            {
-                LogMessage(LOG_LEVEL_WARNING,"Received unexpected INIT command");
-            }
-
-            break;
         case COMM_INV:
             break;
         default:
@@ -358,28 +322,24 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
   -- Private functions
   ------------------------------------------------------------*/
 
-
 void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
 {
     int iResult;
-    DIR* directory;
-    struct dirent *directory_entry;
-    int iMaxFolder = 0;
+    struct stat st = {0};
 
-    directory = opendir(logFolder);
-
-    // If the directory does not exist, create it
-    if(directory == NULL)
-    {
-        iResult = mkdir(logFolder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-        if (iResult < 0)
-        {
-            util_error("Failed to create LOG dir");
+    // Create log directory if it does not exist
+    if (stat(logFolder, &st) == -1) {
+        if (errno == ENOENT) {
+            LogMessage(LOG_LEVEL_INFO, "Creating log directory <%s>", logFolder);
+            iResult = mkdir(logFolder, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+            if (iResult < 0) {
+                util_error("Unable to create log directory");
+            }
+        }
+        else {
+            util_error("Unable to stat log directory");
         }
     }
-
-    (void)closedir(directory);
-
 }
 
 void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvLogFilePath, unsigned int csvFilePathLength)
@@ -550,4 +510,52 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
 
 
     fclose(filefd);
+}
+
+/*!
+ * \brief vLogCommand Logs a command with associated data to two log files
+ * \param command Message bus command number
+ * \param commandData Null terminated string of command data
+ * \param recvTime Time when command was received
+ * \param pcLogFile Path to log file
+ * \param pcLogFileComp Path to .csv log file
+ */
+void vLogCommand(enum COMMAND command, char *commandData, struct timeval recvTime, char *pcLogFile, char *pcLogFileComp)
+{
+    FILE *filefd;
+    char DateBuffer[MAX_DATE_STRLEN];
+
+    bzero(DateBuffer, sizeof(DateBuffer));
+    TimeGetAsDateTime(&recvTime, "%Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof(DateBuffer));
+
+    // Remove newlines in HTTP requests for nicer printouts.
+    for (unsigned long i = 0; i < strlen(commandData); i++){
+        if(commandData[i] == '\n'){
+            commandData[i] = ' ';
+        }
+    }
+
+    // Write to log file
+    filefd = fopen(pcLogFile, ACCESS_MODE_APPEND);
+    if (filefd != NULL)
+    {
+        fprintf(filefd,"%s;%ld;%u;%s\n", DateBuffer, TimeGetAsUTCms(&recvTime), (char)command, commandData);
+        fclose(filefd);
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Unable to open file <%s>", pcLogFile);
+    }
+
+    // Write to .csv file
+    filefd = fopen(pcLogFileComp, ACCESS_MODE_APPEND);
+    if (filefd != NULL)
+    {
+        fprintf(filefd,"%s;%ld;%u;%s\n", DateBuffer, TimeGetAsUTCms(&recvTime), (char)command, commandData);
+        fclose(filefd);
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR,"Unable to open file <%s>",pcLogFileComp);
+    }
 }
