@@ -57,7 +57,6 @@ int loadGeofenceFiles(GeofenceType *geofences[], unsigned int *nGeof);
 int parseGeofenceFile(char* geofenceFile, GeofenceType *geofence);
 
 void freeGeofences(GeofenceType *geoFence, unsigned int *nGeof);
-void printFences(GeofenceType *geoFence, unsigned int nGeof);
 /*------------------------------------------------------------
 -- Public functions
 ------------------------------------------------------------*/
@@ -362,22 +361,4 @@ void freeGeofences(GeofenceType *geofences, unsigned int *nGeofences){
     }
     free(geofences);
     *nGeofences = 0;
-}
-
-void printFences(GeofenceType *geoPtrs, unsigned int nGeof){
-    for (int i = 0; i < nGeof; i++) {
-                    printf("Namn: %s\n", geoPtrs[i].name);
-                    printf("Coordinates: %d\n", geoPtrs[i].numberOfPoints);
-                    if(geoPtrs[i].isPermitted == 1){
-                        printf("Type: Permitted\n");
-                    }
-                    else{
-                         printf("Type: Forbidden\n");
-                    }
-                    printf("Points: \n");
-                    for (int j = 0; j < geoPtrs[i].numberOfPoints; j++) {
-                        printf("X: %f\n", geoPtrs[i].polygonPoints[j].xCoord_m);
-                        printf("Y: %f\n", geoPtrs[i].polygonPoints[j].yCoord_m);
-                    }
-                }
 }
