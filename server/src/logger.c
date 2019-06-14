@@ -74,13 +74,9 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     char pcLogFileComp[MAX_FILE_PATH];                      //!< CSV log file path and name buffer
     char busReceiveBuffer[MBUS_MAX_DATALEN];                //!< Buffer for receiving from message bus
     char busSendBuffer[MBUS_MAX_DATALEN];                   //!< Buffer for sending to message bus
-    char DateBuffer[MAX_DATE_STRLEN];                       //!< Buffer for holding a timestamp in human readable text format
     char pcReadBuffer[MAX_LOG_ROW_LENGTH];                  //!< Buffer for reading files
-    char pcBuffer[MAX_LOG_ROW_LENGTH];                      //!< General purpose buffer
     char subStrings[MBUS_MAX_DATALEN];
-    struct timeval time, recvTime;
-
-    struct stat st = {0};
+    struct timeval recvTime;
 
     // Listen for commands
     enum COMMAND command = COMM_INV;
@@ -88,7 +84,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     int iExit = 0;
 
     int GPSweek;
-    FILE *filefd,*replayfd, *filefdComp;
+    FILE *replayfd;
     struct timespec sleep_time, ref_time;
     U8 isFirstInit = 1;
 
@@ -108,9 +104,8 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     vCreateLogFolder(LOG_PATH);
 
     // our time
-    char *find_time;
     char *src;
-    uint64_t NewTimestamp, OldTimestamp, Timestamp;
+    uint64_t NewTimestamp, OldTimestamp;
 
     while(!iExit)
     {
@@ -351,6 +346,7 @@ void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
         }
     }
 }
+
 
 void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvLogFilePath, unsigned int csvFilePathLength)
 {
