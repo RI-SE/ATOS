@@ -1,4 +1,10 @@
-# Chronos test server
+# Maestro 
+<img align="left" width="100" height="100" src="https://github.com/RI-SE/Maestro/blob/MaestroIcon/server/src/icon/MaestroICON.svg">
+
+The Maestro server is a communication hub for all test objects. The server monitors and controls the test objects and is also responsible for creating logfiles.
+
+<br />
+<br />
 
 ## How to build and run the server
 
