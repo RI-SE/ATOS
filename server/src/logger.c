@@ -167,6 +167,8 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
 
         case COMM_MONI:
+            LogMessage(LOG_LEVEL_DEBUG, "Disregarding old MONR data");
+            /* TODO: Delete this (superseded by COMM_MONR)
             filefd = fopen(pcLogFile, ACCESS_MODE_APPEND_AND_READ);
 
             strcpy(subStrings,busReceiveBuffer);
@@ -192,7 +194,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
 
             fclose(filefd);
-
+            */
             break;
 
         case COMM_OSEM:
