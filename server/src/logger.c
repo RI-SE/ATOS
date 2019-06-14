@@ -57,7 +57,7 @@ static void vInitializeLog(char * logFilePath, unsigned int filePathLength, char
 static int ReadLogLine(FILE *fd, char *Buffer);
 static int CountFileRows(FILE *fd);
 void vLogCommand(enum COMMAND command, char *commandData, struct timeval recvTime, char *pcLogFile, char *pcLogFileComp);
-void vLogMonitorData(char *commandData, ssize_t commandDatalen, timeval recvTime, char *pcLogFile, char *pcLogFileComp);
+void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval recvTime, char *pcLogFile, char *pcLogFileComp);
 
 /*------------------------------------------------------------
 -- Private variables
