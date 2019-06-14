@@ -147,7 +147,10 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case COMM_TRAJ_FROMSUP:
         case COMM_ASP:
         case COMM_LOG:
-            vLogCommand(command, busReceiveBuffer, recvTime, pcLogFile, pcLogFileComp);
+            if (!isFirstInit)
+                vLogCommand(command, busReceiveBuffer, recvTime, pcLogFile, pcLogFileComp);
+            else
+                LogMessage(LOG_LEVEL_WARNING, "Received command %u while log uninitialized", command);
             break;
 
         case COMM_DISCONNECT:
