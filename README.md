@@ -6,7 +6,16 @@ The Maestro server is a communication hub for all test objects. The server monit
 <br />
 <br />
 
+To build Maestro either usie the build script "buildMaestro.sh" or follow the guide below.
+
+
 ## How to build and run the server
+
+Clone the repo and make sure you run the following command to update all submodules:
+
+```sh
+git submodule update --init --recursive
+```
 
 Navigate to the the repo and enter the build folder 
 
