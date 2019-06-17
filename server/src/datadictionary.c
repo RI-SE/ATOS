@@ -1663,7 +1663,7 @@ ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, U8 *MiscData)
  * \param OBCState
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, U8 OBCState)
+ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, OBCState_t OBCState)
 {
   ReadWriteAccess_t Res;
   Res = WRITE_OK;
@@ -1676,11 +1676,11 @@ ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, U8 OBCState)
 /*!
  * \brief DataDictionaryGetOBCStateU8 Reads variable from shared memory
  * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
+ * \return Current object control state according to ::OBCState_t
  */
-U8 DataDictionaryGetOBCStateU8(GSDType *GSD)
+OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD)
 {
-  U8 Ret;
+  OBCState_t Ret;
   pthread_mutex_lock(&OBCStateMutex);
   Ret = GSD->OBCStateU8;
   pthread_mutex_unlock(&OBCStateMutex);

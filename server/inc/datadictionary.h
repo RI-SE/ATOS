@@ -116,8 +116,8 @@ ReadWriteAccess_t DataDictionaryInitMiscDataC8(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType *GSD, C8 *MiscData);
 ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, C8 *MiscData);
 
-ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, U8 OBCState);
-U8 DataDictionaryGetOBCStateU8(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, OBCState_t OBCState);
+OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD);
 
 ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
 
