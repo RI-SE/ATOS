@@ -1,6 +1,21 @@
-# Chronos test server
+# Maestro 
+<img align="left" width="100" height="100" src="https://github.com/RI-SE/Maestro/blob/dev/server/src/icon/MaestroICON.svg">
+
+The Maestro server is a communication hub for all test objects. The server monitors and controls the test objects and is also responsible for creating logfiles.
+
+<br />
+<br />
+
+To build Maestro either usie the build script "buildMaestro.sh" or follow the guide below.
+
 
 ## How to build and run the server
+
+Clone the repo and make sure you run the following command to update all submodules:
+
+```sh
+git submodule update --init --recursive
+```
 
 Navigate to the the repo and enter the build folder 
 

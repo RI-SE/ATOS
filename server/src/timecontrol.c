@@ -98,6 +98,9 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     U16 CurrentMilliSecondU16, PrevMilliSecondU16;
     U8 CycleCount = 0;
 
+    enum COMMAND command;
+    char busReceiveBuffer[MBUS_MAX_DATALEN];
+
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO,"Time control task running with PID: %i",getpid());
 
@@ -155,6 +158,9 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     while(!iExit)
     {
+
+        // Ignore any commands received, just empty the bus
+        iCommRecv(&command, busReceiveBuffer, sizeof(busReceiveBuffer), NULL);
 
         gettimeofday(&ExecTime, NULL);
         CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
