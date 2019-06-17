@@ -736,14 +736,14 @@ typedef struct {
     char UserAgent[HTTP_HEADER_MAX_LENGTH];
 } HTTPHeaderContent;
 
-
+/*! Data dictionary read/write return codes. */
 typedef enum {
-    UNDEFINED,
-    WRITE_OK,
-    READ_OK,
-    READ_WRITE_OK,
-    PARAMETER_NOTFOUND,
-    OUT_OF_RANGE
+    UNDEFINED, /*!< Undefined result */
+    WRITE_OK, /*!< Write successful */
+    READ_OK, /*!< Read successful */
+    READ_WRITE_OK, /*!< Combined read/write successful */
+    PARAMETER_NOTFOUND, /*!< Read/write not successful */
+    OUT_OF_RANGE /*!< Attempted to read out of range */
 } ReadWriteAccess_t;
 
 

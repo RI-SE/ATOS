@@ -46,8 +46,10 @@ static pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 
-
-U64 DataDictionarySearchParameter(C8 *ParameterName, C8 *ResultBuffer);
+/*------------------------------------------------------------
+  -- Static function definitions
+  ------------------------------------------------------------*/
+static U64 DataDictionarySearchParameter(C8 *ParameterName, C8 *ResultBuffer);
 
 /*------------------------------------------------------------
   -- Functions
@@ -94,7 +96,11 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD)
 }
 
 
-/*Origin Latitude*/
+/*!
+ * \brief DataDictionaryInitOriginLatitudeDbl Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -117,6 +123,12 @@ ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetOriginLatitudeDbl Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param Latitude
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType *GSD, C8 *Latitude)
 {
   ReadWriteAccess_t Res;
@@ -132,6 +144,12 @@ ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType *GSD, C8 *Latitude)
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetOriginLatitudeDbl Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param Latitude Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(GSDType *GSD, dbl *Latitude)
 {
   pthread_mutex_lock(&OriginLatitudeMutex);
@@ -140,6 +158,12 @@ ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(GSDType *GSD, dbl *Latitude
   return READ_OK;
  }
 
+/*!
+ * \brief DataDictionaryGetOriginLatitudeC8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param Latitude Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetOriginLatitudeC8(GSDType *GSD, C8 *Latitude)
 {
   pthread_mutex_lock(&OriginLatitudeMutex);
@@ -151,6 +175,11 @@ ReadWriteAccess_t DataDictionaryGetOriginLatitudeC8(GSDType *GSD, C8 *Latitude)
 /*END of Origin Latitude*/
 
 /*Origin Longitude*/
+/*!
+ * \brief DataDictionaryInitOriginLongitudeDbl Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitOriginLongitudeDbl(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -173,6 +202,12 @@ ReadWriteAccess_t DataDictionaryInitOriginLongitudeDbl(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetOriginLongitudeDbl Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param Longitude
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(GSDType *GSD, C8 *Longitude)
 {
   ReadWriteAccess_t Res;
@@ -188,6 +223,12 @@ ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(GSDType *GSD, C8 *Longitud
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetOriginLongitudeDbl Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param Longitude Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(GSDType *GSD, dbl *Longitude)
 {
   pthread_mutex_lock(&OriginLongitudeMutex);
@@ -196,6 +237,12 @@ ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(GSDType *GSD, dbl *Longitu
   return READ_OK;
  }
 
+/*!
+ * \brief DataDictionaryGetOriginLongitudeC8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param Longitude Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetOriginLongitudeC8(GSDType *GSD, C8 *Longitude)
 {
   pthread_mutex_lock(&OriginLongitudeMutex);
@@ -206,6 +253,11 @@ ReadWriteAccess_t DataDictionaryGetOriginLongitudeC8(GSDType *GSD, C8 *Longitude
 /*END of Origin Longitude*/
 
 /*Origin Altitude*/
+/*!
+ * \brief DataDictionaryInitOriginAltitudeDbl Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitOriginAltitudeDbl(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -228,6 +280,12 @@ ReadWriteAccess_t DataDictionaryInitOriginAltitudeDbl(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetOriginAltitudeDbl Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param Altitude
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(GSDType *GSD, C8 *Altitude)
 {
   ReadWriteAccess_t Res;
@@ -243,6 +301,12 @@ ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(GSDType *GSD, C8 *Altitude)
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetOriginAltitudeDbl Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param Altitude Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(GSDType *GSD, dbl *Altitude)
 {
   pthread_mutex_lock(&OriginAltitudeMutex);
@@ -251,6 +315,12 @@ ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(GSDType *GSD, dbl *Altitude
   return READ_OK;
  }
 
+/*!
+ * \brief DataDictionaryGetOriginAltitudeC8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param Altitude Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetOriginAltitudeC8(GSDType *GSD, C8 *Altitude)
 {
   pthread_mutex_lock(&OriginAltitudeMutex);
@@ -262,6 +332,11 @@ ReadWriteAccess_t DataDictionaryGetOriginAltitudeC8(GSDType *GSD, C8 *Altitude)
 /*END of Origin Altitude*/
 
 /*VisualizationServer*/
+/*!
+ * \brief DataDictionaryInitVisualizationServerU32 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitVisualizationServerU32(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -284,6 +359,12 @@ ReadWriteAccess_t DataDictionaryInitVisualizationServerU32(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetVisualizationServerU32 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param IP
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType *GSD, C8 *IP)
 {
   ReadWriteAccess_t Res;
@@ -299,6 +380,12 @@ ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType *GSD, C8 *IP)
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetVisualizationServerU32 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param IP Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(GSDType *GSD, U32 *IP)
 {
   pthread_mutex_lock(&VisualizationServerMutex);
@@ -308,6 +395,12 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(GSDType *GSD, U32 *IP)
  }
 
 
+/*!
+ * \brief DataDictionaryGetVisualizationServerU32 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param IP Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType *GSD, C8 *IP)
 {
   pthread_mutex_lock(&VisualizationServerMutex);
@@ -320,6 +413,11 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType *GSD, C8 *IP)
 
 
 /*ForceToLocalhost*/
+/*!
+ * \brief DataDictionaryInitForceToLocalhostU8 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitForceToLocalhostU8(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -340,6 +438,12 @@ ReadWriteAccess_t DataDictionaryInitForceToLocalhostU8(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetForceToLocalhostU8 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param ForceLocalhost
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetForceToLocalhostU8(GSDType *GSD, C8 *ForceLocalhost)
 {
   ReadWriteAccess_t Res;
@@ -353,6 +457,12 @@ ReadWriteAccess_t DataDictionarySetForceToLocalhostU8(GSDType *GSD, C8 *ForceLoc
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetForceToLocalhostU8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param ForceLocalhost Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetForceToLocalhostU8(GSDType *GSD, U8 *ForceLocalhost)
 {
   pthread_mutex_lock(&ForceObjectToLocalhostMutex);
@@ -363,6 +473,11 @@ ReadWriteAccess_t DataDictionaryGetForceToLocalhostU8(GSDType *GSD, U8 *ForceLoc
 /*END of ForceToLocalhost*/
 
 /*ASPMaxTimeDiff*/
+/*!
+ * \brief DataDictionaryInitASPMaxTimeDiffDbl Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitASPMaxTimeDiffDbl(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -383,6 +498,12 @@ ReadWriteAccess_t DataDictionaryInitASPMaxTimeDiffDbl(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetASPMaxTimeDiffDbl Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPMaxTimeDiff
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(GSDType *GSD, C8 *ASPMaxTimeDiff)
 {
   ReadWriteAccess_t Res;
@@ -396,6 +517,12 @@ ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(GSDType *GSD, C8 *ASPMaxTim
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetASPMaxTimeDiffDbl Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPMaxTimeDiff Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(GSDType *GSD, dbl *ASPMaxTimeDiff)
 {
   pthread_mutex_lock(&ASPMaxTimeDiffMutex);
@@ -406,6 +533,11 @@ ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(GSDType *GSD, dbl *ASPMaxTi
 /*END of ASPMaxTimeDiff*/
 
 /*ASPMaxTrajDiff*/
+/*!
+ * \brief DataDictionaryInitASPMaxTrajDiffDbl Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitASPMaxTrajDiffDbl(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -426,6 +558,12 @@ ReadWriteAccess_t DataDictionaryInitASPMaxTrajDiffDbl(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetASPMaxTrajDiffDbl Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPMaxTrajDiff
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(GSDType *GSD, C8 *ASPMaxTrajDiff)
 {
   ReadWriteAccess_t Res;
@@ -439,6 +577,12 @@ ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(GSDType *GSD, C8 *ASPMaxTra
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetASPMaxTrajDiffDbl Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPMaxTrajDiff Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(GSDType *GSD, dbl *ASPMaxTrajDiff)
 {
   pthread_mutex_lock(&ASPMaxTrajDiffMutex);
@@ -450,6 +594,11 @@ ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(GSDType *GSD, dbl *ASPMaxTr
 
 
 /*ASPStepBackCount*/
+/*!
+ * \brief DataDictionaryInitASPStepBackCountU32 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitASPStepBackCountU32(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -470,6 +619,12 @@ ReadWriteAccess_t DataDictionaryInitASPStepBackCountU32(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetASPStepBackCountU32 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPStepBackCount
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(GSDType *GSD, C8 *ASPStepBackCount)
 {
   ReadWriteAccess_t Res;
@@ -483,6 +638,12 @@ ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(GSDType *GSD, C8 *ASPStep
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetASPStepBackCountU32 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPStepBackCount Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(GSDType *GSD, U32 *ASPStepBackCount)
 {
   pthread_mutex_lock(&ASPStepBackCountMutex);
@@ -493,6 +654,11 @@ ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(GSDType *GSD, U32 *ASPSte
 /*END of ASPStepBackCount*/
 
 /*ASPFilterLevel*/
+/*!
+ * \brief DataDictionaryInitASPFilterLevelDbl Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitASPFilterLevelDbl(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -513,6 +679,12 @@ ReadWriteAccess_t DataDictionaryInitASPFilterLevelDbl(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetASPFilterLevelDbl Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPFilterLevel
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(GSDType *GSD, C8 *ASPFilterLevel)
 {
   ReadWriteAccess_t Res;
@@ -526,6 +698,12 @@ ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(GSDType *GSD, C8 *ASPFilter
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetASPFilterLevelDbl Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPFilterLevel Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(GSDType *GSD, dbl *ASPFilterLevel)
 {
   pthread_mutex_lock(&ASPFilterLevelMutex);
@@ -536,6 +714,11 @@ ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(GSDType *GSD, dbl *ASPFilte
 /*END of ASPFilterLevel*/
 
 /*ASPMaxDeltaTime*/
+/*!
+ * \brief DataDictionaryInitASPMaxDeltaTimeDbl Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitASPMaxDeltaTimeDbl(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -556,6 +739,12 @@ ReadWriteAccess_t DataDictionaryInitASPMaxDeltaTimeDbl(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetASPMaxDeltaTimeDbl Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPMaxDeltaTime
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(GSDType *GSD, C8 *ASPMaxDeltaTime)
 {
   ReadWriteAccess_t Res;
@@ -569,6 +758,12 @@ ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(GSDType *GSD, C8 *ASPMaxDe
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetASPMaxDeltaTimeDbl Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPMaxDeltaTime Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(GSDType *GSD, dbl *ASPMaxDeltaTime)
 {
   pthread_mutex_lock(&ASPMaxDeltaTimeMutex);
@@ -580,6 +775,11 @@ ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(GSDType *GSD, dbl *ASPMaxD
 
 
 /*TimeServerIP*/
+/*!
+ * \brief DataDictionaryInitTimeServerIPU32 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitTimeServerIPU32(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -602,6 +802,12 @@ ReadWriteAccess_t DataDictionaryInitTimeServerIPU32(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetTimeServerIPU32 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param TimeServerIP
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetTimeServerIPU32(GSDType *GSD, C8 *TimeServerIP)
 {
   ReadWriteAccess_t Res;
@@ -617,6 +823,12 @@ ReadWriteAccess_t DataDictionarySetTimeServerIPU32(GSDType *GSD, C8 *TimeServerI
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetTimeServerIPU32 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param TimeServerIP Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(GSDType *GSD, U32 *TimeServerIP)
 {
   pthread_mutex_lock(&TimeServerIPMutex);
@@ -625,6 +837,12 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(GSDType *GSD, U32 *TimeServer
   return READ_OK;
  }
 
+/*!
+ * \brief DataDictionaryGetTimeServerIPC8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param TimeServerIP Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetTimeServerIPC8(GSDType *GSD, C8 *TimeServerIP)
 {
   pthread_mutex_lock(&TimeServerIPMutex);
@@ -637,6 +855,11 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPC8(GSDType *GSD, C8 *TimeServerIP
 
 
 /*TimeServerPort*/
+/*!
+ * \brief DataDictionaryInitTimeServerPortU16 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitTimeServerPortU16(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -657,6 +880,12 @@ ReadWriteAccess_t DataDictionaryInitTimeServerPortU16(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetTimeServerPortU16 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param TimeServerPort
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetTimeServerPortU16(GSDType *GSD, C8 *TimeServerPort)
 {
   ReadWriteAccess_t Res;
@@ -670,6 +899,12 @@ ReadWriteAccess_t DataDictionarySetTimeServerPortU16(GSDType *GSD, C8 *TimeServe
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetTimeServerPortU16 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param TimeServerPort Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(GSDType *GSD, U16 *TimeServerPort)
 {
   pthread_mutex_lock(&TimeServerPortMutex);
@@ -681,6 +916,11 @@ ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(GSDType *GSD, U16 *TimeServ
 
 
 /*SimulatorIP*/
+/*!
+ * \brief DataDictionaryInitSimulatorIPU32 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitSimulatorIPU32(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -703,6 +943,12 @@ ReadWriteAccess_t DataDictionaryInitSimulatorIPU32(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetSimulatorIPU32 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param SimulatorIP
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetSimulatorIPU32(GSDType *GSD, C8 *SimulatorIP)
 {
   ReadWriteAccess_t Res;
@@ -718,6 +964,12 @@ ReadWriteAccess_t DataDictionarySetSimulatorIPU32(GSDType *GSD, C8 *SimulatorIP)
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetSimulatorIPU32 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param SimulatorIP Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(GSDType *GSD, U32 *SimulatorIP)
 {
   pthread_mutex_lock(&SimulatorIPMutex);
@@ -726,6 +978,12 @@ ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(GSDType *GSD, U32 *SimulatorIP
   return READ_OK;
  }
 
+/*!
+ * \brief DataDictionaryGetSimulatorIPC8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param SimulatorIP Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetSimulatorIPC8(GSDType *GSD, C8 *SimulatorIP)
 {
   pthread_mutex_lock(&SimulatorIPMutex);
@@ -736,6 +994,11 @@ ReadWriteAccess_t DataDictionaryGetSimulatorIPC8(GSDType *GSD, C8 *SimulatorIP)
 /*END of SimulatorIP*/
 
 /*SimulatorTCPPort*/
+/*!
+ * \brief DataDictionaryInitSimulatorTCPPortU16 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitSimulatorTCPPortU16(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -756,6 +1019,12 @@ ReadWriteAccess_t DataDictionaryInitSimulatorTCPPortU16(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetSimulatorTCPPortU16 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param SimulatorTCPPort
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(GSDType *GSD, C8 *SimulatorTCPPort)
 {
   ReadWriteAccess_t Res;
@@ -769,6 +1038,12 @@ ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(GSDType *GSD, C8 *Simulat
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetSimulatorTCPPortU16 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param SimulatorTCPPort Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(GSDType *GSD, U16 *SimulatorTCPPort)
 {
   pthread_mutex_lock(&SimulatorTCPPortMutex);
@@ -779,6 +1054,11 @@ ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(GSDType *GSD, U16 *Simula
 /*END of SimulatorTCPPort*/
 
 /*SimulatorUDPPort*/
+/*!
+ * \brief DataDictionaryInitSimulatorUDPPortU16 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitSimulatorUDPPortU16(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -799,6 +1079,12 @@ ReadWriteAccess_t DataDictionaryInitSimulatorUDPPortU16(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetSimulatorUDPPortU16 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param SimulatorUDPPort
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(GSDType *GSD, C8 *SimulatorUDPPort)
 {
   ReadWriteAccess_t Res;
@@ -812,6 +1098,12 @@ ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(GSDType *GSD, C8 *Simulat
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetSimulatorUDPPortU16 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param SimulatorUDPPort Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(GSDType *GSD, U16 *SimulatorUDPPort)
 {
   pthread_mutex_lock(&SimulatorUDPPortMutex);
@@ -822,6 +1114,11 @@ ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(GSDType *GSD, U16 *Simula
 /*END of SimulatorUDPPort*/
 
 /*SimulatorMode*/
+/*!
+ * \brief DataDictionaryInitSimulatorModeU8 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitSimulatorModeU8(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -842,6 +1139,12 @@ ReadWriteAccess_t DataDictionaryInitSimulatorModeU8(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetSimulatorModeU8 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param SimulatorMode
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetSimulatorModeU8(GSDType *GSD, C8 *SimulatorMode)
 {
   ReadWriteAccess_t Res;
@@ -855,6 +1158,12 @@ ReadWriteAccess_t DataDictionarySetSimulatorModeU8(GSDType *GSD, C8 *SimulatorMo
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetSimulatorModeU8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param SimulatorMode Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(GSDType *GSD, U8 *SimulatorMode)
 {
   pthread_mutex_lock(&SimulatorModeMutex);
@@ -865,6 +1174,11 @@ ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(GSDType *GSD, U8 *SimulatorMo
 /*END of SimulatorMode*/
 
 /*VOILReceivers*/
+/*!
+ * \brief DataDictionaryInitVOILReceiversC8 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitVOILReceiversC8(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -885,6 +1199,12 @@ ReadWriteAccess_t DataDictionaryInitVOILReceiversC8(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetVOILReceiversC8 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param VOILReceivers
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType *GSD, C8 *VOILReceivers)
 {
   ReadWriteAccess_t Res;
@@ -898,6 +1218,12 @@ ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType *GSD, C8 *VOILReceive
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetVOILReceiversC8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param VOILReceivers Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetVOILReceiversC8(GSDType *GSD, U8 *VOILReceivers)
 {
   pthread_mutex_lock(&VOILReceiversMutex);
@@ -908,6 +1234,11 @@ ReadWriteAccess_t DataDictionaryGetVOILReceiversC8(GSDType *GSD, U8 *VOILReceive
 /*END of VOILReceivers*/
 
 /*DTMReceivers*/
+/*!
+ * \brief DataDictionaryInitDTMReceiversC8 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitDTMReceiversC8(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -928,6 +1259,12 @@ else
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetDTMReceiversC8 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param DTMReceivers
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetDTMReceiversC8(GSDType *GSD, C8 *DTMReceivers)
 {
   ReadWriteAccess_t Res;
@@ -941,6 +1278,12 @@ ReadWriteAccess_t DataDictionarySetDTMReceiversC8(GSDType *GSD, C8 *DTMReceivers
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetDTMReceiversC8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param DTMReceivers Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetDTMReceiversC8(GSDType *GSD, U8 *DTMReceivers)
 {
   pthread_mutex_lock(&DTMReceiversMutex);
@@ -951,6 +1294,11 @@ ReadWriteAccess_t DataDictionaryGetDTMReceiversC8(GSDType *GSD, U8 *DTMReceivers
 /*END of DTMReceivers*/
 
 /*External Supervisor IP*/
+/*!
+ * \brief DataDictionaryInitExternalSupervisorIPU32 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -974,6 +1322,12 @@ ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetExternalSupervisorIPU32 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param IP
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(GSDType *GSD, C8 *IP)
 {
   ReadWriteAccess_t Res;
@@ -989,6 +1343,12 @@ ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(GSDType *GSD, C8 *IP)
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetExternalSupervisorIPU32 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param IP Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(GSDType *GSD, U32 *IP)
 {
   pthread_mutex_lock(&ExternalSupervisorIPMutex);
@@ -997,6 +1357,12 @@ ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(GSDType *GSD, U32 *IP
   return READ_OK;
  }
 
+/*!
+ * \brief DataDictionaryGetExternalSupervisorIPC8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param IP Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPC8(GSDType *GSD, C8 *IP)
 {
   pthread_mutex_lock(&ExternalSupervisorIPMutex);
@@ -1007,6 +1373,11 @@ ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPC8(GSDType *GSD, C8 *IP)
 /*END of External Supervisor IP*/
 
 /*External SupervisorTCPPort*/
+/*!
+ * \brief DataDictionaryInitSupervisorTCPPortU16 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -1027,6 +1398,12 @@ ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetSupervisorTCPPortU16 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param SupervisorTCPPort
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(GSDType *GSD, C8 *SupervisorTCPPort)
 {
   ReadWriteAccess_t Res;
@@ -1040,6 +1417,12 @@ ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(GSDType *GSD, C8 *Superv
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetSupervisorTCPPortU16 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param SupervisorTCPPort Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(GSDType *GSD, U16 *SupervisorTCPPort)
 {
   pthread_mutex_lock(&SupervisorTCPPortMutex);
@@ -1050,6 +1433,11 @@ ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(GSDType *GSD, U16 *Super
 /*END of External SupervisorTCPPort*/
 
 /*Runtime Variable Subscription Service (RVSS) Configuration*/
+/*!
+ * \brief DataDictionaryInitRVSSConfigU32 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitRVSSConfigU32(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -1071,6 +1459,12 @@ ReadWriteAccess_t DataDictionaryInitRVSSConfigU32(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetInitRVSSConfigU32 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param RVSSConfig
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetRVSSConfigU32(GSDType *GSD, U32 RVSSConfig)
 {
   ReadWriteAccess_t Res;
@@ -1088,6 +1482,12 @@ ReadWriteAccess_t DataDictionarySetRVSSConfigU32(GSDType *GSD, U32 RVSSConfig)
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetRVSSConfigU32 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param RVSSConfig Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(GSDType *GSD, U32 *RVSSConfig)
 {
   pthread_mutex_lock(&DataDictionaryRVSSConfigMutex);
@@ -1099,6 +1499,11 @@ ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(GSDType *GSD, U32 *RVSSConfig)
 
 
 /*Runtime Variable Subscription Service (RVSS) Rate*/
+/*!
+ * \brief DataDictionaryInitRVSSRateU8 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitRVSSRateU8(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -1120,6 +1525,12 @@ ReadWriteAccess_t DataDictionaryInitRVSSRateU8(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetRVSSRateU8 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param RVSSRate
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetRVSSRateU8(GSDType *GSD, U8 RVSSRate)
 {
   ReadWriteAccess_t Res;
@@ -1137,6 +1548,12 @@ ReadWriteAccess_t DataDictionarySetRVSSRateU8(GSDType *GSD, U8 RVSSRate)
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetRVSSRateU8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param RVSSRate Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetRVSSRateU8(GSDType *GSD, U8 *RVSSRate)
 {
   pthread_mutex_lock(&DataDictionaryRVSSRateMutex);
@@ -1148,6 +1565,12 @@ ReadWriteAccess_t DataDictionaryGetRVSSRateU8(GSDType *GSD, U8 *RVSSRate)
 
 
 /*ASPDebug*/
+/*!
+ * \brief DataDictionarySetRVSSAsp Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPD
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetRVSSAsp(GSDType *GSD, ASPType *ASPD)
 {
   pthread_mutex_lock(&ASPDataMutex);
@@ -1156,6 +1579,12 @@ ReadWriteAccess_t DataDictionarySetRVSSAsp(GSDType *GSD, ASPType *ASPD)
   return WRITE_OK;
 }
 
+/*!
+ * \brief DataDictionaryGetRVSSAsp Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPD Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType *GSD, ASPType *ASPD)
 {
   pthread_mutex_lock(&ASPDataMutex);
@@ -1166,6 +1595,11 @@ ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType *GSD, ASPType *ASPD)
 /*END ASPDebug*/
 
 /*MiscData*/
+/*!
+ * \brief DataDictionaryInitMiscDataC8 Initializes variable according to the configuration file
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryInitMiscDataC8(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
@@ -1186,6 +1620,12 @@ ReadWriteAccess_t DataDictionaryInitMiscDataC8(GSDType *GSD)
   return Res;
 }
 
+/*!
+ * \brief DataDictionarySetMiscDataC8 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param MiscData
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType *GSD, C8 *MiscData)
 {
   ReadWriteAccess_t Res;
@@ -1200,6 +1640,12 @@ ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType *GSD, C8 *MiscData)
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetMiscDataC8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param MiscData Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, U8 *MiscData)
 {
   pthread_mutex_lock(&MiscDataMutex);
@@ -1211,6 +1657,12 @@ ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, U8 *MiscData)
 
 
 /*OBCState*/
+/*!
+ * \brief DataDictionarySetOBCStateU8 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param OBCState
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, U8 OBCState)
 {
   ReadWriteAccess_t Res;
@@ -1221,6 +1673,11 @@ ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, U8 OBCState)
   return Res; 
 }
 
+/*!
+ * \brief DataDictionaryGetOBCStateU8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \return Result according to ::ReadWriteAccess_t
+ */
 U8 DataDictionaryGetOBCStateU8(GSDType *GSD)
 {
   U8 Ret;
@@ -1233,13 +1690,13 @@ U8 DataDictionaryGetOBCStateU8(GSDType *GSD)
 /*END OBCState*/
 
 
-/*
-DataDictionarySearchParameter searches for parameters in the file test.conf and returns
+/*!
+ * \brief DataDictionarySearchParameter Searches for parameters in the configuration file and returns
 the parameter value.
-
-- *ParameterName the name of the parameter in test.conf
-- *ResultBuffer the value of the parameter.
-*/
+ * \param ParameterName Parameter to search for
+ * \param ResultBuffer Buffer where read result should be stored
+ * \return Length of read parameter string
+ */
 U64 DataDictionarySearchParameter(C8 *ParameterName, C8 *ResultBuffer)
 {
   bzero(ResultBuffer, DD_CONTROL_BUFFER_SIZE_20);
