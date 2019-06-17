@@ -46,6 +46,7 @@
 
 #define TASK_PERIOD_MS 1
 #define HEARTBEAT_TIME_MS 10
+#define OBC_STATE_REPORT_PERIOD_MS 1000
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
 #define OBJECT_CONTROL_ABORT_MODE 1
@@ -137,16 +138,22 @@ typedef enum {
 } hearbeatCommand_t;
 
 
-
+typedef enum {
+    TRANSITION_RESULT_UNDEFINED,
+    TRANSITION_OK,
+    TRANSITION_INVALID,
+    TRANSITION_MEMORY_ERROR
+} StateTransitionResult;
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
       void (*fooptr)(int,float) = foo;
       fooptr(10,1.5);
 
    Consequently, the below typedef defines a StateTransition type as a function pointer to a function taking
-   (OBCState_t, OBCState_t) as input, and returning an int8_t
+   (OBCState_t, OBCState_t) as input, and returning a StateTransitionResult
 */
-typedef int8_t (*StateTransition)(OBCState_t *currentState, OBCState_t requestedState);
+typedef StateTransitionResult (*StateTransition)(OBCState_t *currentState, OBCState_t requestedState);
+
 
 C8 TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION*COMMAND_DOTM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH];
 
@@ -186,15 +193,17 @@ static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
                              char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
                              int* nbr_objects);
 
-int8_t vSetState(OBCState_t *currentState, OBCState_t requestedState);
+OBCState_t vInitializeState(OBCState_t firstState, GSDType *GSD);
+inline OBCState_t vGetState(GSDType *GSD);
+StateTransitionResult vSetState(OBCState_t requestedState, GSDType *GSD);
 StateTransition tGetTransition(OBCState_t fromState);
-int8_t tFromIdle(OBCState_t *currentState, OBCState_t requestedState);
-int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState);
-int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState);
-int8_t tFromArmed(OBCState_t *currentState, OBCState_t requestedState);
-int8_t tFromRunning(OBCState_t *currentState, OBCState_t requestedState);
-int8_t tFromError(OBCState_t *currentState, OBCState_t requestedState);
-int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromIdle(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromInitialized(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromConnected(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromArmed(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromRunning(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromError(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -303,8 +312,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
-    OBCState_t OBCState = OBC_STATE_IDLE;
+    OBCState_t state = vInitializeState(OBC_STATE_IDLE, GSD);
     U8 uiTimeCycle = 0;
+    U32 stateKeepAliveTimeCounter = 0;
     int ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
 
     C8 Buffer2[SMALL_BUFFER_SIZE_1];
@@ -334,7 +344,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO, "Object control task running with PID: %i", getpid());
 
-    DataDictionarySetOBCStateU8(GSD, OBCState);
   
     // Set up message bus connection
     if (iCommInit())
@@ -342,7 +351,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
    
     while(!iExit)
     {
-        if(OBCState == OBC_STATE_ERROR)
+        state = vGetState(GSD);
+
+        if(state == OBC_STATE_ERROR)
         {
             ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
             MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus, 0);
@@ -350,7 +361,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
         }
 
-        if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED)
+        if(state == OBC_STATE_RUNNING || state == OBC_STATE_ARMED || state == OBC_STATE_CONNECTED)
         {
             /*HEAB*/
             for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -386,13 +397,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     {
                         vCloseSafetyChannel(&safety_socket_fd[iIndex]);
                     }
-                    vSetState(&OBCState, OBC_STATE_IDLE);
+                    vSetState(OBC_STATE_IDLE, GSD);
                     break;
                 }
             }
         }
 
-        if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED)
+        if(state == OBC_STATE_RUNNING || state == OBC_STATE_CONNECTED || state == OBC_STATE_ARMED)
         {
             char buffer[RECV_MESSAGE_BUFFER];
             int recievedNewData = 0;
@@ -460,7 +471,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                                 if(iCommSend(COMM_TOM, pcSendBuffer, strlen(pcSendBuffer)+1) < 0)
                                 {
                                     LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending TOM command - entering error state");
-                                    vSetState(&OBCState, OBC_STATE_ERROR);
+                                    vSetState(OBC_STATE_ERROR, GSD);
                                     ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
 
                                 }
@@ -475,7 +486,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         if(iCommSend(COMM_MONR, buffer, COMMAND_MONR_MESSAGE_LENGTH) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONR command - entering error state");
-                            vSetState(&OBCState,OBC_STATE_ERROR);
+                            vSetState(OBC_STATE_ERROR, GSD);
                             ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
                         }
                     }
@@ -522,7 +533,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         if(iCommSend(COMM_MONI,buffer,strlen(buffer)) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONI command - entering error state");
-                            vSetState(&OBCState,OBC_STATE_ERROR);
+                            vSetState(OBC_STATE_ERROR, GSD);
                             ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
                         }
                     }
@@ -608,7 +619,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         }
 
 
-        if(GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
+        if(GSD->SupChunkSize > 0 && (state == OBC_STATE_CONNECTED || state == OBC_STATE_ARMED || state == OBC_STATE_RUNNING) )
         {
 
             //bzero(TrajBuffer, strlen(pcRecvBuffer));
@@ -653,17 +664,17 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             LogMessage(LOG_LEVEL_INFO, "Received command %d", iCommand);
 
 
-            if(iCommand == COMM_ARMD && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED))
+            if(iCommand == COMM_ARMD && (state == OBC_STATE_CONNECTED || state == OBC_STATE_ARMED))
             {
                 if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_ARMED_STATE)
                 {
                     LOG_SEND(LogBuffer,"[ObjectControl] Sending ARM %d", pcRecvBuffer[0]);
-                    vSetState(&OBCState, OBC_STATE_ARMED);
+                    vSetState(OBC_STATE_ARMED, GSD);
                 }
                 else if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE)
                 {
                     LOG_SEND(LogBuffer,"[ObjectControl] Sending DISARM: %d", pcRecvBuffer[0]);
-                    vSetState(&OBCState, OBC_STATE_CONNECTED);
+                    vSetState(OBC_STATE_CONNECTED, GSD);
                 }
                 MessageLength = ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, pcRecvBuffer[0], 0);
 
@@ -679,7 +690,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
             }
-            else if(iCommand == COMM_STRT && (OBCState == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED)*/)  //OBC_STATE_INITIALIZED is temporary!
+            else if(iCommand == COMM_STRT && (state == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED)*/)  //OBC_STATE_INITIALIZED is temporary!
             {
                 bzero(Timestamp, SMALL_BUFFER_SIZE_0);
                 MiscPtr =strchr(pcRecvBuffer,';');
@@ -700,7 +711,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 for(iIndex=0;iIndex<nbr_objects;++iIndex) {
                   UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
                 }
-                vSetState(&OBCState, OBC_STATE_RUNNING);
+                vSetState(OBC_STATE_RUNNING, GSD);
 
                 //Store STRT in GSD
                 if(STRTSentU8 == 0)
@@ -717,7 +728,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>, GPS time <%s>\n",pcRecvBuffer, MiscText);
 
             }
-            else if(iCommand == COMM_TRAJ && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
+            else if(iCommand == COMM_TRAJ && (state == OBC_STATE_CONNECTED || state == OBC_STATE_ARMED || state == OBC_STATE_RUNNING) )
             {
 
                 DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
@@ -762,7 +773,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 }
 
             }
-            else if(/*iCommand == COMM_TRAJ_FROMSUP*/ GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
+            else if(/*iCommand == COMM_TRAJ_FROMSUP*/ GSD->SupChunkSize > 0 && (state == OBC_STATE_CONNECTED || state == OBC_STATE_ARMED || state == OBC_STATE_RUNNING) )
             {
 
                 //bzero(TrajBuffer, strlen(pcRecvBuffer));
@@ -793,7 +804,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 GSD->SupChunkSize = 0;
 
             }
-            else if(iCommand == COMM_VIOP && OBCState == OBC_STATE_RUNNING/*OBC_STATE_INITIALIZED*/)
+            else if(iCommand == COMM_VIOP && state == OBC_STATE_RUNNING/*OBC_STATE_INITIALIZED*/)
             {
                 /*Build the VOIL message*/
                 MessageLength = ObjectControlBuildVOILMessage(MessageBuffer, &VOILData, (C8*)GSD->VOILData, 0);
@@ -814,9 +825,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 ObjectcontrolExecutionMode = OBJECT_CONTROL_REPLAY_MODE;
                 LogMessage(LOG_LEVEL_INFO,"Entering REPLAY mode <%s>", pcRecvBuffer);
             }
-            else if(iCommand == COMM_ABORT && OBCState == OBC_STATE_RUNNING)
+            else if(iCommand == COMM_ABORT && state == OBC_STATE_RUNNING)
             {
-                vSetState(&OBCState, OBC_STATE_CONNECTED);
+                vSetState(OBC_STATE_CONNECTED, GSD);
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT; //Set server to ABORT
                 LogMessage(LOG_LEVEL_WARNING,"ABORT received");
                 LOG_SEND(LogBuffer, "[ObjectControl] ABORT received.");
@@ -883,10 +894,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 }
 
 
-                vSetState(&OBCState, OBC_STATE_INITIALIZED);
+                vSetState(OBC_STATE_INITIALIZED, GSD);
                 LogMessage(LOG_LEVEL_INFO,"ObjectControl is initialized");
                 LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
-                DataDictionarySetOBCStateU8(GSD, OBCState);
+
                 //Remove temporary file
                 remove(TEMP_LOG_FILE);
                 if(USE_TEMP_LOGFILE)
@@ -898,7 +909,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 //OSEMSentU8 = 0;
                 STRTSentU8 = 0;
             }
-            else if(iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED)
+            else if(iCommand == COMM_CONNECT && state == OBC_STATE_INITIALIZED)
             {
                 LogMessage(LOG_LEVEL_INFO,"CONNECT received");
                 LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.");
@@ -983,7 +994,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         if(iCommSend(COMM_OSEM,pcSendBuffer,strlen(pcSendBuffer)+1) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OSEM command - entering error state");
-                            vSetState(&OBCState,OBC_STATE_ERROR);
+                            vSetState(OBC_STATE_ERROR, GSD);
                             ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
                         }
                       
@@ -1070,8 +1081,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 /*Set server status*/
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
 
-                if(DisconnectU8 == 0) vSetState(&OBCState, OBC_STATE_CONNECTED);
-                else if(DisconnectU8 == 1) vSetState(&OBCState, OBC_STATE_IDLE);
+                if(DisconnectU8 == 0) vSetState(OBC_STATE_CONNECTED, GSD);
+                else if(DisconnectU8 == 1) vSetState(OBC_STATE_IDLE, GSD);
             }
             else if(iCommand == COMM_DATA_DICT)
             {
@@ -1137,7 +1148,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 {
                     vCloseSafetyChannel(&safety_socket_fd[iIndex]);
                 }
-                vSetState(&OBCState, OBC_STATE_IDLE);
+                vSetState(OBC_STATE_IDLE, GSD);
             }
             else if(iCommand == COMM_EXIT)
             {
@@ -1149,8 +1160,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 LogMessage(LOG_LEVEL_WARNING,"Unhandled command in object control: %d",iCommand);
             }
         }
-
-        DataDictionarySetOBCStateU8(GSD, OBCState);
       
         if(!iExit)
         {
@@ -1162,6 +1171,21 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             if(uiTimeCycle >= HEARTBEAT_TIME_MS/TASK_PERIOD_MS)
             {
                uiTimeCycle = 0;
+            }
+
+            // Periodically send state to signal aliveness
+            if (++stateKeepAliveTimeCounter >= OBC_STATE_REPORT_PERIOD_MS/TASK_PERIOD_MS)
+            {
+                stateKeepAliveTimeCounter = 0;
+                state = vGetState(GSD);
+                bzero(Buffer2, sizeof(Buffer2));
+                Buffer2[0] = (uint8_t)(DataDictionaryGetOBCStateU8(GSD));
+                if (iCommSend(COMM_OBC_STATE, Buffer2, sizeof(Buffer2)) < 0)
+                {
+                    LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OBC_STATE command - entering error state");
+                    vSetState(OBC_STATE_ERROR, GSD);
+                    ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+                }
             }
 
             (void)nanosleep(&sleep_time,&ref_time);
@@ -2681,30 +2705,50 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], char ob
 }
 
 
-int8_t vSetState(OBCState_t *currentState, OBCState_t requestedState)
+
+OBCState_t vGetState(GSDType *GSD)
+{
+    return DataDictionaryGetOBCStateU8(GSD);
+}
+
+StateTransitionResult vSetState(OBCState_t requestedState, GSDType *GSD)
 {
     StateTransition transitionFunction;
-    int8_t retval;
+    StateTransitionResult retval = TRANSITION_RESULT_UNDEFINED;
+    OBCState_t currentState = DataDictionaryGetOBCStateU8(GSD);
 
     // Always allow transitions to these two states
     if (requestedState == OBC_STATE_ERROR || requestedState == OBC_STATE_UNDEFINED)
     {
-        *currentState = requestedState;
-        retval = 0;
+        if (DataDictionarySetOBCStateU8(GSD, requestedState) == WRITE_OK)
+            retval = TRANSITION_OK;
+        else
+            retval = TRANSITION_MEMORY_ERROR;
     }
-    else if (requestedState == *currentState)
+    else if (requestedState == currentState)
     {
-        retval = 0;
+        retval = TRANSITION_OK;
     }
     else
     {
-        transitionFunction = tGetTransition(*currentState);
-        retval = transitionFunction(currentState, requestedState);
+        transitionFunction = tGetTransition(currentState);
+        retval = transitionFunction(&currentState, requestedState);
+        if (retval != TRANSITION_INVALID)
+        {
+            if(DataDictionarySetOBCStateU8(GSD, currentState) == WRITE_OK)
+                retval = TRANSITION_OK;
+            else
+                retval = TRANSITION_MEMORY_ERROR;
+        }
     }
 
-    if (retval == -1)
+    if (retval == TRANSITION_INVALID)
     {
-        LogMessage(LOG_LEVEL_WARNING,"Invalid transition requested: from %d to %d",*currentState,requestedState);
+        LogMessage(LOG_LEVEL_WARNING,"Invalid transition requested: from %d to %d",currentState,requestedState);
+    }
+    else if (retval == TRANSITION_MEMORY_ERROR)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Unable to set state to %u in shared memory!!", requestedState);
     }
     return retval;
 }
@@ -2731,68 +2775,82 @@ StateTransition tGetTransition(OBCState_t fromState)
     }
 }
 
-int8_t tFromIdle(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromIdle(OBCState_t *currentState, OBCState_t requestedState)
 {
     if (requestedState == OBC_STATE_INITIALIZED)
     {
         *currentState = requestedState;
-        return 0;
+        return TRANSITION_OK;
     }
-    return -1;
+    return TRANSITION_INVALID;
 }
 
-int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromInitialized(OBCState_t *currentState, OBCState_t requestedState)
 {
     if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
-        return 0;
+        return TRANSITION_OK;
     }
-    return -1;
+    return TRANSITION_INVALID;
 }
 
-int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromConnected(OBCState_t *currentState, OBCState_t requestedState)
 {
     if (requestedState == OBC_STATE_ARMED || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
-        return 0;
+        return TRANSITION_OK;
     }
-    return -1;
+    return TRANSITION_INVALID;
 }
 
-int8_t tFromArmed(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromArmed(OBCState_t *currentState, OBCState_t requestedState)
 {
     if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_RUNNING || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
-        return 0;
+        return TRANSITION_OK;
     }
-    return -1;
+    return TRANSITION_INVALID;
 }
 
-int8_t tFromRunning(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromRunning(OBCState_t *currentState, OBCState_t requestedState)
 {
     if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
-        return 0;
+        return TRANSITION_OK;
     }
-    return -1;
+    return TRANSITION_INVALID;
 }
 
-int8_t tFromError(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromError(OBCState_t *currentState, OBCState_t requestedState)
 {
     if (requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
-        return 0;
+        return TRANSITION_OK;
     }
-    return -1;
+    return TRANSITION_INVALID;
 }
 
-int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromUndefined(OBCState_t *currentState, OBCState_t requestedState)
 {
-    return -1;
+    return TRANSITION_INVALID;
 }
 
+
+OBCState_t vInitializeState(OBCState_t firstState, GSDType *GSD){
+    static int8_t isInitialized = 0;
+    if (!isInitialized)
+    {
+        isInitialized = 1;
+        if(DataDictionarySetOBCStateU8(GSD,firstState) != WRITE_OK)
+            util_error("Unable to write object control state to shared memory");
+    }
+    else {
+        LogMessage(LOG_LEVEL_WARNING,"Object control state already initialized");
+    }
+    return DataDictionaryGetOBCStateU8(GSD);
+}
