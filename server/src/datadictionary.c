@@ -18,31 +18,31 @@
 #include "logging.h"
 
 // Parameters and variables
-pthread_mutex_t OriginLatitudeMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t OriginLongitudeMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t OriginAltitudeMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t VisualizationServerMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t ForceObjectToLocalhostMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t ASPMaxTimeDiffMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t ASPMaxTrajDiffMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t ASPStepBackCountMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t ASPFilterLevelMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t ASPMaxDeltaTimeMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t TimeServerIPMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t TimeServerPortMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t SimulatorIPMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t SimulatorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t SimulatorUDPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t SimulatorModeMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t VOILReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t DTMReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t ExternalSupervisorIPMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t SupervisorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t DataDictionaryRVSSConfigMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t DataDictionaryRVSSRateMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t OriginLatitudeMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t OriginLongitudeMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t OriginAltitudeMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t VisualizationServerMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t ForceObjectToLocalhostMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t ASPMaxTimeDiffMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t ASPMaxTrajDiffMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t ASPStepBackCountMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t ASPFilterLevelMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t ASPMaxDeltaTimeMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t TimeServerIPMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t TimeServerPortMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t SimulatorIPMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t SimulatorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t SimulatorUDPPortMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t SimulatorModeMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t VOILReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t DTMReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t ExternalSupervisorIPMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t SupervisorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t DataDictionaryRVSSConfigMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t DataDictionaryRVSSRateMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 
