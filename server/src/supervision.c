@@ -197,9 +197,10 @@ int loadGeofenceFiles(GeofenceType *geofences[], unsigned int *nGeof){
             if(parseGeofenceFile(pDirent->d_name, (*geofences)+n) == -1)
             {
                 closedir(pDir);
+                LogMessage(LOG_LEVEL_ERROR, "Error parsing file <%s>", pDirent->d_name);
                 return -1;
             }
-            LogMessage(LOG_LEVEL_DEBUG, "Loaded geofence with %u vertices", geofences[n]->numberOfPoints);
+            LogMessage(LOG_LEVEL_DEBUG, "Loaded geofence with %u vertices", (*geofences)[n].numberOfPoints);
             n++;
         }
     }
