@@ -159,7 +159,7 @@ static I32 vCheckRemoteDisconnected(int* sockfd);
 
 static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static void vCloseSafetyChannel(int* sockfd);
-static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData);
+static size_t uiRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData);
 I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug);
 I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug);
 I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
@@ -428,7 +428,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             for(iIndex=0;iIndex<nbr_objects;++iIndex)
             {
                 bzero(buffer,RECV_MESSAGE_BUFFER);
-                vRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
+                uiRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
 
 
                 if(recievedNewData)
@@ -2613,9 +2613,9 @@ int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendDa
 }
 
 
-static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData)
+static size_t uiRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData)
 {
-    int result;
+    size_t result;
     *recievedNewData = 0;
     do
     {
