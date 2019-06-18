@@ -159,7 +159,7 @@ static I32 vCheckRemoteDisconnected(int* sockfd);
 
 static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static void vCloseSafetyChannel(int* sockfd);
-static ssize_t uiRecvMonitor(int* sockfd, char* buffer, size_t length, int* recievedNewData);
+static ssize_t uiRecvMonitor(int* sockfd, char* buffer, size_t length);
 I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug);
 I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug);
 I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
@@ -392,7 +392,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED)
         {
             char buffer[RECV_MESSAGE_BUFFER];
-            int recievedNewData = 0;
+            ssize_t receivedMONRData = 0;
             // this is etsi time lets remov it ans use utc instead
             //gettimeofday(&CurrentTimeStruct, NULL);
 
@@ -428,7 +428,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             for(iIndex=0;iIndex<nbr_objects;++iIndex)
             {
                 bzero(buffer,RECV_MESSAGE_BUFFER);
-                uiRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
+                receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER);
 
 
                 if(recievedNewData)
@@ -2613,10 +2613,10 @@ int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendDa
 }
 
 
-static ssize_t uiRecvMonitor(int* sockfd, char* buffer, size_t length, int* recievedNewData)
+static ssize_t uiRecvMonitor(int* sockfd, char* buffer, size_t length)
 {
     ssize_t result = 0;
-    *recievedNewData = 0;
+
     do
     {
         result = recv(*sockfd, buffer, length, 0);
@@ -2630,7 +2630,6 @@ static ssize_t uiRecvMonitor(int* sockfd, char* buffer, size_t length, int* reci
         }
         else
         {
-            *recievedNewData = 1;
             LogMessage(LOG_LEVEL_DEBUG,"Received: <%s>",buffer);
         }
     } while(result > 0 );
