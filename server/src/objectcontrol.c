@@ -425,17 +425,16 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
 
 
-            for(iIndex=0;iIndex<nbr_objects;++iIndex)
+            for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
             {
                 bzero(buffer,RECV_MESSAGE_BUFFER);
                 receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER);
 
-
-                if(receivedMONRData > 0)
+                if (receivedMONRData > 0)
                 {
-                    LogMessage(LOG_LEVEL_DEBUG,"Recieved new data from %s %d %d: %s",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
+                    LogMessage(LOG_LEVEL_DEBUG,"Recieved new data from %s %d %d: %s",object_address_name[iIndex],object_udp_port[iIndex],receivedMONRData,buffer);
 
-                    if(buffer[0] == COMMAND_TOM_CODE)
+                    if (buffer[0] == COMMAND_TOM_CODE)
                     {
                         for(i = 0; i < TriggerActionCount; i ++)
                         {
@@ -467,9 +466,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                     if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE)
                     {
-                        // Send MONR message on new byte format
-                        //LogMessage(LOG_LEVEL_INFO, "Sending raw MONR message");
-                        if(iCommSend(COMM_MONR, buffer, COMMAND_MONR_MESSAGE_LENGTH) < 0)
+                        // Append IP to buffer
+                        memcpy(&buffer[receivedMONRData], &safety_object_addr[iIndex].sin_addr.s_addr, sizeof(in_addr_t));
+
+                        // Send MONR message as bytes
+                        if(iCommSend(COMM_MONR, buffer, (size_t)(receivedMONRData) + sizeof(in_addr_t)) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONR command - entering error state");
                             vSetState(&OBCState,OBC_STATE_ERROR);
