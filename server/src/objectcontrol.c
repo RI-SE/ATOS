@@ -2627,10 +2627,6 @@ static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNew
             {
                 util_error("ERR: Failed to receive from monitor socket");
             }
-            else
-            {
-                LogMessage(LOG_LEVEL_DEBUG,"No data received");
-            }
         }
         else
         {
