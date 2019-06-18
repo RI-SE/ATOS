@@ -425,6 +425,7 @@ typedef struct
   U8 StateU8;
   U8 ReadyToArmU8;
   U8 ErrorStatusU8;
+  U16 CRC;
 } MONRType; //41 bytes
 
 typedef struct

@@ -3094,6 +3094,11 @@ I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataTy
     monitorData->MONR.ReadyToArmU8 = *(rdPtr++);
     monitorData->MONR.ErrorStatusU8 = *(rdPtr++);
 
+    memcpy(&U16Data, rdPtr, sizeof(U16Data));
+    monitorData->MONR.CRC = U16Data;
+    rdPtr += sizeof(U16Data);
+    U16Data = 0;
+
     memcpy(&IPData, rdPtr, sizeof(IPData));
     monitorData->ClientIP = IPData;
     rdPtr += sizeof(IPData);
