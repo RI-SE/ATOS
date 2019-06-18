@@ -52,7 +52,7 @@ typedef struct
   -- Function declarations.
   ------------------------------------------------------------*/
 
-int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, unsigned int numberOfGeofences);
+int SupervisionCheckGeofences(MonitorDataType MONRdata, GeofenceType *geofences, unsigned int numberOfGeofences);
 int loadGeofenceFiles(GeofenceType *geofences[], unsigned int *nGeof);
 int parseGeofenceFile(char* geofenceFile, GeofenceType *geofence);
 
@@ -68,7 +68,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     I32 iExit = 0;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
-    MONRType MONRMessage;
+    MonitorDataType MONRMessage;
 
     unsigned int numberOfGeofences = 0;
     GeofenceType *geofenceArray = NULL;
@@ -113,7 +113,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             // Ignore old style MONR data
             break;
         case COMM_MONR:
-            UtilPopulateMONRStruct(busReceiveBuffer, sizeof(busReceiveBuffer), &MONRMessage, 0);
+            UtilPopulateMonitorDataStruct(busReceiveBuffer, sizeof(busReceiveBuffer), &MONRMessage, 0);
             // TODO: react to output from SupervisionCheckGeofences
             SupervisionCheckGeofences(MONRMessage, geofenceArray, numberOfGeofences);
 
@@ -299,9 +299,9 @@ int parseGeofenceFile(char* geofenceFile, GeofenceType *geofence){
  * \param numberOfGeofences Length of struct array
  * \return 1 if MONR coordinate violates a geofence, 0 if not. -1 on error
  */
-int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, unsigned int numberOfGeofences)
+int SupervisionCheckGeofences(MonitorDataType MONRdata, GeofenceType *geofences, unsigned int numberOfGeofences)
 {
-    const CartesianPosition monrPoint = {MONRdata.XPositionI32/1000.0, MONRdata.YPositionI32/1000.0, MONRdata.ZPositionI32/1000.0, 0.0};
+    const CartesianPosition monrPoint = {MONRdata.MONR.XPositionI32/1000.0, MONRdata.MONR.YPositionI32/1000.0, MONRdata.MONR.ZPositionI32/1000.0, 0.0};
     char isInPolygon = 0;
     int retval = 0;
 
@@ -323,9 +323,9 @@ int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, unsign
         else
         {
             if (geofences[i].isPermitted)
-                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is outside a permitted area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
+                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is outside a permitted area %s", MONRdata.MONR.Header.TransmitterIdU8, geofences[i].name);
             else
-                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is inside a forbidden area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
+                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is inside a forbidden area %s", MONRdata.MONR.Header.TransmitterIdU8, geofences[i].name);
 
             retval = 1;
         }
