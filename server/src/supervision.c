@@ -90,7 +90,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     enum COMMAND command;
 
     (void)iCommInit();
-    LogInit(MODULE_NAME,LOG_LEVEL_INFO);
+    LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO, "Supervision running with PID: %i", getpid());
 
     while(!iExit)
@@ -204,13 +204,19 @@ int loadGeofenceFiles(GeofenceType *geofences[], unsigned int *nGeof){
         {
             LogMessage(LOG_LEVEL_WARNING, "File <%s> is not a valid .geofence file", pDirent->d_name);
         }
+        else if (strcmp(pDirent->d_name,".") == 0 || strcmp(pDirent->d_name,"..") == 0)
+        {
+            LogMessage(LOG_LEVEL_DEBUG, "Ignored <%s>",pDirent->d_name);
+        }
         else
         {
             if(parseGeofenceFile(pDirent->d_name, (*geofences)+n) == -1)
             {
                 closedir(pDir);
+                LogMessage(LOG_LEVEL_ERROR, "Error parsing file <%s>", pDirent->d_name);
                 return -1;
             }
+            LogMessage(LOG_LEVEL_DEBUG, "Loaded geofence with %u vertices", (*geofences)[n].numberOfPoints);
             n++;
         }
     }
@@ -288,6 +294,10 @@ int parseGeofenceFile(char* geofenceFile, GeofenceType *geofence){
 
                     ptr = strtok(NULL, delim);
                     geofence->polygonPoints[lineCount].yCoord_m = atof(ptr);
+
+                    LogMessage(LOG_LEVEL_DEBUG,"Point: (%.3f, %.3f)",
+                               geofence->polygonPoints[lineCount].xCoord_m,
+                               geofence->polygonPoints[lineCount].yCoord_m);
 
                     lineCount++;
                 }
