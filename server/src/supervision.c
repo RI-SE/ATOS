@@ -76,7 +76,7 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     enum COMMAND command;
 
     (void)iCommInit();
-    LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
+    LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO, "Supervision running with PID: %i", getpid());
 
     while(!iExit)
