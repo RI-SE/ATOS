@@ -431,7 +431,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER);
 
 
-                if(recievedNewData)
+                if(receivedMONRData > 0)
                 {
                     LogMessage(LOG_LEVEL_DEBUG,"Recieved new data from %s %d %d: %s",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
 
