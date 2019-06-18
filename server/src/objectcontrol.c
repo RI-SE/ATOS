@@ -29,6 +29,7 @@
 #include <sys/time.h>
 #include "timecontrol.h"
 #include "datadictionary.h"
+#include "maestroTime.h"
 
 
 /*------------------------------------------------------------
@@ -46,7 +47,8 @@
 
 #define TASK_PERIOD_MS 1
 #define HEARTBEAT_TIME_MS 10
-#define OBC_STATE_REPORT_PERIOD_MS 1000
+#define OBC_STATE_REPORT_PERIOD_S 1
+#define OBC_STATE_REPORT_PERIOD_US 0
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
 #define OBJECT_CONTROL_ABORT_MODE 1
@@ -232,6 +234,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     C8 MessageBuffer[BUFFER_SIZE_3100];
     int iIndex = 0, i=0;
     struct timespec sleep_time, ref_time;
+    struct timeval currentTime, nextStateReportTime;
+    const struct timeval stateReportInterval = {OBC_STATE_REPORT_PERIOD_S, OBC_STATE_REPORT_PERIOD_US};
     U8 iForceObjectToLocalhostU8 = 0;
 
     FILE *fd;
@@ -314,7 +318,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     OBCState_t state = vInitializeState(OBC_STATE_IDLE, GSD);
     U8 uiTimeCycle = 0;
-    U32 stateKeepAliveTimeCounter = 0;
     int ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
 
     C8 Buffer2[SMALL_BUFFER_SIZE_1];
@@ -349,6 +352,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     if (iCommInit())
         util_error("Unable to connect to message queue bus");
    
+    // Initialize timer for sending state
+    TimeSetToCurrentSystemTime(&currentTime);
+    nextStateReportTime = currentTime;
+
     while(!iExit)
     {
         state = vGetState(GSD);
@@ -1174,9 +1181,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
 
             // Periodically send state to signal aliveness
-            if (++stateKeepAliveTimeCounter >= OBC_STATE_REPORT_PERIOD_MS/TASK_PERIOD_MS)
+            TimeSetToCurrentSystemTime(&currentTime);
+            if (timercmp(&currentTime, &nextStateReportTime, >))
             {
-                stateKeepAliveTimeCounter = 0;
+                timeradd(&nextStateReportTime, &stateReportInterval,
+                         &nextStateReportTime);
+
                 state = vGetState(GSD);
                 bzero(Buffer2, sizeof(Buffer2));
                 Buffer2[0] = (uint8_t)(DataDictionaryGetOBCStateU8(GSD));
