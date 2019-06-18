@@ -72,8 +72,8 @@ static const ModuleTask allModules[] = {
     supervision_task,
     supervisorcontrol_task,
     systemcontrol_task,
-    objectcontrol_task,
-    citscontrol_task
+    objectcontrol_task
+   //citscontrol_task
 };
 static const size_t numberOfModules = sizeof(allModules) / sizeof(ModuleTask);
 
