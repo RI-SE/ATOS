@@ -3008,7 +3008,7 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
  * \param debug Boolean enabling debug printouts
  * \return -1 on failure, 0 on success
  */
-I32 UtilPopulateMONRStruct(C8* rawMONR, size_t rawMONRsize, MONRType *MONR, U8 debug)
+I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataType *monitorData, U8 debug)
 {
     // TODO: size of rawMONR
     U16 Crc = 0, U16Data = 0;
@@ -3017,91 +3017,97 @@ I32 UtilPopulateMONRStruct(C8* rawMONR, size_t rawMONRsize, MONRType *MONR, U8 d
     I32 I32Data = 0;
     U64 U64Data = 0;
     C8 *rdPtr = rawMONR; // Pointer to keep track of where in rawMONR we are currently reading
+    in_addr_t IPData = 0;
 
-    if (rawMONRsize < sizeof (MONRType))
+    if (rawMONRsize < sizeof(MonitorDataType))
     {
         LogMessage(LOG_LEVEL_ERROR, "Raw MONR array too small to hold all necessary MONR data");
         return -1;
     }
 
     memcpy(&U16Data, rdPtr, sizeof(U16Data));
-    MONR->Header.SyncWordU16 = U16Data;
+    monitorData->MONR.Header.SyncWordU16 = U16Data;
     rdPtr += sizeof(U16Data);
     U16Data = 0;
 
-    MONR->Header.TransmitterIdU8 = *(rdPtr++);
-    MONR->Header.MessageCounterU8 = *(rdPtr++);
-    MONR->Header.AckReqProtVerU8 = *(rdPtr++);
+    monitorData->MONR.Header.TransmitterIdU8 = *(rdPtr++);
+    monitorData->MONR.Header.MessageCounterU8 = *(rdPtr++);
+    monitorData->MONR.Header.AckReqProtVerU8 = *(rdPtr++);
 
     memcpy(&U16Data, rdPtr, sizeof(U16Data));
-    MONR->Header.MessageIdU16 = U16Data;
+    monitorData->MONR.Header.MessageIdU16 = U16Data;
     rdPtr += sizeof(U16Data);
     U16Data = 0;
 
     memcpy(&U32Data, rdPtr, sizeof(U32Data));
-    MONR->Header.MessageLengthU32 = U32Data;
+    monitorData->MONR.Header.MessageLengthU32 = U32Data;
     rdPtr += sizeof(U32Data);
     U32Data = 0;
 
     memcpy(&U32Data, rdPtr, sizeof(U32Data));
-    MONR->GPSSOWU32 = U32Data;
+    monitorData->MONR.GPSSOWU32 = U32Data;
     rdPtr += sizeof(U32Data);
     U32Data = 0;
 
     memcpy(&I32Data, rdPtr, sizeof(I32Data));
-    MONR->XPositionI32 = I32Data;
+    monitorData->MONR.XPositionI32 = I32Data;
     rdPtr += sizeof(I32Data);
     I32Data = 0;
 
     memcpy(&I32Data, rdPtr, sizeof(I32Data));
-    MONR->YPositionI32 = I32Data;
+    monitorData->MONR.YPositionI32 = I32Data;
     rdPtr += sizeof(I32Data);
     I32Data = 0;
 
     memcpy(&I32Data, rdPtr, sizeof(I32Data));
-    MONR->ZPositionI32 = I32Data;
+    monitorData->MONR.ZPositionI32 = I32Data;
     rdPtr += sizeof(I32Data);
     I32Data = 0;
 
     memcpy(&U16Data, rdPtr, sizeof(U16Data));
-    MONR->HeadingU16 = U16Data;
+    monitorData->MONR.HeadingU16 = U16Data;
     rdPtr += sizeof(U16Data);
     U16Data = 0;
 
     memcpy(&I16Data, rdPtr, sizeof(I16Data));
-    MONR->LongitudinalSpeedI16 = I16Data;
+    monitorData->MONR.LongitudinalSpeedI16 = I16Data;
     rdPtr += sizeof(I16Data);
     I16Data = 0;
 
     memcpy(&I16Data, rdPtr, sizeof(I16Data));
-    MONR->LateralSpeedI16 = I16Data;
+    monitorData->MONR.LateralSpeedI16 = I16Data;
     rdPtr += sizeof(I16Data);
     I16Data = 0;
 
     memcpy(&I16Data, rdPtr, sizeof(I16Data));
-    MONR->LongitudinalAccI16 = I16Data;
+    monitorData->MONR.LongitudinalAccI16 = I16Data;
     rdPtr += sizeof(I16Data);
     I16Data = 0;
 
     memcpy(&I16Data, rdPtr, sizeof(I16Data));
-    MONR->LateralAccI16 = I16Data;
+    monitorData->MONR.LateralAccI16 = I16Data;
     rdPtr += sizeof(I16Data);
     I16Data = 0;
 
-    MONR->DriveDirectionU8 = *(rdPtr++);
-    MONR->StateU8 = *(rdPtr++);
-    MONR->ReadyToArmU8 = *(rdPtr++);
-    MONR->ErrorStatusU8 = *(rdPtr++);
+    monitorData->MONR.DriveDirectionU8 = *(rdPtr++);
+    monitorData->MONR.StateU8 = *(rdPtr++);
+    monitorData->MONR.ReadyToArmU8 = *(rdPtr++);
+    monitorData->MONR.ErrorStatusU8 = *(rdPtr++);
+
+    memcpy(&IPData, rdPtr, sizeof(IPData));
+    monitorData->ClientIP = IPData;
+    rdPtr += sizeof(IPData);
+    IPData = 0;
 
     if(debug == 1)
     {
         LogPrint("MONR:");
-        LogPrint("SyncWord = %d", MONR->Header.SyncWordU16);
-        LogPrint("TransmitterId = %d", MONR->Header.TransmitterIdU8);
-        LogPrint("PackageCounter = %d", MONR->Header.MessageCounterU8);
-        LogPrint("AckReq = %d", MONR->Header.AckReqProtVerU8);
-        LogPrint("MessageLength = %d", MONR->Header.MessageLengthU32);
-        LogPrint("GPSSOW = %u",MONR->GPSSOWU32);
+        LogPrint("SyncWord = %d", monitorData->MONR.Header.SyncWordU16);
+        LogPrint("TransmitterId = %d", monitorData->MONR.Header.TransmitterIdU8);
+        LogPrint("PackageCounter = %d", monitorData->MONR.Header.MessageCounterU8);
+        LogPrint("AckReq = %d", monitorData->MONR.Header.AckReqProtVerU8);
+        LogPrint("MessageLength = %d", monitorData->MONR.Header.MessageLengthU32);
+        LogPrint("GPSSOW = %u",monitorData->MONR.GPSSOWU32);
     }
 
     return 0;
