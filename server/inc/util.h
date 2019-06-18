@@ -427,6 +427,11 @@ typedef struct
   U8 ErrorStatusU8;
 } MONRType; //41 bytes
 
+typedef struct
+{
+    MONRType MONR;
+    in_addr_t ClientIP;
+} MonitorDataType;
 
 typedef struct
 {
