@@ -234,8 +234,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     C8 MessageBuffer[BUFFER_SIZE_3100];
     int iIndex = 0, i=0;
     struct timespec sleep_time, ref_time;
+
+    /*! Timers for reporting state over message bus */
     struct timeval currentTime, nextStateReportTime;
     const struct timeval stateReportInterval = {OBC_STATE_REPORT_PERIOD_S, OBC_STATE_REPORT_PERIOD_US};
+
     U8 iForceObjectToLocalhostU8 = 0;
 
     FILE *fd;
