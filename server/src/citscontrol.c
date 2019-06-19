@@ -39,7 +39,7 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-
+I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam);
 
 
 /*------------------------------------------------------------
@@ -96,4 +96,57 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
         }
     }
+}
+
+I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam){
+
+
+    TimeType time;
+    int something = 0;
+    CAMmessage tempCam;
+        UtilGetMillisecond(&time);
+        tempCam.header.generationTime = time.MillisecondU16;
+        tempCam.referencePosition.heading = MONRData->HeadingU16;
+        if(MONRData != NULL ){
+            //lastSpeed = calcSpeed(lastHist, lastPos)
+            if(UtilGetDistance(tempCam.referencePosition.latitude.degrees, tempCam.referencePosition.longitude.degrees, lastCam->referencePosition.latitude.degrees, lastCam->referencePosition.longitude.degrees)
+                    >= D_THRESHOLD || tempCam.referencePosition.heading - lastCam->referencePosition.heading >= H_THRESHOLD //|| speed - lastCam >= S_THRESHOLD
+                    ){
+                lastCam->referencePosition.heading = tempCam.referencePosition.heading;
+                }
+        }
+        else{
+            tempCam.referencePosition.latitude = lastCam->referencePosition.latitude;
+            tempCam.referencePosition.longitude = lastCam->referencePosition.longitude;
+            tempCam.referencePosition.heading = lastCam->referencePosition.heading;
+        }
+        if(tempCam.header.generationTime - lastCam->header.generationTime >= T_THRESHOLD){
+            *lastCam = tempCam;
+        }
+    }
+
+    /* PSEUDOCODE FOR CAM
+       while true do
+           time = System.getTime()
+           heading = calcHeading(pHist, p)
+           lastPos = lastPosition(pHist)
+           lastHist = pHist \ lastPos
+           lastHead = calcHeading(lastHist, lastPos)
+           speed = calcSpeed(pHist, p)
+           if p , null then
+               lastSpeed = calcSpeed(lastHist, lastPos)
+               if distance(p, lastCam.pos) ≥ D_THRESHOLD or |heading - lastCam.heading| ≥ H_THRESHOLD or |speed - lastCam.speed| ≥ S_THRESHOLD then
+                   cam = newCam(time, p, heading, speed)
+                   sendCam(cam)
+                   lastCam = cam
+               pHist = pHist UNION p
+           else
+               p = lastPos
+               heading = lastHead
+           if time - lastCam.time ≥ T_THRESHOLD then
+               cam = newCam(time, p, heading, speed)
+               sendCam(cam)
+               lastCam = cam
+           System.wait(CHECK_PERIOD)
+           */
 }
