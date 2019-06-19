@@ -118,11 +118,13 @@ I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam){
 
     if(MONRData != NULL ){
         //lastSpeed = calcSpeed(lastHist, lastPos)
-        if(UtilGetDistance(tempCam.referencePosition.latitude.degrees, tempCam.referencePosition.longitude.degrees, lastCam->referencePosition.latitude.degrees, lastCam->referencePosition.longitude.degrees)
-            >= D_THRESHOLD || tempCam.referencePosition.heading - lastCam->referencePosition.heading >= H_THRESHOLD //|| speed - lastCam >= S_THRESHOLD
-                ){
+
+        double distanceDelta = UtilGetDistance(tempCam.referencePosition.latitude.degrees, tempCam.referencePosition.longitude.degrees, lastCam->referencePosition.latitude.degrees, lastCam->referencePosition.longitude.degrees);
+        U16 headingDelta = tempCam.referencePosition.heading - lastCam->referencePosition.heading
+        U16 speedDelta = sqrt(MONRData->LateralAccI16*MONRData->LateralAccI16) + (MONRData->LateralAccI16*MONRData->LateralAccI16);
+
+        if( distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD || speedDelta >= S_THRESHOLD){
               lastCam->referencePosition.heading = tempCam.referencePosition.heading;
-             }
         }
         else{
             tempCam.referencePosition.latitude = lastCam->referencePosition.latitude;
