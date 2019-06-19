@@ -11,6 +11,7 @@ include_directories(inc)
 include_directories(../util/C/logging)
 include_directories(../util/C/time)
 include_directories(../util/C/MQBus)
+include_directories(../paho.mqtt.c/src)
 include(GNUInstallDirs)
 
 # Add logging library (hint at some locations)
@@ -23,6 +24,19 @@ include(GNUInstallDirs)
 #add_library(MaestroLogging SHARED IMPORTED)
 #set_property(TARGET MaestroLogging PROPERTY IMPORTED_LOCATION ${MAESTRO_LOGGING_PATH})
 
+SET(USE_CITS FALSE CACHE BOOL "Flag to indicate the use of CITS.")
+
+# MQTT PAHO
+if(USE_CITS)
+    find_package(OpenSSL REQUIRED)
+    find_library(paho-mqtt3c NAMES libpaho-mqtt3c.so REQUIRED)
+    add_library(pahomqtt3c SHARED IMPORTED)
+    set_property(TARGET pahomqtt3c PROPERTY IMPORTED_LOCATION ${paho-mqtt3c})
+    add_library(cits
+        src/citscontrol.c
+        inc/citscontrol.h
+    )
+endif()
 
 # Create library
 add_library(MaestroLogging
@@ -39,6 +53,8 @@ add_library(MQBus
   ../util/C/MQBus/mqbus.h
   ../util/C/MQBus/mqbus.c
 )
+
+
 
 # Create library
 add_library(util
@@ -71,14 +87,12 @@ add_executable(TEServer
   src/supervision.c
   src/systemcontrol.c
   src/timecontrol.c
-  src/citscontrol.c
   src/supervisorcontrol.c
   inc/logger.h
   inc/objectcontrol.h
   inc/supervision.h
   inc/systemcontrol.h
   inc/timecontrol.h
-  inc/citscontrol.h
   inc/supervisorcontrol.h
 )
 
@@ -94,4 +108,11 @@ target_link_libraries(util MaestroLogging MaestroTime MQBus)
 target_link_libraries(UserControl util objctrl MaestroLogging MaestroTime)
 
 target_link_libraries(TEServer util)
+
+if(USE_CITS)
+    target_link_libraries(cits pahomqtt3c)
+    target_link_libraries(TEServer cits)
+endif()
+
+
 target_link_libraries(TEServer MaestroLogging MaestroTime MQBus)
