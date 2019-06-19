@@ -52,19 +52,18 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
     enum COMMAND command;
 
+    (void)iCommInit();
     LogInit(MODULE_NAME,LOG_LEVEL_INFO);
     LogMessage(LOG_LEVEL_INFO, "Supervision running with PID: %i", getpid());
 
-    (void)iCommInit();
-
-
-
-    printf("Starting cits control...\n");
     while(!iExit)
     {
-
         bzero(busReceiveBuffer, sizeof(busReceiveBuffer));
         (void)iCommRecv(&command,busReceiveBuffer, sizeof(busReceiveBuffer), NULL);
+        if (command == COMM_ABORT)
+        {
+
+        }
 
         if(command == COMM_EXIT)
         {
@@ -73,5 +72,28 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             (void)iCommClose();
         }
 
+        switch (command)
+        {
+        case COMM_INIT:
+
+            break;
+        case COMM_MONI:
+            // Ignore old style MONR data
+            break;
+        case COMM_MONR:
+           //TODO: CREATE CAM
+
+            break;
+        case COMM_OBC_STATE:
+            break;
+        case COMM_CONNECT:
+            break;
+        case COMM_LOG:
+            break;
+        case COMM_INV:
+            break;
+        default:
+            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
+        }
     }
 }
