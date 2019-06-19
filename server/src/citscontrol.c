@@ -51,6 +51,8 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     I32 iExit = 0;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
     enum COMMAND command;
+    MONRType MONRMessage;
+    CAMmessage lastCam;
 
     (void)iCommInit();
     LogInit(MODULE_NAME,LOG_LEVEL_INFO);
@@ -82,6 +84,10 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
         case COMM_MONR:
            //TODO: CREATE CAM
+            UtilPopulateMONRStruct(busReceiveBuffer, sizeof(busReceiveBuffer), &MONRMessage, 0);
+
+
+            GenerateCamMessage(&MONRMessage, &lastCam);
 
             break;
         case COMM_OBC_STATE:
@@ -107,9 +113,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
 I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam){
 
-
     TimeType time;
-
     CAMmessage tempCam;
 
     UtilGetMillisecond(&time);
@@ -117,8 +121,6 @@ I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam){
     tempCam.referencePosition.heading = MONRData->HeadingU16;
 
     if(MONRData != NULL ){
-        //lastSpeed = calcSpeed(lastHist, lastPos)
-
         double distanceDelta = UtilGetDistance(tempCam.referencePosition.latitude.degrees, tempCam.referencePosition.longitude.degrees, lastCam->referencePosition.latitude.degrees, lastCam->referencePosition.longitude.degrees);
         U16 headingDelta = tempCam.referencePosition.heading - lastCam->referencePosition.heading
         U16 speedDelta = sqrt(MONRData->LateralAccI16*MONRData->LateralAccI16) + (MONRData->LateralAccI16*MONRData->LateralAccI16);
