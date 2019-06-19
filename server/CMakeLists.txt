@@ -11,7 +11,6 @@ include_directories(inc)
 include_directories(../util/C/logging)
 include_directories(../util/C/time)
 include_directories(../util/C/MQBus)
-include_directories(../paho.mqtt.c/src)
 include(GNUInstallDirs)
 
 # Add logging library (hint at some locations)
