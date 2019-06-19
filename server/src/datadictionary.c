@@ -64,31 +64,31 @@ Initialization data that is configurable is stored in test.conf.
  */
 ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD)
 {
-  ReadWriteAccess_t Res;
+  ReadWriteAccess_t Res = READ_OK;
 
-  Res = DataDictionaryInitOriginLatitudeDbl(GSD);
-  if(Res == READ_OK) Res = DataDictionaryInitOriginLongitudeDbl(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitOriginAltitudeDbl(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitVisualizationServerU32(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitForceToLocalhostU8(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitASPMaxTimeDiffDbl(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitASPMaxTrajDiffDbl(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitASPStepBackCountU32(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitASPFilterLevelDbl(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitASPMaxDeltaTimeDbl(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitTimeServerIPU32(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitTimeServerPortU16(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitSimulatorIPU32(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitSimulatorTCPPortU16(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitSimulatorUDPPortU16(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitSimulatorModeU8(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitVOILReceiversC8(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitDTMReceiversC8(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitExternalSupervisorIPU32(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitRVSSConfigU32(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitRVSSRateU8(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitSupervisorTCPPortU16(GSD);
-  else if(Res == READ_OK) Res = DataDictionaryInitMiscDataC8(GSD);
+  Res = Res == READ_OK ? DataDictionaryInitOriginLatitudeDbl(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitOriginLongitudeDbl(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitOriginAltitudeDbl(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitVisualizationServerU32(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitForceToLocalhostU8(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitASPMaxTimeDiffDbl(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitASPMaxTrajDiffDbl(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitASPStepBackCountU32(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitASPFilterLevelDbl(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitASPMaxDeltaTimeDbl(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitTimeServerIPU32(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitTimeServerPortU16(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitSimulatorIPU32(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitSimulatorTCPPortU16(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitSimulatorUDPPortU16(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitSimulatorModeU8(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitVOILReceiversC8(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitDTMReceiversC8(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitExternalSupervisorIPU32(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitRVSSConfigU32(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
+  Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
 
   DataDictionarySetOBCStateU8(GSD, OBC_STATE_UNDEFINED);
   
