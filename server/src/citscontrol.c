@@ -98,22 +98,31 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     }
 }
 
+//TODO MOVE THESE DEFINITIONS TO CORRECT PLACE
+#define H_THRESHOLD 10
+#define S_THRESHOLD 10
+#define T_THRESHOLD 10
+#define D_THRESHOLD 10
+#define CHECK_PERIOD 10
+
 I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam){
 
 
     TimeType time;
-    int something = 0;
+
     CAMmessage tempCam;
-        UtilGetMillisecond(&time);
-        tempCam.header.generationTime = time.MillisecondU16;
-        tempCam.referencePosition.heading = MONRData->HeadingU16;
-        if(MONRData != NULL ){
-            //lastSpeed = calcSpeed(lastHist, lastPos)
-            if(UtilGetDistance(tempCam.referencePosition.latitude.degrees, tempCam.referencePosition.longitude.degrees, lastCam->referencePosition.latitude.degrees, lastCam->referencePosition.longitude.degrees)
-                    >= D_THRESHOLD || tempCam.referencePosition.heading - lastCam->referencePosition.heading >= H_THRESHOLD //|| speed - lastCam >= S_THRESHOLD
-                    ){
-                lastCam->referencePosition.heading = tempCam.referencePosition.heading;
-                }
+
+    UtilGetMillisecond(&time);
+    tempCam.header.generationTime = time.MillisecondU16;
+    tempCam.referencePosition.heading = MONRData->HeadingU16;
+
+    if(MONRData != NULL ){
+        //lastSpeed = calcSpeed(lastHist, lastPos)
+        if(UtilGetDistance(tempCam.referencePosition.latitude.degrees, tempCam.referencePosition.longitude.degrees, lastCam->referencePosition.latitude.degrees, lastCam->referencePosition.longitude.degrees)
+            >= D_THRESHOLD || tempCam.referencePosition.heading - lastCam->referencePosition.heading >= H_THRESHOLD //|| speed - lastCam >= S_THRESHOLD
+                ){
+              lastCam->referencePosition.heading = tempCam.referencePosition.heading;
+             }
         }
         else{
             tempCam.referencePosition.latitude = lastCam->referencePosition.latitude;
@@ -127,8 +136,8 @@ I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam){
 
     /* PSEUDOCODE FOR CAM
        while true do
-           time = System.getTime()
-           heading = calcHeading(pHist, p)
+           time = System.getTime() DONE
+           heading = calcHeading(pHist, p) DONE
            lastPos = lastPosition(pHist)
            lastHist = pHist \ lastPos
            lastHead = calcHeading(lastHist, lastPos)

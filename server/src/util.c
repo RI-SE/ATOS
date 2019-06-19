@@ -3106,3 +3106,26 @@ I32 UtilPopulateMONRStruct(C8* rawMONR, size_t rawMONRsize, MONRType *MONR, U8 d
 
     return 0;
 }
+
+/*!
+ * \brief UtilgetDistance calculates the distance between two log lat positions usgin haversine formula.
+ * \param lat1 Latitude of first coordinate
+ * \param log1 Latitude of first coordinate
+ * \param lat2 Longitude of second coordinate
+ * \param log2 Longitude of second coordinate
+ * \return Distance
+ */
+double UtilGetDistance(double lat1, double lon1, double lat2, double lon2) {
+    int nRadius = 6371; // Earth's radius in Kilometers
+
+       // Get the difference between our two points
+       // then convert the difference into radians
+       double nDLat = (lat2 - lat1) * (M_PI/180);
+       double nDLon = (lon2 - lon1) * (M_PI/180);
+       double nA = pow ( sin(nDLat/2), 2 ) + cos(lat1) * cos(lat2) * pow ( sin(nDLon/2), 2 );
+
+       double nC = 2 * atan2( sqrt(nA), sqrt( 1 - nA ));
+       double distance = nRadius * nC;
+
+       return distance; // Return our calculated distance
+}
