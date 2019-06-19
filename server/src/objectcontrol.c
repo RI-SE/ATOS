@@ -44,6 +44,11 @@
 #define BUFFER_SIZE_3100 3100
 #define OBJECT_MESS_BUFFER_SIZE 1024
 
+#define OC_SLEEP_TIME_EMPTY_MQ_S 0
+#define OC_SLEEP_TIME_EMPTY_MQ_NS 1000000
+#define OC_SLEEP_TIME_NONEMPTY_MQ_S 0
+#define OC_SLEEP_TIME_NONEMPTY_MQ_NS 0
+
 #define TASK_PERIOD_MS 1
 #define HEARTBEAT_TIME_MS 10
 #define OBJECT_CONTROL_CONTROL_MODE 0
@@ -240,6 +245,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     C8 MessageBuffer[BUFFER_SIZE_3100];
     int iIndex = 0, i=0;
     struct timespec sleep_time, ref_time;
+    const struct timespec mqEmptyPollPeriod = {OC_SLEEP_TIME_EMPTY_MQ_S, OC_SLEEP_TIME_EMPTY_MQ_NS};
+    const struct timespec mqNonEmptyPollPeriod = {OC_SLEEP_TIME_NONEMPTY_MQ_S, OC_SLEEP_TIME_NONEMPTY_MQ_NS};
     int iForceObjectToLocalhost = 0;
 
     FILE *fd;
@@ -1170,8 +1177,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         if(!iExit)
         {
             /* Make call periodic */
-            sleep_time.tv_sec = 0;
-            sleep_time.tv_nsec = TASK_PERIOD_MS*1000000;
+            sleep_time = iCommand == COMM_INV ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
 
             ++uiTimeCycle;
             if(uiTimeCycle >= HEARTBEAT_TIME_MS/TASK_PERIOD_MS)
