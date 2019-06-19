@@ -505,8 +505,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
         iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
 
-        sleep_time = iCommand == COMM_INV ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
-
         switch (iCommand)
         {
         case COMM_OBC_STATE:
@@ -1074,6 +1072,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
         }
 
+
+        sleep_time = iCommand == COMM_INV ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
         nanosleep(&sleep_time,&ref_time);
 
 
