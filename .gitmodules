@@ -1,6 +1,3 @@
 [submodule "util"]
 	path = util
 	url = ../util.git
-[submodule "paho.mqtt.c"]
-	path = paho.mqtt.c
-	url = https://github.com/RI-SE/paho.mqtt.c.git
