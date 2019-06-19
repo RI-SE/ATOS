@@ -700,6 +700,44 @@ typedef struct {
     char UserAgent[HTTP_HEADER_MAX_LENGTH];
 } HTTPHeaderContent;
 
+typedef enum {
+    NORTHERN,
+    SOUTHERN
+} Hemisphere;
+
+
+typedef struct{
+    U8 version;
+    U8 messageID;
+    U64 generationTime;
+}CAMheader;
+
+typedef struct{
+    U64 stationID;
+    bool mobileITSSTation;
+    bool privateITSStation;
+    bool physicalrelevantITSStation;
+}CAMbody;
+
+typedef struct{
+    Hemisphere hemisphere;
+    U32 degrees;
+}CAMLogLat;
+
+typedef struct{
+    CAMLogLat latitude;
+    CAMLogLat longitude;
+    I16 elevation;
+    U16  heading;
+}CAMrefPos;
+
+typedef struct{
+    CAMheader header;
+    CAMbody body;
+    CAMrefPos referencePosition;
+} CAMmessage;
+
+
 
 /*------------------------------------------------------------
   -- Function declarations.
