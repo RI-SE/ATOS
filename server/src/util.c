@@ -3115,17 +3115,23 @@ I32 UtilPopulateMONRStruct(C8* rawMONR, size_t rawMONRsize, MONRType *MONR, U8 d
  * \param log2 Longitude of second coordinate
  * \return Distance
  */
-double UtilGetDistance(double lat1, double lon1, double lat2, double lon2) {
-    int nRadius = 6371; // Earth's radius in Kilometers
+double UtilGetDistance(double th1, double ph1, double th2, double ph2) {
+       int nRadius = 6371; // Earth's radius in Kilometers
+
+       printf("th1: %f \n", th1);
+       printf("ph1: %f \n", ph1);
+
+       printf("th2: %f \n", th2);
+       printf("ph2: %f \n", ph2);
 
        // Get the difference between our two points
        // then convert the difference into radians
-       double nDLat = (lat2 - lat1) * (M_PI/180);
-       double nDLon = (lon2 - lon1) * (M_PI/180);
-       double nA = pow ( sin(nDLat/2), 2 ) + cos(lat1) * cos(lat2) * pow ( sin(nDLon/2), 2 );
+       double dx, dy, dz;
+       ph1 -= ph2;
+       ph1 *= (3.1415926536 / 180), th1 *= (3.1415926536 / 180), th2 *= (3.1415926536 / 180);
 
-       double nC = 2 * atan2( sqrt(nA), sqrt( 1 - nA ));
-       double distance = nRadius * nC;
-
-       return distance; // Return our calculated distance
+       dz = sin(th1) - sin(th2);
+       dx = cos(ph1) * cos(th1) - cos(th2);
+       dy = sin(ph1) * cos(th1);
+       return asin(sqrt(dx * dx + dy * dy + dz * dz) / 2) * 2 * nRadius;
 }

@@ -39,7 +39,8 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam);
+I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam, I16* lastSpeed);
+I32 SendCam(CAMmessage* lastCam);
 
 
 /*------------------------------------------------------------
@@ -48,16 +49,30 @@ I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam);
 void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
 
+    int camTimeCycle = 0;
     I32 iExit = 0;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
     enum COMMAND command;
     MONRType MONRMessage;
     CAMmessage lastCam;
+    TimeType time;
+
+    I16 lastSpeed = 0;
+
+    UtilGetMillisecond(&time);
+
+
+    lastCam.header.generationTime = time.MillisecondU16;
+
+    lastCam.referencePosition.latitude.degrees = 0;
+    lastCam.referencePosition.longitude.degrees = 0;
 
     (void)iCommInit();
     LogInit(MODULE_NAME,LOG_LEVEL_INFO);
     LogMessage(LOG_LEVEL_INFO, "Supervision running with PID: %i", getpid());
 
+
+    int monrCounter = 0;
     while(!iExit)
     {
         bzero(busReceiveBuffer, sizeof(busReceiveBuffer));
@@ -84,10 +99,16 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
         case COMM_MONR:
            //TODO: CREATE CAM
+
             UtilPopulateMONRStruct(busReceiveBuffer, sizeof(busReceiveBuffer), &MONRMessage, 0);
 
-
-            GenerateCamMessage(&MONRMessage, &lastCam);
+            if(camTimeCycle == 100)
+            {
+                GenerateCamMessage(&MONRMessage, &lastCam, &lastSpeed);
+                SendCam(&lastCam);
+                camTimeCycle = 0;
+            }
+            camTimeCycle++;
 
             break;
         case COMM_OBC_STATE:
@@ -111,31 +132,86 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 #define D_THRESHOLD 1
 #define CHECK_PERIOD 1
 
-I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam){
+I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam, I16* lastSpeed){
 
     TimeType time;
     CAMmessage tempCam;
+
+
+    tempCam.header.version = 0;
+    tempCam.header.messageID = 1;
 
     UtilGetMillisecond(&time);
     tempCam.header.generationTime = time.MillisecondU16;
     tempCam.referencePosition.heading = MONRData->HeadingU16;
 
+    //LOG LAT from XY
+    double x = MONRData->XPositionI32;
+    double y = MONRData->YPositionI32;
+    double z = MONRData->ZPositionI32;
+    double latitude, longitude, height;
 
-    printf("Generating CAM..\n");
+    height = 0;
+    xyzToLlh(x, y, z, &latitude, &longitude, &height);
+
+    printf("latitude %f \n", latitude);
+    printf("longitude %f \n", longitude);
+
+    tempCam.referencePosition.latitude.degrees = latitude;
+    tempCam.referencePosition.longitude.degrees = longitude;
+
+
 
     if(MONRData != NULL ){
         double distanceDelta = UtilGetDistance(tempCam.referencePosition.latitude.degrees, tempCam.referencePosition.longitude.degrees, lastCam->referencePosition.latitude.degrees, lastCam->referencePosition.longitude.degrees);
-        U16 headingDelta = tempCam.referencePosition.heading - lastCam->referencePosition.heading;
-        U16 speedDelta = sqrt(MONRData->LateralAccI16*MONRData->LateralAccI16) + (MONRData->LateralAccI16*MONRData->LateralAccI16);
+        double headingDelta = tempCam.referencePosition.heading - lastCam->referencePosition.heading;
+        I16 speedDelta = (sqrt((MONRData->LateralSpeedI16*MONRData->LateralSpeedI16) + (MONRData->LongitudinalSpeedI16*MONRData->LongitudinalSpeedI16))) - (*lastSpeed);
+
+        printf("Speed delta %d \n", speedDelta);
+        printf("Distance delta %f \n", distanceDelta);
+        printf("heading delta %f \n", headingDelta);
+        printf("Time delta %d \n", tempCam.header.generationTime - lastCam->header.generationTime);
+
 
         if( distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD || speedDelta >= S_THRESHOLD){
-            printf("\"Sending\" CAM..\n");
+            printf("\"Sending\" CAM \n");
+
+            /*
+            printf("Generation time: %d", tempCam.header.generationTime);
+            printf("Heading: %d", tempCam.referencePosition.heading);
+            printf("Latitude: %d", tempCam.referencePosition.latitude.degrees);
+            printf("Longitude time: %d", tempCam.referencePosition.longitude.degrees);
+            printf("Elevation time: %d", tempCam.referencePosition.elevation);
+            */
+
+            *lastSpeed =  (U16)((double)sqrt((MONRData->LateralSpeedI16*MONRData->LateralSpeedI16) + (double)(MONRData->LongitudinalSpeedI16*MONRData->LongitudinalSpeedI16)));
             *lastCam = tempCam;
+
         }
 
         if(tempCam.header.generationTime - lastCam->header.generationTime >= T_THRESHOLD){
-            printf("\"Sending\" CAM..\n");
+            printf("\"Sending\" CAM because of time..\n");
+            lastSpeed = (U16)((double)sqrt(MONRData->LateralAccI16*MONRData->LateralAccI16) + (double)(MONRData->LateralAccI16*MONRData->LateralAccI16));
             *lastCam = tempCam;
         }
     }
 }
+
+I32 SendCam(CAMmessage* lastCam){
+       size_t i = 0;
+
+       unsigned char *dst;
+
+       memcpy(&dst[i], &lastCam->header.version, sizeof lastCam->header.version);
+       i += sizeof &lastCam->header.version;
+
+       memcpy(&dst[i], &lastCam->header.messageID, sizeof lastCam->header.messageID);
+       i += sizeof &lastCam->header.messageID;
+
+       memcpy(&dst[i], &lastCam->header.generationTime, sizeof lastCam->header.generationTime);
+       i += sizeof &lastCam->header.generationTime;
+
+       return i;
+
+}
+
