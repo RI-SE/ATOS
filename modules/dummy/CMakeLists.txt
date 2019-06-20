@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
 project(DummyModule)
-
+# This module is an example of how to set up a new module external to the Maestro executable
 
 
 include_directories(inc)
