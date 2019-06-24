@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
 int initializeMessageQueueBus(void)
 {
     int nbrOfQueues = numberOfModules;
-    enum MQBUS_ERROR result = MQBusInit(nbrOfQueues);
+    enum MQBUS_ERROR result = MQBusInit(nbrOfQueues+3); // Added a couple of slots to allow for additional modules
 
     // Printouts according to result
     switch (result)

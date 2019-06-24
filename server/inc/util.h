@@ -11,6 +11,10 @@
 #ifndef __UTIL_H_INCLUDED__
 #define __UTIL_H_INCLUDED__
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
@@ -727,7 +731,7 @@ void UtilgetDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t);
 void UtilgetDateTimefromUTCCSVformat(int64_t utc_ms, char *buffer, int size_t);
 void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int size_t);
 
-void util_error(char* message);
+void util_error(const char *message);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
@@ -827,5 +831,8 @@ void traj2ldm ( float      time ,
                 monitor_t* ldm  );
 
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif //__UTIL_H_INCLUDED__
