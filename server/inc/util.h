@@ -721,7 +721,7 @@ typedef struct{
 
 typedef struct{
     Hemisphere hemisphere;
-    U32 degrees;
+    double degrees;
 }CAMLogLat;
 
 typedef struct{

@@ -3113,7 +3113,7 @@ I32 UtilPopulateMONRStruct(C8* rawMONR, size_t rawMONRsize, MONRType *MONR, U8 d
  * \param log1 Latitude of first coordinate
  * \param lat2 Longitude of second coordinate
  * \param log2 Longitude of second coordinate
- * \return Distance
+ * \return Distance in km
  */
 double UtilGetDistance(double th1, double ph1, double th2, double ph2) {
        int nRadius = 6371; // Earth's radius in Kilometers

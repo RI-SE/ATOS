@@ -105,7 +105,6 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             if(camTimeCycle == 100)
             {
                 GenerateCamMessage(&MONRMessage, &lastCam, &lastSpeed);
-                SendCam(&lastCam);
                 camTimeCycle = 0;
             }
             camTimeCycle++;
@@ -132,11 +131,16 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 #define D_THRESHOLD 1
 #define CHECK_PERIOD 1
 
+/*!
+ * \brief GenerateCamMessage generates a cam message to send on MQTT
+ * \param MONRData MONR data struct
+ * \param lastCam struct to fill with cam data if cam should be sent, used as reference to calculate new cam.
+ * \param lastSpeed variable keeping track of last speed recorded.
+ */
 I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam, I16* lastSpeed){
 
     TimeType time;
     CAMmessage tempCam;
-
 
     tempCam.header.version = 0;
     tempCam.header.messageID = 1;
@@ -145,21 +149,42 @@ I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam, I16* lastSpeed){
     tempCam.header.generationTime = time.MillisecondU16;
     tempCam.referencePosition.heading = MONRData->HeadingU16;
 
+    tempCam.body.stationID = 1;
+    tempCam.body.mobileITSSTation = 1;
+    tempCam.body.physicalrelevantITSStation = 1;
+
+
     //LOG LAT from XY
     double x = MONRData->XPositionI32;
     double y = MONRData->YPositionI32;
     double z = MONRData->ZPositionI32;
     double latitude, longitude, height;
 
-    height = 0;
-    xyzToLlh(x, y, z, &latitude, &longitude, &height);
+    double distance=0;
+    double azimuth1 = 0;
+    double azimuth2 =0;
+    int fail;
+
+    /* Calculate the geodetic forward azimuth in the direction from origo to point we want to know,
+     * A problem right now is that I belive that the GUC and virtualObject needs to have the same origin
+   * */
+
+    azimuth1 = UtilDegToRad(90)-atan2(y/1.00,x/1.00);
+
+    // calculate the norm value
+    distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
+
+    // TODO: Get From RVSSgetParameter
+    double origoLong = 12.77011670;
+    double origoLat = 57.77315060;
+
+    fail = UtilVincentyDirect(origoLat,origoLong,azimuth1,distance ,&latitude,&longitude,&azimuth2);
 
     printf("latitude %f \n", latitude);
     printf("longitude %f \n", longitude);
 
     tempCam.referencePosition.latitude.degrees = latitude;
     tempCam.referencePosition.longitude.degrees = longitude;
-
 
 
     if(MONRData != NULL ){
@@ -186,6 +211,7 @@ I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam, I16* lastSpeed){
 
             *lastSpeed =  (U16)((double)sqrt((MONRData->LateralSpeedI16*MONRData->LateralSpeedI16) + (double)(MONRData->LongitudinalSpeedI16*MONRData->LongitudinalSpeedI16)));
             *lastCam = tempCam;
+            //SendCam(&lastCam);
 
         }
 
@@ -193,10 +219,16 @@ I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam, I16* lastSpeed){
             printf("\"Sending\" CAM because of time..\n");
             lastSpeed = (U16)((double)sqrt(MONRData->LateralAccI16*MONRData->LateralAccI16) + (double)(MONRData->LateralAccI16*MONRData->LateralAccI16));
             *lastCam = tempCam;
+           // SendCam(&lastCam);
         }
     }
 }
 
+/*!
+ * \brief SendCam publishes a cam message on MQTT with hardcoded topic.
+ * \param lastCam cam message struct
+ * \return 1 if message sent succesfully
+ */
 I32 SendCam(CAMmessage* lastCam){
        size_t i = 0;
 
@@ -210,6 +242,27 @@ I32 SendCam(CAMmessage* lastCam){
 
        memcpy(&dst[i], &lastCam->header.generationTime, sizeof lastCam->header.generationTime);
        i += sizeof &lastCam->header.generationTime;
+
+       memcpy(&dst[i], &lastCam->body.stationID, sizeof lastCam->body.stationID);
+       i += sizeof lastCam->body.stationID;
+
+       memcpy(&dst[i], &lastCam->body.physicalrelevantITSStation, sizeof lastCam->body.physicalrelevantITSStation);
+       i += sizeof lastCam->body.physicalrelevantITSStation;
+
+       memcpy(&dst[i], &lastCam->body.stationID, sizeof lastCam->body.stationID);
+       i += sizeof lastCam->body.stationID;
+
+       memcpy(&dst[i], &lastCam->body.physicalrelevantITSStation, sizeof lastCam->body.physicalrelevantITSStation);
+       i += sizeof lastCam->body.stationID;
+
+       memcpy(&dst[i], &lastCam->referencePosition.heading, sizeof lastCam->referencePosition.heading);
+       i += sizeof lastCam->referencePosition.heading;
+
+       memcpy(&dst[i], &lastCam->referencePosition.latitude, sizeof lastCam->referencePosition.latitude);
+       i += sizeof lastCam->referencePosition.latitude;
+
+       memcpy(&dst[i], &lastCam->referencePosition.longitude, sizeof lastCam->referencePosition.longitude);
+       i += sizeof lastCam->referencePosition.longitude;
 
        return i;
 
