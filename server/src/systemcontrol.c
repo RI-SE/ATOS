@@ -108,6 +108,11 @@ typedef enum {
 #define REMOVE_FILE 1
 #define KEEP_FILE 0
 
+// Time intervals for sleeping when no message bus message was received and for when one was received
+#define SC_SLEEP_TIME_EMPTY_MQ_S 0
+#define SC_SLEEP_TIME_EMPTY_MQ_NS 10000000
+#define SC_SLEEP_TIME_NONEMPTY_MQ_S 0
+#define SC_SLEEP_TIME_NONEMPTY_MQ_NS 0
 
 
 typedef enum {
@@ -227,6 +232,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     ServiceSessionType SessionData;
     C8 RemoteServerRxData[1024];
     struct timespec sleep_time, ref_time;
+    const struct timespec mqEmptyPollPeriod = {SC_SLEEP_TIME_EMPTY_MQ_S, SC_SLEEP_TIME_EMPTY_MQ_NS};
+    const struct timespec mqNonEmptyPollPeriod = {SC_SLEEP_TIME_NONEMPTY_MQ_S, SC_SLEEP_TIME_NONEMPTY_MQ_NS};
     struct timeval CurrentTimeStruct;
     U64 CurrentTimeU64 = 0;
     U64 TimeDiffU64 = 0;
@@ -498,22 +505,24 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
         iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
 
-        if (iCommand == COMM_OBC_STATE)
+        switch (iCommand)
         {
+        case COMM_OBC_STATE:
             OBCStateU8 = (U8)*pcRecvBuffer;
-        }
-        else if(iCommand == COMM_LOG)
-        {
+            break;
+        case COMM_LOG:
             SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
-        }
-
-        else if(iCommand == COMM_MONI){
-          printf("Monr sys %s\n", pcRecvBuffer);
-            C8 data[strlen(pcRecvBuffer)];
-            bzero(data, strlen(data));
-            strcat(data, pcRecvBuffer);
-
-          UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, data, sizeof(data), 0);
+            break;
+        case COMM_MONR:
+            // TODO: Decode
+            break;
+        case COMM_MONI:
+            UtilSendUDPData("SystemControl", &ProcessChannelSocket, &ProcessChannelAddr, pcRecvBuffer, sizeof(pcRecvBuffer), 0);
+            break;
+        case COMM_INV:
+            break;
+        default:
+            LogMessage(LOG_LEVEL_WARNING,"Unhandled message bus command: %u",iCommand);
         }
 
         ++ProcessControlSendCounterU32;
@@ -1064,8 +1073,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         }
 
 
-        sleep_time.tv_sec = 0;
-        sleep_time.tv_nsec = 10000000;
+        sleep_time = iCommand == COMM_INV ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
         nanosleep(&sleep_time,&ref_time);
 
 

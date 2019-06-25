@@ -39,7 +39,7 @@ add_executable(dummy src/main.cpp)
 install(TARGETS dummy DESTINATION bin)
 
 target_link_libraries(dummy MaestroTime MaestroLogging util)
-target_link_libraries(util MQBus MaestroTime)
+target_link_libraries(util MQBus MaestroTime MaestroLogging)
 target_link_libraries(MQBus rt m)
 
 
