@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <errno.h>
+#include <signal.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <inttypes.h>
@@ -204,6 +205,23 @@ int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
+void sig_handlerOC(int signo)
+ {
+   if (signo == SIGINT)
+         printf("received SIGINT in ObjectControl\n");
+         printf("Shutting down ObjectControl with pid: %d\n", getpid());
+         pid_t iPid = getpid(); /* Process gets its id.*/
+         //kill(iPid, SIGINT);
+         exit(1);
+
+
+   if (signo == SIGUSR1)
+         printf("received SIGUSR1\n");
+   if (signo == SIGKILL)
+         printf("received SIGKILL\n");
+   if (signo == SIGSTOP)
+         printf("received SIGSTOP\n");
+}
 
 void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
@@ -1172,6 +1190,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             (void)nanosleep(&sleep_time,&ref_time);
         }
 
+            if (signal(SIGINT, sig_handlerOC) == SIG_ERR)
+                printf("\ncan't catch SIGINT\n");
     }
 
     LogMessage(LOG_LEVEL_INFO,"Object control exiting");

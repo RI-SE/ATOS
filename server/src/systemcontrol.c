@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -67,8 +68,9 @@ typedef enum {
 #define SYSTEM_CONTROL_COMMAND_MAX_LENGTH 	32
 #define SYSTEM_CONTROL_ARG_MAX_COUNT	 	6
 #define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	32
-#define SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH SYSTEM_CONTROL_ARG_CHAR_COUNT + SYSTEM_CONTROL_COMMAND_MAX_LENGTH + SYSTEM_CONTROL_ARG_MAX_COUNT*SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH
+//#define SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH SYSTEM_CONTROL_ARG_CHAR_COUNT + SYSTEM_CONTROL_COMMAND_MAX_LENGTH + SYSTEM_CONTROL_ARG_MAX_COUNT*SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH
 //#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	80
+#define TCP_RECV_BUFFER_SIZE 2048
 
 #define OSTM_OPT_SET_ARMED_STATE 2
 #define OSTM_OPT_SET_DISARMED_STATE 3
@@ -166,6 +168,21 @@ static C8 SystemControlVerifyHostAddress(char* ip);
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
+void sig_handler(int signo)
+ {
+   if (signo == SIGINT)
+         printf("received SIGINT in SystemControl\n");
+         printf("Shutting down SystemControl with pid: %d\n", getpid());
+         pid_t iPid = getpid(); /* Process gets its id.*/
+         exit(1);
+
+   if (signo == SIGUSR1)
+         printf("received SIGUSR1\n");
+   if (signo == SIGKILL)
+         printf("received SIGKILL\n");
+   if (signo == SIGSTOP)
+         printf("received SIGSTOP\n");
+}
 
 void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
@@ -352,7 +369,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 SystemControlCommand = AbortScenario_0; //Oops no client is connected, go to AbortScenario_0
                 server_state == SERVER_STATE_UNDEFINED; // TODO: Should this be an assignment?
             }
-            else if(ClientResult > 0 && ClientResult < SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH)
+            else if(ClientResult > 0 && ClientResult < TCP_RECV_BUFFER_SIZE)
             {
 
                 for(i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i ++ )
@@ -418,6 +435,10 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 {
                     LogMessage(LOG_LEVEL_WARNING,"Received badly formatted HTTP request: <%s>, must contain \"POST\" and \"\\r\\n\\r\\n\"",pcBuffer);
                 }
+            }
+            else
+            {
+                LogMessage(LOG_LEVEL_WARNING, "Ignored received TCP message which was too large to handle");
             }
         }
         else if(ModeU8 == 1)
@@ -1046,6 +1067,10 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         sleep_time.tv_sec = 0;
         sleep_time.tv_nsec = 10000000;
         nanosleep(&sleep_time,&ref_time);
+
+
+        if (signal(SIGINT, sig_handler) == SIG_ERR)
+            printf("\ncan't catch SIGINT\n");
 
     }
 

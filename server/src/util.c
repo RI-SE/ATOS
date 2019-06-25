@@ -299,7 +299,7 @@ void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int 
   sprintf(tmp_buffer_ms,"%" PRIi64,ms);
   strcat(buffer,tmp_buffer_ms);
 }
-void util_error(char* message)
+void util_error(const char* message)
 {
   LogMessage(LOG_LEVEL_ERROR,message);
   exit(EXIT_FAILURE);
