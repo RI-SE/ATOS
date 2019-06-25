@@ -429,8 +429,14 @@ typedef struct
   U8 StateU8;
   U8 ReadyToArmU8;
   U8 ErrorStatusU8;
+  U16 CRC;
 } MONRType; //41 bytes
 
+typedef struct
+{
+    MONRType MONR;
+    in_addr_t ClientIP;
+} MonitorDataType;
 
 typedef struct
 {
@@ -804,7 +810,7 @@ I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *H
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
 
-I32 UtilPopulateMONRStruct(C8* rawMONR, size_t rawMONRsize, MONRType *MONR, U8 debug);
+I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataType *monitorData, U8 debug);
 
 typedef struct {
   uint64_t timestamp;

@@ -165,7 +165,7 @@ static I32 vCheckRemoteDisconnected(int* sockfd);
 
 static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static void vCloseSafetyChannel(int* sockfd);
-static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData);
+static size_t uiRecvMonitor(int* sockfd, char* buffer, size_t length);
 I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug);
 I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug);
 I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
@@ -417,7 +417,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED)
         {
             char buffer[RECV_MESSAGE_BUFFER];
-            int recievedNewData = 0;
+            size_t receivedMONRData = 0;
             // this is etsi time lets remov it ans use utc instead
             //gettimeofday(&CurrentTimeStruct, NULL);
 
@@ -450,17 +450,16 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
 
 
-            for(iIndex=0;iIndex<nbr_objects;++iIndex)
+            for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
             {
                 bzero(buffer,RECV_MESSAGE_BUFFER);
-                vRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
+                receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER);
 
-
-                if(recievedNewData)
+                if (receivedMONRData > 0)
                 {
-                    LogMessage(LOG_LEVEL_DEBUG,"Recieved new data from %s %d %d: %s",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
+                    LogMessage(LOG_LEVEL_DEBUG,"Recieved new data from %s %d %d: %s",object_address_name[iIndex],object_udp_port[iIndex],receivedMONRData,buffer);
 
-                    if(buffer[0] == COMMAND_TOM_CODE)
+                    if (buffer[0] == COMMAND_TOM_CODE)
                     {
                         for(i = 0; i < TriggerActionCount; i ++)
                         {
@@ -492,9 +491,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                     if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE)
                     {
-                        // Send MONR message on new byte format
-                        //LogMessage(LOG_LEVEL_INFO, "Sending raw MONR message");
-                        if(iCommSend(COMM_MONR, buffer, COMMAND_MONR_MESSAGE_LENGTH) < 0)
+                        // Append IP to buffer
+                        memcpy(&buffer[receivedMONRData], &safety_object_addr[iIndex].sin_addr.s_addr, sizeof(in_addr_t));
+
+                        // Send MONR message as bytes
+                        if(iCommSend(COMM_MONR, buffer, (size_t)(receivedMONRData) + sizeof(in_addr_t)) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONR command - entering error state");
                             vSetState(&OBCState,OBC_STATE_ERROR);
@@ -2639,10 +2640,12 @@ int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendDa
 }
 
 
-static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData)
+static size_t uiRecvMonitor(int* sockfd, char* buffer, size_t length)
 {
-    int result;
-    *recievedNewData = 0;
+    ssize_t result = 0;
+    size_t recvDataSize = 0;
+
+    // Read until receive buffer is empty, return last read message
     do
     {
         result = recv(*sockfd, buffer, length, 0);
@@ -2651,19 +2654,17 @@ static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNew
         {
             if(errno != EAGAIN && errno != EWOULDBLOCK)
             {
-                util_error("ERR: Failed to receive from monitor socket");
-            }
-            else
-            {
-                LogMessage(LOG_LEVEL_DEBUG,"No data received");
+                util_error("Failed to receive from monitor socket");
             }
         }
         else
         {
-            *recievedNewData = 1;
+            recvDataSize = (size_t)(result);
             LogMessage(LOG_LEVEL_DEBUG,"Received: <%s>",buffer);
         }
     } while(result > 0 );
+
+    return recvDataSize;
 }
 
 void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], char object_address_name[MAX_OBJECTS][MAX_FILE_PATH], int* nbr_objects)
