@@ -28,13 +28,40 @@ cp -R ../conf/ .
 Create a folder for Trajectory files in /build and move one of the existing trajectory files to this folder. 
 ```sh
 mkdir traj
-cp ../traj/0.traj ./traj/192.168.0.1  
+cp ../traj/0.traj ./traj/192.168.0.1
 ```
 
 Start the server
 ```sh
 ./TEServer
 ```
+
+## Building the server with CITS module and mqtt
+
+The CITS module uses PAHO MQTT, which can be found through the following link:
+https://www.eclipse.org/paho/
+
+To be able to run the server with the CITS module you must first build and install paho mqtt. 
+
+Paho mqtt requires OpenSSL to be able to run. To install OpenSSL do
+```sh
+apt-get install libssl-dev
+```
+In order to get and build the documentation for paho mqtt, do the following
+```sh
+apt-get install doxygen graphviz
+```
+
+Now get the latest source code for paho mqtt
+```sh
+git clone https://github.com/eclipse/paho.mqtt.c.git
+```
+
+Go to the root of the cloned git repo and build the documentation by doing
+```sh
+sudo make html
+```
+This will build the documentation for all the code. Then proceede to build and install the 
 
 # To communicate with server start program.
 ./UserControl [IP] [port]
