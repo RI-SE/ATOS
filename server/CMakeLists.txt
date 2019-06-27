@@ -11,6 +11,7 @@ include_directories(inc)
 include_directories(../util/C/logging)
 include_directories(../util/C/time)
 include_directories(../util/C/MQBus)
+include_directories(../util/ASN1/generatedfiles)
 include(GNUInstallDirs)
 
 # Add logging library (hint at some locations)
@@ -51,6 +52,7 @@ add_library(objctrl
   src/objectcontrol.c
   inc/objectcontrol.h
 )
+
 
 add_executable(UserControl
   src/usercontrol.c
@@ -95,3 +97,4 @@ target_link_libraries(UserControl util objctrl MaestroLogging MaestroTime)
 
 target_link_libraries(TEServer util)
 target_link_libraries(TEServer MaestroLogging MaestroTime MQBus)
+

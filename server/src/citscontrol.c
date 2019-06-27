@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
+#include "generatedfiles/CAM.h"
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -28,6 +29,7 @@
 #include <netdb.h>
 
 #include "citscontrol.h"
+
 
 #define CITS_CONTROL_CONF_FILE_PATH  "conf/test.conf"
 #define CITS_CONTROL_BUFFER_SIZE_20 20
@@ -39,8 +41,8 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam, I16* lastSpeed);
-I32 SendCam(CAMmessage* lastCam);
+I32 GenerateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed);
+I32 SendCam(CAM_t* lastCam);
 
 
 /*------------------------------------------------------------
@@ -137,22 +139,16 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
  * \param lastCam struct to fill with cam data if cam should be sent, used as reference to calculate new cam.
  * \param lastSpeed variable keeping track of last speed recorded.
  */
-I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam, I16* lastSpeed){
+I32 GenerateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed){
 
     TimeType time;
-    CAMmessage tempCam;
+    CAM_t tempCam;
 
-    tempCam.header.version = 0;
-    tempCam.header.messageID = 1;
+    tempCam.header.protocolVersion = 1;
+    tempCam.header.messageID = 2;
 
     UtilGetMillisecond(&time);
-    tempCam.header.generationTime = time.MillisecondU16;
-    tempCam.referencePosition.heading = MONRData->HeadingU16;
-
-    tempCam.body.stationID = 1;
-    tempCam.body.mobileITSSTation = 1;
-    tempCam.body.physicalrelevantITSStation = 1;
-
+    tempCam.cam.generationDeltaTime = time.MillisecondU16;
 
     //LOG LAT from XY
     double x = MONRData->XPositionI32;
@@ -183,19 +179,26 @@ I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam, I16* lastSpeed){
     printf("latitude %f \n", latitude);
     printf("longitude %f \n", longitude);
 
-    tempCam.referencePosition.latitude.degrees = latitude;
-    tempCam.referencePosition.longitude.degrees = longitude;
+    tempCam.cam.camParameters.basicContainer.referencePosition.latitude = latitude;
+    tempCam.cam.camParameters.basicContainer.referencePosition.longitude = longitude;
+
+    tempCam.cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = MONRData->HeadingU16;
+    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = sqrt((MONRData->LateralSpeedI16*MONRData->LateralSpeedI16) + (MONRData->LongitudinalSpeedI16*MONRData->LongitudinalSpeedI16)));
+
+    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection = 0; //FORWARD
+    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth = 10; //TEMP WIDTH
+    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength = 10; //TEMP LENGTH
 
 
     if(MONRData != NULL ){
-        double distanceDelta = UtilGetDistance(tempCam.referencePosition.latitude.degrees, tempCam.referencePosition.longitude.degrees, lastCam->referencePosition.latitude.degrees, lastCam->referencePosition.longitude.degrees);
-        double headingDelta = tempCam.referencePosition.heading - lastCam->referencePosition.heading;
+        double distanceDelta = UtilGetDistance(tempCam.cam.camParameters.basicContainer.referencePosition.latitude, tempCam.cam.camParameters.basicContainer.referencePosition.longitude, lastCam->cam.camParameters.basicContainer.referencePosition.latitude, lastCam->cam.camParameters.basicContainer.referencePosition.longitude);
+        double headingDelta = tempCam.cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation - lastCam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation;
         I16 speedDelta = (sqrt((MONRData->LateralSpeedI16*MONRData->LateralSpeedI16) + (MONRData->LongitudinalSpeedI16*MONRData->LongitudinalSpeedI16))) - (*lastSpeed);
 
         printf("Speed delta %d \n", speedDelta);
         printf("Distance delta %f \n", distanceDelta);
         printf("heading delta %f \n", headingDelta);
-        printf("Time delta %d \n", tempCam.header.generationTime - lastCam->header.generationTime);
+        printf("Time delta %d \n", tempCam.cam.generationDeltaTime - lastCam->cam.generationDeltaTime);
 
 
         if( distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD || speedDelta >= S_THRESHOLD){
@@ -215,7 +218,7 @@ I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam, I16* lastSpeed){
 
         }
 
-        if(tempCam.header.generationTime - lastCam->header.generationTime >= T_THRESHOLD){
+        if(tempCam.cam.generationDeltaTime - lastCam->cam.generationDeltaTime >= T_THRESHOLD){
             printf("\"Sending\" CAM because of time..\n");
             lastSpeed = (U16)((double)sqrt(MONRData->LateralAccI16*MONRData->LateralAccI16) + (double)(MONRData->LateralAccI16*MONRData->LateralAccI16));
             *lastCam = tempCam;
@@ -229,42 +232,9 @@ I32 GenerateCamMessage(MONRType *MONRData, CAMmessage* lastCam, I16* lastSpeed){
  * \param lastCam cam message struct
  * \return 1 if message sent succesfully
  */
-I32 SendCam(CAMmessage* lastCam){
-       size_t i = 0;
+I32 SendCam(CAM_t* lastCam){
 
-       unsigned char *dst;
-
-       memcpy(&dst[i], &lastCam->header.version, sizeof lastCam->header.version);
-       i += sizeof &lastCam->header.version;
-
-       memcpy(&dst[i], &lastCam->header.messageID, sizeof lastCam->header.messageID);
-       i += sizeof &lastCam->header.messageID;
-
-       memcpy(&dst[i], &lastCam->header.generationTime, sizeof lastCam->header.generationTime);
-       i += sizeof &lastCam->header.generationTime;
-
-       memcpy(&dst[i], &lastCam->body.stationID, sizeof lastCam->body.stationID);
-       i += sizeof lastCam->body.stationID;
-
-       memcpy(&dst[i], &lastCam->body.physicalrelevantITSStation, sizeof lastCam->body.physicalrelevantITSStation);
-       i += sizeof lastCam->body.physicalrelevantITSStation;
-
-       memcpy(&dst[i], &lastCam->body.stationID, sizeof lastCam->body.stationID);
-       i += sizeof lastCam->body.stationID;
-
-       memcpy(&dst[i], &lastCam->body.physicalrelevantITSStation, sizeof lastCam->body.physicalrelevantITSStation);
-       i += sizeof lastCam->body.stationID;
-
-       memcpy(&dst[i], &lastCam->referencePosition.heading, sizeof lastCam->referencePosition.heading);
-       i += sizeof lastCam->referencePosition.heading;
-
-       memcpy(&dst[i], &lastCam->referencePosition.latitude, sizeof lastCam->referencePosition.latitude);
-       i += sizeof lastCam->referencePosition.latitude;
-
-       memcpy(&dst[i], &lastCam->referencePosition.longitude, sizeof lastCam->referencePosition.longitude);
-       i += sizeof lastCam->referencePosition.longitude;
-
-       return i;
+       return 1;
 
 }
 
