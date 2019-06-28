@@ -33,6 +33,7 @@
 
 #include "MQTTClient.h"
 #include "citscontrol.h"
+#include "util.h"
 
 
 
@@ -57,7 +58,7 @@
 I32 generateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed);
 I32 generateDenmMessage(MONRType *MONRData, DENM_t* lastCam, I16* lastSpeed);
 
-I32 SendCam(CAM_t* lastCam);
+I32 sendCam(CAM_t* lastCam);
 void init_mqtt(char* ip_addr, char * clientid);
 int connect_mqtt();
 int publish_mqtt(char *payload, int payload_len, char *topic);
@@ -159,19 +160,52 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         // Handle MQ messages
 
         bzero(busReceiveBuffer, sizeof(busReceiveBuffer));
-        (void)iCommRecv(&command,busReceiveBuffer, sizeof(busReceiveBuffer), NULL);
-        if (command == COMM_ABORT)
-        {
+               (void)iCommRecv(&command,busReceiveBuffer, sizeof(busReceiveBuffer), NULL);
+               if (command == COMM_ABORT)
+               {
 
-        }
+               }
 
-        if(command == COMM_EXIT)
-        {
-            iExit = 1;
-            printf("citscontrol exiting.\n");
-            (void)iCommClose();
-        }
-        usleep(100000);
+               if(command == COMM_EXIT)
+               {
+                   iExit = 1;
+                   printf("citscontrol exiting.\n");
+                   (void)iCommClose();
+               }
+
+               switch (command)
+               {
+               case COMM_INIT:
+
+                   break;
+               case COMM_MONI:
+                   // Ignore old style MONR data
+                   break;
+               case COMM_MONR:
+                  //TODO: CREATE CAM
+
+                   UtilPopulateMONRStruct(busReceiveBuffer, sizeof(busReceiveBuffer), &MONRMessage, 0);
+
+                   if(camTimeCycle == 100)
+                   {
+                       generateCamMessage(&MONRMessage, &lastCam, &lastSpeed);
+                       sendCam(&lastCam);
+                       camTimeCycle = 0;
+                   }
+                   camTimeCycle++;
+
+                   break;
+               case COMM_OBC_STATE:
+                   break;
+               case COMM_CONNECT:
+                   break;
+               case COMM_LOG:
+                   break;
+               case COMM_INV:
+                   break;
+               default:
+                   LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
+       }
     }
 }
 
@@ -303,18 +337,24 @@ I32 generateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed){
     tempCam.cam.camParameters.basicContainer.referencePosition.longitude = longitude;
 
     tempCam.cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = MONRData->HeadingU16;
+
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = sqrt((MONRData->LateralSpeedI16*MONRData->LateralSpeedI16) + (MONRData->LongitudinalSpeedI16*MONRData->LongitudinalSpeedI16));
 
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection = 0; //FORWARD
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth = 10; //TEMP WIDTH
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = 10; //TEMP LENGTH
 
+
+   //TODO: CRASHES HERE FOR SOME REASON
+/*
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = MONRData->LateralAccI16;
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = MONRData->LongitudinalAccI16;
 
+        printf("Got here2\n");
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureValue = 0; //HARDCODED CURVATURE
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvatureCalculationMode = 7;
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateValue = 0;
+*/
 
 
     if(MONRData != NULL ){
@@ -341,7 +381,7 @@ I32 generateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed){
 
             *lastSpeed =  (U16)((double)sqrt((MONRData->LateralSpeedI16*MONRData->LateralSpeedI16) + (double)(MONRData->LongitudinalSpeedI16*MONRData->LongitudinalSpeedI16)));
             *lastCam = tempCam;
-            //SendCam(&lastCam);
+            //sendCam(lastCam);
 
         }
 
@@ -349,7 +389,7 @@ I32 generateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed){
             printf("\"Sending\" CAM because of time..\n");
             lastSpeed = (U16)((double)sqrt(MONRData->LateralAccI16*MONRData->LateralAccI16) + (double)(MONRData->LateralAccI16*MONRData->LateralAccI16));
             *lastCam = tempCam;
-           // SendCam(&lastCam);
+            //sendCam(lastCam);
         }
     }
 }
@@ -364,7 +404,7 @@ I32 generateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed){
  */
 I32 generateDenemMessage(MONRType *MONRData, DENM_t* lastDenm, I16* lastSpeed){
     TimeType time;
-    DENM_t tempDENM*;
+    DENM_t tempDENM;
 
     tempDENM.header.protocolVersion = 1;
     tempDENM.header.messageID = 1;
@@ -375,8 +415,8 @@ I32 generateDenemMessage(MONRType *MONRData, DENM_t* lastDenm, I16* lastSpeed){
     tempDENM.denm.management.actionID.sequenceNumber = 0;
 
     UtilGetMillisecond(&time);
-    tempDENM.denm.management.detectionTime = time.MillisecondU16;
-    tempDENM.denm.management.referenceTime = time.MillisecondU16;
+   // tempDENM.denm.management.detectionTime = time.MillisecondU16;
+   // tempDENM.denm.management.referenceTime = time.MillisecondU16;
 
     //LOG LAT from XY
     double x = MONRData->XPositionI32;
@@ -416,12 +456,13 @@ I32 generateDenemMessage(MONRType *MONRData, DENM_t* lastDenm, I16* lastSpeed){
     tempDENM.denm.management.eventPosition.altitude.altitudeValue = 0;
     tempDENM.denm.management.eventPosition.altitude.altitudeConfidence = 0;
 
+    /*
     tempDENM.denm.management.relevanceDistance = 3;
     tempDENM.denm.management.relevanceTrafficDirection = 1;
     tempDENM.denm.management.validityDuration = 0;
     tempDENM.denm.management.transmissionInterval = 100;
     tempDENM.denm.management.stationType = 8; //HEAVY TRUCK. 5 = passenger car, 1 = Pedestrian
-
+*/
     tempDENM.denm.situation->informationQuality = 7;
     tempDENM.denm.situation->eventType.causeCode = 99;
     tempDENM.denm.situation->eventType.subCauseCode = 1; //Emergency break engaged
@@ -437,8 +478,15 @@ I32 generateDenemMessage(MONRType *MONRData, DENM_t* lastDenm, I16* lastSpeed){
  * \param lastCam cam message struct
  * \return 1 if message sent succesfully
  */
-I32 SendCam(CAM_t* lastCam){
-    publish_mqtt(lastCam, sizeof(lastCam), "CLIENT/CAM/CS01/1/RP03");
+I32 sendCam(CAM_t* lastCam){
+
+    CAM_t * cam;
+    cam = calloc(1, sizeof (*cam));
+    assert(cam);
+    xer_fprint(stdout, &asn_DEF_CAM, cam);
+
+
+    publish_mqtt(cam, sizeof(lastCam), "CLIENT/CAM/CS01/1/AZ12B");
     return 1;
 }
 
