@@ -4,7 +4,7 @@
 #include "logging.h"
 #include "util.h"
 
-#define MODULE_NAME "Dummy"
+#define MODULE_NAME "ScenarioControl"
 
 int main()
 {
@@ -33,13 +33,6 @@ int main()
         switch (command) {
         case COMM_INV:
             nanosleep(&sleepTimePeriod,&remTime);
-            break;
-        case COMM_OBC_STATE:
-            break;
-        case COMM_STRT:
-            nanosleep(&abortWaitTime,&remTime);
-            LogMessage(LOG_LEVEL_WARNING,"Sending ABORT");
-            iCommSend(COMM_ABORT,nullptr,0);
             break;
         default:
             LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
