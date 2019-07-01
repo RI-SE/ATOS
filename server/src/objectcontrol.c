@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include "timecontrol.h"
+#include "maestroTime.h"
 
 
 /*------------------------------------------------------------
@@ -49,11 +50,15 @@
 #define OC_SLEEP_TIME_NONEMPTY_MQ_S 0
 #define OC_SLEEP_TIME_NONEMPTY_MQ_NS 0
 
+
 #define TASK_PERIOD_MS 1
 #define HEARTBEAT_TIME_MS 10
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
 #define OBJECT_CONTROL_ABORT_MODE 1
+
+#define OC_STATE_REPORT_PERIOD_S 1
+#define OC_STATE_REPORT_PERIOD_US 0
 
 #define COMMAND_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
 #define COMMAND_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
@@ -247,6 +252,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     struct timespec sleep_time, ref_time;
     const struct timespec mqEmptyPollPeriod = {OC_SLEEP_TIME_EMPTY_MQ_S, OC_SLEEP_TIME_EMPTY_MQ_NS};
     const struct timespec mqNonEmptyPollPeriod = {OC_SLEEP_TIME_NONEMPTY_MQ_S, OC_SLEEP_TIME_NONEMPTY_MQ_NS};
+    const struct timeval stateReportPeriod = {OC_STATE_REPORT_PERIOD_S, OC_STATE_REPORT_PERIOD_US};
+    struct timeval currentTime, nextStateReportTime;
     int iForceObjectToLocalhost = 0;
 
     FILE *fd;
@@ -361,6 +368,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     // Set up message bus connection
     if (iCommInit())
         util_error("Unable to connect to message queue bus");
+
+    // Initialize timer for sending state
+    TimeSetToCurrentSystemTime(&currentTime);
+    nextStateReportTime = currentTime;
 
     while(!iExit)
     {
@@ -1183,15 +1194,23 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             ++uiTimeCycle;
             if(uiTimeCycle >= HEARTBEAT_TIME_MS/TASK_PERIOD_MS)
             {
+                uiTimeCycle = 0;
+            }
+
+            // Periodically send state to signal aliveness (TODO: replace with supervisor process health check)
+            TimeSetToCurrentSystemTime(&currentTime);
+            if (timercmp(&currentTime, &nextStateReportTime, >))
+            {
+                timeradd(&nextStateReportTime, &stateReportPeriod, &nextStateReportTime);
+
                 bzero(Buffer2, SMALL_BUFFER_SIZE_1);
                 Buffer2[0] = OBCState;
-                if(iCommSend(COMM_OBC_STATE,Buffer2,SMALL_BUFFER_SIZE_1) < 0)
+                if (iCommSend(COMM_OBC_STATE, Buffer2, SMALL_BUFFER_SIZE_1) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OBC_STATE command - entering error state");
                     vSetState(&OBCState,OBC_STATE_ERROR);
                     ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
                 }
-                uiTimeCycle = 0;
             }
 
             (void)nanosleep(&sleep_time,&ref_time);
