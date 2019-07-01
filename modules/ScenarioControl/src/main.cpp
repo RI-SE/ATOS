@@ -11,7 +11,6 @@ int main()
     COMMAND command = COMM_INV;
     char mqRecvData[MQ_MSG_SIZE];
     const struct timespec sleepTimePeriod = {0,10000000};
-    const struct timespec abortWaitTime = {1,0};
     struct timespec remTime;
 
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
