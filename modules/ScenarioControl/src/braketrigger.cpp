@@ -1,11 +1,6 @@
 #include "braketrigger.h"
 
-BrakeTrigger::BrakeTrigger()
-{
-
-}
-
-uint16_t BrakeTrigger::getType()
+Trigger::TriggerReturnCode_t BrakeTrigger::appendTriggerParameter(uint32_t triggerParameter)
 {
 
 }

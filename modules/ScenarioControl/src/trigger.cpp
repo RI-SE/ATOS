@@ -1,6 +1,6 @@
 #include "trigger.h"
 
-Trigger::Trigger()
+Trigger::Trigger(TriggerType_t triggerID)
 {
-
+    this->triggerID = triggerID;
 }
