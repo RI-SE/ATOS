@@ -65,22 +65,29 @@ public:
         TRIGGER_PARAMETER_UNAVAILABLE               = 0xFFFFFFFF
     } TriggerParameter_t;
 
-    typedef enum {OK} TriggerReturnCode_t;
+    typedef uint16_t TriggerID_t;
+
+    typedef enum {OK, NOT_OK} TriggerReturnCode_t;
+
 
     /*! Constructor */
     Trigger(TriggerType_t triggerID);
 
+
     /*! Destructor */
     virtual ~Trigger();
+
 
     /*! Getters */
     virtual TriggerType_t getType();
     uint16_t getID() { return this->triggerID; }
 
+
     /*! Setters */
     void setID(uint16_t triggerID) { this->triggerID = triggerID; }
 
-    virtual TriggerReturnCode_t appendTriggerParameter(uint32_t triggerParameter);
+    virtual TriggerReturnCode_t appendTriggerParameter(TriggerParameter_t triggerParameter);
+
 
     /*! To string */
     friend std::ostream& operator<<(std::ostream &strm, const Trigger &a) {
@@ -89,10 +96,10 @@ public:
 
 
 private:
-    uint16_t triggerID;
-    TriggerType_t triggerType = TRIGGER_UNDEFINED;
+    TriggerID_t triggerID;
     std::set<TriggerParameter_t> triggerParameters;
 
+    virtual TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t param);
 };
 
 #endif // TRIGGER_H
