@@ -72,11 +72,10 @@ public:
     virtual ~Trigger();
 
     /*! Getters */
-    virtual uint16_t getType();
+    virtual TriggerType_t getType();
     virtual uint16_t getID();
 
     /*! Setters */
-    virtual void setType(uint16_t triggerType);
     virtual void setID(uint16_t triggerID);
 
     virtual int8_t appendTriggerParameter(uint32_t triggerParameter);
