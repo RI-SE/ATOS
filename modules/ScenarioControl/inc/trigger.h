@@ -8,22 +8,7 @@
 class Trigger
 {
 public:
-    Trigger();
-    virtual ~Trigger();
-
-    virtual uint16_t getType();
-    virtual uint16_t getID();
-
-    virtual void setType(uint16_t triggerType);
-    virtual void setID(uint16_t triggerID);
-
-    virtual int8_t appendTriggerParameter(uint32_t triggerParameter);
-
-    friend std::ostream& operator<<(std::ostream &strm, const Trigger &a) {
-        return strm << "TODO";
-    }
-
-protected:
+    /*! Typedefs */
     typedef enum {
         TRIGGER_UNDEFINED               = 0x0000,
         TRIGGER_TYPE_1                  = 0x0001,
@@ -79,6 +64,27 @@ protected:
         TRIGGER_PARAMETER_RULE                      = 0x000000A0,
         TRIGGER_PARAMETER_UNAVAILABLE               = 0xFFFFFFFF
     } TriggerParameter_t;
+
+    /*! Constructor */
+    Trigger();
+
+    /*! Destructor */
+    virtual ~Trigger();
+
+    /*! Getters */
+    virtual uint16_t getType();
+    virtual uint16_t getID();
+
+    /*! Setters */
+    virtual void setType(uint16_t triggerType);
+    virtual void setID(uint16_t triggerID);
+
+    virtual int8_t appendTriggerParameter(uint32_t triggerParameter);
+
+    /*! To string */
+    friend std::ostream& operator<<(std::ostream &strm, const Trigger &a) {
+        return strm << "TODO";
+    }
 
 
 private:
