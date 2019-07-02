@@ -36,8 +36,10 @@ add_library(util
 )
 
 add_library(Trigger
-    src/trigger.cpp
     inc/trigger.h
+    src/trigger.cpp
+    inc/braketrigger.h
+    src/braketrigger.cpp
 )
 
 add_executable(ScenarioControl src/main.cpp)
