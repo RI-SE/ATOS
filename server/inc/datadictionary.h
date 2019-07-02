@@ -14,112 +14,112 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-I32 DataDictionaryInitOriginLatitudeDbl(GSDType *GSD);
-I32 DataDictionarySetOriginLatitudeDbl(GSDType *GSD, C8 *Latitude);
-I32 DataDictionaryGetOriginLatitudeDbl(GSDType *GSD, dbl *Latitude);
-I32 DataDictionaryGetOriginLatitudeC8(GSDType *GSD, C8 *Latitude);
+ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType *GSD, C8 *Latitude);
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(GSDType *GSD, dbl *Latitude);
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeC8(GSDType *GSD, C8 *Latitude);
 
-I32 DataDictionaryInitOriginLongitudeDbl(GSDType *GSD);
-I32 DataDictionarySetOriginLongitudeDbl(GSDType *GSD, C8 *Longitude);
-I32 DataDictionaryGetOriginLongitudeDbl(GSDType *GSD, dbl *Longitude);
-I32 DataDictionaryGetOriginLongitudeC8(GSDType *GSD, C8 *Longitude);
+ReadWriteAccess_t DataDictionaryInitOriginLongitudeDbl(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(GSDType *GSD, C8 *Longitude);
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(GSDType *GSD, dbl *Longitude);
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeC8(GSDType *GSD, C8 *Longitude);
 
-I32 DataDictionaryInitOriginAltitudeDbl(GSDType *GSD);
-I32 DataDictionarySetOriginAltitudeDbl(GSDType *GSD, C8 *Altitude);
-I32 DataDictionaryGetOriginAltitudeDbl(GSDType *GSD, dbl *Altitude);
-I32 DataDictionaryGetOriginAltitudeC8(GSDType *GSD, C8 *Altitude);
+ReadWriteAccess_t DataDictionaryInitOriginAltitudeDbl(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(GSDType *GSD, C8 *Altitude);
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(GSDType *GSD, dbl *Altitude);
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeC8(GSDType *GSD, C8 *Altitude);
 
-I32 DataDictionaryInitVisualizationServerU32(GSDType *GSD);
-I32 DataDictionarySetVisualizationServerU32(GSDType *GSD, C8 *IP);
-I32 DataDictionaryGetVisualizationServerU32(GSDType *GSD, U32 *IP);
-I32 DataDictionaryGetVisualizationServerC8(GSDType *GSD, C8 *IP);
+ReadWriteAccess_t DataDictionaryInitVisualizationServerU32(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType *GSD, C8 *IP);
+ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(GSDType *GSD, U32 *IP);
+ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType *GSD, C8 *IP);
 
-I32 DataDictionaryInitForceToLocalhostU8(GSDType *GSD);
-I32 DataDictionarySetForceToLocalhostU8(GSDType *GSD, C8 *ForceLocalhost);
-I32 DataDictionaryGetForceToLocalhostU8(GSDType *GSD, U8 *ForceLocalhost);
+ReadWriteAccess_t DataDictionaryInitForceToLocalhostU8(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetForceToLocalhostU8(GSDType *GSD, C8 *ForceLocalhost);
+ReadWriteAccess_t DataDictionaryGetForceToLocalhostU8(GSDType *GSD, U8 *ForceLocalhost);
 
-I32 DataDictionaryInitASPMaxTimeDiffDbl(GSDType *GSD);
-I32 DataDictionarySetASPMaxTimeDiffDbl(GSDType *GSD, C8 *ASPMaxTimeDiff);
-I32 DataDictionaryGetASPMaxTimeDiffDbl(GSDType *GSD, dbl *ASPMaxTimeDiff);
+ReadWriteAccess_t DataDictionaryInitASPMaxTimeDiffDbl(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(GSDType *GSD, C8 *ASPMaxTimeDiff);
+ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(GSDType *GSD, dbl *ASPMaxTimeDiff);
 
-I32 DataDictionaryInitASPMaxTrajDiffDbl(GSDType *GSD);
-I32 DataDictionarySetASPMaxTrajDiffDbl(GSDType *GSD, C8 *ASPMaxTimeDiff);
-I32 DataDictionaryGetASPMaxTrajDiffDbl(GSDType *GSD, dbl *ASPMaxTimeDiff);
+ReadWriteAccess_t DataDictionaryInitASPMaxTrajDiffDbl(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(GSDType *GSD, C8 *ASPMaxTimeDiff);
+ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(GSDType *GSD, dbl *ASPMaxTimeDiff);
 
-I32 DataDictionaryInitASPStepBackCountU32(GSDType *GSD);
-I32 DataDictionarySetASPStepBackCountU32(GSDType *GSD, C8 *ASPStepBackCount);
-I32 DataDictionaryGetASPStepBackCountU32(GSDType *GSD, U32 *ASPStepBackCount);
+ReadWriteAccess_t DataDictionaryInitASPStepBackCountU32(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(GSDType *GSD, C8 *ASPStepBackCount);
+ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(GSDType *GSD, U32 *ASPStepBackCount);
 
-I32 DataDictionaryInitASPFilterLevelDbl(GSDType *GSD);
-I32 DataDictionarySetASPFilterLevelDbl(GSDType *GSD, C8 *ASPFilterLevel);
-I32 DataDictionaryGetASPFilterLevelDbl(GSDType *GSD, dbl *ASPFilterLevel);
+ReadWriteAccess_t DataDictionaryInitASPFilterLevelDbl(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(GSDType *GSD, C8 *ASPFilterLevel);
+ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(GSDType *GSD, dbl *ASPFilterLevel);
 
-I32 DataDictionaryInitASPMaxDeltaTimeDbl(GSDType *GSD);
-I32 DataDictionarySetASPMaxDeltaTimeDbl(GSDType *GSD, C8 *ASPMaxDeltaTime);
-I32 DataDictionaryGetASPMaxDeltaTimeDbl(GSDType *GSD, dbl *ASPMaxDeltaTime);
+ReadWriteAccess_t DataDictionaryInitASPMaxDeltaTimeDbl(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(GSDType *GSD, C8 *ASPMaxDeltaTime);
+ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(GSDType *GSD, dbl *ASPMaxDeltaTime);
 
-I32 DataDictionaryInitTimeServerIPU32(GSDType *GSD);
-I32 DataDictionarySetTimeServerIPU32(GSDType *GSD, C8 *TimeServerIP);
-I32 DataDictionaryGetTimeServerIPU32(GSDType *GSD, U32 *TimeServerIP);
-I32 DataDictionaryGetTimeServerIPC8(GSDType *GSD, C8 *TimeServerIP);
+ReadWriteAccess_t DataDictionaryInitTimeServerIPU32(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetTimeServerIPU32(GSDType *GSD, C8 *TimeServerIP);
+ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(GSDType *GSD, U32 *TimeServerIP);
+ReadWriteAccess_t DataDictionaryGetTimeServerIPC8(GSDType *GSD, C8 *TimeServerIP);
 
-I32 DataDictionaryInitTimeServerPortU16(GSDType *GSD);
-I32 DataDictionarySetTimeServerPortU16(GSDType *GSD, C8 *TimeServerPort);
-I32 DataDictionaryGetTimeServerPortU16(GSDType *GSD, U16 *TimeServerPort);
+ReadWriteAccess_t DataDictionaryInitTimeServerPortU16(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetTimeServerPortU16(GSDType *GSD, C8 *TimeServerPort);
+ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(GSDType *GSD, U16 *TimeServerPort);
 
-I32 DataDictionaryInitSimulatorIPU32(GSDType *GSD);
-I32 DataDictionarySetSimulatorIPU32(GSDType *GSD, C8 *SimulatorIP);
-I32 DataDictionaryGetSimulatorIPU32(GSDType *GSD, U32 *SimulatorIP);
-I32 DataDictionaryGetSimulatorIPC8(GSDType *GSD, C8 *SimulatorIP);
+ReadWriteAccess_t DataDictionaryInitSimulatorIPU32(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetSimulatorIPU32(GSDType *GSD, C8 *SimulatorIP);
+ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(GSDType *GSD, U32 *SimulatorIP);
+ReadWriteAccess_t DataDictionaryGetSimulatorIPC8(GSDType *GSD, C8 *SimulatorIP);
 
-I32 DataDictionaryInitSimulatorTCPPortU16(GSDType *GSD);
-I32 DataDictionarySetSimulatorTCPPortU16(GSDType *GSD, C8 *SimulatorTCPPort);
-I32 DataDictionaryGetSimulatorTCPPortU16(GSDType *GSD, U16 *SimulatorTCPPort);
+ReadWriteAccess_t DataDictionaryInitSimulatorTCPPortU16(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(GSDType *GSD, C8 *SimulatorTCPPort);
+ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(GSDType *GSD, U16 *SimulatorTCPPort);
 
-I32 DataDictionaryInitSimulatorUDPPortU16(GSDType *GSD);
-I32 DataDictionarySetSimulatorUDPPortU16(GSDType *GSD, C8 *SimulatorUDPPort);
-I32 DataDictionaryGetSimulatorUDPPortU16(GSDType *GSD, U16 *SimulatorUDPPort);
+ReadWriteAccess_t DataDictionaryInitSimulatorUDPPortU16(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(GSDType *GSD, C8 *SimulatorUDPPort);
+ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(GSDType *GSD, U16 *SimulatorUDPPort);
 
-I32 DataDictionaryInitSimulatorModeU8(GSDType *GSD);
-I32 DataDictionarySetSimulatorModeU8(GSDType *GSD, C8 *SimulatorMode);
-I32 DataDictionaryGetSimulatorModeU8(GSDType *GSD, U8 *SimulatorMode);
+ReadWriteAccess_t DataDictionaryInitSimulatorModeU8(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetSimulatorModeU8(GSDType *GSD, C8 *SimulatorMode);
+ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(GSDType *GSD, U8 *SimulatorMode);
 
-I32 DataDictionaryInitVOILReceiversC8(GSDType *GSD);
-I32 DataDictionarySetVOILReceiversC8(GSDType *GSD, C8 *VOILReceivers);
-I32 DataDictionaryGetVOILReceiversC8(GSDType *GSD, C8 *VOILReceivers);
+ReadWriteAccess_t DataDictionaryInitVOILReceiversC8(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType *GSD, C8 *VOILReceivers);
+ReadWriteAccess_t DataDictionaryGetVOILReceiversC8(GSDType *GSD, C8 *VOILReceivers);
 
-I32 DataDictionaryInitDTMReceiversC8(GSDType *GSD);
-I32 DataDictionarySetDTMReceiversC8(GSDType *GSD, C8 *DTMReceivers);
-I32 DataDictionaryGetDTMReceiversC8(GSDType *GSD, C8 *DTMReceivers);
+ReadWriteAccess_t DataDictionaryInitDTMReceiversC8(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetDTMReceiversC8(GSDType *GSD, C8 *DTMReceivers);
+ReadWriteAccess_t DataDictionaryGetDTMReceiversC8(GSDType *GSD, C8 *DTMReceivers);
 
-I32 DataDictionaryInitExternalSupervisorIPU32(GSDType *GSD);
-I32 DataDictionarySetExternalSupervisorIPU32(GSDType *GSD, C8 *IP);
-I32 DataDictionaryGetExternalSupervisorIPU32(GSDType *GSD, U32 *IP);
-I32 DataDictionaryGetExternalSupervisorIPC8(GSDType *GSD, C8 *IP);
+ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(GSDType *GSD, C8 *IP);
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(GSDType *GSD, U32 *IP);
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPC8(GSDType *GSD, C8 *IP);
 
-I32 DataDictionaryInitSupervisorTCPPortU16(GSDType *GSD);
-I32 DataDictionarySetSupervisorTCPPortU16(GSDType *GSD, C8 *SupervisorTCPPort);
-I32 DataDictionaryGetSupervisorTCPPortU16(GSDType *GSD, U16 *SupervisorTCPPort);
+ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(GSDType *GSD, C8 *SupervisorTCPPort);
+ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(GSDType *GSD, U16 *SupervisorTCPPort);
 
-I32 DataDictionaryInitRVSSConfigU32(GSDType *GSD);
-I32 DataDictionarySetRVSSConfigU32(GSDType *GSD, U32 RVSSConfig);
-I32 DataDictionaryGetRVSSConfigU32(GSDType *GSD, U32 *RVSSConfig);
+ReadWriteAccess_t DataDictionaryInitRVSSConfigU32(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetRVSSConfigU32(GSDType *GSD, U32 RVSSConfig);
+ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(GSDType *GSD, U32 *RVSSConfig);
 
-I32 DataDictionaryInitRVSSRateU8(GSDType *GSD);
-I32 DataDictionarySetRVSSRateU8(GSDType *GSD, U8 RVSSRate);
-I32 DataDictionaryGetRVSSRateU8(GSDType *GSD, U8 *RVSSRate);
+ReadWriteAccess_t DataDictionaryInitRVSSRateU8(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetRVSSRateU8(GSDType *GSD, U8 RVSSRate);
+ReadWriteAccess_t DataDictionaryGetRVSSRateU8(GSDType *GSD, U8 *RVSSRate);
 
-I32 DataDictionarySetRVSSAsp(GSDType *GSD, ASPType *ASPData);
-I32 DataDictionaryGetRVSSAsp(GSDType *GSD, ASPType *ASPData);
+ReadWriteAccess_t DataDictionarySetRVSSAsp(GSDType *GSD, ASPType *ASPData);
+ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType *GSD, ASPType *ASPData);
 
-I32 DataDictionaryInitMiscDataC8(GSDType *GSD);
-I32 DataDictionarySetMiscDataC8(GSDType *GSD, C8 *MiscData);
-I32 DataDictionaryGetMiscDataC8(GSDType *GSD, C8 *MiscData);
+ReadWriteAccess_t DataDictionaryInitMiscDataC8(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType *GSD, C8 *MiscData);
+ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, C8 *MiscData);
 
-I32 DataDictionarySetOBCStateU8(GSDType *GSD, U8 OBCState);
-U8 DataDictionaryGetOBCStateU8(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, OBCState_t OBCState);
+OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD);
 
-I32 DataDictionaryConstructor(GSDType *GSD);
+ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
 
 #endif 
 

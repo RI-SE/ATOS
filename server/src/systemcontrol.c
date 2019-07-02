@@ -190,6 +190,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     I32 RVSSChannelSocket;
 
     ServerState_t server_state = SERVER_STATE_UNDEFINED;
+    OBCState_t objectControlState = OBC_STATE_UNDEFINED;
     SystemControlCommand_t SystemControlCommand = Idle_0;
     SystemControlCommand_t PreviousSystemControlCommand = Idle_0;
 
@@ -228,7 +229,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     U64 OldTimeU64 = 0;
     U64 PollRateU64 = 0;
     C8 ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
-    U8 OBCStateU8;
     C8 UserControlIPC8[SMALL_BUFFER_SIZE_20];
     struct timeval now;
     U16 MilliU16 = 0, NowU16 = 0;
@@ -474,6 +474,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         }
 
 
+        objectControlState = DataDictionaryGetOBCStateU8(GSD);
+
         if(server_state == SERVER_STATE_INWORK)
         {
             if(SystemControlCommand == AbortScenario_0)
@@ -482,7 +484,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             else if(SystemControlCommand == GetServerStatus_0)
             {
-                LogMessage(LOG_LEVEL_INFO,"State: %s, OBCState: %s, PreviousCommand: %s", SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8], SystemControlCommandsArr[PreviousSystemControlCommand]);
+                LogMessage(LOG_LEVEL_INFO,"State: %s, OBCState: %s, PreviousCommand: %s", SystemControlStatesArr[server_state], SystemControlOBCStatesArr[objectControlState], SystemControlCommandsArr[PreviousSystemControlCommand]);
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 ControlResponseBuffer[0] = server_state;
                 ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD);//OBCStateU8;
@@ -502,11 +504,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
         iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
 
-        if (iCommand == COMM_OBC_STATE)
-        {
-            OBCStateU8 = (U8)*pcRecvBuffer;
-        }
-        else if(iCommand == COMM_LOG)
+        if(iCommand == COMM_LOG)
         {
             SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
         }
@@ -519,7 +517,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 0);
             }
         }
-        
+
         switch(SystemControlCommand)
         {
         // can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
@@ -589,7 +587,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
             break;
         case GetServerStatus_0:
-            LogMessage(LOG_LEVEL_INFO,"State: %s, OBCState: %s, %d",SystemControlStatesArr[server_state], SystemControlOBCStatesArr[OBCStateU8], DataDictionaryGetOBCStateU8(GSD));
+            LogMessage(LOG_LEVEL_INFO,"State: %s, OBCState: %s, %d",SystemControlStatesArr[server_state], SystemControlOBCStatesArr[objectControlState], DataDictionaryGetOBCStateU8(GSD));
             SystemControlCommand = Idle_0;
             bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
             ControlResponseBuffer[0] = server_state;
@@ -628,7 +626,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlSetServerParameter(GSD, SystemControlArgument[0], SystemControlArgument[1], 1);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:", ControlResponseBuffer, 0, &ClientSocket, 0);
-                //Send COMM_DATA_DICT to notify to update data from DataDictionary    
+                //Send COMM_DATA_DICT to notify to update data from DataDictionary
                 iCommSend(COMM_DATA_DICT, ControlResponseBuffer, sizeof(ControlResponseBuffer));
 
             } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in SetServerParameter(Name, Value)!"); SystemControlCommand = Idle_0;}
@@ -730,7 +728,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in PrepFileRx(path, filesize, packetsize)!"); SystemControlCommand = Idle_0;}
         break;
         case InitializeScenario_0:
-            if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "IDLE") != NULL)
+            if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_IDLE)
             {
                 if (iCommSend(COMM_INIT, pcBuffer, strlen(pcBuffer)+1) < 0)
                 {
@@ -742,7 +740,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
                 SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
             }
-            else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "INITIALIZED") != NULL)
+            else if(server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_INITIALIZED)
             {
                 SystemControlSendLog("[SystemControl] Simulate that all objects becomes successfully configured.\n", &ClientSocket, 0);
                 SystemControlCommand = Idle_0;
@@ -756,7 +754,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             break;
         case ConnectObject_0:
-            if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "INITIALIZED") != NULL)
+            if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_INITIALIZED)
             {
                 if (iCommSend(COMM_CONNECT, pcBuffer, strlen(pcBuffer)+1) < 0)
                 {
@@ -768,7 +766,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ConnectObject:", ControlResponseBuffer, 0, &ClientSocket, 0);
                 SystemControlSendLog("[SystemControl] Sending CONNECT.\n", &ClientSocket, 0);
             }
-            else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL)
+            else if(server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_CONNECTED)
             {
                 SystemControlSendLog("[SystemControl] Simulate that all objects are connected.\n", &ClientSocket, 0);
                 SystemControlCommand = Idle_0;
@@ -802,7 +800,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             break;
         case ArmScenario_0:
-            if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL)
+            if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED)
             {
                 bzero(pcBuffer, IPC_BUFFER_SIZE);
                 server_state = SERVER_STATE_INWORK;
@@ -816,7 +814,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ArmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
                 SystemControlSendLog("[SystemControl] Sending ARM.\n", &ClientSocket, 0);
             }
-            else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL)
+            else if(server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_ARMED)
             {
                 SystemControlSendLog("[SystemControl] Simulate that all objects become armed.\n", &ClientSocket, 0);
 
@@ -831,7 +829,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             break;
         case DisarmScenario_0:
-            if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL)
+            if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED)
             {
                 bzero(pcBuffer, IPC_BUFFER_SIZE);
                 server_state = SERVER_STATE_IDLE;
@@ -845,7 +843,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DisarmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
                 SystemControlSendLog("[SystemControl] Sending DISARM.\n", &ClientSocket, 0);
             }
-            else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL)
+            else if(server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_CONNECTED)
             {
                 SystemControlSendLog("[SystemControl] Simulate that all objects becomes disarmed.\n", &ClientSocket, 0);
                 SystemControlCommand = Idle_0;
@@ -861,7 +859,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case StartScenario_1:
             if(CurrentInputArgCount == CommandArgCount)
             {
-                if(server_state == SERVER_STATE_IDLE && strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL) //Temporary!
+                if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED) //Temporary!
                 {
                     bzero(pcBuffer, IPC_BUFFER_SIZE);
                     /* Lest use UTC time everywhere instead of etsi and gps time
@@ -896,7 +894,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     //server_state = SERVER_STATE_IDLE; //Temporary!
                     //SystemControlCommand = Idle_0; //Temporary!
                 }
-                else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "RUNNING") != NULL)
+                else if(server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_RUNNING)
                 {
 
                     SystemControlCommand = Idle_0;
@@ -950,7 +948,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             break;
         case AbortScenario_0:
-            if(strstr(SystemControlOBCStatesArr[OBCStateU8], "RUNNING") != NULL
+            if(objectControlState == OBC_STATE_RUNNING
                     /* || strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL
                      * || strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/ ) // Abort should only be allowed in running state
             {

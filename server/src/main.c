@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
     Options options;
     pid_t pID[numberOfModules];
     char moduleExitStatus[numberOfModules];
+    ReadWriteAccess_t dataDictInitResult = UNDEFINED;
 
     if (readArgumentList(argc, argv, &options))
         exit(EXIT_FAILURE);
@@ -107,14 +108,17 @@ int main(int argc, char *argv[])
     GSD->ScenarioStartTimeU32 = 0;
     GPSTime->isTimeInitializedU8 = 0;
 
-    LogMessage(LOG_LEVEL_INFO,"Initializing data dictionary");
-    DataDictionaryConstructor(GSD);
-
     // Initialise log
     LogInit(MODULE_NAME, options.commonLogLevel);
     LogPrint("Version %s", MaestroVersion);
     LogMessage(LOG_LEVEL_INFO, "Central started");
     LogMessage(LOG_LEVEL_DEBUG, "Verbose mode enabled");
+
+    // Initialise data dictionary
+    LogMessage(LOG_LEVEL_INFO,"Initializing data dictionary");
+    dataDictInitResult = DataDictionaryConstructor(GSD);
+    if (dataDictInitResult != READ_OK && dataDictInitResult != READ_WRITE_OK)
+        util_error("Unable to initialize shared memory space");
 
     // Initialise message queue bus
     if(initializeMessageQueueBus())

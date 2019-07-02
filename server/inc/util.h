@@ -527,6 +527,17 @@ typedef struct
   volatile U16 IterationTimeU16;
 } ASPType;
 
+/*! Object control states */
+typedef enum {
+    OBC_STATE_UNDEFINED,
+    OBC_STATE_IDLE,
+    OBC_STATE_INITIALIZED,
+    OBC_STATE_CONNECTED,
+    OBC_STATE_ARMED,
+    OBC_STATE_RUNNING,
+    OBC_STATE_ERROR
+} OBCState_t;
+
 typedef struct
 {
 
@@ -585,7 +596,7 @@ typedef struct
   U32 DataDictionaryRVSSRateU8;
   volatile ASPType ASPData;
   C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
-  volatile U8 OBCStateU8;
+  volatile OBCState_t OBCStateU8;
 } GSDType;
 
 
@@ -703,17 +714,6 @@ typedef struct
   I16 SpeedI16;
 } ObjectMonitorType;
 
-
-typedef enum {
-    OBC_STATE_UNDEFINED,
-    OBC_STATE_IDLE,
-    OBC_STATE_INITIALIZED,
-    OBC_STATE_CONNECTED,
-    OBC_STATE_ARMED,
-    OBC_STATE_RUNNING,
-    OBC_STATE_ERROR
-} OBCState_t;
-
 #define HTTP_HEADER_MAX_LENGTH 64
 typedef struct {
     char AcceptCharset[HTTP_HEADER_MAX_LENGTH];
@@ -736,14 +736,14 @@ typedef struct {
     char UserAgent[HTTP_HEADER_MAX_LENGTH];
 } HTTPHeaderContent;
 
-
+/*! Data dictionary read/write return codes. */
 typedef enum {
-    UNDEFINED,
-    WRITE_OK,
-    READ_OK,
-    READ_WRITE_OK,
-    PARAMETER_NOTFOUND,
-    OUT_OF_RANGE
+    UNDEFINED, /*!< Undefined result */
+    WRITE_OK, /*!< Write successful */
+    READ_OK, /*!< Read successful */
+    READ_WRITE_OK, /*!< Combined read/write successful */
+    PARAMETER_NOTFOUND, /*!< Read/write not successful */
+    OUT_OF_RANGE /*!< Attempted to read out of range */
 } ReadWriteAccess_t;
 
 
