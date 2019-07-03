@@ -80,20 +80,26 @@ public:
 
 
     /*! Getters */
-    virtual TriggerType_t getType();
+    virtual TriggerType_t getType() = 0;
     uint16_t getID() { return this->triggerID; }
 
 
     /*! Setters */
     void setID(uint16_t triggerID) { this->triggerID = triggerID; }
 
-    virtual TriggerReturnCode_t appendTriggerParameter(TriggerParameter_t triggerParameter);
+    virtual TriggerReturnCode_t appendParameter(TriggerParameter_t triggerParameter) = 0;
+    virtual TriggerReturnCode_t parseParameters() = 0; // TODO: Maybe make this a Trigger function
 
 
     /*! To string */
-    friend std::ostream& operator<<(std::ostream &strm, const Trigger &a) {
-        return strm << "TODO";
+    friend std::ostream& operator<<(std::ostream &strm, const Trigger &trig) {
+        return strm << "TODO, but here is the ID: " << trig.triggerID;
     }
+
+
+
+protected:
+    TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter);
 
 
 private:
@@ -103,7 +109,6 @@ private:
     virtual std::set<TriggerParameter_t> getAcceptedParameters()
         { return {TRIGGER_PARAMETER_UNAVAILABLE}; }
 
-    virtual TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t param);
 };
 
 #endif // TRIGGER_H
