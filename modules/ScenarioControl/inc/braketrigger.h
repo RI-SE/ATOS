@@ -13,10 +13,22 @@ public:
 
     TriggerReturnCode_t parseParameters();
 
+    template<typename T> TriggerReturnCode_t update(T) { return INVALID_ARGUMENT; }
+
+    template<> TriggerReturnCode_t update<bool>(bool isBrakeCurrentlyPressed)
+    {
+        wasBrakePressed = isBrakePressed;
+        isBrakePressed = isBrakeCurrentlyPressed;
+        return OK;
+    }
+
+
 private:
     static constexpr TriggerTypeCode_t triggerTypeCode = TRIGGER_BRAKE;
 
     std::list<TriggerParameter_t> parameters;
+
+    bool isBrakePressed = false, wasBrakePressed = false;
 
     std::set<Trigger::TriggerParameter_t> getAcceptedParameters()
     {
@@ -34,6 +46,7 @@ private:
             Trigger::TRIGGER_PARAMETER_NOT_EQUAL_TO
         };
     }
+
 };
 
 #endif // BRAKETRIGGER_H

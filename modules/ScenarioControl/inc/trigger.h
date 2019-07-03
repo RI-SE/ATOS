@@ -68,7 +68,7 @@ public:
 
     typedef uint16_t TriggerID_t;
 
-    typedef enum {OK, NOT_OK} TriggerReturnCode_t;
+    typedef enum {OK, NOT_OK, INVALID_ARGUMENT} TriggerReturnCode_t;
 
 
     /*! Constructor */
@@ -96,10 +96,7 @@ public:
         return strm << "TODO, but here is the ID: " << trig.triggerID;
     }
 
-    TriggerReturnCode_t update(double value);
-    TriggerReturnCode_t update(int value);
-    TriggerReturnCode_t update(bool value);
-
+    template<typename T> TriggerReturnCode_t update(T) { return INVALID_ARGUMENT; }
 
 protected:
     TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter);
