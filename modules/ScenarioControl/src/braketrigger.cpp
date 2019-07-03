@@ -32,7 +32,7 @@ Trigger::TriggerReturnCode_t BrakeTrigger::checkIfTriggered()
     case PRESSED:
         return isBrakePressed ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
     case RELEASED:
-        return isBrakePressed ? NO_TRIGGER_OCCURRED : TRIGGER_OCCURRED;
+        return !isBrakePressed ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
     case EDGE_ANY:
         return (isBrakePressed != wasBrakePressed) ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
     case EDGE_RISING:
