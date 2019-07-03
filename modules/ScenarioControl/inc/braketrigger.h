@@ -11,7 +11,8 @@ public:
 
     TriggerType_t getType() { return TRIGGER_BRAKE; }
 
-    TriggerReturnCode_t appendTriggerParameter(TriggerParameter_t triggerParameter);
+    TriggerReturnCode_t appendParameter(TriggerParameter_t triggerParameter);
+    TriggerReturnCode_t parseParameters();
 
 private:
     std::set<TriggerParameter_t> triggerParameters;
