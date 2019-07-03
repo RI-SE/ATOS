@@ -13,15 +13,7 @@ public:
 
     TriggerReturnCode_t parseParameters();
 
-    template<typename T> TriggerReturnCode_t update(T) { return INVALID_ARGUMENT; }
-
-    template<> TriggerReturnCode_t update<bool>(bool isBrakeCurrentlyPressed)
-    {
-        wasBrakePressed = isBrakePressed;
-        isBrakePressed = isBrakeCurrentlyPressed;
-        return OK;
-    }
-
+    TriggerReturnCode_t update(bool);
 
 private:
     static constexpr TriggerTypeCode_t triggerTypeCode = TRIGGER_BRAKE;
@@ -47,6 +39,9 @@ private:
         };
     }
 
+    TriggerReturnCode_t checkIfTriggered(void);
+
+    enum TriggerMode {PRESSED, RELEASED, EDGE_RISING, EDGE_FALLING, EDGE_ANY} mode;
 };
 
 #endif // BRAKETRIGGER_H

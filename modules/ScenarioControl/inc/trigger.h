@@ -6,6 +6,8 @@
 #include <iostream>
 #include <list>
 
+
+
 class Trigger
 {
 public:
@@ -68,7 +70,7 @@ public:
 
     typedef uint16_t TriggerID_t;
 
-    typedef enum {OK, NOT_OK, INVALID_ARGUMENT} TriggerReturnCode_t;
+    typedef enum {OK, NOT_OK, INVALID_ARGUMENT, TRIGGER_OCCURRED, NO_TRIGGER_OCCURRED} TriggerReturnCode_t;
 
 
     /*! Constructor */
@@ -96,7 +98,12 @@ public:
         return strm << "TODO, but here is the ID: " << trig.triggerID;
     }
 
-    template<typename T> TriggerReturnCode_t update(T) { return INVALID_ARGUMENT; }
+    TriggerReturnCode_t update(void)    { return INVALID_ARGUMENT; }
+    TriggerReturnCode_t update(bool)    { return INVALID_ARGUMENT; }
+    TriggerReturnCode_t update(char)    { return INVALID_ARGUMENT; }
+    TriggerReturnCode_t update(int)     { return INVALID_ARGUMENT; }
+    TriggerReturnCode_t update(float)   { return INVALID_ARGUMENT; }
+    TriggerReturnCode_t update(double)  { return INVALID_ARGUMENT; }
 
 protected:
     TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter);
@@ -113,6 +120,7 @@ private:
     virtual std::set<TriggerParameter_t> getAcceptedParameters()
         { return {TRIGGER_PARAMETER_UNAVAILABLE}; }
 
+    virtual TriggerReturnCode_t checkIfTriggered(void) = 0;
 };
 
 #endif // TRIGGER_H
