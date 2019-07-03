@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <set>
 #include <iostream>
+#include <list>
 
 class Trigger
 {
@@ -97,7 +98,10 @@ public:
 
 private:
     TriggerID_t triggerID;
-    std::set<TriggerParameter_t> triggerParameters;
+    std::list<TriggerParameter_t> parameters;
+
+    virtual std::set<TriggerParameter_t> getAcceptedParameters()
+        { return {TRIGGER_PARAMETER_UNAVAILABLE}; }
 
     virtual TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t param);
 };
