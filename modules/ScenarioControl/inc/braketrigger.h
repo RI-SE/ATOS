@@ -11,13 +11,13 @@ public:
     BrakeTrigger(TriggerID_t triggerID);
     ~BrakeTrigger();
 
-    TriggerType_t getType() { return TRIGGER_BRAKE; }
-
-    TriggerReturnCode_t appendParameter(TriggerParameter_t triggerParameter);
     TriggerReturnCode_t parseParameters();
 
 private:
+    static constexpr TriggerTypeCode_t triggerTypeCode = TRIGGER_BRAKE;
+
     std::list<TriggerParameter_t> parameters;
+
     std::set<Trigger::TriggerParameter_t> getAcceptedParameters()
     {
         return {

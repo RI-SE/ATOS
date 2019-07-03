@@ -26,3 +26,15 @@ Trigger::TriggerReturnCode_t Trigger::checkTriggerParameter(TriggerParameter_t t
     }
     return NOT_OK;
 }
+
+
+Trigger::TriggerReturnCode_t Trigger::appendParameter(Trigger::TriggerParameter_t triggerParameter)
+{
+    TriggerReturnCode_t retval = NOT_OK;
+
+    if( (retval = checkTriggerParameter(triggerParameter)) != OK)
+        return retval;
+
+    parameters.push_back(triggerParameter);
+    return OK;
+}

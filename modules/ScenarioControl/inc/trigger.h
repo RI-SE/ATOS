@@ -33,7 +33,7 @@ public:
         TRIGGER_TIMER_EVENT_OCCURRED    = 0x0100,
         TRIGGER_MODE_CHANGED            = 0x0110,
         TRIGGER_UNAVAILABLE             = 0xFFFF
-    } TriggerType_t;
+    } TriggerTypeCode_t;
 
     typedef enum {
         TRIGGER_PARAMETER_FALSE                     = 0x00000000,
@@ -80,15 +80,15 @@ public:
 
 
     /*! Getters */
-    virtual TriggerType_t getType() = 0;
+    TriggerTypeCode_t getTypeCode() { return this->triggerTypeCode; }
     uint16_t getID() { return this->triggerID; }
 
 
     /*! Setters */
     void setID(uint16_t triggerID) { this->triggerID = triggerID; }
 
-    virtual TriggerReturnCode_t appendParameter(TriggerParameter_t triggerParameter) = 0;
-    virtual TriggerReturnCode_t parseParameters() = 0; // TODO: Maybe make this a Trigger function
+    TriggerReturnCode_t appendParameter(TriggerParameter_t triggerParameter);
+    virtual TriggerReturnCode_t parseParameters() = 0;
 
 
     /*! To string */
@@ -96,6 +96,9 @@ public:
         return strm << "TODO, but here is the ID: " << trig.triggerID;
     }
 
+    TriggerReturnCode_t update(double value);
+    TriggerReturnCode_t update(int value);
+    TriggerReturnCode_t update(bool value);
 
 
 protected:
@@ -104,6 +107,10 @@ protected:
 
 private:
     TriggerID_t triggerID;
+    TriggerTypeCode_t triggerTypeCode;
+
+
+
     std::list<TriggerParameter_t> parameters;
 
     virtual std::set<TriggerParameter_t> getAcceptedParameters()
