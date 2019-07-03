@@ -3,10 +3,12 @@
 
 #include "trigger.h"
 
+#include <list>
+
 class BrakeTrigger : public Trigger
 {
 public:
-    //BrakeTrigger(TriggerType_t triggerID);
+    BrakeTrigger(TriggerID_t triggerID);
     ~BrakeTrigger();
 
     TriggerType_t getType() { return TRIGGER_BRAKE; }
