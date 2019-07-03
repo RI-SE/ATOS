@@ -72,7 +72,7 @@ public:
 
 
     /*! Constructor */
-    Trigger(TriggerType_t triggerID);
+    Trigger(TriggerID_t triggerID);
 
 
     /*! Destructor */
