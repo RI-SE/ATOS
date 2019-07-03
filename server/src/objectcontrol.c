@@ -1109,9 +1109,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                    pi = p + 1;
                 }
                 */                
-                DataDictionaryGetOriginLatitudeC8(GSD, OriginLatitude);
-                DataDictionaryGetOriginLongitudeC8(GSD, OriginLongitude);
-                DataDictionaryGetOriginAltitudeC8(GSD, OriginAltitude);
+                DataDictionaryGetOriginLatitudeC8(GSD, OriginLatitude, SMALL_BUFFER_SIZE_0);
+                DataDictionaryGetOriginLongitudeC8(GSD, OriginLongitude, SMALL_BUFFER_SIZE_0);
+                DataDictionaryGetOriginAltitudeC8(GSD, OriginAltitude, SMALL_BUFFER_SIZE_0);
                 
                 DataDictionaryGetOriginLatitudeDbl(GSD, &OriginLatitudeDbl);
                 DataDictionaryGetOriginLongitudeDbl(GSD, &OriginLongitudeDbl);
@@ -1136,10 +1136,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 DataDictionaryGetASPFilterLevelDbl(GSD, &ASPFilterLevelDbl);
                 DataDictionaryGetASPMaxDeltaTimeDbl(GSD, &ASPMaxDeltaTimeDbl);
                 ASPDebugRate = 1;
-                bzero(VOILReceivers, SMALL_BUFFER_SIZE_254);
-                DataDictionaryGetVOILReceiversC8(GSD, VOILReceivers);
-                bzero(DTMReceivers, SMALL_BUFFER_SIZE_254);
-                DataDictionaryGetDTMReceiversC8(GSD, DTMReceivers);
+                DataDictionaryGetVOILReceiversC8(GSD, VOILReceivers, SMALL_BUFFER_SIZE_254);
+                DataDictionaryGetDTMReceiversC8(GSD, DTMReceivers, SMALL_BUFFER_SIZE_254);
 
             }
             else if(iCommand == COMM_DISCONNECT)

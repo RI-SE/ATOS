@@ -112,10 +112,8 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     gettimeofday(&ExecTime, NULL);
     CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
     PrevMilliSecondU16 = CurrentMilliSecondU16;
-
     // Set time server IP
-    bzero(ServerIPC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
-    DataDictionaryGetTimeServerIPC8(GSD, ServerIPC8);
+    DataDictionaryGetTimeServerIPC8(GSD, ServerIPC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
     DataDictionaryGetTimeServerIPU32(GSD, &IpU32);
 
     // Set time server port

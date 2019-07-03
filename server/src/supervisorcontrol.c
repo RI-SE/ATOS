@@ -113,8 +113,7 @@ void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
  
   DataDictionaryGetExternalSupervisorIPU32(GSD, &SupervisorIpU32);
   
-  bzero(SupervisorServerIpC8, SUP_CONTROL_BUFFER_SIZE_20);
-  DataDictionaryGetExternalSupervisorIPC8(GSD, SupervisorServerIpC8);
+  DataDictionaryGetExternalSupervisorIPC8(GSD, SupervisorServerIpC8, SUP_CONTROL_BUFFER_SIZE_20);
   
   LogMessage(LOG_LEVEL_INFO,"Supervisor IP: %s", SupervisorServerIpC8);
   

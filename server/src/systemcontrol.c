@@ -153,7 +153,7 @@ void SystemControlSendMONR(C8* LogString, I32* Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8* name, const U32 port, I32 *sockfd, struct sockaddr_in* addr);
 //I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
 I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 debug);
-I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnValue, U8 Debug);
+I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnValue, U32 BufferLength, U8 Debug);
 I32 SystemControlReadServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debug);
 I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 I32 SystemControlSetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *NewValue, U8 Debug);
@@ -229,6 +229,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     U64 OldTimeU64 = 0;
     U64 PollRateU64 = 0;
     C8 ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
+    C8 TextBuffer20[SMALL_BUFFER_SIZE_20];
     C8 UserControlIPC8[SMALL_BUFFER_SIZE_20];
     struct timeval now;
     U16 MilliU16 = 0, NowU16 = 0;
@@ -392,7 +393,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     {
                         // Find opening parenthesis
                         StartPtr = strchr(CmdPtr, '(');
-
                         // If there was no opening or closing parenthesis, the format is not correct
                         if (StartPtr == NULL || strchr(StartPtr,')') == NULL)
                             LogMessage(LOG_LEVEL_WARNING, "Received command not conforming to MSCP standards");
@@ -604,9 +604,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case GetTestOrigin_0:
             SystemControlCommand = Idle_0;
             bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-            DataDictionaryGetOriginLatitudeC8(GSD, ControlResponseBuffer);strcat(ControlResponseBuffer,";");
-            DataDictionaryGetOriginLongitudeC8(GSD, ControlResponseBuffer);strcat(ControlResponseBuffer,";");
-            DataDictionaryGetOriginAltitudeC8(GSD, ControlResponseBuffer);strcat(ControlResponseBuffer,";");
+            DataDictionaryGetOriginLatitudeC8(GSD, TextBuffer20, SMALL_BUFFER_SIZE_20); strcat(ControlResponseBuffer,TextBuffer20); strcat(ControlResponseBuffer,";");
+            DataDictionaryGetOriginLongitudeC8(GSD, TextBuffer20, SMALL_BUFFER_SIZE_20);strcat(ControlResponseBuffer,TextBuffer20); strcat(ControlResponseBuffer,";");
+            DataDictionaryGetOriginAltitudeC8(GSD, TextBuffer20, SMALL_BUFFER_SIZE_20);strcat(ControlResponseBuffer,TextBuffer20); strcat(ControlResponseBuffer,";");
             iCommSend(COMM_OSEM, ControlResponseBuffer, sizeof(ControlResponseBuffer));
             SystemControlSendControlResponse(strlen(ParameterListC8) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetTestOrigin:", ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
         break;
@@ -615,7 +615,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             {
                 SystemControlCommand = Idle_0;
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                SystemControlGetServerParameter(GSD, SystemControlArgument[0], ControlResponseBuffer, 0);
+                SystemControlGetServerParameter(GSD, SystemControlArgument[0], ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE, 0);
                 SystemControlSendControlResponse(strlen(ControlResponseBuffer) > 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK: SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA , "GetServerParameter:", ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
             } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in GetServerParameter(Name)!"); SystemControlCommand = Idle_0;}
         break;
@@ -1477,7 +1477,7 @@ I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData
 }
 */
 
-I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnValue, U8 Debug)
+I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnValue, U32 BufferLength, U8 Debug)
 {
     bzero(ReturnValue, 20);
     dbl ValueDbl = 0;
@@ -1502,7 +1502,7 @@ I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnV
     }
     else if(strcmp("VisualizationServerName", ParameterName) == 0)
     {
-        DataDictionaryGetVisualizationServerC8(GSD, ReturnValue);
+        DataDictionaryGetVisualizationServerC8(GSD, ReturnValue, BufferLength);
     }
     else if(strcmp("ForceObjectToLocalhost", ParameterName) == 0)
     {
@@ -1536,7 +1536,7 @@ I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnV
     }
     else if(strcmp("TimeServerIP", ParameterName) == 0)
     {
-        DataDictionaryGetTimeServerIPC8(GSD, ReturnValue);
+        DataDictionaryGetTimeServerIPC8(GSD, ReturnValue, BufferLength);
     }
     else if(strcmp("TimeServerPort", ParameterName) == 0)
     {
@@ -1545,7 +1545,7 @@ I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnV
     }
     else if(strcmp("SimulatorIP", ParameterName) == 0)
     {
-        DataDictionaryGetSimulatorIPC8(GSD, ReturnValue);
+        DataDictionaryGetSimulatorIPC8(GSD, ReturnValue, BufferLength);
     }
     else if(strcmp("SimulatorTCPPort", ParameterName) == 0)
     {
@@ -1564,15 +1564,15 @@ I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnV
     }
     else if(strcmp("VOILReceivers", ParameterName) == 0)
     {
-        DataDictionaryGetVOILReceiversC8(GSD, ReturnValue);
+        DataDictionaryGetVOILReceiversC8(GSD, ReturnValue, BufferLength);
     }
     else if(strcmp("DTMReceivers", ParameterName) == 0)
     {
-        DataDictionaryGetDTMReceiversC8(GSD, ReturnValue);
+        DataDictionaryGetDTMReceiversC8(GSD, ReturnValue, BufferLength);
     }
     else if(strcmp("SupervisorIP", ParameterName) == 0)
     {
-       DataDictionaryGetExternalSupervisorIPC8(GSD, ReturnValue);
+       DataDictionaryGetExternalSupervisorIPC8(GSD, ReturnValue, BufferLength);
     }
     else if(strcmp("SupervisorTCPPort", ParameterName) == 0)
     {
@@ -1581,7 +1581,7 @@ I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnV
     }
     else if(strcmp("MiscData", ParameterName) == 0)
     {
-        DataDictionaryGetMiscDataC8(GSD, ReturnValue);
+        DataDictionaryGetMiscDataC8(GSD, ReturnValue, BufferLength);
     }
     else if(strcmp("RVSSConfig", ParameterName) == 0)
     {

@@ -164,9 +164,10 @@ ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(GSDType *GSD, dbl *Latitude
  * \param Latitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLatitudeC8(GSDType *GSD, C8 *Latitude)
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeC8(GSDType *GSD, C8 *Latitude, U32 BuffLen)
 {
   pthread_mutex_lock(&OriginLatitudeMutex);
+  bzero(Latitude, BuffLen);
   strcat(Latitude, GSD->OriginLatitudeC8);
   pthread_mutex_unlock(&OriginLatitudeMutex);
   return READ_OK;
@@ -243,9 +244,10 @@ ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(GSDType *GSD, dbl *Longitu
  * \param Longitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLongitudeC8(GSDType *GSD, C8 *Longitude)
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeC8(GSDType *GSD, C8 *Longitude, U32 BuffLen)
 {
   pthread_mutex_lock(&OriginLongitudeMutex);
+  bzero(Longitude, BuffLen);
   strcat(Longitude, GSD->OriginLongitudeC8);
   pthread_mutex_unlock(&OriginLongitudeMutex);
   return READ_OK;
@@ -321,9 +323,10 @@ ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(GSDType *GSD, dbl *Altitude
  * \param Altitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginAltitudeC8(GSDType *GSD, C8 *Altitude)
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeC8(GSDType *GSD, C8 *Altitude, U32 BuffLen)
 {
   pthread_mutex_lock(&OriginAltitudeMutex);
+  bzero(Altitude, BuffLen);
   strcat(Altitude, GSD->OriginAltitudeC8);
   pthread_mutex_unlock(&OriginAltitudeMutex);
   return READ_OK;
@@ -389,7 +392,7 @@ ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType *GSD, C8 *IP)
 ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(GSDType *GSD, U32 *IP)
 {
   pthread_mutex_lock(&VisualizationServerMutex);
-  *IP = GSD->VisualizationServerU32;
+   *IP = GSD->VisualizationServerU32;
   pthread_mutex_unlock(&VisualizationServerMutex);
   return READ_OK;
  }
@@ -401,9 +404,10 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(GSDType *GSD, U32 *IP)
  * \param IP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType *GSD, C8 *IP)
+ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType *GSD, C8 *IP, U32 BuffLen)
 {
   pthread_mutex_lock(&VisualizationServerMutex);
+  bzero(IP, BuffLen);
   strcat(IP, GSD->VisualizationServerC8);
   pthread_mutex_unlock(&VisualizationServerMutex);
   return READ_OK;
@@ -843,9 +847,10 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(GSDType *GSD, U32 *TimeServer
  * \param TimeServerIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetTimeServerIPC8(GSDType *GSD, C8 *TimeServerIP)
+ReadWriteAccess_t DataDictionaryGetTimeServerIPC8(GSDType *GSD, C8 *TimeServerIP, U32 BuffLen)
 {
   pthread_mutex_lock(&TimeServerIPMutex);
+  bzero(TimeServerIP, BuffLen);
   strcat(TimeServerIP, GSD->TimeServerIPC8);
   pthread_mutex_unlock(&TimeServerIPMutex);
   return READ_OK;
@@ -984,9 +989,10 @@ ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(GSDType *GSD, U32 *SimulatorIP
  * \param SimulatorIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorIPC8(GSDType *GSD, C8 *SimulatorIP)
+ReadWriteAccess_t DataDictionaryGetSimulatorIPC8(GSDType *GSD, C8 *SimulatorIP, U32 BuffLen)
 {
   pthread_mutex_lock(&SimulatorIPMutex);
+  bzero(SimulatorIP, BuffLen);
   strcat(SimulatorIP, GSD->SimulatorIPC8);
   pthread_mutex_unlock(&SimulatorIPMutex);
   return READ_OK;
@@ -1224,9 +1230,10 @@ ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType *GSD, C8 *VOILReceive
  * \param VOILReceivers Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetVOILReceiversC8(GSDType *GSD, U8 *VOILReceivers)
+ReadWriteAccess_t DataDictionaryGetVOILReceiversC8(GSDType *GSD, U8 *VOILReceivers, U32 BuffLen)
 {
   pthread_mutex_lock(&VOILReceiversMutex);
+  bzero(VOILReceivers, BuffLen);
   strcpy(VOILReceivers, GSD->VOILReceiversC8);
   pthread_mutex_unlock(&VOILReceiversMutex);
   return READ_OK;
@@ -1284,9 +1291,10 @@ ReadWriteAccess_t DataDictionarySetDTMReceiversC8(GSDType *GSD, C8 *DTMReceivers
  * \param DTMReceivers Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetDTMReceiversC8(GSDType *GSD, U8 *DTMReceivers)
+ReadWriteAccess_t DataDictionaryGetDTMReceiversC8(GSDType *GSD, U8 *DTMReceivers, U32 BuffLen)
 {
   pthread_mutex_lock(&DTMReceiversMutex);
+  bzero(DTMReceivers, BuffLen);
   strcpy(DTMReceivers, GSD->DTMReceiversC8);
   pthread_mutex_unlock(&DTMReceiversMutex);
   return READ_OK;
@@ -1363,9 +1371,10 @@ ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(GSDType *GSD, U32 *IP
  * \param IP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPC8(GSDType *GSD, C8 *IP)
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPC8(GSDType *GSD, C8 *IP, U32 BuffLen)
 {
   pthread_mutex_lock(&ExternalSupervisorIPMutex);
+  bzero(IP, BuffLen);
   strcat(IP, GSD->ExternalSupervisorIPC8);
   pthread_mutex_unlock(&ExternalSupervisorIPMutex);
   return READ_OK;
@@ -1646,9 +1655,10 @@ ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType *GSD, C8 *MiscData)
  * \param MiscData Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, U8 *MiscData)
+ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, U8 *MiscData, U32 BuffLen)
 {
   pthread_mutex_lock(&MiscDataMutex);
+  bzero(MiscData, BuffLen);
   strcpy(MiscData, GSD->MiscDataC8);
   pthread_mutex_unlock(&MiscDataMutex);
   return READ_OK;
