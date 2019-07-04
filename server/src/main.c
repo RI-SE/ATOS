@@ -67,15 +67,15 @@ static struct timeval waitStartTime, waitedTime;                                
 ------------------------------------------------------------*/
 //! allModules contains the tasks to be run in the server. To enable or disable a task, add or remove the main module function in this array
 static const ModuleTask allModules[] = {
-    /*
+    
     logger_task,
     timecontrol_task,
     supervision_task,
     supervisorcontrol_task,
     systemcontrol_task,
     objectcontrol_task
-    */
-   citscontrol_task
+    
+   //citscontrol_task
 };
 static const size_t numberOfModules = sizeof(allModules) / sizeof(ModuleTask);
 
