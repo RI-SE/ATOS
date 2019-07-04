@@ -61,7 +61,27 @@ Go to the root of the cloned git repo and build the documentation by doing
 ```sh
 sudo make html
 ```
-This will build the documentation for all the code. Then proceede to build and install the 
+This will build the documentation for all the code. Then proceede to build and install paho
+```sh
+make
+make install
+```
+
+The server will not bu default build the CITS module. This is to prevent the use of the CITS module when it is not necessary. To enable building of the module, run `cmake` from the `build/` directory
+```sh
+cmake "Unix Makefiles" -DUSE_CITS:BOOL=TRUE ..
+```
+then you can build and run the server as normal
+```sh
+make
+./TEServer
+```
+
+To disable the CITS module, remake the `cmake` procedure
+
+```sh
+cmake "Unix Makefiles" -DUSE_CITS:BOOL=FALSE ..
+```
 
 # To communicate with server start program.
 ./UserControl [IP] [port]
