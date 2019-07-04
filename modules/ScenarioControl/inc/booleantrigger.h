@@ -30,7 +30,6 @@ protected:
     bool isStateTrue = false, wasStateTrue = false;
 
 private:
-    TriggerTypeCode_t triggerTypeCode;
 
     virtual std::set<Trigger::TriggerParameter_t> getAcceptedParameters() override
     {

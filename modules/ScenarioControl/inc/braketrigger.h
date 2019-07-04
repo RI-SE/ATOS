@@ -9,13 +9,10 @@
 class BrakeTrigger : public BooleanTrigger
 {
 public:
-    using BooleanTrigger::BooleanTrigger;
-
+    BrakeTrigger(TriggerID_t triggerID);
     TriggerReturnCode_t parseParameters() override;
 
 private:
-    TriggerTypeCode_t triggerTypeCode = TRIGGER_BRAKE;
-
     std::vector<TriggerParameter_t> parameters;
 
     std::set<Trigger::TriggerParameter_t> getAcceptedParameters() override

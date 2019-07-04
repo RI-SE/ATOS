@@ -1,6 +1,8 @@
 
 #include "braketrigger.h"
 
+BrakeTrigger::BrakeTrigger(Trigger::TriggerID_t triggerID) : BooleanTrigger(triggerID, Trigger::TRIGGER_BRAKE) { }
+
 /*!
  * \brief BooleanTrigger::parseParameters Parses the parameter vector and sets the trigger mode accordingly
  * \return Value according to ::TriggerReturnCode_t

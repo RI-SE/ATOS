@@ -80,7 +80,7 @@ public:
 
 
     /*! Constructor */
-    Trigger(TriggerID_t triggerID);
+    Trigger(TriggerID_t triggerID, TriggerTypeCode_t triggerType);
 
 
     /*! Destructor */
@@ -88,8 +88,9 @@ public:
 
 
     /*! Getters */
-    TriggerTypeCode_t getTypeCode() { return this->triggerTypeCode; }
-    uint16_t getID() { return this->triggerID; }
+    virtual TriggerTypeCode_t getTypeCode() { return triggerTypeCode; }
+    uint16_t getID() { return triggerID; }
+    std::vector<TriggerParameter_t> getParameters() { return parameters; }
 
 
     /*! Setters */
@@ -100,27 +101,29 @@ public:
 
 
     /*! To string */
-    friend std::ostream& operator<<(std::ostream &strm, const Trigger &trig) {
-        return strm << "TODO, but here is the ID: " << trig.triggerID;
+    friend std::ostream& operator<<(std::ostream &strm, Trigger &trig) {
+        return strm << "TRIGGER ID " << trig.triggerID <<
+                       " TYPE " << getTypeAsString(trig.getTypeCode()) <<
+                       " PARAMETERS " << trig.getParametersString();
     }
 
-    TriggerReturnCode_t update(void)    { return INVALID_ARGUMENT; }
-    TriggerReturnCode_t update(bool)    { return INVALID_ARGUMENT; }
-    TriggerReturnCode_t update(char)    { return INVALID_ARGUMENT; }
-    TriggerReturnCode_t update(int)     { return INVALID_ARGUMENT; }
-    TriggerReturnCode_t update(float)   { return INVALID_ARGUMENT; }
-    TriggerReturnCode_t update(double)  { return INVALID_ARGUMENT; }
+    static std::string getTypeAsString(TriggerTypeCode_t typeCode);
+    static std::string getParameterAsString(TriggerParameter_t param);
+    std::string getParametersString();
+
+    virtual TriggerReturnCode_t update(void)    { return INVALID_ARGUMENT; }
+    virtual TriggerReturnCode_t update(bool)    { return INVALID_ARGUMENT; }
+    virtual TriggerReturnCode_t update(char)    { return INVALID_ARGUMENT; }
+    virtual TriggerReturnCode_t update(int)     { return INVALID_ARGUMENT; }
+    virtual TriggerReturnCode_t update(float)   { return INVALID_ARGUMENT; }
+    virtual TriggerReturnCode_t update(double)  { return INVALID_ARGUMENT; }
 
 protected:
     TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter);
-
+    TriggerTypeCode_t triggerTypeCode;
 
 private:
     TriggerID_t triggerID;
-    TriggerTypeCode_t triggerTypeCode;
-
-
-
     std::vector<TriggerParameter_t> parameters;
 
     virtual std::set<TriggerParameter_t> getAcceptedParameters()
