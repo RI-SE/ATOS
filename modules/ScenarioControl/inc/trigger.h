@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <set>
 #include <iostream>
-#include <list>
+#include <vector>
 
 
 
@@ -70,7 +70,13 @@ public:
 
     typedef uint16_t TriggerID_t;
 
-    typedef enum {OK, NOT_OK, INVALID_ARGUMENT, TRIGGER_OCCURRED, NO_TRIGGER_OCCURRED} TriggerReturnCode_t;
+    typedef enum {
+        OK,
+        NOT_OK,
+        INVALID_ARGUMENT,
+        TRIGGER_OCCURRED,
+        NO_TRIGGER_OCCURRED
+    } TriggerReturnCode_t;
 
 
     /*! Constructor */
@@ -115,7 +121,7 @@ private:
 
 
 
-    std::list<TriggerParameter_t> parameters;
+    std::vector<TriggerParameter_t> parameters;
 
     virtual std::set<TriggerParameter_t> getAcceptedParameters()
         { return {TRIGGER_PARAMETER_UNAVAILABLE}; }
