@@ -10,6 +10,11 @@ BrakeTrigger::~BrakeTrigger()
     parameters.clear();
 }
 
+/*!
+ * \brief BrakeTrigger::update Updates the brake signal connected to the trigger to the value specified
+ * \param isBrakeCurrentlyPressed Boolean describing if the brake is currently pressed
+ * \return Value according to ::TriggerReturnCode_t
+ */
 Trigger::TriggerReturnCode_t BrakeTrigger::update(bool isBrakeCurrentlyPressed)
 {
     wasBrakePressed = isBrakePressed;
@@ -17,6 +22,10 @@ Trigger::TriggerReturnCode_t BrakeTrigger::update(bool isBrakeCurrentlyPressed)
     return checkIfTriggered();
 }
 
+/*!
+ * \brief BrakeTrigger::checkIfTriggered Check if the trigger has occurred based on the mode and state
+ * \return Value according to ::TriggerReturnCode_t
+ */
 Trigger::TriggerReturnCode_t BrakeTrigger::checkIfTriggered()
 {
     switch (mode) {
@@ -35,7 +44,10 @@ Trigger::TriggerReturnCode_t BrakeTrigger::checkIfTriggered()
     }
 }
 
-
+/*!
+ * \brief BrakeTrigger::parseParameters Parses the parameter vector and sets the trigger mode accordingly
+ * \return Value according to ::TriggerReturnCode_t
+ */
 Trigger::TriggerReturnCode_t BrakeTrigger::parseParameters()
 {
     if (parameters.size() == 1)
