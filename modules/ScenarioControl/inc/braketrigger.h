@@ -1,29 +1,24 @@
 #ifndef BRAKETRIGGER_H
 #define BRAKETRIGGER_H
 
-#include "trigger.h"
+#include "booleantrigger.h"
 
-#include <vector>
 #include <set>
+#include <vector>
 
-class BrakeTrigger : public Trigger
+class BrakeTrigger : public BooleanTrigger
 {
 public:
-    BrakeTrigger(TriggerID_t triggerID);
-    ~BrakeTrigger();
+    using BooleanTrigger::BooleanTrigger;
 
-    TriggerReturnCode_t parseParameters();
-
-    TriggerReturnCode_t update(bool);
+    TriggerReturnCode_t parseParameters() override;
 
 private:
-    static constexpr TriggerTypeCode_t triggerTypeCode = TRIGGER_BRAKE;
+    TriggerTypeCode_t triggerTypeCode = TRIGGER_BRAKE;
 
     std::vector<TriggerParameter_t> parameters;
 
-    bool isBrakePressed = false, wasBrakePressed = false;
-
-    std::set<Trigger::TriggerParameter_t> getAcceptedParameters()
+    std::set<Trigger::TriggerParameter_t> getAcceptedParameters() override
     {
         return {
             Trigger::TRIGGER_PARAMETER_FALSE,
@@ -37,17 +32,5 @@ private:
             Trigger::TRIGGER_PARAMETER_ANY_EDGE
         };
     }
-
-    TriggerReturnCode_t checkIfTriggered(void);
-
-    enum TriggerMode {
-        INVALID_MODE,
-        PRESSED,
-        RELEASED,
-        EDGE_RISING,
-        EDGE_FALLING,
-        EDGE_ANY}
-    mode = INVALID_MODE;
 };
-
 #endif // BRAKETRIGGER_H

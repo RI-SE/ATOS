@@ -38,6 +38,8 @@ add_library(util
 add_library(Trigger
     inc/trigger.h
     src/trigger.cpp
+    inc/booleantrigger.h
+    src/booleantrigger.cpp
     inc/braketrigger.h
     src/braketrigger.cpp
 )
