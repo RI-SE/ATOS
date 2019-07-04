@@ -55,10 +55,14 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-I32 generateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed);
-I32 generateDenmMessage(MONRType *MONRData, DENM_t* lastCam, I16* lastSpeed);
+I32 generateCAMMessage(MONRType *MONRData, CAM_t* lastCam);
+I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm);
 
-I32 sendCam(CAM_t* lastCam);
+I32 sendCAM(CAM_t* lastCam);
+I32 sendDENM(DENM_t* lastDenm);
+
+
+
 void init_mqtt(char* ip_addr, char * clientid);
 int connect_mqtt();
 int publish_mqtt(char *payload, int payload_len, char *topic);
@@ -99,7 +103,9 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     enum COMMAND command;
     int mqtt_response_code = 0;
     MONRType MONRMessage;
-    CAMmessage lastCam;
+    CAM_t lastCam;
+    DENM_t lastDenm;
+
     TimeType time;
 
     I16 lastSpeed = 0;
@@ -112,11 +118,11 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     MQTTClient_setCallbacks(client, NULL, connlost_mqtt, msgarrvd_mqtt, delivered_mqtt);
 
-    lastCam.header.generationTime = time.MillisecondU16;
+    lastCam.cam.generationDeltaTime = time.MillisecondU16;
 
     LogMessage(LOG_LEVEL_INFO,"Starting cits control...\n");
-    lastCam.referencePosition.latitude.degrees = 0;
-    lastCam.referencePosition.longitude.degrees = 0;
+    lastCam.cam.camParameters.basicContainer.referencePosition.latitude = 0;
+    lastCam.cam.camParameters.basicContainer.referencePosition.longitude = 0;
 
     (void)iCommInit();
     LogInit(MODULE_NAME,LOG_LEVEL_INFO);
@@ -188,8 +194,19 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                    if(camTimeCycle == 100)
                    {
-                       generateCamMessage(&MONRMessage, &lastCam, &lastSpeed);
-                       sendCam(&lastCam);
+                       printf("TRIGGERED\n");
+
+                           I16 speedDelta = abs((sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16))) - (lastSpeed));
+
+                           printf("Speed delta %d \n", speedDelta);
+
+                           if(speedDelta >= 0){
+                               generateCAMMessage(&MONRMessage, &lastCam);
+                               generateDENMMessage(&MONRMessage, &lastDenm);
+                               sendCAM(&lastCam);
+                               sendDENM(&lastDenm);
+                           }
+                       lastSpeed = sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16));
                        camTimeCycle = 0;
                    }
                    camTimeCycle++;
@@ -292,7 +309,7 @@ void connlost_mqtt(void *context, char *cause){
  * \param lastCam struct to fill with cam data if cam should be sent, used as reference to calculate new cam.
  * \param lastSpeed variable keeping track of last speed recorded.
  */
-I32 generateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed){
+I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
 
     TimeType time;
     CAM_t tempCam;
@@ -315,8 +332,7 @@ I32 generateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed){
     double azimuth2 =0;
     int fail;
 
-    /* Calculate the geodetic forward azimuth in the direction from origo to point we want to know,
-     * A problem right now is that I belive that the GUC and virtualObject needs to have the same origin
+    /* Calculate the geodetic forward azimuth in the direction from known origo
    * */
 
     azimuth1 = UtilDegToRad(90)-atan2(y/1.00,x/1.00);
@@ -344,7 +360,6 @@ I32 generateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed){
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth = 10; //TEMP WIDTH
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = 10; //TEMP LENGTH
 
-
    //TODO: CRASHES HERE FOR SOME REASON
 /*
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = MONRData->LateralAccI16;
@@ -358,39 +373,7 @@ I32 generateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed){
 
 
     if(MONRData != NULL ){
-        double distanceDelta = UtilGetDistance(tempCam.cam.camParameters.basicContainer.referencePosition.latitude, tempCam.cam.camParameters.basicContainer.referencePosition.longitude, lastCam->cam.camParameters.basicContainer.referencePosition.latitude, lastCam->cam.camParameters.basicContainer.referencePosition.longitude);
-        double headingDelta = tempCam.cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation - lastCam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation;
-        I16 speedDelta = (sqrt((MONRData->LateralSpeedI16*MONRData->LateralSpeedI16) + (MONRData->LongitudinalSpeedI16*MONRData->LongitudinalSpeedI16))) - (*lastSpeed);
-
-        printf("Speed delta %d \n", speedDelta);
-        printf("Distance delta %f \n", distanceDelta);
-        printf("heading delta %f \n", headingDelta);
-        printf("Time delta %d \n", tempCam.cam.generationDeltaTime - lastCam->cam.generationDeltaTime);
-
-
-        if( distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD || speedDelta >= S_THRESHOLD){
-            printf("\"Sending\" CAM \n");
-
-            /*
-            printf("Generation time: %d", tempCam.header.generationTime);
-            printf("Heading: %d", tempCam.referencePosition.heading);
-            printf("Latitude: %d", tempCam.referencePosition.latitude.degrees);
-            printf("Longitude time: %d", tempCam.referencePosition.longitude.degrees);
-            printf("Elevation time: %d", tempCam.referencePosition.elevation);
-            */
-
-            *lastSpeed =  (U16)((double)sqrt((MONRData->LateralSpeedI16*MONRData->LateralSpeedI16) + (double)(MONRData->LongitudinalSpeedI16*MONRData->LongitudinalSpeedI16)));
-            *lastCam = tempCam;
-            //sendCam(lastCam);
-
-        }
-
-        if(tempCam.cam.generationDeltaTime - lastCam->cam.generationDeltaTime >= T_THRESHOLD){
-            printf("\"Sending\" CAM because of time..\n");
-            lastSpeed = (U16)((double)sqrt(MONRData->LateralAccI16*MONRData->LateralAccI16) + (double)(MONRData->LateralAccI16*MONRData->LateralAccI16));
-            *lastCam = tempCam;
-            //sendCam(lastCam);
-        }
+        *cam = tempCam;
     }
 }
 
@@ -402,7 +385,7 @@ I32 generateCamMessage(MONRType *MONRData, CAM_t* lastCam, I16* lastSpeed){
  * \param lastDENM struct to fill with DENM data if DENM should be sent, used as reference to calculate new DENM.
  * \param lastSpeed variable keeping track of last speed recorded.
  */
-I32 generateDenemMessage(MONRType *MONRData, DENM_t* lastDenm, I16* lastSpeed){
+I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     TimeType time;
     DENM_t tempDENM;
 
@@ -450,27 +433,36 @@ I32 generateDenemMessage(MONRType *MONRData, DENM_t* lastDenm, I16* lastSpeed){
     tempDENM.denm.management.eventPosition.latitude = latitude;
     tempDENM.denm.management.eventPosition.longitude = longitude;
 
+
     tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = 7;
     tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 10;
 
     tempDENM.denm.management.eventPosition.altitude.altitudeValue = 0;
     tempDENM.denm.management.eventPosition.altitude.altitudeConfidence = 0;
 
-    /*
+
+    /* CRASHES CITS
     tempDENM.denm.management.relevanceDistance = 3;
     tempDENM.denm.management.relevanceTrafficDirection = 1;
     tempDENM.denm.management.validityDuration = 0;
     tempDENM.denm.management.transmissionInterval = 100;
     tempDENM.denm.management.stationType = 8; //HEAVY TRUCK. 5 = passenger car, 1 = Pedestrian
-*/
+
+
     tempDENM.denm.situation->informationQuality = 7;
     tempDENM.denm.situation->eventType.causeCode = 99;
+
     tempDENM.denm.situation->eventType.subCauseCode = 1; //Emergency break engaged
+
 
     tempDENM.denm.location->eventSpeed->speedValue = 0; //CHECK THIS
     tempDENM.denm.location->eventSpeed->speedConfidence = 0; //unavaliabe
 
-    *lastDenm = tempDENM;
+    */
+    if(MONRData != NULL ){
+        *denm = tempDENM;
+
+    }
 
 }
 /*!
@@ -478,15 +470,34 @@ I32 generateDenemMessage(MONRType *MONRData, DENM_t* lastDenm, I16* lastSpeed){
  * \param lastCam cam message struct
  * \return 1 if message sent succesfully
  */
-I32 sendCam(CAM_t* lastCam){
+I32 sendCAM(CAM_t* cam){
 
-    CAM_t * cam;
-    cam = calloc(1, sizeof (*cam));
-    assert(cam);
-    xer_fprint(stdout, &asn_DEF_CAM, cam);
+   // CAM_t * cam;
+   // cam = calloc(1, sizeof (*cam));
+   // assert(cam);
+   // xer_fprint(stdout, &asn_DEF_CAM, cam);
 
+    printf("SENDING CAM\n");
 
-    publish_mqtt(cam, sizeof(lastCam), "CLIENT/CAM/CS01/1/AZ12B");
+    publish_mqtt(cam, sizeof (CAM_t), "CLIENT/CAM/CS01/1/AZ12B");
+    return 1;
+}
+
+/*!
+ * \brief SendCam publishes a cam message on MQTT with hardcoded topic.
+ * \param lastCam cam message struct
+ * \return 1 if message sent succesfully
+ */
+I32 sendDENM(DENM_t* denm){
+
+   // CAM_t * cam;
+   // cam = calloc(1, sizeof (*cam));
+   // assert(cam);
+   // xer_fprint(stdout, &asn_DEF_CAM, cam);
+
+    printf("SENDING DENM\n");
+
+    publish_mqtt(denm, sizeof (DENM_t), "CLIENT/DENM/CS01/1/AZ12B");
     return 1;
 }
 
