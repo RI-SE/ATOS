@@ -59,12 +59,13 @@ git clone https://github.com/eclipse/paho.mqtt.c.git
 
 Go to the root of the cloned git repo and build the documentation by doing
 ```sh
+cd paho.mqtt.c.git
 sudo make html
 ```
 This will build the documentation for all the code. Then proceede to build and install paho
 ```sh
-make
-make install
+sudo make
+sudo make install
 ```
 
 The server will not bu default build the CITS module. This is to prevent the use of the CITS module when it is not necessary. To enable building of the module, run `cmake` from the `build/` directory
