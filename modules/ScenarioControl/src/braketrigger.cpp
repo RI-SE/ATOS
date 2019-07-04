@@ -31,7 +31,7 @@ Trigger::TriggerReturnCode_t BrakeTrigger::checkIfTriggered()
     case EDGE_FALLING:
         return (!isBrakePressed && wasBrakePressed) ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
     case INVALID_MODE:
-        return NO_TRIGGER_OCCURRED;
+        return NOT_OK;
     }
 }
 
