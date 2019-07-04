@@ -103,8 +103,13 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     enum COMMAND command;
     int mqtt_response_code = 0;
     MONRType MONRMessage;
-    CAM_t lastCam;
-    DENM_t lastDenm;
+    CAM_t* lastCam;
+    DENM_t* lastDenm;
+
+    CAM_t * cam;
+    cam = calloc(1, sizeof (*cam));
+    assert(cam);
+    xer_fprint(stdout, &asn_DEF_CAM, cam);
 
     TimeType time;
 
@@ -194,8 +199,6 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                    if(camTimeCycle == 100)
                    {
-                       printf("TRIGGERED\n");
-
                            I16 speedDelta = abs((sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16))) - (lastSpeed));
 
                            printf("Speed delta %d \n", speedDelta);
