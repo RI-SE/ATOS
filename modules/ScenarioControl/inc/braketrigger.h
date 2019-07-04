@@ -3,7 +3,8 @@
 
 #include "trigger.h"
 
-#include <list>
+#include <vector>
+#include <set>
 
 class BrakeTrigger : public Trigger
 {
@@ -18,7 +19,7 @@ public:
 private:
     static constexpr TriggerTypeCode_t triggerTypeCode = TRIGGER_BRAKE;
 
-    std::list<TriggerParameter_t> parameters;
+    std::vector<TriggerParameter_t> parameters;
 
     bool isBrakePressed = false, wasBrakePressed = false;
 
@@ -33,15 +34,20 @@ private:
             Trigger::TRIGGER_PARAMETER_HIGH,
             Trigger::TRIGGER_PARAMETER_RISING_EDGE,
             Trigger::TRIGGER_PARAMETER_FALLING_EDGE,
-            Trigger::TRIGGER_PARAMETER_ANY_EDGE,
-            Trigger::TRIGGER_PARAMETER_EQUAL_TO,
-            Trigger::TRIGGER_PARAMETER_NOT_EQUAL_TO
+            Trigger::TRIGGER_PARAMETER_ANY_EDGE
         };
     }
 
     TriggerReturnCode_t checkIfTriggered(void);
 
-    enum TriggerMode {PRESSED, RELEASED, EDGE_RISING, EDGE_FALLING, EDGE_ANY} mode;
+    enum TriggerMode {
+        INVALID_MODE,
+        PRESSED,
+        RELEASED,
+        EDGE_RISING,
+        EDGE_FALLING,
+        EDGE_ANY}
+    mode = INVALID_MODE;
 };
 
 #endif // BRAKETRIGGER_H
