@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
+set (CMAKE_CXX_STANDARD 11)
 
 project(ScenarioControl)
 # This module is an example of how to set up a new module external to the Maestro executable
