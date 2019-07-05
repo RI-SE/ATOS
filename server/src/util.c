@@ -3044,7 +3044,7 @@ I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataTy
     U32Data = 0;
 
     memcpy(&U32Data, rdPtr, sizeof(U32Data));
-    monitorData->MONR->GPSQmsOfWeekU32 = U32Data;
+    monitorData->MONR.GPSQmsOfWeekU32 = U32Data;
     rdPtr += sizeof(U32Data);
     U32Data = 0;
 
