@@ -105,7 +105,7 @@ ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType *GSD)
 {
   ReadWriteAccess_t Res = UNDEFINED;
   C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-  if(DataDictionarySearchParameter("OrigoLatidude=", ResultBufferC8))
+  if(DataDictionarySearchParameter("OrigoLatitude=", ResultBufferC8))
   {
     Res = READ_OK;
     pthread_mutex_lock(&OriginLatitudeMutex);
@@ -132,7 +132,7 @@ ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType *GSD)
 ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType *GSD, C8 *Latitude)
 {
   ReadWriteAccess_t Res;
-  if(UtilWriteConfigurationParameter("OrigoLatidude", Latitude, 0))
+  if(UtilWriteConfigurationParameter("OrigoLatitude", Latitude, 0))
   {
     Res = WRITE_OK;
     pthread_mutex_lock(&OriginLatitudeMutex);

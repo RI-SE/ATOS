@@ -1485,7 +1485,7 @@ I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnV
     U16 ValueU16 = 0;
     U8 ValueU8 = 0;
  
-    if(strcmp("OrigoLatidude", ParameterName) == 0)
+    if(strcmp("OrigoLatitude", ParameterName) == 0)
     {
         DataDictionaryGetOriginLatitudeDbl(GSD, &ValueDbl);
         sprintf(ReturnValue, "%3.12f", ValueDbl);
@@ -1601,7 +1601,7 @@ I32 SystemControlGetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *ReturnV
 I32 SystemControlSetServerParameter(GSDType *GSD, C8 *ParameterName, C8 *NewValue, U8 Debug)
 {
     if(Debug) printf("[SystemControl] SetServerParameter: %s = %s\n", ParameterName, NewValue);
-    if(strcmp("OrigoLatidude", ParameterName) == 0) DataDictionarySetOriginLatitudeDbl(GSD, NewValue);
+    if(strcmp("OrigoLatitude", ParameterName) == 0) DataDictionarySetOriginLatitudeDbl(GSD, NewValue);
     else if(strcmp("OrigoLongitude", ParameterName) == 0) DataDictionarySetOriginLongitudeDbl(GSD, NewValue);
     else if(strcmp("OrigoAltitude", ParameterName) == 0) DataDictionarySetOriginAltitudeDbl(GSD, NewValue);
     else if(strcmp("VisualizationServerName", ParameterName) == 0) DataDictionarySetVisualizationServerU32(GSD, NewValue);
