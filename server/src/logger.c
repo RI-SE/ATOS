@@ -595,6 +595,7 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 {
     FILE *filefd;
     char DateBuffer[MAX_DATE_STRLEN];
+    char ipStringBuffer[INET_ADDRSTRLEN];
     MonitorDataType monitorData;
     struct timeval monrTime, systemTime;
     const int debug = 0;
@@ -617,7 +618,8 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
         return;
     }
 
-    fprintf(filefd, "%s;%ld;%ld;%d;", DateBuffer, TimeGetAsUTCms(&monrTime), TimeGetAsGPSms(&monrTime), (char)COMM_MONR);
+    fprintf(filefd, "%s;%ld;%ld;%d;", DateBuffer, TimeGetAsUTCms(&monrTime), TimeGetAsGPSms(&monrTime), (unsigned char)COMM_MONR);
+    fprintf(filefd, "%s;", inet_ntop(AF_INET, &monitorData.ClientIP, ipStringBuffer, sizeof(ipStringBuffer)));
     fprintf(filefd, "%u;%u;", monitorData.MONR.Header.TransmitterIdU8, monitorData.MONR.GPSQmsOfWeekU32);
     fprintf(filefd, "%d;%d;%d;%u;",monitorData.MONR.XPositionI32, monitorData.MONR.YPositionI32, monitorData.MONR.ZPositionI32, monitorData.MONR.HeadingU16);
     fprintf(filefd, "%d;%d;", monitorData.MONR.LongitudinalSpeedI16, monitorData.MONR.LateralSpeedI16);
