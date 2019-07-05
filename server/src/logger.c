@@ -595,7 +595,7 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 {
     FILE *filefd;
     char DateBuffer[MAX_DATE_STRLEN];
-    MONRType monr;
+    MonitorDataType monitorData;
     struct timeval monrTime, systemTime;
     const int debug = 0;
 
@@ -604,8 +604,8 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 
     TimeSetToCurrentSystemTime(&systemTime);
 
-    UtilPopulateMONRStruct(commandData, (size_t)(commandDatalen), &monr, debug);
-    TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monr.GPSQmsOfWeekU32);
+    UtilPopulateMonitorDataStruct(commandData, (size_t)(commandDatalen), &monitorData, debug);
+    TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monitorData.MONR.GPSQmsOfWeekU32);
 
     bzero(DateBuffer, sizeof(DateBuffer));
     TimeGetAsDateTime(&recvTime, "%Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof(DateBuffer));
@@ -618,11 +618,11 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
     }
 
     fprintf(filefd, "%s;%ld;%ld;%d;", DateBuffer, TimeGetAsUTCms(&monrTime), TimeGetAsGPSms(&monrTime), (char)COMM_MONR);
-    fprintf(filefd, "%u;%u;", monr.Header.TransmitterIdU8, monr.GPSQmsOfWeekU32);
-    fprintf(filefd, "%d;%d;%d;%u;",monr.XPositionI32, monr.YPositionI32, monr.ZPositionI32, monr.HeadingU16);
-    fprintf(filefd, "%d;%d;", monr.LongitudinalSpeedI16, monr.LateralSpeedI16);
-    fprintf(filefd, "%d;%d;", monr.LongitudinalAccI16, monr.LateralAccI16);
-    fprintf(filefd, "%u;%u;%u;%u;\n", monr.DriveDirectionU8, monr.StateU8, monr.ReadyToArmU8, monr.ErrorStatusU8);
+    fprintf(filefd, "%u;%u;", monitorData.MONR.Header.TransmitterIdU8, monitorData.MONR.GPSQmsOfWeekU32);
+    fprintf(filefd, "%d;%d;%d;%u;",monitorData.MONR.XPositionI32, monitorData.MONR.YPositionI32, monitorData.MONR.ZPositionI32, monitorData.MONR.HeadingU16);
+    fprintf(filefd, "%d;%d;", monitorData.MONR.LongitudinalSpeedI16, monitorData.MONR.LateralSpeedI16);
+    fprintf(filefd, "%d;%d;", monitorData.MONR.LongitudinalAccI16, monitorData.MONR.LateralAccI16);
+    fprintf(filefd, "%u;%u;%u;%u;\n", monitorData.MONR.DriveDirectionU8, monitorData.MONR.StateU8, monitorData.MONR.ReadyToArmU8, monitorData.MONR.ErrorStatusU8);
 
     fclose(filefd);
 }

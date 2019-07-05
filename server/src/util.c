@@ -3001,7 +3001,7 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 
 
 /*!
- * \brief UtilPopulateMONRStruct Takes an array of raw MONR data and fills a MONRType struct with the content
+ * \brief UtilPopulateMonitorDataStruct Takes an array of raw MONR data and fills a MONRType struct with the content
  * \param rawMONR Array of raw MONR data
  * \param rawMONRsize Size of raw MONR data array
  * \param MONR Struct where MONR data should be placed
