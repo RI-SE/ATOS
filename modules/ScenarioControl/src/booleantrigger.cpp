@@ -1,7 +1,7 @@
 #include "booleantrigger.h"
 
 /*!
- * \brief BooleanTrigger::update Updates the signal connected to the trigger to the value specified
+ * \brief BooleanTrigger::update Updates the tracked signal (i.e. which causes the trigger) to the value specified
  * \param isBrakeCurrentlyPressed Boolean describing if the boolean
  * \return Value according to ::TriggerReturnCode_t
  */
