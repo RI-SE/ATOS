@@ -96,7 +96,17 @@ public:
     /*! Setters */
     void setID(uint16_t triggerID) { this->triggerID = triggerID; }
 
+    /*!
+     * \brief appendParameter Appends an ISO parameter to the parameters list.
+     * \param triggerParameter Parameter to append
+     * \return Value according to ::TriggerReturnCode_t
+     */
     TriggerReturnCode_t appendParameter(TriggerParameter_t triggerParameter);
+
+    /*!
+     * \brief parseParameters Parse the parameters list into an appropriate Trigger mode.
+     * \return Value according to ::TriggerReturnCode_t
+     */
     virtual TriggerReturnCode_t parseParameters() = 0;
 
 
@@ -111,7 +121,8 @@ public:
     static std::string getParameterAsString(TriggerParameter_t param);
     std::string getParametersString();
 
-    /*! Update tracked signal (i.e. signal which causes the trigger to occur).
+    /*!
+     * \brief update Update tracked signal (i.e. signal which causes the trigger to occur).
      * Inheriting classes should override the appropriate function(s)
      * - e.g. a trigger tracking a floating point trigger should override
      * update(float) and update(double)
