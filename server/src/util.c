@@ -2623,11 +2623,11 @@ I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPS
     HEABData->Header.MessageLengthU32 = sizeof(HEABType) - sizeof(HeaderType);
     //HEABData->HeabStructValueIdU16 = 0;
     //HEABData->HeabStructContentLengthU16 = sizeof(HEABType) - sizeof(HeaderType) - 4;
-    HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)UtilGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
+    HEABData->GPSQmsOfWeekU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)UtilGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
     HEABData->CCStatusU8 = CCStatus;
 
     if(!GPSTime->isGPSenabled){
-        UtilgetCurrentGPStime(NULL,&HEABData->GPSSOWU32);
+        UtilgetCurrentGPStime(NULL,&HEABData->GPSQmsOfWeekU32);
     }
 
     p=(C8 *)HEABData;
@@ -3001,7 +3001,7 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 
 
 /*!
- * \brief UtilPopulateMONRStruct Takes an array of raw MONR data and fills a MONRType struct with the content
+ * \brief UtilPopulateMonitorDataStruct Takes an array of raw MONR data and fills a MONRType struct with the content
  * \param rawMONR Array of raw MONR data
  * \param rawMONRsize Size of raw MONR data array
  * \param MONR Struct where MONR data should be placed
@@ -3010,7 +3010,6 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
  */
 I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataType *monitorData, U8 debug)
 {
-    // TODO: size of rawMONR
     U16 Crc = 0, U16Data = 0;
     I16 I16Data = 0;
     U32 U32Data = 0;
@@ -3045,7 +3044,7 @@ I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataTy
     U32Data = 0;
 
     memcpy(&U32Data, rdPtr, sizeof(U32Data));
-    monitorData->MONR.GPSSOWU32 = U32Data;
+    monitorData->MONR.GPSQmsOfWeekU32 = U32Data;
     rdPtr += sizeof(U32Data);
     U32Data = 0;
 
@@ -3112,7 +3111,7 @@ I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataTy
         LogPrint("PackageCounter = %d", monitorData->MONR.Header.MessageCounterU8);
         LogPrint("AckReq = %d", monitorData->MONR.Header.AckReqProtVerU8);
         LogPrint("MessageLength = %d", monitorData->MONR.Header.MessageLengthU32);
-        LogPrint("GPSSOW = %u",monitorData->MONR.GPSSOWU32);
+        LogPrint("GPSQMSOW = %u",monitorData->MONR.GPSQmsOfWeekU32);
     }
 
     return 0;
