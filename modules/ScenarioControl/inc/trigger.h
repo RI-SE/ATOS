@@ -111,6 +111,11 @@ public:
     static std::string getParameterAsString(TriggerParameter_t param);
     std::string getParametersString();
 
+    /*! Update tracked signal (i.e. signal which causes the trigger to occur).
+     * Inheriting classes should override the appropriate function(s)
+     * - e.g. a trigger tracking a floating point trigger should override
+     * update(float) and update(double)
+    */
     virtual TriggerReturnCode_t update(void)    { return INVALID_ARGUMENT; }
     virtual TriggerReturnCode_t update(bool)    { return INVALID_ARGUMENT; }
     virtual TriggerReturnCode_t update(char)    { return INVALID_ARGUMENT; }
