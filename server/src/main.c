@@ -31,6 +31,7 @@
 //#include "remotecontrol.h"
 #include "timecontrol.h"
 #include "supervisorcontrol.h"
+#include "citscontrol.h"
 #include "logging.h"
 #include "mqbus.h"
 #include "maestroTime.h"
@@ -66,12 +67,15 @@ static struct timeval waitStartTime, waitedTime;                                
 ------------------------------------------------------------*/
 //! allModules contains the tasks to be run in the server. To enable or disable a task, add or remove the main module function in this array
 static const ModuleTask allModules[] = {
+    
     logger_task,
     timecontrol_task,
     supervision_task,
     supervisorcontrol_task,
     systemcontrol_task,
     objectcontrol_task
+    
+   //citscontrol_task
 };
 static const size_t numberOfModules = sizeof(allModules) / sizeof(ModuleTask);
 
@@ -129,6 +133,7 @@ int main(int argc, char *argv[])
         {
             // Call module task
             (*allModules[moduleNumber])(GPSTime, GSD, options.commonLogLevel);
+            printf("Hejhopp\n");
             exit(EXIT_SUCCESS);
         }
     }
@@ -280,6 +285,7 @@ int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExi
         }
 
         nanosleep(&childPollPeriodTime,NULL);
+        printf("exited modules: %d, number of modules: %d\n",nExitedModules,numberOfModules);
     } while (nExitedModules < numberOfModules);
 
     // Loop over all exited modules to report exit manner
