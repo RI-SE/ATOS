@@ -45,7 +45,7 @@
 #define DEFAULT_MQTT_ADDRESS     "tcp://localhost:1883"
 #define ERICSSON_MQTT_ADDRESS     "tcp://10.130.100.18:1883"
 #define DEFAULT_MQTT_CLIENTID    "ExampleClientPub"
-#define DEFAULT_MQTT_TOPIC       "CLIENT/CAM/CS01/1/AZ12"
+#define DEFAULT_MQTT_TOPIC       "CLIENT/CAM/CS01/1/AZ12B"
 #define DEFAULT_MQTT_PAYLOAD     "Hello World!"
 #define DEFAULT_MQTT_QOS         1
 #define DEFAULT_MQTT_TIMEOUT     10000L
@@ -148,13 +148,14 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
         case CONNECTED:
 
-            if ((mqtt_response_code = publish_mqtt(DEFAULT_MQTT_PAYLOAD,strlen(DEFAULT_MQTT_PAYLOAD),DEFAULT_MQTT_TOPIC))) {
+          /*  if ((mqtt_response_code = publish_mqtt(DEFAULT_MQTT_PAYLOAD,strlen(DEFAULT_MQTT_PAYLOAD),DEFAULT_MQTT_TOPIC))) {
                 LogMessage(LOG_LEVEL_ERROR,"Could not publish message, error code %d", mqtt_response_code);
             }
             else {
                 pending_state = SENDING;
             }
             break;
+          */
         case SENDING:
             if (sendtoken == deliveredtoken) {
                 pending_state = CONNECTED;
@@ -294,12 +295,6 @@ void connlost_mqtt(void *context, char *cause){
     printf("Connection lost \n");
 }
 
-//TODO MOVE THESE DEFINITIONS TO CORRECT PLACE
-#define H_THRESHOLD 1
-#define S_THRESHOLD 1
-#define T_THRESHOLD 1
-#define D_THRESHOLD 1
-#define CHECK_PERIOD 1
 
 /*!
  * \brief GenerateCamMessage generates a cam message to send on MQTT
@@ -354,20 +349,17 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
 
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = sqrt((MONRData->LateralSpeedI16*MONRData->LateralSpeedI16) + (MONRData->LongitudinalSpeedI16*MONRData->LongitudinalSpeedI16));
 
-    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection = 0; //FORWARD
+    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection = DriveDirection_forward; //FORWARD
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth = 10; //TEMP WIDTH
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = 10; //TEMP LENGTH
 
 
-    //tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = 5; //MONRData->LateralAccI16;
-    //tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = 5; // = MONRData->LongitudinalAccI16;
-   //TODO: CRASHES HERE FOR SOME REASON
-/*
-        printf("Got here2\n");
-    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureValue = 0; //HARDCODED CURVATURE
+    //tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = MONRData->LateralAccI16;
+    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = MONRData->LongitudinalAccI16;
+    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureValue = 0;
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvatureCalculationMode = 7;
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateValue = 0;
-*/
+
 
 
     if(MONRData != NULL ){
@@ -431,32 +423,28 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     tempDENM.denm.management.eventPosition.latitude = latitude;
     tempDENM.denm.management.eventPosition.longitude = longitude;
 
-
     tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = 7;
     tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 10;
 
     tempDENM.denm.management.eventPosition.altitude.altitudeValue = 0;
     tempDENM.denm.management.eventPosition.altitude.altitudeConfidence = 0;
 
-
-
     //tempDENM.denm.management.relevanceDistance = 3;
     //tempDENM.denm.management.relevanceTrafficDirection = 1;
-   // tempDENM.denm.management.validityDuration = 0;
+    //tempDENM.denm.management.validityDuration = 0;
     //tempDENM.denm.management.transmissionInterval = 100;
-    //tempDENM.denm.management.stationType = 8; //HEAVY TRUCK. 5 = passenger car, 1 = Pedestrian
-  /* CRASHES CITS
+    tempDENM.denm.management.stationType = StationType_heavyTruck; //HEAVY TRUCK. 5 = passenger car, 1 = Pedestrian
 
-    tempDENM.denm.situation->informationQuality = 7;
-    tempDENM.denm.situation->eventType.causeCode = 99;
+    //tempDENM.denm.situation->informationQuality = InformationQuality_highest;
+    //tempDENM.denm.situation->eventType.causeCode = CauseCodeType_dangerousSituation;
 
-    tempDENM.denm.situation->eventType.subCauseCode = 1; //Emergency break engaged
+    //tempDENM.denm.situation->eventType.subCauseCode =  1; //Emergency break engaged
 
 
-    tempDENM.denm.location->eventSpeed->speedValue = 0; //CHECK THIS
-    tempDENM.denm.location->eventSpeed->speedConfidence = 0; //unavaliabe
+    //tempDENM.denm.location->eventSpeed->speedValue = 0; //CHECK THIS
+    //tempDENM.denm.location->eventSpeed->speedConfidence = 0; //unavaliabe
 
-    */
+
     if(MONRData != NULL ){
         *denm = tempDENM;
 
@@ -469,12 +457,6 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
  * \return 1 if message sent succesfully
  */
 I32 sendCAM(CAM_t* cam){
-
-   // CAM_t * cam;
-   // cam = calloc(1, sizeof (*cam));
-   // assert(cam);
-   // xer_fprint(stdout, &asn_DEF_CAM, cam);
-
     printf("SENDING CAM\n");
 
     publish_mqtt((char*)cam, sizeof (CAM_t), "CLIENT/CAM/CS01/1/AZ12B");
@@ -487,11 +469,6 @@ I32 sendCAM(CAM_t* cam){
  * \return 1 if message sent succesfully
  */
 I32 sendDENM(DENM_t* denm){
-
-   // CAM_t * cam;
-   // cam = calloc(1, sizeof (*cam));
-   // assert(cam);
-   // xer_fprint(stdout, &asn_DEF_CAM, cam);
 
     printf("SENDING DENM\n");
 
