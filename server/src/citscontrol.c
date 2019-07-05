@@ -103,13 +103,8 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     enum COMMAND command;
     int mqtt_response_code = 0;
     MONRType MONRMessage;
-    CAM_t* lastCam;
-    DENM_t* lastDenm;
-
-    CAM_t * cam;
-    cam = calloc(1, sizeof (*cam));
-    assert(cam);
-    xer_fprint(stdout, &asn_DEF_CAM, cam);
+    CAM_t lastCam;
+    DENM_t lastDenm;
 
     TimeType time;
 
@@ -363,11 +358,11 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth = 10; //TEMP WIDTH
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = 10; //TEMP LENGTH
 
+
+    //tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = 5; //MONRData->LateralAccI16;
+    //tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = 5; // = MONRData->LongitudinalAccI16;
    //TODO: CRASHES HERE FOR SOME REASON
 /*
-    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = MONRData->LateralAccI16;
-    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = MONRData->LongitudinalAccI16;
-
         printf("Got here2\n");
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureValue = 0; //HARDCODED CURVATURE
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvatureCalculationMode = 7;
@@ -444,13 +439,13 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     tempDENM.denm.management.eventPosition.altitude.altitudeConfidence = 0;
 
 
-    /* CRASHES CITS
-    tempDENM.denm.management.relevanceDistance = 3;
-    tempDENM.denm.management.relevanceTrafficDirection = 1;
-    tempDENM.denm.management.validityDuration = 0;
-    tempDENM.denm.management.transmissionInterval = 100;
-    tempDENM.denm.management.stationType = 8; //HEAVY TRUCK. 5 = passenger car, 1 = Pedestrian
 
+    //tempDENM.denm.management.relevanceDistance = 3;
+    //tempDENM.denm.management.relevanceTrafficDirection = 1;
+   // tempDENM.denm.management.validityDuration = 0;
+    //tempDENM.denm.management.transmissionInterval = 100;
+    //tempDENM.denm.management.stationType = 8; //HEAVY TRUCK. 5 = passenger car, 1 = Pedestrian
+  /* CRASHES CITS
 
     tempDENM.denm.situation->informationQuality = 7;
     tempDENM.denm.situation->eventType.causeCode = 99;
@@ -482,7 +477,7 @@ I32 sendCAM(CAM_t* cam){
 
     printf("SENDING CAM\n");
 
-    publish_mqtt(cam, sizeof (CAM_t), "CLIENT/CAM/CS01/1/AZ12B");
+    publish_mqtt((char*)cam, sizeof (CAM_t), "CLIENT/CAM/CS01/1/AZ12B");
     return 1;
 }
 
@@ -500,7 +495,7 @@ I32 sendDENM(DENM_t* denm){
 
     printf("SENDING DENM\n");
 
-    publish_mqtt(denm, sizeof (DENM_t), "CLIENT/DENM/CS01/1/AZ12B");
+    publish_mqtt((char*)denm, sizeof (DENM_t), "CLIENT/DENM/CS01/1/AZ12B");
     return 1;
 }
 
