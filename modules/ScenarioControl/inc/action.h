@@ -51,14 +51,16 @@ public:
     } ActionReturnCode_t;
 
     typedef uint16_t ActionID_t;
-    Action(ActionID_t actionID);
-    virtual ~Action() = 0;
+    Action(ActionID_t actionID, ActionType_t actionType, uint32_t numberOfFires);
 
-    virtual ActionType_t getType() = 0;
     ActionID_t getID() { return actionID; }
+    ActionType_t getType() { return actionType; }
 
 private:
-    ActionID_t actionID;
+    ActionID_t actionID = 0;
+    ActionType_t actionType = ACTION_NONE;
+
+    uint32_t remainingFires = 0;
 };
 
 #endif
