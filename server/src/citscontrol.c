@@ -35,7 +35,10 @@
 #include "citscontrol.h"
 #include "util.h"
 
-
+#define H_THRESHOLD 1 //HEADING THRESHOLD
+#define S_THRESHOLD 0 //SPEED THRESHOLD
+#define D_THRESHOLD 1 //DISTANCE THRESHOLD
+#define CHECK_PERIOD 1
 
 #define CITS_CONTROL_CONF_FILE_PATH  "conf/test.conf"
 #define CITS_CONTROL_BUFFER_SIZE_20 20
@@ -103,6 +106,8 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     enum COMMAND command;
     int mqtt_response_code = 0;
     MONRType MONRMessage;
+    MONRType LastMONRMessage = nullptr;
+
     CAM_t lastCam;
     DENM_t lastDenm;
 
@@ -193,19 +198,27 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                    UtilPopulateMONRStruct(busReceiveBuffer, sizeof(busReceiveBuffer), &MONRMessage, 0);
 
-                   if(camTimeCycle == 100)
+                   I16 distanceDelta = 0;
+                   I16 headingDelta = 0;
+
+                   if(camTimeCycle == CHECK_PERIOD)
                    {
+                       if(LastMONRMessage != nullptr){
+                           distanceDelta = UtilCoordinateDistance(LastMONRMessage.XPositionI32, LastMONRMessage.YPositionI32, MONRMessage.XPositionI32, MONRMessage.YPositionI32)
+                           headingDelta = abs(LastMONRMessage.HeadingU16 - MONRMessage.HeadingU16);
+                       }
                            I16 speedDelta = abs((sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16))) - (lastSpeed));
 
                            printf("Speed delta %d \n", speedDelta);
 
-                           if(speedDelta >= 0){
+                           if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
                                generateCAMMessage(&MONRMessage, &lastCam);
                                generateDENMMessage(&MONRMessage, &lastDenm);
                                sendCAM(&lastCam);
                                sendDENM(&lastDenm);
                            }
                        lastSpeed = sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16));
+                       LastMONRMessage = MONRMessage;
                        camTimeCycle = 0;
                    }
                    camTimeCycle++;

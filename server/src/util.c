@@ -3135,3 +3135,16 @@ double UtilGetDistance(double th1, double ph1, double th2, double ph2) {
        dy = sin(ph1) * cos(th1);
        return asin(sqrt(dx * dx + dy * dy + dz * dz) / 2) * 2 * nRadius;
 }
+
+/*!
+ * \brief UtilCoordinateDistance calculates the distance between two cordinates using distance formula.
+ * \param x1 x of first coordinate
+ * \param y1 y of first coordinate
+ * \param x2 x of second coordinate
+ * \param y2 y of second coordinate
+ * \return Distance
+ */
+float UtilCoordinateDistance(float x1, float y1, float x2, float y2)
+{
+    return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2) * 1.0);
+}
