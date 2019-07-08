@@ -106,7 +106,8 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     enum COMMAND command;
     int mqtt_response_code = 0;
     MONRType MONRMessage;
-    MONRType LastMONRMessage = nullptr;
+    MONRType LastMONRMessage;
+
 
     CAM_t lastCam;
     DENM_t lastDenm;
@@ -194,22 +195,15 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                    // Ignore old style MONR data
                    break;
                case COMM_MONR:
-                  //TODO: CREATE CAM
 
                    UtilPopulateMONRStruct(busReceiveBuffer, sizeof(busReceiveBuffer), &MONRMessage, 0);
 
-                   I16 distanceDelta = 0;
-                   I16 headingDelta = 0;
-
                    if(camTimeCycle == CHECK_PERIOD)
                    {
-                       if(LastMONRMessage != nullptr){
-                           distanceDelta = UtilCoordinateDistance(LastMONRMessage.XPositionI32, LastMONRMessage.YPositionI32, MONRMessage.XPositionI32, MONRMessage.YPositionI32)
-                           headingDelta = abs(LastMONRMessage.HeadingU16 - MONRMessage.HeadingU16);
-                       }
+                           I16 distanceDelta = UtilCoordinateDistance(LastMONRMessage.XPositionI32, LastMONRMessage.YPositionI32, MONRMessage.XPositionI32, MONRMessage.YPositionI32);
+                           I16 headingDelta = abs(LastMONRMessage.HeadingU16 - MONRMessage.HeadingU16);
                            I16 speedDelta = abs((sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16))) - (lastSpeed));
 
-                           printf("Speed delta %d \n", speedDelta);
 
                            if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
                                generateCAMMessage(&MONRMessage, &lastCam);
