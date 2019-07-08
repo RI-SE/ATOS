@@ -44,8 +44,8 @@
 typedef void (*ModuleTask)(TimeType*, GSDType*, LOG_LEVEL); //!< Function pointer type for module "main" functions
 typedef struct
 {
-    LOG_LEVEL commonLogLevel;
-    int extraMessageQueues;
+    LOG_LEVEL commonLogLevel; //!< Logging level of the server.
+    int extraMessageQueues; //!< Number of extra message queues to create on startup.
 } Options;
 
 /*------------------------------------------------------------
@@ -324,7 +324,7 @@ int readArgumentList(int argc, char *argv[], Options *opts)
     enum ArgState {
         NO_STATE,
         NR_MQ_INPUT
-    };
+    }; //<! The available arguments states. This is used to track what the next arguments should be, after a user have given a command.
 
     char *progName = strrchr(argv[0],'/');
     if (progName == NULL)
