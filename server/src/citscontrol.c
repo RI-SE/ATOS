@@ -35,10 +35,13 @@
 #include "citscontrol.h"
 #include "util.h"
 
+
+
+
 #define H_THRESHOLD 1 //HEADING THRESHOLD
 #define S_THRESHOLD 0 //SPEED THRESHOLD
 #define D_THRESHOLD 1 //DISTANCE THRESHOLD
-#define CHECK_PERIOD 1
+#define CHECK_PERIOD 100
 
 #define CITS_CONTROL_CONF_FILE_PATH  "conf/test.conf"
 #define CITS_CONTROL_BUFFER_SIZE_20 20
@@ -64,8 +67,6 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm);
 I32 sendCAM(CAM_t* lastCam);
 I32 sendDENM(DENM_t* lastDenm);
 
-
-
 void init_mqtt(char* ip_addr, char * clientid);
 int connect_mqtt();
 int publish_mqtt(char *payload, int payload_len, char *topic);
@@ -73,6 +74,9 @@ void delivered_mqtt(void *context, MQTTClient_deliveryToken dt);
 int msgarrvd_mqtt(void *context, char *topicName, int topicLen, MQTTClient_message *message);
 void connlost_mqtt(void *context, char *cause);
 
+bool validate_constraints(asn_TYPE_descriptor_t *type_descriptor, const void *struct_ptr) ;
+
+void *encode_and_decode_object(asn_TYPE_descriptor_t *type_descriptor, void *struct_ptr) ;
 
 
 /*------------------------------------------------------------
@@ -109,8 +113,14 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     MONRType LastMONRMessage;
 
 
-    CAM_t lastCam;
-    DENM_t lastDenm;
+    CAM_t* lastCam;
+    lastCam = calloc(1, sizeof *lastCam);
+    assert(lastCam);
+
+    DENM_t* lastDenm;
+    lastDenm = calloc(1, sizeof *lastDenm);
+    assert(lastDenm);
+
 
     TimeType time;
 
@@ -124,11 +134,11 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     MQTTClient_setCallbacks(client, NULL, connlost_mqtt, msgarrvd_mqtt, delivered_mqtt);
 
-    lastCam.cam.generationDeltaTime = time.MillisecondU16;
+    lastCam->cam.generationDeltaTime = time.MillisecondU16;
 
     LogMessage(LOG_LEVEL_INFO,"Starting cits control...\n");
-    lastCam.cam.camParameters.basicContainer.referencePosition.latitude = 0;
-    lastCam.cam.camParameters.basicContainer.referencePosition.longitude = 0;
+    lastCam->cam.camParameters.basicContainer.referencePosition.latitude = 0;
+    lastCam->cam.camParameters.basicContainer.referencePosition.longitude = 0;
 
     (void)iCommInit();
     LogInit(MODULE_NAME,LOG_LEVEL_INFO);
@@ -147,7 +157,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
             if (!connect_mqtt()){
                 LogMessage(LOG_LEVEL_INFO,"Connected!");
-                //MQTTClient_subscribe(client,DEFAULT_MQTT_TOPIC,DEFAULT_MQTT_QOS);
+                MQTTClient_subscribe(client,DEFAULT_MQTT_TOPIC,DEFAULT_MQTT_QOS);
                 pending_state = CONNECTED;
                 LogMessage(LOG_LEVEL_DEBUG,"CITS state change from %d to %d",state,pending_state);
             }
@@ -206,10 +216,10 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
 
                            if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
-                               generateCAMMessage(&MONRMessage, &lastCam);
-                               generateDENMMessage(&MONRMessage, &lastDenm);
-                               sendCAM(&lastCam);
-                               sendDENM(&lastDenm);
+                               generateCAMMessage(&MONRMessage, lastCam);
+                               generateDENMMessage(&MONRMessage, lastDenm);
+                               sendCAM(lastCam);
+                               sendDENM(lastDenm);
                            }
                        lastSpeed = sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16));
                        LastMONRMessage = MONRMessage;
@@ -274,18 +284,20 @@ int msgarrvd_mqtt(void *context, char *topicName, int topicLen, MQTTClient_messa
     LogMessage(LOG_LEVEL_DEBUG,"Message arrived! Length=%d",message->payloadlen);
     //if (message->payloadlen == 0) return 1;
     //else if (topicLen == 0) return 2;
+
     if(message->payloadlen > 0) LogMessage(LOG_LEVEL_DEBUG,"\n\tTopic: %s\n\tmessage: %s",topicName,message->payload);
-    //printf("Message arrived\n");
-    //printf("     topic: %s\n", topicName);
-    //printf("   message: ");
-    //payloadptr = message->payload;
-    /*
+    printf("Message arrived\n");
+    printf("topic: %s\n", topicName);
+    printf("message: ");
+    payloadptr = message->payload;
+
     for(i=0; i<message->payloadlen; i++)
     {
         putchar(*payloadptr++);
     }
     putchar('\n');
-    */
+
+
     MQTTClient_freeMessage(&message);
     MQTTClient_free(topicName);
     return 0;
@@ -368,11 +380,12 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateValue = 0;
 
 
-
     if(MONRData != NULL ){
         *cam = tempCam;
     }
+
 }
+
 
 
 
@@ -440,8 +453,7 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     //tempDENM.denm.management.relevanceTrafficDirection = 1;
     //tempDENM.denm.management.validityDuration = 0;
     //tempDENM.denm.management.transmissionInterval = 100;
-    tempDENM.denm.management.stationType = StationType_heavyTruck; //HEAVY TRUCK. 5 = passenger car, 1 = Pedestrian
-
+    //tempDENM.denm.management.stationType = StationType_heavyTruck; //HEAVY TRUCK. 5 = passenger car, 1 = Pedestrian
     //tempDENM.denm.situation->informationQuality = InformationQuality_highest;
     //tempDENM.denm.situation->eventType.causeCode = CauseCodeType_dangerousSituation;
 
@@ -466,6 +478,9 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
 I32 sendCAM(CAM_t* cam){
     printf("SENDING CAM\n");
 
+    xer_fprint(stdout, &asn_DEF_CAM, cam);
+
+
     publish_mqtt((char*)cam, sizeof (CAM_t), "CLIENT/CAM/CS01/1/AZ12B");
     return 1;
 }
@@ -479,7 +494,10 @@ I32 sendDENM(DENM_t* denm){
 
     printf("SENDING DENM\n");
 
+
     publish_mqtt((char*)denm, sizeof (DENM_t), "CLIENT/DENM/CS01/1/AZ12B");
     return 1;
 }
+
+
 
