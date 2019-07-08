@@ -71,7 +71,6 @@ static const ModuleTask allModules[] = {
     logger_task,
     timecontrol_task,
     supervision_task,
-    supervisorcontrol_task,
     systemcontrol_task,
     objectcontrol_task
     

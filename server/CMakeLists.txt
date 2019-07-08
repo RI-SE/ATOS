@@ -13,15 +13,6 @@ include_directories(../util/C/time)
 include_directories(../util/C/MQBus)
 include(GNUInstallDirs)
 
-# Add logging library (hint at some locations)
-#find_library(MAESTRO_LOGGING_PATH
-#    NAMES MaestroLogging
-#    PATHS "../util/C/logging"
-#          "../util/C"
-#          ${CMAKE_INSTALL_LIBDIR}
-#          ${CMAKE_INSTALL_INCLUDEDIR})
-#add_library(MaestroLogging SHARED IMPORTED)
-#set_property(TARGET MaestroLogging PROPERTY IMPORTED_LOCATION ${MAESTRO_LOGGING_PATH})
 
 SET(USE_CITS FALSE CACHE BOOL "Flag to indicate the use of CITS.")
 
@@ -54,64 +45,33 @@ add_library(MQBus
 )
 
 
-
-# Create library
-add_library(util
-  src/util.c
-  inc/util.h
-)
-
-# Create library
-add_library(objctrl
-  src/objectcontrol.c
-  inc/objectcontrol.h
-)
-
-add_executable(UserControl
-  src/usercontrol.c
-)
-
-# TODO: Make citscontrol into a separate program that is started when the server starts
-#add_executable(CitsControl
-#  inc/citscontrol.h
-#  src/citscontrol.c
-#)
-
-
 # add the executable
-add_executable(TEServer
+add_executable(Maestro
   src/main.c
   src/logger.c
   src/objectcontrol.c
   src/supervision.c
   src/systemcontrol.c
   src/timecontrol.c
-  src/supervisorcontrol.c
+  src/util.c
   inc/logger.h
   inc/objectcontrol.h
   inc/supervision.h
   inc/systemcontrol.h
   inc/timecontrol.h
-  inc/supervisorcontrol.h
+  inc/util.h
 )
 
 # add the install targets
-install (TARGETS TEServer DESTINATION bin)
+install (TARGETS Maestro DESTINATION bin)
 
-# add linking to message queue
-target_link_libraries(util rt m)
-target_link_libraries(util m)
-target_link_libraries(util rt)
-target_link_libraries(util MaestroLogging MaestroTime MQBus)
+target_link_libraries(MQBus rt) # Make sure the MQBus has linking to rt for message queue support
+target_link_libraries(Maestro MQBus m MaestroLogging MaestroTime) # Link all libraries together
 
-target_link_libraries(UserControl util objctrl MaestroLogging MaestroTime)
-
-target_link_libraries(TEServer util)
-
-if(USE_CITS)
+if(USE_CITS) # If C-ITS is used, link with 3d party software pahomqtt3c
     target_link_libraries(cits pahomqtt3c)
-    target_link_libraries(TEServer cits)
+    target_link_libraries(Maestro cits)
 endif()
 
 
-target_link_libraries(TEServer MaestroLogging MaestroTime MQBus)
+
