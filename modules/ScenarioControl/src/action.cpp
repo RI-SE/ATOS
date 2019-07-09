@@ -12,7 +12,7 @@ Action::Action(ActionID_t actionID, ActionType_t actionType, uint32_t numberOfRu
  * \brief Action::runOnce Runs the action if allowed and decrements the number of remaining allowed action executions.
  * \return Value according to ::ActionReturnCode_t
  */
-Action::ActionReturnCode_t Action::runOnce(void)
+Action::ActionReturnCode_t Action::execute(void)
 {
     if (remainingRuns == 0)
         return NO_REMAINING_RUNS;
