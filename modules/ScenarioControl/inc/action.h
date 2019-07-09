@@ -55,7 +55,7 @@ public:
     typedef uint16_t ActionID_t;
 
     /*! Constructor */
-    Action(ActionID_t actionID = 0, ActionType_t actionType = ACTION_NONE, uint32_t numberOfRuns = 1);
+    Action(ActionID_t actionID = 0, ActionType_t actionType = ACTION_NONE, uint32_t allowedNumberOfRuns = 1);
 
     /*! Getters */
     ActionID_t getID() { return actionID; }
@@ -67,7 +67,7 @@ public:
 private:
     ActionID_t actionID = 0;
     ActionType_t actionType = ACTION_NONE;
-    uint32_t remainingRuns = 0;
+    uint32_t remainingAllowedRuns = 0;
 };
 
 #endif
