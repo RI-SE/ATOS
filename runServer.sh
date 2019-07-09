@@ -14,7 +14,7 @@ MODULES=(ScenarioControl)
 MAESTRODIR=$(pwd)
 
 # Build string for executing server alongside modules
-SERVER_EXEC_STRING="(cd $MAESTRODIR/server/build && ./TEServer)"
+SERVER_EXEC_STRING="(cd $MAESTRODIR/server/build && ./Maestro)"
 for i in "${MODULES[@]}"
 do
 	SERVER_EXEC_STRING="$SERVER_EXEC_STRING & (cd $MAESTRODIR/modules/$i/build && ./$i)"
