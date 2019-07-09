@@ -6,6 +6,7 @@
 class Action
 {
 public:
+    /*! Typedefs */
     typedef enum {
         ACTION_NONE                     = 0x0000,
         ACTION_TYPE_1                   = 0x0001,
@@ -47,20 +48,26 @@ public:
     typedef enum {
         OK,
         NOT_OK,
-        INVALID_ARGUMENT
+        INVALID_ARGUMENT,
+        NO_REMAINING_RUNS
     } ActionReturnCode_t;
 
     typedef uint16_t ActionID_t;
-    Action(ActionID_t actionID, ActionType_t actionType, uint32_t numberOfFires);
 
+    /*! Constructor */
+    Action(ActionID_t actionID = 0, ActionType_t actionType = ACTION_NONE, uint32_t numberOfRuns = 1);
+
+    /*! Getters */
     ActionID_t getID() { return actionID; }
     ActionType_t getType() { return actionType; }
+
+    /*! Run the action once, if allowed */
+    ActionReturnCode_t execute(void);
 
 private:
     ActionID_t actionID = 0;
     ActionType_t actionType = ACTION_NONE;
-
-    uint32_t remainingFires = 0;
+    uint32_t remainingRuns = 0;
 };
 
 #endif
