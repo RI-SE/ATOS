@@ -402,9 +402,9 @@ void printHelp(char* progName)
 {
     printf("Usage: %s [OPTION]\n", progName);
     printf("Runs all modules of test server.\n\n");
-    printf("  [-v | --verbose] \t\tcreate detailed logs\n");
-    printf("  [-h | --help] \t\tdisplay this help and exit\n");
-    printf("  [-m | --messagequeues [number]] \t\t add additional message queues which other modules could connect to.\n");
+    printf("  -v, --verbose \t\t\tcreate detailed logs\n");
+    printf("  -h, --help \t\t\t\tdisplay this help and exit\n");
+    printf("  -m, --additional-modules [number] \tenables the connection of a [number] of extra modules to connect.\n");
 }
 
 /*!
