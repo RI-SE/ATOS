@@ -1,15 +1,21 @@
 
 #include "action.h"
 
-Action::Action(ActionID_t actionID, ActionType_t actionType, uint32_t numberOfRuns)
+/*!
+ * \brief Action::Action Constructor for Action objects.
+ * \param actionID ISO ID of the action
+ * \param actionType ISO action type of the action
+ * \param allowedNumberOfRuns Number of times the action is allowed to be run
+ */
+Action::Action(ActionID_t actionID, ActionType_t actionType, uint32_t allowedNumberOfRuns)
 {
     this->actionID = actionID;
     this->actionType = actionType;
-    this->remainingRuns = numberOfRuns;
+    this->remainingAllowedRuns = allowedNumberOfRuns;
 }
 
 /*!
- * \brief Action::runOnce Runs the action if allowed and decrements the number of remaining allowed action executions.
+ * \brief Action::execute Runs the action if allowed and decrements the number of remaining allowed action executions.
  * \return Value according to ::ActionReturnCode_t
  */
 Action::ActionReturnCode_t Action::execute(void)
