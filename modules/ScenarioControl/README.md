@@ -1,4 +1,4 @@
-## Dummy module
+## ScenarioControl module
 TODO.
 
 ### Build process
