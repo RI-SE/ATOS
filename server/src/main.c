@@ -162,7 +162,8 @@ int main(int argc, char *argv[])
 int initializeMessageQueueBus(Options *opts)
 {
 
-    int nbrOfQueues = numberOfModules + opts->extraMessageQueues; // If the user supplied an additional number of message queues in the input, this will create thoes message queues.
+    // If the user supplied an additional number of modules in the input, this will create the appropriate amout of message queues.
+    int nbrOfQueues = numberOfModules + opts->extraMessageQueues;
     enum MQBUS_ERROR result = MQBusInit(nbrOfQueues);
 
     // Printouts according to result
@@ -325,7 +326,7 @@ int readArgumentList(int argc, char *argv[], Options *opts)
 {
     enum ArgState {
         NO_STATE,
-        NR_MQ_INPUT
+        NR_MODULES_INPUT
     }; //<! The available arguments states. This is used to track what the next arguments should be, after a user have given a command.
 
     char *progName = strrchr(argv[0],'/');
@@ -353,7 +354,7 @@ int readArgumentList(int argc, char *argv[], Options *opts)
     for(int i = 1; i < argc; ++i)
     {
         switch (argState) {
-        case NR_MQ_INPUT:
+        case NR_MODULES_INPUT:
             opts->extraMessageQueues = atoi(argv[i]);
             argState = NO_STATE;
             continue;
@@ -371,9 +372,9 @@ int readArgumentList(int argc, char *argv[], Options *opts)
         {
             opts->commonLogLevel = LOG_LEVEL_DEBUG;
         }
-        else if (!strcmp(argv[i], "-m") || !strcmp(argv[i],"--messagequeues"))
+        else if (!strcmp(argv[i], "-m") || !strcmp(argv[i],"--additional-modules"))
         {
-            argState = NR_MQ_INPUT;
+            argState = NR_MODULES_INPUT;
         }
         else
         {
@@ -385,7 +386,7 @@ int readArgumentList(int argc, char *argv[], Options *opts)
     }
 
     if (argState != NO_STATE) {
-        printf("%s: insufficient number if arguments.\n",progName);
+        printf("%s: insufficient number of arguments.\n",progName);
         printf("Try '%s --help' for more information.\n", argv[0]);
         return 1;
     }
