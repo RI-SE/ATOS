@@ -66,7 +66,9 @@ add_executable(Maestro
 install (TARGETS Maestro DESTINATION bin)
 
 target_link_libraries(MQBus rt) # Make sure the MQBus has linking to rt for message queue support
-target_link_libraries(Maestro MQBus m MaestroLogging MaestroTime) # Link all libraries together
+
+# Link the local libraries together with Maestro and the math library "m"
+target_link_libraries(Maestro MQBus m MaestroLogging MaestroTime) 
 
 if(USE_CITS) # If C-ITS is used, link with 3d party software pahomqtt3c
     target_link_libraries(cits pahomqtt3c)
