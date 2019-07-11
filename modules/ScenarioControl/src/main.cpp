@@ -30,6 +30,9 @@ int main()
         }
 
         switch (command) {
+        case COMM_INIT:
+
+            break;
         case COMM_INV:
             nanosleep(&sleepTimePeriod,&remTime);
             break;

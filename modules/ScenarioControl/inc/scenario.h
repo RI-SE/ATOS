@@ -1,0 +1,6 @@
+
+class Scenario
+{
+public:
+private:
+};

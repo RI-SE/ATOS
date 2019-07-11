@@ -50,11 +50,16 @@ add_library(Action
     src/action.cpp
 )
 
+add_library(Scenario
+    inc/scenario.h
+    src/scenario.cpp
+)
+
 add_executable(ScenarioControl src/main.cpp)
 
 install(TARGETS ScenarioControl DESTINATION bin)
 
-target_link_libraries(ScenarioControl MaestroTime MaestroLogging util Trigger Action)
+target_link_libraries(ScenarioControl MaestroTime MaestroLogging util Trigger Action Scenario)
 target_link_libraries(util MQBus MaestroTime MaestroLogging)
 target_link_libraries(MQBus rt m)
 
