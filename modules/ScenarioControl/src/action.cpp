@@ -20,11 +20,11 @@ Action::Action(ActionID_t actionID, ActionType_t actionType, uint32_t allowedNum
  */
 Action::ActionReturnCode_t Action::execute(void)
 {
-    if (remainingRuns == 0)
+    if (remainingAllowedRuns == 0)
         return NO_REMAINING_RUNS;
     else {
         // TODO: Maybe add some more functionality when it is more well specified
-        remainingRuns--;
+        remainingAllowedRuns--;
         return OK;
     }
 }
