@@ -92,6 +92,7 @@ public:
     uint16_t getID() { return triggerID; }
     std::vector<TriggerParameter_t> getParameters() { return parameters; }
 
+    bool operator==(const Trigger &other) { return other.triggerID == triggerID; }
 
     /*! Setters */
     void setID(uint16_t triggerID) { this->triggerID = triggerID; }
