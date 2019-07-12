@@ -126,7 +126,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
   OBCState_t OBCStateStatus = OBC_STATE_IDLE;
   U8 ObjectAddressListSentU8 = 0;
-  U8 SupervisorModeU8 = 0;
+  U8 SimulatorModeU8 = 0;
 
   gettimeofday(&ExecTime, NULL);
   CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
@@ -151,8 +151,8 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   //Get the Supervisor mode
   bzero(TextBufferC8, SIM_CONTROL_BUFFER_SIZE_20);
   UtilSearchTextFile(TEST_CONF_FILE, "SimulatorMode=", "", TextBufferC8);
-  SupervisorModeU8 = atoi(TextBufferC8);
-  printf("[SimulatorControl] SimulatorMode: %d\n", SupervisorModeU8);
+  SimulatorModeU8 = atoi(TextBufferC8);
+  printf("[SimulatorControl] Requesting SimulatorMode: %d\n", SimulatorModeU8);
 
   //Get object addresses used in DTM mode
   bzero(DTMObjectAddressesC8, SIM_CONTROL_BUFFER_SIZE_128);
@@ -196,7 +196,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         /*Initiate the simulator if not initialized and a there is a valid TCP connection */
         if(SimulatorInitiatedReqU8 == 0 && SimulatorTCPSocketfdI32 > 0)
         {
-          SimulatorControlInitSimulator(&SimulatorTCPSocketfdI32, SupervisorModeU8, SimFuncReqResponse, 0);
+          SimulatorControlInitSimulator(&SimulatorTCPSocketfdI32, SimulatorModeU8, SimFuncReqResponse, 0);
           SimulatorInitiatedReqU8 = 1;
         }
         
@@ -273,7 +273,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           {
 
             printf("[SimulatorControl] SimRxCodeU16 = 0x%x\n", SimRxCodeU16);
-            if(SimRxCodeU16 == 0x7E7E && SMGD.SimulatorModeU8 == SIM_CONTROL_DTM_MODE)
+            if(SimRxCodeU16 == 0x7E7E && (SMGD.SimulatorModeU8 == SIM_CONTROL_DTM_MODE || SMGD.SimulatorModeU8 == SIM_CONTROL_VIM_DTM_MODE))
             {
 
               //Binary data is received from simulator, send to binary message manager when Supervisor not is available
@@ -283,6 +283,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
               if(SupervisorIpU32 == 0)
               { 
                 //printf("[SimulatorControl] To MsgQueue: %s\n", MsgQueBuffer);
+                printf("[SimulatorControl] Sending COMM_TRAJ.\n");
                 (void)iCommSend(COMM_TRAJ, MsgQueBuffer); //COMM_TRAJ will be received by ObjectControl
               }
               else
@@ -318,7 +319,11 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 if(strcmp(SimFuncReqResponse, "InitSimulator") == 0)
                 {
                   //printf("Do ObjectAddressList\n");
-                  if(ReceiveBuffer[ResponseDataIndexU16] >= SIM_CONTROL_VIM_MODE && ReceiveBuffer[ResponseDataIndexU16] <= SIM_CONTROL_DEBUG_MODE) SMGD.SimulatorModeU8 = ReceiveBuffer[ResponseDataIndexU16];
+                  if(ReceiveBuffer[ResponseDataIndexU16] >= SIM_CONTROL_VIM_MODE && ReceiveBuffer[ResponseDataIndexU16] <= SIM_CONTROL_DEBUG_MODE)
+                  {
+                    SMGD.SimulatorModeU8 = ReceiveBuffer[ResponseDataIndexU16];
+                    printf("[SimulatorControl] SimulatorMode: %d\n", SMGD.SimulatorModeU8);
+                  } 
                   
                 }            
                 else if(strcmp(SimFuncReqResponse, "ObjectAddressList") == 0)
@@ -391,7 +396,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
             GSD->VOILData[i] = (U8)UDPReceiveBuffer[i];
             //printf("%x-", GSD->VOILData[i]);
           }
-           // printf("\n");
+            //printf("\n");
 
           /*Make ASCII data from binary data*/
           bzero(VOILString, SIM_CONTROL_LOG_BUFFER_LENGTH);
