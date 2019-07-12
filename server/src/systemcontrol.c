@@ -111,6 +111,7 @@ typedef enum {
 
 #define RVSS_TIME_CHANNEL 1
 #define RVSS_MONR_CHANNEL 2
+#define RVSS_MAESTRO_CHANNEL 4
 #define RVSS_ASP_CHANNEL 8
 
 
@@ -165,6 +166,7 @@ I32 SystemControlBuildFileContentInfo(C8 *Path, C8 *ReturnValue, U8 Debug);
 I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *ReturnValue, U8 Remove, U8 Debug);
 I32 SystemControlCreateDirectory(C8 *Path, C8 *ReturnValue, U8 Debug);
 I32 SystemControlBuildRVSSTimeChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, TimeType *GPSTime, U8 Debug);
+I32 SystemControlBuildRVSSMaestroChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, GSDType *GSD, U8 SysCtrlState, U8 Debug);
 I32 SystemControlBuildRVSSAspChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, U8 Debug);
 I32 SystemControlBuildRVSSMONRChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, C8 *MonrData, U8 Debug);
 static C8 SystemControlVerifyHostAddress(char* ip);
@@ -1051,10 +1053,16 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                 if(RVSSConfigU32 & RVSS_TIME_CHANNEL)
                 {
-                    SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 1);
+                    SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
                     UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 0);
                 }
 
+                if(RVSSConfigU32 & RVSS_MAESTRO_CHANNEL)
+                {
+                    SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32, GSD, server_state, 0);
+                    UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 0);
+                }
+               
                 if(RVSSConfigU32 & RVSS_ASP_CHANNEL)
                 {
                     SystemControlBuildRVSSAspChannelMessage(RVSSData, &RVSSMessageLengthU32, 0);
@@ -2176,6 +2184,44 @@ I32 SystemControlBuildRVSSTimeChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU3
 
     return 0;
 }
+
+
+/*
+SystemControlBuildRVSSMaestroChannelMessage builds a message from OBCState in *GSD and SysCtrlState. The message is stored in *RVSSData.
+See the architecture document for the protocol of RVSS. 
+
+- *RVSSData the buffer the message
+- *RVSSDataLengthU32 the length of the message
+- *GSD the Global System Data
+- U8 SysCtrlState the SystemControl state (server_state)
+- Debug enable(1)/disable(0) debug printouts (Not used)
+*/
+I32 SystemControlBuildRVSSMaestroChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, GSDType *GSD, U8 SysCtrlState, U8 Debug)
+{
+    I32 MessageIndex = 0, i;
+    C8 *p;
+
+    
+    RVSSMaestroType RVSSMaestroData;
+    RVSSMaestroData.MessageLengthU32 = SwapU32((U32)sizeof(RVSSMaestroType)-4); 
+    RVSSMaestroData.ChannelCodeU32 = SwapU32((U32)RVSS_MAESTRO_CHANNEL);
+    RVSSMaestroData.OBCStateU8 = DataDictionaryGetOBCStateU8(GSD);
+    RVSSMaestroData.SysCtrlStateU8 = SysCtrlState;
+ 
+    p=(C8 *)&RVSSMaestroData;
+    for(i=0; i<sizeof(RVSSMaestroType); i++) *(RVSSData + i) = *p++;
+    *RVSSDataLengthU32 = i;
+
+    if(Debug)
+    {
+     
+    }
+
+    return 0;
+}
+
+
+
 
 /*
 SystemControlBuildRVSSMONRChannelMessage builds a message from data in *MonrData. The message is stored in *RVSSData.

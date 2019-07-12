@@ -766,8 +766,17 @@ typedef struct
   volatile U32 GPSSecondsOfDayU32;
   volatile U8 FixQualityU8;
   volatile U8 NSatellitesU8;
-
 } RVSSTimeType;
+
+
+typedef struct
+{
+  volatile U32 MessageLengthU32;
+  volatile U32 ChannelCodeU32;
+  volatile U8 OBCStateU8;
+  volatile U8 SysCtrlStateU8;
+} RVSSMaestroType;
+
 
 
 /*------------------------------------------------------------
