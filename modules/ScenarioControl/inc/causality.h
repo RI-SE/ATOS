@@ -10,14 +10,15 @@ public:
 
     typedef enum {OR, AND} TriggerOperator_t;
 
-    Causality(Trigger t, Action a, TriggerOperator_t op = OR);
-    Causality(Action a, TriggerOperator_t op = OR);
+    Causality(Trigger* t, Action* a, TriggerOperator_t op = OR);
+    Causality(Action* a, TriggerOperator_t op = OR);
     Causality(TriggerOperator_t op = OR);
 
-    void addTrigger(Trigger t) { triggers.insert(t); }
-    void removeTrigger(Trigger t) { triggers.erase(t); }
+    void addTrigger(Trigger* t) { triggers.insert(t); }
+    void removeTrigger(Trigger* t) { triggers.erase(t); }
 
-    std::set<Trigger> getTriggers(void) { return triggers; }
+    std::set<Trigger*> getTriggers(void) { return triggers; }
+    Trigger* getTriggerByID(Trigger::TriggerID_t id);
 
     void setOperator(TriggerOperator_t op) { oper = op; }
     void setRelationOR(void) { setOperator(OR); }
@@ -26,11 +27,14 @@ public:
     TriggerOperator_t getOperator(void) { return oper; }
     std::string getOperatorString(void);
 
-    void setAction(Action a) { action = a; }
-    Action getAction(void) { return action; }
+    void addAction(Action* a) { actions.insert(a); }
+    void removeAction(Action* a) { actions.erase(a); }
+
+    std::set<Action*> getActions(void) { return actions; }
+    Action* getActionByID(Action::ActionID_t id);
 
 private:
     TriggerOperator_t oper;
-    std::set<Trigger> triggers;
-    Action action;
+    std::set<Trigger*> triggers;
+    std::set<Action*> actions;
 };
