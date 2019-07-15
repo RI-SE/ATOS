@@ -13,8 +13,15 @@ MODULES=(ScenarioControl)
 # Save top directory
 MAESTRODIR=$(pwd)
 
+# Number of modules
+MODULE_LENGTH=${#MODULES[@]}
+
+echo "Starting server with $MODULE_LENGTH extra message queues."
+
 # Build string for executing server alongside modules
-SERVER_EXEC_STRING="(cd $MAESTRODIR/server/build && ./Maestro)"
+
+SERVER_EXEC_STRING="(cd $MAESTRODIR/server/build && ./TEServer -m $MODULE_LENGTH)"
+
 for i in "${MODULES[@]}"
 do
 	SERVER_EXEC_STRING="$SERVER_EXEC_STRING & (cd $MAESTRODIR/modules/$i/build && ./$i)"
