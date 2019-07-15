@@ -14,12 +14,14 @@
 
 
 #include <sys/time.h>
+#include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
+#include <string.h>
 
 
 #include <sys/socket.h>
@@ -112,15 +114,19 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     MONRType MONRMessage;
     MONRType LastMONRMessage;
 
+    asn_enc_rval_t ec;
 
     CAM_t* lastCam;
-    lastCam = calloc(1, sizeof *lastCam);
-    assert(lastCam);
+    lastCam = calloc(1, sizeof(CAM_t));
+    if(!lastCam){
+         exit(1);
+    }
 
     DENM_t* lastDenm;
-    lastDenm = calloc(1, sizeof *lastDenm);
-    assert(lastDenm);
-
+    lastDenm = calloc(1, sizeof(DENM_t));
+    if(!lastDenm) {
+           exit(1);
+    }
 
     TimeType time;
 
@@ -193,6 +199,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                {
                    iExit = 1;
                    printf("citscontrol exiting.\n");
+
                    (void)iCommClose();
                }
 
@@ -285,6 +292,22 @@ int msgarrvd_mqtt(void *context, char *topicName, int topicLen, MQTTClient_messa
     //if (message->payloadlen == 0) return 1;
     //else if (topicLen == 0) return 2;
 
+    CAM_t tempCAM;
+    memcpy(&tempCAM, message->payload, (message->payloadlen)+1);
+
+    printf("[LOOKIE LOOKIE] MessageID should be 2 is: %d\n", tempCAM.header.messageID);
+    printf("[LOOKIE LOOKIE] protocolVersion should be 1 is: %d\n", tempCAM.header.protocolVersion);
+    printf("[LOOKIE LOOKIE] stationID should be 1000 is: %d\n", tempCAM.header.stationID);
+
+    printf("[LOOKIE LOOKIE] curvatureCalculationMode should be 7, is: %d\n", tempCAM.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvatureCalculationMode );
+
+
+    printf("[LOOKIE LOOKIE] Log is: %f\n", tempCAM.cam.camParameters.basicContainer.referencePosition.longitude );
+    printf("[LOOKIE LOOKIE] Lat is: %f\n", tempCAM.cam.camParameters.basicContainer.referencePosition.latitude);
+
+
+
+
     if(message->payloadlen > 0) LogMessage(LOG_LEVEL_DEBUG,"\n\tTopic: %s\n\tmessage: %s",topicName,message->payload);
     printf("Message arrived\n");
     printf("topic: %s\n", topicName);
@@ -296,6 +319,9 @@ int msgarrvd_mqtt(void *context, char *topicName, int topicLen, MQTTClient_messa
         putchar(*payloadptr++);
     }
     putchar('\n');
+
+
+
 
 
     MQTTClient_freeMessage(&message);
@@ -313,6 +339,15 @@ void connlost_mqtt(void *context, char *cause){
     LogMessage(LOG_LEVEL_DEBUG,"Connection Lost.\n Cause: %s",cause);
     printf("Connection lost \n");
 }
+
+
+
+static int write_out(const void *buffer, size_t size, void *app_key){
+    FILE *out_fp = app_key;
+    size_t wrote = fwrite(buffer, 1, size, out_fp);
+    return (wrote == size) ? 0 : -1;
+}
+
 
 
 /*!
@@ -358,11 +393,15 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
 
     fail = UtilVincentyDirect(origoLat,origoLong,azimuth1,distance ,&latitude,&longitude,&azimuth2);
 
-    printf("latitude %f \n", latitude);
-    printf("longitude %f \n", longitude);
-
     tempCam.cam.camParameters.basicContainer.referencePosition.latitude = latitude;
     tempCam.cam.camParameters.basicContainer.referencePosition.longitude = longitude;
+
+    printf("calc latitude %f \n",  latitude);
+    printf("calc longitude %f \n",  longitude);
+
+    printf("CAM latitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.latitude);
+    printf("CAM longitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.longitude);
+
 
     tempCam.cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = MONRData->HeadingU16;
 
@@ -401,7 +440,7 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
 
     tempDENM.header.protocolVersion = 1;
     tempDENM.header.messageID = 1;
-    tempDENM.header.stationID = 1234;
+    tempDENM.header.stationID = 1000;
 
 
     tempDENM.denm.management.actionID.originatingStationID = 12345;
@@ -437,11 +476,12 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
 
     fail = UtilVincentyDirect(origoLat,origoLong,azimuth1,distance ,&latitude,&longitude,&azimuth2);
 
-    printf("latitude %f \n", latitude);
-    printf("longitude %f \n", longitude);
-
     tempDENM.denm.management.eventPosition.latitude = latitude;
     tempDENM.denm.management.eventPosition.longitude = longitude;
+
+    printf("DENM latitude %f \n", tempDENM.denm.management.eventPosition.latitude);
+    printf("DENM longitude %f \n", tempDENM.denm.management.eventPosition.longitude);
+
 
     tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = 7;
     tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 10;
@@ -466,7 +506,6 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
 
     if(MONRData != NULL ){
         *denm = tempDENM;
-
     }
 
 }
@@ -478,22 +517,26 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
 I32 sendCAM(CAM_t* cam){
     printf("SENDING CAM\n");
 
-    xer_fprint(stdout, &asn_DEF_CAM, cam);
-
+    FILE *fp = fopen("tmp", "wb");
+    //asn_enc_rval_t ec = der_encode(&asn_DEF_CAM, cam, write_out, fp);
+    fclose(fp);
 
     publish_mqtt((char*)cam, sizeof (CAM_t), "CLIENT/CAM/CS01/1/AZ12B");
     return 1;
 }
 
 /*!
- * \brief SendCam publishes a cam message on MQTT with hardcoded topic.
- * \param lastCam cam message struct
+ * \brief sendDENM publishes a cam message on MQTT with hardcoded topic.
+ * \param denm cam message struct
  * \return 1 if message sent succesfully
  */
 I32 sendDENM(DENM_t* denm){
 
     printf("SENDING DENM\n");
 
+    FILE *fp = fopen("tmp", "wb");
+    //asn_enc_rval_t ec = der_encode(&asn_DEF_DENM, denm, write_out, fp);
+    fclose(fp);
 
     publish_mqtt((char*)denm, sizeof (DENM_t), "CLIENT/DENM/CS01/1/AZ12B");
     return 1;

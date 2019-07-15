@@ -75,7 +75,7 @@ add_executable(UserControl
 
 # TODO: Make citscontrol into a separate program that is started when the server starts
 #add_executable(CitsControl
-#  inc/citscontrol.h
+# inc/citscontrol.h
 #  src/citscontrol.c
 #)
 
