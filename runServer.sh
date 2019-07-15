@@ -20,7 +20,7 @@ echo "Starting server with $MODULE_LENGTH extra message queues."
 
 # Build string for executing server alongside modules
 
-SERVER_EXEC_STRING="(cd $MAESTRODIR/server/build && ./TEServer -m $MODULE_LENGTH)"
+SERVER_EXEC_STRING="(cd $MAESTRODIR/server/build && ./Maestro -m $MODULE_LENGTH)"
 
 for i in "${MODULES[@]}"
 do
