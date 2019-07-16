@@ -292,21 +292,7 @@ int msgarrvd_mqtt(void *context, char *topicName, int topicLen, MQTTClient_messa
     //if (message->payloadlen == 0) return 1;
     //else if (topicLen == 0) return 2;
 
-    CAM_t tempCAM;
-    memcpy(&tempCAM, message->payload, (message->payloadlen)+1);
-
-    printf("[LOOKIE LOOKIE] MessageID should be 2 is: %d\n", tempCAM.header.messageID);
-    printf("[LOOKIE LOOKIE] protocolVersion should be 1 is: %d\n", tempCAM.header.protocolVersion);
-    printf("[LOOKIE LOOKIE] stationID should be 1000 is: %d\n", tempCAM.header.stationID);
-
-    printf("[LOOKIE LOOKIE] curvatureCalculationMode should be 7, is: %d\n", tempCAM.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvatureCalculationMode );
-
-
-    printf("[LOOKIE LOOKIE] Log is: %f\n", tempCAM.cam.camParameters.basicContainer.referencePosition.longitude );
-    printf("[LOOKIE LOOKIE] Lat is: %f\n", tempCAM.cam.camParameters.basicContainer.referencePosition.latitude);
-
-
-
+    /*
 
     if(message->payloadlen > 0) LogMessage(LOG_LEVEL_DEBUG,"\n\tTopic: %s\n\tmessage: %s",topicName,message->payload);
     printf("Message arrived\n");
@@ -321,7 +307,7 @@ int msgarrvd_mqtt(void *context, char *topicName, int topicLen, MQTTClient_messa
     putchar('\n');
 
 
-
+    */
 
 
     MQTTClient_freeMessage(&message);
@@ -396,12 +382,13 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     tempCam.cam.camParameters.basicContainer.referencePosition.latitude = latitude;
     tempCam.cam.camParameters.basicContainer.referencePosition.longitude = longitude;
 
+    /*
     printf("calc latitude %f \n",  latitude);
     printf("calc longitude %f \n",  longitude);
 
     printf("CAM latitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.latitude);
     printf("CAM longitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.longitude);
-
+    */
 
     tempCam.cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = MONRData->HeadingU16;
 
@@ -479,9 +466,10 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     tempDENM.denm.management.eventPosition.latitude = latitude;
     tempDENM.denm.management.eventPosition.longitude = longitude;
 
+    /*
     printf("DENM latitude %f \n", tempDENM.denm.management.eventPosition.latitude);
     printf("DENM longitude %f \n", tempDENM.denm.management.eventPosition.longitude);
-
+    */
 
     tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = 7;
     tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 10;
