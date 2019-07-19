@@ -9,7 +9,7 @@ Causality::Causality(Causality::TriggerOperator_t op)
 
 Causality::Causality(Action* a, TriggerOperator_t op)
 {
-    actions.insert(a);;
+    actions.insert(a);
     oper = op;
     triggers = std::set<Trigger*>();
 }
@@ -21,7 +21,7 @@ Causality::Causality(Trigger* t, Action* a, TriggerOperator_t op)
     oper = op;
 }
 
-Action* Causality::getActionByID(Action::ActionID_t id)
+Action* Causality::getActionByID(Action::ActionID_t id) const
 {
     for (Action* a : actions)
     {
@@ -31,7 +31,7 @@ Action* Causality::getActionByID(Action::ActionID_t id)
     return nullptr;
 }
 
-Trigger* Causality::getTriggerByID(Trigger::TriggerID_t id)
+Trigger* Causality::getTriggerByID(Trigger::TriggerID_t id) const
 {
     for (Trigger* t : triggers)
     {

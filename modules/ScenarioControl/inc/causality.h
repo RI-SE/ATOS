@@ -17,20 +17,21 @@ public:
     void addTrigger(Trigger* t) { triggers.insert(t); }
     void removeTrigger(Trigger* t) { triggers.erase(t); }
 
-    std::set<Trigger*> getTriggers(void) { return triggers; }
+    std::set<Trigger*> getTriggers(void) const { return triggers; }
+    Trigger* getTriggerByID(Trigger::TriggerID_t id) const;
 
     void setOperator(TriggerOperator_t op) { oper = op; }
     void setRelationOR(void) { setOperator(OR); }
     void setRelationAND(void) { setOperator(AND); }
 
-    TriggerOperator_t getOperator(void) { return oper; }
-    std::string getOperatorString(void);
+    TriggerOperator_t getOperator(void) const { return oper; }
+    std::string getOperatorString(void) const;
 
     void addAction(Action* a) { actions.insert(a); }
     void removeAction(Action* a) { actions.erase(a); }
 
-    std::set<Action*> getActions(void) { return actions; }
-    Action* getActionByID(Action::ActionID_t id);
+    std::set<Action*> getActions(void) const { return actions; }
+    Action* getActionByID(Action::ActionID_t id) const;
 
 private:
     TriggerOperator_t oper;
