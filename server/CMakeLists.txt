@@ -11,6 +11,7 @@ include_directories(inc)
 include_directories(../util/C/logging)
 include_directories(../util/C/time)
 include_directories(../util/C/MQBus)
+include_directories(../util/ASN1/generatedfiles)
 include(GNUInstallDirs)
 
 # Add logging library (hint at some locations)
@@ -23,7 +24,7 @@ include(GNUInstallDirs)
 #add_library(MaestroLogging SHARED IMPORTED)
 #set_property(TARGET MaestroLogging PROPERTY IMPORTED_LOCATION ${MAESTRO_LOGGING_PATH})
 
-SET(USE_CITS FALSE CACHE BOOL "Flag to indicate the use of CITS.")
+SET(USE_CITS TRUE CACHE BOOL "Flag to indicate the use of CITS.")
 
 # MQTT PAHO
 if(USE_CITS)
@@ -67,13 +68,14 @@ add_library(objctrl
   inc/objectcontrol.h
 )
 
+
 add_executable(UserControl
   src/usercontrol.c
 )
 
 # TODO: Make citscontrol into a separate program that is started when the server starts
 #add_executable(CitsControl
-#  inc/citscontrol.h
+# inc/citscontrol.h
 #  src/citscontrol.c
 #)
 
@@ -115,3 +117,4 @@ endif()
 
 
 target_link_libraries(TEServer MaestroLogging MaestroTime MQBus)
+
