@@ -89,13 +89,14 @@ public:
 
     /*! Getters */
     virtual TriggerTypeCode_t getTypeCode() { return triggerTypeCode; }
-    uint16_t getID() { return triggerID; }
+    TriggerID_t getID() const { return triggerID; }
     std::vector<TriggerParameter_t> getParameters() { return parameters; }
+    TriggerReturnCode_t getTriggerStatus() { return wasTriggeredByLastUpdate; }
 
     bool operator==(const Trigger &other) { return other.triggerID == triggerID; }
 
     /*! Setters */
-    void setID(uint16_t triggerID) { this->triggerID = triggerID; }
+    void setID(TriggerID_t triggerID) { this->triggerID = triggerID; }
 
     /*!
      * \brief appendParameter Appends an ISO parameter to the parameters list.
@@ -138,6 +139,7 @@ public:
 protected:
     TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter);
     TriggerTypeCode_t triggerTypeCode;
+    TriggerReturnCode_t wasTriggeredByLastUpdate = NOT_OK; //!< State saving the last result of update
 
 private:
     TriggerID_t triggerID;

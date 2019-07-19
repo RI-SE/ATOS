@@ -18,7 +18,6 @@ public:
     void removeTrigger(Trigger* t) { triggers.erase(t); }
 
     std::set<Trigger*> getTriggers(void) { return triggers; }
-    Trigger* getTriggerByID(Trigger::TriggerID_t id);
 
     void setOperator(TriggerOperator_t op) { oper = op; }
     void setRelationOR(void) { setOperator(OR); }

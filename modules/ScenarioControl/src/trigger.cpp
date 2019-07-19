@@ -41,7 +41,7 @@ Trigger::TriggerReturnCode_t Trigger::appendParameter(Trigger::TriggerParameter_
         return retval;
 
     parameters.push_back(triggerParameter);
-    return OK;
+    return parseParameters();
 }
 
 /*!
