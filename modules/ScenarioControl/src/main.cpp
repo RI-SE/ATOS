@@ -30,6 +30,8 @@ int main()
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
     LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
 
+    scenario.initialize("log/dummy_scenariofil.fil");
+
     // Initialize message bus connection
     while(iCommInit())
     {
@@ -54,6 +56,9 @@ int main()
             break;
         case COMM_INV:
             nanosleep(&sleepTimePeriod,&remTime);
+            break;
+        case COMM_OBC_STATE:
+            // Ignore the state of object control
             break;
         default:
             LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
