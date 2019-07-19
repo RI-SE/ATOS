@@ -722,7 +722,7 @@ typedef struct{
 typedef struct{
     Hemisphere hemisphere;
     double degrees;
-}CAMLogLat;
+}CAMLongLat;
 
 typedef struct{
     CAMLogLat latitude;
