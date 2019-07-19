@@ -23,7 +23,7 @@ extern "C"{
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
-
+#include <stdbool.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -710,6 +710,11 @@ typedef struct {
     char UserAgent[HTTP_HEADER_MAX_LENGTH];
 } HTTPHeaderContent;
 
+typedef enum {
+    NORTHERN,
+    SOUTHERN
+} Hemisphere;
+
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -811,6 +816,8 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
 
 I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataType *monitorData, U8 debug);
+double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
+
 
 typedef struct {
   uint64_t timestamp;

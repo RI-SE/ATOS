@@ -3116,3 +3116,45 @@ I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataTy
 
     return 0;
 }
+
+/*!
+ * \brief UtilgetDistance calculates the distance between two log lat positions usgin haversine formula.
+ * \param lat1 Latitude of first coordinate
+ * \param log1 Latitude of first coordinate
+ * \param lat2 Longitude of second coordinate
+ * \param log2 Longitude of second coordinate
+ * \return Distance in km
+ */
+double UtilGetDistance(double th1, double ph1, double th2, double ph2) {
+       int nRadius = 6371; // Earth's radius in Kilometers
+
+       printf("th1: %f \n", th1);
+       printf("ph1: %f \n", ph1);
+
+       printf("th2: %f \n", th2);
+       printf("ph2: %f \n", ph2);
+
+       // Get the difference between our two points
+       // then convert the difference into radians
+       double dx, dy, dz;
+       ph1 -= ph2;
+       ph1 *= (3.1415926536 / 180), th1 *= (3.1415926536 / 180), th2 *= (3.1415926536 / 180);
+
+       dz = sin(th1) - sin(th2);
+       dx = cos(ph1) * cos(th1) - cos(th2);
+       dy = sin(ph1) * cos(th1);
+       return asin(sqrt(dx * dx + dy * dy + dz * dz) / 2) * 2 * nRadius;
+}
+
+/*!
+ * \brief UtilCoordinateDistance calculates the distance between two cordinates using distance formula.
+ * \param x1 x of first coordinate
+ * \param y1 y of first coordinate
+ * \param x2 x of second coordinate
+ * \param y2 y of second coordinate
+ * \return Distance
+ */
+float UtilCoordinateDistance(float x1, float y1, float x2, float y2)
+{
+    return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2) * 1.0);
+}
