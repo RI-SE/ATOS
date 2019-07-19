@@ -9,7 +9,8 @@ Trigger::TriggerReturnCode_t BooleanTrigger::update(bool currentStateValue)
 {
     wasStateTrue = isStateTrue;
     isStateTrue = currentStateValue;
-    return checkIfTriggered();
+    wasTriggeredByLastUpdate = checkIfTriggered();
+    return wasTriggeredByLastUpdate;
 }
 
 /*!
