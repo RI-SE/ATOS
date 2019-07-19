@@ -40,3 +40,62 @@ Trigger* Causality::getTriggerByID(Trigger::TriggerID_t id) const
     }
     return nullptr;
 }
+
+
+bool Causality::operator==(const Causality &other) const
+{
+    for (Trigger* other_tp : other.getTriggers())
+    {
+        if (triggers.find(other_tp) == triggers.end())
+            return false;
+    }
+
+    for (Action* other_ap : other.getActions())
+    {
+        if (actions.find(other_ap) == actions.end())
+            return false;
+    }
+
+    return other.getOperator() == oper;
+}
+
+bool Causality::operator<(const Causality &other) const
+{
+    std::set<Trigger*>::iterator trigIterThis, trigIterOther;
+    std::set<Action*>::iterator actIterThis, actIterOther;
+
+    if (*this == other) return false;
+
+    if (other.getOperator() != oper) return oper == OR;
+
+    // They have the same operator, check which has more triggers
+    if (other.getTriggers().size() != triggers.size())
+    {
+        return triggers.size() < other.getTriggers().size();
+    }
+
+    // They have the same amount of triggers, check which has more actions
+    if (other.getActions().size() != actions.size())
+    {
+        return actions.size() < other.getActions().size();
+    }
+
+    // They are of equal size, compare trigger IDs returning the first found less than
+    for (trigIterThis = triggers.begin(), trigIterOther = other.getTriggers().begin();
+         trigIterThis != triggers.end() && trigIterOther != other.getTriggers().end();
+         ++trigIterThis, ++trigIterOther){
+        if ((*trigIterThis)->getID() != (*trigIterOther)->getID())
+            return (*trigIterThis)->getID() < (*trigIterOther)->getID();
+    }
+
+    // All triggers are equal, compare action IDs returning the first found less than
+    for (actIterThis = actions.begin(), actIterOther = other.getActions().begin();
+         actIterThis != actions.end() && actIterOther != other.getActions().end();
+         ++actIterThis, ++actIterOther){
+        if ((*actIterThis)->getID() != (*actIterOther)->getID())
+            return (*actIterThis)->getID() < (*actIterOther)->getID();
+    }
+
+    // Since we checked for equality at start, we should never get here
+    return false;
+}

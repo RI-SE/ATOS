@@ -33,6 +33,8 @@ public:
     std::set<Action*> getActions(void) const { return actions; }
     Action* getActionByID(Action::ActionID_t id) const;
 
+    bool operator==(const Causality &other) const;
+    bool operator<(const Causality &other) const;
 private:
     TriggerOperator_t oper;
     std::set<Trigger*> triggers;
