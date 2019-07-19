@@ -10,9 +10,9 @@ public:
 
     typedef enum {OR, AND} TriggerOperator_t;
 
-    Causality(Trigger* t, Action* a, TriggerOperator_t op = OR);
-    Causality(Action* a, TriggerOperator_t op = OR);
-    Causality(TriggerOperator_t op = OR);
+    Causality(Trigger* t, Action* a, TriggerOperator_t op = AND);
+    Causality(Action* a, TriggerOperator_t op = AND);
+    Causality(TriggerOperator_t op = AND);
 
     void addTrigger(Trigger* t) { triggers.insert(t); }
     void removeTrigger(Trigger* t) { triggers.erase(t); }
