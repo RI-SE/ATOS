@@ -1,6 +1,21 @@
-# Chronos test server
+# Maestro 
+<img align="left" width="100" height="100" src="https://github.com/RI-SE/Maestro/blob/dev/server/src/icon/MaestroICON.svg">
+
+The Maestro server is a communication hub for all test objects. The server monitors and controls the test objects and is also responsible for creating logfiles.
+
+<br />
+<br />
+
+To build Maestro either usie the build script "buildMaestro.sh" or follow the guide below.
+
 
 ## How to build and run the server
+
+Clone the repo and make sure you run the following command to update all submodules:
+
+```sh
+git submodule update --init --recursive
+```
 
 Navigate to the the repo and enter the build folder 
 
@@ -59,9 +74,30 @@ git clone https://github.com/eclipse/paho.mqtt.c.git
 
 Go to the root of the cloned git repo and build the documentation by doing
 ```sh
+cd paho.mqtt.c.git
 sudo make html
 ```
-This will build the documentation for all the code. Then proceede to build and install the 
+This will build the documentation for all the code. Then proceede to build and install paho
+```sh
+sudo make
+sudo make install
+```
+
+The server will not bu default build the CITS module. This is to prevent the use of the CITS module when it is not necessary. To enable building of the module, run `cmake` from the `build/` directory
+```sh
+cmake "Unix Makefiles" -DUSE_CITS:BOOL=TRUE ..
+```
+then you can build and run the server as normal
+```sh
+make
+./TEServer
+```
+
+To disable the CITS module, remake the `cmake` procedure
+
+```sh
+cmake "Unix Makefiles" -DUSE_CITS:BOOL=FALSE ..
+```
 
 # To communicate with server start program.
 ./UserControl [IP] [port]

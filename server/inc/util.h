@@ -11,6 +11,10 @@
 #ifndef __UTIL_H_INCLUDED__
 #define __UTIL_H_INCLUDED__
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
@@ -336,7 +340,7 @@ typedef struct
   U16 GPSWeekU16;
   U16 GPSSOWValueIdU16;
   U16 GPSSOWContentLengthU16;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   U16 MaxWayDeviationValueIdU16;
   U16 MaxWayDeviationContentLengthU16;
   U16 MaxWayDeviationU16;
@@ -403,7 +407,7 @@ typedef struct
   HeaderType Header;
   //U16 HeabStructValueIdU16;
   //U16 HeabStructContentLengthU16;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   U8 CCStatusU8;
 } HEABType; //16 bytes
 
@@ -412,7 +416,7 @@ typedef struct
   HeaderType Header;
   //U16 MonrStructValueIdU16;
   //U16 MonrStructContentLengthU16;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   I32 XPositionI32;
   I32 YPositionI32;
   I32 ZPositionI32;
@@ -425,8 +429,14 @@ typedef struct
   U8 StateU8;
   U8 ReadyToArmU8;
   U8 ErrorStatusU8;
+  U16 CRC;
 } MONRType; //41 bytes
 
+typedef struct
+{
+    MONRType MONR;
+    in_addr_t ClientIP;
+} MonitorDataType;
 
 typedef struct
 {
@@ -647,7 +657,7 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   U8 WorldStateU8;
   U8 ObjectCountU8;
   Sim1Type SimObjects[16];
@@ -659,7 +669,7 @@ typedef struct
 {
   U16 MessageIdU16;
   U32 ObjectIPU32;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   I32 XPositionI32;
   I32 YPositionI32;
   I32 ZPositionI32;
@@ -706,39 +716,6 @@ typedef enum {
 } Hemisphere;
 
 
-typedef struct{
-    U8 version;
-    U8 messageID;
-    U64 generationTime;
-}CAMheader;
-
-typedef struct{
-    U64 stationID;
-    bool mobileITSSTation;
-    bool privateITSStation;
-    bool physicalrelevantITSStation;
-}CAMbody;
-
-typedef struct{
-    Hemisphere hemisphere;
-    double degrees;
-}CAMLongLat;
-
-typedef struct{
-    CAMLogLat latitude;
-    CAMLogLat longitude;
-    I16 elevation;
-    U16  heading;
-}CAMrefPos;
-
-typedef struct{
-    CAMheader header;
-    CAMbody body;
-    CAMrefPos referencePosition;
-} CAMmessage;
-
-
-
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -765,7 +742,7 @@ void UtilgetDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t);
 void UtilgetDateTimefromUTCCSVformat(int64_t utc_ms, char *buffer, int size_t);
 void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int size_t);
 
-void util_error(char* message);
+void util_error(const char *message);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
@@ -838,7 +815,7 @@ I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *H
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
 
-I32 UtilPopulateMONRStruct(C8* rawMONR, size_t rawMONRsize, MONRType *MONR, U8 debug);
+I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataType *monitorData, U8 debug);
 double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
 
 
@@ -867,5 +844,8 @@ void traj2ldm ( float      time ,
                 monitor_t* ldm  );
 
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif //__UTIL_H_INCLUDED__

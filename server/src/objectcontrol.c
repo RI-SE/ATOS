@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <errno.h>
+#include <signal.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <inttypes.h>
@@ -28,6 +29,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include "timecontrol.h"
+#include "maestroTime.h"
 
 
 /*------------------------------------------------------------
@@ -43,11 +45,20 @@
 #define BUFFER_SIZE_3100 3100
 #define OBJECT_MESS_BUFFER_SIZE 1024
 
+#define OC_SLEEP_TIME_EMPTY_MQ_S 0
+#define OC_SLEEP_TIME_EMPTY_MQ_NS 1000000
+#define OC_SLEEP_TIME_NONEMPTY_MQ_S 0
+#define OC_SLEEP_TIME_NONEMPTY_MQ_NS 0
+
+
 #define TASK_PERIOD_MS 1
 #define HEARTBEAT_TIME_MS 10
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
 #define OBJECT_CONTROL_ABORT_MODE 1
+
+#define OC_STATE_REPORT_PERIOD_S 1
+#define OC_STATE_REPORT_PERIOD_US 0
 
 #define COMMAND_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
 #define COMMAND_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
@@ -159,7 +170,7 @@ static I32 vCheckRemoteDisconnected(int* sockfd);
 
 static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static void vCloseSafetyChannel(int* sockfd);
-static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData);
+static size_t uiRecvMonitor(int* sockfd, char* buffer, size_t length);
 I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug);
 I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug);
 I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
@@ -204,6 +215,23 @@ int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
+void sig_handlerOC(int signo)
+ {
+   if (signo == SIGINT)
+         printf("received SIGINT in ObjectControl\n");
+         printf("Shutting down ObjectControl with pid: %d\n", getpid());
+         pid_t iPid = getpid(); /* Process gets its id.*/
+         //kill(iPid, SIGINT);
+         exit(1);
+
+
+   if (signo == SIGUSR1)
+         printf("received SIGUSR1\n");
+   if (signo == SIGKILL)
+         printf("received SIGKILL\n");
+   if (signo == SIGSTOP)
+         printf("received SIGSTOP\n");
+}
 
 void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
@@ -222,6 +250,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     C8 MessageBuffer[BUFFER_SIZE_3100];
     int iIndex = 0, i=0;
     struct timespec sleep_time, ref_time;
+    const struct timespec mqEmptyPollPeriod = {OC_SLEEP_TIME_EMPTY_MQ_S, OC_SLEEP_TIME_EMPTY_MQ_NS};
+    const struct timespec mqNonEmptyPollPeriod = {OC_SLEEP_TIME_NONEMPTY_MQ_S, OC_SLEEP_TIME_NONEMPTY_MQ_NS};
+    const struct timeval stateReportPeriod = {OC_STATE_REPORT_PERIOD_S, OC_STATE_REPORT_PERIOD_US};
+    struct timeval currentTime, nextStateReportTime;
     int iForceObjectToLocalhost = 0;
 
     FILE *fd;
@@ -337,6 +369,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     if (iCommInit())
         util_error("Unable to connect to message queue bus");
 
+    // Initialize timer for sending state
+    TimeSetToCurrentSystemTime(&currentTime);
+    nextStateReportTime = currentTime;
+
     while(!iExit)
     {
         if(OBCState == OBC_STATE_ERROR)
@@ -392,7 +428,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED)
         {
             char buffer[RECV_MESSAGE_BUFFER];
-            int recievedNewData = 0;
+            size_t receivedMONRData = 0;
             // this is etsi time lets remov it ans use utc instead
             //gettimeofday(&CurrentTimeStruct, NULL);
 
@@ -425,17 +461,16 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
 
 
-            for(iIndex=0;iIndex<nbr_objects;++iIndex)
+            for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
             {
                 bzero(buffer,RECV_MESSAGE_BUFFER);
-                vRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER, &recievedNewData);
+                receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex],buffer, RECV_MESSAGE_BUFFER);
 
-
-                if(recievedNewData)
+                if (receivedMONRData > 0)
                 {
-                    LogMessage(LOG_LEVEL_DEBUG,"Recieved new data from %s %d %d: %s",object_address_name[iIndex],object_udp_port[iIndex],recievedNewData,buffer);
+                    LogMessage(LOG_LEVEL_DEBUG,"Recieved new data from %s %d %d: %s",object_address_name[iIndex],object_udp_port[iIndex],receivedMONRData,buffer);
 
-                    if(buffer[0] == COMMAND_TOM_CODE)
+                    if (buffer[0] == COMMAND_TOM_CODE)
                     {
                         for(i = 0; i < TriggerActionCount; i ++)
                         {
@@ -467,9 +502,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                     if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE)
                     {
-                        // Send MONR message on new byte format
-                        //LogMessage(LOG_LEVEL_INFO, "Sending raw MONR message");
-                        if(iCommSend(COMM_MONR, buffer, COMMAND_MONR_MESSAGE_LENGTH) < 0)
+                        // Append IP to buffer
+                        memcpy(&buffer[receivedMONRData], &safety_object_addr[iIndex].sin_addr.s_addr, sizeof(in_addr_t));
+
+                        // Send MONR message as bytes
+                        if(iCommSend(COMM_MONR, buffer, (size_t)(receivedMONRData) + sizeof(in_addr_t)) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONR command - entering error state");
                             vSetState(&OBCState,OBC_STATE_ERROR);
@@ -1152,26 +1189,35 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         if(!iExit)
         {
             /* Make call periodic */
-            sleep_time.tv_sec = 0;
-            sleep_time.tv_nsec = TASK_PERIOD_MS*1000000;
+            sleep_time = iCommand == COMM_INV ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
 
             ++uiTimeCycle;
             if(uiTimeCycle >= HEARTBEAT_TIME_MS/TASK_PERIOD_MS)
             {
+                uiTimeCycle = 0;
+            }
+
+            // Periodically send state to signal aliveness (TODO: replace with supervisor process health check)
+            TimeSetToCurrentSystemTime(&currentTime);
+            if (timercmp(&currentTime, &nextStateReportTime, >))
+            {
+                timeradd(&nextStateReportTime, &stateReportPeriod, &nextStateReportTime);
+
                 bzero(Buffer2, SMALL_BUFFER_SIZE_1);
                 Buffer2[0] = OBCState;
-                if(iCommSend(COMM_OBC_STATE,Buffer2,SMALL_BUFFER_SIZE_1) < 0)
+                if (iCommSend(COMM_OBC_STATE, Buffer2, SMALL_BUFFER_SIZE_1) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OBC_STATE command - entering error state");
                     vSetState(&OBCState,OBC_STATE_ERROR);
                     ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
                 }
-                uiTimeCycle = 0;
             }
 
             (void)nanosleep(&sleep_time,&ref_time);
         }
 
+            if (signal(SIGINT, sig_handlerOC) == SIG_ERR)
+                printf("\ncan't catch SIGINT\n");
     }
 
     LogMessage(LOG_LEVEL_INFO,"Object control exiting");
@@ -1269,7 +1315,7 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
     VOILData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
     VOILData->Header.MessageIdU16 = COMMAND_VOIL_CODE;
     VOILData->Header.MessageLengthU32 = ObjectCount*sizeof(Sim1Type) + 6 - COMMAND_MESSAGE_HEADER_LENGTH;
-    VOILData->GPSSOWU32 = GPSSOW;
+    VOILData->GPSQmsOfWeekU32 = GPSSOW;
     VOILData->WorldStateU8 = DynamicWorldState;
     VOILData->ObjectCountU8 = ObjectCount;
     VOILData->SimObjects[0].ObjectIdU8 = ObjectId;
@@ -1409,7 +1455,7 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     U32Data = (U32Data | *(MonrData+13)) << 8;
     U32Data = (U32Data | *(MonrData+12)) << 8;
     U32Data = U32Data | *(MonrData+11);
-    MONRData->GPSSOWU32 = U32Data;
+    MONRData->GPSQmsOfWeekU32 = U32Data;
 
     I32Data = 0;
     I32Data = (I32Data | *(MonrData+18)) << 8;
@@ -1474,7 +1520,7 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
         LogPrint("PackageCounter = %d", MONRData->Header.MessageCounterU8);
         LogPrint("AckReq = %d", MONRData->Header.AckReqProtVerU8);
         LogPrint("MessageLength = %d", MONRData->Header.MessageLengthU32);
-        LogPrint("GPSSOW = %u",MONRData->GPSSOWU32);
+        LogPrint("GPSSOW = %u",MONRData->GPSQmsOfWeekU32);
     }
 
     return 0;
@@ -1517,9 +1563,9 @@ I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I3
         MonrValueU64 = 0;
         //for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
         ConvertGPStoUTC =
-        sprintf(Timestamp, "%" PRIu32, MONRData->GPSSOWU32);
+        sprintf(Timestamp, "%" PRIu32, MONRData->GPSQmsOfWeekU32);
 
-        if(debug && MONRData->GPSSOWU32%400 == 0)
+        if(debug && MONRData->GPSQmsOfWeekU32%400 == 0)
         {
             LogMessage(LOG_LEVEL_DEBUG,"MONR = %x-%x-%x-%x-%x-%x-%d-%d-%d-%d-%d-%d-%d-%d-%d-%d",
                         MONRData->Header.MessageIdU16,
@@ -1528,7 +1574,7 @@ I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I3
                         MONRData->Header.MessageCounterU8,
                         MONRData->Header.AckReqProtVerU8,
                         MONRData->Header.MessageLengthU32,
-                        MONRData->GPSSOWU32,
+                        MONRData->GPSQmsOfWeekU32,
                         MONRData->XPositionI32,
                         MONRData->YPositionI32,
                         MONRData->ZPositionI32,
@@ -1692,7 +1738,7 @@ I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeTyp
     OSEMData->GPSWeekU16 = GPSTime->GPSWeekU16;
     OSEMData->GPSSOWValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
     OSEMData->GPSSOWContentLengthU16 = 4;
-    OSEMData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + GPSTime->MillisecondU16) << 2) + GPSTime->MicroSecondU16;
+    OSEMData->GPSQmsOfWeekU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + GPSTime->MillisecondU16) << 2) + GPSTime->MicroSecondU16;
     OSEMData->MaxWayDeviationValueIdU16 = VALUE_ID_MAX_WAY_DEVIATION;
     OSEMData->MaxWayDeviationContentLengthU16 = 2;
     OSEMData->MaxWayDeviationU16 = 65535;
@@ -1706,7 +1752,7 @@ I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeTyp
     if (!GPSTime->isGPSenabled)
     {
         OSEMData->DateU32 = UtilgetIntDateFromMS(UtilgetCurrentUTCtimeMS());
-        UtilgetCurrentGPStime(&OSEMData->GPSWeekU16,&OSEMData->GPSSOWU32);
+        UtilgetCurrentGPStime(&OSEMData->GPSWeekU16,&OSEMData->GPSQmsOfWeekU32);
     }
 
     p=(C8 *)OSEMData;
@@ -1869,11 +1915,11 @@ I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeTyp
     HEABData->Header.MessageLengthU32 = sizeof(HEABType) - sizeof(HeaderType);
     //HEABData->HeabStructValueIdU16 = 0;
     //HEABData->HeabStructContentLengthU16 = sizeof(HEABType) - sizeof(HeaderType) - 4;
-    HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
+    HEABData->GPSQmsOfWeekU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
     HEABData->CCStatusU8 = CCStatus;
 
     if(!GPSTime->isGPSenabled){
-        UtilgetCurrentGPStime(NULL,&HEABData->GPSSOWU32);
+        UtilgetCurrentGPStime(NULL,&HEABData->GPSQmsOfWeekU32);
     }
 
     p=(C8 *)HEABData;
@@ -2613,10 +2659,12 @@ int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendDa
 }
 
 
-static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNewData)
+static size_t uiRecvMonitor(int* sockfd, char* buffer, size_t length)
 {
-    int result;
-    *recievedNewData = 0;
+    ssize_t result = 0;
+    size_t recvDataSize = 0;
+
+    // Read until receive buffer is empty, return last read message
     do
     {
         result = recv(*sockfd, buffer, length, 0);
@@ -2625,19 +2673,17 @@ static void vRecvMonitor(int* sockfd, char* buffer, int length, int* recievedNew
         {
             if(errno != EAGAIN && errno != EWOULDBLOCK)
             {
-                util_error("ERR: Failed to receive from monitor socket");
-            }
-            else
-            {
-                LogMessage(LOG_LEVEL_DEBUG,"No data received");
+                util_error("Failed to receive from monitor socket");
             }
         }
         else
         {
-            *recievedNewData = 1;
+            recvDataSize = (size_t)(result);
             LogMessage(LOG_LEVEL_DEBUG,"Received: <%s>",buffer);
         }
     } while(result > 0 );
+
+    return recvDataSize;
 }
 
 void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], char object_address_name[MAX_OBJECTS][MAX_FILE_PATH], int* nbr_objects)

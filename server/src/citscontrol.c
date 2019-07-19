@@ -52,7 +52,7 @@
 
 #define DEFAULT_MQTT_ADDRESS     "tcp://localhost:1883"
 #define ERICSSON_MQTT_ADDRESS     "tcp://10.130.100.18:1883"
-#define DEFAULT_MQTT_CLIENTID    "ExampleClientPub"
+#define DEFAULT_MQTT_CLIENTID    "ExampleClientPub1"
 #define DEFAULT_MQTT_TOPIC       "CLIENT/CAM/CS01/1/AZ12B"
 #define DEFAULT_MQTT_PAYLOAD     "Hello World!"
 #define DEFAULT_MQTT_QOS         1
@@ -176,6 +176,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             else {
                 pending_state = SENDING;
             }
+
             break;
           */
         case SENDING:
@@ -202,7 +203,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                    (void)iCommClose();
                }
-
+        //usleep(100000);
                switch (command)
                {
                case COMM_INIT:
@@ -291,7 +292,9 @@ int msgarrvd_mqtt(void *context, char *topicName, int topicLen, MQTTClient_messa
     LogMessage(LOG_LEVEL_DEBUG,"Message arrived! Length=%d",message->payloadlen);
     //if (message->payloadlen == 0) return 1;
     //else if (topicLen == 0) return 2;
-
+    //if(message->payloadlen > 0) {
+    //    LogMessage(LOG_LEVEL_DEBUG,"\n\tTopic: %s\n\tmessage: %s",topicName,message->payload);
+    //}
     /*
 
     if(message->payloadlen > 0) LogMessage(LOG_LEVEL_DEBUG,"\n\tTopic: %s\n\tmessage: %s",topicName,message->payload);

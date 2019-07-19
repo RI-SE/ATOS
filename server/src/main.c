@@ -44,7 +44,8 @@
 typedef void (*ModuleTask)(TimeType*, GSDType*, LOG_LEVEL); //!< Function pointer type for module "main" functions
 typedef struct
 {
-    LOG_LEVEL commonLogLevel;
+    LOG_LEVEL commonLogLevel; //!< Logging level of the server.
+    int extraMessageQueues; //!< Number of extra message queues to create on startup.
 } Options;
 
 /*------------------------------------------------------------
@@ -67,22 +68,22 @@ static struct timeval waitStartTime, waitedTime;                                
 ------------------------------------------------------------*/
 //! allModules contains the tasks to be run in the server. To enable or disable a task, add or remove the main module function in this array
 static const ModuleTask allModules[] = {
+    
     logger_task,
     timecontrol_task,
     supervision_task,
-    supervisorcontrol_task,
     systemcontrol_task,
     objectcontrol_task,
     citscontrol_task
 };
-static const size_t numberOfModules = sizeof(allModules) / sizeof(ModuleTask);
+static const int numberOfModules = sizeof(allModules) / sizeof(ModuleTask);
 
 /*------------------------------------------------------------
 -- Private functions
 ------------------------------------------------------------*/
 int readArgumentList(int argc, char *argv[], Options *opts);
 void printHelp(char* progName);
-int initializeMessageQueueBus(void);
+int initializeMessageQueueBus(Options *opts);
 int shutdownMessageQueueBus(void);
 int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExitStatus[]);
 void signal_handler(int signo);
@@ -115,8 +116,10 @@ int main(int argc, char *argv[])
     LogMessage(LOG_LEVEL_INFO, "Central started");
     LogMessage(LOG_LEVEL_DEBUG, "Verbose mode enabled");
 
+
+    LogMessage(LOG_LEVEL_INFO,"About to enter mq init");
     // Initialise message queue bus
-    if(initializeMessageQueueBus())
+    if(initializeMessageQueueBus(&options))
         exit(EXIT_FAILURE);
 
     // For all modules in allModules, start corresponding process in a fork
@@ -152,11 +155,14 @@ int main(int argc, char *argv[])
 
 /*!
  * \brief initialiseMessageQueueBus Wrapper function for MQBusInit with explanatory log printouts
+ * \param opts A pointer to the current options the program has. This function will only look for ::extraMessageQueues
  * \return 0 upon success, -1 upon failure
  */
-int initializeMessageQueueBus(void)
+int initializeMessageQueueBus(Options *opts)
 {
-    int nbrOfQueues = numberOfModules;
+
+    // If the user supplied an additional number of modules in the input, this will create the appropriate amout of message queues.
+    int nbrOfQueues = numberOfModules + opts->extraMessageQueues;
     enum MQBUS_ERROR result = MQBusInit(nbrOfQueues);
 
     // Printouts according to result
@@ -317,6 +323,11 @@ int waitForModuleExit(pid_t pIDs[], unsigned int numberOfModules, char moduleExi
  */
 int readArgumentList(int argc, char *argv[], Options *opts)
 {
+    enum ArgState {
+        NO_STATE,
+        NR_MODULES_INPUT
+    }; //<! The available arguments states. This is used to track what the next arguments should be, after a user have given a command.
+
     char *progName = strrchr(argv[0],'/');
     if (progName == NULL)
     {
@@ -333,12 +344,24 @@ int readArgumentList(int argc, char *argv[], Options *opts)
 
     // Initialise to default options
     opts->commonLogLevel = LOG_LEVEL_INFO;
+    opts->extraMessageQueues = 0;
 
 
+    int argState = NO_STATE;
 
     // Loop over all input arguments
     for(int i = 1; i < argc; ++i)
     {
+        switch (argState) {
+        case NR_MODULES_INPUT:
+            opts->extraMessageQueues = atoi(argv[i]);
+            argState = NO_STATE;
+            continue;
+        case NO_STATE:
+        default:
+            break;
+        }
+
         if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help"))
         {
             printHelp(progName);
@@ -348,6 +371,10 @@ int readArgumentList(int argc, char *argv[], Options *opts)
         {
             opts->commonLogLevel = LOG_LEVEL_DEBUG;
         }
+        else if (!strcmp(argv[i], "-m") || !strcmp(argv[i],"--additional-modules"))
+        {
+            argState = NR_MODULES_INPUT;
+        }
         else
         {
             // If option didn't match any known option
@@ -356,6 +383,13 @@ int readArgumentList(int argc, char *argv[], Options *opts)
             return 1;
         }
     }
+
+    if (argState != NO_STATE) {
+        printf("%s: insufficient number of arguments.\n",progName);
+        printf("Try '%s --help' for more information.\n", argv[0]);
+        return 1;
+    }
+
     return 0;
 }
 
@@ -367,8 +401,9 @@ void printHelp(char* progName)
 {
     printf("Usage: %s [OPTION]\n", progName);
     printf("Runs all modules of test server.\n\n");
-    printf("  -v, --verbose \tcreate detailed logs\n");
-    printf("  -h, --help \t\tdisplay this help and exit\n");
+    printf("  -v, --verbose \t\t\tcreate detailed logs\n");
+    printf("  -h, --help \t\t\t\tdisplay this help and exit\n");
+    printf("  -m, --additional-modules [number] \tenables the connection of a [number] of extra modules to connect.\n");
 }
 
 /*!
