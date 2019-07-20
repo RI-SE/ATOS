@@ -75,11 +75,11 @@ git clone https://github.com/eclipse/paho.mqtt.c.git
 Go to the root of the cloned git repo and build the documentation by doing
 ```sh
 cd paho.mqtt.c.git
-sudo make html
+make html
 ```
 This will build the documentation for all the code. Then proceede to build and install paho
 ```sh
-sudo make
+make
 sudo make install
 ```
 
