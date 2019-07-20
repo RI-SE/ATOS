@@ -15,7 +15,7 @@ public:
 private:
     std::vector<TriggerParameter_t> parameters;
 
-    std::set<Trigger::TriggerParameter_t> getAcceptedParameters() override
+    std::set<Trigger::TriggerParameter_t> getAcceptedParameters() const override
     {
         return {
             Trigger::TRIGGER_PARAMETER_FALSE,

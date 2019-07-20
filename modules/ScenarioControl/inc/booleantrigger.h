@@ -16,7 +16,7 @@ public:
     TriggerReturnCode_t update(bool) override;
 
 protected:
-    TriggerReturnCode_t checkIfTriggered(void) override;
+    TriggerReturnCode_t checkIfTriggered(void) const override;
 
     enum TriggerMode {
         INVALID_MODE,
@@ -31,7 +31,7 @@ protected:
 
 private:
 
-    virtual std::set<Trigger::TriggerParameter_t> getAcceptedParameters() override
+    virtual std::set<Trigger::TriggerParameter_t> getAcceptedParameters() const override
     {
         return {
             Trigger::TRIGGER_PARAMETER_FALSE,

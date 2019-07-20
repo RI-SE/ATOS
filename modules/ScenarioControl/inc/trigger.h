@@ -88,12 +88,12 @@ public:
 
 
     /*! Getters */
-    virtual TriggerTypeCode_t getTypeCode() { return triggerTypeCode; }
+    virtual TriggerTypeCode_t getTypeCode() const { return triggerTypeCode; }
     TriggerID_t getID() const { return triggerID; }
-    std::vector<TriggerParameter_t> getParameters() { return parameters; }
-    TriggerReturnCode_t getTriggerStatus() { return wasTriggeredByLastUpdate; }
+    std::vector<TriggerParameter_t> getParameters() const { return parameters; }
+    TriggerReturnCode_t getTriggerStatus() const { return wasTriggeredByLastUpdate; }
 
-    bool operator==(const Trigger &other) { return other.triggerID == triggerID; }
+    bool operator==(const Trigger &other) const { return other.triggerID == triggerID; }
 
     /*! Setters */
     void setID(TriggerID_t triggerID) { this->triggerID = triggerID; }
@@ -113,7 +113,7 @@ public:
 
 
     /*! To string */
-    friend std::ostream& operator<<(std::ostream &strm, Trigger &trig) {
+    friend std::ostream& operator<<(std::ostream &strm, const Trigger &trig) {
         return strm << "TRIGGER ID " << trig.triggerID <<
                        " TYPE " << getTypeAsString(trig.getTypeCode()) <<
                        " PARAMETERS " << trig.getParametersString();
@@ -121,7 +121,7 @@ public:
 
     static std::string getTypeAsString(TriggerTypeCode_t typeCode);
     static std::string getParameterAsString(TriggerParameter_t param);
-    std::string getParametersString();
+    std::string getParametersString(void) const;
 
     /*!
      * \brief update Update tracked signal (i.e. signal which causes the trigger to occur).
@@ -137,7 +137,7 @@ public:
     virtual TriggerReturnCode_t update(double)  { return INVALID_ARGUMENT; }
 
 protected:
-    TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter);
+    TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter) const;
     TriggerTypeCode_t triggerTypeCode;
     TriggerReturnCode_t wasTriggeredByLastUpdate = NOT_OK; //!< State saving the last result of update
 
@@ -145,10 +145,10 @@ private:
     TriggerID_t triggerID;
     std::vector<TriggerParameter_t> parameters;
 
-    virtual std::set<TriggerParameter_t> getAcceptedParameters()
+    virtual std::set<TriggerParameter_t> getAcceptedParameters() const
         { return {TRIGGER_PARAMETER_UNAVAILABLE}; }
 
-    virtual TriggerReturnCode_t checkIfTriggered(void) = 0;
+    virtual TriggerReturnCode_t checkIfTriggered(void) const = 0;
 };
 
 #endif // TRIGGER_H

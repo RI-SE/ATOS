@@ -18,7 +18,7 @@ Trigger::~Trigger()
  * \param triggerParameter Queried parameter
  * \return According to ::TriggerReturnCode_t
  */
-Trigger::TriggerReturnCode_t Trigger::checkTriggerParameter(TriggerParameter_t triggerParameter)
+Trigger::TriggerReturnCode_t Trigger::checkTriggerParameter(TriggerParameter_t triggerParameter) const
 {
     std::set<TriggerParameter_t> acceptedParameters = getAcceptedParameters();
     for (const TriggerParameter_t param : acceptedParameters) {
@@ -48,7 +48,7 @@ Trigger::TriggerReturnCode_t Trigger::appendParameter(Trigger::TriggerParameter_
  * \brief Trigger::getParametersString Converts the list of loaded parameters into a string
  * \return String describing all parameters
  */
-std::string Trigger::getParametersString()
+std::string Trigger::getParametersString() const
 {
     std::string retval;
     if (parameters.size() == 0)
@@ -133,7 +133,7 @@ std::string Trigger::getParameterAsString(TriggerParameter_t param)
 
 /*!
  * \brief Trigger::getTypeAsString Maps a ::TriggerTypeCode_t to a string
- * \param triggerTypeCode Type code
+ * \param typeCode Type code
  * \return String describing the trigger type
  */
 std::string Trigger::getTypeAsString(Trigger::TriggerTypeCode_t typeCode)

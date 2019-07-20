@@ -17,7 +17,7 @@ Trigger::TriggerReturnCode_t BooleanTrigger::update(bool currentStateValue)
  * \brief BooleanTrigger::checkIfTriggered Check if the trigger has occurred based on the mode and state
  * \return Value according to ::TriggerReturnCode_t
  */
-Trigger::TriggerReturnCode_t BooleanTrigger::checkIfTriggered()
+Trigger::TriggerReturnCode_t BooleanTrigger::checkIfTriggered() const
 {
     switch (mode) {
     case HIGH:
