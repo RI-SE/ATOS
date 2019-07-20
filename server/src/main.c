@@ -73,8 +73,10 @@ static const ModuleTask allModules[] = {
     timecontrol_task,
     supervision_task,
     systemcontrol_task,
-    objectcontrol_task,
-    citscontrol_task
+    objectcontrol_task
+    #ifdef CITS_ENABLED
+    ,citscontrol_task
+    #endif
 };
 static const int numberOfModules = sizeof(allModules) / sizeof(ModuleTask);
 
