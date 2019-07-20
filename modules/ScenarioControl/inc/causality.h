@@ -28,6 +28,9 @@ public:
     TriggerOperator_t getOperator(void) const { return oper; }
     std::string getOperatorString(void) const;
 
+    void refresh(void) const;
+    bool isActive(void) const;
+
     void addAction(Action* a) { actions.insert(a); }
     void removeAction(Action* a) { actions.erase(a); }
 

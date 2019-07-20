@@ -129,13 +129,12 @@ public:
      * - e.g. a trigger tracking a floating point trigger should override
      * update(float) and update(double)
     */
-    virtual TriggerReturnCode_t update(void)    { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(bool)    { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(char)    { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(int)     { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(float)   { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(double)  { return INVALID_ARGUMENT; }
-
+    virtual TriggerReturnCode_t update(void)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(bool)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(char)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(int)     { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(float)   { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(double)  { throw std::invalid_argument("Invalid signal type"); }
 protected:
     TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter) const;
     TriggerTypeCode_t triggerTypeCode;

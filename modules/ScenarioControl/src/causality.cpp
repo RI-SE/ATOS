@@ -41,6 +41,26 @@ Trigger* Causality::getTriggerByID(Trigger::TriggerID_t id) const
     return nullptr;
 }
 
+void Causality::refresh(void) const
+{
+    if (isActive())
+    {
+        for (Action* ap : actions)
+        {
+            ap->execute();
+        }
+    }
+}
+
+bool Causality::isActive() const
+{
+    bool active = oper == AND;
+    for (Trigger* tp : triggers)
+    {
+        active = (oper == OR) ? active || tp->getTriggerStatus() : active && tp->getTriggerStatus();
+    }
+    return active;
+}
 
 bool Causality::operator==(const Causality &other) const
 {

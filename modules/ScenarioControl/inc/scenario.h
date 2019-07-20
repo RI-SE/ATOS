@@ -6,17 +6,18 @@
 #include "braketrigger.h"
 #include "action.h"
 #include "causality.h"
+#include "logging.h"
 
 class Scenario
 {
 public:
     typedef enum {OK, NOT_OK, DUPLICATE_ELEMENT, INVALID_ARGUMENT, NOT_FOUND} ScenarioReturnCode_t;
 
-    Scenario(std::string scenarioFilePath);
+    Scenario(const std::string scenarioFilePath);
     Scenario() {}
     ~Scenario();
 
-    void initialize(std::string scenarioFilePath);
+    void initialize(const std::string scenarioFilePath);
 
     ScenarioReturnCode_t linkTriggersWithActions(std::set<Trigger*> ts, std::set<Action*> as);
     ScenarioReturnCode_t linkTriggersWithAction(std::set<Trigger*> ts, Action* a);
@@ -37,13 +38,15 @@ public:
             if (tp->getID() == id)
             {
                 retval = tp->update(value);
-                return (retval == Trigger::OK) ? OK : INVALID_ARGUMENT;
+                if (retval == Trigger::TRIGGER_OCCURRED) LogMessage(LOG_LEVEL_DEBUG, "Triggered ID %u", id);
+                return (retval == Trigger::NOT_OK) ? INVALID_ARGUMENT : OK;
             }
         }
         return NOT_FOUND;
     }
 
-    void refresh(void);
+    void refresh(void) const;
+    void clear(void);
 
 private:
     std::set<Causality> causalities;

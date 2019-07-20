@@ -1,5 +1,6 @@
 
 #include "action.h"
+#include "logging.h"
 
 /*!
  * \brief Action::Action Constructor for Action objects.
@@ -24,6 +25,7 @@ Action::ActionReturnCode_t Action::execute(void)
         return NO_REMAINING_RUNS;
     else {
         // TODO: Maybe add some more functionality when it is more well specified
+        LogMessage(LOG_LEVEL_DEBUG, "Executing action with ID %u", actionID);
         remainingAllowedRuns--;
         return OK;
     }

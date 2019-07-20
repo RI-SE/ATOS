@@ -3,7 +3,9 @@
 #include <fstream>
 #include <stdexcept>
 
-Scenario::Scenario(std::string scenarioFilePath)
+#include "logging.h"
+
+Scenario::Scenario(const std::string scenarioFilePath)
 {
     initialize(scenarioFilePath);
 }
@@ -11,7 +13,11 @@ Scenario::Scenario(std::string scenarioFilePath)
 
 Scenario::~Scenario()
 {
-    // TODO: deallocate all elements as well
+    clear();
+}
+
+void Scenario::clear()
+{
     for (Trigger* t : allTriggers)
         delete t;
 
@@ -23,10 +29,13 @@ Scenario::~Scenario()
     allActions.clear();
 }
 
-void Scenario::initialize(std::string scenarioFilePath)
+void Scenario::initialize(const std::string scenarioFilePath)
 {
     std::ifstream file;
     file.exceptions(std::ios_base::badbit | std::ios_base::failbit);
+
+    clear();
+    LogMessage(LOG_LEVEL_DEBUG, "Opening scenario file <%s>", scenarioFilePath.c_str());
     file.open(scenarioFilePath);
 
     try {
@@ -36,6 +45,25 @@ void Scenario::initialize(std::string scenarioFilePath)
         throw;
     }
     file.close();
+
+    LogMessage(LOG_LEVEL_INFO, "Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
+}
+
+void Scenario::parseScenarioFile(std::ifstream &file)
+{
+    LogMessage(LOG_LEVEL_DEBUG, "Parsing scenario file");
+    // TODO: read file, throw std::invalid_argument if badly formatted
+    // TODO: decode file into triggers and actions
+    BrakeTrigger* bt = new BrakeTrigger(1);
+    Action* mqttAction = new Action(5, Action::ACTION_TEST_SCENARIO_COMMAND, 1);
+
+    bt->appendParameter(Trigger::TRIGGER_PARAMETER_PRESSED);
+    bt->parseParameters();
+
+    addTrigger(bt);
+    addAction(mqttAction);
+
+    linkTriggerWithAction(bt, mqttAction);
 }
 
 Scenario::ScenarioReturnCode_t Scenario::addTrigger(Trigger* t)
@@ -102,19 +130,11 @@ Scenario::ScenarioReturnCode_t Scenario::linkTriggerWithActions(Trigger *t, std:
     return linkTriggersWithActions(ts, as);
 }
 
-
-void Scenario::parseScenarioFile(std::ifstream &file)
+void Scenario::refresh(void) const
 {
-    // TODO: read file, throw std::invalid_argument if badly formatted
-    // TODO: decode file into triggers and actions
-    BrakeTrigger* bt = new BrakeTrigger(1);
-    Action* mqttAction = new Action(5, Action::ACTION_TEST_SCENARIO_COMMAND, 1);
-
-    bt->appendParameter(Trigger::TRIGGER_PARAMETER_PRESSED);
-    bt->parseParameters();
-
-    addTrigger(bt);
-    addAction(mqttAction);
-
-    linkTriggerWithAction(bt, mqttAction);
+    for (const Causality &c : causalities)
+    {
+        c.refresh();
+    }
 }
+

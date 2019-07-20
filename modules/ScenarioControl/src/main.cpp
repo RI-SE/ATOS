@@ -12,12 +12,6 @@
 
 #define SCENARIO_FILE_PATH "path/to/file"
 
-typedef enum {SUCCESS, FAILURE} ReturnCode_t;
-
-/************************ Static functions ******************************************/
-static ReturnCode_t initializeScenario(Scenario &s);
-
-
 /************************ Main task ******************************************/
 int main()
 {
