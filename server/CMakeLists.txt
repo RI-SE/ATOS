@@ -24,7 +24,7 @@ include(GNUInstallDirs)
 #add_library(MaestroLogging SHARED IMPORTED)
 #set_property(TARGET MaestroLogging PROPERTY IMPORTED_LOCATION ${MAESTRO_LOGGING_PATH})
 
-SET(USE_CITS TRUE CACHE BOOL "Flag to indicate the use of CITS.")
+SET(USE_CITS FALSE CACHE BOOL "Flag to indicate the use of CITS.")
 
 # MQTT PAHO
 if(USE_CITS)
@@ -36,6 +36,7 @@ if(USE_CITS)
         src/citscontrol.c
         inc/citscontrol.h
     )
+add_definitions(-DCITS_ENABLED)
 endif()
 
 # Create library
