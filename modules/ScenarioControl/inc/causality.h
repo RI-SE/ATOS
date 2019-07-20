@@ -1,4 +1,5 @@
 #include <set>
+#include <iostream>
 
 #include "trigger.h"
 #include "action.h"
@@ -35,6 +36,16 @@ public:
 
     bool operator==(const Causality &other) const;
     bool operator<(const Causality &other) const;
+
+    /*! To string */
+    friend std::ostream& operator<<(std::ostream &strm, const Causality &causality) {
+        return strm << ((causality.getOperator() == OR) ? "OR" : "AND") <<
+                       "-CAUSALITY LINKING " << causality.getTriggers().size() <<
+                       " TRIGGER" << (causality.getTriggers().size() == 1 ? "" : "S") <<
+                       " TO " << causality.getActions().size() <<
+                       " ACTION" << (causality.getActions().size() == 1 ? "" : "S");
+    }
+
 private:
     TriggerOperator_t oper;
     std::set<Trigger*> triggers;
