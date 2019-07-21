@@ -47,6 +47,7 @@
 #define PRIO_COMM_REPLAY 160
 #define PRIO_COMM_CONTROL 180
 #define PRIO_COMM_ABORT 60
+#define PRIO_COMM_BRAKE 70
 #define PRIO_COMM_TOM 90
 #define PRIO_COMM_INIT 110
 #define PRIO_COMM_CONNECT 110
@@ -1962,6 +1963,9 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
         break;
     case COMM_TRAJ_FROMSUP:
         uiMessagePrio = PRIO_COMM_TRAJ_FROMSUP;
+        break;
+    case COMM_BRAKE:
+        uiMessagePrio = PRIO_COMM_BRAKE;
         break;
     default:
         util_error("Unknown command");
