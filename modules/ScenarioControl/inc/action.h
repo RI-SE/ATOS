@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 
+#define ACTION_NUMBER_PARAMETER_FIELDS 3
+
 class Action
 {
 public:
@@ -59,12 +61,15 @@ public:
     /*! Constructor */
     Action(ActionID_t actionID = 0, ActionTypeCode_t actionTypeCode = ACTION_NONE, uint32_t allowedNumberOfRuns = 1);
 
+    /*! Destructor */
+    virtual ~Action() { parameters.clear(); }
+
     /*! Getters */
     ActionID_t getID() const { return actionID; }
     ActionTypeCode_t getTypeCode() const { return actionTypeCode; }
 
     /*! Run the action once, if allowed */
-    ActionReturnCode_t execute(void);
+    virtual ActionReturnCode_t execute(void);
 
     /*! To string */
     friend std::ostream& operator<<(std::ostream &strm, const Action &act) {
@@ -79,11 +84,9 @@ public:
 
 protected:
     ActionTypeCode_t actionTypeCode = ACTION_NONE;
-
-private:
     ActionID_t actionID = 0;
-    std::vector<ActionParameter_t> parameters;
     uint32_t remainingAllowedRuns = 0;
+    std::vector<ActionParameter_t> parameters;
 };
 
 #endif
