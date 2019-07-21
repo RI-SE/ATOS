@@ -91,7 +91,7 @@ public:
     virtual TriggerTypeCode_t getTypeCode() const { return triggerTypeCode; }
     TriggerID_t getID() const { return triggerID; }
     std::vector<TriggerParameter_t> getParameters() const { return parameters; }
-    TriggerReturnCode_t getTriggerStatus() const { return wasTriggeredByLastUpdate; }
+    bool isActive() const;
 
     bool operator==(const Trigger &other) const { return other.triggerID == triggerID; }
 
@@ -139,13 +139,17 @@ protected:
     TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter) const;
     TriggerTypeCode_t triggerTypeCode;
     TriggerReturnCode_t wasTriggeredByLastUpdate = NOT_OK; //!< State saving the last result of update
+    std::vector<TriggerParameter_t> parameters;
 
 private:
     TriggerID_t triggerID;
-    std::vector<TriggerParameter_t> parameters;
 
-    virtual std::set<TriggerParameter_t> getAcceptedParameters() const
-        { return {TRIGGER_PARAMETER_UNAVAILABLE}; }
+    virtual const std::set<TriggerParameter_t> getAcceptedParameters() const
+    {
+        std::set<TriggerParameter_t> accParams;
+        accParams.insert(TRIGGER_PARAMETER_UNAVAILABLE);
+        return accParams;
+    }
 
     virtual TriggerReturnCode_t checkIfTriggered(void) const = 0;
 };

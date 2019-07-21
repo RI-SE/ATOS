@@ -57,7 +57,7 @@ bool Causality::isActive() const
     bool active = oper == AND;
     for (Trigger* tp : triggers)
     {
-        active = (oper == OR) ? active || tp->getTriggerStatus() : active && tp->getTriggerStatus();
+        active = (oper == OR) ? active || tp->isActive() : active && tp->isActive();
     }
     return active;
 }

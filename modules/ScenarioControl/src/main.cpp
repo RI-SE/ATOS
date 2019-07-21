@@ -26,6 +26,23 @@ int main()
 
     scenario.initialize("log/dummy_scenariofil.fil");
 
+    LogMessage(LOG_LEVEL_INFO,"1");
+    scenario.updateTrigger(1,false);
+    scenario.refresh();
+    LogMessage(LOG_LEVEL_INFO,"2");
+    scenario.updateTrigger(1,false);
+    scenario.refresh();
+    LogMessage(LOG_LEVEL_INFO,"3");
+    scenario.updateTrigger(1,true);
+    scenario.refresh();
+    LogMessage(LOG_LEVEL_INFO,"4");
+    scenario.updateTrigger(1,true);
+    scenario.refresh();
+    LogMessage(LOG_LEVEL_INFO,"5");
+    scenario.updateTrigger(1,false);
+    scenario.refresh();
+    LogMessage(LOG_LEVEL_INFO,"6");
+    exit(0);
     // Initialize message bus connection
     while(iCommInit())
     {

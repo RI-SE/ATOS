@@ -31,7 +31,7 @@ Trigger::TriggerReturnCode_t BooleanTrigger::checkIfTriggered() const
     case EDGE_FALLING:
         return (!isStateTrue && wasStateTrue) ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
     case INVALID_MODE:
-        return NOT_OK;
+        throw std::logic_error("Boolean trigger cannot be triggered if mode invalid");
     }
 }
 

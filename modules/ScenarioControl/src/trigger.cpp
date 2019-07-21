@@ -187,3 +187,16 @@ std::string Trigger::getTypeAsString(Trigger::TriggerTypeCode_t typeCode)
     }
     return "<<unimplemented>>";
 }
+
+/*!
+ * \brief Trigger::isActive Check if the last update to tracked signal caused trigger to occur
+ * \return Boolean according to trigger status
+ */
+bool Trigger::isActive() const
+{
+    if(wasTriggeredByLastUpdate == TRIGGER_OCCURRED)
+        return true;
+    else if(wasTriggeredByLastUpdate == NO_TRIGGER_OCCURRED)
+        return false;
+    throw std::logic_error("Trigger in undefined state");
+}

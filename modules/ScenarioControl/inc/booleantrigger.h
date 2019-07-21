@@ -31,15 +31,15 @@ protected:
 
 private:
 
-    virtual std::set<Trigger::TriggerParameter_t> getAcceptedParameters() const override
+    virtual const std::set<TriggerParameter_t> getAcceptedParameters() const override
     {
-        return {
-            Trigger::TRIGGER_PARAMETER_FALSE,
-            Trigger::TRIGGER_PARAMETER_TRUE,
-            Trigger::TRIGGER_PARAMETER_RISING_EDGE,
-            Trigger::TRIGGER_PARAMETER_FALLING_EDGE,
-            Trigger::TRIGGER_PARAMETER_ANY_EDGE
-        };
+        std::set<TriggerParameter_t> accParams;
+        accParams.insert(TRIGGER_PARAMETER_FALSE);
+        accParams.insert(TRIGGER_PARAMETER_TRUE);
+        accParams.insert(TRIGGER_PARAMETER_RISING_EDGE);
+        accParams.insert(TRIGGER_PARAMETER_FALLING_EDGE);
+        accParams.insert(TRIGGER_PARAMETER_ANY_EDGE);
+        return accParams;
     }
 
 
