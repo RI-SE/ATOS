@@ -48,6 +48,8 @@ add_library(Trigger
 add_library(Action
     inc/action.h
     src/action.cpp
+    inc/brakeaction.h
+    src/brakeaction.cpp
 )
 
 add_library(Scenario
