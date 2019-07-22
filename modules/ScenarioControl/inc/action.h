@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 
+#include "util.h"
+
 #define ACTION_NUMBER_PARAMETER_FIELDS 3
 
 class Action
@@ -81,6 +83,7 @@ public:
     static std::string getTypeAsString(ActionTypeCode_t type);
     static std::string getParameterAsString(ActionParameter_t param);
     std::string getParametersString(void) const;
+    ACCMData getConfigurationMessageData(void) const;
 
 protected:
     ActionTypeCode_t actionTypeCode = ACTION_NONE;
@@ -88,6 +91,7 @@ protected:
     uint32_t remainingAllowedRuns = 0;
     std::vector<ActionParameter_t> parameters;
     uint32_t actionDelayTime_qms;
+    in_addr_t actionObjectIP = 0;
 };
 
 #endif

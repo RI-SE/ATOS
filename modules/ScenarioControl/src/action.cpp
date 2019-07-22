@@ -133,3 +133,45 @@ std::string Action::getTypeAsString(Action::ActionTypeCode_t typeCode)
     }
     return "<<unimplemented>>";
 }
+
+/*!
+ * \brief Action::getConfigurationMessageData Constructs a ACCMData struct from object members
+ * \return A struct which can be sent on message bus
+ */
+ACCMData Action::getConfigurationMessageData(void) const
+{
+    ACCMData retval;
+    retval.actionID = actionID;
+    retval.actionType = actionTypeCode;
+
+    if (actionObjectIP == 0) LogMessage(LOG_LEVEL_WARNING, "Constructing action configuration message with no IP");
+
+    retval.ip = actionObjectIP;
+
+    switch(parameters.size())
+    {
+    case 3:
+        retval.actionTypeParameter1 = parameters[0];
+        retval.actionTypeParameter2 = parameters[1];
+        retval.actionTypeParameter3 = parameters[2];
+        break;
+    case 2:
+        retval.actionTypeParameter1 = parameters[0];
+        retval.actionTypeParameter2 = parameters[1];
+        retval.actionTypeParameter3 = ACTION_PARAMETER_UNAVAILABLE;
+        break;
+    case 1:
+        retval.actionTypeParameter1 = parameters[0];
+        retval.actionTypeParameter2 = ACTION_PARAMETER_UNAVAILABLE;
+        retval.actionTypeParameter3 = ACTION_PARAMETER_UNAVAILABLE;
+        break;
+    case 0:
+        retval.actionTypeParameter1 = ACTION_PARAMETER_UNAVAILABLE;
+        retval.actionTypeParameter2 = ACTION_PARAMETER_UNAVAILABLE;
+        retval.actionTypeParameter3 = ACTION_PARAMETER_UNAVAILABLE;
+        break;
+    default:
+        throw std::invalid_argument("Action contains too many parameters for an ISO message");
+    }
+    return retval;
+}

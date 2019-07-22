@@ -1,8 +1,8 @@
 #ifndef ISOTRIGGER_H
 #define ISOTRIGGER_H
 
-#include "trigger.h"
 #include "util.h"
+#include "trigger.h"
 
 class ISOTrigger : public Trigger
 {
@@ -13,7 +13,7 @@ public:
 
     using Trigger::update;
     TriggerReturnCode_t update(void) override { return wasTriggeredByLastUpdate = NO_TRIGGER_OCCURRED; }
-    TriggerReturnCode_t update(TREOData);
+    TriggerReturnCode_t update(TREOData) override;
 private:
     const std::set<TriggerParameter_t> getAcceptedParameters() const override
     {

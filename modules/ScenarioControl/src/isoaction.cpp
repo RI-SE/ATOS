@@ -11,7 +11,7 @@ Action::ActionReturnCode_t ISOAction::execute(void)
     else {
         data.actionID = actionID;
         data.delayTime_qms = actionDelayTime_qms;
-        data.ip = targetObjAddr;
+        data.ip = actionObjectIP;
 
         LogMessage(LOG_LEVEL_INFO, "Sending execute action message over message bus (action ID %u)", actionID);
         if(iCommSendEXAC(data) == -1)

@@ -14,12 +14,12 @@ public:
 
     typedef enum {OR, AND} TriggerOperator_t;
 
-    Causality(Trigger* t, Action* a, TriggerOperator_t op = AND);
-    Causality(Action* a, TriggerOperator_t op = AND);
+    Causality(Trigger* tp, Action* ap, TriggerOperator_t op = AND);
+    Causality(Action* ap, TriggerOperator_t op = AND);
     Causality(TriggerOperator_t op = AND);
 
-    void addTrigger(Trigger* t) { triggers.insert(t); }
-    void removeTrigger(Trigger* t) { triggers.erase(t); }
+    void addTrigger(Trigger* tp) { triggers.insert(tp); }
+    void removeTrigger(Trigger* tp) { triggers.erase(tp); }
 
     std::set<Trigger*> getTriggers(void) const { return triggers; }
     Trigger* getTriggerByID(Trigger::TriggerID_t id) const;
@@ -34,8 +34,8 @@ public:
     void refresh(void) const;
     bool isActive(void) const;
 
-    void addAction(Action* a) { actions.insert(a); }
-    void removeAction(Action* a) { actions.erase(a); }
+    void addAction(Action* ap) { actions.insert(ap); }
+    void removeAction(Action* ap) { actions.erase(ap); }
 
     std::set<Action*> getActions(void) const { return actions; }
     Action* getActionByID(Action::ActionID_t id) const;

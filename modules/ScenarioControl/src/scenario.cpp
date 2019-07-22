@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "logging.h"
+#include "isotrigger.h"
 
 Scenario::Scenario(const std::string scenarioFilePath)
 {
@@ -18,11 +19,11 @@ Scenario::~Scenario()
 
 void Scenario::clear()
 {
-    for (Trigger* t : allTriggers)
-        delete t;
+    for (Trigger* tp : allTriggers)
+        delete tp;
 
-    for (Action* a : allActions)
-        delete a;
+    for (Action* ap : allActions)
+        delete ap;
 
     causalities.clear();
     allTriggers.clear();
@@ -46,6 +47,16 @@ void Scenario::initialize(const std::string scenarioFilePath)
     }
     file.close();
 
+    for (Trigger* tp : allTriggers)
+    {
+        iCommSendTRCM(tp->getConfigurationMessageData());
+    }
+
+    for (Action* ap : allActions)
+    {
+        iCommSendACCM(ap->getConfigurationMessageData());
+    }
+
     LogMessage(LOG_LEVEL_INFO, "Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
 }
 
@@ -66,68 +77,68 @@ void Scenario::parseScenarioFile(std::ifstream &file)
     linkTriggerWithAction(bt, mqttAction);
 }
 
-Scenario::ScenarioReturnCode_t Scenario::addTrigger(Trigger* t)
+Scenario::ScenarioReturnCode_t Scenario::addTrigger(Trigger* tp)
 {
     for (Trigger* knownTrigger : allTriggers)
     {
-        if (knownTrigger->getID() == t->getID()) return DUPLICATE_ELEMENT;
+        if (knownTrigger->getID() == tp->getID()) return DUPLICATE_ELEMENT;
     }
 
-    allTriggers.insert(t);
+    allTriggers.insert(tp);
     return OK;
 }
 
-Scenario::ScenarioReturnCode_t Scenario::addAction(Action* a)
+Scenario::ScenarioReturnCode_t Scenario::addAction(Action* ap)
 {
     for (Action* knownAction : allActions)
     {
-        if (knownAction->getID() == a->getID()) return DUPLICATE_ELEMENT;
+        if (knownAction->getID() == ap->getID()) return DUPLICATE_ELEMENT;
     }
 
-    allActions.insert(a);
+    allActions.insert(ap);
     return OK;
 }
 
 
-Scenario::ScenarioReturnCode_t Scenario::linkTriggersWithActions(std::set<Trigger *> ts, std::set<Action *> as)
+Scenario::ScenarioReturnCode_t Scenario::linkTriggersWithActions(std::set<Trigger *> ts, std::set<Action *> aps)
 {
     Causality c(Causality::AND);
 
-    for (Trigger* t : ts)
+    for (Trigger* tp : ts)
     {
-        c.addTrigger(t);
+        c.addTrigger(tp);
     }
 
-    for (Action* a : as)
+    for (Action* ap : aps)
     {
-        c.addAction(a);
+        c.addAction(ap);
     }
 
     causalities.insert(c);
     return OK;
 }
 
-Scenario::ScenarioReturnCode_t Scenario::linkTriggerWithAction(Trigger *t, Action *a)
+Scenario::ScenarioReturnCode_t Scenario::linkTriggerWithAction(Trigger *tp, Action *ap)
 {
-    std::set<Trigger*> ts;
-    std::set<Action*> as;
-    ts.insert(t);
-    as.insert(a);
-    return linkTriggersWithActions(ts, as);
+    std::set<Trigger*> tps;
+    std::set<Action*> aps;
+    tps.insert(tp);
+    aps.insert(ap);
+    return linkTriggersWithActions(tps, aps);
 }
 
-Scenario::ScenarioReturnCode_t Scenario::linkTriggersWithAction(std::set<Trigger*> ts, Action* a)
+Scenario::ScenarioReturnCode_t Scenario::linkTriggersWithAction(std::set<Trigger*> tps, Action* ap)
 {
-    std::set<Action*> as;
-    as.insert(a);
-    return linkTriggersWithActions(ts, as);
+    std::set<Action*> aps;
+    aps.insert(ap);
+    return linkTriggersWithActions(tps, aps);
 }
 
-Scenario::ScenarioReturnCode_t Scenario::linkTriggerWithActions(Trigger *t, std::set<Action *> as)
+Scenario::ScenarioReturnCode_t Scenario::linkTriggerWithActions(Trigger *tp, std::set<Action *> aps)
 {
-    std::set<Trigger*> ts;
-    ts.insert(t);
-    return linkTriggersWithActions(ts, as);
+    std::set<Trigger*> tps;
+    tps.insert(tp);
+    return linkTriggersWithActions(tps, aps);
 }
 
 void Scenario::refresh(void) const
@@ -135,6 +146,18 @@ void Scenario::refresh(void) const
     for (const Causality &c : causalities)
     {
         c.refresh();
+    }
+}
+
+void Scenario::resetISOTriggers(void)
+{
+    for (Trigger* tp : allTriggers)
+    {
+        if (dynamic_cast<ISOTrigger*>(tp) != nullptr)
+        {
+            // "untrigger" the trigger
+            tp->update();
+        }
     }
 }
 
