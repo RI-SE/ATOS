@@ -50,8 +50,8 @@ add_library(Trigger
 add_library(Action
     inc/action.h
     src/action.cpp
-    inc/isoaction.h
-    src/isoaction.cpp
+    inc/externalaction.h
+    src/externalaction.cpp
 )
 
 add_library(Scenario

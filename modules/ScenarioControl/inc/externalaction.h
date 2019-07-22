@@ -1,5 +1,5 @@
-#ifndef ISOACTION_H
-#define ISOACTION_H
+#ifndef EXTERNALACTION_H
+#define EXTERNALACTION_H
 
 #include "action.h"
 
