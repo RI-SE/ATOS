@@ -1,3 +1,6 @@
+#ifndef CAUSALITY_H
+#define CAUSALITY_H
+
 #include <set>
 #include <iostream>
 
@@ -54,3 +57,5 @@ private:
     std::set<Trigger*> triggers;
     std::set<Action*> actions;
 };
+
+#endif

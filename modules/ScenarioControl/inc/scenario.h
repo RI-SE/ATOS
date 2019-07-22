@@ -1,3 +1,5 @@
+#ifndef SCENARIO_H
+#define SCENARIO_H
 
 #include <set>
 #include <fstream>
@@ -55,3 +57,5 @@ private:
 
     void parseScenarioFile(std::ifstream &file);
 };
+
+#endif

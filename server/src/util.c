@@ -47,7 +47,7 @@
 #define PRIO_COMM_REPLAY 160
 #define PRIO_COMM_CONTROL 180
 #define PRIO_COMM_ABORT 60
-#define PRIO_COMM_BRAKE 70
+#define PRIO_COMM_EXAC 70
 #define PRIO_COMM_TOM 90
 #define PRIO_COMM_INIT 110
 #define PRIO_COMM_CONNECT 110
@@ -1964,8 +1964,8 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
     case COMM_TRAJ_FROMSUP:
         uiMessagePrio = PRIO_COMM_TRAJ_FROMSUP;
         break;
-    case COMM_BRAKE:
-        uiMessagePrio = PRIO_COMM_BRAKE;
+    case COMM_EXAC:
+        uiMessagePrio = PRIO_COMM_EXAC;
         break;
     default:
         util_error("Unknown command");
@@ -2027,6 +2027,108 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
     }
 
     return -1;
+}
+
+/*!
+ * \brief iCommSendTREO Sends a trigger event occurred command over message bus
+ * \param data Related trigger data
+ * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
+ */
+int iCommSendTREO(TREOData data)
+{
+    char sendBuffer[sizeof(TREOData)];
+    char* ptr = sendBuffer;
+
+    memcpy(ptr, &data.triggerID, sizeof(data.triggerID));
+    ptr += sizeof(data.triggerID);
+
+    memcpy(ptr, &data.timestamp_qmsow, sizeof(data.timestamp_qmsow));
+    ptr += sizeof(data.timestamp_qmsow);
+
+    memcpy(ptr, &data.ip, sizeof(data.ip));
+
+    return iCommSend(COMM_TREO, sendBuffer, sizeof(sendBuffer));
+}
+
+/*!
+ * \brief iCommSendEXAC Sends an action execute command over message bus
+ * \param data Related action data
+ * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
+ */
+int iCommSendEXAC(EXACData data)
+{
+    char sendBuffer[sizeof(EXACData)];
+    char* ptr = sendBuffer;
+
+    memcpy(ptr, &data.actionID, sizeof(data.actionID));
+    ptr += sizeof(data.actionID);
+
+    memcpy(ptr, &data.delayTime_qms, sizeof(data.delayTime_qms));
+    ptr += sizeof(data.delayTime_qms);
+
+    memcpy(ptr, &data.ip, sizeof(data.ip));
+
+    return iCommSend(COMM_EXAC, sendBuffer, sizeof(sendBuffer));
+}
+
+/*!
+ * \brief iCommSendTRCM Sends a trigger event configuration command over message bus
+ * \param data Related trigger data
+ * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
+ */
+int iCommSendTRCM(TRCMData data)
+{
+    char sendBuffer[sizeof(TRCMData)];
+    char* ptr = sendBuffer;
+
+    memcpy(ptr, &data.triggerID, sizeof(data.triggerID));
+    ptr += sizeof(data.triggerID);
+
+    memcpy(ptr, &data.triggerType, sizeof(data.triggerType));
+    ptr += sizeof(data.triggerType);
+
+    memcpy(ptr, &data.triggerTypeParameter1, sizeof(data.triggerTypeParameter1));
+    ptr += sizeof(data.triggerTypeParameter1);
+
+    memcpy(ptr, &data.triggerTypeParameter2, sizeof(data.triggerTypeParameter2));
+    ptr += sizeof(data.triggerTypeParameter2);
+
+    memcpy(ptr, &data.triggerTypeParameter3, sizeof(data.triggerTypeParameter3));
+    ptr += sizeof(data.triggerTypeParameter3);
+
+    memcpy(ptr, &data.ip, sizeof(data.ip));
+
+    return iCommSend(COMM_TRCM, sendBuffer, sizeof(sendBuffer));
+}
+
+/*!
+ * \brief iCommSendACCM Sends an action configuration command over message bus
+ * \param data Related action data
+ * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
+ */
+int iCommSendACCM(ACCMData data)
+{
+    char sendBuffer[sizeof(ACCMData)];
+    char* ptr = sendBuffer;
+
+    memcpy(ptr, &data.actionID, sizeof(data.actionID));
+    ptr += sizeof(data.actionID);
+
+    memcpy(ptr, &data.actionType, sizeof(data.actionType));
+    ptr += sizeof(data.actionType);
+
+    memcpy(ptr, &data.actionTypeParameter1, sizeof(data.actionTypeParameter1));
+    ptr += sizeof(data.actionTypeParameter1);
+
+    memcpy(ptr, &data.actionTypeParameter2, sizeof(data.actionTypeParameter2));
+    ptr += sizeof(data.actionTypeParameter2);
+
+    memcpy(ptr, &data.actionTypeParameter3, sizeof(data.actionTypeParameter3));
+    ptr += sizeof(data.actionTypeParameter3);
+
+    memcpy(ptr, &data.ip, sizeof(data.ip));
+
+    return iCommSend(COMM_ACCM, sendBuffer, sizeof(sendBuffer));
 }
 
 /*------------------------------------------------------------

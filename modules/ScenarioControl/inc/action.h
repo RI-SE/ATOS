@@ -87,6 +87,7 @@ protected:
     ActionID_t actionID = 0;
     uint32_t remainingAllowedRuns = 0;
     std::vector<ActionParameter_t> parameters;
+    uint32_t actionDelayTime_qms;
 };
 
 #endif
