@@ -101,7 +101,8 @@ protected:
     uint32_t actionDelayTime_qms;
     in_addr_t actionObjectIP = 0;
 
-    ActionReturnCode_t checkActionParameter(ActionParameter_t actionParameter);
+    ActionReturnCode_t checkActionParameter(ActionParameter_t actionParameter) const;
+
 private:
     virtual const std::set<ActionParameter_t> getAcceptedParameters(void) const
     {

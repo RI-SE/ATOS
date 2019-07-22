@@ -68,7 +68,7 @@ void Scenario::parseScenarioFile(std::ifstream &file)
     // TODO: decode file into triggers and actions
     // TODO: link triggers and actions
 
-    // THIS IS TEMPORARY
+    // PLACEHOLDER CODE
     BrakeTrigger* bt = new BrakeTrigger(1);
     InfrastructureAction* mqttAction = new InfrastructureAction(5, 1);
     const char brakeObjectIPString[] = "123.123.123.123";
