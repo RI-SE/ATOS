@@ -1,6 +1,8 @@
 
 #include "action.h"
+
 #include "logging.h"
+
 
 /*!
  * \brief Action::Action Constructor for Action objects.
@@ -132,6 +134,37 @@ std::string Action::getTypeAsString(Action::ActionTypeCode_t typeCode)
         return "ACTION UNAVAILABLE";
     }
     return "<<unimplemented>>";
+}
+
+/*!
+ * \brief Action::checkActionParameter Checks if the queried parameter is within the list of accepted parameters
+ * \param actionParameter Queried parameter
+ * \return According to ::ActionReturnCode_t
+ */
+Action::ActionReturnCode_t Action::checkActionParameter(ActionParameter_t actionParameter) const
+{
+    std::set<ActionParameter_t> acceptedParameters = getAcceptedParameters();
+    for (const ActionParameter_t param : acceptedParameters) {
+        if (actionParameter == param)
+            return OK;
+    }
+    return NOT_OK;
+}
+
+/*!
+ * \brief Action::appendParameter
+ * \param actionParameter
+ * \return
+ */
+Action::ActionReturnCode_t Action::appendParameter(ActionParameter_t actionParameter)
+{
+    ActionReturnCode_t retval = NOT_OK;
+
+    if( (retval = checkActionParameter(actionParameter)) != OK)
+        return retval;
+
+    parameters.push_back(actionParameter);
+    return OK;
 }
 
 /*!

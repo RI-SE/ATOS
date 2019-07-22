@@ -5,6 +5,7 @@
 
 #include "logging.h"
 #include "isotrigger.h"
+#include "externalaction.h"
 
 Scenario::Scenario(const std::string scenarioFilePath)
 {
@@ -65,11 +66,22 @@ void Scenario::parseScenarioFile(std::ifstream &file)
     LogMessage(LOG_LEVEL_DEBUG, "Parsing scenario file");
     // TODO: read file, throw std::invalid_argument if badly formatted
     // TODO: decode file into triggers and actions
+    // TODO: link triggers and actions
+
+    // THIS IS TEMPORARY
     BrakeTrigger* bt = new BrakeTrigger(1);
-    Action* mqttAction = new Action(5, Action::ACTION_TEST_SCENARIO_COMMAND, 1);
+    InfrastructureAction* mqttAction = new InfrastructureAction(5, 1);
+    const char brakeObjectIPString[] = "123.123.123.123";
+    in_addr brakeObjectIP;
+    inet_pton(AF_INET, brakeObjectIPString, &brakeObjectIP);
 
     bt->appendParameter(Trigger::TRIGGER_PARAMETER_PRESSED);
     bt->parseParameters();
+
+    bt->setObjectIP(brakeObjectIP.s_addr);
+
+    mqttAction->appendParameter(Action::ACTION_PARAMETER_VS_BRAKE_WARNING);
+    mqttAction->setObjectIP(0);
 
     addTrigger(bt);
     addAction(mqttAction);

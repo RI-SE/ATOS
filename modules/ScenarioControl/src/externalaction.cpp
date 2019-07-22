@@ -1,8 +1,8 @@
-#include "isoaction.h"
+#include "externalaction.h"
 #include "logging.h"
 #include "util.h"
 
-Action::ActionReturnCode_t ISOAction::execute(void)
+Action::ActionReturnCode_t ExternalAction::execute(void)
 {
     EXACData data;
 
@@ -20,4 +20,9 @@ Action::ActionReturnCode_t ISOAction::execute(void)
         remainingAllowedRuns--;
         return OK;
     }
+}
+
+InfrastructureAction::InfrastructureAction(ActionID_t actionID, uint32_t allowedNumberOfRuns)
+    : ExternalAction(actionID, Action::ACTION_INFRASTRUCTURE, allowedNumberOfRuns)
+{
 }

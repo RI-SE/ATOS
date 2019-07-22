@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <iostream>
 #include <vector>
+#include <set>
+#include <netinet/in.h>
+
 
 #include "util.h"
 
@@ -38,17 +41,18 @@ public:
     } ActionTypeCode_t;
 
     typedef enum {
-        ACTION_PARAMETER_SET_FALSE      = 0x00000000,
-        ACTION_PARAMETER_SET_TRUE       = 0x00000001,
-        ACTION_PARAMETER_RELEASE        = 0x00000010,
-        ACTION_PARAMETER_PRESS          = 0x00000011,
-        ACTION_PARAMETER_SET_VALUE      = 0x00000020,
-        ACTION_PARAMETER_MIN            = 0x00000040,
-        ACTION_PARAMETER_MAX            = 0x00000041,
-        ACTION_PARAMETER_X              = 0x00000070,
-        ACTION_PARAMETER_Y              = 0x00000071,
-        ACTION_PARAMETER_Z              = 0x00000072,
-        ACTION_PARAMETER_UNAVAILABLE    = 0xFFFFFFFF
+        ACTION_PARAMETER_SET_FALSE          = 0x00000000,
+        ACTION_PARAMETER_SET_TRUE           = 0x00000001,
+        ACTION_PARAMETER_RELEASE            = 0x00000010,
+        ACTION_PARAMETER_PRESS              = 0x00000011,
+        ACTION_PARAMETER_SET_VALUE          = 0x00000020,
+        ACTION_PARAMETER_MIN                = 0x00000040,
+        ACTION_PARAMETER_MAX                = 0x00000041,
+        ACTION_PARAMETER_X                  = 0x00000070,
+        ACTION_PARAMETER_Y                  = 0x00000071,
+        ACTION_PARAMETER_Z                  = 0x00000072,
+        ACTION_PARAMETER_VS_BRAKE_WARNING   = 0xA0000000,
+        ACTION_PARAMETER_UNAVAILABLE        = 0xFFFFFFFF
     } ActionParameter_t;
 
     typedef enum {
@@ -84,6 +88,10 @@ public:
     static std::string getParameterAsString(ActionParameter_t param);
     std::string getParametersString(void) const;
     ACCMData getConfigurationMessageData(void) const;
+    in_addr_t getObjectIP(void) const { return actionObjectIP; }
+    void setObjectIP(in_addr_t ipAddr) { actionObjectIP = ipAddr; }
+
+    ActionReturnCode_t appendParameter(ActionParameter_t actionParameter);
 
 protected:
     ActionTypeCode_t actionTypeCode = ACTION_NONE;
@@ -92,6 +100,26 @@ protected:
     std::vector<ActionParameter_t> parameters;
     uint32_t actionDelayTime_qms;
     in_addr_t actionObjectIP = 0;
+
+    ActionReturnCode_t checkActionParameter(ActionParameter_t actionParameter);
+private:
+    virtual const std::set<ActionParameter_t> getAcceptedParameters(void) const
+    {
+        std::set<ActionParameter_t> accParams;
+        accParams.insert(ACTION_PARAMETER_SET_FALSE);
+        accParams.insert(ACTION_PARAMETER_SET_TRUE);
+        accParams.insert(ACTION_PARAMETER_RELEASE);
+        accParams.insert(ACTION_PARAMETER_PRESS);
+        accParams.insert(ACTION_PARAMETER_SET_VALUE);
+        accParams.insert(ACTION_PARAMETER_MIN);
+        accParams.insert(ACTION_PARAMETER_MAX);
+        accParams.insert(ACTION_PARAMETER_X);
+        accParams.insert(ACTION_PARAMETER_Y);
+        accParams.insert(ACTION_PARAMETER_Z);
+        accParams.insert(ACTION_PARAMETER_VS_BRAKE_WARNING);
+        accParams.insert(ACTION_PARAMETER_UNAVAILABLE);
+        return accParams;
+    }
 };
 
 #endif
