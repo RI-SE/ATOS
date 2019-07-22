@@ -9,8 +9,6 @@ Action::ActionReturnCode_t ISOAction::execute(void)
     if (remainingAllowedRuns == 0)
         return NO_REMAINING_RUNS;
     else {
-        LogMessage(LOG_LEVEL_DEBUG, "Action ID %u triggered", actionID);
-
         data.actionID = actionID;
         data.delayTime_qms = actionDelayTime_qms;
         data.ip = targetObjAddr;

@@ -39,6 +39,8 @@ add_library(util
 add_library(Trigger
     inc/trigger.h
     src/trigger.cpp
+    inc/isotrigger.h
+    src/isotrigger.cpp
     inc/booleantrigger.h
     src/booleantrigger.cpp
     inc/braketrigger.h
@@ -55,19 +57,17 @@ add_library(Action
 add_library(Scenario
     inc/scenario.h
     src/scenario.cpp
-)
-
-add_library(Causality
     inc/causality.h
     src/causality.cpp
 )
+
 
 add_executable(ScenarioControl src/main.cpp)
 
 install(TARGETS ScenarioControl DESTINATION bin)
 
 target_link_libraries(ScenarioControl MaestroTime MaestroLogging util Scenario)
-target_link_libraries(Scenario Causality Trigger Action)
+target_link_libraries(Scenario Trigger Action)
 target_link_libraries(util MQBus MaestroTime MaestroLogging)
 target_link_libraries(MQBus rt m)
 
