@@ -48,6 +48,9 @@
 #define PRIO_COMM_CONTROL 180
 #define PRIO_COMM_ABORT 60
 #define PRIO_COMM_EXAC 70
+#define PRIO_COMM_ACCM 80
+#define PRIO_COMM_TREO 70
+#define PRIO_COMM_TRCM 80
 #define PRIO_COMM_TOM 90
 #define PRIO_COMM_INIT 110
 #define PRIO_COMM_CONNECT 110
@@ -1967,6 +1970,15 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
     case COMM_EXAC:
         uiMessagePrio = PRIO_COMM_EXAC;
         break;
+    case COMM_ACCM:
+        uiMessagePrio = PRIO_COMM_ACCM;
+        break;
+    case COMM_TREO:
+        uiMessagePrio = PRIO_COMM_TREO;
+        break;
+    case COMM_TRCM:
+        uiMessagePrio = PRIO_COMM_TRCM;
+        break;
     default:
         util_error("Unknown command");
     }
@@ -3219,6 +3231,136 @@ I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataTy
         LogPrint("MessageLength = %d", monitorData->MONR.Header.MessageLengthU32);
         LogPrint("GPSQMSOW = %u",monitorData->MONR.GPSQmsOfWeekU32);
     }
+
+    return 0;
+}
+
+/*!
+ * \brief UtilPopulateTREODataStructFromMQ Fills TREO data struct with COMM_TREO MQ message contents
+ * \param rawTREO MQ data
+ * \param rawTREOsize size of MQ data
+ * \param treoData Data struct to be filled
+ */
+I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData)
+{
+    C8 *rdPtr = rawTREO;
+
+    if (rawTREOsize < sizeof(TREOData))
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Raw TREO array too small to hold all necessary TREO data");
+        return -1;
+    }
+
+    memcpy(&treoData->triggerID, rdPtr, sizeof(treoData->triggerID));
+    rdPtr += sizeof(treoData->triggerID);
+
+    memcpy(&treoData->timestamp_qmsow, rdPtr, sizeof(treoData->timestamp_qmsow));
+    rdPtr += sizeof(treoData->timestamp_qmsow);
+
+    memcpy(&treoData->ip, rdPtr, sizeof(treoData->ip));
+    rdPtr += sizeof(treoData->ip);
+
+    return 0;
+}
+
+/*!
+ * \brief UtilPopulateEXACDataStructFromMQ Fills EXAC data struct with COMM_EXAC MQ message contents
+ * \param rawEXAC MQ data
+ * \param rawEXACsize size of MQ data
+ * \param exacData Data struct to be filled
+ */
+I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData)
+{
+    C8 *rdPtr = rawEXAC;
+
+    if (rawEXACsize < sizeof(EXACData))
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Raw EXAC array too small to hold all necessary EXAC data");
+        return -1;
+    }
+
+    memcpy(&exacData->actionID, rdPtr, sizeof(exacData->actionID));
+    rdPtr += sizeof(exacData->actionID);
+
+    memcpy(&exacData->delayTime_qms, rdPtr, sizeof(exacData->delayTime_qms));
+    rdPtr += sizeof(exacData->delayTime_qms);
+
+    memcpy(&exacData->ip, rdPtr, sizeof(exacData->ip));
+    rdPtr += sizeof(exacData->ip);
+
+    return 0;
+}
+
+/*!
+ * \brief UtilPopulateTRCMDataStructFromMQ Fills TRCM data struct with COMM_TRCM MQ message contents
+ * \param rawTRCM MQ data
+ * \param rawTRCMsize size of MQ data
+ * \param trcmData Data struct to be filled
+ */
+I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData)
+{
+    C8 *rdPtr = rawTRCM;
+
+    if (rawTRCMsize < sizeof(TRCMData))
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Raw TRCM array too small to hold all necessary TRCM data");
+        return -1;
+    }
+
+    memcpy(&trcmData->triggerID, rdPtr, sizeof(trcmData->triggerID));
+    rdPtr += sizeof(trcmData->triggerID);
+
+    memcpy(&trcmData->triggerType, rdPtr, sizeof(trcmData->triggerType));
+    rdPtr += sizeof(trcmData->triggerType);
+
+    memcpy(&trcmData->triggerTypeParameter1, rdPtr, sizeof(trcmData->triggerTypeParameter1));
+    rdPtr += sizeof(trcmData->triggerTypeParameter1);
+
+    memcpy(&trcmData->triggerTypeParameter2, rdPtr, sizeof(trcmData->triggerTypeParameter2));
+    rdPtr += sizeof(trcmData->triggerTypeParameter2);
+
+    memcpy(&trcmData->triggerTypeParameter3, rdPtr, sizeof(trcmData->triggerTypeParameter3));
+    rdPtr += sizeof(trcmData->triggerTypeParameter3);
+
+    memcpy(&trcmData->ip, rdPtr, sizeof(trcmData->ip));
+    rdPtr += sizeof(trcmData->ip);
+
+    return 0;
+}
+
+/*!
+ * \brief UtilPopulateACCMDataStructFromMQ Fills ACCM data struct with COMM_ACCM MQ message contents
+ * \param rawACCM MQ data
+ * \param rawACCMsize size of MQ data
+ * \param accmData Data struct to be filled
+ */
+I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *accmData)
+{
+    C8 *rdPtr = rawACCM;
+
+    if (rawACCMsize < sizeof(ACCMData))
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Raw ACCM array too small to hold all necessary ACCM data");
+        return -1;
+    }
+
+    memcpy(&accmData->actionID, rdPtr, sizeof(accmData->actionID));
+    rdPtr += sizeof(accmData->actionID);
+
+    memcpy(&accmData->actionType, rdPtr, sizeof(accmData->actionType));
+    rdPtr += sizeof(accmData->actionType);
+
+    memcpy(&accmData->actionTypeParameter1, rdPtr, sizeof(accmData->actionTypeParameter1));
+    rdPtr += sizeof(accmData->actionTypeParameter1);
+
+    memcpy(&accmData->actionTypeParameter2, rdPtr, sizeof(accmData->actionTypeParameter2));
+    rdPtr += sizeof(accmData->actionTypeParameter2);
+
+    memcpy(&accmData->actionTypeParameter3, rdPtr, sizeof(accmData->actionTypeParameter3));
+    rdPtr += sizeof(accmData->actionTypeParameter3);
+
+    memcpy(&accmData->ip, rdPtr, sizeof(accmData->ip));
+    rdPtr += sizeof(accmData->ip);
 
     return 0;
 }
