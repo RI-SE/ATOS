@@ -59,6 +59,7 @@ static int ReadLogLine(FILE *fd, char *Buffer);
 static int CountFileRows(FILE *fd);
 void vLogCommand(enum COMMAND command, char *commandData, struct timeval recvTime, char *pcLogFile, char *pcLogFileComp);
 void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval recvTime, char *pcLogFile, char *pcLogFileComp);
+void vLogScenarioControlData(enum COMMAND command, unsigned char *commandData, ssize_t commandDatalen, struct timeval recvTime, char *pcLogFile, char *pcLogFileComp);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -147,6 +148,15 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
 
             break;
+
+        case COMM_TRCM:
+        case COMM_ACCM:
+        case COMM_TREO:
+        case COMM_EXAC:
+            if (!isFirstInit)
+                vLogScenarioControlData(command, busReceiveBuffer, receivedBytes, recvTime, pcLogFile, pcLogFileComp);
+            else
+                LogMessage(LOG_LEVEL_WARNING, "Received command %u while log uninitialized", command);
 
         case COMM_STRT:
         case COMM_ARMD:
@@ -625,6 +635,74 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
     fprintf(filefd, "%d;%d;", monitorData.MONR.LongitudinalSpeedI16, monitorData.MONR.LateralSpeedI16);
     fprintf(filefd, "%d;%d;", monitorData.MONR.LongitudinalAccI16, monitorData.MONR.LateralAccI16);
     fprintf(filefd, "%u;%u;%u;%u;\n", monitorData.MONR.DriveDirectionU8, monitorData.MONR.StateU8, monitorData.MONR.ReadyToArmU8, monitorData.MONR.ErrorStatusU8);
+
+    fclose(filefd);
+}
+
+
+void vLogScenarioControlData(enum COMMAND command, unsigned char *commandData, ssize_t commandDatalen, struct timeval recvTime, char *pcLogFile, char *pcLogFileComp)
+{
+    FILE *filefd;
+    char DateBuffer[MAX_DATE_STRLEN];
+    char ipStringBuffer[INET_ADDRSTRLEN];
+    EXACData exac;
+    ACCMData accm;
+    TREOData treo;
+    TRCMData trcm;
+
+    struct timeval messageTimeField, systemTime;
+    const int debug = 0;
+
+    if (commandDatalen < 0)
+    {
+        LogMessage(LOG_LEVEL_WARNING, "Cannot log scenario control data with negative length");
+        return;
+    }
+
+    TimeSetToCurrentSystemTime(&systemTime);
+
+    //UtilPopulateMonitorDataStruct(commandData, (size_t)(commandDatalen), &monitorData, debug);
+    //TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monitorData.MONR.GPSQmsOfWeekU32);
+
+    bzero(DateBuffer, sizeof(DateBuffer));
+    TimeGetAsDateTime(&recvTime, "%Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof(DateBuffer));
+
+    filefd = fopen(pcLogFile, ACCESS_MODE_APPEND_AND_READ);
+    if (filefd == NULL)
+    {
+        LogMessage(LOG_LEVEL_ERROR,"Unable to open file <%s>",pcLogFile);
+        return;
+    }
+
+    fprintf(filefd, "%s;%ld;%u;", DateBuffer, TimeGetAsUTCms(&recvTime), (char)command);
+
+    switch (command)
+    {
+    case COMM_TREO:
+        UtilPopulateTREODataStructFromMQ(commandData, (size_t)commandDatalen, &treo);
+        TimeSetToGPStime(&messageTimeField, TimeGetAsGPSweek(&systemTime), treo.timestamp_qmsow);
+        fprintf(filefd, "%u;%ld;", treo.triggerID, TimeGetAsGPSms(&messageTimeField));
+        fprintf(filefd, "%s", inet_ntop(AF_INET,&treo.ip,ipStringBuffer,sizeof(ipStringBuffer)));
+        break;
+    case COMM_EXAC:
+        UtilPopulateEXACDataStructFromMQ(commandData, (size_t)commandDatalen, &exac);
+        TimeSetToUTCms(&messageTimeField, exac.delayTime_qms*4);
+        fprintf(filefd, "%u;%ld;", exac.actionID, TimeGetAsUTCms(&messageTimeField));
+        fprintf(filefd, "%s", inet_ntop(AF_INET,&exac.ip,ipStringBuffer,sizeof(ipStringBuffer)));
+        break;
+    case COMM_TRCM:
+        UtilPopulateTRCMDataStructFromMQ(commandData, (size_t)commandDatalen, &trcm);
+        fprintf(filefd, "%u;%u;%u;%u;%u", trcm.triggerID, trcm.triggerType,
+                trcm.triggerTypeParameter1, trcm.triggerTypeParameter2, trcm.triggerTypeParameter3);
+        fprintf(filefd, "%s", inet_ntop(AF_INET,&trcm.ip,ipStringBuffer,sizeof(ipStringBuffer)));
+    case COMM_ACCM:
+        UtilPopulateACCMDataStructFromMQ(commandData, (size_t)commandDatalen, &accm);
+        fprintf(filefd, "%u;%u;%u;%u;%u", accm.actionID, accm.actionType,
+                accm.actionTypeParameter1, accm.actionTypeParameter2, accm.actionTypeParameter3);
+        fprintf(filefd, "%s", inet_ntop(AF_INET,&accm.ip,ipStringBuffer,sizeof(ipStringBuffer)));
+    default:
+        LogMessage(LOG_LEVEL_ERROR,"Unhandled command in scenario control logging: %u", (unsigned char)command);
+    }
 
     fclose(filefd);
 }
