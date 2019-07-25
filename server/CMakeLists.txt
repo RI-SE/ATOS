@@ -61,6 +61,7 @@ add_library(MQBus
 add_library(util
   src/util.c
   inc/util.h
+  inc/iso22133.h
 )
 
 # Create library
