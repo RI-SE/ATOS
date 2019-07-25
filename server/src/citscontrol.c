@@ -36,6 +36,7 @@
 #include "MQTTClient.h"
 #include "citscontrol.h"
 #include "util.h"
+#include "iso22133.h"
 
 
 
@@ -79,7 +80,7 @@ void connlost_mqtt(void *context, char *cause);
 bool validate_constraints(asn_TYPE_descriptor_t *type_descriptor, const void *struct_ptr) ;
 
 void *encode_and_decode_object(asn_TYPE_descriptor_t *type_descriptor, void *struct_ptr) ;
-
+int parseActionConfiguration(ACCMData config);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -114,6 +115,8 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     MonitorDataType mqMONRdata;
     MONRType MONRMessage;
     MONRType LastMONRMessage;
+    ACCMData actionConfig;
+    EXACData actionData;
 
     asn_enc_rval_t ec;
 
@@ -239,6 +242,14 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             camTimeCycle++;
 
+            break;
+        case COMM_ACCM:
+            // TODO: settings configuration
+            UtilPopulateACCMDataStructFromMQ(busReceiveBuffer, sizeof(busReceiveBuffer), &actionConfig);
+            parseActionConfiguration(actionConfig);
+            break;
+        case COMM_EXAC:
+            // TODO: send mqtt message
             break;
         case COMM_OBC_STATE:
             break;
@@ -537,5 +548,26 @@ I32 sendDENM(DENM_t* denm){
     return 1;
 }
 
+
+int parseActionConfiguration(ACCMData config)
+{
+    if (config.actionType == ACTION_INFRASTRUCTURE)
+    {
+        // Note that this ACCM may or may not be the first received (TODO: handle!)
+        if (config.actionTypeParameter1 == ACTION_PARAMETER_VS_BRAKE_WARNING)
+        {
+            // TODO: Save the ID
+        }
+
+        if (config.actionTypeParameter2 != ACTION_PARAMETER_UNAVAILABLE)
+            LogMessage(LOG_LEVEL_WARNING, "Ignored ACCM parameter 2");
+        if (config.actionTypeParameter3 != ACTION_PARAMETER_UNAVAILABLE)
+            LogMessage(LOG_LEVEL_WARNING, "Ignored ACCM parameter 3");
+
+        return 0;
+    }
+    else
+        return 1;
+}
 
 
