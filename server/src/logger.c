@@ -680,26 +680,32 @@ void vLogScenarioControlData(enum COMMAND command, unsigned char *commandData, s
     {
     case COMM_TREO:
         UtilPopulateTREODataStructFromMQ(commandData, (size_t)commandDatalen, &treo);
+        LogMessage(LOG_LEVEL_INFO,"Trigger event occurred, ID %u",treo.triggerID);
         TimeSetToGPStime(&messageTimeField, TimeGetAsGPSweek(&systemTime), treo.timestamp_qmsow);
         fprintf(filefd, "%u;%ld;", treo.triggerID, TimeGetAsGPSms(&messageTimeField));
         fprintf(filefd, "%s", inet_ntop(AF_INET,&treo.ip,ipStringBuffer,sizeof(ipStringBuffer)));
         break;
     case COMM_EXAC:
         UtilPopulateEXACDataStructFromMQ(commandData, (size_t)commandDatalen, &exac);
+        LogMessage(LOG_LEVEL_INFO,"Action execute request detected, ID %u",exac.actionID);
         TimeSetToUTCms(&messageTimeField, exac.delayTime_qms*4);
         fprintf(filefd, "%u;%ld;", exac.actionID, TimeGetAsUTCms(&messageTimeField));
         fprintf(filefd, "%s", inet_ntop(AF_INET,&exac.ip,ipStringBuffer,sizeof(ipStringBuffer)));
         break;
     case COMM_TRCM:
         UtilPopulateTRCMDataStructFromMQ(commandData, (size_t)commandDatalen, &trcm);
+        LogMessage(LOG_LEVEL_INFO,"Trigger configuration for ID %u received, of type %u",trcm.triggerID, trcm.triggerType);
         fprintf(filefd, "%u;%u;%u;%u;%u", trcm.triggerID, trcm.triggerType,
                 trcm.triggerTypeParameter1, trcm.triggerTypeParameter2, trcm.triggerTypeParameter3);
         fprintf(filefd, "%s", inet_ntop(AF_INET,&trcm.ip,ipStringBuffer,sizeof(ipStringBuffer)));
+        break;
     case COMM_ACCM:
         UtilPopulateACCMDataStructFromMQ(commandData, (size_t)commandDatalen, &accm);
+        LogMessage(LOG_LEVEL_INFO,"Action configuration for ID %u received, of type %u",accm.actionID, accm.actionType);
         fprintf(filefd, "%u;%u;%u;%u;%u", accm.actionID, accm.actionType,
                 accm.actionTypeParameter1, accm.actionTypeParameter2, accm.actionTypeParameter3);
         fprintf(filefd, "%s", inet_ntop(AF_INET,&accm.ip,ipStringBuffer,sizeof(ipStringBuffer)));
+        break;
     default:
         LogMessage(LOG_LEVEL_ERROR,"Unhandled command in scenario control logging: %u", (unsigned char)command);
     }
