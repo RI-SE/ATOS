@@ -111,6 +111,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
     enum COMMAND command;
     int mqtt_response_code = 0;
+    MonitorDataType mqMONRdata;
     MONRType MONRMessage;
     MONRType LastMONRMessage;
 
@@ -190,63 +191,66 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         // Handle MQ messages
 
         bzero(busReceiveBuffer, sizeof(busReceiveBuffer));
-               (void)iCommRecv(&command,busReceiveBuffer, sizeof(busReceiveBuffer), NULL);
-               if (command == COMM_ABORT)
-               {
+        (void)iCommRecv(&command,busReceiveBuffer, sizeof(busReceiveBuffer), NULL);
 
-               }
+        if (command == COMM_ABORT)
+        {
 
-               if(command == COMM_EXIT)
-               {
-                   iExit = 1;
-                   printf("citscontrol exiting.\n");
+        }
 
-                   (void)iCommClose();
-               }
-        //usleep(100000);
-               switch (command)
-               {
-               case COMM_INIT:
+        if(command == COMM_EXIT)
+        {
+            iExit = 1;
+            printf("citscontrol exiting.\n");
 
-                   break;
-               case COMM_MONI:
-                   // Ignore old style MONR data
-                   break;
-               case COMM_MONR:
-
-                   UtilPopulateMONRStruct(busReceiveBuffer, sizeof(busReceiveBuffer), &MONRMessage, 0);
-
-                   if(camTimeCycle == CHECK_PERIOD)
-                   {
-                           I16 distanceDelta = UtilCoordinateDistance(LastMONRMessage.XPositionI32, LastMONRMessage.YPositionI32, MONRMessage.XPositionI32, MONRMessage.YPositionI32);
-                           I16 headingDelta = abs(LastMONRMessage.HeadingU16 - MONRMessage.HeadingU16);
-                           I16 speedDelta = abs((sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16))) - (lastSpeed));
+            (void)iCommClose();
+        }
 
 
-                           if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
-                               generateCAMMessage(&MONRMessage, lastCam);
-                               generateDENMMessage(&MONRMessage, lastDenm);
-                               sendCAM(lastCam);
-                               sendDENM(lastDenm);
-                           }
-                       lastSpeed = sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16));
-                       LastMONRMessage = MONRMessage;
-                       camTimeCycle = 0;
-                   }
-                   camTimeCycle++;
+        switch (command)
+        {
+        case COMM_INIT:
 
-                   break;
-               case COMM_OBC_STATE:
-                   break;
-               case COMM_CONNECT:
-                   break;
-               case COMM_LOG:
-                   break;
-               case COMM_INV:
-                   break;
-               default:
-                   LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
-       }
+            break;
+        case COMM_MONI:
+            LogMessage(LOG_LEVEL_DEBUG, "Ignored old style MONR data");
+            break;
+        case COMM_MONR:
+
+            UtilPopulateMonitorDataStruct(busReceiveBuffer, sizeof(busReceiveBuffer),&mqMONRdata,0);
+            MONRMessage = mqMONRdata.MONR;
+
+            if(camTimeCycle == CHECK_PERIOD)
+            {
+                I16 distanceDelta = UtilCoordinateDistance(LastMONRMessage.XPositionI32, LastMONRMessage.YPositionI32, MONRMessage.XPositionI32, MONRMessage.YPositionI32);
+                I16 headingDelta = abs(LastMONRMessage.HeadingU16 - MONRMessage.HeadingU16);
+                I16 speedDelta = abs((sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16))) - (lastSpeed));
+
+
+                if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
+                    generateCAMMessage(&MONRMessage, lastCam);
+                    generateDENMMessage(&MONRMessage, lastDenm);
+                    sendCAM(lastCam);
+                    sendDENM(lastDenm);
+                }
+                lastSpeed = sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16));
+                LastMONRMessage = MONRMessage;
+                camTimeCycle = 0;
+            }
+            camTimeCycle++;
+
+            break;
+        case COMM_OBC_STATE:
+            break;
+        case COMM_CONNECT:
+            break;
+        case COMM_LOG:
+            break;
+        case COMM_INV:
+            break;
+        default:
+            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
+        }
     }
 }
 
