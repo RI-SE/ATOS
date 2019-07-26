@@ -80,7 +80,8 @@ void connlost_mqtt(void *context, char *cause);
 bool validate_constraints(asn_TYPE_descriptor_t *type_descriptor, const void *struct_ptr) ;
 
 void *encode_and_decode_object(asn_TYPE_descriptor_t *type_descriptor, void *struct_ptr) ;
-int parseActionConfiguration(ACCMData config);
+int parseActionConfiguration(ACCMData config, uint16_t* actionIDs, unsigned int* nConfiguredActions);
+bool isActionValid(EXACData exac, uint16_t* actionIDs, unsigned int nConfiguredActions);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -117,6 +118,8 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     MONRType LastMONRMessage;
     ACCMData actionConfig;
     EXACData actionData;
+    uint16_t* storedActionIDs = NULL;
+    unsigned int numberOfStoredActionIDs = 0;
 
     asn_enc_rval_t ec;
 
@@ -135,8 +138,8 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     TimeType time;
 
     I16 lastSpeed = 0;
-    LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
-    LogMessage(LOG_LEVEL_INFO, "CITS running with PID: %i", getpid());
+    LogInit(MODULE_NAME,logLevel);
+    LogMessage(LOG_LEVEL_INFO, "C-ITS control running with PID: %i", getpid());
 
     UtilGetMillisecond(&time);
 
@@ -150,10 +153,8 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     lastCam->cam.camParameters.basicContainer.referencePosition.latitude = 0;
     lastCam->cam.camParameters.basicContainer.referencePosition.longitude = 0;
 
-    (void)iCommInit();
-    LogInit(MODULE_NAME,LOG_LEVEL_INFO);
-    LogMessage(LOG_LEVEL_INFO, "Supervision running with PID: %i", getpid());
-
+    if (iCommInit())
+        util_error("Unable to connect to message bus");
 
     int monrCounter = 0;
     while(!iExit)
@@ -225,31 +226,39 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
             if(camTimeCycle == CHECK_PERIOD)
             {
-                I16 distanceDelta = UtilCoordinateDistance(LastMONRMessage.XPositionI32, LastMONRMessage.YPositionI32, MONRMessage.XPositionI32, MONRMessage.YPositionI32);
-                I16 headingDelta = abs(LastMONRMessage.HeadingU16 - MONRMessage.HeadingU16);
-                I16 speedDelta = abs((sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16))) - (lastSpeed));
+                //I16 distanceDelta = UtilCoordinateDistance(LastMONRMessage.XPositionI32, LastMONRMessage.YPositionI32, MONRMessage.XPositionI32, MONRMessage.YPositionI32);
+                //I16 headingDelta = abs(LastMONRMessage.HeadingU16 - MONRMessage.HeadingU16);
+                //I16 speedDelta = abs((sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16))) - (lastSpeed));
 
 
-                if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
-                    generateCAMMessage(&MONRMessage, lastCam);
-                    generateDENMMessage(&MONRMessage, lastDenm);
-                    sendCAM(lastCam);
-                    sendDENM(lastDenm);
-                }
-                lastSpeed = sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16));
-                LastMONRMessage = MONRMessage;
-                camTimeCycle = 0;
+                //if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
+                //    generateCAMMessage(&MONRMessage, lastCam);
+                //    generateDENMMessage(&MONRMessage, lastDenm);
+                //    sendCAM(lastCam);
+                //    sendDENM(lastDenm);
+                //}
+                //lastSpeed = sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16));
+                //LastMONRMessage = MONRMessage;
+                //camTimeCycle = 0;
             }
             camTimeCycle++;
 
             break;
         case COMM_ACCM:
-            // TODO: settings configuration
+            LogMessage(LOG_LEVEL_INFO,"Received action configuration");
             UtilPopulateACCMDataStructFromMQ(busReceiveBuffer, sizeof(busReceiveBuffer), &actionConfig);
-            parseActionConfiguration(actionConfig);
+            parseActionConfiguration(actionConfig, storedActionIDs, &numberOfStoredActionIDs);
             break;
         case COMM_EXAC:
-            // TODO: send mqtt message
+            LogMessage(LOG_LEVEL_INFO, "Received EXAC");
+            UtilPopulateEXACDataStructFromMQ(busReceiveBuffer, sizeof(busReceiveBuffer), &actionData);
+            if (isActionValid(actionData, storedActionIDs, numberOfStoredActionIDs)
+                    && state != DISCONNECTED && state != INIT)
+            {
+                LogMessage(LOG_LEVEL_INFO,"Received action request: sending DENM message");
+                // TODO: Start timer
+                // TODO: On timer, send DENM
+            }
             break;
         case COMM_OBC_STATE:
             break;
@@ -548,26 +557,68 @@ I32 sendDENM(DENM_t* denm){
     return 1;
 }
 
-
-int parseActionConfiguration(ACCMData config)
+/*!
+ * \brief parseActionConfiguration Parses an ACCM message into an action ID if it is of the infrastructure type
+ * \param config ACCM data struct
+ * \param actionIDs Pointer to a dynamically allocated array of actionIDs (may be null if empty)
+ * \param nConfiguredActions Length of the actionID array
+ * \return 0 if ACCM was decoded into an action, 1 if ACCM contained irrelevant action, -1 otherwise
+ */
+int parseActionConfiguration(ACCMData config, uint16_t* actionIDs, unsigned int* nConfiguredActions)
 {
+    int retval = -1;
+
     if (config.actionType == ACTION_INFRASTRUCTURE)
     {
-        // Note that this ACCM may or may not be the first received (TODO: handle!)
-        if (config.actionTypeParameter1 == ACTION_PARAMETER_VS_BRAKE_WARNING)
+        switch (config.actionTypeParameter1)
         {
-            // TODO: Save the ID
+        case ACTION_PARAMETER_VS_BRAKE_WARNING:
+            actionIDs = realloc(actionIDs, (*nConfiguredActions+1)*sizeof(uint16_t));
+            actionIDs[*nConfiguredActions] = config.actionID;
+            (*nConfiguredActions)++;
+            retval = 0;
+            break;
+        case ACTION_PARAMETER_UNAVAILABLE:
+            LogMessage(LOG_LEVEL_WARNING, "First parameter of ACCM message is empty");
+            retval = 1;
+            break;
+        default:
+            LogMessage(LOG_LEVEL_WARNING, "Ignored ACCM parameter 1",config.actionTypeParameter1);
+            retval = 1;
+            break;
         }
 
         if (config.actionTypeParameter2 != ACTION_PARAMETER_UNAVAILABLE)
+        {
             LogMessage(LOG_LEVEL_WARNING, "Ignored ACCM parameter 2");
+            retval = 1;
+        }
         if (config.actionTypeParameter3 != ACTION_PARAMETER_UNAVAILABLE)
+        {
             LogMessage(LOG_LEVEL_WARNING, "Ignored ACCM parameter 3");
-
-        return 0;
+            retval = 1;
+        }
     }
     else
-        return 1;
+        retval = 1;
+
+    return retval;
 }
 
+/*!
+ * \brief isActionValid Checks if specified action is among the configured actions
+ * \param exac Action to check
+ * \param actionIDs Array of configured actions
+ * \param nConfiguredActions Length of actionIDs list
+ * \return True if action is among configured actions, false otherwise
+ */
+bool isActionValid(EXACData exac, uint16_t* actionIDs, unsigned int nConfiguredActions)
+{
+    for (unsigned int i = 0; i < nConfiguredActions; ++i)
+    {
+        if (exac.actionID == actionIDs[i])
+            return true;
+    }
+    return false;
+}
 
