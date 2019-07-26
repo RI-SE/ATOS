@@ -75,12 +75,12 @@ void Scenario::parseScenarioFile(std::ifstream &file)
     in_addr brakeObjectIP;
     inet_pton(AF_INET, brakeObjectIPString, &brakeObjectIP);
 
-    bt->appendParameter(Trigger::TRIGGER_PARAMETER_PRESSED);
+    bt->appendParameter(Trigger::TriggerParameter_t::TRIGGER_PARAMETER_PRESSED);
     bt->parseParameters();
 
     bt->setObjectIP(brakeObjectIP.s_addr);
 
-    mqttAction->appendParameter(Action::ACTION_PARAMETER_VS_BRAKE_WARNING);
+    mqttAction->appendParameter(Action::ActionParameter_t::ACTION_PARAMETER_VS_BRAKE_WARNING);
     mqttAction->setObjectIP(0);
 
     addTrigger(bt);
