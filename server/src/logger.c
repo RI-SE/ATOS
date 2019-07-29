@@ -688,8 +688,8 @@ void vLogScenarioControlData(enum COMMAND command, unsigned char *commandData, s
     case COMM_EXAC:
         UtilPopulateEXACDataStructFromMQ(commandData, (size_t)commandDatalen, &exac);
         LogMessage(LOG_LEVEL_INFO,"Action execute request detected, ID %u",exac.actionID);
-        TimeSetToUTCms(&messageTimeField, exac.delayTime_qms*4);
-        fprintf(filefd, "%u;%ld;", exac.actionID, TimeGetAsUTCms(&messageTimeField));
+        TimeSetToGPStime(&messageTimeField,TimeGetAsGPSweek(&systemTime),exac.executionTime_qmsoW);
+        fprintf(filefd, "%u;%ld;", exac.actionID, TimeGetAsGPSms(&messageTimeField));
         fprintf(filefd, "%s", inet_ntop(AF_INET,&exac.ip,ipStringBuffer,sizeof(ipStringBuffer)));
         break;
     case COMM_TRCM:

@@ -191,9 +191,9 @@ typedef struct
     uint16_t actionIDValueID;
     uint16_t actionIDContentLength;
     uint16_t actionID;
-    uint16_t delayTime_qmsValueID;
-    uint16_t delayTime_qmsContentLength;
-    uint32_t delayTime_qms;
+    uint16_t executionTime_qmsoWValueID;
+    uint16_t executionTime_qmsoWContentLength;
+    uint32_t executionTime_qmsoW;
     FooterType footer;
 } EXACType;
 

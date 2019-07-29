@@ -628,7 +628,7 @@ typedef struct
 typedef struct
 {
     uint16_t actionID;
-    uint32_t delayTime_qms;
+    uint32_t executionTime_qmsoW;
     in_addr_t ip;
 } EXACData; //!< Data type for MQ message
 

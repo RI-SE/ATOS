@@ -2605,14 +2605,14 @@ I32 ObjectControlSendEXACMessage(EXACData *EXAC, I32 *socket, U8 debug)
     ptr += sizeof(isoEXAC.actionID);
 
     // Copy EXAC action execution time to send buffer
-    memcpy(ptr, &isoEXAC.delayTime_qmsValueID, sizeof(isoEXAC.delayTime_qmsValueID));
-    ptr += sizeof(isoEXAC.delayTime_qmsValueID);
+    memcpy(ptr, &isoEXAC.executionTime_qmsoWValueID, sizeof(isoEXAC.executionTime_qmsoWValueID));
+    ptr += sizeof(isoEXAC.executionTime_qmsoWValueID);
 
-    memcpy(ptr, &isoEXAC.delayTime_qmsContentLength, sizeof(isoEXAC.delayTime_qmsContentLength));
-    ptr += sizeof(isoEXAC.delayTime_qmsContentLength);
+    memcpy(ptr, &isoEXAC.executionTime_qmsoWContentLength, sizeof(isoEXAC.executionTime_qmsoWContentLength));
+    ptr += sizeof(isoEXAC.executionTime_qmsoWContentLength);
 
-    memcpy(ptr, &isoEXAC.delayTime_qms, sizeof(isoEXAC.delayTime_qms));
-    ptr += sizeof(isoEXAC.delayTime_qms);
+    memcpy(ptr, &isoEXAC.executionTime_qmsoW, sizeof(isoEXAC.executionTime_qmsoW));
+    ptr += sizeof(isoEXAC.executionTime_qmsoW);
 
 
     // Copy EXAC footer to send buffer
@@ -2706,15 +2706,15 @@ I32 ObjectControlBuildEXACMessage(EXACData *mqEXACData, EXACType *EXAC, U8 debug
 
     // Data fields
     EXAC->actionID = mqEXACData->actionID;
-    EXAC->delayTime_qms = mqEXACData->delayTime_qms == 0 ? 0 : TimeGetAsGPSqmsOfWeek(&systemTime) + mqEXACData->delayTime_qms;
+    EXAC->executionTime_qmsoW = mqEXACData->executionTime_qmsoW;
 
     // Value ID fields
     EXAC->actionIDValueID = VALUE_ID_ACTION_ID;
-    EXAC->delayTime_qmsValueID = VALUE_ID_ACTION_EXECUTE_TIME;
+    EXAC->executionTime_qmsoWValueID = VALUE_ID_ACTION_EXECUTE_TIME;
 
     // Content length fields
     EXAC->actionIDContentLength = sizeof(EXAC->actionID);
-    EXAC->delayTime_qmsContentLength = sizeof(EXAC->delayTime_qms);
+    EXAC->executionTime_qmsoWContentLength = sizeof(EXAC->executionTime_qmsoW);
 
     // Footer (TODO)
     EXAC->footer.Crc = 0;
@@ -2723,7 +2723,7 @@ I32 ObjectControlBuildEXACMessage(EXACData *mqEXACData, EXACType *EXAC, U8 debug
     {
         LogPrint("EXAC (%u bytes):\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x", sizeof(EXACType),
                  EXAC->actionIDValueID, EXAC->actionIDContentLength, EXAC->actionID,
-                 EXAC->delayTime_qmsValueID, EXAC->delayTime_qmsContentLength, EXAC->delayTime_qms);
+                 EXAC->executionTime_qmsoWValueID, EXAC->executionTime_qmsoWContentLength, EXAC->executionTime_qmsoW);
     }
 
     return sizeof(EXACType);
