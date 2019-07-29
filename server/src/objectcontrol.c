@@ -193,8 +193,9 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
 I32 ObjectControlSendDTMMessage(C8 *DTMData, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug);
 I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 ObjectControlBuildASPMessage(C8* MessageBuffer, ASPType *ASPData, U8 debug);
-I32 ObjectControlBuildACCMMessage(ACCMData *mqEXACData, ACCMType *ACCM, U8 debug);
+I32 ObjectControlBuildACCMMessage(ACCMData *mqACCMData, ACCMType *ACCM, U8 debug);
 I32 ObjectControlBuildEXACMessage(EXACData *mqEXACData, EXACType *EXAC, U8 debug);
+I32 ObjectControlBuildTRCMMessage(TRCMData *mqTRCMData, TRCMType *TRCM, U8 debug);
 I32 ObjectControlSendACCMMessage(ACCMData *ACCM, I32 *socket, U8 debug);
 I32 ObjectControlSendTRCMMessage(TRCMData *TRCM, I32 *socket, U8 debug);
 I32 ObjectControlSendEXACMessage(EXACData *EXAC, I32 *socket, U8 debug);
@@ -2357,27 +2358,267 @@ I32 ObjectControlBuildASPMessage(C8* MessageBuffer, ASPType *ASPData, U8 debug)
 }
 
 
-
+/*!
+ * \brief ObjectControlSendACCMMessage Sends ACCM data, reformatted to an ISO compliant message, to specified TCP socket
+ * \param ACCM ACCM data from message bus
+ * \param socket Socket where to send ACCM
+ * \param debug Debug flag
+ * \return Length of sent message
+ */
 I32 ObjectControlSendACCMMessage(ACCMData *ACCM, I32 *socket, U8 debug)
 {
     ACCMType isoACCM;
-    ObjectControlBuildACCMMessage(ACCM, &isoACCM, debug);
-    U16 crc = 0;
+    C8 messageBuffer[sizeof(isoACCM)];
+    C8* ptr = messageBuffer;
+    int messageSize = 0;
 
-    TrajBuffer[MessageLength] = (U8)(CrcU16);
-    TrajBuffer[MessageLength+1] = (U8)(CrcU16 >> 8);
-    MessageLength = MessageLength + 2;
-    UtilSendTCPData("Object Control", TrajBuffer, MessageLength, Socket, 0);
+    ObjectControlBuildACCMMessage(ACCM, &isoACCM, debug);
+
+    // Copy ACCM header to send buffer
+    memcpy(ptr, &isoACCM.header.SyncWordU16, sizeof(isoACCM.header.SyncWordU16));
+    ptr += sizeof(isoACCM.header.SyncWordU16);
+
+    memcpy(ptr, &isoACCM.header.TransmitterIdU8, sizeof(isoACCM.header.TransmitterIdU8));
+    ptr += sizeof(isoACCM.header.TransmitterIdU8);
+
+    memcpy(ptr, &isoACCM.header.MessageCounterU8, sizeof(isoACCM.header.MessageCounterU8));
+    ptr += sizeof(isoACCM.header.MessageCounterU8);
+
+    memcpy(ptr, &isoACCM.header.AckReqProtVerU8, sizeof(isoACCM.header.AckReqProtVerU8));
+    ptr += sizeof(isoACCM.header.AckReqProtVerU8);
+
+    memcpy(ptr, &isoACCM.header.MessageIdU16, sizeof(isoACCM.header.MessageIdU16));
+    ptr += sizeof(isoACCM.header.MessageIdU16);
+
+    memcpy(ptr, &isoACCM.header.MessageLengthU32, sizeof(isoACCM.header.MessageLengthU32));
+    ptr += sizeof(isoACCM.header.MessageLengthU32);
+
+
+    // Copy ACCM action ID to send buffer
+    memcpy(ptr, &isoACCM.actionIDValueID, sizeof(isoACCM.actionIDValueID));
+    ptr += sizeof(isoACCM.actionIDValueID);
+
+    memcpy(ptr, &isoACCM.actionIDContentLength, sizeof(isoACCM.actionIDContentLength));
+    ptr += sizeof(isoACCM.actionIDContentLength);
+
+    memcpy(ptr, &isoACCM.actionID, sizeof(isoACCM.actionID));
+    ptr += sizeof(isoACCM.actionID);
+
+    // Copy ACCM action type to send buffer
+    memcpy(ptr, &isoACCM.actionTypeValueID, sizeof(isoACCM.actionTypeValueID));
+    ptr += sizeof(isoACCM.actionTypeValueID);
+
+    memcpy(ptr, &isoACCM.actionTypeContentLength, sizeof(isoACCM.actionTypeContentLength));
+    ptr += sizeof(isoACCM.actionTypeContentLength);
+
+    memcpy(ptr, &isoACCM.actionType, sizeof(isoACCM.actionType));
+    ptr += sizeof(isoACCM.actionType);
+
+    // Copy ACCM action parameter 1 to send buffer
+    memcpy(ptr, &isoACCM.actionTypeParameter1ValueID, sizeof(isoACCM.actionTypeParameter1ValueID));
+    ptr += sizeof(isoACCM.actionTypeParameter1ValueID);
+
+    memcpy(ptr, &isoACCM.actionTypeParameter1ContentLength, sizeof(isoACCM.actionTypeParameter1ContentLength));
+    ptr += sizeof(isoACCM.actionTypeParameter1ContentLength);
+
+    memcpy(ptr, &isoACCM.actionTypeParameter1, sizeof(isoACCM.actionTypeParameter1));
+    ptr += sizeof(isoACCM.actionTypeParameter1);
+
+    // Copy ACCM action parameter 2 to send buffer
+    memcpy(ptr, &isoACCM.actionTypeParameter2ValueID, sizeof(isoACCM.actionTypeParameter2ValueID));
+    ptr += sizeof(isoACCM.actionTypeParameter2ValueID);
+
+    memcpy(ptr, &isoACCM.actionTypeParameter2ContentLength, sizeof(isoACCM.actionTypeParameter2ContentLength));
+    ptr += sizeof(isoACCM.actionTypeParameter2ContentLength);
+
+    memcpy(ptr, &isoACCM.actionTypeParameter2, sizeof(isoACCM.actionTypeParameter2));
+    ptr += sizeof(isoACCM.actionTypeParameter2);
+
+    // Copy ACCM action parameter 3 to send buffer
+    memcpy(ptr, &isoACCM.actionTypeParameter3ValueID, sizeof(isoACCM.actionTypeParameter3ValueID));
+    ptr += sizeof(isoACCM.actionTypeParameter3ValueID);
+
+    memcpy(ptr, &isoACCM.actionTypeParameter3ContentLength, sizeof(isoACCM.actionTypeParameter3ContentLength));
+    ptr += sizeof(isoACCM.actionTypeParameter3ContentLength);
+
+    memcpy(ptr, &isoACCM.actionTypeParameter3, sizeof(isoACCM.actionTypeParameter3));
+    ptr += sizeof(isoACCM.actionTypeParameter3);
+
+
+    // Copy ACCM footer to send buffer
+    memcpy(ptr, &isoACCM.footer.Crc, sizeof(isoACCM.footer.Crc));
+    ptr += sizeof(isoACCM.footer.Crc);
+
+    messageSize = (int)(ptr-messageBuffer);
+
+    if (messageSize != (int)isoACCM.header.MessageLengthU32) LogMessage(LOG_LEVEL_WARNING, "ACCM message sent with invalid message length");
+
+    UtilSendTCPData(MODULE_NAME, messageBuffer, messageSize, socket, 0);
+
+    return messageSize;
 }
 
+/*!
+ * \brief ObjectControlSendTRCMMessage Sends TRCM data, reformatted to an ISO compliant message, to specified TCP socket
+ * \param ACCM TRCM data from message bus
+ * \param socket Socket where to send TRCM
+ * \param debug Debug flag
+ * \return Length of sent message
+ */
 I32 ObjectControlSendTRCMMessage(TRCMData *TRCM, I32 *socket, U8 debug)
 {
+    TRCMType isoTRCM;
+    C8 messageBuffer[sizeof(isoTRCM)];
+    C8* ptr = messageBuffer;
+    int messageSize = 0;
 
+    ObjectControlBuildTRCMMessage(TRCM, &isoTRCM, debug);
+
+    // Copy TRCM header to send buffer
+    memcpy(ptr, &isoTRCM.header.SyncWordU16, sizeof(isoTRCM.header.SyncWordU16));
+    ptr += sizeof(isoTRCM.header.SyncWordU16);
+
+    memcpy(ptr, &isoTRCM.header.TransmitterIdU8, sizeof(isoTRCM.header.TransmitterIdU8));
+    ptr += sizeof(isoTRCM.header.TransmitterIdU8);
+
+    memcpy(ptr, &isoTRCM.header.MessageCounterU8, sizeof(isoTRCM.header.MessageCounterU8));
+    ptr += sizeof(isoTRCM.header.MessageCounterU8);
+
+    memcpy(ptr, &isoTRCM.header.AckReqProtVerU8, sizeof(isoTRCM.header.AckReqProtVerU8));
+    ptr += sizeof(isoTRCM.header.AckReqProtVerU8);
+
+    memcpy(ptr, &isoTRCM.header.MessageIdU16, sizeof(isoTRCM.header.MessageIdU16));
+    ptr += sizeof(isoTRCM.header.MessageIdU16);
+
+    memcpy(ptr, &isoTRCM.header.MessageLengthU32, sizeof(isoTRCM.header.MessageLengthU32));
+    ptr += sizeof(isoTRCM.header.MessageLengthU32);
+
+
+    // Copy TRCM trigger ID to send buffer
+    memcpy(ptr, &isoTRCM.triggerIDValueID, sizeof(isoTRCM.triggerIDValueID));
+    ptr += sizeof(isoTRCM.triggerIDValueID);
+
+    memcpy(ptr, &isoTRCM.triggerIDContentLength, sizeof(isoTRCM.triggerIDContentLength));
+    ptr += sizeof(isoTRCM.triggerIDContentLength);
+
+    memcpy(ptr, &isoTRCM.triggerID, sizeof(isoTRCM.triggerID));
+    ptr += sizeof(isoTRCM.triggerID);
+
+    // Copy TRCM trigger type to send buffer
+    memcpy(ptr, &isoTRCM.triggerTypeValueID, sizeof(isoTRCM.triggerTypeValueID));
+    ptr += sizeof(isoTRCM.triggerTypeValueID);
+
+    memcpy(ptr, &isoTRCM.triggerTypeContentLength, sizeof(isoTRCM.triggerTypeContentLength));
+    ptr += sizeof(isoTRCM.triggerTypeContentLength);
+
+    memcpy(ptr, &isoTRCM.triggerType, sizeof(isoTRCM.triggerType));
+    ptr += sizeof(isoTRCM.triggerType);
+
+    // Copy TRCM trigger parameter 1 to send buffer
+    memcpy(ptr, &isoTRCM.triggerTypeParameter1ValueID, sizeof(isoTRCM.triggerTypeParameter1ValueID));
+    ptr += sizeof(isoTRCM.triggerTypeParameter1ValueID);
+
+    memcpy(ptr, &isoTRCM.triggerTypeParameter1ContentLength, sizeof(isoTRCM.triggerTypeParameter1ContentLength));
+    ptr += sizeof(isoTRCM.triggerTypeParameter1ContentLength);
+
+    memcpy(ptr, &isoTRCM.triggerTypeParameter1, sizeof(isoTRCM.triggerTypeParameter1));
+    ptr += sizeof(isoTRCM.triggerTypeParameter1);
+
+    // Copy TRCM trigger parameter 2 to send buffer
+    memcpy(ptr, &isoTRCM.triggerTypeParameter2ValueID, sizeof(isoTRCM.triggerTypeParameter2ValueID));
+    ptr += sizeof(isoTRCM.triggerTypeParameter2ValueID);
+
+    memcpy(ptr, &isoTRCM.triggerTypeParameter2ContentLength, sizeof(isoTRCM.triggerTypeParameter2ContentLength));
+    ptr += sizeof(isoTRCM.triggerTypeParameter2ContentLength);
+
+    memcpy(ptr, &isoTRCM.triggerTypeParameter2, sizeof(isoTRCM.triggerTypeParameter2));
+    ptr += sizeof(isoTRCM.triggerTypeParameter2);
+
+    // Copy TRCM trigger parameter 3 to send buffer
+    memcpy(ptr, &isoTRCM.triggerTypeParameter3ValueID, sizeof(isoTRCM.triggerTypeParameter3ValueID));
+    ptr += sizeof(isoTRCM.triggerTypeParameter3ValueID);
+
+    memcpy(ptr, &isoTRCM.triggerTypeParameter3ContentLength, sizeof(isoTRCM.triggerTypeParameter3ContentLength));
+    ptr += sizeof(isoTRCM.triggerTypeParameter3ContentLength);
+
+    memcpy(ptr, &isoTRCM.triggerTypeParameter3, sizeof(isoTRCM.triggerTypeParameter3));
+    ptr += sizeof(isoTRCM.triggerTypeParameter3);
+
+
+    // Copy TRCM footer to send buffer
+    memcpy(ptr, &isoTRCM.footer.Crc, sizeof(isoTRCM.footer.Crc));
+    ptr += sizeof(isoTRCM.footer.Crc);
+
+    messageSize = (int)(ptr-messageBuffer);
+
+    if (messageSize != (int)isoTRCM.header.MessageLengthU32) LogMessage(LOG_LEVEL_WARNING, "TRCM message sent with invalid message length");
+
+    UtilSendTCPData(MODULE_NAME, messageBuffer, messageSize, socket, 0);
+
+    return messageSize;
 }
 
 I32 ObjectControlSendEXACMessage(EXACData *EXAC, I32 *socket, U8 debug)
 {
+    EXACType isoEXAC;
+    C8 messageBuffer[sizeof(isoEXAC)];
+    C8* ptr = messageBuffer;
+    int messageSize = 0;
 
+    ObjectControlBuildEXACMessage(EXAC, &isoEXAC, debug);
+
+    // Copy EXAC header to send buffer
+    memcpy(ptr, &isoEXAC.header.SyncWordU16, sizeof(isoEXAC.header.SyncWordU16));
+    ptr += sizeof(isoEXAC.header.SyncWordU16);
+
+    memcpy(ptr, &isoEXAC.header.TransmitterIdU8, sizeof(isoEXAC.header.TransmitterIdU8));
+    ptr += sizeof(isoEXAC.header.TransmitterIdU8);
+
+    memcpy(ptr, &isoEXAC.header.MessageCounterU8, sizeof(isoEXAC.header.MessageCounterU8));
+    ptr += sizeof(isoEXAC.header.MessageCounterU8);
+
+    memcpy(ptr, &isoEXAC.header.AckReqProtVerU8, sizeof(isoEXAC.header.AckReqProtVerU8));
+    ptr += sizeof(isoEXAC.header.AckReqProtVerU8);
+
+    memcpy(ptr, &isoEXAC.header.MessageIdU16, sizeof(isoEXAC.header.MessageIdU16));
+    ptr += sizeof(isoEXAC.header.MessageIdU16);
+
+    memcpy(ptr, &isoEXAC.header.MessageLengthU32, sizeof(isoEXAC.header.MessageLengthU32));
+    ptr += sizeof(isoEXAC.header.MessageLengthU32);
+
+
+    // Copy EXAC action ID to send buffer
+    memcpy(ptr, &isoEXAC.actionIDValueID, sizeof(isoEXAC.actionIDValueID));
+    ptr += sizeof(isoEXAC.actionIDValueID);
+
+    memcpy(ptr, &isoEXAC.actionIDContentLength, sizeof(isoEXAC.actionIDContentLength));
+    ptr += sizeof(isoEXAC.actionIDContentLength);
+
+    memcpy(ptr, &isoEXAC.actionID, sizeof(isoEXAC.actionID));
+    ptr += sizeof(isoEXAC.actionID);
+
+    // Copy EXAC action execution time to send buffer
+    memcpy(ptr, &isoEXAC.delayTime_qmsValueID, sizeof(isoEXAC.delayTime_qmsValueID));
+    ptr += sizeof(isoEXAC.delayTime_qmsValueID);
+
+    memcpy(ptr, &isoEXAC.delayTime_qmsContentLength, sizeof(isoEXAC.delayTime_qmsContentLength));
+    ptr += sizeof(isoEXAC.delayTime_qmsContentLength);
+
+    memcpy(ptr, &isoEXAC.delayTime_qms, sizeof(isoEXAC.delayTime_qms));
+    ptr += sizeof(isoEXAC.delayTime_qms);
+
+
+    // Copy EXAC footer to send buffer
+    memcpy(ptr, &isoEXAC.footer.Crc, sizeof(isoEXAC.footer.Crc));
+    ptr += sizeof(isoEXAC.footer.Crc);
+
+    messageSize = (int)(ptr-messageBuffer);
+
+    if (messageSize != (int)isoEXAC.header.MessageLengthU32) LogMessage(LOG_LEVEL_WARNING, "EXAC message sent with invalid message length");
+
+    UtilSendTCPData(MODULE_NAME, messageBuffer, messageSize, socket, 0);
+
+    return messageSize;
 }
 
 
@@ -2418,6 +2659,9 @@ I32 ObjectControlBuildACCMMessage(ACCMData *mqACCMData, ACCMType *ACCM, U8 debug
     ACCM->actionTypeParameter1ContentLength = sizeof(ACCM->actionTypeParameter1);
     ACCM->actionTypeParameter2ContentLength = sizeof(ACCM->actionTypeParameter2);
     ACCM->actionTypeParameter3ContentLength = sizeof(ACCM->actionTypeParameter3);
+
+    // Footer (TODO)
+    ACCM->footer.Crc = 0;
 
     if (debug)
     {
@@ -2464,6 +2708,9 @@ I32 ObjectControlBuildEXACMessage(EXACData *mqEXACData, EXACType *EXAC, U8 debug
     // Content length fields
     EXAC->actionIDContentLength = sizeof(EXAC->actionID);
     EXAC->delayTime_qmsContentLength = sizeof(EXAC->delayTime_qms);
+
+    // Footer (TODO)
+    EXAC->footer.Crc = 0;
 
     if (debug)
     {
@@ -2512,6 +2759,9 @@ I32 ObjectControlBuildTRCMMessage(TRCMData *mqTRCMData, TRCMType *TRCM, U8 debug
     TRCM->triggerTypeParameter1ContentLength = sizeof(TRCM->triggerTypeParameter1);
     TRCM->triggerTypeParameter2ContentLength = sizeof(TRCM->triggerTypeParameter2);
     TRCM->triggerTypeParameter3ContentLength = sizeof(TRCM->triggerTypeParameter3);
+
+    // Footer (TODO)
+    TRCM->footer.Crc = 0;
 
     if (debug)
     {
