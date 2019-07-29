@@ -82,6 +82,7 @@ void Scenario::parseScenarioFile(std::ifstream &file)
 
     mqttAction->appendParameter(Action::ActionParameter_t::ACTION_PARAMETER_VS_BRAKE_WARNING);
     mqttAction->setObjectIP(0);
+    mqttAction->setExecuteDalayTime({1,0});
 
     addTrigger(bt);
     addAction(mqttAction);
