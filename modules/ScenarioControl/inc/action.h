@@ -57,6 +57,9 @@ public:
     in_addr_t getObjectIP(void) const { return actionObjectIP; }
     void setObjectIP(in_addr_t ipAddr) { actionObjectIP = ipAddr; }
 
+    void setExecuteDalayTime(struct timeval tm);
+    struct timeval getExecuteDelayTime(void) const;
+
     ActionReturnCode_t appendParameter(ActionParameter_t actionParameter);
 
 protected:
@@ -64,7 +67,7 @@ protected:
     ActionID_t actionID = 0;
     uint32_t remainingAllowedRuns = 0;
     std::vector<ActionParameter_t> parameters;
-    uint32_t actionDelayTime_qms;
+    uint32_t actionDelayTime_qms = 0;
     in_addr_t actionObjectIP = 0;
 
     ActionReturnCode_t checkActionParameter(ActionParameter_t actionParameter) const;

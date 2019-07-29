@@ -1,7 +1,10 @@
 
+#include <limits>
 #include "action.h"
 
 #include "logging.h"
+#include "maestroTime.h"
+
 
 
 /*!
@@ -207,4 +210,30 @@ ACCMData Action::getConfigurationMessageData(void) const
         throw std::invalid_argument("Action contains too many parameters for an ISO message");
     }
     return retval;
+}
+
+/*!
+ * \brief Action::setExecuteDalayTime Sets the delay from when EXAC is sent to when action is to be executed
+ * \param tm Timeval struct representing the delay
+ */
+void Action::setExecuteDalayTime(struct timeval tm)
+{
+    int64_t time_qms = tm.tv_sec*4000 + tm.tv_usec/250;
+
+    if (time_qms < 0) throw std::invalid_argument("Attempted to set a negative execution delay");
+    if (time_qms > std::numeric_limits<uint32_t>::max()) throw std::invalid_argument("Attempted to set a too large execution delay");
+
+    actionDelayTime_qms = static_cast<uint32_t>(time_qms);
+}
+
+/*!
+ * \brief Action::getExecuteDelayTime Returns the delay time
+ * \return Delay time as timeval struct
+ */
+struct timeval Action::getExecuteDelayTime(void) const
+{
+    struct timeval tm;
+    tm.tv_sec = actionDelayTime_qms / 4000;
+    tm.tv_usec = (actionDelayTime_qms % 4000) * 250;
+    return tm;
 }
