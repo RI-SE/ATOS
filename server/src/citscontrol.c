@@ -638,10 +638,6 @@ I32 sendDENM(DENM_t* denm){
 
     LogMessage(LOG_LEVEL_INFO,"Sending DENM");
 
-    LogPrint("DENM (lat: %d, lon: %d)",
-             denm->denm.management.eventPosition.latitude,
-             denm->denm.management.eventPosition.longitude);
-
     FILE *fp = fopen("tmp", "wb");
     //asn_enc_rval_t ec = der_encode(&asn_DEF_DENM, denm, write_out, fp);
     fclose(fp);
