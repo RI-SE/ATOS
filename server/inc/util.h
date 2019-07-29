@@ -31,6 +31,8 @@ extern "C"{
 #include <netdb.h>
 #include "mqbus.h"
 
+#include "iso22133.h"
+
 
 /*------------------------------------------------------------
   -- Defines
@@ -186,6 +188,7 @@ extern "C"{
 #define dbl double
 #define flt float
 
+// Why do we need this?
 #pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
 
 #define SYNC_WORD 0x7e7e
@@ -309,20 +312,6 @@ typedef struct
 } CartesianPosition;
 
 
-typedef struct
-{
-  U16 SyncWordU16;
-  U8 TransmitterIdU8;
-  U8 MessageCounterU8;
-  U8 AckReqProtVerU8;
-  U16 MessageIdU16;
-  U32 MessageLengthU32;
-} HeaderType; //11 bytes
-
-typedef struct
-{
-  U16 Crc;
-} FooterType; //2 bytes
 
 typedef struct
 {
@@ -638,32 +627,12 @@ typedef struct
 
 typedef struct
 {
-    HeaderType header;
-    uint16_t actionIDValueID;
-    uint16_t actionIDContentLength;
-    uint16_t actionID;
-    uint16_t delayTime_qmsValueID;
-    uint16_t delayTime_qmsContentLength;
-    uint32_t delayTime_qms;
-} EXACType;
-
-typedef struct
-{
     uint16_t actionID;
     uint32_t delayTime_qms;
     in_addr_t ip;
 } EXACData; //!< Data type for MQ message
 
-typedef struct
-{
-    HeaderType header;
-    uint16_t triggerIDValueID;
-    uint16_t triggerIDContentLength;
-    uint16_t triggerID;
-    uint16_t timestamp_qmsowValueID;
-    uint16_t timestamp_qmsowContentLength;
-    uint32_t timestamp_qmsow;
-} TREOType;
+
 
 typedef struct
 {
@@ -674,26 +643,6 @@ typedef struct
 
 typedef struct
 {
-    HeaderType header;
-    uint16_t actionIDValueID;
-    uint16_t actionIDContentLength;
-    uint16_t actionID;
-    uint16_t actionTypeValueID;
-    uint16_t actionTypeContentLength;
-    uint16_t actionType;
-    uint16_t actionTypeParameter1ValueID;
-    uint16_t actionTypeParameter1ContentLength;
-    uint32_t actionTypeParameter1;
-    uint16_t actionTypeParameter2ValueID;
-    uint16_t actionTypeParameter2ContentLength;
-    uint32_t actionTypeParameter2;
-    uint16_t actionTypeParameter3ValueID;
-    uint16_t actionTypeParameter3ContentLength;
-    uint32_t actionTypeParameter3;
-} ACCMType;
-
-typedef struct
-{
     uint16_t actionID;
     uint16_t actionType;
     uint32_t actionTypeParameter1;
@@ -701,26 +650,6 @@ typedef struct
     uint32_t actionTypeParameter3;
     in_addr_t ip;
 } ACCMData; //!< Data type for MQ message
-
-typedef struct
-{
-    HeaderType header;
-    uint16_t triggerIDValueID;
-    uint16_t triggerIDContentLength;
-    uint16_t triggerID;
-    uint16_t triggerTypeValueID;
-    uint16_t triggerTypeContentLength;
-    uint16_t triggerType;
-    uint16_t triggerTypeParameter1ValueID;
-    uint16_t triggerTypeParameter1ContentLength;
-    uint32_t triggerTypeParameter1;
-    uint16_t triggerTypeParameter2ValueID;
-    uint16_t triggerTypeParameter2ContentLength;
-    uint32_t triggerTypeParameter2;
-    uint16_t triggerTypeParameter3ValueID;
-    uint16_t triggerTypeParameter3ContentLength;
-    uint32_t triggerTypeParameter3;
-} TRCMType;
 
 typedef struct
 {
