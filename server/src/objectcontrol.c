@@ -2558,6 +2558,13 @@ I32 ObjectControlSendTRCMMessage(TRCMData *TRCM, I32 *socket, U8 debug)
     return messageSize;
 }
 
+/*!
+ * \brief ObjectControlSendEXACMessage Sends EXAC data, reformatted to an ISO compliant message, to specified TCP socket
+ * \param ACCM EXAC data from message bus
+ * \param socket Socket where to send EXAC
+ * \param debug Debug flag
+ * \return Length of sent message
+ */
 I32 ObjectControlSendEXACMessage(EXACData *EXAC, I32 *socket, U8 debug)
 {
     EXACType isoEXAC;
