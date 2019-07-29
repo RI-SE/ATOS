@@ -18,7 +18,7 @@ Trigger::~Trigger()
  * \param triggerParameter Queried parameter
  * \return According to ::TriggerReturnCode_t
  */
-Trigger::TriggerReturnCode_t Trigger::checkTriggerParameter(TriggerParameter_t triggerParameter)
+Trigger::TriggerReturnCode_t Trigger::checkTriggerParameter(TriggerParameter_t triggerParameter) const
 {
     std::set<TriggerParameter_t> acceptedParameters = getAcceptedParameters();
     for (const TriggerParameter_t param : acceptedParameters) {
@@ -41,14 +41,14 @@ Trigger::TriggerReturnCode_t Trigger::appendParameter(Trigger::TriggerParameter_
         return retval;
 
     parameters.push_back(triggerParameter);
-    return OK;
+    return parseParameters();
 }
 
 /*!
  * \brief Trigger::getParametersString Converts the list of loaded parameters into a string
  * \return String describing all parameters
  */
-std::string Trigger::getParametersString()
+std::string Trigger::getParametersString() const
 {
     std::string retval;
     if (parameters.size() == 0)
@@ -133,7 +133,7 @@ std::string Trigger::getParameterAsString(TriggerParameter_t param)
 
 /*!
  * \brief Trigger::getTypeAsString Maps a ::TriggerTypeCode_t to a string
- * \param triggerTypeCode Type code
+ * \param typeCode Type code
  * \return String describing the trigger type
  */
 std::string Trigger::getTypeAsString(Trigger::TriggerTypeCode_t typeCode)
@@ -186,4 +186,17 @@ std::string Trigger::getTypeAsString(Trigger::TriggerTypeCode_t typeCode)
         return "TRIGGER UNAVAILABLE";
     }
     return "<<unimplemented>>";
+}
+
+/*!
+ * \brief Trigger::isActive Check if the last update to tracked signal caused trigger to occur
+ * \return Boolean according to trigger status
+ */
+bool Trigger::isActive() const
+{
+    if(wasTriggeredByLastUpdate == TRIGGER_OCCURRED)
+        return true;
+    else if(wasTriggeredByLastUpdate == NO_TRIGGER_OCCURRED)
+        return false;
+    throw std::logic_error("Trigger in undefined state");
 }

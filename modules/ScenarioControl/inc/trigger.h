@@ -88,13 +88,15 @@ public:
 
 
     /*! Getters */
-    virtual TriggerTypeCode_t getTypeCode() { return triggerTypeCode; }
-    uint16_t getID() { return triggerID; }
-    std::vector<TriggerParameter_t> getParameters() { return parameters; }
+    virtual TriggerTypeCode_t getTypeCode() const { return triggerTypeCode; }
+    TriggerID_t getID() const { return triggerID; }
+    std::vector<TriggerParameter_t> getParameters() const { return parameters; }
+    bool isActive() const;
 
+    bool operator==(const Trigger &other) const { return other.triggerID == triggerID; }
 
     /*! Setters */
-    void setID(uint16_t triggerID) { this->triggerID = triggerID; }
+    void setID(TriggerID_t triggerID) { this->triggerID = triggerID; }
 
     /*!
      * \brief appendParameter Appends an ISO parameter to the parameters list.
@@ -111,7 +113,7 @@ public:
 
 
     /*! To string */
-    friend std::ostream& operator<<(std::ostream &strm, Trigger &trig) {
+    friend std::ostream& operator<<(std::ostream &strm, const Trigger &trig) {
         return strm << "TRIGGER ID " << trig.triggerID <<
                        " TYPE " << getTypeAsString(trig.getTypeCode()) <<
                        " PARAMETERS " << trig.getParametersString();
@@ -119,7 +121,7 @@ public:
 
     static std::string getTypeAsString(TriggerTypeCode_t typeCode);
     static std::string getParameterAsString(TriggerParameter_t param);
-    std::string getParametersString();
+    std::string getParametersString(void) const;
 
     /*!
      * \brief update Update tracked signal (i.e. signal which causes the trigger to occur).
@@ -127,25 +129,29 @@ public:
      * - e.g. a trigger tracking a floating point trigger should override
      * update(float) and update(double)
     */
-    virtual TriggerReturnCode_t update(void)    { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(bool)    { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(char)    { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(int)     { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(float)   { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(double)  { return INVALID_ARGUMENT; }
-
+    virtual TriggerReturnCode_t update(void)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(bool)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(char)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(int)     { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(float)   { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(double)  { throw std::invalid_argument("Invalid signal type"); }
 protected:
-    TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter);
+    TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter) const;
     TriggerTypeCode_t triggerTypeCode;
+    TriggerReturnCode_t wasTriggeredByLastUpdate = NOT_OK; //!< State saving the last result of update
+    std::vector<TriggerParameter_t> parameters;
 
 private:
     TriggerID_t triggerID;
-    std::vector<TriggerParameter_t> parameters;
 
-    virtual std::set<TriggerParameter_t> getAcceptedParameters()
-        { return {TRIGGER_PARAMETER_UNAVAILABLE}; }
+    virtual const std::set<TriggerParameter_t> getAcceptedParameters() const
+    {
+        std::set<TriggerParameter_t> accParams;
+        accParams.insert(TRIGGER_PARAMETER_UNAVAILABLE);
+        return accParams;
+    }
 
-    virtual TriggerReturnCode_t checkIfTriggered(void) = 0;
+    virtual TriggerReturnCode_t checkIfTriggered(void) const = 0;
 };
 
 #endif // TRIGGER_H
