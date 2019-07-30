@@ -63,6 +63,7 @@
 #define PRIO_COMM_TRAJ_FROMSUP 80
 #define PRIO_COMM_ASP 110
 #define PRIO_COMM_OSEM 160
+#define PRIO_OBJECTS_CONNECTED 100
 
 /*------------------------------------------------------------
 -- Public variables
@@ -1979,6 +1980,9 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
     case COMM_TRCM:
         uiMessagePrio = PRIO_COMM_TRCM;
         break;
+    case COMM_OBJECTS_CONNECTED:
+        uiMessagePrio = PRIO_OBJECTS_CONNECTED;
+        break;
     default:
         util_error("Unknown command");
     }
@@ -2075,8 +2079,8 @@ int iCommSendEXAC(EXACData data)
     memcpy(ptr, &data.actionID, sizeof(data.actionID));
     ptr += sizeof(data.actionID);
 
-    memcpy(ptr, &data.delayTime_qms, sizeof(data.delayTime_qms));
-    ptr += sizeof(data.delayTime_qms);
+    memcpy(ptr, &data.executionTime_qmsoW, sizeof(data.executionTime_qmsoW));
+    ptr += sizeof(data.executionTime_qmsoW);
 
     memcpy(ptr, &data.ip, sizeof(data.ip));
 
@@ -3282,8 +3286,8 @@ I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *
     memcpy(&exacData->actionID, rdPtr, sizeof(exacData->actionID));
     rdPtr += sizeof(exacData->actionID);
 
-    memcpy(&exacData->delayTime_qms, rdPtr, sizeof(exacData->delayTime_qms));
-    rdPtr += sizeof(exacData->delayTime_qms);
+    memcpy(&exacData->executionTime_qmsoW, rdPtr, sizeof(exacData->executionTime_qmsoW));
+    rdPtr += sizeof(exacData->executionTime_qmsoW);
 
     memcpy(&exacData->ip, rdPtr, sizeof(exacData->ip));
     rdPtr += sizeof(exacData->ip);

@@ -48,17 +48,25 @@ void Scenario::initialize(const std::string scenarioFilePath)
     }
     file.close();
 
+    LogMessage(LOG_LEVEL_INFO, "Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
+}
+
+/*!
+ * \brief Scenario::sendConfiguration Sends TRCM and ACCM according to previously initialized scenario
+ */
+void Scenario::sendConfiguration(void) const
+{
     for (Trigger* tp : allTriggers)
     {
-        iCommSendTRCM(tp->getConfigurationMessageData());
+        if(iCommSendTRCM(tp->getConfigurationMessageData()) == -1)
+            util_error("Fatal communication error sending TRCM");
     }
 
     for (Action* ap : allActions)
     {
-        iCommSendACCM(ap->getConfigurationMessageData());
+        if(iCommSendACCM(ap->getConfigurationMessageData()) == -1)
+            util_error("Fatal communication error sending ACCM");
     }
-
-    LogMessage(LOG_LEVEL_INFO, "Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
 }
 
 void Scenario::parseScenarioFile(std::ifstream &file)
