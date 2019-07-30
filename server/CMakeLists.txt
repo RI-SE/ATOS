@@ -18,7 +18,7 @@ include(GNUInstallDirs)
 #find_library(MAESTRO_LOGGING_PATH
 #    NAMES MaestroLogging
 #    PATHS "../util/C/logging"
-#          "../util/C"
+#          "../util
 #          ${CMAKE_INSTALL_LIBDIR}
 #          ${CMAKE_INSTALL_INCLUDEDIR})
 #add_library(MaestroLogging SHARED IMPORTED)
@@ -39,6 +39,14 @@ if(USE_CITS)
 add_definitions(-DCITS_ENABLED)
 endif()
 
+if(1)
+    add_library(visualization
+        src/visualization.c
+        inc/visualization.h
+    )
+add_definitions(-DVISUALIZATION_ENABLED)
+endif()
+
 # Create library
 add_library(MaestroLogging
   ../util/C/logging/logging.h
@@ -54,8 +62,6 @@ add_library(MQBus
   ../util/C/MQBus/mqbus.h
   ../util/C/MQBus/mqbus.c
 )
-
-
 
 # Create library
 add_library(util
@@ -114,6 +120,10 @@ target_link_libraries(TEServer util)
 if(USE_CITS)
     target_link_libraries(cits pahomqtt3c)
     target_link_libraries(TEServer cits)
+endif()
+
+if(1)
+    target_link_libraries(TEServer visualization)
 endif()
 
 
