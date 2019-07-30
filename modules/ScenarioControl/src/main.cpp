@@ -22,6 +22,7 @@ int main()
     Scenario scenario;
     TREOData treo;
     bool terminate = false;
+    enum {UNINITIALIZED, INITIALIZED, CONNECTED, RUNNING} state = UNINITIALIZED;
 
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
     LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
@@ -36,10 +37,13 @@ int main()
 
     while(!terminate)
     {
-        // Make all active triggers cause their corresponding actions
-        scenario.refresh();
-        // Allow for retriggering on received TREO messages
-        scenario.resetISOTriggers();
+        if (state == RUNNING)
+        {
+            // Make all active triggers cause their corresponding actions
+            scenario.refresh();
+            // Allow for retriggering on received TREO messages
+            scenario.resetISOTriggers();
+        }
 
         if (iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr) < 0)
         {
@@ -48,17 +52,25 @@ int main()
 
         switch (command) {
         case COMM_INIT:
-            try {
-                LogMessage(LOG_LEVEL_INFO, "Initializing scenario");
-                //scenario.initialize(SCENARIO_FILE_PATH);
-                scenario.initialize("log/dummy_scenariofil.fil");
+            if (state == UNINITIALIZED)
+            {
+                try {
+                    LogMessage(LOG_LEVEL_INFO, "Initializing scenario");
+                    //scenario.initialize(SCENARIO_FILE_PATH);
+                    scenario.initialize("log/dummy_scenariofil.fil");
+                    state = INITIALIZED;
+                }
+                catch (std::invalid_argument) { util_error("Invalid scenario file format"); }
+                catch (std::ifstream::failure) { util_error("Unable to open scenario file <" SCENARIO_FILE_PATH ">"); }
             }
-            catch (std::invalid_argument) { util_error("Invalid scenario file format"); }
-            catch (std::ifstream::failure) { util_error("Unable to open scenario file <" SCENARIO_FILE_PATH ">"); }
             break;
         case COMM_OBJECTS_CONNECTED:
-            LogMessage(LOG_LEVEL_INFO, "Distributing scenario configuration");
-            scenario.sendConfiguration();
+            if (state == INITIALIZED)
+            {
+                state = CONNECTED;
+                LogMessage(LOG_LEVEL_INFO, "Distributing scenario configuration");
+                scenario.sendConfiguration();
+            }
             break;
         case COMM_OBC_STATE:
         case COMM_LOG:
@@ -70,8 +82,11 @@ int main()
             memcpy(&treo.timestamp_qmsow, mqRecvData+sizeof(treo.triggerID), sizeof(treo.timestamp_qmsow));
             memcpy(&treo.ip, mqRecvData+sizeof(treo.triggerID)+sizeof(treo.timestamp_qmsow), sizeof(treo.ip));
 
-            // Trigger corresponding trigger
-            scenario.updateTrigger(treo.triggerID, treo);
+            if (state == RUNNING)
+            {
+                // Trigger corresponding trigger
+                scenario.updateTrigger(treo.triggerID, treo);
+            }
             break;
         case COMM_EXAC:
             LogMessage(LOG_LEVEL_ERROR, "Received unexpected execute action message");
@@ -92,26 +107,39 @@ int main()
         case COMM_INV:
             nanosleep(&sleepTimePeriod,&remTime);
             break;
+        case COMM_ABORT:
+            if (state == RUNNING) state = CONNECTED;
+            break;
         case COMM_STRT:
+            if (state == CONNECTED)
+            {
+                state = RUNNING;
 
-            // PLACEHOLDER
-            LogMessage(LOG_LEVEL_INFO,"1");
-            scenario.updateTrigger(1,false);
-            scenario.refresh();
-            LogMessage(LOG_LEVEL_INFO,"2");
-            scenario.updateTrigger(1,false);
-            scenario.refresh();
-            LogMessage(LOG_LEVEL_INFO,"3");
-            scenario.updateTrigger(1,true);
-            scenario.refresh();
-            LogMessage(LOG_LEVEL_INFO,"4");
-            scenario.updateTrigger(1,true);
-            scenario.refresh();
-            LogMessage(LOG_LEVEL_INFO,"5");
-            scenario.updateTrigger(1,false);
-            scenario.refresh();
-            LogMessage(LOG_LEVEL_INFO,"6");
-
+                // PLACEHOLDER
+                LogMessage(LOG_LEVEL_INFO,"1");
+                scenario.updateTrigger(1,false);
+                scenario.refresh();
+                LogMessage(LOG_LEVEL_INFO,"2");
+                scenario.updateTrigger(1,false);
+                scenario.refresh();
+                LogMessage(LOG_LEVEL_INFO,"3");
+                scenario.updateTrigger(1,true);
+                scenario.refresh();
+                LogMessage(LOG_LEVEL_INFO,"4");
+                scenario.updateTrigger(1,true);
+                scenario.refresh();
+                LogMessage(LOG_LEVEL_INFO,"5");
+                scenario.updateTrigger(1,false);
+                scenario.refresh();
+                LogMessage(LOG_LEVEL_INFO,"6");
+            }
+            break;
+        case COMM_MONR:
+            // TODO: Update triggers
+            break;
+        case COMM_MONI:
+            // Ignore
+            break;
         default:
             LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
         }
