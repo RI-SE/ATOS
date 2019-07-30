@@ -68,6 +68,7 @@ install(TARGETS ScenarioControl DESTINATION bin)
 
 target_link_libraries(ScenarioControl MaestroTime MaestroLogging util Scenario)
 target_link_libraries(Scenario Trigger Action)
+target_link_libraries(Action MaestroTime)
 target_link_libraries(util MQBus MaestroTime MaestroLogging)
 target_link_libraries(MQBus rt m)
 
