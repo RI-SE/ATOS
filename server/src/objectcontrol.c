@@ -173,6 +173,7 @@ static I32 vCheckRemoteDisconnected(int* sockfd);
 static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static void vCloseSafetyChannel(int* sockfd);
 static size_t uiRecvMonitor(int* sockfd, char* buffer, size_t length);
+static int iGetSocketFromObjectIP(in_addr_t ipAddr, int sockfds[], unsigned int nSockfds);
 I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug);
 I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug);
 I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
@@ -245,15 +246,17 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
     int safety_socket_fd[MAX_OBJECTS];
     struct sockaddr_in safety_object_addr[MAX_OBJECTS];
-    int socket_fd[MAX_OBJECTS];
+    int socket_fds[MAX_OBJECTS];
+    int socket_fd = 0;
     char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH];
     char object_address_name[MAX_OBJECTS][MAX_FILE_PATH];
+    char ipStringBuffer[INET_ADDRSTRLEN];
     uint32_t object_udp_port[MAX_OBJECTS];
     uint32_t object_tcp_port[MAX_OBJECTS];
     int nbr_objects=0;
     int iExit = 0;
     enum COMMAND iCommand;
-    char pcRecvBuffer[RECV_MESSAGE_BUFFER];
+    uint8_t pcRecvBuffer[RECV_MESSAGE_BUFFER];
     char pcTempBuffer[512];
     C8 MessageBuffer[BUFFER_SIZE_3100];
     int iIndex = 0, i=0;
@@ -325,6 +328,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     SYPMType SYPMData;
     MTSPType MTSPData;
     ACCMData mqACCMData;
+    EXACData mqEXACData;
     GeoPosition OriginPosition;
     ASPType ASPData;
     ASPData.MTSPU32 = 0;
@@ -414,13 +418,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             DisconnectU8 = 0;
             for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
             {
-                DisconnectU8 |= vCheckRemoteDisconnected(&socket_fd[iIndex]);
+                DisconnectU8 |= vCheckRemoteDisconnected(&socket_fds[iIndex]);
                 if (DisconnectU8){
                     LogMessage(LOG_LEVEL_WARNING,"Lost connection to IP %s - returning to IDLE",object_address_name[iIndex]);
 
                     for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
                     {
-                        vDisconnectObject(&socket_fd[iIndex]);
+                        vDisconnectObject(&socket_fds[iIndex]);
                     }
 
                     /* Close safety socket */
@@ -970,11 +974,21 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             else if (iCommand == COMM_ACCM && OBCState == OBC_STATE_CONNECTED)
             {
-                UtilPopulateACCMDataStructFromMQ()
+                UtilPopulateACCMDataStructFromMQ(pcRecvBuffer,sizeof(pcRecvBuffer),&mqACCMData);
+                socket_fd = iGetSocketFromObjectIP(mqACCMData.ip, socket_fds, sizeof(socket_fds)/sizeof(socket_fds[0]));
+                if (socket_fd != 0)
+                    ObjectControlSendACCMMessage(&mqACCMData,&socket_fd,1);
+                else
+                    LogMessage(LOG_LEVEL_WARNING, "Unable to send ACCM: no valid socket found");
             }
             else if (iCommand == COMM_EXAC && OBCState == OBC_STATE_RUNNING)
             {
-
+                UtilPopulateEXACDataStructFromMQ(pcRecvBuffer,sizeof(pcRecvBuffer),&mqEXACData);
+                socket_fd = iGetSocketFromObjectIP(mqEXACData.ip, socket_fds, sizeof(socket_fds)/sizeof(socket_fds[0]));
+                if (socket_fd != 0)
+                    ObjectControlSendEXACMessage(&mqEXACData,&socket_fd,1);
+                else
+                    LogMessage(LOG_LEVEL_WARNING, "Unable to send EXAC: no valid socket found");
             }
             else if(iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED)
             {
@@ -1000,7 +1014,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     do
                     {
 
-                        iResult = vConnectObject(&socket_fd[iIndex],object_address_name[iIndex],object_tcp_port[iIndex], &DisconnectU8);
+                        iResult = vConnectObject(&socket_fds[iIndex],object_address_name[iIndex],object_tcp_port[iIndex], &DisconnectU8);
 
                         if ( iResult < 0)
                         {
@@ -2946,7 +2960,22 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
 }
 
 
+static int iGetSocketFromObjectIP(in_addr_t ipAddr, int sockfds[], unsigned int nSockfds)
+{
+    struct sockaddr_in inaddr;
+    socklen_t addrlen = sizeof(inaddr);
+    int result;
 
+    for (unsigned int i = 0; i < nSockfds; ++i) {
+        result = getsockname(sockfds[i], (struct sockaddr*)&inaddr, &addrlen);
+        if (result == -1)
+            continue;
+
+        if (inaddr.sin_addr.s_addr == ipAddr)
+            return sockfds[i];
+    }
+    return 0;
+}
 
 static I32 vConnectObject(int* sockfd, const char* name, const uint32_t port, U8 *Disconnect)
 {
