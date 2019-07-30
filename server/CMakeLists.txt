@@ -126,6 +126,4 @@ if(1)
     target_link_libraries(TEServer visualization)
 endif()
 
-
 target_link_libraries(TEServer MaestroLogging MaestroTime MQBus)
-

@@ -8,7 +8,9 @@
 #include <time.h>
 #include <string.h>
 
+#include "visualization.h"
 #include "util.h"
+
 
 /*------------------------------------------------------------
   -- Defines
@@ -48,18 +50,6 @@ void visualization_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     while(!iExit)
     {
-        // Handle states specific things
-        state = pending_state;
-
-        switch (state) {
-        case INIT:
-            break;
-        case CONNECTED:
-            break;
-        case SENDING:
-            break;
-        }
-
         // Handle MQ messages
         bzero(busReceiveBuffer, sizeof(busReceiveBuffer));
                (void)iCommRecv(&command,busReceiveBuffer, sizeof(busReceiveBuffer), NULL);
