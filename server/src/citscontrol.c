@@ -38,6 +38,7 @@
 #include "citscontrol.h"
 #include "util.h"
 #include "iso22133.h"
+#include "maestroTime.h"
 
 
 
@@ -149,45 +150,8 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO, "C-ITS control running with PID: %i", getpid());
 
-
     //! Timer for sending DENM at later time
-    timer_t actionTimer;
-    struct sigevent timerEvent;
-    struct itimerspec actionTimerSpec;
-    struct sigaction timerAction;
-    sigset_t signalMask;
-
-    // Initialize timer
-    timerAction.sa_flags = SA_SIGINFO; // TODO: which?
-    timerAction.sa_sigaction = signalHandler;
-    sigemptyset(&timerAction.sa_mask);
-    if (sigaction(SIG, &timerAction, NULL) == -1)
-        util_error("Error calling sigaction");
-
-    // Block timer signal while setting it up
-    LogMessage(LOG_LEVEL_DEBUG, "Blocking signal %d", SIG);
-    sigemptyset(&signalMask);
-    sigaddset(&signalMask, SIG);
-    if (sigprocmask(SIG_SETMASK, &signalMask, NULL) == -1)
-        util_error("Error blocking signal");
-
-    // Create timer
-    timerEvent.sigev_notify = SIGEV_SIGNAL; //!< When timer expires, call linked function in a separate thread
-    timerEvent.sigev_signo = SIG;
-    timerEvent.sigev_value.sival_ptr = &actionTimer;
-    if (timer_create(CLOCK_REALTIME, &timerEvent, &actionTimer) == -1)
-        util_error("Error creating timer");
-
-    LogMessage(LOG_LEVEL_DEBUG, "Created timer with ID 0x%1x", (long)actionTimer);
-
-    actionTimerSpec.it_interval.tv_sec = 0; //!< Make timer single shot
-    actionTimerSpec.it_interval.tv_nsec = 0;
-    actionTimerSpec.it_value.tv_sec = 0;
-    actionTimerSpec.it_value.tv_nsec = 0;
-
-    LogMessage(LOG_LEVEL_DEBUG, "Unblocking signal %d", SIG);
-    if (sigprocmask(SIG_UNBLOCK, &signalMask, NULL) == -1)
-        util_error("Error unblocking signal");
+    struct timeval systemTime, exacTime = {0,0};
 
 
     UtilGetMillisecond(&time);
@@ -208,6 +172,8 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     LogMessage(LOG_LEVEL_INFO,"Starting C-ITS control");
     while(!iExit)
     {
+        TimeSetToCurrentSystemTime(&systemTime);
+
         // Handle states specific things
         state = pending_state;
 
@@ -267,7 +233,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             LogMessage(LOG_LEVEL_DEBUG, "Ignored old style MONR data");
             break;
         case COMM_MONR:
-
+            break;
             UtilPopulateMonitorDataStruct(busReceiveBuffer, sizeof(busReceiveBuffer),&mqMONRdata,0);
             MONRMessage = mqMONRdata.MONR;
 
@@ -303,8 +269,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             {
                 LogMessage(LOG_LEVEL_INFO, "Received action execution request with ID %u", storedActionIDs[actionIndex]);
 
-                timer_gettime(actionTimer, &actionTimerSpec);
-                if (actionTimerSpec.it_value.tv_sec || actionTimerSpec.it_value.tv_nsec)
+                if (timerisset(&exacTime))
                 {
                     LogMessage(LOG_LEVEL_WARNING, "Another DENM send already queued");
                     break;
@@ -313,7 +278,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 // Based on last MONR message, generate a DENM message to send
                 generateDENMMessage(&MONRMessage, lastDENM);
 
-                if (actionData.delayTime_qms == 0)
+                if (actionData.executionTime_qmsoW == 0)
                 {
                     LogMessage(LOG_LEVEL_INFO, "Received immediate action request: sending DENM message");
                     if (lastDENM != NULL)
@@ -323,10 +288,10 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 }
                 else
                 {
-                    actionTimerSpec.it_value.tv_sec = actionData.delayTime_qms / 4000;
-                    actionTimerSpec.it_value.tv_nsec = (actionData.delayTime_qms % 4000) * 250 * 1000;
-                    timer_settime(actionTimer, 0, &actionTimerSpec, NULL);
-                    LogMessage(LOG_LEVEL_INFO, "Received action request: sending DENM in %.3f seconds", (double)(actionData.delayTime_qms)/4000);
+                    TimeSetToGPStime(&exacTime, TimeGetAsGPSweek(&systemTime), actionData.executionTime_qmsoW);
+
+                    LogMessage(LOG_LEVEL_INFO, "Received action request: sending DENM in %.3f seconds",
+                               (double)(actionData.executionTime_qmsoW-TimeGetAsGPSqmsOfWeek(&systemTime))/4000);
                 }
             }
             else if (actionIndex == -1)
@@ -341,7 +306,12 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
         case COMM_OBC_STATE:
             break;
+        case COMM_OSEM:
+            // Save these values?
+            break;
         case COMM_CONNECT:
+            break;
+        case COMM_OBJECTS_CONNECTED:
             break;
         case COMM_LOG:
             break;
@@ -349,6 +319,12 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
         default:
             LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
+        }
+
+        if (timerisset(&exacTime) && timercmp(&systemTime, &exacTime, >))
+        {
+            timerclear(&exacTime);
+            sendDENM(lastDENM);
         }
     }
 
@@ -359,8 +335,12 @@ void signalHandler(int sig, siginfo_t* siginfo, void* uc)
 {
     // TODO: check signal
 
+    LogPrint("Caught %d", sig);
+
     if (lastDENM != NULL)
         sendDENM(lastDENM);
+
+    signal(sig, SIG_IGN);
 }
 
 void init_mqtt(char* ip_addr, char * clientid){
@@ -638,9 +618,9 @@ I32 sendDENM(DENM_t* denm){
 
     LogMessage(LOG_LEVEL_INFO,"Sending DENM");
 
-    FILE *fp = fopen("tmp", "wb");
+    //FILE *fp = fopen("tmp", "wb");
     //asn_enc_rval_t ec = der_encode(&asn_DEF_DENM, denm, write_out, fp);
-    fclose(fp);
+    //fclose(fp);
 
     publish_mqtt((char*)denm, sizeof (DENM_t), "CLIENT/DENM/CS01/1/AZ12B");
     return 1;
