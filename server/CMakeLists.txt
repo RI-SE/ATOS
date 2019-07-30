@@ -25,6 +25,8 @@ include(GNUInstallDirs)
 #set_property(TARGET MaestroLogging PROPERTY IMPORTED_LOCATION ${MAESTRO_LOGGING_PATH})
 
 SET(USE_CITS FALSE CACHE BOOL "Flag to indicate the use of CITS.")
+SET(USE_VISUALIZATION_ADAPTER FALSE CACHE BOOL "Flag to indicate the use of Visualization Adapter.")
+
 
 # MQTT PAHO
 if(USE_CITS)
@@ -39,7 +41,7 @@ if(USE_CITS)
 add_definitions(-DCITS_ENABLED)
 endif()
 
-if(1)
+if(USE_VISUALIZATION_ADAPTER)
     add_library(visualization
         src/visualization.c
         inc/visualization.h
@@ -122,7 +124,7 @@ if(USE_CITS)
     target_link_libraries(TEServer cits)
 endif()
 
-if(1)
+if(USE_VISUALIZATION_ADAPTER)
     target_link_libraries(TEServer visualization)
 endif()
 

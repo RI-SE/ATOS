@@ -67,10 +67,10 @@ void visualization_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                {
                    iExit = 1;
                    printf("Vizualisation exiting.\n");
-
+                   vDisconnectVisualizationChannel(&visual_server);
                    (void)iCommClose();
                }
-        //usleep(100000);
+                //usleep(100000);
                switch (command)
                {
                case COMM_INIT:
@@ -80,7 +80,8 @@ void visualization_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                    // Ignore old style MONR data
                    break;
                case COMM_MONR:
-                   UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer, sizeof(busReceiveBuffer), 0);
+                   printf("Vizualisation got MONR.\n");
+                   //UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer, sizeof(busReceiveBuffer), 0);
                    break;
                case COMM_OBC_STATE:
                    break;
