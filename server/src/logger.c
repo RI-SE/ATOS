@@ -157,7 +157,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 vLogScenarioControlData(command, busReceiveBuffer, receivedBytes, recvTime, pcLogFile, pcLogFileComp);
             else
                 LogMessage(LOG_LEVEL_WARNING, "Received command %u while log uninitialized", command);
-
+            break;
         case COMM_STRT:
         case COMM_ARMD:
         case COMM_STOP:
