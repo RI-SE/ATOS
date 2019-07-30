@@ -1,5 +1,8 @@
 #ifndef ISO22133_H
 #define ISO22133_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*! This file contains all definitions pertaining to the ISO standard 22133
  *
  *
@@ -7,8 +10,9 @@
  *
  */
 
-
 #include <inttypes.h>
+
+#pragma pack(push,1)
 
 typedef struct
 {
@@ -214,5 +218,9 @@ typedef struct
 #define VALUE_ID_TRIGGER_TYPE_PARAM3 0x0013
 #define VALUE_ID_TRIGGER_TIMESTAMP 0x0002
 
+#pragma pack(pop)
 
+#ifdef __cplusplus
+}
+#endif
 #endif
