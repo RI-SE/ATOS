@@ -113,19 +113,7 @@ extern "C"{
 #define TRAJECTORY_PATH "./traj/"
 
 #define ADAPTIVE_SYNC_POINT_CONF "./conf/adaptivesync.conf"
-#define TRIGG_ACTION_CONF "./conf/triggeraction.conf"
 #define VERSION_PATH "../conf/Version.txt"
-
-#define MAX_TRIGG_ACTIONS 20
-
-
-#define TAA_ACTION_EXT_START 1
-#define TAA_ACTION_TEST_SIGNAL 2
-
-#define TAA_TRIGGER_DI_LOW  1
-#define TAA_TRIGGER_DI_HIGH  2
-#define TAA_TRIGGER_DI_RISING_EDGE 3
-#define TAA_TRIGGER_DI_FALLING_EDGE 4
 
 
 #define MASTER_FILE_EXTENSION ".sync.m"
@@ -273,7 +261,6 @@ COMM_EXIT = 5,
 COMM_REPLAY = 6,
 COMM_CONTROL = 7,
 COMM_ABORT = 8,
-COMM_TOM = 9,
 COMM_INIT = 10,
 COMM_CONNECT = 11,
 COMM_OBC_STATE = 12,
@@ -616,18 +603,6 @@ typedef struct
 
 typedef struct
 {
-  char TriggerIP[16];
-  char TriggerType[8];
-  char TriggerTypeVar[16];
-  char ActionType[24];
-  char ActionTypeVar[16];
-  char ActionDelay[8];
-  uint8_t TriggerId;
-  int32_t Action;
-} TriggActionType; // Note: this is the old struct
-
-typedef struct
-{
     uint16_t actionID;
     uint32_t executionTime_qmsoW;
     in_addr_t ip;
@@ -819,7 +794,7 @@ int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
-int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug);
+//int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug); // TODO DELETE
 
 void llhToXyz(double lat, double lon, double height, double *x, double *y, double *z);
 void enuToLlh(const double *iLlh, const double *xyz, double *llh);

@@ -189,7 +189,6 @@ int ObjectControlSendUDPData(int* sockfd, struct sockaddr_in* addr, char* SendDa
 I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I32 Idn, C8 *Id, C8 *Timestamp, C8 *XPosition, C8 *YPosition, C8 *ZPosition, C8 *LongitudinalSpeed, C8 *LateralSpeed, C8 *LongitudinalAcc, C8 *LateralAcc, C8 *Heading, C8 *DriveDirection, C8 *StatusFlag, C8 *StateFlag, C8 debug);
 I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug);
 int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId ,char *TriggAction, char *TriggDelay, char debug);
-int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug);
 I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* SimData, U8 debug);
 I32 ObjectControlSendDTMMessage(C8 *DTMData, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug);
 I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
@@ -250,7 +249,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     int socket_fd = 0;
     char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH];
     char object_address_name[MAX_OBJECTS][MAX_FILE_PATH];
-    char ipStringBuffer[INET_ADDRSTRLEN];
     uint32_t object_udp_port[MAX_OBJECTS];
     uint32_t object_tcp_port[MAX_OBJECTS];
     int nbr_objects=0;
@@ -309,13 +307,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     double OriginLongitudeDbl;
     double OriginAltitudeDbl;
     double OriginHeadingDbl;
-    TriggActionType TAA[MAX_TRIGG_ACTIONS];
-    int TriggerActionCount = 0;
     char pcSendBuffer[MBUS_MAX_DATALEN];
     char ObjectPort[SMALL_BUFFER_SIZE_0];
-    char TriggId[SMALL_BUFFER_SIZE_1];
-    char TriggAction[SMALL_BUFFER_SIZE_1];
-    char TriggDelay[SMALL_BUFFER_SIZE_0];
     HeaderType HeaderData;
     OSEMType OSEMData;
     STRTType STRTData;
@@ -482,36 +475,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 if (receivedMONRData > 0)
                 {
                     LogMessage(LOG_LEVEL_DEBUG,"Recieved new data from %s %d %d: %s",object_address_name[iIndex],object_udp_port[iIndex],receivedMONRData,buffer);
-
-                    if (buffer[0] == COMMAND_TOM_CODE)
-                    {
-                        for(i = 0; i < TriggerActionCount; i ++)
-                        {
-                            LOG_SEND(LogBuffer,"[ObjectControl] External trigg received. %s\n", TAA[i].TriggerIP);
-                            if(strstr(TAA[i].TriggerIP, object_address_name[iIndex]) != NULL)
-                            {
-                                //printf("[ObjectControl] External trigg received\n");
-                                fflush(stdout);
-                                ObjectControlTOMToASCII(buffer, TriggId, TriggAction, TriggDelay, 1);
-                                bzero(buffer, OBJECT_MESS_BUFFER_SIZE);
-                                bzero(pcSendBuffer, sizeof(pcSendBuffer));
-                                bzero(ObjectPort, SMALL_BUFFER_SIZE_0);
-                                sprintf(ObjectPort, "%d", object_udp_port[iIndex]);
-                                strcat(pcSendBuffer,object_address_name[iIndex]);strcat(pcSendBuffer,";");
-                                strcat(pcSendBuffer, ObjectPort);strcat(pcSendBuffer,";");
-                                strcat(pcSendBuffer,TriggId);strcat(pcSendBuffer,";");
-                                strcat(pcSendBuffer,TriggAction);strcat(pcSendBuffer,";");
-                                strcat(pcSendBuffer,TriggDelay);strcat(pcSendBuffer,";");
-                                if(iCommSend(COMM_TOM, pcSendBuffer, strlen(pcSendBuffer)+1) < 0)
-                                {
-                                    LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending TOM command - entering error state");
-                                    vSetState(&OBCState, OBC_STATE_ERROR);
-                                    ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
-
-                                }
-                            }
-                        }
-                    }
 
                     if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE)
                     {
@@ -916,21 +879,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     fclose (fd);
                 }
 
-                /*Setup Trigger and Action*/
-                fd = fopen (TRIGG_ACTION_CONF, "r");
-                if(fd)
-                {
-                    TriggerActionCount = UtilCountFileRows(fd) - 1;
-                    fclose (fd);
-                    fd = fopen (TRIGG_ACTION_CONF, "r");
-                    UtilReadLineCntSpecChars(fd, pcTempBuffer); //Read header
 
-                    for(i = 0; i < TriggerActionCount; i++)
-                    {
-                        UtilSetTriggActions(&TAA[i], fd, 1);
-                    }
-                    fclose (fd);
-                }
 
                 bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
                 UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTimeDiff=", "", TextBuffer);
@@ -1142,18 +1091,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         {
                             if(TEST_SYNC_POINTS == 1 && iIndex == 0) UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, ASP[i].MasterTrajSyncTime);
                             else if(TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL) UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, ASP[i].MasterTrajSyncTime);
-                        }
-                        /* ...end*/
-
-
-                        /* Trigg And Action object configuration start...*/
-                        for(i = 0; i < TriggerActionCount; i++)
-                        {
-                            if(strstr(object_address_name[iIndex], TAA[i].TriggerIP) != NULL)
-                            {
-                                MessageLength = ObjectControlBuildTCMMessage(MessageBuffer, &TAA[i], 0);
-                                UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
-                            }
                         }
                         /* ...end*/
                     }
@@ -1388,71 +1325,6 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
 
     return ObjectCount*sizeof(Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH; //Total number of bytes
 
-}
-
-int ObjectControlBuildTCMMessage(char* MessageBuffer, TriggActionType *TAA, char debug)
-{
-    int MessageIndex = 0;
-    uint8_t MessageData = 0;
-    uint16_t MessageDataU16 = 0;
-
-    bzero(MessageBuffer, COMMAND_TCM_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH);
-
-
-    UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_TCM_CODE);
-
-
-    MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex+COMMAND_MESSAGE_HEADER_LENGTH, TAA->TriggerId);
-
-
-    if(strstr(TAA->TriggerType, "DI") != NULL && strstr(TAA->TriggerTypeVar, "LOW") != NULL) MessageData = TAA_TRIGGER_DI_LOW;
-    else if(strstr(TAA->TriggerType, "DI") != NULL && strstr(TAA->TriggerTypeVar, "HIGH") != NULL) MessageData = TAA_TRIGGER_DI_HIGH;
-    else if(strstr(TAA->TriggerType, "DI") != NULL && strstr(TAA->TriggerTypeVar, "RISING_EDGE") != NULL) MessageData = TAA_TRIGGER_DI_RISING_EDGE;
-    else if(strstr(TAA->TriggerType, "DI") != NULL && strstr(TAA->TriggerTypeVar, "FALLING_EDGE") != NULL) MessageData = TAA_TRIGGER_DI_FALLING_EDGE;
-    MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex, MessageData);
-
-    MessageData = 0;
-    if(strstr(TAA->ActionType, "SERVER") != NULL && TAA->Action == TAA_ACTION_EXT_START) MessageData = TAA_ACTION_EXT_START;
-    else if(strstr(TAA->ActionType, "SERVER") != NULL && TAA->Action == TAA_ACTION_TEST_SIGNAL) MessageData = TAA_ACTION_TEST_SIGNAL;
-    MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex, MessageData);
-
-    MessageDataU16 = atoi(TAA->ActionDelay);
-    MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, MessageDataU16);
-
-
-    UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);
-
-    if(debug)
-    {
-        int i = 0;
-        LogMessage(LOG_LEVEL_DEBUG,"TCM:");
-        for(i = 0; i < MessageIndex; i ++) LogMessage(LOG_LEVEL_DEBUG,"[%d]= %x", i, (unsigned char)MessageBuffer[i]);
-    }
-
-    return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
-}
-
-int ObjectControlBuildACMMessage(char* MessageBuffer, TriggActionType *TAA, char debug)
-{
-    int MessageIndex = 0;
-    uint8_t MessageData = 0;
-
-    bzero(MessageBuffer, COMMAND_TCM_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH);
-
-    UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_TCM_CODE);
-
-    MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex+COMMAND_MESSAGE_HEADER_LENGTH, (uint8_t)TAA->Action);
-
-    UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX, (unsigned int) MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);
-
-    if(debug)
-    {
-        int i = 0;
-        LogMessage(LOG_LEVEL_DEBUG,"ACM:");
-        for(i = 0; i < MessageIndex; i ++) LogMessage(LOG_LEVEL_DEBUG,"[%d]= %x", i, (unsigned char)MessageBuffer[i]);
-    }
-
-    return MessageIndex; //Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
 }
 
 
@@ -2388,7 +2260,7 @@ I32 ObjectControlSendACCMMessage(ACCMData *ACCM, I32 *socket, U8 debug)
     ACCMType isoACCM;
     C8 messageBuffer[sizeof(isoACCM)];
     C8* ptr = messageBuffer;
-    int messageSize = 0;
+    U32 messageSize = 0;
 
     ObjectControlBuildACCMMessage(ACCM, &isoACCM, debug);
 
@@ -2467,13 +2339,14 @@ I32 ObjectControlSendACCMMessage(ACCMData *ACCM, I32 *socket, U8 debug)
     memcpy(ptr, &isoACCM.footer.Crc, sizeof(isoACCM.footer.Crc));
     ptr += sizeof(isoACCM.footer.Crc);
 
-    messageSize = (int)(ptr-messageBuffer);
+    if (ptr > messageBuffer) messageSize = (U32)(ptr-messageBuffer);
 
-    if (messageSize != (int)isoACCM.header.MessageLengthU32) LogMessage(LOG_LEVEL_WARNING, "ACCM message sent with invalid message length");
+    if (messageSize - sizeof(isoACCM.header) - sizeof(isoACCM.footer) != isoACCM.header.MessageLengthU32)
+        LogMessage(LOG_LEVEL_WARNING, "ACCM message sent with invalid message length");
 
-    UtilSendTCPData(MODULE_NAME, messageBuffer, messageSize, socket, 0);
+    UtilSendTCPData(MODULE_NAME, messageBuffer, (I32)messageSize, socket, 0);
 
-    return messageSize;
+    return (I32)messageSize;
 }
 
 /*!
@@ -2488,7 +2361,7 @@ I32 ObjectControlSendTRCMMessage(TRCMData *TRCM, I32 *socket, U8 debug)
     TRCMType isoTRCM;
     C8 messageBuffer[sizeof(isoTRCM)];
     C8* ptr = messageBuffer;
-    int messageSize = 0;
+    U32 messageSize = 0;
 
     ObjectControlBuildTRCMMessage(TRCM, &isoTRCM, debug);
 
@@ -2567,13 +2440,14 @@ I32 ObjectControlSendTRCMMessage(TRCMData *TRCM, I32 *socket, U8 debug)
     memcpy(ptr, &isoTRCM.footer.Crc, sizeof(isoTRCM.footer.Crc));
     ptr += sizeof(isoTRCM.footer.Crc);
 
-    messageSize = (int)(ptr-messageBuffer);
+    if (ptr > messageBuffer) messageSize = (U32)(ptr-messageBuffer);
 
-    if (messageSize != (int)isoTRCM.header.MessageLengthU32) LogMessage(LOG_LEVEL_WARNING, "TRCM message sent with invalid message length");
+    if (messageSize - sizeof(isoTRCM.header) - sizeof(isoTRCM.footer) != isoTRCM.header.MessageLengthU32)
+        LogMessage(LOG_LEVEL_WARNING, "TRCM message sent with invalid message length");
 
-    UtilSendTCPData(MODULE_NAME, messageBuffer, messageSize, socket, 0);
+    UtilSendTCPData(MODULE_NAME, messageBuffer, (I32)messageSize, socket, 0);
 
-    return messageSize;
+    return (I32)messageSize;
 }
 
 /*!
@@ -2588,7 +2462,7 @@ I32 ObjectControlSendEXACMessage(EXACData *EXAC, I32 *socket, U8 debug)
     EXACType isoEXAC;
     C8 messageBuffer[sizeof(isoEXAC)];
     C8* ptr = messageBuffer;
-    int messageSize = 0;
+    U32 messageSize = 0;
 
     ObjectControlBuildEXACMessage(EXAC, &isoEXAC, debug);
 
@@ -2637,13 +2511,14 @@ I32 ObjectControlSendEXACMessage(EXACData *EXAC, I32 *socket, U8 debug)
     memcpy(ptr, &isoEXAC.footer.Crc, sizeof(isoEXAC.footer.Crc));
     ptr += sizeof(isoEXAC.footer.Crc);
 
-    messageSize = (int)(ptr-messageBuffer);
+    if (ptr > messageBuffer) messageSize = (U32)(ptr-messageBuffer);
 
-    if (messageSize != (int)isoEXAC.header.MessageLengthU32) LogMessage(LOG_LEVEL_WARNING, "EXAC message sent with invalid message length");
+    if (messageSize - sizeof(isoEXAC.header) - sizeof(isoEXAC.footer) != isoEXAC.header.MessageLengthU32)
+        LogMessage(LOG_LEVEL_WARNING, "EXAC message sent with invalid message length");
 
-    UtilSendTCPData(MODULE_NAME, messageBuffer, messageSize, socket, 0);
+    UtilSendTCPData(MODULE_NAME, messageBuffer, (I32)messageSize, socket, 0);
 
-    return messageSize;
+    return (I32)messageSize;
 }
 
 
@@ -2685,12 +2560,23 @@ I32 ObjectControlBuildACCMMessage(ACCMData *mqACCMData, ACCMType *ACCM, U8 debug
     ACCM->actionTypeParameter2ContentLength = sizeof(ACCM->actionTypeParameter2);
     ACCM->actionTypeParameter3ContentLength = sizeof(ACCM->actionTypeParameter3);
 
+    // Header content length
+    ACCM->header.MessageLengthU32 = sizeof(ACCM->actionID) + sizeof(ACCM->actionType)
+            + sizeof(ACCM->actionTypeParameter1) + sizeof(ACCM->actionTypeParameter2) + sizeof(ACCM->actionTypeParameter3)
+            + sizeof(ACCM->actionIDValueID) + sizeof(ACCM->actionTypeValueID)
+            + sizeof(ACCM->actionTypeParameter1ValueID) + sizeof(ACCM->actionTypeParameter1ValueID) + sizeof(ACCM->actionTypeParameter3ValueID)
+            + sizeof(ACCM->actionIDContentLength) + sizeof(ACCM->actionTypeContentLength)
+            + sizeof(ACCM->actionTypeParameter1ContentLength) + sizeof(ACCM->actionTypeParameter1ContentLength) + sizeof(ACCM->actionTypeParameter3ContentLength);
+
+
     // Footer (TODO)
     ACCM->footer.Crc = 0;
 
+    U32 messageLen = ACCM->header.MessageLengthU32 + sizeof(ACCM->footer.Crc) + sizeof(ACCM->header.SyncWordU16) + sizeof(ACCM->header.MessageIdU16) + sizeof(ACCM->header.AckReqProtVerU8) + sizeof(ACCM->header.TransmitterIdU8) + sizeof(ACCM->header.MessageCounterU8) + sizeof(ACCM->header.MessageLengthU32);
+
     if (debug)
     {
-        LogPrint("ACCM (%u bytes):\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x", sizeof(ACCMType),
+        LogPrint("ACCM (%u bytes):\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x", messageLen,
                  ACCM->actionIDValueID, ACCM->actionIDContentLength, ACCM->actionID,
                  ACCM->actionTypeValueID, ACCM->actionTypeContentLength, ACCM->actionType,
                  ACCM->actionTypeParameter1ValueID, ACCM->actionTypeParameter1ContentLength, ACCM->actionTypeParameter1,
@@ -2698,7 +2584,7 @@ I32 ObjectControlBuildACCMMessage(ACCMData *mqACCMData, ACCMType *ACCM, U8 debug
                  ACCM->actionTypeParameter3ValueID, ACCM->actionTypeParameter3ContentLength, ACCM->actionTypeParameter3);
     }
 
-    return sizeof(ACCMType);
+    return (I32)messageLen;
 }
 
 /*!
@@ -2720,7 +2606,6 @@ I32 ObjectControlBuildEXACMessage(EXACData *mqEXACData, EXACType *EXAC, U8 debug
     EXAC->header.MessageCounterU8 = 0;
     EXAC->header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
     EXAC->header.MessageIdU16 = COMMAND_EXAC_CODE;
-    EXAC->header.MessageLengthU32 = sizeof(EXACType) - sizeof(HeaderType) - sizeof(FooterType);
 
     // Data fields
     EXAC->actionID = mqEXACData->actionID;
@@ -2734,17 +2619,25 @@ I32 ObjectControlBuildEXACMessage(EXACData *mqEXACData, EXACType *EXAC, U8 debug
     EXAC->actionIDContentLength = sizeof(EXAC->actionID);
     EXAC->executionTime_qmsoWContentLength = sizeof(EXAC->executionTime_qmsoW);
 
+
+    // Header message length
+    EXAC->header.MessageLengthU32 = sizeof(EXAC->actionID) + sizeof(EXAC->executionTime_qmsoW)
+            + sizeof(EXAC->actionIDValueID) + sizeof(EXAC->executionTime_qmsoWValueID)
+            + sizeof(EXAC->actionIDContentLength) + sizeof(EXAC->executionTime_qmsoWContentLength);
+
     // Footer (TODO)
     EXAC->footer.Crc = 0;
 
+    U32 messageLen = EXAC->header.MessageLengthU32 + sizeof(EXAC->footer.Crc) + sizeof(EXAC->header.SyncWordU16) + sizeof(EXAC->header.MessageIdU16) + sizeof(EXAC->header.AckReqProtVerU8) + sizeof(EXAC->header.TransmitterIdU8) + sizeof(EXAC->header.MessageCounterU8) + sizeof(EXAC->header.MessageLengthU32);
+
     if (debug)
     {
-        LogPrint("EXAC (%u bytes):\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x", sizeof(EXACType),
+        LogPrint("EXAC (%u bytes):\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x", messageLen,
                  EXAC->actionIDValueID, EXAC->actionIDContentLength, EXAC->actionID,
                  EXAC->executionTime_qmsoWValueID, EXAC->executionTime_qmsoWContentLength, EXAC->executionTime_qmsoW);
     }
 
-    return sizeof(EXACType);
+    return (I32)messageLen;
 }
 
 /*!
@@ -2762,7 +2655,7 @@ I32 ObjectControlBuildTRCMMessage(TRCMData *mqTRCMData, TRCMType *TRCM, U8 debug
     TRCM->header.MessageCounterU8 = 0;
     TRCM->header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
     TRCM->header.MessageIdU16 = COMMAND_TRCM_CODE;
-    TRCM->header.MessageLengthU32 = sizeof(TRCMType) - sizeof(HeaderType) - sizeof(FooterType);
+
 
     // Data fields
     TRCM->triggerID = mqTRCMData->triggerID;
@@ -2785,12 +2678,23 @@ I32 ObjectControlBuildTRCMMessage(TRCMData *mqTRCMData, TRCMType *TRCM, U8 debug
     TRCM->triggerTypeParameter2ContentLength = sizeof(TRCM->triggerTypeParameter2);
     TRCM->triggerTypeParameter3ContentLength = sizeof(TRCM->triggerTypeParameter3);
 
+
+    // Message length in header
+    TRCM->header.MessageLengthU32 = sizeof(TRCM->triggerID) + sizeof(TRCM->triggerType)
+            + sizeof(TRCM->triggerTypeParameter1) + sizeof(TRCM->triggerTypeParameter2) + sizeof(TRCM->triggerTypeParameter3)
+            + sizeof(TRCM->triggerIDValueID) + sizeof(TRCM->triggerTypeValueID)
+            + sizeof(TRCM->triggerTypeParameter1ValueID) + sizeof(TRCM->triggerTypeParameter1ValueID) + sizeof(TRCM->triggerTypeParameter3ValueID)
+            + sizeof(TRCM->triggerIDContentLength) + sizeof(TRCM->triggerTypeContentLength)
+            + sizeof(TRCM->triggerTypeParameter1ContentLength) + sizeof(TRCM->triggerTypeParameter1ContentLength) + sizeof(TRCM->triggerTypeParameter3ContentLength);
+
+
     // Footer (TODO)
     TRCM->footer.Crc = 0;
 
+    U32 messageLen = TRCM->header.MessageLengthU32 + sizeof(TRCM->footer.Crc) + sizeof(TRCM->header.SyncWordU16) + sizeof(TRCM->header.MessageIdU16) + sizeof(TRCM->header.AckReqProtVerU8) + sizeof(TRCM->header.TransmitterIdU8) + sizeof(TRCM->header.MessageCounterU8) + sizeof(TRCM->header.MessageLengthU32);
     if (debug)
     {
-        LogPrint("TRCM (%u bytes):\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x", sizeof(TRCMType),
+        LogPrint("TRCM (%u bytes):\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x", messageLen,
                  TRCM->triggerIDValueID, TRCM->triggerIDContentLength, TRCM->triggerID,
                  TRCM->triggerTypeValueID, TRCM->triggerTypeContentLength, TRCM->triggerType,
                  TRCM->triggerTypeParameter1ValueID, TRCM->triggerTypeParameter1ContentLength, TRCM->triggerTypeParameter1,
@@ -2798,7 +2702,7 @@ I32 ObjectControlBuildTRCMMessage(TRCMData *mqTRCMData, TRCMType *TRCM, U8 debug
                  TRCM->triggerTypeParameter3ValueID, TRCM->triggerTypeParameter3ContentLength, TRCM->triggerTypeParameter3);
     }
 
-    return sizeof(TRCMType);
+    return (I32)messageLen;
 }
 
 
@@ -2969,12 +2873,16 @@ static int iGetSocketFromObjectIP(in_addr_t ipAddr, int sockfds[], unsigned int 
     struct sockaddr_in inaddr;
     socklen_t addrlen = sizeof(inaddr);
     int result;
+    char ip[INET_ADDRSTRLEN];
+
+    inet_ntop(AF_INET, &ipAddr, ip, INET_ADDRSTRLEN);
 
     for (unsigned int i = 0; i < nSockfds; ++i) {
         result = getsockname(sockfds[i], (struct sockaddr*)&inaddr, &addrlen);
         if (result == -1)
             continue;
 
+        inet_ntop(AF_INET, &inaddr.sin_addr.s_addr, ip, INET_ADDRSTRLEN);
         if (inaddr.sin_addr.s_addr == ipAddr)
             return sockfds[i];
     }

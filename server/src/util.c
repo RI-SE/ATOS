@@ -51,7 +51,6 @@
 #define PRIO_COMM_ACCM 80
 #define PRIO_COMM_TREO 70
 #define PRIO_COMM_TRCM 80
-#define PRIO_COMM_TOM 90
 #define PRIO_COMM_INIT 110
 #define PRIO_COMM_CONNECT 110
 #define PRIO_COMM_OBC_STATE 160
@@ -575,6 +574,7 @@ int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug)
   return 0;
 }
 
+/* TODO: DELETE
 int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug)
 {
 
@@ -651,7 +651,7 @@ int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug)
 
   return 0;
 }
-
+*/
 
 
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP) { strncpy(OP->IP, IP, strlen(IP));}
@@ -1931,9 +1931,6 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
         break;
     case COMM_ABORT:
         uiMessagePrio = PRIO_COMM_ABORT;
-        break;
-    case COMM_TOM:
-        uiMessagePrio = PRIO_COMM_TOM;
         break;
     case COMM_INIT:
         uiMessagePrio = PRIO_COMM_INIT;
