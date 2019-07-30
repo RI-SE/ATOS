@@ -81,7 +81,7 @@ void visualization_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                    break;
                case COMM_MONR:
                    printf("Vizualisation got MONR.\n");
-                   //UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer, sizeof(busReceiveBuffer), 0);
+                   UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer, sizeof(busReceiveBuffer), 0);
                    break;
                case COMM_OBC_STATE:
                    break;
