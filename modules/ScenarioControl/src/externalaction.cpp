@@ -23,6 +23,6 @@ Action::ActionReturnCode_t ExternalAction::execute(void)
 }
 
 InfrastructureAction::InfrastructureAction(ActionID_t actionID, uint32_t allowedNumberOfRuns)
-    : ExternalAction(actionID, Action::ACTION_INFRASTRUCTURE, allowedNumberOfRuns)
+    : ExternalAction(actionID, Action::ActionTypeCode_t::ACTION_INFRASTRUCTURE, allowedNumberOfRuns)
 {
 }
