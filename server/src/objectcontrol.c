@@ -1216,16 +1216,16 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
   ------------------------------------------------------------*/
 
 void signalHandler(int signo)
- {
-   if (signo == SIGINT)
-   {
-         LogMessage(LOG_LEVEL_WARNING,"Caught keyboard interrupt");
-         iExit = 1;
-   }
-   else
-   {
-       LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
-   }
+{
+    if (signo == SIGINT)
+    {
+        LogMessage(LOG_LEVEL_WARNING,"Caught keyboard interrupt");
+        iExit = 1;
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+    }
 }
 
 I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* SimData, U8 debug)
