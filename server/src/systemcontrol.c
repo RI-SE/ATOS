@@ -248,6 +248,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO,"System control task running with PID: %i",getpid());
 
+    // Set up signal handlers
     if (signal(SIGINT, signalHandler) == SIG_ERR)
         util_error("Unable to initialize signal handler");
 
@@ -340,7 +341,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
             PreviousSystemControlCommand = SystemControlCommand;
             bzero(pcBuffer,IPC_BUFFER_SIZE);
-            ClientResult = recv(ClientSocket, pcBuffer, IPC_BUFFER_SIZE,  0);
+
+            ClientResult = recv(ClientSocket, pcBuffer, IPC_BUFFER_SIZE, MSG_DONTWAIT);
 
             if (ClientResult <= -1)
             {
@@ -436,6 +438,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             {
                 LogMessage(LOG_LEVEL_WARNING, "Ignored received TCP message which was too large to handle");
             }
+
         }
         else if(ModeU8 == 1)
         {   /* use util.c function to call time
@@ -497,6 +500,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         switch (iCommand)
         {
         case COMM_OBC_STATE:
+            LogPrint("REC: %u",OBCStateU8);
             OBCStateU8 = (U8)*pcRecvBuffer;
             break;
         case COMM_LOG:
@@ -1062,7 +1066,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         }
 
 
-        sleep_time = iCommand == COMM_INV ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
+        sleep_time = (iCommand == COMM_INV && server_state != SERVER_STATE_INWORK) ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
         nanosleep(&sleep_time,&ref_time);
     }
 
