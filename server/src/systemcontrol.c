@@ -163,31 +163,18 @@ I32 SystemControlBuildFileContentInfo(C8 *Path, C8 *ReturnValue, U8 Debug);
 I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *ReturnValue, U8 Remove, U8 Debug);
 I32 SystemControlCreateDirectory(C8 *Path, C8 *ReturnValue, U8 Debug);
 static C8 SystemControlVerifyHostAddress(char* ip);
+static void signalHandler(int signo);
 
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
 
 #define MODULE_NAME "SystemControl"
+static volatile int iExit = 0;
 
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
-void sig_handler(int signo)
- {
-   if (signo == SIGINT)
-         printf("received SIGINT in SystemControl\n");
-         printf("Shutting down SystemControl with pid: %d\n", getpid());
-         pid_t iPid = getpid(); /* Process gets its id.*/
-         exit(1);
-
-   if (signo == SIGUSR1)
-         printf("received SIGUSR1\n");
-   if (signo == SIGKILL)
-         printf("received SIGKILL\n");
-   if (signo == SIGSTOP)
-         printf("received SIGSTOP\n");
-}
 
 void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
@@ -207,7 +194,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     C8 pcBuffer[IPC_BUFFER_SIZE];
     char inchr;
     struct timeval tvTime;
-    int iExit = 0;
 
     ObjectPosition OP;
     int i,i1;
@@ -261,6 +247,9 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO,"System control task running with PID: %i",getpid());
+
+    if (signal(SIGINT, signalHandler) == SIG_ERR)
+        util_error("Unable to initialize signal handler");
 
     if(iCommInit())
         util_error("Unable to connect to message bus");
@@ -1075,11 +1064,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
         sleep_time = iCommand == COMM_INV ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
         nanosleep(&sleep_time,&ref_time);
-
-
-        if (signal(SIGINT, sig_handler) == SIG_ERR)
-            printf("\ncan't catch SIGINT\n");
-
     }
 
     (void)iCommClose();
@@ -1090,6 +1074,18 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
+void signalHandler(int signo)
+{
+    if (signo == SIGINT)
+    {
+        LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+        iExit = 1;
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+    }
+}
 
 SystemControlCommand_t SystemControlFindCommand(const char* CommandBuffer, SystemControlCommand_t *CurrentCommand, int *CommandArgCount)
 {
@@ -1258,6 +1254,7 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
     unsigned int control_port = SYSTEM_CONTROL_CONTROL_PORT;
     int optval = 1;
     int result = 0;
+    int sockFlags = 0;
 
     /* Init user control socket */
     LogMessage(LOG_LEVEL_INFO,"Init control socket");
@@ -1268,6 +1265,7 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
         perror("[SystemControl] ERR: Failed to create control socket");
         exit(1);
     }
+
     bzero((char *) &command_server_addr, sizeof(command_server_addr));
 
     command_server_addr.sin_family = AF_INET;
@@ -1295,17 +1293,23 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
     listen(*ServerHandle, 1);
     cli_length = sizeof(cli_addr);
 
+    /* Set socket to nonblocking */
+    sockFlags = fcntl(*ServerHandle, F_GETFL, 0);
+    if (sockFlags == -1)
+        util_error("Error calling fcntl");
 
+    sockFlags = sockFlags | O_NONBLOCK;
+    if(fcntl(*ServerHandle, F_SETFL, sockFlags))
+        util_error("Error calling fcntl");
 
-    while( *ClientSocket = accept(*ServerHandle, (struct sockaddr *) &cli_addr, &cli_length))
+    do
     {
+        *ClientSocket = accept(*ServerHandle, (struct sockaddr *) &cli_addr, &cli_length);
+        if ((*ClientSocket == -1 && errno != EAGAIN && errno != EWOULDBLOCK) || iExit)
+            util_error("Failed to establish connection");
+    } while(*ClientSocket == -1);
 
-        LogMessage( LOG_LEVEL_INFO,"Connection accepted!");
-        break;
-
-    }
-
-    LogMessage( LOG_LEVEL_INFO,"Connection received: %s:%i", inet_ntoa(cli_addr.sin_addr), htons(command_server_addr.sin_port));
+    LogMessage(LOG_LEVEL_INFO, "Connection established: %s:%i", inet_ntoa(cli_addr.sin_addr), htons(command_server_addr.sin_port));
 
     ip_addr->s_addr = cli_addr.sin_addr.s_addr; //Set IP-address of Usercontrol
 
@@ -1314,9 +1318,6 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
         perror("[SystemControl] ERR: Failed to accept from central");
         exit(1);
     }
-
-    /* set socket to non-blocking */
-    result = fcntl(*ClientSocket, F_SETFL, fcntl(*ClientSocket, F_GETFL, 0) | O_NONBLOCK);
 
     return result;
 }
