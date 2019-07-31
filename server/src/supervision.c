@@ -62,7 +62,7 @@ void freeGeofences(GeofenceType *geoFence, unsigned int *nGeof);
 /*------------------------------------------------------------
 -- Static variables
 ------------------------------------------------------------*/
-static int iExit = 0;
+static volatile int iExit = 0;
 
 /*------------------------------------------------------------
 -- The main function.
