@@ -1,5 +1,6 @@
 #include "trigger.h"
 
+#include "logging.h"
 
 Trigger::Trigger(TriggerID_t triggerID, TriggerTypeCode_t triggerType)
 {
@@ -199,4 +200,46 @@ bool Trigger::isActive() const
     else if(wasTriggeredByLastUpdate == NO_TRIGGER_OCCURRED)
         return false;
     throw std::logic_error("Trigger in undefined state");
+}
+
+/*!
+ * \brief Trigger::getConfigurationMessageData Constructs a TRCMData struct from object members
+ * \return A struct which can be sent on message bus
+ */
+TRCMData Trigger::getConfigurationMessageData(void) const
+{
+    TRCMData retval;
+    retval.triggerID = triggerID;
+    retval.triggerType = triggerTypeCode;
+
+    if (triggerObjectIP == 0) LogMessage(LOG_LEVEL_WARNING, "Constructing trigger configuration message with no IP");
+
+    retval.ip = triggerObjectIP;
+
+    switch(parameters.size())
+    {
+    case 3:
+        retval.triggerTypeParameter1 = parameters[0];
+        retval.triggerTypeParameter2 = parameters[1];
+        retval.triggerTypeParameter3 = parameters[2];
+        break;
+    case 2:
+        retval.triggerTypeParameter1 = parameters[0];
+        retval.triggerTypeParameter2 = parameters[1];
+        retval.triggerTypeParameter3 = TRIGGER_PARAMETER_UNAVAILABLE;
+        break;
+    case 1:
+        retval.triggerTypeParameter1 = parameters[0];
+        retval.triggerTypeParameter2 = TRIGGER_PARAMETER_UNAVAILABLE;
+        retval.triggerTypeParameter3 = TRIGGER_PARAMETER_UNAVAILABLE;
+        break;
+    case 0:
+        retval.triggerTypeParameter1 = TRIGGER_PARAMETER_UNAVAILABLE;
+        retval.triggerTypeParameter2 = TRIGGER_PARAMETER_UNAVAILABLE;
+        retval.triggerTypeParameter3 = TRIGGER_PARAMETER_UNAVAILABLE;
+        break;
+    default:
+        throw std::invalid_argument("Trigger contains too many parameters for an ISO message");
+    }
+    return retval;
 }

@@ -1,3 +1,5 @@
+#ifndef SCENARIO_H
+#define SCENARIO_H
 
 #include <set>
 #include <fstream>
@@ -19,13 +21,13 @@ public:
 
     void initialize(const std::string scenarioFilePath);
 
-    ScenarioReturnCode_t linkTriggersWithActions(std::set<Trigger*> ts, std::set<Action*> as);
-    ScenarioReturnCode_t linkTriggersWithAction(std::set<Trigger*> ts, Action* a);
-    ScenarioReturnCode_t linkTriggerWithActions(Trigger* t, std::set<Action*> as);
-    ScenarioReturnCode_t linkTriggerWithAction(Trigger* t, Action* a);
+    ScenarioReturnCode_t linkTriggersWithActions(std::set<Trigger*> tps, std::set<Action*> aps);
+    ScenarioReturnCode_t linkTriggersWithAction(std::set<Trigger*> tps, Action* ap);
+    ScenarioReturnCode_t linkTriggerWithActions(Trigger* tp, std::set<Action*> aps);
+    ScenarioReturnCode_t linkTriggerWithAction(Trigger* tp, Action* ap);
 
-    ScenarioReturnCode_t addTrigger(Trigger* t);
-    ScenarioReturnCode_t addAction(Action* a);
+    ScenarioReturnCode_t addTrigger(Trigger* tp);
+    ScenarioReturnCode_t addAction(Action* ap);
 
     std::set<Causality> getCausalities(void);
 
@@ -45,6 +47,7 @@ public:
         return NOT_FOUND;
     }
 
+    void resetISOTriggers(void);
     void refresh(void) const;
     void clear(void);
 
@@ -55,3 +58,5 @@ private:
 
     void parseScenarioFile(std::ifstream &file);
 };
+
+#endif

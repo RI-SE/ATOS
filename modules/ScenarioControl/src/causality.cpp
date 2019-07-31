@@ -7,36 +7,36 @@ Causality::Causality(Causality::TriggerOperator_t op)
     triggers = std::set<Trigger*>();
 }
 
-Causality::Causality(Action* a, TriggerOperator_t op)
+Causality::Causality(Action* ap, TriggerOperator_t op)
 {
-    actions.insert(a);
+    actions.insert(ap);
     oper = op;
     triggers = std::set<Trigger*>();
 }
 
-Causality::Causality(Trigger* t, Action* a, TriggerOperator_t op)
+Causality::Causality(Trigger* tp, Action* ap, TriggerOperator_t op)
 {
-    triggers.insert(t);
-    actions.insert(a);
+    triggers.insert(tp);
+    actions.insert(ap);
     oper = op;
 }
 
 Action* Causality::getActionByID(Action::ActionID_t id) const
 {
-    for (Action* a : actions)
+    for (Action* ap : actions)
     {
-        if (a->getID() == id)
-            return a;
+        if (ap->getID() == id)
+            return ap;
     }
     return nullptr;
 }
 
 Trigger* Causality::getTriggerByID(Trigger::TriggerID_t id) const
 {
-    for (Trigger* t : triggers)
+    for (Trigger* tp : triggers)
     {
-        if (t->getID() == id)
-            return t;
+        if (tp->getID() == id)
+            return tp;
     }
     return nullptr;
 }

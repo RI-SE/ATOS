@@ -282,6 +282,10 @@ COMM_TRAJ_TOSUP = 17,
 COMM_TRAJ_FROMSUP = 18,
 COMM_ASP = 19,
 COMM_OSEM = 20,
+COMM_EXAC = 21,
+COMM_TREO = 22,
+COMM_ACCM = 23,
+COMM_TRCM = 24,
 COMM_MONR = 239,
 COMM_INV = 255
 };
@@ -630,7 +634,105 @@ typedef struct
   char ActionDelay[8];
   uint8_t TriggerId;
   int32_t Action;
-} TriggActionType;
+} TriggActionType; // Note: this is the old struct
+
+typedef struct
+{
+    HeaderType header;
+    uint16_t actionIDValueID;
+    uint16_t actionIDContentLength;
+    uint16_t actionID;
+    uint16_t delayTime_qmsValueID;
+    uint16_t delayTime_qmsContentLength;
+    uint32_t delayTime_qms;
+} EXACType;
+
+typedef struct
+{
+    uint16_t actionID;
+    uint32_t delayTime_qms;
+    in_addr_t ip;
+} EXACData; //!< Data type for MQ message
+
+typedef struct
+{
+    HeaderType header;
+    uint16_t triggerIDValueID;
+    uint16_t triggerIDContentLength;
+    uint16_t triggerID;
+    uint16_t timestamp_qmsowValueID;
+    uint16_t timestamp_qmsowContentLength;
+    uint32_t timestamp_qmsow;
+} TREOType;
+
+typedef struct
+{
+    uint16_t triggerID;
+    uint32_t timestamp_qmsow;
+    in_addr_t ip;
+} TREOData; //!< Data type for MQ message
+
+typedef struct
+{
+    HeaderType header;
+    uint16_t actionIDValueID;
+    uint16_t actionIDContentLength;
+    uint16_t actionID;
+    uint16_t actionTypeValueID;
+    uint16_t actionTypeContentLength;
+    uint16_t actionType;
+    uint16_t actionTypeParameter1ValueID;
+    uint16_t actionTypeParameter1ContentLength;
+    uint32_t actionTypeParameter1;
+    uint16_t actionTypeParameter2ValueID;
+    uint16_t actionTypeParameter2ContentLength;
+    uint32_t actionTypeParameter2;
+    uint16_t actionTypeParameter3ValueID;
+    uint16_t actionTypeParameter3ContentLength;
+    uint32_t actionTypeParameter3;
+} ACCMType;
+
+typedef struct
+{
+    uint16_t actionID;
+    uint16_t actionType;
+    uint32_t actionTypeParameter1;
+    uint32_t actionTypeParameter2;
+    uint32_t actionTypeParameter3;
+    in_addr_t ip;
+} ACCMData; //!< Data type for MQ message
+
+typedef struct
+{
+    HeaderType header;
+    uint16_t triggerIDValueID;
+    uint16_t triggerIDContentLength;
+    uint16_t triggerID;
+    uint16_t triggerTypeValueID;
+    uint16_t triggerTypeContentLength;
+    uint16_t triggerType;
+    uint16_t triggerTypeParameter1ValueID;
+    uint16_t triggerTypeParameter1ContentLength;
+    uint32_t triggerTypeParameter1;
+    uint16_t triggerTypeParameter2ValueID;
+    uint16_t triggerTypeParameter2ContentLength;
+    uint32_t triggerTypeParameter2;
+    uint16_t triggerTypeParameter3ValueID;
+    uint16_t triggerTypeParameter3ContentLength;
+    uint32_t triggerTypeParameter3;
+} TRCMType;
+
+typedef struct
+{
+    uint16_t triggerID;
+    uint16_t triggerType;
+    uint32_t triggerTypeParameter1;
+    uint32_t triggerTypeParameter2;
+    uint32_t triggerTypeParameter3;
+    in_addr_t ip;
+} TRCMData; //!< Data type for MQ message
+
+
 
 typedef struct
 {
@@ -746,11 +848,18 @@ void util_error(const char *message);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
+// Message bus functions
 int iCommInit(void);
 int iCommClose(void);
 ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, struct timeval *timeRecv);
 int iCommSend(const enum COMMAND iCommand, const char* data, size_t dataLength);
 
+int iCommSendTREO(TREOData data);
+int iCommSendTRCM(TRCMData data);
+int iCommSendEXAC(EXACData data);
+int iCommSendACCM(ACCMData data);
+
+//
 char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
 int UtilVincentyDirect(double refLat, double refLon, double a1, double distance, double *resLat, double *resLon, double *a2);
@@ -816,6 +925,11 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
 
 I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataType *monitorData, U8 debug);
+I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
+I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData);
+I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);
+I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *accmData);
+
 double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
 
 
