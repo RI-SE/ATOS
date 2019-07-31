@@ -87,7 +87,6 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     // Listen for commands
     enum COMMAND command = COMM_INV;
     ssize_t receivedBytes = 0;
-    int iExit = 0;
 
     int GPSweek;
     FILE *replayfd;

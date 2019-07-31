@@ -1194,7 +1194,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                 bzero(Buffer2, SMALL_BUFFER_SIZE_1);
                 Buffer2[0] = OBCState;
-                LogPrint("SEND: %u",Buffer2[0]);
                 if (iCommSend(COMM_OBC_STATE, Buffer2, SMALL_BUFFER_SIZE_1) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OBC_STATE command - entering error state");
