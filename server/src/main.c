@@ -79,10 +79,6 @@ static const ModuleTask allModules[] = {
     #ifdef CITS_ENABLED
     ,citscontrol_task
     #endif
-
-    #ifdef VISUALIZATION_ENABLED
-    ,visualization_task
-    #endif
 };
 static const int numberOfModules = sizeof(allModules) / sizeof(ModuleTask);
 
