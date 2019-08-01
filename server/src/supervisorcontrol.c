@@ -17,7 +17,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
-#include <time.h>  
+#include <time.h>
+#include <signal.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -47,13 +48,14 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-
+static void signalHandler(int signo);
 
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
 
 #define MODULE_NAME "SupervisorControl"
+static volatile int iExit = 0;
 
 /*------------------------------------------------------------
 -- The main function.
@@ -99,7 +101,6 @@ void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
   U8 ISOMessageReadRestU8 = 0;
   U8 ISOMessageReceivedU8 = 0;
 
-  I32 iExit = 0;
   enum COMMAND iCommand;
   C8 MqBuffer[SUP_MQ_MAX_SIZE];
 
@@ -107,9 +108,15 @@ void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
   U16 IterationCounter = 0;
   U32 TimestampU32 = 0;
 
+  // Create log
   LogInit(MODULE_NAME,logLevel);
-  LogMessage( LOG_LEVEL_INFO, "Supervisor control task running with PID: %i", getpid());
+  LogMessage(LOG_LEVEL_INFO, "Supervisor control task running with PID: %i", getpid());
 
+  // Set up signal handlers
+  if (signal(SIGINT, signalHandler) == SIG_ERR)
+      util_error("Unable to initialize signal handler");
+
+  // Set up message bus connection
   if(iCommInit())
       util_error("Unable to connect to message bus");
 
@@ -366,6 +373,19 @@ void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
       }
     }
   }
+}
+
+void signalHandler(int signo)
+{
+    if (signo == SIGINT)
+    {
+        LogMessage(LOG_LEVEL_WARNING,"Caught keyboard interrupt");
+        iExit = 1;
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+    }
 }
 
 

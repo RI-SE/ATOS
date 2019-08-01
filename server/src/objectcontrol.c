@@ -171,6 +171,8 @@ static I32 vCheckRemoteDisconnected(int* sockfd);
 static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static void vCloseSafetyChannel(int* sockfd);
 static size_t uiRecvMonitor(int* sockfd, char* buffer, size_t length);
+static void signalHandler(int signo);
+
 I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug);
 I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug);
 I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
@@ -211,27 +213,11 @@ int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
 ------------------------------------------------------------*/
 
 #define MODULE_NAME "ObjectControl"
+static volatile int iExit = 0;
 
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
-void sig_handlerOC(int signo)
- {
-   if (signo == SIGINT)
-         printf("received SIGINT in ObjectControl\n");
-         printf("Shutting down ObjectControl with pid: %d\n", getpid());
-         pid_t iPid = getpid(); /* Process gets its id.*/
-         //kill(iPid, SIGINT);
-         exit(1);
-
-
-   if (signo == SIGUSR1)
-         printf("received SIGUSR1\n");
-   if (signo == SIGKILL)
-         printf("received SIGKILL\n");
-   if (signo == SIGSTOP)
-         printf("received SIGSTOP\n");
-}
 
 void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
@@ -243,7 +229,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     uint32_t object_udp_port[MAX_OBJECTS];
     uint32_t object_tcp_port[MAX_OBJECTS];
     int nbr_objects=0;
-    int iExit = 0;
     enum COMMAND iCommand;
     char pcRecvBuffer[RECV_MESSAGE_BUFFER];
     char pcTempBuffer[512];
@@ -364,6 +349,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     // Create log
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO, "Object control task running with PID: %i", getpid());
+
+    // Set up signal handlers
+    if (signal(SIGINT, signalHandler) == SIG_ERR)
+        util_error("Unable to initialize signal handler");
 
     // Set up message bus connection
     if (iCommInit())
@@ -1215,9 +1204,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
             (void)nanosleep(&sleep_time,&ref_time);
         }
-
-            if (signal(SIGINT, sig_handlerOC) == SIG_ERR)
-                printf("\ncan't catch SIGINT\n");
     }
 
     LogMessage(LOG_LEVEL_INFO,"Object control exiting");
@@ -1228,6 +1214,18 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
   -- Private functions
   ------------------------------------------------------------*/
 
+void signalHandler(int signo)
+{
+    if (signo == SIGINT)
+    {
+        LogMessage(LOG_LEVEL_WARNING,"Caught keyboard interrupt");
+        iExit = 1;
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+    }
+}
 
 I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* SimData, U8 debug)
 {

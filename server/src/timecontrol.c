@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
 
 
 #include <sys/socket.h>
@@ -62,12 +63,13 @@ static void TimeControlRecvTime(int* sockfd, C8* buffer, int length, int* reciev
 U32 TimeControlIPStringToInt(C8 *IP);
 U16 TimeControlGetMillisecond(TimeType *GPSTime);
 static void TimeControlDecodeTimeBuffer(TimeType* GPSTime, C8* TimeBuffer, C8 debug);
-
+static void signalHandler(int signo);
 
 /*------------------------------------------------------------
   -- Private variables.
   ------------------------------------------------------------*/
 #define MODULE_NAME "TimeControl"
+static volatile int iExit = 0;
 
 /*------------------------------------------------------------
 -- The main function.
@@ -81,7 +83,7 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     I32 SocketfdI32=-1;
     struct sockaddr_in time_addr;
 
-    I32 iExit = 0, iCommand, result;
+    I32 result;
     C8 TimeBuffer[TIME_CONTROL_RECEIVE_BUFFER_SIZE];
     C8 LogBuffer[LOG_BUFFER_LENGTH];
     I32 ReceivedNewData, i;
@@ -100,9 +102,15 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     enum COMMAND command;
     char busReceiveBuffer[MBUS_MAX_DATALEN];
 
+    // Create log
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO,"Time control task running with PID: %i",getpid());
 
+    // Set up signal handlers
+    if (signal(SIGINT, signalHandler) == SIG_ERR)
+        util_error("Unable to initialize signal handler");
+
+    // Set up message bus connection
     if(iCommInit())
         util_error("Unable to initialize message bus connection");
 
@@ -253,6 +261,19 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     }
 
     LogMessage(LOG_LEVEL_INFO,"Time control exiting");
+}
+
+void signalHandler(int signo)
+  {
+    if (signo == SIGINT)
+    {
+          LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+          iExit = 1;
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+    }
 }
 
 U16 TimeControlGetMillisecond(TimeType *GPSTime)

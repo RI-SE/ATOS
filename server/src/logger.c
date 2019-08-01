@@ -11,7 +11,7 @@
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
-#include "logger.h"
+
 #include <dirent.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -25,6 +25,7 @@
 #include <time.h>
 
 #include "maestroTime.h"
+#include "logger.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -60,28 +61,17 @@ static int CountFileRows(FILE *fd);
 void vLogCommand(enum COMMAND command, char *commandData, struct timeval recvTime, char *pcLogFile, char *pcLogFileComp);
 void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval recvTime, char *pcLogFile, char *pcLogFileComp);
 void vLogScenarioControlData(enum COMMAND command, unsigned char *commandData, ssize_t commandDatalen, struct timeval recvTime, char *pcLogFile, char *pcLogFileComp);
+static void signalHandler(int signo);
 
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
 #define MODULE_NAME "Logger"
-
+static volatile int iExit = 0;
 /*------------------------------------------------------------
   -- Public functions
   ------------------------------------------------------------*/
-void sig_handlerLogger(int signo)
-{
-   if (signo == SIGINT)
-         printf("received SIGINT in Logger\n");
-         printf("Shutting down Logger with pid: %d\n", getpid());
-         exit(1);
-   if (signo == SIGUSR1)
-         printf("received SIGUSR1\n");
-   if (signo == SIGKILL)
-         printf("received SIGKILL\n");
-   if (signo == SIGSTOP)
-         printf("received SIGSTOP\n");
-}
+
 
 void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
@@ -97,7 +87,6 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     // Listen for commands
     enum COMMAND command = COMM_INV;
     ssize_t receivedBytes = 0;
-    int iExit = 0;
 
     int GPSweek;
     FILE *replayfd;
@@ -111,6 +100,10 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     // Initialize log
     LogInit(MODULE_NAME, logLevel);
     LogMessage(LOG_LEVEL_INFO, "Logger task running with PID: %d", getpid());
+
+    // Set up signal handlers
+    if (signal(SIGINT, signalHandler) == SIG_ERR)
+        util_error("Unable to initialize signal handler");
 
     // Initialize message bus connection
     if(iCommInit())
@@ -338,10 +331,6 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         default:
             LogMessage(LOG_LEVEL_WARNING,"Unhandled message bus command: %u", command);
         }
-
-        if (signal(SIGINT, sig_handlerLogger) == SIG_ERR)
-            printf("\ncan't catch SIGINT\n");
-
     }
 
     (void)iCommClose();
@@ -354,6 +343,18 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
+void signalHandler(int signo)
+  {
+    if (signo == SIGINT)
+    {
+          LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+          iExit = 1;
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+    }
+}
 
 void vCreateLogFolder(char logFolder[MAX_FILE_PATH])
 {
