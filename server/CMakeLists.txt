@@ -18,7 +18,7 @@ include(GNUInstallDirs)
 #find_library(MAESTRO_LOGGING_PATH
 #    NAMES MaestroLogging
 #    PATHS "../util/C/logging"
-#          "../util
+#          "../util/C"
 #          ${CMAKE_INSTALL_LIBDIR}
 #          ${CMAKE_INSTALL_INCLUDEDIR})
 #add_library(MaestroLogging SHARED IMPORTED)
