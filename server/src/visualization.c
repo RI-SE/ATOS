@@ -38,7 +38,7 @@ static void vDisconnectVisualizationChannel(int* sockfd);
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
-void visualization_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
+void visualization_task(LOG_LEVEL logLevel)
 {
     int visual_server;
     struct sockaddr_in visual_server_addr;

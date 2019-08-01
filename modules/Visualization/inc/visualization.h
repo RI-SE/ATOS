@@ -17,7 +17,7 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-void visualization_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel);
+extern
 
 
 #endif 

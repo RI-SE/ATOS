@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -8,13 +9,13 @@
 #include <time.h>
 #include <string.h>
 
-#include "visualization.h"
+#include "logging.h"
 #include "util.h"
-
 
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
+#define MODULE_NAME "Visualization"
 #define RECV_MESSAGE_BUFFER 1024
 #define VISUAL_SERVER_NAME  "localhost"
 #define VISUAL_SERVER_PORT  53250
@@ -24,71 +25,87 @@
 #define SMALL_ITEM_TEXT_BUFFER_SIZE 20
 
 /*------------------------------------------------------------
--- The main function.
-------------------------------------------------------------*/
-void visualization_task(LOG_LEVEL logLevel)
+  -- Function declarations.
+  ------------------------------------------------------------*/
+static void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr);
+static void vDisconnectVisualizationChannel(int* sockfd);
+
+
+int main()
 {
+    enum COMMAND command = COMM_INV;
+    char mqRecvData[MQ_MSG_SIZE];
+    const struct timespec sleepTimePeriod = {0,10000000};
+    const struct timespec abortWaitTime = {1,0};
+    struct timespec remTime;
+
+    LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
+    LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
+
     int visual_server;
     struct sockaddr_in visual_server_addr;
     vConnectVisualizationChannel(&visual_server,&visual_server_addr);
 
-    int camTimeCycle = 0;
     I32 iExit = 0;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
-    enum COMMAND command;
 
-    (void)iCommInit();
-    LogInit(MODULE_NAME,LOG_LEVEL_INFO);
-    LogMessage(LOG_LEVEL_INFO, "Visualization running with PID: %i", getpid());
 
-    while(!iExit)
+    // Initialize message bus connection
+    while(iCommInit())
     {
-        // Handle MQ messages
-        bzero(busReceiveBuffer, sizeof(busReceiveBuffer));
-               (void)iCommRecv(&command,busReceiveBuffer, sizeof(busReceiveBuffer), NULL);
-               if (command == COMM_ABORT)
-               {
-
-               }
-
-               if(command == COMM_EXIT)
-               {
-                   iExit = 1;
-                   printf("Vizualisation exiting.\n");
-                   vDisconnectVisualizationChannel(&visual_server);
-                   (void)iCommClose();
-               }
-                //usleep(100000);
-               switch (command)
-               {
-               case COMM_INIT:
-
-                   break;
-               case COMM_MONI:
-                   // Ignore old style MONR data
-                   break;
-               case COMM_MONR:
-                   printf("Vizualisation got MONR.\n");
-                   UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer, sizeof(busReceiveBuffer), 0);
-                   break;
-               case COMM_OBC_STATE:
-                   break;
-               case COMM_CONNECT:
-                   break;
-               case COMM_LOG:
-                   break;
-               case COMM_INV:
-                   break;
-               default:
-                   LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
-       }
+        nanosleep(&sleepTimePeriod,&remTime);
     }
+
+    while(true)
+    {
+        if (iCommRecv(&command,mqRecvData,MQ_MSG_SIZE, NULL) < 0)
+        {
+            util_error("Message bus receive error");
+        }
+
+
+       if (command == COMM_ABORT){
+                       }
+
+       if(command == COMM_EXIT){
+            iExit = 1;
+            printf("Vizualisation exiting.\n");
+            vDisconnectVisualizationChannel(&visual_server);
+            (void)iCommClose();
+       }
+
+
+        switch (command) {
+        case COMM_INIT:
+            break;
+        case COMM_MONI:
+            // Ignore old style MONR data
+            break;
+        case COMM_MONR:
+            printf("Vizualisation got MONR.\n");
+            UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer, sizeof(busReceiveBuffer), 0);
+        break;
+        case COMM_LOG:
+        break;
+        case COMM_INV:
+            break;
+        case COMM_OBC_STATE:
+            break;
+        case COMM_STRT:
+            break;
+        default:
+            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
+        }
+    }
+
+    return 0;
 }
+
 
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
-void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr)
+static void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr)
 {
     struct hostent *server;
     char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
@@ -129,9 +146,8 @@ void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr)
     addr->sin_port   = htons(VISUAL_SERVER_PORT);
 }
 
-void vDisconnectVisualizationChannel(int* sockfd)
+static void vDisconnectVisualizationChannel(int* sockfd)
 {
     close(*sockfd);
 }
-
 

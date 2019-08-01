@@ -34,7 +34,8 @@ add_library(util
   ../../server/inc/util.h
 )
 
-add_executable(Visualization src/main.cpp)
+add_executable(Visualization
+    src/main.c)
 
 install(TARGETS Visualization DESTINATION bin)
 
