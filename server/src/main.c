@@ -32,7 +32,6 @@
 #include "timecontrol.h"
 #include "supervisorcontrol.h"
 #include "citscontrol.h"
-#include "visualization.h"
 
 #include "logging.h"
 #include "mqbus.h"
