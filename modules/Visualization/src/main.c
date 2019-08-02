@@ -69,7 +69,7 @@ int main()
 
        if(command == COMM_EXIT){
             iExit = 1;
-            printf("Vizualisation exiting.\n");
+            LogMessage(LOG_LEVEL_INFO, "Visualization exiting");
             vDisconnectVisualizationChannel(&visual_server);
             (void)iCommClose();
        }
@@ -82,7 +82,7 @@ int main()
             // Ignore old style MONR data
             break;
         case COMM_MONR:
-            printf("Vizualisation got MONR.\n");
+            LogMessage(LOG_LEVEL_INFO, "got MONR.\n");
             UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer, sizeof(busReceiveBuffer), 0);
         break;
         case COMM_LOG:
