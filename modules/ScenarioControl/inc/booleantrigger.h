@@ -30,7 +30,6 @@ protected:
     bool isStateTrue = false, wasStateTrue = false;
 
 private:
-
     virtual const std::set<TriggerParameter_t> getAcceptedParameters() const override
     {
         std::set<TriggerParameter_t> accParams;
