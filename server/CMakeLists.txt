@@ -26,6 +26,7 @@ include(GNUInstallDirs)
 
 SET(USE_CITS FALSE CACHE BOOL "Flag to indicate the use of CITS.")
 
+
 # MQTT PAHO
 if(USE_CITS)
     find_package(OpenSSL REQUIRED)
@@ -38,6 +39,7 @@ if(USE_CITS)
     )
 add_definitions(-DCITS_ENABLED)
 endif()
+
 
 # Create library
 add_library(MaestroLogging
@@ -54,8 +56,6 @@ add_library(MQBus
   ../util/C/MQBus/mqbus.h
   ../util/C/MQBus/mqbus.c
 )
-
-
 
 # Create library
 add_library(util
@@ -117,6 +117,4 @@ if(USE_CITS)
     target_link_libraries(TEServer cits)
 endif()
 
-
 target_link_libraries(TEServer MaestroLogging MaestroTime MQBus)
-
