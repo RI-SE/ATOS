@@ -56,24 +56,13 @@ typedef struct
 int SupervisionCheckGeofences(MonitorDataType MONRdata, GeofenceType *geofences, unsigned int numberOfGeofences);
 int loadGeofenceFiles(GeofenceType *geofences[], unsigned int *nGeof);
 int parseGeofenceFile(char* geofenceFile, GeofenceType *geofence);
-
+static void signalHandler(int signo);
 void freeGeofences(GeofenceType *geoFence, unsigned int *nGeof);
+
 /*------------------------------------------------------------
--- Public functions
+-- Static variables
 ------------------------------------------------------------*/
-void sig_handlerSV(int signo)
-  {
-    if (signo == SIGINT)
-          printf("received SIGINT in Supervision\n");
-          printf("Shutting down Supervision with pid: %d\n", getpid());
-          exit(1);
-    if (signo == SIGUSR1)
-          printf("received SIGUSR1\n");
-    if (signo == SIGKILL)
-          printf("received SIGKILL\n");
-    if (signo == SIGSTOP)
-          printf("received SIGSTOP\n");
-}
+static volatile int iExit = 0;
 
 /*------------------------------------------------------------
 -- The main function.
@@ -81,7 +70,6 @@ void sig_handlerSV(int signo)
 void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
 
-    I32 iExit = 0;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
     MonitorDataType MONRMessage;
 
@@ -90,9 +78,17 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     enum COMMAND command;
 
-    (void)iCommInit();
+    // Create log
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO, "Supervision running with PID: %i", getpid());
+
+    // Set up signal handlers
+    if (signal(SIGINT, signalHandler) == SIG_ERR)
+        util_error("Unable to initialize signal handler");
+
+    // Set up message bus connection
+    if (iCommInit())
+        util_error("Unable to connect to message queue bus");
 
     while(!iExit)
     {
@@ -144,8 +140,23 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         default:
             LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
         }
-        if (signal(SIGINT, sig_handlerSV) == SIG_ERR)
-            printf("\ncan't catch SIGINT\n");
+    }
+}
+
+
+/*------------------------------------------------------------
+-- Private functions
+------------------------------------------------------------*/
+void signalHandler(int signo)
+  {
+    if (signo == SIGINT)
+    {
+          LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+          iExit = 1;
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
     }
 }
 

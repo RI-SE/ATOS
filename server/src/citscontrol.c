@@ -102,7 +102,7 @@ enum CITS_STATE {
 
 static int state = INIT;
 static volatile int pending_state = INIT;
-
+static volatile int iExit = 0;
 static MQTTClient client;
 static MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
 static MQTTClient_message pubmsg = MQTTClient_message_initializer;
@@ -117,7 +117,6 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
 
     int camTimeCycle = 0;
-    I32 iExit = 0;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
     enum COMMAND command;
     int mqtt_response_code = 0;
@@ -164,6 +163,8 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     lastCam->cam.camParameters.basicContainer.referencePosition.latitude = 0;
     lastCam->cam.camParameters.basicContainer.referencePosition.longitude = 0;
+
+    // TODO: Initialize signal handler
 
     if (iCommInit())
         util_error("Unable to connect to message bus");
