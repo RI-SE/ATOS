@@ -51,7 +51,6 @@
 #define PRIO_COMM_ACCM 80
 #define PRIO_COMM_TREO 70
 #define PRIO_COMM_TRCM 80
-#define PRIO_COMM_TOM 90
 #define PRIO_COMM_INIT 110
 #define PRIO_COMM_CONNECT 110
 #define PRIO_COMM_OBC_STATE 160
@@ -63,6 +62,7 @@
 #define PRIO_COMM_TRAJ_FROMSUP 80
 #define PRIO_COMM_ASP 110
 #define PRIO_COMM_OSEM 160
+#define PRIO_OBJECTS_CONNECTED 100
 
 /*------------------------------------------------------------
 -- Public variables
@@ -574,6 +574,7 @@ int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug)
   return 0;
 }
 
+/* TODO: DELETE
 int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug)
 {
 
@@ -650,7 +651,7 @@ int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug)
 
   return 0;
 }
-
+*/
 
 
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP) { strncpy(OP->IP, IP, strlen(IP));}
@@ -1931,9 +1932,6 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
     case COMM_ABORT:
         uiMessagePrio = PRIO_COMM_ABORT;
         break;
-    case COMM_TOM:
-        uiMessagePrio = PRIO_COMM_TOM;
-        break;
     case COMM_INIT:
         uiMessagePrio = PRIO_COMM_INIT;
         break;
@@ -1978,6 +1976,9 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
         break;
     case COMM_TRCM:
         uiMessagePrio = PRIO_COMM_TRCM;
+        break;
+    case COMM_OBJECTS_CONNECTED:
+        uiMessagePrio = PRIO_OBJECTS_CONNECTED;
         break;
     default:
         util_error("Unknown command");
@@ -2075,8 +2076,8 @@ int iCommSendEXAC(EXACData data)
     memcpy(ptr, &data.actionID, sizeof(data.actionID));
     ptr += sizeof(data.actionID);
 
-    memcpy(ptr, &data.delayTime_qms, sizeof(data.delayTime_qms));
-    ptr += sizeof(data.delayTime_qms);
+    memcpy(ptr, &data.executionTime_qmsoW, sizeof(data.executionTime_qmsoW));
+    ptr += sizeof(data.executionTime_qmsoW);
 
     memcpy(ptr, &data.ip, sizeof(data.ip));
 
@@ -3282,8 +3283,8 @@ I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *
     memcpy(&exacData->actionID, rdPtr, sizeof(exacData->actionID));
     rdPtr += sizeof(exacData->actionID);
 
-    memcpy(&exacData->delayTime_qms, rdPtr, sizeof(exacData->delayTime_qms));
-    rdPtr += sizeof(exacData->delayTime_qms);
+    memcpy(&exacData->executionTime_qmsoW, rdPtr, sizeof(exacData->executionTime_qmsoW));
+    rdPtr += sizeof(exacData->executionTime_qmsoW);
 
     memcpy(&exacData->ip, rdPtr, sizeof(exacData->ip));
     rdPtr += sizeof(exacData->ip);

@@ -154,7 +154,6 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case COMM_STRT:
         case COMM_ARMD:
         case COMM_STOP:
-        case COMM_TOM:
         case COMM_CONNECT:
         case COMM_VIOP:
         case COMM_TRAJ:
@@ -540,7 +539,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     sprintf(pcBuffer,"unit 0.01 m/s>;<Lateral speed, unit 0.01 m/s>;<Longitudinal Acceleration, unit 0.001 m/s^2>;<Lateral Acceleration, unit 0.001 m/s^2>;<Driving direction>;<Object state>;<Ready to ARM>;<ErrorState>\n"); // add more her if we want more data
     (void)fwrite(pcBuffer, 1, strlen(pcBuffer), filefd);
     bzero(pcBuffer, sizeof(pcBuffer));
-    sprintf(pcBuffer, "Command message nr:\nCOMM_START:%d\nCOMM_STOP:%d\nCOMM_MONI%d\nCOMM_EXIT:%d\nCOMM_ARMD:%d\nCOMM_REPLAY:%d\nCOMM_CONTROL:%d\nCOMM_ABORT:%d\nCOMM_TOM:%d\nCOMM_INIT:%d\nCOMM_CONNECT:%d\nCOMM_OBC_STATE:%d\nCOMM_DISCONNECT:%d\nCOMM_LOG:%d\nCOMM_VIOP:%d\nCOMM_INV:%d\n------------------------------------------\n Log start\n------------------------------------------\n",COMM_STRT,COMM_STOP,COMM_MONI,COMM_EXIT,COMM_ARMD,COMM_REPLAY,COMM_CONTROL,COMM_ABORT,COMM_TOM,COMM_INIT,COMM_CONNECT,COMM_OBC_STATE,COMM_DISCONNECT,COMM_LOG,COMM_VIOP,COMM_INV);
+    sprintf(pcBuffer, "Command message nr:\nCOMM_START:%d\nCOMM_STOP:%d\nCOMM_MONI%d\nCOMM_EXIT:%d\nCOMM_ARMD:%d\nCOMM_REPLAY:%d\nCOMM_CONTROL:%d\nCOMM_ABORT:%d\nCOMM_INIT:%d\nCOMM_CONNECT:%d\nCOMM_OBC_STATE:%d\nCOMM_DISCONNECT:%d\nCOMM_LOG:%d\nCOMM_VIOP:%d\nCOMM_INV:%d\n------------------------------------------\n Log start\n------------------------------------------\n",COMM_STRT,COMM_STOP,COMM_MONI,COMM_EXIT,COMM_ARMD,COMM_REPLAY,COMM_CONTROL,COMM_ABORT,COMM_INIT,COMM_CONNECT,COMM_OBC_STATE,COMM_DISCONNECT,COMM_LOG,COMM_VIOP,COMM_INV);
     (void)fwrite(pcBuffer, 1, strlen(pcBuffer), filefd);
 
 
@@ -689,8 +688,8 @@ void vLogScenarioControlData(enum COMMAND command, unsigned char *commandData, s
     case COMM_EXAC:
         UtilPopulateEXACDataStructFromMQ(commandData, (size_t)commandDatalen, &exac);
         LogMessage(LOG_LEVEL_INFO,"Action execute request detected, ID %u",exac.actionID);
-        TimeSetToUTCms(&messageTimeField, exac.delayTime_qms*4);
-        fprintf(filefd, "%u;%ld;", exac.actionID, TimeGetAsUTCms(&messageTimeField));
+        TimeSetToGPStime(&messageTimeField,TimeGetAsGPSweek(&systemTime),exac.executionTime_qmsoW);
+        fprintf(filefd, "%u;%ld;", exac.actionID, TimeGetAsGPSms(&messageTimeField));
         fprintf(filefd, "%s", inet_ntop(AF_INET,&exac.ip,ipStringBuffer,sizeof(ipStringBuffer)));
         break;
     case COMM_TRCM:

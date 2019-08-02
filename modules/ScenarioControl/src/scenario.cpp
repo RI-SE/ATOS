@@ -48,17 +48,25 @@ void Scenario::initialize(const std::string scenarioFilePath)
     }
     file.close();
 
+    LogMessage(LOG_LEVEL_INFO, "Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
+}
+
+/*!
+ * \brief Scenario::sendConfiguration Sends TRCM and ACCM according to previously initialized scenario
+ */
+void Scenario::sendConfiguration(void) const
+{
     for (Trigger* tp : allTriggers)
     {
-        iCommSendTRCM(tp->getConfigurationMessageData());
+        if(iCommSendTRCM(tp->getConfigurationMessageData()) == -1)
+            util_error("Fatal communication error sending TRCM");
     }
 
     for (Action* ap : allActions)
     {
-        iCommSendACCM(ap->getConfigurationMessageData());
+        if(iCommSendACCM(ap->getConfigurationMessageData()) == -1)
+            util_error("Fatal communication error sending ACCM");
     }
-
-    LogMessage(LOG_LEVEL_INFO, "Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
 }
 
 void Scenario::parseScenarioFile(std::ifstream &file)
@@ -71,9 +79,11 @@ void Scenario::parseScenarioFile(std::ifstream &file)
     // PLACEHOLDER CODE
     BrakeTrigger* bt = new BrakeTrigger(1);
     InfrastructureAction* mqttAction = new InfrastructureAction(5, 1);
-    const char brakeObjectIPString[] = "123.123.123.123";
-    in_addr brakeObjectIP;
+    const char brakeObjectIPString[] = "0.0.0.0";
+    const char mqttObjectIPString[] = "127.0.0.1";
+    in_addr brakeObjectIP, mqttObjectIP;
     inet_pton(AF_INET, brakeObjectIPString, &brakeObjectIP);
+    inet_pton(AF_INET, mqttObjectIPString, &mqttObjectIP);
 
     bt->appendParameter(Trigger::TriggerParameter_t::TRIGGER_PARAMETER_PRESSED);
     bt->parseParameters();
@@ -81,7 +91,7 @@ void Scenario::parseScenarioFile(std::ifstream &file)
     bt->setObjectIP(brakeObjectIP.s_addr);
 
     mqttAction->appendParameter(Action::ActionParameter_t::ACTION_PARAMETER_VS_BRAKE_WARNING);
-    mqttAction->setObjectIP(0);
+    mqttAction->setObjectIP(mqttObjectIP.s_addr);
     mqttAction->setExecuteDalayTime({1,0});
 
     addTrigger(bt);

@@ -113,7 +113,7 @@ target_link_libraries(UserControl util objctrl MaestroLogging MaestroTime)
 target_link_libraries(TEServer util)
 
 if(USE_CITS)
-    target_link_libraries(cits pahomqtt3c)
+    target_link_libraries(cits pahomqtt3c MaestroTime)
     target_link_libraries(TEServer cits)
 endif()
 

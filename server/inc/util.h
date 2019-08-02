@@ -31,6 +31,8 @@ extern "C"{
 #include <netdb.h>
 #include "mqbus.h"
 
+#include "iso22133.h"
+
 
 /*------------------------------------------------------------
   -- Defines
@@ -111,19 +113,7 @@ extern "C"{
 #define TRAJECTORY_PATH "./traj/"
 
 #define ADAPTIVE_SYNC_POINT_CONF "./conf/adaptivesync.conf"
-#define TRIGG_ACTION_CONF "./conf/triggeraction.conf"
 #define VERSION_PATH "../conf/Version.txt"
-
-#define MAX_TRIGG_ACTIONS 20
-
-
-#define TAA_ACTION_EXT_START 1
-#define TAA_ACTION_TEST_SIGNAL 2
-
-#define TAA_TRIGGER_DI_LOW  1
-#define TAA_TRIGGER_DI_HIGH  2
-#define TAA_TRIGGER_DI_RISING_EDGE 3
-#define TAA_TRIGGER_DI_FALLING_EDGE 4
 
 
 #define MASTER_FILE_EXTENSION ".sync.m"
@@ -186,6 +176,7 @@ extern "C"{
 #define dbl double
 #define flt float
 
+// Why do we need this?
 #pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
 
 #define SYNC_WORD 0x7e7e
@@ -270,7 +261,6 @@ COMM_EXIT = 5,
 COMM_REPLAY = 6,
 COMM_CONTROL = 7,
 COMM_ABORT = 8,
-COMM_TOM = 9,
 COMM_INIT = 10,
 COMM_CONNECT = 11,
 COMM_OBC_STATE = 12,
@@ -287,6 +277,7 @@ COMM_TREO = 22,
 COMM_ACCM = 23,
 COMM_TRCM = 24,
 COMM_MONR = 239,
+COMM_OBJECTS_CONNECTED = 111,
 COMM_INV = 255
 };
 
@@ -309,20 +300,6 @@ typedef struct
 } CartesianPosition;
 
 
-typedef struct
-{
-  U16 SyncWordU16;
-  U8 TransmitterIdU8;
-  U8 MessageCounterU8;
-  U8 AckReqProtVerU8;
-  U16 MessageIdU16;
-  U32 MessageLengthU32;
-} HeaderType; //11 bytes
-
-typedef struct
-{
-  U16 Crc;
-} FooterType; //2 bytes
 
 typedef struct
 {
@@ -626,44 +603,12 @@ typedef struct
 
 typedef struct
 {
-  char TriggerIP[16];
-  char TriggerType[8];
-  char TriggerTypeVar[16];
-  char ActionType[24];
-  char ActionTypeVar[16];
-  char ActionDelay[8];
-  uint8_t TriggerId;
-  int32_t Action;
-} TriggActionType; // Note: this is the old struct
-
-typedef struct
-{
-    HeaderType header;
-    uint16_t actionIDValueID;
-    uint16_t actionIDContentLength;
     uint16_t actionID;
-    uint16_t delayTime_qmsValueID;
-    uint16_t delayTime_qmsContentLength;
-    uint32_t delayTime_qms;
-} EXACType;
-
-typedef struct
-{
-    uint16_t actionID;
-    uint32_t delayTime_qms;
+    uint32_t executionTime_qmsoW;
     in_addr_t ip;
 } EXACData; //!< Data type for MQ message
 
-typedef struct
-{
-    HeaderType header;
-    uint16_t triggerIDValueID;
-    uint16_t triggerIDContentLength;
-    uint16_t triggerID;
-    uint16_t timestamp_qmsowValueID;
-    uint16_t timestamp_qmsowContentLength;
-    uint32_t timestamp_qmsow;
-} TREOType;
+
 
 typedef struct
 {
@@ -674,26 +619,6 @@ typedef struct
 
 typedef struct
 {
-    HeaderType header;
-    uint16_t actionIDValueID;
-    uint16_t actionIDContentLength;
-    uint16_t actionID;
-    uint16_t actionTypeValueID;
-    uint16_t actionTypeContentLength;
-    uint16_t actionType;
-    uint16_t actionTypeParameter1ValueID;
-    uint16_t actionTypeParameter1ContentLength;
-    uint32_t actionTypeParameter1;
-    uint16_t actionTypeParameter2ValueID;
-    uint16_t actionTypeParameter2ContentLength;
-    uint32_t actionTypeParameter2;
-    uint16_t actionTypeParameter3ValueID;
-    uint16_t actionTypeParameter3ContentLength;
-    uint32_t actionTypeParameter3;
-} ACCMType;
-
-typedef struct
-{
     uint16_t actionID;
     uint16_t actionType;
     uint32_t actionTypeParameter1;
@@ -701,26 +626,6 @@ typedef struct
     uint32_t actionTypeParameter3;
     in_addr_t ip;
 } ACCMData; //!< Data type for MQ message
-
-typedef struct
-{
-    HeaderType header;
-    uint16_t triggerIDValueID;
-    uint16_t triggerIDContentLength;
-    uint16_t triggerID;
-    uint16_t triggerTypeValueID;
-    uint16_t triggerTypeContentLength;
-    uint16_t triggerType;
-    uint16_t triggerTypeParameter1ValueID;
-    uint16_t triggerTypeParameter1ContentLength;
-    uint32_t triggerTypeParameter1;
-    uint16_t triggerTypeParameter2ValueID;
-    uint16_t triggerTypeParameter2ContentLength;
-    uint32_t triggerTypeParameter2;
-    uint16_t triggerTypeParameter3ValueID;
-    uint16_t triggerTypeParameter3ContentLength;
-    uint32_t triggerTypeParameter3;
-} TRCMType;
 
 typedef struct
 {
@@ -889,7 +794,7 @@ int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
-int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug);
+//int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug); // TODO DELETE
 
 void llhToXyz(double lat, double lon, double height, double *x, double *y, double *z);
 void enuToLlh(const double *iLlh, const double *xyz, double *llh);

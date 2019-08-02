@@ -1,5 +1,8 @@
 #ifndef ISO22133_H
 #define ISO22133_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*! This file contains all definitions pertaining to the ISO standard 22133
  *
  *
@@ -7,8 +10,48 @@
  *
  */
 
+#include <inttypes.h>
 
-//! TRCM
+#pragma pack(push,1)
+
+typedef struct
+{
+  uint16_t SyncWordU16;
+  uint8_t TransmitterIdU8;
+  uint8_t MessageCounterU8;
+  uint8_t AckReqProtVerU8;
+  uint16_t MessageIdU16;
+  uint32_t MessageLengthU32;
+} HeaderType; //11 bytes
+
+typedef struct
+{
+  uint16_t Crc;
+} FooterType; //2 bytes
+
+//! *************************** TRCM
+#define COMMAND_TRCM_CODE 11
+typedef struct
+{
+    HeaderType header;
+    uint16_t triggerIDValueID;
+    uint16_t triggerIDContentLength;
+    uint16_t triggerID;
+    uint16_t triggerTypeValueID;
+    uint16_t triggerTypeContentLength;
+    uint16_t triggerType;
+    uint16_t triggerTypeParameter1ValueID;
+    uint16_t triggerTypeParameter1ContentLength;
+    uint32_t triggerTypeParameter1;
+    uint16_t triggerTypeParameter2ValueID;
+    uint16_t triggerTypeParameter2ContentLength;
+    uint32_t triggerTypeParameter2;
+    uint16_t triggerTypeParameter3ValueID;
+    uint16_t triggerTypeParameter3ContentLength;
+    uint32_t triggerTypeParameter3;
+    FooterType footer;
+} TRCMType;
+
 typedef enum {
     TRIGGER_UNDEFINED               = 0x0000,
     TRIGGER_TYPE_1                  = 0x0001,
@@ -66,7 +109,29 @@ typedef enum {
 } TriggerTypeParameter_t;
 
 
-//! ACCM
+//! *************************** ACCM
+#define COMMAND_ACCM_CODE 12
+typedef struct
+{
+    HeaderType header;
+    uint16_t actionIDValueID;
+    uint16_t actionIDContentLength;
+    uint16_t actionID;
+    uint16_t actionTypeValueID;
+    uint16_t actionTypeContentLength;
+    uint16_t actionType;
+    uint16_t actionTypeParameter1ValueID;
+    uint16_t actionTypeParameter1ContentLength;
+    uint32_t actionTypeParameter1;
+    uint16_t actionTypeParameter2ValueID;
+    uint16_t actionTypeParameter2ContentLength;
+    uint32_t actionTypeParameter2;
+    uint16_t actionTypeParameter3ValueID;
+    uint16_t actionTypeParameter3ContentLength;
+    uint32_t actionTypeParameter3;
+    FooterType footer;
+} ACCMType;
+
 typedef enum {
     ACTION_NONE                     = 0x0000,
     ACTION_TYPE_1                   = 0x0001,
@@ -106,4 +171,56 @@ typedef enum {
     ACTION_PARAMETER_UNAVAILABLE        = 0xFFFFFFFF
 } ActionTypeParameter_t;
 
+
+//! *************************** TREO
+#define COMMAND_TREO_CODE 13
+typedef struct
+{
+    HeaderType header;
+    uint16_t triggerIDValueID;
+    uint16_t triggerIDContentLength;
+    uint16_t triggerID;
+    uint16_t timestamp_qmsowValueID;
+    uint16_t timestamp_qmsowContentLength;
+    uint32_t timestamp_qmsow;
+    FooterType footer;
+} TREOType;
+
+
+//! *************************** EXAC
+#define COMMAND_EXAC_CODE 14
+typedef struct
+{
+    HeaderType header;
+    uint16_t actionIDValueID;
+    uint16_t actionIDContentLength;
+    uint16_t actionID;
+    uint16_t executionTime_qmsoWValueID;
+    uint16_t executionTime_qmsoWContentLength;
+    uint32_t executionTime_qmsoW;
+    FooterType footer;
+} EXACType;
+
+
+//! ACCM / EXAC / CATA value IDs
+#define VALUE_ID_ACTION_ID 0x0002
+#define VALUE_ID_ACTION_TYPE 0x0003
+#define VALUE_ID_ACTION_TYPE_PARAM1 0x00A1
+#define VALUE_ID_ACTION_TYPE_PARAM2 0x00A2
+#define VALUE_ID_ACTION_TYPE_PARAM3 0x00A3
+#define VALUE_ID_ACTION_EXECUTE_TIME 0x0003
+
+//! TRCM / TREO / CATA value IDs
+#define VALUE_ID_TRIGGER_ID 0x0001
+#define VALUE_ID_TRIGGER_TYPE 0x0002
+#define VALUE_ID_TRIGGER_TYPE_PARAM1 0x0011
+#define VALUE_ID_TRIGGER_TYPE_PARAM2 0x0012
+#define VALUE_ID_TRIGGER_TYPE_PARAM3 0x0013
+#define VALUE_ID_TRIGGER_TIMESTAMP 0x0002
+
+#pragma pack(pop)
+
+#ifdef __cplusplus
+}
+#endif
 #endif

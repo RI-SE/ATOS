@@ -20,6 +20,7 @@ public:
     ~Scenario();
 
     void initialize(const std::string scenarioFilePath);
+    void sendConfiguration(void) const;
 
     ScenarioReturnCode_t linkTriggersWithActions(std::set<Trigger*> tps, std::set<Action*> aps);
     ScenarioReturnCode_t linkTriggersWithAction(std::set<Trigger*> tps, Action* ap);
