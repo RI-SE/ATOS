@@ -19,7 +19,7 @@ public:
     void setBrakeRetardationThreshold(double threshold_m_s2);
 private:
 
-    double brakeRetardationThreshold_m_s2 = 0;
+    double brakeRetardationThreshold_m_s2;
     const std::set<TriggerParameter_t> getAcceptedParameters() const override
     {
         std::set<TriggerParameter_t> accParams;

@@ -2,7 +2,13 @@
 #include "maestroTime.h"
 #include "braketrigger.h"
 
-BrakeTrigger::BrakeTrigger(Trigger::TriggerID_t triggerID) : BooleanTrigger(triggerID, Trigger::TriggerTypeCode_t::TRIGGER_BRAKE) { }
+#define ACCELERATION_OF_GRAVITY_M_S2 9.81
+#define DEFAULT_RETARDATION_THRESHOLD_G 0.1
+
+BrakeTrigger::BrakeTrigger(Trigger::TriggerID_t triggerID) : BooleanTrigger(triggerID, Trigger::TriggerTypeCode_t::TRIGGER_BRAKE)
+{
+    setBrakeRetardationThreshold(DEFAULT_RETARDATION_THRESHOLD_G * ACCELERATION_OF_GRAVITY_M_S2);
+}
 
 void BrakeTrigger::setBrakeRetardationThreshold(double threshold_m_s2)
 {
