@@ -40,7 +40,7 @@ add_executable(Visualization
 install(TARGETS Visualization DESTINATION bin)
 
 target_link_libraries(Visualization MaestroTime MaestroLogging util)
-target_link_libraries(util MQBus MaestroTime MaestroLogging)
+target_link_libraries(util MQBus MaestroLogging)
 target_link_libraries(MQBus rt m)
 
 
