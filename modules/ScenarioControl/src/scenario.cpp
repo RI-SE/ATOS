@@ -186,7 +186,7 @@ void Scenario::resetISOTriggers(void)
     }
 }
 
-Scenario::ScenarioReturnCode_t Scenario::updateTrigger(MonitorDataType monr)
+Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &monr)
 {
     std::set<Trigger*> relevantTriggers;
     for (Trigger* tp : allTriggers)
