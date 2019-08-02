@@ -1,9 +1,12 @@
-#include "scenario.h"
+#include "logging.h"
+#include "maestroTime.h"
 
 #include <fstream>
 #include <stdexcept>
 
-#include "logging.h"
+#include "scenario.h"
+
+
 #include "isotrigger.h"
 #include "externalaction.h"
 
@@ -87,7 +90,6 @@ void Scenario::parseScenarioFile(std::ifstream &file)
 
     bt->appendParameter(Trigger::TriggerParameter_t::TRIGGER_PARAMETER_PRESSED);
     bt->parseParameters();
-
     bt->setObjectIP(brakeObjectIP.s_addr);
 
     mqttAction->appendParameter(Action::ActionParameter_t::ACTION_PARAMETER_VS_BRAKE_WARNING);
@@ -180,6 +182,29 @@ void Scenario::resetISOTriggers(void)
         {
             // "untrigger" the trigger
             tp->update();
+        }
+    }
+}
+
+Scenario::ScenarioReturnCode_t Scenario::updateTrigger(MonitorDataType monr)
+{
+    std::set<Trigger*> relevantTriggers;
+    for (Trigger* tp : allTriggers)
+    {
+        if(tp->getObjectIP() == monr.ClientIP && dynamic_cast<ISOTrigger*>(tp) == nullptr)
+        {
+            switch (tp->getTypeCode())
+            {
+            case Trigger::TriggerTypeCode_t::TRIGGER_BRAKE:
+                struct timeval monrTime, currentTime;
+                TimeSetToCurrentSystemTime(&currentTime);
+                TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&currentTime), monr.MONR.GPSQmsOfWeekU32);
+                tp->update(static_cast<double>(monr.MONR.LongitudinalSpeedI16*100), monrTime);
+                break;
+            default:
+                LogMessage(LOG_LEVEL_WARNING, "Unhandled trigger type in update: %s",
+                           tp->getTypeAsString(tp->getTypeCode()).c_str());
+            }
         }
     }
 }

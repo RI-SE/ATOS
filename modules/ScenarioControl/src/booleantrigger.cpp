@@ -3,9 +3,10 @@
 /*!
  * \brief BooleanTrigger::update Updates the tracked signal (i.e. which causes the trigger) to the value specified
  * \param isBrakeCurrentlyPressed Boolean describing if the boolean
+ * \param Unused time of measurement
  * \return Value according to ::TriggerReturnCode_t
  */
-Trigger::TriggerReturnCode_t BooleanTrigger::update(bool currentStateValue)
+Trigger::TriggerReturnCode_t BooleanTrigger::update(bool currentStateValue, struct timeval)
 {
     wasStateTrue = isStateTrue;
     isStateTrue = currentStateValue;

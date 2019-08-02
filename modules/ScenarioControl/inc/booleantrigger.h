@@ -13,7 +13,7 @@ public:
 
     virtual TriggerReturnCode_t parseParameters() override = 0;
 
-    TriggerReturnCode_t update(bool) override;
+    TriggerReturnCode_t update(bool, struct timeval measurementTime) override;
 
 protected:
     TriggerReturnCode_t checkIfTriggered(void) const override;

@@ -83,11 +83,12 @@ public:
      * update(float) and update(double)
     */
     virtual TriggerReturnCode_t update(void)    { throw std::invalid_argument("Invalid signal type"); }
-    virtual TriggerReturnCode_t update(bool)    { throw std::invalid_argument("Invalid signal type"); }
-    virtual TriggerReturnCode_t update(char)    { throw std::invalid_argument("Invalid signal type"); }
-    virtual TriggerReturnCode_t update(int)     { throw std::invalid_argument("Invalid signal type"); }
-    virtual TriggerReturnCode_t update(float)   { throw std::invalid_argument("Invalid signal type"); }
-    virtual TriggerReturnCode_t update(double)  { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(struct timeval)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(bool, struct timeval)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(char, struct timeval)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(int, struct timeval)     { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(float, struct timeval)   { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(double, struct timeval)  { throw std::invalid_argument("Invalid signal type"); }
     virtual TriggerReturnCode_t update(TREOData){ throw std::invalid_argument("Invalid signal type"); }
 protected:
     TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter) const;

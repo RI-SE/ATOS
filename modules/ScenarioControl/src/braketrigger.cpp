@@ -15,10 +15,10 @@ void BrakeTrigger::setBrakeRetardationThreshold(double threshold_m_s2)
     brakeRetardationThreshold_m_s2 = fabs(threshold_m_s2);
 }
 
-BrakeTrigger::TriggerReturnCode_t BrakeTrigger::update(double velocityMeasurement)
+BrakeTrigger::TriggerReturnCode_t BrakeTrigger::update(double velocityMeasurement, struct timeval measurementTime)
 {
     static struct timeval lastMeasurementTime;
-    struct timeval currentTime, timeDifference;
+    struct timeval timeDifference;
     double deltaT, velocityInnovation, accelerationInnovation;
     static double velocityEstimate, accelerationEstimate;
     constexpr double velocityInnovationWeight = 0.85;
@@ -33,10 +33,9 @@ BrakeTrigger::TriggerReturnCode_t BrakeTrigger::update(double velocityMeasuremen
     }
 
     // Calculate time difference and save current time
-    TimeSetToCurrentSystemTime(&currentTime);
-    timersub(&currentTime, &lastMeasurementTime, &timeDifference);
+    timersub(&measurementTime, &lastMeasurementTime, &timeDifference);
     deltaT = timeDifference.tv_sec + timeDifference.tv_usec * 1000000;
-    lastMeasurementTime = currentTime;
+    lastMeasurementTime = measurementTime;
 
     // Prediction step
     velocityEstimate = velocityEstimate + accelerationEstimate * deltaT;
@@ -49,7 +48,7 @@ BrakeTrigger::TriggerReturnCode_t BrakeTrigger::update(double velocityMeasuremen
     velocityEstimate = velocityEstimate + velocityInnovationWeight * velocityInnovation;
 
     // Check for negative acceleration
-    return update(accelerationEstimate < -brakeRetardationThreshold_m_s2);
+    return update(accelerationEstimate < -brakeRetardationThreshold_m_s2, measurementTime);
 }
 
 /*!

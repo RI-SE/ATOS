@@ -52,6 +52,8 @@ public:
     void refresh(void) const;
     void clear(void);
 
+    ScenarioReturnCode_t updateTrigger(MonitorDataType);
+
 private:
     std::set<Causality> causalities;
     std::set<Trigger*> allTriggers;

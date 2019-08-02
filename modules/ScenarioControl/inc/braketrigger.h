@@ -13,8 +13,8 @@ public:
     TriggerReturnCode_t parseParameters() override;
 
     using BooleanTrigger::update;
-    TriggerReturnCode_t update(double newValue) override;
-    TriggerReturnCode_t update(float newValue) override { return update(static_cast<double>(newValue)); }
+    TriggerReturnCode_t update(double newValue, struct timeval measurementTime) override;
+    TriggerReturnCode_t update(float newValue, struct timeval measurementTime) override { return update(static_cast<double>(newValue),measurementTime); }
 
     void setBrakeRetardationThreshold(double threshold_m_s2);
 private:
