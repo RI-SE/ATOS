@@ -94,7 +94,7 @@ int main()
         case COMM_STRT:
             break;
         default:
-            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
+            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", (unsigned char)command);
         }
     }
 
