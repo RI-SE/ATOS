@@ -119,11 +119,8 @@ int main()
             break;
         case COMM_MONR:
             // Update triggers
-            if (state == RUNNING)
-            {
-                UtilPopulateMonitorDataStruct(reinterpret_cast<uint8_t*>(mqRecvData), sizeof(mqRecvData), &monr, 0);
-                scenario.updateTrigger(monr);
-            }
+            UtilPopulateMonitorDataStruct(reinterpret_cast<uint8_t*>(mqRecvData), sizeof(mqRecvData), &monr, 0);
+            scenario.updateTrigger(monr);
             break;
         case COMM_MONI:
             // Ignore
