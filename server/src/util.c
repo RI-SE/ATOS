@@ -3134,8 +3134,10 @@ I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataTy
     U32 U32Data = 0;
     I32 I32Data = 0;
     U64 U64Data = 0;
-    C8 *rdPtr = rawMONR; // Pointer to keep track of where in rawMONR we are currently reading
+    C8 *rdPtr = rawMONR, *monrStruct; // Pointer to keep track of where in rawMONR we are currently reading
+    U16 contentLength = 0;
     in_addr_t IPData = 0;
+    const size_t monrPacketSize = sizeof (monitorData->MONR) - sizeof (monitorData->MONR.Header) - sizeof (monitorData->MONR.CRC);
 
     if (rawMONRsize < sizeof(MonitorDataType))
     {
@@ -3143,6 +3145,7 @@ I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataTy
         return -1;
     }
 
+    // ISO message header
     memcpy(&U16Data, rdPtr, sizeof(U16Data));
     monitorData->MONR.Header.SyncWordU16 = U16Data;
     rdPtr += sizeof(U16Data);
@@ -3161,6 +3164,35 @@ I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataTy
     monitorData->MONR.Header.MessageLengthU32 = U32Data;
     rdPtr += sizeof(U32Data);
     U32Data = 0;
+
+    // ISO content header?
+    memcpy(&U16Data, rdPtr, sizeof(U16Data));
+    if (U16Data == VALUE_ID_MONR_STRUCT)
+    {
+        rdPtr += sizeof(U16Data);
+        U16Data = 0;
+
+        memcpy(&contentLength, rdPtr, sizeof(contentLength));
+        rdPtr += sizeof(contentLength);
+
+        if (contentLength < monrPacketSize)
+        {
+            LogMessage(LOG_LEVEL_ERROR, "Content length %u too small to hold necessary MONR data (expected %u)",
+                       contentLength, monrPacketSize);
+            return -1;
+        }
+        else if (contentLength > monrPacketSize)
+        {
+            LogMessage(LOG_LEVEL_ERROR, "Content length %u too large to follow MONR data specification (expected %u)",
+                       contentLength, monrPacketSize);
+            return -1;
+        }
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_WARNING, "Received MONR message without content header: corrupt data may result");
+        U16Data = 0;
+    }
 
     memcpy(&U32Data, rdPtr, sizeof(U32Data));
     monitorData->MONR.GPSQmsOfWeekU32 = U32Data;
