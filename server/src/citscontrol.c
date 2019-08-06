@@ -68,7 +68,7 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-I32 generateCAMMessage(MONRType *MONRData, CAM_t* lastCam);
+I32 generateCAMMessage(GSDType* GSD, MONRType *MONRData, CAM_t* lastCam);
 I32 generateDENMMessage(GSDType* GSD, MONRType *MONRData, DENM_t* denm);
 
 I32 sendCAM(CAM_t* lastCam);
@@ -247,7 +247,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
 
                 if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
-                    generateCAMMessage(&MONRMessage, lastCam);
+                    generateCAMMessage(GSD, &MONRMessage, lastCam);
                     generateDENMMessage(GSD, &MONRMessage, lastDENM);
                     sendCAM(lastCam);
                     sendDENM(lastDENM);
@@ -440,7 +440,7 @@ static int write_out(const void *buffer, size_t size, void *app_key){
  * \param lastCam struct to fill with cam data if cam should be sent, used as reference to calculate new cam.
  * \param lastSpeed variable keeping track of last speed recorded.
  */
-I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
+I32 generateCAMMessage(GSDType* GSD, MONRType *MONRData, CAM_t* cam){
 
     TimeType time;
     CAM_t tempCam;
@@ -471,15 +471,16 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     // calculate the norm value
     distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
 
-    // TODO: Get From RVSSgetParameter
-    double origoLong = 12.77011670;
-    double origoLat = 57.77315060;
+    double origoLong = 0;
+    double origoLat = 0;
 
+    DataDictionaryGetOriginLatitudeDbl(GSD, &origoLat);
+    DataDictionaryGetOriginLongitudeDbl(GSD, &origoLong);
 
     fail = UtilVincentyDirect(origoLat,origoLong,azimuth1,distance ,&latitude,&longitude,&azimuth2);
 
-    tempCam.cam.camParameters.basicContainer.referencePosition.latitude = latitude;
-    tempCam.cam.camParameters.basicContainer.referencePosition.longitude = longitude;
+    tempCam.cam.camParameters.basicContainer.referencePosition.latitude = origoLat;
+    tempCam.cam.camParameters.basicContainer.referencePosition.longitude = origoLong;
 
     /*
     printf("calc latitude %f \n",  latitude);
