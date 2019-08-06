@@ -1096,8 +1096,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 ASPDebugRate = 1;
                 DataDictionaryGetVOILReceiversC8(GSD, VOILReceivers, SMALL_BUFFER_SIZE_254);
                 DataDictionaryGetDTMReceiversC8(GSD, DTMReceivers, SMALL_BUFFER_SIZE_254);
-                if(DisconnectU8 == 0) vSetState(OBC_STATE_CONNECTED, GSD);
-                else if(DisconnectU8 == 1) vSetState(OBC_STATE_IDLE, GSD);
             }
             else if(iCommand == COMM_DISCONNECT)
             {
