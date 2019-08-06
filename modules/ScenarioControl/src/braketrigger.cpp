@@ -1,5 +1,6 @@
 #include <sys/time.h>
 #include "maestroTime.h"
+#include "logging.h"
 #include "braketrigger.h"
 
 #define ACCELERATION_OF_GRAVITY_M_S2 9.81
@@ -20,6 +21,7 @@ BrakeTrigger::TriggerReturnCode_t BrakeTrigger::update(double velocityMeasuremen
     static struct timeval lastMeasurementTime;
     struct timeval timeDifference;
     double deltaT, velocityInnovation, accelerationInnovation;
+    constexpr double minimumDeltaT = 0.001;
     static double velocityEstimate, accelerationEstimate;
     constexpr double velocityInnovationWeight = 0.85;
     constexpr double accelerationInnovationWeight = 0.4;
@@ -29,13 +31,20 @@ BrakeTrigger::TriggerReturnCode_t BrakeTrigger::update(double velocityMeasuremen
         // Initialize
         velocityEstimate = velocityMeasurement;
         accelerationEstimate = 0;
-        return OK;
+        lastMeasurementTime = measurementTime;
+        return NO_TRIGGER_OCCURRED;
     }
 
     // Calculate time difference and save current time
     timersub(&measurementTime, &lastMeasurementTime, &timeDifference);
     deltaT = timeDifference.tv_sec + timeDifference.tv_usec * 1000000;
-    lastMeasurementTime = measurementTime;
+    if (deltaT < minimumDeltaT)
+    {
+        // Short sample time difference risks division by zero: ignore too rapid MONR messages
+        LogMessage(LOG_LEVEL_WARNING, "Received two MONR messages from same object within time span of %.6f ms",deltaT/1000);
+        return update(static_cast<bool>(accelerationEstimate < -brakeRetardationThreshold_m_s2), measurementTime);
+    }
+    else lastMeasurementTime = measurementTime;
 
     // Prediction step
     velocityEstimate = velocityEstimate + accelerationEstimate * deltaT;
@@ -48,7 +57,7 @@ BrakeTrigger::TriggerReturnCode_t BrakeTrigger::update(double velocityMeasuremen
     velocityEstimate = velocityEstimate + velocityInnovationWeight * velocityInnovation;
 
     // Check for negative acceleration
-    return update(accelerationEstimate < -brakeRetardationThreshold_m_s2, measurementTime);
+    return update(static_cast<bool>(accelerationEstimate < -brakeRetardationThreshold_m_s2), measurementTime);
 }
 
 /*!
