@@ -1083,7 +1083,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                 if(RVSSConfigU32 & RVSS_TIME_CHANNEL)
                 {
-                    SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 1);
+                    SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
                     UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 0);
                 }
 
