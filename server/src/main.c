@@ -28,7 +28,7 @@
 #include "objectcontrol.h"
 #include "systemcontrol.h"
 #include "supervision.h"
-//#include "remotecontrol.h"
+#include "datadictionary.h"
 #include "timecontrol.h"
 #include "supervisorcontrol.h"
 #include "citscontrol.h"
@@ -101,6 +101,7 @@ int main(int argc, char *argv[])
     Options options;
     pid_t pID[numberOfModules];
     char moduleExitStatus[numberOfModules];
+    ReadWriteAccess_t dataDictInitResult = UNDEFINED;
 
     if (readArgumentList(argc, argv, &options))
         exit(EXIT_FAILURE);
@@ -119,8 +120,14 @@ int main(int argc, char *argv[])
     LogMessage(LOG_LEVEL_INFO, "Central started");
     LogMessage(LOG_LEVEL_DEBUG, "Verbose mode enabled");
 
+    // Initialise data dictionary
+    LogMessage(LOG_LEVEL_INFO,"Initializing data dictionary");
+    dataDictInitResult = DataDictionaryConstructor(GSD);
+    if (dataDictInitResult != READ_OK && dataDictInitResult != READ_WRITE_OK)
+        util_error("Unable to initialize shared memory space");
 
     LogMessage(LOG_LEVEL_INFO,"About to enter mq init");
+
     // Initialise message queue bus
     if(initializeMessageQueueBus(&options))
         exit(EXIT_FAILURE);

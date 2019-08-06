@@ -30,6 +30,7 @@
 #include "timecontrol.h"
 #include "logger.h"
 #include "maestroTime.h"
+#include "datadictionary.h"
 
 
 #define TIME_CONTROL_CONF_FILE_PATH  "conf/test.conf"
@@ -119,19 +120,13 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     gettimeofday(&ExecTime, NULL);
     CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
     PrevMilliSecondU16 = CurrentMilliSecondU16;
+    // Set time server IP
+    DataDictionaryGetTimeServerIPC8(GSD, ServerIPC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
+    DataDictionaryGetTimeServerIPU32(GSD, &IpU32);
 
-    // Search .conf file for time server IP
-    bzero(TextBufferC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
-    UtilSearchTextFile(TEST_CONF_FILE, "TimeServerIP=", "", TextBufferC8);
-    bzero(ServerIPC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
-    strcat(ServerIPC8, TextBufferC8);
-    IpU32 = TimeControlIPStringToInt(ServerIPC8);
-
-    // Search .conf file for time server port
-    bzero(TextBufferC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
-    UtilSearchTextFile(TEST_CONF_FILE, "TimeServerPort=", "", TextBufferC8);
-    ServerPortU16 = (U16)atoi(TextBufferC8);
-
+    // Set time server port
+    DataDictionaryGetTimeServerPortU16(GSD, &ServerPortU16);
+    
     // If time server is specified, connect to it
     if(IpU32 != 0)
     {
@@ -163,7 +158,7 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         GPSTime->GPSWeekU16 = (U16)(GPSTime->GPSMillisecondsU64 / WEEK_TIME_MS);
         GPSTime->GPSSecondsOfWeekU32 = (U32)((GPSTime->GPSMillisecondsU64 - (U64)(GPSTime->GPSWeekU16) * WEEK_TIME_MS) / 1000);
         GPSTime->GPSSecondsOfDayU32 = (GPSTime->GPSMillisecondsU64 % DAY_TIME_MS) / 1000;
-        GPSTime->GPSMinutesU32 = (GPSTime->GPSSecondsOfDayU32 / 60) % 60;
+        GPSTime->GPSMinutesU32 = (GPSTime->GPSMillisecondsU64 / 1000) / 60;
         GPSTime->isTimeInitializedU8 = 1;
     }
 
@@ -227,7 +222,7 @@ void timecontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     GPSTime->GPSWeekU16 ++;
                 } else GPSTime->GPSSecondsOfWeekU32 ++;
 
-                if(GPSTime->SecondCounterU32 % 60 == 0) GPSTime->GPSMinutesU32 ++;
+                if(GPSTime->SecondU8  == 0) GPSTime->GPSMinutesU32 ++;
             }
         }
 
