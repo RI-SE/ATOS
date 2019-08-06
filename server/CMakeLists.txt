@@ -71,17 +71,6 @@ add_library(objctrl
 )
 
 
-add_executable(UserControl
-  src/usercontrol.c
-)
-
-# TODO: Make citscontrol into a separate program that is started when the server starts
-#add_executable(CitsControl
-# inc/citscontrol.h
-#  src/citscontrol.c
-#)
-
-
 # add the executable
 add_executable(TEServer
   src/main.c
@@ -90,7 +79,6 @@ add_executable(TEServer
   src/supervision.c
   src/systemcontrol.c
   src/timecontrol.c
-  src/supervisorcontrol.c
   src/datadictionary.c
   inc/logger.h
   inc/objectcontrol.h
@@ -98,7 +86,6 @@ add_executable(TEServer
   inc/systemcontrol.h
   inc/timecontrol.h
   inc/datadictionary.h
-  inc/supervisorcontrol.h
 )
 
 # add the install targets
@@ -109,8 +96,6 @@ target_link_libraries(util rt m)
 target_link_libraries(util m)
 target_link_libraries(util rt)
 target_link_libraries(util MaestroLogging MaestroTime MQBus)
-
-target_link_libraries(UserControl util objctrl MaestroLogging MaestroTime)
 
 target_link_libraries(TEServer util)
 
