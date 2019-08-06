@@ -975,7 +975,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         /* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates)*/
                         LogMessage(LOG_LEVEL_INFO,"Sending OSEM");
                         LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.");
-                      
+
                         ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, OriginLatitude, OriginLongitude, OriginAltitude );
                         bzero(pcSendBuffer, sizeof(pcSendBuffer));
                         strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";");
@@ -997,18 +997,22 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                             fd = fopen (object_traj_file[iIndex], "r");
 
-                            RowCount = UtilCountFileRows(fd);
-                            //printf("RowCount: %d\n", RowCount);
-                            fclose (fd);
+                            if (fd != NULL)
+                            {
+                                RowCount = UtilCountFileRows(fd);
+                                //printf("RowCount: %d\n", RowCount);
+                                fclose (fd);
 
-                            /*DOTM*/
-                            MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-2, &HeaderData, &TRAJInfoData, 0);
+                                /*DOTM*/
+                                MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer, RowCount-2, &HeaderData, &TRAJInfoData, 0);
 
-                            /*Send DOTM header*/
-                            UtilSendTCPData("Object Control", TrajBuffer, MessageLength, &socket_fds[iIndex], 0);
+                                /*Send DOTM header*/
+                                UtilSendTCPData("Object Control", TrajBuffer, MessageLength, &socket_fds[iIndex], 0);
 
-                            /*Send DOTM data*/
-                            ObjectControlSendDOTMMEssage(object_traj_file[iIndex], &socket_fds[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 0);
+                                /*Send DOTM data*/
+                                ObjectControlSendDOTMMEssage(object_traj_file[iIndex], &socket_fds[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 0);
+                            }
+                            else LogMessage(LOG_LEVEL_WARNING, "Could not open file <%s>", object_traj_file[iIndex]);
                         }
 
 
@@ -3110,7 +3114,10 @@ StateTransitionResult vSetState(OBCState_t requestedState, GSDType *GSD)
     if (requestedState == OBC_STATE_ERROR || requestedState == OBC_STATE_UNDEFINED)
     {
         if (DataDictionarySetOBCStateU8(GSD, requestedState) == WRITE_OK)
+        {
+            LogMessage(LOG_LEVEL_WARNING,"Transitioning to state %u",(unsigned char)requestedState);
             retval = TRANSITION_OK;
+        }
         else
             retval = TRANSITION_MEMORY_ERROR;
     }
@@ -3125,7 +3132,10 @@ StateTransitionResult vSetState(OBCState_t requestedState, GSDType *GSD)
         if (retval != TRANSITION_INVALID)
         {
             if(DataDictionarySetOBCStateU8(GSD, currentState) == WRITE_OK)
+            {
+                LogMessage(LOG_LEVEL_INFO,"Transitioning to state %u",(unsigned char)requestedState);
                 retval = TRANSITION_OK;
+            }
             else
                 retval = TRANSITION_MEMORY_ERROR;
         }
