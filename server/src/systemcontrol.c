@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -114,6 +115,11 @@ typedef enum {
 #define RVSS_MAESTRO_CHANNEL 4
 #define RVSS_ASP_CHANNEL 8
 
+// Time intervals for sleeping when no message bus message was received and for when one was received
+#define SC_SLEEP_TIME_EMPTY_MQ_S 0
+#define SC_SLEEP_TIME_EMPTY_MQ_NS 10000000
+#define SC_SLEEP_TIME_NONEMPTY_MQ_S 0
+#define SC_SLEEP_TIME_NONEMPTY_MQ_NS 0
 
 
 typedef enum {
@@ -170,12 +176,14 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 *RVSSData, U32 *RVSSDataLengt
 I32 SystemControlBuildRVSSAspChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, U8 Debug);
 I32 SystemControlBuildRVSSMONRChannelMessage(C8 *RVSSData, U32 *RVSSDataLengthU32, C8 *MonrData, U8 Debug);
 static C8 SystemControlVerifyHostAddress(char* ip);
+static void signalHandler(int signo);
 
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
 
 #define MODULE_NAME "SystemControl"
+static volatile int iExit = 0;
 
 /*------------------------------------------------------------
   -- Public functions
@@ -200,7 +208,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     C8 pcBuffer[IPC_BUFFER_SIZE];
     char inchr;
     struct timeval tvTime;
-    int iExit = 0;
 
     ObjectPosition OP;
     int i,i1;
@@ -225,6 +232,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     ServiceSessionType SessionData;
     C8 RemoteServerRxData[1024];
     struct timespec sleep_time, ref_time;
+    const struct timespec mqEmptyPollPeriod = {SC_SLEEP_TIME_EMPTY_MQ_S, SC_SLEEP_TIME_EMPTY_MQ_NS};
+    const struct timespec mqNonEmptyPollPeriod = {SC_SLEEP_TIME_NONEMPTY_MQ_S, SC_SLEEP_TIME_NONEMPTY_MQ_NS};
     struct timeval CurrentTimeStruct;
     U64 CurrentTimeU64 = 0;
     U64 TimeDiffU64 = 0;
@@ -254,6 +263,10 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
   
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO,"System control task running with PID: %i",getpid());
+
+    // Set up signal handlers
+    if (signal(SIGINT, signalHandler) == SIG_ERR)
+        util_error("Unable to initialize signal handler");
 
     if(iCommInit())
         util_error("Unable to connect to message bus");
@@ -329,7 +342,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
             PreviousSystemControlCommand = SystemControlCommand;
             bzero(pcBuffer,IPC_BUFFER_SIZE);
-            ClientResult = recv(ClientSocket, pcBuffer, IPC_BUFFER_SIZE,  0);
+
+            ClientResult = recv(ClientSocket, pcBuffer, IPC_BUFFER_SIZE, MSG_DONTWAIT);
 
             if (ClientResult <= -1)
             {
@@ -465,6 +479,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             {
                 LogMessage(LOG_LEVEL_WARNING, "Ignored received TCP message which was too large to handle");
             }
+
         }
         else if(ModeU8 == 1)
         {   /* use util.c function to call time
@@ -506,18 +521,32 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
         iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
 
-        if(iCommand == COMM_LOG)
+        switch (iCommand)
         {
+        case COMM_OBC_STATE:
+            LogPrint("REC: %u",DataDictionaryGetOBCStateU8(GSD));
+            break;
+        case COMM_LOG:
             SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
-        }
-        else if(iCommand == COMM_MONI)
-        {
-            //printf("Monr sys %s\n", pcRecvBuffer);
-            if(RVSSConfigU32 & RVSS_MONR_CHANNEL)
+            break;
+        case COMM_MONR:
+            // TODO: Decode
+            break;
+        case COMM_MONI:
+            if(RVSSChannelSocket != 0)
             {
-                SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, pcRecvBuffer, 0);
-                UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 0);
+                //printf("Monr sys %s\n", pcRecvBuffer);
+                if(RVSSConfigU32 & RVSS_MONR_CHANNEL)
+                {
+                    SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, pcRecvBuffer, 0);
+                    UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 0);
+                }
             }
+            break;
+        case COMM_INV:
+            break;
+        default:
+            LogMessage(LOG_LEVEL_WARNING,"Unhandled message bus command: %u",iCommand);
         }
 
         switch(SystemControlCommand)
@@ -1037,6 +1066,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         }
 
 
+
         sleep_time.tv_sec = 0;
         sleep_time.tv_nsec = SYSTEM_CONTROL_TASK_PERIOD_MS*1000000;
         ++ RVSSSendCounterU16;
@@ -1045,16 +1075,16 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             RVSSSendCounterU16 = 0;            
             DataDictionaryGetRVSSRateU8(GSD, &RVSSRateU8);
             RVSSRateDbl = RVSSRateU8;
-            RVSSRateDbl = (1/RVSSRateDbl)*1000;
-
+            RVSSRateDbl = (1/RVSSRateDbl)*100; //This is strange!! Should be 1000, but if it is the RVSSData is sent to slow by a factor of 10.
+            
             if(RVSSChannelSocket != 0 && RVSSSendCounterU16 == 0 && RVSSConfigU32 > 0)
             {
                 bzero(RVSSData, SYSTEM_CONTROL_RVSS_DATA_BUFFER);
 
                 if(RVSSConfigU32 & RVSS_TIME_CHANNEL)
                 {
-                    SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
-                    UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 0);
+                    SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 1);
+                    UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 1);
                 }
 
                 if(RVSSConfigU32 & RVSS_MAESTRO_CHANNEL)
@@ -1074,8 +1104,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
         }
 
+        sleep_time = (iCommand == COMM_INV && server_state != SERVER_STATE_INWORK) ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
         nanosleep(&sleep_time,&ref_time);
-
     }
 
     (void)iCommClose();
@@ -1086,6 +1116,18 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
+void signalHandler(int signo)
+{
+    if (signo == SIGINT)
+    {
+        LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+        iExit = 1;
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+    }
+}
 
 SystemControlCommand_t SystemControlFindCommand(const char* CommandBuffer, SystemControlCommand_t *CurrentCommand, int *CommandArgCount)
 {
@@ -1254,6 +1296,7 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
     unsigned int control_port = SYSTEM_CONTROL_CONTROL_PORT;
     int optval = 1;
     int result = 0;
+    int sockFlags = 0;
 
     /* Init user control socket */
     LogMessage(LOG_LEVEL_INFO,"Init control socket");
@@ -1264,6 +1307,7 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
         perror("[SystemControl] ERR: Failed to create control socket");
         exit(1);
     }
+
     bzero((char *) &command_server_addr, sizeof(command_server_addr));
 
     command_server_addr.sin_family = AF_INET;
@@ -1291,17 +1335,23 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
     listen(*ServerHandle, 1);
     cli_length = sizeof(cli_addr);
 
+    /* Set socket to nonblocking */
+    sockFlags = fcntl(*ServerHandle, F_GETFL, 0);
+    if (sockFlags == -1)
+        util_error("Error calling fcntl");
 
+    sockFlags = sockFlags | O_NONBLOCK;
+    if(fcntl(*ServerHandle, F_SETFL, sockFlags))
+        util_error("Error calling fcntl");
 
-    while( *ClientSocket = accept(*ServerHandle, (struct sockaddr *) &cli_addr, &cli_length))
+    do
     {
+        *ClientSocket = accept(*ServerHandle, (struct sockaddr *) &cli_addr, &cli_length);
+        if ((*ClientSocket == -1 && errno != EAGAIN && errno != EWOULDBLOCK) || iExit)
+            util_error("Failed to establish connection");
+    } while(*ClientSocket == -1);
 
-        LogMessage( LOG_LEVEL_INFO,"Connection accepted!");
-        break;
-
-    }
-
-    LogMessage( LOG_LEVEL_INFO,"Connection received: %s:%i", inet_ntoa(cli_addr.sin_addr), htons(command_server_addr.sin_port));
+    LogMessage(LOG_LEVEL_INFO, "Connection established: %s:%i", inet_ntoa(cli_addr.sin_addr), htons(command_server_addr.sin_port));
 
     ip_addr->s_addr = cli_addr.sin_addr.s_addr; //Set IP-address of Usercontrol
 
@@ -1310,9 +1360,6 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
         perror("[SystemControl] ERR: Failed to accept from central");
         exit(1);
     }
-
-    /* set socket to non-blocking */
-    result = fcntl(*ClientSocket, F_SETFL, fcntl(*ClientSocket, F_GETFL, 0) | O_NONBLOCK);
 
     return result;
 }

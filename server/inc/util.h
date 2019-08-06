@@ -11,6 +11,10 @@
 #ifndef __UTIL_H_INCLUDED__
 #define __UTIL_H_INCLUDED__
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
@@ -19,13 +23,14 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
-
+#include <stdbool.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
 #include "mqbus.h"
+#include "iso22133.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -69,7 +74,7 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0 
-#define LOCAL_USER_CONTROL_IP "10.168.19.250"
+#define LOCAL_USER_CONTROL_IP "10.130.24.50"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -106,19 +111,7 @@
 #define TRAJECTORY_PATH "./traj/"
 
 #define ADAPTIVE_SYNC_POINT_CONF "./conf/adaptivesync.conf"
-#define TRIGG_ACTION_CONF "./conf/triggeraction.conf"
 #define VERSION_PATH "../conf/Version.txt"
-
-#define MAX_TRIGG_ACTIONS 20
-
-
-#define TAA_ACTION_EXT_START 1
-#define TAA_ACTION_TEST_SIGNAL 2
-
-#define TAA_TRIGGER_DI_LOW  1
-#define TAA_TRIGGER_DI_HIGH  2
-#define TAA_TRIGGER_DI_RISING_EDGE 3
-#define TAA_TRIGGER_DI_FALLING_EDGE 4
 
 
 #define MASTER_FILE_EXTENSION ".sync.m"
@@ -181,6 +174,7 @@
 #define dbl double
 #define flt float
 
+// Why do we need this?
 #pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
 
 #define SYNC_WORD 0x7e7e
@@ -270,7 +264,6 @@ COMM_EXIT = 5,
 COMM_REPLAY = 6,
 COMM_CONTROL = 7,
 COMM_ABORT = 8,
-COMM_TOM = 9,
 COMM_INIT = 10,
 COMM_CONNECT = 11,
 COMM_OBC_STATE = 12,
@@ -283,7 +276,12 @@ COMM_TRAJ_FROMSUP = 18,
 COMM_ASP = 19,
 COMM_OSEM = 20,
 COMM_DATA_DICT = 21,
+COMM_EXAC = 22,
+COMM_TREO = 23,
+COMM_ACCM = 24,
+COMM_TRCM = 25,
 COMM_MONR = 239,
+COMM_OBJECTS_CONNECTED = 111,
 COMM_INV = 255
 };
 
@@ -305,20 +303,6 @@ typedef struct
 } CartesianPosition;
 
 
-typedef struct
-{
-  U16 SyncWordU16;
-  U8 TransmitterIdU8;
-  U8 MessageCounterU8;
-  U8 AckReqProtVerU8;
-  U16 MessageIdU16;
-  U32 MessageLengthU32;
-} HeaderType; //11 bytes
-
-typedef struct
-{
-  U16 Crc;
-} FooterType; //2 bytes
 
 typedef struct
 {
@@ -340,7 +324,7 @@ typedef struct
   U16 GPSWeekU16;
   U16 GPSSOWValueIdU16;
   U16 GPSSOWContentLengthU16;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   U16 MaxWayDeviationValueIdU16;
   U16 MaxWayDeviationContentLengthU16;
   U16 MaxWayDeviationU16;
@@ -407,7 +391,7 @@ typedef struct
   HeaderType Header;
   //U16 HeabStructValueIdU16;
   //U16 HeabStructContentLengthU16;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   U8 CCStatusU8;
 } HEABType; //16 bytes
 
@@ -416,7 +400,7 @@ typedef struct
   HeaderType Header;
   //U16 MonrStructValueIdU16;
   //U16 MonrStructContentLengthU16;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   I32 XPositionI32;
   I32 YPositionI32;
   I32 ZPositionI32;
@@ -429,8 +413,14 @@ typedef struct
   U8 StateU8;
   U8 ReadyToArmU8;
   U8 ErrorStatusU8;
+  U16 CRC;
 } MONRType; //41 bytes
 
+typedef struct
+{
+    MONRType MONR;
+    in_addr_t ClientIP;
+} MonitorDataType;
 
 typedef struct
 {
@@ -659,15 +649,41 @@ typedef struct
 
 typedef struct
 {
-  char TriggerIP[16];
-  char TriggerType[8];
-  char TriggerTypeVar[16];
-  char ActionType[24];
-  char ActionTypeVar[16];
-  char ActionDelay[8];
-  uint8_t TriggerId;
-  int32_t Action;
-} TriggActionType;
+    uint16_t actionID;
+    uint32_t executionTime_qmsoW;
+    in_addr_t ip;
+} EXACData; //!< Data type for MQ message
+
+
+
+typedef struct
+{
+    uint16_t triggerID;
+    uint32_t timestamp_qmsow;
+    in_addr_t ip;
+} TREOData; //!< Data type for MQ message
+
+typedef struct
+{
+    uint16_t actionID;
+    uint16_t actionType;
+    uint32_t actionTypeParameter1;
+    uint32_t actionTypeParameter2;
+    uint32_t actionTypeParameter3;
+    in_addr_t ip;
+} ACCMData; //!< Data type for MQ message
+
+typedef struct
+{
+    uint16_t triggerID;
+    uint16_t triggerType;
+    uint32_t triggerTypeParameter1;
+    uint32_t triggerTypeParameter2;
+    uint32_t triggerTypeParameter3;
+    in_addr_t ip;
+} TRCMData; //!< Data type for MQ message
+
+
 
 typedef struct
 {
@@ -694,7 +710,7 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   U8 WorldStateU8;
   U8 ObjectCountU8;
   Sim1Type SimObjects[16];
@@ -706,7 +722,7 @@ typedef struct
 {
   U16 MessageIdU16;
   U32 ObjectIPU32;
-  U32 GPSSOWU32;
+  U32 GPSQmsOfWeekU32;
   I32 XPositionI32;
   I32 YPositionI32;
   I32 ZPositionI32;
@@ -778,6 +794,12 @@ typedef struct
 } RVSSMaestroType;
 
 
+typedef enum {
+    NORTHERN,
+    SOUTHERN
+} Hemisphere;
+
+
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -805,15 +827,22 @@ void UtilgetDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t);
 void UtilgetDateTimefromUTCCSVformat(int64_t utc_ms, char *buffer, int size_t);
 void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int size_t);
 
-void util_error(char* message);
+void util_error(const char *message);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
+// Message bus functions
 int iCommInit(void);
 int iCommClose(void);
 ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, struct timeval *timeRecv);
 int iCommSend(const enum COMMAND iCommand, const char* data, size_t dataLength);
 
+int iCommSendTREO(TREOData data);
+int iCommSendTRCM(TRCMData data);
+int iCommSendEXAC(EXACData data);
+int iCommSendACCM(ACCMData data);
+
+//
 char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
 int UtilVincentyDirect(double refLat, double refLon, double a1, double distance, double *resLat, double *resLon, double *a2);
@@ -843,7 +872,7 @@ int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
-int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug);
+//int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug); // TODO DELETE
 
 void llhToXyz(double lat, double lon, double height, double *x, double *y, double *z);
 void enuToLlh(const double *iLlh, const double *xyz, double *llh);
@@ -879,7 +908,14 @@ I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMTy
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
 I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 
-I32 UtilPopulateMONRStruct(C8* rawMONR, size_t rawMONRsize, MONRType *MONR, U8 debug);
+I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataType *monitorData, U8 debug);
+I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
+I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData);
+I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);
+I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *accmData);
+
+double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
+
 
 typedef struct {
   uint64_t timestamp;
@@ -906,5 +942,8 @@ void traj2ldm ( float      time ,
                 monitor_t* ldm  );
 
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif //__UTIL_H_INCLUDED__

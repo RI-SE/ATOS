@@ -19,12 +19,13 @@
 #include <unistd.h>
 #include <time.h>
 #include <dirent.h>
-
+#include <signal.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
+#include <limits.h>
 
 #include "supervision.h"
 
@@ -52,13 +53,16 @@ typedef struct
   -- Function declarations.
   ------------------------------------------------------------*/
 
-int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, unsigned int numberOfGeofences);
+int SupervisionCheckGeofences(MonitorDataType MONRdata, GeofenceType *geofences, unsigned int numberOfGeofences);
 int loadGeofenceFiles(GeofenceType *geofences[], unsigned int *nGeof);
 int parseGeofenceFile(char* geofenceFile, GeofenceType *geofence);
-
+static void signalHandler(int signo);
 void freeGeofences(GeofenceType *geoFence, unsigned int *nGeof);
-void printFences(GeofenceType *geoFence, unsigned int nGeof);
 
+/*------------------------------------------------------------
+-- Static variables
+------------------------------------------------------------*/
+static volatile int iExit = 0;
 
 /*------------------------------------------------------------
 -- The main function.
@@ -66,18 +70,25 @@ void printFences(GeofenceType *geoFence, unsigned int nGeof);
 void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
 
-    I32 iExit = 0;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
-    MONRType MONRMessage;
+    MonitorDataType MONRMessage;
 
     unsigned int numberOfGeofences = 0;
     GeofenceType *geofenceArray = NULL;
 
     enum COMMAND command;
 
-    (void)iCommInit();
-    LogInit(MODULE_NAME,LOG_LEVEL_INFO);
+    // Create log
+    LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO, "Supervision running with PID: %i", getpid());
+
+    // Set up signal handlers
+    if (signal(SIGINT, signalHandler) == SIG_ERR)
+        util_error("Unable to initialize signal handler");
+
+    // Set up message bus connection
+    if (iCommInit())
+        util_error("Unable to connect to message queue bus");
 
     while(!iExit)
     {
@@ -106,14 +117,14 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 freeGeofences(geofenceArray, &numberOfGeofences);
 
             if (loadGeofenceFiles(&geofenceArray, &numberOfGeofences) == -1)
-                util_error("Unable to load geofences");
+                util_error("Unable to load geofences"); // TODO: Do something more e.g. stop the INIT process
 
             break;
         case COMM_MONI:
             // Ignore old style MONR data
             break;
         case COMM_MONR:
-            UtilPopulateMONRStruct(busReceiveBuffer, sizeof(busReceiveBuffer), &MONRMessage, 0);
+            UtilPopulateMonitorDataStruct(busReceiveBuffer, sizeof(busReceiveBuffer), &MONRMessage, 0);
             // TODO: react to output from SupervisionCheckGeofences
             SupervisionCheckGeofences(MONRMessage, geofenceArray, numberOfGeofences);
 
@@ -129,6 +140,23 @@ void supervision_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         default:
             LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
         }
+    }
+}
+
+
+/*------------------------------------------------------------
+-- Private functions
+------------------------------------------------------------*/
+void signalHandler(int signo)
+  {
+    if (signo == SIGINT)
+    {
+          LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+          iExit = 1;
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
     }
 }
 
@@ -188,13 +216,19 @@ int loadGeofenceFiles(GeofenceType *geofences[], unsigned int *nGeof){
         {
             LogMessage(LOG_LEVEL_WARNING, "File <%s> is not a valid .geofence file", pDirent->d_name);
         }
+        else if (strcmp(pDirent->d_name,".") == 0 || strcmp(pDirent->d_name,"..") == 0)
+        {
+            LogMessage(LOG_LEVEL_DEBUG, "Ignored <%s>",pDirent->d_name);
+        }
         else
         {
             if(parseGeofenceFile(pDirent->d_name, (*geofences)+n) == -1)
             {
                 closedir(pDir);
+                LogMessage(LOG_LEVEL_ERROR, "Error parsing file <%s>", pDirent->d_name);
                 return -1;
             }
+            LogMessage(LOG_LEVEL_DEBUG, "Loaded geofence with %u vertices", (*geofences)[n].numberOfPoints);
             n++;
         }
     }
@@ -209,8 +243,8 @@ int loadGeofenceFiles(GeofenceType *geofences[], unsigned int *nGeof){
 * \brief Open a directory and look for .geofence files which are then passed to parseGeofenceFile().
 * \param *geofenceFile A string containing a .geofence filename.
 * \param *geofence A pointer to the geofence struct used for saving data.
-* * \param index An integer used to keep track of which index to store data in.
-*
+* \param index An integer used to keep track of which index to store data in.
+* \return 0 on success, -1 on failure
 */
 int parseGeofenceFile(char* geofenceFile, GeofenceType *geofence){
 
@@ -222,66 +256,215 @@ int parseGeofenceFile(char* geofenceFile, GeofenceType *geofence){
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
+    int tempInt;
+    int isHeaderParsedSuccessfully = 0;
 
-    LogMessage(LOG_LEVEL_DEBUG, "Opening <%s>", geofenceFile);
+    LogMessage(LOG_LEVEL_DEBUG, "Opening <%s>", pcFileNameBuffer);
     fp = fopen(pcFileNameBuffer, "r");
     if ( fp != NULL )
     {
+        int lineCount = 0;
+
         while ((read = getline(&line, &len, fp)) != -1) {
-            static int lineCount = 0;
             char delim[] = ";";
             char *ptr = strtok(line, delim);
 
             while (ptr != NULL)
             {
-                if(strcmp( ptr,  "GEOFENCE" ) == 0){ //PARSE HEADER
-                    lineCount = 0;
+                if (strcmp(ptr, "GEOFENCE") == 0 && strcmp( ptr, "ENDGEOFENCE") != 0 && lineCount != 0)
+                {
+                    // In case there's a second header somewhere in the middle of the file, catch that
+                    LogMessage(LOG_LEVEL_ERROR, "Found misplaced header in file <%s>", geofenceFile);
+                    fclose(fp);
+                    if(isHeaderParsedSuccessfully)
+                        free(geofence->polygonPoints);
+                    return -1;
+                }
+                else if (strcmp( ptr,  "GEOFENCE" ) == 0 && strcmp( ptr, "ENDGEOFENCE") != 0)
+                {
+                    /* Parse header */
 
-                    ptr = strtok(NULL, delim);
+                    // Geofence name string
+                    if ((ptr = strtok(NULL, delim)) == NULL)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Unable to parse header of file <%s>", geofenceFile);
+                        fclose(fp);
+                        return -1;
+                    }
                     strcpy (geofence->name, ptr);
 
-                    ptr = strtok(NULL, delim);
-                    geofence->numberOfPoints = atoi(ptr);
+                    // Geofence number of points
+                    if ((ptr = strtok(NULL, delim)) == NULL)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Unable to parse header of file <%s>", geofenceFile);
+                        fclose(fp);
+                        return -1;
+                    }
+                    tempInt = atoi(ptr);
+                    if (tempInt < 0)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Header of file <%s> contains a negative number of points", geofenceFile);
+                        fclose(fp);
+                        return -1;
+                    }
+                    else if (tempInt > USHRT_MAX)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Geofence file <%s> contains too many points", geofenceFile);
+                        fclose(fp);
+                        return -1;
+                    }
+                    geofence->numberOfPoints = (unsigned short)tempInt;
 
+                    // Permitted|forbidden string
+                    if ((ptr = strtok(NULL, delim)) == NULL)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Unable to parse header of file <%s>", geofenceFile);
+                        fclose(fp);
+                        return -1;
+                    }
+
+                    if(strcasecmp( ptr,  "permitted" ) == 0){
+                        geofence->isPermitted = 1;
+                    }
+                    else if (strcasecmp(ptr, "forbidden") == 0)
+                    {
+                        geofence->isPermitted = 0;
+                    }
+                    else
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Unable to parse header of file <%s>", geofenceFile);
+                        fclose(fp);
+                        return -1;
+                    }
+
+                    // Minimum height
+                    if ((ptr = strtok(NULL, delim)) == NULL)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Unable to parse header of file <%s>", geofenceFile);
+                        fclose(fp);
+                        return -1;
+                    }
+                    LogMessage(LOG_LEVEL_DEBUG, "Ignored minimum height %s in geofence <%s> (unimplemented)", ptr, geofenceFile);
+
+                    // Maximum height
+                    if ((ptr = strtok(NULL, delim)) == NULL)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Unable to parse header of file <%s>", geofenceFile);
+                        fclose(fp);
+                        return -1;
+                    }
+                    LogMessage(LOG_LEVEL_DEBUG, "Ignored maximum height %s in geofence <%s> (unimplemented)", ptr, geofenceFile);
+
+                    // Final delimiter
+                    if ((ptr = strtok(NULL, delim)) == NULL)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Unable to parse header of file <%s>", geofenceFile);
+                        fclose(fp);
+                        return -1;
+                    }
+
+                    // Successfully parsed the header; now we can allocate memory for the rest
                     geofence->polygonPoints = (CartesianPosition*)malloc(geofence->numberOfPoints*sizeof(CartesianPosition));
                     if (geofence->polygonPoints == NULL)
                     {
                         LogMessage(LOG_LEVEL_ERROR, "Unable to allocate memory for coordinate array");
+                        fclose(fp);
                         return -1;
                     }
-                    ptr = strtok(NULL, delim);
 
-                    if(strcmp( ptr,  "permitted" ) == 0){
-                        geofence->isPermitted = 1;
+                    isHeaderParsedSuccessfully = 1;
+                }
+                else if ((strcmp( ptr, "LINE" ) == 0) && !isHeaderParsedSuccessfully)
+                {
+                    // In case there's a point before the header, catch that
+                    LogMessage(LOG_LEVEL_ERROR, "Encountered geofence point above header in file <%s>",geofenceFile);
+                    fclose(fp);
+                    return -1;
+                }
+                else if (strcmp( ptr, "LINE" ) == 0){
+                    /* Parse non-header line */
+
+                    // Check so that there are not more points than previously specified
+                    if (lineCount >= geofence->numberOfPoints)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Geofence file <%s> contains more rows than specified in the header",geofenceFile);
+                        fclose(fp);
+                        free(geofence->polygonPoints);
+                        return -1;
+                    }
+
+                    // Parse x coordinate
+                    if ((ptr = strtok(NULL, delim)) == NULL)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Unable to parse x coordinate in row %d of file <%s>", lineCount+2, geofenceFile);
+                        fclose(fp);
+                        free(geofence->polygonPoints);
+                        return -1;
+                    }
+                    geofence->polygonPoints[lineCount].xCoord_m = atof(ptr);
+
+                    // Parse y coordinate
+                    if ((ptr = strtok(NULL, delim)) == NULL)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Unable to parse y coordinate in row %d of file <%s>", lineCount+2, geofenceFile);
+                        fclose(fp);
+                        free(geofence->polygonPoints);
+                        return -1;
+                    }
+                    geofence->polygonPoints[lineCount].yCoord_m = atof(ptr);
+
+                    LogMessage(LOG_LEVEL_DEBUG,"Point: (%.3f, %.3f)",
+                               geofence->polygonPoints[lineCount].xCoord_m,
+                               geofence->polygonPoints[lineCount].yCoord_m);
+
+                    // Check so that there is an ENDLINE text
+                    if ((ptr = strtok(NULL, delim)) == NULL)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Could not find ENDLINE at row %d of file <%s>", lineCount+2, geofenceFile);
+                        fclose(fp);
+                        free(geofence->polygonPoints);
+                        return -1;
+                    }
+
+                    if (strcmp(ptr, "ENDLINE") != 0)
+                    {
+                        LogMessage(LOG_LEVEL_ERROR, "Unable to parse row %d of file <%s>", lineCount+2, geofenceFile);
+                        fclose(fp);
+                        free(geofence->polygonPoints);
+                        return -1;
+                    }
+
+                    // Increment the line counter
+                    lineCount++;
+                }
+                else if (strcmp( ptr, "ENDGEOFENCE" ) == 0 && !isHeaderParsedSuccessfully)
+                {
+                    LogMessage(LOG_LEVEL_ERROR, "Found misplaced ENDGEOFENCE in file <%s>", geofenceFile);
+                    fclose(fp);
+                    return -1;
+                }
+                else if (strcmp(ptr, "ENDGEOFENCE") == 0)
+                {
+                    if (lineCount == geofence->numberOfPoints)
+                    {
+                        /* Successful parse, return */
+                        fclose(fp);
+                        LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", pcFileNameBuffer);
+                        return 0;
                     }
                     else
                     {
-                        geofence->isPermitted = 0;
+                        LogMessage(LOG_LEVEL_ERROR, "Mismatch between specified number of points (%u) and row count (%d) in file <%s>", geofence->numberOfPoints, lineCount, geofenceFile);
+                        fclose(fp);
+                        free(geofence->polygonPoints);
+                        return -1;
                     }
-
-                    ptr = strtok(NULL, delim);
-                    // printf("Min Height: %s\n", ptr);
-                    ptr = strtok(NULL, delim);
-                    // printf("Max Height: %s\n", ptr);
-                    ptr = strtok(NULL, delim);
-                }
-
-                if(strcmp( ptr, "LINE" ) == 0){
-                    ptr = strtok(NULL, delim);
-                    geofence->polygonPoints[lineCount].xCoord_m = atof(ptr);
-
-                    ptr = strtok(NULL, delim);
-                    geofence->polygonPoints[lineCount].yCoord_m = atof(ptr);
-
-                    lineCount++;
                 }
                 ptr = strtok(NULL, delim);
-
             }
         }
 
-
-        fclose ( fp );
+        fclose(fp);
         LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", pcFileNameBuffer);
     }
     else
@@ -289,7 +472,12 @@ int parseGeofenceFile(char* geofenceFile, GeofenceType *geofence){
         LogMessage(LOG_LEVEL_ERROR, "Unable to open file <%s>", pcFileNameBuffer);
         return -1;
     }
-    return 0;
+
+    // If we reach here, it means we did not find an ENDGEOFENCE before EOF
+    LogMessage(LOG_LEVEL_ERROR, "Reached end of file <%s> unexpectedly while parsing", pcFileNameBuffer);
+    if(isHeaderParsedSuccessfully)
+        free(geofence->polygonPoints);
+    return -1;
 }
 
 /*!
@@ -299,9 +487,9 @@ int parseGeofenceFile(char* geofenceFile, GeofenceType *geofence){
  * \param numberOfGeofences Length of struct array
  * \return 1 if MONR coordinate violates a geofence, 0 if not. -1 on error
  */
-int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, unsigned int numberOfGeofences)
+int SupervisionCheckGeofences(MonitorDataType MONRdata, GeofenceType *geofences, unsigned int numberOfGeofences)
 {
-    const CartesianPosition monrPoint = {MONRdata.XPositionI32/1000.0, MONRdata.YPositionI32/1000.0, MONRdata.ZPositionI32/1000.0, 0.0};
+    const CartesianPosition monrPoint = {MONRdata.MONR.XPositionI32/1000.0, MONRdata.MONR.YPositionI32/1000.0, MONRdata.MONR.ZPositionI32/1000.0, 0.0};
     char isInPolygon = 0;
     int retval = 0;
 
@@ -323,9 +511,9 @@ int SupervisionCheckGeofences(MONRType MONRdata, GeofenceType *geofences, unsign
         else
         {
             if (geofences[i].isPermitted)
-                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is outside a permitted area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
+                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is outside a permitted area %s", MONRdata.MONR.Header.TransmitterIdU8, geofences[i].name);
             else
-                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is inside a forbidden area %s", MONRdata.Header.TransmitterIdU8, geofences[i].name);
+                LogMessage(LOG_LEVEL_WARNING,"Object with MONR transmitter ID %u is inside a forbidden area %s", MONRdata.MONR.Header.TransmitterIdU8, geofences[i].name);
 
             retval = 1;
         }

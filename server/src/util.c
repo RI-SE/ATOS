@@ -53,7 +53,10 @@
 #define PRIO_COMM_REPLAY 160
 #define PRIO_COMM_CONTROL 180
 #define PRIO_COMM_ABORT 60
-#define PRIO_COMM_TOM 90
+#define PRIO_COMM_EXAC 70
+#define PRIO_COMM_ACCM 80
+#define PRIO_COMM_TREO 70
+#define PRIO_COMM_TRCM 80
 #define PRIO_COMM_INIT 110
 #define PRIO_COMM_CONNECT 110
 #define PRIO_COMM_OBC_STATE 160
@@ -66,6 +69,7 @@
 #define PRIO_COMM_ASP 110
 #define PRIO_COMM_OSEM 160
 #define PRIO_DATA_DICT 100
+#define PRIO_OBJECTS_CONNECTED 100
 
 /*------------------------------------------------------------
 -- Public variables
@@ -306,7 +310,7 @@ void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int 
   sprintf(tmp_buffer_ms,"%" PRIi64,ms);
   strcat(buffer,tmp_buffer_ms);
 }
-void util_error(char* message)
+void util_error(const char* message)
 {
   LogMessage(LOG_LEVEL_ERROR,message);
   exit(EXIT_FAILURE);
@@ -577,6 +581,7 @@ int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug)
   return 0;
 }
 
+/* TODO: DELETE
 int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug)
 {
 
@@ -653,7 +658,7 @@ int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug)
 
   return 0;
 }
-
+*/
 
 
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP) { strncpy(OP->IP, IP, strlen(IP));}
@@ -1934,9 +1939,6 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
     case COMM_ABORT:
         uiMessagePrio = PRIO_COMM_ABORT;
         break;
-    case COMM_TOM:
-        uiMessagePrio = PRIO_COMM_TOM;
-        break;
     case COMM_INIT:
         uiMessagePrio = PRIO_COMM_INIT;
         break;
@@ -1972,6 +1974,20 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
         break;
     case COMM_DATA_DICT:
         uiMessagePrio = PRIO_DATA_DICT;
+    case COMM_EXAC:
+        uiMessagePrio = PRIO_COMM_EXAC;
+        break;
+    case COMM_ACCM:
+        uiMessagePrio = PRIO_COMM_ACCM;
+        break;
+    case COMM_TREO:
+        uiMessagePrio = PRIO_COMM_TREO;
+        break;
+    case COMM_TRCM:
+        uiMessagePrio = PRIO_COMM_TRCM;
+        break;
+    case COMM_OBJECTS_CONNECTED:
+        uiMessagePrio = PRIO_OBJECTS_CONNECTED;
         break;
     default:
         util_error("Unknown command");
@@ -2033,6 +2049,108 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
     }
 
     return -1;
+}
+
+/*!
+ * \brief iCommSendTREO Sends a trigger event occurred command over message bus
+ * \param data Related trigger data
+ * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
+ */
+int iCommSendTREO(TREOData data)
+{
+    char sendBuffer[sizeof(TREOData)];
+    char* ptr = sendBuffer;
+
+    memcpy(ptr, &data.triggerID, sizeof(data.triggerID));
+    ptr += sizeof(data.triggerID);
+
+    memcpy(ptr, &data.timestamp_qmsow, sizeof(data.timestamp_qmsow));
+    ptr += sizeof(data.timestamp_qmsow);
+
+    memcpy(ptr, &data.ip, sizeof(data.ip));
+
+    return iCommSend(COMM_TREO, sendBuffer, sizeof(sendBuffer));
+}
+
+/*!
+ * \brief iCommSendEXAC Sends an action execute command over message bus
+ * \param data Related action data
+ * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
+ */
+int iCommSendEXAC(EXACData data)
+{
+    char sendBuffer[sizeof(EXACData)];
+    char* ptr = sendBuffer;
+
+    memcpy(ptr, &data.actionID, sizeof(data.actionID));
+    ptr += sizeof(data.actionID);
+
+    memcpy(ptr, &data.executionTime_qmsoW, sizeof(data.executionTime_qmsoW));
+    ptr += sizeof(data.executionTime_qmsoW);
+
+    memcpy(ptr, &data.ip, sizeof(data.ip));
+
+    return iCommSend(COMM_EXAC, sendBuffer, sizeof(sendBuffer));
+}
+
+/*!
+ * \brief iCommSendTRCM Sends a trigger event configuration command over message bus
+ * \param data Related trigger data
+ * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
+ */
+int iCommSendTRCM(TRCMData data)
+{
+    char sendBuffer[sizeof(TRCMData)];
+    char* ptr = sendBuffer;
+
+    memcpy(ptr, &data.triggerID, sizeof(data.triggerID));
+    ptr += sizeof(data.triggerID);
+
+    memcpy(ptr, &data.triggerType, sizeof(data.triggerType));
+    ptr += sizeof(data.triggerType);
+
+    memcpy(ptr, &data.triggerTypeParameter1, sizeof(data.triggerTypeParameter1));
+    ptr += sizeof(data.triggerTypeParameter1);
+
+    memcpy(ptr, &data.triggerTypeParameter2, sizeof(data.triggerTypeParameter2));
+    ptr += sizeof(data.triggerTypeParameter2);
+
+    memcpy(ptr, &data.triggerTypeParameter3, sizeof(data.triggerTypeParameter3));
+    ptr += sizeof(data.triggerTypeParameter3);
+
+    memcpy(ptr, &data.ip, sizeof(data.ip));
+
+    return iCommSend(COMM_TRCM, sendBuffer, sizeof(sendBuffer));
+}
+
+/*!
+ * \brief iCommSendACCM Sends an action configuration command over message bus
+ * \param data Related action data
+ * \return 0 upon success, 1 upon partial success (e.g. a message queue was full), -1 on error
+ */
+int iCommSendACCM(ACCMData data)
+{
+    char sendBuffer[sizeof(ACCMData)];
+    char* ptr = sendBuffer;
+
+    memcpy(ptr, &data.actionID, sizeof(data.actionID));
+    ptr += sizeof(data.actionID);
+
+    memcpy(ptr, &data.actionType, sizeof(data.actionType));
+    ptr += sizeof(data.actionType);
+
+    memcpy(ptr, &data.actionTypeParameter1, sizeof(data.actionTypeParameter1));
+    ptr += sizeof(data.actionTypeParameter1);
+
+    memcpy(ptr, &data.actionTypeParameter2, sizeof(data.actionTypeParameter2));
+    ptr += sizeof(data.actionTypeParameter2);
+
+    memcpy(ptr, &data.actionTypeParameter3, sizeof(data.actionTypeParameter3));
+    ptr += sizeof(data.actionTypeParameter3);
+
+    memcpy(ptr, &data.ip, sizeof(data.ip));
+
+    return iCommSend(COMM_ACCM, sendBuffer, sizeof(sendBuffer));
 }
 
 /*------------------------------------------------------------
@@ -2633,11 +2751,11 @@ I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPS
     HEABData->Header.MessageLengthU32 = sizeof(HEABType) - sizeof(HeaderType);
     //HEABData->HeabStructValueIdU16 = 0;
     //HEABData->HeabStructContentLengthU16 = sizeof(HEABType) - sizeof(HeaderType) - 4;
-    HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)UtilGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
+    HEABData->GPSQmsOfWeekU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)UtilGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
     HEABData->CCStatusU8 = CCStatus;
 
     if(!GPSTime->isGPSenabled){
-        UtilgetCurrentGPStime(NULL,&HEABData->GPSSOWU32);
+        UtilgetCurrentGPStime(NULL,&HEABData->GPSQmsOfWeekU32);
     }
 
     p=(C8 *)HEABData;
@@ -3100,108 +3218,290 @@ I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
 }
 
 /*!
- * \brief UtilPopulateMONRStruct Takes an array of raw MONR data and fills a MONRType struct with the content
+ * \brief UtilPopulateMonitorDataStruct Takes an array of raw MONR data and fills a MONRType struct with the content
  * \param rawMONR Array of raw MONR data
  * \param rawMONRsize Size of raw MONR data array
  * \param MONR Struct where MONR data should be placed
  * \param debug Boolean enabling debug printouts
  * \return -1 on failure, 0 on success
  */
-I32 UtilPopulateMONRStruct(C8* rawMONR, size_t rawMONRsize, MONRType *MONR, U8 debug)
+I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataType *monitorData, U8 debug)
 {
-    // TODO: size of rawMONR
     U16 Crc = 0, U16Data = 0;
     I16 I16Data = 0;
     U32 U32Data = 0;
     I32 I32Data = 0;
     U64 U64Data = 0;
     C8 *rdPtr = rawMONR; // Pointer to keep track of where in rawMONR we are currently reading
+    in_addr_t IPData = 0;
 
-    if (rawMONRsize < sizeof (MONRType))
+    if (rawMONRsize < sizeof(MonitorDataType))
     {
         LogMessage(LOG_LEVEL_ERROR, "Raw MONR array too small to hold all necessary MONR data");
         return -1;
     }
 
     memcpy(&U16Data, rdPtr, sizeof(U16Data));
-    MONR->Header.SyncWordU16 = U16Data;
+    monitorData->MONR.Header.SyncWordU16 = U16Data;
     rdPtr += sizeof(U16Data);
     U16Data = 0;
 
-    MONR->Header.TransmitterIdU8 = *(rdPtr++);
-    MONR->Header.MessageCounterU8 = *(rdPtr++);
-    MONR->Header.AckReqProtVerU8 = *(rdPtr++);
+    monitorData->MONR.Header.TransmitterIdU8 = *(rdPtr++);
+    monitorData->MONR.Header.MessageCounterU8 = *(rdPtr++);
+    monitorData->MONR.Header.AckReqProtVerU8 = *(rdPtr++);
 
     memcpy(&U16Data, rdPtr, sizeof(U16Data));
-    MONR->Header.MessageIdU16 = U16Data;
+    monitorData->MONR.Header.MessageIdU16 = U16Data;
     rdPtr += sizeof(U16Data);
     U16Data = 0;
 
     memcpy(&U32Data, rdPtr, sizeof(U32Data));
-    MONR->Header.MessageLengthU32 = U32Data;
+    monitorData->MONR.Header.MessageLengthU32 = U32Data;
     rdPtr += sizeof(U32Data);
     U32Data = 0;
 
     memcpy(&U32Data, rdPtr, sizeof(U32Data));
-    MONR->GPSSOWU32 = U32Data;
+    monitorData->MONR.GPSQmsOfWeekU32 = U32Data;
     rdPtr += sizeof(U32Data);
     U32Data = 0;
 
     memcpy(&I32Data, rdPtr, sizeof(I32Data));
-    MONR->XPositionI32 = I32Data;
+    monitorData->MONR.XPositionI32 = I32Data;
     rdPtr += sizeof(I32Data);
     I32Data = 0;
 
     memcpy(&I32Data, rdPtr, sizeof(I32Data));
-    MONR->YPositionI32 = I32Data;
+    monitorData->MONR.YPositionI32 = I32Data;
     rdPtr += sizeof(I32Data);
     I32Data = 0;
 
     memcpy(&I32Data, rdPtr, sizeof(I32Data));
-    MONR->ZPositionI32 = I32Data;
+    monitorData->MONR.ZPositionI32 = I32Data;
     rdPtr += sizeof(I32Data);
     I32Data = 0;
 
     memcpy(&U16Data, rdPtr, sizeof(U16Data));
-    MONR->HeadingU16 = U16Data;
+    monitorData->MONR.HeadingU16 = U16Data;
     rdPtr += sizeof(U16Data);
     U16Data = 0;
 
     memcpy(&I16Data, rdPtr, sizeof(I16Data));
-    MONR->LongitudinalSpeedI16 = I16Data;
+    monitorData->MONR.LongitudinalSpeedI16 = I16Data;
     rdPtr += sizeof(I16Data);
     I16Data = 0;
 
     memcpy(&I16Data, rdPtr, sizeof(I16Data));
-    MONR->LateralSpeedI16 = I16Data;
+    monitorData->MONR.LateralSpeedI16 = I16Data;
     rdPtr += sizeof(I16Data);
     I16Data = 0;
 
     memcpy(&I16Data, rdPtr, sizeof(I16Data));
-    MONR->LongitudinalAccI16 = I16Data;
+    monitorData->MONR.LongitudinalAccI16 = I16Data;
     rdPtr += sizeof(I16Data);
     I16Data = 0;
 
     memcpy(&I16Data, rdPtr, sizeof(I16Data));
-    MONR->LateralAccI16 = I16Data;
+    monitorData->MONR.LateralAccI16 = I16Data;
     rdPtr += sizeof(I16Data);
     I16Data = 0;
 
-    MONR->DriveDirectionU8 = *(rdPtr++);
-    MONR->StateU8 = *(rdPtr++);
-    MONR->ReadyToArmU8 = *(rdPtr++);
-    MONR->ErrorStatusU8 = *(rdPtr++);
+    monitorData->MONR.DriveDirectionU8 = *(rdPtr++);
+    monitorData->MONR.StateU8 = *(rdPtr++);
+    monitorData->MONR.ReadyToArmU8 = *(rdPtr++);
+    monitorData->MONR.ErrorStatusU8 = *(rdPtr++);
+
+    memcpy(&U16Data, rdPtr, sizeof(U16Data));
+    monitorData->MONR.CRC = U16Data;
+    rdPtr += sizeof(U16Data);
+    U16Data = 0;
+
+    memcpy(&IPData, rdPtr, sizeof(IPData));
+    monitorData->ClientIP = IPData;
+    rdPtr += sizeof(IPData);
+    IPData = 0;
 
     if(debug == 1)
     {
         LogPrint("MONR:");
-        LogPrint("SyncWord = %d", MONR->Header.SyncWordU16);
-        LogPrint("TransmitterId = %d", MONR->Header.TransmitterIdU8);
-        LogPrint("PackageCounter = %d", MONR->Header.MessageCounterU8);
-        LogPrint("AckReq = %d", MONR->Header.AckReqProtVerU8);
-        LogPrint("MessageLength = %d", MONR->Header.MessageLengthU32);
-        LogPrint("GPSSOW = %u",MONR->GPSSOWU32);
+        LogPrint("SyncWord = %d", monitorData->MONR.Header.SyncWordU16);
+        LogPrint("TransmitterId = %d", monitorData->MONR.Header.TransmitterIdU8);
+        LogPrint("PackageCounter = %d", monitorData->MONR.Header.MessageCounterU8);
+        LogPrint("AckReq = %d", monitorData->MONR.Header.AckReqProtVerU8);
+        LogPrint("MessageLength = %d", monitorData->MONR.Header.MessageLengthU32);
+        LogPrint("GPSQMSOW = %u",monitorData->MONR.GPSQmsOfWeekU32);
     }
 
     return 0;
+}
+
+/*!
+ * \brief UtilPopulateTREODataStructFromMQ Fills TREO data struct with COMM_TREO MQ message contents
+ * \param rawTREO MQ data
+ * \param rawTREOsize size of MQ data
+ * \param treoData Data struct to be filled
+ */
+I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData)
+{
+    C8 *rdPtr = rawTREO;
+
+    if (rawTREOsize < sizeof(TREOData))
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Raw TREO array too small to hold all necessary TREO data");
+        return -1;
+    }
+
+    memcpy(&treoData->triggerID, rdPtr, sizeof(treoData->triggerID));
+    rdPtr += sizeof(treoData->triggerID);
+
+    memcpy(&treoData->timestamp_qmsow, rdPtr, sizeof(treoData->timestamp_qmsow));
+    rdPtr += sizeof(treoData->timestamp_qmsow);
+
+    memcpy(&treoData->ip, rdPtr, sizeof(treoData->ip));
+    rdPtr += sizeof(treoData->ip);
+
+    return 0;
+}
+
+/*!
+ * \brief UtilPopulateEXACDataStructFromMQ Fills EXAC data struct with COMM_EXAC MQ message contents
+ * \param rawEXAC MQ data
+ * \param rawEXACsize size of MQ data
+ * \param exacData Data struct to be filled
+ */
+I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData)
+{
+    C8 *rdPtr = rawEXAC;
+
+    if (rawEXACsize < sizeof(EXACData))
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Raw EXAC array too small to hold all necessary EXAC data");
+        return -1;
+    }
+
+    memcpy(&exacData->actionID, rdPtr, sizeof(exacData->actionID));
+    rdPtr += sizeof(exacData->actionID);
+
+    memcpy(&exacData->executionTime_qmsoW, rdPtr, sizeof(exacData->executionTime_qmsoW));
+    rdPtr += sizeof(exacData->executionTime_qmsoW);
+
+    memcpy(&exacData->ip, rdPtr, sizeof(exacData->ip));
+    rdPtr += sizeof(exacData->ip);
+
+    return 0;
+}
+
+/*!
+ * \brief UtilPopulateTRCMDataStructFromMQ Fills TRCM data struct with COMM_TRCM MQ message contents
+ * \param rawTRCM MQ data
+ * \param rawTRCMsize size of MQ data
+ * \param trcmData Data struct to be filled
+ */
+I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData)
+{
+    C8 *rdPtr = rawTRCM;
+
+    if (rawTRCMsize < sizeof(TRCMData))
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Raw TRCM array too small to hold all necessary TRCM data");
+        return -1;
+    }
+
+    memcpy(&trcmData->triggerID, rdPtr, sizeof(trcmData->triggerID));
+    rdPtr += sizeof(trcmData->triggerID);
+
+    memcpy(&trcmData->triggerType, rdPtr, sizeof(trcmData->triggerType));
+    rdPtr += sizeof(trcmData->triggerType);
+
+    memcpy(&trcmData->triggerTypeParameter1, rdPtr, sizeof(trcmData->triggerTypeParameter1));
+    rdPtr += sizeof(trcmData->triggerTypeParameter1);
+
+    memcpy(&trcmData->triggerTypeParameter2, rdPtr, sizeof(trcmData->triggerTypeParameter2));
+    rdPtr += sizeof(trcmData->triggerTypeParameter2);
+
+    memcpy(&trcmData->triggerTypeParameter3, rdPtr, sizeof(trcmData->triggerTypeParameter3));
+    rdPtr += sizeof(trcmData->triggerTypeParameter3);
+
+    memcpy(&trcmData->ip, rdPtr, sizeof(trcmData->ip));
+    rdPtr += sizeof(trcmData->ip);
+
+    return 0;
+}
+
+/*!
+ * \brief UtilPopulateACCMDataStructFromMQ Fills ACCM data struct with COMM_ACCM MQ message contents
+ * \param rawACCM MQ data
+ * \param rawACCMsize size of MQ data
+ * \param accmData Data struct to be filled
+ */
+I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *accmData)
+{
+    C8 *rdPtr = rawACCM;
+
+    if (rawACCMsize < sizeof(ACCMData))
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Raw ACCM array too small to hold all necessary ACCM data");
+        return -1;
+    }
+
+    memcpy(&accmData->actionID, rdPtr, sizeof(accmData->actionID));
+    rdPtr += sizeof(accmData->actionID);
+
+    memcpy(&accmData->actionType, rdPtr, sizeof(accmData->actionType));
+    rdPtr += sizeof(accmData->actionType);
+
+    memcpy(&accmData->actionTypeParameter1, rdPtr, sizeof(accmData->actionTypeParameter1));
+    rdPtr += sizeof(accmData->actionTypeParameter1);
+
+    memcpy(&accmData->actionTypeParameter2, rdPtr, sizeof(accmData->actionTypeParameter2));
+    rdPtr += sizeof(accmData->actionTypeParameter2);
+
+    memcpy(&accmData->actionTypeParameter3, rdPtr, sizeof(accmData->actionTypeParameter3));
+    rdPtr += sizeof(accmData->actionTypeParameter3);
+
+    memcpy(&accmData->ip, rdPtr, sizeof(accmData->ip));
+    rdPtr += sizeof(accmData->ip);
+
+    return 0;
+}
+
+/*!
+ * \brief UtilgetDistance calculates the distance between two log lat positions usgin haversine formula.
+ * \param lat1 Latitude of first coordinate
+ * \param log1 Latitude of first coordinate
+ * \param lat2 Longitude of second coordinate
+ * \param log2 Longitude of second coordinate
+ * \return Distance in km
+ */
+double UtilGetDistance(double th1, double ph1, double th2, double ph2) {
+       int nRadius = 6371; // Earth's radius in Kilometers
+
+       printf("th1: %f \n", th1);
+       printf("ph1: %f \n", ph1);
+
+       printf("th2: %f \n", th2);
+       printf("ph2: %f \n", ph2);
+
+       // Get the difference between our two points
+       // then convert the difference into radians
+       double dx, dy, dz;
+       ph1 -= ph2;
+       ph1 *= (3.1415926536 / 180), th1 *= (3.1415926536 / 180), th2 *= (3.1415926536 / 180);
+
+       dz = sin(th1) - sin(th2);
+       dx = cos(ph1) * cos(th1) - cos(th2);
+       dy = sin(ph1) * cos(th1);
+       return asin(sqrt(dx * dx + dy * dy + dz * dz) / 2) * 2 * nRadius;
+}
+
+/*!
+ * \brief UtilCoordinateDistance calculates the distance between two cordinates using distance formula.
+ * \param x1 x of first coordinate
+ * \param y1 y of first coordinate
+ * \param x2 x of second coordinate
+ * \param y2 y of second coordinate
+ * \return Distance
+ */
+float UtilCoordinateDistance(float x1, float y1, float x2, float y2)
+{
+    return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2) * 1.0);
 }
