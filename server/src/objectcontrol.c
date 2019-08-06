@@ -1009,6 +1009,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                                 /*Send DOTM header*/
                                 UtilSendTCPData("Object Control", TrajBuffer, MessageLength, &socket_fds[iIndex], 0);
 
+                                LogPrint("1");
                                 /*Send DOTM data*/
                                 ObjectControlSendDOTMMessage(object_traj_file[iIndex], &socket_fds[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 0);
 
@@ -2016,9 +2017,14 @@ I32 ObjectControlBuildDOTMMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderT
 
 I32 ObjectControlSendDOTMMessage(C8* Filename, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug)
 {
-
     FILE *fd;
     fd = fopen (Filename, "r");
+    if (fd == NULL)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Unable to open file <%s>", Filename);
+        return -1;
+    }
+
     UtilReadLineCntSpecChars(fd, TrajBuffer);//Read first line
     int Rest = 0, i = 0, MessageLength = 0, SumMessageLength = 0, Modulo = 0, Transmissions = 0;
     Transmissions = RowCount / COMMAND_DOTM_ROWS_IN_TRANSMISSION;
