@@ -1098,7 +1098,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 DataDictionaryGetDTMReceiversC8(GSD, DTMReceivers, SMALL_BUFFER_SIZE_254);
                 if(DisconnectU8 == 0) vSetState(OBC_STATE_CONNECTED, GSD);
                 else if(DisconnectU8 == 1) vSetState(OBC_STATE_IDLE, GSD);
-                DataDictionarySetOBCStateU8(GSD, OBCState);
             }
             else if(iCommand == COMM_DISCONNECT)
             {
