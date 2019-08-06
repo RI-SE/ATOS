@@ -517,10 +517,9 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     if(MONRData != NULL ){
         *cam = tempCam;
     }
+    return 0;
 
 }
-
-
 
 
 /*!
@@ -601,7 +600,7 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     if(MONRData != NULL ){
         *denm = tempDENM;
     }
-
+    return 0;
 }
 /*!
  * \brief SendCam publishes a cam message on MQTT with hardcoded topic.
@@ -625,9 +624,7 @@ I32 sendCAM(CAM_t* cam){
  * \return 1 if message sent succesfully
  */
 I32 sendDENM(DENM_t* denm){
-
     LogMessage(LOG_LEVEL_INFO,"Sending DENM");
-
     //FILE *fp = fopen("tmp", "wb");
     //asn_enc_rval_t ec = der_encode(&asn_DEF_DENM, denm, write_out, fp);
     //fclose(fp);
