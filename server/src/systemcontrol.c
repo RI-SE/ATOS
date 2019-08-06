@@ -524,7 +524,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         switch (iCommand)
         {
         case COMM_OBC_STATE:
-            LogPrint("REC: %u",DataDictionaryGetOBCStateU8(GSD));
             break;
         case COMM_LOG:
             SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
