@@ -68,8 +68,8 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-I32 generateCAMMessage(GSDType* GSD, MONRType *MONRData, CAM_t* lastCam);
-I32 generateDENMMessage(GSDType* GSD, MONRType *MONRData, DENM_t* denm);
+I32 generateCAMMessage(MONRType *MONRData, CAM_t* lastCam);
+I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm);
 
 I32 sendCAM(CAM_t* lastCam);
 I32 sendDENM(DENM_t* lastDENM);
@@ -101,6 +101,11 @@ enum CITS_STATE {
     SENDING
 };
 
+struct Origo {
+    double longitude;
+    double latitude;
+};
+
 static int state = INIT;
 static volatile int pending_state = INIT;
 static volatile int iExit = 0;
@@ -110,12 +115,16 @@ static MQTTClient_message pubmsg = MQTTClient_message_initializer;
 static volatile MQTTClient_deliveryToken deliveredtoken = 0;
 static MQTTClient_deliveryToken sendtoken = 0;
 static DENM_t* lastDENM;
+static struct Origo origin;
+
 
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
 void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
+    origin.longitude = -1;
+    origin.latitude = -1;
 
     int camTimeCycle = 0;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
@@ -247,8 +256,8 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
 
                 if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
-                    generateCAMMessage(GSD, &MONRMessage, lastCam);
-                    generateDENMMessage(GSD, &MONRMessage, lastDENM);
+                    generateCAMMessage(&MONRMessage, lastCam);
+                    generateDENMMessage(&MONRMessage, lastDENM);
                     sendCAM(lastCam);
                     sendDENM(lastDENM);
                 }
@@ -278,7 +287,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 }
 
                 // Based on last MONR message, generate a DENM message to send
-                generateDENMMessage(GSD, &MONRMessage, lastDENM);
+                generateDENMMessage(&MONRMessage, lastDENM);
 
                 if (actionData.executionTime_qmsoW == 0)
                 {
@@ -319,6 +328,11 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
         case COMM_INV:
             break;
+        case COMM_DATA_DICT:
+            DataDictionaryGetOriginLatitudeDbl(GSD, &origin.latitude);
+            DataDictionaryGetOriginLongitudeDbl(GSD, &origin.longitude);
+            break;
+
         default:
             LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
         }
@@ -440,7 +454,7 @@ static int write_out(const void *buffer, size_t size, void *app_key){
  * \param lastCam struct to fill with cam data if cam should be sent, used as reference to calculate new cam.
  * \param lastSpeed variable keeping track of last speed recorded.
  */
-I32 generateCAMMessage(GSDType* GSD, MONRType *MONRData, CAM_t* cam){
+I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
 
     TimeType time;
     CAM_t tempCam;
@@ -471,23 +485,17 @@ I32 generateCAMMessage(GSDType* GSD, MONRType *MONRData, CAM_t* cam){
     // calculate the norm value
     distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
 
-    double origoLong = 0;
-    double origoLat = 0;
+    fail = UtilVincentyDirect(origin.latitude, origin.longitude, azimuth1,distance ,&latitude,&longitude,&azimuth2);
 
-    DataDictionaryGetOriginLatitudeDbl(GSD, &origoLat);
-    DataDictionaryGetOriginLongitudeDbl(GSD, &origoLong);
-
-    fail = UtilVincentyDirect(origoLat,origoLong,azimuth1,distance ,&latitude,&longitude,&azimuth2);
-
-    tempCam.cam.camParameters.basicContainer.referencePosition.latitude = origoLat;
-    tempCam.cam.camParameters.basicContainer.referencePosition.longitude = origoLong;
+    tempCam.cam.camParameters.basicContainer.referencePosition.latitude = origin.latitude;
+    tempCam.cam.camParameters.basicContainer.referencePosition.longitude = origin.longitude;
 
     /*
-    printf("calc latitude %f \n",  latitude);
-    printf("calc longitude %f \n",  longitude);
+    printf("\ncalc latitude %f \n",  origin.latitude);
+    printf("\ncalc longitude %f \n",  origin.longitude);
 
-    printf("CAM latitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.latitude);
-    printf("CAM longitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.longitude);
+    printf("\nCAM latitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.latitude);
+    printf("\nCAM longitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.longitude);
     */
 
     tempCam.cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = MONRData->HeadingU16;
@@ -521,7 +529,7 @@ I32 generateCAMMessage(GSDType* GSD, MONRType *MONRData, CAM_t* cam){
  * \param lastDENM struct to fill with DENM data if DENM should be sent, used as reference to calculate new DENM.
  * \param lastSpeed variable keeping track of last speed recorded.
  */
-I32 generateDENMMessage(GSDType* GSD, MONRType *MONRData, DENM_t* denm){
+I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     TimeType time;
     DENM_t tempDENM;
 
@@ -557,20 +565,14 @@ I32 generateDENMMessage(GSDType* GSD, MONRType *MONRData, DENM_t* denm){
     // calculate the norm value
     distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
 
-    double origoLong = 0;
-    double origoLat = 0;
+    fail = UtilVincentyDirect(origin.latitude, origin.longitude,azimuth1,distance ,&latitude,&longitude,&azimuth2);
 
-    DataDictionaryGetOriginLatitudeDbl(GSD, &origoLat);
-    DataDictionaryGetOriginLongitudeDbl(GSD, &origoLong);
-
-    fail = UtilVincentyDirect(origoLat,origoLong,azimuth1,distance ,&latitude,&longitude,&azimuth2);
-
-    tempDENM.denm.management.eventPosition.latitude = origoLat;
-    tempDENM.denm.management.eventPosition.longitude = origoLong;
+    tempDENM.denm.management.eventPosition.latitude = origin.latitude;
+    tempDENM.denm.management.eventPosition.longitude = origin.longitude;
 
     /*
-    printf("latitude %f \n", origoLat);
-    printf("longitude %f \n", origoLong);
+    printf("latitude %f \n", origin.latitude);
+    printf("longitude %f \n", origin.longitude);
     printf("DENM latitude %f \n", tempDENM.denm.management.eventPosition.latitude);
     printf("DENM longitude %f \n", tempDENM.denm.management.eventPosition.longitude);
     */
