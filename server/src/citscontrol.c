@@ -39,6 +39,7 @@
 #include "util.h"
 #include "iso22133.h"
 #include "maestroTime.h"
+#include "datadictionary.h"
 
 
 
@@ -68,7 +69,7 @@
   -- Function declarations.
   ------------------------------------------------------------*/
 I32 generateCAMMessage(MONRType *MONRData, CAM_t* lastCam);
-I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm);
+I32 generateDENMMessage(GSDType* GSD, MONRType *MONRData, DENM_t* denm);
 
 I32 sendCAM(CAM_t* lastCam);
 I32 sendDENM(DENM_t* lastDENM);
@@ -247,7 +248,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                 if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
                     generateCAMMessage(&MONRMessage, lastCam);
-                    generateDENMMessage(&MONRMessage, lastDENM);
+                    generateDENMMessage(GSD, &MONRMessage, lastDENM);
                     sendCAM(lastCam);
                     sendDENM(lastDENM);
                 }
@@ -277,7 +278,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 }
 
                 // Based on last MONR message, generate a DENM message to send
-                generateDENMMessage(&MONRMessage, lastDENM);
+                generateDENMMessage(GSD, &MONRMessage, lastDENM);
 
                 if (actionData.executionTime_qmsoW == 0)
                 {
@@ -474,6 +475,7 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     double origoLong = 12.77011670;
     double origoLat = 57.77315060;
 
+
     fail = UtilVincentyDirect(origoLat,origoLong,azimuth1,distance ,&latitude,&longitude,&azimuth2);
 
     tempCam.cam.camParameters.basicContainer.referencePosition.latitude = latitude;
@@ -518,7 +520,7 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
  * \param lastDENM struct to fill with DENM data if DENM should be sent, used as reference to calculate new DENM.
  * \param lastSpeed variable keeping track of last speed recorded.
  */
-I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
+I32 generateDENMMessage(GSDType* GSD, MONRType *MONRData, DENM_t* denm){
     TimeType time;
     DENM_t tempDENM;
 
@@ -554,16 +556,20 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     // calculate the norm value
     distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
 
-    // TODO: Get From RVSSgetParameter
-    double origoLong = 12.77011670;
-    double origoLat = 57.77315060;
+    double origoLong = 0;
+    double origoLat = 0;
+
+    DataDictionaryGetOriginLatitudeDbl(GSD, &origoLat);
+    DataDictionaryGetOriginLongitudeDbl(GSD, &origoLong);
 
     fail = UtilVincentyDirect(origoLat,origoLong,azimuth1,distance ,&latitude,&longitude,&azimuth2);
 
-    tempDENM.denm.management.eventPosition.latitude = latitude;
-    tempDENM.denm.management.eventPosition.longitude = longitude;
+    tempDENM.denm.management.eventPosition.latitude = origoLat;
+    tempDENM.denm.management.eventPosition.longitude = origoLong;
 
     /*
+    printf("latitude %f \n", origoLat);
+    printf("longitude %f \n", origoLong);
     printf("DENM latitude %f \n", tempDENM.denm.management.eventPosition.latitude);
     printf("DENM longitude %f \n", tempDENM.denm.management.eventPosition.longitude);
     */

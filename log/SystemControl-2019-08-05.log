@@ -1,0 +1,21 @@
+[2019-08-05|15:55:01|[31mERR[0m]: Unable to open file <conf/test.conf>
+[2019-08-05|15:56:21|[0mIFO[0m]: Created directory log
+[2019-08-05|15:56:21|[0mIFO[0m]: Log initialized
+[2019-08-05|15:56:21|[0mIFO[0m]: System control task running with PID: 10698
+[2019-08-05|15:56:21|[31mERR[0m]: Unable to open file <conf/test.conf>
+[2019-08-05|16:01:26|[0mIFO[0m]: Created directory log
+[2019-08-05|16:01:26|[0mIFO[0m]: Log initialized
+[2019-08-05|16:01:26|[0mIFO[0m]: System control task running with PID: 11801
+[2019-08-05|16:01:26|[31mERR[0m]: Unable to open file <conf/test.conf>
+[2019-08-05|16:01:54|[0mIFO[0m]: Created directory log
+[2019-08-05|16:01:54|[0mIFO[0m]: Log initialized
+[2019-08-05|16:01:54|[0mIFO[0m]: System control task running with PID: 11828
+[2019-08-05|16:01:54|[31mERR[0m]: Unable to open file <conf/test.conf>
+[2019-08-05|16:02:45|[0mIFO[0m]: Created directory log
+[2019-08-05|16:02:45|[0mIFO[0m]: Log initialized
+[2019-08-05|16:02:45|[0mIFO[0m]: System control task running with PID: 11909
+[2019-08-05|16:02:45|[31mERR[0m]: Unable to open file <conf/test.conf>
+[2019-08-05|16:03:03|[0mIFO[0m]: Created directory log
+[2019-08-05|16:03:03|[0mIFO[0m]: Log initialized
+[2019-08-05|16:03:03|[0mIFO[0m]: System control task running with PID: 11997
+[2019-08-05|16:03:03|[31mERR[0m]: Unable to open file <conf/test.conf>
