@@ -29,8 +29,10 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include "timecontrol.h"
+#include "datadictionary.h"
 #include "maestroTime.h"
 #include "iso22133.h"
+
 
 
 /*------------------------------------------------------------
@@ -54,6 +56,8 @@
 
 #define TASK_PERIOD_MS 1
 #define HEARTBEAT_TIME_MS 10
+#define OBC_STATE_REPORT_PERIOD_S 1
+#define OBC_STATE_REPORT_PERIOD_US 0
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
 #define OBJECT_CONTROL_ABORT_MODE 1
@@ -149,16 +153,22 @@ typedef enum {
 } hearbeatCommand_t;
 
 
-
+typedef enum {
+    TRANSITION_RESULT_UNDEFINED,
+    TRANSITION_OK,
+    TRANSITION_INVALID,
+    TRANSITION_MEMORY_ERROR
+} StateTransitionResult;
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
       void (*fooptr)(int,float) = foo;
       fooptr(10,1.5);
 
    Consequently, the below typedef defines a StateTransition type as a function pointer to a function taking
-   (OBCState_t, OBCState_t) as input, and returning an int8_t
+   (OBCState_t, OBCState_t) as input, and returning a StateTransitionResult
 */
-typedef int8_t (*StateTransition)(OBCState_t *currentState, OBCState_t requestedState);
+typedef StateTransitionResult (*StateTransition)(OBCState_t *currentState, OBCState_t requestedState);
+
 
 C8 TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION*COMMAND_DOTM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH];
 
@@ -172,11 +182,10 @@ static I32 vCheckRemoteDisconnected(int* sockfd);
 
 static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sockfd, struct sockaddr_in* addr);
 static void vCloseSafetyChannel(int* sockfd);
+I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, U8 debug);
 static size_t uiRecvMonitor(int* sockfd, char* buffer, size_t length);
 static int iGetSocketFromObjectIP(in_addr_t ipAddr, int sockfds[], unsigned int nSockfds);
 static void signalHandler(int signo);
-
-I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug);
 I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug);
 I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
 I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 debug);
@@ -202,19 +211,21 @@ I32 ObjectControlSendACCMMessage(ACCMData *ACCM, I32 *socket, U8 debug);
 I32 ObjectControlSendTRCMMessage(TRCMData *TRCM, I32 *socket, U8 debug);
 I32 ObjectControlSendEXACMessage(EXACData *EXAC, I32 *socket, U8 debug);
 
-static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
-                             char object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
-                             int* nbr_objects);
+static void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
+                             C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
+                             I32 *nbr_objects);
 
-int8_t vSetState(OBCState_t *currentState, OBCState_t requestedState);
+OBCState_t vInitializeState(OBCState_t firstState, GSDType *GSD);
+inline OBCState_t vGetState(GSDType *GSD);
+StateTransitionResult vSetState(OBCState_t requestedState, GSDType *GSD);
 StateTransition tGetTransition(OBCState_t fromState);
-int8_t tFromIdle(OBCState_t *currentState, OBCState_t requestedState);
-int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState);
-int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState);
-int8_t tFromArmed(OBCState_t *currentState, OBCState_t requestedState);
-int8_t tFromRunning(OBCState_t *currentState, OBCState_t requestedState);
-int8_t tFromError(OBCState_t *currentState, OBCState_t requestedState);
-int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromIdle(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromInitialized(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromConnected(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromArmed(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromRunning(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromError(OBCState_t *currentState, OBCState_t requestedState);
+StateTransitionResult tFromUndefined(OBCState_t *currentState, OBCState_t requestedState);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -229,46 +240,36 @@ static volatile int iExit = 0;
 
 void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
-    int safety_socket_fd[MAX_OBJECTS];
+    I32 safety_socket_fd[MAX_OBJECTS];
     struct sockaddr_in safety_object_addr[MAX_OBJECTS];
-    int socket_fds[MAX_OBJECTS];
-    int socket_fd = 0;
-    char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH];
-    char object_address_name[MAX_OBJECTS][MAX_FILE_PATH];
-    uint32_t object_udp_port[MAX_OBJECTS];
-    uint32_t object_tcp_port[MAX_OBJECTS];
-    int nbr_objects=0;
+    I32 socket_fds[MAX_OBJECTS];
+    I32 socket_fd = 0;
+    C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH];
+    C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH];
+    U32 object_udp_port[MAX_OBJECTS];
+    U32 object_tcp_port[MAX_OBJECTS];
+    I32 nbr_objects=0;
     enum COMMAND iCommand;
-    uint8_t pcRecvBuffer[RECV_MESSAGE_BUFFER];
-    char pcTempBuffer[512];
+    U8 pcRecvBuffer[RECV_MESSAGE_BUFFER];
+    C8 pcTempBuffer[512];
     C8 MessageBuffer[BUFFER_SIZE_3100];
-    int iIndex = 0, i=0;
+    I32 iIndex = 0, i=0;
     struct timespec sleep_time, ref_time;
+
+    /*! Timers for reporting state over message bus */
     const struct timespec mqEmptyPollPeriod = {OC_SLEEP_TIME_EMPTY_MQ_S, OC_SLEEP_TIME_EMPTY_MQ_NS};
     const struct timespec mqNonEmptyPollPeriod = {OC_SLEEP_TIME_NONEMPTY_MQ_S, OC_SLEEP_TIME_NONEMPTY_MQ_NS};
     const struct timeval stateReportPeriod = {OC_STATE_REPORT_PERIOD_S, OC_STATE_REPORT_PERIOD_US};
     struct timeval currentTime, nextStateReportTime;
-    int iForceObjectToLocalhost = 0;
+    U8 iForceObjectToLocalhostU8 = 0;
 
     FILE *fd;
-    char Id[SMALL_BUFFER_SIZE_0];
-    char GPSWeek[SMALL_BUFFER_SIZE_0];
-    char Timestamp[SMALL_BUFFER_SIZE_0];
-    char XPosition[SMALL_BUFFER_SIZE_0];
-    char YPosition[SMALL_BUFFER_SIZE_0];
-    char ZPosition[SMALL_BUFFER_SIZE_0];
-    char Speed[SMALL_BUFFER_SIZE_0];
-    char LongitudinalSpeed[SMALL_BUFFER_SIZE_0];
-    char LateralSpeed[SMALL_BUFFER_SIZE_0];
-    char LongitudinalAcc[SMALL_BUFFER_SIZE_0];
-    char LateralAcc[SMALL_BUFFER_SIZE_0];
-    char Heading[SMALL_BUFFER_SIZE_0];
-    char DriveDirection[SMALL_BUFFER_SIZE_1];
-    char StatusFlag[SMALL_BUFFER_SIZE_1];
-    char StateFlag[SMALL_BUFFER_SIZE_1];
-    char MTSP[SMALL_BUFFER_SIZE_0];
-    int MessageLength;
-    char *MiscPtr;
+    C8 Id[SMALL_BUFFER_SIZE_0];
+    C8 GPSWeek[SMALL_BUFFER_SIZE_0], Timestamp[SMALL_BUFFER_SIZE_0], XPosition[SMALL_BUFFER_SIZE_0], YPosition[SMALL_BUFFER_SIZE_0], ZPosition[SMALL_BUFFER_SIZE_0];
+    C8 Speed[SMALL_BUFFER_SIZE_0], LongitudinalSpeed[SMALL_BUFFER_SIZE_0], LateralSpeed[SMALL_BUFFER_SIZE_0], LongitudinalAcc[SMALL_BUFFER_SIZE_0], LateralAcc[SMALL_BUFFER_SIZE_0];
+    C8 Heading[SMALL_BUFFER_SIZE_0], DriveDirection[SMALL_BUFFER_SIZE_1], StatusFlag[SMALL_BUFFER_SIZE_1], StateFlag[SMALL_BUFFER_SIZE_1], MTSP[SMALL_BUFFER_SIZE_0];
+    I32 MessageLength;
+    C8 *MiscPtr;
     C8 MiscText[SMALL_BUFFER_SIZE_0];
     U32 StartTimeU32 = 0;
     U32 OutgoingStartTimeU32 = 0;
@@ -277,23 +278,20 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     U32 OldTimeU32 = 0;
     U64 TimeCap1, TimeCap2;
     struct timeval CurrentTimeStruct;
-    int HeartbeatMessageCounter = 0;
+    I32 HeartbeatMessageCounter = 0;
 
     ObjectPosition OP[MAX_OBJECTS];
-    float SpaceArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
-    float TimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
+    flt SpaceArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
+    flt TimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
     SpaceTime SpaceTimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
-    char OriginLatitude[SMALL_BUFFER_SIZE_0];
-    char OriginLongitude[SMALL_BUFFER_SIZE_0];
-    char OriginAltitude[SMALL_BUFFER_SIZE_0];
-    char OriginHeading[SMALL_BUFFER_SIZE_0];
-    char TextBuffer[SMALL_BUFFER_SIZE_0];
-    double OriginLatitudeDbl;
-    double OriginLongitudeDbl;
-    double OriginAltitudeDbl;
-    double OriginHeadingDbl;
-    char pcSendBuffer[MBUS_MAX_DATALEN];
-    char ObjectPort[SMALL_BUFFER_SIZE_0];
+    C8 OriginLatitude[SMALL_BUFFER_SIZE_0], OriginLongitude[SMALL_BUFFER_SIZE_0], OriginAltitude[SMALL_BUFFER_SIZE_0], OriginHeading[SMALL_BUFFER_SIZE_0];
+    C8 TextBuffer[SMALL_BUFFER_SIZE_0];
+    dbl OriginLatitudeDbl;
+    dbl OriginLongitudeDbl;
+    dbl OriginAltitudeDbl;
+    dbl OriginHeadingDbl;
+    C8 pcSendBuffer[MBUS_MAX_DATALEN];
+    C8 ObjectPort[SMALL_BUFFER_SIZE_0];
     HeaderType HeaderData;
     OSEMType OSEMData;
     STRTType STRTData;
@@ -314,20 +312,20 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     ASPData.PrevTimeToSyncPointDbl = 0;
     ASPData.CurrentTimeDbl = 0;
     AdaptiveSyncPoint ASP[MAX_ADAPTIVE_SYNC_POINTS];
-    int SyncPointCount = 0;
-    int SearchStartIndex = 0;
-    double ASPMaxTimeDiff = 0;
-    double ASPMaxTrajDiff = 0;
-    double ASPFilterLevel = 0;
-    double ASPMaxDeltaTime = 0;
-    int ASPDebugRate = 1;
-    int ASPStepBackCount = 0;
+    I32 SyncPointCount = 0;
+    I32 SearchStartIndex = 0;
+    dbl ASPMaxTimeDiffDbl = 0;
+    dbl ASPMaxTrajDiffDbl = 0;
+    dbl ASPFilterLevelDbl = 0;
+    dbl ASPMaxDeltaTimeDbl = 0;
+    I32 ASPDebugRate = 1;
+    I32 ASPStepBackCount = 0;
 
-    unsigned char ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
+    U8 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
-    OBCState_t OBCState = OBC_STATE_IDLE;
+    OBCState_t OBCState = vInitializeState(OBC_STATE_IDLE, GSD);
     U8 uiTimeCycle = 0;
-    int ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
+    I32 ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
 
     C8 Buffer2[SMALL_BUFFER_SIZE_1];
     C8 LogBuffer[LOG_BUFFER_LENGTH];
@@ -343,12 +341,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     FILE *TempFd;
     U16 MiscU16;
     I32 j = 0;
-    GSD->MONRSizeU8 = 0;
-    GSD->HEABSizeU8 = 0;
-    //GSD->OSTMSizeU8 = 0;
-    //GSD->STRTSizeU8 = 0;
-    //GSD->OSEMSizeU8 = 0;
-    U8 OSEMSentU8 = 0;
+  
     U8 STRTSentU8 = 0;
 
 
@@ -356,6 +349,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     LogInit(MODULE_NAME,logLevel);
     LogMessage(LOG_LEVEL_INFO, "Object control task running with PID: %i", getpid());
 
+  
     // Set up signal handlers
     if (signal(SIGINT, signalHandler) == SIG_ERR)
         util_error("Unable to initialize signal handler");
@@ -363,6 +357,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     // Set up message bus connection
     if (iCommInit())
         util_error("Unable to connect to message queue bus");
+   
+    // Initialize timer for sending state
+    TimeSetToCurrentSystemTime(&currentTime);
+    nextStateReportTime = currentTime;
 
     // Initialize timer for sending state
     TimeSetToCurrentSystemTime(&currentTime);
@@ -370,6 +368,8 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     while(!iExit)
     {
+        OBCState = vGetState(GSD);
+
         if(OBCState == OBC_STATE_ERROR)
         {
             ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
@@ -414,7 +414,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     {
                         vCloseSafetyChannel(&safety_socket_fd[iIndex]);
                     }
-                    vSetState(&OBCState, OBC_STATE_IDLE);
+                    vSetState(OBC_STATE_IDLE, GSD);
                     break;
                 }
             }
@@ -474,7 +474,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         if(iCommSend(COMM_MONR, buffer, (size_t)(receivedMONRData) + sizeof(in_addr_t)) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONR command - entering error state");
-                            vSetState(&OBCState,OBC_STATE_ERROR);
+                            vSetState(OBC_STATE_ERROR, GSD);
                             ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
                         }
                     }
@@ -521,7 +521,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         if(iCommSend(COMM_MONI,buffer,strlen(buffer)) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending MONI command - entering error state");
-                            vSetState(&OBCState,OBC_STATE_ERROR);
+                            vSetState(OBC_STATE_ERROR, GSD);
                             ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
                         }
                     }
@@ -551,7 +551,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                                 ASPData.CurrentTimeU32 = CurrentTimeU32;
                                 ASPData.CurrentTimeDbl = (((double)CurrentTimeU32-(double)StartTimeU32)/1000);
                                 SearchStartIndex = OP[iIndex].BestFoundTrajectoryIndex - ASPStepBackCount;
-                                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, ASPData.CurrentTimeDbl, ASPMaxTrajDiff, ASPMaxTimeDiff, 0);
+                                UtilFindCurrentTrajectoryPosition(&OP[iIndex], SearchStartIndex, ASPData.CurrentTimeDbl, ASPMaxTrajDiffDbl, ASPMaxTimeDiffDbl, 0);
                                 ASPData.BestFoundIndexI32 = OP[iIndex].BestFoundTrajectoryIndex;
 
                                 if(OP[iIndex].BestFoundTrajectoryIndex != TRAJ_POSITION_NOT_FOUND)
@@ -559,10 +559,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                                     ASPData.TimeToSyncPointDbl = UtilCalculateTimeToSync(&OP[iIndex]);
                                     if(ASPData.TimeToSyncPointDbl > 0)
                                     {
-                                        if(ASPData.PrevTimeToSyncPointDbl != 0 && ASPFilterLevel > 0)
+                                        if(ASPData.PrevTimeToSyncPointDbl != 0 && ASPFilterLevelDbl > 0)
                                         {
-                                            if(ASPData.TimeToSyncPointDbl/ASPData.PrevTimeToSyncPointDbl > (1 + ASPFilterLevel/100)) ASPData.TimeToSyncPointDbl = ASPData.PrevTimeToSyncPointDbl + ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
-                                            else if(ASPData.TimeToSyncPointDbl/ASPData.PrevTimeToSyncPointDbl < (1 - ASPFilterLevel/100)) ASPData.TimeToSyncPointDbl = ASPData.PrevTimeToSyncPointDbl - ASPMaxDeltaTime;//TimeToSyncPoint*ASPFilterLevel/500;
+                                            if(ASPData.TimeToSyncPointDbl/ASPData.PrevTimeToSyncPointDbl > (1 + ASPFilterLevelDbl/100)) ASPData.TimeToSyncPointDbl = ASPData.PrevTimeToSyncPointDbl + ASPMaxDeltaTimeDbl;//TimeToSyncPoint*ASPFilterLevelDbl/500;
+                                            else if(ASPData.TimeToSyncPointDbl/ASPData.PrevTimeToSyncPointDbl < (1 - ASPFilterLevelDbl/100)) ASPData.TimeToSyncPointDbl = ASPData.PrevTimeToSyncPointDbl - ASPMaxDeltaTimeDbl;//TimeToSyncPoint*ASPFilterLevelDbl/500;
                                         }
                                         ASPData.MTSPU32 = CurrentTimeU32 + (U32)(ASPData.TimeToSyncPointDbl*4000);
 
@@ -583,10 +583,9 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                                 ASPData.SyncPointIndexI32 = OP[iIndex].SyncIndex;
                                 ASPData.IterationTimeU16 = (U16)(TimeCap2 - TimeCap1);
                                 //Build ASP debug data and set to GSD
-                                bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
-                                ObjectControlBuildASPMessage(buffer, &ASPData, 0);
-                                for(j = 0; j < sizeof(ASPType); j ++) GSD->ASPDebugDataU8[j] = buffer[j];
-                                GSD->ASPDebugDataSetU8 = 1;
+                                //bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
+                                //ObjectControlBuildASPMessage(buffer, &ASPData, 0);
+                                DataDictionarySetRVSSAsp(GSD, &ASPData);
 
                                 if(atoi(Timestamp)%ASPDebugRate == 0)
                                 {
@@ -607,7 +606,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
         }
 
-
+        //This is used for sending DTM chunks, will be updated when dev is merged with chronos2 
         if(GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
         {
 
@@ -658,12 +657,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_ARMED_STATE)
                 {
                     LOG_SEND(LogBuffer,"[ObjectControl] Sending ARM %d", pcRecvBuffer[0]);
-                    vSetState(&OBCState, OBC_STATE_ARMED);
+                    vSetState(OBC_STATE_ARMED, GSD);
                 }
                 else if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE)
                 {
                     LOG_SEND(LogBuffer,"[ObjectControl] Sending DISARM: %d", pcRecvBuffer[0]);
-                    vSetState(&OBCState, OBC_STATE_CONNECTED);
+                    vSetState(OBC_STATE_CONNECTED, GSD);
                 }
                 MessageLength = ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, pcRecvBuffer[0], 0);
 
@@ -700,7 +699,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 for(iIndex=0;iIndex<nbr_objects;++iIndex) {
                   UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
                 }
-                vSetState(&OBCState, OBC_STATE_RUNNING);
+                vSetState(OBC_STATE_RUNNING, GSD);
 
                 //Store STRT in GSD
                 if(STRTSentU8 == 0)
@@ -816,7 +815,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             else if(iCommand == COMM_ABORT && OBCState == OBC_STATE_RUNNING)
             {
-                vSetState(&OBCState, OBC_STATE_CONNECTED);
+                vSetState(OBC_STATE_CONNECTED, GSD);
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT; //Set server to ABORT
                 LogMessage(LOG_LEVEL_WARNING,"ABORT received");
                 LOG_SEND(LogBuffer, "[ObjectControl] ABORT received.");
@@ -833,13 +832,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 /* Get objects; name and drive file */
                 nbr_objects = 0;
                 vFindObjectsInfo(object_traj_file,object_address_name,&nbr_objects);
-                (void)iUtilGetIntParaConfFile("ForceObjectToLocalhost",&iForceObjectToLocalhost);
-                LogMessage(LOG_LEVEL_INFO,"ForceObjectToLocalhost = %d", iForceObjectToLocalhost);
-                LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d", iForceObjectToLocalhost);
+                DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
-                    if(0 == iForceObjectToLocalhost)
+                    if(0 == iForceObjectToLocalhostU8)
                     {
                         object_udp_port[iIndex] = SAFETY_CHANNEL_PORT;
                         object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT;
@@ -870,35 +867,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
 
 
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-                UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTimeDiff=", "", TextBuffer);
-                ASPMaxTimeDiff = atof(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-                UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTrajDiff=", "", TextBuffer);
-                ASPMaxTrajDiff = atof(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-                UtilSearchTextFile(CONF_FILE_PATH, "ASPStepBackCount=", "", TextBuffer);
-                ASPStepBackCount = atoi(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-                UtilSearchTextFile(CONF_FILE_PATH, "ASPFilterLevel=", "", TextBuffer);
-                ASPFilterLevel = atof(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-                UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxDeltaTime=", "", TextBuffer);
-                ASPMaxDeltaTime = atof(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
-                UtilSearchTextFile(CONF_FILE_PATH, "ASPDebugRate=", "", TextBuffer);
-                ASPDebugRate = atoi(TextBuffer);
-                bzero(VOILReceivers, SMALL_BUFFER_SIZE_254);
-                UtilSearchTextFile(CONF_FILE_PATH, "VOILReceivers=", "", VOILReceivers);
-                bzero(DTMReceivers, SMALL_BUFFER_SIZE_254);
-                UtilSearchTextFile(CONF_FILE_PATH, "DTMReceivers=", "", DTMReceivers);
 
-
-                vSetState(&OBCState, OBC_STATE_INITIALIZED);
+                vSetState(OBC_STATE_INITIALIZED, GSD);
                 LogMessage(LOG_LEVEL_INFO,"ObjectControl is initialized");
                 LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
 
-                if(TempFd != NULL) fclose(TempFd);
                 //Remove temporary file
                 remove(TEMP_LOG_FILE);
                 if(USE_TEMP_LOGFILE)
@@ -907,7 +880,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     TempFd = fopen (TEMP_LOG_FILE, "w+");
                 }
 
-                OSEMSentU8 = 0;
+                //OSEMSentU8 = 0;
                 STRTSentU8 = 0;
             }
             else if (iCommand == COMM_ACCM && OBCState == OBC_STATE_CONNECTED)
@@ -940,12 +913,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
 
                     MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, GPSTime,
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatitude=", "", OriginLatitude),
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
+                                                                 OriginLatitude,
+                                                                 OriginLongitude,
+                                                                 OriginAltitude,
                                                                  0);
-
 
                     DisconnectU8 = 0;
 
@@ -1004,6 +975,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         /* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates)*/
                         LogMessage(LOG_LEVEL_INFO,"Sending OSEM");
                         LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.");
+                      
                         ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, OriginLatitude, OriginLongitude, OriginAltitude );
                         bzero(pcSendBuffer, sizeof(pcSendBuffer));
                         strcat(pcSendBuffer,GPSWeek);strcat(pcSendBuffer,";");
@@ -1014,21 +986,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         if(iCommSend(COMM_OSEM,pcSendBuffer,strlen(pcSendBuffer)+1) < 0)
                         {
                             LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OSEM command - entering error state");
-                            vSetState(&OBCState,OBC_STATE_ERROR);
+                            vSetState(OBC_STATE_ERROR, GSD);
                             ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
                         }
                         UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
-
-
-                        //Store OSEM in GSD
-                        if(OSEMSentU8 == 0)
-                        {
-                            //for(i = 0; i < MessageLength; i++) GSD->OSEMData[i] = MessageBuffer[i];
-                            //GSD->OSEMSizeU8 = (U8)MessageLength;
-                            OSEMSentU8 = 1;
-                            //printf("OSEMSentU8 = %d\n", OSEMSentU8);
-                        }
-
 
                         /*Here we send DOTM, if the IP-address not is found*/
                         if(strstr(DTMReceivers, object_address_name[iIndex]) == NULL)
@@ -1099,22 +1060,45 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 /*Set server status*/
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
 
+                if(DisconnectU8 == 0) vSetState(OBC_STATE_CONNECTED, GSD);
+                else if(DisconnectU8 == 1) vSetState(OBC_STATE_IDLE, GSD);
+            }
+            else if(iCommand == COMM_DATA_DICT)
+            {
+                
+                LogMessage(LOG_LEVEL_INFO,"Updating variables from DataDictionary.");
+                DataDictionaryGetOriginLatitudeC8(GSD, OriginLatitude, SMALL_BUFFER_SIZE_0);
+                DataDictionaryGetOriginLongitudeC8(GSD, OriginLongitude, SMALL_BUFFER_SIZE_0);
+                DataDictionaryGetOriginAltitudeC8(GSD, OriginAltitude, SMALL_BUFFER_SIZE_0);
+                
+                DataDictionaryGetOriginLatitudeDbl(GSD, &OriginLatitudeDbl);
+                DataDictionaryGetOriginLongitudeDbl(GSD, &OriginLongitudeDbl);
+                DataDictionaryGetOriginAltitudeDbl(GSD, &OriginAltitudeDbl);
+                
                 OriginLatitudeDbl = atof(OriginLatitude);
                 OriginLongitudeDbl = atof(OriginLongitude);
                 OriginAltitudeDbl = atof(OriginAltitude);
                 OriginHeadingDbl = atof(OriginHeading);
-
                 OriginPosition.Latitude = OriginLatitudeDbl;
                 OriginPosition.Longitude = OriginLongitudeDbl;
                 OriginPosition.Altitude = OriginAltitudeDbl;
                 OriginPosition.Heading = OriginHeadingDbl;
 
-                if(DisconnectU8 == 0)
-                {
-                    vSetState(&OBCState, OBC_STATE_CONNECTED);
-                    iCommSend(COMM_OBJECTS_CONNECTED, NULL, 0);
-                }
-                else if(DisconnectU8 == 1) vSetState(&OBCState, OBC_STATE_IDLE);
+                DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
+                LogMessage(LOG_LEVEL_INFO,"ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
+                LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
+
+                DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ASPMaxTimeDiffDbl);
+                DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ASPMaxTrajDiffDbl);
+                DataDictionaryGetASPStepBackCountU32(GSD, &ASPStepBackCount);
+                DataDictionaryGetASPFilterLevelDbl(GSD, &ASPFilterLevelDbl);
+                DataDictionaryGetASPMaxDeltaTimeDbl(GSD, &ASPMaxDeltaTimeDbl);
+                ASPDebugRate = 1;
+                DataDictionaryGetVOILReceiversC8(GSD, VOILReceivers, SMALL_BUFFER_SIZE_254);
+                DataDictionaryGetDTMReceiversC8(GSD, DTMReceivers, SMALL_BUFFER_SIZE_254);
+                if(DisconnectU8 == 0) vSetState(OBC_STATE_CONNECTED, GSD);
+                else if(DisconnectU8 == 1) vSetState(OBC_STATE_IDLE, GSD);
+                DataDictionarySetOBCStateU8(GSD, OBCState);
             }
             else if(iCommand == COMM_DISCONNECT)
             {
@@ -1132,7 +1116,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 {
                     vCloseSafetyChannel(&safety_socket_fd[iIndex]);
                 }
-                vSetState(&OBCState, OBC_STATE_IDLE);
+                vSetState(OBC_STATE_IDLE, GSD);
             }
             else if(iCommand == COMM_EXIT)
             {
@@ -1144,9 +1128,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 LogMessage(LOG_LEVEL_WARNING,"Unhandled command in object control: %d",iCommand);
             }
         }
-
-
-
+      
         if(!iExit)
         {
             /* Make call periodic */
@@ -1155,21 +1137,23 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             ++uiTimeCycle;
             if(uiTimeCycle >= HEARTBEAT_TIME_MS/TASK_PERIOD_MS)
             {
-                uiTimeCycle = 0;
+               uiTimeCycle = 0;
             }
 
-            // Periodically send state to signal aliveness (TODO: replace with supervisor process health check)
+            // Periodically send state to signal aliveness
             TimeSetToCurrentSystemTime(&currentTime);
             if (timercmp(&currentTime, &nextStateReportTime, >))
             {
-                timeradd(&nextStateReportTime, &stateReportPeriod, &nextStateReportTime);
+                timeradd(&nextStateReportTime, &stateReportPeriod,
+                         &nextStateReportTime);
 
-                bzero(Buffer2, SMALL_BUFFER_SIZE_1);
-                Buffer2[0] = OBCState;
-                if (iCommSend(COMM_OBC_STATE, Buffer2, SMALL_BUFFER_SIZE_1) < 0)
+                OBCState = vGetState(GSD);
+                bzero(Buffer2, sizeof(Buffer2));
+                Buffer2[0] = (uint8_t)(DataDictionaryGetOBCStateU8(GSD));
+                if (iCommSend(COMM_OBC_STATE, Buffer2, sizeof(Buffer2)) < 0)
                 {
                     LogMessage(LOG_LEVEL_ERROR,"Fatal communication fault when sending OBC_STATE command - entering error state");
-                    vSetState(&OBCState,OBC_STATE_ERROR);
+                    vSetState(OBC_STATE_ERROR, GSD);
                     ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
                 }
             }
@@ -1611,7 +1595,7 @@ int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId, char *TriggAc
 }
 
 
-I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, C8 *Heading, U8 debug)
+I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, U8 debug)
 {
     I32 MessageIndex = 0, i = 0;
     dbl Data;
@@ -3067,7 +3051,7 @@ static size_t uiRecvMonitor(int* sockfd, char* buffer, size_t length)
     return recvDataSize;
 }
 
-void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], char object_address_name[MAX_OBJECTS][MAX_FILE_PATH], int* nbr_objects)
+void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH], I32 *nbr_objects)
 {
     DIR* traj_directory;
     struct dirent *directory_entry;
@@ -3113,30 +3097,50 @@ void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], char ob
 }
 
 
-int8_t vSetState(OBCState_t *currentState, OBCState_t requestedState)
+
+OBCState_t vGetState(GSDType *GSD)
+{
+    return DataDictionaryGetOBCStateU8(GSD);
+}
+
+StateTransitionResult vSetState(OBCState_t requestedState, GSDType *GSD)
 {
     StateTransition transitionFunction;
-    int8_t retval;
+    StateTransitionResult retval = TRANSITION_RESULT_UNDEFINED;
+    OBCState_t currentState = DataDictionaryGetOBCStateU8(GSD);
 
     // Always allow transitions to these two states
     if (requestedState == OBC_STATE_ERROR || requestedState == OBC_STATE_UNDEFINED)
     {
-        *currentState = requestedState;
-        retval = 0;
+        if (DataDictionarySetOBCStateU8(GSD, requestedState) == WRITE_OK)
+            retval = TRANSITION_OK;
+        else
+            retval = TRANSITION_MEMORY_ERROR;
     }
-    else if (requestedState == *currentState)
+    else if (requestedState == currentState)
     {
-        retval = 0;
+        retval = TRANSITION_OK;
     }
     else
     {
-        transitionFunction = tGetTransition(*currentState);
-        retval = transitionFunction(currentState, requestedState);
+        transitionFunction = tGetTransition(currentState);
+        retval = transitionFunction(&currentState, requestedState);
+        if (retval != TRANSITION_INVALID)
+        {
+            if(DataDictionarySetOBCStateU8(GSD, currentState) == WRITE_OK)
+                retval = TRANSITION_OK;
+            else
+                retval = TRANSITION_MEMORY_ERROR;
+        }
     }
 
-    if (retval == -1)
+    if (retval == TRANSITION_INVALID)
     {
-        LogMessage(LOG_LEVEL_WARNING,"Invalid transition requested: from %d to %d",*currentState,requestedState);
+        LogMessage(LOG_LEVEL_WARNING,"Invalid transition requested: from %d to %d",currentState,requestedState);
+    }
+    else if (retval == TRANSITION_MEMORY_ERROR)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Unable to set state to %u in shared memory!!", requestedState);
     }
     return retval;
 }
@@ -3163,68 +3167,82 @@ StateTransition tGetTransition(OBCState_t fromState)
     }
 }
 
-int8_t tFromIdle(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromIdle(OBCState_t *currentState, OBCState_t requestedState)
 {
     if (requestedState == OBC_STATE_INITIALIZED)
     {
         *currentState = requestedState;
-        return 0;
+        return TRANSITION_OK;
     }
-    return -1;
+    return TRANSITION_INVALID;
 }
 
-int8_t tFromInitialized(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromInitialized(OBCState_t *currentState, OBCState_t requestedState)
 {
     if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
-        return 0;
+        return TRANSITION_OK;
     }
-    return -1;
+    return TRANSITION_INVALID;
 }
 
-int8_t tFromConnected(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromConnected(OBCState_t *currentState, OBCState_t requestedState)
 {
     if (requestedState == OBC_STATE_ARMED || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
-        return 0;
+        return TRANSITION_OK;
     }
-    return -1;
+    return TRANSITION_INVALID;
 }
 
-int8_t tFromArmed(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromArmed(OBCState_t *currentState, OBCState_t requestedState)
 {
     if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_RUNNING || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
-        return 0;
+        return TRANSITION_OK;
     }
-    return -1;
+    return TRANSITION_INVALID;
 }
 
-int8_t tFromRunning(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromRunning(OBCState_t *currentState, OBCState_t requestedState)
 {
     if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
-        return 0;
+        return TRANSITION_OK;
     }
-    return -1;
+    return TRANSITION_INVALID;
 }
 
-int8_t tFromError(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromError(OBCState_t *currentState, OBCState_t requestedState)
 {
     if (requestedState == OBC_STATE_IDLE)
     {
         *currentState = requestedState;
-        return 0;
+        return TRANSITION_OK;
     }
-    return -1;
+    return TRANSITION_INVALID;
 }
 
-int8_t tFromUndefined(OBCState_t *currentState, OBCState_t requestedState)
+StateTransitionResult tFromUndefined(OBCState_t *currentState, OBCState_t requestedState)
 {
-    return -1;
+    return TRANSITION_INVALID;
 }
 
+
+OBCState_t vInitializeState(OBCState_t firstState, GSDType *GSD){
+    static int8_t isInitialized = 0;
+    if (!isInitialized)
+    {
+        isInitialized = 1;
+        if(DataDictionarySetOBCStateU8(GSD,firstState) != WRITE_OK)
+            util_error("Unable to write object control state to shared memory");
+    }
+    else {
+        LogMessage(LOG_LEVEL_WARNING,"Object control state already initialized");
+    }
+    return DataDictionaryGetOBCStateU8(GSD);
+}

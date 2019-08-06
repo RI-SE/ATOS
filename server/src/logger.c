@@ -325,6 +325,10 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             iExit = 1;
             break;
 
+        case COMM_DATA_DICT:
+            LogMessage(LOG_LEVEL_INFO,"Data dictionary has been modified");
+            break;
+            
         case COMM_INV:
             break;
         default:

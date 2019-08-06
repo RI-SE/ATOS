@@ -28,6 +28,7 @@
 #include "util.h"
 #include "logging.h"
 #include "maestroTime.h"
+#include "datadictionary.h"
 
 
 /*------------------------------------------------------------
@@ -36,6 +37,11 @@
 
 #define FE_WGS84        (1.0/298.257223563) // earth flattening (WGS84)
 #define RE_WGS84        6378137.0           // earth semimajor axis (WGS84) (m)
+
+#define TEMP_CONF_FILE_PATH  "conf/temp.conf"
+//#define CONF_FILE_PATH  "conf/test.conf"
+#define SMALL_BUFFER_SIZE_128 128
+#define SMALL_BUFFER_SIZE_64 64
 
 // Message priorities on message queue
 #define PRIO_COMM_STRT 100
@@ -62,6 +68,7 @@
 #define PRIO_COMM_TRAJ_FROMSUP 80
 #define PRIO_COMM_ASP 110
 #define PRIO_COMM_OSEM 160
+#define PRIO_DATA_DICT 100
 #define PRIO_OBJECTS_CONNECTED 100
 
 /*------------------------------------------------------------
@@ -1965,6 +1972,8 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
     case COMM_TRAJ_FROMSUP:
         uiMessagePrio = PRIO_COMM_TRAJ_FROMSUP;
         break;
+    case COMM_DATA_DICT:
+        uiMessagePrio = PRIO_DATA_DICT;
     case COMM_EXAC:
         uiMessagePrio = PRIO_COMM_EXAC;
         break;
@@ -3118,6 +3127,95 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
     return 0;
 }
 
+
+
+/*
+UtilWriteConfigurationParameter updates parameters in the file test.conf.
+
+- *ParameterName the name of the parameter in test.conf
+- *NewValue the value of the parameter.
+- Debug enable(1)/disable(0) debug printouts
+*/
+I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
+{
+
+    I32 RowCount, i;
+    C8 Parameter[SMALL_BUFFER_SIZE_64];
+    C8 Row[SMALL_BUFFER_SIZE_128];
+    C8 NewRow[SMALL_BUFFER_SIZE_128];
+    FILE *fd, *TempFd;
+    C8 *ptr1, *ptr2;
+    U8 ParameterFound = 0;
+    bzero(Parameter, SMALL_BUFFER_SIZE_64);
+
+    strcat(Parameter, ParameterName);
+    strcat(Parameter, "=");
+
+    //Remove temporary file
+    remove(TEMP_CONF_FILE_PATH);
+
+    //Create temporary file
+    TempFd = fopen (TEMP_CONF_FILE_PATH, "w+");
+
+    //Open configuration file
+    fd = fopen (TEST_CONF_FILE, "r");
+
+    if(fd > 0)
+    {
+        RowCount = UtilCountFileRows(fd);
+        fclose(fd);
+        fd = fopen (TEST_CONF_FILE, "r");
+
+        for(i = 0; i < RowCount; i++)
+        {
+            bzero(Row, SMALL_BUFFER_SIZE_128);
+            UtilReadLine(fd, Row);
+
+            ptr1 = strstr(Row, Parameter);
+            ptr2 = strstr(Row, "//");
+            if (ptr2 == NULL) ptr2 = ptr1; //No comment found
+            if(ptr1 != NULL && (U64)ptr2 >= (U64)ptr1 && ParameterFound == 0)
+            {
+                ParameterFound = 1;
+                bzero(NewRow, SMALL_BUFFER_SIZE_128);
+                strncpy(NewRow, Row, (U64)ptr1 - (U64)Row + strlen(Parameter));
+                strcat(NewRow, NewValue);
+                if((U64)ptr2 > (U64)ptr1)
+                {
+                    strcat(NewRow, " "); // Add space
+                    strcat(NewRow, ptr2); // Add the comment
+                }
+
+                if(Debug)
+                {
+                    LogMessage(LOG_LEVEL_DEBUG,"Changed parameter: %s", NewRow);
+                }
+
+                strcat(NewRow, "\n");
+                (void)fwrite(NewRow,1,strlen(NewRow),TempFd);
+
+            }
+            else
+            {
+                strcat(Row, "\n");
+                (void)fwrite(Row,1,strlen(Row),TempFd);
+            }
+        }
+        fclose(TempFd);
+        fclose(fd);
+
+        //Remove test.conf
+        remove(TEST_CONF_FILE);
+
+        //Rename temp.conf to test.conf
+        rename(TEMP_CONF_FILE_PATH, TEST_CONF_FILE);
+
+        //Remove temporary file
+        remove(TEMP_CONF_FILE_PATH);
+    }
+
+    return (I32)ParameterFound;
+}
 
 /*!
  * \brief UtilPopulateMonitorDataStruct Takes an array of raw MONR data and fills a MONRType struct with the content

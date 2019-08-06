@@ -30,9 +30,7 @@ extern "C"{
 #include <poll.h>
 #include <netdb.h>
 #include "mqbus.h"
-
 #include "iso22133.h"
-
 
 /*------------------------------------------------------------
   -- Defines
@@ -75,8 +73,8 @@ extern "C"{
 #define TCP_RX_BUFFER 1024
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
-#define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.15"
+#define USE_LOCAL_USER_CONTROL  0 
+#define LOCAL_USER_CONTROL_IP "10.130.24.50"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -251,6 +249,11 @@ extern "C"{
 
 #define ISO_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
 
+#define DD_CONTROL_BUFFER_SIZE_1024 1024
+#define DD_CONTROL_BUFFER_SIZE_20 20
+#define DD_CONTROL_BUFFER_SIZE_52 52
+#define DD_CONTROL_TASK_PERIOD_MS 1
+
 //! Internal message queue communication identifiers
 enum COMMAND
 {
@@ -273,15 +276,15 @@ COMM_TRAJ_TOSUP = 17,
 COMM_TRAJ_FROMSUP = 18,
 COMM_ASP = 19,
 COMM_OSEM = 20,
-COMM_EXAC = 21,
-COMM_TREO = 22,
-COMM_ACCM = 23,
-COMM_TRCM = 24,
+COMM_DATA_DICT = 21,
+COMM_EXAC = 22,
+COMM_TREO = 23,
+COMM_ACCM = 24,
+COMM_TRCM = 25,
 COMM_MONR = 239,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_INV = 255
 };
-
 
 typedef struct
 {
@@ -503,15 +506,28 @@ typedef struct
 
 typedef struct
 {
-  U32 MTSPU32;
-  dbl CurrentTimeDbl;
-  dbl TimeToSyncPointDbl;
-  dbl PrevTimeToSyncPointDbl;
-  I32 SyncPointIndexI32;
-  U32 CurrentTimeU32;
-  I32 BestFoundIndexI32;
-  U16 IterationTimeU16;
+  volatile U32 MessageLengthU32;
+  volatile U32 ChannelCodeU32;
+  volatile U32 MTSPU32;
+  volatile dbl CurrentTimeDbl;
+  volatile dbl TimeToSyncPointDbl;
+  volatile dbl PrevTimeToSyncPointDbl;
+  volatile I32 SyncPointIndexI32;
+  volatile U32 CurrentTimeU32;
+  volatile I32 BestFoundIndexI32;
+  volatile U16 IterationTimeU16;
 } ASPType;
+
+/*! Object control states */
+typedef enum {
+    OBC_STATE_UNDEFINED,
+    OBC_STATE_IDLE,
+    OBC_STATE_INITIALIZED,
+    OBC_STATE_CONNECTED,
+    OBC_STATE_ARMED,
+    OBC_STATE_RUNNING,
+    OBC_STATE_ERROR
+} OBCState_t;
 
 typedef struct
 {
@@ -540,8 +556,38 @@ typedef struct
   //U8 STRTData[100];
   //U8 OSEMSizeU8;
   //U8 OSEMData[100];
-
-
+  volatile dbl OriginLatitudeDbl;
+  C8 OriginLatitudeC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile dbl OriginLongitudeDbl;
+  C8 OriginLongitudeC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile dbl OriginAltitudeDbl;
+  C8 OriginAltitudeC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile U32 VisualizationServerU32;
+  C8 VisualizationServerC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile U8 ForceObjectToLocalhostU8;
+  volatile dbl ASPMaxTimeDiffDbl;
+  volatile dbl ASPMaxTrajDiffDbl;
+  volatile U32 ASPStepBackCountU32;
+  volatile dbl ASPFilterLevelDbl;
+  volatile dbl ASPMaxDeltaTimeDbl;
+  volatile U32 TimeServerIPU32;
+  C8 TimeServerIPC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile U16 TimeServerPortU16;
+  volatile U32 SimulatorIPU32;
+  C8 SimulatorIPC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile U16 SimulatorTCPPortU16;
+  volatile U16 SimulatorUDPPortU16;
+  volatile U8 SimulatorModeU8;
+  C8 VOILReceiversC8[DD_CONTROL_BUFFER_SIZE_1024];
+  C8 DTMReceiversC8[DD_CONTROL_BUFFER_SIZE_1024];
+  volatile U32 ExternalSupervisorIPU32;
+  C8 ExternalSupervisorIPC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile U16 SupervisorTCPPortU16;
+  U32 DataDictionaryRVSSConfigU32;
+  U32 DataDictionaryRVSSRateU8;
+  volatile ASPType ASPData;
+  C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
+  volatile OBCState_t OBCStateU8;
 } GSDType;
 
 
@@ -685,17 +731,6 @@ typedef struct
   I16 SpeedI16;
 } ObjectMonitorType;
 
-
-typedef enum {
-    OBC_STATE_UNDEFINED,
-    OBC_STATE_IDLE,
-    OBC_STATE_INITIALIZED,
-    OBC_STATE_CONNECTED,
-    OBC_STATE_ARMED,
-    OBC_STATE_RUNNING,
-    OBC_STATE_ERROR
-} OBCState_t;
-
 #define HTTP_HEADER_MAX_LENGTH 64
 typedef struct {
     char AcceptCharset[HTTP_HEADER_MAX_LENGTH];
@@ -718,10 +753,53 @@ typedef struct {
     char UserAgent[HTTP_HEADER_MAX_LENGTH];
 } HTTPHeaderContent;
 
+/*! Data dictionary read/write return codes. */
+typedef enum {
+    UNDEFINED, /*!< Undefined result */
+    WRITE_OK, /*!< Write successful */
+    READ_OK, /*!< Read successful */
+    READ_WRITE_OK, /*!< Combined read/write successful */
+    PARAMETER_NOTFOUND, /*!< Read/write not successful */
+    OUT_OF_RANGE /*!< Attempted to read out of range */
+} ReadWriteAccess_t;
+
+
+typedef struct
+{
+  volatile U32 MessageLengthU32;
+  volatile U32 ChannelCodeU32;
+  volatile U16 YearU16;
+  volatile U8 MonthU8;
+  volatile U8 DayU8;
+  volatile U8 HourU8;
+  volatile U8 MinuteU8;
+  volatile U8 SecondU8;
+  volatile U16 MillisecondU16;
+  volatile U32 SecondCounterU32;
+  volatile U64 GPSMillisecondsU64;
+  volatile U32 GPSMinutesU32;
+  volatile U16 GPSWeekU16;
+  volatile U32 GPSSecondsOfWeekU32;
+  volatile U32 GPSSecondsOfDayU32;
+  volatile U8 FixQualityU8;
+  volatile U8 NSatellitesU8;
+} RVSSTimeType;
+
+
+typedef struct
+{
+  volatile U32 MessageLengthU32;
+  volatile U32 ChannelCodeU32;
+  volatile U8 OBCStateU8;
+  volatile U8 SysCtrlStateU8;
+} RVSSMaestroType;
+
+
 typedef enum {
     NORTHERN,
     SOUTHERN
 } Hemisphere;
+
 
 
 /*------------------------------------------------------------
@@ -829,6 +907,7 @@ I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPS
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
+I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 
 I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataType *monitorData, U8 debug);
 I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);

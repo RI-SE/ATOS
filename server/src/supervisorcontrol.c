@@ -28,6 +28,7 @@
 #include <netdb.h>
 
 #include "logger.h"
+#include "datadictionary.h"
 
 
 /*------------------------------------------------------------
@@ -110,6 +111,14 @@ void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
   // Create log
   LogInit(MODULE_NAME,logLevel);
+  LogMessage( LOG_LEVEL_INFO, "Supervisor control task running with PID: %i", getpid());
+ 
+  DataDictionaryGetExternalSupervisorIPU32(GSD, &SupervisorIpU32);
+  
+  DataDictionaryGetExternalSupervisorIPC8(GSD, SupervisorServerIpC8, SUP_CONTROL_BUFFER_SIZE_20);
+  
+  LogMessage(LOG_LEVEL_INFO,"Supervisor IP: %s", SupervisorServerIpC8);
+  
   LogMessage(LOG_LEVEL_INFO, "Supervisor control task running with PID: %i", getpid());
 
   // Set up signal handlers
@@ -120,19 +129,10 @@ void supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
   if(iCommInit())
       util_error("Unable to connect to message bus");
 
-  bzero(TextBufferC8, SUP_CONTROL_BUFFER_SIZE_20);
-  UtilSearchTextFile(TEST_CONF_FILE, "SupervisorIP=", "", TextBufferC8);
-  bzero(SupervisorServerIpC8, SUP_CONTROL_BUFFER_SIZE_20);
-  strcat(SupervisorServerIpC8, TextBufferC8);
-
-  LogMessage(LOG_LEVEL_INFO,"Supervisor IP: %s", TextBufferC8);
-  SupervisorIpU32 = UtilIPStringToInt(SupervisorServerIpC8);
 
   if(SupervisorIpU32 != 0)
   {
-    bzero(TextBufferC8, SUP_CONTROL_BUFFER_SIZE_20);
-    UtilSearchTextFile(TEST_CONF_FILE, "SupervisorTCPPort=", "", TextBufferC8);
-    SupervisorTCPPortU16 = (U16)atoi(TextBufferC8);
+    DataDictionaryGetSupervisorTCPPortU16(GSD, &SupervisorTCPPortU16);
         
     LogMessage(LOG_LEVEL_INFO,"SupervisorTCPPort = %d", SupervisorTCPPortU16);
 
