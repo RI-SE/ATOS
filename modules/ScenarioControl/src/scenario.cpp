@@ -82,7 +82,7 @@ void Scenario::parseScenarioFile(std::ifstream &file)
     // PLACEHOLDER CODE
     BrakeTrigger* bt = new BrakeTrigger(1);
     InfrastructureAction* mqttAction = new InfrastructureAction(5, 1);
-    const char brakeObjectIPString[] = "0.0.0.0";
+    const char brakeObjectIPString[] = "127.0.0.1";
     const char mqttObjectIPString[] = "127.0.0.1";
     in_addr brakeObjectIP, mqttObjectIP;
     inet_pton(AF_INET, brakeObjectIPString, &brakeObjectIP);
@@ -188,7 +188,6 @@ void Scenario::resetISOTriggers(void)
 
 Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &monr)
 {
-    std::set<Trigger*> relevantTriggers;
     for (Trigger* tp : allTriggers)
     {
         if(tp->getObjectIP() == monr.ClientIP && dynamic_cast<ISOTrigger*>(tp) == nullptr)
