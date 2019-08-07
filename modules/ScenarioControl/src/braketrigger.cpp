@@ -37,11 +37,11 @@ BrakeTrigger::TriggerReturnCode_t BrakeTrigger::update(double velocityMeasuremen
 
     // Calculate time difference and save current time
     timersub(&measurementTime, &lastMeasurementTime, &timeDifference);
-    deltaT = timeDifference.tv_sec + timeDifference.tv_usec * 1000000;
+    deltaT = TimeGetAsUTCms(&timeDifference) / 1000.0;
     if (deltaT < minimumDeltaT)
     {
         // Short sample time difference risks division by zero: ignore too rapid MONR messages
-        LogMessage(LOG_LEVEL_WARNING, "Received two MONR messages from same object within time span of %.6f ms",deltaT/1000);
+        // Also filters away MONR messages which are repeated with the same information
         return update(static_cast<bool>(accelerationEstimate < -brakeRetardationThreshold_m_s2), measurementTime);
     }
     else lastMeasurementTime = measurementTime;
