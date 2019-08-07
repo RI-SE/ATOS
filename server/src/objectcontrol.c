@@ -1066,7 +1066,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 /*Set server status*/
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
 
-                if(DisconnectU8 == 0) vSetState(OBC_STATE_CONNECTED, GSD);
+                if(DisconnectU8 == 0)
+                {
+                    vSetState(OBC_STATE_CONNECTED, GSD);
+                    iCommSend(COMM_OBJECTS_CONNECTED,NULL,0);
+                }
                 else if(DisconnectU8 == 1) vSetState(OBC_STATE_IDLE, GSD);
             }
             else if(iCommand == COMM_DATA_DICT)
