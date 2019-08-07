@@ -392,9 +392,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 }
             }
 
-            //Store HEAB in GSD
-            //for(j = 0; j < MessageLength; j++) GSD->HEABData[j] = MessageBuffer[j];
-            //GSD->HEABSizeU8 = (U8)MessageLength;
 
             // Check if any object has disconnected - if so, disconnect all objects and return to idle
             DisconnectU8 = 0;
@@ -526,8 +523,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                         }
                     }
 
-
-
                     //Ok, let's do the ASP
                     for(i = 0; i < SyncPointCount; i++)
                     {
@@ -606,44 +601,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
         }
 
-        //This is used for sending DTM chunks, will be updated when dev is merged with chronos2 
-        if(GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
-        {
-
-            //bzero(TrajBuffer, strlen(pcRecvBuffer));
-            //DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
-            //UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 1);
-
-            //MiscU16 = sizeof(TRAJInfoType); //72 = Number of bytes in [Ip, Id, Name, Version]
-            DTMIpU32 = 0;
-            DTMIpU32 = (C8)GSD->SupChunk[98];
-            DTMIpU32 = (C8)GSD->SupChunk[97] | (DTMIpU32 << 8);
-            DTMIpU32 = (C8)GSD->SupChunk[96] | (DTMIpU32 << 8);
-            DTMIpU32 = (C8)GSD->SupChunk[95] | (DTMIpU32 << 8);
-            /*DTM*/
-            for(iIndex=0;iIndex<nbr_objects;++iIndex)
-            {
-                printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
-                if(DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
-                {
-                    //UtilSendTCPData("[ObjectControl]", TrajBuffer, DTMLengthU32, &socket_fd[iIndex], 0);
-                    /*DTM Header*/
-                    //MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
-                    /*Send DTM header*/
-                    //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-                    /*DTM Data*/
-                    //MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
-                    /*Send DTM data*/
-                    //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-                    //printf("Send to object\n");
-                    UtilSendTCPData("[ObjectControl]", GSD->SupChunk, GSD->SupChunkSize, &socket_fds[iIndex], 0);
-                }
-            }
-
-            GSD->SupChunkSize = 0;
-
-        }
-
 
         bzero(pcRecvBuffer,RECV_MESSAGE_BUFFER);
         //Have we recieved a command?
@@ -671,10 +628,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     /*Send OSTM message*/
                     UtilSendTCPData("[Object Control test]", MessageBuffer, MessageLength, &socket_fds[iIndex], 1);
                 }
-
-                //Store OSTM in GSD
-                //for(i = 0; i < MessageLength; i++) GSD->OSTMData[i] = MessageBuffer[i];
-                //GSD->OSTMSizeU8 = (U8)MessageLength;
 
                 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK; //Set server to READY
             }
@@ -714,99 +667,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 bzero(MiscText, SMALL_BUFFER_SIZE_0);
                 sprintf(MiscText, "%" PRIu32, GSD->ScenarioStartTimeU32 << 2);
                 LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>, GPS time <%s>\n",pcRecvBuffer, MiscText);
-
-            }
-            else if(iCommand == COMM_TRAJ && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
-            {
-
-                DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
-                DTMIpU32 = (C8)TrajBuffer[0];
-                DTMIpU32 = (C8)TrajBuffer[1] | (DTMIpU32 << 8);
-                DTMIpU32 = (C8)TrajBuffer[2] | (DTMIpU32 << 8);
-                DTMIpU32 = (C8)TrajBuffer[3] | (DTMIpU32 << 8);
-                TRAJInfoData.IpAddressU32 = DTMIpU32;
-
-                MiscU16 = (C8)TrajBuffer[4];
-                MiscU16 = (C8)TrajBuffer[5] | (MiscU16 << 8);
-                TRAJInfoData.TrajectoryIDU16 = MiscU16;
-                i = 0;
-                do
-                {
-                    TRAJInfoData.TrajectoryNameC8[i] = (C8)TrajBuffer[i + 6];
-                    i ++;
-                } while(TRAJInfoData.TrajectoryNameC8[i-1] != 0);
-
-                MiscU16 = (C8)TrajBuffer[70];
-                MiscU16 = (C8)TrajBuffer[71] | (MiscU16 << 8);
-
-                TRAJInfoData.TrajectoryVersionU16 = MiscU16;
-
-                MiscU16 = 72; //Number of bytes in [Ip, Id, Name, Version]
-
-                /*DTM*/
-                for(iIndex=0;iIndex<nbr_objects;++iIndex)
-                {
-                    printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
-                    if( DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
-                    {
-                        /*DTM Header*/
-                        MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-MiscU16)/ COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
-                        /*Send DTM header*/
-                        UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 1);
-                        /*DTM Data*/
-                        MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer+MiscU16, (DTMLengthU32-MiscU16)/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
-                        /*Send DTM data*/
-                        UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 1);
-                    }
-                }
-
-            }
-            else if(/*iCommand == COMM_TRAJ_FROMSUP*/ GSD->SupChunkSize > 0 && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
-            {
-
-                //bzero(TrajBuffer, strlen(pcRecvBuffer));
-                //DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
-                UtilISOBuildTRAJInfo(GSD->SupChunk, &TRAJInfoData, 0);
-
-                //MiscU16 = sizeof(TRAJInfoType); //72 = Number of bytes in [Ip, Id, Name, Version]
-                printf("[ObjectControl] Send DTM %d\n", DTMLengthU32);
-                /*DTM*/
-                for(iIndex=0;iIndex<nbr_objects;++iIndex)
-                {
-                    printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), TRAJInfoData.IpAddressU32);
-                    if(TRAJInfoData.IpAddressU32 == UtilIPStringToInt(object_address_name[iIndex]))
-                    {
-                        //UtilSendTCPData("[ObjectControl]", TrajBuffer, DTMLengthU32, &socket_fd[iIndex], 0);
-                        /*DTM Header*/
-                        //MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
-                        /*Send DTM header*/
-                        //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-                        /*DTM Data*/
-                        //MessageLength = ObjectControlBuildDTMMessage(MessageBuffer, TrajBuffer, (DTMLengthU32-sizeof(TRAJInfoType))/COMMAND_DTM_BYTES_IN_ROW, &DOTMData, 0);
-                        /*Send DTM data*/
-                        //UtilSendTCPData("[ObjectControl]", MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-                        UtilSendTCPData("[ObjectControl]", GSD->SupChunk, GSD->SupChunkSize, &socket_fds[iIndex], 0);
-                    }
-                }
-
-                GSD->SupChunkSize = 0;
-
-            }
-            else if(iCommand == COMM_VIOP && OBCState == OBC_STATE_RUNNING/*OBC_STATE_INITIALIZED*/)
-            {
-                /*Build the VOIL message*/
-                MessageLength = ObjectControlBuildVOILMessage(MessageBuffer, &VOILData, (C8*)GSD->VOILData, 0);
-                for(iIndex=0;iIndex<nbr_objects;++iIndex)
-                {
-                    /*Here we send the VOIL message, if IP-address found*/
-                    if(strstr(VOILReceivers, object_address_name[iIndex]))
-                    {
-                        //ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
-                        UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
-                    }
-                }
-
-                if(USE_TEMP_LOGFILE) (void)fwrite(MessageBuffer,1,MessageLength,TempFd); //Write VOIL data to file
             }
             else if(iCommand == COMM_REPLAY)
             {
@@ -864,9 +724,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     }
                     fclose (fd);
                 }
-
-
-
 
                 vSetState(OBC_STATE_INITIALIZED, GSD);
                 LogMessage(LOG_LEVEL_INFO,"ObjectControl is initialized");
@@ -1009,7 +866,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                                 /*Send DOTM header*/
                                 UtilSendTCPData("Object Control", TrajBuffer, MessageLength, &socket_fds[iIndex], 0);
 
-                                LogPrint("1");
                                 /*Send DOTM data*/
                                 ObjectControlSendDOTMMessage(object_traj_file[iIndex], &socket_fds[iIndex], RowCount-2, (char *)&object_address_name[iIndex], object_tcp_port[iIndex], &DOTMData, 0);
 
