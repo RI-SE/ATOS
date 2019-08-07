@@ -116,6 +116,7 @@ int main()
             {
                 state = RUNNING;
             }
+            else LogMessage(LOG_LEVEL_ERROR, "Received unexpected START command (current state: %u)",static_cast<unsigned char>(state));
             break;
         case COMM_MONR:
             // Update triggers
