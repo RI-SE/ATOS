@@ -524,7 +524,6 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         switch (iCommand)
         {
         case COMM_OBC_STATE:
-            LogPrint("REC: %u",DataDictionaryGetOBCStateU8(GSD));
             break;
         case COMM_LOG:
             SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
@@ -1083,8 +1082,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                 if(RVSSConfigU32 & RVSS_TIME_CHANNEL)
                 {
-                    SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 1);
-                    UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 1);
+                    SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
+                    UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData, RVSSMessageLengthU32, 0);
                 }
 
                 if(RVSSConfigU32 & RVSS_MAESTRO_CHANNEL)
