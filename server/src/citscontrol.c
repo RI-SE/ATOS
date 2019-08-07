@@ -195,7 +195,6 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             break;
         case CONNECTED:
-
           /*  if ((mqtt_response_code = publish_mqtt(DEFAULT_MQTT_PAYLOAD,strlen(DEFAULT_MQTT_PAYLOAD),DEFAULT_MQTT_TOPIC))) {
                 LogMessage(LOG_LEVEL_ERROR,"Could not publish message, error code %d", mqtt_response_code);
             }
@@ -469,13 +468,24 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     double z = MONRData->ZPositionI32;
     double latitude, longitude, height;
 
+    double distance=0;
+    double azimuth1 = 0;
+    double azimuth2 =0;
+    int fail;
+
     if(origin.latitude < -90 || origin.latitude > 90 || origin.longitude < -180 || origin.longitude > 180){
         LogMessage(LOG_LEVEL_ERROR,"Tried to send CAM with longitude %f, latitude %f", origin.longitude, origin.latitude);
         return 1;
     }
 
-    tempCam.cam.camParameters.basicContainer.referencePosition.latitude = origin.latitude;
-    tempCam.cam.camParameters.basicContainer.referencePosition.longitude = origin.longitude;
+    azimuth1 = UtilDegToRad(90)-atan2(y/1.00,x/1.00);
+       // calculate the norm value
+    distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
+
+    fail = UtilVincentyDirect(origin.latitude, origin.longitude, azimuth1,distance ,&latitude,&longitude,&azimuth2);
+
+    tempCam.cam.camParameters.basicContainer.referencePosition.latitude = latitude;
+    tempCam.cam.camParameters.basicContainer.referencePosition.longitude = longitude;
 
     tempCam.cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = MONRData->HeadingU16;
 
@@ -537,8 +547,16 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
         LogMessage(LOG_LEVEL_ERROR,"Tried to send DENM with longitude %f, latitude %f ", origin.longitude, origin.latitude);
         return 1;
     }
-    tempDENM.denm.management.eventPosition.latitude = origin.latitude;
-    tempDENM.denm.management.eventPosition.longitude = origin.longitude;
+
+    azimuth1 = UtilDegToRad(90)-atan2(y/1.00,x/1.00);
+
+    // calculate the norm value
+    distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
+
+    fail = UtilVincentyDirect(origin.latitude, origin.longitude,azimuth1,distance ,&latitude,&longitude,&azimuth2);
+
+    tempDENM.denm.management.eventPosition.latitude = latitude;
+    tempDENM.denm.management.eventPosition.longitude = longitude;
 
     tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = 7;
     tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 10;
