@@ -39,9 +39,7 @@
 #include "util.h"
 #include "iso22133.h"
 #include "maestroTime.h"
-
-
-
+#include "datadictionary.h"
 
 #define H_THRESHOLD 1 //HEADING THRESHOLD
 #define S_THRESHOLD 0 //SPEED THRESHOLD
@@ -68,7 +66,7 @@
   -- Function declarations.
   ------------------------------------------------------------*/
 I32 generateCAMMessage(MONRType *MONRData, CAM_t* lastCam);
-I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm);
+I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm, int causeCode);
 
 I32 sendCAM(CAM_t* lastCam);
 I32 sendDENM(DENM_t* lastDENM);
@@ -100,6 +98,11 @@ enum CITS_STATE {
     SENDING
 };
 
+struct Origo {
+    double longitude;
+    double latitude;
+};
+
 static int state = INIT;
 static volatile int pending_state = INIT;
 static volatile int iExit = 0;
@@ -109,12 +112,16 @@ static MQTTClient_message pubmsg = MQTTClient_message_initializer;
 static volatile MQTTClient_deliveryToken deliveredtoken = 0;
 static MQTTClient_deliveryToken sendtoken = 0;
 static DENM_t* lastDENM;
+static struct Origo origin;
+
 
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
 void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
+    origin.longitude = -200; //Initialize longitude to something outside -180 to 180
+    origin.latitude = -100; //Initialize latitude to something outside -90 to 90
 
     int camTimeCycle = 0;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
@@ -188,7 +195,6 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             }
             break;
         case CONNECTED:
-
           /*  if ((mqtt_response_code = publish_mqtt(DEFAULT_MQTT_PAYLOAD,strlen(DEFAULT_MQTT_PAYLOAD),DEFAULT_MQTT_TOPIC))) {
                 LogMessage(LOG_LEVEL_ERROR,"Could not publish message, error code %d", mqtt_response_code);
             }
@@ -247,7 +253,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                 if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
                     generateCAMMessage(&MONRMessage, lastCam);
-                    generateDENMMessage(&MONRMessage, lastDENM);
+                    generateDENMMessage(&MONRMessage, lastDENM, CauseCodeType_reserved);
                     sendCAM(lastCam);
                     sendDENM(lastDENM);
                 }
@@ -277,7 +283,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 }
 
                 // Based on last MONR message, generate a DENM message to send
-                generateDENMMessage(&MONRMessage, lastDENM);
+                generateDENMMessage(&MONRMessage, lastDENM, CauseCodeType_collisionRisk);
 
                 if (actionData.executionTime_qmsoW == 0)
                 {
@@ -318,6 +324,11 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
         case COMM_INV:
             break;
+        case COMM_DATA_DICT:
+            DataDictionaryGetOriginLatitudeDbl(GSD, &origin.latitude);
+            DataDictionaryGetOriginLongitudeDbl(GSD, &origin.longitude);
+            break;
+
         default:
             LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
         }
@@ -462,30 +473,19 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     double azimuth2 =0;
     int fail;
 
-    /* Calculate the geodetic forward azimuth in the direction from known origo
-   * */
+    if(origin.latitude < -90 || origin.latitude > 90 || origin.longitude < -180 || origin.longitude > 180){
+        LogMessage(LOG_LEVEL_ERROR,"Tried to send CAM with longitude %f, latitude %f", origin.longitude, origin.latitude);
+        return 1;
+    }
 
     azimuth1 = UtilDegToRad(90)-atan2(y/1.00,x/1.00);
-
-    // calculate the norm value
+       // calculate the norm value
     distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
 
-    // TODO: Get From RVSSgetParameter
-    double origoLong = 12.77011670;
-    double origoLat = 57.77315060;
-
-    fail = UtilVincentyDirect(origoLat,origoLong,azimuth1,distance ,&latitude,&longitude,&azimuth2);
+    fail = UtilVincentyDirect(origin.latitude, origin.longitude, azimuth1,distance ,&latitude,&longitude,&azimuth2);
 
     tempCam.cam.camParameters.basicContainer.referencePosition.latitude = latitude;
     tempCam.cam.camParameters.basicContainer.referencePosition.longitude = longitude;
-
-    /*
-    printf("calc latitude %f \n",  latitude);
-    printf("calc longitude %f \n",  longitude);
-
-    printf("CAM latitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.latitude);
-    printf("CAM longitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.longitude);
-    */
 
     tempCam.cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = MONRData->HeadingU16;
 
@@ -494,7 +494,6 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection = DriveDirection_forward; //FORWARD
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth = 10; //TEMP WIDTH
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = 10; //TEMP LENGTH
-
 
     //tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = MONRData->LateralAccI16;
     tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = MONRData->LongitudinalAccI16;
@@ -506,10 +505,9 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     if(MONRData != NULL ){
         *cam = tempCam;
     }
+    return 0;
 
 }
-
-
 
 
 /*!
@@ -518,7 +516,7 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
  * \param lastDENM struct to fill with DENM data if DENM should be sent, used as reference to calculate new DENM.
  * \param lastSpeed variable keeping track of last speed recorded.
  */
-I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
+I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm, int causeCode){
     TimeType time;
     DENM_t tempDENM;
 
@@ -531,8 +529,8 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     tempDENM.denm.management.actionID.sequenceNumber = 0;
 
     UtilGetMillisecond(&time);
-   // tempDENM.denm.management.detectionTime = time.MillisecondU16;
-   // tempDENM.denm.management.referenceTime = time.MillisecondU16;
+    //tempDENM.denm.management.detectionTime = time.MillisecondU16;
+    //tempDENM.denm.management.referenceTime = time.MillisecondU16;
 
     //LOG LAT from XY
     double x = MONRData->XPositionI32;
@@ -545,28 +543,20 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     double azimuth2 =0;
     int fail;
 
-    /* Calculate the geodetic forward azimuth in the direction from origo to point we want to know,
-     * A problem right now is that I belive that the GUC and virtualObject needs to have the same origin
-   * */
+    if(origin.latitude < -90 || origin.latitude > 90 || origin.longitude < -180 || origin.longitude > 180){
+        LogMessage(LOG_LEVEL_ERROR,"Tried to send DENM with longitude %f, latitude %f ", origin.longitude, origin.latitude);
+        return 1;
+    }
 
     azimuth1 = UtilDegToRad(90)-atan2(y/1.00,x/1.00);
 
     // calculate the norm value
     distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
 
-    // TODO: Get From RVSSgetParameter
-    double origoLong = 12.77011670;
-    double origoLat = 57.77315060;
-
-    fail = UtilVincentyDirect(origoLat,origoLong,azimuth1,distance ,&latitude,&longitude,&azimuth2);
+    fail = UtilVincentyDirect(origin.latitude, origin.longitude,azimuth1,distance ,&latitude,&longitude,&azimuth2);
 
     tempDENM.denm.management.eventPosition.latitude = latitude;
     tempDENM.denm.management.eventPosition.longitude = longitude;
-
-    /*
-    printf("DENM latitude %f \n", tempDENM.denm.management.eventPosition.latitude);
-    printf("DENM longitude %f \n", tempDENM.denm.management.eventPosition.longitude);
-    */
 
     tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = 7;
     tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 10;
@@ -580,9 +570,14 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     //tempDENM.denm.management.transmissionInterval = 100;
     //tempDENM.denm.management.stationType = StationType_heavyTruck; //HEAVY TRUCK. 5 = passenger car, 1 = Pedestrian
     //tempDENM.denm.situation->informationQuality = InformationQuality_highest;
-    //tempDENM.denm.situation->eventType.causeCode = CauseCodeType_dangerousSituation;
+    tempDENM.denm.situation->eventType.causeCode = causeCode;
 
-    //tempDENM.denm.situation->eventType.subCauseCode =  1; //Emergency break engaged
+    if(causeCode == CauseCodeType_collisionRisk){
+         tempDENM.denm.situation->eventType.subCauseCode = 1;  //Emergency break engaged
+    }
+    else{
+     tempDENM.denm.situation->eventType.subCauseCode = 0;
+    }
 
 
     //tempDENM.denm.location->eventSpeed->speedValue = 0; //CHECK THIS
@@ -592,7 +587,7 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     if(MONRData != NULL ){
         *denm = tempDENM;
     }
-
+    return 0;
 }
 /*!
  * \brief SendCam publishes a cam message on MQTT with hardcoded topic.
@@ -616,9 +611,7 @@ I32 sendCAM(CAM_t* cam){
  * \return 1 if message sent succesfully
  */
 I32 sendDENM(DENM_t* denm){
-
     LogMessage(LOG_LEVEL_INFO,"Sending DENM");
-
     //FILE *fp = fopen("tmp", "wb");
     //asn_enc_rval_t ec = der_encode(&asn_DEF_DENM, denm, write_out, fp);
     //fclose(fp);
