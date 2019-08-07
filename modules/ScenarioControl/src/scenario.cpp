@@ -82,15 +82,21 @@ void Scenario::parseScenarioFile(std::ifstream &file)
     // PLACEHOLDER CODE
     BrakeTrigger* bt = new BrakeTrigger(1);
     InfrastructureAction* mqttAction = new InfrastructureAction(5, 1);
+    ExternalAction* brakeLightAction = new ExternalAction(6,Action::ActionTypeCode_t::ACTION_MISC_DIGITAL_OUTPUT,1);
     const char brakeObjectIPString[] = "127.0.0.1";
     const char mqttObjectIPString[] = "127.0.0.1";
-    in_addr brakeObjectIP, mqttObjectIP;
+    const char ledObjectIPString[] = "10.130.254.197";
+    in_addr brakeObjectIP, mqttObjectIP, ledObjectIP;
     inet_pton(AF_INET, brakeObjectIPString, &brakeObjectIP);
     inet_pton(AF_INET, mqttObjectIPString, &mqttObjectIP);
+    inet_pton(AF_INET, ledObjectIPString, &ledObjectIP);
 
     bt->appendParameter(Trigger::TriggerParameter_t::TRIGGER_PARAMETER_PRESSED);
     bt->parseParameters();
     bt->setObjectIP(brakeObjectIP.s_addr);
+
+    brakeLightAction->appendParameter(Action::ActionParameter_t::ACTION_PARAMETER_SET_TRUE);
+    brakeLightAction->setObjectIP(ledObjectIP.s_addr);
 
     mqttAction->appendParameter(Action::ActionParameter_t::ACTION_PARAMETER_VS_BRAKE_WARNING);
     mqttAction->setObjectIP(mqttObjectIP.s_addr);
@@ -98,8 +104,10 @@ void Scenario::parseScenarioFile(std::ifstream &file)
 
     addTrigger(bt);
     addAction(mqttAction);
+    addAction(brakeLightAction);
 
     linkTriggerWithAction(bt, mqttAction);
+    linkTriggerWithAction(bt, brakeLightAction);
 }
 
 Scenario::ScenarioReturnCode_t Scenario::addTrigger(Trigger* tp)
