@@ -66,7 +66,7 @@
   -- Function declarations.
   ------------------------------------------------------------*/
 I32 generateCAMMessage(MONRType *MONRData, CAM_t* lastCam);
-I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm);
+I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm, int causeCode);
 
 I32 sendCAM(CAM_t* lastCam);
 I32 sendDENM(DENM_t* lastDENM);
@@ -253,7 +253,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
                 if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
                     generateCAMMessage(&MONRMessage, lastCam);
-                    generateDENMMessage(&MONRMessage, lastDENM);
+                    generateDENMMessage(&MONRMessage, lastDENM, CauseCodeType_reserved);
                     sendCAM(lastCam);
                     sendDENM(lastDENM);
                 }
@@ -283,7 +283,7 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 }
 
                 // Based on last MONR message, generate a DENM message to send
-                generateDENMMessage(&MONRMessage, lastDENM);
+                generateDENMMessage(&MONRMessage, lastDENM, CauseCodeType_collisionRisk);
 
                 if (actionData.executionTime_qmsoW == 0)
                 {
@@ -516,7 +516,7 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
  * \param lastDENM struct to fill with DENM data if DENM should be sent, used as reference to calculate new DENM.
  * \param lastSpeed variable keeping track of last speed recorded.
  */
-I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
+I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm, int causeCode){
     TimeType time;
     DENM_t tempDENM;
 
@@ -570,9 +570,15 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     //tempDENM.denm.management.transmissionInterval = 100;
     //tempDENM.denm.management.stationType = StationType_heavyTruck; //HEAVY TRUCK. 5 = passenger car, 1 = Pedestrian
     //tempDENM.denm.situation->informationQuality = InformationQuality_highest;
-    //tempDENM.denm.situation->eventType.causeCode = CauseCodeType_dangerousSituation;
+    tempDENM.denm.situation->eventType.causeCode = causeCode;
 
-    //tempDENM.denm.situation->eventType.subCauseCode =  1; //Emergency break engaged
+    if(causeCode == CauseCodeType_collisionRisk){
+         tempDENM.denm.situation->eventType.subCauseCode = 1;  //Emergency break engaged
+    }
+    else{
+     tempDENM.denm.situation->eventType.subCauseCode = 0;
+    }
+
 
     //tempDENM.denm.location->eventSpeed->speedValue = 0; //CHECK THIS
     //tempDENM.denm.location->eventSpeed->speedConfidence = 0; //unavaliabe
