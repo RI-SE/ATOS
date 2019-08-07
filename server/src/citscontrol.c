@@ -39,6 +39,7 @@
 #include "util.h"
 #include "iso22133.h"
 #include "maestroTime.h"
+#include "datadictionary.h"
 
 
 
@@ -100,6 +101,11 @@ enum CITS_STATE {
     SENDING
 };
 
+struct Origo {
+    double longitude;
+    double latitude;
+};
+
 static int state = INIT;
 static volatile int pending_state = INIT;
 static volatile int iExit = 0;
@@ -109,12 +115,16 @@ static MQTTClient_message pubmsg = MQTTClient_message_initializer;
 static volatile MQTTClient_deliveryToken deliveredtoken = 0;
 static MQTTClient_deliveryToken sendtoken = 0;
 static DENM_t* lastDENM;
+static struct Origo origin;
+
 
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
 void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
+    origin.longitude = -1;
+    origin.latitude = -1;
 
     int camTimeCycle = 0;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
@@ -318,6 +328,11 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
         case COMM_INV:
             break;
+        case COMM_DATA_DICT:
+            DataDictionaryGetOriginLatitudeDbl(GSD, &origin.latitude);
+            DataDictionaryGetOriginLongitudeDbl(GSD, &origin.longitude);
+            break;
+
         default:
             LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
         }
@@ -470,21 +485,17 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     // calculate the norm value
     distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
 
-    // TODO: Get From RVSSgetParameter
-    double origoLong = 12.77011670;
-    double origoLat = 57.77315060;
+    fail = UtilVincentyDirect(origin.latitude, origin.longitude, azimuth1,distance ,&latitude,&longitude,&azimuth2);
 
-    fail = UtilVincentyDirect(origoLat,origoLong,azimuth1,distance ,&latitude,&longitude,&azimuth2);
-
-    tempCam.cam.camParameters.basicContainer.referencePosition.latitude = latitude;
-    tempCam.cam.camParameters.basicContainer.referencePosition.longitude = longitude;
+    tempCam.cam.camParameters.basicContainer.referencePosition.latitude = origin.latitude;
+    tempCam.cam.camParameters.basicContainer.referencePosition.longitude = origin.longitude;
 
     /*
-    printf("calc latitude %f \n",  latitude);
-    printf("calc longitude %f \n",  longitude);
+    printf("\ncalc latitude %f \n",  origin.latitude);
+    printf("\ncalc longitude %f \n",  origin.longitude);
 
-    printf("CAM latitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.latitude);
-    printf("CAM longitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.longitude);
+    printf("\nCAM latitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.latitude);
+    printf("\nCAM longitude %f \n",  tempCam.cam.camParameters.basicContainer.referencePosition.longitude);
     */
 
     tempCam.cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = MONRData->HeadingU16;
@@ -506,10 +517,9 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     if(MONRData != NULL ){
         *cam = tempCam;
     }
+    return 0;
 
 }
-
-
 
 
 /*!
@@ -554,16 +564,14 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     // calculate the norm value
     distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
 
-    // TODO: Get From RVSSgetParameter
-    double origoLong = 12.77011670;
-    double origoLat = 57.77315060;
+    fail = UtilVincentyDirect(origin.latitude, origin.longitude,azimuth1,distance ,&latitude,&longitude,&azimuth2);
 
-    fail = UtilVincentyDirect(origoLat,origoLong,azimuth1,distance ,&latitude,&longitude,&azimuth2);
-
-    tempDENM.denm.management.eventPosition.latitude = latitude;
-    tempDENM.denm.management.eventPosition.longitude = longitude;
+    tempDENM.denm.management.eventPosition.latitude = origin.latitude;
+    tempDENM.denm.management.eventPosition.longitude = origin.longitude;
 
     /*
+    printf("latitude %f \n", origin.latitude);
+    printf("longitude %f \n", origin.longitude);
     printf("DENM latitude %f \n", tempDENM.denm.management.eventPosition.latitude);
     printf("DENM longitude %f \n", tempDENM.denm.management.eventPosition.longitude);
     */
@@ -592,7 +600,7 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm){
     if(MONRData != NULL ){
         *denm = tempDENM;
     }
-
+    return 0;
 }
 /*!
  * \brief SendCam publishes a cam message on MQTT with hardcoded topic.
@@ -616,9 +624,7 @@ I32 sendCAM(CAM_t* cam){
  * \return 1 if message sent succesfully
  */
 I32 sendDENM(DENM_t* denm){
-
     LogMessage(LOG_LEVEL_INFO,"Sending DENM");
-
     //FILE *fp = fopen("tmp", "wb");
     //asn_enc_rval_t ec = der_encode(&asn_DEF_DENM, denm, write_out, fp);
     //fclose(fp);
