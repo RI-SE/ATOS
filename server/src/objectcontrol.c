@@ -184,7 +184,7 @@ static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sock
 static void vCloseSafetyChannel(int* sockfd);
 I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, U8 debug);
 static size_t uiRecvMonitor(int* sockfd, char* buffer, size_t length);
-static int iGetSocketFromObjectIP(in_addr_t ipAddr, int sockfds[], unsigned int nSockfds);
+static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, C8 *objectIPStrings[], unsigned int numberOfStrings);
 static void signalHandler(int signo);
 I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug);
 I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
@@ -622,7 +622,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     vSetState(OBC_STATE_CONNECTED, GSD);
                 }
                 MessageLength = ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, pcRecvBuffer[0], 0);
-
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
                 {
                     /*Send OSTM message*/
@@ -743,18 +742,18 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             else if(iCommand == COMM_ACCM && OBCState == OBC_STATE_CONNECTED)
             {
                 UtilPopulateACCMDataStructFromMQ(pcRecvBuffer,sizeof(pcRecvBuffer),&mqACCMData);
-                socket_fd = iGetSocketFromObjectIP(mqACCMData.ip, socket_fds, sizeof(socket_fds)/sizeof(socket_fds[0]));
-                if (socket_fd != 0)
-                    ObjectControlSendACCMMessage(&mqACCMData,&socket_fd,1);
+                iIndex = iGetObjectIndexFromObjectIP(mqACCMData.ip, object_address_name, sizeof(object_address_name)/sizeof(object_address_name[0]));
+                if (iIndex != -1)
+                    ObjectControlSendACCMMessage(&mqACCMData,&(socket_fds[iIndex]),1);
                 else
                     LogMessage(LOG_LEVEL_WARNING, "Unable to send ACCM: no valid socket found");
             }
             else if (iCommand == COMM_EXAC && OBCState == OBC_STATE_RUNNING)
             {
                 UtilPopulateEXACDataStructFromMQ(pcRecvBuffer,sizeof(pcRecvBuffer),&mqEXACData);
-                socket_fd = iGetSocketFromObjectIP(mqEXACData.ip, socket_fds, sizeof(socket_fds)/sizeof(socket_fds[0]));
-                if (socket_fd != 0)
-                    ObjectControlSendEXACMessage(&mqEXACData,&socket_fd,1);
+                iIndex = iGetObjectIndexFromObjectIP(mqEXACData.ip, object_address_name, sizeof(object_address_name)/sizeof(object_address_name[0]));
+                if (iIndex != -1)
+                    ObjectControlSendEXACMessage(&mqEXACData,&(socket_fds[iIndex]),1);
                 else
                     LogMessage(LOG_LEVEL_WARNING, "Unable to send EXAC: no valid socket found");
             }
@@ -2721,32 +2720,27 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
 }
 
 
-static int iGetSocketFromObjectIP(in_addr_t ipAddr, int sockfds[], unsigned int nSockfds)
+static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, C8 *objectIPStrings[], unsigned int nIPStrings)
 {
     struct sockaddr_in inaddr;
-    socklen_t addrlen = sizeof(inaddr);
     int result;
-    char ip[INET_ADDRSTRLEN];
-    char ip2[INET_ADDRSTRLEN];
 
-    inet_ntop(AF_INET, &ipAddr, ip, INET_ADDRSTRLEN);
-
-    LogPrint("Searching for %s",ip);
-    for (unsigned int i = 0; i < nSockfds; ++i) {
-        result = getsockname(sockfds[i], (struct sockaddr*)&inaddr, &addrlen); /// RETURNS 10.130.254.221 when should be 220 ?????????
-        inet_ntop(AF_INET, &inaddr.sin_addr.s_addr, ip2, INET_ADDRSTRLEN);
-        if (result == -1)
+    for (unsigned int i = 0; i < nIPStrings; ++i) {
+        result = inet_pton(AF_INET,objectIPStrings[i],&(inaddr.sin_addr));
+        if (result == 0)
         {
-            LogMessage(LOG_LEVEL_ERROR,"Error!");
             continue;
         }
-        inet_ntop(AF_INET, &inaddr.sin_addr.s_addr, ip, INET_ADDRSTRLEN);
-        LogPrint("Is it: %s ?",ip);
+        else if (result == -1)
+        {
+            LogMessage(LOG_LEVEL_ERROR,"Invalid address family");
+            return -1;
+        }
 
         if (inaddr.sin_addr.s_addr == ipAddr)
-            return sockfds[i];
+            return (int)i;
     }
-    return 0;
+    return -1;
 }
 
 static I32 vConnectObject(int* sockfd, const char* name, const uint32_t port, U8 *Disconnect)
