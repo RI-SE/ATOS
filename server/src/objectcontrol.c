@@ -1187,31 +1187,31 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     C8 *p = MonrData;
 
     // Decode ISO header
-    memcpy(p, &MONRData->Header.SyncWordU16, sizeof(MONRData->Header.SyncWordU16));
+    memcpy(&MONRData->Header.SyncWordU16, p, sizeof(MONRData->Header.SyncWordU16));
     p += sizeof(MONRData->Header.SyncWordU16);
 
-    memcpy(p, &MONRData->Header.TransmitterIdU8, sizeof(MONRData->Header.TransmitterIdU8));
+    memcpy(&MONRData->Header.TransmitterIdU8, p, sizeof(MONRData->Header.TransmitterIdU8));
     p += sizeof(MONRData->Header.TransmitterIdU8);
 
-    memcpy(p, &MONRData->Header.MessageCounterU8, sizeof(MONRData->Header.MessageCounterU8));
+    memcpy(&MONRData->Header.MessageCounterU8, p, sizeof(MONRData->Header.MessageCounterU8));
     p += sizeof(MONRData->Header.MessageCounterU8);
 
-    memcpy(p, &MONRData->Header.AckReqProtVerU8, sizeof(MONRData->Header.AckReqProtVerU8));
+    memcpy(&MONRData->Header.AckReqProtVerU8, p, sizeof(MONRData->Header.AckReqProtVerU8));
     p += sizeof(MONRData->Header.AckReqProtVerU8);
 
-    memcpy(p, &MONRData->Header.MessageIdU16, sizeof(MONRData->Header.MessageIdU16));
+    memcpy(&MONRData->Header.MessageIdU16, p, sizeof(MONRData->Header.MessageIdU16));
     p += sizeof(MONRData->Header.MessageIdU16);
 
-    memcpy(p, &MONRData->Header.MessageLengthU32, sizeof(MONRData->Header.MessageLengthU32));
+    memcpy(&MONRData->Header.MessageLengthU32, p, sizeof(MONRData->Header.MessageLengthU32));
     p += sizeof(MONRData->Header.MessageLengthU32);
 
     // Decode content header
-    memcpy(p, &valueID, sizeof(valueID));
+    memcpy(&valueID, p, sizeof(valueID));
     if (valueID == VALUE_ID_MONR_STRUCT)
     {
         p += sizeof(valueID);
 
-        memcpy(p, &contentLength, sizeof(contentLength));
+        memcpy(&contentLength, p, sizeof(contentLength));
         p += sizeof(contentLength);
 
         // TODO: check on content length
@@ -1222,47 +1222,47 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     }
 
     // Decode content
-    memcpy(p, &MONRData->GPSQmsOfWeekU32, sizeof(MONRData->GPSQmsOfWeekU32));
+    memcpy(&MONRData->GPSQmsOfWeekU32, p, sizeof(MONRData->GPSQmsOfWeekU32));
     p += sizeof(MONRData->GPSQmsOfWeekU32);
 
-    memcpy(p, &MONRData->XPositionI32, sizeof(MONRData->XPositionI32));
+    memcpy(&MONRData->XPositionI32, p, sizeof(MONRData->XPositionI32));
     p += sizeof(MONRData->XPositionI32);
 
-    memcpy(p, &MONRData->YPositionI32, sizeof(MONRData->YPositionI32));
+    memcpy(&MONRData->YPositionI32, p, sizeof(MONRData->YPositionI32));
     p += sizeof(MONRData->YPositionI32);
 
-    memcpy(p, &MONRData->ZPositionI32, sizeof(MONRData->ZPositionI32));
+    memcpy(&MONRData->ZPositionI32, p, sizeof(MONRData->ZPositionI32));
     p += sizeof(MONRData->ZPositionI32);
 
-    memcpy(p, &MONRData->HeadingU16, sizeof(MONRData->HeadingU16));
+    memcpy(&MONRData->HeadingU16, p, sizeof(MONRData->HeadingU16));
     p += sizeof(MONRData->HeadingU16);
 
-    memcpy(p, &MONRData->LongitudinalSpeedI16, sizeof(MONRData->LongitudinalSpeedI16));
+    memcpy(&MONRData->LongitudinalSpeedI16, p, sizeof(MONRData->LongitudinalSpeedI16));
     p += sizeof(MONRData->LongitudinalSpeedI16);
 
-    memcpy(p, &MONRData->LateralSpeedI16, sizeof(MONRData->LateralSpeedI16));
+    memcpy(&MONRData->LateralSpeedI16, p, sizeof(MONRData->LateralSpeedI16));
     p += sizeof(MONRData->LateralSpeedI16);
 
-    memcpy(p, &MONRData->LongitudinalAccI16, sizeof(MONRData->LongitudinalAccI16));
+    memcpy(&MONRData->LongitudinalAccI16, p, sizeof(MONRData->LongitudinalAccI16));
     p += sizeof(MONRData->LongitudinalAccI16);
 
-    memcpy(p, &MONRData->LateralAccI16, sizeof(MONRData->LateralAccI16));
+    memcpy(&MONRData->LateralAccI16, p, sizeof(MONRData->LateralAccI16));
     p += sizeof(MONRData->LateralAccI16);
 
-    memcpy(p, &MONRData->DriveDirectionU8, sizeof(MONRData->DriveDirectionU8));
+    memcpy(&MONRData->DriveDirectionU8, p, sizeof(MONRData->DriveDirectionU8));
     p += sizeof(MONRData->DriveDirectionU8);
 
-    memcpy(p, &MONRData->StateU8, sizeof(MONRData->StateU8));
+    memcpy(&MONRData->StateU8, p, sizeof(MONRData->StateU8));
     p += sizeof(MONRData->StateU8);
 
-    memcpy(p, &MONRData->ReadyToArmU8, sizeof(MONRData->ReadyToArmU8));
+    memcpy(&MONRData->ReadyToArmU8, p, sizeof(MONRData->ReadyToArmU8));
     p += sizeof(MONRData->ReadyToArmU8);
 
-    memcpy(p, &MONRData->ErrorStatusU8, sizeof(MONRData->ErrorStatusU8));
+    memcpy(&MONRData->ErrorStatusU8, p, sizeof(MONRData->ErrorStatusU8));
     p += sizeof(MONRData->ErrorStatusU8);
 
     // Footer
-    memcpy(p, &MONRData->CRC, sizeof(MONRData->CRC));
+    memcpy(&MONRData->CRC, p, sizeof(MONRData->CRC));
     p += sizeof(MONRData->CRC);
 
     // TODO: check on CRC
