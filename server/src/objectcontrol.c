@@ -184,7 +184,7 @@ static void vCreateSafetyChannel(const char* name,const uint32_t port, int* sock
 static void vCloseSafetyChannel(int* sockfd);
 I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeType *GPSTime, C8 *Latitude, C8 *Longitude, C8 *Altitude, U8 debug);
 static size_t uiRecvMonitor(int* sockfd, char* buffer, size_t length);
-static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, C8 *objectIPStrings[], unsigned int numberOfStrings);
+static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects);
 static void signalHandler(int signo);
 I32 ObjectControlBuildSTRTMessage(C8* MessageBuffer, STRTType *STRTData, TimeType *GPSTime, U32 ScenarioStartTime, U32 DelayStart, U32 *OutgoingStartTime, U8 debug);
 I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
@@ -213,6 +213,7 @@ I32 ObjectControlSendEXACMessage(EXACData *EXAC, I32 *socket, U8 debug);
 
 static void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
                              C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
+                             in_addr_t objectIPs[MAX_OBJECTS],
                              I32 *nbr_objects);
 
 OBCState_t vInitializeState(OBCState_t firstState, GSDType *GSD);
@@ -246,6 +247,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     I32 socket_fd = 0;
     C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH];
     C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH];
+    in_addr_t objectIPs[MAX_OBJECTS];
     U32 object_udp_port[MAX_OBJECTS];
     U32 object_tcp_port[MAX_OBJECTS];
     I32 nbr_objects=0;
@@ -690,7 +692,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
                 /* Get objects; name and drive file */
                 nbr_objects = 0;
-                vFindObjectsInfo(object_traj_file,object_address_name,&nbr_objects);
+                vFindObjectsInfo(object_traj_file,object_address_name,objectIPs,&nbr_objects);
                 DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 
                 for(iIndex=0;iIndex<nbr_objects;++iIndex)
@@ -742,16 +744,18 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             else if(iCommand == COMM_ACCM && OBCState == OBC_STATE_CONNECTED)
             {
                 UtilPopulateACCMDataStructFromMQ(pcRecvBuffer,sizeof(pcRecvBuffer),&mqACCMData);
-                iIndex = iGetObjectIndexFromObjectIP(mqACCMData.ip, object_address_name, sizeof(object_address_name)/sizeof(object_address_name[0]));
+                iIndex = iGetObjectIndexFromObjectIP(mqACCMData.ip, objectIPs, sizeof(objectIPs)/sizeof(objectIPs[0]));
                 if (iIndex != -1)
+                {
                     ObjectControlSendACCMMessage(&mqACCMData,&(socket_fds[iIndex]),1);
+                }
                 else
                     LogMessage(LOG_LEVEL_WARNING, "Unable to send ACCM: no valid socket found");
             }
             else if (iCommand == COMM_EXAC && OBCState == OBC_STATE_RUNNING)
             {
                 UtilPopulateEXACDataStructFromMQ(pcRecvBuffer,sizeof(pcRecvBuffer),&mqEXACData);
-                iIndex = iGetObjectIndexFromObjectIP(mqEXACData.ip, object_address_name, sizeof(object_address_name)/sizeof(object_address_name[0]));
+                iIndex = iGetObjectIndexFromObjectIP(mqEXACData.ip, objectIPs, sizeof(objectIPs)/sizeof(objectIPs[0]));
                 if (iIndex != -1)
                     ObjectControlSendEXACMessage(&mqEXACData,&(socket_fds[iIndex]),1);
                 else
@@ -2720,24 +2724,10 @@ I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, D
 }
 
 
-static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, C8 *objectIPStrings[], unsigned int nIPStrings)
+static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects)
 {
-    struct sockaddr_in inaddr;
-    int result;
-
-    for (unsigned int i = 0; i < nIPStrings; ++i) {
-        result = inet_pton(AF_INET,objectIPStrings[i],&(inaddr.sin_addr));
-        if (result == 0)
-        {
-            continue;
-        }
-        else if (result == -1)
-        {
-            LogMessage(LOG_LEVEL_ERROR,"Invalid address family");
-            return -1;
-        }
-
-        if (inaddr.sin_addr.s_addr == ipAddr)
+    for (unsigned int i = 0; i < numberOfObjects; ++i) {
+        if (objectIPs[i] == ipAddr)
             return (int)i;
     }
     return -1;
@@ -2923,11 +2913,13 @@ static size_t uiRecvMonitor(int* sockfd, char* buffer, size_t length)
     return recvDataSize;
 }
 
-void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH], I32 *nbr_objects)
+void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH], in_addr_t objectIPs[MAX_OBJECTS], I32 *nbr_objects)
 {
     DIR* traj_directory;
     struct dirent *directory_entry;
     int iForceObjectToLocalhost;
+    struct sockaddr_in sockaddr;
+    int result;
 
     iForceObjectToLocalhost = 0;
 
@@ -2954,6 +2946,19 @@ void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], C8 object
             if(0 == iForceObjectToLocalhost)
             {
                 (void)strncat(object_address_name[(*nbr_objects)],directory_entry->d_name,strlen(directory_entry->d_name));
+                result = inet_pton(AF_INET,object_address_name[*nbr_objects],&sockaddr.sin_addr);
+                if (result == -1)
+                {
+                    LogMessage(LOG_LEVEL_ERROR,"Invalid address family");
+                    continue;
+                }
+                else if (result == 0)
+                {
+                    LogMessage(LOG_LEVEL_WARNING,"Address <%s> is not a valid IPv4 address",object_address_name[*nbr_objects]);
+                    continue;
+                }
+                else
+                    objectIPs[*nbr_objects] = sockaddr.sin_addr.s_addr;
             }
             else
             {
