@@ -2011,7 +2011,7 @@ int iCommSend(const enum COMMAND iCommand, const char* cpData, size_t dataLength
     case MQBUS_OK:
         return 0;
     case MQBUS_MQ_FULL:
-        LogMessage(LOG_LEVEL_WARNING, "Attempted to write to full message queue - message may be lost: <%d><%s>", iCommand, cpData);
+        //LogMessage(LOG_LEVEL_WARNING, "Attempted to write to full message queue - message may be lost: <%d><%s>", iCommand, cpData);
         return 1;
     case MQBUS_INVALID_INPUT_ARGUMENT:
         LogMessage(LOG_LEVEL_WARNING, "Invalid message queue message length");
@@ -3268,7 +3268,6 @@ I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataTy
     if (U16Data == VALUE_ID_MONR_STRUCT)
     {
         rdPtr += sizeof(U16Data);
-        U16Data = 0;
 
         memcpy(&contentLength, rdPtr, sizeof(contentLength));
         rdPtr += sizeof(contentLength);
@@ -3286,11 +3285,12 @@ I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataTy
             return -1;
         }
     }
-    else
+    else if (debug)
     {
-        LogMessage(LOG_LEVEL_WARNING, "Received MONR message without content header: corrupt data may result");
-        U16Data = 0;
+        LogPrint("Received MONR message without content header: corrupt data may result");
     }
+
+    U16Data = 0;
 
     memcpy(&U32Data, rdPtr, sizeof(U32Data));
     monitorData->MONR.GPSQmsOfWeekU32 = U32Data;

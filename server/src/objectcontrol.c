@@ -740,7 +740,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 //OSEMSentU8 = 0;
                 STRTSentU8 = 0;
             }
-            else if (iCommand == COMM_ACCM && OBCState == OBC_STATE_CONNECTED)
+            else if(iCommand == COMM_ACCM && OBCState == OBC_STATE_CONNECTED)
             {
                 UtilPopulateACCMDataStructFromMQ(pcRecvBuffer,sizeof(pcRecvBuffer),&mqACCMData);
                 socket_fd = iGetSocketFromObjectIP(mqACCMData.ip, socket_fds, sizeof(socket_fds)/sizeof(socket_fds[0]));
@@ -1182,87 +1182,90 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     U32 U32Data = 0;
     I32 I32Data = 0;
     U64 U64Data = 0;
-    C8 *p;
-    U16Data = (U16Data | *(MonrData+1)) << 8;
-    U16Data = U16Data | *MonrData;
+    U16 contentLength = 0;
+    U16 valueID = 0;
+    C8 *p = MonrData;
 
-    MONRData->Header.SyncWordU16 = U16Data;
-    MONRData->Header.TransmitterIdU8 = *(MonrData+2);
-    MONRData->Header.MessageCounterU8 = *(MonrData+3);
-    MONRData->Header.AckReqProtVerU8 = *(MonrData+4);
+    // Decode ISO header
+    memcpy(p, &MONRData->Header.SyncWordU16, sizeof(MONRData->Header.SyncWordU16));
+    p += sizeof(MONRData->Header.SyncWordU16);
 
-    U16Data = 0;
-    U16Data = (U16Data | *(MonrData+6)) << 8;
-    U16Data = U16Data | *(MonrData+5);
-    MONRData->Header.MessageIdU16 = U16Data;
+    memcpy(p, &MONRData->Header.TransmitterIdU8, sizeof(MONRData->Header.TransmitterIdU8));
+    p += sizeof(MONRData->Header.TransmitterIdU8);
 
-    U32Data = (U32Data | *(MonrData+10)) << 8;
-    U32Data = (U32Data | *(MonrData+9)) << 8;
-    U32Data = (U32Data | *(MonrData+8)) << 8;
-    U32Data = U32Data | *(MonrData+7);
-    MONRData->Header.MessageLengthU32 = U32Data;
+    memcpy(p, &MONRData->Header.MessageCounterU8, sizeof(MONRData->Header.MessageCounterU8));
+    p += sizeof(MONRData->Header.MessageCounterU8);
 
-    U32Data = 0;
-    U32Data = (U32Data | *(MonrData+14)) << 8;
-    U32Data = (U32Data | *(MonrData+13)) << 8;
-    U32Data = (U32Data | *(MonrData+12)) << 8;
-    U32Data = U32Data | *(MonrData+11);
-    MONRData->GPSQmsOfWeekU32 = U32Data;
+    memcpy(p, &MONRData->Header.AckReqProtVerU8, sizeof(MONRData->Header.AckReqProtVerU8));
+    p += sizeof(MONRData->Header.AckReqProtVerU8);
 
-    I32Data = 0;
-    I32Data = (I32Data | *(MonrData+18)) << 8;
-    I32Data = (I32Data | *(MonrData+17)) << 8;
-    I32Data = (I32Data | *(MonrData+16)) << 8;
-    I32Data = I32Data | *(MonrData+15);
-    MONRData->XPositionI32 = I32Data;
+    memcpy(p, &MONRData->Header.MessageIdU16, sizeof(MONRData->Header.MessageIdU16));
+    p += sizeof(MONRData->Header.MessageIdU16);
 
+    memcpy(p, &MONRData->Header.MessageLengthU32, sizeof(MONRData->Header.MessageLengthU32));
+    p += sizeof(MONRData->Header.MessageLengthU32);
 
-    I32Data = 0;
-    I32Data = (I32Data | *(MonrData+22)) << 8;
-    I32Data = (I32Data | *(MonrData+21)) << 8;
-    I32Data = (I32Data | *(MonrData+20)) << 8;
-    I32Data = I32Data | *(MonrData+19);
-    MONRData->YPositionI32 = I32Data;
+    // Decode content header
+    memcpy(p, &valueID, sizeof(valueID));
+    if (valueID == VALUE_ID_MONR_STRUCT)
+    {
+        p += sizeof(valueID);
 
+        memcpy(p, &contentLength, sizeof(contentLength));
+        p += sizeof(contentLength);
 
-    I32Data = 0;
-    I32Data = (I32Data | *(MonrData+26)) << 8;
-    I32Data = (I32Data | *(MonrData+25)) << 8;
-    I32Data = (I32Data | *(MonrData+24)) << 8;
-    I32Data = I32Data | *(MonrData+23);
-    MONRData->ZPositionI32 = I32Data;
+        // TODO: check on content length
+    }
+    else if (debug)
+    {
+        LogPrint("MONR message did not contain a content header");
+    }
 
-    U16Data = 0;
-    U16Data = (U16Data | *(MonrData+28)) << 8;
-    U16Data = U16Data | *(MonrData+27);
-    MONRData->HeadingU16 = U16Data;
+    // Decode content
+    memcpy(p, &MONRData->GPSQmsOfWeekU32, sizeof(MONRData->GPSQmsOfWeekU32));
+    p += sizeof(MONRData->GPSQmsOfWeekU32);
 
-    I16Data = 0;
-    I16Data = (I16Data | *(MonrData+30)) << 8;
-    I16Data = I16Data | *(MonrData+29);
-    MONRData->LongitudinalSpeedI16 = I16Data;
+    memcpy(p, &MONRData->XPositionI32, sizeof(MONRData->XPositionI32));
+    p += sizeof(MONRData->XPositionI32);
 
-    I16Data = 0;
-    I16Data = (I16Data | *(MonrData+32)) << 8;
-    I16Data = I16Data | *(MonrData+31);
-    MONRData->LateralSpeedI16 = I16Data;
+    memcpy(p, &MONRData->YPositionI32, sizeof(MONRData->YPositionI32));
+    p += sizeof(MONRData->YPositionI32);
 
-    I16Data = 0;
-    I16Data = (I16Data | *(MonrData+34)) << 8;
-    I16Data = I16Data | *(MonrData+33);
-    MONRData->LongitudinalAccI16 = I16Data;
+    memcpy(p, &MONRData->ZPositionI32, sizeof(MONRData->ZPositionI32));
+    p += sizeof(MONRData->ZPositionI32);
 
-    I16Data = 0;
-    I16Data = (I16Data | *(MonrData+36)) << 8;
-    I16Data = I16Data | *(MonrData+35);
-    MONRData->LateralAccI16 = I16Data;
+    memcpy(p, &MONRData->HeadingU16, sizeof(MONRData->HeadingU16));
+    p += sizeof(MONRData->HeadingU16);
 
-    MONRData->DriveDirectionU8 = *(MonrData+37);
-    MONRData->StateU8 = *(MonrData+38);
-    MONRData->ReadyToArmU8 = *(MonrData+39);
-    MONRData->ErrorStatusU8 = *(MonrData+40);
+    memcpy(p, &MONRData->LongitudinalSpeedI16, sizeof(MONRData->LongitudinalSpeedI16));
+    p += sizeof(MONRData->LongitudinalSpeedI16);
 
+    memcpy(p, &MONRData->LateralSpeedI16, sizeof(MONRData->LateralSpeedI16));
+    p += sizeof(MONRData->LateralSpeedI16);
 
+    memcpy(p, &MONRData->LongitudinalAccI16, sizeof(MONRData->LongitudinalAccI16));
+    p += sizeof(MONRData->LongitudinalAccI16);
+
+    memcpy(p, &MONRData->LateralAccI16, sizeof(MONRData->LateralAccI16));
+    p += sizeof(MONRData->LateralAccI16);
+
+    memcpy(p, &MONRData->DriveDirectionU8, sizeof(MONRData->DriveDirectionU8));
+    p += sizeof(MONRData->DriveDirectionU8);
+
+    memcpy(p, &MONRData->StateU8, sizeof(MONRData->StateU8));
+    p += sizeof(MONRData->StateU8);
+
+    memcpy(p, &MONRData->ReadyToArmU8, sizeof(MONRData->ReadyToArmU8));
+    p += sizeof(MONRData->ReadyToArmU8);
+
+    memcpy(p, &MONRData->ErrorStatusU8, sizeof(MONRData->ErrorStatusU8));
+    p += sizeof(MONRData->ErrorStatusU8);
+
+    // Footer
+    memcpy(p, &MONRData->CRC, sizeof(MONRData->CRC));
+    p += sizeof(MONRData->CRC);
+
+    // TODO: check on CRC
 
     if(debug == 1)
     {
@@ -2194,7 +2197,7 @@ I32 ObjectControlSendACCMMessage(ACCMData *ACCM, I32 *socket, U8 debug)
     if (messageSize - sizeof(isoACCM.header) - sizeof(isoACCM.footer) != isoACCM.header.MessageLengthU32)
         LogMessage(LOG_LEVEL_WARNING, "ACCM message sent with invalid message length");
 
-    UtilSendTCPData(MODULE_NAME, messageBuffer, (I32)messageSize, socket, 0);
+    UtilSendTCPData(MODULE_NAME, messageBuffer, (I32)messageSize, socket, 1);
 
     return (I32)messageSize;
 }
@@ -2398,7 +2401,7 @@ I32 ObjectControlBuildACCMMessage(ACCMData *mqACCMData, ACCMType *ACCM, U8 debug
 
     // Value ID fields
     ACCM->actionIDValueID = VALUE_ID_ACTION_ID;
-    ACCM->actionIDValueID = VALUE_ID_ACTION_TYPE;
+    ACCM->actionTypeValueID = VALUE_ID_ACTION_TYPE;
     ACCM->actionTypeParameter1ValueID = VALUE_ID_ACTION_TYPE_PARAM1;
     ACCM->actionTypeParameter2ValueID = VALUE_ID_ACTION_TYPE_PARAM2;
     ACCM->actionTypeParameter3ValueID = VALUE_ID_ACTION_TYPE_PARAM3;
@@ -2724,15 +2727,22 @@ static int iGetSocketFromObjectIP(in_addr_t ipAddr, int sockfds[], unsigned int 
     socklen_t addrlen = sizeof(inaddr);
     int result;
     char ip[INET_ADDRSTRLEN];
+    char ip2[INET_ADDRSTRLEN];
 
     inet_ntop(AF_INET, &ipAddr, ip, INET_ADDRSTRLEN);
 
+    LogPrint("Searching for %s",ip);
     for (unsigned int i = 0; i < nSockfds; ++i) {
-        result = getsockname(sockfds[i], (struct sockaddr*)&inaddr, &addrlen);
+        result = getsockname(sockfds[i], (struct sockaddr*)&inaddr, &addrlen); /// RETURNS 10.130.254.221 when should be 220 ?????????
+        inet_ntop(AF_INET, &inaddr.sin_addr.s_addr, ip2, INET_ADDRSTRLEN);
         if (result == -1)
+        {
+            LogMessage(LOG_LEVEL_ERROR,"Error!");
             continue;
-
+        }
         inet_ntop(AF_INET, &inaddr.sin_addr.s_addr, ip, INET_ADDRSTRLEN);
+        LogPrint("Is it: %s ?",ip);
+
         if (inaddr.sin_addr.s_addr == ipAddr)
             return sockfds[i];
     }
