@@ -30,7 +30,7 @@ typedef struct
 } FooterType; //2 bytes
 
 //! *************************** TRCM
-#define COMMAND_TRCM_CODE 11
+#define COMMAND_TRCM_CODE 0x0011
 typedef struct
 {
     HeaderType header;
@@ -110,7 +110,7 @@ typedef enum {
 
 
 //! *************************** ACCM
-#define COMMAND_ACCM_CODE 12
+#define COMMAND_ACCM_CODE 0x0012
 typedef struct
 {
     HeaderType header;
@@ -173,7 +173,7 @@ typedef enum {
 
 
 //! *************************** TREO
-#define COMMAND_TREO_CODE 13
+#define COMMAND_TREO_CODE 0x0013
 typedef struct
 {
     HeaderType header;
@@ -188,7 +188,7 @@ typedef struct
 
 
 //! *************************** EXAC
-#define COMMAND_EXAC_CODE 14
+#define COMMAND_EXAC_CODE 0x0014
 typedef struct
 {
     HeaderType header;
