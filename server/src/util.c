@@ -145,7 +145,7 @@ void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetCont
 
     // Check length
     fieldLength = lastPos - firstPos;
-    if (fieldLength > targetContainerSize)
+    if (fieldLength >= targetContainerSize)
     {
         LogMessage(LOG_LEVEL_WARNING, "Received too long HTTP header field: %s", fieldName);
         targetContainer[0] = '\0';
@@ -153,7 +153,9 @@ void CopyHTTPHeaderField(char* request, char* targetContainer, size_t targetCont
     }
     else
     {
+        // Strings in the request may not be null terminated: make them so after copying them
         strncpy(targetContainer, firstPos, fieldLength);
+        targetContainer[fieldLength] = '\0';
     }
 
 }
