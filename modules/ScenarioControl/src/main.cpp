@@ -21,6 +21,7 @@ int main()
     struct timespec remTime;
     Scenario scenario;
     TREOData treo;
+    MonitorDataType monr;
     bool terminate = false;
     enum {UNINITIALIZED, INITIALIZED, CONNECTED, RUNNING} state = UNINITIALIZED;
 
@@ -114,28 +115,13 @@ int main()
             if (state == CONNECTED)
             {
                 state = RUNNING;
-
-                // PLACEHOLDER
-                LogMessage(LOG_LEVEL_INFO,"1");
-                scenario.updateTrigger(1,false);
-                scenario.refresh();
-                LogMessage(LOG_LEVEL_INFO,"2");
-                scenario.updateTrigger(1,false);
-                scenario.refresh();
-                LogMessage(LOG_LEVEL_INFO,"3");
-                scenario.updateTrigger(1,true);
-                scenario.refresh();
-                LogMessage(LOG_LEVEL_INFO,"4");
-                scenario.updateTrigger(1,true);
-                scenario.refresh();
-                LogMessage(LOG_LEVEL_INFO,"5");
-                scenario.updateTrigger(1,false);
-                scenario.refresh();
-                LogMessage(LOG_LEVEL_INFO,"6");
             }
+            else LogMessage(LOG_LEVEL_ERROR, "Received unexpected START command (current state: %u)",static_cast<unsigned char>(state));
             break;
         case COMM_MONR:
-            // TODO: Update triggers
+            // Update triggers
+            UtilPopulateMonitorDataStruct(reinterpret_cast<uint8_t*>(mqRecvData), sizeof(mqRecvData), &monr, 0);
+            scenario.updateTrigger(monr);
             break;
         case COMM_MONI:
             // Ignore

@@ -12,8 +12,14 @@ public:
     BrakeTrigger(TriggerID_t triggerID);
     TriggerReturnCode_t parseParameters() override;
 
+    using BooleanTrigger::update;
+    TriggerReturnCode_t update(double newValue, struct timeval measurementTime) override;
+    TriggerReturnCode_t update(float newValue, struct timeval measurementTime) override { return update(static_cast<double>(newValue),measurementTime); }
+
+    void setBrakeRetardationThreshold(double threshold_m_s2);
 private:
 
+    double brakeRetardationThreshold_m_s2;
     const std::set<TriggerParameter_t> getAcceptedParameters() const override
     {
         std::set<TriggerParameter_t> accParams;
