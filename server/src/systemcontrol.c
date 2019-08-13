@@ -521,7 +521,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case COMM_OBC_STATE:
             break;
         case COMM_LOG:
-            SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
+            // This creates a problem in GUC: disabled it for now
+            //SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
             break;
         case COMM_MONR:
             // TODO: Decode
