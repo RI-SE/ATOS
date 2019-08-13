@@ -30,7 +30,7 @@
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-#define LOG_PATH "./log/"
+#define LOG_PATH MAESTRO_TEST_DIR_PATH "journal/"
 #define LOG_FILE_ENDING ".log"
 #define CSV_FILE_ENDING ".csv"
 #define FORWARD_SLASH "/"
@@ -82,6 +82,8 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     char busSendBuffer[MBUS_MAX_DATALEN];                   //!< Buffer for sending to message bus
     char pcReadBuffer[MAX_LOG_ROW_LENGTH];                  //!< Buffer for reading files
     char subStrings[MBUS_MAX_DATALEN];
+    char journalPathDir[MAX_FILE_PATH];
+    UtilGetJournalDirectoryPath(journalPathDir, sizeof(journalPathDir));
     struct timeval recvTime;
 
     // Listen for commands
@@ -110,7 +112,7 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         util_error("Unable to initialize connection to message bus");
 
     // Create log directory if it does not exist
-    vCreateLogFolder(LOG_PATH);
+    vCreateLogFolder(journalPathDir);
 
     // our time
     char *src;
@@ -384,6 +386,9 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
 {
     struct timeval tvTime;
     char logFileDirectoryPath[MAX_FILE_PATH];
+    char trajPathDir[MAX_FILE_PATH];
+    char confPathDir[MAX_FILE_PATH];
+    char journalPathDir[MAX_FILE_PATH];
     char DateBuffer[FILENAME_MAX];
     FILE *filefd, *fileread;
     char msString[10];
@@ -392,6 +397,10 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     DIR *dir;
     struct dirent *ent;
     int read;
+
+    UtilGetConfDirectoryPath(confPathDir, sizeof(confPathDir));
+    UtilGetTrajDirectoryPath(trajPathDir, sizeof(trajPathDir));
+    UtilGetJournalDirectoryPath(journalPathDir, sizeof(journalPathDir));
 
     // Clear the two path strings
     bzero(logFilePath, filePathLength);
@@ -406,7 +415,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     strcat(DateBuffer, msString);
 
     // Create log folder named with initialization date and time
-    (void)strcpy(logFileDirectoryPath, LOG_PATH);
+    (void)strcpy(logFileDirectoryPath, journalPathDir);
     (void)strcat(logFileDirectoryPath, DateBuffer);
 
     vCreateLogFolder(logFileDirectoryPath);
@@ -416,15 +425,15 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     // Copy configuration file to log directory
     LogMessage(LOG_LEVEL_INFO, "Copying configuration file to log directory");
     (void)strcpy(sysCommand, "cp ");
-    (void)strcat(sysCommand, TEST_CONF_FILE);
+    (void)strcat(sysCommand, confPathDir);
     (void)strcat(sysCommand, " ");
     (void)strcat(sysCommand, logFileDirectoryPath);
     (void)system(sysCommand);
 
     // Check if ./traj directory exists
-    if ((dir = opendir(TRAJECTORY_PATH)) == NULL)
+    if ((dir = opendir(trajPathDir)) == NULL)
     {
-        sprintf(sysCommand,"Unable to open traj directory <%s>",TRAJECTORY_PATH);
+        sprintf(sysCommand,"Unable to open traj directory <%s>",trajPathDir);
         util_error(sysCommand);
     }
     else
@@ -433,7 +442,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     // Copy trajectory files to subdirectory
     LogMessage(LOG_LEVEL_INFO, "Copying trajectory files to log directory");
     (void)strcpy(sysCommand, "cp -R ");
-    (void)strcat(sysCommand, TRAJECTORY_PATH);
+    (void)strcat(sysCommand, trajPathDir);
     (void)strcat(sysCommand, " ");
     (void)strcat(sysCommand, logFileDirectoryPath);
     (void)system(sysCommand);
@@ -458,14 +467,14 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     sprintf(pcBuffer,"------------------------------------------\nWhole Trajectory files:\n------------------------------------------\n");
     (void)fwrite(pcBuffer, 1, strlen(pcBuffer), filefd);
 
-    // Open directory ./traj/
-    if ((dir = opendir(TRAJECTORY_PATH)) != NULL)
+    // Open directory traj
+    if ((dir = opendir(trajPathDir)) != NULL)
     {
         while ((ent = readdir(dir)) != NULL)
         {
             // Copy all files in trajectory and add them to the log file
             bzero(pcBuffer, sizeof(pcBuffer));
-            strcpy(pcBuffer, TRAJECTORY_PATH);
+            strcpy(pcBuffer, trajPathDir);
             strcat(pcBuffer, ent->d_name);
             if (access(pcBuffer, 0) == 0)
             {
@@ -486,7 +495,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     }
     else
     {
-        sprintf(sysCommand,"Unable to open traj directory <%s>",TRAJECTORY_PATH);
+        sprintf(sysCommand,"Unable to open traj directory <%s>",trajPathDir);
         util_error(sysCommand);
     }
     fclose(filefd);
@@ -501,10 +510,10 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
 
 
     /* If file conf file exists and we have read permission do*/
-    if (access(TEST_CONF_FILE, 0) == 0)
+    if (access(confPathDir, 0) == 0)
     {
       /*read the .conf file and print it in to the .log file */
-      fileread = fopen(TEST_CONF_FILE, ACCESS_MODE_READ);
+      fileread = fopen(confPathDir, ACCESS_MODE_READ);
       read = fgetc(fileread);
       while(read!= EOF)
       {
@@ -515,7 +524,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     }
     else
     {
-        sprintf(sysCommand,"Unable to open <%s>",TEST_CONF_FILE);
+        sprintf(sysCommand,"Unable to open <%s>",confPathDir);
         util_error(sysCommand);
     }
 

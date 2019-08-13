@@ -106,13 +106,9 @@ extern "C"{
 // 60 * 1000
 #define MINUTE_TIME_MS 60000
 
-
-#define TEST_CONF_FILE "./conf/test.conf"
-#define TRAJECTORY_PATH "./traj/"
-
-#define ADAPTIVE_SYNC_POINT_CONF "./conf/adaptivesync.conf"
-#define VERSION_PATH "../conf/Version.txt"
-
+#define CONF_FILE_NAME "test.conf"
+#define ADAPTIVE_SYNC_FILE_NAME "adaptivesync.conf"
+#define TRIGGER_ACTION_FILE_NAME "triggeraction.conf"
 
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
@@ -175,7 +171,7 @@ extern "C"{
 #define dbl double
 #define flt float
 
-// Why do we need this?
+// Why do we need this memory efficiency? There is a risk that this breaks included code which isn't using pragma pack
 #pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
 
 #define SYNC_WORD 0x7e7e
@@ -195,26 +191,6 @@ extern "C"{
 #define FAILED_DELETE 0x02
 #define FILE_TO_MUCH_DATA 0x06
 
-/* DEBUGGING DEFINES */
-
-#define DEBUG_LEVEL_LOW 1
-#define DEBUG_LEVEL_MEDIUM 2
-#define DEBUG_LEVEL_HIGH 3
-
-// Enable debugging by defining DEBUG
-#define DEBUG
-
-
-
-#ifdef DEBUG
-// Set level of DEBUG
-#define DEBUG_TEST 1
-#else
-#define DEBUG_TEST 0
-#endif
-
-//#define DEBUG_PRINT(fmt,...) do {if(DEBUG_TEST) {fprintf(stdout,"[%s]: " fmt "\n",__func__,__VA_ARGS__);fflush(stdout);}} while (0)
-//#define DEBUG_ERR_PRINT(...) do {if(DEBUG_TEST) {fprintf(stderr,__VA_ARGS__);fflush(stderr);}} while (0)
 
 // The do - while loop makes sure that each function call is properly handled using macros
 #define LOG_SEND(buf, ...) \
@@ -842,6 +818,13 @@ int iCommSendTREO(TREOData data);
 int iCommSendTRCM(TRCMData data);
 int iCommSendEXAC(EXACData data);
 int iCommSendACCM(ACCMData data);
+
+// File system functions
+void UtilGetTestDirectoryPath(char* path, size_t pathLen);
+void UtilGetJournalDirectoryPath(char* path, size_t pathLen);
+void UtilGetConfDirectoryPath(char* path, size_t pathLen);
+void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
+void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 
 //
 char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);

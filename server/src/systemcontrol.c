@@ -60,7 +60,6 @@ typedef enum {
 #define SYSTEM_CONTROL_PROCESS_PORT   54242       // Default port, process channel
 #define SYSTEM_CONTROL_RX_PACKET_SIZE 1280
 #define SYSTEM_CONTROL_TX_PACKET_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
-#define SYSTEM_CONTROL_MAX_PATH_LENGTH 255
 #define IPC_BUFFER_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
 //#define IPC_BUFFER_SIZE   1024
 #define SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE 64
@@ -88,11 +87,7 @@ typedef enum {
 #define SMALL_BUFFER_SIZE_2 2
 #define SYSTEM_CONTROL_SEND_BUFFER_SIZE 1024
 
-#define SYSTEM_CONTROL_CONF_FILE_PATH  "conf/test.conf"
-#define SYSTEM_CONTROL_TEMP_CONF_FILE_PATH  "conf/temp.conf"
-
 #define SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE 1024
-
 
 #define SYSTEM_CONTROL_RESPONSE_CODE_OK 						0x0001
 #define SYSTEM_CONTROL_RESPONSE_CODE_ERROR 						0x0F10
@@ -700,11 +695,11 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetDirectoryContent:", ControlResponseBuffer, 1, &ClientSocket, 0);
                 if(ControlResponseBuffer[0] == FOLDER_EXIST)
                 {
-                    UtilCreateDirContent(SystemControlArgument[0], "/dir.info");
+                    UtilCreateDirContent(SystemControlArgument[0], "dir.info");
                     bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                    SystemControlBuildFileContentInfo("/dir.info", ControlResponseBuffer, 0);
+                    SystemControlBuildFileContentInfo("dir.info", ControlResponseBuffer, 0);
                     SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetDirectoryContent:", ControlResponseBuffer, 4, &ClientSocket, 0);
-                    SystemControlSendFileContent(&ClientSocket, "/dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE, ControlResponseBuffer, REMOVE_FILE, 0);
+                    SystemControlSendFileContent(&ClientSocket, "dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE, ControlResponseBuffer, REMOVE_FILE, 0);
                 }
 
             } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in GetDirectoryContent(path)!"); SystemControlCommand = Idle_0;}
@@ -743,8 +738,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 else if (ControlResponseBuffer[0] == PATH_INVALID_MISSING)
                 {
                     LogMessage(LOG_LEVEL_INFO,"Failed receiving file: %s", SystemControlArgument[0]);
-                    SystemControlReceiveRxData(&ClientSocket, "/file.tmp", SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
-                    SystemControlDeleteFileDirectory("/file.tmp", ControlResponseBuffer, 0);
+                    SystemControlReceiveRxData(&ClientSocket, "file.tmp", SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
+                    SystemControlDeleteFileDirectory("file.tmp", ControlResponseBuffer, 0);
                     ControlResponseBuffer[0] = PATH_INVALID_MISSING;
                 }
                 else
@@ -1692,25 +1687,34 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
     FILE *fd, *TempFd;
     C8 *ptr1, *ptr2;
     U8 ParameterFound = 0;
+    char confPathFileDir[MAX_FILE_PATH];
+    char tempConfPathFileDir[MAX_FILE_PATH];
+    const char TEMP_FILE_NAME[] = "temp-" MODULE_NAME ".conf";
+
+    UtilGetConfDirectoryPath(confPathFileDir, sizeof(confPathFileDir));
+    strcpy(tempConfPathFileDir,confPathFileDir);
+    strcat(confPathFileDir, CONF_FILE_NAME);
+    strcat(tempConfPathFileDir, TEMP_FILE_NAME);
+
     bzero(Parameter, SMALL_BUFFER_SIZE_64);
 
     strcat(Parameter, ParameterName);
     strcat(Parameter, "=");
 
     //Remove temporary file
-    remove(SYSTEM_CONTROL_TEMP_CONF_FILE_PATH);
+    remove(tempConfPathFileDir);
 
     //Create temporary file
-    TempFd = fopen (SYSTEM_CONTROL_TEMP_CONF_FILE_PATH, "w+");
+    TempFd = fopen (tempConfPathFileDir, "w+");
 
     //Open configuration file
-    fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
+    fd = fopen (confPathFileDir, "r");
 
     if(fd > 0)
     {
         RowCount = UtilCountFileRows(fd);
         fclose(fd);
-        fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
+        fd = fopen (confPathFileDir, "r");
 
         for(i = 0; i < RowCount; i++)
         {
@@ -1751,13 +1755,13 @@ I32 SystemControlWriteServerParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
         fclose(fd);
 
         //Remove test.conf
-        remove(SYSTEM_CONTROL_CONF_FILE_PATH);
+        remove(confPathFileDir);
 
         //Rename temp.conf to test.conf
-        rename(SYSTEM_CONTROL_TEMP_CONF_FILE_PATH, SYSTEM_CONTROL_CONF_FILE_PATH);
+        rename(tempConfPathFileDir, confPathFileDir);
 
         //Remove temporary file
-        remove(SYSTEM_CONTROL_TEMP_CONF_FILE_PATH);
+        remove(tempConfPathFileDir);
     }
 
     return 0;
@@ -1770,13 +1774,16 @@ I32 SystemControlReadServerParameter(C8 *ParameterName, C8 *ReturnValue, U8 Debu
 
     I32 RowCount, i;
     C8 TextBuffer[SMALL_BUFFER_SIZE_128];
+    char confPathDir[MAX_FILE_PATH];
+    UtilGetConfDirectoryPath(confPathDir, sizeof(confPathDir));
+    strcat(confPathDir, CONF_FILE_NAME);
 
     bzero(TextBuffer, SMALL_BUFFER_SIZE_128);
 
     strcat(TextBuffer, ParameterName);
     strcat(TextBuffer, "=");
 
-    UtilSearchTextFile(SYSTEM_CONTROL_CONF_FILE_PATH, TextBuffer, "", ReturnValue);
+    UtilSearchTextFile(confPathDir, TextBuffer, "", ReturnValue);
 
     if(Debug)
     {
@@ -1793,13 +1800,16 @@ I32 SystemControlReadServerParameterList(C8 *ParameterList, U8 Debug)
     I32 RowCount, i;
     C8 TextBuffer[SMALL_BUFFER_SIZE_128];
     FILE *fd;
+    char confPathDir[MAX_FILE_PATH];
+    UtilGetConfDirectoryPath(confPathDir, sizeof(confPathDir));
+    strcat(confPathDir, CONF_FILE_NAME);
 
-    fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
+    fd = fopen (confPathDir, "r");
     if(fd > 0)
     {
         RowCount = UtilCountFileRows(fd);
         fclose(fd);
-        fd = fopen (SYSTEM_CONTROL_CONF_FILE_PATH, "r");
+        fd = fopen (confPathDir, "r");
 
         for(i = 0; i < RowCount; i++)
         {
@@ -1827,9 +1837,9 @@ I32 SystemControlBuildFileContentInfo(C8 *Path, C8 *ReturnValue, U8 Debug)
 {
 
     struct stat st;
-    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
-    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
-    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    C8 CompletePath[MAX_FILE_PATH];
+    bzero(CompletePath, MAX_FILE_PATH);
+    UtilGetTestDirectoryPath(CompletePath, sizeof(CompletePath));
     strcat(CompletePath, Path);
 
     stat(CompletePath, &st);
@@ -1849,9 +1859,9 @@ I32 SystemControlCheckFileDirectoryExist(C8 *ParameterName, C8 *ReturnValue, U8 
 
     DIR *pDir;
     FILE *fd;
-    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
-    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
-    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    C8 CompletePath[MAX_FILE_PATH];
+    bzero(CompletePath, MAX_FILE_PATH);
+    UtilGetTestDirectoryPath(CompletePath, sizeof(CompletePath));
     strcat(CompletePath, ParameterName);
 
     *ReturnValue = PATH_INVALID_MISSING;
@@ -1885,9 +1895,9 @@ I32 SystemControlDeleteFileDirectory(C8 *Path, C8 *ReturnValue, U8 Debug)
 
     DIR *pDir;
     FILE *fd;
-    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
-    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
-    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    C8 CompletePath[MAX_FILE_PATH];
+    bzero(CompletePath, MAX_FILE_PATH);
+    UtilGetTestDirectoryPath(CompletePath, sizeof(CompletePath));
     strcat(CompletePath, Path);
 
     *ReturnValue = PATH_INVALID_MISSING;
@@ -1936,9 +1946,9 @@ I32 SystemControlCreateDirectory(C8 *Path, C8 *ReturnValue, U8 Debug)
 
     DIR *pDir;
     FILE *fd;
-    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
-    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
-    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    C8 CompletePath[MAX_FILE_PATH];
+    bzero(CompletePath, MAX_FILE_PATH);
+    UtilGetTestDirectoryPath(CompletePath, sizeof(CompletePath));
     strcat(CompletePath, Path);
 
     *ReturnValue = PATH_INVALID_MISSING;
@@ -1984,9 +1994,9 @@ I32 SystemControlUploadFile(C8 *Path, C8 *FileSize, C8 *PacketSize, C8 *ReturnVa
 {
 
     FILE *fd;
-    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
-    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
-    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    C8 CompletePath[MAX_FILE_PATH];
+    bzero(CompletePath, MAX_FILE_PATH);
+    UtilGetTestDirectoryPath(CompletePath, sizeof(CompletePath));
     strcat(CompletePath, Path);
 
     if(Debug)
@@ -2021,9 +2031,9 @@ I32 SystemControlUploadFile(C8 *Path, C8 *FileSize, C8 *PacketSize, C8 *ReturnVa
     else
     {
         //ok, path invalid create temporary file
-        bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
-        GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
-        strcat(CompletePath, "/file.tmp");
+        bzero(CompletePath, MAX_FILE_PATH);
+        UtilGetTestDirectoryPath(CompletePath, sizeof(CompletePath));
+        strcat(CompletePath, "file.tmp");
         fd = fopen(CompletePath, "r");
         if(fd != NULL)
         {
@@ -2044,9 +2054,9 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
 {
 
     FILE *fd;
-    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
-    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
-    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    C8 CompletePath[MAX_FILE_PATH];
+    bzero(CompletePath, MAX_FILE_PATH);
+    UtilGetTestDirectoryPath(CompletePath, sizeof(CompletePath));
     strcat(CompletePath, Path);
     U32 FileSizeU32 = atoi(FileSize);
     U16 PacketSizeU16 = atoi(PacketSize);
@@ -2128,9 +2138,9 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
 I32 SystemControlSendFileContent(I32 *sockfd, C8 *Path, C8 *PacketSize, C8 *ReturnValue, U8 Remove, U8 Debug)
 {
     FILE *fd;
-    C8 CompletePath[SYSTEM_CONTROL_MAX_PATH_LENGTH];
-    bzero(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
-    GetCurrentDir(CompletePath, SYSTEM_CONTROL_MAX_PATH_LENGTH);
+    C8 CompletePath[MAX_FILE_PATH];
+    bzero(CompletePath, MAX_FILE_PATH);
+    UtilGetTestDirectoryPath(CompletePath, sizeof(CompletePath));
     strcat(CompletePath, Path);
     U32 FileSizeU32 = 0;
     U16 PacketSizeU16 = atoi(PacketSize);

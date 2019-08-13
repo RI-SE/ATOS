@@ -1709,7 +1709,10 @@ the parameter value.
  */
 U64 DataDictionarySearchParameter(C8 *ParameterName, C8 *ResultBuffer)
 {
+  char confPathDir[MAX_FILE_PATH];
+  UtilGetConfDirectoryPath(confPathDir, sizeof(confPathDir));
+  strcat(confPathDir, CONF_FILE_NAME);
   bzero(ResultBuffer, DD_CONTROL_BUFFER_SIZE_20);
-  UtilSearchTextFile(TEST_CONF_FILE, ParameterName, "", ResultBuffer);
+  UtilSearchTextFile(confPathDir, ParameterName, "", ResultBuffer);
   return strlen(ResultBuffer);
 }
