@@ -120,6 +120,10 @@ int main(int argc, char *argv[])
     LogMessage(LOG_LEVEL_INFO, "Central started");
     LogMessage(LOG_LEVEL_DEBUG, "Verbose mode enabled");
 
+    // Check file path validity
+    if (UtilVerifyTestDirectory() == -1)
+        util_error("Test directory could not be verified");
+
     // Initialise data dictionary
     LogMessage(LOG_LEVEL_INFO,"Initializing data dictionary");
     dataDictInitResult = DataDictionaryConstructor(GSD);

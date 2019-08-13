@@ -399,6 +399,7 @@ void vInitializeLog(char * logFilePath, unsigned int filePathLength, char * csvL
     int read;
 
     UtilGetConfDirectoryPath(confPathDir, sizeof(confPathDir));
+    strcat(confPathDir, CONF_FILE_NAME);
     UtilGetTrajDirectoryPath(trajPathDir, sizeof(trajPathDir));
     UtilGetJournalDirectoryPath(journalPathDir, sizeof(journalPathDir));
 

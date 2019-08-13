@@ -24,6 +24,7 @@
 #include <stdbool.h>
 #include <netinet/tcp.h>
 #include <float.h>
+#include <sys/stat.h>
 
 #include "util.h"
 #include "logging.h"
@@ -2169,6 +2170,104 @@ int iCommSendACCM(ACCMData data)
   -- File system functions
   ------------------------------------------------------------*/
 /*!
+ * \brief UtilVerifyTestDirectory Checks so that all the required directories exist
+ * (i.e. traj, conf etc.) and that a configuration file exists.
+ * \return 0 if successfully verified, -1 otherwise
+ */
+int UtilVerifyTestDirectory()
+{
+    DIR* dir;
+    FILE* file;
+    char testDir[MAX_FILE_PATH];
+    char subDir[MAX_FILE_PATH];
+    const char expectedDirs[][MAX_FILE_PATH] = {CONFIGURATION_DIR_NAME,
+                                                GEOFENCE_DIR_NAME,
+                                                JOURNAL_DIR_NAME,
+                                                TRAJECTORY_DIR_NAME};
+    char* envVar;
+    int result;
+
+    envVar = getenv(TEST_DIR_ENV_VARIABLE_NAME);
+    if (envVar == NULL)
+    {
+        strcpy(testDir, getenv("HOME"));
+        strcat(testDir,"/");
+        strcat(testDir,MAESTRO_TEST_DIR_NAME);
+
+        LogMessage(LOG_LEVEL_INFO,"Environment variable %s unset: defaulting to directory %s", TEST_DIR_ENV_VARIABLE_NAME, testDir);
+    }
+    else
+    {
+        strcpy(testDir, envVar);
+        LogMessage(LOG_LEVEL_INFO,"Using specified test directory %s", testDir);
+    }
+
+    // Check top level dir
+    dir = opendir(testDir);
+    if (dir)
+        closedir(dir);
+    else if (errno == ENOENT)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Nonexistent top level test directory %s", testDir);
+        return -1;
+    }
+    else if (errno == EACCES)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Permission to access top level test directory %s denied (please do not run me as root)", testDir);
+        return -1;
+    }
+    else if (errno == ENOTDIR)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Top level test directory %s is not a directory", testDir);
+        return -1;
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Error opening top level directory %s", testDir);
+        return -1;
+    }
+
+    // Check so that all expected directories exist
+    strcat(testDir, "/");
+    for (unsigned int i = 0; i < sizeof (expectedDirs)/sizeof(expectedDirs[0]); ++i)
+    {
+        strcpy(subDir, testDir);
+        strcat(subDir, expectedDirs[i]);
+
+        dir = opendir(subDir);
+        if (dir)
+            closedir(dir);
+        else if (errno == ENOENT)
+        {
+            // It did not exist: create it
+            LogMessage(LOG_LEVEL_INFO, "Directory %s does not exist: creating it", subDir);
+            result = mkdir(subDir, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+            if (result < 0) util_error("Unable to create directory");
+        }
+        else
+        {
+            LogMessage(LOG_LEVEL_ERROR, "Error opening directory %s", subDir);
+            return -1;
+        }
+    }
+
+    // Check so that a configuration file exists
+    strcpy(subDir, testDir);
+    strcat(subDir, CONFIGURATION_DIR_NAME "/" CONF_FILE_NAME);
+    file = fopen(subDir, "r+");
+
+    if (file != NULL)
+    {
+        fclose(file);
+        return 0;
+    }
+    else {
+        LogMessage(LOG_LEVEL_ERROR, "Configuration file %s does not exist", subDir);
+        return -1;
+    }
+}
+
+/*!
  * \brief getTestDirectoryPath Gets the absolute path to the directory where subdirectories for
  * trajectories, geofences, configuration etc. are stored, ending with a forward slash. The
  * function defaults to a subdirectory of the user's home directory if the environment variable
@@ -2179,7 +2278,6 @@ int iCommSendACCM(ACCMData data)
 void UtilGetTestDirectoryPath(char* path, size_t pathLen)
 {
     char* envVar;
-    static short int pathInfoEmitted = 0;
 
     if (pathLen > MAX_FILE_PATH)
     {
@@ -2191,11 +2289,6 @@ void UtilGetTestDirectoryPath(char* path, size_t pathLen)
     envVar = getenv(TEST_DIR_ENV_VARIABLE_NAME);
     if (envVar == NULL)
     {
-        if (!pathInfoEmitted)
-        {
-            LogMessage(LOG_LEVEL_INFO,"Environment variable %s unset: defaulting to home directory", TEST_DIR_ENV_VARIABLE_NAME);
-            pathInfoEmitted = 1;
-        }
         strcpy(path, getenv("HOME"));
         strcat(path,"/");
         strcat(path,MAESTRO_TEST_DIR_NAME);
@@ -2203,11 +2296,6 @@ void UtilGetTestDirectoryPath(char* path, size_t pathLen)
     }
     else
     {
-        if (!pathInfoEmitted)
-        {
-            LogMessage(LOG_LEVEL_INFO,"Using test directory %s", envVar);
-            pathInfoEmitted = 1;
-        }
         strcpy(path, envVar);
         strcat(path,"/");
     }
