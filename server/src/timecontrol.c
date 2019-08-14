@@ -33,7 +33,6 @@
 #include "datadictionary.h"
 
 
-#define TIME_CONTROL_CONF_FILE_PATH  "conf/test.conf"
 #define TIME_CONTROL_HOSTNAME_BUFFER_SIZE 20
 #define TIME_CONTROL_RECEIVE_BUFFER_SIZE 54
 #define TIME_CONTROL_TASK_PERIOD_MS 1

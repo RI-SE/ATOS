@@ -24,6 +24,7 @@
 #include <stdbool.h>
 #include <netinet/tcp.h>
 #include <float.h>
+#include <sys/stat.h>
 
 #include "util.h"
 #include "logging.h"
@@ -38,10 +39,16 @@
 #define FE_WGS84        (1.0/298.257223563) // earth flattening (WGS84)
 #define RE_WGS84        6378137.0           // earth semimajor axis (WGS84) (m)
 
-#define TEMP_CONF_FILE_PATH  "conf/temp.conf"
-//#define CONF_FILE_PATH  "conf/test.conf"
 #define SMALL_BUFFER_SIZE_128 128
 #define SMALL_BUFFER_SIZE_64 64
+
+// File paths
+#define TEST_DIR_ENV_VARIABLE_NAME "MAESTRO_TEST_DIR"
+#define JOURNAL_DIR_NAME "journal"
+#define MAESTRO_TEST_DIR_NAME ".maestro"
+#define CONFIGURATION_DIR_NAME "conf"
+#define TRAJECTORY_DIR_NAME "traj"
+#define GEOFENCE_DIR_NAME "geofence"
 
 // Message priorities on message queue
 #define PRIO_COMM_STRT 100
@@ -490,10 +497,13 @@ int iUtilGetParaConfFile(char* pcParameter, char* pcValue)
   FILE *filefd;
   int iFindResult;
   char pcTemp[512];
+  char confPathDir[MAX_FILE_PATH];
+  UtilGetConfDirectoryPath(confPathDir, sizeof(confPathDir));
+  strcat(confPathDir, CONF_FILE_NAME);
 
   iFindResult = 0;
 
-  filefd = fopen (TEST_CONF_FILE, "rb");
+  filefd = fopen (confPathDir, "rb");
 
   if (filefd == NULL)
   {
@@ -2155,6 +2165,220 @@ int iCommSendACCM(ACCMData data)
     return iCommSend(COMM_ACCM, sendBuffer, sizeof(sendBuffer));
 }
 
+
+/*------------------------------------------------------------
+  -- File system functions
+  ------------------------------------------------------------*/
+/*!
+ * \brief UtilVerifyTestDirectory Checks so that all the required directories exist
+ * (i.e. traj, conf etc.) and that a configuration file exists.
+ * \return 0 if successfully verified, -1 otherwise
+ */
+int UtilVerifyTestDirectory()
+{
+    DIR* dir;
+    FILE* file;
+    char testDir[MAX_FILE_PATH];
+    char subDir[MAX_FILE_PATH];
+    const char expectedDirs[][MAX_FILE_PATH] = {CONFIGURATION_DIR_NAME,
+                                                GEOFENCE_DIR_NAME,
+                                                JOURNAL_DIR_NAME,
+                                                TRAJECTORY_DIR_NAME};
+    char* envVar;
+    int result;
+
+    envVar = getenv(TEST_DIR_ENV_VARIABLE_NAME);
+    if (envVar == NULL)
+    {
+        strcpy(testDir, getenv("HOME"));
+        strcat(testDir,"/");
+        strcat(testDir,MAESTRO_TEST_DIR_NAME);
+
+        LogMessage(LOG_LEVEL_INFO,"Environment variable %s unset: defaulting to directory %s", TEST_DIR_ENV_VARIABLE_NAME, testDir);
+    }
+    else
+    {
+        strcpy(testDir, envVar);
+        LogMessage(LOG_LEVEL_INFO,"Using specified test directory %s", testDir);
+    }
+
+    // Check top level dir
+    dir = opendir(testDir);
+    if (dir)
+        closedir(dir);
+    else if (errno == ENOENT)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Nonexistent top level test directory %s", testDir);
+        return -1;
+    }
+    else if (errno == EACCES)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Permission to access top level test directory %s denied (please do not run me as root)", testDir);
+        return -1;
+    }
+    else if (errno == ENOTDIR)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Top level test directory %s is not a directory", testDir);
+        return -1;
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Error opening top level directory %s", testDir);
+        return -1;
+    }
+
+    // Check so that all expected directories exist
+    strcat(testDir, "/");
+    for (unsigned int i = 0; i < sizeof (expectedDirs)/sizeof(expectedDirs[0]); ++i)
+    {
+        strcpy(subDir, testDir);
+        strcat(subDir, expectedDirs[i]);
+
+        dir = opendir(subDir);
+        if (dir)
+            closedir(dir);
+        else if (errno == ENOENT)
+        {
+            // It did not exist: create it
+            LogMessage(LOG_LEVEL_INFO, "Directory %s does not exist: creating it", subDir);
+            result = mkdir(subDir, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+            if (result < 0) util_error("Unable to create directory");
+        }
+        else
+        {
+            LogMessage(LOG_LEVEL_ERROR, "Error opening directory %s", subDir);
+            return -1;
+        }
+    }
+
+    // Check so that a configuration file exists
+    strcpy(subDir, testDir);
+    strcat(subDir, CONFIGURATION_DIR_NAME "/" CONF_FILE_NAME);
+    file = fopen(subDir, "r+");
+
+    if (file != NULL)
+    {
+        fclose(file);
+        return 0;
+    }
+    else {
+        LogMessage(LOG_LEVEL_ERROR, "Configuration file %s does not exist", subDir);
+        return -1;
+    }
+}
+
+/*!
+ * \brief getTestDirectoryPath Gets the absolute path to the directory where subdirectories for
+ * trajectories, geofences, configuration etc. are stored, ending with a forward slash. The
+ * function defaults to a subdirectory of the user's home directory if the environment variable
+ * MAESTRO_TEST_DIR is not set.
+ * \param path Char array to hold path name
+ * \param pathLen Length of char array
+ */
+void UtilGetTestDirectoryPath(char* path, size_t pathLen)
+{
+    char* envVar;
+
+    if (pathLen > MAX_FILE_PATH)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+        path[0] = '\0';
+        return;
+    }
+
+    envVar = getenv(TEST_DIR_ENV_VARIABLE_NAME);
+    if (envVar == NULL)
+    {
+        strcpy(path, getenv("HOME"));
+        strcat(path,"/");
+        strcat(path,MAESTRO_TEST_DIR_NAME);
+        strcat(path,"/");
+    }
+    else
+    {
+        strcpy(path, envVar);
+        strcat(path,"/");
+    }
+}
+
+/*!
+ * \brief UtilGetJournalDirectoryPath Fetches the absolute path to where test logs are stored,
+ * ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetJournalDirectoryPath(char* path, size_t pathLen)
+{
+    if (pathLen > MAX_FILE_PATH)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+        path[0] = '\0';
+        return;
+    }
+    UtilGetTestDirectoryPath(path, pathLen);
+    strcat(path, JOURNAL_DIR_NAME);
+    strcat(path, "/");
+}
+
+/*!
+ * \brief UtilGetConfDirectoryPath Fetches the absolute path to where configuration files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetConfDirectoryPath(char* path, size_t pathLen)
+{
+    if (pathLen > MAX_FILE_PATH)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+        path[0] = '\0';
+        return;
+    }
+    UtilGetTestDirectoryPath(path, pathLen);
+    strcat(path, CONFIGURATION_DIR_NAME);
+    strcat(path, "/");
+}
+
+/*!
+ * \brief UtilGetTrajDirectoryPath Fetches the absolute path to where trajectory files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetTrajDirectoryPath(char* path, size_t pathLen)
+{
+    if (pathLen > MAX_FILE_PATH)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+        path[0] = '\0';
+        return;
+    }
+    UtilGetTestDirectoryPath(path, pathLen);
+    strcat(path, TRAJECTORY_DIR_NAME);
+    strcat(path, "/");
+}
+
+/*!
+ * \brief UtilGetGeofenceDirectoryPath Fetches the absolute path to where geofence files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen)
+{
+    if (pathLen > MAX_FILE_PATH)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+        path[0] = '\0';
+        return;
+    }
+    UtilGetTestDirectoryPath(path, pathLen);
+    strcat(path, GEOFENCE_DIR_NAME);
+    strcat(path, "/");
+}
+
+
+
 /*------------------------------------------------------------
   -- Function traj2ldm
   --  converts a traj file format to a ldm:monitor_t
@@ -2634,7 +2858,7 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
   C8 Filename[FILE_INFO_LENGTH];
   C8 CompletePath[MAX_PATH_LENGTH];
   bzero(CompletePath, MAX_PATH_LENGTH);
-  GetCurrentDir(CompletePath, MAX_PATH_LENGTH);
+  UtilGetTestDirectoryPath(CompletePath, sizeof(CompletePath));
   strcat(CompletePath, DirPath);//Concatenate dir path
 
   DIR * d = opendir(CompletePath); // open the path
@@ -2642,7 +2866,7 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath)
   struct dirent * dir; // for the directory entries
 
   bzero(CompletePath, MAX_PATH_LENGTH);
-  GetCurrentDir(CompletePath, MAX_PATH_LENGTH);
+  UtilGetTestDirectoryPath(CompletePath, sizeof(CompletePath));
   strcat(CompletePath, TempPath); //Concatenate temp file path
 
   fd = fopen(CompletePath, "r");
@@ -3148,25 +3372,33 @@ I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
     FILE *fd, *TempFd;
     C8 *ptr1, *ptr2;
     U8 ParameterFound = 0;
+    char confPathDir[MAX_FILE_PATH];
+    char tempConfPathDir[MAX_FILE_PATH];
+    char TEMP_FILE_NAME[] = "temp-util.conf";
+    UtilGetConfDirectoryPath(confPathDir, sizeof(confPathDir));
+    strcpy(tempConfPathDir,confPathDir);
+    strcat(confPathDir, CONF_FILE_NAME);
+    strcat(tempConfPathDir, TEMP_FILE_NAME);
+
     bzero(Parameter, SMALL_BUFFER_SIZE_64);
 
     strcat(Parameter, ParameterName);
     strcat(Parameter, "=");
 
     //Remove temporary file
-    remove(TEMP_CONF_FILE_PATH);
+    remove(tempConfPathDir);
 
     //Create temporary file
-    TempFd = fopen (TEMP_CONF_FILE_PATH, "w+");
+    TempFd = fopen (tempConfPathDir, "w+");
 
     //Open configuration file
-    fd = fopen (TEST_CONF_FILE, "r");
+    fd = fopen (confPathDir, "r");
 
     if(fd > 0)
     {
         RowCount = UtilCountFileRows(fd);
         fclose(fd);
-        fd = fopen (TEST_CONF_FILE, "r");
+        fd = fopen (confPathDir, "r");
 
         for(i = 0; i < RowCount; i++)
         {
@@ -3207,13 +3439,13 @@ I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug)
         fclose(fd);
 
         //Remove test.conf
-        remove(TEST_CONF_FILE);
+        remove(confPathDir);
 
         //Rename temp.conf to test.conf
-        rename(TEMP_CONF_FILE_PATH, TEST_CONF_FILE);
+        rename(tempConfPathDir, confPathDir);
 
         //Remove temporary file
-        remove(TEMP_CONF_FILE_PATH);
+        remove(tempConfPathDir);
     }
 
     return (I32)ParameterFound;

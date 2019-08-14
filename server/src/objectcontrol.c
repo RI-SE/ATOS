@@ -132,8 +132,6 @@
 
 #define ASP_MESSAGE_LENGTH sizeof(ASPType)
 
-#define CONF_FILE_PATH  "conf/test.conf"
-
 #define SMALL_BUFFER_SIZE_0 20
 #define SMALL_BUFFER_SIZE_1 2
 #define SMALL_BUFFER_SIZE_2 1
@@ -322,6 +320,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     dbl ASPMaxDeltaTimeDbl = 0;
     I32 ASPDebugRate = 1;
     I32 ASPStepBackCount = 0;
+    char confDirectoryPath[MAX_FILE_PATH];
 
     U8 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
@@ -710,12 +709,14 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 }
 
                 /*Setup Adaptive Sync Points (ASP)*/
-                fd = fopen (ADAPTIVE_SYNC_POINT_CONF, "r");
+                UtilGetConfDirectoryPath(confDirectoryPath, sizeof(confDirectoryPath));
+                strcat(confDirectoryPath, ADAPTIVE_SYNC_FILE_NAME);
+                fd = fopen (confDirectoryPath, "r");
                 if(fd)
                 {
                     SyncPointCount = UtilCountFileRows(fd) - 1;
                     fclose (fd);
-                    fd = fopen (ADAPTIVE_SYNC_POINT_CONF, "r");
+                    fd = fopen (confDirectoryPath, "r");
                     UtilReadLineCntSpecChars(fd, pcTempBuffer); //Read header
 
                     for(i = 0; i < SyncPointCount; i++)
@@ -2920,10 +2921,12 @@ void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], C8 object
     int iForceObjectToLocalhost;
     struct sockaddr_in sockaddr;
     int result;
+    char trajPathDir[MAX_FILE_PATH];
+    UtilGetTrajDirectoryPath(trajPathDir, sizeof(trajPathDir));
 
     iForceObjectToLocalhost = 0;
 
-    traj_directory = opendir(TRAJECTORY_PATH);
+    traj_directory = opendir(trajPathDir);
     if(traj_directory == NULL)
     {
         util_error("ERR: Failed to open trajectory directory");
@@ -2940,7 +2943,7 @@ void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH], C8 object
             bzero(object_address_name[(*nbr_objects)],MAX_FILE_PATH);
 
             bzero(object_traj_file[(*nbr_objects)],MAX_FILE_PATH);
-            (void)strcat(object_traj_file[(*nbr_objects)],TRAJECTORY_PATH);
+            (void)strcat(object_traj_file[(*nbr_objects)],trajPathDir);
             (void)strcat(object_traj_file[(*nbr_objects)],directory_entry->d_name);
 
             if(0 == iForceObjectToLocalhost)
