@@ -44,14 +44,19 @@ void Scenario::initialize(const std::string scenarioFilePath)
     LogMessage(LOG_LEVEL_DEBUG, "Opening scenario file <%s>", scenarioFilePath.c_str());
     file.open(scenarioFilePath);
 
-    try {
-        parseScenarioFile(file);
-    } catch (std::invalid_argument) {
+    if (file.is_open())
+    {
+        try {
+            parseScenarioFile(file);
+        } catch (std::invalid_argument) {
+            file.close();
+            throw;
+        }
         file.close();
-        throw;
     }
-    file.close();
-
+    else {
+        throw std::ifstream::failure("Unable to open file <" + scenarioFilePath + ">");
+    }
     LogMessage(LOG_LEVEL_INFO, "Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
 
     debugStr =  "Triggers:\n";
