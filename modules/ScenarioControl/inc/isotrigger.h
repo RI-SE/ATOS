@@ -15,6 +15,7 @@ public:
     TriggerReturnCode_t update(void) override { return wasTriggeredByLastUpdate = NO_TRIGGER_OCCURRED; }
     TriggerReturnCode_t update(TREOData) override;
 private:
+    TriggerReturnCode_t checkIfTriggered() const override;
     const std::set<TriggerParameter_t> getAcceptedParameters() const override
     {
         std::set<Trigger::TriggerParameter_t> retval;
