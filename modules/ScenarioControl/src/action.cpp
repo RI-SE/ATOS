@@ -1,10 +1,10 @@
 
 #include <limits>
+#include <string>
 #include "action.h"
 
 #include "logging.h"
 #include "maestroTime.h"
-
 
 
 /*!
@@ -139,6 +139,89 @@ std::string Action::getTypeAsString(Action::ActionTypeCode_t typeCode)
     return "<<unimplemented>>";
 }
 
+char Action::toUpper(const char c)
+{
+    if (c >= 'a' && c <= 'z')
+        return c - ('a' - 'A');
+    return c;
+}
+
+/*!
+ * \brief Action::asTypeCode Tries to interpret the input as an action type, and returns the type code.
+ * \param inputStr String to be interpreted
+ * \return Type code matching the string
+ */
+Action::ActionTypeCode_t Action::asTypeCode(const std::string &inputStr)
+{
+    std::string str = inputStr;
+    for (char &ch : str)
+        ch = toUpper(ch);
+    if (!str.compare("NONE"))
+        return ACTION_NONE;
+    if (!str.compare("TYPE_1"))
+        return ACTION_TYPE_1;
+    if (!str.compare("TYPE_2"))
+        return ACTION_TYPE_2;
+    if (!str.compare("SET_SPEED"))
+        return ACTION_SET_SPEED;
+    if (!str.compare("SET_DISTANCE"))
+        return ACTION_SET_DISTANCE;
+    if (!str.compare("SET_ACCELERATION"))
+        return ACTION_SET_ACCELERATION;
+    if (!str.compare("LANE_CHANGE"))
+        return ACTION_LANE_CHANGE;
+    if (!str.compare("LANE_OFFSET"))
+        return ACTION_LANE_OFFSET;
+    if (!str.compare("SET_POSITION"))
+        return ACTION_SET_POSITION;
+    if (!str.compare("SET_STEERING_ANGLE"))
+        return ACTION_SET_STEERING_ANGLE;
+    if (!str.compare("SET_THROTTLE_VALUE"))
+        return ACTION_SET_TRHOTTLE_VALUE;
+    if (!str.compare("BRAKE"))
+        return ACTION_BRAKE;
+    if (!str.compare("FOLLOW_TRAJECTORY"))
+        return ACTION_FOLLOW_TRAJECTORY;
+    if (!str.compare("OTHER_OBJECT_FEATURE"))
+        return ACTION_OTHER_OBJECT_FEATURE;
+    if (!str.compare("INFRASTRUCTURE"))
+        return ACTION_INFRASTRUCTURE;
+    if (!str.compare("TEST_SCENARIO_COMMAND"))
+        return ACTION_TEST_SCENARIO_COMMAND;
+    if (!str.compare("MISC_DIGITAL_OUTPUT"))
+        return ACTION_MISC_DIGITAL_OUTPUT;
+    if (!str.compare("MISC_ANALOG_OUTPUT"))
+        return ACTION_MISC_ANALOG_OUTPUT;
+    if (!str.compare("START_TIMER"))
+        return ACTION_START_TIMER;
+    if (!str.compare("MODE_CHANGE"))
+        return ACTION_MODE_CHANGE;
+    if (!str.compare("UNAVAILABLE"))
+        return ACTION_UNAVAILABLE;
+
+    throw std::invalid_argument("Action name " + inputStr + " does not match any known action type");
+}
+
+
+Action::ActionParameter_t Action::asParameterCode(const std::string &inputStr) const
+{
+    std::string str = inputStr;
+    for (char &ch : str)
+        ch = toUpper(ch);
+    if(!str.compare("ENABLE") || !str.compare("SET_TRUE"))
+        return ACTION_PARAMETER_SET_TRUE;
+    if(!str.compare("DISABLE") || !str.compare("SET_FALSE"))
+        return ACTION_PARAMETER_SET_FALSE;
+    if(!str.compare("SET_VALUE"))
+        return ACTION_PARAMETER_SET_VALUE;
+    if(!str.compare("PRESS"))
+        return ACTION_PARAMETER_PRESS;
+    if(!str.compare("RELEASE"))
+        return ACTION_PARAMETER_RELEASE;
+
+    throw std::invalid_argument("Action parameter " + inputStr + " is not a valid parameter");
+}
+
 /*!
  * \brief Action::checkActionParameter Checks if the queried parameter is within the list of accepted parameters
  * \param actionParameter Queried parameter
@@ -154,6 +237,7 @@ Action::ActionReturnCode_t Action::checkActionParameter(ActionParameter_t action
     return NOT_OK;
 }
 
+
 /*!
  * \brief Action::appendParameter
  * \param actionParameter
@@ -168,6 +252,12 @@ Action::ActionReturnCode_t Action::appendParameter(ActionParameter_t actionParam
 
     parameters.push_back(actionParameter);
     return OK;
+}
+
+Action::ActionReturnCode_t Action::appendParameter(std::string inputStr)
+{
+    ActionParameter_t param = asParameterCode(inputStr);
+    return appendParameter(param);
 }
 
 /*!
@@ -216,7 +306,7 @@ ACCMData Action::getConfigurationMessageData(void) const
  * \brief Action::setExecuteDalayTime Sets the delay from when EXAC is sent to when action is to be executed
  * \param tm Timeval struct representing the delay
  */
-void Action::setExecuteDalayTime(struct timeval tm)
+void Action::setExecuteDelayTime(struct timeval tm)
 {
     int64_t time_qms = tm.tv_sec*4000 + tm.tv_usec/250;
 
