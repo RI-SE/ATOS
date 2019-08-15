@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <stdexcept>
+#include <regex>
 
 #include "scenario.h"
 
@@ -37,7 +38,7 @@ void Scenario::clear()
 void Scenario::initialize(const std::string scenarioFilePath)
 {
     std::ifstream file;
-    file.exceptions(std::ios_base::badbit | std::ios_base::failbit);
+    std::string debugStr;
 
     clear();
     LogMessage(LOG_LEVEL_DEBUG, "Opening scenario file <%s>", scenarioFilePath.c_str());
@@ -52,6 +53,17 @@ void Scenario::initialize(const std::string scenarioFilePath)
     file.close();
 
     LogMessage(LOG_LEVEL_INFO, "Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
+
+    debugStr =  "Triggers:\n";
+    for (Trigger* tp : allTriggers)
+        debugStr += "\t" + tp->getTypeAsString(tp->getTypeCode()) + "\n";
+
+    debugStr += "Actions:\n";
+    for (Action* ap : allActions)
+        debugStr += "\t" + ap->getTypeAsString(ap->getTypeCode()) + "\n";
+
+    debugStr.pop_back();
+    LogMessage(LOG_LEVEL_DEBUG, debugStr.c_str());
 }
 
 /*!
@@ -72,9 +84,222 @@ void Scenario::sendConfiguration(void) const
     }
 }
 
+
+void Scenario::splitLine(const std::string &line, const char delimiter, std::vector<std::string> &result)
+{
+    std::istringstream strm(line);
+    std::string part;
+    while (getline(strm,part,delimiter))
+    {
+        result.push_back(part);
+    }
+    return;
+}
+
+void Scenario::parseScenarioFileLine(const std::string &inputLine)
+{
+    using namespace std;
+    if (inputLine[0] == '#' || inputLine.length() == 0) return;
+    string line = inputLine;
+
+    // Remove whitespace
+    string::iterator endPos = remove_if(line.begin(), line.end(), ::isspace);
+    line.erase(endPos,line.end());
+
+    // Split into parts
+    vector<string> parts;
+    constexpr char delimiter = ';';
+    splitLine(line,delimiter,parts);
+
+    // Match and act on relevant fields
+    regex ipAddrPattern("([0-2]?[0-9]?[0-9]\\.){3}([0-2]?[0-9]?[0-9])"); // Match 3 "<000-299>." followed by "<000-299>"
+    regex triggerActionPattern("(([a-zA-Z_])+\\[([a-zA-Z0-9\\.,<=>_])+\\])+");
+    in_addr triggerIP, actionIP;
+    string errMsg;
+    set<Action*> actions;
+    set<Trigger*> triggers;
+    enum {TRIGGER_IP,TRIGGER,ACTION_IP,ACTION,DONE} parseState = TRIGGER_IP;
+
+    for (const string &part : parts)
+    {
+        switch (parseState)
+        {
+        case TRIGGER_IP:
+            if(!regex_match(part,ipAddrPattern))
+            {
+                errMsg = "Specified trigger IP address field <" + part + "> is invalid";
+                LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+                throw invalid_argument(errMsg);
+            }
+
+            if(inet_pton(AF_INET, part.c_str(), &triggerIP) <= 0)
+            {
+                errMsg = "Error parsing IP string <" + part + ">";
+                LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+                throw invalid_argument(errMsg);
+            }
+            parseState = TRIGGER;
+            break;
+        case TRIGGER:
+            if(!regex_match(part,triggerActionPattern))
+            {
+                errMsg = "Trigger configuration field <" + part + "> is invalid";
+                LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+                throw invalid_argument(errMsg);
+            }
+
+            triggers = parseTriggerConfiguration(part);
+            for (Trigger* tp : triggers)
+            {
+                tp->setObjectIP(triggerIP.s_addr);
+                for (Trigger* knownTrigger : allTriggers)
+                    tp = tp->isSimilar(*knownTrigger) ? knownTrigger : tp;
+                addTrigger(tp);
+            }
+            parseState = ACTION_IP;
+            break;
+        case ACTION_IP:
+            if(!regex_match(part,ipAddrPattern))
+            {
+                errMsg = "Specified action IP address field <" + part + "> is invalid";
+                LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+                throw invalid_argument(errMsg);
+            }
+
+            if(inet_pton(AF_INET, part.c_str(), &actionIP) <= 0)
+            {
+                errMsg = "Error parsing IP string <" + part + ">";
+                LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+                throw invalid_argument(errMsg);
+            }
+            parseState = ACTION;
+            break;
+        case ACTION:
+            if(!regex_match(part,triggerActionPattern))
+            {
+                errMsg = "Action configuration field <" + part + "> is invalid";
+                LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+                throw invalid_argument(errMsg);
+            }
+
+            actions = parseActionConfiguration(part);
+            for (Action* ap : actions)
+            {
+                ap->setObjectIP(actionIP.s_addr);
+                addAction(ap);
+            }
+            parseState = DONE;
+            break;
+        case DONE:
+            if (part.length() != 0) LogMessage(LOG_LEVEL_WARNING,"Ignored tail field of row in configuration file: <%s>",part.c_str());
+            break;
+        }
+    }
+
+    linkTriggersWithActions(triggers, actions);
+    return;
+}
+
+std::set<Trigger*> Scenario::parseTriggerConfiguration(const std::string &inputConfig)
+{
+    using namespace std;
+    regex triggerPattern("([a-zA-Z_]+)\\[([^,^\\]]+)(?:,([^,^\\]]+))?(?:,([^,^\\]]+))?\\]");
+    smatch match;
+    string errMsg;
+    vector<string> configs;
+    Trigger::TriggerTypeCode_t triggerType;
+    set<Trigger*> returnTriggers;
+    Trigger* trigger;
+    Trigger::TriggerID_t baseTriggerID = static_cast<Trigger::TriggerID_t>(allTriggers.size());
+
+    splitLine(inputConfig, ']', configs);
+    for (string &config : configs)
+        config.append("]");
+
+    for(const string &config : configs)
+    {
+        if (!regex_search(config, match, triggerPattern))
+        {
+            errMsg = "The following is not a valid configuration: <" + config + ">";
+            LogMessage(LOG_LEVEL_ERROR,errMsg.c_str());
+            throw invalid_argument(errMsg);
+        }
+        vector<string> matches;
+        for (unsigned int i = 0; i < match.size(); i++)
+            matches.push_back(match[i].str());
+
+        triggerType = Trigger::asTypeCode(match[1]);
+        switch (triggerType) {
+        case TRIGGER_BRAKE:
+            trigger = new BrakeTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()));
+            // TODO: the OR between the Maestro trigger and possible TREO messages
+            break;
+        default:
+            // TODO: implement ISO triggers with TRCM and whatnot
+            // trigger = new ISOTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size(), triggerType);
+            errMsg = "Unimplemented trigger type " + match[0].str();
+            LogMessage(LOG_LEVEL_ERROR,errMsg.c_str());
+            throw logic_error(errMsg);
+            break;
+        }
+        for (unsigned int i = 2; i < match.size(); ++i)
+            if (!match[i].str().empty()) trigger->appendParameter(match[i].str());
+        returnTriggers.insert(trigger);
+    }
+    return returnTriggers;
+}
+
+std::set<Action*> Scenario::parseActionConfiguration(const std::string &inputConfig)
+{
+    using namespace std;
+    regex triggerPattern("([a-zA-Z_]+)\\[([^,^\\]]+)(?:,([^,^\\]]+))?(?:,([^,^\\]]+))?\\]");
+    smatch match;
+    string errMsg;
+    vector<string> configs;
+    Action::ActionTypeCode_t actionType;
+    set<Action*> returnActions;
+    Action* action;
+    Action::ActionID_t baseActionID = static_cast<Action::ActionID_t>(allActions.size());
+
+    splitLine(inputConfig, ']', configs);
+    for (string &config : configs)
+        config.append("]");
+
+    for(const string &config : configs)
+    {
+        if (!regex_search(config, match, triggerPattern))
+        {
+            errMsg = "The following is not a valid configuration: <" + config + ">";
+            LogMessage(LOG_LEVEL_ERROR,errMsg.c_str());
+            throw invalid_argument(errMsg);
+        }
+
+        actionType = Action::asTypeCode(match[1]);
+        switch (actionType)
+        {
+        case ACTION_INFRASTRUCTURE:
+            action = new InfrastructureAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()));
+            break;
+        default:
+            action = new ExternalAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()), actionType);
+            break;
+        }
+        for (unsigned int i = 2; i < match.size(); ++i)
+            if(!match[i].str().empty()) action->appendParameter(match[i].str());
+        returnActions.insert(action);
+    }
+
+    return returnActions;
+}
+
 void Scenario::parseScenarioFile(std::ifstream &file)
 {
     LogMessage(LOG_LEVEL_DEBUG, "Parsing scenario file");
+
+    std::string line;
+    while ( std::getline(file, line) ) parseScenarioFileLine(line);
+
+    return;
     // TODO: read file, throw std::invalid_argument if badly formatted
     // TODO: decode file into triggers and actions
     // TODO: link triggers and actions
@@ -100,7 +325,7 @@ void Scenario::parseScenarioFile(std::ifstream &file)
 
     mqttAction->appendParameter(Action::ActionParameter_t::ACTION_PARAMETER_VS_BRAKE_WARNING);
     mqttAction->setObjectIP(mqttObjectIP.s_addr);
-    mqttAction->setExecuteDalayTime({1,0});
+    mqttAction->setExecuteDelayTime({1,0});
 
     addTrigger(bt);
     addAction(mqttAction);
