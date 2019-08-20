@@ -60,11 +60,17 @@
 #define DEFAULT_MQTT_QOS         1
 #define DEFAULT_MQTT_TIMEOUT     10000L
 
+#define ITS_STATION_ID 0x7E7E00000000
+
 #define MODULE_NAME "CitsControl"
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
+DENM_t* allocateDENMStruct(void);
+void deallocateDENMStruct(DENM_t* denm);
+void initializeDENMStruct(DENM_t* denm);
+
 I32 generateCAMMessage(MONRType *MONRData, CAM_t* lastCam);
 I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm, int causeCode);
 
@@ -135,26 +141,27 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     uint16_t* storedActionIDs = NULL;
     int numberOfStoredActionIDs = 0;
     int actionIndex = -1;
-
-
     asn_enc_rval_t ec;
+
+    LogInit(MODULE_NAME,logLevel);
+    LogMessage(LOG_LEVEL_INFO, "C-ITS control running with PID: %i", getpid());
 
     CAM_t* lastCam;
     lastCam = calloc(1, sizeof(CAM_t));
-    if(!lastCam){
-         exit(1);
+    if (lastCam == NULL){
+        exit(EXIT_FAILURE);
     }
 
-    lastDENM = calloc(1, sizeof(DENM_t));
-    if(!lastDENM) {
-           exit(1);
+    //lastDENM = calloc(1, sizeof(DENM_t));
+    lastDENM = allocateDENMStruct();
+    if (lastDENM == NULL) {
+        exit(EXIT_FAILURE);
     }
+    initializeDENMStruct(lastDENM);
 
     TimeType time;
 
     I16 lastSpeed = 0;
-    LogInit(MODULE_NAME,logLevel);
-    LogMessage(LOG_LEVEL_INFO, "C-ITS control running with PID: %i", getpid());
 
     //! Timer for sending DENM at later time
     struct timeval systemTime, exacTime = {0,0};
@@ -339,7 +346,178 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         }
     }
 
+    deallocateDENMStruct(lastDENM);
     free(storedActionIDs);
+}
+
+void initializeDENMStruct(DENM_t* denm)
+{
+    /****** MANAGEMENT ******/
+    denm->denm.management.actionID.originatingStationID = ITS_STATION_ID;
+    denm->denm.management.actionID.sequenceNumber = 0;
+    denm->denm.management.stationType = 0; // TODO: relevant stationType
+    // TODO: denm->denm.management.detectionTime.buf
+    // TODO: denm->denm.management.referenceTime.buf
+    // TODO: denm->denm.management.detectionTime.size
+    // TODO: denm->denm.management.referenceTime.size
+    denm->denm.management.eventPosition.altitude.altitudeValue = 0;
+    denm->denm.management.eventPosition.altitude.altitudeConfidence = 0;
+    denm->denm.management.eventPosition.latitude = 0;
+    denm->denm.management.eventPosition.longitude = 0;
+    denm->denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = 0;
+    denm->denm.management.eventPosition.positionConfidenceEllipse.semiMinorConfidence = 0;
+    denm->denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 0;
+
+
+    // Unused management optional fields (null their pointers to show unused)
+    // TODO: Modify here to ocne relevant information can be used
+    free(denm->denm.management.termination);
+    free(denm->denm.management.relevanceDistance);
+    free(denm->denm.management.relevanceTrafficDirection);
+    free(denm->denm.management.validityDuration);
+    free(denm->denm.management.transmissionInterval);
+    denm->denm.management.termination = NULL;
+    denm->denm.management.relevanceDistance = NULL;
+    denm->denm.management.relevanceTrafficDirection = NULL;
+    denm->denm.management.validityDuration = NULL;
+    denm->denm.management.transmissionInterval = NULL;
+
+    /****** SITUATION ******/
+    // TODO
+
+    /****** LOCATION ******/
+    // TODO
+
+    /****** ALACARTE ******/
+    // TODO
+}
+
+DENM_t* allocateDENMStruct(void)
+{
+    // Allocate entire struct
+    DENM_t* denm = calloc(1, sizeof(DENM_t));
+    if (denm == NULL)
+        return NULL;
+
+    // Allocate subcontainers
+    denm->denm.situation = calloc(1, sizeof(SituationContainer_t));
+    denm->denm.location = calloc(1, sizeof(LocationContainer_t));
+    denm->denm.alacarte = calloc(1, sizeof(AlacarteContainer_t));
+    if (denm->denm.situation == NULL || denm->denm.location == NULL || denm->denm.alacarte == NULL)
+    {
+        deallocateDENMStruct(denm);
+        return NULL;
+    }
+    else {
+        // Initialize all pointers to null so that they can be passed to the deallocation
+        // function if something goes wrong during initialization
+        denm->denm.management.termination = NULL;
+        denm->denm.management.relevanceDistance = NULL;
+        denm->denm.management.relevanceTrafficDirection = NULL;
+        denm->denm.management.validityDuration = NULL;
+        denm->denm.management.transmissionInterval = NULL;
+
+        denm->denm.situation->linkedCause = NULL;
+        denm->denm.situation->eventHistory = NULL;
+
+        denm->denm.location->eventSpeed = NULL;
+        denm->denm.location->eventPositionHeading = NULL;
+        denm->denm.location->roadType = NULL;
+
+        denm->denm.alacarte->lanePosition = NULL;
+        denm->denm.alacarte->impactReduction = NULL;
+        denm->denm.alacarte->externalTemperature = NULL;
+        denm->denm.alacarte->roadWorks = NULL;
+        denm->denm.alacarte->positioningSolution = NULL;
+        denm->denm.alacarte->stationaryVehicle = NULL;
+    }
+
+    // Allocate management subcontainers
+    denm->denm.management.termination = calloc(1, sizeof (Termination_t));
+    denm->denm.management.relevanceDistance = calloc(1, sizeof (RelevanceDistance_t));
+    denm->denm.management.relevanceTrafficDirection = calloc(1, sizeof (RelevanceTrafficDirection_t));
+    denm->denm.management.validityDuration = calloc(1, sizeof (ValidityDuration_t));
+    denm->denm.management.transmissionInterval = calloc(1, sizeof (TransmissionInterval_t));
+    if (denm->denm.management.termination == NULL || denm->denm.management.relevanceDistance == NULL
+            || denm->denm.management.relevanceTrafficDirection == NULL || denm->denm.management.validityDuration == NULL
+            || denm->denm.management.transmissionInterval == NULL)
+    {
+        deallocateDENMStruct(denm);
+        return NULL;
+    }
+
+    // Allocate situation subcontainers
+    denm->denm.situation->linkedCause = calloc(1,sizeof (CauseCode_t));
+    denm->denm.situation->eventHistory = NULL; // TODO: allocate memory for this
+    if (denm->denm.situation->linkedCause == NULL /*|| denm->denm.situation->eventHistory == NULL*/)
+    {
+        deallocateDENMStruct(denm);
+        return NULL;
+    }
+
+    // Allocate location subcontainers
+    denm->denm.location->eventSpeed = calloc(1, sizeof (Speed_t));
+    denm->denm.location->eventPositionHeading = calloc(1, sizeof (Heading_t));
+    denm->denm.location->roadType = calloc(1, sizeof (RoadType_t));
+    if (denm->denm.location->eventSpeed == NULL || denm->denm.location->eventPositionHeading == NULL
+            || denm->denm.location->roadType == NULL)
+    {
+        deallocateDENMStruct(denm);
+        return NULL;
+    }
+
+    // Allocate alacarte subcontainers
+    denm->denm.alacarte->lanePosition = calloc(1, sizeof(LanePosition_t));
+    denm->denm.alacarte->impactReduction = NULL; // TODO: allocate memory for this
+    denm->denm.alacarte->externalTemperature = calloc(1, sizeof(Temperature_t));
+    denm->denm.alacarte->roadWorks = NULL; // TODO: allocate memory for this
+    denm->denm.alacarte->positioningSolution = calloc(1, sizeof (PositioningSolutionType_t));
+    denm->denm.alacarte->stationaryVehicle = NULL; // TODO: allocate memory for this
+    if (denm->denm.alacarte->lanePosition == NULL || denm->denm.alacarte->externalTemperature == NULL
+            || denm->denm.alacarte->positioningSolution == NULL /*|| denm->denm.alacarte->impactReduction == NULL
+            || denm->denm.alacarte->roadWorks == NULL || denm->denm.alacarte->stationaryVehicle == NULL*/)
+    {
+        deallocateDENMStruct(denm);
+        return NULL;
+    }
+
+    return denm;
+}
+
+void deallocateDENMStruct(DENM_t* denm)
+{
+    if (denm == NULL) return;
+
+    if (denm->denm.situation != NULL)
+    {
+        free(denm->denm.situation->linkedCause);
+        free(denm->denm.situation->eventHistory); // TODO: deallocate possible submembers
+
+        free(denm->denm.situation);
+    }
+
+    if (denm->denm.location != NULL)
+    {
+        free(denm->denm.location->eventSpeed);
+        free(denm->denm.location->eventPositionHeading);
+        free(denm->denm.location->roadType);
+
+        free(denm->denm.location);
+    }
+
+    if (denm->denm.alacarte != NULL)
+    {
+        free(denm->denm.alacarte->lanePosition);
+        free(denm->denm.alacarte->impactReduction); // TODO: deallocate possible submembers
+        free(denm->denm.alacarte->externalTemperature);
+        free(denm->denm.alacarte->roadWorks); // TODO: deallocate possible submembers
+        free(denm->denm.alacarte->positioningSolution);
+        free(denm->denm.alacarte->stationaryVehicle); // TODO: deallocate possible submembers
+
+        free(denm->denm.alacarte);
+    }
+
+    free(denm);
 }
 
 void signalHandler(int sig, siginfo_t* siginfo, void* uc)
