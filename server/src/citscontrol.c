@@ -240,7 +240,6 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             LogMessage(LOG_LEVEL_DEBUG, "Ignored old style MONR data");
             break;
         case COMM_MONR:
-            break;
             UtilPopulateMonitorDataStruct(busReceiveBuffer, sizeof(busReceiveBuffer),&mqMONRdata,0);
             MONRMessage = mqMONRdata.MONR;
 
