@@ -1,4 +1,5 @@
 #include "causality.h"
+#include "logging.h"
 
 Causality::Causality(Causality::TriggerOperator_t op)
 {
@@ -39,6 +40,11 @@ Trigger* Causality::getTriggerByID(Trigger::TriggerID_t id) const
             return tp;
     }
     return nullptr;
+}
+
+std::string Causality::getOperatorString() const
+{
+    return oper == OR ? "OR" : "AND";
 }
 
 void Causality::refresh(void) const
