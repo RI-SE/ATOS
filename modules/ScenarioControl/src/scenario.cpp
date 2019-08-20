@@ -161,7 +161,14 @@ void Scenario::parseScenarioFileLine(const std::string &inputLine)
             for (Trigger* tp : triggers) {
                 tp->setObjectIP(triggerIP.s_addr);
                 for (Trigger* knownTrigger : allTriggers)
-                    tp = tp->isSimilar(*knownTrigger) ? knownTrigger : tp;
+                {
+                    if(tp->isSimilar(*knownTrigger))
+                    {
+                        triggers.erase(tp);
+                        triggers.insert(knownTrigger);
+                        tp = knownTrigger;
+                    }
+                }
                 addTrigger(tp);
             }
             parseState = ACTION_IP;
@@ -336,6 +343,7 @@ Scenario::ScenarioReturnCode_t Scenario::addTrigger(Trigger* tp)
     for (Trigger* knownTrigger : allTriggers)
         if (knownTrigger->getID() == tp->getID()) return DUPLICATE_ELEMENT;
 
+    LogMessage(LOG_LEVEL_DEBUG,"Adding trigger with ID: %d",tp->getID());
     allTriggers.insert(tp);
     return OK;
 }
@@ -428,7 +436,7 @@ Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &mo
                 struct timeval monrTime, currentTime;
                 TimeSetToCurrentSystemTime(&currentTime);
                 TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&currentTime), monr.MONR.GPSQmsOfWeekU32);
-                tp->update(static_cast<double>(monr.MONR.LongitudinalSpeedI16/100.0), monrTime);
+                tp->update(static_cast<double>(monr.MONR.LongitudinalSpeedI16)/100.0, monrTime);
                 break;
             default:
                 LogMessage(LOG_LEVEL_WARNING, "Unhandled trigger type in update: %s",
