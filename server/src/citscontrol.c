@@ -356,10 +356,8 @@ void initializeDENMStruct(DENM_t* denm)
     denm->denm.management.actionID.originatingStationID = ITS_STATION_ID;
     denm->denm.management.actionID.sequenceNumber = 0;
     denm->denm.management.stationType = 0; // TODO: relevant stationType
-    // TODO: denm->denm.management.detectionTime.buf
-    // TODO: denm->denm.management.referenceTime.buf
-    // TODO: denm->denm.management.detectionTime.size
-    // TODO: denm->denm.management.referenceTime.size
+    asn_long2INTEGER(&denm->denm.management.detectionTime,0); // TODO: double check
+    asn_long2INTEGER(&denm->denm.management.referenceTime,0); // TODO: double check
     denm->denm.management.eventPosition.altitude.altitudeValue = 0;
     denm->denm.management.eventPosition.altitude.altitudeConfidence = 0;
     denm->denm.management.eventPosition.latitude = 0;
@@ -367,29 +365,43 @@ void initializeDENMStruct(DENM_t* denm)
     denm->denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = 0;
     denm->denm.management.eventPosition.positionConfidenceEllipse.semiMinorConfidence = 0;
     denm->denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 0;
-
+    *denm->denm.management.validityDuration = 600;
 
     // Unused management optional fields (null their pointers to show unused)
-    // TODO: Modify here to ocne relevant information can be used
+    // TODO: Modify here to once relevant information can be used
     free(denm->denm.management.termination);
     free(denm->denm.management.relevanceDistance);
     free(denm->denm.management.relevanceTrafficDirection);
-    free(denm->denm.management.validityDuration);
     free(denm->denm.management.transmissionInterval);
     denm->denm.management.termination = NULL;
     denm->denm.management.relevanceDistance = NULL;
     denm->denm.management.relevanceTrafficDirection = NULL;
-    denm->denm.management.validityDuration = NULL;
     denm->denm.management.transmissionInterval = NULL;
 
     /****** SITUATION ******/
     // TODO
+    free(denm->denm.situation);
+    denm->denm.situation = NULL;
+    // denm->denm.situation->informationQuality = 0; // TODO: what should this be initialised to?
+    // denm->denm.situation->eventType.causeCode = CauseCodeType_reserved;
+    // denm->denm.situation->eventType.subCauseCode = 0; // TODO: what should this be initialised to?
+    //
+    // // Unused situation optional fields (null their pointers to show unused)
+    // // TODO: Modify here to once relevant information can be used
+    // free(denm->denm.situation->linkedCause);
+    // free(denm->denm.situation->eventHistory);
+    // denm->denm.situation->linkedCause = NULL;
+    // denm->denm.situation->eventHistory = NULL;
 
     /****** LOCATION ******/
     // TODO
+    free(denm->denm.location);
+    denm->denm.location = NULL;
 
     /****** ALACARTE ******/
     // TODO
+    free(denm->denm.alacarte);
+    denm->denm.alacarte = NULL;
 }
 
 DENM_t* allocateDENMStruct(void)
@@ -792,8 +804,11 @@ I32 sendDENM(DENM_t* denm){
     //FILE *fp = fopen("tmp", "wb");
     //asn_enc_rval_t ec = der_encode(&asn_DEF_DENM, denm, write_out, fp);
     //fclose(fp);
+    //void* buffer;
+    //struct asn_per_constraints_s* constraints = NULL;
+    //const ssize_t ec = uper_encode_to_new_buffer(&asn_DEF_DENM, constraints, denm, &buffer);
 
-    publish_mqtt((char*)denm, sizeof (DENM_t), "CLIENT/DENM/CS01/1/AZ12B");
+    publish_mqtt(buffer, sizeof (DENM_t), "CLIENT/DENM/CS01/1/AZ12B");
     return 1;
 }
 
