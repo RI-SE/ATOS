@@ -808,7 +808,7 @@ I32 sendDENM(DENM_t* denm){
     //struct asn_per_constraints_s* constraints = NULL;
     //const ssize_t ec = uper_encode_to_new_buffer(&asn_DEF_DENM, constraints, denm, &buffer);
 
-    publish_mqtt(buffer, sizeof (DENM_t), "CLIENT/DENM/CS01/1/AZ12B");
+    publish_mqtt((char*)denm, sizeof (DENM_t), "CLIENT/DENM/CS01/1/AZ12B");
     return 1;
 }
 
