@@ -709,7 +709,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 { 
                     if( DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
                     {
-                        printf("[ObjectControl] Sending TRAj data to ObjectIp = %x (DTMIp = %x)\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
+                        printf("[ObjectControl] Sending TRAj data to ObjectIp = %s (DTMIp = %d.%d.%d.%d)\n", object_address_name[iIndex], (U8)(DTMIpU32>>24), (U8)(DTMIpU32>>16), (U8)(DTMIpU32>>8), (U8)DTMIpU32);
                         /*DTM Header*/
                         MessageLength = ObjectControlBuildDOTMMessageHeader(MessageBuffer, (DTMLengthU32-MiscU16)/ COMMAND_DTM_BYTES_IN_ROW , &HeaderData, &TRAJInfoData, 0);
                         /*Send DTM header*/
@@ -740,7 +740,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     /*DTM*/
                     for(iIndex=0;iIndex<nbr_objects;++iIndex) 
                     { 
-                        printf("[ObjectControl] ObjectIp = %x, DTMIp = %x\n", UtilIPStringToInt(object_address_name[iIndex]), DTMIpU32);
+                        printf("[ObjectControl] ObjectIp = %s, DTMIp = %d.%d.%d.%d\n", object_address_name[iIndex], (U8)(DTMIpU32>>24), (U8)(DTMIpU32>>16), (U8)(DTMIpU32>>8), (U8)DTMIpU32);
                         if(DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
                         {
                             printf("[ObjectControl] Sending TRAJ_FROMSUP chunk to %d.%d.%d.%d, size %ld bytes \n", (U8)(DTMIpU32>>24), (U8)(DTMIpU32>>16), (U8)(DTMIpU32>>8), (U8)DTMIpU32, strlen(pcRecvBuffer)/2);
