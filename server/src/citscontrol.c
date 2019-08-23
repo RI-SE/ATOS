@@ -514,7 +514,7 @@ DENM_t* allocateDENMStruct(void)
 {
     // Allocate entire struct
     DENM_t* denm = calloc(1, sizeof(DENM_t));
-    LogPrint("denm: %p ", denm);
+
     if (denm == NULL)
         return NULL;
 
@@ -597,7 +597,6 @@ DENM_t* allocateDENMStruct(void)
         return NULL;
     }
 
-    LogPrint("Allocated");
     return denm;
 }
 
