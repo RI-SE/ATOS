@@ -1120,13 +1120,6 @@ I32 sendCAM(CAM_t* cam){
 
     if (ec != -1)
     {
-
-        FILE *fp = fopen("asn1test_cam.hx", "w");
-        for (ssize_t i = 0; i < ec; ++i) {
-            fprintf(fp,"%02X ",(((unsigned char*)buffer)[i]));
-        }
-        fclose(fp);
-
         LogMessage(LOG_LEVEL_INFO,"Sending CAM");
         publish_mqtt((char*)buffer, ec, "CLIENT/CAM/CS01/1/AZ12B");
         return 1;
@@ -1155,12 +1148,6 @@ I32 sendDENM(DENM_t* denm){
 
     if (ec != -1)
     {
-        FILE *fp = fopen("asn1test_denm.hx", "w");
-        for (ssize_t i = 0; i < ec; ++i) {
-            fprintf(fp,"%02X ",(((unsigned char*)buffer)[i]));
-        }
-        fclose(fp);
-
         LogMessage(LOG_LEVEL_INFO,"Sending DENM");
         publish_mqtt((char*)buffer, ec, "CLIENT/DENM/CS01/1/AZ12B");
     }
