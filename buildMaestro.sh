@@ -15,5 +15,6 @@ make
 cd $MAESTRODIR
 
 cd $MAESTRODIR/modules/ScenarioControl/build
+cmake ..
 make
 
