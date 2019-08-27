@@ -959,8 +959,6 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
  */
 I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm, int causeCode){
     struct timeval tv;
-    long detectionTime;
-    LogPrint("Generating DENM");
     initializeDENMStruct(tempDENM);
 
     // Set reference time to current time, leave detection time as in previous message
@@ -1050,10 +1048,6 @@ int updateDENMMessage(MONRType *MONRData, DENM_t* denm)
     TimeSetToCurrentSystemTime(&tv);
     asn_long2INTEGER(&denm->denm.management.referenceTime,TimeGetAsETSIms(&tv));
 
-    LogPrint("Updating DENM: %d", TimeGetAsETSIms(&tv));
-    LogPrint("Updating DENM: %d", TimeGetAsGPSms(&tv));
-    LogPrint("Updating DENM: %d", TimeGetAsUTCms(&tv));
-
     //LOG LAT from XY
     x = MONRData->XPositionI32/1000.0;
     y = MONRData->YPositionI32/1000.0;
@@ -1094,6 +1088,11 @@ int updateDENMMessage(MONRType *MONRData, DENM_t* denm)
 
             denm->denm.management.eventPosition.altitude.altitudeValue = AltitudeValue_unavailable;
             denm->denm.management.eventPosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
+
+            // TODO: Make to work
+            // denm->denm.location->eventSpeed->speedValue = (long)(sqrt(pow((double)(MONRData->LongitudinalSpeedI16), 2) + pow((double)(MONRData->LateralSpeedI16), 2)));
+            // denm->denm.location->eventSpeed->speedConfidence = SpeedConfidence_unavailable;
+
         }
         else LogMessage(LOG_LEVEL_ERROR, "Vincenty algorithm failed for DENM");
     }
