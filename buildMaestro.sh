@@ -13,3 +13,8 @@ mkdir traj && mkdir log
 cp ../traj/0.traj ./traj/127.0.0.1
 make
 cd $MAESTRODIR
+
+cd $MAESTRODIR/modules/ScenarioControl/build
+cmake ..
+make
+
