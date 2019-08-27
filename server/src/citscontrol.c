@@ -960,20 +960,13 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
 I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm, int causeCode){
     struct timeval tv;
     long detectionTime;
+    LogPrint("Generating DENM");
     initializeDENMStruct(tempDENM);
 
     // Set reference time to current time, leave detection time as in previous message
     TimeSetToCurrentSystemTime(&tv);
-    // TODO: make to work
-    //asn_long2INTEGER(&tempDENM->denm.management.referenceTime,TimeGetAsETSIms(&tv));
-    //asn_INTEGER2long(&lastDENM->denm.management.detectionTime,&detectionTime);
-    //asn_INTEGER2long(&lastDENM->denm.management.referenceTime,&detectionTime);
-
-    //LogPrint("rt: %ld, dt: %ld",TimeGetAsETSIms(&tv),detectionTime);
-
-    //exit(EXIT_FAILURE);
-
-    //asn_long2INTEGER(&tempDENM->denm.management.detectionTime,detectionTime);
+    asn_long2INTEGER(&tempDENM->denm.management.referenceTime,TimeGetAsETSIms(&tv));
+    asn_long2INTEGER(&tempDENM->denm.management.detectionTime,TimeGetAsETSIms(&tv));
 
     //LOG LAT from XY
     double x = MONRData->XPositionI32/1000.0;
@@ -1053,8 +1046,13 @@ int updateDENMMessage(MONRType *MONRData, DENM_t* denm)
 
     if (MONRData == NULL || denm == NULL) return -1;
 
-    // TODO: make to work
-    //asn_long2INTEGER(&tempDENM->denm.management.referenceTime,TimeGetAsETSIms(&tv));
+    // Update reference time
+    TimeSetToCurrentSystemTime(&tv);
+    asn_long2INTEGER(&denm->denm.management.referenceTime,TimeGetAsETSIms(&tv));
+
+    LogPrint("Updating DENM: %d", TimeGetAsETSIms(&tv));
+    LogPrint("Updating DENM: %d", TimeGetAsGPSms(&tv));
+    LogPrint("Updating DENM: %d", TimeGetAsUTCms(&tv));
 
     //LOG LAT from XY
     x = MONRData->XPositionI32/1000.0;
