@@ -887,9 +887,9 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
 
         if(UtilVincentyDirect(origin.latitude, origin.longitude, azimuth1,distance ,&latitude,&longitude,&azimuth2) != -1)
         {
-            // Convert to microdegrees
-            tempCAM->cam.camParameters.basicContainer.referencePosition.latitude = (long)(latitude*1000000.0);
-            tempCAM->cam.camParameters.basicContainer.referencePosition.longitude = (long)(longitude*1000000.0);
+            // Convert to 0.1 microdegrees
+            tempCAM->cam.camParameters.basicContainer.referencePosition.latitude = (long)(latitude*10000000.0);
+            tempCAM->cam.camParameters.basicContainer.referencePosition.longitude = (long)(longitude*10000000.0);
 
             tempCAM->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorConfidence = SemiAxisLength_unavailable;
             tempCAM->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMinorConfidence = SemiAxisLength_unavailable;
@@ -997,8 +997,8 @@ I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm, int causeCode){
         if(UtilVincentyDirect(origin.latitude, origin.longitude,azimuth1,distance ,&latitude,&longitude,&azimuth2) != -1)
         {
             // Convert to microdegrees
-            tempDENM->denm.management.eventPosition.latitude = (long)(latitude*1000000.0);
-            tempDENM->denm.management.eventPosition.longitude = (long)(longitude*1000000.0);
+            tempDENM->denm.management.eventPosition.latitude = (long)(latitude*10000000.0);
+            tempDENM->denm.management.eventPosition.longitude = (long)(longitude*10000000.0);
 
             tempDENM->denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = SemiAxisLength_unavailable;
             tempDENM->denm.management.eventPosition.positionConfidenceEllipse.semiMinorConfidence = SemiAxisLength_unavailable;
@@ -1079,8 +1079,8 @@ int updateDENMMessage(MONRType *MONRData, DENM_t* denm)
         if(UtilVincentyDirect(origin.latitude, origin.longitude,azimuth1,distance ,&latitude,&longitude,&azimuth2) != -1)
         {
             // Convert to microdegrees
-            denm->denm.management.eventPosition.latitude = (long)(latitude*1000000.0);
-            denm->denm.management.eventPosition.longitude = (long)(longitude*1000000.0);
+            denm->denm.management.eventPosition.latitude = (long)(latitude*10000000.0);
+            denm->denm.management.eventPosition.longitude = (long)(longitude*10000000.0);
 
             denm->denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = SemiAxisLength_unavailable;
             denm->denm.management.eventPosition.positionConfidenceEllipse.semiMinorConfidence = SemiAxisLength_unavailable;
