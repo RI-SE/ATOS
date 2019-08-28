@@ -17,6 +17,9 @@ class InfrastructureAction : public ExternalAction
 public:
     InfrastructureAction(ActionID_t actionID = 0, uint32_t allowedNumberOfRuns = 1);
 
+protected:
+    ActionParameter_t asParameterCode(const std::string &parameterCodeString) const;
+
 private:
     const std::set<ActionParameter_t> getAcceptedParameters(void) const
     {

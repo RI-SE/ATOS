@@ -60,6 +60,11 @@ private:
     std::set<Action*> allActions;
 
     void parseScenarioFile(std::ifstream &file);
+    void parseScenarioFileLine(const std::string &line);
+    void splitLine(const std::string &line, const char delimiter, std::vector<std::string> &result);
+    std::set<Trigger*> parseTriggerConfiguration(const std::string &config);
+    std::set<Action*> parseActionConfiguration(const std::string &config);
+
 };
 
 #endif

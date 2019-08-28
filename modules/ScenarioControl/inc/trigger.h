@@ -44,7 +44,8 @@ public:
     bool isActive() const;
     in_addr_t getObjectIP(void) const { return triggerObjectIP; }
 
-    bool operator==(const Trigger &other) const { return other.triggerID == triggerID; }
+    bool operator==(const Trigger &other) const { return (other.triggerID == triggerID) && isSimilar(other); }
+    bool isSimilar(const Trigger &other) const;
 
     /*! Setters */
     void setID(TriggerID_t triggerID) { this->triggerID = triggerID; }
@@ -56,6 +57,7 @@ public:
      * \return Value according to ::TriggerReturnCode_t
      */
     TriggerReturnCode_t appendParameter(TriggerParameter_t triggerParameter);
+    virtual TriggerReturnCode_t appendParameter(std::string parameterString);
 
     /*!
      * \brief parseParameters Parse the parameters list into an appropriate Trigger mode.
@@ -90,12 +92,15 @@ public:
     virtual TriggerReturnCode_t update(float, struct timeval)   { throw std::invalid_argument("Invalid signal type"); }
     virtual TriggerReturnCode_t update(double, struct timeval)  { throw std::invalid_argument("Invalid signal type"); }
     virtual TriggerReturnCode_t update(TREOData){ throw std::invalid_argument("Invalid signal type"); }
+
+    static TriggerTypeCode_t asTypeCode(std::string typeCodeString);
 protected:
     TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter) const;
     TriggerTypeCode_t triggerTypeCode;
     TriggerReturnCode_t wasTriggeredByLastUpdate = NOT_OK; //!< State saving the last result of update
     std::vector<TriggerParameter_t> parameters;
-
+    virtual TriggerParameter_t asParameterCode(const std::string &parameterCodeString) const;
+    static char toUpper(const char c);
     in_addr_t triggerObjectIP = 0;
 
 private:

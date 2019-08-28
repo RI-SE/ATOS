@@ -10,7 +10,6 @@
 
 #define MODULE_NAME "ScenarioControl"
 
-#define SCENARIO_FILE_PATH "path/to/file"
 
 /************************ Main task ******************************************/
 int main()
@@ -23,6 +22,9 @@ int main()
     TREOData treo;
     MonitorDataType monr;
     bool terminate = false;
+    char configPath[MAX_FILE_PATH];
+    UtilGetConfDirectoryPath(configPath, sizeof(configPath));
+    strcat(configPath,TRIGGER_ACTION_FILE_NAME);
     enum {UNINITIALIZED, INITIALIZED, CONNECTED, RUNNING} state = UNINITIALIZED;
 
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
@@ -34,7 +36,6 @@ int main()
         nanosleep(&sleepTimePeriod,&remTime);
     }
 
-    //exit(0);
 
     while(!terminate)
     {
@@ -57,12 +58,17 @@ int main()
             {
                 try {
                     LogMessage(LOG_LEVEL_INFO, "Initializing scenario");
-                    //scenario.initialize(SCENARIO_FILE_PATH);
-                    scenario.initialize("log/dummy_scenariofil.fil");
+                    scenario.initialize(configPath);
                     state = INITIALIZED;
                 }
-                catch (std::invalid_argument) { util_error("Invalid scenario file format"); }
-                catch (std::ifstream::failure) { util_error("Unable to open scenario file <" SCENARIO_FILE_PATH ">"); }
+                catch (std::invalid_argument e) {
+                    std::string errMsg = "Invalid scenario file format: " + std::string(e.what());
+                    util_error(errMsg.c_str());
+                }
+                catch (std::ifstream::failure) {
+                    std::string errMsg = "Unable to open scenario file <" + std::string(configPath) + ">";
+                    util_error(errMsg.c_str());
+                }
             }
             break;
         case COMM_OBJECTS_CONNECTED:

@@ -57,10 +57,13 @@ public:
     in_addr_t getObjectIP(void) const { return actionObjectIP; }
     void setObjectIP(in_addr_t ipAddr) { actionObjectIP = ipAddr; }
 
-    void setExecuteDalayTime(struct timeval tm);
+    void setExecuteDelayTime(struct timeval tm);
     struct timeval getExecuteDelayTime(void) const;
 
     ActionReturnCode_t appendParameter(ActionParameter_t actionParameter);
+    virtual ActionReturnCode_t appendParameter(std::string parameterString);
+
+    static ActionTypeCode_t asTypeCode(const std::string &typeCodeString);
 
 protected:
     ActionTypeCode_t actionTypeCode = ACTION_NONE;
@@ -71,6 +74,8 @@ protected:
     in_addr_t actionObjectIP = 0;
 
     ActionReturnCode_t checkActionParameter(ActionParameter_t actionParameter) const;
+    virtual ActionParameter_t asParameterCode(const std::string &parameterCodeString) const;
+    static char toUpper(const char c);
 
 private:
     virtual const std::set<ActionParameter_t> getAcceptedParameters(void) const

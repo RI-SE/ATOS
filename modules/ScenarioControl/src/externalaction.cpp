@@ -31,3 +31,17 @@ InfrastructureAction::InfrastructureAction(ActionID_t actionID, uint32_t allowed
     : ExternalAction(actionID, Action::ActionTypeCode_t::ACTION_INFRASTRUCTURE, allowedNumberOfRuns)
 {
 }
+
+Action::ActionParameter_t InfrastructureAction::asParameterCode(const std::string &inputStr) const
+{
+    try {
+        return Action::asParameterCode(inputStr);
+    } catch (std::invalid_argument e) {
+        std::string str = inputStr;
+        for (char &ch : str)
+            ch = toUpper(ch);
+        if (!str.compare("DENM_BRAKE_WARNING"))
+            return ACTION_PARAMETER_VS_BRAKE_WARNING;
+        throw e;
+    }
+}
