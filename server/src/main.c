@@ -31,6 +31,7 @@
 #include "datadictionary.h"
 #include "timecontrol.h"
 #include "supervisorcontrol.h"
+#include "simulatorcontrol.h"
 #include "citscontrol.h"
 
 #include "logging.h"
@@ -74,7 +75,8 @@ static const ModuleTask allModules[] = {
     timecontrol_task,
     supervision_task,
     systemcontrol_task,
-    objectcontrol_task
+    objectcontrol_task,
+    simulatorcontrol_task
     #ifdef CITS_ENABLED
     ,citscontrol_task
     #endif

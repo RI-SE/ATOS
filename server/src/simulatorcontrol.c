@@ -26,9 +26,9 @@
 #include <netdb.h>
 
 #include "util.h"
-#include "logger.h"
+#include "datadictionary.h"
 #include "timecontrol.h"
-#include "simulatorcontrol.h"
+#include "logging.h"
 
 
 #define SIM_CONTROL_CONF_FILE_PATH  "conf/test.conf"
@@ -52,10 +52,18 @@
 
 #define SIM_CONTROL_DEBUG_TCP_RX_DATA 0
 
+#define SIM_CONTROL_MQ_MAX_MESSAGE_LENGTH 6200
+
+#define MODULE_NAME "SimulatorControl"
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
+typedef struct
+{
+  U8 SimulatorModeU8;
+} SMGDType;
+
 
 void SimulatorControlSendHeartbeat( I32 *Sockfd, struct sockaddr_in *Addr, TimeType *GPSTime, U8 Debug);
 void SimulatorControlInitSimulator( I32 *Sockfd, U8 SimulatorMode, C8 *FunctionReqResponse, U8 Debug);
@@ -69,12 +77,16 @@ U32 SimulatorControlTextMessageManager(C8 *RxData, C8 *ReqFunction, SMGDType *SM
 /*------------------------------------------------------------
 -- The main function.
 ------------------------------------------------------------*/
-int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
+void simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
 
-  I32 iExit = 0, iCommand;
-  C8 MqRecvBuffer[MQ_MAX_MESSAGE_LENGTH];
-  (void)iCommInit(IPC_RECV_SEND,MQ_LG,0);
+  I32 iExit = 0;
+  enum COMMAND iCommand;
+  C8 MqRecvBuffer[SIM_CONTROL_MQ_MAX_MESSAGE_LENGTH];
+  
+  // Set up message bus connection
+  if (iCommInit())
+        util_error("Unable to connect to message queue bus");
 
   printf("[SimulatorControl] Starting simulator control...\n");
 
@@ -127,7 +139,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
   OBCState_t OBCStateStatus = OBC_STATE_IDLE;
   U8 ObjectAddressListSentU8 = 0;
-  U8 SupervisorModeU8 = 0;
+  U8 SimulatorModeU8 = 0;
   GSD->ChunkSize = 0;
 
   gettimeofday(&ExecTime, NULL);
@@ -136,44 +148,36 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
   //Get the Simulator IP
   bzero(TextBufferC8, SIM_CONTROL_BUFFER_SIZE_20);
-  UtilSearchTextFile(TEST_CONF_FILE, "SimulatorIP=", "", TextBufferC8);
   bzero(SimulatorServerIPC8, SIM_CONTROL_BUFFER_SIZE_20);
-  strcat(SimulatorServerIPC8, TextBufferC8);
-  printf("[SimulatorControl] Simulator IP: %s\n", TextBufferC8);
-  SimulatorIpU32 = UtilIPStringToInt(SimulatorServerIPC8);
-
+  DataDictionaryGetSimulatorIPC8(GSD, SimulatorServerIPC8, SIM_CONTROL_BUFFER_SIZE_20);
+  printf("[SimulatorControl] Simulator IP: %s\n", SimulatorServerIPC8);
+  DataDictionaryGetSimulatorIPU32(GSD, &SimulatorIpU32);
+ 
   //Get the Supervisor IP
-  bzero(TextBufferC8, SIM_CONTROL_BUFFER_SIZE_20);
-  UtilSearchTextFile(TEST_CONF_FILE, "SupervisorIP=", "", TextBufferC8);
   bzero(SupervisorServerIPC8, SIM_CONTROL_BUFFER_SIZE_20);
-  strcat(SupervisorServerIPC8, TextBufferC8);
-  printf("[SimulatorControl] Supervisor IP: %s\n", TextBufferC8);
-  SupervisorIpU32 = UtilIPStringToInt(SupervisorServerIPC8);
+  DataDictionaryGetExternalSupervisorIPC8(GSD, SupervisorServerIPC8, SIM_CONTROL_BUFFER_SIZE_20);
+  printf("[SimulatorControl] Supervisor IP: %s\n", SupervisorServerIPC8);
+  DataDictionaryGetExternalSupervisorIPU32(GSD, &SupervisorIpU32);
 
-  //Get the Supervisor mode
-  bzero(TextBufferC8, SIM_CONTROL_BUFFER_SIZE_20);
-  UtilSearchTextFile(TEST_CONF_FILE, "SimulatorMode=", "", TextBufferC8);
-  SupervisorModeU8 = atoi(TextBufferC8);
-  printf("[SimulatorControl] SimulatorMode: %d\n", SupervisorModeU8);
+  //Get the Simulator mode
+  DataDictionaryGetSimulatorModeU8(GSD, &SimulatorModeU8);
+  printf("[SimulatorControl] SimulatorMode: %d\n", SimulatorModeU8);
 
   //Get object addresses used in DTM mode
   bzero(DTMObjectAddressesC8, SIM_CONTROL_BUFFER_SIZE_128);
-  UtilSearchTextFile(TEST_CONF_FILE, "DTMReceivers=", "", DTMObjectAddressesC8);
+  DataDictionaryGetDTMReceiversC8(GSD, DTMObjectAddressesC8, SIM_CONTROL_BUFFER_SIZE_128);
+
   
   if(SimulatorIpU32 != 0) //Do stuff if IP is defined
   {
-    bzero(TextBufferC8, SIM_CONTROL_BUFFER_SIZE_20);
-    UtilSearchTextFile(TEST_CONF_FILE, "SimulatorTCPPort=", "", TextBufferC8);
-    SimulatorTCPPortU16 = (U16)atoi(TextBufferC8);
-    bzero(TextBufferC8, SIM_CONTROL_BUFFER_SIZE_20);
-    UtilSearchTextFile(TEST_CONF_FILE, "SimulatorUDPPort=", "", TextBufferC8);
-    SimulatorUDPPortU16 = (U16)atoi(TextBufferC8);
+    DataDictionaryGetSimulatorTCPPortU16(GSD, &SimulatorTCPPortU16);
+    DataDictionaryGetSimulatorUDPPortU16(GSD, &SimulatorUDPPortU16);
 
     printf("[SimulatorControl] SimulatorTCPPort = %d\n", SimulatorTCPPortU16);
     printf("[SimulatorControl] SimulatorUDPPort = %d\n", SimulatorUDPPortU16);
 
 
-    while (GPSTime->TimeInitiatedU8 == 0) { usleep(100); }
+    while (GPSTime->isTimeInitializedU8 == 0) { usleep(100); }
     
     while(!iExit)
     {
@@ -188,7 +192,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         ClientResultI32 = UtilReceiveTCPData("SimulatorControl", &SimulatorTCPSocketfdI32, RxBuffer, 0, 0); //Data length resides in ClientResultI32
         if(ClientResultI32 == 0)
         {
-            DEBUG_LPRINT(DEBUG_LEVEL_HIGH, "[SimulatorControl] Client closed connection.\n");
+            printf("[SimulatorControl] Client closed connection.\n");
             close(SimulatorTCPSocketfdI32);
             SimulatorTCPSocketfdI32 = -1;
             SimulatorInitiatedU8 = 0;
@@ -197,7 +201,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         /*Initiate the simulator if not initialized and a there is a valid TCP connection */
         if(SimulatorInitiatedReqU8 == 0 && SimulatorTCPSocketfdI32 > 0)
         {
-          SimulatorControlInitSimulator(&SimulatorTCPSocketfdI32, SupervisorModeU8, SimFuncReqResponse, 0);
+          SimulatorControlInitSimulator(&SimulatorTCPSocketfdI32, SimulatorModeU8, SimFuncReqResponse, 0);
           SimulatorInitiatedReqU8 = 1;
         }
         
@@ -284,7 +288,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
               if(SupervisorIpU32 == 0)
               { 
                 //printf("[SimulatorControl] To MsgQueue: %s\n", MsgQueBuffer);
-                (void)iCommSend(COMM_TRAJ, MsgQueBuffer); //COMM_TRAJ will be received by ObjectControl
+                (void)iCommSend(COMM_TRAJ, MsgQueBuffer, strlen(MsgQueBuffer)); //COMM_TRAJ will be received by ObjectControl. MsgQueBuffer is a string!!
               }
               else
               {
@@ -399,7 +403,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           bzero(VOILString, SIM_CONTROL_LOG_BUFFER_LENGTH);
           SimulatorControlVOILToASCII(UDPReceiveBuffer, VOILString);
           /*Send data to message queue so it is written to the log file*/
-          (void)iCommSend(COMM_VIOP, VOILString);
+          (void)iCommSend(COMM_VIOP, VOILString, strlen(VOILString));
         }
 
 
@@ -423,9 +427,8 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
       }
 
 
-      bzero(MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH);
-      (void)iCommRecv(&iCommand,MqRecvBuffer,MQ_MAX_MESSAGE_LENGTH, NULL);
-
+      bzero(MqRecvBuffer,SIM_CONTROL_MQ_MAX_MESSAGE_LENGTH);
+      (void)iCommRecv(&iCommand,MqRecvBuffer,SIM_CONTROL_MQ_MAX_MESSAGE_LENGTH, NULL);
 
       if(iCommand == COMM_EXIT)
       {
@@ -565,7 +568,7 @@ U32 SimulatorControlBuildObjectMonitorMessage(C8* MessageBuffer, C8 *MONRData, O
   ptr = strchr(ptr+1, ';');
   bzero(TextBuffer, SIM_CONTROL_BUFFER_SIZE_20);
   strncpy(TextBuffer, ptr+1, (uint64_t)strchr(ptr+1, ';') - (uint64_t)ptr);
-  ObjectMonitorData->GPSSOWU32 = SwapU32((U32) atoi(TextBuffer));
+  ObjectMonitorData->GPSQmsOfWeekU32 = SwapU32((U32) atoi(TextBuffer));
 
   //Get XPosition
   ptr = strchr(ptr+1, ';');

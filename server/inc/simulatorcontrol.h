@@ -11,18 +11,13 @@
 #ifndef __SIMULATORCONTROL_H_INCLUDED__
 #define __SIMULATORCONTROL_H_INCLUDED__
 
-
-typedef struct
-{
-  U8 SimulatorModeU8;
-} SMGDType;
-
+#include "logging.h"
 
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD);
+void simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel);
 
 
 #endif 
