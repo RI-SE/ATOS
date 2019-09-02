@@ -37,6 +37,12 @@ if(USE_CITS)
         src/citscontrol.c
         inc/citscontrol.h
     )
+    file(GLOB ASN1_HEADERS "../util/ASN1/generatedfiles/*.h")
+    file(GLOB ASN1_SOURCES "../util/ASN1/generatedfiles/*.c")
+    add_library(ASN1_ITS
+        ${ASN1_HEADERS}
+        ${ASN1_SOURCES}
+    )
 add_definitions(-DCITS_ENABLED)
 endif()
 
@@ -100,7 +106,7 @@ target_link_libraries(util MaestroLogging MaestroTime MQBus)
 target_link_libraries(TEServer util)
 
 if(USE_CITS)
-    target_link_libraries(cits pahomqtt3c MaestroTime)
+    target_link_libraries(cits pahomqtt3c MaestroTime ASN1_ITS)
     target_link_libraries(TEServer cits)
 endif()
 

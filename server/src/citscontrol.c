@@ -23,6 +23,7 @@
 #include <time.h>
 #include <string.h>
 #include <signal.h>
+#include <math.h>
 
 
 #include <sys/socket.h>
@@ -44,7 +45,12 @@
 #define H_THRESHOLD 1 //HEADING THRESHOLD
 #define S_THRESHOLD 0 //SPEED THRESHOLD
 #define D_THRESHOLD 1 //DISTANCE THRESHOLD
-#define CHECK_PERIOD 100
+#define DENM_RETRANSMIT_CYCLE_S 1
+#define DENM_RETRANSMIT_CYCLE_US 0
+#define DENM_VALIDITY_DURATION_S 10
+#define MAX_SIMULTANEOUS_DENM 10
+#define CAM_TIME_CYCLE_S 1
+#define CAM_TIME_CYCLE_US 0
 #define SIG SIGRTMIN // Signal type to use for timers
 
 #define CITS_CONTROL_CONF_FILE_PATH  "conf/test.conf"
@@ -60,13 +66,41 @@
 #define DEFAULT_MQTT_QOS         1
 #define DEFAULT_MQTT_TIMEOUT     10000L
 
+#define ITS_STATION_ID 1000
+
+#define DENM_V_1_2_1_MESSAGE_ID 1
+#define DENM_V_1_2_1_PROTOCOL_VERSION 1
+#define CAM_V_1_3_1_MESSAGE_ID 2
+#define CAM_V_1_3_1_PROTOCOL_VERSION 1
+
 #define MODULE_NAME "CitsControl"
+
+
+/*------------------------------------------------------------
+  -- Typedefs
+  ------------------------------------------------------------*/
+typedef struct
+{
+    struct timeval retransmissionEndTime;
+    struct timeval nextRetransmissionTime;
+    struct timeval retransmissionInterval;
+    DENM_t* message;
+} DENMRetransmission_t;
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
+DENM_t* allocateDENMStruct(void);
+void deallocateDENMStruct(DENM_t* denm);
+void initializeDENMStruct(DENM_t* denm);
+
+CAM_t* allocateCAMStruct(void);
+void deallocateCAMStruct(CAM_t* cam);
+void initializeCAMStruct(CAM_t* cam);
+
 I32 generateCAMMessage(MONRType *MONRData, CAM_t* lastCam);
 I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm, int causeCode);
+int updateDENMMessage(MONRType *MONRData, DENM_t* denm);
 
 I32 sendCAM(CAM_t* lastCam);
 I32 sendDENM(DENM_t* lastDENM);
@@ -86,6 +120,7 @@ int getActionIndex(EXACData exac, uint16_t* actionIDs, int nConfiguredActions);
 int storeDENM(DENM_t denm);
 static void signalHandler(int sig, siginfo_t *siginfo, void* uc);
 void sendLastDENM(void);
+ssize_t insertNewDENMIntoList(DENMRetransmission_t** list, size_t listSize);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -103,6 +138,7 @@ struct Origo {
     double latitude;
 };
 
+
 static int state = INIT;
 static volatile int pending_state = INIT;
 static volatile int iExit = 0;
@@ -111,9 +147,10 @@ static MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializ
 static MQTTClient_message pubmsg = MQTTClient_message_initializer;
 static volatile MQTTClient_deliveryToken deliveredtoken = 0;
 static MQTTClient_deliveryToken sendtoken = 0;
-static DENM_t* lastDENM;
+static DENM_t *tempDENM;
+static CAM_t* lastCAM, *tempCAM;
 static struct Origo origin;
-
+static DENMRetransmission_t* activeDENMs[MAX_SIMULTANEOUS_DENM];
 
 /*------------------------------------------------------------
 -- The main function.
@@ -121,9 +158,10 @@ static struct Origo origin;
 void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 {
     origin.longitude = -200; //Initialize longitude to something outside -180 to 180
-    origin.latitude = -100; //Initialize latitude to something outside -90 to 90
+    origin.latitude = -100;  //Initialize latitude to something outside -90 to 90
 
-    int camTimeCycle = 0;
+    const struct timeval timeCycleCAM = {CAM_TIME_CYCLE_S,CAM_TIME_CYCLE_US};
+    struct timeval nextCAMCycle;
     char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
     enum COMMAND command;
     int mqtt_response_code = 0;
@@ -135,29 +173,33 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
     uint16_t* storedActionIDs = NULL;
     int numberOfStoredActionIDs = 0;
     int actionIndex = -1;
-
-
     asn_enc_rval_t ec;
 
-    CAM_t* lastCam;
-    lastCam = calloc(1, sizeof(CAM_t));
-    if(!lastCam){
-         exit(1);
-    }
+    LogInit(MODULE_NAME,logLevel);
+    LogMessage(LOG_LEVEL_INFO, "C-ITS control running with PID: %i", getpid());
 
-    lastDENM = calloc(1, sizeof(DENM_t));
-    if(!lastDENM) {
-           exit(1);
+
+    lastCAM = allocateCAMStruct();
+    tempCAM = allocateCAMStruct();
+    if (lastCAM == NULL || tempCAM == NULL){
+        exit(EXIT_FAILURE);
+    }
+    initializeCAMStruct(lastCAM);
+
+    bzero(activeDENMs,sizeof (activeDENMs));
+
+    tempDENM = allocateDENMStruct();
+    if (tempDENM == NULL) {
+        exit(EXIT_FAILURE);
     }
 
     TimeType time;
 
     I16 lastSpeed = 0;
-    LogInit(MODULE_NAME,logLevel);
-    LogMessage(LOG_LEVEL_INFO, "C-ITS control running with PID: %i", getpid());
 
     //! Timer for sending DENM at later time
     struct timeval systemTime, exacTime = {0,0};
+    TimeSetToCurrentSystemTime(&nextCAMCycle);
 
 
     UtilGetMillisecond(&time);
@@ -166,10 +208,10 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
 
     MQTTClient_setCallbacks(client, NULL, connlost_mqtt, msgarrvd_mqtt, delivered_mqtt);
 
-    lastCam->cam.generationDeltaTime = time.MillisecondU16;
+    lastCAM->cam.generationDeltaTime = time.MillisecondU16;
 
-    lastCam->cam.camParameters.basicContainer.referencePosition.latitude = 0;
-    lastCam->cam.camParameters.basicContainer.referencePosition.longitude = 0;
+    lastCAM->cam.camParameters.basicContainer.referencePosition.latitude = 0;
+    lastCAM->cam.camParameters.basicContainer.referencePosition.longitude = 0;
 
     // TODO: Initialize signal handler
 
@@ -239,29 +281,33 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         case COMM_MONI:
             LogMessage(LOG_LEVEL_DEBUG, "Ignored old style MONR data");
             break;
-        case COMM_MONR:
+        case COMM_OBJECTS_CONNECTED:
+            TimeSetToCurrentSystemTime(&nextCAMCycle);
             break;
+        case COMM_MONR:
             UtilPopulateMonitorDataStruct(busReceiveBuffer, sizeof(busReceiveBuffer),&mqMONRdata,0);
             MONRMessage = mqMONRdata.MONR;
 
-            if(camTimeCycle == CHECK_PERIOD)
+            TimeSetToCurrentSystemTime(&systemTime);
+            if(timercmp(&systemTime,&nextCAMCycle,>))
             {
+                timeradd(&nextCAMCycle,&timeCycleCAM,&nextCAMCycle);
+
                 I16 distanceDelta = 0;// UtilCoordinateDistance(LastMONRMessage.XPositionI32, LastMONRMessage.YPositionI32, MONRMessage.XPositionI32, MONRMessage.YPositionI32);
                 I16 headingDelta = abs(LastMONRMessage.HeadingU16 - MONRMessage.HeadingU16);
                 I16 speedDelta = abs((sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16))) - (lastSpeed));
 
-
                 if(speedDelta >= S_THRESHOLD || distanceDelta >= D_THRESHOLD || headingDelta >= H_THRESHOLD){
-                    generateCAMMessage(&MONRMessage, lastCam);
-                    generateDENMMessage(&MONRMessage, lastDENM, CauseCodeType_reserved);
-                    sendCAM(lastCam);
-                    sendDENM(lastDENM);
+                    generateCAMMessage(&MONRMessage, lastCAM);
+                    sendCAM(lastCAM);
+
+                    // Temporary
+                    //generateDENMMessage(&MONRMessage, lastDENM, CauseCodeType_reserved);
+                    //sendDENM(lastDENM);
                 }
                 lastSpeed = sqrt((MONRMessage.LateralSpeedI16*MONRMessage.LateralSpeedI16) + (MONRMessage.LongitudinalSpeedI16*MONRMessage.LongitudinalSpeedI16));
                 LastMONRMessage = MONRMessage;
-                camTimeCycle = 0;
             }
-            camTimeCycle++;
 
             break;
         case COMM_ACCM:
@@ -283,23 +329,27 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 }
 
                 // Based on last MONR message, generate a DENM message to send
-                generateDENMMessage(&MONRMessage, lastDENM, CauseCodeType_collisionRisk);
-
-                if (actionData.executionTime_qmsoW == 0)
+                ssize_t DENMindex = insertNewDENMIntoList(activeDENMs,MAX_SIMULTANEOUS_DENM);
+                if (DENMindex == -1)
                 {
-                    LogMessage(LOG_LEVEL_INFO, "Received immediate action request: sending DENM message");
-                    if (lastDENM != NULL)
-                        sendDENM(lastDENM);
-                    else
-                        LogMessage(LOG_LEVEL_ERROR, "Unable to send null DENM");
+                    LogMessage(LOG_LEVEL_ERROR,"Could not insert new DENM into list");
+                    break;
                 }
+                generateDENMMessage(&MONRMessage, activeDENMs[DENMindex]->message, CauseCodeType_dangerousSituation);
+
+                struct timeval validityDuration;
+                if (actionData.executionTime_qmsoW == 0) // Immediate execution requested
+                    activeDENMs[DENMindex]->nextRetransmissionTime = systemTime;
                 else
-                {
-                    TimeSetToGPStime(&exacTime, TimeGetAsGPSweek(&systemTime), actionData.executionTime_qmsoW);
+                    TimeSetToGPStime(&activeDENMs[DENMindex]->nextRetransmissionTime, TimeGetAsGPSweek(&systemTime), actionData.executionTime_qmsoW);
 
-                    LogMessage(LOG_LEVEL_INFO, "Received action request: sending DENM in %.3f seconds",
-                               (double)(actionData.executionTime_qmsoW-TimeGetAsGPSqmsOfWeek(&systemTime))/4000);
-                }
+                validityDuration.tv_sec = *activeDENMs[DENMindex]->message->denm.management.validityDuration;
+                validityDuration.tv_usec = 0;
+
+                timeradd(&activeDENMs[DENMindex]->nextRetransmissionTime, &validityDuration, &activeDENMs[DENMindex]->retransmissionEndTime);
+
+                activeDENMs[DENMindex]->retransmissionInterval.tv_sec = DENM_RETRANSMIT_CYCLE_S;
+                activeDENMs[DENMindex]->retransmissionInterval.tv_usec = DENM_RETRANSMIT_CYCLE_US;
             }
             else if (actionIndex == -1)
                 LogMessage(LOG_LEVEL_DEBUG, "Received non-configured action execution request");
@@ -318,8 +368,6 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             break;
         case COMM_CONNECT:
             break;
-        case COMM_OBJECTS_CONNECTED:
-            break;
         case COMM_LOG:
             break;
         case COMM_INV:
@@ -333,14 +381,369 @@ void citscontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
             LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
         }
 
-        if (timerisset(&exacTime) && timercmp(&systemTime, &exacTime, >))
+        // Go through all stored DENMs, and see if any of them is up for retransmission
+        TimeSetToCurrentSystemTime(&systemTime);
+        for (int i = 0; i < MAX_SIMULTANEOUS_DENM; ++i)
         {
-            timerclear(&exacTime);
-            sendDENM(lastDENM);
+            if(activeDENMs[i] == NULL) continue;
+
+            DENMRetransmission_t* aDENM = activeDENMs[i];
+
+            if (timerisset(&aDENM->nextRetransmissionTime) && timercmp(&systemTime, &aDENM->nextRetransmissionTime, >))
+            {
+                updateDENMMessage(&MONRMessage,aDENM->message);
+                sendDENM(aDENM->message);
+
+                timeradd(&aDENM->nextRetransmissionTime,&aDENM->retransmissionInterval,&aDENM->nextRetransmissionTime);
+                if (timercmp(&aDENM->nextRetransmissionTime,&aDENM->retransmissionEndTime,>))
+                {
+                    deallocateDENMStruct(aDENM->message);
+                    free(aDENM);
+                    activeDENMs[i] = NULL;
+                }
+            }
         }
     }
 
+    for (int i = 0; i < MAX_SIMULTANEOUS_DENM; ++i)
+    {
+        deallocateDENMStruct(activeDENMs[i]->message);
+        free(activeDENMs[i]);
+    }
     free(storedActionIDs);
+}
+
+
+ssize_t insertNewDENMIntoList(DENMRetransmission_t** list, size_t listSize)
+{
+    for (unsigned int i = 0; i < listSize; ++i)
+    {
+        if (list[i] == NULL)
+        {
+            list[i] = calloc(1,sizeof(DENMRetransmission_t));
+            list[i]->message = allocateDENMStruct();
+            if (list[i]->message != NULL)
+            {
+                initializeDENMStruct(list[i]->message);
+                return i;
+            }
+            else return -1;
+        }
+    }
+    return -1;
+}
+
+void initializeDENMStruct(DENM_t* denm)
+{
+    denm->header.messageID = DENM_V_1_2_1_MESSAGE_ID;
+    denm->header.protocolVersion = DENM_V_1_2_1_PROTOCOL_VERSION;
+    denm->header.stationID = ITS_STATION_ID;
+
+    /****** MANAGEMENT ******/
+    denm->denm.management.actionID.originatingStationID = ITS_STATION_ID;
+    denm->denm.management.actionID.sequenceNumber = 0;
+    denm->denm.management.stationType = StationType_roadSideUnit;
+    asn_long2INTEGER(&denm->denm.management.detectionTime,0); // TODO: double check
+    asn_long2INTEGER(&denm->denm.management.referenceTime,0); // TODO: double check
+    denm->denm.management.eventPosition.altitude.altitudeValue = 0;
+    denm->denm.management.eventPosition.altitude.altitudeConfidence = 0;
+    denm->denm.management.eventPosition.latitude = 0;
+    denm->denm.management.eventPosition.longitude = 0;
+    denm->denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = 0;
+    denm->denm.management.eventPosition.positionConfidenceEllipse.semiMinorConfidence = 0;
+    denm->denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 0;
+    *denm->denm.management.validityDuration = DENM_VALIDITY_DURATION_S;
+    *denm->denm.management.relevanceDistance = RelevanceDistance_over10km;
+    *denm->denm.management.relevanceTrafficDirection = RelevanceTrafficDirection_allTrafficDirections;
+
+    // Unused management optional fields (null their pointers to show unused)
+    // TODO: Modify here to once relevant information can be used
+    free(denm->denm.management.termination);
+    denm->denm.management.termination = NULL;
+
+    /****** SITUATION ******/
+    denm->denm.situation->informationQuality = InformationQuality_highest;
+    denm->denm.situation->eventType.causeCode = CauseCodeType_reserved;
+    denm->denm.situation->eventType.subCauseCode = CauseCodeType_reserved;
+
+    // Unused situation optional fields (null their pointers to show unused)
+    // TODO: Modify here to once relevant information can be used
+    free(denm->denm.situation->linkedCause);
+    free(denm->denm.situation->eventHistory);
+    denm->denm.situation->linkedCause = NULL;
+    denm->denm.situation->eventHistory = NULL;
+
+    /****** LOCATION ******/
+    free(denm->denm.location);
+    denm->denm.location = NULL;
+
+    if (denm->denm.location != NULL)
+    {
+        denm->denm.location->eventSpeed->speedValue = 0;
+        denm->denm.location->eventSpeed->speedValue = SpeedConfidence_unavailable;
+
+        // Unused location optional fields (null their pointers to show unused)
+        // TODO: Modify here to once relevant information can be used
+        free(denm->denm.location->roadType);
+        free(denm->denm.location->eventPositionHeading);
+        denm->denm.location->roadType = NULL;
+        denm->denm.location->eventPositionHeading = NULL;
+    }
+
+    /****** ALACARTE ******/
+
+    // Unused alacarte optional fields (null their pointers to show unused)
+    // TODO: Modify here to once relevant information can be used
+    free(denm->denm.alacarte->lanePosition);
+    free(denm->denm.alacarte->impactReduction);
+    free(denm->denm.alacarte->externalTemperature);
+    free(denm->denm.alacarte->roadWorks);
+    free(denm->denm.alacarte->positioningSolution);
+    free(denm->denm.alacarte->stationaryVehicle);
+    denm->denm.alacarte->lanePosition = NULL;
+    denm->denm.alacarte->impactReduction = NULL;
+    denm->denm.alacarte->externalTemperature = NULL;
+    denm->denm.alacarte->roadWorks = NULL;
+    denm->denm.alacarte->positioningSolution = NULL;
+    denm->denm.alacarte->stationaryVehicle = NULL;
+
+    // TODO
+}
+
+DENM_t* allocateDENMStruct(void)
+{
+    // Allocate entire struct
+    DENM_t* denm = calloc(1, sizeof(DENM_t));
+
+    if (denm == NULL)
+        return NULL;
+
+    // Allocate management subcontainers
+    denm->denm.management.termination = calloc(1, sizeof (Termination_t));
+    denm->denm.management.relevanceDistance = calloc(1, sizeof (RelevanceDistance_t));
+    denm->denm.management.relevanceTrafficDirection = calloc(1, sizeof (RelevanceTrafficDirection_t));
+    denm->denm.management.validityDuration = calloc(1, sizeof (ValidityDuration_t));
+    denm->denm.management.transmissionInterval = calloc(1, sizeof (TransmissionInterval_t));
+
+    if (denm->denm.management.termination == NULL || denm->denm.management.relevanceDistance == NULL
+            || denm->denm.management.relevanceTrafficDirection == NULL || denm->denm.management.validityDuration == NULL
+            || denm->denm.management.transmissionInterval == NULL)
+    {
+        deallocateDENMStruct(denm);
+        return NULL;
+    }
+
+    // Allocate subcontainers
+    denm->denm.situation = calloc(1, sizeof(SituationContainer_t));
+    denm->denm.location = calloc(1, sizeof(LocationContainer_t));
+    denm->denm.alacarte = calloc(1, sizeof(AlacarteContainer_t));
+    if (denm->denm.situation == NULL || denm->denm.location == NULL || denm->denm.alacarte == NULL)
+    {
+        deallocateDENMStruct(denm);
+        return NULL;
+    }
+    else {
+        // Initialize all pointers to null so that they can be passed to the deallocation
+        // function if something goes wrong during initialization
+
+        denm->denm.situation->linkedCause = NULL;
+        denm->denm.situation->eventHistory = NULL;
+
+        denm->denm.location->eventSpeed = NULL;
+        denm->denm.location->eventPositionHeading = NULL;
+        denm->denm.location->roadType = NULL;
+
+        denm->denm.alacarte->lanePosition = NULL;
+        denm->denm.alacarte->impactReduction = NULL;
+        denm->denm.alacarte->externalTemperature = NULL;
+        denm->denm.alacarte->roadWorks = NULL;
+        denm->denm.alacarte->positioningSolution = NULL;
+        denm->denm.alacarte->stationaryVehicle = NULL;
+    }
+
+
+    // Allocate situation subcontainers
+    denm->denm.situation->linkedCause = calloc(1,sizeof (CauseCode_t));
+    denm->denm.situation->eventHistory = NULL; // TODO: allocate memory for this
+    if (denm->denm.situation->linkedCause == NULL /*|| denm->denm.situation->eventHistory == NULL*/)
+    {
+        deallocateDENMStruct(denm);
+        return NULL;
+    }
+
+    // Allocate location subcontainers
+    denm->denm.location->eventSpeed = calloc(1, sizeof (Speed_t));
+    denm->denm.location->eventPositionHeading = calloc(1, sizeof (Heading_t));
+    denm->denm.location->roadType = calloc(1, sizeof (RoadType_t));
+    if (denm->denm.location->eventSpeed == NULL || denm->denm.location->eventPositionHeading == NULL
+            || denm->denm.location->roadType == NULL)
+    {
+        deallocateDENMStruct(denm);
+        return NULL;
+    }
+
+    // Allocate alacarte subcontainers
+    denm->denm.alacarte->lanePosition = calloc(1, sizeof(LanePosition_t));
+    denm->denm.alacarte->impactReduction = NULL; // TODO: allocate memory for this
+    denm->denm.alacarte->externalTemperature = calloc(1, sizeof(Temperature_t));
+    denm->denm.alacarte->roadWorks = NULL; // TODO: allocate memory for this
+    denm->denm.alacarte->positioningSolution = calloc(1, sizeof (PositioningSolutionType_t));
+    denm->denm.alacarte->stationaryVehicle = NULL; // TODO: allocate memory for this
+    if (denm->denm.alacarte->lanePosition == NULL || denm->denm.alacarte->externalTemperature == NULL
+            || denm->denm.alacarte->positioningSolution == NULL /*|| denm->denm.alacarte->impactReduction == NULL
+            || denm->denm.alacarte->roadWorks == NULL || denm->denm.alacarte->stationaryVehicle == NULL*/)
+    {
+        deallocateDENMStruct(denm);
+        return NULL;
+    }
+
+    return denm;
+}
+
+void deallocateDENMStruct(DENM_t* denm)
+{
+    if (denm == NULL) return;
+
+    if (denm->denm.situation != NULL)
+    {
+        free(denm->denm.situation->linkedCause);
+        free(denm->denm.situation->eventHistory); // TODO: deallocate possible submembers
+
+        free(denm->denm.situation);
+    }
+
+    if (denm->denm.location != NULL)
+    {
+        free(denm->denm.location->eventSpeed);
+        free(denm->denm.location->eventPositionHeading);
+        free(denm->denm.location->roadType);
+
+        free(denm->denm.location);
+    }
+
+    if (denm->denm.alacarte != NULL)
+    {
+        free(denm->denm.alacarte->lanePosition);
+        free(denm->denm.alacarte->impactReduction); // TODO: deallocate possible submembers
+        free(denm->denm.alacarte->externalTemperature);
+        free(denm->denm.alacarte->roadWorks); // TODO: deallocate possible submembers
+        free(denm->denm.alacarte->positioningSolution);
+        free(denm->denm.alacarte->stationaryVehicle); // TODO: deallocate possible submembers
+
+        free(denm->denm.alacarte);
+    }
+
+    free(denm);
+}
+
+CAM_t* allocateCAMStruct(void)
+{
+    CAM_t* cam = calloc(1,sizeof (CAM_t));
+    const HighFrequencyContainer_PR chosenHFContainerType =  HighFrequencyContainer_PR_basicVehicleContainerHighFrequency;
+
+    if (cam == NULL)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Unable to allocate CAM struct");
+        return NULL;
+    }
+
+    cam->cam.camParameters.highFrequencyContainer.present = chosenHFContainerType;
+    switch (cam->cam.camParameters.highFrequencyContainer.present)
+    {
+    case HighFrequencyContainer_PR_NOTHING:
+        util_error("Empty container unimplemented");
+        break;
+    case HighFrequencyContainer_PR_basicVehicleContainerHighFrequency:
+        cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.accelerationControl = NULL; // TODO: Allocate memory for this
+        cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lanePosition = calloc(1,sizeof(LanePosition_t));
+        cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.steeringWheelAngle = calloc(1,sizeof(SteeringWheelAngle_t));
+        cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration = calloc(1,sizeof(LateralAcceleration_t));
+        cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.verticalAcceleration = calloc(1,sizeof(VerticalAcceleration_t));
+        cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.performanceClass = calloc(1,sizeof(PerformanceClass_t));
+        cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.cenDsrcTollingZone = calloc(1,sizeof(CenDsrcTollingZone_t));
+        cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.cenDsrcTollingZone->cenDsrcTollingZoneID = NULL; // TODO: Allocate memory for this
+
+        BasicVehicleContainerHighFrequency_t* bvc = &cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency;
+        if (bvc->lanePosition == NULL || bvc->steeringWheelAngle == NULL
+                || bvc->lateralAcceleration == NULL || bvc->verticalAcceleration == NULL
+                || bvc->performanceClass == NULL || bvc->cenDsrcTollingZone == NULL /*|| bvc->cenDsrcTollingZone->cenDsrcTollingZoneID == NULL || bvc->accelerationControl == NULL*/)
+        {
+            LogMessage(LOG_LEVEL_ERROR, "Unable to allocate CAM struct basic vehicle container");
+            deallocateCAMStruct(cam);
+            return NULL;
+        }
+        break;
+    case HighFrequencyContainer_PR_rsuContainerHighFrequency:
+        util_error("RSU container unimplemented");
+        break;
+    }
+    return cam;
+}
+
+void initializeCAMStruct(CAM_t* cam)
+{
+    cam->header.stationID = ITS_STATION_ID;
+    cam->header.messageID = CAM_V_1_3_1_MESSAGE_ID;
+    cam->header.protocolVersion = CAM_V_1_3_1_PROTOCOL_VERSION;
+
+    cam->cam.generationDeltaTime = 0;
+    cam->cam.camParameters.basicContainer.stationType = StationType_roadSideUnit;
+    cam->cam.camParameters.basicContainer.referencePosition.latitude = 0;
+    cam->cam.camParameters.basicContainer.referencePosition.longitude = 0;
+    cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeValue = 0;
+    cam->cam.camParameters.basicContainer.referencePosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
+    cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorConfidence = SemiAxisLength_unavailable;
+    cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMinorConfidence = SemiAxisLength_unavailable;
+    cam->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = 0;
+
+    cam->cam.camParameters.highFrequencyContainer.present = HighFrequencyContainer_PR_basicVehicleContainerHighFrequency;
+
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.headingValue = HeadingValue_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.headingConfidence = HeadingConfidence_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = SpeedValue_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence = SpeedConfidence_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection = DriveDirection_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = VehicleLengthValue_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthConfidenceIndication = VehicleLengthConfidenceIndication_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth = VehicleWidth_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = LongitudinalAccelerationValue_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationConfidence = AccelerationConfidence_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureValue = CurvatureValue_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureConfidence = CurvatureConfidence_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvatureCalculationMode = CurvatureCalculationMode_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateValue = YawRateValue_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateConfidence = YawRateConfidence_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = LateralAccelerationValue_unavailable;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationConfidence = AccelerationConfidence_unavailable;
+
+    // Unused highFrequencyContainer optional fields (null their pointers to show unused)
+    // TODO: Modify here to once relevant information can be used
+    free(cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.accelerationControl);
+    free(cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lanePosition);
+    free(cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.steeringWheelAngle);
+    free(cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.verticalAcceleration);
+    free(cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.performanceClass);
+    free(cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.cenDsrcTollingZone);
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.accelerationControl = NULL;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lanePosition = NULL;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.steeringWheelAngle = NULL;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.verticalAcceleration = NULL;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.performanceClass = NULL;
+    cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.cenDsrcTollingZone = NULL;
+
+    // Low frequency container and special vehicle containers unused for now (TODO)
+    free(cam->cam.camParameters.lowFrequencyContainer);
+    free(cam->cam.camParameters.specialVehicleContainer);
+    cam->cam.camParameters.lowFrequencyContainer = NULL;
+    cam->cam.camParameters.specialVehicleContainer = NULL;
+
+    return;
+}
+
+void deallocateCAMStruct(CAM_t* cam)
+{
+    free(cam);
+    // TODO: more
 }
 
 void signalHandler(int sig, siginfo_t* siginfo, void* uc)
@@ -349,8 +752,8 @@ void signalHandler(int sig, siginfo_t* siginfo, void* uc)
 
     LogPrint("Caught %d", sig);
 
-    if (lastDENM != NULL)
-        sendDENM(lastDENM);
+    //if (lastDENM != NULL)
+    //    sendDENM(lastDENM);
 
     signal(sig, SIG_IGN);
 }
@@ -442,8 +845,6 @@ static int write_out(const void *buffer, size_t size, void *app_key){
     return (wrote == size) ? 0 : -1;
 }
 
-
-
 /*!
  * \brief GenerateCamMessage generates a cam message to send on MQTT
  * \param MONRData MONR data struct
@@ -451,21 +852,22 @@ static int write_out(const void *buffer, size_t size, void *app_key){
  * \param lastSpeed variable keeping track of last speed recorded.
  */
 I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
+    struct timeval tv, systemTime;
 
-    TimeType time;
-    CAM_t tempCam;
+    initializeCAMStruct(tempCAM);
 
-    tempCam.header.protocolVersion = 1;
-    tempCam.header.messageID = 2;
-    tempCam.header.stationID = 1000;
+    tempCAM->header.protocolVersion = CAM_V_1_3_1_PROTOCOL_VERSION;
+    tempCAM->header.messageID = CAM_V_1_3_1_MESSAGE_ID;
+    tempCAM->header.stationID = ITS_STATION_ID;
 
-    UtilGetMillisecond(&time);
-    tempCam.cam.generationDeltaTime = time.MillisecondU16;
+    TimeSetToCurrentSystemTime(&systemTime);
+    TimeSetToGPStime(&tv, TimeGetAsGPSweek(&systemTime), MONRData->GPSQmsOfWeekU32);
+    tempCAM->cam.generationDeltaTime = TimeGetAsETSIms(&tv) % 65536; // Wrap to 65536 according to standard
 
     //LOG LAT from XY
-    double x = MONRData->XPositionI32;
-    double y = MONRData->YPositionI32;
-    double z = MONRData->ZPositionI32;
+    double x = MONRData->XPositionI32/1000.0;
+    double y = MONRData->YPositionI32/1000.0;
+    double z = MONRData->ZPositionI32/1000.0;
     double latitude, longitude, height;
 
     double distance=0;
@@ -473,42 +875,81 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
     double azimuth2 =0;
     int fail;
 
-    if(origin.latitude < -90 || origin.latitude > 90 || origin.longitude < -180 || origin.longitude > 180){
-        LogMessage(LOG_LEVEL_ERROR,"Tried to send CAM with longitude %f, latitude %f", origin.longitude, origin.latitude);
-        return 1;
+    if(origin.latitude < -90 || origin.latitude > 90 || origin.longitude < -180 || origin.longitude > 180)
+    {
+        LogMessage(LOG_LEVEL_WARNING, "Uninitialized origin: unable to write relevant data to CAM", origin.longitude, origin.latitude);
+        return -1;
     }
+    else
+    {
+        azimuth1 = UtilDegToRad(90)-atan2(y/1.00,x/1.00);
+        distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
 
-    azimuth1 = UtilDegToRad(90)-atan2(y/1.00,x/1.00);
-       // calculate the norm value
-    distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
+        if(UtilVincentyDirect(origin.latitude, origin.longitude, azimuth1,distance ,&latitude,&longitude,&azimuth2) != -1)
+        {
+            // Convert to 0.1 microdegrees
+            tempCAM->cam.camParameters.basicContainer.referencePosition.latitude = (long)(latitude*10000000.0);
+            tempCAM->cam.camParameters.basicContainer.referencePosition.longitude = (long)(longitude*10000000.0);
 
-    fail = UtilVincentyDirect(origin.latitude, origin.longitude, azimuth1,distance ,&latitude,&longitude,&azimuth2);
+            tempCAM->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorConfidence = SemiAxisLength_unavailable;
+            tempCAM->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMinorConfidence = SemiAxisLength_unavailable;
+            tempCAM->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = 0;
 
-    tempCam.cam.camParameters.basicContainer.referencePosition.latitude = latitude;
-    tempCam.cam.camParameters.basicContainer.referencePosition.longitude = longitude;
+            tempCAM->cam.camParameters.basicContainer.referencePosition.altitude.altitudeValue = AltitudeValue_unavailable;
+            tempCAM->cam.camParameters.basicContainer.referencePosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
+        }
+        else LogMessage(LOG_LEVEL_ERROR, "Vincenty algorithm failed for CAM");
+    }
+    tempCAM->cam.camParameters.basicContainer.stationType = StationType_roadSideUnit;
+    if (tempCAM->cam.camParameters.highFrequencyContainer.present == HighFrequencyContainer_PR_basicVehicleContainerHighFrequency)
+    {
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = (long)(sqrt(pow((double)(MONRData->LongitudinalSpeedI16), 2) + pow((double)(MONRData->LateralSpeedI16), 2)));
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedConfidence = SpeedConfidence_unavailable;
 
-    tempCam.cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.semiMajorOrientation = MONRData->HeadingU16;
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection = MONRData->DriveDirectionU8;
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.headingValue = MONRData->HeadingU16 / 10;
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.headingConfidence = HeadingConfidence_unavailable;
 
-    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue = sqrt((MONRData->LateralSpeedI16*MONRData->LateralSpeedI16) + (MONRData->LongitudinalSpeedI16*MONRData->LongitudinalSpeedI16));
+        if (MONRData->LongitudinalAccI16 == 32001)
+            tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = LongitudinalAccelerationValue_unavailable;
+        else if (MONRData->LongitudinalAccI16 > 16000)
+            tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = 160;
+        else if (MONRData->LongitudinalAccI16 < -16000)
+            tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = -160;
+        else
+            tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = MONRData->LongitudinalAccI16 / 100;
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationConfidence = AccelerationConfidence_unavailable;
 
-    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection = DriveDirection_forward; //FORWARD
-    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth = 10; //TEMP WIDTH
-    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = 10; //TEMP LENGTH
+        if (MONRData->LateralAccI16 == 32001)
+            tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = LateralAccelerationValue_unavailable;
+        else if (MONRData->LateralAccI16 > 16000)
+            tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = 160;
+        else if (MONRData->LateralAccI16 < -16000)
+            tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = -160;
+        else
+            tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = MONRData->LateralAccI16 / 100;
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationConfidence = AccelerationConfidence_unavailable;
 
-    //tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = MONRData->LateralAccI16;
-    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue = MONRData->LongitudinalAccI16;
-    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureValue = 0;
-    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvatureCalculationMode = 7;
-    tempCam.cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateValue = 0;
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateValue = YawRateValue_unavailable;
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.yawRateConfidence = YawRateConfidence_unavailable;
+
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureValue = CurvatureValue_unavailable;
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.curvatureConfidence = CurvatureConfidence_unavailable;
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvatureCalculationMode = CurvatureCalculationMode_unavailable;
+
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth = VehicleWidth_unavailable;
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue = VehicleLengthValue_unavailable;
+        tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthConfidenceIndication = VehicleLengthConfidenceIndication_unavailable;
+
+
+    } else LogMessage(LOG_LEVEL_ERROR, "Unimplemented CAM container %d", tempCAM->cam.camParameters.highFrequencyContainer.present);
 
 
     if(MONRData != NULL ){
-        *cam = tempCam;
+        *cam = *tempCAM;
     }
     return 0;
-
 }
-
 
 /*!
  * \brief GenerateDENMMessage generates a DENM message to send on MQTT
@@ -517,107 +958,202 @@ I32 generateCAMMessage(MONRType *MONRData, CAM_t* cam){
  * \param lastSpeed variable keeping track of last speed recorded.
  */
 I32 generateDENMMessage(MONRType *MONRData, DENM_t* denm, int causeCode){
-    TimeType time;
-    DENM_t tempDENM;
+    struct timeval tv;
+    initializeDENMStruct(tempDENM);
 
-    tempDENM.header.protocolVersion = 1;
-    tempDENM.header.messageID = 1;
-    tempDENM.header.stationID = 1000;
-
-
-    tempDENM.denm.management.actionID.originatingStationID = 12345;
-    tempDENM.denm.management.actionID.sequenceNumber = 0;
-
-    UtilGetMillisecond(&time);
-    //tempDENM.denm.management.detectionTime = time.MillisecondU16;
-    //tempDENM.denm.management.referenceTime = time.MillisecondU16;
+    // Set reference time to current time, leave detection time as in previous message
+    TimeSetToCurrentSystemTime(&tv);
+    asn_long2INTEGER(&tempDENM->denm.management.referenceTime,TimeGetAsETSIms(&tv));
+    asn_long2INTEGER(&tempDENM->denm.management.detectionTime,TimeGetAsETSIms(&tv));
 
     //LOG LAT from XY
-    double x = MONRData->XPositionI32;
-    double y = MONRData->YPositionI32;
-    double z = MONRData->ZPositionI32;
+    double x = MONRData->XPositionI32/1000.0;
+    double y = MONRData->YPositionI32/1000.0;
+    double z = MONRData->ZPositionI32/1000.0;
     double latitude, longitude, height;
 
-    double distance=0;
+    double distance = 0;
     double azimuth1 = 0;
-    double azimuth2 =0;
-    int fail;
+    double azimuth2 = 0;
 
-    if(origin.latitude < -90 || origin.latitude > 90 || origin.longitude < -180 || origin.longitude > 180){
-        LogMessage(LOG_LEVEL_ERROR,"Tried to send DENM with longitude %f, latitude %f ", origin.longitude, origin.latitude);
-        return 1;
+    if (origin.longitude > 180 || origin.longitude < -180 || origin.latitude > 90 || origin.latitude < -90)
+    {
+        LogMessage(LOG_LEVEL_WARNING, "Uninitialized origin: unable to write relevant data to DENM");
+
+        tempDENM->denm.management.eventPosition.latitude = 0;
+        tempDENM->denm.management.eventPosition.longitude = 0;
+
+        tempDENM->denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = 0;
+        tempDENM->denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 0;
+
+        tempDENM->denm.management.eventPosition.altitude.altitudeValue = 0;
+        tempDENM->denm.management.eventPosition.altitude.altitudeConfidence = 0;
+    }
+    else
+    {
+        azimuth1 = UtilDegToRad(90)-atan2(y/1.00,x/1.00);
+        distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
+
+        if(UtilVincentyDirect(origin.latitude, origin.longitude,azimuth1,distance ,&latitude,&longitude,&azimuth2) != -1)
+        {
+            // Convert to microdegrees
+            tempDENM->denm.management.eventPosition.latitude = (long)(latitude*10000000.0);
+            tempDENM->denm.management.eventPosition.longitude = (long)(longitude*10000000.0);
+
+            tempDENM->denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = SemiAxisLength_unavailable;
+            tempDENM->denm.management.eventPosition.positionConfidenceEllipse.semiMinorConfidence = SemiAxisLength_unavailable;
+            tempDENM->denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 0;
+
+            tempDENM->denm.management.eventPosition.altitude.altitudeValue = AltitudeValue_unavailable;
+            tempDENM->denm.management.eventPosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
+        }
+        else LogMessage(LOG_LEVEL_ERROR, "Vincenty algorithm failed for DENM");
     }
 
-    azimuth1 = UtilDegToRad(90)-atan2(y/1.00,x/1.00);
+    *tempDENM->denm.management.relevanceDistance = RelevanceDistance_lessThan500m;
+    *tempDENM->denm.management.relevanceTrafficDirection = RelevanceTrafficDirection_upstreamTraffic;
 
-    // calculate the norm value
-    distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
+    *tempDENM->denm.management.transmissionInterval = CAM_TIME_CYCLE_S*1000 + CAM_TIME_CYCLE_US/1000;
 
-    fail = UtilVincentyDirect(origin.latitude, origin.longitude,azimuth1,distance ,&latitude,&longitude,&azimuth2);
+    tempDENM->denm.situation->eventType.causeCode = causeCode;
 
-    tempDENM.denm.management.eventPosition.latitude = latitude;
-    tempDENM.denm.management.eventPosition.longitude = longitude;
-
-    tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = 7;
-    tempDENM.denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 10;
-
-    tempDENM.denm.management.eventPosition.altitude.altitudeValue = 0;
-    tempDENM.denm.management.eventPosition.altitude.altitudeConfidence = 0;
-
-    //tempDENM.denm.management.relevanceDistance = 3;
-    //tempDENM.denm.management.relevanceTrafficDirection = 1;
-    //tempDENM.denm.management.validityDuration = 0;
-    //tempDENM.denm.management.transmissionInterval = 100;
-    //tempDENM.denm.management.stationType = StationType_heavyTruck; //HEAVY TRUCK. 5 = passenger car, 1 = Pedestrian
-    //tempDENM.denm.situation->informationQuality = InformationQuality_highest;
-    tempDENM.denm.situation->eventType.causeCode = causeCode;
-
-    if(causeCode == CauseCodeType_collisionRisk){
-         tempDENM.denm.situation->eventType.subCauseCode = 1;  //Emergency break engaged
+    if(causeCode == CauseCodeType_dangerousSituation){
+        tempDENM->denm.situation->eventType.subCauseCode = 1;  // Emergency brake engaged
     }
     else{
-     tempDENM.denm.situation->eventType.subCauseCode = 0;
+        tempDENM->denm.situation->eventType.subCauseCode = 0;
     }
 
-
-    //tempDENM.denm.location->eventSpeed->speedValue = 0; //CHECK THIS
-    //tempDENM.denm.location->eventSpeed->speedConfidence = 0; //unavaliabe
+    // TODO: make to work
+    //double lonSpeed_cm_s = (double)MONRData->LongitudinalSpeedI16;
+    //double latSpeed_cm_s = (double)MONRData->LateralSpeedI16;
+    //tempDENM->denm.location->eventSpeed->speedValue = (long)(sqrt(pow(lonSpeed_cm_s,2) + pow(latSpeed_cm_s,2)));
+    //tempDENM->denm.location->eventSpeed->speedConfidence = SpeedConfidence_unavailable;
 
 
     if(MONRData != NULL ){
-        *denm = tempDENM;
+        *denm = *tempDENM;
     }
     return 0;
 }
+
+int updateDENMMessage(MONRType *MONRData, DENM_t* denm)
+{
+    struct timeval tv;
+    double x, y, z, latitude, longitude, distance, azimuth1, azimuth2;
+
+    if (MONRData == NULL || denm == NULL) return -1;
+
+    // Update reference time
+    TimeSetToCurrentSystemTime(&tv);
+    asn_long2INTEGER(&denm->denm.management.referenceTime,TimeGetAsETSIms(&tv));
+
+    //LOG LAT from XY
+    x = MONRData->XPositionI32/1000.0;
+    y = MONRData->YPositionI32/1000.0;
+    z = MONRData->ZPositionI32/1000.0;
+
+    distance = 0;
+    azimuth1 = 0;
+    azimuth2 = 0;
+
+    if (origin.longitude > 180 || origin.longitude < -180 || origin.latitude > 90 || origin.latitude < -90)
+    {
+        LogMessage(LOG_LEVEL_WARNING, "Uninitialized origin: unable to write relevant data to DENM");
+
+        denm->denm.management.eventPosition.latitude = 0;
+        denm->denm.management.eventPosition.longitude = 0;
+
+        denm->denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = 0;
+        denm->denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 0;
+
+        denm->denm.management.eventPosition.altitude.altitudeValue = 0;
+        denm->denm.management.eventPosition.altitude.altitudeConfidence = 0;
+        return -1;
+    }
+    else
+    {
+        azimuth1 = UtilDegToRad(90)-atan2(y/1.00,x/1.00);
+        distance = sqrt(pow(x/1.00,2)+pow(y/1.00,2));
+
+        if(UtilVincentyDirect(origin.latitude, origin.longitude,azimuth1,distance ,&latitude,&longitude,&azimuth2) != -1)
+        {
+            // Convert to microdegrees
+            denm->denm.management.eventPosition.latitude = (long)(latitude*10000000.0);
+            denm->denm.management.eventPosition.longitude = (long)(longitude*10000000.0);
+
+            denm->denm.management.eventPosition.positionConfidenceEllipse.semiMajorConfidence = SemiAxisLength_unavailable;
+            denm->denm.management.eventPosition.positionConfidenceEllipse.semiMinorConfidence = SemiAxisLength_unavailable;
+            denm->denm.management.eventPosition.positionConfidenceEllipse.semiMajorOrientation = 0;
+
+            denm->denm.management.eventPosition.altitude.altitudeValue = AltitudeValue_unavailable;
+            denm->denm.management.eventPosition.altitude.altitudeConfidence = AltitudeConfidence_unavailable;
+
+            // TODO: Make to work
+            // denm->denm.location->eventSpeed->speedValue = (long)(sqrt(pow((double)(MONRData->LongitudinalSpeedI16), 2) + pow((double)(MONRData->LateralSpeedI16), 2)));
+            // denm->denm.location->eventSpeed->speedConfidence = SpeedConfidence_unavailable;
+
+        }
+        else LogMessage(LOG_LEVEL_ERROR, "Vincenty algorithm failed for DENM");
+    }
+    return 0;
+}
+
 /*!
  * \brief SendCam publishes a cam message on MQTT with hardcoded topic.
  * \param lastCam cam message struct
  * \return 1 if message sent succesfully
  */
 I32 sendCAM(CAM_t* cam){
-    printf("SENDING CAM\n");
+    if (cam == NULL)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Attempted to send null CAM");
+        return -1;
+    }
 
-    FILE *fp = fopen("tmp", "wb");
-    //asn_enc_rval_t ec = der_encode(&asn_DEF_CAM, cam, write_out, fp);
-    fclose(fp);
+    void* buffer = NULL;
+    struct asn_per_constraints_s* constraints = NULL;
+    const ssize_t ec = uper_encode_to_new_buffer(&asn_DEF_CAM, constraints, cam, &buffer);
 
-    publish_mqtt((char*)cam, sizeof (CAM_t), "CLIENT/CAM/CS01/1/AZ12B");
-    return 1;
+    if (ec != -1)
+    {
+        LogMessage(LOG_LEVEL_INFO,"Sending CAM");
+        publish_mqtt((char*)buffer, ec, "CLIENT/CAM/CS01/1/AZ12B");
+        return 1;
+    }
+    else {
+        LogMessage(LOG_LEVEL_ERROR,"Encoding of CAM message failed");
+        return -1;
+    }
 }
 
 /*!
  * \brief sendDENM publishes a cam message on MQTT with hardcoded topic.
  * \param denm cam message struct
- * \return 1 if message sent succesfully
+ * \return 0 if message sent succesfully
  */
 I32 sendDENM(DENM_t* denm){
-    LogMessage(LOG_LEVEL_INFO,"Sending DENM");
-    //FILE *fp = fopen("tmp", "wb");
-    //asn_enc_rval_t ec = der_encode(&asn_DEF_DENM, denm, write_out, fp);
-    //fclose(fp);
+    if  (denm == NULL)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Attempted to send null DENM");
+        return -1;
+    }
 
-    publish_mqtt((char*)denm, sizeof (DENM_t), "CLIENT/DENM/CS01/1/AZ12B");
-    return 1;
+    void* buffer = NULL;
+    struct asn_per_constraints_s* constraints = NULL;
+    const ssize_t ec = uper_encode_to_new_buffer(&asn_DEF_DENM, constraints, denm, &buffer);
+
+    if (ec != -1)
+    {
+        LogMessage(LOG_LEVEL_INFO,"Sending DENM");
+        publish_mqtt((char*)buffer, ec, "CLIENT/DENM/CS01/1/AZ12B");
+    }
+    else
+    {
+        LogMessage(LOG_LEVEL_ERROR,"Encoding of DENM message failed");
+        return -1;
+    }
+    return 0;
 }
 
 /*!
