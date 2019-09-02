@@ -673,7 +673,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 GSD->ScenarioStartTimeU32 = OutgoingStartTimeU32;
                 bzero(MiscText, SMALL_BUFFER_SIZE_0);
                 sprintf(MiscText, "%" PRIu32, GSD->ScenarioStartTimeU32 << 2);
-                LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>, GPS time <%s>\n",pcRecvBuffer, MiscText);
+                LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>, GPS time <%s>",pcRecvBuffer, MiscText);
 
             }
             else if(iCommand == COMM_TRAJ && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )

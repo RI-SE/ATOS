@@ -628,8 +628,10 @@ U32 SimulatorControlBuildObjectMonitorMessage(C8* MessageBuffer, C8 *MONRData, O
   if(debug)
   {
     printf("----MONR TO SIMULATOR----\n");
+    printf("Heading = %d, Speed = %d\n", SwapU16(ObjectMonitorData->HeadingU16), SwapI16(ObjectMonitorData->SpeedI16));
     for(j = 0;j < sizeof(ObjectMonitorType) + 4; j ++) printf("%x ", (unsigned char)MessageBuffer[j]);
     printf("\n");
+
   }
 
 
