@@ -115,6 +115,7 @@ int main()
             nanosleep(&sleepTimePeriod,&remTime);
             break;
         case COMM_ABORT:
+            LogMessage(LOG_LEVEL_INFO, "Received abort command");
             if (state == RUNNING) state = CONNECTED;
             break;
         case COMM_STRT:
@@ -131,6 +132,10 @@ int main()
             break;
         case COMM_MONI:
             // Ignore
+            break;
+        case COMM_DISCONNECT:
+            LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
+            state = UNINITIALIZED;
             break;
         default:
             LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
