@@ -612,6 +612,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             {
                 if(pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_ARMED_STATE)
                 {
+                    printf("[ObjectControl] Sending ARM.\n");
                     LOG_SEND(LogBuffer,"[ObjectControl] Sending ARM %d", pcRecvBuffer[0]);
                     vSetState(&OBCState, OBC_STATE_ARMED);
                 }              

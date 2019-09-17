@@ -688,6 +688,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ConnectObject:", ControlResponseBuffer, 0, &ClientSocket, 0);
                 SystemControlSendLog("[SystemControl] Sending CONNECT.\n", &ClientSocket, 0);
+                printf("[SystemControl] Sending CONNECT\n");
             }
             else if(server_state == SERVER_STATE_INWORK && strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL)
             {
