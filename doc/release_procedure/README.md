@@ -14,7 +14,7 @@ A release is the process of moving code from the `dev` branch to the `master` br
 feature -> dev
 ```
 Testing should be documented through a lightweight protocol
-* Complete a normal test with one virtual car
+* Complete a normal test with one virtual test object
 * Complete a normal test with two virtual cars
 * Complete a aborting test with two virtual cars
 
