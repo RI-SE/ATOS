@@ -1,4 +1,4 @@
 #  Release Procedure
 
-![Image description](timeline_procedure.jpg)
+![A timeline for the release of a software update](timeline_procedure.png)
 
