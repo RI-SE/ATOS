@@ -730,7 +730,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlUploadFile(SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 0);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK , "UploadFile:", ControlResponseBuffer, 1, &ClientSocket, 0);
-                printf("UploadFile filelength: %s", SystemControlArgument[1]);
+                LogMessage(LOG_LEVEL_DEBUG,"UploadFile filelength: %s", SystemControlArgument[1]);
                 if(ControlResponseBuffer[0] == SERVER_PREPARED_BIG_PACKET_SIZE) //Server is ready to receive data
                 {
                     LogMessage(LOG_LEVEL_INFO,"Receiving file: %s", SystemControlArgument[0]);
@@ -2130,16 +2130,16 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
         {
             *ReturnValue = FILE_TO_MUCH_DATA;
             remove(CompletePath);
-            printf("CORRUPT FILE, REMOVING...\n");
+            LogMessage(LOG_LEVEL_INFO, "CORRUPT FILE, REMOVING...");
         }
         else
         {
             *ReturnValue = TIME_OUT;
             remove(CompletePath);
-            printf("CORRUPT FILE, REMOVING...\n");
+            LogMessage(LOG_LEVEL_INFO,"CORRUPT FILE, REMOVING...");
         }
 
-        LogMessage(LOG_LEVEL_INFO,"Rec count = %d, Req count = %d", TotalRxCount, FileSizeU32);
+        LogMessage(LOG_LEVEL_DEBUG,"Rec count = %d, Req count = %d", TotalRxCount, FileSizeU32);
 
     }
 
