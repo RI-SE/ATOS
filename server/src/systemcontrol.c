@@ -730,7 +730,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlUploadFile(SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 0);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK , "UploadFile:", ControlResponseBuffer, 1, &ClientSocket, 0);
-
+                printf("UploadFile filelength: %s", SystemControlArgument[1]);
                 if(ControlResponseBuffer[0] == SERVER_PREPARED_BIG_PACKET_SIZE) //Server is ready to receive data
                 {
                     LogMessage(LOG_LEVEL_INFO,"Receiving file: %s", SystemControlArgument[0]);
@@ -2063,7 +2063,7 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
     U16 PacketSizeU16 = atoi(PacketSize);
     I32 ClientStatus = 0, Time1 = 0, Time2 = 0, TimeDiff = 0, i = 0, j = 0;
     C8 RxBuffer[SYSTEM_CONTROL_RX_PACKET_SIZE];
-    U32 TotalRxCount = 0, TransmissionCount = 0, RestCount = 0;
+    U32 TotalRxCount = 0, TransmissionCount = (U32)(FileSizeU32/PacketSizeU16), RestCount = FileSizeU32%PacketSizeU16;
     struct timeval CurTime;
 
 
@@ -2090,8 +2090,15 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
             gettimeofday(&CurTime, NULL);
             Time2 = CurTime.tv_sec*1000 + CurTime.tv_usec/1000;
 
+
+            if(i == TransmissionCount)
+            {
+                PacketSizeU16 = RestCount;
+            }
+
             bzero(RxBuffer,PacketSizeU16);
             ClientStatus = recv(*sockfd, RxBuffer, PacketSizeU16, MSG_WAITALL);
+
 
             if (ClientStatus > 0)
             {
@@ -2100,7 +2107,7 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
                 fflush(fd);
                 if(Debug)
                 {
-                    printf("%d, %d, %d, %d :", i, ClientStatus, TotalRxCount, TimeDiff);
+                    printf("%d, %d, %d, %d, %d, %d :", i, ClientStatus, TotalRxCount, TimeDiff, PacketSizeU16, FileSizeU32);
                     for(j = 0; j < 10; j ++ ) printf("%x-", RxBuffer[j]);
                     printf("...\n");
                 }
@@ -2122,13 +2129,17 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
         else if(TotalRxCount > FileSizeU32)
         {
             *ReturnValue = FILE_TO_MUCH_DATA;
+            remove(CompletePath);
+            printf("CORRUPT FILE, REMOVING...\n");
         }
         else
         {
             *ReturnValue = TIME_OUT;
+            remove(CompletePath);
+            printf("CORRUPT FILE, REMOVING...\n");
         }
 
-        LogMessage(LOG_LEVEL_DEBUG,"Rec count = %d, Req count = %d", TotalRxCount, FileSizeU32);
+        LogMessage(LOG_LEVEL_INFO,"Rec count = %d, Req count = %d", TotalRxCount, FileSizeU32);
 
     }
 
