@@ -110,6 +110,7 @@
 
 #define USE_LOCAL_USER_CONTROL  0
 #define LOCAL_USER_CONTROL_IP "192.168.0.15"
+#define ISO_UPDATED
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -215,6 +216,7 @@
 #define VALUE_OBJECT_MODE                   0x55
 #define VALUE_OBJECT_MASS                   0x56
 #define VALUE_ACTOR_TYPE                    0x57
+#define VALUE_ID_HEAB                       0x90
 #define VALUE_ID_TRAJECTORY_ID              0x101
 #define VALUE_ID_TRAJECTORY_NAME            0x102
 #define VALUE_ID_TRAJECTORY_VERSION         0x103
@@ -423,8 +425,8 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  //U16 HeabStructValueIdU16;
-  //U16 HeabStructContentLengthU16;
+  U16 HeabStructValueIdU16;
+  U16 HeabStructContentLengthU16;
   U32 GPSSOWU32;
   U8 CCStatusU8;
 } HEABType; //16 bytes
@@ -432,8 +434,10 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  //U16 MonrStructValueIdU16;
-  //U16 MonrStructContentLengthU16;
+  #ifdef ISO_UPDATED
+  U16 MonrStructValueIdU16;
+  U16 MonrStructContentLengthU16;
+  #endif
   U32 GPSSOWU32;
   I32 XPositionI32;
   I32 YPositionI32;

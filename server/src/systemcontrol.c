@@ -633,6 +633,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 SystemControlCommand = Idle_0;
                 bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlUploadFile(SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 0);
+
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK , "UploadFile:", ControlResponseBuffer, 1, &ClientSocket, 0);
                 
                 if(ControlResponseBuffer[0] == SERVER_PREPARED_BIG_PACKET_SIZE) //Server is ready to receive data
@@ -1655,9 +1656,8 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
     U16 PacketSizeU16 = atoi(PacketSize);
     I32 ClientStatus = 0, Time1 = 0, Time2 = 0, TimeDiff = 0, i = 0, j = 0;
     C8 RxBuffer[SYSTEM_CONTROL_RX_PACKET_SIZE];
-    U32 TotalRxCount = 0, TransmissionCount = 0, RestCount = 0;
+    U32 TotalRxCount = 0, TransmissionCount = (U32)(FileSizeU32/PacketSizeU16), RestCount = FileSizeU32%PacketSizeU16;
     struct timeval CurTime;
-
 
     if(Debug)
     {
@@ -1666,8 +1666,6 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
         printf("%s\n", PacketSize);
         printf("%s\n", CompletePath);
     }
-
-
 
     fd = fopen(CompletePath, "w+");
     if(fd != NULL)
@@ -1680,6 +1678,8 @@ I32 SystemControlReceiveRxData(I32 *sockfd, C8 *Path, C8 *FileSize, C8 *PacketSi
         {
             gettimeofday(&CurTime, NULL);
             Time2 = CurTime.tv_sec*1000 + CurTime.tv_usec/1000; 
+
+            if(i == TransmissionCount) PacketSizeU16 = RestCount;
 
             bzero(RxBuffer,PacketSizeU16);
             ClientStatus = recv(*sockfd, RxBuffer, PacketSizeU16, MSG_WAITALL);

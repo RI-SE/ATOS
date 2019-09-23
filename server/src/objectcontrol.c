@@ -1334,6 +1334,7 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     I32 I32Data = 0;
     U64 U64Data = 0;
     C8 *p;
+    U8 offset = 0;
     U16Data = (U16Data | *(MonrData+1)) << 8;
     U16Data = U16Data | *MonrData;
 
@@ -1352,65 +1353,78 @@ I32 ObjectControlBuildMONRMessage(C8 *MonrData, MONRType *MONRData, U8 debug)
     U32Data = U32Data | *(MonrData+7);
     MONRData->Header.MessageLengthU32 = U32Data;
 
+    #ifdef ISO_UPDATED
+    U16Data = 0;
+    U16Data = (U16Data | *(MonrData+12)) << 8;
+    U16Data = U16Data | *(MonrData+11);
+    MONRData->MonrStructValueIdU16 = U16Data;
+
+    U16Data = 0;
+    U16Data = (U16Data | *(MonrData+14)) << 8;
+    U16Data = U16Data | *(MonrData+13);
+    MONRData->MonrStructValueIdU16 = U16Data;
+    offset = 4;
+    #endif
+
     U32Data = 0;
-    U32Data = (U32Data | *(MonrData+14)) << 8;
-    U32Data = (U32Data | *(MonrData+13)) << 8;
-    U32Data = (U32Data | *(MonrData+12)) << 8;
-    U32Data = U32Data | *(MonrData+11);
+    U32Data = (U32Data | *(MonrData+14+offset)) << 8;
+    U32Data = (U32Data | *(MonrData+13+offset)) << 8;
+    U32Data = (U32Data | *(MonrData+12+offset)) << 8;
+    U32Data = U32Data | *(MonrData+11+offset);
     MONRData->GPSSOWU32 = U32Data;
 
     I32Data = 0;
-    I32Data = (I32Data | *(MonrData+18)) << 8;
-    I32Data = (I32Data | *(MonrData+17)) << 8;
-    I32Data = (I32Data | *(MonrData+16)) << 8;
-    I32Data = I32Data | *(MonrData+15);
+    I32Data = (I32Data | *(MonrData+18+offset)) << 8;
+    I32Data = (I32Data | *(MonrData+17+offset)) << 8;
+    I32Data = (I32Data | *(MonrData+16+offset)) << 8;
+    I32Data = I32Data | *(MonrData+15+offset);
     MONRData->XPositionI32 = I32Data;
 
 
     I32Data = 0;
-    I32Data = (I32Data | *(MonrData+22)) << 8;
-    I32Data = (I32Data | *(MonrData+21)) << 8;
-    I32Data = (I32Data | *(MonrData+20)) << 8;
-    I32Data = I32Data | *(MonrData+19);
+    I32Data = (I32Data | *(MonrData+22+offset)) << 8;
+    I32Data = (I32Data | *(MonrData+21+offset)) << 8;
+    I32Data = (I32Data | *(MonrData+20+offset)) << 8;
+    I32Data = I32Data | *(MonrData+19+offset);
     MONRData->YPositionI32 = I32Data;
 
 
     I32Data = 0;
-    I32Data = (I32Data | *(MonrData+26)) << 8;
-    I32Data = (I32Data | *(MonrData+25)) << 8;
-    I32Data = (I32Data | *(MonrData+24)) << 8;
-    I32Data = I32Data | *(MonrData+23);
+    I32Data = (I32Data | *(MonrData+26+offset)) << 8;
+    I32Data = (I32Data | *(MonrData+25+offset)) << 8;
+    I32Data = (I32Data | *(MonrData+24+offset)) << 8;
+    I32Data = I32Data | *(MonrData+23+offset);
     MONRData->ZPositionI32 = I32Data;
 
     U16Data = 0;
-    U16Data = (U16Data | *(MonrData+28)) << 8;
-    U16Data = U16Data | *(MonrData+27);
+    U16Data = (U16Data | *(MonrData+28+offset)) << 8;
+    U16Data = U16Data | *(MonrData+27+offset);
     MONRData->HeadingU16 = U16Data;
 
     I16Data = 0;
-    I16Data = (I16Data | *(MonrData+30)) << 8;
-    I16Data = I16Data | *(MonrData+29);
+    I16Data = (I16Data | *(MonrData+30+offset)) << 8;
+    I16Data = I16Data | *(MonrData+29+offset);
     MONRData->LongitudinalSpeedI16 = I16Data;
 
     I16Data = 0;
-    I16Data = (I16Data | *(MonrData+32)) << 8;
-    I16Data = I16Data | *(MonrData+31);
+    I16Data = (I16Data | *(MonrData+32+offset)) << 8;
+    I16Data = I16Data | *(MonrData+31+offset);
     MONRData->LateralSpeedI16 = I16Data;
 
     I16Data = 0;
-    I16Data = (I16Data | *(MonrData+34)) << 8;
-    I16Data = I16Data | *(MonrData+33);
+    I16Data = (I16Data | *(MonrData+34+offset)) << 8;
+    I16Data = I16Data | *(MonrData+33+offset);
     MONRData->LongitudinalAccI16 = I16Data;
 
     I16Data = 0;
-    I16Data = (I16Data | *(MonrData+36)) << 8;
-    I16Data = I16Data | *(MonrData+35);
+    I16Data = (I16Data | *(MonrData+36+offset)) << 8;
+    I16Data = I16Data | *(MonrData+35+offset);
     MONRData->LateralAccI16 = I16Data;
 
-    MONRData->DriveDirectionU8 = *(MonrData+37);
-    MONRData->StateU8 = *(MonrData+38);
-    MONRData->ReadyToArmU8 = *(MonrData+39);
-    MONRData->ErrorStatusU8 = *(MonrData+40);
+    MONRData->DriveDirectionU8 = *(MonrData+37+offset);
+    MONRData->StateU8 = *(MonrData+38+offset);
+    MONRData->ReadyToArmU8 = *(MonrData+39+offset);
+    MONRData->ErrorStatusU8 = *(MonrData+40+offset);
 
 
 
@@ -1818,8 +1832,8 @@ I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeTyp
     HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
     HEABData->Header.MessageIdU16 = COMMAND_HEAB_CODE;
     HEABData->Header.MessageLengthU32 = sizeof(HEABType) - sizeof(HeaderType);
-    //HEABData->HeabStructValueIdU16 = 0;
-    //HEABData->HeabStructContentLengthU16 = sizeof(HEABType) - sizeof(HeaderType) - 4;
+    HEABData->HeabStructValueIdU16 = VALUE_ID_HEAB;
+    HEABData->HeabStructContentLengthU16 = sizeof(HEABType) - sizeof(HeaderType) - 4;
     HEABData->GPSSOWU32 = ((GPSTime->GPSSecondsOfWeekU32*1000 + (U32)TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
     HEABData->CCStatusU8 = CCStatus;
 
