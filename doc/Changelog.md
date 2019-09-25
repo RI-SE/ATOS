@@ -45,8 +45,7 @@ New Features
 
 Enhancements 
 -------
-iCommreceive now has UTC timestamp
-
+Latidude spelling error has been changed to Latitude
 
 
 Fixed bugs
@@ -66,5 +65,5 @@ New Features
 
 Enhancements 
 -------
-iCommreceive now has UTC timestamp
+iCommReceive now has UTC timestamp
 
