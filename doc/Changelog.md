@@ -1,3 +1,16 @@
+
+Contents
+==============================
+
+[v.0.3.0 Trigger and Action](#maestro-v030-trigger-and-action)
+
+[v.0.2.0 July Server-snapshot](#july-release-v020---serversnapshot)
+
+[v.0.1.0 Drottning Kristina](drottning-kristina-v010)
+
+
+
+
 Maestro v0.3.0 Trigger and Action
 ==============================
 
@@ -34,6 +47,11 @@ Enhancements
 -------
 iCommreceive now has UTC timestamp
 
+
+
+Fixed bugs
+-------
+Server no longer creates Junk files in root directory
 
 Drottning Kristina v0.1.0 
 ==============================
