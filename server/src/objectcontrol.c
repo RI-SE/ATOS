@@ -116,7 +116,7 @@
 
 #define CONF_FILE_PATH  "conf/test.conf"
 
-#define SMALL_BUFFER_SIZE_0 20
+#define SMALL_BUFFER_SIZE_20 20
 #define SMALL_BUFFER_SIZE_1 2
 #define SMALL_BUFFER_SIZE_2 1
 #define SMALL_BUFFER_SIZE_254 254
@@ -183,7 +183,7 @@ I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* Sim
 I32 ObjectControlSendDTMMEssage(C8 *DTMData, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug);
 I32 ObjectControlBuildDTMMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 ObjectControlBuildASPMessage(C8* MessageBuffer, ASPType *ASPData, U8 debug);
-
+I32 ObjectControlGetObjectProperties(C8 *IPAddress, C8 *MessageBuffer, U8 Debug);
 void ObjectControlSendMONR(I32 *Sockfd, struct sockaddr_in *Addr, MONRType *MonrData, U8 Debug);
 
 static void vFindObjectsInfo(char object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
@@ -228,25 +228,25 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     int iForceObjectToLocalhost = 0;
 
     FILE *fd;
-    char Id[SMALL_BUFFER_SIZE_0];
-    char GPSWeek[SMALL_BUFFER_SIZE_0];
-    char Timestamp[SMALL_BUFFER_SIZE_0];
-    char XPosition[SMALL_BUFFER_SIZE_0];
-    char YPosition[SMALL_BUFFER_SIZE_0];
-    char ZPosition[SMALL_BUFFER_SIZE_0];
-    char Speed[SMALL_BUFFER_SIZE_0];
-    char LongitudinalSpeed[SMALL_BUFFER_SIZE_0];
-    char LateralSpeed[SMALL_BUFFER_SIZE_0];
-    char LongitudinalAcc[SMALL_BUFFER_SIZE_0];
-    char LateralAcc[SMALL_BUFFER_SIZE_0];
-    char Heading[SMALL_BUFFER_SIZE_0];
+    char Id[SMALL_BUFFER_SIZE_20];
+    char GPSWeek[SMALL_BUFFER_SIZE_20];
+    char Timestamp[SMALL_BUFFER_SIZE_20];
+    char XPosition[SMALL_BUFFER_SIZE_20];
+    char YPosition[SMALL_BUFFER_SIZE_20];
+    char ZPosition[SMALL_BUFFER_SIZE_20];
+    char Speed[SMALL_BUFFER_SIZE_20];
+    char LongitudinalSpeed[SMALL_BUFFER_SIZE_20];
+    char LateralSpeed[SMALL_BUFFER_SIZE_20];
+    char LongitudinalAcc[SMALL_BUFFER_SIZE_20];
+    char LateralAcc[SMALL_BUFFER_SIZE_20];
+    char Heading[SMALL_BUFFER_SIZE_20];
     char DriveDirection[SMALL_BUFFER_SIZE_1];
     char StatusFlag[SMALL_BUFFER_SIZE_1];
     char StateFlag[SMALL_BUFFER_SIZE_1];
-    char MTSP[SMALL_BUFFER_SIZE_0];
+    char MTSP[SMALL_BUFFER_SIZE_20];
     int MessageLength;
     char *MiscPtr;
-    C8 MiscText[SMALL_BUFFER_SIZE_0];
+    C8 MiscText[SMALL_BUFFER_SIZE_20];
     U32 StartTimeU32 = 0;
     U32 OutgoingStartTimeU32 = 0;
     U32 DelayedStartU32 = 0;
@@ -260,11 +260,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     float SpaceArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
     float TimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
     SpaceTime SpaceTimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
-    char OriginLatitude[SMALL_BUFFER_SIZE_0];
-    char OriginLongitude[SMALL_BUFFER_SIZE_0];
-    char OriginAltitude[SMALL_BUFFER_SIZE_0];
-    char OriginHeading[SMALL_BUFFER_SIZE_0];
-    char TextBuffer[SMALL_BUFFER_SIZE_0];
+    char OriginLatitude[SMALL_BUFFER_SIZE_20];
+    char OriginLongitude[SMALL_BUFFER_SIZE_20];
+    char OriginAltitude[SMALL_BUFFER_SIZE_20];
+    char OriginHeading[SMALL_BUFFER_SIZE_20];
+    char TextBuffer[SMALL_BUFFER_SIZE_20];
     double OriginLatitudeDbl;
     double OriginLongitudeDbl;
     double OriginAltitudeDbl;
@@ -272,10 +272,10 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     TriggActionType TAA[MAX_TRIGG_ACTIONS];
     int TriggerActionCount = 0;
     char pcSendBuffer[MQ_MAX_MESSAGE_LENGTH];
-    char ObjectPort[SMALL_BUFFER_SIZE_0];
+    char ObjectPort[SMALL_BUFFER_SIZE_20];
     char TriggId[SMALL_BUFFER_SIZE_1];
     char TriggAction[SMALL_BUFFER_SIZE_1];
-    char TriggDelay[SMALL_BUFFER_SIZE_0];
+    char TriggDelay[SMALL_BUFFER_SIZE_20];
     HeaderType HeaderData;
     OSEMType OSEMData;
     STRTType STRTData;
@@ -441,7 +441,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                                 ObjectControlTOMToASCII(buffer, TriggId, TriggAction, TriggDelay, 1);
                                 bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
                                 bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
-                                bzero(ObjectPort, SMALL_BUFFER_SIZE_0);
+                                bzero(ObjectPort, SMALL_BUFFER_SIZE_20);
                                 sprintf(ObjectPort, "%d", object_udp_port[iIndex]);
                                 strcat(pcSendBuffer,object_address_name[iIndex]);strcat(pcSendBuffer,";");
                                 strcat(pcSendBuffer, ObjectPort);strcat(pcSendBuffer,";");
@@ -483,7 +483,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     if(ASPData.MTSPU32 != 0)
                     {
                         //Add MTSP to MONR if not 0
-                        bzero(MTSP, SMALL_BUFFER_SIZE_0);
+                        bzero(MTSP, SMALL_BUFFER_SIZE_20);
                         sprintf(MTSP, "%" PRIu32, ASPData.MTSPU32);
                         strcat(buffer, MTSP); strcat(buffer,";");
                     }
@@ -640,11 +640,11 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if(iCommand == COMM_STRT && (OBCState == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED)*/)  //OBC_STATE_INITIALIZED is temporary!
             {
-                bzero(Timestamp, SMALL_BUFFER_SIZE_0);
+                bzero(Timestamp, SMALL_BUFFER_SIZE_20);
                 MiscPtr =strchr(pcRecvBuffer,';');
                 strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
                 StartTimeU32 = atol(Timestamp);
-                bzero(Timestamp, SMALL_BUFFER_SIZE_0);
+                bzero(Timestamp, SMALL_BUFFER_SIZE_20);
                 MiscPtr += 1;
                 MiscPtr =strchr(pcRecvBuffer,';');
                 strncpy(Timestamp, MiscPtr+1, (uint64_t)strchr(MiscPtr+1, ';') - (uint64_t)MiscPtr  - 1);
@@ -672,7 +672,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                 //OBCState = OBC_STATE_INITIALIZED; //This is temporary!
                 //printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
                 GSD->ScenarioStartTimeU32 = OutgoingStartTimeU32;
-                bzero(MiscText, SMALL_BUFFER_SIZE_0);
+                bzero(MiscText, SMALL_BUFFER_SIZE_20);
                 sprintf(MiscText, "%" PRIu32, GSD->ScenarioStartTimeU32 << 2);
                 LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>, GPS time <%s>",pcRecvBuffer, MiscText);
 
@@ -841,22 +841,22 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     fclose (fd);
                 }
 
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+                bzero(TextBuffer, SMALL_BUFFER_SIZE_20);
                 UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTimeDiff=", "", TextBuffer);
                 ASPMaxTimeDiff = atof(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+                bzero(TextBuffer, SMALL_BUFFER_SIZE_20);
                 UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxTrajDiff=", "", TextBuffer);
                 ASPMaxTrajDiff = atof(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+                bzero(TextBuffer, SMALL_BUFFER_SIZE_20);
                 UtilSearchTextFile(CONF_FILE_PATH, "ASPStepBackCount=", "", TextBuffer);
                 ASPStepBackCount = atoi(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+                bzero(TextBuffer, SMALL_BUFFER_SIZE_20);
                 UtilSearchTextFile(CONF_FILE_PATH, "ASPFilterLevel=", "", TextBuffer);
                 ASPFilterLevel = atof(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+                bzero(TextBuffer, SMALL_BUFFER_SIZE_20);
                 UtilSearchTextFile(CONF_FILE_PATH, "ASPMaxDeltaTime=", "", TextBuffer);
                 ASPMaxDeltaTime = atof(TextBuffer);
-                bzero(TextBuffer, SMALL_BUFFER_SIZE_0);
+                bzero(TextBuffer, SMALL_BUFFER_SIZE_20);
                 UtilSearchTextFile(CONF_FILE_PATH, "ASPDebugRate=", "", TextBuffer);
                 ASPDebugRate = atoi(TextBuffer);
                 bzero(VOILReceivers, SMALL_BUFFER_SIZE_254);
@@ -890,12 +890,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                     UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
 
-                    MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, GPSTime,
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
-                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
-                                                                 0);
 
                     DisconnectU8 = 0;
 
@@ -950,7 +944,20 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                     if(iResult >= 0)
                     {
+
+                        //Get and send OPRO to object
+                        LOG_SEND(LogBuffer, "[ObjectControl] Sending OPRO.");
+                        MessageLength = ObjectControlGetObjectProperties(object_address_name[iIndex], MessageBuffer, 0);
+                        vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
+
                         /* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates)*/
+                        MessageLength =ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, GPSTime,
+                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLatidude=", "", OriginLatitude),
+                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoLongitude=", "", OriginLongitude),
+                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoAltitude=", "", OriginAltitude),
+                                                                 UtilSearchTextFile(CONF_FILE_PATH, "OrigoHeading=", "", OriginHeading),
+                                                                 0);
+
                         LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.");
                         ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, OriginLatitude, OriginLongitude, OriginAltitude );
                         bzero(pcSendBuffer,MQ_MAX_MESSAGE_LENGTH);
@@ -962,8 +969,6 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
                         iCommSend(COMM_LOG,pcSendBuffer);
                         vSendBytes(MessageBuffer, MessageLength, &socket_fd[iIndex], 0);
-
-
                         
 
                         /*Here we send DOTM, if the IP-address not is found*/
@@ -1133,6 +1138,89 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
+
+
+I32 ObjectControlGetObjectProperties(C8 *IPAddress, C8 *MessageBuffer, U8 Debug)
+{
+    I32 MessageLengthI32, RowCountI32, IpU32, i, j;
+    C8 TextRow[SMALL_BUFFER_SIZE_254], ValueBuffer[SMALL_BUFFER_SIZE_20];
+    FILE *fd;
+    C8 *PtrC8;
+    U8 TransmitterIdU8, ObjectTypeU8, ActorTypeU8, OperationModeU8;
+    U32 MassU32, DimensionXU32, DimensionYU32, DimensionZU32;
+    OPROType OPROData;
+
+
+    //Search and build OPRO 
+    fd = fopen(OBJECT_PROPERTIES_CONF, "r");
+    if(fd)
+    {
+        RowCountI32 = UtilCountFileRows(fd);
+        fclose(fd);
+        fd = fopen(OBJECT_PROPERTIES_CONF, "r");
+        UtilReadLine(fd, TextRow); //Read first line
+        for(i = 0; i < RowCountI32; i ++)
+        {
+            bzero(TextRow, SMALL_BUFFER_SIZE_254);
+            UtilReadLine(fd, TextRow);
+            PtrC8 = TextRow;
+            if(strlen(TextRow) > 0 && strstr(TextRow, "//") == NULL)
+            {
+                for(j = 0; j < 9; j ++)
+                {
+                    bzero(ValueBuffer, SMALL_BUFFER_SIZE_20);
+                    strncpy(ValueBuffer, PtrC8, (U64)strstr(PtrC8, ";") - (U64)PtrC8);
+                    PtrC8 = PtrC8 + (U64)strlen(ValueBuffer) + 1;
+                    switch(j)
+                    {
+                        case 0:
+                            IpU32 = UtilIPStringToInt(ValueBuffer);
+                        break;
+                        case 1:
+                            TransmitterIdU8 = atoi(ValueBuffer);
+                        break;
+                        case 2:
+                            ObjectTypeU8 = atoi(ValueBuffer);
+                        break;
+                        case 3:
+                            ActorTypeU8 = atoi(ValueBuffer);
+                        break;
+                        case 4:
+                            OperationModeU8 = atoi(ValueBuffer);
+                        break;
+                        case 5:
+                            MassU32 = atoi(ValueBuffer);
+                        break;
+                        case 6:
+                            DimensionXU32 = atoi(ValueBuffer);
+                        break;
+                        case 7:
+                            DimensionYU32 = atoi(ValueBuffer);
+                        break;
+                        case 8:
+                            DimensionZU32 = atoi(ValueBuffer);
+                        break;
+
+                        default:
+                        break;
+                    }
+                }
+
+                if(IpU32 == UtilIPStringToInt(IPAddress))
+                {
+                    fclose(fd);
+                    MessageLengthI32 = UtilISOBuildOPROMessage(MessageBuffer, &OPROData, IpU32, TransmitterIdU8, ObjectTypeU8, ActorTypeU8, OperationModeU8, MassU32, DimensionXU32, DimensionYU32, DimensionZU32, 1);
+                    return MessageLengthI32;
+                }
+            }
+        }
+
+        fclose(fd);
+    }
+
+    return -1;
+}
+
 
 
 I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* SimData, U8 debug)
@@ -1454,15 +1542,15 @@ I32 ObjectControlMONRToASCII(MONRType *MONRData, GeoPosition *OriginPosition, I3
     uint64_t ConvertGPStoUTC;
 
     bzero(Id, SMALL_BUFFER_SIZE_1);
-    bzero(Timestamp, SMALL_BUFFER_SIZE_0);
-    bzero(XPosition, SMALL_BUFFER_SIZE_0);
-    bzero(YPosition, SMALL_BUFFER_SIZE_0);
-    bzero(ZPosition, SMALL_BUFFER_SIZE_0);
-    bzero(LongitudinalSpeed, SMALL_BUFFER_SIZE_0);
-    bzero(LateralSpeed, SMALL_BUFFER_SIZE_0);
-    bzero(LongitudinalAcc, SMALL_BUFFER_SIZE_0);
-    bzero(LateralAcc, SMALL_BUFFER_SIZE_0);
-    bzero(Heading, SMALL_BUFFER_SIZE_0);
+    bzero(Timestamp, SMALL_BUFFER_SIZE_20);
+    bzero(XPosition, SMALL_BUFFER_SIZE_20);
+    bzero(YPosition, SMALL_BUFFER_SIZE_20);
+    bzero(ZPosition, SMALL_BUFFER_SIZE_20);
+    bzero(LongitudinalSpeed, SMALL_BUFFER_SIZE_20);
+    bzero(LateralSpeed, SMALL_BUFFER_SIZE_20);
+    bzero(LongitudinalAcc, SMALL_BUFFER_SIZE_20);
+    bzero(LateralAcc, SMALL_BUFFER_SIZE_20);
+    bzero(Heading, SMALL_BUFFER_SIZE_20);
     bzero(DriveDirection, SMALL_BUFFER_SIZE_1);
     bzero(StatusFlag, SMALL_BUFFER_SIZE_1);
     bzero(StateFlag, SMALL_BUFFER_SIZE_1);
@@ -1592,7 +1680,7 @@ int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId, char *TriggAc
 
     bzero(TriggId, SMALL_BUFFER_SIZE_1);
     bzero(TriggAction, SMALL_BUFFER_SIZE_1);
-    bzero(TriggDelay, SMALL_BUFFER_SIZE_0);
+    bzero(TriggDelay, SMALL_BUFFER_SIZE_20);
 
     if(*TomData == COMMAND_TOM_CODE)
     {
@@ -1705,10 +1793,10 @@ I32 ObjectControlBuildOSEMMessage(C8* MessageBuffer, OSEMType *OSEMData, TimeTyp
 int ObjectControlOSEMtoASCII(OSEMType *OSEMData, char *GPSWeek, char *GPSLatitude, char *GPSLongitude, char *GPSAltitude)
 {
     // what do i want? in my mq? gps week, origin in lat and long coordinates
-    bzero(GPSWeek,SMALL_BUFFER_SIZE_0);
-    bzero(GPSLatitude,SMALL_BUFFER_SIZE_0);
-    bzero(GPSLongitude,SMALL_BUFFER_SIZE_0);
-    bzero(GPSAltitude,SMALL_BUFFER_SIZE_0);
+    bzero(GPSWeek,SMALL_BUFFER_SIZE_20);
+    bzero(GPSLatitude,SMALL_BUFFER_SIZE_20);
+    bzero(GPSLongitude,SMALL_BUFFER_SIZE_20);
+    bzero(GPSAltitude,SMALL_BUFFER_SIZE_20);
 
     if (OSEMData->Header.MessageIdU16 == COMMAND_OSEM_CODE)
     {

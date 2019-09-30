@@ -112,6 +112,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   C8 ValueBuffer[SUP_TEXT_BUFFER_20];
   C8 *C8Ptr;
   U32 IpU32 = 0;
+  U8 TransmitterIdU8 = 0;
   U8 ObjectTypeU8 = 0;
   U8 ActorTypeU8 = 0;
   U8 OperationModeU8 = 0;
@@ -258,6 +259,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
           }
         } 
 
+        //Do action for received ISO message
         if(ISOMessageReceivedU8 == 1)
         {
           if(SUP_DEBUG_TCP_RX_DATA) printf("[SupervisorControl] MessageId %d handled.\n", HeaderData.MessageIdU16);
@@ -294,7 +296,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
                   bzero(TextRow, SUP_TEXT_ROW_LENGTH);
                   UtilReadLine(fd, TextRow);
                   C8Ptr = TextRow;
-                  for(j = 0; j < 8; j ++)
+                  for(j = 0; j < 9; j ++)
                   {
                     bzero(ValueBuffer, SUP_TEXT_BUFFER_20);
                     strncpy(ValueBuffer, C8Ptr, (U64)strstr(C8Ptr, ";") - (U64)C8Ptr);
@@ -305,24 +307,27 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
                         IpU32 = UtilIPStringToInt(ValueBuffer);
                       break;
                       case 1:
-                        ObjectTypeU8 = atoi(ValueBuffer);
+                        TransmitterIdU8 = atoi(ValueBuffer);
                       break;
                       case 2:
-                        ActorTypeU8 = atoi(ValueBuffer);
+                        ObjectTypeU8 = atoi(ValueBuffer);
                       break;
                       case 3:
-                        OperationModeU8 = atoi(ValueBuffer);
+                        ActorTypeU8 = atoi(ValueBuffer);
                       break;
                       case 4:
-                        MassU32 = atoi(ValueBuffer);
+                        OperationModeU8 = atoi(ValueBuffer);
                       break;
                       case 5:
-                        DimensionXU32 = atoi(ValueBuffer);
+                        MassU32 = atoi(ValueBuffer);
                       break;
                       case 6:
-                        DimensionYU32 = atoi(ValueBuffer);
+                        DimensionXU32 = atoi(ValueBuffer);
                       break;
                       case 7:
+                        DimensionYU32 = atoi(ValueBuffer);
+                      break;
+                      case 8:
                         DimensionZU32 = atoi(ValueBuffer);
                       break;
 
@@ -330,17 +335,14 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
                       break;
                     }
                   }
-                  UtilISOBuildOPROMessage(TxBuffer, &OPROData, IpU32, ObjectTypeU8, ActorTypeU8, OperationModeU8, MassU32, DimensionXU32, DimensionYU32, DimensionZU32, 1);
+                  UtilISOBuildOPROMessage(TxBuffer, &OPROData, IpU32, TransmitterIdU8, ObjectTypeU8, ActorTypeU8, OperationModeU8, MassU32, DimensionXU32, DimensionYU32, DimensionZU32, 1);
                   UtilSendTCPData("SupervisorControl", TxBuffer, OPROData.Header.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH, &SupervisorTCPSocketfdI32, 0);
                 }
                 fclose(fd);
               }
-
             }
           }
-
-
-          
+         
           bzero(RxBuffer, ISO_MESSAGE_HEADER_LENGTH + HeaderData.MessageLengthU32 + ISO_MESSAGE_FOOTER_LENGTH);
           ISOMessageReceivedU8 = 0;
           RxTotalDataU32 = 0;

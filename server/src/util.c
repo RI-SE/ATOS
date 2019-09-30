@@ -2863,7 +2863,7 @@ I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug)
 }
 
 
-I32 UtilISOBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 ObjectType, U8 ActorType, U8 OperationMode, U32 ObjectMass, U32 ObjectDimX, U32 ObjectDimY, U32 ObjectDimZ, U8 Debug)
+I32 UtilISOBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 TransmitterId, U8 ObjectType, U8 ActorType, U8 OperationMode, U32 ObjectMass, U32 ObjectDimX, U32 ObjectDimY, U32 ObjectDimZ, U8 Debug)
 {
     I32 MessageIndex = 0, i;
     U16 Crc = 0;
@@ -2880,6 +2880,9 @@ I32 UtilISOBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress
     OPROData->IPAddrValueIdU16 = VALUE_IP_ADDRESS;
     OPROData->IPAddrContentLengthU16 = 4;
     OPROData->IPAddrU32 = IPAddress;
+    OPROData->TransmitterIdValueIdU16 = VALUE_ID_TRANSMITTER_ID;
+    OPROData->TransmitterIdContentLengthU16 = 1;
+    OPROData->TransmitterIdU8 = TransmitterId;
     OPROData->ObjectTypeValueIdU16 = VALUE_OBJECT_TYPE;
     OPROData->ObjectTypeContentLengthU16 = 1;
     OPROData->ObjectTypeU8 = ObjectType;

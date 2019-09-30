@@ -463,7 +463,8 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
         {
         // can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
         case Idle_0:
-            /*bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
+                /*
+                bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
                 iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
 
                 if(iCommand == COMM_TOM)

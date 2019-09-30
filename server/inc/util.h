@@ -156,6 +156,7 @@
 #define ADAPTIVE_SYNC_POINT_CONF "./conf/adaptivesync.conf"
 #define TRIGG_ACTION_CONF "./conf/triggeraction.conf"
 #define VERSION_PATH "../conf/Version.txt"
+#define OBJECT_PROPERTIES_CONF "./conf/objprop.conf"
 
 #define MAX_TRIGG_ACTIONS 20
 
@@ -216,6 +217,7 @@
 #define VALUE_OBJECT_MODE                   0x55
 #define VALUE_OBJECT_MASS                   0x56
 #define VALUE_ACTOR_TYPE                    0x57
+#define VALUE_ID_TRANSMITTER_ID             0x58
 #define VALUE_ID_HEAB                       0x90
 #define VALUE_ID_TRAJECTORY_ID              0x101
 #define VALUE_ID_TRAJECTORY_NAME            0x102
@@ -460,6 +462,9 @@ typedef struct
   U16 IPAddrValueIdU16;
   U16 IPAddrContentLengthU16;
   U32 IPAddrU32;
+  U16 TransmitterIdValueIdU16;
+  U16 TransmitterIdContentLengthU16;
+  U8 TransmitterIdU8;
   U16 ObjectTypeValueIdU16;
   U16 ObjectTypeContentLengthU16;
   U8 ObjectTypeU8;
@@ -832,7 +837,7 @@ I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPS
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
-I32 UtilISOBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 ObjectType, U8 ActorType, U8 OperationMode, U32 ObjectMass, U32 ObjectDimX, U32 ObjectDimY, U32 ObjectDimZ, U8 Debug);
+I32 UtilISOBuildOPROMessage(C8* MessageBuffer, OPROType *OPROData, U32 IPAddress, U8 TransmitterId, U8 ObjectType, U8 ActorType, U8 OperationMode, U32 ObjectMass, U32 ObjectDimX, U32 ObjectDimY, U32 ObjectDimZ, U8 Debug);
 
 
 typedef struct {
