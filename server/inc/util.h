@@ -117,8 +117,6 @@
 #define LOCAL_USER_CONTROL_PORT 54240
 #define TEST_SYNC_POINTS 0
 
-
-
 /* Calculation:
   34 years between 1970 and 2004
   8 days for leap year between 1970 and 2004
