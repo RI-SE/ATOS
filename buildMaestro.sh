@@ -8,7 +8,7 @@ echo "Building util"
 ls
 echo $PATH
 printenv
-cmake -G "Unix Makefiles" . && make || exit 1
+/usr/bin/cmake -G "Unix Makefiles" . && make || exit 1
 
 # Build core modules
 cd $MAESTRODIR/server
