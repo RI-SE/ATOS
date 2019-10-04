@@ -2462,7 +2462,7 @@ I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 Command
     *(MessageBuffer + i++) = (U8)(Crc);
     MessageIndex = i;
 
-    if(debug)
+    if(Debug)
     {
         printf("INSUP total length = %d bytes (header+message+footer)\n", (int)(ISO_INSUP_MESSAGE_LENGTH+ISO_MESSAGE_FOOTER_LENGTH));
         printf("----HEADER----\n");

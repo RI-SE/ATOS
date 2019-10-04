@@ -178,7 +178,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         //Initiate the simulator if not initialized and a there is a valid TCP connection
         if(SupervisorInitiatedU8 == 0 && SupervisorTCPSocketfdI32 > 0)
         {
-          UtilISOBuildINSUPMessage(TxBuffer, &INSUPData, SUP_MODE_NORMAL, 1);
+          UtilISOBuildINSUPMessage(TxBuffer, &INSUPData, SUP_MODE_NORMAL, 0);
           UtilSendTCPData("SupervisorControl", TxBuffer, INSUPData.Header.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH, &SupervisorTCPSocketfdI32, 0);
           SupervisorInitiatedU8 = 1;
         }
@@ -335,7 +335,7 @@ int supervisorcontrol_task(TimeType *GPSTime, GSDType *GSD)
                       break;
                     }
                   }
-                  UtilISOBuildOPROMessage(TxBuffer, &OPROData, IpU32, TransmitterIdU8, ObjectTypeU8, ActorTypeU8, OperationModeU8, MassU32, DimensionXU32, DimensionYU32, DimensionZU32, 1);
+                  UtilISOBuildOPROMessage(TxBuffer, &OPROData, IpU32, TransmitterIdU8, ObjectTypeU8, ActorTypeU8, OperationModeU8, MassU32, DimensionXU32, DimensionYU32, DimensionZU32, 0);
                   UtilSendTCPData("SupervisorControl", TxBuffer, OPROData.Header.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH + ISO_MESSAGE_FOOTER_LENGTH, &SupervisorTCPSocketfdI32, 0);
                 }
                 fclose(fd);

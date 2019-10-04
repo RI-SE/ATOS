@@ -1163,6 +1163,7 @@ I32 ObjectControlGetObjectProperties(C8 *IPAddress, C8 *MessageBuffer, U8 Debug)
         {
             bzero(TextRow, SMALL_BUFFER_SIZE_254);
             UtilReadLine(fd, TextRow);
+            if(Debug) printf("ObjProp row: %s\n", TextRow);
             PtrC8 = TextRow;
             if(strlen(TextRow) > 0 && strstr(TextRow, "//") == NULL)
             {
@@ -1209,7 +1210,7 @@ I32 ObjectControlGetObjectProperties(C8 *IPAddress, C8 *MessageBuffer, U8 Debug)
                 if(IpU32 == UtilIPStringToInt(IPAddress))
                 {
                     fclose(fd);
-                    MessageLengthI32 = UtilISOBuildOPROMessage(MessageBuffer, &OPROData, IpU32, TransmitterIdU8, ObjectTypeU8, ActorTypeU8, OperationModeU8, MassU32, DimensionXU32, DimensionYU32, DimensionZU32, 1);
+                    MessageLengthI32 = UtilISOBuildOPROMessage(MessageBuffer, &OPROData, IpU32, TransmitterIdU8, ObjectTypeU8, ActorTypeU8, OperationModeU8, MassU32, DimensionXU32, DimensionYU32, DimensionZU32, Debug);
                     return MessageLengthI32;
                 }
             }
