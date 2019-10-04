@@ -5,7 +5,7 @@ pipeline {
         stage('build') {
             steps {
                 sh 'echo "Executing build script..."'
-                sh 'buildMaestro.sh'
+                sh './buildMaestro.sh'
             }
         }
     }
