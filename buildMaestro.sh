@@ -6,6 +6,7 @@ git submodule update --init --recursive || exit 1
 cd util/C
 echo "Building util"
 ls
+lls
 cmake -G "Unix Makefiles" . && make || exit 1
 
 # Build core modules
