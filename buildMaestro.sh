@@ -6,9 +6,7 @@ git submodule update --init --recursive || exit 1
 cd util/C
 echo "Building util"
 ls
-echo $PATH
-printenv
-/usr/bin/cmake -G "Unix Makefiles" . && make || exit 1
+cmake -G "Unix Makefiles" . && make || exit 1
 
 # Build core modules
 cd $MAESTRODIR/server
