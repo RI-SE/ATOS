@@ -14,7 +14,8 @@ cp ../traj/0.traj ./traj/127.0.0.1
 make
 cd $MAESTRODIR
 
+# Build separate modules
+mkdir $MAESTRODIR/modules/ScenarioControl/build
 cd $MAESTRODIR/modules/ScenarioControl/build
 cmake ..
 make
-
