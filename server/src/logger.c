@@ -127,7 +127,6 @@ void logger_task(TimeType* GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
         switch(command)
         {
         case COMM_ABORT:
-            isFirstInit = 1;
             break;
 
         case COMM_INIT:
