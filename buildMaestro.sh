@@ -13,7 +13,7 @@ cd $MAESTRODIR/server
 mkdir build
 cd build
 echo "Building core modules"
-cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug .. && make || exit 1
+cmake -G "Unix Makefiles" -DUSE_CITS:BOOL=FALSE -DCMAKE_BUILD_TYPE=Debug .. && make || exit 1
 
 # Build ScenarioControl module
 mkdir $MAESTRODIR/modules/ScenarioControl/build
