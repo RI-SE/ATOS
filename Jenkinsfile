@@ -12,7 +12,7 @@ pipeline {
         stage('Integration testing') {
             steps {
                 sh 'echo "Running Maestro integration tests..."'
-                sh 'allMaestroIntegrationTests.sh'
+                sh './allMaestroIntegrationTests.sh'
             }
         }
     }
