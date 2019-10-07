@@ -26,10 +26,4 @@ if [ $RUNNING_PIDS -ne 0 ]; then
 	RESULT=1
 fi
 
-if [ $RESULT -eq 0 ]; then
-	echo "Success!"
-else
-	echo "Failure!"
-fi
-
 exit $RESULT
