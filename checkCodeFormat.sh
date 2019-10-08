@@ -7,7 +7,9 @@ fi
 
 ./formatSourceFiles.sh
 git diff > formatDiff.patch
-# Todo: remove formatting diffs
+
+# Reset changes made
+find . -iname "*.c" -a -not -ipath "*ASN1*" -a -not -ipath "*CMakeFiles*" -a -not -ipath "*util/*" | xargs git checkout --
 
 if [ ! -s formatDiff.patch ]; then
 	# It was empty
