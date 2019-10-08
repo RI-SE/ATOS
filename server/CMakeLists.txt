@@ -1,6 +1,14 @@
 cmake_minimum_required (VERSION 2.6)
 project (Maestro)
 
+# Standard compiler flags
+SET(GCC_COMPILE_FLAGS_WARNINGS "-Wall") # Use -Wall to make all warnings appear, and -Werror to make all of them into errors. To select individual warnings use e.g. -Werror=pointer-sign
+SET(GCC_COMPILE_FLAGS_COVERAGE "-fprofile-arcs -ftest-coverage")
+SET(GCC_COMPILE_FLAGS_OPTIMISATION "-O0") # Use -O2 for final build
+
+# Set which compiler flags are used for the build
+SET(GCC_COMPILE_FLAGS_ALL "${GCC_COMPILE_FLAGS_WARNINGS)}")
+
 # copy needed file
 #configure_file(traj/0.traj traj/192.168.0.1 COPYONLY)
 #configure_file(traj/1.traj traj/192.168.0.2 COPYONLY)
@@ -93,6 +101,9 @@ add_executable(TEServer
   inc/timecontrol.h
   inc/datadictionary.h
 )
+
+# add compiler flags for all targets
+set_target_properties(TEServer PROPERTIES COMPILE_FLAGS ${GCC_COMPILE_FLAGS_ALL})
 
 # add the install targets
 install (TARGETS TEServer DESTINATION bin)
