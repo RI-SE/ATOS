@@ -17,8 +17,9 @@ if [ ! -s formatDiff.patch ]; then
 	echo "No code formatting errors detected"
 	exit 0
 else
-	echo "Formatting errors detected:"
-	cat formatDiff.patch
+	echo "Formatting errors detected"
+	# Very wordy printout:
+	# cat formatDiff.patch
 	rm formatDiff.patch
 	exit 1
 fi
