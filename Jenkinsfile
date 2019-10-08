@@ -15,6 +15,12 @@ pipeline {
                 sh './allMaestroIntegrationTests.sh'
             }
         }
+        stage('Format check') {
+            steps {
+                sh 'echo "Running code formatting check..."'
+		sh './checkCodeFormat.sh'
+            }
+        }
     }
 }
 
