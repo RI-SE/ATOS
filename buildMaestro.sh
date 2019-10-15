@@ -1,4 +1,5 @@
 #!/bin/sh
+export PATH=$PATH:/usr/bin
 MAESTRODIR=$(pwd)
 git submodule update --init --recursive || exit 1
 

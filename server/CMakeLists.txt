@@ -7,7 +7,8 @@ SET(GCC_COMPILE_FLAGS_COVERAGE "-fprofile-arcs -ftest-coverage")
 SET(GCC_COMPILE_FLAGS_OPTIMISATION "-O0") # Use -O2 for final build
 
 # Set which compiler flags are used for the build
-SET(GCC_COMPILE_FLAGS_ALL "${GCC_COMPILE_FLAGS_WARNINGS}")
+
+SET(GCC_COMPILE_FLAGS_ALL "${GCC_COMPILE_FLAGS_WARNINGS)}")
 
 # copy needed file
 #configure_file(traj/0.traj traj/192.168.0.1 COPYONLY)
