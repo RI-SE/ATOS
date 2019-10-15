@@ -14,7 +14,7 @@ Contents
 Maestro v0.3.0 Trigger and Action
 ==============================
 
-This version is compatible with Maestro-Tools v0.X.X and Util v0.X.X
+This version is compatible with Maestro-Tools v0.3.0 and Util v0.3.0
 
 New Features
 -------
@@ -31,6 +31,7 @@ Fixed bugs
 -------
 Uploading .traj files from the GUC no longer results in a corrupted file with POST messages at the end.  
 
+
 July release v0.2.0 - ServerSnapshot  
 ==============================
 
@@ -40,10 +41,10 @@ New Features
 -------
 
 1. Geofencing has been enabled. Server checks if an object is located inside or outside a given geofence and prints this to terminal.
-2. MQbus defined in the util repo is not beeing used instead of the old message
-3. 
+2. MQbus defined in the util repo is now beeing used instead of the old message
 
-Enhancements 
+
+"Enhancements" 
 -------
 Latidude spelling error has been changed to Latitude
 
