@@ -699,7 +699,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     UtilCreateDirContent(SystemControlArgument[0], "dir.info");
                     bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                     SystemControlBuildFileContentInfo("dir.info", ControlResponseBuffer, 0);
-                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetDirectoryContent:", ControlResponseBuffer, 4, &ClientSocket, 0);
+                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubGetDirectoryContent:", ControlResponseBuffer, 4, &ClientSocket, 0);
                     SystemControlSendFileContent(&ClientSocket, "dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE, ControlResponseBuffer, REMOVE_FILE, 0);
                 }
 
@@ -717,7 +717,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     UtilCreateDirContent(SystemControlArgument[0], SystemControlArgument[0]);
                     bzero(ControlResponseBuffer,SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                     SystemControlBuildFileContentInfo(SystemControlArgument[0], ControlResponseBuffer, 0);
-                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DownloadFile:", ControlResponseBuffer, 4, &ClientSocket, 0);
+                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubDownloadFile:", ControlResponseBuffer, 4, &ClientSocket, 0);
                     SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0], STR_SYSTEM_CONTROL_TX_PACKET_SIZE, ControlResponseBuffer, KEEP_FILE, 0);
                 }
 
@@ -749,7 +749,7 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel)
                     SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0], SystemControlArgument[1], SystemControlArgument[2], ControlResponseBuffer, 0);
                 }
 
-                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:", ControlResponseBuffer, 1, &ClientSocket, 0);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubUploadFile:", ControlResponseBuffer, 1, &ClientSocket, 0);
 
             } else { LogMessage(LOG_LEVEL_ERROR,"Wrong parameter count in PrepFileRx(path, filesize, packetsize)!"); SystemControlCommand = Idle_0;}
         break;
