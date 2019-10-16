@@ -2,6 +2,7 @@
 #define TRIGGER_H
 
 #include <cstdint>
+#include <stdexcept>
 #include <set>
 #include <iostream>
 #include <vector>
