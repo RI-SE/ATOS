@@ -142,9 +142,9 @@ void supervisorcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLeve
 					UtilConnectTCPChannel("SupervisorControl", &SupervisorTCPSocketfdI32,
 										  (const C8 *)SupervisorServerIpC8, SupervisorTCPPortU16);
 				int yes = 1;
-				int result =
-					setsockopt(SupervisorTCPSocketfdI32, IPPROTO_TCP, TCP_NODELAY, (char *)&yes,
-							   sizeof (int));
+				int result = setsockopt(SupervisorTCPSocketfdI32, IPPROTO_TCP, TCP_NODELAY, (char *)&yes,
+										sizeof (int));
+
 				if (result < 0) {
 					LogMessage(LOG_LEVEL_WARNING, "Failed to set socket option code = %d", result);
 				}

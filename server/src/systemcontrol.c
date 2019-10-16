@@ -119,21 +119,21 @@ typedef enum {
 
 typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
-		InitializeScenario_0,
+	InitializeScenario_0,
 	ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
-		DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetDirectoryContent_1,
+	DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetDirectoryContent_1,
 	DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0, start_ext_trigg_1,
-		nocommand
+	nocommand
 } SystemControlCommand_t;
 
 const char *SystemControlCommandsArr[] = {
 	"Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0",
-		"AbortScenario_0", "InitializeScenario_0",
+	"AbortScenario_0", "InitializeScenario_0",
 	"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
-		"GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1",
-		"GetDirectoryContent_1",
+	"GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1",
+	"GetDirectoryContent_1",
 	"DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1", "control_0", "Exit_0",
-		"start_ext_trigg_1"
+	"start_ext_trigg_1"
 };
 
 const char *SystemControlStatesArr[] =
@@ -1056,8 +1056,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case AbortScenario_0:
 			if (objectControlState == OBC_STATE_RUNNING
 				/* || strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL
-																							 * || strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/ )
-																							// Abort should only be allowed in running state
+				 * || strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/ )
+				// Abort should only be allowed in running state
 			{
 				if (iCommSend(COMM_ABORT, NULL, 0) < 0) {
 					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ABORT command");

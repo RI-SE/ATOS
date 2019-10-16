@@ -78,8 +78,7 @@ static volatile int iExit = 0;
   ------------------------------------------------------------*/
 
 
-void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel)
-{
+void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	char pcLogFile[MAX_FILE_PATH];	//!< Log file path and name buffer
 	char pcLogFileComp[MAX_FILE_PATH];	//!< CSV log file path and name buffer
 	char busReceiveBuffer[MBUS_MAX_DATALEN];	//!< Buffer for receiving from message bus

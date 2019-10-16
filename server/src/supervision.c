@@ -466,7 +466,8 @@ int SupervisionCheckGeofences(MonitorDataType MONRdata, GeofenceType * geofences
 							  unsigned int numberOfGeofences) {
 	const CartesianPosition monrPoint =
 		{ MONRdata.MONR.XPositionI32 / 1000.0, MONRdata.MONR.YPositionI32 / 1000.0,
-MONRdata.MONR.ZPositionI32 / 1000.0, 0.0 };
+		MONRdata.MONR.ZPositionI32 / 1000.0, 0.0
+	};
 	char isInPolygon = 0;
 	int retval = 0;
 

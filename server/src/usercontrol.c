@@ -67,7 +67,7 @@ typedef enum {
 
 const char *UserControlCommandsArr[] = {
 	"idle_0", "status_0", "arm_0", "start_1", "stop_0", "abort_0", "replay_1", "control_0", "exit_0", "cx_0",
-		"cc_0",
+	"cc_0",
 	"cp_0", "sb_0", "cb_0", "tp_0", "tsp_1", "sx_0", "sc_0", "help_0", "tosem_0", "tstrt_0", "tdopm_0",
 	"tmonr_0", "disarm_0", "tt_0"
 };
