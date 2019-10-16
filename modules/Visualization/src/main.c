@@ -27,127 +27,116 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
-static void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr);
-static void vDisconnectVisualizationChannel(int* sockfd);
+static void vConnectVisualizationChannel(int *sockfd, struct sockaddr_in *addr);
+static void vDisconnectVisualizationChannel(int *sockfd);
 
 
-int main()
-{
-    enum COMMAND command = COMM_INV;
-    char mqRecvData[MQ_MSG_SIZE];
-    const struct timespec sleepTimePeriod = {0,10000000};
-    const struct timespec abortWaitTime = {1,0};
-    struct timespec remTime;
+int main() {
+	enum COMMAND command = COMM_INV;
+	char mqRecvData[MQ_MSG_SIZE];
+	const struct timespec sleepTimePeriod = { 0, 10000000 };
+	const struct timespec abortWaitTime = { 1, 0 };
+	struct timespec remTime;
 
-    LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
-    LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
+	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
+	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
 
-    int visual_server;
-    struct sockaddr_in visual_server_addr;
-    vConnectVisualizationChannel(&visual_server,&visual_server_addr);
+	int visual_server;
+	struct sockaddr_in visual_server_addr;
 
-    I32 iExit = 0;
-    char busReceiveBuffer[MBUS_MAX_DATALEN];               //!< Buffer for receiving from message bus
+	vConnectVisualizationChannel(&visual_server, &visual_server_addr);
 
-
-    // Initialize message bus connection
-    while(iCommInit())
-    {
-        nanosleep(&sleepTimePeriod,&remTime);
-    }
-
-    while(true)
-    {
-        if (iCommRecv(&command,mqRecvData,MQ_MSG_SIZE, NULL) < 0)
-        {
-            util_error("Message bus receive error");
-        }
+	I32 iExit = 0;
+	char busReceiveBuffer[MBUS_MAX_DATALEN];	//!< Buffer for receiving from message bus
 
 
-       if (command == COMM_ABORT){
-                       }
+	// Initialize message bus connection
+	while (iCommInit()) {
+		nanosleep(&sleepTimePeriod, &remTime);
+	}
 
-       if(command == COMM_EXIT){
-            iExit = 1;
-            LogMessage(LOG_LEVEL_INFO, "Visualization exiting");
-            vDisconnectVisualizationChannel(&visual_server);
-            (void)iCommClose();
-       }
+	while (true) {
+		if (iCommRecv(&command, mqRecvData, MQ_MSG_SIZE, NULL) < 0) {
+			util_error("Message bus receive error");
+		}
 
 
-        switch (command) {
-        case COMM_INIT:
-            break;
-        case COMM_MONI:
-            // Ignore old style MONR data
-            break;
-        case COMM_MONR:
-            LogMessage(LOG_LEVEL_INFO, "got MONR.\n");
-            UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer, sizeof(busReceiveBuffer), 0);
-        break;
-        case COMM_LOG:
-        break;
-        case COMM_INV:
-            break;
-        case COMM_OBC_STATE:
-            break;
-        case COMM_STRT:
-            break;
-        default:
-            LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", (unsigned char)command);
-        }
-    }
+		if (command == COMM_ABORT) {
+		}
 
-    return 0;
+		if (command == COMM_EXIT) {
+			iExit = 1;
+			LogMessage(LOG_LEVEL_INFO, "Visualization exiting");
+			vDisconnectVisualizationChannel(&visual_server);
+			(void)iCommClose();
+		}
+
+
+		switch (command) {
+		case COMM_INIT:
+			break;
+		case COMM_MONI:
+			// Ignore old style MONR data
+			break;
+		case COMM_MONR:
+			LogMessage(LOG_LEVEL_INFO, "got MONR.\n");
+			UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer,
+							sizeof (busReceiveBuffer), 0);
+			break;
+		case COMM_LOG:
+			break;
+		case COMM_INV:
+			break;
+		case COMM_OBC_STATE:
+			break;
+		case COMM_STRT:
+			break;
+		default:
+			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", (unsigned char)command);
+		}
+	}
+
+	return 0;
 }
 
 
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
-static void vConnectVisualizationChannel(int* sockfd, struct sockaddr_in* addr)
-{
-    struct hostent *server;
-    char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
+static void vConnectVisualizationChannel(int *sockfd, struct sockaddr_in *addr) {
+	struct hostent *server;
+	char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
 
-    /* Setup connection to visualization */
-    //DEBUG_LPRINT(DEBUG_LEVEL_LOW,"%s","INF: Creating visualization socket.\n");
+	/* Setup connection to visualization */
+	//DEBUG_LPRINT(DEBUG_LEVEL_LOW,"%s","INF: Creating visualization socket.\n");
 
-    *sockfd = socket ( AF_INET,
-                       SOCK_DGRAM,
-                       IPPROTO_UDP );
+	*sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-    if (*sockfd < 0)
-    {
-        util_error("ERR: Failed to create visualization socket");
-    }
+	if (*sockfd < 0) {
+		util_error("ERR: Failed to create visualization socket");
+	}
 
-    bzero((char *)addr, sizeof(*addr));
+	bzero((char *)addr, sizeof (*addr));
 
-    bzero(pcTempBuffer,MAX_UTIL_VARIBLE_SIZE);
-    if(!iUtilGetParaConfFile("VisualizationServerName",pcTempBuffer))
-    {
-        strcat(pcTempBuffer,VISUAL_SERVER_NAME);
-    }
+	bzero(pcTempBuffer, MAX_UTIL_VARIBLE_SIZE);
+	if (!iUtilGetParaConfFile("VisualizationServerName", pcTempBuffer)) {
+		strcat(pcTempBuffer, VISUAL_SERVER_NAME);
+	}
 
-    //DEBUG_LPRINT(DEBUG_LEVEL_LOW,"[Visualization] UDP visualization sending to %s %d\n",pcTempBuffer,VISUAL_SERVER_PORT);
+	//DEBUG_LPRINT(DEBUG_LEVEL_LOW,"[Visualization] UDP visualization sending to %s %d\n",pcTempBuffer,VISUAL_SERVER_PORT);
 
 
-    server = gethostbyname(pcTempBuffer);
+	server = gethostbyname(pcTempBuffer);
 
-    if (server == NULL)
-    {
-        util_error("ERR: Unkonown host\n");
-    }
-    bcopy((char *) server->h_addr,
-          (char *)&addr->sin_addr.s_addr, server->h_length);
+	if (server == NULL) {
+		util_error("ERR: Unkonown host\n");
+	}
+	bcopy((char *)server->h_addr, (char *)&addr->sin_addr.s_addr, server->h_length);
 
-    addr->sin_family = AF_INET;
-    addr->sin_port   = htons(VISUAL_SERVER_PORT);
+	addr->sin_family = AF_INET;
+	addr->sin_port = htons(VISUAL_SERVER_PORT);
 }
 
-static void vDisconnectVisualizationChannel(int* sockfd)
-{
-    close(*sockfd);
+static void vDisconnectVisualizationChannel(int *sockfd) {
+	close(*sockfd);
 }
-
