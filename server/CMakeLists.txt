@@ -1,6 +1,9 @@
 cmake_minimum_required (VERSION 2.6)
 project (Maestro)
 
+SET(CMAKE_CXX_STANDARD 11)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Standard compiler flags
 SET(GCC_COMPILE_FLAGS_WARNINGS "-Wall") # Use -Wall to make all warnings appear, and -Werror to make all of them into errors. To select individual warnings use e.g. -Werror=pointer-sign
 SET(GCC_COMPILE_FLAGS_COVERAGE "-fprofile-arcs -ftest-coverage")
