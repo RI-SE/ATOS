@@ -17,9 +17,24 @@ if [ ! -s formatDiff.patch ]; then
 	echo "No code formatting errors detected"
 	exit 0
 else
-	echo "Formatting errors detected"
-	# Very wordy printout:
-	cat formatDiff.patch
+	echo "Formatting errors detected. Attempting to fix ..."
 	rm formatDiff.patch
-	exit 1
+
+	./formatSourceFiles.sh
+	./formatSourceFiles.sh
+
+	git diff > formatDiff.patch
+
+	find . -iname "*.c" -a -not -ipath "*ASN1*" -a -not -ipath "*CMakeFiles*" -a -not -ipath "*util/*" | xargs git checkout --
+
+	if [ ! -s formatDiff.patch ]; then
+		rm formatDiff.patch
+		echo "No code formatting errors detected after rerun"
+		exit 0
+	else
+		# Very wordy printout:
+		cat formatDiff.patch
+		rm formatDiff.patch
+		exit 1
+	fi
 fi
