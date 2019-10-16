@@ -17,7 +17,7 @@ CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --blank-before-sizeof"
 # Structs
 CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --braces-on-struct-decl-line"
 CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --braces-on-func-def-line --dont-break-procedure-type"
-CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --continue-at-parenthesis"
+CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --continue-at-parentheses"
 CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --indent-level${TAB_SIZE} --tab-size${TAB_SIZE}"
 echo "${CODE_STYLE_OPTIONS}"
 
