@@ -1,5 +1,13 @@
 #!/bin/sh
 export PATH=$PATH:/usr/bin
+
+if [ $USER = "jenkins" ]; then
+	# Show jenkins environment
+	echo "Running as ${USER} with environment"
+	printenv
+	rm -rf ~/.maestro
+fi
+
 MAESTRODIR=$(pwd)
 git submodule update --init --recursive || exit 1
 
