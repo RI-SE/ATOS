@@ -1,6 +1,7 @@
 #!/bin/bash
 #### Settings for GNU indent
 TAB_SIZE=4
+LINE_LENGTH=110
 # Blank lines
 CODE_STYLE_OPTIONS="--blank-lines-after-declarations --blank-lines-after-procedures"
 
@@ -19,6 +20,7 @@ CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --braces-on-struct-decl-line"
 CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --braces-on-func-def-line --dont-break-procedure-type"
 CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --continue-at-parentheses"
 CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --indent-level${TAB_SIZE} --tab-size${TAB_SIZE}"
+CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --line-length${LINE_LENGTH}"
 echo "${CODE_STYLE_OPTIONS}"
 
 # Disable generating backup files
