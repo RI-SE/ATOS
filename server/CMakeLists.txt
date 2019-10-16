@@ -1,6 +1,9 @@
 cmake_minimum_required (VERSION 2.6)
 project (Maestro)
 
+# Set C and C++ dialects
+SET(CMAKE_C_STANDARD 11)
+SET(CMAKE_C_STANDARD_REQUIRED ON)
 SET(CMAKE_CXX_STANDARD 11)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
