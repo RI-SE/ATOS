@@ -4,7 +4,6 @@ TAB_SIZE=4
 LINE_LENGTH=110
 # Blank lines
 CODE_STYLE_OPTIONS="--blank-lines-after-declarations --blank-lines-after-procedures"
-
 # If-else statements
 CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --braces-on-if-line --dont-cuddle-else"
 # Do-while statements
@@ -17,11 +16,16 @@ CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --no-space-after-cast"
 CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --blank-before-sizeof"
 # Structs
 CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --braces-on-struct-decl-line"
-CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --braces-on-func-def-line --dont-break-procedure-type"
+# Functions/procedures
+CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --dont-break-procedure-type --braces-on-func-def-line"
+# Parentheses indentation on newline
 CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --continue-at-parentheses"
+# Indentation
 CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --indent-level${TAB_SIZE} --tab-size${TAB_SIZE}"
+# Column cap
 CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --line-length${LINE_LENGTH}"
-echo "${CODE_STYLE_OPTIONS}"
+# Function call appearance
+CODE_STYLE_OPTIONS="${CODE_STYLE_OPTIONS} --no-space-after-function-call-names"
 
 # Disable generating backup files
 export VERSION_CONTROL="none"
