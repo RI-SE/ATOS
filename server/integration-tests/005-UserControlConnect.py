@@ -2,6 +2,7 @@ from tools.MSCP import MSCP
 from tools.Maestro import Maestro
 import time
 import subprocess
+import sys
 
 if __name__ == "__main__":
 
@@ -10,6 +11,13 @@ if __name__ == "__main__":
     M = MSCP("127.0.0.1")
 
     time.sleep(1)
+    if S.poll():
+        S.stop()
+        sys.exit(1)
     M.Init()
     time.sleep(1)
+    if S.poll():
+        S.stop()
+        sys.exit(1)
     S.stop()
+    sys.exit(0)
