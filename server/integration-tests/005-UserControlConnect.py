@@ -1,12 +1,12 @@
 from tools.MSCP import MSCP
-from tools.Maestro import Maestro
+from tools.Executable import Executable
 import time
 import subprocess
 import sys
 
 if __name__ == "__main__":
 
-    S = Maestro("../build/TEServer",0)
+    S = Executable("../build/TEServer",["-m","0"])
     time.sleep(0.05)
     M = MSCP("127.0.0.1")
 
