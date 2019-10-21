@@ -234,20 +234,20 @@ int loadGeofenceFiles(GeofenceType * geofences[], unsigned int *nGeof) {
 */
 int parseGeofenceFile(char *geofenceFile, GeofenceType * geofence) {
 
-	char pcFileNameBuffer[MAX_FILE_PATH] = "";
+    char geofencePathDir[MAX_FILE_PATH];
+    FILE *fp;
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    int tempInt;
+    int isHeaderParsedSuccessfully = 0;
 
-	strcat(pcFileNameBuffer, GEOFENCE_DIRECTORY);
-	strcat(pcFileNameBuffer, geofenceFile);
+    UtilGetGeofenceDirectoryPath(geofencePathDir, sizeof (geofencePathDir));
+    strcat(geofencePathDir, geofenceFile);
 
-	FILE *fp;
-	char *line = NULL;
-	size_t len = 0;
-	ssize_t read;
-	int tempInt;
-	int isHeaderParsedSuccessfully = 0;
+    LogMessage(LOG_LEVEL_DEBUG, "Opening <%s>", geofencePathDir);
+    fp = fopen(geofencePathDir, "r");
 
-	LogMessage(LOG_LEVEL_DEBUG, "Opening <%s>", pcFileNameBuffer);
-	fp = fopen(pcFileNameBuffer, "r");
 	if (fp != NULL) {
 		int lineCount = 0;
 
@@ -424,7 +424,7 @@ int parseGeofenceFile(char *geofenceFile, GeofenceType * geofence) {
 					if (lineCount == geofence->numberOfPoints) {
 						/* Successful parse, return */
 						fclose(fp);
-						LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", pcFileNameBuffer);
+                        LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", geofencePathDir);
 						return 0;
 					}
 					else {
@@ -441,15 +441,15 @@ int parseGeofenceFile(char *geofenceFile, GeofenceType * geofence) {
 		}
 
 		fclose(fp);
-		LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", pcFileNameBuffer);
+        LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", geofencePathDir);
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to open file <%s>", pcFileNameBuffer);
+        LogMessage(LOG_LEVEL_ERROR, "Unable to open file <%s>", geofencePathDir);
 		return -1;
 	}
 
 	// If we reach here, it means we did not find an ENDGEOFENCE before EOF
-	LogMessage(LOG_LEVEL_ERROR, "Reached end of file <%s> unexpectedly while parsing", pcFileNameBuffer);
+    LogMessage(LOG_LEVEL_ERROR, "Reached end of file <%s> unexpectedly while parsing", geofencePathDir);
 	if (isHeaderParsedSuccessfully)
 		free(geofence->polygonPoints);
 	return -1;
