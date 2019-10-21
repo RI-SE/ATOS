@@ -33,7 +33,6 @@
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
 #define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
 #define MAX_GEOFENCE_NAME_LEN 256
-#define GEOFENCE_DIRECTORY "./geofence/"
 
 #define MODULE_NAME "Supervisor"
 
@@ -164,10 +163,13 @@ int loadGeofenceFiles(GeofenceType * geofences[], unsigned int *nGeof) {
 	DIR *pDir;
 	char *ext;
 	unsigned int n = 0;
+    char geofencePathDir[MAX_FILE_PATH];
+
+    UtilGetGeofenceDirectoryPath(geofencePathDir, sizeof (geofencePathDir));
 
 	LogMessage(LOG_LEVEL_DEBUG, "Loading geofences");
 
-	pDir = opendir(GEOFENCE_DIRECTORY);
+    pDir = opendir(geofencePathDir);
 	if (pDir == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Cannot open geofence directory");
 		return -1;
@@ -192,7 +194,7 @@ int loadGeofenceFiles(GeofenceType * geofences[], unsigned int *nGeof) {
 
 	LogMessage(LOG_LEVEL_DEBUG, "Found %u geofence files: proceeding to parse", *nGeof);
 
-	pDir = opendir(GEOFENCE_DIRECTORY);
+    pDir = opendir(geofencePathDir);
 	if (pDir == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Cannot open geofence directory");
 		return -1;
