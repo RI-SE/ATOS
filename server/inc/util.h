@@ -20,6 +20,7 @@ extern "C"{
   ------------------------------------------------------------*/
 #include <inttypes.h>
 #include <math.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -46,7 +47,7 @@ extern "C"{
 #define CONTROL_CHANNEL_PORT 53241
 
 #define MAX_OBJECTS 10
-#define MAX_FILE_PATH 256
+#define MAX_FILE_PATH PATH_MAX
 
 #define MAX_UTIL_VARIBLE_SIZE 512
 
