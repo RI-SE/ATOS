@@ -6,6 +6,7 @@ NUM_TESTS=0
 
 echo "Running integration tests"
 for f in $(pwd)/*; do
+	rm -f /dev/mqueue/*
 	if [ ${f: -3} == ".py" ]; then
 		echo "Running ${f}"
 		python3 "$f"
