@@ -33,7 +33,6 @@
 /* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
 #define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
 #define MAX_GEOFENCE_NAME_LEN 256
-#define GEOFENCE_DIRECTORY "./geofence/"
 
 #define MODULE_NAME "Supervisor"
 
@@ -164,10 +163,13 @@ int loadGeofenceFiles(GeofenceType * geofences[], unsigned int *nGeof) {
 	DIR *pDir;
 	char *ext;
 	unsigned int n = 0;
+	char geofencePathDir[MAX_FILE_PATH];
+
+	UtilGetGeofenceDirectoryPath(geofencePathDir, sizeof (geofencePathDir));
 
 	LogMessage(LOG_LEVEL_DEBUG, "Loading geofences");
 
-	pDir = opendir(GEOFENCE_DIRECTORY);
+	pDir = opendir(geofencePathDir);
 	if (pDir == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Cannot open geofence directory");
 		return -1;
@@ -192,7 +194,7 @@ int loadGeofenceFiles(GeofenceType * geofences[], unsigned int *nGeof) {
 
 	LogMessage(LOG_LEVEL_DEBUG, "Found %u geofence files: proceeding to parse", *nGeof);
 
-	pDir = opendir(GEOFENCE_DIRECTORY);
+	pDir = opendir(geofencePathDir);
 	if (pDir == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Cannot open geofence directory");
 		return -1;
@@ -234,11 +236,7 @@ int loadGeofenceFiles(GeofenceType * geofences[], unsigned int *nGeof) {
 */
 int parseGeofenceFile(char *geofenceFile, GeofenceType * geofence) {
 
-	char pcFileNameBuffer[MAX_FILE_PATH] = "";
-
-	strcat(pcFileNameBuffer, GEOFENCE_DIRECTORY);
-	strcat(pcFileNameBuffer, geofenceFile);
-
+	char geofencePathDir[MAX_FILE_PATH];
 	FILE *fp;
 	char *line = NULL;
 	size_t len = 0;
@@ -246,8 +244,12 @@ int parseGeofenceFile(char *geofenceFile, GeofenceType * geofence) {
 	int tempInt;
 	int isHeaderParsedSuccessfully = 0;
 
-	LogMessage(LOG_LEVEL_DEBUG, "Opening <%s>", pcFileNameBuffer);
-	fp = fopen(pcFileNameBuffer, "r");
+	UtilGetGeofenceDirectoryPath(geofencePathDir, sizeof (geofencePathDir));
+	strcat(geofencePathDir, geofenceFile);
+
+	LogMessage(LOG_LEVEL_DEBUG, "Opening <%s>", geofencePathDir);
+	fp = fopen(geofencePathDir, "r");
+
 	if (fp != NULL) {
 		int lineCount = 0;
 
@@ -424,7 +426,7 @@ int parseGeofenceFile(char *geofenceFile, GeofenceType * geofence) {
 					if (lineCount == geofence->numberOfPoints) {
 						/* Successful parse, return */
 						fclose(fp);
-						LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", pcFileNameBuffer);
+						LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", geofencePathDir);
 						return 0;
 					}
 					else {
@@ -441,15 +443,15 @@ int parseGeofenceFile(char *geofenceFile, GeofenceType * geofence) {
 		}
 
 		fclose(fp);
-		LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", pcFileNameBuffer);
+		LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", geofencePathDir);
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to open file <%s>", pcFileNameBuffer);
+		LogMessage(LOG_LEVEL_ERROR, "Unable to open file <%s>", geofencePathDir);
 		return -1;
 	}
 
 	// If we reach here, it means we did not find an ENDGEOFENCE before EOF
-	LogMessage(LOG_LEVEL_ERROR, "Reached end of file <%s> unexpectedly while parsing", pcFileNameBuffer);
+	LogMessage(LOG_LEVEL_ERROR, "Reached end of file <%s> unexpectedly while parsing", geofencePathDir);
 	if (isHeaderParsedSuccessfully)
 		free(geofence->polygonPoints);
 	return -1;
