@@ -1652,7 +1652,7 @@ int UtilReadLine(FILE * fd, char *Buffer) {
 
 
 
-C8 *UtilSearchTextFile(C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
+C8 * UtilSearchTextFile(C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
 
 	FILE *fd;
 
@@ -3422,7 +3422,7 @@ I32 UtilPopulateMonitorDataStruct(C8 * rawMONR, size_t rawMONRsize, MonitorDataT
 		sizeof (monitorData->MONR) - sizeof (monitorData->MONR.Header) - sizeof (monitorData->MONR.CRC);
 
 	if (rawMONRsize < sizeof (MonitorDataType)) {
-		LogMessage(LOG_LEVEL_ERROR, "Raw MONR array too small to hold all necessary MONR data");
+		LogMessage(LOG_LEVEL_ERROR, "Raw MONR array too small to hold all necessary MONR data, %d < %d.", rawMONRsize, sizeof (MonitorDataType));
 		return -1;
 	}
 

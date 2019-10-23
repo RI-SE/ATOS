@@ -392,42 +392,42 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		if (OBCState == OBC_STATE_ERROR) {
 			ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
-			MessageLength =
-				ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus,
-											  0);
-			UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
-							MessageBuffer, MessageLength, 0);
-
+			MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus, 0);
+			UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
 		}
 
-		if (OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED) {
-			 /*HEAB*/ for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-				if (uiTimeCycle == 0) {
+		if (OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED)
+        {
+			 /*HEAB*/ for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+            {
+				if (uiTimeCycle == 0)
+                {
 					//HeartbeatMessageCounter ++;
-					MessageLength =
-						ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime,
-													  ObjectControlServerStatus, 0);
-					//ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
-					UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
-									MessageBuffer, MessageLength, 0);
+					MessageLength = ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus, 0);
+					//ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 1);
+					UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
 				}
 			}
 
 
 			// Check if any object has disconnected - if so, disconnect all objects and return to idle
 			DisconnectU8 = 0;
-			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+			for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+            {
 				DisconnectU8 |= vCheckRemoteDisconnected(&socket_fds[iIndex]);
-				if (DisconnectU8) {
+				if (DisconnectU8)
+                {
 					LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s - returning to IDLE",
 							   object_address_name[iIndex]);
 
-					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+					for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+                    {
 						vDisconnectObject(&socket_fds[iIndex]);
 					}
 
 					/* Close safety socket */
-					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+					for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+                    {
 						vCloseSafetyChannel(&safety_socket_fd[iIndex]);
 					}
 					vSetState(OBC_STATE_IDLE, GSD);
@@ -443,21 +443,22 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			// this is etsi time lets remov it ans use utc instead
 			//gettimeofday(&CurrentTimeStruct, NULL);
 
-			CurrentTimeU32 =
-				((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime)) << 2) +
-				GPSTime->MicroSecondU16;
+			CurrentTimeU32 = ((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime)) << 2) + GPSTime->MicroSecondU16;
 
 
-			 /*MTSP*/ if (HeartbeatMessageCounter == 0) {
-				HeartbeatMessageCounter = 0;
-				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					for (i = 0; i < SyncPointCount; i++) {
-						if (TEST_SYNC_POINTS == 0
-							&& strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL
-							&& ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1) {
+			 /*MTSP*/
+            if (HeartbeatMessageCounter == 0)
+            {
+			    HeartbeatMessageCounter = 0;
+			    for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+                {
+					for (i = 0; i < SyncPointCount; i++)
+                    {
+						if (TEST_SYNC_POINTS == 0 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL &&
+                            ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1)
+                        {
 							/*Send Master time to adaptive sync point */
-							MessageLength =
-								ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, ASPData.MTSPU32, 0);
+							MessageLength = ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, ASPData.MTSPU32, 0);
 							//ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
 							UtilSendUDPData("Object Control", &safety_socket_fd[iIndex],
 											&safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
@@ -473,25 +474,26 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 
 
-			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+			for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+            {
 				bzero(buffer, RECV_MESSAGE_BUFFER);
 				receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex], buffer, RECV_MESSAGE_BUFFER);
 
-				if (receivedMONRData > 0) {
+				if (receivedMONRData >= sizeof(MONRType)) 
+                {
 					LogMessage(LOG_LEVEL_DEBUG, "Recieved new data from %s %d %d: %s",
 							   object_address_name[iIndex], object_udp_port[iIndex], receivedMONRData,
 							   buffer);
 
-					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
+					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) 
+                    {
 						// Append IP to buffer
-						memcpy(&buffer[receivedMONRData], &safety_object_addr[iIndex].sin_addr.s_addr,
-							   sizeof (in_addr_t));
+						memcpy(&buffer[receivedMONRData], &safety_object_addr[iIndex].sin_addr.s_addr, sizeof (in_addr_t));
 
 						// Send MONR message as bytes
-						if (iCommSend(COMM_MONR, buffer, (size_t) (receivedMONRData) + sizeof (in_addr_t)) <
-							0) {
-							LogMessage(LOG_LEVEL_ERROR,
-									   "Fatal communication fault when sending MONR command - entering error state");
+						if (iCommSend(COMM_MONR, buffer, (size_t) (receivedMONRData) + sizeof (in_addr_t)) < 0) 
+                        {
+							LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending MONR command - entering error state");
 							vSetState(OBC_STATE_ERROR, GSD);
 							ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
 						}
@@ -501,15 +503,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					//Store MONR in GSD
 					//UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
-
-					for (i = 0;
-						 i <
-						 (MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
-						  COMMAND_MESSAGE_FOOTER_LENGTH); i++)
+					for (i = 0; i < (MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH); i++)
 						GSD->MONRData[i] = buffer[i];
-					GSD->MONRSizeU8 =
-						MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
-						COMMAND_MESSAGE_FOOTER_LENGTH;
+					    GSD->MONRSizeU8 = MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH;
 
 					ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, XPosition,
 											 YPosition, ZPosition, LongitudinalSpeed, LateralSpeed,
@@ -548,7 +544,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					strcat(buffer, ";");
 
 
-					if (ASPData.MTSPU32 != 0) {
+					if (ASPData.MTSPU32 != 0) 
+                    {
 						//Add MTSP to MONR if not 0
 						bzero(MTSP, SMALL_BUFFER_SIZE_0);
 						sprintf(MTSP, "%" PRIu32, ASPData.MTSPU32);
@@ -558,9 +555,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					LogMessage(LOG_LEVEL_DEBUG, "Sending MONR message: %s", buffer);
 
-					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
+					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) 
+                    {
 						// Send MONR message on old (ASCII) format
-						if (iCommSend(COMM_MONI, buffer, strlen(buffer)) < 0) {
+						if (iCommSend(COMM_MONI, buffer, strlen(buffer)) < 0) 
+                        {
 							LogMessage(LOG_LEVEL_ERROR,
 									   "Fatal communication fault when sending MONI command - entering error state");
 							vSetState(OBC_STATE_ERROR, GSD);
@@ -569,7 +568,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 
 					//Ok, let's do the ASP
-					for (i = 0; i < SyncPointCount; i++) {
+					for (i = 0; i < SyncPointCount; i++) 
+                    {
 						if (TEST_SYNC_POINTS == 0
 							&& strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL
 							&& CurrentTimeU32 > StartTimeU32 && StartTimeU32 > 0
@@ -653,10 +653,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							}
 						}
 					}
-
 					OP[iIndex].Speed = atof(Speed);
-
-				}
+				} else if(receivedMONRData > 0) LogMessage(LOG_LEVEL_INFO, "MONR = %d, to short (should be %d) from %s.", object_address_name[iIndex], sizeof(MONRType));
 			}
 		}
 
@@ -768,7 +766,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					UtilReadLineCntSpecChars(fd, pcTempBuffer);	//Read header
 
 					for (i = 0; i < SyncPointCount; i++) {
-						UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);
+						UtilSetAdaptiveSyncPoint(&ASP[i], fd, 1);
 						if (TEST_SYNC_POINTS == 1)
 							ASP[i].TestPort = SAFETY_CHANNEL_PORT;
 					}
@@ -944,6 +942,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
 						UtilPopulateSpaceTimeArr(&OP[iIndex], object_traj_file[iIndex]);
 
+                        LogMessage(LOG_LEVEL_INFO, "Sync point counts: %d", SyncPointCount);
 						for (i = 0; i < SyncPointCount; i++) {
 							if (TEST_SYNC_POINTS == 1 && iIndex == 1) {
 								/*Send SYPM to slave */
@@ -952,7 +951,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 																  ASP[i].SlaveTrajSyncTime * 1000,
 																  ASP[i].SlaveSyncStopTime * 1000, 1);
 								UtilSendTCPData("Object Control", MessageBuffer, MessageLength,
-												&socket_fds[iIndex], 1);
+												&socket_fds[iIndex], 0);
 							}
 							else if (TEST_SYNC_POINTS == 0
 									 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL) {
@@ -962,7 +961,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 																  ASP[i].SlaveTrajSyncTime * 1000,
 																  ASP[i].SlaveSyncStopTime * 1000, 1);
 								UtilSendTCPData("Object Control", MessageBuffer, MessageLength,
-												&socket_fds[iIndex], 1);
+												&socket_fds[iIndex], 0);
 							}
 						}
 
