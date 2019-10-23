@@ -27,14 +27,14 @@
 #include <netdb.h>
 #include <limits.h>
 
+#include "maestroTime.h"
 #include "supervision.h"
 
-/* 34 years between 1970 and 2004, 8 days for leap year between 1970 and 2004      */
-/* Calculation: 34 * 365 * 24 * 3600 * 1000 + 8 * 24 * 3600 * 1000 = 1072915200000 */
-#define MS_FROM_1970_TO_2004_NO_LEAP_SECS 1072915200000
 #define MAX_GEOFENCE_NAME_LEN 256
 
 #define MODULE_NAME "Supervisor"
+
+#define VERIFY_ARM_TIMEOUT_MS 500
 
 /*------------------------------------------------------------
   -- Type definitions.
@@ -46,22 +46,60 @@ typedef struct {
 	CartesianPosition *polygonPoints;
 } GeofenceType;
 
+typedef struct {
+    double time;                            //!< Time from start of test [s]
+    CartesianPosition *point;
+    double longitudinalSpeed;               //!< Speed in the direction of the heading [m/s]
+    double lateralSpeed;                    //!< Speed in the direction perpendicular to the heading [m/s]
+    double longitudinalAcceleration;        //!< Acceleration in the direction of the heading [m/s²]
+    double lateralAcceleration;             //!< Acceleration in the direction perpendicular to the heading [m/s²]
+    double curvature;                       //!< Curvature of the curve [1/m]
+    uint8_t mode;                           //!< Value describing if the object is controlled by the drive file
+} TrajPointType;
+
+typedef enum {
+    READY = 0,
+    VERIFYING_INIT = 1,
+    VERIFYING_ARM = 2
+} SupervisorStateType;
+static char * const stateNames[] = {"READY", "INIT", "ARM"};
+
+typedef struct {
+    in_addr_t ipAddr;
+    double length;
+    double width;
+    double height;
+    double mass;
+    double turnRadius;
+} ObjectPropertyType;
+
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
 
+static SupervisorStateType state = READY;
+static SupervisorStateType getState(void);
+static int setState(SupervisorStateType newState);
+
 int SupervisionCheckGeofences(MonitorDataType MONRdata, GeofenceType * geofences,
 							  unsigned int numberOfGeofences);
 int loadGeofenceFiles(GeofenceType * geofences[], unsigned int *nGeof);
 int parseGeofenceFile(char *geofenceFile, GeofenceType * geofence);
-static void signalHandler(int signo);
 void freeGeofences(GeofenceType * geoFence, unsigned int *nGeof);
+
+static int verifyArm(MonitorDataType MONRdata, ObjectPropertyType objectProperties[], unsigned int nObjects);
+static int initializeObjectProperties(ObjectPropertyType* objectProperties[], unsigned int *nObjects);
+static void resetVerifiedStatus(unsigned int numberOfObjects);
+static int checkIfNearFirstPointOfTrajectory(MonitorDataType MONRdata, ObjectPropertyType objectProperties);
+
+static void signalHandler(int signo);
 
 /*------------------------------------------------------------
 -- Static variables
 ------------------------------------------------------------*/
 static volatile int iExit = 0;
+static uint8_t* isVerified = NULL;
 
 /*------------------------------------------------------------
 -- The main function.
@@ -73,6 +111,12 @@ void supervision_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	unsigned int numberOfGeofences = 0;
 	GeofenceType *geofenceArray = NULL;
+
+    unsigned int numberOfObjects = 0;
+    ObjectPropertyType *objectProperties = NULL;
+
+    struct timeval currentTime, verificationTimeout;
+    const struct timeval armWaitTime = {VERIFY_ARM_TIMEOUT_MS % 1000, (VERIFY_ARM_TIMEOUT_MS * 1000) % 1000000};
 
 	enum COMMAND command;
 
@@ -106,13 +150,18 @@ void supervision_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 		switch (command) {
-		case COMM_INIT:
+        case COMM_INIT:
+            setState(VERIFYING_INIT);
 			if (geofenceArray != NULL)
 				freeGeofences(geofenceArray, &numberOfGeofences);
 
 			if (loadGeofenceFiles(&geofenceArray, &numberOfGeofences) == -1)
-				util_error("Unable to load geofences");	// TODO: Do something more e.g. stop the INIT process
+                util_error("Unable to load geofences");	// TODO: Do something more e.g. stop the INIT process
 
+            if (initializeObjectProperties(&objectProperties, &numberOfObjects) == -1) {
+                util_error("Unable to initialize object properties");
+            }
+            setState(READY);
 			break;
 		case COMM_MONI:
 			// Ignore old style MONR data
@@ -122,11 +171,33 @@ void supervision_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			// TODO: react to output from SupervisionCheckGeofences
 			SupervisionCheckGeofences(MONRMessage, geofenceArray, numberOfGeofences);
 
+            if (state == VERIFYING_ARM) {
+                switch (verifyArm(MONRMessage, objectProperties, numberOfObjects)) {
+                case -1:
+                    LogMessage(LOG_LEVEL_INFO, "ARM should not be allowed - objects not in position");
+                    // TODO: There was an error - ARM is not ok
+                    break;
+                case 0:
+                    setState(READY);
+                    break;
+                case 1:
+                    // Nothing to do except to wait for more MONR
+                    break;
+                }
+            }
+
 			break;
 		case COMM_OBC_STATE:
 			break;
 		case COMM_CONNECT:
 			break;
+        case COMM_ARMD:
+            setState(VERIFYING_ARM);
+            TimeSetToCurrentSystemTime(&verificationTimeout);
+            timeradd(&verificationTimeout, &armWaitTime, &verificationTimeout);
+            // TODO: Check one MONR of each object against first point of their traj files
+            // TODO:
+            break;
 		case COMM_LOG:
 			break;
 		case COMM_INV:
@@ -134,6 +205,11 @@ void supervision_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
 		}
+
+        TimeSetToCurrentSystemTime(&currentTime);
+        if (timercmp(&currentTime,&verificationTimeout,>)) {
+            LogMessage(LOG_LEVEL_WARNING,"Timed out while verifying %s",stateNames[state]);
+        }
 	}
 }
 
@@ -150,6 +226,162 @@ void signalHandler(int signo) {
 		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
 	}
 }
+
+
+int setState(SupervisorStateType newState)
+{
+    switch (newState) {
+    case VERIFYING_INIT:
+    case VERIFYING_ARM:
+        if (state == READY)
+            state = newState;
+        else {
+            LogMessage(LOG_LEVEL_ERROR, "Received command %s to verify while still not done verifying %s",
+                       stateNames[newState], stateNames[state]);
+            // TODO: Do something more
+        }
+        break;
+    case READY:
+        state = newState;
+    }
+}
+
+/*!
+ * \brief SupervisionVerifyArm
+ * \param MONRdata
+ * \return 0 if ARM command verified
+ */
+int verifyArm(MonitorDataType MONRdata, ObjectPropertyType objectProperties[], unsigned int numberOfObjects) {
+
+    int allVerified = 1;
+    char ipString[INET_ADDRSTRLEN];
+
+    if (isVerified == NULL) {
+        LogMessage(LOG_LEVEL_ERROR, "Received MONR before initialized properly");
+        return -1;
+    }
+
+    for (unsigned int i = 0; i < numberOfObjects; ++i) {
+        if (MONRdata.ClientIP == objectProperties[i].ipAddr) {
+            if (checkIfNearFirstPointOfTrajectory(MONRdata, objectProperties[i]) == 0) {
+                isVerified[i] = 1;
+            }
+            else {
+                inet_ntop(AF_INET, &objectProperties[i].ipAddr, ipString, sizeof (ipString));
+                LogMessage(LOG_LEVEL_INFO, "Object with IP %s is not near its starting position", ipString);
+                resetVerifiedStatus(numberOfObjects);
+                return -1;
+            }
+        }
+        allVerified = allVerified && isVerified[i];
+    }
+
+    if (allVerified) {
+        resetVerifiedStatus(numberOfObjects);
+        return 0;
+    }
+    return 1;
+}
+
+/*!
+ * \brief checkNearFirstPointOfTrajectory
+ * \param MONRdata
+ * \param objectProperties
+ * \return
+ */
+int checkIfNearFirstPointOfTrajectory(MonitorDataType MONRdata, ObjectPropertyType objectProperties) {
+
+    // TODO: Implement this in a better way
+    // Hardcoded values for now
+    struct dirent *ent;
+    DIR *dir;
+    TrajPointType firstTrajPoint;
+    char ipString[INET_ADDRSTRLEN];
+    char trajPathDir[MAX_FILE_PATH];
+    inet_ntop(AF_INET, &objectProperties.ipAddr, ipString, sizeof (ipString));
+    UtilGetTrajDirectoryPath(trajPathDir, sizeof (trajPathDir));
+    LogMessage(LOG_LEVEL_DEBUG, "Opening trajectory directory");
+    dir = opendir(trajPathDir);
+    if (dir == NULL) {
+        LogMessage(LOG_LEVEL_ERROR, "Cannot open trajectory directory");
+        return -1;
+    }
+
+    while ((ent = readdir(dir)) != NULL) {
+        if (!strcmp(ent->d_name,".") || !strcmp(ent->d_name,".."))
+            continue;
+        else if (!strcmp(ent->d_name, ipString)) {
+            // TODO: read corresponding file first row of traj
+            firstTrajPoint.time = 0.0;
+            firstTrajPoint.point->xCoord_m = 0.0;
+            firstTrajPoint.point->yCoord_m = 0.0;
+            firstTrajPoint.point->zCoord_m = 0.0;
+            firstTrajPoint.longitudinalSpeed = 0.0;
+            firstTrajPoint.lateralSpeed = 0.0;
+            firstTrajPoint.longitudinalAcceleration = 0.0;
+            firstTrajPoint.lateralAcceleration = 0.0;
+            firstTrajPoint.curvature = 0.0;
+            firstTrajPoint.mode = 0;
+
+        }
+    }
+    closedir(dir);
+
+}
+
+/*!
+ * \brief resetVerifiedStatus
+ * \param numberOfObjects
+ */
+void resetVerifiedStatus(unsigned int numberOfObjects)
+{
+    for (unsigned int i = 0; i < numberOfObjects; ++i) {
+        isVerified[i] = 0;
+    }
+}
+
+
+int initializeObjectProperties(ObjectPropertyType* objectProperties[], unsigned int *nObjects) {
+
+    struct dirent *ent;
+    DIR *dir;
+    char trajPathDir[MAX_FILE_PATH];
+    unsigned int nTrajs = 0;
+
+    UtilGetTrajDirectoryPath(trajPathDir, sizeof (trajPathDir));
+    LogMessage(LOG_LEVEL_DEBUG, "Opening trajectory directory");
+    dir = opendir(trajPathDir);
+    if (dir == NULL) {
+        LogMessage(LOG_LEVEL_ERROR, "Cannot open trajectory directory");
+        return -1;
+    }
+
+    while ((ent = readdir(dir)) != NULL) {
+        if (!strcmp(ent->d_name,".") || !strcmp(ent->d_name,".."))
+            continue;
+        else
+            nTrajs++;
+    }
+    closedir(dir);
+
+    *nObjects = nTrajs;
+    free(*objectProperties);
+    *objectProperties = (ObjectPropertyType*) malloc(nTrajs*sizeof (ObjectPropertyType));
+    if (*objectProperties == NULL) {
+        LogMessage(LOG_LEVEL_ERROR, "Unable to allocate memory for object properties");
+        return -1;
+    }
+
+    // TODO: fill in the IPs
+
+    free(isVerified);
+    isVerified = malloc(nTrajs * sizeof (uint8_t));
+    resetVerifiedStatus(nTrajs);
+
+    LogMessage(LOG_LEVEL_DEBUG, "Found %u trajectory files", nTrajs);
+    return 0;
+}
+
 
 /*!
 * \brief Open a directory and look for .geofence files which are then passed to parseGeofenceFile().
