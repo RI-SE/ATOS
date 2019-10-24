@@ -1,3 +1,6 @@
+#ifndef	GEOFENCE_H
+#define	GEOFENCE_H
+
 #include <iostream>
 #include <vector>
 
@@ -12,3 +15,5 @@ public:
     double minHeight = 0;
     double maxHeight = 0;
 };
+
+#endif
