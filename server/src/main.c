@@ -70,7 +70,7 @@ static struct timeval waitStartTime, waitedTime;	//!< Poll timeout timers
 static const ModuleTask allModules[] = {
 
 	logger_task,
-    timecontrol_task,
+	timecontrol_task,
 	systemcontrol_task,
 	objectcontrol_task
 #ifdef CITS_ENABLED
