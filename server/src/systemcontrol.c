@@ -776,7 +776,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					UtilCreateDirContent(SystemControlArgument[0], SystemControlArgument[0]);
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					SystemControlBuildFileContentInfo(SystemControlArgument[0], ControlResponseBuffer, 0);
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DownloadFile:",
+                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubDownloadFile:",
 													 ControlResponseBuffer, 4, &ClientSocket, 0);
 					SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0],
 												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE, ControlResponseBuffer,
