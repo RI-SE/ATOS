@@ -3419,7 +3419,7 @@ I32 UtilPopulateMonitorDataStruct(C8 * rawMONR, size_t rawMONRsize, MonitorDataT
 	U16 contentLength = 0;
 	in_addr_t IPData = 0;
 	const size_t monrPacketSize =
-		sizeof (monitorData->MONR) - sizeof (monitorData->MONR.Header) - sizeof (monitorData->MONR.CRC);
+		sizeof (monitorData->MONR) - sizeof (monitorData->MONR.Header) - sizeof (monitorData->MONR.CRC) - 4; // 4 is the size of ValueId and ContentLength
 
 	if (rawMONRsize < sizeof (MonitorDataType)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw MONR array too small to hold all necessary MONR data, %d < %d.", rawMONRsize, sizeof (MonitorDataType));
@@ -3454,6 +3454,7 @@ I32 UtilPopulateMonitorDataStruct(C8 * rawMONR, size_t rawMONRsize, MonitorDataT
 		memcpy(&contentLength, rdPtr, sizeof (contentLength));
 		rdPtr += sizeof (contentLength);
 
+		
 		if (contentLength < monrPacketSize) {
 			LogMessage(LOG_LEVEL_ERROR,
 					   "Content length %u too small to hold necessary MONR data (expected %u)", contentLength,
@@ -3466,6 +3467,7 @@ I32 UtilPopulateMonitorDataStruct(C8 * rawMONR, size_t rawMONRsize, MonitorDataT
 					   contentLength, monrPacketSize);
 			return -1;
 		}
+		
 	}
 	else if (debug) {
 		LogPrint("Received MONR message without content header: corrupt data may result");

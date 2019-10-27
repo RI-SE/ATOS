@@ -489,8 +489,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                     {
 						// Append IP to buffer
 						memcpy(&buffer[receivedMONRData], &safety_object_addr[iIndex].sin_addr.s_addr, sizeof (in_addr_t));
-
 						// Send MONR message as bytes
+						
 						if (iCommSend(COMM_MONR, buffer, (size_t) (receivedMONRData) + sizeof (in_addr_t)) < 0) 
                         {
 							LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending MONR command - entering error state");
@@ -654,7 +654,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 					}
 					OP[iIndex].Speed = atof(Speed);
-				} else if(receivedMONRData > 0) LogMessage(LOG_LEVEL_INFO, "MONR = %d, to short (should be %d) from %s.", object_address_name[iIndex], sizeof(MONRType));
+				} else if(receivedMONRData > 0) LogMessage(LOG_LEVEL_INFO, "MONR length error (should be %d but is %ld) from %s.", sizeof(MONRType), object_address_name[iIndex]);
 			}
 		}
 
@@ -678,7 +678,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					/*Send OSTM message */
 					UtilSendTCPData("[Object Control test]", MessageBuffer, MessageLength,
-									&socket_fds[iIndex], 1);
+									&socket_fds[iIndex], 0);
 				}
 
 				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
@@ -1277,10 +1277,12 @@ I32 ObjectControlBuildMONRMessage(C8 * MonrData, MONRType * MONRData, U8 debug) 
 	// Decode content header
 	memcpy(&valueID, p, sizeof (valueID));
 	if (valueID == VALUE_ID_MONR_STRUCT) {
-		p += sizeof (valueID);
+		memcpy(&MONRData->MonrStructValueIdU16, p, sizeof (MONRData->MonrStructValueIdU16));
+		p += sizeof (MONRData->MonrStructValueIdU16);
 
-		memcpy(&contentLength, p, sizeof (contentLength));
-		p += sizeof (contentLength);
+		//memcpy(&contentLength, p, sizeof (contentLength));
+		memcpy(&MONRData->MonrStructContentLengthU16, p, sizeof (MONRData->MonrStructContentLengthU16));
+		p += sizeof (MONRData->MonrStructContentLengthU16);
 
 		// TODO: check on content length
 	}
@@ -1336,12 +1338,18 @@ I32 ObjectControlBuildMONRMessage(C8 * MonrData, MONRType * MONRData, U8 debug) 
 
 	if (debug == 1) {
 		LogPrint("MONR:");
-		LogPrint("SyncWord = %d", MONRData->Header.SyncWordU16);
+		LogPrint("SyncWord = %x", MONRData->Header.SyncWordU16);
 		LogPrint("TransmitterId = %d", MONRData->Header.TransmitterIdU8);
 		LogPrint("PackageCounter = %d", MONRData->Header.MessageCounterU8);
 		LogPrint("AckReq = %d", MONRData->Header.AckReqProtVerU8);
+		LogPrint("MessageId = %d", MONRData->Header.MessageIdU16);
 		LogPrint("MessageLength = %d", MONRData->Header.MessageLengthU32);
+		LogPrint("ValueId = %d", MONRData->MonrStructValueIdU16);
+		LogPrint("ContentLength = %d", MONRData->MonrStructContentLengthU16);
 		LogPrint("GPSSOW = %u", MONRData->GPSQmsOfWeekU32);
+		LogPrint("XPosition = %u", MONRData->XPositionI32);
+		LogPrint("YPosition = %u", MONRData->YPositionI32);
+		LogPrint("ZPosition = %u", MONRData->ZPositionI32);
 	}
 
 	return 0;
@@ -1746,8 +1754,8 @@ I32 ObjectControlBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeT
 	HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
 	HEABData->Header.MessageIdU16 = COMMAND_HEAB_CODE;
 	HEABData->Header.MessageLengthU32 = sizeof (HEABType) - sizeof (HeaderType);
-	//HEABData->HeabStructValueIdU16 = 0;
-	//HEABData->HeabStructContentLengthU16 = sizeof(HEABType) - sizeof(HeaderType) - 4;
+	HEABData->HeabStructValueIdU16 = VALUE_ID_HEAB_STRUCT;
+	HEABData->HeabStructContentLengthU16 = sizeof(HEABType) - sizeof(HeaderType) - 4;
 	HEABData->GPSQmsOfWeekU32 =
 		((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime)) << 2) +
 		GPSTime->MicroSecondU16;

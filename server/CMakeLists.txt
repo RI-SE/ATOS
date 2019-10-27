@@ -8,9 +8,9 @@ SET(CMAKE_CXX_STANDARD 11)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Standard compiler flags
-SET(GCC_COMPILE_FLAGS_WARNINGS "-Wall") # Use -Wall to make all warnings appear, and -Werror to make all of them into errors. To select individual warnings use e.g. -Werror=pointer-sign
-SET(GCC_COMPILE_FLAGS_COVERAGE "-fprofile-arcs -ftest-coverage")
-SET(GCC_COMPILE_FLAGS_OPTIMISATION "-O0") # Use -O2 for final build
+#SET(GCC_COMPILE_FLAGS_WARNINGS "-Wall") # Use -Wall to make all warnings appear, and -Werror to make all of them into errors. To select individual warnings use e.g. -Werror=pointer-sign
+#SET(GCC_COMPILE_FLAGS_COVERAGE "-fprofile-arcs -ftest-coverage")
+#SET(GCC_COMPILE_FLAGS_OPTIMISATION "-O0") # Use -O2 for final build
 
 # Set which compiler flags are used for the build
 SET(GCC_COMPILE_FLAGS_ALL "${GCC_COMPILE_FLAGS_WARNINGS}")
@@ -109,7 +109,7 @@ add_executable(TEServer
 )
 
 # add compiler flags for all targets
-set_target_properties(TEServer PROPERTIES COMPILE_FLAGS ${GCC_COMPILE_FLAGS_ALL})
+#set_target_properties(TEServer PROPERTIES COMPILE_FLAGS ${GCC_COMPILE_FLAGS_ALL})
 
 # add the install targets
 install (TARGETS TEServer DESTINATION bin)

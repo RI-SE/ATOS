@@ -74,7 +74,7 @@ extern "C"{
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "10.168.54.90"
+#define LOCAL_USER_CONTROL_IP "192.168.0.22"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -136,7 +136,7 @@ extern "C"{
 #define VALUE_ID_GPS_SECOND_OF_WEEK         0x2
 #define VALUE_ID_GPS_WEEK                   0x3
 #define VALUE_ID_DATE_ISO8601               0x4
-#define VALUE_ID_MONR_STRUCT                0x8
+#define VALUE_ID_MONR_STRUCT                0x80
 #define VALUE_ID_X_POSITION                 0x10
 #define VALUE_ID_Y_POSITION                 0x11
 #define VALUE_ID_Z_POSITION                 0x12
@@ -156,7 +156,7 @@ extern "C"{
 #define VALUE_ID_TRAJECTORY_ID              0x101
 #define VALUE_ID_TRAJECTORY_NAME            0x102
 #define VALUE_ID_TRAJECTORY_VERSION         0x103
-
+#define VALUE_ID_HEAB_STRUCT                0x90
 #define VALUE_ID_INSUP_MODE                 0x200
 
 #define C8 uint8_t
@@ -366,8 +366,8 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  //U16 HeabStructValueIdU16;
-  //U16 HeabStructContentLengthU16;
+  U16 HeabStructValueIdU16;
+  U16 HeabStructContentLengthU16;
   U32 GPSQmsOfWeekU32;
   U8 CCStatusU8;
 } HEABType; //16 bytes
@@ -375,8 +375,8 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  //U16 MonrStructValueIdU16;
-  //U16 MonrStructContentLengthU16;
+  U16 MonrStructValueIdU16;
+  U16 MonrStructContentLengthU16;
   U32 GPSQmsOfWeekU32;
   I32 XPositionI32;
   I32 YPositionI32;
