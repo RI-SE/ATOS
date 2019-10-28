@@ -52,7 +52,8 @@
 
 // Message priorities on message queue
 #define PRIO_COMM_STRT 100
-#define PRIO_COMM_ARMD 110
+#define PRIO_COMM_ARM 110
+#define PRIO_COMM_DISARM 109
 #define PRIO_COMM_STOP 120
 #define PRIO_COMM_MONI 80
 #define PRIO_COMM_MONR 80
@@ -1918,9 +1919,12 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_STRT:
 		uiMessagePrio = PRIO_COMM_STRT;
 		break;
-	case COMM_ARMD:
-		uiMessagePrio = PRIO_COMM_ARMD;
+    case COMM_ARM:
+        uiMessagePrio = PRIO_COMM_ARM;
 		break;
+    case COMM_DISARM:
+        uiMessagePrio = PRIO_COMM_DISARM;
+        break;
 	case COMM_STOP:
 		uiMessagePrio = PRIO_COMM_STOP;
 		break;
