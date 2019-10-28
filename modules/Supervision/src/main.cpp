@@ -109,10 +109,7 @@ int main()
                 switch (updateNearStartingPositionStatus(MONRMessage, armVerified)) {
                 case SINGLE_OBJECT_NOT_NEAR_START:
                     // Object not near start: disarm
-                    bzero(mqSendData, sizeof (mqSendData));
-                    // TODO:
-                    mqSendData[0] = OSTM_OPT_SET_DISARMED_STATE;
-                    iCommSend(COMM_ARMD,) // TODO: send ARMD with data
+                    iCommSend(COMM_DISARM, nullptr, 0);
                     state.set(SupervisionState::READY);
                     break;
                 case ALL_OBJECTS_NEAR_START:
@@ -128,7 +125,7 @@ int main()
                 }
             }
             break;
-        case COMM_ARMD:
+        case COMM_ARM:
             state.set(SupervisionState::VERIFYING_ARM);
             break;
         case COMM_INV:
