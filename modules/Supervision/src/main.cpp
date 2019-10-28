@@ -6,7 +6,9 @@
 #include <fstream>
 #include <regex>
 
+#include "supervisionstate.h"
 #include "geofence.h"
+#include "trajectory.h"
 #include "logging.h"
 #include "util.h"
 
@@ -16,13 +18,20 @@
 /*------------------------------------------------------------
   -- Type definitions.
   ------------------------------------------------------------*/
-
+typedef enum {
+    ALL_OBJECTS_NEAR_START,         //!< The queried object is near its starting position and all objects have been checked
+    SINGLE_OBJECT_NOT_NEAR_START,   //!< The queried object is not near its starting position
+    SINGLE_OBJECT_NEAR_START,       //!< The queried object is near its starting position but all objects have not yet been checked
+    OBJECT_HAS_NO_TRAJECTORY        //!< The queried object has no trajectory
+} PositionStatus;
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
-static bool isViolatingGeofence(const MonitorDataType MONRdata, std::vector<Geofence> geofences);
+static bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> geofences);
 static void loadGeofenceFiles(std::vector<Geofence> &geofences);
+static void loadTrajectoryFiles(std::vector<Trajectory> &trajectories);
 static Geofence parseGeofenceFile(const std::string geofenceFile);
+static PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRData, std::vector<std::pair<Trajectory&, bool>> armVerified);
 
 static void signalHandler(int signo);
 
@@ -30,16 +39,20 @@ static void signalHandler(int signo);
   -- Static variables
   ------------------------------------------------------------*/
 static bool quit = false;
+
 /*------------------------------------------------------------
   -- Main task
   ------------------------------------------------------------*/
 int main()
 {
     COMMAND command = COMM_INV;
-    char mqRecvData[MQ_MSG_SIZE];
+    char mqRecvData[MQ_MSG_SIZE], mqSendData[MQ_MSG_SIZE];
     std::vector<Geofence> geofences;
+    std::vector<Trajectory> trajectories;
+    std::vector<std::pair<Trajectory&, bool>> armVerified;
     const struct timespec sleepTimePeriod = {0,10000000};
     struct timespec remTime;
+    SupervisionState state;
 
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
     LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
@@ -63,15 +76,25 @@ int main()
 
         switch (command) {
         case COMM_INIT:
+            state.set(SupervisionState::VERIFYING_INIT);
             if (!geofences.empty())
                 geofences.clear();
-
+            if (!trajectories.empty()) {
+                trajectories.clear();
+                armVerified.clear();
+            }
             try {
                 loadGeofenceFiles(geofences);
+                loadTrajectoryFiles(trajectories);
+                for (Trajectory &trajectory : trajectories) {
+                    armVerified.push_back({trajectory, false});
+                }
             }
             catch (std::invalid_argument e) {
                 LogMessage(LOG_LEVEL_ERROR, "Unable to initialize due to file parsing error");
+                iCommSend(COMM_DISCONNECT, nullptr, 0);
             }
+            state.set(SupervisionState::READY);
             break;
         case COMM_MONI:
             // Ignore old style MONR data
@@ -82,9 +105,31 @@ int main()
             if (isViolatingGeofence(MONRMessage, geofences)) {
                 iCommSend(COMM_ABORT, nullptr, 0);
             }
+            if (state.get() == SupervisionState::VERIFYING_ARM) {
+                switch (updateNearStartingPositionStatus(MONRMessage, armVerified)) {
+                case SINGLE_OBJECT_NOT_NEAR_START:
+                    // Object not near start: disarm
+                    bzero(mqSendData, sizeof (mqSendData));
+                    // TODO:
+                    mqSendData[0] = OSTM_OPT_SET_DISARMED_STATE;
+                    iCommSend(COMM_ARMD,) // TODO: send ARMD with data
+                    state.set(SupervisionState::READY);
+                    break;
+                case ALL_OBJECTS_NEAR_START:
+                    LogMessage(LOG_LEVEL_INFO, "Arm approved");
+                    state.set(SupervisionState::READY);
+                    break;
+                case SINGLE_OBJECT_NEAR_START:
+                    // Need to wait for all objects to report position
+                    break;
+                case OBJECT_HAS_NO_TRAJECTORY:
+                    // Object has no trajectory, no need to check it
+                    break;
+                }
+            }
             break;
         case COMM_ARMD:
-            // TODO
+            state.set(SupervisionState::VERIFYING_ARM);
             break;
         case COMM_INV:
             // TODO sleep?
@@ -110,6 +155,69 @@ void signalHandler(int signo) {
     }
 }
 
+
+/*!
+* \brief Open a directory and look for trajectory files which are then parsed.
+* \param Trajectories A vector of trajectories to be filled
+*/
+void loadTrajectoryFiles(std::vector<Trajectory> &trajectories) {
+
+    struct dirent *ent;
+    DIR *dir;
+    unsigned int n = 0;
+    char trajectoryPathDir[MAX_FILE_PATH];
+    UtilGetTrajDirectoryPath(trajectoryPathDir, sizeof (trajectoryPathDir));
+    LogMessage(LOG_LEVEL_DEBUG, "Loading trajectories");
+
+    dir = opendir(trajectoryPathDir);
+    if (dir == nullptr) {
+        LogMessage(LOG_LEVEL_ERROR, "Cannot open trajectory directory");
+        throw std::invalid_argument("Cannot open trajectory directory");
+    }
+
+    // Count the number of trajectory files in the directory
+    while ((ent = readdir(dir)) != nullptr) {
+        if (!strcmp(ent->d_name,".") && !strcmp(ent->d_name,"..")) {
+            n++;
+        }
+    }
+    closedir(dir);
+
+    LogMessage(LOG_LEVEL_DEBUG, "Found %u trajectory files: proceeding to parse", n);
+
+    dir = opendir(trajectoryPathDir);
+    if (dir == nullptr) {
+        LogMessage(LOG_LEVEL_ERROR, "Cannot open trajectory directory");
+        throw std::invalid_argument("Cannot open trajectory directory");
+    }
+
+    while ((ent = readdir(dir)) != nullptr) {
+        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
+            LogMessage(LOG_LEVEL_DEBUG, "Ignored <%s>", ent->d_name);
+        }
+        else {
+            try {
+                Trajectory trajectory;
+                trajectory.initializeFromFile(ent->d_name);
+                trajectories.push_back(trajectory);
+                LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectories.back().points.size());
+            } catch (std::invalid_argument e) {
+                closedir(dir);
+                trajectories.clear();
+                LogMessage(LOG_LEVEL_ERROR, "Error parsing file <%s>", ent->d_name);
+                throw;
+            } catch (std::ifstream::failure e) {
+                closedir(dir);
+                trajectories.clear();
+                LogMessage(LOG_LEVEL_ERROR, "Error opening file <%s>", ent->d_name);
+                throw;
+            }
+        }
+    }
+    closedir(dir);
+    LogMessage(LOG_LEVEL_INFO, "Loaded %d trajectories", trajectories.size());
+    return;
+}
 
 /*!
 * \brief Open a directory and look for .geofence files which are then passed to parseGeofenceFile().
@@ -296,7 +404,7 @@ Geofence parseGeofenceFile(const std::string geofenceFile) {
  * \param numberOfGeofences Length of struct array
  * \return 1 if MONR coordinate violates a geofence, 0 if not. -1 on error
  */
-bool isViolatingGeofence(const MonitorDataType MONRdata, std::vector<Geofence> geofences) {
+bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> geofences) {
     const CartesianPosition monrPoint =
     {
         MONRdata.MONR.XPositionI32 / 1000.0, MONRdata.MONR.YPositionI32 / 1000.0,
@@ -332,4 +440,27 @@ bool isViolatingGeofence(const MonitorDataType MONRdata, std::vector<Geofence> g
     }
 
     return retval;
+}
+
+PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata, std::vector<std::pair<Trajectory&, bool>> armVerified) {
+    for (std::pair<Trajectory&, bool> element : armVerified) {
+        if (element.first.ip == MONRdata.ClientIP) {
+            CartesianPosition trajectoryPoint = element.first.points.front().getCartesianPosition();
+            CartesianPosition objectPosition = MONRToCartesianPosition(MONRdata);
+            if (UtilIsPositionNearTarget(objectPosition, trajectoryPoint, 1.0)) {
+                // Object was near starting position, now check if all objects have passed
+                if (std::any_of(armVerified.begin(), armVerified.end(),
+                                [](const std::pair<Trajectory&, bool> &pair) { return pair.second == false; })) {
+                    return SINGLE_OBJECT_NEAR_START;
+                }
+                else {
+                    return ALL_OBJECTS_NEAR_START;
+                }
+            }
+            else {
+                return SINGLE_OBJECT_NOT_NEAR_START;
+            }
+        }
+    }
+    return OBJECT_HAS_NO_TRAJECTORY;
 }

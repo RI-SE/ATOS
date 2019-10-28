@@ -20,7 +20,7 @@ extern "C"{
   ------------------------------------------------------------*/
 #include <inttypes.h>
 #include <math.h>
-#include <limits.h>
+#include <linux/limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -829,7 +829,8 @@ void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
 void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 
 //
-char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
+CartesianPosition MONRToCartesianPosition(MonitorDataType MONR);
+uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
 int UtilVincentyDirect(double refLat, double refLon, double a1, double distance, double *resLat, double *resLon, double *a2);
 double UtilDegToRad(double Deg);

@@ -723,6 +723,26 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
 
 
 /*!
+ * \brief MONRToCartesianPosition Extracts a CartesianPosition from MONR
+ * \param MONR Struct containing MONR data
+ * \return CartesianPosition struct containing the point represented by MONR
+ */
+CartesianPosition MONRToCartesianPosition(MonitorDataType MONR) {
+    CartesianPosition retval;
+    retval.xCoord_m = MONR.MONR.XPositionI32 / 1000.0;
+    retval.yCoord_m = MONR.MONR.YPositionI32 / 1000.0;
+    retval.zCoord_m = MONR.MONR.ZPositionI32 / 1000.0;
+    if (MONR.MONR.HeadingU16 == 36001) {// 36001: unavailable
+        LogMessage(LOG_LEVEL_DEBUG, "MONR heading unavailable, assuming 0");
+        retval.heading_deg = 0.0;
+    }
+    else {
+        retval.heading_deg = MONR.MONR.HeadingU16 / 100.0;
+    }
+    return retval;
+}
+
+/*!
  * \brief UtilIsPositionNearTarget Checks if position lies within or on a sphere with radius equal to tolerance_m
  * and centre at target.
  * \param position Position to verify
@@ -730,8 +750,8 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
  * \param tolerance_m Radius around target position defining "near"
  * \return true if position is within tolerance_m of target, false otherwise
  */
-char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m) {
-	double distance = 0;
+uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m) {
+    double distance = 0.0;
 
 	distance = sqrt(pow(position.xCoord_m - target.xCoord_m, 2)
 					+ pow(position.yCoord_m - target.yCoord_m, 2)
