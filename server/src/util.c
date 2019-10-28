@@ -729,18 +729,19 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
  * \return CartesianPosition struct containing the point represented by MONR
  */
 CartesianPosition MONRToCartesianPosition(MonitorDataType MONR) {
-    CartesianPosition retval;
-    retval.xCoord_m = MONR.MONR.XPositionI32 / 1000.0;
-    retval.yCoord_m = MONR.MONR.YPositionI32 / 1000.0;
-    retval.zCoord_m = MONR.MONR.ZPositionI32 / 1000.0;
-    if (MONR.MONR.HeadingU16 == 36001) {// 36001: unavailable
-        LogMessage(LOG_LEVEL_DEBUG, "MONR heading unavailable, assuming 0");
-        retval.heading_deg = 0.0;
-    }
-    else {
-        retval.heading_deg = MONR.MONR.HeadingU16 / 100.0;
-    }
-    return retval;
+	CartesianPosition retval;
+
+	retval.xCoord_m = MONR.MONR.XPositionI32 / 1000.0;
+	retval.yCoord_m = MONR.MONR.YPositionI32 / 1000.0;
+	retval.zCoord_m = MONR.MONR.ZPositionI32 / 1000.0;
+	if (MONR.MONR.HeadingU16 == 36001) {	// 36001: unavailable
+		LogMessage(LOG_LEVEL_DEBUG, "MONR heading unavailable, assuming 0");
+		retval.heading_deg = 0.0;
+	}
+	else {
+		retval.heading_deg = MONR.MONR.HeadingU16 / 100.0;
+	}
+	return retval;
 }
 
 /*!
@@ -752,7 +753,7 @@ CartesianPosition MONRToCartesianPosition(MonitorDataType MONR) {
  * \return true if position is within tolerance_m of target, false otherwise
  */
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m) {
-    double distance = 0.0;
+	double distance = 0.0;
 
 	distance = sqrt(pow(position.xCoord_m - target.xCoord_m, 2)
 					+ pow(position.yCoord_m - target.yCoord_m, 2)
@@ -1919,12 +1920,12 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_STRT:
 		uiMessagePrio = PRIO_COMM_STRT;
 		break;
-    case COMM_ARM:
-        uiMessagePrio = PRIO_COMM_ARM;
+	case COMM_ARM:
+		uiMessagePrio = PRIO_COMM_ARM;
 		break;
-    case COMM_DISARM:
-        uiMessagePrio = PRIO_COMM_DISARM;
-        break;
+	case COMM_DISARM:
+		uiMessagePrio = PRIO_COMM_DISARM;
+		break;
 	case COMM_STOP:
 		uiMessagePrio = PRIO_COMM_STOP;
 		break;

@@ -667,35 +667,37 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			LogMessage(LOG_LEVEL_INFO, "Received command %d", iCommand);
 
 
-            if (iCommand == COMM_ARM && OBCState == OBC_STATE_CONNECTED) {
+			if (iCommand == COMM_ARM && OBCState == OBC_STATE_CONNECTED) {
 
-                LogMessage(LOG_LEVEL_INFO, "Sending ARM");
-                LOG_SEND(LogBuffer, "[ObjectControl] Sending ARM");
-                vSetState(OBC_STATE_ARMED, GSD);
-                MessageLength = ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, COMMAND_OSTM_OPT_SET_ARMED_STATE, 0);
+				LogMessage(LOG_LEVEL_INFO, "Sending ARM");
+				LOG_SEND(LogBuffer, "[ObjectControl] Sending ARM");
+				vSetState(OBC_STATE_ARMED, GSD);
+				MessageLength =
+					ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, COMMAND_OSTM_OPT_SET_ARMED_STATE,
+												  0);
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					/*Send OSTM message */
-                    UtilSendTCPData("[Object Control]", MessageBuffer, MessageLength,
-                                    &socket_fds[iIndex], 0);
+					UtilSendTCPData("[Object Control]", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 				}
 
 				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
 			}
-            else if (iCommand == COMM_DISARM && OBCState == OBC_STATE_ARMED) {
+			else if (iCommand == COMM_DISARM && OBCState == OBC_STATE_ARMED) {
 
-                LogMessage(LOG_LEVEL_INFO, "Sending DISARM");
-                LOG_SEND(LogBuffer, "[ObjectControl] Sending DISARM");
-                vSetState(OBC_STATE_CONNECTED, GSD);
+				LogMessage(LOG_LEVEL_INFO, "Sending DISARM");
+				LOG_SEND(LogBuffer, "[ObjectControl] Sending DISARM");
+				vSetState(OBC_STATE_CONNECTED, GSD);
 
-                MessageLength = ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, COMMAND_OSTM_OPT_SET_DISARMED_STATE, 0);
-                for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-                    /*Send OSTM message */
-                    UtilSendTCPData("[Object Control]", MessageBuffer, MessageLength,
-                                    &socket_fds[iIndex], 0);
-                }
+				MessageLength =
+					ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData,
+												  COMMAND_OSTM_OPT_SET_DISARMED_STATE, 0);
+				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+					/*Send OSTM message */
+					UtilSendTCPData("[Object Control]", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+				}
 
-                ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
-            }
+				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
+			}
 			else if (iCommand == COMM_STRT && (OBCState == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED) */ )	//OBC_STATE_INITIALIZED is temporary!
 			{
 				bzero(Timestamp, SMALL_BUFFER_SIZE_0);

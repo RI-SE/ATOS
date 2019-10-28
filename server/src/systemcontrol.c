@@ -902,10 +902,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case ArmScenario_0:
-            if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED) {
-                server_state = SERVER_STATE_INWORK;
-                if (iCommSend(COMM_ARM, NULL, 0) < 0) {
-                    LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ARM command");
+			if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED) {
+				server_state = SERVER_STATE_INWORK;
+				if (iCommSend(COMM_ARM, NULL, 0) < 0) {
+					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ARM command");
 					server_state = SERVER_STATE_ERROR;
 				}
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -922,17 +922,16 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else if (server_state == SERVER_STATE_IDLE) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-                                                 "ArmScenario:", ControlResponseBuffer, 0, &ClientSocket,
-												 0);
+												 "ArmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 				SystemControlSendLog("[SystemControl] ARM received, state errors!\n", &ClientSocket, 0);
 				SystemControlCommand = PreviousSystemControlCommand;
 			}
 			break;
 		case DisarmScenario_0:
-            if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED) {
-                server_state = SERVER_STATE_IDLE;
-                if (iCommSend(COMM_DISARM, NULL, 0) < 0) {
-                    LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending DISARM command");
+			if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED) {
+				server_state = SERVER_STATE_IDLE;
+				if (iCommSend(COMM_DISARM, NULL, 0) < 0) {
+					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending DISARM command");
 					server_state = SERVER_STATE_ERROR;
 				}
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -941,14 +940,14 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlSendLog("[SystemControl] Sending DISARM.\n", &ClientSocket, 0);
 			}
 			else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_CONNECTED) {
-                SystemControlSendLog("[SystemControl] Simulate that all objects become disarmed.\n",
+				SystemControlSendLog("[SystemControl] Simulate that all objects become disarmed.\n",
 									 &ClientSocket, 0);
 				SystemControlCommand = Idle_0;
 				server_state = SERVER_STATE_IDLE;
 			}
 			else if (server_state == SERVER_STATE_IDLE) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-                                                 "DisarmScenario:", ControlResponseBuffer, 0, &ClientSocket,
+												 "DisarmScenario:", ControlResponseBuffer, 0, &ClientSocket,
 												 0);
 				SystemControlSendLog("[SystemControl] DISARM received, state errors!\n", &ClientSocket, 0);
 				SystemControlCommand = PreviousSystemControlCommand;
