@@ -154,7 +154,8 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_WARNING, "Received command %u while log uninitialized", command);
 			break;
 		case COMM_STRT:
-		case COMM_ARMD:
+		case COMM_ARM:
+        case COMM_DISARM:
 		case COMM_STOP:
 		case COMM_CONNECT:
 		case COMM_VIOP:
@@ -548,8 +549,8 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 	(void)fwrite(pcBuffer, 1, strlen(pcBuffer), filefd);
 	bzero(pcBuffer, sizeof (pcBuffer));
 	sprintf(pcBuffer,
-			"Command message nr:\nCOMM_START:%d\nCOMM_STOP:%d\nCOMM_MONI%d\nCOMM_EXIT:%d\nCOMM_ARMD:%d\nCOMM_REPLAY:%d\nCOMM_CONTROL:%d\nCOMM_ABORT:%d\nCOMM_INIT:%d\nCOMM_CONNECT:%d\nCOMM_OBC_STATE:%d\nCOMM_DISCONNECT:%d\nCOMM_LOG:%d\nCOMM_VIOP:%d\nCOMM_INV:%d\n------------------------------------------\n Log start\n------------------------------------------\n",
-			COMM_STRT, COMM_STOP, COMM_MONI, COMM_EXIT, COMM_ARMD, COMM_REPLAY, COMM_CONTROL, COMM_ABORT,
+            "Command message nr:\nCOMM_START:%d\nCOMM_STOP:%d\nCOMM_MONI%d\nCOMM_MONR%d\nCOMM_EXIT:%d\nCOMM_ARM:%d\nCOMM_DISARM:%d\nCOMM_REPLAY:%d\nCOMM_CONTROL:%d\nCOMM_ABORT:%d\nCOMM_INIT:%d\nCOMM_CONNECT:%d\nCOMM_OBC_STATE:%d\nCOMM_DISCONNECT:%d\nCOMM_LOG:%d\nCOMM_VIOP:%d\nCOMM_INV:%d\n------------------------------------------\n Log start\n------------------------------------------\n",
+            COMM_STRT, COMM_STOP, COMM_MONI, COMM_MONR, COMM_EXIT, COMM_ARM, COMM_DISARM, COMM_REPLAY, COMM_CONTROL, COMM_ABORT,
 			COMM_INIT, COMM_CONNECT, COMM_OBC_STATE, COMM_DISCONNECT, COMM_LOG, COMM_VIOP, COMM_INV);
 	(void)fwrite(pcBuffer, 1, strlen(pcBuffer), filefd);
 
