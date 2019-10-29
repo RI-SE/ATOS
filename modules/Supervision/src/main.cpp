@@ -103,9 +103,14 @@ int main()
         case COMM_MONR:
             MonitorDataType MONRMessage;
             UtilPopulateMonitorDataStruct((unsigned char *)mqRecvData, sizeof (mqRecvData), &MONRMessage, 0);
+
             if (state.get() == SupervisionState::RUNNING && isViolatingGeofence(MONRMessage, geofences)) {
+                LogMessage(LOG_LEVEL_WARNING, "Object with IP %s is violating a geofence: sending ABORT",
+                           inet_ntop(AF_INET, &MONRMessage.ClientIP, ipString, sizeof (ipString)));
                 iCommSend(COMM_ABORT, nullptr, 0);
+                state.set(SupervisionState::READY);
             }
+
             if (state.get() == SupervisionState::VERIFYING_ARM) {
                 if (isViolatingGeofence(MONRMessage, geofences)) {
                     LogMessage(LOG_LEVEL_INFO, "Arm not approved: object with IP address %s is violating a geofence",
@@ -153,8 +158,14 @@ int main()
             {
                 LogMessage(LOG_LEVEL_ERROR, "START command received while not ready: sending ABORT");
                 iCommSend(COMM_ABORT, nullptr, 0);
+                state.set(SupervisionState::READY);
             }
 
+            break;
+        case COMM_DISCONNECT:
+        case COMM_STOP:
+        case COMM_ABORT:
+            state.set(SupervisionState::READY);
             break;
         case COMM_INV:
             // TODO sleep?
