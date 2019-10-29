@@ -116,8 +116,7 @@ int main()
                 }
 
                 switch (updateNearStartingPositionStatus(MONRMessage, armVerified)) {
-                case SINGLE_OBJECT_NOT_NEAR_START:
-                    // Object not near start: disarm
+                case SINGLE_OBJECT_NOT_NEAR_START: // Object not near start: disarm
                     LogMessage(LOG_LEVEL_INFO, "Arm not approved: object with IP address %s is not in position",
                                inet_ntop(AF_INET, &MONRMessage.ClientIP, ipString, sizeof (ipString)));
                     iCommSend(COMM_DISARM, nullptr, 0);
@@ -127,11 +126,9 @@ int main()
                     LogMessage(LOG_LEVEL_INFO, "Arm approved");
                     state.set(SupervisionState::READY);
                     break;
-                case SINGLE_OBJECT_NEAR_START:
-                    // Need to wait for all objects to report position
+                case SINGLE_OBJECT_NEAR_START: // Need to wait for all objects to report position
                     break;
-                case OBJECT_HAS_NO_TRAJECTORY:
-                    // Object has no trajectory, no need to check it
+                case OBJECT_HAS_NO_TRAJECTORY: // Object has no trajectory, no need to check it
                     break;
                 }
             }
@@ -471,11 +468,12 @@ bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> 
 }
 
 PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata, std::vector<std::pair<Trajectory&, bool>> armVerified) {
-    for (std::pair<Trajectory&, bool> element : armVerified) {
+    for (std::pair<Trajectory&, bool> &element : armVerified) {
         if (element.first.ip == MONRdata.ClientIP) {
             CartesianPosition trajectoryPoint = element.first.points.front().getCartesianPosition();
             CartesianPosition objectPosition = MONRToCartesianPosition(MONRdata);
             if (UtilIsPositionNearTarget(objectPosition, trajectoryPoint, 1.0)) {
+                element.second = true;
                 // Object was near starting position, now check if all objects have passed
                 if (std::any_of(armVerified.begin(), armVerified.end(),
                                 [](const std::pair<Trajectory&, bool> &pair) { return pair.second == false; })) {
@@ -486,6 +484,7 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata,
                 }
             }
             else {
+                element.second = false;
                 return SINGLE_OBJECT_NOT_NEAR_START;
             }
         }
