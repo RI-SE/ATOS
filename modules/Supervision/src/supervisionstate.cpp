@@ -42,6 +42,8 @@ std::string SupervisionState::toString(State state) {
         return "VERIFYING INIT";
     case VERIFYING_ARM:
         return "VERIFYING ARM";
+    case RUNNING:
+        return "RUNNING";
     default:
         return "UNKNOWN";
     }
