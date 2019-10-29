@@ -5,16 +5,21 @@ SupervisionState::SupervisionState() {
     this->transitions.insert( {SupervisionState::READY, SupervisionState::READY} );
     this->transitions.insert( {SupervisionState::VERIFYING_ARM, SupervisionState::VERIFYING_ARM} );
     this->transitions.insert( {SupervisionState::VERIFYING_INIT, SupervisionState::VERIFYING_INIT} );
+    this->transitions.insert( {SupervisionState::RUNNING, SupervisionState::RUNNING} );
 
     // Transitions to ready
     this->transitions.insert( {SupervisionState::VERIFYING_ARM, SupervisionState::READY} );
     this->transitions.insert( {SupervisionState::VERIFYING_INIT, SupervisionState::READY} );
+    this->transitions.insert( {SupervisionState::RUNNING, SupervisionState::READY} );
 
     // Transitions to verifying init
     this->transitions.insert( {SupervisionState::READY, SupervisionState::VERIFYING_INIT} );
 
     // Transitions to verifying arm
     this->transitions.insert( {SupervisionState::READY, SupervisionState::VERIFYING_ARM} );
+
+    // Transitions to verifying running
+    this->transitions.insert( {SupervisionState::READY, SupervisionState::RUNNING} );
 }
 
 void SupervisionState::set(SupervisionState::State newState) {

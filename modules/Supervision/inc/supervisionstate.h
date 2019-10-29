@@ -9,7 +9,8 @@ public:
     typedef enum {
         READY,
         VERIFYING_INIT,
-        VERIFYING_ARM
+        VERIFYING_ARM,
+        RUNNING
     } State;
     void set(State newState);
     State get() const { return this->currentState; }

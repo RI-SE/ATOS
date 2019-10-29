@@ -103,10 +103,18 @@ int main()
         case COMM_MONR:
             MonitorDataType MONRMessage;
             UtilPopulateMonitorDataStruct((unsigned char *)mqRecvData, sizeof (mqRecvData), &MONRMessage, 0);
-            if (isViolatingGeofence(MONRMessage, geofences)) {
+            if (state.get() == SupervisionState::RUNNING && isViolatingGeofence(MONRMessage, geofences)) {
                 iCommSend(COMM_ABORT, nullptr, 0);
             }
             if (state.get() == SupervisionState::VERIFYING_ARM) {
+                if (isViolatingGeofence(MONRMessage, geofences)) {
+                    LogMessage(LOG_LEVEL_INFO, "Arm not approved: object with IP address %s is violating a geofence",
+                               inet_ntop(AF_INET, &MONRMessage.ClientIP, ipString, sizeof (ipString)));
+                    iCommSend(COMM_DISARM, nullptr, 0);
+                    state.set(SupervisionState::READY);
+                    break;
+                }
+
                 switch (updateNearStartingPositionStatus(MONRMessage, armVerified)) {
                 case SINGLE_OBJECT_NOT_NEAR_START:
                     // Object not near start: disarm
@@ -129,7 +137,27 @@ int main()
             }
             break;
         case COMM_ARM:
-            state.set(SupervisionState::VERIFYING_ARM);
+            try {
+                std::for_each(armVerified.begin(), armVerified.end(),
+                              [](std::pair<Trajectory&, bool> &pair) { pair.second = false; });
+                state.set(SupervisionState::VERIFYING_ARM);
+            }
+            catch (std::invalid_argument e)
+            {
+                LogMessage(LOG_LEVEL_ERROR, "Attempted to verify ARM while previous command not yet verified");
+                iCommSend(COMM_DISARM, nullptr, 0);
+            }
+            break;
+        case COMM_STRT:
+            try {
+                state.set(SupervisionState::RUNNING);
+            }
+            catch (std::invalid_argument e)
+            {
+                LogMessage(LOG_LEVEL_ERROR, "START command received while not ready: sending ABORT");
+                iCommSend(COMM_ABORT, nullptr, 0);
+            }
+
             break;
         case COMM_INV:
             // TODO sleep?
@@ -199,7 +227,7 @@ void loadTrajectoryFiles(std::vector<Trajectory> &trajectories) {
             try {
                 Trajectory trajectory;
                 trajectory.initializeFromFile(ent->d_name);
-                trajectories.push_back(trajectory);
+                trajectories.push_back(trajectory); // This does not copy IP value correctly
                 LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectories.back().points.size());
             } catch (std::invalid_argument e) {
                 closedir(dir);
