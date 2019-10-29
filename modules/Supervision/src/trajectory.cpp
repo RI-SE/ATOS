@@ -17,6 +17,7 @@ const std::regex Trajectory::fileFooterPattern("ENDTRAJECTORY;");
 
 Trajectory::Trajectory(const Trajectory& other) {
     this->id = other.id;
+    this->ip = other.ip;
     this->name = other.name;
     this->version = other.version;
     this->points = std::vector<TrajectoryPoint>(other.points);
