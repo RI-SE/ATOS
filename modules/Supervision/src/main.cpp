@@ -47,6 +47,7 @@ int main()
 {
     COMMAND command = COMM_INV;
     char mqRecvData[MQ_MSG_SIZE], mqSendData[MQ_MSG_SIZE];
+    char ipString[INET_ADDRSTRLEN];
     std::vector<Geofence> geofences;
     std::vector<Trajectory> trajectories;
     std::vector<std::pair<Trajectory&, bool>> armVerified;
@@ -109,6 +110,8 @@ int main()
                 switch (updateNearStartingPositionStatus(MONRMessage, armVerified)) {
                 case SINGLE_OBJECT_NOT_NEAR_START:
                     // Object not near start: disarm
+                    LogMessage(LOG_LEVEL_INFO, "Arm not approved: object with IP address %s is not in position",
+                               inet_ntop(AF_INET, &MONRMessage.ClientIP, ipString, sizeof (ipString)));
                     iCommSend(COMM_DISARM, nullptr, 0);
                     state.set(SupervisionState::READY);
                     break;
@@ -174,7 +177,7 @@ void loadTrajectoryFiles(std::vector<Trajectory> &trajectories) {
 
     // Count the number of trajectory files in the directory
     while ((ent = readdir(dir)) != nullptr) {
-        if (!strcmp(ent->d_name,".") && !strcmp(ent->d_name,"..")) {
+        if (ent->d_type == DT_REG) {
             n++;
         }
     }
@@ -189,7 +192,7 @@ void loadTrajectoryFiles(std::vector<Trajectory> &trajectories) {
     }
 
     while ((ent = readdir(dir)) != nullptr) {
-        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
+        if (ent->d_type != DT_REG) {
             LogMessage(LOG_LEVEL_DEBUG, "Ignored <%s>", ent->d_name);
         }
         else {
