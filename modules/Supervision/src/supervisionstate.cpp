@@ -1,3 +1,5 @@
+#include <exception>
+
 #include "supervisionstate.h"
 
 SupervisionState::SupervisionState() {
