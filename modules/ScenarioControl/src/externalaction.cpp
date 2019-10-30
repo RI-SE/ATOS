@@ -1,4 +1,7 @@
 #include "externalaction.h"
+
+#include <stdexcept>
+
 #include "logging.h"
 #include "util.h"
 #include "maestroTime.h"
