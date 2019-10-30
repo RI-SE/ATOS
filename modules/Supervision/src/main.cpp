@@ -484,8 +484,10 @@ bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> 
 PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata, std::vector<std::pair<Trajectory&, bool>> armVerified) {
     for (std::pair<Trajectory&, bool> &element : armVerified) {
         if (element.first.ip == MONRdata.ClientIP) {
-            if (element.first.points.empty())
+            if (element.first.points.empty()) {
+                element.second = true;
                 return OBJECT_HAS_NO_TRAJECTORY;
+            }
 
             CartesianPosition trajectoryPoint = element.first.points.front().getCartesianPosition();
             CartesianPosition objectPosition = MONRToCartesianPosition(MONRdata);
