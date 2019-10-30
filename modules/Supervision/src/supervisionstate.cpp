@@ -1,4 +1,4 @@
-#include <exception>
+#include <stdexcept>
 
 #include "supervisionstate.h"
 
