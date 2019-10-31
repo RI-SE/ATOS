@@ -32,7 +32,9 @@ class MSCP:
                 {"command": "arm", "regex": re.compile(b'(..)ArmScenario:')},
                 {"command": "start", "regex": re.compile(b'(..)StartScenario:(.)')},
                 {"command": "connect", "regex": re.compile(b'(..)ConnectObject:')},
-                {"command": "disconnect", "regex": re.compile(b'(..)DisconnectObject:')}
+                {"command": "disconnect", "regex": re.compile(b'(..)DisconnectObject:')},
+                {"command": "upload", "regex": re.compile(b'([^u][^b])UploadFile:(.)')},
+                {"command": "subupload", "regex": re.compile(b'(..)SubUploadFile:(.)')}
         ]
 
         while not self.quit:
@@ -108,7 +110,26 @@ class MSCP:
                     print("Connect reply received")
                 if matchPattern["command"] == "disconnect":
                     print("Disconnect reply received")
-                
+                if matchPattern["command"] == "upload":
+                    print("Upload reply 1 received")
+                    num = int.from_bytes(match.group(2),byteorder='big')
+                    if num == 0x01:
+                        self.lastUploadReply["status"] = "SERVER_PREPARED"
+                    elif num == 0x02:
+                        self.lastUploadReply["status"] = "PACKET_SIZE_ERROR"
+                    elif num == 0x03:
+                        self.lastUploadReply["status"] = "INVALID_PATH"
+                    else:
+                        self.lastUploadReply["status"] = "UNKNOWN"
+                if matchPattern["command"] == "subupload":
+                    print("Upload reply 2 received")
+                    num = int.from_bytes(match.group(2),byteorder='big')
+                    if num == 0x04:
+                        self.lastUploadReply["status"] = "UPLOAD_SUCCESS"
+                    elif num == 0x05:
+                        self.lastUploadReply["status"] = "UPLOAD_FAILURE"
+                    else:
+                        self.lastUploadReply["status"] = "UNKNOWN"
 
     def GetStatus(self):         
         message = "POST /maestro HTTP/1.1\r\nHost: " + self.host + "\r\n\r\nGetServerStatus();"    
@@ -143,7 +164,13 @@ class MSCP:
     def Start(self,delayTime_ms):       
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nStartScenario(" + str(delayTime_ms) + ");"
         self.Send(message)
-        print("StarScenario() sent")               
+        print("StarScenario() sent")
+
+    def UploadFile(self,targetPath,fileContents):
+        packetSize = 1024
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nUploadFile(" + targetPath + "," + str(len(fileContents)) + "," + str(packetSize) + ");"
+        print("UploadFile() sent")
+        # TODO
 
     def Send(self,message):
         self.socket.send(message.encode())
