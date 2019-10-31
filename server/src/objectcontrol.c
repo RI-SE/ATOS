@@ -479,7 +479,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				bzero(buffer, RECV_MESSAGE_BUFFER);
 				receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex], buffer, RECV_MESSAGE_BUFFER);
 
-				if (receivedMONRData >= sizeof(MONRType)) 
+				if(receivedMONRData == sizeof(MONRType)) 
                 {
 					LogMessage(LOG_LEVEL_DEBUG, "Recieved new data from %s %d %d: %s",
 							   object_address_name[iIndex], object_udp_port[iIndex], receivedMONRData,
@@ -522,6 +522,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					strcat(buffer, ";");
 					strcat(buffer, YPosition);
 					strcat(buffer, ";");
+					printf("XPosition: %s, YPosition: %s\n", XPosition, YPosition);
 					strcat(buffer, ZPosition);
 					strcat(buffer, ";");
 					strcat(buffer, Heading);
@@ -766,7 +767,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					UtilReadLineCntSpecChars(fd, pcTempBuffer);	//Read header
 
 					for (i = 0; i < SyncPointCount; i++) {
-						UtilSetAdaptiveSyncPoint(&ASP[i], fd, 1);
+						UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);
 						if (TEST_SYNC_POINTS == 1)
 							ASP[i].TestPort = SAFETY_CHANNEL_PORT;
 					}
@@ -1395,13 +1396,15 @@ I32 ObjectControlMONRToASCII(MONRType * MONRData, GeoPosition * OriginPosition, 
 		ConvertGPStoUTC = sprintf(Timestamp, "%" PRIu32, MONRData->GPSQmsOfWeekU32);
 
 		if (debug && MONRData->GPSQmsOfWeekU32 % 400 == 0) {
-			LogMessage(LOG_LEVEL_DEBUG, "MONR = %x-%x-%x-%x-%x-%x-%d-%d-%d-%d-%d-%d-%d-%d-%d-%d",
+			LogMessage(LOG_LEVEL_DEBUG, "MONR = %x-%x-%x-%x-%x-%x-%d-%d-%d-%d-%d-%d-%d-%d-%d-%d-%d-%d",
 					   MONRData->Header.MessageIdU16,
 					   MONRData->Header.SyncWordU16,
 					   MONRData->Header.TransmitterIdU8,
 					   MONRData->Header.MessageCounterU8,
 					   MONRData->Header.AckReqProtVerU8,
 					   MONRData->Header.MessageLengthU32,
+					   MONRData->MonrStructValueIdU16,
+					   MONRData->MonrStructContentLengthU16,
 					   MONRData->GPSQmsOfWeekU32,
 					   MONRData->XPositionI32,
 					   MONRData->YPositionI32,
