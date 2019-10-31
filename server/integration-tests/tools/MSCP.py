@@ -76,11 +76,11 @@ class MSCP:
                     else:
                         self.lastStatusReply["objectControlState"] = "UNKNOWN"
 
-                    if match.group(3) is not None:
+                    if match.group(4) is not None:
                         self.lastStatusReply["systemControlErrorCode"] = int.from_bytes(match.group(4),byteorder='big')
                     else:
                         self.lastStatusReply["systemControlErrorCode"] = 0
-                    if match.group(4) is not None:
+                    if match.group(5) is not None:
                         self.lastStatusReply["objectControlErrorCode"] = int.from_bytes(match.group(5),byteorder='big')
                     else:
                         self.lastStatusReply["objectControlErrorCode"] = 0
@@ -189,5 +189,5 @@ class MSCP:
         elif num == 0x0F62:
             return "No data"
         else:
-            raise ValueError("Response code " + str(num) " is not recognized")
+            raise ValueError("Response code " + str(num) + " is not recognized")
 
