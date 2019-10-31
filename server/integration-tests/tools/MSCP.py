@@ -168,25 +168,25 @@ class MSCP:
             return "OK"
         elif num == 0x0002:
             return "Logging data"
-        elif num = 0x0F10:
+        elif num == 0x0F10:
             return "Error"
-        elif num = 0x0F20:
+        elif num == 0x0F20:
             return "Function not available"
-        elif num = 0x0F25:
+        elif num == 0x0F25:
             return "Incorrect state"
-        elif num = 0x0F30:
+        elif num == 0x0F30:
             return "Invalid length"
-        elif num = 0x0F40:
+        elif num == 0x0F40:
             return "Busy"
-        elif num = 0x0F42:
+        elif num == 0x0F42:
             return "Timeout"
-        elif num = 0x0F50:
+        elif num == 0x0F50:
             return "Invalid script"
-        elif num = 0x0F60:
+        elif num == 0x0F60:
             return "Invalid encryption code"
-        elif num = 0x0F61:
+        elif num == 0x0F61:
             return "Decryption error"
-        elif num = 0x0F62:
+        elif num == 0x0F62:
             return "No data"
         else:
             raise ValueError("Response code " + str(num) " is not recognized")
