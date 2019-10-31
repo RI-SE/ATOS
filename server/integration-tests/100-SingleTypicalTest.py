@@ -1,11 +1,13 @@
 from tools.MSCP import MSCP
 from tools.Executable import Executable
+from tools.TrajectoryFile import *
 import time
 import subprocess
 import sys
 
 if __name__ == "__main__":
 
+    
     server = Executable("../build/TEServer",["-m","0"])
     time.sleep(0.05)
     
@@ -17,8 +19,11 @@ if __name__ == "__main__":
         server.stop()
         sys.exit(1)
     # 2: Load trajectory
+    traj = ReadTrajectoryFile("resources/trajectories/",fileName="random")
+
     # 3: Start a test object
     # 4: Upload trajectory
+    userControl.UploadFile("traj/127.0.0.1",traj)
 
     # 5: Send init
     userControl.Init()
