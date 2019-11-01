@@ -13,12 +13,19 @@ class MSCP:
         self.lastStatusReply = {}
         self.lastAbortReply = {}
         self.lastStartReply = {}
+        self.lastUploadReply = {}
         self.lastStatusReply["objectControlState"] = "UNKNOWN"
         self.lastStatusReply["systemControlState"] = "UNKNOWN"
         self.lastStatusReply["systemControlErrorCode"] = 0
         self.lastStatusReply["objectControlErrorCode"] = 0
         self.lastAbortReply["scenarioActive"] = 0
         self.lastStartReply["scenarioActive"] = 0
+        self.lastUploadReply["status"] = "UNKNOWN"
+        self.uploadReplyLock = threading.Lock()
+        self.startReplyLock = threading.Lock()
+        self.abortReplyLock = threading.Lock()
+        self.statusReplyLock = threading.Lock()
+        self.responseCodeLock = threading.Lock()
         self.quit = False
         self.lastResponseCode = "No message received yet"
         self.listener = threading.Thread(target=self.listen)
@@ -43,7 +50,9 @@ class MSCP:
                 match = re.search(replyPattern["regex"],data)
                 if match is not None:
                     matchPattern = replyPattern
+                    self.responseCodeLock.acquire()
                     self.lastResponseCode = self.interpretResponseCode(match.group(1))
+                    self.responseCodeLock.release()
                     break
             if match is not None:
                 if matchPattern["command"] == "init":
@@ -51,6 +60,7 @@ class MSCP:
                 if matchPattern["command"] == "status":
                     print("Status reply received")
                     num = int.from_bytes(match.group(2),byteorder='big')
+                    self.statusReplyLock.acquire()
                     if num == 1:
                         self.lastStatusReply["systemControlState"] = "INITIALIZED"
                     elif num == 2:
@@ -86,26 +96,31 @@ class MSCP:
                         self.lastStatusReply["objectControlErrorCode"] = int.from_bytes(match.group(5),byteorder='big')
                     else:
                         self.lastStatusReply["objectControlErrorCode"] = 0
+                    self.statusReplyLock.release()
                 if matchPattern["command"] == "abort":
                     print("Abort reply received")
                     num = int.from_bytes(match.group(2),byteorder='big')
+                    self.abortReplyLock.acquire()
                     if num == 0:
                         self.lastAbortReply["scenarioActive"] = "NOT_ACTIVE"
                     elif num == 1:
                         self.lastAbortReply["scenarioActive"] = "ACTIVE"
                     else:
                         self.lastAbortReply["scenarioActive"] = "UNKNOWN"
+                    self.abortReplyLock.release()
                 if matchPattern["command"] == "arm":
                     print("Arm reply received")
                 if matchPattern["command"] == "start":
                     print("Start reply received")
                     num = int.from_bytes(match.group(2),byteorder='big')
+                    self.startReplyLock.acquire()
                     if num == 0:
                         self.lastStartReply["scenarioActive"] = "NOT_ACTIVE"
                     elif num == 1:
                         self.lastStartReply["scenarioActive"] = "ACTIVE"
                     else:
                         self.lastStartReply["scenarioActive"] = "UNKNOWN"
+                    self.startReplyLock.release()
                 if matchPattern["command"] == "connect":
                     print("Connect reply received")
                 if matchPattern["command"] == "disconnect":
@@ -113,23 +128,31 @@ class MSCP:
                 if matchPattern["command"] == "upload":
                     print("Upload reply 1 received")
                     num = int.from_bytes(match.group(2),byteorder='big')
+                    self.uploadReplyLock.acquire()
                     if num == 0x01:
                         self.lastUploadReply["status"] = "SERVER_PREPARED"
                     elif num == 0x02:
                         self.lastUploadReply["status"] = "PACKET_SIZE_ERROR"
                     elif num == 0x03:
                         self.lastUploadReply["status"] = "INVALID_PATH"
+                    elif num == 0x04:
+                        self.lastUploadReply["status"] = "UPLOAD_SUCCESS"
+                    elif num == 0x05:
+                        self.lastUploadReply["status"] = "UPLOAD_FAILURE"
                     else:
                         self.lastUploadReply["status"] = "UNKNOWN"
+                    self.uploadReplyLock.release()
                 if matchPattern["command"] == "subupload":
                     print("Upload reply 2 received")
                     num = int.from_bytes(match.group(2),byteorder='big')
+                    self.uploadReplyLock.acquire()
                     if num == 0x04:
                         self.lastUploadReply["status"] = "UPLOAD_SUCCESS"
                     elif num == 0x05:
                         self.lastUploadReply["status"] = "UPLOAD_FAILURE"
                     else:
                         self.lastUploadReply["status"] = "UNKNOWN"
+                    self.uploadReplyLock.release()
 
     def GetStatus(self):         
         message = "POST /maestro HTTP/1.1\r\nHost: " + self.host + "\r\n\r\nGetServerStatus();"    
@@ -167,10 +190,21 @@ class MSCP:
         print("StarScenario() sent")
 
     def UploadFile(self,targetPath,fileContents):
-        packetSize = 1024
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nUploadFile(" + targetPath + "," + str(len(fileContents)) + "," + str(packetSize) + ");"
+        packetSize = 1200
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nUploadFile(" + targetPath + "," + str(len(fileContents)) + "," + str(packetSize) + ");" 
+        self.uploadReplyLock.acquire()
+        self.lastUploadReply["status"] = "UNKNOWN"
+        self.uploadReplyLock.release()
+        self.Send(message)
         print("UploadFile() sent")
-        # TODO
+        self.waitForUploadReply("SERVER_PREPARED")
+        # Send file
+        self.Send(fileContents)
+        self.uploadReplyLock.acquire()
+        self.lastUploadReply["status"] = "UNKNOWN"
+        self.uploadReplyLock.release()
+        self.waitForUploadReply("UPLOAD_SUCCESS")
+        print("File uploaded")
 
     def Send(self,message):
         self.socket.send(message.encode())
@@ -179,14 +213,34 @@ class MSCP:
         self.quit = True
         self.socket.close()
 
+    def waitForUploadReply(self,status,timeout=3.0):
+        timeoutTime = time.time() + timeout
+        self.uploadReplyLock.acquire()
+        ur = self.lastUploadReply["status"]
+        self.uploadReplyLock.release()
+        while ur == "UNKNOWN" and time.time() < timeoutTime:
+            self.uploadReplyLock.acquire()
+            ur = self.lastUploadReply["status"]
+            self.uploadReplyLock.release()
+        if ur != status and time.time() >= timeoutTime:
+            raise TimeoutError("Timed out while waiting for reply to UploadFile")
+        elif ur != status:
+            raise ValueError("Expected status " + status + " but received " + ur)
+
     def waitForObjectControlState(self,state,timeout=3.0):
         timeoutTime = time.time() + timeout
-        while self.lastStatusReply["objectControlState"] != state and time.time() < timeoutTime:
+        self.statusReplyLock.acquire()
+        sr = self.lastStatusReply["objectControlState"]
+        self.statusReplyLock.release()
+        while sr != state and time.time() < timeoutTime:
             time.sleep(0.005)
-            print("Expecting: " + state + ", Current: " + self.lastStatusReply["objectControlState"])
+            self.statusReplyLock.acquire()
+            sr = self.lastStatusReply["objectControlState"]
+            self.statusReplyLock.release()
+            print("Expecting: " + state + ", Current: " + sr)
             self.GetStatus()
-        print("Expecting: " + state + ", Current: " + self.lastStatusReply["objectControlState"])
-        if self.lastStatusReply["objectControlState"] != state:
+        print("Expecting: " + state + ", Current: " + sr)
+        if sr != state:
             raise TimeoutError("Timed out while waiting for transition to " + state)
 
     def interpretResponseCode(self,code):
