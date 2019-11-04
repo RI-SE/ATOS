@@ -41,6 +41,7 @@ class Executable():
         
         try:
             self.proc.wait(3)
+            print("=== " + procName[-1] + " terminated successfully")
             return
         except TimeoutExpired as e:
             print("=== Executable did not respond to interrupt, forcing shutdown")
