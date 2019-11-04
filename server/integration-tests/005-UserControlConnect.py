@@ -13,11 +13,14 @@ if __name__ == "__main__":
     time.sleep(1)
     if S.poll():
         S.stop()
+        M.shutdown()
         sys.exit(1)
     M.Init()
     time.sleep(1)
     if S.poll():
         S.stop()
+        M.shutdown()
         sys.exit(1)
     S.stop()
+    M.shutdown()
     sys.exit(0)
