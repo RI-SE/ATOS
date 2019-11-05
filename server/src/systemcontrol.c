@@ -665,7 +665,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 											 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
 											 SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetTestOrigin:",
 											 ControlResponseBuffer, strlen(ControlResponseBuffer),
-											 &ClientSocket, 0);
+											 &ClientSocket, 1);
 			break;
 		case GetServerParameter_1:
 			if (CurrentInputArgCount == CommandArgCount) {
@@ -677,7 +677,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
 												 SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetServerParameter:",
 												 ControlResponseBuffer, strlen(ControlResponseBuffer),
-												 &ClientSocket, 0);
+												 &ClientSocket, 1);
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetServerParameter(Name)!");
