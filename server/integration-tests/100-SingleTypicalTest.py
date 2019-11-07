@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     # 2: Load trajectory
     traj = ReadTrajectoryFile("resources/trajectories/",fileName="random")
-    asdasd = Executable("asdASDAD",["-nogui"])
+    
     # 3: Start a test object
     WaitForPortAvailable(53240,"UDP",timeout=0)
     WaitForPortAvailable(53241,"TCP",timeout=0)
