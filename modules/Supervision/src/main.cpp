@@ -24,6 +24,7 @@ typedef enum {
     SINGLE_OBJECT_NEAR_START,       //!< The queried object is near its starting position but all objects have not yet been checked
     OBJECT_HAS_NO_TRAJECTORY        //!< The queried object has no trajectory
 } PositionStatus;
+
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
@@ -99,6 +100,7 @@ int main()
             break;
         case COMM_OSEM:
             // TODO: check so that OSEM is not null island?
+
             break;
         case COMM_MONI:
             // Ignore old style MONR data
@@ -259,10 +261,8 @@ void loadTrajectoryFiles(std::vector<Trajectory> &trajectories) {
 }
 
 /*!
-* \brief Open a directory and look for .geofence files which are then passed to parseGeofenceFile().
-* \param *geofences A pointer to geofence struct used for saving data
-* \param *nGeof A pointer to count number of geofences loaded.
-*
+* \brief loadGeofenceFiles Open a directory and look for .geofence files which are then passed to parseGeofenceFile().
+* \param geofences A vector of Geofence objects used for saving data
 */
 void loadGeofenceFiles(std::vector<Geofence> &geofences) {
 
@@ -332,11 +332,9 @@ void loadGeofenceFiles(std::vector<Geofence> &geofences) {
 }
 
 /*!
-* \brief Open a directory and look for .geofence files which are then passed to parseGeofenceFile().
-* \param *geofenceFile A string containing a .geofence filename.
-* \param *geofence A pointer to the geofence struct used for saving data.
-* \param index An integer used to keep track of which index to store data in.
-* \return 0 on success, -1 on failure
+* \brief parseGeofenceFile Parse a geofence file into a Geofence object
+* \param geofenceFile A string containing a .geofence filename.
+* \return A Geofence object representing the data in the input file
 */
 Geofence parseGeofenceFile(const std::string geofenceFile) {
 
@@ -439,11 +437,11 @@ Geofence parseGeofenceFile(const std::string geofenceFile) {
 /*!
  * \brief SupervisionCheckGeofences Checks all geofences to verify that the point represented by the MONR data lies within all permitted geofences and outside all forbidden geofences
  * \param MONRdata MONR struct containing the object coordinate data
- * \param geofences Struct array containing all geofences
- * \param numberOfGeofences Length of struct array
- * \return 1 if MONR coordinate violates a geofence, 0 if not. -1 on error
+ * \param geofences Vector containing all geofences
+ * \return True if MONR coordinate violates a geofence, false if not.
  */
 bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> geofences) {
+
     const CartesianPosition monrPoint =
     {
         MONRdata.MONR.XPositionI32 / 1000.0, MONRdata.MONR.YPositionI32 / 1000.0,
@@ -481,6 +479,15 @@ bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> 
     return retval;
 }
 
+/*!
+ * \brief updateNearStartingPositionStatus Loops through the armVerified vector for a trajectory that matches the input MONR packet,
+ *  and sets the armVerified boolean to true if the object is near its starting position. It also performs a check on the entire vector
+ *  to determine whether all objects have been verified near starting position.
+ * \param MONRdata MONR struct containing the object coordinate data
+ * \param armVerified Vector containing trajectories paired with a boolean showing whether or not the associated object has been previously verified
+    to be near its starting position
+ * \return A value according to ::PositionStatus
+ */
 PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata, std::vector<std::pair<Trajectory&, bool>> armVerified) {
     for (std::pair<Trajectory&, bool> &element : armVerified) {
         if (element.first.ip == MONRdata.ClientIP) {

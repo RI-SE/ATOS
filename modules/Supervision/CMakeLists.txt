@@ -46,7 +46,8 @@ add_executable(Supervision
     inc/trajectory.h
     inc/regexpatterns.h
     src/supervisionstate.cpp
-    inc/supervisionstate.h)
+    inc/supervisionstate.h
+)
 
 install(TARGETS Supervision DESTINATION bin)
 
