@@ -9,6 +9,7 @@ class MSCP:
         self.host = host
         self.port = port
         self.socket = socket.socket()
+        print("=== MSCP connecting to " str(self.host) + ":" + str(self.port))
         self.socket.connect((self.host,self.port))
         self.lastStatusReply = {}
         self.lastAbortReply = {}
@@ -44,6 +45,7 @@ class MSCP:
                 {"command": "subupload", "regex": re.compile(b'(..)SubUploadFile:(.)')}
         ]
 
+        print("=== Starting listener on " + str(self.host) + ":" + str(self.port))
         while not self.quit:
             data = self.socket.recv(1024)
             for replyPattern in replyPatterns:
@@ -56,9 +58,9 @@ class MSCP:
                     break
             if match is not None:
                 if matchPattern["command"] == "init":
-                    print("Init reply received")
+                    print("=== Init reply received")
                 if matchPattern["command"] == "status":
-                    print("Status reply received")
+                    print("=== Status reply received")
                     num = int.from_bytes(match.group(2),byteorder='big')
                     self.statusReplyLock.acquire()
                     if num == 1:
@@ -98,7 +100,7 @@ class MSCP:
                         self.lastStatusReply["objectControlErrorCode"] = 0
                     self.statusReplyLock.release()
                 if matchPattern["command"] == "abort":
-                    print("Abort reply received")
+                    print("=== Abort reply received")
                     num = int.from_bytes(match.group(2),byteorder='big')
                     self.abortReplyLock.acquire()
                     if num == 0:
@@ -109,9 +111,9 @@ class MSCP:
                         self.lastAbortReply["scenarioActive"] = "UNKNOWN"
                     self.abortReplyLock.release()
                 if matchPattern["command"] == "arm":
-                    print("Arm reply received")
+                    print("=== Arm reply received")
                 if matchPattern["command"] == "start":
-                    print("Start reply received")
+                    print("=== Start reply received")
                     num = int.from_bytes(match.group(2),byteorder='big')
                     self.startReplyLock.acquire()
                     if num == 0:
@@ -122,11 +124,11 @@ class MSCP:
                         self.lastStartReply["scenarioActive"] = "UNKNOWN"
                     self.startReplyLock.release()
                 if matchPattern["command"] == "connect":
-                    print("Connect reply received")
+                    print("=== Connect reply received")
                 if matchPattern["command"] == "disconnect":
-                    print("Disconnect reply received")
+                    print("=== Disconnect reply received")
                 if matchPattern["command"] == "upload":
-                    print("Upload reply 1 received")
+                    print("=== Upload reply 1 received")
                     num = int.from_bytes(match.group(2),byteorder='big')
                     self.uploadReplyLock.acquire()
                     if num == 0x01:
@@ -143,7 +145,7 @@ class MSCP:
                         self.lastUploadReply["status"] = "UNKNOWN"
                     self.uploadReplyLock.release()
                 if matchPattern["command"] == "subupload":
-                    print("Upload reply 2 received")
+                    print("=== Upload reply 2 received")
                     num = int.from_bytes(match.group(2),byteorder='big')
                     self.uploadReplyLock.acquire()
                     if num == 0x04:
@@ -157,37 +159,37 @@ class MSCP:
     def GetStatus(self):         
         message = "POST /maestro HTTP/1.1\r\nHost: " + self.host + "\r\n\r\nGetServerStatus();"    
         self.Send(message)
-        print("GetServerStatus() sent")
+        print("=== GetServerStatus() sent")
  
     def Abort(self):         
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nAbortScenario();"
         self.Send(message)
-        print("Abort() sent")
+        print("=== Abort() sent")
 
     def Arm(self):         
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nArmScenario();"    
         self.Send(message)
-        print("ArmScenario() sent")
+        print("=== ArmScenario() sent")
 
     def Init(self):       
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nInitializeScenario();"
         self.Send(message)
-        print("Init() sent")
+        print("=== Init() sent")
 
     def Connect(self):
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nConnectObject();"
         self.Send(message)
-        print("Connect() sent")
+        print("=== Connect() sent")
                  
     def Disconnect(self):
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDisconnectObject();"
         self.Send(message)
-        print("Disonnect() sent")
+        print("=== Disonnect() sent")
     
     def Start(self,delayTime_ms):       
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nStartScenario(" + str(delayTime_ms) + ");"
         self.Send(message)
-        print("StarScenario() sent")
+        print("=== StarScenario() sent")
 
     def UploadFile(self,targetPath,fileContents):
         packetSize = 1200
@@ -196,7 +198,7 @@ class MSCP:
         self.lastUploadReply["status"] = "UNKNOWN"
         self.uploadReplyLock.release()
         self.Send(message)
-        print("UploadFile() sent")
+        print("=== UploadFile() sent")
         self.waitForUploadReply("SERVER_PREPARED")
         # Send file
         self.Send(fileContents)
@@ -204,7 +206,7 @@ class MSCP:
         self.lastUploadReply["status"] = "UNKNOWN"
         self.uploadReplyLock.release()
         self.waitForUploadReply("UPLOAD_SUCCESS")
-        print("File uploaded")
+        print("=== File uploaded")
 
     def Send(self,message):
         self.socket.send(message.encode())
@@ -237,9 +239,9 @@ class MSCP:
             self.statusReplyLock.acquire()
             sr = self.lastStatusReply["objectControlState"]
             self.statusReplyLock.release()
-            print("Expecting: " + state + ", Current: " + sr)
+            print("=== Expecting: " + state + ", Current: " + sr)
             self.GetStatus()
-        print("Expecting: " + state + ", Current: " + sr)
+        print("=== Expecting: " + state + ", Current: " + sr)
         if sr != state:
             raise TimeoutError("Timed out while waiting for transition to " + state)
 

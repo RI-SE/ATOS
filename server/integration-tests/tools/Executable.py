@@ -23,6 +23,8 @@ class Executable():
 
     # Get a list of all processes linked to the Executable which have died
     def poll(self):
+        procName = self.args[0].split("/")
+        print("=== Polling executable " + procName[-1])
         died = []
         if self.proc.poll() is not None:
             died.append(self.proc.pid)
