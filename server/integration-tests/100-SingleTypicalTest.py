@@ -9,7 +9,7 @@ import sys
 if __name__ == "__main__":
 
     # Note: server does not close sockets properly so this fails frequently (cross fingers for now):
-    WaitForPortAvailable(54241,"TCP",timeout=0)
+    #WaitForPortAvailable(54241,"TCP",timeout=0)
     server = Executable("../build/TEServer",["-m","0"])
     time.sleep(0.05)
     
