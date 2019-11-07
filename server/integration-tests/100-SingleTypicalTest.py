@@ -12,12 +12,16 @@ if __name__ == "__main__":
     #WaitForPortAvailable(54241,"TCP",timeout=0)
     server = Executable("../build/TEServer",["-m","0"])
     time.sleep(0.05)
+    if server.poll():
+        print("=== Starting the server caused a problem")
+        server.stop()
+        sys.exit(1)
     
     # 1: Connect to the server
     userControl = MSCP("127.0.0.1")
     time.sleep(0.25)
     if server.poll():
-        print("Connecting to the server caused a problem")
+        print("=== Connecting to the server caused a problem")
         server.stop()
         sys.exit(1)
 

@@ -11,6 +11,7 @@ def ReadTrajectoryFile(trajectoryDir, fileName="random"):
         fname = join(trajectoryDir, fileName)
     else:
         raise ValueError("File " + fileName + " in directory " + trajectoryDir + " does not exist")
+    print("=== Reading trajectory file " + fname)
     with open(fname, "r") as fp:
         data = fp.read()    
     return data
