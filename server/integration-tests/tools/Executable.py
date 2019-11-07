@@ -6,7 +6,11 @@ class Executable():
     def __init__(self, path, argList=[]):
         print("=== Starting executable " + str(path))
         self.args = [path] + argList
-        self.proc = subprocess.Popen(self.args)
+        try:
+            self.proc = subprocess.Popen(self.args)
+        except FileNotFoundError as e:
+            print("=== Executable " + str(path) + " not found")
+            raise ValueError(e.message)
         self.pids = []
         
         # Wait for a short time to allow the process to reach "steady-state"
