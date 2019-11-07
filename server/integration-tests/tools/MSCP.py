@@ -9,7 +9,7 @@ class MSCP:
         self.host = host
         self.port = port
         self.socket = socket.socket()
-        print("=== MSCP connecting to " str(self.host) + ":" + str(self.port))
+        print("=== MSCP connecting to " + str(self.host) + ":" + str(self.port))
         self.socket.connect((self.host,self.port))
         self.lastStatusReply = {}
         self.lastAbortReply = {}
