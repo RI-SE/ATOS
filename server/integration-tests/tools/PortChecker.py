@@ -6,7 +6,6 @@ import sys
 host = ''
 
 def WaitForPortAvailable(port,protocol,timeout=5):
-    print("=== Checking " + str(protocol) + " port " + str(port))
     if protocol == "UDP":
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     elif protocol == "TCP":
@@ -18,8 +17,10 @@ def WaitForPortAvailable(port,protocol,timeout=5):
     timeoutTime = time.time() + timeout
     while True:
         try:
+            print("=== Checking " + str(protocol) + " port " + str(port))
             s.bind((host,port))
             s.close()
+            print("=== Port " + str(port) + " available")
             return
         except OSError:
             if not hasPrinted:

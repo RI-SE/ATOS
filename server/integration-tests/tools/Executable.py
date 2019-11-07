@@ -4,6 +4,7 @@ import time
 
 class Executable():
     def __init__(self, path, argList=[]):
+        print("=== Starting executable " + str(path))
         self.args = [path] + argList
         self.proc = subprocess.Popen(self.args)
         self.pids = []
