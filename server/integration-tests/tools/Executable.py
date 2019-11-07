@@ -7,7 +7,7 @@ class Executable():
         print("=== Starting executable " + str(path))
         self.args = [path] + argList
         try:
-            self.proc = subprocess.Popen(self.args)
+            self.proc = subprocess.Popen(self.args,shell=True)
         except FileNotFoundError as e:
             print("=== Executable " + str(path) + " not found")
             raise ValueError(e.message)
