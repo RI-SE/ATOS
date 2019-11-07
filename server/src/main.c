@@ -27,7 +27,6 @@
 #include "logger.h"
 #include "objectcontrol.h"
 #include "systemcontrol.h"
-#include "supervision.h"
 #include "datadictionary.h"
 #include "timecontrol.h"
 #include "supervisorcontrol.h"
@@ -72,7 +71,6 @@ static const ModuleTask allModules[] = {
 
 	logger_task,
 	timecontrol_task,
-	supervision_task,
 	systemcontrol_task,
 	objectcontrol_task
 #ifdef CITS_ENABLED
