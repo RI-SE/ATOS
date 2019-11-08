@@ -795,7 +795,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					iGetObjectIndexFromObjectIP(mqACCMData.ip, objectIPs,
 												sizeof (objectIPs) / sizeof (objectIPs[0]));
 				if (iIndex != -1) {
-					ObjectControlSendACCMMessage(&mqACCMData, &(socket_fds[iIndex]), 1);
+					ObjectControlSendACCMMessage(&mqACCMData, &(socket_fds[iIndex]), 0);
 				}
 				else
 					LogMessage(LOG_LEVEL_WARNING, "Unable to send ACCM: no valid socket found");
@@ -806,7 +806,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					iGetObjectIndexFromObjectIP(mqEXACData.ip, objectIPs,
 												sizeof (objectIPs) / sizeof (objectIPs[0]));
 				if (iIndex != -1)
-					ObjectControlSendEXACMessage(&mqEXACData, &(socket_fds[iIndex]), 1);
+					ObjectControlSendEXACMessage(&mqEXACData, &(socket_fds[iIndex]), 0);
 				else
 					LogMessage(LOG_LEVEL_WARNING, "Unable to send EXAC: no valid socket found");
 			}
@@ -2377,7 +2377,7 @@ I32 ObjectControlSendACCMMessage(ACCMData * ACCM, I32 * socket, U8 debug) {
 	if (messageSize - sizeof (isoACCM.header) - sizeof (isoACCM.footer) != isoACCM.header.MessageLengthU32)
 		LogMessage(LOG_LEVEL_WARNING, "ACCM message sent with invalid message length");
 
-	UtilSendTCPData(MODULE_NAME, messageBuffer, (I32) messageSize, socket, 1);
+	UtilSendTCPData(MODULE_NAME, messageBuffer, (I32) messageSize, socket, debug);
 
 	return (I32) messageSize;
 }

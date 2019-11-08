@@ -1922,7 +1922,7 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 	}
 
 	if (Debug) {
-		LogMessage(LOG_LEVEL_DEBUG, "ParameterList = %s\n", ParameterList);
+		LogMessage(LOG_LEVEL_INFO, "ParameterList = %s\n", ParameterList);
 	}
 
 	return strlen(ParameterList);
