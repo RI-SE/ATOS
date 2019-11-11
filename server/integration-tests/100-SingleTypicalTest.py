@@ -6,24 +6,23 @@ import time
 import subprocess
 import sys
 
+
+userControl = None
+server = None
+obj = None
+
 if __name__ == "__main__":
 
     # Note: server does not close sockets properly so this fails frequently (cross fingers for now):
     #WaitForPortAvailable(54241,"TCP",timeout=0)
     server = Executable("../build/TEServer",["-m","0"])
     time.sleep(0.05)
-    if server.poll():
-        print("=== Starting the server caused a problem")
-        server.stop()
-        sys.exit(1)
+    checkProgramStatus("=== Starting the server caused a problem")
     
     # 1: Connect to the server
     userControl = MSCP("127.0.0.1")
     time.sleep(0.25)
-    if server.poll():
-        print("=== Connecting to the server caused a problem")
-        server.stop()
-        sys.exit(1)
+    checkProgramStatus("=== Connecting to the server caused a problem")
 
     # 2: Load trajectory
     traj = ReadTrajectoryFile("resources/trajectories/",fileName="random")
@@ -39,53 +38,48 @@ if __name__ == "__main__":
     # 5: Send init
     userControl.Init()
     userControl.waitForObjectControlState("INITIALIZED")
-    if server.poll():
-        print("Sending init to the server caused a problem")
-        server.stop()
-        sys.exit(1)
+    checkProgramStatus("Sending init to the server caused a problem")
 
     # 6: Send connect
     userControl.Connect()
     userControl.waitForObjectControlState("CONNECTED")
-    if server.poll():
-        print("Sending connect to the server caused a problem")
-        server.stop()
-        sys.exit(1)
+    checkProgramStatus("Sending connect to the server caused a problem")
 
     # 7: Send arm
     userControl.Arm()
     userControl.waitForObjectControlState("ARMED")
-    if server.poll():
-        print("Sending arm to the server caused a problem")
-        server.stop()
-        sys.exit(1)
+    checkProgramStatus("Sending arm to the server caused a problem")
 
     # 8: Send start
     userControl.Start(10)
     userControl.waitForObjectControlState("RUNNING")
-    if server.poll():
-        print("Sending start to the server caused a problem")
-        server.stop()
-        sys.exit(1)
+    checkProgramStatus("Sending start to the server caused a problem")
 
     # 9: Send abort
     userControl.Abort()
     userControl.waitForObjectControlState("CONNECTED")
-    if server.poll():
-        print("Sending abort to the server caused a problem")
-        server.stop()
-        sys.exit(1)
+    checkProgramStatus("Sending abort to the server caused a problem")
 
     # 10: Send reset
     userControl.Disconnect()
     userControl.waitForObjectControlState("IDLE")
-    if server.poll():
-        print("Sending disconnect to the server caused a problem")
-        server.stop()
-        sys.exit(1)
+    checkProgramStatus("Sending disconnect to the server caused a problem")
     
     # 11: Done!
     userControl.shutdown()
     server.stop()
     obj.stop()
     sys.exit(0)
+
+
+def checkProgramStatus(failurePrintout):
+    if server != None:
+        if server.poll():
+            print(failurePrintout)
+            if userControl != None:
+                userControl.shutdown()
+            server.stop()
+            if obj != None:
+                obj.stop()
+            sys.exit(1)
+
