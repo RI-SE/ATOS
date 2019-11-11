@@ -15,6 +15,9 @@
 #define MODULE_NAME "Supervision"
 #define MAX_GEOFENCE_NAME_LEN 256
 
+#define ARM_MAX_DISTANCE_TO_START_M 1.0
+#define ARM_MAX_ANGLE_TO_START_DEG 10.0
+
 /*------------------------------------------------------------
   -- Type definitions.
   ------------------------------------------------------------*/
@@ -498,7 +501,8 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata,
 
             CartesianPosition trajectoryPoint = element.first.points.front().getCartesianPosition();
             CartesianPosition objectPosition = MONRToCartesianPosition(MONRdata);
-            if (UtilIsPositionNearTarget(objectPosition, trajectoryPoint, 1.0)) {
+            if (UtilIsPositionNearTarget(objectPosition, trajectoryPoint, ARM_MAX_DISTANCE_TO_START_M)
+                    && UtilIsAngleNearTarget(objectPosition, trajectoryPoint, ARM_MAX_ANGLE_TO_START_DEG)) {
                 element.second = true;
                 // Object was near starting position, now check if all objects have passed
                 if (std::any_of(armVerified.begin(), armVerified.end(),
