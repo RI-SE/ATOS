@@ -761,6 +761,20 @@ uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition t
 	return distance <= tolerance_m;
 }
 
+/*!
+ * \brief UtilIsAngleNearTarget Checks if angle is within tolerence_deg of target angle
+ * \param position Position with angle to verify
+ * \param target Target position with angle
+ * \param tolerance_deg Angle tolerance defining "near"
+ * \return true if position is within tolerance_deg of target, false otherwise
+ */
+uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_deg) {
+
+    const double oneRotation = 360;
+    return fabs(fmod(position.heading_deg, oneRotation) - fmod(target.heading_deg, oneRotation))
+            <= tolerance_deg;
+}
+
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition * OP) {
 
 	double f, d, P1LatRad, P1LongRad, P2LatRad, P2LongRad, U1, U2, L, lambda, sins, coss, sigma, sinalpha,
