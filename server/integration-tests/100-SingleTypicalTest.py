@@ -11,6 +11,18 @@ userControl = None
 server = None
 obj = None
 
+
+def checkProgramStatus(failurePrintout):
+    if server != None:
+        if server.poll():
+            print(failurePrintout)
+            if userControl != None:
+                userControl.shutdown()
+            server.stop()
+            if obj != None:
+                obj.stop()
+            sys.exit(1)
+
 if __name__ == "__main__":
 
     # Note: server does not close sockets properly so this fails frequently (cross fingers for now):
@@ -72,14 +84,4 @@ if __name__ == "__main__":
     sys.exit(0)
 
 
-def checkProgramStatus(failurePrintout):
-    if server != None:
-        if server.poll():
-            print(failurePrintout)
-            if userControl != None:
-                userControl.shutdown()
-            server.stop()
-            if obj != None:
-                obj.stop()
-            sys.exit(1)
 
