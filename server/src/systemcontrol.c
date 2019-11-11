@@ -952,7 +952,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else
 				LogMessage(LOG_LEVEL_WARNING, "START command parameter count error");
-            break;
+			break;
 		case stop_0:
 			if (iCommSend(COMM_STOP, NULL, 0) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending STOP command");
