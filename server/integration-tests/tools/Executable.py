@@ -4,8 +4,13 @@ import time
 
 class Executable():
     def __init__(self, path, argList=[]):
+        print("=== Starting executable " + str(path))
         self.args = [path] + argList
-        self.proc = subprocess.Popen(self.args)
+        try:
+            self.proc = subprocess.Popen(' '.join(self.args),shell=True)
+        except FileNotFoundError as e:
+            print("=== Executable " + str(path) + " not found")
+            raise ValueError(e.message)
         self.pids = []
         
         # Wait for a short time to allow the process to reach "steady-state"
@@ -23,6 +28,8 @@ class Executable():
 
     # Get a list of all processes linked to the Executable which have died
     def poll(self):
+        procName = self.args[0].split("/")
+        print("=== Polling executable " + procName[-1])
         died = []
         if self.proc.poll() is not None:
             died.append(self.proc.pid)
@@ -41,6 +48,7 @@ class Executable():
         
         try:
             self.proc.wait(3)
+            print("=== " + procName[-1] + " terminated successfully")
             return
         except TimeoutExpired as e:
             print("=== Executable did not respond to interrupt, forcing shutdown")
