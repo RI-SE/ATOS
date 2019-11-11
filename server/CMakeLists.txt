@@ -96,13 +96,11 @@ add_executable(TEServer
   src/main.c
   src/logger.c
   src/objectcontrol.c
-  src/supervision.c
   src/systemcontrol.c
   src/timecontrol.c
   src/datadictionary.c
   inc/logger.h
   inc/objectcontrol.h
-  inc/supervision.h
   inc/systemcontrol.h
   inc/timecontrol.h
   inc/datadictionary.h
