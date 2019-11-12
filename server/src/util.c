@@ -51,32 +51,32 @@
 #define GEOFENCE_DIR_NAME "geofence"
 
 // Message priorities on message queue
-#define PRIO_COMM_STRT 100
-#define PRIO_COMM_ARMD 110
-#define PRIO_COMM_STOP 120
-#define PRIO_COMM_MONI 80
-#define PRIO_COMM_MONR 80
-#define PRIO_COMM_EXIT 140
-#define PRIO_COMM_REPLAY 160
-#define PRIO_COMM_CONTROL 180
-#define PRIO_COMM_ABORT 60
-#define PRIO_COMM_EXAC 70
-#define PRIO_COMM_ACCM 80
-#define PRIO_COMM_TREO 70
-#define PRIO_COMM_TRCM 80
-#define PRIO_COMM_INIT 110
-#define PRIO_COMM_CONNECT 110
-#define PRIO_COMM_OBC_STATE 160
-#define PRIO_COMM_DISCONNECT 110
-#define PRIO_COMM_LOG 160
-#define PRIO_COMM_VIOP 80
-#define PRIO_COMM_TRAJ 80
-#define PRIO_COMM_TRAJ_TOSUP 80
-#define PRIO_COMM_TRAJ_FROMSUP 80
-#define PRIO_COMM_ASP 110
-#define PRIO_COMM_OSEM 160
-#define PRIO_DATA_DICT 100
-#define PRIO_OBJECTS_CONNECTED 100
+#define PRIO_COMM_STRT 18
+#define PRIO_COMM_ARMD 18
+#define PRIO_COMM_STOP 18
+#define PRIO_COMM_MONI 0
+#define PRIO_COMM_MONR 0
+#define PRIO_COMM_EXIT 3
+#define PRIO_COMM_REPLAY 18
+#define PRIO_COMM_CONTROL 18
+#define PRIO_COMM_ABORT 31
+#define PRIO_COMM_EXAC 16
+#define PRIO_COMM_ACCM 22
+#define PRIO_COMM_TREO 16
+#define PRIO_COMM_TRCM 22
+#define PRIO_COMM_INIT 18
+#define PRIO_COMM_CONNECT 18
+#define PRIO_COMM_OBC_STATE 26
+#define PRIO_COMM_DISCONNECT 18
+#define PRIO_COMM_LOG 5
+#define PRIO_COMM_VIOP 10 // TODO: double check the priority of unused message
+#define PRIO_COMM_TRAJ 10 // TODO: double check the priority of unused message
+#define PRIO_COMM_TRAJ_TOSUP 14
+#define PRIO_COMM_TRAJ_FROMSUP 14
+#define PRIO_COMM_ASP 10 // TODO: double check the priority of unused message
+#define PRIO_COMM_OSEM 24
+#define PRIO_DATA_DICT 22
+#define PRIO_OBJECTS_CONNECTED 20
 
 /*------------------------------------------------------------
 -- Public variables
