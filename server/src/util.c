@@ -69,11 +69,11 @@
 #define PRIO_COMM_OBC_STATE 26
 #define PRIO_COMM_DISCONNECT 18
 #define PRIO_COMM_LOG 5
-#define PRIO_COMM_VIOP 10 // TODO: double check the priority of unused message
-#define PRIO_COMM_TRAJ 10 // TODO: double check the priority of unused message
+#define PRIO_COMM_VIOP 10		// TODO: double check the priority of unused message
+#define PRIO_COMM_TRAJ 10		// TODO: double check the priority of unused message
 #define PRIO_COMM_TRAJ_TOSUP 14
 #define PRIO_COMM_TRAJ_FROMSUP 14
-#define PRIO_COMM_ASP 10 // TODO: double check the priority of unused message
+#define PRIO_COMM_ASP 10		// TODO: double check the priority of unused message
 #define PRIO_COMM_OSEM 24
 #define PRIO_DATA_DICT 22
 #define PRIO_OBJECTS_CONNECTED 20
