@@ -2,71 +2,22 @@
 #define TRIGGER_H
 
 #include <cstdint>
+#include <stdexcept>
 #include <set>
 #include <iostream>
 #include <vector>
+#include <netinet/in.h>
 
-
+#include "util.h"
+#include "iso22133.h"
 
 class Trigger
 {
 public:
     /*! Typedefs */
-    typedef enum {
-        TRIGGER_UNDEFINED               = 0x0000,
-        TRIGGER_TYPE_1                  = 0x0001,
-        TRIGGER_SPEED                   = 0x0010,
-        TRIGGER_DISTANCE                = 0x0020,
-        TRIGGER_ACCELERATION            = 0x0030,
-        TRIGGER_LANE_CHANGED            = 0x0040,
-        TRIGGER_LANE_OFFSET             = 0x0050,
-        TRIGGER_POSITION_REACHED        = 0x0060,
-        TRIGGER_POSITION_LEFT           = 0x0061,
-        TRIGGER_POSITION_OFFSET         = 0x0062,
-        TRIGGER_STEERING_ANGLE          = 0x0070,
-        TRIGGER_THROTTLE_VALUE          = 0x0080,
-        TRIGGER_BRAKE                   = 0x0090,
-        TRIGGER_ACTIVE_TRAJECTORY       = 0x00A0,
-        TRIGGER_OTHER_OBJECT_FEATURE    = 0x00B0,
-        TRIGGER_INFRASTRUCTURE          = 0x00C0,
-        TRIGGER_TEST_SCENARIO_EVENT     = 0x00D0,
-        TRIGGER_MISC_DIGITAL_INPUT      = 0x00E0,
-        TRIGGER_MISC_ANALOG_INPUT       = 0x00F0,
-        TRIGGER_TIMER_EVENT_OCCURRED    = 0x0100,
-        TRIGGER_MODE_CHANGED            = 0x0110,
-        TRIGGER_UNAVAILABLE             = 0xFFFF
-    } TriggerTypeCode_t;
+    typedef TriggerType_t TriggerTypeCode_t;
 
-    typedef enum {
-        TRIGGER_PARAMETER_FALSE                     = 0x00000000,
-        TRIGGER_PARAMETER_TRUE                      = 0x00000001,
-        TRIGGER_PARAMETER_RELEASED                  = 0x00000010,
-        TRIGGER_PARAMETER_PRESSED                   = 0x00000011,
-        TRIGGER_PARAMETER_LOW                       = 0x00000020,
-        TRIGGER_PARAMETER_HIGH                      = 0x00000021,
-        TRIGGER_PARAMETER_RISING_EDGE               = 0x00000022,
-        TRIGGER_PARAMETER_FALLING_EDGE              = 0x00000023,
-        TRIGGER_PARAMETER_ANY_EDGE                  = 0x00000024,
-        TRIGGER_PARAMETER_RELATIVE                  = 0x00000030,
-        TRIGGER_PARAMETER_ABSOLUTE                  = 0x00000031,
-        TRIGGER_PARAMETER_VALUE                     = 0x00000040,
-        TRIGGER_PARAMETER_MIN                       = 0x00000050,
-        TRIGGER_PARAMETER_MAX                       = 0x00000051,
-        TRIGGER_PARAMETER_MEAN                      = 0x00000052,
-        TRIGGER_PARAMETER_EQUAL_TO                  = 0x00000060,
-        TRIGGER_PARAMETER_GREATER_THAN              = 0x00000061,
-        TRIGGER_PARAMETER_GREATER_THAN_OR_EQUAL_TO  = 0x00000062,
-        TRIGGER_PARAMETER_LESS_THAN                 = 0x00000063,
-        TRIGGER_PARAMETER_LESS_THAN_OR_EQUAL_TO     = 0x00000064,
-        TRIGGER_PARAMETER_NOT_EQUAL_TO              = 0x00000065,
-        TRIGGER_PARAMETER_X                         = 0x00000070,
-        TRIGGER_PARAMETER_Y                         = 0x00000071,
-        TRIGGER_PARAMETER_Z                         = 0x00000072,
-        TRIGGER_PARAMETER_TIME                      = 0x00000080,
-        TRIGGER_PARAMETER_DATE                      = 0x00000081,
-        TRIGGER_PARAMETER_RULE                      = 0x000000A0,
-        TRIGGER_PARAMETER_UNAVAILABLE               = 0xFFFFFFFF
-    } TriggerParameter_t;
+    typedef TriggerTypeParameter_t TriggerParameter_t;
 
     typedef uint16_t TriggerID_t;
 
@@ -88,13 +39,18 @@ public:
 
 
     /*! Getters */
-    virtual TriggerTypeCode_t getTypeCode() { return triggerTypeCode; }
-    uint16_t getID() { return triggerID; }
-    std::vector<TriggerParameter_t> getParameters() { return parameters; }
+    virtual TriggerTypeCode_t getTypeCode() const { return triggerTypeCode; }
+    TriggerID_t getID() const { return triggerID; }
+    std::vector<TriggerParameter_t> getParameters() const { return parameters; }
+    bool isActive() const;
+    in_addr_t getObjectIP(void) const { return triggerObjectIP; }
 
+    bool operator==(const Trigger &other) const { return (other.triggerID == triggerID) && isSimilar(other); }
+    bool isSimilar(const Trigger &other) const;
 
     /*! Setters */
-    void setID(uint16_t triggerID) { this->triggerID = triggerID; }
+    void setID(TriggerID_t triggerID) { this->triggerID = triggerID; }
+    void setObjectIP(in_addr_t ipAddr) { triggerObjectIP = ipAddr; }
 
     /*!
      * \brief appendParameter Appends an ISO parameter to the parameters list.
@@ -102,6 +58,7 @@ public:
      * \return Value according to ::TriggerReturnCode_t
      */
     TriggerReturnCode_t appendParameter(TriggerParameter_t triggerParameter);
+    virtual TriggerReturnCode_t appendParameter(std::string parameterString);
 
     /*!
      * \brief parseParameters Parse the parameters list into an appropriate Trigger mode.
@@ -111,7 +68,7 @@ public:
 
 
     /*! To string */
-    friend std::ostream& operator<<(std::ostream &strm, Trigger &trig) {
+    friend std::ostream& operator<<(std::ostream &strm, const Trigger &trig) {
         return strm << "TRIGGER ID " << trig.triggerID <<
                        " TYPE " << getTypeAsString(trig.getTypeCode()) <<
                        " PARAMETERS " << trig.getParametersString();
@@ -119,7 +76,8 @@ public:
 
     static std::string getTypeAsString(TriggerTypeCode_t typeCode);
     static std::string getParameterAsString(TriggerParameter_t param);
-    std::string getParametersString();
+    std::string getParametersString(void) const;
+    TRCMData getConfigurationMessageData(void) const;
 
     /*!
      * \brief update Update tracked signal (i.e. signal which causes the trigger to occur).
@@ -127,25 +85,36 @@ public:
      * - e.g. a trigger tracking a floating point trigger should override
      * update(float) and update(double)
     */
-    virtual TriggerReturnCode_t update(void)    { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(bool)    { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(char)    { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(int)     { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(float)   { return INVALID_ARGUMENT; }
-    virtual TriggerReturnCode_t update(double)  { return INVALID_ARGUMENT; }
+    virtual TriggerReturnCode_t update(void)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(struct timeval)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(bool, struct timeval)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(char, struct timeval)    { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(int, struct timeval)     { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(float, struct timeval)   { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(double, struct timeval)  { throw std::invalid_argument("Invalid signal type"); }
+    virtual TriggerReturnCode_t update(TREOData){ throw std::invalid_argument("Invalid signal type"); }
 
+    static TriggerTypeCode_t asTypeCode(std::string typeCodeString);
 protected:
-    TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter);
+    TriggerReturnCode_t checkTriggerParameter(TriggerParameter_t triggerParameter) const;
     TriggerTypeCode_t triggerTypeCode;
+    TriggerReturnCode_t wasTriggeredByLastUpdate = NOT_OK; //!< State saving the last result of update
+    std::vector<TriggerParameter_t> parameters;
+    virtual TriggerParameter_t asParameterCode(const std::string &parameterCodeString) const;
+    static char toUpper(const char c);
+    in_addr_t triggerObjectIP = 0;
 
 private:
     TriggerID_t triggerID;
-    std::vector<TriggerParameter_t> parameters;
 
-    virtual std::set<TriggerParameter_t> getAcceptedParameters()
-        { return {TRIGGER_PARAMETER_UNAVAILABLE}; }
+    virtual const std::set<TriggerParameter_t> getAcceptedParameters() const
+    {
+        std::set<TriggerParameter_t> accParams;
+        accParams.insert(TRIGGER_PARAMETER_UNAVAILABLE);
+        return accParams;
+    }
 
-    virtual TriggerReturnCode_t checkIfTriggered(void) = 0;
+    virtual TriggerReturnCode_t checkIfTriggered(void) const = 0;
 };
 
 #endif // TRIGGER_H

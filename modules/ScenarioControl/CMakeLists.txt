@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 2.8)
-set (CMAKE_CXX_STANDARD 11)
+cmake_minimum_required(VERSION 3.1)
+SET(CMAKE_CXX_STANDARD 11)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+SET(CMAKE_C_STANDARD 11)
+SET(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(ScenarioControl)
 # This module is an example of how to set up a new module external to the Maestro executable
@@ -39,6 +42,8 @@ add_library(util
 add_library(Trigger
     inc/trigger.h
     src/trigger.cpp
+    inc/isotrigger.h
+    src/isotrigger.cpp
     inc/booleantrigger.h
     src/booleantrigger.cpp
     inc/braketrigger.h
@@ -48,13 +53,25 @@ add_library(Trigger
 add_library(Action
     inc/action.h
     src/action.cpp
+    inc/externalaction.h
+    src/externalaction.cpp
 )
+
+add_library(Scenario
+    inc/scenario.h
+    src/scenario.cpp
+    inc/causality.h
+    src/causality.cpp
+)
+
 
 add_executable(ScenarioControl src/main.cpp)
 
 install(TARGETS ScenarioControl DESTINATION bin)
 
-target_link_libraries(ScenarioControl MaestroTime MaestroLogging util Trigger Action)
+target_link_libraries(ScenarioControl MaestroTime MaestroLogging util Scenario)
+target_link_libraries(Scenario Trigger Action)
+target_link_libraries(Action MaestroTime)
 target_link_libraries(util MQBus MaestroTime MaestroLogging)
 target_link_libraries(MQBus rt m)
 

@@ -20,17 +20,18 @@ extern "C"{
   ------------------------------------------------------------*/
 #include <inttypes.h>
 #include <math.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
-
+#include <stdbool.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
 #include "mqbus.h"
-
+#include "iso22133.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -46,7 +47,7 @@ extern "C"{
 #define CONTROL_CHANNEL_PORT 53241
 
 #define MAX_OBJECTS 10
-#define MAX_FILE_PATH 256
+#define MAX_FILE_PATH PATH_MAX
 
 #define MAX_UTIL_VARIBLE_SIZE 512
 
@@ -74,7 +75,7 @@ extern "C"{
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.15"
+#define LOCAL_USER_CONTROL_IP "10.168.54.90"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -106,25 +107,9 @@ extern "C"{
 // 60 * 1000
 #define MINUTE_TIME_MS 60000
 
-
-#define TEST_CONF_FILE "./conf/test.conf"
-#define TRAJECTORY_PATH "./traj/"
-
-#define ADAPTIVE_SYNC_POINT_CONF "./conf/adaptivesync.conf"
-#define TRIGG_ACTION_CONF "./conf/triggeraction.conf"
-#define VERSION_PATH "../conf/Version.txt"
-
-#define MAX_TRIGG_ACTIONS 20
-
-
-#define TAA_ACTION_EXT_START 1
-#define TAA_ACTION_TEST_SIGNAL 2
-
-#define TAA_TRIGGER_DI_LOW  1
-#define TAA_TRIGGER_DI_HIGH  2
-#define TAA_TRIGGER_DI_RISING_EDGE 3
-#define TAA_TRIGGER_DI_FALLING_EDGE 4
-
+#define CONF_FILE_NAME "test.conf"
+#define ADAPTIVE_SYNC_FILE_NAME "adaptivesync.conf"
+#define TRIGGER_ACTION_FILE_NAME "triggeraction.conf"
 
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
@@ -152,6 +137,7 @@ extern "C"{
 #define VALUE_ID_GPS_SECOND_OF_WEEK         0x2
 #define VALUE_ID_GPS_WEEK                   0x3
 #define VALUE_ID_DATE_ISO8601               0x4
+#define VALUE_ID_MONR_STRUCT                0x8
 #define VALUE_ID_X_POSITION                 0x10
 #define VALUE_ID_Y_POSITION                 0x11
 #define VALUE_ID_Z_POSITION                 0x12
@@ -186,6 +172,7 @@ extern "C"{
 #define dbl double
 #define flt float
 
+// Why do we need this memory efficiency? There is a risk that this breaks included code which isn't using pragma pack
 #pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
 
 #define SYNC_WORD 0x7e7e
@@ -205,26 +192,6 @@ extern "C"{
 #define FAILED_DELETE 0x02
 #define FILE_TO_MUCH_DATA 0x06
 
-/* DEBUGGING DEFINES */
-
-#define DEBUG_LEVEL_LOW 1
-#define DEBUG_LEVEL_MEDIUM 2
-#define DEBUG_LEVEL_HIGH 3
-
-// Enable debugging by defining DEBUG
-#define DEBUG
-
-
-
-#ifdef DEBUG
-// Set level of DEBUG
-#define DEBUG_TEST 1
-#else
-#define DEBUG_TEST 0
-#endif
-
-//#define DEBUG_PRINT(fmt,...) do {if(DEBUG_TEST) {fprintf(stdout,"[%s]: " fmt "\n",__func__,__VA_ARGS__);fflush(stdout);}} while (0)
-//#define DEBUG_ERR_PRINT(...) do {if(DEBUG_TEST) {fprintf(stderr,__VA_ARGS__);fflush(stderr);}} while (0)
 
 // The do - while loop makes sure that each function call is properly handled using macros
 #define LOG_SEND(buf, ...) \
@@ -259,6 +226,11 @@ extern "C"{
 
 #define ISO_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
 
+#define DD_CONTROL_BUFFER_SIZE_1024 1024
+#define DD_CONTROL_BUFFER_SIZE_20 20
+#define DD_CONTROL_BUFFER_SIZE_52 52
+#define DD_CONTROL_TASK_PERIOD_MS 1
+
 //! Internal message queue communication identifiers
 enum COMMAND
 {
@@ -270,7 +242,6 @@ COMM_EXIT = 5,
 COMM_REPLAY = 6,
 COMM_CONTROL = 7,
 COMM_ABORT = 8,
-COMM_TOM = 9,
 COMM_INIT = 10,
 COMM_CONNECT = 11,
 COMM_OBC_STATE = 12,
@@ -282,10 +253,15 @@ COMM_TRAJ_TOSUP = 17,
 COMM_TRAJ_FROMSUP = 18,
 COMM_ASP = 19,
 COMM_OSEM = 20,
+COMM_DATA_DICT = 21,
+COMM_EXAC = 22,
+COMM_TREO = 23,
+COMM_ACCM = 24,
+COMM_TRCM = 25,
 COMM_MONR = 239,
+COMM_OBJECTS_CONNECTED = 111,
 COMM_INV = 255
 };
-
 
 typedef struct
 {
@@ -305,20 +281,6 @@ typedef struct
 } CartesianPosition;
 
 
-typedef struct
-{
-  U16 SyncWordU16;
-  U8 TransmitterIdU8;
-  U8 MessageCounterU8;
-  U8 AckReqProtVerU8;
-  U16 MessageIdU16;
-  U32 MessageLengthU32;
-} HeaderType; //11 bytes
-
-typedef struct
-{
-  U16 Crc;
-} FooterType; //2 bytes
 
 typedef struct
 {
@@ -521,15 +483,28 @@ typedef struct
 
 typedef struct
 {
-  U32 MTSPU32;
-  dbl CurrentTimeDbl;
-  dbl TimeToSyncPointDbl;
-  dbl PrevTimeToSyncPointDbl;
-  I32 SyncPointIndexI32;
-  U32 CurrentTimeU32;
-  I32 BestFoundIndexI32;
-  U16 IterationTimeU16;
+  volatile U32 MessageLengthU32;
+  volatile U32 ChannelCodeU32;
+  volatile U32 MTSPU32;
+  volatile dbl CurrentTimeDbl;
+  volatile dbl TimeToSyncPointDbl;
+  volatile dbl PrevTimeToSyncPointDbl;
+  volatile I32 SyncPointIndexI32;
+  volatile U32 CurrentTimeU32;
+  volatile I32 BestFoundIndexI32;
+  volatile U16 IterationTimeU16;
 } ASPType;
+
+/*! Object control states */
+typedef enum {
+    OBC_STATE_UNDEFINED,
+    OBC_STATE_IDLE,
+    OBC_STATE_INITIALIZED,
+    OBC_STATE_CONNECTED,
+    OBC_STATE_ARMED,
+    OBC_STATE_RUNNING,
+    OBC_STATE_ERROR
+} OBCState_t;
 
 typedef struct
 {
@@ -558,8 +533,38 @@ typedef struct
   //U8 STRTData[100];
   //U8 OSEMSizeU8;
   //U8 OSEMData[100];
-
-
+  volatile dbl OriginLatitudeDbl;
+  C8 OriginLatitudeC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile dbl OriginLongitudeDbl;
+  C8 OriginLongitudeC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile dbl OriginAltitudeDbl;
+  C8 OriginAltitudeC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile U32 VisualizationServerU32;
+  C8 VisualizationServerC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile U8 ForceObjectToLocalhostU8;
+  volatile dbl ASPMaxTimeDiffDbl;
+  volatile dbl ASPMaxTrajDiffDbl;
+  volatile U32 ASPStepBackCountU32;
+  volatile dbl ASPFilterLevelDbl;
+  volatile dbl ASPMaxDeltaTimeDbl;
+  volatile U32 TimeServerIPU32;
+  C8 TimeServerIPC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile U16 TimeServerPortU16;
+  volatile U32 SimulatorIPU32;
+  C8 SimulatorIPC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile U16 SimulatorTCPPortU16;
+  volatile U16 SimulatorUDPPortU16;
+  volatile U8 SimulatorModeU8;
+  C8 VOILReceiversC8[DD_CONTROL_BUFFER_SIZE_1024];
+  C8 DTMReceiversC8[DD_CONTROL_BUFFER_SIZE_1024];
+  volatile U32 ExternalSupervisorIPU32;
+  C8 ExternalSupervisorIPC8[DD_CONTROL_BUFFER_SIZE_20];
+  volatile U16 SupervisorTCPPortU16;
+  U32 DataDictionaryRVSSConfigU32;
+  U32 DataDictionaryRVSSRateU8;
+  volatile ASPType ASPData;
+  C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
+  volatile OBCState_t OBCStateU8;
 } GSDType;
 
 
@@ -622,15 +627,41 @@ typedef struct
 
 typedef struct
 {
-  char TriggerIP[16];
-  char TriggerType[8];
-  char TriggerTypeVar[16];
-  char ActionType[24];
-  char ActionTypeVar[16];
-  char ActionDelay[8];
-  uint8_t TriggerId;
-  int32_t Action;
-} TriggActionType;
+    uint16_t actionID;
+    uint32_t executionTime_qmsoW;
+    in_addr_t ip;
+} EXACData; //!< Data type for MQ message
+
+
+
+typedef struct
+{
+    uint16_t triggerID;
+    uint32_t timestamp_qmsow;
+    in_addr_t ip;
+} TREOData; //!< Data type for MQ message
+
+typedef struct
+{
+    uint16_t actionID;
+    uint16_t actionType;
+    uint32_t actionTypeParameter1;
+    uint32_t actionTypeParameter2;
+    uint32_t actionTypeParameter3;
+    in_addr_t ip;
+} ACCMData; //!< Data type for MQ message
+
+typedef struct
+{
+    uint16_t triggerID;
+    uint16_t triggerType;
+    uint32_t triggerTypeParameter1;
+    uint32_t triggerTypeParameter2;
+    uint32_t triggerTypeParameter3;
+    in_addr_t ip;
+} TRCMData; //!< Data type for MQ message
+
+
 
 typedef struct
 {
@@ -677,17 +708,6 @@ typedef struct
   I16 SpeedI16;
 } ObjectMonitorType;
 
-
-typedef enum {
-    OBC_STATE_UNDEFINED,
-    OBC_STATE_IDLE,
-    OBC_STATE_INITIALIZED,
-    OBC_STATE_CONNECTED,
-    OBC_STATE_ARMED,
-    OBC_STATE_RUNNING,
-    OBC_STATE_ERROR
-} OBCState_t;
-
 #define HTTP_HEADER_MAX_LENGTH 64
 typedef struct {
     char AcceptCharset[HTTP_HEADER_MAX_LENGTH];
@@ -709,6 +729,54 @@ typedef struct {
     char TE[HTTP_HEADER_MAX_LENGTH];
     char UserAgent[HTTP_HEADER_MAX_LENGTH];
 } HTTPHeaderContent;
+
+/*! Data dictionary read/write return codes. */
+typedef enum {
+    UNDEFINED, /*!< Undefined result */
+    WRITE_OK, /*!< Write successful */
+    READ_OK, /*!< Read successful */
+    READ_WRITE_OK, /*!< Combined read/write successful */
+    PARAMETER_NOTFOUND, /*!< Read/write not successful */
+    OUT_OF_RANGE /*!< Attempted to read out of range */
+} ReadWriteAccess_t;
+
+
+typedef struct
+{
+  volatile U32 MessageLengthU32;
+  volatile U32 ChannelCodeU32;
+  volatile U16 YearU16;
+  volatile U8 MonthU8;
+  volatile U8 DayU8;
+  volatile U8 HourU8;
+  volatile U8 MinuteU8;
+  volatile U8 SecondU8;
+  volatile U16 MillisecondU16;
+  volatile U32 SecondCounterU32;
+  volatile U64 GPSMillisecondsU64;
+  volatile U32 GPSMinutesU32;
+  volatile U16 GPSWeekU16;
+  volatile U32 GPSSecondsOfWeekU32;
+  volatile U32 GPSSecondsOfDayU32;
+  volatile U8 FixQualityU8;
+  volatile U8 NSatellitesU8;
+} RVSSTimeType;
+
+
+typedef struct
+{
+  volatile U32 MessageLengthU32;
+  volatile U32 ChannelCodeU32;
+  volatile U8 OBCStateU8;
+  volatile U8 SysCtrlStateU8;
+} RVSSMaestroType;
+
+
+typedef enum {
+    NORTHERN,
+    SOUTHERN
+} Hemisphere;
+
 
 
 /*------------------------------------------------------------
@@ -741,11 +809,26 @@ void util_error(const char *message);
 int iUtilGetParaConfFile(char* pcParameter, char* pcValue);
 int iUtilGetIntParaConfFile(char* pcParameter, int* iValue);
 
+// Message bus functions
 int iCommInit(void);
 int iCommClose(void);
 ssize_t iCommRecv(enum COMMAND *command, char* data, const size_t messageSize, struct timeval *timeRecv);
 int iCommSend(const enum COMMAND iCommand, const char* data, size_t dataLength);
 
+int iCommSendTREO(TREOData data);
+int iCommSendTRCM(TRCMData data);
+int iCommSendEXAC(EXACData data);
+int iCommSendACCM(ACCMData data);
+
+// File system functions
+int UtilVerifyTestDirectory();
+void UtilGetTestDirectoryPath(char* path, size_t pathLen);
+void UtilGetJournalDirectoryPath(char* path, size_t pathLen);
+void UtilGetConfDirectoryPath(char* path, size_t pathLen);
+void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
+void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
+
+//
 char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
 int UtilVincentyDirect(double refLat, double refLon, double a1, double distance, double *resLat, double *resLon, double *a2);
@@ -775,7 +858,7 @@ int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
-int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug);
+//int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug); // TODO DELETE
 
 void llhToXyz(double lat, double lon, double height, double *x, double *y, double *z);
 void enuToLlh(const double *iLlh, const double *xyz, double *llh);
@@ -809,8 +892,16 @@ I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPS
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
+I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 
 I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataType *monitorData, U8 debug);
+I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
+I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData);
+I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);
+I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *accmData);
+
+double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
+
 
 typedef struct {
   uint64_t timestamp;

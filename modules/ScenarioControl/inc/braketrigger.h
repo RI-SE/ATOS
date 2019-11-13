@@ -12,22 +12,27 @@ public:
     BrakeTrigger(TriggerID_t triggerID);
     TriggerReturnCode_t parseParameters() override;
 
-private:
-    std::vector<TriggerParameter_t> parameters;
+    using BooleanTrigger::update;
+    TriggerReturnCode_t update(double newValue, struct timeval measurementTime) override;
+    TriggerReturnCode_t update(float newValue, struct timeval measurementTime) override { return update(static_cast<double>(newValue),measurementTime); }
 
-    std::set<Trigger::TriggerParameter_t> getAcceptedParameters() override
+    void setBrakeRetardationThreshold(double threshold_m_s2);
+private:
+
+    double brakeRetardationThreshold_m_s2;
+    const std::set<TriggerParameter_t> getAcceptedParameters() const override
     {
-        return {
-            Trigger::TRIGGER_PARAMETER_FALSE,
-            Trigger::TRIGGER_PARAMETER_TRUE,
-            Trigger::TRIGGER_PARAMETER_RELEASED,
-            Trigger::TRIGGER_PARAMETER_PRESSED,
-            Trigger::TRIGGER_PARAMETER_LOW,
-            Trigger::TRIGGER_PARAMETER_HIGH,
-            Trigger::TRIGGER_PARAMETER_RISING_EDGE,
-            Trigger::TRIGGER_PARAMETER_FALLING_EDGE,
-            Trigger::TRIGGER_PARAMETER_ANY_EDGE
-        };
+        std::set<TriggerParameter_t> accParams;
+        accParams.insert(TRIGGER_PARAMETER_FALSE);
+        accParams.insert(TRIGGER_PARAMETER_TRUE);
+        accParams.insert(TRIGGER_PARAMETER_RELEASED);
+        accParams.insert(TRIGGER_PARAMETER_PRESSED);
+        accParams.insert(TRIGGER_PARAMETER_LOW);
+        accParams.insert(TRIGGER_PARAMETER_HIGH);
+        accParams.insert(TRIGGER_PARAMETER_RISING_EDGE);
+        accParams.insert(TRIGGER_PARAMETER_FALLING_EDGE);
+        accParams.insert(TRIGGER_PARAMETER_ANY_EDGE);
+        return accParams;
     }
 };
 #endif // BRAKETRIGGER_H
