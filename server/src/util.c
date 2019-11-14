@@ -50,33 +50,46 @@
 #define TRAJECTORY_DIR_NAME "traj"
 #define GEOFENCE_DIR_NAME "geofence"
 
-// Message priorities on message queue
-#define PRIO_COMM_STRT 100
-#define PRIO_COMM_ARMD 110
-#define PRIO_COMM_STOP 120
-#define PRIO_COMM_MONI 80
-#define PRIO_COMM_MONR 80
-#define PRIO_COMM_EXIT 140
-#define PRIO_COMM_REPLAY 160
-#define PRIO_COMM_CONTROL 180
-#define PRIO_COMM_ABORT 60
-#define PRIO_COMM_EXAC 70
-#define PRIO_COMM_ACCM 80
-#define PRIO_COMM_TREO 70
-#define PRIO_COMM_TRCM 80
-#define PRIO_COMM_INIT 110
-#define PRIO_COMM_CONNECT 110
-#define PRIO_COMM_OBC_STATE 160
-#define PRIO_COMM_DISCONNECT 110
-#define PRIO_COMM_LOG 160
-#define PRIO_COMM_VIOP 80
-#define PRIO_COMM_TRAJ 80
-#define PRIO_COMM_TRAJ_TOSUP 80
-#define PRIO_COMM_TRAJ_FROMSUP 80
-#define PRIO_COMM_ASP 110
-#define PRIO_COMM_OSEM 160
-#define PRIO_DATA_DICT 100
-#define PRIO_OBJECTS_CONNECTED 100
+/* Message priorities on message queue */
+// Abort message
+#define PRIO_COMM_ABORT 31
+// Object control state report
+#define PRIO_COMM_OBC_STATE 26
+// Internal configuration
+#define PRIO_DATA_DICT 24
+// Configuration affecting other configurations
+#define PRIO_COMM_OSEM 22
+// Configuration messages
+#define PRIO_COMM_ACCM 20
+#define PRIO_COMM_TRCM 20
+// Messages affecting state change messages
+#define PRIO_OBJECTS_CONNECTED 18
+// State change messages
+#define PRIO_COMM_STRT 16
+#define PRIO_COMM_ARMD 16
+#define PRIO_COMM_STOP 16
+#define PRIO_COMM_REPLAY 16
+#define PRIO_COMM_CONTROL 16
+#define PRIO_COMM_INIT 16
+#define PRIO_COMM_CONNECT 16
+#define PRIO_COMM_DISCONNECT 16
+// Single-shot messages relevant during test run
+#define PRIO_COMM_EXAC 14
+#define PRIO_COMM_TREO 14
+// Frequent messages relevant during test run
+#define PRIO_COMM_TRAJ_TOSUP 12
+#define PRIO_COMM_TRAJ_FROMSUP 12
+// Logging
+#define PRIO_COMM_LOG 10
+// Unused messages TODO: double check the priority of unused messages
+#define PRIO_COMM_VIOP 5
+#define PRIO_COMM_TRAJ 5
+#define PRIO_COMM_ASP 5
+// Server exit message
+#define PRIO_COMM_EXIT 3
+// Monitoring messages
+#define PRIO_COMM_MONI 0
+#define PRIO_COMM_MONR 0
 
 /*------------------------------------------------------------
 -- Public variables
