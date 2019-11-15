@@ -6,7 +6,6 @@ import time
 import subprocess
 import sys
 
-
 userControl = None
 server = None
 obj = None
@@ -27,7 +26,7 @@ if __name__ == "__main__":
 
     # Note: server does not close sockets properly so this fails frequently (cross fingers for now):
     #WaitForPortAvailable(54241,"TCP",timeout=0)
-    server = Executable("../build/TEServer",["-m","0"])
+    server = Executable("../build/Maestro",["-m","0"])
     time.sleep(0.05)
     checkProgramStatus("=== Starting the server caused a problem")
     

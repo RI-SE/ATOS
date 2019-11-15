@@ -4,9 +4,10 @@ import time
 import subprocess
 import sys
 
+
 if __name__ == "__main__":
 
-    S = Executable("../build/TEServer",["-m","0"])
+    S = Executable("../build/Maestro",["-m","0"])
     time.sleep(0.05)
     M = MSCP("127.0.0.1")
 
