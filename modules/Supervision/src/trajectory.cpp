@@ -129,5 +129,6 @@ CartesianPosition Trajectory::TrajectoryPoint::getCartesianPosition() {
         LogMessage(LOG_LEVEL_WARNING, "Casting trajectory point to cartesian position: optional z value assumed to be 0");
         retval.zCoord_m = 0.0;
     }
+    retval.heading_deg = this->getHeading() * 180.0 / M_PI;
     return retval;
 }

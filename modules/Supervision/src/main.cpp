@@ -505,9 +505,12 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata,
             if (UtilIsPositionNearTarget(objectPosition, trajectoryPoint, ARM_MAX_DISTANCE_TO_START_M)
                     && UtilIsAngleNearTarget(objectPosition, trajectoryPoint, ARM_MAX_ANGLE_TO_START_DEG)) {
                 if (element.second == false) {
-                    LogMessage(LOG_LEVEL_INFO, "Object with IP %s detected within %.2f m and %.2f degrees of the first point in trajectory %s",
-                               inet_ntop(AF_INET, &MONRdata.ClientIP, ipString, sizeof (ipString)), ARM_MAX_DISTANCE_TO_START_M,
-                               ARM_MAX_ANGLE_TO_START_DEG, element.first.name.c_str());
+                    LogMessage(LOG_LEVEL_INFO, "Object with IP %s and position (%.2f, %.2f, %.2f) detected within %.2f m and %.2f degrees of the first point (%.2f, %.2f, %.2f) in trajectory %s",
+                               inet_ntop(AF_INET, &MONRdata.ClientIP, ipString, sizeof (ipString)),
+                               objectPosition.xCoord_m, objectPosition.yCoord_m, objectPosition.zCoord_m,
+                               ARM_MAX_DISTANCE_TO_START_M, ARM_MAX_ANGLE_TO_START_DEG,
+                               trajectoryPoint.xCoord_m, trajectoryPoint.yCoord_m, trajectoryPoint.zCoord_m,
+                               element.first.name.c_str());
                 }
                 element.second = true;
                 // Object was near starting position, now check if all objects have passed
@@ -520,15 +523,17 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata,
                 }
             }
             else {
-                if (UtilIsPositionNearTarget(objectPosition, trajectoryPoint, ARM_MAX_DISTANCE_TO_START_M)) {
-                    LogMessage(LOG_LEVEL_INFO, "Object with IP %s farther than %.2f m from first point in trajectory %s",
+                if (!UtilIsPositionNearTarget(objectPosition, trajectoryPoint, ARM_MAX_DISTANCE_TO_START_M)) {
+                    LogMessage(LOG_LEVEL_INFO, "Object with IP %s and position (%.2f, %.2f, %.2f) farther than %.2f m from first point (%.2f, %.2f, %.2f) in trajectory %s",
                                 inet_ntop(AF_INET, &MONRdata.ClientIP, ipString, sizeof (ipString)),
-                               ARM_MAX_DISTANCE_TO_START_M, element.first.name.c_str());
+                                objectPosition.xCoord_m, objectPosition.yCoord_m, objectPosition.zCoord_m,
+                                ARM_MAX_DISTANCE_TO_START_M, trajectoryPoint.xCoord_m, trajectoryPoint.yCoord_m, trajectoryPoint.zCoord_m,
+                                element.first.points.front().getZCoord(), element.first.name.c_str());
                 }
                 else {
-                    LogMessage(LOG_LEVEL_INFO, "Object with IP %s not facing direction specified by first point in trajectory %s (tolerance: %.2f degrees)",
-                                inet_ntop(AF_INET, &MONRdata.ClientIP, ipString, sizeof (ipString)),
-                                element.first.name.c_str(),ARM_MAX_ANGLE_TO_START_DEG);
+                    LogMessage(LOG_LEVEL_INFO, "Object with IP %s (heading: %.2f degrees) not facing direction specified by first point (heading: %.2f degrees) in trajectory %s (tolerance: %.2f degrees)",
+                                inet_ntop(AF_INET, &MONRdata.ClientIP, ipString, sizeof (ipString)), objectPosition.heading_deg,
+                               trajectoryPoint.heading_deg, element.first.name.c_str(), ARM_MAX_ANGLE_TO_START_DEG);
                 }
                 element.second = false;
                 return SINGLE_OBJECT_NOT_NEAR_START;

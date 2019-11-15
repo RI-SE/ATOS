@@ -783,10 +783,16 @@ uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition t
  */
 uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_deg) {
 
-	const double oneRotation = 360;
+    const double oneRotation = 360.0;
+    double posHeading = position.heading_deg, tarHeading = target.heading_deg;
+    while (posHeading < 0) {
+        posHeading += oneRotation;
+    }
+    while (tarHeading < 0) {
+        tarHeading += oneRotation;
+    }
 
-	return fabs(fmod(position.heading_deg, oneRotation) - fmod(target.heading_deg, oneRotation))
-		<= tolerance_deg;
+    return fabs(posHeading - tarHeading) <= tolerance_deg;
 }
 
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition * OP) {
