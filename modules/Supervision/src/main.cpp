@@ -130,8 +130,7 @@ int main()
 
                 switch (updateNearStartingPositionStatus(MONRMessage, armVerified)) {
                 case SINGLE_OBJECT_NOT_NEAR_START: // Object not near start: disarm
-                    LogMessage(LOG_LEVEL_INFO, "Arm not approved: object with IP address %s is not in position",
-                               inet_ntop(AF_INET, &MONRMessage.ClientIP, ipString, sizeof (ipString)));
+                    LogMessage(LOG_LEVEL_INFO, "Arm not approved: sending disarm");
                     iCommSend(COMM_DISARM, nullptr, 0);
                     state.set(SupervisionState::READY);
                     break;
@@ -492,6 +491,8 @@ bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> 
  * \return A value according to ::PositionStatus
  */
 PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata, std::vector<std::pair<Trajectory&, bool>> armVerified) {
+
+    char ipString[INET_ADDRSTRLEN];
     for (std::pair<Trajectory&, bool> &element : armVerified) {
         if (element.first.ip == MONRdata.ClientIP) {
             if (element.first.points.empty()) {
@@ -503,6 +504,11 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata,
             CartesianPosition objectPosition = MONRToCartesianPosition(MONRdata);
             if (UtilIsPositionNearTarget(objectPosition, trajectoryPoint, ARM_MAX_DISTANCE_TO_START_M)
                     && UtilIsAngleNearTarget(objectPosition, trajectoryPoint, ARM_MAX_ANGLE_TO_START_DEG)) {
+                if (element.second == false) {
+                    LogMessage(LOG_LEVEL_INFO, "Object with IP %s detected within %.2f m and %.2f degrees of the first point in trajectory %s",
+                               inet_ntop(AF_INET, &MONRdata.ClientIP, ipString, sizeof (ipString)), ARM_MAX_DISTANCE_TO_START_M,
+                               ARM_MAX_ANGLE_TO_START_DEG, element.first.name.c_str());
+                }
                 element.second = true;
                 // Object was near starting position, now check if all objects have passed
                 if (std::any_of(armVerified.begin(), armVerified.end(),
@@ -514,6 +520,16 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata,
                 }
             }
             else {
+                if (UtilIsPositionNearTarget(objectPosition, trajectoryPoint, ARM_MAX_DISTANCE_TO_START_M)) {
+                    LogMessage(LOG_LEVEL_INFO, "Object with IP %s farther than %.2f m from first point in trajectory %s",
+                                inet_ntop(AF_INET, &MONRdata.ClientIP, ipString, sizeof (ipString)),
+                               ARM_MAX_DISTANCE_TO_START_M, element.first.name.c_str());
+                }
+                else {
+                    LogMessage(LOG_LEVEL_INFO, "Object with IP %s not facing direction specified by first point in trajectory %s (tolerance: %.2f degrees)",
+                                inet_ntop(AF_INET, &MONRdata.ClientIP, ipString, sizeof (ipString)),
+                                element.first.name.c_str(),ARM_MAX_ANGLE_TO_START_DEG);
+                }
                 element.second = false;
                 return SINGLE_OBJECT_NOT_NEAR_START;
             }
