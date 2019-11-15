@@ -66,7 +66,8 @@
 #define PRIO_OBJECTS_CONNECTED 18
 // State change messages
 #define PRIO_COMM_STRT 16
-#define PRIO_COMM_ARMD 16
+#define PRIO_COMM_ARM 16
+#define PRIO_COMM_DISARM 16
 #define PRIO_COMM_STOP 16
 #define PRIO_COMM_REPLAY 16
 #define PRIO_COMM_CONTROL 16
