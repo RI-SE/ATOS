@@ -41,7 +41,13 @@ add_library(util
 add_executable(Supervision
     src/main.cpp
     src/geofence.cpp
-    inc/geofence.h)
+    inc/geofence.h
+    src/trajectory.cpp
+    inc/trajectory.h
+    inc/regexpatterns.h
+    src/supervisionstate.cpp
+    inc/supervisionstate.h
+)
 
 install(TARGETS Supervision DESTINATION bin)
 
