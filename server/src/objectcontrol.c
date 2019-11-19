@@ -1694,12 +1694,12 @@ int ObjectControlBuildSTRTMessage(C8 * MessageBuffer, STRTType * STRTData, TimeT
 	STRTData->Header.MessageIdU16 = COMMAND_STRT_CODE;
 	STRTData->Header.MessageLengthU32 = sizeof (STRTType) - sizeof (HeaderType);
 	STRTData->StartTimeValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
-	STRTData->StartTimeContentLengthU16 = 4;
+    STRTData->StartTimeContentLengthU16 = sizeof (STRTData->StartTimeU32);
 	STRTData->StartTimeU32 =
 		((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime) +
 		  ScenarioStartTime) << 2) + GPSTime->MicroSecondU16;
 	STRTData->GPSWeekValueIdU16 = VALUE_ID_GPS_WEEK;
-	STRTData->GPSWeekContentLengthU16 = 2;
+    STRTData->GPSWeekContentLengthU16 = sizeof (STRTData->GPSWeekU16);
 	STRTData->GPSWeekU16 = GPSTime->GPSWeekU16;
 	// STRTData->DelayStartValueIdU16 = VALUE_ID_RELATIVE_TIME;
 	// STRTData->DelayStartContentLengthU16 = 4;
@@ -1754,7 +1754,7 @@ I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 Co
 	OSTMData->Header.MessageIdU16 = COMMAND_OSTM_CODE;
 	OSTMData->Header.MessageLengthU32 = sizeof (OSTMType) - sizeof (HeaderType);
 	OSTMData->StateValueIdU16 = VALUE_ID_STATE_CHANGE_REQUEST;
-	OSTMData->StateContentLengthU16 = 1;
+    OSTMData->StateContentLengthU16 = sizeof (OSTMData->StateU8);
 	OSTMData->StateU8 = (U8) CommandOption;
 
 	p = (C8 *) OSTMData;
@@ -1801,7 +1801,8 @@ I32 ObjectControlBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeT
 	HEABData->Header.MessageIdU16 = COMMAND_HEAB_CODE;
 	HEABData->Header.MessageLengthU32 = sizeof (HEABType) - sizeof (HeaderType);
 	HEABData->HeabStructValueIdU16 = VALUE_ID_HEAB_STRUCT;
-	HEABData->HeabStructContentLengthU16 = sizeof (HEABType) - sizeof (HeaderType) - 4;
+    HEABData->HeabStructContentLengthU16 = sizeof (HEABType) - sizeof (HeaderType)
+            - sizeof (HEABData->HeabStructValueIdU16) - sizeof (HEABData->HeabStructContentLengthU16);
 	HEABData->GPSQmsOfWeekU32 =
 		((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime)) << 2) +
 		GPSTime->MicroSecondU16;
