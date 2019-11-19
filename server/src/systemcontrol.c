@@ -1792,7 +1792,7 @@ I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 De
 	UtilSearchTextFile(confPathDir, TextBuffer, "", ReturnValue);
 
 	if (Debug) {
-		LogMessage(LOG_LEVEL_DEBUG, "%s = %s\n", ParameterName, ReturnValue);
+        LogPrint("%s = %s\n", ParameterName, ReturnValue);
 	}
 
 	return strlen(ReturnValue);
@@ -1883,7 +1883,7 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 
 
 	if (Debug)
-		LogMessage(LOG_LEVEL_DEBUG, "%d %s", *ReturnValue, CompletePath);
+        LogPrint("%d %s", *ReturnValue, CompletePath);
 
 
 	return 0;
@@ -1972,7 +1972,7 @@ I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 	}
 
 	if (Debug)
-		LogMessage(LOG_LEVEL_DEBUG, "%d %s", *(ReturnValue), CompletePath);
+        LogPrint("%d %s", *(ReturnValue), CompletePath);
 
 	if (*ReturnValue == SUCCEDED_CREATE_FOLDER)
 		LogMessage(LOG_LEVEL_INFO, "Directory created: %s", CompletePath);
@@ -2150,11 +2150,10 @@ I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * 
 	RestCount = (U32) (st.st_size) % PacketSizeU16;
 
 	if (Debug) {
-		LogMessage(LOG_LEVEL_DEBUG, "Send file content:");
-		LogMessage(LOG_LEVEL_DEBUG, "%s", Path);
-		//printf("%s\n", FileSize);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", PacketSize);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", CompletePath);
+        LogPrint("Send file content:");
+        LogPrint("%s", Path);
+        LogPrint("%s", PacketSize);
+        LogPrint("%s", CompletePath);
 	}
 
 	fd = fopen(CompletePath, "r");
