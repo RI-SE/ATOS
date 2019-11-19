@@ -293,14 +293,12 @@ void systemcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     sprintf(UserControlIPC8, "%s", inet_ntoa(ip_addr));
                     printf("[SystemControl] UserControl IP address is %s\n", inet_ntoa(ip_addr));
                     SystemControlCreateProcessChannel(UserControlIPC8, SYSTEM_CONTROL_PROCESS_PORT, &ProcessChannelSocket, &ProcessChannelAddr);
-
                 }
                 if(USE_LOCAL_USER_CONTROL == 1)
                 {
                     ClientResult = SystemControlConnectServer(&ClientSocket, LOCAL_USER_CONTROL_IP, LOCAL_USER_CONTROL_PORT);
                     SystemControlCreateProcessChannel(LOCAL_USER_CONTROL_IP, SYSTEM_CONTROL_PROCESS_PORT, &ProcessChannelSocket, &ProcessChannelAddr);
                 }
-
                 server_state = SERVER_STATE_IDLE;
             }
 

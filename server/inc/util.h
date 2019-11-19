@@ -109,7 +109,7 @@
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "10.168.247.201"
+#define LOCAL_USER_CONTROL_IP "192.168.0.15"
 #define ISO_UPDATED
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
@@ -585,24 +585,24 @@ typedef struct
 typedef struct
 {
 
-  U16 TimeControlExecTimeU16;
-  U16 SystemControlExecTimeU16;
-  U16 ObjectControlExecTimeU16;
-  U16 SimulatorControlExecTimeU16;
-  U8 ExitU8;
-  U32 ScenarioStartTimeU32;
-  U8 VOILData[400];
-  //U32 ChunkSize;
-  //U8 Chunk[6200];
-  U8 ASPDebugDataSetU8;
-  U8 ASPDebugDataU8[sizeof(ASPType)];
- // U32 SupChunkSize;
- // U8 SupChunk[6200];
-
-  U8 MONRSizeU8;
-  U8 MONRData[100];
-  U8 HEABSizeU8;
-  U8 HEABData[100];
+  volatile U16 TimeControlExecTimeU16;
+  volatile U16 SystemControlExecTimeU16;
+  volatile U16 ObjectControlExecTimeU16;
+  volatile U16 SimulatorControlExecTimeU16;
+  volatile U8 ExitU8;
+  volatile U32 ScenarioStartTimeU32;
+  volatile U8 VOILData[400];
+  volatile U32 ChunkSize;
+  volatile U8 Chunk[6200];
+  volatile U8 ASPDebugDataSetU8;
+  volatile U8 ASPDebugDataU8[sizeof(ASPType)];
+  volatile U32 SupChunkSize;
+  volatile U8 SupChunkReadyU8;
+  volatile U8 SupChunk[6200];
+  volatile U8 MONRSizeU8;
+  volatile U8 MONRData[100];
+  volatile U8 HEABSizeU8;
+  volatile U8 HEABData[100];
   //U8 OSTMSizeU8;
   //U8 OSTMData[100];
   //U8 STRTSizeU8;

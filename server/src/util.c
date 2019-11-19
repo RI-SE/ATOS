@@ -2664,7 +2664,7 @@ I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *H
         printf("TrajectoryID = %d\n", TRAJInfoData->TrajectoryIDU16);
         printf("TrajectoryName = %s\n", TRAJInfoData->TrajectoryNameC8);
         printf("TrajectoryVersion = %d\n", TRAJInfoData->TrajectoryVersionU16);
-        printf("IpAddress = %d\n", TRAJInfoData->IpAddressU32);
+        printf("IpAddress = %x\n", TRAJInfoData->IpAddressU32);
         printf("\n----MESSAGE----\n");
     }
 
