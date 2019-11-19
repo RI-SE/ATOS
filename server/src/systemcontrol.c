@@ -600,7 +600,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 											 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
 											 SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetTestOrigin:",
 											 ControlResponseBuffer, strlen(ControlResponseBuffer),
-                                             &ClientSocket, 0);
+											 &ClientSocket, 0);
 			break;
 		case GetServerParameter_1:
 			if (CurrentInputArgCount == CommandArgCount) {
@@ -612,7 +612,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
 												 SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetServerParameter:",
 												 ControlResponseBuffer, strlen(ControlResponseBuffer),
-                                                 &ClientSocket, 0);
+												 &ClientSocket, 0);
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetServerParameter(Name)!");
@@ -1792,7 +1792,7 @@ I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 De
 	UtilSearchTextFile(confPathDir, TextBuffer, "", ReturnValue);
 
 	if (Debug) {
-        LogPrint("%s = %s\n", ParameterName, ReturnValue);
+		LogPrint("%s = %s\n", ParameterName, ReturnValue);
 	}
 
 	return strlen(ReturnValue);
@@ -1883,7 +1883,7 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 
 
 	if (Debug)
-        LogPrint("%d %s", *ReturnValue, CompletePath);
+		LogPrint("%d %s", *ReturnValue, CompletePath);
 
 
 	return 0;
@@ -1972,7 +1972,7 @@ I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 	}
 
 	if (Debug)
-        LogPrint("%d %s", *(ReturnValue), CompletePath);
+		LogPrint("%d %s", *(ReturnValue), CompletePath);
 
 	if (*ReturnValue == SUCCEDED_CREATE_FOLDER)
 		LogMessage(LOG_LEVEL_INFO, "Directory created: %s", CompletePath);
@@ -2150,10 +2150,10 @@ I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * 
 	RestCount = (U32) (st.st_size) % PacketSizeU16;
 
 	if (Debug) {
-        LogPrint("Send file content:");
-        LogPrint("%s", Path);
-        LogPrint("%s", PacketSize);
-        LogPrint("%s", CompletePath);
+		LogPrint("Send file content:");
+		LogPrint("%s", Path);
+		LogPrint("%s", PacketSize);
+		LogPrint("%s", CompletePath);
 	}
 
 	fd = fopen(CompletePath, "r");
