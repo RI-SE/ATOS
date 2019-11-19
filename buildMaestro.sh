@@ -29,6 +29,11 @@ cd $MAESTRODIR/modules/ScenarioControl/build
 echo "Building ScenarioControl"
 cmake .. && make || exit 1
 
+# Build Supervision module
+mkdir $MAESTRODIR/modules/Supervision/build
+cd $MAESTRODIR/modules/Supervision/build
+echo "Building Supervision"
+cmake .. && make || exit 1
 
 # Set up running directory in home
 cd

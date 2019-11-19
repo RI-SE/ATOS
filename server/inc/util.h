@@ -20,6 +20,7 @@ extern "C"{
   ------------------------------------------------------------*/
 #include <inttypes.h>
 #include <math.h>
+#include <linux/limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -46,7 +47,7 @@ extern "C"{
 #define CONTROL_CHANNEL_PORT 53241
 
 #define MAX_OBJECTS 10
-#define MAX_FILE_PATH 256
+#define MAX_FILE_PATH PATH_MAX
 
 #define MAX_UTIL_VARIBLE_SIZE 512
 
@@ -234,7 +235,7 @@ extern "C"{
 enum COMMAND
 {
 COMM_STRT = 1,
-COMM_ARMD = 2,
+COMM_ARM = 2,
 COMM_STOP = 3,
 COMM_MONI = 4,
 COMM_EXIT = 5,
@@ -257,6 +258,7 @@ COMM_EXAC = 22,
 COMM_TREO = 23,
 COMM_ACCM = 24,
 COMM_TRCM = 25,
+COMM_DISARM = 26,
 COMM_MONR = 239,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_INV = 255
@@ -831,7 +833,9 @@ void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
 void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 
 //
-char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
+CartesianPosition MONRToCartesianPosition(MonitorDataType MONR);
+uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
+uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_deg);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
 int UtilVincentyDirect(double refLat, double refLon, double a1, double distance, double *resLat, double *resLon, double *a2);
 double UtilDegToRad(double Deg);

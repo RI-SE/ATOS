@@ -50,33 +50,47 @@
 #define TRAJECTORY_DIR_NAME "traj"
 #define GEOFENCE_DIR_NAME "geofence"
 
-// Message priorities on message queue
-#define PRIO_COMM_STRT 100
-#define PRIO_COMM_ARMD 110
-#define PRIO_COMM_STOP 120
-#define PRIO_COMM_MONI 80
-#define PRIO_COMM_MONR 80
-#define PRIO_COMM_EXIT 140
-#define PRIO_COMM_REPLAY 160
-#define PRIO_COMM_CONTROL 180
-#define PRIO_COMM_ABORT 60
-#define PRIO_COMM_EXAC 70
-#define PRIO_COMM_ACCM 80
-#define PRIO_COMM_TREO 70
-#define PRIO_COMM_TRCM 80
-#define PRIO_COMM_INIT 110
-#define PRIO_COMM_CONNECT 110
-#define PRIO_COMM_OBC_STATE 160
-#define PRIO_COMM_DISCONNECT 110
-#define PRIO_COMM_LOG 160
-#define PRIO_COMM_VIOP 80
-#define PRIO_COMM_TRAJ 80
-#define PRIO_COMM_TRAJ_TOSUP 80
-#define PRIO_COMM_TRAJ_FROMSUP 80
-#define PRIO_COMM_ASP 110
-#define PRIO_COMM_OSEM 160
-#define PRIO_DATA_DICT 100
-#define PRIO_OBJECTS_CONNECTED 100
+/* Message priorities on message queue */
+// Abort message
+#define PRIO_COMM_ABORT 31
+// Object control state report
+#define PRIO_COMM_OBC_STATE 26
+// Internal configuration
+#define PRIO_DATA_DICT 24
+// Configuration affecting other configurations
+#define PRIO_COMM_OSEM 22
+// Configuration messages
+#define PRIO_COMM_ACCM 20
+#define PRIO_COMM_TRCM 20
+// Messages affecting state change messages
+#define PRIO_OBJECTS_CONNECTED 18
+// State change messages
+#define PRIO_COMM_STRT 16
+#define PRIO_COMM_ARM 16
+#define PRIO_COMM_DISARM 16
+#define PRIO_COMM_STOP 16
+#define PRIO_COMM_REPLAY 16
+#define PRIO_COMM_CONTROL 16
+#define PRIO_COMM_INIT 16
+#define PRIO_COMM_CONNECT 16
+#define PRIO_COMM_DISCONNECT 16
+// Single-shot messages relevant during test run
+#define PRIO_COMM_EXAC 14
+#define PRIO_COMM_TREO 14
+// Frequent messages relevant during test run
+#define PRIO_COMM_TRAJ_TOSUP 12
+#define PRIO_COMM_TRAJ_FROMSUP 12
+// Logging
+#define PRIO_COMM_LOG 10
+// Unused messages TODO: double check the priority of unused messages
+#define PRIO_COMM_VIOP 5
+#define PRIO_COMM_TRAJ 5
+#define PRIO_COMM_ASP 5
+// Server exit message
+#define PRIO_COMM_EXIT 3
+// Monitoring messages
+#define PRIO_COMM_MONI 0
+#define PRIO_COMM_MONR 0
 
 /*------------------------------------------------------------
 -- Public variables
@@ -723,6 +737,27 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
 
 
 /*!
+ * \brief MONRToCartesianPosition Extracts a CartesianPosition from MONR
+ * \param MONR Struct containing MONR data
+ * \return CartesianPosition struct containing the point represented by MONR
+ */
+CartesianPosition MONRToCartesianPosition(MonitorDataType MONR) {
+	CartesianPosition retval;
+
+	retval.xCoord_m = MONR.MONR.XPositionI32 / 1000.0;
+	retval.yCoord_m = MONR.MONR.YPositionI32 / 1000.0;
+	retval.zCoord_m = MONR.MONR.ZPositionI32 / 1000.0;
+	if (MONR.MONR.HeadingU16 == 36001) {	// 36001: unavailable
+		LogMessage(LOG_LEVEL_DEBUG, "MONR heading unavailable, assuming 0");
+		retval.heading_deg = 0.0;
+	}
+	else {
+		retval.heading_deg = MONR.MONR.HeadingU16 / 100.0;
+	}
+	return retval;
+}
+
+/*!
  * \brief UtilIsPositionNearTarget Checks if position lies within or on a sphere with radius equal to tolerance_m
  * and centre at target.
  * \param position Position to verify
@@ -730,13 +765,35 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
  * \param tolerance_m Radius around target position defining "near"
  * \return true if position is within tolerance_m of target, false otherwise
  */
-char UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m) {
-	double distance = 0;
+uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m) {
+	double distance = 0.0;
 
 	distance = sqrt(pow(position.xCoord_m - target.xCoord_m, 2)
 					+ pow(position.yCoord_m - target.yCoord_m, 2)
 					+ pow(position.zCoord_m - target.zCoord_m, 2));
 	return distance <= tolerance_m;
+}
+
+/*!
+ * \brief UtilIsAngleNearTarget Checks if angle is within tolerence_deg of target angle
+ * \param position Position with angle to verify
+ * \param target Target position with angle
+ * \param tolerance_deg Angle tolerance defining "near"
+ * \return true if position is within tolerance_deg of target, false otherwise
+ */
+uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_deg) {
+
+	const double oneRotation = 360.0;
+	double posHeading = position.heading_deg, tarHeading = target.heading_deg;
+
+	while (posHeading < 0) {
+		posHeading += oneRotation;
+	}
+	while (tarHeading < 0) {
+		tarHeading += oneRotation;
+	}
+
+	return fabs(posHeading - tarHeading) <= tolerance_deg;
 }
 
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition * OP) {
@@ -1898,8 +1955,11 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_STRT:
 		uiMessagePrio = PRIO_COMM_STRT;
 		break;
-	case COMM_ARMD:
-		uiMessagePrio = PRIO_COMM_ARMD;
+	case COMM_ARM:
+		uiMessagePrio = PRIO_COMM_ARM;
+		break;
+	case COMM_DISARM:
+		uiMessagePrio = PRIO_COMM_DISARM;
 		break;
 	case COMM_STOP:
 		uiMessagePrio = PRIO_COMM_STOP;
