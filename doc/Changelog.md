@@ -2,6 +2,7 @@ Last edited 15/10- 2019
 
 Contents
 ==============================
+[v.0.4.0 November Server-Snapshot](#november-release-v040---serversnapshot)
 
 [v.0.3.0 Trigger and Action](#maestro-v030-trigger-and-action)
 
@@ -9,8 +10,24 @@ Contents
 
 [v.0.1.0 Drottning Kristina](drottning-kristina-v010)
 
+July release v0.2.0 - ServerSnapshot  
+==============================
+
+This version is compatible with Maestro-Tools v0.4.0 and Util v0.4.0
+
+New Features
+-------
+
+1. Supervisor now is its own c++ module.
+
+Enhancements 
+-------
+The location for all files necessary to run the server has can now be defined. Defaults to ~/.maestro
 
 
+Fixed bugs
+-------
+MQ priorities was wrong, Highest priority was lowest. This has been remedied.
 
 Maestro v0.3.0 Trigger and Action
 ==============================
