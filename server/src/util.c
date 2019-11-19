@@ -3418,11 +3418,13 @@ I32 UtilPopulateMonitorDataStruct(C8 * rawMONR, size_t rawMONRsize, MonitorDataT
 	C8 *rdPtr = rawMONR, *monrStruct;	// Pointer to keep track of where in rawMONR we are currently reading
 	U16 contentLength = 0;
 	in_addr_t IPData = 0;
-	const size_t monrPacketSize = sizeof (monitorData->MONR) - sizeof (monitorData->MONR.Header) - sizeof (monitorData->MONR.CRC) - 4;	// 4 is the size of ValueId and ContentLength
+    const size_t monrPacketSize = sizeof (monitorData->MONR) - sizeof (monitorData->MONR.Header)
+            - sizeof (monitorData->MONR.CRC) - sizeof (monitorData->MONR.MonrStructValueIdU16)
+            - sizeof (monitorData->MONR.MonrStructContentLengthU16);
 
-	if (rawMONRsize < sizeof (MonitorDataType)) {
+    if (rawMONRsize < sizeof (MONRType)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw MONR array too small to hold all necessary MONR data, %d < %d.",
-				   rawMONRsize, sizeof (MonitorDataType));
+                   rawMONRsize, sizeof (MONRType));
 		return -1;
 	}
 
