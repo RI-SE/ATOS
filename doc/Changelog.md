@@ -22,8 +22,7 @@ New Features
 
 Enhancements 
 -------
-The location for all files necessary to run the server has can now be defined. Defaults to ~/.maestro
-
+N/A
 
 Fixed bugs
 -------
