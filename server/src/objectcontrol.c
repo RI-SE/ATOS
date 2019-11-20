@@ -199,11 +199,10 @@ int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, uns
 I32 ObjectControlBuildSYPMMessage(C8 * MessageBuffer, SYPMType * SYPMData, U32 SyncPoint, U32 StopTime,
 								  U8 debug);
 I32 ObjectControlBuildMTSPMessage(C8 * MessageBuffer, MTSPType * MTSPData, U32 SyncTimestamp, U8 debug);
-I32 ObjectControlBuildDOTMMessageHeader(C8 * MessageBuffer, I32 * RowCount, HeaderType * HeaderData,
+I32 ObjectControlBuildTRAJMessageHeader(C8 * MessageBuffer, I32 * RowCount, HeaderType * HeaderData,
 										TRAJInfoType * TRAJInfoData, C8 * TrajFileHeader, U8 debug);
-//I32 ObjectControlBuildDOTMMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, U8 debug);
-I32 ObjectControlBuildDOTMMessage(C8 * MessageBuffer, FILE * fd, I32 RowCount, DOTMType * DOTMData, U8 debug);
-I32 ObjectControlSendDOTMMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
+I32 ObjectControlBuildTRAJMessage(C8 * MessageBuffer, FILE * fd, I32 RowCount, DOTMType * DOTMData, U8 debug);
+I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
 								 DOTMType * DOTMData, U8 debug);
 int ObjectControlSendUDPData(int *sockfd, struct sockaddr_in *addr, char *SendData, int Length, char debug);
 I32 ObjectControlMONRToASCII(MONRType * MONRData, GeoPosition * OriginPosition, I32 Idn, C8 * Id,
@@ -940,7 +939,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								fclose(fd);
 
 								 /*DOTM*/
-									MessageLength = ObjectControlBuildDOTMMessageHeader(TrajBuffer,
+									MessageLength = ObjectControlBuildTRAJMessageHeader(TrajBuffer,
 																						&RowCount,
 																						&HeaderData,
 																						&TRAJInfoData,
@@ -954,7 +953,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												&socket_fds[iIndex], 0);
 
 								/*Send DOTM data */
-								ObjectControlSendDOTMMessage(object_traj_file[iIndex], &socket_fds[iIndex],
+								ObjectControlSendTRAJMessage(object_traj_file[iIndex], &socket_fds[iIndex],
 															 RowCount,
 															 (char *)&object_address_name[iIndex],
 															 object_tcp_port[iIndex], &DOTMData, 0);
@@ -1978,7 +1977,7 @@ I32 ObjectControlBuildMTSPMessage(C8 * MessageBuffer, MTSPType * MTSPData, U32 S
 }
 
 
-I32 ObjectControlBuildDOTMMessageHeader(C8 * MessageBuffer, I32 * RowCount, HeaderType * HeaderData,
+I32 ObjectControlBuildTRAJMessageHeader(C8 * MessageBuffer, I32 * RowCount, HeaderType * HeaderData,
 										TRAJInfoType * TRAJInfoData, C8 * TrajFileHeader, U8 debug) {
 	I32 MessageIndex = 0, i, j;
 	U16 Crc = 0;
@@ -2064,7 +2063,7 @@ I32 ObjectControlBuildDOTMMessageHeader(C8 * MessageBuffer, I32 * RowCount, Head
 
 
 
-I32 ObjectControlSendDOTMMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
+I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
 								 DOTMType * DOTMData, U8 debug) {
 	FILE *fd;
 
@@ -2083,7 +2082,7 @@ I32 ObjectControlSendDOTMMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 *
 
 	for (i = 0; i < Transmissions; i++) {
 		MessageLength =
-			ObjectControlBuildDOTMMessage(TrajBuffer, fd, COMMAND_DOTM_ROWS_IN_TRANSMISSION, DOTMData, debug);
+			ObjectControlBuildTRAJMessage(TrajBuffer, fd, COMMAND_DOTM_ROWS_IN_TRANSMISSION, DOTMData, debug);
 
 		if (i == Transmissions && Rest == 0) {
 			TrajBuffer[MessageLength] = (U8) (CrcU16);
@@ -2102,7 +2101,7 @@ I32 ObjectControlSendDOTMMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 *
 	}
 
 	if (Rest > 0) {
-		MessageLength = ObjectControlBuildDOTMMessage(TrajBuffer, fd, Rest, DOTMData, debug);
+		MessageLength = ObjectControlBuildTRAJMessage(TrajBuffer, fd, Rest, DOTMData, debug);
 		TrajBuffer[MessageLength] = (U8) (CrcU16);
 		TrajBuffer[MessageLength + 1] = (U8) (CrcU16 >> 8);
 		MessageLength = MessageLength + 2;
@@ -2119,7 +2118,7 @@ I32 ObjectControlSendDOTMMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 *
 	return 0;
 }
 
-I32 ObjectControlBuildDOTMMessage(C8 * MessageBuffer, FILE * fd, I32 RowCount, DOTMType * DOTMData, U8 debug) {
+I32 ObjectControlBuildTRAJMessage(C8 * MessageBuffer, FILE * fd, I32 RowCount, DOTMType * DOTMData, U8 debug) {
 	I32 MessageIndex = 0;
 	C8 RowBuffer[100];
 	C8 DataBuffer[20];
