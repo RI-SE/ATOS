@@ -73,8 +73,6 @@ typedef enum {
 //#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH    80
 #define TCP_RECV_BUFFER_SIZE 2048
 
-#define OSTM_OPT_SET_ARMED_STATE 2
-#define OSTM_OPT_SET_DISARMED_STATE 3
 #define SC_RECV_MESSAGE_BUFFER 1024
 
 #define SMALL_BUFFER_SIZE_1024 1024
@@ -564,69 +562,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		switch (SystemControlCommand) {
 			// can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
 		case Idle_0:
-			/*bzero(pcRecvBuffer,SC_RECV_MESSAGE_BUFFER);
-			   iCommRecv(&iCommand,pcRecvBuffer,SC_RECV_MESSAGE_BUFFER,NULL);
-
-			   if(iCommand == COMM_TOM)
-			   {
-			   bzero(ObjectIP, SMALL_BUFFER_SIZE_16);
-			   bzero(ObjectPort, SMALL_BUFFER_SIZE_6);
-			   bzero(TriggId, SMALL_BUFFER_SIZE_6);
-			   bzero(TriggAction, SMALL_BUFFER_SIZE_6);
-			   bzero(TriggDelay, SMALL_BUFFER_SIZE_20);
-
-			   StartPtr = pcRecvBuffer;
-			   StopPtr = (char *)strchr(StartPtr, ';');
-			   strncpy(ObjectIP, StartPtr, (uint64_t)StopPtr-(uint64_t)StartPtr);
-			   StartPtr = StopPtr + 1; StopPtr = (char *)strchr(StartPtr, ';');
-			   strncpy(ObjectPort, StartPtr, (uint64_t)StopPtr-(uint64_t)StartPtr);
-			   StartPtr = StopPtr + 1; StopPtr = (char *)strchr(StartPtr, ';');
-			   strncpy(TriggId, StartPtr, (uint64_t)StopPtr-(uint64_t)StartPtr);
-			   StartPtr = StopPtr + 1; StopPtr = (char *)strchr(StartPtr, ';');
-			   strncpy(TriggAction, StartPtr, (uint64_t)StopPtr-(uint64_t)StartPtr);
-			   StartPtr = StopPtr + 1; StopPtr = (char *)strchr(StartPtr, ';');
-			   strncpy(TriggDelay, StartPtr, (uint64_t)StopPtr-(uint64_t)StartPtr);
-			   CurrentCommandArgCounter = 1;
-			   strncpy(SystemControlArgument[CurrentCommandArgCounter], TriggDelay, strlen(TriggDelay));
-			   printf("[SystemControl] TOM recieved from %s, port=%s, TriggId=%s, TriggAction=%s, TriggDelay=%s\n", ObjectIP, ObjectPort, TriggId ,TriggAction, TriggDelay);
-			   fflush(stdout);
-
-			   if((uint8_t)atoi(TriggAction) == TAA_ACTION_EXT_START)
-			   {
-			   SystemControlCommand = start_ext_trigg_1;
-			   CommandArgCount = 1;
-			   }
-			   else if ((uint8_t)atoi(TriggAction) == TAA_ACTION_TEST_SIGNAL)
-			   {
-			   printf("[SystemControl] Trigg action TEST_SIGNAL not supported by server.\n");
-			   SystemControlCommand = Idle_0;
-			   CurrentCommandArgCounter = 0;
-			   CommandArgCount = 0;
-			   }
-			   else
-			   {
-			   printf("[SystemControl] Unknown trigg action %s.\n", TriggAction);
-			   SystemControlCommand = Idle_0;
-			   CurrentCommandArgCounter = 0;
-			   CommandArgCount = 0;
-			   }
-			   }
-			   else
-			   {
-			   SystemControlCommand = Idle_0;
-			   CurrentCommandArgCounter = 0;
-			   }
-
-			   if (iCommand == COMM_OBC_STATE)
-			   {
-			   OBCStateU8 = (U8)*pcRecvBuffer;
-			   }
-			   else if(iCommand == COMM_LOG)
-			   {
-			   SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
-			   }
-			 */
-
 			break;
 		case GetServerStatus_0:
 			LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, %d", SystemControlStatesArr[server_state],
@@ -905,11 +840,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case ArmScenario_0:
 			if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED) {
-				bzero(pcBuffer, IPC_BUFFER_SIZE);
 				server_state = SERVER_STATE_INWORK;
-				pcBuffer[0] = OSTM_OPT_SET_ARMED_STATE;
-				if (iCommSend(COMM_ARMD, pcBuffer, strlen(pcBuffer) + 1) < 0) {
-					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ARMD command");
+				if (iCommSend(COMM_ARM, NULL, 0) < 0) {
+					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ARM command");
 					server_state = SERVER_STATE_ERROR;
 				}
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -926,19 +859,16 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else if (server_state == SERVER_STATE_IDLE) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-												 "StartScenario:", ControlResponseBuffer, 0, &ClientSocket,
-												 0);
+												 "ArmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 				SystemControlSendLog("[SystemControl] ARM received, state errors!\n", &ClientSocket, 0);
 				SystemControlCommand = PreviousSystemControlCommand;
 			}
 			break;
 		case DisarmScenario_0:
 			if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED) {
-				bzero(pcBuffer, IPC_BUFFER_SIZE);
 				server_state = SERVER_STATE_IDLE;
-				pcBuffer[0] = OSTM_OPT_SET_DISARMED_STATE;
-				if (iCommSend(COMM_ARMD, pcBuffer, strlen(pcBuffer) + 1) < 0) {
-					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ARMD command");
+				if (iCommSend(COMM_DISARM, NULL, 0) < 0) {
+					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending DISARM command");
 					server_state = SERVER_STATE_ERROR;
 				}
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -947,14 +877,14 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlSendLog("[SystemControl] Sending DISARM.\n", &ClientSocket, 0);
 			}
 			else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_CONNECTED) {
-				SystemControlSendLog("[SystemControl] Simulate that all objects becomes disarmed.\n",
+				SystemControlSendLog("[SystemControl] Simulate that all objects become disarmed.\n",
 									 &ClientSocket, 0);
 				SystemControlCommand = Idle_0;
 				server_state = SERVER_STATE_IDLE;
 			}
 			else if (server_state == SERVER_STATE_IDLE) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-												 "StartScenario:", ControlResponseBuffer, 0, &ClientSocket,
+												 "DisarmScenario:", ControlResponseBuffer, 0, &ClientSocket,
 												 0);
 				SystemControlSendLog("[SystemControl] DISARM received, state errors!\n", &ClientSocket, 0);
 				SystemControlCommand = PreviousSystemControlCommand;
@@ -1016,30 +946,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else
 				LogMessage(LOG_LEVEL_WARNING, "START command parameter count error");
 			break;
-			/*
-			   case start_ext_trigg_1:
-			   if(CurrentCommandArgCounter == CommandArgCount)
-			   {
-			   bzero(pcBuffer, IPC_BUFFER_SIZE);
-			   uiTime = (uint64_t)atol(SystemControlArgument[CurrentCommandArgCounter]);
-			   if(uiTime == 0)
-			   {
-			   gettimeofday(&tvTime, NULL);
-			   uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-			   }
-
-			   if(TIME_COMPENSATE_LAGING_VM) uiTime = uiTime - TIME_COMPENSATE_LAGING_VM_VAL;
-
-			   sprintf (pcBuffer,"%" PRIu8 ";%" PRIu64 ";",0,uiTime);
-			   printf("[SystemControl] Sending START <%s> (externally trigged)\n", SystemControlArgument[CurrentCommandArgCounter]);
-			   fflush(stdout);
-
-			   (void)iCommSend(COMM_STRT,pcBuffer);
-			   server_state = SERVER_STATE_RUNNINGSERVER_STATE_RUNNING;
-			   SystemControlCommand = Idle_0;
-			   CurrentCommandArgCounter = 0;
-			   } else CurrentCommandArgCounter ++;
-			   break; */
 		case stop_0:
 			if (iCommSend(COMM_STOP, NULL, 0) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending STOP command");

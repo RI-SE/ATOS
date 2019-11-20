@@ -667,20 +667,33 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			LogMessage(LOG_LEVEL_INFO, "Received command %d", iCommand);
 
 
-			if (iCommand == COMM_ARMD && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED)) {
-				if (pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_ARMED_STATE) {
-					LOG_SEND(LogBuffer, "[ObjectControl] Sending ARM %d", pcRecvBuffer[0]);
-					vSetState(OBC_STATE_ARMED, GSD);
-				}
-				else if (pcRecvBuffer[0] == COMMAND_OSTM_OPT_SET_DISARMED_STATE) {
-					LOG_SEND(LogBuffer, "[ObjectControl] Sending DISARM: %d", pcRecvBuffer[0]);
-					vSetState(OBC_STATE_CONNECTED, GSD);
-				}
-				MessageLength = ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, pcRecvBuffer[0], 0);
+			if (iCommand == COMM_ARM && OBCState == OBC_STATE_CONNECTED) {
+
+				LogMessage(LOG_LEVEL_INFO, "Sending ARM");
+				LOG_SEND(LogBuffer, "[ObjectControl] Sending ARM");
+				vSetState(OBC_STATE_ARMED, GSD);
+				MessageLength =
+					ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, COMMAND_OSTM_OPT_SET_ARMED_STATE,
+												  0);
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					/*Send OSTM message */
-					UtilSendTCPData("[Object Control test]", MessageBuffer, MessageLength,
-									&socket_fds[iIndex], 1);
+					UtilSendTCPData("[Object Control]", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+				}
+
+				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
+			}
+			else if (iCommand == COMM_DISARM && OBCState == OBC_STATE_ARMED) {
+
+				LogMessage(LOG_LEVEL_INFO, "Sending DISARM");
+				LOG_SEND(LogBuffer, "[ObjectControl] Sending DISARM");
+				vSetState(OBC_STATE_CONNECTED, GSD);
+
+				MessageLength =
+					ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData,
+												  COMMAND_OSTM_OPT_SET_DISARMED_STATE, 0);
+				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+					/*Send OSTM message */
+					UtilSendTCPData("[Object Control]", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 				}
 
 				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
