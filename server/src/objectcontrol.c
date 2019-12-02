@@ -268,7 +268,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U8 pcRecvBuffer[RECV_MESSAGE_BUFFER];
 	C8 pcTempBuffer[512];
 	C8 MessageBuffer[BUFFER_SIZE_3100];
-	I32 iIndex = 0, i = 0;
+	I32 iIndex = 0, i = 0, jIndex = 0;;
 	struct timespec sleep_time, ref_time;
 
 	/*! Timers for reporting state over message bus */
@@ -423,13 +423,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s - returning to IDLE",
 							   object_address_name[iIndex]);
 
-					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-						vDisconnectObject(&socket_fds[iIndex]);
+					for (jIndex = 0; jIndex < nbr_objects; ++jIndex) {
+						if(iIndex != jIndex) vDisconnectObject(&socket_fds[jIndex]);
 					}
 
 					/* Close safety socket */
-					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-						vCloseSafetyChannel(&safety_socket_fd[iIndex]);
+					for (jIndex = 0; jIndex < nbr_objects; ++jIndex) {
+						if(iIndex != jIndex) vCloseSafetyChannel(&safety_socket_fd[jIndex]);
 					}
 					vSetState(OBC_STATE_IDLE, GSD);
 					break;
@@ -934,19 +934,19 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								//fclose(fd);
 
 								//fd = fopen(object_traj_file[iIndex], "r");
-								printf("Open file: %s\n", object_traj_file[iIndex]);
+								//printf("Open file: %s\n", object_traj_file[iIndex]);
 								UtilReadLineCntSpecChars(fd, FileHeaderBufferC8);
 								fclose(fd);
 
 								 /*DOTM*/
-									MessageLength = ObjectControlBuildTRAJMessageHeader(TrajBuffer,
+								MessageLength = ObjectControlBuildTRAJMessageHeader(TrajBuffer,
 																						&RowCount,
 																						&HeaderData,
 																						&TRAJInfoData,
 																						FileHeaderBufferC8,
 																						0);
 
-								printf("RowCount: %d\n", RowCount);
+								//printf("RowCount: %d\n", RowCount);
 
 								/*Send DOTM header */
 								UtilSendTCPData("Object Control", TrajBuffer, MessageLength,
