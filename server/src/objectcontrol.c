@@ -148,7 +148,6 @@ typedef int8_t (*StateTransition)(OBCState_t *currentState, OBCState_t requested
 
 C8 TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION*COMMAND_DOTM_ROW_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH];
 
-
 /*------------------------------------------------------------
 -- Function declarations.
 ------------------------------------------------------------*/
@@ -341,10 +340,12 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
     U32 SupervisorIpU32 = 0;
 
     (void)iCommInit(IPC_RECV_SEND,MQ_OC,1);
+    
 
 
     while(!iExit)
     {
+
         if(OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED)
         {
             /*HEAB*/
@@ -368,21 +369,22 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
 
             // Check if any object has disconnected - if so, disconnect all objects and return to idle
             DisconnectU8 = 0;
+            U8 jIndex = 0;
             for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
             {
                 DisconnectU8 |= vCheckRemoteDisconnected(&socket_fd[iIndex]);
                 if (DisconnectU8){
                     LOG_SEND(LogBuffer, "[ObjectControl] Lost connection to IP %s - returning to IDLE.",object_address_name[iIndex]);
-
-                    for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+                    
+                    for (jIndex = 0; jIndex < nbr_objects; ++jIndex)
                     {
-                        vDisconnectObject(&socket_fd[iIndex]);
+                        if(jIndex != iIndex) vDisconnectObject(&socket_fd[jIndex]);
                     }
 
                     // Close safety socket
-                    for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+                    for (jIndex = 0; jIndex < nbr_objects; ++jIndex)
                     {
-                        vCloseSafetyChannel(&safety_socket_fd[iIndex]);
+                        if(jIndex != iIndex) vCloseSafetyChannel(&safety_socket_fd[iIndex]);
                     }
                     vSetState(&OBCState, OBC_STATE_IDLE);
                     break;
@@ -2882,9 +2884,8 @@ int8_t vSetState(OBCState_t *currentState, OBCState_t requestedState)
 {
     StateTransition transitionFunction;
     int8_t retval;
-
     // Always allow transitions to these two states
-    if (requestedState == OBC_STATE_ERROR || requestedState == OBC_STATE_UNDEFINED)
+    if (requestedState == OBC_STATE_ERROR || requestedState == OBC_STATE_UNDEFINED || OBC_STATE_CONNECTED)
     {
         *currentState = requestedState;
         retval = 0;
