@@ -726,14 +726,13 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
             }
             else if((iCommand == COMM_TRAJ) && (OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING) )
             {
-                printf("[ObjectControl] COMM_TRAJ received.\n");
                 DTMLengthU32 = UtilHexTextToBinary(strlen(pcRecvBuffer), pcRecvBuffer, TrajBuffer, 0);
                 DTMIpU32 = (C8)TrajBuffer[0];
                 DTMIpU32 = (C8)TrajBuffer[1] | (DTMIpU32 << 8);
                 DTMIpU32 = (C8)TrajBuffer[2] | (DTMIpU32 << 8);
                 DTMIpU32 = (C8)TrajBuffer[3] | (DTMIpU32 << 8);
                 TRAJInfoData.IpAddressU32 = DTMIpU32;
-
+                printf("[ObjectControl] COMM_TRAJ received, destination IP = %x\n", DTMIpU32);
                 MiscU16 = (C8)TrajBuffer[4];
                 MiscU16 = (C8)TrajBuffer[5] | (MiscU16 << 8);
                 TRAJInfoData.TrajectoryIDU16 = MiscU16;

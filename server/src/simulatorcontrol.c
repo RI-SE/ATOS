@@ -130,6 +130,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   U8 SimulatorModeU8 = 0;
 
   U8 DTSSMU8 = 0;
+  U32 TrajCounterU32 = 0;
 
   gettimeofday(&ExecTime, NULL);
   CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
@@ -301,7 +302,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 	                {
                   	for(i = 0; i < GSD->ChunkSize; i ++) GSD->Chunk[i] = ReceiveBuffer[i + 8];
                     GSD->ChunkSize = RxTotalDataU32 - 8;
-	                	printf("[SimulatorControl] Storing TRAJ to ObjectControl in GSD, size = %d.\n", GSD->ChunkSize);
+	                	printf("[SimulatorControl] Storing TRAJ %d to ObjectControl in GSD, %d bytes.\n", TrajCounterU32++, GSD->ChunkSize);
 	              	} else printf("[SimulatorControl] Chunk TRAJ buffer not empty.\n");
 	              }
 	              else
@@ -309,7 +310,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   	              //Binary data is received from simulator, make the data to ASCII
 		              bzero(MsgQueBuffer, SIM_CONTROL_BUFFER_SIZE_6200);
     		          SimulatorControlBinaryMessageManager(RxTotalDataU32, ReceiveBuffer, MsgQueBuffer, 0);
-                	printf("[SimulatorControl] Sending COMM_TRAJ.\n");
+                	printf("[SimulatorControl] Sending COMM_TRAJ %d, %ld bytes.\n", TrajCounterU32++, strlen(MsgQueBuffer)/2);
                 	(void)iCommSend(COMM_TRAJ, MsgQueBuffer); //COMM_TRAJ will be received by ObjectControl
                 }
               }
@@ -321,7 +322,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
 	                {
 	                	for(i = 0; i < GSD->SupChunkSize; i ++) GSD->SupChunk[i] = ReceiveBuffer[i + 8];
                     GSD->SupChunkSize = RxTotalDataU32 - 8;
-	                	printf("[SimulatorControl] Sending TRAJ to Supervisor in GSD, size = %d bytes\n", GSD->SupChunkSize);
+	                	printf("[SimulatorControl] Sending TRAJ %d to Supervisor in GSD, %d bytes.\n", TrajCounterU32++, GSD->SupChunkSize);
 	              	} else printf("[SimulatorControl] Supervisor chunk TRAJ buffer not empty.\n");
             		}
             		else
@@ -329,7 +330,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   	              //Binary data is received from simulator, make the data to ASCII
 		              bzero(MsgQueBuffer, SIM_CONTROL_BUFFER_SIZE_6200);
     		          SimulatorControlBinaryMessageManager(RxTotalDataU32, ReceiveBuffer, MsgQueBuffer, 0);
-	                printf("[SimulatorControl] Sending COMM_TRAJ_TOSUP.\n");
+                  printf("[SimulatorControl] Sending COMM_TRAJ_TOSUP %d, %ld bytes.\n", TrajCounterU32++, strlen(MsgQueBuffer)/2);
                		(void)iCommSend(COMM_TRAJ_TOSUP, MsgQueBuffer); //COMM_TRAJ_TOSUP will be received by SupervisorControl
                	}
               }
