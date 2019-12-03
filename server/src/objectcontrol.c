@@ -268,7 +268,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U8 pcRecvBuffer[RECV_MESSAGE_BUFFER];
 	C8 pcTempBuffer[512];
 	C8 MessageBuffer[BUFFER_SIZE_3100];
-	I32 iIndex = 0, i = 0, jIndex = 0;;
+	I32 iIndex = 0, i = 0;
 	struct timespec sleep_time, ref_time;
 
 	/*! Timers for reporting state over message bus */
@@ -390,9 +390,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	nextStateReportTime = currentTime;
 
 	while (!iExit) {
-		OBCState = vGetState(GSD);
+		//OBCState = vGetState(GSD);
 
-		if (OBCState == OBC_STATE_ERROR) {
+		if (vGetState(GSD) == OBC_STATE_ERROR) {
 			ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
 			MessageLength =
 				ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus,
@@ -401,7 +401,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							MessageBuffer, MessageLength, 0);
 		}
 
-		if (OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_CONNECTED) {
+		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_ARMED || vGetState(GSD) == OBC_STATE_CONNECTED) {
 			 /*HEAB*/ for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				if (uiTimeCycle == 0) {
 					//HeartbeatMessageCounter ++;
@@ -423,13 +423,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s - returning to IDLE",
 							   object_address_name[iIndex]);
 
-					for (jIndex = 0; jIndex < nbr_objects; ++jIndex) {
-						if(iIndex != jIndex) vDisconnectObject(&socket_fds[jIndex]);
+					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+						vDisconnectObject(&socket_fds[iIndex]);
 					}
 
 					/* Close safety socket */
-					for (jIndex = 0; jIndex < nbr_objects; ++jIndex) {
-						if(iIndex != jIndex) vCloseSafetyChannel(&safety_socket_fd[jIndex]);
+					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+						 vCloseSafetyChannel(&safety_socket_fd[iIndex]);
 					}
 					vSetState(OBC_STATE_IDLE, GSD);
 					break;
@@ -437,7 +437,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 		}
 
-		if (OBCState == OBC_STATE_RUNNING || OBCState == OBC_STATE_CONNECTED || OBCState == OBC_STATE_ARMED) {
+		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_CONNECTED || vGetState(GSD) == OBC_STATE_ARMED) {
 			char buffer[RECV_MESSAGE_BUFFER];
 			size_t receivedMONRData = 0;
 
@@ -668,7 +668,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			LogMessage(LOG_LEVEL_INFO, "Received command %d", iCommand);
 
 
-			if (iCommand == COMM_ARM && OBCState == OBC_STATE_CONNECTED) {
+			if (iCommand == COMM_ARM && vGetState(GSD) == OBC_STATE_CONNECTED) {
 
 				LogMessage(LOG_LEVEL_INFO, "Sending ARM");
 				LOG_SEND(LogBuffer, "[ObjectControl] Sending ARM");
@@ -683,7 +683,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
 			}
-			else if (iCommand == COMM_DISARM && OBCState == OBC_STATE_ARMED) {
+			else if (iCommand == COMM_DISARM && vGetState(GSD) == OBC_STATE_ARMED) {
 
 				LogMessage(LOG_LEVEL_INFO, "Sending DISARM");
 				LOG_SEND(LogBuffer, "[ObjectControl] Sending DISARM");
@@ -700,7 +700,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
 			}
-			else if (iCommand == COMM_STRT && (OBCState == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED) */ )	//OBC_STATE_INITIALIZED is temporary!
+			else if (iCommand == COMM_STRT && (vGetState(GSD) == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED) */ )	//OBC_STATE_INITIALIZED is temporary!
 			{
 				bzero(Timestamp, SMALL_BUFFER_SIZE_0);
 				MiscPtr = strchr(pcRecvBuffer, ';');
@@ -743,7 +743,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				ObjectcontrolExecutionMode = OBJECT_CONTROL_REPLAY_MODE;
 				LogMessage(LOG_LEVEL_INFO, "Entering REPLAY mode <%s>", pcRecvBuffer);
 			}
-			else if (iCommand == COMM_ABORT && OBCState == OBC_STATE_RUNNING) {
+			else if (iCommand == COMM_ABORT && vGetState(GSD) == OBC_STATE_RUNNING) {
 				vSetState(OBC_STATE_CONNECTED, GSD);
 				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;	//Set server to ABORT
 				LogMessage(LOG_LEVEL_WARNING, "ABORT received");
@@ -804,7 +804,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				//OSEMSentU8 = 0;
 				STRTSentU8 = 0;
 			}
-			else if (iCommand == COMM_ACCM && OBCState == OBC_STATE_CONNECTED) {
+			else if (iCommand == COMM_ACCM && vGetState(GSD) == OBC_STATE_CONNECTED) {
 				UtilPopulateACCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqACCMData);
 				iIndex =
 					iGetObjectIndexFromObjectIP(mqACCMData.ip, objectIPs,
@@ -815,7 +815,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				else
 					LogMessage(LOG_LEVEL_WARNING, "Unable to send ACCM: no valid socket found");
 			}
-			else if (iCommand == COMM_EXAC && OBCState == OBC_STATE_RUNNING) {
+			else if (iCommand == COMM_EXAC && vGetState(GSD) == OBC_STATE_RUNNING) {
 				UtilPopulateEXACDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqEXACData);
 				iIndex =
 					iGetObjectIndexFromObjectIP(mqEXACData.ip, objectIPs,
@@ -825,7 +825,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				else
 					LogMessage(LOG_LEVEL_WARNING, "Unable to send EXAC: no valid socket found");
 			}
-			else if (iCommand == COMM_CONNECT && OBCState == OBC_STATE_INITIALIZED) {
+			else if (iCommand == COMM_CONNECT && vGetState(GSD) == OBC_STATE_INITIALIZED) {
 				LogMessage(LOG_LEVEL_INFO, "CONNECT received");
 				LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.");
 
