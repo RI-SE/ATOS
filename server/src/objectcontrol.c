@@ -226,7 +226,7 @@ I32 ObjectControlSendACCMMessage(ACCMData * ACCM, I32 * socket, U8 debug);
 I32 ObjectControlSendTRCMMessage(TRCMData * TRCM, I32 * socket, U8 debug);
 I32 ObjectControlSendEXACMessage(EXACData * EXAC, I32 * socket, U8 debug);
 
-static void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
+static int vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 							 C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
 							 in_addr_t objectIPs[MAX_OBJECTS], I32 * nbr_objects);
 
@@ -3141,7 +3141,7 @@ static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 	return recvDataSize;
 }
 
-void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
+int vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 					  C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH], in_addr_t objectIPs[MAX_OBJECTS],
 					  I32 * nbr_objects) {
 	DIR *traj_directory;
@@ -3150,6 +3150,7 @@ void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 	struct sockaddr_in sockaddr;
 	int result;
 	char trajPathDir[MAX_FILE_PATH];
+    int retval = 0;
 
 	UtilGetTrajDirectoryPath(trajPathDir, sizeof (trajPathDir));
 
@@ -3172,17 +3173,24 @@ void vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 			(void)strcat(object_traj_file[(*nbr_objects)], trajPathDir);
 			(void)strcat(object_traj_file[(*nbr_objects)], directory_entry->d_name);
 
+            if (UtilCheckTrajectoryFileFormat(object_traj_file[*nbr_objects], sizeof (object_traj_file[*nbr_objects]))) {
+                LogMessage(LOG_LEVEL_ERROR, "Trajectory file <%s> is not valid", object_address_name[*nbr_objects]);
+                retval = -1;
+            }
+
 			if (0 == iForceObjectToLocalhost) {
 				(void)strncat(object_address_name[(*nbr_objects)], directory_entry->d_name,
 							  strlen(directory_entry->d_name));
 				result = inet_pton(AF_INET, object_address_name[*nbr_objects], &sockaddr.sin_addr);
 				if (result == -1) {
 					LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+                    retval = -1;
 					continue;
 				}
 				else if (result == 0) {
 					LogMessage(LOG_LEVEL_WARNING, "Address <%s> is not a valid IPv4 address",
 							   object_address_name[*nbr_objects]);
+                    retval = -1;
 					continue;
 				}
 				else
