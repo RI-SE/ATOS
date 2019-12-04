@@ -226,7 +226,7 @@ I32 ObjectControlSendACCMMessage(ACCMData * ACCM, I32 * socket, U8 debug);
 I32 ObjectControlSendTRCMMessage(TRCMData * TRCM, I32 * socket, U8 debug);
 I32 ObjectControlSendEXACMessage(EXACData * EXAC, I32 * socket, U8 debug);
 
-static int vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
+static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 							 C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
 							 in_addr_t objectIPs[MAX_OBJECTS], I32 * nbr_objects);
 
@@ -758,7 +758,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
 				/* Get objects; name and drive file */
 				nbr_objects = 0;
-				vFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects);
+                iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects);
 				DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
@@ -3141,7 +3141,7 @@ static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 	return recvDataSize;
 }
 
-int vFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
+int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 					  C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH], in_addr_t objectIPs[MAX_OBJECTS],
 					  I32 * nbr_objects) {
 	DIR *traj_directory;
