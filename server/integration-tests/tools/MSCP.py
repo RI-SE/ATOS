@@ -184,12 +184,12 @@ class MSCP:
     def Disconnect(self):
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDisconnectObject();"
         self.Send(message)
-        print("=== Disonnect() sent")
+        print("=== Disconnect() sent")
     
     def Start(self,delayTime_ms):       
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nStartScenario(" + str(delayTime_ms) + ");"
         self.Send(message)
-        print("=== StarScenario() sent")
+        print("=== StartScenario() sent")
 
     def UploadFile(self,targetPath,fileContents):
         packetSize = 1200
