@@ -93,6 +93,31 @@
 #define PRIO_COMM_MONR 0
 
 /*------------------------------------------------------------
+-- Local type definitions
+------------------------------------------------------------*/
+typedef struct {
+    unsigned int ID;
+    char name[SMALL_BUFFER_SIZE_128];
+    unsigned short majorVersion;
+    unsigned short minorVersion;
+    unsigned int numberOfLines;
+} TrajectoryFileHeader;
+
+typedef struct {
+    double time;
+    double xCoord;
+    double yCoord;
+    double *zCoord;
+    double heading;
+    double *longitudinalVelocity;
+    double *lateralVelocity;
+    double *longitudinalAcceleration;
+    double *lateralAcceleration;
+    double curvature;
+    uint8_t mode;
+} TrajectoryFileLine;
+
+/*------------------------------------------------------------
 -- Public variables
 ------------------------------------------------------------*/
 
@@ -109,6 +134,11 @@ static void CopyHTTPHeaderField(char *request, char *targetContainer, size_t tar
 								const char *fieldName);
 static char rayFromPointIntersectsLine(double pointX, double pointY, double polyPointAX, double polyPointAY,
 									   double polyPointBX, double polyPointBY);
+
+
+static int UtilParseTrajectoryFileHeader(char *headerLine, TrajectoryFileHeader* header);
+static int UtilParseTrajectoryFileFooter(char* footerLine);
+static int UtilParseTrajectoryFileLine(char *fileLine, TrajectoryFileLine* line);
 
 
 void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetContainerSize,
@@ -2387,7 +2417,163 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
 }
 
 
+int UtilParseTrajectoryFileHeader(char* line, TrajectoryFileHeader* header) {
+    char* token;
+    const char delimiter = ';';
+    unsigned int column = 0;
+    int retval = 0;
 
+    header->ID = 0;
+    memset(header->name, '\0', sizeof (header->name));
+    header->majorVersion = 0;
+    header->minorVersion = 0;
+    header->numberOfLines = 0;
+
+    token = strtok(line, &delimiter);
+    if (!strcmp(token, "TRAJECTORY")) {
+        while (retval != -1 && (token = strtok(NULL, &delimiter)) != NULL) {
+            column++;
+            switch (column) {
+            case 1:
+                break;
+            case 2:
+                break;
+            case 3:
+                break;
+            case 4:
+                break;
+            default:
+                LogMessage(LOG_LEVEL_ERROR, "Found unexpected \"%s\" in header", token);
+                retval = -1;
+            }
+        }
+    }
+    else {
+        LogMessage(LOG_LEVEL_ERROR,"Cannot parse line \"%s\" as trajectory header", line);
+        retval = -1;
+    }
+
+    if (retval == -1) {
+        header->ID = 0;
+        memset(header->name, '\0', sizeof (header->name));
+        header->majorVersion = 0;
+        header->minorVersion = 0;
+        header->numberOfLines = 0;
+    }
+    return retval;
+}
+
+int UtilParseTrajectoryFileLine(char* line, TrajectoryFileLine* fileLine) {
+
+    if (fileLine->zCoord)
+        free(fileLine->zCoord);
+    if (fileLine->lateralVelocity)
+        free(fileLine->lateralVelocity);
+    if (fileLine->lateralAcceleration)
+        free(fileLine->lateralAcceleration);
+    if (fileLine->longitudinalVelocity)
+        free(fileLine->longitudinalVelocity);
+    if (fileLine->lateralAcceleration)
+        free(fileLine->longitudinalAcceleration);
+    memset(fileLine, 0, sizeof (*fileLine));
+
+    // TODO: Parse row
+    return 0;
+}
+
+int UtilParseTrajectoryFileFooter(char* line) {
+    char* token;
+    const char delimiter = ';';
+    int retval = 0;
+
+    token = strtok(line, &delimiter);
+    if (!strcmp(token, "ENDTRAJECTORY")) {
+        while ((token = strtok(NULL, &delimiter)) != NULL) {
+            LogMessage(LOG_LEVEL_ERROR, "Footer contained unexpected \"%s\"", token);
+            retval = -1;
+        }
+    }
+    else {
+        retval = -1;
+    }
+
+    return retval;
+}
+
+/*!
+ * \brief UtilCheckTrajectoryFileFormat Verifies that the file follows ISO format
+ * \param path Path to the file to be checked
+ * \param pathLen Length of the path variable
+ * \return -1 if the file does not follow the correct format, 0 otherwise
+ */
+int UtilCheckTrajectoryFileFormat(const char* path, size_t pathLen) {
+    int retval = 0;
+    FILE* fp = fopen(path, "r");
+
+    char* line;
+    size_t len = 0;
+    ssize_t read;
+
+    unsigned int row = 0;
+
+    TrajectoryFileHeader header;
+    TrajectoryFileLine fileLine;
+    memset(&fileLine, 0, sizeof (fileLine));
+
+    if (fp == NULL) {
+        LogMessage(LOG_LEVEL_ERROR,"Could not open file <%s>",path);
+        return -1;
+    }
+
+    // Read line by line
+    while ((read = getline(&line, &len, fp)) != -1) {
+        row++;
+        if (row == 1) { // Header parsing
+            // If header parsing failed, parsing the rest of the file could be risky
+            if ((retval = UtilParseTrajectoryFileHeader(line, &header)) == -1) {
+                LogMessage(LOG_LEVEL_ERROR,"Failed to parse header of file <%s>",path);
+                break;
+            }
+        }
+        else if (row == header.numberOfLines + 2) { // Footer parsing
+            if (UtilParseTrajectoryFileFooter(line) != 0) {
+                LogMessage(LOG_LEVEL_ERROR, "Failed to parse footer of file <%s>", row, path);
+                retval = -1;
+            }
+        }
+        else if (row > header.numberOfLines + 2) {
+            LogMessage(LOG_LEVEL_ERROR, "File <%s> contains more rows than specified", path);
+            retval = -1;
+            break;
+        }
+        else { // Line parsing
+            if (UtilParseTrajectoryFileLine(line, &fileLine) != 0) {
+                if (UtilParseTrajectoryFileFooter(line) == 0)
+                    LogMessage(LOG_LEVEL_ERROR, "File <%s> contains %u rows but %u were specified", path, row-2, header.numberOfLines);
+                else
+                    LogMessage(LOG_LEVEL_ERROR, "Failed to parse line %u of file <%s>", row, path);
+                retval = -1;
+            }
+        }
+    }
+
+    fclose(fp);
+
+    if (line)
+        free(line);
+    if (fileLine.zCoord)
+        free(fileLine.zCoord);
+    if (fileLine.lateralVelocity)
+        free(fileLine.lateralVelocity);
+    if (fileLine.lateralAcceleration)
+        free(fileLine.lateralAcceleration);
+    if (fileLine.longitudinalVelocity)
+        free(fileLine.longitudinalVelocity);
+    if (fileLine.lateralAcceleration)
+        free(fileLine.longitudinalAcceleration);
+
+    return retval;
+}
 /*------------------------------------------------------------
   -- Function traj2ldm
   --  converts a traj file format to a ldm:monitor_t

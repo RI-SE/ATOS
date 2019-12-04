@@ -832,6 +832,9 @@ void UtilGetConfDirectoryPath(char* path, size_t pathLen);
 void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
 void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 
+// File parsing functions
+int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
+
 //
 CartesianPosition MONRToCartesianPosition(MonitorDataType MONR);
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
