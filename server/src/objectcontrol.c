@@ -756,53 +756,57 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_INIT) {
 				LogMessage(LOG_LEVEL_INFO, "INIT received");
 				LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
-				/* Get objects; name and drive file */
-				nbr_objects = 0;
-                iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects);
-				DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
+                nbr_objects = 0;
+                if (iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects) == 0) {
+                    // Get objects; name and drive file
+                    DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 
-				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					if (0 == iForceObjectToLocalhostU8) {
-						object_udp_port[iIndex] = SAFETY_CHANNEL_PORT;
-						object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT;
-					}
-					else {
-						object_udp_port[iIndex] = SAFETY_CHANNEL_PORT + iIndex * 2;
-						object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT + iIndex * 2;
-					}
-				}
+                    for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+                        if (0 == iForceObjectToLocalhostU8) {
+                            object_udp_port[iIndex] = SAFETY_CHANNEL_PORT;
+                            object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT;
+                        }
+                        else {
+                            object_udp_port[iIndex] = SAFETY_CHANNEL_PORT + iIndex * 2;
+                            object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT + iIndex * 2;
+                        }
+                    }
 
-				/*Setup Adaptive Sync Points (ASP) */
-				UtilGetConfDirectoryPath(confDirectoryPath, sizeof (confDirectoryPath));
-				strcat(confDirectoryPath, ADAPTIVE_SYNC_FILE_NAME);
-				fd = fopen(confDirectoryPath, "r");
-				if (fd) {
-					SyncPointCount = UtilCountFileRows(fd) - 1;
-					fclose(fd);
-					fd = fopen(confDirectoryPath, "r");
-					UtilReadLineCntSpecChars(fd, pcTempBuffer);	//Read header
+                    /*Setup Adaptive Sync Points (ASP) */
+                    UtilGetConfDirectoryPath(confDirectoryPath, sizeof (confDirectoryPath));
+                    strcat(confDirectoryPath, ADAPTIVE_SYNC_FILE_NAME);
+                    fd = fopen(confDirectoryPath, "r");
+                    if (fd) {
+                        SyncPointCount = UtilCountFileRows(fd) - 1;
+                        fclose(fd);
+                        fd = fopen(confDirectoryPath, "r");
+                        UtilReadLineCntSpecChars(fd, pcTempBuffer);	//Read header
 
-					for (i = 0; i < SyncPointCount; i++) {
-						UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);
-						if (TEST_SYNC_POINTS == 1)
-							ASP[i].TestPort = SAFETY_CHANNEL_PORT;
-					}
-					fclose(fd);
-				}
+                        for (i = 0; i < SyncPointCount; i++) {
+                            UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);
+                            if (TEST_SYNC_POINTS == 1)
+                                ASP[i].TestPort = SAFETY_CHANNEL_PORT;
+                        }
+                        fclose(fd);
+                    }
 
-				vSetState(OBC_STATE_INITIALIZED, GSD);
-				LogMessage(LOG_LEVEL_INFO, "ObjectControl is initialized");
-				LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
+                    vSetState(OBC_STATE_INITIALIZED, GSD);
+                    LogMessage(LOG_LEVEL_INFO, "ObjectControl is initialized");
+                    LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
 
-				//Remove temporary file
-				remove(TEMP_LOG_FILE);
-				if (USE_TEMP_LOGFILE) {
-					//Create temporary file
-					TempFd = fopen(TEMP_LOG_FILE, "w+");
-				}
+                    //Remove temporary file
+                    remove(TEMP_LOG_FILE);
+                    if (USE_TEMP_LOGFILE) {
+                        //Create temporary file
+                        TempFd = fopen(TEMP_LOG_FILE, "w+");
+                    }
 
-				//OSEMSentU8 = 0;
-				STRTSentU8 = 0;
+                    //OSEMSentU8 = 0;
+                    STRTSentU8 = 0;
+                }
+                else {
+                    LogMessage(LOG_LEVEL_INFO, "Could not initialize: object info was not processed successfully");
+                }
 			}
 			else if (iCommand == COMM_ACCM && OBCState == OBC_STATE_CONNECTED) {
 				UtilPopulateACCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqACCMData);
