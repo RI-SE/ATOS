@@ -47,7 +47,12 @@ class MSCP:
 
         print("=== Starting listener on " + str(self.host) + ":" + str(self.port))
         while not self.quit:
-            data = self.socket.recv(1024)
+            try:
+                data = self.socket.recv(1024)
+            except ConnectionResetError as e:
+                if not self.quit:
+                    raise e
+
             for replyPattern in replyPatterns:
                 match = re.search(replyPattern["regex"],data)
                 if match is not None:
