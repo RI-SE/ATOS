@@ -3178,7 +3178,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 			(void)strcat(object_traj_file[(*nbr_objects)], directory_entry->d_name);
 
             if (UtilCheckTrajectoryFileFormat(object_traj_file[*nbr_objects], sizeof (object_traj_file[*nbr_objects]))) {
-                LogMessage(LOG_LEVEL_ERROR, "Trajectory file <%s> is not valid", object_address_name[*nbr_objects]);
+                LogMessage(LOG_LEVEL_ERROR, "Trajectory file <%s> is not valid", object_traj_file[*nbr_objects]);
                 retval = -1;
             }
 
@@ -3212,6 +3212,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 		}
 	}
 	(void)closedir(traj_directory);
+    return retval;
 }
 
 
