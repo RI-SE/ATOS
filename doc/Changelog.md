@@ -2,7 +2,7 @@ Last edited 15/10- 2019
 
 Contents
 ==============================
-[v.0.4.0 November Server-Snapshot](#november-release-v040---serversnapshot)
+[v.0.4.0 December Server-Snapshot](#December-release-v040---serversnapshot)
 
 [v.0.3.0 Trigger and Action](#maestro-v030-trigger-and-action)
 
@@ -10,7 +10,7 @@ Contents
 
 [v.0.1.0 Drottning Kristina](drottning-kristina-v010)
 
-July release v0.2.0 - ServerSnapshot  
+December release v0.4.0 - ServerSnapshot  
 ==============================
 
 This version is compatible with Maestro-Tools v0.4.0 and Util v0.4.0
