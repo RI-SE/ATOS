@@ -227,8 +227,8 @@ I32 ObjectControlSendTRCMMessage(TRCMData * TRCM, I32 * socket, U8 debug);
 I32 ObjectControlSendEXACMessage(EXACData * EXAC, I32 * socket, U8 debug);
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
-							 C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
-							 in_addr_t objectIPs[MAX_OBJECTS], I32 * nbr_objects);
+							C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
+							in_addr_t objectIPs[MAX_OBJECTS], I32 * nbr_objects);
 
 OBCState_t vInitializeState(OBCState_t firstState, GSDType * GSD);
 inline OBCState_t vGetState(GSDType * GSD);
@@ -264,7 +264,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U32 object_udp_port[MAX_OBJECTS];
 	U32 object_tcp_port[MAX_OBJECTS];
 	I32 nbr_objects = 0;
-    enum COMMAND iCommand;
+	enum COMMAND iCommand;
 	U8 pcRecvBuffer[RECV_MESSAGE_BUFFER];
 	C8 pcTempBuffer[512];
 	C8 MessageBuffer[BUFFER_SIZE_3100];
@@ -756,59 +756,60 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_INIT) {
 				LogMessage(LOG_LEVEL_INFO, "INIT received");
 				LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
-                nbr_objects = 0;
-                if (iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects) == 0) {
-                    // Get objects; name and drive file
-                    DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
+				nbr_objects = 0;
+				if (iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects) == 0) {
+					// Get objects; name and drive file
+					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 
-                    for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-                        if (0 == iForceObjectToLocalhostU8) {
-                            object_udp_port[iIndex] = SAFETY_CHANNEL_PORT;
-                            object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT;
-                        }
-                        else {
-                            object_udp_port[iIndex] = SAFETY_CHANNEL_PORT + iIndex * 2;
-                            object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT + iIndex * 2;
-                        }
-                    }
+					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+						if (0 == iForceObjectToLocalhostU8) {
+							object_udp_port[iIndex] = SAFETY_CHANNEL_PORT;
+							object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT;
+						}
+						else {
+							object_udp_port[iIndex] = SAFETY_CHANNEL_PORT + iIndex * 2;
+							object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT + iIndex * 2;
+						}
+					}
 
-                    /*Setup Adaptive Sync Points (ASP) */
-                    UtilGetConfDirectoryPath(confDirectoryPath, sizeof (confDirectoryPath));
-                    strcat(confDirectoryPath, ADAPTIVE_SYNC_FILE_NAME);
-                    fd = fopen(confDirectoryPath, "r");
-                    if (fd) {
-                        SyncPointCount = UtilCountFileRows(fd) - 1;
-                        fclose(fd);
-                        fd = fopen(confDirectoryPath, "r");
-                        UtilReadLineCntSpecChars(fd, pcTempBuffer);	//Read header
+					/*Setup Adaptive Sync Points (ASP) */
+					UtilGetConfDirectoryPath(confDirectoryPath, sizeof (confDirectoryPath));
+					strcat(confDirectoryPath, ADAPTIVE_SYNC_FILE_NAME);
+					fd = fopen(confDirectoryPath, "r");
+					if (fd) {
+						SyncPointCount = UtilCountFileRows(fd) - 1;
+						fclose(fd);
+						fd = fopen(confDirectoryPath, "r");
+						UtilReadLineCntSpecChars(fd, pcTempBuffer);	//Read header
 
-                        for (i = 0; i < SyncPointCount; i++) {
-                            UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);
-                            if (TEST_SYNC_POINTS == 1)
-                                ASP[i].TestPort = SAFETY_CHANNEL_PORT;
-                        }
-                        fclose(fd);
-                    }
+						for (i = 0; i < SyncPointCount; i++) {
+							UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);
+							if (TEST_SYNC_POINTS == 1)
+								ASP[i].TestPort = SAFETY_CHANNEL_PORT;
+						}
+						fclose(fd);
+					}
 
-                    vSetState(OBC_STATE_INITIALIZED, GSD);
-                    LogMessage(LOG_LEVEL_INFO, "ObjectControl is initialized");
-                    LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
+					vSetState(OBC_STATE_INITIALIZED, GSD);
+					LogMessage(LOG_LEVEL_INFO, "ObjectControl is initialized");
+					LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
 
-                    //Remove temporary file
-                    remove(TEMP_LOG_FILE);
-                    if (USE_TEMP_LOGFILE) {
-                        //Create temporary file
-                        TempFd = fopen(TEMP_LOG_FILE, "w+");
-                    }
+					//Remove temporary file
+					remove(TEMP_LOG_FILE);
+					if (USE_TEMP_LOGFILE) {
+						//Create temporary file
+						TempFd = fopen(TEMP_LOG_FILE, "w+");
+					}
 
-                    //OSEMSentU8 = 0;
-                    STRTSentU8 = 0;
-                }
-                else {
-                    LogMessage(LOG_LEVEL_INFO, "Could not initialize: object info was not processed successfully");
-                    pcSendBuffer[0] = (uint8_t)iCommand;
-                    iCommSend(COMM_FAILURE, pcSendBuffer, sizeof (iCommand));
-                }
+					//OSEMSentU8 = 0;
+					STRTSentU8 = 0;
+				}
+				else {
+					LogMessage(LOG_LEVEL_INFO,
+							   "Could not initialize: object info was not processed successfully");
+					pcSendBuffer[0] = (uint8_t) iCommand;
+					iCommSend(COMM_FAILURE, pcSendBuffer, sizeof (iCommand));
+				}
 			}
 			else if (iCommand == COMM_ACCM && OBCState == OBC_STATE_CONNECTED) {
 				UtilPopulateACCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqACCMData);
@@ -3148,15 +3149,15 @@ static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 }
 
 int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
-					  C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH], in_addr_t objectIPs[MAX_OBJECTS],
-					  I32 * nbr_objects) {
+					 C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH], in_addr_t objectIPs[MAX_OBJECTS],
+					 I32 * nbr_objects) {
 	DIR *traj_directory;
 	struct dirent *directory_entry;
 	int iForceObjectToLocalhost;
 	struct sockaddr_in sockaddr;
 	int result;
 	char trajPathDir[MAX_FILE_PATH];
-    int retval = 0;
+	int retval = 0;
 
 	UtilGetTrajDirectoryPath(trajPathDir, sizeof (trajPathDir));
 
@@ -3179,10 +3180,12 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 			(void)strcat(object_traj_file[(*nbr_objects)], trajPathDir);
 			(void)strcat(object_traj_file[(*nbr_objects)], directory_entry->d_name);
 
-            if (UtilCheckTrajectoryFileFormat(object_traj_file[*nbr_objects], sizeof (object_traj_file[*nbr_objects]))) {
-                LogMessage(LOG_LEVEL_ERROR, "Trajectory file <%s> is not valid", object_traj_file[*nbr_objects]);
-                retval = -1;
-            }
+			if (UtilCheckTrajectoryFileFormat
+				(object_traj_file[*nbr_objects], sizeof (object_traj_file[*nbr_objects]))) {
+				LogMessage(LOG_LEVEL_ERROR, "Trajectory file <%s> is not valid",
+						   object_traj_file[*nbr_objects]);
+				retval = -1;
+			}
 
 			if (0 == iForceObjectToLocalhost) {
 				(void)strncat(object_address_name[(*nbr_objects)], directory_entry->d_name,
@@ -3190,13 +3193,13 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 				result = inet_pton(AF_INET, object_address_name[*nbr_objects], &sockaddr.sin_addr);
 				if (result == -1) {
 					LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
-                    retval = -1;
+					retval = -1;
 					continue;
 				}
 				else if (result == 0) {
 					LogMessage(LOG_LEVEL_WARNING, "Address <%s> is not a valid IPv4 address",
 							   object_address_name[*nbr_objects]);
-                    retval = -1;
+					retval = -1;
 					continue;
 				}
 				else
@@ -3214,7 +3217,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 		}
 	}
 	(void)closedir(traj_directory);
-    return retval;
+	return retval;
 }
 
 
