@@ -64,6 +64,8 @@
 #define PRIO_COMM_TRCM 20
 // Messages affecting state change messages
 #define PRIO_OBJECTS_CONNECTED 18
+#define PRIO_COMM_SUCCESS 18
+#define PRIO_COMM_FAILURE 18
 // State change messages
 #define PRIO_COMM_STRT 16
 #define PRIO_COMM_ARM 16
@@ -2061,7 +2063,10 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 		break;
 	case COMM_OBJECTS_CONNECTED:
 		uiMessagePrio = PRIO_OBJECTS_CONNECTED;
-		break;
+        break;
+    case COMM_FAILURE:
+        uiMessagePrio = PRIO_COMM_FAILURE;
+        break;
 	default:
 		util_error("Unknown command");
 	}
