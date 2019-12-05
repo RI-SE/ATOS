@@ -2416,11 +2416,18 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
 	strcat(path, "/");
 }
 
-
+/*!
+ * \brief UtilParseTrajectoryFileHeader Attempts to parse a line into a trajectory header
+ * \param line Line to be parsed
+ * \param header Pointer to struct to fill
+ * \return -1 if parsing failed, 0 otherwise
+ */
 int UtilParseTrajectoryFileHeader(char* line, TrajectoryFileHeader* header) {
     char* token;
-    const char delimiter = ';';
+    char* dotToken;
+    const char delimiter[3] = ";\n";
     unsigned int column = 0;
+    int noOfLines = 0;
     int retval = 0;
 
     header->ID = 0;
@@ -2429,18 +2436,40 @@ int UtilParseTrajectoryFileHeader(char* line, TrajectoryFileHeader* header) {
     header->minorVersion = 0;
     header->numberOfLines = 0;
 
-    token = strtok(line, &delimiter);
+    token = strtok(line, delimiter);
     if (!strcmp(token, "TRAJECTORY")) {
-        while (retval != -1 && (token = strtok(NULL, &delimiter)) != NULL) {
+        while (retval != -1 && (token = strtok(NULL, delimiter)) != NULL) {
             column++;
             switch (column) {
             case 1:
+                header->ID = (unsigned int)atoi(token);
                 break;
             case 2:
+                if (strlen(token) > sizeof (header->name)) {
+                    LogMessage(LOG_LEVEL_ERROR, "Name field \"%s\" in trajectory too long", token);
+                    retval = -1;
+                }
+                else {
+                    strcpy(header->name, token);
+                }
                 break;
             case 3:
+                header->majorVersion = (unsigned short)atoi(token);
+                if ((dotToken = strchr(token,'.')) != NULL && *(dotToken + 1) != '\0') {
+                    header->minorVersion = (unsigned short)atoi(dotToken+1);
+                }
+                else {
+                    header->minorVersion = 0;
+                }
                 break;
             case 4:
+                noOfLines = atoi(token);
+                if (noOfLines >= 0)
+                    header->numberOfLines = (unsigned int)noOfLines;
+                else {
+                    LogMessage(LOG_LEVEL_ERROR, "Found negative number of lines in trajectory");
+                    retval = -1;
+                }
                 break;
             default:
                 LogMessage(LOG_LEVEL_ERROR, "Found unexpected \"%s\" in header", token);
@@ -2463,7 +2492,20 @@ int UtilParseTrajectoryFileHeader(char* line, TrajectoryFileHeader* header) {
     return retval;
 }
 
+/*!
+ * \brief UtilParseTrajectoryFileLine Attempts to parse a line into a trajectory line
+ * \param line Line to be parsed
+ * \param header Pointer to struct to fill
+ * \return -1 if parsing failed, 0 otherwise
+ */
 int UtilParseTrajectoryFileLine(char* line, TrajectoryFileLine* fileLine) {
+
+    char* tokenIndex = line;
+    char* nextTokenIndex;
+    const char delimiter = ';';
+    char token[SMALL_BUFFER_SIZE_64];
+    int retval = 0;
+    unsigned short column = 0;
 
     if (fileLine->zCoord)
         free(fileLine->zCoord);
@@ -2477,18 +2519,100 @@ int UtilParseTrajectoryFileLine(char* line, TrajectoryFileLine* fileLine) {
         free(fileLine->longitudinalAcceleration);
     memset(fileLine, 0, sizeof (*fileLine));
 
-    // TODO: Parse row
-    return 0;
+    // strtok() does not handle double delimiters well, more complicated parsing necessary
+    while ((nextTokenIndex = index(tokenIndex, delimiter)) != NULL && retval != -1) {
+        column++;
+        memset(token, '\0', sizeof (token));
+        memcpy(token, tokenIndex, (unsigned long)(nextTokenIndex-tokenIndex));
+        switch (column) {
+        case 1:
+            if (strcmp(token,"LINE")) {
+                LogMessage(LOG_LEVEL_ERROR, "Line start badly formatted");
+                retval = -1;
+            }
+            break;
+        case 2:
+            fileLine->time = atof(token);
+            break;
+        case 3:
+            fileLine->xCoord = atof(token);
+            break;
+        case 4:
+            fileLine->yCoord = atof(token);
+            break;
+        case 5:
+            if (strlen(token) != 0) {
+                fileLine->zCoord = malloc(sizeof (fileLine->zCoord));
+                *fileLine->zCoord = atof(token);
+            }
+            break;
+        case 6:
+            fileLine->heading = atof(token);
+            break;
+        case 7:
+            if (strlen(token) != 0) {
+                fileLine->longitudinalVelocity = malloc(sizeof (fileLine->longitudinalVelocity));
+                *fileLine->longitudinalVelocity = atof(token);
+            }
+            break;
+        case 8:
+            if (strlen(token) != 0) {
+                fileLine->lateralVelocity = malloc(sizeof (fileLine->lateralVelocity));
+                *fileLine->lateralVelocity = atof(token);
+            }
+            break;
+        case 9:
+            if (strlen(token) != 0) {
+                fileLine->longitudinalAcceleration = malloc(sizeof (fileLine->longitudinalAcceleration));
+                *fileLine->longitudinalAcceleration = atof(token);
+            }
+            break;
+        case 10:
+            if (strlen(token) != 0) {
+                fileLine->lateralAcceleration = malloc(sizeof (fileLine->lateralAcceleration));
+                *fileLine->lateralAcceleration = atof(token);
+            }
+            break;
+        case 11:
+            fileLine->curvature = atof(token);
+            break;
+        case 12:
+            fileLine->mode = (uint8_t)atoi(token);
+            break;
+        case 13:
+            if (strcmp(token,"ENDLINE")) {
+                LogMessage(LOG_LEVEL_ERROR, "Line end badly formatted");
+                retval = -1;
+            }
+            break;
+        default:
+            LogMessage(LOG_LEVEL_ERROR,"Superfluous delimiter in line");
+            retval = -1;
+            break;
+        }
+        tokenIndex = nextTokenIndex + 1;
+    }
+    if (column != 13 && retval == 0) {
+        LogMessage(LOG_LEVEL_ERROR, "Wrong number of fields (%u) in trajectory line", column);
+        retval = -1;
+    }
+
+    return retval;
 }
 
+/*!
+ * \brief UtilParseTrajectoryFileFooter Attempts to parse a line as a trajectory footer
+ * \param line Line to be parsed
+ * \return -1 if parsing failed, 0 otherwise
+ */
 int UtilParseTrajectoryFileFooter(char* line) {
     char* token;
-    const char delimiter = ';';
+    const char delimiter[3] = ";\n";
     int retval = 0;
 
-    token = strtok(line, &delimiter);
+    token = strtok(line, delimiter);
     if (!strcmp(token, "ENDTRAJECTORY")) {
-        while ((token = strtok(NULL, &delimiter)) != NULL) {
+        while ((token = strtok(NULL, delimiter)) != NULL) {
             LogMessage(LOG_LEVEL_ERROR, "Footer contained unexpected \"%s\"", token);
             retval = -1;
         }
@@ -2534,11 +2658,15 @@ int UtilCheckTrajectoryFileFormat(const char* path, size_t pathLen) {
                 LogMessage(LOG_LEVEL_ERROR,"Failed to parse header of file <%s>",path);
                 break;
             }
+            LogPrint("No lines: %u",header.numberOfLines);
         }
         else if (row == header.numberOfLines + 2) { // Footer parsing
-            if (UtilParseTrajectoryFileFooter(line) != 0) {
-                LogMessage(LOG_LEVEL_ERROR, "Failed to parse footer of file <%s>", row, path);
-                retval = -1;
+            if ((retval = UtilParseTrajectoryFileFooter(line)) != 0) {
+                if (UtilParseTrajectoryFileLine(line, &fileLine) == 0) {
+                    LogMessage(LOG_LEVEL_ERROR, "File <%s> contains more rows than specified", path);
+                    break;
+                }
+                LogMessage(LOG_LEVEL_ERROR, "Failed to parse footer of file <%s>", path);
             }
         }
         else if (row > header.numberOfLines + 2) {
