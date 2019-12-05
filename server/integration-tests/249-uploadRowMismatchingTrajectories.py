@@ -58,8 +58,8 @@ if __name__ == "__main__":
         raise AssertionError("Transitioned to initialized even though malformed trajectory was uploaded")
     except TimeoutError as e:
         # If there was a timeout while waiting for initialized that means everything went as intended
-        pass
-
+        print("=== Timed out while waiting for initialisation")
+ 
     # 6: Upload normal trajectory, to verify we can still initialise
     userControl.UploadFile("traj/127.0.0.1", normalTraj)
 
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         raise AssertionError("Transitioned to initialized even though malformed trajectory was uploaded")
     except TimeoutError as e:
         # If there was a timeout while waiting for initialized that means everything went as intended
-        pass
+        print("=== Timed out while waiting for initialisation")
 
     # 9: Upload normal trajectory, to verify we can still initialise
     userControl.UploadFile("traj/127.0.0.1", normalTraj)
