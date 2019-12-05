@@ -264,7 +264,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U32 object_udp_port[MAX_OBJECTS];
 	U32 object_tcp_port[MAX_OBJECTS];
 	I32 nbr_objects = 0;
-	enum COMMAND iCommand;
+    enum COMMAND iCommand;
 	U8 pcRecvBuffer[RECV_MESSAGE_BUFFER];
 	C8 pcTempBuffer[512];
 	C8 MessageBuffer[BUFFER_SIZE_3100];
@@ -806,6 +806,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                 }
                 else {
                     LogMessage(LOG_LEVEL_INFO, "Could not initialize: object info was not processed successfully");
+                    pcSendBuffer[0] = (uint8_t)iCommand;
+                    iCommSend(COMM_FAILURE, pcSendBuffer, sizeof (iCommand));
                 }
 			}
 			else if (iCommand == COMM_ACCM && OBCState == OBC_STATE_CONNECTED) {
