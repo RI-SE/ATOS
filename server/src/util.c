@@ -2663,8 +2663,7 @@ int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen) {
 			if ((retval = UtilParseTrajectoryFileHeader(line, &header)) == -1) {
 				LogMessage(LOG_LEVEL_ERROR, "Failed to parse header of file <%s>", path);
 				break;
-			}
-			LogPrint("No lines: %u", header.numberOfLines);
+            }
 		}
 		else if (row == header.numberOfLines + 2) {	// Footer parsing
 			if ((retval = UtilParseTrajectoryFileFooter(line)) != 0) {
