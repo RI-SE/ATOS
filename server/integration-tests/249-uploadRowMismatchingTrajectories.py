@@ -62,6 +62,8 @@ if __name__ == "__main__":
 
     userControl.Init()
     userControl.waitForObjectControlState("INITIALIZED")
+    
+    time.sleep(0.05)
 
     userControl.Disconnect()
     userControl.waitForObjectControlState("IDLE")
@@ -86,6 +88,8 @@ if __name__ == "__main__":
 
     userControl.Init()
     userControl.waitForObjectControlState("INITIALIZED")
+
+    time.sleep(0.05)
 
     userControl.Disconnect()
     userControl.waitForObjectControlState("IDLE")
