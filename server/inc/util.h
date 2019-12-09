@@ -36,7 +36,7 @@ extern "C"{
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-#define MaestroVersion  "Maestro 0.1.x"
+#define MaestroVersion  "0.4.0"
 
 #define ISO_PROTOCOL_VERSION 2
 #define ACK_REQ 0
