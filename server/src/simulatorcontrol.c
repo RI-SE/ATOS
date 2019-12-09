@@ -496,7 +496,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
        ++CycleU16;
       if(CycleU16 >= SIM_CONTROL_HEARTBEAT_TIME_MS/SIM_CONTROL_TASK_PERIOD_MS) CycleU16 = 0;
       sleep_time.tv_sec = 0;
-      sleep_time.tv_nsec = SIM_CONTROL_TASK_PERIOD_MS*10000; //!!!
+      sleep_time.tv_nsec = SIM_CONTROL_TASK_PERIOD_MS*100; //!!!
       (void)nanosleep(&sleep_time,&ref_time);
 
 
