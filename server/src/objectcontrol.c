@@ -345,7 +345,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	U8 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
-	OBCState_t OBCState = vInitializeState(OBC_STATE_IDLE, GSD);
 	U8 uiTimeCycle = 0;
 	I32 ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
 
@@ -390,7 +389,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	nextStateReportTime = currentTime;
 
 	while (!iExit) {
-		//OBCState = vGetState(GSD);
 
 		if (vGetState(GSD) == OBC_STATE_ERROR) {
 			ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
@@ -1104,7 +1102,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (timercmp(&currentTime, &nextStateReportTime, >)) {
 				timeradd(&nextStateReportTime, &stateReportPeriod, &nextStateReportTime);
 
-				OBCState = vGetState(GSD);
 				bzero(Buffer2, sizeof (Buffer2));
 				Buffer2[0] = (uint8_t) (DataDictionaryGetOBCStateU8(GSD));
 				if (iCommSend(COMM_OBC_STATE, Buffer2, sizeof (Buffer2)) < 0) {
