@@ -345,7 +345,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	U8 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
-    vInitializeState(OBC_STATE_IDLE, GSD);
+	vInitializeState(OBC_STATE_IDLE, GSD);
 	U8 uiTimeCycle = 0;
 	I32 ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
 
@@ -400,7 +400,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							MessageBuffer, MessageLength, 0);
 		}
 
-		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_ARMED || vGetState(GSD) == OBC_STATE_CONNECTED) {
+		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_ARMED
+			|| vGetState(GSD) == OBC_STATE_CONNECTED) {
 			 /*HEAB*/ for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				if (uiTimeCycle == 0) {
 					//HeartbeatMessageCounter ++;
@@ -428,7 +429,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					/* Close safety socket */
 					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-						 vCloseSafetyChannel(&safety_socket_fd[iIndex]);
+						vCloseSafetyChannel(&safety_socket_fd[iIndex]);
 					}
 					vSetState(OBC_STATE_IDLE, GSD);
 					break;
@@ -436,7 +437,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 		}
 
-		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_CONNECTED || vGetState(GSD) == OBC_STATE_ARMED) {
+		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_CONNECTED
+			|| vGetState(GSD) == OBC_STATE_ARMED) {
 			char buffer[RECV_MESSAGE_BUFFER];
 			size_t receivedMONRData = 0;
 
@@ -938,7 +940,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								fclose(fd);
 
 								 /*DOTM*/
-								MessageLength = ObjectControlBuildTRAJMessageHeader(TrajBuffer,
+									MessageLength = ObjectControlBuildTRAJMessageHeader(TrajBuffer,
 																						&RowCount,
 																						&HeaderData,
 																						&TRAJInfoData,
