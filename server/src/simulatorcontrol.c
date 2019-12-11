@@ -99,7 +99,6 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
   struct tm *tm;
   U8 PrevSecondU8;
   U16 CurrentMilliSecondU16, PrevMilliSecondU16;
-  U16 CycleU16;
   U8 ServerStatusU8 = 0;
   U8 SimulatorInitiatedReqU8 = 0;
   U8 SimulatorInitiatedU8 = 0;
@@ -196,7 +195,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         bzero(RxBuffer, SIM_CONTROL_BUFFER_SIZE_2048);
         if(WaitAllDataU8 == 0)
         {
-          ClientResultI32 = UtilReceiveTCPData("SimulatorControl", &SimulatorTCPSocketfdI32, RxBuffer, 0, 0); //Data length resides in ClientResultI32
+          ClientResultI32 = UtilReceiveTCPData("SimulatorControl", &SimulatorTCPSocketfdI32, RxBuffer, 4, 0); //Data length resides in ClientResultI32
         }
         else if (WaitAllDataU8 == 1)
         {
@@ -447,7 +446,7 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
         }
 
 
-        if(CycleU16 == 0)
+        if(GPSTime->MillisecondU16 == 0)
         {
           /*Send hearbeat to the simulator*/
           SimulatorControlSendHeartbeat( &SimulatorUDPSocketfdI32, &simulator_addr, GPSTime, 0);
@@ -493,8 +492,6 @@ int simulatorcontrol_task(TimeType *GPSTime, GSDType *GSD)
       }
  
 
-       ++CycleU16;
-      if(CycleU16 >= SIM_CONTROL_HEARTBEAT_TIME_MS/SIM_CONTROL_TASK_PERIOD_MS) CycleU16 = 0;
       sleep_time.tv_sec = 0;
       sleep_time.tv_nsec = SIM_CONTROL_TASK_PERIOD_MS*100; //!!!
       (void)nanosleep(&sleep_time,&ref_time);

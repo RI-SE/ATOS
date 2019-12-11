@@ -786,7 +786,7 @@ void objectcontrol_task(TimeType *GPSTime, GSDType *GSD)
                     /*DTM*/
                     for(iIndex=0;iIndex<nbr_objects;++iIndex) 
                     { 
-                        printf("[ObjectControl] Checking ObjectIp = %s == DTMIp = %d.%d.%d.%d\n", object_address_name[iIndex], (U8)(DTMIpU32>>24), (U8)(DTMIpU32>>16), (U8)(DTMIpU32>>8), (U8)DTMIpU32);
+                        //printf("[ObjectControl] Checking ObjectIp = %s == DTMIp = %d.%d.%d.%d\n", object_address_name[iIndex], (U8)(DTMIpU32>>24), (U8)(DTMIpU32>>16), (U8)(DTMIpU32>>8), (U8)DTMIpU32);
                         if(DTMIpU32 == UtilIPStringToInt(object_address_name[iIndex]))
                         {
                             printf("[ObjectControl] Sending TRAJ_FROMSUP chunk to %d.%d.%d.%d, size %ld bytes \n", (U8)(DTMIpU32>>24), (U8)(DTMIpU32>>16), (U8)(DTMIpU32>>8), (U8)DTMIpU32, strlen(pcRecvBuffer)/2);
