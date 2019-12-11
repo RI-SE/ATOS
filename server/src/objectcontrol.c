@@ -345,6 +345,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	U8 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
 
+    vInitializeState(OBC_STATE_IDLE, GSD);
 	U8 uiTimeCycle = 0;
 	I32 ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
 
