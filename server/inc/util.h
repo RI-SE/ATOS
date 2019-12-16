@@ -261,6 +261,7 @@ COMM_TRCM = 25,
 COMM_DISARM = 26,
 COMM_MONR = 239,
 COMM_OBJECTS_CONNECTED = 111,
+COMM_FAILURE = 254,
 COMM_INV = 255
 };
 
@@ -831,6 +832,9 @@ void UtilGetJournalDirectoryPath(char* path, size_t pathLen);
 void UtilGetConfDirectoryPath(char* path, size_t pathLen);
 void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
 void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
+
+// File parsing functions
+int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
 
 //
 CartesianPosition MONRToCartesianPosition(MonitorDataType MONR);
