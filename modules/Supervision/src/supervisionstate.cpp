@@ -22,6 +22,7 @@ SupervisionState::SupervisionState() {
 
     // Transitions to verifying running
     this->transitions.insert( {SupervisionState::READY, SupervisionState::RUNNING} );
+
 }
 
 void SupervisionState::set(SupervisionState::State newState) {
@@ -32,8 +33,7 @@ void SupervisionState::set(SupervisionState::State newState) {
             return;
         }
     }
-    throw std::invalid_argument("State transition from " + toString(currentState) + " to "
-                                + toString(newState) +  " is not allowed");
+    currentState = ERROR;
 }
 
 std::string SupervisionState::toString(State state) {
@@ -46,6 +46,8 @@ std::string SupervisionState::toString(State state) {
         return "VERIFYING ARM";
     case RUNNING:
         return "RUNNING";
+    case ERROR:
+        return "ERROR";
     default:
         return "UNKNOWN";
     }

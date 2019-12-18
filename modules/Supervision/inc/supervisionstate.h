@@ -10,7 +10,8 @@ public:
         READY,
         VERIFYING_INIT,
         VERIFYING_ARM,
-        RUNNING
+        RUNNING,
+        ERROR
     } State;
     void set(State newState);
     State get() const { return this->currentState; }
