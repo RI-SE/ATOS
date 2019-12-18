@@ -125,11 +125,12 @@ int main(int argc, char *argv[]) {
 	// Initialise data dictionary
 	LogMessage(LOG_LEVEL_INFO, "Initializing data dictionary");
 	dataDictInitResult = DataDictionaryConstructor(GSD);
-    if (dataDictInitResult != READ_OK && dataDictInitResult != READ_WRITE_OK){
+	if (dataDictInitResult != READ_OK && dataDictInitResult != READ_WRITE_OK) {
 		util_error("Unable to initialize shared memory space");
-    }else {
-        LogMessage(LOG_LEVEL_INFO, "Data dictionary succesfully initiated");
-    }
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "Data dictionary succesfully initiated");
+	}
 	LogMessage(LOG_LEVEL_INFO, "About to enter mq init");
 
 	// Initialise message queue bus
