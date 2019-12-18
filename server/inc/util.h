@@ -36,7 +36,7 @@ extern "C"{
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-#define MaestroVersion  "Maestro 0.1.x"
+#define MaestroVersion  "0.4.0"
 
 #define ISO_PROTOCOL_VERSION 2
 #define ACK_REQ 0
@@ -75,7 +75,7 @@ extern "C"{
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.22"
+#define LOCAL_USER_CONTROL_IP "10.168.212.5"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -261,6 +261,7 @@ COMM_TRCM = 25,
 COMM_DISARM = 26,
 COMM_MONR = 239,
 COMM_OBJECTS_CONNECTED = 111,
+COMM_FAILURE = 254,
 COMM_INV = 255
 };
 
@@ -487,16 +488,16 @@ typedef struct
 
 typedef struct
 {
-  volatile U32 MessageLengthU32;
-  volatile U32 ChannelCodeU32;
-  volatile U32 MTSPU32;
-  volatile dbl CurrentTimeDbl;
-  volatile dbl TimeToSyncPointDbl;
-  volatile dbl PrevTimeToSyncPointDbl;
-  volatile I32 SyncPointIndexI32;
-  volatile U32 CurrentTimeU32;
-  volatile I32 BestFoundIndexI32;
-  volatile U16 IterationTimeU16;
+  U32 MessageLengthU32;
+  U32 ChannelCodeU32;
+  U32 MTSPU32;
+  dbl CurrentTimeDbl;
+  dbl TimeToSyncPointDbl;
+  dbl PrevTimeToSyncPointDbl;
+  I32 SyncPointIndexI32;
+  U32 CurrentTimeU32;
+  I32 BestFoundIndexI32;
+  U16 IterationTimeU16;
 } ASPType;
 
 /*! Object control states */
@@ -566,7 +567,7 @@ typedef struct
   volatile U16 SupervisorTCPPortU16;
   U32 DataDictionaryRVSSConfigU32;
   U32 DataDictionaryRVSSRateU8;
-  volatile ASPType ASPData;
+  ASPType ASPData;
   C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
   volatile OBCState_t OBCStateU8;
 } GSDType;
@@ -747,32 +748,32 @@ typedef enum {
 
 typedef struct
 {
-  volatile U32 MessageLengthU32;
-  volatile U32 ChannelCodeU32;
-  volatile U16 YearU16;
-  volatile U8 MonthU8;
-  volatile U8 DayU8;
-  volatile U8 HourU8;
-  volatile U8 MinuteU8;
-  volatile U8 SecondU8;
-  volatile U16 MillisecondU16;
-  volatile U32 SecondCounterU32;
-  volatile U64 GPSMillisecondsU64;
-  volatile U32 GPSMinutesU32;
-  volatile U16 GPSWeekU16;
-  volatile U32 GPSSecondsOfWeekU32;
-  volatile U32 GPSSecondsOfDayU32;
-  volatile U8 FixQualityU8;
-  volatile U8 NSatellitesU8;
+  U32 MessageLengthU32;
+  U32 ChannelCodeU32;
+  U16 YearU16;
+  U8 MonthU8;
+  U8 DayU8;
+  U8 HourU8;
+  U8 MinuteU8;
+  U8 SecondU8;
+  U16 MillisecondU16;
+  U32 SecondCounterU32;
+  U64 GPSMillisecondsU64;
+  U32 GPSMinutesU32;
+  U16 GPSWeekU16;
+  U32 GPSSecondsOfWeekU32;
+  U32 GPSSecondsOfDayU32;
+  U8 FixQualityU8;
+  U8 NSatellitesU8;
 } RVSSTimeType;
 
 
 typedef struct
 {
-  volatile U32 MessageLengthU32;
-  volatile U32 ChannelCodeU32;
-  volatile U8 OBCStateU8;
-  volatile U8 SysCtrlStateU8;
+  U32 MessageLengthU32;
+  U32 ChannelCodeU32;
+  U8 OBCStateU8;
+  U8 SysCtrlStateU8;
 } RVSSMaestroType;
 
 
@@ -831,6 +832,9 @@ void UtilGetJournalDirectoryPath(char* path, size_t pathLen);
 void UtilGetConfDirectoryPath(char* path, size_t pathLen);
 void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
 void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
+
+// File parsing functions
+int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
 
 //
 CartesianPosition MONRToCartesianPosition(MonitorDataType MONR);

@@ -533,6 +533,27 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 
 		switch (iCommand) {
+		case COMM_FAILURE:
+			if (server_state == SERVER_STATE_INWORK) {
+				enum COMMAND failedCommand = (enum COMMAND)pcRecvBuffer[0];
+
+				if (failedCommand == COMM_INIT && PreviousSystemControlCommand == InitializeScenario_0) {
+					server_state = SERVER_STATE_IDLE;
+					SystemControlCommand = Idle_0;
+					LogMessage(LOG_LEVEL_INFO, "Initialization failed");
+					// TODO: report to user?
+				}
+				else {
+					LogMessage(LOG_LEVEL_ERROR, "Unhandled FAILURE (command: %u) reply in state %s",
+							   pcRecvBuffer[0], SystemControlStatesArr[server_state]);
+				}
+			}
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "Received unexpected FAILURE (command: %u) reply in state %s",
+						   pcRecvBuffer[0], SystemControlStatesArr[server_state]);
+				// TODO: React more?
+			}
+			break;
 		case COMM_OBC_STATE:
 			break;
 		case COMM_LOG:
@@ -564,8 +585,11 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case Idle_0:
 			break;
 		case GetServerStatus_0:
-			LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, %d", SystemControlStatesArr[server_state],
-					   SystemControlOBCStatesArr[objectControlState], DataDictionaryGetOBCStateU8(GSD));
+			if (SystemControlCommand != PreviousSystemControlCommand) {
+				LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, %d",
+						   SystemControlStatesArr[server_state],
+						   SystemControlOBCStatesArr[objectControlState], DataDictionaryGetOBCStateU8(GSD));
+			}
 			SystemControlCommand = Idle_0;
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 			ControlResponseBuffer[0] = server_state;
