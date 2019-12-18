@@ -80,8 +80,23 @@ int main(int argc, char *argv[])
         {
             DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Recieved MONITOR message: %s\n",cpBuffer);
 
-            vISOtoCHRONOSmsg(cpBuffer,chronosbuff,RECV_MESSAGE_BUFFER);
-            vSendVisualization(&visual_server,&visual_server_addr,chronosbuff);
+
+            //Option 1
+            //vISOtoCHRONOSmsg(cpBuffer,chronosbuff,RECV_MESSAGE_BUFFER);
+            //printf("MQ monr %s\n", chronosbuff);
+            //printf("Visual_server valueb %d\n", visual_server );
+
+            //vSendVisualization(&visual_server,&visual_server_addr,chronosbuff);
+
+            //Option 2
+            //LengthU32 = SimulatorControlBuildObjectMonitorMessage(cpBuffer, chronosbuff, &ObjectMonitorData, 0);
+            //UtilSendUDPData("SimulatorControl", &SimulatorUDPSocketfdI32, &simulator_addr, SendBuffer, LengthU32, 0);
+
+            //Option3
+            C8 data[strlen(cpBuffer)];
+            bzero(data, strlen(data));
+            strcat(data, cpBuffer);
+            UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, data, sizeof(data), 0);
 
         }
         else if(iCommand == COMM_REPLAY)

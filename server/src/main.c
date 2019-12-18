@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
     }
     ++iIndex;
 
-  /*  char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
+    char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
     bzero(pcTempBuffer,MAX_UTIL_VARIBLE_SIZE);
     if(iUtilGetParaConfFile("VisualizationAdapter",pcTempBuffer))
     {
@@ -123,6 +123,7 @@ int main(int argc, char *argv[])
         }
         if(pID[iIndex] == 0)
         {
+
             DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: visualization 0 running in:  %i \n",getpid());
 
 
@@ -134,7 +135,7 @@ int main(int argc, char *argv[])
         }
         ++iIndex;
     }
-*/
+
 /*
     pID[iIndex] = fork();
     if(pID[iIndex] < 0)
@@ -199,7 +200,7 @@ int main(int argc, char *argv[])
     exit(EXIT_SUCCESS);
   }
   ++iIndex;
-  
+
 */
 
     pID[iIndex] = fork();
@@ -215,7 +216,7 @@ int main(int argc, char *argv[])
         exit(EXIT_SUCCESS);
     }
     ++iIndex;
-  
+
 
 
     DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: systemcontrol_task running in:  %i \n",getpid());

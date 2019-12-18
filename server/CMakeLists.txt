@@ -23,6 +23,9 @@ add_library(objctrl
   inc/objectcontrol.h
 )
 
+add_executable(DefaultVisualizationAdapter
+  src/visualization.c
+)
 
 add_executable(UserControl
   src/usercontrol.c
@@ -56,5 +59,6 @@ install (TARGETS TEServer DESTINATION bin)
 target_link_libraries(util rt m)
 target_link_libraries(util m)
 target_link_libraries(util rt)
+target_link_libraries(DefaultVisualizationAdapter util)
 target_link_libraries(UserControl util objctrl)
 target_link_libraries(TEServer util)
