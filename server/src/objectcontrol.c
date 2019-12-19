@@ -116,18 +116,7 @@
 #define COMMAND_MTSP_CODE 0xA104
 #define COMMAND_MTSP_MESSAGE_LENGTH sizeof(MTSPType)
 
-// Old T&A (TODO: remove)
-#define COMMAND_ACM_CODE 11		//Action Configuration Message: Server->Object, TCP
-#define COMMAND_ACM_MESSAGE_LENGTH 6
 
-#define COMMAND_EAM_CODE 12		//Execution Action Message: Server->Object, UDP
-#define COMMAND_EAM_MESSAGE_LENGTH 6
-
-#define COMMAND_TCM_CODE 13		//Trigger Configuration Message: Server->Object, TCP
-#define COMMAND_TCM_MESSAGE_LENGTH 5
-
-#define COMMAND_TOM_CODE 14		//Trigger Occurred Message: Object->Server, UDP
-#define COMMAND_TOM_MESSAGE_LENGTH 8
 
 #define ASP_MESSAGE_LENGTH sizeof(ASPType)
 
@@ -209,8 +198,6 @@ I32 ObjectControlMONRToASCII(MONRType * MONRData, GeoPosition * OriginPosition, 
 							 C8 * Heading, C8 * DriveDirection, C8 * ObjectState, C8 * ReadyToArm,
 							 C8 * ErrorStatus, C8 debug);
 I32 ObjectControlBuildMONRMessage(C8 * MonrData, MONRType * MONRData, U8 debug);
-int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId, char *TriggAction, char *TriggDelay,
-							char debug);
 I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * SimData, U8 debug);
 I32 ObjectControlSendDTMMessage(C8 * DTMData, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
 								DOTMType * DOTMData, U8 debug);
@@ -1531,49 +1518,6 @@ I32 ObjectControlMONRToASCII(MONRType * MONRData, GeoPosition * OriginPosition, 
 		//ErrorStatusU8
 		//MonrValueU8 = (unsigned char)*(MonrData+j);
 		sprintf(ErrorStatus, "%" PRIu8, MONRData->ErrorStatusU8);
-
-	}
-
-	return 0;
-}
-
-int ObjectControlTOMToASCII(unsigned char *TomData, char *TriggId, char *TriggAction, char *TriggDelay,
-							char debug) {
-	char Buffer[6];
-	long unsigned int MonrValueU64;
-	unsigned int MonrValueU32;
-	unsigned short MonrValueU16;
-	unsigned char MonrValueU8;
-	int i, j;
-
-	bzero(TriggId, SMALL_BUFFER_SIZE_1);
-	bzero(TriggAction, SMALL_BUFFER_SIZE_1);
-	bzero(TriggDelay, SMALL_BUFFER_SIZE_0);
-
-	if (*TomData == COMMAND_TOM_CODE) {
-
-		if (debug == 1) {
-			for (i = 0; i < COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TOM_MESSAGE_LENGTH; i++)
-				printf("%x-", (unsigned char)TomData[i]);
-			printf("\n");
-		}
-
-		//Trigg id
-		j = 5;
-		MonrValueU8 = (unsigned char)*(TomData + j);
-		sprintf(TriggId, "%" PRIu8, MonrValueU8);
-		j++;
-
-		//Trigg type
-		MonrValueU8 = (unsigned char)*(TomData + j);
-		sprintf(TriggAction, "%" PRIu8, MonrValueU8);
-		j++;
-
-		//Delay
-		MonrValueU64 = 0;
-		for (i = 0; i <= 5; i++, j++)
-			MonrValueU64 = *(TomData + j) | (MonrValueU64 << 8);
-		sprintf(TriggDelay, "%" PRIu64, MonrValueU64);
 
 	}
 
