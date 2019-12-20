@@ -875,7 +875,7 @@ int UtilVincentyDirect(double refLat, double refLon, double a1, double distance,
 			B * sin(sigma) * (cos(sigma2m) +
 							  0.25 * B * (cos(sigma) * (-1.0 + 2.0 * pow(cos(sigma2m), 2)) -
 										  B / 6 * cos(sigma2m) * (-3.0 + 4.0 * pow(sin(sigma), 2.0))
-										  * (-3.0 + 4.0 * pow(cos(sigma2m),2))
+										  * (-3.0 + 4.0 * pow(cos(sigma2m), 2))
 							  )
 			);
 		sigma = init_sigma + deltaSigma;
