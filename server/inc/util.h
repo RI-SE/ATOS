@@ -868,7 +868,6 @@ int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
-//int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug); // TODO DELETE
 
 void llhToXyz(double lat, double lon, double height, double *x, double *y, double *z);
 void enuToLlh(const double *iLlh, const double *xyz, double *llh);
