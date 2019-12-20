@@ -64,7 +64,6 @@
 #define PRIO_COMM_TRCM 20
 // Messages affecting state change messages
 #define PRIO_OBJECTS_CONNECTED 18
-#define PRIO_COMM_SUCCESS 18
 #define PRIO_COMM_FAILURE 18
 // State change messages
 #define PRIO_COMM_STRT 16
@@ -618,85 +617,6 @@ int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint * ASP, FILE * filefd, char debug)
 
 	return 0;
 }
-
-/* TODO: DELETE
-int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug)
-{
-
-  char DataBuffer[MAX_FILE_PATH];
-  char RowBuffer[MAX_FILE_PATH];
-  char *ptr, *ptr1, *ptr2;
-  bzero(DataBuffer,MAX_FILE_PATH);
-  bzero(RowBuffer,MAX_FILE_PATH);
-
-  bzero(RowBuffer, MAX_FILE_PATH);
-  UtilReadLineCntSpecChars(filefd, RowBuffer);
-
-  ptr = strchr(RowBuffer, ';');
-  strncpy(DataBuffer, RowBuffer, (uint64_t)ptr - (uint64_t)RowBuffer);
-  strncpy(TAA->TriggerIP, DataBuffer, strlen(DataBuffer));
-
-  bzero(DataBuffer, strlen(DataBuffer));
-  ptr1 = ptr+1;
-  ptr = strchr(ptr+1, ';');
-  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);
-  TAA->TriggerId = (uint8_t)atoi(DataBuffer);
-
-  bzero(DataBuffer, strlen(DataBuffer));
-  ptr1 = ptr+1;
-  ptr = strchr(ptr+2, '[');
-  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);
-  strncpy(TAA->TriggerType, DataBuffer, strlen(DataBuffer));
-
-  bzero(DataBuffer, strlen(DataBuffer));
-  ptr1 = ptr+1;
-  ptr = strchr(ptr+2, ']');
-  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);
-  strncpy(TAA->TriggerTypeVar, DataBuffer, strlen(DataBuffer));
-  ptr = strchr(ptr, ';');
-
-  bzero(DataBuffer, strlen(DataBuffer));
-  ptr1 = ptr+1;
-  ptr = strchr(ptr+2, '[');
-  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);
-  strncpy(TAA->ActionType, DataBuffer, strlen(DataBuffer));
-
-  bzero(DataBuffer, strlen(DataBuffer));
-  ptr1 = ptr+1;
-  ptr = strchr(ptr+2, ']');
-  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);
-  strncpy(TAA->ActionTypeVar, DataBuffer, strlen(DataBuffer));
-  ptr = strchr(ptr, ';');
-
-  bzero(DataBuffer, strlen(DataBuffer));
-  ptr1 = ptr+1;
-  ptr = strchr(ptr+2, '[');
-  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);
-  if(strstr(DataBuffer,"SEND_START") != NULL) TAA->Action = TAA_ACTION_EXT_START;
-  else if(strstr(DataBuffer,"TEST_SIGNAL") != NULL) TAA->Action = TAA_ACTION_TEST_SIGNAL;
-
-  bzero(DataBuffer, strlen(DataBuffer));
-  ptr1 = ptr+1;
-  ptr = strchr(ptr+2, ']');
-  strncpy(DataBuffer, ptr1, (uint64_t)ptr - (uint64_t)ptr1);
-  strncpy(TAA->ActionDelay, DataBuffer, strlen(DataBuffer));
-
-
-  if(debug)
-  {
-    LogPrint("TriggerIP: %s", TAA->TriggerIP);
-    LogPrint("TriggerId: %d", TAA->TriggerId);
-    LogPrint("TriggerType: %s", TAA->TriggerType);
-    LogPrint("TriggerTypeVar: %s", TAA->TriggerTypeVar);
-    LogPrint("ActionType: %s", TAA->ActionType);
-    LogPrint("ActionTypeVar: %s", TAA->ActionTypeVar);
-    LogPrint("Action: %d", TAA->Action);
-    LogPrint("ActionDelay: %s", TAA->ActionDelay);
-  }
-
-  return 0;
-}
-*/
 
 
 void UtilSetObjectPositionIP(ObjectPosition * OP, char *IP) {
