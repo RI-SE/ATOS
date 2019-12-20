@@ -887,8 +887,7 @@ int UtilVincentyDirect(double refLat, double refLon, double a1, double distance,
 												pow(sin(U1) * sin(sigma) - cos(U1) * cos(sigma) * cos(a1), 2))
 						   ));
 
-	lambda = atan2(sin(sigma) * sin(a1), cos(U1) * cos(sigma) - sin(U1) * sin(sigma) * cos(a1)
-		);
+	lambda = atan2(sin(sigma) * sin(a1), cos(U1) * cos(sigma) - sin(U1) * sin(sigma) * cos(a1));
 
 	C = f / 16 * pow2cosa * (4 + f * (4 - 3 * pow2cosa));
 
@@ -2004,7 +2003,9 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case MQBUS_OK:
 		return 0;
 	case MQBUS_MQ_FULL:
-		//LogMessage(LOG_LEVEL_WARNING, "Attempted to write to full message queue - message may be lost: <%d><%s>", iCommand, cpData);
+		LogMessage(LOG_LEVEL_WARNING,
+				   "Attempted to write to full message queue - message may be lost: <%d><%s>", iCommand,
+				   cpData);
 		return 1;
 	case MQBUS_INVALID_INPUT_ARGUMENT:
 		LogMessage(LOG_LEVEL_WARNING, "Invalid message queue message length");
@@ -4003,10 +4004,12 @@ double UtilGetDistance(double th1, double ph1, double th2, double ph2) {
  * \brief UtilCoordinateDistance calculates the distance between two cordinates using distance formula.
  * \param x1 x of first coordinate
  * \param y1 y of first coordinate
+ * \param z1 z of first coordinate
  * \param x2 x of second coordinate
  * \param y2 y of second coordinate
+ * \param z2 z of second coordinate
  * \return Distance
  */
-float UtilCoordinateDistance(float x1, float y1, float x2, float y2) {
-	return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2) * 1.0);
+float UtilCoordinateDistance(float x1, float y1, float z1, float x2, float y2, float z2) {
+	return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2) + pow(z2 - z1, 2));
 }
