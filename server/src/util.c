@@ -887,8 +887,7 @@ int UtilVincentyDirect(double refLat, double refLon, double a1, double distance,
 												pow(sin(U1) * sin(sigma) - cos(U1) * cos(sigma) * cos(a1), 2))
 						   ));
 
-	lambda = atan2(sin(sigma) * sin(a1), cos(U1) * cos(sigma) - sin(U1) * sin(sigma) * cos(a1)
-		);
+	lambda = atan2(sin(sigma) * sin(a1), cos(U1) * cos(sigma) - sin(U1) * sin(sigma) * cos(a1));
 
 	C = f / 16 * pow2cosa * (4 + f * (4 - 3 * pow2cosa));
 
@@ -2004,7 +2003,7 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case MQBUS_OK:
 		return 0;
 	case MQBUS_MQ_FULL:
-		//LogMessage(LOG_LEVEL_WARNING, "Attempted to write to full message queue - message may be lost: <%d><%s>", iCommand, cpData);
+		LogMessage(LOG_LEVEL_WARNING, "Attempted to write to full message queue - message may be lost: <%d><%s>", iCommand, cpData);
 		return 1;
 	case MQBUS_INVALID_INPUT_ARGUMENT:
 		LogMessage(LOG_LEVEL_WARNING, "Invalid message queue message length");
