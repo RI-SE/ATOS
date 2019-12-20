@@ -64,7 +64,6 @@
 #define PRIO_COMM_TRCM 20
 // Messages affecting state change messages
 #define PRIO_OBJECTS_CONNECTED 18
-#define PRIO_COMM_SUCCESS 18
 #define PRIO_COMM_FAILURE 18
 // State change messages
 #define PRIO_COMM_STRT 16
