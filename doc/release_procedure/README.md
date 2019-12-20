@@ -14,9 +14,10 @@ A release is the process of moving code from the `dev` branch to the `master` br
 feature -> dev
 ```
 Testing should be performed and documented through a lightweight protocol:
-* Complete a normal test with one virtual test object
+* Pass Jenkins tests 
+* Complete a normal manual test with one virtual test object
 * Complete a normal test with two virtual test objects
-* Complete a aborting test with two virtual test objects
+* Complete an aborting test with two virtual test objects
 
 
 # Release Phase
