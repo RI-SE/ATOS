@@ -916,7 +916,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex],
 										0);
 
-						/*Here we send DOTM, if the IP-address not is found */
+						/*Here we send TRAJ, if the IP-address not is found */
 						if (strstr(DTMReceivers, object_address_name[iIndex]) == NULL) {
 
 							fd = fopen(object_traj_file[iIndex], "r");
@@ -931,7 +931,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								UtilReadLineCntSpecChars(fd, FileHeaderBufferC8);
 								fclose(fd);
 
-								 /*DOTM*/
+								 /*TRAJ*/
 									MessageLength = ObjectControlBuildTRAJMessageHeader(TrajBuffer,
 																						&RowCount,
 																						&HeaderData,
@@ -941,11 +941,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 								//printf("RowCount: %d\n", RowCount);
 
-								/*Send DOTM header */
+								/*Send TRAJ header */
 								UtilSendTCPData("Object Control", TrajBuffer, MessageLength,
 												&socket_fds[iIndex], 0);
 
-								/*Send DOTM data */
+								/*Send TRAJ data */
 								ObjectControlSendTRAJMessage(object_traj_file[iIndex], &socket_fds[iIndex],
 															 RowCount,
 															 (char *)&object_address_name[iIndex],
