@@ -47,7 +47,12 @@ class MSCP:
 
         print("=== Starting listener on " + str(self.host) + ":" + str(self.port))
         while not self.quit:
-            data = self.socket.recv(1024)
+            try:
+                data = self.socket.recv(1024)
+            except ConnectionResetError as e:
+                if not self.quit:
+                    raise e
+
             for replyPattern in replyPatterns:
                 match = re.search(replyPattern["regex"],data)
                 if match is not None:
@@ -184,12 +189,12 @@ class MSCP:
     def Disconnect(self):
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDisconnectObject();"
         self.Send(message)
-        print("=== Disonnect() sent")
+        print("=== Disconnect() sent")
     
     def Start(self,delayTime_ms):       
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nStartScenario(" + str(delayTime_ms) + ");"
         self.Send(message)
-        print("=== StarScenario() sent")
+        print("=== StartScenario() sent")
 
     def UploadFile(self,targetPath,fileContents):
         packetSize = 1200

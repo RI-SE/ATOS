@@ -533,6 +533,27 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 
 		switch (iCommand) {
+		case COMM_FAILURE:
+			if (server_state == SERVER_STATE_INWORK) {
+				enum COMMAND failedCommand = (enum COMMAND)pcRecvBuffer[0];
+
+				if (failedCommand == COMM_INIT && PreviousSystemControlCommand == InitializeScenario_0) {
+					server_state = SERVER_STATE_IDLE;
+					SystemControlCommand = Idle_0;
+					LogMessage(LOG_LEVEL_INFO, "Initialization failed");
+					// TODO: report to user?
+				}
+				else {
+					LogMessage(LOG_LEVEL_ERROR, "Unhandled FAILURE (command: %u) reply in state %s",
+							   pcRecvBuffer[0], SystemControlStatesArr[server_state]);
+				}
+			}
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "Received unexpected FAILURE (command: %u) reply in state %s",
+						   pcRecvBuffer[0], SystemControlStatesArr[server_state]);
+				// TODO: React more?
+			}
+			break;
 		case COMM_OBC_STATE:
 			break;
 		case COMM_LOG:
@@ -564,8 +585,11 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case Idle_0:
 			break;
 		case GetServerStatus_0:
-			LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, %d", SystemControlStatesArr[server_state],
-					   SystemControlOBCStatesArr[objectControlState], DataDictionaryGetOBCStateU8(GSD));
+			if (SystemControlCommand != PreviousSystemControlCommand) {
+				LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, %d",
+						   SystemControlStatesArr[server_state],
+						   SystemControlOBCStatesArr[objectControlState], DataDictionaryGetOBCStateU8(GSD));
+			}
 			SystemControlCommand = Idle_0;
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 			ControlResponseBuffer[0] = server_state;
@@ -1792,7 +1816,7 @@ I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 De
 	UtilSearchTextFile(confPathDir, TextBuffer, "", ReturnValue);
 
 	if (Debug) {
-		LogMessage(LOG_LEVEL_DEBUG, "%s = %s\n", ParameterName, ReturnValue);
+		LogPrint("%s = %s\n", ParameterName, ReturnValue);
 	}
 
 	return strlen(ReturnValue);
@@ -1828,7 +1852,7 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 	}
 
 	if (Debug) {
-		LogMessage(LOG_LEVEL_DEBUG, "ParameterList = %s\n", ParameterList);
+		LogMessage(LOG_LEVEL_INFO, "ParameterList = %s\n", ParameterList);
 	}
 
 	return strlen(ParameterList);
@@ -1883,7 +1907,7 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 
 
 	if (Debug)
-		LogMessage(LOG_LEVEL_DEBUG, "%d %s", *ReturnValue, CompletePath);
+		LogPrint("%d %s", *ReturnValue, CompletePath);
 
 
 	return 0;
@@ -1972,7 +1996,7 @@ I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 	}
 
 	if (Debug)
-		LogMessage(LOG_LEVEL_DEBUG, "%d %s", *(ReturnValue), CompletePath);
+		LogPrint("%d %s", *(ReturnValue), CompletePath);
 
 	if (*ReturnValue == SUCCEDED_CREATE_FOLDER)
 		LogMessage(LOG_LEVEL_INFO, "Directory created: %s", CompletePath);
@@ -2150,11 +2174,10 @@ I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * 
 	RestCount = (U32) (st.st_size) % PacketSizeU16;
 
 	if (Debug) {
-		LogMessage(LOG_LEVEL_DEBUG, "Send file content:");
-		LogMessage(LOG_LEVEL_DEBUG, "%s", Path);
-		//printf("%s\n", FileSize);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", PacketSize);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", CompletePath);
+		LogPrint("Send file content:");
+		LogPrint("%s", Path);
+		LogPrint("%s", PacketSize);
+		LogPrint("%s", CompletePath);
 	}
 
 	fd = fopen(CompletePath, "r");

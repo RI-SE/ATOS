@@ -1,7 +1,7 @@
 #!/bin/sh
 export PATH=$PATH:/usr/bin
 
-if [ $USER = "jenkins" ]; then
+if [ $USER = "jenkins" ] || [ $USER = "tomcat" ]; then
 	# Show jenkins environment
 	echo "Running as ${USER} with environment"
 	printenv

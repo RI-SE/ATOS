@@ -67,15 +67,16 @@ int main()
         util_error("Unable to initialize signal handler");
 
     // Initialize message bus connection
-    while(iCommInit() && !quit)
-    {
+    while(iCommInit() && !quit) {
         nanosleep(&sleepTimePeriod,&remTime);
     }
 
-    while(!quit)
-    {
-        if (iCommRecv(&command, mqRecvData, sizeof (mqRecvData), nullptr) < 0)
-        {
+    while(!quit) {
+        if (state.get() == SupervisionState::ERROR) {
+            iCommSend(COMM_ABORT, nullptr, 0);
+        }
+
+        if (iCommRecv(&command, mqRecvData, sizeof (mqRecvData), nullptr) < 0) {
             util_error("Message bus receive error");
         }
 
