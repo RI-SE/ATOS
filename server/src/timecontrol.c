@@ -520,9 +520,9 @@ static void TimeControlDecodeTimeBuffer(TimeType * GPSTime, C8 * TimeBuffer, C8 
 		//TimeControlGetMillisecond(GPSTime);
 		//LogPrintBytes(TimeBuffer,0,TIME_CONTROL_RECEIVE_BUFFER_SIZE);
 		//LogPrint("ProtocolVersionU8: %d", GPSTime->ProtocolVersionU8);
-		//LogPrint("YearU16: %d", GPSTime->YearU16);
-		//LogPrint("MonthU8: %d", GPSTime->MonthU8);
-		//LogPrint("DayU8: %d", GPSTime->DayU8);
+		LogPrint("YearU16: %d", GPSTime->YearU16);
+		LogPrint("MonthU8: %d - %d", GPSTime->MonthU8, TimeBuffer[3]);
+		LogPrint("DayU8: %d", GPSTime->DayU8);
 		LogPrint("Time: %d:%d:%d", GPSTime->HourU8, GPSTime->MinuteU8, GPSTime->SecondU8);
 		//LogPrint("MinuteU8: %d", GPSTime->MinuteU8);
 		//LogPrint("SecondU8: %d", GPSTime->SecondU8);
