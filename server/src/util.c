@@ -2003,7 +2003,9 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case MQBUS_OK:
 		return 0;
 	case MQBUS_MQ_FULL:
-		LogMessage(LOG_LEVEL_WARNING, "Attempted to write to full message queue - message may be lost: <%d><%s>", iCommand, cpData);
+		LogMessage(LOG_LEVEL_WARNING,
+				   "Attempted to write to full message queue - message may be lost: <%d><%s>", iCommand,
+				   cpData);
 		return 1;
 	case MQBUS_INVALID_INPUT_ARGUMENT:
 		LogMessage(LOG_LEVEL_WARNING, "Invalid message queue message length");
