@@ -4,7 +4,7 @@
 #include "logging.h"
 #include "util.h"
 
-#define MODULE_NAME "Dummy"
+#define MODULE_NAME "ObjectMonitoring"
 
 int main()
 {
@@ -15,35 +15,15 @@ int main()
     struct timespec remTime;
 
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
-    LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
+	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
 
     // Initialize message bus connection
-    while(iCommInit())
-    {
+	while(iCommInit()) {
         nanosleep(&sleepTimePeriod,&remTime);
     }
 
-    while(true)
-    {
-        if (iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr) < 0)
-        {
-            util_error("Message bus receive error");
-        }
+	while(true) {
 
-        switch (command) {
-        case COMM_INV:
-            nanosleep(&sleepTimePeriod,&remTime);
-            break;
-        case COMM_OBC_STATE:
-            break;
-        case COMM_STRT:
-            nanosleep(&abortWaitTime,&remTime);
-            LogMessage(LOG_LEVEL_WARNING,"Sending ABORT");
-            iCommSend(COMM_ABORT,nullptr,0);
-            break;
-        default:
-            LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
-        }
     }
 
     return 0;
