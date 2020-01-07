@@ -33,11 +33,24 @@ add_library(util
   ../../server/src/util.c
 )
 
-add_executable(ObjectMonitoring src/main.cpp)
+add_executable(ObjectMonitoring
+	src/main.cpp
+)
+
+add_library(ConnectionHandler
+	src/connectionhandler.cpp
+	inc/connectionhandler.h
+)
+
+add_library(ProtocolData
+	src/protocoldata.cpp
+	inc/protocoldata.h
+)
 
 install(TARGETS ObjectMonitoring DESTINATION bin)
 
-target_link_libraries(ObjectMonitoring MaestroTime MaestroLogging util)
+target_link_libraries(ObjectMonitoring MaestroTime MaestroLogging util ConnectionHandler)
+target_link_libraries(ConnectionHandler ProtocolData)
 target_link_libraries(util MQBus MaestroLogging MaestroTime)
 target_link_libraries(MQBus rt m)
 
