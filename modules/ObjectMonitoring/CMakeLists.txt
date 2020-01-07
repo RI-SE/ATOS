@@ -8,6 +8,7 @@ include_directories(inc)
 include_directories(../../util/C/logging)
 include_directories(../../util/C/time)
 include_directories(../../util/C/MQBus)
+include_directories(../../server/inc)
 include(GNUInstallDirs)
 
 
@@ -27,11 +28,17 @@ add_library(MQBus
   ../../util/C/MQBus/mqbus.c
 )
 
+add_library(util
+  ../../server/inc/util.h
+  ../../server/src/util.c
+)
+
 add_executable(ObjectMonitoring src/main.cpp)
 
 install(TARGETS ObjectMonitoring DESTINATION bin)
 
-target_link_libraries(ObjectMonitoring MaestroTime MaestroLogging)
+target_link_libraries(ObjectMonitoring MaestroTime MaestroLogging util)
+target_link_libraries(util MQBus MaestroLogging MaestroTime)
 target_link_libraries(MQBus rt m)
 
 
