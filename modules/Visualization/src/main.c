@@ -84,6 +84,17 @@ int main() {
 			// ((TODO define this protocol clearly - leave this for now))
 			UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer,
 							sizeof (busReceiveBuffer), 0);
+
+            MonitorDataType monitorData;
+            int busReceiveBufferLen = sizeof (busReceiveBuffer);
+            struct timeval monrTime, systemTime;
+
+
+            //TimeSetToCurrentSystemTime(&systemTime);
+            //UtilPopulateMonitorDataStruct(busReceiveBuffer, (size_t) (busReceiveBufferLen), &monitorData, 0);
+            //TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monitorData.MONR.GPSQmsOfWeekU32);
+            printf("HELLO!");
+
 			break;
 		case COMM_LOG:
 			break;
