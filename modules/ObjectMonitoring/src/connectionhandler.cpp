@@ -1,21 +1,17 @@
 #include "connectionhandler.h"
 #include "logging.h"
+
 #include <system_error>
 #include <unistd.h>
-#include <stdio.h>
 #include <sys/socket.h>
-#include <stdlib.h>
-#include <netinet/in.h>
-#include <string.h>
 #include <vector>
 
-typedef void* (*ThreadFunctionPointerType)(void *);
+ConnectionHandler::ConnectionHandler(int openSocketDescriptor, ProtocolData& data)
+	: ConnectionHandler::ConnectionHandler(openSocketDescriptor, data, DefaultReadBufferSize) {}
 
-ConnectionHandler::ConnectionHandler(int openSocketDescriptor)
-	: ConnectionHandler::ConnectionHandler(openSocketDescriptor, DefaultReadBufferSize) {}
-
-ConnectionHandler::ConnectionHandler(int openSocketDescriptor, unsigned long readBufferSize) {
+ConnectionHandler::ConnectionHandler(int openSocketDescriptor, ProtocolData& data, unsigned long readBufferSize) : data(data) {
 	int returnCode;
+
 	if (openSocketDescriptor < 0) {
 		LogMessage(LOG_LEVEL_ERROR, "Attempted to create connection handler with invalid socket descriptor");
 		return;
@@ -23,7 +19,7 @@ ConnectionHandler::ConnectionHandler(int openSocketDescriptor, unsigned long rea
 	socketDescriptor = openSocketDescriptor;
 
 	if (readBufferSize == 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Attempted to create connection handler with invalid socket descriptor");
+		LogMessage(LOG_LEVEL_ERROR, "Attempted to create connection handler with zero buffer size");
 		return;
 	}
 	this->readBufferSize = readBufferSize;
@@ -31,35 +27,48 @@ ConnectionHandler::ConnectionHandler(int openSocketDescriptor, unsigned long rea
 	LogMessage(LOG_LEVEL_INFO, "Creating thread to handle connection");
 	returnCode = pthread_create(&readThread, nullptr, &ConnectionHandler::routineWrapper, this);
 	if (returnCode) {
+		LogMessage(LOG_LEVEL_ERROR, "Error creating thread");
+		close(socketDescriptor);
+		terminated = true;
 		throw std::system_error();
 	}
 }
 
+ConnectionHandler::~ConnectionHandler() {
+	close(socketDescriptor);
+}
+
 
 void* ConnectionHandler::threadRoutine(void*) {
-	struct sockaddr_in address;
-	socklen_t addrlen = sizeof (address);
 	std::vector<char> readBuffer(readBufferSize);
 	std::vector<char> messageBuffer;
 	ssize_t readBytes;
 
-	socketDescriptor = accept(socketDescriptor, (struct sockaddr *)&address, static_cast<socklen_t*>(&addrlen));
-	if (socketDescriptor < 0) {
-		pthread_exit(static_cast<void*>(&socketDescriptor));
-	}
-
 	while ( (readBytes = read(socketDescriptor, readBuffer.data(), readBuffer.size()) ) > 0) {
 		messageBuffer.insert(messageBuffer.end(), readBuffer.begin(), readBuffer.end());
-		// TODO: Decode raw data into MQ friendly data
-
+		switch (data.decodeFrom(messageBuffer)) {
+		case ProtocolData::DECODE_PARTIAL:
+			break;
+		case ProtocolData::DECODE_SUCCESSFUL:
+			messageBuffer.clear();
+			break;
+		case ProtocolData::DECODE_ERROR:
+			messageBuffer.clear();
+			break;
+		}
 	}
 
 	if (readBytes < 0) {
 		LogMessage(LOG_LEVEL_ERROR, "Socket read error");
-		pthread_exit(static_cast<void*>(&readBytes));
+		terminate(static_cast<void*>(&readBytes));
 	}
 	else {
 		LogMessage(LOG_LEVEL_INFO, "Remote closed connection");
-		pthread_exit(nullptr);
+		terminate(nullptr);
 	}
+}
+
+void ConnectionHandler::terminate(void *retval) {
+	terminated = true;
+	pthread_exit(retval);
 }

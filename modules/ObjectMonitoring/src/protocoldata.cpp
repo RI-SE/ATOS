@@ -1,3 +1,4 @@
 #include "protocoldata.h"
-#include "logging.h"
 
+ProtocolData::~ProtocolData() {
+}

@@ -2,20 +2,28 @@
 #define PROTOCOLDATA_H
 
 #include <pthread.h>
+#include <vector>
+#include <functional>
+#include <netinet/in.h>
+#include <unordered_map>
+#include <memory>
 
-class ProtocolData
-{
+class ProtocolData {
 public:
-	ProtocolData();
+	ProtocolData() = default;
+	ProtocolData(const ProtocolData&) = default;
+	ProtocolData(ProtocolData&&) = default;
+	ProtocolData& operator=(const ProtocolData&) = default;
+	ProtocolData& operator=(ProtocolData&&) = default;
+	virtual ~ProtocolData();
 
 	typedef enum {
-		OK,
-		DECODE_INCOMPLETE,
+		DECODE_PARTIAL,
 		DECODE_SUCCESSFUL,
 		DECODE_ERROR
 	} ReturnCode;
 
-	virtual ReturnCode decodeFromData();
+	virtual ReturnCode decodeFrom(const std::vector<char> &rawData) = 0;
 
 private:
 
