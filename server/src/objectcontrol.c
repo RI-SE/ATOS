@@ -542,18 +542,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						strcat(buffer, ";");
 					}
 
-					LogMessage(LOG_LEVEL_DEBUG, "Sending MONR message: %s", buffer);
-
-					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
-						// Send MONR message on old (ASCII) format
-						if (iCommSend(COMM_MONI, buffer, strlen(buffer)) < 0) {
-							LogMessage(LOG_LEVEL_ERROR,
-									   "Fatal communication fault when sending MONI command - entering error state");
-							vSetState(OBC_STATE_ERROR, GSD);
-							ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
-						}
-					}
-
 					//Ok, let's do the ASP
 					for (i = 0; i < SyncPointCount; i++) {
 						if (TEST_SYNC_POINTS == 0
@@ -2016,6 +2004,20 @@ I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 *
 								 DOTMType * DOTMData, U8 debug) {
 	FILE *fd;
 
+	// Save socket settings and set it to blocking
+	int retval = fcntl(*Socket, F_GETFL);
+	if (retval < 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Error getting socket options with fcntl");
+		return -1;
+	}
+	int socketOptions = retval;
+	retval = fcntl(*Socket, F_SETFL, socketOptions & ~O_NONBLOCK);
+	if (retval < 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Error setting socket options with fcntl");
+		return -1;
+	}
+
+
 	fd = fopen(Filename, "r");
 	if (fd == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to open file <%s>", Filename);
@@ -2028,6 +2030,7 @@ I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 *
 	Transmissions = RowCount / COMMAND_DOTM_ROWS_IN_TRANSMISSION;
 	Rest = RowCount % COMMAND_DOTM_ROWS_IN_TRANSMISSION;
 	U16 CrcU16 = 0;
+
 
 	for (i = 0; i < Transmissions; i++) {
 		MessageLength =
@@ -2061,8 +2064,15 @@ I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 *
 	}
 
 	LogMessage(LOG_LEVEL_INFO, "%d DOTM bytes sent to %s:%d", SumMessageLength, IP, Port);
-
 	fclose(fd);
+
+	// Reset socket settings
+	retval = fcntl(*Socket, F_SETFL, socketOptions);
+	if (retval < 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Error setting socket options with fcntl");
+		return -1;
+	}
+
 
 	return 0;
 }

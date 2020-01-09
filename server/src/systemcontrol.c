@@ -185,7 +185,7 @@ I32 SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
 												U8 SysCtrlState, U8 Debug);
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
-I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, C8 * MonrData, U8 Debug);
+I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData, U8 Debug);
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
 
@@ -208,6 +208,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	struct sockaddr_in RVSSChannelAddr;
 	struct in_addr ip_addr;
 	I32 RVSSChannelSocket;
+	MonitorDataType monrData;
 
 	ServerState_t server_state = SERVER_STATE_UNDEFINED;
 	OBCState_t objectControlState = OBC_STATE_UNDEFINED;
@@ -224,6 +225,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	char *StartPtr, *StopPtr, *CmdPtr, *OpeningQuotationMarkPtr, *ClosingQuotationMarkPtr, *StringPos;
 	struct timespec tTime;
 	enum COMMAND iCommand;
+	ssize_t bytesReceived = 0;
 	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
 	char ObjectIP[SMALL_BUFFER_SIZE_16];
 	char ObjectPort[SMALL_BUFFER_SIZE_6];
@@ -530,7 +532,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 		bzero(pcRecvBuffer, SC_RECV_MESSAGE_BUFFER);
-		iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
+		bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 
 		switch (iCommand) {
 		case COMM_FAILURE:
@@ -562,16 +564,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case COMM_MONR:
 			// TODO: Decode
-			break;
-		case COMM_MONI:
-			if (RVSSChannelSocket != 0) {
-				//printf("Monr sys %s\n", pcRecvBuffer);
-				if (RVSSConfigU32 & RVSS_MONR_CHANNEL) {
-					SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, pcRecvBuffer,
-															 0);
-					UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
-									RVSSMessageLengthU32, 0);
-				}
+			if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
+				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t)bytesReceived, &monrData, 0);
+				SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData,
+														 0);
+				UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+								RVSSMessageLengthU32, 0);
 			}
 			break;
 		case COMM_INV:
@@ -2297,7 +2295,7 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 
 
 
-
+#define MAX_MONR_STRING_LENGTH 116
 /*
 SystemControlBuildRVSSMONRChannelMessage builds a message from data in *MonrData. The message is stored in *RVSSData.
 See the architecture document for the protocol of RVSS. 
@@ -2308,10 +2306,14 @@ See the architecture document for the protocol of RVSS.
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
 
-I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, C8 * MonrData, U8 Debug) {
+I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData, U8 Debug) {
 	I32 MessageLength = 0;
+	char MonrDataString[MAX_MONR_STRING_LENGTH];
 
-	MessageLength = strlen(MonrData) + 8;
+	// TODO: Convert MonrData to string
+	UtilMonitorDataToString(MonrData, MonrDataString, sizeof (MonrDataString));
+
+	MessageLength = strlen(MonrDataString) + 8;
 	bzero(RVSSData, MessageLength);
 	*RVSSDataLengthU32 = MessageLength;
 
@@ -2320,7 +2322,7 @@ I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 	*(RVSSData + 2) = (C8) (MessageLength >> 8);
 	*(RVSSData + 3) = (C8) (MessageLength);
 	*(RVSSData + 7) = (C8) (RVSS_MONR_CHANNEL);
-	strcat(RVSSData + 8, MonrData);
+	strcat(RVSSData + 8, MonrDataString);
 
 	if (Debug) {
 
