@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <typeindex>
 #include <vector>
+#include <algorithm>
 
 #include "logging.h"
 #include "connectionhandler.h"
@@ -15,6 +16,8 @@
 using namespace std;
 
 static void handleNewConnection(int socketDescriptor, vector<ConnectionHandler*> &handlers);
+static void pruneTerminatedConnectionHandlers(vector<ConnectionHandler*> &handlers);
+static void listenForNewConnection(void);
 
 int main()
 {
@@ -34,10 +37,11 @@ int main()
     }
 
 	while(true) {
-		// TODO: listen
+		listenForNewConnection();
 
 		handleNewConnection(0, handlers);
 
+		pruneTerminatedConnectionHandlers(handlers);
     }
 
     return 0;
@@ -49,7 +53,7 @@ void handleNewConnection(int socketDescriptor, vector<ConnectionHandler*> &handl
 	getsockname(socketDescriptor, (struct sockaddr *)&socketAddress, &addressLength);
 
 	switch(socketAddress.sin_port) {
-	case ISO22133_PORT:
+	case ISO22133ProtocolData::TCP_PORT:
 	{
 		ISO22133ProtocolData protoData;
 		handlers.push_back(new ConnectionHandler(socketDescriptor, protoData));
@@ -60,4 +64,18 @@ void handleNewConnection(int socketDescriptor, vector<ConnectionHandler*> &handl
 		close(socketDescriptor);
 		return;
 	}
+}
+
+void pruneTerminatedConnectionHandlers(vector<ConnectionHandler*> &handlers) {
+	// Remove any connection handlers which are null pointers
+	handlers.erase( std::remove(handlers.begin(), handlers.end(), nullptr), handlers.end() );
+	// Remove any connection handlers which have finished their tasks
+	handlers.erase( std::remove_if(handlers.begin(), handlers.end(),
+								   [](const ConnectionHandler* handler) { handler->isTerminated(); }
+									), handlers.end() );
+}
+
+
+void listenForNewConnection(void) {
+	// TODO
 }
