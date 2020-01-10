@@ -162,43 +162,43 @@ class MSCP:
                     self.uploadReplyLock.release()
 
     def GetStatus(self):         
-        message = "POST /maestro HTTP/1.1\r\nHost: " + self.host + "\r\n\r\nGetServerStatus();"    
+        message = "POST /maestro HTTP/1.1\r\nHost: " + self.host + "\r\n\r\nGetServerStatus();\r\n\r\n"    
         self.Send(message)
         print("=== GetServerStatus() sent")
  
     def Abort(self):         
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nAbortScenario();"
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nAbortScenario();\r\n\r\n"
         self.Send(message)
         print("=== Abort() sent")
 
     def Arm(self):         
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nArmScenario();"    
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nArmScenario();\r\n\r\n"    
         self.Send(message)
         print("=== ArmScenario() sent")
 
     def Init(self):       
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nInitializeScenario();"
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nInitializeScenario();\r\n\r\n"
         self.Send(message)
         print("=== Init() sent")
 
     def Connect(self):
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nConnectObject();"
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nConnectObject();\r\n\r\n"
         self.Send(message)
         print("=== Connect() sent")
                  
     def Disconnect(self):
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDisconnectObject();"
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDisconnectObject();\r\n\r\n"
         self.Send(message)
         print("=== Disconnect() sent")
     
     def Start(self,delayTime_ms):       
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nStartScenario(" + str(delayTime_ms) + ");"
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nStartScenario(" + str(delayTime_ms) + ");\r\n\r\n"
         self.Send(message)
         print("=== StartScenario() sent")
 
     def UploadFile(self,targetPath,fileContents):
         packetSize = 1200
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nUploadFile(" + targetPath + "," + str(len(fileContents)) + "," + str(packetSize) + ");" 
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nUploadFile(" + targetPath + "," + str(len(fileContents)) + "," + str(packetSize) + ");\r\n\r\n" 
         self.uploadReplyLock.acquire()
         self.lastUploadReply["status"] = "UNKNOWN"
         self.uploadReplyLock.release()
