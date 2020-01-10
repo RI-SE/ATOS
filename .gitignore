@@ -4,6 +4,9 @@
 *.obj
 *.elf
 
+# Compiled python code
+*.pyc
+
 # Precompiled Headers
 *.gch
 *.pch
@@ -39,3 +42,7 @@
 # Catalogs
 build*/
 PlaygroundPlatform*/
+
+# Autosave files
+*.save
+*.autosave
