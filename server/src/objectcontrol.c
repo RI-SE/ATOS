@@ -2006,11 +2006,13 @@ I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 *
 
 	// Save socket settings and set it to blocking
 	int retval = fcntl(*Socket, F_GETFL);
+
 	if (retval < 0) {
 		LogMessage(LOG_LEVEL_ERROR, "Error getting socket options with fcntl");
 		return -1;
 	}
 	int socketOptions = retval;
+
 	retval = fcntl(*Socket, F_SETFL, socketOptions & ~O_NONBLOCK);
 	if (retval < 0) {
 		LogMessage(LOG_LEVEL_ERROR, "Error setting socket options with fcntl");

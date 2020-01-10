@@ -235,6 +235,7 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					j++;
 					if (SpecChars == SPECIFIC_CHAR_THRESHOLD_COUNT) {
 						MonitorDataType monrData;
+
 						UtilStringToMonitorData(pcReadBuffer, sizeof (pcReadBuffer), &monrData);
 						NewTimestamp = monrData.MONR.GPSQmsOfWeekU32;
 
@@ -248,7 +249,7 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 						// TODO: Convert monrData to binary form
 						//if (iCommSend(COMM_MONR, , ) < 0)
-						//	util_error("Communication error - exiting");
+						//  util_error("Communication error - exiting");
 
 						FirstIteration = 0;
 						OldTimestamp = NewTimestamp;

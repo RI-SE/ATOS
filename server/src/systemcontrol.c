@@ -185,7 +185,8 @@ I32 SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
 												U8 SysCtrlState, U8 Debug);
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
-I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData, U8 Debug);
+I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
+											 U8 Debug);
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
 
@@ -565,9 +566,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case COMM_MONR:
 			// TODO: Decode
 			if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
-				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t)bytesReceived, &monrData, 0);
-				SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData,
-														 0);
+				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t) bytesReceived, &monrData, 0);
+				SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData, 0);
 				UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 								RVSSMessageLengthU32, 0);
 			}
@@ -2306,7 +2306,8 @@ See the architecture document for the protocol of RVSS.
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
 
-I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData, U8 Debug) {
+I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
+											 U8 Debug) {
 	I32 MessageLength = 0;
 	char MonrDataString[MAX_MONR_STRING_LENGTH];
 

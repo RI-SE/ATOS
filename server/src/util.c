@@ -715,20 +715,19 @@ CartesianPosition MONRToCartesianPosition(MonitorDataType MONR) {
  * \param stringLength Length of string in which converted data is to be placed
  * \return 0 upon success, -1 otherwise
  */
-int UtilMonitorDataToString(MonitorDataType monrData, char* monrString, size_t stringLength) {
+int UtilMonitorDataToString(MonitorDataType monrData, char *monrString, size_t stringLength) {
 	memset(monrString, 0, stringLength);
-	inet_ntop(AF_INET, &monrData.ClientIP, monrString, (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t)stringLength);
+	inet_ntop(AF_INET, &monrData.ClientIP, monrString,
+			  (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t) stringLength);
 	strcat(monrString, ";0;");
-	sprintf(monrString + strlen(monrString), "%u;",
-			monrData.MONR.GPSQmsOfWeekU32);
+	sprintf(monrString + strlen(monrString), "%u;", monrData.MONR.GPSQmsOfWeekU32);
 	sprintf(monrString + strlen(monrString), "%d;%d;%d;%u;",
-			monrData.MONR.XPositionI32, monrData.MONR.YPositionI32, monrData.MONR.ZPositionI32, monrData.MONR.HeadingU16);
-	sprintf(monrString + strlen(monrString), "%d;%d;%d;%d;",
-			monrData.MONR.LongitudinalSpeedI16, monrData.MONR.LateralSpeedI16,
-			monrData.MONR.LongitudinalAccI16, monrData.MONR.LateralAccI16);
-	sprintf(monrString + strlen(monrString), "%u;%u;%u;%u;",
-			monrData.MONR.DriveDirectionU8, monrData.MONR.StateU8,
-			monrData.MONR.ReadyToArmU8, monrData.MONR.ErrorStatusU8);
+			monrData.MONR.XPositionI32, monrData.MONR.YPositionI32, monrData.MONR.ZPositionI32,
+			monrData.MONR.HeadingU16);
+	sprintf(monrString + strlen(monrString), "%d;%d;%d;%d;", monrData.MONR.LongitudinalSpeedI16,
+			monrData.MONR.LateralSpeedI16, monrData.MONR.LongitudinalAccI16, monrData.MONR.LateralAccI16);
+	sprintf(monrString + strlen(monrString), "%u;%u;%u;%u;", monrData.MONR.DriveDirectionU8,
+			monrData.MONR.StateU8, monrData.MONR.ReadyToArmU8, monrData.MONR.ErrorStatusU8);
 	return 0;
 }
 
@@ -739,8 +738,8 @@ int UtilMonitorDataToString(MonitorDataType monrData, char* monrString, size_t s
  * \param monrData Struct containing relevant monitor data
  * \return 0 upon success, -1 otherwise
  */
-int UtilStringToMonitorData(const char* monrString, size_t stringLength, MonitorDataType * monrData) {
-	const char* token;
+int UtilStringToMonitorData(const char *monrString, size_t stringLength, MonitorDataType * monrData) {
+	const char *token;
 	const char delim[] = ";";
 	const int NumberBaseDecimal = 10;
 	struct in_addr addr;
@@ -756,43 +755,43 @@ int UtilStringToMonitorData(const char* monrString, size_t stringLength, Monitor
 
 	// MONR data
 	token = strtok(NULL, delim);
-	monrData->MONR.GPSQmsOfWeekU32 = (U32)strtoul(token, NULL, NumberBaseDecimal);
+	monrData->MONR.GPSQmsOfWeekU32 = (U32) strtoul(token, NULL, NumberBaseDecimal);
 
 	token = strtok(NULL, delim);
-	monrData->MONR.XPositionI32 = (I32)strtol(token, NULL, NumberBaseDecimal);
+	monrData->MONR.XPositionI32 = (I32) strtol(token, NULL, NumberBaseDecimal);
 
 	token = strtok(NULL, delim);
-	monrData->MONR.YPositionI32 = (I32)strtol(token, NULL, NumberBaseDecimal);
+	monrData->MONR.YPositionI32 = (I32) strtol(token, NULL, NumberBaseDecimal);
 
 	token = strtok(NULL, delim);
-	monrData->MONR.ZPositionI32 = (I32)strtol(token, NULL, NumberBaseDecimal);
+	monrData->MONR.ZPositionI32 = (I32) strtol(token, NULL, NumberBaseDecimal);
 
 	token = strtok(NULL, delim);
-	monrData->MONR.HeadingU16 = (U16)strtoul(token, NULL, NumberBaseDecimal);
+	monrData->MONR.HeadingU16 = (U16) strtoul(token, NULL, NumberBaseDecimal);
 
 	token = strtok(NULL, delim);
-	monrData->MONR.LongitudinalSpeedI16 = (I16)strtol(token, NULL, NumberBaseDecimal);
+	monrData->MONR.LongitudinalSpeedI16 = (I16) strtol(token, NULL, NumberBaseDecimal);
 
 	token = strtok(NULL, delim);
-	monrData->MONR.LateralSpeedI16 = (I16)strtol(token, NULL, NumberBaseDecimal);
+	monrData->MONR.LateralSpeedI16 = (I16) strtol(token, NULL, NumberBaseDecimal);
 
 	token = strtok(NULL, delim);
-	monrData->MONR.LongitudinalAccI16 = (I16)strtol(token, NULL, NumberBaseDecimal);
+	monrData->MONR.LongitudinalAccI16 = (I16) strtol(token, NULL, NumberBaseDecimal);
 
 	token = strtok(NULL, delim);
-	monrData->MONR.LateralAccI16 = (I16)strtol(token, NULL, NumberBaseDecimal);
+	monrData->MONR.LateralAccI16 = (I16) strtol(token, NULL, NumberBaseDecimal);
 
 	token = strtok(NULL, delim);
-	monrData->MONR.DriveDirectionU8 = (U8)strtoul(token, NULL, NumberBaseDecimal);
+	monrData->MONR.DriveDirectionU8 = (U8) strtoul(token, NULL, NumberBaseDecimal);
 
 	token = strtok(NULL, delim);
-	monrData->MONR.StateU8 = (U8)strtoul(token, NULL, NumberBaseDecimal);
+	monrData->MONR.StateU8 = (U8) strtoul(token, NULL, NumberBaseDecimal);
 
 	token = strtok(NULL, delim);
-	monrData->MONR.ReadyToArmU8 = (U8)strtoul(token, NULL, NumberBaseDecimal);
+	monrData->MONR.ReadyToArmU8 = (U8) strtoul(token, NULL, NumberBaseDecimal);
 
 	token = strtok(NULL, delim);
-	monrData->MONR.ErrorStatusU8 = (U8)strtoul(token, NULL, NumberBaseDecimal);
+	monrData->MONR.ErrorStatusU8 = (U8) strtoul(token, NULL, NumberBaseDecimal);
 	return 0;
 }
 
