@@ -11,7 +11,7 @@ public:
 	ConnectionHandler(int openSocketDescriptor, ProtocolData& data, unsigned long readBufferSize);
 	~ConnectionHandler();
 
-	bool isTerminated() { return terminated; }
+	bool isTerminated() const { return terminated; }
 private:
 	int socketDescriptor = 0;
 	ProtocolData &data;
