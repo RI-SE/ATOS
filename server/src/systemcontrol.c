@@ -187,6 +187,7 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
 I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
 											 U8 Debug);
+static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
 
@@ -354,7 +355,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			PreviousSystemControlCommand = SystemControlCommand;
 			bzero(pcBuffer, IPC_BUFFER_SIZE);
 
-			ClientResult = recv(ClientSocket, pcBuffer, IPC_BUFFER_SIZE, MSG_DONTWAIT);
+			ClientResult = SystemControlReceiveUserControlData(ClientSocket, pcBuffer, sizeof (pcBuffer));
 
 			if (ClientResult <= -1) {
 				if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -1165,6 +1166,37 @@ SystemControlCommand_t SystemControlFindCommand(const char *CommandBuffer,
 	}
 	return nocommand;
 }
+
+
+ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength) {
+	static char recvBuffer[TCP_RECV_BUFFER_SIZE];
+	static size_t bytesInBuffer = 0;
+	ssize_t readResult;
+	uint32_t messageLength = 0;
+
+	readResult = recv(socket, recvBuffer + bytesInBuffer, sizeof (recvBuffer) - bytesInBuffer, MSG_DONTWAIT);
+
+	if (readResult > 0) {
+		bytesInBuffer += (size_t) readResult;
+		memcpy(&messageLength, recvBuffer, sizeof (messageLength));
+		messageLength = ntohl(messageLength);
+
+		if (bytesInBuffer >= messageLength + sizeof (messageLength)) {
+			if (dataBufferLength < messageLength + sizeof (messageLength)) {
+				LogMessage(LOG_LEVEL_WARNING, "Discarding message too large for data buffer");
+				readResult = -1;
+				errno = ENOBUFS;
+			}
+			else {
+				memcpy(dataBuffer, recvBuffer, messageLength + sizeof (messageLength));
+			}
+			bytesInBuffer -= messageLength + sizeof (messageLength);
+			memmove(recvBuffer, recvBuffer + messageLength + sizeof (messageLength), bytesInBuffer);
+		}
+	}
+	return readResult;
+}
+
 
 void SystemControlSendMONR(C8 * MONRStr, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
