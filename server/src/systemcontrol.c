@@ -1171,27 +1171,36 @@ SystemControlCommand_t SystemControlFindCommand(const char *CommandBuffer,
 ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength) {
 	static char recvBuffer[TCP_RECV_BUFFER_SIZE];
 	static size_t bytesInBuffer = 0;
+	const char endOfMessagePattern[] = ";\r\n\r\n";
+	char* endOfMessage = NULL;
 	ssize_t readResult;
-	uint32_t messageLength = 0;
+	size_t messageLength = 0;
 
 	readResult = recv(socket, recvBuffer + bytesInBuffer, sizeof (recvBuffer) - bytesInBuffer, MSG_DONTWAIT);
-
 	if (readResult > 0) {
 		bytesInBuffer += (size_t) readResult;
-		memcpy(&messageLength, recvBuffer, sizeof (messageLength));
-		messageLength = ntohl(messageLength);
 
-		if (bytesInBuffer >= messageLength + sizeof (messageLength)) {
-			if (dataBufferLength < messageLength + sizeof (messageLength)) {
+		if ((endOfMessage = strstr(recvBuffer, endOfMessagePattern)) != NULL) {
+			endOfMessage += sizeof (endOfMessagePattern) - 1;
+			messageLength = (size_t)(endOfMessage - recvBuffer);
+		}
+		else {
+			messageLength = 0;
+			readResult = -1;
+			errno = EAGAIN;
+		}
+
+		if (bytesInBuffer >= messageLength) {
+			if (dataBufferLength < messageLength) {
 				LogMessage(LOG_LEVEL_WARNING, "Discarding message too large for data buffer");
 				readResult = -1;
 				errno = ENOBUFS;
 			}
 			else {
-				memcpy(dataBuffer, recvBuffer, messageLength + sizeof (messageLength));
+				memcpy(dataBuffer, recvBuffer, messageLength);
 			}
-			bytesInBuffer -= messageLength + sizeof (messageLength);
-			memmove(recvBuffer, recvBuffer + messageLength + sizeof (messageLength), bytesInBuffer);
+			bytesInBuffer -= messageLength;
+			memmove(recvBuffer, recvBuffer + messageLength, bytesInBuffer);
 		}
 	}
 	return readResult;
