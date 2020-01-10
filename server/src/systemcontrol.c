@@ -381,6 +381,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				server_state == SERVER_STATE_UNDEFINED;	// TODO: Should this be an assignment?
 			}
 			else if (ClientResult > 0 && ClientResult < TCP_RECV_BUFFER_SIZE) {
+				LogPrint("HERE: %s", pcBuffer);
 				// TODO: Move this entire decoding process into a separate function
 				for (i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i++)
 					bzero(SystemControlArgument[i], SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
@@ -1110,7 +1111,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 		sleep_time = (iCommand == COMM_INV
-					  && server_state != SERVER_STATE_INWORK) ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
+					  && server_state != SERVER_STATE_INWORK
+					  && ClientResult < 0) ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
 		nanosleep(&sleep_time, &ref_time);
 	}
 
@@ -1172,17 +1174,18 @@ ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t 
 	static char recvBuffer[TCP_RECV_BUFFER_SIZE];
 	static size_t bytesInBuffer = 0;
 	const char endOfMessagePattern[] = ";\r\n\r\n";
-	char* endOfMessage = NULL;
+	char *endOfMessage = NULL;
 	ssize_t readResult;
 	size_t messageLength = 0;
 
 	readResult = recv(socket, recvBuffer + bytesInBuffer, sizeof (recvBuffer) - bytesInBuffer, MSG_DONTWAIT);
 	if (readResult > 0) {
 		bytesInBuffer += (size_t) readResult;
-
+	}
+	if (bytesInBuffer > 0) {
 		if ((endOfMessage = strstr(recvBuffer, endOfMessagePattern)) != NULL) {
 			endOfMessage += sizeof (endOfMessagePattern) - 1;
-			messageLength = (size_t)(endOfMessage - recvBuffer);
+			messageLength = (size_t) (endOfMessage - recvBuffer);
 		}
 		else {
 			messageLength = 0;
@@ -1203,6 +1206,7 @@ ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t 
 			memmove(recvBuffer, recvBuffer + messageLength, bytesInBuffer);
 		}
 	}
+
 	return readResult;
 }
 
