@@ -470,6 +470,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					if ( ObjectControlBuildMONRMessage(buffer, receivedMONRData, &MONRData, 0) == -1 ) {
 						// TODO react on error
+						continue;
 					}
 
 					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
