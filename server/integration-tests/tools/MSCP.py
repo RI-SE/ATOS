@@ -236,7 +236,7 @@ class MSCP:
             ur = self.lastUploadReply["status"]
             self.uploadReplyLock.release()
         
-        print("=== Exited waiting state")
+        print("=== Exited waiting state: " + ur)
         if ur != status and time.time() >= timeoutTime:
             raise TimeoutError("Timed out while waiting for reply to UploadFile")
         elif ur != status:
