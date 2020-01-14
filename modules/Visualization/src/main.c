@@ -29,7 +29,27 @@
   ------------------------------------------------------------*/
 static void vConnectVisualizationChannel(int *sockfd, struct sockaddr_in *addr);
 static void vDisconnectVisualizationChannel(int *sockfd);
+static void vCreateMonitorData(char *commandData, ssize_t commandDatalen);
 
+static void vCreateMonitorData(char *commandData, ssize_t commandDatalen)
+{
+    char ipStringBuffer[INET_ADDRSTRLEN];
+    MonitorDataType monitorData;
+    struct timeval monrTime, systemTime;
+    const int debug = 0;
+
+    if (commandDatalen < 0)
+        return;
+
+    TimeSetToCurrentSystemTime(&systemTime);
+
+    UtilPopulateMonitorDataStruct(commandData, (size_t) (commandDatalen), &monitorData, debug);
+    TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monitorData.MONR.GPSQmsOfWeekU32);
+
+
+    LogMessage(LOG_LEVEL_INFO, "HELLOTHEROBIWANKENOBI");
+
+}
 
 int main() {
 	enum COMMAND command = COMM_INV;
@@ -79,21 +99,26 @@ int main() {
 			// Ignore old style MONR data
 			break;
 		case COMM_MONR:
-			// TODO: Call util function to fill MonitorDataType struct
+
+            vCreateMonitorData(busReceiveBuffer, (sizeof (busReceiveBuffer)));
+
+            // TODO: Call util function to fill MonitorDataType struct
 			// TODO: Convert to temporary visualisation protocol - implement this function in this main.c
 			// ((TODO define this protocol clearly - leave this for now))
-			UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer,
-							sizeof (busReceiveBuffer), 0);
-
-            MonitorDataType monitorData;
-            int busReceiveBufferLen = sizeof (busReceiveBuffer);
-            struct timeval monrTime, systemTime;
-
-
-            //TimeSetToCurrentSystemTime(&systemTime);
+            //UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, "busReceiveBuffer",
+            //                sizeof ("busReceiveBuffer"), 0);
+            //
+            //MonitorDataType monitorData;
+            //int busReceiveBufferLen = sizeof (busReceiveBuffer);
+            //struct timeval monrTime, systemTime;
+            //
+            //
+            ////TimeSetToCurrentSystemTime(&systemTime);
             //UtilPopulateMonitorDataStruct(busReceiveBuffer, (size_t) (busReceiveBufferLen), &monitorData, 0);
-            //TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monitorData.MONR.GPSQmsOfWeekU32);
-            printf("HELLO!");
+            ////TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monitorData.MONR.GPSQmsOfWeekU32);
+            //
+            //LogMessage(LOG_LEVEL_INFO, "Visualization HELLOOOOOO");
+            //LogMessage(LOG_LEVEL_INFO, monitorData.MONR.XPositionI32);
 
 			break;
 		case COMM_LOG:
