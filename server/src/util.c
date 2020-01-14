@@ -3654,10 +3654,10 @@ I32 UtilISOBuildHeader(C8 * MessageBuffer, const size_t length, HeaderType * Hea
 	const U8 ProtocolVersionBitmask = 0x7F;
 	U8 messageProtocolVersion = 0;
 	U8 isProtocolVersionSupported = 0;
-	const uint8_t* supportedProtocolVersions;
+	const uint8_t *supportedProtocolVersions;
 	size_t nSupportedProtocols = 0;
 
-	if ( length < sizeof (HeaderData) ) {
+	if (length < sizeof (HeaderData)) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO header");
 		memset(HeaderData, 0, sizeof (*HeaderData));
@@ -3668,7 +3668,7 @@ I32 UtilISOBuildHeader(C8 * MessageBuffer, const size_t length, HeaderType * Hea
 	memcpy(&HeaderData->SyncWordU16, p, sizeof (HeaderData->SyncWordU16));
 	p += sizeof (HeaderData->SyncWordU16);
 
-	if ( HeaderData->SyncWordU16 != ISO_SYNC_WORD) {
+	if (HeaderData->SyncWordU16 != ISO_SYNC_WORD) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Sync word error when decoding ISO header");
 		memset(HeaderData, 0, sizeof (*HeaderData));
@@ -3694,7 +3694,7 @@ I32 UtilISOBuildHeader(C8 * MessageBuffer, const size_t length, HeaderType * Hea
 		}
 	}
 
-	if ( !isProtocolVersionSupported ) {
+	if (!isProtocolVersionSupported) {
 		errno = EPROTONOSUPPORT;
 		LogMessage(LOG_LEVEL_WARNING, "Protocol version %u not supported", messageProtocolVersion);
 		retval = -1;

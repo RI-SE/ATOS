@@ -468,7 +468,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							   object_address_name[iIndex], object_udp_port[iIndex], receivedMONRData,
 							   buffer);
 
-					if ( ObjectControlBuildMONRMessage(buffer, receivedMONRData, &MONRData, 0) == -1 ) {
+					if (ObjectControlBuildMONRMessage(buffer, receivedMONRData, &MONRData, 0) == -1) {
 						// TODO react on error
 						continue;
 					}
@@ -1266,11 +1266,12 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
  */
 I32 ObjectControlBuildMONRMessage(C8 * MonrData, const size_t length, MONRType * MONRData, U8 debug) {
 	C8 *p = MonrData;
-	const U16 ExpectedMONRStructSize = (U16)(sizeof (*MONRData) - sizeof (MONRData->Header)
-											 - sizeof (MONRData->CRC) - sizeof (MONRData->MonrStructValueIdU16)
-											 - sizeof (MONRData->MonrStructContentLengthU16));
+	const U16 ExpectedMONRStructSize = (U16) (sizeof (*MONRData) - sizeof (MONRData->Header)
+											  - sizeof (MONRData->CRC) -
+											  sizeof (MONRData->MonrStructValueIdU16)
+											  - sizeof (MONRData->MonrStructContentLengthU16));
 
-	if ( UtilISOBuildHeader(MonrData, length, &MONRData->Header, 0) == -1 ) {
+	if (UtilISOBuildHeader(MonrData, length, &MONRData->Header, 0) == -1) {
 		memset(MONRData, 0, sizeof (*MONRData));
 		return -1;
 	}
@@ -1290,7 +1291,7 @@ I32 ObjectControlBuildMONRMessage(C8 * MonrData, const size_t length, MONRType *
 	memcpy(&MONRData->MonrStructContentLengthU16, p, sizeof (MONRData->MonrStructContentLengthU16));
 	p += sizeof (MONRData->MonrStructContentLengthU16);
 
-	if ( MONRData->MonrStructContentLengthU16 != ExpectedMONRStructSize ) {
+	if (MONRData->MonrStructContentLengthU16 != ExpectedMONRStructSize) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "MONR content length %u differs from the expected length %u",
 				   MONRData->MonrStructContentLengthU16, ExpectedMONRStructSize);
