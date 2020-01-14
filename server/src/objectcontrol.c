@@ -196,7 +196,7 @@ I32 ObjectControlMONRToASCII(MONRType * MONRData, GeoPosition * OriginPosition, 
 							 C8 * LongitudinalSpeed, C8 * LateralSpeed, C8 * LongitudinalAcc, C8 * LateralAcc,
 							 C8 * Heading, C8 * DriveDirection, C8 * ObjectState, C8 * ReadyToArm,
 							 C8 * ErrorStatus, C8 debug);
-I32 ObjectControlBuildMONRMessage(C8 * MonrData, size_t length, MONRType * MONRData, U8 debug);
+I32 ObjectControlBuildMONRMessage(C8 * MonrData, const size_t length, MONRType * MONRData, U8 debug);
 I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * SimData, U8 debug);
 I32 ObjectControlSendDTMMessage(C8 * DTMData, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
 								DOTMType * DOTMData, U8 debug);
@@ -1264,10 +1264,13 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
  * \param debug Flag for enabling of debugging
  * \return 0 on success, -1 otherwise
  */
-I32 ObjectControlBuildMONRMessage(C8 * MonrData, size_t length, MONRType * MONRData, U8 debug) {
+I32 ObjectControlBuildMONRMessage(C8 * MonrData, const size_t length, MONRType * MONRData, U8 debug) {
 	C8 *p = MonrData;
+	const U16 ExpectedMONRStructSize = (U16)(sizeof (*MONRData) - sizeof (MONRData->Header)
+											 - sizeof (MONRData->CRC) - sizeof (MONRData->MonrStructValueIdU16)
+											 - sizeof (MONRData->MonrStructContentLengthU16));
 
-	if ( UtilISOBuildHeader(MonrData, &MONRData->Header, 0) == -1 ) {
+	if ( UtilISOBuildHeader(MonrData, length, &MONRData->Header, 0) == -1 ) {
 		memset(MONRData, 0, sizeof (*MONRData));
 		return -1;
 	}
@@ -1287,11 +1290,10 @@ I32 ObjectControlBuildMONRMessage(C8 * MonrData, size_t length, MONRType * MONRD
 	memcpy(&MONRData->MonrStructContentLengthU16, p, sizeof (MONRData->MonrStructContentLengthU16));
 	p += sizeof (MONRData->MonrStructContentLengthU16);
 
-	if ( MONRData->MonrStructContentLengthU16 != (U16)(sizeof (MONRData)
-						- sizeof (MONRData->Header) - sizeof (MONRData->CRC)
-						- sizeof (MONRData->MonrStructValueIdU16) - sizeof (MONRData->MonrStructContentLengthU16)) ) {
+	if ( MONRData->MonrStructContentLengthU16 != ExpectedMONRStructSize ) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "MONR content length differs from the expected");
+		LogMessage(LOG_LEVEL_ERROR, "MONR content length %u differs from the expected length %u",
+				   MONRData->MonrStructContentLengthU16, ExpectedMONRStructSize);
 		memset(MONRData, 0, sizeof (*MONRData));
 		return -1;
 	}

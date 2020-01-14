@@ -3648,7 +3648,7 @@ I32 UtilISOBuildTRAJMessage(C8 * MessageBuffer, C8 * DTMData, I32 RowCount, DOTM
 	return MessageIndex;		//Total number of bytes
 }
 
-I32 UtilISOBuildHeader(C8 * MessageBuffer, HeaderType * HeaderData, U8 Debug) {
+I32 UtilISOBuildHeader(C8 * MessageBuffer, const size_t length, HeaderType * HeaderData, U8 Debug) {
 	C8 *p = MessageBuffer;
 	I32 retval = 0;
 	const U8 ProtocolVersionBitmask = 0x7F;
@@ -3656,6 +3656,13 @@ I32 UtilISOBuildHeader(C8 * MessageBuffer, HeaderType * HeaderData, U8 Debug) {
 	U8 isProtocolVersionSupported = 0;
 	const uint8_t* supportedProtocolVersions;
 	size_t nSupportedProtocols = 0;
+
+	if ( length < sizeof (HeaderData) ) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO header");
+		memset(HeaderData, 0, sizeof (*HeaderData));
+		return -1;
+	}
 
 	// Decode ISO header
 	memcpy(&HeaderData->SyncWordU16, p, sizeof (HeaderData->SyncWordU16));
