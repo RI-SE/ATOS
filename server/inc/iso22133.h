@@ -12,8 +12,10 @@ extern "C" {
 
 #include <inttypes.h>
 
-#pragma pack(push,1)
+const uint8_t SupportedProtocolVersions[] = {2};
+#define ISO_SYNC_WORD 0x7E7E
 
+#pragma pack(push,1)
 typedef struct
 {
   uint16_t SyncWordU16;
@@ -28,6 +30,7 @@ typedef struct
 {
   uint16_t Crc;
 } FooterType; //2 bytes
+
 
 //! *************************** TRCM
 #define COMMAND_TRCM_CODE 0x0011
