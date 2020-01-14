@@ -52,7 +52,8 @@ class MSCP:
             except ConnectionResetError as e:
                 if not self.quit:
                     raise e
-
+            
+            print("Received: " + str(len(data)))
             for replyPattern in replyPatterns:
                 match = re.search(replyPattern["regex"],data)
                 if match is not None:
