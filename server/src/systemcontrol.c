@@ -381,7 +381,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				server_state == SERVER_STATE_UNDEFINED;	// TODO: Should this be an assignment?
 			}
 			else if (ClientResult > 0 && ClientResult < TCP_RECV_BUFFER_SIZE) {
-				LogPrint("HERE: %s", pcBuffer);
 				// TODO: Move this entire decoding process into a separate function
 				for (i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i++)
 					bzero(SystemControlArgument[i], SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
