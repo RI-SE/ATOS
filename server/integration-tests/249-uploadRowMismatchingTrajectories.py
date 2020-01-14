@@ -43,7 +43,11 @@ if __name__ == "__main__":
     normalTraj = ReadTrajectoryFile("resources/trajectories")
 
     # 4: Upload short trajectory
-    userControl.UploadFile("traj/127.0.0.1", fewRowTraj)
+    try:
+        userControl.UploadFile("traj/127.0.0.1", fewRowTraj)
+    except TimeoutError as e:
+        print("tjenixen")
+        raise e
 
     # 5: Send init
     try:
