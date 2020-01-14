@@ -240,7 +240,7 @@ class MSCP:
         sr = self.lastStatusReply["objectControlState"]
         self.statusReplyLock.release()
         while sr != state and time.time() < timeoutTime:
-            time.sleep(0.005)
+            time.sleep(0.25)
             self.statusReplyLock.acquire()
             sr = self.lastStatusReply["objectControlState"]
             self.statusReplyLock.release()
