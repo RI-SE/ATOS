@@ -29,26 +29,21 @@
   ------------------------------------------------------------*/
 static void vConnectVisualizationChannel(int *sockfd, struct sockaddr_in *addr);
 static void vDisconnectVisualizationChannel(int *sockfd);
-static void vCreateMonitorData(char *commandData, ssize_t commandDatalen);
+void vCreateVisualizationMessage(MonitorDataType *_monitorData, char *_visualizationMessage, int _debug);
 
-static void vCreateMonitorData(char *commandData, ssize_t commandDatalen)
+void vCreateVisualizationMessage(MonitorDataType *_monitorData, char *_visualizationMessage, int _debug)
 {
-    char ipStringBuffer[INET_ADDRSTRLEN];
-    MonitorDataType monitorData;
-    struct timeval monrTime, systemTime;
-    const int debug = 0;
+    sprintf(_visualizationMessage,"%d;%d;%d;%d", _monitorData->MONR.XPositionI32, _monitorData->MONR.YPositionI32, _monitorData->MONR.ZPositionI32, _monitorData->MONR.HeadingU16);
 
-    if (commandDatalen < 0)
-        return;
-
-    TimeSetToCurrentSystemTime(&systemTime);
-
-    UtilPopulateMonitorDataStruct(commandData, (size_t) (commandDatalen), &monitorData, debug);
-    TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monitorData.MONR.GPSQmsOfWeekU32);
-
-
-    LogMessage(LOG_LEVEL_INFO, "HELLOTHEROBIWANKENOBI");
-
+    if(_debug)
+    {
+        LogMessage(LOG_LEVEL_INFO, "X: %d", _monitorData->MONR.XPositionI32);
+        LogMessage(LOG_LEVEL_INFO, "Y: %d", _monitorData->MONR.YPositionI32);
+        LogMessage(LOG_LEVEL_INFO, "Z: %d", _monitorData->MONR.ZPositionI32);
+        LogMessage(LOG_LEVEL_INFO, "Heading: %d", _monitorData->MONR.HeadingU16);
+        LogMessage(LOG_LEVEL_INFO, "LatAcc: %d", _monitorData->MONR.LateralAccI16);
+        LogMessage(LOG_LEVEL_INFO, "LongAcc: %d", _monitorData->MONR.LongitudinalAccI16);
+    }
 }
 
 int main() {
@@ -58,6 +53,12 @@ int main() {
 	const struct timespec abortWaitTime = { 1, 0 };
 	struct timespec remTime;
 
+    MonitorDataType monitorData;
+    int sizeOfMessage = (sizeof (monitorData.MONR.XPositionI32) +
+                         sizeof (monitorData.MONR.YPositionI32) +
+                         sizeof (monitorData.MONR.ZPositionI32) +
+                         sizeof (monitorData.MONR.HeadingU16));
+
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
 
@@ -66,8 +67,7 @@ int main() {
 
 	vConnectVisualizationChannel(&visual_server, &visual_server_addr);
 
-	I32 iExit = 0;
-	char busReceiveBuffer[MBUS_MAX_DATALEN];	//!< Buffer for receiving from message bus
+    I32 iExit = 0;
 
 
 	// Initialize message bus connection
@@ -98,28 +98,20 @@ int main() {
 		case COMM_MONI:
 			// Ignore old style MONR data
 			break;
-		case COMM_MONR:
+        case COMM_MONR:
+        {
+            //Populate the monitorType
+            UtilPopulateMonitorDataStruct(mqRecvData, (size_t) (sizeof (mqRecvData)), &monitorData, 0);
 
-            vCreateMonitorData(busReceiveBuffer, (sizeof (busReceiveBuffer)));
+            //Create visualization message and insert values from the monitor datastruct above
+            char visualizationMessage[42];
+            vCreateVisualizationMessage(&monitorData, visualizationMessage, 0);
 
-            // TODO: Call util function to fill MonitorDataType struct
-			// TODO: Convert to temporary visualisation protocol - implement this function in this main.c
-			// ((TODO define this protocol clearly - leave this for now))
-            //UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, "busReceiveBuffer",
-            //                sizeof ("busReceiveBuffer"), 0);
-            //
-            //MonitorDataType monitorData;
-            //int busReceiveBufferLen = sizeof (busReceiveBuffer);
-            //struct timeval monrTime, systemTime;
-            //
-            //
-            ////TimeSetToCurrentSystemTime(&systemTime);
-            //UtilPopulateMonitorDataStruct(busReceiveBuffer, (size_t) (busReceiveBufferLen), &monitorData, 0);
-            ////TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monitorData.MONR.GPSQmsOfWeekU32);
-            //
-            //LogMessage(LOG_LEVEL_INFO, "Visualization HELLOOOOOO");
-            //LogMessage(LOG_LEVEL_INFO, monitorData.MONR.XPositionI32);
+            //Send visualization message on the UDP socket
+            UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, visualizationMessage,
+                            sizeof (visualizationMessage), 0);
 
+        }
 			break;
 		case COMM_LOG:
 			break;
