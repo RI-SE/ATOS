@@ -238,8 +238,10 @@ class MSCP:
         
         print("=== Exited waiting state: " + ur)
         if ur != status and time.time() >= timeoutTime:
+            print("Fall A")
             raise TimeoutError("Timed out while waiting for reply to UploadFile")
         elif ur != status:
+            print("Fall B")
             raise ValueError("Expected status " + status + " but received " + ur)
 
     def waitForObjectControlState(self,state,timeout=3.0):
