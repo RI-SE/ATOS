@@ -161,6 +161,8 @@ class MSCP:
                     else:
                         self.lastUploadReply["status"] = "UNKNOWN"
                     self.uploadReplyLock.release()
+            else:
+                print("=== Unable to match against data: " + str(data))
 
     def GetStatus(self):         
         message = "POST /maestro HTTP/1.1\r\nHost: " + self.host + "\r\n\r\nGetServerStatus();\r\n\r\n"    
@@ -206,8 +208,10 @@ class MSCP:
         self.Send(message)
         print("=== UploadFile() sent")
         self.waitForUploadReply("SERVER_PREPARED")
+        print("=== Sending file contents")
         # Send file
         self.Send(fileContents)
+        print("=== Sent file contents")
         self.uploadReplyLock.acquire()
         self.lastUploadReply["status"] = "UNKNOWN"
         self.uploadReplyLock.release()
