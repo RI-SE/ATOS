@@ -1190,6 +1190,7 @@ ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t 
 			messageLength = 0;
 			readResult = -1;
 			errno = EAGAIN;
+			LogMessage(LOG_LEVEL_WARNING, "Part of message received");
 		}
 
 		if (bytesInBuffer >= messageLength) {
@@ -2148,7 +2149,9 @@ I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * Pack
 			}
 
 			bzero(RxBuffer, PacketSizeU16);
+			LogPrint("AAAA");
 			ClientStatus = recv(*sockfd, RxBuffer, PacketSizeU16, MSG_WAITALL);
+			LogPrint("BBBB");
 
 
 			if (ClientStatus > 0) {
