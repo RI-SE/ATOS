@@ -197,7 +197,7 @@ I32 ObjectControlMONRToASCII(MONRType * MONRData, GeoPosition * OriginPosition, 
 							 C8 * LongitudinalSpeed, C8 * LateralSpeed, C8 * LongitudinalAcc, C8 * LateralAcc,
 							 C8 * Heading, C8 * DriveDirection, C8 * ObjectState, C8 * ReadyToArm,
 							 C8 * ErrorStatus, C8 debug);
-I32 ObjectControlBuildMONRMessage(C8 * MonrData, MONRType * MONRData, U8 debug);
+I32 ObjectControlBuildMONRMessage(C8 * MonrData, size_t length, MONRType * MONRData, U8 debug);
 I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * SimData, U8 debug);
 I32 ObjectControlSendDTMMessage(C8 * DTMData, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
 								DOTMType * DOTMData, U8 debug);
@@ -461,13 +461,19 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-				bzero(buffer, RECV_MESSAGE_BUFFER);
-				receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex], buffer, RECV_MESSAGE_BUFFER);
+				memset(buffer, 0, sizeof (buffer));
+				receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex], buffer, sizeof (buffer));
 
-				if (receivedMONRData == sizeof (MONRType)) {
+				if (receivedMONRData > 0) {
 					LogMessage(LOG_LEVEL_DEBUG, "Recieved new data from %s %d %d: %s",
 							   object_address_name[iIndex], object_udp_port[iIndex], receivedMONRData,
 							   buffer);
+
+					if ( ObjectControlBuildMONRMessage(buffer, receivedMONRData, &MONRData, 0) == -1 ) {
+						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object", object_address_name[iIndex]);
+						vDisconnectObject(&safety_socket_fd[iIndex]);
+						continue;
+					}
 
 					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
 						// Append IP to buffer
@@ -484,7 +490,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 					}
 
-					ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
 
 					//Store MONR in GSD
 					//UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
@@ -1203,7 +1208,7 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 		  COMMAND_MESSAGE_HEADER_LENGTH);
 
 
-	VOILData->Header.SyncWordU16 = SYNC_WORD;
+	VOILData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	VOILData->Header.TransmitterIdU8 = 0;
 	VOILData->Header.MessageCounterU8 = 0;
 	VOILData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -1254,52 +1259,43 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 
 }
 
-
-I32 ObjectControlBuildMONRMessage(C8 * MonrData, MONRType * MONRData, U8 debug) {
-	I32 MessageIndex = 0, i = 0;
-	dbl Data;
-	U16 Crc = 0, U16Data = 0;
-	I16 I16Data = 0;
-	U32 U32Data = 0;
-	I32 I32Data = 0;
-	U64 U64Data = 0;
-	U16 contentLength = 0;
-	U16 valueID = 0;
+/*!
+ * \brief ObjectControlBuildMONRMessage Fills a MONRType struct from a buffer of raw data
+ * \param MonrData Raw data to be decoded
+ * \param MONRData Struct to be filled
+ * \param debug Flag for enabling of debugging
+ * \return 0 on success, -1 otherwise
+ */
+I32 ObjectControlBuildMONRMessage(C8 * MonrData, size_t length, MONRType * MONRData, U8 debug) {
 	C8 *p = MonrData;
 
-	// Decode ISO header
-	memcpy(&MONRData->Header.SyncWordU16, p, sizeof (MONRData->Header.SyncWordU16));
-	p += sizeof (MONRData->Header.SyncWordU16);
-
-	memcpy(&MONRData->Header.TransmitterIdU8, p, sizeof (MONRData->Header.TransmitterIdU8));
-	p += sizeof (MONRData->Header.TransmitterIdU8);
-
-	memcpy(&MONRData->Header.MessageCounterU8, p, sizeof (MONRData->Header.MessageCounterU8));
-	p += sizeof (MONRData->Header.MessageCounterU8);
-
-	memcpy(&MONRData->Header.AckReqProtVerU8, p, sizeof (MONRData->Header.AckReqProtVerU8));
-	p += sizeof (MONRData->Header.AckReqProtVerU8);
-
-	memcpy(&MONRData->Header.MessageIdU16, p, sizeof (MONRData->Header.MessageIdU16));
-	p += sizeof (MONRData->Header.MessageIdU16);
-
-	memcpy(&MONRData->Header.MessageLengthU32, p, sizeof (MONRData->Header.MessageLengthU32));
-	p += sizeof (MONRData->Header.MessageLengthU32);
+	if ( UtilISOBuildHeader(MonrData, &MONRData->Header, 0) == -1 ) {
+		memset(MONRData, 0, sizeof (*MONRData));
+		return -1;
+	}
+	p += sizeof (MONRData->Header);
 
 	// Decode content header
-	memcpy(&valueID, p, sizeof (valueID));
-	if (valueID == VALUE_ID_MONR_STRUCT) {
-		memcpy(&MONRData->MonrStructValueIdU16, p, sizeof (MONRData->MonrStructValueIdU16));
-		p += sizeof (MONRData->MonrStructValueIdU16);
+	memcpy(&MONRData->MonrStructValueIdU16, p, sizeof (MONRData->MonrStructValueIdU16));
+	p += sizeof (MONRData->MonrStructValueIdU16);
 
-		//memcpy(&contentLength, p, sizeof (contentLength));
-		memcpy(&MONRData->MonrStructContentLengthU16, p, sizeof (MONRData->MonrStructContentLengthU16));
-		p += sizeof (MONRData->MonrStructContentLengthU16);
-
-		// TODO: check on content length
+	if (MONRData->MonrStructValueIdU16 != VALUE_ID_MONR_STRUCT) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Attempted to pass non-MONR struct into MONR parsing function");
+		memset(MONRData, 0, sizeof (*MONRData));
+		return -1;
 	}
-	else if (debug) {
-		LogPrint("MONR message did not contain a content header");
+
+	memcpy(&MONRData->MonrStructContentLengthU16, p, sizeof (MONRData->MonrStructContentLengthU16));
+	p += sizeof (MONRData->MonrStructContentLengthU16);
+
+	if ( MONRData->MonrStructContentLengthU16 != (U16)(sizeof (MONRData)
+						- sizeof (MONRData->Header) - sizeof (MONRData->CRC)
+						- sizeof (MONRData->MonrStructValueIdU16) - sizeof (MONRData->MonrStructContentLengthU16)) ) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "MONR content length differs from the expected");
+		memset(MONRData, 0, sizeof (*MONRData));
+		return -1;
 	}
 
 	// Decode content
@@ -1523,7 +1519,7 @@ I32 ObjectControlBuildOSEMMessage(C8 * MessageBuffer, OSEMType * OSEMData, TimeT
 
 	bzero(MessageBuffer, COMMAND_OSEM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
 
-	OSEMData->Header.SyncWordU16 = SYNC_WORD;
+	OSEMData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	OSEMData->Header.TransmitterIdU8 = 0;
 	OSEMData->Header.MessageCounterU8 = 0;
 	OSEMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -1631,7 +1627,7 @@ int ObjectControlBuildSTRTMessage(C8 * MessageBuffer, STRTType * STRTData, TimeT
 
 	bzero(MessageBuffer, COMMAND_STRT_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
 
-	STRTData->Header.SyncWordU16 = SYNC_WORD;
+	STRTData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	STRTData->Header.TransmitterIdU8 = 0;
 	STRTData->Header.MessageCounterU8 = 0;
 	STRTData->Header.AckReqProtVerU8 = 0;
@@ -1691,7 +1687,7 @@ I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 Co
 
 	bzero(MessageBuffer, COMMAND_OSTM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
 
-	OSTMData->Header.SyncWordU16 = SYNC_WORD;
+	OSTMData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	OSTMData->Header.TransmitterIdU8 = 0;
 	OSTMData->Header.MessageCounterU8 = 0;
 	OSTMData->Header.AckReqProtVerU8 = 0;
@@ -1738,7 +1734,7 @@ I32 ObjectControlBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeT
 
 	bzero(MessageBuffer, COMMAND_HEAB_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
 
-	HEABData->Header.SyncWordU16 = SYNC_WORD;
+	HEABData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	HEABData->Header.TransmitterIdU8 = 0;
 	HEABData->Header.MessageCounterU8 = 0;
 	HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -1824,7 +1820,7 @@ I32 ObjectControlBuildSYPMMessage(C8 * MessageBuffer, SYPMType * SYPMData, U32 S
 
 	bzero(MessageBuffer, COMMAND_SYPM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
 
-	SYPMData->Header.SyncWordU16 = SYNC_WORD;
+	SYPMData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	SYPMData->Header.TransmitterIdU8 = 0;
 	SYPMData->Header.MessageCounterU8 = 0;
 	SYPMData->Header.AckReqProtVerU8 = 0;
@@ -1874,7 +1870,7 @@ I32 ObjectControlBuildMTSPMessage(C8 * MessageBuffer, MTSPType * MTSPData, U32 S
 
 	bzero(MessageBuffer, COMMAND_MTSP_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
 
-	MTSPData->Header.SyncWordU16 = SYNC_WORD;
+	MTSPData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	MTSPData->Header.TransmitterIdU8 = 0;
 	MTSPData->Header.MessageCounterU8 = 0;
 	MTSPData->Header.AckReqProtVerU8 = 0;
@@ -1957,7 +1953,7 @@ I32 ObjectControlBuildTRAJMessageHeader(C8 * MessageBuffer, I32 * RowCount, Head
 
 	bzero(MessageBuffer, COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH);
 
-	HeaderData->SyncWordU16 = SYNC_WORD;
+	HeaderData->SyncWordU16 = ISO_SYNC_WORD;
 	HeaderData->TransmitterIdU8 = 0;
 	HeaderData->MessageCounterU8 = 0;
 	HeaderData->AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -2556,7 +2552,7 @@ I32 ObjectControlSendEXACMessage(EXACData * EXAC, I32 * socket, U8 debug) {
  */
 I32 ObjectControlBuildACCMMessage(ACCMData * mqACCMData, ACCMType * ACCM, U8 debug) {
 	// Header
-	ACCM->header.SyncWordU16 = SYNC_WORD;
+	ACCM->header.SyncWordU16 = ISO_SYNC_WORD;
 	ACCM->header.TransmitterIdU8 = 0;
 	ACCM->header.MessageCounterU8 = 0;
 	ACCM->header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -2634,7 +2630,7 @@ I32 ObjectControlBuildEXACMessage(EXACData * mqEXACData, EXACType * EXAC, U8 deb
 	TimeSetToCurrentSystemTime(&systemTime);
 
 	// Header
-	EXAC->header.SyncWordU16 = SYNC_WORD;
+	EXAC->header.SyncWordU16 = ISO_SYNC_WORD;
 	EXAC->header.TransmitterIdU8 = 0;
 	EXAC->header.MessageCounterU8 = 0;
 	EXAC->header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -2686,7 +2682,7 @@ I32 ObjectControlBuildEXACMessage(EXACData * mqEXACData, EXACType * EXAC, U8 deb
  */
 I32 ObjectControlBuildTRCMMessage(TRCMData * mqTRCMData, TRCMType * TRCM, U8 debug) {
 	// Header
-	TRCM->header.SyncWordU16 = SYNC_WORD;
+	TRCM->header.SyncWordU16 = ISO_SYNC_WORD;
 	TRCM->header.TransmitterIdU8 = 0;
 	TRCM->header.MessageCounterU8 = 0;
 	TRCM->header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
