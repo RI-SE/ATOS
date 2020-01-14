@@ -156,7 +156,6 @@ typedef enum {
 */
 typedef StateTransitionResult(*StateTransition) (OBCState_t * currentState, OBCState_t requestedState);
 
-
 C8 TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION * COMMAND_DOTM_ROW_MESSAGE_LENGTH +
 			  COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH];
 
@@ -470,9 +469,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							   buffer);
 
 					if ( ObjectControlBuildMONRMessage(buffer, receivedMONRData, &MONRData, 0) == -1 ) {
-						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object", object_address_name[iIndex]);
-						vDisconnectObject(&safety_socket_fd[iIndex]);
-						continue;
+						// TODO react on error
 					}
 
 					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
