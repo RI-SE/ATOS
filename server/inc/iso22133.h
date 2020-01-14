@@ -11,8 +11,8 @@ extern "C" {
  */
 
 #include <inttypes.h>
+#include <stddef.h>
 
-const uint8_t SupportedProtocolVersions[] = {2};
 #define ISO_SYNC_WORD 0x7E7E
 
 #pragma pack(push,1)
@@ -222,6 +222,9 @@ typedef struct
 #define VALUE_ID_TRIGGER_TIMESTAMP 0x0002
 
 #pragma pack(pop)
+
+void getSupportedISOProtocolVersions(const uint8_t** supportedProtocolVersions, size_t* nProtocols);
+
 
 #ifdef __cplusplus
 }

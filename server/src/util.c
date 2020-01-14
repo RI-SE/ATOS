@@ -3654,6 +3654,8 @@ I32 UtilISOBuildHeader(C8 * MessageBuffer, HeaderType * HeaderData, U8 Debug) {
 	const U8 ProtocolVersionBitmask = 0x7F;
 	U8 messageProtocolVersion = 0;
 	U8 isProtocolVersionSupported = 0;
+	const uint8_t* supportedProtocolVersions;
+	size_t nSupportedProtocols = 0;
 
 	// Decode ISO header
 	memcpy(&HeaderData->SyncWordU16, p, sizeof (HeaderData->SyncWordU16));
@@ -3677,8 +3679,9 @@ I32 UtilISOBuildHeader(C8 * MessageBuffer, HeaderType * HeaderData, U8 Debug) {
 
 	// Loop over permitted protocol versions
 	messageProtocolVersion = HeaderData->AckReqProtVerU8 & ProtocolVersionBitmask;
-	for (size_t i = 0; i < sizeof (SupportedProtocolVersions) / sizeof (SupportedProtocolVersions[0]); ++i) {
-		if (SupportedProtocolVersions[i] == messageProtocolVersion) {
+	getSupportedISOProtocolVersions(&supportedProtocolVersions, &nSupportedProtocols);
+	for (size_t i = 0; i < nSupportedProtocols; ++i) {
+		if (supportedProtocolVersions[i] == messageProtocolVersion) {
 			isProtocolVersionSupported = 1;
 			break;
 		}
