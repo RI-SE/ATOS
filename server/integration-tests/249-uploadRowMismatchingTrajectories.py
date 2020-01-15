@@ -62,7 +62,11 @@ if __name__ == "__main__":
     
     time.sleep(0.05) 
     # 6: Upload normal trajectory, to verify we can still initialise
-    userControl.UploadFile("traj/127.0.0.1", normalTraj)
+    try:
+        userControl.UploadFile("traj/127.0.0.1", normalTraj)
+    except TimeoutError as e:
+        print("tjenixen")
+        raise e
 
     userControl.Init()
     userControl.waitForObjectControlState("INITIALIZED")
@@ -73,7 +77,11 @@ if __name__ == "__main__":
     userControl.waitForObjectControlState("IDLE")
 
     # 7: Upload long trajectory
-    userControl.UploadFile("traj/127.0.0.1", manyRowTraj)
+    try:
+        userControl.UploadFile("traj/127.0.0.1", manyRowTraj)
+    except TimeoutError as e:
+        print("tjenixen")
+        raise e
 
     # 8: Send init
     try:
@@ -88,7 +96,11 @@ if __name__ == "__main__":
 
     time.sleep(0.05)
     # 9: Upload normal trajectory, to verify we can still initialise
-    userControl.UploadFile("traj/127.0.0.1", normalTraj)
+    try:
+        userControl.UploadFile("traj/127.0.0.1", normalTraj)
+    except TimeoutError as e:
+        print("tjenixen")
+        raise e
 
     userControl.Init()
     userControl.waitForObjectControlState("INITIALIZED")
