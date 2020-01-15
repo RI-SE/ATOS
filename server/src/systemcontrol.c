@@ -1181,6 +1181,7 @@ ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t 
 	readResult = recv(socket, recvBuffer + bytesInBuffer, sizeof (recvBuffer) - bytesInBuffer, MSG_DONTWAIT);
 	if (readResult > 0) {
 		bytesInBuffer += (size_t) readResult;
+		LogPrint("Raw: %s",recvBuffer);
 	}
 	if (bytesInBuffer > 0) {
 		if ((endOfMessage = strstr(recvBuffer, endOfMessagePattern)) != NULL) {
