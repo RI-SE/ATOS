@@ -55,7 +55,7 @@ class MSCP:
             
             print("=== Received " + str(len(data)) + " bytes")
             if len(data) > 0:
-                print("=== " + data)
+                print("=== " + str(data))
 
             for replyPattern in replyPatterns:
                 match = re.search(replyPattern["regex"],data)
