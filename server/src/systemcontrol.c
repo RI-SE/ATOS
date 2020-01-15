@@ -748,6 +748,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case UploadFile_3:
+			LogMessage(LOG_LEVEL_INFO, "Received upload command");
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
