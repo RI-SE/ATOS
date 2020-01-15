@@ -2150,10 +2150,7 @@ I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * Pack
 			}
 
 			bzero(RxBuffer, PacketSizeU16);
-			LogPrint("AAAA");
 			ClientStatus = recv(*sockfd, RxBuffer, PacketSizeU16, MSG_WAITALL);
-			LogPrint("BBBB");
-
 
 			if (ClientStatus > 0) {
 				i++;
