@@ -1631,7 +1631,7 @@ int ObjectControlBuildSTRTMessage(C8 * MessageBuffer, STRTType * STRTData, TimeT
 	STRTData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	STRTData->Header.TransmitterIdU8 = 0;
 	STRTData->Header.MessageCounterU8 = 0;
-	STRTData->Header.AckReqProtVerU8 = 0;
+	STRTData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
 	STRTData->Header.MessageIdU16 = COMMAND_STRT_CODE;
 	STRTData->Header.MessageLengthU32 = sizeof (STRTType) - sizeof (HeaderType);
 	STRTData->StartTimeValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
@@ -1691,7 +1691,7 @@ I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 Co
 	OSTMData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	OSTMData->Header.TransmitterIdU8 = 0;
 	OSTMData->Header.MessageCounterU8 = 0;
-	OSTMData->Header.AckReqProtVerU8 = 0;
+	OSTMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
 	OSTMData->Header.MessageIdU16 = COMMAND_OSTM_CODE;
 	OSTMData->Header.MessageLengthU32 = sizeof (OSTMType) - sizeof (HeaderType);
 	OSTMData->StateValueIdU16 = VALUE_ID_STATE_CHANGE_REQUEST;
@@ -1824,7 +1824,7 @@ I32 ObjectControlBuildSYPMMessage(C8 * MessageBuffer, SYPMType * SYPMData, U32 S
 	SYPMData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	SYPMData->Header.TransmitterIdU8 = 0;
 	SYPMData->Header.MessageCounterU8 = 0;
-	SYPMData->Header.AckReqProtVerU8 = 0;
+	SYPMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
 	SYPMData->Header.MessageIdU16 = COMMAND_SYPM_CODE;
 	SYPMData->Header.MessageLengthU32 = sizeof (SYPMType) - sizeof (HeaderType);
 	SYPMData->SyncPointTimeValueIdU16 = 1;
@@ -1874,7 +1874,7 @@ I32 ObjectControlBuildMTSPMessage(C8 * MessageBuffer, MTSPType * MTSPData, U32 S
 	MTSPData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	MTSPData->Header.TransmitterIdU8 = 0;
 	MTSPData->Header.MessageCounterU8 = 0;
-	MTSPData->Header.AckReqProtVerU8 = 0;
+	MTSPData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
 	MTSPData->Header.MessageIdU16 = COMMAND_MTSP_CODE;
 	MTSPData->Header.MessageLengthU32 = sizeof (MTSPType) - sizeof (HeaderType);
 	MTSPData->EstSyncPointTimeValueIdU16 = 1;
