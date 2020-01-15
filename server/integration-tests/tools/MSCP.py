@@ -48,12 +48,15 @@ class MSCP:
         print("=== Starting listener on " + str(self.host) + ":" + str(self.port))
         while not self.quit:
             try:
-                data = self.socket.recv(1024)
+                data = self.socket.recv(2048)
             except ConnectionResetError as e:
                 if not self.quit:
                     raise e
             
-            print("Received: " + str(len(data)))
+            print("=== Received " + str(len(data)) + " bytes")
+            if len(data) > 0:
+                print("=== " + data)
+
             for replyPattern in replyPatterns:
                 match = re.search(replyPattern["regex"],data)
                 if match is not None:
@@ -161,7 +164,7 @@ class MSCP:
                     else:
                         self.lastUploadReply["status"] = "UNKNOWN"
                     self.uploadReplyLock.release()
-            else:
+            elif len(data) > 0:
                 print("=== Unable to match against data: " + str(data))
 
     def GetStatus(self):         
@@ -238,10 +241,10 @@ class MSCP:
         
         print("=== Exited waiting state: " + ur)
         if ur != status and time.time() >= timeoutTime:
-            print("Fall A")
+            print("=== Timed out")
             raise TimeoutError("Timed out while waiting for reply to UploadFile")
         elif ur != status:
-            print("Fall B")
+            print("=== Error response")
             raise ValueError("Expected status " + status + " but received " + ur)
 
     def waitForObjectControlState(self,state,timeout=3.0):
