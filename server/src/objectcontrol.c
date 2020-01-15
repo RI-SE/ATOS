@@ -486,17 +486,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
 
-					//Store MONR in GSD
-					//UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
-					for (i = 0;
-						 i <
-						 (MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
-						  COMMAND_MESSAGE_FOOTER_LENGTH); i++)
-						GSD->MONRData[i] = buffer[i];
-					GSD->MONRSizeU8 =
-						MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
-						COMMAND_MESSAGE_FOOTER_LENGTH;
-
 					ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, XPosition,
 											 YPosition, ZPosition, LongitudinalSpeed, LateralSpeed,
 											 LongitudinalAcc, LateralAcc, Heading, DriveDirection,

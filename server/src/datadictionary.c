@@ -43,6 +43,7 @@ static pthread_mutex_t DataDictionaryRVSSRateMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t MONRMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 
