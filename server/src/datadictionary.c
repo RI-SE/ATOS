@@ -1667,6 +1667,42 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
 
 
 /*!
+ * \brief DataDictionarySetMONR Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param MONRdata Monitor data
+ * \param id object id
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, int id) {
+    ReadWriteAccess_t Res;
+
+    Res = WRITE_OK;
+    pthread_mutex_lock(&MONRMutex);
+    //GSD->MONRdata[id] = MONR
+    pthread_mutex_unlock(&MONRMutex);
+
+    return Res;
+}
+
+/*!
+ * \brief DataDictionaryGetMONR Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param MONRdata Return variable pointer
+ * \param id requesed object id
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, int id) {
+    pthread_mutex_lock(&MONRMutex);
+    //*MONR = GSD->MONRdata[id];
+    pthread_mutex_unlock(&MONRMutex);
+    return READ_OK;
+}
+
+/*END of MONR*/
+
+
+
+/*!
  * \brief DataDictionarySearchParameter Searches for parameters in the configuration file and returns
 the parameter value.
  * \param ParameterName Parameter to search for
