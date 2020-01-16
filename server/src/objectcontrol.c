@@ -468,8 +468,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							   object_address_name[iIndex], object_udp_port[iIndex], receivedMONRData,
 							   buffer);
 
-					if ( ObjectControlBuildMONRMessage(buffer, receivedMONRData, &MONRData, 0) == -1 ) {
-						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object", object_address_name[iIndex]);
+					if (ObjectControlBuildMONRMessage(buffer, receivedMONRData, &MONRData, 0) == -1) {
+						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object",
+								   object_address_name[iIndex]);
 						vDisconnectObject(&safety_socket_fd[iIndex]);
 						// TODO smarter way of handling?
 						continue;
