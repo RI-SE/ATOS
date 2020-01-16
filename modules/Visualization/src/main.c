@@ -23,20 +23,37 @@
 #define VISUAL_REPLAY_MODE 1
 
 #define SMALL_ITEM_TEXT_BUFFER_SIZE 20
+#define MAX_DATE_STRLEN 25		// Maximum string length of a time stamp on the format "2035;12;31;24;59;59;1000" is 25
+
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
 static void vConnectVisualizationChannel(int *sockfd, struct sockaddr_in *addr);
 static void vDisconnectVisualizationChannel(int *sockfd);
-void vCreateVisualizationMessage(MonitorDataType *_monitorData, char *_visualizationMessage, int _debug);
+void vCreateVisualizationMessage(MonitorDataType *_monitorData, char *_visualizationMessage, int _sizeOfVisualizationMessage, int _debug);
 
-void vCreateVisualizationMessage(MonitorDataType *_monitorData, char *_visualizationMessage, int _debug)
+void vCreateVisualizationMessage(MonitorDataType *_monitorData, char *_visualizationMessage, int _sizeOfVisualizationMessage, int _debug)
 {
-    sprintf(_visualizationMessage,"%d;%d;%d;%d", _monitorData->MONR.XPositionI32, _monitorData->MONR.YPositionI32, _monitorData->MONR.ZPositionI32, _monitorData->MONR.HeadingU16);
+
+    //IP
+    char ipStringBuffer[INET_ADDRSTRLEN];
+    sprintf(ipStringBuffer, "%s", inet_ntop(AF_INET, &_monitorData->ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
+
+    //Build message from MonitorStruct
+    snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%s;%u;%u;%d;%d;%d;%u;",
+            ipStringBuffer,
+            _monitorData->MONR.Header.TransmitterIdU8,
+            _monitorData->MONR.GPSQmsOfWeekU32,
+            _monitorData->MONR.XPositionI32,
+            _monitorData->MONR.YPositionI32,
+            _monitorData->MONR.ZPositionI32,
+            _monitorData->MONR.HeadingU16);
+
 
     if(_debug)
     {
+        LogMessage(LOG_LEVEL_INFO, "%s", _visualizationMessage);
         LogMessage(LOG_LEVEL_INFO, "X: %d", _monitorData->MONR.XPositionI32);
         LogMessage(LOG_LEVEL_INFO, "Y: %d", _monitorData->MONR.YPositionI32);
         LogMessage(LOG_LEVEL_INFO, "Z: %d", _monitorData->MONR.ZPositionI32);
@@ -54,10 +71,15 @@ int main() {
 	struct timespec remTime;
 
     MonitorDataType monitorData;
-    int sizeOfMessage = (sizeof (monitorData.MONR.XPositionI32) +
-                         sizeof (monitorData.MONR.YPositionI32) +
-                         sizeof (monitorData.MONR.ZPositionI32) +
-                         sizeof (monitorData.MONR.HeadingU16));
+
+    int sizeOfVisualizationMessage = (INET_ADDRSTRLEN +
+                                      sizeof (monitorData.MONR.Header.TransmitterIdU8) +
+                                      sizeof (monitorData.MONR.XPositionI32) +
+                                      sizeof (monitorData.MONR.YPositionI32) +
+                                      sizeof (monitorData.MONR.ZPositionI32) +
+                                      sizeof (monitorData.MONR.HeadingU16) +
+                                      6 + //Number of fields (;)
+                                      1); //Required
 
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
@@ -76,6 +98,8 @@ int main() {
 	}
 
 	while (true) {
+
+
 		if (iCommRecv(&command, mqRecvData, MQ_MSG_SIZE, NULL) < 0) {
 			util_error("Message bus receive error");
 		}
@@ -100,16 +124,22 @@ int main() {
 			break;
         case COMM_MONR:
         {
+
             //Populate the monitorType
             UtilPopulateMonitorDataStruct(mqRecvData, (size_t) (sizeof (mqRecvData)), &monitorData, 0);
 
+            //Allocate memory
+            char *visualizationMessage = malloc(sizeOfVisualizationMessage * sizeof (char));
+
             //Create visualization message and insert values from the monitor datastruct above
-            char visualizationMessage[42];
-            vCreateVisualizationMessage(&monitorData, visualizationMessage, 0);
+            vCreateVisualizationMessage(&monitorData, visualizationMessage, sizeOfVisualizationMessage, 0);
 
             //Send visualization message on the UDP socket
-            UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, visualizationMessage,
-                            sizeof (visualizationMessage), 0);
+            UtilSendUDPData((const uint8_t *)"Visualization", &visual_server, &visual_server_addr, visualizationMessage,
+                            sizeOfVisualizationMessage, 0);
+
+            //Free memory used by malloc
+            free(visualizationMessage);
 
         }
 			break;
