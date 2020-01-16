@@ -91,7 +91,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
 
     DataDictionarySetOBCStateU8(GSD, OBC_STATE_UNDEFINED);
-    GSD->test = (MONRType**)malloc(sizeof(MONRType*));
+
 
     return Res;
 }
@@ -1673,22 +1673,29 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
  * \param objects number of objects that will transmitt monr
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD){
+ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD, U8 objectCount){
     ReadWriteAccess_t Res;
 
     Res = WRITE_OK;
     pthread_mutex_lock(&MONRMutex);
 
-    GSD->test = (MONRType*)malloc(sizeof(MONRType));
-    LogPrint("Size of MONRtype = %d", sizeof (MONRType));
+    MONRType *ptr = malloc(sizeof (MONRType) * objectCount);
+    GSD->test = ptr;
+
+    LogPrint("Very good nice.");
+
+    LogPrint("Very good nice 2.");
+
     // Check if the memory has been successfully
-    if (GSD->test == NULL) {
+    /*if (GSD->test == NULL) {
         LogPrint(LOG_LEVEL_ERROR, "Coult not allocate memmory for MONR");
     }
     else {
         // Memory has been successfully allocated
         LogPrint(LOG_LEVEL_INFO, "Allocated pointer for MONR.");
     }
+        */
+    LogPrint("Thats the stuff");
 
     pthread_mutex_unlock(&MONRMutex);
     return Res;

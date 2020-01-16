@@ -488,7 +488,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
                     //Store MONR in GSD
                     //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
-                    /*for (i = 0;
+                    for (i = 0;
                          i <
                          (MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
                           COMMAND_MESSAGE_FOOTER_LENGTH); i++)
@@ -496,10 +496,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                     GSD->MONRSizeU8 =
                         MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
                         COMMAND_MESSAGE_FOOTER_LENGTH;
-                    */
-
-                    DataDictionarySetMONR(GSD, &MONRData, 0);
-
 
                     ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, XPosition,
                                              YPosition, ZPosition, LongitudinalSpeed, LateralSpeed,
@@ -734,6 +730,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             else if (iCommand == COMM_INIT) {
                 LogMessage(LOG_LEVEL_INFO, "INIT received");
 
+                LogMessage(LOG_LEVEL_INFO, "Try to do the thing");
+                DataDictionaryInitMONR(GSD, 1);
+                LogMessage(LOG_LEVEL_INFO, "Did the thing");
+
                 LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
                 nbr_objects = 0;
                 if (iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects) == 0) {
@@ -814,6 +814,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             else if (iCommand == COMM_CONNECT && vGetState(GSD) == OBC_STATE_INITIALIZED) {
                 LogMessage(LOG_LEVEL_INFO, "CONNECT received");
                 LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.");
+
+                LogMessage(LOG_LEVEL_INFO, "Try to do the other thing");
+                DataDictionaryFreeMONR(GSD);
+                LogMessage(LOG_LEVEL_INFO, "Did the thing");
 
                 /* Connect and send drive files */
                 for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
