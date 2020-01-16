@@ -196,7 +196,7 @@ I32 ObjectControlMONRToASCII(MONRType * MONRData, GeoPosition * OriginPosition, 
 							 C8 * LongitudinalSpeed, C8 * LateralSpeed, C8 * LongitudinalAcc, C8 * LateralAcc,
 							 C8 * Heading, C8 * DriveDirection, C8 * ObjectState, C8 * ReadyToArm,
 							 C8 * ErrorStatus, C8 debug);
-I32 ObjectControlBuildMONRMessage(C8 * MonrData, size_t length, MONRType * MONRData, U8 debug);
+I32 ObjectControlBuildMONRMessage(C8 * MonrData, const size_t length, MONRType * MONRData, U8 debug);
 I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * SimData, U8 debug);
 I32 ObjectControlSendDTMMessage(C8 * DTMData, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
 								DOTMType * DOTMData, U8 debug);
@@ -1266,10 +1266,14 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
  * \param debug Flag for enabling of debugging
  * \return 0 on success, -1 otherwise
  */
-I32 ObjectControlBuildMONRMessage(C8 * MonrData, size_t length, MONRType * MONRData, U8 debug) {
+I32 ObjectControlBuildMONRMessage(C8 * MonrData, const size_t length, MONRType * MONRData, U8 debug) {
 	C8 *p = MonrData;
+	const U16 ExpectedMONRStructSize = (U16) (sizeof (*MONRData) - sizeof (MONRData->Header)
+											  - sizeof (MONRData->CRC) -
+											  sizeof (MONRData->MonrStructValueIdU16)
+											  - sizeof (MONRData->MonrStructContentLengthU16));
 
-	if ( UtilISOBuildHeader(MonrData, &MONRData->Header, 0) == -1 ) {
+	if (UtilISOBuildHeader(MonrData, length, &MONRData->Header, 0) == -1) {
 		memset(MONRData, 0, sizeof (*MONRData));
 		return -1;
 	}
@@ -1289,11 +1293,10 @@ I32 ObjectControlBuildMONRMessage(C8 * MonrData, size_t length, MONRType * MONRD
 	memcpy(&MONRData->MonrStructContentLengthU16, p, sizeof (MONRData->MonrStructContentLengthU16));
 	p += sizeof (MONRData->MonrStructContentLengthU16);
 
-	if ( MONRData->MonrStructContentLengthU16 != (U16)(sizeof (MONRData)
-						- sizeof (MONRData->Header) - sizeof (MONRData->CRC)
-						- sizeof (MONRData->MonrStructValueIdU16) - sizeof (MONRData->MonrStructContentLengthU16)) ) {
+	if (MONRData->MonrStructContentLengthU16 != ExpectedMONRStructSize) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "MONR content length differs from the expected");
+		LogMessage(LOG_LEVEL_ERROR, "MONR content length %u differs from the expected length %u",
+				   MONRData->MonrStructContentLengthU16, ExpectedMONRStructSize);
 		memset(MONRData, 0, sizeof (*MONRData));
 		return -1;
 	}
@@ -1630,7 +1633,7 @@ int ObjectControlBuildSTRTMessage(C8 * MessageBuffer, STRTType * STRTData, TimeT
 	STRTData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	STRTData->Header.TransmitterIdU8 = 0;
 	STRTData->Header.MessageCounterU8 = 0;
-	STRTData->Header.AckReqProtVerU8 = 0;
+	STRTData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
 	STRTData->Header.MessageIdU16 = COMMAND_STRT_CODE;
 	STRTData->Header.MessageLengthU32 = sizeof (STRTType) - sizeof (HeaderType);
 	STRTData->StartTimeValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
@@ -1690,7 +1693,7 @@ I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 Co
 	OSTMData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	OSTMData->Header.TransmitterIdU8 = 0;
 	OSTMData->Header.MessageCounterU8 = 0;
-	OSTMData->Header.AckReqProtVerU8 = 0;
+	OSTMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
 	OSTMData->Header.MessageIdU16 = COMMAND_OSTM_CODE;
 	OSTMData->Header.MessageLengthU32 = sizeof (OSTMType) - sizeof (HeaderType);
 	OSTMData->StateValueIdU16 = VALUE_ID_STATE_CHANGE_REQUEST;
@@ -1823,7 +1826,7 @@ I32 ObjectControlBuildSYPMMessage(C8 * MessageBuffer, SYPMType * SYPMData, U32 S
 	SYPMData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	SYPMData->Header.TransmitterIdU8 = 0;
 	SYPMData->Header.MessageCounterU8 = 0;
-	SYPMData->Header.AckReqProtVerU8 = 0;
+	SYPMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
 	SYPMData->Header.MessageIdU16 = COMMAND_SYPM_CODE;
 	SYPMData->Header.MessageLengthU32 = sizeof (SYPMType) - sizeof (HeaderType);
 	SYPMData->SyncPointTimeValueIdU16 = 1;
@@ -1873,7 +1876,7 @@ I32 ObjectControlBuildMTSPMessage(C8 * MessageBuffer, MTSPType * MTSPData, U32 S
 	MTSPData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	MTSPData->Header.TransmitterIdU8 = 0;
 	MTSPData->Header.MessageCounterU8 = 0;
-	MTSPData->Header.AckReqProtVerU8 = 0;
+	MTSPData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
 	MTSPData->Header.MessageIdU16 = COMMAND_MTSP_CODE;
 	MTSPData->Header.MessageLengthU32 = sizeof (MTSPType) - sizeof (HeaderType);
 	MTSPData->EstSyncPointTimeValueIdU16 = 1;

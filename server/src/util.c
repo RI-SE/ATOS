@@ -3648,18 +3648,27 @@ I32 UtilISOBuildTRAJMessage(C8 * MessageBuffer, C8 * DTMData, I32 RowCount, DOTM
 	return MessageIndex;		//Total number of bytes
 }
 
-I32 UtilISOBuildHeader(C8 * MessageBuffer, HeaderType * HeaderData, U8 Debug) {
+I32 UtilISOBuildHeader(C8 * MessageBuffer, const size_t length, HeaderType * HeaderData, U8 Debug) {
 	C8 *p = MessageBuffer;
 	I32 retval = 0;
 	const U8 ProtocolVersionBitmask = 0x7F;
 	U8 messageProtocolVersion = 0;
 	U8 isProtocolVersionSupported = 0;
+	const uint8_t *supportedProtocolVersions;
+	size_t nSupportedProtocols = 0;
+
+	if (length < sizeof (HeaderData)) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO header");
+		memset(HeaderData, 0, sizeof (*HeaderData));
+		return -1;
+	}
 
 	// Decode ISO header
 	memcpy(&HeaderData->SyncWordU16, p, sizeof (HeaderData->SyncWordU16));
 	p += sizeof (HeaderData->SyncWordU16);
 
-	if ( HeaderData->SyncWordU16 != ISO_SYNC_WORD) {
+	if (HeaderData->SyncWordU16 != ISO_SYNC_WORD) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Sync word error when decoding ISO header");
 		memset(HeaderData, 0, sizeof (*HeaderData));
@@ -3677,14 +3686,15 @@ I32 UtilISOBuildHeader(C8 * MessageBuffer, HeaderType * HeaderData, U8 Debug) {
 
 	// Loop over permitted protocol versions
 	messageProtocolVersion = HeaderData->AckReqProtVerU8 & ProtocolVersionBitmask;
-	for (size_t i = 0; i < sizeof (SupportedProtocolVersions) / sizeof (SupportedProtocolVersions[0]); ++i) {
-		if (SupportedProtocolVersions[i] == messageProtocolVersion) {
+	getSupportedISOProtocolVersions(&supportedProtocolVersions, &nSupportedProtocols);
+	for (size_t i = 0; i < nSupportedProtocols; ++i) {
+		if (supportedProtocolVersions[i] == messageProtocolVersion) {
 			isProtocolVersionSupported = 1;
 			break;
 		}
 	}
 
-	if ( !isProtocolVersionSupported ) {
+	if (!isProtocolVersionSupported) {
 		errno = EPROTONOSUPPORT;
 		LogMessage(LOG_LEVEL_WARNING, "Protocol version %u not supported", messageProtocolVersion);
 		retval = -1;

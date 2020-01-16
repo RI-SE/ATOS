@@ -82,6 +82,7 @@ add_library(util
   src/util.c
   inc/util.h
   inc/iso22133.h
+  src/iso22133.c
 )
 
 # Create library
