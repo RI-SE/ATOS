@@ -1168,7 +1168,17 @@ SystemControlCommand_t SystemControlFindCommand(const char *CommandBuffer,
 	return nocommand;
 }
 
-
+/*! 
+ * \brief SystemControlReceiveUserControlData Performs similarly to the recv function (see manpage for recv) except that it
+ *        only fills the input data buffer with messages ending with ";\r\n\r\n" and saves any remaining data in a local
+ *        buffer awaiting the next call to this function.
+ * \param socket Socket on which MSCP HTTP communication is expected to arrive
+ * \param dataBuffer Data buffer where read data is to be stored
+ * \param dataBufferLength Maximum number of bytes possible to store in the data buffer
+ * \return Number of bytes printed to dataBuffer where 0 means that the connection has been severed. A return value of -1
+ *        constitutes an error with the appropriate errno has been set (see manpage for recv) with the addition of
+ *         - ENOBUFS if the data buffer is too small to hold the received message
+ */
 ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength) {
 	static char recvBuffer[TCP_RECV_BUFFER_SIZE];
 	static size_t bytesInBuffer = 0;
