@@ -74,11 +74,12 @@ int main() {
 
     int sizeOfVisualizationMessage = (INET_ADDRSTRLEN +
                                       sizeof (monitorData.MONR.Header.TransmitterIdU8) +
+                                      sizeof (monitorData.MONR.GPSQmsOfWeekU32) +
                                       sizeof (monitorData.MONR.XPositionI32) +
                                       sizeof (monitorData.MONR.YPositionI32) +
                                       sizeof (monitorData.MONR.ZPositionI32) +
                                       sizeof (monitorData.MONR.HeadingU16) +
-                                      6 + //Number of fields (;)
+                                      8 + //Number of fields + 1 (;)
                                       1); //Required
 
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
