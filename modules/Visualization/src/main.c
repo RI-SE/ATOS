@@ -41,25 +41,28 @@ void vCreateVisualizationMessage(MonitorDataType *_monitorData, char *_visualiza
     sprintf(ipStringBuffer, "%s", inet_ntop(AF_INET, &_monitorData->ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
 
     //Build message from MonitorStruct
-    snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%s;%u;%u;%d;%d;%d;%u;",
-            ipStringBuffer,
-            _monitorData->MONR.Header.TransmitterIdU8,
-            _monitorData->MONR.GPSQmsOfWeekU32,
-            _monitorData->MONR.XPositionI32,
-            _monitorData->MONR.YPositionI32,
-            _monitorData->MONR.ZPositionI32,
-            _monitorData->MONR.HeadingU16);
+    snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%s;%u;%d;%d;%d;%u;%d;%u;",
+             ipStringBuffer,
+             _monitorData->MONR.GPSQmsOfWeekU32,
+             _monitorData->MONR.XPositionI32,
+             _monitorData->MONR.YPositionI32,
+             _monitorData->MONR.ZPositionI32,
+             _monitorData->MONR.HeadingU16,
+             _monitorData->MONR.LongitudinalSpeedI16,
+             _monitorData->MONR.StateU8);
 
 
     if(_debug)
     {
-        LogMessage(LOG_LEVEL_INFO, "%s", _visualizationMessage);
+        //LogMessage(LOG_LEVEL_INFO, "%s", _visualizationMessage);
+        LogMessage(LOG_LEVEL_INFO, "IP: %s", ipStringBuffer);
+        LogMessage(LOG_LEVEL_INFO, "GPSQmsOfWeek: %u", _monitorData->MONR.GPSQmsOfWeekU32);
         LogMessage(LOG_LEVEL_INFO, "X: %d", _monitorData->MONR.XPositionI32);
         LogMessage(LOG_LEVEL_INFO, "Y: %d", _monitorData->MONR.YPositionI32);
         LogMessage(LOG_LEVEL_INFO, "Z: %d", _monitorData->MONR.ZPositionI32);
-        LogMessage(LOG_LEVEL_INFO, "Heading: %d", _monitorData->MONR.HeadingU16);
-        LogMessage(LOG_LEVEL_INFO, "LatAcc: %d", _monitorData->MONR.LateralAccI16);
-        LogMessage(LOG_LEVEL_INFO, "LongAcc: %d", _monitorData->MONR.LongitudinalAccI16);
+        LogMessage(LOG_LEVEL_INFO, "Heading: %u", _monitorData->MONR.HeadingU16);
+        LogMessage(LOG_LEVEL_INFO, "LongSpeed: %d", _monitorData->MONR.LongitudinalSpeedI16);
+        LogMessage(LOG_LEVEL_INFO, "State: %u", _monitorData->MONR.StateU8);
     }
 }
 
@@ -73,12 +76,13 @@ int main() {
     MonitorDataType monitorData;
 
     int sizeOfVisualizationMessage = (INET_ADDRSTRLEN +
-                                      sizeof (monitorData.MONR.Header.TransmitterIdU8) +
                                       sizeof (monitorData.MONR.GPSQmsOfWeekU32) +
                                       sizeof (monitorData.MONR.XPositionI32) +
                                       sizeof (monitorData.MONR.YPositionI32) +
                                       sizeof (monitorData.MONR.ZPositionI32) +
                                       sizeof (monitorData.MONR.HeadingU16) +
+                                      sizeof (monitorData.MONR.LongitudinalSpeedI16) +
+                                      sizeof (monitorData.MONR.StateU8) +
                                       8 + //Number of fields + 1 (;)
                                       1); //Required
 
