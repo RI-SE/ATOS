@@ -1667,6 +1667,61 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
 
 
 /*!
+ * \brief DataDictionaryInitMONR inits a data structure for saving object monr
+ * \param GSD Pointer to shared allocated memory
+ * \param objects number of objects that will transmitt monr
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD, int size){
+    ReadWriteAccess_t Res;
+
+    Res = WRITE_OK;
+    pthread_mutex_lock(&MONRMutex);
+
+    GSD->MonrData = (MONRType*)malloc(size * sizeof(MONRType));
+
+    // Check if the memory has been successfully
+    if (GSD->MonrData == NULL) {
+        LogPrint(LOG_LEVEL_ERROR, "Coult not allocate memmory for MONR");
+    }
+    else {
+        // Memory has been successfully allocated
+        LogPrint(LOG_LEVEL_INFO, "Allocated memory for %d objects.", size);
+    }
+
+    pthread_mutex_unlock(&MONRMutex);
+    return Res;
+}
+
+/*!
+ * \brief DataDictionaryInitMONR inits a data structure for saving object monr
+ * \param GSD Pointer to shared allocated memory
+ * \param objects number of objects that will transmitt monr
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD){
+    ReadWriteAccess_t Res;
+
+    Res = WRITE_OK;
+    pthread_mutex_lock(&MONRMutex);
+
+    free(GSD->MonrData);
+
+    // Check if the memory has been freed successfully
+    if (GSD->MonrData == NULL) {
+        LogPrint(LOG_LEVEL_INFO, "MONR array freed");
+    }
+    else {
+        // Memory has been successfully allocated
+        LogPrint(LOG_LEVEL_ERROR, "Could not free monr data struct");
+    }
+
+    pthread_mutex_unlock(&MONRMutex);
+    return Res;
+}
+
+
+/*!
  * \brief DataDictionarySetMONR Parses input variable and sets variable to corresponding value
  * \param GSD Pointer to shared allocated memory
  * \param MONRdata Monitor data

@@ -119,6 +119,13 @@ ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, C8 *MiscData, U32 Bu
 ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, OBCState_t OBCState);
 OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD);
 
+ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD);
+ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD, int size);
+ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, int id);
+ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, int id);
+
+/*END of MONR*/
+
 ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
 
 #endif 
