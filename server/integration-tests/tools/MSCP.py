@@ -53,8 +53,8 @@ class MSCP:
                 if not self.quit:
                     raise e
             
-            print("=== Received " + str(len(data)) + " bytes")
             if len(data) > 0:
+                print("=== Received " + str(len(data)) + " bytes:")
                 print("=== " + str(data))
 
             for replyPattern in replyPatterns:
@@ -219,7 +219,7 @@ class MSCP:
         self.lastUploadReply["status"] = "UNKNOWN"
         self.uploadReplyLock.release()
         self.waitForUploadReply("UPLOAD_SUCCESS")
-        print("=== File uploaded")
+        print("=== File upload verified")
 
     def Send(self,message):
         self.socket.send(message.encode())
@@ -233,18 +233,16 @@ class MSCP:
         self.uploadReplyLock.acquire()
         ur = self.lastUploadReply["status"]
         self.uploadReplyLock.release()
-        print("=== Entering waiting state")
         while ur == "UNKNOWN" and time.time() < timeoutTime:
             self.uploadReplyLock.acquire()
             ur = self.lastUploadReply["status"]
             self.uploadReplyLock.release()
         
-        print("=== Exited waiting state: " + ur)
         if ur != status and time.time() >= timeoutTime:
-            print("=== Timed out")
+            print("=== Timed out while waiting for upload reply")
             raise TimeoutError("Timed out while waiting for reply to UploadFile")
         elif ur != status:
-            print("=== Error response")
+            print("=== File upload error response")
             raise ValueError("Expected status " + status + " but received " + ur)
 
     def waitForObjectControlState(self,state,timeout=3.0):
@@ -259,7 +257,7 @@ class MSCP:
             self.statusReplyLock.release()
             print("=== Expecting: " + state + ", Current: " + sr)
             self.GetStatus()
-        print("=== Expecting: " + state + ", Current: " + sr)
+        
         if sr != state:
             raise TimeoutError("Timed out while waiting for transition to " + state)
 
