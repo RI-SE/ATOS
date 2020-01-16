@@ -381,7 +381,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				server_state == SERVER_STATE_UNDEFINED;	// TODO: Should this be an assignment?
 			}
 			else if (ClientResult > 0 && ClientResult < TCP_RECV_BUFFER_SIZE) {
-				LogPrint("Received: %s", pcBuffer);
 				// TODO: Move this entire decoding process into a separate function
 				for (i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i++)
 					bzero(SystemControlArgument[i], SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
@@ -1181,8 +1180,8 @@ ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t 
 	readResult = recv(socket, recvBuffer + bytesInBuffer, sizeof (recvBuffer) - bytesInBuffer, MSG_DONTWAIT);
 	if (readResult > 0) {
 		bytesInBuffer += (size_t) readResult;
-		LogPrint("Raw: %s", recvBuffer);
 	}
+
 	if (bytesInBuffer > 0) {
 		if ((endOfMessage = strstr(recvBuffer, endOfMessagePattern)) != NULL) {
 			endOfMessage += sizeof (endOfMessagePattern) - 1;
@@ -1203,6 +1202,7 @@ ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t 
 			}
 			else {
 				memcpy(dataBuffer, recvBuffer, messageLength);
+				readResult = (ssize_t) messageLength;
 			}
 			bytesInBuffer -= messageLength;
 			memmove(recvBuffer, recvBuffer + messageLength, bytesInBuffer);
