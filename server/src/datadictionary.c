@@ -82,7 +82,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitSimulatorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSimulatorUDPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSimulatorModeU8(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitVOILReceiversC8(GSD) : Res;
+    Res = Res == READ_OK ? DataDictionaryInitVOILReceiversC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitDTMReceiversC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitExternalSupervisorIPU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitRVSSConfigU32(GSD) : Res;
@@ -90,9 +90,10 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
 
-	DataDictionarySetOBCStateU8(GSD, OBC_STATE_UNDEFINED);
+    DataDictionarySetOBCStateU8(GSD, OBC_STATE_UNDEFINED);
+    GSD->test = (MONRType**)malloc(sizeof(MONRType*));
 
-	return Res;
+    return Res;
 }
 
 
@@ -1672,21 +1673,21 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
  * \param objects number of objects that will transmitt monr
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD, int size){
+ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD){
     ReadWriteAccess_t Res;
 
     Res = WRITE_OK;
     pthread_mutex_lock(&MONRMutex);
 
-    GSD->MonrData = (MONRType*)malloc(size * sizeof(MONRType));
-
+    GSD->test = (MONRType*)malloc(sizeof(MONRType));
+    LogPrint("Size of MONRtype = %d", sizeof (MONRType));
     // Check if the memory has been successfully
-    if (GSD->MonrData == NULL) {
+    if (GSD->test == NULL) {
         LogPrint(LOG_LEVEL_ERROR, "Coult not allocate memmory for MONR");
     }
     else {
         // Memory has been successfully allocated
-        LogPrint(LOG_LEVEL_INFO, "Allocated memory for %d objects.", size);
+        LogPrint(LOG_LEVEL_INFO, "Allocated pointer for MONR.");
     }
 
     pthread_mutex_unlock(&MONRMutex);
@@ -1705,10 +1706,11 @@ ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD){
     Res = WRITE_OK;
     pthread_mutex_lock(&MONRMutex);
 
-    free(GSD->MonrData);
+
+    free(GSD->test);
 
     // Check if the memory has been freed successfully
-    if (GSD->MonrData == NULL) {
+    if (GSD->test == NULL) {
         LogPrint(LOG_LEVEL_INFO, "MONR array freed");
     }
     else {
@@ -1728,12 +1730,12 @@ ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD){
  * \param id object id
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, int id) {
+ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, U8 size) {
     ReadWriteAccess_t Res;
 
     Res = WRITE_OK;
     pthread_mutex_lock(&MONRMutex);
-    //GSD->MONRdata[id] = MONR
+    GSD->test = MONR;
     pthread_mutex_unlock(&MONRMutex);
 
     return Res;
@@ -1746,7 +1748,7 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, int id) 
  * \param id requesed object id
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, int id) {
+ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, U8 id) {
     pthread_mutex_lock(&MONRMutex);
     //*MONR = GSD->MONRdata[id];
     pthread_mutex_unlock(&MONRMutex);

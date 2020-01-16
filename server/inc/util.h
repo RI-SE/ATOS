@@ -533,7 +533,7 @@ typedef struct
   U8 HEABSizeU8;
   U8 HEABData[100];
 
-  MONRType* MonrData;
+  MONRType **test;
   //U8 OSTMSizeU8;
   //U8 OSTMData[100];
   //U8 STRTSizeU8;
