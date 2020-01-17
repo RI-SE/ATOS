@@ -48,10 +48,14 @@ class MSCP:
         print("=== Starting listener on " + str(self.host) + ":" + str(self.port))
         while not self.quit:
             try:
-                data = self.socket.recv(1024)
+                data = self.socket.recv(2048)
             except ConnectionResetError as e:
                 if not self.quit:
                     raise e
+            
+            if len(data) > 0:
+                print("=== Received " + str(len(data)) + " bytes:")
+                print("=== " + str(data))
 
             for replyPattern in replyPatterns:
                 match = re.search(replyPattern["regex"],data)
@@ -160,58 +164,62 @@ class MSCP:
                     else:
                         self.lastUploadReply["status"] = "UNKNOWN"
                     self.uploadReplyLock.release()
+            elif len(data) > 0:
+                print("=== Unable to match against data: " + str(data))
 
     def GetStatus(self):         
-        message = "POST /maestro HTTP/1.1\r\nHost: " + self.host + "\r\n\r\nGetServerStatus();"    
+        message = "POST /maestro HTTP/1.1\r\nHost: " + self.host + "\r\n\r\nGetServerStatus();\r\n\r\n"    
         self.Send(message)
         print("=== GetServerStatus() sent")
  
     def Abort(self):         
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nAbortScenario();"
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nAbortScenario();\r\n\r\n"
         self.Send(message)
         print("=== Abort() sent")
 
     def Arm(self):         
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nArmScenario();"    
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nArmScenario();\r\n\r\n"    
         self.Send(message)
         print("=== ArmScenario() sent")
 
     def Init(self):       
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nInitializeScenario();"
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nInitializeScenario();\r\n\r\n"
         self.Send(message)
         print("=== Init() sent")
 
     def Connect(self):
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nConnectObject();"
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nConnectObject();\r\n\r\n"
         self.Send(message)
         print("=== Connect() sent")
                  
     def Disconnect(self):
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDisconnectObject();"
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDisconnectObject();\r\n\r\n"
         self.Send(message)
         print("=== Disconnect() sent")
     
     def Start(self,delayTime_ms):       
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nStartScenario(" + str(delayTime_ms) + ");"
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nStartScenario(" + str(delayTime_ms) + ");\r\n\r\n"
         self.Send(message)
         print("=== StartScenario() sent")
 
     def UploadFile(self,targetPath,fileContents):
         packetSize = 1200
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nUploadFile(" + targetPath + "," + str(len(fileContents)) + "," + str(packetSize) + ");" 
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nUploadFile(" + targetPath + "," + str(len(fileContents)) + "," + str(packetSize) + ");\r\n\r\n" 
         self.uploadReplyLock.acquire()
         self.lastUploadReply["status"] = "UNKNOWN"
         self.uploadReplyLock.release()
         self.Send(message)
         print("=== UploadFile() sent")
         self.waitForUploadReply("SERVER_PREPARED")
+        print("=== Sending file contents")
         # Send file
         self.Send(fileContents)
+        print("=== Sent file contents")
         self.uploadReplyLock.acquire()
         self.lastUploadReply["status"] = "UNKNOWN"
         self.uploadReplyLock.release()
         self.waitForUploadReply("UPLOAD_SUCCESS")
-        print("=== File uploaded")
+        print("=== File upload verified")
 
     def Send(self,message):
         self.socket.send(message.encode())
@@ -229,9 +237,12 @@ class MSCP:
             self.uploadReplyLock.acquire()
             ur = self.lastUploadReply["status"]
             self.uploadReplyLock.release()
+        
         if ur != status and time.time() >= timeoutTime:
+            print("=== Timed out while waiting for upload reply")
             raise TimeoutError("Timed out while waiting for reply to UploadFile")
         elif ur != status:
+            print("=== File upload error response")
             raise ValueError("Expected status " + status + " but received " + ur)
 
     def waitForObjectControlState(self,state,timeout=3.0):
@@ -246,7 +257,7 @@ class MSCP:
             self.statusReplyLock.release()
             print("=== Expecting: " + state + ", Current: " + sr)
             self.GetStatus()
-        print("=== Expecting: " + state + ", Current: " + sr)
+        
         if sr != state:
             raise TimeoutError("Timed out while waiting for transition to " + state)
 

@@ -129,10 +129,7 @@ int main()
             // Update triggers
             UtilPopulateMonitorDataStruct(reinterpret_cast<uint8_t*>(mqRecvData), sizeof(mqRecvData), &monr, 0);
             scenario.updateTrigger(monr);
-            break;
-        case COMM_MONI:
-            // Ignore
-            break;
+			break;
         case COMM_DISCONNECT:
             LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
             state = UNINITIALIZED;

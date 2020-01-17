@@ -105,10 +105,7 @@ int main()
         case COMM_OSEM:
             // TODO: check so that OSEM is not null island?
 
-            break;
-        case COMM_MONI:
-            // Ignore old style MONR data
-            break;
+			break;
         case COMM_MONR:
             MonitorDataType MONRMessage;
             UtilPopulateMonitorDataStruct((unsigned char *)mqRecvData, sizeof (mqRecvData), &MONRMessage, 0);
