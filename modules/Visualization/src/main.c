@@ -124,9 +124,7 @@ int main() {
 		switch (command) {
 		case COMM_INIT:
 			break;
-		case COMM_MONI:
-			// Ignore old style MONR data
-			break;
+
         case COMM_MONR:
         {
 
