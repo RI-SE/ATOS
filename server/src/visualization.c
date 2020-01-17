@@ -31,6 +31,10 @@
 #define VISUAL_CONTROL_MODE 0
 #define VISUAL_REPLAY_MODE 1
 
+
+#define SIM_CONTROL_BUFFER_SIZE_20 20
+#define SIM_CONTROL_BUFFER_SIZE_128 128
+
 #define SMALL_ITEM_TEXT_BUFFER_SIZE 20
 /*------------------------------------------------------------
   -- Function declarations.
@@ -42,6 +46,7 @@ static void vSendVisualization(int* sockfd,
                                const char* message);
 
 void vISOtoCHRONOSmsg(char* ISOmsg,char* tarCHRONOSmsg,int MSG_size);
+U32 SimulatorControlBuildObjectMonitorMessage(C8* MessageBuffer, C8 *MONRData, ObjectMonitorType *ObjectMonitorData, U8 debug);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -52,11 +57,13 @@ void vISOtoCHRONOSmsg(char* ISOmsg,char* tarCHRONOSmsg,int MSG_size);
   ------------------------------------------------------------*/
 int main(int argc, char *argv[])
 {
+    C8 SendBuffer[SIM_CONTROL_BUFFER_SIZE_128];
     int visual_server;
     struct sockaddr_in visual_server_addr;
     char cpBuffer[RECV_MESSAGE_BUFFER];
     char chronosbuff[RECV_MESSAGE_BUFFER];
-
+    ObjectMonitorType ObjectMonitorData;
+    U32 LengthU32;
     printf("[Visualization] DefaultVisualizationAdapter started\n");
     fflush(stdout);
 
@@ -76,11 +83,21 @@ int main(int argc, char *argv[])
         bzero(cpBuffer,RECV_MESSAGE_BUFFER);
         (void)iCommRecv(&iCommand,cpBuffer,RECV_MESSAGE_BUFFER, NULL);
 
+        //if(iCommand == COMM_MONI_BIN)
+        //{
+        //    //send as chronos if i dont missremeber!!
+        //
+        //
+        //    DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Recieved MONITOR message: %s\n",cpBuffer);
+        //
+        //
+        //}
+
         if(iCommand == COMM_MONI)
         {
             DEBUG_LPRINT(DEBUG_LEVEL_LOW,"INF: Recieved MONITOR message: %s\n",cpBuffer);
 
-
+            // Hwere we send as ASCII
             //Option 1
             //vISOtoCHRONOSmsg(cpBuffer,chronosbuff,RECV_MESSAGE_BUFFER);
             //printf("MQ monr %s\n", chronosbuff);
@@ -89,14 +106,18 @@ int main(int argc, char *argv[])
             //vSendVisualization(&visual_server,&visual_server_addr,chronosbuff);
 
             //Option 2
-            //LengthU32 = SimulatorControlBuildObjectMonitorMessage(cpBuffer, chronosbuff, &ObjectMonitorData, 0);
-            //UtilSendUDPData("SimulatorControl", &SimulatorUDPSocketfdI32, &simulator_addr, SendBuffer, LengthU32, 0);
+            LengthU32 = SimulatorControlBuildObjectMonitorMessage(SendBuffer, cpBuffer, &ObjectMonitorData, 1);
+
+
+
+            UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, SendBuffer, LengthU32, 0);
 
             //Option3
-            C8 data[strlen(cpBuffer)];
-            bzero(data, strlen(data));
-            strcat(data, cpBuffer);
-            UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, data, sizeof(data), 0);
+
+            //C8 data[strlen(cpBuffer)];
+            //bzero(data, strlen(data));
+            //strcat(data, cpBuffer);
+            //UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, data, sizeof(data), 0);
 
         }
         else if(iCommand == COMM_REPLAY)
@@ -123,7 +144,7 @@ int main(int argc, char *argv[])
     }
 
     /* Close visualization socket */
-    vDisconnectVisualizationChannel(&visual_server);
+    //vDisconnectVisualizationChannel(&visual_server);
 
     (void)iCommClose();
 }
@@ -248,4 +269,80 @@ void vISOtoCHRONOSmsg(char* ISOmsg,char* tarCHRONOSmsg, int MSG_size)
         item_p = strtok(NULL,";");
     }
 
+}
+U32 SimulatorControlBuildObjectMonitorMessage(C8* MessageBuffer, C8 *MONRData, ObjectMonitorType *ObjectMonitorData, U8 debug)
+{
+
+  C8 *ptr;
+  C8 TextBuffer[SIM_CONTROL_BUFFER_SIZE_20];
+  U32 i,j;
+
+  /*10.130.22.8;0;0;-6;14;229;256;800;0;0;0;0;4;0; */
+  //printf("%s\n", MONRData);
+
+  ptr = MONRData;
+  /*Get IP*/
+  bzero(TextBuffer, SIM_CONTROL_BUFFER_SIZE_20);
+  strncpy(TextBuffer, ptr, (uint64_t)strchr(ptr, ';') - (uint64_t)ptr);
+  ObjectMonitorData->ObjectIPU32 = SwapU32(UtilIPStringToInt(TextBuffer));
+
+  /*Get GPSSOW*/
+  ptr = strchr(ptr+1, ';');
+  ptr = strchr(ptr+1, ';');
+  bzero(TextBuffer, SIM_CONTROL_BUFFER_SIZE_20);
+  strncpy(TextBuffer, ptr+1, (uint64_t)strchr(ptr+1, ';') - (uint64_t)ptr);
+  ObjectMonitorData->GPSSOWU32 = SwapU32((U32) atoi(TextBuffer));
+
+  //Get XPosition
+  ptr = strchr(ptr+1, ';');
+  bzero(TextBuffer, SIM_CONTROL_BUFFER_SIZE_20);
+  strncpy(TextBuffer, ptr+1, (uint64_t)strchr(ptr+1, ';') - (uint64_t)ptr);
+  ObjectMonitorData->XPositionI32 = SwapI32((I32) atoi(TextBuffer));
+
+  //Get YPosition
+  ptr = strchr(ptr+1, ';');
+  bzero(TextBuffer, SIM_CONTROL_BUFFER_SIZE_20);
+  strncpy(TextBuffer, ptr+1, (uint64_t)strchr(ptr+1, ';') - (uint64_t)ptr);
+  ObjectMonitorData->YPositionI32 = SwapI32((I32) atoi(TextBuffer));
+
+  //Get ZPosition
+  ptr = strchr(ptr+1, ';');
+  bzero(TextBuffer, SIM_CONTROL_BUFFER_SIZE_20);
+  strncpy(TextBuffer, ptr+1, (uint64_t)strchr(ptr+1, ';') - (uint64_t)ptr);
+  ObjectMonitorData->ZPositionI32 = SwapI32((I32) atoi(TextBuffer));
+
+  //Get Heading
+  ptr = strchr(ptr+1, ';');
+  bzero(TextBuffer, SIM_CONTROL_BUFFER_SIZE_20);
+  strncpy(TextBuffer, ptr+1, (uint64_t)strchr(ptr+1, ';') - (uint64_t)ptr);
+  ObjectMonitorData->HeadingU16 = SwapU16((U16) atoi(TextBuffer));
+
+  //Get Speed
+  ptr = strchr(ptr+1, ';');
+  bzero(TextBuffer, SIM_CONTROL_BUFFER_SIZE_20);
+  strncpy(TextBuffer, ptr+1, (uint64_t)strchr(ptr+1, ';') - (uint64_t)ptr);
+  ObjectMonitorData->SpeedI16 = SwapI16((I16) atoi(TextBuffer));
+
+  //Set MessageId
+  ObjectMonitorData->MessageIdU16 = SwapU16(2);
+
+  ptr=(char *)ObjectMonitorData;
+  for(i=0; i<sizeof(ObjectMonitorType); i++) *(MessageBuffer + i + 4) = *ptr++;
+
+  *(MessageBuffer + 0) = (U8)(i >> 24);
+  *(MessageBuffer + 1) = (U8)(i >> 16);
+  *(MessageBuffer + 2) = (U8)(i >> 8);
+  *(MessageBuffer + 3) = (U8)(i);
+
+  if(debug)
+  {
+    printf("----MONR TO SIMULATOR----\n");
+    printf("Heading=%d, Speed=%d, Time=%d, X=%d, Y=%d\n", SwapU16(ObjectMonitorData->HeadingU16), SwapI16(ObjectMonitorData->SpeedI16), SwapU32(ObjectMonitorData->GPSSOWU32), SwapI32(ObjectMonitorData->XPositionI32), SwapI32(ObjectMonitorData->YPositionI32));
+    for(j = 0;j < sizeof(ObjectMonitorType) + 4; j ++) printf("%x ", (unsigned char)MessageBuffer[j]);
+    printf("\n");
+
+  }
+
+
+  return i + 4;
 }
