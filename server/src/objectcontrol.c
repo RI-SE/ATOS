@@ -481,13 +481,19 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                                        "Fatal communication fault when sending MONR command - entering error state");
                             vSetState(OBC_STATE_ERROR, GSD);
                             ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
-                        }
+                       }
                     }
 
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
 
                     //Store MONR in GSD
+                    DataDictionarySetMONR(GSD, &MONRData, iIndex);
+
+
+
                     //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
+
+                    /*
                     for (i = 0;
                          i <
                          (MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
@@ -495,7 +501,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                         GSD->MONRData[i] = buffer[i];
                     GSD->MONRSizeU8 =
                         MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
-                        COMMAND_MESSAGE_FOOTER_LENGTH;
+                        COMMAND_MESSAGE_FOOTER_LENGTH; */
 
                     ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, XPosition,
                                              YPosition, ZPosition, LongitudinalSpeed, LateralSpeed,
@@ -705,8 +711,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                     //GSD->STRTSizeU8 = (U8)MessageLength;
                     STRTSentU8 = 1;
                 }
-                //OBCState = OBC_STATE_INITIALIZED; //This is temporary!
+                //OBCState = OBC_STATE_INITIALIZED; //This is temporary
                 //printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
+
+
                 GSD->ScenarioStartTimeU32 = OutgoingStartTimeU32;
                 bzero(MiscText, SMALL_BUFFER_SIZE_0);
                 sprintf(MiscText, "%" PRIu32, GSD->ScenarioStartTimeU32 << 2);
@@ -729,10 +737,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             }
             else if (iCommand == COMM_INIT) {
                 LogMessage(LOG_LEVEL_INFO, "INIT received");
-
-                LogMessage(LOG_LEVEL_INFO, "Try to do the thing");
-                DataDictionaryInitMONR(GSD, 1);
-                LogMessage(LOG_LEVEL_INFO, "Did the thing");
 
                 LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
                 nbr_objects = 0;
@@ -789,6 +793,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                     pcSendBuffer[0] = (uint8_t) iCommand;
                     iCommSend(COMM_FAILURE, pcSendBuffer, sizeof (iCommand));
                 }
+
+
+                LogMessage(LOG_LEVEL_INFO, "Try to do the thing with %d objects", nbr_objects);
+                DataDictionaryInitMONR(GSD, nbr_objects);
+                LogMessage(LOG_LEVEL_INFO, "Did the thing with %d objects", nbr_objects);
+
             }
             else if (iCommand == COMM_ACCM && vGetState(GSD) == OBC_STATE_CONNECTED) {
                 UtilPopulateACCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqACCMData);
@@ -814,10 +824,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             else if (iCommand == COMM_CONNECT && vGetState(GSD) == OBC_STATE_INITIALIZED) {
                 LogMessage(LOG_LEVEL_INFO, "CONNECT received");
                 LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.");
-
-                LogMessage(LOG_LEVEL_INFO, "Try to do the other thing");
-                DataDictionaryFreeMONR(GSD);
-                LogMessage(LOG_LEVEL_INFO, "Did the thing");
 
                 /* Connect and send drive files */
                 for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
@@ -1061,6 +1067,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                 for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
                     vDisconnectObject(&socket_fds[iIndex]);
                 }
+                DataDictionaryFreeMONR(GSD);
                 //#endif //NOTCP
 
                 LogMessage(LOG_LEVEL_INFO, "DISCONNECT received");
