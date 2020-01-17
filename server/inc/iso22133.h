@@ -29,6 +29,30 @@ typedef struct
   uint16_t Crc;
 } FooterType; //2 bytes
 
+
+//! *************************** MONR
+typedef struct
+{
+  HeaderType header;
+  uint16_t monrStructValueID;
+  uint16_t monrStructContentLength;
+  uint32_t gpsQmsOfWeek;
+  int32_t xPosition;
+  int32_t yPosition;
+  int32_t zPosition;
+  uint16_t heading;
+  int16_t longitudinalSpeed;
+  int16_t lateralSpeed;
+  int16_t longitudinalAcc;
+  int16_t lateralAcc;
+  uint8_t driveDirection;
+  uint8_t state;
+  uint8_t readyToArm;
+  uint8_t errorStatus;
+  FooterType footer;
+} MONRType; //41 bytes
+
+
 //! *************************** TRCM
 #define COMMAND_TRCM_CODE 0x0011
 typedef struct

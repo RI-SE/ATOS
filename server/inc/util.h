@@ -378,26 +378,7 @@ typedef struct
   U8 CCStatusU8;
 } HEABType; //16 bytes
 
-typedef struct
-{
-  HeaderType Header;
-  U16 MonrStructValueIdU16;
-  U16 MonrStructContentLengthU16;
-  U32 GPSQmsOfWeekU32;
-  I32 XPositionI32;
-  I32 YPositionI32;
-  I32 ZPositionI32;
-  U16 HeadingU16;
-  I16 LongitudinalSpeedI16;
-  I16 LateralSpeedI16;
-  I16 LongitudinalAccI16;
-  I16 LateralAccI16;
-  U8 DriveDirectionU8;
-  U8 StateU8;
-  U8 ReadyToArmU8;
-  U8 ErrorStatusU8;
-  U16 CRC;
-} MONRType; //41 bytes
+
 
 typedef struct
 {
