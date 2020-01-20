@@ -2,6 +2,7 @@
 #include "string.h"
 #include "logging.h"
 #include "errno.h"
+#include "stdlib.h"
 
 static const uint8_t SupportedProtocolVersions[] = { 2 };
 
@@ -267,3 +268,64 @@ ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer,
 	return MESSAGE_OK;
 }
 
+
+/*!
+ * \brief MONRToASCII Converts an ASCII string into a MONR struct
+ * \param asciiBuffer Buffer containing ASCII text representation
+ * \param MONRData Struct containing MONR data
+ * \param debug Flag for enabling debugging
+ * \return value according to ::ISOMessageReturnValue
+ */
+ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug) {
+
+	const size_t bufferLength = strlen(asciiBuffer);
+	const char *token;
+	const char delim[] = ";";
+	const int NumberBaseDecimal = 10;
+	char * copy = strdup(asciiBuffer);
+
+	memset(MONRData, 0, sizeof (*MONRData));
+
+	token = strtok(copy, delim);
+
+	token = strtok(NULL, delim);
+	MONRData->gpsQmsOfWeek = (uint32_t) strtoul(token, NULL, NumberBaseDecimal);
+
+	token = strtok(NULL, delim);
+	MONRData->xPosition = (int32_t) strtol(token, NULL, NumberBaseDecimal);
+
+	token = strtok(NULL, delim);
+	MONRData->yPosition = (int32_t) strtol(token, NULL, NumberBaseDecimal);
+
+	token = strtok(NULL, delim);
+	MONRData->zPosition = (int32_t) strtol(token, NULL, NumberBaseDecimal);
+
+	token = strtok(NULL, delim);
+	MONRData->heading = (uint16_t) strtoul(token, NULL, NumberBaseDecimal);
+
+	token = strtok(NULL, delim);
+	MONRData->longitudinalSpeed = (int16_t) strtol(token, NULL, NumberBaseDecimal);
+
+	token = strtok(NULL, delim);
+	MONRData->lateralSpeed = (int16_t) strtol(token, NULL, NumberBaseDecimal);
+
+	token = strtok(NULL, delim);
+	MONRData->longitudinalAcc = (int16_t) strtol(token, NULL, NumberBaseDecimal);
+
+	token = strtok(NULL, delim);
+	MONRData->lateralAcc = (int16_t) strtol(token, NULL, NumberBaseDecimal);
+
+	token = strtok(NULL, delim);
+	MONRData->driveDirection = (uint8_t) strtoul(token, NULL, NumberBaseDecimal);
+
+	token = strtok(NULL, delim);
+	MONRData->state = (uint8_t) strtoul(token, NULL, NumberBaseDecimal);
+
+	token = strtok(NULL, delim);
+	MONRData->readyToArm = (uint8_t) strtoul(token, NULL, NumberBaseDecimal);
+
+	token = strtok(NULL, delim);
+	MONRData->errorStatus = (uint8_t) strtoul(token, NULL, NumberBaseDecimal);
+
+	return MESSAGE_OK;
+}

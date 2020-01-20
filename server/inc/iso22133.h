@@ -272,6 +272,7 @@ typedef enum {
 void getSupportedISOProtocolVersions(const uint8_t** supportedProtocolVersions, size_t* nProtocols);
 ISOMessageReturnValue buildMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
 ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
+ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 
 #ifdef __cplusplus
 }
