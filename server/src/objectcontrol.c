@@ -191,11 +191,6 @@ I32 ObjectControlBuildTRAJMessage(C8 * MessageBuffer, FILE * fd, I32 RowCount, D
 I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
 								 DOTMType * DOTMData, U8 debug);
 int ObjectControlSendUDPData(int *sockfd, struct sockaddr_in *addr, char *SendData, int Length, char debug);
-I32 ObjectControlMONRToASCII(MONRType * MONRData, GeoPosition * OriginPosition, I32 Idn, C8 * Id,
-							 C8 * Timestamp, C8 * XPosition, C8 * YPosition, C8 * ZPosition,
-							 C8 * LongitudinalSpeed, C8 * LateralSpeed, C8 * LongitudinalAcc, C8 * LateralAcc,
-							 C8 * Heading, C8 * DriveDirection, C8 * ObjectState, C8 * ReadyToArm,
-							 C8 * ErrorStatus, C8 debug);
 I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * SimData, U8 debug);
 I32 ObjectControlSendDTMMessage(C8 * DTMData, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
 								DOTMType * DOTMData, U8 debug);
@@ -498,7 +493,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					GSD->MONRSizeU8 =
 						MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
 						COMMAND_MESSAGE_FOOTER_LENGTH;
-
+					MONRToASCII(&MONRData, buffer, sizeof (buffer), 0);
 					ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, XPosition,
 											 YPosition, ZPosition, LongitudinalSpeed, LateralSpeed,
 											 LongitudinalAcc, LateralAcc, Heading, DriveDirection,
@@ -1254,143 +1249,6 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 
 	return ObjectCount * sizeof (Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH;	//Total number of bytes
 
-}
-
-
-
-I32 ObjectControlMONRToASCII(MONRType * MONRData, GeoPosition * OriginPosition, I32 Idn, C8 * Id,
-							 C8 * Timestamp, C8 * XPosition, C8 * YPosition, C8 * ZPosition,
-							 C8 * LongitudinalSpeed, C8 * LateralSpeed, C8 * LongitudinalAcc, C8 * LateralAcc,
-							 C8 * Heading, C8 * DriveDirection, C8 * ObjectState, C8 * ReadyToArm,
-							 C8 * ErrorStatus, C8 debug) {
-	char Buffer[6];
-	long unsigned int MonrValueU64;
-	unsigned int MonrValueU32;
-	unsigned short MonrValueU16;
-	unsigned char MonrValueU8;
-	double iLlh[3] = { 0, 0, 0 };
-	double xyz[3] = { 0, 0, 0 };
-	double Llh[3] = { 0, 0, 0 };
-	uint64_t ConvertGPStoUTC;
-
-	bzero(Id, SMALL_BUFFER_SIZE_1);
-	bzero(Timestamp, SMALL_BUFFER_SIZE_0);
-	bzero(XPosition, SMALL_BUFFER_SIZE_0);
-	bzero(YPosition, SMALL_BUFFER_SIZE_0);
-	bzero(ZPosition, SMALL_BUFFER_SIZE_0);
-	bzero(LongitudinalSpeed, SMALL_BUFFER_SIZE_0);
-	bzero(LateralSpeed, SMALL_BUFFER_SIZE_0);
-	bzero(LongitudinalAcc, SMALL_BUFFER_SIZE_0);
-	bzero(LateralAcc, SMALL_BUFFER_SIZE_0);
-	bzero(Heading, SMALL_BUFFER_SIZE_0);
-	bzero(DriveDirection, SMALL_BUFFER_SIZE_1);
-	bzero(ObjectState, SMALL_BUFFER_SIZE_1);
-	bzero(ReadyToArm, SMALL_BUFFER_SIZE_1);
-
-
-	if (MONRData->Header.MessageIdU16 == COMMAND_MONR_CODE) {
-		//Index
-		sprintf(Id, "%" PRIu8, (C8) Idn);
-
-		//Timestamp
-		MonrValueU64 = 0;
-		//for(i = 0; i <= 5; i++, j++) MonrValueU64 = *(MonrData+j) | (MonrValueU64 << 8);
-		ConvertGPStoUTC = sprintf(Timestamp, "%" PRIu32, MONRData->GPSQmsOfWeekU32);
-
-		if (debug && MONRData->GPSQmsOfWeekU32 % 400 == 0) {
-			LogMessage(LOG_LEVEL_DEBUG, "MONR = %x-%x-%x-%x-%x-%x-%d-%d-%d-%d-%d-%d-%d-%d-%d-%d-%d-%d",
-					   MONRData->Header.MessageIdU16,
-					   MONRData->Header.SyncWordU16,
-					   MONRData->Header.TransmitterIdU8,
-					   MONRData->Header.MessageCounterU8,
-					   MONRData->Header.AckReqProtVerU8,
-					   MONRData->Header.MessageLengthU32,
-					   MONRData->MonrStructValueIdU16,
-					   MONRData->MonrStructContentLengthU16,
-					   MONRData->GPSQmsOfWeekU32,
-					   MONRData->XPositionI32,
-					   MONRData->YPositionI32,
-					   MONRData->ZPositionI32,
-					   MONRData->LongitudinalSpeedI16,
-					   MONRData->HeadingU16,
-					   MONRData->DriveDirectionU8,
-					   MONRData->StateU8, MONRData->ReadyToArmU8, MONRData->ErrorStatusU8);
-		}
-
-		iLlh[0] = OriginPosition->Latitude;
-		iLlh[1] = OriginPosition->Longitude;
-		iLlh[2] = OriginPosition->Altitude;
-
-		xyz[0] = ((dbl) MONRData->XPositionI32) / 1000;
-		xyz[1] = ((dbl) MONRData->YPositionI32) / 1000;
-		xyz[2] = ((dbl) MONRData->ZPositionI32) / 1000;
-
-		enuToLlh(iLlh, xyz, Llh);
-
-		//XPosition
-		//MonrValueU32 = 0;
-		//for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-		//sprintf(Latitude, "%" PRIi32, (I32)(Llh[0]*1e7));
-		sprintf(XPosition, "%" PRIi32, MONRData->XPositionI32);
-
-		//YPosition
-		//MonrValueU32 = 0;
-		//for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-		//sprintf(Longitude, "%" PRIi32, (I32)(Llh[1]*1e7));
-		sprintf(YPosition, "%" PRIi32, MONRData->YPositionI32);
-
-		//ZPosition
-		//MonrValueU32 = 0;
-		//for(i = 0; i <= 3; i++, j++) MonrValueU32 = *(MonrData+j) | (MonrValueU32 << 8);
-		//sprintf(Altitude, "%" PRIi32, (I32)(Llh[2]));
-		sprintf(ZPosition, "%" PRIi32, MONRData->ZPositionI32);
-
-		//Speed
-		//MonrValueU16 = 0;
-		//for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
-		sprintf(LongitudinalSpeed, "%" PRIi16, MONRData->LongitudinalSpeedI16);
-
-		//LatSpeed
-		//MonrValueU16 = 0;
-		//for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
-		sprintf(LateralSpeed, "%" PRIi16, MONRData->LateralSpeedI16);
-
-		//LongAcc
-		//MonrValueU16 = 0;
-		//for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
-		sprintf(LongitudinalAcc, "%" PRIi16, MONRData->LongitudinalAccI16);
-
-		//LatAcc
-		//MonrValueU16 = 0;
-		//for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
-		sprintf(LateralAcc, "%" PRIi16, MONRData->LateralAccI16);
-
-		//Heading
-		//MonrValueU16 = 0;
-		//for(i = 0; i <= 1; i++, j++) MonrValueU16 = *(MonrData+j) | (MonrValueU16 << 8);
-		sprintf(Heading, "%" PRIu16, MONRData->HeadingU16);
-
-		//Driving direction
-		//MonrValueU8 = (unsigned char)*(MonrData+j);
-		//printf("D: %d\n", MonrValueU8 );
-
-		sprintf(DriveDirection, "%" PRIu8, MONRData->DriveDirectionU8);
-
-		//State
-		//MonrValueU8 = (unsigned char)*(MonrData+j);
-		sprintf(ObjectState, "%" PRIu8, MONRData->StateU8);
-
-		//ReadyToArmU8
-		//MonrValueU8 = (unsigned char)*(MonrData+j);
-		sprintf(ReadyToArm, "%" PRIu8, MONRData->ReadyToArmU8);
-
-		//ErrorStatusU8
-		//MonrValueU8 = (unsigned char)*(MonrData+j);
-		sprintf(ErrorStatus, "%" PRIu8, MONRData->ErrorStatusU8);
-
-	}
-
-	return 0;
 }
 
 
