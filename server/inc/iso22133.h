@@ -261,17 +261,41 @@ typedef enum {
 } ISOMessageReturnValue;
 
 typedef enum {
+	MESSAGE_ID_INVALID = 0x0000,
+	MESSAGE_ID_TRAJ = 0x0001,
+	MESSAGE_ID_OSEM = 0x0002,
+	MESSAGE_ID_OSTM = 0x0003,
+	MESSAGE_ID_STRT = 0x0004,
+	MESSAGE_ID_HEAB = 0x0005,
 	MESSAGE_ID_MONR = 0x0006,
+	MESSAGE_ID_MONR2 = 0x0007,
+	MESSAGE_ID_SOWM = 0x0008,
+	MESSAGE_ID_INFO = 0x0009,
+	MESSAGE_ID_RCMM = 0x000A,
+	MESSAGE_ID_SYPM = 0x000B,
+	MESSAGE_ID_MTSP = 0x000C,
 	MESSAGE_ID_TRCM = 0x0011,
 	MESSAGE_ID_ACCM = 0x0012,
 	MESSAGE_ID_TREO = 0x0013,
 	MESSAGE_ID_EXAC = 0x0014,
-	MESSAGE_ID_CATA = 0x0015
+	MESSAGE_ID_CATA = 0x0015,
+	MESSAGE_ID_RCCM = 0x0020,
+	MESSAGE_ID_RCRT = 0x0021,
+	MESSAGE_ID_PIME = 0x0030,
+	MESSAGE_ID_COSE = 0x0031,
+	MESSAGE_ID_MOMA = 0x0032,
+	MESSAGE_ID_RESERVE_RANGE_1_LOWER_LIMIT = 0x0100,
+	MESSAGE_ID_RESERVE_RANGE_1_UPPER_LIMIT = 0x0FFF,
+	MESSAGE_ID_RESERVE_RANGE_2_LOWER_LIMIT = 0xF000,
+	MESSAGE_ID_RESERVE_RANGE_2_UPPER_LIMIT = 0xFFFF,
+	MESSAGE_ID_VENDOR_SPECIFIC_LOWER_LIMIT = 0xA100,
+	MESSAGE_ID_VENDOR_SPECIFIC_UPPER_LIMIT = 0xBFFF
 } ISOMessageID;
 
 ISOMessageReturnValue buildMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
 ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
+ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);
 
 #ifdef __cplusplus
 }
