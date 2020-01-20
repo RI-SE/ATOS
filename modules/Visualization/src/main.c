@@ -79,7 +79,9 @@ int main() {
 			// Ignore old style MONR data
 			break;
 		case COMM_MONR:
-			LogMessage(LOG_LEVEL_INFO, "got MONR.\n");
+			// TODO: Call util function to fill MonitorDataType struct
+			// TODO: Convert to temporary visualisation protocol - implement this function in this main.c
+			// ((TODO define this protocol clearly - leave this for now))
 			UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer,
 							sizeof (busReceiveBuffer), 0);
 			break;

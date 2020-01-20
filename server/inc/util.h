@@ -32,11 +32,12 @@ extern "C"{
 #include <netdb.h>
 #include "mqbus.h"
 #include "iso22133.h"
+#include "logging.h"
 
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-#define MaestroVersion  "0.4.0"
+#define MaestroVersion  "0.4.1"
 
 #define ISO_PROTOCOL_VERSION 2
 #define ACK_REQ 0
@@ -195,7 +196,7 @@ extern "C"{
 
 // The do - while loop makes sure that each function call is properly handled using macros
 #define LOG_SEND(buf, ...) \
-    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);printf("%s\n",buf);fflush(stdout);} while (0)
+	do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);LogMessage(LOG_LEVEL_INFO,buf);fflush(stdout);} while (0)
 
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
@@ -237,7 +238,6 @@ enum COMMAND
 COMM_STRT = 1,
 COMM_ARM = 2,
 COMM_STOP = 3,
-COMM_MONI = 4,
 COMM_EXIT = 5,
 COMM_REPLAY = 6,
 COMM_CONTROL = 7,
@@ -838,6 +838,8 @@ int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
 
 //
 CartesianPosition MONRToCartesianPosition(MonitorDataType MONR);
+int UtilMonitorDataToString(MonitorDataType monrData, char* monrString, size_t stringLength);
+int UtilStringToMonitorData(const char* monrString, size_t stringLength, MonitorDataType * monrData);
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_deg);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
@@ -868,7 +870,6 @@ int UtilSetMasterObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetSlaveObject(ObjectPosition *OP, char *Filename, char debug);
 int UtilSetAdaptiveSyncPoint(AdaptiveSyncPoint *ASP, FILE *filefd, char debug);
 void UtilSetObjectPositionIP(ObjectPosition *OP, char *IP);
-//int UtilSetTriggActions(TriggActionType *TAA, FILE *filefd, char debug); // TODO DELETE
 
 void llhToXyz(double lat, double lon, double height, double *x, double *y, double *z);
 void enuToLlh(const double *iLlh, const double *xyz, double *llh);

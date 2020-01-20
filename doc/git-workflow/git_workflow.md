@@ -83,6 +83,12 @@ Once you have had enough people review it, you are confident in the code you hav
 11. Merge the pull request into the **staging** or **feature** branch, and then delete it on github.
 12. Run applicable test again on the merged code.
 
+### Add changes to release Draft
+Go to [releases](https://github.com/RI-SE/Maestro/releases) and add your pull request to the current release draft. Also remember to add the change to the changelog.md file in Maestro/Maestro-Tools. 
+
+If the change warrants it increase the version numer. 
+
+
 #
 
 ## Additional stuff and resources
