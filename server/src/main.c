@@ -41,7 +41,7 @@
 /*------------------------------------------------------------
 -- Types
 ------------------------------------------------------------*/
-typedef void (*ModuleTask) (TimeType *, GSDType *, LOG_LEVEL);	//!< Function pointer type for module "main" functions
+typedef void (*ModuleTask)(TimeType *, GSDType *, LOG_LEVEL);	//!< Function pointer type for module "main" functions
 typedef struct {
 	LOG_LEVEL commonLogLevel;	//!< Logging level of the server.
 	int extraMessageQueues;		//!< Number of extra message queues to create on startup.
@@ -161,7 +161,6 @@ int main(int argc, char *argv[]) {
 	if (shutdownMessageQueueBus())
 		util_error("Unable to successfully clean up message bus resources");
 	else
-
 		exit(EXIT_SUCCESS);
 }
 

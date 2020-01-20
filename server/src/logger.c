@@ -574,7 +574,7 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 
 	TimeSetToCurrentSystemTime(&systemTime);
 
-	UtilPopulateMonitorDataStruct(commandData, (size_t) (commandDatalen), &monitorData, debug);
+	UtilPopulateMonitorDataStruct(commandData, (size_t)(commandDatalen), &monitorData, debug);
 	TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monitorData.MONR.GPSQmsOfWeekU32);
 
 	bzero(DateBuffer, sizeof (DateBuffer));
@@ -638,21 +638,21 @@ void vLogScenarioControlData(enum COMMAND command, unsigned char *commandData, s
 
 	switch (command) {
 	case COMM_TREO:
-		UtilPopulateTREODataStructFromMQ(commandData, (size_t) commandDatalen, &treo);
+		UtilPopulateTREODataStructFromMQ(commandData, (size_t)commandDatalen, &treo);
 		LogMessage(LOG_LEVEL_INFO, "Trigger event occurred, ID %u", treo.triggerID);
 		TimeSetToGPStime(&messageTimeField, TimeGetAsGPSweek(&systemTime), treo.timestamp_qmsow);
 		fprintf(filefd, "%u;%ld;", treo.triggerID, TimeGetAsGPSms(&messageTimeField));
 		fprintf(filefd, "%s", inet_ntop(AF_INET, &treo.ip, ipStringBuffer, sizeof (ipStringBuffer)));
 		break;
 	case COMM_EXAC:
-		UtilPopulateEXACDataStructFromMQ(commandData, (size_t) commandDatalen, &exac);
+		UtilPopulateEXACDataStructFromMQ(commandData, (size_t)commandDatalen, &exac);
 		LogMessage(LOG_LEVEL_INFO, "Action execute request detected, ID %u", exac.actionID);
 		TimeSetToGPStime(&messageTimeField, TimeGetAsGPSweek(&systemTime), exac.executionTime_qmsoW);
 		fprintf(filefd, "%u;%ld;", exac.actionID, TimeGetAsGPSms(&messageTimeField));
 		fprintf(filefd, "%s", inet_ntop(AF_INET, &exac.ip, ipStringBuffer, sizeof (ipStringBuffer)));
 		break;
 	case COMM_TRCM:
-		UtilPopulateTRCMDataStructFromMQ(commandData, (size_t) commandDatalen, &trcm);
+		UtilPopulateTRCMDataStructFromMQ(commandData, (size_t)commandDatalen, &trcm);
 		LogMessage(LOG_LEVEL_INFO, "Trigger configuration for ID %u received, of type %u", trcm.triggerID,
 				   trcm.triggerType);
 		fprintf(filefd, "%u;%u;%u;%u;%u", trcm.triggerID, trcm.triggerType, trcm.triggerTypeParameter1,
@@ -660,7 +660,7 @@ void vLogScenarioControlData(enum COMMAND command, unsigned char *commandData, s
 		fprintf(filefd, "%s", inet_ntop(AF_INET, &trcm.ip, ipStringBuffer, sizeof (ipStringBuffer)));
 		break;
 	case COMM_ACCM:
-		UtilPopulateACCMDataStructFromMQ(commandData, (size_t) commandDatalen, &accm);
+		UtilPopulateACCMDataStructFromMQ(commandData, (size_t)commandDatalen, &accm);
 		LogMessage(LOG_LEVEL_INFO, "Action configuration for ID %u received, of type %u", accm.actionID,
 				   accm.actionType);
 		fprintf(filefd, "%u;%u;%u;%u;%u", accm.actionID, accm.actionType, accm.actionTypeParameter1,

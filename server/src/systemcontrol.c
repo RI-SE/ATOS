@@ -567,7 +567,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case COMM_MONR:
 			// TODO: Decode
 			if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
-				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t) bytesReceived, &monrData, 0);
+				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t)bytesReceived, &monrData, 0);
 				SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData, 0);
 				UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 								RVSSMessageLengthU32, 0);
@@ -1189,13 +1189,13 @@ ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t 
 
 	readResult = recv(socket, recvBuffer + bytesInBuffer, sizeof (recvBuffer) - bytesInBuffer, MSG_DONTWAIT);
 	if (readResult > 0) {
-		bytesInBuffer += (size_t) readResult;
+		bytesInBuffer += (size_t)readResult;
 	}
 
 	if (bytesInBuffer > 0) {
 		if ((endOfMessage = strstr(recvBuffer, endOfMessagePattern)) != NULL) {
 			endOfMessage += sizeof (endOfMessagePattern) - 1;
-			messageLength = (size_t) (endOfMessage - recvBuffer);
+			messageLength = (size_t)(endOfMessage - recvBuffer);
 		}
 		else {
 			messageLength = 0;
