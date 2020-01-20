@@ -10,12 +10,7 @@ static const uint8_t SupportedProtocolVersions[] = { 2 };
 static ISOMessageReturnValue buildISOHeader(const char * MessageBuffer, const size_t length, HeaderType * HeaderData, const char debug);
 static ISOMessageReturnValue buildISOFooter(const char * MessageBuffer, const size_t length, FooterType * HeaderData, const char debug);
 
-
 // ************************** function definitions
-void getSupportedISOProtocolVersions(const uint8_t ** supportedProtocolVersions, size_t * nProtocols) {
-	*supportedProtocolVersions = SupportedProtocolVersions;
-	*nProtocols = sizeof (SupportedProtocolVersions) / sizeof (SupportedProtocolVersions[0]);
-}
 
 /*!
  * \brief buildISOHeader Convert data in a buffer to an ISO header
@@ -31,8 +26,6 @@ ISOMessageReturnValue buildISOHeader(const char* MessageBuffer, const size_t len
 	const char ProtocolVersionBitmask = 0x7F;
 	char messageProtocolVersion = 0;
 	char isProtocolVersionSupported = 0;
-	const uint8_t *supportedProtocolVersions;
-	size_t nSupportedProtocols = 0;
 
 	if (length < sizeof (HeaderData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO header");
@@ -61,9 +54,8 @@ ISOMessageReturnValue buildISOHeader(const char* MessageBuffer, const size_t len
 
 	// Loop over permitted protocol versions
 	messageProtocolVersion = HeaderData->AckReqProtVerU8 & ProtocolVersionBitmask;
-	getSupportedISOProtocolVersions(&supportedProtocolVersions, &nSupportedProtocols);
-	for (size_t i = 0; i < nSupportedProtocols; ++i) {
-		if (supportedProtocolVersions[i] == messageProtocolVersion) {
+	for (size_t i = 0; i < sizeof (SupportedProtocolVersions) / sizeof (SupportedProtocolVersions[0]); ++i) {
+		if (SupportedProtocolVersions[i] == messageProtocolVersion) {
 			isProtocolVersionSupported = 1;
 			break;
 		}
