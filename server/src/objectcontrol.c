@@ -196,7 +196,6 @@ I32 ObjectControlMONRToASCII(MONRType * MONRData, GeoPosition * OriginPosition, 
 							 C8 * LongitudinalSpeed, C8 * LateralSpeed, C8 * LongitudinalAcc, C8 * LateralAcc,
 							 C8 * Heading, C8 * DriveDirection, C8 * ObjectState, C8 * ReadyToArm,
 							 C8 * ErrorStatus, C8 debug);
-I32 ObjectControlBuildMONRMessage(C8 * MonrData, const size_t length, MONRType * MONRData, U8 debug);
 I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * SimData, U8 debug);
 I32 ObjectControlSendDTMMessage(C8 * DTMData, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
 								DOTMType * DOTMData, U8 debug);
@@ -468,7 +467,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							   object_address_name[iIndex], object_udp_port[iIndex], receivedMONRData,
 							   buffer);
 
-					if (ObjectControlBuildMONRMessage(buffer, receivedMONRData, &MONRData, 0) == -1) {
+					if (buildMONRMessage(buffer, receivedMONRData, &MONRData, 0) != MESSAGE_OK) {
 						// TODO react on error
 						continue;
 					}
@@ -1257,121 +1256,6 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 
 }
 
-/*!
- * \brief ObjectControlBuildMONRMessage Fills a MONRType struct from a buffer of raw data
- * \param MonrData Raw data to be decoded
- * \param MONRData Struct to be filled
- * \param debug Flag for enabling of debugging
- * \return 0 on success, -1 otherwise
- */
-I32 ObjectControlBuildMONRMessage(C8 * MonrData, const size_t length, MONRType * MONRData, U8 debug) {
-	C8 *p = MonrData;
-	const U16 ExpectedMONRStructSize = (U16) (sizeof (*MONRData) - sizeof (MONRData->Header)
-											  - sizeof (MONRData->CRC) -
-											  sizeof (MONRData->MonrStructValueIdU16)
-											  - sizeof (MONRData->MonrStructContentLengthU16));
-
-	if (UtilISOBuildHeader(MonrData, length, &MONRData->Header, 0) == -1) {
-		memset(MONRData, 0, sizeof (*MONRData));
-		return -1;
-	}
-	p += sizeof (MONRData->Header);
-
-	// Decode content header
-	memcpy(&MONRData->MonrStructValueIdU16, p, sizeof (MONRData->MonrStructValueIdU16));
-	p += sizeof (MONRData->MonrStructValueIdU16);
-
-	if (MONRData->MonrStructValueIdU16 != VALUE_ID_MONR_STRUCT) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempted to pass non-MONR struct into MONR parsing function");
-		memset(MONRData, 0, sizeof (*MONRData));
-		return -1;
-	}
-
-	memcpy(&MONRData->MonrStructContentLengthU16, p, sizeof (MONRData->MonrStructContentLengthU16));
-	p += sizeof (MONRData->MonrStructContentLengthU16);
-
-	if (MONRData->MonrStructContentLengthU16 != ExpectedMONRStructSize) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "MONR content length %u differs from the expected length %u",
-				   MONRData->MonrStructContentLengthU16, ExpectedMONRStructSize);
-		memset(MONRData, 0, sizeof (*MONRData));
-		return -1;
-	}
-
-	// Decode content
-	memcpy(&MONRData->GPSQmsOfWeekU32, p, sizeof (MONRData->GPSQmsOfWeekU32));
-	p += sizeof (MONRData->GPSQmsOfWeekU32);
-
-	memcpy(&MONRData->XPositionI32, p, sizeof (MONRData->XPositionI32));
-	p += sizeof (MONRData->XPositionI32);
-
-	memcpy(&MONRData->YPositionI32, p, sizeof (MONRData->YPositionI32));
-	p += sizeof (MONRData->YPositionI32);
-
-	memcpy(&MONRData->ZPositionI32, p, sizeof (MONRData->ZPositionI32));
-	p += sizeof (MONRData->ZPositionI32);
-
-	memcpy(&MONRData->HeadingU16, p, sizeof (MONRData->HeadingU16));
-	p += sizeof (MONRData->HeadingU16);
-
-	memcpy(&MONRData->LongitudinalSpeedI16, p, sizeof (MONRData->LongitudinalSpeedI16));
-	p += sizeof (MONRData->LongitudinalSpeedI16);
-
-	memcpy(&MONRData->LateralSpeedI16, p, sizeof (MONRData->LateralSpeedI16));
-	p += sizeof (MONRData->LateralSpeedI16);
-
-	memcpy(&MONRData->LongitudinalAccI16, p, sizeof (MONRData->LongitudinalAccI16));
-	p += sizeof (MONRData->LongitudinalAccI16);
-
-	memcpy(&MONRData->LateralAccI16, p, sizeof (MONRData->LateralAccI16));
-	p += sizeof (MONRData->LateralAccI16);
-
-	memcpy(&MONRData->DriveDirectionU8, p, sizeof (MONRData->DriveDirectionU8));
-	p += sizeof (MONRData->DriveDirectionU8);
-
-	memcpy(&MONRData->StateU8, p, sizeof (MONRData->StateU8));
-	p += sizeof (MONRData->StateU8);
-
-	memcpy(&MONRData->ReadyToArmU8, p, sizeof (MONRData->ReadyToArmU8));
-	p += sizeof (MONRData->ReadyToArmU8);
-
-	memcpy(&MONRData->ErrorStatusU8, p, sizeof (MONRData->ErrorStatusU8));
-	p += sizeof (MONRData->ErrorStatusU8);
-
-	// Footer
-	memcpy(&MONRData->CRC, p, sizeof (MONRData->CRC));
-	p += sizeof (MONRData->CRC);
-
-	// TODO: check on CRC
-
-	if (debug == 1) {
-		LogPrint("MONR:");
-		LogPrint("SyncWord = %x", MONRData->Header.SyncWordU16);
-		LogPrint("TransmitterId = %d", MONRData->Header.TransmitterIdU8);
-		LogPrint("PackageCounter = %d", MONRData->Header.MessageCounterU8);
-		LogPrint("AckReq = %d", MONRData->Header.AckReqProtVerU8);
-		LogPrint("MessageId = %d", MONRData->Header.MessageIdU16);
-		LogPrint("MessageLength = %d", MONRData->Header.MessageLengthU32);
-		LogPrint("ValueId = %d", MONRData->MonrStructValueIdU16);
-		LogPrint("ContentLength = %d", MONRData->MonrStructContentLengthU16);
-		LogPrint("GPSSOW = %d", MONRData->GPSQmsOfWeekU32);
-		LogPrint("XPosition = %d", MONRData->XPositionI32);
-		LogPrint("YPosition = %d", MONRData->YPositionI32);
-		LogPrint("ZPosition = %d", MONRData->ZPositionI32);
-		LogPrint("Heading = %d", MONRData->HeadingU16);
-		LogPrint("LongitudinalSpeed = %d", MONRData->LongitudinalSpeedI16);
-		LogPrint("LateralSpeed = %d", MONRData->LateralSpeedI16);
-		LogPrint("LongitudinalAcc = %d", MONRData->LongitudinalAccI16);
-		LogPrint("LateralAcc = %d", MONRData->LateralAccI16);
-		LogPrint("DriveDirection = %d", MONRData->DriveDirectionU8);
-		LogPrint("State = %d", MONRData->StateU8);
-		LogPrint("ReadyToArm = %d", MONRData->ReadyToArmU8);
-		LogPrint("ErrorStatus = %d", MONRData->ErrorStatusU8);
-	}
-
-	return 0;
-}
 
 
 I32 ObjectControlMONRToASCII(MONRType * MONRData, GeoPosition * OriginPosition, I32 Idn, C8 * Id,

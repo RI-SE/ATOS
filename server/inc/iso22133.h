@@ -250,8 +250,17 @@ typedef struct
 
 #pragma pack(pop)
 
-void getSupportedISOProtocolVersions(const uint8_t** supportedProtocolVersions, size_t* nProtocols);
+typedef enum {
+	MESSAGE_OK,
+	MESSAGE_LENGTH_ERROR,
+	MESSAGE_CRC_ERROR,
+	MESSAGE_VERSION_ERROR,
+	MESSAGE_VALUE_ID_ERROR,
+	MESSAGE_SYNC_WORD_ERROR
+} ISOMessageReturnValue;
 
+void getSupportedISOProtocolVersions(const uint8_t** supportedProtocolVersions, size_t* nProtocols);
+ISOMessageReturnValue buildMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, char debug);
 
 #ifdef __cplusplus
 }
