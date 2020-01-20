@@ -106,10 +106,7 @@ int main(int argc, char *argv[])
             //vSendVisualization(&visual_server,&visual_server_addr,chronosbuff);
 
             //Option 2
-            LengthU32 = SimulatorControlBuildObjectMonitorMessage(SendBuffer, cpBuffer, &ObjectMonitorData, 1);
-
-
-
+            LengthU32 = SimulatorControlBuildObjectMonitorMessage(SendBuffer, cpBuffer, &ObjectMonitorData, 0);
             UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, SendBuffer, LengthU32, 0);
 
             //Option3
