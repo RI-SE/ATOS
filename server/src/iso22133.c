@@ -108,7 +108,12 @@ ISOMessageReturnValue buildISOFooter(const char* MessageBuffer, const size_t len
 	return MESSAGE_OK;
 }
 
-
+/*!
+ * \brief isValidMessageID Determines if specified id is a valid ISO message ID. The reserved range is deemed
+ * invalid and vendor specific range is deemed valid.
+ * \param id An ISO message id to be checked
+ * \return 1 if valid, 0 if not
+ */
 char isValidMessageID(const uint16_t id) {
 	return id == MESSAGE_ID_MONR || id == MESSAGE_ID_HEAB || id == MESSAGE_ID_TRAJ || id == MESSAGE_ID_OSEM
 			|| id == MESSAGE_ID_OSTM || id == MESSAGE_ID_STRT || id == MESSAGE_ID_MONR2 || id == MESSAGE_ID_SOWM
@@ -119,14 +124,25 @@ char isValidMessageID(const uint16_t id) {
 			|| (id >= MESSAGE_ID_VENDOR_SPECIFIC_LOWER_LIMIT && id <= MESSAGE_ID_VENDOR_SPECIFIC_UPPER_LIMIT);
 }
 
-
+/*!
+ * \brief getISOMessageType Determines the ISO message type of a raw data buffer
+ * \param messageData Buffer containing raw data to be parsed into an ISO message
+ * \param length Size of buffer to be parsed
+ * \param debug Flag for enabling debugging information
+ * \return Value according to ::ISOMessageID
+ */
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug) {
 	HeaderType header;
-	buildISOHeader(messageData, length, &header, debug);
+	if (buildISOHeader(messageData, length, &header, debug) != MESSAGE_OK) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to parse raw data into ISO message header");
+		return MESSAGE_ID_INVALID;
+	}
 	if (isValidMessageId(header.MessageIdU16))
 		return (ISOMessageID) header.MessageIdU16;
-	else
+	else {
+		LogMessage(LOG_LEVEL_WARNING, "Message ID %u does not match any known ISO message", header.MessageIdU16);
 		return MESSAGE_ID_INVALID;
+	}
 }
 
 /*!
