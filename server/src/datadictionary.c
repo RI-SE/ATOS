@@ -44,6 +44,7 @@ static pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MONRMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t numberOfObjectsMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 
@@ -1752,6 +1753,38 @@ ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType *MONR, U8 id) {
 
 /*END of MONR*/
 
+
+/*NbrOfObjects*/
+/*!
+ * \brief DataDictionarySetOBCStateU8 Parses input variable and sets variable to corresponding value
+ * \param GSD Pointer to shared allocated memory
+ * \param OBCState
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U8 NumberOfObjects) {
+    ReadWriteAccess_t Res;
+
+    Res = WRITE_OK;
+    pthread_mutex_lock(&numberOfObjectsMutex);
+    GSD->numberOfObjects = NumberOfObjects;
+    pthread_mutex_unlock(&numberOfObjectsMutex);
+    return Res;
+}
+
+/*!
+ * \brief DataDictionaryGetOBCStateU8 Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \return Current object control state according to ::OBCState_t
+ */
+U8 DataDictionaryNumberOfObjectsU8(GSDType * GSD) {
+    U8 Ret;
+    pthread_mutex_lock(&numberOfObjectsMutex);
+    Ret = GSD->OBCStateU8;
+    pthread_mutex_unlock(&numberOfObjectsMutex);
+    return Ret;
+}
+
+/*END of NbrOfObjects*/
 
 
 /*!

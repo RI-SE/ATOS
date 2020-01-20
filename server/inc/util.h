@@ -533,6 +533,7 @@ typedef struct
   U8 HEABSizeU8;
   U8 HEABData[100];
 
+  U8 numberOfObjects;
   MONRType *MonrMessages;
   //U8 OSTMSizeU8;
   //U8 OSTMData[100];
