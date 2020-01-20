@@ -843,22 +843,22 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								(void)sleep(3);	// TODO: Move this to the rest of the sleep operations? Also, remove the hardcoded 3
 								break;
 							case EADDRINUSE:
-                                LogMessage(LOG_LEVEL_ERROR, "[ObjectControl] Local address/port already in use");
+                                util_error("[ObjectControl] Local address/port already in use");
 								break;
 							case EALREADY:
-                                LogMessage(LOG_LEVEL_ERROR, "[ObjectControl] Previous connection attempt still in progress");
+                                util_error("[ObjectControl] Previous connection attempt still in progress");
 								break;
 							case EISCONN:
-                                LogMessage(LOG_LEVEL_ERROR, "[ObjectControl] Socket is already connected");
+                                util_error("[ObjectControl] Socket is already connected");
 								break;
 							case ENETUNREACH:
-                                LogMessage(LOG_LEVEL_ERROR, "[ObjectControl] Network unreachable");
+                                util_error("[ObjectControl] Network unreachable");
 								break;
 							case ETIMEDOUT:
-                                LogMessage(LOG_LEVEL_ERROR, "[ObjectControl] Connection timed out");
+                                util_error("[ObjectControl] Connection timed out");
 								break;
 							default:
-                                LogMessage(LOG_LEVEL_ERROR, "ERR: Failed to connect to control socket");
+                                util_error("ERR: Failed to connect to control socket");
 								break;
 							}
 
