@@ -31,39 +31,40 @@
   ------------------------------------------------------------*/
 static void vConnectVisualizationChannel(int *sockfd, struct sockaddr_in *addr);
 static void vDisconnectVisualizationChannel(int *sockfd);
-void vCreateVisualizationMessage(MonitorDataType *_monitorData, char *_visualizationMessage, int _sizeOfVisualizationMessage, int _debug);
+void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualizationMessage,
+								 int _sizeOfVisualizationMessage, int _debug);
 
-void vCreateVisualizationMessage(MonitorDataType *_monitorData, char *_visualizationMessage, int _sizeOfVisualizationMessage, int _debug)
-{
+void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualizationMessage,
+								 int _sizeOfVisualizationMessage, int _debug) {
 
-    //IP
-    char ipStringBuffer[INET_ADDRSTRLEN];
-    sprintf(ipStringBuffer, "%s", inet_ntop(AF_INET, &_monitorData->ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
+	//IP
+	char ipStringBuffer[INET_ADDRSTRLEN];
 
-    //Build message from MonitorStruct
-    snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%s;%u;%d;%d;%d;%u;%d;%u;",
-             ipStringBuffer,
-             _monitorData->MONR.GPSQmsOfWeekU32,
-             _monitorData->MONR.XPositionI32,
-             _monitorData->MONR.YPositionI32,
-             _monitorData->MONR.ZPositionI32,
-             _monitorData->MONR.HeadingU16,
-             _monitorData->MONR.LongitudinalSpeedI16,
-             _monitorData->MONR.StateU8);
+	sprintf(ipStringBuffer, "%s",
+			inet_ntop(AF_INET, &_monitorData->ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
+
+	//Build message from MonitorStruct
+	snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%s;%u;%d;%d;%d;%u;%d;%u;",
+			 ipStringBuffer,
+			 _monitorData->MONR.GPSQmsOfWeekU32,
+			 _monitorData->MONR.XPositionI32,
+			 _monitorData->MONR.YPositionI32,
+			 _monitorData->MONR.ZPositionI32,
+			 _monitorData->MONR.HeadingU16,
+			 _monitorData->MONR.LongitudinalSpeedI16, _monitorData->MONR.StateU8);
 
 
-    if(_debug)
-    {
-        //LogMessage(LOG_LEVEL_INFO, "%s", _visualizationMessage);
-        LogMessage(LOG_LEVEL_INFO, "IP: %s", ipStringBuffer);
-        LogMessage(LOG_LEVEL_INFO, "GPSQmsOfWeek: %u", _monitorData->MONR.GPSQmsOfWeekU32);
-        LogMessage(LOG_LEVEL_INFO, "X: %d", _monitorData->MONR.XPositionI32);
-        LogMessage(LOG_LEVEL_INFO, "Y: %d", _monitorData->MONR.YPositionI32);
-        LogMessage(LOG_LEVEL_INFO, "Z: %d", _monitorData->MONR.ZPositionI32);
-        LogMessage(LOG_LEVEL_INFO, "Heading: %u", _monitorData->MONR.HeadingU16);
-        LogMessage(LOG_LEVEL_INFO, "LongSpeed: %d", _monitorData->MONR.LongitudinalSpeedI16);
-        LogMessage(LOG_LEVEL_INFO, "State: %u", _monitorData->MONR.StateU8);
-    }
+	if (_debug) {
+		//LogMessage(LOG_LEVEL_INFO, "%s", _visualizationMessage);
+		LogMessage(LOG_LEVEL_INFO, "IP: %s", ipStringBuffer);
+		LogMessage(LOG_LEVEL_INFO, "GPSQmsOfWeek: %u", _monitorData->MONR.GPSQmsOfWeekU32);
+		LogMessage(LOG_LEVEL_INFO, "X: %d", _monitorData->MONR.XPositionI32);
+		LogMessage(LOG_LEVEL_INFO, "Y: %d", _monitorData->MONR.YPositionI32);
+		LogMessage(LOG_LEVEL_INFO, "Z: %d", _monitorData->MONR.ZPositionI32);
+		LogMessage(LOG_LEVEL_INFO, "Heading: %u", _monitorData->MONR.HeadingU16);
+		LogMessage(LOG_LEVEL_INFO, "LongSpeed: %d", _monitorData->MONR.LongitudinalSpeedI16);
+		LogMessage(LOG_LEVEL_INFO, "State: %u", _monitorData->MONR.StateU8);
+	}
 }
 
 int main() {
@@ -73,18 +74,10 @@ int main() {
 	const struct timespec abortWaitTime = { 1, 0 };
 	struct timespec remTime;
 
-    MonitorDataType monitorData;
+	MonitorDataType monitorData;
 
-    int sizeOfVisualizationMessage = (INET_ADDRSTRLEN +
-                                      sizeof (monitorData.MONR.GPSQmsOfWeekU32) +
-                                      sizeof (monitorData.MONR.XPositionI32) +
-                                      sizeof (monitorData.MONR.YPositionI32) +
-                                      sizeof (monitorData.MONR.ZPositionI32) +
-                                      sizeof (monitorData.MONR.HeadingU16) +
-                                      sizeof (monitorData.MONR.LongitudinalSpeedI16) +
-                                      sizeof (monitorData.MONR.StateU8) +
-                                      8 + //Number of fields + 1 (;)
-                                      1); //Required
+	int sizeOfVisualizationMessage = (INET_ADDRSTRLEN + sizeof (monitorData.MONR.GPSQmsOfWeekU32) + sizeof (monitorData.MONR.XPositionI32) + sizeof (monitorData.MONR.YPositionI32) + sizeof (monitorData.MONR.ZPositionI32) + sizeof (monitorData.MONR.HeadingU16) + sizeof (monitorData.MONR.LongitudinalSpeedI16) + sizeof (monitorData.MONR.StateU8) + 8 +	//Number of fields + 1 (;)
+									  1);	//Required
 
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
@@ -94,7 +87,7 @@ int main() {
 
 	vConnectVisualizationChannel(&visual_server, &visual_server_addr);
 
-    I32 iExit = 0;
+	I32 iExit = 0;
 
 
 	// Initialize message bus connection
@@ -125,26 +118,26 @@ int main() {
 		case COMM_INIT:
 			break;
 
-        case COMM_MONR:
-        {
+		case COMM_MONR:
+		{
 
-            //Populate the monitorType
-            UtilPopulateMonitorDataStruct(mqRecvData, (size_t) (sizeof (mqRecvData)), &monitorData, 0);
+			//Populate the monitorType
+			UtilPopulateMonitorDataStruct(mqRecvData, (size_t)(sizeof (mqRecvData)), &monitorData, 0);
 
-            //Allocate memory
-            char *visualizationMessage = malloc(sizeOfVisualizationMessage * sizeof (char));
+			//Allocate memory
+			char *visualizationMessage = malloc(sizeOfVisualizationMessage * sizeof (char));
 
-            //Create visualization message and insert values from the monitor datastruct above
-            vCreateVisualizationMessage(&monitorData, visualizationMessage, sizeOfVisualizationMessage, 0);
+			//Create visualization message and insert values from the monitor datastruct above
+			vCreateVisualizationMessage(&monitorData, visualizationMessage, sizeOfVisualizationMessage, 0);
 
-            //Send visualization message on the UDP socket
-            UtilSendUDPData((const uint8_t *)"Visualization", &visual_server, &visual_server_addr, visualizationMessage,
-                            sizeOfVisualizationMessage, 0);
+			//Send visualization message on the UDP socket
+			UtilSendUDPData((const uint8_t *)"Visualization", &visual_server, &visual_server_addr,
+							visualizationMessage, sizeOfVisualizationMessage, 0);
 
-            //Free memory used by malloc
-            free(visualizationMessage);
+			//Free memory used by malloc
+			free(visualizationMessage);
 
-        }
+		}
 			break;
 		case COMM_LOG:
 			break;
