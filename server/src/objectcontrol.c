@@ -258,13 +258,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U8 iForceObjectToLocalhostU8 = 0;
 
 	FILE *fd;
-	C8 Id[SMALL_BUFFER_SIZE_0];
-	C8 GPSWeek[SMALL_BUFFER_SIZE_0], Timestamp[SMALL_BUFFER_SIZE_0], XPosition[SMALL_BUFFER_SIZE_0],
-		YPosition[SMALL_BUFFER_SIZE_0], ZPosition[SMALL_BUFFER_SIZE_0];
-	C8 Speed[SMALL_BUFFER_SIZE_0], LongitudinalSpeed[SMALL_BUFFER_SIZE_0], LateralSpeed[SMALL_BUFFER_SIZE_0],
-		LongitudinalAcc[SMALL_BUFFER_SIZE_0], LateralAcc[SMALL_BUFFER_SIZE_0];
-	C8 Heading[SMALL_BUFFER_SIZE_0], DriveDirection[SMALL_BUFFER_SIZE_1], ObjectState[SMALL_BUFFER_SIZE_1],
-		ReadyToArm[SMALL_BUFFER_SIZE_1], MTSP[SMALL_BUFFER_SIZE_0], ErrorStatus[SMALL_BUFFER_SIZE_0];
+	C8 Timestamp[SMALL_BUFFER_SIZE_0];
+	C8 GPSWeek[SMALL_BUFFER_SIZE_0];
 	I32 MessageLength;
 	C8 *MiscPtr;
 	C8 MiscText[SMALL_BUFFER_SIZE_0];
@@ -501,10 +496,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					if (ASPData.MTSPU32 != 0) {
 						//Add MTSP to MONR if not 0
-						bzero(MTSP, SMALL_BUFFER_SIZE_0);
-						sprintf(MTSP, "%" PRIu32, ASPData.MTSPU32);
-						strcat(buffer, MTSP);
-						strcat(buffer, ";");
+						sprintf(buffer+strlen(buffer), "%" PRIu32 ";", ASPData.MTSPU32);
 					}
 
 					//Ok, let's do the ASP
@@ -520,13 +512,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 							TimeCap1 = (uint64_t) CurrentTimeStruct.tv_sec * 1000 + (uint64_t) CurrentTimeStruct.tv_usec / 1000;	//Calculate initial timestamp
 
-							OP[iIndex].x = ((dbl) atoi(XPosition)) / 1000;	//Set x and y on OP (ObjectPosition)
-							OP[iIndex].y = ((dbl) atoi(YPosition)) / 1000;
+							OP[iIndex].x = ((double) MONRData.xPosition) / 1000;	//Set x and y on OP (ObjectPosition)
+							OP[iIndex].y = ((double) MONRData.yPosition) / 1000;
 
 							//OP[iIndex].OrigoDistance = sqrt(pow(OP[iIndex].x,2) + pow(OP[iIndex].y,2)); //Calculate hypotenuse
 
+							// TODO: check use of this function since it should take two lat/long points but is here used with x/y
 							UtilCalcPositionDelta(OriginLatitudeDbl, OriginLongitudeDbl,
-												  atof(XPosition) / 1e7, atof(YPosition) / 1e7, &OP[iIndex]);
+												  MONRData.xPosition / 1e7, MONRData.yPosition / 1e7, &OP[iIndex]);
 
 							if (OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex) {
 								ASPData.CurrentTimeU32 = CurrentTimeU32;
@@ -575,7 +568,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								//ObjectControlBuildASPMessage(buffer, &ASPData, 0);
 								DataDictionarySetRVSSAsp(GSD, &ASPData);
 
-								if (atoi(Timestamp) % ASPDebugRate == 0) {
+								if (MONRData.gpsQmsOfWeek % ASPDebugRate == 0) {
 									printf("%d, %d, %3.3f, %s, %s\n", CurrentTimeU32, StartTimeU32,
 										   ASPData.TimeToSyncPointDbl, object_address_name[iIndex],
 										   ASP[i].MasterIP);
@@ -592,7 +585,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							}
 						}
 					}
-					OP[iIndex].Speed = atof(Speed);
+					OP[iIndex].Speed = sqrt(pow(MONRData.lateralSpeed, 2) + pow(MONRData.longitudinalSpeed, 2));
 				}
 				else if (receivedMONRData > 0)
 					LogMessage(LOG_LEVEL_INFO, "MONR length error (should be %d but is %ld) from %s.",
