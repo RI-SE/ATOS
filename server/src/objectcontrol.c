@@ -491,12 +491,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					memset(buffer, 0, sizeof (buffer));
 					memcpy(buffer, object_address_name[iIndex], strlen(object_address_name[iIndex]));
 					strcat(buffer, ";0;");
-					MONRToASCII(&MONRData, buffer+strlen(buffer), sizeof (buffer)-strlen(buffer), 0);
+					MONRToASCII(&MONRData, buffer + strlen(buffer), sizeof (buffer) - strlen(buffer), 0);
 
 
 					if (ASPData.MTSPU32 != 0) {
 						//Add MTSP to MONR if not 0
-						sprintf(buffer+strlen(buffer), "%" PRIu32 ";", ASPData.MTSPU32);
+						sprintf(buffer + strlen(buffer), "%" PRIu32 ";", ASPData.MTSPU32);
 					}
 
 					//Ok, let's do the ASP
@@ -512,14 +512,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 							TimeCap1 = (uint64_t) CurrentTimeStruct.tv_sec * 1000 + (uint64_t) CurrentTimeStruct.tv_usec / 1000;	//Calculate initial timestamp
 
-							OP[iIndex].x = ((double) MONRData.xPosition) / 1000;	//Set x and y on OP (ObjectPosition)
-							OP[iIndex].y = ((double) MONRData.yPosition) / 1000;
+							OP[iIndex].x = ((double)MONRData.xPosition) / 1000;	//Set x and y on OP (ObjectPosition)
+							OP[iIndex].y = ((double)MONRData.yPosition) / 1000;
 
 							//OP[iIndex].OrigoDistance = sqrt(pow(OP[iIndex].x,2) + pow(OP[iIndex].y,2)); //Calculate hypotenuse
 
 							// TODO: check use of this function since it should take two lat/long points but is here used with x/y
 							UtilCalcPositionDelta(OriginLatitudeDbl, OriginLongitudeDbl,
-												  MONRData.xPosition / 1e7, MONRData.yPosition / 1e7, &OP[iIndex]);
+												  MONRData.xPosition / 1e7, MONRData.yPosition / 1e7,
+												  &OP[iIndex]);
 
 							if (OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex) {
 								ASPData.CurrentTimeU32 = CurrentTimeU32;
@@ -585,7 +586,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							}
 						}
 					}
-					OP[iIndex].Speed = sqrt(pow(MONRData.lateralSpeed, 2) + pow(MONRData.longitudinalSpeed, 2));
+					OP[iIndex].Speed =
+						sqrt(pow(MONRData.lateralSpeed, 2) + pow(MONRData.longitudinalSpeed, 2));
 				}
 				else if (receivedMONRData > 0)
 					LogMessage(LOG_LEVEL_INFO, "MONR length error (should be %d but is %ld) from %s.",

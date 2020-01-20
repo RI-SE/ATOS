@@ -7,8 +7,10 @@
 static const uint8_t SupportedProtocolVersions[] = { 2 };
 
 // ************************** static functions
-static ISOMessageReturnValue buildISOHeader(const char * MessageBuffer, const size_t length, HeaderType * HeaderData, const char debug);
-static ISOMessageReturnValue buildISOFooter(const char * MessageBuffer, const size_t length, FooterType * HeaderData, const char debug);
+static ISOMessageReturnValue buildISOHeader(const char *MessageBuffer, const size_t length,
+											HeaderType * HeaderData, const char debug);
+static ISOMessageReturnValue buildISOFooter(const char *MessageBuffer, const size_t length,
+											FooterType * HeaderData, const char debug);
 
 // ************************** function definitions
 
@@ -20,7 +22,8 @@ static ISOMessageReturnValue buildISOFooter(const char * MessageBuffer, const si
  * \param debug Flag for enabling debugging of this function
  * \return value according to ::ISOMessageReturnValue
  */
-ISOMessageReturnValue buildISOHeader(const char* MessageBuffer, const size_t length, HeaderType * HeaderData, const char debug) {
+ISOMessageReturnValue buildISOHeader(const char *MessageBuffer, const size_t length, HeaderType * HeaderData,
+									 const char debug) {
 	const char *p = MessageBuffer;
 	ISOMessageReturnValue retval = MESSAGE_OK;
 	const char ProtocolVersionBitmask = 0x7F;
@@ -94,7 +97,8 @@ ISOMessageReturnValue buildISOHeader(const char* MessageBuffer, const size_t len
  * \param debug Flag for enabling debugging of this function
  * \return value according to ::ISOMessageReturnValue
  */
-ISOMessageReturnValue buildISOFooter(const char* MessageBuffer, const size_t length, FooterType * FooterData, const char debug) {
+ISOMessageReturnValue buildISOFooter(const char *MessageBuffer, const size_t length, FooterType * FooterData,
+									 const char debug) {
 
 	if (length < sizeof (FooterData->Crc)) {
 		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO footer");
@@ -115,13 +119,14 @@ ISOMessageReturnValue buildISOFooter(const char* MessageBuffer, const size_t len
  * \param debug Flag for enabling of debugging
  * \return value according to ::ISOMessageReturnValue
  */
-ISOMessageReturnValue buildMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug) {
+ISOMessageReturnValue buildMONRMessage(const char *MonrData, const size_t length, MONRType * MONRData,
+									   const char debug) {
 
 	const char *p = MonrData;
 	const uint16_t ExpectedMONRStructSize = (uint16_t) (sizeof (*MONRData) - sizeof (MONRData->header)
-											  - sizeof (MONRData->footer.Crc) -
-											  sizeof (MONRData->monrStructValueID)
-											  - sizeof (MONRData->monrStructContentLength));
+														- sizeof (MONRData->footer.Crc) -
+														sizeof (MONRData->monrStructValueID)
+														- sizeof (MONRData->monrStructContentLength));
 	ISOMessageReturnValue retval = MESSAGE_OK;
 
 	// Decode ISO header
@@ -197,7 +202,8 @@ ISOMessageReturnValue buildMONRMessage(const char * MonrData, const size_t lengt
 	p += sizeof (MONRData->errorStatus);
 
 	// Footer
-	if ((retval = buildISOFooter(p, length-(size_t)(p-MonrData), &MONRData->footer, debug)) != MESSAGE_OK) {
+	if ((retval =
+		 buildISOFooter(p, length - (size_t) (p - MonrData), &MONRData->footer, debug)) != MESSAGE_OK) {
 		memset(MONRData, 0, sizeof (*MONRData));
 		return retval;
 	}
@@ -240,7 +246,8 @@ ISOMessageReturnValue buildMONRMessage(const char * MonrData, const size_t lengt
  * \param debug Flag for enabling debugging
  * \return value according to ::ISOMessageReturnValue
  */
-ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug) {
+ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char *asciiBuffer, const size_t bufferLength,
+								  const char debug) {
 
 	memset(asciiBuffer, 0, bufferLength);
 	if (MONRData->header.MessageIdU16 != MESSAGE_ID_MONR) {
@@ -250,8 +257,7 @@ ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer,
 
 	sprintf(asciiBuffer + strlen(asciiBuffer), "%u;", MONRData->gpsQmsOfWeek);
 	sprintf(asciiBuffer + strlen(asciiBuffer), "%d;%d;%d;%u;",
-			MONRData->xPosition, MONRData->yPosition, MONRData->zPosition,
-			MONRData->heading);
+			MONRData->xPosition, MONRData->yPosition, MONRData->zPosition, MONRData->heading);
 	sprintf(asciiBuffer + strlen(asciiBuffer), "%d;%d;%d;%d;", MONRData->longitudinalSpeed,
 			MONRData->lateralSpeed, MONRData->longitudinalAcc, MONRData->lateralAcc);
 	sprintf(asciiBuffer + strlen(asciiBuffer), "%u;%u;%u;%u;", MONRData->driveDirection,
@@ -268,13 +274,13 @@ ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer,
  * \param debug Flag for enabling debugging
  * \return value according to ::ISOMessageReturnValue
  */
-ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug) {
+ISOMessageReturnValue ASCIIToMONR(const char *asciiBuffer, MONRType * MONRData, const char debug) {
 
 	const size_t bufferLength = strlen(asciiBuffer);
 	const char *token;
 	const char delim[] = ";";
 	const int NumberBaseDecimal = 10;
-	char * copy = strdup(asciiBuffer);
+	char *copy = strdup(asciiBuffer);
 
 	memset(MONRData, 0, sizeof (*MONRData));
 

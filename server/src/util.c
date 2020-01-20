@@ -720,7 +720,8 @@ int UtilMonitorDataToString(MonitorDataType monrData, char *monrString, size_t s
 	inet_ntop(AF_INET, &monrData.ClientIP, monrString,
 			  (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t) stringLength);
 	strcat(monrString, ";0;");
-	if (MONRToASCII(&monrData.MONR, monrString + strlen(monrString), stringLength - strlen(monrString), 0) != MESSAGE_OK) {
+	if (MONRToASCII(&monrData.MONR, monrString + strlen(monrString), stringLength - strlen(monrString), 0) !=
+		MESSAGE_OK) {
 		memset(monrString, 0, stringLength);
 		return -1;
 	}
@@ -738,7 +739,7 @@ int UtilStringToMonitorData(const char *monrString, size_t stringLength, Monitor
 	const char *token;
 	const char delim[] = ";";
 	struct in_addr addr;
-	char * copy = strdup(monrString);
+	char *copy = strdup(monrString);
 
 	token = strtok(copy, delim);
 
