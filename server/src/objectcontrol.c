@@ -810,8 +810,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_INFO, "CONNECT received");
 				LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.");
 
-
-
 				/* Connect and send drive files */
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 
