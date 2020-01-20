@@ -1744,9 +1744,7 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, U8 id) {
  */
 ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType *MONR, U8 id) {
     pthread_mutex_lock(&MONRMutex);
-
     *MONR = GSD->MonrMessages[id];
-
     pthread_mutex_unlock(&MONRMutex);
     return READ_OK;
 }
@@ -1761,12 +1759,11 @@ ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType *MONR, U8 id) {
  * \param OBCState
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U8 NumberOfObjects) {
+ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U8 *numberOfObjects) {
     ReadWriteAccess_t Res;
-
     Res = WRITE_OK;
     pthread_mutex_lock(&numberOfObjectsMutex);
-    GSD->numberOfObjects = NumberOfObjects;
+    GSD->numberOfObjects = *numberOfObjects;
     pthread_mutex_unlock(&numberOfObjectsMutex);
     return Res;
 }
@@ -1776,12 +1773,11 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U8 NumberOfO
  * \param GSD Pointer to shared allocated memory
  * \return Current object control state according to ::OBCState_t
  */
-U8 DataDictionaryNumberOfObjectsU8(GSDType * GSD) {
-    U8 Ret;
+ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(GSDType * GSD, U8 *numberOfObjects) {
     pthread_mutex_lock(&numberOfObjectsMutex);
-    Ret = GSD->OBCStateU8;
+    *numberOfObjects = GSD->numberOfObjects;
     pthread_mutex_unlock(&numberOfObjectsMutex);
-    return Ret;
+    return READ_OK;
 }
 
 /*END of NbrOfObjects*/

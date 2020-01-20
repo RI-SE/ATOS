@@ -125,7 +125,7 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType *GSD, MONRType * MONR, U8 index)
 ReadWriteAccess_t DataDictionaryGetMONR(GSDType *GSD, MONRType * MONR, U8 index);
 
 ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U8 *NumberOfObjects);
-ReadWriteAccess_t DataDictionaryNumberOfObjectsU8(GSDType * GSD, U8 *NumberOfObjects);
+ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(GSDType * GSD, U8 *NumberOfObjects);
 
 /*END of MONR*/
 
