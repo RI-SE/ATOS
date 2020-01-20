@@ -122,7 +122,7 @@ int main() {
 		{
 
 			//Populate the monitorType
-			UtilPopulateMonitorDataStruct(mqRecvData, (size_t)(sizeof (mqRecvData)), &monitorData, 0);
+			UtilPopulateMonitorDataStruct(mqRecvData, (size_t) (sizeof (mqRecvData)), &monitorData, 0);
 
 			//Allocate memory
 			char *visualizationMessage = malloc(sizeOfVisualizationMessage * sizeof (char));

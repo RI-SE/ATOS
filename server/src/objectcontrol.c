@@ -475,7 +475,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							   sizeof (in_addr_t));
 						// Send MONR message as bytes
 
-						if (iCommSend(COMM_MONR, buffer, (size_t)(receivedMONRData) + sizeof (in_addr_t)) < 0) {
+						if (iCommSend(COMM_MONR, buffer, (size_t) (receivedMONRData) + sizeof (in_addr_t)) <
+							0) {
 							LogMessage(LOG_LEVEL_ERROR,
 									   "Fatal communication fault when sending MONR command - entering error state");
 							vSetState(OBC_STATE_ERROR, GSD);
@@ -3093,7 +3094,7 @@ static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 			}
 		}
 		else {
-			recvDataSize = (size_t)(result);
+			recvDataSize = (size_t) (result);
 			LogMessage(LOG_LEVEL_DEBUG, "Received: <%s>", buffer);
 		}
 	} while (result > 0);
