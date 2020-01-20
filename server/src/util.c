@@ -720,14 +720,10 @@ int UtilMonitorDataToString(MonitorDataType monrData, char *monrString, size_t s
 	inet_ntop(AF_INET, &monrData.ClientIP, monrString,
 			  (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t) stringLength);
 	strcat(monrString, ";0;");
-	sprintf(monrString + strlen(monrString), "%u;", monrData.MONR.GPSQmsOfWeekU32);
-	sprintf(monrString + strlen(monrString), "%d;%d;%d;%u;",
-			monrData.MONR.XPositionI32, monrData.MONR.YPositionI32, monrData.MONR.ZPositionI32,
-			monrData.MONR.HeadingU16);
-	sprintf(monrString + strlen(monrString), "%d;%d;%d;%d;", monrData.MONR.LongitudinalSpeedI16,
-			monrData.MONR.LateralSpeedI16, monrData.MONR.LongitudinalAccI16, monrData.MONR.LateralAccI16);
-	sprintf(monrString + strlen(monrString), "%u;%u;%u;%u;", monrData.MONR.DriveDirectionU8,
-			monrData.MONR.StateU8, monrData.MONR.ReadyToArmU8, monrData.MONR.ErrorStatusU8);
+	if (MONRToASCII(&monrData.MONR, monrString + strlen(monrString), stringLength - strlen(monrString), 0) != MESSAGE_OK) {
+		memset(monrString, 0, stringLength);
+		return -1;
+	}
 	return 0;
 }
 
@@ -3647,77 +3643,6 @@ I32 UtilISOBuildTRAJMessage(C8 * MessageBuffer, C8 * DTMData, I32 RowCount, DOTM
 
 	return MessageIndex;		//Total number of bytes
 }
-
-I32 UtilISOBuildHeader(C8 * MessageBuffer, const size_t length, HeaderType * HeaderData, U8 Debug) {
-	C8 *p = MessageBuffer;
-	I32 retval = 0;
-	const U8 ProtocolVersionBitmask = 0x7F;
-	U8 messageProtocolVersion = 0;
-	U8 isProtocolVersionSupported = 0;
-	const uint8_t *supportedProtocolVersions;
-	size_t nSupportedProtocols = 0;
-
-	if (length < sizeof (HeaderData)) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO header");
-		memset(HeaderData, 0, sizeof (*HeaderData));
-		return -1;
-	}
-
-	// Decode ISO header
-	memcpy(&HeaderData->SyncWordU16, p, sizeof (HeaderData->SyncWordU16));
-	p += sizeof (HeaderData->SyncWordU16);
-
-	if (HeaderData->SyncWordU16 != ISO_SYNC_WORD) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Sync word error when decoding ISO header");
-		memset(HeaderData, 0, sizeof (*HeaderData));
-		return -1;
-	}
-
-	memcpy(&HeaderData->TransmitterIdU8, p, sizeof (HeaderData->TransmitterIdU8));
-	p += sizeof (HeaderData->TransmitterIdU8);
-
-	memcpy(&HeaderData->MessageCounterU8, p, sizeof (HeaderData->MessageCounterU8));
-	p += sizeof (HeaderData->MessageCounterU8);
-
-	memcpy(&HeaderData->AckReqProtVerU8, p, sizeof (HeaderData->AckReqProtVerU8));
-	p += sizeof (HeaderData->AckReqProtVerU8);
-
-	// Loop over permitted protocol versions
-	messageProtocolVersion = HeaderData->AckReqProtVerU8 & ProtocolVersionBitmask;
-	getSupportedISOProtocolVersions(&supportedProtocolVersions, &nSupportedProtocols);
-	for (size_t i = 0; i < nSupportedProtocols; ++i) {
-		if (supportedProtocolVersions[i] == messageProtocolVersion) {
-			isProtocolVersionSupported = 1;
-			break;
-		}
-	}
-
-	if (!isProtocolVersionSupported) {
-		errno = EPROTONOSUPPORT;
-		LogMessage(LOG_LEVEL_WARNING, "Protocol version %u not supported", messageProtocolVersion);
-		retval = -1;
-	}
-
-	memcpy(&HeaderData->MessageIdU16, p, sizeof (HeaderData->MessageIdU16));
-	p += sizeof (HeaderData->MessageIdU16);
-
-	memcpy(&HeaderData->MessageLengthU32, p, sizeof (HeaderData->MessageLengthU32));
-	p += sizeof (HeaderData->MessageLengthU32);
-
-	if (Debug) {
-		LogPrint("SyncWordU16 = 0x%x", HeaderData->SyncWordU16);
-		LogPrint("TransmitterIdU8 = 0x%x", HeaderData->TransmitterIdU8);
-		LogPrint("MessageCounterU8 = 0x%x", HeaderData->MessageCounterU8);
-		LogPrint("AckReqProtVerU8 = 0x%x", HeaderData->AckReqProtVerU8);
-		LogPrint("MessageIdU16 = 0x%x", HeaderData->MessageIdU16);
-		LogPrint("MessageLengthU32 = 0x%x", HeaderData->MessageLengthU32);
-	}
-
-	return retval;
-}
-
 
 
 /*

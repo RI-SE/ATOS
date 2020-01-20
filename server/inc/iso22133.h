@@ -253,14 +253,25 @@ typedef struct
 typedef enum {
 	MESSAGE_OK,
 	MESSAGE_LENGTH_ERROR,
+	MESSAGE_TYPE_ERROR,
 	MESSAGE_CRC_ERROR,
 	MESSAGE_VERSION_ERROR,
 	MESSAGE_VALUE_ID_ERROR,
 	MESSAGE_SYNC_WORD_ERROR
 } ISOMessageReturnValue;
 
+typedef enum {
+	MESSAGE_ID_MONR = 0x0006,
+	MESSAGE_ID_TRCM = 0x0011,
+	MESSAGE_ID_ACCM = 0x0012,
+	MESSAGE_ID_TREO = 0x0013,
+	MESSAGE_ID_EXAC = 0x0014,
+	MESSAGE_ID_CATA = 0x0015
+} ISOMessageID;
+
 void getSupportedISOProtocolVersions(const uint8_t** supportedProtocolVersions, size_t* nProtocols);
-ISOMessageReturnValue buildMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, char debug);
+ISOMessageReturnValue buildMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
+ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
 
 #ifdef __cplusplus
 }
