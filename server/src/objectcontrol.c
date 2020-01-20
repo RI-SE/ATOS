@@ -487,48 +487,16 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					//UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
 					for (i = 0;
 						 i <
-						 (MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
-						  COMMAND_MESSAGE_FOOTER_LENGTH); i++)
+						 (MONRData.header.MessageLengthU32 + sizeof (MONRData.header) +
+						  sizeof (MONRData.footer)); i++)
 						GSD->MONRData[i] = buffer[i];
 					GSD->MONRSizeU8 =
-						MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
-						COMMAND_MESSAGE_FOOTER_LENGTH;
-					MONRToASCII(&MONRData, buffer, sizeof (buffer), 0);
-					ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, XPosition,
-											 YPosition, ZPosition, LongitudinalSpeed, LateralSpeed,
-											 LongitudinalAcc, LateralAcc, Heading, DriveDirection,
-											 ObjectState, ReadyToArm, ErrorStatus, 1);
-					bzero(buffer, OBJECT_MESS_BUFFER_SIZE);
-					strcat(buffer, object_address_name[iIndex]);
-					strcat(buffer, ";");
-					strcat(buffer, "0");
-					strcat(buffer, ";");
-					strcat(buffer, Timestamp);
-					strcat(buffer, ";");
-					strcat(buffer, XPosition);
-					strcat(buffer, ";");
-					strcat(buffer, YPosition);
-					strcat(buffer, ";");
-					strcat(buffer, ZPosition);
-					strcat(buffer, ";");
-					strcat(buffer, Heading);
-					strcat(buffer, ";");
-					strcat(buffer, LongitudinalSpeed);
-					strcat(buffer, ";");
-					strcat(buffer, LateralSpeed);
-					strcat(buffer, ";");
-					strcat(buffer, LongitudinalAcc);
-					strcat(buffer, ";");
-					strcat(buffer, LateralAcc);
-					strcat(buffer, ";");
-					strcat(buffer, DriveDirection);
-					strcat(buffer, ";");
-					strcat(buffer, ObjectState);
-					strcat(buffer, ";");
-					strcat(buffer, ReadyToArm);
-					strcat(buffer, ";");
-					strcat(buffer, ErrorStatus);
-					strcat(buffer, ";");
+						MONRData.header.MessageLengthU32 + sizeof (MONRData.header) +
+						sizeof (MONRData.footer);
+					memset(buffer, 0, sizeof (buffer));
+					memcpy(buffer, object_address_name[iIndex], strlen(object_address_name[iIndex]));
+					strcat(buffer, ";0;");
+					MONRToASCII(&MONRData, buffer+strlen(buffer), sizeof (buffer)-strlen(buffer), 0);
 
 
 					if (ASPData.MTSPU32 != 0) {
