@@ -138,7 +138,6 @@ extern "C"{
 #define VALUE_ID_GPS_SECOND_OF_WEEK         0x2
 #define VALUE_ID_GPS_WEEK                   0x3
 #define VALUE_ID_DATE_ISO8601               0x4
-#define VALUE_ID_MONR_STRUCT                0x80
 #define VALUE_ID_X_POSITION                 0x10
 #define VALUE_ID_Y_POSITION                 0x11
 #define VALUE_ID_Z_POSITION                 0x12

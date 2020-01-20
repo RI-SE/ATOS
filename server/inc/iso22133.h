@@ -31,6 +31,7 @@ typedef struct
 
 
 //! *************************** MONR
+#define COMMAND_MONR_CODE 0x0006
 typedef struct
 {
   HeaderType header;
@@ -50,7 +51,10 @@ typedef struct
   uint8_t readyToArm;
   uint8_t errorStatus;
   FooterType footer;
-} MONRType; //41 bytes
+} MONRType;
+
+//! MONR value IDs
+#define VALUE_ID_MONR_STRUCT 0x80
 
 
 //! *************************** TRCM
