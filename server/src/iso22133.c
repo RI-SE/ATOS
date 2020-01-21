@@ -158,7 +158,7 @@ ISOMessageID getISOMessageType(const char *messageData, const size_t length, con
  * \param debug Flag for enabling of debugging
  * \return value according to ::ISOMessageReturnValue
  */
-ISOMessageReturnValue buildMONRMessage(const char *MonrData, const size_t length, MONRType * MONRData,
+ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t length, MONRType * MONRData,
 									   const char debug) {
 
 	const char *p = MonrData;
