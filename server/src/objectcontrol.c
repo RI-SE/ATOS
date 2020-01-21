@@ -1325,66 +1325,6 @@ int ObjectControlOSEMtoASCII(OSEMType * OSEMData, char *GPSWeek, char *GPSLatitu
 	}
 	return 0;
 }
-int ObjectControlBuildSTRTMessage(C8 * MessageBuffer, STRTType * STRTData, TimeType * GPSTime,
-								  U32 ScenarioStartTime, U32 DelayStart, U32 * OutgoingStartTime, U8 debug) {
-	I32 MessageIndex = 0, i = 0;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, COMMAND_STRT_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
-
-	STRTData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	STRTData->Header.TransmitterIdU8 = 0;
-	STRTData->Header.MessageCounterU8 = 0;
-	STRTData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	STRTData->Header.MessageIdU16 = COMMAND_STRT_CODE;
-	STRTData->Header.MessageLengthU32 = sizeof (STRTType) - sizeof (HeaderType);
-	STRTData->StartTimeValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
-	STRTData->StartTimeContentLengthU16 = sizeof (STRTData->StartTimeU32);
-	STRTData->StartTimeU32 =
-		((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime) +
-		  ScenarioStartTime) << 2) + GPSTime->MicroSecondU16;
-	STRTData->GPSWeekValueIdU16 = VALUE_ID_GPS_WEEK;
-	STRTData->GPSWeekContentLengthU16 = sizeof (STRTData->GPSWeekU16);
-	STRTData->GPSWeekU16 = GPSTime->GPSWeekU16;
-	// STRTData->DelayStartValueIdU16 = VALUE_ID_RELATIVE_TIME;
-	// STRTData->DelayStartContentLengthU16 = 4;
-	// STRTData->DelayStartU32 = DelayStart;
-
-	*OutgoingStartTime = (STRTData->StartTimeU32) >> 2;
-
-	if (!GPSTime->isGPSenabled) {
-		UtilgetCurrentGPStime(NULL, &STRTData->StartTimeU32);
-	}
-
-	p = (char *)STRTData;
-	for (i = 0; i < sizeof (STRTType); i++)
-		*(MessageBuffer + i) = *p++;
-	Crc = crc_16((const unsigned char *)MessageBuffer, sizeof (STRTType));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc);
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	MessageIndex = i;
-
-	if (debug) {
-		// TODO: Change to log printout when byte thingy has been implemented
-		printf("STRT total length = %d bytes (header+message+footer)\n",
-			   (int)(COMMAND_STRT_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (STRTType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-}
-
 
 I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 CommandOption, U8 debug) {
 	I32 MessageIndex = 0, i;

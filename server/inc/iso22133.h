@@ -12,6 +12,7 @@ extern "C" {
 
 #include <inttypes.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #define ISO_SYNC_WORD 0x7E7E
 
@@ -43,6 +44,10 @@ typedef struct
 	uint16_t GPSWeekU16;
 	FooterType footer;
 } STRTType; //27 bytes
+
+//! STRT value IDs
+#define VALUE_ID_STRT_GPS_QMS_OF_WEEK 0x0002
+#define VALUE_ID_STRT_GPS_WEEK 0x0003
 
 
 //! *************************** MONR
@@ -306,7 +311,7 @@ typedef enum {
 } ISOMessageID;
 
 ISOMessageReturnValue decodeMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
-ISOMessageReturnValue encodeSTRTMessage(const STRTType * STRTData, char * strtData, const size_t length, const char debug);
+ssize_t encodeSTRTMessage(const STRTType * STRTData, char * strtData, const size_t length, const char debug);
 ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);
