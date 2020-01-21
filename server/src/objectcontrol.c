@@ -264,8 +264,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 *MiscPtr;
 	C8 MiscText[SMALL_BUFFER_SIZE_0];
 	U32 StartTimeU32 = 0;
-	U32 OutgoingStartTimeU32 = 0;
-	U32 DelayedStartU32 = 0;
 	U32 CurrentTimeU32 = 0;
 	U32 OldTimeU32 = 0;
 	U64 TimeCap1, TimeCap2;
@@ -636,24 +634,20 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else if (iCommand == COMM_STRT && (vGetState(GSD) == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED) */ )	//OBC_STATE_INITIALIZED is temporary!
 			{
-				bzero(Timestamp, SMALL_BUFFER_SIZE_0);
-				MiscPtr = strchr(pcRecvBuffer, ';');
-				strncpy(Timestamp, MiscPtr + 1, (uint64_t) strchr(MiscPtr + 1, ';') - (uint64_t) MiscPtr - 1);
-				StartTimeU32 = atol(Timestamp);
-				bzero(Timestamp, SMALL_BUFFER_SIZE_0);
-				MiscPtr += 1;
-				MiscPtr = strchr(pcRecvBuffer, ';');
-				strncpy(Timestamp, MiscPtr + 1, (uint64_t) strchr(MiscPtr + 1, ';') - (uint64_t) MiscPtr - 1);
-				DelayedStartU32 = atoi(Timestamp);
+				struct timeval startTime, startDelay;
+				MiscPtr = pcRecvBuffer;
+				TimeSetToUTCms(&startTime, (int64_t) strtoul(MiscPtr, &MiscPtr, 10));
+				TimeSetToUTCms(&startDelay, (int64_t) strtoul(MiscPtr+1, NULL, 10));
+				timeradd(&startTime, &startDelay, &startTime);
+				MessageLength = (int) encodeSTRTMessage(TimeGetAsGPSqmsOfWeek(&startTime), TimeGetAsGPSweek(&startTime), MessageBuffer, sizeof (MessageBuffer), 0);
+
 				ASPData.MTSPU32 = 0;
 				ASPData.TimeToSyncPointDbl = 0;
 				SearchStartIndex = -1;
 				ASPData.PrevTimeToSyncPointDbl = 0;
 				OldTimeU32 = CurrentTimeU32;
 				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
-				MessageLength =
-					ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, GPSTime, (U32) StartTimeU32,
-												  DelayedStartU32, &OutgoingStartTimeU32, 0);
+
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 				}
@@ -667,7 +661,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 				//OBCState = OBC_STATE_INITIALIZED; //This is temporary!
 				//printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
-				GSD->ScenarioStartTimeU32 = OutgoingStartTimeU32;
+				GSD->ScenarioStartTimeU32 = TimeGetAsGPSqmsOfWeek(&startTime) >> 2;
 				bzero(MiscText, SMALL_BUFFER_SIZE_0);
 				sprintf(MiscText, "%" PRIu32, GSD->ScenarioStartTimeU32 << 2);
 				LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>, GPS time <%s>", pcRecvBuffer,

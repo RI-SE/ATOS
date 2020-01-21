@@ -223,19 +223,6 @@ ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t start
 	STRTData.GPSWeekContentLengthU16 = sizeof (STRTData.GPSWeekU16);
 	STRTData.GPSWeekU16 = startGPSWeek;
 
-	// TODO: Delete
-	//STRTData->StartTimeU32 =
-	//	((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime) +
-	//	  ScenarioStartTime) << 2) + GPSTime->MicroSecondU16;
-	//
-	//STRTData->GPSWeekU16 = GPSTime->GPSWeekU16;
-	//
-	//*OutgoingStartTime = (STRTData->StartTimeU32) >> 2;
-	//
-	//if (!GPSTime->isGPSenabled) {
-	//	UtilgetCurrentGPStime(NULL, &STRTData->StartTimeU32);
-	//}
-
 	if (debug) {
 		LogPrint("STRT message:\n\tGPS second of week value ID: 0x%x\n\t"
 				 "GPS second of week content length: %u\n\tGPS second of week: %u qms\n\t"
