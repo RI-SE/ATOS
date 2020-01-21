@@ -1672,9 +1672,8 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD, U8 objectCount){
     ReadWriteAccess_t Res;
     Res = WRITE_OK;
     pthread_mutex_lock(&MONRMutex);
-    MONRType *ptr = malloc(sizeof (MONRType) * objectCount);
+    MONRType *ptr = malloc(sizeof(MONRType) * objectCount);
     GSD->MonrMessages = ptr;
-    LogPrint("Very good nice.");
     pthread_mutex_unlock(&MONRMutex);
     return Res;
 }
@@ -1706,8 +1705,8 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, U8 id) {
     ReadWriteAccess_t Res;
     Res = WRITE_OK;
     pthread_mutex_lock(&MONRMutex);
-    MONRType *test = GSD->MonrMessages;
-    test[id] = *MONR;
+    GSD->MonrMessages[id].HeadingU16 = MONR->HeadingU16;
+    LogPrint("Setting %d for %d in ptr %p", GSD->MonrMessages[id].HeadingU16, GSD->MonrMessages->Header.TransmitterIdU8, GSD->MonrMessages);
     pthread_mutex_unlock(&MONRMutex);
     return Res;
 }
@@ -1721,7 +1720,7 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, U8 id) {
  */
 ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType *MONR, U8 id) {
     pthread_mutex_lock(&MONRMutex);
-    *MONR = GSD->MonrMessages[id];
+    LogPrint("Getting %d for %d in ptr %p", GSD->MonrMessages[id].HeadingU16, GSD->MonrMessages->Header.TransmitterIdU8, GSD->MonrMessages);
     pthread_mutex_unlock(&MONRMutex);
     return READ_OK;
 }

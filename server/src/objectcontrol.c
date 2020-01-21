@@ -490,7 +490,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                     DataDictionarySetMONR(GSD, &MONRData, iIndex);
 
 
-
                     //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
 
                     /*
@@ -887,7 +886,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
                         }
 
-                    } while (iResult < 0 && DisconnectU8 == 0);
+                    } while (iExit == 0 && iResult < 0 && DisconnectU8 == 0);
 
                     if (iResult >= 0) {
                         /* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates) */
