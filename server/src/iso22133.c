@@ -120,7 +120,7 @@ ISOMessageReturnValue buildISOFooter(const char *MessageBuffer, const size_t len
  * \return value according to ::ISOMessageReturnValue
  */
 ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t length, MONRType * MONRData,
-									   const char debug) {
+										const char debug) {
 
 	const char *p = MonrData;
 	const uint16_t ExpectedMONRStructSize = (uint16_t) (sizeof (*MONRData) - sizeof (MONRData->header)
