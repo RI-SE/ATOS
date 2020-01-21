@@ -11,7 +11,7 @@ static ISOMessageReturnValue buildISOHeader(const char *MessageBuffer, const siz
 											HeaderType * HeaderData, const char debug);
 static ISOMessageReturnValue buildISOFooter(const char *MessageBuffer, const size_t length,
 											FooterType * HeaderData, const char debug);
-static char isValidMessageId(const uint16_t id);
+static char isValidMessageID(const uint16_t id);
 
 // ************************** function definitions
 
@@ -142,7 +142,7 @@ ISOMessageID getISOMessageType(const char *messageData, const size_t length, con
 		LogMessage(LOG_LEVEL_ERROR, "Unable to parse raw data into ISO message header");
 		return MESSAGE_ID_INVALID;
 	}
-	if (isValidMessageId(header.MessageIdU16))
+	if (isValidMessageID(header.MessageIdU16))
 		return (ISOMessageID) header.MessageIdU16;
 	else {
 		LogMessage(LOG_LEVEL_WARNING, "Message ID %u does not match any known ISO message",
