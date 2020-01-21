@@ -114,6 +114,13 @@ ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t le
 	return MESSAGE_OK;
 }
 
+/*!
+ * \brief buildISOHeader Constructs an ISO header based on the supplied message ID and content length
+ * \param id Message ID of the message for which the header is to be used
+ * \param messageLength Length of the message excluding header and footer
+ * \param debug Flag for enabling debugging
+ * \return A struct containing ISO header data
+ */
 HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char debug) {
 	HeaderType header;
 	header.SyncWordU16 = ISO_SYNC_WORD;
@@ -124,7 +131,7 @@ HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char de
 	header.MessageLengthU32 = messageLength;
 
 	if (debug) {
-		LogPrint("ISO header:\n\tSync word: 0x%x\n\tTransmitter ID: %u\n\tMessage counter: %u\n\t"
+		LogPrint("Encoded ISO header:\n\tSync word: 0x%x\n\tTransmitter ID: %u\n\tMessage counter: %u\n\t"
 				 "Ack request | Protocol version: 0x%x\n\tMessage ID: 0x%x\n\tMessage length: %u",
 				 header.SyncWordU16, header.TransmitterIdU8, header.MessageCounterU8, header.AckReqProtVerU8,
 				 header.MessageIdU16, header.MessageLengthU32);
@@ -139,7 +146,7 @@ FooterType buildISOFooter(const void * message, const size_t messageSize, const 
 	footer.Crc = 0;
 
 	if (debug) {
-		LogPrint("ISO footer:\n\tCRC: 0x%x", footer.Crc);
+		LogPrint("Encoded ISO footer:\n\tCRC: 0x%x", footer.Crc);
 	}
 
 	return footer;
@@ -185,7 +192,15 @@ ISOMessageID getISOMessageType(const char *messageData, const size_t length, con
 }
 
 
-
+/*!
+ * \brief encodeSTRTMessage Constructs an ISO STRT message based on start time parameters
+ * \param startTimeGPSqmsOW Quarter milliseconds of week when recipient of message shall start
+ * \param startGPSWeek GPS week when recipient shall start
+ * \param strtDataBuffer Data buffer in which to place encoded STRT message
+ * \param bufferLength Size of data buffer in which to place encoded STRT message
+ * \param debug Flag for enabling debugging
+ * \return number of bytes written to the data buffer, or -1 if an error occurred
+ */
 ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t startGPSWeek, char * strtDataBuffer,
 						  const size_t bufferLength, const char debug) {
 
