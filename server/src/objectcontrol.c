@@ -457,7 +457,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							   object_address_name[iIndex], object_udp_port[iIndex], receivedMONRData,
 							   buffer);
 
-					if (buildMONRMessage(buffer, receivedMONRData, &MONRData, 0) != MESSAGE_OK) {
+					if (decodeMONRMessage(buffer, receivedMONRData, &MONRData, 0) != MESSAGE_OK) {
 						// TODO react on error
 						continue;
 					}

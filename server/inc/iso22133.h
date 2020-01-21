@@ -269,7 +269,7 @@ typedef enum {
 	MESSAGE_ID_CATA = 0x0015
 } ISOMessageID;
 
-ISOMessageReturnValue buildMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
+ISOMessageReturnValue decodeMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
 ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 
