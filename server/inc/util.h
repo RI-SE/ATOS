@@ -39,9 +39,6 @@ extern "C"{
   ------------------------------------------------------------*/
 #define MaestroVersion  "0.4.1"
 
-#define ISO_PROTOCOL_VERSION 2
-#define ACK_REQ 0
-
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1) // Message queue data minus one byte for the command
 
 #define SAFETY_CHANNEL_PORT 53240

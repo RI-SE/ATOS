@@ -14,6 +14,9 @@ extern "C" {
 #include <stddef.h>
 #include <stdio.h>
 
+#define ISO_PROTOCOL_VERSION 2
+#define ACK_REQ 0
+
 #define ISO_SYNC_WORD 0x7E7E
 
 #pragma pack(push,1)
