@@ -6,7 +6,7 @@
 
 static const uint8_t SupportedProtocolVersions[] = { 2 };
 
-// ************************** static functions
+// ************************** static function declarations
 static ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t length,
 											HeaderType * HeaderData, const char debug);
 static ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t length,
@@ -186,11 +186,9 @@ ISOMessageID getISOMessageType(const char *messageData, const size_t length, con
 
 
 
-ssize_t encodeSTRTMessage(char * strtDataBuffer, const size_t bufferLength, TimeType * GPSTime,
-								  uint32_t ScenarioStartTime, uint32_t DelayStart, uint32_t * OutgoingStartTime, const char debug) {
-	I32 MessageIndex = 0, i = 0;
-	U16 Crc = 0;
-	C8 *p;
+ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t startGPSWeek, char * strtDataBuffer,
+						  const size_t bufferLength, const char debug) {
+
 	STRTType STRTData;
 
 	memset(strtDataBuffer, 0, bufferLength);
@@ -205,21 +203,23 @@ ssize_t encodeSTRTMessage(char * strtDataBuffer, const size_t bufferLength, Time
 
 	STRTData.StartTimeValueIdU16 = VALUE_ID_STRT_GPS_QMS_OF_WEEK;
 	STRTData.StartTimeContentLengthU16 = sizeof (STRTData.StartTimeU32);
-
+	STRTData.StartTimeU32 = startTimeGPSqmsOW;
 	STRTData.GPSWeekValueIdU16 = VALUE_ID_STRT_GPS_WEEK;
 	STRTData.GPSWeekContentLengthU16 = sizeof (STRTData.GPSWeekU16);
+	STRTData.GPSWeekU16 = startGPSWeek;
 
-	STRTData->StartTimeU32 =
-		((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime) +
-		  ScenarioStartTime) << 2) + GPSTime->MicroSecondU16;
-
-	STRTData->GPSWeekU16 = GPSTime->GPSWeekU16;
-
-	*OutgoingStartTime = (STRTData->StartTimeU32) >> 2;
-
-	if (!GPSTime->isGPSenabled) {
-		UtilgetCurrentGPStime(NULL, &STRTData->StartTimeU32);
-	}
+	// TODO: Delete
+	//STRTData->StartTimeU32 =
+	//	((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime) +
+	//	  ScenarioStartTime) << 2) + GPSTime->MicroSecondU16;
+	//
+	//STRTData->GPSWeekU16 = GPSTime->GPSWeekU16;
+	//
+	//*OutgoingStartTime = (STRTData->StartTimeU32) >> 2;
+	//
+	//if (!GPSTime->isGPSenabled) {
+	//	UtilgetCurrentGPStime(NULL, &STRTData->StartTimeU32);
+	//}
 
 	if (debug) {
 		LogPrint("STRT message:\n\tGPS second of week value ID: 0x%x\n\t"
