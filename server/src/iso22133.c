@@ -8,11 +8,11 @@ static const uint8_t SupportedProtocolVersions[] = { 2 };
 
 // ************************** static function declarations
 static ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t length,
-											HeaderType * HeaderData, const char debug);
+											 HeaderType * HeaderData, const char debug);
 static ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t length,
-											FooterType * HeaderData, const char debug);
+											 FooterType * HeaderData, const char debug);
 static HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char debug);
-static FooterType buildISOFooter(const void * message, const size_t sizeExclFooter, const char debug);
+static FooterType buildISOFooter(const void *message, const size_t sizeExclFooter, const char debug);
 static char isValidMessageID(const uint16_t id);
 
 // ************************** function definitions
@@ -26,7 +26,7 @@ static char isValidMessageID(const uint16_t id);
  * \return value according to ::ISOMessageReturnValue
  */
 ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t length, HeaderType * HeaderData,
-									 const char debug) {
+									  const char debug) {
 	const char *p = MessageBuffer;
 	ISOMessageReturnValue retval = MESSAGE_OK;
 	const char ProtocolVersionBitmask = 0x7F;
@@ -101,7 +101,7 @@ ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t le
  * \return value according to ::ISOMessageReturnValue
  */
 ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t length, FooterType * FooterData,
-									 const char debug) {
+									  const char debug) {
 
 	if (length < sizeof (FooterData->Crc)) {
 		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO footer");
@@ -123,6 +123,7 @@ ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t le
  */
 HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char debug) {
 	HeaderType header;
+
 	header.SyncWordU16 = ISO_SYNC_WORD;
 	header.TransmitterIdU8 = 0;
 	header.MessageCounterU8 = 0;
@@ -140,8 +141,9 @@ HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char de
 	return header;
 }
 
-FooterType buildISOFooter(const void * message, const size_t messageSize, const char debug) {
+FooterType buildISOFooter(const void *message, const size_t messageSize, const char debug) {
 	FooterType footer;
+
 	// TODO: Calculate CRC - remembering that message begins with header and messageSize will include header and footer
 	footer.Crc = 0;
 
@@ -201,7 +203,7 @@ ISOMessageID getISOMessageType(const char *messageData, const size_t length, con
  * \param debug Flag for enabling debugging
  * \return number of bytes written to the data buffer, or -1 if an error occurred
  */
-ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t startGPSWeek, char * strtDataBuffer,
+ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t startGPSWeek, char *strtDataBuffer,
 						  const size_t bufferLength, const char debug) {
 
 	STRTType STRTData;
@@ -213,8 +215,8 @@ ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t start
 		return -1;
 	}
 
-	STRTData.Header = buildISOHeader(MESSAGE_ID_STRT, sizeof (STRTType) - sizeof (HeaderType) - sizeof (FooterType),
-									 debug);
+	STRTData.Header =
+		buildISOHeader(MESSAGE_ID_STRT, sizeof (STRTType) - sizeof (HeaderType) - sizeof (FooterType), debug);
 
 	STRTData.StartTimeValueIdU16 = VALUE_ID_STRT_GPS_QMS_OF_WEEK;
 	STRTData.StartTimeContentLengthU16 = sizeof (STRTData.StartTimeU32);
@@ -249,7 +251,7 @@ ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t start
  * \return value according to ::ISOMessageReturnValue
  */
 ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t length, MONRType * MONRData,
-									   const char debug) {
+										const char debug) {
 
 	const char *p = MonrData;
 	const uint16_t ExpectedMONRStructSize = (uint16_t) (sizeof (*MONRData) - sizeof (MONRData->header)

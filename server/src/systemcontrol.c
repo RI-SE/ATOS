@@ -222,8 +222,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 pcBuffer[IPC_BUFFER_SIZE];
 	char inchr;
 	struct timeval tvTime;
-	const struct timeval VirtualMachineLagCompensation = {VIRTUAL_MACHINE_LAG_COMPENSATION_S,
-				VIRTUAL_MACHINE_LAG_COMPENSATION_US};
+
+	const struct timeval VirtualMachineLagCompensation = { VIRTUAL_MACHINE_LAG_COMPENSATION_S,
+		VIRTUAL_MACHINE_LAG_COMPENSATION_US
+	};
 
 	ObjectPosition OP;
 	int i, i1;

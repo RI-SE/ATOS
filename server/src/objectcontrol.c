@@ -635,11 +635,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_STRT && (vGetState(GSD) == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED) */ )	//OBC_STATE_INITIALIZED is temporary!
 			{
 				struct timeval startTime, startDelay;
+
 				MiscPtr = pcRecvBuffer;
 				TimeSetToUTCms(&startTime, (int64_t) strtoul(MiscPtr, &MiscPtr, 10));
-				TimeSetToUTCms(&startDelay, (int64_t) strtoul(MiscPtr+1, NULL, 10));
+				TimeSetToUTCms(&startDelay, (int64_t) strtoul(MiscPtr + 1, NULL, 10));
 				timeradd(&startTime, &startDelay, &startTime);
-				MessageLength = (int) encodeSTRTMessage(TimeGetAsGPSqmsOfWeek(&startTime), TimeGetAsGPSweek(&startTime), MessageBuffer, sizeof (MessageBuffer), 0);
+				MessageLength =
+					(int)encodeSTRTMessage(TimeGetAsGPSqmsOfWeek(&startTime), TimeGetAsGPSweek(&startTime),
+										   MessageBuffer, sizeof (MessageBuffer), 0);
 
 				ASPData.MTSPU32 = 0;
 				ASPData.TimeToSyncPointDbl = 0;
