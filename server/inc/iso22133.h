@@ -32,6 +32,19 @@ typedef struct
 } FooterType; //2 bytes
 
 
+typedef struct
+{
+  HeaderType Header;
+  uint16_t StartTimeValueIdU16;
+  uint16_t StartTimeContentLengthU16;
+  uint32_t StartTimeU32;
+  uint16_t GPSWeekValueIdU16;
+  uint16_t GPSWeekContentLengthU16;
+  uint16_t GPSWeekU16;
+  FooterType footer;
+} STRTType; //27 bytes
+
+
 //! *************************** MONR
 #define COMMAND_MONR_CODE 0x0006
 typedef struct
@@ -293,6 +306,7 @@ typedef enum {
 } ISOMessageID;
 
 ISOMessageReturnValue decodeMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
+ISOMessageReturnValue encodeSTRTMessage(const STRTType * STRTData, char * strtData, const size_t length, const char debug);
 ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);

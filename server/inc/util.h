@@ -316,20 +316,6 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  U16 StartTimeValueIdU16;
-  U16 StartTimeContentLengthU16;
-  U32 StartTimeU32;
-  U16 GPSWeekValueIdU16;
-  U16 GPSWeekContentLengthU16;
-  U16 GPSWeekU16;
-  // U16 DelayStartValueIdU16;
-  // U16 DelayStartContentLengthU16;
-  // U32 DelayStartU32;
-} STRTType; //27 bytes
-
-typedef struct
-{
-  HeaderType Header;
   U16 StateValueIdU16;
   U16 StateContentLengthU16;
   U8 StateU8;
