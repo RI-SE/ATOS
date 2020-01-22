@@ -1260,6 +1260,7 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 /*!
  * \brief ObjectControlBuildMONRMessage Fills a MONRType struct from a buffer of raw data
  * \param MonrData Raw data to be decoded
+ * \param length Length of the raw data buffer
  * \param MONRData Struct to be filled
  * \param debug Flag for enabling of debugging
  * \return 0 on success, -1 otherwise
