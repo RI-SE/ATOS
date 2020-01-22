@@ -838,7 +838,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 										 "[ObjectControl] Was not able to connect to object, [IP: %s] [PORT: %d], retry in %d sec...",
 										 object_address_name[iIndex], object_tcp_port[iIndex],
 										 (!(1 & DisconnectU8)) * 3);
-								(void)sleep(3);	// TODO: Move this to the rest of the sleep operations? Also, remove the hardcoded 3
 								break;
 							case EADDRINUSE:
                                 util_error("[ObjectControl] Local address/port already in use");
