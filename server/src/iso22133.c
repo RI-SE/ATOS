@@ -33,6 +33,7 @@ ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t le
 	char messageProtocolVersion = 0;
 	char isProtocolVersionSupported = 0;
 
+	// If not enough data to fill header, generate error
 	if (length < sizeof (HeaderData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO header");
 		memset(HeaderData, 0, sizeof (*HeaderData));
@@ -43,6 +44,7 @@ ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t le
 	memcpy(&HeaderData->SyncWordU16, p, sizeof (HeaderData->SyncWordU16));
 	p += sizeof (HeaderData->SyncWordU16);
 
+	// If sync word is not correct, generate error
 	if (HeaderData->SyncWordU16 != ISO_SYNC_WORD) {
 		LogMessage(LOG_LEVEL_ERROR, "Sync word error when decoding ISO header");
 		memset(HeaderData, 0, sizeof (*HeaderData));
@@ -58,7 +60,7 @@ ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t le
 	memcpy(&HeaderData->AckReqProtVerU8, p, sizeof (HeaderData->AckReqProtVerU8));
 	p += sizeof (HeaderData->AckReqProtVerU8);
 
-	// Loop over permitted protocol versions
+	// Loop over permitted protocol versions to see if current version is among them
 	messageProtocolVersion = HeaderData->AckReqProtVerU8 & ProtocolVersionBitmask;
 	for (size_t i = 0; i < sizeof (SupportedProtocolVersions) / sizeof (SupportedProtocolVersions[0]); ++i) {
 		if (SupportedProtocolVersions[i] == messageProtocolVersion) {
@@ -67,6 +69,7 @@ ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t le
 		}
 	}
 
+	// Generate error if protocol version not supported
 	if (!isProtocolVersionSupported) {
 		LogMessage(LOG_LEVEL_WARNING, "Protocol version %u not supported", messageProtocolVersion);
 		retval = MESSAGE_VERSION_ERROR;
@@ -103,6 +106,7 @@ ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t le
 ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t length, FooterType * FooterData,
 									  const char debug) {
 
+	// If too little data, generate error
 	if (length < sizeof (FooterData->Crc)) {
 		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO footer");
 		memset(FooterData, 0, sizeof (*FooterData));
@@ -180,10 +184,13 @@ char isValidMessageID(const uint16_t id) {
 ISOMessageID getISOMessageType(const char *messageData, const size_t length, const char debug) {
 	HeaderType header;
 
+	// Create header
 	if (decodeISOHeader(messageData, length, &header, debug) != MESSAGE_OK) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to parse raw data into ISO message header");
 		return MESSAGE_ID_INVALID;
 	}
+
+	// Check if header contains valid message ID, if so return it
 	if (isValidMessageID(header.MessageIdU16))
 		return (ISOMessageID) header.MessageIdU16;
 	else {
@@ -210,6 +217,7 @@ ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t start
 
 	memset(strtDataBuffer, 0, bufferLength);
 
+	// If buffer too small to hold STRT data, generate an error
 	if (bufferLength < sizeof (STRTType)) {
 		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary STRT data");
 		return -1;
@@ -267,6 +275,7 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 	}
 	p += sizeof (MONRData->header);
 
+	// If message is not a MONR message, generate an error
 	if (MONRData->header.MessageIdU16 != MESSAGE_ID_MONR) {
 		memset(MONRData, 0, sizeof (*MONRData));
 		return MESSAGE_TYPE_ERROR;
@@ -276,6 +285,7 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 	memcpy(&MONRData->monrStructValueID, p, sizeof (MONRData->monrStructValueID));
 	p += sizeof (MONRData->monrStructValueID);
 
+	// If content is not a MONR struct or an unexpected size, generate an error
 	if (MONRData->monrStructValueID != VALUE_ID_MONR_STRUCT) {
 		LogMessage(LOG_LEVEL_ERROR, "Attempted to pass non-MONR struct into MONR parsing function");
 		memset(MONRData, 0, sizeof (*MONRData));
@@ -332,7 +342,7 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 	memcpy(&MONRData->errorStatus, p, sizeof (MONRData->errorStatus));
 	p += sizeof (MONRData->errorStatus);
 
-	// Footer
+	// Decode footer
 	if ((retval =
 		 decodeISOFooter(p, length - (size_t) (p - MonrData), &MONRData->footer, debug)) != MESSAGE_OK) {
 		memset(MONRData, 0, sizeof (*MONRData));
