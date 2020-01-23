@@ -90,7 +90,6 @@ typedef struct
 
 
 //! *************************** MONR
-#define COMMAND_MONR_CODE 0x0006
 typedef struct
 {
 	HeaderType header;
