@@ -42,6 +42,7 @@ ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t le
 
 	// Decode ISO header
 	memcpy(&HeaderData->SyncWordU16, p, sizeof (HeaderData->SyncWordU16));
+	HeaderData->SyncWordU16 = le16toh(HeaderData->SyncWordU16);
 	p += sizeof (HeaderData->SyncWordU16);
 
 	// If sync word is not correct, generate error
@@ -79,9 +80,11 @@ ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t le
 
 	memcpy(&HeaderData->MessageIdU16, p, sizeof (HeaderData->MessageIdU16));
 	p += sizeof (HeaderData->MessageIdU16);
+	HeaderData->MessageIdU16 = le16toh(HeaderData->MessageIdU16);
 
 	memcpy(&HeaderData->MessageLengthU32, p, sizeof (HeaderData->MessageLengthU32));
 	p += sizeof (HeaderData->MessageLengthU32);
+	HeaderData->MessageLengthU32 = le32toh(HeaderData->MessageLengthU32);
 
 	if (debug) {
 		LogPrint("SyncWordU16 = 0x%x", HeaderData->SyncWordU16);
@@ -113,6 +116,7 @@ ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t le
 		return MESSAGE_LENGTH_ERROR;
 	}
 	memcpy(&FooterData->Crc, MessageBuffer, sizeof (FooterData->Crc));
+	FooterData->Crc = le16toh(FooterData->Crc);
 
 	// TODO: check on CRC
 	return MESSAGE_OK;
@@ -284,6 +288,7 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 	// Decode content header
 	memcpy(&MONRData->monrStructValueID, p, sizeof (MONRData->monrStructValueID));
 	p += sizeof (MONRData->monrStructValueID);
+	MONRData->monrStructValueID = le16toh(MONRData->monrStructValueID);
 
 	// If content is not a MONR struct or an unexpected size, generate an error
 	if (MONRData->monrStructValueID != VALUE_ID_MONR_STRUCT) {
@@ -294,6 +299,7 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 
 	memcpy(&MONRData->monrStructContentLength, p, sizeof (MONRData->monrStructContentLength));
 	p += sizeof (MONRData->monrStructContentLength);
+	MONRData->monrStructContentLength = le16toh(MONRData->monrStructContentLength);
 
 	if (MONRData->monrStructContentLength != ExpectedMONRStructSize) {
 		LogMessage(LOG_LEVEL_ERROR, "MONR content length %u differs from the expected length %u",
@@ -305,30 +311,39 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 	// Decode content
 	memcpy(&MONRData->gpsQmsOfWeek, p, sizeof (MONRData->gpsQmsOfWeek));
 	p += sizeof (MONRData->gpsQmsOfWeek);
+	MONRData->gpsQmsOfWeek = le32toh(MONRData->gpsQmsOfWeek);
 
 	memcpy(&MONRData->xPosition, p, sizeof (MONRData->xPosition));
 	p += sizeof (MONRData->xPosition);
+	MONRData->xPosition = (int32_t) le32toh(MONRData->xPosition);
 
 	memcpy(&MONRData->yPosition, p, sizeof (MONRData->yPosition));
 	p += sizeof (MONRData->yPosition);
+	MONRData->yPosition = (int32_t) le32toh(MONRData->yPosition);
 
 	memcpy(&MONRData->zPosition, p, sizeof (MONRData->zPosition));
 	p += sizeof (MONRData->zPosition);
+	MONRData->zPosition = (int32_t) le32toh(MONRData->zPosition);
 
 	memcpy(&MONRData->heading, p, sizeof (MONRData->heading));
 	p += sizeof (MONRData->heading);
+	MONRData->heading = le16toh(MONRData->heading);
 
 	memcpy(&MONRData->longitudinalSpeed, p, sizeof (MONRData->longitudinalSpeed));
 	p += sizeof (MONRData->longitudinalSpeed);
+	MONRData->longitudinalSpeed = (int16_t) le16toh(MONRData->longitudinalSpeed);
 
 	memcpy(&MONRData->lateralSpeed, p, sizeof (MONRData->lateralSpeed));
 	p += sizeof (MONRData->lateralSpeed);
+	MONRData->lateralSpeed = (int16_t) le16toh(MONRData->lateralSpeed);
 
 	memcpy(&MONRData->longitudinalAcc, p, sizeof (MONRData->longitudinalAcc));
 	p += sizeof (MONRData->longitudinalAcc);
+	MONRData->longitudinalAcc = (int16_t) le16toh(MONRData->longitudinalAcc);
 
 	memcpy(&MONRData->lateralAcc, p, sizeof (MONRData->lateralAcc));
 	p += sizeof (MONRData->lateralAcc);
+	MONRData->lateralAcc = (int16_t) le16toh(MONRData->lateralAcc);
 
 	memcpy(&MONRData->driveDirection, p, sizeof (MONRData->driveDirection));
 	p += sizeof (MONRData->driveDirection);
@@ -348,7 +363,6 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 		memset(MONRData, 0, sizeof (*MONRData));
 		return retval;
 	}
-	p += sizeof (MONRData->footer);
 
 	if (debug == 1) {
 		LogPrint("MONR:");
