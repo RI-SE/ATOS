@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
-
+#include <signal.h>
 #include "logging.h"
 #include "util.h"
 
@@ -21,6 +21,7 @@
 #define VISUAL_SERVER_PORT  53250
 #define VISUAL_CONTROL_MODE 0
 #define VISUAL_REPLAY_MODE 1
+#define ENOUGH_BUFFER_SIZE 64
 
 #define SMALL_ITEM_TEXT_BUFFER_SIZE 20
 #define MAX_DATE_STRLEN 25		// Maximum string length of a time stamp on the format "2035;12;31;24;59;59;1000" is 25
@@ -33,35 +34,34 @@ static void vConnectVisualizationChannel(int *sockfd, struct sockaddr_in *addr);
 static void vDisconnectVisualizationChannel(int *sockfd);
 void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualizationMessage,
 								 int _sizeOfVisualizationMessage, int _debug);
+static void signalHandler(int signo);
+
+I32 iExit = 0;
 
 void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualizationMessage,
 								 int _sizeOfVisualizationMessage, int _debug) {
 
-	//IP
 	char ipStringBuffer[INET_ADDRSTRLEN];
+    sprintf(ipStringBuffer, "%s",
+            inet_ntop(AF_INET, &_monitorData->ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
+    char GPSMsOfWeekString[ENOUGH_BUFFER_SIZE];
+    sprintf(GPSMsOfWeekString, "%u", _monitorData->MONR.GPSQmsOfWeekU32);
+    char xPosString[ENOUGH_BUFFER_SIZE];
+    sprintf(xPosString, "%d", _monitorData->MONR.XPositionI32);
+    char yPosString[ENOUGH_BUFFER_SIZE];
+    sprintf(yPosString, "%d", _monitorData->MONR.YPositionI32);
+    char zPosString[ENOUGH_BUFFER_SIZE];
+    sprintf(zPosString, "%d", _monitorData->MONR.ZPositionI32);
+    char headingString[ENOUGH_BUFFER_SIZE];
+    sprintf(headingString, "%u", _monitorData->MONR.HeadingU16);
+    char longSpeedString[ENOUGH_BUFFER_SIZE];
+    sprintf(longSpeedString, "%d", _monitorData->MONR.LongitudinalSpeedI16);
+    char stateString[ENOUGH_BUFFER_SIZE];
+    sprintf(stateString, "%u", _monitorData->MONR.StateU8);
 
-    char GPSMsOfWeekString[4];
-    printf(GPSMsOfWeekString, "%u", _monitorData->MONR.GPSQmsOfWeekU32);
-    char xPosString[4];
-    printf(xPosString, "%d", _monitorData->MONR.XPositionI32);
-    char yPosString[4];
-    printf(yPosString, "%d", _monitorData->MONR.YPositionI32);
-    char zPosString[4];
-    printf(zPosString, "%d", _monitorData->MONR.ZPositionI32);
-    char headingString[2];
-    printf(headingString, "%u", _monitorData->MONR.HeadingU16);
-    char longSpeedString[2];
-    printf(longSpeedString, "%d", _monitorData->MONR.LongitudinalSpeedI16);
-    char stateString[1];
-    printf(stateString, "%u", _monitorData->MONR.StateU8);
-
-
-
-	sprintf(ipStringBuffer, "%s",
-			inet_ntop(AF_INET, &_monitorData->ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
 
 	//Build message from MonitorStruct
-    snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%c;%c;%c;%c;%c;%c;%c;%c;",
+    snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%s;%s;%s;%s;%s;%s;%s;%s;",
 			 ipStringBuffer,
              GPSMsOfWeekString,
              xPosString,
@@ -82,6 +82,7 @@ void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualiz
 		LogMessage(LOG_LEVEL_INFO, "Heading: %u", _monitorData->MONR.HeadingU16);
 		LogMessage(LOG_LEVEL_INFO, "LongSpeed: %d", _monitorData->MONR.LongitudinalSpeedI16);
 		LogMessage(LOG_LEVEL_INFO, "State: %u", _monitorData->MONR.StateU8);
+        LogMessage(LOG_LEVEL_INFO, "MESSAGE-SIZE = %d",_sizeOfVisualizationMessage);
 	}
 }
 
@@ -94,8 +95,6 @@ int main() {
 
 	MonitorDataType monitorData;
 
-	int sizeOfVisualizationMessage = (INET_ADDRSTRLEN + sizeof (monitorData.MONR.GPSQmsOfWeekU32) + sizeof (monitorData.MONR.XPositionI32) + sizeof (monitorData.MONR.YPositionI32) + sizeof (monitorData.MONR.ZPositionI32) + sizeof (monitorData.MONR.HeadingU16) + sizeof (monitorData.MONR.LongitudinalSpeedI16) + sizeof (monitorData.MONR.StateU8) + 8 +	//Number of fields + 1 (;)
-									  1);	//Required
 
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
@@ -105,7 +104,11 @@ int main() {
 
 	vConnectVisualizationChannel(&visual_server, &visual_server_addr);
 
-	I32 iExit = 0;
+    //Setup signal handlers
+    if (signal(SIGINT, signalHandler) == SIG_ERR)
+        util_error("Unable to initialize signal handler");
+
+
 
 
 	// Initialize message bus connection
@@ -113,7 +116,7 @@ int main() {
 		nanosleep(&sleepTimePeriod, &remTime);
 	}
 
-	while (true) {
+    while (!iExit) {
 
 
 		if (iCommRecv(&command, mqRecvData, MQ_MSG_SIZE, NULL) < 0) {
@@ -142,15 +145,31 @@ int main() {
 			//Populate the monitorType
 			UtilPopulateMonitorDataStruct(mqRecvData, (size_t) (sizeof (mqRecvData)), &monitorData, 0);
 
+            char dummy[1];
+            int sizeOfVisualizationMessage;
+
+            //Calculate size of incoming buffer
+            sizeOfVisualizationMessage = snprintf(dummy, sizeof(dummy),"%u;%d;%d;%d;%u;%d;%u;",
+                                                  monitorData.MONR.GPSQmsOfWeekU32,
+                                                  monitorData.MONR.XPositionI32,
+                                                  monitorData.MONR.YPositionI32,
+                                                  monitorData.MONR.ZPositionI32,
+                                                  monitorData.MONR.HeadingU16,
+                                                  monitorData.MONR.LongitudinalSpeedI16,
+                                                  monitorData.MONR.StateU8
+                                                  );
+            sizeOfVisualizationMessage += INET_ADDRSTRLEN;
+            sizeOfVisualizationMessage += 8; //(;)
+
 			//Allocate memory
 			char *visualizationMessage = malloc(sizeOfVisualizationMessage * sizeof (char));
 
 			//Create visualization message and insert values from the monitor datastruct above
-			vCreateVisualizationMessage(&monitorData, visualizationMessage, sizeOfVisualizationMessage, 0);
+            vCreateVisualizationMessage(&monitorData, visualizationMessage, sizeOfVisualizationMessage, 0);
 
 			//Send visualization message on the UDP socket
 			UtilSendUDPData((const uint8_t *)"Visualization", &visual_server, &visual_server_addr,
-							visualizationMessage, sizeOfVisualizationMessage, 0);
+                            visualizationMessage, strlen(visualizationMessage), 0);
 
 			//Free memory used by malloc
 			free(visualizationMessage);
@@ -170,6 +189,9 @@ int main() {
 		}
 	}
 
+    //Return MQBus to "stack"
+    MQBusDisconnect();
+
 	return 0;
 }
 
@@ -177,6 +199,17 @@ int main() {
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
+void signalHandler(int signo) {
+    if (signo == SIGINT) {
+        LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+        iExit = 1;
+    }
+    else {
+        LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+    }
+}
+
+
 static void vConnectVisualizationChannel(int *sockfd, struct sockaddr_in *addr) {
 	struct hostent *server;
 	char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];
