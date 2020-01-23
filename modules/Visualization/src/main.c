@@ -40,18 +40,36 @@ void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualiz
 	//IP
 	char ipStringBuffer[INET_ADDRSTRLEN];
 
+    char GPSMsOfWeekString[4];
+    printf(GPSMsOfWeekString, "%u", _monitorData->MONR.GPSQmsOfWeekU32);
+    char xPosString[4];
+    printf(xPosString, "%d", _monitorData->MONR.XPositionI32);
+    char yPosString[4];
+    printf(yPosString, "%d", _monitorData->MONR.YPositionI32);
+    char zPosString[4];
+    printf(zPosString, "%d", _monitorData->MONR.ZPositionI32);
+    char headingString[2];
+    printf(headingString, "%u", _monitorData->MONR.HeadingU16);
+    char longSpeedString[2];
+    printf(longSpeedString, "%d", _monitorData->MONR.LongitudinalSpeedI16);
+    char stateString[1];
+    printf(stateString, "%u", _monitorData->MONR.StateU8);
+
+
+
 	sprintf(ipStringBuffer, "%s",
 			inet_ntop(AF_INET, &_monitorData->ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
 
 	//Build message from MonitorStruct
-	snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%s;%u;%d;%d;%d;%u;%d;%u;",
+    snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%c;%c;%c;%c;%c;%c;%c;%c;",
 			 ipStringBuffer,
-			 _monitorData->MONR.GPSQmsOfWeekU32,
-			 _monitorData->MONR.XPositionI32,
-			 _monitorData->MONR.YPositionI32,
-			 _monitorData->MONR.ZPositionI32,
-			 _monitorData->MONR.HeadingU16,
-			 _monitorData->MONR.LongitudinalSpeedI16, _monitorData->MONR.StateU8);
+             GPSMsOfWeekString,
+             xPosString,
+             yPosString,
+             zPosString,
+             headingString,
+             longSpeedString,
+             stateString);
 
 
 	if (_debug) {
