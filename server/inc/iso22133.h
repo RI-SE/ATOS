@@ -36,6 +36,42 @@ typedef struct
 } FooterType; //2 bytes
 
 
+//! *************************** OSEM
+typedef struct
+{
+  HeaderType Header;
+  uint16_t LatitudeValueIdU16;
+  uint16_t LatitudeContentLengthU16;
+  int64_t LatitudeI64;
+  uint16_t LongitudeValueIdU16;
+  uint16_t LongitudeContentLengthU16;
+  int64_t LongitudeI64;
+  uint16_t AltitudeValueIdU16;
+  uint16_t AltitudeContentLengthU16;
+  int32_t AltitudeI32;
+  uint16_t DateValueIdU16;
+  uint16_t DateContentLengthU16;
+  uint32_t DateU32;
+  uint16_t GPSWeekValueIdU16;
+  uint16_t GPSWeekContentLengthU16;
+  uint16_t GPSWeekU16;
+  uint16_t GPSSOWValueIdU16;
+  uint16_t GPSSOWContentLengthU16;
+  uint32_t GPSQmsOfWeekU32;
+  uint16_t MaxWayDeviationValueIdU16;
+  uint16_t MaxWayDeviationContentLengthU16;
+  uint16_t MaxWayDeviationU16;
+  uint16_t MaxLateralDeviationValueIdU16;
+  uint16_t MaxLateralDeviationContentLengthU16;
+  uint16_t MaxLateralDeviationU16;
+  uint16_t MinPosAccuracyValueIdU16;
+  uint16_t MinPosAccuracyContentLengthU16;
+  uint16_t MinPosAccuracyU16;
+} OSEMType; //85 bytes
+
+//! OSEM value IDs
+
+//! *************************** STRT
 typedef struct
 {
 	HeaderType header;
