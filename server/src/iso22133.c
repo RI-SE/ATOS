@@ -154,6 +154,7 @@ FooterType buildISOFooter(const void *message, const size_t messageSize, const c
 
 	// TODO: Calculate CRC - remembering that message begins with header and messageSize will include header and footer
 	footer.Crc = 0;
+	footer.Crc = htole16(footer.Crc);
 
 	if (debug) {
 		LogPrint("Encoded ISO footer:\n\tCRC: 0x%x", footer.Crc);
@@ -230,12 +231,19 @@ ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t start
 	STRTData.header =
 		buildISOHeader(MESSAGE_ID_STRT, sizeof (STRTType) - sizeof (HeaderType) - sizeof (FooterType), debug);
 
+	// Fill contents, ensuring to swap from host endianness to little endian
 	STRTData.StartTimeValueIdU16 = VALUE_ID_STRT_GPS_QMS_OF_WEEK;
+	STRTData.StartTimeValueIdU16 = htole16(STRTData.StartTimeValueIdU16);
 	STRTData.StartTimeContentLengthU16 = sizeof (STRTData.StartTimeU32);
+	STRTData.StartTimeContentLengthU16 = htole16(STRTData.StartTimeContentLengthU16);
 	STRTData.StartTimeU32 = startTimeGPSqmsOW;
+	STRTData.StartTimeU32 = htole32(STRTData.StartTimeU32);
 	STRTData.GPSWeekValueIdU16 = VALUE_ID_STRT_GPS_WEEK;
+	STRTData.GPSWeekValueIdU16 = htole16(STRTData.GPSWeekValueIdU16);
 	STRTData.GPSWeekContentLengthU16 = sizeof (STRTData.GPSWeekU16);
+	STRTData.GPSWeekContentLengthU16 = htole16(STRTData.GPSWeekContentLengthU16);
 	STRTData.GPSWeekU16 = startGPSWeek;
+	STRTData.GPSWeekU16 = htole16(STRTData.GPSWeekU16);
 
 	if (debug) {
 		LogPrint("STRT message:\n\tGPS second of week value ID: 0x%x\n\t"
