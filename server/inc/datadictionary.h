@@ -10,6 +10,8 @@
 #ifndef __DATADICTIONARY_H_INCLUDED__
 #define __DATADICTIONARY_H_INCLUDED__
 
+#define SHARED_MEMORY_PATH "/dev/shm/maestro/"
+
 #include "util.h"
 /*------------------------------------------------------------
   -- Function declarations.

@@ -196,7 +196,7 @@ extern "C"{
 
 // The do - while loop makes sure that each function call is properly handled using macros
 #define LOG_SEND(buf, ...) \
-	do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);LogMessage(LOG_LEVEL_INFO,buf);fflush(stdout);} while (0)
+    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);LogMessage(LOG_LEVEL_INFO,buf);fflush(stdout);} while (0)
 
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
@@ -535,6 +535,7 @@ typedef struct
 
   U8 numberOfObjects;
   MONRType *MonrMessages;
+  char *memory;
   //U8 OSTMSizeU8;
   //U8 OSTMData[100];
   //U8 STRTSizeU8;
@@ -590,18 +591,18 @@ typedef struct
 
 typedef struct
 {
-	char Type;
+    char Type;
   double Latitude;
-	double Longitude;
-	double OrigoDistance;
+    double Longitude;
+    double OrigoDistance;
   double OldOrigoDistance;
-	double DeltaOrigoDistance;
+    double DeltaOrigoDistance;
   double x;
-	double y;
-	double z;
-	int CalcIterations;
-	double ForwardAzimuth1;
-	double ForwardAzimuth2;
+    double y;
+    double z;
+    int CalcIterations;
+    double ForwardAzimuth1;
+    double ForwardAzimuth2;
   int TrajectoryPositionCount;
   I32 SyncIndex;
   double SyncTime;

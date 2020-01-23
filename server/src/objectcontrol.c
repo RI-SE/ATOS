@@ -486,10 +486,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
                     ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
 
-                    LogPrint("****** BEFORE SETTING ******");
-                    DataDictionaryGetMONR(GSD, &MONRData, iIndex);
-                    LogPrint("****************");
-
                     //Store MONR in GSD
                     DataDictionarySetMONR(GSD, &MONRData, iIndex);
 
