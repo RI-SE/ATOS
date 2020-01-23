@@ -38,7 +38,7 @@ typedef struct
 
 typedef struct
 {
-	HeaderType Header;
+	HeaderType header;
 	uint16_t StartTimeValueIdU16;
 	uint16_t StartTimeContentLengthU16;
 	uint32_t StartTimeU32;
