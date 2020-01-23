@@ -175,8 +175,6 @@ I32 ObjectControlBuildOSEMMessage(C8 * MessageBuffer, OSEMType * OSEMData, TimeT
 static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects);
 static void signalHandler(int signo);
-I32 ObjectControlBuildSTRTMessage(C8 * MessageBuffer, STRTType * STRTData, TimeType * GPSTime,
-								  U32 ScenarioStartTime, U32 DelayStart, U32 * OutgoingStartTime, U8 debug);
 I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 CommandOption, U8 debug);
 I32 ObjectControlBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeType * GPSTime, U8 CCStatus,
 								  U8 debug);
