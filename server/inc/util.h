@@ -155,7 +155,6 @@ extern "C"{
 #define VALUE_ID_TRAJECTORY_ID              0x101
 #define VALUE_ID_TRAJECTORY_NAME            0x102
 #define VALUE_ID_TRAJECTORY_VERSION         0x103
-#define VALUE_ID_HEAB_STRUCT                0x90
 #define VALUE_ID_INSUP_MODE                 0x200
 
 #define C8 uint8_t
