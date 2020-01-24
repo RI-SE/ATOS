@@ -391,13 +391,13 @@ ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_
 
 /*!
  * \brief encodeSTRTMessage Constructs an ISO STRT message based on start time parameters
- * \param timeOfStart Time when test shall start
+ * \param timeOfStart Time when test shall start, a value of NULL indicates that the time is not known
  * \param strtDataBuffer Data buffer in which to place encoded STRT message
  * \param bufferLength Size of data buffer in which to place encoded STRT message
  * \param debug Flag for enabling debugging
  * \return number of bytes written to the data buffer, or -1 if an error occurred
  */
-ssize_t encodeSTRTMessage(const struct timeval timeOfStart, char *strtDataBuffer,
+ssize_t encodeSTRTMessage(const struct timeval * timeOfStart, char *strtDataBuffer,
 						  const size_t bufferLength, const char debug) {
 
 	STRTType STRTData;
@@ -416,10 +416,10 @@ ssize_t encodeSTRTMessage(const struct timeval timeOfStart, char *strtDataBuffer
 	// Fill contents
 	STRTData.StartTimeValueIdU16 = VALUE_ID_STRT_GPS_QMS_OF_WEEK;
 	STRTData.StartTimeContentLengthU16 = sizeof (STRTData.StartTimeU32);
-	STRTData.StartTimeU32 = TimeGetAsGPSqmsOfWeek(&timeOfStart);
+	STRTData.StartTimeU32 = timeOfStart == NULL ? GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSqmsOfWeek(&timeOfStart);
 	STRTData.GPSWeekValueID = VALUE_ID_STRT_GPS_WEEK;
 	STRTData.GPSWeekContentLength = sizeof (STRTData.GPSWeek);
-	STRTData.GPSWeek = TimeGetAsGPSweek(&timeOfStart);
+	STRTData.GPSWeek = timeOfStart == NULL ? GPS_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSweek(&timeOfStart);
 
 	if (debug) {
 		LogPrint("STRT message:\n\tGPS second of week value ID: 0x%x\n\t"
