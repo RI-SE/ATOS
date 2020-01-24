@@ -752,9 +752,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
 
-					MessageLength = ObjectControlBuildOSEMMessage(MessageBuffer, &OSEMData, GPSTime,
-																  OriginLatitude, OriginLongitude,
-																  OriginAltitude, 0);
+					MessageLength = encodeOSEMMessage(&OriginPosition.Latitude, &OriginPosition.Longitude, &OriginPosition.Altitude,
+													  NULL, NULL, NULL, MessageBuffer, sizeof (MessageBuffer), 0);
+					if (MessageLength < 0) {
+						util_error("OSEM encoding error");
+					}
 
 					DisconnectU8 = 0;
 
@@ -815,17 +817,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						/* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates) */
 						LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
 						LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.");
-
-						ObjectControlOSEMtoASCII(&OSEMData, GPSWeek, OriginLatitude, OriginLongitude,
-												 OriginAltitude);
-						bzero(pcSendBuffer, sizeof (pcSendBuffer));
-						strcat(pcSendBuffer, GPSWeek);
-						strcat(pcSendBuffer, ";");
-						strcat(pcSendBuffer, OriginLatitude);
-						strcat(pcSendBuffer, ";");
-						strcat(pcSendBuffer, OriginLongitude);
-						strcat(pcSendBuffer, ";");
-						strcat(pcSendBuffer, OriginAltitude);
 
 						//Restore the buffers
 						DataDictionaryGetOriginLatitudeC8(GSD, OriginLatitude, SMALL_BUFFER_SIZE_0);
@@ -1189,26 +1180,6 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 
 	return ObjectCount * sizeof (Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH;	//Total number of bytes
 
-}
-
-int ObjectControlOSEMtoASCII(OSEMType * OSEMData, char *GPSWeek, char *GPSLatitude, char *GPSLongitude,
-							 char *GPSAltitude) {
-	// what do i want? in my mq? gps week, origin in lat and long coordinates
-	bzero(GPSWeek, SMALL_BUFFER_SIZE_0);
-	bzero(GPSLatitude, SMALL_BUFFER_SIZE_0);
-	bzero(GPSLongitude, SMALL_BUFFER_SIZE_0);
-	bzero(GPSAltitude, SMALL_BUFFER_SIZE_0);
-
-	if (OSEMData->Header.MessageIdU16 == COMMAND_OSEM_CODE) {
-		sprintf(GPSWeek, "%" PRIu16, OSEMData->GPSWeekU16);
-
-		sprintf(GPSLatitude, "%" PRIi64, OSEMData->LatitudeI64);
-
-		sprintf(GPSLongitude, "%" PRIi64, OSEMData->LongitudeI64);
-
-		sprintf(GPSAltitude, "%" PRIi32, OSEMData->AltitudeI32);
-	}
-	return 0;
 }
 
 I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 CommandOption, U8 debug) {
