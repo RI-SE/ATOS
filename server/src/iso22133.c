@@ -129,6 +129,10 @@ ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t le
 	memcpy(&FooterData->Crc, MessageBuffer, sizeof (FooterData->Crc));
 	FooterData->Crc = le16toh(FooterData->Crc);
 
+	if (debug) {
+		LogPrint("Decoded ISO footer:\n\tCRC: 0x%x", FooterData->Crc);
+	}
+
 	// TODO: check on CRC
 	return MESSAGE_OK;
 }
@@ -585,6 +589,30 @@ ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char *asciiBuffer, 
 	sprintf(asciiBuffer + strlen(asciiBuffer), "%u;%u;%u;%u;", MONRData->driveDirection,
 			MONRData->state, MONRData->readyToArm, MONRData->errorStatus);
 
+	if (debug) {
+		LogPrint("Converted MONR to string:\n\tMONR:\n\t\t"
+				 "Value ID = 0x%x\n\t\t"
+				 "Content length = %u\n\t\t"
+				 "GPS quarter millisecond of week = %u\n\t\t"
+				 "X position = %d\n\t\t"
+				 "Y position = %d\n\t\t"
+				 "Z position = %d\n\t\t"
+				 "Heading = %d\n\t\t"
+				 "Longitudinal speed = %d\n\t\t"
+				 "Lateral speed = %d\n\t\t"
+				 "Longitudinal acceleration = %d\n\t\t"
+				 "Lateral acceleration = %d\n\t\t"
+				 "Drive direction = %d\n\t\t"
+				 "State = %d\n\t\t"
+				 "Ready to arm = %d\n\t\t"
+				 "Error status = %d\n\t"
+				 "String:\n\t\t<%s>", MONRData->monrStructValueID, MONRData->monrStructContentLength,
+				 MONRData->gpsQmsOfWeek, MONRData->xPosition, MONRData->yPosition, MONRData->zPosition,
+				 MONRData->heading, MONRData->longitudinalSpeed, MONRData->lateralSpeed, MONRData->longitudinalAcc,
+				 MONRData->lateralAcc, MONRData->driveDirection, MONRData->state, MONRData->readyToArm,
+				 MONRData->errorStatus, asciiBuffer);
+	}
+
 	return MESSAGE_OK;
 }
 
@@ -598,7 +626,6 @@ ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char *asciiBuffer, 
  */
 ISOMessageReturnValue ASCIIToMONR(const char *asciiBuffer, MONRType * MONRData, const char debug) {
 
-	const size_t bufferLength = strlen(asciiBuffer);
 	const char *token;
 	const char delim[] = ";";
 	const int NumberBaseDecimal = 10;
@@ -646,6 +673,29 @@ ISOMessageReturnValue ASCIIToMONR(const char *asciiBuffer, MONRType * MONRData, 
 
 	token = strtok(NULL, delim);
 	MONRData->errorStatus = (uint8_t) strtoul(token, NULL, NumberBaseDecimal);
+
+	if (debug) {
+		LogPrint("Converted string to MONR:\n\tString:\n\t\t<%s>\n\tMONR:\n\t\t"
+				 "Value ID = 0x%x\n\t\t"
+				 "Content length = %u\n\t\t"
+				 "GPS quarter millisecond of week = %u\n\t\t"
+				 "X position = %d\n\t\t"
+				 "Y position = %d\n\t\t"
+				 "Z position = %d\n\t\t"
+				 "Heading = %d\n\t\t"
+				 "Longitudinal speed = %d\n\t\t"
+				 "Lateral speed = %d\n\t\t"
+				 "Longitudinal acceleration = %d\n\t\t"
+				 "Lateral acceleration = %d\n\t\t"
+				 "Drive direction = %d\n\t\t"
+				 "State = %d\n\t\t"
+				 "Ready to arm = %d\n\t\t"
+				 "Error status = %d", asciiBuffer, MONRData->monrStructValueID, MONRData->monrStructContentLength,
+				 MONRData->gpsQmsOfWeek, MONRData->xPosition, MONRData->yPosition, MONRData->zPosition,
+				 MONRData->heading, MONRData->longitudinalSpeed, MONRData->lateralSpeed, MONRData->longitudinalAcc,
+				 MONRData->lateralAcc, MONRData->driveDirection, MONRData->state, MONRData->readyToArm,
+				 MONRData->errorStatus);
+	}
 
 	return MESSAGE_OK;
 }
