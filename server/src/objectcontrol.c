@@ -241,7 +241,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	FILE *fd;
 	C8 Timestamp[SMALL_BUFFER_SIZE_0];
 	C8 GPSWeek[SMALL_BUFFER_SIZE_0];
-	I32 MessageLength;
+	ssize_t MessageLength;
 	C8 *MiscPtr;
 	C8 MiscText[SMALL_BUFFER_SIZE_0];
 	U32 StartTimeU32 = 0;
