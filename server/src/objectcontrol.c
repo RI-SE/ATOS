@@ -453,7 +453,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							   buffer);
 
 					if (decodeMONRMessage(buffer, receivedMONRData, &MONRData, 0) != MESSAGE_OK) {
-						// TODO react on error
+						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object",
+								   object_address_name[iIndex]);
+						vDisconnectObject(&safety_socket_fd[iIndex]);
+						// TODO smarter way of handling?
 						continue;
 					}
 
@@ -1207,7 +1210,6 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 	return ObjectCount * sizeof (Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH;	//Total number of bytes
 
 }
-
 
 I32 ObjectControlBuildOSEMMessage(C8 * MessageBuffer, OSEMType * OSEMData, TimeType * GPSTime, C8 * Latitude,
 								  C8 * Longitude, C8 * Altitude, U8 debug) {
