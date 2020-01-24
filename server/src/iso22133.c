@@ -164,6 +164,13 @@ HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char de
 	return header;
 }
 
+/*!
+ * \brief buildISOFooter Constructs a footer for an ISO message
+ * \param message Pointer to start of message header
+ * \param messageSize Size of the entire message including header and footer
+ * \param debug Flag for enabling debugging
+ * \return A struct containing ISO footer data
+ */
 FooterType buildISOFooter(const void *message, const size_t messageSize, const char debug) {
 	FooterType footer;
 
@@ -220,7 +227,20 @@ ISOMessageID getISOMessageType(const char *messageData, const size_t length, con
 	}
 }
 
-
+/*!
+ * \brief encodeOSEMMessage Creates an OSEM message and writes it into a buffer based on supplied values. All values are passed as pointers and
+ *  passing them as NULL causes the OSEM message to contain a default value for that field (a value representing "unavailable" or similar).
+ * \param latitude_deg Latitude in degrees of the test origin
+ * \param longitude_deg Longitude in degrees of the test origin
+ * \param altitude_m Altitude in meters above sea level of the test origin
+ * \param maxWayDeviation_m Maximum allowed deviation from target trajectory point, in meters
+ * \param maxLateralDeviation_m Maximum lateral deviation from trajectory allowed, in meters
+ * \param minimumPositioningAccuracy_m Minimum positioning accuracy required of the object
+ * \param osemDataBuffer Buffer to which OSEM message is to be written
+ * \param bufferLength Size of the buffer to which OSEM message is to be written
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes written to the buffer, or -1 in case of an error
+ */
 ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_deg, const float * altitude_m, const float * maxWayDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug) {
 
 	const char SizeDifference64bitTo48bit = 2;
