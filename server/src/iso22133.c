@@ -535,10 +535,11 @@ ssize_t encodeSTRTMessage(const struct timeval *timeOfStart, char *strtDataBuffe
  * \return Number of bytes written or -1 in case of an error
  */
 ssize_t encodeHEABMessage(const ControlCenterStatusType status, char *heabDataBuffer,
-					  const size_t bufferLength, const char debug) {
+						  const size_t bufferLength, const char debug) {
 
 	HEABType HEABData;
 	struct timeval currentTime;
+
 	TimeSetToCurrentSystemTime(&currentTime);
 
 	memset(heabDataBuffer, 0, bufferLength);
@@ -554,12 +555,13 @@ ssize_t encodeHEABMessage(const ControlCenterStatusType status, char *heabDataBu
 	// Fill contents
 	HEABData.HEABStructValueID = VALUE_ID_HEAB_STRUCT;
 	HEABData.HEABStructContentLength = sizeof (HEABType) - sizeof (HeaderType) - sizeof (FooterType)
-			- sizeof (HEABData.HEABStructValueID) - sizeof (HEABData.HEABStructContentLength);
+		- sizeof (HEABData.HEABStructValueID) - sizeof (HEABData.HEABStructContentLength);
 	HEABData.GPSQmsOfWeek = TimeGetAsGPSqmsOfWeek(&currentTime);
 	if (!(status == CONTROL_CENTER_STATUS_INIT || status == CONTROL_CENTER_STATUS_READY
 		  || status == CONTROL_CENTER_STATUS_ABORT || status == CONTROL_CENTER_STATUS_RUNNING
 		  || status == CONTROL_CENTER_STATUS_TEST_DONE || status == CONTROL_CENTER_STATUS_NORMAL_STOP)) {
-		LogMessage(LOG_LEVEL_ERROR, "HEAB does not support status ID %u - defaulting to ABORT", (uint8_t) status);
+		LogMessage(LOG_LEVEL_ERROR, "HEAB does not support status ID %u - defaulting to ABORT",
+				   (uint8_t) status);
 		HEABData.controlCenterStatus = (uint8_t) CONTROL_CENTER_STATUS_ABORT;
 	}
 	else {

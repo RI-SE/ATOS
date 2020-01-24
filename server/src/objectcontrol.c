@@ -210,8 +210,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		{ OC_SLEEP_TIME_NONEMPTY_MQ_S, OC_SLEEP_TIME_NONEMPTY_MQ_NS };
 	const struct timeval stateReportPeriod = { OC_STATE_REPORT_PERIOD_S, OC_STATE_REPORT_PERIOD_US };
 	struct timeval currentTime, nextStateReportTime, nextHeartbeatTime;
+
 	const struct timeval heartbeatPeriod = { 1 / HEAB_FREQUENCY_HZ,
-				(1000000 / HEAB_FREQUENCY_HZ) % 1000000 };
+		(1000000 / HEAB_FREQUENCY_HZ) % 1000000
+	};
 	U8 iForceObjectToLocalhostU8 = 0;
 
 	FILE *fd;
@@ -314,22 +316,24 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		if (vGetState(GSD) == OBC_STATE_ERROR) {
 			objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
-			MessageLength = encodeHEABMessage(objectControlServerStatus, MessageBuffer, sizeof (MessageBuffer), 0);
+			MessageLength =
+				encodeHEABMessage(objectControlServerStatus, MessageBuffer, sizeof (MessageBuffer), 0);
 			UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
 							MessageBuffer, MessageLength, 0);
 		}
 
 		// Heartbeat
 		if ((vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_ARMED
-			|| vGetState(GSD) == OBC_STATE_CONNECTED) && timercmp(&currentTime, &nextHeartbeatTime, >)) {
+			 || vGetState(GSD) == OBC_STATE_CONNECTED) && timercmp(&currentTime, &nextHeartbeatTime, >)) {
 
 			timeradd(&nextHeartbeatTime, &heartbeatPeriod, &nextHeartbeatTime);
-			MessageLength = encodeHEABMessage(objectControlServerStatus, MessageBuffer, sizeof (MessageBuffer), 0);
+			MessageLength =
+				encodeHEABMessage(objectControlServerStatus, MessageBuffer, sizeof (MessageBuffer), 0);
 
 			// Transmit heartbeat to all objects
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
-									MessageBuffer, MessageLength, 0);
+								MessageBuffer, MessageLength, 0);
 			}
 
 			// Check if any object has disconnected - if so, disconnect all objects and return to idle
