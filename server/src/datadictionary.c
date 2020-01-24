@@ -95,6 +95,9 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 
     DataDictionarySetOBCStateU8(GSD, OBC_STATE_UNDEFINED);
 
+    //Allocate memory in data dict
+
+
     return Res;
 }
 
@@ -1684,14 +1687,14 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD, U8 objectCount){
 
     printf("File size on open: %ld\n", st.st_size);
 
-    lseek(fd, (sizeof (MONRType) * objectCount) - 1, SEEK_SET);
+    lseek(fd, (sizeof (MONRType)) - 1, SEEK_SET);
     write(fd, "", 1);
 
     stat(filePath, &st);
     printf("File size after writing: %ld\n", st.st_size);
 
     // Map memory to created file
-    GSD->MonrMessages = (MONRType *) mmap(NULL, (sizeof (MONRType) * objectCount), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    GSD->MonrMessages = (MONRType *) mmap(NULL, (sizeof (MONRType)), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
 
     LogPrint("Initing");
@@ -1713,7 +1716,6 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, U8 id) {
     ReadWriteAccess_t Res;
     Res = WRITE_OK;
     pthread_mutex_lock(&MONRMutex);
-
     //GSD->MonrMessages[id].HeadingU16 = MONR->HeadingU16;
 
     GSD->MonrMessages[id] = *MONR;
@@ -1736,16 +1738,7 @@ ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType *MONR, U8 id) {
     int fd;
 
     pthread_mutex_lock(&MONRMutex);
-    sprintf(filePath, "%stest%d.mem", SHARED_MEMORY_PATH, 5);
-    fd = open(filePath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    stat(filePath, &st);
-
-    // Map memory to created file
-    GSD->MonrMessages = (MONRType *) mmap(NULL, sizeof (MONRType), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-
     *MONR = GSD->MonrMessages[id];
-    //GSD->memory = (char *) mmap(NULL, 6, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     LogPrint("Getting heading: %d for object[%d]", MONR->HeadingU16, id);
     pthread_mutex_unlock(&MONRMutex);
     return READ_OK;
@@ -1781,6 +1774,7 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U8 *numberOf
     Res = WRITE_OK;
     pthread_mutex_lock(&numberOfObjectsMutex);
     GSD->numberOfObjects = *numberOfObjects;
+    DataDictionaryInitMONR(GSD, *numberOfObjects);
     pthread_mutex_unlock(&numberOfObjectsMutex);
     return Res;
 }

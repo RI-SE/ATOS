@@ -489,7 +489,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                     //Store MONR in GSD
                     DataDictionarySetMONR(GSD, &MONRData, iIndex);
 
-                    DataDictionaryGetMONR(GSD, &MONRData, iIndex);
 
                     //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
 
@@ -786,6 +785,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
                     //OSEMSentU8 = 0;
                     STRTSentU8 = 0;
+
+                    DataDictionaryInitMONR(GSD, 2);
+
                 }
                 else {
                     LogMessage(LOG_LEVEL_INFO,
@@ -794,8 +796,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                     iCommSend(COMM_FAILURE, pcSendBuffer, sizeof (iCommand));
                 }
 
-                //Allocate memory in data dict
-                DataDictionaryInitMONR(GSD, nbr_objects);
 
             }
             else if (iCommand == COMM_ACCM && vGetState(GSD) == OBC_STATE_CONNECTED) {

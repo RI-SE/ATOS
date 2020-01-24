@@ -565,13 +565,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             break;
         case COMM_MONR:
             // TODO: Decode
-            /*if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
+            if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
                 UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t) bytesReceived, &monrData, 0);
                 SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData, 0);
                 UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
                                 RVSSMessageLengthU32, 0);
-            }*/
-            DataDictionaryGetMONR(GSD, &monrData.MONR, 0);
+            }
 
             SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData, 0);
             UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
@@ -792,6 +791,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             }
             break;
         case InitializeScenario_0:
+            DataDictionaryInitMONR(GSD, 2);
             if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_IDLE) {
                 if (iCommSend(COMM_INIT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
                     LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending INIT command");
