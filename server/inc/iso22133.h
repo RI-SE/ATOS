@@ -36,6 +36,26 @@ typedef struct
 } FooterType; //2 bytes
 
 
+
+//! Predefined integer values with special meaning
+#define LATITUDE_UNAVAILABLE_VALUE 900000000001
+#define LATITUDE_ONE_DEGREE_VALUE 10000000000
+#define LONGITUDE_UNAVAILABLE_VALUE 1800000000001
+#define LONGITUDE_ONE_DEGREE_VALUE 10000000000
+#define ALTITUDE_UNAVAILABLE_VALUE 800001
+#define ALTITUDE_ONE_METER_VALUE 100
+#define DATE_UNAVAILABLE_VALUE 0
+#define GPS_WEEK_UNAVAILABLE_VALUE 10001
+#define GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE 2419200000
+#define MAX_WAY_DEVIATION_UNAVAILABLE_VALUE 65535
+#define MAX_WAY_DEVIATION_ONE_METER_VALUE 1000
+#define MAX_LATERAL_DEVIATION_UNAVAILABLE_VALUE 65535
+#define MAX_LATERAL_DEVIATION_ONE_METER_VALUE 1000
+#define MIN_POSITIONING_ACCURACY_NOT_REQUIRED_VALUE 0
+#define MIN_POSITIONING_ACCURACY_ONE_METER_VALUE 1000 // ISO specification unclear on this value
+
+
+
 //! *************************** OSEM
 typedef struct
 {
@@ -67,9 +87,20 @@ typedef struct
   uint16_t MinPosAccuracyValueIdU16;
   uint16_t MinPosAccuracyContentLengthU16;
   uint16_t MinPosAccuracyU16;
+  FooterType footer;
 } OSEMType; //85 bytes
 
 //! OSEM value IDs
+#define VALUE_ID_OSEM_LATITUDE 0x0020
+#define VALUE_ID_OSEM_LONGITUDE 0x0021
+#define VALUE_ID_OSEM_ALTITUDE 0x0022
+#define VALUE_ID_OSEM_DATE 0x0004
+#define VALUE_ID_OSEM_GPS_WEEK 0x0003
+#define VALUE_ID_OSEM_GPS_QUARTER_MILLISECOND_OF_WEEK 0x0002
+#define VALUE_ID_OSEM_MAX_WAY_DEVIATION 0x0070
+#define VALUE_ID_OSEM_MAX_LATERAL_DEVIATION 0x0072
+#define VALUE_ID_OSEM_MIN_POSITIONING_ACCURACY 0x0074
+
 
 //! *************************** STRT
 typedef struct
@@ -351,6 +382,7 @@ typedef enum {
 ISOMessageReturnValue decodeMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
 ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t startGPSWeek, char * strtDataBuffer,
 						  const size_t bufferLength, const char debug);
+ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);

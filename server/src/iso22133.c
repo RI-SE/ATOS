@@ -1,10 +1,21 @@
 #include "iso22133.h"
 #include "logging.h"
+#include "maestroTime.h"
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <endian.h>
 
 static const uint8_t SupportedProtocolVersions[] = { 2 };
+
+// ************************* Byte swapper definitions for 6 byte values
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define le48toh(x) __uint64_identity (x)
+#define htole48(x) __uint64_identity (x)
+#else
+#define le48toh(x) (__bswap_64(x) >> 16)
+#define htole48(x) (__bswap_64(x) >> 16)
+#endif
 
 // ************************** static function declarations
 static ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t length,
@@ -206,6 +217,154 @@ ISOMessageID getISOMessageType(const char *messageData, const size_t length, con
 }
 
 
+ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_deg, const float * altitude_m, const float * maxWayDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug) {
+
+	const char SizeDifference64bitTo48bit = 2;
+	OSEMType OSEMData;
+	struct timeval currentTime;
+	struct tm * printableTime;
+	char *p = osemDataBuffer;
+	TimeSetToCurrentSystemTime(&currentTime);
+	printableTime = localtime(&currentTime.tv_sec);
+
+	memset(osemDataBuffer, 0, bufferLength);
+
+	// If buffer too small to hold OSEM data, generate an error
+	if (bufferLength < sizeof (OSEMData) - 2* SizeDifference64bitTo48bit) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary OSEM data");
+		return -1;
+	}
+
+	// Build header, and account for the two values which are 48 bit in the message
+	OSEMData.Header = buildISOHeader(MESSAGE_ID_OSEM, sizeof (OSEMData)
+									 - sizeof (OSEMData.Header) - sizeof (OSEMData.footer) - 2*SizeDifference64bitTo48bit, debug);
+
+	// Fill the OSEM struct with relevant values
+	OSEMData.LatitudeValueIdU16 = VALUE_ID_OSEM_LATITUDE;
+	OSEMData.LatitudeContentLengthU16 = sizeof (OSEMData.LatitudeI64) - SizeDifference64bitTo48bit;
+	OSEMData.LatitudeI64 = (latitude_deg == NULL) ?
+				LATITUDE_UNAVAILABLE_VALUE : (int64_t) (*latitude_deg * LATITUDE_ONE_DEGREE_VALUE);
+
+	OSEMData.LongitudeValueIdU16 = VALUE_ID_OSEM_LONGITUDE;
+	OSEMData.LongitudeContentLengthU16 = sizeof (OSEMData.LongitudeI64) - SizeDifference64bitTo48bit;
+	OSEMData.LongitudeI64 = (longitude_deg == NULL) ?
+				LONGITUDE_UNAVAILABLE_VALUE : (int64_t) (*longitude_deg * LONGITUDE_ONE_DEGREE_VALUE);
+
+	OSEMData.AltitudeValueIdU16 = VALUE_ID_OSEM_ALTITUDE;
+	OSEMData.AltitudeContentLengthU16 = sizeof (OSEMData.AltitudeI32);
+	OSEMData.AltitudeI32 = (altitude_m == NULL) ?
+				ALTITUDE_UNAVAILABLE_VALUE : (int32_t) (*altitude_m * ALTITUDE_ONE_METER_VALUE);
+
+	OSEMData.DateValueIdU16 = VALUE_ID_OSEM_DATE;
+	OSEMData.DateContentLengthU16 = sizeof (OSEMData.DateContentLengthU16);
+	OSEMData.DateU32 = (uint32_t) ((printableTime->tm_year + 1900) * 10000 + (printableTime->tm_mon + 1) * 100
+			+ (printableTime->tm_mday));
+
+	OSEMData.GPSWeekValueIdU16 = VALUE_ID_OSEM_GPS_WEEK;
+	OSEMData.GPSWeekContentLengthU16 = sizeof (OSEMData.GPSWeekContentLengthU16);
+	OSEMData.GPSWeekU16 = TimeGetAsGPSweek(&currentTime);
+
+	OSEMData.GPSSOWValueIdU16 = VALUE_ID_OSEM_GPS_QUARTER_MILLISECOND_OF_WEEK;
+	OSEMData.GPSSOWContentLengthU16 = sizeof (OSEMData.GPSQmsOfWeekU32);
+	OSEMData.GPSQmsOfWeekU32 = TimeGetAsGPSqmsOfWeek(&currentTime);
+
+	OSEMData.MaxWayDeviationValueIdU16 = VALUE_ID_OSEM_MAX_WAY_DEVIATION;
+	OSEMData.MaxWayDeviationContentLengthU16 = sizeof (OSEMData.MaxWayDeviationU16);
+	OSEMData.MaxWayDeviationU16 = (maxWayDeviation_m == NULL) ?
+				MAX_WAY_DEVIATION_UNAVAILABLE_VALUE : (uint16_t) (*maxWayDeviation_m * MAX_WAY_DEVIATION_ONE_METER_VALUE);
+
+	OSEMData.MaxLateralDeviationValueIdU16 = VALUE_ID_OSEM_MAX_LATERAL_DEVIATION;
+	OSEMData.MaxLateralDeviationContentLengthU16 = sizeof (OSEMData.MaxLateralDeviationU16);
+	OSEMData.MaxLateralDeviationU16 = (maxLateralDeviation_m == NULL) ?
+				MAX_LATERAL_DEVIATION_UNAVAILABLE_VALUE : (uint16_t) (*maxLateralDeviation_m * MAX_LATERAL_DEVIATION_ONE_METER_VALUE);
+
+	OSEMData.MinPosAccuracyValueIdU16 = VALUE_ID_OSEM_MIN_POSITIONING_ACCURACY;
+	OSEMData.MinPosAccuracyContentLengthU16 = sizeof (OSEMData.MinPosAccuracyU16);
+	OSEMData.MinPosAccuracyU16 = (minimumPositioningAccuracy_m == NULL) ?
+				MIN_POSITIONING_ACCURACY_NOT_REQUIRED_VALUE : (uint16_t) (*minimumPositioningAccuracy_m * MIN_POSITIONING_ACCURACY_ONE_METER_VALUE);
+
+	if (debug) {
+		LogPrint("OSEM message:\n\tLatitude value ID: 0x%x\n\tLatitude content length: %u\n\tLatitude: %ld [100 nanodegrees]\n\t"
+				 "Longitude value ID: 0x%x\n\tLongitude content length: %u\n\tLongitude: %ld [100 nanodegrees]\n\t"
+				 "Altitude value ID: 0x%x\n\tAltitude content length: %u\n\tAltitude: %d [cm]"
+				 "Date value ID: 0x%x\n\tDate content length: %u\n\tDate: %u\n\t"
+				 "GPS week value ID: 0x%x\n\tGPS week content length: %u\n\tGPS week: %u\n\t"
+				 "GPS second of week value ID: 0x%x\n\tGPS second of week content length: %u\n\tGPS second of week: %u [¼ ms]\n\t"
+				 "Max way deviation value ID: 0x%x\n\tMax way deviation content length: %u\n\tMax way deviation: %u\n\t"
+				 "Max lateral deviation value ID: 0x%x\n\tMax lateral deviation content length: %u\n\t"
+				 "Min positioning accuracy value ID: 0x%x\n\tMin positioning accuracy content length: %u\n\tMin positioning accuracy: %u",
+				 OSEMData.LatitudeValueIdU16, OSEMData.LatitudeContentLengthU16, OSEMData.LatitudeI64,
+				 OSEMData.LongitudeValueIdU16, OSEMData.LongitudeContentLengthU16, OSEMData.LongitudeI64,
+				 OSEMData.AltitudeValueIdU16, OSEMData.AltitudeContentLengthU16, OSEMData.AltitudeI32,
+				 OSEMData.DateValueIdU16, OSEMData.DateContentLengthU16, OSEMData.DateU32,
+				 OSEMData.GPSWeekValueIdU16, OSEMData.GPSWeekContentLengthU16, OSEMData.GPSWeekU16,
+				 OSEMData.GPSSOWValueIdU16, OSEMData.GPSSOWContentLengthU16, OSEMData.GPSQmsOfWeekU32,
+				 OSEMData.MaxWayDeviationValueIdU16, OSEMData.MaxWayDeviationContentLengthU16, OSEMData.MaxWayDeviationU16,
+				 OSEMData.MaxLateralDeviationValueIdU16, OSEMData.MaxLateralDeviationContentLengthU16, OSEMData.MaxLateralDeviationU16,
+				 OSEMData.MinPosAccuracyValueIdU16, OSEMData.MinPosAccuracyContentLengthU16, OSEMData.MinPosAccuracyU16);
+	}
+
+	// Switch endianness to little endian for all fields
+	OSEMData.LatitudeValueIdU16 = htole16(OSEMData.LatitudeValueIdU16);
+	OSEMData.LatitudeContentLengthU16 = htole16(OSEMData.LatitudeContentLengthU16);
+	OSEMData.LatitudeI64 = (int64_t) htole48(OSEMData.LatitudeI64);
+	OSEMData.LongitudeValueIdU16 = htole16(OSEMData.LongitudeValueIdU16);
+	OSEMData.LongitudeContentLengthU16 = htole16(OSEMData.LongitudeContentLengthU16);
+	OSEMData.LongitudeI64 = (int64_t) htole48(OSEMData.LongitudeI64);
+	OSEMData.AltitudeValueIdU16 = htole16(OSEMData.AltitudeValueIdU16);
+	OSEMData.AltitudeContentLengthU16 = htole16(OSEMData.AltitudeContentLengthU16);
+	OSEMData.AltitudeI32 = (int32_t) htole32(OSEMData.AltitudeI32);
+	OSEMData.DateValueIdU16 = htole16(OSEMData.DateValueIdU16);
+	OSEMData.DateContentLengthU16 = htole16(OSEMData.DateContentLengthU16);
+	OSEMData.DateU32 = htole32(OSEMData.DateU32);
+	OSEMData.GPSWeekValueIdU16 = htole16(OSEMData.GPSWeekValueIdU16);
+	OSEMData.GPSWeekContentLengthU16 = htole16(OSEMData.GPSWeekContentLengthU16);
+	OSEMData.GPSWeekU16 = htole16(OSEMData.GPSWeekU16);
+	OSEMData.GPSSOWValueIdU16 = htole16(OSEMData.GPSSOWValueIdU16);
+	OSEMData.GPSSOWContentLengthU16 = htole16(OSEMData.GPSSOWContentLengthU16);
+	OSEMData.GPSQmsOfWeekU32 = htole32(OSEMData.GPSQmsOfWeekU32);
+	OSEMData.MaxWayDeviationValueIdU16 = htole16(OSEMData.MaxWayDeviationValueIdU16);
+	OSEMData.MaxWayDeviationContentLengthU16 = htole16(OSEMData.MaxWayDeviationContentLengthU16);
+	OSEMData.MaxWayDeviationU16 = htole16(OSEMData.MaxWayDeviationU16);
+	OSEMData.MaxLateralDeviationValueIdU16 = htole16(OSEMData.MaxLateralDeviationValueIdU16);
+	OSEMData.MaxLateralDeviationContentLengthU16 = htole16(OSEMData.MaxLateralDeviationContentLengthU16);
+	OSEMData.MaxLateralDeviationU16 = htole16(OSEMData.MaxLateralDeviationU16);
+	OSEMData.MinPosAccuracyValueIdU16 = htole16(OSEMData.MinPosAccuracyValueIdU16);
+	OSEMData.MinPosAccuracyContentLengthU16 = htole16(OSEMData.MinPosAccuracyContentLengthU16);
+	OSEMData.MinPosAccuracyU16 = htole16(OSEMData.MinPosAccuracyU16);
+
+
+	// Copy data from OSEM struct into the buffer
+	// Must be done before constructing the footer due to the two 48bit size anomalies
+	memcpy(p, &OSEMData.Header, sizeof (OSEMData.Header));
+	p += sizeof (OSEMData.Header);
+
+	// Special handling of 48 bit value
+	memcpy(p, &OSEMData.LatitudeValueIdU16, sizeof (OSEMData.LatitudeValueIdU16) + sizeof (OSEMData.LatitudeContentLengthU16));
+	p += sizeof (OSEMData.LatitudeValueIdU16) + sizeof (OSEMData.LatitudeContentLengthU16);
+	memcpy(p, &OSEMData.LatitudeI64, sizeof (OSEMData.LatitudeI64) - SizeDifference64bitTo48bit);
+	p += sizeof (OSEMData.LatitudeI64) - SizeDifference64bitTo48bit;
+
+	// Special handling of 48 bit value
+	memcpy(p, &OSEMData.LongitudeValueIdU16, sizeof (OSEMData.LongitudeValueIdU16) + sizeof (OSEMData.LongitudeContentLengthU16));
+	p += sizeof (OSEMData.LongitudeValueIdU16) + sizeof (OSEMData.LongitudeContentLengthU16);
+	memcpy(p, &OSEMData.LongitudeI64, sizeof (OSEMData.LongitudeI64) - SizeDifference64bitTo48bit);
+	p += sizeof (OSEMData.LongitudeI64) - SizeDifference64bitTo48bit;
+
+	// Copy rest of struct (excluding footer) directly into buffer since no more byte anomalies remain
+	memcpy(p, &OSEMData.AltitudeI32, sizeof (OSEMData) - sizeof (OSEMData.footer)
+		   - (size_t) (p - osemDataBuffer + 2*SizeDifference64bitTo48bit));
+	p += sizeof (OSEMData) - sizeof (OSEMData.footer) - (size_t) (p - osemDataBuffer + 2*SizeDifference64bitTo48bit);
+
+	// Build footer
+	OSEMData.footer = buildISOFooter(osemDataBuffer, sizeof (OSEMType) - 2*SizeDifference64bitTo48bit, debug);
+	memcpy(p, &OSEMData.footer, sizeof (OSEMData.footer));
+
+	return sizeof (OSEMType) - 2*SizeDifference64bitTo48bit;
+}
+
+
+
 /*!
  * \brief encodeSTRTMessage Constructs an ISO STRT message based on start time parameters
  * \param startTimeGPSqmsOW Quarter milliseconds of week when recipient of message shall start
@@ -247,7 +406,7 @@ ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t start
 
 	if (debug) {
 		LogPrint("STRT message:\n\tGPS second of week value ID: 0x%x\n\t"
-				 "GPS second of week content length: %u\n\tGPS second of week: %u qms\n\t"
+				 "GPS second of week content length: %u\n\tGPS second of week: %u [¼ ms]\n\t"
 				 "GPS week value ID: 0x%x\n\tGPS week content length: %u\n\t"
 				 "GPS week: %u", STRTData.StartTimeValueIdU16, STRTData.StartTimeContentLengthU16,
 				 STRTData.StartTimeU32, STRTData.GPSWeekValueIdU16, STRTData.GPSWeekContentLengthU16,
