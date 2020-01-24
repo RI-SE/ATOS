@@ -413,7 +413,8 @@ ssize_t encodeOSEMMessage(const double *latitude_deg, const double *longitude_de
 }
 
 
-ssize_t encodeOSTMMessage(const ObjectCommandType command, char * ostmDataBuffer, const size_t bufferLength, const char debug) {
+ssize_t encodeOSTMMessage(const ObjectCommandType command, char *ostmDataBuffer, const size_t bufferLength,
+						  const char debug) {
 
 	OSTMType OSTMData;
 
@@ -426,7 +427,9 @@ ssize_t encodeOSTMMessage(const ObjectCommandType command, char * ostmDataBuffer
 	}
 
 	// Check vs allowed commands
-	if (!(command == OBJECT_COMMAND_ARM || command == OBJECT_COMMAND_DISARM || command == OBJECT_COMMAND_REMOTE_CONTROL)) {
+	if (!
+		(command == OBJECT_COMMAND_ARM || command == OBJECT_COMMAND_DISARM
+		 || command == OBJECT_COMMAND_REMOTE_CONTROL)) {
 		LogMessage(LOG_LEVEL_ERROR, "OSTM does not support command %u", (uint8_t) command);
 		return -1;
 	}
@@ -479,8 +482,7 @@ ssize_t encodeSTRTMessage(const struct timeval *timeOfStart, char *strtDataBuffe
 		return -1;
 	}
 
-	STRTData.header =
-		buildISOHeader(MESSAGE_ID_STRT, sizeof (STRTType), debug);
+	STRTData.header = buildISOHeader(MESSAGE_ID_STRT, sizeof (STRTType), debug);
 
 	// Fill contents
 	STRTData.StartTimeValueIdU16 = VALUE_ID_STRT_GPS_QMS_OF_WEEK;
