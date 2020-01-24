@@ -310,17 +310,6 @@ typedef struct
 
 typedef struct
 {
-  HeaderType Header;
-  U16 HeabStructValueIdU16;
-  U16 HeabStructContentLengthU16;
-  U32 GPSQmsOfWeekU32;
-  U8 CCStatusU8;
-} HEABType; //16 bytes
-
-
-
-typedef struct
-{
     MONRType MONR;
     in_addr_t ClientIP;
 } MonitorDataType;
