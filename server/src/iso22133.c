@@ -412,7 +412,14 @@ ssize_t encodeOSEMMessage(const double *latitude_deg, const double *longitude_de
 	return sizeof (OSEMType) - 2 * SizeDifference64bitTo48bit;
 }
 
-
+/*!
+ * \brief encodeOSTMMessage Constructs an ISO OSTM message based on specified command
+ * \param command Command to send to object according to ::ObjectCommandType
+ * \param ostmDataBuffer Data buffer to which OSTM is to be written
+ * \param bufferLength Length of data buffer to which OSTM is to be written
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes written to buffer, or -1 in case of error
+ */
 ssize_t encodeOSTMMessage(const ObjectCommandType command, char *ostmDataBuffer, const size_t bufferLength,
 						  const char debug) {
 
