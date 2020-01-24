@@ -122,7 +122,7 @@ ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, OBCState_t OBCState)
 OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD);
 
 ReadWriteAccess_t DataDictionaryFreeMONR(GSDType *GSD);
-ReadWriteAccess_t DataDictionaryInitMONR(GSDType *GSD, U8 objectCount);
+ReadWriteAccess_t DataDictionaryInitMONR(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetMONR(GSDType *GSD, MONRType * MONR, U8 index);
 ReadWriteAccess_t DataDictionaryGetMONR(GSDType *GSD, MONRType * MONR, U8 index);
 

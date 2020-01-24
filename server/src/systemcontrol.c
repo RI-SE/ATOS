@@ -791,7 +791,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             }
             break;
         case InitializeScenario_0:
-            DataDictionaryInitMONR(GSD, 2);
             if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_IDLE) {
                 if (iCommSend(COMM_INIT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
                     LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending INIT command");
@@ -801,6 +800,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                 bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeScenario:",
                                                  ControlResponseBuffer, 0, &ClientSocket, 0);
+                DataDictionaryInitMONR(GSD);
+
                 SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
             }
             else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_INITIALIZED) {
