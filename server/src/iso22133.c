@@ -414,19 +414,13 @@ ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t start
 	STRTData.header =
 		buildISOHeader(MESSAGE_ID_STRT, sizeof (STRTType) - sizeof (HeaderType) - sizeof (FooterType), debug);
 
-	// Fill contents, ensuring to swap from host endianness to little endian
+	// Fill contents
 	STRTData.StartTimeValueIdU16 = VALUE_ID_STRT_GPS_QMS_OF_WEEK;
-	STRTData.StartTimeValueIdU16 = htole16(STRTData.StartTimeValueIdU16);
 	STRTData.StartTimeContentLengthU16 = sizeof (STRTData.StartTimeU32);
-	STRTData.StartTimeContentLengthU16 = htole16(STRTData.StartTimeContentLengthU16);
 	STRTData.StartTimeU32 = startTimeGPSqmsOW;
-	STRTData.StartTimeU32 = htole32(STRTData.StartTimeU32);
 	STRTData.GPSWeekValueID = VALUE_ID_STRT_GPS_WEEK;
-	STRTData.GPSWeekValueID = htole16(STRTData.GPSWeekValueID);
 	STRTData.GPSWeekContentLength = sizeof (STRTData.GPSWeek);
-	STRTData.GPSWeekContentLength = htole16(STRTData.GPSWeekContentLength);
 	STRTData.GPSWeek = startGPSWeek;
-	STRTData.GPSWeek = htole16(STRTData.GPSWeek);
 
 	if (debug) {
 		LogPrint("STRT message:\n\tGPS second of week value ID: 0x%x\n\t"
@@ -437,6 +431,15 @@ ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t start
 				 STRTData.GPSWeek);
 	}
 
+	// Swap from host endianness to little endian
+	STRTData.StartTimeValueIdU16 = htole16(STRTData.StartTimeValueIdU16);
+	STRTData.StartTimeContentLengthU16 = htole16(STRTData.StartTimeContentLengthU16);
+	STRTData.StartTimeU32 = htole32(STRTData.StartTimeU32);
+	STRTData.GPSWeekValueID = htole16(STRTData.GPSWeekValueID);
+	STRTData.GPSWeekContentLength = htole16(STRTData.GPSWeekContentLength);
+	STRTData.GPSWeek = htole16(STRTData.GPSWeek);
+
+	// Construct footer
 	STRTData.footer = buildISOFooter(&STRTData, sizeof (STRTType), debug);
 
 	memcpy(strtDataBuffer, &STRTData, sizeof (STRTType));
