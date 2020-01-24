@@ -846,22 +846,22 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 										 (!(1 & DisconnectU8)) * 3);
 								break;
 							case EADDRINUSE:
-                                util_error("[ObjectControl] Local address/port already in use");
+								util_error("[ObjectControl] Local address/port already in use");
 								break;
 							case EALREADY:
-                                util_error("[ObjectControl] Previous connection attempt still in progress");
+								util_error("[ObjectControl] Previous connection attempt still in progress");
 								break;
 							case EISCONN:
-                                util_error("[ObjectControl] Socket is already connected");
+								util_error("[ObjectControl] Socket is already connected");
 								break;
 							case ENETUNREACH:
-                                util_error("[ObjectControl] Network unreachable");
+								util_error("[ObjectControl] Network unreachable");
 								break;
 							case ETIMEDOUT:
-                                util_error("[ObjectControl] Connection timed out");
+								util_error("[ObjectControl] Connection timed out");
 								break;
 							default:
-                                util_error("ERR: Failed to connect to control socket");
+								util_error("ERR: Failed to connect to control socket");
 								break;
 							}
 
@@ -877,7 +877,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 						}
 
-                    } while (iExit == 0 && iResult < 0 && DisconnectU8 == 0);
+					} while (iExit == 0 && iResult < 0 && DisconnectU8 == 0);
 
 					if (iResult >= 0) {
 						/* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates) */
