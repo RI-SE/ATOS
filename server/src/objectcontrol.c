@@ -622,8 +622,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				TimeSetToUTCms(&startTime, (int64_t) strtoul(MiscPtr, &MiscPtr, 10));
 				TimeSetToUTCms(&startDelay, (int64_t) strtoul(MiscPtr + 1, NULL, 10));
 				timeradd(&startTime, &startDelay, &startTime);
-				MessageLength =
-					(int)encodeSTRTMessage(startTime, MessageBuffer, sizeof (MessageBuffer), 0);
+				MessageLength = (int)encodeSTRTMessage(startTime, MessageBuffer, sizeof (MessageBuffer), 0);
 
 				ASPData.MTSPU32 = 0;
 				ASPData.TimeToSyncPointDbl = 0;
@@ -753,8 +752,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
 
-					MessageLength = encodeOSEMMessage(&OriginPosition.Latitude, &OriginPosition.Longitude, &OriginPosition.Altitude,
-													  NULL, NULL, NULL, MessageBuffer, sizeof (MessageBuffer), 0);
+					MessageLength =
+						encodeOSEMMessage(&OriginPosition.Latitude, &OriginPosition.Longitude,
+										  &OriginPosition.Altitude, NULL, NULL, NULL, MessageBuffer,
+										  sizeof (MessageBuffer), 0);
 					if (MessageLength < 0) {
 						util_error("OSEM encoding error");
 					}
