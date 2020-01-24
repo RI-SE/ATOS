@@ -59,34 +59,34 @@ typedef struct
 //! *************************** OSEM
 typedef struct
 {
-  HeaderType Header;
-  uint16_t LatitudeValueIdU16;
-  uint16_t LatitudeContentLengthU16;
-  int64_t LatitudeI64;
-  uint16_t LongitudeValueIdU16;
-  uint16_t LongitudeContentLengthU16;
-  int64_t LongitudeI64;
-  uint16_t AltitudeValueIdU16;
-  uint16_t AltitudeContentLengthU16;
-  int32_t AltitudeI32;
-  uint16_t DateValueIdU16;
-  uint16_t DateContentLengthU16;
-  uint32_t DateU32;
-  uint16_t GPSWeekValueIdU16;
-  uint16_t GPSWeekContentLengthU16;
-  uint16_t GPSWeekU16;
-  uint16_t GPSSOWValueIdU16;
-  uint16_t GPSSOWContentLengthU16;
-  uint32_t GPSQmsOfWeekU32;
-  uint16_t MaxWayDeviationValueIdU16;
-  uint16_t MaxWayDeviationContentLengthU16;
-  uint16_t MaxWayDeviationU16;
-  uint16_t MaxLateralDeviationValueIdU16;
-  uint16_t MaxLateralDeviationContentLengthU16;
-  uint16_t MaxLateralDeviationU16;
-  uint16_t MinPosAccuracyValueIdU16;
-  uint16_t MinPosAccuracyContentLengthU16;
-  uint16_t MinPosAccuracyU16;
+  HeaderType header;
+  uint16_t latitudeValueID;
+  uint16_t latitudeContentLength;
+  int64_t latitude;
+  uint16_t longitudeValueID;
+  uint16_t longitudeContentLength;
+  int64_t longitude;
+  uint16_t altitudeValueID;
+  uint16_t altitudeContentLength;
+  int32_t altitude;
+  uint16_t dateValueID;
+  uint16_t dateContentLength;
+  uint32_t date;
+  uint16_t GPSWeekValueID;
+  uint16_t GPSWeekContentLength;
+  uint16_t GPSWeek;
+  uint16_t GPSQmsOfWeekValueID;
+  uint16_t GPSQmsOfWeekContentLength;
+  uint32_t GPSQmsOfWeek;
+  uint16_t maxWayDeviationValueID;
+  uint16_t maxWayDeviationContentLength;
+  uint16_t maxWayDeviation;
+  uint16_t maxLateralDeviationValueID;
+  uint16_t maxLateralDeviationContentLength;
+  uint16_t maxLateralDeviation;
+  uint16_t minPosAccuracyValueID;
+  uint16_t minPosAccuracyContentLength;
+  uint16_t minPosAccuracy;
   FooterType footer;
 } OSEMType; //85 bytes
 
@@ -109,9 +109,9 @@ typedef struct
 	uint16_t StartTimeValueIdU16;
 	uint16_t StartTimeContentLengthU16;
 	uint32_t StartTimeU32;
-	uint16_t GPSWeekValueIdU16;
-	uint16_t GPSWeekContentLengthU16;
-	uint16_t GPSWeekU16;
+	uint16_t GPSWeekValueID;
+	uint16_t GPSWeekContentLength;
+	uint16_t GPSWeek;
 	FooterType footer;
 } STRTType; //27 bytes
 
