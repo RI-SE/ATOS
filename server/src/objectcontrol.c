@@ -265,7 +265,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 pcSendBuffer[MBUS_MAX_DATALEN];
 	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
 	HeaderType HeaderData;
-	OSEMType OSEMData;
 	OSTMType OSTMData;
 	HEABType HEABData;
 	MONRType MONRData;
