@@ -187,6 +187,7 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
 I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
                                              U8 Debug);
+static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
 
@@ -354,7 +355,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             PreviousSystemControlCommand = SystemControlCommand;
             bzero(pcBuffer, IPC_BUFFER_SIZE);
 
-            ClientResult = recv(ClientSocket, pcBuffer, IPC_BUFFER_SIZE, MSG_DONTWAIT);
+			ClientResult = SystemControlReceiveUserControlData(ClientSocket, pcBuffer, sizeof (pcBuffer));
 
             if (ClientResult <= -1) {
                 if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -1115,7 +1116,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
         }
 
         sleep_time = (iCommand == COMM_INV
-                      && server_state != SERVER_STATE_INWORK) ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
+					  && server_state != SERVER_STATE_INWORK
+					  && ClientResult < 0) ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
         nanosleep(&sleep_time, &ref_time);
     }
 
@@ -1171,6 +1173,61 @@ SystemControlCommand_t SystemControlFindCommand(const char *CommandBuffer,
     }
     return nocommand;
 }
+
+/*! 
+ * \brief SystemControlReceiveUserControlData Performs similarly to the recv function (see manpage for recv) except that it
+ *        only fills the input data buffer with messages ending with ";\r\n\r\n" and saves any remaining data in a local
+ *        buffer awaiting the next call to this function.
+ * \param socket Socket on which MSCP HTTP communication is expected to arrive
+ * \param dataBuffer Data buffer where read data is to be stored
+ * \param dataBufferLength Maximum number of bytes possible to store in the data buffer
+ * \return Number of bytes printed to dataBuffer where 0 means that the connection has been severed. A return value of -1
+ *        constitutes an error with the appropriate errno has been set (see manpage for recv) with the addition of
+ *         - ENOBUFS if the data buffer is too small to hold the received message
+ */
+ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength) {
+	static char recvBuffer[TCP_RECV_BUFFER_SIZE];
+	static size_t bytesInBuffer = 0;
+	const char endOfMessagePattern[] = ";\r\n\r\n";
+	char *endOfMessage = NULL;
+	ssize_t readResult;
+	size_t messageLength = 0;
+
+	readResult = recv(socket, recvBuffer + bytesInBuffer, sizeof (recvBuffer) - bytesInBuffer, MSG_DONTWAIT);
+	if (readResult > 0) {
+		bytesInBuffer += (size_t) readResult;
+	}
+
+	if (bytesInBuffer > 0) {
+		if ((endOfMessage = strstr(recvBuffer, endOfMessagePattern)) != NULL) {
+			endOfMessage += sizeof (endOfMessagePattern) - 1;
+			messageLength = (size_t) (endOfMessage - recvBuffer);
+		}
+		else {
+			messageLength = 0;
+			readResult = -1;
+			errno = EAGAIN;
+			LogMessage(LOG_LEVEL_WARNING, "Part of message received");
+		}
+
+		if (bytesInBuffer >= messageLength) {
+			if (dataBufferLength < messageLength) {
+				LogMessage(LOG_LEVEL_WARNING, "Discarding message too large for data buffer");
+				readResult = -1;
+				errno = ENOBUFS;
+			}
+			else {
+				memcpy(dataBuffer, recvBuffer, messageLength);
+				readResult = (ssize_t) messageLength;
+			}
+			bytesInBuffer -= messageLength;
+			memmove(recvBuffer, recvBuffer + messageLength, bytesInBuffer);
+		}
+	}
+
+	return readResult;
+}
+
 
 void SystemControlSendMONR(C8 * MONRStr, I32 * Sockfd, U8 Debug) {
     int i, n, j, t;
@@ -2111,7 +2168,6 @@ I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * Pack
 
             bzero(RxBuffer, PacketSizeU16);
             ClientStatus = recv(*sockfd, RxBuffer, PacketSizeU16, MSG_WAITALL);
-
 
             if (ClientStatus > 0) {
                 i++;

@@ -40,7 +40,7 @@
 #define REPLY_TIMEOUT_S 3
 
 #define SLEEP_TIME_GPS_CONNECTED_S 0
-#define SLEEP_TIME_GPS_CONNECTED_NS 500000000
+#define SLEEP_TIME_GPS_CONNECTED_NS 5000000	//500000000
 #define SLEEP_TIME_NO_GPS_CONNECTED_S 1
 #define SLEEP_TIME_NO_GPS_CONNECTED_NS 0
 
@@ -51,6 +51,12 @@
 #define FIX_QUALITY_NONE 0
 #define FIX_QUALITY_BASIC 1
 #define FIX_QUALITY_DIFFERENTIAL 2
+
+// Time intervals for sleeping when no message bus message was received and for when one was received
+#define TC_SLEEP_TIME_EMPTY_MQ_S 0
+#define TC_SLEEP_TIME_EMPTY_MQ_NS 10000000
+#define TC_SLEEP_TIME_NONEMPTY_MQ_S 0
+#define TC_SLEEP_TIME_NONEMPTY_MQ_NS 0
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -83,6 +89,9 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
     U16 ServerPortU16;
     I32 SocketfdI32 = -1;
     struct sockaddr_in time_addr;
+	const struct timespec mqEmptyPollPeriod = { TC_SLEEP_TIME_EMPTY_MQ_S, TC_SLEEP_TIME_EMPTY_MQ_NS };
+	const struct timespec mqNonEmptyPollPeriod =
+		{ TC_SLEEP_TIME_NONEMPTY_MQ_S, TC_SLEEP_TIME_NONEMPTY_MQ_NS };
 
     I32 result;
     C8 TimeBuffer[TIME_CONTROL_RECEIVE_BUFFER_SIZE];
@@ -164,7 +173,9 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
     while (!iExit) {
 
         // Ignore any commands received, just empty the bus
-        iCommRecv(&command, busReceiveBuffer, sizeof (busReceiveBuffer), NULL);
+		do {
+			iCommRecv(&command, busReceiveBuffer, sizeof (busReceiveBuffer), NULL);
+		} while (command != COMM_INV);
 
         gettimeofday(&ExecTime, NULL);
         CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
@@ -236,18 +247,10 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             (void)iCommClose();
         }
 
-        if (ReceivedNewData && GPSTime->isGPSenabled) {
-            /* Make call periodic */
-            sleep_time.tv_sec = SLEEP_TIME_GPS_CONNECTED_S;
-            sleep_time.tv_nsec = SLEEP_TIME_GPS_CONNECTED_NS;
-            nanosleep(&sleep_time, &ref_time);
-        }
-        else if (!GPSTime->isGPSenabled) {
-            sleep_time.tv_sec = SLEEP_TIME_NO_GPS_CONNECTED_S;
-            sleep_time.tv_nsec = SLEEP_TIME_NO_GPS_CONNECTED_NS;
-            nanosleep(&sleep_time, &ref_time);
-        }
-    }
+
+		sleep_time = command == COMM_INV ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
+		nanosleep(&sleep_time, &ref_time);
+	}
 
     LogMessage(LOG_LEVEL_INFO, "Time control exiting");
 }
