@@ -620,8 +620,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				TimeSetToUTCms(&startDelay, (int64_t) strtoul(MiscPtr + 1, NULL, 10));
 				timeradd(&startTime, &startDelay, &startTime);
 				MessageLength =
-					(int)encodeSTRTMessage(TimeGetAsGPSqmsOfWeek(&startTime), TimeGetAsGPSweek(&startTime),
-										   MessageBuffer, sizeof (MessageBuffer), 0);
+					(int)encodeSTRTMessage(startTime, MessageBuffer, sizeof (MessageBuffer), 0);
 
 				ASPData.MTSPU32 = 0;
 				ASPData.TimeToSyncPointDbl = 0;
