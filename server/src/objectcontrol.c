@@ -155,8 +155,6 @@ static I32 vCheckRemoteDisconnected(int *sockfd);
 static void vCreateSafetyChannel(const char *name, const uint32_t port, int *sockfd,
 								 struct sockaddr_in *addr);
 static void vCloseSafetyChannel(int *sockfd);
-I32 ObjectControlBuildOSEMMessage(C8 * MessageBuffer, OSEMType * OSEMData, TimeType * GPSTime, C8 * Latitude,
-								  C8 * Longitude, C8 * Altitude, U8 debug);
 static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects);
 static void signalHandler(int signo);
@@ -1191,98 +1189,6 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 
 	return ObjectCount * sizeof (Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH;	//Total number of bytes
 
-}
-
-
-I32 ObjectControlBuildOSEMMessage(C8 * MessageBuffer, OSEMType * OSEMData, TimeType * GPSTime, C8 * Latitude,
-								  C8 * Longitude, C8 * Altitude, U8 debug) {
-	I32 MessageIndex = 0, i = 0;
-	dbl Data;
-	U16 Crc = 0;
-	C8 *p;
-	U32 ISODate = 0;
-
-	bzero(MessageBuffer, COMMAND_OSEM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
-
-	OSEMData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	OSEMData->Header.TransmitterIdU8 = 0;
-	OSEMData->Header.MessageCounterU8 = 0;
-	OSEMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	OSEMData->Header.MessageIdU16 = COMMAND_OSEM_CODE;
-	OSEMData->Header.MessageLengthU32 = sizeof (OSEMType) - sizeof (HeaderType) - 4;
-	OSEMData->LatitudeValueIdU16 = VALUE_ID_LATITUDE;
-	OSEMData->LatitudeContentLengthU16 = 6;
-	OSEMData->LatitudeI64 = (I64) ((atof((const char *)Latitude) * 1e10));
-	OSEMData->LongitudeValueIdU16 = VALUE_ID_LONGITUDE;
-	OSEMData->LongitudeContentLengthU16 = 6;
-	OSEMData->LongitudeI64 = (I64) ((atof((const char *)Longitude) * 1e10));
-	OSEMData->AltitudeValueIdU16 = VALUE_ID_ALTITUDE;
-	OSEMData->AltitudeContentLengthU16 = 4;
-	OSEMData->AltitudeI32 = (I32) (atof((char *)Altitude) * 1e2);
-	OSEMData->DateValueIdU16 = VALUE_ID_DATE_ISO8601;
-	OSEMData->DateContentLengthU16 = 4;
-	OSEMData->DateU32 =
-		((U32) GPSTime->YearU16 * 10000) + ((U32) GPSTime->MonthU8 * 100) + ((U32) GPSTime->DayU8);
-	OSEMData->GPSWeekValueIdU16 = VALUE_ID_GPS_WEEK;
-	OSEMData->GPSWeekContentLengthU16 = 2;
-	OSEMData->GPSWeekU16 = GPSTime->GPSWeekU16;
-	OSEMData->GPSSOWValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
-	OSEMData->GPSSOWContentLengthU16 = 4;
-	OSEMData->GPSQmsOfWeekU32 =
-		((GPSTime->GPSSecondsOfWeekU32 * 1000 + GPSTime->MillisecondU16) << 2) + GPSTime->MicroSecondU16;
-	OSEMData->MaxWayDeviationValueIdU16 = VALUE_ID_MAX_WAY_DEVIATION;
-	OSEMData->MaxWayDeviationContentLengthU16 = 2;
-	OSEMData->MaxWayDeviationU16 = 65535;
-	OSEMData->MaxLateralDeviationValueIdU16 = VALUE_ID_MAX_LATERAL_DEVIATION;
-	OSEMData->MaxLateralDeviationContentLengthU16 = 2;
-	OSEMData->MaxLateralDeviationU16 = 65535;
-	OSEMData->MinPosAccuracyContentLengthU16 = 2;
-	OSEMData->MinPosAccuracyValueIdU16 = VALUE_ID_MIN_POS_ACCURACY;
-	OSEMData->MinPosAccuracyU16 = 65535;
-
-	if (!GPSTime->isGPSenabled) {
-		OSEMData->DateU32 = UtilgetIntDateFromMS(UtilgetCurrentUTCtimeMS());
-		UtilgetCurrentGPStime(&OSEMData->GPSWeekU16, &OSEMData->GPSQmsOfWeekU32);
-	}
-
-	p = (C8 *) OSEMData;
-	for (i = 0; i < 21; i++)
-		*(MessageBuffer + i) = *p++;
-	*p++;
-	*p++;
-	for (; i < 31; i++)
-		*(MessageBuffer + i) = *p++;
-	*p++;
-	*p++;
-	for (; i < sizeof (OSEMType) - 4; i++)
-		*(MessageBuffer + i) = *p++;
-
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (OSEMType) - 4);
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc);
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-
-	MessageIndex = i;
-
-	if (debug) {
-		// TODO: Change to log printout when byte thingy has been implemented
-		printf("OSEM total length = %d bytes (header+message+footer)\n",
-			   (int)(COMMAND_OSEM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (OSEMType) - 4; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-		printf("Latitude = %ld\n", OSEMData->LatitudeI64);
-		printf("Longitude = %ld\n", OSEMData->LongitudeI64);
-		printf("ISODate = %d\n", OSEMData->DateU32);
-	}
-	return MessageIndex;		//Total number of bytes
 }
 
 int ObjectControlOSEMtoASCII(OSEMType * OSEMData, char *GPSWeek, char *GPSLatitude, char *GPSLongitude,
