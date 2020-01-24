@@ -807,7 +807,6 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
 I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 CommandOption, U8 Debug);
-I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 Debug);
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
