@@ -190,7 +190,9 @@ int main() {
 	}
 
     //Return MQBus to "stack"
-    MQBusDisconnect();
+    (void)iCommClose();
+
+    LogMessage(LOG_LEVEL_INFO, "Visualization exiting...");
 
 	return 0;
 }
