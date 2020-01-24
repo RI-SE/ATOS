@@ -554,7 +554,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_INFO, "Sending ARM");
 				LOG_SEND(LogBuffer, "[ObjectControl] Sending ARM");
 				vSetState(OBC_STATE_ARMED, GSD);
-				MessageLength = encodeOSTMMessage(OBJECT_COMMAND_ARM, MessageBuffer, sizeof (MessageBuffer), 0);
+				MessageLength =
+					encodeOSTMMessage(OBJECT_COMMAND_ARM, MessageBuffer, sizeof (MessageBuffer), 0);
 
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					/*Send OSTM message */
@@ -569,7 +570,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LOG_SEND(LogBuffer, "[ObjectControl] Sending DISARM");
 				vSetState(OBC_STATE_CONNECTED, GSD);
 
-				MessageLength = encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
+				MessageLength =
+					encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
 
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					/*Send OSTM message */
