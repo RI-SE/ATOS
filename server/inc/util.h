@@ -281,15 +281,6 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  U16 StateValueIdU16;
-  U16 StateContentLengthU16;
-  U8 StateU8;
-} OSTMType; //16 bytes
-
-
-typedef struct
-{
-  HeaderType Header;
   U16 ModeValueIdU16;
   U16 ModeContentLengthU16;
   U8 ModeU8;

@@ -75,12 +75,6 @@
 #define COMMAND_DOTM_ROWS_IN_TRANSMISSION  40
 #define COMMAND_DTM_BYTES_IN_ROW  30
 
-#define COMMAND_OSTM_CODE 3
-#define COMMAND_OSTM_NOFV 1
-#define COMMAND_OSTM_MESSAGE_LENGTH sizeof(OSTMType)
-#define COMMAND_OSTM_OPT_SET_ARMED_STATE 2
-#define COMMAND_OSTM_OPT_SET_DISARMED_STATE 3
-
 #define COMMAND_HEAB_CODE 5
 #define COMMAND_HEAB_NOFV 2
 #define COMMAND_HEAB_MESSAGE_LENGTH sizeof(HEABType)
@@ -1184,50 +1178,6 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 
 }
 
-I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 CommandOption, U8 debug) {
-	I32 MessageIndex = 0, i;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, COMMAND_OSTM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
-
-	OSTMData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	OSTMData->Header.TransmitterIdU8 = 0;
-	OSTMData->Header.MessageCounterU8 = 0;
-	OSTMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	OSTMData->Header.MessageIdU16 = COMMAND_OSTM_CODE;
-	OSTMData->Header.MessageLengthU32 = sizeof (OSTMType) - sizeof (HeaderType);
-	OSTMData->StateValueIdU16 = VALUE_ID_STATE_CHANGE_REQUEST;
-	OSTMData->StateContentLengthU16 = sizeof (OSTMData->StateU8);
-	OSTMData->StateU8 = (U8) CommandOption;
-
-	p = (C8 *) OSTMData;
-	for (i = 0; i < sizeof (OSTMType); i++)
-		*(MessageBuffer + i) = *p++;
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (OSTMType));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	*(MessageBuffer + i++) = (U8) (Crc);
-	MessageIndex = i;
-
-	if (debug) {
-		// TODO: Change to log printout when byte thingy has been implemented
-		printf("OSTM total length = %d bytes (header+message+footer)\n",
-			   (int)(COMMAND_OSTM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (OSTMType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-}
 
 
 I32 ObjectControlBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeType * GPSTime, U8 CCStatus,
