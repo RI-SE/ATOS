@@ -54,9 +54,6 @@
 #define OC_SLEEP_TIME_NONEMPTY_MQ_S 0
 #define OC_SLEEP_TIME_NONEMPTY_MQ_NS 0
 
-
-#define TASK_PERIOD_MS 1
-#define HEARTBEAT_TIME_MS 10
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
 #define OBJECT_CONTROL_ABORT_MODE 1
@@ -75,13 +72,6 @@
 #define COMMAND_DOTM_ROWS_IN_TRANSMISSION  40
 #define COMMAND_DTM_BYTES_IN_ROW  30
 
-#define COMMAND_HEAB_CODE 5
-#define COMMAND_HEAB_NOFV 2
-#define COMMAND_HEAB_MESSAGE_LENGTH sizeof(HEABType)
-#define COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING 0
-#define COMMAND_HEAB_OPT_SERVER_STATUS_OK 1
-#define COMMAND_HEAB_OPT_SERVER_STATUS_ABORT 2
-
 #define COMMAND_VOIL_CODE 0xA100
 //#define COMMAND_VOIL_NOFV 2
 #define COMMAND_VOIL_MESSAGE_LENGTH (16 * sizeof(Sim1Type) + sizeof(HeaderType) + 5)
@@ -94,8 +84,6 @@
 
 #define COMMAND_MTSP_CODE 0xA104
 #define COMMAND_MTSP_MESSAGE_LENGTH sizeof(MTSPType)
-
-
 
 #define ASP_MESSAGE_LENGTH sizeof(ASPType)
 
@@ -110,12 +98,6 @@
 
 #define USE_TEMP_LOGFILE 0
 #define TEMP_LOG_FILE "log/temp.log"
-
-
-typedef enum {
-	COMMAND_HEARTBEAT_GO,
-	COMMAND_HEARTBEAT_ABORT
-} hearbeatCommand_t;
 
 
 typedef enum {
@@ -153,8 +135,6 @@ static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects);
 static void signalHandler(int signo);
 
-I32 ObjectControlBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeType * GPSTime, U8 CCStatus,
-								  U8 debug);
 int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, unsigned short Curvature,
 								  unsigned char Mode, char debug);
 I32 ObjectControlBuildSYPMMessage(C8 * MessageBuffer, SYPMType * SYPMData, U32 SyncPoint, U32 StopTime,
@@ -229,7 +209,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	const struct timespec mqNonEmptyPollPeriod =
 		{ OC_SLEEP_TIME_NONEMPTY_MQ_S, OC_SLEEP_TIME_NONEMPTY_MQ_NS };
 	const struct timeval stateReportPeriod = { OC_STATE_REPORT_PERIOD_S, OC_STATE_REPORT_PERIOD_US };
-	struct timeval currentTime, nextStateReportTime;
+	struct timeval currentTime, nextStateReportTime, nextHeartbeatTime;
+	const struct timeval heartbeatPeriod = { 1 / HEAB_FREQUENCY_HZ,
+				(1000000 / HEAB_FREQUENCY_HZ) % 1000000 };
 	U8 iForceObjectToLocalhostU8 = 0;
 
 	FILE *fd;
@@ -259,8 +241,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 pcSendBuffer[MBUS_MAX_DATALEN];
 	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
 	HeaderType HeaderData;
-	OSTMType OSTMData;
-	HEABType HEABData;
 	MONRType MONRData;
 	DOTMType DOTMData;
 	TRAJInfoType TRAJInfoData;
@@ -287,7 +267,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	I32 ASPStepBackCount = 0;
 	char confDirectoryPath[MAX_FILE_PATH];
 
-	U8 ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_BOOTING;
+	ControlCenterStatusType objectControlServerStatus = CONTROL_CENTER_STATUS_INIT;
 
 	vInitializeState(OBC_STATE_IDLE, GSD);
 	U8 uiTimeCycle = 0;
@@ -328,36 +308,29 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	// Initialize timer for sending state
 	TimeSetToCurrentSystemTime(&currentTime);
 	nextStateReportTime = currentTime;
-
-	// Initialize timer for sending state
-	TimeSetToCurrentSystemTime(&currentTime);
-	nextStateReportTime = currentTime;
+	nextHeartbeatTime = currentTime;
 
 	while (!iExit) {
 
 		if (vGetState(GSD) == OBC_STATE_ERROR) {
-			ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
-			MessageLength =
-				ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus,
-											  0);
+			objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
+			MessageLength = encodeHEABMessage(objectControlServerStatus, MessageBuffer, sizeof (MessageBuffer), 0);
 			UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
 							MessageBuffer, MessageLength, 0);
 		}
 
-		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_ARMED
-			|| vGetState(GSD) == OBC_STATE_CONNECTED) {
-			 /*HEAB*/ for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-				if (uiTimeCycle == 0) {
-					//HeartbeatMessageCounter ++;
-					MessageLength =
-						ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime,
-													  ObjectControlServerStatus, 0);
-					//ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 1);
-					UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
-									MessageBuffer, MessageLength, 0);
-				}
-			}
+		// Heartbeat
+		if ((vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_ARMED
+			|| vGetState(GSD) == OBC_STATE_CONNECTED) && timercmp(&currentTime, &nextHeartbeatTime, >)) {
 
+			timeradd(&nextHeartbeatTime, &heartbeatPeriod, &nextHeartbeatTime);
+			MessageLength = encodeHEABMessage(objectControlServerStatus, MessageBuffer, sizeof (MessageBuffer), 0);
+
+			// Transmit heartbeat to all objects
+			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+				UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
+									MessageBuffer, MessageLength, 0);
+			}
 
 			// Check if any object has disconnected - if so, disconnect all objects and return to idle
 			DisconnectU8 = 0;
@@ -447,7 +420,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							LogMessage(LOG_LEVEL_ERROR,
 									   "Fatal communication fault when sending MONR command - entering error state");
 							vSetState(OBC_STATE_ERROR, GSD);
-							ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+							objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 						}
 					}
 
@@ -588,7 +561,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					UtilSendTCPData("[Object Control]", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 				}
 
-				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
+				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
 			}
 			else if (iCommand == COMM_DISARM && vGetState(GSD) == OBC_STATE_ARMED) {
 
@@ -604,7 +577,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									0);
 				}
 
-				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
+				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
 			}
 			else if (iCommand == COMM_STRT && (vGetState(GSD) == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED) */ )	//OBC_STATE_INITIALIZED is temporary!
 			{
@@ -621,7 +594,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SearchStartIndex = -1;
 				ASPData.PrevTimeToSyncPointDbl = 0;
 				OldTimeU32 = CurrentTimeU32;
-				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
+				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
 
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
@@ -648,7 +621,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else if (iCommand == COMM_ABORT && vGetState(GSD) == OBC_STATE_RUNNING) {
 				vSetState(OBC_STATE_CONNECTED, GSD);
-				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;	//Set server to ABORT
+				objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 				LogMessage(LOG_LEVEL_WARNING, "ABORT received");
 				LOG_SEND(LogBuffer, "[ObjectControl] ABORT received.");
 			}
@@ -821,7 +794,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							LogMessage(LOG_LEVEL_ERROR,
 									   "Fatal communication fault when sending OSEM command - entering error state");
 							vSetState(OBC_STATE_ERROR, GSD);
-							ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+							objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 						}
 						UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex],
 										0);
@@ -927,7 +900,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
 
 				/*Set server status */
-				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
+				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
 
 				if (DisconnectU8 == 0) {
 					vSetState(OBC_STATE_CONNECTED, GSD);
@@ -997,11 +970,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			/* Make call periodic */
 			sleep_time = iCommand == COMM_INV ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
 
-			++uiTimeCycle;
-			if (uiTimeCycle >= HEARTBEAT_TIME_MS / TASK_PERIOD_MS) {
-				uiTimeCycle = 0;
-			}
-
 			// Periodically send state to signal aliveness
 			TimeSetToCurrentSystemTime(&currentTime);
 			if (timercmp(&currentTime, &nextStateReportTime, >)) {
@@ -1013,7 +981,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					LogMessage(LOG_LEVEL_ERROR,
 							   "Fatal communication fault when sending OBC_STATE command - entering error state");
 					vSetState(OBC_STATE_ERROR, GSD);
-					ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_ABORT;
+					objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 				}
 			}
 
@@ -1177,61 +1145,6 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 }
 
 
-
-I32 ObjectControlBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeType * GPSTime, U8 CCStatus,
-								  U8 debug) {
-	I32 MessageIndex = 0, i;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, COMMAND_HEAB_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
-
-	HEABData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	HEABData->Header.TransmitterIdU8 = 0;
-	HEABData->Header.MessageCounterU8 = 0;
-	HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	HEABData->Header.MessageIdU16 = COMMAND_HEAB_CODE;
-	HEABData->Header.MessageLengthU32 = sizeof (HEABType) - sizeof (HeaderType);
-	HEABData->HeabStructValueIdU16 = VALUE_ID_HEAB_STRUCT;
-	HEABData->HeabStructContentLengthU16 = sizeof (HEABType) - sizeof (HeaderType)
-		- sizeof (HEABData->HeabStructValueIdU16) - sizeof (HEABData->HeabStructContentLengthU16);
-	HEABData->GPSQmsOfWeekU32 =
-		((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime)) << 2) +
-		GPSTime->MicroSecondU16;
-	HEABData->CCStatusU8 = CCStatus;
-
-	if (!GPSTime->isGPSenabled) {
-		UtilgetCurrentGPStime(NULL, &HEABData->GPSQmsOfWeekU32);
-	}
-
-	p = (C8 *) HEABData;
-	for (i = 0; i < sizeof (HEABType); i++)
-		*(MessageBuffer + i) = *p++;
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (HEABType));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc);
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	MessageIndex = i;
-
-	if (debug) {
-		// TODO: Change to log printout when byte thingy has been implemented
-		printf("HEAB total length = %d bytes (header+message+footer)\n",
-			   (int)(COMMAND_HEAB_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (HEABType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-
-}
 
 
 int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, unsigned short Curvature,
