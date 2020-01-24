@@ -152,7 +152,7 @@ static void vCloseSafetyChannel(int *sockfd);
 static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects);
 static void signalHandler(int signo);
-I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 CommandOption, U8 debug);
+
 I32 ObjectControlBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeType * GPSTime, U8 CCStatus,
 								  U8 debug);
 int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, unsigned short Curvature,
@@ -581,9 +581,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_INFO, "Sending ARM");
 				LOG_SEND(LogBuffer, "[ObjectControl] Sending ARM");
 				vSetState(OBC_STATE_ARMED, GSD);
-				MessageLength =
-					ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData, COMMAND_OSTM_OPT_SET_ARMED_STATE,
-												  0);
+				MessageLength = encodeOSTMMessage(OBJECT_COMMAND_ARM, MessageBuffer, sizeof (MessageBuffer), 0);
+
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					/*Send OSTM message */
 					UtilSendTCPData("[Object Control]", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
@@ -597,9 +596,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LOG_SEND(LogBuffer, "[ObjectControl] Sending DISARM");
 				vSetState(OBC_STATE_CONNECTED, GSD);
 
-				MessageLength =
-					ObjectControlBuildOSTMMessage(MessageBuffer, &OSTMData,
-												  COMMAND_OSTM_OPT_SET_DISARMED_STATE, 0);
+				MessageLength = encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
+
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					/*Send OSTM message */
 					UtilSendTCPData("[" MODULE_NAME "]", MessageBuffer, MessageLength, &socket_fds[iIndex],
