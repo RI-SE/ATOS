@@ -338,6 +338,7 @@ void UtilgetDateTimefromUTCCSVformat(int64_t utc_ms, char *buffer, int size_t) {
 
 	ms = round(tmp_ms * 1000);
 	strftime(buffer, size_t, "%Y;%m;%d;%H;%M;%S;", &date_time);
+
 	sprintf(tmp_buffer_ms, "%" PRIi64, ms);
 	strcat(buffer, tmp_buffer_ms);
 }
@@ -354,6 +355,7 @@ void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int 
 
 	ms = round(tmp_ms * 1000);
 	strftime(buffer, size_t, "%Y-%m-%d_%H:%M:%S:", &date_time);
+
 	sprintf(tmp_buffer_ms, "%" PRIi64, ms);
 	strcat(buffer, tmp_buffer_ms);
 }
@@ -3610,6 +3612,7 @@ I32 UtilISOBuildTRAJMessage(C8 * MessageBuffer, C8 * DTMData, I32 RowCount, DOTM
 
 	return MessageIndex;		//Total number of bytes
 }
+
 
 
 /*
