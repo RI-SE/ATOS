@@ -84,6 +84,7 @@ typedef struct
 //! MONR value IDs
 #define VALUE_ID_MONR_STRUCT 0x80
 
+#pragma pack(pop)
 
 typedef enum {
 	TRIGGER_UNDEFINED               = 0x0000,
@@ -182,37 +183,6 @@ typedef enum {
 } ActionTypeParameter_t;
 
 
-//! *************************** TREO
-#define COMMAND_TREO_CODE 0x0013
-typedef struct
-{
-	HeaderType header;
-	uint16_t triggerIDValueID;
-	uint16_t triggerIDContentLength;
-	uint16_t triggerID;
-	uint16_t timestamp_qmsowValueID;
-	uint16_t timestamp_qmsowContentLength;
-	uint32_t timestamp_qmsow;
-	FooterType footer;
-} TREOType;
-
-
-//! *************************** EXAC
-#define COMMAND_EXAC_CODE 0x0014
-typedef struct
-{
-	HeaderType header;
-	uint16_t actionIDValueID;
-	uint16_t actionIDContentLength;
-	uint16_t actionID;
-	uint16_t executionTime_qmsoWValueID;
-	uint16_t executionTime_qmsoWContentLength;
-	uint32_t executionTime_qmsoW;
-	FooterType footer;
-} EXACType;
-
-#pragma pack(pop)
-
 typedef enum {
 	MESSAGE_OK,
 	MESSAGE_LENGTH_ERROR,
@@ -261,7 +231,9 @@ ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_
 ssize_t encodeOSTMMessage(const ObjectCommandType command, char * ostmDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeHEABMessage(const ControlCenterStatusType status, char * heabDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerType, const TriggerTypeParameter_t param1, const TriggerTypeParameter_t param2, const TriggerTypeParameter_t param3, char * trcmDataBuffer, const size_t bufferLength, const char debug);
+ssize_t decodeTREOMessage();
 ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType, const ActionTypeParameter_t param1, const ActionTypeParameter_t param2, const ActionTypeParameter_t param3, char * accmDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval * executionTime, char * exacDataBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);

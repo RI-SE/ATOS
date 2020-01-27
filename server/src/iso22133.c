@@ -154,6 +154,17 @@ typedef struct
 
 
 /*! TREO message */
+typedef struct
+{
+	HeaderType header;
+	uint16_t triggerIDValueID;
+	uint16_t triggerIDContentLength;
+	uint16_t triggerID;
+	uint16_t timestamp_qmsowValueID;
+	uint16_t timestamp_qmsowContentLength;
+	uint32_t timestamp_qmsow;
+	FooterType footer;
+} TREOType;
 
 //! TREO value IDs
 #define VALUE_ID_TREO_TRIGGER_ID 0x0001
@@ -191,6 +202,17 @@ typedef struct
 
 
 /*! EXAC message */
+typedef struct
+{
+	HeaderType header;
+	uint16_t actionIDValueID;
+	uint16_t actionIDContentLength;
+	uint16_t actionID;
+	uint16_t executionTime_qmsoWValueID;
+	uint16_t executionTime_qmsoWContentLength;
+	uint32_t executionTime_qmsoW;
+	FooterType footer;
+} EXACType;
 
 //! EXAC value IDs
 #define VALUE_ID_EXAC_ACTION_ID 0x0002
@@ -1247,4 +1269,61 @@ ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType
 	memcpy(accmDataBuffer, &ACCMData, sizeof (ACCMData));
 
 	return sizeof (ACCMData);
+}
+
+
+
+/*!
+ * \brief encodeEXACMessage Fills an ISO EXAC struct with relevant data fields, and corresponding value IDs and content lengths
+ * \param actionID ID of the action to be executed
+ * \param executionTime Time when the action is to be executed
+ * \param exacDataBuffer Buffer to which EXAC message is to be written
+ * \param bufferLength Size of buffer to which EXAC message is to be written
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes written or -1 in case of an error
+ */
+ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval * executionTime, char * exacDataBuffer, const size_t bufferLength, const char debug) {
+
+	EXACType EXACData;
+
+	memset(exacDataBuffer, 0, bufferLength);
+
+	// If buffer too small to hold EXAC data, generate an error
+	if (bufferLength < sizeof (EXACType)) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary EXAC data");
+		return -1;
+	}
+
+	// Construct header
+	EXACData.header = buildISOHeader(MESSAGE_ID_EXAC, sizeof (EXACData), debug);
+
+	EXACData.actionIDValueID = VALUE_ID_EXAC_ACTION_ID;
+	EXACData.actionIDContentLength = sizeof (EXACData.actionID);
+	EXACData.actionID = actionID;
+
+	EXACData.executionTime_qmsoWValueID = VALUE_ID_EXAC_ACTION_EXECUTE_TIME;
+	EXACData.executionTime_qmsoWContentLength = sizeof (EXACData.executionTime_qmsoW);
+	EXACData.executionTime_qmsoW = TimeGetAsGPSqmsOfWeek(executionTime);
+
+	if (debug) {
+		LogPrint("EXAC message:\n\tAction ID value ID: 0x%x\n\tAction ID content length: %u\n\tAction ID: %u\n\t"
+				 "Action execute time value ID: 0x%x\n\tAction execute time content length: %u\n\tAction execute time: %u [¼ ms]",
+				 EXACData.actionIDValueID, EXACData.actionIDContentLength, EXACData.actionID, EXACData.executionTime_qmsoWValueID,
+				 EXACData.executionTime_qmsoWContentLength, EXACData.executionTime_qmsoW);
+	}
+
+	// Switch from host endianness to little endian
+	EXACData.actionIDValueID = htole16(EXACData.actionIDValueID);
+	EXACData.actionIDContentLength = htole16(EXACData.actionIDContentLength);
+	EXACData.actionID = htole16(EXACData.actionID);
+	EXACData.executionTime_qmsoWValueID = htole16(EXACData.executionTime_qmsoWValueID);
+	EXACData.executionTime_qmsoWContentLength = htole16(EXACData.executionTime_qmsoWContentLength);
+	EXACData.executionTime_qmsoW = htole32(EXACData.executionTime_qmsoW);
+
+	// Construct footer
+	EXACData.footer = buildISOFooter(&EXACData, sizeof (EXACData), debug);
+
+	memcpy(exacDataBuffer, &EXACData, sizeof (EXACData));
+
+	return sizeof (EXACType);
 }
