@@ -3258,7 +3258,7 @@ I32 UtilISOBuildINSUPMessage(C8 * MessageBuffer, INSUPType * INSUPData, C8 Comma
 
 	bzero(MessageBuffer, ISO_INSUP_MESSAGE_LENGTH + ISO_MESSAGE_FOOTER_LENGTH);
 
-	INSUPData->Header.SyncWordU16 = SYNC_WORD;
+	INSUPData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	INSUPData->Header.TransmitterIdU8 = 0;
 	INSUPData->Header.MessageCounterU8 = 0;
 	INSUPData->Header.AckReqProtVerU8 = 0;
@@ -3304,7 +3304,7 @@ I32 UtilISOBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeType * 
 
 	bzero(MessageBuffer, ISO_HEAB_MESSAGE_LENGTH + ISO_MESSAGE_FOOTER_LENGTH);
 
-	HEABData->Header.SyncWordU16 = SYNC_WORD;
+	HEABData->Header.SyncWordU16 = ISO_SYNC_WORD;
 	HEABData->Header.TransmitterIdU8 = 0;
 	HEABData->Header.MessageCounterU8 = 0;
 	HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -3454,7 +3454,7 @@ I32 UtilISOBuildTRAJMessageHeader(C8 * MessageBuffer, I32 RowCount, HeaderType *
 
 	bzero(MessageBuffer, ISO_MESSAGE_HEADER_LENGTH + ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH);
 
-	HeaderData->SyncWordU16 = SYNC_WORD;
+	HeaderData->SyncWordU16 = ISO_SYNC_WORD;
 	HeaderData->TransmitterIdU8 = 0;
 	HeaderData->MessageCounterU8 = 0;
 	HeaderData->AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -3650,34 +3650,63 @@ I32 UtilISOBuildTRAJMessage(C8 * MessageBuffer, C8 * DTMData, I32 RowCount, DOTM
 	return MessageIndex;		//Total number of bytes
 }
 
-I32 UtilISOBuildHeader(C8 * MessageBuffer, HeaderType * HeaderData, U8 Debug) {
-	I32 MessageIndex = 0, i = 0;
-	dbl Data;
-	U16 Crc = 0, U16Data = 0;
-	I16 I16Data = 0;
-	U32 U32Data = 0;
-	I32 I32Data = 0;
-	U64 U64Data = 0;
-	C8 *p;
+I32 UtilISOBuildHeader(C8 * MessageBuffer, const size_t length, HeaderType * HeaderData, U8 Debug) {
+	C8 *p = MessageBuffer;
+	I32 retval = 0;
+	const U8 ProtocolVersionBitmask = 0x7F;
+	U8 messageProtocolVersion = 0;
+	U8 isProtocolVersionSupported = 0;
+	const uint8_t *supportedProtocolVersions;
+	size_t nSupportedProtocols = 0;
 
-	U16Data = (U16Data | *(MessageBuffer + 1)) << 8;
-	U16Data = U16Data | *(MessageBuffer + 0);
+	if (length < sizeof (HeaderData)) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO header");
+		memset(HeaderData, 0, sizeof (*HeaderData));
+		return -1;
+	}
 
-	HeaderData->SyncWordU16 = U16Data;
-	HeaderData->TransmitterIdU8 = *(MessageBuffer + 2);
-	HeaderData->MessageCounterU8 = *(MessageBuffer + 3);
-	HeaderData->AckReqProtVerU8 = *(MessageBuffer + 4);
+	// Decode ISO header
+	memcpy(&HeaderData->SyncWordU16, p, sizeof (HeaderData->SyncWordU16));
+	p += sizeof (HeaderData->SyncWordU16);
 
-	U16Data = 0;
-	U16Data = (U16Data | *(MessageBuffer + 6)) << 8;
-	U16Data = U16Data | *(MessageBuffer + 5);
-	HeaderData->MessageIdU16 = U16Data;
+	if (HeaderData->SyncWordU16 != ISO_SYNC_WORD) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Sync word error when decoding ISO header");
+		memset(HeaderData, 0, sizeof (*HeaderData));
+		return -1;
+	}
 
-	U32Data = (U32Data | *(MessageBuffer + 10)) << 8;
-	U32Data = (U32Data | *(MessageBuffer + 9)) << 8;
-	U32Data = (U32Data | *(MessageBuffer + 8)) << 8;
-	U32Data = U32Data | *(MessageBuffer + 7);
-	HeaderData->MessageLengthU32 = U32Data;
+	memcpy(&HeaderData->TransmitterIdU8, p, sizeof (HeaderData->TransmitterIdU8));
+	p += sizeof (HeaderData->TransmitterIdU8);
+
+	memcpy(&HeaderData->MessageCounterU8, p, sizeof (HeaderData->MessageCounterU8));
+	p += sizeof (HeaderData->MessageCounterU8);
+
+	memcpy(&HeaderData->AckReqProtVerU8, p, sizeof (HeaderData->AckReqProtVerU8));
+	p += sizeof (HeaderData->AckReqProtVerU8);
+
+	// Loop over permitted protocol versions
+	messageProtocolVersion = HeaderData->AckReqProtVerU8 & ProtocolVersionBitmask;
+	getSupportedISOProtocolVersions(&supportedProtocolVersions, &nSupportedProtocols);
+	for (size_t i = 0; i < nSupportedProtocols; ++i) {
+		if (supportedProtocolVersions[i] == messageProtocolVersion) {
+			isProtocolVersionSupported = 1;
+			break;
+		}
+	}
+
+	if (!isProtocolVersionSupported) {
+		errno = EPROTONOSUPPORT;
+		LogMessage(LOG_LEVEL_WARNING, "Protocol version %u not supported", messageProtocolVersion);
+		retval = -1;
+	}
+
+	memcpy(&HeaderData->MessageIdU16, p, sizeof (HeaderData->MessageIdU16));
+	p += sizeof (HeaderData->MessageIdU16);
+
+	memcpy(&HeaderData->MessageLengthU32, p, sizeof (HeaderData->MessageLengthU32));
+	p += sizeof (HeaderData->MessageLengthU32);
 
 	if (Debug) {
 		LogPrint("SyncWordU16 = 0x%x", HeaderData->SyncWordU16);
@@ -3688,7 +3717,7 @@ I32 UtilISOBuildHeader(C8 * MessageBuffer, HeaderType * HeaderData, U8 Debug) {
 		LogPrint("MessageLengthU32 = 0x%x", HeaderData->MessageLengthU32);
 	}
 
-	return 0;
+	return retval;
 }
 
 
