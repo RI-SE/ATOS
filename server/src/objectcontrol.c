@@ -489,18 +489,16 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					//Store MONR in GSD
 					DataDictionarySetMONR(GSD, &MONRData, iIndex);
 
+                    //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0)
 
-					//UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
-
-					/*
-					   for (i = 0;
-					   i <
-					   (MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
-					   COMMAND_MESSAGE_FOOTER_LENGTH); i++)
-					   GSD->MONRData[i] = buffer[i];
-					   GSD->MONRSizeU8 =
-					   MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
-					   COMMAND_MESSAGE_FOOTER_LENGTH; */
+                       for (i = 0;
+                       i <
+                       (MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
+                       COMMAND_MESSAGE_FOOTER_LENGTH); i++)
+                       GSD->MONRData[i] = buffer[i];
+                       GSD->MONRSizeU8 =
+                       MONRData.Header.MessageLengthU32 + COMMAND_MESSAGE_HEADER_LENGTH +
+                       COMMAND_MESSAGE_FOOTER_LENGTH;
 
 					ObjectControlMONRToASCII(&MONRData, &OriginPosition, iIndex, Id, Timestamp, XPosition,
 											 YPosition, ZPosition, LongitudinalSpeed, LateralSpeed,
@@ -785,7 +783,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					//OSEMSentU8 = 0;
 					STRTSentU8 = 0;
-
+                    DataDictionarySetNumberOfObjectsU8(GSD, nbr_objects);
 					DataDictionaryInitMONR(GSD);
 
 				}

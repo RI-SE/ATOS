@@ -1699,7 +1699,7 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
 
 	// Map memory to created file
 	GSD->MonrMessages =
-		(MONRType *) mmap(NULL, (sizeof (MONRType)), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        (MONRType *) mmap(NULL, (sizeof (MONRType) * GSD->numberOfObjects), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
 
 	LogPrint("Initing");
