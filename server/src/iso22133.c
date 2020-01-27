@@ -6,9 +6,31 @@
 #include <stdlib.h>
 #include <endian.h>
 
+// ************************* ISO protocol versions supported by functions in this file ***************************
 static const uint8_t SupportedProtocolVersions[] = { 2 };
 
-// ************************* Byte swapper definitions for 6 byte values
+
+// ************************* Type definitions according ISO protocol specification *******************************
+//! Predefined integer values with special meaning
+#define LATITUDE_UNAVAILABLE_VALUE 900000000001
+#define LATITUDE_ONE_DEGREE_VALUE 10000000000
+#define LONGITUDE_UNAVAILABLE_VALUE 1800000000001
+#define LONGITUDE_ONE_DEGREE_VALUE 10000000000
+#define ALTITUDE_UNAVAILABLE_VALUE 800001
+#define ALTITUDE_ONE_METER_VALUE 100
+#define DATE_UNAVAILABLE_VALUE 0
+#define GPS_WEEK_UNAVAILABLE_VALUE 10001
+#define GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE 2419200000
+#define MAX_WAY_DEVIATION_UNAVAILABLE_VALUE 65535
+#define MAX_WAY_DEVIATION_ONE_METER_VALUE 1000
+#define MAX_LATERAL_DEVIATION_UNAVAILABLE_VALUE 65535
+#define MAX_LATERAL_DEVIATION_ONE_METER_VALUE 1000
+#define MIN_POSITIONING_ACCURACY_NOT_REQUIRED_VALUE 0
+#define MIN_POSITIONING_ACCURACY_ONE_METER_VALUE 1000 // ISO specification unclear on this value
+
+
+// ************************* Non-ISO type definitions and defines ************************************************
+// Byte swapper definitions for 6 byte values
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #define le48toh(x) __uint64_identity (x)
 #define htole48(x) __uint64_identity (x)
@@ -17,7 +39,7 @@ static const uint8_t SupportedProtocolVersions[] = { 2 };
 #define htole48(x) (__bswap_64(x) >> 16)
 #endif
 
-// ************************** static function declarations
+// ************************** static function declarations ********************************************************
 static ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t length,
 											 HeaderType * HeaderData, const char debug);
 static ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t length,
@@ -26,7 +48,7 @@ static HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const 
 static FooterType buildISOFooter(const void *message, const size_t sizeExclFooter, const char debug);
 static char isValidMessageID(const uint16_t id);
 
-// ************************** function definitions
+// ************************** function definitions ****************************************************************
 
 /*!
  * \brief decodeISOHeader Convert data in a buffer to an ISO header
