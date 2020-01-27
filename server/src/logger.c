@@ -289,7 +289,7 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 	}
 
-	(void)iCommClose();
+    (void)iCommClose();
 
 	LogMessage(LOG_LEVEL_INFO, "Logger exiting");
 }
