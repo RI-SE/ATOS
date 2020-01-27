@@ -138,7 +138,6 @@ extern "C"{
 #define VALUE_ID_GPS_SECOND_OF_WEEK         0x2
 #define VALUE_ID_GPS_WEEK                   0x3
 #define VALUE_ID_DATE_ISO8601               0x4
-#define VALUE_ID_MONR_STRUCT                0x80
 #define VALUE_ID_X_POSITION                 0x10
 #define VALUE_ID_Y_POSITION                 0x11
 #define VALUE_ID_Z_POSITION                 0x12
@@ -376,26 +375,7 @@ typedef struct
   U8 CCStatusU8;
 } HEABType; //16 bytes
 
-typedef struct
-{
-  HeaderType Header;
-  U16 MonrStructValueIdU16;
-  U16 MonrStructContentLengthU16;
-  U32 GPSQmsOfWeekU32;
-  I32 XPositionI32;
-  I32 YPositionI32;
-  I32 ZPositionI32;
-  U16 HeadingU16;
-  I16 LongitudinalSpeedI16;
-  I16 LateralSpeedI16;
-  I16 LongitudinalAccI16;
-  I16 LateralAccI16;
-  U8 DriveDirectionU8;
-  U8 StateU8;
-  U8 ReadyToArmU8;
-  U8 ErrorStatusU8;
-  U16 CRC;
-} MONRType; //41 bytes
+
 
 typedef struct
 {
@@ -895,7 +875,6 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
-I32 UtilISOBuildHeader(C8 *MessageBuffer, const size_t length, HeaderType *HeaderData, U8 Debug);
 I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 CommandOption, U8 Debug);
 I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 Debug);
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
