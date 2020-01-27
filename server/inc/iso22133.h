@@ -85,29 +85,6 @@ typedef struct
 #define VALUE_ID_MONR_STRUCT 0x80
 
 
-//! *************************** TRCM
-#define COMMAND_TRCM_CODE 0x0011
-typedef struct
-{
-	HeaderType header;
-	uint16_t triggerIDValueID;
-	uint16_t triggerIDContentLength;
-	uint16_t triggerID;
-	uint16_t triggerTypeValueID;
-	uint16_t triggerTypeContentLength;
-	uint16_t triggerType;
-	uint16_t triggerTypeParameter1ValueID;
-	uint16_t triggerTypeParameter1ContentLength;
-	uint32_t triggerTypeParameter1;
-	uint16_t triggerTypeParameter2ValueID;
-	uint16_t triggerTypeParameter2ContentLength;
-	uint32_t triggerTypeParameter2;
-	uint16_t triggerTypeParameter3ValueID;
-	uint16_t triggerTypeParameter3ContentLength;
-	uint32_t triggerTypeParameter3;
-	FooterType footer;
-} TRCMType;
-
 typedef enum {
 	TRIGGER_UNDEFINED               = 0x0000,
 	TRIGGER_TYPE_1                  = 0x0001,
@@ -164,29 +141,6 @@ typedef enum {
 	TRIGGER_PARAMETER_UNAVAILABLE               = 0xFFFFFFFF
 } TriggerTypeParameter_t;
 
-
-//! *************************** ACCM
-#define COMMAND_ACCM_CODE 0x0012
-typedef struct
-{
-	HeaderType header;
-	uint16_t actionIDValueID;
-	uint16_t actionIDContentLength;
-	uint16_t actionID;
-	uint16_t actionTypeValueID;
-	uint16_t actionTypeContentLength;
-	uint16_t actionType;
-	uint16_t actionTypeParameter1ValueID;
-	uint16_t actionTypeParameter1ContentLength;
-	uint32_t actionTypeParameter1;
-	uint16_t actionTypeParameter2ValueID;
-	uint16_t actionTypeParameter2ContentLength;
-	uint32_t actionTypeParameter2;
-	uint16_t actionTypeParameter3ValueID;
-	uint16_t actionTypeParameter3ContentLength;
-	uint32_t actionTypeParameter3;
-	FooterType footer;
-} ACCMType;
 
 typedef enum {
 	ACTION_NONE                     = 0x0000,
@@ -257,23 +211,6 @@ typedef struct
 	FooterType footer;
 } EXACType;
 
-
-//! ACCM / EXAC / CATA value IDs
-#define VALUE_ID_ACTION_ID 0x0002
-#define VALUE_ID_ACTION_TYPE 0x0003
-#define VALUE_ID_ACTION_TYPE_PARAM1 0x00A1
-#define VALUE_ID_ACTION_TYPE_PARAM2 0x00A2
-#define VALUE_ID_ACTION_TYPE_PARAM3 0x00A3
-#define VALUE_ID_ACTION_EXECUTE_TIME 0x0003
-
-//! TRCM / TREO / CATA value IDs
-#define VALUE_ID_TRIGGER_ID 0x0001
-#define VALUE_ID_TRIGGER_TYPE 0x0002
-#define VALUE_ID_TRIGGER_TYPE_PARAM1 0x0011
-#define VALUE_ID_TRIGGER_TYPE_PARAM2 0x0012
-#define VALUE_ID_TRIGGER_TYPE_PARAM3 0x0013
-#define VALUE_ID_TRIGGER_TIMESTAMP 0x0002
-
 #pragma pack(pop)
 
 typedef enum {
@@ -323,6 +260,8 @@ ssize_t encodeSTRTMessage(const struct timeval* timeOfStart, char * strtDataBuff
 ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeOSTMMessage(const ObjectCommandType command, char * ostmDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeHEABMessage(const ControlCenterStatusType status, char * heabDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerType, const TriggerTypeParameter_t param1, const TriggerTypeParameter_t param2, const TriggerTypeParameter_t param3, char * trcmDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType, const ActionTypeParameter_t param1, const ActionTypeParameter_t param2, const ActionTypeParameter_t param3, char * accmDataBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);

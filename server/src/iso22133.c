@@ -29,8 +29,8 @@ static const uint8_t SupportedProtocolVersions[] = { 2 };
 #define MIN_POSITIONING_ACCURACY_NOT_REQUIRED_VALUE 0
 #define MIN_POSITIONING_ACCURACY_ONE_METER_VALUE 1000 // ISO specification unclear on this value
 
-
-//! *************************** OSEM
+#pragma pack(push,1)
+/*! OSEM message */
 typedef struct
 {
   HeaderType header;
@@ -121,6 +121,88 @@ typedef struct
 
 //! HEAB value IDs
 #define VALUE_ID_HEAB_STRUCT 0x0090
+
+
+/*! TRCM message */
+typedef struct
+{
+	HeaderType header;
+	uint16_t triggerIDValueID;
+	uint16_t triggerIDContentLength;
+	uint16_t triggerID;
+	uint16_t triggerTypeValueID;
+	uint16_t triggerTypeContentLength;
+	uint16_t triggerType;
+	uint16_t triggerTypeParameter1ValueID;
+	uint16_t triggerTypeParameter1ContentLength;
+	uint32_t triggerTypeParameter1;
+	uint16_t triggerTypeParameter2ValueID;
+	uint16_t triggerTypeParameter2ContentLength;
+	uint32_t triggerTypeParameter2;
+	uint16_t triggerTypeParameter3ValueID;
+	uint16_t triggerTypeParameter3ContentLength;
+	uint32_t triggerTypeParameter3;
+	FooterType footer;
+} TRCMType;
+
+//! TRCM value IDs
+#define VALUE_ID_TRCM_TRIGGER_ID 0x0001
+#define VALUE_ID_TRCM_TRIGGER_TYPE 0x0002
+#define VALUE_ID_TRCM_TRIGGER_TYPE_PARAM1 0x0011
+#define VALUE_ID_TRCM_TRIGGER_TYPE_PARAM2 0x0012
+#define VALUE_ID_TRCM_TRIGGER_TYPE_PARAM3 0x0013
+
+
+/*! TREO message */
+
+//! TREO value IDs
+#define VALUE_ID_TREO_TRIGGER_ID 0x0001
+#define VALUE_ID_TREO_TRIGGER_TIMESTAMP 0x0002
+
+
+/*! ACCM message */
+typedef struct
+{
+	HeaderType header;
+	uint16_t actionIDValueID;
+	uint16_t actionIDContentLength;
+	uint16_t actionID;
+	uint16_t actionTypeValueID;
+	uint16_t actionTypeContentLength;
+	uint16_t actionType;
+	uint16_t actionTypeParameter1ValueID;
+	uint16_t actionTypeParameter1ContentLength;
+	uint32_t actionTypeParameter1;
+	uint16_t actionTypeParameter2ValueID;
+	uint16_t actionTypeParameter2ContentLength;
+	uint32_t actionTypeParameter2;
+	uint16_t actionTypeParameter3ValueID;
+	uint16_t actionTypeParameter3ContentLength;
+	uint32_t actionTypeParameter3;
+	FooterType footer;
+} ACCMType;
+
+//! ACCM value IDs
+#define VALUE_ID_ACCM_ACTION_ID 0x0002
+#define VALUE_ID_ACCM_ACTION_TYPE 0x0003
+#define VALUE_ID_ACCM_ACTION_TYPE_PARAM1 0x00A1
+#define VALUE_ID_ACCM_ACTION_TYPE_PARAM2 0x00A2
+#define VALUE_ID_ACCM_ACTION_TYPE_PARAM3 0x00A3
+
+
+/*! EXAC message */
+
+//! EXAC value IDs
+#define VALUE_ID_EXAC_ACTION_ID 0x0002
+#define VALUE_ID_EXAC_ACTION_EXECUTE_TIME 0x0003
+
+/*! CATA message */
+// TODO
+//! CATA value IDs
+// TODO
+
+#pragma pack(pop)
+
 
 // ************************* Non-ISO type definitions and defines ************************************************
 // Byte swapper definitions for 6 byte values
@@ -975,4 +1057,194 @@ ISOMessageReturnValue ASCIIToMONR(const char *asciiBuffer, MONRType * MONRData, 
 	}
 
 	return MESSAGE_OK;
+}
+
+
+
+/*!
+ * \brief encodeTRCMMessage Fills an ISO TRCM struct with relevant data fields, and corresponding value IDs and content lengths
+ * \param triggerID ID of the trigger to be configured
+ * \param triggerType Type of the trigger to be configured according to ::TriggerType_t
+ * \param param1 First parameter of the trigger to be configured according to ::TriggerTypeParameter_t
+ * \param param2 Second parameter of the trigger to be configured ::TriggerTypeParameter_t
+ * \param param3 Third parameter of the trigger to be configured ::TriggerTypeParameter_t
+ * \param trcmDataBuffer Buffer to which TRCM message is to be written
+ * \param bufferLength Size of buffer to which TRCM message is to be written
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes written or -1 in case of an error
+ */
+ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerType, const TriggerTypeParameter_t param1,
+						  const TriggerTypeParameter_t param2, const TriggerTypeParameter_t param3, char * trcmDataBuffer,
+						  const size_t bufferLength, const char debug) {
+
+	TRCMType TRCMData;
+
+	memset(trcmDataBuffer, 0, bufferLength);
+
+	// If buffer too small to hold TRCM data, generate an error
+	if (bufferLength < sizeof (TRCMType)) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary TRCM data");
+		return -1;
+	}
+
+	// Construct header
+	TRCMData.header = buildISOHeader(MESSAGE_ID_TRCM, sizeof (TRCMData), debug);
+
+	// Fill contents
+	TRCMData.triggerIDValueID = VALUE_ID_TRCM_TRIGGER_ID;
+	TRCMData.triggerIDContentLength = sizeof (TRCMData.triggerID);
+	TRCMData.triggerID = triggerID;
+
+	TRCMData.triggerTypeValueID = VALUE_ID_TRCM_TRIGGER_TYPE;
+	TRCMData.triggerTypeContentLength = sizeof (TRCMData.triggerType);
+	TRCMData.triggerType = (uint16_t) triggerType;
+
+	TRCMData.triggerTypeParameter1ValueID = VALUE_ID_TRCM_TRIGGER_TYPE_PARAM1;
+	TRCMData.triggerTypeParameter2ValueID = VALUE_ID_TRCM_TRIGGER_TYPE_PARAM2;
+	TRCMData.triggerTypeParameter3ValueID = VALUE_ID_TRCM_TRIGGER_TYPE_PARAM3;
+
+	TRCMData.triggerTypeParameter1ContentLength = sizeof (TRCMData.triggerTypeParameter1);
+	TRCMData.triggerTypeParameter2ContentLength = sizeof (TRCMData.triggerTypeParameter2);
+	TRCMData.triggerTypeParameter3ContentLength = sizeof (TRCMData.triggerTypeParameter3);
+
+	TRCMData.triggerTypeParameter1 = (uint32_t) param1;
+	TRCMData.triggerTypeParameter2 = (uint32_t) param2;
+	TRCMData.triggerTypeParameter3 = (uint32_t) param3;
+
+	if (debug) {
+		LogPrint("TRCM message:\n\tTrigger ID value ID: 0x%x\n\tTrigger ID content length: %u\n\t"
+				 "Trigger ID: %u\n\tTrigger type value ID: 0x%x\n\tTrigger type content length: %u\n\t"
+				 "Trigger type: %u\n\tTrigger type parameter 1 value ID: 0x%x\n\tTrigger type parameter 1 content length: %u\n\t"
+				 "Trigger type parameter 1: %u\n\tTrigger type parameter 2 value ID: 0x%x\n\tTrigger type parameter 2 content length: %u\n\t"
+				 "Trigger type parameter 2: %u\n\tTrigger type parameter 3 value ID: 0x%x\n\tTrigger type parameter 3 content length: %u"
+				 "Trigger type parameter 3: %u\n\t", TRCMData.triggerIDValueID, TRCMData.triggerIDContentLength, TRCMData.triggerID,
+				 TRCMData.triggerTypeValueID, TRCMData.triggerTypeContentLength, TRCMData.triggerType, TRCMData.triggerTypeParameter1ValueID,
+				 TRCMData.triggerTypeParameter1ContentLength, TRCMData.triggerTypeParameter1, TRCMData.triggerTypeParameter2ValueID,
+				 TRCMData.triggerTypeParameter2ContentLength, TRCMData.triggerTypeParameter2, TRCMData.triggerTypeParameter3ValueID,
+				 TRCMData.triggerTypeParameter3ContentLength, TRCMData.triggerTypeParameter3);
+	}
+
+	// Switch from host endianness to little endian
+	TRCMData.triggerIDValueID = htole16(TRCMData.triggerIDValueID);
+	TRCMData.triggerIDContentLength = htole16(TRCMData.triggerIDContentLength);
+	TRCMData.triggerID = htole16(TRCMData.triggerID);
+
+	TRCMData.triggerTypeValueID = htole16(TRCMData.triggerTypeValueID);
+	TRCMData.triggerTypeContentLength = htole16(TRCMData.triggerTypeContentLength);
+	TRCMData.triggerType = htole16(TRCMData.triggerType);
+
+	TRCMData.triggerTypeParameter1ValueID = htole16(TRCMData.triggerTypeParameter1ValueID);
+	TRCMData.triggerTypeParameter2ValueID = htole16(TRCMData.triggerTypeParameter2ValueID);
+	TRCMData.triggerTypeParameter3ValueID = htole16(TRCMData.triggerTypeParameter3ValueID);
+
+	TRCMData.triggerTypeParameter1ContentLength = htole16(TRCMData.triggerTypeParameter1ContentLength);
+	TRCMData.triggerTypeParameter2ContentLength = htole16(TRCMData.triggerTypeParameter2ContentLength);
+	TRCMData.triggerTypeParameter3ContentLength = htole16(TRCMData.triggerTypeParameter3ContentLength);
+
+	TRCMData.triggerTypeParameter1 = htole32(TRCMData.triggerTypeParameter1);
+	TRCMData.triggerTypeParameter2 = htole32(TRCMData.triggerTypeParameter2);
+	TRCMData.triggerTypeParameter3 = htole32(TRCMData.triggerTypeParameter3);
+
+	// Construct footer
+	TRCMData.footer = buildISOFooter(&TRCMData, sizeof (TRCMData), debug);
+
+	memcpy(trcmDataBuffer, &TRCMData, sizeof (TRCMData));
+
+	return sizeof (TRCMData);
+}
+
+
+
+
+
+/*!
+ * \brief encodeACCMMessage Fills an ISO ACCM struct with relevant data fields, and corresponding value IDs and content lengths
+ * \param actionID ID of the action to be configured
+ * \param actionType Type of the action to be configured according to ::ActionType_t
+ * \param param1 First parameter of the action to be configured according to ::ActionTypeParameter_t
+ * \param param2 Second parameter of the action to be configured ::ActionTypeParameter_t
+ * \param param3 Third parameter of the action to be configured ::ActionTypeParameter_t
+ * \param trcmDataBuffer Buffer to which ACCM message is to be written
+ * \param bufferLength Size of buffer to which ACCM message is to be written
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes written or -1 in case of an error
+ */
+ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType, const ActionTypeParameter_t param1,
+						  const ActionTypeParameter_t param2, const ActionTypeParameter_t param3, char * accmDataBuffer,
+						  const size_t bufferLength, const char debug) {
+
+	ACCMType ACCMData;
+
+	memset(accmDataBuffer, 0, bufferLength);
+
+	// If buffer too small to hold ACCM data, generate an error
+	if (bufferLength < sizeof (ACCMType)) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary ACCM data");
+		return -1;
+	}
+
+	// Construct header
+	ACCMData.header = buildISOHeader(MESSAGE_ID_ACCM, sizeof (ACCMData), debug);
+
+	// Fill contents
+	ACCMData.actionIDValueID = VALUE_ID_ACCM_ACTION_ID;
+	ACCMData.actionIDContentLength = sizeof (ACCMData.actionID);
+	ACCMData.actionID = actionID;
+
+	ACCMData.actionTypeValueID = VALUE_ID_ACCM_ACTION_TYPE;
+	ACCMData.actionTypeContentLength = sizeof (ACCMData.actionType);
+	ACCMData.actionType = (uint16_t) actionType;
+
+	ACCMData.actionTypeParameter1ValueID = VALUE_ID_ACCM_ACTION_TYPE_PARAM1;
+	ACCMData.actionTypeParameter2ValueID = VALUE_ID_ACCM_ACTION_TYPE_PARAM2;
+	ACCMData.actionTypeParameter3ValueID = VALUE_ID_ACCM_ACTION_TYPE_PARAM3;
+
+	ACCMData.actionTypeParameter1ContentLength = sizeof (ACCMData.actionTypeParameter1);
+	ACCMData.actionTypeParameter2ContentLength = sizeof (ACCMData.actionTypeParameter2);
+	ACCMData.actionTypeParameter3ContentLength = sizeof (ACCMData.actionTypeParameter3);
+
+	ACCMData.actionTypeParameter1 = (uint32_t) param1;
+	ACCMData.actionTypeParameter2 = (uint32_t) param2;
+	ACCMData.actionTypeParameter3 = (uint32_t) param3;
+
+	if (debug) {
+		LogPrint("ACCM message:\n\tAction ID value ID: 0x%x\n\tAction ID content length: %u\n\t"
+				 "Action ID: %u\n\tAction type value ID: 0x%x\n\tAction type content length: %u\n\t"
+				 "Action type: %u\n\tAction type parameter 1 value ID: 0x%x\n\tAction type parameter 1 content length: %u\n\t"
+				 "Action type parameter 1: %u\n\tAction type parameter 2 value ID: 0x%x\n\tAction type parameter 2 content length: %u\n\t"
+				 "Action type parameter 2: %u\n\tAction type parameter 3 value ID: 0x%x\n\tAction type parameter 3 content length: %u"
+				 "Action type parameter 3: %u\n\t", ACCMData.actionIDValueID, ACCMData.actionIDContentLength, ACCMData.actionID,
+				 ACCMData.actionTypeValueID, ACCMData.actionTypeContentLength, ACCMData.actionType, ACCMData.actionTypeParameter1ValueID,
+				 ACCMData.actionTypeParameter1ContentLength, ACCMData.actionTypeParameter1, ACCMData.actionTypeParameter2ValueID,
+				 ACCMData.actionTypeParameter2ContentLength, ACCMData.actionTypeParameter2, ACCMData.actionTypeParameter3ValueID,
+				 ACCMData.actionTypeParameter3ContentLength, ACCMData.actionTypeParameter3);
+	}
+
+	// Switch from host endianness to little endian
+	ACCMData.actionIDValueID = htole16(ACCMData.actionIDValueID);
+	ACCMData.actionIDContentLength = htole16(ACCMData.actionIDContentLength);
+	ACCMData.actionID = htole16(ACCMData.actionID);
+
+	ACCMData.actionTypeValueID = htole16(ACCMData.actionTypeValueID);
+	ACCMData.actionTypeContentLength = htole16(ACCMData.actionTypeContentLength);
+	ACCMData.actionType = htole16(ACCMData.actionType);
+
+	ACCMData.actionTypeParameter1ValueID = htole16(ACCMData.actionTypeParameter1ValueID);
+	ACCMData.actionTypeParameter2ValueID = htole16(ACCMData.actionTypeParameter2ValueID);
+	ACCMData.actionTypeParameter3ValueID = htole16(ACCMData.actionTypeParameter3ValueID);
+
+	ACCMData.actionTypeParameter1ContentLength = htole16(ACCMData.actionTypeParameter1ContentLength);
+	ACCMData.actionTypeParameter2ContentLength = htole16(ACCMData.actionTypeParameter2ContentLength);
+	ACCMData.actionTypeParameter3ContentLength = htole16(ACCMData.actionTypeParameter3ContentLength);
+
+	ACCMData.actionTypeParameter1 = htole32(ACCMData.actionTypeParameter1);
+	ACCMData.actionTypeParameter2 = htole32(ACCMData.actionTypeParameter2);
+	ACCMData.actionTypeParameter3 = htole32(ACCMData.actionTypeParameter3);
+
+	// Construct footer
+	ACCMData.footer = buildISOFooter(&ACCMData, sizeof (ACCMData), debug);
+
+	memcpy(accmDataBuffer, &ACCMData, sizeof (ACCMData));
+
+	return sizeof (ACCMData);
 }
