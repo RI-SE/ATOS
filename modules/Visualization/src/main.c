@@ -42,34 +42,37 @@ void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualiz
 								 int _sizeOfVisualizationMessage, int _debug) {
 
 	char ipStringBuffer[INET_ADDRSTRLEN];
-    sprintf(ipStringBuffer, "%s",
-            inet_ntop(AF_INET, &_monitorData->ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
-    char GPSMsOfWeekString[ENOUGH_BUFFER_SIZE];
-    sprintf(GPSMsOfWeekString, "%u", _monitorData->MONR.GPSQmsOfWeekU32);
-    char xPosString[ENOUGH_BUFFER_SIZE];
-    sprintf(xPosString, "%d", _monitorData->MONR.XPositionI32);
-    char yPosString[ENOUGH_BUFFER_SIZE];
-    sprintf(yPosString, "%d", _monitorData->MONR.YPositionI32);
-    char zPosString[ENOUGH_BUFFER_SIZE];
-    sprintf(zPosString, "%d", _monitorData->MONR.ZPositionI32);
-    char headingString[ENOUGH_BUFFER_SIZE];
-    sprintf(headingString, "%u", _monitorData->MONR.HeadingU16);
-    char longSpeedString[ENOUGH_BUFFER_SIZE];
-    sprintf(longSpeedString, "%d", _monitorData->MONR.LongitudinalSpeedI16);
-    char stateString[ENOUGH_BUFFER_SIZE];
-    sprintf(stateString, "%u", _monitorData->MONR.StateU8);
+
+	sprintf(ipStringBuffer, "%s",
+			inet_ntop(AF_INET, &_monitorData->ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
+	char GPSMsOfWeekString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(GPSMsOfWeekString, "%u", _monitorData->MONR.GPSQmsOfWeekU32);
+	char xPosString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(xPosString, "%d", _monitorData->MONR.XPositionI32);
+	char yPosString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(yPosString, "%d", _monitorData->MONR.YPositionI32);
+	char zPosString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(zPosString, "%d", _monitorData->MONR.ZPositionI32);
+	char headingString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(headingString, "%u", _monitorData->MONR.HeadingU16);
+	char longSpeedString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(longSpeedString, "%d", _monitorData->MONR.LongitudinalSpeedI16);
+	char stateString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(stateString, "%u", _monitorData->MONR.StateU8);
 
 
 	//Build message from MonitorStruct
-    snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%s;%s;%s;%s;%s;%s;%s;%s;",
+	snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%s;%s;%s;%s;%s;%s;%s;%s;",
 			 ipStringBuffer,
-             GPSMsOfWeekString,
-             xPosString,
-             yPosString,
-             zPosString,
-             headingString,
-             longSpeedString,
-             stateString);
+			 GPSMsOfWeekString,
+			 xPosString, yPosString, zPosString, headingString, longSpeedString, stateString);
 
 
 	if (_debug) {
@@ -82,7 +85,7 @@ void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualiz
 		LogMessage(LOG_LEVEL_INFO, "Heading: %u", _monitorData->MONR.HeadingU16);
 		LogMessage(LOG_LEVEL_INFO, "LongSpeed: %d", _monitorData->MONR.LongitudinalSpeedI16);
 		LogMessage(LOG_LEVEL_INFO, "State: %u", _monitorData->MONR.StateU8);
-        LogMessage(LOG_LEVEL_INFO, "MESSAGE-SIZE = %d",_sizeOfVisualizationMessage);
+		LogMessage(LOG_LEVEL_INFO, "MESSAGE-SIZE = %d", _sizeOfVisualizationMessage);
 	}
 }
 
@@ -104,9 +107,9 @@ int main() {
 
 	vConnectVisualizationChannel(&visual_server, &visual_server_addr);
 
-    //Setup signal handlers
-    if (signal(SIGINT, signalHandler) == SIG_ERR)
-        util_error("Unable to initialize signal handler");
+	//Setup signal handlers
+	if (signal(SIGINT, signalHandler) == SIG_ERR)
+		util_error("Unable to initialize signal handler");
 
 
 
@@ -116,7 +119,7 @@ int main() {
 		nanosleep(&sleepTimePeriod, &remTime);
 	}
 
-    while (!iExit) {
+	while (!iExit) {
 
 
 		if (iCommRecv(&command, mqRecvData, MQ_MSG_SIZE, NULL) < 0) {
@@ -145,31 +148,30 @@ int main() {
 			//Populate the monitorType
 			UtilPopulateMonitorDataStruct(mqRecvData, (size_t) (sizeof (mqRecvData)), &monitorData, 0);
 
-            char dummy[1];
-            int sizeOfVisualizationMessage;
+			char dummy[1];
+			int sizeOfVisualizationMessage;
 
-            //Calculate size of incoming buffer
-            sizeOfVisualizationMessage = snprintf(dummy, sizeof(dummy),"%u;%d;%d;%d;%u;%d;%u;",
-                                                  monitorData.MONR.GPSQmsOfWeekU32,
-                                                  monitorData.MONR.XPositionI32,
-                                                  monitorData.MONR.YPositionI32,
-                                                  monitorData.MONR.ZPositionI32,
-                                                  monitorData.MONR.HeadingU16,
-                                                  monitorData.MONR.LongitudinalSpeedI16,
-                                                  monitorData.MONR.StateU8
-                                                  );
-            sizeOfVisualizationMessage += INET_ADDRSTRLEN;
-            sizeOfVisualizationMessage += 8; //(;)
+			//Calculate size of incoming buffer
+			sizeOfVisualizationMessage = snprintf(dummy, sizeof (dummy), "%u;%d;%d;%d;%u;%d;%u;",
+												  monitorData.MONR.GPSQmsOfWeekU32,
+												  monitorData.MONR.XPositionI32,
+												  monitorData.MONR.YPositionI32,
+												  monitorData.MONR.ZPositionI32,
+												  monitorData.MONR.HeadingU16,
+												  monitorData.MONR.LongitudinalSpeedI16,
+												  monitorData.MONR.StateU8);
+			sizeOfVisualizationMessage += INET_ADDRSTRLEN;
+			sizeOfVisualizationMessage += 8;	//(;)
 
 			//Allocate memory
 			char *visualizationMessage = malloc(sizeOfVisualizationMessage * sizeof (char));
 
 			//Create visualization message and insert values from the monitor datastruct above
-            vCreateVisualizationMessage(&monitorData, visualizationMessage, sizeOfVisualizationMessage, 0);
+			vCreateVisualizationMessage(&monitorData, visualizationMessage, sizeOfVisualizationMessage, 0);
 
 			//Send visualization message on the UDP socket
 			UtilSendUDPData((const uint8_t *)"Visualization", &visual_server, &visual_server_addr,
-                            visualizationMessage, strlen(visualizationMessage), 0);
+							visualizationMessage, strlen(visualizationMessage), 0);
 
 			//Free memory used by malloc
 			free(visualizationMessage);
@@ -189,10 +191,10 @@ int main() {
 		}
 	}
 
-    //Return MQBus to "stack"
-    (void)iCommClose();
+	//Return MQBus to "stack"
+	(void)iCommClose();
 
-    LogMessage(LOG_LEVEL_INFO, "Visualization exiting...");
+	LogMessage(LOG_LEVEL_INFO, "Visualization exiting...");
 
 	return 0;
 }
@@ -202,13 +204,13 @@ int main() {
   -- Private functions
   ------------------------------------------------------------*/
 void signalHandler(int signo) {
-    if (signo == SIGINT) {
-        LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
-        iExit = 1;
-    }
-    else {
-        LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
-    }
+	if (signo == SIGINT) {
+		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+		iExit = 1;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+	}
 }
 
 
