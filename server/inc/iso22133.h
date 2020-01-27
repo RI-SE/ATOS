@@ -193,6 +193,7 @@ typedef enum {
 	MESSAGE_SYNC_WORD_ERROR
 } ISOMessageReturnValue;
 
+/*! Valid ISO message identifiers */
 typedef enum {
 	MESSAGE_ID_INVALID = 0x0000,
 	MESSAGE_ID_TRAJ = 0x0001,
@@ -222,8 +223,15 @@ typedef enum {
 	MESSAGE_ID_RESERVE_RANGE_2_LOWER_LIMIT = 0xF000,
 	MESSAGE_ID_RESERVE_RANGE_2_UPPER_LIMIT = 0xFFFF,
 	MESSAGE_ID_VENDOR_SPECIFIC_LOWER_LIMIT = 0xA100,
-	MESSAGE_ID_VENDOR_SPECIFIC_UPPER_LIMIT = 0xBFFF
+	MESSAGE_ID_VENDOR_SPECIFIC_UPPER_LIMIT = 0xBFFF,
+	MESSAGE_ID_VENDOR_SPECIFIC_RISE_INSUP = 0xA102
 } ISOMessageID;
+
+/*! Supervisor command */
+typedef enum {
+	SUPERVISOR_COMMAND_NORMAL = 1,	//!< Place supervisor in normal mode
+	SUPERVISOR_COMMAND_DEBUG = 2	//!< Place supervisor in debug mode
+} SupervisorCommandType;
 
 ISOMessageReturnValue decodeMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
 ssize_t encodeSTRTMessage(const struct timeval* timeOfStart, char * strtDataBuffer, const size_t bufferLength, const char debug);
@@ -234,6 +242,7 @@ ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerT
 ssize_t decodeTREOMessage();
 ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType, const ActionTypeParameter_t param1, const ActionTypeParameter_t param2, const ActionTypeParameter_t param3, char * accmDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval * executionTime, char * exacDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeINSUPMessage(const SupervisorCommandType, char * insupDataBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);

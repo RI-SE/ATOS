@@ -197,12 +197,6 @@ extern "C"{
 
 #define ISO_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
 
-#define ISO_INSUP_CODE 0xA102
-#define ISO_INSUP_NOFV 1
-#define ISO_INSUP_MESSAGE_LENGTH sizeof(OSTMType)
-#define ISO_INSUP_OPT_SET_ARMED_STATE 2
-#define ISO_INSUP_OPT_SET_DISARMED_STATE 3
-
 #define ISO_TRAJ_CODE 1
 #define ISO_DTM_ROWS_IN_TRANSMISSION 40
 #define ISO_DTM_ROW_MESSAGE_LENGTH sizeof(DOTMType)
@@ -268,15 +262,6 @@ typedef struct
     double zCoord_m;
     double heading_deg;
 } CartesianPosition;
-
-
-typedef struct
-{
-  HeaderType Header;
-  U16 ModeValueIdU16;
-  U16 ModeContentLengthU16;
-  U8 ModeU8;
-} INSUPType; //16 bytes
 
 
 typedef struct
@@ -798,7 +783,6 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
-I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 CommandOption, U8 Debug);
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);

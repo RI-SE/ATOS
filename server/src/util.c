@@ -3211,53 +3211,6 @@ U32 UtilCreateDirContent(C8 * DirPath, C8 * TempPath) {
 }
 
 
-
-I32 UtilISOBuildINSUPMessage(C8 * MessageBuffer, INSUPType * INSUPData, C8 CommandOption, U8 Debug) {
-	I32 MessageIndex = 0, i;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, ISO_INSUP_MESSAGE_LENGTH + ISO_MESSAGE_FOOTER_LENGTH);
-
-	INSUPData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	INSUPData->Header.TransmitterIdU8 = 0;
-	INSUPData->Header.MessageCounterU8 = 0;
-	INSUPData->Header.AckReqProtVerU8 = 0;
-	INSUPData->Header.MessageIdU16 = ISO_INSUP_CODE;
-	INSUPData->Header.MessageLengthU32 = sizeof (INSUPType) - sizeof (HeaderType);
-	INSUPData->ModeValueIdU16 = VALUE_ID_INSUP_MODE;
-	INSUPData->ModeContentLengthU16 = 1;
-	INSUPData->ModeU8 = (U8) CommandOption;
-
-	p = (C8 *) INSUPData;
-	for (i = 0; i < sizeof (INSUPType); i++)
-		*(MessageBuffer + i) = *p++;
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (OSTMType));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	*(MessageBuffer + i++) = (U8) (Crc);
-	MessageIndex = i;
-
-	if (Debug) {
-		// TODO: Change this when bytes thingy has been implemented in logging
-		printf("INSUP total length = %d bytes (header+message+footer)\n",
-			   (int)(ISO_INSUP_MESSAGE_LENGTH + ISO_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (INSUPType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-}
-
-
 U16 UtilGetMillisecond(TimeType * GPSTime) {
 	struct timeval now;
 	U16 MilliU16 = 0, NowU16 = 0;

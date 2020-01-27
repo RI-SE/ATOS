@@ -86,8 +86,6 @@ void supervisorcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLeve
 	I32 i, j;
 
 	HeaderType HeaderData;
-	INSUPType INSUPData;
-	HEABType HEABData;
 	DOTMType DOTMData;
 	C8 MessageBuffer[SUP_MESSAGE_BUFFER];
 
@@ -166,10 +164,9 @@ void supervisorcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLeve
 
 				//Initiate the simulator if not initialized and a there is a valid TCP connection
 				if (SupervisorInitiatedU8 == 0 && SupervisorTCPSocketfdI32 > 0) {
-					UtilISOBuildINSUPMessage(TxBuffer, &INSUPData, SUP_MODE_NORMAL, 0);
+					MessageLength = encodeINSUPMessage(SUPERVISOR_COMMAND_NORMAL, TxBuffer, sizeof (TxBuffer), 0);
 					UtilSendTCPData("SupervisorControl", TxBuffer,
-									INSUPData.Header.MessageLengthU32 + ISO_MESSAGE_HEADER_LENGTH +
-									ISO_MESSAGE_FOOTER_LENGTH, &SupervisorTCPSocketfdI32, 0);
+									MessageLength, &SupervisorTCPSocketfdI32, 0);
 					SupervisorInitiatedU8 = 1;
 				}
 

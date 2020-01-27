@@ -223,6 +223,20 @@ typedef struct
 //! CATA value IDs
 // TODO
 
+/*! INSUP message */
+typedef struct
+{
+	HeaderType header;
+	uint16_t modeValueID;
+	uint16_t modeContentLength;
+	uint8_t mode;
+	FooterType footer;
+} INSUPType;
+
+//! INSUP value IDs
+#define VALUE_ID_INSUP_MODE 0x0200
+
+
 #pragma pack(pop)
 
 
@@ -1297,6 +1311,7 @@ ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval * execut
 	// Construct header
 	EXACData.header = buildISOHeader(MESSAGE_ID_EXAC, sizeof (EXACData), debug);
 
+	// Fill contents
 	EXACData.actionIDValueID = VALUE_ID_EXAC_ACTION_ID;
 	EXACData.actionIDContentLength = sizeof (EXACData.actionID);
 	EXACData.actionID = actionID;
@@ -1327,3 +1342,49 @@ ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval * execut
 
 	return sizeof (EXACType);
 }
+
+
+ssize_t encodeINSUPMessage(const SupervisorCommandType command, char * insupDataBuffer, const size_t bufferLength, const char debug) {
+	INSUPType INSUPData;
+
+	memset(insupDataBuffer, 0, bufferLength);
+
+	// If buffer too small to hold EXAC data, generate an error
+	if (bufferLength < sizeof (INSUPType)) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary INSUP data");
+		return -1;
+	}
+
+	// Construct header
+	INSUPData.header = buildISOHeader(MESSAGE_ID_VENDOR_SPECIFIC_RISE_INSUP, sizeof (INSUPData), debug);
+
+	// Fill contents
+	INSUPData.modeValueID = VALUE_ID_INSUP_MODE;
+	INSUPData.modeContentLength = sizeof (INSUPData.mode);
+	INSUPData.mode = (uint8_t) command;
+
+	if (debug) {
+
+	}
+
+	// Switch from host endianness to little endian
+	INSUPData.modeValueID = htole16(INSUPData.modeValueID);
+	INSUPData.modeContentLength = htole16(INSUPData.modeContentLength);
+
+	// Construct footer
+	INSUPData.footer = buildISOFooter(&INSUPData, sizeof (INSUPData), debug);
+
+	memcpy(insupDataBuffer, &INSUPData, sizeof (INSUPData));
+
+	return sizeof (INSUPData);
+}
+
+
+
+
+
+
+
+
+
+
