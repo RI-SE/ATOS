@@ -176,8 +176,6 @@ extern "C"{
 // Why do we need this memory efficiency? There is a risk that this breaks included code which isn't using pragma pack
 #pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
 
-#define SYNC_WORD 0x7e7e
-
 #define SERVER_PREPARED 0x01
 #define SERVER_PREPARED_BIG_PACKET_SIZE 0x02
 #define PATH_INVALID_MISSING 0x03
@@ -901,7 +899,7 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
-I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug);
+I32 UtilISOBuildHeader(C8 *MessageBuffer, const size_t length, HeaderType *HeaderData, U8 Debug);
 I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 CommandOption, U8 Debug);
 I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 Debug);
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
