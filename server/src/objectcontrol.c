@@ -380,8 +380,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			MessageLength =
 				ObjectControlBuildHEABMessage(MessageBuffer, &HEABData, GPSTime, ObjectControlServerStatus,
 											  0);
-			UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
-							MessageBuffer, MessageLength, 0);
+			for(iIndex = 0; iIndex < nbr_objects; ++iIndex)
+            {
+                UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
+				    			MessageBuffer, MessageLength, 0);
+            }
 		}
 
 		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_ARMED
