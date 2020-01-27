@@ -158,8 +158,7 @@ int main() {
 												  monitorData.MONR.yPosition,
 												  monitorData.MONR.zPosition,
 												  monitorData.MONR.heading,
-												  monitorData.MONR.longitudinalSpeed,
-												  monitorData.MONR.state);
+												  monitorData.MONR.longitudinalSpeed, monitorData.MONR.state);
 			sizeOfVisualizationMessage += INET_ADDRSTRLEN;
 			sizeOfVisualizationMessage += 8;	//(;)
 
