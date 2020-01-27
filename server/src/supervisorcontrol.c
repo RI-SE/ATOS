@@ -164,9 +164,10 @@ void supervisorcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLeve
 
 				//Initiate the simulator if not initialized and a there is a valid TCP connection
 				if (SupervisorInitiatedU8 == 0 && SupervisorTCPSocketfdI32 > 0) {
-					MessageLength = encodeINSUPMessage(SUPERVISOR_COMMAND_NORMAL, TxBuffer, sizeof (TxBuffer), 0);
-					UtilSendTCPData("SupervisorControl", TxBuffer,
-									MessageLength, &SupervisorTCPSocketfdI32, 0);
+					MessageLength =
+						encodeINSUPMessage(SUPERVISOR_COMMAND_NORMAL, TxBuffer, sizeof (TxBuffer), 0);
+					UtilSendTCPData("SupervisorControl", TxBuffer, MessageLength, &SupervisorTCPSocketfdI32,
+									0);
 					SupervisorInitiatedU8 = 1;
 				}
 

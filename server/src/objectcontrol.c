@@ -695,9 +695,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					iGetObjectIndexFromObjectIP(mqACCMData.ip, objectIPs,
 												sizeof (objectIPs) / sizeof (objectIPs[0]));
 				if (iIndex != -1) {
-					MessageLength = encodeACCMMessage(mqACCMData.actionID, mqACCMData.actionType, mqACCMData.actionTypeParameter1,
-													  mqACCMData.actionTypeParameter2, mqACCMData.actionTypeParameter3,
-													  MessageBuffer, sizeof (MessageBuffer), 0);
+					MessageLength =
+						encodeACCMMessage(mqACCMData.actionID, mqACCMData.actionType,
+										  mqACCMData.actionTypeParameter1, mqACCMData.actionTypeParameter2,
+										  mqACCMData.actionTypeParameter3, MessageBuffer,
+										  sizeof (MessageBuffer), 0);
 					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
 				}
 				else
@@ -715,9 +717,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												sizeof (objectIPs) / sizeof (objectIPs[0]));
 				if (iIndex != -1) {
 					struct timeval executionTime;
-					TimeSetToGPStime(&executionTime, TimeGetAsGPSweek(&currentTime), mqEXACData.executionTime_qmsoW);
-					MessageLength = encodeEXACMessage(mqEXACData.actionID, &executionTime,
-													  MessageBuffer, sizeof (MessageBuffer), 0);
+
+					TimeSetToGPStime(&executionTime, TimeGetAsGPSweek(&currentTime),
+									 mqEXACData.executionTime_qmsoW);
+					MessageLength =
+						encodeEXACMessage(mqEXACData.actionID, &executionTime, MessageBuffer,
+										  sizeof (MessageBuffer), 0);
 					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
 				}
 				else

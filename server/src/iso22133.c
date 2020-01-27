@@ -27,42 +27,41 @@ static const uint8_t SupportedProtocolVersions[] = { 2 };
 #define MAX_LATERAL_DEVIATION_UNAVAILABLE_VALUE 65535
 #define MAX_LATERAL_DEVIATION_ONE_METER_VALUE 1000
 #define MIN_POSITIONING_ACCURACY_NOT_REQUIRED_VALUE 0
-#define MIN_POSITIONING_ACCURACY_ONE_METER_VALUE 1000 // ISO specification unclear on this value
+#define MIN_POSITIONING_ACCURACY_ONE_METER_VALUE 1000	// ISO specification unclear on this value
 
 #pragma pack(push,1)
 /*! OSEM message */
-typedef struct
-{
-  HeaderType header;
-  uint16_t latitudeValueID;
-  uint16_t latitudeContentLength;
-  int64_t latitude;
-  uint16_t longitudeValueID;
-  uint16_t longitudeContentLength;
-  int64_t longitude;
-  uint16_t altitudeValueID;
-  uint16_t altitudeContentLength;
-  int32_t altitude;
-  uint16_t dateValueID;
-  uint16_t dateContentLength;
-  uint32_t date;
-  uint16_t GPSWeekValueID;
-  uint16_t GPSWeekContentLength;
-  uint16_t GPSWeek;
-  uint16_t GPSQmsOfWeekValueID;
-  uint16_t GPSQmsOfWeekContentLength;
-  uint32_t GPSQmsOfWeek;
-  uint16_t maxWayDeviationValueID;
-  uint16_t maxWayDeviationContentLength;
-  uint16_t maxWayDeviation;
-  uint16_t maxLateralDeviationValueID;
-  uint16_t maxLateralDeviationContentLength;
-  uint16_t maxLateralDeviation;
-  uint16_t minPosAccuracyValueID;
-  uint16_t minPosAccuracyContentLength;
-  uint16_t minPosAccuracy;
-  FooterType footer;
-} OSEMType; //85 bytes
+typedef struct {
+	HeaderType header;
+	uint16_t latitudeValueID;
+	uint16_t latitudeContentLength;
+	int64_t latitude;
+	uint16_t longitudeValueID;
+	uint16_t longitudeContentLength;
+	int64_t longitude;
+	uint16_t altitudeValueID;
+	uint16_t altitudeContentLength;
+	int32_t altitude;
+	uint16_t dateValueID;
+	uint16_t dateContentLength;
+	uint32_t date;
+	uint16_t GPSWeekValueID;
+	uint16_t GPSWeekContentLength;
+	uint16_t GPSWeek;
+	uint16_t GPSQmsOfWeekValueID;
+	uint16_t GPSQmsOfWeekContentLength;
+	uint32_t GPSQmsOfWeek;
+	uint16_t maxWayDeviationValueID;
+	uint16_t maxWayDeviationContentLength;
+	uint16_t maxWayDeviation;
+	uint16_t maxLateralDeviationValueID;
+	uint16_t maxLateralDeviationContentLength;
+	uint16_t maxLateralDeviation;
+	uint16_t minPosAccuracyValueID;
+	uint16_t minPosAccuracyContentLength;
+	uint16_t minPosAccuracy;
+	FooterType footer;
+} OSEMType;						//85 bytes
 
 //! OSEM value IDs
 #define VALUE_ID_OSEM_LATITUDE 0x0020
@@ -77,22 +76,20 @@ typedef struct
 
 
 /*! OSTM message */
-typedef struct
-{
-  HeaderType header;
-  uint16_t stateValueID;
-  uint16_t stateContentLength;
-  uint8_t state;
-  FooterType footer;
-} OSTMType; //16 bytes
+typedef struct {
+	HeaderType header;
+	uint16_t stateValueID;
+	uint16_t stateContentLength;
+	uint8_t state;
+	FooterType footer;
+} OSTMType;						//16 bytes
 
 //! OSTM value IDs
 #define VALUE_ID_OSTM_STATE_CHANGE_REQUEST 0x0064
 
 
 /*! STRT message */
-typedef struct
-{
+typedef struct {
 	HeaderType header;
 	uint16_t StartTimeValueIdU16;
 	uint16_t StartTimeContentLengthU16;
@@ -101,7 +98,7 @@ typedef struct
 	uint16_t GPSWeekContentLength;
 	uint16_t GPSWeek;
 	FooterType footer;
-} STRTType; //27 bytes
+} STRTType;						//27 bytes
 
 //! STRT value IDs
 #define VALUE_ID_STRT_GPS_QMS_OF_WEEK 0x0002
@@ -109,23 +106,21 @@ typedef struct
 
 
 /*! HEAB message */
-typedef struct
-{
-  HeaderType header;
-  uint16_t HEABStructValueID;
-  uint16_t HEABStructContentLength;
-  uint32_t GPSQmsOfWeek;
-  uint8_t controlCenterStatus;
-  FooterType footer;
-} HEABType; //16 bytes
+typedef struct {
+	HeaderType header;
+	uint16_t HEABStructValueID;
+	uint16_t HEABStructContentLength;
+	uint32_t GPSQmsOfWeek;
+	uint8_t controlCenterStatus;
+	FooterType footer;
+} HEABType;						//16 bytes
 
 //! HEAB value IDs
 #define VALUE_ID_HEAB_STRUCT 0x0090
 
 
 /*! TRCM message */
-typedef struct
-{
+typedef struct {
 	HeaderType header;
 	uint16_t triggerIDValueID;
 	uint16_t triggerIDContentLength;
@@ -154,8 +149,7 @@ typedef struct
 
 
 /*! TREO message */
-typedef struct
-{
+typedef struct {
 	HeaderType header;
 	uint16_t triggerIDValueID;
 	uint16_t triggerIDContentLength;
@@ -172,8 +166,7 @@ typedef struct
 
 
 /*! ACCM message */
-typedef struct
-{
+typedef struct {
 	HeaderType header;
 	uint16_t actionIDValueID;
 	uint16_t actionIDContentLength;
@@ -202,8 +195,7 @@ typedef struct
 
 
 /*! EXAC message */
-typedef struct
-{
+typedef struct {
 	HeaderType header;
 	uint16_t actionIDValueID;
 	uint16_t actionIDContentLength;
@@ -224,8 +216,7 @@ typedef struct
 // TODO
 
 /*! INSUP message */
-typedef struct
-{
+typedef struct {
 	HeaderType header;
 	uint16_t modeValueID;
 	uint16_t modeContentLength;
@@ -1109,8 +1100,9 @@ ISOMessageReturnValue ASCIIToMONR(const char *asciiBuffer, MONRType * MONRData, 
  * \param debug Flag for enabling debugging
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerType, const TriggerTypeParameter_t param1,
-						  const TriggerTypeParameter_t param2, const TriggerTypeParameter_t param3, char * trcmDataBuffer,
+ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerType,
+						  const TriggerTypeParameter_t param1, const TriggerTypeParameter_t param2,
+						  const TriggerTypeParameter_t param3, char *trcmDataBuffer,
 						  const size_t bufferLength, const char debug) {
 
 	TRCMType TRCMData;
@@ -1153,11 +1145,14 @@ ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerT
 				 "Trigger type: %u\n\tTrigger type parameter 1 value ID: 0x%x\n\tTrigger type parameter 1 content length: %u\n\t"
 				 "Trigger type parameter 1: %u\n\tTrigger type parameter 2 value ID: 0x%x\n\tTrigger type parameter 2 content length: %u\n\t"
 				 "Trigger type parameter 2: %u\n\tTrigger type parameter 3 value ID: 0x%x\n\tTrigger type parameter 3 content length: %u"
-				 "Trigger type parameter 3: %u\n\t", TRCMData.triggerIDValueID, TRCMData.triggerIDContentLength, TRCMData.triggerID,
-				 TRCMData.triggerTypeValueID, TRCMData.triggerTypeContentLength, TRCMData.triggerType, TRCMData.triggerTypeParameter1ValueID,
-				 TRCMData.triggerTypeParameter1ContentLength, TRCMData.triggerTypeParameter1, TRCMData.triggerTypeParameter2ValueID,
-				 TRCMData.triggerTypeParameter2ContentLength, TRCMData.triggerTypeParameter2, TRCMData.triggerTypeParameter3ValueID,
-				 TRCMData.triggerTypeParameter3ContentLength, TRCMData.triggerTypeParameter3);
+				 "Trigger type parameter 3: %u\n\t", TRCMData.triggerIDValueID,
+				 TRCMData.triggerIDContentLength, TRCMData.triggerID, TRCMData.triggerTypeValueID,
+				 TRCMData.triggerTypeContentLength, TRCMData.triggerType,
+				 TRCMData.triggerTypeParameter1ValueID, TRCMData.triggerTypeParameter1ContentLength,
+				 TRCMData.triggerTypeParameter1, TRCMData.triggerTypeParameter2ValueID,
+				 TRCMData.triggerTypeParameter2ContentLength, TRCMData.triggerTypeParameter2,
+				 TRCMData.triggerTypeParameter3ValueID, TRCMData.triggerTypeParameter3ContentLength,
+				 TRCMData.triggerTypeParameter3);
 	}
 
 	// Switch from host endianness to little endian
@@ -1205,9 +1200,10 @@ ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerT
  * \param debug Flag for enabling debugging
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType, const ActionTypeParameter_t param1,
-						  const ActionTypeParameter_t param2, const ActionTypeParameter_t param3, char * accmDataBuffer,
-						  const size_t bufferLength, const char debug) {
+ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType,
+						  const ActionTypeParameter_t param1, const ActionTypeParameter_t param2,
+						  const ActionTypeParameter_t param3, char *accmDataBuffer, const size_t bufferLength,
+						  const char debug) {
 
 	ACCMType ACCMData;
 
@@ -1249,10 +1245,12 @@ ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType
 				 "Action type: %u\n\tAction type parameter 1 value ID: 0x%x\n\tAction type parameter 1 content length: %u\n\t"
 				 "Action type parameter 1: %u\n\tAction type parameter 2 value ID: 0x%x\n\tAction type parameter 2 content length: %u\n\t"
 				 "Action type parameter 2: %u\n\tAction type parameter 3 value ID: 0x%x\n\tAction type parameter 3 content length: %u"
-				 "Action type parameter 3: %u\n\t", ACCMData.actionIDValueID, ACCMData.actionIDContentLength, ACCMData.actionID,
-				 ACCMData.actionTypeValueID, ACCMData.actionTypeContentLength, ACCMData.actionType, ACCMData.actionTypeParameter1ValueID,
-				 ACCMData.actionTypeParameter1ContentLength, ACCMData.actionTypeParameter1, ACCMData.actionTypeParameter2ValueID,
-				 ACCMData.actionTypeParameter2ContentLength, ACCMData.actionTypeParameter2, ACCMData.actionTypeParameter3ValueID,
+				 "Action type parameter 3: %u\n\t", ACCMData.actionIDValueID, ACCMData.actionIDContentLength,
+				 ACCMData.actionID, ACCMData.actionTypeValueID, ACCMData.actionTypeContentLength,
+				 ACCMData.actionType, ACCMData.actionTypeParameter1ValueID,
+				 ACCMData.actionTypeParameter1ContentLength, ACCMData.actionTypeParameter1,
+				 ACCMData.actionTypeParameter2ValueID, ACCMData.actionTypeParameter2ContentLength,
+				 ACCMData.actionTypeParameter2, ACCMData.actionTypeParameter3ValueID,
 				 ACCMData.actionTypeParameter3ContentLength, ACCMData.actionTypeParameter3);
 	}
 
@@ -1296,7 +1294,8 @@ ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType
  * \param debug Flag for enabling debugging
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval * executionTime, char * exacDataBuffer, const size_t bufferLength, const char debug) {
+ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval *executionTime, char *exacDataBuffer,
+						  const size_t bufferLength, const char debug) {
 
 	EXACType EXACData;
 
@@ -1321,10 +1320,12 @@ ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval * execut
 	EXACData.executionTime_qmsoW = TimeGetAsGPSqmsOfWeek(executionTime);
 
 	if (debug) {
-		LogPrint("EXAC message:\n\tAction ID value ID: 0x%x\n\tAction ID content length: %u\n\tAction ID: %u\n\t"
-				 "Action execute time value ID: 0x%x\n\tAction execute time content length: %u\n\tAction execute time: %u [¼ ms]",
-				 EXACData.actionIDValueID, EXACData.actionIDContentLength, EXACData.actionID, EXACData.executionTime_qmsoWValueID,
-				 EXACData.executionTime_qmsoWContentLength, EXACData.executionTime_qmsoW);
+		LogPrint
+			("EXAC message:\n\tAction ID value ID: 0x%x\n\tAction ID content length: %u\n\tAction ID: %u\n\t"
+			 "Action execute time value ID: 0x%x\n\tAction execute time content length: %u\n\tAction execute time: %u [¼ ms]",
+			 EXACData.actionIDValueID, EXACData.actionIDContentLength, EXACData.actionID,
+			 EXACData.executionTime_qmsoWValueID, EXACData.executionTime_qmsoWContentLength,
+			 EXACData.executionTime_qmsoW);
 	}
 
 	// Switch from host endianness to little endian
@@ -1344,7 +1345,8 @@ ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval * execut
 }
 
 
-ssize_t encodeINSUPMessage(const SupervisorCommandType command, char * insupDataBuffer, const size_t bufferLength, const char debug) {
+ssize_t encodeINSUPMessage(const SupervisorCommandType command, char *insupDataBuffer,
+						   const size_t bufferLength, const char debug) {
 	INSUPType INSUPData;
 
 	memset(insupDataBuffer, 0, bufferLength);
@@ -1378,13 +1380,3 @@ ssize_t encodeINSUPMessage(const SupervisorCommandType command, char * insupData
 
 	return sizeof (INSUPData);
 }
-
-
-
-
-
-
-
-
-
-
