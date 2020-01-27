@@ -517,10 +517,10 @@ ssize_t encodeSTRTMessage(const struct timeval *timeOfStart, char *strtDataBuffe
 	STRTData.StartTimeValueIdU16 = VALUE_ID_STRT_GPS_QMS_OF_WEEK;
 	STRTData.StartTimeContentLengthU16 = sizeof (STRTData.StartTimeU32);
 	STRTData.StartTimeU32 =
-		timeOfStart == NULL ? GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSqmsOfWeek(&timeOfStart);
+		timeOfStart == NULL ? GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSqmsOfWeek(timeOfStart);
 	STRTData.GPSWeekValueID = VALUE_ID_STRT_GPS_WEEK;
 	STRTData.GPSWeekContentLength = sizeof (STRTData.GPSWeek);
-	STRTData.GPSWeek = timeOfStart == NULL ? GPS_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSweek(&timeOfStart);
+	STRTData.GPSWeek = timeOfStart == NULL ? GPS_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSweek(timeOfStart);
 
 	if (debug) {
 		LogPrint("STRT message:\n\tGPS second of week value ID: 0x%x\n\t"
