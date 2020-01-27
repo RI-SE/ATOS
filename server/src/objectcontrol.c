@@ -783,8 +783,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					//OSEMSentU8 = 0;
 					STRTSentU8 = 0;
-                    DataDictionarySetNumberOfObjectsU8(GSD, nbr_objects);
-					DataDictionaryInitMONR(GSD);
 
 				}
 				else {

@@ -801,7 +801,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeScenario:",
 												 ControlResponseBuffer, 0, &ClientSocket, 0);
-				DataDictionaryInitMONR(GSD);
 
 				SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
 			}

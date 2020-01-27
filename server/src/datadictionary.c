@@ -1698,13 +1698,14 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
 	//printf("File size after writing: %ld\n", st.st_size);
 
 	// Map memory to created file
-	GSD->MonrMessages =
-        (MONRType *) mmap(NULL, (sizeof (MONRType) * GSD->numberOfObjects), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    // int objectCount = GSD->numberOfObjects;
+
+
+    GSD->MonrMessages = (MONRType *) mmap(NULL, (sizeof (MONRType)), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
 
 	LogPrint("Initing");
 
-	//munmap(memory, 6);
 
 	pthread_mutex_unlock(&MONRMutex);
 	return Res;
@@ -1723,7 +1724,6 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, U8 id) {
 	Res = WRITE_OK;
 	pthread_mutex_lock(&MONRMutex);
 	GSD->MonrMessages[id] = *MONR;
-	LogPrint("Setting %d", GSD->MonrMessages[id].HeadingU16);
 	pthread_mutex_unlock(&MONRMutex);
 	return Res;
 }
@@ -1774,7 +1774,7 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U8 * numberO
 
 	Res = WRITE_OK;
 	pthread_mutex_lock(&numberOfObjectsMutex);
-	GSD->numberOfObjects = *numberOfObjects;
+    GSD->numberOfObjects = *numberOfObjects;
 	pthread_mutex_unlock(&numberOfObjectsMutex);
 	return Res;
 }
