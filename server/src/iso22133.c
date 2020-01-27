@@ -11,6 +11,8 @@ static ISOMessageReturnValue buildISOHeader(const char *MessageBuffer, const siz
 											HeaderType * HeaderData, const char debug);
 static ISOMessageReturnValue buildISOFooter(const char *MessageBuffer, const size_t length,
 											FooterType * HeaderData, const char debug);
+static char isValidMessageID(const uint16_t id);
+
 
 // ************************** function definitions
 
@@ -115,6 +117,44 @@ ISOMessageReturnValue buildISOFooter(const char *MessageBuffer, const size_t len
 	return MESSAGE_OK;
 }
 
+/*!
+ * \brief isValidMessageID Determines if specified id is a valid ISO message ID. The reserved range is deemed
+ * invalid and vendor specific range is deemed valid.
+ * \param id An ISO message id to be checked
+ * \return 1 if valid, 0 if not
+ */
+char isValidMessageID(const uint16_t id) {
+	return id == MESSAGE_ID_MONR || id == MESSAGE_ID_HEAB || id == MESSAGE_ID_TRAJ || id == MESSAGE_ID_OSEM
+		|| id == MESSAGE_ID_OSTM || id == MESSAGE_ID_STRT || id == MESSAGE_ID_MONR2 || id == MESSAGE_ID_SOWM
+		|| id == MESSAGE_ID_INFO || id == MESSAGE_ID_RCMM || id == MESSAGE_ID_SYPM || id == MESSAGE_ID_MTSP
+		|| id == MESSAGE_ID_TRCM || id == MESSAGE_ID_ACCM || id == MESSAGE_ID_TREO || id == MESSAGE_ID_EXAC
+		|| id == MESSAGE_ID_CATA || id == MESSAGE_ID_RCCM || id == MESSAGE_ID_RCRT || id == MESSAGE_ID_PIME
+		|| id == MESSAGE_ID_COSE || id == MESSAGE_ID_MOMA
+		|| (id >= MESSAGE_ID_VENDOR_SPECIFIC_LOWER_LIMIT && id <= MESSAGE_ID_VENDOR_SPECIFIC_UPPER_LIMIT);
+}
+
+/*!
+ * \brief getISOMessageType Determines the ISO message type of a raw data buffer
+ * \param messageData Buffer containing raw data to be parsed into an ISO message
+ * \param length Size of buffer to be parsed
+ * \param debug Flag for enabling debugging information
+ * \return Value according to ::ISOMessageID
+ */
+ISOMessageID getISOMessageType(const char *messageData, const size_t length, const char debug) {
+	HeaderType header;
+
+	if (buildISOHeader(messageData, length, &header, debug) != MESSAGE_OK) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to parse raw data into ISO message header");
+		return MESSAGE_ID_INVALID;
+	}
+	if (isValidMessageID(header.MessageIdU16))
+		return (ISOMessageID) header.MessageIdU16;
+	else {
+		LogMessage(LOG_LEVEL_WARNING, "Message ID %u does not match any known ISO message",
+				   header.MessageIdU16);
+		return MESSAGE_ID_INVALID;
+	}
+}
 
 /*!
  * \brief buildMONRMessage Fills a MONRType struct from a buffer of raw data
@@ -222,6 +262,7 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 		memset(MONRData, 0, sizeof (*MONRData));
 		return retval;
 	}
+	p += sizeof (MONRData->footer);
 
 	if (debug == 1) {
 		LogPrint("MONR:");
