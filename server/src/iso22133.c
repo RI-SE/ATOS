@@ -10,6 +10,7 @@
 static const uint8_t SupportedProtocolVersions[] = { 2 };
 
 
+
 // ************************* Type definitions according ISO protocol specification *******************************
 //! Predefined integer values with special meaning
 #define LATITUDE_UNAVAILABLE_VALUE 900000000001
@@ -28,6 +29,98 @@ static const uint8_t SupportedProtocolVersions[] = { 2 };
 #define MIN_POSITIONING_ACCURACY_NOT_REQUIRED_VALUE 0
 #define MIN_POSITIONING_ACCURACY_ONE_METER_VALUE 1000 // ISO specification unclear on this value
 
+
+//! *************************** OSEM
+typedef struct
+{
+  HeaderType header;
+  uint16_t latitudeValueID;
+  uint16_t latitudeContentLength;
+  int64_t latitude;
+  uint16_t longitudeValueID;
+  uint16_t longitudeContentLength;
+  int64_t longitude;
+  uint16_t altitudeValueID;
+  uint16_t altitudeContentLength;
+  int32_t altitude;
+  uint16_t dateValueID;
+  uint16_t dateContentLength;
+  uint32_t date;
+  uint16_t GPSWeekValueID;
+  uint16_t GPSWeekContentLength;
+  uint16_t GPSWeek;
+  uint16_t GPSQmsOfWeekValueID;
+  uint16_t GPSQmsOfWeekContentLength;
+  uint32_t GPSQmsOfWeek;
+  uint16_t maxWayDeviationValueID;
+  uint16_t maxWayDeviationContentLength;
+  uint16_t maxWayDeviation;
+  uint16_t maxLateralDeviationValueID;
+  uint16_t maxLateralDeviationContentLength;
+  uint16_t maxLateralDeviation;
+  uint16_t minPosAccuracyValueID;
+  uint16_t minPosAccuracyContentLength;
+  uint16_t minPosAccuracy;
+  FooterType footer;
+} OSEMType; //85 bytes
+
+//! OSEM value IDs
+#define VALUE_ID_OSEM_LATITUDE 0x0020
+#define VALUE_ID_OSEM_LONGITUDE 0x0021
+#define VALUE_ID_OSEM_ALTITUDE 0x0022
+#define VALUE_ID_OSEM_DATE 0x0004
+#define VALUE_ID_OSEM_GPS_WEEK 0x0003
+#define VALUE_ID_OSEM_GPS_QUARTER_MILLISECOND_OF_WEEK 0x0002
+#define VALUE_ID_OSEM_MAX_WAY_DEVIATION 0x0070
+#define VALUE_ID_OSEM_MAX_LATERAL_DEVIATION 0x0072
+#define VALUE_ID_OSEM_MIN_POSITIONING_ACCURACY 0x0074
+
+
+/*! OSTM message */
+typedef struct
+{
+  HeaderType header;
+  uint16_t stateValueID;
+  uint16_t stateContentLength;
+  uint8_t state;
+  FooterType footer;
+} OSTMType; //16 bytes
+
+//! OSTM value IDs
+#define VALUE_ID_OSTM_STATE_CHANGE_REQUEST 0x0064
+
+
+/*! STRT message */
+typedef struct
+{
+	HeaderType header;
+	uint16_t StartTimeValueIdU16;
+	uint16_t StartTimeContentLengthU16;
+	uint32_t StartTimeU32;
+	uint16_t GPSWeekValueID;
+	uint16_t GPSWeekContentLength;
+	uint16_t GPSWeek;
+	FooterType footer;
+} STRTType; //27 bytes
+
+//! STRT value IDs
+#define VALUE_ID_STRT_GPS_QMS_OF_WEEK 0x0002
+#define VALUE_ID_STRT_GPS_WEEK 0x0003
+
+
+/*! HEAB message */
+typedef struct
+{
+  HeaderType header;
+  uint16_t HEABStructValueID;
+  uint16_t HEABStructContentLength;
+  uint32_t GPSQmsOfWeek;
+  uint8_t controlCenterStatus;
+  FooterType footer;
+} HEABType; //16 bytes
+
+//! HEAB value IDs
+#define VALUE_ID_HEAB_STRUCT 0x0090
 
 // ************************* Non-ISO type definitions and defines ************************************************
 // Byte swapper definitions for 6 byte values
