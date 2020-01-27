@@ -47,25 +47,25 @@ void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualiz
 			inet_ntop(AF_INET, &_monitorData->ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
 	char GPSMsOfWeekString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(GPSMsOfWeekString, "%u", _monitorData->MONR.GPSQmsOfWeekU32);
+	sprintf(GPSMsOfWeekString, "%u", _monitorData->MONR.gpsQmsOfWeek);
 	char xPosString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(xPosString, "%d", _monitorData->MONR.XPositionI32);
+	sprintf(xPosString, "%d", _monitorData->MONR.xPosition);
 	char yPosString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(yPosString, "%d", _monitorData->MONR.YPositionI32);
+	sprintf(yPosString, "%d", _monitorData->MONR.yPosition);
 	char zPosString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(zPosString, "%d", _monitorData->MONR.ZPositionI32);
+	sprintf(zPosString, "%d", _monitorData->MONR.zPosition);
 	char headingString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(headingString, "%u", _monitorData->MONR.HeadingU16);
+	sprintf(headingString, "%u", _monitorData->MONR.heading);
 	char longSpeedString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(longSpeedString, "%d", _monitorData->MONR.LongitudinalSpeedI16);
+	sprintf(longSpeedString, "%d", _monitorData->MONR.longitudinalSpeed);
 	char stateString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(stateString, "%u", _monitorData->MONR.StateU8);
+	sprintf(stateString, "%u", _monitorData->MONR.state);
 
 
 	//Build message from MonitorStruct
@@ -78,13 +78,13 @@ void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualiz
 	if (_debug) {
 		//LogMessage(LOG_LEVEL_INFO, "%s", _visualizationMessage);
 		LogMessage(LOG_LEVEL_INFO, "IP: %s", ipStringBuffer);
-		LogMessage(LOG_LEVEL_INFO, "GPSQmsOfWeek: %u", _monitorData->MONR.GPSQmsOfWeekU32);
-		LogMessage(LOG_LEVEL_INFO, "X: %d", _monitorData->MONR.XPositionI32);
-		LogMessage(LOG_LEVEL_INFO, "Y: %d", _monitorData->MONR.YPositionI32);
-		LogMessage(LOG_LEVEL_INFO, "Z: %d", _monitorData->MONR.ZPositionI32);
-		LogMessage(LOG_LEVEL_INFO, "Heading: %u", _monitorData->MONR.HeadingU16);
-		LogMessage(LOG_LEVEL_INFO, "LongSpeed: %d", _monitorData->MONR.LongitudinalSpeedI16);
-		LogMessage(LOG_LEVEL_INFO, "State: %u", _monitorData->MONR.StateU8);
+		LogMessage(LOG_LEVEL_INFO, "GPSQmsOfWeek: %u", _monitorData->MONR.gpsQmsOfWeek);
+		LogMessage(LOG_LEVEL_INFO, "X: %d", _monitorData->MONR.xPosition);
+		LogMessage(LOG_LEVEL_INFO, "Y: %d", _monitorData->MONR.yPosition);
+		LogMessage(LOG_LEVEL_INFO, "Z: %d", _monitorData->MONR.zPosition);
+		LogMessage(LOG_LEVEL_INFO, "Heading: %u", _monitorData->MONR.heading);
+		LogMessage(LOG_LEVEL_INFO, "LongSpeed: %d", _monitorData->MONR.longitudinalSpeed);
+		LogMessage(LOG_LEVEL_INFO, "State: %u", _monitorData->MONR.state);
 		LogMessage(LOG_LEVEL_INFO, "MESSAGE-SIZE = %d", _sizeOfVisualizationMessage);
 	}
 }
@@ -153,13 +153,13 @@ int main() {
 
 			//Calculate size of incoming buffer
 			sizeOfVisualizationMessage = snprintf(dummy, sizeof (dummy), "%u;%d;%d;%d;%u;%d;%u;",
-												  monitorData.MONR.GPSQmsOfWeekU32,
-												  monitorData.MONR.XPositionI32,
-												  monitorData.MONR.YPositionI32,
-												  monitorData.MONR.ZPositionI32,
-												  monitorData.MONR.HeadingU16,
-												  monitorData.MONR.LongitudinalSpeedI16,
-												  monitorData.MONR.StateU8);
+												  monitorData.MONR.gpsQmsOfWeek,
+												  monitorData.MONR.xPosition,
+												  monitorData.MONR.yPosition,
+												  monitorData.MONR.zPosition,
+												  monitorData.MONR.heading,
+												  monitorData.MONR.longitudinalSpeed,
+												  monitorData.MONR.state);
 			sizeOfVisualizationMessage += INET_ADDRSTRLEN;
 			sizeOfVisualizationMessage += 8;	//(;)
 
