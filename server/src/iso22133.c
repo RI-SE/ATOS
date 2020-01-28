@@ -1,37 +1,40 @@
 #include "iso22133.h"
-#include "string.h"
 #include "logging.h"
-#include "errno.h"
-#include "stdlib.h"
+#include <string.h>
+#include <errno.h>
+#include <stdlib.h>
 
 static const uint8_t SupportedProtocolVersions[] = { 2 };
 
-// ************************** static functions
-static ISOMessageReturnValue buildISOHeader(const char *MessageBuffer, const size_t length,
-											HeaderType * HeaderData, const char debug);
-static ISOMessageReturnValue buildISOFooter(const char *MessageBuffer, const size_t length,
-											FooterType * HeaderData, const char debug);
+// ************************** static function declarations
+static ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t length,
+											 HeaderType * HeaderData, const char debug);
+static ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t length,
+											 FooterType * HeaderData, const char debug);
+static HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char debug);
+static FooterType buildISOFooter(const void *message, const size_t sizeExclFooter, const char debug);
 static char isValidMessageID(const uint16_t id);
-
 
 // ************************** function definitions
 
 /*!
- * \brief buildISOHeader Convert data in a buffer to an ISO header
+ * \brief decodeISOHeader Convert data in a buffer to an ISO heade
  * \param MessageBuffer Buffer containing raw data to be converted
  * \param length Length of buffer
  * \param HeaderData Struct in which to store resulting data
  * \param debug Flag for enabling debugging of this function
  * \return value according to ::ISOMessageReturnValue
  */
-ISOMessageReturnValue buildISOHeader(const char *MessageBuffer, const size_t length, HeaderType * HeaderData,
-									 const char debug) {
+ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t length, HeaderType * HeaderData,
+									  const char debug) {
+
 	const char *p = MessageBuffer;
 	ISOMessageReturnValue retval = MESSAGE_OK;
 	const char ProtocolVersionBitmask = 0x7F;
 	char messageProtocolVersion = 0;
 	char isProtocolVersionSupported = 0;
 
+	// If not enough data to fill header, generate error
 	if (length < sizeof (HeaderData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO header");
 		memset(HeaderData, 0, sizeof (*HeaderData));
@@ -43,6 +46,7 @@ ISOMessageReturnValue buildISOHeader(const char *MessageBuffer, const size_t len
 	HeaderData->SyncWordU16 = le16toh(HeaderData->SyncWordU16);
 	p += sizeof (HeaderData->SyncWordU16);
 
+	// If sync word is not correct, generate error
 	if (HeaderData->SyncWordU16 != ISO_SYNC_WORD) {
 		LogMessage(LOG_LEVEL_ERROR, "Sync word error when decoding ISO header");
 		memset(HeaderData, 0, sizeof (*HeaderData));
@@ -58,7 +62,7 @@ ISOMessageReturnValue buildISOHeader(const char *MessageBuffer, const size_t len
 	memcpy(&HeaderData->AckReqProtVerU8, p, sizeof (HeaderData->AckReqProtVerU8));
 	p += sizeof (HeaderData->AckReqProtVerU8);
 
-	// Loop over permitted protocol versions
+	// Loop over permitted protocol versions to see if current version is among them
 	messageProtocolVersion = HeaderData->AckReqProtVerU8 & ProtocolVersionBitmask;
 	for (size_t i = 0; i < sizeof (SupportedProtocolVersions) / sizeof (SupportedProtocolVersions[0]); ++i) {
 		if (SupportedProtocolVersions[i] == messageProtocolVersion) {
@@ -67,6 +71,7 @@ ISOMessageReturnValue buildISOHeader(const char *MessageBuffer, const size_t len
 		}
 	}
 
+	// Generate error if protocol version not supported
 	if (!isProtocolVersionSupported) {
 		LogMessage(LOG_LEVEL_WARNING, "Protocol version %u not supported", messageProtocolVersion);
 		retval = MESSAGE_VERSION_ERROR;
@@ -95,16 +100,17 @@ ISOMessageReturnValue buildISOHeader(const char *MessageBuffer, const size_t len
 }
 
 /*!
- * \brief buildISOFooter Convert data in a buffer to an ISO footer
+ * \brief decodeISOFooter Convert data in a buffer to an ISO footer
  * \param MessageBuffer Buffer containing raw data to be converted
  * \param length Length of buffer
  * \param HeaderData Struct in which to store resulting data
  * \param debug Flag for enabling debugging of this function
  * \return value according to ::ISOMessageReturnValue
  */
-ISOMessageReturnValue buildISOFooter(const char *MessageBuffer, const size_t length, FooterType * FooterData,
-									 const char debug) {
+ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t length, FooterType * FooterData,
+									  const char debug) {
 
+	// If too little data, generate error
 	if (length < sizeof (FooterData->Crc)) {
 		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO footer");
 		memset(FooterData, 0, sizeof (*FooterData));
@@ -115,6 +121,47 @@ ISOMessageReturnValue buildISOFooter(const char *MessageBuffer, const size_t len
 
 	// TODO: check on CRC
 	return MESSAGE_OK;
+}
+
+/*!
+ * \brief buildISOHeader Constructs an ISO header based on the supplied message ID and content length
+ * \param id Message ID of the message for which the header is to be used
+ * \param messageLength Length of the message excluding header and footer
+ * \param debug Flag for enabling debugging
+ * \return A struct containing ISO header data
+ */
+HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char debug) {
+	HeaderType header;
+
+	header.SyncWordU16 = ISO_SYNC_WORD;
+	header.TransmitterIdU8 = 0;
+	header.MessageCounterU8 = 0;
+	header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
+	header.MessageIdU16 = (uint16_t) id;
+	header.MessageLengthU32 = messageLength;
+
+	if (debug) {
+		LogPrint("Encoded ISO header:\n\tSync word: 0x%x\n\tTransmitter ID: %u\n\tMessage counter: %u\n\t"
+				 "Ack request | Protocol version: 0x%x\n\tMessage ID: 0x%x\n\tMessage length: %u",
+				 header.SyncWordU16, header.TransmitterIdU8, header.MessageCounterU8, header.AckReqProtVerU8,
+				 header.MessageIdU16, header.MessageLengthU32);
+	}
+
+	return header;
+}
+
+FooterType buildISOFooter(const void *message, const size_t messageSize, const char debug) {
+	FooterType footer;
+
+	// TODO: Calculate CRC - remembering that message begins with header and messageSize will include header and footer
+	footer.Crc = 0;
+	footer.Crc = htole16(footer.Crc);
+
+	if (debug) {
+		LogPrint("Encoded ISO footer:\n\tCRC: 0x%x", footer.Crc);
+	}
+
+	return footer;
 }
 
 /*!
@@ -143,10 +190,13 @@ char isValidMessageID(const uint16_t id) {
 ISOMessageID getISOMessageType(const char *messageData, const size_t length, const char debug) {
 	HeaderType header;
 
-	if (buildISOHeader(messageData, length, &header, debug) != MESSAGE_OK) {
+	// Decode header
+	if (decodeISOHeader(messageData, length, &header, debug) != MESSAGE_OK) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to parse raw data into ISO message header");
 		return MESSAGE_ID_INVALID;
 	}
+
+	// Check if header contains valid message ID, if so return it
 	if (isValidMessageID(header.MessageIdU16))
 		return (ISOMessageID) header.MessageIdU16;
 	else {
@@ -155,6 +205,63 @@ ISOMessageID getISOMessageType(const char *messageData, const size_t length, con
 		return MESSAGE_ID_INVALID;
 	}
 }
+
+
+/*!
+ * \brief encodeSTRTMessage Constructs an ISO STRT message based on start time parameters
+ * \param startTimeGPSqmsOW Quarter milliseconds of week when recipient of message shall start
+ * \param startGPSWeek GPS week when recipient shall start
+ * \param strtDataBuffer Data buffer in which to place encoded STRT message
+ * \param bufferLength Size of data buffer in which to place encoded STRT message
+ * \param debug Flag for enabling debugging
+ * \return number of bytes written to the data buffer, or -1 if an error occurred
+ */
+ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t startGPSWeek, char *strtDataBuffer,
+						  const size_t bufferLength, const char debug) {
+
+	STRTType STRTData;
+
+	memset(strtDataBuffer, 0, bufferLength);
+
+	// If buffer too small to hold STRT data, generate an error
+	if (bufferLength < sizeof (STRTType)) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary STRT data");
+		return -1;
+	}
+
+	STRTData.header =
+		buildISOHeader(MESSAGE_ID_STRT, sizeof (STRTType) - sizeof (HeaderType) - sizeof (FooterType), debug);
+
+	// Fill contents, ensuring to swap from host endianness to little endian
+	STRTData.StartTimeValueIdU16 = VALUE_ID_STRT_GPS_QMS_OF_WEEK;
+	STRTData.StartTimeValueIdU16 = htole16(STRTData.StartTimeValueIdU16);
+	STRTData.StartTimeContentLengthU16 = sizeof (STRTData.StartTimeU32);
+	STRTData.StartTimeContentLengthU16 = htole16(STRTData.StartTimeContentLengthU16);
+	STRTData.StartTimeU32 = startTimeGPSqmsOW;
+	STRTData.StartTimeU32 = htole32(STRTData.StartTimeU32);
+	STRTData.GPSWeekValueIdU16 = VALUE_ID_STRT_GPS_WEEK;
+	STRTData.GPSWeekValueIdU16 = htole16(STRTData.GPSWeekValueIdU16);
+	STRTData.GPSWeekContentLengthU16 = sizeof (STRTData.GPSWeekU16);
+	STRTData.GPSWeekContentLengthU16 = htole16(STRTData.GPSWeekContentLengthU16);
+	STRTData.GPSWeekU16 = startGPSWeek;
+	STRTData.GPSWeekU16 = htole16(STRTData.GPSWeekU16);
+
+	if (debug) {
+		LogPrint("STRT message:\n\tGPS second of week value ID: 0x%x\n\t"
+				 "GPS second of week content length: %u\n\tGPS second of week: %u qms\n\t"
+				 "GPS week value ID: 0x%x\n\tGPS week content length: %u\n\t"
+				 "GPS week: %u", STRTData.StartTimeValueIdU16, STRTData.StartTimeContentLengthU16,
+				 STRTData.StartTimeU32, STRTData.GPSWeekValueIdU16, STRTData.GPSWeekContentLengthU16,
+				 STRTData.GPSWeekU16);
+	}
+
+	STRTData.footer = buildISOFooter(&STRTData, sizeof (STRTType), debug);
+
+	memcpy(strtDataBuffer, &STRTData, sizeof (STRTType));
+
+	return sizeof (STRTType);
+}
+
 
 /*!
  * \brief buildMONRMessage Fills a MONRType struct from a buffer of raw data
@@ -174,12 +281,13 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 	ISOMessageReturnValue retval = MESSAGE_OK;
 
 	// Decode ISO header
-	if ((retval = buildISOHeader(p, length, &MONRData->header, debug)) != MESSAGE_OK) {
+	if ((retval = decodeISOHeader(p, length, &MONRData->header, debug)) != MESSAGE_OK) {
 		memset(MONRData, 0, sizeof (*MONRData));
 		return retval;
 	}
 	p += sizeof (MONRData->header);
 
+	// If message is not a MONR message, generate an error
 	if (MONRData->header.MessageIdU16 != MESSAGE_ID_MONR) {
 		memset(MONRData, 0, sizeof (*MONRData));
 		return MESSAGE_TYPE_ERROR;
@@ -190,6 +298,7 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 	p += sizeof (MONRData->monrStructValueID);
 	MONRData->monrStructValueID = le16toh(MONRData->monrStructValueID);
 
+	// If content is not a MONR struct or an unexpected size, generate an error
 	if (MONRData->monrStructValueID != VALUE_ID_MONR_STRUCT) {
 		LogMessage(LOG_LEVEL_ERROR, "Attempted to pass non-MONR struct into MONR parsing function");
 		memset(MONRData, 0, sizeof (*MONRData));
@@ -256,13 +365,12 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 	memcpy(&MONRData->errorStatus, p, sizeof (MONRData->errorStatus));
 	p += sizeof (MONRData->errorStatus);
 
-	// Footer
+	// Decode footer
 	if ((retval =
-		 buildISOFooter(p, length - (size_t) (p - MonrData), &MONRData->footer, debug)) != MESSAGE_OK) {
+		 decodeISOFooter(p, length - (size_t) (p - MonrData), &MONRData->footer, debug)) != MESSAGE_OK) {
 		memset(MONRData, 0, sizeof (*MONRData));
 		return retval;
 	}
-	p += sizeof (MONRData->footer);
 
 	if (debug == 1) {
 		LogPrint("MONR:");

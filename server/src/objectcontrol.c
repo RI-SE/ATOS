@@ -175,8 +175,6 @@ I32 ObjectControlBuildOSEMMessage(C8 * MessageBuffer, OSEMType * OSEMData, TimeT
 static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects);
 static void signalHandler(int signo);
-I32 ObjectControlBuildSTRTMessage(C8 * MessageBuffer, STRTType * STRTData, TimeType * GPSTime,
-								  U32 ScenarioStartTime, U32 DelayStart, U32 * OutgoingStartTime, U8 debug);
 I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 CommandOption, U8 debug);
 I32 ObjectControlBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeType * GPSTime, U8 CCStatus,
 								  U8 debug);
@@ -264,8 +262,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 *MiscPtr;
 	C8 MiscText[SMALL_BUFFER_SIZE_0];
 	U32 StartTimeU32 = 0;
-	U32 OutgoingStartTimeU32 = 0;
-	U32 DelayedStartU32 = 0;
 	U32 CurrentTimeU32 = 0;
 	U32 OldTimeU32 = 0;
 	U64 TimeCap1, TimeCap2;
@@ -287,7 +283,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
 	HeaderType HeaderData;
 	OSEMType OSEMData;
-	STRTType STRTData;
 	OSTMType OSTMData;
 	HEABType HEABData;
 	MONRType MONRData;
@@ -639,24 +634,23 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else if (iCommand == COMM_STRT && (vGetState(GSD) == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED) */ )	//OBC_STATE_INITIALIZED is temporary!
 			{
-				bzero(Timestamp, SMALL_BUFFER_SIZE_0);
-				MiscPtr = strchr(pcRecvBuffer, ';');
-				strncpy(Timestamp, MiscPtr + 1, (uint64_t) strchr(MiscPtr + 1, ';') - (uint64_t) MiscPtr - 1);
-				StartTimeU32 = atol(Timestamp);
-				bzero(Timestamp, SMALL_BUFFER_SIZE_0);
-				MiscPtr += 1;
-				MiscPtr = strchr(pcRecvBuffer, ';');
-				strncpy(Timestamp, MiscPtr + 1, (uint64_t) strchr(MiscPtr + 1, ';') - (uint64_t) MiscPtr - 1);
-				DelayedStartU32 = atoi(Timestamp);
+				struct timeval startTime, startDelay;
+
+				MiscPtr = pcRecvBuffer;
+				TimeSetToUTCms(&startTime, (int64_t) strtoul(MiscPtr, &MiscPtr, 10));
+				TimeSetToUTCms(&startDelay, (int64_t) strtoul(MiscPtr + 1, NULL, 10));
+				timeradd(&startTime, &startDelay, &startTime);
+				MessageLength =
+					(int)encodeSTRTMessage(TimeGetAsGPSqmsOfWeek(&startTime), TimeGetAsGPSweek(&startTime),
+										   MessageBuffer, sizeof (MessageBuffer), 0);
+
 				ASPData.MTSPU32 = 0;
 				ASPData.TimeToSyncPointDbl = 0;
 				SearchStartIndex = -1;
 				ASPData.PrevTimeToSyncPointDbl = 0;
 				OldTimeU32 = CurrentTimeU32;
 				ObjectControlServerStatus = COMMAND_HEAB_OPT_SERVER_STATUS_OK;	//Set server to READY
-				MessageLength =
-					ObjectControlBuildSTRTMessage(MessageBuffer, &STRTData, GPSTime, (U32) StartTimeU32,
-												  DelayedStartU32, &OutgoingStartTimeU32, 0);
+
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 				}
@@ -670,7 +664,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 				//OBCState = OBC_STATE_INITIALIZED; //This is temporary!
 				//printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
-				GSD->ScenarioStartTimeU32 = OutgoingStartTimeU32;
+				GSD->ScenarioStartTimeU32 = TimeGetAsGPSqmsOfWeek(&startTime) >> 2;
 				bzero(MiscText, SMALL_BUFFER_SIZE_0);
 				sprintf(MiscText, "%" PRIu32, GSD->ScenarioStartTimeU32 << 2);
 				LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>, GPS time <%s>", pcRecvBuffer,
@@ -1327,66 +1321,6 @@ int ObjectControlOSEMtoASCII(OSEMType * OSEMData, char *GPSWeek, char *GPSLatitu
 	}
 	return 0;
 }
-int ObjectControlBuildSTRTMessage(C8 * MessageBuffer, STRTType * STRTData, TimeType * GPSTime,
-								  U32 ScenarioStartTime, U32 DelayStart, U32 * OutgoingStartTime, U8 debug) {
-	I32 MessageIndex = 0, i = 0;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, COMMAND_STRT_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
-
-	STRTData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	STRTData->Header.TransmitterIdU8 = 0;
-	STRTData->Header.MessageCounterU8 = 0;
-	STRTData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	STRTData->Header.MessageIdU16 = COMMAND_STRT_CODE;
-	STRTData->Header.MessageLengthU32 = sizeof (STRTType) - sizeof (HeaderType);
-	STRTData->StartTimeValueIdU16 = VALUE_ID_GPS_SECOND_OF_WEEK;
-	STRTData->StartTimeContentLengthU16 = sizeof (STRTData->StartTimeU32);
-	STRTData->StartTimeU32 =
-		((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime) +
-		  ScenarioStartTime) << 2) + GPSTime->MicroSecondU16;
-	STRTData->GPSWeekValueIdU16 = VALUE_ID_GPS_WEEK;
-	STRTData->GPSWeekContentLengthU16 = sizeof (STRTData->GPSWeekU16);
-	STRTData->GPSWeekU16 = GPSTime->GPSWeekU16;
-	// STRTData->DelayStartValueIdU16 = VALUE_ID_RELATIVE_TIME;
-	// STRTData->DelayStartContentLengthU16 = 4;
-	// STRTData->DelayStartU32 = DelayStart;
-
-	*OutgoingStartTime = (STRTData->StartTimeU32) >> 2;
-
-	if (!GPSTime->isGPSenabled) {
-		UtilgetCurrentGPStime(NULL, &STRTData->StartTimeU32);
-	}
-
-	p = (char *)STRTData;
-	for (i = 0; i < sizeof (STRTType); i++)
-		*(MessageBuffer + i) = *p++;
-	Crc = crc_16((const unsigned char *)MessageBuffer, sizeof (STRTType));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc);
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	MessageIndex = i;
-
-	if (debug) {
-		// TODO: Change to log printout when byte thingy has been implemented
-		printf("STRT total length = %d bytes (header+message+footer)\n",
-			   (int)(COMMAND_STRT_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (STRTType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-}
-
 
 I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 CommandOption, U8 debug) {
 	I32 MessageIndex = 0, i;

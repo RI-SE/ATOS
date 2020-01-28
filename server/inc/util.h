@@ -39,9 +39,6 @@ extern "C"{
   ------------------------------------------------------------*/
 #define MaestroVersion  "0.4.1"
 
-#define ISO_PROTOCOL_VERSION 2
-#define ACK_REQ 0
-
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1) // Message queue data minus one byte for the command
 
 #define SAFETY_CHANNEL_PORT 53240
@@ -68,7 +65,8 @@ extern "C"{
 #define TRAJ_MASTER_LATE -2
 
 #define TIME_COMPENSATE_LAGING_VM 0
-#define TIME_COMPENSATE_LAGING_VM_VAL 106407
+#define VIRTUAL_MACHINE_LAG_COMPENSATION_S 106
+#define VIRTUAL_MACHINE_LAG_COMPENSATION_US 407000
 
 #define MAX_ROW_SIZE 1024
 
@@ -312,20 +310,6 @@ typedef struct
   U16 MinPosAccuracyContentLengthU16;
   U16 MinPosAccuracyU16;
 } OSEMType; //85 bytes
-
-typedef struct
-{
-  HeaderType Header;
-  U16 StartTimeValueIdU16;
-  U16 StartTimeContentLengthU16;
-  U32 StartTimeU32;
-  U16 GPSWeekValueIdU16;
-  U16 GPSWeekContentLengthU16;
-  U16 GPSWeekU16;
-  // U16 DelayStartValueIdU16;
-  // U16 DelayStartContentLengthU16;
-  // U32 DelayStartU32;
-} STRTType; //27 bytes
 
 typedef struct
 {
