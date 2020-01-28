@@ -1755,6 +1755,7 @@ ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD) {
 	pthread_mutex_lock(&MONRMutex);
 	munmap(GSD->MonrMessages, sizeof (MONRType));
 	free(GSD->MonrMessages);
+    DataDictionarySetNumberOfObjectsU8(GSD, 0);
 	pthread_mutex_unlock(&MONRMutex);
 	return Res;
 }
