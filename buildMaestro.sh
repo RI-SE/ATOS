@@ -29,6 +29,12 @@ cd $MAESTRODIR/modules/ScenarioControl/build
 echo "Building ScenarioControl"
 cmake .. && make || exit 1
 
+# Build Visualization module
+mkdir $MAESTRODIR/modules/Visualization/build
+cd $MAESTRODIR/modules/Visualization/build
+echo "Building Visualization"
+cmake .. && make || exit 1
+
 # Build Supervision module
 mkdir $MAESTRODIR/modules/Supervision/build
 cd $MAESTRODIR/modules/Supervision/build

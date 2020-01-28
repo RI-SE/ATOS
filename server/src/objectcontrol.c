@@ -1183,6 +1183,7 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 
 }
 
+
 I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 CommandOption, U8 debug) {
 	I32 MessageIndex = 0, i;
 	U16 Crc = 0;
