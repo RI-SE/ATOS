@@ -119,6 +119,35 @@ typedef struct {
 #define VALUE_ID_HEAB_STRUCT 0x0090
 
 
+/*! SYPM message */
+typedef struct {
+	HeaderType header;
+	uint16_t syncPointTimeValueID;
+	uint16_t syncPointTimeContentLength;
+	uint32_t syncPointTime;
+	uint16_t freezeTimeValueID;
+	uint16_t freezeTimeContentLength;
+	uint32_t freezeTime;
+	FooterType footer;
+} SYPMType;
+
+//! SYPM value IDs
+#define VALUE_ID_SYPM_SYNC_POINT_TIME 0x0001
+#define VALUE_ID_SYPM_FREEZE_TIME 0x0002
+
+
+/*! MTSP message */
+typedef struct {
+	HeaderType header;
+	uint16_t estSyncPointTimeValueID;
+	uint16_t estSyncPointTimeContentLength;
+	uint32_t estSyncPointTime;
+} MTSPType;
+
+//! MTSP value IDs
+#define VALUE_ID_MTSP_EST_SYNC_POINT_TIME 0x0001
+
+
 /*! TRCM message */
 typedef struct {
 	HeaderType header;
@@ -1086,6 +1115,29 @@ ISOMessageReturnValue ASCIIToMONR(const char *asciiBuffer, MONRType * MONRData, 
 	return MESSAGE_OK;
 }
 
+
+ssize_t encodeMTSPMessage(const struct timeval * estSyncPointTime, char * mtspDataBuffer, const size_t bufferLength, const char debug) {
+
+	MTSPType MTSPData;
+
+	memset(mtspDataBuffer, 0, bufferLength);
+
+	// If buffer too small to hold TRCM data, generate an error
+	if (bufferLength < sizeof (MTSPType)) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary MTSP data");
+		return -1;
+	}
+
+	// Construct header
+	MTSPData.header = buildISOHeader(MESSAGE_ID_MTSP, sizeof (MTSPData), debug);
+
+	// Fill contents
+	MTSPData.estSyncPointTimeValueID = VALUE_ID_MTSP_EST_SYNC_POINT_TIME;
+	MTSPData.estSyncPointTimeContentLength = sizeof (MTSPData.estSyncPointTime);
+	MTSPData.estSyncPointTime = estSyncPointTime == NULL ? GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSqmsOfWeek(estSyncPointTime);
+
+	// TODO
+}
 
 
 /*!
