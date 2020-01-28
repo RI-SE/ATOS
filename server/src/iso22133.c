@@ -1142,9 +1142,12 @@ ssize_t encodeTRCMMessage(const uint16_t * triggerID, const TriggerType_t * trig
 	TRCMData.triggerTypeParameter2ContentLength = sizeof (TRCMData.triggerTypeParameter2);
 	TRCMData.triggerTypeParameter3ContentLength = sizeof (TRCMData.triggerTypeParameter3);
 
-	TRCMData.triggerTypeParameter1 = param1 == NULL ? TRIGGER_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param1);
-	TRCMData.triggerTypeParameter2 = param2 == NULL ? TRIGGER_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param2);
-	TRCMData.triggerTypeParameter3 = param3 == NULL ? TRIGGER_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param3);
+	TRCMData.triggerTypeParameter1 =
+		param1 == NULL ? TRIGGER_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param1);
+	TRCMData.triggerTypeParameter2 =
+		param2 == NULL ? TRIGGER_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param2);
+	TRCMData.triggerTypeParameter3 =
+		param3 == NULL ? TRIGGER_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param3);
 
 	if (debug) {
 		LogPrint("TRCM message:\n\tTrigger ID value ID: 0x%x\n\tTrigger ID content length: %u\n\t"
@@ -1207,10 +1210,10 @@ ssize_t encodeTRCMMessage(const uint16_t * triggerID, const TriggerType_t * trig
  * \param debug Flag for enabling debugging
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeACCMMessage(const uint16_t *actionID, const ActionType_t *actionType,
-						  const ActionTypeParameter_t *param1, const ActionTypeParameter_t *param2,
-						  const ActionTypeParameter_t *param3, char *accmDataBuffer, const size_t bufferLength,
-						  const char debug) {
+ssize_t encodeACCMMessage(const uint16_t * actionID, const ActionType_t * actionType,
+						  const ActionTypeParameter_t * param1, const ActionTypeParameter_t * param2,
+						  const ActionTypeParameter_t * param3, char *accmDataBuffer,
+						  const size_t bufferLength, const char debug) {
 
 	ACCMType ACCMData;
 
@@ -1301,8 +1304,8 @@ ssize_t encodeACCMMessage(const uint16_t *actionID, const ActionType_t *actionTy
  * \param debug Flag for enabling debugging
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeEXACMessage(const uint16_t * actionID, const struct timeval *executionTime, char *exacDataBuffer,
-						  const size_t bufferLength, const char debug) {
+ssize_t encodeEXACMessage(const uint16_t * actionID, const struct timeval *executionTime,
+						  char *exacDataBuffer, const size_t bufferLength, const char debug) {
 
 	EXACType EXACData;
 
@@ -1324,7 +1327,8 @@ ssize_t encodeEXACMessage(const uint16_t * actionID, const struct timeval *execu
 
 	EXACData.executionTime_qmsoWValueID = VALUE_ID_EXAC_ACTION_EXECUTE_TIME;
 	EXACData.executionTime_qmsoWContentLength = sizeof (EXACData.executionTime_qmsoW);
-	EXACData.executionTime_qmsoW = executionTime == NULL ? GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSqmsOfWeek(executionTime);
+	EXACData.executionTime_qmsoW =
+		executionTime == NULL ? GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSqmsOfWeek(executionTime);
 
 	if (debug) {
 		LogPrint

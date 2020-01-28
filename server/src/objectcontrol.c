@@ -711,10 +711,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 													 sizeof (objectIPs) / sizeof (objectIPs[0]));
 				if (iIndex != -1) {
 					MessageLength =
-							encodeTRCMMessage(&mqTRCMData.triggerID, &mqTRCMData.triggerType,
-											  &mqTRCMData.triggerTypeParameter1, &mqTRCMData.triggerTypeParameter2,
-											  &mqTRCMData.triggerTypeParameter3, MessageBuffer,
-											  sizeof (MessageBuffer), 0);
+						encodeTRCMMessage(&mqTRCMData.triggerID, &mqTRCMData.triggerType,
+										  &mqTRCMData.triggerTypeParameter1,
+										  &mqTRCMData.triggerTypeParameter2,
+										  &mqTRCMData.triggerTypeParameter3, MessageBuffer,
+										  sizeof (MessageBuffer), 0);
 					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
 				}
 				else
