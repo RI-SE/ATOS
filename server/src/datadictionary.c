@@ -1685,7 +1685,7 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
 	struct stat st;
 
 	pthread_mutex_lock(&MONRMutex);
-	sprintf(filePath, "%stest%d.mem", SHARED_MEMORY_PATH, 5);
+    sprintf(filePath, "%smonrMessageMemory%d.mem", SHARED_MEMORY_PATH, 5);
 	fd = open(filePath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	stat(filePath, &st);
 
