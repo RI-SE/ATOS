@@ -313,12 +313,14 @@ typedef enum {
 	MESSAGE_ID_VENDOR_SPECIFIC_UPPER_LIMIT = 0xBFFF
 } ISOMessageID;
 
+
 ISOMessageReturnValue decodeMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
 ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t startGPSWeek, char * strtDataBuffer,
 						  const size_t bufferLength, const char debug);
 ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);
+
 
 #ifdef __cplusplus
 }
