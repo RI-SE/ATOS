@@ -1,10 +1,21 @@
 #include "iso22133.h"
 #include "logging.h"
+#include "maestroTime.h"
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <endian.h>
 
 static const uint8_t SupportedProtocolVersions[] = { 2 };
+
+// ************************* Byte swapper definitions for 6 byte values
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define le48toh(x) (x)
+#define htole48(x) (x)
+#else
+#define le48toh(x) (le64toh(x) >> 16)
+#define htole48(x) (htole64(x) >> 16)
+#endif
 
 // ************************** static function declarations
 static ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t length,
@@ -119,6 +130,10 @@ ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t le
 	memcpy(&FooterData->Crc, MessageBuffer, sizeof (FooterData->Crc));
 	FooterData->Crc = le16toh(FooterData->Crc);
 
+	if (debug) {
+		LogPrint("Decoded ISO footer:\n\tCRC: 0x%x", FooterData->Crc);
+	}
+
 	// TODO: check on CRC
 	return MESSAGE_OK;
 }
@@ -150,6 +165,13 @@ HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char de
 	return header;
 }
 
+/*!
+ * \brief buildISOFooter Constructs a footer for an ISO message
+ * \param message Pointer to start of message header
+ * \param messageSize Size of the entire message including header and footer
+ * \param debug Flag for enabling debugging
+ * \return A struct containing ISO footer data
+ */
 FooterType buildISOFooter(const void *message, const size_t messageSize, const char debug) {
 	FooterType footer;
 
@@ -206,17 +228,191 @@ ISOMessageID getISOMessageType(const char *messageData, const size_t length, con
 	}
 }
 
+/*!
+ * \brief encodeOSEMMessage Creates an OSEM message and writes it into a buffer based on supplied values. All values are passed as pointers and
+ *  passing them as NULL causes the OSEM message to contain a default value for that field (a value representing "unavailable" or similar).
+ * \param latitude_deg Latitude in degrees of the test origin
+ * \param longitude_deg Longitude in degrees of the test origin
+ * \param altitude_m Altitude in meters above sea level of the test origin
+ * \param maxWayDeviation_m Maximum allowed deviation from target trajectory point, in meters
+ * \param maxLateralDeviation_m Maximum lateral deviation from trajectory allowed, in meters
+ * \param minimumPositioningAccuracy_m Minimum positioning accuracy required of the object
+ * \param osemDataBuffer Buffer to which OSEM message is to be written
+ * \param bufferLength Size of the buffer to which OSEM message is to be written
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes written to the buffer, or -1 in case of an error
+ */
+ssize_t encodeOSEMMessage(const double *latitude_deg, const double *longitude_deg, const float *altitude_m,
+						  const float *maxWayDeviation_m, const float *maxLateralDeviation_m,
+						  const float *minimumPositioningAccuracy_m, char *osemDataBuffer,
+						  const size_t bufferLength, const char debug) {
+
+	const char SizeDifference64bitTo48bit = 2;
+	OSEMType OSEMData;
+	struct timeval currentTime;
+	struct tm *printableTime;
+	char *p = osemDataBuffer;
+
+	TimeSetToCurrentSystemTime(&currentTime);
+	printableTime = localtime(&currentTime.tv_sec);
+
+	memset(osemDataBuffer, 0, bufferLength);
+
+	// If buffer too small to hold OSEM data, generate an error
+	if (bufferLength < sizeof (OSEMData) - 2 * SizeDifference64bitTo48bit) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary OSEM data");
+		return -1;
+	}
+
+	// Build header, and account for the two values which are 48 bit in the message
+	OSEMData.header = buildISOHeader(MESSAGE_ID_OSEM, sizeof (OSEMData)
+									 - sizeof (OSEMData.header) - sizeof (OSEMData.footer) -
+									 2 * SizeDifference64bitTo48bit, debug);
+
+	// Fill the OSEM struct with relevant values
+	OSEMData.latitudeValueID = VALUE_ID_OSEM_LATITUDE;
+	OSEMData.latitudeContentLength = sizeof (OSEMData.latitude) - SizeDifference64bitTo48bit;
+	OSEMData.latitude = (latitude_deg == NULL) ?
+		LATITUDE_UNAVAILABLE_VALUE : (int64_t) (*latitude_deg * LATITUDE_ONE_DEGREE_VALUE);
+
+	OSEMData.longitudeValueID = VALUE_ID_OSEM_LONGITUDE;
+	OSEMData.longitudeContentLength = sizeof (OSEMData.longitude) - SizeDifference64bitTo48bit;
+	OSEMData.longitude = (longitude_deg == NULL) ?
+		LONGITUDE_UNAVAILABLE_VALUE : (int64_t) (*longitude_deg * LONGITUDE_ONE_DEGREE_VALUE);
+
+	OSEMData.altitudeValueID = VALUE_ID_OSEM_ALTITUDE;
+	OSEMData.altitudeContentLength = sizeof (OSEMData.altitude);
+	OSEMData.altitude = (altitude_m == NULL) ?
+		ALTITUDE_UNAVAILABLE_VALUE : (int32_t) (*altitude_m * ALTITUDE_ONE_METER_VALUE);
+
+	OSEMData.dateValueID = VALUE_ID_OSEM_DATE;
+	OSEMData.dateContentLength = sizeof (OSEMData.date);
+	OSEMData.date = (uint32_t) ((printableTime->tm_year + 1900) * 10000 + (printableTime->tm_mon + 1) * 100
+								+ (printableTime->tm_mday));
+
+	OSEMData.GPSWeekValueID = VALUE_ID_OSEM_GPS_WEEK;
+	OSEMData.GPSWeekContentLength = sizeof (OSEMData.GPSWeek);
+	OSEMData.GPSWeek = TimeGetAsGPSweek(&currentTime);
+
+	OSEMData.GPSQmsOfWeekValueID = VALUE_ID_OSEM_GPS_QUARTER_MILLISECOND_OF_WEEK;
+	OSEMData.GPSQmsOfWeekContentLength = sizeof (OSEMData.GPSQmsOfWeek);
+	OSEMData.GPSQmsOfWeek = TimeGetAsGPSqmsOfWeek(&currentTime);
+
+	OSEMData.maxWayDeviationValueID = VALUE_ID_OSEM_MAX_WAY_DEVIATION;
+	OSEMData.maxWayDeviationContentLength = sizeof (OSEMData.maxWayDeviation);
+	OSEMData.maxWayDeviation = (maxWayDeviation_m == NULL) ?
+		MAX_WAY_DEVIATION_UNAVAILABLE_VALUE : (uint16_t) (*maxWayDeviation_m *
+														  MAX_WAY_DEVIATION_ONE_METER_VALUE);
+
+	OSEMData.maxLateralDeviationValueID = VALUE_ID_OSEM_MAX_LATERAL_DEVIATION;
+	OSEMData.maxLateralDeviationContentLength = sizeof (OSEMData.maxLateralDeviation);
+	OSEMData.maxLateralDeviation = (maxLateralDeviation_m == NULL) ?
+		MAX_LATERAL_DEVIATION_UNAVAILABLE_VALUE : (uint16_t) (*maxLateralDeviation_m *
+															  MAX_LATERAL_DEVIATION_ONE_METER_VALUE);
+
+	OSEMData.minPosAccuracyValueID = VALUE_ID_OSEM_MIN_POSITIONING_ACCURACY;
+	OSEMData.minPosAccuracyContentLength = sizeof (OSEMData.minPosAccuracy);
+	OSEMData.minPosAccuracy = (minimumPositioningAccuracy_m == NULL) ?
+		MIN_POSITIONING_ACCURACY_NOT_REQUIRED_VALUE : (uint16_t) (*minimumPositioningAccuracy_m *
+																  MIN_POSITIONING_ACCURACY_ONE_METER_VALUE);
+
+	if (debug) {
+		LogPrint
+			("OSEM message:\n\tLatitude value ID: 0x%x\n\tLatitude content length: %u\n\tLatitude: %ld [100 nanodegrees]\n\t"
+			 "Longitude value ID: 0x%x\n\tLongitude content length: %u\n\tLongitude: %ld [100 nanodegrees]\n\t"
+			 "Altitude value ID: 0x%x\n\tAltitude content length: %u\n\tAltitude: %d [cm]\n\t"
+			 "Date value ID: 0x%x\n\tDate content length: %u\n\tDate: %u\n\t"
+			 "GPS week value ID: 0x%x\n\tGPS week content length: %u\n\tGPS week: %u\n\t"
+			 "GPS second of week value ID: 0x%x\n\tGPS second of week content length: %u\n\tGPS second of week: %u [¼ ms]\n\t"
+			 "Max way deviation value ID: 0x%x\n\tMax way deviation content length: %u\n\tMax way deviation: %u\n\t"
+			 "Max lateral deviation value ID: 0x%x\n\tMax lateral deviation content length: %u\n\t"
+			 "Min positioning accuracy value ID: 0x%x\n\tMin positioning accuracy content length: %u\n\tMin positioning accuracy: %u",
+			 OSEMData.latitudeValueID, OSEMData.latitudeContentLength, OSEMData.latitude,
+			 OSEMData.longitudeValueID, OSEMData.longitudeContentLength, OSEMData.longitude,
+			 OSEMData.altitudeValueID, OSEMData.altitudeContentLength, OSEMData.altitude,
+			 OSEMData.dateValueID, OSEMData.dateContentLength, OSEMData.date, OSEMData.GPSWeekValueID,
+			 OSEMData.GPSWeekContentLength, OSEMData.GPSWeek, OSEMData.GPSQmsOfWeekValueID,
+			 OSEMData.GPSQmsOfWeekContentLength, OSEMData.GPSQmsOfWeek, OSEMData.maxWayDeviationValueID,
+			 OSEMData.maxWayDeviationContentLength, OSEMData.maxWayDeviation,
+			 OSEMData.maxLateralDeviationValueID, OSEMData.maxLateralDeviationContentLength,
+			 OSEMData.maxLateralDeviation, OSEMData.minPosAccuracyValueID,
+			 OSEMData.minPosAccuracyContentLength, OSEMData.minPosAccuracy);
+	}
+
+	// Switch endianness to little endian for all fields
+	OSEMData.latitudeValueID = htole16(OSEMData.latitudeValueID);
+	OSEMData.latitudeContentLength = htole16(OSEMData.latitudeContentLength);
+	OSEMData.latitude = (int64_t) htole48(OSEMData.latitude);
+	OSEMData.longitudeValueID = htole16(OSEMData.longitudeValueID);
+	OSEMData.longitudeContentLength = htole16(OSEMData.longitudeContentLength);
+	OSEMData.longitude = (int64_t) htole48(OSEMData.longitude);
+	OSEMData.altitudeValueID = htole16(OSEMData.altitudeValueID);
+	OSEMData.altitudeContentLength = htole16(OSEMData.altitudeContentLength);
+	OSEMData.altitude = (int32_t) htole32(OSEMData.altitude);
+	OSEMData.dateValueID = htole16(OSEMData.dateValueID);
+	OSEMData.dateContentLength = htole16(OSEMData.dateContentLength);
+	OSEMData.date = htole32(OSEMData.date);
+	OSEMData.GPSWeekValueID = htole16(OSEMData.GPSWeekValueID);
+	OSEMData.GPSWeekContentLength = htole16(OSEMData.GPSWeekContentLength);
+	OSEMData.GPSWeek = htole16(OSEMData.GPSWeek);
+	OSEMData.GPSQmsOfWeekValueID = htole16(OSEMData.GPSQmsOfWeekValueID);
+	OSEMData.GPSQmsOfWeekContentLength = htole16(OSEMData.GPSQmsOfWeekContentLength);
+	OSEMData.GPSQmsOfWeek = htole32(OSEMData.GPSQmsOfWeek);
+	OSEMData.maxWayDeviationValueID = htole16(OSEMData.maxWayDeviationValueID);
+	OSEMData.maxWayDeviationContentLength = htole16(OSEMData.maxWayDeviationContentLength);
+	OSEMData.maxWayDeviation = htole16(OSEMData.maxWayDeviation);
+	OSEMData.maxLateralDeviationValueID = htole16(OSEMData.maxLateralDeviationValueID);
+	OSEMData.maxLateralDeviationContentLength = htole16(OSEMData.maxLateralDeviationContentLength);
+	OSEMData.maxLateralDeviation = htole16(OSEMData.maxLateralDeviation);
+	OSEMData.minPosAccuracyValueID = htole16(OSEMData.minPosAccuracyValueID);
+	OSEMData.minPosAccuracyContentLength = htole16(OSEMData.minPosAccuracyContentLength);
+	OSEMData.minPosAccuracy = htole16(OSEMData.minPosAccuracy);
+
+
+	// Copy data from OSEM struct into the buffer
+	// Must be done before constructing the footer due to the two 48bit size anomalies
+	memcpy(p, &OSEMData.header, sizeof (OSEMData.header));
+	p += sizeof (OSEMData.header);
+
+	// Special handling of 48 bit value
+	memcpy(p, &OSEMData.latitudeValueID,
+		   sizeof (OSEMData.latitudeValueID) + sizeof (OSEMData.latitudeContentLength));
+	p += sizeof (OSEMData.latitudeValueID) + sizeof (OSEMData.latitudeContentLength);
+	memcpy(p, &OSEMData.latitude, sizeof (OSEMData.latitude) - SizeDifference64bitTo48bit);
+	p += sizeof (OSEMData.latitude) - SizeDifference64bitTo48bit;
+
+	// Special handling of 48 bit value
+	memcpy(p, &OSEMData.longitudeValueID,
+		   sizeof (OSEMData.longitudeValueID) + sizeof (OSEMData.longitudeContentLength));
+	p += sizeof (OSEMData.longitudeValueID) + sizeof (OSEMData.longitudeContentLength);
+	memcpy(p, &OSEMData.longitude, sizeof (OSEMData.longitude) - SizeDifference64bitTo48bit);
+	p += sizeof (OSEMData.longitude) - SizeDifference64bitTo48bit;
+
+	// Copy rest of struct (excluding footer) directly into buffer since no more byte anomalies remain
+	memcpy(p, &OSEMData.altitudeValueID, sizeof (OSEMData) - sizeof (OSEMData.footer)
+		   - (size_t) (p - osemDataBuffer + 2 * SizeDifference64bitTo48bit));
+	p += sizeof (OSEMData) - sizeof (OSEMData.footer) - (size_t) (p - osemDataBuffer +
+																  2 * SizeDifference64bitTo48bit);
+
+	// Build footer
+	OSEMData.footer =
+		buildISOFooter(osemDataBuffer, sizeof (OSEMType) - 2 * SizeDifference64bitTo48bit, debug);
+	memcpy(p, &OSEMData.footer, sizeof (OSEMData.footer));
+
+	return sizeof (OSEMType) - 2 * SizeDifference64bitTo48bit;
+}
+
+
 
 /*!
  * \brief encodeSTRTMessage Constructs an ISO STRT message based on start time parameters
- * \param startTimeGPSqmsOW Quarter milliseconds of week when recipient of message shall start
- * \param startGPSWeek GPS week when recipient shall start
+ * \param timeOfStart Time when test shall start, a value of NULL indicates that the time is not known
  * \param strtDataBuffer Data buffer in which to place encoded STRT message
  * \param bufferLength Size of data buffer in which to place encoded STRT message
  * \param debug Flag for enabling debugging
  * \return number of bytes written to the data buffer, or -1 if an error occurred
  */
-ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t startGPSWeek, char *strtDataBuffer,
+ssize_t encodeSTRTMessage(const struct timeval *timeOfStart, char *strtDataBuffer,
 						  const size_t bufferLength, const char debug) {
 
 	STRTType STRTData;
@@ -232,29 +428,33 @@ ssize_t encodeSTRTMessage(const uint32_t startTimeGPSqmsOW, const uint16_t start
 	STRTData.header =
 		buildISOHeader(MESSAGE_ID_STRT, sizeof (STRTType) - sizeof (HeaderType) - sizeof (FooterType), debug);
 
-	// Fill contents, ensuring to swap from host endianness to little endian
+	// Fill contents
 	STRTData.StartTimeValueIdU16 = VALUE_ID_STRT_GPS_QMS_OF_WEEK;
-	STRTData.StartTimeValueIdU16 = htole16(STRTData.StartTimeValueIdU16);
 	STRTData.StartTimeContentLengthU16 = sizeof (STRTData.StartTimeU32);
-	STRTData.StartTimeContentLengthU16 = htole16(STRTData.StartTimeContentLengthU16);
-	STRTData.StartTimeU32 = startTimeGPSqmsOW;
-	STRTData.StartTimeU32 = htole32(STRTData.StartTimeU32);
-	STRTData.GPSWeekValueIdU16 = VALUE_ID_STRT_GPS_WEEK;
-	STRTData.GPSWeekValueIdU16 = htole16(STRTData.GPSWeekValueIdU16);
-	STRTData.GPSWeekContentLengthU16 = sizeof (STRTData.GPSWeekU16);
-	STRTData.GPSWeekContentLengthU16 = htole16(STRTData.GPSWeekContentLengthU16);
-	STRTData.GPSWeekU16 = startGPSWeek;
-	STRTData.GPSWeekU16 = htole16(STRTData.GPSWeekU16);
+	STRTData.StartTimeU32 =
+		timeOfStart == NULL ? GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSqmsOfWeek(timeOfStart);
+	STRTData.GPSWeekValueID = VALUE_ID_STRT_GPS_WEEK;
+	STRTData.GPSWeekContentLength = sizeof (STRTData.GPSWeek);
+	STRTData.GPSWeek = timeOfStart == NULL ? GPS_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSweek(timeOfStart);
 
 	if (debug) {
 		LogPrint("STRT message:\n\tGPS second of week value ID: 0x%x\n\t"
-				 "GPS second of week content length: %u\n\tGPS second of week: %u qms\n\t"
+				 "GPS second of week content length: %u\n\tGPS second of week: %u [¼ ms]\n\t"
 				 "GPS week value ID: 0x%x\n\tGPS week content length: %u\n\t"
 				 "GPS week: %u", STRTData.StartTimeValueIdU16, STRTData.StartTimeContentLengthU16,
-				 STRTData.StartTimeU32, STRTData.GPSWeekValueIdU16, STRTData.GPSWeekContentLengthU16,
-				 STRTData.GPSWeekU16);
+				 STRTData.StartTimeU32, STRTData.GPSWeekValueID, STRTData.GPSWeekContentLength,
+				 STRTData.GPSWeek);
 	}
 
+	// Swap from host endianness to little endian
+	STRTData.StartTimeValueIdU16 = htole16(STRTData.StartTimeValueIdU16);
+	STRTData.StartTimeContentLengthU16 = htole16(STRTData.StartTimeContentLengthU16);
+	STRTData.StartTimeU32 = htole32(STRTData.StartTimeU32);
+	STRTData.GPSWeekValueID = htole16(STRTData.GPSWeekValueID);
+	STRTData.GPSWeekContentLength = htole16(STRTData.GPSWeekContentLength);
+	STRTData.GPSWeek = htole16(STRTData.GPSWeek);
+
+	// Construct footer
 	STRTData.footer = buildISOFooter(&STRTData, sizeof (STRTType), debug);
 
 	memcpy(strtDataBuffer, &STRTData, sizeof (STRTType));
@@ -426,6 +626,30 @@ ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char *asciiBuffer, 
 	sprintf(asciiBuffer + strlen(asciiBuffer), "%u;%u;%u;%u;", MONRData->driveDirection,
 			MONRData->state, MONRData->readyToArm, MONRData->errorStatus);
 
+	if (debug) {
+		LogPrint("Converted MONR to string:\n\tMONR:\n\t\t"
+				 "Value ID = 0x%x\n\t\t"
+				 "Content length = %u\n\t\t"
+				 "GPS quarter millisecond of week = %u\n\t\t"
+				 "X position = %d\n\t\t"
+				 "Y position = %d\n\t\t"
+				 "Z position = %d\n\t\t"
+				 "Heading = %d\n\t\t"
+				 "Longitudinal speed = %d\n\t\t"
+				 "Lateral speed = %d\n\t\t"
+				 "Longitudinal acceleration = %d\n\t\t"
+				 "Lateral acceleration = %d\n\t\t"
+				 "Drive direction = %d\n\t\t"
+				 "State = %d\n\t\t"
+				 "Ready to arm = %d\n\t\t"
+				 "Error status = %d\n\t"
+				 "String:\n\t\t<%s>", MONRData->monrStructValueID, MONRData->monrStructContentLength,
+				 MONRData->gpsQmsOfWeek, MONRData->xPosition, MONRData->yPosition, MONRData->zPosition,
+				 MONRData->heading, MONRData->longitudinalSpeed, MONRData->lateralSpeed,
+				 MONRData->longitudinalAcc, MONRData->lateralAcc, MONRData->driveDirection, MONRData->state,
+				 MONRData->readyToArm, MONRData->errorStatus, asciiBuffer);
+	}
+
 	return MESSAGE_OK;
 }
 
@@ -439,7 +663,6 @@ ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char *asciiBuffer, 
  */
 ISOMessageReturnValue ASCIIToMONR(const char *asciiBuffer, MONRType * MONRData, const char debug) {
 
-	const size_t bufferLength = strlen(asciiBuffer);
 	const char *token;
 	const char delim[] = ";";
 	const int NumberBaseDecimal = 10;
@@ -487,6 +710,29 @@ ISOMessageReturnValue ASCIIToMONR(const char *asciiBuffer, MONRType * MONRData, 
 
 	token = strtok(NULL, delim);
 	MONRData->errorStatus = (uint8_t) strtoul(token, NULL, NumberBaseDecimal);
+
+	if (debug) {
+		LogPrint("Converted string to MONR:\n\tString:\n\t\t<%s>\n\tMONR:\n\t\t"
+				 "Value ID = 0x%x\n\t\t"
+				 "Content length = %u\n\t\t"
+				 "GPS quarter millisecond of week = %u\n\t\t"
+				 "X position = %d\n\t\t"
+				 "Y position = %d\n\t\t"
+				 "Z position = %d\n\t\t"
+				 "Heading = %d\n\t\t"
+				 "Longitudinal speed = %d\n\t\t"
+				 "Lateral speed = %d\n\t\t"
+				 "Longitudinal acceleration = %d\n\t\t"
+				 "Lateral acceleration = %d\n\t\t"
+				 "Drive direction = %d\n\t\t"
+				 "State = %d\n\t\t"
+				 "Ready to arm = %d\n\t\t"
+				 "Error status = %d", asciiBuffer, MONRData->monrStructValueID,
+				 MONRData->monrStructContentLength, MONRData->gpsQmsOfWeek, MONRData->xPosition,
+				 MONRData->yPosition, MONRData->zPosition, MONRData->heading, MONRData->longitudinalSpeed,
+				 MONRData->lateralSpeed, MONRData->longitudinalAcc, MONRData->lateralAcc,
+				 MONRData->driveDirection, MONRData->state, MONRData->readyToArm, MONRData->errorStatus);
+	}
 
 	return MESSAGE_OK;
 }
