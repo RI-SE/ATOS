@@ -1718,7 +1718,7 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
  * \param id object id
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, U32 TransmitterId) {
+ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, const U32 TransmitterId) {
 	ReadWriteAccess_t Res;
 
 	Res = WRITE_OK;
@@ -1737,7 +1737,7 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, U32 Tran
  * \param id requesed object id
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, U32 TransmitterId) {
+ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, const U32 TransmitterId) {
 	pthread_mutex_lock(&MONRMutex);
     if(GSD->MonrMessages != NULL && TransmitterId < GSD->numberOfObjects){
         *MONR = GSD->MonrMessages[TransmitterId];
