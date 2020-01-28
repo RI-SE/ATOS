@@ -149,6 +149,7 @@ typedef struct {
 	uint16_t estSyncPointTimeValueID;
 	uint16_t estSyncPointTimeContentLength;
 	uint32_t estSyncPointTime;
+	FooterType footer;
 } MTSPType;
 
 //! MTSP value IDs
@@ -1124,14 +1125,73 @@ ISOMessageReturnValue ASCIIToMONR(const char *asciiBuffer, MONRType * MONRData, 
 	return MESSAGE_OK;
 }
 
+/*!
+ * \brief encodeSYPMMessage Fills an ISO SYPM struct with relevant data fields, and corresponding value IDs and content lengths
+ * \param synchronizationTime Time along trajectory at which objects are to be synchronized
+ * \param freezeTime Time along trajectory after which no further adaptation to the master is allowed
+ * \param mtspDataBuffer Buffer to which SYPM message is to be written
+ * \param bufferLength Size of buffer to which SYPM message is to be written
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes written to buffer, or -1 in case of an error
+ */
+ssize_t encodeSYPMMessage(const uint32_t synchronizationTime, const uint32_t freezeTime, char * sypmDataBuffer,
+						  const size_t bufferLength, const char debug) {
 
+	SYPMType SYPMData;
+
+	// If buffer too small to hold SYPM data, generate an error
+	if (bufferLength < sizeof (SYPMType)) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary SYPM data");
+		return -1;
+	}
+
+	// Construct header
+	SYPMData.header = buildISOHeader(MESSAGE_ID_SYPM, sizeof (SYPMData), debug);
+
+	// Fill contents
+	SYPMData.syncPointTimeValueID = VALUE_ID_SYPM_SYNC_POINT_TIME;
+	SYPMData.syncPointTimeContentLength = sizeof (SYPMData.syncPointTime);
+	SYPMData.syncPointTime = synchronizationTime;
+
+	SYPMData.freezeTimeValueID = VALUE_ID_SYPM_FREEZE_TIME;
+	SYPMData.freezeTimeContentLength = sizeof (SYPMData.freezeTime);
+	SYPMData.freezeTime = freezeTime;
+
+	if (debug) {
+
+	}
+
+	// Switch from host endianness to little endian
+	SYPMData.syncPointTimeValueID = htole16(SYPMData.syncPointTimeValueID);
+	SYPMData.syncPointTimeContentLength = htole16(SYPMData.syncPointTimeContentLength);
+	SYPMData.syncPointTime = htole16(SYPMData.syncPointTime);
+	SYPMData.freezeTimeValueID = htole16(SYPMData.freezeTimeValueID);
+	SYPMData.freezeTimeContentLength = htole16(SYPMData.freezeTimeContentLength);
+	SYPMData.freezeTime = htobe16(SYPMData.freezeTime);
+
+	// Construct footer
+	SYPMData.footer = buildISOFooter(&SYPMData, sizeof (SYPMData), debug);
+
+	memcpy(sypmDataBuffer, &SYPMData, sizeof (SYPMData));
+
+	return sizeof (SYPMType);
+}
+
+/*!
+ * \brief encodeMTSPMessage Fills an ISO MTSP struct with relevant data fields, and corresponding value IDs and content lengths
+ * \param estSyncPointTime Estimated time when the master object will reach the synchronization point
+ * \param mtspDataBuffer Buffer to which MTSP message is to be written
+ * \param bufferLength Size of buffer to which MTSP message is to be written
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes written to buffer, or -1 in case of an error
+ */
 ssize_t encodeMTSPMessage(const struct timeval * estSyncPointTime, char * mtspDataBuffer, const size_t bufferLength, const char debug) {
 
 	MTSPType MTSPData;
 
 	memset(mtspDataBuffer, 0, bufferLength);
 
-	// If buffer too small to hold TRCM data, generate an error
+	// If buffer too small to hold MTSP data, generate an error
 	if (bufferLength < sizeof (MTSPType)) {
 		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary MTSP data");
 		return -1;
@@ -1145,7 +1205,26 @@ ssize_t encodeMTSPMessage(const struct timeval * estSyncPointTime, char * mtspDa
 	MTSPData.estSyncPointTimeContentLength = sizeof (MTSPData.estSyncPointTime);
 	MTSPData.estSyncPointTime = estSyncPointTime == NULL ? GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSqmsOfWeek(estSyncPointTime);
 
-	// TODO
+	if (debug) {
+		LogPrint("MTSP message:\n\t"
+				 "Estimated sync point time value ID: 0x%x\n\t"
+				 "Estimated sync point time content length: %u\n\t"
+				 "Estimated sync point time: %u [¼ ms]",
+				 MTSPData.estSyncPointTimeValueID, MTSPData.estSyncPointTimeContentLength,
+				 MTSPData.estSyncPointTime);
+	}
+
+	// Switch from host endianness to little endian
+	MTSPData.estSyncPointTimeValueID = htole16(MTSPData.estSyncPointTimeValueID);
+	MTSPData.estSyncPointTimeContentLength = htole16(MTSPData.estSyncPointTimeContentLength);
+	MTSPData.estSyncPointTime = htole32(MTSPData.estSyncPointTime);
+
+	// Construct footer
+	MTSPData.footer = buildISOFooter(&MTSPData, sizeof (MTSPData), debug);
+
+	memcpy(mtspDataBuffer, &MTSPData, sizeof (MTSPData));
+
+	return sizeof (MTSPType);
 }
 
 
