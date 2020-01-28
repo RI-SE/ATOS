@@ -1387,7 +1387,9 @@ ssize_t encodeINSUPMessage(const SupervisorCommandType command, char *insupDataB
 	INSUPData.mode = (uint8_t) command;
 
 	if (debug) {
-
+		LogPrint("INSUP message:\n\tMode value ID: 0x%x\n\t"
+				 "Mode content length: %u\n\tMode: %u", INSUPData.modeValueID,
+				 INSUPData.modeContentLength, INSUPData.mode);
 	}
 
 	// Switch from host endianness to little endian
