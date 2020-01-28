@@ -10,11 +10,11 @@ static const uint8_t SupportedProtocolVersions[] = { 2 };
 
 // ************************* Byte swapper definitions for 6 byte values
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-#define le48toh(x) __uint64_identity (x)
-#define htole48(x) __uint64_identity (x)
+#define le48toh(x) (x)
+#define htole48(x) (x)
 #else
-#define le48toh(x) (__bswap_64(x) >> 16)
-#define htole48(x) (__bswap_64(x) >> 16)
+#define le48toh(x) (le64toh(x) >> 16)
+#define htole48(x) (htole64(x) >> 16)
 #endif
 
 // ************************** static function declarations
