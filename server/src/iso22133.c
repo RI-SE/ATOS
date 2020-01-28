@@ -297,12 +297,12 @@ ssize_t encodeOSEMMessage(const double *latitude_deg, const double *longitude_de
 		ALTITUDE_UNAVAILABLE_VALUE : (int32_t) (*altitude_m * ALTITUDE_ONE_METER_VALUE);
 
 	OSEMData.dateValueID = VALUE_ID_OSEM_DATE;
-	OSEMData.dateContentLength = sizeof (OSEMData.dateContentLength);
+	OSEMData.dateContentLength = sizeof (OSEMData.date);
 	OSEMData.date = (uint32_t) ((printableTime->tm_year + 1900) * 10000 + (printableTime->tm_mon + 1) * 100
 								+ (printableTime->tm_mday));
 
 	OSEMData.GPSWeekValueID = VALUE_ID_OSEM_GPS_WEEK;
-	OSEMData.GPSWeekContentLength = sizeof (OSEMData.GPSWeekContentLength);
+	OSEMData.GPSWeekContentLength = sizeof (OSEMData.GPSWeek);
 	OSEMData.GPSWeek = TimeGetAsGPSweek(&currentTime);
 
 	OSEMData.GPSQmsOfWeekValueID = VALUE_ID_OSEM_GPS_QUARTER_MILLISECOND_OF_WEEK;
@@ -331,7 +331,7 @@ ssize_t encodeOSEMMessage(const double *latitude_deg, const double *longitude_de
 		LogPrint
 			("OSEM message:\n\tLatitude value ID: 0x%x\n\tLatitude content length: %u\n\tLatitude: %ld [100 nanodegrees]\n\t"
 			 "Longitude value ID: 0x%x\n\tLongitude content length: %u\n\tLongitude: %ld [100 nanodegrees]\n\t"
-			 "Altitude value ID: 0x%x\n\tAltitude content length: %u\n\tAltitude: %d [cm]"
+			 "Altitude value ID: 0x%x\n\tAltitude content length: %u\n\tAltitude: %d [cm]\n\t"
 			 "Date value ID: 0x%x\n\tDate content length: %u\n\tDate: %u\n\t"
 			 "GPS week value ID: 0x%x\n\tGPS week content length: %u\n\tGPS week: %u\n\t"
 			 "GPS second of week value ID: 0x%x\n\tGPS second of week content length: %u\n\tGPS second of week: %u [¼ ms]\n\t"
@@ -400,7 +400,7 @@ ssize_t encodeOSEMMessage(const double *latitude_deg, const double *longitude_de
 	p += sizeof (OSEMData.longitude) - SizeDifference64bitTo48bit;
 
 	// Copy rest of struct (excluding footer) directly into buffer since no more byte anomalies remain
-	memcpy(p, &OSEMData.altitude, sizeof (OSEMData) - sizeof (OSEMData.footer)
+	memcpy(p, &OSEMData.altitudeValueID, sizeof (OSEMData) - sizeof (OSEMData.footer)
 		   - (size_t) (p - osemDataBuffer + 2 * SizeDifference64bitTo48bit));
 	p += sizeof (OSEMData) - sizeof (OSEMData.footer) - (size_t) (p - osemDataBuffer +
 																  2 * SizeDifference64bitTo48bit);
