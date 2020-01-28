@@ -156,7 +156,6 @@ typedef enum {
 */
 typedef StateTransitionResult(*StateTransition) (OBCState_t * currentState, OBCState_t requestedState);
 
-
 C8 TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION * COMMAND_DOTM_ROW_MESSAGE_LENGTH +
               COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH];
 
@@ -257,8 +256,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
     U8 iForceObjectToLocalhostU8 = 0;
 
     FILE *fd;
-	C8 Timestamp[SMALL_BUFFER_SIZE_0];
-	C8 GPSWeek[SMALL_BUFFER_SIZE_0];
+    C8 Timestamp[SMALL_BUFFER_SIZE_0];
+    C8 GPSWeek[SMALL_BUFFER_SIZE_0];
     I32 MessageLength;
     C8 *MiscPtr;
     C8 MiscText[SMALL_BUFFER_SIZE_0];
@@ -445,15 +444,22 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 
             for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-                bzero(buffer, RECV_MESSAGE_BUFFER);
-                receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex], buffer, RECV_MESSAGE_BUFFER);
+                memset(buffer, 0, sizeof (buffer));
+                receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex], buffer, sizeof (buffer));
 
-                if (receivedMONRData == sizeof (MONRType)) {
+                if (receivedMONRData > 0) {
                     LogMessage(LOG_LEVEL_DEBUG, "Recieved new data from %s %d %d: %s",
                                object_address_name[iIndex], object_udp_port[iIndex], receivedMONRData,
                                buffer);
 
-					if (decodeMONRMessage(buffer, receivedMONRData, &MONRData, 0) != MESSAGE_OK) {
+                    if (decodeMONRMessage(buffer, receivedMONRData, &MONRData, 0) != MESSAGE_OK) {
+                        LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object",
+                                   object_address_name[iIndex]);
+                        vDisconnectObject(&safety_socket_fd[iIndex]);
+                        // TODO smarter way of handling?
+                        continue;
+                    }
+
                     if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
                         // Append IP to buffer
                         memcpy(&buffer[receivedMONRData], &safety_object_addr[iIndex].sin_addr.s_addr,
@@ -469,30 +475,26 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                         }
                     }
 
-                    ObjectControlBuildMONRMessage(buffer, &MONRData, 0);
 
                     //Store MONR in GSD
-                    DataDictionarySetMONR(GSD, &MONRData, iIndex);
-
-                    //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0)
-
-                       for (i = 0;
-                       i <
-						 (MONRData.header.MessageLengthU32 + sizeof (MONRData.header) +
-						  sizeof (MONRData.footer)); i++)
-                       GSD->MONRData[i] = buffer[i];
-                       GSD->MONRSizeU8 =
-						MONRData.header.MessageLengthU32 + sizeof (MONRData.header) +
-						sizeof (MONRData.footer);
-					memset(buffer, 0, sizeof (buffer));
-					memcpy(buffer, object_address_name[iIndex], strlen(object_address_name[iIndex]));
-					strcat(buffer, ";0;");
-					MONRToASCII(&MONRData, buffer + strlen(buffer), sizeof (buffer) - strlen(buffer), 0);
+                    //UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
+                    for (i = 0;
+                         i <
+                         (MONRData.header.MessageLengthU32 + sizeof (MONRData.header) +
+                          sizeof (MONRData.footer)); i++)
+                        GSD->MONRData[i] = buffer[i];
+                    GSD->MONRSizeU8 =
+                        MONRData.header.MessageLengthU32 + sizeof (MONRData.header) +
+                        sizeof (MONRData.footer);
+                    memset(buffer, 0, sizeof (buffer));
+                    memcpy(buffer, object_address_name[iIndex], strlen(object_address_name[iIndex]));
+                    strcat(buffer, ";0;");
+                    MONRToASCII(&MONRData, buffer + strlen(buffer), sizeof (buffer) - strlen(buffer), 0);
 
 
                     if (ASPData.MTSPU32 != 0) {
                         //Add MTSP to MONR if not 0
-						sprintf(buffer + strlen(buffer), "%" PRIu32 ";", ASPData.MTSPU32);
+                        sprintf(buffer + strlen(buffer), "%" PRIu32 ";", ASPData.MTSPU32);
                     }
 
                     //Ok, let's do the ASP
@@ -508,15 +510,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
                             TimeCap1 = (uint64_t) CurrentTimeStruct.tv_sec * 1000 + (uint64_t) CurrentTimeStruct.tv_usec / 1000;	//Calculate initial timestamp
 
-							OP[iIndex].x = ((double)MONRData.xPosition) / 1000;	//Set x and y on OP (ObjectPosition)
-							OP[iIndex].y = ((double)MONRData.yPosition) / 1000;
+                            OP[iIndex].x = ((double)MONRData.xPosition) / 1000;	//Set x and y on OP (ObjectPosition)
+                            OP[iIndex].y = ((double)MONRData.yPosition) / 1000;
 
                             //OP[iIndex].OrigoDistance = sqrt(pow(OP[iIndex].x,2) + pow(OP[iIndex].y,2)); //Calculate hypotenuse
 
-							// TODO: check use of this function since it should take two lat/long points but is here used with x/y
+                            // TODO: check use of this function since it should take two lat/long points but is here used with x/y
                             UtilCalcPositionDelta(OriginLatitudeDbl, OriginLongitudeDbl,
-												  MONRData.xPosition / 1e7, MONRData.yPosition / 1e7,
-												  &OP[iIndex]);
+                                                  MONRData.xPosition / 1e7, MONRData.yPosition / 1e7,
+                                                  &OP[iIndex]);
 
                             if (OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex) {
                                 ASPData.CurrentTimeU32 = CurrentTimeU32;
@@ -565,7 +567,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                                 //ObjectControlBuildASPMessage(buffer, &ASPData, 0);
                                 DataDictionarySetRVSSAsp(GSD, &ASPData);
 
-								if (MONRData.gpsQmsOfWeek % ASPDebugRate == 0) {
+                                if (MONRData.gpsQmsOfWeek % ASPDebugRate == 0) {
                                     printf("%d, %d, %3.3f, %s, %s\n", CurrentTimeU32, StartTimeU32,
                                            ASPData.TimeToSyncPointDbl, object_address_name[iIndex],
                                            ASP[i].MasterIP);
@@ -582,8 +584,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                             }
                         }
                     }
-					OP[iIndex].Speed =
-						sqrt(pow(MONRData.lateralSpeed, 2) + pow(MONRData.longitudinalSpeed, 2));
+                    OP[iIndex].Speed =
+                        sqrt(pow(MONRData.lateralSpeed, 2) + pow(MONRData.longitudinalSpeed, 2));
                 }
                 else if (receivedMONRData > 0)
                     LogMessage(LOG_LEVEL_INFO, "MONR length error (should be %d but is %ld) from %s.",
@@ -632,15 +634,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             }
             else if (iCommand == COMM_STRT && (vGetState(GSD) == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED) */ )	//OBC_STATE_INITIALIZED is temporary!
             {
-				struct timeval startTime, startDelay;
+                struct timeval startTime, startDelay;
 
-				MiscPtr = pcRecvBuffer;
-				TimeSetToUTCms(&startTime, (int64_t) strtoul(MiscPtr, &MiscPtr, 10));
-				TimeSetToUTCms(&startDelay, (int64_t) strtoul(MiscPtr + 1, NULL, 10));
-				timeradd(&startTime, &startDelay, &startTime);
-				MessageLength =
-					(int)encodeSTRTMessage(TimeGetAsGPSqmsOfWeek(&startTime), TimeGetAsGPSweek(&startTime),
-										   MessageBuffer, sizeof (MessageBuffer), 0);
+                MiscPtr = pcRecvBuffer;
+                TimeSetToUTCms(&startTime, (int64_t) strtoul(MiscPtr, &MiscPtr, 10));
+                TimeSetToUTCms(&startDelay, (int64_t) strtoul(MiscPtr + 1, NULL, 10));
+                timeradd(&startTime, &startDelay, &startTime);
+                MessageLength =
+                    (int)encodeSTRTMessage(TimeGetAsGPSqmsOfWeek(&startTime), TimeGetAsGPSweek(&startTime),
+                                           MessageBuffer, sizeof (MessageBuffer), 0);
 
                 ASPData.MTSPU32 = 0;
                 ASPData.TimeToSyncPointDbl = 0;
@@ -660,10 +662,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                     //GSD->STRTSizeU8 = (U8)MessageLength;
                     STRTSentU8 = 1;
                 }
-                //OBCState = OBC_STATE_INITIALIZED; //This is temporary
+                //OBCState = OBC_STATE_INITIALIZED; //This is temporary!
                 //printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
-				GSD->ScenarioStartTimeU32 = TimeGetAsGPSqmsOfWeek(&startTime) >> 2;
-
+                GSD->ScenarioStartTimeU32 = TimeGetAsGPSqmsOfWeek(&startTime) >> 2;
                 bzero(MiscText, SMALL_BUFFER_SIZE_0);
                 sprintf(MiscText, "%" PRIu32, GSD->ScenarioStartTimeU32 << 2);
                 LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>, GPS time <%s>", pcRecvBuffer,
@@ -685,7 +686,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             }
             else if (iCommand == COMM_INIT) {
                 LogMessage(LOG_LEVEL_INFO, "INIT received");
-
                 LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
                 nbr_objects = 0;
                 if (iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects) == 0) {
@@ -734,9 +734,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
                     //OSEMSentU8 = 0;
                     STRTSentU8 = 0;
-                    DataDictionarySetNumberOfObjectsU8(GSD, nbr_objects);
-                    DataDictionaryInitMONR(GSD);
-
                 }
                 else {
                     LogMessage(LOG_LEVEL_INFO,
@@ -744,8 +741,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                     pcSendBuffer[0] = (uint8_t) iCommand;
                     iCommSend(COMM_FAILURE, pcSendBuffer, sizeof (iCommand));
                 }
-
-
             }
             else if (iCommand == COMM_ACCM && vGetState(GSD) == OBC_STATE_CONNECTED) {
                 UtilPopulateACCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqACCMData);
@@ -800,27 +795,24 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                                          "[ObjectControl] Was not able to connect to object, [IP: %s] [PORT: %d], retry in %d sec...",
                                          object_address_name[iIndex], object_tcp_port[iIndex],
                                          (!(1 & DisconnectU8)) * 3);
-                                (void)sleep(3);	// TODO: Move this to the rest of the sleep operations? Also, remove the hardcoded 3
                                 break;
                             case EADDRINUSE:
-                                LogMessage(LOG_LEVEL_ERROR,
-                                           "[ObjectControl] Local address/port already in use");
+                                util_error("[ObjectControl] Local address/port already in use");
                                 break;
                             case EALREADY:
-                                LogMessage(LOG_LEVEL_ERROR,
-                                           "[ObjectControl] Previous connection attempt still in progress");
+                                util_error("[ObjectControl] Previous connection attempt still in progress");
                                 break;
                             case EISCONN:
-                                LogMessage(LOG_LEVEL_ERROR, "[ObjectControl] Socket is already connected");
+                                util_error("[ObjectControl] Socket is already connected");
                                 break;
                             case ENETUNREACH:
-                                LogMessage(LOG_LEVEL_ERROR, "[ObjectControl] Network unreachable");
+                                util_error("[ObjectControl] Network unreachable");
                                 break;
                             case ETIMEDOUT:
-                                LogMessage(LOG_LEVEL_ERROR, "[ObjectControl] Connection timed out");
+                                util_error("[ObjectControl] Connection timed out");
                                 break;
                             default:
-                                LogMessage(LOG_LEVEL_ERROR, "ERR: Failed to connect to control socket");
+                                util_error("ERR: Failed to connect to control socket");
                                 break;
                             }
 
@@ -1016,7 +1008,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                 for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
                     vDisconnectObject(&socket_fds[iIndex]);
                 }
-                DataDictionaryFreeMONR(GSD);
                 //#endif //NOTCP
 
                 LogMessage(LOG_LEVEL_INFO, "DISCONNECT received");
@@ -1168,7 +1159,7 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
           COMMAND_MESSAGE_HEADER_LENGTH);
 
 
-    VOILData->Header.SyncWordU16 = SYNC_WORD;
+    VOILData->Header.SyncWordU16 = ISO_SYNC_WORD;
     VOILData->Header.TransmitterIdU8 = 0;
     VOILData->Header.MessageCounterU8 = 0;
     VOILData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -1219,23 +1210,6 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 
 }
 
-    U16 contentLength = 0;
-    U16 valueID = 0;
-    p += sizeof (MONRData->Header.TransmitterIdU8);
-
-    memcpy(&MONRData->Header.MessageCounterU8, p, sizeof (MONRData->Header.MessageCounterU8));
-    p += sizeof (MONRData->Header.MessageCounterU8);
-
-    memcpy(&MONRData->Header.AckReqProtVerU8, p, sizeof (MONRData->Header.AckReqProtVerU8));
-    p += sizeof (MONRData->Header.AckReqProtVerU8);
-
-    memcpy(&MONRData->Header.MessageIdU16, p, sizeof (MONRData->Header.MessageIdU16));
-    p += sizeof (MONRData->Header.MessageIdU16);
-
-    memcpy(&MONRData->Header.MessageLengthU32, p, sizeof (MONRData->Header.MessageLengthU32));
-    p += sizeof (MONRData->Header.MessageLengthU32);
-    memcpy(&valueID, p, sizeof (valueID));
-    if (valueID == VALUE_ID_MONR_STRUCT) {
 
 I32 ObjectControlBuildOSEMMessage(C8 * MessageBuffer, OSEMType * OSEMData, TimeType * GPSTime, C8 * Latitude,
                                   C8 * Longitude, C8 * Altitude, U8 debug) {
@@ -1247,7 +1221,7 @@ I32 ObjectControlBuildOSEMMessage(C8 * MessageBuffer, OSEMType * OSEMData, TimeT
 
     bzero(MessageBuffer, COMMAND_OSEM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
 
-    OSEMData->Header.SyncWordU16 = SYNC_WORD;
+    OSEMData->Header.SyncWordU16 = ISO_SYNC_WORD;
     OSEMData->Header.TransmitterIdU8 = 0;
     OSEMData->Header.MessageCounterU8 = 0;
     OSEMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -1355,10 +1329,10 @@ I32 ObjectControlBuildOSTMMessage(C8 * MessageBuffer, OSTMType * OSTMData, C8 Co
 
     bzero(MessageBuffer, COMMAND_OSTM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
 
-    OSTMData->Header.SyncWordU16 = SYNC_WORD;
+    OSTMData->Header.SyncWordU16 = ISO_SYNC_WORD;
     OSTMData->Header.TransmitterIdU8 = 0;
     OSTMData->Header.MessageCounterU8 = 0;
-    OSTMData->Header.AckReqProtVerU8 = 0;
+    OSTMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
     OSTMData->Header.MessageIdU16 = COMMAND_OSTM_CODE;
     OSTMData->Header.MessageLengthU32 = sizeof (OSTMType) - sizeof (HeaderType);
     OSTMData->StateValueIdU16 = VALUE_ID_STATE_CHANGE_REQUEST;
@@ -1402,7 +1376,7 @@ I32 ObjectControlBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeT
 
     bzero(MessageBuffer, COMMAND_HEAB_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
 
-    HEABData->Header.SyncWordU16 = SYNC_WORD;
+    HEABData->Header.SyncWordU16 = ISO_SYNC_WORD;
     HEABData->Header.TransmitterIdU8 = 0;
     HEABData->Header.MessageCounterU8 = 0;
     HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -1488,10 +1462,10 @@ I32 ObjectControlBuildSYPMMessage(C8 * MessageBuffer, SYPMType * SYPMData, U32 S
 
     bzero(MessageBuffer, COMMAND_SYPM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
 
-    SYPMData->Header.SyncWordU16 = SYNC_WORD;
+    SYPMData->Header.SyncWordU16 = ISO_SYNC_WORD;
     SYPMData->Header.TransmitterIdU8 = 0;
     SYPMData->Header.MessageCounterU8 = 0;
-    SYPMData->Header.AckReqProtVerU8 = 0;
+    SYPMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
     SYPMData->Header.MessageIdU16 = COMMAND_SYPM_CODE;
     SYPMData->Header.MessageLengthU32 = sizeof (SYPMType) - sizeof (HeaderType);
     SYPMData->SyncPointTimeValueIdU16 = 1;
@@ -1538,10 +1512,10 @@ I32 ObjectControlBuildMTSPMessage(C8 * MessageBuffer, MTSPType * MTSPData, U32 S
 
     bzero(MessageBuffer, COMMAND_MTSP_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
 
-    MTSPData->Header.SyncWordU16 = SYNC_WORD;
+    MTSPData->Header.SyncWordU16 = ISO_SYNC_WORD;
     MTSPData->Header.TransmitterIdU8 = 0;
     MTSPData->Header.MessageCounterU8 = 0;
-    MTSPData->Header.AckReqProtVerU8 = 0;
+    MTSPData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
     MTSPData->Header.MessageIdU16 = COMMAND_MTSP_CODE;
     MTSPData->Header.MessageLengthU32 = sizeof (MTSPType) - sizeof (HeaderType);
     MTSPData->EstSyncPointTimeValueIdU16 = 1;
@@ -1621,7 +1595,7 @@ I32 ObjectControlBuildTRAJMessageHeader(C8 * MessageBuffer, I32 * RowCount, Head
 
     bzero(MessageBuffer, COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH);
 
-    HeaderData->SyncWordU16 = SYNC_WORD;
+    HeaderData->SyncWordU16 = ISO_SYNC_WORD;
     HeaderData->TransmitterIdU8 = 0;
     HeaderData->MessageCounterU8 = 0;
     HeaderData->AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -2220,7 +2194,7 @@ I32 ObjectControlSendEXACMessage(EXACData * EXAC, I32 * socket, U8 debug) {
  */
 I32 ObjectControlBuildACCMMessage(ACCMData * mqACCMData, ACCMType * ACCM, U8 debug) {
     // Header
-    ACCM->header.SyncWordU16 = SYNC_WORD;
+    ACCM->header.SyncWordU16 = ISO_SYNC_WORD;
     ACCM->header.TransmitterIdU8 = 0;
     ACCM->header.MessageCounterU8 = 0;
     ACCM->header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -2298,7 +2272,7 @@ I32 ObjectControlBuildEXACMessage(EXACData * mqEXACData, EXACType * EXAC, U8 deb
     TimeSetToCurrentSystemTime(&systemTime);
 
     // Header
-    EXAC->header.SyncWordU16 = SYNC_WORD;
+    EXAC->header.SyncWordU16 = ISO_SYNC_WORD;
     EXAC->header.TransmitterIdU8 = 0;
     EXAC->header.MessageCounterU8 = 0;
     EXAC->header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
@@ -2350,7 +2324,7 @@ I32 ObjectControlBuildEXACMessage(EXACData * mqEXACData, EXACType * EXAC, U8 deb
  */
 I32 ObjectControlBuildTRCMMessage(TRCMData * mqTRCMData, TRCMType * TRCM, U8 debug) {
     // Header
-    TRCM->header.SyncWordU16 = SYNC_WORD;
+    TRCM->header.SyncWordU16 = ISO_SYNC_WORD;
     TRCM->header.TransmitterIdU8 = 0;
     TRCM->header.MessageCounterU8 = 0;
     TRCM->header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
