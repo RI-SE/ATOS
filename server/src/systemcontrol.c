@@ -33,6 +33,7 @@
 #include <ifaddrs.h>
 
 #include "systemcontrol.h"
+#include "maestroTime.h"
 #include "timecontrol.h"
 #include "datadictionary.h"
 
@@ -221,6 +222,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 pcBuffer[IPC_BUFFER_SIZE];
 	char inchr;
 	struct timeval tvTime;
+
+	const struct timeval VirtualMachineLagCompensation = { VIRTUAL_MACHINE_LAG_COMPENSATION_S,
+		VIRTUAL_MACHINE_LAG_COMPENSATION_US
+	};
 
 	ObjectPosition OP;
 	int i, i1;
@@ -919,28 +924,17 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED)	//Temporary!
 				{
 					bzero(pcBuffer, IPC_BUFFER_SIZE);
-					/* Lest use UTC time everywhere instead of etsi and gps time
-					   gettimeofday(&tvTime, NULL);
-					   uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-					 */
-					uiTime = UtilgetCurrentUTCtimeMS();
+					TimeSetToCurrentSystemTime(&tvTime);
+
 					if (TIME_COMPENSATE_LAGING_VM)
-						uiTime = uiTime - TIME_COMPENSATE_LAGING_VM_VAL;
+						timersub(&tvTime, &VirtualMachineLagCompensation, &tvTime);
 
-					LogMessage(LOG_LEVEL_INFO, "Current timestamp (gtd): %lu", uiTime);
+					LogMessage(LOG_LEVEL_INFO, "Current timestamp (epoch): %lu", TimeGetAsUTCms(&tvTime));
 
-					//clock_gettime(CLOCK_MONOTONIC_COARSE, &tTime);
-					//clock_gettime(CLOCK_REALTIME, &tTime);
-					//uiTime = (uint64_t)tTime.tv_sec*1000 + (uint64_t)tTime.tv_nsec/1000000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-					//printf("[SystemControl] Current timestamp (cgt): %lu\n",uiTime );
-					//printf("[SystemControl] Current timestamp: %lu\n",uiTime );
-
-					//uiTime += atoi(SystemControlArgument[0]);
-					uiTime = atoi(SystemControlArgument[0]);
-					DelayedStartU32 = atoi(SystemControlArgument[1]);
-					sprintf(pcBuffer, "%" PRIu8 ";%" PRIu64 ";%" PRIu32 ";", 0, uiTime, DelayedStartU32);
-					LogMessage(LOG_LEVEL_INFO, "Sending START <%s> (delayed +%s ms)", pcBuffer,
-							   SystemControlArgument[1]);
+					DelayedStartU32 = atoi(SystemControlArgument[0]);
+					sprintf(pcBuffer, "%" PRIi64 ";%" PRIu32 ";", TimeGetAsUTCms(&tvTime), DelayedStartU32);
+					LogMessage(LOG_LEVEL_INFO, "Sending START <%s> (delayed +%u ms)", pcBuffer,
+							   DelayedStartU32);
 
 					if (iCommSend(COMM_STRT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
 						LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending STRT command");

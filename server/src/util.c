@@ -338,6 +338,7 @@ void UtilgetDateTimefromUTCCSVformat(int64_t utc_ms, char *buffer, int size_t) {
 
 	ms = round(tmp_ms * 1000);
 	strftime(buffer, size_t, "%Y;%m;%d;%H;%M;%S;", &date_time);
+
 	sprintf(tmp_buffer_ms, "%" PRIi64, ms);
 	strcat(buffer, tmp_buffer_ms);
 }
@@ -354,6 +355,7 @@ void UtilgetDateTimeFromUTCForMapNameCreation(int64_t utc_ms, char *buffer, int 
 
 	ms = round(tmp_ms * 1000);
 	strftime(buffer, size_t, "%Y-%m-%d_%H:%M:%S:", &date_time);
+
 	sprintf(tmp_buffer_ms, "%" PRIi64, ms);
 	strcat(buffer, tmp_buffer_ms);
 }
@@ -695,15 +697,15 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
 CartesianPosition MONRToCartesianPosition(MonitorDataType MONR) {
 	CartesianPosition retval;
 
-	retval.xCoord_m = MONR.MONR.XPositionI32 / 1000.0;
-	retval.yCoord_m = MONR.MONR.YPositionI32 / 1000.0;
-	retval.zCoord_m = MONR.MONR.ZPositionI32 / 1000.0;
-	if (MONR.MONR.HeadingU16 == 36001) {	// 36001: unavailable
+	retval.xCoord_m = MONR.MONR.xPosition / 1000.0;
+	retval.yCoord_m = MONR.MONR.yPosition / 1000.0;
+	retval.zCoord_m = MONR.MONR.zPosition / 1000.0;
+	if (MONR.MONR.heading == 36001) {	// 36001: unavailable
 		LogMessage(LOG_LEVEL_DEBUG, "MONR heading unavailable, assuming 0");
 		retval.heading_deg = 0.0;
 	}
 	else {
-		retval.heading_deg = MONR.MONR.HeadingU16 / 100.0;
+		retval.heading_deg = MONR.MONR.heading / 100.0;
 	}
 	return retval;
 }
@@ -720,14 +722,11 @@ int UtilMonitorDataToString(MonitorDataType monrData, char *monrString, size_t s
 	inet_ntop(AF_INET, &monrData.ClientIP, monrString,
 			  (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t) stringLength);
 	strcat(monrString, ";0;");
-	sprintf(monrString + strlen(monrString), "%u;", monrData.MONR.GPSQmsOfWeekU32);
-	sprintf(monrString + strlen(monrString), "%d;%d;%d;%u;",
-			monrData.MONR.XPositionI32, monrData.MONR.YPositionI32, monrData.MONR.ZPositionI32,
-			monrData.MONR.HeadingU16);
-	sprintf(monrString + strlen(monrString), "%d;%d;%d;%d;", monrData.MONR.LongitudinalSpeedI16,
-			monrData.MONR.LateralSpeedI16, monrData.MONR.LongitudinalAccI16, monrData.MONR.LateralAccI16);
-	sprintf(monrString + strlen(monrString), "%u;%u;%u;%u;", monrData.MONR.DriveDirectionU8,
-			monrData.MONR.StateU8, monrData.MONR.ReadyToArmU8, monrData.MONR.ErrorStatusU8);
+	if (MONRToASCII(&monrData.MONR, monrString + strlen(monrString), stringLength - strlen(monrString), 0) !=
+		MESSAGE_OK) {
+		memset(monrString, 0, stringLength);
+		return -1;
+	}
 	return 0;
 }
 
@@ -741,10 +740,10 @@ int UtilMonitorDataToString(MonitorDataType monrData, char *monrString, size_t s
 int UtilStringToMonitorData(const char *monrString, size_t stringLength, MonitorDataType * monrData) {
 	const char *token;
 	const char delim[] = ";";
-	const int NumberBaseDecimal = 10;
 	struct in_addr addr;
+	char *copy = strdup(monrString);
 
-	token = strtok(monrString, delim);
+	token = strtok(copy, delim);
 
 	// IP address
 	inet_pton(AF_INET, token, &addr);
@@ -755,44 +754,10 @@ int UtilStringToMonitorData(const char *monrString, size_t stringLength, Monitor
 
 	// MONR data
 	token = strtok(NULL, delim);
-	monrData->MONR.GPSQmsOfWeekU32 = (U32) strtoul(token, NULL, NumberBaseDecimal);
-
-	token = strtok(NULL, delim);
-	monrData->MONR.XPositionI32 = (I32) strtol(token, NULL, NumberBaseDecimal);
-
-	token = strtok(NULL, delim);
-	monrData->MONR.YPositionI32 = (I32) strtol(token, NULL, NumberBaseDecimal);
-
-	token = strtok(NULL, delim);
-	monrData->MONR.ZPositionI32 = (I32) strtol(token, NULL, NumberBaseDecimal);
-
-	token = strtok(NULL, delim);
-	monrData->MONR.HeadingU16 = (U16) strtoul(token, NULL, NumberBaseDecimal);
-
-	token = strtok(NULL, delim);
-	monrData->MONR.LongitudinalSpeedI16 = (I16) strtol(token, NULL, NumberBaseDecimal);
-
-	token = strtok(NULL, delim);
-	monrData->MONR.LateralSpeedI16 = (I16) strtol(token, NULL, NumberBaseDecimal);
-
-	token = strtok(NULL, delim);
-	monrData->MONR.LongitudinalAccI16 = (I16) strtol(token, NULL, NumberBaseDecimal);
-
-	token = strtok(NULL, delim);
-	monrData->MONR.LateralAccI16 = (I16) strtol(token, NULL, NumberBaseDecimal);
-
-	token = strtok(NULL, delim);
-	monrData->MONR.DriveDirectionU8 = (U8) strtoul(token, NULL, NumberBaseDecimal);
-
-	token = strtok(NULL, delim);
-	monrData->MONR.StateU8 = (U8) strtoul(token, NULL, NumberBaseDecimal);
-
-	token = strtok(NULL, delim);
-	monrData->MONR.ReadyToArmU8 = (U8) strtoul(token, NULL, NumberBaseDecimal);
-
-	token = strtok(NULL, delim);
-	monrData->MONR.ErrorStatusU8 = (U8) strtoul(token, NULL, NumberBaseDecimal);
-	return 0;
+	if (ASCIIToMONR(token, &monrData->MONR, 0) == MESSAGE_OK)
+		return 0;
+	else
+		return -1;
 }
 
 /*!
@@ -3648,77 +3613,6 @@ I32 UtilISOBuildTRAJMessage(C8 * MessageBuffer, C8 * DTMData, I32 RowCount, DOTM
 	return MessageIndex;		//Total number of bytes
 }
 
-I32 UtilISOBuildHeader(C8 * MessageBuffer, const size_t length, HeaderType * HeaderData, U8 Debug) {
-	C8 *p = MessageBuffer;
-	I32 retval = 0;
-	const U8 ProtocolVersionBitmask = 0x7F;
-	U8 messageProtocolVersion = 0;
-	U8 isProtocolVersionSupported = 0;
-	const uint8_t *supportedProtocolVersions;
-	size_t nSupportedProtocols = 0;
-
-	if (length < sizeof (HeaderData)) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Too little raw data to fill ISO header");
-		memset(HeaderData, 0, sizeof (*HeaderData));
-		return -1;
-	}
-
-	// Decode ISO header
-	memcpy(&HeaderData->SyncWordU16, p, sizeof (HeaderData->SyncWordU16));
-	p += sizeof (HeaderData->SyncWordU16);
-
-	if (HeaderData->SyncWordU16 != ISO_SYNC_WORD) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Sync word error when decoding ISO header");
-		memset(HeaderData, 0, sizeof (*HeaderData));
-		return -1;
-	}
-
-	memcpy(&HeaderData->TransmitterIdU8, p, sizeof (HeaderData->TransmitterIdU8));
-	p += sizeof (HeaderData->TransmitterIdU8);
-
-	memcpy(&HeaderData->MessageCounterU8, p, sizeof (HeaderData->MessageCounterU8));
-	p += sizeof (HeaderData->MessageCounterU8);
-
-	memcpy(&HeaderData->AckReqProtVerU8, p, sizeof (HeaderData->AckReqProtVerU8));
-	p += sizeof (HeaderData->AckReqProtVerU8);
-
-	// Loop over permitted protocol versions
-	messageProtocolVersion = HeaderData->AckReqProtVerU8 & ProtocolVersionBitmask;
-	getSupportedISOProtocolVersions(&supportedProtocolVersions, &nSupportedProtocols);
-	for (size_t i = 0; i < nSupportedProtocols; ++i) {
-		if (supportedProtocolVersions[i] == messageProtocolVersion) {
-			isProtocolVersionSupported = 1;
-			break;
-		}
-	}
-
-	if (!isProtocolVersionSupported) {
-		errno = EPROTONOSUPPORT;
-		LogMessage(LOG_LEVEL_WARNING, "Protocol version %u not supported", messageProtocolVersion);
-		retval = -1;
-	}
-
-	memcpy(&HeaderData->MessageIdU16, p, sizeof (HeaderData->MessageIdU16));
-	p += sizeof (HeaderData->MessageIdU16);
-
-	memcpy(&HeaderData->MessageLengthU32, p, sizeof (HeaderData->MessageLengthU32));
-	p += sizeof (HeaderData->MessageLengthU32);
-
-	if (Debug) {
-		LogPrint("SyncWordU16 = 0x%x", HeaderData->SyncWordU16);
-		LogPrint("TransmitterIdU8 = 0x%x", HeaderData->TransmitterIdU8);
-		LogPrint("MessageCounterU8 = 0x%x", HeaderData->MessageCounterU8);
-		LogPrint("AckReqProtVerU8 = 0x%x", HeaderData->AckReqProtVerU8);
-		LogPrint("MessageIdU16 = 0x%x", HeaderData->MessageIdU16);
-		LogPrint("MessageLengthU32 = 0x%x", HeaderData->MessageLengthU32);
-	}
-
-	return retval;
-}
-
-
 
 /*
 UtilWriteConfigurationParameter updates parameters in the file test.conf.
@@ -3828,9 +3722,9 @@ I32 UtilPopulateMonitorDataStruct(C8 * rawMONR, size_t rawMONRsize, MonitorDataT
 	C8 *rdPtr = rawMONR, *monrStruct;	// Pointer to keep track of where in rawMONR we are currently reading
 	U16 contentLength = 0;
 	in_addr_t IPData = 0;
-	const size_t monrPacketSize = sizeof (monitorData->MONR) - sizeof (monitorData->MONR.Header)
-		- sizeof (monitorData->MONR.CRC) - sizeof (monitorData->MONR.MonrStructValueIdU16)
-		- sizeof (monitorData->MONR.MonrStructContentLengthU16);
+	const size_t monrPacketSize = sizeof (monitorData->MONR) - sizeof (monitorData->MONR.header)
+		- sizeof (monitorData->MONR.footer.Crc) - sizeof (monitorData->MONR.monrStructValueID)
+		- sizeof (monitorData->MONR.monrStructContentLength);
 
 	if (rawMONRsize < sizeof (MONRType)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw MONR array too small to hold all necessary MONR data, %d < %d.",
@@ -3840,21 +3734,21 @@ I32 UtilPopulateMonitorDataStruct(C8 * rawMONR, size_t rawMONRsize, MonitorDataT
 
 	// ISO message header
 	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	monitorData->MONR.Header.SyncWordU16 = U16Data;
+	monitorData->MONR.header.SyncWordU16 = U16Data;
 	rdPtr += sizeof (U16Data);
 	U16Data = 0;
 
-	monitorData->MONR.Header.TransmitterIdU8 = *(rdPtr++);
-	monitorData->MONR.Header.MessageCounterU8 = *(rdPtr++);
-	monitorData->MONR.Header.AckReqProtVerU8 = *(rdPtr++);
+	monitorData->MONR.header.TransmitterIdU8 = *(rdPtr++);
+	monitorData->MONR.header.MessageCounterU8 = *(rdPtr++);
+	monitorData->MONR.header.AckReqProtVerU8 = *(rdPtr++);
 
 	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	monitorData->MONR.Header.MessageIdU16 = U16Data;
+	monitorData->MONR.header.MessageIdU16 = U16Data;
 	rdPtr += sizeof (U16Data);
 	U16Data = 0;
 
 	memcpy(&U32Data, rdPtr, sizeof (U32Data));
-	monitorData->MONR.Header.MessageLengthU32 = U32Data;
+	monitorData->MONR.header.MessageLengthU32 = U32Data;
 	rdPtr += sizeof (U32Data);
 	U32Data = 0;
 
@@ -3888,57 +3782,57 @@ I32 UtilPopulateMonitorDataStruct(C8 * rawMONR, size_t rawMONRsize, MonitorDataT
 	U16Data = 0;
 
 	memcpy(&U32Data, rdPtr, sizeof (U32Data));
-	monitorData->MONR.GPSQmsOfWeekU32 = U32Data;
+	monitorData->MONR.gpsQmsOfWeek = U32Data;
 	rdPtr += sizeof (U32Data);
 	U32Data = 0;
 
 	memcpy(&I32Data, rdPtr, sizeof (I32Data));
-	monitorData->MONR.XPositionI32 = I32Data;
+	monitorData->MONR.xPosition = I32Data;
 	rdPtr += sizeof (I32Data);
 	I32Data = 0;
 
 	memcpy(&I32Data, rdPtr, sizeof (I32Data));
-	monitorData->MONR.YPositionI32 = I32Data;
+	monitorData->MONR.yPosition = I32Data;
 	rdPtr += sizeof (I32Data);
 	I32Data = 0;
 
 	memcpy(&I32Data, rdPtr, sizeof (I32Data));
-	monitorData->MONR.ZPositionI32 = I32Data;
+	monitorData->MONR.zPosition = I32Data;
 	rdPtr += sizeof (I32Data);
 	I32Data = 0;
 
 	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	monitorData->MONR.HeadingU16 = U16Data;
+	monitorData->MONR.heading = U16Data;
 	rdPtr += sizeof (U16Data);
 	U16Data = 0;
 
 	memcpy(&I16Data, rdPtr, sizeof (I16Data));
-	monitorData->MONR.LongitudinalSpeedI16 = I16Data;
+	monitorData->MONR.longitudinalSpeed = I16Data;
 	rdPtr += sizeof (I16Data);
 	I16Data = 0;
 
 	memcpy(&I16Data, rdPtr, sizeof (I16Data));
-	monitorData->MONR.LateralSpeedI16 = I16Data;
+	monitorData->MONR.lateralSpeed = I16Data;
 	rdPtr += sizeof (I16Data);
 	I16Data = 0;
 
 	memcpy(&I16Data, rdPtr, sizeof (I16Data));
-	monitorData->MONR.LongitudinalAccI16 = I16Data;
+	monitorData->MONR.longitudinalAcc = I16Data;
 	rdPtr += sizeof (I16Data);
 	I16Data = 0;
 
 	memcpy(&I16Data, rdPtr, sizeof (I16Data));
-	monitorData->MONR.LateralAccI16 = I16Data;
+	monitorData->MONR.lateralAcc = I16Data;
 	rdPtr += sizeof (I16Data);
 	I16Data = 0;
 
-	monitorData->MONR.DriveDirectionU8 = *(rdPtr++);
-	monitorData->MONR.StateU8 = *(rdPtr++);
-	monitorData->MONR.ReadyToArmU8 = *(rdPtr++);
-	monitorData->MONR.ErrorStatusU8 = *(rdPtr++);
+	monitorData->MONR.driveDirection = *(rdPtr++);
+	monitorData->MONR.state = *(rdPtr++);
+	monitorData->MONR.readyToArm = *(rdPtr++);
+	monitorData->MONR.errorStatus = *(rdPtr++);
 
 	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	monitorData->MONR.CRC = U16Data;
+	monitorData->MONR.footer.Crc = U16Data;
 	rdPtr += sizeof (U16Data);
 	U16Data = 0;
 
@@ -3949,12 +3843,12 @@ I32 UtilPopulateMonitorDataStruct(C8 * rawMONR, size_t rawMONRsize, MonitorDataT
 
 	if (debug == 1) {
 		LogPrint("MONR:");
-		LogPrint("SyncWord = %d", monitorData->MONR.Header.SyncWordU16);
-		LogPrint("TransmitterId = %d", monitorData->MONR.Header.TransmitterIdU8);
-		LogPrint("PackageCounter = %d", monitorData->MONR.Header.MessageCounterU8);
-		LogPrint("AckReq = %d", monitorData->MONR.Header.AckReqProtVerU8);
-		LogPrint("MessageLength = %d", monitorData->MONR.Header.MessageLengthU32);
-		LogPrint("GPSQMSOW = %u", monitorData->MONR.GPSQmsOfWeekU32);
+		LogPrint("SyncWord = %d", monitorData->MONR.header.SyncWordU16);
+		LogPrint("TransmitterId = %d", monitorData->MONR.header.TransmitterIdU8);
+		LogPrint("PackageCounter = %d", monitorData->MONR.header.MessageCounterU8);
+		LogPrint("AckReq = %d", monitorData->MONR.header.AckReqProtVerU8);
+		LogPrint("MessageLength = %d", monitorData->MONR.header.MessageLengthU32);
+		LogPrint("GPSQMSOW = %u", monitorData->MONR.gpsQmsOfWeek);
 	}
 
 	return 0;
