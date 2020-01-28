@@ -1409,7 +1409,15 @@ ssize_t encodeEXACMessage(const uint16_t * actionID, const struct timeval *execu
 	return sizeof (EXACType);
 }
 
-
+/*!
+ * \brief encodeINSUPMessage Fills an ISO vendor specific (RISE) INSUP struct with relevant data fields,
+ *		and corresponding value IDs and content lengths
+ * \param command Command to send to supervisor
+ * \param insupDataBuffer Data buffer to which INSUP is to be written
+ * \param bufferLength Length of data buffer to which INSUP is to be written
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes written to buffer, or -1 in case of error
+ */
 ssize_t encodeINSUPMessage(const SupervisorCommandType command, char *insupDataBuffer,
 						   const size_t bufferLength, const char debug) {
 	INSUPType INSUPData;
@@ -1431,7 +1439,9 @@ ssize_t encodeINSUPMessage(const SupervisorCommandType command, char *insupDataB
 	INSUPData.mode = (uint8_t) command;
 
 	if (debug) {
-
+		LogPrint("INSUP message:\n\tMode value ID: 0x%x\n\t"
+				 "Mode content length: %u\n\tMode: %u", INSUPData.modeValueID,
+				 INSUPData.modeContentLength, INSUPData.mode);
 	}
 
 	// Switch from host endianness to little endian
