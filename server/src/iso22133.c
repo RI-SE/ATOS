@@ -28,6 +28,13 @@ static const uint8_t SupportedProtocolVersions[] = { 2 };
 #define MAX_LATERAL_DEVIATION_ONE_METER_VALUE 1000
 #define MIN_POSITIONING_ACCURACY_NOT_REQUIRED_VALUE 0
 #define MIN_POSITIONING_ACCURACY_ONE_METER_VALUE 1000	// ISO specification unclear on this value
+#define TRIGGER_ID_UNAVAILABLE 65535
+#define TRIGGER_TYPE_UNAVAILABLE 65535
+#define TRIGGER_TYPE_PARAMETER_UNAVAILABLE 4294967295
+#define ACTION_ID_UNAVAILABLE 65535
+#define ACTION_TYPE_UNAVAILABLE 65535
+#define ACTION_TYPE_PARAMETER_UNAVAILABLE 4294967295
+
 
 #pragma pack(push,1)
 /*! OSEM message */
@@ -263,11 +270,11 @@ typedef struct {
 // ************************* Non-ISO type definitions and defines ************************************************
 // Byte swapper definitions for 6 byte values
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-#define le48toh(x) __uint64_identity (x)
-#define htole48(x) __uint64_identity (x)
+#define le48toh(x) (x)
+#define htole48(x) (x)
 #else
-#define le48toh(x) (__bswap_64(x) >> 16)
-#define htole48(x) (__bswap_64(x) >> 16)
+#define le48toh(x) (le64toh(x) >> 16)
+#define htole48(x) (htole64(x) >> 16)
 #endif
 
 // ************************** static function declarations ********************************************************
@@ -282,7 +289,7 @@ static char isValidMessageID(const uint16_t id);
 // ************************** function definitions ****************************************************************
 
 /*!
- * \brief decodeISOHeader Convert data in a buffer to an ISO header
+ * \brief decodeISOHeader Convert data in a buffer to an ISO heade
  * \param MessageBuffer Buffer containing raw data to be converted
  * \param length Length of buffer
  * \param HeaderData Struct in which to store resulting data
@@ -291,6 +298,7 @@ static char isValidMessageID(const uint16_t id);
  */
 ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t length, HeaderType * HeaderData,
 									  const char debug) {
+
 	const char *p = MessageBuffer;
 	ISOMessageReturnValue retval = MESSAGE_OK;
 	const char ProtocolVersionBitmask = 0x7F;
@@ -476,7 +484,7 @@ char isValidMessageID(const uint16_t id) {
 ISOMessageID getISOMessageType(const char *messageData, const size_t length, const char debug) {
 	HeaderType header;
 
-	// Create header
+	// Decode header
 	if (decodeISOHeader(messageData, length, &header, debug) != MESSAGE_OK) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to parse raw data into ISO message header");
 		return MESSAGE_ID_INVALID;
@@ -803,6 +811,7 @@ ssize_t encodeHEABMessage(const ControlCenterStatusType status, char *heabDataBu
 		return -1;
 	}
 
+	// Construct header
 	HEABData.header = buildISOHeader(MESSAGE_ID_HEAB, sizeof (HEABData), debug);
 
 	// Fill contents
@@ -1152,9 +1161,9 @@ ssize_t encodeMTSPMessage(const struct timeval * estSyncPointTime, char * mtspDa
  * \param debug Flag for enabling debugging
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerType,
-						  const TriggerTypeParameter_t param1, const TriggerTypeParameter_t param2,
-						  const TriggerTypeParameter_t param3, char *trcmDataBuffer,
+ssize_t encodeTRCMMessage(const uint16_t * triggerID, const TriggerType_t * triggerType,
+						  const TriggerTypeParameter_t * param1, const TriggerTypeParameter_t * param2,
+						  const TriggerTypeParameter_t * param3, char *trcmDataBuffer,
 						  const size_t bufferLength, const char debug) {
 
 	TRCMType TRCMData;
@@ -1173,11 +1182,11 @@ ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerT
 	// Fill contents
 	TRCMData.triggerIDValueID = VALUE_ID_TRCM_TRIGGER_ID;
 	TRCMData.triggerIDContentLength = sizeof (TRCMData.triggerID);
-	TRCMData.triggerID = triggerID;
+	TRCMData.triggerID = triggerID == NULL ? TRIGGER_ID_UNAVAILABLE : *triggerID;
 
 	TRCMData.triggerTypeValueID = VALUE_ID_TRCM_TRIGGER_TYPE;
 	TRCMData.triggerTypeContentLength = sizeof (TRCMData.triggerType);
-	TRCMData.triggerType = (uint16_t) triggerType;
+	TRCMData.triggerType = triggerType == NULL ? TRIGGER_TYPE_UNAVAILABLE : (uint16_t) (*triggerType);
 
 	TRCMData.triggerTypeParameter1ValueID = VALUE_ID_TRCM_TRIGGER_TYPE_PARAM1;
 	TRCMData.triggerTypeParameter2ValueID = VALUE_ID_TRCM_TRIGGER_TYPE_PARAM2;
@@ -1187,9 +1196,12 @@ ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerT
 	TRCMData.triggerTypeParameter2ContentLength = sizeof (TRCMData.triggerTypeParameter2);
 	TRCMData.triggerTypeParameter3ContentLength = sizeof (TRCMData.triggerTypeParameter3);
 
-	TRCMData.triggerTypeParameter1 = (uint32_t) param1;
-	TRCMData.triggerTypeParameter2 = (uint32_t) param2;
-	TRCMData.triggerTypeParameter3 = (uint32_t) param3;
+	TRCMData.triggerTypeParameter1 =
+		param1 == NULL ? TRIGGER_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param1);
+	TRCMData.triggerTypeParameter2 =
+		param2 == NULL ? TRIGGER_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param2);
+	TRCMData.triggerTypeParameter3 =
+		param3 == NULL ? TRIGGER_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param3);
 
 	if (debug) {
 		LogPrint("TRCM message:\n\tTrigger ID value ID: 0x%x\n\tTrigger ID content length: %u\n\t"
@@ -1252,10 +1264,10 @@ ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerT
  * \param debug Flag for enabling debugging
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType,
-						  const ActionTypeParameter_t param1, const ActionTypeParameter_t param2,
-						  const ActionTypeParameter_t param3, char *accmDataBuffer, const size_t bufferLength,
-						  const char debug) {
+ssize_t encodeACCMMessage(const uint16_t * actionID, const ActionType_t * actionType,
+						  const ActionTypeParameter_t * param1, const ActionTypeParameter_t * param2,
+						  const ActionTypeParameter_t * param3, char *accmDataBuffer,
+						  const size_t bufferLength, const char debug) {
 
 	ACCMType ACCMData;
 
@@ -1273,11 +1285,11 @@ ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType
 	// Fill contents
 	ACCMData.actionIDValueID = VALUE_ID_ACCM_ACTION_ID;
 	ACCMData.actionIDContentLength = sizeof (ACCMData.actionID);
-	ACCMData.actionID = actionID;
+	ACCMData.actionID = actionID == NULL ? ACTION_ID_UNAVAILABLE : *actionID;
 
 	ACCMData.actionTypeValueID = VALUE_ID_ACCM_ACTION_TYPE;
 	ACCMData.actionTypeContentLength = sizeof (ACCMData.actionType);
-	ACCMData.actionType = (uint16_t) actionType;
+	ACCMData.actionType = actionType == NULL ? ACTION_TYPE_UNAVAILABLE : (uint16_t) (*actionType);
 
 	ACCMData.actionTypeParameter1ValueID = VALUE_ID_ACCM_ACTION_TYPE_PARAM1;
 	ACCMData.actionTypeParameter2ValueID = VALUE_ID_ACCM_ACTION_TYPE_PARAM2;
@@ -1287,9 +1299,9 @@ ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType
 	ACCMData.actionTypeParameter2ContentLength = sizeof (ACCMData.actionTypeParameter2);
 	ACCMData.actionTypeParameter3ContentLength = sizeof (ACCMData.actionTypeParameter3);
 
-	ACCMData.actionTypeParameter1 = (uint32_t) param1;
-	ACCMData.actionTypeParameter2 = (uint32_t) param2;
-	ACCMData.actionTypeParameter3 = (uint32_t) param3;
+	ACCMData.actionTypeParameter1 = param1 == NULL ? ACTION_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param1);
+	ACCMData.actionTypeParameter2 = param2 == NULL ? ACTION_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param2);
+	ACCMData.actionTypeParameter3 = param3 == NULL ? ACTION_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param3);
 
 	if (debug) {
 		LogPrint("ACCM message:\n\tAction ID value ID: 0x%x\n\tAction ID content length: %u\n\t"
@@ -1346,8 +1358,8 @@ ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType
  * \param debug Flag for enabling debugging
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval *executionTime, char *exacDataBuffer,
-						  const size_t bufferLength, const char debug) {
+ssize_t encodeEXACMessage(const uint16_t * actionID, const struct timeval *executionTime,
+						  char *exacDataBuffer, const size_t bufferLength, const char debug) {
 
 	EXACType EXACData;
 
@@ -1365,11 +1377,12 @@ ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval *executi
 	// Fill contents
 	EXACData.actionIDValueID = VALUE_ID_EXAC_ACTION_ID;
 	EXACData.actionIDContentLength = sizeof (EXACData.actionID);
-	EXACData.actionID = actionID;
+	EXACData.actionID = actionID == NULL ? ACTION_ID_UNAVAILABLE : *actionID;
 
 	EXACData.executionTime_qmsoWValueID = VALUE_ID_EXAC_ACTION_EXECUTE_TIME;
 	EXACData.executionTime_qmsoWContentLength = sizeof (EXACData.executionTime_qmsoW);
-	EXACData.executionTime_qmsoW = TimeGetAsGPSqmsOfWeek(executionTime);
+	EXACData.executionTime_qmsoW =
+		executionTime == NULL ? GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSqmsOfWeek(executionTime);
 
 	if (debug) {
 		LogPrint

@@ -696,9 +696,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												sizeof (objectIPs) / sizeof (objectIPs[0]));
 				if (iIndex != -1) {
 					MessageLength =
-						encodeACCMMessage(mqACCMData.actionID, mqACCMData.actionType,
-										  mqACCMData.actionTypeParameter1, mqACCMData.actionTypeParameter2,
-										  mqACCMData.actionTypeParameter3, MessageBuffer,
+						encodeACCMMessage(&mqACCMData.actionID, &mqACCMData.actionType,
+										  &mqACCMData.actionTypeParameter1, &mqACCMData.actionTypeParameter2,
+										  &mqACCMData.actionTypeParameter3, MessageBuffer,
 										  sizeof (MessageBuffer), 0);
 					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
 				}
@@ -709,6 +709,17 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				UtilPopulateTRCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqTRCMData);
 				iIndex = iGetObjectIndexFromObjectIP(mqTRCMData.ip, objectIPs,
 													 sizeof (objectIPs) / sizeof (objectIPs[0]));
+				if (iIndex != -1) {
+					MessageLength =
+						encodeTRCMMessage(&mqTRCMData.triggerID, &mqTRCMData.triggerType,
+										  &mqTRCMData.triggerTypeParameter1,
+										  &mqTRCMData.triggerTypeParameter2,
+										  &mqTRCMData.triggerTypeParameter3, MessageBuffer,
+										  sizeof (MessageBuffer), 0);
+					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
+				}
+				else
+					LogMessage(LOG_LEVEL_WARNING, "Unable to send TRCM: no valid socket found");
 			}
 			else if (iCommand == COMM_EXAC && vGetState(GSD) == OBC_STATE_RUNNING) {
 				UtilPopulateEXACDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqEXACData);
@@ -721,7 +732,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					TimeSetToGPStime(&executionTime, TimeGetAsGPSweek(&currentTime),
 									 mqEXACData.executionTime_qmsoW);
 					MessageLength =
-						encodeEXACMessage(mqEXACData.actionID, &executionTime, MessageBuffer,
+						encodeEXACMessage(&mqEXACData.actionID, &executionTime, MessageBuffer,
 										  sizeof (MessageBuffer), 0);
 					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
 				}
@@ -1162,8 +1173,6 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 	return ObjectCount * sizeof (Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH;	//Total number of bytes
 
 }
-
-
 
 
 int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, unsigned short Curvature,
