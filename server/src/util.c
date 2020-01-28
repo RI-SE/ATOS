@@ -3614,7 +3614,6 @@ I32 UtilISOBuildTRAJMessage(C8 * MessageBuffer, C8 * DTMData, I32 RowCount, DOTM
 }
 
 
-
 /*
 UtilWriteConfigurationParameter updates parameters in the file test.conf.
 

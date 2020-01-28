@@ -58,7 +58,7 @@ typedef struct
 //! MONR value IDs
 #define VALUE_ID_MONR_STRUCT 0x80
 
-  
+
 //! *************************** TRCM
 #define COMMAND_TRCM_CODE 0x0011
 typedef struct
@@ -297,6 +297,9 @@ ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer,
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);
 
+ISOMessageReturnValue decodeMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
+ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
+ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 
 #ifdef __cplusplus
 }

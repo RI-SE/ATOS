@@ -13,6 +13,7 @@ static ISOMessageReturnValue buildISOFooter(const char *MessageBuffer, const siz
 											FooterType * HeaderData, const char debug);
 static char isValidMessageID(const uint16_t id);
 
+
 // ************************** function definitions
 
 /*!
@@ -39,6 +40,7 @@ ISOMessageReturnValue buildISOHeader(const char *MessageBuffer, const size_t len
 
 	// Decode ISO header
 	memcpy(&HeaderData->SyncWordU16, p, sizeof (HeaderData->SyncWordU16));
+	HeaderData->SyncWordU16 = le16toh(HeaderData->SyncWordU16);
 	p += sizeof (HeaderData->SyncWordU16);
 
 	if (HeaderData->SyncWordU16 != ISO_SYNC_WORD) {
@@ -74,9 +76,11 @@ ISOMessageReturnValue buildISOHeader(const char *MessageBuffer, const size_t len
 
 	memcpy(&HeaderData->MessageIdU16, p, sizeof (HeaderData->MessageIdU16));
 	p += sizeof (HeaderData->MessageIdU16);
+	HeaderData->MessageIdU16 = le16toh(HeaderData->MessageIdU16);
 
 	memcpy(&HeaderData->MessageLengthU32, p, sizeof (HeaderData->MessageLengthU32));
 	p += sizeof (HeaderData->MessageLengthU32);
+	HeaderData->MessageLengthU32 = le32toh(HeaderData->MessageLengthU32);
 
 	if (debug) {
 		LogPrint("SyncWordU16 = 0x%x", HeaderData->SyncWordU16);
@@ -107,6 +111,7 @@ ISOMessageReturnValue buildISOFooter(const char *MessageBuffer, const size_t len
 		return MESSAGE_LENGTH_ERROR;
 	}
 	memcpy(&FooterData->Crc, MessageBuffer, sizeof (FooterData->Crc));
+	FooterData->Crc = le16toh(FooterData->Crc);
 
 	// TODO: check on CRC
 	return MESSAGE_OK;
@@ -183,6 +188,7 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 	// Decode content header
 	memcpy(&MONRData->monrStructValueID, p, sizeof (MONRData->monrStructValueID));
 	p += sizeof (MONRData->monrStructValueID);
+	MONRData->monrStructValueID = le16toh(MONRData->monrStructValueID);
 
 	if (MONRData->monrStructValueID != VALUE_ID_MONR_STRUCT) {
 		LogMessage(LOG_LEVEL_ERROR, "Attempted to pass non-MONR struct into MONR parsing function");
@@ -192,6 +198,7 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 
 	memcpy(&MONRData->monrStructContentLength, p, sizeof (MONRData->monrStructContentLength));
 	p += sizeof (MONRData->monrStructContentLength);
+	MONRData->monrStructContentLength = le16toh(MONRData->monrStructContentLength);
 
 	if (MONRData->monrStructContentLength != ExpectedMONRStructSize) {
 		LogMessage(LOG_LEVEL_ERROR, "MONR content length %u differs from the expected length %u",
@@ -203,30 +210,39 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 	// Decode content
 	memcpy(&MONRData->gpsQmsOfWeek, p, sizeof (MONRData->gpsQmsOfWeek));
 	p += sizeof (MONRData->gpsQmsOfWeek);
+	MONRData->gpsQmsOfWeek = le32toh(MONRData->gpsQmsOfWeek);
 
 	memcpy(&MONRData->xPosition, p, sizeof (MONRData->xPosition));
 	p += sizeof (MONRData->xPosition);
+	MONRData->xPosition = (int32_t) le32toh(MONRData->xPosition);
 
 	memcpy(&MONRData->yPosition, p, sizeof (MONRData->yPosition));
 	p += sizeof (MONRData->yPosition);
+	MONRData->yPosition = (int32_t) le32toh(MONRData->yPosition);
 
 	memcpy(&MONRData->zPosition, p, sizeof (MONRData->zPosition));
 	p += sizeof (MONRData->zPosition);
+	MONRData->zPosition = (int32_t) le32toh(MONRData->zPosition);
 
 	memcpy(&MONRData->heading, p, sizeof (MONRData->heading));
 	p += sizeof (MONRData->heading);
+	MONRData->heading = le16toh(MONRData->heading);
 
 	memcpy(&MONRData->longitudinalSpeed, p, sizeof (MONRData->longitudinalSpeed));
 	p += sizeof (MONRData->longitudinalSpeed);
+	MONRData->longitudinalSpeed = (int16_t) le16toh(MONRData->longitudinalSpeed);
 
 	memcpy(&MONRData->lateralSpeed, p, sizeof (MONRData->lateralSpeed));
 	p += sizeof (MONRData->lateralSpeed);
+	MONRData->lateralSpeed = (int16_t) le16toh(MONRData->lateralSpeed);
 
 	memcpy(&MONRData->longitudinalAcc, p, sizeof (MONRData->longitudinalAcc));
 	p += sizeof (MONRData->longitudinalAcc);
+	MONRData->longitudinalAcc = (int16_t) le16toh(MONRData->longitudinalAcc);
 
 	memcpy(&MONRData->lateralAcc, p, sizeof (MONRData->lateralAcc));
 	p += sizeof (MONRData->lateralAcc);
+	MONRData->lateralAcc = (int16_t) le16toh(MONRData->lateralAcc);
 
 	memcpy(&MONRData->driveDirection, p, sizeof (MONRData->driveDirection));
 	p += sizeof (MONRData->driveDirection);
