@@ -137,9 +137,6 @@ static void signalHandler(int signo);
 
 int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, unsigned short Curvature,
 								  unsigned char Mode, char debug);
-I32 ObjectControlBuildSYPMMessage(C8 * MessageBuffer, SYPMType * SYPMData, U32 SyncPoint, U32 StopTime,
-								  U8 debug);
-I32 ObjectControlBuildMTSPMessage(C8 * MessageBuffer, MTSPType * MTSPData, U32 SyncTimestamp, U8 debug);
 I32 ObjectControlBuildTRAJMessageHeader(C8 * MessageBuffer, I32 * RowCount, HeaderType * HeaderData,
 										TRAJInfoType * TRAJInfoData, C8 * TrajFileHeader, U8 debug);
 I32 ObjectControlBuildTRAJMessage(C8 * MessageBuffer, FILE * fd, I32 RowCount, DOTMType * DOTMData, U8 debug);
@@ -242,8 +239,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	DOTMType DOTMData;
 	TRAJInfoType TRAJInfoData;
 	VOILType VOILData;
-	SYPMType SYPMData;
-	MTSPType MTSPData;
 	ACCMData mqACCMData;
 	EXACData mqEXACData;
 	TRCMData mqTRCMData;
@@ -1205,103 +1200,6 @@ int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, uns
 	return MessageIndex;		//Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
 }
 
-I32 ObjectControlBuildSYPMMessage(C8 * MessageBuffer, SYPMType * SYPMData, U32 SyncPoint, U32 StopTime,
-								  U8 debug) {
-
-	I32 MessageIndex = 0, i;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, COMMAND_SYPM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
-
-	SYPMData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	SYPMData->Header.TransmitterIdU8 = 0;
-	SYPMData->Header.MessageCounterU8 = 0;
-	SYPMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	SYPMData->Header.MessageIdU16 = COMMAND_SYPM_CODE;
-	SYPMData->Header.MessageLengthU32 = sizeof (SYPMType) - sizeof (HeaderType);
-	SYPMData->SyncPointTimeValueIdU16 = 1;
-	SYPMData->SyncPointTimeContentLengthU16 = 4;
-	SYPMData->SyncPointTimeU32 = SyncPoint;
-	SYPMData->FreezeTimeValueIdU16 = 2;
-	SYPMData->FreezeTimeContentLengthU16 = 4;
-	SYPMData->FreezeTimeU32 = StopTime;
-
-
-	p = (C8 *) SYPMData;
-	for (i = 0; i < sizeof (SYPMType); i++)
-		*(MessageBuffer + i) = *p++;
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (SYPMType));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	*(MessageBuffer + i++) = (U8) (Crc);
-	MessageIndex = i;
-
-	if (debug) {
-		// TODO: Change to log printout when byte thingy has been implemented
-		printf("SYPM total length = %d bytes (header+message+footer)\n",
-			   (int)(COMMAND_SYPM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (SYPMType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-}
-
-I32 ObjectControlBuildMTSPMessage(C8 * MessageBuffer, MTSPType * MTSPData, U32 SyncTimestamp, U8 debug) {
-
-	I32 MessageIndex = 0, i;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, COMMAND_MTSP_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
-
-	MTSPData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	MTSPData->Header.TransmitterIdU8 = 0;
-	MTSPData->Header.MessageCounterU8 = 0;
-	MTSPData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	MTSPData->Header.MessageIdU16 = COMMAND_MTSP_CODE;
-	MTSPData->Header.MessageLengthU32 = sizeof (MTSPType) - sizeof (HeaderType);
-	MTSPData->EstSyncPointTimeValueIdU16 = 1;
-	MTSPData->EstSyncPointTimeContentLengthU16 = 4;
-	MTSPData->EstSyncPointTimeU32 = SyncTimestamp;
-
-
-	p = (C8 *) MTSPData;
-	for (i = 0; i < sizeof (MTSPType); i++)
-		*(MessageBuffer + i) = *p++;
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (MTSPType));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	*(MessageBuffer + i++) = (U8) (Crc);
-	MessageIndex = i;
-
-	if (debug) {
-		// TODO: Change to log printout when byte thingy has been implemented
-		printf("MTSPData total length = %d bytes (header+message+footer)\n",
-			   (int)(COMMAND_MTSP_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (MTSPType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-}
 
 
 I32 ObjectControlBuildTRAJMessageHeader(C8 * MessageBuffer, I32 * RowCount, HeaderType * HeaderData,
