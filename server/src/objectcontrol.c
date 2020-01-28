@@ -751,7 +751,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 
 					UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
-					float altitude = (float) OriginPosition.Altitude;
+					float altitude = (float)OriginPosition.Altitude;
+
 					MessageLength =
 						encodeOSEMMessage(&OriginPosition.Latitude, &OriginPosition.Longitude,
 										  &altitude, NULL, NULL, NULL, MessageBuffer,
