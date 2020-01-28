@@ -28,6 +28,13 @@ static const uint8_t SupportedProtocolVersions[] = { 2 };
 #define MAX_LATERAL_DEVIATION_ONE_METER_VALUE 1000
 #define MIN_POSITIONING_ACCURACY_NOT_REQUIRED_VALUE 0
 #define MIN_POSITIONING_ACCURACY_ONE_METER_VALUE 1000	// ISO specification unclear on this value
+#define TRIGGER_ID_UNAVAILABLE 65535
+#define TRIGGER_TYPE_UNAVAILABLE 65535
+#define TRIGGER_TYPE_PARAMETER_UNAVAILABLE 4294967295
+#define ACTION_ID_UNAVAILABLE 65535
+#define ACTION_TYPE_UNAVAILABLE 65535
+#define ACTION_TYPE_PARAMETER_UNAVAILABLE 4294967295
+
 
 #pragma pack(push,1)
 /*! OSEM message */
@@ -1100,9 +1107,9 @@ ISOMessageReturnValue ASCIIToMONR(const char *asciiBuffer, MONRType * MONRData, 
  * \param debug Flag for enabling debugging
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerType,
-						  const TriggerTypeParameter_t param1, const TriggerTypeParameter_t param2,
-						  const TriggerTypeParameter_t param3, char *trcmDataBuffer,
+ssize_t encodeTRCMMessage(const uint16_t * triggerID, const TriggerType_t * triggerType,
+						  const TriggerTypeParameter_t * param1, const TriggerTypeParameter_t * param2,
+						  const TriggerTypeParameter_t * param3, char *trcmDataBuffer,
 						  const size_t bufferLength, const char debug) {
 
 	TRCMType TRCMData;
@@ -1121,11 +1128,11 @@ ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerT
 	// Fill contents
 	TRCMData.triggerIDValueID = VALUE_ID_TRCM_TRIGGER_ID;
 	TRCMData.triggerIDContentLength = sizeof (TRCMData.triggerID);
-	TRCMData.triggerID = triggerID;
+	TRCMData.triggerID = triggerID == NULL ? TRIGGER_ID_UNAVAILABLE : *triggerID;
 
 	TRCMData.triggerTypeValueID = VALUE_ID_TRCM_TRIGGER_TYPE;
 	TRCMData.triggerTypeContentLength = sizeof (TRCMData.triggerType);
-	TRCMData.triggerType = (uint16_t) triggerType;
+	TRCMData.triggerType = triggerType == NULL ? TRIGGER_TYPE_UNAVAILABLE : (uint16_t) (*triggerType);
 
 	TRCMData.triggerTypeParameter1ValueID = VALUE_ID_TRCM_TRIGGER_TYPE_PARAM1;
 	TRCMData.triggerTypeParameter2ValueID = VALUE_ID_TRCM_TRIGGER_TYPE_PARAM2;
@@ -1135,9 +1142,9 @@ ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerT
 	TRCMData.triggerTypeParameter2ContentLength = sizeof (TRCMData.triggerTypeParameter2);
 	TRCMData.triggerTypeParameter3ContentLength = sizeof (TRCMData.triggerTypeParameter3);
 
-	TRCMData.triggerTypeParameter1 = (uint32_t) param1;
-	TRCMData.triggerTypeParameter2 = (uint32_t) param2;
-	TRCMData.triggerTypeParameter3 = (uint32_t) param3;
+	TRCMData.triggerTypeParameter1 = param1 == NULL ? TRIGGER_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param1);
+	TRCMData.triggerTypeParameter2 = param2 == NULL ? TRIGGER_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param2);
+	TRCMData.triggerTypeParameter3 = param3 == NULL ? TRIGGER_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param3);
 
 	if (debug) {
 		LogPrint("TRCM message:\n\tTrigger ID value ID: 0x%x\n\tTrigger ID content length: %u\n\t"
@@ -1200,9 +1207,9 @@ ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerT
  * \param debug Flag for enabling debugging
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType,
-						  const ActionTypeParameter_t param1, const ActionTypeParameter_t param2,
-						  const ActionTypeParameter_t param3, char *accmDataBuffer, const size_t bufferLength,
+ssize_t encodeACCMMessage(const uint16_t *actionID, const ActionType_t *actionType,
+						  const ActionTypeParameter_t *param1, const ActionTypeParameter_t *param2,
+						  const ActionTypeParameter_t *param3, char *accmDataBuffer, const size_t bufferLength,
 						  const char debug) {
 
 	ACCMType ACCMData;
@@ -1221,11 +1228,11 @@ ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType
 	// Fill contents
 	ACCMData.actionIDValueID = VALUE_ID_ACCM_ACTION_ID;
 	ACCMData.actionIDContentLength = sizeof (ACCMData.actionID);
-	ACCMData.actionID = actionID;
+	ACCMData.actionID = actionID == NULL ? ACTION_ID_UNAVAILABLE : *actionID;
 
 	ACCMData.actionTypeValueID = VALUE_ID_ACCM_ACTION_TYPE;
 	ACCMData.actionTypeContentLength = sizeof (ACCMData.actionType);
-	ACCMData.actionType = (uint16_t) actionType;
+	ACCMData.actionType = actionType == NULL ? ACTION_TYPE_UNAVAILABLE : (uint16_t) (*actionType);
 
 	ACCMData.actionTypeParameter1ValueID = VALUE_ID_ACCM_ACTION_TYPE_PARAM1;
 	ACCMData.actionTypeParameter2ValueID = VALUE_ID_ACCM_ACTION_TYPE_PARAM2;
@@ -1235,9 +1242,9 @@ ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType
 	ACCMData.actionTypeParameter2ContentLength = sizeof (ACCMData.actionTypeParameter2);
 	ACCMData.actionTypeParameter3ContentLength = sizeof (ACCMData.actionTypeParameter3);
 
-	ACCMData.actionTypeParameter1 = (uint32_t) param1;
-	ACCMData.actionTypeParameter2 = (uint32_t) param2;
-	ACCMData.actionTypeParameter3 = (uint32_t) param3;
+	ACCMData.actionTypeParameter1 = param1 == NULL ? ACTION_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param1);
+	ACCMData.actionTypeParameter2 = param2 == NULL ? ACTION_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param2);
+	ACCMData.actionTypeParameter3 = param3 == NULL ? ACTION_TYPE_PARAMETER_UNAVAILABLE : (uint32_t) (*param3);
 
 	if (debug) {
 		LogPrint("ACCM message:\n\tAction ID value ID: 0x%x\n\tAction ID content length: %u\n\t"
@@ -1294,7 +1301,7 @@ ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType
  * \param debug Flag for enabling debugging
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval *executionTime, char *exacDataBuffer,
+ssize_t encodeEXACMessage(const uint16_t * actionID, const struct timeval *executionTime, char *exacDataBuffer,
 						  const size_t bufferLength, const char debug) {
 
 	EXACType EXACData;
@@ -1313,11 +1320,11 @@ ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval *executi
 	// Fill contents
 	EXACData.actionIDValueID = VALUE_ID_EXAC_ACTION_ID;
 	EXACData.actionIDContentLength = sizeof (EXACData.actionID);
-	EXACData.actionID = actionID;
+	EXACData.actionID = actionID == NULL ? ACTION_ID_UNAVAILABLE : *actionID;
 
 	EXACData.executionTime_qmsoWValueID = VALUE_ID_EXAC_ACTION_EXECUTE_TIME;
 	EXACData.executionTime_qmsoWContentLength = sizeof (EXACData.executionTime_qmsoW);
-	EXACData.executionTime_qmsoW = TimeGetAsGPSqmsOfWeek(executionTime);
+	EXACData.executionTime_qmsoW = executionTime == NULL ? GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSqmsOfWeek(executionTime);
 
 	if (debug) {
 		LogPrint

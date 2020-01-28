@@ -238,10 +238,10 @@ ssize_t encodeSTRTMessage(const struct timeval* timeOfStart, char * strtDataBuff
 ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeOSTMMessage(const ObjectCommandType command, char * ostmDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeHEABMessage(const ControlCenterStatusType status, char * heabDataBuffer, const size_t bufferLength, const char debug);
-ssize_t encodeTRCMMessage(const uint16_t triggerID, const TriggerType_t triggerType, const TriggerTypeParameter_t param1, const TriggerTypeParameter_t param2, const TriggerTypeParameter_t param3, char * trcmDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeTRCMMessage(const uint16_t* triggerID, const TriggerType_t* triggerType, const TriggerTypeParameter_t* param1, const TriggerTypeParameter_t* param2, const TriggerTypeParameter_t* param3, char * trcmDataBuffer, const size_t bufferLength, const char debug);
 ssize_t decodeTREOMessage();
-ssize_t encodeACCMMessage(const uint16_t actionID, const ActionType_t actionType, const ActionTypeParameter_t param1, const ActionTypeParameter_t param2, const ActionTypeParameter_t param3, char * accmDataBuffer, const size_t bufferLength, const char debug);
-ssize_t encodeEXACMessage(const uint16_t actionID, const struct timeval * executionTime, char * exacDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeACCMMessage(const uint16_t* actionID, const ActionType_t* actionType, const ActionTypeParameter_t* param1, const ActionTypeParameter_t* param2, const ActionTypeParameter_t* param3, char * accmDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeEXACMessage(const uint16_t* actionID, const struct timeval * executionTime, char * exacDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeINSUPMessage(const SupervisorCommandType, char * insupDataBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
