@@ -751,10 +751,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 
 					UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
-
+					float altitude = (float) OriginPosition.Altitude;
 					MessageLength =
 						encodeOSEMMessage(&OriginPosition.Latitude, &OriginPosition.Longitude,
-										  &OriginPosition.Altitude, NULL, NULL, NULL, MessageBuffer,
+										  &altitude, NULL, NULL, NULL, MessageBuffer,
 										  sizeof (MessageBuffer), 0);
 					if (MessageLength < 0) {
 						util_error("OSEM encoding error");
