@@ -1723,8 +1723,10 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, U32 Tran
 
 	Res = WRITE_OK;
 	pthread_mutex_lock(&MONRMutex);
-    GSD->MonrMessages[TransmitterId] = *MONR;
-	pthread_mutex_unlock(&MONRMutex);
+    if(GSD->MonrMessages != NULL && TransmitterId < GSD->numberOfObjects){
+        GSD->MonrMessages[TransmitterId] = *MONR;
+    }
+    pthread_mutex_unlock(&MONRMutex);
 	return Res;
 }
 
@@ -1737,7 +1739,9 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, MONRType * MONR, U32 Tran
  */
 ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, U32 TransmitterId) {
 	pthread_mutex_lock(&MONRMutex);
-    *MONR = GSD->MonrMessages[TransmitterId];
+    if(GSD->MonrMessages != NULL && TransmitterId < GSD->numberOfObjects){
+        *MONR = GSD->MonrMessages[TransmitterId];
+    }
 	pthread_mutex_unlock(&MONRMutex);
 	return READ_OK;
 }
