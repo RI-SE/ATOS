@@ -1175,8 +1175,6 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 }
 
 
-
-
 int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, unsigned short Curvature,
 								  unsigned char Mode, char debug) {
 	int MessageIndex = 0;

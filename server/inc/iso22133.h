@@ -247,6 +247,7 @@ ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer,
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);
 
+
 #ifdef __cplusplus
 }
 #endif

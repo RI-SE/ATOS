@@ -241,11 +241,11 @@ typedef struct {
 // ************************* Non-ISO type definitions and defines ************************************************
 // Byte swapper definitions for 6 byte values
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-#define le48toh(x) __uint64_identity (x)
-#define htole48(x) __uint64_identity (x)
+#define le48toh(x) (x)
+#define htole48(x) (x)
 #else
-#define le48toh(x) (__bswap_64(x) >> 16)
-#define htole48(x) (__bswap_64(x) >> 16)
+#define le48toh(x) (le64toh(x) >> 16)
+#define htole48(x) (htole64(x) >> 16)
 #endif
 
 // ************************** static function declarations ********************************************************
@@ -260,7 +260,7 @@ static char isValidMessageID(const uint16_t id);
 // ************************** function definitions ****************************************************************
 
 /*!
- * \brief decodeISOHeader Convert data in a buffer to an ISO header
+ * \brief decodeISOHeader Convert data in a buffer to an ISO heade
  * \param MessageBuffer Buffer containing raw data to be converted
  * \param length Length of buffer
  * \param HeaderData Struct in which to store resulting data
@@ -269,6 +269,7 @@ static char isValidMessageID(const uint16_t id);
  */
 ISOMessageReturnValue decodeISOHeader(const char *MessageBuffer, const size_t length, HeaderType * HeaderData,
 									  const char debug) {
+
 	const char *p = MessageBuffer;
 	ISOMessageReturnValue retval = MESSAGE_OK;
 	const char ProtocolVersionBitmask = 0x7F;
@@ -454,7 +455,7 @@ char isValidMessageID(const uint16_t id) {
 ISOMessageID getISOMessageType(const char *messageData, const size_t length, const char debug) {
 	HeaderType header;
 
-	// Create header
+	// Decode header
 	if (decodeISOHeader(messageData, length, &header, debug) != MESSAGE_OK) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to parse raw data into ISO message header");
 		return MESSAGE_ID_INVALID;
@@ -781,6 +782,7 @@ ssize_t encodeHEABMessage(const ControlCenterStatusType status, char *heabDataBu
 		return -1;
 	}
 
+	// Construct header
 	HEABData.header = buildISOHeader(MESSAGE_ID_HEAB, sizeof (HEABData), debug);
 
 	// Fill contents
