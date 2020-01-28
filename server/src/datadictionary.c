@@ -1705,7 +1705,7 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
 
 
 	LogPrint("Initing");
-
+    close(fd);
 
 	pthread_mutex_unlock(&MONRMutex);
 	return Res;
