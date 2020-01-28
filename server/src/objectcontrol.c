@@ -1178,7 +1178,6 @@ I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * 
 }
 
 
-
 I32 ObjectControlBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeType * GPSTime, U8 CCStatus,
 								  U8 debug) {
 	I32 MessageIndex = 0, i;

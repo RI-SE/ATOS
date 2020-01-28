@@ -37,8 +37,8 @@ add_library(MQBus
 add_library(util
     ../../server/src/util.c
     ../../server/inc/util.h
-	../../server/src/iso22133.c
-	../../server/inc/iso22133.h
+    ../../server/src/iso22133.c
+    ../../server/inc/iso22133.h
 )
 
 add_library(Trigger
