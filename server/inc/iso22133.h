@@ -238,7 +238,7 @@ ssize_t encodeSTRTMessage(const struct timeval* timeOfStart, char * strtDataBuff
 ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeOSTMMessage(const ObjectCommandType command, char * ostmDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeHEABMessage(const ControlCenterStatusType status, char * heabDataBuffer, const size_t bufferLength, const char debug);
-ssize_t encodeSYPMMessage(const timeval synchronizationTime, const timeval freezeTime, char * sypmDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeSYPMMessage(const struct timeval synchronizationTime, const struct timeval freezeTime, char * sypmDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeMTSPMessage(const struct timeval * estSyncPointTime, char * mtspDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeTRCMMessage(const uint16_t* triggerID, const TriggerType_t* triggerType, const TriggerTypeParameter_t* param1, const TriggerTypeParameter_t* param2, const TriggerTypeParameter_t* param3, char * trcmDataBuffer, const size_t bufferLength, const char debug);
 ssize_t decodeTREOMessage();
