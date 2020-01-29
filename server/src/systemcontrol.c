@@ -470,7 +470,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									}
 								}
 								StartPtr = StopPtr + 1;
-								CurrentInputArgCount++;
+								if (SystemControlArgument[CurrentInputArgCount][0] != '\0') {
+									CurrentInputArgCount++;	// In case the argument was empty, don't add it to the argument count
+								}
 							}
 
 							if (CmdPtr != NULL)
