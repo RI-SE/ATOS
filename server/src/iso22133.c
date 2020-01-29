@@ -1134,7 +1134,7 @@ ISOMessageReturnValue ASCIIToMONR(const char *asciiBuffer, MONRType * MONRData, 
  * \param debug Flag for enabling debugging
  * \return Number of bytes written to buffer, or -1 in case of an error
  */
-ssize_t encodeSYPMMessage(const uint32_t synchronizationTime, const uint32_t freezeTime, char * sypmDataBuffer,
+ssize_t encodeSYPMMessage(const struct timeval synchronizationTime, const struct timeval freezeTime, char * sypmDataBuffer,
 						  const size_t bufferLength, const char debug) {
 
 	SYPMType SYPMData;
@@ -1151,14 +1151,22 @@ ssize_t encodeSYPMMessage(const uint32_t synchronizationTime, const uint32_t fre
 	// Fill contents
 	SYPMData.syncPointTimeValueID = VALUE_ID_SYPM_SYNC_POINT_TIME;
 	SYPMData.syncPointTimeContentLength = sizeof (SYPMData.syncPointTime);
-	SYPMData.syncPointTime = synchronizationTime;
+	SYPMData.syncPointTime = TimeGetAsUTCms(&synchronizationTime);
 
 	SYPMData.freezeTimeValueID = VALUE_ID_SYPM_FREEZE_TIME;
 	SYPMData.freezeTimeContentLength = sizeof (SYPMData.freezeTime);
-	SYPMData.freezeTime = freezeTime;
+	SYPMData.freezeTime = TimeGetAsUTCms(&freezeTime);
 
 	if (debug) {
-
+		LogPrint("SYPM message:\n\tSynchronization point time value ID: 0x%x\n\t"
+				 "Synchronization point time content length: %u\n\t"
+				 "Synchronization point time: %u [ms]\n\t"
+				 "Freeze time value ID: 0x%x\n\t"
+				 "Freeze time content length: %u\n\t"
+				 "Freeze time: %u [ms]", SYPMData.syncPointTimeValueID,
+				 SYPMData.syncPointTimeContentLength, SYPMData.syncPointTime,
+				 SYPMData.freezeTimeValueID, SYPMData.freezeTimeContentLength,
+				 SYPMData.freezeTime);
 	}
 
 	// Switch from host endianness to little endian
