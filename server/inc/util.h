@@ -39,9 +39,6 @@ extern "C"{
   ------------------------------------------------------------*/
 #define MaestroVersion  "0.4.1"
 
-#define ISO_PROTOCOL_VERSION 2
-#define ACK_REQ 0
-
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1) // Message queue data minus one byte for the command
 
 #define SAFETY_CHANNEL_PORT 53240
@@ -68,7 +65,8 @@ extern "C"{
 #define TRAJ_MASTER_LATE -2
 
 #define TIME_COMPENSATE_LAGING_VM 0
-#define TIME_COMPENSATE_LAGING_VM_VAL 106407
+#define VIRTUAL_MACHINE_LAG_COMPENSATION_S 106
+#define VIRTUAL_MACHINE_LAG_COMPENSATION_US 407000
 
 #define MAX_ROW_SIZE 1024
 
@@ -138,7 +136,6 @@ extern "C"{
 #define VALUE_ID_GPS_SECOND_OF_WEEK         0x2
 #define VALUE_ID_GPS_WEEK                   0x3
 #define VALUE_ID_DATE_ISO8601               0x4
-#define VALUE_ID_MONR_STRUCT                0x80
 #define VALUE_ID_X_POSITION                 0x10
 #define VALUE_ID_Y_POSITION                 0x11
 #define VALUE_ID_Z_POSITION                 0x12
@@ -281,53 +278,6 @@ typedef struct
 } CartesianPosition;
 
 
-
-typedef struct
-{
-  HeaderType Header;
-  U16 LatitudeValueIdU16;
-  U16 LatitudeContentLengthU16;
-  I64 LatitudeI64;
-  U16 LongitudeValueIdU16;
-  U16 LongitudeContentLengthU16;
-  I64 LongitudeI64;
-  U16 AltitudeValueIdU16;
-  U16 AltitudeContentLengthU16;
-  I32 AltitudeI32;
-  U16 DateValueIdU16;
-  U16 DateContentLengthU16;
-  U32 DateU32;
-  U16 GPSWeekValueIdU16;
-  U16 GPSWeekContentLengthU16;
-  U16 GPSWeekU16;
-  U16 GPSSOWValueIdU16;
-  U16 GPSSOWContentLengthU16;
-  U32 GPSQmsOfWeekU32;
-  U16 MaxWayDeviationValueIdU16;
-  U16 MaxWayDeviationContentLengthU16;
-  U16 MaxWayDeviationU16;
-  U16 MaxLateralDeviationValueIdU16;
-  U16 MaxLateralDeviationContentLengthU16;
-  U16 MaxLateralDeviationU16;
-  U16 MinPosAccuracyValueIdU16;
-  U16 MinPosAccuracyContentLengthU16;
-  U16 MinPosAccuracyU16;
-} OSEMType; //85 bytes
-
-typedef struct
-{
-  HeaderType Header;
-  U16 StartTimeValueIdU16;
-  U16 StartTimeContentLengthU16;
-  U32 StartTimeU32;
-  U16 GPSWeekValueIdU16;
-  U16 GPSWeekContentLengthU16;
-  U16 GPSWeekU16;
-  // U16 DelayStartValueIdU16;
-  // U16 DelayStartContentLengthU16;
-  // U32 DelayStartU32;
-} STRTType; //27 bytes
-
 typedef struct
 {
   HeaderType Header;
@@ -376,26 +326,7 @@ typedef struct
   U8 CCStatusU8;
 } HEABType; //16 bytes
 
-typedef struct
-{
-  HeaderType Header;
-  U16 MonrStructValueIdU16;
-  U16 MonrStructContentLengthU16;
-  U32 GPSQmsOfWeekU32;
-  I32 XPositionI32;
-  I32 YPositionI32;
-  I32 ZPositionI32;
-  U16 HeadingU16;
-  I16 LongitudinalSpeedI16;
-  I16 LateralSpeedI16;
-  I16 LongitudinalAccI16;
-  I16 LateralAccI16;
-  U8 DriveDirectionU8;
-  U8 StateU8;
-  U8 ReadyToArmU8;
-  U8 ErrorStatusU8;
-  U16 CRC;
-} MONRType; //41 bytes
+
 
 typedef struct
 {
@@ -895,7 +826,6 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
-I32 UtilISOBuildHeader(C8 *MessageBuffer, const size_t length, HeaderType *HeaderData, U8 Debug);
 I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 CommandOption, U8 Debug);
 I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 Debug);
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);

@@ -435,8 +435,8 @@ Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &mo
             case Trigger::TriggerTypeCode_t::TRIGGER_BRAKE:
                 struct timeval monrTime, currentTime;
                 TimeSetToCurrentSystemTime(&currentTime);
-                TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&currentTime), monr.MONR.GPSQmsOfWeekU32);
-                tp->update(static_cast<double>(monr.MONR.LongitudinalSpeedI16)/100.0, monrTime);
+				TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&currentTime), monr.MONR.gpsQmsOfWeek);
+				tp->update(static_cast<double>(monr.MONR.longitudinalSpeed)/100.0, monrTime);
                 break;
             default:
                 LogMessage(LOG_LEVEL_WARNING, "Unhandled trigger type in update: %s",
