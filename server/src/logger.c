@@ -181,37 +181,6 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_WARNING, "Received command %u while log uninitialized", command);
 			break;
 
-		case COMM_MONI:
-			LogMessage(LOG_LEVEL_DEBUG, "Disregarding old MONR data");
-			/* TODO: Delete this (superseded by COMM_MONR)
-			   filefd = fopen(pcLogFile, ACCESS_MODE_APPEND_AND_READ);
-
-			   strcpy(subStrings,busReceiveBuffer);
-
-			   char* GPSSecondOfWeek = strtok(subStrings, ";");
-
-			   int counter = 0;
-			   while (GPSSecondOfWeek != NULL && counter < 2)  // Get GPS second of week
-			   {
-			   //printf("%s\n", token);
-			   GPSSecondOfWeek = strtok(NULL, ";");
-			   counter++;
-			   }
-
-			   TimeSetToGPStime(&time, (uint16_t)GPSweek, (uint32_t)(atoi(GPSSecondOfWeek)*4));
-
-			   bzero(DateBuffer, sizeof(DateBuffer));
-			   TimeGetAsDateTime(&recvTime, "%Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof(DateBuffer));
-
-			   bzero(pcBuffer, sizeof(pcBuffer));
-			   sprintf (pcBuffer, "%s;%ld;%ld;%d;%s\n", DateBuffer, TimeGetAsUTCms(&time), TimeGetAsGPSms(&time), command, busReceiveBuffer);
-
-			   (void)fwrite(pcBuffer,1,strlen(pcBuffer),filefd);
-
-			   fclose(filefd);
-			 */
-			break;
-
 		case COMM_OSEM:
 			strcpy(subStrings, busReceiveBuffer);
 
@@ -237,6 +206,12 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 
 		case COMM_REPLAY:
+			// This function was not kept up to date and some work must be done to make it work again
+			LogMessage(LOG_LEVEL_WARNING, "Replay function out of date");
+			if (iCommSend(COMM_CONTROL, NULL, 0) < 0)
+				util_error("Communication error - exiting");
+			break;
+
 			LoggerExecutionMode = LOG_REPLAY_MODE;
 			LogMessage(LOG_LEVEL_INFO, "Logger in REPLAY mode <%s>", busReceiveBuffer);
 
@@ -247,9 +222,8 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			replayfd = fopen(busReceiveBuffer, ACCESS_MODE_READ);
 			LogMessage(LOG_LEVEL_INFO, "Rows: %d", RowCount);;
 			if (replayfd) {
-				UtilReadLineCntSpecChars(replayfd, pcReadBuffer);	//Just read first line
+				UtilReadLineCntSpecChars(replayfd, pcReadBuffer);	// Just read first line and ignore it
 				int SpecChars = 0, j = 0;
-				char TimestampBuffer[TIMESTAMP_BUFFER_LENGTH];
 				int FirstIteration = 1;
 
 				//char *src;
@@ -260,15 +234,10 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					j++;
 					if (SpecChars == SPECIFIC_CHAR_THRESHOLD_COUNT) {
-						/* Read to second ';' in row = 418571059920: 3 1;0;418571059920;577776566;127813082;0;0;3600;0; */
-						src = strchr(pcReadBuffer, ';');
-						src = strchr(src + 1, ';');
+						MonitorDataType monrData;
 
-						/* Get the current timestamp */
-						bzero(TimestampBuffer, TIMESTAMP_BUFFER_LENGTH);
-						strncpy(TimestampBuffer, src + 1,
-								(uint64_t) strchr(src + 1, ';') - (uint64_t) strchr(src, ';') - 1);
-						NewTimestamp = atol(TimestampBuffer);
+						UtilStringToMonitorData(pcReadBuffer, sizeof (pcReadBuffer), &monrData);
+						NewTimestamp = monrData.MONR.gpsQmsOfWeek;
 
 						if (!FirstIteration) {	/* Wait a little bit */
 							sleep_time.tv_sec = 0;
@@ -278,32 +247,13 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						else
 							OldTimestamp = NewTimestamp;
 
-						//printf("Wait time : %ld ms\n", NewTimestamp - OldTimestamp);
-						//printf("Timestamp: %s\n", TimestampBuffer);
-						/* Build the message */
-						/* Read to second ' ' in row = 418571059920: 3 1;0;418571059920;577776566;127813082;0;0;3600;0; */
-						src = strchr(pcReadBuffer, ' ');
-						src = strchr(src + 1, ' ');
-						bzero(busSendBuffer, sizeof (busSendBuffer));
-						//strcpy(busSendBuffer, "MONR;");
-						strcat(busSendBuffer, src + 1);
-						if (iCommSend(COMM_MONI, busSendBuffer, strlen(busSendBuffer) + 1) < 0)
-							util_error("Communication error - exiting");
+						// TODO: Convert monrData to binary form
+						//if (iCommSend(COMM_MONR, , ) < 0)
+						//  util_error("Communication error - exiting");
 
 						FirstIteration = 0;
 						OldTimestamp = NewTimestamp;
-					};
-					LogMessage(LOG_LEVEL_INFO, "%d:%d:%d<%s>", RowCount, j, SpecChars, busSendBuffer);
-
-					/*
-					   bzero(TimeStampUTCBufferRecv,MQ_ETSI_LENGTH);
-					   (void)iCommRecv(&iCommand,busReceiveBuffer,MQ_MAX_MESSAGE_LENGTH,TimeStampUTCBufferRecv);
-
-					   if(iCommand == COMM_STOP)
-					   {
-					   printf("Replay stopped by user.\n");
-					   (void)iCommSend(COMM_CONTROL, NULL);
-					   } */
+					}
 
 				} while (--RowCount >= 0);
 
@@ -549,8 +499,8 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 	(void)fwrite(pcBuffer, 1, strlen(pcBuffer), filefd);
 	bzero(pcBuffer, sizeof (pcBuffer));
 	sprintf(pcBuffer,
-			"Command message nr:\nCOMM_START:%d\nCOMM_STOP:%d\nCOMM_MONI%d\nCOMM_MONR%d\nCOMM_EXIT:%d\nCOMM_ARM:%d\nCOMM_DISARM:%d\nCOMM_REPLAY:%d\nCOMM_CONTROL:%d\nCOMM_ABORT:%d\nCOMM_INIT:%d\nCOMM_CONNECT:%d\nCOMM_OBC_STATE:%d\nCOMM_DISCONNECT:%d\nCOMM_LOG:%d\nCOMM_VIOP:%d\nCOMM_INV:%d\n------------------------------------------\n Log start\n------------------------------------------\n",
-			COMM_STRT, COMM_STOP, COMM_MONI, COMM_MONR, COMM_EXIT, COMM_ARM, COMM_DISARM, COMM_REPLAY,
+			"Command message nr:\nCOMM_START:%d\nCOMM_STOP:%d\nCOMM_MONR:%d\nCOMM_EXIT:%d\nCOMM_ARM:%d\nCOMM_DISARM:%d\nCOMM_REPLAY:%d\nCOMM_CONTROL:%d\nCOMM_ABORT:%d\nCOMM_INIT:%d\nCOMM_CONNECT:%d\nCOMM_OBC_STATE:%d\nCOMM_DISCONNECT:%d\nCOMM_LOG:%d\nCOMM_VIOP:%d\nCOMM_INV:%d\n------------------------------------------\n Log start\n------------------------------------------\n",
+			COMM_STRT, COMM_STOP, COMM_MONR, COMM_EXIT, COMM_ARM, COMM_DISARM, COMM_REPLAY,
 			COMM_CONTROL, COMM_ABORT, COMM_INIT, COMM_CONNECT, COMM_OBC_STATE, COMM_DISCONNECT, COMM_LOG,
 			COMM_VIOP, COMM_INV);
 	(void)fwrite(pcBuffer, 1, strlen(pcBuffer), filefd);
@@ -625,7 +575,7 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 	TimeSetToCurrentSystemTime(&systemTime);
 
 	UtilPopulateMonitorDataStruct(commandData, (size_t) (commandDatalen), &monitorData, debug);
-	TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monitorData.MONR.GPSQmsOfWeekU32);
+	TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monitorData.MONR.gpsQmsOfWeek);
 
 	bzero(DateBuffer, sizeof (DateBuffer));
 	TimeGetAsDateTime(&recvTime, "%Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof (DateBuffer));
@@ -640,13 +590,13 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 			(unsigned char)COMM_MONR);
 	fprintf(filefd, "%s;",
 			inet_ntop(AF_INET, &monitorData.ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
-	fprintf(filefd, "%u;%u;", monitorData.MONR.Header.TransmitterIdU8, monitorData.MONR.GPSQmsOfWeekU32);
-	fprintf(filefd, "%d;%d;%d;%u;", monitorData.MONR.XPositionI32, monitorData.MONR.YPositionI32,
-			monitorData.MONR.ZPositionI32, monitorData.MONR.HeadingU16);
-	fprintf(filefd, "%d;%d;", monitorData.MONR.LongitudinalSpeedI16, monitorData.MONR.LateralSpeedI16);
-	fprintf(filefd, "%d;%d;", monitorData.MONR.LongitudinalAccI16, monitorData.MONR.LateralAccI16);
-	fprintf(filefd, "%u;%u;%u;%u;\n", monitorData.MONR.DriveDirectionU8, monitorData.MONR.StateU8,
-			monitorData.MONR.ReadyToArmU8, monitorData.MONR.ErrorStatusU8);
+	fprintf(filefd, "%u;%u;", monitorData.MONR.header.TransmitterIdU8, monitorData.MONR.gpsQmsOfWeek);
+	fprintf(filefd, "%d;%d;%d;%u;", monitorData.MONR.xPosition, monitorData.MONR.yPosition,
+			monitorData.MONR.zPosition, monitorData.MONR.heading);
+	fprintf(filefd, "%d;%d;", monitorData.MONR.longitudinalSpeed, monitorData.MONR.lateralSpeed);
+	fprintf(filefd, "%d;%d;", monitorData.MONR.longitudinalAcc, monitorData.MONR.lateralAcc);
+	fprintf(filefd, "%u;%u;%u;%u;\n", monitorData.MONR.driveDirection, monitorData.MONR.state,
+			monitorData.MONR.readyToArm, monitorData.MONR.errorStatus);
 
 	fclose(filefd);
 }

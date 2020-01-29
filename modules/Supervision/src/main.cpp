@@ -105,10 +105,7 @@ int main()
         case COMM_OSEM:
             // TODO: check so that OSEM is not null island?
 
-            break;
-        case COMM_MONI:
-            // Ignore old style MONR data
-            break;
+			break;
         case COMM_MONR:
             MonitorDataType MONRMessage;
             UtilPopulateMonitorDataStruct((unsigned char *)mqRecvData, sizeof (mqRecvData), &MONRMessage, 0);
@@ -447,8 +444,8 @@ bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> 
 
     const CartesianPosition monrPoint =
     {
-        MONRdata.MONR.XPositionI32 / 1000.0, MONRdata.MONR.YPositionI32 / 1000.0,
-        MONRdata.MONR.ZPositionI32 / 1000.0, 0.0
+		MONRdata.MONR.xPosition / 1000.0, MONRdata.MONR.yPosition / 1000.0,
+		MONRdata.MONR.zPosition / 1000.0, 0.0
     };
     char isInPolygon = 0;
     int retval = false;
@@ -470,11 +467,11 @@ bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> 
             if (geofence.isPermitted)
                 LogMessage(LOG_LEVEL_WARNING,
                            "Object with MONR transmitter ID %u is outside a permitted area %s",
-                           MONRdata.MONR.Header.TransmitterIdU8, geofence.name.c_str());
+						   MONRdata.MONR.header.TransmitterIdU8, geofence.name.c_str());
             else
                 LogMessage(LOG_LEVEL_WARNING,
                            "Object with MONR transmitter ID %u is inside a forbidden area %s",
-                           MONRdata.MONR.Header.TransmitterIdU8, geofence.name.c_str());
+						   MONRdata.MONR.header.TransmitterIdU8, geofence.name.c_str());
             retval = true;
         }
     }

@@ -2,7 +2,8 @@
 
 #### User settings
 # Modify this array by adding more modules to include them in the execution
-MODULES=(Supervision ScenarioControl)
+
+MODULES=(ScenarioControl)
 
 ####
 # Save top directory

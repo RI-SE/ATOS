@@ -33,6 +33,7 @@
 #include <ifaddrs.h>
 
 #include "systemcontrol.h"
+#include "maestroTime.h"
 #include "timecontrol.h"
 #include "datadictionary.h"
 
@@ -185,7 +186,9 @@ I32 SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
 												U8 SysCtrlState, U8 Debug);
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
-I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, C8 * MonrData, U8 Debug);
+I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
+											 U8 Debug);
+static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
 
@@ -208,6 +211,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	struct sockaddr_in RVSSChannelAddr;
 	struct in_addr ip_addr;
 	I32 RVSSChannelSocket;
+	MonitorDataType monrData;
 
 	ServerState_t server_state = SERVER_STATE_UNDEFINED;
 	OBCState_t objectControlState = OBC_STATE_UNDEFINED;
@@ -219,11 +223,16 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	char inchr;
 	struct timeval tvTime;
 
+	const struct timeval VirtualMachineLagCompensation = { VIRTUAL_MACHINE_LAG_COMPENSATION_S,
+		VIRTUAL_MACHINE_LAG_COMPENSATION_US
+	};
+
 	ObjectPosition OP;
 	int i, i1;
 	char *StartPtr, *StopPtr, *CmdPtr, *OpeningQuotationMarkPtr, *ClosingQuotationMarkPtr, *StringPos;
 	struct timespec tTime;
 	enum COMMAND iCommand;
+	ssize_t bytesReceived = 0;
 	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
 	char ObjectIP[SMALL_BUFFER_SIZE_16];
 	char ObjectPort[SMALL_BUFFER_SIZE_6];
@@ -351,7 +360,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			PreviousSystemControlCommand = SystemControlCommand;
 			bzero(pcBuffer, IPC_BUFFER_SIZE);
 
-			ClientResult = recv(ClientSocket, pcBuffer, IPC_BUFFER_SIZE, MSG_DONTWAIT);
+			ClientResult = SystemControlReceiveUserControlData(ClientSocket, pcBuffer, sizeof (pcBuffer));
 
 			if (ClientResult <= -1) {
 				if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -530,7 +539,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 		bzero(pcRecvBuffer, SC_RECV_MESSAGE_BUFFER);
-		iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
+		bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 
 		switch (iCommand) {
 		case COMM_FAILURE:
@@ -562,16 +571,11 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case COMM_MONR:
 			// TODO: Decode
-			break;
-		case COMM_MONI:
-			if (RVSSChannelSocket != 0) {
-				//printf("Monr sys %s\n", pcRecvBuffer);
-				if (RVSSConfigU32 & RVSS_MONR_CHANNEL) {
-					SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, pcRecvBuffer,
-															 0);
-					UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
-									RVSSMessageLengthU32, 0);
-				}
+			if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
+				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t) bytesReceived, &monrData, 0);
+				SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData, 0);
+				UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+								RVSSMessageLengthU32, 0);
 			}
 			break;
 		case COMM_INV:
@@ -919,28 +923,17 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED)	//Temporary!
 				{
 					bzero(pcBuffer, IPC_BUFFER_SIZE);
-					/* Lest use UTC time everywhere instead of etsi and gps time
-					   gettimeofday(&tvTime, NULL);
-					   uiTime = (uint64_t)tvTime.tv_sec*1000 + (uint64_t)tvTime.tv_usec/1000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-					 */
-					uiTime = UtilgetCurrentUTCtimeMS();
+					TimeSetToCurrentSystemTime(&tvTime);
+
 					if (TIME_COMPENSATE_LAGING_VM)
-						uiTime = uiTime - TIME_COMPENSATE_LAGING_VM_VAL;
+						timersub(&tvTime, &VirtualMachineLagCompensation, &tvTime);
 
-					LogMessage(LOG_LEVEL_INFO, "Current timestamp (gtd): %lu", uiTime);
+					LogMessage(LOG_LEVEL_INFO, "Current timestamp (epoch): %lu", TimeGetAsUTCms(&tvTime));
 
-					//clock_gettime(CLOCK_MONOTONIC_COARSE, &tTime);
-					//clock_gettime(CLOCK_REALTIME, &tTime);
-					//uiTime = (uint64_t)tTime.tv_sec*1000 + (uint64_t)tTime.tv_nsec/1000000 - MS_FROM_1970_TO_2004_NO_LEAP_SECS + DIFF_LEAP_SECONDS_UTC_ETSI*1000;
-					//printf("[SystemControl] Current timestamp (cgt): %lu\n",uiTime );
-					//printf("[SystemControl] Current timestamp: %lu\n",uiTime );
-
-					//uiTime += atoi(SystemControlArgument[0]);
-					uiTime = atoi(SystemControlArgument[0]);
-					DelayedStartU32 = atoi(SystemControlArgument[1]);
-					sprintf(pcBuffer, "%" PRIu8 ";%" PRIu64 ";%" PRIu32 ";", 0, uiTime, DelayedStartU32);
-					LogMessage(LOG_LEVEL_INFO, "Sending START <%s> (delayed +%s ms)", pcBuffer,
-							   SystemControlArgument[1]);
+					DelayedStartU32 = atoi(SystemControlArgument[0]);
+					sprintf(pcBuffer, "%" PRIi64 ";%" PRIu32 ";", TimeGetAsUTCms(&tvTime), DelayedStartU32);
+					LogMessage(LOG_LEVEL_INFO, "Sending START <%s> (delayed +%u ms)", pcBuffer,
+							   DelayedStartU32);
 
 					if (iCommSend(COMM_STRT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
 						LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending STRT command");
@@ -1111,7 +1104,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 		sleep_time = (iCommand == COMM_INV
-					  && server_state != SERVER_STATE_INWORK) ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
+					  && server_state != SERVER_STATE_INWORK
+					  && ClientResult < 0) ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
 		nanosleep(&sleep_time, &ref_time);
 	}
 
@@ -1167,6 +1161,61 @@ SystemControlCommand_t SystemControlFindCommand(const char *CommandBuffer,
 	}
 	return nocommand;
 }
+
+/*! 
+ * \brief SystemControlReceiveUserControlData Performs similarly to the recv function (see manpage for recv) except that it
+ *        only fills the input data buffer with messages ending with ";\r\n\r\n" and saves any remaining data in a local
+ *        buffer awaiting the next call to this function.
+ * \param socket Socket on which MSCP HTTP communication is expected to arrive
+ * \param dataBuffer Data buffer where read data is to be stored
+ * \param dataBufferLength Maximum number of bytes possible to store in the data buffer
+ * \return Number of bytes printed to dataBuffer where 0 means that the connection has been severed. A return value of -1
+ *        constitutes an error with the appropriate errno has been set (see manpage for recv) with the addition of
+ *         - ENOBUFS if the data buffer is too small to hold the received message
+ */
+ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength) {
+	static char recvBuffer[TCP_RECV_BUFFER_SIZE];
+	static size_t bytesInBuffer = 0;
+	const char endOfMessagePattern[] = ";\r\n\r\n";
+	char *endOfMessage = NULL;
+	ssize_t readResult;
+	size_t messageLength = 0;
+
+	readResult = recv(socket, recvBuffer + bytesInBuffer, sizeof (recvBuffer) - bytesInBuffer, MSG_DONTWAIT);
+	if (readResult > 0) {
+		bytesInBuffer += (size_t) readResult;
+	}
+
+	if (bytesInBuffer > 0) {
+		if ((endOfMessage = strstr(recvBuffer, endOfMessagePattern)) != NULL) {
+			endOfMessage += sizeof (endOfMessagePattern) - 1;
+			messageLength = (size_t) (endOfMessage - recvBuffer);
+		}
+		else {
+			messageLength = 0;
+			readResult = -1;
+			errno = EAGAIN;
+			LogMessage(LOG_LEVEL_WARNING, "Part of message received");
+		}
+
+		if (bytesInBuffer >= messageLength) {
+			if (dataBufferLength < messageLength) {
+				LogMessage(LOG_LEVEL_WARNING, "Discarding message too large for data buffer");
+				readResult = -1;
+				errno = ENOBUFS;
+			}
+			else {
+				memcpy(dataBuffer, recvBuffer, messageLength);
+				readResult = (ssize_t) messageLength;
+			}
+			bytesInBuffer -= messageLength;
+			memmove(recvBuffer, recvBuffer + messageLength, bytesInBuffer);
+		}
+	}
+
+	return readResult;
+}
+
 
 void SystemControlSendMONR(C8 * MONRStr, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
@@ -2108,7 +2157,6 @@ I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * Pack
 			bzero(RxBuffer, PacketSizeU16);
 			ClientStatus = recv(*sockfd, RxBuffer, PacketSizeU16, MSG_WAITALL);
 
-
 			if (ClientStatus > 0) {
 				i++;
 				fwrite(RxBuffer, 1, ClientStatus, fd);
@@ -2297,7 +2345,7 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 
 
 
-
+#define MAX_MONR_STRING_LENGTH 116
 /*
 SystemControlBuildRVSSMONRChannelMessage builds a message from data in *MonrData. The message is stored in *RVSSData.
 See the architecture document for the protocol of RVSS. 
@@ -2308,10 +2356,15 @@ See the architecture document for the protocol of RVSS.
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
 
-I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, C8 * MonrData, U8 Debug) {
+I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
+											 U8 Debug) {
 	I32 MessageLength = 0;
+	char MonrDataString[MAX_MONR_STRING_LENGTH];
 
-	MessageLength = strlen(MonrData) + 8;
+	// TODO: Convert MonrData to string
+	UtilMonitorDataToString(MonrData, MonrDataString, sizeof (MonrDataString));
+
+	MessageLength = strlen(MonrDataString) + 8;
 	bzero(RVSSData, MessageLength);
 	*RVSSDataLengthU32 = MessageLength;
 
@@ -2320,7 +2373,7 @@ I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 	*(RVSSData + 2) = (C8) (MessageLength >> 8);
 	*(RVSSData + 3) = (C8) (MessageLength);
 	*(RVSSData + 7) = (C8) (RVSS_MONR_CHANNEL);
-	strcat(RVSSData + 8, MonrData);
+	strcat(RVSSData + 8, MonrDataString);
 
 	if (Debug) {
 

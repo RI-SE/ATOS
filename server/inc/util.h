@@ -32,14 +32,12 @@ extern "C"{
 #include <netdb.h>
 #include "mqbus.h"
 #include "iso22133.h"
+#include "logging.h"
 
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-#define MaestroVersion  "0.4.0"
-
-#define ISO_PROTOCOL_VERSION 2
-#define ACK_REQ 0
+#define MaestroVersion  "0.4.1"
 
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1) // Message queue data minus one byte for the command
 
@@ -67,7 +65,8 @@ extern "C"{
 #define TRAJ_MASTER_LATE -2
 
 #define TIME_COMPENSATE_LAGING_VM 0
-#define TIME_COMPENSATE_LAGING_VM_VAL 106407
+#define VIRTUAL_MACHINE_LAG_COMPENSATION_S 106
+#define VIRTUAL_MACHINE_LAG_COMPENSATION_US 407000
 
 #define MAX_ROW_SIZE 1024
 
@@ -137,7 +136,6 @@ extern "C"{
 #define VALUE_ID_GPS_SECOND_OF_WEEK         0x2
 #define VALUE_ID_GPS_WEEK                   0x3
 #define VALUE_ID_DATE_ISO8601               0x4
-#define VALUE_ID_MONR_STRUCT                0x80
 #define VALUE_ID_X_POSITION                 0x10
 #define VALUE_ID_Y_POSITION                 0x11
 #define VALUE_ID_Z_POSITION                 0x12
@@ -175,8 +173,6 @@ extern "C"{
 // Why do we need this memory efficiency? There is a risk that this breaks included code which isn't using pragma pack
 #pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
 
-#define SYNC_WORD 0x7e7e
-
 #define SERVER_PREPARED 0x01
 #define SERVER_PREPARED_BIG_PACKET_SIZE 0x02
 #define PATH_INVALID_MISSING 0x03
@@ -195,7 +191,7 @@ extern "C"{
 
 // The do - while loop makes sure that each function call is properly handled using macros
 #define LOG_SEND(buf, ...) \
-    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);printf("%s\n",buf);fflush(stdout);} while (0)
+	do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);LogMessage(LOG_LEVEL_INFO,buf);fflush(stdout);} while (0)
 
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
@@ -237,7 +233,6 @@ enum COMMAND
 COMM_STRT = 1,
 COMM_ARM = 2,
 COMM_STOP = 3,
-COMM_MONI = 4,
 COMM_EXIT = 5,
 COMM_REPLAY = 6,
 COMM_CONTROL = 7,
@@ -319,20 +314,6 @@ typedef struct
 typedef struct
 {
   HeaderType Header;
-  U16 StartTimeValueIdU16;
-  U16 StartTimeContentLengthU16;
-  U32 StartTimeU32;
-  U16 GPSWeekValueIdU16;
-  U16 GPSWeekContentLengthU16;
-  U16 GPSWeekU16;
-  // U16 DelayStartValueIdU16;
-  // U16 DelayStartContentLengthU16;
-  // U32 DelayStartU32;
-} STRTType; //27 bytes
-
-typedef struct
-{
-  HeaderType Header;
   U16 StateValueIdU16;
   U16 StateContentLengthU16;
   U8 StateU8;
@@ -378,26 +359,7 @@ typedef struct
   U8 CCStatusU8;
 } HEABType; //16 bytes
 
-typedef struct
-{
-  HeaderType Header;
-  U16 MonrStructValueIdU16;
-  U16 MonrStructContentLengthU16;
-  U32 GPSQmsOfWeekU32;
-  I32 XPositionI32;
-  I32 YPositionI32;
-  I32 ZPositionI32;
-  U16 HeadingU16;
-  I16 LongitudinalSpeedI16;
-  I16 LateralSpeedI16;
-  I16 LongitudinalAccI16;
-  I16 LateralAccI16;
-  U8 DriveDirectionU8;
-  U8 StateU8;
-  U8 ReadyToArmU8;
-  U8 ErrorStatusU8;
-  U16 CRC;
-} MONRType; //41 bytes
+
 
 typedef struct
 {
@@ -838,6 +800,8 @@ int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
 
 //
 CartesianPosition MONRToCartesianPosition(MonitorDataType MONR);
+int UtilMonitorDataToString(MonitorDataType monrData, char* monrString, size_t stringLength);
+int UtilStringToMonitorData(const char* monrString, size_t stringLength, MonitorDataType * monrData);
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_deg);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
@@ -895,7 +859,6 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
-I32 UtilISOBuildHeader(C8 *MessageBuffer, HeaderType *HeaderData, U8 Debug);
 I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 CommandOption, U8 Debug);
 I32 UtilISOBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 Debug);
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
