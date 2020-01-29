@@ -1531,7 +1531,7 @@ I32 ObjectControlBuildASPMessage(C8 * MessageBuffer, ASPType * ASPData, U8 debug
 	I32 MessageIndex = 0, i;
 	C8 *p;
 
-	bzero(MessageBuffer, ASP_MESSAGE_LENGTH);
+	memset(MessageBuffer, 0, sizeof (ASPType));
 	p = (C8 *) ASPData;
 	for (i = 0; i < sizeof (ASPType); i++)
 		*(MessageBuffer + i) = *p++;
@@ -1539,7 +1539,7 @@ I32 ObjectControlBuildASPMessage(C8 * MessageBuffer, ASPType * ASPData, U8 debug
 
 	if (debug) {
 		// TODO: Write to log when bytes thingy has been implemented
-		printf("ASP total length = %d bytes \n", (int)(ASP_MESSAGE_LENGTH));
+		printf("ASP total length = %d bytes \n", (int)(sizeof (ASPType)));
 		printf("\n----MESSAGE----\n");
 		for (i = 0; i < sizeof (ASPType); i++)
 			printf("%x ", (C8) MessageBuffer[i]);
