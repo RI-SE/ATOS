@@ -79,14 +79,6 @@
 #define COMMAND_LLCM_CODE 8
 #define COMMAND_LLCM_MESSAGE_LENGTH 5
 
-#define COMMAND_SYPM_CODE 0xA103
-#define COMMAND_SYPM_MESSAGE_LENGTH sizeof(SYPMType)
-
-#define COMMAND_MTSP_CODE 0xA104
-#define COMMAND_MTSP_MESSAGE_LENGTH sizeof(MTSPType)
-
-#define ASP_MESSAGE_LENGTH sizeof(ASPType)
-
 #define SMALL_BUFFER_SIZE_0 20
 #define SMALL_BUFFER_SIZE_1 2
 #define SMALL_BUFFER_SIZE_2 1
@@ -201,11 +193,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	const struct timespec mqNonEmptyPollPeriod =
 		{ OC_SLEEP_TIME_NONEMPTY_MQ_S, OC_SLEEP_TIME_NONEMPTY_MQ_NS };
 	const struct timeval stateReportPeriod = { OC_STATE_REPORT_PERIOD_S, OC_STATE_REPORT_PERIOD_US };
-	struct timeval currentTime, nextStateReportTime, nextHeartbeatTime;
+	struct timeval currentTime, nextStateReportTime, nextHeartbeatTime, nextAdaptiveSyncMessageTime;
 
 	const struct timeval heartbeatPeriod = { 1 / HEAB_FREQUENCY_HZ,
 		(1000000 / HEAB_FREQUENCY_HZ) % 1000000
 	};
+	const struct timeval adaptiveSyncMessagePeriod = heartbeatPeriod;
+
 	U8 iForceObjectToLocalhostU8 = 0;
 
 	FILE *fd;
@@ -302,6 +296,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	TimeSetToCurrentSystemTime(&currentTime);
 	nextStateReportTime = currentTime;
 	nextHeartbeatTime = currentTime;
+	nextAdaptiveSyncMessageTime = currentTime;
 
 	while (!iExit) {
 
@@ -354,26 +349,27 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			char buffer[RECV_MESSAGE_BUFFER];
 			size_t receivedMONRData = 0;
 
-			// this is etsi time lets remov it ans use utc instead
-			//gettimeofday(&CurrentTimeStruct, NULL);
-
 			CurrentTimeU32 =
 				((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime)) << 2) +
 				GPSTime->MicroSecondU16;
 
+			 /*MTSP*/
+			if (timercmp(&currentTime, &nextAdaptiveSyncMessageTime, >)) {
 
-			 /*MTSP*/ if (HeartbeatMessageCounter == 0) {
-				HeartbeatMessageCounter = 0;
+				timeradd(&nextAdaptiveSyncMessageTime, &adaptiveSyncMessagePeriod, &nextAdaptiveSyncMessageTime);
+
+				struct timeval estSyncPointTime;
+				TimeSetToGPStime(&estSyncPointTime, TimeGetAsGPSweek(&currentTime), ASPData.MTSPU32);
+
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					for (i = 0; i < SyncPointCount; i++) {
 						if (TEST_SYNC_POINTS == 0
 							&& strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL
 							&& ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1) {
+
 							/*Send Master time to adaptive sync point */
-							MessageLength =
-								ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, ASPData.MTSPU32, 0);
-							//ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
-							UtilSendUDPData("Object Control", &safety_socket_fd[iIndex],
+							MessageLength = encodeMTSPMessage(&estSyncPointTime, MessageBuffer, sizeof (MessageBuffer), 0);
+							UtilSendUDPData(MODULE_NAME, &safety_socket_fd[iIndex],
 											&safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
 						}
 						/*else if(TEST_SYNC_POINTS == 1 && iIndex == 1 && ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1 )
@@ -878,23 +874,20 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 						LogMessage(LOG_LEVEL_INFO, "Sync point counts: %d", SyncPointCount);
 						for (i = 0; i < SyncPointCount; i++) {
+							struct timeval syncPointTime, syncStopTime;
+							TimeSetToUTCms(&syncPointTime, (int64_t) (ASP[i].SlaveTrajSyncTime * 1000.0f));
+							TimeSetToUTCms(&syncStopTime, (int64_t) (ASP[i].SlaveSyncStopTime * 1000.0f));
 							if (TEST_SYNC_POINTS == 1 && iIndex == 1) {
 								/*Send SYPM to slave */
-								MessageLength =
-									ObjectControlBuildSYPMMessage(MessageBuffer, &SYPMData,
-																  ASP[i].SlaveTrajSyncTime * 1000,
-																  ASP[i].SlaveSyncStopTime * 1000, 1);
-								UtilSendTCPData("Object Control", MessageBuffer, MessageLength,
+								MessageLength = encodeSYPMMessage(syncPointTime, syncStopTime, MessageBuffer, sizeof (MessageBuffer), 0);
+								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 												&socket_fds[iIndex], 0);
 							}
 							else if (TEST_SYNC_POINTS == 0
 									 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL) {
 								/*Send SYPM to slave */
-								MessageLength =
-									ObjectControlBuildSYPMMessage(MessageBuffer, &SYPMData,
-																  ASP[i].SlaveTrajSyncTime * 1000,
-																  ASP[i].SlaveSyncStopTime * 1000, 1);
-								UtilSendTCPData("Object Control", MessageBuffer, MessageLength,
+								MessageLength = encodeSYPMMessage(syncPointTime, syncStopTime, MessageBuffer, sizeof (MessageBuffer), 0);
+								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 												&socket_fds[iIndex], 0);
 							}
 						}
@@ -929,6 +922,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
 
 				if (DisconnectU8 == 0) {
+					nextHeartbeatTime = currentTime;
+					nextAdaptiveSyncMessageTime = currentTime;
 					vSetState(OBC_STATE_CONNECTED, GSD);
 					iCommSend(COMM_OBJECTS_CONNECTED, NULL, 0);
 				}
