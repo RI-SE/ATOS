@@ -14,8 +14,10 @@ obj = None
 
 def checkProgramStatus(failurePrintout):
     if server != None:
-        if server.poll():
+        deadPIDs = server.poll()
+        if deadPIDs:
             print(failurePrintout)
+            print("Dead PIDs: " + str(deadPIDs))
             if userControl != None:
                 userControl.shutdown()
             server.stop()
