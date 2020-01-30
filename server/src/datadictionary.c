@@ -1684,7 +1684,7 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
 	struct stat st;
 
 	pthread_mutex_lock(&MONRMutex);
-    sprintf(filePath, "%smonrMessageMemory%d.mem", SHARED_MEMORY_PATH, 5);
+	sprintf(filePath, "%smonrMessageMemory%d.mem", SHARED_MEMORY_PATH, 5);
 	fd = open(filePath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	stat(filePath, &st);
 
@@ -1697,10 +1697,11 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
 	//printf("File size after writing: %ld\n", st.st_size);
 
 	// Map memory to created file
-    GSD->MonrMessages = (MONRType *) mmap(NULL, (sizeof (MONRType)), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    close(fd);
+	GSD->MonrMessages =
+		(MONRType *) mmap(NULL, (sizeof (MONRType)), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	close(fd);
 
-    LogMessage(LOG_LEVEL_INFO, "Init MonrMessage memory");
+	LogMessage(LOG_LEVEL_INFO, "Init MonrMessage memory");
 
 	pthread_mutex_unlock(&MONRMutex);
 	return Res;
@@ -1715,12 +1716,13 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
  */
 ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, const U32 transmitterId) {
 	ReadWriteAccess_t Res;
+
 	Res = WRITE_OK;
 	pthread_mutex_lock(&MONRMutex);
-    if(GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects){
-        GSD->MonrMessages[0] = *MONR;
-    }
-    pthread_mutex_unlock(&MONRMutex);
+	if (GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects) {
+		GSD->MonrMessages[0] = *MONR;
+	}
+	pthread_mutex_unlock(&MONRMutex);
 
 	return Res;
 }
@@ -1734,9 +1736,9 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, co
  */
 ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, const U32 transmitterId) {
 	pthread_mutex_lock(&MONRMutex);
-    if(GSD->MonrMessages != NULL && TransmitterId < GSD->numberOfObjects){
-        *MONR = GSD->MonrMessages[transmitterId];
-    }
+	if (GSD->MonrMessages != NULL && TransmitterId < GSD->numberOfObjects) {
+		*MONR = GSD->MonrMessages[transmitterId];
+	}
 	pthread_mutex_unlock(&MONRMutex);
 	return READ_OK;
 }
@@ -1751,12 +1753,13 @@ ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD) {
 
 	Res = WRITE_OK;
 	pthread_mutex_lock(&MONRMutex);
-    int res= munmap(GSD->MonrMessages, sizeof (MONRType));
-    if(res < 0){
-        util_error("Unable to unmap monrMessages file!");
-    }
-    free(GSD->MonrMessages);
-    DataDictionarySetNumberOfObjectsU8(GSD, 0);
+	int res = munmap(GSD->MonrMessages, sizeof (MONRType));
+
+	if (res < 0) {
+		util_error("Unable to unmap monrMessages file!");
+	}
+	free(GSD->MonrMessages);
+	DataDictionarySetNumberOfObjectsU8(GSD, 0);
 	pthread_mutex_unlock(&MONRMutex);
 	return Res;
 }
@@ -1771,12 +1774,12 @@ ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD) {
  * \param numberOfobjects number of objects in a test
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U32 *numberOfObjects) {
+ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U32 * numberOfObjects) {
 	ReadWriteAccess_t Res;
 
 	Res = WRITE_OK;
 	pthread_mutex_lock(&numberOfObjectsMutex);
-    GSD->numberOfObjects = *numberOfObjects;
+	GSD->numberOfObjects = *numberOfObjects;
 	pthread_mutex_unlock(&numberOfObjectsMutex);
 	return Res;
 }
@@ -1787,7 +1790,7 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U32 *numberO
  * \param numberOfobjects number of objects in a test
  * \return Current object control state according to ::OBCState_t
  */
-ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(GSDType * GSD, U32 *numberOfObjects) {
+ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(GSDType * GSD, U32 * numberOfObjects) {
 	pthread_mutex_lock(&numberOfObjectsMutex);
 	*numberOfObjects = GSD->numberOfObjects;
 	pthread_mutex_unlock(&numberOfObjectsMutex);
