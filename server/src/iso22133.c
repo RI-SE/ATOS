@@ -141,7 +141,7 @@ ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const size_t le
 /*!
  * \brief buildISOHeader Constructs an ISO header based on the supplied message ID and content length
  * \param id Message ID of the message for which the header is to be used
- * \param messageLength Length of the message excluding header and footer
+ * \param messageLength Length of the message including header and footer
  * \param debug Flag for enabling debugging
  * \return A struct containing ISO header data
  */
@@ -152,8 +152,15 @@ HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char de
 	header.TransmitterIdU8 = 0;
 	header.MessageCounterU8 = 0;
 	header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	header.MessageIdU16 = (uint16_t) id;
-	header.MessageLengthU32 = messageLength;
+	if (messageLength >= sizeof (HeaderType) + sizeof (FooterType)) {
+		header.MessageIdU16 = (uint16_t) id;
+		header.MessageLengthU32 = messageLength - sizeof (HeaderType) - sizeof (FooterType);
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Supplied message length too small to hold header and footer");
+		header.MessageIdU16 = (uint16_t) MESSAGE_ID_INVALID;
+		header.MessageLengthU32 = 0;
+	}
 
 	if (debug) {
 		LogPrint("Encoded ISO header:\n\tSync word: 0x%x\n\tTransmitter ID: %u\n\tMessage counter: %u\n\t"
@@ -161,6 +168,11 @@ HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char de
 				 header.SyncWordU16, header.TransmitterIdU8, header.MessageCounterU8, header.AckReqProtVerU8,
 				 header.MessageIdU16, header.MessageLengthU32);
 	}
+
+	// Convert from host endianness to little endian
+	header.SyncWordU16 = htole16(header.SyncWordU16);
+	header.MessageIdU16 = htole16(header.MessageIdU16);
+	header.MessageLengthU32 = htole32(header.MessageLengthU32);
 
 	return header;
 }
@@ -266,8 +278,7 @@ ssize_t encodeOSEMMessage(const double *latitude_deg, const double *longitude_de
 
 	// Build header, and account for the two values which are 48 bit in the message
 	OSEMData.header = buildISOHeader(MESSAGE_ID_OSEM, sizeof (OSEMData)
-									 - sizeof (OSEMData.header) - sizeof (OSEMData.footer) -
-									 2 * SizeDifference64bitTo48bit, debug);
+									 - 2 * SizeDifference64bitTo48bit, debug);
 
 	// Fill the OSEM struct with relevant values
 	OSEMData.latitudeValueID = VALUE_ID_OSEM_LATITUDE;
@@ -402,6 +413,60 @@ ssize_t encodeOSEMMessage(const double *latitude_deg, const double *longitude_de
 	return sizeof (OSEMType) - 2 * SizeDifference64bitTo48bit;
 }
 
+/*!
+ * \brief encodeOSTMMessage Constructs an ISO OSTM message based on specified command
+ * \param command Command to send to object according to ::ObjectCommandType
+ * \param ostmDataBuffer Data buffer to which OSTM is to be written
+ * \param bufferLength Length of data buffer to which OSTM is to be written
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes written to buffer, or -1 in case of error
+ */
+ssize_t encodeOSTMMessage(const ObjectCommandType command, char *ostmDataBuffer, const size_t bufferLength,
+						  const char debug) {
+
+	OSTMType OSTMData;
+
+	memset(ostmDataBuffer, 0, bufferLength);
+
+	// Check so buffer can hold message
+	if (bufferLength < sizeof (OSTMData)) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary OSTM data");
+		return -1;
+	}
+
+	// Check vs allowed commands
+	if (!
+		(command == OBJECT_COMMAND_ARM || command == OBJECT_COMMAND_DISARM
+		 || command == OBJECT_COMMAND_REMOTE_CONTROL)) {
+		LogMessage(LOG_LEVEL_ERROR, "OSTM does not support command %u", (uint8_t) command);
+		return -1;
+	}
+
+	// Construct header
+	OSTMData.header = buildISOHeader(MESSAGE_ID_OSTM, sizeof (OSTMData), debug);
+
+	// Fill contents
+	OSTMData.stateValueID = VALUE_ID_OSTM_STATE_CHANGE_REQUEST;
+	OSTMData.stateContentLength = sizeof (OSTMData.state);
+	OSTMData.state = (uint8_t) command;
+
+	if (debug) {
+		LogPrint("OSTM message:\n\tState change request value ID: 0x%x\n\t"
+				 "State change request content length: %u\n\tState change request: %u",
+				 OSTMData.stateValueID, OSTMData.stateContentLength, OSTMData.state);
+	}
+
+	// Convert from host endianness to little endian
+	OSTMData.stateValueID = htole16(OSTMData.stateValueID);
+	OSTMData.stateContentLength = htole16(OSTMData.stateContentLength);
+
+	// Construct footer
+	OSTMData.footer = buildISOFooter(&OSTMData, sizeof (OSTMData), debug);
+
+	memcpy(ostmDataBuffer, &OSTMData, sizeof (OSTMData));
+
+	return sizeof (OSTMType);
+}
 
 
 /*!
@@ -425,8 +490,7 @@ ssize_t encodeSTRTMessage(const struct timeval *timeOfStart, char *strtDataBuffe
 		return -1;
 	}
 
-	STRTData.header =
-		buildISOHeader(MESSAGE_ID_STRT, sizeof (STRTType) - sizeof (HeaderType) - sizeof (FooterType), debug);
+	STRTData.header = buildISOHeader(MESSAGE_ID_STRT, sizeof (STRTType), debug);
 
 	// Fill contents
 	STRTData.StartTimeValueIdU16 = VALUE_ID_STRT_GPS_QMS_OF_WEEK;

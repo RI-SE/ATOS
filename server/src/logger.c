@@ -87,7 +87,6 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	char subStrings[MBUS_MAX_DATALEN];
 	char journalPathDir[MAX_FILE_PATH];
 
-	UtilGetJournalDirectoryPath(journalPathDir, sizeof (journalPathDir));
 	struct timeval recvTime;
 
 	// Listen for commands
@@ -116,6 +115,7 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		util_error("Unable to initialize connection to message bus");
 
 	// Create log directory if it does not exist
+	UtilGetJournalDirectoryPath(journalPathDir, sizeof (journalPathDir));
 	vCreateLogFolder(journalPathDir);
 
 	// our time
