@@ -1673,7 +1673,6 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
 /*!
  * \brief DataDictionaryInitMONR inits a data structure for saving object monr
  * \param GSD Pointer to shared allocated memory
- * \param objects number of objects that will transmitt monr
  * \return Result according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
@@ -1711,14 +1710,14 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
  * \brief DataDictionarySetMONR Parses input variable and sets variable to corresponding value
  * \param GSD Pointer to shared allocated memory
  * \param MONRdata Monitor data
- * \param id object id
+ * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, const U32 TransmitterId) {
+ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, const U32 transmitterId) {
 	ReadWriteAccess_t Res;
 	Res = WRITE_OK;
 	pthread_mutex_lock(&MONRMutex);
-    if(GSD->MonrMessages != NULL && TransmitterId < GSD->numberOfObjects){
+    if(GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects){
         GSD->MonrMessages[0] = *MONR;
     }
     pthread_mutex_unlock(&MONRMutex);
@@ -1730,13 +1729,13 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, co
  * \brief DataDictionaryGetMONR Reads variable from shared memory
  * \param GSD Pointer to shared allocated memory
  * \param MONRdata Return variable pointer
- * \param id requesed object id
+ * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, const U32 TransmitterId) {
+ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, const U32 transmitterId) {
 	pthread_mutex_lock(&MONRMutex);
     if(GSD->MonrMessages != NULL && TransmitterId < GSD->numberOfObjects){
-        *MONR = GSD->MonrMessages[TransmitterId];
+        *MONR = GSD->MonrMessages[transmitterId];
     }
 	pthread_mutex_unlock(&MONRMutex);
 	return READ_OK;
@@ -1745,7 +1744,6 @@ ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, const U3
 /*!
  * \brief DataDictionaryInitMONR inits a data structure for saving object monr
  * \param GSD Pointer to shared allocated memory
- * \param objects number of objects that will transmitt monr
  * \return Result according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD) {
@@ -1770,7 +1768,7 @@ ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD) {
 /*!
  * \brief DataDictionarySetOBCStateU8 Parses input variable and sets variable to corresponding value
  * \param GSD Pointer to shared allocated memory
- * \param OBCState
+ * \param numberOfobjects number of objects in a test
  * \return Result according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U32 *numberOfObjects) {
@@ -1786,6 +1784,7 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U32 *numberO
 /*!
  * \brief DataDictionaryGetOBCStateU8 Reads variable from shared memory
  * \param GSD Pointer to shared allocated memory
+ * \param numberOfobjects number of objects in a test
  * \return Current object control state according to ::OBCState_t
  */
 ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(GSDType * GSD, U32 *numberOfObjects) {
