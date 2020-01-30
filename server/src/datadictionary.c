@@ -1736,7 +1736,7 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, co
  */
 ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, const U32 transmitterId) {
 	pthread_mutex_lock(&MONRMutex);
-	if (GSD->MonrMessages != NULL && TransmitterId < GSD->numberOfObjects) {
+    if (GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects) {
 		*MONR = GSD->MonrMessages[transmitterId];
 	}
 	pthread_mutex_unlock(&MONRMutex);
