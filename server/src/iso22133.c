@@ -1151,11 +1151,11 @@ ssize_t encodeSYPMMessage(const struct timeval synchronizationTime, const struct
 	// Fill contents
 	SYPMData.syncPointTimeValueID = VALUE_ID_SYPM_SYNC_POINT_TIME;
 	SYPMData.syncPointTimeContentLength = sizeof (SYPMData.syncPointTime);
-	SYPMData.syncPointTime = TimeGetAsUTCms(&synchronizationTime);
+	SYPMData.syncPointTime = (uint32_t) TimeGetAsUTCms(&synchronizationTime);
 
 	SYPMData.freezeTimeValueID = VALUE_ID_SYPM_FREEZE_TIME;
 	SYPMData.freezeTimeContentLength = sizeof (SYPMData.freezeTime);
-	SYPMData.freezeTime = TimeGetAsUTCms(&freezeTime);
+	SYPMData.freezeTime = (uint32_t) TimeGetAsUTCms(&freezeTime);
 
 	if (debug) {
 		LogPrint("SYPM message:\n\tSynchronization point time value ID: 0x%x\n\t"
