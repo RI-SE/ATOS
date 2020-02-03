@@ -526,6 +526,69 @@ ssize_t encodeSTRTMessage(const struct timeval *timeOfStart, char *strtDataBuffe
 	return sizeof (STRTType);
 }
 
+/*!
+ * \brief encodeHEABMessage Constructs an ISO HEAB message based on current control center status and system time
+ * \param status Current control center status according to ::ControlCenterStatusType. Entering an unaccepable value
+ *	makes this parameter default to ABORT
+ * \param heabDataBuffer Buffer to which HEAB message is to be written
+ * \param bufferLength Size of buffer to which HEAB message is to be written
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes written or -1 in case of an error
+ */
+ssize_t encodeHEABMessage(const ControlCenterStatusType status, char *heabDataBuffer,
+						  const size_t bufferLength, const char debug) {
+
+	HEABType HEABData;
+	struct timeval currentTime;
+
+	TimeSetToCurrentSystemTime(&currentTime);
+
+	memset(heabDataBuffer, 0, bufferLength);
+
+	// If buffer too small to hold HEAB data, generate an error
+	if (bufferLength < sizeof (HEABType)) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary HEAB data");
+		return -1;
+	}
+
+	// Construct header
+	HEABData.header = buildISOHeader(MESSAGE_ID_HEAB, sizeof (HEABData), debug);
+
+	// Fill contents
+	HEABData.HEABStructValueID = VALUE_ID_HEAB_STRUCT;
+	HEABData.HEABStructContentLength = sizeof (HEABType) - sizeof (HeaderType) - sizeof (FooterType)
+		- sizeof (HEABData.HEABStructValueID) - sizeof (HEABData.HEABStructContentLength);
+	HEABData.GPSQmsOfWeek = TimeGetAsGPSqmsOfWeek(&currentTime);
+	if (!(status == CONTROL_CENTER_STATUS_INIT || status == CONTROL_CENTER_STATUS_READY
+		  || status == CONTROL_CENTER_STATUS_ABORT || status == CONTROL_CENTER_STATUS_RUNNING
+		  || status == CONTROL_CENTER_STATUS_TEST_DONE || status == CONTROL_CENTER_STATUS_NORMAL_STOP)) {
+		LogMessage(LOG_LEVEL_ERROR, "HEAB does not support status ID %u - defaulting to ABORT",
+				   (uint8_t) status);
+		HEABData.controlCenterStatus = (uint8_t) CONTROL_CENTER_STATUS_ABORT;
+	}
+	else {
+		HEABData.controlCenterStatus = (uint8_t) status;
+	}
+
+	if (debug) {
+		LogPrint("HEAB message:\n\tHEAB struct value ID: 0x%x\n\t"
+				 "HEAB struct content length: %u\n\tGPS second of week: %u [¼ ms]\n\t"
+				 "Control center status: 0x%x", HEABData.HEABStructValueID, HEABData.HEABStructContentLength,
+				 HEABData.GPSQmsOfWeek, HEABData.controlCenterStatus);
+	}
+
+	// Switch from host endianness to little endian
+	HEABData.HEABStructValueID = htole16(HEABData.HEABStructValueID);
+	HEABData.HEABStructContentLength = htole16(HEABData.HEABStructContentLength);
+	HEABData.GPSQmsOfWeek = htole32(HEABData.GPSQmsOfWeek);
+
+	HEABData.footer = buildISOFooter(&HEABData, sizeof (HEABData), debug);
+
+	memcpy(heabDataBuffer, &HEABData, sizeof (HEABData));
+
+	return sizeof (HEABType);
+
+}
 
 /*!
  * \brief buildMONRMessage Fills a MONRType struct from a buffer of raw data

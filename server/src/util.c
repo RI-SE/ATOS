@@ -3259,59 +3259,6 @@ I32 UtilISOBuildINSUPMessage(C8 * MessageBuffer, INSUPType * INSUPData, C8 Comma
 	return MessageIndex;		//Total number of bytes
 }
 
-I32 UtilISOBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeType * GPSTime, U8 CCStatus,
-							U8 Debug) {
-	I32 MessageIndex = 0, i;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, ISO_HEAB_MESSAGE_LENGTH + ISO_MESSAGE_FOOTER_LENGTH);
-
-	HEABData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	HEABData->Header.TransmitterIdU8 = 0;
-	HEABData->Header.MessageCounterU8 = 0;
-	HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	HEABData->Header.MessageIdU16 = ISO_HEAB_CODE;
-	HEABData->Header.MessageLengthU32 = sizeof (HEABType) - sizeof (HeaderType);
-	//HEABData->HeabStructValueIdU16 = 0;
-	//HEABData->HeabStructContentLengthU16 = sizeof(HEABType) - sizeof(HeaderType) - 4;
-	HEABData->GPSQmsOfWeekU32 =
-		((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) UtilGetMillisecond(GPSTime)) << 2) +
-		GPSTime->MicroSecondU16;
-	HEABData->CCStatusU8 = CCStatus;
-
-	if (!GPSTime->isGPSenabled) {
-		UtilgetCurrentGPStime(NULL, &HEABData->GPSQmsOfWeekU32);
-	}
-
-	p = (C8 *) HEABData;
-	for (i = 0; i < sizeof (HEABType); i++)
-		*(MessageBuffer + i) = *p++;
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (HEABType));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc);
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	MessageIndex = i;
-
-	if (Debug) {
-		// TODO: Change this when bytes thingy has been implemented in logging
-		printf("HEAB total length = %d bytes (header+message+footer)\n",
-			   (int)(ISO_HEAB_MESSAGE_LENGTH + ISO_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (HEABType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-}
-
 
 U16 UtilGetMillisecond(TimeType * GPSTime) {
 	struct timeval now;
