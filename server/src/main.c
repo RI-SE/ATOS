@@ -77,6 +77,14 @@ static const ModuleTask allModules[] = {
 		, citscontrol_task
 #endif
 };
+static const char moduleNames[6][10] = {
+	"LG",
+	"TC",
+	"SC",
+	"OC",
+	"",
+	""
+};
 
 static const int numberOfModules = sizeof (allModules) / sizeof (ModuleTask);
 
@@ -145,6 +153,7 @@ int main(int argc, char *argv[]) {
 		}
 		else if (pID[moduleNumber] == 0) {
 			// Call module task
+			LogPrint("Starting %s", moduleNames[moduleNumber]);
 			(*allModules[moduleNumber]) (GPSTime, GSD, options.commonLogLevel);
 			exit(EXIT_SUCCESS);
 		}
