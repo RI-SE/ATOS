@@ -54,7 +54,7 @@ typedef struct
 #define MAX_LATERAL_DEVIATION_ONE_METER_VALUE 1000
 #define MIN_POSITIONING_ACCURACY_NOT_REQUIRED_VALUE 0
 #define MIN_POSITIONING_ACCURACY_ONE_METER_VALUE 1000 // ISO specification unclear on this value
-
+#define HEADING_UNAVAILABLE_VALUE 36001
 
 
 //! *************************** OSEM

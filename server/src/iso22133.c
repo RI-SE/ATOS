@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <endian.h>
+#include <math.h>
 
 static const uint8_t SupportedProtocolVersions[] = { 2 };
 
@@ -25,6 +26,7 @@ static ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const si
 static HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char debug);
 static FooterType buildISOFooter(const void *message, const size_t sizeExclFooter, const char debug);
 static char isValidMessageID(const uint16_t id);
+static double mapISOHeadingToHostHeading(const double isoHeading_rad);
 
 // ************************** function definitions
 
@@ -724,6 +726,10 @@ ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t lengt
 		LogPrint("ErrorStatus = %d", MONRData->errorStatus);
 	}
 
+
+	MONRData->heading = MONRData->heading ==  HEADING_UNAVAILABLE_VALUE ?
+				HEADING_UNAVAILABLE_VALUE : (uint16_t)(mapISOHeadingToHostHeading(MONRData->heading / 100.0) * 100.0);
+
 	return retval;
 }
 
@@ -863,3 +869,28 @@ ISOMessageReturnValue ASCIIToMONR(const char *asciiBuffer, MONRType * MONRData, 
 
 	return MESSAGE_OK;
 }
+
+
+/*!
+ * \brief mapISOHeadingToHostHeading Converts between ISO NED heading to internal heading measured from the test x axis
+ * \param isoHeading_rad Heading measured according to ISO specification, in radians
+ * \return Heading, in radians, measured from the test x axis
+ */
+double mapISOHeadingToHostHeading(const double isoHeading_rad) {
+	// TODO: Reevaluate this when ISO specification is updated with new heading and rotated coordinate system
+
+	double retval = isoHeading_rad;
+	// Host heading is CCW while ISO is CW
+	retval = -retval;
+	// Host heading is measured from the x axis while ISO is measured from the y axis
+	retval = retval + M_PI / 2.0;
+	// Ensure angle lies between 0 and 2pi
+	while (retval < 0.0) {
+		retval += 2.0 * M_PI;
+	}
+	while (retval >= 2.0 * M_PI) {
+		retval -= 2.0 * M_PI;
+	}
+	return retval;
+}
+
