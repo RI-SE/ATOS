@@ -36,7 +36,7 @@ static const uint8_t SupportedProtocolVersions[] = { 2 };
 #define ACTION_TYPE_PARAMETER_UNAVAILABLE 4294967295
 
 
-#pragma pack(push,1)
+#pragma pack(push,1)		// Ensure sizeof() is useable for (most) network byte lengths
 /*! OSEM message */
 typedef struct {
 	HeaderType header;
@@ -110,6 +110,31 @@ typedef struct {
 //! STRT value IDs
 #define VALUE_ID_STRT_GPS_QMS_OF_WEEK 0x0002
 #define VALUE_ID_STRT_GPS_WEEK 0x0003
+
+
+//! MONR message */
+typedef struct {
+	HeaderType header;
+	uint16_t monrStructValueID;
+	uint16_t monrStructContentLength;
+	uint32_t gpsQmsOfWeek;
+	int32_t xPosition;
+	int32_t yPosition;
+	int32_t zPosition;
+	uint16_t heading;
+	int16_t longitudinalSpeed;
+	int16_t lateralSpeed;
+	int16_t longitudinalAcc;
+	int16_t lateralAcc;
+	uint8_t driveDirection;
+	uint8_t state;
+	uint8_t readyToArm;
+	uint8_t errorStatus;
+	FooterType footer;
+} MONRType;
+
+//! MONR value IDs
+#define VALUE_ID_MONR_STRUCT 0x80
 
 
 /*! HEAB message */
