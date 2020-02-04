@@ -84,6 +84,7 @@ add_library(util
   inc/iso22133.h
   src/iso22133.c
   inc/positioning.h
+  src/positioning.c
 )
 
 # Create library

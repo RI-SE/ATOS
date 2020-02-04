@@ -690,41 +690,19 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
 
 
 /*!
- * \brief MONRToCartesianPosition Extracts a CartesianPosition from MONR
- * \param MONR Struct containing MONR data
- * \return CartesianPosition struct containing the point represented by MONR
- */
-CartesianPosition MONRToCartesianPosition(MonitorDataType MONR) {
-	CartesianPosition retval;
-
-	retval.xCoord_m = MONR.MONR.xPosition / 1000.0;
-	retval.yCoord_m = MONR.MONR.yPosition / 1000.0;
-	retval.zCoord_m = MONR.MONR.zPosition / 1000.0;
-	if (MONR.MONR.heading == 36001) {	// 36001: unavailable
-		LogMessage(LOG_LEVEL_DEBUG, "MONR heading unavailable, assuming 0");
-		retval.heading_deg = 0.0;
-	}
-	else {
-		retval.heading_deg = MONR.MONR.heading / 100.0;
-	}
-	return retval;
-}
-
-/*!
  * \brief UtilMonitorDataToString Converts the data from a message queue monitor data struct into ASCII format
  * \param monrData Struct containing relevant monitor data
  * \param monrString String in which converted data is to be placed
  * \param stringLength Length of string in which converted data is to be placed
  * \return 0 upon success, -1 otherwise
  */
-int UtilMonitorDataToString(MonitorDataType monrData, char *monrString, size_t stringLength) {
-	memset(monrString, 0, stringLength);
-	inet_ntop(AF_INET, &monrData.ClientIP, monrString,
+int UtilMonitorDataToString(MonitorDataType monitorData, char *monitorDataString, size_t stringLength) {
+	memset(monitorDataString, 0, stringLength);
+	inet_ntop(AF_INET, &monitorData.ClientIP, monitorDataString,
 			  (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t) stringLength);
-	strcat(monrString, ";0;");
-	if (MONRToASCII(&monrData.MONR, monrString + strlen(monrString), stringLength - strlen(monrString), 0) !=
-		MESSAGE_OK) {
-		memset(monrString, 0, stringLength);
+	strcat(monitorDataString, ";0;");
+	if (monitorDataToASCII(&monitorData.data, monitorDataString + strlen(monitorDataString), stringLength - strlen(monitorDataString)) != 0) {
+		memset(monitorDataString, 0, stringLength);
 		return -1;
 	}
 	return 0;

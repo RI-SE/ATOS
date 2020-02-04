@@ -33,6 +33,7 @@ extern "C"{
 #include "mqbus.h"
 #include "iso22133.h"
 #include "logging.h"
+#include "positioning.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -257,17 +258,7 @@ typedef struct
 
 typedef struct
 {
-    double xCoord_m;
-    double yCoord_m;
-    double zCoord_m;
-    double heading_deg;
-} CartesianPosition;
-
-
-
-typedef struct
-{
-    MONRType MONR;
+	ObjectMonitorType data;
     in_addr_t ClientIP;
 } MonitorDataType;
 
@@ -567,18 +558,6 @@ typedef struct
 } VOILType;
 
 
-typedef struct
-{
-  U16 MessageIdU16;
-  U32 ObjectIPU32;
-  U32 GPSQmsOfWeekU32;
-  I32 XPositionI32;
-  I32 YPositionI32;
-  I32 ZPositionI32;
-  U16 HeadingU16;
-  I16 SpeedI16;
-} ObjectMonitorType;
-
 #define HTTP_HEADER_MAX_LENGTH 64
 typedef struct {
     char AcceptCharset[HTTP_HEADER_MAX_LENGTH];
@@ -702,8 +681,7 @@ void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 // File parsing functions
 int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
 
-//
-CartesianPosition MONRToCartesianPosition(MonitorDataType MONR);
+
 int UtilMonitorDataToString(MonitorDataType monrData, char* monrString, size_t stringLength);
 int UtilStringToMonitorData(const char* monrString, size_t stringLength, MonitorDataType * monrData);
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);

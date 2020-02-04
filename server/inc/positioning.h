@@ -7,6 +7,7 @@ extern "C" {
 #include <inttypes.h>
 #include <sys/time.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 /*! Struct describing a position and orientation in a local cartesian coordinate system */
 typedef struct {
@@ -44,7 +45,7 @@ typedef enum {
 	OBJECT_STATE_UNKNOWN,
 	OBJECT_STATE_DISARMED,
 	OBJECT_STATE_ARMED,
-	OBJECT_STATE_ACTIVE,
+	OBJECT_STATE_RUNNING,
 	OBJECT_STATE_POSTRUN,
 	OBJECT_STATE_ABORTING,
 	OBJECT_STATE_REMOTE_CONTROL
@@ -80,6 +81,15 @@ typedef struct {
 	ObjectArmReadinessType armReadiness;
 	ObjectErrorType error;
 } ObjectMonitorType;
+
+
+int objectMonitorDataToASCII(const ObjectMonitorType * monitorData, char *asciiBuffer, const size_t bufferLength);
+int ASCIIToObjectMonitorData(const char *asciiBuffer, ObjectMonitorType * monitorData);
+bool hasError(const ObjectErrorType error);
+const char * objectStateToASCII(const ObjectStateType state);
+ObjectStateType ASCIIToObjectState(const char * asciiString);
+void errorStatusToASCII(const ObjectErrorType error, char * asciiBuffer, const size_t bufferLength);
+ObjectErrorType ASCIIToErrorStatus(const char * asciiString);
 
 #ifdef __cplusplus
 }
