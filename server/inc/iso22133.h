@@ -229,8 +229,6 @@ ssize_t decodeTREOMessage();
 ssize_t encodeACCMMessage(const uint16_t* actionID, const ActionType_t* actionType, const ActionTypeParameter_t* param1, const ActionTypeParameter_t* param2, const ActionTypeParameter_t* param3, char * accmDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeEXACMessage(const uint16_t* actionID, const struct timeval * executionTime, char * exacDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeINSUPMessage(const SupervisorCommandType, char * insupDataBuffer, const size_t bufferLength, const char debug);
-ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
-ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);
 
 
