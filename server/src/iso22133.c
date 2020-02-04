@@ -34,6 +34,41 @@ static const uint8_t SupportedProtocolVersions[] = { 2 };
 #define ACTION_ID_UNAVAILABLE 65535
 #define ACTION_TYPE_UNAVAILABLE 65535
 #define ACTION_TYPE_PARAMETER_UNAVAILABLE 4294967295
+#define POSITION_ONE_METER_VALUE 1000
+#define HEADING_UNAVAILABLE_VALUE 36001
+#define SPEED_UNAVAILABLE_VALUE (-32768)
+#define SPEED_ONE_METER_PER_SECOND_VALUE 100
+#define ACCELERATION_UNAVAILABLE_VALUE 32001
+#define ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE 1000
+typedef enum {
+	ISO_DRIVE_DIRECTION_FORWARD = 0,
+	ISO_DRIVE_DIRECTION_BACKWARD = 1,
+	ISO_DRIVE_DIRECTION_UNAVAILABLE = 2
+} DriveDirectionValues;
+typedef enum {
+	ISO_OBJECT_STATE_OFF = 0,
+	ISO_OBJECT_STATE_INIT = 1,
+	ISO_OBJECT_STATE_ARMED = 2,
+	ISO_OBJECT_STATE_DISARMED = 3,
+	ISO_OBJECT_STATE_RUNNING = 4,
+	ISO_OBJECT_STATE_POSTRUN = 5,
+	ISO_OBJECT_STATE_REMOTE_CONTROLLED = 6,
+	ISO_OBJECT_STATE_ABORTING = 7
+} ObjectStateValues;
+typedef enum {
+	ISO_NOT_READY_TO_ARM = 0,
+	ISO_READY_TO_ARM = 1,
+	ISO_READY_TO_ARM_UNAVAILABLE = 2
+} ArmReadinessValues;
+#define BITMASK_ERROR_ABORT_REQUEST				0x80
+#define BITMASK_ERROR_OUTSIDE_GEOFENCE			0x40
+#define BITMASK_ERROR_BAD_POSITIONING_ACCURACY	0x20
+#define BITMASK_ERROR_ENGINE_FAULT				0x10
+#define BITMASK_ERROR_BATTERY_FAULT				0x08
+#define BITMASK_ERROR_OTHER						0x04
+#define BITMASK_ERROR_SYNC_POINT_ENDED			0x02
+#define BITMASK_ERROR_VENDOR_SPECIFIC			0x01
+
 
 
 #pragma pack(push,1)		// Ensure sizeof() is useable for (most) network byte lengths
@@ -311,6 +346,7 @@ static ISOMessageReturnValue decodeISOFooter(const char *MessageBuffer, const si
 static HeaderType buildISOHeader(ISOMessageID id, uint32_t messageLength, const char debug);
 static FooterType buildISOFooter(const void *message, const size_t sizeExclFooter, const char debug);
 static char isValidMessageID(const uint16_t id);
+static void convertMONRToHostRepresentation(const MONRType * MONRData, ObjectMonitorType * monitorData);
 
 // ************************** function definitions ****************************************************************
 
@@ -883,135 +919,259 @@ ssize_t encodeHEABMessage(const ControlCenterStatusType status, char *heabDataBu
  * \param debug Flag for enabling of debugging
  * \return value according to ::ISOMessageReturnValue
  */
-ISOMessageReturnValue decodeMONRMessage(const char *MonrData, const size_t length, MONRType * MONRData,
+ISOMessageReturnValue decodeMONRMessage(const char *monrDataBuffer, const size_t bufferLength, ObjectMonitorType * monitorData,
 										const char debug) {
 
-	const char *p = MonrData;
-	const uint16_t ExpectedMONRStructSize = (uint16_t) (sizeof (*MONRData) - sizeof (MONRData->header)
-														- sizeof (MONRData->footer.Crc) -
-														sizeof (MONRData->monrStructValueID)
-														- sizeof (MONRData->monrStructContentLength));
+	MONRType MONRData;
+	const char *p = monrDataBuffer;
+	const uint16_t ExpectedMONRStructSize = (uint16_t) (sizeof (MONRData) - sizeof (MONRData.header)
+														- sizeof (MONRData.footer.Crc) -
+														sizeof (MONRData.monrStructValueID)
+														- sizeof (MONRData.monrStructContentLength));
 	ISOMessageReturnValue retval = MESSAGE_OK;
 
+	memset(monitorData, 0, sizeof (*monitorData));
+
 	// Decode ISO header
-	if ((retval = decodeISOHeader(p, length, &MONRData->header, debug)) != MESSAGE_OK) {
-		memset(MONRData, 0, sizeof (*MONRData));
+	if ((retval = decodeISOHeader(p, bufferLength, &MONRData.header, debug)) != MESSAGE_OK) {
+		memset(monitorData, 0, sizeof (*monitorData));
 		return retval;
 	}
-	p += sizeof (MONRData->header);
+	p += sizeof (MONRData.header);
 
 	// If message is not a MONR message, generate an error
-	if (MONRData->header.MessageIdU16 != MESSAGE_ID_MONR) {
-		memset(MONRData, 0, sizeof (*MONRData));
+	if (MONRData.header.MessageIdU16 != MESSAGE_ID_MONR) {
+		LogMessage(LOG_LEVEL_ERROR, "Attempted to pass non-MONR message into MONR parsing function");
 		return MESSAGE_TYPE_ERROR;
 	}
 
 	// Decode content header
-	memcpy(&MONRData->monrStructValueID, p, sizeof (MONRData->monrStructValueID));
-	p += sizeof (MONRData->monrStructValueID);
-	MONRData->monrStructValueID = le16toh(MONRData->monrStructValueID);
+	memcpy(&MONRData.monrStructValueID, p, sizeof (MONRData.monrStructValueID));
+	p += sizeof (MONRData.monrStructValueID);
+	MONRData.monrStructValueID = le16toh(MONRData.monrStructValueID);
 
 	// If content is not a MONR struct or an unexpected size, generate an error
-	if (MONRData->monrStructValueID != VALUE_ID_MONR_STRUCT) {
+	if (MONRData.monrStructValueID != VALUE_ID_MONR_STRUCT) {
 		LogMessage(LOG_LEVEL_ERROR, "Attempted to pass non-MONR struct into MONR parsing function");
-		memset(MONRData, 0, sizeof (*MONRData));
 		return MESSAGE_VALUE_ID_ERROR;
 	}
 
-	memcpy(&MONRData->monrStructContentLength, p, sizeof (MONRData->monrStructContentLength));
-	p += sizeof (MONRData->monrStructContentLength);
-	MONRData->monrStructContentLength = le16toh(MONRData->monrStructContentLength);
+	memcpy(&MONRData.monrStructContentLength, p, sizeof (MONRData.monrStructContentLength));
+	p += sizeof (MONRData.monrStructContentLength);
+	MONRData.monrStructContentLength = le16toh(MONRData.monrStructContentLength);
 
-	if (MONRData->monrStructContentLength != ExpectedMONRStructSize) {
+	if (MONRData.monrStructContentLength != ExpectedMONRStructSize) {
 		LogMessage(LOG_LEVEL_ERROR, "MONR content length %u differs from the expected length %u",
-				   MONRData->monrStructContentLength, ExpectedMONRStructSize);
-		memset(MONRData, 0, sizeof (*MONRData));
+				   MONRData.monrStructContentLength, ExpectedMONRStructSize);
 		return MESSAGE_LENGTH_ERROR;
 	}
 
 	// Decode content
-	memcpy(&MONRData->gpsQmsOfWeek, p, sizeof (MONRData->gpsQmsOfWeek));
-	p += sizeof (MONRData->gpsQmsOfWeek);
-	MONRData->gpsQmsOfWeek = le32toh(MONRData->gpsQmsOfWeek);
+	memcpy(&MONRData.gpsQmsOfWeek, p, sizeof (MONRData.gpsQmsOfWeek));
+	p += sizeof (MONRData.gpsQmsOfWeek);
+	MONRData.gpsQmsOfWeek = le32toh(MONRData.gpsQmsOfWeek);
 
-	memcpy(&MONRData->xPosition, p, sizeof (MONRData->xPosition));
-	p += sizeof (MONRData->xPosition);
-	MONRData->xPosition = (int32_t) le32toh(MONRData->xPosition);
+	memcpy(&MONRData.xPosition, p, sizeof (MONRData.xPosition));
+	p += sizeof (MONRData.xPosition);
+	MONRData.xPosition = (int32_t) le32toh(MONRData.xPosition);
 
-	memcpy(&MONRData->yPosition, p, sizeof (MONRData->yPosition));
-	p += sizeof (MONRData->yPosition);
-	MONRData->yPosition = (int32_t) le32toh(MONRData->yPosition);
+	memcpy(&MONRData.yPosition, p, sizeof (MONRData.yPosition));
+	p += sizeof (MONRData.yPosition);
+	MONRData.yPosition = (int32_t) le32toh(MONRData.yPosition);
 
-	memcpy(&MONRData->zPosition, p, sizeof (MONRData->zPosition));
-	p += sizeof (MONRData->zPosition);
-	MONRData->zPosition = (int32_t) le32toh(MONRData->zPosition);
+	memcpy(&MONRData.zPosition, p, sizeof (MONRData.zPosition));
+	p += sizeof (MONRData.zPosition);
+	MONRData.zPosition = (int32_t) le32toh(MONRData.zPosition);
 
-	memcpy(&MONRData->heading, p, sizeof (MONRData->heading));
-	p += sizeof (MONRData->heading);
-	MONRData->heading = le16toh(MONRData->heading);
+	memcpy(&MONRData.heading, p, sizeof (MONRData.heading));
+	p += sizeof (MONRData.heading);
+	MONRData.heading = le16toh(MONRData.heading);
 
-	memcpy(&MONRData->longitudinalSpeed, p, sizeof (MONRData->longitudinalSpeed));
-	p += sizeof (MONRData->longitudinalSpeed);
-	MONRData->longitudinalSpeed = (int16_t) le16toh(MONRData->longitudinalSpeed);
+	memcpy(&MONRData.longitudinalSpeed, p, sizeof (MONRData.longitudinalSpeed));
+	p += sizeof (MONRData.longitudinalSpeed);
+	MONRData.longitudinalSpeed = (int16_t) le16toh(MONRData.longitudinalSpeed);
 
-	memcpy(&MONRData->lateralSpeed, p, sizeof (MONRData->lateralSpeed));
-	p += sizeof (MONRData->lateralSpeed);
-	MONRData->lateralSpeed = (int16_t) le16toh(MONRData->lateralSpeed);
+	memcpy(&MONRData.lateralSpeed, p, sizeof (MONRData.lateralSpeed));
+	p += sizeof (MONRData.lateralSpeed);
+	MONRData.lateralSpeed = (int16_t) le16toh(MONRData.lateralSpeed);
 
-	memcpy(&MONRData->longitudinalAcc, p, sizeof (MONRData->longitudinalAcc));
-	p += sizeof (MONRData->longitudinalAcc);
-	MONRData->longitudinalAcc = (int16_t) le16toh(MONRData->longitudinalAcc);
+	memcpy(&MONRData.longitudinalAcc, p, sizeof (MONRData.longitudinalAcc));
+	p += sizeof (MONRData.longitudinalAcc);
+	MONRData.longitudinalAcc = (int16_t) le16toh(MONRData.longitudinalAcc);
 
-	memcpy(&MONRData->lateralAcc, p, sizeof (MONRData->lateralAcc));
-	p += sizeof (MONRData->lateralAcc);
-	MONRData->lateralAcc = (int16_t) le16toh(MONRData->lateralAcc);
+	memcpy(&MONRData.lateralAcc, p, sizeof (MONRData.lateralAcc));
+	p += sizeof (MONRData.lateralAcc);
+	MONRData.lateralAcc = (int16_t) le16toh(MONRData.lateralAcc);
 
-	memcpy(&MONRData->driveDirection, p, sizeof (MONRData->driveDirection));
-	p += sizeof (MONRData->driveDirection);
+	memcpy(&MONRData.driveDirection, p, sizeof (MONRData.driveDirection));
+	p += sizeof (MONRData.driveDirection);
 
-	memcpy(&MONRData->state, p, sizeof (MONRData->state));
-	p += sizeof (MONRData->state);
+	memcpy(&MONRData.state, p, sizeof (MONRData.state));
+	p += sizeof (MONRData.state);
 
-	memcpy(&MONRData->readyToArm, p, sizeof (MONRData->readyToArm));
-	p += sizeof (MONRData->readyToArm);
+	memcpy(&MONRData.readyToArm, p, sizeof (MONRData.readyToArm));
+	p += sizeof (MONRData.readyToArm);
 
-	memcpy(&MONRData->errorStatus, p, sizeof (MONRData->errorStatus));
-	p += sizeof (MONRData->errorStatus);
+	memcpy(&MONRData.errorStatus, p, sizeof (MONRData.errorStatus));
+	p += sizeof (MONRData.errorStatus);
 
 	// Decode footer
 	if ((retval =
-		 decodeISOFooter(p, length - (size_t) (p - MonrData), &MONRData->footer, debug)) != MESSAGE_OK) {
-		memset(MONRData, 0, sizeof (*MONRData));
+		 decodeISOFooter(p, bufferLength - (size_t) (p - monrDataBuffer), &MONRData.footer, debug)) != MESSAGE_OK) {
+		LogMessage(LOG_LEVEL_ERROR, "Error decoding MONR footer");
 		return retval;
 	}
 
-	if (debug == 1) {
+	if (debug) {
 		LogPrint("MONR:");
-		LogPrint("SyncWord = %x", MONRData->header.SyncWordU16);
-		LogPrint("TransmitterId = %d", MONRData->header.TransmitterIdU8);
-		LogPrint("PackageCounter = %d", MONRData->header.MessageCounterU8);
-		LogPrint("AckReq = %d", MONRData->header.AckReqProtVerU8);
-		LogPrint("MessageId = %d", MONRData->header.MessageIdU16);
-		LogPrint("MessageLength = %d", MONRData->header.MessageLengthU32);
-		LogPrint("ValueId = %d", MONRData->monrStructValueID);
-		LogPrint("ContentLength = %d", MONRData->monrStructContentLength);
-		LogPrint("GPSSOW = %d", MONRData->gpsQmsOfWeek);
-		LogPrint("XPosition = %d", MONRData->xPosition);
-		LogPrint("YPosition = %d", MONRData->yPosition);
-		LogPrint("ZPosition = %d", MONRData->zPosition);
-		LogPrint("Heading = %d", MONRData->heading);
-		LogPrint("LongitudinalSpeed = %d", MONRData->longitudinalSpeed);
-		LogPrint("LateralSpeed = %d", MONRData->lateralSpeed);
-		LogPrint("LongitudinalAcc = %d", MONRData->longitudinalAcc);
-		LogPrint("LateralAcc = %d", MONRData->lateralAcc);
-		LogPrint("DriveDirection = %d", MONRData->driveDirection);
-		LogPrint("State = %d", MONRData->state);
-		LogPrint("ReadyToArm = %d", MONRData->readyToArm);
-		LogPrint("ErrorStatus = %d", MONRData->errorStatus);
+		LogPrint("SyncWord = %x", MONRData.header.SyncWordU16);
+		LogPrint("TransmitterId = %d", MONRData.header.TransmitterIdU8);
+		LogPrint("PackageCounter = %d", MONRData.header.MessageCounterU8);
+		LogPrint("AckReq = %d", MONRData.header.AckReqProtVerU8);
+		LogPrint("MessageId = %d", MONRData.header.MessageIdU16);
+		LogPrint("MessageLength = %d", MONRData.header.MessageLengthU32);
+		LogPrint("ValueId = %d", MONRData.monrStructValueID);
+		LogPrint("ContentLength = %d", MONRData.monrStructContentLength);
+		LogPrint("GPSSOW = %d", MONRData.gpsQmsOfWeek);
+		LogPrint("XPosition = %d", MONRData.xPosition);
+		LogPrint("YPosition = %d", MONRData.yPosition);
+		LogPrint("ZPosition = %d", MONRData.zPosition);
+		LogPrint("Heading = %d", MONRData.heading);
+		LogPrint("LongitudinalSpeed = %d", MONRData.longitudinalSpeed);
+		LogPrint("LateralSpeed = %d", MONRData.lateralSpeed);
+		LogPrint("LongitudinalAcc = %d", MONRData.longitudinalAcc);
+		LogPrint("LateralAcc = %d", MONRData.lateralAcc);
+		LogPrint("DriveDirection = %d", MONRData.driveDirection);
+		LogPrint("State = %d", MONRData.state);
+		LogPrint("ReadyToArm = %d", MONRData.readyToArm);
+		LogPrint("ErrorStatus = %d", MONRData.errorStatus);
 	}
+
+	// Fill output struct with parsed data
+	convertMONRToHostRepresentation(&MONRData, monitorData);
 
 	return retval;
 }
+
+
+/*!
+ * \brief convertMONRToHostRepresentation Converts a MONR message to the internal representation for
+ * object monitoring data
+ * \param MONRData MONR message to be converted
+ * \param monitorData Monitor data in which result is to be placed
+ */
+void convertMONRToHostRepresentation(const MONRType * MONRData, ObjectMonitorType * monitorData) {
+
+	// Timestamp
+	monitorData->isTimestampValid = MONRData->gpsQmsOfWeek != GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE;
+	if (monitorData->isTimestampValid) {
+		struct timeval currentTime;
+		TimeSetToCurrentSystemTime(&currentTime);
+		TimeSetToGPStime(&monitorData->timestamp, TimeGetAsGPSweek(&currentTime), MONRData->gpsQmsOfWeek);
+	}
+
+	// Position / heading
+	monitorData->position.xCoord_m = (double) (MONRData->xPosition) / POSITION_ONE_METER_VALUE;
+	monitorData->position.yCoord_m = (double) (MONRData->yPosition) / POSITION_ONE_METER_VALUE;
+	monitorData->position.zCoord_m = (double) (MONRData->zPosition) / POSITION_ONE_METER_VALUE;
+	monitorData->position.isPositionValid = true;
+	monitorData->position.isHeadingValid = MONRData->heading != HEADING_UNAVAILABLE_VALUE;
+	if (monitorData->position.isHeadingValid) {
+		// TODO: convert to host representation
+		monitorData->position.heading_deg = (double) (MONRData->heading) / 100;
+	}
+
+	// Velocity
+	monitorData->speed.isValid = true;
+	if (MONRData->longitudinalSpeed == SPEED_UNAVAILABLE_VALUE)
+		monitorData->speed.isValid = false;
+	else
+		monitorData->speed.longitudinal_m_s =
+				(double) (MONRData->longitudinalSpeed) / SPEED_ONE_METER_PER_SECOND_VALUE;
+	if (MONRData->lateralSpeed == SPEED_UNAVAILABLE_VALUE)
+		monitorData->speed.isValid = false;
+	else
+		monitorData->speed.lateral_m_s =
+				(double) (MONRData->lateralSpeed) / SPEED_ONE_METER_PER_SECOND_VALUE;
+
+	// Acceleration
+	monitorData->acceleration.isValid = true;
+	if (MONRData->longitudinalAcc == ACCELERATION_UNAVAILABLE_VALUE)
+		monitorData->acceleration.isValid = false;
+	else
+		monitorData->acceleration.longitudinal_m_s2 =
+				(double) (MONRData->longitudinalAcc) / ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE;
+	if (MONRData->lateralAcc == ACCELERATION_UNAVAILABLE_VALUE)
+		monitorData->acceleration.isValid = false;
+	else
+		monitorData->acceleration.lateral_m_s2 =
+				(double) (MONRData->lateralAcc) / ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE;
+
+	// Drive direction
+	switch (MONRData->driveDirection) {
+	case ISO_DRIVE_DIRECTION_FORWARD:
+		monitorData->drivingDirection = OBJECT_DRIVE_DIRECTION_FORWARD;
+		break;
+	case ISO_DRIVE_DIRECTION_BACKWARD:
+		monitorData->drivingDirection = OBJECT_DRIVE_DIRECTION_BACKWARD;
+		break;
+	case ISO_DRIVE_DIRECTION_UNAVAILABLE:
+	default:
+		monitorData->drivingDirection = OBJECT_DRIVE_DIRECTION_UNAVAILABLE;
+	}
+
+	// State
+	switch (MONRData->state) {
+	case ISO_OBJECT_STATE_DISARMED:
+		monitorData->state = OBJECT_STATE_DISARMED;
+		break;
+	case ISO_OBJECT_STATE_ARMED:
+		monitorData->state = OBJECT_STATE_ARMED;
+		break;
+	case ISO_OBJECT_STATE_RUNNING:
+		monitorData->state = OBJECT_STATE_ACTIVE;
+		break;
+	case ISO_OBJECT_STATE_POSTRUN:
+		monitorData->state = OBJECT_STATE_POSTRUN;
+		break;
+	case ISO_OBJECT_STATE_ABORTING:
+		monitorData->state = OBJECT_STATE_ABORTING;
+		break;
+	case ISO_OBJECT_STATE_REMOTE_CONTROLLED:
+		monitorData->state = OBJECT_STATE_REMOTE_CONTROL;
+		break;
+	case ISO_OBJECT_STATE_OFF:
+	case ISO_OBJECT_STATE_INIT:
+	default:
+		monitorData->state = OBJECT_STATE_UNKNOWN;
+		break;
+	}
+
+	// Ready to arm
+	switch (MONRData->readyToArm) {
+	case ISO_READY_TO_ARM:
+		monitorData->armReadiness = OBJECT_READY_TO_ARM;
+		break;
+	case ISO_NOT_READY_TO_ARM:
+		monitorData->armReadiness = OBJECT_NOT_READY_TO_ARM;
+		break;
+	case ISO_READY_TO_ARM_UNAVAILABLE:
+	default:
+		monitorData->armReadiness = OBJECT_READY_TO_ARM_UNAVAILABLE;
+	}
+
+	// Error status
+	monitorData->error.engineFault = MONRData->errorStatus & BITMASK_ERROR_ENGINE_FAULT;
+	monitorData->error.abortRequest = MONRData->errorStatus & BITMASK_ERROR_ABORT_REQUEST;
+	monitorData->error.batteryFault = MONRData->errorStatus & BITMASK_ERROR_BATTERY_FAULT;
+	monitorData->error.unknownError = MONRData->errorStatus & BITMASK_ERROR_OTHER || MONRData->errorStatus & BITMASK_ERROR_VENDOR_SPECIFIC;
+	monitorData->error.syncPointEnded = MONRData->errorStatus & BITMASK_ERROR_SYNC_POINT_ENDED;
+	monitorData->error.outsideGeofence = MONRData->errorStatus & BITMASK_ERROR_OUTSIDE_GEOFENCE;
+	monitorData->error.badPositioningAccuracy = MONRData->errorStatus & BITMASK_ERROR_BAD_POSITIONING_ACCURACY;
+
+	return;
+}
+
 
 
 /*!

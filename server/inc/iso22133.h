@@ -3,17 +3,25 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-/*! This file contains all definitions pertaining to the ISO standard 22133
- *
- *
- *
- *
+/*! ------------------------------------------------------------------------------
+ *  -- Copyright	: (C) AstaZero AB
+ *  ------------------------------------------------------------------------------
+ *  -- File			: iso22133.h
+ *  -- Author		: Lukas Wikander
+ *  -- Description	: This file specifies an interface for converting from network
+ *					  messages in the ISO 22133 format to native data types.
+ *  -- Purpose		: Reduce the amount of boilerplate needed to read an ISO 22133
+ *					  message.
+ *  -- Reference	: ISO/TC 22/SC 33/WG 16 - ISO/WD 22133-1
+ *  ------------------------------------------------------------------------------
  */
 
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <sys/time.h>
+
+#include "positioning.h"
 
 // TODO: move to .c-file
 #define ISO_PROTOCOL_VERSION 2
@@ -209,7 +217,7 @@ typedef enum {
 	SUPERVISOR_COMMAND_DEBUG = 2	//!< Place supervisor in debug mode
 } SupervisorCommandType;
 
-ISOMessageReturnValue decodeMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
+ISOMessageReturnValue decodeMONRMessage(const char * monrDataBuffer, const size_t bufferLength, ObjectMonitorType * MonitorData, const char debug);
 ssize_t encodeSTRTMessage(const struct timeval* timeOfStart, char * strtDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeOSTMMessage(const ObjectCommandType command, char * ostmDataBuffer, const size_t bufferLength, const char debug);
