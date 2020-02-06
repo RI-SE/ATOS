@@ -130,5 +130,7 @@ CartesianPosition Trajectory::TrajectoryPoint::getCartesianPosition() {
         retval.zCoord_m = 0.0;
     }
     retval.heading_deg = this->getHeading() * 180.0 / M_PI;
+	retval.isHeadingValid = true;
+	retval.isPositionValid = true;
     return retval;
 }

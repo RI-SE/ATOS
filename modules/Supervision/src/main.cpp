@@ -31,7 +31,7 @@ typedef enum {
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
-static bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> geofences);
+static bool isViolatingGeofence(const MonitorDataType &monitorData, std::vector<Geofence> geofences);
 static void loadGeofenceFiles(std::vector<Geofence> &geofences);
 static void loadTrajectoryFiles(std::vector<Trajectory> &trajectories);
 static Geofence parseGeofenceFile(const std::string geofenceFile);
@@ -107,26 +107,26 @@ int main()
 
 			break;
         case COMM_MONR:
-            MonitorDataType MONRMessage;
-            UtilPopulateMonitorDataStruct((unsigned char *)mqRecvData, sizeof (mqRecvData), &MONRMessage, 0);
+			MonitorDataType monitorMessage;
+			UtilPopulateMonitorDataStruct(mqRecvData, sizeof (mqRecvData), &monitorMessage);
 
-            if (state.get() == SupervisionState::RUNNING && isViolatingGeofence(MONRMessage, geofences)) {
+			if (state.get() == SupervisionState::RUNNING && isViolatingGeofence(monitorMessage, geofences)) {
                 LogMessage(LOG_LEVEL_WARNING, "Object with IP %s is violating a geofence: sending ABORT",
-                           inet_ntop(AF_INET, &MONRMessage.ClientIP, ipString, sizeof (ipString)));
+						   inet_ntop(AF_INET, &monitorMessage.ClientIP, ipString, sizeof (ipString)));
                 iCommSend(COMM_ABORT, nullptr, 0);
                 state.set(SupervisionState::READY);
             }
 
             if (state.get() == SupervisionState::VERIFYING_ARM) {
-                if (isViolatingGeofence(MONRMessage, geofences)) {
+				if (isViolatingGeofence(monitorMessage, geofences)) {
                     LogMessage(LOG_LEVEL_INFO, "Arm not approved: object with IP address %s is violating a geofence",
-                               inet_ntop(AF_INET, &MONRMessage.ClientIP, ipString, sizeof (ipString)));
+							   inet_ntop(AF_INET, &monitorMessage.ClientIP, ipString, sizeof (ipString)));
                     iCommSend(COMM_DISARM, nullptr, 0);
                     state.set(SupervisionState::READY);
                     break;
                 }
 
-                switch (updateNearStartingPositionStatus(MONRMessage, armVerified)) {
+				switch (updateNearStartingPositionStatus(monitorMessage, armVerified)) {
                 case SINGLE_OBJECT_NOT_NEAR_START: // Object not near start: disarm
                     LogMessage(LOG_LEVEL_INFO, "Arm not approved: sending disarm");
                     iCommSend(COMM_DISARM, nullptr, 0);
@@ -436,23 +436,19 @@ Geofence parseGeofenceFile(const std::string geofenceFile) {
 
 /*!
  * \brief SupervisionCheckGeofences Checks all geofences to verify that the point represented by the MONR data lies within all permitted geofences and outside all forbidden geofences
- * \param MONRdata MONR struct containing the object coordinate data
+ * \param monitorData monitor data struct containing the object coordinate data
  * \param geofences Vector containing all geofences
  * \return True if MONR coordinate violates a geofence, false if not.
  */
-bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> geofences) {
+bool isViolatingGeofence(const MonitorDataType &monitorData, std::vector<Geofence> geofences) {
 
-    const CartesianPosition monrPoint =
-    {
-		MONRdata.MONR.xPosition / 1000.0, MONRdata.MONR.yPosition / 1000.0,
-		MONRdata.MONR.zPosition / 1000.0, 0.0
-    };
+	const CartesianPosition monitorPoint = monitorData.data.position;
     char isInPolygon = 0;
     int retval = false;
 
     for (Geofence geofence : geofences)
     {
-        isInPolygon = UtilIsPointInPolygon(monrPoint, geofence.polygonPoints.data(),
+		isInPolygon = UtilIsPointInPolygon(monitorPoint, geofence.polygonPoints.data(),
                                      static_cast<unsigned int>(geofence.polygonPoints.size()));
         if (isInPolygon == -1) {
             LogMessage(LOG_LEVEL_WARNING, "No points in polygon");
@@ -466,12 +462,12 @@ bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> 
         else {
             if (geofence.isPermitted)
                 LogMessage(LOG_LEVEL_WARNING,
-                           "Object with MONR transmitter ID %u is outside a permitted area %s",
-						   MONRdata.MONR.header.TransmitterIdU8, geofence.name.c_str());
+						   "Object with ID %u is outside a permitted area %s",
+						   monitorData.ClientID, geofence.name.c_str());
             else
                 LogMessage(LOG_LEVEL_WARNING,
-                           "Object with MONR transmitter ID %u is inside a forbidden area %s",
-						   MONRdata.MONR.header.TransmitterIdU8, geofence.name.c_str());
+						   "Object with ID %u is inside a forbidden area %s",
+						   monitorData.ClientID, geofence.name.c_str());
             retval = true;
         }
     }
@@ -480,31 +476,31 @@ bool isViolatingGeofence(const MonitorDataType &MONRdata, std::vector<Geofence> 
 }
 
 /*!
- * \brief updateNearStartingPositionStatus Loops through the armVerified vector for a trajectory that matches the input MONR packet,
+ * \brief updateNearStartingPositionStatus Loops through the armVerified vector for a trajectory that matches the input monitor data packet,
  *  and sets the armVerified boolean to true if the object is near its starting position. It also performs a check on the entire vector
  *  to determine whether all objects have been verified near starting position.
- * \param MONRdata MONR struct containing the object coordinate data
+ * \param monitorData Monitor data struct containing the object coordinate data
  * \param armVerified Vector containing trajectories paired with a boolean showing whether or not the associated object has been previously verified
     to be near its starting position
  * \return A value according to ::PositionStatus
  */
-PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata, std::vector<std::pair<Trajectory&, bool>> armVerified) {
+PositionStatus updateNearStartingPositionStatus(const MonitorDataType &monitorData, std::vector<std::pair<Trajectory&, bool>> armVerified) {
 
     char ipString[INET_ADDRSTRLEN];
     for (std::pair<Trajectory&, bool> &element : armVerified) {
-        if (element.first.ip == MONRdata.ClientIP) {
+		if (element.first.ip == monitorData.ClientIP) {
             if (element.first.points.empty()) {
                 element.second = true;
                 return OBJECT_HAS_NO_TRAJECTORY;
             }
 
             CartesianPosition trajectoryPoint = element.first.points.front().getCartesianPosition();
-            CartesianPosition objectPosition = MONRToCartesianPosition(MONRdata);
+			CartesianPosition objectPosition = monitorData.data.position;
             if (UtilIsPositionNearTarget(objectPosition, trajectoryPoint, ARM_MAX_DISTANCE_TO_START_M)
                     && UtilIsAngleNearTarget(objectPosition, trajectoryPoint, ARM_MAX_ANGLE_TO_START_DEG)) {
                 if (element.second == false) {
                     LogMessage(LOG_LEVEL_INFO, "Object with IP %s and position (%.2f, %.2f, %.2f) detected within %.2f m and %.2f degrees of the first point (%.2f, %.2f, %.2f) in trajectory %s",
-                               inet_ntop(AF_INET, &MONRdata.ClientIP, ipString, sizeof (ipString)),
+							   inet_ntop(AF_INET, &monitorData.ClientIP, ipString, sizeof (ipString)),
                                objectPosition.xCoord_m, objectPosition.yCoord_m, objectPosition.zCoord_m,
                                ARM_MAX_DISTANCE_TO_START_M, ARM_MAX_ANGLE_TO_START_DEG,
                                trajectoryPoint.xCoord_m, trajectoryPoint.yCoord_m, trajectoryPoint.zCoord_m,
@@ -523,14 +519,14 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRdata,
             else {
                 if (!UtilIsPositionNearTarget(objectPosition, trajectoryPoint, ARM_MAX_DISTANCE_TO_START_M)) {
                     LogMessage(LOG_LEVEL_INFO, "Object with IP %s and position (%.2f, %.2f, %.2f) farther than %.2f m from first point (%.2f, %.2f, %.2f) in trajectory %s",
-                                inet_ntop(AF_INET, &MONRdata.ClientIP, ipString, sizeof (ipString)),
+								inet_ntop(AF_INET, &monitorData.ClientIP, ipString, sizeof (ipString)),
                                 objectPosition.xCoord_m, objectPosition.yCoord_m, objectPosition.zCoord_m,
                                 ARM_MAX_DISTANCE_TO_START_M, trajectoryPoint.xCoord_m, trajectoryPoint.yCoord_m, trajectoryPoint.zCoord_m,
                                 element.first.points.front().getZCoord(), element.first.name.c_str());
                 }
                 else {
                     LogMessage(LOG_LEVEL_INFO, "Object with IP %s (heading: %.2f degrees) not facing direction specified by first point (heading: %.2f degrees) in trajectory %s (tolerance: %.2f degrees)",
-                                inet_ntop(AF_INET, &MONRdata.ClientIP, ipString, sizeof (ipString)), objectPosition.heading_deg,
+								inet_ntop(AF_INET, &monitorData.ClientIP, ipString, sizeof (ipString)), objectPosition.heading_deg,
                                trajectoryPoint.heading_deg, element.first.name.c_str(), ARM_MAX_ANGLE_TO_START_DEG);
                 }
                 element.second = false;

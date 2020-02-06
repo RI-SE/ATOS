@@ -572,9 +572,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			//SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
 			break;
 		case COMM_MONR:
-			// TODO: Decode
 			if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
-				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t) bytesReceived, &monrData, 0);
+				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t) bytesReceived, &monrData);
 				SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData, 0);
 				UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 								RVSSMessageLengthU32, 0);
@@ -2348,7 +2347,7 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 
 
 
-#define MAX_MONR_STRING_LENGTH 116
+#define MAX_MONR_STRING_LENGTH 1024
 /*
 SystemControlBuildRVSSMONRChannelMessage builds a message from data in *MonrData. The message is stored in *RVSSData.
 See the architecture document for the protocol of RVSS. 
@@ -2365,7 +2364,12 @@ I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 	char MonrDataString[MAX_MONR_STRING_LENGTH];
 
 	// TODO: Convert MonrData to string
-	UtilMonitorDataToString(MonrData, MonrDataString, sizeof (MonrDataString));
+	if (UtilMonitorDataToString(MonrData, MonrDataString, sizeof (MonrDataString)) == -1) {
+		// TODO memset rvssdata to 0
+		LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
+		*RVSSDataLengthU32 = 0;
+		return -1;
+	}
 
 	MessageLength = strlen(MonrDataString) + 8;
 	bzero(RVSSData, MessageLength);
