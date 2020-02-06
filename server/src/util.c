@@ -1880,6 +1880,7 @@ ssize_t iCommRecv(enum COMMAND * command, char *data, const size_t messageSize, 
 				return 0;
 			}
 			memcpy(data, message + headerSize, dataLength - headerSize);
+			result -= headerSize;
 		}
 	}
 	else if (result > 0) {
