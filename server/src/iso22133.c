@@ -1085,7 +1085,8 @@ void convertMONRToHostRepresentation(const MONRType * MONRData, ObjectMonitorTyp
 	monitorData->position.isPositionValid = true;
 	monitorData->position.isHeadingValid = MONRData->heading != HEADING_UNAVAILABLE_VALUE;
 	if (monitorData->position.isHeadingValid) {
-		monitorData->position.heading_rad = mapISOHeadingToHostHeading(MONRData->heading / 100.0 * M_PI / 180.0);
+		monitorData->position.heading_rad =
+			mapISOHeadingToHostHeading(MONRData->heading / 100.0 * M_PI / 180.0);
 	}
 
 	// Velocity
@@ -1611,6 +1612,7 @@ double mapISOHeadingToHostHeading(const double isoHeading_rad) {
 	// TODO: Reevaluate this when ISO specification is updated with new heading and rotated coordinate system
 
 	double retval = isoHeading_rad;
+
 	// Host heading is CCW while ISO is CW
 	retval = -retval;
 	// Host heading is measured from the x axis while ISO is measured from the y axis
@@ -1624,4 +1626,3 @@ double mapISOHeadingToHostHeading(const double isoHeading_rad) {
 	}
 	return retval;
 }
-
