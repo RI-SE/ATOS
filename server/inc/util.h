@@ -686,7 +686,7 @@ int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
 int UtilMonitorDataToString(const MonitorDataType monrData, char* monrString, size_t stringLength);
 int UtilStringToMonitorData(const char* monrString, size_t stringLength, MonitorDataType * monrData);
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
-uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_deg);
+uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
 int UtilVincentyDirect(double refLat, double refLon, double a1, double distance, double *resLat, double *resLon, double *a2);
 double UtilDegToRad(double Deg);

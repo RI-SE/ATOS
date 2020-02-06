@@ -766,7 +766,7 @@ uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition t
  */
 uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_deg) {
 
-	const double oneRotation = 360.0;
+	const double oneRotation = 2.0 * M_PI;
 	double posHeading = position.heading_deg, tarHeading = target.heading_deg;
 
 	while (posHeading < 0) {
