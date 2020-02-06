@@ -1681,17 +1681,14 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
 	struct stat st;
 
 	pthread_mutex_lock(&MONRMutex);
-	sprintf(filePath, "%smonrMessageMemory%d.mem", SHARED_MEMORY_PATH, 5);
+    sprintf(filePath, "%smonrMessageMemory.mem", SHARED_MEMORY_PATH);
 	fd = open(filePath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	stat(filePath, &st);
-
-	//printf("File size on open: %ld\n", st.st_size);
 
 	lseek(fd, (sizeof (MONRType)) - 1, SEEK_SET);
 	write(fd, "", 1);
 
 	stat(filePath, &st);
-	//printf("File size after writing: %ld\n", st.st_size);
 
 	// Map memory to created file
 	GSD->MonrMessages =
@@ -1719,6 +1716,7 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, co
 	if (GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects) {
         GSD->MonrMessages[transmitterId] = *MONR;
 	}
+
 	pthread_mutex_unlock(&MONRMutex);
 
 	return Res;
