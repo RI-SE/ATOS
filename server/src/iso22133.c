@@ -919,7 +919,7 @@ ssize_t encodeHEABMessage(const ControlCenterStatusType status, char *heabDataBu
  * \param debug Flag for enabling of debugging
  * \return value according to ::ISOMessageReturnValue
  */
-ISOMessageReturnValue decodeMONRMessage(const char *monrDataBuffer, const size_t bufferLength, ObjectMonitorType * monitorData,
+ISOMessageReturnValue decodeMONRMessage(const char *monrDataBuffer, const size_t bufferLength, uint32_t* objectID, ObjectMonitorType * monitorData,
 										const char debug) {
 
 	MONRType MONRData;
@@ -931,6 +931,7 @@ ISOMessageReturnValue decodeMONRMessage(const char *monrDataBuffer, const size_t
 	ISOMessageReturnValue retval = MESSAGE_OK;
 
 	memset(monitorData, 0, sizeof (*monitorData));
+	*objectID = 0;
 
 	// Decode ISO header
 	if ((retval = decodeISOHeader(p, bufferLength, &MONRData.header, debug)) != MESSAGE_OK) {
@@ -938,6 +939,7 @@ ISOMessageReturnValue decodeMONRMessage(const char *monrDataBuffer, const size_t
 		return retval;
 	}
 	p += sizeof (MONRData.header);
+	*objectID = MONRData.header.TransmitterIdU8;
 
 	// If message is not a MONR message, generate an error
 	if (MONRData.header.MessageIdU16 != MESSAGE_ID_MONR) {

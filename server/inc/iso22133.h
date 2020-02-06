@@ -217,7 +217,7 @@ typedef enum {
 	SUPERVISOR_COMMAND_DEBUG = 2	//!< Place supervisor in debug mode
 } SupervisorCommandType;
 
-ISOMessageReturnValue decodeMONRMessage(const char * monrDataBuffer, const size_t bufferLength, ObjectMonitorType * MonitorData, const char debug);
+ISOMessageReturnValue decodeMONRMessage(const char * monrDataBuffer, const size_t bufferLength, uint32_t * objectID, ObjectMonitorType * MonitorData, const char debug);
 ssize_t encodeSTRTMessage(const struct timeval* timeOfStart, char * strtDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeOSTMMessage(const ObjectCommandType command, char * ostmDataBuffer, const size_t bufferLength, const char debug);
