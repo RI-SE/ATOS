@@ -95,9 +95,6 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 
 	DataDictionarySetOBCStateU8(GSD, OBC_STATE_UNDEFINED);
 
-	//Allocate memory in data dict
-
-
 	return Res;
 }
 
@@ -1372,7 +1369,7 @@ ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType * GSD) {
 		pthread_mutex_lock(&SupervisorTCPPortMutex);
 		GSD->SupervisorTCPPortU16 = atoi(ResultBufferC8);
 		pthread_mutex_unlock(&SupervisorTCPPortMutex);
-	}
+    }
 	else {
 		Res = PARAMETER_NOTFOUND;
 		LogMessage(LOG_LEVEL_ERROR, "SupervisorTCPPort not found!");
@@ -1720,7 +1717,7 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, co
 	Res = WRITE_OK;
 	pthread_mutex_lock(&MONRMutex);
 	if (GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects) {
-		GSD->MonrMessages[0] = *MONR;
+        GSD->MonrMessages[transmitterId] = *MONR;
 	}
 	pthread_mutex_unlock(&MONRMutex);
 
