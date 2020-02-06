@@ -405,7 +405,9 @@ Geofence parseGeofenceFile(const std::string geofenceFile) {
                     pos.xCoord_m = stod(match[1]);
                     pos.yCoord_m = stod(match[2]);
                     pos.zCoord_m = (geofence.maxHeight + geofence.minHeight) / 2.0;
-                    pos.heading_deg = 0;
+					pos.isPositionValid = true;
+					pos.heading_rad = 0;
+					pos.isHeadingValid = false;
 
                     LogMessage(LOG_LEVEL_DEBUG, "Point: (%.3f, %.3f, %.3f)",
                                pos.xCoord_m,
@@ -497,7 +499,7 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &monitorDa
             CartesianPosition trajectoryPoint = element.first.points.front().getCartesianPosition();
 			CartesianPosition objectPosition = monitorData.data.position;
             if (UtilIsPositionNearTarget(objectPosition, trajectoryPoint, ARM_MAX_DISTANCE_TO_START_M)
-                    && UtilIsAngleNearTarget(objectPosition, trajectoryPoint, ARM_MAX_ANGLE_TO_START_DEG)) {
+					&& UtilIsAngleNearTarget(objectPosition, trajectoryPoint, ARM_MAX_ANGLE_TO_START_DEG * M_PI / 180.0)) {
                 if (element.second == false) {
                     LogMessage(LOG_LEVEL_INFO, "Object with IP %s and position (%.2f, %.2f, %.2f) detected within %.2f m and %.2f degrees of the first point (%.2f, %.2f, %.2f) in trajectory %s",
 							   inet_ntop(AF_INET, &monitorData.ClientIP, ipString, sizeof (ipString)),
@@ -526,8 +528,8 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &monitorDa
                 }
                 else {
                     LogMessage(LOG_LEVEL_INFO, "Object with IP %s (heading: %.2f degrees) not facing direction specified by first point (heading: %.2f degrees) in trajectory %s (tolerance: %.2f degrees)",
-								inet_ntop(AF_INET, &monitorData.ClientIP, ipString, sizeof (ipString)), objectPosition.heading_deg,
-                               trajectoryPoint.heading_deg, element.first.name.c_str(), ARM_MAX_ANGLE_TO_START_DEG);
+								inet_ntop(AF_INET, &monitorData.ClientIP, ipString, sizeof (ipString)), objectPosition.heading_rad * 180.0 / M_PI,
+							   trajectoryPoint.heading_rad * 180.0 / M_PI, element.first.name.c_str(), ARM_MAX_ANGLE_TO_START_DEG);
                 }
                 element.second = false;
                 return SINGLE_OBJECT_NOT_NEAR_START;
