@@ -758,16 +758,19 @@ uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition t
 }
 
 /*!
- * \brief UtilIsAngleNearTarget Checks if angle is within tolerence_deg of target angle
+ * \brief UtilIsAngleNearTarget Checks if angle is within tolerence of target angle
  * \param position Position with angle to verify
  * \param target Target position with angle
- * \param tolerance_deg Angle tolerance defining "near"
- * \return true if position is within tolerance_deg of target, false otherwise
+ * \param tolerance Angle tolerance defining "near"
+ * \return true if position is within tolerance of target, false otherwise
  */
-uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_deg) {
+uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance) {
 
 	const double oneRotation = 2.0 * M_PI;
-	double posHeading = position.heading_deg, tarHeading = target.heading_deg;
+	double posHeading = position.heading_rad, tarHeading = target.heading_rad;
+
+	if (!position.isHeadingValid || !target.isHeadingValid)
+		return 0;
 
 	while (posHeading < 0) {
 		posHeading += oneRotation;
@@ -776,7 +779,7 @@ uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition targ
 		tarHeading += oneRotation;
 	}
 
-	return fabs(posHeading - tarHeading) <= tolerance_deg;
+	return fabs(posHeading - tarHeading) <= tolerance;
 }
 
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition * OP) {
