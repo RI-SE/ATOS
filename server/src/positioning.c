@@ -274,25 +274,25 @@ int ASCIIToObjectMonitorData(const char *asciiBuffer, ObjectMonitorType * monito
 	monitorData->position.isPositionValid = true;
 
 	token = strtok(NULL, delim);
-	monitorData->position.xCoord_m = (int32_t) strtol(token, &endPtr, NumberBaseDecimal);
+	monitorData->position.xCoord_m = strtod(token, &endPtr);
 	if (endPtr == token) {
 		monitorData->position.isPositionValid = false;
 	}
 
 	token = strtok(NULL, delim);
-	monitorData->position.yCoord_m = (int32_t) strtol(token, &endPtr, NumberBaseDecimal);
+	monitorData->position.yCoord_m = strtod(token, &endPtr);
 	if (endPtr == token) {
 		monitorData->position.isPositionValid = false;
 	}
 
 	token = strtok(NULL, delim);
-	monitorData->position.zCoord_m = (int32_t) strtol(token, &endPtr, NumberBaseDecimal);
+	monitorData->position.zCoord_m = strtod(token, &endPtr);
 	if (endPtr == token) {
 		monitorData->position.isPositionValid = false;
 	}
 
 	token = strtok(NULL, delim);
-	monitorData->position.heading_deg = (uint16_t) strtoul(token, &endPtr, NumberBaseDecimal);
+	monitorData->position.heading_rad = strtod(token, &endPtr) * M_PI / 180.0;
 	if (endPtr == token) {
 		monitorData->position.isHeadingValid = false;
 	}
@@ -301,13 +301,13 @@ int ASCIIToObjectMonitorData(const char *asciiBuffer, ObjectMonitorType * monito
 	monitorData->speed.isValid = true;
 
 	token = strtok(NULL, delim);
-	monitorData->speed.longitudinal_m_s = (int16_t) strtol(token, &endPtr, NumberBaseDecimal);
+	monitorData->speed.longitudinal_m_s = strtod(token, &endPtr);
 	if (endPtr == token) {
 		monitorData->speed.isValid = false;
 	}
 
 	token = strtok(NULL, delim);
-	monitorData->speed.lateral_m_s = (int16_t) strtol(token, &endPtr, NumberBaseDecimal);
+	monitorData->speed.lateral_m_s = strtod(token, &endPtr);
 	if (endPtr == token) {
 		monitorData->speed.isValid = false;
 	}
@@ -316,13 +316,13 @@ int ASCIIToObjectMonitorData(const char *asciiBuffer, ObjectMonitorType * monito
 	monitorData->acceleration.isValid = true;
 
 	token = strtok(NULL, delim);
-	monitorData->acceleration.longitudinal_m_s2 = (int16_t) strtol(token, &endPtr, NumberBaseDecimal);
+	monitorData->acceleration.longitudinal_m_s2 = strtod(token, &endPtr);
 	if (endPtr == token) {
 		monitorData->acceleration.isValid = false;
 	}
 
 	token = strtok(NULL, delim);
-	monitorData->acceleration.lateral_m_s2 = (int16_t) strtol(token, &endPtr, NumberBaseDecimal);
+	monitorData->acceleration.lateral_m_s2 = strtod(token, &endPtr);
 	if (endPtr == token) {
 		monitorData->acceleration.isValid = false;
 	}
