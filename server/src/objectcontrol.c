@@ -229,7 +229,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 pcSendBuffer[MBUS_MAX_DATALEN];
 	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
 	HeaderType HeaderData;
-	MONRType MONRData;
+	MonitorDataType monitorData;
 	DOTMType DOTMData;
 	TRAJInfoType TRAJInfoData;
 	VOILType VOILData;
@@ -387,12 +387,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				memset(buffer, 0, sizeof (buffer));
 				receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex], buffer, sizeof (buffer));
 
-				if (receivedMONRData > 0) {
-					LogMessage(LOG_LEVEL_DEBUG, "Recieved new data from %s %d %d: %s",
-							   object_address_name[iIndex], object_udp_port[iIndex], receivedMONRData,
+				if (receivedMONRData > 0 && getISOMessageType(buffer, receivedMONRData, 0) == MESSAGE_ID_MONR) {
+					LogMessage(LOG_LEVEL_DEBUG, "Recieved %d bytes of new data from %s %d: %s",
+							   receivedMONRData, object_address_name[iIndex], object_udp_port[iIndex],
 							   buffer);
 
-					if (decodeMONRMessage(buffer, receivedMONRData, &MONRData, 0) != MESSAGE_OK) {
+					monitorData.ClientIP = safety_object_addr[iIndex].sin_addr.s_addr;
+					if (decodeMONRMessage(buffer, receivedMONRData, &monitorData.ClientID, &monitorData.data, 0) != MESSAGE_OK) {
 						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object",
 								   object_address_name[iIndex]);
 						vDisconnectObject(&safety_socket_fd[iIndex]);
@@ -401,12 +402,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 
 					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
-						// Append IP to buffer
-						memcpy(&buffer[receivedMONRData], &safety_object_addr[iIndex].sin_addr.s_addr,
-							   sizeof (in_addr_t));
+						// Place struct in buffer
+						memcpy(&buffer, &monitorData, sizeof (monitorData));
 						// Send MONR message as bytes
-
-						if (iCommSend(COMM_MONR, buffer, (size_t) (receivedMONRData) + sizeof (in_addr_t)) <
+						if (iCommSend(COMM_MONR, buffer, sizeof (monitorData)) <
 							0) {
 							LogMessage(LOG_LEVEL_ERROR,
 									   "Fatal communication fault when sending MONR command - entering error state");
@@ -417,20 +416,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 
 					//Store MONR in GSD
-					//UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
-					for (i = 0;
-						 i <
-						 (MONRData.header.MessageLengthU32 + sizeof (MONRData.header) +
-						  sizeof (MONRData.footer)); i++)
-						GSD->MONRData[i] = buffer[i];
-					GSD->MONRSizeU8 =
-						MONRData.header.MessageLengthU32 + sizeof (MONRData.header) +
-						sizeof (MONRData.footer);
-					memset(buffer, 0, sizeof (buffer));
-					memcpy(buffer, object_address_name[iIndex], strlen(object_address_name[iIndex]));
-					strcat(buffer, ";0;");
-					MONRToASCII(&MONRData, buffer + strlen(buffer), sizeof (buffer) - strlen(buffer), 0);
+					memcpy(GSD->MONRData, buffer, receivedMONRData);
+					GSD->MONRSizeU8 = (unsigned char) receivedMONRData;
 
+					memset(buffer, 0, sizeof (buffer));
+					UtilMonitorDataToString(monitorData, buffer, sizeof (buffer));
 
 					if (ASPData.MTSPU32 != 0) {
 						//Add MTSP to MONR if not 0
@@ -450,14 +440,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 							TimeCap1 = (uint64_t) CurrentTimeStruct.tv_sec * 1000 + (uint64_t) CurrentTimeStruct.tv_usec / 1000;	//Calculate initial timestamp
 
-							OP[iIndex].x = ((double)MONRData.xPosition) / 1000;	//Set x and y on OP (ObjectPosition)
-							OP[iIndex].y = ((double)MONRData.yPosition) / 1000;
+							OP[iIndex].x = monitorData.data.position.xCoord_m;	//Set x and y on OP (ObjectPosition)
+							OP[iIndex].y = monitorData.data.position.yCoord_m;
 
 							//OP[iIndex].OrigoDistance = sqrt(pow(OP[iIndex].x,2) + pow(OP[iIndex].y,2)); //Calculate hypotenuse
 
 							// TODO: check use of this function since it should take two lat/long points but is here used with x/y
 							UtilCalcPositionDelta(OriginLatitudeDbl, OriginLongitudeDbl,
-												  MONRData.xPosition / 1e7, MONRData.yPosition / 1e7,
+												  monitorData.data.position.xCoord_m, monitorData.data.position.yCoord_m,
 												  &OP[iIndex]);
 
 							if (OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex) {
@@ -507,7 +497,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								//ObjectControlBuildASPMessage(buffer, &ASPData, 0);
 								DataDictionarySetRVSSAsp(GSD, &ASPData);
 
-								if (MONRData.gpsQmsOfWeek % ASPDebugRate == 0) {
+								if (TimeGetAsGPSqmsOfWeek(&monitorData.data.timestamp) % ASPDebugRate == 0) {
 									printf("%d, %d, %3.3f, %s, %s\n", CurrentTimeU32, StartTimeU32,
 										   ASPData.TimeToSyncPointDbl, object_address_name[iIndex],
 										   ASP[i].MasterIP);
@@ -525,11 +515,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 					}
 					OP[iIndex].Speed =
-						sqrt(pow(MONRData.lateralSpeed, 2) + pow(MONRData.longitudinalSpeed, 2));
+						(float) sqrt(pow(monitorData.data.speed.lateral_m_s, 2) + pow(monitorData.data.speed.longitudinal_m_s, 2));
 				}
 				else if (receivedMONRData > 0)
-					LogMessage(LOG_LEVEL_INFO, "MONR length error (should be %d but is %ld) from %s.",
-							   sizeof (MONRType), object_address_name[iIndex]);
+					LogMessage(LOG_LEVEL_WARNING, "Received unhandled message on monitoring socket");
 			}
 		}
 
@@ -1880,7 +1869,7 @@ int ObjectControlSendUDPData(int *sockfd, struct sockaddr_in *addr, char *SendDa
 }
 
 
-static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
+size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 	ssize_t result = 0;
 	size_t recvDataSize = 0;
 
