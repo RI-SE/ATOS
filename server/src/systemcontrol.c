@@ -622,7 +622,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			DataDictionaryGetOriginAltitudeC8(GSD, TextBuffer20, SMALL_BUFFER_SIZE_20);
 			strcat(ControlResponseBuffer, TextBuffer20);
 			strcat(ControlResponseBuffer, ";");
-			iCommSend(COMM_OSEM, ControlResponseBuffer, sizeof (ControlResponseBuffer));
+
 			SystemControlSendControlResponse(strlen(ParameterListC8) >
 											 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
 											 SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetTestOrigin:",
