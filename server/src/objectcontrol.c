@@ -801,6 +801,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						DataDictionaryGetOriginLongitudeC8(GSD, OriginLongitude, SMALL_BUFFER_SIZE_0);
 						DataDictionaryGetOriginAltitudeC8(GSD, OriginAltitude, SMALL_BUFFER_SIZE_0);
 
+						memset(pcSendBuffer, 0, sizeof(pcSendBuffer));
+						snprintf(pcSendBuffer, sizeof (pcSendBuffer), "%u;", TimeGetAsGPSweek(&currentTime));
+						snprintf(pcSendBuffer + strlen(pcSendBuffer), sizeof (pcSendBuffer) - strlen(pcSendBuffer), "%s;%s;%s;%s;",
+								 OriginLatitude, OriginLongitude, OriginAltitude, OriginHeading);
+
 						if (iCommSend(COMM_OSEM, pcSendBuffer, strlen(pcSendBuffer) + 1) < 0) {
 							LogMessage(LOG_LEVEL_ERROR,
 									   "Fatal communication fault when sending OSEM command - entering error state");
