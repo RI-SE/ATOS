@@ -60,7 +60,7 @@ void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualiz
 	sprintf(zPosString, "%.3f", _monitorData->data.position.zCoord_m);
 	char headingString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(headingString, "%.2f", _monitorData->data.position.heading_deg);
+	sprintf(headingString, "%.2f", _monitorData->data.position.heading_rad * 180.0 / M_PI);
 	char longSpeedString[ENOUGH_BUFFER_SIZE];
 
 	sprintf(longSpeedString, "%.3f", _monitorData->data.speed.longitudinal_m_s);
@@ -157,7 +157,7 @@ int main() {
 												  monitorData.data.position.xCoord_m,
 												  monitorData.data.position.yCoord_m,
 												  monitorData.data.position.zCoord_m,
-												  monitorData.data.position.heading_deg,
+												  monitorData.data.position.heading_rad * 180.0 / M_PI,
 												  monitorData.data.speed.longitudinal_m_s,
 												  objectStateToASCII(monitorData.data.state));
 			sizeOfVisualizationMessage += INET_ADDRSTRLEN;
