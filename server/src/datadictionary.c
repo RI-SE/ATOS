@@ -1685,6 +1685,7 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
 	fd = open(filePath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	stat(filePath, &st);
 
+// this memory does not change size as more MONR messages are added, and it is unclear where in the memory stuff is being written
 	lseek(fd, (sizeof (MONRType)) - 1, SEEK_SET);
 	write(fd, "", 1);
 
