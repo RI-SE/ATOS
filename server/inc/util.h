@@ -683,7 +683,7 @@ void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
 
 
-int UtilMonitorDataToString(MonitorDataType monrData, char* monrString, size_t stringLength);
+int UtilMonitorDataToString(const MonitorDataType monrData, char* monrString, size_t stringLength);
 int UtilStringToMonitorData(const char* monrString, size_t stringLength, MonitorDataType * monrData);
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_deg);

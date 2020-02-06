@@ -696,12 +696,13 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
  * \param stringLength Length of string in which converted data is to be placed
  * \return 0 upon success, -1 otherwise
  */
-int UtilMonitorDataToString(MonitorDataType monitorData, char *monitorDataString, size_t stringLength) {
+int UtilMonitorDataToString(const MonitorDataType monitorData, char *monitorDataString, size_t stringLength) {
 	memset(monitorDataString, 0, stringLength);
 	inet_ntop(AF_INET, &monitorData.ClientIP, monitorDataString,
 			  (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t) stringLength);
 	strcat(monitorDataString, ";0;");
-	if (monitorDataToASCII(&monitorData.data, monitorDataString + strlen(monitorDataString), stringLength - strlen(monitorDataString)) != 0) {
+
+	if (objectMonitorDataToASCII(&monitorData.data, monitorDataString + strlen(monitorDataString), stringLength - strlen(monitorDataString)) < 0) {
 		memset(monitorDataString, 0, stringLength);
 		return -1;
 	}
@@ -715,24 +716,24 @@ int UtilMonitorDataToString(MonitorDataType monitorData, char *monitorDataString
  * \param monrData Struct containing relevant monitor data
  * \return 0 upon success, -1 otherwise
  */
-int UtilStringToMonitorData(const char *monrString, size_t stringLength, MonitorDataType * monrData) {
+int UtilStringToMonitorData(const char *monitorString, size_t stringLength, MonitorDataType * monitorData) {
 	const char *token;
 	const char delim[] = ";";
 	struct in_addr addr;
-	char *copy = strdup(monrString);
+	char *copy = strdup(monitorString);
 
 	token = strtok(copy, delim);
 
 	// IP address
 	inet_pton(AF_INET, token, &addr);
-	monrData->ClientIP = addr.s_addr;
+	monitorData->ClientIP = addr.s_addr;
 
 	// Skip the 0
 	token = strtok(NULL, delim);
 
 	// MONR data
 	token = strtok(NULL, delim);
-	if (ASCIIToMONR(token, &monrData->MONR, 0) == MESSAGE_OK)
+	if (ASCIIToObjectMonitorData(token, &monitorData->data) == 0)
 		return 0;
 	else
 		return -1;
@@ -3584,150 +3585,22 @@ I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug)
 }
 
 /*!
- * \brief UtilPopulateMonitorDataStruct Takes an array of raw MONR data and fills a MONRType struct with the content
- * \param rawMONR Array of raw MONR data
- * \param rawMONRsize Size of raw MONR data array
- * \param MONR Struct where MONR data should be placed
- * \param debug Boolean enabling debug printouts
+ * \brief UtilPopulateMonitorDataStruct Takes an array of raw monitor data and fills a monitor data struct with the content
+ * \param rawData Array of raw monitor data
+ * \param rawDataSize Size of raw monitor data array
+ * \param MONR Struct where monitor data should be placed
  * \return -1 on failure, 0 on success
  */
-I32 UtilPopulateMonitorDataStruct(C8 * rawMONR, size_t rawMONRsize, MonitorDataType * monitorData, U8 debug) {
-	U16 Crc = 0, U16Data = 0;
-	I16 I16Data = 0;
-	U32 U32Data = 0;
-	I32 I32Data = 0;
-	U64 U64Data = 0;
-	C8 *rdPtr = rawMONR, *monrStruct;	// Pointer to keep track of where in rawMONR we are currently reading
-	U16 contentLength = 0;
-	in_addr_t IPData = 0;
-	const size_t monrPacketSize = sizeof (monitorData->MONR) - sizeof (monitorData->MONR.header)
-		- sizeof (monitorData->MONR.footer.Crc) - sizeof (monitorData->MONR.monrStructValueID)
-		- sizeof (monitorData->MONR.monrStructContentLength);
+int UtilPopulateMonitorDataStruct(const char * rawData, const size_t rawDataSize, MonitorDataType * monitorData) {
 
-	if (rawMONRsize < sizeof (MONRType)) {
-		LogMessage(LOG_LEVEL_ERROR, "Raw MONR array too small to hold all necessary MONR data, %d < %d.",
-				   rawMONRsize, sizeof (MONRType));
+	if (rawDataSize != sizeof (MonitorDataType)) {
+		errno = EMSGSIZE;
+		LogMessage(LOG_LEVEL_ERROR, "Raw monitor data array wrong size, %d != %d",
+				   rawDataSize, sizeof (MonitorDataType));
 		return -1;
 	}
 
-	// ISO message header
-	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	monitorData->MONR.header.SyncWordU16 = U16Data;
-	rdPtr += sizeof (U16Data);
-	U16Data = 0;
-
-	monitorData->MONR.header.TransmitterIdU8 = *(rdPtr++);
-	monitorData->MONR.header.MessageCounterU8 = *(rdPtr++);
-	monitorData->MONR.header.AckReqProtVerU8 = *(rdPtr++);
-
-	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	monitorData->MONR.header.MessageIdU16 = U16Data;
-	rdPtr += sizeof (U16Data);
-	U16Data = 0;
-
-	memcpy(&U32Data, rdPtr, sizeof (U32Data));
-	monitorData->MONR.header.MessageLengthU32 = U32Data;
-	rdPtr += sizeof (U32Data);
-	U32Data = 0;
-
-	// ISO content header?
-	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	if (U16Data == VALUE_ID_MONR_STRUCT) {
-		rdPtr += sizeof (U16Data);
-
-		memcpy(&contentLength, rdPtr, sizeof (contentLength));
-		rdPtr += sizeof (contentLength);
-
-
-		if (contentLength < monrPacketSize) {
-			LogMessage(LOG_LEVEL_ERROR,
-					   "Content length %u too small to hold necessary MONR data (expected %u)", contentLength,
-					   monrPacketSize);
-			return -1;
-		}
-		else if (contentLength > monrPacketSize) {
-			LogMessage(LOG_LEVEL_ERROR,
-					   "Content length %u too large to follow MONR data specification (expected %u)",
-					   contentLength, monrPacketSize);
-			return -1;
-		}
-
-	}
-	else if (debug) {
-		LogPrint("Received MONR message without content header: corrupt data may result");
-	}
-
-	U16Data = 0;
-
-	memcpy(&U32Data, rdPtr, sizeof (U32Data));
-	monitorData->MONR.gpsQmsOfWeek = U32Data;
-	rdPtr += sizeof (U32Data);
-	U32Data = 0;
-
-	memcpy(&I32Data, rdPtr, sizeof (I32Data));
-	monitorData->MONR.xPosition = I32Data;
-	rdPtr += sizeof (I32Data);
-	I32Data = 0;
-
-	memcpy(&I32Data, rdPtr, sizeof (I32Data));
-	monitorData->MONR.yPosition = I32Data;
-	rdPtr += sizeof (I32Data);
-	I32Data = 0;
-
-	memcpy(&I32Data, rdPtr, sizeof (I32Data));
-	monitorData->MONR.zPosition = I32Data;
-	rdPtr += sizeof (I32Data);
-	I32Data = 0;
-
-	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	monitorData->MONR.heading = U16Data;
-	rdPtr += sizeof (U16Data);
-	U16Data = 0;
-
-	memcpy(&I16Data, rdPtr, sizeof (I16Data));
-	monitorData->MONR.longitudinalSpeed = I16Data;
-	rdPtr += sizeof (I16Data);
-	I16Data = 0;
-
-	memcpy(&I16Data, rdPtr, sizeof (I16Data));
-	monitorData->MONR.lateralSpeed = I16Data;
-	rdPtr += sizeof (I16Data);
-	I16Data = 0;
-
-	memcpy(&I16Data, rdPtr, sizeof (I16Data));
-	monitorData->MONR.longitudinalAcc = I16Data;
-	rdPtr += sizeof (I16Data);
-	I16Data = 0;
-
-	memcpy(&I16Data, rdPtr, sizeof (I16Data));
-	monitorData->MONR.lateralAcc = I16Data;
-	rdPtr += sizeof (I16Data);
-	I16Data = 0;
-
-	monitorData->MONR.driveDirection = *(rdPtr++);
-	monitorData->MONR.state = *(rdPtr++);
-	monitorData->MONR.readyToArm = *(rdPtr++);
-	monitorData->MONR.errorStatus = *(rdPtr++);
-
-	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	monitorData->MONR.footer.Crc = U16Data;
-	rdPtr += sizeof (U16Data);
-	U16Data = 0;
-
-	memcpy(&IPData, rdPtr, sizeof (IPData));
-	monitorData->ClientIP = IPData;
-	rdPtr += sizeof (IPData);
-	IPData = 0;
-
-	if (debug == 1) {
-		LogPrint("MONR:");
-		LogPrint("SyncWord = %d", monitorData->MONR.header.SyncWordU16);
-		LogPrint("TransmitterId = %d", monitorData->MONR.header.TransmitterIdU8);
-		LogPrint("PackageCounter = %d", monitorData->MONR.header.MessageCounterU8);
-		LogPrint("AckReq = %d", monitorData->MONR.header.AckReqProtVerU8);
-		LogPrint("MessageLength = %d", monitorData->MONR.header.MessageLengthU32);
-		LogPrint("GPSQMSOW = %u", monitorData->MONR.gpsQmsOfWeek);
-	}
+	memcpy(monitorData, rawData, rawDataSize);
 
 	return 0;
 }
