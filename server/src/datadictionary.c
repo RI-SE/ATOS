@@ -1694,10 +1694,15 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
 	// Map memory to created file
 	GSD->MonrMessages =
 		(MONRType *) mmap(NULL, (sizeof (MONRType)), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	close(fd);
 
-	LogMessage(LOG_LEVEL_INFO, "Init MonrMessage memory");
-
+    if (GSD->MonrMessages == MAP_FAILED) {
+            LogPrint(LOG_LEVEL_ERROR, "mmap failed: %s", strerror(errno));
+            close(fd);
+    }
+    else{
+        LogMessage(LOG_LEVEL_INFO, "Init MonrMessage memory");
+    }
+    close(fd);
 	pthread_mutex_unlock(&MONRMutex);
 	return Res;
 }
@@ -1747,7 +1752,7 @@ ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, const U3
         LogPrint(LOG_LEVEL_ERROR, "Unable to read MonrMessage in DataDictionary");
     }
 	pthread_mutex_unlock(&MONRMutex);
-    return Res
+    return Res;
 }
 
 /*!
