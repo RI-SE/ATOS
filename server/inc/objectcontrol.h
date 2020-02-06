@@ -21,8 +21,6 @@
   ------------------------------------------------------------*/
 void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel);
 
-I32 ObjectControlBuildOSTMMessage(C8* MessageBuffer, OSTMType *OSTMData, C8 CommandOption, U8 debug);
-I32 ObjectControlBuildHEABMessage(C8* MessageBuffer, HEABType *HEABData, TimeType *GPSTime, U8 CCStatus, U8 debug);
 int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, unsigned short Curvature, unsigned char Mode, char debug);
 I32 ObjectControlBuildSYPMMessage(C8* MessageBuffer, SYPMType *SYPMData, U32 SyncPoint, U32 StopTime, U8 debug);
 I32 ObjectControlBuildMTSPMessage(C8* MessageBuffer, MTSPType *MTSPData, U32 SyncTimestamp, U8 debug);
@@ -30,5 +28,4 @@ I32 ObjectControlBuildTRAJMessageHeader(C8* MessageBuffer, I32 *RowCount, Header
 I32 ObjectControlBuildTRAJMessage(C8* MessageBuffer, FILE *fd, I32 RowCount, DOTMType *DOTMType, U8 debug);
 I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* SimData, U8 debug);
 I32 ObjectControlSendTRAJMessage(C8* Filename, I32 *Socket, I32 RowCount, C8 *IP, U32 Port, DOTMType *DOTMData, U8 debug);
-int ObjectControlOSEMtoASCII(OSEMType *OSEMData,char *GPSWeek, char *GPSLatitude, char *GPSLongitude, char *GPSAltitude);  
 #endif //__OBJECTCONTROL_H_INCLUDED__

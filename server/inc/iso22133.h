@@ -103,6 +103,25 @@ typedef struct
 #define VALUE_ID_OSEM_MIN_POSITIONING_ACCURACY 0x0074
 
 
+//! *************************** OSTM
+typedef struct
+{
+  HeaderType header;
+  uint16_t stateValueID;
+  uint16_t stateContentLength;
+  uint8_t state;
+  FooterType footer;
+} OSTMType; //16 bytes
+
+//! OSTM value IDs
+#define VALUE_ID_OSTM_STATE_CHANGE_REQUEST 0x0064
+typedef enum {
+	OBJECT_COMMAND_ARM = 0x02,				//!< Request to arm the target object
+	OBJECT_COMMAND_DISARM = 0x03,			//!< Request to disarm the target object
+	OBJECT_COMMAND_REMOTE_CONTROL = 0x06	//!< Request for remote control of the target object
+} ObjectCommandType;
+
+
 //! *************************** STRT
 typedef struct
 {
@@ -121,7 +140,31 @@ typedef struct
 #define VALUE_ID_STRT_GPS_WEEK 0x0003
 
 
+//! *************************** HEAB
+#define HEAB_FREQUENCY_HZ 100
+typedef struct
+{
+  HeaderType header;
+  uint16_t HEABStructValueID;
+  uint16_t HEABStructContentLength;
+  uint32_t GPSQmsOfWeek;
+  uint8_t controlCenterStatus;
+  FooterType footer;
+} HEABType; //16 bytes
+
+//! HEAB value IDs
+#define VALUE_ID_HEAB_STRUCT 0x0090
+typedef enum {
+	CONTROL_CENTER_STATUS_INIT = 0x00,
+	CONTROL_CENTER_STATUS_READY = 0x01,
+	CONTROL_CENTER_STATUS_ABORT = 0x02,
+	CONTROL_CENTER_STATUS_RUNNING = 0x03,
+	CONTROL_CENTER_STATUS_TEST_DONE = 0x04,
+	CONTROL_CENTER_STATUS_NORMAL_STOP = 0x05
+} ControlCenterStatusType;
+
 //! *************************** MONR
+#define MONR_EXPECTED_FREQUENCY_HZ 100
 typedef struct
 {
 	HeaderType header;
@@ -384,6 +427,8 @@ typedef enum {
 ISOMessageReturnValue decodeMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
 ssize_t encodeSTRTMessage(const struct timeval* timeOfStart, char * strtDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeOSTMMessage(const ObjectCommandType command, char * ostmDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeHEABMessage(const ControlCenterStatusType status, char * heabDataBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
 ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);
