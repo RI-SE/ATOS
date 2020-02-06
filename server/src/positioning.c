@@ -164,13 +164,13 @@ ObjectErrorType ASCIIToErrorStatus(const char * asciiString) {
 }
 
 /*!
- * \brief monitorDataToASCII Converts a monitor data struct into human readable ASCII text
+ * \brief objectMonitorDataToASCII Converts a monitor data struct into human readable ASCII text
  * \param MONRData Struct containing monitor data
  * \param asciiBuffer Buffer in which to print ASCII text representation
  * \param bufferLength Length of ASCII buffer
- * \return value according to ::ISOMessageReturnValue
+ * \return Number of bytes printed
  */
-int monitorDataToASCII(const ObjectMonitorType * monitorData, char *asciiBuffer, const size_t bufferLength) {
+int objectMonitorDataToASCII(const ObjectMonitorType * monitorData, char *asciiBuffer, const size_t bufferLength) {
 
 	memset(asciiBuffer, 0, bufferLength);
 
@@ -234,16 +234,16 @@ int monitorDataToASCII(const ObjectMonitorType * monitorData, char *asciiBuffer,
 	snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
 			 ";");
 
-	return 0;
+	return (int) strlen(asciiBuffer);
 }
 
 
 
 
 /*!
- * \brief ASCIIToMonitorData Converts an ASCII string into a monitor data struct
+ * \brief ASCIIToObjectMonitorData Converts an ASCII string into a monitor data struct
  * \param asciiBuffer Buffer containing ASCII text representation
- * \param MONRData Struct containing monitor data
+ * \param monitorData Struct containing monitor data
  * \return 0 on success, -1 otherwise
  */
 int ASCIIToObjectMonitorData(const char *asciiBuffer, ObjectMonitorType * monitorData) {
