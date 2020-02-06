@@ -176,8 +176,9 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 
 		case COMM_MONR:
-			if (!isFirstInit)
+			if (!isFirstInit) {
 				vLogMonitorData(busReceiveBuffer, receivedBytes, recvTime, pcLogFile, pcLogFileComp);
+			}
 			else
 				LogMessage(LOG_LEVEL_WARNING, "Received command %u while log uninitialized", command);
 			break;
@@ -188,9 +189,14 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			// Returns first datapoint of OSEM (GPSWeek)
 			char *token = strtok(busReceiveBuffer, ";");
 
-			GPSweek = atoi(token);
+			if (token != NULL) {
+				GPSweek = atoi(token);
+				LogMessage(LOG_LEVEL_INFO, "GPS week of OSEM: %d", GPSweek);
+			}
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "Could not read GPS week in OSEM");
+			}
 
-			LogMessage(LOG_LEVEL_INFO, "GPS week of OSEM: %d", GPSweek);
 
 			// Rest of OSEM if needed
 			/*
@@ -505,7 +511,6 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 			COMM_CONTROL, COMM_ABORT, COMM_INIT, COMM_CONNECT, COMM_OBC_STATE, COMM_DISCONNECT, COMM_LOG,
 			COMM_VIOP, COMM_INV);
 	(void)fwrite(pcBuffer, 1, strlen(pcBuffer), filefd);
-
 
 	fclose(filefd);
 }
