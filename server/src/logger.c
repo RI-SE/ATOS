@@ -585,8 +585,8 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 	TimeGetAsDateTime(&recvTime, "%Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof (DateBuffer));
 
 	printedBytes = snprintf(printBuffer, sizeof (printBuffer), "%s;%ld;%ld;%d;", DateBuffer,
-							TimeGetAsUTCms(&monitorData.data.timestamp), TimeGetAsGPSms(&monitorData.data.timestamp),
-							(unsigned char)COMM_MONR);
+							TimeGetAsUTCms(&monitorData.data.timestamp),
+							TimeGetAsGPSms(&monitorData.data.timestamp), (unsigned char)COMM_MONR);
 
 	totalPrintedBytes += printedBytes;
 	if (printedBytes < 0 || (size_t) totalPrintedBytes > sizeof (printBuffer)) {
@@ -594,8 +594,9 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 		return;
 	}
 
-	printedBytes = snprintf(printBuffer + totalPrintedBytes, sizeof (printBuffer) - (size_t) totalPrintedBytes, "%s;",
-							inet_ntop(AF_INET, &monitorData.ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
+	printedBytes =
+		snprintf(printBuffer + totalPrintedBytes, sizeof (printBuffer) - (size_t) totalPrintedBytes, "%s;",
+				 inet_ntop(AF_INET, &monitorData.ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
 
 	totalPrintedBytes += printedBytes;
 	if (printedBytes < 0 || (size_t) totalPrintedBytes > sizeof (printBuffer)) {
@@ -603,8 +604,9 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 		return;
 	}
 
-	printedBytes = snprintf(printBuffer + totalPrintedBytes, sizeof (printBuffer) - (size_t) totalPrintedBytes, "%u;",
-						   monitorData.ClientID);
+	printedBytes =
+		snprintf(printBuffer + totalPrintedBytes, sizeof (printBuffer) - (size_t) totalPrintedBytes, "%u;",
+				 monitorData.ClientID);
 
 	totalPrintedBytes += printedBytes;
 	if (printedBytes < 0 || (size_t) totalPrintedBytes > sizeof (printBuffer)) {
@@ -612,7 +614,8 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 		return;
 	}
 
-	objectMonitorDataToASCII(&monitorData.data, printBuffer + totalPrintedBytes, sizeof (printBuffer) - (size_t) totalPrintedBytes);
+	objectMonitorDataToASCII(&monitorData.data, printBuffer + totalPrintedBytes,
+							 sizeof (printBuffer) - (size_t) totalPrintedBytes);
 
 	filefd = fopen(pcLogFile, ACCESS_MODE_APPEND_AND_READ);
 	if (filefd == NULL) {
