@@ -702,7 +702,9 @@ int UtilMonitorDataToString(const MonitorDataType monitorData, char *monitorData
 			  (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t) stringLength);
 	strcat(monitorDataString, ";0;");
 
-	if (objectMonitorDataToASCII(&monitorData.data, monitorDataString + strlen(monitorDataString), stringLength - strlen(monitorDataString)) < 0) {
+	if (objectMonitorDataToASCII
+		(&monitorData.data, monitorDataString + strlen(monitorDataString),
+		 stringLength - strlen(monitorDataString)) < 0) {
 		memset(monitorDataString, 0, stringLength);
 		return -1;
 	}
@@ -749,6 +751,7 @@ int UtilStringToMonitorData(const char *monitorString, size_t stringLength, Moni
  */
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m) {
 	double distance = 0.0;
+
 	if (!position.isPositionValid || target.isPositionValid)
 		return 0;
 	distance = sqrt(pow(position.xCoord_m - target.xCoord_m, 2)
@@ -3596,7 +3599,8 @@ I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug)
  * \param MONR Struct where monitor data should be placed
  * \return -1 on failure, 0 on success
  */
-int UtilPopulateMonitorDataStruct(const char * rawData, const size_t rawDataSize, MonitorDataType * monitorData) {
+int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize,
+								  MonitorDataType * monitorData) {
 
 	if (rawDataSize != sizeof (MonitorDataType)) {
 		errno = EMSGSIZE;

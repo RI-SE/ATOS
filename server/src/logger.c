@@ -176,8 +176,9 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 
 		case COMM_MONR:
-			if (!isFirstInit)
+			if (!isFirstInit) {
 				vLogMonitorData(busReceiveBuffer, receivedBytes, recvTime, pcLogFile, pcLogFileComp);
+			}
 			else
 				LogMessage(LOG_LEVEL_WARNING, "Received command %u while log uninitialized", command);
 			break;
@@ -188,9 +189,14 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			// Returns first datapoint of OSEM (GPSWeek)
 			char *token = strtok(busReceiveBuffer, ";");
 
-			GPSweek = atoi(token);
+			if (token != NULL) {
+				GPSweek = atoi(token);
+				LogMessage(LOG_LEVEL_INFO, "GPS week of OSEM: %d", GPSweek);
+			}
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "Could not read GPS week in OSEM");
+			}
 
-			LogMessage(LOG_LEVEL_INFO, "GPS week of OSEM: %d", GPSweek);
 
 			// Rest of OSEM if needed
 			/*
@@ -506,7 +512,6 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 			COMM_VIOP, COMM_INV);
 	(void)fwrite(pcBuffer, 1, strlen(pcBuffer), filefd);
 
-
 	fclose(filefd);
 }
 
@@ -580,8 +585,8 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 	TimeGetAsDateTime(&recvTime, "%Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof (DateBuffer));
 
 	printedBytes = snprintf(printBuffer, sizeof (printBuffer), "%s;%ld;%ld;%d;", DateBuffer,
-							TimeGetAsUTCms(&monitorData.data.timestamp), TimeGetAsGPSms(&monitorData.data.timestamp),
-							(unsigned char)COMM_MONR);
+							TimeGetAsUTCms(&monitorData.data.timestamp),
+							TimeGetAsGPSms(&monitorData.data.timestamp), (unsigned char)COMM_MONR);
 
 	totalPrintedBytes += printedBytes;
 	if (printedBytes < 0 || (size_t) totalPrintedBytes > sizeof (printBuffer)) {
@@ -589,8 +594,9 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 		return;
 	}
 
-	printedBytes = snprintf(printBuffer + totalPrintedBytes, sizeof (printBuffer) - (size_t) totalPrintedBytes, "%s;",
-							inet_ntop(AF_INET, &monitorData.ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
+	printedBytes =
+		snprintf(printBuffer + totalPrintedBytes, sizeof (printBuffer) - (size_t) totalPrintedBytes, "%s;",
+				 inet_ntop(AF_INET, &monitorData.ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
 
 	totalPrintedBytes += printedBytes;
 	if (printedBytes < 0 || (size_t) totalPrintedBytes > sizeof (printBuffer)) {
@@ -598,8 +604,9 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 		return;
 	}
 
-	printedBytes = snprintf(printBuffer + totalPrintedBytes, sizeof (printBuffer) - (size_t) totalPrintedBytes, "%u;",
-						   monitorData.ClientID);
+	printedBytes =
+		snprintf(printBuffer + totalPrintedBytes, sizeof (printBuffer) - (size_t) totalPrintedBytes, "%u;",
+				 monitorData.ClientID);
 
 	totalPrintedBytes += printedBytes;
 	if (printedBytes < 0 || (size_t) totalPrintedBytes > sizeof (printBuffer)) {
@@ -607,7 +614,8 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 		return;
 	}
 
-	objectMonitorDataToASCII(&monitorData.data, printBuffer + totalPrintedBytes, sizeof (printBuffer) - (size_t) totalPrintedBytes);
+	objectMonitorDataToASCII(&monitorData.data, printBuffer + totalPrintedBytes,
+							 sizeof (printBuffer) - (size_t) totalPrintedBytes);
 
 	filefd = fopen(pcLogFile, ACCESS_MODE_APPEND_AND_READ);
 	if (filefd == NULL) {

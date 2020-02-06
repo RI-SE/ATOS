@@ -353,12 +353,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime)) << 2) +
 				GPSTime->MicroSecondU16;
 
-			 /*MTSP*/
-			if (timercmp(&currentTime, &nextAdaptiveSyncMessageTime, >)) {
+			 /*MTSP*/ if (timercmp(&currentTime, &nextAdaptiveSyncMessageTime, >)) {
 
-				timeradd(&nextAdaptiveSyncMessageTime, &adaptiveSyncMessagePeriod, &nextAdaptiveSyncMessageTime);
+				timeradd(&nextAdaptiveSyncMessageTime, &adaptiveSyncMessagePeriod,
+						 &nextAdaptiveSyncMessageTime);
 
 				struct timeval estSyncPointTime;
+
 				TimeSetToGPStime(&estSyncPointTime, TimeGetAsGPSweek(&currentTime), ASPData.MTSPU32);
 
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
@@ -368,7 +369,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							&& ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1) {
 
 							/*Send Master time to adaptive sync point */
-							MessageLength = encodeMTSPMessage(&estSyncPointTime, MessageBuffer, sizeof (MessageBuffer), 0);
+							MessageLength =
+								encodeMTSPMessage(&estSyncPointTime, MessageBuffer, sizeof (MessageBuffer),
+												  0);
 							UtilSendUDPData(MODULE_NAME, &safety_socket_fd[iIndex],
 											&safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
 						}
@@ -393,7 +396,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							   buffer);
 
 					monitorData.ClientIP = safety_object_addr[iIndex].sin_addr.s_addr;
-					if (decodeMONRMessage(buffer, receivedMONRData, &monitorData.ClientID, &monitorData.data, 0) != MESSAGE_OK) {
+					if (decodeMONRMessage
+						(buffer, receivedMONRData, &monitorData.ClientID, &monitorData.data,
+						 0) != MESSAGE_OK) {
 						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object",
 								   object_address_name[iIndex]);
 						vDisconnectObject(&safety_socket_fd[iIndex]);
@@ -405,8 +410,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						// Place struct in buffer
 						memcpy(&buffer, &monitorData, sizeof (monitorData));
 						// Send MONR message as bytes
-						if (iCommSend(COMM_MONR, buffer, sizeof (monitorData)) <
-							0) {
+						if (iCommSend(COMM_MONR, buffer, sizeof (monitorData)) < 0) {
 							LogMessage(LOG_LEVEL_ERROR,
 									   "Fatal communication fault when sending MONR command - entering error state");
 							vSetState(OBC_STATE_ERROR, GSD);
@@ -417,7 +421,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					//Store MONR in GSD
 					memcpy(GSD->MONRData, buffer, receivedMONRData);
-					GSD->MONRSizeU8 = (unsigned char) receivedMONRData;
+					GSD->MONRSizeU8 = (unsigned char)receivedMONRData;
 
 					memset(buffer, 0, sizeof (buffer));
 					UtilMonitorDataToString(monitorData, buffer, sizeof (buffer));
@@ -447,8 +451,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 							// TODO: check use of this function since it should take two lat/long points but is here used with x/y
 							UtilCalcPositionDelta(OriginLatitudeDbl, OriginLongitudeDbl,
-												  monitorData.data.position.xCoord_m, monitorData.data.position.yCoord_m,
-												  &OP[iIndex]);
+												  monitorData.data.position.xCoord_m,
+												  monitorData.data.position.yCoord_m, &OP[iIndex]);
 
 							if (OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex) {
 								ASPData.CurrentTimeU32 = CurrentTimeU32;
@@ -515,7 +519,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 					}
 					OP[iIndex].Speed =
-						(float) sqrt(pow(monitorData.data.speed.lateral_m_s, 2) + pow(monitorData.data.speed.longitudinal_m_s, 2));
+						(float)sqrt(pow(monitorData.data.speed.lateral_m_s, 2) +
+									pow(monitorData.data.speed.longitudinal_m_s, 2));
 				}
 				else if (receivedMONRData > 0)
 					LogMessage(LOG_LEVEL_WARNING, "Received unhandled message on monitoring socket");
@@ -801,6 +806,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						DataDictionaryGetOriginLongitudeC8(GSD, OriginLongitude, SMALL_BUFFER_SIZE_0);
 						DataDictionaryGetOriginAltitudeC8(GSD, OriginAltitude, SMALL_BUFFER_SIZE_0);
 
+						memset(pcSendBuffer, 0, sizeof (pcSendBuffer));
+						snprintf(pcSendBuffer, sizeof (pcSendBuffer), "%u;", TimeGetAsGPSweek(&currentTime));
+						snprintf(pcSendBuffer + strlen(pcSendBuffer),
+								 sizeof (pcSendBuffer) - strlen(pcSendBuffer), "%s;%s;%s;%s;", OriginLatitude,
+								 OriginLongitude, OriginAltitude, OriginHeading);
+
 						if (iCommSend(COMM_OSEM, pcSendBuffer, strlen(pcSendBuffer) + 1) < 0) {
 							LogMessage(LOG_LEVEL_ERROR,
 									   "Fatal communication fault when sending OSEM command - entering error state");
@@ -864,18 +875,23 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						LogMessage(LOG_LEVEL_INFO, "Sync point counts: %d", SyncPointCount);
 						for (i = 0; i < SyncPointCount; i++) {
 							struct timeval syncPointTime, syncStopTime;
+
 							TimeSetToUTCms(&syncPointTime, (int64_t) (ASP[i].SlaveTrajSyncTime * 1000.0f));
 							TimeSetToUTCms(&syncStopTime, (int64_t) (ASP[i].SlaveSyncStopTime * 1000.0f));
 							if (TEST_SYNC_POINTS == 1 && iIndex == 1) {
 								/*Send SYPM to slave */
-								MessageLength = encodeSYPMMessage(syncPointTime, syncStopTime, MessageBuffer, sizeof (MessageBuffer), 0);
+								MessageLength =
+									encodeSYPMMessage(syncPointTime, syncStopTime, MessageBuffer,
+													  sizeof (MessageBuffer), 0);
 								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 												&socket_fds[iIndex], 0);
 							}
 							else if (TEST_SYNC_POINTS == 0
 									 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL) {
 								/*Send SYPM to slave */
-								MessageLength = encodeSYPMMessage(syncPointTime, syncStopTime, MessageBuffer, sizeof (MessageBuffer), 0);
+								MessageLength =
+									encodeSYPMMessage(syncPointTime, syncStopTime, MessageBuffer,
+													  sizeof (MessageBuffer), 0);
 								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 												&socket_fds[iIndex], 0);
 							}

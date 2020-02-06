@@ -34,7 +34,7 @@ static const char notReadyToArmString[] = "NOT_READY";
  * \param state Variable to be converted
  * \return Pointer to a string of the state
  */
-const char * objectStateToASCII(const ObjectStateType state) {
+const char *objectStateToASCII(const ObjectStateType state) {
 	switch (state) {
 	case OBJECT_STATE_DISARMED:
 		return disarmedStateString;
@@ -59,7 +59,7 @@ const char * objectStateToASCII(const ObjectStateType state) {
  * \param asciiString String to convert
  * \return Value according to ::ObjectStateType
  */
-ObjectStateType ASCIIToObjectState(const char * asciiString) {
+ObjectStateType ASCIIToObjectState(const char *asciiString) {
 	if (strstr(asciiString, disarmedStateString) != NULL)
 		return OBJECT_STATE_DISARMED;
 	if (strstr(asciiString, armedStateString) != NULL)
@@ -83,7 +83,7 @@ ObjectStateType ASCIIToObjectState(const char * asciiString) {
  */
 bool hasError(const ObjectErrorType error) {
 	return error.engineFault || error.abortRequest || error.batteryFault || error.unknownError
-			|| error.syncPointEnded || error.outsideGeofence || error.badPositioningAccuracy;
+		|| error.syncPointEnded || error.outsideGeofence || error.badPositioningAccuracy;
 }
 
 /*!
@@ -92,7 +92,7 @@ bool hasError(const ObjectErrorType error) {
  * \param asciiBuffer Buffer to which text is to be written
  * \param bufferLength Size of buffer to which text is to be written
  */
-void errorStatusToASCII(const ObjectErrorType error, char* asciiBuffer, const size_t bufferLength) {
+void errorStatusToASCII(const ObjectErrorType error, char *asciiBuffer, const size_t bufferLength) {
 
 	memset(asciiBuffer, 0, bufferLength);
 
@@ -103,23 +103,17 @@ void errorStatusToASCII(const ObjectErrorType error, char* asciiBuffer, const si
 	if (error.engineFault)
 		snprintf(asciiBuffer, bufferLength, "%s,", engineFaultString);
 	if (error.batteryFault)
-		snprintf(asciiBuffer, bufferLength - strlen(asciiBuffer),
-				 "%s,", batteryFaultString);
+		snprintf(asciiBuffer, bufferLength - strlen(asciiBuffer), "%s,", batteryFaultString);
 	if (error.unknownError)
-		snprintf(asciiBuffer, bufferLength - strlen(asciiBuffer),
-				 "%s,", otherErrorString);
+		snprintf(asciiBuffer, bufferLength - strlen(asciiBuffer), "%s,", otherErrorString);
 	if (error.syncPointEnded)
-		snprintf(asciiBuffer, bufferLength - strlen(asciiBuffer),
-				 "%s,", syncPointEndedString);
+		snprintf(asciiBuffer, bufferLength - strlen(asciiBuffer), "%s,", syncPointEndedString);
 	if (error.outsideGeofence)
-		snprintf(asciiBuffer, bufferLength - strlen(asciiBuffer),
-				 "%s,", outsideGeofenceString);
+		snprintf(asciiBuffer, bufferLength - strlen(asciiBuffer), "%s,", outsideGeofenceString);
 	if (error.badPositioningAccuracy)
-		snprintf(asciiBuffer, bufferLength - strlen(asciiBuffer),
-				 "%s,", badPositioningAccuracyString);
+		snprintf(asciiBuffer, bufferLength - strlen(asciiBuffer), "%s,", badPositioningAccuracyString);
 	if (error.abortRequest)
-		snprintf(asciiBuffer, bufferLength - strlen(asciiBuffer),
-				 "%s,", abortRequestString);
+		snprintf(asciiBuffer, bufferLength - strlen(asciiBuffer), "%s,", abortRequestString);
 
 	if (asciiBuffer[strlen(asciiBuffer)] == ',')
 		asciiBuffer[strlen(asciiBuffer)] = '\0';
@@ -133,28 +127,29 @@ void errorStatusToASCII(const ObjectErrorType error, char* asciiBuffer, const si
  * \param asciiString String to be parsed
  * \return Value according to ::ObjectErrorType
  */
-ObjectErrorType ASCIIToErrorStatus(const char * asciiString) {
+ObjectErrorType ASCIIToErrorStatus(const char *asciiString) {
 	ObjectErrorType error;
+
 	memset(&error, 0, sizeof (error));
 
 	// First check if string starts with the "all ok" string
-	if(strstr(asciiString, noErrorString) == asciiString)
+	if (strstr(asciiString, noErrorString) == asciiString)
 		return error;
 
 	// Check against all error string representations
-	if(strstr(asciiString, batteryFaultString) != NULL)
+	if (strstr(asciiString, batteryFaultString) != NULL)
 		error.batteryFault = true;
-	if(strstr(asciiString, engineFaultString) != NULL)
+	if (strstr(asciiString, engineFaultString) != NULL)
 		error.engineFault = true;
-	if(strstr(asciiString, abortRequestString) != NULL)
+	if (strstr(asciiString, abortRequestString) != NULL)
 		error.abortRequest = true;
-	if(strstr(asciiString, otherErrorString) != NULL)
+	if (strstr(asciiString, otherErrorString) != NULL)
 		error.unknownError = true;
-	if(strstr(asciiString, syncPointEndedString) != NULL)
+	if (strstr(asciiString, syncPointEndedString) != NULL)
 		error.syncPointEnded = true;
-	if(strstr(asciiString, outsideGeofenceString) != NULL)
+	if (strstr(asciiString, outsideGeofenceString) != NULL)
 		error.outsideGeofence = true;
-	if(strstr(asciiString, badPositioningAccuracyString) != NULL)
+	if (strstr(asciiString, badPositioningAccuracyString) != NULL)
 		error.badPositioningAccuracy = true;
 
 	// Error unmatched against all strings casted into unknown type
@@ -171,7 +166,8 @@ ObjectErrorType ASCIIToErrorStatus(const char * asciiString) {
  * \param bufferLength Length of ASCII buffer
  * \return Number of bytes printed
  */
-int objectMonitorDataToASCII(const ObjectMonitorType * monitorData, char *asciiBuffer, const size_t bufferLength) {
+int objectMonitorDataToASCII(const ObjectMonitorType * monitorData, char *asciiBuffer,
+							 const size_t bufferLength) {
 
 	memset(asciiBuffer, 0, bufferLength);
 
@@ -179,45 +175,40 @@ int objectMonitorDataToASCII(const ObjectMonitorType * monitorData, char *asciiB
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
 				 "%u;", TimeGetAsGPSqmsOfWeek(&monitorData->timestamp));
 	else
-		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-				 "NaN;");
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "NaN;");
 
 	if (monitorData->position.isPositionValid)
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
 				 "%.3f;%.3f;%.3f;", monitorData->position.xCoord_m, monitorData->position.yCoord_m,
 				 monitorData->position.zCoord_m);
 	else
-		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-				 "NaN;NaN;NaN;");
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "NaN;NaN;NaN;");
 
 	if (monitorData->position.isHeadingValid)
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
 				 "%.2f;", monitorData->position.heading_rad * 180.0 / M_PI);
 	else
-		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-				 "NaN;");
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "NaN;");
 
 	if (monitorData->speed.isValid)
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-				"%.2f;%.2f;", monitorData->speed.longitudinal_m_s, monitorData->speed.lateral_m_s);
+				 "%.2f;%.2f;", monitorData->speed.longitudinal_m_s, monitorData->speed.lateral_m_s);
 	else
-		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-				 "NaN;NaN;");
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "NaN;NaN;");
 
 	if (monitorData->acceleration.isValid)
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-				 "%.3f;%.3f;", monitorData->acceleration.longitudinal_m_s2, monitorData->acceleration.lateral_m_s2);
+				 "%.3f;%.3f;", monitorData->acceleration.longitudinal_m_s2,
+				 monitorData->acceleration.lateral_m_s2);
 	else
-		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-				 "NaN;NaN;");
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "NaN;NaN;");
 
 	if (monitorData->drivingDirection != OBJECT_DRIVE_DIRECTION_UNAVAILABLE)
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
 				 "%s;", monitorData->drivingDirection == OBJECT_DRIVE_DIRECTION_FORWARD ?
-					 driveDirectionForwardString : driveDirectionReverseString);
+				 driveDirectionForwardString : driveDirectionReverseString);
 	else
-		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-				 "UNKNOWN;");
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "UNKNOWN;");
 
 	snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
 			 "%s;", objectStateToASCII(monitorData->state));
@@ -225,17 +216,16 @@ int objectMonitorDataToASCII(const ObjectMonitorType * monitorData, char *asciiB
 	if (monitorData->armReadiness != OBJECT_READY_TO_ARM_UNAVAILABLE)
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
 				 "%s;", monitorData->armReadiness == OBJECT_READY_TO_ARM ?
-					 readyToArmString : notReadyToArmString);
+				 readyToArmString : notReadyToArmString);
 	else
-		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-				 "UNKNOWN;");
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "UNKNOWN;");
 
-	errorStatusToASCII(monitorData->error, asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer));
+	errorStatusToASCII(monitorData->error, asciiBuffer + strlen(asciiBuffer),
+					   bufferLength - strlen(asciiBuffer));
 
-	snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-			 ";");
+	snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), ";");
 
-	return (int) strlen(asciiBuffer);
+	return (int)strlen(asciiBuffer);
 }
 
 
@@ -255,6 +245,7 @@ int ASCIIToObjectMonitorData(const char *asciiBuffer, ObjectMonitorType * monito
 	const int NumberBaseDecimal = 10;
 	char *copy = strdup(asciiBuffer);
 	struct timeval currentTime;
+
 	TimeSetToCurrentSystemTime(&currentTime);
 
 	memset(monitorData, 0, sizeof (*monitorData));

@@ -61,6 +61,7 @@ typedef enum {
 	ISO_READY_TO_ARM = 1,
 	ISO_READY_TO_ARM_UNAVAILABLE = 2
 } ArmReadinessValues;
+
 #define BITMASK_ERROR_ABORT_REQUEST				0x80
 #define BITMASK_ERROR_OUTSIDE_GEOFENCE			0x40
 #define BITMASK_ERROR_BAD_POSITIONING_ACCURACY	0x20
@@ -72,7 +73,7 @@ typedef enum {
 
 
 
-#pragma pack(push,1)		// Ensure sizeof() is useable for (most) network byte lengths
+#pragma pack(push,1)			// Ensure sizeof() is useable for (most) network byte lengths
 /*! OSEM message */
 typedef struct {
 	HeaderType header;
@@ -921,7 +922,8 @@ ssize_t encodeHEABMessage(const ControlCenterStatusType status, char *heabDataBu
  * \param debug Flag for enabling of debugging
  * \return value according to ::ISOMessageReturnValue
  */
-ISOMessageReturnValue decodeMONRMessage(const char *monrDataBuffer, const size_t bufferLength, uint32_t* objectID, ObjectMonitorType * monitorData,
+ISOMessageReturnValue decodeMONRMessage(const char *monrDataBuffer, const size_t bufferLength,
+										uint32_t * objectID, ObjectMonitorType * monitorData,
 										const char debug) {
 
 	MONRType MONRData;
@@ -1021,7 +1023,8 @@ ISOMessageReturnValue decodeMONRMessage(const char *monrDataBuffer, const size_t
 
 	// Decode footer
 	if ((retval =
-		 decodeISOFooter(p, bufferLength - (size_t) (p - monrDataBuffer), &MONRData.footer, debug)) != MESSAGE_OK) {
+		 decodeISOFooter(p, bufferLength - (size_t) (p - monrDataBuffer), &MONRData.footer,
+						 debug)) != MESSAGE_OK) {
 		LogMessage(LOG_LEVEL_ERROR, "Error decoding MONR footer");
 		return retval;
 	}
@@ -1070,14 +1073,15 @@ void convertMONRToHostRepresentation(const MONRType * MONRData, ObjectMonitorTyp
 	monitorData->isTimestampValid = MONRData->gpsQmsOfWeek != GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE;
 	if (monitorData->isTimestampValid) {
 		struct timeval currentTime;
+
 		TimeSetToCurrentSystemTime(&currentTime);
 		TimeSetToGPStime(&monitorData->timestamp, TimeGetAsGPSweek(&currentTime), MONRData->gpsQmsOfWeek);
 	}
 
 	// Position / heading
-	monitorData->position.xCoord_m = (double) (MONRData->xPosition) / POSITION_ONE_METER_VALUE;
-	monitorData->position.yCoord_m = (double) (MONRData->yPosition) / POSITION_ONE_METER_VALUE;
-	monitorData->position.zCoord_m = (double) (MONRData->zPosition) / POSITION_ONE_METER_VALUE;
+	monitorData->position.xCoord_m = (double)(MONRData->xPosition) / POSITION_ONE_METER_VALUE;
+	monitorData->position.yCoord_m = (double)(MONRData->yPosition) / POSITION_ONE_METER_VALUE;
+	monitorData->position.zCoord_m = (double)(MONRData->zPosition) / POSITION_ONE_METER_VALUE;
 	monitorData->position.isPositionValid = true;
 	monitorData->position.isHeadingValid = MONRData->heading != HEADING_UNAVAILABLE_VALUE;
 	if (monitorData->position.isHeadingValid) {
@@ -1090,12 +1094,11 @@ void convertMONRToHostRepresentation(const MONRType * MONRData, ObjectMonitorTyp
 		monitorData->speed.isValid = false;
 	else
 		monitorData->speed.longitudinal_m_s =
-				(double) (MONRData->longitudinalSpeed) / SPEED_ONE_METER_PER_SECOND_VALUE;
+			(double)(MONRData->longitudinalSpeed) / SPEED_ONE_METER_PER_SECOND_VALUE;
 	if (MONRData->lateralSpeed == SPEED_UNAVAILABLE_VALUE)
 		monitorData->speed.isValid = false;
 	else
-		monitorData->speed.lateral_m_s =
-				(double) (MONRData->lateralSpeed) / SPEED_ONE_METER_PER_SECOND_VALUE;
+		monitorData->speed.lateral_m_s = (double)(MONRData->lateralSpeed) / SPEED_ONE_METER_PER_SECOND_VALUE;
 
 	// Acceleration
 	monitorData->acceleration.isValid = true;
@@ -1103,12 +1106,12 @@ void convertMONRToHostRepresentation(const MONRType * MONRData, ObjectMonitorTyp
 		monitorData->acceleration.isValid = false;
 	else
 		monitorData->acceleration.longitudinal_m_s2 =
-				(double) (MONRData->longitudinalAcc) / ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE;
+			(double)(MONRData->longitudinalAcc) / ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE;
 	if (MONRData->lateralAcc == ACCELERATION_UNAVAILABLE_VALUE)
 		monitorData->acceleration.isValid = false;
 	else
 		monitorData->acceleration.lateral_m_s2 =
-				(double) (MONRData->lateralAcc) / ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE;
+			(double)(MONRData->lateralAcc) / ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE;
 
 	// Drive direction
 	switch (MONRData->driveDirection) {
@@ -1167,10 +1170,12 @@ void convertMONRToHostRepresentation(const MONRType * MONRData, ObjectMonitorTyp
 	monitorData->error.engineFault = MONRData->errorStatus & BITMASK_ERROR_ENGINE_FAULT;
 	monitorData->error.abortRequest = MONRData->errorStatus & BITMASK_ERROR_ABORT_REQUEST;
 	monitorData->error.batteryFault = MONRData->errorStatus & BITMASK_ERROR_BATTERY_FAULT;
-	monitorData->error.unknownError = MONRData->errorStatus & BITMASK_ERROR_OTHER || MONRData->errorStatus & BITMASK_ERROR_VENDOR_SPECIFIC;
+	monitorData->error.unknownError = MONRData->errorStatus & BITMASK_ERROR_OTHER
+		|| MONRData->errorStatus & BITMASK_ERROR_VENDOR_SPECIFIC;
 	monitorData->error.syncPointEnded = MONRData->errorStatus & BITMASK_ERROR_SYNC_POINT_ENDED;
 	monitorData->error.outsideGeofence = MONRData->errorStatus & BITMASK_ERROR_OUTSIDE_GEOFENCE;
-	monitorData->error.badPositioningAccuracy = MONRData->errorStatus & BITMASK_ERROR_BAD_POSITIONING_ACCURACY;
+	monitorData->error.badPositioningAccuracy =
+		MONRData->errorStatus & BITMASK_ERROR_BAD_POSITIONING_ACCURACY;
 
 	return;
 }
@@ -1185,8 +1190,8 @@ void convertMONRToHostRepresentation(const MONRType * MONRData, ObjectMonitorTyp
  * \param debug Flag for enabling debugging
  * \return Number of bytes written to buffer, or -1 in case of an error
  */
-ssize_t encodeSYPMMessage(const struct timeval synchronizationTime, const struct timeval freezeTime, char * sypmDataBuffer,
-						  const size_t bufferLength, const char debug) {
+ssize_t encodeSYPMMessage(const struct timeval synchronizationTime, const struct timeval freezeTime,
+						  char *sypmDataBuffer, const size_t bufferLength, const char debug) {
 
 	SYPMType SYPMData;
 
@@ -1216,8 +1221,7 @@ ssize_t encodeSYPMMessage(const struct timeval synchronizationTime, const struct
 				 "Freeze time content length: %u\n\t"
 				 "Freeze time: %u [ms]", SYPMData.syncPointTimeValueID,
 				 SYPMData.syncPointTimeContentLength, SYPMData.syncPointTime,
-				 SYPMData.freezeTimeValueID, SYPMData.freezeTimeContentLength,
-				 SYPMData.freezeTime);
+				 SYPMData.freezeTimeValueID, SYPMData.freezeTimeContentLength, SYPMData.freezeTime);
 	}
 
 	// Switch from host endianness to little endian
@@ -1244,7 +1248,8 @@ ssize_t encodeSYPMMessage(const struct timeval synchronizationTime, const struct
  * \param debug Flag for enabling debugging
  * \return Number of bytes written to buffer, or -1 in case of an error
  */
-ssize_t encodeMTSPMessage(const struct timeval * estSyncPointTime, char * mtspDataBuffer, const size_t bufferLength, const char debug) {
+ssize_t encodeMTSPMessage(const struct timeval *estSyncPointTime, char *mtspDataBuffer,
+						  const size_t bufferLength, const char debug) {
 
 	MTSPType MTSPData;
 
@@ -1262,7 +1267,9 @@ ssize_t encodeMTSPMessage(const struct timeval * estSyncPointTime, char * mtspDa
 	// Fill contents
 	MTSPData.estSyncPointTimeValueID = VALUE_ID_MTSP_EST_SYNC_POINT_TIME;
 	MTSPData.estSyncPointTimeContentLength = sizeof (MTSPData.estSyncPointTime);
-	MTSPData.estSyncPointTime = estSyncPointTime == NULL ? GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSqmsOfWeek(estSyncPointTime);
+	MTSPData.estSyncPointTime =
+		estSyncPointTime ==
+		NULL ? GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE : TimeGetAsGPSqmsOfWeek(estSyncPointTime);
 
 	if (debug) {
 		LogPrint("MTSP message:\n\t"
