@@ -260,6 +260,7 @@ typedef struct
 {
 	ObjectMonitorType data;
     in_addr_t ClientIP;
+	uint32_t ClientID;
 } MonitorDataType;
 
 typedef struct
