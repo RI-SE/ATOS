@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "positioning.h"
 #include "maestroTime.h"
@@ -191,7 +192,7 @@ int objectMonitorDataToASCII(const ObjectMonitorType * monitorData, char *asciiB
 
 	if (monitorData->position.isHeadingValid)
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-				 "%.2f;", monitorData->position.heading_deg);
+				 "%.2f;", monitorData->position.heading_rad * 180.0 / M_PI);
 	else
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
 				 "NaN;");
