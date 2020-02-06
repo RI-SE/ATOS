@@ -1717,6 +1717,10 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, co
 	if (GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects) {
         GSD->MonrMessages[transmitterId] = *MONR;
 	}
+    else{
+        Res = UNDEFINED;
+        LogPrint(LOG_LEVEL_ERROR, "Unable to write MonrMessage in DataDictionary");
+    }
 
 	pthread_mutex_unlock(&MONRMutex);
 
@@ -1731,12 +1735,19 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, co
  * \return Result according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, const U32 transmitterId) {
-	pthread_mutex_lock(&MONRMutex);
+    ReadWriteAccess_t Res;
+    Res = READ_OK;
+
+    pthread_mutex_lock(&MONRMutex);
     if (GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects) {
 		*MONR = GSD->MonrMessages[transmitterId];
-	}
+    }
+    else{
+        Res = UNDEFINED;
+        LogPrint(LOG_LEVEL_ERROR, "Unable to read MonrMessage in DataDictionary");
+    }
 	pthread_mutex_unlock(&MONRMutex);
-	return READ_OK;
+    return Res
 }
 
 /*!
