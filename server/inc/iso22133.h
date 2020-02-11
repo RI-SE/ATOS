@@ -20,6 +20,7 @@ extern "C" {
 #include <stddef.h>
 #include <stdio.h>
 #include <sys/time.h>
+#include <math.h>
 
 #include "positioning.h"
 
@@ -45,6 +46,7 @@ typedef struct
 	uint16_t Crc;
 } FooterType; //2 bytes
 
+#pragma pack(pop)
 
 /*! OSTM commands */
 typedef enum {
@@ -66,8 +68,6 @@ typedef enum {
 } ControlCenterStatusType;
 
 #define MONR_EXPECTED_FREQUENCY_HZ 100
-
-#pragma pack(pop)
 
 typedef enum {
 	TRIGGER_UNDEFINED               = 0x0000,
@@ -217,8 +217,11 @@ typedef enum {
 } SupervisorCommandType;
 
 ISOMessageReturnValue decodeMONRMessage(const char * monrDataBuffer, const size_t bufferLength, uint32_t * objectID, ObjectMonitorType * MonitorData, const char debug);
+ssize_t encodeTRAJMessageHeader(const uint16_t trajectoryID, const uint16_t trajectoryVersion, const char * trajectoryName, const size_t nameLength, const uint32_t numberOfPointsInTraj, char * trajDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const CartesianPosition position, const SpeedType speed, const AccelerationType acceleration, const float curvature, char * trajDataBufferPointer, const size_t remainingBufferLength, const char debug);
+ssize_t encodeTRAJMessageFooter(char * trajDataBuffer, const char * trajDataBufferStart, const size_t bufferLength, const char debug);
 ssize_t encodeSTRTMessage(const struct timeval* timeOfStart, char * strtDataBuffer, const size_t bufferLength, const char debug);
-ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeOSEMMessage(const double_t * latitude_deg, const double_t * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeOSTMMessage(const ObjectCommandType command, char * ostmDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeHEABMessage(const ControlCenterStatusType status, char * heabDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeSYPMMessage(const struct timeval synchronizationTime, const struct timeval freezeTime, char * sypmDataBuffer, const size_t bufferLength, const char debug);
