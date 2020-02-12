@@ -196,7 +196,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 pcSendBuffer[MBUS_MAX_DATALEN];
 	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
 	MonitorDataType monitorData;
-	VOILType VOILData;
 	ACCMData mqACCMData;
 	EXACData mqEXACData;
 	TRCMData mqTRCMData;
@@ -966,7 +965,13 @@ void signalHandler(int signo) {
 }
 
 
-
+/*!
+ * \brief ObjectControlSendTRAJMessage Sends a trajectory message over a socket based on a trajectory file.
+ * \param Filename Path and name of the file containing the trajectory
+ * \param Socket TCP socket over which the trajectory is to be sent
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes sent, or -1 in case of an error
+ */
 ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const char debug) {
 	FILE *fd;
 	char* line;
@@ -1019,8 +1024,8 @@ ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const 
 	}
 
 	// Generate ISO trajectory message header
-	if ((printedBytes = encodeTRAJMessageHeader(fileHeader.ID, fileHeader.majorVersion,
-												fileHeader.name, strlen(fileHeader.name),
+	if ((printedBytes = encodeTRAJMessageHeader(fileHeader.ID > UINT16_MAX ? 0 : (uint16_t) fileHeader.ID,
+												fileHeader.majorVersion, fileHeader.name, strlen(fileHeader.name),
 												fileHeader.numberOfLines, messageBufferPosition,
 												remainingBufferSpace, debug)) == -1) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to encode trajectory message");
@@ -1066,7 +1071,7 @@ ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const 
 
 		// Print to buffer
 		if ((printedBytes = encodeTRAJMessagePoint(&relTime, position, speed, acceleration,
-												   fileLine.curvature, messageBufferPosition,
+												   (float) fileLine.curvature, messageBufferPosition,
 												   remainingBufferSpace, debug)) == -1) {
 
 			if (errno == ENOBUFS) {
