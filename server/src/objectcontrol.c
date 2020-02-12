@@ -228,8 +228,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 VOILReceivers[SMALL_BUFFER_SIZE_254];
 	C8 DTMReceivers[SMALL_BUFFER_SIZE_254];
 	U32 RowCount;
-	U32 DTMIpU32;
-	U32 DTMLengthU32;
 
 	U8 DisconnectU8 = 0;
 	I32 iResult;
