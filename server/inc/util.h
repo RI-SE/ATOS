@@ -315,6 +315,27 @@ typedef struct
 
 } TRAJInfoType;
 
+typedef struct {
+	unsigned int ID;
+	char name[128];
+	unsigned short majorVersion;
+	unsigned short minorVersion;
+	unsigned int numberOfLines;
+} TrajectoryFileHeader;
+
+typedef struct {
+	double time;
+	double xCoord;
+	double yCoord;
+	double *zCoord;
+	double heading;
+	double *longitudinalVelocity;
+	double *lateralVelocity;
+	double *longitudinalAcceleration;
+	double *lateralAcceleration;
+	double curvature;
+	uint8_t mode;
+} TrajectoryFileLine;
 
 typedef struct
 {
@@ -755,6 +776,9 @@ I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *
 
 double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
 
+int UtilParseTrajectoryFileHeader(char *headerLine, TrajectoryFileHeader * header);
+int UtilParseTrajectoryFileFooter(char *footerLine);
+int UtilParseTrajectoryFileLine(char *fileLine, TrajectoryFileLine * line);
 
 typedef struct {
   uint64_t timestamp;
