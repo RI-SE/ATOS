@@ -406,14 +406,14 @@ typedef struct {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #define le48toh(x) (x)
 #define htole48(x) (x)
+#define htolef(x) (x)
+#else
+#define le48toh(x) (le64toh(x) >> 16)
+#define htole48(x) (htole64(x) >> 16)
 #define htolef_a(x) \
 	htole32((union { uint32_t i; float f; }){ .f = (x) }.i)
 #define htolef(x) \
   ((union { uint32_t i; float f; }){ .i = htolef_a(x) }.f)
-#else
-#define le48toh(x) (le64toh(x) >> 16)
-#define htole48(x) (htole64(x) >> 16)
-#define htolef(x) (x)
 #endif
 
 // ************************** static function declarations ********************************************************
@@ -427,6 +427,9 @@ static char isValidMessageID(const uint16_t id);
 static double_t mapISOHeadingToHostHeading(const double_t isoHeading_rad);
 static double_t mapHostHeadingToISOHeading(const double_t hostHeading_rad);
 static void convertMONRToHostRepresentation(const MONRType * MONRData, ObjectMonitorType * monitorData);
+
+// ************************** static variables ********************************************************************
+static uint16_t trajectoryMessageCrc = 0;
 
 // ************************** function definitions ****************************************************************
 
@@ -642,6 +645,23 @@ ISOMessageID getISOMessageType(const char *messageData, const size_t length, con
 	}
 }
 
+
+/*!
+ * \brief encodeTRAJMessageHeader Creates a TRAJ message header based on supplied values and resets
+ *	an internal CRC to be used in the corresponding footer. The header is printed to a buffer.
+ * \param trajectoryID ID of the trajectory
+ * \param trajectoryVersion Version of the trajectory
+ * \param trajectoryName A string of maximum length 63 excluding the null terminator
+ * \param nameLength Length of the name string excluding the null terminator
+ * \param numberOfPointsInTraj Number of points in the subsequent trajectory
+ * \param trajDataBuffer Buffer to which TRAJ header is to be printed
+ * \param bufferLength Length of buffer to which TRAJ header is to be printed
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes printed, or -1 in case of error with the following errnos:
+ *		EINVAL		if one of the input parameters are invalid
+ *		ENOBUFS		if supplied buffer is too small to hold header
+ *		EMSGSIZE	if trajectory name is too long
+ */
 ssize_t encodeTRAJMessageHeader(const uint16_t trajectoryID, const uint16_t trajectoryVersion,
 								const char * trajectoryName, const size_t nameLength,
 								const uint32_t numberOfPointsInTraj, char *trajDataBuffer,
@@ -667,7 +687,7 @@ ssize_t encodeTRAJMessageHeader(const uint16_t trajectoryID, const uint16_t traj
 		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary TRAJ header data");
 		return -1;
 	}
-	else if (nameLength > sizeof (TRAJData.trajectoryName)) {
+	else if (nameLength >= sizeof (TRAJData.trajectoryName)) {
 		errno = EMSGSIZE;
 		LogMessage(LOG_LEVEL_ERROR, "Trajectory name <%s> too long for TRAJ message", trajectoryName);
 		return -1;
@@ -720,11 +740,30 @@ ssize_t encodeTRAJMessageHeader(const uint16_t trajectoryID, const uint16_t traj
 	TRAJData.trajectoryNameValueID = htole16(TRAJData.trajectoryNameValueID);
 	TRAJData.trajectoryNameContentLength = htole16(TRAJData.trajectoryNameContentLength);
 
+	trajectoryMessageCrc = 0;
+
 	memcpy(trajDataBuffer, &TRAJData, sizeof (TRAJData));
 
+	// TODO update CRC based on header data
 	return sizeof (TRAJHeaderType);
 }
 
+
+/*!
+ * \brief encodeTRAJMessagePoint Creates a TRAJ message point based on supplied values and updates an internal
+ * CRC to be used in the footer. Also prints the TRAJ point to a buffer.
+ * \param pointTimeFromStart Time from start of the trajectory point
+ * \param position Position of the point
+ * \param speed Speed at the point
+ * \param acceleration Acceleration at the point
+ * \param curvature Curvature of the trajectory at the point
+ * \param trajDataBufferPointer Buffer to which the message is to be printed
+ * \param remainingBufferLength Remaining bytes in the buffer to which the message is to be printed
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes printed, or -1 in case of error with the following errnos:
+ *		EINVAL		if one of the input parameters are invalid
+ *		ENOBUFS		if supplied buffer is too small to hold point
+ */
 ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const CartesianPosition position, const SpeedType speed,
 							   const AccelerationType acceleration, const float curvature, char * trajDataBufferPointer,
 							   const size_t remainingBufferLength, const char debug) {
@@ -888,10 +927,21 @@ ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const 
 
 	memcpy(trajDataBufferPointer, &TRAJData, sizeof (TRAJData));
 
+	// TODO update CRC based on printed data
 	return sizeof (TRAJPointType);
 }
 
 
+/*!
+ * \brief encodeTRAJMessageFooter Creates a TRAJ message footer based on an internal CRC from previous header
+ * and points, and prints it to a buffer.
+ * \param trajDataBuffer Buffer to which TRAJ message is to be printed
+ * \param remainingBufferLength Remaining bytes in the buffer to which the message is to be printed
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes printed, or -1 in case of error with the following errnos:
+ *		EINVAL		if one of the input parameters are invalid
+ *		ENOBUFS		if supplied buffer is too small to hold footer
+ */
 ssize_t encodeTRAJMessageFooter(char * trajDataBuffer, const size_t remainingBufferLength, const char debug) {
 
 	TRAJFooterType TRAJData;
@@ -907,8 +957,7 @@ ssize_t encodeTRAJMessageFooter(char * trajDataBuffer, const size_t remainingBuf
 		return -1;
 	}
 
-	// TODO TRAJData.footer =  real CRC
-	TRAJData.footer.Crc = 0;
+	TRAJData.footer.Crc = trajectoryMessageCrc;
 
 	memcpy(trajDataBuffer, &TRAJData, sizeof (TRAJData));
 
