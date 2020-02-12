@@ -144,9 +144,6 @@ extern "C"{
 #define dbl double
 #define flt float
 
-// Why do we need this memory efficiency? There is a risk that this breaks included code which isn't using pragma pack
-#pragma pack(1) // #pragma pack ( 1 ) directive can be used for arranging memory for structure members very next to the end of other structure members.
-
 #define SERVER_PREPARED 0x01
 #define SERVER_PREPARED_BIG_PACKET_SIZE 0x02
 #define PATH_INVALID_MISSING 0x03
@@ -463,20 +460,6 @@ typedef struct
   U32 UserIdU32;
   U8 UserTypeU8;
 } ServiceSessionType; //9 bytes
-
-
-typedef struct
-{
-  U8 ObjectIdU8;
-  U8 ObjectStateU8;
-  I32 XPositionI32;
-  I32 YPositionI32;
-  I32 ZPositionI32;
-  U16 HeadingU16;
-  U16 PitchU16;
-  U16 RollU16;
-  I16 SpeedI16;
-} Sim1Type;
 
 
 #define HTTP_HEADER_MAX_LENGTH 64
