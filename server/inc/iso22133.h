@@ -24,30 +24,6 @@ extern "C" {
 
 #include "positioning.h"
 
-// TODO: move to .c-file
-#define ISO_PROTOCOL_VERSION 2
-#define ACK_REQ 0
-
-#define ISO_SYNC_WORD 0x7E7E
-
-#pragma pack(push,1)
-typedef struct
-{
-	uint16_t SyncWordU16;
-	uint8_t TransmitterIdU8;
-	uint8_t MessageCounterU8;
-	uint8_t AckReqProtVerU8;
-	uint16_t MessageIdU16;
-	uint32_t MessageLengthU32;
-} HeaderType; //11 bytes
-
-typedef struct
-{
-	uint16_t Crc;
-} FooterType; //2 bytes
-
-#pragma pack(pop)
-
 /*! OSTM commands */
 typedef enum {
 	OBJECT_COMMAND_ARM = 0x02,				//!< Request to arm the target object

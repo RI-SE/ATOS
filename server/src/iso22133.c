@@ -8,13 +8,16 @@
 #include <byteswap.h>
 #include <math.h>
 
-// ************************* ISO protocol versions supported by functions in this file ***************************
+// ************************* Global ISO protocol settings ********************************************************
 static const uint8_t SupportedProtocolVersions[] = { 2 };
 
+#define ISO_PROTOCOL_VERSION 2	//!< ISO protocol version of messages sent
+#define ACK_REQ 0
 
 
 // ************************* Type definitions according ISO protocol specification *******************************
 //! Predefined integer values with special meaning
+#define ISO_SYNC_WORD 0x7E7E
 #define LATITUDE_UNAVAILABLE_VALUE 900000000001
 #define LATITUDE_ONE_DEGREE_VALUE 10000000000
 #define LONGITUDE_UNAVAILABLE_VALUE 1800000000001
@@ -78,6 +81,25 @@ typedef enum {
 
 
 #pragma pack(push,1)			// Ensure sizeof() is useable for (most) network byte lengths
+/*! ISO message header */
+typedef struct
+{
+	uint16_t SyncWordU16;
+	uint8_t TransmitterIdU8;
+	uint8_t MessageCounterU8;
+	uint8_t AckReqProtVerU8;
+	uint16_t MessageIdU16;
+	uint32_t MessageLengthU32;
+} HeaderType;
+
+
+/*! ISO message footer */
+typedef struct
+{
+	uint16_t Crc;
+} FooterType;
+
+
 /*! TRAJ message */
 #define TRAJ_NAME_STRING_MAX_LENGTH 64
 typedef struct {
@@ -144,6 +166,7 @@ typedef struct {
 #define VALUE_ID_TRAJ_LONGITUDINAL_ACCELERATION 0x0050
 #define VALUE_ID_TRAJ_LATERAL_ACCELERATION 0x0051
 #define VALUE_ID_TRAJ_CURVATURE 0x0052
+
 
 /*! OSEM message */
 typedef struct {
@@ -384,6 +407,7 @@ typedef struct {
 // TODO
 //! CATA value IDs
 // TODO
+
 
 /*! INSUP message */
 typedef struct {
