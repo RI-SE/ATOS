@@ -95,27 +95,6 @@
 /*------------------------------------------------------------
 -- Local type definitions
 ------------------------------------------------------------*/
-typedef struct {
-	unsigned int ID;
-	char name[SMALL_BUFFER_SIZE_128];
-	unsigned short majorVersion;
-	unsigned short minorVersion;
-	unsigned int numberOfLines;
-} TrajectoryFileHeader;
-
-typedef struct {
-	double time;
-	double xCoord;
-	double yCoord;
-	double *zCoord;
-	double heading;
-	double *longitudinalVelocity;
-	double *lateralVelocity;
-	double *longitudinalAcceleration;
-	double *lateralAcceleration;
-	double curvature;
-	uint8_t mode;
-} TrajectoryFileLine;
 
 /*------------------------------------------------------------
 -- Public variables
@@ -134,11 +113,6 @@ static void CopyHTTPHeaderField(char *request, char *targetContainer, size_t tar
 								const char *fieldName);
 static char rayFromPointIntersectsLine(double pointX, double pointY, double polyPointAX, double polyPointAY,
 									   double polyPointBX, double polyPointBY);
-
-
-static int UtilParseTrajectoryFileHeader(char *headerLine, TrajectoryFileHeader * header);
-static int UtilParseTrajectoryFileFooter(char *footerLine);
-static int UtilParseTrajectoryFileLine(char *fileLine, TrajectoryFileLine * line);
 
 
 void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetContainerSize,
@@ -2474,6 +2448,7 @@ int UtilParseTrajectoryFileLine(char *line, TrajectoryFileLine * fileLine) {
 		free(fileLine->longitudinalVelocity);
 	if (fileLine->lateralAcceleration)
 		free(fileLine->longitudinalAcceleration);
+
 	memset(fileLine, 0, sizeof (*fileLine));
 
 	// strtok() does not handle double delimiters well, more complicated parsing necessary
