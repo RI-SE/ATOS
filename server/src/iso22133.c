@@ -733,7 +733,7 @@ ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const 
 
 	if (remainingBufferLength < sizeof (TRAJPointType)) {
 		errno = ENOBUFS;
-		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary TRAJ point data");
+		LogMessage(LOG_LEVEL_DEBUG, "Buffer too small to hold necessary TRAJ point data");
 		return -1;
 	}
 	else if (trajDataBufferPointer == NULL) {
@@ -892,27 +892,13 @@ ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const 
 }
 
 
-ssize_t encodeTRAJMessageFooter(char * trajDataBuffer, const char * trajDataBufferStart, const size_t remainingBufferLength, const char debug) {
+ssize_t encodeTRAJMessageFooter(char * trajDataBuffer, const size_t remainingBufferLength, const char debug) {
 
-	ssize_t messageSize;
 	TRAJFooterType TRAJData;
-
-	if (trajDataBufferStart == NULL) {
-		messageSize = -1;
-	}
-	else {
-		messageSize = trajDataBuffer - trajDataBufferStart;
-
-		if (messageSize < (ssize_t) sizeof (TRAJHeaderType)) {
-			errno = EINVAL;
-			LogMessage(LOG_LEVEL_ERROR, "TRAJ message too short to contain header");
-			return -1;
-		}
-	}
 
 	if (remainingBufferLength < sizeof (TRAJFooterType)) {
 		errno = ENOBUFS;
-		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold TRAJ footer data");
+		LogMessage(LOG_LEVEL_DEBUG, "Buffer too small to hold TRAJ footer data");
 		return -1;
 	}
 	else if (trajDataBuffer == NULL) {
@@ -921,12 +907,8 @@ ssize_t encodeTRAJMessageFooter(char * trajDataBuffer, const char * trajDataBuff
 		return -1;
 	}
 
-	if (messageSize > 0) {
-		TRAJData.footer = buildISOFooter(trajDataBufferStart, (size_t) messageSize, debug);
-	}
-	else {
-		TRAJData.footer.Crc = 0;
-	}
+	// TODO TRAJData.footer =  real CRC
+	TRAJData.footer.Crc = 0;
 
 	memcpy(trajDataBuffer, &TRAJData, sizeof (TRAJData));
 
