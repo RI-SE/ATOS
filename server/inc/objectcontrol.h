@@ -21,6 +21,4 @@
   ------------------------------------------------------------*/
 void objectcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel);
 
-int ObjectControlBuildLLCMMessage(char* MessageBuffer, unsigned short Speed, unsigned short Curvature, unsigned char Mode, char debug);
-I32 ObjectControlBuildVOILMessage(C8* MessageBuffer, VOILType *VOILData, C8* SimData, U8 debug);
 #endif //__OBJECTCONTROL_H_INCLUDED__

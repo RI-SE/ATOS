@@ -479,17 +479,6 @@ typedef struct
 } Sim1Type;
 
 
-typedef struct
-{
-  HeaderType Header;
-  U32 GPSQmsOfWeekU32;
-  U8 WorldStateU8;
-  U8 ObjectCountU8;
-  Sim1Type SimObjects[16];
-
-} VOILType;
-
-
 #define HTTP_HEADER_MAX_LENGTH 64
 typedef struct {
     char AcceptCharset[HTTP_HEADER_MAX_LENGTH];
