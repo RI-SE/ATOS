@@ -47,7 +47,6 @@
 #define RECV_MESSAGE_BUFFER 6200
 #define BUFFER_SIZE_3100 3100
 #define TRAJ_FILE_HEADER_ROW 256
-#define OBJECT_MESS_BUFFER_SIZE 1024
 
 #define OC_SLEEP_TIME_EMPTY_MQ_S 0
 #define OC_SLEEP_TIME_EMPTY_MQ_NS 1000000
@@ -129,19 +128,13 @@ static void signalHandler(int signo);
 
 int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, unsigned short Curvature,
 								  unsigned char Mode, char debug);
-I32 ObjectControlBuildTRAJMessageHeader(C8 * MessageBuffer, I32 * RowCount, HeaderType * HeaderData,
-										TRAJInfoType * TRAJInfoData, C8 * TrajFileHeader, U8 debug);
-I32 ObjectControlBuildTRAJMessage(C8 * MessageBuffer, FILE * fd, I32 RowCount, DOTMType * DOTMData, U8 debug);
-I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
-								 DOTMType * DOTMData, U8 debug);
+static ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const char debug);
 int ObjectControlSendUDPData(int *sockfd, struct sockaddr_in *addr, char *SendData, int Length, char debug);
 I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * SimData, U8 debug);
 I32 ObjectControlSendDTMMessage(C8 * DTMData, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
 								DOTMType * DOTMData, U8 debug);
 I32 ObjectControlBuildDTMMessage(C8 * MessageBuffer, C8 * DTMData, I32 RowCount, DOTMType * DOTMData,
 								 U8 debug);
-I32 ObjectControlBuildASPMessage(C8 * MessageBuffer, ASPType * ASPData, U8 debug);
-I32 ObjectControlSendEXACMessage(EXACData * EXAC, I32 * socket, U8 debug);
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 							C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
@@ -1202,94 +1195,7 @@ int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, uns
 
 
 
-I32 ObjectControlBuildTRAJMessageHeader(C8 * MessageBuffer, I32 * RowCount, HeaderType * HeaderData,
-										TRAJInfoType * TRAJInfoData, C8 * TrajFileHeader, U8 debug) {
-	I32 MessageIndex = 0, i, j;
-	U16 Crc = 0;
-	C8 *p;
-	C8 *token;
-
-
-	if (strlen(TrajFileHeader) >= 1) {
-		j = 0;
-		token = strtok(TrajFileHeader, ";");
-		while (token != NULL) {
-			if (j == 1) {
-				TRAJInfoData->TrajectoryIDValueIdU16 = VALUE_ID_TRAJECTORY_ID;
-				TRAJInfoData->TrajectoryIDContentLengthU16 = 2;
-				TRAJInfoData->TrajectoryIDU16 = atoi(token);
-			}
-			else if (j == 2) {
-				TRAJInfoData->TrajectoryNameValueIdU16 = VALUE_ID_TRAJECTORY_NAME;
-				TRAJInfoData->TrajectoryNameContentLengthU16 = 64;
-				bzero(TRAJInfoData->TrajectoryNameC8, 64);
-				strncpy(TRAJInfoData->TrajectoryNameC8, token, strlen(token));
-			}
-			else if (j == 3) {
-				TRAJInfoData->TrajectoryVersionValueIdU16 = VALUE_ID_TRAJECTORY_VERSION;
-				TRAJInfoData->TrajectoryVersionContentLengthU16 = 2;
-				TRAJInfoData->TrajectoryVersionU16 = atoi(token);
-			}
-			else if (j == 4) {
-				*RowCount = atoi(token);
-			}
-
-			j++;
-			token = strtok(NULL, ";");
-		}
-	}
-
-	TRAJInfoData->IpAddressValueIdU16 = 0xA000;
-	TRAJInfoData->IpAddressContentLengthU16 = 4;
-	TRAJInfoData->IpAddressU32 = 0;
-
-	bzero(MessageBuffer, COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH);
-
-	HeaderData->SyncWordU16 = ISO_SYNC_WORD;
-	HeaderData->TransmitterIdU8 = 0;
-	HeaderData->MessageCounterU8 = 0;
-	HeaderData->AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	HeaderData->MessageIdU16 = COMMAND_DOTM_CODE;
-	HeaderData->MessageLengthU32 =
-		*RowCount * COMMAND_DOTM_ROW_MESSAGE_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH;
-
-	p = (C8 *) HeaderData;
-	for (i = 0; i < COMMAND_MESSAGE_HEADER_LENGTH; i++)
-		*(MessageBuffer + i) = *p++;
-
-	p = (C8 *) TRAJInfoData;
-	for (; i < COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH; i++)
-		*(MessageBuffer + i) = *p++;
-
-	MessageIndex = i;
-
-
-	if (debug) {
-		// TODO: Change to log printout when byte thingy has been implemented
-		printf("Header + TRAJInfo total length = %d bytes\n",
-			   (int)(COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH));
-		printf("----HEADER + TRAJInfo----\n");
-		for (i = 0; i < sizeof (HeaderType) + sizeof (TRAJInfoType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-		printf("DOTM message total length = %d bytes.\n", (int)HeaderData->MessageLengthU32);
-		printf("Traj file header = %s\n", TrajFileHeader);
-		printf("TrajectoryID = %d\n", TRAJInfoData->TrajectoryIDU16);
-		printf("TrajectoryName = %s\n", TRAJInfoData->TrajectoryNameC8);
-		printf("TrajectoryVersion = %d\n", TRAJInfoData->TrajectoryVersionU16);
-		printf("RowCount = %d\n", *RowCount);
-		printf("IpAddress = %d\n", TRAJInfoData->IpAddressU32);
-
-		printf("\n----MESSAGE----\n");
-	}
-
-	return MessageIndex;		//Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH
-}
-
-
-
-I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
-								 DOTMType * DOTMData, U8 debug) {
+ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const char debug) {
 	FILE *fd;
 
 	// Save socket settings and set it to blocking
