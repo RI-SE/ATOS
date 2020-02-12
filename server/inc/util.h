@@ -132,32 +132,6 @@ extern "C"{
 #define STRUCT_CODE  254
 #define RESERVED_CODE  255
 
-#define VALUE_ID_NOT_DEF                    0
-#define VALUE_ID_RELATIVE_TIME              0x1
-#define VALUE_ID_GPS_SECOND_OF_WEEK         0x2
-#define VALUE_ID_GPS_WEEK                   0x3
-#define VALUE_ID_DATE_ISO8601               0x4
-#define VALUE_ID_X_POSITION                 0x10
-#define VALUE_ID_Y_POSITION                 0x11
-#define VALUE_ID_Z_POSITION                 0x12
-#define VALUE_ID_LATITUDE                   0x20
-#define VALUE_ID_LONGITUDE                  0x21
-#define VALUE_ID_ALTITUDE                   0x22
-#define VALUE_ID_HEADING                    0x30
-#define VALUE_ID_LONGITUDINAL_SPEED         0x40
-#define VALUE_ID_LATERAL_SPEED              0x41
-#define VALUE_ID_LONGITUDINAL_ACCELERATION  0x50
-#define VALUE_ID_LATERAL_ACCELERATION       0x51
-#define VALUE_ID_STATE_CHANGE_REQUEST       0x64
-#define VALUE_ID_MAX_WAY_DEVIATION          0x70
-#define VALUE_ID_MAX_LATERAL_DEVIATION      0x72
-#define VALUE_ID_MIN_POS_ACCURACY           0x74
-#define VALUE_ID_CURVATURE                  0x52
-#define VALUE_ID_TRAJECTORY_ID              0x101
-#define VALUE_ID_TRAJECTORY_NAME            0x102
-#define VALUE_ID_TRAJECTORY_VERSION         0x103
-#define VALUE_ID_INSUP_MODE                 0x200
-
 #define C8 uint8_t
 #define U8 uint8_t
 #define I8 int8_t
@@ -195,19 +169,6 @@ extern "C"{
 
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
-
-#define ISO_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
-
-#define ISO_TRAJ_CODE 1
-#define ISO_DTM_ROWS_IN_TRANSMISSION 40
-#define ISO_DTM_ROW_MESSAGE_LENGTH sizeof(DOTMType)
-
-#define ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH sizeof(TRAJInfoType)
-#define SIM_TRAJ_BYTES_IN_ROW  30
-
-
-
-#define ISO_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
 
 #define DD_CONTROL_BUFFER_SIZE_1024 1024
 #define DD_CONTROL_BUFFER_SIZE_20 20
@@ -263,57 +224,6 @@ typedef struct
 	uint32_t ClientID;
 } MonitorDataType;
 
-typedef struct
-{
-  U16 RelativeTimeValueIdU16;
-  U16 RelativeTimeContentLengthU16;
-  U32 RelativeTimeU32;
-  U16 XPositionValueIdU16;
-  U16 XPositionContentLengthU16;
-  I32 XPositionI32;
-  U16 YPositionValueIdU16;
-  U16 YPositionContentLengthU16;
-  I32 YPositionI32;
-  U16 ZPositionValueIdU16;
-  U16 ZPositionContentLengthU16;
-  I32 ZPositionI32;
-  U16 HeadingValueIdU16;
-  U16 HeadingContentLengthU16;
-  U16 HeadingU16;
-  U16 LongitudinalSpeedValueIdU16;
-  U16 LongitudinalSpeedContentLengthU16;
-  I16 LongitudinalSpeedI16;
-  U16 LateralSpeedValueIdU16;
-  U16 LateralSpeedContentLengthU16;
-  I16 LateralSpeedI16;
-  U16 LongitudinalAccValueIdU16;
-  U16 LongitudinalAccContentLengthU16;
-  I16 LongitudinalAccI16;
-  U16 LateralAccValueIdU16;
-  U16 LateralAccContentLengthU16;
-  I16 LateralAccI16;
-  U16 CurvatureValueIdU16;
-  U16 CurvatureContentLengthU16;
-  I32 CurvatureI32;
-} DOTMType; //70 bytes
-
-
-typedef struct
-{
-  U16 TrajectoryIDValueIdU16;
-  U16 TrajectoryIDContentLengthU16;
-  U16 TrajectoryIDU16;
-  U16 TrajectoryNameValueIdU16;
-  U16 TrajectoryNameContentLengthU16;
-  C8 TrajectoryNameC8[64];
-  U16 TrajectoryVersionValueIdU16;
-  U16 TrajectoryVersionContentLengthU16;
-  U16 TrajectoryVersionU16;
-  U16 IpAddressValueIdU16;
-  U16 IpAddressContentLengthU16;
-  I32 IpAddressU32;
-
-} TRAJInfoType;
 
 typedef struct {
 	unsigned int ID;
@@ -702,6 +612,9 @@ void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 
 // File parsing functions
 int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
+int UtilParseTrajectoryFileHeader(char *headerLine, TrajectoryFileHeader * header);
+int UtilParseTrajectoryFileFooter(char *footerLine);
+int UtilParseTrajectoryFileLine(char *fileLine, TrajectoryFileLine * line);
 
 
 int UtilMonitorDataToString(const MonitorDataType monrData, char* monrString, size_t stringLength);
@@ -763,9 +676,6 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
-I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
-I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
-I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
 I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 
 int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, MonitorDataType *monitorData);
@@ -776,9 +686,6 @@ I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *
 
 double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
 
-int UtilParseTrajectoryFileHeader(char *headerLine, TrajectoryFileHeader * header);
-int UtilParseTrajectoryFileFooter(char *footerLine);
-int UtilParseTrajectoryFileLine(char *fileLine, TrajectoryFileLine * line);
 
 typedef struct {
   uint64_t timestamp;
