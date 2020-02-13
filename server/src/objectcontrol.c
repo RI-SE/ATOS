@@ -1059,10 +1059,12 @@ ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const 
 		position.zCoord_m = position.isPositionValid ? *fileLine.zCoord : 0;
 		position.heading_rad = fileLine.heading;
 		position.isHeadingValid = true;
-		speed.isValid = fileLine.longitudinalVelocity != NULL && fileLine.lateralVelocity != NULL;
+		speed.isLongitudinalValid = fileLine.longitudinalVelocity != NULL;
+		speed.isLateralValid = fileLine.lateralVelocity != NULL;
 		speed.longitudinal_m_s = fileLine.longitudinalVelocity != NULL ? *fileLine.longitudinalVelocity : 0;
 		speed.lateral_m_s = fileLine.lateralVelocity != NULL ? *fileLine.lateralVelocity : 0;
-		acceleration.isValid = fileLine.longitudinalAcceleration != NULL && fileLine.lateralAcceleration != NULL;
+		acceleration.isLongitudinalValid = fileLine.longitudinalAcceleration != NULL;
+		acceleration.isLateralValid = fileLine.lateralAcceleration != NULL;
 		acceleration.longitudinal_m_s2 = fileLine.longitudinalAcceleration != NULL ? *fileLine.longitudinalAcceleration : 0;
 		acceleration.lateral_m_s2 = fileLine.lateralAcceleration != NULL ? *fileLine.lateralAcceleration : 0;
 
