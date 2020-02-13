@@ -108,7 +108,6 @@ static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], 
 static void signalHandler(int signo);
 
 static ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const char debug);
-int ObjectControlSendUDPData(int *sockfd, struct sockaddr_in *addr, char *SendData, int Length, char debug);
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 							C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
@@ -1277,28 +1276,6 @@ static I32 vCheckRemoteDisconnected(int *sockfd) {
 	}
 
 	return 1;
-}
-
-int ObjectControlSendUDPData(int *sockfd, struct sockaddr_in *addr, char *SendData, int Length, char debug) {
-	ssize_t result;
-
-	// TODO: Change to log write when bytes thingy has been implemented
-	if (debug) {
-		printf("Bytes sent: ");
-		int i = 0;
-
-		for (i = 0; i < Length; i++)
-			printf("%x-", (unsigned char)*(SendData + i));
-		printf("\n");
-	}
-
-	result = sendto(*sockfd, SendData, Length, 0, (const struct sockaddr *)addr, sizeof (struct sockaddr_in));
-
-	if (result < 0) {
-		util_error("ERR: Failed to send on monitor socket");
-	}
-
-	return 0;
 }
 
 
