@@ -1074,7 +1074,7 @@ ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const 
 			if (errno == ENOBUFS) {
 				// Reached the end of buffer, send buffered data and
 				// try again
-				UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket, 1);
+				UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket, debug);
 
 				messageBufferPosition = messageBuffer;
 				remainingBufferSpace = sizeof (messageBuffer);
