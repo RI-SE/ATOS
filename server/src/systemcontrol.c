@@ -470,7 +470,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									}
 								}
 								StartPtr = StopPtr + 1;
-								CurrentInputArgCount++;
+								if (SystemControlArgument[CurrentInputArgCount][0] != '\0') {
+									CurrentInputArgCount++;	// In case the argument was empty, don't add it to the argument count
+								}
 							}
 
 							if (CmdPtr != NULL)
@@ -991,8 +993,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					SystemControlCommand = Idle_0;
 					if (ClientSocket >= 0) {
 						bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+						ControlResponseBuffer[0] = 1;
 						SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "AbortScenario:",
-														 ControlResponseBuffer, 0, &ClientSocket, 0);
+														 ControlResponseBuffer, 1, &ClientSocket, 0);
 					}
 				}
 			}
@@ -1000,7 +1003,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (ClientSocket >= 0) {
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-													 "AbortScenario:", ControlResponseBuffer, 0,
+													 "AbortScenario:", ControlResponseBuffer, 1,
 													 &ClientSocket, 0);
 					SystemControlSendLog("[SystemControl] ABORT received, state errors!\n", &ClientSocket, 0);
 				}
