@@ -33,6 +33,7 @@ extern "C"{
 #include "mqbus.h"
 #include "iso22133.h"
 #include "logging.h"
+#include "positioning.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -197,12 +198,6 @@ extern "C"{
 
 #define ISO_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
 
-#define ISO_INSUP_CODE 0xA102
-#define ISO_INSUP_NOFV 1
-#define ISO_INSUP_MESSAGE_LENGTH sizeof(OSTMType)
-#define ISO_INSUP_OPT_SET_ARMED_STATE 2
-#define ISO_INSUP_OPT_SET_DISARMED_STATE 3
-
 #define ISO_TRAJ_CODE 1
 #define ISO_DTM_ROWS_IN_TRANSMISSION 40
 #define ISO_DTM_ROW_MESSAGE_LENGTH sizeof(DOTMType)
@@ -263,47 +258,9 @@ typedef struct
 
 typedef struct
 {
-    double xCoord_m;
-    double yCoord_m;
-    double zCoord_m;
-    double heading_deg;
-} CartesianPosition;
-
-
-typedef struct
-{
-  HeaderType Header;
-  U16 ModeValueIdU16;
-  U16 ModeContentLengthU16;
-  U8 ModeU8;
-} INSUPType; //16 bytes
-
-
-typedef struct
-{
-  HeaderType Header;
-  U16 SyncPointTimeValueIdU16;
-  U16 SyncPointTimeContentLengthU16;
-  U32 SyncPointTimeU32;
-  U16 FreezeTimeValueIdU16;
-  U16 FreezeTimeContentLengthU16;
-  U32 FreezeTimeU32;
-} SYPMType; //
-
-
-typedef struct
-{
-  HeaderType Header;
-  U16 EstSyncPointTimeValueIdU16;
-  U16 EstSyncPointTimeContentLengthU16;
-  U32 EstSyncPointTimeU32;
-} MTSPType; //
-
-
-typedef struct
-{
-    MONRType MONR;
+	ObjectMonitorType data;
     in_addr_t ClientIP;
+	uint32_t ClientID;
 } MonitorDataType;
 
 typedef struct
@@ -602,18 +559,6 @@ typedef struct
 } VOILType;
 
 
-typedef struct
-{
-  U16 MessageIdU16;
-  U32 ObjectIPU32;
-  U32 GPSQmsOfWeekU32;
-  I32 XPositionI32;
-  I32 YPositionI32;
-  I32 ZPositionI32;
-  U16 HeadingU16;
-  I16 SpeedI16;
-} ObjectMonitorType;
-
 #define HTTP_HEADER_MAX_LENGTH 64
 typedef struct {
     char AcceptCharset[HTTP_HEADER_MAX_LENGTH];
@@ -737,12 +682,11 @@ void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 // File parsing functions
 int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
 
-//
-CartesianPosition MONRToCartesianPosition(MonitorDataType MONR);
-int UtilMonitorDataToString(MonitorDataType monrData, char* monrString, size_t stringLength);
+
+int UtilMonitorDataToString(const MonitorDataType monrData, char* monrString, size_t stringLength);
 int UtilStringToMonitorData(const char* monrString, size_t stringLength, MonitorDataType * monrData);
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
-uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_deg);
+uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
 int UtilVincentyDirect(double refLat, double refLon, double a1, double distance, double *resLat, double *resLon, double *a2);
 double UtilDegToRad(double Deg);
@@ -798,13 +742,12 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
-I32 UtilISOBuildINSUPMessage(C8* MessageBuffer, INSUPType *INSUPData, C8 CommandOption, U8 Debug);
 I32 UtilISOBuildTRAJMessageHeader(C8* MessageBuffer, I32 RowCount, HeaderType *HeaderData, TRAJInfoType *TRAJInfoData, U8 Debug);
 I32 UtilISOBuildTRAJMessage(C8 *MessageBuffer, C8 *DTMData, I32 RowCount, DOTMType *DOTMData, U8 debug);
 I32 UtilISOBuildTRAJInfo(C8* MessageBuffer, TRAJInfoType *TRAJInfoData, U8 debug);
 I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 
-I32 UtilPopulateMonitorDataStruct(C8* rawMONR, size_t rawMONRsize, MonitorDataType *monitorData, U8 debug);
+int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, MonitorDataType *monitorData);
 I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
 I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData);
 I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);

@@ -39,6 +39,8 @@ add_library(util
   ../../server/inc/util.h
   ../../server/inc/iso22133.h
   ../../server/src/iso22133.c
+  ../../server/inc/positioning.h
+  ../../server/src/positioning.c
 )
 
 add_executable(Visualization
