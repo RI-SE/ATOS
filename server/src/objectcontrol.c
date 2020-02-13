@@ -779,8 +779,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 						}
 						LogPrint("OSEM msglen: %ld", MessageLength);
-						UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex],
-										1);
+						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex],
+										0);
 
 						/* Here we send TRAJ, if the IP-address is not operating with a dynamic trajectory */
 						if (strstr(DTMReceivers, object_address_name[iIndex]) == NULL) {
