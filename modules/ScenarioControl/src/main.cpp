@@ -127,7 +127,7 @@ int main()
             break;
         case COMM_MONR:
             // Update triggers
-            UtilPopulateMonitorDataStruct(reinterpret_cast<uint8_t*>(mqRecvData), sizeof(mqRecvData), &monr, 0);
+			UtilPopulateMonitorDataStruct(mqRecvData, sizeof(mqRecvData), &monr);
             scenario.updateTrigger(monr);
 			break;
         case COMM_DISCONNECT:

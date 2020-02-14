@@ -39,6 +39,8 @@ add_library(util
     ../../server/inc/util.h
     ../../server/src/iso22133.c
     ../../server/inc/iso22133.h
+	../../server/src/positioning.c
+	../../server/inc/positioning.h
 )
 
 add_library(Trigger
