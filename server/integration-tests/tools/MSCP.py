@@ -48,7 +48,8 @@ class MSCP:
         print("=== Starting listener on " + str(self.host) + ":" + str(self.port))
         while not self.quit:
             try:
-                data = self.socket.recv(2048)
+                dat = self.socket.recv(2048)
+                data = bytearray(dat)
             except ConnectionResetError as e:
                 if not self.quit:
                     raise e
@@ -56,7 +57,7 @@ class MSCP:
             while len(data) > 0:
                 print("=== Received " + str(len(data)) + " bytes:")
                 print("=== " + str(data))
-
+                
                 for replyPattern in replyPatterns:
                     match = re.search(replyPattern["regex"],data)
                     if match is not None:
@@ -66,9 +67,6 @@ class MSCP:
                         self.responseCodeLock.release()
                         data = data[match.end():]
                         break
-                    else:
-                        print("=== Unable to match against data")
-                        data = []
                 if match is not None:
                     if matchPattern["command"] == "init":
                         print("=== Init reply received")
@@ -168,6 +166,9 @@ class MSCP:
                         else:
                             self.lastUploadReply["status"] = "UNKNOWN"
                         self.uploadReplyLock.release()
+                else:
+                    print("=== Unable to match against data")
+                    data = bytearray([])
 
 
     def GetStatus(self):         
