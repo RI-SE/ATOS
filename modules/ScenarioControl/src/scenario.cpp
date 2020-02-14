@@ -432,11 +432,16 @@ Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &mo
         {
             switch (tp->getTypeCode())
             {
-            case Trigger::TriggerTypeCode_t::TRIGGER_BRAKE:
-                struct timeval monrTime, currentTime;
-                TimeSetToCurrentSystemTime(&currentTime);
-				TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&currentTime), monr.MONR.gpsQmsOfWeek);
-				tp->update(static_cast<double>(monr.MONR.longitudinalSpeed)/100.0, monrTime);
+			case Trigger::TriggerTypeCode_t::TRIGGER_BRAKE:
+				if (monr.data.speed.isValid && monr.data.isTimestampValid)
+				{
+					tp->update(monr.data.speed.longitudinal_m_s, monr.data.timestamp);
+				}
+				else
+				{
+					LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
+							   tp->getTypeAsString(tp->getTypeCode()).c_str());
+				}
                 break;
             default:
                 LogMessage(LOG_LEVEL_WARNING, "Unhandled trigger type in update: %s",
