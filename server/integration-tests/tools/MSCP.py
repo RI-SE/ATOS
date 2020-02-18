@@ -168,7 +168,7 @@ class MSCP:
                 print("=== Unable to match against data: " + str(data))
 
     def GetStatus(self):         
-        message = "POST /maestro HTTP/1.1\r\nHost: " + self.host + "\r\n\r\nGetServerStatus();\r\n\r\n"    
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nGetServerStatus();\r\n\r\n"    
         self.Send(message)
         print("=== GetServerStatus() sent")
  
@@ -182,6 +182,11 @@ class MSCP:
         self.Send(message)
         print("=== ArmScenario() sent")
 
+    def Disarm(self):         
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDisarmScenario();\r\n\r\n"    
+        self.Send(message)
+        print("=== DisarmScenario() sent")
+
     def Init(self):       
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nInitializeScenario();\r\n\r\n"
         self.Send(message)
@@ -191,6 +196,11 @@ class MSCP:
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nConnectObject();\r\n\r\n"
         self.Send(message)
         print("=== Connect() sent")
+    
+    def CreateObjects(self, count):
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nCreateObjects(" + str(count) + ");\r\n\r\n"
+        self.Send(message)
+        print("=== CreateObjects() sent")
                  
     def Disconnect(self):
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDisconnectObject();\r\n\r\n"
@@ -220,6 +230,46 @@ class MSCP:
         self.uploadReplyLock.release()
         self.waitForUploadReply("UPLOAD_SUCCESS")
         print("=== File upload verified")
+
+    def DownloadFile(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDownloadFile();\r\n\r\n"
+        self.Send(message)
+        print("=== DownloadFile() sent")
+
+    def DeleteFile(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDeleteFile();\r\n\r\n"
+        self.Send(message)
+        print("=== DeleteFile() sent")
+
+    def CheckFileExists(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nCheckFileExists();\r\n\r\n"
+        self.Send(message)
+        print("=== CheckFileExists() sent")
+
+    def RemoteControl(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nRemoteControl();\r\n\r\n"
+        self.Send(message)
+        print("=== RemoteControl() sent")
+
+    def SetServerParameter(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nSetServerParameter();\r\n\r\n"
+        self.Send(message)
+        print("=== SetServerParameter() sent")
+
+    def GetServerParameters(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nGetServerParameters();\r\n\r\n"
+        self.Send(message)
+        print("=== GetServerParameters() sent")
+
+    def GetDirectoryContent(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nGetDirectoryContent();\r\n\r\n"
+        self.Send(message)
+        print("=== GetDirectoryContent() sent")
+
+    def GetServerTime(self):
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nGetServerTime();\r\n\r\n"
+        self.Send(message)
+        print("=== GetServerTime() sent")
 
     def Send(self,message):
         self.socket.send(message.encode())

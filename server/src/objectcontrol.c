@@ -79,14 +79,6 @@
 #define COMMAND_LLCM_CODE 8
 #define COMMAND_LLCM_MESSAGE_LENGTH 5
 
-#define COMMAND_SYPM_CODE 0xA103
-#define COMMAND_SYPM_MESSAGE_LENGTH sizeof(SYPMType)
-
-#define COMMAND_MTSP_CODE 0xA104
-#define COMMAND_MTSP_MESSAGE_LENGTH sizeof(MTSPType)
-
-#define ASP_MESSAGE_LENGTH sizeof(ASPType)
-
 #define SMALL_BUFFER_SIZE_0 20
 #define SMALL_BUFFER_SIZE_1 2
 #define SMALL_BUFFER_SIZE_2 1
@@ -137,9 +129,6 @@ static void signalHandler(int signo);
 
 int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, unsigned short Curvature,
 								  unsigned char Mode, char debug);
-I32 ObjectControlBuildSYPMMessage(C8 * MessageBuffer, SYPMType * SYPMData, U32 SyncPoint, U32 StopTime,
-								  U8 debug);
-I32 ObjectControlBuildMTSPMessage(C8 * MessageBuffer, MTSPType * MTSPData, U32 SyncTimestamp, U8 debug);
 I32 ObjectControlBuildTRAJMessageHeader(C8 * MessageBuffer, I32 * RowCount, HeaderType * HeaderData,
 										TRAJInfoType * TRAJInfoData, C8 * TrajFileHeader, U8 debug);
 I32 ObjectControlBuildTRAJMessage(C8 * MessageBuffer, FILE * fd, I32 RowCount, DOTMType * DOTMData, U8 debug);
@@ -152,11 +141,6 @@ I32 ObjectControlSendDTMMessage(C8 * DTMData, I32 * Socket, I32 RowCount, C8 * I
 I32 ObjectControlBuildDTMMessage(C8 * MessageBuffer, C8 * DTMData, I32 RowCount, DOTMType * DOTMData,
 								 U8 debug);
 I32 ObjectControlBuildASPMessage(C8 * MessageBuffer, ASPType * ASPData, U8 debug);
-I32 ObjectControlBuildACCMMessage(ACCMData * mqACCMData, ACCMType * ACCM, U8 debug);
-I32 ObjectControlBuildEXACMessage(EXACData * mqEXACData, EXACType * EXAC, U8 debug);
-I32 ObjectControlBuildTRCMMessage(TRCMData * mqTRCMData, TRCMType * TRCM, U8 debug);
-I32 ObjectControlSendACCMMessage(ACCMData * ACCM, I32 * socket, U8 debug);
-I32 ObjectControlSendTRCMMessage(TRCMData * TRCM, I32 * socket, U8 debug);
 I32 ObjectControlSendEXACMessage(EXACData * EXAC, I32 * socket, U8 debug);
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
@@ -209,11 +193,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	const struct timespec mqNonEmptyPollPeriod =
 		{ OC_SLEEP_TIME_NONEMPTY_MQ_S, OC_SLEEP_TIME_NONEMPTY_MQ_NS };
 	const struct timeval stateReportPeriod = { OC_STATE_REPORT_PERIOD_S, OC_STATE_REPORT_PERIOD_US };
-	struct timeval currentTime, nextStateReportTime, nextHeartbeatTime;
+	struct timeval currentTime, nextStateReportTime, nextHeartbeatTime, nextAdaptiveSyncMessageTime;
 
 	const struct timeval heartbeatPeriod = { 1 / HEAB_FREQUENCY_HZ,
 		(1000000 / HEAB_FREQUENCY_HZ) % 1000000
 	};
+	const struct timeval adaptiveSyncMessagePeriod = heartbeatPeriod;
+
 	U8 iForceObjectToLocalhostU8 = 0;
 
 	FILE *fd;
@@ -243,14 +229,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 pcSendBuffer[MBUS_MAX_DATALEN];
 	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
 	HeaderType HeaderData;
-	MONRType MONRData;
+	MonitorDataType monitorData;
 	DOTMType DOTMData;
 	TRAJInfoType TRAJInfoData;
 	VOILType VOILData;
-	SYPMType SYPMData;
-	MTSPType MTSPData;
 	ACCMData mqACCMData;
 	EXACData mqEXACData;
+	TRCMData mqTRCMData;
 	GeoPosition OriginPosition;
 	ASPType ASPData;
 
@@ -311,6 +296,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	TimeSetToCurrentSystemTime(&currentTime);
 	nextStateReportTime = currentTime;
 	nextHeartbeatTime = currentTime;
+	nextAdaptiveSyncMessageTime = currentTime;
 
 	while (!iExit) {
 
@@ -366,26 +352,30 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			char buffer[RECV_MESSAGE_BUFFER];
 			size_t receivedMONRData = 0;
 
-			// this is etsi time lets remov it ans use utc instead
-			//gettimeofday(&CurrentTimeStruct, NULL);
-
 			CurrentTimeU32 =
 				((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime)) << 2) +
 				GPSTime->MicroSecondU16;
 
+			 /*MTSP*/ if (timercmp(&currentTime, &nextAdaptiveSyncMessageTime, >)) {
 
-			 /*MTSP*/ if (HeartbeatMessageCounter == 0) {
-				HeartbeatMessageCounter = 0;
+				timeradd(&nextAdaptiveSyncMessageTime, &adaptiveSyncMessagePeriod,
+						 &nextAdaptiveSyncMessageTime);
+
+				struct timeval estSyncPointTime;
+
+				TimeSetToGPStime(&estSyncPointTime, TimeGetAsGPSweek(&currentTime), ASPData.MTSPU32);
+
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					for (i = 0; i < SyncPointCount; i++) {
 						if (TEST_SYNC_POINTS == 0
 							&& strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL
 							&& ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1) {
+
 							/*Send Master time to adaptive sync point */
 							MessageLength =
-								ObjectControlBuildMTSPMessage(MessageBuffer, &MTSPData, ASPData.MTSPU32, 0);
-							//ObjectControlSendUDPData(&safety_socket_fd[iIndex], &safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
-							UtilSendUDPData("Object Control", &safety_socket_fd[iIndex],
+								encodeMTSPMessage(&estSyncPointTime, MessageBuffer, sizeof (MessageBuffer),
+												  0);
+							UtilSendUDPData(MODULE_NAME, &safety_socket_fd[iIndex],
 											&safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
 						}
 						/*else if(TEST_SYNC_POINTS == 1 && iIndex == 1 && ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1 )
@@ -403,12 +393,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				memset(buffer, 0, sizeof (buffer));
 				receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex], buffer, sizeof (buffer));
 
-				if (receivedMONRData > 0) {
-					LogMessage(LOG_LEVEL_DEBUG, "Recieved new data from %s %d %d: %s",
-							   object_address_name[iIndex], object_udp_port[iIndex], receivedMONRData,
+				if (receivedMONRData > 0 && getISOMessageType(buffer, receivedMONRData, 0) == MESSAGE_ID_MONR) {
+					LogMessage(LOG_LEVEL_DEBUG, "Recieved %d bytes of new data from %s %d: %s",
+							   receivedMONRData, object_address_name[iIndex], object_udp_port[iIndex],
 							   buffer);
 
-					if (decodeMONRMessage(buffer, receivedMONRData, &MONRData, 0) != MESSAGE_OK) {
+					monitorData.ClientIP = safety_object_addr[iIndex].sin_addr.s_addr;
+					if (decodeMONRMessage
+						(buffer, receivedMONRData, &monitorData.ClientID, &monitorData.data,
+						 0) != MESSAGE_OK) {
 						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object",
 								   object_address_name[iIndex]);
 						vDisconnectObject(&safety_socket_fd[iIndex]);
@@ -417,13 +410,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 
 					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
-						// Append IP to buffer
-						memcpy(&buffer[receivedMONRData], &safety_object_addr[iIndex].sin_addr.s_addr,
-							   sizeof (in_addr_t));
+						// Place struct in buffer
+						memcpy(&buffer, &monitorData, sizeof (monitorData));
 						// Send MONR message as bytes
-
-						if (iCommSend(COMM_MONR, buffer, (size_t) (receivedMONRData) + sizeof (in_addr_t)) <
-							0) {
+						if (iCommSend(COMM_MONR, buffer, sizeof (monitorData)) < 0) {
 							LogMessage(LOG_LEVEL_ERROR,
 									   "Fatal communication fault when sending MONR command - entering error state");
 							vSetState(OBC_STATE_ERROR, GSD);
@@ -433,20 +423,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 
 					//Store MONR in GSD
-					//UtilSendUDPData("ObjectControl", &ObjectControlUDPSocketfdI32, &simulator_addr, &MONRData, sizeof(MONRData), 0);
-					for (i = 0;
-						 i <
-						 (MONRData.header.MessageLengthU32 + sizeof (MONRData.header) +
-						  sizeof (MONRData.footer)); i++)
-						GSD->MONRData[i] = buffer[i];
-					GSD->MONRSizeU8 =
-						MONRData.header.MessageLengthU32 + sizeof (MONRData.header) +
-						sizeof (MONRData.footer);
-					memset(buffer, 0, sizeof (buffer));
-					memcpy(buffer, object_address_name[iIndex], strlen(object_address_name[iIndex]));
-					strcat(buffer, ";0;");
-					MONRToASCII(&MONRData, buffer + strlen(buffer), sizeof (buffer) - strlen(buffer), 0);
+					memcpy(GSD->MONRData, buffer, receivedMONRData);
+					GSD->MONRSizeU8 = (unsigned char)receivedMONRData;
 
+					memset(buffer, 0, sizeof (buffer));
+					UtilMonitorDataToString(monitorData, buffer, sizeof (buffer));
 
 					if (ASPData.MTSPU32 != 0) {
 						//Add MTSP to MONR if not 0
@@ -466,15 +447,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 							TimeCap1 = (uint64_t) CurrentTimeStruct.tv_sec * 1000 + (uint64_t) CurrentTimeStruct.tv_usec / 1000;	//Calculate initial timestamp
 
-							OP[iIndex].x = ((double)MONRData.xPosition) / 1000;	//Set x and y on OP (ObjectPosition)
-							OP[iIndex].y = ((double)MONRData.yPosition) / 1000;
+							OP[iIndex].x = monitorData.data.position.xCoord_m;	//Set x and y on OP (ObjectPosition)
+							OP[iIndex].y = monitorData.data.position.yCoord_m;
 
 							//OP[iIndex].OrigoDistance = sqrt(pow(OP[iIndex].x,2) + pow(OP[iIndex].y,2)); //Calculate hypotenuse
 
 							// TODO: check use of this function since it should take two lat/long points but is here used with x/y
 							UtilCalcPositionDelta(OriginLatitudeDbl, OriginLongitudeDbl,
-												  MONRData.xPosition / 1e7, MONRData.yPosition / 1e7,
-												  &OP[iIndex]);
+												  monitorData.data.position.xCoord_m,
+												  monitorData.data.position.yCoord_m, &OP[iIndex]);
 
 							if (OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex) {
 								ASPData.CurrentTimeU32 = CurrentTimeU32;
@@ -523,7 +504,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								//ObjectControlBuildASPMessage(buffer, &ASPData, 0);
 								DataDictionarySetRVSSAsp(GSD, &ASPData);
 
-								if (MONRData.gpsQmsOfWeek % ASPDebugRate == 0) {
+								if (TimeGetAsGPSqmsOfWeek(&monitorData.data.timestamp) % ASPDebugRate == 0) {
 									printf("%d, %d, %3.3f, %s, %s\n", CurrentTimeU32, StartTimeU32,
 										   ASPData.TimeToSyncPointDbl, object_address_name[iIndex],
 										   ASP[i].MasterIP);
@@ -541,11 +522,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 					}
 					OP[iIndex].Speed =
-						sqrt(pow(MONRData.lateralSpeed, 2) + pow(MONRData.longitudinalSpeed, 2));
+						(float)sqrt(pow(monitorData.data.speed.lateral_m_s, 2) +
+									pow(monitorData.data.speed.longitudinal_m_s, 2));
 				}
 				else if (receivedMONRData > 0)
-					LogMessage(LOG_LEVEL_INFO, "MONR length error (should be %d but is %ld) from %s.",
-							   sizeof (MONRType), object_address_name[iIndex]);
+					LogMessage(LOG_LEVEL_WARNING, "Received unhandled message on monitoring socket");
 			}
 		}
 
@@ -596,7 +577,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				TimeSetToUTCms(&startTime, (int64_t) strtoul(MiscPtr, &MiscPtr, 10));
 				TimeSetToUTCms(&startDelay, (int64_t) strtoul(MiscPtr + 1, NULL, 10));
 				timeradd(&startTime, &startDelay, &startTime);
-				MessageLength = (int)encodeSTRTMessage(&startTime, MessageBuffer, sizeof (MessageBuffer), 0);
+				MessageLength = encodeSTRTMessage(&startTime, MessageBuffer, sizeof (MessageBuffer), 0);
 
 				ASPData.MTSPU32 = 0;
 				ASPData.TimeToSyncPointDbl = 0;
@@ -702,18 +683,47 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					iGetObjectIndexFromObjectIP(mqACCMData.ip, objectIPs,
 												sizeof (objectIPs) / sizeof (objectIPs[0]));
 				if (iIndex != -1) {
-					ObjectControlSendACCMMessage(&mqACCMData, &(socket_fds[iIndex]), 0);
+					MessageLength =
+						encodeACCMMessage(&mqACCMData.actionID, &mqACCMData.actionType,
+										  &mqACCMData.actionTypeParameter1, &mqACCMData.actionTypeParameter2,
+										  &mqACCMData.actionTypeParameter3, MessageBuffer,
+										  sizeof (MessageBuffer), 0);
+					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
 				}
 				else
 					LogMessage(LOG_LEVEL_WARNING, "Unable to send ACCM: no valid socket found");
+			}
+			else if (iCommand == COMM_TRCM && vGetState(GSD) == OBC_STATE_CONNECTED) {
+				UtilPopulateTRCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqTRCMData);
+				iIndex = iGetObjectIndexFromObjectIP(mqTRCMData.ip, objectIPs,
+													 sizeof (objectIPs) / sizeof (objectIPs[0]));
+				if (iIndex != -1) {
+					MessageLength =
+						encodeTRCMMessage(&mqTRCMData.triggerID, &mqTRCMData.triggerType,
+										  &mqTRCMData.triggerTypeParameter1,
+										  &mqTRCMData.triggerTypeParameter2,
+										  &mqTRCMData.triggerTypeParameter3, MessageBuffer,
+										  sizeof (MessageBuffer), 0);
+					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
+				}
+				else
+					LogMessage(LOG_LEVEL_WARNING, "Unable to send TRCM: no valid socket found");
 			}
 			else if (iCommand == COMM_EXAC && vGetState(GSD) == OBC_STATE_RUNNING) {
 				UtilPopulateEXACDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqEXACData);
 				iIndex =
 					iGetObjectIndexFromObjectIP(mqEXACData.ip, objectIPs,
 												sizeof (objectIPs) / sizeof (objectIPs[0]));
-				if (iIndex != -1)
-					ObjectControlSendEXACMessage(&mqEXACData, &(socket_fds[iIndex]), 0);
+				if (iIndex != -1) {
+					struct timeval executionTime;
+
+					TimeSetToGPStime(&executionTime, TimeGetAsGPSweek(&currentTime),
+									 mqEXACData.executionTime_qmsoW);
+					MessageLength =
+						encodeEXACMessage(&mqEXACData.actionID, &executionTime, MessageBuffer,
+										  sizeof (MessageBuffer), 0);
+					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
+				}
 				else
 					LogMessage(LOG_LEVEL_WARNING, "Unable to send EXAC: no valid socket found");
 			}
@@ -799,6 +809,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						DataDictionaryGetOriginLongitudeC8(GSD, OriginLongitude, SMALL_BUFFER_SIZE_0);
 						DataDictionaryGetOriginAltitudeC8(GSD, OriginAltitude, SMALL_BUFFER_SIZE_0);
 
+						memset(pcSendBuffer, 0, sizeof (pcSendBuffer));
+						snprintf(pcSendBuffer, sizeof (pcSendBuffer), "%u;", TimeGetAsGPSweek(&currentTime));
+						snprintf(pcSendBuffer + strlen(pcSendBuffer),
+								 sizeof (pcSendBuffer) - strlen(pcSendBuffer), "%s;%s;%s;%s;", OriginLatitude,
+								 OriginLongitude, OriginAltitude, OriginHeading);
+
 						if (iCommSend(COMM_OSEM, pcSendBuffer, strlen(pcSendBuffer) + 1) < 0) {
 							LogMessage(LOG_LEVEL_ERROR,
 									   "Fatal communication fault when sending OSEM command - entering error state");
@@ -861,23 +877,25 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 						LogMessage(LOG_LEVEL_INFO, "Sync point counts: %d", SyncPointCount);
 						for (i = 0; i < SyncPointCount; i++) {
+							struct timeval syncPointTime, syncStopTime;
+
+							TimeSetToUTCms(&syncPointTime, (int64_t) (ASP[i].SlaveTrajSyncTime * 1000.0f));
+							TimeSetToUTCms(&syncStopTime, (int64_t) (ASP[i].SlaveSyncStopTime * 1000.0f));
 							if (TEST_SYNC_POINTS == 1 && iIndex == 1) {
 								/*Send SYPM to slave */
 								MessageLength =
-									ObjectControlBuildSYPMMessage(MessageBuffer, &SYPMData,
-																  ASP[i].SlaveTrajSyncTime * 1000,
-																  ASP[i].SlaveSyncStopTime * 1000, 1);
-								UtilSendTCPData("Object Control", MessageBuffer, MessageLength,
+									encodeSYPMMessage(syncPointTime, syncStopTime, MessageBuffer,
+													  sizeof (MessageBuffer), 0);
+								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 												&socket_fds[iIndex], 0);
 							}
 							else if (TEST_SYNC_POINTS == 0
 									 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL) {
 								/*Send SYPM to slave */
 								MessageLength =
-									ObjectControlBuildSYPMMessage(MessageBuffer, &SYPMData,
-																  ASP[i].SlaveTrajSyncTime * 1000,
-																  ASP[i].SlaveSyncStopTime * 1000, 1);
-								UtilSendTCPData("Object Control", MessageBuffer, MessageLength,
+									encodeSYPMMessage(syncPointTime, syncStopTime, MessageBuffer,
+													  sizeof (MessageBuffer), 0);
+								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 												&socket_fds[iIndex], 0);
 							}
 						}
@@ -912,6 +930,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
 
 				if (DisconnectU8 == 0) {
+					nextHeartbeatTime = currentTime;
+					nextAdaptiveSyncMessageTime = currentTime;
 					vSetState(OBC_STATE_CONNECTED, GSD);
 					iCommSend(COMM_OBJECTS_CONNECTED, NULL, 0);
 				}
@@ -1183,103 +1203,6 @@ int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, uns
 	return MessageIndex;		//Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
 }
 
-I32 ObjectControlBuildSYPMMessage(C8 * MessageBuffer, SYPMType * SYPMData, U32 SyncPoint, U32 StopTime,
-								  U8 debug) {
-
-	I32 MessageIndex = 0, i;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, COMMAND_SYPM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
-
-	SYPMData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	SYPMData->Header.TransmitterIdU8 = 0;
-	SYPMData->Header.MessageCounterU8 = 0;
-	SYPMData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	SYPMData->Header.MessageIdU16 = COMMAND_SYPM_CODE;
-	SYPMData->Header.MessageLengthU32 = sizeof (SYPMType) - sizeof (HeaderType);
-	SYPMData->SyncPointTimeValueIdU16 = 1;
-	SYPMData->SyncPointTimeContentLengthU16 = 4;
-	SYPMData->SyncPointTimeU32 = SyncPoint;
-	SYPMData->FreezeTimeValueIdU16 = 2;
-	SYPMData->FreezeTimeContentLengthU16 = 4;
-	SYPMData->FreezeTimeU32 = StopTime;
-
-
-	p = (C8 *) SYPMData;
-	for (i = 0; i < sizeof (SYPMType); i++)
-		*(MessageBuffer + i) = *p++;
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (SYPMType));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	*(MessageBuffer + i++) = (U8) (Crc);
-	MessageIndex = i;
-
-	if (debug) {
-		// TODO: Change to log printout when byte thingy has been implemented
-		printf("SYPM total length = %d bytes (header+message+footer)\n",
-			   (int)(COMMAND_SYPM_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (SYPMType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-}
-
-I32 ObjectControlBuildMTSPMessage(C8 * MessageBuffer, MTSPType * MTSPData, U32 SyncTimestamp, U8 debug) {
-
-	I32 MessageIndex = 0, i;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, COMMAND_MTSP_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH);
-
-	MTSPData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	MTSPData->Header.TransmitterIdU8 = 0;
-	MTSPData->Header.MessageCounterU8 = 0;
-	MTSPData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	MTSPData->Header.MessageIdU16 = COMMAND_MTSP_CODE;
-	MTSPData->Header.MessageLengthU32 = sizeof (MTSPType) - sizeof (HeaderType);
-	MTSPData->EstSyncPointTimeValueIdU16 = 1;
-	MTSPData->EstSyncPointTimeContentLengthU16 = 4;
-	MTSPData->EstSyncPointTimeU32 = SyncTimestamp;
-
-
-	p = (C8 *) MTSPData;
-	for (i = 0; i < sizeof (MTSPType); i++)
-		*(MessageBuffer + i) = *p++;
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (MTSPType));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	*(MessageBuffer + i++) = (U8) (Crc);
-	MessageIndex = i;
-
-	if (debug) {
-		// TODO: Change to log printout when byte thingy has been implemented
-		printf("MTSPData total length = %d bytes (header+message+footer)\n",
-			   (int)(COMMAND_MTSP_MESSAGE_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (MTSPType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-}
 
 
 I32 ObjectControlBuildTRAJMessageHeader(C8 * MessageBuffer, I32 * RowCount, HeaderType * HeaderData,
@@ -1616,7 +1539,7 @@ I32 ObjectControlBuildASPMessage(C8 * MessageBuffer, ASPType * ASPData, U8 debug
 	I32 MessageIndex = 0, i;
 	C8 *p;
 
-	bzero(MessageBuffer, ASP_MESSAGE_LENGTH);
+	memset(MessageBuffer, 0, sizeof (ASPType));
 	p = (C8 *) ASPData;
 	for (i = 0; i < sizeof (ASPType); i++)
 		*(MessageBuffer + i) = *p++;
@@ -1624,7 +1547,7 @@ I32 ObjectControlBuildASPMessage(C8 * MessageBuffer, ASPType * ASPData, U8 debug
 
 	if (debug) {
 		// TODO: Write to log when bytes thingy has been implemented
-		printf("ASP total length = %d bytes \n", (int)(ASP_MESSAGE_LENGTH));
+		printf("ASP total length = %d bytes \n", (int)(sizeof (ASPType)));
 		printf("\n----MESSAGE----\n");
 		for (i = 0; i < sizeof (ASPType); i++)
 			printf("%x ", (C8) MessageBuffer[i]);
@@ -1634,489 +1557,6 @@ I32 ObjectControlBuildASPMessage(C8 * MessageBuffer, ASPType * ASPData, U8 debug
 	return MessageIndex;		//Total number of bytes
 }
 
-
-/*!
- * \brief ObjectControlSendACCMMessage Sends ACCM data, reformatted to an ISO compliant message, to specified TCP socket
- * \param ACCM ACCM data from message bus
- * \param socket Socket where to send ACCM
- * \param debug Debug flag
- * \return Length of sent message
- */
-I32 ObjectControlSendACCMMessage(ACCMData * ACCM, I32 * socket, U8 debug) {
-	ACCMType isoACCM;
-	C8 messageBuffer[sizeof (isoACCM)];
-	C8 *ptr = messageBuffer;
-	U32 messageSize = 0;
-
-	ObjectControlBuildACCMMessage(ACCM, &isoACCM, debug);
-
-	// Copy ACCM header to send buffer
-	memcpy(ptr, &isoACCM.header.SyncWordU16, sizeof (isoACCM.header.SyncWordU16));
-	ptr += sizeof (isoACCM.header.SyncWordU16);
-
-	memcpy(ptr, &isoACCM.header.TransmitterIdU8, sizeof (isoACCM.header.TransmitterIdU8));
-	ptr += sizeof (isoACCM.header.TransmitterIdU8);
-
-	memcpy(ptr, &isoACCM.header.MessageCounterU8, sizeof (isoACCM.header.MessageCounterU8));
-	ptr += sizeof (isoACCM.header.MessageCounterU8);
-
-	memcpy(ptr, &isoACCM.header.AckReqProtVerU8, sizeof (isoACCM.header.AckReqProtVerU8));
-	ptr += sizeof (isoACCM.header.AckReqProtVerU8);
-
-	memcpy(ptr, &isoACCM.header.MessageIdU16, sizeof (isoACCM.header.MessageIdU16));
-	ptr += sizeof (isoACCM.header.MessageIdU16);
-
-	memcpy(ptr, &isoACCM.header.MessageLengthU32, sizeof (isoACCM.header.MessageLengthU32));
-	ptr += sizeof (isoACCM.header.MessageLengthU32);
-
-
-	// Copy ACCM action ID to send buffer
-	memcpy(ptr, &isoACCM.actionIDValueID, sizeof (isoACCM.actionIDValueID));
-	ptr += sizeof (isoACCM.actionIDValueID);
-
-	memcpy(ptr, &isoACCM.actionIDContentLength, sizeof (isoACCM.actionIDContentLength));
-	ptr += sizeof (isoACCM.actionIDContentLength);
-
-	memcpy(ptr, &isoACCM.actionID, sizeof (isoACCM.actionID));
-	ptr += sizeof (isoACCM.actionID);
-
-	// Copy ACCM action type to send buffer
-	memcpy(ptr, &isoACCM.actionTypeValueID, sizeof (isoACCM.actionTypeValueID));
-	ptr += sizeof (isoACCM.actionTypeValueID);
-
-	memcpy(ptr, &isoACCM.actionTypeContentLength, sizeof (isoACCM.actionTypeContentLength));
-	ptr += sizeof (isoACCM.actionTypeContentLength);
-
-	memcpy(ptr, &isoACCM.actionType, sizeof (isoACCM.actionType));
-	ptr += sizeof (isoACCM.actionType);
-
-	// Copy ACCM action parameter 1 to send buffer
-	memcpy(ptr, &isoACCM.actionTypeParameter1ValueID, sizeof (isoACCM.actionTypeParameter1ValueID));
-	ptr += sizeof (isoACCM.actionTypeParameter1ValueID);
-
-	memcpy(ptr, &isoACCM.actionTypeParameter1ContentLength,
-		   sizeof (isoACCM.actionTypeParameter1ContentLength));
-	ptr += sizeof (isoACCM.actionTypeParameter1ContentLength);
-
-	memcpy(ptr, &isoACCM.actionTypeParameter1, sizeof (isoACCM.actionTypeParameter1));
-	ptr += sizeof (isoACCM.actionTypeParameter1);
-
-	// Copy ACCM action parameter 2 to send buffer
-	memcpy(ptr, &isoACCM.actionTypeParameter2ValueID, sizeof (isoACCM.actionTypeParameter2ValueID));
-	ptr += sizeof (isoACCM.actionTypeParameter2ValueID);
-
-	memcpy(ptr, &isoACCM.actionTypeParameter2ContentLength,
-		   sizeof (isoACCM.actionTypeParameter2ContentLength));
-	ptr += sizeof (isoACCM.actionTypeParameter2ContentLength);
-
-	memcpy(ptr, &isoACCM.actionTypeParameter2, sizeof (isoACCM.actionTypeParameter2));
-	ptr += sizeof (isoACCM.actionTypeParameter2);
-
-	// Copy ACCM action parameter 3 to send buffer
-	memcpy(ptr, &isoACCM.actionTypeParameter3ValueID, sizeof (isoACCM.actionTypeParameter3ValueID));
-	ptr += sizeof (isoACCM.actionTypeParameter3ValueID);
-
-	memcpy(ptr, &isoACCM.actionTypeParameter3ContentLength,
-		   sizeof (isoACCM.actionTypeParameter3ContentLength));
-	ptr += sizeof (isoACCM.actionTypeParameter3ContentLength);
-
-	memcpy(ptr, &isoACCM.actionTypeParameter3, sizeof (isoACCM.actionTypeParameter3));
-	ptr += sizeof (isoACCM.actionTypeParameter3);
-
-
-	// Copy ACCM footer to send buffer
-	memcpy(ptr, &isoACCM.footer.Crc, sizeof (isoACCM.footer.Crc));
-	ptr += sizeof (isoACCM.footer.Crc);
-
-	if (ptr > messageBuffer)
-		messageSize = (U32) (ptr - messageBuffer);
-
-	if (messageSize - sizeof (isoACCM.header) - sizeof (isoACCM.footer) != isoACCM.header.MessageLengthU32)
-		LogMessage(LOG_LEVEL_WARNING, "ACCM message sent with invalid message length");
-
-	UtilSendTCPData(MODULE_NAME, messageBuffer, (I32) messageSize, socket, debug);
-
-	return (I32) messageSize;
-}
-
-/*!
- * \brief ObjectControlSendTRCMMessage Sends TRCM data, reformatted to an ISO compliant message, to specified TCP socket
- * \param ACCM TRCM data from message bus
- * \param socket Socket where to send TRCM
- * \param debug Debug flag
- * \return Length of sent message
- */
-I32 ObjectControlSendTRCMMessage(TRCMData * TRCM, I32 * socket, U8 debug) {
-	TRCMType isoTRCM;
-	C8 messageBuffer[sizeof (isoTRCM)];
-	C8 *ptr = messageBuffer;
-	U32 messageSize = 0;
-
-	ObjectControlBuildTRCMMessage(TRCM, &isoTRCM, debug);
-
-	// Copy TRCM header to send buffer
-	memcpy(ptr, &isoTRCM.header.SyncWordU16, sizeof (isoTRCM.header.SyncWordU16));
-	ptr += sizeof (isoTRCM.header.SyncWordU16);
-
-	memcpy(ptr, &isoTRCM.header.TransmitterIdU8, sizeof (isoTRCM.header.TransmitterIdU8));
-	ptr += sizeof (isoTRCM.header.TransmitterIdU8);
-
-	memcpy(ptr, &isoTRCM.header.MessageCounterU8, sizeof (isoTRCM.header.MessageCounterU8));
-	ptr += sizeof (isoTRCM.header.MessageCounterU8);
-
-	memcpy(ptr, &isoTRCM.header.AckReqProtVerU8, sizeof (isoTRCM.header.AckReqProtVerU8));
-	ptr += sizeof (isoTRCM.header.AckReqProtVerU8);
-
-	memcpy(ptr, &isoTRCM.header.MessageIdU16, sizeof (isoTRCM.header.MessageIdU16));
-	ptr += sizeof (isoTRCM.header.MessageIdU16);
-
-	memcpy(ptr, &isoTRCM.header.MessageLengthU32, sizeof (isoTRCM.header.MessageLengthU32));
-	ptr += sizeof (isoTRCM.header.MessageLengthU32);
-
-
-	// Copy TRCM trigger ID to send buffer
-	memcpy(ptr, &isoTRCM.triggerIDValueID, sizeof (isoTRCM.triggerIDValueID));
-	ptr += sizeof (isoTRCM.triggerIDValueID);
-
-	memcpy(ptr, &isoTRCM.triggerIDContentLength, sizeof (isoTRCM.triggerIDContentLength));
-	ptr += sizeof (isoTRCM.triggerIDContentLength);
-
-	memcpy(ptr, &isoTRCM.triggerID, sizeof (isoTRCM.triggerID));
-	ptr += sizeof (isoTRCM.triggerID);
-
-	// Copy TRCM trigger type to send buffer
-	memcpy(ptr, &isoTRCM.triggerTypeValueID, sizeof (isoTRCM.triggerTypeValueID));
-	ptr += sizeof (isoTRCM.triggerTypeValueID);
-
-	memcpy(ptr, &isoTRCM.triggerTypeContentLength, sizeof (isoTRCM.triggerTypeContentLength));
-	ptr += sizeof (isoTRCM.triggerTypeContentLength);
-
-	memcpy(ptr, &isoTRCM.triggerType, sizeof (isoTRCM.triggerType));
-	ptr += sizeof (isoTRCM.triggerType);
-
-	// Copy TRCM trigger parameter 1 to send buffer
-	memcpy(ptr, &isoTRCM.triggerTypeParameter1ValueID, sizeof (isoTRCM.triggerTypeParameter1ValueID));
-	ptr += sizeof (isoTRCM.triggerTypeParameter1ValueID);
-
-	memcpy(ptr, &isoTRCM.triggerTypeParameter1ContentLength,
-		   sizeof (isoTRCM.triggerTypeParameter1ContentLength));
-	ptr += sizeof (isoTRCM.triggerTypeParameter1ContentLength);
-
-	memcpy(ptr, &isoTRCM.triggerTypeParameter1, sizeof (isoTRCM.triggerTypeParameter1));
-	ptr += sizeof (isoTRCM.triggerTypeParameter1);
-
-	// Copy TRCM trigger parameter 2 to send buffer
-	memcpy(ptr, &isoTRCM.triggerTypeParameter2ValueID, sizeof (isoTRCM.triggerTypeParameter2ValueID));
-	ptr += sizeof (isoTRCM.triggerTypeParameter2ValueID);
-
-	memcpy(ptr, &isoTRCM.triggerTypeParameter2ContentLength,
-		   sizeof (isoTRCM.triggerTypeParameter2ContentLength));
-	ptr += sizeof (isoTRCM.triggerTypeParameter2ContentLength);
-
-	memcpy(ptr, &isoTRCM.triggerTypeParameter2, sizeof (isoTRCM.triggerTypeParameter2));
-	ptr += sizeof (isoTRCM.triggerTypeParameter2);
-
-	// Copy TRCM trigger parameter 3 to send buffer
-	memcpy(ptr, &isoTRCM.triggerTypeParameter3ValueID, sizeof (isoTRCM.triggerTypeParameter3ValueID));
-	ptr += sizeof (isoTRCM.triggerTypeParameter3ValueID);
-
-	memcpy(ptr, &isoTRCM.triggerTypeParameter3ContentLength,
-		   sizeof (isoTRCM.triggerTypeParameter3ContentLength));
-	ptr += sizeof (isoTRCM.triggerTypeParameter3ContentLength);
-
-	memcpy(ptr, &isoTRCM.triggerTypeParameter3, sizeof (isoTRCM.triggerTypeParameter3));
-	ptr += sizeof (isoTRCM.triggerTypeParameter3);
-
-
-	// Copy TRCM footer to send buffer
-	memcpy(ptr, &isoTRCM.footer.Crc, sizeof (isoTRCM.footer.Crc));
-	ptr += sizeof (isoTRCM.footer.Crc);
-
-	if (ptr > messageBuffer)
-		messageSize = (U32) (ptr - messageBuffer);
-
-	if (messageSize - sizeof (isoTRCM.header) - sizeof (isoTRCM.footer) != isoTRCM.header.MessageLengthU32)
-		LogMessage(LOG_LEVEL_WARNING, "TRCM message sent with invalid message length");
-
-	UtilSendTCPData(MODULE_NAME, messageBuffer, (I32) messageSize, socket, 0);
-
-	return (I32) messageSize;
-}
-
-/*!
- * \brief ObjectControlSendEXACMessage Sends EXAC data, reformatted to an ISO compliant message, to specified TCP socket
- * \param ACCM EXAC data from message bus
- * \param socket Socket where to send EXAC
- * \param debug Debug flag
- * \return Length of sent message
- */
-I32 ObjectControlSendEXACMessage(EXACData * EXAC, I32 * socket, U8 debug) {
-	EXACType isoEXAC;
-	C8 messageBuffer[sizeof (isoEXAC)];
-	C8 *ptr = messageBuffer;
-	U32 messageSize = 0;
-
-	ObjectControlBuildEXACMessage(EXAC, &isoEXAC, debug);
-
-	// Copy EXAC header to send buffer
-	memcpy(ptr, &isoEXAC.header.SyncWordU16, sizeof (isoEXAC.header.SyncWordU16));
-	ptr += sizeof (isoEXAC.header.SyncWordU16);
-
-	memcpy(ptr, &isoEXAC.header.TransmitterIdU8, sizeof (isoEXAC.header.TransmitterIdU8));
-	ptr += sizeof (isoEXAC.header.TransmitterIdU8);
-
-	memcpy(ptr, &isoEXAC.header.MessageCounterU8, sizeof (isoEXAC.header.MessageCounterU8));
-	ptr += sizeof (isoEXAC.header.MessageCounterU8);
-
-	memcpy(ptr, &isoEXAC.header.AckReqProtVerU8, sizeof (isoEXAC.header.AckReqProtVerU8));
-	ptr += sizeof (isoEXAC.header.AckReqProtVerU8);
-
-	memcpy(ptr, &isoEXAC.header.MessageIdU16, sizeof (isoEXAC.header.MessageIdU16));
-	ptr += sizeof (isoEXAC.header.MessageIdU16);
-
-	memcpy(ptr, &isoEXAC.header.MessageLengthU32, sizeof (isoEXAC.header.MessageLengthU32));
-	ptr += sizeof (isoEXAC.header.MessageLengthU32);
-
-
-	// Copy EXAC action ID to send buffer
-	memcpy(ptr, &isoEXAC.actionIDValueID, sizeof (isoEXAC.actionIDValueID));
-	ptr += sizeof (isoEXAC.actionIDValueID);
-
-	memcpy(ptr, &isoEXAC.actionIDContentLength, sizeof (isoEXAC.actionIDContentLength));
-	ptr += sizeof (isoEXAC.actionIDContentLength);
-
-	memcpy(ptr, &isoEXAC.actionID, sizeof (isoEXAC.actionID));
-	ptr += sizeof (isoEXAC.actionID);
-
-	// Copy EXAC action execution time to send buffer
-	memcpy(ptr, &isoEXAC.executionTime_qmsoWValueID, sizeof (isoEXAC.executionTime_qmsoWValueID));
-	ptr += sizeof (isoEXAC.executionTime_qmsoWValueID);
-
-	memcpy(ptr, &isoEXAC.executionTime_qmsoWContentLength, sizeof (isoEXAC.executionTime_qmsoWContentLength));
-	ptr += sizeof (isoEXAC.executionTime_qmsoWContentLength);
-
-	memcpy(ptr, &isoEXAC.executionTime_qmsoW, sizeof (isoEXAC.executionTime_qmsoW));
-	ptr += sizeof (isoEXAC.executionTime_qmsoW);
-
-
-	// Copy EXAC footer to send buffer
-	memcpy(ptr, &isoEXAC.footer.Crc, sizeof (isoEXAC.footer.Crc));
-	ptr += sizeof (isoEXAC.footer.Crc);
-
-	if (ptr > messageBuffer)
-		messageSize = (U32) (ptr - messageBuffer);
-
-	if (messageSize - sizeof (isoEXAC.header) - sizeof (isoEXAC.footer) != isoEXAC.header.MessageLengthU32)
-		LogMessage(LOG_LEVEL_WARNING, "EXAC message sent with invalid message length");
-
-	UtilSendTCPData(MODULE_NAME, messageBuffer, (I32) messageSize, socket, 0);
-
-	return (I32) messageSize;
-}
-
-
-/*!
- * \brief ObjectControlBuildACCMMessage Fills an ISO ACCM struct with relevant data fields, and corresponding value IDs and content lengths
- * \param mqACCMData Data which is to fill ACCM struct
- * \param ACCM Output ACCM struct
- * \param debug Debug flag
- * \return Byte size of ACCM struct
- */
-I32 ObjectControlBuildACCMMessage(ACCMData * mqACCMData, ACCMType * ACCM, U8 debug) {
-	// Header
-	ACCM->header.SyncWordU16 = ISO_SYNC_WORD;
-	ACCM->header.TransmitterIdU8 = 0;
-	ACCM->header.MessageCounterU8 = 0;
-	ACCM->header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	ACCM->header.MessageIdU16 = COMMAND_ACCM_CODE;
-	ACCM->header.MessageLengthU32 = sizeof (ACCMType) - sizeof (HeaderType) - sizeof (FooterType);
-
-	// Data fields
-	ACCM->actionID = mqACCMData->actionID;
-	ACCM->actionType = mqACCMData->actionType;
-	ACCM->actionTypeParameter1 = mqACCMData->actionTypeParameter1;
-	ACCM->actionTypeParameter2 = mqACCMData->actionTypeParameter2;
-	ACCM->actionTypeParameter3 = mqACCMData->actionTypeParameter3;
-
-	// Value ID fields
-	ACCM->actionIDValueID = VALUE_ID_ACTION_ID;
-	ACCM->actionTypeValueID = VALUE_ID_ACTION_TYPE;
-	ACCM->actionTypeParameter1ValueID = VALUE_ID_ACTION_TYPE_PARAM1;
-	ACCM->actionTypeParameter2ValueID = VALUE_ID_ACTION_TYPE_PARAM2;
-	ACCM->actionTypeParameter3ValueID = VALUE_ID_ACTION_TYPE_PARAM3;
-
-	// Content length fields
-	ACCM->actionIDContentLength = sizeof (ACCM->actionID);
-	ACCM->actionTypeContentLength = sizeof (ACCM->actionType);
-	ACCM->actionTypeParameter1ContentLength = sizeof (ACCM->actionTypeParameter1);
-	ACCM->actionTypeParameter2ContentLength = sizeof (ACCM->actionTypeParameter2);
-	ACCM->actionTypeParameter3ContentLength = sizeof (ACCM->actionTypeParameter3);
-
-	// Header content length
-	ACCM->header.MessageLengthU32 = sizeof (ACCM->actionID) + sizeof (ACCM->actionType)
-		+ sizeof (ACCM->actionTypeParameter1) + sizeof (ACCM->actionTypeParameter2) +
-		sizeof (ACCM->actionTypeParameter3)
-		+ sizeof (ACCM->actionIDValueID) + sizeof (ACCM->actionTypeValueID)
-		+ sizeof (ACCM->actionTypeParameter1ValueID) + sizeof (ACCM->actionTypeParameter1ValueID) +
-		sizeof (ACCM->actionTypeParameter3ValueID)
-		+ sizeof (ACCM->actionIDContentLength) + sizeof (ACCM->actionTypeContentLength)
-		+ sizeof (ACCM->actionTypeParameter1ContentLength) +
-		sizeof (ACCM->actionTypeParameter1ContentLength) + sizeof (ACCM->actionTypeParameter3ContentLength);
-
-
-	// Footer (TODO)
-	ACCM->footer.Crc = 0;
-
-	U32 messageLen =
-		ACCM->header.MessageLengthU32 + sizeof (ACCM->footer.Crc) + sizeof (ACCM->header.SyncWordU16) +
-		sizeof (ACCM->header.MessageIdU16) + sizeof (ACCM->header.AckReqProtVerU8) +
-		sizeof (ACCM->header.TransmitterIdU8) + sizeof (ACCM->header.MessageCounterU8) +
-		sizeof (ACCM->header.MessageLengthU32);
-
-	if (debug) {
-		LogPrint
-			("ACCM (%u bytes):\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x",
-			 messageLen, ACCM->actionIDValueID, ACCM->actionIDContentLength, ACCM->actionID,
-			 ACCM->actionTypeValueID, ACCM->actionTypeContentLength, ACCM->actionType,
-			 ACCM->actionTypeParameter1ValueID, ACCM->actionTypeParameter1ContentLength,
-			 ACCM->actionTypeParameter1, ACCM->actionTypeParameter2ValueID,
-			 ACCM->actionTypeParameter2ContentLength, ACCM->actionTypeParameter2,
-			 ACCM->actionTypeParameter3ValueID, ACCM->actionTypeParameter3ContentLength,
-			 ACCM->actionTypeParameter3);
-	}
-
-	return (I32) messageLen;
-}
-
-/*!
- * \brief ObjectControlBuildEXACMessage Fills an ISO EXAC struct with relevant data fields, and corresponding value IDs and content lengths
- * \param mqEXACData Data which is to fill EXAC struct
- * \param EXAC Output EXAC struct
- * \param debug Debug flag
- * \return Byte size of EXAC struct
- */
-I32 ObjectControlBuildEXACMessage(EXACData * mqEXACData, EXACType * EXAC, U8 debug) {
-	// TODO: Make system time follow GPS time (better) or pass the GSD pointer into here somehow
-	struct timeval systemTime;
-
-	TimeSetToCurrentSystemTime(&systemTime);
-
-	// Header
-	EXAC->header.SyncWordU16 = ISO_SYNC_WORD;
-	EXAC->header.TransmitterIdU8 = 0;
-	EXAC->header.MessageCounterU8 = 0;
-	EXAC->header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	EXAC->header.MessageIdU16 = COMMAND_EXAC_CODE;
-
-	// Data fields
-	EXAC->actionID = mqEXACData->actionID;
-	EXAC->executionTime_qmsoW = mqEXACData->executionTime_qmsoW;
-
-	// Value ID fields
-	EXAC->actionIDValueID = VALUE_ID_ACTION_ID;
-	EXAC->executionTime_qmsoWValueID = VALUE_ID_ACTION_EXECUTE_TIME;
-
-	// Content length fields
-	EXAC->actionIDContentLength = sizeof (EXAC->actionID);
-	EXAC->executionTime_qmsoWContentLength = sizeof (EXAC->executionTime_qmsoW);
-
-
-	// Header message length
-	EXAC->header.MessageLengthU32 = sizeof (EXAC->actionID) + sizeof (EXAC->executionTime_qmsoW)
-		+ sizeof (EXAC->actionIDValueID) + sizeof (EXAC->executionTime_qmsoWValueID)
-		+ sizeof (EXAC->actionIDContentLength) + sizeof (EXAC->executionTime_qmsoWContentLength);
-
-	// Footer (TODO)
-	EXAC->footer.Crc = 0;
-
-	U32 messageLen =
-		EXAC->header.MessageLengthU32 + sizeof (EXAC->footer.Crc) + sizeof (EXAC->header.SyncWordU16) +
-		sizeof (EXAC->header.MessageIdU16) + sizeof (EXAC->header.AckReqProtVerU8) +
-		sizeof (EXAC->header.TransmitterIdU8) + sizeof (EXAC->header.MessageCounterU8) +
-		sizeof (EXAC->header.MessageLengthU32);
-
-	if (debug) {
-		LogPrint("EXAC (%u bytes):\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x", messageLen,
-				 EXAC->actionIDValueID, EXAC->actionIDContentLength, EXAC->actionID,
-				 EXAC->executionTime_qmsoWValueID, EXAC->executionTime_qmsoWContentLength,
-				 EXAC->executionTime_qmsoW);
-	}
-
-	return (I32) messageLen;
-}
-
-/*!
- * \brief ObjectControlBuildTRCMMessage Fills an ISO TRCM struct with relevant data fields, and corresponding value IDs and content lengths
- * \param mqTRCMData Data which is to fill TRCM struct
- * \param TRCM Output TRCM struct
- * \param debug Debug flag
- * \return Byte size of TRCM struct
- */
-I32 ObjectControlBuildTRCMMessage(TRCMData * mqTRCMData, TRCMType * TRCM, U8 debug) {
-	// Header
-	TRCM->header.SyncWordU16 = ISO_SYNC_WORD;
-	TRCM->header.TransmitterIdU8 = 0;
-	TRCM->header.MessageCounterU8 = 0;
-	TRCM->header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	TRCM->header.MessageIdU16 = COMMAND_TRCM_CODE;
-
-
-	// Data fields
-	TRCM->triggerID = mqTRCMData->triggerID;
-	TRCM->triggerType = mqTRCMData->triggerType;
-	TRCM->triggerTypeParameter1 = mqTRCMData->triggerTypeParameter1;
-	TRCM->triggerTypeParameter2 = mqTRCMData->triggerTypeParameter2;
-	TRCM->triggerTypeParameter3 = mqTRCMData->triggerTypeParameter3;
-
-	// Value ID fields
-	TRCM->triggerIDValueID = VALUE_ID_TRIGGER_ID;
-	TRCM->triggerIDValueID = VALUE_ID_TRIGGER_TYPE;
-	TRCM->triggerTypeParameter1ValueID = VALUE_ID_TRIGGER_TYPE_PARAM1;
-	TRCM->triggerTypeParameter2ValueID = VALUE_ID_TRIGGER_TYPE_PARAM2;
-	TRCM->triggerTypeParameter3ValueID = VALUE_ID_TRIGGER_TYPE_PARAM3;
-
-	// Content length fields
-	TRCM->triggerIDContentLength = sizeof (TRCM->triggerID);
-	TRCM->triggerTypeContentLength = sizeof (TRCM->triggerType);
-	TRCM->triggerTypeParameter1ContentLength = sizeof (TRCM->triggerTypeParameter1);
-	TRCM->triggerTypeParameter2ContentLength = sizeof (TRCM->triggerTypeParameter2);
-	TRCM->triggerTypeParameter3ContentLength = sizeof (TRCM->triggerTypeParameter3);
-
-
-	// Message length in header
-	TRCM->header.MessageLengthU32 = sizeof (TRCM->triggerID) + sizeof (TRCM->triggerType)
-		+ sizeof (TRCM->triggerTypeParameter1) + sizeof (TRCM->triggerTypeParameter2) +
-		sizeof (TRCM->triggerTypeParameter3)
-		+ sizeof (TRCM->triggerIDValueID) + sizeof (TRCM->triggerTypeValueID)
-		+ sizeof (TRCM->triggerTypeParameter1ValueID) + sizeof (TRCM->triggerTypeParameter1ValueID) +
-		sizeof (TRCM->triggerTypeParameter3ValueID)
-		+ sizeof (TRCM->triggerIDContentLength) + sizeof (TRCM->triggerTypeContentLength)
-		+ sizeof (TRCM->triggerTypeParameter1ContentLength) +
-		sizeof (TRCM->triggerTypeParameter1ContentLength) + sizeof (TRCM->triggerTypeParameter3ContentLength);
-
-
-	// Footer (TODO)
-	TRCM->footer.Crc = 0;
-
-	U32 messageLen =
-		TRCM->header.MessageLengthU32 + sizeof (TRCM->footer.Crc) + sizeof (TRCM->header.SyncWordU16) +
-		sizeof (TRCM->header.MessageIdU16) + sizeof (TRCM->header.AckReqProtVerU8) +
-		sizeof (TRCM->header.TransmitterIdU8) + sizeof (TRCM->header.MessageCounterU8) +
-		sizeof (TRCM->header.MessageLengthU32);
-	if (debug) {
-		LogPrint
-			("TRCM (%u bytes):\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x\n\t%#x-%#x-%#x",
-			 messageLen, TRCM->triggerIDValueID, TRCM->triggerIDContentLength, TRCM->triggerID,
-			 TRCM->triggerTypeValueID, TRCM->triggerTypeContentLength, TRCM->triggerType,
-			 TRCM->triggerTypeParameter1ValueID, TRCM->triggerTypeParameter1ContentLength,
-			 TRCM->triggerTypeParameter1, TRCM->triggerTypeParameter2ValueID,
-			 TRCM->triggerTypeParameter2ContentLength, TRCM->triggerTypeParameter2,
-			 TRCM->triggerTypeParameter3ValueID, TRCM->triggerTypeParameter3ContentLength,
-			 TRCM->triggerTypeParameter3);
-	}
-
-	return (I32) messageLen;
-}
 
 
 I32 ObjectControlSendDTMMessage(C8 * DTMData, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
@@ -2448,7 +1888,7 @@ int ObjectControlSendUDPData(int *sockfd, struct sockaddr_in *addr, char *SendDa
 }
 
 
-static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
+size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 	ssize_t result = 0;
 	size_t recvDataSize = 0;
 

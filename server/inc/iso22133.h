@@ -3,11 +3,17 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-/*! This file contains all definitions pertaining to the ISO standard 22133
- *
- *
- *
- *
+/*! ------------------------------------------------------------------------------
+ *  -- Copyright	: (C) AstaZero AB
+ *  ------------------------------------------------------------------------------
+ *  -- File			: iso22133.h
+ *  -- Author		: Lukas Wikander
+ *  -- Description	: This file specifies an interface for converting from network
+ *					  messages in the ISO 22133 format to native data types.
+ *  -- Purpose		: Reduce the amount of boilerplate needed to read an ISO 22133
+ *					  message.
+ *  -- Reference	: ISO/TC 22/SC 33/WG 16 - ISO/WD 22133-1
+ *  ------------------------------------------------------------------------------
  */
 
 #include <inttypes.h>
@@ -15,6 +21,9 @@ extern "C" {
 #include <stdio.h>
 #include <sys/time.h>
 
+#include "positioning.h"
+
+// TODO: move to .c-file
 #define ISO_PROTOCOL_VERSION 2
 #define ACK_REQ 0
 
@@ -37,84 +46,7 @@ typedef struct
 } FooterType; //2 bytes
 
 
-
-//! Predefined integer values with special meaning
-#define LATITUDE_UNAVAILABLE_VALUE 900000000001
-#define LATITUDE_ONE_DEGREE_VALUE 10000000000
-#define LONGITUDE_UNAVAILABLE_VALUE 1800000000001
-#define LONGITUDE_ONE_DEGREE_VALUE 10000000000
-#define ALTITUDE_UNAVAILABLE_VALUE 800001
-#define ALTITUDE_ONE_METER_VALUE 100
-#define DATE_UNAVAILABLE_VALUE 0
-#define GPS_WEEK_UNAVAILABLE_VALUE 10001
-#define GPS_SECOND_OF_WEEK_UNAVAILABLE_VALUE 2419200000
-#define MAX_WAY_DEVIATION_UNAVAILABLE_VALUE 65535
-#define MAX_WAY_DEVIATION_ONE_METER_VALUE 1000
-#define MAX_LATERAL_DEVIATION_UNAVAILABLE_VALUE 65535
-#define MAX_LATERAL_DEVIATION_ONE_METER_VALUE 1000
-#define MIN_POSITIONING_ACCURACY_NOT_REQUIRED_VALUE 0
-#define MIN_POSITIONING_ACCURACY_ONE_METER_VALUE 1000 // ISO specification unclear on this value
-
-
-
-//! *************************** OSEM
-typedef struct
-{
-  HeaderType header;
-  uint16_t latitudeValueID;
-  uint16_t latitudeContentLength;
-  int64_t latitude;
-  uint16_t longitudeValueID;
-  uint16_t longitudeContentLength;
-  int64_t longitude;
-  uint16_t altitudeValueID;
-  uint16_t altitudeContentLength;
-  int32_t altitude;
-  uint16_t dateValueID;
-  uint16_t dateContentLength;
-  uint32_t date;
-  uint16_t GPSWeekValueID;
-  uint16_t GPSWeekContentLength;
-  uint16_t GPSWeek;
-  uint16_t GPSQmsOfWeekValueID;
-  uint16_t GPSQmsOfWeekContentLength;
-  uint32_t GPSQmsOfWeek;
-  uint16_t maxWayDeviationValueID;
-  uint16_t maxWayDeviationContentLength;
-  uint16_t maxWayDeviation;
-  uint16_t maxLateralDeviationValueID;
-  uint16_t maxLateralDeviationContentLength;
-  uint16_t maxLateralDeviation;
-  uint16_t minPosAccuracyValueID;
-  uint16_t minPosAccuracyContentLength;
-  uint16_t minPosAccuracy;
-  FooterType footer;
-} OSEMType; //85 bytes
-
-//! OSEM value IDs
-#define VALUE_ID_OSEM_LATITUDE 0x0020
-#define VALUE_ID_OSEM_LONGITUDE 0x0021
-#define VALUE_ID_OSEM_ALTITUDE 0x0022
-#define VALUE_ID_OSEM_DATE 0x0004
-#define VALUE_ID_OSEM_GPS_WEEK 0x0003
-#define VALUE_ID_OSEM_GPS_QUARTER_MILLISECOND_OF_WEEK 0x0002
-#define VALUE_ID_OSEM_MAX_WAY_DEVIATION 0x0070
-#define VALUE_ID_OSEM_MAX_LATERAL_DEVIATION 0x0072
-#define VALUE_ID_OSEM_MIN_POSITIONING_ACCURACY 0x0074
-
-
-//! *************************** OSTM
-typedef struct
-{
-  HeaderType header;
-  uint16_t stateValueID;
-  uint16_t stateContentLength;
-  uint8_t state;
-  FooterType footer;
-} OSTMType; //16 bytes
-
-//! OSTM value IDs
-#define VALUE_ID_OSTM_STATE_CHANGE_REQUEST 0x0064
+/*! OSTM commands */
 typedef enum {
 	OBJECT_COMMAND_ARM = 0x02,				//!< Request to arm the target object
 	OBJECT_COMMAND_DISARM = 0x03,			//!< Request to disarm the target object
@@ -122,96 +54,20 @@ typedef enum {
 } ObjectCommandType;
 
 
-//! *************************** STRT
-typedef struct
-{
-	HeaderType header;
-	uint16_t StartTimeValueIdU16;
-	uint16_t StartTimeContentLengthU16;
-	uint32_t StartTimeU32;
-	uint16_t GPSWeekValueID;
-	uint16_t GPSWeekContentLength;
-	uint16_t GPSWeek;
-	FooterType footer;
-} STRTType; //27 bytes
-
-//! STRT value IDs
-#define VALUE_ID_STRT_GPS_QMS_OF_WEEK 0x0002
-#define VALUE_ID_STRT_GPS_WEEK 0x0003
-
-
-//! *************************** HEAB
 #define HEAB_FREQUENCY_HZ 100
-typedef struct
-{
-  HeaderType header;
-  uint16_t HEABStructValueID;
-  uint16_t HEABStructContentLength;
-  uint32_t GPSQmsOfWeek;
-  uint8_t controlCenterStatus;
-  FooterType footer;
-} HEABType; //16 bytes
-
-//! HEAB value IDs
-#define VALUE_ID_HEAB_STRUCT 0x0090
+/*! HEAB control center statuses */
 typedef enum {
-	CONTROL_CENTER_STATUS_INIT = 0x00,
-	CONTROL_CENTER_STATUS_READY = 0x01,
-	CONTROL_CENTER_STATUS_ABORT = 0x02,
-	CONTROL_CENTER_STATUS_RUNNING = 0x03,
-	CONTROL_CENTER_STATUS_TEST_DONE = 0x04,
-	CONTROL_CENTER_STATUS_NORMAL_STOP = 0x05
+	CONTROL_CENTER_STATUS_INIT = 0x00,			//!<
+	CONTROL_CENTER_STATUS_READY = 0x01,			//!<
+	CONTROL_CENTER_STATUS_ABORT = 0x02,			//!<
+	CONTROL_CENTER_STATUS_RUNNING = 0x03,		//!<
+	CONTROL_CENTER_STATUS_TEST_DONE = 0x04,		//!<
+	CONTROL_CENTER_STATUS_NORMAL_STOP = 0x05	//!<
 } ControlCenterStatusType;
 
-//! *************************** MONR
 #define MONR_EXPECTED_FREQUENCY_HZ 100
-typedef struct
-{
-	HeaderType header;
-	uint16_t monrStructValueID;
-	uint16_t monrStructContentLength;
-	uint32_t gpsQmsOfWeek;
-	int32_t xPosition;
-	int32_t yPosition;
-	int32_t zPosition;
-	uint16_t heading;
-	int16_t longitudinalSpeed;
-	int16_t lateralSpeed;
-	int16_t longitudinalAcc;
-	int16_t lateralAcc;
-	uint8_t driveDirection;
-	uint8_t state;
-	uint8_t readyToArm;
-	uint8_t errorStatus;
-	FooterType footer;
-} MONRType;
 
-//! MONR value IDs
-#define VALUE_ID_MONR_STRUCT 0x80
-
-
-//! *************************** TRCM
-#define COMMAND_TRCM_CODE 0x0011
-typedef struct
-{
-	HeaderType header;
-	uint16_t triggerIDValueID;
-	uint16_t triggerIDContentLength;
-	uint16_t triggerID;
-	uint16_t triggerTypeValueID;
-	uint16_t triggerTypeContentLength;
-	uint16_t triggerType;
-	uint16_t triggerTypeParameter1ValueID;
-	uint16_t triggerTypeParameter1ContentLength;
-	uint32_t triggerTypeParameter1;
-	uint16_t triggerTypeParameter2ValueID;
-	uint16_t triggerTypeParameter2ContentLength;
-	uint32_t triggerTypeParameter2;
-	uint16_t triggerTypeParameter3ValueID;
-	uint16_t triggerTypeParameter3ContentLength;
-	uint32_t triggerTypeParameter3;
-	FooterType footer;
-} TRCMType;
+#pragma pack(pop)
 
 typedef enum {
 	TRIGGER_UNDEFINED               = 0x0000,
@@ -270,29 +126,6 @@ typedef enum {
 } TriggerTypeParameter_t;
 
 
-//! *************************** ACCM
-#define COMMAND_ACCM_CODE 0x0012
-typedef struct
-{
-	HeaderType header;
-	uint16_t actionIDValueID;
-	uint16_t actionIDContentLength;
-	uint16_t actionID;
-	uint16_t actionTypeValueID;
-	uint16_t actionTypeContentLength;
-	uint16_t actionType;
-	uint16_t actionTypeParameter1ValueID;
-	uint16_t actionTypeParameter1ContentLength;
-	uint32_t actionTypeParameter1;
-	uint16_t actionTypeParameter2ValueID;
-	uint16_t actionTypeParameter2ContentLength;
-	uint32_t actionTypeParameter2;
-	uint16_t actionTypeParameter3ValueID;
-	uint16_t actionTypeParameter3ContentLength;
-	uint32_t actionTypeParameter3;
-	FooterType footer;
-} ACCMType;
-
 typedef enum {
 	ACTION_NONE                     = 0x0000,
 	ACTION_TYPE_1                   = 0x0001,
@@ -333,54 +166,6 @@ typedef enum {
 } ActionTypeParameter_t;
 
 
-//! *************************** TREO
-#define COMMAND_TREO_CODE 0x0013
-typedef struct
-{
-	HeaderType header;
-	uint16_t triggerIDValueID;
-	uint16_t triggerIDContentLength;
-	uint16_t triggerID;
-	uint16_t timestamp_qmsowValueID;
-	uint16_t timestamp_qmsowContentLength;
-	uint32_t timestamp_qmsow;
-	FooterType footer;
-} TREOType;
-
-
-//! *************************** EXAC
-#define COMMAND_EXAC_CODE 0x0014
-typedef struct
-{
-	HeaderType header;
-	uint16_t actionIDValueID;
-	uint16_t actionIDContentLength;
-	uint16_t actionID;
-	uint16_t executionTime_qmsoWValueID;
-	uint16_t executionTime_qmsoWContentLength;
-	uint32_t executionTime_qmsoW;
-	FooterType footer;
-} EXACType;
-
-
-//! ACCM / EXAC / CATA value IDs
-#define VALUE_ID_ACTION_ID 0x0002
-#define VALUE_ID_ACTION_TYPE 0x0003
-#define VALUE_ID_ACTION_TYPE_PARAM1 0x00A1
-#define VALUE_ID_ACTION_TYPE_PARAM2 0x00A2
-#define VALUE_ID_ACTION_TYPE_PARAM3 0x00A3
-#define VALUE_ID_ACTION_EXECUTE_TIME 0x0003
-
-//! TRCM / TREO / CATA value IDs
-#define VALUE_ID_TRIGGER_ID 0x0001
-#define VALUE_ID_TRIGGER_TYPE 0x0002
-#define VALUE_ID_TRIGGER_TYPE_PARAM1 0x0011
-#define VALUE_ID_TRIGGER_TYPE_PARAM2 0x0012
-#define VALUE_ID_TRIGGER_TYPE_PARAM3 0x0013
-#define VALUE_ID_TRIGGER_TIMESTAMP 0x0002
-
-#pragma pack(pop)
-
 typedef enum {
 	MESSAGE_OK,
 	MESSAGE_LENGTH_ERROR,
@@ -391,6 +176,7 @@ typedef enum {
 	MESSAGE_SYNC_WORD_ERROR
 } ISOMessageReturnValue;
 
+/*! Valid ISO message identifiers */
 typedef enum {
 	MESSAGE_ID_INVALID = 0x0000,
 	MESSAGE_ID_TRAJ = 0x0001,
@@ -420,17 +206,28 @@ typedef enum {
 	MESSAGE_ID_RESERVE_RANGE_2_LOWER_LIMIT = 0xF000,
 	MESSAGE_ID_RESERVE_RANGE_2_UPPER_LIMIT = 0xFFFF,
 	MESSAGE_ID_VENDOR_SPECIFIC_LOWER_LIMIT = 0xA100,
-	MESSAGE_ID_VENDOR_SPECIFIC_UPPER_LIMIT = 0xBFFF
+	MESSAGE_ID_VENDOR_SPECIFIC_UPPER_LIMIT = 0xBFFF,
+	MESSAGE_ID_VENDOR_SPECIFIC_RISE_INSUP = 0xA102
 } ISOMessageID;
 
+/*! Supervisor command */
+typedef enum {
+	SUPERVISOR_COMMAND_NORMAL = 1,	//!< Place supervisor in normal mode
+	SUPERVISOR_COMMAND_DEBUG = 2	//!< Place supervisor in debug mode
+} SupervisorCommandType;
 
-ISOMessageReturnValue decodeMONRMessage(const char * MonrData, const size_t length, MONRType * MONRData, const char debug);
+ISOMessageReturnValue decodeMONRMessage(const char * monrDataBuffer, const size_t bufferLength, uint32_t * objectID, ObjectMonitorType * MonitorData, const char debug);
 ssize_t encodeSTRTMessage(const struct timeval* timeOfStart, char * strtDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeOSEMMessage(const double * latitude_deg, const double * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeOSTMMessage(const ObjectCommandType command, char * ostmDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeHEABMessage(const ControlCenterStatusType status, char * heabDataBuffer, const size_t bufferLength, const char debug);
-ISOMessageReturnValue MONRToASCII(const MONRType * MONRData, char * asciiBuffer, const size_t bufferLength, const char debug);
-ISOMessageReturnValue ASCIIToMONR(const char * asciiBuffer, MONRType * MONRData, const char debug);
+ssize_t encodeSYPMMessage(const struct timeval synchronizationTime, const struct timeval freezeTime, char * sypmDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeMTSPMessage(const struct timeval * estSyncPointTime, char * mtspDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeTRCMMessage(const uint16_t* triggerID, const TriggerType_t* triggerType, const TriggerTypeParameter_t* param1, const TriggerTypeParameter_t* param2, const TriggerTypeParameter_t* param3, char * trcmDataBuffer, const size_t bufferLength, const char debug);
+ssize_t decodeTREOMessage();
+ssize_t encodeACCMMessage(const uint16_t* actionID, const ActionType_t* actionType, const ActionTypeParameter_t* param1, const ActionTypeParameter_t* param2, const ActionTypeParameter_t* param3, char * accmDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeEXACMessage(const uint16_t* actionID, const struct timeval * executionTime, char * exacDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeINSUPMessage(const SupervisorCommandType, char * insupDataBuffer, const size_t bufferLength, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);
 
 

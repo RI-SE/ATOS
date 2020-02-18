@@ -38,6 +38,8 @@ add_library(util
   ../../server/inc/util.h
   ../../server/src/iso22133.c
   ../../server/inc/iso22133.h
+  ../../server/inc/positioning.h
+  ../../server/src/positioning.c
 )
 
 add_executable(Supervision
