@@ -10,38 +10,43 @@ project(ScenarioControl)
 
 include_directories(inc)
 include_directories(src)
-include_directories(../../util/C/logging)
-include_directories(../../util/C/time)
-include_directories(../../util/C/MQBus)
-include_directories(../../server/inc)
 include(GNUInstallDirs)
 
+if (NOT TARGET MaestroLogging)
+	include_directories(../../util/C/logging)
+	add_library(MaestroLogging
+  		../util/C/logging/logging.h
+  		../util/C/logging/logging.c
+	)
+endif()
 
-# Create library
-add_library(MaestroLogging
-    ../../util/C/logging/logging.h
-    ../../util/C/logging/logging.c
-)
+if (NOT TARGET MaestroTime)
+	include_directories(../../util/C/time)
+	add_library(MaestroTime
+  		../util/C/time/maestroTime.h
+  		../util/C/time/maestroTime.c
+	)
+endif()
 
-add_library(MaestroTime
-    ../../util/C/time/maestroTime.h
-    ../../util/C/time/maestroTime.c
-)
+if (NOT TARGET MQBus)
+	include_directories(../../util/C/MQBus)
+	add_library(MQBus
+		../util/C/MQBus/mqbus.c
+		../util/C/MQBus/mqbus.h
+	)
+endif()
 
-add_library(MQBus
-    ../../util/C/MQBus/mqbus.h
-    ../../util/C/MQBus/mqbus.c
-)
-
-# Create library
-add_library(util
-    ../../server/src/util.c
-    ../../server/inc/util.h
-    ../../server/src/iso22133.c
-    ../../server/inc/iso22133.h
-	../../server/src/positioning.c
-	../../server/inc/positioning.h
-)
+if (NOT TARGET util)
+	include_directories(../../server/inc)
+	add_library(util
+    		../../server/src/util.c
+    		../../server/inc/util.h
+    		../../server/src/iso22133.c
+    		../../server/inc/iso22133.h
+		../../server/src/positioning.c
+		../../server/inc/positioning.h
+	)
+endif()
 
 add_library(Trigger
     inc/trigger.h

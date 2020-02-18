@@ -22,11 +22,41 @@ SET(GCC_COMPILE_FLAGS_ALL "${GCC_COMPILE_FLAGS_WARNINGS}")
 
 # add include directories
 include_directories(inc)
-include_directories(../util/C/logging)
-include_directories(../util/C/time)
-include_directories(../util/C/MQBus)
-include_directories(../util/ASN1/generatedfiles)
 include(GNUInstallDirs)
+if (NOT TARGET MaestroLogging)
+	include_directories(../util/C/logging)
+	add_library(MaestroLogging
+  		../util/C/logging/logging.h
+  		../util/C/logging/logging.c
+	)
+endif()
+
+if (NOT TARGET MaestroTime)
+	include_directories(../util/C/time)
+	add_library(MaestroTime
+  		../util/C/time/maestroTime.h
+  		../util/C/time/maestroTime.c
+	)
+endif()
+
+if (NOT TARGET MQBus)
+	include_directories(../util/C/MQBus)
+	add_library(MQBus
+		../util/C/MQBus/mqbus.c
+		../util/C/MQBus/mqbus.h
+	)
+endif()
+
+if (NOT TARGET util)
+	add_library(util
+  		inc/util.h
+  		src/util.c
+  		inc/iso22133.h
+  		src/iso22133.c
+  		inc/positioning.h
+  		src/positioning.c
+	)
+endif()
 
 # Add logging library (hint at some locations)
 #find_library(MAESTRO_LOGGING_PATH
@@ -43,6 +73,7 @@ SET(USE_CITS FALSE CACHE BOOL "Flag to indicate the use of CITS.")
 
 # MQTT PAHO
 if(USE_CITS)
+    include_directories(../util/ASN1/generatedfiles)
     find_package(OpenSSL REQUIRED)
     find_library(paho-mqtt3c NAMES libpaho-mqtt3c.so REQUIRED)
     add_library(pahomqtt3c SHARED IMPORTED)
@@ -59,39 +90,6 @@ if(USE_CITS)
     )
 add_definitions(-DCITS_ENABLED)
 endif()
-
-
-# Create library
-add_library(MaestroLogging
-  ../util/C/logging/logging.h
-  ../util/C/logging/logging.c
-)
-
-add_library(MaestroTime
-  ../util/C/time/maestroTime.h
-  ../util/C/time/maestroTime.c
-)
-
-add_library(MQBus
-  ../util/C/MQBus/mqbus.h
-  ../util/C/MQBus/mqbus.c
-)
-
-# Create library
-add_library(util
-  inc/util.h
-  src/util.c
-  inc/iso22133.h
-  src/iso22133.c
-  inc/positioning.h
-  src/positioning.c
-)
-
-# Create library
-add_library(objctrl
-  src/objectcontrol.c
-  inc/objectcontrol.h
-)
 
 
 # add the executable
