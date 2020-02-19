@@ -6,59 +6,72 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(Supervision)
 
-set(SUPERVISION_TARGET ${CMAKE_PROJECT_NAME})
+# Define target names
+set(SUPERVISION_TARGET ${PROJECT_NAME})
 set(UTIL_TARGET MaestroUtil)
 set(TIME_TARGET MaestroTime)
 set(LOGGING_TARGET MaestroLogging)
 set(MESSAGE_BUS_TARGET MaestroMQ)
 
-add_executable(Supervision
+# Define paths to related files
+set(CORE_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../core)
+set(CORE_INCLUDE_PATH ${CORE_ROOT_PATH}/inc)
+set(CORE_SOURCE_PATH ${CORE_ROOT_PATH}/src)
+set(UTIL_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../util/C)
+set(TIME_PATH ${UTIL_ROOT_PATH}/time)
+set(LOGGING_PATH ${UTIL_ROOT_PATH}/logging)
+set(MESSAGE_BUS_PATH ${UTIL_ROOT_PATH}/mqbus)
+
+# Create project main executable target
+add_executable(${SUPERVISION_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/geofence.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/supervisionstate.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/trajectory.cpp
 )
 
+# If building locally, it is necessary to add relevant util targets
 if(NOT TARGET ${TIME_TARGET})
 	add_library(${TIME_TARGET} STATIC
-		${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/time/maestroTime.c
+		${TIME_PATH}/maestroTime.c
 	)
 endif()
 
 if(NOT TARGET ${LOGGING_TARGET})
 	add_library(${LOGGING_TARGET} STATIC
-		${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/logging/logging.c
+		${LOGGING_PATH}/logging.c
 	)
 endif()
 
 if(NOT TARGET ${MESSAGE_BUS_TARGET})
 	add_library(${MESSAGE_BUS_TARGET} STATIC
-		${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/mqbus/mqbus.c
+		${MESSAGE_BUS_PATH}/mqbus.c
 	)
 	target_link_libraries(${MESSAGE_BUS_TARGET} rt)
 endif()
 
 if(NOT TARGET ${UTIL_TARGET})
 	add_library(${UTIL_TARGET} STATIC
-		${CMAKE_CURRENT_SOURCE_DIR}/../../core/src/util.c
-		${CMAKE_CURRENT_SOURCE_DIR}/../../core/src/iso22133.c
-		${CMAKE_CURRENT_SOURCE_DIR}/../../core/src/positioning.c
-		${CMAKE_CURRENT_SOURCE_DIR}/../../core/src/datadictionary.c
+		${CORE_SOURCE_PATH}/util.c
+		${CORE_SOURCE_PATH}/iso22133.c
+		${CORE_SOURCE_PATH}/positioning.c
+		${CORE_SOURCE_PATH}/datadictionary.c
 	)
 	target_link_libraries(${UTIL_TARGET} ${LOGGING_TARGET} ${TIME_TARGET} ${MESSAGE_BUS_TARGET} m)
 	target_include_directories(${UTIL_TARGET} PUBLIC
-		${CMAKE_CURRENT_SOURCE_DIR}/../../core/inc
-		${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/mqbus
-		${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/logging
-		${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/time
+		${CORE_INCLUDE_PATH}
+		${MESSAGE_BUS_PATH}
+		${LOGGING_PATH}
+		${TIME_PATH}
 	)
 endif()
 
+# Link project executable to util libraries
 target_link_libraries(${SUPERVISION_TARGET} LINK_PUBLIC ${TIME_TARGET} ${UTIL_TARGET} ${LOGGING_TARGET})
 target_include_directories(${SUPERVISION_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/time
-	${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/logging
-	${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/mqbus
-	${CMAKE_CURRENT_SOURCE_DIR}/../../core/inc
+	${TIME_PATH}
+	${LOGGING_PATH}
+	${MESSAGE_BUS_PATH}
+	${CORE_INCLUDE_PATH}
 )
