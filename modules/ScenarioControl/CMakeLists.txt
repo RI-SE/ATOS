@@ -50,7 +50,7 @@ if(NOT TARGET ${UTIL_TARGET})
 		${CMAKE_CURRENT_SOURCE_DIR}/../../core/src/positioning.c
 		${CMAKE_CURRENT_SOURCE_DIR}/../../core/src/datadictionary.c
 	)
-	target_link_libraries(${UTIL_TARGET} ${MESSAGE_BUS_TARGET} m)
+	target_link_libraries(${UTIL_TARGET} ${LOGGING_TARGET} ${TIME_TARGET} ${MESSAGE_BUS_TARGET} m)
 	target_include_directories(${UTIL_TARGET} PUBLIC
 		${CMAKE_CURRENT_SOURCE_DIR}/../../core/inc
 		${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/mqbus
