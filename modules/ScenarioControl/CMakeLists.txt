@@ -1,88 +1,28 @@
 cmake_minimum_required(VERSION 3.1)
-SET(CMAKE_CXX_STANDARD 11)
-SET(CMAKE_CXX_STANDARD_REQUIRED ON)
-SET(CMAKE_C_STANDARD 11)
-SET(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(ScenarioControl)
-# This module is an example of how to set up a new module external to the Maestro executable
 
-
-include_directories(inc)
-include_directories(src)
-include(GNUInstallDirs)
-
-if (NOT TARGET MaestroLogging)
-	include_directories(../../util/C/logging)
-	add_library(MaestroLogging
-  		../util/C/logging/logging.h
-  		../util/C/logging/logging.c
-	)
-endif()
-
-if (NOT TARGET MaestroTime)
-	include_directories(../../util/C/time)
-	add_library(MaestroTime
-  		../util/C/time/maestroTime.h
-  		../util/C/time/maestroTime.c
-	)
-endif()
-
-if (NOT TARGET MQBus)
-	include_directories(../../util/C/MQBus)
-	add_library(MQBus
-		../util/C/MQBus/mqbus.c
-		../util/C/MQBus/mqbus.h
-	)
-endif()
-
-if (NOT TARGET util)
-	include_directories(../../server/inc)
-	add_library(util
-    		../../server/src/util.c
-    		../../server/inc/util.h
-    		../../server/src/iso22133.c
-    		../../server/inc/iso22133.h
-		../../server/src/positioning.c
-		../../server/inc/positioning.h
-	)
-endif()
-
-add_library(Trigger
-    inc/trigger.h
-    src/trigger.cpp
-    inc/isotrigger.h
-    src/isotrigger.cpp
-    inc/booleantrigger.h
-    src/booleantrigger.cpp
-    inc/braketrigger.h
-    src/braketrigger.cpp
+add_executable(ScenarioControl
+	src/action.cpp
+	src/booleantrigger.cpp
+	src/braketrigger.cpp
+	src/causality.cpp
+	src/externalaction.cpp
+	src/isotrigger.cpp
+	src/main.cpp
+	src/scenario.cpp
+	src/trigger.cpp
 )
 
-add_library(Action
-    inc/action.h
-    src/action.cpp
-    inc/externalaction.h
-    src/externalaction.cpp
+target_link_libraries(ScenarioControl LINK_PUBLIC MaestroTime MaestroLogging MaestroMQ MaestroUtil)
+target_include_directories(ScenarioControl PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/time
+	${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/logging
+	${CMAKE_CURRENT_SOURCE_DIR}/../../util/C/mqbus
+	${CMAKE_CURRENT_SOURCE_DIR}/../../core/inc
 )
-
-add_library(Scenario
-    inc/scenario.h
-    src/scenario.cpp
-    inc/causality.h
-    src/causality.cpp
-)
-
-
-add_executable(ScenarioControl src/main.cpp)
-
-install(TARGETS ScenarioControl DESTINATION bin)
-
-target_link_libraries(ScenarioControl MaestroTime MaestroLogging util Scenario)
-target_link_libraries(Scenario Trigger Action)
-target_link_libraries(Action MaestroTime)
-target_link_libraries(util MQBus MaestroTime MaestroLogging)
-target_link_libraries(MQBus rt m)
-
-
-
