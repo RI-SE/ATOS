@@ -17,6 +17,7 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include "datadictionary.h"
+#include "iso22133.h"
 #include "logging.h"
 
 // Parameters and variables
@@ -1686,14 +1687,14 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
 	stat(filePath, &st);
 
 // this memory does not change size as more MONR messages are added, and it is unclear where in the memory stuff is being written
-	lseek(fd, (sizeof (MONRType)) - 1, SEEK_SET);
+    lseek(fd, (sizeof (MonitorDataType)) - 1, SEEK_SET);
 	write(fd, "", 1);
 
 	stat(filePath, &st);
 
 	// Map memory to created file
 	GSD->MonrMessages =
-		(MONRType *) mmap(NULL, (sizeof (MONRType)), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        (MonitorDataType *) mmap(NULL, (sizeof (MonitorDataType)), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
     if (GSD->MonrMessages == MAP_FAILED) {
             LogPrint(LOG_LEVEL_ERROR, "mmap failed: %s", strerror(errno));
@@ -1714,7 +1715,7 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
  * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, const U32 transmitterId) {
+ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MonitorDataType * MONR, const U32 transmitterId) {
 	ReadWriteAccess_t Res;
 
 	Res = WRITE_OK;
@@ -1739,7 +1740,7 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MONRType * MONR, co
  * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MONRType * MONR, const U32 transmitterId) {
+ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MonitorDataType * MONR, const U32 transmitterId) {
     ReadWriteAccess_t Res;
     Res = READ_OK;
 
@@ -1765,7 +1766,7 @@ ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD) {
 
 	Res = WRITE_OK;
 	pthread_mutex_lock(&MONRMutex);
-	int res = munmap(GSD->MonrMessages, sizeof (MONRType));
+    int res = munmap(GSD->MonrMessages, sizeof (MonitorDataType));
 
 	if (res < 0) {
 		util_error("Unable to unmap monrMessages file!");

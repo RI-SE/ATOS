@@ -123,8 +123,8 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD);
 
 ReadWriteAccess_t DataDictionaryFreeMONR(GSDType *GSD);
 ReadWriteAccess_t DataDictionaryInitMONR(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetMONR(GSDType *GSD, const MONRType * MONR, const U32 TransmitterId);
-ReadWriteAccess_t DataDictionaryGetMONR(GSDType *GSD, MONRType * MONR, const U32 TransmitterId);
+ReadWriteAccess_t DataDictionarySetMONR(GSDType *GSD, const MonitorDataType * MONR, const U32 TransmitterId);
+ReadWriteAccess_t DataDictionaryGetMONR(GSDType *GSD, MonitorDataType * MONR, const U32 TransmitterId);
 
 ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U32 *numberOfObjects);
 ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(GSDType * GSD, U32 *numberOfObjects);

@@ -385,14 +385,13 @@ typedef struct
   U8 ASPDebugDataU8[sizeof(ASPType)];
   U32 SupChunkSize;
   U8 SupChunk[6200];
-
+  MonitorDataType* MonrMessages;
   U8 MONRSizeU8;
   U8 MONRData[100];
   U8 HEABSizeU8;
   U8 HEABData[100];
 
   U8 numberOfObjects;
-  MONRType *MonrMessages;
   char *memory;
   //U8 OSTMSizeU8;
   //U8 OSTMData[100];
