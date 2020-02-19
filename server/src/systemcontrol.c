@@ -577,7 +577,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData, 0);
 				UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 								RVSSMessageLengthU32, 0);
-            }
+			}
 			break;
 		case COMM_INV:
 			break;

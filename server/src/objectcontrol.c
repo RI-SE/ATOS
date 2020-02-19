@@ -304,11 +304,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 			MessageLength =
 				encodeHEABMessage(objectControlServerStatus, MessageBuffer, sizeof (MessageBuffer), 0);
-			for(iIndex = 0; iIndex < nbr_objects; ++iIndex)
-            {
-                UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
-				    			MessageBuffer, MessageLength, 0);
-            }
+			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+				UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
+								MessageBuffer, MessageLength, 0);
+			}
 		}
 
 		// Heartbeat

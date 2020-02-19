@@ -1370,7 +1370,7 @@ ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType * GSD) {
 		pthread_mutex_lock(&SupervisorTCPPortMutex);
 		GSD->SupervisorTCPPortU16 = atoi(ResultBufferC8);
 		pthread_mutex_unlock(&SupervisorTCPPortMutex);
-    }
+	}
 	else {
 		Res = PARAMETER_NOTFOUND;
 		LogMessage(LOG_LEVEL_ERROR, "SupervisorTCPPort not found!");
@@ -1682,28 +1682,28 @@ ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
 	struct stat st;
 
 	pthread_mutex_lock(&MONRMutex);
-    sprintf(filePath, "%smonrMessageMemory.mem", SHARED_MEMORY_PATH);
+	sprintf(filePath, "%smonrMessageMemory.mem", SHARED_MEMORY_PATH);
 	fd = open(filePath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	stat(filePath, &st);
 
 // this memory does not change size as more MONR messages are added, and it is unclear where in the memory stuff is being written
-    lseek(fd, (sizeof (MonitorDataType)) - 1, SEEK_SET);
+	lseek(fd, (sizeof (MonitorDataType)) - 1, SEEK_SET);
 	write(fd, "", 1);
 
 	stat(filePath, &st);
 
 	// Map memory to created file
 	GSD->MonrMessages =
-        (MonitorDataType *) mmap(NULL, (sizeof (MonitorDataType)), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+		(MonitorDataType *) mmap(NULL, (sizeof (MonitorDataType)), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
-    if (GSD->MonrMessages == MAP_FAILED) {
-            LogPrint(LOG_LEVEL_ERROR, "mmap failed: %s", strerror(errno));
-            close(fd);
-    }
-    else{
-        LogMessage(LOG_LEVEL_INFO, "Init MonrMessage memory");
-    }
-    close(fd);
+	if (GSD->MonrMessages == MAP_FAILED) {
+		LogPrint(LOG_LEVEL_ERROR, "mmap failed: %s", strerror(errno));
+		close(fd);
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "Init MonrMessage memory");
+	}
+	close(fd);
 	pthread_mutex_unlock(&MONRMutex);
 	return Res;
 }
@@ -1721,12 +1721,12 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MonitorDataType * M
 	Res = WRITE_OK;
 	pthread_mutex_lock(&MONRMutex);
 	if (GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects) {
-        GSD->MonrMessages[transmitterId] = *MONR;
+		GSD->MonrMessages[transmitterId] = *MONR;
 	}
-    else{
-        Res = UNDEFINED;
-        LogPrint(LOG_LEVEL_ERROR, "Unable to write MonrMessage in DataDictionary");
-    }
+	else {
+		Res = UNDEFINED;
+		LogPrint(LOG_LEVEL_ERROR, "Unable to write MonrMessage in DataDictionary");
+	}
 
 	pthread_mutex_unlock(&MONRMutex);
 
@@ -1741,19 +1741,20 @@ ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MonitorDataType * M
  * \return Result according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MonitorDataType * MONR, const U32 transmitterId) {
-    ReadWriteAccess_t Res;
-    Res = READ_OK;
+	ReadWriteAccess_t Res;
 
-    pthread_mutex_lock(&MONRMutex);
-    if (GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects) {
+	Res = READ_OK;
+
+	pthread_mutex_lock(&MONRMutex);
+	if (GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects) {
 		*MONR = GSD->MonrMessages[transmitterId];
-    }
-    else{
-        Res = UNDEFINED;
-        LogPrint(LOG_LEVEL_ERROR, "Unable to read MonrMessage in DataDictionary");
-    }
+	}
+	else {
+		Res = UNDEFINED;
+		LogPrint(LOG_LEVEL_ERROR, "Unable to read MonrMessage in DataDictionary");
+	}
 	pthread_mutex_unlock(&MONRMutex);
-    return Res;
+	return Res;
 }
 
 /*!
@@ -1766,7 +1767,7 @@ ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD) {
 
 	Res = WRITE_OK;
 	pthread_mutex_lock(&MONRMutex);
-    int res = munmap(GSD->MonrMessages, sizeof (MonitorDataType));
+	int res = munmap(GSD->MonrMessages, sizeof (MonitorDataType));
 
 	if (res < 0) {
 		util_error("Unable to unmap monrMessages file!");
