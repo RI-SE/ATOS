@@ -89,9 +89,9 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
     U16 ServerPortU16;
     I32 SocketfdI32 = -1;
     struct sockaddr_in time_addr;
-	const struct timespec mqEmptyPollPeriod = { TC_SLEEP_TIME_EMPTY_MQ_S, TC_SLEEP_TIME_EMPTY_MQ_NS };
-	const struct timespec mqNonEmptyPollPeriod =
-		{ TC_SLEEP_TIME_NONEMPTY_MQ_S, TC_SLEEP_TIME_NONEMPTY_MQ_NS };
+    const struct timespec mqEmptyPollPeriod = { TC_SLEEP_TIME_EMPTY_MQ_S, TC_SLEEP_TIME_EMPTY_MQ_NS };
+    const struct timespec mqNonEmptyPollPeriod =
+        { TC_SLEEP_TIME_NONEMPTY_MQ_S, TC_SLEEP_TIME_NONEMPTY_MQ_NS };
 
     I32 result;
     C8 TimeBuffer[TIME_CONTROL_RECEIVE_BUFFER_SIZE];
@@ -173,9 +173,9 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
     while (!iExit) {
 
         // Ignore any commands received, just empty the bus
-		do {
-			iCommRecv(&command, busReceiveBuffer, sizeof (busReceiveBuffer), NULL);
-		} while (command != COMM_INV);
+        do {
+            iCommRecv(&command, busReceiveBuffer, sizeof (busReceiveBuffer), NULL);
+        } while (command != COMM_INV);
 
         gettimeofday(&ExecTime, NULL);
         CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
@@ -193,8 +193,35 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             bzero(TimeBuffer, TIME_CONTROL_RECEIVE_BUFFER_SIZE);
             TimeControlRecvTime(&SocketfdI32, TimeBuffer, TIME_CONTROL_RECEIVE_BUFFER_SIZE, &ReceivedNewData);
 
-            if (ReceivedNewData)
+            if (ReceivedNewData) {
                 TimeControlDecodeTimeBuffer(GPSTime, TimeBuffer, 0);
+
+                if (GPSTime->GPSMillisecondsU64 < INT64_MAX) {
+                    struct timespec newSystemTime;
+
+                    TimeSetToGPSms(&tv, (int64_t) GPSTime->GPSMillisecondsU64);
+                    newSystemTime.tv_sec = tv.tv_sec;
+                    newSystemTime.tv_nsec = tv.tv_usec * 1000;
+                    if (clock_settime(CLOCK_REALTIME, &newSystemTime) == -1) {
+                        switch (errno) {
+                        case EPERM:
+                            LogMessage(LOG_LEVEL_ERROR,
+                                       "Unable to set system time - ensure this program has the correct capabilities");
+                            break;
+                        case EINVAL:
+                            LogMessage(LOG_LEVEL_ERROR, "Clock type not supported on this system");
+                            break;
+                        default:
+                            LogMessage(LOG_LEVEL_ERROR, "Error setting system time");
+                            break;
+                        }
+                    }
+                }
+                else {
+                    LogMessage(LOG_LEVEL_ERROR,
+                               "Current GPS time exceeds limit and would be interpreted as negative");
+                }
+            }
         }
         else if (!GPSTime->isGPSenabled) {
             gettimeofday(&tv, NULL);
@@ -248,9 +275,9 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
         }
 
 
-		sleep_time = command == COMM_INV ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
-		nanosleep(&sleep_time, &ref_time);
-	}
+        sleep_time = command == COMM_INV ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
+        nanosleep(&sleep_time, &ref_time);
+    }
 
     LogMessage(LOG_LEVEL_INFO, "Time control exiting");
 }
