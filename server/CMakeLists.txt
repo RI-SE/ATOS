@@ -79,10 +79,12 @@ add_library(MQBus
 
 # Create library
 add_library(util
-  src/util.c
   inc/util.h
+  src/util.c
   inc/iso22133.h
   src/iso22133.c
+  inc/positioning.h
+  src/positioning.c
 )
 
 # Create library

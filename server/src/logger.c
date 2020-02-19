@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <time.h>
 
+#include "positioning.h"
 #include "maestroTime.h"
 #include "logger.h"
 
@@ -175,8 +176,9 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 
 		case COMM_MONR:
-			if (!isFirstInit)
+			if (!isFirstInit) {
 				vLogMonitorData(busReceiveBuffer, receivedBytes, recvTime, pcLogFile, pcLogFileComp);
+			}
 			else
 				LogMessage(LOG_LEVEL_WARNING, "Received command %u while log uninitialized", command);
 			break;
@@ -187,9 +189,14 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			// Returns first datapoint of OSEM (GPSWeek)
 			char *token = strtok(busReceiveBuffer, ";");
 
-			GPSweek = atoi(token);
+			if (token != NULL) {
+				GPSweek = atoi(token);
+				LogMessage(LOG_LEVEL_INFO, "GPS week of OSEM: %d", GPSweek);
+			}
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "Could not read GPS week in OSEM");
+			}
 
-			LogMessage(LOG_LEVEL_INFO, "GPS week of OSEM: %d", GPSweek);
 
 			// Rest of OSEM if needed
 			/*
@@ -237,7 +244,7 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						MonitorDataType monrData;
 
 						UtilStringToMonitorData(pcReadBuffer, sizeof (pcReadBuffer), &monrData);
-						NewTimestamp = monrData.MONR.gpsQmsOfWeek;
+						NewTimestamp = TimeGetAsGPSqmsOfWeek(&monrData.data.timestamp);
 
 						if (!FirstIteration) {	/* Wait a little bit */
 							sleep_time.tv_sec = 0;
@@ -505,7 +512,6 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 			COMM_VIOP, COMM_INV);
 	(void)fwrite(pcBuffer, 1, strlen(pcBuffer), filefd);
 
-
 	fclose(filefd);
 }
 
@@ -565,39 +571,58 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 	FILE *filefd;
 	char DateBuffer[MAX_DATE_STRLEN];
 	char ipStringBuffer[INET_ADDRSTRLEN];
+	char printBuffer[MAX_LOG_ROW_LENGTH];
 	MonitorDataType monitorData;
-	struct timeval monrTime, systemTime;
-	const int debug = 0;
+	int printedBytes = 0;
+	int totalPrintedBytes = 0;
 
 	if (commandDatalen < 0)
 		return;
 
-	TimeSetToCurrentSystemTime(&systemTime);
+	UtilPopulateMonitorDataStruct(commandData, (size_t) commandDatalen, &monitorData);
 
-	UtilPopulateMonitorDataStruct(commandData, (size_t) (commandDatalen), &monitorData, debug);
-	TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&systemTime), monitorData.MONR.gpsQmsOfWeek);
-
-	bzero(DateBuffer, sizeof (DateBuffer));
+	memset(DateBuffer, 0, sizeof (DateBuffer));
 	TimeGetAsDateTime(&recvTime, "%Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof (DateBuffer));
+
+	printedBytes = snprintf(printBuffer, sizeof (printBuffer), "%s;%ld;%ld;%d;", DateBuffer,
+							TimeGetAsUTCms(&monitorData.data.timestamp),
+							TimeGetAsGPSms(&monitorData.data.timestamp), (unsigned char)COMM_MONR);
+
+	totalPrintedBytes += printedBytes;
+	if (printedBytes < 0 || (size_t) totalPrintedBytes > sizeof (printBuffer)) {
+		LogMessage(LOG_LEVEL_ERROR, "Error printing data to string");
+		return;
+	}
+
+	printedBytes =
+		snprintf(printBuffer + totalPrintedBytes, sizeof (printBuffer) - (size_t) totalPrintedBytes, "%s;",
+				 inet_ntop(AF_INET, &monitorData.ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
+
+	totalPrintedBytes += printedBytes;
+	if (printedBytes < 0 || (size_t) totalPrintedBytes > sizeof (printBuffer)) {
+		LogMessage(LOG_LEVEL_ERROR, "Error printing data to string");
+		return;
+	}
+
+	printedBytes =
+		snprintf(printBuffer + totalPrintedBytes, sizeof (printBuffer) - (size_t) totalPrintedBytes, "%u;",
+				 monitorData.ClientID);
+
+	totalPrintedBytes += printedBytes;
+	if (printedBytes < 0 || (size_t) totalPrintedBytes > sizeof (printBuffer)) {
+		LogMessage(LOG_LEVEL_ERROR, "Error printing data to string");
+		return;
+	}
+
+	objectMonitorDataToASCII(&monitorData.data, printBuffer + totalPrintedBytes,
+							 sizeof (printBuffer) - (size_t) totalPrintedBytes);
 
 	filefd = fopen(pcLogFile, ACCESS_MODE_APPEND_AND_READ);
 	if (filefd == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to open file <%s>", pcLogFile);
 		return;
 	}
-
-	fprintf(filefd, "%s;%ld;%ld;%d;", DateBuffer, TimeGetAsUTCms(&monrTime), TimeGetAsGPSms(&monrTime),
-			(unsigned char)COMM_MONR);
-	fprintf(filefd, "%s;",
-			inet_ntop(AF_INET, &monitorData.ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
-	fprintf(filefd, "%u;%u;", monitorData.MONR.header.TransmitterIdU8, monitorData.MONR.gpsQmsOfWeek);
-	fprintf(filefd, "%d;%d;%d;%u;", monitorData.MONR.xPosition, monitorData.MONR.yPosition,
-			monitorData.MONR.zPosition, monitorData.MONR.heading);
-	fprintf(filefd, "%d;%d;", monitorData.MONR.longitudinalSpeed, monitorData.MONR.lateralSpeed);
-	fprintf(filefd, "%d;%d;", monitorData.MONR.longitudinalAcc, monitorData.MONR.lateralAcc);
-	fprintf(filefd, "%u;%u;%u;%u;\n", monitorData.MONR.driveDirection, monitorData.MONR.state,
-			monitorData.MONR.readyToArm, monitorData.MONR.errorStatus);
-
+	fprintf(filefd, "%s\n", printBuffer);
 	fclose(filefd);
 }
 
