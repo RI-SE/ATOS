@@ -783,7 +783,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 											   ControlResponseBuffer, 0);
 				}
 
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:",
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubUploadFile:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 
 			}
