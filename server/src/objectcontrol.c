@@ -47,7 +47,6 @@
 #define RECV_MESSAGE_BUFFER 6200
 #define BUFFER_SIZE_3100 3100
 #define TRAJ_FILE_HEADER_ROW 256
-#define OBJECT_MESS_BUFFER_SIZE 1024
 
 #define OC_SLEEP_TIME_EMPTY_MQ_S 0
 #define OC_SLEEP_TIME_EMPTY_MQ_NS 1000000
@@ -61,23 +60,7 @@
 #define OC_STATE_REPORT_PERIOD_S 1
 #define OC_STATE_REPORT_PERIOD_US 0
 
-#define COMMAND_MESSAGE_HEADER_LENGTH sizeof(HeaderType)
-#define COMMAND_MESSAGE_FOOTER_LENGTH sizeof(FooterType)
-#define COMMAND_CODE_INDEX 0
-#define COMMAND_MESSAGE_LENGTH_INDEX 1
-
-#define COMMAND_DOTM_CODE 1
-#define COMMAND_DOTM_ROW_MESSAGE_LENGTH sizeof(DOTMType)
-#define COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH sizeof(TRAJInfoType)
-#define COMMAND_DOTM_ROWS_IN_TRANSMISSION  40
-#define COMMAND_DTM_BYTES_IN_ROW  30
-
-#define COMMAND_VOIL_CODE 0xA100
-//#define COMMAND_VOIL_NOFV 2
-#define COMMAND_VOIL_MESSAGE_LENGTH (16 * sizeof(Sim1Type) + sizeof(HeaderType) + 5)
-
-#define COMMAND_LLCM_CODE 8
-#define COMMAND_LLCM_MESSAGE_LENGTH 5
+#define TRAJECTORY_TX_BUFFER_SIZE 2048
 
 #define SMALL_BUFFER_SIZE_0 20
 #define SMALL_BUFFER_SIZE_1 2
@@ -109,9 +92,6 @@ typedef enum {
 */
 typedef StateTransitionResult(*StateTransition) (OBCState_t * currentState, OBCState_t requestedState);
 
-C8 TrajBuffer[COMMAND_DOTM_ROWS_IN_TRANSMISSION * COMMAND_DOTM_ROW_MESSAGE_LENGTH +
-			  COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH];
-
 
 /*------------------------------------------------------------
 -- Function declarations.
@@ -127,21 +107,7 @@ static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects);
 static void signalHandler(int signo);
 
-int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, unsigned short Curvature,
-								  unsigned char Mode, char debug);
-I32 ObjectControlBuildTRAJMessageHeader(C8 * MessageBuffer, I32 * RowCount, HeaderType * HeaderData,
-										TRAJInfoType * TRAJInfoData, C8 * TrajFileHeader, U8 debug);
-I32 ObjectControlBuildTRAJMessage(C8 * MessageBuffer, FILE * fd, I32 RowCount, DOTMType * DOTMData, U8 debug);
-I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
-								 DOTMType * DOTMData, U8 debug);
-int ObjectControlSendUDPData(int *sockfd, struct sockaddr_in *addr, char *SendData, int Length, char debug);
-I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * SimData, U8 debug);
-I32 ObjectControlSendDTMMessage(C8 * DTMData, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
-								DOTMType * DOTMData, U8 debug);
-I32 ObjectControlBuildDTMMessage(C8 * MessageBuffer, C8 * DTMData, I32 RowCount, DOTMType * DOTMData,
-								 U8 debug);
-I32 ObjectControlBuildASPMessage(C8 * MessageBuffer, ASPType * ASPData, U8 debug);
-I32 ObjectControlSendEXACMessage(EXACData * EXAC, I32 * socket, U8 debug);
+static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const char debug);
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 							C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
@@ -228,11 +194,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	dbl OriginHeadingDbl;
 	C8 pcSendBuffer[MBUS_MAX_DATALEN];
 	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
-	HeaderType HeaderData;
 	MonitorDataType monitorData;
-	DOTMType DOTMData;
-	TRAJInfoType TRAJInfoData;
-	VOILType VOILData;
 	ACCMData mqACCMData;
 	EXACData mqEXACData;
 	TRCMData mqTRCMData;
@@ -265,8 +227,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 VOILReceivers[SMALL_BUFFER_SIZE_254];
 	C8 DTMReceivers[SMALL_BUFFER_SIZE_254];
 	U32 RowCount;
-	U32 DTMIpU32;
-	U32 DTMLengthU32;
 
 	U8 DisconnectU8 = 0;
 	I32 iResult;
@@ -820,50 +780,20 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							vSetState(OBC_STATE_ERROR, GSD);
 							objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 						}
+						LogPrint("OSEM msglen: %ld", MessageLength);
 						UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex],
-										0);
+										1);
 
-						/*Here we send TRAJ, if the IP-address not is found */
+						/* Here we send TRAJ, if the IP-address is not operating with a dynamic trajectory */
 						if (strstr(DTMReceivers, object_address_name[iIndex]) == NULL) {
-
-							fd = fopen(object_traj_file[iIndex], "r");
-
-							if (fd != NULL) {
-								//RowCount = UtilCountFileRows(fd);
-								//printf("RowCount: %d\n", RowCount);
-								//fclose(fd);
-
-								//fd = fopen(object_traj_file[iIndex], "r");
-								//printf("Open file: %s\n", object_traj_file[iIndex]);
-								UtilReadLineCntSpecChars(fd, FileHeaderBufferC8);
-								fclose(fd);
-
-								 /*TRAJ*/
-									MessageLength = ObjectControlBuildTRAJMessageHeader(TrajBuffer,
-																						&RowCount,
-																						&HeaderData,
-																						&TRAJInfoData,
-																						FileHeaderBufferC8,
-																						0);
-
-								//printf("RowCount: %d\n", RowCount);
-
-								/*Send TRAJ header */
-								UtilSendTCPData("Object Control", TrajBuffer, MessageLength,
-												&socket_fds[iIndex], 0);
-
-								/*Send TRAJ data */
-								ObjectControlSendTRAJMessage(object_traj_file[iIndex], &socket_fds[iIndex],
-															 RowCount,
-															 (char *)&object_address_name[iIndex],
-															 object_tcp_port[iIndex], &DOTMData, 0);
-
+							LogMessage(LOG_LEVEL_INFO, "Sending TRAJ to %s", object_address_name[iIndex]);
+							if (ObjectControlSendTRAJMessage(object_traj_file[iIndex], &socket_fds[iIndex], 0)
+								== -1) {
+								LogMessage(LOG_LEVEL_ERROR, "Failed to send TRAJ to %s",
+										   object_address_name[iIndex]);
+								continue;
 							}
-							else
-								LogMessage(LOG_LEVEL_WARNING, "Could not open file <%s>",
-										   object_traj_file[iIndex]);
 						}
-
 
 						/* Adaptive Sync Points object configuration start... */
 						if (TEST_SYNC_POINTS == 1)
@@ -1035,264 +965,35 @@ void signalHandler(int signo) {
 	}
 }
 
-I32 ObjectControlBuildVOILMessage(C8 * MessageBuffer, VOILType * VOILData, C8 * SimData, U8 debug) {
-	I32 MessageIndex = 0, i;
-	U16 Crc = 0;
-	C8 *p;
-	U16 U16Data = 0;
-	I16 I16Data = 0;
-	U32 U32Data = 0;
-	I32 I32Data = 0;
 
-	if (debug) {
-		printf("Length: %d\n", *(SimData + 3));
-		for (i = 0; i < *(SimData + 3) + 4; i++)
-			printf("%x-", *(SimData + i));
-		printf("\n");
-	}
-
-	U16Data = (U16Data | *(SimData + 5)) << 8;
-	U16Data = (U16Data | *(SimData + 4));
-	U16 MessageId = U16Data;
-
-	//printf("MessageId = %x\n", MessageId);
-
-	U32Data = (U32Data | *(SimData + 6)) << 8;
-	U32Data = (U32Data | *(SimData + 7)) << 8;
-	U32Data = (U32Data | *(SimData + 8)) << 8;
-	U32Data = (U32Data | *(SimData + 9));
-	U32 GPSSOW = U32Data;
-
-	//printf("GPSSOW = %x\n", GPSSOW);
-	U8 DynamicWorldState = *(SimData + 10);
-	U8 ObjectCount = *(SimData + 11);
-
-	//printf("ObjectCount = %d\n", ObjectCount);
-
-	U8 ObjectId = *(SimData + 12);
-	U8 ObjectState = *(SimData + 13);
-
-	I32Data = (I32Data | *(SimData + 14)) << 8;
-	I32Data = (I32Data | *(SimData + 15)) << 8;
-	I32Data = (I32Data | *(SimData + 16)) << 8;
-	I32Data = (I32Data | *(SimData + 17));
-	I32 XPosition = I32Data;
-
-	I32Data = 0;
-	I32Data = (I32Data | *(SimData + 18)) << 8;
-	I32Data = (I32Data | *(SimData + 19)) << 8;
-	I32Data = (I32Data | *(SimData + 20)) << 8;
-	I32Data = (I32Data | *(SimData + 21));
-	I32 YPosition = I32Data;
-
-	I32Data = 0;
-	I32Data = (I32Data | *(SimData + 22)) << 8;
-	I32Data = (I32Data | *(SimData + 23)) << 8;
-	I32Data = (I32Data | *(SimData + 24)) << 8;
-	I32Data = (I32Data | *(SimData + 25));
-	I32 ZPosition = I32Data;
-
-	U16Data = 0;
-	U16Data = (U16Data | *(SimData + 26)) << 8;
-	U16Data = (U16Data | *(SimData + 27));
-	U16 Heading = U16Data;
-
-	U16Data = 0;
-	U16Data = (U16Data | *(SimData + 28)) << 8;
-	U16Data = (U16Data | *(SimData + 29));
-	U16 Pitch = U16Data;
-
-	U16Data = 0;
-	U16Data = (U16Data | *(SimData + 30)) << 8;
-	U16Data = (U16Data | *(SimData + 31));
-	U16 Roll = U16Data;
-
-	//printf("Roll = %d\n", Roll);
-	I16Data = 0;
-	I16Data = (I16Data | *(SimData + 32)) << 8;
-	I16Data = (I16Data | *(SimData + 33));
-	I16 Speed = I16Data;
-
-	//printf("Speed = %d\n", Speed);
-
-
-	bzero(MessageBuffer,
-		  ObjectCount * sizeof (Sim1Type) + 6 + COMMAND_MESSAGE_FOOTER_LENGTH +
-		  COMMAND_MESSAGE_HEADER_LENGTH);
-
-
-	VOILData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	VOILData->Header.TransmitterIdU8 = 0;
-	VOILData->Header.MessageCounterU8 = 0;
-	VOILData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	VOILData->Header.MessageIdU16 = COMMAND_VOIL_CODE;
-	VOILData->Header.MessageLengthU32 = ObjectCount * sizeof (Sim1Type) + 6 - COMMAND_MESSAGE_HEADER_LENGTH;
-	VOILData->GPSQmsOfWeekU32 = GPSSOW;
-	VOILData->WorldStateU8 = DynamicWorldState;
-	VOILData->ObjectCountU8 = ObjectCount;
-	VOILData->SimObjects[0].ObjectIdU8 = ObjectId;
-	VOILData->SimObjects[0].ObjectStateU8 = ObjectState;
-	VOILData->SimObjects[0].XPositionI32 = XPosition;
-	VOILData->SimObjects[0].YPositionI32 = YPosition;
-	VOILData->SimObjects[0].ZPositionI32 = ZPosition;
-	VOILData->SimObjects[0].HeadingU16 = Heading;
-	VOILData->SimObjects[0].PitchU16 = Pitch;
-	VOILData->SimObjects[0].RollU16 = Roll;
-	VOILData->SimObjects[0].SpeedI16 = Speed;
-
-
-	p = (C8 *) VOILData;
-	for (i = 0; i < ObjectCount * sizeof (Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH; i++)
-		*(MessageBuffer + i) = *p++;
-	//Crc = crc_16((const C8*)MessageBuffer, sizeof(VOILData));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc);
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	MessageIndex = i;
-
-	if (debug) {
-		// TODO: use byte printout from logging when it has been implemented
-		printf("VOILData total length = %d bytes (header+message+footer)\n",
-			   (int)(ObjectCount * sizeof (Sim1Type) + 6 + COMMAND_MESSAGE_FOOTER_LENGTH +
-					 COMMAND_MESSAGE_HEADER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (Sim1Type) * ObjectCount + 6 + COMMAND_MESSAGE_HEADER_LENGTH; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-
-	return ObjectCount * sizeof (Sim1Type) + 6 + COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_MESSAGE_FOOTER_LENGTH;	//Total number of bytes
-
-}
-
-
-int ObjectControlBuildLLCMMessage(char *MessageBuffer, unsigned short Speed, unsigned short Curvature,
-								  unsigned char Mode, char debug) {
-	int MessageIndex = 0;
-
-	bzero(MessageBuffer, COMMAND_LLCM_MESSAGE_LENGTH + COMMAND_MESSAGE_HEADER_LENGTH);
-
-	UtilAddOneByteMessageData(MessageBuffer, COMMAND_CODE_INDEX, COMMAND_LLCM_CODE);
-
-	MessageIndex =
-		UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex + COMMAND_MESSAGE_HEADER_LENGTH, Speed);
-
-	MessageIndex = UtilAddTwoBytesMessageData(MessageBuffer, MessageIndex, Curvature);
-
-	MessageIndex = UtilAddOneByteMessageData(MessageBuffer, MessageIndex, Mode);
-
-	UtilAddFourBytesMessageData(MessageBuffer, COMMAND_MESSAGE_LENGTH_INDEX,
-								(unsigned int)MessageIndex - COMMAND_MESSAGE_HEADER_LENGTH);
-
-	if (debug) {
-		int i = 0;
-
-		LogMessage(LOG_LEVEL_DEBUG, "LLCM:");
-		for (i = 0; i < MessageIndex; i++)
-			LogMessage(LOG_LEVEL_DEBUG, "[%d]= %x", i, (unsigned char)MessageBuffer[i]);
-	}
-
-	return MessageIndex;		//Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH + message data count
-}
-
-
-
-I32 ObjectControlBuildTRAJMessageHeader(C8 * MessageBuffer, I32 * RowCount, HeaderType * HeaderData,
-										TRAJInfoType * TRAJInfoData, C8 * TrajFileHeader, U8 debug) {
-	I32 MessageIndex = 0, i, j;
-	U16 Crc = 0;
-	C8 *p;
-	C8 *token;
-
-
-	if (strlen(TrajFileHeader) >= 1) {
-		j = 0;
-		token = strtok(TrajFileHeader, ";");
-		while (token != NULL) {
-			if (j == 1) {
-				TRAJInfoData->TrajectoryIDValueIdU16 = VALUE_ID_TRAJECTORY_ID;
-				TRAJInfoData->TrajectoryIDContentLengthU16 = 2;
-				TRAJInfoData->TrajectoryIDU16 = atoi(token);
-			}
-			else if (j == 2) {
-				TRAJInfoData->TrajectoryNameValueIdU16 = VALUE_ID_TRAJECTORY_NAME;
-				TRAJInfoData->TrajectoryNameContentLengthU16 = 64;
-				bzero(TRAJInfoData->TrajectoryNameC8, 64);
-				strncpy(TRAJInfoData->TrajectoryNameC8, token, strlen(token));
-			}
-			else if (j == 3) {
-				TRAJInfoData->TrajectoryVersionValueIdU16 = VALUE_ID_TRAJECTORY_VERSION;
-				TRAJInfoData->TrajectoryVersionContentLengthU16 = 2;
-				TRAJInfoData->TrajectoryVersionU16 = atoi(token);
-			}
-			else if (j == 4) {
-				*RowCount = atoi(token);
-			}
-
-			j++;
-			token = strtok(NULL, ";");
-		}
-	}
-
-	TRAJInfoData->IpAddressValueIdU16 = 0xA000;
-	TRAJInfoData->IpAddressContentLengthU16 = 4;
-	TRAJInfoData->IpAddressU32 = 0;
-
-	bzero(MessageBuffer, COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH);
-
-	HeaderData->SyncWordU16 = ISO_SYNC_WORD;
-	HeaderData->TransmitterIdU8 = 0;
-	HeaderData->MessageCounterU8 = 0;
-	HeaderData->AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	HeaderData->MessageIdU16 = COMMAND_DOTM_CODE;
-	HeaderData->MessageLengthU32 =
-		*RowCount * COMMAND_DOTM_ROW_MESSAGE_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH;
-
-	p = (C8 *) HeaderData;
-	for (i = 0; i < COMMAND_MESSAGE_HEADER_LENGTH; i++)
-		*(MessageBuffer + i) = *p++;
-
-	p = (C8 *) TRAJInfoData;
-	for (; i < COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH; i++)
-		*(MessageBuffer + i) = *p++;
-
-	MessageIndex = i;
-
-
-	if (debug) {
-		// TODO: Change to log printout when byte thingy has been implemented
-		printf("Header + TRAJInfo total length = %d bytes\n",
-			   (int)(COMMAND_MESSAGE_HEADER_LENGTH + COMMAND_TRAJ_INFO_ROW_MESSAGE_LENGTH));
-		printf("----HEADER + TRAJInfo----\n");
-		for (i = 0; i < sizeof (HeaderType) + sizeof (TRAJInfoType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-		printf("DOTM message total length = %d bytes.\n", (int)HeaderData->MessageLengthU32);
-		printf("Traj file header = %s\n", TrajFileHeader);
-		printf("TrajectoryID = %d\n", TRAJInfoData->TrajectoryIDU16);
-		printf("TrajectoryName = %s\n", TRAJInfoData->TrajectoryNameC8);
-		printf("TrajectoryVersion = %d\n", TRAJInfoData->TrajectoryVersionU16);
-		printf("RowCount = %d\n", *RowCount);
-		printf("IpAddress = %d\n", TRAJInfoData->IpAddressU32);
-
-		printf("\n----MESSAGE----\n");
-	}
-
-	return MessageIndex;		//Total number of bytes = COMMAND_MESSAGE_HEADER_LENGTH
-}
-
-
-
-I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
-								 DOTMType * DOTMData, U8 debug) {
+/*!
+ * \brief ObjectControlSendTRAJMessage Sends a trajectory message over a socket based on a trajectory file.
+ * \param Filename Path and name of the file containing the trajectory
+ * \param Socket TCP socket over which the trajectory is to be sent
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes sent, or -1 in case of an error
+ */
+ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const char debug) {
 	FILE *fd;
+	char *line;
+	size_t len = 0;
+	ssize_t read;
+	ssize_t printedBytes = 0, totalPrintedBytes = 0;
+	int socketOptions;
+	TrajectoryFileHeader fileHeader;
+	TrajectoryFileLine fileLine;
+	char messageBuffer[TRAJECTORY_TX_BUFFER_SIZE];
+	size_t remainingBufferSpace = sizeof (messageBuffer);
+	char *messageBufferPosition = messageBuffer;
+
+	memset(&fileHeader, 0, sizeof (fileHeader));
+	memset(&fileLine, 0, sizeof (fileLine));
+
+	// Check file format before doing anything
+	if (UtilCheckTrajectoryFileFormat(Filename, strlen(Filename)) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Incorrect trajectory file format - cannot proceed to send message");
+		return -1;
+	}
 
 	// Save socket settings and set it to blocking
 	int retval = fcntl(*Socket, F_GETFL);
@@ -1301,7 +1002,7 @@ I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 *
 		LogMessage(LOG_LEVEL_ERROR, "Error getting socket options with fcntl");
 		return -1;
 	}
-	int socketOptions = retval;
+	socketOptions = retval;
 
 	retval = fcntl(*Socket, F_SETFL, socketOptions & ~O_NONBLOCK);
 	if (retval < 0) {
@@ -1309,53 +1010,139 @@ I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 *
 		return -1;
 	}
 
-
+	// Open the file and parse header
 	fd = fopen(Filename, "r");
 	if (fd == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to open file <%s>", Filename);
 		return -1;
 	}
 
-	UtilReadLineCntSpecChars(fd, TrajBuffer);	//Read first line
-	int Rest = 0, i = 0, MessageLength = 0, SumMessageLength = 0, Modulo = 0, Transmissions = 0;
+	read = getline(&line, &len, fd);
+	if (read == -1 || (retval = UtilParseTrajectoryFileHeader(line, &fileHeader)) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to parse header of file <%s>", Filename);
+		fclose(fd);
+		return -1;
+	}
 
-	Transmissions = RowCount / COMMAND_DOTM_ROWS_IN_TRANSMISSION;
-	Rest = RowCount % COMMAND_DOTM_ROWS_IN_TRANSMISSION;
-	U16 CrcU16 = 0;
+	// Generate ISO trajectory message header
+	if ((printedBytes = encodeTRAJMessageHeader(fileHeader.ID > UINT16_MAX ? 0 : (uint16_t) fileHeader.ID,
+												fileHeader.majorVersion, fileHeader.name,
+												strlen(fileHeader.name), fileHeader.numberOfLines,
+												messageBufferPosition, remainingBufferSpace, debug)) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to encode trajectory message");
+		fclose(fd);
+		return -1;
+	}
 
+	totalPrintedBytes += printedBytes;
+	messageBufferPosition += printedBytes;
+	remainingBufferSpace -= (size_t) printedBytes;
 
-	for (i = 0; i < Transmissions; i++) {
-		MessageLength =
-			ObjectControlBuildTRAJMessage(TrajBuffer, fd, COMMAND_DOTM_ROWS_IN_TRANSMISSION, DOTMData, debug);
+	read = getline(&line, &len, fd);
+	for (unsigned int i = 0; i < fileHeader.numberOfLines && read != -1; ++i, read = getline(&line, &len, fd)) {
 
-		if (i == Transmissions && Rest == 0) {
-			TrajBuffer[MessageLength] = (U8) (CrcU16);
-			TrajBuffer[MessageLength + 1] = (U8) (CrcU16 >> 8);
-			MessageLength = MessageLength + 2;
-			UtilSendTCPData("Object Control", TrajBuffer, MessageLength, Socket, 0);
-			SumMessageLength = SumMessageLength + MessageLength;
+		// Parse file line
+		struct timeval relTime;
+		CartesianPosition position;
+		SpeedType speed;
+		AccelerationType acceleration;
+
+		if (UtilParseTrajectoryFileLine(line, &fileLine) == -1) {
+			// TODO: how to terminate an ISO message when an error has occurred?
+			LogMessage(LOG_LEVEL_ERROR, "Unable to parse line %u of trajectory file <%s>", i + 1, Filename);
+			fclose(fd);
+			return -1;
+		}
+
+		relTime.tv_sec = (time_t) fileLine.time;
+		relTime.tv_usec = (time_t) ((fileLine.time - relTime.tv_sec) * 1000000);
+		position.xCoord_m = fileLine.xCoord;
+		position.yCoord_m = fileLine.yCoord;
+		position.isPositionValid = fileLine.zCoord != NULL;
+		position.zCoord_m = position.isPositionValid ? *fileLine.zCoord : 0;
+		position.heading_rad = fileLine.heading;
+		position.isHeadingValid = true;
+		speed.isValid = fileLine.longitudinalVelocity != NULL && fileLine.lateralVelocity != NULL;
+		speed.longitudinal_m_s = fileLine.longitudinalVelocity != NULL ? *fileLine.longitudinalVelocity : 0;
+		speed.lateral_m_s = fileLine.lateralVelocity != NULL ? *fileLine.lateralVelocity : 0;
+		acceleration.isValid = fileLine.longitudinalAcceleration != NULL
+			&& fileLine.lateralAcceleration != NULL;
+		acceleration.longitudinal_m_s2 =
+			fileLine.longitudinalAcceleration != NULL ? *fileLine.longitudinalAcceleration : 0;
+		acceleration.lateral_m_s2 = fileLine.lateralAcceleration != NULL ? *fileLine.lateralAcceleration : 0;
+
+		// Print to buffer
+		if ((printedBytes = encodeTRAJMessagePoint(&relTime, position, speed, acceleration,
+												   (float)fileLine.curvature, messageBufferPosition,
+												   remainingBufferSpace, debug)) == -1) {
+
+			if (errno == ENOBUFS) {
+				// Reached the end of buffer, send buffered data and
+				// try again
+				UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket,
+								debug);
+
+				messageBufferPosition = messageBuffer;
+				remainingBufferSpace = sizeof (messageBuffer);
+				if ((printedBytes =
+					 encodeTRAJMessagePoint(&relTime, position, speed, acceleration, fileLine.curvature,
+											messageBufferPosition, remainingBufferSpace, debug)) == -1) {
+					// TODO how to terminate an ISO message when an error has occurred?
+					LogMessage(LOG_LEVEL_ERROR, "Error encoding trajectory message point");
+					fclose(fd);
+					return -1;
+				}
+				messageBufferPosition += printedBytes;
+				totalPrintedBytes += printedBytes;
+				remainingBufferSpace -= (size_t) printedBytes;
+			}
+			else {
+				// TODO how to terminate an ISO message when an error has occurred?
+				LogMessage(LOG_LEVEL_ERROR, "Error encoding trajectory message point");
+				fclose(fd);
+				return -1;
+			}
 		}
 		else {
-			UtilSendTCPData("Object Control", TrajBuffer, MessageLength, Socket, 0);
-			SumMessageLength = SumMessageLength + MessageLength;
+			totalPrintedBytes += printedBytes;
+			messageBufferPosition += printedBytes;
+			remainingBufferSpace -= (size_t) printedBytes;
 		}
-
-		if (debug)
-			LogMessage(LOG_LEVEL_DEBUG, "Transmission %d: %d bytes sent", i, MessageLength);
 	}
 
-	if (Rest > 0) {
-		MessageLength = ObjectControlBuildTRAJMessage(TrajBuffer, fd, Rest, DOTMData, debug);
-		TrajBuffer[MessageLength] = (U8) (CrcU16);
-		TrajBuffer[MessageLength + 1] = (U8) (CrcU16 >> 8);
-		MessageLength = MessageLength + 2;
-		UtilSendTCPData("Object Control", TrajBuffer, MessageLength, Socket, 0);
-		SumMessageLength = SumMessageLength + MessageLength;
-		if (debug)
-			LogMessage(LOG_LEVEL_DEBUG, "Transmission %d: %d bytes sent.\n", i, MessageLength);
+	// Trajectory message footer
+	if ((printedBytes = encodeTRAJMessageFooter(messageBufferPosition, remainingBufferSpace, debug)) == -1) {
+		if (errno == ENOBUFS) {
+			// Buffer was filled: send the data and try to encode it again
+			UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket, debug);
+			messageBufferPosition = messageBuffer;
+			remainingBufferSpace = sizeof (messageBuffer);
+			if ((printedBytes =
+				 encodeTRAJMessageFooter(messageBufferPosition, remainingBufferSpace, debug)) == -1) {
+				// TODO how to terminate an ISO message when an error has occurred?
+				LogMessage(LOG_LEVEL_ERROR, "Error encoding trajectory message footer");
+				fclose(fd);
+				return -1;
+			}
+			messageBufferPosition += printedBytes;
+			totalPrintedBytes += printedBytes;
+			remainingBufferSpace -= (size_t) printedBytes;
+		}
+		else {
+			// TODO how to terminate an ISO message when an error has occurred?
+			LogMessage(LOG_LEVEL_ERROR, "Error encoding trajectory message footer");
+			fclose(fd);
+			return -1;
+		}
+	}
+	else {
+		totalPrintedBytes += printedBytes;
+		messageBufferPosition += printedBytes;
+		remainingBufferSpace -= (size_t) printedBytes;
 	}
 
-	LogMessage(LOG_LEVEL_INFO, "%d DOTM bytes sent to %s:%d", SumMessageLength, IP, Port);
+	UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket, debug);
+
 	fclose(fd);
 
 	// Reset socket settings
@@ -1365,372 +1152,7 @@ I32 ObjectControlSendTRAJMessage(C8 * Filename, I32 * Socket, I32 RowCount, C8 *
 		return -1;
 	}
 
-
-	return 0;
-}
-
-I32 ObjectControlBuildTRAJMessage(C8 * MessageBuffer, FILE * fd, I32 RowCount, DOTMType * DOTMData, U8 debug) {
-	I32 MessageIndex = 0;
-	C8 RowBuffer[100];
-	C8 DataBuffer[20];
-	dbl Data;
-	C8 *src, *p;
-	U16 Crc = 0;
-	flt curv = 0;
-	C8 *pc;
-
-	bzero(MessageBuffer, COMMAND_DOTM_ROW_MESSAGE_LENGTH * RowCount);
-
-	I32 i = 0, j = 0, n = 0;
-
-	for (i = 0; i < RowCount; i++) {
-		bzero(RowBuffer, 100);
-		UtilReadLineCntSpecChars(fd, RowBuffer);
-
-		//Read to ';' in row = LINE;0.00;21.239000;39.045000;0.000000;-1.240001;0.029103;0.004005;0.000000;3;ENDLINE;
-		//Time
-		src = strchr(RowBuffer, ';');
-		bzero(DataBuffer, 20);
-		strncpy(DataBuffer, src + 1, (U64) strchr(src + 1, ';') - (U64) src - 1);
-		Data = atof(DataBuffer) * 1e3;
-		DOTMData->RelativeTimeValueIdU16 = VALUE_ID_RELATIVE_TIME;
-		DOTMData->RelativeTimeContentLengthU16 = 4;
-		DOTMData->RelativeTimeU32 = (U32) Data;
-		if (debug)
-			printf("Time DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
-
-		//x
-		src = strchr(src + 1, ';');
-		bzero(DataBuffer, 20);
-		strncpy(DataBuffer, src + 1, (uint64_t) strchr(src + 1, ';') - (uint64_t) src - 1);
-		Data = atof(DataBuffer) * 1e3;
-		DOTMData->XPositionValueIdU16 = VALUE_ID_X_POSITION;
-		DOTMData->XPositionContentLengthU16 = 4;
-		DOTMData->XPositionI32 = (I32) Data;
-		if (debug)
-			printf("X DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
-
-		//y
-		src = strchr(src + 1, ';');
-		bzero(DataBuffer, 20);
-		strncpy(DataBuffer, src + 1, (uint64_t) strchr(src + 1, ';') - (uint64_t) src - 1);
-		Data = atof(DataBuffer) * 1e3;
-		DOTMData->YPositionValueIdU16 = VALUE_ID_Y_POSITION;
-		DOTMData->YPositionContentLengthU16 = 4;
-		DOTMData->YPositionI32 = (I32) Data;
-		if (debug)
-			printf("Y DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
-
-		//z
-		src = strchr(src + 1, ';');
-		bzero(DataBuffer, 20);
-		strncpy(DataBuffer, src + 1, (uint64_t) strchr(src + 1, ';') - (uint64_t) src - 1);
-		Data = atof(DataBuffer) * 1e3;
-		DOTMData->ZPositionValueIdU16 = VALUE_ID_Z_POSITION;
-		DOTMData->ZPositionContentLengthU16 = 4;
-		DOTMData->ZPositionI32 = (I32) Data;
-		if (debug)
-			printf("Z DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
-
-		//Heading
-		src = strchr(src + 1, ';');
-		bzero(DataBuffer, 20);
-		strncpy(DataBuffer, src + 1, (uint64_t) strchr(src + 1, ';') - (uint64_t) src - 1);
-		Data = UtilRadToDeg(atof(DataBuffer));
-		Data = 450 - Data;		//Turn heading back pi/2
-		while (Data < 0)
-			Data += 360.0;
-		while (Data > 360)
-			Data -= 360.0;
-		DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
-		DOTMData->HeadingContentLengthU16 = 2;
-		DOTMData->HeadingU16 = (U16) (Data * 1e2);
-		if (debug)
-			printf("Heading DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
-
-		//Longitudinal speed
-		src = strchr(src + 1, ';');
-		bzero(DataBuffer, 20);
-		strncpy(DataBuffer, src + 1, (uint64_t) strchr(src + 1, ';') - (uint64_t) src - 1);
-		Data = atof(DataBuffer) * 1e2;
-		DOTMData->LongitudinalSpeedValueIdU16 = VALUE_ID_LONGITUDINAL_SPEED;
-		DOTMData->LongitudinalSpeedContentLengthU16 = 2;
-		DOTMData->LongitudinalSpeedI16 = (I16) Data;
-		if (debug)
-			printf("Long speed DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
-
-		//Lateral speed
-		src = strchr(src + 1, ';');
-		bzero(DataBuffer, 20);
-		strncpy(DataBuffer, src + 1, (uint64_t) strchr(src + 1, ';') - (uint64_t) src - 1);
-		Data = atof(DataBuffer) * 1e2;
-		DOTMData->LateralSpeedValueIdU16 = VALUE_ID_LATERAL_SPEED;
-		DOTMData->LateralSpeedContentLengthU16 = 2;
-		DOTMData->LateralSpeedI16 = (I16) Data;
-		if (debug)
-			printf("Lat speed DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
-
-		//Longitudinal acceleration
-		src = strchr(src + 1, ';');
-		bzero(DataBuffer, 20);
-		strncpy(DataBuffer, src + 1, (uint64_t) strchr(src + 1, ';') - (uint64_t) src - 1);
-		Data = atof(DataBuffer) * 1e3;
-		DOTMData->LongitudinalAccValueIdU16 = VALUE_ID_LONGITUDINAL_ACCELERATION;
-		DOTMData->LongitudinalAccContentLengthU16 = 2;
-		DOTMData->LongitudinalAccI16 = (I16) Data;
-		if (debug)
-			printf("Long acc DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
-
-		//Lateral acceleration
-		src = strchr(src + 1, ';');
-		bzero(DataBuffer, 20);
-		strncpy(DataBuffer, src + 1, (uint64_t) strchr(src + 1, ';') - (uint64_t) src - 1);
-		Data = atof(DataBuffer) * 1e3;
-		DOTMData->LateralAccValueIdU16 = VALUE_ID_LATERAL_ACCELERATION;
-		DOTMData->LateralAccContentLengthU16 = 2;
-		DOTMData->LateralAccI16 = (I16) Data;
-		if (debug)
-			printf("Lat accDataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
-
-		//Curvature
-		src = strchr(src + 1, ';');
-		bzero(DataBuffer, 20);
-		strncpy(DataBuffer, src + 1, (uint64_t) strchr(src + 1, ';') - (uint64_t) src - 1);
-		//Data = atof(DataBuffer) * 3e4;
-		curv = atof(DataBuffer);
-		pc = (C8 *) & curv;
-		DOTMData->CurvatureValueIdU16 = VALUE_ID_CURVATURE;
-		DOTMData->CurvatureContentLengthU16 = 4;
-		//DOTMData->CurvatureI32 = (I32) Data;
-		DOTMData->CurvatureI32 = pc[0];
-		DOTMData->CurvatureI32 = DOTMData->CurvatureI32 | ((I32) pc[1]) << 8;
-		DOTMData->CurvatureI32 = DOTMData->CurvatureI32 | ((I32) pc[2]) << 16;
-		DOTMData->CurvatureI32 = DOTMData->CurvatureI32 | ((I32) pc[3]) << 24;
-
-		if (debug)
-			printf("Curv DataBuffer=%s  float=%3.6f\n", DataBuffer, Data);
-
-		p = (C8 *) DOTMData;
-		for (j = 0; j < sizeof (DOTMType); j++, n++)
-			*(MessageBuffer + n) = *p++;
-		MessageIndex = n;
-	}
-
-
-	if (debug) {
-		int i = 0;
-
-		for (i = 0; i < MessageIndex; i++) {
-			// TODO: Write to log when bytes thingy has been implemented
-			if ((unsigned char)MessageBuffer[i] >= 0 && (unsigned char)MessageBuffer[i] <= 15)
-				printf("0");
-			printf("%x-", (unsigned char)MessageBuffer[i]);
-		}
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-
-}
-
-
-I32 ObjectControlBuildASPMessage(C8 * MessageBuffer, ASPType * ASPData, U8 debug) {
-	I32 MessageIndex = 0, i;
-	C8 *p;
-
-	memset(MessageBuffer, 0, sizeof (ASPType));
-	p = (C8 *) ASPData;
-	for (i = 0; i < sizeof (ASPType); i++)
-		*(MessageBuffer + i) = *p++;
-	MessageIndex = i;
-
-	if (debug) {
-		// TODO: Write to log when bytes thingy has been implemented
-		printf("ASP total length = %d bytes \n", (int)(sizeof (ASPType)));
-		printf("\n----MESSAGE----\n");
-		for (i = 0; i < sizeof (ASPType); i++)
-			printf("%x ", (C8) MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-}
-
-
-
-I32 ObjectControlSendDTMMessage(C8 * DTMData, I32 * Socket, I32 RowCount, C8 * IP, U32 Port,
-								DOTMType * DOTMData, U8 debug) {
-
-	U32 Rest = 0, i = 0, MessageLength = 0, SumMessageLength = 0, Modulo = 0, Transmissions = 0;
-	U16 CrcU16 = 0;
-
-	MessageLength =
-		ObjectControlBuildDTMMessage(TrajBuffer, DTMData, COMMAND_DOTM_ROWS_IN_TRANSMISSION, DOTMData, 0);
-
-	if (debug)
-		LogMessage(LOG_LEVEL_DEBUG, "Transmission %d: %d bytes sent", i, MessageLength);
-
-	LogMessage(LOG_LEVEL_INFO, "%d DTM bytes sent to %s:%d", SumMessageLength, IP, Port);
-
-	return 0;
-}
-
-
-I32 ObjectControlBuildDTMMessage(C8 * MessageBuffer, C8 * DTMData, I32 RowCount, DOTMType * DOTMData,
-								 U8 debug) {
-	I32 MessageIndex = 0;
-	U32 Data;
-	C8 *src, *p;
-	U16 Crc = 0;
-
-	bzero(MessageBuffer, COMMAND_DOTM_ROW_MESSAGE_LENGTH * RowCount);
-
-	I32 i = 0, j = 0, n = 0;
-
-	for (i = 0; i < RowCount; i++) {
-		if (debug)
-			LogMessage(LOG_LEVEL_DEBUG, "DOTM row:");
-		//Time
-		Data = 0;
-		Data = *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 3);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 2);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 1);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 0);
-		DOTMData->RelativeTimeValueIdU16 = VALUE_ID_RELATIVE_TIME;
-		DOTMData->RelativeTimeContentLengthU16 = 4;
-		DOTMData->RelativeTimeU32 = SwapU32((U32) Data);
-		if (debug)
-			LogMessage(LOG_LEVEL_DEBUG, "Time=%d", DOTMData->RelativeTimeU32);
-
-		//x
-		Data = 0;
-		Data = *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 7);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 6);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 5);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 4);
-		DOTMData->XPositionValueIdU16 = VALUE_ID_X_POSITION;
-		DOTMData->XPositionContentLengthU16 = 4;
-		DOTMData->XPositionI32 = SwapI32((I32) Data);
-		if (debug)
-			LogMessage(LOG_LEVEL_DEBUG, "X=%d", DOTMData->XPositionI32);
-
-		//y
-		Data = 0;
-		Data = *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 11);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 10);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 9);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 8);
-		DOTMData->YPositionValueIdU16 = VALUE_ID_Y_POSITION;
-		DOTMData->YPositionContentLengthU16 = 4;
-		DOTMData->YPositionI32 = SwapI32((I32) Data);
-		if (debug)
-			LogMessage(LOG_LEVEL_DEBUG, "Y=%d", DOTMData->YPositionI32);
-
-		//z
-		Data = 0;
-		Data = *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 15);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 14);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 13);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 12);
-		DOTMData->ZPositionValueIdU16 = VALUE_ID_Z_POSITION;
-		DOTMData->ZPositionContentLengthU16 = 4;
-		DOTMData->ZPositionI32 = SwapI32((I32) Data);
-		if (debug)
-			LogMessage(LOG_LEVEL_DEBUG, "Z=%d", DOTMData->ZPositionI32);
-
-		//Heading
-		Data = 0;
-		Data = *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 17);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 16);
-		//Data = UtilRadToDeg(Data);
-		//Data = 4500 - Data; //Turn heading back pi/2
-		//while(Data<0) Data+=360.0;
-		//while(Data>3600) Data-=360.0;
-		DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
-		DOTMData->HeadingContentLengthU16 = 2;
-		DOTMData->HeadingU16 = SwapU16((U16) (Data));
-		if (debug)
-			LogMessage(LOG_LEVEL_DEBUG, "Heading=%d", DOTMData->HeadingU16);
-
-		//Longitudinal speed
-		Data = 0;
-		Data = *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 19);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 18);
-		DOTMData->LongitudinalSpeedValueIdU16 = VALUE_ID_LONGITUDINAL_SPEED;
-		DOTMData->LongitudinalSpeedContentLengthU16 = 2;
-		DOTMData->LongitudinalSpeedI16 = SwapI16((I16) Data);
-		if (debug)
-			LogMessage(LOG_LEVEL_DEBUG, "LongitudinalSpeedI16=%d", DOTMData->LongitudinalSpeedI16);
-
-		//Lateral speed
-		Data = 0;
-		Data = *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 21);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 20);
-		DOTMData->LateralSpeedValueIdU16 = VALUE_ID_LATERAL_SPEED;
-		DOTMData->LateralSpeedContentLengthU16 = 2;
-		DOTMData->LateralSpeedI16 = SwapI16((I16) Data);
-		if (debug)
-			LogMessage(LOG_LEVEL_DEBUG, "LateralSpeedI16=%d", DOTMData->LateralSpeedI16);
-
-		//Longitudinal acceleration
-		Data = 0;
-		Data = *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 23);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 22);
-		DOTMData->LongitudinalAccValueIdU16 = VALUE_ID_LONGITUDINAL_ACCELERATION;
-		DOTMData->LongitudinalAccContentLengthU16 = 2;
-		DOTMData->LongitudinalAccI16 = SwapI16((I16) Data);
-		if (debug)
-			LogMessage(LOG_LEVEL_DEBUG, "LongitudinalAccI16=%d", DOTMData->LongitudinalAccI16);
-
-		//Lateral acceleration
-		Data = 0;
-		Data = *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 25);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 24);
-		DOTMData->LateralAccValueIdU16 = VALUE_ID_LATERAL_ACCELERATION;
-		DOTMData->LateralAccContentLengthU16 = 2;
-		DOTMData->LateralAccI16 = SwapI16((I16) Data);
-		if (debug)
-			LogMessage(LOG_LEVEL_DEBUG, "LateralAccI16=%d", DOTMData->LateralAccI16);
-
-		//Curvature
-		Data = 0;
-		Data = *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 29);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 28);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 27);
-		Data = (Data << 8) | *(DTMData + COMMAND_DTM_BYTES_IN_ROW * i + 26);
-		DOTMData->CurvatureValueIdU16 = VALUE_ID_CURVATURE;
-		DOTMData->CurvatureContentLengthU16 = 4;
-		DOTMData->CurvatureI32 = SwapI32((I32) Data);
-		if (debug)
-			printf("CurvatureI32=%d \n", DOTMData->CurvatureI32);
-
-		p = (C8 *) DOTMData;
-		for (j = 0; j < sizeof (DOTMType); j++, n++)
-			*(MessageBuffer + n) = *p++;
-		MessageIndex = n;
-	}
-
-
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (DOTMType));
-	Crc = 0;
-	*(MessageBuffer + MessageIndex++) = (U8) (Crc);
-	*(MessageBuffer + MessageIndex++) = (U8) (Crc >> 8);
-
-
-	if (debug) {
-		int i = 0;
-
-		for (i = 0; i < MessageIndex; i++) {
-			// TODO: Write to log when bytes thingy has been implemented
-			if ((unsigned char)MessageBuffer[i] >= 0 && (unsigned char)MessageBuffer[i] <= 15)
-				printf("0");
-			printf("%x-", (unsigned char)MessageBuffer[i]);
-		}
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-
+	return totalPrintedBytes;
 }
 
 
@@ -1862,28 +1284,6 @@ static I32 vCheckRemoteDisconnected(int *sockfd) {
 	}
 
 	return 1;
-}
-
-int ObjectControlSendUDPData(int *sockfd, struct sockaddr_in *addr, char *SendData, int Length, char debug) {
-	ssize_t result;
-
-	// TODO: Change to log write when bytes thingy has been implemented
-	if (debug) {
-		printf("Bytes sent: ");
-		int i = 0;
-
-		for (i = 0; i < Length; i++)
-			printf("%x-", (unsigned char)*(SendData + i));
-		printf("\n");
-	}
-
-	result = sendto(*sockfd, SendData, Length, 0, (const struct sockaddr *)addr, sizeof (struct sockaddr_in));
-
-	if (result < 0) {
-		util_error("ERR: Failed to send on monitor socket");
-	}
-
-	return 0;
 }
 
 
