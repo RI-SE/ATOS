@@ -82,8 +82,7 @@ typedef enum {
 
 #pragma pack(push,1)			// Ensure sizeof() is useable for (most) network byte lengths
 /*! ISO message header */
-typedef struct
-{
+typedef struct {
 	uint16_t SyncWordU16;
 	uint8_t TransmitterIdU8;
 	uint8_t MessageCounterU8;
@@ -94,8 +93,7 @@ typedef struct
 
 
 /*! ISO message footer */
-typedef struct
-{
+typedef struct {
 	uint16_t Crc;
 } FooterType;
 
@@ -687,9 +685,9 @@ ISOMessageID getISOMessageType(const char *messageData, const size_t length, con
  *		EMSGSIZE	if trajectory name is too long
  */
 ssize_t encodeTRAJMessageHeader(const uint16_t trajectoryID, const uint16_t trajectoryVersion,
-								const char * trajectoryName, const size_t nameLength,
+								const char *trajectoryName, const size_t nameLength,
 								const uint32_t numberOfPointsInTraj, char *trajDataBuffer,
-								const size_t bufferLength, const char debug){
+								const size_t bufferLength, const char debug) {
 
 	TRAJHeaderType TRAJData;
 
@@ -719,7 +717,8 @@ ssize_t encodeTRAJMessageHeader(const uint16_t trajectoryID, const uint16_t traj
 
 	// Construct ISO header
 	TRAJData.header = buildISOHeader(MESSAGE_ID_TRAJ, sizeof (TRAJHeaderType)
-									 + numberOfPointsInTraj * sizeof (TRAJPointType) + sizeof (TRAJFooterType), debug);
+									 + numberOfPointsInTraj * sizeof (TRAJPointType) +
+									 sizeof (TRAJFooterType), debug);
 
 	// Fill contents
 	TRAJData.trajectoryIDValueID = VALUE_ID_TRAJ_TRAJECTORY_IDENTIFIER;
@@ -788,8 +787,9 @@ ssize_t encodeTRAJMessageHeader(const uint16_t trajectoryID, const uint16_t traj
  *		EINVAL		if one of the input parameters are invalid
  *		ENOBUFS		if supplied buffer is too small to hold point
  */
-ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const CartesianPosition position, const SpeedType speed,
-							   const AccelerationType acceleration, const float curvature, char * trajDataBufferPointer,
+ssize_t encodeTRAJMessagePoint(const struct timeval *pointTimeFromStart, const CartesianPosition position,
+							   const SpeedType speed, const AccelerationType acceleration,
+							   const float curvature, char *trajDataBufferPointer,
 							   const size_t remainingBufferLength, const char debug) {
 
 	TRAJPointType TRAJData;
@@ -808,7 +808,8 @@ ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const 
 	// Fill contents
 	TRAJData.relativeTimeValueID = VALUE_ID_TRAJ_RELATIVE_TIME;
 	TRAJData.relativeTimeContentLength = sizeof (TRAJData.relativeTime);
-	TRAJData.relativeTime = (uint32_t) TimeGetAsUTCms(pointTimeFromStart) / (1000 / RELATIVE_TIME_ONE_SECOND_VALUE);
+	TRAJData.relativeTime =
+		(uint32_t) TimeGetAsUTCms(pointTimeFromStart) / (1000 / RELATIVE_TIME_ONE_SECOND_VALUE);
 
 	TRAJData.xPositionValueID = VALUE_ID_TRAJ_X_POSITION;
 	TRAJData.xPositionContentLength = sizeof (TRAJData.xPosition);
@@ -831,7 +832,7 @@ ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const 
 	TRAJData.headingContentLength = sizeof (TRAJData.heading);
 	if (position.isHeadingValid) {
 		TRAJData.heading = (uint16_t) (mapHostHeadingToISOHeading(position.heading_rad)
-				* 180.0 / M_PI * HEADING_ONE_DEGREE_VALUE);
+									   * 180.0 / M_PI * HEADING_ONE_DEGREE_VALUE);
 	}
 	else {
 		errno = EINVAL;
@@ -858,12 +859,16 @@ ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const 
 	TRAJData.lateralAccelerationValueID = VALUE_ID_TRAJ_LATERAL_ACCELERATION;
 	TRAJData.lateralAccelerationContentLength = sizeof (TRAJData.lateralAcceleration);
 	if (acceleration.isValid) {
-		TRAJData.longitudinalAcceleration = (int16_t) (acceleration.longitudinal_m_s2 * ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE);
-		TRAJData.lateralAcceleration = (int16_t) (acceleration.lateral_m_s2 * ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE);
+		TRAJData.longitudinalAcceleration =
+			(int16_t) (acceleration.longitudinal_m_s2 * ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE);
+		TRAJData.lateralAcceleration =
+			(int16_t) (acceleration.lateral_m_s2 * ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE);
 	}
 	else {
-		LogMessage(LOG_LEVEL_WARNING, "TRAJ acceleration supplied not valid: assuming longitudinal still valid");
-		TRAJData.longitudinalAcceleration = (int16_t) (acceleration.longitudinal_m_s2 * ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE);
+		LogMessage(LOG_LEVEL_WARNING,
+				   "TRAJ acceleration supplied not valid: assuming longitudinal still valid");
+		TRAJData.longitudinalAcceleration =
+			(int16_t) (acceleration.longitudinal_m_s2 * ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE);
 		TRAJData.lateralAcceleration = ACCELERATION_UNAVAILABLE_VALUE;
 	}
 
@@ -918,36 +923,36 @@ ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const 
 	}
 
 	// Convert from host endianness to little endian
-	TRAJData.relativeTimeValueID					= htole16(TRAJData.relativeTimeValueID);
-	TRAJData.relativeTimeContentLength				= htole16(TRAJData.relativeTimeContentLength);
-	TRAJData.relativeTime							= htole32(TRAJData.relativeTime);
-	TRAJData.xPositionValueID						= htole16(TRAJData.xPositionValueID);
-	TRAJData.xPositionContentLength					= htole16(TRAJData.xPositionContentLength);
-	TRAJData.xPosition								= (int32_t) htole32(TRAJData.xPosition);
-	TRAJData.yPositionValueID						= htole16(TRAJData.yPositionValueID);
-	TRAJData.yPositionContentLength					= htole16(TRAJData.yPositionContentLength);
-	TRAJData.yPosition								= (int32_t) htole32(TRAJData.yPosition);
-	TRAJData.zPositionValueID						= htole16(TRAJData.zPositionValueID);
-	TRAJData.zPositionContentLength					= htole16(TRAJData.zPositionContentLength);
-	TRAJData.zPosition								= (int32_t) htole32(TRAJData.zPosition);
-	TRAJData.headingValueID							= htole16(TRAJData.headingValueID);
-	TRAJData.headingContentLength					= htole16(TRAJData.headingContentLength);
-	TRAJData.heading								= htole16(TRAJData.heading);
-	TRAJData.longitudinalSpeedValueID				= htole16(TRAJData.longitudinalSpeedValueID);
-	TRAJData.longitudinalSpeedContentLength			= htole16(TRAJData.longitudinalSpeedContentLength);
-	TRAJData.longitudinalSpeed						= (int16_t) htole16(TRAJData.longitudinalSpeed);
-	TRAJData.lateralSpeedValueID					= htole16(TRAJData.lateralSpeedValueID);
-	TRAJData.lateralSpeedContentLength				= htole16(TRAJData.lateralSpeedContentLength);
-	TRAJData.lateralSpeed							= (int16_t) htole16(TRAJData.lateralSpeed);
-	TRAJData.longitudinalAccelerationValueID		= htole16(TRAJData.longitudinalAccelerationValueID);
-	TRAJData.longitudinalAccelerationContentLength	= htole16(TRAJData.longitudinalAccelerationContentLength);
-	TRAJData.longitudinalAcceleration				= (int16_t) htole16(TRAJData.longitudinalAcceleration);
-	TRAJData.lateralAccelerationValueID				= htole16(TRAJData.lateralAccelerationValueID);
-	TRAJData.lateralAccelerationContentLength		= htole16(TRAJData.lateralAccelerationContentLength);
-	TRAJData.lateralAcceleration					= (int16_t) htole16(TRAJData.lateralAcceleration);
-	TRAJData.curvatureValueID						= htole16(TRAJData.curvatureValueID);
-	TRAJData.curvatureContentLength					= htole16(TRAJData.curvatureContentLength);
-	TRAJData.curvature								= htolef(TRAJData.curvature);
+	TRAJData.relativeTimeValueID = htole16(TRAJData.relativeTimeValueID);
+	TRAJData.relativeTimeContentLength = htole16(TRAJData.relativeTimeContentLength);
+	TRAJData.relativeTime = htole32(TRAJData.relativeTime);
+	TRAJData.xPositionValueID = htole16(TRAJData.xPositionValueID);
+	TRAJData.xPositionContentLength = htole16(TRAJData.xPositionContentLength);
+	TRAJData.xPosition = (int32_t) htole32(TRAJData.xPosition);
+	TRAJData.yPositionValueID = htole16(TRAJData.yPositionValueID);
+	TRAJData.yPositionContentLength = htole16(TRAJData.yPositionContentLength);
+	TRAJData.yPosition = (int32_t) htole32(TRAJData.yPosition);
+	TRAJData.zPositionValueID = htole16(TRAJData.zPositionValueID);
+	TRAJData.zPositionContentLength = htole16(TRAJData.zPositionContentLength);
+	TRAJData.zPosition = (int32_t) htole32(TRAJData.zPosition);
+	TRAJData.headingValueID = htole16(TRAJData.headingValueID);
+	TRAJData.headingContentLength = htole16(TRAJData.headingContentLength);
+	TRAJData.heading = htole16(TRAJData.heading);
+	TRAJData.longitudinalSpeedValueID = htole16(TRAJData.longitudinalSpeedValueID);
+	TRAJData.longitudinalSpeedContentLength = htole16(TRAJData.longitudinalSpeedContentLength);
+	TRAJData.longitudinalSpeed = (int16_t) htole16(TRAJData.longitudinalSpeed);
+	TRAJData.lateralSpeedValueID = htole16(TRAJData.lateralSpeedValueID);
+	TRAJData.lateralSpeedContentLength = htole16(TRAJData.lateralSpeedContentLength);
+	TRAJData.lateralSpeed = (int16_t) htole16(TRAJData.lateralSpeed);
+	TRAJData.longitudinalAccelerationValueID = htole16(TRAJData.longitudinalAccelerationValueID);
+	TRAJData.longitudinalAccelerationContentLength = htole16(TRAJData.longitudinalAccelerationContentLength);
+	TRAJData.longitudinalAcceleration = (int16_t) htole16(TRAJData.longitudinalAcceleration);
+	TRAJData.lateralAccelerationValueID = htole16(TRAJData.lateralAccelerationValueID);
+	TRAJData.lateralAccelerationContentLength = htole16(TRAJData.lateralAccelerationContentLength);
+	TRAJData.lateralAcceleration = (int16_t) htole16(TRAJData.lateralAcceleration);
+	TRAJData.curvatureValueID = htole16(TRAJData.curvatureValueID);
+	TRAJData.curvatureContentLength = htole16(TRAJData.curvatureContentLength);
+	TRAJData.curvature = htolef(TRAJData.curvature);
 
 	memcpy(trajDataBufferPointer, &TRAJData, sizeof (TRAJData));
 
@@ -966,7 +971,7 @@ ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const 
  *		EINVAL		if one of the input parameters are invalid
  *		ENOBUFS		if supplied buffer is too small to hold footer
  */
-ssize_t encodeTRAJMessageFooter(char * trajDataBuffer, const size_t remainingBufferLength, const char debug) {
+ssize_t encodeTRAJMessageFooter(char *trajDataBuffer, const size_t remainingBufferLength, const char debug) {
 
 	TRAJFooterType TRAJData;
 
@@ -1003,10 +1008,10 @@ ssize_t encodeTRAJMessageFooter(char * trajDataBuffer, const size_t remainingBuf
  * \param debug Flag for enabling debugging
  * \return Number of bytes written to the buffer, or -1 in case of an error
  */
-ssize_t encodeOSEMMessage(const double_t *latitude_deg, const double_t *longitude_deg, const float *altitude_m,
-						  const float *maxWayDeviation_m, const float *maxLateralDeviation_m,
-						  const float *minimumPositioningAccuracy_m, char *osemDataBuffer,
-						  const size_t bufferLength, const char debug) {
+ssize_t encodeOSEMMessage(const double_t * latitude_deg, const double_t * longitude_deg,
+						  const float *altitude_m, const float *maxWayDeviation_m,
+						  const float *maxLateralDeviation_m, const float *minimumPositioningAccuracy_m,
+						  char *osemDataBuffer, const size_t bufferLength, const char debug) {
 
 	const char SizeDifference64bitTo48bit = 2;
 	OSEMType OSEMData;
