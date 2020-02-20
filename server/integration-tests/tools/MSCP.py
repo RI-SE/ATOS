@@ -48,8 +48,8 @@ class MSCP:
         print("=== Starting listener on " + str(self.host) + ":" + str(self.port))
         while not self.quit:
             try:
-                dat = self.socket.recv(2048)
-                data = bytearray(dat)
+                byteData = self.socket.recv(2048)
+                data = bytearray(byteData)
             except ConnectionResetError as e:
                 if not self.quit:
                     raise e
