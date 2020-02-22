@@ -721,7 +721,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
                     char * fileBufferPointer = NULL;
                     char * traversingPointer = NULL;
-                    I32 file_len = SystemControlBuildFileContentInfo("dir.info",&fileBufferPointer,0);
+                    int fd = 0;
+                    I32 file_len = SystemControlBuildFileContentInfo("dir.info",&fileBufferPointer,&fd,0);
                     traversingPointer = fileBufferPointer;
                     for (int i = 0; i < file_len; i++) {
                         printf("0x%X\n", *traversingPointer);
@@ -1922,7 +1923,7 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 	return strlen(ParameterList);
 }
 
-I32 SystemControlBuildFileContentInfo(C8 * Path, C8 ** bufferPlace, U8 Debug) {
+I32 SystemControlBuildFileContentInfo(C8 * Path, C8 ** bufferPlace, int *fd_pointer, U8 Debug) {
 
     /*
 	struct stat st;
@@ -1974,11 +1975,18 @@ I32 SystemControlBuildFileContentInfo(C8 * Path, C8 ** bufferPlace, U8 Debug) {
     rename(temporaryCompletePath, CompletePath);
     stat(CompletePath, &st);
     // Create mmap of the file and return the length
-    int fd = open(CompletePath, O_RDWR);
-    char * buffer = mmap(NULL,st.st_size,PROT_READ | PROT_WRITE, MAP_PRIVATE, fd,0);
+    *fd_pointer = open(CompletePath, O_RDWR);
+    char * buffer = mmap(NULL,st.st_size,PROT_READ | PROT_WRITE, MAP_PRIVATE, *fd_pointer,0);
 
     *bufferPlace = buffer;
     return st.st_size;
+}
+
+I32 SystemControlDestroyFileContentInfo(C8 *path, C8 *bufferPointer, int *fd_pointer)
+{
+    char CompletePath[MAX_FILE_PATH];
+    UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+    strcat(CompletePath, path);
 }
 
 I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug) {
