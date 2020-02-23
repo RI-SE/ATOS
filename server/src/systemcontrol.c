@@ -729,18 +729,22 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 
                     I32 file_len = SystemControlBuildFileContentInfo("dir.info",0);
+
+                    /*
                     if (file_len > 0) printf("file contred Created\n");
                     char *traversingPointer = SystemControlDirectoryInfo.info_buffer;
                     for (int i = 0; i < file_len; i++) {
                         printf("0x%X\n", *traversingPointer);
                         traversingPointer++;
                     }
+                    */
+                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubGetDirectoryContent:",
+                                                     SystemControlDirectoryInfo.info_buffer, file_len, &ClientSocket, 0);
 
-                    if (!SystemControlDestroyFileContentInfo("dir.info")) printf("file content deleted \n");
+                    SystemControlDestroyFileContentInfo("dir.info");
                     /*
                     SystemControlBuildFileContentInfo("dir.info", ControlResponseBuffer, 0);
-                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubGetDirectoryContent:",
-                                                     ControlResponseBuffer, 4, &ClientSocket, 0);
+
 					SystemControlSendFileContent(&ClientSocket, "dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
 												 ControlResponseBuffer, REMOVE_FILE, 0);
                                                  */
@@ -1998,14 +2002,14 @@ I32 SystemControlDestroyFileContentInfo(C8 *path)
 {
     char CompletePath[MAX_FILE_PATH];
     struct stat st;
-    if (SystemControlDirectoryInfo.exist != 0) return -1;
+    if (!SystemControlDirectoryInfo.exist) return -1;
     UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
     strcat(CompletePath, path);
 
     munmap(SystemControlDirectoryInfo.info_buffer, SystemControlDirectoryInfo.size);
     close(SystemControlDirectoryInfo.fd);
     SystemControlDirectoryInfo.exist = 0;
-    remove(CompletePath);
+    //remove(CompletePath);
     return 0;
 }
 
