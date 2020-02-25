@@ -127,7 +127,7 @@ typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
 	InitializeScenario_0,
 	ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
-    DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetDirectoryContent_0, GetDirectoryContent_1,
+    DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetRootDirectoryContent_0, GetDirectoryContent_1,
 	DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0, start_ext_trigg_1,
 	nocommand
 } SystemControlCommand_t;
@@ -137,7 +137,7 @@ const char *SystemControlCommandsArr[] = {
 	"AbortScenario_0", "InitializeScenario_0",
 	"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1",
-    "GetDirectoryContent_0", "GetDirectoryContent_1",
+    "GetRootDirectoryContent_0", "GetDirectoryContent_1",
 	"DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1", "control_0", "Exit_0",
 	"start_ext_trigg_1"
 };
@@ -716,7 +716,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = Idle_0;
 			}
 			break;
-        case GetDirectoryContent_0:
+        case GetRootDirectoryContent_0:
+            LogMessage(LOG_LEVEL_ERROR, "GetRootDirectory called");
 		case GetDirectoryContent_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
@@ -752,7 +753,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 			}
 			else {
-				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
+                LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)! got:%d, expected:%d",CurrentInputArgCount, CommandArgCount);
 				SystemControlCommand = Idle_0;
 			}
 			break;
