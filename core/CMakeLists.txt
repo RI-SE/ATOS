@@ -1,12 +1,24 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(Core)
+project(Core LANGUAGES C)
+
+# Specify locations for logs and shared memory
+# WARNING: These are used for installation and could hose
+# 	your system if e.g. specified to "/"
+set(SYSTEM_SHARED_MEMORY_PATH "/dev/shm/maestro")
 
 set(CORE_TARGET ${CMAKE_PROJECT_NAME})
-set(UTIL_TARGET MaestroUtil)
-set(TIME_TARGET MaestroTime)
-set(LOGGING_TARGET MaestroLogging)
-set(MESSAGE_BUS_TARGET MaestroMQ)
+set(COREUTILS_TARGET MaestroCoreUtil)
+set(ISO_22133_TARGET MaestroISO22133)
+set(POSITIONING_TARGET MaestroPositioning)
+set(DATA_DICTIONARY_TARGET MaestroDataDictionary)
+
+set(TIME_LIBRARY MaestroTime)
+set(LOGGING_LIBRARY MaestroLogging)
+set(MESSAGE_BUS_LIBRARY MaestroMQ)
+set(MATH_LIBRARY m)
+
+include(GNUInstallDirs)
 
 add_executable(${CORE_TARGET} 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.c
@@ -16,44 +28,79 @@ add_executable(${CORE_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
 )
 
-add_library(${UTIL_TARGET}
+add_library(${COREUTILS_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
+)
+set_target_properties(${COREUTILS_TARGET} PROPERTIES PUBLIC_HEADER
+	${CMAKE_CURRENT_SOURCE_DIR}/inc/util.h
+)
+set_target_properties(${COREUTILS_TARGET} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+add_library(${ISO_22133_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/src/iso22133.c
+)
+set_target_properties(${ISO_22133_TARGET} PROPERTIES PUBLIC_HEADER
+	${CMAKE_CURRENT_SOURCE_DIR}/inc/iso22133.h
+)
+set_target_properties(${ISO_22133_TARGET} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+add_library(${POSITIONING_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/src/positioning.c
+)
+set_target_properties(${POSITIONING_TARGET} PROPERTIES PUBLIC_HEADER
+	${CMAKE_CURRENT_SOURCE_DIR}/inc/positioning.h
+)
+set_target_properties(${POSITIONING_TARGET} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+add_library(${DATA_DICTIONARY_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/src/datadictionary.c
 )
+set_target_properties(${DATA_DICTIONARY_TARGET} PROPERTIES PUBLIC_HEADER
+	${CMAKE_CURRENT_SOURCE_DIR}/inc/datadictionary.h
+)
+set_target_properties(${DATA_DICTIONARY_TARGET} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-if(NOT TARGET ${TIME_TARGET})
-	add_library(${TIME_TARGET} STATIC
-		${CMAKE_CURRENT_SOURCE_DIR}/../util/C/time/maestroTime.c
-	)
-endif()
-
-if(NOT TARGET ${LOGGING_TARGET})
-	add_library(${LOGGING_TARGET} STATIC
-		${CMAKE_CURRENT_SOURCE_DIR}/../util/C/logging/logging.c
-	)
-endif()
-
-if(NOT TARGET ${MESSAGE_BUS_TARGET})
-	add_library(${MESSAGE_BUS_TARGET} STATIC
-		${CMAKE_CURRENT_SOURCE_DIR}/../util/C/mqbus/mqbus.c
-	)
-	target_link_libraries(${MESSAGE_BUS_TARGET} rt)
-endif()
-
-target_link_libraries(${CORE_TARGET} LINK_PUBLIC ${TIME_TARGET} ${LOGGING_TARGET} ${UTIL_TARGET})
+# Linking
+target_link_libraries(${CORE_TARGET} LINK_PUBLIC
+	${TIME_LIBRARY}
+	${LOGGING_LIBRARY}
+	${COREUTILS_TARGET}
+	${DATA_DICTIONARY_TARGET}
+	${ISO_22133_TARGET}
+	${POSITIONING_TARGET}
+)
 target_include_directories(${CORE_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/../util/C/time
-	${CMAKE_CURRENT_SOURCE_DIR}/../util/C/logging
+)
+target_include_directories(${COREUTILS_TARGET} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+target_include_directories(${DATA_DICTIONARY_TARGET} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+target_include_directories(${ISO_22133_TARGET} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+target_include_directories(${POSITIONING_TARGET} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
-target_link_libraries(${UTIL_TARGET} LINK_PUBLIC ${TIME_TARGET} ${LOGGING_TARGET} ${MESSAGE_BUS_TARGET})
-target_link_libraries(${UTIL_TARGET} LINK_PUBLIC m)
-target_include_directories(${UTIL_TARGET} PUBLIC
+target_link_libraries(${COREUTILS_TARGET} LINK_PUBLIC ${TIME_LIBRARY} ${LOGGING_LIBRARY} ${MESSAGE_BUS_LIBRARY} ${MATH_LIBRARY})
+
+target_include_directories(${COREUTILS_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/../util/C/time
-	${CMAKE_CURRENT_SOURCE_DIR}/../util/C/logging
-	${CMAKE_CURRENT_SOURCE_DIR}/../util/C/mqbus
 )
+
+install(TARGETS ${CORE_TARGET} ${COREUTILS_TARGET}
+		${ISO_22133_TARGET} ${DATA_DICTIONARY_TARGET}
+		${POSITIONING_TARGET}
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+# Create shared memory directory and give user access
+install(DIRECTORY DESTINATION ${SYSTEM_SHARED_MEMORY_PATH})
+install(CODE "execute_process(COMMAND chown $ENV{USER} ${SYSTEM_SHARED_MEMORY_PATH})")
+
