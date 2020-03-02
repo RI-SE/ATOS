@@ -17,6 +17,7 @@ add_subdirectory(modules/Supervision)
 add_subdirectory(modules/Visualization)
 
 # Create directory for test data in user home directory
+install(CODE "MESSAGE(STATUS \"Creating home directory environment under $ENV{HOME}\")")
 install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro" USE_SOURCE_PERMISSIONS)
 install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro/journal" USE_SOURCE_PERMISSIONS)
 install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro/traj" USE_SOURCE_PERMISSIONS)
