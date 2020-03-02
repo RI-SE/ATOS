@@ -13,8 +13,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 add_subdirectory(util/C)
 add_subdirectory(core)
 add_subdirectory(modules/ScenarioControl)
-#add_subdirectory(modules/Supervision)
-#add_subdirectory(modules/Visualization)
+add_subdirectory(modules/Supervision)
+add_subdirectory(modules/Visualization)
 
 # Create directory for test data in user home directory
 install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro" USE_SOURCE_PERMISSIONS)
