@@ -803,6 +803,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeScenario:",
 												 ControlResponseBuffer, 0, &ClientSocket, 0);
+
 				SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
 			}
 			else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_INITIALIZED) {
@@ -2264,7 +2265,7 @@ I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * 
 
 /*
 SystemControlBuildRVSSTimeChannelMessage builds a message from data in *GPSTime. The message is stored in *RVSSData.
-See the architecture document for the protocol of RVSS. 
+See the architecture document for the protocol of RVSS.
 
 - *RVSSData the buffer the message
 - *RVSSDataLengthU32 the length of the message
@@ -2312,7 +2313,7 @@ I32 SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 
 /*
 SystemControlBuildRVSSMaestroChannelMessage builds a message from OBCState in *GSD and SysCtrlState. The message is stored in *RVSSData.
-See the architecture document for the protocol of RVSS. 
+See the architecture document for the protocol of RVSS.
 
 - *RVSSData the buffer the message
 - *RVSSDataLengthU32 the length of the message
@@ -2350,7 +2351,7 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 #define MAX_MONR_STRING_LENGTH 1024
 /*
 SystemControlBuildRVSSMONRChannelMessage builds a message from data in *MonrData. The message is stored in *RVSSData.
-See the architecture document for the protocol of RVSS. 
+See the architecture document for the protocol of RVSS.
 
 - *RVSSData the buffer the message
 - *RVSSDataLengthU32 the length of the message
@@ -2392,7 +2393,7 @@ I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 
 /*
 SystemControlBuildRVSSAspChannelMessage shall be used for sending ASP-debug data. The message is stored in *RVSSData.
-See the architecture document for the protocol of RVSS. 
+See the architecture document for the protocol of RVSS.
 
 - *RVSSData the buffer the message
 - *RVSSDataLengthU32 the length of the message
