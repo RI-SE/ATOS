@@ -91,6 +91,7 @@ target_include_directories(${COREUTILS_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
+install(CODE "MESSAGE(STATUS \"Installing target ${CORE_TARGET}\")")
 install(TARGETS ${CORE_TARGET} ${COREUTILS_TARGET}
 		${ISO_22133_TARGET} ${DATA_DICTIONARY_TARGET}
 		${POSITIONING_TARGET}
@@ -100,7 +101,11 @@ install(TARGETS ${CORE_TARGET} ${COREUTILS_TARGET}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
+install(CODE "MESSAGE(STATUS \"Giving system time setting capabilities to target ${CORE_TARGET}\")")
+install(CODE "execute_process(COMMAND setcap CAP_SYS_TIME+ep ${CMAKE_INSTALL_FULL_BINDIR}/${CORE_TARGET})")
+
 # Create shared memory directory and give user access
+install(CODE "MESSAGE(STATUS \"Creating shared memory directory ${SYSTEM_SHARED_MEMORY_PATH} owned by user $ENV{USER}\")")
 install(DIRECTORY DESTINATION ${SYSTEM_SHARED_MEMORY_PATH})
 install(CODE "execute_process(COMMAND chown $ENV{USER} ${SYSTEM_SHARED_MEMORY_PATH})")
 
