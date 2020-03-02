@@ -107,7 +107,7 @@ static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects);
 static void signalHandler(int signo);
 
-static ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const char debug);
+static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const char debug);
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 							C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
@@ -264,8 +264,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 			MessageLength =
 				encodeHEABMessage(objectControlServerStatus, MessageBuffer, sizeof (MessageBuffer), 0);
-			UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
-							MessageBuffer, MessageLength, 0);
+			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+				UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
+								MessageBuffer, MessageLength, 0);
+			}
 		}
 
 		// Heartbeat
@@ -785,8 +787,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						/* Here we send TRAJ, if the IP-address is not operating with a dynamic trajectory */
 						if (strstr(DTMReceivers, object_address_name[iIndex]) == NULL) {
 							LogMessage(LOG_LEVEL_INFO, "Sending TRAJ to %s", object_address_name[iIndex]);
-							if (ObjectControlSendTRAJMessage(object_traj_file[iIndex], &socket_fds[iIndex], 0) == -1) {
-								LogMessage(LOG_LEVEL_ERROR, "Failed to send TRAJ to %s", object_address_name[iIndex]);
+							if (ObjectControlSendTRAJMessage(object_traj_file[iIndex], &socket_fds[iIndex], 0)
+								== -1) {
+								LogMessage(LOG_LEVEL_ERROR, "Failed to send TRAJ to %s",
+										   object_address_name[iIndex]);
 								continue;
 							}
 						}
@@ -969,9 +973,9 @@ void signalHandler(int signo) {
  * \param debug Flag for enabling debugging
  * \return Number of bytes sent, or -1 in case of an error
  */
-ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const char debug) {
+ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const char debug) {
 	FILE *fd;
-	char* line;
+	char *line;
 	size_t len = 0;
 	ssize_t read;
 	ssize_t printedBytes = 0, totalPrintedBytes = 0;
@@ -980,7 +984,7 @@ ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const 
 	TrajectoryFileLine fileLine;
 	char messageBuffer[TRAJECTORY_TX_BUFFER_SIZE];
 	size_t remainingBufferSpace = sizeof (messageBuffer);
-	char* messageBufferPosition = messageBuffer;
+	char *messageBufferPosition = messageBuffer;
 
 	memset(&fileHeader, 0, sizeof (fileHeader));
 	memset(&fileLine, 0, sizeof (fileLine));
@@ -1022,9 +1026,9 @@ ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const 
 
 	// Generate ISO trajectory message header
 	if ((printedBytes = encodeTRAJMessageHeader(fileHeader.ID > UINT16_MAX ? 0 : (uint16_t) fileHeader.ID,
-												fileHeader.majorVersion, fileHeader.name, strlen(fileHeader.name),
-												fileHeader.numberOfLines, messageBufferPosition,
-												remainingBufferSpace, debug)) == -1) {
+												fileHeader.majorVersion, fileHeader.name,
+												strlen(fileHeader.name), fileHeader.numberOfLines,
+												messageBufferPosition, remainingBufferSpace, debug)) == -1) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to encode trajectory message");
 		fclose(fd);
 		return -1;
@@ -1035,8 +1039,7 @@ ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const 
 	remainingBufferSpace -= (size_t) printedBytes;
 
 	read = getline(&line, &len, fd);
-	for (unsigned int i = 0; i < fileHeader.numberOfLines && read != -1;
-		 ++i, read = getline(&line, &len, fd)) {
+	for (unsigned int i = 0; i < fileHeader.numberOfLines && read != -1; ++i, read = getline(&line, &len, fd)) {
 
 		// Parse file line
 		struct timeval relTime;
@@ -1046,7 +1049,7 @@ ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const 
 
 		if (UtilParseTrajectoryFileLine(line, &fileLine) == -1) {
 			// TODO: how to terminate an ISO message when an error has occurred?
-			LogMessage(LOG_LEVEL_ERROR, "Unable to parse line %u of trajectory file <%s>", i+1, Filename);
+			LogMessage(LOG_LEVEL_ERROR, "Unable to parse line %u of trajectory file <%s>", i + 1, Filename);
 			fclose(fd);
 			return -1;
 		}
@@ -1066,22 +1069,25 @@ ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const 
 		acceleration.isLongitudinalValid = fileLine.longitudinalAcceleration != NULL;
 		acceleration.isLateralValid = fileLine.lateralAcceleration != NULL;
 		acceleration.longitudinal_m_s2 = fileLine.longitudinalAcceleration != NULL ? *fileLine.longitudinalAcceleration : 0;
+
 		acceleration.lateral_m_s2 = fileLine.lateralAcceleration != NULL ? *fileLine.lateralAcceleration : 0;
 
 		// Print to buffer
 		if ((printedBytes = encodeTRAJMessagePoint(&relTime, position, speed, acceleration,
-												   (float) fileLine.curvature, messageBufferPosition,
+												   (float)fileLine.curvature, messageBufferPosition,
 												   remainingBufferSpace, debug)) == -1) {
 
 			if (errno == ENOBUFS) {
 				// Reached the end of buffer, send buffered data and
 				// try again
-				UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket, debug);
+				UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket,
+								debug);
 
 				messageBufferPosition = messageBuffer;
 				remainingBufferSpace = sizeof (messageBuffer);
-				if ((printedBytes = encodeTRAJMessagePoint(&relTime, position, speed, acceleration, fileLine.curvature,
-														   messageBufferPosition, remainingBufferSpace, debug)) == -1) {
+				if ((printedBytes =
+					 encodeTRAJMessagePoint(&relTime, position, speed, acceleration, fileLine.curvature,
+											messageBufferPosition, remainingBufferSpace, debug)) == -1) {
 					// TODO how to terminate an ISO message when an error has occurred?
 					LogMessage(LOG_LEVEL_ERROR, "Error encoding trajectory message point");
 					fclose(fd);
@@ -1112,7 +1118,8 @@ ssize_t ObjectControlSendTRAJMessage(const char * Filename, int * Socket, const 
 			UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket, debug);
 			messageBufferPosition = messageBuffer;
 			remainingBufferSpace = sizeof (messageBuffer);
-			if ((printedBytes = encodeTRAJMessageFooter(messageBufferPosition, remainingBufferSpace, debug)) == -1) {
+			if ((printedBytes =
+				 encodeTRAJMessageFooter(messageBufferPosition, remainingBufferSpace, debug)) == -1) {
 				// TODO how to terminate an ISO message when an error has occurred?
 				LogMessage(LOG_LEVEL_ERROR, "Error encoding trajectory message footer");
 				fclose(fd);

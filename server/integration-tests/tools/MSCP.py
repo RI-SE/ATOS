@@ -48,127 +48,131 @@ class MSCP:
         print("=== Starting listener on " + str(self.host) + ":" + str(self.port))
         while not self.quit:
             try:
-                data = self.socket.recv(2048)
+                byteData = self.socket.recv(2048)
+                data = bytearray(byteData)
             except ConnectionResetError as e:
                 if not self.quit:
                     raise e
             
-            if len(data) > 0:
+            while len(data) > 0:
                 print("=== Received " + str(len(data)) + " bytes:")
                 print("=== " + str(data))
-
-            for replyPattern in replyPatterns:
-                match = re.search(replyPattern["regex"],data)
+                
+                for replyPattern in replyPatterns:
+                    match = re.search(replyPattern["regex"],data)
+                    if match is not None:
+                        matchPattern = replyPattern
+                        self.responseCodeLock.acquire()
+                        self.lastResponseCode = self.interpretResponseCode(match.group(1))
+                        self.responseCodeLock.release()
+                        data = data[match.end():]
+                        break
                 if match is not None:
-                    matchPattern = replyPattern
-                    self.responseCodeLock.acquire()
-                    self.lastResponseCode = self.interpretResponseCode(match.group(1))
-                    self.responseCodeLock.release()
-                    break
-            if match is not None:
-                if matchPattern["command"] == "init":
-                    print("=== Init reply received")
-                if matchPattern["command"] == "status":
-                    print("=== Status reply received")
-                    num = int.from_bytes(match.group(2),byteorder='big')
-                    self.statusReplyLock.acquire()
-                    if num == 1:
-                        self.lastStatusReply["systemControlState"] = "INITIALIZED"
-                    elif num == 2:
-                        self.lastStatusReply["systemControlState"] = "IDLE"
-                    elif num == 5:
-                        self.lastStatusReply["systemControlState"] = "INWORK"
-                    elif num == 6:
-                        self.lastStatusReply["systemControlState"] = "ERROR"
-                    else:
-                        self.lastStatusReply["systemControlState"] = "UNKNOWN"
+                    if matchPattern["command"] == "init":
+                        print("=== Init reply received")
+                    if matchPattern["command"] == "status":
+                        print("=== Status reply received")
+                        num = int.from_bytes(match.group(2),byteorder='big')
+                        self.statusReplyLock.acquire()
+                        if num == 1:
+                            self.lastStatusReply["systemControlState"] = "INITIALIZED"
+                        elif num == 2:
+                            self.lastStatusReply["systemControlState"] = "IDLE"
+                        elif num == 5:
+                            self.lastStatusReply["systemControlState"] = "INWORK"
+                        elif num == 6:
+                            self.lastStatusReply["systemControlState"] = "ERROR"
+                        else:
+                            self.lastStatusReply["systemControlState"] = "UNKNOWN"
 
-                    num = int.from_bytes(match.group(3),byteorder='big')
-                    if num == 1:
-                        self.lastStatusReply["objectControlState"] = "IDLE"
-                    elif num == 2:
-                        self.lastStatusReply["objectControlState"] = "INITIALIZED"
-                    elif num == 3:
-                        self.lastStatusReply["objectControlState"] = "CONNECTED"
-                    elif num == 4:
-                        self.lastStatusReply["objectControlState"] = "ARMED"
-                    elif num == 5:
-                        self.lastStatusReply["objectControlState"] = "RUNNING"
-                    elif num == 6:
-                        self.lastStatusReply["objectControlState"] = "ERROR"
-                    else:
-                        self.lastStatusReply["objectControlState"] = "UNKNOWN"
+                        num = int.from_bytes(match.group(3),byteorder='big')
+                        if num == 1:
+                            self.lastStatusReply["objectControlState"] = "IDLE"
+                        elif num == 2:
+                            self.lastStatusReply["objectControlState"] = "INITIALIZED"
+                        elif num == 3:
+                            self.lastStatusReply["objectControlState"] = "CONNECTED"
+                        elif num == 4:
+                            self.lastStatusReply["objectControlState"] = "ARMED"
+                        elif num == 5:
+                            self.lastStatusReply["objectControlState"] = "RUNNING"
+                        elif num == 6:
+                            self.lastStatusReply["objectControlState"] = "ERROR"
+                        else:
+                            self.lastStatusReply["objectControlState"] = "UNKNOWN"
 
-                    if match.group(4) is not None:
-                        self.lastStatusReply["systemControlErrorCode"] = int.from_bytes(match.group(4),byteorder='big')
-                    else:
-                        self.lastStatusReply["systemControlErrorCode"] = 0
-                    if match.group(5) is not None:
-                        self.lastStatusReply["objectControlErrorCode"] = int.from_bytes(match.group(5),byteorder='big')
-                    else:
-                        self.lastStatusReply["objectControlErrorCode"] = 0
-                    self.statusReplyLock.release()
-                if matchPattern["command"] == "abort":
-                    print("=== Abort reply received")
-                    num = int.from_bytes(match.group(2),byteorder='big')
-                    self.abortReplyLock.acquire()
-                    if num == 0:
-                        self.lastAbortReply["scenarioActive"] = "NOT_ACTIVE"
-                    elif num == 1:
-                        self.lastAbortReply["scenarioActive"] = "ACTIVE"
-                    else:
-                        self.lastAbortReply["scenarioActive"] = "UNKNOWN"
-                    self.abortReplyLock.release()
-                if matchPattern["command"] == "arm":
-                    print("=== Arm reply received")
-                if matchPattern["command"] == "start":
-                    print("=== Start reply received")
-                    num = int.from_bytes(match.group(2),byteorder='big')
-                    self.startReplyLock.acquire()
-                    if num == 0:
-                        self.lastStartReply["scenarioActive"] = "NOT_ACTIVE"
-                    elif num == 1:
-                        self.lastStartReply["scenarioActive"] = "ACTIVE"
-                    else:
-                        self.lastStartReply["scenarioActive"] = "UNKNOWN"
-                    self.startReplyLock.release()
-                if matchPattern["command"] == "connect":
-                    print("=== Connect reply received")
-                if matchPattern["command"] == "disconnect":
-                    print("=== Disconnect reply received")
-                if matchPattern["command"] == "upload":
-                    print("=== Upload reply 1 received")
-                    num = int.from_bytes(match.group(2),byteorder='big')
-                    self.uploadReplyLock.acquire()
-                    if num == 0x01:
-                        self.lastUploadReply["status"] = "SERVER_PREPARED"
-                    elif num == 0x02:
-                        self.lastUploadReply["status"] = "PACKET_SIZE_ERROR"
-                    elif num == 0x03:
-                        self.lastUploadReply["status"] = "INVALID_PATH"
-                    elif num == 0x04:
-                        self.lastUploadReply["status"] = "UPLOAD_SUCCESS"
-                    elif num == 0x05:
-                        self.lastUploadReply["status"] = "UPLOAD_FAILURE"
-                    else:
-                        self.lastUploadReply["status"] = "UNKNOWN"
-                    self.uploadReplyLock.release()
-                if matchPattern["command"] == "subupload":
-                    print("=== Upload reply 2 received")
-                    num = int.from_bytes(match.group(2),byteorder='big')
-                    self.uploadReplyLock.acquire()
-                    if num == 0x04:
-                        self.lastUploadReply["status"] = "UPLOAD_SUCCESS"
-                    elif num == 0x05:
-                        self.lastUploadReply["status"] = "UPLOAD_FAILURE"
-                    else:
-                        self.lastUploadReply["status"] = "UNKNOWN"
-                    self.uploadReplyLock.release()
-            elif len(data) > 0:
-                print("=== Unable to match against data: " + str(data))
+                        if match.group(4) is not None:
+                            self.lastStatusReply["systemControlErrorCode"] = int.from_bytes(match.group(4),byteorder='big')
+                        else:
+                            self.lastStatusReply["systemControlErrorCode"] = 0
+                        if match.group(5) is not None:
+                            self.lastStatusReply["objectControlErrorCode"] = int.from_bytes(match.group(5),byteorder='big')
+                        else:
+                            self.lastStatusReply["objectControlErrorCode"] = 0
+                        self.statusReplyLock.release()
+                    if matchPattern["command"] == "abort":
+                        print("=== Abort reply received")
+                        num = int.from_bytes(match.group(2),byteorder='big')
+                        self.abortReplyLock.acquire()
+                        if num == 0:
+                            self.lastAbortReply["scenarioActive"] = "NOT_ACTIVE"
+                        elif num == 1:
+                            self.lastAbortReply["scenarioActive"] = "ACTIVE"
+                        else:
+                            self.lastAbortReply["scenarioActive"] = "UNKNOWN"
+                        self.abortReplyLock.release()
+                    if matchPattern["command"] == "arm":
+                        print("=== Arm reply received")
+                    if matchPattern["command"] == "start":
+                        print("=== Start reply received")
+                        num = int.from_bytes(match.group(2),byteorder='big')
+                        self.startReplyLock.acquire()
+                        if num == 0:
+                            self.lastStartReply["scenarioActive"] = "NOT_ACTIVE"
+                        elif num == 1:
+                            self.lastStartReply["scenarioActive"] = "ACTIVE"
+                        else:
+                            self.lastStartReply["scenarioActive"] = "UNKNOWN"
+                        self.startReplyLock.release()
+                    if matchPattern["command"] == "connect":
+                        print("=== Connect reply received")
+                    if matchPattern["command"] == "disconnect":
+                        print("=== Disconnect reply received")
+                    if matchPattern["command"] == "upload":
+                        print("=== Upload reply 1 received")
+                        num = int.from_bytes(match.group(2),byteorder='big')
+                        self.uploadReplyLock.acquire()
+                        if num == 0x01:
+                            self.lastUploadReply["status"] = "SERVER_PREPARED"
+                        elif num == 0x02:
+                            self.lastUploadReply["status"] = "PACKET_SIZE_ERROR"
+                        elif num == 0x03:
+                            self.lastUploadReply["status"] = "INVALID_PATH"
+                        elif num == 0x04:
+                            self.lastUploadReply["status"] = "UPLOAD_SUCCESS"
+                        elif num == 0x05:
+                            self.lastUploadReply["status"] = "UPLOAD_FAILURE"
+                        else:
+                            self.lastUploadReply["status"] = "UNKNOWN"
+                        self.uploadReplyLock.release()
+                    if matchPattern["command"] == "subupload":
+                        print("=== Upload reply 2 received")
+                        num = int.from_bytes(match.group(2),byteorder='big')
+                        self.uploadReplyLock.acquire()
+                        if num == 0x04:
+                            self.lastUploadReply["status"] = "UPLOAD_SUCCESS"
+                        elif num == 0x05:
+                            self.lastUploadReply["status"] = "UPLOAD_FAILURE"
+                        else:
+                            self.lastUploadReply["status"] = "UNKNOWN"
+                        self.uploadReplyLock.release()
+                else:
+                    print("=== Unable to match against data")
+                    data = bytearray([])
+
 
     def GetStatus(self):         
-        message = "POST /maestro HTTP/1.1\r\nHost: " + self.host + "\r\n\r\nGetServerStatus();\r\n\r\n"    
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nGetServerStatus();\r\n\r\n"    
         self.Send(message)
         print("=== GetServerStatus() sent")
  
@@ -182,6 +186,11 @@ class MSCP:
         self.Send(message)
         print("=== ArmScenario() sent")
 
+    def Disarm(self):         
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDisarmScenario();\r\n\r\n"    
+        self.Send(message)
+        print("=== DisarmScenario() sent")
+
     def Init(self):       
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nInitializeScenario();\r\n\r\n"
         self.Send(message)
@@ -191,6 +200,11 @@ class MSCP:
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nConnectObject();\r\n\r\n"
         self.Send(message)
         print("=== Connect() sent")
+    
+    def CreateObjects(self, count):
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nCreateObjects(" + str(count) + ");\r\n\r\n"
+        self.Send(message)
+        print("=== CreateObjects() sent")
                  
     def Disconnect(self):
         message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDisconnectObject();\r\n\r\n"
@@ -220,6 +234,46 @@ class MSCP:
         self.uploadReplyLock.release()
         self.waitForUploadReply("UPLOAD_SUCCESS")
         print("=== File upload verified")
+
+    def DownloadFile(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDownloadFile();\r\n\r\n"
+        self.Send(message)
+        print("=== DownloadFile() sent")
+
+    def DeleteFile(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nDeleteFile();\r\n\r\n"
+        self.Send(message)
+        print("=== DeleteFile() sent")
+
+    def CheckFileExists(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nCheckFileExists();\r\n\r\n"
+        self.Send(message)
+        print("=== CheckFileExists() sent")
+
+    def RemoteControl(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nRemoteControl();\r\n\r\n"
+        self.Send(message)
+        print("=== RemoteControl() sent")
+
+    def SetServerParameter(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nSetServerParameter();\r\n\r\n"
+        self.Send(message)
+        print("=== SetServerParameter() sent")
+
+    def GetServerParameters(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nGetServerParameters();\r\n\r\n"
+        self.Send(message)
+        print("=== GetServerParameters() sent")
+
+    def GetDirectoryContent(self): #TODO
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nGetDirectoryContent();\r\n\r\n"
+        self.Send(message)
+        print("=== GetDirectoryContent() sent")
+
+    def GetServerTime(self):
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nGetServerTime();\r\n\r\n"
+        self.Send(message)
+        print("=== GetServerTime() sent")
 
     def Send(self,message):
         self.socket.send(message.encode())
