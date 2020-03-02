@@ -53,10 +53,10 @@ typedef enum {
 } ServerState_t;
 
 typedef struct {
-    int exist;
-    int fd;
-    char *info_buffer;
-    int size;
+	int exist;
+	int fd;
+	char *info_buffer;
+	int size;
 } content_dir_info;
 
 #define SYSTEM_CONTROL_SERVICE_POLL_TIME_MS 5000
@@ -127,7 +127,7 @@ typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
 	InitializeScenario_0,
 	ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
-    DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetRootDirectoryContent_0, GetDirectoryContent_1,
+	DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetRootDirectoryContent_0, GetDirectoryContent_1,
 	DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0, start_ext_trigg_1,
 	nocommand
 } SystemControlCommand_t;
@@ -137,7 +137,7 @@ const char *SystemControlCommandsArr[] = {
 	"AbortScenario_0", "InitializeScenario_0",
 	"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1",
-    "GetRootDirectoryContent_0", "GetDirectoryContent_1",
+	"GetRootDirectoryContent_0", "GetDirectoryContent_1",
 	"DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1", "control_0", "Exit_0",
 	"start_ext_trigg_1"
 };
@@ -155,7 +155,7 @@ char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT
 C8 *STR_SYSTEM_CONTROL_RX_PACKET_SIZE = "1280";
 C8 *STR_SYSTEM_CONTROL_TX_PACKET_SIZE = "1200";
 
-content_dir_info SystemControlDirectoryInfo = { 0, 0, NULL, 0};
+content_dir_info SystemControlDirectoryInfo = { 0, 0, NULL, 0 };
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -187,7 +187,7 @@ I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * Pack
 							   U8 Debug);
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug);
-I32 SystemControlDestroyFileContentInfo(C8 *path);
+I32 SystemControlDestroyFileContentInfo(C8 * path);
 I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * ReturnValue, U8 Remove,
 								 U8 Debug);
 I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
@@ -716,8 +716,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = Idle_0;
 			}
 			break;
-        case GetRootDirectoryContent_0:
-            LogMessage(LOG_LEVEL_ERROR, "GetRootDirectory called");
+		case GetRootDirectoryContent_0:
+			LogMessage(LOG_LEVEL_ERROR, "GetRootDirectory called");
 		case GetDirectoryContent_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
@@ -729,31 +729,35 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					UtilCreateDirContent(SystemControlArgument[0], "dir.info");
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 
-                    I32 file_len = SystemControlBuildFileContentInfo("dir.info",0);
+					I32 file_len = SystemControlBuildFileContentInfo("dir.info", 0);
 
-                    /*
-                    if (file_len > 0) printf("file contred Created\n");
-                    char *traversingPointer = SystemControlDirectoryInfo.info_buffer;
-                    for (int i = 0; i < file_len; i++) {
-                        printf("0x%X\n", *traversingPointer);
-                        traversingPointer++;
-                    }
-                    */
-                    SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubGetDirectoryContent:",
-                                                     SystemControlDirectoryInfo.info_buffer, file_len, &ClientSocket, 0);
+					/*
+					   if (file_len > 0) printf("file contred Created\n");
+					   char *traversingPointer = SystemControlDirectoryInfo.info_buffer;
+					   for (int i = 0; i < file_len; i++) {
+					   printf("0x%X\n", *traversingPointer);
+					   traversingPointer++;
+					   }
+					 */
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK,
+													 "SubGetDirectoryContent:",
+													 SystemControlDirectoryInfo.info_buffer, file_len,
+													 &ClientSocket, 0);
 
-                    SystemControlDestroyFileContentInfo("dir.info");
-                    /*
-                    SystemControlBuildFileContentInfo("dir.info", ControlResponseBuffer, 0);
+					SystemControlDestroyFileContentInfo("dir.info");
+					/*
+					   SystemControlBuildFileContentInfo("dir.info", ControlResponseBuffer, 0);
 
-					SystemControlSendFileContent(&ClientSocket, "dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
-												 ControlResponseBuffer, REMOVE_FILE, 0);
-                                                 */
+					   SystemControlSendFileContent(&ClientSocket, "dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+					   ControlResponseBuffer, REMOVE_FILE, 0);
+					 */
 				}
 
 			}
 			else {
-                LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)! got:%d, expected:%d",CurrentInputArgCount, CommandArgCount);
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Wrong parameter count in GetDirectoryContent(path)! got:%d, expected:%d",
+						   CurrentInputArgCount, CommandArgCount);
 				SystemControlCommand = Idle_0;
 			}
 			break;
@@ -767,7 +771,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (ControlResponseBuffer[0] == FILE_EXIST) {
 					UtilCreateDirContent(SystemControlArgument[0], SystemControlArgument[0]);
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                    SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
+					SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubDownloadFile:",
 													 ControlResponseBuffer, 4, &ClientSocket, 0);
 					SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0],
@@ -811,7 +815,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 											   ControlResponseBuffer, 0);
 				}
 
-                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubUploadFile:",
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubUploadFile:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 
 			}
@@ -1321,7 +1325,7 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8 * ResponseString, C
 	C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
 
 	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
-    n = 2 + strlen(ResponseString) + ResponseDataLength;
+	n = 2 + strlen(ResponseString) + ResponseDataLength;
 	Length[0] = (C8) (n >> 24);
 	Length[1] = (C8) (n >> 16);
 	Length[2] = (C8) (n >> 8);
@@ -1939,79 +1943,80 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 
-    /*
+	/*
+	   struct stat st;
+	   C8 CompletePath[MAX_FILE_PATH];
+
+	   bzero(CompletePath, MAX_FILE_PATH);
+	   UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+	   strcat(CompletePath, Path);
+
+	   stat(CompletePath, &st);
+	   *(ReturnValue + 0) = (U8) (st.st_size >> 24);
+	   *(ReturnValue + 1) = (U8) (st.st_size >> 16);
+	   *(ReturnValue + 2) = (U8) (st.st_size >> 8);
+	   *(ReturnValue + 3) = (U8) st.st_size;
+
+
+	   if (Debug)
+	   LogMessage(LOG_LEVEL_DEBUG, "Filesize %d of %s", (I32) st.st_size, CompletePath);
+
+	   return st.st_size;
+	 */
 	struct stat st;
 	C8 CompletePath[MAX_FILE_PATH];
+	C8 temporaryCompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
+
+	if (SystemControlDirectoryInfo.exist)
+		return -1;
+
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
-
 	stat(CompletePath, &st);
-	*(ReturnValue + 0) = (U8) (st.st_size >> 24);
-	*(ReturnValue + 1) = (U8) (st.st_size >> 16);
-	*(ReturnValue + 2) = (U8) (st.st_size >> 8);
-	*(ReturnValue + 3) = (U8) st.st_size;
+	// Create new temporary file, containing the length of the current file in hex + the rest of the document
+	strcat(temporaryCompletePath, ".temp");
+	FILE *comp_fd = fopen(CompletePath, "r");
+	FILE *temp_fd = fopen(temporaryCompletePath, "w");
 
+	fprintf(temp_fd, "%c%c%c%c",
+			(U8) (st.st_size >> 24), (U8) (st.st_size >> 16), (U8) (st.st_size >> 8), (U8) (st.st_size)
+		);
 
-	if (Debug)
-		LogMessage(LOG_LEVEL_DEBUG, "Filesize %d of %s", (I32) st.st_size, CompletePath);
+	while (!feof(comp_fd)) {
+		fputc(fgetc(comp_fd), temp_fd);
+	}
 
-    return st.st_size;
-    */
-    struct stat st;
-    C8 CompletePath[MAX_FILE_PATH];
-    C8 temporaryCompletePath[MAX_FILE_PATH];
-    bzero(CompletePath, MAX_FILE_PATH);
+	fclose(comp_fd);
+	fclose(temp_fd);
 
-    if (SystemControlDirectoryInfo.exist) return -1;
-
-    UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-    strcat(CompletePath, Path);
-    stat(CompletePath, &st);
-    // Create new temporary file, containing the length of the current file in hex + the rest of the document
-    strcat(temporaryCompletePath,".temp");
-    FILE * comp_fd = fopen(CompletePath,"r");
-    FILE * temp_fd = fopen(temporaryCompletePath,"w");
-
-    fprintf(temp_fd,"%c%c%c%c",
-            (U8) (st.st_size >> 24),
-            (U8) (st.st_size >> 16),
-            (U8) (st.st_size >> 8),
-            (U8) (st.st_size)
-            );
-
-    while (!feof(comp_fd)) {
-        fputc(fgetc(comp_fd),temp_fd);
-    }
-
-    fclose(comp_fd);
-    fclose(temp_fd);
-
-    // Rename the temporary file to the name of the previous one
-    rename(temporaryCompletePath, CompletePath);
-    stat(CompletePath, &st);
-    // Create mmap of the file and return the length
-    SystemControlDirectoryInfo.fd = open(CompletePath, O_RDWR);
-    SystemControlDirectoryInfo.info_buffer = mmap(NULL,st.st_size,PROT_READ | PROT_WRITE, MAP_PRIVATE, SystemControlDirectoryInfo.fd,0);
-    SystemControlDirectoryInfo.size = st.st_size;
-    SystemControlDirectoryInfo.exist = 1;
-    return st.st_size;
+	// Rename the temporary file to the name of the previous one
+	rename(temporaryCompletePath, CompletePath);
+	stat(CompletePath, &st);
+	// Create mmap of the file and return the length
+	SystemControlDirectoryInfo.fd = open(CompletePath, O_RDWR);
+	SystemControlDirectoryInfo.info_buffer =
+		mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, SystemControlDirectoryInfo.fd, 0);
+	SystemControlDirectoryInfo.size = st.st_size;
+	SystemControlDirectoryInfo.exist = 1;
+	return st.st_size;
 }
 
-I32 SystemControlDestroyFileContentInfo(C8 *path)
-{
-    char CompletePath[MAX_FILE_PATH];
-    struct stat st;
-    if (!SystemControlDirectoryInfo.exist) return -1;
-    UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-    strcat(CompletePath, path);
+I32 SystemControlDestroyFileContentInfo(C8 * path) {
+	char CompletePath[MAX_FILE_PATH];
+	struct stat st;
 
-    munmap(SystemControlDirectoryInfo.info_buffer, SystemControlDirectoryInfo.size);
-    close(SystemControlDirectoryInfo.fd);
-    SystemControlDirectoryInfo.exist = 0;
-    //remove(CompletePath);
-    return 0;
+	if (!SystemControlDirectoryInfo.exist)
+		return -1;
+	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+	strcat(CompletePath, path);
+
+	munmap(SystemControlDirectoryInfo.info_buffer, SystemControlDirectoryInfo.size);
+	close(SystemControlDirectoryInfo.fd);
+	SystemControlDirectoryInfo.exist = 0;
+	//remove(CompletePath);
+	return 0;
 }
 
 I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug) {
