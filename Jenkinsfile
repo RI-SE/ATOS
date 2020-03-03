@@ -10,12 +10,7 @@ pipeline {
 			steps {
 				sh 'echo "Executing build steps..."'
 				cmake installation: 'InSearchPath'
-				cmakeBuild
-					buildDir: 'build',
-					installation: 'InSearchPath',
-					steps: [
-						[args: 'all', envVars: 'DESTDIR=${WORKSPACE}/artifacts'] 
-					]
+				cmakeBuild buildDir: 'build', installation: 'InSearchPath', steps: [[args: 'all', envVars: 'DESTDIR=${WORKSPACE}/artifacts', withCmake: true]]
 			}
 		}
 		stage('Run tests') {
