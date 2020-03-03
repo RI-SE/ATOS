@@ -1,5 +1,5 @@
 #!/bin/bash
-EXECDIR=../build/bin
+EXECDIR=../../build/bin
 EXECNAME=Core
 SLEEP_TIME_START=3
 SLEEP_TIME_KILL=1
