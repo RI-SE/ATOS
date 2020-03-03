@@ -51,3 +51,6 @@ install(TARGETS ${SCENARIO_CONTROL_TARGET}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
+
+# Ensure linkage is reloaded after install
+install(CODE "execute_process(COMMAND ldconfig)")

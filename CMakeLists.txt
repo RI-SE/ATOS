@@ -29,5 +29,3 @@ install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro/geofence" USE_SOURCE_PERMISSI
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/conf
 	DESTINATION "$ENV{HOME}/.maestro" USE_SOURCE_PERMISSIONS)
 
-# Ensure libraries are reloaded after install
-install(CODE "execute_process(COMMAND ldconfig)")
