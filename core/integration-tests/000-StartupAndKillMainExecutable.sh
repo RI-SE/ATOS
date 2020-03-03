@@ -1,6 +1,6 @@
 #!/bin/bash
-EXECDIR=../build
-EXECNAME=TEServer
+EXECDIR=../build/bin
+EXECNAME=Core
 SLEEP_TIME_START=3
 SLEEP_TIME_KILL=1
 RESULT=0
