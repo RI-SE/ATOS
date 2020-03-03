@@ -1459,8 +1459,6 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
             util_error("Failed to establish connection");
 
         bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
-
-
 	} while (*ClientSocket == -1);
 
 	LogMessage(LOG_LEVEL_INFO, "Connection established: %s:%i", inet_ntoa(cli_addr.sin_addr),
