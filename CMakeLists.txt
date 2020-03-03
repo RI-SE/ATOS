@@ -22,10 +22,11 @@ add_subdirectory(modules/Visualization)
 
 # Create directory for test data in user home directory
 install(CODE "MESSAGE(STATUS \"Creating home directory environment under $ENV{HOME}\")")
-install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro" USE_SOURCE_PERMISSIONS)
-install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro/journal" USE_SOURCE_PERMISSIONS)
-install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro/traj" USE_SOURCE_PERMISSIONS)
-install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro/geofence" USE_SOURCE_PERMISSIONS)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/conf
-	DESTINATION "$ENV{HOME}/.maestro" USE_SOURCE_PERMISSIONS)
+install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro")
+install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro/journal")
+install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro/traj")
+install(DIRECTORY DESTINATION "$ENV{HOME}/.maestro/geofence")
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/conf DESTINATION "$ENV{HOME}/.maestro")
+
+install(CODE "execute_process(COMMAND chown -R $ENV{USER} $ENV{HOME}/.maestro)")
 
