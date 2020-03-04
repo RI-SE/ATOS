@@ -113,7 +113,7 @@ static void CopyHTTPHeaderField(char *request, char *targetContainer, size_t tar
 								const char *fieldName);
 static char rayFromPointIntersectsLine(double pointX, double pointY, double polyPointAX, double polyPointAY,
 									   double polyPointBX, double polyPointBY);
-static int deleteDirectoryContents(char* path, size_t pathLen);
+static int deleteDirectoryContents(char *path, size_t pathLen);
 
 void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetContainerSize,
 						 const char *fieldName) {
@@ -176,35 +176,37 @@ void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetCont
 	}
 
 }
+
 /*!
  * \brief deleteDirectoryContents Deletes the directory given in the parameter ::path
  * \param path The path to the directory on the machine.
  * \param pathLen The length of ::the path string.
  * \return  0 if it could successfully delete file, non-zero if it could not.
  */
-int deleteDirectoryContents(char* path, size_t pathLen) {
-    if (pathLen > MAX_FILE_PATH) {
-        LogMessage(LOG_LEVEL_ERROR, "Path variable too large to handle");
-        return -1;
-    }
-    // These are data types defined in the "dirent" header
-   DIR *theFolder = opendir(path);
-   if (theFolder == NULL) {
-       LogMessage(LOG_LEVEL_ERROR, "Path: %s could not be opened",path);
-       return -2;
-   }
-   struct dirent *next_file;
-   char filepath[MAX_FILE_PATH];
+int deleteDirectoryContents(char *path, size_t pathLen) {
+	if (pathLen > MAX_FILE_PATH) {
+		LogMessage(LOG_LEVEL_ERROR, "Path variable too large to handle");
+		return -1;
+	}
+	// These are data types defined in the "dirent" header
+	DIR *theFolder = opendir(path);
 
-   while ( (next_file = readdir(theFolder)) != NULL )
-   {
-       // build the path for each file in the folder
-       sprintf(filepath, "%s/%s", path, next_file->d_name);
-       remove(filepath);
-   }
-   closedir(theFolder);
-   return 0;
+	if (theFolder == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Path: %s could not be opened", path);
+		return -2;
+	}
+	struct dirent *next_file;
+	char filepath[MAX_FILE_PATH];
+
+	while ((next_file = readdir(theFolder)) != NULL) {
+		// build the path for each file in the folder
+		sprintf(filepath, "%s/%s", path, next_file->d_name);
+		remove(filepath);
+	}
+	closedir(theFolder);
+	return 0;
 }
+
 /*---------------------------------------------s---------------
   -- Public functions
   ------------------------------------------------------------*/
@@ -2379,10 +2381,11 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
  * \return returns 0 if succesfull if the trajectory folder now is empty. Non-zero values otherwise.
  */
 int UtilDeleteTrajectoryFiles() {
-    char filePath[MAX_FILE_PATH] = {'\0'};
-    UtilGetTrajDirectoryPath(filePath,MAX_FILE_PATH);
-    if (filePath[0] =='\0') return -1;
-    return deleteDirectoryContents(filePath,MAX_FILE_PATH);
+	char filePath[MAX_FILE_PATH] = { '\0' };
+	UtilGetTrajDirectoryPath(filePath, MAX_FILE_PATH);
+	if (filePath[0] == '\0')
+		return -1;
+	return deleteDirectoryContents(filePath, MAX_FILE_PATH);
 }
 
 /*!

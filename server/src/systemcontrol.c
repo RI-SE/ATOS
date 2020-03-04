@@ -128,8 +128,9 @@ typedef enum {
 	InitializeScenario_0,
 	ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
 	DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetRootDirectoryContent_0, GetDirectoryContent_1,
-    ClearTrajectories_0, DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
-    start_ext_trigg_1, nocommand
+	ClearTrajectories_0, DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0,
+		Exit_0,
+	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 
 const char *SystemControlCommandsArr[] = {
@@ -138,8 +139,9 @@ const char *SystemControlCommandsArr[] = {
 	"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1",
-    "ClearTrajectories_0","DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1", "control_0",
-    "Exit_0", "start_ext_trigg_1"
+	"ClearTrajectories_0", "DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
+		"control_0",
+	"Exit_0", "start_ext_trigg_1"
 };
 
 const char *SystemControlStatesArr[] =
@@ -762,15 +764,15 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = Idle_0;
 			}
 			break;
-        case ClearTrajectories_0:
-            if (CurrentInputArgCount == CommandArgCount) {
-                SystemControlCommand = Idle_0;
-                bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                SystemControlClearTrajectories(ControlResponseBuffer,0);
-                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearTrajectories:",
-                                                 ControlResponseBuffer, 1, &ClientSocket, 0);
-            }
-            break;
+		case ClearTrajectories_0:
+			if (CurrentInputArgCount == CommandArgCount) {
+				SystemControlCommand = Idle_0;
+				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				SystemControlClearTrajectories(ControlResponseBuffer, 0);
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearTrajectories:",
+												 ControlResponseBuffer, 1, &ClientSocket, 0);
+			}
+			break;
 		case DownloadFile_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
@@ -2069,15 +2071,15 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
  * \param Debug Used for debugging, at the moment there is no such information.
  * \return Always 0
  */
-I32 SystemControlClearTrajectories(C8 * ReturnValue, U8 Debug)
-{
-    C8 returnResponse = SUCCEDED_DELETE;
-    int response;
-    if (UtilDeleteTrajectoryFiles() != 0) {
-        returnResponse = FAILED_DELETE;
-    }
-    *ReturnValue = returnResponse;
-    return 0;
+I32 SystemControlClearTrajectories(C8 * ReturnValue, U8 Debug) {
+	C8 returnResponse = SUCCEDED_DELETE;
+	int response;
+
+	if (UtilDeleteTrajectoryFiles() != 0) {
+		returnResponse = FAILED_DELETE;
+	}
+	*ReturnValue = returnResponse;
+	return 0;
 }
 
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
