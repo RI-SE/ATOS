@@ -38,6 +38,7 @@ target_include_directories(${SUPERVISION_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
+# Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${SUPERVISION_TARGET}\")")
 install(TARGETS ${SUPERVISION_TARGET} 
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

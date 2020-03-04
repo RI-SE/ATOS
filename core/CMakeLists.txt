@@ -102,7 +102,7 @@ target_link_libraries(${COREUTILS_TARGET} LINK_PUBLIC
 	${MATH_LIBRARY}
 )
 
-
+# Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${CORE_TARGET}\")")
 install(TARGETS ${CORE_TARGET} ${COREUTILS_TARGET}
 		${ISO_22133_TARGET} ${DATA_DICTIONARY_TARGET}
