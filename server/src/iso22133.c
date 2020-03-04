@@ -850,16 +850,21 @@ ssize_t encodeTRAJMessagePoint(const struct timeval *pointTimeFromStart, const C
 		LogMessage(LOG_LEVEL_ERROR, "Longitudinal speed is a required field in TRAJ messages");
 		return -1;
 	}
-	TRAJData.lateralSpeed = speed.isLateralValid ? (int16_t) (speed.lateral_m_s * SPEED_ONE_METER_PER_SECOND_VALUE) : SPEED_UNAVAILABLE_VALUE;
+	TRAJData.lateralSpeed =
+		speed.isLateralValid ? (int16_t) (speed.lateral_m_s *
+										  SPEED_ONE_METER_PER_SECOND_VALUE) : SPEED_UNAVAILABLE_VALUE;
 
 	TRAJData.longitudinalAccelerationValueID = VALUE_ID_TRAJ_LONGITUDINAL_ACCELERATION;
 	TRAJData.longitudinalAccelerationContentLength = sizeof (TRAJData.longitudinalAcceleration);
 	TRAJData.lateralAccelerationValueID = VALUE_ID_TRAJ_LATERAL_ACCELERATION;
 	TRAJData.lateralAccelerationContentLength = sizeof (TRAJData.lateralAcceleration);
 	TRAJData.longitudinalAcceleration = acceleration.isLongitudinalValid ?
-				(int16_t) (acceleration.longitudinal_m_s2 * ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE) : ACCELERATION_UNAVAILABLE_VALUE;
-	TRAJData.lateralAcceleration = acceleration.isLateralValid ?
-				(int16_t) (acceleration.lateral_m_s2 * ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE) : ACCELERATION_UNAVAILABLE_VALUE;
+		(int16_t) (acceleration.longitudinal_m_s2 *
+				   ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE) : ACCELERATION_UNAVAILABLE_VALUE;
+	TRAJData.lateralAcceleration =
+		acceleration.isLateralValid ? (int16_t) (acceleration.lateral_m_s2 *
+												 ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE) :
+		ACCELERATION_UNAVAILABLE_VALUE;
 
 	TRAJData.curvatureValueID = VALUE_ID_TRAJ_CURVATURE;
 	TRAJData.curvatureContentLength = sizeof (TRAJData.curvature);
@@ -1510,18 +1515,20 @@ void convertMONRToHostRepresentation(const MONRType * MONRData, ObjectMonitorTyp
 	// Velocity
 	monitorData->speed.isLongitudinalValid = MONRData->longitudinalSpeed != SPEED_UNAVAILABLE_VALUE;
 	monitorData->speed.longitudinal_m_s = monitorData->speed.isLongitudinalValid ?
-				(double) (MONRData->longitudinalSpeed) / SPEED_ONE_METER_PER_SECOND_VALUE : 0;
+		(double)(MONRData->longitudinalSpeed) / SPEED_ONE_METER_PER_SECOND_VALUE : 0;
 	monitorData->speed.isLateralValid = MONRData->lateralSpeed != SPEED_UNAVAILABLE_VALUE;
 	monitorData->speed.lateral_m_s = monitorData->speed.isLateralValid ?
-				(double) (MONRData->lateralSpeed) / SPEED_ONE_METER_PER_SECOND_VALUE : 0;
+		(double)(MONRData->lateralSpeed) / SPEED_ONE_METER_PER_SECOND_VALUE : 0;
 
 	// Acceleration
-	monitorData->acceleration.isLongitudinalValid = MONRData->longitudinalAcc != ACCELERATION_UNAVAILABLE_VALUE;
-	monitorData->acceleration.longitudinal_m_s2 = monitorData->acceleration.isLongitudinalValid ?
-				(double) (MONRData->longitudinalAcc) / ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE : 0;
+	monitorData->acceleration.isLongitudinalValid =
+		MONRData->longitudinalAcc != ACCELERATION_UNAVAILABLE_VALUE;
+	monitorData->acceleration.longitudinal_m_s2 =
+		monitorData->acceleration.isLongitudinalValid ? (double)(MONRData->longitudinalAcc) /
+		ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE : 0;
 	monitorData->acceleration.isLateralValid = MONRData->lateralAcc != ACCELERATION_UNAVAILABLE_VALUE;
 	monitorData->acceleration.lateral_m_s2 = monitorData->acceleration.isLateralValid ?
-				(double) (MONRData->lateralAcc) / ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE : 0;
+		(double)(MONRData->lateralAcc) / ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE : 0;
 
 	// Drive direction
 	switch (MONRData->driveDirection) {
