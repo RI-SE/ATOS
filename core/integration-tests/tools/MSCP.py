@@ -227,11 +227,11 @@ class MSCP:
         self.waitForUploadReply("SERVER_PREPARED")
         print("=== Sending file contents")
         # Send file
-        self.Send(fileContents)
-        print("=== Sent file contents")
         self.uploadReplyLock.acquire()
         self.lastUploadReply["status"] = "UNKNOWN"
         self.uploadReplyLock.release()
+        self.Send(fileContents)
+        print("=== Sent file contents")
         self.waitForUploadReply("UPLOAD_SUCCESS")
         print("=== File upload verified")
 
