@@ -75,7 +75,7 @@ extern "C"{
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "10.168.212.5"
+#define LOCAL_USER_CONTROL_IP "192.168.0.7"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -166,6 +166,16 @@ extern "C"{
 
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
+
+#define MAESTRO_GENERIC_FILE_TYPE     1
+#define MAESTRO_TRAJ_FILE_TYPE        2
+#define MAESTRO_CONF_FILE_TYPE        3
+#define MAESTRO_GEOFENCE_FILE_TYPE    4
+
+#define MAESTRO_GENERIC_FILE_FOLDER "~/.maestro/"
+#define MAESTRO_TRAJ_FILE_FOLDER "~/.maestro/traj/"
+#define MAESTRO_CONF_FILE_FOLDER "~/.maestro/conf/"
+#define MAESTRO_GEOFENCE_FILE_FOLDER "~/.maestro/geofence/"
 
 #define DD_CONTROL_BUFFER_SIZE_1024 1024
 #define DD_CONTROL_BUFFER_SIZE_20 20

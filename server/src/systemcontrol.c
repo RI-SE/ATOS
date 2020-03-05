@@ -127,7 +127,7 @@ typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
 	InitializeScenario_0,
 	ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
-	DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetRootDirectoryContent_0, GetDirectoryContent_1,
+	DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1, GetRootDirectoryContent_0, GetDirectoryContent_1,
 	DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0, start_ext_trigg_1,
 	nocommand
 } SystemControlCommand_t;
@@ -136,7 +136,7 @@ const char *SystemControlCommandsArr[] = {
 	"Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0",
 	"AbortScenario_0", "InitializeScenario_0",
 	"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
-	"GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1",
+	"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1",
 	"DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1", "control_0", "Exit_0",
 	"start_ext_trigg_1"
@@ -182,7 +182,7 @@ I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 De
 I32 SystemControlWriteServerParameter(C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
-I32 SystemControlUploadFile(C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue, U8 Debug);
+I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue, U8 Debug);
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug);
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
@@ -785,12 +785,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = Idle_0;
 			}
 			break;
-		case UploadFile_3:
+		case UploadFile_4:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlUploadFile(SystemControlArgument[0], SystemControlArgument[1],
-										SystemControlArgument[2], ControlResponseBuffer, 0);
+										SystemControlArgument[2], SystemControlArgument[3], ControlResponseBuffer, 1);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 				LogMessage(LOG_LEVEL_DEBUG, "UploadFile filelength: %s", SystemControlArgument[1]);
@@ -2147,18 +2147,22 @@ I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 
 
 
-I32 SystemControlUploadFile(C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue, U8 Debug) {
+I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue, U8 Debug) {
 
 	FILE *fd;
 	C8 CompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
-	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-	strcat(CompletePath, Path);
+	//UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+
+	if(atoi(FileType) == MAESTRO_GENERIC_FILE_TYPE) { strcat(CompletePath, MAESTRO_GENERIC_FILE_FOLDER); strcat(CompletePath, Filename);}
+    else if(atoi(FileType) == MAESTRO_TRAJ_FILE_TYPE) { strcat(CompletePath, MAESTRO_TRAJ_FILE_FOLDER); strcat(CompletePath, Filename); }
+    else if(atoi(FileType) == MAESTRO_CONF_FILE_TYPE) { strcat(CompletePath, MAESTRO_CONF_FILE_FOLDER); strcat(CompletePath, Filename); }
+    else if(atoi(FileType) == MAESTRO_GEOFENCE_FILE_TYPE) { strcat(CompletePath, MAESTRO_GEOFENCE_FILE_FOLDER); strcat(CompletePath, Filename); }
 
 	if (Debug) {
 		LogMessage(LOG_LEVEL_DEBUG, "Upload file:");
-		LogMessage(LOG_LEVEL_DEBUG, "%s", Path);
+		LogMessage(LOG_LEVEL_DEBUG, "%s", Filename);
 		LogMessage(LOG_LEVEL_DEBUG, "%s", FileSize);
 		LogMessage(LOG_LEVEL_DEBUG, "%s", PacketSize);
 		LogMessage(LOG_LEVEL_DEBUG, "%s", CompletePath);
