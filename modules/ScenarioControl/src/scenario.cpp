@@ -433,7 +433,7 @@ Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &mo
             switch (tp->getTypeCode())
             {
 			case Trigger::TriggerTypeCode_t::TRIGGER_BRAKE:
-				if (monr.data.speed.isValid && monr.data.isTimestampValid)
+				if (monr.data.speed.isLongitudinalValid && monr.data.isTimestampValid)
 				{
 					tp->update(monr.data.speed.longitudinal_m_s, monr.data.timestamp);
 				}
