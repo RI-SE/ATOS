@@ -23,14 +23,16 @@ typedef struct {
 typedef struct {
 	double longitudinal_m_s;
 	double lateral_m_s;
-	bool isValid;
+	bool isLongitudinalValid;
+	bool isLateralValid;
 } SpeedType;
 
 /*! Struct describing longitudinal and lateral acceleration of an object */
 typedef struct {
 	double longitudinal_m_s2;
 	double lateral_m_s2;
-	bool isValid;
+	bool isLongitudinalValid;
+	bool isLateralValid;
 } AccelerationType;
 
 /*! Enumeration of object driving direction descriptions */
