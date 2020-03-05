@@ -2145,66 +2145,96 @@ I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 }
 
 
+I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * FileType, C8 *ReturnValue, U8 Debug)
+{
 
+    FILE *fd;
+    C8 CompletePath[MAX_FILE_PATH];
+    bzero(CompletePath, MAX_FILE_PATH);
+    //GetCurrentDir(CompletePath, MAX_FILE_PATH);
+    //strcat(CompletePath, Filename);
+  
+    const char *homedir;
 
-I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue, U8 Debug) {
+    if((homedir = getenv("HOME")) == NULL) {
+        homedir = getpwuid(getuid())->pw_dir;
+    }
 
-	FILE *fd;
-	C8 CompletePath[MAX_FILE_PATH];
-
-	bzero(CompletePath, MAX_FILE_PATH);
-	//UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-
-	if(atoi(FileType) == MAESTRO_GENERIC_FILE_TYPE) { strcat(CompletePath, MAESTRO_GENERIC_FILE_FOLDER); strcat(CompletePath, Filename);}
+    strcat(CompletePath, homedir);
+    if(atoi(FileType) == MAESTRO_GENERIC_FILE_TYPE) { strcat(CompletePath, MAESTRO_GENERIC_FILE_FOLDER); strcat(CompletePath, Filename);}
     else if(atoi(FileType) == MAESTRO_TRAJ_FILE_TYPE) { strcat(CompletePath, MAESTRO_TRAJ_FILE_FOLDER); strcat(CompletePath, Filename); }
     else if(atoi(FileType) == MAESTRO_CONF_FILE_TYPE) { strcat(CompletePath, MAESTRO_CONF_FILE_FOLDER); strcat(CompletePath, Filename); }
-    else if(atoi(FileType) == MAESTRO_GEOFENCE_FILE_TYPE) { strcat(CompletePath, MAESTRO_GEOFENCE_FILE_FOLDER); strcat(CompletePath, Filename); }
+    else if(atoi(FileType) == MAESTRO_GEOFENCE_FILE_TYPE) { strcat(CompletePath, MAESTRO_GEOFENCE_FILE_FOLDER); strcat(CompletePath, Filename);}
+    else
+    {
+        //ok, path invalid create temporary file
+        bzero(CompletePath, MAX_FILE_PATH);
+        GetCurrentDir(CompletePath, MAX_FILE_PATH);
+        strcat(CompletePath, "/file.tmp");
+        fd = fopen(CompletePath, "r");
+        if(fd != NULL)
+        {
+            fclose(fd);
+            remove(CompletePath); //Remove file if exist
+        }
+        fd = fopen(CompletePath, "w+"); //Create the temporary file
 
-	if (Debug) {
-		LogMessage(LOG_LEVEL_DEBUG, "Upload file:");
-		LogMessage(LOG_LEVEL_DEBUG, "%s", Filename);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", FileSize);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", PacketSize);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", CompletePath);
-	}
+        *ReturnValue = PATH_INVALID_MISSING; 
 
-	if (atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE)	//Check packet size
-	{
-		*ReturnValue = SERVER_PREPARED_BIG_PACKET_SIZE;
-		return 0;
-	}
+        return 0;
+    }
 
-	fd = fopen(CompletePath, "r");
-	if (fd != NULL) {
-		fclose(fd);
-		remove(CompletePath);	//Remove file if exist
-	}
+    if(Debug)
+    {
+        printf("Filename: %s\n", Filename);
+        printf("FileSize: %s\n", FileSize);
+        printf("PacketSize: %s\n", PacketSize);
+        printf("FileType: %s\n", FileType);
+        printf("CompletePath: %s\n", CompletePath);
+    }
+   
+    if(atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE) //Check packet size
+    {
+        *ReturnValue = SERVER_PREPARED_BIG_PACKET_SIZE;
+        return 0;
+    }
 
-	fd = fopen(CompletePath, "w+");	//Create the file
-	if (fd != NULL) {
-		*ReturnValue = SERVER_PREPARED;	//Server prepared
-		fclose(fd);
-		return 0;
-	}
-	else {
-		//ok, path invalid create temporary file
-		bzero(CompletePath, MAX_FILE_PATH);
-		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-		strcat(CompletePath, "file.tmp");
-		fd = fopen(CompletePath, "r");
-		if (fd != NULL) {
-			fclose(fd);
-			remove(CompletePath);	//Remove file if exist
-		}
-		fd = fopen(CompletePath, "w+");	//Create the temporary file
+    fd = fopen(CompletePath, "r");
+    if(fd != NULL)
+    {
+        fclose(fd);
+        remove(CompletePath); //Remove file if exist
+    }
 
-		*ReturnValue = PATH_INVALID_MISSING;
+    fd = fopen(CompletePath, "w+"); //Create the file
+    if(fd != NULL)
+    {
+        *ReturnValue = SERVER_PREPARED;//Server prepared
+        fclose(fd);
+        return 0;
+    }
+    else
+    {
+        //Failed to open path create temporary file
+        bzero(CompletePath, MAX_FILE_PATH);
+        GetCurrentDir(CompletePath, MAX_FILE_PATH);
+        strcat(CompletePath, "/file.tmp");
+        fd = fopen(CompletePath, "r");
+        if(fd != NULL)
+        {
+            fclose(fd);
+            remove(CompletePath); //Remove file if exist
+        }
+        fd = fopen(CompletePath, "w+"); //Create the temporary file
 
-		return 0;
-	}
+        *ReturnValue = PATH_INVALID_MISSING; 
 
-	return 0;
+        return 0;
+    } 
+
+    return 0;
 }
+
 
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug) {
