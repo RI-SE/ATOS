@@ -762,6 +762,15 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 			}
 			break;
+		case ClearGeofences_0:
+			if (CurrentInputArgCount == CommandArgCount) {
+				SystemControlCommand = Idle_0;
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				*ControlResponseBuffer = SystemControlClearGeofences();
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearGeofences:",
+												 ControlResponseBuffer, 1, &ClientSocket, 0);
+			}
+			break;
 		case DownloadFile_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
