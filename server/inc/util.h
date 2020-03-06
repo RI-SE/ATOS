@@ -167,12 +167,6 @@ extern "C"{
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
 
-#define MAESTRO_GENERIC_FILE_TYPE     1
-#define MAESTRO_TRAJ_FILE_TYPE        2
-#define MAESTRO_CONF_FILE_TYPE        3
-#define MAESTRO_GEOFENCE_FILE_TYPE    4
-
-
 #define DD_CONTROL_BUFFER_SIZE_1024 1024
 #define DD_CONTROL_BUFFER_SIZE_20 20
 #define DD_CONTROL_BUFFER_SIZE_52 52

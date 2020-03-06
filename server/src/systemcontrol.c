@@ -122,6 +122,11 @@ typedef struct {
 #define SC_SLEEP_TIME_NONEMPTY_MQ_S 0
 #define SC_SLEEP_TIME_NONEMPTY_MQ_NS 0
 
+#define MAESTRO_GENERIC_FILE_TYPE     1
+#define MAESTRO_TRAJ_FILE_TYPE        2
+#define MAESTRO_CONF_FILE_TYPE        3
+#define MAESTRO_GEOFENCE_FILE_TYPE    4
+
 
 typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
@@ -2156,13 +2161,7 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
 		LogMessage(LOG_LEVEL_ERROR, "Invalid function parameter passed to upload file handler function");
 		return -1;
 	}
-    const char *homedir;
 
-    if((homedir = getenv("HOME")) == NULL) {
-        homedir = getpwuid(getuid())->pw_dir;
-    }
-
-    strcat(CompletePath, homedir);
 	switch (atoi(FileType)) {
 	case MAESTRO_GENERIC_FILE_TYPE:
 		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
@@ -2178,14 +2177,8 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
 		break;
 	default:
 		LogMessage(LOG_LEVEL_ERROR, "Received invalid file type upload request");
-		return -1;
-	}
-	strcat(CompletePath, Filename);
-    else
-    {
-        //ok, path invalid create temporary file
-        bzero(CompletePath, MAX_FILE_PATH);
-        GetCurrentDir(CompletePath, MAX_FILE_PATH);
+        //Create temporary file for handling data anyway
+        UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
         strcat(CompletePath, "/file.tmp");
         fd = fopen(CompletePath, "r");
         if(fd != NULL)
@@ -2196,9 +2189,9 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
         fd = fopen(CompletePath, "w+"); //Create the temporary file
 
         *ReturnValue = PATH_INVALID_MISSING; 
-
-        return 0;
-    }
+		return -1;
+	}
+	strcat(CompletePath, Filename);
 
     if (Debug) {
         LogPrint("Filename: %s\n", Filename);
@@ -2230,8 +2223,7 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
     else
     {
         //Failed to open path create temporary file
-        bzero(CompletePath, MAX_FILE_PATH);
-        GetCurrentDir(CompletePath, MAX_FILE_PATH);
+        UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
         strcat(CompletePath, "/file.tmp");
         fd = fopen(CompletePath, "r");
         if(fd != NULL)
