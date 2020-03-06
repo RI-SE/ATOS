@@ -128,18 +128,18 @@ typedef enum {
 	InitializeScenario_0,
 	ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
 	DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetRootDirectoryContent_0, GetDirectoryContent_1,
-	ClearTrajectories_0, DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0,
+	ClearTrajectories_0, ClearGeofences_0, DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0,
 		Exit_0,
 	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 
-const char *SystemControlCommandsArr[] = {
+static const char *SystemControlCommandsArr[] = {
 	"Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0",
 	"AbortScenario_0", "InitializeScenario_0",
 	"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1",
-	"ClearTrajectories_0", "DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
+	"ClearTrajectories_0", "ClearGeofences_0", "DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 		"control_0",
 	"Exit_0", "start_ext_trigg_1"
 };
@@ -187,7 +187,8 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 I32 SystemControlUploadFile(C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue, U8 Debug);
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug);
-C8 SystemControlClearTrajectories();
+C8 SystemControlClearTrajectories(void);
+C8 SystemControlClearGeofences(void);
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug);
 I32 SystemControlDestroyFileContentInfo(C8 * path);
@@ -2051,7 +2052,7 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 }
 
 /*!
- * \brief SystemControlClearTrajectories Clears the trajectory folder on the machine
+ * \brief SystemControlClearTrajectories Clears the trajectory directory on the machine
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
 C8 SystemControlClearTrajectories() {
@@ -2059,6 +2060,17 @@ C8 SystemControlClearTrajectories() {
         return FAILED_DELETE;
 	}
     return SUCCEDED_DELETE;
+}
+
+/*!
+ * \brief SystemControlClearGeofences Clears the geofence directory on the machine
+ * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
+ */
+C8 SystemControlClearGeofences() {
+	if (UtilDeleteGeofenceFiles() != 0) {
+		return FAILED_DELETE;
+	}
+	return SUCCEDED_DELETE;
 }
 
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
