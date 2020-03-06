@@ -184,8 +184,14 @@ void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetCont
  * \return  0 if it could successfully delete file, non-zero if it could not.
  */
 int deleteDirectoryContents(char *path, size_t pathLen) {
+    if (path == NULL) {
+        LogMessage(LOG_LEVEL_ERROR, "Path is null-pointer.");
+        errno = EINVAL;
+        return -1;
+    }
 	if (pathLen > MAX_FILE_PATH) {
 		LogMessage(LOG_LEVEL_ERROR, "Path variable too large to handle");
+        errno = EINVAL;
 		return -1;
 	}
 	// These are data types defined in the "dirent" header
@@ -193,7 +199,8 @@ int deleteDirectoryContents(char *path, size_t pathLen) {
 
 	if (theFolder == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Path: %s could not be opened", path);
-		return -2;
+        errno = ENOENT;
+        return -1;
 	}
 	struct dirent *next_file;
 	char filepath[MAX_FILE_PATH];
