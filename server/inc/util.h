@@ -30,7 +30,6 @@ extern "C"{
 #include <arpa/inet.h>
 #include <poll.h>
 #include <netdb.h>
-#include <pwd.h>
 #include "mqbus.h"
 #include "iso22133.h"
 #include "logging.h"
