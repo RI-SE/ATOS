@@ -2059,7 +2059,7 @@ C8 SystemControlClearTrajectories() {
 	if (UtilDeleteTrajectoryFiles() != 0) {
         return FAILED_DELETE;
 	}
-    return SUCCEDED_DELETE;
+	return SUCCEEDED_DELETE;
 }
 
 /*!
@@ -2070,7 +2070,7 @@ C8 SystemControlClearGeofences() {
 	if (UtilDeleteGeofenceFiles() != 0) {
 		return FAILED_DELETE;
 	}
-	return SUCCEDED_DELETE;
+	return SUCCEEDED_DELETE;
 }
 
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
@@ -2094,7 +2094,7 @@ I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 		else {
 			if (0 == remove(CompletePath))	//Delete file
 			{
-				*ReturnValue = SUCCEDED_DELETE;
+				*ReturnValue = SUCCEEDED_DELETE;
 			}
 			else {
 				*ReturnValue = FAILED_DELETE;
@@ -2104,14 +2104,14 @@ I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 	else {
 		if (0 == remove(CompletePath))	//Delete directory
 		{
-			*ReturnValue = SUCCEDED_DELETE;
+			*ReturnValue = SUCCEEDED_DELETE;
 		}
 		else {
 			*ReturnValue = FAILED_DELETE;
 		}
 	}
 
-	if (*ReturnValue == SUCCEDED_DELETE)
+	if (*ReturnValue == SUCCEEDED_DELETE)
 		LogMessage(LOG_LEVEL_INFO, "Deleted %s", CompletePath);
 	else if (*ReturnValue == FAILED_DELETE)
 		LogMessage(LOG_LEVEL_INFO, "Failed to delete %s", CompletePath);
