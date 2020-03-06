@@ -2055,7 +2055,7 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
  * \brief SystemControlClearTrajectories Clears the trajectory directory on the machine
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
-C8 SystemControlClearTrajectories() {
+C8 SystemControlClearTrajectories(void) {
 	if (UtilDeleteTrajectoryFiles() != 0) {
         return FAILED_DELETE;
 	}
@@ -2066,7 +2066,7 @@ C8 SystemControlClearTrajectories() {
  * \brief SystemControlClearGeofences Clears the geofence directory on the machine
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
-C8 SystemControlClearGeofences() {
+C8 SystemControlClearGeofences(void) {
 	if (UtilDeleteGeofenceFiles() != 0) {
 		return FAILED_DELETE;
 	}
