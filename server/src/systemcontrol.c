@@ -790,7 +790,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlUploadFile(SystemControlArgument[0], SystemControlArgument[1],
-										SystemControlArgument[2], SystemControlArgument[3], ControlResponseBuffer, 1);
+										SystemControlArgument[2], SystemControlArgument[3], ControlResponseBuffer, 0);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 				LogMessage(LOG_LEVEL_DEBUG, "UploadFile filelength: %s", SystemControlArgument[1]);
