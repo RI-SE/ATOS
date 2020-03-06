@@ -2217,6 +2217,7 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
     if (fd != NULL) {
         fclose(fd);
         remove(CompletePath); //Remove file if exist
+        LogMessage(LOG_LEVEL_INFO, "Deleted file <%s>", CompletePath);
     }
 
     fd = fopen(CompletePath, "w+"); //Create the file
