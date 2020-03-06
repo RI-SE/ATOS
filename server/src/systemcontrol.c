@@ -767,7 +767,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case ClearTrajectories_0:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
 				SystemControlClearTrajectories(ControlResponseBuffer, 0);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearTrajectories:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
