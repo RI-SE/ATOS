@@ -2185,11 +2185,11 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
 
     if(Debug)
     {
-        printf("Filename: %s\n", Filename);
-        printf("FileSize: %s\n", FileSize);
-        printf("PacketSize: %s\n", PacketSize);
-        printf("FileType: %s\n", FileType);
-        printf("CompletePath: %s\n", CompletePath);
+        LogPrint("Filename: %s\n", Filename);
+        LogPrint("FileSize: %s\n", FileSize);
+        LogPrint("PacketSize: %s\n", PacketSize);
+        LogPrint("FileType: %s\n", FileType);
+        LogPrint("CompletePath: %s\n", CompletePath);
     }
    
     if(atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE) //Check packet size
