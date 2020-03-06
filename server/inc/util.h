@@ -585,7 +585,8 @@ void UtilGetConfDirectoryPath(char* path, size_t pathLen);
 void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
 void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 
-int UtilDeleteTrajectoryFiles();
+int UtilDeleteTrajectoryFiles(void);
+int UtilDeleteGeofenceFiles(void);
 
 // File parsing functions
 int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
