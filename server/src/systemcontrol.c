@@ -2214,8 +2214,7 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
     }
 
     fd = fopen(CompletePath, "r");
-    if(fd != NULL)
-    {
+    if (fd != NULL) {
         fclose(fd);
         remove(CompletePath); //Remove file if exist
     }
