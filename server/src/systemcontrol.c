@@ -2231,7 +2231,7 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
         return 0;
     } 
 
-    return 0;
+    return -1;
 }
 
 
