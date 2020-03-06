@@ -2197,8 +2197,7 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
         return 0;
     }
 
-    if(Debug)
-    {
+    if (Debug) {
         LogPrint("Filename: %s\n", Filename);
         LogPrint("FileSize: %s\n", FileSize);
         LogPrint("PacketSize: %s\n", PacketSize);
