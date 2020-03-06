@@ -2150,7 +2150,7 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
 
     FILE *fd;
     C8 CompletePath[MAX_FILE_PATH];
-    bzero(CompletePath, MAX_FILE_PATH);
+    memset(CompletePath, 0, sizeof (CompletePath));
     //GetCurrentDir(CompletePath, MAX_FILE_PATH);
     //strcat(CompletePath, Filename);
   
