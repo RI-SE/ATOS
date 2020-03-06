@@ -173,10 +173,6 @@ extern "C"{
 #define MAESTRO_CONF_FILE_TYPE        3
 #define MAESTRO_GEOFENCE_FILE_TYPE    4
 
-#define MAESTRO_GENERIC_FILE_FOLDER "/.maestro/"
-#define MAESTRO_TRAJ_FILE_FOLDER "/.maestro/traj/"
-#define MAESTRO_CONF_FILE_FOLDER "/.maestro/conf/"
-#define MAESTRO_GEOFENCE_FILE_FOLDER "/.maestro/geofence/"
 
 #define DD_CONTROL_BUFFER_SIZE_1024 1024
 #define DD_CONTROL_BUFFER_SIZE_20 20
