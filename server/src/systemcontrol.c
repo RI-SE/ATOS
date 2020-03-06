@@ -2152,7 +2152,10 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
     memset(CompletePath, 0, sizeof (CompletePath));
     //GetCurrentDir(CompletePath, MAX_FILE_PATH);
     //strcat(CompletePath, Filename);
-  
+	if (Filename == NULL || FileSize == NULL || PacketSize == NULL || FileType == NULL || ReturnValue == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Invalid function parameter passed to upload file handler function");
+		return -1;
+	}
     const char *homedir;
 
     if((homedir = getenv("HOME")) == NULL) {
