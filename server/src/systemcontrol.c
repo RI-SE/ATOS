@@ -2208,8 +2208,7 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
         LogPrint("CompletePath: %s\n", CompletePath);
     }
    
-    if(atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE) //Check packet size
-    {
+    if (atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE) { //Check packet size
         *ReturnValue = SERVER_PREPARED_BIG_PACKET_SIZE;
         return 0;
     }
