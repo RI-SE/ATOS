@@ -2160,10 +2160,24 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
     }
 
     strcat(CompletePath, homedir);
-    if(atoi(FileType) == MAESTRO_GENERIC_FILE_TYPE) { strcat(CompletePath, MAESTRO_GENERIC_FILE_FOLDER); strcat(CompletePath, Filename);}
-    else if(atoi(FileType) == MAESTRO_TRAJ_FILE_TYPE) { strcat(CompletePath, MAESTRO_TRAJ_FILE_FOLDER); strcat(CompletePath, Filename); }
-    else if(atoi(FileType) == MAESTRO_CONF_FILE_TYPE) { strcat(CompletePath, MAESTRO_CONF_FILE_FOLDER); strcat(CompletePath, Filename); }
-    else if(atoi(FileType) == MAESTRO_GEOFENCE_FILE_TYPE) { strcat(CompletePath, MAESTRO_GEOFENCE_FILE_FOLDER); strcat(CompletePath, Filename);}
+	switch (atoi(FileType)) {
+	case MAESTRO_GENERIC_FILE_TYPE:
+		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+		break;
+	case MAESTRO_TRAJ_FILE_TYPE:
+		UtilGetTrajDirectoryPath(CompletePath, sizeof (CompletePath));
+		break;
+	case MAESTRO_CONF_FILE_TYPE:
+		UtilGetConfDirectoryPath(CompletePath, sizeof (CompletePath));
+		break;
+	case MAESTRO_GEOFENCE_FILE_TYPE:
+		UtilGetGeofenceDirectoryPath(CompletePath, sizeof (CompletePath));
+		break;
+	default:
+		LogMessage(LOG_LEVEL_ERROR, "Received invalid file type upload request");
+		return -1;
+	}
+	strcat(CompletePath, Filename);
     else
     {
         //ok, path invalid create temporary file
