@@ -2073,7 +2073,6 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
  */
 I32 SystemControlClearTrajectories(C8 * ReturnValue, U8 Debug) {
 	C8 returnResponse = SUCCEDED_DELETE;
-	int response;
 
 	if (UtilDeleteTrajectoryFiles() != 0) {
 		returnResponse = FAILED_DELETE;
