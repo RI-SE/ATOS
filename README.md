@@ -43,6 +43,12 @@ cd bin
 ./Core
 ```
 
+To run one or several of the modules along with Core, modify the runServer.sh script by adding the modules you wish to execute in the variable near the top. Then run the script from the top level directory:
+```sh
+./runServer.sh
+```
+To see which modules are available, check the build output inside the ```build/bin``` directory
+
 ### Installation
 To install the server (recommended) navigate to the build directory
 ```sh
