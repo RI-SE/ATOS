@@ -187,7 +187,7 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 I32 SystemControlUploadFile(C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue, U8 Debug);
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug);
-I32 SystemControlClearTrajectories(C8 * ReturnValue, U8 Debug);
+C8 SystemControlClearTrajectories();
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug);
 I32 SystemControlDestroyFileContentInfo(C8 * path);
@@ -733,27 +733,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 
 					I32 file_len = SystemControlBuildFileContentInfo("dir.info", 0);
-
-					/*
-					   if (file_len > 0) printf("file contred Created\n");
-					   char *traversingPointer = SystemControlDirectoryInfo.info_buffer;
-					   for (int i = 0; i < file_len; i++) {
-					   printf("0x%X\n", *traversingPointer);
-					   traversingPointer++;
-					   }
-					 */
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK,
 													 "SubGetDirectoryContent:",
 													 SystemControlDirectoryInfo.info_buffer, file_len,
 													 &ClientSocket, 0);
 
 					SystemControlDestroyFileContentInfo("dir.info");
-					/*
-					   SystemControlBuildFileContentInfo("dir.info", ControlResponseBuffer, 0);
-
-					   SystemControlSendFileContent(&ClientSocket, "dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
-					   ControlResponseBuffer, REMOVE_FILE, 0);
-					 */
 				}
 
 			}
@@ -768,7 +753,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
 				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-				SystemControlClearTrajectories(ControlResponseBuffer, 0);
+                *ControlResponseBuffer = SystemControlClearTrajectories();
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearTrajectories:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 			}
@@ -2067,18 +2052,13 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 
 /*!
  * \brief SystemControlClearTrajectories Clears the trajectory folder on the machine
- * \param ReturnValue The status from the delete procedure is stored in the pointer location.
- * \param Debug Used for debugging, at the moment there is no such information.
- * \return Always 0
+ * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
-I32 SystemControlClearTrajectories(C8 * ReturnValue, U8 Debug) {
-	C8 returnResponse = SUCCEDED_DELETE;
-
+C8 SystemControlClearTrajectories() {
 	if (UtilDeleteTrajectoryFiles() != 0) {
-		returnResponse = FAILED_DELETE;
+        return FAILED_DELETE;
 	}
-	*ReturnValue = returnResponse;
-	return 0;
+    return SUCCEDED_DELETE;
 }
 
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
