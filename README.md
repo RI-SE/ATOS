@@ -6,7 +6,7 @@ The Maestro server is a communication hub for all test objects. The server monit
 <br />
 <br />
 
-To build Maestro either usie the build script "buildMaestro.sh" or follow the guide below.
+To build Maestro follow the guide below.
 
 
 ## How to build and run the server
@@ -17,10 +17,9 @@ Clone the repo and make sure you run the following command to update all submodu
 git submodule update --init --recursive
 ```
 
-Navigate to the the repo and enter the build folder 
+Navigate to the the repo and enter the build directory 
 
 ```sh
-cd  server
 mkdir build && cd build
 ```
 create project
@@ -34,21 +33,25 @@ cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
 ```
 
 make the project
-]
 ```sh
 make
-cp -R ../conf/ .
-```
-
-Create a folder for Trajectory files in /build and move one of the existing trajectory files to this folder. 
-```sh
-mkdir traj
-cp ../traj/0.traj ./traj/192.168.0.1
 ```
 
 Start the server
 ```sh
-./TEServer
+cd bin
+./Core
+```
+
+### Installation
+To install the server (recommended) navigate to the build directory
+```sh
+cd build
+```
+then build and install the server (be aware that this requires superuser privileges)
+```sh
+cmake -G "Unix Makefiles" ..
+make install
 ```
 
 ## Building the server with CITS module and mqtt
@@ -83,18 +86,17 @@ make
 sudo make install
 ```
 
-The server will not bu default build the CITS module. This is to prevent the use of the CITS module when it is not necessary. To enable building of the module, run `cmake` from the `build/` directory
+The server will not build the CITS module by default. This is to prevent the use of the CITS module when it is not necessary. To enable building of the module, run `cmake` from the `build/` directory
 ```sh
 cmake "Unix Makefiles" -DUSE_CITS:BOOL=TRUE ..
 ```
 then you can build and run the server as normal
 ```sh
-make
-./TEServer
+make && cd bin
+./Core
 ```
 
 To disable the CITS module, remake the `cmake` procedure
-
 ```sh
 cmake "Unix Makefiles" -DUSE_CITS:BOOL=FALSE ..
 ```
