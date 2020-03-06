@@ -2145,8 +2145,7 @@ I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 }
 
 
-I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * FileType, C8 *ReturnValue, U8 Debug)
-{
+I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * FileType, C8 *ReturnValue, U8 Debug) {
 
     FILE *fd;
     C8 CompletePath[MAX_FILE_PATH];
