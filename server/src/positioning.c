@@ -190,18 +190,29 @@ int objectMonitorDataToASCII(const ObjectMonitorType * monitorData, char *asciiB
 	else
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "NaN;");
 
-	if (monitorData->speed.isValid)
+	if (monitorData->speed.isLongitudinalValid)
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-				 "%.2f;%.2f;", monitorData->speed.longitudinal_m_s, monitorData->speed.lateral_m_s);
+				 "%.2f;", monitorData->speed.longitudinal_m_s);
 	else
-		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "NaN;NaN;");
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "NaN;");
 
-	if (monitorData->acceleration.isValid)
+	if (monitorData->speed.isLateralValid)
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
-				 "%.3f;%.3f;", monitorData->acceleration.longitudinal_m_s2,
-				 monitorData->acceleration.lateral_m_s2);
+				 "%.2f;", monitorData->speed.lateral_m_s);
 	else
-		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "NaN;NaN;");
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "NaN;");
+
+	if (monitorData->acceleration.isLongitudinalValid)
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
+				 "%.3f;", monitorData->acceleration.longitudinal_m_s2);
+	else
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "NaN;");
+
+	if (monitorData->acceleration.isLateralValid)
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
+				 "%.3f;", monitorData->acceleration.lateral_m_s2);
+	else
+		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer), "NaN;");
 
 	if (monitorData->drivingDirection != OBJECT_DRIVE_DIRECTION_UNAVAILABLE)
 		snprintf(asciiBuffer + strlen(asciiBuffer), bufferLength - strlen(asciiBuffer),
@@ -289,34 +300,22 @@ int ASCIIToObjectMonitorData(const char *asciiBuffer, ObjectMonitorType * monito
 	}
 
 	// Velocity
-	monitorData->speed.isValid = true;
-
 	token = strtok(NULL, delim);
 	monitorData->speed.longitudinal_m_s = strtod(token, &endPtr);
-	if (endPtr == token) {
-		monitorData->speed.isValid = false;
-	}
+	monitorData->speed.isLongitudinalValid = endPtr != token;
 
 	token = strtok(NULL, delim);
 	monitorData->speed.lateral_m_s = strtod(token, &endPtr);
-	if (endPtr == token) {
-		monitorData->speed.isValid = false;
-	}
+	monitorData->speed.isLateralValid = endPtr != token;
 
 	// Acceleration
-	monitorData->acceleration.isValid = true;
-
 	token = strtok(NULL, delim);
 	monitorData->acceleration.longitudinal_m_s2 = strtod(token, &endPtr);
-	if (endPtr == token) {
-		monitorData->acceleration.isValid = false;
-	}
+	monitorData->acceleration.isLongitudinalValid = endPtr != token;
 
 	token = strtok(NULL, delim);
 	monitorData->acceleration.lateral_m_s2 = strtod(token, &endPtr);
-	if (endPtr == token) {
-		monitorData->acceleration.isValid = false;
-	}
+	monitorData->acceleration.isLateralValid = endPtr != token;
 
 	// Drive direction
 	token = strtok(NULL, delim);

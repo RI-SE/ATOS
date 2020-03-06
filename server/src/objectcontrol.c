@@ -781,8 +781,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 						}
 						LogPrint("OSEM msglen: %ld", MessageLength);
-						UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex],
-										1);
+						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 
 						/* Here we send TRAJ, if the IP-address is not operating with a dynamic trajectory */
 						if (strstr(DTMReceivers, object_address_name[iIndex]) == NULL) {
@@ -1062,13 +1061,15 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 		position.zCoord_m = position.isPositionValid ? *fileLine.zCoord : 0;
 		position.heading_rad = fileLine.heading;
 		position.isHeadingValid = true;
-		speed.isValid = fileLine.longitudinalVelocity != NULL && fileLine.lateralVelocity != NULL;
+		speed.isLongitudinalValid = fileLine.longitudinalVelocity != NULL;
+		speed.isLateralValid = fileLine.lateralVelocity != NULL;
 		speed.longitudinal_m_s = fileLine.longitudinalVelocity != NULL ? *fileLine.longitudinalVelocity : 0;
 		speed.lateral_m_s = fileLine.lateralVelocity != NULL ? *fileLine.lateralVelocity : 0;
-		acceleration.isValid = fileLine.longitudinalAcceleration != NULL
-			&& fileLine.lateralAcceleration != NULL;
+		acceleration.isLongitudinalValid = fileLine.longitudinalAcceleration != NULL;
+		acceleration.isLateralValid = fileLine.lateralAcceleration != NULL;
 		acceleration.longitudinal_m_s2 =
 			fileLine.longitudinalAcceleration != NULL ? *fileLine.longitudinalAcceleration : 0;
+
 		acceleration.lateral_m_s2 = fileLine.lateralAcceleration != NULL ? *fileLine.lateralAcceleration : 0;
 
 		// Print to buffer
