@@ -50,13 +50,13 @@ To run one or several of the modules along with Core, modify the runServer.sh sc
 To see which modules are available, check the build output inside the ```build/bin``` directory
 
 ### Installation
-To install the server (recommended) navigate to the build directory
+To install the server (recommended) navigate to the build directory and configure the project:
 ```sh
 cd build
+cmake -G "Unix Makefiles" ..
 ```
 then build and install the server (be aware that this requires superuser privileges)
 ```sh
-cmake -G "Unix Makefiles" ..
 make install
 ```
 
