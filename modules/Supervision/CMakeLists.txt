@@ -1,63 +1,51 @@
 cmake_minimum_required(VERSION 3.1)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
-SET(CMAKE_CXX_STANDARD 11)
-SET(CMAKE_CXX_STANDARD_REQUIRED ON)
-SET(CMAKE_C_STANDARD 11)
-SET(CMAKE_C_STANDARD_REQUIRED ON)
+project(Supervision LANGUAGES C CXX)
 
-project(Supervision)
+# Define target names
+set(SUPERVISION_TARGET ${PROJECT_NAME})
 
+set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(ISO_22133_LIBRARY MaestroISO22133)
+set(POSITIONING_LIBRARY MaestroPositioning)
+set(TIME_LIBRARY MaestroTime)
+set(LOGGING_LIBRARY MaestroLogging)
+set(MESSAGE_BUS_LIBRARY MaestroMQ)
 
-include_directories(inc)
-include_directories(../../util/C/logging)
-include_directories(../../util/C/time)
-include_directories(../../util/C/MQBus)
-include_directories(../../server/inc)
 include(GNUInstallDirs)
 
-
-# Create library
-add_library(MaestroLogging
-  ../../util/C/logging/logging.h
-  ../../util/C/logging/logging.c
+# Create project main executable target
+add_executable(${SUPERVISION_TARGET}
+	${CMAKE_CURRENT_SOURCE_DIR}/src/geofence.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/supervisionstate.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/trajectory.cpp
 )
 
-add_library(MaestroTime
-  ../../util/C/time/maestroTime.h
-  ../../util/C/time/maestroTime.c
+# Link project executable to util libraries
+target_link_libraries(${SUPERVISION_TARGET} LINK_PUBLIC
+	${TIME_LIBRARY}
+	${COREUTILS_LIBRARY}
+	${ISO_22133_LIBRARY}
+	${POSITIONING_LIBRARY}
+	${LOGGING_LIBRARY}
+)
+target_include_directories(${SUPERVISION_TARGET} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
-add_library(MQBus
-  ../../util/C/MQBus/mqbus.h
-  ../../util/C/MQBus/mqbus.c
+# Installation rules
+install(CODE "MESSAGE(STATUS \"Installing target ${SUPERVISION_TARGET}\")")
+install(TARGETS ${SUPERVISION_TARGET} 
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Create library
-add_library(util
-  ../../server/src/util.c
-  ../../server/inc/util.h
-  ../../server/src/iso22133.c
-  ../../server/inc/iso22133.h
-  ../../server/inc/positioning.h
-  ../../server/src/positioning.c
-)
-
-add_executable(Supervision
-    src/main.cpp
-    src/geofence.cpp
-    inc/geofence.h
-    src/trajectory.cpp
-    inc/trajectory.h
-    inc/regexpatterns.h
-    src/supervisionstate.cpp
-    inc/supervisionstate.h
-)
-
-install(TARGETS Supervision DESTINATION bin)
-
-target_link_libraries(Supervision MaestroTime MaestroLogging util)
-target_link_libraries(util MQBus MaestroTime MaestroLogging)
-target_link_libraries(MQBus rt m)
-
-
-
+# Ensure linkage is reloaded after install
+install(CODE "execute_process(COMMAND ldconfig)")

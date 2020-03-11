@@ -1,56 +1,43 @@
 cmake_minimum_required(VERSION 3.1)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(Visualization)
-# This module is an example of how to set up a new module external to the Maestro executable
+project(Visualization LANGUAGES C)
 
-# Set C and C++ dialects
-SET(CMAKE_C_STANDARD 11)
-SET(CMAKE_C_STANDARD_REQUIRED ON)
-SET(CMAKE_CXX_STANDARD 11)
-SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Define target names
+set(VISUALIZATION_TARGET ${PROJECT_NAME})
 
-include_directories(inc)
-include_directories(../../util/C/logging)
-include_directories(../../util/C/time)
-include_directories(../../util/C/MQBus)
-include_directories(../../server/inc)
-include(GNUInstallDirs)
+set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(ISO_22133_LIBRARY MaestroISO22133)
+set(POSITIONING_LIBRARY MaestroPositioning)
+set(TIME_LIBRARY MaestroTime)
+set(LOGGING_LIBRARY MaestroLogging)
+set(MESSAGE_BUS_LIBRARY MaestroMQ)
 
-
-# Create library
-add_library(MaestroLogging
-  ../../util/C/logging/logging.h
-  ../../util/C/logging/logging.c
+# Create project main executable target
+add_executable(${VISUALIZATION_TARGET}
+	${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
 )
 
-add_library(MaestroTime
-  ../../util/C/time/maestroTime.h
-  ../../util/C/time/maestroTime.c
+# Link project executable to util libraries
+target_link_libraries(${VISUALIZATION_TARGET} LINK_PUBLIC
+	${COREUTILS_LIBRARY}
+	${ISO_22133_LIBRARY}
+	${POSITIONING_LIBRARY}
+	${TIME_LIBRARY}
+	${LOGGING_LIBRARY}
+	${MESSAGE_BUS_LIBRARY}
 )
 
-add_library(MQBus
-  ../../util/C/MQBus/mqbus.h
-  ../../util/C/MQBus/mqbus.c
+# Installation rules
+install(CODE "MESSAGE(STATUS \"Installing target ${VISUALIZATION_TARGET}\")")
+install(TARGETS ${VISUALIZATION_TARGET} 
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Create library
-add_library(util
-  ../../server/src/util.c
-  ../../server/inc/util.h
-  ../../server/inc/iso22133.h
-  ../../server/src/iso22133.c
-  ../../server/inc/positioning.h
-  ../../server/src/positioning.c
-)
 
-add_executable(Visualization
-    src/main.c)
-
-install(TARGETS Visualization DESTINATION bin)
-
-target_link_libraries(Visualization MaestroTime MaestroLogging util)
-target_link_libraries(util MQBus MaestroLogging MaestroTime)
-target_link_libraries(MQBus rt m)
-
-
-
+# Ensure linkage is reloaded after install
+install(CODE "execute_process(COMMAND ldconfig)")

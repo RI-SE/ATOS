@@ -15,13 +15,13 @@ MODULE_LENGTH=${#MODULES[@]}
 echo "Starting server with $MODULE_LENGTH extra message queues."
 
 # Build string for executing server alongside modules
-SERVER_EXEC_STRING="(cd $MAESTRODIR/server/build && ./TEServer -m $MODULE_LENGTH)"
+SERVER_EXEC_STRING="(cd $MAESTRODIR/build/bin && ./Core -m $MODULE_LENGTH)"
 for i in "${MODULES[@]}"
 do
-	SERVER_EXEC_STRING="$SERVER_EXEC_STRING & (cd $MAESTRODIR/modules/$i/build && ./$i)"
+	SERVER_EXEC_STRING="$SERVER_EXEC_STRING & (cd $MAESTRODIR/build/bin && ./$i)"
 done
 
 # Run the generated string
-# Each module in MODULES will be run in parallel with TEServer
+# Each module in MODULES will be run in parallel with Core
 eval $SERVER_EXEC_STRING
 
