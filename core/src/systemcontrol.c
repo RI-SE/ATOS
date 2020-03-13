@@ -1149,6 +1149,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		nanosleep(&sleep_time, &ref_time);
 	}
 
+
+
 	(void)iCommClose();
 
 	LogMessage(LOG_LEVEL_INFO, "Exiting");
@@ -1441,6 +1443,11 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
 	int result = 0;
 	int sockFlags = 0;
 
+	enum COMMAND iCommand;
+	ssize_t bytesReceived = 0;
+	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
+
+
 	/* Init user control socket */
 	LogMessage(LOG_LEVEL_INFO, "Init control socket");
 
@@ -1488,6 +1495,8 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
 		*ClientSocket = accept(*ServerHandle, (struct sockaddr *)&cli_addr, &cli_length);
 		if ((*ClientSocket == -1 && errno != EAGAIN && errno != EWOULDBLOCK) || iExit)
 			util_error("Failed to establish connection");
+
+		bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 	} while (*ClientSocket == -1);
 
 	LogMessage(LOG_LEVEL_INFO, "Connection established: %s:%i", inet_ntoa(cli_addr.sin_addr),

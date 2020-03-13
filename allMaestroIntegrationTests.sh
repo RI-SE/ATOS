@@ -1,6 +1,6 @@
 #!/bin/bash
 MAESTRODIR=$(pwd)
-cd ${MAESTRODIR}/server/integration-tests
+cd ${MAESTRODIR}/core/integration-tests
 FAILURES=0
 NUM_TESTS=0
 NUMBER_REGEX='^[0-9]+'
