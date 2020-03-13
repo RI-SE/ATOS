@@ -128,8 +128,9 @@ typedef enum {
 	InitializeScenario_0,
 	ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
 	DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetRootDirectoryContent_0, GetDirectoryContent_1,
-	DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0, start_ext_trigg_1,
-	nocommand
+	ClearTrajectories_0, DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0,
+	Exit_0,
+	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 
 const char *SystemControlCommandsArr[] = {
@@ -138,8 +139,9 @@ const char *SystemControlCommandsArr[] = {
 	"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1",
-	"DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1", "control_0", "Exit_0",
-	"start_ext_trigg_1"
+	"ClearTrajectories_0", "DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
+	"control_0",
+	"Exit_0", "start_ext_trigg_1"
 };
 
 const char *SystemControlStatesArr[] =
@@ -185,6 +187,7 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 I32 SystemControlUploadFile(C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue, U8 Debug);
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug);
+C8 SystemControlClearTrajectories();
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug);
 I32 SystemControlDestroyFileContentInfo(C8 * path);
@@ -731,26 +734,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					I32 file_len = SystemControlBuildFileContentInfo("dir.info", 0);
 
-					/*
-					   if (file_len > 0) printf("file contred Created\n");
-					   char *traversingPointer = SystemControlDirectoryInfo.info_buffer;
-					   for (int i = 0; i < file_len; i++) {
-					   printf("0x%X\n", *traversingPointer);
-					   traversingPointer++;
-					   }
-					 */
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK,
 													 "SubGetDirectoryContent:",
 													 SystemControlDirectoryInfo.info_buffer, file_len,
 													 &ClientSocket, 0);
 
 					SystemControlDestroyFileContentInfo("dir.info");
-					/*
-					   SystemControlBuildFileContentInfo("dir.info", ControlResponseBuffer, 0);
-
-					   SystemControlSendFileContent(&ClientSocket, "dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
-					   ControlResponseBuffer, REMOVE_FILE, 0);
-					 */
 				}
 
 			}
@@ -759,6 +748,15 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						   "Wrong parameter count in GetDirectoryContent(path)! got:%d, expected:%d",
 						   CurrentInputArgCount, CommandArgCount);
 				SystemControlCommand = Idle_0;
+			}
+			break;
+		case ClearTrajectories_0:
+			if (CurrentInputArgCount == CommandArgCount) {
+				SystemControlCommand = Idle_0;
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				*ControlResponseBuffer = SystemControlClearTrajectories();
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearTrajectories:",
+												 ControlResponseBuffer, 1, &ClientSocket, 0);
 			}
 			break;
 		case DownloadFile_1:
@@ -2062,6 +2060,16 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 	return 0;
 }
 
+/*!
+ * \brief SystemControlClearTrajectories Clears the trajectory folder on the machine
+ * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
+ */
+C8 SystemControlClearTrajectories() {
+	if (UtilDeleteTrajectoryFiles() != 0) {
+		return FAILED_DELETE;
+	}
+	return SUCCEDED_DELETE;
+}
 
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 
