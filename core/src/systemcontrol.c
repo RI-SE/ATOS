@@ -129,7 +129,7 @@ typedef enum {
 	ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
 	DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetRootDirectoryContent_0, GetDirectoryContent_1,
 	ClearTrajectories_0, DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0,
-		Exit_0,
+	Exit_0,
 	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 
@@ -140,7 +140,7 @@ const char *SystemControlCommandsArr[] = {
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1",
 	"ClearTrajectories_0", "DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
-		"control_0",
+	"control_0",
 	"Exit_0", "start_ext_trigg_1"
 };
 
@@ -733,6 +733,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 
 					I32 file_len = SystemControlBuildFileContentInfo("dir.info", 0);
+
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK,
 													 "SubGetDirectoryContent:",
 													 SystemControlDirectoryInfo.info_buffer, file_len,
@@ -753,7 +754,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
 				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-                *ControlResponseBuffer = SystemControlClearTrajectories();
+				*ControlResponseBuffer = SystemControlClearTrajectories();
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearTrajectories:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 			}
@@ -2065,9 +2066,9 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
  */
 C8 SystemControlClearTrajectories() {
 	if (UtilDeleteTrajectoryFiles() != 0) {
-        return FAILED_DELETE;
+		return FAILED_DELETE;
 	}
-    return SUCCEDED_DELETE;
+	return SUCCEDED_DELETE;
 }
 
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
