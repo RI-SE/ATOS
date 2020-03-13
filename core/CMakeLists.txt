@@ -1,0 +1,126 @@
+cmake_minimum_required(VERSION 3.1)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
+project(Core LANGUAGES C)
+
+# Specify locations for logs and shared memory
+# WARNING: These are used for installation and could hose
+# 	your system if e.g. specified to "/"
+set(SYSTEM_SHARED_MEMORY_PATH "/dev/shm/maestro")
+
+set(CORE_TARGET ${PROJECT_NAME})
+set(COREUTILS_TARGET MaestroCoreUtil)
+set(ISO_22133_TARGET MaestroISO22133)
+set(POSITIONING_TARGET MaestroPositioning)
+set(DATA_DICTIONARY_TARGET MaestroDataDictionary)
+
+set(TIME_LIBRARY MaestroTime)
+set(LOGGING_LIBRARY MaestroLogging)
+set(MESSAGE_BUS_LIBRARY MaestroMQ)
+set(MATH_LIBRARY m)
+get_target_property(TIME_HEADERS ${TIME_LIBRARY} INCLUDE_DIRECTORIES)
+get_target_property(LOGGING_HEADERS ${LOGGING_LIBRARY} INCLUDE_DIRECTORIES)
+get_target_property(MESSAGE_BUS_HEADERS ${MESSAGE_BUS_LIBRARY} INCLUDE_DIRECTORIES)
+
+include(GNUInstallDirs)
+
+add_executable(${CORE_TARGET} 
+	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/logger.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
+)
+
+add_library(${COREUTILS_TARGET} SHARED
+	${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
+)
+target_include_directories(${COREUTILS_TARGET} PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+	${TIME_HEADERS}
+	${LOGGING_HEADERS}
+	${MESSAGE_BUS_HEADERS}
+)
+set_target_properties(${COREUTILS_TARGET} PROPERTIES
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/inc/util.h
+)
+
+add_library(${ISO_22133_TARGET} SHARED
+	${CMAKE_CURRENT_SOURCE_DIR}/src/iso22133.c
+)
+target_include_directories(${ISO_22133_TARGET} PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+	${TIME_HEADERS}
+	${LOGGING_HEADERS}
+)
+set_target_properties(${ISO_22133_TARGET} PROPERTIES
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/inc/iso22133.h
+)
+
+add_library(${POSITIONING_TARGET} SHARED
+	${CMAKE_CURRENT_SOURCE_DIR}/src/positioning.c
+)
+target_include_directories(${POSITIONING_TARGET} PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+	${TIME_HEADERS}
+)
+set_target_properties(${POSITIONING_TARGET} PROPERTIES
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/inc/positioning.h
+)
+
+add_library(${DATA_DICTIONARY_TARGET} SHARED
+	${CMAKE_CURRENT_SOURCE_DIR}/src/datadictionary.c
+)
+target_include_directories(${DATA_DICTIONARY_TARGET} PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+	${LOGGING_HEADERS}
+	${MESSAGE_BUS_HEADERS}
+)
+set_target_properties(${DATA_DICTIONARY_TARGET} PROPERTIES
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/inc/datadictionary.h
+)
+
+# Linking
+target_link_libraries(${CORE_TARGET} LINK_PUBLIC
+	${TIME_LIBRARY}
+	${LOGGING_LIBRARY}
+	${COREUTILS_TARGET}
+	${DATA_DICTIONARY_TARGET}
+	${ISO_22133_TARGET}
+	${POSITIONING_TARGET}
+)
+
+target_link_libraries(${COREUTILS_TARGET} LINK_PUBLIC
+	${TIME_LIBRARY}
+	${LOGGING_LIBRARY}
+	${MESSAGE_BUS_LIBRARY}
+	${MATH_LIBRARY}
+)
+
+# Installation rules
+install(CODE "MESSAGE(STATUS \"Installing target ${CORE_TARGET}\")")
+install(TARGETS ${CORE_TARGET} ${COREUTILS_TARGET}
+		${ISO_22133_TARGET} ${DATA_DICTIONARY_TARGET}
+		${POSITIONING_TARGET}
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+# Give built target ability to set system clock
+install(CODE "MESSAGE(STATUS \"Giving system time setting capabilities to target ${CORE_TARGET}\")")
+install(CODE "execute_process(COMMAND setcap CAP_SYS_TIME+ep ${CMAKE_INSTALL_FULL_BINDIR}/${CORE_TARGET})")
+
+# Create shared memory directory and give user access
+install(CODE "MESSAGE(STATUS \"Creating shared memory directory ${SYSTEM_SHARED_MEMORY_PATH} owned by user $ENV{USER}\")")
+install(DIRECTORY DESTINATION ${SYSTEM_SHARED_MEMORY_PATH})
+install(CODE "execute_process(COMMAND chown $ENV{USER} ${SYSTEM_SHARED_MEMORY_PATH})")
+
+# Ensure linkage is reloaded after install
+install(CODE "execute_process(COMMAND ldconfig)")
