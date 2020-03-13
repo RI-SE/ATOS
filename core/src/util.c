@@ -2387,12 +2387,24 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
  * \brief UtilDeleteTrajectoryFiles finds the trajectory folder and deletes its contents
  * \return returns 0 if succesfull if the trajectory folder now is empty. Non-zero values otherwise.
  */
-int UtilDeleteTrajectoryFiles() {
+int UtilDeleteTrajectoryFiles(void) {
 	char filePath[MAX_FILE_PATH] = { '\0' };
-	UtilGetTrajDirectoryPath(filePath, MAX_FILE_PATH);
+	UtilGetTrajDirectoryPath(filePath, sizeof (filePath));
 	if (filePath[0] == '\0')
 		return -1;
-	return deleteDirectoryContents(filePath, MAX_FILE_PATH);
+	return deleteDirectoryContents(filePath, sizeof (filePath));
+}
+
+/*!
+ * \brief UtilDeleteGeofenceFiles finds the geofence folder and deletes its contents
+ * \return returns 0 if succesfull if the trajectory folder now is empty. Non-zero values otherwise.
+ */
+int UtilDeleteGeofenceFiles(void) {
+	char filePath[MAX_FILE_PATH] = { '\0' };
+	UtilGetGeofenceDirectoryPath(filePath, sizeof (filePath));
+	if (filePath[0] == '\0')
+		return -1;
+	return deleteDirectoryContents(filePath, sizeof (filePath));
 }
 
 /*!
