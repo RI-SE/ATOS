@@ -14,6 +14,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
@@ -51,6 +52,12 @@ typedef enum {
 	SERVER_STATE_ERROR,
 } ServerState_t;
 
+typedef struct {
+	int exist;
+	int fd;
+	char *info_buffer;
+	int size;
+} content_dir_info;
 
 #define SYSTEM_CONTROL_SERVICE_POLL_TIME_MS 5000
 #define SYSTEM_CONTROL_TASK_PERIOD_MS 1
@@ -120,9 +127,10 @@ typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
 	InitializeScenario_0,
 	ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
-	DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetDirectoryContent_1,
-	DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0, start_ext_trigg_1,
-	nocommand
+	DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetRootDirectoryContent_0, GetDirectoryContent_1,
+	ClearTrajectories_0, DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0,
+	Exit_0,
+	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 
 const char *SystemControlCommandsArr[] = {
@@ -130,9 +138,10 @@ const char *SystemControlCommandsArr[] = {
 	"AbortScenario_0", "InitializeScenario_0",
 	"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1",
-	"GetDirectoryContent_1",
-	"DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1", "control_0", "Exit_0",
-	"start_ext_trigg_1"
+	"GetRootDirectoryContent_0", "GetDirectoryContent_1",
+	"ClearTrajectories_0", "DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
+	"control_0",
+	"Exit_0", "start_ext_trigg_1"
 };
 
 const char *SystemControlStatesArr[] =
@@ -147,6 +156,8 @@ char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
 char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH];
 C8 *STR_SYSTEM_CONTROL_RX_PACKET_SIZE = "1280";
 C8 *STR_SYSTEM_CONTROL_TX_PACKET_SIZE = "1200";
+
+content_dir_info SystemControlDirectoryInfo = { 0, 0, NULL, 0 };
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -176,8 +187,10 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 I32 SystemControlUploadFile(C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue, U8 Debug);
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug);
+C8 SystemControlClearTrajectories();
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
-I32 SystemControlBuildFileContentInfo(C8 * Path, C8 * ReturnValue, U8 Debug);
+I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug);
+I32 SystemControlDestroyFileContentInfo(C8 * path);
 I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * ReturnValue, U8 Remove,
 								 U8 Debug);
 I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
@@ -470,7 +483,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									}
 								}
 								StartPtr = StopPtr + 1;
-								CurrentInputArgCount++;
+								if (SystemControlArgument[CurrentInputArgCount][0] != '\0') {
+									CurrentInputArgCount++;	// In case the argument was empty, don't add it to the argument count
+								}
 							}
 
 							if (CmdPtr != NULL)
@@ -570,9 +585,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			//SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
 			break;
 		case COMM_MONR:
-			// TODO: Decode
 			if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
-				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t) bytesReceived, &monrData, 0);
+				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t) bytesReceived, &monrData);
 				SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData, 0);
 				UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 								RVSSMessageLengthU32, 0);
@@ -623,7 +637,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			DataDictionaryGetOriginAltitudeC8(GSD, TextBuffer20, SMALL_BUFFER_SIZE_20);
 			strcat(ControlResponseBuffer, TextBuffer20);
 			strcat(ControlResponseBuffer, ";");
-			iCommSend(COMM_OSEM, ControlResponseBuffer, sizeof (ControlResponseBuffer));
+
 			SystemControlSendControlResponse(strlen(ParameterListC8) >
 											 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
 											 SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetTestOrigin:",
@@ -705,6 +719,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = Idle_0;
 			}
 			break;
+		case GetRootDirectoryContent_0:
+			LogMessage(LOG_LEVEL_ERROR, "GetRootDirectory called");
 		case GetDirectoryContent_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
@@ -715,17 +731,32 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (ControlResponseBuffer[0] == FOLDER_EXIST) {
 					UtilCreateDirContent(SystemControlArgument[0], "dir.info");
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					SystemControlBuildFileContentInfo("dir.info", ControlResponseBuffer, 0);
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetDirectoryContent:",
-													 ControlResponseBuffer, 4, &ClientSocket, 0);
-					SystemControlSendFileContent(&ClientSocket, "dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
-												 ControlResponseBuffer, REMOVE_FILE, 0);
+
+					I32 file_len = SystemControlBuildFileContentInfo("dir.info", 0);
+
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK,
+													 "SubGetDirectoryContent:",
+													 SystemControlDirectoryInfo.info_buffer, file_len,
+													 &ClientSocket, 0);
+
+					SystemControlDestroyFileContentInfo("dir.info");
 				}
 
 			}
 			else {
-				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Wrong parameter count in GetDirectoryContent(path)! got:%d, expected:%d",
+						   CurrentInputArgCount, CommandArgCount);
 				SystemControlCommand = Idle_0;
+			}
+			break;
+		case ClearTrajectories_0:
+			if (CurrentInputArgCount == CommandArgCount) {
+				SystemControlCommand = Idle_0;
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				*ControlResponseBuffer = SystemControlClearTrajectories();
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearTrajectories:",
+												 ControlResponseBuffer, 1, &ClientSocket, 0);
 			}
 			break;
 		case DownloadFile_1:
@@ -738,7 +769,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (ControlResponseBuffer[0] == FILE_EXIST) {
 					UtilCreateDirContent(SystemControlArgument[0], SystemControlArgument[0]);
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					SystemControlBuildFileContentInfo(SystemControlArgument[0], ControlResponseBuffer, 0);
+					SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubDownloadFile:",
 													 ControlResponseBuffer, 4, &ClientSocket, 0);
 					SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0],
@@ -782,7 +813,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 											   ControlResponseBuffer, 0);
 				}
 
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:",
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubUploadFile:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 
 			}
@@ -802,6 +833,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeScenario:",
 												 ControlResponseBuffer, 0, &ClientSocket, 0);
+
 				SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
 			}
 			else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_INITIALIZED) {
@@ -991,8 +1023,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					SystemControlCommand = Idle_0;
 					if (ClientSocket >= 0) {
 						bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+						ControlResponseBuffer[0] = 1;
 						SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "AbortScenario:",
-														 ControlResponseBuffer, 0, &ClientSocket, 0);
+														 ControlResponseBuffer, 1, &ClientSocket, 0);
 					}
 				}
 			}
@@ -1000,7 +1033,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (ClientSocket >= 0) {
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-													 "AbortScenario:", ControlResponseBuffer, 0,
+													 "AbortScenario:", ControlResponseBuffer, 1,
 													 &ClientSocket, 0);
 					SystemControlSendLog("[SystemControl] ABORT received, state errors!\n", &ClientSocket, 0);
 				}
@@ -1108,6 +1141,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					  && ClientResult < 0) ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
 		nanosleep(&sleep_time, &ref_time);
 	}
+
+
 
 	(void)iCommClose();
 
@@ -1401,6 +1436,11 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
 	int result = 0;
 	int sockFlags = 0;
 
+	enum COMMAND iCommand;
+	ssize_t bytesReceived = 0;
+	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
+
+
 	/* Init user control socket */
 	LogMessage(LOG_LEVEL_INFO, "Init control socket");
 
@@ -1448,6 +1488,8 @@ static I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct 
 		*ClientSocket = accept(*ServerHandle, (struct sockaddr *)&cli_addr, &cli_length);
 		if ((*ClientSocket == -1 && errno != EAGAIN && errno != EWOULDBLOCK) || iExit)
 			util_error("Failed to establish connection");
+
+		bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 	} while (*ClientSocket == -1);
 
 	LogMessage(LOG_LEVEL_INFO, "Connection established: %s:%i", inet_ntoa(cli_addr.sin_addr),
@@ -1907,25 +1949,81 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 	return strlen(ParameterList);
 }
 
-I32 SystemControlBuildFileContentInfo(C8 * Path, C8 * ReturnValue, U8 Debug) {
+I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 
+	/*
+	   struct stat st;
+	   C8 CompletePath[MAX_FILE_PATH];
+
+	   bzero(CompletePath, MAX_FILE_PATH);
+	   UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+	   strcat(CompletePath, Path);
+
+	   stat(CompletePath, &st);
+	   *(ReturnValue + 0) = (U8) (st.st_size >> 24);
+	   *(ReturnValue + 1) = (U8) (st.st_size >> 16);
+	   *(ReturnValue + 2) = (U8) (st.st_size >> 8);
+	   *(ReturnValue + 3) = (U8) st.st_size;
+
+
+	   if (Debug)
+	   LogMessage(LOG_LEVEL_DEBUG, "Filesize %d of %s", (I32) st.st_size, CompletePath);
+
+	   return st.st_size;
+	 */
 	struct stat st;
 	C8 CompletePath[MAX_FILE_PATH];
+	C8 temporaryCompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
+
+	if (SystemControlDirectoryInfo.exist)
+		return -1;
+
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
-
 	stat(CompletePath, &st);
-	*(ReturnValue + 0) = (U8) (st.st_size >> 24);
-	*(ReturnValue + 1) = (U8) (st.st_size >> 16);
-	*(ReturnValue + 2) = (U8) (st.st_size >> 8);
-	*(ReturnValue + 3) = (U8) st.st_size;
+	// Create new temporary file, containing the length of the current file in hex + the rest of the document
+	strcat(temporaryCompletePath, ".temp");
+	FILE *comp_fd = fopen(CompletePath, "r");
+	FILE *temp_fd = fopen(temporaryCompletePath, "w");
 
+	fprintf(temp_fd, "%c%c%c%c",
+			(U8) (st.st_size >> 24), (U8) (st.st_size >> 16), (U8) (st.st_size >> 8), (U8) (st.st_size)
+		);
 
-	if (Debug)
-		LogMessage(LOG_LEVEL_DEBUG, "Filesize %d of %s", (I32) st.st_size, CompletePath);
+	while (!feof(comp_fd)) {
+		fputc(fgetc(comp_fd), temp_fd);
+	}
 
+	fclose(comp_fd);
+	fclose(temp_fd);
+
+	// Rename the temporary file to the name of the previous one
+	rename(temporaryCompletePath, CompletePath);
+	stat(CompletePath, &st);
+	// Create mmap of the file and return the length
+	SystemControlDirectoryInfo.fd = open(CompletePath, O_RDWR);
+	SystemControlDirectoryInfo.info_buffer =
+		mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, SystemControlDirectoryInfo.fd, 0);
+	SystemControlDirectoryInfo.size = st.st_size;
+	SystemControlDirectoryInfo.exist = 1;
+	return st.st_size;
+}
+
+I32 SystemControlDestroyFileContentInfo(C8 * path) {
+	char CompletePath[MAX_FILE_PATH];
+	struct stat st;
+
+	if (!SystemControlDirectoryInfo.exist)
+		return -1;
+	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+	strcat(CompletePath, path);
+
+	munmap(SystemControlDirectoryInfo.info_buffer, SystemControlDirectoryInfo.size);
+	close(SystemControlDirectoryInfo.fd);
+	SystemControlDirectoryInfo.exist = 0;
+	//remove(CompletePath);
 	return 0;
 }
 
@@ -1962,6 +2060,16 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 	return 0;
 }
 
+/*!
+ * \brief SystemControlClearTrajectories Clears the trajectory folder on the machine
+ * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
+ */
+C8 SystemControlClearTrajectories() {
+	if (UtilDeleteTrajectoryFiles() != 0) {
+		return FAILED_DELETE;
+	}
+	return SUCCEDED_DELETE;
+}
 
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 
@@ -2262,7 +2370,7 @@ I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * 
 
 /*
 SystemControlBuildRVSSTimeChannelMessage builds a message from data in *GPSTime. The message is stored in *RVSSData.
-See the architecture document for the protocol of RVSS. 
+See the architecture document for the protocol of RVSS.
 
 - *RVSSData the buffer the message
 - *RVSSDataLengthU32 the length of the message
@@ -2310,7 +2418,7 @@ I32 SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 
 /*
 SystemControlBuildRVSSMaestroChannelMessage builds a message from OBCState in *GSD and SysCtrlState. The message is stored in *RVSSData.
-See the architecture document for the protocol of RVSS. 
+See the architecture document for the protocol of RVSS.
 
 - *RVSSData the buffer the message
 - *RVSSDataLengthU32 the length of the message
@@ -2345,10 +2453,10 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 
 
 
-#define MAX_MONR_STRING_LENGTH 116
+#define MAX_MONR_STRING_LENGTH 1024
 /*
 SystemControlBuildRVSSMONRChannelMessage builds a message from data in *MonrData. The message is stored in *RVSSData.
-See the architecture document for the protocol of RVSS. 
+See the architecture document for the protocol of RVSS.
 
 - *RVSSData the buffer the message
 - *RVSSDataLengthU32 the length of the message
@@ -2362,7 +2470,12 @@ I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 	char MonrDataString[MAX_MONR_STRING_LENGTH];
 
 	// TODO: Convert MonrData to string
-	UtilMonitorDataToString(MonrData, MonrDataString, sizeof (MonrDataString));
+	if (UtilMonitorDataToString(MonrData, MonrDataString, sizeof (MonrDataString)) == -1) {
+		// TODO memset rvssdata to 0
+		LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
+		*RVSSDataLengthU32 = 0;
+		return -1;
+	}
 
 	MessageLength = strlen(MonrDataString) + 8;
 	bzero(RVSSData, MessageLength);
@@ -2385,7 +2498,7 @@ I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 
 /*
 SystemControlBuildRVSSAspChannelMessage shall be used for sending ASP-debug data. The message is stored in *RVSSData.
-See the architecture document for the protocol of RVSS. 
+See the architecture document for the protocol of RVSS.
 
 - *RVSSData the buffer the message
 - *RVSSDataLengthU32 the length of the message

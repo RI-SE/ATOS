@@ -14,8 +14,10 @@ obj = None
 
 def checkProgramStatus(failurePrintout):
     if server != None:
-        if server.poll():
+        deadPIDs = server.poll()
+        if deadPIDs:
             print(failurePrintout)
+            print("Dead PIDs: " + str(deadPIDs))
             if userControl != None:
                 userControl.shutdown()
             server.stop()
@@ -27,7 +29,7 @@ if __name__ == "__main__":
 
     # Note: server does not close sockets properly so this fails frequently (cross fingers for now):
     #WaitForPortAvailable(54241,"TCP",timeout=0)
-    server = Executable("../build/TEServer",["-m","0"])
+    server = Executable("../../build/bin/Core",["-m","0"])
     time.sleep(0.05)
     checkProgramStatus("=== Starting the server caused a problem")
     

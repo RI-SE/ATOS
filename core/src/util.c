@@ -95,27 +95,6 @@
 /*------------------------------------------------------------
 -- Local type definitions
 ------------------------------------------------------------*/
-typedef struct {
-	unsigned int ID;
-	char name[SMALL_BUFFER_SIZE_128];
-	unsigned short majorVersion;
-	unsigned short minorVersion;
-	unsigned int numberOfLines;
-} TrajectoryFileHeader;
-
-typedef struct {
-	double time;
-	double xCoord;
-	double yCoord;
-	double *zCoord;
-	double heading;
-	double *longitudinalVelocity;
-	double *lateralVelocity;
-	double *longitudinalAcceleration;
-	double *lateralAcceleration;
-	double curvature;
-	uint8_t mode;
-} TrajectoryFileLine;
 
 /*------------------------------------------------------------
 -- Public variables
@@ -134,12 +113,7 @@ static void CopyHTTPHeaderField(char *request, char *targetContainer, size_t tar
 								const char *fieldName);
 static char rayFromPointIntersectsLine(double pointX, double pointY, double polyPointAX, double polyPointAY,
 									   double polyPointBX, double polyPointBY);
-
-
-static int UtilParseTrajectoryFileHeader(char *headerLine, TrajectoryFileHeader * header);
-static int UtilParseTrajectoryFileFooter(char *footerLine);
-static int UtilParseTrajectoryFileLine(char *fileLine, TrajectoryFileLine * line);
-
+static int deleteDirectoryContents(char *path, size_t pathLen);
 
 void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetContainerSize,
 						 const char *fieldName) {
@@ -203,6 +177,42 @@ void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetCont
 
 }
 
+/*!
+ * \brief deleteDirectoryContents Deletes the directory given in the parameter ::path
+ * \param path The path to the directory on the machine.
+ * \param pathLen The length of ::the path string.
+ * \return  0 if it could successfully delete file, non-zero if it could not.
+ */
+int deleteDirectoryContents(char *path, size_t pathLen) {
+	if (path == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Path is null-pointer.");
+		errno = EINVAL;
+		return -1;
+	}
+	if (pathLen > MAX_FILE_PATH) {
+		LogMessage(LOG_LEVEL_ERROR, "Path variable too large to handle");
+		errno = EINVAL;
+		return -1;
+	}
+	// These are data types defined in the "dirent" header
+	DIR *theFolder = opendir(path);
+
+	if (theFolder == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Path: %s could not be opened", path);
+		errno = ENOENT;
+		return -1;
+	}
+	struct dirent *next_file;
+	char filepath[MAX_FILE_PATH];
+
+	while ((next_file = readdir(theFolder)) != NULL) {
+		// build the path for each file in the folder
+		sprintf(filepath, "%s/%s", path, next_file->d_name);
+		remove(filepath);
+	}
+	closedir(theFolder);
+	return 0;
+}
 
 /*---------------------------------------------s---------------
   -- Public functions
@@ -690,41 +700,22 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
 
 
 /*!
- * \brief MONRToCartesianPosition Extracts a CartesianPosition from MONR
- * \param MONR Struct containing MONR data
- * \return CartesianPosition struct containing the point represented by MONR
- */
-CartesianPosition MONRToCartesianPosition(MonitorDataType MONR) {
-	CartesianPosition retval;
-
-	retval.xCoord_m = MONR.MONR.xPosition / 1000.0;
-	retval.yCoord_m = MONR.MONR.yPosition / 1000.0;
-	retval.zCoord_m = MONR.MONR.zPosition / 1000.0;
-	if (MONR.MONR.heading == 36001) {	// 36001: unavailable
-		LogMessage(LOG_LEVEL_DEBUG, "MONR heading unavailable, assuming 0");
-		retval.heading_deg = 0.0;
-	}
-	else {
-		retval.heading_deg = MONR.MONR.heading / 100.0;
-	}
-	return retval;
-}
-
-/*!
  * \brief UtilMonitorDataToString Converts the data from a message queue monitor data struct into ASCII format
  * \param monrData Struct containing relevant monitor data
  * \param monrString String in which converted data is to be placed
  * \param stringLength Length of string in which converted data is to be placed
  * \return 0 upon success, -1 otherwise
  */
-int UtilMonitorDataToString(MonitorDataType monrData, char *monrString, size_t stringLength) {
-	memset(monrString, 0, stringLength);
-	inet_ntop(AF_INET, &monrData.ClientIP, monrString,
+int UtilMonitorDataToString(const MonitorDataType monitorData, char *monitorDataString, size_t stringLength) {
+	memset(monitorDataString, 0, stringLength);
+	inet_ntop(AF_INET, &monitorData.ClientIP, monitorDataString,
 			  (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t) stringLength);
-	strcat(monrString, ";0;");
-	if (MONRToASCII(&monrData.MONR, monrString + strlen(monrString), stringLength - strlen(monrString), 0) !=
-		MESSAGE_OK) {
-		memset(monrString, 0, stringLength);
+	strcat(monitorDataString, ";0;");
+
+	if (objectMonitorDataToASCII
+		(&monitorData.data, monitorDataString + strlen(monitorDataString),
+		 stringLength - strlen(monitorDataString)) < 0) {
+		memset(monitorDataString, 0, stringLength);
 		return -1;
 	}
 	return 0;
@@ -737,24 +728,24 @@ int UtilMonitorDataToString(MonitorDataType monrData, char *monrString, size_t s
  * \param monrData Struct containing relevant monitor data
  * \return 0 upon success, -1 otherwise
  */
-int UtilStringToMonitorData(const char *monrString, size_t stringLength, MonitorDataType * monrData) {
+int UtilStringToMonitorData(const char *monitorString, size_t stringLength, MonitorDataType * monitorData) {
 	const char *token;
 	const char delim[] = ";";
 	struct in_addr addr;
-	char *copy = strdup(monrString);
+	char *copy = strdup(monitorString);
 
 	token = strtok(copy, delim);
 
 	// IP address
 	inet_pton(AF_INET, token, &addr);
-	monrData->ClientIP = addr.s_addr;
+	monitorData->ClientIP = addr.s_addr;
 
 	// Skip the 0
 	token = strtok(NULL, delim);
 
 	// MONR data
 	token = strtok(NULL, delim);
-	if (ASCIIToMONR(token, &monrData->MONR, 0) == MESSAGE_OK)
+	if (ASCIIToObjectMonitorData(token, &monitorData->data) == 0)
 		return 0;
 	else
 		return -1;
@@ -771,6 +762,8 @@ int UtilStringToMonitorData(const char *monrString, size_t stringLength, Monitor
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m) {
 	double distance = 0.0;
 
+	if (!position.isPositionValid || target.isPositionValid)
+		return 0;
 	distance = sqrt(pow(position.xCoord_m - target.xCoord_m, 2)
 					+ pow(position.yCoord_m - target.yCoord_m, 2)
 					+ pow(position.zCoord_m - target.zCoord_m, 2));
@@ -778,16 +771,19 @@ uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition t
 }
 
 /*!
- * \brief UtilIsAngleNearTarget Checks if angle is within tolerence_deg of target angle
+ * \brief UtilIsAngleNearTarget Checks if angle is within tolerence of target angle
  * \param position Position with angle to verify
  * \param target Target position with angle
- * \param tolerance_deg Angle tolerance defining "near"
- * \return true if position is within tolerance_deg of target, false otherwise
+ * \param tolerance Angle tolerance defining "near"
+ * \return true if position is within tolerance of target, false otherwise
  */
-uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_deg) {
+uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance) {
 
-	const double oneRotation = 360.0;
-	double posHeading = position.heading_deg, tarHeading = target.heading_deg;
+	const double oneRotation = 2.0 * M_PI;
+	double posHeading = position.heading_rad, tarHeading = target.heading_rad;
+
+	if (!position.isHeadingValid || !target.isHeadingValid)
+		return 0;
 
 	while (posHeading < 0) {
 		posHeading += oneRotation;
@@ -796,7 +792,7 @@ uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition targ
 		tarHeading += oneRotation;
 	}
 
-	return fabs(posHeading - tarHeading) <= tolerance_deg;
+	return fabs(posHeading - tarHeading) <= tolerance;
 }
 
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition * OP) {
@@ -1900,6 +1896,7 @@ ssize_t iCommRecv(enum COMMAND * command, char *data, const size_t messageSize, 
 				return 0;
 			}
 			memcpy(data, message + headerSize, dataLength - headerSize);
+			result -= headerSize;
 		}
 	}
 	else if (result > 0) {
@@ -2387,6 +2384,18 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
 }
 
 /*!
+ * \brief UtilDeleteTrajectoryFiles finds the trajectory folder and deletes its contents
+ * \return returns 0 if succesfull if the trajectory folder now is empty. Non-zero values otherwise.
+ */
+int UtilDeleteTrajectoryFiles() {
+	char filePath[MAX_FILE_PATH] = { '\0' };
+	UtilGetTrajDirectoryPath(filePath, MAX_FILE_PATH);
+	if (filePath[0] == '\0')
+		return -1;
+	return deleteDirectoryContents(filePath, MAX_FILE_PATH);
+}
+
+/*!
  * \brief UtilParseTrajectoryFileHeader Attempts to parse a line into a trajectory header
  * \param line Line to be parsed
  * \param header Pointer to struct to fill
@@ -2487,6 +2496,7 @@ int UtilParseTrajectoryFileLine(char *line, TrajectoryFileLine * fileLine) {
 		free(fileLine->longitudinalVelocity);
 	if (fileLine->lateralAcceleration)
 		free(fileLine->longitudinalAcceleration);
+
 	memset(fileLine, 0, sizeof (*fileLine));
 
 	// strtok() does not handle double delimiters well, more complicated parsing necessary
@@ -3213,106 +3223,6 @@ U32 UtilCreateDirContent(C8 * DirPath, C8 * TempPath) {
 }
 
 
-
-I32 UtilISOBuildINSUPMessage(C8 * MessageBuffer, INSUPType * INSUPData, C8 CommandOption, U8 Debug) {
-	I32 MessageIndex = 0, i;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, ISO_INSUP_MESSAGE_LENGTH + ISO_MESSAGE_FOOTER_LENGTH);
-
-	INSUPData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	INSUPData->Header.TransmitterIdU8 = 0;
-	INSUPData->Header.MessageCounterU8 = 0;
-	INSUPData->Header.AckReqProtVerU8 = 0;
-	INSUPData->Header.MessageIdU16 = ISO_INSUP_CODE;
-	INSUPData->Header.MessageLengthU32 = sizeof (INSUPType) - sizeof (HeaderType);
-	INSUPData->ModeValueIdU16 = VALUE_ID_INSUP_MODE;
-	INSUPData->ModeContentLengthU16 = 1;
-	INSUPData->ModeU8 = (U8) CommandOption;
-
-	p = (C8 *) INSUPData;
-	for (i = 0; i < sizeof (INSUPType); i++)
-		*(MessageBuffer + i) = *p++;
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (OSTMType));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	*(MessageBuffer + i++) = (U8) (Crc);
-	MessageIndex = i;
-
-	if (Debug) {
-		// TODO: Change this when bytes thingy has been implemented in logging
-		printf("INSUP total length = %d bytes (header+message+footer)\n",
-			   (int)(ISO_INSUP_MESSAGE_LENGTH + ISO_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (INSUPType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-}
-
-I32 UtilISOBuildHEABMessage(C8 * MessageBuffer, HEABType * HEABData, TimeType * GPSTime, U8 CCStatus,
-							U8 Debug) {
-	I32 MessageIndex = 0, i;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, ISO_HEAB_MESSAGE_LENGTH + ISO_MESSAGE_FOOTER_LENGTH);
-
-	HEABData->Header.SyncWordU16 = ISO_SYNC_WORD;
-	HEABData->Header.TransmitterIdU8 = 0;
-	HEABData->Header.MessageCounterU8 = 0;
-	HEABData->Header.AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	HEABData->Header.MessageIdU16 = ISO_HEAB_CODE;
-	HEABData->Header.MessageLengthU32 = sizeof (HEABType) - sizeof (HeaderType);
-	//HEABData->HeabStructValueIdU16 = 0;
-	//HEABData->HeabStructContentLengthU16 = sizeof(HEABType) - sizeof(HeaderType) - 4;
-	HEABData->GPSQmsOfWeekU32 =
-		((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) UtilGetMillisecond(GPSTime)) << 2) +
-		GPSTime->MicroSecondU16;
-	HEABData->CCStatusU8 = CCStatus;
-
-	if (!GPSTime->isGPSenabled) {
-		UtilgetCurrentGPStime(NULL, &HEABData->GPSQmsOfWeekU32);
-	}
-
-	p = (C8 *) HEABData;
-	for (i = 0; i < sizeof (HEABType); i++)
-		*(MessageBuffer + i) = *p++;
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (HEABType));
-	Crc = 0;
-	*(MessageBuffer + i++) = (U8) (Crc);
-	*(MessageBuffer + i++) = (U8) (Crc >> 8);
-	MessageIndex = i;
-
-	if (Debug) {
-		// TODO: Change this when bytes thingy has been implemented in logging
-		printf("HEAB total length = %d bytes (header+message+footer)\n",
-			   (int)(ISO_HEAB_MESSAGE_LENGTH + ISO_MESSAGE_FOOTER_LENGTH));
-		printf("----HEADER----\n");
-		for (i = 0; i < sizeof (HeaderType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----MESSAGE----\n");
-		for (; i < sizeof (HEABType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n----FOOTER----\n");
-		for (; i < MessageIndex; i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
-}
-
-
 U16 UtilGetMillisecond(TimeType * GPSTime) {
 	struct timeval now;
 	U16 MilliU16 = 0, NowU16 = 0;
@@ -3327,290 +3237,6 @@ U16 UtilGetMillisecond(TimeType * GPSTime) {
 
 	//printf("Result= %d, now= %d, local= %d \n", MilliU16, NowU16, GPSTime->LocalMillisecondU16);
 	return MilliU16;
-}
-
-I32 UtilISOBuildTRAJInfo(C8 * MessageBuffer, TRAJInfoType * TRAJInfoData, U8 debug) {
-	I32 MessageIndex = 0, i;
-
-	U16 Crc = 0, U16Data = 0;
-	I16 I16Data = 0;
-	U32 U32Data = 0;
-	I32 I32Data = 0;
-	U64 U64Data = 0;
-	C8 *p;
-
-	U16Data = 0;
-	U16Data = (U16Data | *(MessageBuffer + 1)) << 8;
-	U16Data = U16Data | *MessageBuffer;
-	TRAJInfoData->TrajectoryIDValueIdU16 = U16Data;
-	U16Data = 0;
-	U16Data = (U16Data | *(MessageBuffer + 3)) << 8;
-	U16Data = U16Data | *(MessageBuffer + 2);
-	TRAJInfoData->TrajectoryIDContentLengthU16 = U16Data;
-	U16Data = 0;
-	U16Data = (U16Data | *(MessageBuffer + 5)) << 8;
-	U16Data = U16Data | *(MessageBuffer + 4);
-	TRAJInfoData->TrajectoryIDU16 = U16Data;
-
-	U16Data = 0;
-	U16Data = (U16Data | *(MessageBuffer + 7)) << 8;
-	U16Data = U16Data | *(MessageBuffer + 6);
-	TRAJInfoData->TrajectoryNameValueIdU16 = U16Data;
-	U16Data = 0;
-	U16Data = (U16Data | *(MessageBuffer + 9)) << 8;
-	U16Data = U16Data | *(MessageBuffer + 8);
-	TRAJInfoData->TrajectoryNameContentLengthU16 = U16Data;
-	for (i = 0; i < TRAJInfoData->TrajectoryNameContentLengthU16; i++)
-		TRAJInfoData->TrajectoryNameC8[i] = *(MessageBuffer + 10 + i);
-
-	U16Data = 0;
-	U16Data = (U16Data | *(MessageBuffer + 65)) << 8;
-	U16Data = U16Data | *(MessageBuffer + 64);
-	TRAJInfoData->TrajectoryVersionValueIdU16 = U16Data;
-	U16Data = 0;
-	U16Data = (U16Data | *(MessageBuffer + 67)) << 8;
-	U16Data = U16Data | *(MessageBuffer + 66);
-	TRAJInfoData->TrajectoryVersionContentLengthU16 = U16Data;
-	U16Data = 0;
-	U16Data = (U16Data | *(MessageBuffer + 69)) << 8;
-	U16Data = U16Data | *(MessageBuffer + 68);
-	TRAJInfoData->TrajectoryVersionU16 = U16Data;
-
-	U16Data = 0;
-	U16Data = (U16Data | *(MessageBuffer + 71)) << 8;
-	U16Data = U16Data | *(MessageBuffer + 70);
-	TRAJInfoData->IpAddressValueIdU16 = U16Data;
-	U16Data = 0;
-	U16Data = (U16Data | *(MessageBuffer + 73)) << 8;
-	U16Data = U16Data | *(MessageBuffer + 72);
-	TRAJInfoData->IpAddressContentLengthU16 = U16Data;
-	U32Data = 0;
-	U32Data = (U32Data | *(MessageBuffer + 77)) << 8;
-	U32Data = (U32Data | *(MessageBuffer + 76)) << 8;
-	U32Data = (U32Data | *(MessageBuffer + 75)) << 8;
-	U32Data = U32Data | *(MessageBuffer + 74);
-	TRAJInfoData->IpAddressU32 = U32Data;
-
-	if (debug) {
-		// TODO: Change this when bytes thingy has been implemented in logging
-		printf("TRAJInfo total length = %d bytes\n", (int)(ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH));
-		printf("----TRAJInfo----\n");
-		for (i = 0; i < sizeof (TRAJInfoType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-		printf("TrajectoryID = %d\n", TRAJInfoData->TrajectoryIDU16);
-		printf("TrajectoryName = %s\n", TRAJInfoData->TrajectoryNameC8);
-		printf("TrajectoryVersion = %d\n", TRAJInfoData->TrajectoryVersionU16);
-		printf("IpAddress = %d\n", TRAJInfoData->IpAddressU32);
-		printf("\n----MESSAGE----\n");
-	}
-
-	return 0;
-}
-
-
-I32 UtilISOBuildTRAJMessageHeader(C8 * MessageBuffer, I32 RowCount, HeaderType * HeaderData,
-								  TRAJInfoType * TRAJInfoData, U8 debug) {
-	I32 MessageIndex = 0, i;
-	U16 Crc = 0;
-	C8 *p;
-
-	bzero(MessageBuffer, ISO_MESSAGE_HEADER_LENGTH + ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH);
-
-	HeaderData->SyncWordU16 = ISO_SYNC_WORD;
-	HeaderData->TransmitterIdU8 = 0;
-	HeaderData->MessageCounterU8 = 0;
-	HeaderData->AckReqProtVerU8 = ACK_REQ | ISO_PROTOCOL_VERSION;
-	HeaderData->MessageIdU16 = ISO_TRAJ_CODE;
-	HeaderData->MessageLengthU32 = ISO_DTM_ROW_MESSAGE_LENGTH * RowCount + ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH;
-
-	p = (C8 *) HeaderData;
-	for (i = 0; i < ISO_MESSAGE_HEADER_LENGTH; i++)
-		*(MessageBuffer + i) = *p++;
-
-
-	TRAJInfoData->TrajectoryIDValueIdU16 = VALUE_ID_TRAJECTORY_ID;
-	TRAJInfoData->TrajectoryIDContentLengthU16 = 2;
-
-	TRAJInfoData->TrajectoryNameValueIdU16 = VALUE_ID_TRAJECTORY_NAME;
-	TRAJInfoData->TrajectoryNameContentLengthU16 = 64;
-
-	TRAJInfoData->TrajectoryVersionValueIdU16 = VALUE_ID_TRAJECTORY_VERSION;
-	TRAJInfoData->TrajectoryVersionContentLengthU16 = 2;
-
-	TRAJInfoData->IpAddressValueIdU16 = 0xA000;
-	TRAJInfoData->IpAddressContentLengthU16 = 4;
-
-	p = (C8 *) TRAJInfoData;
-	for (; i < ISO_MESSAGE_HEADER_LENGTH + ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH; i++)
-		*(MessageBuffer + i) = *p++;
-
-	MessageIndex = i;
-
-
-	if (debug) {
-		// TODO: Change this when bytes thingy has been implemented in logging
-		printf("Header + TRAJInfo total length = %d bytes\n",
-			   (int)(ISO_MESSAGE_HEADER_LENGTH + ISO_TRAJ_INFO_ROW_MESSAGE_LENGTH));
-		printf("----HEADER + TRAJInfo----\n");
-		for (i = 0; i < sizeof (HeaderType) + sizeof (TRAJInfoType); i++)
-			printf("%x ", (unsigned char)MessageBuffer[i]);
-		printf("\n");
-		printf("DOTM message total length = %d bytes.\n", (int)HeaderData->MessageLengthU32);
-		printf("TrajectoryID = %d\n", TRAJInfoData->TrajectoryIDU16);
-		printf("TrajectoryName = %s\n", TRAJInfoData->TrajectoryNameC8);
-		printf("TrajectoryVersion = %d\n", TRAJInfoData->TrajectoryVersionU16);
-		printf("IpAddress = %d\n", TRAJInfoData->IpAddressU32);
-		printf("\n----MESSAGE----\n");
-	}
-
-	return MessageIndex;		//Total number of bytes = ISO_MESSAGE_HEADER_LENGTH
-}
-
-I32 UtilISOBuildTRAJMessage(C8 * MessageBuffer, C8 * DTMData, I32 RowCount, DOTMType * DOTMData, U8 debug) {
-	I32 MessageIndex = 0;
-	U32 Data;
-	C8 *src, *p;
-	U16 Crc = 0;
-
-	bzero(MessageBuffer, ISO_DTM_ROW_MESSAGE_LENGTH * RowCount);
-
-	I32 i = 0, j = 0, n = 0;
-
-	for (i = 0; i < RowCount; i++) {
-		//Time
-		Data = 0;
-		Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 3);
-		//if(debug) printf("%x-",Data);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 2);
-		//if(debug) printf("%x-",Data);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 1);
-		//if(debug) printf("%x-",Data);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 0);
-		//if(debug) printf("%x- ",Data);
-		DOTMData->RelativeTimeValueIdU16 = VALUE_ID_RELATIVE_TIME;
-		DOTMData->RelativeTimeContentLengthU16 = 4;
-		DOTMData->RelativeTimeU32 = SwapU32((U32) Data);
-
-		//x
-		Data = 0;
-		Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 7);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 6);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 5);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 4);
-		DOTMData->XPositionValueIdU16 = VALUE_ID_X_POSITION;
-		DOTMData->XPositionContentLengthU16 = 4;
-		DOTMData->XPositionI32 = SwapI32((I32) Data);
-
-		//y
-		Data = 0;
-		Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 11);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 10);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 9);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 8);
-		DOTMData->YPositionValueIdU16 = VALUE_ID_Y_POSITION;
-		DOTMData->YPositionContentLengthU16 = 4;
-		DOTMData->YPositionI32 = SwapI32((I32) Data);
-
-		//z
-		Data = 0;
-		Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 15);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 14);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 13);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 12);
-		DOTMData->ZPositionValueIdU16 = VALUE_ID_Z_POSITION;
-		DOTMData->ZPositionContentLengthU16 = 4;
-		DOTMData->ZPositionI32 = SwapI32((I32) Data);
-
-		//Heading
-		Data = 0;
-		Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 17);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 16);
-		//Data = UtilRadToDeg(Data);
-		//Data = 4500 - Data; //Turn heading back pi/2
-		//while(Data<0) Data+=360.0;
-		//while(Data>3600) Data-=360.0;
-		DOTMData->HeadingValueIdU16 = VALUE_ID_HEADING;
-		DOTMData->HeadingContentLengthU16 = 2;
-		DOTMData->HeadingU16 = SwapU16((U16) (Data));
-
-		//Longitudinal speed
-		Data = 0;
-		Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 19);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 18);
-		DOTMData->LongitudinalSpeedValueIdU16 = VALUE_ID_LONGITUDINAL_SPEED;
-		DOTMData->LongitudinalSpeedContentLengthU16 = 2;
-		DOTMData->LongitudinalSpeedI16 = SwapI16((I16) Data);
-
-		//Lateral speed
-		Data = 0;
-		Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 21);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 20);
-		DOTMData->LateralSpeedValueIdU16 = VALUE_ID_LATERAL_SPEED;
-		DOTMData->LateralSpeedContentLengthU16 = 2;
-		DOTMData->LateralSpeedI16 = SwapI16((I16) Data);
-
-		//Longitudinal acceleration
-		Data = 0;
-		Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 23);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 22);
-		DOTMData->LongitudinalAccValueIdU16 = VALUE_ID_LONGITUDINAL_ACCELERATION;
-		DOTMData->LongitudinalAccContentLengthU16 = 2;
-		DOTMData->LongitudinalAccI16 = SwapI16((I16) Data);
-
-		//Lateral acceleration
-		Data = 0;
-		Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 25);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 24);
-		DOTMData->LateralAccValueIdU16 = VALUE_ID_LATERAL_ACCELERATION;
-		DOTMData->LateralAccContentLengthU16 = 2;
-		DOTMData->LateralAccI16 = SwapI16((I16) Data);
-
-		//Curvature
-		Data = 0;
-		Data = *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 29);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 28);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 27);
-		Data = (Data << 8) | *(DTMData + SIM_TRAJ_BYTES_IN_ROW * i + 26);
-		DOTMData->CurvatureValueIdU16 = VALUE_ID_CURVATURE;
-		DOTMData->CurvatureContentLengthU16 = 4;
-		DOTMData->CurvatureI32 = SwapI32((I32) Data);
-
-		p = (C8 *) DOTMData;
-		for (j = 0; j < sizeof (DOTMType); j++, n++)
-			*(MessageBuffer + n) = *p++;
-		MessageIndex = n;
-
-		if (debug) {
-			LogPrint
-				("%d. Time=%d, X=%d, Y=%d, Z=%d, Heading=%d, LongitudinalSpeedI16=%d, LateralSpeedI16=%d, LongitudinalAccI16=%d, LateralAccI16=%d, CurvatureI32=%d",
-				 i, DOTMData->RelativeTimeU32, DOTMData->XPositionI32, DOTMData->YPositionI32,
-				 DOTMData->ZPositionI32, DOTMData->HeadingU16, DOTMData->LongitudinalSpeedI16,
-				 DOTMData->LateralSpeedI16, DOTMData->LongitudinalAccI16, DOTMData->LateralAccI16,
-				 DOTMData->CurvatureI32);
-		}
-	}
-
-
-	Crc = crc_16((const C8 *)MessageBuffer, sizeof (DOTMType));
-	Crc = 0;
-	*(MessageBuffer + MessageIndex++) = (U8) (Crc);
-	*(MessageBuffer + MessageIndex++) = (U8) (Crc >> 8);
-
-
-	if (debug == 2) {
-		// TODO: Replace this when bytes thingy has been implemented
-		int i = 0;
-
-		for (i = 0; i < MessageIndex; i++) {
-			if ((unsigned char)MessageBuffer[i] >= 0 && (unsigned char)MessageBuffer[i] <= 15)
-				printf("0");
-			printf("%x-", (unsigned char)MessageBuffer[i]);
-		}
-		printf("\n");
-	}
-
-	return MessageIndex;		//Total number of bytes
 }
 
 
@@ -3706,150 +3332,23 @@ I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug)
 }
 
 /*!
- * \brief UtilPopulateMonitorDataStruct Takes an array of raw MONR data and fills a MONRType struct with the content
- * \param rawMONR Array of raw MONR data
- * \param rawMONRsize Size of raw MONR data array
- * \param MONR Struct where MONR data should be placed
- * \param debug Boolean enabling debug printouts
+ * \brief UtilPopulateMonitorDataStruct Takes an array of raw monitor data and fills a monitor data struct with the content
+ * \param rawData Array of raw monitor data
+ * \param rawDataSize Size of raw monitor data array
+ * \param MONR Struct where monitor data should be placed
  * \return -1 on failure, 0 on success
  */
-I32 UtilPopulateMonitorDataStruct(C8 * rawMONR, size_t rawMONRsize, MonitorDataType * monitorData, U8 debug) {
-	U16 Crc = 0, U16Data = 0;
-	I16 I16Data = 0;
-	U32 U32Data = 0;
-	I32 I32Data = 0;
-	U64 U64Data = 0;
-	C8 *rdPtr = rawMONR, *monrStruct;	// Pointer to keep track of where in rawMONR we are currently reading
-	U16 contentLength = 0;
-	in_addr_t IPData = 0;
-	const size_t monrPacketSize = sizeof (monitorData->MONR) - sizeof (monitorData->MONR.header)
-		- sizeof (monitorData->MONR.footer.Crc) - sizeof (monitorData->MONR.monrStructValueID)
-		- sizeof (monitorData->MONR.monrStructContentLength);
+int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize,
+								  MonitorDataType * monitorData) {
 
-	if (rawMONRsize < sizeof (MONRType)) {
-		LogMessage(LOG_LEVEL_ERROR, "Raw MONR array too small to hold all necessary MONR data, %d < %d.",
-				   rawMONRsize, sizeof (MONRType));
+	if (rawDataSize != sizeof (MonitorDataType)) {
+		errno = EMSGSIZE;
+		LogMessage(LOG_LEVEL_ERROR, "Raw monitor data array wrong size, %d != %d",
+				   rawDataSize, sizeof (MonitorDataType));
 		return -1;
 	}
 
-	// ISO message header
-	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	monitorData->MONR.header.SyncWordU16 = U16Data;
-	rdPtr += sizeof (U16Data);
-	U16Data = 0;
-
-	monitorData->MONR.header.TransmitterIdU8 = *(rdPtr++);
-	monitorData->MONR.header.MessageCounterU8 = *(rdPtr++);
-	monitorData->MONR.header.AckReqProtVerU8 = *(rdPtr++);
-
-	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	monitorData->MONR.header.MessageIdU16 = U16Data;
-	rdPtr += sizeof (U16Data);
-	U16Data = 0;
-
-	memcpy(&U32Data, rdPtr, sizeof (U32Data));
-	monitorData->MONR.header.MessageLengthU32 = U32Data;
-	rdPtr += sizeof (U32Data);
-	U32Data = 0;
-
-	// ISO content header?
-	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	if (U16Data == VALUE_ID_MONR_STRUCT) {
-		rdPtr += sizeof (U16Data);
-
-		memcpy(&contentLength, rdPtr, sizeof (contentLength));
-		rdPtr += sizeof (contentLength);
-
-
-		if (contentLength < monrPacketSize) {
-			LogMessage(LOG_LEVEL_ERROR,
-					   "Content length %u too small to hold necessary MONR data (expected %u)", contentLength,
-					   monrPacketSize);
-			return -1;
-		}
-		else if (contentLength > monrPacketSize) {
-			LogMessage(LOG_LEVEL_ERROR,
-					   "Content length %u too large to follow MONR data specification (expected %u)",
-					   contentLength, monrPacketSize);
-			return -1;
-		}
-
-	}
-	else if (debug) {
-		LogPrint("Received MONR message without content header: corrupt data may result");
-	}
-
-	U16Data = 0;
-
-	memcpy(&U32Data, rdPtr, sizeof (U32Data));
-	monitorData->MONR.gpsQmsOfWeek = U32Data;
-	rdPtr += sizeof (U32Data);
-	U32Data = 0;
-
-	memcpy(&I32Data, rdPtr, sizeof (I32Data));
-	monitorData->MONR.xPosition = I32Data;
-	rdPtr += sizeof (I32Data);
-	I32Data = 0;
-
-	memcpy(&I32Data, rdPtr, sizeof (I32Data));
-	monitorData->MONR.yPosition = I32Data;
-	rdPtr += sizeof (I32Data);
-	I32Data = 0;
-
-	memcpy(&I32Data, rdPtr, sizeof (I32Data));
-	monitorData->MONR.zPosition = I32Data;
-	rdPtr += sizeof (I32Data);
-	I32Data = 0;
-
-	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	monitorData->MONR.heading = U16Data;
-	rdPtr += sizeof (U16Data);
-	U16Data = 0;
-
-	memcpy(&I16Data, rdPtr, sizeof (I16Data));
-	monitorData->MONR.longitudinalSpeed = I16Data;
-	rdPtr += sizeof (I16Data);
-	I16Data = 0;
-
-	memcpy(&I16Data, rdPtr, sizeof (I16Data));
-	monitorData->MONR.lateralSpeed = I16Data;
-	rdPtr += sizeof (I16Data);
-	I16Data = 0;
-
-	memcpy(&I16Data, rdPtr, sizeof (I16Data));
-	monitorData->MONR.longitudinalAcc = I16Data;
-	rdPtr += sizeof (I16Data);
-	I16Data = 0;
-
-	memcpy(&I16Data, rdPtr, sizeof (I16Data));
-	monitorData->MONR.lateralAcc = I16Data;
-	rdPtr += sizeof (I16Data);
-	I16Data = 0;
-
-	monitorData->MONR.driveDirection = *(rdPtr++);
-	monitorData->MONR.state = *(rdPtr++);
-	monitorData->MONR.readyToArm = *(rdPtr++);
-	monitorData->MONR.errorStatus = *(rdPtr++);
-
-	memcpy(&U16Data, rdPtr, sizeof (U16Data));
-	monitorData->MONR.footer.Crc = U16Data;
-	rdPtr += sizeof (U16Data);
-	U16Data = 0;
-
-	memcpy(&IPData, rdPtr, sizeof (IPData));
-	monitorData->ClientIP = IPData;
-	rdPtr += sizeof (IPData);
-	IPData = 0;
-
-	if (debug == 1) {
-		LogPrint("MONR:");
-		LogPrint("SyncWord = %d", monitorData->MONR.header.SyncWordU16);
-		LogPrint("TransmitterId = %d", monitorData->MONR.header.TransmitterIdU8);
-		LogPrint("PackageCounter = %d", monitorData->MONR.header.MessageCounterU8);
-		LogPrint("AckReq = %d", monitorData->MONR.header.AckReqProtVerU8);
-		LogPrint("MessageLength = %d", monitorData->MONR.header.MessageLengthU32);
-		LogPrint("GPSQMSOW = %u", monitorData->MONR.gpsQmsOfWeek);
-	}
+	memcpy(monitorData, rawData, rawDataSize);
 
 	return 0;
 }
