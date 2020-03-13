@@ -187,7 +187,8 @@ I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 De
 I32 SystemControlWriteServerParameter(C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
-I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue, U8 Debug);
+I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
+							U8 Debug);
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug);
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
@@ -795,7 +796,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlUploadFile(SystemControlArgument[0], SystemControlArgument[1],
-										SystemControlArgument[2], SystemControlArgument[3], ControlResponseBuffer, 0);
+										SystemControlArgument[2], SystemControlArgument[3],
+										ControlResponseBuffer, 0);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 				LogMessage(LOG_LEVEL_DEBUG, "UploadFile filelength: %s", SystemControlArgument[1]);
@@ -2159,13 +2161,15 @@ I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 }
 
 
-I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * FileType, C8 *ReturnValue, U8 Debug) {
+I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
+							U8 Debug) {
 
-    FILE *fd;
-    C8 CompletePath[MAX_FILE_PATH];
-    memset(CompletePath, 0, sizeof (CompletePath));
-    //GetCurrentDir(CompletePath, MAX_FILE_PATH);
-    //strcat(CompletePath, Filename);
+	FILE *fd;
+	C8 CompletePath[MAX_FILE_PATH];
+
+	memset(CompletePath, 0, sizeof (CompletePath));
+	//GetCurrentDir(CompletePath, MAX_FILE_PATH);
+	//strcat(CompletePath, Filename);
 	if (Filename == NULL || FileSize == NULL || PacketSize == NULL || FileType == NULL || ReturnValue == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Invalid function parameter passed to upload file handler function");
 		return -1;
@@ -2186,68 +2190,64 @@ I32 SystemControlUploadFile(C8 *Filename, C8 *FileSize, C8 *PacketSize, C8 * Fil
 		break;
 	default:
 		LogMessage(LOG_LEVEL_ERROR, "Received invalid file type upload request");
-        //Create temporary file for handling data anyway
-        UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-        strcat(CompletePath, "/file.tmp");
-        fd = fopen(CompletePath, "r");
-        if(fd != NULL)
-        {
-            fclose(fd);
-            remove(CompletePath); //Remove file if exist
-        }
-        fd = fopen(CompletePath, "w+"); //Create the temporary file
+		//Create temporary file for handling data anyway
+		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+		strcat(CompletePath, "/file.tmp");
+		fd = fopen(CompletePath, "r");
+		if (fd != NULL) {
+			fclose(fd);
+			remove(CompletePath);	//Remove file if exist
+		}
+		fd = fopen(CompletePath, "w+");	//Create the temporary file
 
-        *ReturnValue = PATH_INVALID_MISSING; 
+		*ReturnValue = PATH_INVALID_MISSING;
 		return -1;
 	}
 	strcat(CompletePath, Filename);
 
-    if (Debug) {
-        LogPrint("Filename: %s\n", Filename);
-        LogPrint("FileSize: %s\n", FileSize);
-        LogPrint("PacketSize: %s\n", PacketSize);
-        LogPrint("FileType: %s\n", FileType);
-        LogPrint("CompletePath: %s\n", CompletePath);
-    }
-   
-    if (atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE) { //Check packet size
-        *ReturnValue = SERVER_PREPARED_BIG_PACKET_SIZE;
-        return 0;
-    }
+	if (Debug) {
+		LogPrint("Filename: %s\n", Filename);
+		LogPrint("FileSize: %s\n", FileSize);
+		LogPrint("PacketSize: %s\n", PacketSize);
+		LogPrint("FileType: %s\n", FileType);
+		LogPrint("CompletePath: %s\n", CompletePath);
+	}
 
-    fd = fopen(CompletePath, "r");
-    if (fd != NULL) {
-        fclose(fd);
-        remove(CompletePath); //Remove file if exist
-        LogMessage(LOG_LEVEL_INFO, "Deleted file <%s>", CompletePath);
-    }
+	if (atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE) {	//Check packet size
+		*ReturnValue = SERVER_PREPARED_BIG_PACKET_SIZE;
+		return 0;
+	}
 
-    fd = fopen(CompletePath, "w+"); //Create the file
-    if(fd != NULL)
-    {
-        *ReturnValue = SERVER_PREPARED;//Server prepared
-        fclose(fd);
-        return 0;
-    }
-    else
-    {
-        //Failed to open path create temporary file
-        UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-        strcat(CompletePath, "/file.tmp");
-        fd = fopen(CompletePath, "r");
-        if(fd != NULL)
-        {
-            fclose(fd);
-            remove(CompletePath); //Remove file if exist
-        }
-        fd = fopen(CompletePath, "w+"); //Create the temporary file
+	fd = fopen(CompletePath, "r");
+	if (fd != NULL) {
+		fclose(fd);
+		remove(CompletePath);	//Remove file if exist
+		LogMessage(LOG_LEVEL_INFO, "Deleted file <%s>", CompletePath);
+	}
 
-        *ReturnValue = PATH_INVALID_MISSING; 
+	fd = fopen(CompletePath, "w+");	//Create the file
+	if (fd != NULL) {
+		*ReturnValue = SERVER_PREPARED;	//Server prepared
+		fclose(fd);
+		return 0;
+	}
+	else {
+		//Failed to open path create temporary file
+		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+		strcat(CompletePath, "/file.tmp");
+		fd = fopen(CompletePath, "r");
+		if (fd != NULL) {
+			fclose(fd);
+			remove(CompletePath);	//Remove file if exist
+		}
+		fd = fopen(CompletePath, "w+");	//Create the temporary file
 
-        return 0;
-    } 
+		*ReturnValue = PATH_INVALID_MISSING;
 
-    return -1;
+		return 0;
+	}
+
+	return -1;
 }
 
 
