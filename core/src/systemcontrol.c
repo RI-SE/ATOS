@@ -134,7 +134,7 @@ typedef enum {
 	ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
 	DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1, GetRootDirectoryContent_0, GetDirectoryContent_1,
 	ClearTrajectories_0, DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0,
-		Exit_0,
+	Exit_0,
 	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 
