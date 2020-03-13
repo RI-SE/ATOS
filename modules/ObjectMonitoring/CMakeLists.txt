@@ -4,62 +4,50 @@ SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 SET(CMAKE_C_STANDARD 11)
 SET(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(ObjectMonitoring)
-# This module is an example of how to set up a new module external to the Maestro executable
+project(ObjectMonitoring LANGUAGES C CXX)
 
+# Define target names
+set(OBJECT_MONITORING_TARGET ${PROJECT_NAME})
 
-include_directories(inc)
-include_directories(../../util/C/logging)
-include_directories(../../util/C/time)
-include_directories(../../util/C/MQBus)
-include_directories(../../server/inc)
+set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(ISO_22133_LIBRARY MaestroISO22133)
+set(POSITIONING_LIBRARY MaestroPositioning)
+set(TIME_LIBRARY MaestroTime)
+set(LOGGING_LIBRARY MaestroLogging)
+set(MESSAGE_BUS_LIBRARY MaestroMQ)
+
 include(GNUInstallDirs)
 
-find_package(Threads)
+find_package(Threads REQUIRED)
 
-# Create library
-add_library(MaestroLogging
-  ../../util/C/logging/logging.h
-  ../../util/C/logging/logging.c
+# Create project main executable target
+add_executable(${OBJECT_MONITORING_TARGET}
+	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/connectionhandler.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/protocoldata.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/ISO22133ProtocolData.cpp
 )
 
-add_library(MaestroTime
-  ../../util/C/time/maestroTime.h
-  ../../util/C/time/maestroTime.c
+# Link project executable to util libraries
+target_link_libraries(${OBJECT_MONITORING_TARGET} LINK_PUBLIC
+	${TIME_LIBRARY}
+	${LOGGING_LIBRARY}
+	${COREUTILS_LIBRARY}
+	${CMAKE_THREAD_LIBS_INIT}
 )
 
-add_library(MQBus
-  ../../util/C/MQBus/mqbus.h
-  ../../util/C/MQBus/mqbus.c
+target_include_directories(${OBJECT_MONITORING_TARGET} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
-add_library(util
-  ../../server/inc/util.h
-  ../../server/src/util.c
+# Installation rules
+install(CODE "MESSAGE(STATUS \"Installing target ${OBJECT_MONITORING_TARGET}\")")
+install(TARGETS ${OBJECT_MONITORING_TARGET}
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-add_executable(ObjectMonitoring
-	src/main.cpp
-)
-
-add_library(ConnectionHandler
-	src/connectionhandler.cpp
-	inc/connectionhandler.h
-)
-
-add_library(ProtocolData
-	src/protocoldata.cpp
-	inc/protocoldata.h
-	src/ISO22133ProtocolData.cpp
-	inc/ISO22133ProtocolData.h
-)
-
-install(TARGETS ObjectMonitoring DESTINATION bin)
-
-target_link_libraries(ObjectMonitoring MaestroTime MaestroLogging util ConnectionHandler)
-target_link_libraries(ConnectionHandler ProtocolData ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(util MQBus MaestroLogging MaestroTime)
-target_link_libraries(MQBus rt m)
-
-
-
+# Ensure linkage is reloaded after install
+install(CODE "execute_process(COMMAND ldconfig)")

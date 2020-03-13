@@ -71,7 +71,7 @@ void pruneTerminatedConnectionHandlers(vector<ConnectionHandler*> &handlers) {
 	handlers.erase( std::remove(handlers.begin(), handlers.end(), nullptr), handlers.end() );
 	// Remove any connection handlers which have finished their tasks
 	handlers.erase( std::remove_if(handlers.begin(), handlers.end(),
-								   [](const ConnectionHandler* handler) { handler->isTerminated(); }
+								   [](const ConnectionHandler* handler) { return handler->isTerminated(); }
 									), handlers.end() );
 }
 
