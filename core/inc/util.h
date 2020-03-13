@@ -155,7 +155,7 @@ extern "C"{
 #define FOLDER_EXISTED 0x02
 #define SUCCEDED_CREATE_FOLDER 0x03
 #define FAILED_CREATE_FOLDER 0x04
-#define SUCCEDED_DELETE 0x01
+#define SUCCEEDED_DELETE 0x01
 #define FAILED_DELETE 0x02
 #define FILE_TO_MUCH_DATA 0x06
 
@@ -585,7 +585,8 @@ void UtilGetConfDirectoryPath(char* path, size_t pathLen);
 void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
 void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 
-int UtilDeleteTrajectoryFiles();
+int UtilDeleteTrajectoryFiles(void);
+int UtilDeleteGeofenceFiles(void);
 
 // File parsing functions
 int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
