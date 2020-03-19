@@ -130,11 +130,11 @@ typedef struct {
 
 typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
-		InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
-		SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
-		GetRootDirectoryContent_0, GetDirectoryContent_1, ClearTrajectories_0, ClearGeofences_0,
-		CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
-		start_ext_trigg_1, nocommand
+	InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
+	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
+	GetRootDirectoryContent_0, GetDirectoryContent_1, ClearTrajectories_0, ClearGeofences_0,
+	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
+	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 
 static const char *SystemControlCommandsArr[] = {
