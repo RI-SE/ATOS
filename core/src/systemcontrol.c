@@ -132,7 +132,7 @@ typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
 	InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
 	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
-	GetRootDirectoryContent_0, GetDirectoryContent_1, ClearTrajectories_0, ClearGeofences_0,
+	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1, ClearTrajectories_0, ClearGeofences_0,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
 	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
@@ -142,7 +142,7 @@ static const char *SystemControlCommandsArr[] = {
 	"AbortScenario_0", "InitializeScenario_0",
 	"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
-	"GetRootDirectoryContent_0", "GetDirectoryContent_1",
+	"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1",
 	"ClearTrajectories_0", "ClearGeofences_0", "CreateDirectory_1",
 	"GetTestOrigin_0", "replay_1",
 	"control_0",
@@ -193,8 +193,10 @@ I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * 
 							U8 Debug);
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug);
-C8 SystemControlClearTrajectories(void);
-C8 SystemControlClearGeofences(void);
+static C8 SystemControlDeleteTrajectory(const C8 * trajectoryName, const size_t nameLen);
+static C8 SystemControlDeleteGeofence(const C8 * geofenceName, const size_t nameLen);
+static C8 SystemControlClearTrajectories(void);
+static C8 SystemControlClearGeofences(void);
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug);
 I32 SystemControlDestroyFileContentInfo(C8 * path);
@@ -741,6 +743,24 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						   "Wrong parameter count in GetDirectoryContent(path)! got:%d, expected:%d",
 						   CurrentInputArgCount, CommandArgCount);
 				SystemControlCommand = Idle_0;
+			}
+			break;
+		case DeleteTrajectory_1:
+			if (CurrentInputArgCount == CommandArgCount) {
+				SystemControlCommand = Idle_0;
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				*ControlResponseBuffer = SystemControlDeleteTrajectory(SystemControlArgument[0], sizeof(SystemControlArgument[0]));
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteTrajectory:",
+												 ControlResponseBuffer, 1, &ClientSocket, 0);
+			}
+			break;
+		case DeleteGeofence_1:
+			if (CurrentInputArgCount == CommandArgCount) {
+				SystemControlCommand = Idle_0;
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				*ControlResponseBuffer = SystemControlDeleteGeofence(SystemControlArgument[0], sizeof(SystemControlArgument[0]));
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteGeofence:",
+												 ControlResponseBuffer, 1, &ClientSocket, 0);
 			}
 			break;
 		case ClearTrajectories_0:
@@ -2061,6 +2081,26 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 
 
 	return 0;
+}
+
+/*!
+ * \brief SystemControlDeleteTrajectory Deletes the chosen trajectory
+ * \param trajectoryName Name of the trajectory file
+ * \param nameLen Length of the name string
+ * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE
+ */
+C8 SystemControlDeleteTrajectory(const C8 * trajectoryName, const size_t nameLen) {
+	return UtilDeleteTrajectoryFile(trajectoryName, nameLen) ? FAILED_DELETE : SUCCEEDED_DELETE;
+}
+
+/*!
+ * \brief SystemControlDeleteGeofence Deletes the chosen geofence
+ * \param trajectoryName Name of the geofence file
+ * \param nameLen Length of the name string
+ * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE
+ */
+C8 SystemControlDeleteGeofence(const C8 * geofenceName, const size_t nameLen) {
+	return UtilDeleteGeofenceFile(geofenceName, nameLen) ? FAILED_DELETE : SUCCEEDED_DELETE;
 }
 
 /*!
