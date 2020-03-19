@@ -189,8 +189,7 @@ I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 De
 I32 SystemControlWriteServerParameter(C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
-I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
-							U8 Debug);
+I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue, C8 * CompleteFilePath, U8 Debug);
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug);
 C8 SystemControlClearTrajectories(void);
@@ -300,6 +299,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U32 RVSSConfigU32;
 	U32 RVSSMessageLengthU32;
 	U16 PCDMessageCodeU16;
+	C8 RxFilePath[MAX_FILE_PATH];
+
 
 	LogInit(MODULE_NAME, logLevel);
 	LogMessage(LOG_LEVEL_INFO, "System control task running with PID: %i", getpid());
@@ -803,29 +804,30 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				bzero(RxFilePath, MAX_FILE_PATH);
 				SystemControlUploadFile(SystemControlArgument[0], SystemControlArgument[1],
 										SystemControlArgument[2], SystemControlArgument[3],
-										ControlResponseBuffer, 0);
+										ControlResponseBuffer, RxFilePath, 0);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 				LogMessage(LOG_LEVEL_DEBUG, "UploadFile filelength: %s", SystemControlArgument[1]);
 				if (ControlResponseBuffer[0] == SERVER_PREPARED_BIG_PACKET_SIZE)	//Server is ready to receive data
 				{
 					LogMessage(LOG_LEVEL_INFO, "Receiving file: %s", SystemControlArgument[0]);
-					SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0],
+					SystemControlReceiveRxData(&ClientSocket, RxFilePath,
 											   SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE,
 											   ControlResponseBuffer, 0);
 				}
 				else if (ControlResponseBuffer[0] == PATH_INVALID_MISSING) {
 					LogMessage(LOG_LEVEL_INFO, "Failed receiving file: %s", SystemControlArgument[0]);
-					SystemControlReceiveRxData(&ClientSocket, "file.tmp", SystemControlArgument[1],
+					SystemControlReceiveRxData(&ClientSocket, RxFilePath, SystemControlArgument[1],
 											   STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
-					SystemControlDeleteFileDirectory("file.tmp", ControlResponseBuffer, 0);
+					SystemControlDeleteFileDirectory(RxFilePath, ControlResponseBuffer, 0);
 					ControlResponseBuffer[0] = PATH_INVALID_MISSING;
 				}
 				else {
 					LogMessage(LOG_LEVEL_INFO, "Receiving file: %s", SystemControlArgument[0]);
-					SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0],
+					SystemControlReceiveRxData(&ClientSocket, RxFilePath,
 											   SystemControlArgument[1], SystemControlArgument[2],
 											   ControlResponseBuffer, 0);
 				}
@@ -2191,7 +2193,7 @@ I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 
 
 I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
-							U8 Debug) {
+							C8 * CompleteFilePath, U8 Debug) {
 
 	FILE *fd;
 	C8 CompletePath[MAX_FILE_PATH];
@@ -2233,13 +2235,15 @@ I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * 
 		return -1;
 	}
 	strcat(CompletePath, Filename);
+	strcpy(CompleteFilePath, CompletePath);
 
 	if (Debug) {
-		LogPrint("Filename: %s\n", Filename);
-		LogPrint("FileSize: %s\n", FileSize);
-		LogPrint("PacketSize: %s\n", PacketSize);
-		LogPrint("FileType: %s\n", FileType);
-		LogPrint("CompletePath: %s\n", CompletePath);
+		LogPrint("Filename: %s", Filename);
+		LogPrint("FileSize: %s", FileSize);
+		LogPrint("PacketSize: %s", PacketSize);
+		LogPrint("FileType: %s", FileType);
+		LogPrint("CompletePath: %s", CompletePath);
+		LogPrint("CompleteFilePath: %s", CompleteFilePath);
 	}
 
 	if (atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE) {	//Check packet size
@@ -2251,7 +2255,7 @@ I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * 
 	if (fd != NULL) {
 		fclose(fd);
 		remove(CompletePath);	//Remove file if exist
-		LogMessage(LOG_LEVEL_INFO, "Deleted file <%s>", CompletePath);
+		LogMessage(LOG_LEVEL_INFO, "Deleted existing file <%s>", CompletePath);
 	}
 
 	fd = fopen(CompletePath, "w+");	//Create the file
@@ -2287,7 +2291,7 @@ I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * Pack
 	C8 CompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
-	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+	//UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
 	U32 FileSizeU32 = atoi(FileSize);
 	U16 PacketSizeU16 = atoi(PacketSize);
@@ -2299,11 +2303,11 @@ I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * Pack
 
 
 	if (Debug) {
-		LogMessage(LOG_LEVEL_DEBUG, "Receive Rx data:");
-		LogMessage(LOG_LEVEL_DEBUG, "%s", Path);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", FileSize);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", PacketSize);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", CompletePath);
+		LogPrint("Receive Rx data:");
+		LogPrint("Path: %s", Path);
+		LogPrint("FileSize: %s", FileSize);
+		LogPrint("PacketSize: %s", PacketSize);
+		LogPrint("CompletePath: %s", CompletePath);
 	}
 
 
@@ -2362,7 +2366,7 @@ I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * Pack
 			LogMessage(LOG_LEVEL_INFO, "CORRUPT FILE, REMOVING...");
 		}
 
-		LogMessage(LOG_LEVEL_DEBUG, "Rec count = %d, Req count = %d", TotalRxCount, FileSizeU32);
+		LogMessage(LOG_LEVEL_INFO, "Rec count = %d, Req count = %d", TotalRxCount, FileSizeU32);
 
 	}
 
