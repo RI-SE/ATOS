@@ -199,7 +199,13 @@ int deleteFile(char *path, size_t pathLen) {
 	FILE* fd = fopen(path, "a");
 
 	if (fd == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Path: %s could not be opened", path);
+		LogMessage(LOG_LEVEL_ERROR, "Path <%s> could not be opened", path);
+		return -1;
+	}
+	fclose(fd);
+
+	if (remove(path) != 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Path <%s> could not be deleted", path);
 		return -1;
 	}
 	return 0;
