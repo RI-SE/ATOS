@@ -130,11 +130,11 @@ typedef struct {
 
 typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
-		InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
-		SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
-		GetRootDirectoryContent_0, GetDirectoryContent_1, ClearTrajectories_0, ClearGeofences_0,
-		DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
-		start_ext_trigg_1, nocommand
+	InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
+	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
+	GetRootDirectoryContent_0, GetDirectoryContent_1, ClearTrajectories_0, ClearGeofences_0,
+	DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
+	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 
 static const char *SystemControlCommandsArr[] = {
@@ -189,7 +189,8 @@ I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 De
 I32 SystemControlWriteServerParameter(C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
-I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue, C8 * CompleteFilePath, U8 Debug);
+I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
+							C8 * CompleteFilePath, U8 Debug);
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug);
 C8 SystemControlClearTrajectories(void);
