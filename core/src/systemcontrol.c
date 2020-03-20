@@ -753,6 +753,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteTrajectory:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Wrong parameter count in DeleteTrajectory(name)! got:%d, expected:%d",
+						   CurrentInputArgCount, CommandArgCount);
+				SystemControlCommand = Idle_0;
+			}
 			break;
 		case DeleteGeofence_1:
 			if (CurrentInputArgCount == CommandArgCount) {
@@ -761,6 +767,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				*ControlResponseBuffer = SystemControlDeleteGeofence(SystemControlArgument[0], sizeof(SystemControlArgument[0]));
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteGeofence:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
+			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Wrong parameter count in DeleteGeofence(name)! got:%d, expected:%d",
+						   CurrentInputArgCount, CommandArgCount);
+				SystemControlCommand = Idle_0;
 			}
 			break;
 		case ClearTrajectories_0:
@@ -771,6 +783,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearTrajectories:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Wrong parameter count in ClearTrajectories()! got:%d, expected:%d",
+						   CurrentInputArgCount, CommandArgCount);
+				SystemControlCommand = Idle_0;
+			}
 			break;
 		case ClearGeofences_0:
 			if (CurrentInputArgCount == CommandArgCount) {
@@ -779,6 +797,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				*ControlResponseBuffer = SystemControlClearGeofences();
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearGeofences:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
+			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Wrong parameter count in ClearTrajectories()! got:%d, expected:%d",
+						   CurrentInputArgCount, CommandArgCount);
+				SystemControlCommand = Idle_0;
 			}
 			break;
 		case DownloadFile_1:
