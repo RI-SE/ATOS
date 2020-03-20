@@ -800,7 +800,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR,
-						   "Wrong parameter count in ClearTrajectories()! got:%d, expected:%d",
+						   "Wrong parameter count in ClearGeofences()! got:%d, expected:%d",
 						   CurrentInputArgCount, CommandArgCount);
 				SystemControlCommand = Idle_0;
 			}
