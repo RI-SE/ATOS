@@ -196,7 +196,7 @@ int deleteFile(char *path, size_t pathLen) {
 		return -1;
 	}
 
-	FILE* fd = fopen(path, "a");
+	FILE *fd = fopen(path, "a");
 
 	if (fd == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Path <%s> could not be opened", path);
@@ -2421,13 +2421,14 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
  * \brief UtilDeleteTrajectoryFile deletes the specified trajectory and deletes it
  * \return returns 0 if the trajectory is now deleted. Non-zero values otherwise.
  */
-int UtilDeleteTrajectoryFile(const char* name, const size_t nameLen) {
+int UtilDeleteTrajectoryFile(const char *name, const size_t nameLen) {
 	char filePath[MAX_FILE_PATH] = { '\0' };
 	UtilGetTrajDirectoryPath(filePath, sizeof (filePath));
 
 	if (strstr(name, "..") != NULL || strstr(name, "/") != NULL) {
 		errno = EPERM;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on trajectory file and navigate out of directory");
+		LogMessage(LOG_LEVEL_ERROR,
+				   "Attempt to call delete on trajectory file and navigate out of directory");
 		return -1;
 	}
 	if (name == NULL) {
@@ -2452,7 +2453,7 @@ int UtilDeleteTrajectoryFile(const char* name, const size_t nameLen) {
  * \brief UtilDeleteGeofenceFile deletes the specified geofence and deletes it
  * \return returns 0 if the geofence is now deleted. Non-zero values otherwise.
  */
-int UtilDeleteGeofenceFile(const char* name, const size_t nameLen) {
+int UtilDeleteGeofenceFile(const char *name, const size_t nameLen) {
 	char filePath[MAX_FILE_PATH] = { '\0' };
 	UtilGetGeofenceDirectoryPath(filePath, sizeof (filePath));
 

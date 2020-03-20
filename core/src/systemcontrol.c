@@ -132,7 +132,8 @@ typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
 	InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
 	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
-	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1, ClearTrajectories_0, ClearGeofences_0,
+	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
+		ClearTrajectories_0, ClearGeofences_0,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
 	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
@@ -189,7 +190,8 @@ I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 De
 I32 SystemControlWriteServerParameter(C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
-I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue, C8 * CompleteFilePath, U8 Debug);
+I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
+							C8 * CompleteFilePath, U8 Debug);
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug);
 static C8 SystemControlDeleteTrajectory(const C8 * trajectoryName, const size_t nameLen);
@@ -750,7 +752,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
 				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-				*ControlResponseBuffer = SystemControlDeleteTrajectory(SystemControlArgument[0], sizeof(SystemControlArgument[0]));
+				*ControlResponseBuffer =
+					SystemControlDeleteTrajectory(SystemControlArgument[0],
+												  sizeof (SystemControlArgument[0]));
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteTrajectory:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 			}
@@ -765,7 +769,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
 				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-				*ControlResponseBuffer = SystemControlDeleteGeofence(SystemControlArgument[0], sizeof(SystemControlArgument[0]));
+				*ControlResponseBuffer =
+					SystemControlDeleteGeofence(SystemControlArgument[0], sizeof (SystemControlArgument[0]));
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteGeofence:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 			}
