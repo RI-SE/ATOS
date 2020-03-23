@@ -86,7 +86,7 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	C8 TextBufferC8[TIME_CONTROL_HOSTNAME_BUFFER_SIZE];
 	C8 ServerIPC8[TIME_CONTROL_HOSTNAME_BUFFER_SIZE];
-	U16 ServerPortU16;
+    U16 ServerPortU16 = DEFAULT_TIME_SERVER_PORT;
 	I32 SocketfdI32 = -1;
 	struct sockaddr_in time_addr;
 	const struct timespec mqEmptyPollPeriod = { TC_SLEEP_TIME_EMPTY_MQ_S, TC_SLEEP_TIME_EMPTY_MQ_NS };

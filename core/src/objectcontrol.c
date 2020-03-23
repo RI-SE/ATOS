@@ -185,13 +185,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	flt SpaceArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
 	flt TimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
 	SpaceTime SpaceTimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
-	C8 OriginLatitude[SMALL_BUFFER_SIZE_0], OriginLongitude[SMALL_BUFFER_SIZE_0],
+    C8 OriginLatitude[SMALL_BUFFER_SIZE_0], OriginLongitude[SMALL_BUFFER_SIZE_0],
 		OriginAltitude[SMALL_BUFFER_SIZE_0], OriginHeading[SMALL_BUFFER_SIZE_0];
 	C8 TextBuffer[SMALL_BUFFER_SIZE_0];
-    dbl OriginLatitudeDbl = 0;
-    dbl OriginLongitudeDbl = 0;
-    dbl OriginAltitudeDbl = 0;
-    dbl OriginHeadingDbl = 0;
+    dbl OriginLatitudeDbl = DEFAULT_ORIGO_LAT;
+    dbl OriginLongitudeDbl = DEFAULT_ORIGO_LOG;
+    dbl OriginAltitudeDbl = DEFAULT_ORIGO_ALT;
+    dbl OriginHeadingDbl;
 	C8 pcSendBuffer[MBUS_MAX_DATALEN];
 	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
 	MonitorDataType monitorData;
@@ -208,12 +208,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	AdaptiveSyncPoint ASP[MAX_ADAPTIVE_SYNC_POINTS];
 	I32 SyncPointCount = 0;
 	I32 SearchStartIndex = 0;
-	dbl ASPMaxTimeDiffDbl = 0;
-	dbl ASPMaxTrajDiffDbl = 0;
-	dbl ASPFilterLevelDbl = 0;
-	dbl ASPMaxDeltaTimeDbl = 0;
+    dbl ASPMaxTimeDiffDbl = DEFAULT_ASP_MAX_TIME_DIFF;
+    dbl ASPMaxTrajDiffDbl = DEFAULT_ASP_MAX_TRAJ_DIFF;
+    dbl ASPFilterLevelDbl = DEFAULT_ASP_FILTER_LEVEL;
+    dbl ASPMaxDeltaTimeDbl = DEFAULT_ASP_MAX_DELTA_TIME;
 	I32 ASPDebugRate = 1;
-	I32 ASPStepBackCount = 0;
+    I32 ASPStepBackCount = 0;
 	char confDirectoryPath[MAX_FILE_PATH];
 
 	ControlCenterStatusType objectControlServerStatus = CONTROL_CENTER_STATUS_INIT;
