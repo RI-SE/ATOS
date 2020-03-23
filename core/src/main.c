@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
 		util_error("Unable to initialize shared memory space");
 	}
 	else {
-		LogMessage(LOG_LEVEL_INFO, "Data dictionary succesfully initiated");
+		LogMessage(LOG_LEVEL_INFO, "Data dictionary succesfully initialized");
 	}
 	LogMessage(LOG_LEVEL_INFO, "About to enter mq init");
 
