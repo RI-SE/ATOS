@@ -191,7 +191,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
     dbl OriginLatitudeDbl = DEFAULT_ORIGO_LAT;
     dbl OriginLongitudeDbl = DEFAULT_ORIGO_LOG;
     dbl OriginAltitudeDbl = DEFAULT_ORIGO_ALT;
-    dbl OriginHeadingDbl;
+    dbl OriginHeadingDbl = DEFAULT_ORIGO_HEADING;
 	C8 pcSendBuffer[MBUS_MAX_DATALEN];
 	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
 	MonitorDataType monitorData;
