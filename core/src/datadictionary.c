@@ -51,6 +51,8 @@ static pthread_mutex_t numberOfObjectsMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define NUMBER_OF_OBJECTS_FILENAME "/NUMBER_OF_OBJECTS.mem"
 #define MONR_DATA_FILENAME "/MONR.mem"
+
+static int fdObjectCount, fdObjectMONRData;
 static unsigned int* numberOfObjectsMemory = NULL;
 static MonitorDataType* MONRMemory = NULL;
 
@@ -1679,35 +1681,33 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
  */
 ReadWriteAccess_t DataDictionaryInitMONR() {
 
-	int fdCount, fdObjs;
-
-	fdCount = shm_open(NUMBER_OF_OBJECTS_FILENAME, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-	if (fdObjs == -1) {
+	fdObjectCount = shm_open(NUMBER_OF_OBJECTS_FILENAME, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	if (fdObjectMONRData == -1) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared memory");
 		return UNDEFINED;
 	}
-	fdObjs = shm_open(MONR_DATA_FILENAME, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-	if (fdObjs == -1) {
+	fdObjectMONRData = shm_open(MONR_DATA_FILENAME, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	if (fdObjectMONRData == -1) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared memory");
 		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
 		return UNDEFINED;
 	}
 
-	if (ftruncate(fdCount, sizeof (unsigned int)) == -1) {
+	if (ftruncate(fdObjectCount, sizeof (unsigned int)) == -1) {
 		LogMessage(LOG_LEVEL_ERROR, "File truncation error");
 		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
 		shm_unlink(MONR_DATA_FILENAME);
 		return UNDEFINED;
 	}
 
-	if (ftruncate(fdObjs, sizeof (unsigned int)) == -1) {
+	if (ftruncate(fdObjectMONRData, sizeof (unsigned int)) == -1) {
 		LogMessage(LOG_LEVEL_ERROR, "File truncation error");
 		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
 		shm_unlink(MONR_DATA_FILENAME);
 		return UNDEFINED;
 	}
 
-	numberOfObjectsMemory = mmap(NULL, sizeof (unsigned int), PROT_WRITE, MAP_SHARED, fdCount, 0);
+	numberOfObjectsMemory = mmap(NULL, sizeof (unsigned int), PROT_WRITE, MAP_SHARED, fdObjectCount, 0);
 	if (numberOfObjectsMemory == MAP_FAILED) {
 		LogMessage(LOG_LEVEL_ERROR, "Memory mapping error");
 		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
@@ -1717,7 +1717,7 @@ ReadWriteAccess_t DataDictionaryInitMONR() {
 	*numberOfObjectsMemory = 0;
 
 	MONRMemory = mmap(NULL, sizeof (MonitorDataType) * (*numberOfObjectsMemory),
-					  PROT_WRITE, MAP_SHARED, fdObjs, 0);
+					  PROT_WRITE, MAP_SHARED, fdObjectMONRData, 0);
 	if (MONRMemory == MAP_FAILED) {
 		LogMessage(LOG_LEVEL_ERROR, "Memory mapping error");
 		munmap(numberOfObjectsMemory, sizeof (unsigned int));
@@ -1808,14 +1808,26 @@ ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD) {
  * \param numberOfobjects number of objects in a test
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U32 * numberOfObjects) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(const uint32_t numberOfObjects) {
+	ReadWriteAccess_t result = WRITE_OK;
+	if (numberOfObjectsMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
 
-	Res = WRITE_OK;
 	pthread_mutex_lock(&numberOfObjectsMutex);
-	GSD->numberOfObjects = *numberOfObjects;
+	if (ftruncate(fdObjectMONRData, numberOfObjects * sizeof (fdObjectMONRData)) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "File truncation error");
+		result = UNDEFINED;
+	}
+	else {
+		*numberOfObjectsMemory = numberOfObjects;
+		LogMessage(LOG_LEVEL_DEBUG, "Modified shared memory to hold MONR data for %d objects", *numberOfObjectsMemory);
+	}
 	pthread_mutex_unlock(&numberOfObjectsMutex);
-	return Res;
+
+	return result;
 }
 
 /*!
@@ -1824,10 +1836,17 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U32 * number
  * \param numberOfobjects number of objects in a test
  * \return Current object control state according to ::OBCState_t
  */
-ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(GSDType * GSD, U32 * numberOfObjects) {
+ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(uint32_t * numberOfObjects) {
+	if (numberOfObjectsMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+
 	pthread_mutex_lock(&numberOfObjectsMutex);
-	*numberOfObjects = GSD->numberOfObjects;
+	*numberOfObjects = *numberOfObjectsMemory;
 	pthread_mutex_unlock(&numberOfObjectsMutex);
+
 	return READ_OK;
 }
 
