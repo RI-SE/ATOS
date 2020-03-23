@@ -121,10 +121,10 @@ ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, C8 *MiscData, U32 Bu
 ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, OBCState_t OBCState);
 OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD);
 
-ReadWriteAccess_t DataDictionaryFreeMONR(GSDType *GSD);
+ReadWriteAccess_t DataDictionaryFreeMONR();
 ReadWriteAccess_t DataDictionaryInitMONR();
-ReadWriteAccess_t DataDictionarySetMONR(GSDType *GSD, const MonitorDataType * MONR, const U32 TransmitterId);
-ReadWriteAccess_t DataDictionaryGetMONR(GSDType *GSD, MonitorDataType * MONR, const U32 TransmitterId);
+ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR, const uint32_t TransmitterId);
+ReadWriteAccess_t DataDictionaryGetMONR(MonitorDataType * MONR, const uint32_t TransmitterId);
 
 ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(const uint32_t numberOfObjects);
 ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(uint32_t *numberOfObjects);
