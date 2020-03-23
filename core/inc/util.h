@@ -39,6 +39,28 @@ extern "C"{
   -- Defines
   ------------------------------------------------------------*/
 #define MaestroVersion  "0.4.1"
+#define DEFAULT_ORIGO_LAT 57.777073115
+#define DEFAULT_ORIGO_LOG 12.781295498333
+#define DEFAULT_ORIGO_ALT 193.114
+#define DEFAULT_VISUALISATION_SERVER_NAME 0
+#define DEFAULT_FORCE_OBJECT_TO_LOCALHOST 0
+#define DEFAULT_ASP_MAX_TIME_DIFF 2.5
+#define DEFAULT_ASP_MAX_TRAJ_DIFF 1.52
+#define DEFAULT_ASP_STEP_BACK_COUNT 0
+#define DEFAULT_ASP_FILTER_LEVEL 5
+#define DEFAULT_ASP_MAX_DELTA_TIME 0.05
+#define DEFAULT_TIMESERVER_IP 10.130.23.110
+#define DEFAULT_TIME_SERVER_PORT 53000
+#define DEFAULT_SIMULATOR_SIMULATOR_IP 0
+#define DEFAULT_SIMULATOR_TCP_PORT 53001
+#define DEFAULT_SIMULATOR_UDP_PORT 53002
+#define DEFAULT_SIMULATOR_MODE 1
+#define DEFAULT_VOIL_RECEIVERS 0
+#define DEFAULT_DTM_RECEIVERS 0
+#define DEFAULT_SUPERVISOR_IP 0
+#define DEFAULT_SUPERVISOR_TCP_PORT 53010
+#define DEFAULT_RVSS_CONF 3
+#define DEFAULT_RVSS_RATE 1
 
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1) // Message queue data minus one byte for the command
 
@@ -327,35 +349,35 @@ typedef struct
   //U8 STRTData[100];
   //U8 OSEMSizeU8;
   //U8 OSEMData[100];
-  volatile dbl OriginLatitudeDbl;
+  volatile dbl OriginLatitudeDbl = DEFAULT_ORIGO_LAT;
   C8 OriginLatitudeC8[DD_CONTROL_BUFFER_SIZE_20];
-  volatile dbl OriginLongitudeDbl;
+  volatile dbl OriginLongitudeDbl = DEFAULT_ORIGO_LOG;
   C8 OriginLongitudeC8[DD_CONTROL_BUFFER_SIZE_20];
-  volatile dbl OriginAltitudeDbl;
+  volatile dbl OriginAltitudeDbl = DEFAULT_ORIGO_ALT;
   C8 OriginAltitudeC8[DD_CONTROL_BUFFER_SIZE_20];
   volatile U32 VisualizationServerU32;
   C8 VisualizationServerC8[DD_CONTROL_BUFFER_SIZE_20];
-  volatile U8 ForceObjectToLocalhostU8;
-  volatile dbl ASPMaxTimeDiffDbl;
-  volatile dbl ASPMaxTrajDiffDbl;
-  volatile U32 ASPStepBackCountU32;
-  volatile dbl ASPFilterLevelDbl;
-  volatile dbl ASPMaxDeltaTimeDbl;
+  volatile U8 ForceObjectToLocalhostU8 = DEFAULT_FORCE_OBJECT_TO_LOCALHOST;
+  volatile dbl ASPMaxTimeDiffDbl = DEFAULT_ASP_MAX_TIME_DIFF;
+  volatile dbl ASPMaxTrajDiffDbl = DEFAULT_ASP_MAX_TRAJ_DIFF;
+  volatile U32 ASPStepBackCountU32 = DEFAULT_ASP_STEP_BACK_COUNT;
+  volatile dbl ASPFilterLevelDbl = DEFAULT_ASP_FILTER_LEVEL;
+  volatile dbl ASPMaxDeltaTimeDbl = DEFAULT_ASP_MAX_DELTA_TIME;
   volatile U32 TimeServerIPU32;
   C8 TimeServerIPC8[DD_CONTROL_BUFFER_SIZE_20];
-  volatile U16 TimeServerPortU16;
-  volatile U32 SimulatorIPU32;
+  volatile U16 TimeServerPortU16 = DEFAULT_TIME_SERVER_PORT;
+  volatile U32 SimulatorIPU32 = DEFAULT_SIMULATOR_SIMULATOR_IP;
   C8 SimulatorIPC8[DD_CONTROL_BUFFER_SIZE_20];
-  volatile U16 SimulatorTCPPortU16;
-  volatile U16 SimulatorUDPPortU16;
-  volatile U8 SimulatorModeU8;
+  volatile U16 SimulatorTCPPortU16 = DEFAULT_SIMULATOR_TCP_PORT;
+  volatile U16 SimulatorUDPPortU16 = DEFAULT_SIMULATOR_UDP_PORT;
+  volatile U8 SimulatorModeU8 = DEFAULT_SIMULATOR_MODE;
   C8 VOILReceiversC8[DD_CONTROL_BUFFER_SIZE_1024];
   C8 DTMReceiversC8[DD_CONTROL_BUFFER_SIZE_1024];
   volatile U32 ExternalSupervisorIPU32;
   C8 ExternalSupervisorIPC8[DD_CONTROL_BUFFER_SIZE_20];
-  volatile U16 SupervisorTCPPortU16;
-  U32 DataDictionaryRVSSConfigU32;
-  U32 DataDictionaryRVSSRateU8;
+  volatile U16 SupervisorTCPPortU16 = DEFAULT_SUPERVISOR_TCP_PORT;
+  U32 DataDictionaryRVSSConfigU32 = DEFAULT_RVSS_CONF;
+  U32 DataDictionaryRVSSRateU8 = DEFAULT_RVSS_RATE;
   ASPType ASPData;
   C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
   volatile OBCState_t OBCStateU8;
