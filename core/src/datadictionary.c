@@ -49,6 +49,10 @@ static pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MONRMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t numberOfObjectsMutex = PTHREAD_MUTEX_INITIALIZER;
 
+#define NUMBER_OF_OBJECTS_FILENAME "/NUMBER_OF_OBJECTS.mem"
+#define MONR_DATA_FILENAME "/MONR.mem"
+static unsigned int* numberOfObjectsMemory = NULL;
+static MonitorDataType* MONRMemory = NULL;
 
 
 /*------------------------------------------------------------
@@ -1673,39 +1677,55 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
  * \param GSD Pointer to shared allocated memory
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionaryInitMONR() {
 
-	Res = WRITE_OK;
-	char filePath[PATH_MAX];
-	int fd;
-	struct stat st;
+	int fdCount, fdObjs;
 
-	pthread_mutex_lock(&MONRMutex);
-	sprintf(filePath, "%smonrMessageMemory.mem", SHARED_MEMORY_PATH);
-	fd = open(filePath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-	stat(filePath, &st);
-
-// this memory does not change size as more MONR messages are added, and it is unclear where in the memory stuff is being written
-	lseek(fd, (sizeof (MonitorDataType)) - 1, SEEK_SET);
-	write(fd, "", 1);
-
-	stat(filePath, &st);
-
-	// Map memory to created file
-	GSD->MonrMessages =
-		(MonitorDataType *) mmap(NULL, (sizeof (MonitorDataType)), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-	if (GSD->MonrMessages == MAP_FAILED) {
-		LogPrint(LOG_LEVEL_ERROR, "mmap failed: %s", strerror(errno));
-		close(fd);
+	fdCount = shm_open(NUMBER_OF_OBJECTS_FILENAME, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	if (fdObjs == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared memory");
+		return UNDEFINED;
 	}
-	else {
-		LogMessage(LOG_LEVEL_INFO, "Init MonrMessage memory");
+	fdObjs = shm_open(MONR_DATA_FILENAME, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	if (fdObjs == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared memory");
+		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
+		return UNDEFINED;
 	}
-	close(fd);
-	pthread_mutex_unlock(&MONRMutex);
-	return Res;
+
+	if (ftruncate(fdCount, sizeof (unsigned int)) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "File truncation error");
+		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
+		shm_unlink(MONR_DATA_FILENAME);
+		return UNDEFINED;
+	}
+
+	if (ftruncate(fdObjs, sizeof (unsigned int)) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "File truncation error");
+		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
+		shm_unlink(MONR_DATA_FILENAME);
+		return UNDEFINED;
+	}
+
+	numberOfObjectsMemory = mmap(NULL, sizeof (unsigned int), PROT_WRITE, MAP_SHARED, fdCount, 0);
+	if (numberOfObjectsMemory == MAP_FAILED) {
+		LogMessage(LOG_LEVEL_ERROR, "Memory mapping error");
+		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
+		shm_unlink(MONR_DATA_FILENAME);
+		return UNDEFINED;
+	}
+	*numberOfObjectsMemory = 0;
+
+	MONRMemory = mmap(NULL, sizeof (MonitorDataType) * (*numberOfObjectsMemory),
+					  PROT_WRITE, MAP_SHARED, fdObjs, 0);
+	if (MONRMemory == MAP_FAILED) {
+		LogMessage(LOG_LEVEL_ERROR, "Memory mapping error");
+		munmap(numberOfObjectsMemory, sizeof (unsigned int));
+		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
+		shm_unlink(MONR_DATA_FILENAME);
+		return UNDEFINED;
+	}
+	return WRITE_OK;
 }
 
 /*!
