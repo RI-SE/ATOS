@@ -53,7 +53,7 @@ static pthread_mutex_t numberOfObjectsMutex = PTHREAD_MUTEX_INITIALIZER;
 #define MONR_DATA_FILENAME "/MONR.mem"
 
 static int fdObjectCount, fdObjectMONRData;
-static unsigned int* numberOfObjectsMemory = NULL;
+static uint32_t* numberOfObjectsMemory = NULL;
 static MonitorDataType* MONRMemory = NULL;
 
 
@@ -1686,6 +1686,7 @@ ReadWriteAccess_t DataDictionaryInitMONR() {
 		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared memory");
 		return UNDEFINED;
 	}
+
 	fdObjectMONRData = shm_open(MONR_DATA_FILENAME, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	if (fdObjectMONRData == -1) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared memory");
@@ -1715,7 +1716,7 @@ ReadWriteAccess_t DataDictionaryInitMONR() {
 		return UNDEFINED;
 	}
 
-	MONRMemory = mmap(NULL, sizeof (MonitorDataType) * (*numberOfObjectsMemory),
+	MONRMemory = mmap(NULL, sizeof (MonitorDataType) * (*numberOfObjectsMemory + 1),
 					  PROT_WRITE, MAP_SHARED, fdObjectMONRData, 0);
 	if (MONRMemory == MAP_FAILED) {
 		LogMessage(LOG_LEVEL_ERROR, "Memory mapping error");
@@ -1733,7 +1734,7 @@ ReadWriteAccess_t DataDictionaryInitMONR() {
  * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR, const uint32_t transmitterId) {
+ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR) {
 
 	ReadWriteAccess_t result;
 
@@ -1747,7 +1748,7 @@ ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR, const uint
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
-	if (transmitterId == 0) {
+	if (MONR->ClientID == 0) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
 		return UNDEFINED;
@@ -1757,7 +1758,7 @@ ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR, const uint
 	pthread_mutex_lock(&MONRMutex);
 	result = PARAMETER_NOTFOUND;
 	for (uint32_t i = 0; i < *numberOfObjectsMemory; ++i) {
-		if (MONRMemory[i].ClientID == transmitterId) {
+		if (MONRMemory[i].ClientID == MONR->ClientID) {
 			memcpy(&MONRMemory[i], MONR, sizeof (MonitorDataType));
 			result = WRITE_OK;
 		}
@@ -1765,7 +1766,7 @@ ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR, const uint
 
 	if (result == PARAMETER_NOTFOUND) {
 		// Searched for unused memory space and place monitor data there
-		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", transmitterId);
+		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", MONR->ClientID);
 		for (uint32_t i = 0; i < *numberOfObjectsMemory; ++i) {
 			if (MONRMemory[i].ClientID == 0) {
 				memcpy(&MONRMemory[i], MONR, sizeof (MonitorDataType));
