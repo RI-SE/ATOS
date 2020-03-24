@@ -122,24 +122,29 @@ typedef struct {
 #define SC_SLEEP_TIME_NONEMPTY_MQ_S 0
 #define SC_SLEEP_TIME_NONEMPTY_MQ_NS 0
 
+#define MAESTRO_GENERIC_FILE_TYPE     1
+#define MAESTRO_TRAJ_FILE_TYPE        2
+#define MAESTRO_CONF_FILE_TYPE        3
+#define MAESTRO_GEOFENCE_FILE_TYPE    4
+
 
 typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
-	InitializeScenario_0,
-	ConnectObject_0, DisconnectObject_0, GetServerParameterList_0, SetServerParameter_2, GetServerParameter_1,
-	DownloadFile_1, UploadFile_3, CheckFileDirectoryExist_1, GetRootDirectoryContent_0, GetDirectoryContent_1,
-	ClearTrajectories_0, DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0,
-	Exit_0,
+	InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
+	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
+	GetRootDirectoryContent_0, GetDirectoryContent_1, ClearTrajectories_0, ClearGeofences_0,
+	DeleteFileDirectory_1, CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
 	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
 
-const char *SystemControlCommandsArr[] = {
+static const char *SystemControlCommandsArr[] = {
 	"Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0",
 	"AbortScenario_0", "InitializeScenario_0",
 	"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
-	"GetServerParameter_1", "DownloadFile_1", "UploadFile_3", "CheckFileDirectoryExist_1",
+	"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1",
-	"ClearTrajectories_0", "DeleteFileDirectory_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
+	"ClearTrajectories_0", "ClearGeofences_0", "DeleteFileDirectory_1", "CreateDirectory_1",
+	"GetTestOrigin_0", "replay_1",
 	"control_0",
 	"Exit_0", "start_ext_trigg_1"
 };
@@ -184,10 +189,12 @@ I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 De
 I32 SystemControlWriteServerParameter(C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
-I32 SystemControlUploadFile(C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue, U8 Debug);
+I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
+							C8 * CompleteFilePath, U8 Debug);
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug);
-C8 SystemControlClearTrajectories();
+C8 SystemControlClearTrajectories(void);
+C8 SystemControlClearGeofences(void);
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug);
 I32 SystemControlDestroyFileContentInfo(C8 * path);
@@ -293,6 +300,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U32 RVSSConfigU32;
 	U32 RVSSMessageLengthU32;
 	U16 PCDMessageCodeU16;
+	C8 RxFilePath[MAX_FILE_PATH];
+
 
 	LogInit(MODULE_NAME, logLevel);
 	LogMessage(LOG_LEVEL_INFO, "System control task running with PID: %i", getpid());
@@ -759,6 +768,15 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 			}
 			break;
+		case ClearGeofences_0:
+			if (CurrentInputArgCount == CommandArgCount) {
+				SystemControlCommand = Idle_0;
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				*ControlResponseBuffer = SystemControlClearGeofences();
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearGeofences:",
+												 ControlResponseBuffer, 1, &ClientSocket, 0);
+			}
+			break;
 		case DownloadFile_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
@@ -783,32 +801,34 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = Idle_0;
 			}
 			break;
-		case UploadFile_3:
+		case UploadFile_4:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				bzero(RxFilePath, MAX_FILE_PATH);
 				SystemControlUploadFile(SystemControlArgument[0], SystemControlArgument[1],
-										SystemControlArgument[2], ControlResponseBuffer, 0);
+										SystemControlArgument[2], SystemControlArgument[3],
+										ControlResponseBuffer, RxFilePath, 0);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 				LogMessage(LOG_LEVEL_DEBUG, "UploadFile filelength: %s", SystemControlArgument[1]);
 				if (ControlResponseBuffer[0] == SERVER_PREPARED_BIG_PACKET_SIZE)	//Server is ready to receive data
 				{
 					LogMessage(LOG_LEVEL_INFO, "Receiving file: %s", SystemControlArgument[0]);
-					SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0],
+					SystemControlReceiveRxData(&ClientSocket, RxFilePath,
 											   SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE,
 											   ControlResponseBuffer, 0);
 				}
 				else if (ControlResponseBuffer[0] == PATH_INVALID_MISSING) {
 					LogMessage(LOG_LEVEL_INFO, "Failed receiving file: %s", SystemControlArgument[0]);
-					SystemControlReceiveRxData(&ClientSocket, "file.tmp", SystemControlArgument[1],
+					SystemControlReceiveRxData(&ClientSocket, RxFilePath, SystemControlArgument[1],
 											   STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
-					SystemControlDeleteFileDirectory("file.tmp", ControlResponseBuffer, 0);
+					SystemControlDeleteFileDirectory(RxFilePath, ControlResponseBuffer, 0);
 					ControlResponseBuffer[0] = PATH_INVALID_MISSING;
 				}
 				else {
 					LogMessage(LOG_LEVEL_INFO, "Receiving file: %s", SystemControlArgument[0]);
-					SystemControlReceiveRxData(&ClientSocket, SystemControlArgument[0],
+					SystemControlReceiveRxData(&ClientSocket, RxFilePath,
 											   SystemControlArgument[1], SystemControlArgument[2],
 											   ControlResponseBuffer, 0);
 				}
@@ -2061,14 +2081,25 @@ I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U
 }
 
 /*!
- * \brief SystemControlClearTrajectories Clears the trajectory folder on the machine
+ * \brief SystemControlClearTrajectories Clears the trajectory directory on the machine
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
-C8 SystemControlClearTrajectories() {
+C8 SystemControlClearTrajectories(void) {
 	if (UtilDeleteTrajectoryFiles() != 0) {
 		return FAILED_DELETE;
 	}
-	return SUCCEDED_DELETE;
+	return SUCCEEDED_DELETE;
+}
+
+/*!
+ * \brief SystemControlClearGeofences Clears the geofence directory on the machine
+ * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
+ */
+C8 SystemControlClearGeofences(void) {
+	if (UtilDeleteGeofenceFiles() != 0) {
+		return FAILED_DELETE;
+	}
+	return SUCCEEDED_DELETE;
 }
 
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
@@ -2092,7 +2123,7 @@ I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 		else {
 			if (0 == remove(CompletePath))	//Delete file
 			{
-				*ReturnValue = SUCCEDED_DELETE;
+				*ReturnValue = SUCCEEDED_DELETE;
 			}
 			else {
 				*ReturnValue = FAILED_DELETE;
@@ -2102,14 +2133,14 @@ I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 	else {
 		if (0 == remove(CompletePath))	//Delete directory
 		{
-			*ReturnValue = SUCCEDED_DELETE;
+			*ReturnValue = SUCCEEDED_DELETE;
 		}
 		else {
 			*ReturnValue = FAILED_DELETE;
 		}
 	}
 
-	if (*ReturnValue == SUCCEDED_DELETE)
+	if (*ReturnValue == SUCCEEDED_DELETE)
 		LogMessage(LOG_LEVEL_INFO, "Deleted %s", CompletePath);
 	else if (*ReturnValue == FAILED_DELETE)
 		LogMessage(LOG_LEVEL_INFO, "Failed to delete %s", CompletePath);
@@ -2162,27 +2193,61 @@ I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 }
 
 
-
-
-I32 SystemControlUploadFile(C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue, U8 Debug) {
+I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
+							C8 * CompleteFilePath, U8 Debug) {
 
 	FILE *fd;
 	C8 CompletePath[MAX_FILE_PATH];
 
-	bzero(CompletePath, MAX_FILE_PATH);
-	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-	strcat(CompletePath, Path);
-
-	if (Debug) {
-		LogMessage(LOG_LEVEL_DEBUG, "Upload file:");
-		LogMessage(LOG_LEVEL_DEBUG, "%s", Path);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", FileSize);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", PacketSize);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", CompletePath);
+	memset(CompletePath, 0, sizeof (CompletePath));
+	//GetCurrentDir(CompletePath, MAX_FILE_PATH);
+	//strcat(CompletePath, Filename);
+	if (Filename == NULL || FileSize == NULL || PacketSize == NULL || FileType == NULL || ReturnValue == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Invalid function parameter passed to upload file handler function");
+		return -1;
 	}
 
-	if (atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE)	//Check packet size
-	{
+	switch (atoi(FileType)) {
+	case MAESTRO_GENERIC_FILE_TYPE:
+		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+		break;
+	case MAESTRO_TRAJ_FILE_TYPE:
+		UtilGetTrajDirectoryPath(CompletePath, sizeof (CompletePath));
+		break;
+	case MAESTRO_CONF_FILE_TYPE:
+		UtilGetConfDirectoryPath(CompletePath, sizeof (CompletePath));
+		break;
+	case MAESTRO_GEOFENCE_FILE_TYPE:
+		UtilGetGeofenceDirectoryPath(CompletePath, sizeof (CompletePath));
+		break;
+	default:
+		LogMessage(LOG_LEVEL_ERROR, "Received invalid file type upload request");
+		//Create temporary file for handling data anyway
+		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+		strcat(CompletePath, "/file.tmp");
+		fd = fopen(CompletePath, "r");
+		if (fd != NULL) {
+			fclose(fd);
+			remove(CompletePath);	//Remove file if exist
+		}
+		fd = fopen(CompletePath, "w+");	//Create the temporary file
+
+		*ReturnValue = PATH_INVALID_MISSING;
+		return -1;
+	}
+	strcat(CompletePath, Filename);
+	strcpy(CompleteFilePath, CompletePath);
+
+	if (Debug) {
+		LogPrint("Filename: %s", Filename);
+		LogPrint("FileSize: %s", FileSize);
+		LogPrint("PacketSize: %s", PacketSize);
+		LogPrint("FileType: %s", FileType);
+		LogPrint("CompletePath: %s", CompletePath);
+		LogPrint("CompleteFilePath: %s", CompleteFilePath);
+	}
+
+	if (atoi(PacketSize) > SYSTEM_CONTROL_RX_PACKET_SIZE) {	//Check packet size
 		*ReturnValue = SERVER_PREPARED_BIG_PACKET_SIZE;
 		return 0;
 	}
@@ -2191,6 +2256,7 @@ I32 SystemControlUploadFile(C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * Retu
 	if (fd != NULL) {
 		fclose(fd);
 		remove(CompletePath);	//Remove file if exist
+		LogMessage(LOG_LEVEL_INFO, "Deleted existing file <%s>", CompletePath);
 	}
 
 	fd = fopen(CompletePath, "w+");	//Create the file
@@ -2200,10 +2266,9 @@ I32 SystemControlUploadFile(C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * Retu
 		return 0;
 	}
 	else {
-		//ok, path invalid create temporary file
-		bzero(CompletePath, MAX_FILE_PATH);
+		//Failed to open path create temporary file
 		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-		strcat(CompletePath, "file.tmp");
+		strcat(CompletePath, "/file.tmp");
 		fd = fopen(CompletePath, "r");
 		if (fd != NULL) {
 			fclose(fd);
@@ -2216,8 +2281,9 @@ I32 SystemControlUploadFile(C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * Retu
 		return 0;
 	}
 
-	return 0;
+	return -1;
 }
+
 
 I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug) {
@@ -2226,7 +2292,7 @@ I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * Pack
 	C8 CompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
-	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+	//UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
 	U32 FileSizeU32 = atoi(FileSize);
 	U16 PacketSizeU16 = atoi(PacketSize);
@@ -2238,11 +2304,11 @@ I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * Pack
 
 
 	if (Debug) {
-		LogMessage(LOG_LEVEL_DEBUG, "Receive Rx data:");
-		LogMessage(LOG_LEVEL_DEBUG, "%s", Path);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", FileSize);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", PacketSize);
-		LogMessage(LOG_LEVEL_DEBUG, "%s", CompletePath);
+		LogPrint("Receive Rx data:");
+		LogPrint("Path: %s", Path);
+		LogPrint("FileSize: %s", FileSize);
+		LogPrint("PacketSize: %s", PacketSize);
+		LogPrint("CompletePath: %s", CompletePath);
 	}
 
 
@@ -2301,7 +2367,7 @@ I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * Pack
 			LogMessage(LOG_LEVEL_INFO, "CORRUPT FILE, REMOVING...");
 		}
 
-		LogMessage(LOG_LEVEL_DEBUG, "Rec count = %d, Req count = %d", TotalRxCount, FileSizeU32);
+		LogMessage(LOG_LEVEL_INFO, "Rec count = %d, Req count = %d", TotalRxCount, FileSizeU32);
 
 	}
 

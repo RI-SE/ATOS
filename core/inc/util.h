@@ -75,7 +75,7 @@ extern "C"{
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "10.168.212.5"
+#define LOCAL_USER_CONTROL_IP "192.168.0.7"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -155,7 +155,7 @@ extern "C"{
 #define FOLDER_EXISTED 0x02
 #define SUCCEDED_CREATE_FOLDER 0x03
 #define FAILED_CREATE_FOLDER 0x04
-#define SUCCEDED_DELETE 0x01
+#define SUCCEEDED_DELETE 0x01
 #define FAILED_DELETE 0x02
 #define FILE_TO_MUCH_DATA 0x06
 
@@ -585,7 +585,8 @@ void UtilGetConfDirectoryPath(char* path, size_t pathLen);
 void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
 void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
 
-int UtilDeleteTrajectoryFiles();
+int UtilDeleteTrajectoryFiles(void);
+int UtilDeleteGeofenceFiles(void);
 
 // File parsing functions
 int UtilCheckTrajectoryFileFormat(const char *path, size_t pathLen);
