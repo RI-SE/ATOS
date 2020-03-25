@@ -177,6 +177,7 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8 * ResponseString, C
 									  I32 ResponseDataLength, I32 * Sockfd, U8 Debug);
 I32 SystemControlBuildControlResponse(U16 ResponseStatus, C8 * ResponseString, C8 * ResponseData,
 									  I32 ResponseDataLength, U8 Debug);
+void SystemControlFileDownloadResponse(I32 FileLength, I32 * Sockfd, U8 Debug);
 void SystemControlSendLog(C8 * LogString, I32 * Sockfd, U8 Debug);
 void SystemControlSendMONR(C8 * LogString, I32 * Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8 * name, const U32 port, I32 * sockfd,
@@ -197,7 +198,7 @@ C8 SystemControlClearTrajectories(void);
 C8 SystemControlClearGeofences(void);
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug);
-I32 SystemControlDestroyFileContentInfo(C8 * path);
+I32 SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile);
 I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * ReturnValue, U8 Remove,
 								 U8 Debug);
 I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
@@ -340,6 +341,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	}
 
+	I32 FileLengthI32 = 0;
 
 	while (!iExit) {
 		if (server_state == SERVER_STATE_ERROR) {
@@ -740,15 +742,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (ControlResponseBuffer[0] == FOLDER_EXIST) {
 					UtilCreateDirContent(SystemControlArgument[0], "dir.info");
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-
-					I32 file_len = SystemControlBuildFileContentInfo("dir.info", 0);
-
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK,
-													 "SubGetDirectoryContent:",
-													 SystemControlDirectoryInfo.info_buffer, file_len,
-													 &ClientSocket, 0);
-
-					SystemControlDestroyFileContentInfo("dir.info");
+					FileLengthI32 = SystemControlBuildFileContentInfo("dir.info", 0);
+					SystemControlFileDownloadResponse(FileLengthI32, &ClientSocket, 0);
+					SystemControlSendFileContent(&ClientSocket, "dir.info",
+												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE, SystemControlDirectoryInfo.info_buffer,
+												 KEEP_FILE, 0);
+					SystemControlDestroyFileContentInfo("dir.info", 1);
 				}
 
 			}
@@ -785,14 +784,13 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DownloadFile:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 				if (ControlResponseBuffer[0] == FILE_EXIST) {
-					UtilCreateDirContent(SystemControlArgument[0], SystemControlArgument[0]);
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubDownloadFile:",
-													 ControlResponseBuffer, 4, &ClientSocket, 0);
+					FileLengthI32 = SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
+					SystemControlFileDownloadResponse(FileLengthI32, &ClientSocket, 0);
 					SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0],
-												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE, ControlResponseBuffer,
+												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE, SystemControlDirectoryInfo.info_buffer,
 												 KEEP_FILE, 0);
+					SystemControlDestroyFileContentInfo(SystemControlArgument[0], 0);
 				}
 
 			}
@@ -1377,6 +1375,26 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8 * ResponseString, C
 	else
 		LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
+
+
+void SystemControlFileDownloadResponse(I32 FileLength, I32 * Sockfd, U8 Debug) {
+	I32 n, i;
+	C8 Length[4];
+	n = FileLength;
+	Length[0] = (C8) (n >> 24);
+	Length[1] = (C8) (n >> 16);
+	Length[2] = (C8) (n >> 8);
+	Length[3] = (C8) n;
+	
+	if (Debug) {
+		for (i = 0; i < 4; i++)
+		printf("%x-", Length[i]);
+		printf("\n");
+	}
+
+	UtilSendTCPData("System Control", Length, 4, Sockfd, 0);
+}
+
 
 
 I32 SystemControlBuildControlResponse(U16 ResponseStatus, C8 * ResponseString, C8 * ResponseData,
@@ -1988,7 +2006,7 @@ I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 
 	   if (Debug)
 	   LogMessage(LOG_LEVEL_DEBUG, "Filesize %d of %s", (I32) st.st_size, CompletePath);
-
+	
 	   return st.st_size;
 	 */
 	struct stat st;
@@ -2000,9 +2018,11 @@ I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 	if (SystemControlDirectoryInfo.exist)
 		return -1;
 
+	
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
 	stat(CompletePath, &st);
+	/*
 	// Create new temporary file, containing the length of the current file in hex + the rest of the document
 	strcat(temporaryCompletePath, ".temp");
 	FILE *comp_fd = fopen(CompletePath, "r");
@@ -2022,6 +2042,7 @@ I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 	// Rename the temporary file to the name of the previous one
 	rename(temporaryCompletePath, CompletePath);
 	stat(CompletePath, &st);
+	*/
 	// Create mmap of the file and return the length
 	SystemControlDirectoryInfo.fd = open(CompletePath, O_RDWR);
 	SystemControlDirectoryInfo.info_buffer =
@@ -2031,19 +2052,21 @@ I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 	return st.st_size;
 }
 
-I32 SystemControlDestroyFileContentInfo(C8 * path) {
+I32 SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile) {
 	char CompletePath[MAX_FILE_PATH];
 	struct stat st;
 
 	if (!SystemControlDirectoryInfo.exist)
 		return -1;
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-	strcat(CompletePath, path);
+	strcat(CompletePath, Path);
 
 	munmap(SystemControlDirectoryInfo.info_buffer, SystemControlDirectoryInfo.size);
 	close(SystemControlDirectoryInfo.fd);
 	SystemControlDirectoryInfo.exist = 0;
-	//remove(CompletePath);
+	if(RemoveFile == 1){
+		remove(CompletePath);	
+	} 
 	return 0;
 }
 
