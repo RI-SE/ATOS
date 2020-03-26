@@ -126,10 +126,11 @@ ReadWriteAccess_t DataDictionaryInitMONR();
 ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR);
 ReadWriteAccess_t DataDictionaryGetMONR(MonitorDataType * MONR, const uint32_t TransmitterId);
 
-ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(const uint32_t numberOfObjects);
+ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(const uint32_t newNumberOfObjects);
 ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(uint32_t *numberOfObjects);
 
 ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
+ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
 
 #endif 
 
