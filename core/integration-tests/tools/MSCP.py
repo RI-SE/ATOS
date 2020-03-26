@@ -216,9 +216,20 @@ class MSCP:
         self.Send(message)
         print("=== StartScenario() sent")
 
-    def UploadFile(self,targetPath,fileContents):
+    def UploadFile(self,fileName,fileContents,fileType):
         packetSize = 1200
-        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nUploadFile(" + targetPath + "," + str(len(fileContents)) + "," + str(packetSize) + ");\r\n\r\n" 
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nUploadFile(" + fileName + "," + str(len(fileContents)) + "," + str(packetSize) + ""
+        if fileType == "trajectory":
+            message = message + ",2"
+        elif fileType == "configuration":
+            message = message + ",3"
+        elif fileType == "geofence":
+            message = message + ",4"
+        elif fileType == "generic":
+            message = message + ",1"
+        else:
+            message = message + "," + fileType
+        message = message + ");\r\n\r\n"
         self.uploadReplyLock.acquire()
         self.lastUploadReply["status"] = "UNKNOWN"
         self.uploadReplyLock.release()
