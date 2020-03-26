@@ -11,14 +11,17 @@
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
+
+
 #include <stdlib.h>
 #include <pthread.h>
 #include <sys/stat.h>
-#include <sys/mman.h>
 #include <sys/types.h>
 #include "datadictionary.h"
 #include "iso22133.h"
 #include "logging.h"
+#include "shmem.h"
+
 
 // Parameters and variables
 static pthread_mutex_t OriginLatitudeMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -46,15 +49,10 @@ static pthread_mutex_t DataDictionaryRVSSRateMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t MONRMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t numberOfObjectsMutex = PTHREAD_MUTEX_INITIALIZER;
 
-#define NUMBER_OF_OBJECTS_FILENAME "/NUMBER_OF_OBJECTS.mem"
-#define MONR_DATA_FILENAME "/MONR.mem"
+#define MONR_DATA_FILENAME "MonitorData"
 
-static int fdObjectCount, fdObjectMONRData;
-static uint32_t* numberOfObjectsMemory = NULL;
-static MonitorDataType* MONRMemory = NULL;
+static volatile MonitorDataType* MONRMemory = NULL;
 
 
 /*------------------------------------------------------------
@@ -104,6 +102,20 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	DataDictionarySetOBCStateU8(GSD, OBC_STATE_UNDEFINED);
 
 	return Res;
+}
+
+
+/*!
+ * \brief DataDictionaryDestructor Deallocate data held by DataDictionary.
+ * \param GSD Pointer to allocated shared memory
+ * \return Error code defined by ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryDestructor(GSDType * GSD) {
+	ReadWriteAccess_t result = WRITE_OK;
+
+	result = result == WRITE_OK ? DataDictionaryFreeMONR() : result;
+
+	return result;
 }
 
 
@@ -1681,51 +1693,12 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
  */
 ReadWriteAccess_t DataDictionaryInitMONR() {
 
-	fdObjectCount = shm_open(NUMBER_OF_OBJECTS_FILENAME, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-	if (fdObjectMONRData == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared memory");
+	int createdMemory;
+	MONRMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (MonitorDataType), &createdMemory);
+	if (MONRMemory == NULL) {
 		return UNDEFINED;
 	}
-
-	fdObjectMONRData = shm_open(MONR_DATA_FILENAME, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-	if (fdObjectMONRData == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared memory");
-		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
-		return UNDEFINED;
-	}
-
-	if (ftruncate(fdObjectCount, sizeof (unsigned int)) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "File truncation error");
-		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
-		shm_unlink(MONR_DATA_FILENAME);
-		return UNDEFINED;
-	}
-
-	if (ftruncate(fdObjectMONRData, sizeof (unsigned int)) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "File truncation error");
-		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
-		shm_unlink(MONR_DATA_FILENAME);
-		return UNDEFINED;
-	}
-
-	numberOfObjectsMemory = mmap(NULL, sizeof (unsigned int), PROT_WRITE, MAP_SHARED, fdObjectCount, 0);
-	if (numberOfObjectsMemory == MAP_FAILED) {
-		LogMessage(LOG_LEVEL_ERROR, "Memory mapping error");
-		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
-		shm_unlink(MONR_DATA_FILENAME);
-		return UNDEFINED;
-	}
-
-	MONRMemory = mmap(NULL, sizeof (MonitorDataType) * (*numberOfObjectsMemory + 1),
-					  PROT_WRITE, MAP_SHARED, fdObjectMONRData, 0);
-	if (MONRMemory == MAP_FAILED) {
-		LogMessage(LOG_LEVEL_ERROR, "Memory mapping error");
-		munmap(numberOfObjectsMemory, sizeof (unsigned int));
-		shm_unlink(NUMBER_OF_OBJECTS_FILENAME);
-		shm_unlink(MONR_DATA_FILENAME);
-		return UNDEFINED;
-	}
-	return READ_WRITE_OK;
+	return createdMemory ? WRITE_OK : READ_OK;
 }
 
 /*!
@@ -1738,7 +1711,7 @@ ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR) {
 
 	ReadWriteAccess_t result;
 
-	if (MONRMemory == NULL || numberOfObjectsMemory == NULL) {
+	if (MONRMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
 		return UNDEFINED;
@@ -1754,10 +1727,11 @@ ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR) {
 		return UNDEFINED;
 	}
 
-	pthread_mutex_lock(&numberOfObjectsMutex);
-	pthread_mutex_lock(&MONRMutex);
+	MONRMemory = claimSharedMemory(MONRMemory);
 	result = PARAMETER_NOTFOUND;
-	for (uint32_t i = 0; i < *numberOfObjectsMemory; ++i) {
+	unsigned int numberOfObjects = getNumberOfMemoryElements(MONRMemory);
+	LogPrint("Number of objects currently in memory: %u", numberOfObjects);
+	for (uint32_t i = 0; i < numberOfObjects; ++i) {
 		if (MONRMemory[i].ClientID == MONR->ClientID) {
 			memcpy(&MONRMemory[i], MONR, sizeof (MonitorDataType));
 			result = WRITE_OK;
@@ -1765,9 +1739,9 @@ ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR) {
 	}
 
 	if (result == PARAMETER_NOTFOUND) {
-		// Searched for unused memory space and place monitor data there
+		// Search for unused memory space and place monitor data there
 		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", MONR->ClientID);
-		for (uint32_t i = 0; i < *numberOfObjectsMemory; ++i) {
+		for (uint32_t i = 0; i < numberOfObjects; ++i) {
 			if (MONRMemory[i].ClientID == 0) {
 				memcpy(&MONRMemory[i], MONR, sizeof (MonitorDataType));
 				result = WRITE_OK;
@@ -1776,18 +1750,20 @@ ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR) {
 
 		// No uninitialized memory space found - create new
 		if (result == PARAMETER_NOTFOUND) {
-			if (ftruncate(fdObjectMONRData, (*numberOfObjectsMemory + 1) * sizeof (MonitorDataType)) == -1) {
-				LogMessage(LOG_LEVEL_ERROR, "File truncation error");
-				result = UNDEFINED;
+			MONRMemory = resizeSharedMemory(MONRMemory, numberOfObjects + 1);
+			if (MONRMemory != NULL) {
+				numberOfObjects = getNumberOfMemoryElements(MONRMemory);
+				LogMessage(LOG_LEVEL_INFO, "Modified shared memory to hold MONR data for %u objects, mp now %p", numberOfObjects, MONRMemory);
+				memcpy(&MONRMemory[numberOfObjects-1], MONR, sizeof (MonitorDataType));
+				LogPrint("Printed MONR");
 			}
 			else {
-				*numberOfObjectsMemory += 1;
-				LogMessage(LOG_LEVEL_DEBUG, "Modified shared memory to hold MONR data for %d objects", *numberOfObjectsMemory);
+				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
+				result = UNDEFINED;
 			}
 		}
 	}
-	pthread_mutex_unlock(&MONRMutex);
-	pthread_mutex_unlock(&numberOfObjectsMutex);
+	MONRMemory = releaseSharedMemory(MONRMemory);
 
 	return result;
 }
@@ -1812,16 +1788,16 @@ ReadWriteAccess_t DataDictionaryGetMONR(MonitorDataType * MONR, const uint32_t t
 		return UNDEFINED;
 	}
 
-	pthread_mutex_lock(&numberOfObjectsMutex);
-	pthread_mutex_lock(&MONRMutex);
-	for (uint32_t i = 0; i < *numberOfObjectsMemory; ++i) {
+	MONRMemory = claimSharedMemory(MONRMemory);
+	unsigned int numberOfObjects = getNumberOfMemoryElements(MONRMemory);
+	for (unsigned int  i = 0; i < numberOfObjects; ++i) {
 		if (MONRMemory[i].ClientID == transmitterId) {
 			memcpy(MONR, &MONRMemory[i], sizeof (MonitorDataType));
 			result = READ_OK;
 		}
 	}
-	pthread_mutex_unlock(&MONRMutex);
-	pthread_mutex_unlock(&numberOfObjectsMutex);
+
+	MONRMemory = releaseSharedMemory(MONRMemory);
 
 	if (result == PARAMETER_NOTFOUND) {
 		LogMessage(LOG_LEVEL_WARNING, "Unable to find monitor data for transmitter ID %u", transmitterId);
@@ -1837,32 +1813,13 @@ ReadWriteAccess_t DataDictionaryGetMONR(MonitorDataType * MONR, const uint32_t t
 ReadWriteAccess_t DataDictionaryFreeMONR() {
 	ReadWriteAccess_t result = WRITE_OK;
 
-	if (numberOfObjectsMemory == NULL || MONRMemory == NULL) {
+	if (MONRMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized memory");
 		return UNDEFINED;
 	}
 
-	pthread_mutex_lock(&MONRMutex);
-	pthread_mutex_lock(&numberOfObjectsMutex);
-	if (munmap(MONRMemory, *numberOfObjectsMemory * sizeof (MonitorDataType)) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Memory unmapping error");
-		result = UNDEFINED;
-	}
-	if (shm_unlink(MONR_DATA_FILENAME) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Memory unlinking error");
-		result = UNDEFINED;
-	}
-	if (munmap(numberOfObjectsMemory, sizeof (*numberOfObjectsMemory)) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Memory unmapping error");
-		result = UNDEFINED;
-	}
-	if (shm_unlink(NUMBER_OF_OBJECTS_FILENAME) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Memory unlinking error");
-		result = UNDEFINED;
-	}
-	pthread_mutex_unlock(&numberOfObjectsMutex);
-	pthread_mutex_unlock(&MONRMutex);
+	destroySharedMemory(MONRMemory);
 
 	return result;
 }
@@ -1877,25 +1834,20 @@ ReadWriteAccess_t DataDictionaryFreeMONR() {
  * \param numberOfobjects number of objects
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(const uint32_t numberOfObjects) {
+ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(const uint32_t newNumberOfObjects) {
+
+	unsigned int numberOfObjects;
 	ReadWriteAccess_t result = WRITE_OK;
-	if (numberOfObjectsMemory == NULL) {
+	MONRMemory = claimSharedMemory(MONRMemory);
+	MONRMemory = resizeSharedMemory(MONRMemory, newNumberOfObjects);
+	numberOfObjects = getNumberOfMemoryElements(MONRMemory);
+	MONRMemory = releaseSharedMemory(MONRMemory);
+
+	if (MONRMemory == NULL) {
 		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
 		return UNDEFINED;
 	}
-
-	pthread_mutex_lock(&numberOfObjectsMutex);
-	if (ftruncate(fdObjectMONRData, numberOfObjects * sizeof (MonitorDataType)) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "File truncation error");
-		result = UNDEFINED;
-	}
-	else {
-		*numberOfObjectsMemory = numberOfObjects;
-		memset(MONRMemory, 0, *numberOfObjectsMemory * sizeof (MonitorDataType));
-		LogMessage(LOG_LEVEL_DEBUG, "Modified shared memory to hold MONR data for %d objects", *numberOfObjectsMemory);
-	}
-	pthread_mutex_unlock(&numberOfObjectsMutex);
 
 	return result;
 }
@@ -1906,15 +1858,10 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(const uint32_t numberOfObje
  * \return Current object control state according to ::OBCState_t
  */
 ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(uint32_t * numberOfObjects) {
-	if (numberOfObjectsMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
-	}
 
-	pthread_mutex_lock(&numberOfObjectsMutex);
-	*numberOfObjects = *numberOfObjectsMemory;
-	pthread_mutex_unlock(&numberOfObjectsMutex);
+	MONRMemory = claimSharedMemory(MONRMemory);
+	*numberOfObjects = getNumberOfMemoryElements(MONRMemory);
+	MONRMemory = releaseSharedMemory(MONRMemory);
 
 	return READ_OK;
 }
