@@ -52,7 +52,7 @@ static pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define MONR_DATA_FILENAME "MonitorData"
 
-static volatile MonitorDataType *MONRMemory = NULL;
+static volatile MonitorDataType *monitorDataMemory = NULL;
 
 
 /*------------------------------------------------------------
@@ -97,7 +97,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitMONR() : Res;
+	Res = Res == READ_OK ? DataDictionaryInitMonitorData() : Res;
 	if (Res != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
 	}
@@ -116,7 +116,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 ReadWriteAccess_t DataDictionaryDestructor(GSDType * GSD) {
 	ReadWriteAccess_t result = WRITE_OK;
 
-	result = result == WRITE_OK ? DataDictionaryFreeMONR() : result;
+	result = result == WRITE_OK ? DataDictionaryFreeMonitorData() : result;
 
 	return result;
 }
@@ -1691,77 +1691,77 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
 /*END OBCState*/
 
 /*!
- * \brief DataDictionaryInitMONR inits a data structure for saving object monr
+ * \brief DataDictionaryInitMonitorData inits a data structure for saving object monr
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitMONR() {
+ReadWriteAccess_t DataDictionaryInitMonitorData() {
 
 	int createdMemory;
 
-	MONRMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (MonitorDataType), &createdMemory);
-	if (MONRMemory == NULL) {
+	monitorDataMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (MonitorDataType), &createdMemory);
+	if (monitorDataMemory == NULL) {
 		return UNDEFINED;
 	}
 	return createdMemory ? WRITE_OK : READ_OK;
 }
 
 /*!
- * \brief DataDictionarySetMONR Parses input variable and sets variable to corresponding value
- * \param MONRdata Monitor data
+ * \brief DataDictionarySetMonitorData Parses input variable and sets variable to corresponding value
+ * \param monitorData Monitor data
  * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR) {
+ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorData) {
 
 	ReadWriteAccess_t result;
 
-	if (MONRMemory == NULL) {
+	if (monitorDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
 		return UNDEFINED;
 	}
-	if (MONR == NULL) {
+	if (monitorData == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
-	if (MONR->ClientID == 0) {
+	if (monitorData->ClientID == 0) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
 		return UNDEFINED;
 	}
 
-	MONRMemory = claimSharedMemory(MONRMemory);
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
 	result = PARAMETER_NOTFOUND;
-	unsigned int numberOfObjects = getNumberOfMemoryElements(MONRMemory);
+	unsigned int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
 
 	LogPrint("Number of objects currently in memory: %u", numberOfObjects);
 	for (uint32_t i = 0; i < numberOfObjects; ++i) {
-		if (MONRMemory[i].ClientID == MONR->ClientID) {
-			memcpy(&MONRMemory[i], MONR, sizeof (MonitorDataType));
+		if (monitorDataMemory[i].ClientID == monitorData->ClientID) {
+			memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
 			result = WRITE_OK;
 		}
 	}
 
 	if (result == PARAMETER_NOTFOUND) {
 		// Search for unused memory space and place monitor data there
-		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", MONR->ClientID);
+		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", monitorData->ClientID);
 		for (uint32_t i = 0; i < numberOfObjects; ++i) {
-			if (MONRMemory[i].ClientID == 0) {
-				memcpy(&MONRMemory[i], MONR, sizeof (MonitorDataType));
+			if (monitorDataMemory[i].ClientID == 0) {
+				memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
 				result = WRITE_OK;
 			}
 		}
 
 		// No uninitialized memory space found - create new
 		if (result == PARAMETER_NOTFOUND) {
-			MONRMemory = resizeSharedMemory(MONRMemory, numberOfObjects + 1);
-			if (MONRMemory != NULL) {
-				numberOfObjects = getNumberOfMemoryElements(MONRMemory);
+			monitorDataMemory = resizeSharedMemory(monitorDataMemory, numberOfObjects + 1);
+			if (monitorDataMemory != NULL) {
+				numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold MONR data for %u objects, mp now %p",
-						   numberOfObjects, MONRMemory);
-				memcpy(&MONRMemory[numberOfObjects - 1], MONR, sizeof (MonitorDataType));
+						   numberOfObjects, monitorDataMemory);
+				memcpy(&monitorDataMemory[numberOfObjects - 1], monitorData, sizeof (MonitorDataType));
 				LogPrint("Printed MONR");
 			}
 			else {
@@ -1770,21 +1770,21 @@ ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR) {
 			}
 		}
 	}
-	MONRMemory = releaseSharedMemory(MONRMemory);
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
 
 	return result;
 }
 
 /*!
- * \brief DataDictionaryGetMONR Reads variable from shared memory
- * \param MONRdata Return variable pointer
+ * \brief DataDictionaryGetMonitorData Reads variable from shared memory
+ * \param monitorData Return variable pointer
  * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMONR(MonitorDataType * MONR, const uint32_t transmitterId) {
+ReadWriteAccess_t DataDictionaryGetMonitorData(MonitorDataType * monitorData, const uint32_t transmitterId) {
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 
-	if (MONR == NULL) {
+	if (monitorData == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
@@ -1795,17 +1795,17 @@ ReadWriteAccess_t DataDictionaryGetMONR(MonitorDataType * MONR, const uint32_t t
 		return UNDEFINED;
 	}
 
-	MONRMemory = claimSharedMemory(MONRMemory);
-	unsigned int numberOfObjects = getNumberOfMemoryElements(MONRMemory);
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	unsigned int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
 
 	for (unsigned int i = 0; i < numberOfObjects; ++i) {
-		if (MONRMemory[i].ClientID == transmitterId) {
-			memcpy(MONR, &MONRMemory[i], sizeof (MonitorDataType));
+		if (monitorDataMemory[i].ClientID == transmitterId) {
+			memcpy(monitorData, &monitorDataMemory[i], sizeof (MonitorDataType));
 			result = READ_OK;
 		}
 	}
 
-	MONRMemory = releaseSharedMemory(MONRMemory);
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
 
 	if (result == PARAMETER_NOTFOUND) {
 		LogMessage(LOG_LEVEL_WARNING, "Unable to find monitor data for transmitter ID %u", transmitterId);
@@ -1815,19 +1815,19 @@ ReadWriteAccess_t DataDictionaryGetMONR(MonitorDataType * MONR, const uint32_t t
 }
 
 /*!
- * \brief DataDictionaryInitMONR initializes a data structure for saving object monitor data
+ * \brief DataDictionaryFreeMonitorData Releases data structure for saving object monitor data
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryFreeMONR() {
+ReadWriteAccess_t DataDictionaryFreeMonitorData() {
 	ReadWriteAccess_t result = WRITE_OK;
 
-	if (MONRMemory == NULL) {
+	if (monitorDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized memory");
 		return UNDEFINED;
 	}
 
-	destroySharedMemory(MONRMemory);
+	destroySharedMemory(monitorDataMemory);
 
 	return result;
 }
@@ -1837,22 +1837,22 @@ ReadWriteAccess_t DataDictionaryFreeMONR() {
 
 /*NbrOfObjects*/
 /*!
- * \brief DataDictionarySetOBCStateU8 Sets the number of objects to the specified value and clears all
+ * \brief DataDictionarySetNumberOfObjects Sets the number of objects to the specified value and clears all
  *			monitor data currently present in the system
  * \param numberOfobjects number of objects
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(const uint32_t newNumberOfObjects) {
+ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObjects) {
 
 	unsigned int numberOfObjects;
 	ReadWriteAccess_t result = WRITE_OK;
 
-	MONRMemory = claimSharedMemory(MONRMemory);
-	MONRMemory = resizeSharedMemory(MONRMemory, newNumberOfObjects);
-	numberOfObjects = getNumberOfMemoryElements(MONRMemory);
-	MONRMemory = releaseSharedMemory(MONRMemory);
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	monitorDataMemory = resizeSharedMemory(monitorDataMemory, newNumberOfObjects);
+	numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
 
-	if (MONRMemory == NULL) {
+	if (monitorDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
 		return UNDEFINED;
@@ -1862,15 +1862,15 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(const uint32_t newNumberOfO
 }
 
 /*!
- * \brief DataDictionaryGetOBCStateU8 Reads variable from shared memory
+ * \brief DataDictionaryGetNumberOfObjects Reads variable from shared memory
  * \param numberOfobjects number of objects in a test
  * \return Current object control state according to ::OBCState_t
  */
-ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(uint32_t * numberOfObjects) {
+ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t * numberOfObjects) {
 
-	MONRMemory = claimSharedMemory(MONRMemory);
-	*numberOfObjects = getNumberOfMemoryElements(MONRMemory);
-	MONRMemory = releaseSharedMemory(MONRMemory);
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	*numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
 
 	return READ_OK;
 }
