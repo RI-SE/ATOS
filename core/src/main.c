@@ -125,7 +125,9 @@ int main(int argc, char *argv[]) {
 	// Initialise data dictionary
 	LogMessage(LOG_LEVEL_INFO, "Initializing data dictionary");
 	dataDictOperationResult = DataDictionaryConstructor(GSD);
-	if (dataDictOperationResult != READ_OK && dataDictOperationResult != READ_WRITE_OK) {
+	if (dataDictOperationResult != READ_OK
+			&& dataDictOperationResult != READ_WRITE_OK
+			&& dataDictOperationResult != WRITE_OK) {
 		util_error("Unable to initialize shared memory space");
 	}
 	else {

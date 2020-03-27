@@ -98,6 +98,9 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMONR() : Res;
+	if (Res != WRITE_OK) {
+		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
+	}
 
 	DataDictionarySetOBCStateU8(GSD, OBC_STATE_UNDEFINED);
 
