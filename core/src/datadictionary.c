@@ -1745,7 +1745,8 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 
 	if (result == PARAMETER_NOTFOUND) {
 		// Search for unused memory space and place monitor data there
-		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", monitorData->ClientID);
+		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u",
+				   monitorData->ClientID);
 		for (uint32_t i = 0; i < numberOfObjects; ++i) {
 			if (monitorDataMemory[i].ClientID == 0) {
 				memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
