@@ -47,7 +47,7 @@ if __name__ == "__main__":
     obj = Executable("VirtualObject",["-nogui"])
     
     # 4: Upload trajectory
-    userControl.UploadFile("traj/127.0.0.1",traj)
+    userControl.UploadFile("127.0.0.1",traj,"trajectory")
 
     # 5: Send init
     userControl.Init()
