@@ -132,7 +132,8 @@ typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
 	InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
 	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
-	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1, DeleteFileDirectory_1,
+	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
+		DeleteFileDirectory_1,
 	ClearTrajectories_0, ClearGeofences_0,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
 	start_ext_trigg_1, nocommand
@@ -143,7 +144,8 @@ static const char *SystemControlCommandsArr[] = {
 	"AbortScenario_0", "InitializeScenario_0",
 	"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
-	"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1", "DeleteFileDirectory_1",
+	"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1",
+		"DeleteFileDirectory_1",
 	"ClearTrajectories_0", "ClearGeofences_0", "CreateDirectory_1",
 	"GetTestOrigin_0", "replay_1",
 	"control_0",
@@ -787,7 +789,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = Idle_0;
 				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
 				*ControlResponseBuffer =
-					SystemControlDeleteGenericFile(SystemControlArgument[0], sizeof (SystemControlArgument[0]));
+					SystemControlDeleteGenericFile(SystemControlArgument[0],
+												   sizeof (SystemControlArgument[0]));
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteFileDirectory:",
 												 ControlResponseBuffer, 1, &ClientSocket, 0);
 			}
