@@ -52,7 +52,7 @@ static pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define MONR_DATA_FILENAME "MonitorData"
 
-static volatile MonitorDataType* MONRMemory = NULL;
+static volatile MonitorDataType *MONRMemory = NULL;
 
 
 /*------------------------------------------------------------
@@ -1694,6 +1694,7 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
 ReadWriteAccess_t DataDictionaryInitMONR() {
 
 	int createdMemory;
+
 	MONRMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (MonitorDataType), &createdMemory);
 	if (MONRMemory == NULL) {
 		return UNDEFINED;
@@ -1730,6 +1731,7 @@ ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR) {
 	MONRMemory = claimSharedMemory(MONRMemory);
 	result = PARAMETER_NOTFOUND;
 	unsigned int numberOfObjects = getNumberOfMemoryElements(MONRMemory);
+
 	LogPrint("Number of objects currently in memory: %u", numberOfObjects);
 	for (uint32_t i = 0; i < numberOfObjects; ++i) {
 		if (MONRMemory[i].ClientID == MONR->ClientID) {
@@ -1753,8 +1755,10 @@ ReadWriteAccess_t DataDictionarySetMONR(const MonitorDataType * MONR) {
 			MONRMemory = resizeSharedMemory(MONRMemory, numberOfObjects + 1);
 			if (MONRMemory != NULL) {
 				numberOfObjects = getNumberOfMemoryElements(MONRMemory);
-				LogMessage(LOG_LEVEL_INFO, "Modified shared memory to hold MONR data for %u objects, mp now %p", numberOfObjects, MONRMemory);
-				memcpy(&MONRMemory[numberOfObjects-1], MONR, sizeof (MonitorDataType));
+				LogMessage(LOG_LEVEL_INFO,
+						   "Modified shared memory to hold MONR data for %u objects, mp now %p",
+						   numberOfObjects, MONRMemory);
+				memcpy(&MONRMemory[numberOfObjects - 1], MONR, sizeof (MonitorDataType));
 				LogPrint("Printed MONR");
 			}
 			else {
@@ -1790,7 +1794,8 @@ ReadWriteAccess_t DataDictionaryGetMONR(MonitorDataType * MONR, const uint32_t t
 
 	MONRMemory = claimSharedMemory(MONRMemory);
 	unsigned int numberOfObjects = getNumberOfMemoryElements(MONRMemory);
-	for (unsigned int  i = 0; i < numberOfObjects; ++i) {
+
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
 		if (MONRMemory[i].ClientID == transmitterId) {
 			memcpy(MONR, &MONRMemory[i], sizeof (MonitorDataType));
 			result = READ_OK;
@@ -1838,6 +1843,7 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(const uint32_t newNumberOfO
 
 	unsigned int numberOfObjects;
 	ReadWriteAccess_t result = WRITE_OK;
+
 	MONRMemory = claimSharedMemory(MONRMemory);
 	MONRMemory = resizeSharedMemory(MONRMemory, newNumberOfObjects);
 	numberOfObjects = getNumberOfMemoryElements(MONRMemory);
