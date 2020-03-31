@@ -745,8 +745,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					FileLengthI32 = SystemControlBuildFileContentInfo("dir.info", 0);
 					SystemControlFileDownloadResponse(FileLengthI32, &ClientSocket, 0);
 					SystemControlSendFileContent(&ClientSocket, "dir.info",
-												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE, SystemControlDirectoryInfo.info_buffer,
-												 KEEP_FILE, 0);
+												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
 					SystemControlDestroyFileContentInfo("dir.info", 1);
 				}
 
@@ -788,8 +788,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					FileLengthI32 = SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
 					SystemControlFileDownloadResponse(FileLengthI32, &ClientSocket, 0);
 					SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0],
-												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE, SystemControlDirectoryInfo.info_buffer,
-												 KEEP_FILE, 0);
+												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
 					SystemControlDestroyFileContentInfo(SystemControlArgument[0], 0);
 				}
 
@@ -1380,15 +1380,16 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8 * ResponseString, C
 void SystemControlFileDownloadResponse(I32 FileLength, I32 * Sockfd, U8 Debug) {
 	I32 n, i;
 	C8 Length[4];
+
 	n = FileLength;
 	Length[0] = (C8) (n >> 24);
 	Length[1] = (C8) (n >> 16);
 	Length[2] = (C8) (n >> 8);
 	Length[3] = (C8) n;
-	
+
 	if (Debug) {
 		for (i = 0; i < 4; i++)
-		printf("%x-", Length[i]);
+			printf("%x-", Length[i]);
 		printf("\n");
 	}
 
@@ -2006,7 +2007,7 @@ I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 
 	   if (Debug)
 	   LogMessage(LOG_LEVEL_DEBUG, "Filesize %d of %s", (I32) st.st_size, CompletePath);
-	
+
 	   return st.st_size;
 	 */
 	struct stat st;
@@ -2018,31 +2019,31 @@ I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 	if (SystemControlDirectoryInfo.exist)
 		return -1;
 
-	
+
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
 	stat(CompletePath, &st);
 	/*
-	// Create new temporary file, containing the length of the current file in hex + the rest of the document
-	strcat(temporaryCompletePath, ".temp");
-	FILE *comp_fd = fopen(CompletePath, "r");
-	FILE *temp_fd = fopen(temporaryCompletePath, "w");
+	   // Create new temporary file, containing the length of the current file in hex + the rest of the document
+	   strcat(temporaryCompletePath, ".temp");
+	   FILE *comp_fd = fopen(CompletePath, "r");
+	   FILE *temp_fd = fopen(temporaryCompletePath, "w");
 
-	fprintf(temp_fd, "%c%c%c%c",
-			(U8) (st.st_size >> 24), (U8) (st.st_size >> 16), (U8) (st.st_size >> 8), (U8) (st.st_size)
-		);
+	   fprintf(temp_fd, "%c%c%c%c",
+	   (U8) (st.st_size >> 24), (U8) (st.st_size >> 16), (U8) (st.st_size >> 8), (U8) (st.st_size)
+	   );
 
-	while (!feof(comp_fd)) {
-		fputc(fgetc(comp_fd), temp_fd);
-	}
+	   while (!feof(comp_fd)) {
+	   fputc(fgetc(comp_fd), temp_fd);
+	   }
 
-	fclose(comp_fd);
-	fclose(temp_fd);
+	   fclose(comp_fd);
+	   fclose(temp_fd);
 
-	// Rename the temporary file to the name of the previous one
-	rename(temporaryCompletePath, CompletePath);
-	stat(CompletePath, &st);
-	*/
+	   // Rename the temporary file to the name of the previous one
+	   rename(temporaryCompletePath, CompletePath);
+	   stat(CompletePath, &st);
+	 */
 	// Create mmap of the file and return the length
 	SystemControlDirectoryInfo.fd = open(CompletePath, O_RDWR);
 	SystemControlDirectoryInfo.info_buffer =
@@ -2064,9 +2065,9 @@ I32 SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile) {
 	munmap(SystemControlDirectoryInfo.info_buffer, SystemControlDirectoryInfo.size);
 	close(SystemControlDirectoryInfo.fd);
 	SystemControlDirectoryInfo.exist = 0;
-	if(RemoveFile == 1){
-		remove(CompletePath);	
-	} 
+	if (RemoveFile == 1) {
+		remove(CompletePath);
+	}
 	return 0;
 }
 
