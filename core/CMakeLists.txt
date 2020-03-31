@@ -100,6 +100,7 @@ target_link_libraries(${COREUTILS_TARGET} LINK_PUBLIC
 	${LOGGING_LIBRARY}
 	${MESSAGE_BUS_LIBRARY}
 	${MATH_LIBRARY}
+	${POSITIONING_TARGET}
 )
 
 # Installation rules
