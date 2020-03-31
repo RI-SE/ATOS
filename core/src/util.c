@@ -114,6 +114,7 @@ static void CopyHTTPHeaderField(char *request, char *targetContainer, size_t tar
 static char rayFromPointIntersectsLine(double pointX, double pointY, double polyPointAX, double polyPointAY,
 									   double polyPointBX, double polyPointBY);
 static int deleteDirectoryContents(char *path, size_t pathLen);
+static int deleteFile(char *path, size_t pathLen);
 
 void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetContainerSize,
 						 const char *fieldName) {
@@ -175,6 +176,39 @@ void CopyHTTPHeaderField(char *request, char *targetContainer, size_t targetCont
 		targetContainer[fieldLength] = '\0';
 	}
 
+}
+
+/*!
+ * \brief deleteFile Deletes the file given in the parameter ::path
+ * \param path The path to the file on the machine.
+ * \param pathLen The length of ::the path string.
+ * \return  0 if it could successfully delete file, non-zero if it could not.
+ */
+int deleteFile(char *path, size_t pathLen) {
+	if (path == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Path is null-pointer");
+		errno = EINVAL;
+		return -1;
+	}
+	if (pathLen > MAX_FILE_PATH) {
+		LogMessage(LOG_LEVEL_ERROR, "Path variable too large to handle");
+		errno = EINVAL;
+		return -1;
+	}
+
+	FILE *fd = fopen(path, "a");
+
+	if (fd == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Path <%s> could not be opened", path);
+		return -1;
+	}
+	fclose(fd);
+
+	if (remove(path) != 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Path <%s> could not be deleted", path);
+		return -1;
+	}
+	return 0;
 }
 
 /*!
@@ -2381,6 +2415,107 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
 	UtilGetTestDirectoryPath(path, pathLen);
 	strcat(path, GEOFENCE_DIR_NAME);
 	strcat(path, "/");
+}
+
+/*!
+ * \brief UtilDeleteTrajectoryFile deletes the specified trajectory
+ * \param name
+ * \param nameLen
+ * \return returns 0 if the trajectory is now deleted. Non-zero values otherwise.
+ */
+int UtilDeleteTrajectoryFile(const char *name, const size_t nameLen) {
+	char filePath[MAX_FILE_PATH] = { '\0' };
+	UtilGetTrajDirectoryPath(filePath, sizeof (filePath));
+
+	if (name == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null trajectory file");
+		return -1;
+	}
+	if (strstr(name, "..") != NULL || strstr(name, "/") != NULL) {
+		errno = EPERM;
+		LogMessage(LOG_LEVEL_ERROR,
+				   "Attempt to call delete on trajectory file and navigate out of directory");
+		return -1;
+	}
+	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
+		errno = ENOBUFS;
+		LogMessage(LOG_LEVEL_ERROR, "Trajectory file name too long");
+		return -1;
+	}
+
+	if (filePath[0] == '\0')
+		return -1;
+
+	strcat(filePath, name);
+	return deleteFile(filePath, sizeof (filePath));
+}
+
+/*!
+ * \brief UtilDeleteGeofenceFile deletes the specified geofence
+ * \param name
+ * \param nameLen
+ * \return returns 0 if the geofence is now deleted. Non-zero values otherwise.
+ */
+int UtilDeleteGeofenceFile(const char *name, const size_t nameLen) {
+	char filePath[MAX_FILE_PATH] = { '\0' };
+	UtilGetGeofenceDirectoryPath(filePath, sizeof (filePath));
+
+	if (name == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null geofence file");
+		return -1;
+	}
+	if (strstr(name, "..") != NULL || strstr(name, "/") != NULL) {
+		errno = EPERM;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on geofence file and navigate out of directory");
+		return -1;
+	}
+	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
+		errno = ENOBUFS;
+		LogMessage(LOG_LEVEL_ERROR, "Geofence file name too long");
+		return -1;
+	}
+
+	if (filePath[0] == '\0')
+		return -1;
+
+	strcat(filePath, name);
+	return deleteFile(filePath, sizeof (filePath));
+}
+
+/*!
+ * \brief UtilDeleteGeofenceFile deletes the specified file and deletes it
+ * \param pathRelativeToWorkspace
+ * \return returns 0 if the geofence is now deleted. Non-zero values otherwise.
+ */
+int UtilDeleteGenericFile(const char *pathRelativeToWorkspace, const size_t nameLen) {
+	char filePath[MAX_FILE_PATH] = { '\0' };
+	UtilGetTestDirectoryPath(filePath, sizeof (filePath));
+
+	if (pathRelativeToWorkspace == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null generic file");
+		return -1;
+	}
+
+	if (strstr(pathRelativeToWorkspace, "..") != NULL) {
+		errno = EPERM;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on generic file and navigate out of directory");
+		return -1;
+	}
+
+	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
+		errno = ENOBUFS;
+		LogMessage(LOG_LEVEL_ERROR, "Generic path name too long");
+		return -1;
+	}
+
+	if (filePath[0] == '\0')
+		return -1;
+
+	strcat(filePath, pathRelativeToWorkspace);
+	return deleteFile(filePath, sizeof (filePath));
 }
 
 /*!
