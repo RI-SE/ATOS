@@ -837,7 +837,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR,
-						   "Wrong parameter count in PrepFileRx(path, filesize, packetsize)!");
+						   "Wrong parameter count in UploadFile(path, filesize, packetsize, filetype)!");
 				SystemControlCommand = Idle_0;
 			}
 			break;
