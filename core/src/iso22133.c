@@ -450,9 +450,10 @@ static char isValidMessageID(const uint16_t id);
 static double_t mapISOHeadingToHostHeading(const double_t isoHeading_rad);
 static double_t mapHostHeadingToISOHeading(const double_t hostHeading_rad);
 static void convertMONRToHostRepresentation(const MONRType * MONRData, ObjectMonitorType * monitorData);
-static ISOMessageReturnValue verifyChecksum(const void* data, const size_t dataLen, const uint16_t crc, const char debug);
+static ISOMessageReturnValue verifyChecksum(const void *data, const size_t dataLen, const uint16_t crc,
+											const char debug);
 static uint16_t crcByte(const uint16_t crc, const uint8_t byte);
-static uint16_t crc16(const uint8_t* data, size_t dataLen);
+static uint16_t crc16(const uint8_t * data, size_t dataLen);
 
 // ************************** static variables ********************************************************************
 static uint16_t trajectoryMessageCrc = 0;
@@ -714,7 +715,7 @@ uint16_t crcByte(const uint16_t crc, const uint8_t byte) {
 		0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0
 	};
 
-	return (uint16_t)((crc << 8) ^ crcTable[(crc >> 8) ^ byte]);
+	return (uint16_t) ((crc << 8) ^ crcTable[(crc >> 8) ^ byte]);
 }
 
 
@@ -725,8 +726,9 @@ uint16_t crcByte(const uint16_t crc, const uint8_t byte) {
  * \param dataLen Length of the block of data
  * \return CRC checksum
  */
-uint16_t crc16(const uint8_t* data, size_t dataLen) {
+uint16_t crc16(const uint8_t * data, size_t dataLen) {
 	uint16_t crc = CRC_INIT_VALUE;
+
 	while (dataLen-- > 0) {
 		crc = crcByte(crc, *data++);
 	}
@@ -743,12 +745,14 @@ uint16_t crc16(const uint8_t* data, size_t dataLen) {
  * \param CRC Received CRC value for the data
  * \return Value according to ::ISOMessageReturnValue
  */
-ISOMessageReturnValue verifyChecksum(const void* data, const size_t dataLen, const uint16_t CRC, const char debug) {
+ISOMessageReturnValue verifyChecksum(const void *data, const size_t dataLen, const uint16_t CRC,
+									 const char debug) {
 	if (CRC == 0) {
 		return MESSAGE_OK;
 	}
 
 	const uint16_t dataCRC = crc16(data, dataLen);
+
 	if (debug) {
 		LogPrint("CRC given: %u, CRC calculated: %u", CRC, dataCRC);
 	}
@@ -860,7 +864,7 @@ ssize_t encodeTRAJMessageHeader(const uint16_t trajectoryID, const uint16_t traj
 	// Update CRC
 	dataLen = sizeof (TRAJData);
 	while (dataLen-- > 0) {
-		trajectoryMessageCrc = crcByte(trajectoryMessageCrc, (uint8_t)(*trajDataBuffer++));
+		trajectoryMessageCrc = crcByte(trajectoryMessageCrc, (uint8_t) (*trajDataBuffer++));
 	}
 	return sizeof (TRAJHeaderType);
 }
@@ -1048,7 +1052,7 @@ ssize_t encodeTRAJMessagePoint(const struct timeval *pointTimeFromStart, const C
 	// Update CRC
 	dataLen = sizeof (TRAJData);
 	while (dataLen-- > 0) {
-		trajectoryMessageCrc = crcByte(trajectoryMessageCrc, (uint8_t)(*trajDataBufferPointer++));
+		trajectoryMessageCrc = crcByte(trajectoryMessageCrc, (uint8_t) (*trajDataBufferPointer++));
 	}
 
 	return sizeof (TRAJPointType);
