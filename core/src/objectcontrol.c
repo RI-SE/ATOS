@@ -166,7 +166,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	};
 	const struct timeval adaptiveSyncMessagePeriod = heartbeatPeriod;
 
-	U8 iForceObjectToLocalhostU8 = 0;
+    U8 iForceObjectToLocalhostU8 = DEFAULT_FORCE_OBJECT_TO_LOCALHOST;
 
 	FILE *fd;
 	C8 Timestamp[SMALL_BUFFER_SIZE_0];
@@ -213,7 +213,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
     dbl ASPFilterLevelDbl = DEFAULT_ASP_FILTER_LEVEL;
     dbl ASPMaxDeltaTimeDbl = DEFAULT_ASP_MAX_DELTA_TIME;
 	I32 ASPDebugRate = 1;
-    I32 ASPStepBackCount = 0;
+    I32 ASPStepBackCount = DEFAULT_ASP_STEP_BACK_COUNT;
 	char confDirectoryPath[MAX_FILE_PATH];
 
 	ControlCenterStatusType objectControlServerStatus = CONTROL_CENTER_STATUS_INIT;
@@ -1315,7 +1315,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 					 I32 * nbr_objects) {
 	DIR *traj_directory;
 	struct dirent *directory_entry;
-	int iForceObjectToLocalhost;
+    int iForceObjectToLocalhost = DEFAULT_FORCE_OBJECT_TO_LOCALHOST;
 	struct sockaddr_in sockaddr;
 	int result;
 	char trajPathDir[MAX_FILE_PATH];

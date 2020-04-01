@@ -297,7 +297,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	C8 RVSSData[SYSTEM_CONTROL_RVSS_DATA_BUFFER];
 	U16 RVSSSendCounterU16 = 0;
-	U32 RVSSConfigU32;
+    U32 RVSSConfigU32 = DEFAULT_RVSS_CONF;
 	U32 RVSSMessageLengthU32;
 	U16 PCDMessageCodeU16;
 	C8 RxFilePath[MAX_FILE_PATH];
@@ -316,8 +316,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	DataDictionaryGetRVSSConfigU32(GSD, &RVSSConfigU32);
 	LogMessage(LOG_LEVEL_INFO, "RVSSConfigU32 = %d", RVSSConfigU32);
 
-	U8 RVSSRateU8;
-	dbl RVSSRateDbl;
+    U8 RVSSRateU8 = DEFAULT_RVSS_RATE;
+    dbl RVSSRateDbl = DEFAULT_RVSS_RATE;
 
 	DataDictionaryGetRVSSRateU8(GSD, &RVSSRateU8);
 	RVSSRateDbl = RVSSRateU8;
