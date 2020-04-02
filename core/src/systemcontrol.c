@@ -181,8 +181,8 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8 * ResponseString, C
 I32 SystemControlBuildControlResponse(U16 ResponseStatus, C8 * ResponseString, C8 * ResponseData,
 									  I32 ResponseDataLength, U8 Debug);
 void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
-									  I32 ResponseDataLength, I32 * Sockfd, U8 Debug);
-	void SystemControlSendLog(C8 * LogString, I32 * Sockfd, U8 Debug);
+									   I32 ResponseDataLength, I32 * Sockfd, U8 Debug);
+void SystemControlSendLog(C8 * LogString, I32 * Sockfd, U8 Debug);
 void SystemControlSendMONR(C8 * LogString, I32 * Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8 * name, const U32 port, I32 * sockfd,
 											  struct sockaddr_in *addr);
@@ -736,10 +736,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					UtilCreateDirContent(SystemControlArgument[0], "dir.info");
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					FileLengthI32 = SystemControlBuildFileContentInfo("dir.info", 0);
-					SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubGetDirectoryContent:",
-									  					FileLengthI32, &ClientSocket, 0);
-					SystemControlSendFileContent(&ClientSocket, "dir.info",
-												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+					SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK,
+													  "SubGetDirectoryContent:", FileLengthI32, &ClientSocket,
+													  0);
+					SystemControlSendFileContent(&ClientSocket, "dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
 												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
 					SystemControlDestroyFileContentInfo("dir.info", 1);
 				}
@@ -843,7 +843,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					FileLengthI32 = SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
 					SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubDownloadFile:",
-									  					FileLengthI32, &ClientSocket, 0);
+													  FileLengthI32, &ClientSocket, 0);
 					SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0],
 												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
 												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
@@ -1435,7 +1435,7 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8 * ResponseString, C
 
 
 void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
-									  I32 ResponseDataLength, I32 * Sockfd, U8 Debug) {
+									   I32 ResponseDataLength, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
 	C8 Length[4];
 	C8 Status[2];
@@ -1466,7 +1466,7 @@ void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 		}
 
 		//SystemControlSendBytes(Data, n + 4, Sockfd, 0);
-		UtilSendTCPData("System Control", Data, 6+strlen(ResponseString), Sockfd, 0);
+		UtilSendTCPData("System Control", Data, 6 + strlen(ResponseString), Sockfd, 0);
 	}
 	else
 		LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
