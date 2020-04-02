@@ -459,7 +459,7 @@ static uint16_t crc16(const uint8_t * data, size_t dataLen);
 
 // ************************** static variables ********************************************************************
 static uint16_t trajectoryMessageCrc = 0;
-static int8_t isCRCCheckEnabled = DEFAULT_CRC_CHECK_ENABLED;
+static int8_t isCRCVerificationEnabled = DEFAULT_CRC_CHECK_ENABLED;
 
 // ************************** function definitions ****************************************************************
 
@@ -750,7 +750,7 @@ uint16_t crc16(const uint8_t * data, size_t dataLen) {
  */
 ISOMessageReturnValue verifyChecksum(const void *data, const size_t dataLen, const uint16_t CRC,
 									 const char debug) {
-	if (CRC == 0) {
+	if (!isCRCVerificationEnabled || CRC == 0) {
 		return MESSAGE_OK;
 	}
 
@@ -760,6 +760,16 @@ ISOMessageReturnValue verifyChecksum(const void *data, const size_t dataLen, con
 		LogPrint("CRC given: %u, CRC calculated: %u", CRC, dataCRC);
 	}
 	return dataCRC == CRC ? MESSAGE_OK : MESSAGE_CRC_ERROR;
+}
+
+/*!
+ * \brief setISOCRCVerification Enables or disables checksum verification on received messages (default
+ *			is to enable checksum verification)
+ * \param enabled Boolean for enabling or disabling the checksum verification
+ */
+void setISOCRCVerification(const int8_t enabled) {
+	isCRCVerificationEnabled = enabled ? 1 : 0;
+	return;
 }
 
 
