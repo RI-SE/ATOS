@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
 	Options options;
 	pid_t pID[numberOfModules];
 	char moduleExitStatus[numberOfModules];
-	ReadWriteAccess_t dataDictInitResult = UNDEFINED;
+	ReadWriteAccess_t dataDictOperationResult = UNDEFINED;
 
 	if (readArgumentList(argc, argv, &options))
 		exit(EXIT_FAILURE);
@@ -124,12 +124,13 @@ int main(int argc, char *argv[]) {
 
 	// Initialise data dictionary
 	LogMessage(LOG_LEVEL_INFO, "Initializing data dictionary");
-	dataDictInitResult = DataDictionaryConstructor(GSD);
-	if (dataDictInitResult != READ_OK && dataDictInitResult != READ_WRITE_OK) {
+	dataDictOperationResult = DataDictionaryConstructor(GSD);
+	if (dataDictOperationResult != READ_OK
+		&& dataDictOperationResult != READ_WRITE_OK && dataDictOperationResult != WRITE_OK) {
 		util_error("Unable to initialize shared memory space");
 	}
 	else {
-		LogMessage(LOG_LEVEL_INFO, "Data dictionary succesfully initiated");
+		LogMessage(LOG_LEVEL_INFO, "Data dictionary succesfully initialized");
 	}
 	LogMessage(LOG_LEVEL_INFO, "About to enter mq init");
 
@@ -160,8 +161,13 @@ int main(int argc, char *argv[]) {
 	LogMessage(LOG_LEVEL_DEBUG, "Cleaning up message bus resources");
 	if (shutdownMessageQueueBus())
 		util_error("Unable to successfully clean up message bus resources");
-	else
-		exit(EXIT_SUCCESS);
+
+	dataDictOperationResult = DataDictionaryDestructor(GSD);
+	if (dataDictOperationResult != WRITE_OK && dataDictOperationResult != READ_WRITE_OK) {
+		util_error("Unable to clear shared memory space");
+	}
+
+	exit(EXIT_SUCCESS);
 }
 
 /*!
