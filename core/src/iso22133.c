@@ -47,7 +47,9 @@ static const uint8_t SupportedProtocolVersions[] = { 2 };
 #define ACCELERATION_UNAVAILABLE_VALUE 32001
 #define ACCELERATION_ONE_METER_PER_SECOND_SQUARED_VALUE 1000
 #define RELATIVE_TIME_ONE_SECOND_VALUE 1000
-#define CRC_INIT_VALUE 0x0000
+
+#define DEFAULT_CRC_INIT_VALUE 0x0000
+#define DEFAULT_CRC_CHECK_ENABLED 1
 
 typedef enum {
 	ISO_DRIVE_DIRECTION_FORWARD = 0,
@@ -457,6 +459,7 @@ static uint16_t crc16(const uint8_t * data, size_t dataLen);
 
 // ************************** static variables ********************************************************************
 static uint16_t trajectoryMessageCrc = 0;
+static int8_t isCRCCheckEnabled = DEFAULT_CRC_CHECK_ENABLED;
 
 // ************************** function definitions ****************************************************************
 
@@ -727,7 +730,7 @@ uint16_t crcByte(const uint16_t crc, const uint8_t byte) {
  * \return CRC checksum
  */
 uint16_t crc16(const uint8_t * data, size_t dataLen) {
-	uint16_t crc = CRC_INIT_VALUE;
+	uint16_t crc = DEFAULT_CRC_INIT_VALUE;
 
 	while (dataLen-- > 0) {
 		crc = crcByte(crc, *data++);
@@ -857,7 +860,7 @@ ssize_t encodeTRAJMessageHeader(const uint16_t trajectoryID, const uint16_t traj
 	TRAJData.trajectoryNameContentLength = htole16(TRAJData.trajectoryNameContentLength);
 
 	// Reset CRC
-	trajectoryMessageCrc = CRC_INIT_VALUE;
+	trajectoryMessageCrc = DEFAULT_CRC_INIT_VALUE;
 
 	memcpy(trajDataBuffer, &TRAJData, sizeof (TRAJData));
 
