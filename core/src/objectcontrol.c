@@ -166,7 +166,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	};
 	const struct timeval adaptiveSyncMessagePeriod = heartbeatPeriod;
 
-    U8 iForceObjectToLocalhostU8 = DEFAULT_FORCE_OBJECT_TO_LOCALHOST;
+	U8 iForceObjectToLocalhostU8 = DEFAULT_FORCE_OBJECT_TO_LOCALHOST;
 
 	FILE *fd;
 	C8 Timestamp[SMALL_BUFFER_SIZE_0];
@@ -185,13 +185,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	flt SpaceArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
 	flt TimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
 	SpaceTime SpaceTimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
-    C8 OriginLatitude[SMALL_BUFFER_SIZE_0], OriginLongitude[SMALL_BUFFER_SIZE_0],
+	C8 OriginLatitude[SMALL_BUFFER_SIZE_0], OriginLongitude[SMALL_BUFFER_SIZE_0],
 		OriginAltitude[SMALL_BUFFER_SIZE_0], OriginHeading[SMALL_BUFFER_SIZE_0];
 	C8 TextBuffer[SMALL_BUFFER_SIZE_0];
-    dbl OriginLatitudeDbl = DEFAULT_ORIGO_LAT;
-    dbl OriginLongitudeDbl = DEFAULT_ORIGO_LOG;
-    dbl OriginAltitudeDbl = DEFAULT_ORIGO_ALT;
-    dbl OriginHeadingDbl = DEFAULT_ORIGO_HEADING;
+	dbl OriginLatitudeDbl = DEFAULT_ORIGO_LAT;
+	dbl OriginLongitudeDbl = DEFAULT_ORIGO_LOG;
+	dbl OriginAltitudeDbl = DEFAULT_ORIGO_ALT;
+	dbl OriginHeadingDbl = DEFAULT_ORIGO_HEADING;
 	C8 pcSendBuffer[MBUS_MAX_DATALEN];
 	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
 	MonitorDataType monitorData;
@@ -208,12 +208,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	AdaptiveSyncPoint ASP[MAX_ADAPTIVE_SYNC_POINTS];
 	I32 SyncPointCount = 0;
 	I32 SearchStartIndex = 0;
-    dbl ASPMaxTimeDiffDbl = DEFAULT_ASP_MAX_TIME_DIFF;
-    dbl ASPMaxTrajDiffDbl = DEFAULT_ASP_MAX_TRAJ_DIFF;
-    dbl ASPFilterLevelDbl = DEFAULT_ASP_FILTER_LEVEL;
-    dbl ASPMaxDeltaTimeDbl = DEFAULT_ASP_MAX_DELTA_TIME;
+	dbl ASPMaxTimeDiffDbl = DEFAULT_ASP_MAX_TIME_DIFF;
+	dbl ASPMaxTrajDiffDbl = DEFAULT_ASP_MAX_TRAJ_DIFF;
+	dbl ASPFilterLevelDbl = DEFAULT_ASP_FILTER_LEVEL;
+	dbl ASPMaxDeltaTimeDbl = DEFAULT_ASP_MAX_DELTA_TIME;
 	I32 ASPDebugRate = 1;
-    I32 ASPStepBackCount = DEFAULT_ASP_STEP_BACK_COUNT;
+	I32 ASPStepBackCount = DEFAULT_ASP_STEP_BACK_COUNT;
 	char confDirectoryPath[MAX_FILE_PATH];
 
 	ControlCenterStatusType objectControlServerStatus = CONTROL_CENTER_STATUS_INIT;
@@ -1315,7 +1315,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 					 I32 * nbr_objects) {
 	DIR *traj_directory;
 	struct dirent *directory_entry;
-    int iForceObjectToLocalhost = DEFAULT_FORCE_OBJECT_TO_LOCALHOST;
+	int iForceObjectToLocalhost = DEFAULT_FORCE_OBJECT_TO_LOCALHOST;
 	struct sockaddr_in sockaddr;
 	int result;
 	char trajPathDir[MAX_FILE_PATH];
