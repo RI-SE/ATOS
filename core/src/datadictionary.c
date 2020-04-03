@@ -11,14 +11,17 @@
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
+
+
 #include <stdlib.h>
 #include <pthread.h>
 #include <sys/stat.h>
-#include <sys/mman.h>
 #include <sys/types.h>
 #include "datadictionary.h"
 #include "iso22133.h"
 #include "logging.h"
+#include "shmem.h"
+
 
 // Parameters and variables
 static pthread_mutex_t OriginLatitudeMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -46,9 +49,10 @@ static pthread_mutex_t DataDictionaryRVSSRateMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t MONRMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t numberOfObjectsMutex = PTHREAD_MUTEX_INITIALIZER;
 
+#define MONR_DATA_FILENAME "MonitorData"
+
+static volatile MonitorDataType *monitorDataMemory = NULL;
 
 
 /*------------------------------------------------------------
@@ -93,10 +97,28 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
+	Res = Res == READ_OK ? DataDictionaryInitMonitorData() : Res;
+	if (Res != WRITE_OK) {
+		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
+	}
 
 	DataDictionarySetOBCStateU8(GSD, OBC_STATE_UNDEFINED);
 
 	return Res;
+}
+
+
+/*!
+ * \brief DataDictionaryDestructor Deallocate data held by DataDictionary.
+ * \param GSD Pointer to allocated shared memory
+ * \return Error code defined by ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryDestructor(GSDType * GSD) {
+	ReadWriteAccess_t result = WRITE_OK;
+
+	result = result == WRITE_OK ? DataDictionaryFreeMonitorData() : result;
+
+	return result;
 }
 
 
@@ -1669,113 +1691,146 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
 /*END OBCState*/
 
 /*!
- * \brief DataDictionaryInitMONR inits a data structure for saving object monr
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryInitMonitorData inits a data structure for saving object monr
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitMONR(GSDType * GSD) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionaryInitMonitorData() {
 
-	Res = WRITE_OK;
-	char filePath[PATH_MAX];
-	int fd;
-	struct stat st;
+	int createdMemory;
 
-	pthread_mutex_lock(&MONRMutex);
-	sprintf(filePath, "%smonrMessageMemory.mem", SHARED_MEMORY_PATH);
-	fd = open(filePath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-	stat(filePath, &st);
-
-// this memory does not change size as more MONR messages are added, and it is unclear where in the memory stuff is being written
-	lseek(fd, (sizeof (MonitorDataType)) - 1, SEEK_SET);
-	write(fd, "", 1);
-
-	stat(filePath, &st);
-
-	// Map memory to created file
-	GSD->MonrMessages =
-		(MonitorDataType *) mmap(NULL, (sizeof (MonitorDataType)), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-	if (GSD->MonrMessages == MAP_FAILED) {
-		LogPrint(LOG_LEVEL_ERROR, "mmap failed: %s", strerror(errno));
-		close(fd);
+	monitorDataMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (MonitorDataType), &createdMemory);
+	if (monitorDataMemory == NULL) {
+		return UNDEFINED;
 	}
-	else {
-		LogMessage(LOG_LEVEL_INFO, "Init MonrMessage memory");
-	}
-	close(fd);
-	pthread_mutex_unlock(&MONRMutex);
-	return Res;
+	return createdMemory ? WRITE_OK : READ_OK;
 }
 
 /*!
- * \brief DataDictionarySetMONR Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
- * \param MONRdata Monitor data
+ * \brief DataDictionarySetMonitorData Parses input variable and sets variable to corresponding value
+ * \param monitorData Monitor data
  * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMONR(GSDType * GSD, const MonitorDataType * MONR, const U32 transmitterId) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorData) {
 
-	Res = WRITE_OK;
-	pthread_mutex_lock(&MONRMutex);
-	if (GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects) {
-		GSD->MonrMessages[transmitterId] = *MONR;
+	ReadWriteAccess_t result;
+
+	if (monitorDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
 	}
-	else {
-		Res = UNDEFINED;
-		LogPrint(LOG_LEVEL_ERROR, "Unable to write MonrMessage in DataDictionary");
+	if (monitorData == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (monitorData->ClientID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
 	}
 
-	pthread_mutex_unlock(&MONRMutex);
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	result = PARAMETER_NOTFOUND;
+	unsigned int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
 
-	return Res;
+	LogPrint("Number of objects currently in memory: %u", numberOfObjects);
+	for (uint32_t i = 0; i < numberOfObjects; ++i) {
+		if (monitorDataMemory[i].ClientID == monitorData->ClientID) {
+			memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
+			result = WRITE_OK;
+		}
+	}
+
+	if (result == PARAMETER_NOTFOUND) {
+		// Search for unused memory space and place monitor data there
+		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u",
+				   monitorData->ClientID);
+		for (uint32_t i = 0; i < numberOfObjects; ++i) {
+			if (monitorDataMemory[i].ClientID == 0) {
+				memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
+				result = WRITE_OK;
+			}
+		}
+
+		// No uninitialized memory space found - create new
+		if (result == PARAMETER_NOTFOUND) {
+			monitorDataMemory = resizeSharedMemory(monitorDataMemory, numberOfObjects + 1);
+			if (monitorDataMemory != NULL) {
+				numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+				LogMessage(LOG_LEVEL_INFO,
+						   "Modified shared memory to hold MONR data for %u objects, mp now %p",
+						   numberOfObjects, monitorDataMemory);
+				memcpy(&monitorDataMemory[numberOfObjects - 1], monitorData, sizeof (MonitorDataType));
+				LogPrint("Printed MONR");
+			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
+				result = UNDEFINED;
+			}
+		}
+	}
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
+	return result;
 }
 
 /*!
- * \brief DataDictionaryGetMONR Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param MONRdata Return variable pointer
+ * \brief DataDictionaryGetMonitorData Reads variable from shared memory
+ * \param monitorData Return variable pointer
  * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMONR(GSDType * GSD, MonitorDataType * MONR, const U32 transmitterId) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionaryGetMonitorData(MonitorDataType * monitorData, const uint32_t transmitterId) {
+	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 
-	Res = READ_OK;
+	if (monitorData == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (transmitterId == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
 
-	pthread_mutex_lock(&MONRMutex);
-	if (GSD->MonrMessages != NULL && transmitterId < GSD->numberOfObjects) {
-		*MONR = GSD->MonrMessages[transmitterId];
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	unsigned int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		if (monitorDataMemory[i].ClientID == transmitterId) {
+			memcpy(monitorData, &monitorDataMemory[i], sizeof (MonitorDataType));
+			result = READ_OK;
+		}
 	}
-	else {
-		Res = UNDEFINED;
-		LogPrint(LOG_LEVEL_ERROR, "Unable to read MonrMessage in DataDictionary");
+
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
+	if (result == PARAMETER_NOTFOUND) {
+		LogMessage(LOG_LEVEL_WARNING, "Unable to find monitor data for transmitter ID %u", transmitterId);
 	}
-	pthread_mutex_unlock(&MONRMutex);
-	return Res;
+
+	return result;
 }
 
 /*!
- * \brief DataDictionaryInitMONR inits a data structure for saving object monr
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryFreeMonitorData Releases data structure for saving object monitor data
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionaryFreeMonitorData() {
+	ReadWriteAccess_t result = WRITE_OK;
 
-	Res = WRITE_OK;
-	pthread_mutex_lock(&MONRMutex);
-	int res = munmap(GSD->MonrMessages, sizeof (MonitorDataType));
-
-	if (res < 0) {
-		util_error("Unable to unmap monrMessages file!");
+	if (monitorDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized memory");
+		return UNDEFINED;
 	}
-	free(GSD->MonrMessages);
-	DataDictionarySetNumberOfObjectsU8(GSD, 0);
-	pthread_mutex_unlock(&MONRMutex);
-	return Res;
+
+	destroySharedMemory(monitorDataMemory);
+
+	return result;
 }
 
 /*END of MONR*/
@@ -1783,31 +1838,41 @@ ReadWriteAccess_t DataDictionaryFreeMONR(GSDType * GSD) {
 
 /*NbrOfObjects*/
 /*!
- * \brief DataDictionarySetOBCStateU8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
- * \param numberOfobjects number of objects in a test
+ * \brief DataDictionarySetNumberOfObjects Sets the number of objects to the specified value and clears all
+ *			monitor data currently present in the system
+ * \param numberOfobjects number of objects
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetNumberOfObjectsU8(GSDType * GSD, U32 * numberOfObjects) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObjects) {
 
-	Res = WRITE_OK;
-	pthread_mutex_lock(&numberOfObjectsMutex);
-	GSD->numberOfObjects = *numberOfObjects;
-	pthread_mutex_unlock(&numberOfObjectsMutex);
-	return Res;
+	unsigned int numberOfObjects;
+	ReadWriteAccess_t result = WRITE_OK;
+
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	monitorDataMemory = resizeSharedMemory(monitorDataMemory, newNumberOfObjects);
+	numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
+	if (monitorDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
+		return UNDEFINED;
+	}
+
+	return result;
 }
 
 /*!
- * \brief DataDictionaryGetOBCStateU8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetNumberOfObjects Reads variable from shared memory
  * \param numberOfobjects number of objects in a test
  * \return Current object control state according to ::OBCState_t
  */
-ReadWriteAccess_t DataDictionaryGetNumberOfObjectsU8(GSDType * GSD, U32 * numberOfObjects) {
-	pthread_mutex_lock(&numberOfObjectsMutex);
-	*numberOfObjects = GSD->numberOfObjects;
-	pthread_mutex_unlock(&numberOfObjectsMutex);
+ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t * numberOfObjects) {
+
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	*numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
 	return READ_OK;
 }
 
