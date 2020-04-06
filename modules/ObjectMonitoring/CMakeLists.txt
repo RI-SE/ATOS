@@ -19,6 +19,12 @@ set(MESSAGE_BUS_LIBRARY MaestroMQ)
 include(GNUInstallDirs)
 
 find_package(Threads REQUIRED)
+find_library(paho-mqtt3a NAMES libpaho-mqtt3a.so REQUIRED)
+find_library(paho-mqtt3a NAMES libpaho-mqtt3c.so REQUIRED)
+add_library(pahomqtt3a SHARED IMPORTED)
+add_library(pahomqtt3c SHARED IMPORTED)
+set_property(TARGET pahomqtt3a PROPERTY IMPORTED_LOCATION ${paho-mqtt3a})
+set_property(TARGET pahomqtt3c PROPERTY IMPORTED_LOCATION ${paho-mqtt3c})
 
 # Create project main executable target
 add_executable(${OBJECT_MONITORING_TARGET}
@@ -34,6 +40,8 @@ target_link_libraries(${OBJECT_MONITORING_TARGET} LINK_PUBLIC
 	${LOGGING_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${CMAKE_THREAD_LIBS_INIT}
+	pahomqtt3a
+	pahomqtt3c
 )
 
 target_include_directories(${OBJECT_MONITORING_TARGET} PUBLIC
