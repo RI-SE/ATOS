@@ -1,4 +1,4 @@
-/*------------------------------------------------------------------------------
+﻿/*------------------------------------------------------------------------------
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : systemcontrol.c
@@ -63,6 +63,7 @@ typedef struct {
 #define SYSTEM_CONTROL_TASK_PERIOD_MS 1
 #define SYSTEM_CONTROL_RVSS_TIME_MS 10
 
+#define SYSTEM_CONTROL_GETSTATUS_TIME_MS 5000
 
 #define SYSTEM_CONTROL_CONTROL_PORT   54241	// Default port, control channel
 #define SYSTEM_CONTROL_PROCESS_PORT   54242	// Default port, process channel
@@ -213,7 +214,10 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 												U8 SysCtrlState, U8 Debug);
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
 I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
-											 U8 Debug);
+                                             U8 Debug);
+
+I32 SystemControlSendGetStatusMessage(U8 Debug);
+
 static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
@@ -294,8 +298,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 ParameterListC8[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
 	U32 LengthU32 = 0;
 	C8 BinBuffer[SMALL_BUFFER_SIZE_1024];
-
-	C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
+    C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
 
 	HTTPHeaderContent HTTPHeader;
 
@@ -347,13 +350,13 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	}
 
 
-	while (!iExit) {
+    while (!iExit) {
 		if (server_state == SERVER_STATE_ERROR) {
 			iCommSend(COMM_ABORT, NULL, 0);
 			continue;
-		}
+        }
 
-		if (ModeU8 == 0) {
+        if (ModeU8 == 0) {
 			if (ClientSocket <= 0) {
 				if (server_state == SERVER_STATE_UNDEFINED) {
 					//Do some initialization
@@ -532,6 +535,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								 */
 			CurrentTimeU64 = UtilgetCurrentUTCtimeMS();
 			TimeDiffU64 = CurrentTimeU64 - OldTimeU64;
+
 		}
 
 
@@ -567,6 +571,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = PreviousSystemControlCommand;
 			}
 		}
+
+        //Call this from the loop to send
+        SystemControlSendGetStatusMessage(0);
+
 
 		bzero(pcRecvBuffer, SC_RECV_MESSAGE_BUFFER);
 		bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
@@ -609,6 +617,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case COMM_INV:
 			break;
+
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", iCommand);
 		}
@@ -2663,4 +2672,25 @@ I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU
 
 
 	return 0;
+}
+
+I32 SystemControlSendGetStatusMessage(U8 Debug ){
+
+    static U64 getStatusTimerU64 = 0;
+
+    //Small non-blocking timer
+    if(getStatusTimerU64 - UtilgetCurrentUTCtimeMS() <= -SYSTEM_CONTROL_GETSTATUS_TIME_MS){
+        getStatusTimerU64 = UtilgetCurrentUTCtimeMS();
+
+        iCommSend(COMM_GETSTATUS, NULL, 0);
+
+
+        if(Debug){
+            LogMessage(LOG_LEVEL_INFO, "GETSTATUS SENT");
+        }
+
+        return 1;
+    }
+
+    return 0;
 }

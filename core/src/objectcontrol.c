@@ -918,6 +918,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				iExit = 1;
 				iCommClose();
 			}
+            else if (iCommand == COMM_GETSTATUS) {
+                LogMessage(LOG_LEVEL_INFO, "Received GetStatus");
+            }
+
 			else {
 				LogMessage(LOG_LEVEL_WARNING, "Unhandled command in object control: %d", iCommand);
 			}

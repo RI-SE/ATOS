@@ -81,6 +81,7 @@
 // Frequent messages relevant during test run
 #define PRIO_COMM_TRAJ_TOSUP 12
 #define PRIO_COMM_TRAJ_FROMSUP 12
+#define PRIO_COMM_GETSTATUS 12
 // Logging
 #define PRIO_COMM_LOG 10
 // Unused messages TODO: double check the priority of unused messages
@@ -2044,7 +2045,7 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_DATA_DICT:
 		uiMessagePrio = PRIO_DATA_DICT;
 	case COMM_EXAC:
-		uiMessagePrio = PRIO_COMM_EXAC;
+        uiMessagePrio = PRIO_COMM_GETSTATUS;
 		break;
 	case COMM_ACCM:
 		uiMessagePrio = PRIO_COMM_ACCM;
@@ -2061,6 +2062,9 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_FAILURE:
 		uiMessagePrio = PRIO_COMM_FAILURE;
 		break;
+    case COMM_GETSTATUS:
+        uiMessagePrio = PRIO_COMM_FAILURE;
+        break;
 	default:
 		util_error("Unknown command");
 	}

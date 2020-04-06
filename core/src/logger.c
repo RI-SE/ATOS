@@ -291,6 +291,11 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		case COMM_INV:
 			break;
+
+        case COMM_GETSTATUS:
+            LogMessage(LOG_LEVEL_INFO, "Received GetStatus");
+            break;
+
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
 		}
