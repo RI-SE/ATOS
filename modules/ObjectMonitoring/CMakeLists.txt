@@ -32,6 +32,7 @@ add_executable(${OBJECT_MONITORING_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/connectionhandler.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/protocoldata.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/ISO22133ProtocolData.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/mqttconnectionhandler.cpp
 )
 
 # Link project executable to util libraries
