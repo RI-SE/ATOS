@@ -294,6 +294,14 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
         case COMM_GETSTATUS:
             LogMessage(LOG_LEVEL_INFO, "Received GetStatus");
+            C8 response[128];
+            bzero(response, sizeof (response));
+            response[0] = (uint8_t) "logger";
+            iCommSend(COMM_GETSTATUS_OK, response, sizeof(response));
+
+            break;
+
+        case COMM_GETSTATUS_OK:
             break;
 
 		default:
