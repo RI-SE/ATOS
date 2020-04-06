@@ -4,12 +4,12 @@
 #include <pthread.h>
 #include "protocoldata.h"
 
-class ConnectionHandler
+class RawConnectionHandler
 {
 public:
-	ConnectionHandler(int openSocketDescriptor, ProtocolData& data);
-	ConnectionHandler(int openSocketDescriptor, ProtocolData& data, unsigned long readBufferSize);
-	~ConnectionHandler();
+	RawConnectionHandler(int openSocketDescriptor, ProtocolData& data);
+	RawConnectionHandler(int openSocketDescriptor, ProtocolData& data, unsigned long readBufferSize);
+	~RawConnectionHandler();
 
 	bool isTerminated() const { return terminated; }
 private:
@@ -22,7 +22,7 @@ private:
 
 	void* threadRoutine(void*);
 	static void* routineWrapper(void* context) {
-		return static_cast<ConnectionHandler *>(context)->threadRoutine(nullptr);
+		return static_cast<RawConnectionHandler *>(context)->threadRoutine(nullptr);
 	}
 	[[ noreturn ]] void terminate(void* retval);
 };
