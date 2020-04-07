@@ -113,7 +113,18 @@ bool containsWildcards(const string &topic) {
 	 return retval;
 }
 
-
+/*!
+ * \brief MQTTTopicHandlers::getSubscriptions Returns a vector of MQTT subscriptions
+ *			which have been configured with handlers.
+ * \return A vector of MQTT subscriptions
+ */
+vector<string> MQTTTopicHandlers::getSubscriptions() {
+	vector<string> subscriptions;
+	for (HandlerMap::iterator it = handlerMap.begin(); it != handlerMap.end(); ++it) {
+		subscriptions.push_back(it->first);
+	}
+	return subscriptions;
+}
 
 /*!
  * \brief MQTTTopicHandlers::handleMessage Delegates handling of a message to one of the

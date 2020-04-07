@@ -21,4 +21,7 @@ void MQTTConnectionHandler::establishConnection() {
 	}
 	LogMessage(LOG_LEVEL_INFO, "Successfully connected to MQTT broker");
 	this->setMessageArrivedCallback(MQTTTopicHandlers::handleMessage);
+	for (const string &subscription : MQTTTopicHandlers::getSubscriptions()) {
+		MQTTClient_subscribe(this->client, subscription.c_str(), this->qualityOfService);
+	}
 }

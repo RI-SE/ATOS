@@ -56,6 +56,11 @@ private:
 	string clientID = "";
 	string serverURI = "";
 	MQTTClient_connectOptions connectionOptions;
+	enum : int {
+		FIRE_AND_FORGET = 0,
+		AT_LEAST_ONCE = 1,
+		ONLY_ONCE = 2
+	} qualityOfService = FIRE_AND_FORGET;
 };
 
 #endif // MQTTCONNECTIONHANDLER_H
