@@ -126,7 +126,8 @@ typedef struct {
 #define MAESTRO_TRAJ_FILE_TYPE        2
 #define MAESTRO_CONF_FILE_TYPE        3
 #define MAESTRO_GEOFENCE_FILE_TYPE    4
-
+#define MSCP_RESPONSE_DATALENGTH_BYTES 4
+#define MSCP_RESPONSE_STATUS_CODE_BYTES 2
 
 typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
@@ -1438,7 +1439,7 @@ void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 									   I32 ResponseDataLength, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
 	C8 Length[MSCP_RESPONSE_DATALENGTH_BYTES];
-	C8 Status[MSCP_RSPONSE_STATUS_CODE_BYTES];
+	C8 Status[MSCP_RESPONSE_STATUS_CODE_BYTES];
 	C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
 
 	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
@@ -1451,22 +1452,22 @@ void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 	Status[1] = (C8) ResponseStatus;
 
 	if (n + MSCP_RESPONSE_DATALENGTH_BYTES < SYSTEM_CONTROL_SEND_BUFFER_SIZE) {
-		for (i = 0, j = 0; i < 4; i++, j++)
+		for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
 			Data[j] = Length[i];
-		for (i = 0; i < 2; i++, j++)
+		for (i = 0; i < MSCP_RESPONSE_STATUS_CODE_BYTES; i++, j++)
 			Data[j] = Status[i];
 		t = strlen(ResponseString);
 		for (i = 0; i < t; i++, j++)
 			Data[j] = *(ResponseString + i);
 
 		if (Debug) {
-			for (i = 0; i < n + 4; i++)
+			for (i = 0; i < n + MSCP_RESPONSE_DATALENGTH_BYTES; i++)
 				printf("%x-", Data[i]);
 			printf("\n");
 		}
 
 		//SystemControlSendBytes(Data, n + 4, Sockfd, 0);
-		UtilSendTCPData("System Control", Data, 6 + strlen(ResponseString), Sockfd, 0);
+		UtilSendTCPData("System Control", Data, MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES + strlen(ResponseString), Sockfd, 0);
 	}
 	else
 		LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
@@ -1476,12 +1477,12 @@ void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 I32 SystemControlBuildControlResponse(U16 ResponseStatus, C8 * ResponseString, C8 * ResponseData,
 									  I32 ResponseDataLength, U8 Debug) {
 	int i = 0, n = 0, j = 0, t = 0;
-	C8 Length[4];
-	C8 Status[2];
+	C8 Length[MSCP_RESPONSE_DATALENGTH_BYTES];
+	C8 Status[MSCP_RESPONSE_STATUS_CODE_BYTES];
 	C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
 
 	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
-	n = 2 + strlen(ResponseString) + ResponseDataLength;
+	n = MSCP_RESPONSE_STATUS_CODE_BYTES + strlen(ResponseString) + ResponseDataLength;
 	Length[0] = (C8) (n >> 24);
 	Length[1] = (C8) (n >> 16);
 	Length[2] = (C8) (n >> 8);
@@ -1489,10 +1490,10 @@ I32 SystemControlBuildControlResponse(U16 ResponseStatus, C8 * ResponseString, C
 	Status[0] = (C8) (ResponseStatus >> 8);
 	Status[1] = (C8) ResponseStatus;
 
-	if (n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE) {
-		for (i = 0, j = 0; i < 4; i++, j++)
+	if (n + MSCP_RESPONSE_DATALENGTH_BYTES < SYSTEM_CONTROL_SEND_BUFFER_SIZE) {
+		for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
 			Data[j] = Length[i];
-		for (i = 0; i < 2; i++, j++)
+		for (i = 0; i < MSCP_RESPONSE_STATUS_CODE_BYTES; i++, j++)
 			Data[j] = Status[i];
 		t = strlen(ResponseString);
 		for (i = 0; i < t; i++, j++)
@@ -1504,7 +1505,7 @@ I32 SystemControlBuildControlResponse(U16 ResponseStatus, C8 * ResponseString, C
 			*(ResponseData + i) = Data[i];	//Copy back
 
 		if (Debug) {
-			for (i = 0; i < n + 4; i++)
+			for (i = 0; i < n + MSCP_RESPONSE_DATALENGTH_BYTES; i++)
 				printf("%x-", Data[i]);
 			printf("\n");
 		}
@@ -2065,26 +2066,7 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 
-	/*
-	   struct stat st;
-	   C8 CompletePath[MAX_FILE_PATH];
 
-	   bzero(CompletePath, MAX_FILE_PATH);
-	   UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-	   strcat(CompletePath, Path);
-
-	   stat(CompletePath, &st);
-	   *(ReturnValue + 0) = (U8) (st.st_size >> 24);
-	   *(ReturnValue + 1) = (U8) (st.st_size >> 16);
-	   *(ReturnValue + 2) = (U8) (st.st_size >> 8);
-	   *(ReturnValue + 3) = (U8) st.st_size;
-
-
-	   if (Debug)
-	   LogMessage(LOG_LEVEL_DEBUG, "Filesize %d of %s", (I32) st.st_size, CompletePath);
-
-	   return st.st_size;
-	 */
 	struct stat st;
 	C8 CompletePath[MAX_FILE_PATH];
 	C8 temporaryCompletePath[MAX_FILE_PATH];
@@ -2094,31 +2076,10 @@ I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 	if (SystemControlDirectoryInfo.exist)
 		return -1;
 
-
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
 	stat(CompletePath, &st);
-	/*
-	   // Create new temporary file, containing the length of the current file in hex + the rest of the document
-	   strcat(temporaryCompletePath, ".temp");
-	   FILE *comp_fd = fopen(CompletePath, "r");
-	   FILE *temp_fd = fopen(temporaryCompletePath, "w");
 
-	   fprintf(temp_fd, "%c%c%c%c",
-	   (U8) (st.st_size >> 24), (U8) (st.st_size >> 16), (U8) (st.st_size >> 8), (U8) (st.st_size)
-	   );
-
-	   while (!feof(comp_fd)) {
-	   fputc(fgetc(comp_fd), temp_fd);
-	   }
-
-	   fclose(comp_fd);
-	   fclose(temp_fd);
-
-	   // Rename the temporary file to the name of the previous one
-	   rename(temporaryCompletePath, CompletePath);
-	   stat(CompletePath, &st);
-	 */
 	// Create mmap of the file and return the length
 	SystemControlDirectoryInfo.fd = open(CompletePath, O_RDWR);
 	SystemControlDirectoryInfo.info_buffer =
