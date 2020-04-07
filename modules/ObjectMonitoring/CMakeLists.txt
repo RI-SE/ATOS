@@ -20,7 +20,7 @@ include(GNUInstallDirs)
 
 find_package(Threads REQUIRED)
 find_library(paho-mqtt3a NAMES libpaho-mqtt3a.so REQUIRED)
-find_library(paho-mqtt3a NAMES libpaho-mqtt3c.so REQUIRED)
+find_library(paho-mqtt3c NAMES libpaho-mqtt3c.so REQUIRED)
 add_library(pahomqtt3a SHARED IMPORTED)
 add_library(pahomqtt3c SHARED IMPORTED)
 set_property(TARGET pahomqtt3a PROPERTY IMPORTED_LOCATION ${paho-mqtt3a})
@@ -33,6 +33,7 @@ add_executable(${OBJECT_MONITORING_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/protocoldata.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/ISO22133ProtocolData.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/mqttconnectionhandler.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/mqtttopichandlers.cpp
 )
 
 # Link project executable to util libraries
