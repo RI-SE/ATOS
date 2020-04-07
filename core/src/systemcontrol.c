@@ -1467,7 +1467,9 @@ void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 		}
 
 		//SystemControlSendBytes(Data, n + 4, Sockfd, 0);
-		UtilSendTCPData("System Control", Data, MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES + strlen(ResponseString), Sockfd, 0);
+		UtilSendTCPData("System Control", Data,
+						MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES +
+						strlen(ResponseString), Sockfd, 0);
 	}
 	else
 		LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
