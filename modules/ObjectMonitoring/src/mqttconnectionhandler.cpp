@@ -1,4 +1,4 @@
-#include "mqttconnection.h"
+#include "mqttconnectionhandler.hpp"
 
 
 #define DEFAULT_SERVER_URI "tcp://localhost:1883"
@@ -20,4 +20,5 @@ void MQTTConnectionHandler::establishConnection() {
 		throw new MQTTError(errMsg, returnCode);
 	}
 	LogMessage(LOG_LEVEL_INFO, "Successfully connected to MQTT broker");
+	this->setMessageArrivedCallback(MQTTTopicHandlers::handleMessage);
 }

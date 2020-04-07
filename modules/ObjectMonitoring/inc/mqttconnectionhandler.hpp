@@ -3,10 +3,12 @@
 
 #include <string>
 #include <exception>
+#include <unordered_map>
 
 #include <MQTTClient.h>
 #include "logging.h"
 #include "iso22133.h"
+#include "mqtttopichandlers.hpp"
 
 using namespace std;
 
@@ -15,16 +17,18 @@ protected:
 	int errorCode;
 	string errorMessage;
 public:
-	explicit MQTTError(string msg, int errorCode) : errorCode(errorCode), msg(errorMessage) {}
+	explicit MQTTError(const string &msg, int errorCode) : errorCode(errorCode), errorMessage(msg) {}
 
-	virtual const char* what() const throw () {
+	virtual ~MQTTError() noexcept {}
+
+	virtual const char* what() const noexcept {
 		return errorMessage.c_str();
 	}
 
-	virtual int getErrorNumber() const throw () {
+	virtual int getErrorNumber() const noexcept {
 		return errorCode;
 	}
-} ;
+};
 
 
 class MQTTConnectionHandler {
@@ -34,34 +38,24 @@ public:
 
 private:
 
+	void setMessageArrivedCallback(MQTTTopicHandlers::MQTTTopicHandler messageCallback) {
+		this->messageCallback = messageCallback;
+		MQTTClient_setCallbacks(this->client, this, nullptr, &MQTTConnectionHandler::arrivalCallback, nullptr);
+		return;
+	}
+	MQTTTopicHandlers::MQTTTopicHandler messageCallback;
+
+	static int arrivalCallback(void* context, char* topicName, int,
+							   MQTTClient_message* message) {
+		MQTTConnectionHandler* thisObject = static_cast<MQTTConnectionHandler *>(context);
+		string topic(topicName);
+		return thisObject->messageCallback(message->payload, topic);
+	}
+
 	MQTTClient client;
 	string clientID = "";
 	string serverURI = "";
 	MQTTClient_connectOptions connectionOptions;
-
-	template <typename MQTTDataType> class MQTTConnection {
-	public:
-		MQTTConnection(MQTTClient &client, string &topicExpression, int messageCallback(MQTTDataType* message,
-							string &topicExpression)) : topicExpression(topicExpression), messageCallback(messageCallback) {
-			MQTTClient_setCallbacks(client, this, nullptr, &MQTTConnection::arrivalCallback, nullptr);
-		}
-	private:
-		string topicExpression = "";
-		int (*messageCallback)(void* message, string &topicName);
-
-		static int arrivalCallback(void* context, char* topicName, int,
-								   MQTTClient_message* message) {
-			MQTTConnection* thisObject = static_cast<MQTTConnection *>(context);
-			string topic(topicName);
-			if (message->payloadlen == sizeof (MQTTDataType)) {
-				return thisObject->messageCallback(static_cast<MQTTDataType*>(message->payload), topic);
-			}
-			LogMessage(LOG_LEVEL_ERROR, "Received MQTT payload of size %d while expecting size %u on topic %s",
-					   message->payloadlen, sizeof (MQTTDataType), topic.c_str());
-			return -1;
-		}
-	};
-
 };
 
 #endif // MQTTCONNECTIONHANDLER_H
