@@ -10,6 +10,7 @@
 #include "connectionhandler.h"
 #include "protocoldata.h"
 #include "ISO22133ProtocolData.h"
+#include "mqttconnectionhandler.hpp"
 #include "util.h"
 
 #define MODULE_NAME "ObjectMonitoring"
@@ -41,6 +42,8 @@ int main()
 	// TODO: start MQ communication handler
 
 	// Initialize MQTT handler
+	MQTTConnectionHandler mqttConnectionHandler("Maestro");
+	mqttConnectionHandler.establishConnection();
 
 	while(true) {
 
