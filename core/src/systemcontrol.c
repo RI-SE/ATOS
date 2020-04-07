@@ -1442,7 +1442,7 @@ void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 	C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
 
 	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
-	n = 2 + strlen(ResponseString) + ResponseDataLength;
+	n = MSCP_RESPONSE_STATUS_CODE_BYTES + strlen(ResponseString) + ResponseDataLength;
 	Length[0] = (C8) (n >> 24);
 	Length[1] = (C8) (n >> 16);
 	Length[2] = (C8) (n >> 8);
