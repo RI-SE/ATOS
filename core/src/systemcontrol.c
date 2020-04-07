@@ -1437,8 +1437,8 @@ void SystemControlSendControlResponse(U16 ResponseStatus, C8 * ResponseString, C
 void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 									   I32 ResponseDataLength, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
-	C8 Length[4];
-	C8 Status[2];
+	C8 Length[MSCP_RESPONSE_DATALENGTH_BYTES];
+	C8 Status[MSCP_RSPONSE_STATUS_CODE_BYTES];
 	C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
 
 	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
