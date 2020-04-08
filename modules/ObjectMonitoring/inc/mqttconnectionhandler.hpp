@@ -30,27 +30,12 @@ public:
 	}
 };
 
-
 class MQTTConnectionHandler {
 public:
 	MQTTConnectionHandler(const string clientID);
 	void establishConnection(void);
 
 private:
-
-	void setMessageArrivedCallback(MQTTTopicHandlers::MQTTTopicHandler messageCallback) {
-		this->messageCallback = messageCallback;
-		MQTTClient_setCallbacks(this->client, this, nullptr, &MQTTConnectionHandler::arrivalCallback, nullptr);
-		return;
-	}
-	MQTTTopicHandlers::MQTTTopicHandler messageCallback;
-
-	static int arrivalCallback(void* context, char* topicName, int,
-							   MQTTClient_message* message) {
-		MQTTConnectionHandler* thisObject = static_cast<MQTTConnectionHandler *>(context);
-		string topic(topicName);
-		return thisObject->messageCallback(message->payload, topic);
-	}
 
 	MQTTClient client;
 	string clientID = "";
@@ -60,7 +45,20 @@ private:
 		FIRE_AND_FORGET = 0,
 		AT_LEAST_ONCE = 1,
 		ONLY_ONCE = 2
-	} qualityOfService = FIRE_AND_FORGET;
+	} qualityOfService = AT_LEAST_ONCE;
+
+	MQTTTopicHandlers::MQTTTopicHandler messageCallback;
+	void setMessageCallback(MQTTTopicHandlers::MQTTTopicHandler messageCallback) {
+		this->messageCallback = messageCallback;
+	}
+
+	static int arrivalCallback(void* context, char* topicName, int,
+							   MQTTClient_message* message) {
+		MQTTConnectionHandler* thisObject = static_cast<MQTTConnectionHandler *>(context);
+		string topic(topicName);
+		return thisObject->messageCallback(message->payload, topic);
+	}
+
 };
 
 #endif // MQTTCONNECTIONHANDLER_H
