@@ -23,7 +23,7 @@ add_subdirectory(core)
 add_subdirectory(modules/ScenarioControl)
 add_subdirectory(modules/Supervision)
 add_subdirectory(modules/Visualization)
-add_subdirectory(modules/ObjectMonitoring)
+#add_subdirectory(modules/ObjectMonitoring)
 
 # Ensure .maestro directory is created at build time in build directory
 add_custom_target(configurationDirectory ALL
