@@ -919,7 +919,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				iCommClose();
 			}
             else if (iCommand == COMM_GETSTATUS) {
-                LogMessage(LOG_LEVEL_INFO, "Received GetStatus");
+                //LogMessage(LOG_LEVEL_INFO, "Received GetStatus");
                 C8 response[128];
                 bzero(response, sizeof (response));
                 response[0] = (uint8_t) "objectControl";
