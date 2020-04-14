@@ -55,8 +55,12 @@ private:
 	static int arrivalCallback(void* context, char* topicName, int,
 							   MQTTClient_message* message) {
 		MQTTConnectionHandler* thisObject = static_cast<MQTTConnectionHandler *>(context);
+
 		string topic(topicName);
-		return thisObject->messageCallback(message->payload, topic);
+		int retval = thisObject->messageCallback(message->payload, topic);
+		MQTTClient_freeMessage(&message);
+		MQTTClient_free(topicName);
+		return retval;
 	}
 
 };

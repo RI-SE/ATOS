@@ -23,7 +23,7 @@ static bool topicsAreEquivalent(const string &lhs, const string &rhs);
  * \brief handlerMap maps MQTT topics to their respective handlers
  */
 static HandlerMap handlerMap {
-	{"astazero/+/+/motor-rpm/#", MQTTTopicHandlers::motorRPMHandler},
+	{"astazero/+/+/RPM/#", MQTTTopicHandlers::motorRPMHandler},
 	{"astazero/+/+/MONR/#", MQTTTopicHandlers::monrHandler}
 };
 
@@ -40,7 +40,7 @@ int MQTTTopicHandlers::monrHandler(void*, string& topic) {
 
 int MQTTTopicHandlers::motorRPMHandler(void* message, string &topic) {
 	LogPrint("Received %s on topic %s", message, topic.c_str());
-	return 0;
+	return 1;
 }
 
 /*! ************************************************************************
