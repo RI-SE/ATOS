@@ -293,10 +293,10 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 
 		case COMM_GETSTATUS:
-            LogMessage(LOG_LEVEL_INFO, "Received GetStatus");
+			LogMessage(LOG_LEVEL_INFO, "Received GetStatus");
 			memset(busSendBuffer, 0, sizeof (busSendBuffer));
-            sprintf(busSendBuffer, "%s", MODULE_NAME);
-            iCommSend(COMM_GETSTATUS_OK, busSendBuffer, sizeof (busSendBuffer));
+			sprintf(busSendBuffer, "%s", MODULE_NAME);
+			iCommSend(COMM_GETSTATUS_OK, busSendBuffer, sizeof (busSendBuffer));
 
 			break;
 
