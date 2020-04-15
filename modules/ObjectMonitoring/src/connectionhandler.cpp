@@ -6,10 +6,10 @@
 #include <sys/socket.h>
 #include <vector>
 
-ConnectionHandler::ConnectionHandler(int openSocketDescriptor, ProtocolData& data)
-	: ConnectionHandler::ConnectionHandler(openSocketDescriptor, data, DefaultReadBufferSize) {}
+RawConnectionHandler::RawConnectionHandler(int openSocketDescriptor, ProtocolData& data)
+	: RawConnectionHandler::RawConnectionHandler(openSocketDescriptor, data, DefaultReadBufferSize) {}
 
-ConnectionHandler::ConnectionHandler(int openSocketDescriptor, ProtocolData& data, unsigned long readBufferSize) : data(data) {
+RawConnectionHandler::RawConnectionHandler(int openSocketDescriptor, ProtocolData& data, unsigned long readBufferSize) : data(data) {
 	int returnCode;
 
 	if (openSocketDescriptor < 0) {
@@ -25,7 +25,7 @@ ConnectionHandler::ConnectionHandler(int openSocketDescriptor, ProtocolData& dat
 	this->readBufferSize = readBufferSize;
 
 	LogMessage(LOG_LEVEL_INFO, "Creating thread to handle connection");
-	returnCode = pthread_create(&readThread, nullptr, &ConnectionHandler::routineWrapper, this);
+	returnCode = pthread_create(&readThread, nullptr, &RawConnectionHandler::routineWrapper, this);
 	if (returnCode) {
 		LogMessage(LOG_LEVEL_ERROR, "Error creating thread");
 		close(socketDescriptor);
@@ -34,12 +34,12 @@ ConnectionHandler::ConnectionHandler(int openSocketDescriptor, ProtocolData& dat
 	}
 }
 
-ConnectionHandler::~ConnectionHandler() {
+RawConnectionHandler::~RawConnectionHandler() {
 	close(socketDescriptor);
 }
 
 
-void* ConnectionHandler::threadRoutine(void*) {
+void* RawConnectionHandler::threadRoutine(void*) {
 	std::vector<char> readBuffer(readBufferSize);
 	std::vector<char> messageBuffer;
 	ssize_t readBytes;
@@ -68,7 +68,7 @@ void* ConnectionHandler::threadRoutine(void*) {
 	}
 }
 
-void ConnectionHandler::terminate(void *retval) {
+void RawConnectionHandler::terminate(void *retval) {
 	terminated = true;
 	pthread_exit(retval);
 }

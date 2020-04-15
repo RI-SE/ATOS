@@ -4,10 +4,13 @@
 #include <vector>
 #include <algorithm>
 
+#include <MQTTClient.h>
+
 #include "logging.h"
 #include "connectionhandler.h"
 #include "protocoldata.h"
 #include "ISO22133ProtocolData.h"
+#include "mqttconnectionhandler.hpp"
 #include "util.h"
 
 #define MODULE_NAME "ObjectMonitoring"
@@ -15,8 +18,8 @@
 
 using namespace std;
 
-static void handleNewConnection(int socketDescriptor, vector<ConnectionHandler*> &handlers);
-static void pruneTerminatedConnectionHandlers(vector<ConnectionHandler*> &handlers);
+static void handleNewConnection(int socketDescriptor, vector<RawConnectionHandler*> &handlers);
+static void pruneTerminatedConnectionHandlers(vector<RawConnectionHandler*> &handlers);
 static void listenForNewConnection(void);
 
 int main()
@@ -26,7 +29,7 @@ int main()
     const struct timespec sleepTimePeriod = {0,10000000};
     const struct timespec abortWaitTime = {1,0};
 	struct timespec remTime;
-	vector<ConnectionHandler*> handlers;
+	vector<RawConnectionHandler*> handlers;
 
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
@@ -36,7 +39,14 @@ int main()
         nanosleep(&sleepTimePeriod,&remTime);
     }
 
+	// TODO: start MQ communication handler
+
+	// Initialize MQTT handler
+	MQTTConnectionHandler mqttConnectionHandler("Maestro");
+	mqttConnectionHandler.establishConnection();
+
 	while(true) {
+
 		listenForNewConnection();
 
 		handleNewConnection(0, handlers);
@@ -47,7 +57,7 @@ int main()
     return 0;
 }
 
-void handleNewConnection(int socketDescriptor, vector<ConnectionHandler*> &handlers) {
+void handleNewConnection(int socketDescriptor, vector<RawConnectionHandler*> &handlers) {
 	struct sockaddr_in socketAddress;
 	socklen_t addressLength = sizeof (socketAddress);
 	getsockname(socketDescriptor, (struct sockaddr *)&socketAddress, &addressLength);
@@ -56,7 +66,7 @@ void handleNewConnection(int socketDescriptor, vector<ConnectionHandler*> &handl
 	case ISO22133ProtocolData::TCP_PORT:
 	{
 		ISO22133ProtocolData protoData;
-		handlers.push_back(new ConnectionHandler(socketDescriptor, protoData));
+		handlers.push_back(new RawConnectionHandler(socketDescriptor, protoData));
 		break;
 	}
 	default:
@@ -66,12 +76,12 @@ void handleNewConnection(int socketDescriptor, vector<ConnectionHandler*> &handl
 	}
 }
 
-void pruneTerminatedConnectionHandlers(vector<ConnectionHandler*> &handlers) {
+void pruneTerminatedConnectionHandlers(vector<RawConnectionHandler*> &handlers) {
 	// Remove any connection handlers which are null pointers
 	handlers.erase( std::remove(handlers.begin(), handlers.end(), nullptr), handlers.end() );
 	// Remove any connection handlers which have finished their tasks
 	handlers.erase( std::remove_if(handlers.begin(), handlers.end(),
-								   [](const ConnectionHandler* handler) { return handler->isTerminated(); }
+								   [](const RawConnectionHandler* handler) { return handler->isTerminated(); }
 									), handlers.end() );
 }
 
