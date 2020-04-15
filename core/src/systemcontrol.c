@@ -37,7 +37,7 @@
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-	typedef enum {
+typedef enum {
 	SERVER_STATE_UNDEFINED,
 	SERVER_STATE_INITIALIZED,
 	SERVER_STATE_IDLE,
@@ -216,7 +216,7 @@ I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU
 I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
 											 U8 Debug);
 
-I32 SystemControlGetStatusMessage(char * respondingModule, size_t arrayLength, U8 debug);
+I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8 debug);
 
 static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
 static C8 SystemControlVerifyHostAddress(char *ip);
@@ -574,7 +574,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 		//Call this from the loop to send
-        SystemControlGetStatusMessage("", 0, 0);
+		SystemControlGetStatusMessage("", 0, 0);
 
 
 		bzero(pcRecvBuffer, SC_RECV_MESSAGE_BUFFER);
@@ -620,7 +620,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 
 		case COMM_GETSTATUS_OK:
-            SystemControlGetStatusMessage(pcRecvBuffer, sizeof (pcRecvBuffer),0);
+			SystemControlGetStatusMessage(pcRecvBuffer, sizeof (pcRecvBuffer), 0);
 			//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
 			break;
 
@@ -2684,19 +2684,19 @@ I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU
 	return 0;
 }
 
-I32 SystemControlGetStatusMessage(char * respondingModule, size_t arrayLength, U8 debug){
+I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8 debug) {
 
 	static U64 getStatusTimerU64 = 0;
 	static U64 getStatusTimeoutTimerU64 = 0;
 	static uint8_t numberOfResponses = 0;
 
-    enum State{
+	enum State {
 		GETSTATUS_INIT,
 		GETSTATUS_SEND,
-        GETSTATUS_WAITFORRESPONSE
-    };
+		GETSTATUS_WAITFORRESPONSE
+	};
 
-    static enum State getStatusState = GETSTATUS_INIT;
+	static enum State getStatusState = GETSTATUS_INIT;
 
 	switch (getStatusState) {
 	case GETSTATUS_INIT:
