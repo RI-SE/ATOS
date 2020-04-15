@@ -1,4 +1,5 @@
-ï»¿/*------------------------------------------------------------------------------
+ï »¿
+   /*------------------------------------------------------------------------------
   -- Copyright   : (C) 2016 CHRONOS project
   ------------------------------------------------------------------------------
   -- File        : systemcontrol.c
@@ -7,7 +8,6 @@
   -- Purpose     :
   -- Reference   :
   ------------------------------------------------------------------------------*/
-
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
@@ -23,7 +23,6 @@
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
-
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -32,17 +31,14 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <ifaddrs.h>
-
 #include "systemcontrol.h"
 #include "maestroTime.h"
 #include "timecontrol.h"
 #include "datadictionary.h"
-
-
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-typedef enum {
+	typedef enum {
 	SERVER_STATE_UNDEFINED,
 	SERVER_STATE_INITIALIZED,
 	SERVER_STATE_IDLE,
@@ -65,7 +61,7 @@ typedef struct {
 
 #define SYSTEM_CONTROL_GETSTATUS_TIME_MS 5000
 #define SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS 2000
-#define SYSTEM_CONTROL_NO_OF_MODULES_IN_USE 2       //TODO Create a file containing a list of which modules should be used. Check with this list to see if each module has responded.
+#define SYSTEM_CONTROL_NO_OF_MODULES_IN_USE 2	//TODO Create a file containing a list of which modules should be used. Check with this list to see if each module has responded.
 
 #define SYSTEM_CONTROL_CONTROL_PORT   54241	// Default port, control channel
 #define SYSTEM_CONTROL_PROCESS_PORT   54242	// Default port, process channel
@@ -219,7 +215,7 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 												U8 SysCtrlState, U8 Debug);
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
 I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
-                                             U8 Debug);
+											 U8 Debug);
 
 I32 SystemControlGetStatusMessage(char respondingModule[32], U8 debug);
 
@@ -303,7 +299,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 ParameterListC8[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
 	U32 LengthU32 = 0;
 	C8 BinBuffer[SMALL_BUFFER_SIZE_1024];
-    C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
+	C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
 
 	HTTPHeaderContent HTTPHeader;
 
@@ -356,13 +352,13 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	I32 FileLengthI32 = 0;
 
-    while (!iExit) {
+	while (!iExit) {
 		if (server_state == SERVER_STATE_ERROR) {
 			iCommSend(COMM_ABORT, NULL, 0);
 			continue;
-        }
+		}
 
-        if (ModeU8 == 0) {
+		if (ModeU8 == 0) {
 			if (ClientSocket <= 0) {
 				if (server_state == SERVER_STATE_UNDEFINED) {
 					//Do some initialization
@@ -578,8 +574,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 		}
 
-        //Call this from the loop to send
-        SystemControlGetStatusMessage("", 0);
+		//Call this from the loop to send
+		SystemControlGetStatusMessage("", 0);
 
 
 		bzero(pcRecvBuffer, SC_RECV_MESSAGE_BUFFER);
@@ -624,10 +620,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case COMM_INV:
 			break;
 
-        case COMM_GETSTATUS_OK:
-            SystemControlGetStatusMessage(pcRecvBuffer, 0);
-            //LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
-            break;
+		case COMM_GETSTATUS_OK:
+			SystemControlGetStatusMessage(pcRecvBuffer, 0);
+			//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
+			break;
 
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", iCommand);
@@ -2689,86 +2685,89 @@ I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU
 	return 0;
 }
 
-I32 SystemControlGetStatusMessage(char respondingModule[32], U8 debug){
+I32 SystemControlGetStatusMessage(char respondingModule[32], U8 debug) {
 
-    static U64 getStatusTimerU64 = 0;
-    static U64 getStatusTimeoutTimerU64 = 0;
-    static uint8_t numberOfResponses = 0;
+	static U64 getStatusTimerU64 = 0;
+	static U64 getStatusTimeoutTimerU64 = 0;
+	static uint8_t numberOfResponses = 0;
 
-    static int getStatusState = 0;
+	static int getStatusState = 0;
 
-    static enum {
-        GETSTATUS_INIT,
-        GETSTATUS_SEND,
-        GETSTATUS_WAITFORRESPONSE
-    };
+	static enum {
+		GETSTATUS_INIT,
+		GETSTATUS_SEND,
+		GETSTATUS_WAITFORRESPONSE
+	};
 
-    switch (getStatusState){
-        case GETSTATUS_INIT:
-            getStatusTimerU64 = UtilgetCurrentUTCtimeMS();
-            getStatusTimeoutTimerU64 = UtilgetCurrentUTCtimeMS();
+	switch (getStatusState) {
+	case GETSTATUS_INIT:
+		getStatusTimerU64 = UtilgetCurrentUTCtimeMS();
+		getStatusTimeoutTimerU64 = UtilgetCurrentUTCtimeMS();
 
-            getStatusState = GETSTATUS_SEND;
-        break;
+		getStatusState = GETSTATUS_SEND;
+		break;
 
-        case GETSTATUS_SEND:
-            //Small non-blocking timer
-            if(getStatusTimerU64 - UtilgetCurrentUTCtimeMS() <= -SYSTEM_CONTROL_GETSTATUS_TIME_MS){
-                getStatusTimerU64 = UtilgetCurrentUTCtimeMS();
-                getStatusTimeoutTimerU64 = UtilgetCurrentUTCtimeMS();
+	case GETSTATUS_SEND:
+		//Small non-blocking timer
+		if (getStatusTimerU64 - UtilgetCurrentUTCtimeMS() <= -SYSTEM_CONTROL_GETSTATUS_TIME_MS) {
+			getStatusTimerU64 = UtilgetCurrentUTCtimeMS();
+			getStatusTimeoutTimerU64 = UtilgetCurrentUTCtimeMS();
 
-                iCommSend(COMM_GETSTATUS, NULL, 0);
-
-
-                if(debug){
-                    LogMessage(LOG_LEVEL_INFO, "GETSTATUS SENT");
-                }
-
-                getStatusState = GETSTATUS_WAITFORRESPONSE;
-
-                return 1;
-            }
-        break;
-
-        case GETSTATUS_WAITFORRESPONSE:
-
-            if(respondingModule[0]){
-                numberOfResponses++;
-
-            }
-
-            if(getStatusTimeoutTimerU64 - UtilgetCurrentUTCtimeMS() <= -SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS){
-
-                //Too many
-                if(numberOfResponses > SYSTEM_CONTROL_NO_OF_MODULES_IN_USE){
-
-                    U8 diff = numberOfResponses - SYSTEM_CONTROL_NO_OF_MODULES_IN_USE;
-                    LogMessage(LOG_LEVEL_ERROR, "%d TOO MANY RESPONSES TO GETSTATUS", diff);
-
-                }
-
-                //Too few
-                else if(numberOfResponses < SYSTEM_CONTROL_NO_OF_MODULES_IN_USE){
-
-                    U8 diff = SYSTEM_CONTROL_NO_OF_MODULES_IN_USE - numberOfResponses;
-                    LogMessage(LOG_LEVEL_ERROR, "ALERT! -- %d MODULE(S) NOT RESPONDING", diff);
-                }
-
-                //Just right
-                else if(numberOfResponses == SYSTEM_CONTROL_NO_OF_MODULES_IN_USE){
-                    if(debug){
-                        LogMessage(LOG_LEVEL_INFO, "GET STATUS OK, RECEIVED %d RESPONSES", SYSTEM_CONTROL_NO_OF_MODULES_IN_USE);
-                    }
-                }
-
-                numberOfResponses = 0;
-                getStatusState = GETSTATUS_SEND;
-
-            }
-
-        break;
-    }
+			iCommSend(COMM_GETSTATUS, NULL, 0);
 
 
-    return 0;
+			if (debug) {
+				LogMessage(LOG_LEVEL_INFO, "GETSTATUS SENT");
+			}
+
+			getStatusState = GETSTATUS_WAITFORRESPONSE;
+
+			return 1;
+		}
+		break;
+
+	case GETSTATUS_WAITFORRESPONSE:
+
+		if (respondingModule[0]) {
+			numberOfResponses++;
+
+		}
+
+		if (getStatusTimeoutTimerU64 - UtilgetCurrentUTCtimeMS() <= -SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS) {
+
+			//Too many
+			if (numberOfResponses > SYSTEM_CONTROL_NO_OF_MODULES_IN_USE) {
+
+				U8 diff = numberOfResponses - SYSTEM_CONTROL_NO_OF_MODULES_IN_USE;
+
+				LogMessage(LOG_LEVEL_ERROR, "%d TOO MANY RESPONSES TO GETSTATUS", diff);
+
+			}
+
+			//Too few
+			else if (numberOfResponses < SYSTEM_CONTROL_NO_OF_MODULES_IN_USE) {
+
+				U8 diff = SYSTEM_CONTROL_NO_OF_MODULES_IN_USE - numberOfResponses;
+
+				LogMessage(LOG_LEVEL_ERROR, "ALERT! -- %d MODULE(S) NOT RESPONDING", diff);
+			}
+
+			//Just right
+			else if (numberOfResponses == SYSTEM_CONTROL_NO_OF_MODULES_IN_USE) {
+				if (debug) {
+					LogMessage(LOG_LEVEL_INFO, "GET STATUS OK, RECEIVED %d RESPONSES",
+							   SYSTEM_CONTROL_NO_OF_MODULES_IN_USE);
+				}
+			}
+
+			numberOfResponses = 0;
+			getStatusState = GETSTATUS_SEND;
+
+		}
+
+		break;
+	}
+
+
+	return 0;
 }

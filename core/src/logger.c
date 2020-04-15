@@ -292,17 +292,18 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case COMM_INV:
 			break;
 
-        case COMM_GETSTATUS:
-            LogMessage(LOG_LEVEL_INFO, "Received GetStatus");
-            C8 response[128];
-            bzero(response, sizeof (response));
-            response[0] = (uint8_t) "logger";
-            iCommSend(COMM_GETSTATUS_OK, response, sizeof(response));
+		case COMM_GETSTATUS:
+			LogMessage(LOG_LEVEL_INFO, "Received GetStatus");
+			C8 response[128];
 
-            break;
+			bzero(response, sizeof (response));
+			response[0] = (uint8_t) "logger";
+			iCommSend(COMM_GETSTATUS_OK, response, sizeof (response));
 
-        case COMM_GETSTATUS_OK:
-            break;
+			break;
+
+		case COMM_GETSTATUS_OK:
+			break;
 
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);

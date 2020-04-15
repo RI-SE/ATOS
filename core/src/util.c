@@ -2046,7 +2046,7 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_DATA_DICT:
 		uiMessagePrio = PRIO_DATA_DICT;
 	case COMM_EXAC:
-        uiMessagePrio = PRIO_COMM_EXAC;
+		uiMessagePrio = PRIO_COMM_EXAC;
 		break;
 	case COMM_ACCM:
 		uiMessagePrio = PRIO_COMM_ACCM;
@@ -2063,12 +2063,12 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_FAILURE:
 		uiMessagePrio = PRIO_COMM_FAILURE;
 		break;
-    case COMM_GETSTATUS:
-        uiMessagePrio = PRIO_COMM_GETSTATUS;
-        break;
-    case COMM_GETSTATUS_OK:
-        uiMessagePrio = PRIO_COMM_GETSTATUS_OK;
-        break;
+	case COMM_GETSTATUS:
+		uiMessagePrio = PRIO_COMM_GETSTATUS;
+		break;
+	case COMM_GETSTATUS_OK:
+		uiMessagePrio = PRIO_COMM_GETSTATUS_OK;
+		break;
 	default:
 		util_error("Unknown command");
 	}
