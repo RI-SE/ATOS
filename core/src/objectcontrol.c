@@ -918,16 +918,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				iExit = 1;
 				iCommClose();
 			}
-			else if (iCommand == COMM_GETSTATUS) {
-				//LogMessage(LOG_LEVEL_INFO, "Received GetStatus");
-				C8 response[128];
+            else if (iCommand == COMM_GETSTATUS) {
 
-				bzero(response, sizeof (response));
-				response[0] = (uint8_t) "objectControl";
-				iCommSend(COMM_GETSTATUS_OK, response, sizeof (response));
+                memset(pcSendBuffer, 0, sizeof (pcSendBuffer));
+                sprintf(pcSendBuffer, "%s", MODULE_NAME);
+                iCommSend(COMM_GETSTATUS_OK, pcSendBuffer, sizeof (pcSendBuffer));
 			}
-			else if (iCommand == COMM_GETSTATUS_OK) {
-				continue;
+            else if (iCommand == COMM_GETSTATUS_OK) {
 			}
 
 			else {

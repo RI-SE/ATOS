@@ -296,8 +296,8 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			LogMessage(LOG_LEVEL_INFO, "Received GetStatus");
 			C8 response[128];
 
-			bzero(response, sizeof (response));
-			response[0] = (uint8_t) "logger";
+            memset(busSendBuffer, 0, sizeof (busSendBuffer));
+            sprintf(response, "%s", MODULE_NAME);
 			iCommSend(COMM_GETSTATUS_OK, response, sizeof (response));
 
 			break;
