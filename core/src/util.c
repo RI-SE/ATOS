@@ -81,8 +81,8 @@
 // Frequent messages relevant during test run
 #define PRIO_COMM_TRAJ_TOSUP 12
 #define PRIO_COMM_TRAJ_FROMSUP 12
-#define PRIO_COMM_GETSTATUS 12
-#define PRIO_COMM_GETSTATUS_OK 12
+#define PRIO_COMM_GETSTATUS 10
+#define PRIO_COMM_GETSTATUS_OK 10
 // Logging
 #define PRIO_COMM_LOG 10
 // Unused messages TODO: double check the priority of unused messages
