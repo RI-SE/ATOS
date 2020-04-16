@@ -2690,13 +2690,11 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 	static U64 getStatusTimeoutTimerU64 = 0;
 	static uint8_t numberOfResponses = 0;
 
-	enum State {
+	static enum {
 		GETSTATUS_INIT,
 		GETSTATUS_SEND,
 		GETSTATUS_WAITFORRESPONSE
-	};
-
-	static enum State getStatusState = GETSTATUS_INIT;
+	} getStatusState = GETSTATUS_INIT;
 
 	switch (getStatusState) {
 	case GETSTATUS_INIT:
