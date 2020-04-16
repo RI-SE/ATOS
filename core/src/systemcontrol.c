@@ -2726,7 +2726,11 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 		break;
 
 	case GETSTATUS_WAITFORRESPONSE:
-
+		if (respondingModule == NULL) {
+			errno = EINVAL;
+			LogMessage(LOG_LEVEL_ERROR, "Responding module parameter is null");
+			return -1;
+		}
 		if (respondingModule[0]) {
 			numberOfResponses++;
 
