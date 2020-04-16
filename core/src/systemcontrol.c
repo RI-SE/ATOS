@@ -2684,6 +2684,13 @@ I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU
 	return 0;
 }
 
+/*!
+ * \brief SystemControlGetStatusMessage Send a COMM_GETSTATUS message to all connected modules on the MQ-BUS.
+ * \param respondingModule Name of the responding module.
+ * \param arrayLength Length of the RespondingModule.
+ * \param debug Enable debug or not.
+ * \return
+ */
 I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8 debug) {
 
 	static U64 getStatusTimerU64 = 0;
