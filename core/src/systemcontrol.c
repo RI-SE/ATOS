@@ -2754,7 +2754,7 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 			//Just right
 			else if (numberOfResponses == SYSTEM_CONTROL_NO_OF_MODULES_IN_USE) {
 				if (debug) {
-					LogMessage(LOG_LEVEL_INFO, "GET STATUS OK, RECEIVED %d RESPONSES",
+					LogPrint("GET STATUS OK, RECEIVED %d RESPONSES",
 							   SYSTEM_CONTROL_NO_OF_MODULES_IN_USE);
 				}
 			}
