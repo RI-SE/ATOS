@@ -1700,6 +1700,7 @@ ReadWriteAccess_t DataDictionaryInitMonitorData() {
 
 	monitorDataMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (MonitorDataType), &createdMemory);
 	if (monitorDataMemory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared monitor data memory");
 		return UNDEFINED;
 	}
 	return createdMemory ? WRITE_OK : READ_OK;
@@ -1732,11 +1733,16 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 	}
 
 	monitorDataMemory = claimSharedMemory(monitorDataMemory);
-	result = PARAMETER_NOTFOUND;
-	unsigned int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	if (monitorDataMemory == NULL) {
+		// If this code executes, monitorDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
 
-	LogPrint("Number of objects currently in memory: %u", numberOfObjects);
-	for (uint32_t i = 0; i < numberOfObjects; ++i) {
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
 		if (monitorDataMemory[i].ClientID == monitorData->ClientID) {
 			memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
 			result = WRITE_OK;
@@ -1747,7 +1753,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 		// Search for unused memory space and place monitor data there
 		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u",
 				   monitorData->ClientID);
-		for (uint32_t i = 0; i < numberOfObjects; ++i) {
+		for (int i = 0; i < numberOfObjects; ++i) {
 			if (monitorDataMemory[i].ClientID == 0) {
 				memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
 				result = WRITE_OK;
@@ -1756,14 +1762,13 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 
 		// No uninitialized memory space found - create new
 		if (result == PARAMETER_NOTFOUND) {
-			monitorDataMemory = resizeSharedMemory(monitorDataMemory, numberOfObjects + 1);
+			monitorDataMemory = resizeSharedMemory(monitorDataMemory, (unsigned int)(numberOfObjects + 1));
 			if (monitorDataMemory != NULL) {
 				numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
-						   "Modified shared memory to hold MONR data for %u objects, mp now %p",
-						   numberOfObjects, monitorDataMemory);
+						   "Modified shared memory to hold monitor data for %u objects",
+						   numberOfObjects);
 				memcpy(&monitorDataMemory[numberOfObjects - 1], monitorData, sizeof (MonitorDataType));
-				LogPrint("Printed MONR");
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -1797,9 +1802,9 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(MonitorDataType * monitorData, co
 	}
 
 	monitorDataMemory = claimSharedMemory(monitorDataMemory);
-	unsigned int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
 
-	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+	for (int i = 0; i < numberOfObjects; ++i) {
 		if (monitorDataMemory[i].ClientID == transmitterId) {
 			memcpy(monitorData, &monitorDataMemory[i], sizeof (MonitorDataType));
 			result = READ_OK;
