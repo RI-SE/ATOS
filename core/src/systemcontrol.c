@@ -217,6 +217,7 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
 I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
 											 U8 Debug);
+static void SystemControlUpdateRVSSSendTime(struct timeval * currentRVSSSendTime, uint8_t RVSSRate_Hz);
 static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
@@ -240,6 +241,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	struct sockaddr_in RVSSChannelAddr;
 	struct in_addr ip_addr;
 	I32 RVSSChannelSocket;
+	struct timeval nextRVSSSendTime = {0, 0};
 	MonitorDataType monrData;
 
 	ServerState_t server_state = SERVER_STATE_UNDEFINED;
@@ -302,10 +304,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	HTTPHeaderContent HTTPHeader;
 
-	//C8 SIDSData[128][10000][8];
-
 	C8 RVSSData[SYSTEM_CONTROL_RVSS_DATA_BUFFER];
-	U16 RVSSSendCounterU16 = 0;
 	U32 RVSSConfigU32 = DEFAULT_RVSS_CONF;
 	U32 RVSSMessageLengthU32;
 	U16 PCDMessageCodeU16;
@@ -326,12 +325,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	LogMessage(LOG_LEVEL_INFO, "RVSSConfigU32 = %d", RVSSConfigU32);
 
 	U8 RVSSRateU8 = DEFAULT_RVSS_RATE;
-	dbl RVSSRateDbl = DEFAULT_RVSS_RATE;
 
 	DataDictionaryGetRVSSRateU8(GSD, &RVSSRateU8);
-	RVSSRateDbl = RVSSRateU8;
-	RVSSRateDbl = (1 / RVSSRateDbl) * 1000;
-	LogMessage(LOG_LEVEL_INFO, "RVSSRateU8 = %d", RVSSRateU8);
+	LogMessage(LOG_LEVEL_INFO, "Real-time variable subscription service rate set to %u Hz", RVSSRateU8);
 
 	if (ModeU8 == 0) {
 
@@ -1175,18 +1171,13 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 
+		TimeSetToCurrentSystemTime(&tvTime);
 
-		sleep_time.tv_sec = 0;
-		sleep_time.tv_nsec = SYSTEM_CONTROL_TASK_PERIOD_MS * 1000000;
-		++RVSSSendCounterU16;
-		if (RVSSSendCounterU16 >= ((U16) RVSSRateDbl)) {
-			RVSSSendCounterU16 = 0;
-			DataDictionaryGetRVSSRateU8(GSD, &RVSSRateU8);
-			RVSSRateDbl = RVSSRateU8;
-			RVSSRateDbl = (1 / RVSSRateDbl) * 100;	//This is strange!! Should be 1000, but if it is the RVSSData is sent to slow by a factor of 10.
+		if (timercmp(&tvTime, &nextRVSSSendTime, >)) {
+			SystemControlUpdateRVSSSendTime(&nextRVSSSendTime, RVSSRateU8);
 
-			if (RVSSChannelSocket != 0 && RVSSSendCounterU16 == 0 && RVSSConfigU32 > 0) {
-				bzero(RVSSData, SYSTEM_CONTROL_RVSS_DATA_BUFFER);
+			if (RVSSChannelSocket != 0 && RVSSConfigU32 > 0) {
+				memset(RVSSData, 0, sizeof (RVSSData));
 
 				if (RVSSConfigU32 & RVSS_TIME_CHANNEL) {
 					SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
@@ -1327,6 +1318,23 @@ ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t 
 	return readResult;
 }
 
+
+/*!
+ * \brief SystemControlUpdateRVSSSendTime Adds a time interval onto the specified time struct in accordance
+ *			with the rate parameter
+ * \param currentRVSSSendTime Struct containing the time at which the last RVSS message was sent. After this
+ *			function has been executed, the struct contains the time at which the next RVSS message is to be
+ *			sent.
+ * \param RVSSRate_Hz Rate at which RVSS messages are to be sent - if this parameter is 0 the value
+ *			is clamped to 1 Hz
+ */
+void SystemControlUpdateRVSSSendTime(struct timeval * currentRVSSSendTime, uint8_t RVSSRate_Hz) {
+	struct timeval RVSSTimeInterval;
+	RVSSRate_Hz = RVSSRate_Hz == 0 ? 1 : RVSSRate_Hz;						// Minimum frequency 1 Hz
+	RVSSTimeInterval.tv_sec = (long)(1.0 / RVSSRate_Hz);
+	RVSSTimeInterval.tv_usec = (long)((1.0 / RVSSRate_Hz - RVSSTimeInterval.tv_sec) * 1000000.0);
+	timeradd(currentRVSSSendTime, &RVSSTimeInterval, currentRVSSSendTime);
+}
 
 void SystemControlSendMONR(C8 * MONRStr, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
