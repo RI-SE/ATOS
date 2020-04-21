@@ -267,9 +267,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
 	char ObjectIP[SMALL_BUFFER_SIZE_16];
 	char ObjectPort[SMALL_BUFFER_SIZE_6];
-	char TriggId[SMALL_BUFFER_SIZE_6];
-	char TriggAction[SMALL_BUFFER_SIZE_6];
-	char TriggDelay[SMALL_BUFFER_SIZE_20];
 	U64 uiTime;
 	U32 DelayedStartU32;
 	U8 ModeU8 = 0;
@@ -293,7 +290,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
 	C8 TextBuffer20[SMALL_BUFFER_SIZE_20];
 	C8 UserControlIPC8[SMALL_BUFFER_SIZE_20];
-	struct timeval now;
 	U16 MilliU16 = 0, NowU16 = 0;
 	U64 GPSmsU64 = 0;
 	C8 ParameterListC8[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
