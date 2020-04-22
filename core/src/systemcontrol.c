@@ -1317,23 +1317,6 @@ ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t 
 }
 
 
-/*!
- * \brief SystemControlUpdateRVSSSendTime Adds a time interval onto the specified time struct in accordance
- *			with the rate parameter
- * \param currentRVSSSendTime Struct containing the time at which the last RVSS message was sent. After this
- *			function has been executed, the struct contains the time at which the next RVSS message is to be
- *			sent.
- * \param RVSSRate_Hz Rate at which RVSS messages are to be sent - if this parameter is 0 the value
- *			is clamped to 1 Hz
- */
-void SystemControlUpdateRVSSSendTime(struct timeval * currentRVSSSendTime, uint8_t RVSSRate_Hz) {
-	struct timeval RVSSTimeInterval;
-	RVSSRate_Hz = RVSSRate_Hz == 0 ? 1 : RVSSRate_Hz;						// Minimum frequency 1 Hz
-	RVSSTimeInterval.tv_sec = (long)(1.0 / RVSSRate_Hz);
-	RVSSTimeInterval.tv_usec = (long)((1.0 / RVSSRate_Hz - RVSSTimeInterval.tv_sec) * 1000000.0);
-	timeradd(currentRVSSSendTime, &RVSSTimeInterval, currentRVSSSendTime);
-}
-
 void SystemControlSendMONR(C8 * MONRStr, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
 	C8 Length[4];
@@ -2529,6 +2512,24 @@ I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * 
 	}
 
 	return 0;
+}
+
+
+/*!
+ * \brief SystemControlUpdateRVSSSendTime Adds a time interval onto the specified time struct in accordance
+ *			with the rate parameter
+ * \param currentRVSSSendTime Struct containing the time at which the last RVSS message was sent. After this
+ *			function has been executed, the struct contains the time at which the next RVSS message is to be
+ *			sent.
+ * \param RVSSRate_Hz Rate at which RVSS messages are to be sent - if this parameter is 0 the value
+ *			is clamped to 1 Hz
+ */
+void SystemControlUpdateRVSSSendTime(struct timeval * currentRVSSSendTime, uint8_t RVSSRate_Hz) {
+	struct timeval RVSSTimeInterval;
+	RVSSRate_Hz = RVSSRate_Hz == 0 ? 1 : RVSSRate_Hz;						// Minimum frequency 1 Hz
+	RVSSTimeInterval.tv_sec = (long)(1.0 / RVSSRate_Hz);
+	RVSSTimeInterval.tv_usec = (long)((1.0 / RVSSRate_Hz - RVSSTimeInterval.tv_sec) * 1000000.0);
+	timeradd(currentRVSSSendTime, &RVSSTimeInterval, currentRVSSSendTime);
 }
 
 
