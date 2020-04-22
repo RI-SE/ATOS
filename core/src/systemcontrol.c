@@ -112,7 +112,7 @@ typedef struct {
 #define KEEP_FILE 0
 
 #define RVSS_TIME_CHANNEL 1
-#define RVSS_MONR_CHANNEL 2
+#define RVSS_MONITOR_CHANNEL 2
 #define RVSS_MAESTRO_CHANNEL 4
 #define RVSS_ASP_CHANNEL 8
 
@@ -215,7 +215,7 @@ I32 SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
 												U8 SysCtrlState, U8 Debug);
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
-static int32_t SystemControlSendRVSSMONRChannelMessages(int * socket, struct sockaddr_in * addr);
+static int32_t SystemControlSendRVSSMonitorChannelMessages(int * socket, struct sockaddr_in * addr);
 static void SystemControlUpdateRVSSSendTime(struct timeval * currentRVSSSendTime, uint8_t RVSSRate_Hz);
 static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
 static C8 SystemControlVerifyHostAddress(char *ip);
@@ -1189,10 +1189,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									RVSSMessageLengthU32, 0);
 				}
 
-				if (RVSSConfigU32 & RVSS_MONR_CHANNEL) {
+				if (RVSSConfigU32 & RVSS_MONITOR_CHANNEL) {
 					// Build and send MONR data of all objects
-					if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
-						SystemControlSendRVSSMONRChannelMessages(&RVSSChannelSocket, &RVSSChannelAddr);
+					if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONITOR_CHANNEL && bytesReceived >= 0) {
+						SystemControlSendRVSSMonitorChannelMessages(&RVSSChannelSocket, &RVSSChannelAddr);
 					}
 				}
 
@@ -2626,9 +2626,9 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
  * \param addr Address struct pointer for RVSS socket
  * \return 0 on success, -1 otherwise
  */
-int32_t SystemControlSendRVSSMONRChannelMessages(int *socket, struct sockaddr_in *addr) {
+int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr) {
 	uint32_t messageLength = 0;
-	uint32_t RVSSChannel = RVSS_MONR_CHANNEL;
+	uint32_t RVSSChannel = RVSS_MONITOR_CHANNEL;
 	char RVSSData[MAX_MONR_STRING_LENGTH];
 	char * monitorDataString = RVSSData + sizeof (messageLength) + sizeof (RVSSChannel);
 	uint32_t *transmitterIDs = NULL;
