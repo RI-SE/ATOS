@@ -2525,12 +2525,22 @@ I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * 
  *			is clamped to 1 Hz
  */
 void SystemControlUpdateRVSSSendTime(struct timeval *currentRVSSSendTime, uint8_t RVSSRate_Hz) {
-	struct timeval RVSSTimeInterval;
+	struct timeval RVSSTimeInterval, timeDiff, currentTime;
 
 	RVSSRate_Hz = RVSSRate_Hz == 0 ? 1 : RVSSRate_Hz;	// Minimum frequency 1 Hz
 	RVSSTimeInterval.tv_sec = (long)(1.0 / RVSSRate_Hz);
 	RVSSTimeInterval.tv_usec = (long)((1.0 / RVSSRate_Hz - RVSSTimeInterval.tv_sec) * 1000000.0);
-	timeradd(currentRVSSSendTime, &RVSSTimeInterval, currentRVSSSendTime);
+
+	// If there is a large difference between the current time and the time at which RVSS was sent, update based
+	// on current time instead of last send time to not spam messages until caught up
+	TimeSetToCurrentSystemTime(&currentTime);
+	timersub(&currentTime, currentRVSSSendTime, &timeDiff);
+	if (timercmp(&timeDiff, &RVSSTimeInterval, <)) {
+		timeradd(currentRVSSSendTime, &RVSSTimeInterval, currentRVSSSendTime);
+	}
+	else {
+		timeradd(&currentTime, &RVSSTimeInterval, currentRVSSSendTime);
+	}
 }
 
 
