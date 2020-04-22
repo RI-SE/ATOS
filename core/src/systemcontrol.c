@@ -2697,19 +2697,12 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 	static U64 getStatusTimeoutTimerU64 = 0;
 	static uint8_t numberOfResponses = 0;
 
-	static enum {
-		GETSTATUS_INIT,
+    static enum {
 		GETSTATUS_SEND,
 		GETSTATUS_WAITFORRESPONSE
-	} getStatusState = GETSTATUS_INIT;
+    } getStatusState = GETSTATUS_SEND;
 
-	switch (getStatusState) {
-	case GETSTATUS_INIT:
-		getStatusTimerU64 = UtilgetCurrentUTCtimeMS();
-		getStatusTimeoutTimerU64 = UtilgetCurrentUTCtimeMS();
-
-		getStatusState = GETSTATUS_SEND;
-		break;
+    switch (getStatusState) {
 
 	case GETSTATUS_SEND:
 		//Small non-blocking timer
@@ -2738,7 +2731,6 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 		}
 		if (respondingModule[0]) {
 			numberOfResponses++;
-
 		}
 
 		if (getStatusTimeoutTimerU64 - UtilgetCurrentUTCtimeMS() <= -SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS) {

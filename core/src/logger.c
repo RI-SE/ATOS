@@ -296,8 +296,11 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			LogMessage(LOG_LEVEL_INFO, "Received GetStatus");
 			memset(busSendBuffer, 0, sizeof (busSendBuffer));
 			sprintf(busSendBuffer, "%s", MODULE_NAME);
-			iCommSend(COMM_GETSTATUS_OK, busSendBuffer, sizeof (busSendBuffer));
-
+            LogMessage(LOG_LEVEL_INFO, "%s: %d", busSendBuffer, sizeof(busSendBuffer));
+            if (iCommSend(COMM_MONR, busSendBuffer, sizeof (busSendBuffer)) < 0) {
+                LogMessage(LOG_LEVEL_ERROR,
+                           "Fatal communication fault when sending GETSTATUS.");
+            }
 			break;
 
 		case COMM_GETSTATUS_OK:
