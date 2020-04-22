@@ -215,8 +215,7 @@ I32 SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
 												U8 SysCtrlState, U8 Debug);
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
-I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
-											 U8 Debug);
+static int32_t SystemControlSendRVSSMONRChannelMessages(int * socket, struct sockaddr_in * addr);
 static void SystemControlUpdateRVSSSendTime(struct timeval * currentRVSSSendTime, uint8_t RVSSRate_Hz);
 static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
 static C8 SystemControlVerifyHostAddress(char *ip);
@@ -1188,6 +1187,13 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					SystemControlBuildRVSSAspChannelMessage(RVSSData, &RVSSMessageLengthU32, 0);
 					UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 									RVSSMessageLengthU32, 0);
+				}
+
+				if (RVSSConfigU32 & RVSS_MONR_CHANNEL) {
+					// Build and send MONR data of all objects
+					if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
+						SystemControlSendRVSSMONRChannelMessages(&RVSSChannelSocket, &RVSSChannelAddr);
+					}
 				}
 
 			}
@@ -2612,45 +2618,68 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 
 
 #define MAX_MONR_STRING_LENGTH 1024
-/*
-SystemControlBuildRVSSMONRChannelMessage builds a message from data in *MonrData. The message is stored in *RVSSData.
-See the architecture document for the protocol of RVSS.
+/*!
+ * \brief SystemControlSendRVSSMONRChannelMessages Sends RVSS monitoring data messages based on objects present
+ *			in data dictionary
+ * \param socket Socket descriptor pointer for RVSS socket
+ * \param addr Address struct pointer for RVSS socket
+ * \return 0 on success, -1 otherwise
+ */
+int32_t SystemControlSendRVSSMONRChannelMessages(int *socket, struct sockaddr_in *addr) {
+	uint32_t messageLength = 0;
+	uint32_t RVSSChannel = RVSS_MONR_CHANNEL;
+	char RVSSData[MAX_MONR_STRING_LENGTH];
+	char * monitorDataString = RVSSData + sizeof (messageLength) + sizeof (RVSSChannel);
+	uint32_t *transmitterIDs = NULL;
+	uint32_t numberOfObjects;
+	MonitorDataType monitorData;
 
-- *RVSSData the buffer the message
-- *RVSSDataLengthU32 the length of the message
-- *MonrData MONR data from an object
-- Debug enable(1)/disable(0) debug printouts (Not used)
-*/
-
-I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
-											 U8 Debug) {
-	I32 MessageLength = 0;
-	char MonrDataString[MAX_MONR_STRING_LENGTH];
-
-	// TODO: Convert MonrData to string
-	if (UtilMonitorDataToString(MonrData, MonrDataString, sizeof (MonrDataString)) == -1) {
-		// TODO memset rvssdata to 0
-		LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
-		*RVSSDataLengthU32 = 0;
+	// Get number of objects present in shared memory
+	if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
+		LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error - RVSS messages cannot be sent");
 		return -1;
 	}
 
-	MessageLength = strlen(MonrDataString) + 8;
-	bzero(RVSSData, MessageLength);
-	*RVSSDataLengthU32 = MessageLength;
-
-	*(RVSSData + 0) = (C8) (MessageLength >> 24);
-	*(RVSSData + 1) = (C8) (MessageLength >> 16);
-	*(RVSSData + 2) = (C8) (MessageLength >> 8);
-	*(RVSSData + 3) = (C8) (MessageLength);
-	*(RVSSData + 7) = (C8) (RVSS_MONR_CHANNEL);
-	strcat(RVSSData + 8, MonrDataString);
-
-	if (Debug) {
-
+	// Allocate an array for objects' transmitter IDs
+	transmitterIDs = malloc(numberOfObjects * sizeof (uint32_t));
+	if (transmitterIDs == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Memory allocation error - RVSS messages cannot be sent");
+		return -1;
 	}
 
-	return 0;
+	// Get transmitter IDs for all connected objects
+	if (DataDictionaryGetMonitorTransmitterIDs(transmitterIDs, numberOfObjects) != READ_OK) {
+		free(transmitterIDs);
+		LogMessage(LOG_LEVEL_ERROR, "Data dictionary transmitter ID read error - RVSS messages cannot be sent");
+		return -1;
+	}
+
+	LogMessage(LOG_LEVEL_DEBUG, "%s: Found %u transmitter IDs", __FUNCTION__, numberOfObjects);
+	// Loop over transmitter IDs, sending a message on the RVSS channel for each
+	int32_t retval = 0;
+	for (uint32_t i = 0; i < numberOfObjects; ++i) {
+		if (DataDictionaryGetMonitorData(&monitorData, transmitterIDs[i]) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR, "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent", transmitterIDs[i]);
+			retval = -1;
+		}
+		else if (UtilMonitorDataToString(monitorData, monitorDataString,
+										sizeof (RVSSData) - (size_t)(monitorDataString - RVSSData)) == -1){
+			LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
+			retval = -1;
+		}
+		else {
+			LogMessage(LOG_LEVEL_DEBUG, "%s: Transmitter ID %u", __FUNCTION__, transmitterIDs[i]);
+			messageLength = (uint32_t)(strlen(monitorDataString) + sizeof (messageLength) + sizeof (RVSSChannel));
+			messageLength = htole32(messageLength);
+			RVSSChannel = htole32(RVSSChannel);
+			memcpy(RVSSData, &messageLength, sizeof (messageLength));
+			memcpy(RVSSData + sizeof (messageLength), &RVSSChannel, sizeof (RVSSChannel));
+
+			UtilSendUDPData(MODULE_NAME, socket, addr, RVSSData, messageLength, 0);
+		}
+	}
+	free(transmitterIDs);
+	return retval;
 }
 
 
