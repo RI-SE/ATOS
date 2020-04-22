@@ -589,19 +589,15 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				// TODO: React more?
 			}
 			break;
+		case COMM_MONR:
+			// Ignore MONR messages over MQ to silence unhandled message warning
+			// TODO: delete
+			break;
 		case COMM_OBC_STATE:
 			break;
 		case COMM_LOG:
 			// This creates a problem in GUC: disabled it for now
 			//SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
-			break;
-		case COMM_MONR:
-			if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
-				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t) bytesReceived, &monrData);
-				SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData, 0);
-				UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
-								RVSSMessageLengthU32, 0);
-			}
 			break;
 		case COMM_INV:
 			break;
