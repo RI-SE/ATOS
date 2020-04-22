@@ -1751,10 +1751,12 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 			}
 			else {
 				char addr1[INET_ADDRSTRLEN], addr2[INET_ADDRSTRLEN];
+
 				LogMessage(LOG_LEVEL_WARNING,
 						   "Both IP addresses %s and %s have the transmitter ID %u and cannot be separated: data discarded",
 						   inet_ntop(AF_INET, &monitorDataMemory[i].ClientIP, addr1, sizeof (addr1)),
-						   inet_ntop(AF_INET, &monitorData->ClientIP, addr2, sizeof (addr2)), monitorData->ClientID);
+						   inet_ntop(AF_INET, &monitorData->ClientIP, addr2, sizeof (addr2)),
+						   monitorData->ClientID);
 				result = UNDEFINED;
 			}
 		}
@@ -1777,8 +1779,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 			if (monitorDataMemory != NULL) {
 				numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
-						   "Modified shared memory to hold monitor data for %u objects",
-						   numberOfObjects);
+						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
 				memcpy(&monitorDataMemory[numberOfObjects - 1], monitorData, sizeof (MonitorDataType));
 			}
 			else {
