@@ -1881,15 +1881,15 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObj
 /*!
  * \brief DataDictionaryGetNumberOfObjects Reads variable from shared memory
  * \param numberOfobjects number of objects in a test
- * \return Current object control state according to ::OBCState_t
+ * \return Number of objects present in memory
  */
 ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t * numberOfObjects) {
-
+	int retval;
 	monitorDataMemory = claimSharedMemory(monitorDataMemory);
-	*numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	retval = getNumberOfMemoryElements(monitorDataMemory);
 	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
-
-	return READ_OK;
+	*numberOfObjects = retval == -1 ? 0 : (uint32_t) retval;
+	return retval == -1 ? UNDEFINED : READ_OK;
 }
 
 /*END of NbrOfObjects*/
