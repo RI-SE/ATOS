@@ -1751,10 +1751,12 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 			}
 			else {
 				char addr1[INET_ADDRSTRLEN], addr2[INET_ADDRSTRLEN];
+
 				LogMessage(LOG_LEVEL_WARNING,
 						   "Both IP addresses %s and %s have the transmitter ID %u and cannot be separated: data discarded",
 						   inet_ntop(AF_INET, &monitorDataMemory[i].ClientIP, addr1, sizeof (addr1)),
-						   inet_ntop(AF_INET, &monitorData->ClientIP, addr2, sizeof (addr2)), monitorData->ClientID);
+						   inet_ntop(AF_INET, &monitorData->ClientIP, addr2, sizeof (addr2)),
+						   monitorData->ClientID);
 				result = UNDEFINED;
 			}
 		}
@@ -1777,8 +1779,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 			if (monitorDataMemory != NULL) {
 				numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
-						   "Modified shared memory to hold monitor data for %u objects",
-						   numberOfObjects);
+						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
 				memcpy(&monitorDataMemory[numberOfObjects - 1], monitorData, sizeof (MonitorDataType));
 			}
 			else {
@@ -1885,6 +1886,7 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObj
  */
 ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t * numberOfObjects) {
 	int retval;
+
 	monitorDataMemory = claimSharedMemory(monitorDataMemory);
 	retval = getNumberOfMemoryElements(monitorDataMemory);
 	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
@@ -1901,6 +1903,7 @@ ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t * numberOfObjects) {
  */
 ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs[], const uint32_t arraySize) {
 	int32_t retval;
+
 	if (transmitterIDs == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Data dictionary input pointer error");
@@ -1920,13 +1923,14 @@ ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs
 		monitorDataMemory = releaseSharedMemory(monitorDataMemory);
 		return UNDEFINED;
 	}
-	else if ((uint32_t)retval > arraySize) {
+	else if ((uint32_t) retval > arraySize) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to list transmitter IDs in specified array");
 		monitorDataMemory = releaseSharedMemory(monitorDataMemory);
 		return UNDEFINED;
 	}
-	else if ((uint32_t)retval != arraySize) {
-		LogMessage(LOG_LEVEL_WARNING, "Transmitter ID array is larger than necessary: may indicate the number of objects has changed between calls to data dictionary");
+	else if ((uint32_t) retval != arraySize) {
+		LogMessage(LOG_LEVEL_WARNING,
+				   "Transmitter ID array is larger than necessary: may indicate the number of objects has changed between calls to data dictionary");
 	}
 
 	for (int i = 0; i < retval; ++i) {

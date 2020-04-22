@@ -215,8 +215,8 @@ I32 SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
 												U8 SysCtrlState, U8 Debug);
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
-static int32_t SystemControlSendRVSSMonitorChannelMessages(int * socket, struct sockaddr_in * addr);
-static void SystemControlUpdateRVSSSendTime(struct timeval * currentRVSSSendTime, uint8_t RVSSRate_Hz);
+static int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr);
+static void SystemControlUpdateRVSSSendTime(struct timeval *currentRVSSSendTime, uint8_t RVSSRate_Hz);
 static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
@@ -240,7 +240,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	struct sockaddr_in RVSSChannelAddr;
 	struct in_addr ip_addr;
 	I32 RVSSChannelSocket;
-	struct timeval nextRVSSSendTime = {0, 0};
+	struct timeval nextRVSSSendTime = { 0, 0 };
 	MonitorDataType monrData;
 
 	ServerState_t server_state = SERVER_STATE_UNDEFINED;
@@ -2524,9 +2524,10 @@ I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * 
  * \param RVSSRate_Hz Rate at which RVSS messages are to be sent - if this parameter is 0 the value
  *			is clamped to 1 Hz
  */
-void SystemControlUpdateRVSSSendTime(struct timeval * currentRVSSSendTime, uint8_t RVSSRate_Hz) {
+void SystemControlUpdateRVSSSendTime(struct timeval *currentRVSSSendTime, uint8_t RVSSRate_Hz) {
 	struct timeval RVSSTimeInterval;
-	RVSSRate_Hz = RVSSRate_Hz == 0 ? 1 : RVSSRate_Hz;						// Minimum frequency 1 Hz
+
+	RVSSRate_Hz = RVSSRate_Hz == 0 ? 1 : RVSSRate_Hz;	// Minimum frequency 1 Hz
 	RVSSTimeInterval.tv_sec = (long)(1.0 / RVSSRate_Hz);
 	RVSSTimeInterval.tv_usec = (long)((1.0 / RVSSRate_Hz - RVSSTimeInterval.tv_sec) * 1000000.0);
 	timeradd(currentRVSSSendTime, &RVSSTimeInterval, currentRVSSSendTime);
@@ -2626,18 +2627,19 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
  * \param addr Address struct pointer for RVSS socket
  * \return 0 on success, -1 otherwise
  */
-int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr) {
+int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in * addr) {
 	uint32_t messageLength = 0;
 	uint32_t RVSSChannel = RVSS_MONITOR_CHANNEL;
 	char RVSSData[MAX_MONR_STRING_LENGTH];
-	char * monitorDataString = RVSSData + sizeof (messageLength) + sizeof (RVSSChannel);
+	char *monitorDataString = RVSSData + sizeof (messageLength) + sizeof (RVSSChannel);
 	uint32_t *transmitterIDs = NULL;
 	uint32_t numberOfObjects;
 	MonitorDataType monitorData;
 
 	// Get number of objects present in shared memory
 	if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
-		LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error - RVSS messages cannot be sent");
+		LogMessage(LOG_LEVEL_ERROR,
+				   "Data dictionary number of objects read error - RVSS messages cannot be sent");
 		return -1;
 	}
 
@@ -2651,26 +2653,31 @@ int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr
 	// Get transmitter IDs for all connected objects
 	if (DataDictionaryGetMonitorTransmitterIDs(transmitterIDs, numberOfObjects) != READ_OK) {
 		free(transmitterIDs);
-		LogMessage(LOG_LEVEL_ERROR, "Data dictionary transmitter ID read error - RVSS messages cannot be sent");
+		LogMessage(LOG_LEVEL_ERROR,
+				   "Data dictionary transmitter ID read error - RVSS messages cannot be sent");
 		return -1;
 	}
 
 	LogMessage(LOG_LEVEL_DEBUG, "%s: Found %u transmitter IDs", __FUNCTION__, numberOfObjects);
 	// Loop over transmitter IDs, sending a message on the RVSS channel for each
 	int32_t retval = 0;
+
 	for (uint32_t i = 0; i < numberOfObjects; ++i) {
 		if (DataDictionaryGetMonitorData(&monitorData, transmitterIDs[i]) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR, "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent", transmitterIDs[i]);
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
+					   transmitterIDs[i]);
 			retval = -1;
 		}
 		else if (UtilMonitorDataToString(monitorData, monitorDataString,
-										sizeof (RVSSData) - (size_t)(monitorDataString - RVSSData)) == -1){
+										 sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) == -1) {
 			LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
 			retval = -1;
 		}
 		else {
 			LogMessage(LOG_LEVEL_DEBUG, "%s: Transmitter ID %u", __FUNCTION__, transmitterIDs[i]);
-			messageLength = (uint32_t)(strlen(monitorDataString) + sizeof (messageLength) + sizeof (RVSSChannel));
+			messageLength =
+				(uint32_t) (strlen(monitorDataString) + sizeof (messageLength) + sizeof (RVSSChannel));
 			messageLength = htole32(messageLength);
 			RVSSChannel = htole32(RVSSChannel);
 			memcpy(RVSSData, &messageLength, sizeof (messageLength));
