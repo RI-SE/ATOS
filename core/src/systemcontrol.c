@@ -1172,20 +1172,20 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				if (RVSSConfigU32 & RVSS_TIME_CHANNEL) {
 					SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
-					UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 									RVSSMessageLengthU32, 0);
 				}
 
 				if (RVSSConfigU32 & RVSS_MAESTRO_CHANNEL) {
 					SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32, GSD,
 																server_state, 0);
-					UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 									RVSSMessageLengthU32, 0);
 				}
 
 				if (RVSSConfigU32 & RVSS_ASP_CHANNEL) {
 					SystemControlBuildRVSSAspChannelMessage(RVSSData, &RVSSMessageLengthU32, 0);
-					UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 									RVSSMessageLengthU32, 0);
 				}
 
