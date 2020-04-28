@@ -23,6 +23,7 @@ add_executable(${SCENARIO_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/action.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/booleantrigger.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/braketrigger.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/positiontrigger.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/causality.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/externalaction.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/isotrigger.cpp
