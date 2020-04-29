@@ -208,7 +208,7 @@ ssize_t encodeACCMMessage(const uint16_t* actionID, const ActionType_t* actionTy
 ssize_t encodeEXACMessage(const uint16_t* actionID, const struct timeval * executionTime, char * exacDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeINSUPMessage(const SupervisorCommandType, char * insupDataBuffer, const size_t bufferLength, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);
-
+void setISOCRCVerification(const int8_t enabled);
 
 #ifdef __cplusplus
 }
