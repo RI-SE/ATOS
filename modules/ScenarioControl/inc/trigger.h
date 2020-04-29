@@ -92,7 +92,10 @@ public:
     virtual TriggerReturnCode_t update(int, struct timeval)     { throw std::invalid_argument("Invalid signal type"); }
     virtual TriggerReturnCode_t update(float, struct timeval)   { throw std::invalid_argument("Invalid signal type"); }
     virtual TriggerReturnCode_t update(double, struct timeval)  { throw std::invalid_argument("Invalid signal type"); }
-    virtual TriggerReturnCode_t update(TREOData){ throw std::invalid_argument("Invalid signal type"); }
+	virtual TriggerReturnCode_t update(CartesianPosition, struct timeval) { throw std::invalid_argument("Invalid signal type"); }
+	virtual TriggerReturnCode_t update(TREOData) { throw std::invalid_argument("Invalid signal type"); }
+	virtual TriggerReturnCode_t update(MonitorDataType newValue, struct timeval measurementTime) { throw std::invalid_argument("Invalid signal type"); };
+
 
     static TriggerTypeCode_t asTypeCode(std::string typeCodeString);
 protected:
