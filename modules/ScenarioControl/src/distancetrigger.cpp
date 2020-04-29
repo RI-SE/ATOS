@@ -33,9 +33,11 @@ Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue, s
 
 	switch (this->oper) {
 	case LESS_THAN:
+		this->mode = HIGH;
 		return update(static_cast<bool>(UtilIsPositionNearTarget(newValue.data.position, this->referencePoint, this->triggerDistance_m + networkDelayCorrection_m)),
 				measurementTime);
 	case GREATER_THAN:
+		this->mode = HIGH;
 		return update(static_cast<bool>(!UtilIsPositionNearTarget(newValue.data.position, this->referencePoint, this->triggerDistance_m - networkDelayCorrection_m)),
 				measurementTime);
 	}
