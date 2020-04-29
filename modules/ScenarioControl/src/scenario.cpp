@@ -310,6 +310,9 @@ std::set<Action*> Scenario::parseActionConfiguration(const std::string &inputCon
         case ACTION_INFRASTRUCTURE:
             action = new InfrastructureAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()));
             break;
+		case ACTION_TEST_SCENARIO_COMMAND:
+			action = new TestScenarioCommandAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()));
+			break;
         default:
             // Regular action (only ACCM and EXAC)
             action = new ExternalAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()), actionType);
