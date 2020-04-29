@@ -1,6 +1,9 @@
 #include "externalaction.h"
 
 #include <stdexcept>
+#include <iostream>
+#include <sstream>
+#include <algorithm>
 
 #include "logging.h"
 #include "util.h"
@@ -14,7 +17,7 @@ Action::ActionReturnCode_t ExternalAction::execute(void)
     if (remainingAllowedRuns == 0)
         return NO_REMAINING_RUNS;
     else {
-        TimeSetToCurrentSystemTime(&systemTime); // TODO: Set system time according to timecontrol
+		TimeSetToCurrentSystemTime(&systemTime);
 
         data.actionID = actionID;
         data.executionTime_qmsoW  = actionDelayTime_qms == 0 ? 0 : TimeGetAsGPSqmsOfWeek(&systemTime) + actionDelayTime_qms;
@@ -30,6 +33,63 @@ Action::ActionReturnCode_t ExternalAction::execute(void)
     }
 }
 
+
+// ******* Test scenario command action
+TestScenarioCommandAction::TestScenarioCommandAction(ActionID_t actionID, uint32_t allowedNumberOfRuns)
+	: ExternalAction(actionID, Action::ActionTypeCode_t::ACTION_TEST_SCENARIO_COMMAND, allowedNumberOfRuns)
+{
+}
+
+Action::ActionParameter_t TestScenarioCommandAction::asParameterCode(const std::string &inputStr) const
+{
+	try {
+		return Action::asParameterCode(inputStr);
+	} catch (std::invalid_argument e) {
+		std::string str = inputStr;
+		for (char &ch : str)
+			ch = toUpper(ch);
+		if (!str.compare("SEND_START"))
+			return ACTION_PARAMETER_VS_SEND_START;
+		throw e;
+	}
+}
+
+Action::ActionReturnCode_t TestScenarioCommandAction::appendParameter(std::string inputStr) {
+	try {
+		// String represented an action parameter defined by ISO
+		ActionParameter_t param = asParameterCode(inputStr);
+		return Action::appendParameter(param);
+	} catch (std::invalid_argument e) {
+		// String may have represented a number
+		return parseNumericParameter(inputStr);
+	}
+}
+
+Action::ActionReturnCode_t TestScenarioCommandAction::parseNumericParameter(std::string inputStr) {
+	std::istringstream ss(inputStr);
+	double param;
+
+	if (ss >> param) {
+		if (std::find(this->parameters.begin(), this->parameters.end(),
+					  ACTION_PARAMETER_VS_SEND_START) != this->parameters.end()) {
+			// Scenario command was start, interpret numeric parameter as delay
+			struct timeval delay;
+			delay.tv_sec = static_cast<long>(param);
+			delay.tv_usec = static_cast<long>((param - delay.tv_sec)*1000000);
+			this->setExecuteDelayTime(delay);
+			return OK;
+		}
+		else {
+			throw std::invalid_argument("Numeric parameter cannot be linked to test scenario command");
+		}
+	}
+	else {
+		throw std::invalid_argument("Test scenario command action unable to parse " + inputStr + " as numeric parameter");
+	}
+}
+
+
+// ******* Infrastructure action
 InfrastructureAction::InfrastructureAction(ActionID_t actionID, uint32_t allowedNumberOfRuns)
     : ExternalAction(actionID, Action::ActionTypeCode_t::ACTION_INFRASTRUCTURE, allowedNumberOfRuns)
 {
