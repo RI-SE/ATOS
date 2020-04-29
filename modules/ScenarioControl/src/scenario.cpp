@@ -263,9 +263,20 @@ std::set<Trigger*> Scenario::parseTriggerConfiguration(const std::string &inputC
         }
 
         // Transfer specified parameters to relevant containers
-        for (unsigned int i = 2; i < match.size(); ++i)
-            if (!match[i].str().empty()) trigger->appendParameter(match[i].str());
-        returnTriggers.insert(trigger);
+		for (unsigned int i = 2; i < match.size(); ++i) {
+			if (!match[i].str().empty()){
+				if (trigger->appendParameter(match[i].str()) != Trigger::OK) {
+					throw std::invalid_argument("Unable to interpret trigger parameter " + match[i].str());
+				}
+			}
+		}
+
+		// Parse all parameters into settings
+		if (trigger->parseParameters() != Trigger::OK) {
+			throw std::invalid_argument("Unable to interpret trigger configuration " + inputConfig);
+		}
+
+		returnTriggers.insert(trigger);
     }
 
     return returnTriggers;
@@ -320,8 +331,18 @@ std::set<Action*> Scenario::parseActionConfiguration(const std::string &inputCon
         }
 
         // Transfer specified parameters to relevant containers
-        for (unsigned int i = 2; i < match.size(); ++i)
-            if(!match[i].str().empty()) action->appendParameter(match[i].str());
+		for (unsigned int i = 2; i < match.size(); ++i) {
+			if(!match[i].str().empty()) {
+				if (action->appendParameter(match[i].str()) != Action::OK) {
+					throw std::invalid_argument("Unable to interpret action parameter " + match[i].str());
+				}
+			}
+		}
+		// Parse all parameters into settings
+		if (action->parseParameters() != Action::OK) {
+			throw std::invalid_argument("Unable to interpret trigger configuration " + inputConfig);
+		}
+
         returnActions.insert(action);
     }
 
