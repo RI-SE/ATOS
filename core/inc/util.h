@@ -74,11 +74,6 @@ extern "C"{
 
 #define MAX_UTIL_VARIBLE_SIZE 512
 
-// TODO: Make these constants have more descriptive names
-#define a	6378137.0							            //meters in WGS84
-#define k	298.257223563 						        //in WGS84, f = 1/298.257223563
-#define b	6356752.3142451794975639665996337	//b = (1-f)*a
-#define l	1e-12
 #define PI	3.141592653589793
 #define ORIGO_DISTANCE_CALC_ITERATIONS 14
 #define TRAJECTORY_LINE_LENGTH 100
