@@ -574,7 +574,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 		//Call this from the loop to send
-		SystemControlGetStatusMessage("", 0, 0);
+        SystemControlGetStatusMessage("", 0, 0);
 
 
 		bzero(pcRecvBuffer, SC_RECV_MESSAGE_BUFFER);
@@ -2693,8 +2693,9 @@ I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU
  */
 I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8 debug) {
 
-	static U64 getStatusTimerU64 = 0;
-	static U64 getStatusTimeoutTimerU64 = 0;
+    static struct timeval getStatusSendTimer;
+    static struct timeval getStatusTimeoutTimer;
+    static struct timeval currentSystemTime;
 	static uint8_t numberOfResponses = 0;
 
     static enum {
@@ -2702,14 +2703,27 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 		GETSTATUS_WAITFORRESPONSE
     } getStatusState = GETSTATUS_SEND;
 
+    //Set current time
+    TimeSetToCurrentSystemTime(&currentSystemTime);
+
     switch (getStatusState) {
 
-	case GETSTATUS_SEND:
-		//Small non-blocking timer
-		if (getStatusTimerU64 - UtilgetCurrentUTCtimeMS() <= -SYSTEM_CONTROL_GETSTATUS_TIME_MS) {
-			getStatusTimerU64 = UtilgetCurrentUTCtimeMS();
-			getStatusTimeoutTimerU64 = UtilgetCurrentUTCtimeMS();
 
+    //Waits until it's time to send getStatus
+    case GETSTATUS_SEND:
+
+        //If current time is more than sendTime
+        if (timercmp(&getStatusSendTimer, &currentSystemTime, <)) {
+
+            //Set next sendTime
+            TimeSetToCurrentSystemTime(&getStatusSendTimer);
+            getStatusSendTimer.tv_sec += SYSTEM_CONTROL_GETSTATUS_TIME_MS / 1000;
+
+            //Set when to timeout
+            TimeSetToCurrentSystemTime(&getStatusTimeoutTimer);
+            getStatusTimeoutTimer.tv_sec += SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS / 1000;
+
+            //Send getstatus
 			iCommSend(COMM_GETSTATUS, NULL, 0);
 
 
@@ -2717,23 +2731,27 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 				LogMessage(LOG_LEVEL_INFO, "GETSTATUS SENT");
 			}
 
+            //Next Case
 			getStatusState = GETSTATUS_WAITFORRESPONSE;
 
 			return 1;
 		}
 		break;
 
+    //Waits until timeout-time and counts responses. Warn if too few or too many.
 	case GETSTATUS_WAITFORRESPONSE:
 		if (respondingModule == NULL) {
 			errno = EINVAL;
 			LogMessage(LOG_LEVEL_ERROR, "Responding module parameter is null");
 			return -1;
 		}
+
+        //Did a module respond
 		if (respondingModule[0]) {
 			numberOfResponses++;
 		}
 
-		if (getStatusTimeoutTimerU64 - UtilgetCurrentUTCtimeMS() <= -SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS) {
+        if (timercmp(&getStatusTimeoutTimer, &currentSystemTime, <)) {
 
 			//Too many
 			if (numberOfResponses > SYSTEM_CONTROL_NO_OF_MODULES_IN_USE) {
@@ -2766,6 +2784,10 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 		}
 
 		break;
+
+    default:
+        LogMessage(LOG_LEVEL_INFO, "getStatusState: %d", getStatusState);
+        break;
 	}
 
 
