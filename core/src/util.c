@@ -799,7 +799,7 @@ int UtilStringToMonitorData(const char *monitorString, size_t stringLength, Moni
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m) {
 	double distance = 0.0;
 
-	if (!position.isPositionValid || target.isPositionValid)
+	if (!position.isPositionValid || !target.isPositionValid)
 		return 0;
 	distance = sqrt(pow(position.xCoord_m - target.xCoord_m, 2)
 					+ pow(position.yCoord_m - target.yCoord_m, 2)
