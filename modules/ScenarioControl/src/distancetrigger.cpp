@@ -12,7 +12,7 @@ DistanceTrigger::DistanceTrigger(Trigger::TriggerID_t triggerID) : BooleanTrigge
 	this->setTriggerDistance(0.0);
 }
 
-Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue, struct timeval measurementTime) {
+Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue) {
 	double networkDelayCorrection_m = 0.0;
 	struct timeval currentTime, networkDelay;
 
@@ -23,7 +23,7 @@ Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue, s
 	// Correct for two-way network delay effects on trigger distance
 	if (newValue.data.speed.isLongitudinalValid && newValue.data.isTimestampValid) {
 		TimeSetToCurrentSystemTime(&currentTime);
-		timersub(&currentTime, &measurementTime, &networkDelay);
+		timersub(&currentTime, &newValue.data.timestamp, &networkDelay);
 		networkDelayCorrection_m = 2.0 * fabs(static_cast<double>(networkDelay.tv_sec) + static_cast<double>(networkDelay.tv_usec) / 1000000.0)
 			* newValue.data.speed.longitudinal_m_s;
 	}
@@ -34,10 +34,10 @@ Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue, s
 	switch (this->oper) {
 	case LESS_THAN:
 		return update(static_cast<bool>(UtilIsPositionNearTarget(newValue.data.position, this->referencePoint, this->triggerDistance_m + networkDelayCorrection_m)),
-				measurementTime);
+				newValue.data.timestamp);
 	case GREATER_THAN:
 		return update(static_cast<bool>(!UtilIsPositionNearTarget(newValue.data.position, this->referencePoint, this->triggerDistance_m - networkDelayCorrection_m)),
-				measurementTime);
+				newValue.data.timestamp);
 	}
 	throw std::logic_error("Distance trigger unimplemented operator");
 }

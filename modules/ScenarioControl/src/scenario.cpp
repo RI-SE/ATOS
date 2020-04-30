@@ -474,7 +474,7 @@ Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &mo
                 break;
 			case Trigger::TriggerTypeCode_t::TRIGGER_DISTANCE:
 				if (monr.data.position.isPositionValid) {
-					tp->update(monr.data.position, monr.data.timestamp);
+					tp->update(monr);
 				}
 				else {
 					LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
