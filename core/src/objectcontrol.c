@@ -86,7 +86,7 @@ typedef struct {
 	uint16_t actionID;
 	ActionTypeParameter_t command;
 	in_addr_t ip;
-} TestScenarioCommandAction; //!< Struct describing a command to be sent as action, e.g. delayed start
+} TestScenarioCommandAction;	//!< Struct describing a command to be sent as action, e.g. delayed start
 
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
@@ -112,11 +112,15 @@ static void vCloseSafetyChannel(int *sockfd);
 static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects);
 static void signalHandler(int signo);
-static void resetCommandActionList(TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
-static int addCommandToActionList(const TestScenarioCommandAction command, TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
-static int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
-static int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
-
+static void resetCommandActionList(TestScenarioCommandAction commandActions[],
+								   const int numberOfElementsInList);
+static int addCommandToActionList(const TestScenarioCommandAction command,
+								  TestScenarioCommandAction commandActions[],
+								  const int numberOfElementsInList);
+static int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[],
+						   const int numberOfElementsInList);
+static int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction commandActions[],
+							 const int numberOfElementsInList);
 static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const char debug);
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
@@ -557,8 +561,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
 
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					if (!hasDelayedStart(objectIPs[iIndex], commandActions, sizeof (commandActions) / sizeof (commandActions[0])))
-						UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+					if (!hasDelayedStart
+						(objectIPs[iIndex], commandActions,
+						 sizeof (commandActions) / sizeof (commandActions[0])))
+						UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex],
+										0);
 				}
 				vSetState(OBC_STATE_RUNNING, GSD);
 
@@ -598,7 +605,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					// Get objects; name and drive file
 					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 
-					resetCommandActionList(commandActions, sizeof (commandActions) / sizeof (commandActions[0]));
+					resetCommandActionList(commandActions,
+										   sizeof (commandActions) / sizeof (commandActions[0]));
 
 					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 						if (0 == iForceObjectToLocalhostU8) {
@@ -655,11 +663,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (mqACCMData.actionType == ACTION_TEST_SCENARIO_COMMAND) {
 					// Special handling is required from Maestro for test scenario command
 					TestScenarioCommandAction newCommandAction;
+
 					if (mqACCMData.actionTypeParameter1 == ACTION_PARAMETER_VS_SEND_START) {
 						newCommandAction.ip = mqACCMData.ip;
 						newCommandAction.command = mqACCMData.actionTypeParameter1;
 						newCommandAction.actionID = mqACCMData.actionID;
-						if (addCommandToActionList(newCommandAction, commandActions, sizeof (commandActions) / sizeof (commandActions[0])) == -1) {
+						if (addCommandToActionList
+							(newCommandAction, commandActions,
+							 sizeof (commandActions) / sizeof (commandActions[0])) == -1) {
 							LogMessage(LOG_LEVEL_ERROR, "Unable to handle command action configuration");
 						}
 					}
@@ -670,11 +681,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				else {
 					// Send ACCM to objects
 					iIndex = iGetObjectIndexFromObjectIP(mqACCMData.ip, objectIPs,
-													sizeof (objectIPs) / sizeof (objectIPs[0]));
+														 sizeof (objectIPs) / sizeof (objectIPs[0]));
 					if (iIndex != -1) {
 						MessageLength =
 							encodeACCMMessage(&mqACCMData.actionID, &mqACCMData.actionType,
-											  &mqACCMData.actionTypeParameter1, &mqACCMData.actionTypeParameter2,
+											  &mqACCMData.actionTypeParameter1,
+											  &mqACCMData.actionTypeParameter2,
 											  &mqACCMData.actionTypeParameter3, MessageBuffer,
 											  sizeof (MessageBuffer), 0);
 						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
@@ -706,7 +718,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_EXAC && vGetState(GSD) == OBC_STATE_RUNNING) {
 				UtilPopulateEXACDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqEXACData);
 				int commandIndex;
-				if ((commandIndex = findCommandAction(mqEXACData.actionID, commandActions, sizeof (commandActions) / sizeof (commandActions[0]))) != -1) {
+
+				if ((commandIndex =
+					 findCommandAction(mqEXACData.actionID, commandActions,
+									   sizeof (commandActions) / sizeof (commandActions[0]))) != -1) {
 					switch (commandActions[commandIndex].command) {
 					case ACTION_PARAMETER_VS_SEND_START:
 						iIndex =
@@ -714,18 +729,25 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 														sizeof (objectIPs) / sizeof (objectIPs[0]));
 						if (iIndex != -1) {
 							struct timeval startTime;
+
 							TimeSetToCurrentSystemTime(&currentTime);
-							TimeSetToGPStime(&startTime, TimeGetAsGPSweek(&currentTime), mqEXACData.executionTime_qmsoW);
+							TimeSetToGPStime(&startTime, TimeGetAsGPSweek(&currentTime),
+											 mqEXACData.executionTime_qmsoW);
 							LogPrint("Current time: %ld, Start time: %ld, delay: %u",
-									 TimeGetAsUTCms(&currentTime), TimeGetAsUTCms(&startTime), mqEXACData.executionTime_qmsoW);
-							MessageLength = encodeSTRTMessage(&startTime, MessageBuffer, sizeof (MessageBuffer), 0);
-							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+									 TimeGetAsUTCms(&currentTime), TimeGetAsUTCms(&startTime),
+									 mqEXACData.executionTime_qmsoW);
+							MessageLength =
+								encodeSTRTMessage(&startTime, MessageBuffer, sizeof (MessageBuffer), 0);
+							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex],
+											0);
 						}
 						else if (mqEXACData.ip == 0) {
-							LogMessage(LOG_LEVEL_DEBUG, "Delayed STRT with no configured target IP: no message sent");
+							LogMessage(LOG_LEVEL_DEBUG,
+									   "Delayed STRT with no configured target IP: no message sent");
 						}
 						else {
-							LogMessage(LOG_LEVEL_WARNING, "Unable to send delayed STRT: no valid socket found");
+							LogMessage(LOG_LEVEL_WARNING,
+									   "Unable to send delayed STRT: no valid socket found");
 						}
 						break;
 					default:
@@ -1249,7 +1271,8 @@ void resetCommandActionList(TestScenarioCommandAction commandActions[], const in
  * \param numberOfElementsInList Number of elements in the entire list
  * \return 0 on success, -1 otherwise
  */
-int addCommandToActionList(const TestScenarioCommandAction command, TestScenarioCommandAction commandActions[], const int numberOfElementsInList) {
+int addCommandToActionList(const TestScenarioCommandAction command,
+						   TestScenarioCommandAction commandActions[], const int numberOfElementsInList) {
 	for (int i = 0; i < numberOfElementsInList; ++i) {
 		if (commandActions[i].command == ACTION_PARAMETER_UNAVAILABLE) {
 			commandActions[i] = command;
@@ -1269,7 +1292,8 @@ int addCommandToActionList(const TestScenarioCommandAction command, TestScenario
  * \param numberOfElementsInList Number of elements in the entire list
  * \return Boolean value indicating if the object has a delayed start configuration
  */
-int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[], const int numberOfElementsInList) {
+int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[],
+					const int numberOfElementsInList) {
 	for (int i = 0; i < numberOfElementsInList; ++i) {
 		if (commandActions[i].ip == objectIP && commandActions[i].command == ACTION_PARAMETER_VS_SEND_START) {
 			return 1;
@@ -1286,9 +1310,11 @@ int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction co
  * \param numberOfElementsInList Number of elements in the entire list
  * \return Index of the command action, or -1 if not found
  */
-int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction commandActions[], const int numberOfElementsInList) {
+int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction commandActions[],
+					  const int numberOfElementsInList) {
 	for (int i = 0; i < numberOfElementsInList; ++i) {
-		if (commandActions[i].actionID == actionID && commandActions[i].command != ACTION_PARAMETER_UNAVAILABLE) {
+		if (commandActions[i].actionID == actionID
+			&& commandActions[i].command != ACTION_PARAMETER_UNAVAILABLE) {
 			return i;
 		}
 	}
