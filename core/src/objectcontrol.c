@@ -112,10 +112,12 @@ static void vCloseSafetyChannel(int *sockfd);
 static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects);
 static void signalHandler(int signo);
-static void resetCommandActionList(TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
-static int addCommandToActionList(const TestScenarioCommandAction command, TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
+static void resetCommandActionList(TestScenarioCommandAction commandActions[],
+								   const int numberOfElementsInList);
+static int addCommandToActionList(const TestScenarioCommandAction command,
+								  TestScenarioCommandAction commandActions[],
+								  const int numberOfElementsInList);
 static int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
-
 static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const char debug);
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
@@ -597,7 +599,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					// Get objects; name and drive file
 					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 
-					resetCommandActionList(commandActions, sizeof (commandActions) / sizeof (commandActions[0]));
+					resetCommandActionList(commandActions,
+										   sizeof (commandActions) / sizeof (commandActions[0]));
 
 					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 						if (0 == iForceObjectToLocalhostU8) {
@@ -654,11 +657,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (mqACCMData.actionType == ACTION_TEST_SCENARIO_COMMAND) {
 					// Special handling is required from Maestro for test scenario command
 					TestScenarioCommandAction newCommandAction;
+
 					if (mqACCMData.actionTypeParameter1 == ACTION_PARAMETER_VS_SEND_START) {
 						newCommandAction.ip = mqACCMData.ip;
 						newCommandAction.command = mqACCMData.actionTypeParameter1;
 						newCommandAction.actionID = mqACCMData.actionID;
-						if (addCommandToActionList(newCommandAction, commandActions, sizeof (commandActions) / sizeof (commandActions[0])) == -1) {
+						if (addCommandToActionList
+							(newCommandAction, commandActions,
+							 sizeof (commandActions) / sizeof (commandActions[0])) == -1) {
 							LogMessage(LOG_LEVEL_ERROR, "Unable to handle command action configuration");
 						}
 					}
@@ -669,11 +675,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				else {
 					// Send ACCM to objects
 					iIndex = iGetObjectIndexFromObjectIP(mqACCMData.ip, objectIPs,
-													sizeof (objectIPs) / sizeof (objectIPs[0]));
+														 sizeof (objectIPs) / sizeof (objectIPs[0]));
 					if (iIndex != -1) {
 						MessageLength =
 							encodeACCMMessage(&mqACCMData.actionID, &mqACCMData.actionType,
-											  &mqACCMData.actionTypeParameter1, &mqACCMData.actionTypeParameter2,
+											  &mqACCMData.actionTypeParameter1,
+											  &mqACCMData.actionTypeParameter2,
 											  &mqACCMData.actionTypeParameter3, MessageBuffer,
 											  sizeof (MessageBuffer), 0);
 						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
@@ -1215,7 +1222,8 @@ void resetCommandActionList(TestScenarioCommandAction commandActions[], const in
  * \param numberOfElementsInList Number of elements in the entire list
  * \return 0 on success, -1 otherwise
  */
-int addCommandToActionList(const TestScenarioCommandAction command, TestScenarioCommandAction commandActions[], const int numberOfElementsInList) {
+int addCommandToActionList(const TestScenarioCommandAction command,
+						   TestScenarioCommandAction commandActions[], const int numberOfElementsInList) {
 	for (int i = 0; i < numberOfElementsInList; ++i) {
 		if (commandActions[i].command == ACTION_PARAMETER_UNAVAILABLE) {
 			commandActions[i] = command;

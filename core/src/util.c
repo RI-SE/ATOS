@@ -36,8 +36,8 @@
   -- Defines
   ------------------------------------------------------------*/
 
-#define EARTH_EQUATOR_RADIUS_M	6378137.0  // earth semimajor axis (WGS84) (m)
-#define INVERSE_FLATTENING	298.257223563  //in WGS84, f = 1/298.257223563
+#define EARTH_EQUATOR_RADIUS_M	6378137.0	// earth semimajor axis (WGS84) (m)
+#define INVERSE_FLATTENING	298.257223563	//in WGS84, f = 1/298.257223563
 #define EARTH_FLATTENING ( 1.0 / INVERSE_FLATTENING )
 #define EARTH_POLE_RADIUS_M	6356752.3142451794975639665996337	//b = (1-f)*a
 #define VINCENTY_MIN_STEP_TOLERANCE	1e-12
@@ -938,7 +938,9 @@ int UtilVincentyDirect(double refLat, double refLon, double a1, double distance,
 	sina = cos(U1) * sin(a1);
 
 	pow2cosa = 1 - pow(sina, 2);
-	pow2u = pow2cosa * (pow(EARTH_EQUATOR_RADIUS_M, 2) - pow(EARTH_POLE_RADIUS_M, 2)) / pow(EARTH_POLE_RADIUS_M, 2);
+	pow2u =
+		pow2cosa * (pow(EARTH_EQUATOR_RADIUS_M, 2) - pow(EARTH_POLE_RADIUS_M, 2)) / pow(EARTH_POLE_RADIUS_M,
+																						2);
 
 	A = 1 + pow2u / 16384.0 * (4096.0 + pow2u * (-768.0 + pow2u * (320.0 - 175.0 * pow2u)));
 	B = pow2u / 1024.0 * (256.0 + pow2u * (-128.0 + pow2u * (74.0 - 47.0 * pow2u)));
