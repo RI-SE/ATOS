@@ -82,6 +82,12 @@ typedef enum {
 	TRANSITION_MEMORY_ERROR
 } StateTransitionResult;
 
+typedef struct {
+	uint16_t actionID;
+	ActionTypeParameter_t command;
+	in_addr_t ip;
+} TestScenarioCommandAction;
+
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
       void (*fooptr)(int,float) = foo;
@@ -106,6 +112,8 @@ static void vCloseSafetyChannel(int *sockfd);
 static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects);
 static void signalHandler(int signo);
+static void resetCommandActionList(TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
+static int addCommandToActionList(const TestScenarioCommandAction command, TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
 
 static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const char debug);
 
@@ -146,6 +154,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	in_addr_t objectIPs[MAX_OBJECTS];
 	U32 object_udp_port[MAX_OBJECTS];
 	U32 object_tcp_port[MAX_OBJECTS];
+	TestScenarioCommandAction commandActions[MAX_OBJECTS];
 	I32 nbr_objects = 0;
 	enum COMMAND iCommand;
 	U8 pcRecvBuffer[RECV_MESSAGE_BUFFER];
@@ -586,6 +595,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					// Get objects; name and drive file
 					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 
+					resetCommandActionList(commandActions, sizeof (commandActions) / sizeof (commandActions[0]));
+
 					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 						if (0 == iForceObjectToLocalhostU8) {
 							object_udp_port[iIndex] = SAFETY_CHANNEL_PORT;
@@ -638,19 +649,40 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else if (iCommand == COMM_ACCM && vGetState(GSD) == OBC_STATE_CONNECTED) {
 				UtilPopulateACCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqACCMData);
-				iIndex =
-					iGetObjectIndexFromObjectIP(mqACCMData.ip, objectIPs,
-												sizeof (objectIPs) / sizeof (objectIPs[0]));
-				if (iIndex != -1) {
-					MessageLength =
-						encodeACCMMessage(&mqACCMData.actionID, &mqACCMData.actionType,
-										  &mqACCMData.actionTypeParameter1, &mqACCMData.actionTypeParameter2,
-										  &mqACCMData.actionTypeParameter3, MessageBuffer,
-										  sizeof (MessageBuffer), 0);
-					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
+				if (mqACCMData.actionType == ACTION_TEST_SCENARIO_COMMAND) {
+					// Special handling is required from Maestro for test scenario command
+					TestScenarioCommandAction newCommandAction;
+					if (mqACCMData.actionTypeParameter1 == ACTION_PARAMETER_VS_SEND_START) {
+						newCommandAction.ip = mqACCMData.ip;
+						newCommandAction.command = mqACCMData.actionTypeParameter1;
+						newCommandAction.actionID = mqACCMData.actionID;
+						if (addCommandToActionList(newCommandAction, commandActions, sizeof (commandActions) / sizeof (commandActions[0])) == -1) {
+							LogMessage(LOG_LEVEL_ERROR, "Unable to handle command action configuration");
+						}
+					}
+					else {
+						LogMessage(LOG_LEVEL_WARNING, "Unimplemented test scenario command action");
+					}
 				}
-				else
-					LogMessage(LOG_LEVEL_WARNING, "Unable to send ACCM: no valid socket found");
+				else {
+					// Send ACCM to objects
+					iIndex = iGetObjectIndexFromObjectIP(mqACCMData.ip, objectIPs,
+													sizeof (objectIPs) / sizeof (objectIPs[0]));
+					if (iIndex != -1) {
+						MessageLength =
+							encodeACCMMessage(&mqACCMData.actionID, &mqACCMData.actionType,
+											  &mqACCMData.actionTypeParameter1, &mqACCMData.actionTypeParameter2,
+											  &mqACCMData.actionTypeParameter3, MessageBuffer,
+											  sizeof (MessageBuffer), 0);
+						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
+					}
+					else if (mqACCMData.ip == 0) {
+						LogMessage(LOG_LEVEL_DEBUG, "ACCM with no configured target IP: no message sent");
+					}
+					else {
+						LogMessage(LOG_LEVEL_WARNING, "Unable to send ACCM: no valid socket found");
+					}
+				}
 			}
 			else if (iCommand == COMM_TRCM && vGetState(GSD) == OBC_STATE_CONNECTED) {
 				UtilPopulateTRCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqTRCMData);
@@ -1157,7 +1189,42 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 }
 
 
-static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects) {
+/*!
+ * \brief resetCommandActionList Resets the list back to unset values: 0 for the IP and ID, and
+ *			::ACTION_PARAMETER_UNAVAILABLE for the command.
+ * \param commandActions List of command actions
+ * \param numberOfElementsInList Number of elements in the entire list
+ */
+void resetCommandActionList(TestScenarioCommandAction commandActions[], const int numberOfElementsInList) {
+	for (int i = 0; i < numberOfElementsInList; ++i) {
+		commandActions[i].ip = 0;
+		commandActions[i].command = ACTION_PARAMETER_UNAVAILABLE;
+		commandActions[i].actionID = 0;
+	}
+}
+
+
+/*!
+ * \brief addCommandToActionList Adds a command to the command action list by searching for the
+ *			first occurrence of ::ACTION_PARAMETER_UNAVAILABLE and replacing it with the chosen
+ *			command. An error is returned if no such occurrence is found.
+ * \param command Command to be added to list
+ * \param commandActions List of all command actions
+ * \param numberOfElementsInList Number of elements in the entire list
+ * \return 0 on success, -1 otherwise
+ */
+int addCommandToActionList(const TestScenarioCommandAction command, TestScenarioCommandAction commandActions[], const int numberOfElementsInList) {
+	for (int i = 0; i < numberOfElementsInList; ++i) {
+		if (commandActions[i].command == ACTION_PARAMETER_UNAVAILABLE) {
+			commandActions[i] = command;
+			return 0;
+		}
+	}
+	errno = ENOBUFS;
+	return -1;
+}
+
+int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects) {
 	for (unsigned int i = 0; i < numberOfObjects; ++i) {
 		if (objectIPs[i] == ipAddr)
 			return (int)i;
