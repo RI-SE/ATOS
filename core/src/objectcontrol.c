@@ -114,6 +114,7 @@ static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], 
 static void signalHandler(int signo);
 static void resetCommandActionList(TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
 static int addCommandToActionList(const TestScenarioCommandAction command, TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
+static int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
 
 static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const char debug);
 
@@ -555,7 +556,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
 
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+					if (!hasDelayedStart(objectIPs[iIndex], commandActions, sizeof (commandActions) / sizeof (commandActions[0])))
+						UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 				}
 				vSetState(OBC_STATE_RUNNING, GSD);
 
@@ -1222,6 +1224,24 @@ int addCommandToActionList(const TestScenarioCommandAction command, TestScenario
 	}
 	errno = ENOBUFS;
 	return -1;
+}
+
+
+/*!
+ * \brief hasDelayedStart Checks the command action list for any delayed start configurations
+ *			for the chosen object IP.
+ * \param objectIP IP of the object to be checked for delayed start
+ * \param commandActions List of all configured command actions
+ * \param numberOfElementsInList Number of elements in the entire list
+ * \return Boolean value indicating if the object has a delayed start configuration
+ */
+int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[], const int numberOfElementsInList) {
+	for (int i = 0; i < numberOfElementsInList; ++i) {
+		if (commandActions[i].ip == objectIP && commandActions[i].command == ACTION_PARAMETER_VS_SEND_START) {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects) {
