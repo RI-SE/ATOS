@@ -117,7 +117,8 @@ static void resetCommandActionList(TestScenarioCommandAction commandActions[],
 static int addCommandToActionList(const TestScenarioCommandAction command,
 								  TestScenarioCommandAction commandActions[],
 								  const int numberOfElementsInList);
-static int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
+static int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[],
+						   const int numberOfElementsInList);
 static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const char debug);
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
@@ -558,8 +559,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
 
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					if (!hasDelayedStart(objectIPs[iIndex], commandActions, sizeof (commandActions) / sizeof (commandActions[0])))
-						UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+					if (!hasDelayedStart
+						(objectIPs[iIndex], commandActions,
+						 sizeof (commandActions) / sizeof (commandActions[0])))
+						UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex],
+										0);
 				}
 				vSetState(OBC_STATE_RUNNING, GSD);
 
@@ -1243,7 +1247,8 @@ int addCommandToActionList(const TestScenarioCommandAction command,
  * \param numberOfElementsInList Number of elements in the entire list
  * \return Boolean value indicating if the object has a delayed start configuration
  */
-int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[], const int numberOfElementsInList) {
+int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[],
+					const int numberOfElementsInList) {
 	for (int i = 0; i < numberOfElementsInList; ++i) {
 		if (commandActions[i].ip == objectIP && commandActions[i].command == ACTION_PARAMETER_VS_SEND_START) {
 			return 1;
