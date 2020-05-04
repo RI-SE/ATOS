@@ -707,7 +707,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				UtilPopulateEXACDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqEXACData);
 				int commandIndex;
 				if ((commandIndex = findCommandAction(mqEXACData.actionID, commandActions, sizeof (commandActions) / sizeof (commandActions[0]))) != -1) {
-					// TODO: send STRT to correct object with correct delay
 					switch (commandActions[commandIndex].command) {
 					case ACTION_PARAMETER_VS_SEND_START:
 						iIndex =
@@ -717,6 +716,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							struct timeval startTime;
 							TimeSetToCurrentSystemTime(&currentTime);
 							TimeSetToGPStime(&startTime, TimeGetAsGPSweek(&currentTime), mqEXACData.executionTime_qmsoW);
+							LogPrint("Current time: %ld, Start time: %ld, delay: %u",
+									 TimeGetAsUTCms(&currentTime), TimeGetAsUTCms(&startTime), mqEXACData.executionTime_qmsoW);
 							MessageLength = encodeSTRTMessage(&startTime, MessageBuffer, sizeof (MessageBuffer), 0);
 							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 						}
