@@ -86,7 +86,7 @@ typedef struct {
 	uint16_t actionID;
 	ActionTypeParameter_t command;
 	in_addr_t ip;
-} TestScenarioCommandAction;
+} TestScenarioCommandAction; //!< Struct describing a command to be sent as action, e.g. delayed start
 
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
@@ -115,6 +115,7 @@ static void signalHandler(int signo);
 static void resetCommandActionList(TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
 static int addCommandToActionList(const TestScenarioCommandAction command, TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
 static int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
+static int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction commandActions[], const int numberOfElementsInList);
 
 static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const char debug);
 
@@ -704,21 +705,53 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else if (iCommand == COMM_EXAC && vGetState(GSD) == OBC_STATE_RUNNING) {
 				UtilPopulateEXACDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqEXACData);
-				iIndex =
-					iGetObjectIndexFromObjectIP(mqEXACData.ip, objectIPs,
-												sizeof (objectIPs) / sizeof (objectIPs[0]));
-				if (iIndex != -1) {
-					struct timeval executionTime;
-
-					TimeSetToGPStime(&executionTime, TimeGetAsGPSweek(&currentTime),
-									 mqEXACData.executionTime_qmsoW);
-					MessageLength =
-						encodeEXACMessage(&mqEXACData.actionID, &executionTime, MessageBuffer,
-										  sizeof (MessageBuffer), 0);
-					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
+				int commandIndex;
+				if ((commandIndex = findCommandAction(mqEXACData.actionID, commandActions, sizeof (commandActions) / sizeof (commandActions[0]))) != -1) {
+					// TODO: send STRT to correct object with correct delay
+					switch (commandActions[commandIndex].command) {
+					case ACTION_PARAMETER_VS_SEND_START:
+						iIndex =
+							iGetObjectIndexFromObjectIP(mqEXACData.ip, objectIPs,
+														sizeof (objectIPs) / sizeof (objectIPs[0]));
+						if (iIndex != -1) {
+							struct timeval startTime;
+							TimeSetToCurrentSystemTime(&currentTime);
+							TimeSetToGPStime(&startTime, TimeGetAsGPSweek(&currentTime), mqEXACData.executionTime_qmsoW);
+							MessageLength = encodeSTRTMessage(&startTime, MessageBuffer, sizeof (MessageBuffer), 0);
+							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+						}
+						else if (mqEXACData.ip == 0) {
+							LogMessage(LOG_LEVEL_DEBUG, "Delayed STRT with no configured target IP: no message sent");
+						}
+						else {
+							LogMessage(LOG_LEVEL_WARNING, "Unable to send delayed STRT: no valid socket found");
+						}
+						break;
+					default:
+						LogMessage(LOG_LEVEL_WARNING, "Unimplemented EXAC test scenario command");
+					}
 				}
-				else
-					LogMessage(LOG_LEVEL_WARNING, "Unable to send EXAC: no valid socket found");
+				else {
+					iIndex =
+						iGetObjectIndexFromObjectIP(mqEXACData.ip, objectIPs,
+													sizeof (objectIPs) / sizeof (objectIPs[0]));
+					if (iIndex != -1) {
+						struct timeval executionTime;
+
+						TimeSetToGPStime(&executionTime, TimeGetAsGPSweek(&currentTime),
+										 mqEXACData.executionTime_qmsoW);
+						MessageLength =
+							encodeEXACMessage(&mqEXACData.actionID, &executionTime, MessageBuffer,
+											  sizeof (MessageBuffer), 0);
+						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
+					}
+					else if (mqEXACData.ip == 0) {
+						LogMessage(LOG_LEVEL_DEBUG, "EXAC with no configured target IP: no message sent");
+					}
+					else {
+						LogMessage(LOG_LEVEL_WARNING, "Unable to send EXAC: no valid socket found");
+					}
+				}
 			}
 			else if (iCommand == COMM_CONNECT && vGetState(GSD) == OBC_STATE_INITIALIZED) {
 				LogMessage(LOG_LEVEL_INFO, "CONNECT received");
@@ -1242,6 +1275,23 @@ int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction co
 		}
 	}
 	return 0;
+}
+
+
+/*!
+ * \brief findCommandAction Finds the command action with specified action ID.
+ * \param actionID ID of the action to be found
+ * \param commandActions List of all configured command actions
+ * \param numberOfElementsInList Number of elements in the entire list
+ * \return Index of the command action, or -1 if not found
+ */
+int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction commandActions[], const int numberOfElementsInList) {
+	for (int i = 0; i < numberOfElementsInList; ++i) {
+		if (commandActions[i].actionID == actionID && commandActions[i].command != ACTION_PARAMETER_UNAVAILABLE) {
+			return i;
+		}
+	}
+	return -1;
 }
 
 int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects) {
