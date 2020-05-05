@@ -98,8 +98,8 @@ extern "C"{
 #define TCP_RX_BUFFER 1024
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
-#define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.7"
+#define USE_LOCAL_USER_CONTROL  1
+#define LOCAL_USER_CONTROL_IP "195.0.0.10"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -196,6 +196,10 @@ extern "C"{
 #define DD_CONTROL_BUFFER_SIZE_52 52
 #define DD_CONTROL_TASK_PERIOD_MS 1
 
+#define REQ_OBC_STATE_CHANGE_REMOTE_CONTROL 1
+#define REQ_OBC_STATE_CHANGE_CONNECTED 2
+#define REQ_RCCM_BACK_TO_START 3
+
 //! Internal message queue communication identifiers
 enum COMMAND
 {
@@ -223,6 +227,7 @@ COMM_TREO = 23,
 COMM_ACCM = 24,
 COMM_TRCM = 25,
 COMM_DISARM = 26,
+COMM_RCCM = 27,
 COMM_MONR = 239,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
@@ -318,7 +323,8 @@ typedef enum {
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
     OBC_STATE_RUNNING,
-    OBC_STATE_ERROR
+    OBC_STATE_ERROR,
+    OBC_STATE_REMOTE_CONTROL
 } OBCState_t;
 
 typedef struct
@@ -522,6 +528,8 @@ typedef enum {
 } ReadWriteAccess_t;
 
 
+#pragma pack(push,1)
+
 typedef struct
 {
   U32 MessageLengthU32;
@@ -552,6 +560,7 @@ typedef struct
   U8 SysCtrlStateU8;
 } RVSSMaestroType;
 
+#pragma pack(pop)
 
 typedef enum {
     NORTHERN,

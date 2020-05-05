@@ -578,6 +578,41 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
 				printf("[ObjectControl] Object control in CONTROL mode\n");
 			}
+			else if(iCommand == COMM_RCCM)
+			{
+				if(vGetState(GSD) == OBC_STATE_CONNECTED)
+				{
+					if(pcRecvBuffer[0] == REQ_OBC_STATE_CHANGE_REMOTE_CONTROL) {
+						vSetState(OBC_STATE_REMOTE_CONTROL, GSD);
+						LogMessage(LOG_LEVEL_INFO, "RCCM message changed state to REMOTE_CONTROL.");
+						LOG_SEND(LogBuffer, "[ObjectControl] RCCM message changed state to REMOTE_CONTROL.");
+					}
+				} 
+				else if(vGetState(GSD) == OBC_STATE_REMOTE_CONTROL)
+				{
+					if(pcRecvBuffer[0] == REQ_OBC_STATE_CHANGE_CONNECTED) {
+						vSetState(OBC_STATE_REMOTE_CONTROL, GSD);
+						LogMessage(LOG_LEVEL_INFO, "RCCM message changed state to CONNECTED.");
+						LOG_SEND(LogBuffer, "[ObjectControl] RCCM message changed state to CONNECTED.");
+					}
+				}
+				else if(vGetState(GSD) == OBC_STATE_REMOTE_CONTROL)
+				{
+					if(pcRecvBuffer[0] == REQ_RCCM_BACK_TO_START)
+					{
+		                for(iIndex=0;iIndex<nbr_objects;++iIndex) 
+		                { 
+		                    if( UtilIPStringToInt(pcRecvBuffer+1) == UtilIPStringToInt(object_address_name[iIndex]))
+		                    {
+		                        printf("[ObjectControl] Sending BACK_TO_START to ObjectIp = %s (IpInBufferIp = %s)\n", object_address_name[iIndex], pcRecvBuffer+1);
+								encodeRCCMMessage(pcRecvBuffer[0], MessageBuffer, sizeof (MessageBuffer), 0);
+								UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
+								MessageBuffer, MessageLength, 0);
+		                    }
+	                	}
+					} 
+				}
+			}
 			else if (iCommand == COMM_INIT) {
 				LogMessage(LOG_LEVEL_INFO, "INIT received");
 				LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");

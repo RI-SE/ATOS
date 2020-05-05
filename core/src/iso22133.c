@@ -423,6 +423,20 @@ typedef struct {
 #define VALUE_ID_INSUP_MODE 0x0200
 
 
+/*! RCCM message */
+typedef struct {
+	HeaderType header;
+	uint16_t RCCMControlValueID;
+	uint16_t RCCMControlContentLength;
+	uint8_t rccmControlU8;
+	FooterType footer;
+} RCCMType;						//18 bytes
+
+//! HEAB value IDs
+#define VALUE_ID_RCCM_CONTROL 0x0201
+
+
+
 #pragma pack(pop)
 
 
@@ -1458,6 +1472,57 @@ ssize_t encodeHEABMessage(const ControlCenterStatusType status, char *heabDataBu
 	return sizeof (HEABType);
 
 }
+
+
+/*!
+ * \brief encodeRCCMMessage 
+ * \param 
+ * \param 
+ * \param 
+ * \param 
+ * \return Number of bytes written or -1 in case of an error
+ */
+ssize_t encodeRCCMMessage(const uint8_t rccmControlCommand, char *rccmDataBuffer,
+						  const size_t bufferLength, const char debug) {
+
+	RCCMType RCCMData;
+
+	memset(rccmDataBuffer, 0, bufferLength);
+
+	// If buffer too small to hold HEAB data, generate an error
+	if (bufferLength < sizeof (RCCMType)) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary RCCM data");
+		return -1;
+	}
+
+	// Construct header
+	RCCMData.header = buildISOHeader(MESSAGE_ID_RCCM, sizeof (RCCMData), debug);
+
+	// Fill contents
+	RCCMData.RCCMControlValueID = VALUE_ID_RCCM_CONTROL;
+	RCCMData.RCCMControlContentLength = 1;
+	RCCMData.rccmControlU8 = rccmControlCommand;
+
+
+	if (debug) {
+		LogPrint("RCCM message:\n\tRCCM Control value ID: 0x%x\n\t"
+				 "RCCM Control content length: %u\n\t"
+				 "Control center status: %d", RCCMData.RCCMControlValueID, RCCMData.RCCMControlContentLength,
+				 RCCMData.rccmControlU8);
+	}
+
+	// Switch from host endianness to little endian
+	RCCMData.RCCMControlValueID = htole16(RCCMData.RCCMControlValueID);
+	RCCMData.RCCMControlContentLength = htole16(RCCMData.RCCMControlContentLength);
+
+	RCCMData.footer = buildISOFooter(&RCCMData, sizeof (RCCMData), debug);
+
+	memcpy(rccmDataBuffer, &RCCMData, sizeof (RCCMData));
+
+	return sizeof (RCCMType);
+
+}
+
 
 /*!
  * \brief buildMONRMessage Fills a MONRType struct from a buffer of raw data

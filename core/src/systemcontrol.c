@@ -135,7 +135,7 @@ typedef enum {
 	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
 	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
 	DeleteFileDirectory_1,
-	ClearTrajectories_0, ClearGeofences_0,
+	ClearTrajectories_0, ClearGeofences_0, SetRemoteControlState_1, SetRemoteControlAction_1,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
 	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
@@ -147,8 +147,8 @@ static const char *SystemControlCommandsArr[] = {
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1",
 	"DeleteFileDirectory_1",
-	"ClearTrajectories_0", "ClearGeofences_0", "CreateDirectory_1",
-	"GetTestOrigin_0", "replay_1",
+	"ClearTrajectories_0", "ClearGeofences_0", "SetRemoteControlState_1", "SetRemoteControlAction_1", 
+	"CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 	"control_0",
 	"Exit_0", "start_ext_trigg_1"
 };
@@ -1000,32 +1000,39 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = PreviousSystemControlCommand;
 			}
 			break;
-		case DisarmScenario_0:
-			if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED) {
-				server_state = SERVER_STATE_IDLE;
-				if (iCommSend(COMM_DISARM, NULL, 0) < 0) {
-					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending DISARM command");
-					server_state = SERVER_STATE_ERROR;
-				}
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DisarmScenario:",
-												 ControlResponseBuffer, 0, &ClientSocket, 0);
-				SystemControlSendLog("[SystemControl] Sending DISARM.\n", &ClientSocket, 0);
+		case SetRemoteControlState_1:
+			if (CurrentInputArgCount == CommandArgCount) {
+				if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED)
+				{
+					bzero(pcBuffer, IPC_BUFFER_SIZE);
+					if(atoi(SystemControlArgument[0]) == 1) pcBuffer[0] = REQ_OBC_STATE_CHANGE_REMOTE_CONTROL;
+					else if(atoi(SystemControlArgument[0]) == 2) pcBuffer[0] = REQ_OBC_STATE_CHANGE_CONNECTED;
+					iCommSend(COMM_RCCM, pcBuffer, 1);
+				} else
+					SystemControlSendLog("[SystemControl] Set state to REMOTE_CONTROL failed, state errors!\n", &ClientSocket, 0);
+			
 			}
-			else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_CONNECTED) {
-				SystemControlSendLog("[SystemControl] Simulate that all objects become disarmed.\n",
-									 &ClientSocket, 0);
-				SystemControlCommand = Idle_0;
-				server_state = SERVER_STATE_IDLE;
+			else
+				LogMessage(LOG_LEVEL_WARNING, "SetRemoteControlState command parameter count error");
+			SystemControlCommand = Idle_0;
+		break;
+		case SetRemoteControlAction_1:
+			if (CurrentInputArgCount == CommandArgCount) {
+				if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTE_CONTROL)
+				{
+					bzero(pcBuffer, IPC_BUFFER_SIZE);
+					if(atoi(SystemControlArgument[0]) == 3) {	
+						pcBuffer[0] = REQ_RCCM_BACK_TO_START;
+						strcpy(pcBuffer+1, SystemControlArgument[0]);
+					}
+					iCommSend(COMM_RCCM, pcBuffer, 1);
+				} else
+					SystemControlSendLog("[SystemControl] Remote control ACTION failed, state errors!\n", &ClientSocket, 0);
 			}
-			else if (server_state == SERVER_STATE_IDLE) {
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-												 "DisarmScenario:", ControlResponseBuffer, 0, &ClientSocket,
-												 0);
-				SystemControlSendLog("[SystemControl] DISARM received, state errors!\n", &ClientSocket, 0);
-				SystemControlCommand = PreviousSystemControlCommand;
-			}
-			break;
+			else
+				LogMessage(LOG_LEVEL_WARNING, "SetRemoteControlAction command parameter count error");
+			SystemControlCommand = Idle_0;
+		break;
 		case StartScenario_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED)	//Temporary!
