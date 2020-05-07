@@ -1782,11 +1782,11 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 
 	if (strcmp("OrigoLatitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLatitudeDbl(GSD, &ValueDbl);
-        sprintf(ReturnValue, "%3.12f", ValueDbl);
+		sprintf(ReturnValue, "%3.12f", ValueDbl);
 	}
 	else if (strcmp("OrigoLongitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLongitudeDbl(GSD, &ValueDbl);
-        sprintf(ReturnValue, "%3.12f", ValueDbl);
+		sprintf(ReturnValue, "%3.12f", ValueDbl);
 	}
 	else if (strcmp("OrigoAltitude", ParameterName) == 0) {
 		DataDictionaryGetOriginAltitudeDbl(GSD, &ValueDbl);
