@@ -2427,14 +2427,14 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
  * \param pathLen Length of char array
  */
 void UtilGetTrigDirectoryPath(char *path, size_t pathLen) {
-    if (pathLen > MAX_FILE_PATH) {
-        LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
-        path[0] = '\0';
-        return;
-    }
-    UtilGetTestDirectoryPath(path, pathLen);
-    strcat(path, TRIG_DIR_NAME);
-    strcat(path, "/");
+	if (pathLen > MAX_FILE_PATH) {
+		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		path[0] = '\0';
+		return;
+	}
+	UtilGetTestDirectoryPath(path, pathLen);
+	strcat(path, TRIG_DIR_NAME);
+	strcat(path, "/");
 }
 
 

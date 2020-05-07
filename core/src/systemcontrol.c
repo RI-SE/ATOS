@@ -1782,11 +1782,11 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 
 	if (strcmp("OrigoLatitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLatitudeDbl(GSD, &ValueDbl);
-        sprintf(ReturnValue, "OrigoLatitude=%3.12f", ValueDbl);
+		sprintf(ReturnValue, "OrigoLatitude=%3.12f", ValueDbl);
 	}
 	else if (strcmp("OrigoLongitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLongitudeDbl(GSD, &ValueDbl);
-        sprintf(ReturnValue, "OrigoLongitude=%3.12f", ValueDbl);
+		sprintf(ReturnValue, "OrigoLongitude=%3.12f", ValueDbl);
 	}
 	else if (strcmp("OrigoAltitude", ParameterName) == 0) {
 		DataDictionaryGetOriginAltitudeDbl(GSD, &ValueDbl);
@@ -2314,9 +2314,9 @@ I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * 
 	case MAESTRO_GEOFENCE_FILE_TYPE:
 		UtilGetGeofenceDirectoryPath(CompletePath, sizeof (CompletePath));
 		break;
-    case MAESTRO_TRIGGER_FILE_TYPE:
-        UtilGetTrigDirectoryPath(CompletePath, sizeof (CompletePath));
-        break;
+	case MAESTRO_TRIGGER_FILE_TYPE:
+		UtilGetTrigDirectoryPath(CompletePath, sizeof (CompletePath));
+		break;
 	default:
 		LogMessage(LOG_LEVEL_ERROR, "Received invalid file type upload request");
 		//Create temporary file for handling data anyway
