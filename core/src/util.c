@@ -49,6 +49,8 @@
 #define CONFIGURATION_DIR_NAME "conf"
 #define TRAJECTORY_DIR_NAME "traj"
 #define GEOFENCE_DIR_NAME "geofence"
+#define TRIG_DIR_NAME "trig"
+
 
 /* Message priorities on message queue */
 // Abort message
@@ -2416,6 +2418,25 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
 	strcat(path, GEOFENCE_DIR_NAME);
 	strcat(path, "/");
 }
+
+
+/*!
+ * \brief UtilGetTrigDirectoryPath Fetches the absolute path to where trigger files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetTrigDirectoryPath(char *path, size_t pathLen) {
+    if (pathLen > MAX_FILE_PATH) {
+        LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+        path[0] = '\0';
+        return;
+    }
+    UtilGetTestDirectoryPath(path, pathLen);
+    strcat(path, TRIG_DIR_NAME);
+    strcat(path, "/");
+}
+
 
 /*!
  * \brief UtilDeleteTrajectoryFile deletes the specified trajectory
