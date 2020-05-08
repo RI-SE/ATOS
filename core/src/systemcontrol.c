@@ -2315,7 +2315,7 @@ I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * 
 		UtilGetGeofenceDirectoryPath(CompletePath, sizeof (CompletePath));
 		break;
 	case MAESTRO_TRIGGER_FILE_TYPE:
-		UtilGetTrigDirectoryPath(CompletePath, sizeof (CompletePath));
+        UtilGetConfDirectoryPath(CompletePath, sizeof (CompletePath)); //UtilGetTrigDirectoryPath(CompletePath, sizeof (CompletePath));
 		break;
 	default:
 		LogMessage(LOG_LEVEL_ERROR, "Received invalid file type upload request");
