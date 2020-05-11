@@ -30,6 +30,7 @@ private:
 	CartesianPosition referencePoint;
 	enum {LESS_THAN, GREATER_THAN} oper = LESS_THAN;
 
+
 	const std::set<TriggerParameter_t> getAcceptedParameters() const override
 	{
 		std::set<TriggerParameter_t> accParams;
