@@ -114,9 +114,6 @@ extern "C"{
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
 
-// Difference is 18 leap seconds between utc and gps
-#define MS_LEAP_SEC_DIFF_UTC_GPS 18000
-
 // 7 * 24 * 3600 * 1000
 #define WEEK_TIME_MS 604800000
 // 24 * 3600 * 1000
