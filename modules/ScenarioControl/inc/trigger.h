@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "util.h"
 #include "iso22133.h"
@@ -44,6 +45,11 @@ public:
     std::vector<TriggerParameter_t> getParameters() const { return parameters; }
     bool isActive() const;
     in_addr_t getObjectIP(void) const { return triggerObjectIP; }
+	std::string getObjectIPAsString(void) {
+		std::vector<char> str(INET_ADDRSTRLEN);
+		inet_ntop(AF_INET, &triggerObjectIP, str.data(), static_cast<unsigned int>(str.size()));
+		return std::string(str.data(), str.size());
+	}
 
     bool operator==(const Trigger &other) const { return (other.triggerID == triggerID) && isSimilar(other); }
     bool isSimilar(const Trigger &other) const;
