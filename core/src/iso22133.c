@@ -423,17 +423,17 @@ typedef struct {
 #define VALUE_ID_INSUP_MODE 0x0200
 
 
-/*! RCCM message */
+/*! RCMM message */
 typedef struct {
 	HeaderType header;
-	uint16_t RCCMControlValueID;
-	uint16_t RCCMControlContentLength;
-	uint8_t rccmControlU8;
+	uint16_t RCMMControlValueID;
+	uint16_t RCMMControlContentLength;
+	uint8_t rcmmControlU8;
 	FooterType footer;
-} RCCMType;						//18 bytes
+} RCMMType;						//18 bytes
 
 //! HEAB value IDs
-#define VALUE_ID_RCCM_CONTROL 0x0201
+#define VALUE_ID_RCMM_CONTROL 0x0201
 
 
 
@@ -658,7 +658,7 @@ char isValidMessageID(const uint16_t id) {
 		|| id == MESSAGE_ID_OSTM || id == MESSAGE_ID_STRT || id == MESSAGE_ID_MONR2 || id == MESSAGE_ID_SOWM
 		|| id == MESSAGE_ID_INFO || id == MESSAGE_ID_RCMM || id == MESSAGE_ID_SYPM || id == MESSAGE_ID_MTSP
 		|| id == MESSAGE_ID_TRCM || id == MESSAGE_ID_ACCM || id == MESSAGE_ID_TREO || id == MESSAGE_ID_EXAC
-		|| id == MESSAGE_ID_CATA || id == MESSAGE_ID_RCCM || id == MESSAGE_ID_RCRT || id == MESSAGE_ID_PIME
+		|| id == MESSAGE_ID_CATA || id == MESSAGE_ID_RCMM || id == MESSAGE_ID_RCRT || id == MESSAGE_ID_PIME
 		|| id == MESSAGE_ID_COSE || id == MESSAGE_ID_MOMA
 		|| (id >= MESSAGE_ID_VENDOR_SPECIFIC_LOWER_LIMIT && id <= MESSAGE_ID_VENDOR_SPECIFIC_UPPER_LIMIT);
 }
@@ -1475,51 +1475,51 @@ ssize_t encodeHEABMessage(const ControlCenterStatusType status, char *heabDataBu
 
 
 /*!
- * \brief encodeRCCMMessage 
+ * \brief encodeRCMMMessage 
  * \param 
  * \param 
  * \param 
  * \param 
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeRCCMMessage(const uint8_t rccmControlCommand, char *rccmDataBuffer,
+ssize_t encodeRCMMMessage(const uint8_t rcmmControlCommand, char *rcmmDataBuffer,
 						  const size_t bufferLength, const char debug) {
 
-	RCCMType RCCMData;
+	RCMMType RCMMData;
 
-	memset(rccmDataBuffer, 0, bufferLength);
+	memset(rcmmDataBuffer, 0, bufferLength);
 
-	// If buffer too small to hold HEAB data, generate an error
-	if (bufferLength < sizeof (RCCMType)) {
-		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary RCCM data");
+	// If buffer too small to hold RCMM data, generate an error
+	if (bufferLength < sizeof (RCMMType)) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary RCMM data");
 		return -1;
 	}
 
 	// Construct header
-	RCCMData.header = buildISOHeader(MESSAGE_ID_RCCM, sizeof (RCCMData), debug);
+	RCMMData.header = buildISOHeader(MESSAGE_ID_RCMM, sizeof (RCMMData), debug);
 
 	// Fill contents
-	RCCMData.RCCMControlValueID = VALUE_ID_RCCM_CONTROL;
-	RCCMData.RCCMControlContentLength = 1;
-	RCCMData.rccmControlU8 = rccmControlCommand;
+	RCMMData.RCMMControlValueID = VALUE_ID_RCMM_CONTROL;
+	RCMMData.RCMMControlContentLength = 1;
+	RCMMData.rcmmControlU8 = rcmmControlCommand;
 
 
 	if (debug) {
-		LogPrint("RCCM message:\n\tRCCM Control value ID: 0x%x\n\t"
-				 "RCCM Control content length: %u\n\t"
-				 "Control center status: %d", RCCMData.RCCMControlValueID, RCCMData.RCCMControlContentLength,
-				 RCCMData.rccmControlU8);
+		LogPrint("RCMM message:\n\tRCMM Control value ID: 0x%x\n\t"
+				 "RCMM Control content length: %u\n\t"
+				 "Control center status: %d", RCMMData.RCMMControlValueID, RCMMData.RCMMControlContentLength,
+				 RCMMData.rcmmControlU8);
 	}
 
 	// Switch from host endianness to little endian
-	RCCMData.RCCMControlValueID = htole16(RCCMData.RCCMControlValueID);
-	RCCMData.RCCMControlContentLength = htole16(RCCMData.RCCMControlContentLength);
+	RCMMData.RCMMControlValueID = htole16(RCMMData.RCMMControlValueID);
+	RCMMData.RCMMControlContentLength = htole16(RCMMData.RCMMControlContentLength);
 
-	RCCMData.footer = buildISOFooter(&RCCMData, sizeof (RCCMData), debug);
+	RCMMData.footer = buildISOFooter(&RCMMData, sizeof (RCMMData), debug);
 
-	memcpy(rccmDataBuffer, &RCCMData, sizeof (RCCMData));
+	memcpy(rcmmDataBuffer, &RCMMData, sizeof (RCMMData));
 
-	return sizeof (RCCMType);
+	return sizeof (RCMMType);
 
 }
 

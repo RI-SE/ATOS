@@ -135,7 +135,7 @@ typedef enum {
 	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
 	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
 	DeleteFileDirectory_1,
-	ClearTrajectories_0, ClearGeofences_0, SetRemoteControlState_1, SetRemoteControlAction_1,
+	ClearTrajectories_0, ClearGeofences_0, SetObjectState_2, SetObjectAction_2,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
 	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
@@ -147,7 +147,7 @@ static const char *SystemControlCommandsArr[] = {
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1",
 	"DeleteFileDirectory_1",
-	"ClearTrajectories_0", "ClearGeofences_0", "SetRemoteControlState_1", "SetRemoteControlAction_1", 
+	"ClearTrajectories_0", "ClearGeofences_0", "SetObjectState_2", "SetObjectAction_2", 
 	"CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 	"control_0",
 	"Exit_0", "start_ext_trigg_1"
@@ -1000,14 +1000,16 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = PreviousSystemControlCommand;
 			}
 			break;
-		case SetRemoteControlState_1:
+		case SetObjectState_2:
 			if (CurrentInputArgCount == CommandArgCount) {
 				if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED)
 				{
 					bzero(pcBuffer, IPC_BUFFER_SIZE);
-					if(atoi(SystemControlArgument[0]) == 1) pcBuffer[0] = REQ_OBC_STATE_CHANGE_REMOTE_CONTROL;
-					else if(atoi(SystemControlArgument[0]) == 2) pcBuffer[0] = REQ_OBC_STATE_CHANGE_CONNECTED;
-					iCommSend(COMM_RCCM, pcBuffer, 1);
+					if(atoi(SystemControlArgument[0]) == 1) pcBuffer[0] = REQ_STATE_CHANGE_REMOTE_CONTROL;
+					else if(atoi(SystemControlArgument[0]) == 2) pcBuffer[0] = REQ_STATE_CHANGE_DISARMED;
+					strcpy(pcBuffer+1, SystemControlArgument[1]);
+					printf("Set object state, %s, %s.\n", SystemControlArgument[0], SystemControlArgument[1]);
+					iCommSend(COMM_RCMM, pcBuffer, 1 + strlen(SystemControlArgument[1]));
 				} else
 					SystemControlSendLog("[SystemControl] Set state to REMOTE_CONTROL failed, state errors!\n", &ClientSocket, 0);
 			
@@ -1016,16 +1018,16 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_WARNING, "SetRemoteControlState command parameter count error");
 			SystemControlCommand = Idle_0;
 		break;
-		case SetRemoteControlAction_1:
+		case SetObjectAction_2:
 			if (CurrentInputArgCount == CommandArgCount) {
-				if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTE_CONTROL)
+				if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED)
 				{
 					bzero(pcBuffer, IPC_BUFFER_SIZE);
-					if(atoi(SystemControlArgument[0]) == 3) {	
-						pcBuffer[0] = REQ_RCCM_BACK_TO_START;
-						strcpy(pcBuffer+1, SystemControlArgument[0]);
-					}
-					iCommSend(COMM_RCCM, pcBuffer, 1);
+					if(atoi(SystemControlArgument[0]) == 3) pcBuffer[0] = REQ_RCMM_BACK_TO_START;
+					else if (atoi(SystemControlArgument[0]) == 4) pcBuffer[0] = REQ_RCMM_ENABLE_AUTO_START;
+					else if (atoi(SystemControlArgument[0]) == 5) pcBuffer[0] = REQ_RCMM_DISABLE_AUTO_START;
+					strcpy(pcBuffer+1, SystemControlArgument[1]);
+					iCommSend(COMM_RCMM, pcBuffer, 1 + strlen(SystemControlArgument[1]));
 				} else
 					SystemControlSendLog("[SystemControl] Remote control ACTION failed, state errors!\n", &ClientSocket, 0);
 			}
