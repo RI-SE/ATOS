@@ -232,10 +232,6 @@ COMM_FAILURE = 254,
 COMM_INV = 255
 };
 
-typedef enum {
-	MANOEUVRE_BACK_TO_START
-} RemoteControlManoeuvreType;
-
 typedef struct {
 	RemoteControlManoeuvreType manoeuvre;
 	in_addr_t objectIP;

@@ -186,6 +186,12 @@ typedef enum {
 	MESSAGE_ID_VENDOR_SPECIFIC_RISE_INSUP = 0xA102
 } ISOMessageID;
 
+/*! Remote control command */
+
+typedef enum {
+	MANOEUVRE_BACK_TO_START = 3
+} RemoteControlManoeuvreType;
+
 /*! Supervisor command */
 typedef enum {
 	SUPERVISOR_COMMAND_NORMAL = 1,	//!< Place supervisor in normal mode
@@ -207,7 +213,7 @@ ssize_t decodeTREOMessage();
 ssize_t encodeACCMMessage(const uint16_t* actionID, const ActionType_t* actionType, const ActionTypeParameter_t* param1, const ActionTypeParameter_t* param2, const ActionTypeParameter_t* param3, char * accmDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeEXACMessage(const uint16_t* actionID, const struct timeval * executionTime, char * exacDataBuffer, const size_t bufferLength, const char debug);
 ssize_t encodeINSUPMessage(const SupervisorCommandType, char * insupDataBuffer, const size_t bufferLength, const char debug);
-ssize_t encodeRCMMMessage(const uint8_t rcmmControlCommand, char *rcmmDataBuffer, const size_t bufferLength, const char debug);
+ssize_t encodeRCMMMessage(const RemoteControlManoeuvreType command, char *rcmmDataBuffer, const size_t bufferLength, const char debug);
 ISOMessageID getISOMessageType(const char * messageData, const size_t length, const char debug);
 void setISOCRCVerification(const int8_t enabled);
 
