@@ -580,25 +580,34 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else if(iCommand == COMM_RCMM)
 			{
-				printf("command RCMM!\n");
+
+				U32 IpU32 = pcRecvBuffer[0];
+				IpU32 = (IpU32 << 8) | pcRecvBuffer[1];
+				IpU32 = (IpU32 << 8) | pcRecvBuffer[2];
+				IpU32 = (IpU32 << 8) | pcRecvBuffer[3];
+				printf("RCMM to IP = ");
+				for(i = 0; i < 4; i ++) printf("%d.", pcRecvBuffer[i]);
+				printf(" Command %d\n", pcRecvBuffer[4]);
+
+
 				if(vGetState(GSD) == OBC_STATE_CONNECTED){
-					if(pcRecvBuffer[0] == REQ_STATE_CHANGE_REMOTE_CONTROL) {
+					if(pcRecvBuffer[4] == REQ_STATE_CHANGE_REMOTE_CONTROL) {
 						for(iIndex=0;iIndex<nbr_objects;++iIndex){ 
-		                    if( UtilIPStringToInt(pcRecvBuffer+1) == UtilIPStringToInt(object_address_name[iIndex])){
+		                    if( IpU32 == UtilIPStringToInt(object_address_name[iIndex])){
 								MessageLength =
 								encodeOSTMMessage(OBJECT_COMMAND_REMOTE_CONTROL, MessageBuffer, sizeof (MessageBuffer), 0);
 								/*Send OSTM message */
 								UtilSendTCPData("[Object Control]", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 								LogMessage(LOG_LEVEL_INFO, "RCMM message changed state to REMOTE_CONTROL on %s.", object_address_name[iIndex]);
-								LOG_SEND(LogBuffer, "[ObjectControl] RCMM message changed state to REMOTE_CONTROL on%s.", object_address_name[iIndex]);
+								LOG_SEND(LogBuffer, "[ObjectControl] RCMM message changed state to REMOTE_CONTROL on %s.", object_address_name[iIndex]);
 							}
 						}
 					}
 				} 
-				else if(vGetState(GSD) == OBC_STATE_CONNECTED){
-					if(pcRecvBuffer[0] == REQ_STATE_CHANGE_DISARMED) {
+				if(vGetState(GSD) == OBC_STATE_CONNECTED){
+					if(pcRecvBuffer[4] == REQ_STATE_CHANGE_DISARMED) {
 						for(iIndex=0;iIndex<nbr_objects;++iIndex){ 
-		                    if( UtilIPStringToInt(pcRecvBuffer+1) == UtilIPStringToInt(object_address_name[iIndex])){
+		                    if( IpU32 == UtilIPStringToInt(object_address_name[iIndex])){
 								MessageLength =
 								encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
 								/*Send OSTM message */
@@ -609,23 +618,23 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 					}
 				} 
-				else if(vGetState(GSD) == OBC_STATE_CONNECTED){
-					if(pcRecvBuffer[0] == REQ_RCMM_BACK_TO_START){
+				if(vGetState(GSD) == OBC_STATE_CONNECTED){
+					if(pcRecvBuffer[4] == REQ_RCMM_BACK_TO_START){
 		                for(iIndex=0;iIndex<nbr_objects;++iIndex) { 
-		                    if( UtilIPStringToInt(pcRecvBuffer+1) == UtilIPStringToInt(object_address_name[iIndex])){
-		                        printf("[ObjectControl] Sending BACK_TO_START to ObjectIp = %s (IpInBufferIp = %s)\n", object_address_name[iIndex], pcRecvBuffer+1);
-								MessageLength = encodeRCMMMessage(pcRecvBuffer[0], MessageBuffer, sizeof (MessageBuffer), 0);
+		                    if( IpU32 == UtilIPStringToInt(object_address_name[iIndex])){
+		                        printf("[ObjectControl] Sending BACK_TO_START to ObjectIp = %s\n", object_address_name[iIndex]);
+								MessageLength = encodeRCMMMessage(pcRecvBuffer[4], MessageBuffer, sizeof (MessageBuffer), 0);
 								UtilSendTCPData("[Object Control]", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 		                    }
 	                	}
 					}
 				}
-				else if(vGetState(GSD) == OBC_STATE_CONNECTED){
-					if(pcRecvBuffer[0] == REQ_RCMM_ENABLE_AUTO_START || pcRecvBuffer[0] == REQ_RCMM_DISABLE_AUTO_START){
+				if(vGetState(GSD) == OBC_STATE_CONNECTED){
+					if(pcRecvBuffer[4] == REQ_RCMM_ENABLE_AUTO_START || pcRecvBuffer[4] == REQ_RCMM_DISABLE_AUTO_START){
 		                for(iIndex=0;iIndex<nbr_objects;++iIndex) { 
-		                    if( UtilIPStringToInt(pcRecvBuffer+1) == UtilIPStringToInt(object_address_name[iIndex])){
-		                        printf("[ObjectControl] Sending AUTO_START to ObjectIp = %s (IpInBufferIp = %s)\n", object_address_name[iIndex], pcRecvBuffer+1);
-								MessageLength = encodeRCMMMessage(pcRecvBuffer[0], MessageBuffer, sizeof (MessageBuffer), 0);
+		                    if( IpU32 == UtilIPStringToInt(object_address_name[iIndex])){
+		                        printf("[ObjectControl] Sending AUTO_START to ObjectIp = %s\n", object_address_name[iIndex]);
+								MessageLength = encodeRCMMMessage(pcRecvBuffer[4], MessageBuffer, sizeof (MessageBuffer), 0);
 								UtilSendTCPData("[Object Control]", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 		                    }
 	                	}

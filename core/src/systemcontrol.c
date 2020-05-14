@@ -311,6 +311,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U16 PCDMessageCodeU16;
 	C8 RxFilePath[MAX_FILE_PATH];
 
+	U32 IpU32;
 
 	LogInit(MODULE_NAME, logLevel);
 	LogMessage(LOG_LEVEL_INFO, "System control task running with PID: %i", getpid());
@@ -1005,11 +1006,14 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED)
 				{
 					bzero(pcBuffer, IPC_BUFFER_SIZE);
-					if(atoi(SystemControlArgument[0]) == 1) pcBuffer[0] = REQ_STATE_CHANGE_REMOTE_CONTROL;
-					else if(atoi(SystemControlArgument[0]) == 2) pcBuffer[0] = REQ_STATE_CHANGE_DISARMED;
-					strcpy(pcBuffer+1, SystemControlArgument[1]);
-					printf("Set object state, %s, %s.\n", SystemControlArgument[0], SystemControlArgument[1]);
-					iCommSend(COMM_RCMM, pcBuffer, 1 + strlen(SystemControlArgument[1]));
+					IpU32 = UtilIPStringToInt(SystemControlArgument[0]);
+					pcBuffer[0] = (U8)(IpU32 >> 24);
+					pcBuffer[1] = (U8)(IpU32 >> 16);
+					pcBuffer[2] = (U8)(IpU32 >> 8);
+					pcBuffer[3] = (U8)(IpU32) ;
+					if(atoi(SystemControlArgument[1]) == 1) pcBuffer[4] = REQ_STATE_CHANGE_REMOTE_CONTROL;
+					else if(atoi(SystemControlArgument[1]) == 2) pcBuffer[4] = REQ_STATE_CHANGE_DISARMED;
+					iCommSend(COMM_RCMM, pcBuffer, 5);
 				} else
 					SystemControlSendLog("[SystemControl] Set state to REMOTE_CONTROL failed, state errors!\n", &ClientSocket, 0);
 			
@@ -1023,11 +1027,16 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED)
 				{
 					bzero(pcBuffer, IPC_BUFFER_SIZE);
-					if(atoi(SystemControlArgument[0]) == 3) pcBuffer[0] = REQ_RCMM_BACK_TO_START;
-					else if (atoi(SystemControlArgument[0]) == 4) pcBuffer[0] = REQ_RCMM_ENABLE_AUTO_START;
-					else if (atoi(SystemControlArgument[0]) == 5) pcBuffer[0] = REQ_RCMM_DISABLE_AUTO_START;
-					strcpy(pcBuffer+1, SystemControlArgument[1]);
-					iCommSend(COMM_RCMM, pcBuffer, 1 + strlen(SystemControlArgument[1]));
+					IpU32 = UtilIPStringToInt(SystemControlArgument[0]);
+					pcBuffer[0] = (U8)(IpU32 >> 24);
+					pcBuffer[1] = (U8)(IpU32 >> 16);
+					pcBuffer[2] = (U8)(IpU32 >> 8);
+					pcBuffer[3] = (U8)(IpU32) ;
+
+					if(atoi(SystemControlArgument[1]) == 3) pcBuffer[4] = REQ_RCMM_BACK_TO_START;
+					else if (atoi(SystemControlArgument[1]) == 4) pcBuffer[4] = REQ_RCMM_ENABLE_AUTO_START;
+					else if (atoi(SystemControlArgument[1]) == 5) pcBuffer[4] = REQ_RCMM_DISABLE_AUTO_START;
+					iCommSend(COMM_RCMM, pcBuffer, 5);
 				} else
 					SystemControlSendLog("[SystemControl] Remote control ACTION failed, state errors!\n", &ClientSocket, 0);
 			}
