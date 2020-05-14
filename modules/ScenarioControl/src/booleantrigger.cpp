@@ -10,13 +10,7 @@ Trigger::TriggerReturnCode_t BooleanTrigger::update(bool currentStateValue, stru
 {
     wasStateTrue = isStateTrue;
     isStateTrue = currentStateValue;
-    wasTriggeredByLastUpdate = checkIfTriggered();
-	if (wasTriggeredByLastUpdate == TRIGGER_OCCURRED) {
-		LogPrint("was triggered");
-	}
-	else if (wasTriggeredByLastUpdate == NO_TRIGGER_OCCURRED) {
-		LogPrint("no trigger");
-	}
+	wasTriggeredByLastUpdate = checkIfTriggered();
     return wasTriggeredByLastUpdate;
 }
 
