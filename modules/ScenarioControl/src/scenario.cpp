@@ -63,11 +63,11 @@ void Scenario::initialize(const std::string scenarioFilePath)
 
     debugStr =  "Triggers:\n";
     for (Trigger* tp : allTriggers)
-        debugStr += "\t" + tp->getTypeAsString(tp->getTypeCode()) + "\n";
+		debugStr += "\t" + tp->getObjectIPAsString() + " " + tp->getTypeAsString(tp->getTypeCode()) + "\n";
 
     debugStr += "Actions:\n";
     for (Action* ap : allActions)
-        debugStr += "\t" + ap->getTypeAsString(ap->getTypeCode()) + "\n";
+		debugStr += "\t" + ap->getObjectIPAsString() + " " + ap->getTypeAsString(ap->getTypeCode()) + "\n";
 
     debugStr.pop_back();
     LogMessage(LOG_LEVEL_DEBUG, debugStr.c_str());
