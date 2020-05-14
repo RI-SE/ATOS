@@ -318,6 +318,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U16 PCDMessageCodeU16;
 	C8 RxFilePath[MAX_FILE_PATH];
 
+	U32 IpU32;
 
 	LogInit(MODULE_NAME, logLevel);
 	LogMessage(LOG_LEVEL_INFO, "System control task running with PID: %i", getpid());
