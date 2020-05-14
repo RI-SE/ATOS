@@ -116,6 +116,9 @@ typedef struct {
 #define RVSS_MAESTRO_CHANNEL 4
 #define RVSS_ASP_CHANNEL 8
 
+#define ENABLE_COMMAND_STRING "ENABLE"
+#define DISABLE_COMMAND_STRING "DISABLE"
+
 // Time intervals for sleeping when no message bus message was received and for when one was received
 #define SC_SLEEP_TIME_EMPTY_MQ_S 0
 #define SC_SLEEP_TIME_EMPTY_MQ_NS 10000000
@@ -135,7 +138,7 @@ typedef enum {
 	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
 	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
 	DeleteFileDirectory_1,
-	ClearTrajectories_0, ClearGeofences_0, SetObjectState_2, SetObjectAction_2,
+	ClearTrajectories_0, ClearGeofences_0, RemoteControl_1, RemoteControlManoeuvre_2,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
 	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
@@ -147,7 +150,7 @@ static const char *SystemControlCommandsArr[] = {
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1",
 	"DeleteFileDirectory_1",
-	"ClearTrajectories_0", "ClearGeofences_0", "SetObjectState_2", "SetObjectAction_2", 
+	"ClearTrajectories_0", "ClearGeofences_0", "RemoteControl_1", "RemoteControlManoeuvre_2",
 	"CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 	"control_0",
 	"Exit_0", "start_ext_trigg_1"
@@ -159,6 +162,10 @@ const char *SystemControlOBCStatesArr[] =
 	{ "UNDEFINED", "IDLE", "INITIALIZED", "CONNECTED", "ARMED", "RUNNING", "ERROR" };
 
 const char *POSTRequestMandatoryContent[] = { "POST", "HTTP/1.1", "\r\n\r\n" };
+
+typedef enum {
+	MSCP_BACK_TO_START = 3
+} MSCPRemoteControlCommand;
 
 char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
 char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
@@ -246,7 +253,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	OBCState_t objectControlState = OBC_STATE_UNDEFINED;
 	SystemControlCommand_t SystemControlCommand = Idle_0;
 	SystemControlCommand_t PreviousSystemControlCommand = Idle_0;
-
+	uint16_t responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
 	int CommandArgCount = 0, /*CurrentCommandArgCounter=0, */ CurrentInputArgCount = 0;
 	C8 pcBuffer[IPC_BUFFER_SIZE];
 	char inchr;
@@ -1000,41 +1007,77 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = PreviousSystemControlCommand;
 			}
 			break;
-		case SetObjectState_2:
+		case RemoteControl_1:
+			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
 			if (CurrentInputArgCount == CommandArgCount) {
-				if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED)
-				{
-					bzero(pcBuffer, IPC_BUFFER_SIZE);
-					if(atoi(SystemControlArgument[0]) == 1) pcBuffer[0] = REQ_STATE_CHANGE_REMOTE_CONTROL;
-					else if(atoi(SystemControlArgument[0]) == 2) pcBuffer[0] = REQ_STATE_CHANGE_DISARMED;
-					strcpy(pcBuffer+1, SystemControlArgument[1]);
-					printf("Set object state, %s, %s.\n", SystemControlArgument[0], SystemControlArgument[1]);
-					iCommSend(COMM_RCMM, pcBuffer, 1 + strlen(SystemControlArgument[1]));
-				} else
-					SystemControlSendLog("[SystemControl] Set state to REMOTE_CONTROL failed, state errors!\n", &ClientSocket, 0);
-			
+				if(server_state == SERVER_STATE_IDLE
+						&& (objectControlState == OBC_STATE_CONNECTED || objectControlState == OBC_STATE_REMOTECTRL)) {
+					if (!strcasecmp(SystemControlArgument[0], ENABLE_COMMAND_STRING)
+							&& objectControlState == OBC_STATE_CONNECTED) {
+						LogMessage(LOG_LEVEL_INFO, "Requesting enabling of remote control");
+						iCommSend(COMM_REMOTECTRL_ENABLE, NULL, 0); // TODO check return value
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+					}
+					else if (!strcasecmp(SystemControlArgument[0], DISABLE_COMMAND_STRING)
+							 && objectControlState == OBC_STATE_REMOTECTRL) {
+						LogMessage(LOG_LEVEL_INFO, "Requesting disabling of remote control");
+						iCommSend(COMM_REMOTECTRL_DISABLE, NULL, 0); // TODO check return value
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+					}
+					else {
+						LogMessage(LOG_LEVEL_WARNING, "Incorrect remote control command");
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+					}
+				}
+				else {
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+				}
+
 			}
-			else
-				LogMessage(LOG_LEVEL_WARNING, "SetRemoteControlState command parameter count error");
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "Remote control command parameter count error");
+				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+			}
 			SystemControlCommand = Idle_0;
+			SystemControlSendControlResponse(responseCode, "RemoteControl:",
+											 ControlResponseBuffer, 0, &ClientSocket, 0);
 		break;
-		case SetObjectAction_2:
+		case RemoteControlManoeuvre_2:
 			if (CurrentInputArgCount == CommandArgCount) {
-				if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED)
-				{
-					bzero(pcBuffer, IPC_BUFFER_SIZE);
-					if(atoi(SystemControlArgument[0]) == 3) pcBuffer[0] = REQ_RCMM_BACK_TO_START;
-					else if (atoi(SystemControlArgument[0]) == 4) pcBuffer[0] = REQ_RCMM_ENABLE_AUTO_START;
-					else if (atoi(SystemControlArgument[0]) == 5) pcBuffer[0] = REQ_RCMM_DISABLE_AUTO_START;
-					strcpy(pcBuffer+1, SystemControlArgument[1]);
-					iCommSend(COMM_RCMM, pcBuffer, 1 + strlen(SystemControlArgument[1]));
-				} else
-					SystemControlSendLog("[SystemControl] Remote control ACTION failed, state errors!\n", &ClientSocket, 0);
+				if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTECTRL) {
+					memset(pcBuffer, 0, sizeof (pcBuffer));
+					RemoteControlCommandType rcCommand;
+					if (inet_pton(AF_INET, SystemControlArgument[0], &rcCommand.objectIP) != -1) {
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+						switch (atoi(SystemControlArgument[1])) {
+						case MSCP_BACK_TO_START:
+							rcCommand.manoeuvre = MANOEUVRE_BACK_TO_START;
+							break;
+						default:
+							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
+						}
+						if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
+							memcpy(pcBuffer, &rcCommand, sizeof (rcCommand));
+							iCommSend(COMM_REMOTECTRL_MANOEUVRE, pcBuffer, sizeof (rcCommand)); // TODO check return value
+							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+						}
+					}
+					else {
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+					}
+				}
+				else {
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+				}
 			}
-			else
-				LogMessage(LOG_LEVEL_WARNING, "SetRemoteControlAction command parameter count error");
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "Remote control manoeuvre command parameter count error");
+				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+			}
 			SystemControlCommand = Idle_0;
-		break;
+			SystemControlSendControlResponse(responseCode, "RemoteControlManoeuvre:",
+											 ControlResponseBuffer, 0, &ClientSocket, 0);
+			break;
 		case StartScenario_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED)	//Temporary!
