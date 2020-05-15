@@ -196,12 +196,6 @@ extern "C"{
 #define DD_CONTROL_BUFFER_SIZE_52 52
 #define DD_CONTROL_TASK_PERIOD_MS 1
 
-#define REQ_STATE_CHANGE_REMOTE_CONTROL 1
-#define REQ_STATE_CHANGE_DISARMED 2
-#define REQ_RCMM_BACK_TO_START 3
-#define REQ_RCMM_ENABLE_AUTO_START 4
-#define REQ_RCMM_DISABLE_AUTO_START 5
-
 //! Internal message queue communication identifiers
 enum COMMAND
 {
@@ -229,12 +223,19 @@ COMM_TREO = 23,
 COMM_ACCM = 24,
 COMM_TRCM = 25,
 COMM_DISARM = 26,
-COMM_RCMM = 27,
+COMM_REMOTECTRL_ENABLE = 27,
+COMM_REMOTECTRL_DISABLE = 28,
+COMM_REMOTECTRL_MANOEUVRE = 29,
 COMM_MONR = 239,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
 COMM_INV = 255
 };
+
+typedef struct {
+	RemoteControlManoeuvreType manoeuvre;
+	in_addr_t objectIP;
+} RemoteControlCommandType;
 
 typedef struct
 {
@@ -325,6 +326,7 @@ typedef enum {
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
     OBC_STATE_RUNNING,
+	OBC_STATE_REMOTECTRL,
     OBC_STATE_ERROR
 } OBCState_t;
 

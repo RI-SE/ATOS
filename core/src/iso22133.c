@@ -426,15 +426,14 @@ typedef struct {
 /*! RCMM message */
 typedef struct {
 	HeaderType header;
-	uint16_t RCMMControlValueID;
-	uint16_t RCMMControlContentLength;
-	uint8_t rcmmControlU8;
+	uint16_t commandValueID;
+	uint16_t commandContentLength;
+	uint8_t command;
 	FooterType footer;
-} RCMMType;						//18 bytes
+} RCMMType;
 
-//! HEAB value IDs
+//! RCMM value IDs
 #define VALUE_ID_RCMM_CONTROL 0x0201
-
 
 
 #pragma pack(pop)
@@ -1475,14 +1474,14 @@ ssize_t encodeHEABMessage(const ControlCenterStatusType status, char *heabDataBu
 
 
 /*!
- * \brief encodeRCMMMessage 
- * \param 
- * \param 
- * \param 
- * \param 
+ * \brief encodeRCMMMessage Constructs an ISO RCMM message based on an input ::RemoteControlManoeuvreType
+ * \param command The command to be sent to an object
+ * \param rcmmDataBuffer Buffer to which RCMM message is to be written
+ * \param bufferLength Size of buffer to which RCMM message is to be written
+ * \param debug Flag for enabling debugging
  * \return Number of bytes written or -1 in case of an error
  */
-ssize_t encodeRCMMMessage(const uint8_t rcmmControlCommand, char *rcmmDataBuffer,
+ssize_t encodeRCMMMessage(const RemoteControlManoeuvreType command, char *rcmmDataBuffer,
 						  const size_t bufferLength, const char debug) {
 
 	RCMMType RCMMData;
@@ -1499,21 +1498,20 @@ ssize_t encodeRCMMMessage(const uint8_t rcmmControlCommand, char *rcmmDataBuffer
 	RCMMData.header = buildISOHeader(MESSAGE_ID_RCMM, sizeof (RCMMData), debug);
 
 	// Fill contents
-	RCMMData.RCMMControlValueID = VALUE_ID_RCMM_CONTROL;
-	RCMMData.RCMMControlContentLength = 1;
-	RCMMData.rcmmControlU8 = rcmmControlCommand;
-
+	RCMMData.commandValueID = VALUE_ID_RCMM_CONTROL;
+	RCMMData.commandContentLength = sizeof (RCMMData.command);
+	RCMMData.command = (uint8_t) command;
 
 	if (debug) {
-		LogPrint("RCMM message:\n\tRCMM Control value ID: 0x%x\n\t"
-				 "RCMM Control content length: %u\n\t"
-				 "Control center status: %d", RCMMData.RCMMControlValueID, RCMMData.RCMMControlContentLength,
-				 RCMMData.rcmmControlU8);
+		LogPrint("RCMM message:\n\tCommand value ID: 0x%x\n\t"
+				 "Command content length: %u\n\t"
+				 "Command: %u", RCMMData.commandValueID, RCMMData.commandContentLength,
+				 RCMMData.command);
 	}
 
 	// Switch from host endianness to little endian
-	RCMMData.RCMMControlValueID = htole16(RCMMData.RCMMControlValueID);
-	RCMMData.RCMMControlContentLength = htole16(RCMMData.RCMMControlContentLength);
+	RCMMData.commandValueID = htole16(RCMMData.commandValueID);
+	RCMMData.commandContentLength = htole16(RCMMData.commandContentLength);
 
 	RCMMData.footer = buildISOFooter(&RCMMData, sizeof (RCMMData), debug);
 
