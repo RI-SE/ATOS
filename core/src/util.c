@@ -78,12 +78,15 @@
 #define PRIO_COMM_INIT 16
 #define PRIO_COMM_CONNECT 16
 #define PRIO_COMM_DISCONNECT 16
+#define PRIO_COMM_REMOTECTRL_ENABLE 16
+#define PRIO_COMM_REMOTECTRL_DISABLE 16
 // Single-shot messages relevant during test run
 #define PRIO_COMM_EXAC 14
 #define PRIO_COMM_TREO 14
 // Frequent messages relevant during test run
 #define PRIO_COMM_TRAJ_TOSUP 12
 #define PRIO_COMM_TRAJ_FROMSUP 12
+#define PRIO_COMM_REMOTECTRL_MANOEUVRE 12
 // Logging
 #define PRIO_COMM_LOG 10
 // Unused messages TODO: double check the priority of unused messages
@@ -2062,6 +2065,15 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 		break;
 	case COMM_OBJECTS_CONNECTED:
 		uiMessagePrio = PRIO_OBJECTS_CONNECTED;
+		break;
+	case COMM_REMOTECTRL_ENABLE:
+		uiMessagePrio = PRIO_COMM_REMOTECTRL_ENABLE;
+		break;
+	case COMM_REMOTECTRL_DISABLE:
+		uiMessagePrio = PRIO_COMM_REMOTECTRL_DISABLE;
+		break;
+	case COMM_REMOTECTRL_MANOEUVRE:
+		uiMessagePrio = PRIO_COMM_REMOTECTRL_MANOEUVRE;
 		break;
 	case COMM_FAILURE:
 		uiMessagePrio = PRIO_COMM_FAILURE;
