@@ -71,6 +71,12 @@ void Scenario::initialize(const std::string scenarioFilePath)
     LogMessage(LOG_LEVEL_DEBUG, debugStr.c_str());
 }
 
+void Scenario::reset() {
+	for (Action* ap : allActions) {
+		ap->reset();
+	}
+}
+
 /*!
  * \brief Scenario::sendConfiguration Sends TRCM and ACCM according to previously initialized scenario
  */
