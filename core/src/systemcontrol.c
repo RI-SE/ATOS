@@ -159,7 +159,7 @@ static const char *SystemControlCommandsArr[] = {
 const char *SystemControlStatesArr[] =
 	{ "UNDEFINED", "INITIALIZED", "IDLE", "READY", "RUNNING", "INWORK", "ERROR" };
 const char *SystemControlOBCStatesArr[] =
-	{ "UNDEFINED", "IDLE", "INITIALIZED", "CONNECTED", "ARMED", "RUNNING", "ERROR" };
+    { "UNDEFINED", "IDLE", "INITIALIZED", "CONNECTED", "ARMED", "RUNNING", "REMOTECONTROL", "ERROR" };
 
 const char *POSTRequestMandatoryContent[] = { "POST", "HTTP/1.1", "\r\n\r\n" };
 
