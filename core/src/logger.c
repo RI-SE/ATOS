@@ -97,7 +97,8 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	int GPSweek;
 	FILE *replayfd;
 	struct timespec sleep_time, ref_time;
-	U8 isFirstInit = 1;
+	U8 isFirstInit = 1, isTestRunning = 0;
+
 
 	// Execution mode
 	int LoggerExecutionMode = LOG_CONTROL_MODE;
@@ -130,6 +131,7 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		switch (command) {
 		case COMM_ABORT:
+			isTestRunning = 0;
 			break;
 
 		case COMM_INIT:
@@ -137,6 +139,7 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_INFO, "Initializing test log...");
 				vInitializeLog(pcLogFile, sizeof (pcLogFile), pcLogFileComp, sizeof (pcLogFileComp));
 				isFirstInit = 0;
+				isTestRunning = 0;
 			}
 			else {
 				LogMessage(LOG_LEVEL_WARNING, "Received unexpected INIT command");
@@ -156,8 +159,11 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case COMM_STRT:
 		case COMM_ARM:
+			isTestRunning = 1;
 		case COMM_DISARM:
+			isTestRunning = 0;
 		case COMM_STOP:
+			isTestRunning = 0;
 		case COMM_CONNECT:
 		case COMM_VIOP:
 		case COMM_TRAJ:
@@ -177,7 +183,9 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		case COMM_MONR:
 			if (!isFirstInit) {
-				vLogMonitorData(busReceiveBuffer, receivedBytes, recvTime, pcLogFile, pcLogFileComp);
+				if (isTestRunning) {
+					vLogMonitorData(busReceiveBuffer, receivedBytes, recvTime, pcLogFile, pcLogFileComp);
+				}
 			}
 			else
 				LogMessage(LOG_LEVEL_WARNING, "Received command %u while log uninitialized", command);
