@@ -273,7 +273,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		// Heartbeat
 		if ((vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_ARMED
-			 || vGetState(GSD) == OBC_STATE_CONNECTED || vGetState(GSD) == OBC_STATE_REMOTECTRL) && timercmp(&currentTime, &nextHeartbeatTime, >)) {
+			 || vGetState(GSD) == OBC_STATE_CONNECTED || vGetState(GSD) == OBC_STATE_REMOTECTRL)
+			&& timercmp(&currentTime, &nextHeartbeatTime, >)) {
 
 			timeradd(&nextHeartbeatTime, &heartbeatPeriod, &nextHeartbeatTime);
 			MessageLength =
@@ -583,9 +584,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				vSetState(OBC_STATE_REMOTECTRL, GSD);
 				// TODO: objectControlServerStatus = something
 				MessageLength =
-					encodeOSTMMessage(OBJECT_COMMAND_REMOTE_CONTROL, MessageBuffer, sizeof (MessageBuffer), 0);
+					encodeOSTMMessage(OBJECT_COMMAND_REMOTE_CONTROL, MessageBuffer, sizeof (MessageBuffer),
+									  0);
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to remote control mode", object_address_name[iIndex]);
+					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to remote control mode",
+							   object_address_name[iIndex]);
 					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 				}
 				// TODO: check objects' states
@@ -596,7 +599,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				MessageLength =
 					encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to disarmed mode", object_address_name[iIndex]);
+					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to disarmed mode",
+							   object_address_name[iIndex]);
 					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 				}
 				// TODO: check objects' states
@@ -604,22 +608,28 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				vSetState(OBC_STATE_CONNECTED, GSD);
 				LogMessage(LOG_LEVEL_INFO, "Disabled remote control mode");
 			}
-			else if(iCommand == COMM_REMOTECTRL_MANOEUVRE) {
+			else if (iCommand == COMM_REMOTECTRL_MANOEUVRE) {
 				RemoteControlCommandType rcCommand;
 				char ipString[INET_ADDRSTRLEN];
+
 				// TODO check size of received data
 				memcpy(&rcCommand, pcRecvBuffer, sizeof (rcCommand));
-				LogMessage(LOG_LEVEL_INFO, "Received remote control manoeuvre for object with IP %s",
-						   inet_ntop(AF_INET, &rcCommand.objectIP, ipString, sizeof (ipString))); // TODO print command type
+				LogMessage(LOG_LEVEL_INFO, "Received remote control manoeuvre for object with IP %s", inet_ntop(AF_INET, &rcCommand.objectIP, ipString, sizeof (ipString)));	// TODO print command type
 				if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
 					switch (rcCommand.manoeuvre) {
-						case MANOEUVRE_BACK_TO_START:
-						iIndex = iGetObjectIndexFromObjectIP(rcCommand.objectIP, objectIPs, sizeof (objectIPs) / sizeof (objectIPs[0]));
+					case MANOEUVRE_BACK_TO_START:
+						iIndex =
+							iGetObjectIndexFromObjectIP(rcCommand.objectIP, objectIPs,
+														sizeof (objectIPs) / sizeof (objectIPs[0]));
 						if (iIndex != -1) {
-							LogMessage(LOG_LEVEL_INFO,"Sending back to start command to object with IP %s", object_address_name[iIndex]);
-							MessageLength = encodeRCMMMessage(rcCommand.manoeuvre, MessageBuffer, sizeof (MessageBuffer), 0);
+							LogMessage(LOG_LEVEL_INFO, "Sending back to start command to object with IP %s",
+									   object_address_name[iIndex]);
+							MessageLength =
+								encodeRCMMMessage(rcCommand.manoeuvre, MessageBuffer, sizeof (MessageBuffer),
+												  0);
 							if (MessageLength > 0) {
-								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+												&socket_fds[iIndex], 0);
 							}
 							else {
 								LogMessage(LOG_LEVEL_ERROR, "Error encoding RCMM message");
@@ -627,6 +637,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 						else {
 							char ipString[INET_ADDRSTRLEN];
+
 							LogMessage(LOG_LEVEL_ERROR, "Back to start command for invalid IP %s received",
 									   inet_ntop(AF_INET, &rcCommand.objectIP, ipString, sizeof (ipString)));
 						}
@@ -636,7 +647,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 				}
 				else {
-					LogMessage(LOG_LEVEL_WARNING, "Remote control manoeuvring is not allowed outside of remote control mode");
+					LogMessage(LOG_LEVEL_WARNING,
+							   "Remote control manoeuvring is not allowed outside of remote control mode");
 				}
 			}
 			else if (iCommand == COMM_INIT) {
@@ -1529,7 +1541,7 @@ StateTransitionResult tFromInitialized(OBCState_t * currentState, OBCState_t req
 
 StateTransitionResult tFromConnected(OBCState_t * currentState, OBCState_t requestedState) {
 	if (requestedState == OBC_STATE_ARMED || requestedState == OBC_STATE_IDLE
-			|| requestedState == OBC_STATE_REMOTECTRL) {
+		|| requestedState == OBC_STATE_REMOTECTRL) {
 		*currentState = requestedState;
 		return TRANSITION_OK;
 	}

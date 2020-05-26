@@ -1505,8 +1505,7 @@ ssize_t encodeRCMMMessage(const RemoteControlManoeuvreType command, char *rcmmDa
 	if (debug) {
 		LogPrint("RCMM message:\n\tCommand value ID: 0x%x\n\t"
 				 "Command content length: %u\n\t"
-				 "Command: %u", RCMMData.commandValueID, RCMMData.commandContentLength,
-				 RCMMData.command);
+				 "Command: %u", RCMMData.commandValueID, RCMMData.commandContentLength, RCMMData.command);
 	}
 
 	// Switch from host endianness to little endian
