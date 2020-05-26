@@ -36,8 +36,11 @@
   -- Defines
   ------------------------------------------------------------*/
 
-#define FE_WGS84        (1.0/298.257223563)	// earth flattening (WGS84)
-#define RE_WGS84        6378137.0	// earth semimajor axis (WGS84) (m)
+#define EARTH_EQUATOR_RADIUS_M	6378137.0	// earth semimajor axis (WGS84) (m)
+#define INVERSE_FLATTENING	298.257223563	//in WGS84, f = 1/298.257223563
+#define EARTH_FLATTENING ( 1.0 / INVERSE_FLATTENING )
+#define EARTH_POLE_RADIUS_M	6356752.3142451794975639665996337	//b = (1-f)*a
+#define VINCENTY_MIN_STEP_TOLERANCE	1e-12
 
 #define SMALL_BUFFER_SIZE_128 128
 #define SMALL_BUFFER_SIZE_64 64
@@ -409,17 +412,17 @@ void util_error(const char *message) {
 }
 
 void xyzToLlh(double x, double y, double z, double *lat, double *lon, double *height) {
-	double e2 = FE_WGS84 * (2.0 - FE_WGS84);
+	double e2 = EARTH_FLATTENING * (2.0 - EARTH_FLATTENING);
 	double r2 = x * x + y * y;
 	double za = z;
 	double zk = 0.0;
 	double sinp = 0.0;
-	double v = RE_WGS84;
+	double v = EARTH_EQUATOR_RADIUS_M;
 
 	while (fabs(za - zk) >= 1E-4) {
 		zk = za;
 		sinp = za / sqrt(r2 + za * za);
-		v = RE_WGS84 / sqrt(1.0 - e2 * sinp * sinp);
+		v = EARTH_EQUATOR_RADIUS_M / sqrt(1.0 - e2 * sinp * sinp);
 		za = z + v * e2 * sinp;
 	}
 
@@ -433,8 +436,8 @@ void llhToXyz(double lat, double lon, double height, double *x, double *y, doubl
 	double cosp = cos(lat * M_PI / 180.0);
 	double sinl = sin(lon * M_PI / 180.0);
 	double cosl = cos(lon * M_PI / 180.0);
-	double e2 = FE_WGS84 * (2.0 - FE_WGS84);
-	double v = RE_WGS84 / sqrt(1.0 - e2 * sinp * sinp);
+	double e2 = EARTH_FLATTENING * (2.0 - EARTH_FLATTENING);
+	double v = EARTH_EQUATOR_RADIUS_M / sqrt(1.0 - e2 * sinp * sinp);
 
 	*x = (v + height) * cosp * cosl;
 	*y = (v + height) * cosp * sinl;
@@ -796,7 +799,7 @@ int UtilStringToMonitorData(const char *monitorString, size_t stringLength, Moni
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m) {
 	double distance = 0.0;
 
-	if (!position.isPositionValid || target.isPositionValid)
+	if (!position.isPositionValid || !target.isPositionValid)
 		return 0;
 	distance = sqrt(pow(position.xCoord_m - target.xCoord_m, 2)
 					+ pow(position.yCoord_m - target.yCoord_m, 2)
@@ -846,7 +849,7 @@ double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P
 	P2LatRad = UtilDegToRad(P2Lat);
 	P2LongRad = UtilDegToRad(P2Long);
 
-	f = 1 / k;
+	f = 1 / INVERSE_FLATTENING;
 	U1 = atan((1 - f) * tan(P1LatRad));
 	U2 = atan((1 - f) * tan(P2LatRad));
 	L = P2LongRad - P1LongRad;
@@ -921,7 +924,7 @@ int UtilVincentyDirect(double refLat, double refLon, double a1, double distance,
 
 
 	// Variables only calculated once
-	double U1, f = 1 / k, sigma1, sina, pow2cosa, pow2u, A, B, C, L, lambda;
+	double U1, f = 1 / INVERSE_FLATTENING, sigma1, sina, pow2cosa, pow2u, A, B, C, L, lambda;
 
 	// Iterative variables
 	double sigma, deltaSigma, sigma2m;
@@ -935,14 +938,16 @@ int UtilVincentyDirect(double refLat, double refLon, double a1, double distance,
 	sina = cos(U1) * sin(a1);
 
 	pow2cosa = 1 - pow(sina, 2);
-	pow2u = pow2cosa * (pow(a, 2) - pow(b, 2)) / pow(b, 2);
+	pow2u =
+		pow2cosa * (pow(EARTH_EQUATOR_RADIUS_M, 2) - pow(EARTH_POLE_RADIUS_M, 2)) / pow(EARTH_POLE_RADIUS_M,
+																						2);
 
 	A = 1 + pow2u / 16384.0 * (4096.0 + pow2u * (-768.0 + pow2u * (320.0 - 175.0 * pow2u)));
 	B = pow2u / 1024.0 * (256.0 + pow2u * (-128.0 + pow2u * (74.0 - 47.0 * pow2u)));
 
 
 	int iterations = 0;
-	double init_sigma = distance / (b * A);
+	double init_sigma = distance / (EARTH_POLE_RADIUS_M * A);
 
 	sigma = init_sigma;
 	do {
@@ -960,7 +965,7 @@ int UtilVincentyDirect(double refLat, double refLon, double a1, double distance,
 							  )
 			);
 		sigma = init_sigma + deltaSigma;
-	} while (fabs(sigma - prev_sigma) > l);
+	} while (fabs(sigma - prev_sigma) > VINCENTY_MIN_STEP_TOLERANCE);
 
 
 	*resLat = UtilRadToDeg(atan2(sin(U1) * cos(sigma) + cos(U1) * sin(sigma) * cos(a1),
@@ -2840,7 +2845,7 @@ void traj2ldm(float time, double x, double y, double z, float hdg, float vel, mo
 
 	char pcTempBuffer[512];
 
-	double earth_radius = a;
+	double earth_radius = EARTH_EQUATOR_RADIUS_M;
 
 	double lat_origin = 0.0;
 	double lon_origin = 0.0;
