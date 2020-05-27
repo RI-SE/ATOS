@@ -119,7 +119,7 @@ static int addCommandToActionList(const TestScenarioCommandAction command,
 								  TestScenarioCommandAction commandActions[],
 								  const int numberOfElementsInList);
 
-static int (const in_addr_t objectIP, const TestScenarioCommandAction commandActions[],
+static int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[],
 						   const int numberOfElementsInList);
 static int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction commandActions[],
 							 const int numberOfElementsInList);
@@ -1367,7 +1367,7 @@ int addCommandToActionList(const TestScenarioCommandAction command,
  * \param numberOfElementsInList Number of elements in the entire list
  * \return Boolean value indicating if the object has a delayed start configuration
  */
-int (const in_addr_t objectIP, const TestScenarioCommandAction commandActions[],
+int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[],
 					const int numberOfElementsInList) {
 	for (int i = 0; i < numberOfElementsInList; ++i) {
 		if (commandActions[i].ip == objectIP && commandActions[i].command == ACTION_PARAMETER_VS_SEND_START) {
