@@ -1377,7 +1377,6 @@ int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction co
 	return 0;
 }
 
-
 /*!
  * \brief findCommandAction Finds the command action with specified action ID.
  * \param actionID ID of the action to be found
