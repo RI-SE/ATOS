@@ -49,6 +49,7 @@ public:
 
     void resetISOTriggers(void);
     void refresh(void) const;
+	void reset(void);
     void clear(void);
 
     ScenarioReturnCode_t updateTrigger(const MonitorDataType&);
