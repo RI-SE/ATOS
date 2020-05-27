@@ -20,7 +20,7 @@ Action::ActionReturnCode_t ExternalAction::execute(void)
 		TimeSetToCurrentSystemTime(&systemTime);
 
         data.actionID = actionID;
-        data.executionTime_qmsoW  = actionDelayTime_qms == 0 ? 0 : TimeGetAsGPSqmsOfWeek(&systemTime) + actionDelayTime_qms;
+		data.executionTime_qmsoW  = actionDelayTime_qms == 0 ? TimeGetAsGPSqmsOfWeek(&systemTime) : TimeGetAsGPSqmsOfWeek(&systemTime) + actionDelayTime_qms;
 
         data.ip = actionObjectIP;
 
