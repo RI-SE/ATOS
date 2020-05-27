@@ -5,7 +5,6 @@
 #include <fstream>
 
 #include "trigger.h"
-#include "braketrigger.h"
 #include "action.h"
 #include "causality.h"
 #include "logging.h"

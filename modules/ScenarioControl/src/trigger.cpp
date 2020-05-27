@@ -42,7 +42,7 @@ Trigger::TriggerReturnCode_t Trigger::appendParameter(Trigger::TriggerParameter_
         return retval;
 
     parameters.push_back(triggerParameter);
-    return parseParameters();
+	return OK;
 }
 
 /*!
@@ -316,7 +316,7 @@ Trigger::TriggerParameter_t Trigger::asParameterCode(const std::string &inputStr
     if(!str.compare("UNAVAILABLE"))
         return TRIGGER_PARAMETER_UNAVAILABLE;
 
-    throw std::invalid_argument("Action parameter " + inputStr + " is not a valid parameter");
+	throw std::invalid_argument("Trigger parameter " + inputStr + " is not a valid parameter");
 }
 
 Trigger::TriggerReturnCode_t Trigger::appendParameter(std::string inputStr)

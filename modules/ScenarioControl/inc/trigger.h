@@ -87,12 +87,15 @@ public:
     */
     virtual TriggerReturnCode_t update(void)    { throw std::invalid_argument("Invalid signal type"); }
     virtual TriggerReturnCode_t update(struct timeval)    { throw std::invalid_argument("Invalid signal type"); }
-    virtual TriggerReturnCode_t update(bool, struct timeval)    { throw std::invalid_argument("Invalid signal type"); }
-    virtual TriggerReturnCode_t update(char, struct timeval)    { throw std::invalid_argument("Invalid signal type"); }
-    virtual TriggerReturnCode_t update(int, struct timeval)     { throw std::invalid_argument("Invalid signal type"); }
-    virtual TriggerReturnCode_t update(float, struct timeval)   { throw std::invalid_argument("Invalid signal type"); }
-    virtual TriggerReturnCode_t update(double, struct timeval)  { throw std::invalid_argument("Invalid signal type"); }
-    virtual TriggerReturnCode_t update(TREOData){ throw std::invalid_argument("Invalid signal type"); }
+	virtual TriggerReturnCode_t update(bool, struct timeval)    { throw std::invalid_argument("Invalid signal type bool"); }
+	virtual TriggerReturnCode_t update(char, struct timeval)    { throw std::invalid_argument("Invalid signal type char"); }
+	virtual TriggerReturnCode_t update(int, struct timeval)     { throw std::invalid_argument("Invalid signal type int"); }
+	virtual TriggerReturnCode_t update(float, struct timeval)   { throw std::invalid_argument("Invalid signal type float"); }
+	virtual TriggerReturnCode_t update(double, struct timeval)  { throw std::invalid_argument("Invalid signal type double"); }
+	virtual TriggerReturnCode_t update(CartesianPosition, struct timeval) { throw std::invalid_argument("Invalid signal type cartesian position"); }
+	virtual TriggerReturnCode_t update(TREOData) { throw std::invalid_argument("Invalid signal type TREO data"); }
+	virtual TriggerReturnCode_t update(MonitorDataType) { throw std::invalid_argument("Invalid signal type monitor data"); }
+
 
     static TriggerTypeCode_t asTypeCode(std::string typeCodeString);
 protected:

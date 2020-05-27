@@ -66,6 +66,8 @@ public:
     ActionReturnCode_t appendParameter(ActionParameter_t actionParameter);
     virtual ActionReturnCode_t appendParameter(std::string parameterString);
 
+	virtual ActionReturnCode_t parseParameters() = 0;
+
     static ActionTypeCode_t asTypeCode(const std::string &typeCodeString);
 
 protected:
