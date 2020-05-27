@@ -88,6 +88,7 @@ typedef struct {
 	in_addr_t ip;
 } TestScenarioCommandAction;	//!< Struct describing a command to be sent as action, e.g. delayed start
 
+
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
       void (*fooptr)(int,float) = foo;
@@ -117,6 +118,7 @@ static void resetCommandActionList(TestScenarioCommandAction commandActions[],
 static int addCommandToActionList(const TestScenarioCommandAction command,
 								  TestScenarioCommandAction commandActions[],
 								  const int numberOfElementsInList);
+
 static int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[],
 						   const int numberOfElementsInList);
 static int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction commandActions[],
@@ -1393,6 +1395,7 @@ int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction c
 	}
 	return -1;
 }
+
 
 int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects) {
 	for (unsigned int i = 0; i < numberOfObjects; ++i) {
