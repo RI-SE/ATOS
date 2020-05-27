@@ -94,7 +94,7 @@ extern "C"{
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.7"
+#define LOCAL_USER_CONTROL_IP "195.0.0.10"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -218,11 +218,19 @@ COMM_TREO = 23,
 COMM_ACCM = 24,
 COMM_TRCM = 25,
 COMM_DISARM = 26,
+COMM_REMOTECTRL_ENABLE = 27,
+COMM_REMOTECTRL_DISABLE = 28,
+COMM_REMOTECTRL_MANOEUVRE = 29,
 COMM_MONR = 239,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
 COMM_INV = 255
 };
+
+typedef struct {
+	RemoteControlManoeuvreType manoeuvre;
+	in_addr_t objectIP;
+} RemoteControlCommandType;
 
 typedef struct
 {
@@ -313,6 +321,7 @@ typedef enum {
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
     OBC_STATE_RUNNING,
+	OBC_STATE_REMOTECTRL,
     OBC_STATE_ERROR
 } OBCState_t;
 
@@ -517,6 +526,8 @@ typedef enum {
 } ReadWriteAccess_t;
 
 
+#pragma pack(push,1)
+
 typedef struct
 {
   U32 MessageLengthU32;
@@ -547,6 +558,7 @@ typedef struct
   U8 SysCtrlStateU8;
 } RVSSMaestroType;
 
+#pragma pack(pop)
 
 typedef enum {
     NORTHERN,
