@@ -118,6 +118,7 @@ static void resetCommandActionList(TestScenarioCommandAction commandActions[],
 static int addCommandToActionList(const TestScenarioCommandAction command,
 								  TestScenarioCommandAction commandActions[],
 								  const int numberOfElementsInList);
+
 static int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[],
 						   const int numberOfElementsInList);
 static int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction commandActions[],
