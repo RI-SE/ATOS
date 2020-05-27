@@ -73,6 +73,12 @@ void Scenario::initialize(const std::string scenarioFilePath)
     LogMessage(LOG_LEVEL_DEBUG, debugStr.c_str());
 }
 
+void Scenario::reset() {
+	for (Action* ap : allActions) {
+		ap->reset();
+	}
+}
+
 /*!
  * \brief Scenario::sendConfiguration Sends TRCM and ACCM according to previously initialized scenario
  */
@@ -127,7 +133,7 @@ void Scenario::parseScenarioFileLine(const std::string &inputLine)
 
     // Match relevant field according to below patterns
     regex ipAddrPattern("([0-2]?[0-9]?[0-9]\\.){3}([0-2]?[0-9]?[0-9])"); // Match 3 "<000-299>." followed by "<000-299>"
-	regex triggerActionPattern("(([a-zA-Z_])+\\[([a-zA-Z0-9\\.,<=>_:()])+\\])+");
+	regex triggerActionPattern("(([a-zA-Z_])+\\[([a-zA-Z0-9\\.,\\-<=>_:()])+\\])+");
     in_addr triggerIP, actionIP;
     string errMsg;
     set<Action*> actions;
