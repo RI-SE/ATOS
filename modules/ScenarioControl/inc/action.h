@@ -43,6 +43,9 @@ public:
     /*! Run the action once, if allowed */
     virtual ActionReturnCode_t execute(void);
 
+	/*! Reset to start state */
+	ActionReturnCode_t reset(void);
+
     /*! To string */
     friend std::ostream& operator<<(std::ostream &strm, const Action &act) {
         return strm << "ACTION ID " << act.actionID <<
@@ -72,6 +75,7 @@ protected:
     ActionTypeCode_t actionTypeCode = ACTION_NONE;
     ActionID_t actionID = 0;
     uint32_t remainingAllowedRuns = 0;
+	uint32_t maxAllowedRuns = 0;
     std::vector<ActionParameter_t> parameters;
     uint32_t actionDelayTime_qms = 0;
     in_addr_t actionObjectIP = 0;

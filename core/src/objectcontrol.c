@@ -88,6 +88,7 @@ typedef struct {
 	in_addr_t ip;
 } TestScenarioCommandAction;	//!< Struct describing a command to be sent as action, e.g. delayed start
 
+
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
       void (*fooptr)(int,float) = foo;
@@ -117,6 +118,7 @@ static void resetCommandActionList(TestScenarioCommandAction commandActions[],
 static int addCommandToActionList(const TestScenarioCommandAction command,
 								  TestScenarioCommandAction commandActions[],
 								  const int numberOfElementsInList);
+
 static int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction commandActions[],
 						   const int numberOfElementsInList);
 static int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction commandActions[],
@@ -136,6 +138,7 @@ StateTransitionResult tFromInitialized(OBCState_t * currentState, OBCState_t req
 StateTransitionResult tFromConnected(OBCState_t * currentState, OBCState_t requestedState);
 StateTransitionResult tFromArmed(OBCState_t * currentState, OBCState_t requestedState);
 StateTransitionResult tFromRunning(OBCState_t * currentState, OBCState_t requestedState);
+StateTransitionResult tFromRemoteControl(OBCState_t * currentState, OBCState_t requestedState);
 StateTransitionResult tFromError(OBCState_t * currentState, OBCState_t requestedState);
 StateTransitionResult tFromUndefined(OBCState_t * currentState, OBCState_t requestedState);
 
@@ -287,7 +290,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		// Heartbeat
 		if ((vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_ARMED
-			 || vGetState(GSD) == OBC_STATE_CONNECTED) && timercmp(&currentTime, &nextHeartbeatTime, >)) {
+			 || vGetState(GSD) == OBC_STATE_CONNECTED || vGetState(GSD) == OBC_STATE_REMOTECTRL)
+			&& timercmp(&currentTime, &nextHeartbeatTime, >)) {
 
 			timeradd(&nextHeartbeatTime, &heartbeatPeriod, &nextHeartbeatTime);
 			MessageLength =
@@ -322,7 +326,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_CONNECTED
-			|| vGetState(GSD) == OBC_STATE_ARMED) {
+			|| vGetState(GSD) == OBC_STATE_ARMED || vGetState(GSD) == OBC_STATE_REMOTECTRL) {
 			char buffer[RECV_MESSAGE_BUFFER];
 			size_t receivedMONRData = 0;
 
@@ -596,6 +600,77 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_CONTROL) {
 				ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
 				printf("[ObjectControl] Object control in CONTROL mode\n");
+			}
+			else if (iCommand == COMM_REMOTECTRL_ENABLE) {
+				vSetState(OBC_STATE_REMOTECTRL, GSD);
+				// TODO: objectControlServerStatus = something
+				MessageLength =
+					encodeOSTMMessage(OBJECT_COMMAND_REMOTE_CONTROL, MessageBuffer, sizeof (MessageBuffer),
+									  0);
+				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to remote control mode",
+							   object_address_name[iIndex]);
+					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+				}
+				// TODO: check objects' states
+				LogMessage(LOG_LEVEL_INFO, "Enabled remote control mode");
+			}
+			else if (iCommand == COMM_REMOTECTRL_DISABLE) {
+				// TODO set objects' states to connected
+				MessageLength =
+					encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
+				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to disarmed mode",
+							   object_address_name[iIndex]);
+					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+				}
+				// TODO: check objects' states
+				// TODO: objectControlServerStatus = something
+				vSetState(OBC_STATE_CONNECTED, GSD);
+				LogMessage(LOG_LEVEL_INFO, "Disabled remote control mode");
+			}
+			else if (iCommand == COMM_REMOTECTRL_MANOEUVRE) {
+				RemoteControlCommandType rcCommand;
+				char ipString[INET_ADDRSTRLEN];
+
+				// TODO check size of received data
+				memcpy(&rcCommand, pcRecvBuffer, sizeof (rcCommand));
+				LogMessage(LOG_LEVEL_INFO, "Received remote control manoeuvre for object with IP %s", inet_ntop(AF_INET, &rcCommand.objectIP, ipString, sizeof (ipString)));	// TODO print command type
+				if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
+					switch (rcCommand.manoeuvre) {
+					case MANOEUVRE_BACK_TO_START:
+						iIndex =
+							iGetObjectIndexFromObjectIP(rcCommand.objectIP, objectIPs,
+														sizeof (objectIPs) / sizeof (objectIPs[0]));
+						if (iIndex != -1) {
+							LogMessage(LOG_LEVEL_INFO, "Sending back to start command to object with IP %s",
+									   object_address_name[iIndex]);
+							MessageLength =
+								encodeRCMMMessage(rcCommand.manoeuvre, MessageBuffer, sizeof (MessageBuffer),
+												  0);
+							if (MessageLength > 0) {
+								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+												&socket_fds[iIndex], 0);
+							}
+							else {
+								LogMessage(LOG_LEVEL_ERROR, "Error encoding RCMM message");
+							}
+						}
+						else {
+							char ipString[INET_ADDRSTRLEN];
+
+							LogMessage(LOG_LEVEL_ERROR, "Back to start command for invalid IP %s received",
+									   inet_ntop(AF_INET, &rcCommand.objectIP, ipString, sizeof (ipString)));
+						}
+						break;
+					default:
+						LogMessage(LOG_LEVEL_ERROR, "Unsupported remote control manoeuvre");
+					}
+				}
+				else {
+					LogMessage(LOG_LEVEL_WARNING,
+							   "Remote control manoeuvring is not allowed outside of remote control mode");
+				}
 			}
 			else if (iCommand == COMM_INIT) {
 				LogMessage(LOG_LEVEL_INFO, "INIT received");
@@ -1302,7 +1377,6 @@ int hasDelayedStart(const in_addr_t objectIP, const TestScenarioCommandAction co
 	return 0;
 }
 
-
 /*!
  * \brief findCommandAction Finds the command action with specified action ID.
  * \param actionID ID of the action to be found
@@ -1320,6 +1394,7 @@ int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction c
 	}
 	return -1;
 }
+
 
 int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects) {
 	for (unsigned int i = 0; i < numberOfObjects; ++i) {
@@ -1605,6 +1680,8 @@ StateTransition tGetTransition(OBCState_t fromState) {
 		return &tFromArmed;
 	case OBC_STATE_RUNNING:
 		return &tFromRunning;
+	case OBC_STATE_REMOTECTRL:
+		return &tFromRemoteControl;
 	case OBC_STATE_ERROR:
 		return &tFromError;
 	case OBC_STATE_UNDEFINED:
@@ -1629,7 +1706,8 @@ StateTransitionResult tFromInitialized(OBCState_t * currentState, OBCState_t req
 }
 
 StateTransitionResult tFromConnected(OBCState_t * currentState, OBCState_t requestedState) {
-	if (requestedState == OBC_STATE_ARMED || requestedState == OBC_STATE_IDLE) {
+	if (requestedState == OBC_STATE_ARMED || requestedState == OBC_STATE_IDLE
+		|| requestedState == OBC_STATE_REMOTECTRL) {
 		*currentState = requestedState;
 		return TRANSITION_OK;
 	}
@@ -1646,6 +1724,14 @@ StateTransitionResult tFromArmed(OBCState_t * currentState, OBCState_t requested
 }
 
 StateTransitionResult tFromRunning(OBCState_t * currentState, OBCState_t requestedState) {
+	if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_IDLE) {
+		*currentState = requestedState;
+		return TRANSITION_OK;
+	}
+	return TRANSITION_INVALID;
+}
+
+StateTransitionResult tFromRemoteControl(OBCState_t * currentState, OBCState_t requestedState) {
 	if (requestedState == OBC_STATE_CONNECTED || requestedState == OBC_STATE_IDLE) {
 		*currentState = requestedState;
 		return TRANSITION_OK;
