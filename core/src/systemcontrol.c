@@ -159,7 +159,7 @@ static const char *SystemControlCommandsArr[] = {
 const char *SystemControlStatesArr[] =
 	{ "UNDEFINED", "INITIALIZED", "IDLE", "READY", "RUNNING", "INWORK", "ERROR" };
 const char *SystemControlOBCStatesArr[] =
-    { "UNDEFINED", "IDLE", "INITIALIZED", "CONNECTED", "ARMED", "RUNNING", "REMOTECONTROL", "ERROR" };
+	{ "UNDEFINED", "IDLE", "INITIALIZED", "CONNECTED", "ARMED", "RUNNING", "REMOTECONTROL", "ERROR" };
 
 const char *POSTRequestMandatoryContent[] = { "POST", "HTTP/1.1", "\r\n\r\n" };
 
@@ -1011,18 +1011,19 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case RemoteControl_1:
 			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
 			if (CurrentInputArgCount == CommandArgCount) {
-				if(server_state == SERVER_STATE_IDLE
-						&& (objectControlState == OBC_STATE_CONNECTED || objectControlState == OBC_STATE_REMOTECTRL)) {
+				if (server_state == SERVER_STATE_IDLE
+					&& (objectControlState == OBC_STATE_CONNECTED
+						|| objectControlState == OBC_STATE_REMOTECTRL)) {
 					if (!strcasecmp(SystemControlArgument[0], ENABLE_COMMAND_STRING)
-							&& objectControlState == OBC_STATE_CONNECTED) {
+						&& objectControlState == OBC_STATE_CONNECTED) {
 						LogMessage(LOG_LEVEL_INFO, "Requesting enabling of remote control");
-						iCommSend(COMM_REMOTECTRL_ENABLE, NULL, 0); // TODO check return value
+						iCommSend(COMM_REMOTECTRL_ENABLE, NULL, 0);	// TODO check return value
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 					}
 					else if (!strcasecmp(SystemControlArgument[0], DISABLE_COMMAND_STRING)
 							 && objectControlState == OBC_STATE_REMOTECTRL) {
 						LogMessage(LOG_LEVEL_INFO, "Requesting disabling of remote control");
-						iCommSend(COMM_REMOTECTRL_DISABLE, NULL, 0); // TODO check return value
+						iCommSend(COMM_REMOTECTRL_DISABLE, NULL, 0);	// TODO check return value
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 					}
 					else {
@@ -1042,12 +1043,13 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			SystemControlCommand = Idle_0;
 			SystemControlSendControlResponse(responseCode, "RemoteControl:",
 											 ControlResponseBuffer, 0, &ClientSocket, 0);
-		break;
+			break;
 		case RemoteControlManoeuvre_2:
 			if (CurrentInputArgCount == CommandArgCount) {
-				if(server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTECTRL) {
+				if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTECTRL) {
 					memset(pcBuffer, 0, sizeof (pcBuffer));
 					RemoteControlCommandType rcCommand;
+
 					if (inet_pton(AF_INET, SystemControlArgument[0], &rcCommand.objectIP) != -1) {
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						switch (atoi(SystemControlArgument[1])) {
@@ -1059,7 +1061,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 						if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
 							memcpy(pcBuffer, &rcCommand, sizeof (rcCommand));
-							iCommSend(COMM_REMOTECTRL_MANOEUVRE, pcBuffer, sizeof (rcCommand)); // TODO check return value
+							iCommSend(COMM_REMOTECTRL_MANOEUVRE, pcBuffer, sizeof (rcCommand));	// TODO check return value
 							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						}
 					}
