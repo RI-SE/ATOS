@@ -117,8 +117,14 @@ int main()
             break;
         case COMM_ABORT:
             LogMessage(LOG_LEVEL_INFO, "Received abort command");
-            if (state == RUNNING) state = CONNECTED;
+			if (state == RUNNING) {
+				state = CONNECTED;
+			}
             break;
+		case COMM_ARM:
+			LogMessage(LOG_LEVEL_INFO, "Resetting scenario");
+			scenario.reset();
+			break;
         case COMM_STRT:
             if (state == CONNECTED)
             {

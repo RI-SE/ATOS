@@ -18,7 +18,8 @@ Action::Action(ActionID_t actionID, ActionTypeCode_t actionType, uint32_t allowe
 {
     this->actionID = actionID;
     this->actionTypeCode = actionType;
-    this->remainingAllowedRuns = allowedNumberOfRuns;
+	this->maxAllowedRuns = allowedNumberOfRuns;
+	this->remainingAllowedRuns = this->maxAllowedRuns;
 }
 
 
@@ -49,6 +50,11 @@ Action::ActionReturnCode_t Action::execute(void)
         remainingAllowedRuns--;
         return OK;
     }
+}
+
+Action::ActionReturnCode_t Action::reset(void) {
+	remainingAllowedRuns = maxAllowedRuns;
+	return OK;
 }
 
 std::string Action::getParametersString() const
