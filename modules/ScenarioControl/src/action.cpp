@@ -22,6 +22,20 @@ Action::Action(ActionID_t actionID, ActionTypeCode_t actionType, uint32_t allowe
 	this->remainingAllowedRuns = this->maxAllowedRuns;
 }
 
+
+/*!
+ * \brief Action::getObjectIPAsString Creates a string from the object IP
+ * \return A string representation of the IP
+ */
+std::string Action::getObjectIPAsString(void) const {
+	char ipAddress[INET_ADDRSTRLEN];
+	if (inet_ntop(AF_INET, &this->actionObjectIP, ipAddress, sizeof (ipAddress)) != nullptr) {
+		return std::string(ipAddress);
+	}
+	return "<invalid>";
+}
+
+
 /*!
  * \brief Action::execute Runs the action if allowed and decrements the number of remaining allowed action executions.
  * \return Value according to ::ActionReturnCode_t

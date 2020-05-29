@@ -58,6 +58,7 @@ public:
     std::string getParametersString(void) const;
     ACCMData getConfigurationMessageData(void) const;
     in_addr_t getObjectIP(void) const { return actionObjectIP; }
+	std::string getObjectIPAsString(void) const;
     void setObjectIP(in_addr_t ipAddr) { actionObjectIP = ipAddr; }
 
     void setExecuteDelayTime(struct timeval tm);

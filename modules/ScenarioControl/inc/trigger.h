@@ -44,6 +44,7 @@ public:
     std::vector<TriggerParameter_t> getParameters() const { return parameters; }
     bool isActive() const;
     in_addr_t getObjectIP(void) const { return triggerObjectIP; }
+	std::string getObjectIPAsString(void) const;
 
     bool operator==(const Trigger &other) const { return (other.triggerID == triggerID) && isSimilar(other); }
     bool isSimilar(const Trigger &other) const;

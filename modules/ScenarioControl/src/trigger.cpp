@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include "trigger.h"
 
 #include "logging.h"
@@ -13,6 +14,17 @@ Trigger::~Trigger()
     parameters.clear();
 }
 
+/*!
+ * \brief Trigger::getObjectIPAsString Creates a string from the object IP
+ * \return A string representation of the IP
+ */
+std::string Trigger::getObjectIPAsString(void) const {
+	char ipAddress[INET_ADDRSTRLEN];
+	if (inet_ntop(AF_INET, &this->triggerObjectIP, ipAddress, sizeof (ipAddress)) != nullptr) {
+		return std::string(ipAddress);
+	}
+	return "<invalid>";
+}
 
 /*!
  * \brief Trigger::checkTriggerParameter Checks if the queried parameter is within the list of accepted parameters
