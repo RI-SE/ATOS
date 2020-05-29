@@ -353,8 +353,8 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 	char logFileDirectoryPath[MAX_FILE_PATH];
 	char trajPathDir[MAX_FILE_PATH];
 	char confPathDir[MAX_FILE_PATH];
-    char confFilePath[MAX_FILE_PATH];
-    char trigFilePath[MAX_FILE_PATH];
+	char confFilePath[MAX_FILE_PATH];
+	char trigFilePath[MAX_FILE_PATH];
 	char journalPathDir[MAX_FILE_PATH];
 	char DateBuffer[FILENAME_MAX];
 	FILE *filefd, *fileread;
@@ -377,10 +377,10 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 
 
 	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-    strcat(confFilePath, confPathDir);
-    strcat(confFilePath, CONF_FILE_NAME);
-    strcat(trigFilePath, confPathDir);
-    strcat(trigFilePath, TRIGGER_ACTION_FILE_NAME);
+	strcat(confFilePath, confPathDir);
+	strcat(confFilePath, CONF_FILE_NAME);
+	strcat(trigFilePath, confPathDir);
+	strcat(trigFilePath, TRIGGER_ACTION_FILE_NAME);
 	UtilGetTrajDirectoryPath(trajPathDir, sizeof (trajPathDir));
 	UtilGetJournalDirectoryPath(journalPathDir, sizeof (journalPathDir));
 
@@ -407,18 +407,18 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 	// Copy configuration file to log directory
 	LogMessage(LOG_LEVEL_INFO, "Copying configuration file to log directory");
 	(void)strcpy(sysCommand, "cp ");
-    (void)strcat(sysCommand, confFilePath);
+	(void)strcat(sysCommand, confFilePath);
 	(void)strcat(sysCommand, " ");
 	(void)strcat(sysCommand, logFileDirectoryPath);
 	(void)system(sysCommand);
 
-    // Copy configuration file to log directory
-    LogMessage(LOG_LEVEL_INFO, "Copying TriggerAndAction file to log directory");
-    (void)strcpy(sysCommand, "cp ");
-    (void)strcat(sysCommand, trigFilePath);
-    (void)strcat(sysCommand, " ");
-    (void)strcat(sysCommand, logFileDirectoryPath);
-    (void)system(sysCommand);
+	// Copy configuration file to log directory
+	LogMessage(LOG_LEVEL_INFO, "Copying TriggerAndAction file to log directory");
+	(void)strcpy(sysCommand, "cp ");
+	(void)strcat(sysCommand, trigFilePath);
+	(void)strcat(sysCommand, " ");
+	(void)strcat(sysCommand, logFileDirectoryPath);
+	(void)system(sysCommand);
 
 	// Check if ./traj directory exists
 	if ((dir = opendir(trajPathDir)) == NULL) {
@@ -496,9 +496,9 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 
 
 	/* If file conf file exists and we have read permission do */
-    if (access(confFilePath, 0) == 0) {
+	if (access(confFilePath, 0) == 0) {
 		/*read the .conf file and print it in to the .log file */
-        fileread = fopen(confFilePath, ACCESS_MODE_READ);
+		fileread = fopen(confFilePath, ACCESS_MODE_READ);
 		read = fgetc(fileread);
 		while (read != EOF) {
 			fputc(read, filefd);
@@ -507,7 +507,7 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 		fclose(fileread);
 	}
 	else {
-        sprintf(sysCommand, "Unable to open <%s>", confFilePath);
+		sprintf(sysCommand, "Unable to open <%s>", confFilePath);
 		util_error(sysCommand);
 	}
 
