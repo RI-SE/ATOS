@@ -365,15 +365,15 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 	struct dirent *ent;
 	int read;
 
-    memset(confPathDir,0,sizeof (confPathDir));
-    memset(confFilePath,0,sizeof (confFilePath));
-    memset(trigFilePath,0,sizeof (trigFilePath));
-    memset(trajPathDir,0,sizeof (trajPathDir));
-    memset(journalPathDir,0,sizeof (journalPathDir));
-    memset(logFileDirectoryPath, 0, sizeof (logFileDirectoryPath));
-    memset(DateBuffer, 0, sizeof (DateBuffer));
-    memset(logFilePath,0, filePathLength);
-    memset(csvLogFilePath, 0, csvFilePathLength);
+	memset(confPathDir, 0, sizeof (confPathDir));
+	memset(confFilePath, 0, sizeof (confFilePath));
+	memset(trigFilePath, 0, sizeof (trigFilePath));
+	memset(trajPathDir, 0, sizeof (trajPathDir));
+	memset(journalPathDir, 0, sizeof (journalPathDir));
+	memset(logFileDirectoryPath, 0, sizeof (logFileDirectoryPath));
+	memset(DateBuffer, 0, sizeof (DateBuffer));
+	memset(logFilePath, 0, filePathLength);
+	memset(csvLogFilePath, 0, csvFilePathLength);
 
 
 	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
