@@ -13,7 +13,7 @@ DistanceTrigger::DistanceTrigger(Trigger::TriggerID_t triggerID) : BooleanTrigge
 }
 
 Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue) {
-	double networkDelayCorrection_m = 0.0, networkDelay_s = 0.0;
+	double networkDelayCorrection_m = 0.0;
 	struct timeval currentTime, networkDelay;
 
 	if (!newValue.data.position.isPositionValid || !referencePoint.isPositionValid) {
