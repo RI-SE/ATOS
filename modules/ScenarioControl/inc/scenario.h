@@ -5,7 +5,6 @@
 #include <fstream>
 
 #include "trigger.h"
-#include "braketrigger.h"
 #include "action.h"
 #include "causality.h"
 #include "logging.h"
@@ -50,6 +49,7 @@ public:
 
     void resetISOTriggers(void);
     void refresh(void) const;
+	void reset(void);
     void clear(void);
 
     ScenarioReturnCode_t updateTrigger(const MonitorDataType&);

@@ -74,11 +74,6 @@ extern "C"{
 
 #define MAX_UTIL_VARIBLE_SIZE 512
 
-// TODO: Make these constants have more descriptive names
-#define a	6378137.0							            //meters in WGS84
-#define k	298.257223563 						        //in WGS84, f = 1/298.257223563
-#define b	6356752.3142451794975639665996337	//b = (1-f)*a
-#define l	1e-12
 #define PI	3.141592653589793
 #define ORIGO_DISTANCE_CALC_ITERATIONS 14
 #define TRAJECTORY_LINE_LENGTH 100
@@ -99,7 +94,7 @@ extern "C"{
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.7"
+#define LOCAL_USER_CONTROL_IP "195.0.0.10"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -118,9 +113,6 @@ extern "C"{
 
 /* Difference of leap seconds between UTC and ETSI */
 #define DIFF_LEAP_SECONDS_UTC_ETSI 5
-
-// Difference is 18 leap seconds between utc and gps
-#define MS_LEAP_SEC_DIFF_UTC_GPS 18000
 
 // 7 * 24 * 3600 * 1000
 #define WEEK_TIME_MS 604800000
@@ -225,11 +217,19 @@ COMM_TRCM = 25,
 COMM_DISARM = 26,
 COMM_GETSTATUS = 237,
 COMM_GETSTATUS_OK = 238,
+COMM_REMOTECTRL_ENABLE = 27,
+COMM_REMOTECTRL_DISABLE = 28,
+COMM_REMOTECTRL_MANOEUVRE = 29,
 COMM_MONR = 239,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
 COMM_INV = 255
 };
+
+typedef struct {
+	RemoteControlManoeuvreType manoeuvre;
+	in_addr_t objectIP;
+} RemoteControlCommandType;
 
 typedef struct
 {
@@ -320,6 +320,7 @@ typedef enum {
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
     OBC_STATE_RUNNING,
+	OBC_STATE_REMOTECTRL,
     OBC_STATE_ERROR
 } OBCState_t;
 
@@ -524,6 +525,8 @@ typedef enum {
 } ReadWriteAccess_t;
 
 
+#pragma pack(push,1)
+
 typedef struct
 {
   U32 MessageLengthU32;
@@ -554,6 +557,7 @@ typedef struct
   U8 SysCtrlStateU8;
 } RVSSMaestroType;
 
+#pragma pack(pop)
 
 typedef enum {
     NORTHERN,

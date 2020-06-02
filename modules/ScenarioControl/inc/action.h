@@ -43,6 +43,9 @@ public:
     /*! Run the action once, if allowed */
     virtual ActionReturnCode_t execute(void);
 
+	/*! Reset to start state */
+	ActionReturnCode_t reset(void);
+
     /*! To string */
     friend std::ostream& operator<<(std::ostream &strm, const Action &act) {
         return strm << "ACTION ID " << act.actionID <<
@@ -55,6 +58,7 @@ public:
     std::string getParametersString(void) const;
     ACCMData getConfigurationMessageData(void) const;
     in_addr_t getObjectIP(void) const { return actionObjectIP; }
+	std::string getObjectIPAsString(void) const;
     void setObjectIP(in_addr_t ipAddr) { actionObjectIP = ipAddr; }
 
     void setExecuteDelayTime(struct timeval tm);
@@ -63,12 +67,15 @@ public:
     ActionReturnCode_t appendParameter(ActionParameter_t actionParameter);
     virtual ActionReturnCode_t appendParameter(std::string parameterString);
 
+	virtual ActionReturnCode_t parseParameters() = 0;
+
     static ActionTypeCode_t asTypeCode(const std::string &typeCodeString);
 
 protected:
     ActionTypeCode_t actionTypeCode = ACTION_NONE;
     ActionID_t actionID = 0;
     uint32_t remainingAllowedRuns = 0;
+	uint32_t maxAllowedRuns = 0;
     std::vector<ActionParameter_t> parameters;
     uint32_t actionDelayTime_qms = 0;
     in_addr_t actionObjectIP = 0;

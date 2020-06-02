@@ -423,6 +423,19 @@ typedef struct {
 #define VALUE_ID_INSUP_MODE 0x0200
 
 
+/*! RCMM message */
+typedef struct {
+	HeaderType header;
+	uint16_t commandValueID;
+	uint16_t commandContentLength;
+	uint8_t command;
+	FooterType footer;
+} RCMMType;
+
+//! RCMM value IDs
+#define VALUE_ID_RCMM_CONTROL 0x0201
+
+
 #pragma pack(pop)
 
 
@@ -644,7 +657,7 @@ char isValidMessageID(const uint16_t id) {
 		|| id == MESSAGE_ID_OSTM || id == MESSAGE_ID_STRT || id == MESSAGE_ID_MONR2 || id == MESSAGE_ID_SOWM
 		|| id == MESSAGE_ID_INFO || id == MESSAGE_ID_RCMM || id == MESSAGE_ID_SYPM || id == MESSAGE_ID_MTSP
 		|| id == MESSAGE_ID_TRCM || id == MESSAGE_ID_ACCM || id == MESSAGE_ID_TREO || id == MESSAGE_ID_EXAC
-		|| id == MESSAGE_ID_CATA || id == MESSAGE_ID_RCCM || id == MESSAGE_ID_RCRT || id == MESSAGE_ID_PIME
+		|| id == MESSAGE_ID_CATA || id == MESSAGE_ID_RCMM || id == MESSAGE_ID_RCRT || id == MESSAGE_ID_PIME
 		|| id == MESSAGE_ID_COSE || id == MESSAGE_ID_MOMA
 		|| (id >= MESSAGE_ID_VENDOR_SPECIFIC_LOWER_LIMIT && id <= MESSAGE_ID_VENDOR_SPECIFIC_UPPER_LIMIT);
 }
@@ -1458,6 +1471,55 @@ ssize_t encodeHEABMessage(const ControlCenterStatusType status, char *heabDataBu
 	return sizeof (HEABType);
 
 }
+
+
+/*!
+ * \brief encodeRCMMMessage Constructs an ISO RCMM message based on an input ::RemoteControlManoeuvreType
+ * \param command The command to be sent to an object
+ * \param rcmmDataBuffer Buffer to which RCMM message is to be written
+ * \param bufferLength Size of buffer to which RCMM message is to be written
+ * \param debug Flag for enabling debugging
+ * \return Number of bytes written or -1 in case of an error
+ */
+ssize_t encodeRCMMMessage(const RemoteControlManoeuvreType command, char *rcmmDataBuffer,
+						  const size_t bufferLength, const char debug) {
+
+	RCMMType RCMMData;
+
+	memset(rcmmDataBuffer, 0, bufferLength);
+
+	// If buffer too small to hold RCMM data, generate an error
+	if (bufferLength < sizeof (RCMMType)) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold necessary RCMM data");
+		return -1;
+	}
+
+	// Construct header
+	RCMMData.header = buildISOHeader(MESSAGE_ID_RCMM, sizeof (RCMMData), debug);
+
+	// Fill contents
+	RCMMData.commandValueID = VALUE_ID_RCMM_CONTROL;
+	RCMMData.commandContentLength = sizeof (RCMMData.command);
+	RCMMData.command = (uint8_t) command;
+
+	if (debug) {
+		LogPrint("RCMM message:\n\tCommand value ID: 0x%x\n\t"
+				 "Command content length: %u\n\t"
+				 "Command: %u", RCMMData.commandValueID, RCMMData.commandContentLength, RCMMData.command);
+	}
+
+	// Switch from host endianness to little endian
+	RCMMData.commandValueID = htole16(RCMMData.commandValueID);
+	RCMMData.commandContentLength = htole16(RCMMData.commandContentLength);
+
+	RCMMData.footer = buildISOFooter(&RCMMData, sizeof (RCMMData), debug);
+
+	memcpy(rcmmDataBuffer, &RCMMData, sizeof (RCMMData));
+
+	return sizeof (RCMMType);
+
+}
+
 
 /*!
  * \brief buildMONRMessage Fills a MONRType struct from a buffer of raw data
