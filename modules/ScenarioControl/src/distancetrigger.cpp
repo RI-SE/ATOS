@@ -13,10 +13,8 @@ DistanceTrigger::DistanceTrigger(Trigger::TriggerID_t triggerID) : BooleanTrigge
 }
 
 Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue) {
-
 	double networkDelayCorrection_m = 0.0;
 	struct timeval currentTime, networkDelay;
-
 
 	if (!newValue.data.position.isPositionValid || !referencePoint.isPositionValid) {
 		throw std::logic_error("Unable to update distance trigger on invalid data");
@@ -25,7 +23,6 @@ Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue) {
 	// Correct for two-way network delay effects on trigger distance
 	if (newValue.data.speed.isLongitudinalValid && newValue.data.isTimestampValid) {
 		TimeSetToCurrentSystemTime(&currentTime);
-
 		timersub(&currentTime, &newValue.data.timestamp, &networkDelay);
 		networkDelayCorrection_m = 2.0 * fabs(static_cast<double>(networkDelay.tv_sec)
 											  + static_cast<double>(networkDelay.tv_usec) / 1000000.0)
