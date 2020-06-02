@@ -159,6 +159,7 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case COMM_STRT:
 			isTestRunning = 1;
+			break;
 		case COMM_ARM:
 			isTestRunning = 1;
 			break;
