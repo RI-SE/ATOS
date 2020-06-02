@@ -645,18 +645,16 @@ CAM_t *allocateCAMStruct(void) {
 		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.accelerationControl = NULL;	// TODO: Allocate memory for this
 		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lanePosition =
 			calloc(1, sizeof (LanePosition_t));
-		cam->cam.camParameters.highFrequencyContainer.choice.
-			basicVehicleContainerHighFrequency.steeringWheelAngle = calloc(1, sizeof (SteeringWheelAngle_t));
-		cam->cam.camParameters.highFrequencyContainer.choice.
-			basicVehicleContainerHighFrequency.lateralAcceleration =
-			calloc(1, sizeof (LateralAcceleration_t));
-		cam->cam.camParameters.highFrequencyContainer.choice.
-			basicVehicleContainerHighFrequency.verticalAcceleration =
-			calloc(1, sizeof (VerticalAcceleration_t));
-		cam->cam.camParameters.highFrequencyContainer.choice.
-			basicVehicleContainerHighFrequency.performanceClass = calloc(1, sizeof (PerformanceClass_t));
-		cam->cam.camParameters.highFrequencyContainer.choice.
-			basicVehicleContainerHighFrequency.cenDsrcTollingZone = calloc(1, sizeof (CenDsrcTollingZone_t));
+		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+			steeringWheelAngle = calloc(1, sizeof (SteeringWheelAngle_t));
+		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+			lateralAcceleration = calloc(1, sizeof (LateralAcceleration_t));
+		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+			verticalAcceleration = calloc(1, sizeof (VerticalAcceleration_t));
+		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+			performanceClass = calloc(1, sizeof (PerformanceClass_t));
+		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+			cenDsrcTollingZone = calloc(1, sizeof (CenDsrcTollingZone_t));
 		cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.cenDsrcTollingZone->cenDsrcTollingZoneID = NULL;	// TODO: Allocate memory for this
 
 		BasicVehicleContainerHighFrequency_t *bvc =
@@ -700,71 +698,67 @@ void initializeCAMStruct(CAM_t * cam) {
 	cam->cam.camParameters.highFrequencyContainer.present =
 		HighFrequencyContainer_PR_basicVehicleContainerHighFrequency;
 
-	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-		heading.headingValue = HeadingValue_unavailable;
-	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-		heading.headingConfidence = HeadingConfidence_unavailable;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.
+		headingValue = HeadingValue_unavailable;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.
+		headingConfidence = HeadingConfidence_unavailable;
 	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.speedValue =
 		SpeedValue_unavailable;
-	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-		speed.speedConfidence = SpeedConfidence_unavailable;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.
+		speedConfidence = SpeedConfidence_unavailable;
 	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.driveDirection =
 		DriveDirection_unavailable;
-	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-		vehicleLength.vehicleLengthValue = VehicleLengthValue_unavailable;
-	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-		vehicleLength.vehicleLengthConfidenceIndication = VehicleLengthConfidenceIndication_unavailable;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.
+		vehicleLengthValue = VehicleLengthValue_unavailable;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleLength.
+		vehicleLengthConfidenceIndication = VehicleLengthConfidenceIndication_unavailable;
 	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.vehicleWidth =
 		VehicleWidth_unavailable;
-	cam->cam.camParameters.highFrequencyContainer.choice.
-		basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue =
-		LongitudinalAccelerationValue_unavailable;
-	cam->cam.camParameters.highFrequencyContainer.choice.
-		basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationConfidence =
-		AccelerationConfidence_unavailable;
 	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-		curvature.curvatureValue = CurvatureValue_unavailable;
+		longitudinalAcceleration.longitudinalAccelerationValue = LongitudinalAccelerationValue_unavailable;
 	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-		curvature.curvatureConfidence = CurvatureConfidence_unavailable;
-	cam->cam.camParameters.highFrequencyContainer.choice.
-		basicVehicleContainerHighFrequency.curvatureCalculationMode = CurvatureCalculationMode_unavailable;
+		longitudinalAcceleration.longitudinalAccelerationConfidence = AccelerationConfidence_unavailable;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.
+		curvatureValue = CurvatureValue_unavailable;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.
+		curvatureConfidence = CurvatureConfidence_unavailable;
 	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-		yawRate.yawRateValue = YawRateValue_unavailable;
+		curvatureCalculationMode = CurvatureCalculationMode_unavailable;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.
+		yawRateValue = YawRateValue_unavailable;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.
+		yawRateConfidence = YawRateConfidence_unavailable;
 	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-		yawRate.yawRateConfidence = YawRateConfidence_unavailable;
-	cam->cam.camParameters.highFrequencyContainer.choice.
-		basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue =
-		LateralAccelerationValue_unavailable;
-	cam->cam.camParameters.highFrequencyContainer.choice.
-		basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationConfidence =
-		AccelerationConfidence_unavailable;
+		lateralAcceleration->lateralAccelerationValue = LateralAccelerationValue_unavailable;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+		lateralAcceleration->lateralAccelerationConfidence = AccelerationConfidence_unavailable;
 
 	// Unused highFrequencyContainer optional fields (null their pointers to show unused)
 	// TODO: Modify here to once relevant information can be used
-	free(cam->cam.camParameters.highFrequencyContainer.choice.
-		 basicVehicleContainerHighFrequency.accelerationControl);
-	free(cam->cam.camParameters.highFrequencyContainer.choice.
-		 basicVehicleContainerHighFrequency.lanePosition);
-	free(cam->cam.camParameters.highFrequencyContainer.choice.
-		 basicVehicleContainerHighFrequency.steeringWheelAngle);
-	free(cam->cam.camParameters.highFrequencyContainer.choice.
-		 basicVehicleContainerHighFrequency.verticalAcceleration);
-	free(cam->cam.camParameters.highFrequencyContainer.choice.
-		 basicVehicleContainerHighFrequency.performanceClass);
-	free(cam->cam.camParameters.highFrequencyContainer.choice.
-		 basicVehicleContainerHighFrequency.cenDsrcTollingZone);
-	cam->cam.camParameters.highFrequencyContainer.choice.
-		basicVehicleContainerHighFrequency.accelerationControl = NULL;
+	free(cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+		 accelerationControl);
+	free(cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+		 lanePosition);
+	free(cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+		 steeringWheelAngle);
+	free(cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+		 verticalAcceleration);
+	free(cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+		 performanceClass);
+	free(cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+		 cenDsrcTollingZone);
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+		accelerationControl = NULL;
 	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.lanePosition =
 		NULL;
-	cam->cam.camParameters.highFrequencyContainer.choice.
-		basicVehicleContainerHighFrequency.steeringWheelAngle = NULL;
-	cam->cam.camParameters.highFrequencyContainer.choice.
-		basicVehicleContainerHighFrequency.verticalAcceleration = NULL;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+		steeringWheelAngle = NULL;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+		verticalAcceleration = NULL;
 	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.performanceClass =
 		NULL;
-	cam->cam.camParameters.highFrequencyContainer.choice.
-		basicVehicleContainerHighFrequency.cenDsrcTollingZone = NULL;
+	cam->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+		cenDsrcTollingZone = NULL;
 
 	// Low frequency container and special vehicle containers unused for now (TODO)
 	free(cam->cam.camParameters.lowFrequencyContainer);
@@ -927,12 +921,12 @@ I32 generateCAMMessage(MONRType * MONRData, CAM_t * cam) {
 			tempCAM->cam.camParameters.basicContainer.referencePosition.longitude =
 				(long)(longitude * 10000000.0);
 
-			tempCAM->cam.camParameters.basicContainer.referencePosition.
-				positionConfidenceEllipse.semiMajorConfidence = SemiAxisLength_unavailable;
-			tempCAM->cam.camParameters.basicContainer.referencePosition.
-				positionConfidenceEllipse.semiMinorConfidence = SemiAxisLength_unavailable;
-			tempCAM->cam.camParameters.basicContainer.referencePosition.
-				positionConfidenceEllipse.semiMajorOrientation = 0;
+			tempCAM->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.
+				semiMajorConfidence = SemiAxisLength_unavailable;
+			tempCAM->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.
+				semiMinorConfidence = SemiAxisLength_unavailable;
+			tempCAM->cam.camParameters.basicContainer.referencePosition.positionConfidenceEllipse.
+				semiMajorOrientation = 0;
 
 			tempCAM->cam.camParameters.basicContainer.referencePosition.altitude.altitudeValue =
 				AltitudeValue_unavailable;
@@ -945,80 +939,70 @@ I32 generateCAMMessage(MONRType * MONRData, CAM_t * cam) {
 	tempCAM->cam.camParameters.basicContainer.stationType = StationType_roadSideUnit;
 	if (tempCAM->cam.camParameters.highFrequencyContainer.present ==
 		HighFrequencyContainer_PR_basicVehicleContainerHighFrequency) {
-		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-			speed.speedValue =
+		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.
+			speedValue =
 			(long)(sqrt
 				   (pow((double)(MONRData->LongitudinalSpeedI16), 2) +
 					pow((double)(MONRData->LateralSpeedI16), 2)));
-		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-			speed.speedConfidence = SpeedConfidence_unavailable;
+		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.speed.
+			speedConfidence = SpeedConfidence_unavailable;
 
-		tempCAM->cam.camParameters.highFrequencyContainer.choice.
-			basicVehicleContainerHighFrequency.driveDirection = MONRData->DriveDirectionU8;
 		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-			heading.headingValue = MONRData->HeadingU16 / 10;
-		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-			heading.headingConfidence = HeadingConfidence_unavailable;
+			driveDirection = MONRData->DriveDirectionU8;
+		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.
+			headingValue = MONRData->HeadingU16 / 10;
+		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.heading.
+			headingConfidence = HeadingConfidence_unavailable;
 
 		if (MONRData->LongitudinalAccI16 == 32001)
-			tempCAM->cam.camParameters.highFrequencyContainer.choice.
-				basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue =
+			tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+				longitudinalAcceleration.longitudinalAccelerationValue =
 				LongitudinalAccelerationValue_unavailable;
 		else if (MONRData->LongitudinalAccI16 > 16000)
-			tempCAM->cam.camParameters.highFrequencyContainer.choice.
-				basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue =
-				160;
+			tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+				longitudinalAcceleration.longitudinalAccelerationValue = 160;
 		else if (MONRData->LongitudinalAccI16 < -16000)
-			tempCAM->cam.camParameters.highFrequencyContainer.choice.
-				basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue =
-				-160;
+			tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+				longitudinalAcceleration.longitudinalAccelerationValue = -160;
 		else
-			tempCAM->cam.camParameters.highFrequencyContainer.choice.
-				basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationValue =
-				MONRData->LongitudinalAccI16 / 100;
-		tempCAM->cam.camParameters.highFrequencyContainer.choice.
-			basicVehicleContainerHighFrequency.longitudinalAcceleration.longitudinalAccelerationConfidence =
-			AccelerationConfidence_unavailable;
+			tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+				longitudinalAcceleration.longitudinalAccelerationValue = MONRData->LongitudinalAccI16 / 100;
+		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+			longitudinalAcceleration.longitudinalAccelerationConfidence = AccelerationConfidence_unavailable;
 
 		if (MONRData->LateralAccI16 == 32001)
-			tempCAM->cam.camParameters.highFrequencyContainer.choice.
-				basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue =
-				LateralAccelerationValue_unavailable;
+			tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+				lateralAcceleration->lateralAccelerationValue = LateralAccelerationValue_unavailable;
 		else if (MONRData->LateralAccI16 > 16000)
-			tempCAM->cam.camParameters.highFrequencyContainer.choice.
-				basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = 160;
+			tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+				lateralAcceleration->lateralAccelerationValue = 160;
 		else if (MONRData->LateralAccI16 < -16000)
-			tempCAM->cam.camParameters.highFrequencyContainer.choice.
-				basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue = -160;
+			tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+				lateralAcceleration->lateralAccelerationValue = -160;
 		else
-			tempCAM->cam.camParameters.highFrequencyContainer.choice.
-				basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationValue =
-				MONRData->LateralAccI16 / 100;
-		tempCAM->cam.camParameters.highFrequencyContainer.choice.
-			basicVehicleContainerHighFrequency.lateralAcceleration->lateralAccelerationConfidence =
-			AccelerationConfidence_unavailable;
+			tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+				lateralAcceleration->lateralAccelerationValue = MONRData->LateralAccI16 / 100;
+		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+			lateralAcceleration->lateralAccelerationConfidence = AccelerationConfidence_unavailable;
+
+		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.
+			yawRateValue = YawRateValue_unavailable;
+		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.yawRate.
+			yawRateConfidence = YawRateConfidence_unavailable;
+
+		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.
+			curvatureValue = CurvatureValue_unavailable;
+		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.curvature.
+			curvatureConfidence = CurvatureConfidence_unavailable;
+		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
+			curvatureCalculationMode = CurvatureCalculationMode_unavailable;
 
 		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-			yawRate.yawRateValue = YawRateValue_unavailable;
+			vehicleWidth = VehicleWidth_unavailable;
 		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-			yawRate.yawRateConfidence = YawRateConfidence_unavailable;
-
+			vehicleLength.vehicleLengthValue = VehicleLengthValue_unavailable;
 		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-			curvature.curvatureValue = CurvatureValue_unavailable;
-		tempCAM->cam.camParameters.highFrequencyContainer.choice.basicVehicleContainerHighFrequency.
-			curvature.curvatureConfidence = CurvatureConfidence_unavailable;
-		tempCAM->cam.camParameters.highFrequencyContainer.choice.
-			basicVehicleContainerHighFrequency.curvatureCalculationMode =
-			CurvatureCalculationMode_unavailable;
-
-		tempCAM->cam.camParameters.highFrequencyContainer.choice.
-			basicVehicleContainerHighFrequency.vehicleWidth = VehicleWidth_unavailable;
-		tempCAM->cam.camParameters.highFrequencyContainer.choice.
-			basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthValue =
-			VehicleLengthValue_unavailable;
-		tempCAM->cam.camParameters.highFrequencyContainer.choice.
-			basicVehicleContainerHighFrequency.vehicleLength.vehicleLengthConfidenceIndication =
-			VehicleLengthConfidenceIndication_unavailable;
+			vehicleLength.vehicleLengthConfidenceIndication = VehicleLengthConfidenceIndication_unavailable;
 
 
 	}
@@ -1301,3 +1285,4 @@ int getActionIndex(EXACData exac, uint16_t * actionIDs, int nConfiguredActions) 
 	}
 	return -1;
 }
+
