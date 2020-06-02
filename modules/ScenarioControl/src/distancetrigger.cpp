@@ -13,8 +13,8 @@ DistanceTrigger::DistanceTrigger(Trigger::TriggerID_t triggerID) : BooleanTrigge
 }
 
 Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue) {
-	double networkDelayCorrection_m = 0.0;
-	struct timeval currentTime, networkDelay;
+	double networkDelayCorrection_m = 0.0, networkDelay_s = 0.0;
+	struct timeval currentTime, triggerObjectNetworkDelay, actionObjectNetworkDelay;
 
 	if (!newValue.data.position.isPositionValid || !referencePoint.isPositionValid) {
 		throw std::logic_error("Unable to update distance trigger on invalid data");
@@ -23,10 +23,19 @@ Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue) {
 	// Correct for two-way network delay effects on trigger distance
 	if (newValue.data.speed.isLongitudinalValid && newValue.data.isTimestampValid) {
 		TimeSetToCurrentSystemTime(&currentTime);
-		timersub(&currentTime, &newValue.data.timestamp, &networkDelay);
-		networkDelayCorrection_m = 2.0 * fabs(static_cast<double>(networkDelay.tv_sec)
-											  + static_cast<double>(networkDelay.tv_usec) / 1000000.0)
-										* newValue.data.speed.longitudinal_m_s;
+		timersub(&currentTime, &newValue.data.timestamp, &triggerObjectNetworkDelay);
+
+		// TODO Get rid of this false assumption
+		actionObjectNetworkDelay = triggerObjectNetworkDelay;
+
+		// Network delay consists of both positional data reporting delay and action execution message delay
+		networkDelay_s = fabs(static_cast<double>(triggerObjectNetworkDelay.tv_sec)
+							  + static_cast<double>(triggerObjectNetworkDelay.tv_usec) / 1000000.0)
+						+ fabs(static_cast<double>(actionObjectNetworkDelay.tv_sec)
+							   + static_cast<double>(actionObjectNetworkDelay.tv_usec) / 1000000.0);
+
+		// Predict position offset
+		networkDelayCorrection_m = networkDelay_s * newValue.data.speed.longitudinal_m_s;
 	}
 	else {
 		LogMessage(LOG_LEVEL_WARNING, "Invalid monitor data speed or timestamp: cannot correct for network delay");
