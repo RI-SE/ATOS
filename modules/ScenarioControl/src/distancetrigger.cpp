@@ -24,8 +24,9 @@ Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue) {
 	if (newValue.data.speed.isLongitudinalValid && newValue.data.isTimestampValid) {
 		TimeSetToCurrentSystemTime(&currentTime);
 		timersub(&currentTime, &newValue.data.timestamp, &networkDelay);
-		networkDelayCorrection_m = 2.0 * fabs(static_cast<double>(networkDelay.tv_sec) + static_cast<double>(networkDelay.tv_usec) / 1000000.0)
-			* newValue.data.speed.longitudinal_m_s;
+		networkDelayCorrection_m = 2.0 * fabs(static_cast<double>(networkDelay.tv_sec)
+											  + static_cast<double>(networkDelay.tv_usec) / 1000000.0)
+										* newValue.data.speed.longitudinal_m_s;
 	}
 	else {
 		LogMessage(LOG_LEVEL_WARNING, "Invalid monitor data speed or timestamp: cannot correct for network delay");

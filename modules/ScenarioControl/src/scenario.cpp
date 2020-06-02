@@ -462,7 +462,7 @@ void Scenario::resetISOTriggers(void)
 Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &monr)
 {
     for (Trigger* tp : allTriggers)
-    {
+	{
         if(tp->getObjectIP() == monr.ClientIP && dynamic_cast<ISOTrigger*>(tp) == nullptr)
         {
             switch (tp->getTypeCode())
