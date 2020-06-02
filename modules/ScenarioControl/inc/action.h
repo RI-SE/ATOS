@@ -6,7 +6,6 @@
 #include <vector>
 #include <set>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 
 
 #include "util.h"
