@@ -7,7 +7,6 @@
 #include <iostream>
 #include <vector>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 
 #include "util.h"
 #include "iso22133.h"
