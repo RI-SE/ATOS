@@ -38,7 +38,7 @@ extern "C"{
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
-#define MaestroVersion  "0.4.1"
+#define MaestroVersion  "0.5.0"
 
 #define DEFAULT_ORIGIN_LAT 57.777073115
 #define DEFAULT_ORIGIN_LOG 12.781295498333
