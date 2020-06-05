@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_COLOR_MAKEFILE   ON)
 
-project(Maestro)
+project(Maestro VERSION 0.5.0)
 
 set(MAESTRO_TEST_DIR ".maestro")
 set(MAESTRO_JOURNAL_DIR "${MAESTRO_TEST_DIR}/journal")
