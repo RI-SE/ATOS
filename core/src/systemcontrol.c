@@ -733,7 +733,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case GetRootDirectoryContent_0:
-			LogMessage(LOG_LEVEL_ERROR, "GetRootDirectory called");
+			LogMessage(LOG_LEVEL_INFO, "GetRootDirectory called: defaulting to GetDirectoryContent");
 		case GetDirectoryContent_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
