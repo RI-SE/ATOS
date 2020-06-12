@@ -1,79 +1,57 @@
 cmake_minimum_required(VERSION 3.1)
-SET(CMAKE_CXX_STANDARD 11)
-SET(CMAKE_CXX_STANDARD_REQUIRED ON)
-SET(CMAKE_C_STANDARD 11)
-SET(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(ScenarioControl)
-# This module is an example of how to set up a new module external to the Maestro executable
+project(ScenarioControl LANGUAGES C CXX)
 
+# Define target names
+set(SCENARIO_CONTROL_TARGET ${PROJECT_NAME})
 
-include_directories(inc)
-include_directories(src)
-include_directories(../../util/C/logging)
-include_directories(../../util/C/time)
-include_directories(../../util/C/MQBus)
-include_directories(../../server/inc)
+set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(ISO_22133_LIBRARY ISO22133)
+set(TIME_LIBRARY MaestroTime)
+set(LOGGING_LIBRARY MaestroLogging)
+set(MESSAGE_BUS_LIBRARY MaestroMQ)
+
 include(GNUInstallDirs)
 
-
-# Create library
-add_library(MaestroLogging
-    ../../util/C/logging/logging.h
-    ../../util/C/logging/logging.c
+# Create project main executable target
+add_executable(${SCENARIO_CONTROL_TARGET}
+	${CMAKE_CURRENT_SOURCE_DIR}/src/action.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/booleantrigger.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/braketrigger.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/distancetrigger.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/causality.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/externalaction.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/isotrigger.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/scenario.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/trigger.cpp
 )
 
-add_library(MaestroTime
-    ../../util/C/time/maestroTime.h
-    ../../util/C/time/maestroTime.c
+# Link project executable to util libraries
+target_link_libraries(${SCENARIO_CONTROL_TARGET} LINK_PUBLIC
+	${TIME_LIBRARY}
+	${COREUTILS_LIBRARY}
+	${LOGGING_LIBRARY}
+	${MESSAGE_BUS_LIBRARY}
+	${POSITIONING_LIBRARY}
+	${ISO_22133_LIBRARY}
+)
+target_include_directories(${SCENARIO_CONTROL_TARGET} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
-add_library(MQBus
-    ../../util/C/MQBus/mqbus.h
-    ../../util/C/MQBus/mqbus.c
+# Installation rules
+install(CODE "MESSAGE(STATUS \"Installing target ${SCENARIO_CONTROL_TARGET}\")")
+install(TARGETS ${SCENARIO_CONTROL_TARGET} 
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Create library
-add_library(util
-    ../../server/src/util.c
-    ../../server/inc/util.h
-)
-
-add_library(Trigger
-    inc/trigger.h
-    src/trigger.cpp
-    inc/isotrigger.h
-    src/isotrigger.cpp
-    inc/booleantrigger.h
-    src/booleantrigger.cpp
-    inc/braketrigger.h
-    src/braketrigger.cpp
-)
-
-add_library(Action
-    inc/action.h
-    src/action.cpp
-    inc/externalaction.h
-    src/externalaction.cpp
-)
-
-add_library(Scenario
-    inc/scenario.h
-    src/scenario.cpp
-    inc/causality.h
-    src/causality.cpp
-)
-
-
-add_executable(ScenarioControl src/main.cpp)
-
-install(TARGETS ScenarioControl DESTINATION bin)
-
-target_link_libraries(ScenarioControl MaestroTime MaestroLogging util Scenario)
-target_link_libraries(Scenario Trigger Action)
-target_link_libraries(Action MaestroTime)
-target_link_libraries(util MQBus MaestroTime MaestroLogging)
-target_link_libraries(MQBus rt m)
-
-
-
+# Ensure linkage is reloaded after install
+install(CODE "execute_process(COMMAND ldconfig)")

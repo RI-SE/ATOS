@@ -10,6 +10,8 @@
 
 #include "isotrigger.h"
 #include "externalaction.h"
+#include "braketrigger.h"
+#include "distancetrigger.h"
 
 Scenario::Scenario(const std::string scenarioFilePath)
 {
@@ -59,16 +61,22 @@ void Scenario::initialize(const std::string scenarioFilePath)
     }
     LogMessage(LOG_LEVEL_INFO, "Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
 
-    debugStr =  "Triggers:\n";
+	debugStr =  "\nTriggers:\n";
     for (Trigger* tp : allTriggers)
-        debugStr += "\t" + tp->getTypeAsString(tp->getTypeCode()) + "\n";
+		debugStr += "\t" + tp->getObjectIPAsString() + "\t" + tp->getTypeAsString(tp->getTypeCode()) + "\n";
 
     debugStr += "Actions:\n";
     for (Action* ap : allActions)
-        debugStr += "\t" + ap->getTypeAsString(ap->getTypeCode()) + "\n";
+		debugStr += "\t" + ap->getObjectIPAsString() + "\t" + ap->getTypeAsString(ap->getTypeCode()) + "\n";
 
     debugStr.pop_back();
     LogMessage(LOG_LEVEL_DEBUG, debugStr.c_str());
+}
+
+void Scenario::reset() {
+	for (Action* ap : allActions) {
+		ap->reset();
+	}
 }
 
 /*!
@@ -125,7 +133,7 @@ void Scenario::parseScenarioFileLine(const std::string &inputLine)
 
     // Match relevant field according to below patterns
     regex ipAddrPattern("([0-2]?[0-9]?[0-9]\\.){3}([0-2]?[0-9]?[0-9])"); // Match 3 "<000-299>." followed by "<000-299>"
-    regex triggerActionPattern("(([a-zA-Z_])+\\[([a-zA-Z0-9\\.,<=>_])+\\])+");
+	regex triggerActionPattern("(([a-zA-Z_])+\\[([a-zA-Z0-9\\.,\\-<=>_:()])+\\])+");
     in_addr triggerIP, actionIP;
     string errMsg;
     set<Action*> actions;
@@ -251,6 +259,9 @@ std::set<Trigger*> Scenario::parseTriggerConfiguration(const std::string &inputC
             trigger = new BrakeTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()));
             // TODO: possibly the OR between the Maestro trigger and possible TREO messages
             break;
+		case TRIGGER_DISTANCE:
+			trigger = new DistanceTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()));
+			break;
         default:
             // Trigger with unimplemented Maestro monitoring: let object handle trigger reporting
             trigger = new ISOTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()), triggerType);
@@ -258,9 +269,20 @@ std::set<Trigger*> Scenario::parseTriggerConfiguration(const std::string &inputC
         }
 
         // Transfer specified parameters to relevant containers
-        for (unsigned int i = 2; i < match.size(); ++i)
-            if (!match[i].str().empty()) trigger->appendParameter(match[i].str());
-        returnTriggers.insert(trigger);
+		for (unsigned int i = 2; i < match.size(); ++i) {
+			if (!match[i].str().empty()){
+				if (trigger->appendParameter(match[i].str()) != Trigger::OK) {
+					throw std::invalid_argument("Unable to interpret trigger parameter " + match[i].str());
+				}
+			}
+		}
+
+		// Parse all parameters into settings
+		if (trigger->parseParameters() != Trigger::OK) {
+			throw std::invalid_argument("Unable to interpret trigger configuration " + inputConfig);
+		}
+
+		returnTriggers.insert(trigger);
     }
 
     return returnTriggers;
@@ -305,6 +327,9 @@ std::set<Action*> Scenario::parseActionConfiguration(const std::string &inputCon
         case ACTION_INFRASTRUCTURE:
             action = new InfrastructureAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()));
             break;
+		case ACTION_TEST_SCENARIO_COMMAND:
+			action = new TestScenarioCommandAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()));
+			break;
         default:
             // Regular action (only ACCM and EXAC)
             action = new ExternalAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()), actionType);
@@ -312,8 +337,18 @@ std::set<Action*> Scenario::parseActionConfiguration(const std::string &inputCon
         }
 
         // Transfer specified parameters to relevant containers
-        for (unsigned int i = 2; i < match.size(); ++i)
-            if(!match[i].str().empty()) action->appendParameter(match[i].str());
+		for (unsigned int i = 2; i < match.size(); ++i) {
+			if(!match[i].str().empty()) {
+				if (action->appendParameter(match[i].str()) != Action::OK) {
+					throw std::invalid_argument("Unable to interpret action parameter " + match[i].str());
+				}
+			}
+		}
+		// Parse all parameters into settings
+		if (action->parseParameters() != Action::OK) {
+			throw std::invalid_argument("Unable to interpret trigger configuration " + inputConfig);
+		}
+
         returnActions.insert(action);
     }
 
@@ -427,17 +462,31 @@ void Scenario::resetISOTriggers(void)
 Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &monr)
 {
     for (Trigger* tp : allTriggers)
-    {
+	{
         if(tp->getObjectIP() == monr.ClientIP && dynamic_cast<ISOTrigger*>(tp) == nullptr)
         {
             switch (tp->getTypeCode())
             {
-            case Trigger::TriggerTypeCode_t::TRIGGER_BRAKE:
-                struct timeval monrTime, currentTime;
-                TimeSetToCurrentSystemTime(&currentTime);
-                TimeSetToGPStime(&monrTime, TimeGetAsGPSweek(&currentTime), monr.MONR.GPSQmsOfWeekU32);
-                tp->update(static_cast<double>(monr.MONR.LongitudinalSpeedI16)/100.0, monrTime);
+			case Trigger::TriggerTypeCode_t::TRIGGER_BRAKE:
+				if (monr.data.speed.isLongitudinalValid && monr.data.isTimestampValid)
+				{
+					tp->update(monr.data.speed.longitudinal_m_s, monr.data.timestamp);
+				}
+				else
+				{
+					LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
+							   tp->getTypeAsString(tp->getTypeCode()).c_str());
+				}
                 break;
+			case Trigger::TriggerTypeCode_t::TRIGGER_DISTANCE:
+				if (monr.data.position.isPositionValid) {
+					tp->update(monr);
+				}
+				else {
+					LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
+							   tp->getTypeAsString(tp->getTypeCode()).c_str());
+				}
+				break;
             default:
                 LogMessage(LOG_LEVEL_WARNING, "Unhandled trigger type in update: %s",
                            tp->getTypeAsString(tp->getTypeCode()).c_str());

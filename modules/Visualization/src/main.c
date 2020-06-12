@@ -8,8 +8,9 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
-
+#include <signal.h>
 #include "logging.h"
+#include "maestroTime.h"
 #include "util.h"
 
 /*------------------------------------------------------------
@@ -21,15 +22,72 @@
 #define VISUAL_SERVER_PORT  53250
 #define VISUAL_CONTROL_MODE 0
 #define VISUAL_REPLAY_MODE 1
+#define ENOUGH_BUFFER_SIZE 64
 
 #define SMALL_ITEM_TEXT_BUFFER_SIZE 20
+#define MAX_DATE_STRLEN 25		// Maximum string length of a time stamp on the format "2035;12;31;24;59;59;1000" is 25
+
 
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
 static void vConnectVisualizationChannel(int *sockfd, struct sockaddr_in *addr);
 static void vDisconnectVisualizationChannel(int *sockfd);
+void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualizationMessage,
+								 int _sizeOfVisualizationMessage, int _debug);
+static void signalHandler(int signo);
 
+I32 iExit = 0;
+
+void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualizationMessage,
+								 int _sizeOfVisualizationMessage, int _debug) {
+
+	char ipStringBuffer[INET_ADDRSTRLEN];
+
+	sprintf(ipStringBuffer, "%s",
+			inet_ntop(AF_INET, &_monitorData->ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
+	char GPSMsOfWeekString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(GPSMsOfWeekString, "%u", TimeGetAsGPSqmsOfWeek(&_monitorData->data.timestamp));
+	char xPosString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(xPosString, "%.3f", _monitorData->data.position.xCoord_m);
+	char yPosString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(yPosString, "%.3f", _monitorData->data.position.yCoord_m);
+	char zPosString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(zPosString, "%.3f", _monitorData->data.position.zCoord_m);
+	char headingString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(headingString, "%.2f", _monitorData->data.position.heading_rad * 180.0 / M_PI);
+	char longSpeedString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(longSpeedString, "%.3f", _monitorData->data.speed.longitudinal_m_s);
+	char stateString[ENOUGH_BUFFER_SIZE];
+
+	sprintf(stateString, "%s", objectStateToASCII(_monitorData->data.state));
+
+	//Build message from MonitorStruct
+	snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%s;%s;%s;%s;%s;%s;%s;%s;",
+			 ipStringBuffer,
+			 GPSMsOfWeekString,
+			 xPosString, yPosString, zPosString, headingString, longSpeedString, stateString);
+
+
+	if (_debug) {
+		//LogMessage(LOG_LEVEL_INFO, "%s", _visualizationMessage);
+		LogPrint("IP: %s", ipStringBuffer);
+		LogPrint("GPSQmsOfWeek: %s", GPSMsOfWeekString);
+		LogPrint("X: %s", xPosString);
+		LogPrint("Y: %s", yPosString);
+		LogPrint("Z: %s", zPosString);
+		LogPrint("Heading: %s", headingString);
+		LogPrint("LongSpeed: %s", longSpeedString);
+		LogPrint("State: %s", stateString);
+		LogPrint("MESSAGE-SIZE = %d", _sizeOfVisualizationMessage);
+	}
+}
 
 int main() {
 	enum COMMAND command = COMM_INV;
@@ -37,6 +95,9 @@ int main() {
 	const struct timespec sleepTimePeriod = { 0, 10000000 };
 	const struct timespec abortWaitTime = { 1, 0 };
 	struct timespec remTime;
+
+	MonitorDataType monitorData;
+
 
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
@@ -46,8 +107,11 @@ int main() {
 
 	vConnectVisualizationChannel(&visual_server, &visual_server_addr);
 
-	I32 iExit = 0;
-	char busReceiveBuffer[MBUS_MAX_DATALEN];	//!< Buffer for receiving from message bus
+	//Setup signal handlers
+	if (signal(SIGINT, signalHandler) == SIG_ERR)
+		util_error("Unable to initialize signal handler");
+
+
 
 
 	// Initialize message bus connection
@@ -55,7 +119,9 @@ int main() {
 		nanosleep(&sleepTimePeriod, &remTime);
 	}
 
-	while (true) {
+	while (!iExit) {
+
+
 		if (iCommRecv(&command, mqRecvData, MQ_MSG_SIZE, NULL) < 0) {
 			util_error("Message bus receive error");
 		}
@@ -75,15 +141,42 @@ int main() {
 		switch (command) {
 		case COMM_INIT:
 			break;
-		case COMM_MONI:
-			// Ignore old style MONR data
-			break;
+
 		case COMM_MONR:
-			// TODO: Call util function to fill MonitorDataType struct
-			// TODO: Convert to temporary visualisation protocol - implement this function in this main.c
-			// ((TODO define this protocol clearly - leave this for now))
-			UtilSendUDPData("Visualization", &visual_server, &visual_server_addr, busReceiveBuffer,
-							sizeof (busReceiveBuffer), 0);
+		{
+
+			//Populate the monitorType
+			UtilPopulateMonitorDataStruct(mqRecvData, (size_t) (sizeof (mqRecvData)), &monitorData);
+
+			char dummy[1];
+			int sizeOfVisualizationMessage;
+
+			//Calculate size of incoming buffer
+			sizeOfVisualizationMessage = snprintf(dummy, sizeof (dummy), "%u;%.3f;%.3f;%.3f;%.2f;%.2f;%s;",
+												  TimeGetAsGPSqmsOfWeek(&monitorData.data.timestamp),
+												  monitorData.data.position.xCoord_m,
+												  monitorData.data.position.yCoord_m,
+												  monitorData.data.position.zCoord_m,
+												  monitorData.data.position.heading_rad * 180.0 / M_PI,
+												  monitorData.data.speed.longitudinal_m_s,
+												  objectStateToASCII(monitorData.data.state));
+			sizeOfVisualizationMessage += INET_ADDRSTRLEN;
+			sizeOfVisualizationMessage += 8;	//(;)
+
+			//Allocate memory
+			char *visualizationMessage = malloc(sizeOfVisualizationMessage * sizeof (char));
+
+			//Create visualization message and insert values from the monitor datastruct above
+			vCreateVisualizationMessage(&monitorData, visualizationMessage, sizeOfVisualizationMessage, 0);
+
+			//Send visualization message on the UDP socket
+			UtilSendUDPData((const uint8_t *)"Visualization", &visual_server, &visual_server_addr,
+							visualizationMessage, strlen(visualizationMessage), 0);
+
+			//Free memory used by malloc
+			free(visualizationMessage);
+
+		}
 			break;
 		case COMM_LOG:
 			break;
@@ -98,6 +191,11 @@ int main() {
 		}
 	}
 
+	//Return MQBus to "stack"
+	(void)iCommClose();
+
+	LogMessage(LOG_LEVEL_INFO, "Visualization exiting...");
+
 	return 0;
 }
 
@@ -105,6 +203,17 @@ int main() {
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
+void signalHandler(int signo) {
+	if (signo == SIGINT) {
+		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+		iExit = 1;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+	}
+}
+
+
 static void vConnectVisualizationChannel(int *sockfd, struct sockaddr_in *addr) {
 	struct hostent *server;
 	char pcTempBuffer[MAX_UTIL_VARIBLE_SIZE];

@@ -15,7 +15,8 @@
 int main()
 {
     COMMAND command = COMM_INV;
-    char mqRecvData[MQ_MSG_SIZE];
+	char mqRecvData[MBUS_MAX_DATALEN];
+	ssize_t recvDataLength = 0;
     const struct timespec sleepTimePeriod = {0,10000000};
     struct timespec remTime;
     Scenario scenario;
@@ -47,7 +48,7 @@ int main()
             scenario.resetISOTriggers();
         }
 
-        if (iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr) < 0)
+		if ((recvDataLength = iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr)) < 0)
         {
             util_error("Message bus receive error");
         }
@@ -116,8 +117,14 @@ int main()
             break;
         case COMM_ABORT:
             LogMessage(LOG_LEVEL_INFO, "Received abort command");
-            if (state == RUNNING) state = CONNECTED;
+			if (state == RUNNING) {
+				state = CONNECTED;
+			}
             break;
+		case COMM_ARM:
+			LogMessage(LOG_LEVEL_INFO, "Resetting scenario");
+			scenario.reset();
+			break;
         case COMM_STRT:
             if (state == CONNECTED)
             {
@@ -127,7 +134,7 @@ int main()
             break;
         case COMM_MONR:
             // Update triggers
-            UtilPopulateMonitorDataStruct(reinterpret_cast<uint8_t*>(mqRecvData), sizeof(mqRecvData), &monr, 0);
+			UtilPopulateMonitorDataStruct(mqRecvData, static_cast<size_t>(recvDataLength), &monr);
             scenario.updateTrigger(monr);
 			break;
         case COMM_DISCONNECT:
