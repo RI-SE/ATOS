@@ -1881,19 +1881,64 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObj
 /*!
  * \brief DataDictionaryGetNumberOfObjects Reads variable from shared memory
  * \param numberOfobjects number of objects in a test
- * \return Current object control state according to ::OBCState_t
+ * \return Number of objects present in memory
  */
 ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t * numberOfObjects) {
+	int retval;
 
 	monitorDataMemory = claimSharedMemory(monitorDataMemory);
-	*numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	retval = getNumberOfMemoryElements(monitorDataMemory);
 	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
-
-	return READ_OK;
+	*numberOfObjects = retval == -1 ? 0 : (uint32_t) retval;
+	return retval == -1 ? UNDEFINED : READ_OK;
 }
 
 /*END of NbrOfObjects*/
 
+/*!
+ * \brief DataDictionaryGetNumberOfObjects Reads variable from shared memory
+ * \param numberOfobjects number of objects in a test
+ * \return Number of objects present in memory
+ */
+ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs[], const uint32_t arraySize) {
+	int32_t retval;
+
+	if (transmitterIDs == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Data dictionary input pointer error");
+		return UNDEFINED;
+	}
+	if (monitorDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Data dictionary monitor data read error");
+		return UNDEFINED;
+	}
+
+	memset(transmitterIDs, 0, arraySize * sizeof (transmitterIDs[0]));
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	retval = getNumberOfMemoryElements(monitorDataMemory);
+	if (retval == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Error reading number of objects from shared memory");
+		monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+		return UNDEFINED;
+	}
+	else if ((uint32_t) retval > arraySize) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to list transmitter IDs in specified array");
+		monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+		return UNDEFINED;
+	}
+	else if ((uint32_t) retval != arraySize) {
+		LogMessage(LOG_LEVEL_WARNING,
+				   "Transmitter ID array is larger than necessary: may indicate the number of objects has changed between calls to data dictionary");
+	}
+
+	for (int i = 0; i < retval; ++i) {
+		transmitterIDs[i] = monitorDataMemory[i].ClientID;
+	}
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
+	return READ_OK;
+}
 
 /*!
  * \brief DataDictionarySearchParameter Searches for parameters in the configuration file and returns
