@@ -10,8 +10,7 @@ project(ScenarioControl LANGUAGES C CXX)
 set(SCENARIO_CONTROL_TARGET ${PROJECT_NAME})
 
 set(COREUTILS_LIBRARY MaestroCoreUtil)
-set(ISO_22133_LIBRARY MaestroISO22133)
-set(POSITIONING_LIBRARY MaestroPositioning)
+set(ISO_22133_LIBRARY ISO22133)
 set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MESSAGE_BUS_LIBRARY MaestroMQ)
@@ -23,6 +22,7 @@ add_executable(${SCENARIO_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/action.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/booleantrigger.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/braketrigger.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/distancetrigger.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/causality.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/externalaction.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/isotrigger.cpp
