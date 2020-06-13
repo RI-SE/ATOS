@@ -515,6 +515,7 @@ static void TimeControlDecodeTimeBuffer(TimeType * GPSTime, C8 * TimeBuffer, C8 
 																									  [17]) <<
 		32 | ((U64) TimeBuffer[18]) << 24 | ((U64) TimeBuffer[19]) << 16 | ((U64) TimeBuffer[20]) << 8 |
 		TimeBuffer[21];
+	GPSTime->GPSMillisecondsU64 += MS_LEAP_SEC_DIFF_UTC_GPS;
 	GPSTime->GPSMinutesU32 =
 		((U32) TimeBuffer[22]) << 24 | ((U32) TimeBuffer[23]) << 16 | ((U32) TimeBuffer[24]) << 8 |
 		TimeBuffer[25];

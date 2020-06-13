@@ -116,6 +116,9 @@ typedef struct {
 #define RVSS_MAESTRO_CHANNEL 4
 #define RVSS_ASP_CHANNEL 8
 
+#define ENABLE_COMMAND_STRING "ENABLE"
+#define DISABLE_COMMAND_STRING "DISABLE"
+
 // Time intervals for sleeping when no message bus message was received and for when one was received
 #define SC_SLEEP_TIME_EMPTY_MQ_S 0
 #define SC_SLEEP_TIME_EMPTY_MQ_NS 10000000
@@ -135,7 +138,7 @@ typedef enum {
 	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
 	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
 	DeleteFileDirectory_1,
-	ClearTrajectories_0, ClearGeofences_0,
+	ClearTrajectories_0, ClearGeofences_0, RemoteControl_1, RemoteControlManoeuvre_2,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
 	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
@@ -147,8 +150,8 @@ static const char *SystemControlCommandsArr[] = {
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1",
 	"DeleteFileDirectory_1",
-	"ClearTrajectories_0", "ClearGeofences_0", "CreateDirectory_1",
-	"GetTestOrigin_0", "replay_1",
+	"ClearTrajectories_0", "ClearGeofences_0", "RemoteControl_1", "RemoteControlManoeuvre_2",
+	"CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 	"control_0",
 	"Exit_0", "start_ext_trigg_1"
 };
@@ -156,9 +159,13 @@ static const char *SystemControlCommandsArr[] = {
 const char *SystemControlStatesArr[] =
 	{ "UNDEFINED", "INITIALIZED", "IDLE", "READY", "RUNNING", "INWORK", "ERROR" };
 const char *SystemControlOBCStatesArr[] =
-	{ "UNDEFINED", "IDLE", "INITIALIZED", "CONNECTED", "ARMED", "RUNNING", "ERROR" };
+	{ "UNDEFINED", "IDLE", "INITIALIZED", "CONNECTED", "ARMED", "RUNNING", "REMOTECONTROL", "ERROR" };
 
 const char *POSTRequestMandatoryContent[] = { "POST", "HTTP/1.1", "\r\n\r\n" };
+
+typedef enum {
+	MSCP_BACK_TO_START = 3
+} MSCPRemoteControlCommand;
 
 char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
 char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
@@ -247,7 +254,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	OBCState_t objectControlState = OBC_STATE_UNDEFINED;
 	SystemControlCommand_t SystemControlCommand = Idle_0;
 	SystemControlCommand_t PreviousSystemControlCommand = Idle_0;
-
+	uint16_t responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
 	int CommandArgCount = 0, /*CurrentCommandArgCounter=0, */ CurrentInputArgCount = 0;
 	C8 pcBuffer[IPC_BUFFER_SIZE];
 	char inchr;
@@ -305,6 +312,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U16 PCDMessageCodeU16;
 	C8 RxFilePath[MAX_FILE_PATH];
 
+	U32 IpU32;
 
 	LogInit(MODULE_NAME, logLevel);
 	LogMessage(LOG_LEVEL_INFO, "System control task running with PID: %i", getpid());
@@ -712,7 +720,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case GetRootDirectoryContent_0:
-			LogMessage(LOG_LEVEL_ERROR, "GetRootDirectory called");
+			LogMessage(LOG_LEVEL_INFO, "GetRootDirectory called: defaulting to GetDirectoryContent");
 		case GetDirectoryContent_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
@@ -987,31 +995,78 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = PreviousSystemControlCommand;
 			}
 			break;
-		case DisarmScenario_0:
-			if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED) {
-				server_state = SERVER_STATE_IDLE;
-				if (iCommSend(COMM_DISARM, NULL, 0) < 0) {
-					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending DISARM command");
-					server_state = SERVER_STATE_ERROR;
+		case RemoteControl_1:
+			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+			if (CurrentInputArgCount == CommandArgCount) {
+				if (server_state == SERVER_STATE_IDLE
+					&& (objectControlState == OBC_STATE_CONNECTED
+						|| objectControlState == OBC_STATE_REMOTECTRL)) {
+					if (!strcasecmp(SystemControlArgument[0], ENABLE_COMMAND_STRING)
+						&& objectControlState == OBC_STATE_CONNECTED) {
+						LogMessage(LOG_LEVEL_INFO, "Requesting enabling of remote control");
+						iCommSend(COMM_REMOTECTRL_ENABLE, NULL, 0);	// TODO check return value
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+					}
+					else if (!strcasecmp(SystemControlArgument[0], DISABLE_COMMAND_STRING)
+							 && objectControlState == OBC_STATE_REMOTECTRL) {
+						LogMessage(LOG_LEVEL_INFO, "Requesting disabling of remote control");
+						iCommSend(COMM_REMOTECTRL_DISABLE, NULL, 0);	// TODO check return value
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+					}
+					else {
+						LogMessage(LOG_LEVEL_WARNING, "Incorrect remote control command");
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+					}
 				}
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DisarmScenario:",
-												 ControlResponseBuffer, 0, &ClientSocket, 0);
-				SystemControlSendLog("[SystemControl] Sending DISARM.\n", &ClientSocket, 0);
+				else {
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+				}
+
 			}
-			else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_CONNECTED) {
-				SystemControlSendLog("[SystemControl] Simulate that all objects become disarmed.\n",
-									 &ClientSocket, 0);
-				SystemControlCommand = Idle_0;
-				server_state = SERVER_STATE_IDLE;
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "Remote control command parameter count error");
+				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
 			}
-			else if (server_state == SERVER_STATE_IDLE) {
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-												 "DisarmScenario:", ControlResponseBuffer, 0, &ClientSocket,
-												 0);
-				SystemControlSendLog("[SystemControl] DISARM received, state errors!\n", &ClientSocket, 0);
-				SystemControlCommand = PreviousSystemControlCommand;
+			SystemControlCommand = Idle_0;
+			SystemControlSendControlResponse(responseCode, "RemoteControl:",
+											 ControlResponseBuffer, 0, &ClientSocket, 0);
+			break;
+		case RemoteControlManoeuvre_2:
+			if (CurrentInputArgCount == CommandArgCount) {
+				if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTECTRL) {
+					memset(pcBuffer, 0, sizeof (pcBuffer));
+					RemoteControlCommandType rcCommand;
+
+					if (inet_pton(AF_INET, SystemControlArgument[0], &rcCommand.objectIP) != -1) {
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+						switch (atoi(SystemControlArgument[1])) {
+						case MSCP_BACK_TO_START:
+							rcCommand.manoeuvre = MANOEUVRE_BACK_TO_START;
+							break;
+						default:
+							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
+						}
+						if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
+							memcpy(pcBuffer, &rcCommand, sizeof (rcCommand));
+							iCommSend(COMM_REMOTECTRL_MANOEUVRE, pcBuffer, sizeof (rcCommand));	// TODO check return value
+							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+						}
+					}
+					else {
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+					}
+				}
+				else {
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+				}
 			}
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "Remote control manoeuvre command parameter count error");
+				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+			}
+			SystemControlCommand = Idle_0;
+			SystemControlSendControlResponse(responseCode, "RemoteControlManoeuvre:",
+											 ControlResponseBuffer, 0, &ClientSocket, 0);
 			break;
 		case StartScenario_1:
 			if (CurrentInputArgCount == CommandArgCount) {
