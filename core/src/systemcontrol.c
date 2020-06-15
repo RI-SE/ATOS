@@ -2822,7 +2822,7 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 
 				U8 diff = SYSTEM_CONTROL_NO_OF_MODULES_IN_USE - numberOfResponses;
 
-                LogMessage(LOG_LEVEL_ERROR, "ERROR -- %d MODULE(S) NOT RESPONDING TO GETSTATUS", diff);
+                LogMessage(LOG_LEVEL_ERROR, "%d module(s) not responding to GET_STATUS command", diff);
 			}
 
 			//Just right
