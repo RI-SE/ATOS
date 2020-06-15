@@ -2813,7 +2813,7 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 
 				U8 diff = numberOfResponses - SYSTEM_CONTROL_NO_OF_MODULES_IN_USE;
 
-                LogMessage(LOG_LEVEL_ERROR, "ERROR -- %d TOO MANY RESPONSES TO GETSTATUS", diff);
+                LogMessage(LOG_LEVEL_ERROR, "%d too many responses to GET_STATUS command", diff);
 
 			}
 
