@@ -2828,7 +2828,7 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 			//Just right
 			else {
 				if (debug) {
-					LogPrint("GET STATUS OK, RECEIVED %d RESPONSES FROM %d MODULES.", numberOfResponses,
+					LogPrint("GET_STATUS OK, received %d responses from %d modules.", numberOfResponses,
 							 SYSTEM_CONTROL_NO_OF_MODULES_IN_USE);
 				}
 			}
