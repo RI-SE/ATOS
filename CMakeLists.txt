@@ -31,11 +31,10 @@ add_custom_target(configurationDirectory ALL
 		${CMAKE_BINARY_DIR}/${MAESTRO_CONFIGURATION_DIR}
 	)
 add_custom_target(buildTimeDirectory ALL
-	COMMAND ${CMAKE_COMMAND} -E make_directory [
+	COMMAND ${CMAKE_COMMAND} -E make_directory
 		${CMAKE_BINARY_DIR}/${MAESTRO_JOURNAL_DIR}
 		${CMAKE_BINARY_DIR}/${MAESTRO_TRAJ_DIR}
 		${CMAKE_BINARY_DIR}/${MAESTRO_GEOFENCE_DIR}
-		]
 )
 
 # Create directory for test data in user home directory
