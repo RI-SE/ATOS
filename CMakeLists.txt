@@ -14,7 +14,7 @@ set(MAESTRO_TRAJ_DIR "${MAESTRO_TEST_DIR}/traj")
 set(MAESTRO_GEOFENCE_DIR "${MAESTRO_TEST_DIR}/geofence")
 
 # Dependencies
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/util/cmake)
 find_package(Systemd REQUIRED)
 
 # Configure structure of output
