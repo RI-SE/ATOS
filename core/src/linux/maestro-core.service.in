@@ -29,7 +29,7 @@ Restart=no
 RestartSec=5
 
 # Run executable as this user (TODO: autoconfig)
-User=lukas
+User=$ENV{USER}
 
 # Executable to run (TODO: mbus sockets)
 ExecStart=/usr/local/bin/Core
