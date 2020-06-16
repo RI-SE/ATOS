@@ -400,9 +400,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 
 
-					//Store MONR in GSD
-					memcpy(GSD->MONRData, buffer, receivedMONRData);
-					GSD->MONRSizeU8 = (unsigned char)receivedMONRData;
+					// Store monitor data in shared memory
+					if (DataDictionarySetMonitorData(&monitorData) == UNDEFINED) {
+						LogMessage(LOG_LEVEL_ERROR, "Unable to write monitor data to shared memory");
+						// TODO: handle the error
+					}
 
 					memset(buffer, 0, sizeof (buffer));
 					UtilMonitorDataToString(monitorData, buffer, sizeof (buffer));

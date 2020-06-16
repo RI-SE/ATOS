@@ -110,7 +110,7 @@ typedef struct {
 #define KEEP_FILE 0
 
 #define RVSS_TIME_CHANNEL 1
-#define RVSS_MONR_CHANNEL 2
+#define RVSS_MONITOR_CHANNEL 2
 #define RVSS_MAESTRO_CHANNEL 4
 #define RVSS_ASP_CHANNEL 8
 
@@ -220,8 +220,8 @@ I32 SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
 												U8 SysCtrlState, U8 Debug);
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
-I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
-											 U8 Debug);
+static int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr);
+static void SystemControlUpdateRVSSSendTime(struct timeval *currentRVSSSendTime, uint8_t RVSSRate_Hz);
 
 I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8 debug);
 
@@ -248,6 +248,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	struct sockaddr_in RVSSChannelAddr;
 	struct in_addr ip_addr;
 	I32 RVSSChannelSocket;
+	struct timeval nextRVSSSendTime = { 0, 0 };
 	MonitorDataType monrData;
 
 	ServerState_t server_state = SERVER_STATE_UNDEFINED;
@@ -273,9 +274,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
 	char ObjectIP[SMALL_BUFFER_SIZE_16];
 	char ObjectPort[SMALL_BUFFER_SIZE_6];
-	char TriggId[SMALL_BUFFER_SIZE_6];
-	char TriggAction[SMALL_BUFFER_SIZE_6];
-	char TriggDelay[SMALL_BUFFER_SIZE_20];
 	U64 uiTime;
 	U32 DelayedStartU32;
 	U8 ModeU8 = 0;
@@ -299,7 +297,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
 	C8 TextBuffer20[SMALL_BUFFER_SIZE_20];
 	C8 UserControlIPC8[SMALL_BUFFER_SIZE_20];
-	struct timeval now;
 	U16 MilliU16 = 0, NowU16 = 0;
 	U64 GPSmsU64 = 0;
 	C8 ParameterListC8[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
@@ -309,10 +306,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	HTTPHeaderContent HTTPHeader;
 
-	//C8 SIDSData[128][10000][8];
-
 	C8 RVSSData[SYSTEM_CONTROL_RVSS_DATA_BUFFER];
-	U16 RVSSSendCounterU16 = 0;
 	U32 RVSSConfigU32 = DEFAULT_RVSS_CONF;
 	U32 RVSSMessageLengthU32;
 	U16 PCDMessageCodeU16;
@@ -334,12 +328,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	LogMessage(LOG_LEVEL_INFO, "RVSSConfigU32 = %d", RVSSConfigU32);
 
 	U8 RVSSRateU8 = DEFAULT_RVSS_RATE;
-	dbl RVSSRateDbl = DEFAULT_RVSS_RATE;
 
 	DataDictionaryGetRVSSRateU8(GSD, &RVSSRateU8);
-	RVSSRateDbl = RVSSRateU8;
-	RVSSRateDbl = (1 / RVSSRateDbl) * 1000;
-	LogMessage(LOG_LEVEL_INFO, "RVSSRateU8 = %d", RVSSRateU8);
+	LogMessage(LOG_LEVEL_INFO, "Real-time variable subscription service rate set to %u Hz", RVSSRateU8);
 
 	if (ModeU8 == 0) {
 
@@ -610,19 +601,15 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				// TODO: React more?
 			}
 			break;
+		case COMM_MONR:
+			// Ignore MONR messages over MQ to silence unhandled message warning
+			// TODO: delete
+			break;
 		case COMM_OBC_STATE:
 			break;
 		case COMM_LOG:
 			// This creates a problem in GUC: disabled it for now
 			//SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
-			break;
-		case COMM_MONR:
-			if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
-				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t) bytesReceived, &monrData);
-				SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData, 0);
-				UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
-								RVSSMessageLengthU32, 0);
-			}
 			break;
 		case COMM_INV:
 			break;
@@ -744,7 +731,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case GetRootDirectoryContent_0:
-			LogMessage(LOG_LEVEL_ERROR, "GetRootDirectory called");
+			LogMessage(LOG_LEVEL_INFO, "GetRootDirectory called: defaulting to GetDirectoryContent");
 		case GetDirectoryContent_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
@@ -1241,36 +1228,38 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 
+		TimeSetToCurrentSystemTime(&tvTime);
 
-		sleep_time.tv_sec = 0;
-		sleep_time.tv_nsec = SYSTEM_CONTROL_TASK_PERIOD_MS * 1000000;
-		++RVSSSendCounterU16;
-		if (RVSSSendCounterU16 >= ((U16) RVSSRateDbl)) {
-			RVSSSendCounterU16 = 0;
-			DataDictionaryGetRVSSRateU8(GSD, &RVSSRateU8);
-			RVSSRateDbl = RVSSRateU8;
-			RVSSRateDbl = (1 / RVSSRateDbl) * 100;	//This is strange!! Should be 1000, but if it is the RVSSData is sent to slow by a factor of 10.
+		if (timercmp(&tvTime, &nextRVSSSendTime, >)) {
+			SystemControlUpdateRVSSSendTime(&nextRVSSSendTime, RVSSRateU8);
 
-			if (RVSSChannelSocket != 0 && RVSSSendCounterU16 == 0 && RVSSConfigU32 > 0) {
-				bzero(RVSSData, SYSTEM_CONTROL_RVSS_DATA_BUFFER);
+			if (RVSSChannelSocket != 0 && RVSSConfigU32 > 0) {
+				memset(RVSSData, 0, sizeof (RVSSData));
 
 				if (RVSSConfigU32 & RVSS_TIME_CHANNEL) {
 					SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
-					UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 									RVSSMessageLengthU32, 0);
 				}
 
 				if (RVSSConfigU32 & RVSS_MAESTRO_CHANNEL) {
 					SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32, GSD,
 																server_state, 0);
-					UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 									RVSSMessageLengthU32, 0);
 				}
 
 				if (RVSSConfigU32 & RVSS_ASP_CHANNEL) {
 					SystemControlBuildRVSSAspChannelMessage(RVSSData, &RVSSMessageLengthU32, 0);
-					UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 									RVSSMessageLengthU32, 0);
+				}
+
+				if (RVSSConfigU32 & RVSS_MONITOR_CHANNEL) {
+					// Build and send MONR data of all objects
+					if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONITOR_CHANNEL && bytesReceived >= 0) {
+						SystemControlSendRVSSMonitorChannelMessages(&RVSSChannelSocket, &RVSSChannelAddr);
+					}
 				}
 
 			}
@@ -2592,6 +2581,35 @@ I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * 
 }
 
 
+/*!
+ * \brief SystemControlUpdateRVSSSendTime Adds a time interval onto the specified time struct in accordance
+ *			with the rate parameter
+ * \param currentRVSSSendTime Struct containing the time at which the last RVSS message was sent. After this
+ *			function has been executed, the struct contains the time at which the next RVSS message is to be
+ *			sent.
+ * \param RVSSRate_Hz Rate at which RVSS messages are to be sent - if this parameter is 0 the value
+ *			is clamped to 1 Hz
+ */
+void SystemControlUpdateRVSSSendTime(struct timeval *currentRVSSSendTime, uint8_t RVSSRate_Hz) {
+	struct timeval RVSSTimeInterval, timeDiff, currentTime;
+
+	RVSSRate_Hz = RVSSRate_Hz == 0 ? 1 : RVSSRate_Hz;	// Minimum frequency 1 Hz
+	RVSSTimeInterval.tv_sec = (long)(1.0 / RVSSRate_Hz);
+	RVSSTimeInterval.tv_usec = (long)((1.0 / RVSSRate_Hz - RVSSTimeInterval.tv_sec) * 1000000.0);
+
+	// If there is a large difference between the current time and the time at which RVSS was sent, update based
+	// on current time instead of last send time to not spam messages until caught up
+	TimeSetToCurrentSystemTime(&currentTime);
+	timersub(&currentTime, currentRVSSSendTime, &timeDiff);
+	if (timercmp(&timeDiff, &RVSSTimeInterval, <)) {
+		timeradd(currentRVSSSendTime, &RVSSTimeInterval, currentRVSSSendTime);
+	}
+	else {
+		timeradd(&currentTime, &RVSSTimeInterval, currentRVSSSendTime);
+	}
+}
+
+
 /*
 SystemControlBuildRVSSTimeChannelMessage builds a message from data in *GPSTime. The message is stored in *RVSSData.
 See the architecture document for the protocol of RVSS.
@@ -2678,45 +2696,74 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 
 
 #define MAX_MONR_STRING_LENGTH 1024
-/*
-SystemControlBuildRVSSMONRChannelMessage builds a message from data in *MonrData. The message is stored in *RVSSData.
-See the architecture document for the protocol of RVSS.
+/*!
+ * \brief SystemControlSendRVSSMONRChannelMessages Sends RVSS monitoring data messages based on objects present
+ *			in data dictionary
+ * \param socket Socket descriptor pointer for RVSS socket
+ * \param addr Address struct pointer for RVSS socket
+ * \return 0 on success, -1 otherwise
+ */
+int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in * addr) {
+	uint32_t messageLength = 0;
+	uint32_t RVSSChannel = RVSS_MONITOR_CHANNEL;
+	char RVSSData[MAX_MONR_STRING_LENGTH];
+	char *monitorDataString = RVSSData + sizeof (messageLength) + sizeof (RVSSChannel);
+	uint32_t *transmitterIDs = NULL;
+	uint32_t numberOfObjects;
+	MonitorDataType monitorData;
 
-- *RVSSData the buffer the message
-- *RVSSDataLengthU32 the length of the message
-- *MonrData MONR data from an object
-- Debug enable(1)/disable(0) debug printouts (Not used)
-*/
-
-I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
-											 U8 Debug) {
-	I32 MessageLength = 0;
-	char MonrDataString[MAX_MONR_STRING_LENGTH];
-
-	// TODO: Convert MonrData to string
-	if (UtilMonitorDataToString(MonrData, MonrDataString, sizeof (MonrDataString)) == -1) {
-		// TODO memset rvssdata to 0
-		LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
-		*RVSSDataLengthU32 = 0;
+	// Get number of objects present in shared memory
+	if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
+		LogMessage(LOG_LEVEL_ERROR,
+				   "Data dictionary number of objects read error - RVSS messages cannot be sent");
 		return -1;
 	}
 
-	MessageLength = strlen(MonrDataString) + 8;
-	bzero(RVSSData, MessageLength);
-	*RVSSDataLengthU32 = MessageLength;
-
-	*(RVSSData + 0) = (C8) (MessageLength >> 24);
-	*(RVSSData + 1) = (C8) (MessageLength >> 16);
-	*(RVSSData + 2) = (C8) (MessageLength >> 8);
-	*(RVSSData + 3) = (C8) (MessageLength);
-	*(RVSSData + 7) = (C8) (RVSS_MONR_CHANNEL);
-	strcat(RVSSData + 8, MonrDataString);
-
-	if (Debug) {
-
+	// Allocate an array for objects' transmitter IDs
+	transmitterIDs = malloc(numberOfObjects * sizeof (uint32_t));
+	if (transmitterIDs == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Memory allocation error - RVSS messages cannot be sent");
+		return -1;
 	}
 
-	return 0;
+	// Get transmitter IDs for all connected objects
+	if (DataDictionaryGetMonitorTransmitterIDs(transmitterIDs, numberOfObjects) != READ_OK) {
+		free(transmitterIDs);
+		LogMessage(LOG_LEVEL_ERROR,
+				   "Data dictionary transmitter ID read error - RVSS messages cannot be sent");
+		return -1;
+	}
+
+	LogMessage(LOG_LEVEL_DEBUG, "%s: Found %u transmitter IDs", __FUNCTION__, numberOfObjects);
+	// Loop over transmitter IDs, sending a message on the RVSS channel for each
+	int32_t retval = 0;
+
+	for (uint32_t i = 0; i < numberOfObjects; ++i) {
+		if (DataDictionaryGetMonitorData(&monitorData, transmitterIDs[i]) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
+					   transmitterIDs[i]);
+			retval = -1;
+		}
+		else if (UtilMonitorDataToString(monitorData, monitorDataString,
+										 sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
+			retval = -1;
+		}
+		else {
+			LogMessage(LOG_LEVEL_DEBUG, "%s: Transmitter ID %u", __FUNCTION__, transmitterIDs[i]);
+			messageLength =
+				(uint32_t) (strlen(monitorDataString) + sizeof (messageLength) + sizeof (RVSSChannel));
+			messageLength = htole32(messageLength);
+			RVSSChannel = htole32(RVSSChannel);
+			memcpy(RVSSData, &messageLength, sizeof (messageLength));
+			memcpy(RVSSData + sizeof (messageLength), &RVSSChannel, sizeof (RVSSChannel));
+
+			UtilSendUDPData(MODULE_NAME, socket, addr, RVSSData, messageLength, 0);
+		}
+	}
+	free(transmitterIDs);
+	return retval;
 }
 
 
