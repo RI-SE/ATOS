@@ -7,8 +7,14 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_COLOR_MAKEFILE   ON)
 
 project(Maestro VERSION 0.5.0)
+# Enable or disable modules
+set(WITH_SCENARIO_CONTROL ON CACHE BOOL "Enable ScenarioControl module")
+set(WITH_SUPERVISION ON CACHE BOOL "Enable Supervision module")
+set(WITH_VISUALIZATION ON CACHE BOOL "Enable Visualization module")
+set(WITH_OBJECT_MONITORING ON CACHE BOOL "Enable ObjectMonitoring module")
 
-set(MAESTRO_TEST_DIR ".maestro")
+set(MAESTRO_TEST_DIR ".maestro" CACHE STRING "Directory where test data is to be stored")
+
 set(MAESTRO_JOURNAL_DIR "${MAESTRO_TEST_DIR}/journal")
 set(MAESTRO_TRAJ_DIR "${MAESTRO_TEST_DIR}/traj")
 set(MAESTRO_GEOFENCE_DIR "${MAESTRO_TEST_DIR}/geofence")
@@ -22,12 +28,26 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+# Create list of all enabled modules
+if(WITH_SCENARIO_CONTROL)
+	list(APPEND ENABLED_MODULES ScenarioControl)
+endif()
+if(WITH_SUPERVISION)
+	list(APPEND ENABLED_MODULES Supervision)
+endif()
+if(WITH_VISUALIZATION)
+	list(APPEND ENABLED_MODULES Visualization)
+endif()
+if(WITH_OBJECT_MONITORING)
+	list(APPEND ENABLED_MODULES ObjectMonitoring)
+endif()
+
+# Add corresponding subprojects
 add_subdirectory(util/C)
 add_subdirectory(core)
-add_subdirectory(modules/ScenarioControl)
-add_subdirectory(modules/Supervision)
-add_subdirectory(modules/Visualization)
-add_subdirectory(modules/ObjectMonitoring)
+foreach(MODULE ${ENABLED_MODULES})
+	add_subdirectory(modules/${MODULE})
+endforeach()
 
 # Ensure .maestro directory is created at build time in build directory
 add_custom_target(configurationDirectory ALL
