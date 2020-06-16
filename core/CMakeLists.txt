@@ -89,6 +89,12 @@ target_link_libraries(${DATA_DICTIONARY_TARGET} LINK_PUBLIC
 	${COREUTILS_TARGET}
 )
 
+# Generate service file with correct details
+message(STATUS "Configuring core service file")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/linux/maestro-core.service.in
+	${PROJECT_BINARY_DIR}/maestro-core.service
+)
+
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${CORE_TARGET}\")")
 install(TARGETS ${CORE_TARGET} ${COREUTILS_TARGET}
@@ -107,6 +113,15 @@ install(CODE "execute_process(COMMAND setcap CAP_SYS_TIME+ep ${CMAKE_INSTALL_FUL
 install(CODE "MESSAGE(STATUS \"Creating shared memory directory ${SYSTEM_SHARED_MEMORY_PATH} owned by user $ENV{USER}\")")
 install(DIRECTORY DESTINATION ${SYSTEM_SHARED_MEMORY_PATH})
 install(CODE "execute_process(COMMAND chown $ENV{USER} ${SYSTEM_SHARED_MEMORY_PATH})")
+
+# Install the service
+install(CODE "MESSAGE(STATUS \"Installing core service to ${CMAKE_INSTALL_FULL_LIBDIR}/systemd/system\")")
+install(FILES ${PROJECT_BINARY_DIR}/maestro-core.service
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/systemd/system
+  COMPONENT service
+)
+install(CODE "execute_process(COMMAND systemctl daemon-reload)")
+# TODO enable/disable and start/stop for systemctl
 
 # Ensure linkage is reloaded after install
 install(CODE "execute_process(COMMAND ldconfig)")
