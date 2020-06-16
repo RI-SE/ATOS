@@ -28,11 +28,11 @@ Restart=no
 # Wait this long before restarting after exit
 RestartSec=5
 
-# Run executable as this user (TODO: autoconfig)
+# Run executable as this user
 User=$ENV{USER}
 
-# Executable to run (TODO: mbus sockets)
-ExecStart=/usr/local/bin/Core
+# Executable to run
+ExecStart=${CMAKE_INSTALL_FULL_BINDIR}/Core -m ${NUMBER_ENABLED_MODULES}
 KillSignal=SIGINT
 
 [Install]
