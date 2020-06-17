@@ -16,6 +16,7 @@ int main()
 {
     COMMAND command = COMM_INV;
 	char mqRecvData[MBUS_MAX_DATALEN];
+    char mqSendData[MBUS_MAX_DATALEN];
 	ssize_t recvDataLength = 0;
     const struct timespec sleepTimePeriod = {0,10000000};
     struct timespec remTime;
@@ -140,6 +141,16 @@ int main()
         case COMM_DISCONNECT:
             LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
             state = UNINITIALIZED;
+            break;
+        case COMM_GETSTATUS:
+            memset(mqSendData, 0, sizeof (mqSendData));
+            sprintf(mqSendData, "%s", MODULE_NAME);
+            if (iCommSend(COMM_GETSTATUS_OK, mqSendData, sizeof (mqSendData)) < 0) {
+                LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");
+            }
+            LogMessage(LOG_LEVEL_INFO, "SENT GET STATUS SCENCONTROL");
+            break;
+        case COMM_GETSTATUS_OK:
             break;
         default:
             LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
