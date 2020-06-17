@@ -1,5 +1,6 @@
 #include <iostream>
 #include <unistd.h>
+#include <systemd/sd-daemon.h>
 
 #include "braketrigger.h"
 #include "trigger.h"
@@ -37,6 +38,8 @@ int main()
         nanosleep(&sleepTimePeriod,&remTime);
     }
 
+	// Notify service handler that startup was successful
+	sd_notify(0, "READY=1");
 
     while(!terminate)
     {
