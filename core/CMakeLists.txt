@@ -92,7 +92,7 @@ target_link_libraries(${DATA_DICTIONARY_TARGET} LINK_PUBLIC
 # Generate service file with correct details
 message(STATUS "Configuring core service file")
 list(LENGTH ENABLED_MODULES NUMBER_ENABLED_MODULES)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/linux/maestro-core.service.in
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/linux/maestro-core.service.in
 	${PROJECT_BINARY_DIR}/maestro-core.service
 )
 
