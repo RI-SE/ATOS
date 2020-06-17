@@ -138,7 +138,8 @@ typedef enum {
 	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
 	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
 	DeleteFileDirectory_1,
-	ClearTrajectories_0, ClearGeofences_0, RemoteControl_1, RemoteControlManoeuvre_2,
+	ClearTrajectories_0, ClearGeofences_0, RemoteControl_1, RemoteControlManoeuvre_2, SetObjectEnableStatus_2,
+	GetObjectEnableStatus_1,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
 	start_ext_trigg_1, nocommand
 } SystemControlCommand_t;
@@ -150,8 +151,8 @@ static const char *SystemControlCommandsArr[] = {
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1",
 	"DeleteFileDirectory_1",
-	"ClearTrajectories_0", "ClearGeofences_0", "RemoteControl_1", "RemoteControlManoeuvre_2",
-	"CreateDirectory_1", "GetTestOrigin_0", "replay_1",
+	"ClearTrajectories_0", "ClearGeofences_0", "RemoteControl_1", "RemoteControlManoeuvre_2", "SetObjectEnableStatus_2",
+	"GetObjectEnableStatus_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 	"control_0",
 	"Exit_0", "start_ext_trigg_1"
 };
@@ -1067,6 +1068,74 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			SystemControlCommand = Idle_0;
 			SystemControlSendControlResponse(responseCode, "RemoteControlManoeuvre:",
 											 ControlResponseBuffer, 0, &ClientSocket, 0);
+			break;
+		case SetObjectEnableStatus_2:
+			if (CurrentInputArgCount == CommandArgCount) {
+				if (server_state == SERVER_STATE_IDLE && objectControlState != OBC_STATE_RUNNING) {
+					memset(pcBuffer, 0, sizeof (pcBuffer));
+					ObjectEnabledCommandType enableCommand;
+
+					if (inet_pton(AF_INET, SystemControlArgument[0], &enableCommand.objectIP) != -1) {
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+						switch (atoi(SystemControlArgument[1])) {
+						case OBJECT_ENABLED:
+							enableCommand.Enabled = OBJECT_ENABLED;
+							break;
+						case OBJECT_DISABLED:
+							enableCommand.Enabled = OBJECT_DISABLED;
+							break;
+						default:
+							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
+						}
+						if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
+							memcpy(pcBuffer, &enableCommand, sizeof (enableCommand));
+							iCommSend(COMM_ENABLE_OBJECT, pcBuffer, sizeof (enableCommand));	// TODO check return value
+							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+						}
+					}
+					else {
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+					}
+				}
+				else {
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+				}
+			}
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "SetObjectEnableStatus command parameter count error");
+				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+			}
+			SystemControlCommand = Idle_0;
+			SystemControlSendControlResponse(responseCode, "SetObjectEnableStatus:",
+											 ControlResponseBuffer, 0, &ClientSocket, 0);
+			break;
+		case GetObjectEnableStatus_1:
+			if (CurrentInputArgCount == CommandArgCount) {
+				if (server_state == SERVER_STATE_IDLE) {
+					memset(pcBuffer, 0, sizeof (pcBuffer));
+					ObjectEnabledCommandType enableCommand;
+
+					if (inet_pton(AF_INET, SystemControlArgument[0], &enableCommand.objectIP) != -1) {
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+						DataDictionaryGetObjectStatusEnabledElement(GSD, enableCommand.objectIP, &enableCommand.Enabled);
+						bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+						ControlResponseBuffer[0] = (uint8_t) enableCommand.Enabled;
+						SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",
+											 ControlResponseBuffer, 1, &ClientSocket, 0);
+					}
+					else responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+				}
+				else responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+			}
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "GetObjectEnableStatus command parameter count error");
+				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+			}
+		
+			if(responseCode != SYSTEM_CONTROL_RESPONSE_CODE_OK)
+				SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",
+					ControlResponseBuffer, 0, &ClientSocket, 0);
+			SystemControlCommand = Idle_0;
 			break;
 		case StartScenario_1:
 			if (CurrentInputArgCount == CommandArgCount) {

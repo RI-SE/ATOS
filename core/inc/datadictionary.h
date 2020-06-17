@@ -133,5 +133,10 @@ ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t *numberOfObjects);
 ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
 ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
 
+ReadWriteAccess_t DataDictionaryInitObjectStatusArray(GSDType *GSD);
+ReadWriteAccess_t DataDictionarySetObjectStatusIPElement(GSDType * GSD, uint32_t Index, uint32_t IP);
+ReadWriteAccess_t DataDictionarySetObjectStatusEnabledElement(GSDType * GSD, uint32_t Index, ObjectEnabledType Enabled);
+ReadWriteAccess_t DataDictionaryGetObjectStatusEnabledElement(GSDType * GSD, uint32_t IP, ObjectEnabledType *Enabled);
+
 #endif 
 

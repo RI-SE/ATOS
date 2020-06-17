@@ -218,6 +218,7 @@ COMM_DISARM = 26,
 COMM_REMOTECTRL_ENABLE = 27,
 COMM_REMOTECTRL_DISABLE = 28,
 COMM_REMOTECTRL_MANOEUVRE = 29,
+COMM_ENABLE_OBJECT = 30,
 COMM_MONR = 239,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
@@ -241,7 +242,7 @@ typedef struct
 typedef struct
 {
 	ObjectMonitorType data;
-    in_addr_t ClientIP;
+  in_addr_t ClientIP;
 	uint32_t ClientID;
 } MonitorDataType;
 
@@ -267,6 +268,25 @@ typedef struct {
 	double curvature;
 	uint8_t mode;
 } TrajectoryFileLine;
+
+typedef enum {
+  OBJECT_ENABLED = 1,
+  OBJECT_DISABLED = 2,
+  OBJECT_UNDEFINED = 3
+} ObjectEnabledType;
+
+typedef struct {
+  in_addr_t objectIP;
+  ObjectEnabledType Enabled;
+} ObjectEnabledCommandType;
+
+typedef struct 
+{
+  in_addr_t ClientIP;
+  uint32_t ClientID;
+  ObjectEnabledType Enabled;
+} ObjectStatusType;
+
 
 typedef struct
 {
@@ -384,6 +404,7 @@ typedef struct
   ASPType ASPData;
   C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
   volatile OBCState_t OBCStateU8;
+  volatile ObjectStatusType ObjectStatus[MAX_OBJECTS];
 } GSDType;
 
 
