@@ -1285,4 +1285,3 @@ int getActionIndex(EXACData exac, uint16_t * actionIDs, int nConfiguredActions) 
 	}
 	return -1;
 }
-

@@ -616,7 +616,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		case COMM_GETSTATUS_OK:
 			SystemControlGetStatusMessage(pcRecvBuffer, sizeof (pcRecvBuffer), 0);
-            //LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
+			//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
 			break;
 
 		default:
@@ -2850,10 +2850,10 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 
 		//Did a module respond
 		if (respondingModule[0]) {
-            numberOfResponses++;
-        }
+			numberOfResponses++;
+		}
 
-        //LogMessage(LOG_LEVEL_INFO, "%d responses to GET_STATUS command", numberOfResponses);
+		//LogMessage(LOG_LEVEL_INFO, "%d responses to GET_STATUS command", numberOfResponses);
 
 		if (timercmp(&getStatusTimeoutTimer, &currentSystemTime, <)) {
 
@@ -2862,7 +2862,7 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 
 				U8 diff = numberOfResponses - SYSTEM_CONTROL_NO_OF_MODULES_IN_USE;
 
-                LogMessage(LOG_LEVEL_ERROR, "%d too many responses to GET_STATUS command", diff);
+				LogMessage(LOG_LEVEL_ERROR, "%d too many responses to GET_STATUS command", diff);
 
 			}
 
@@ -2871,7 +2871,7 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 
 				U8 diff = SYSTEM_CONTROL_NO_OF_MODULES_IN_USE - numberOfResponses;
 
-                LogMessage(LOG_LEVEL_ERROR, "%d module(s) not responding to GET_STATUS command", diff);
+				LogMessage(LOG_LEVEL_ERROR, "%d module(s) not responding to GET_STATUS command", diff);
 			}
 
 			//Just right
