@@ -51,7 +51,7 @@ When resolving a bug, follow the same procedure as for **feature** branches, but
    
     - Make sure everything is running (build, tests, etc)
     
-2. Pull branch for any changes (If not working alone on specific branch)
+2. Pull branch for any changes (If not working alone on specific branch) and check util-repo for any changes.
 
 3. Commit with descriptive name
    
