@@ -1699,6 +1699,7 @@ ReadWriteAccess_t DataDictionaryInitMonitorData() {
 
 	monitorDataMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (MonitorDataType), &createdMemory);
 	if (monitorDataMemory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared monitor data memory");
 		return UNDEFINED;
 	}
 	return createdMemory ? WRITE_OK : READ_OK;
@@ -1731,14 +1732,32 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 	}
 
 	monitorDataMemory = claimSharedMemory(monitorDataMemory);
-	result = PARAMETER_NOTFOUND;
-	unsigned int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	if (monitorDataMemory == NULL) {
+		// If this code executes, monitorDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
 
-	LogPrint("Number of objects currently in memory: %u", numberOfObjects);
-	for (uint32_t i = 0; i < numberOfObjects; ++i) {
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
 		if (monitorDataMemory[i].ClientID == monitorData->ClientID) {
-			memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
-			result = WRITE_OK;
+
+			if (monitorDataMemory[i].ClientIP == monitorData->ClientIP) {
+				memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
+				result = WRITE_OK;
+			}
+			else {
+				char addr1[INET_ADDRSTRLEN], addr2[INET_ADDRSTRLEN];
+
+				LogMessage(LOG_LEVEL_WARNING,
+						   "Both IP addresses %s and %s have the transmitter ID %u and cannot be separated: data discarded",
+						   inet_ntop(AF_INET, &monitorDataMemory[i].ClientIP, addr1, sizeof (addr1)),
+						   inet_ntop(AF_INET, &monitorData->ClientIP, addr2, sizeof (addr2)),
+						   monitorData->ClientID);
+				result = UNDEFINED;
+			}
 		}
 	}
 
@@ -1746,7 +1765,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 		// Search for unused memory space and place monitor data there
 		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u",
 				   monitorData->ClientID);
-		for (uint32_t i = 0; i < numberOfObjects; ++i) {
+		for (int i = 0; i < numberOfObjects; ++i) {
 			if (monitorDataMemory[i].ClientID == 0) {
 				memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
 				result = WRITE_OK;
@@ -1755,14 +1774,12 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 
 		// No uninitialized memory space found - create new
 		if (result == PARAMETER_NOTFOUND) {
-			monitorDataMemory = resizeSharedMemory(monitorDataMemory, numberOfObjects + 1);
+			monitorDataMemory = resizeSharedMemory(monitorDataMemory, (unsigned int)(numberOfObjects + 1));
 			if (monitorDataMemory != NULL) {
 				numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
-						   "Modified shared memory to hold MONR data for %u objects, mp now %p",
-						   numberOfObjects, monitorDataMemory);
+						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
 				memcpy(&monitorDataMemory[numberOfObjects - 1], monitorData, sizeof (MonitorDataType));
-				LogPrint("Printed MONR");
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -1796,9 +1813,9 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(MonitorDataType * monitorData, co
 	}
 
 	monitorDataMemory = claimSharedMemory(monitorDataMemory);
-	unsigned int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
 
-	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+	for (int i = 0; i < numberOfObjects; ++i) {
 		if (monitorDataMemory[i].ClientID == transmitterId) {
 			memcpy(monitorData, &monitorDataMemory[i], sizeof (MonitorDataType));
 			result = READ_OK;
@@ -1864,19 +1881,64 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObj
 /*!
  * \brief DataDictionaryGetNumberOfObjects Reads variable from shared memory
  * \param numberOfobjects number of objects in a test
- * \return Current object control state according to ::OBCState_t
+ * \return Number of objects present in memory
  */
 ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t * numberOfObjects) {
+	int retval;
 
 	monitorDataMemory = claimSharedMemory(monitorDataMemory);
-	*numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	retval = getNumberOfMemoryElements(monitorDataMemory);
 	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
-
-	return READ_OK;
+	*numberOfObjects = retval == -1 ? 0 : (uint32_t) retval;
+	return retval == -1 ? UNDEFINED : READ_OK;
 }
 
 /*END of NbrOfObjects*/
 
+/*!
+ * \brief DataDictionaryGetNumberOfObjects Reads variable from shared memory
+ * \param numberOfobjects number of objects in a test
+ * \return Number of objects present in memory
+ */
+ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs[], const uint32_t arraySize) {
+	int32_t retval;
+
+	if (transmitterIDs == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Data dictionary input pointer error");
+		return UNDEFINED;
+	}
+	if (monitorDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Data dictionary monitor data read error");
+		return UNDEFINED;
+	}
+
+	memset(transmitterIDs, 0, arraySize * sizeof (transmitterIDs[0]));
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	retval = getNumberOfMemoryElements(monitorDataMemory);
+	if (retval == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Error reading number of objects from shared memory");
+		monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+		return UNDEFINED;
+	}
+	else if ((uint32_t) retval > arraySize) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to list transmitter IDs in specified array");
+		monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+		return UNDEFINED;
+	}
+	else if ((uint32_t) retval != arraySize) {
+		LogMessage(LOG_LEVEL_WARNING,
+				   "Transmitter ID array is larger than necessary: may indicate the number of objects has changed between calls to data dictionary");
+	}
+
+	for (int i = 0; i < retval; ++i) {
+		transmitterIDs[i] = monitorDataMemory[i].ClientID;
+	}
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
+	return READ_OK;
+}
 
 /*!
  * \brief DataDictionarySearchParameter Searches for parameters in the configuration file and returns
