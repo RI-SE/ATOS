@@ -66,7 +66,7 @@ When resolving a bug, follow the same procedure as for **feature** branches, but
 Open a pull request into the relevant branch (usually **dev**)
     * Write a descriptive title of the implemented feature
     * Bullet points with descriptions of changes
-    * Ensure that your branch is up-to-date with base branch.
+    * Ensure that your branch is up-to-date with base branch and Util repo.
     * Add one or two people as reviewers to pull-request. 
     * Only assign entire Github team if everyone in said team can understand the code (reviewers: not being assigned does not mean you cannot review!).
 
