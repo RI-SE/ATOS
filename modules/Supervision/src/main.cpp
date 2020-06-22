@@ -183,7 +183,7 @@ int main()
             if (iCommSend(COMM_GETSTATUS_OK, mqSendData, sizeof (mqSendData)) < 0) {
                 LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");
             }
-            LogMessage(LOG_LEVEL_INFO, "SENT GET STATUS SCENCONTROL");
+            LogMessage(LOG_LEVEL_INFO, "SENT GET STATUS");
             break;
         case COMM_GETSTATUS_OK:
             break;
