@@ -21,6 +21,7 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <systemd/sd-daemon.h>
 
 
 #include "util.h"
@@ -138,6 +139,9 @@ int main(int argc, char *argv[]) {
 	if (initializeMessageQueueBus(&options))
 		exit(EXIT_FAILURE);
 
+	// Notify service handler that startup was successful
+	sd_notify(0, "READY=1");
+
 	// For all modules in allModules, start corresponding process in a fork
 	for (moduleNumber = 0; moduleNumber < numberOfModules; ++moduleNumber) {
 		pID[moduleNumber] = fork();
@@ -153,6 +157,9 @@ int main(int argc, char *argv[]) {
 
 	if (signal(SIGINT, signal_handler) == SIG_ERR)
 		util_error("Unable to create signal handler");
+
+	// Ensure service handler has the correct PID to communicate with
+	sd_notifyf(0, "MAINPID=%d", getpid());
 
 	// Enter hold function while server is running
 	(void)waitForModuleExit(pID, numberOfModules, moduleExitStatus);
