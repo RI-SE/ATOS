@@ -71,3 +71,5 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/conf DESTINATION "$ENV{HOME}/${MAESTRO_TES
 
 install(CODE "execute_process(COMMAND chown -R $ENV{USER} $ENV{HOME}/${MAESTRO_TEST_DIR})")
 
+# Add post install instructions
+add_subdirectory(cmake/postinstall)

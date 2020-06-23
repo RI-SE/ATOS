@@ -71,8 +71,3 @@ install(FILES ${PROJECT_BINARY_DIR}/maestro-object-monitoring.service
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/systemd/system
   COMPONENT service
 )
-install(CODE "execute_process(COMMAND systemctl daemon-reload)")
-# TODO enable/disable and start/stop for systemctl
-
-# Ensure linkage is reloaded after install
-install(CODE "execute_process(COMMAND ldconfig)")
