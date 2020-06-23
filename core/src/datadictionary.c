@@ -1704,7 +1704,7 @@ ReadWriteAccess_t DataDictionarySetMaxPacketsLost(uint8_t maxPacketsLostSetting)
 ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSetting) {
 	ReadWriteAccess_t result = UNDEFINED;
 	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
-	char* endPtr;
+	char *endPtr;
 	uint64_t readSetting;
 
 	if (DataDictionarySearchParameter("MaxPacketsLost=", resultBuffer)) {
@@ -1721,7 +1721,7 @@ ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSettin
 		}
 		else {
 			result = READ_OK;
-			*maxPacketsLostSetting = (uint8_t)readSetting;
+			*maxPacketsLostSetting = (uint8_t) readSetting;
 		}
 		result = READ_OK;
 	}
@@ -1731,6 +1731,7 @@ ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSettin
 		*maxPacketsLostSetting = DEFAULT_MAX_PACKETS_LOST;
 	}
 }
+
 /*END MaxPacketLoss*/
 
 /*!

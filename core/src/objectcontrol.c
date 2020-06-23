@@ -184,7 +184,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	const struct timeval heartbeatPeriod = { 1 / HEAB_FREQUENCY_HZ,
 		(1000000 / HEAB_FREQUENCY_HZ) % 1000000
 	};
-	struct timeval monitorDataTimeout; //!< Timeout after N missing monitor messages i.e. after this long
+	struct timeval monitorDataTimeout;	//!< Timeout after N missing monitor messages i.e. after this long
 
 	const struct timeval adaptiveSyncMessagePeriod = heartbeatPeriod;
 
@@ -310,7 +310,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			// Check if any object has disconnected - if so, disconnect all objects and return to idle
 			DisconnectU8 = 0;
 			DataDictionaryGetMonitorTransmitterIDs(object_transmitter_ids,
-												   sizeof (object_transmitter_ids) / sizeof (object_transmitter_ids[0]));
+												   sizeof (object_transmitter_ids) /
+												   sizeof (object_transmitter_ids[0]));
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				// Check broken TCP connection
 				DisconnectU8 |= vCheckRemoteDisconnected(&socket_fds[iIndex]);
@@ -318,17 +319,21 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (object_transmitter_ids[iIndex] != 0) {
 					DataDictionaryGetMonitorData(&monitorData, object_transmitter_ids[iIndex]);
 					struct timeval timeSinceLastMonitorData;
+
 					timersub(&currentTime, &monitorData.lastDataUpdate, &timeSinceLastMonitorData);
 					if (timercmp(&timeSinceLastMonitorData, &monitorDataTimeout, >)) {
-						LogMessage(LOG_LEVEL_WARNING, "MONR timeout (ID %u):\n\ttimeout time %d s %d µs\n\tlast message %d s %d µs\n\tcurrent time %d s %d µs",
-								   object_transmitter_ids[iIndex], monitorDataTimeout.tv_sec, monitorDataTimeout.tv_usec,
-								   monitorData.lastDataUpdate.tv_sec, monitorData.lastDataUpdate.tv_usec,
-								   currentTime.tv_sec, currentTime.tv_usec);
+						LogMessage(LOG_LEVEL_WARNING,
+								   "MONR timeout (ID %u):\n\ttimeout time %d s %d µs\n\tlast message %d s %d µs\n\tcurrent time %d s %d µs",
+								   object_transmitter_ids[iIndex], monitorDataTimeout.tv_sec,
+								   monitorDataTimeout.tv_usec, monitorData.lastDataUpdate.tv_sec,
+								   monitorData.lastDataUpdate.tv_usec, currentTime.tv_sec,
+								   currentTime.tv_usec);
 						DisconnectU8 = 1;
 					}
 				}
 				else {
-					LogMessage(LOG_LEVEL_ERROR, "Object with IP %s has not reported any monitoring data", object_address_name[iIndex]);
+					LogMessage(LOG_LEVEL_ERROR, "Object with IP %s has not reported any monitoring data",
+							   object_address_name[iIndex]);
 				}
 
 				if (DisconnectU8) {
@@ -708,13 +713,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects) == 0) {
 					// Reset preexisting stored monitor data
 					DataDictionaryGetMonitorTransmitterIDs(object_transmitter_ids,
-														   sizeof (object_transmitter_ids) / sizeof (object_transmitter_ids[0]));
+														   sizeof (object_transmitter_ids) /
+														   sizeof (object_transmitter_ids[0]));
 					for (unsigned int i = 0;
-						 i < sizeof (object_transmitter_ids) / sizeof (object_transmitter_ids[0]);
-						 ++i) {
+						 i < sizeof (object_transmitter_ids) / sizeof (object_transmitter_ids[0]); ++i) {
 						if (object_transmitter_ids[i] != 0) {
 							if (DataDictionaryClearMonitorData(object_transmitter_ids[0]) != WRITE_OK) {
-								LogMessage(LOG_LEVEL_ERROR, "Unable to clear monitor data for transmitter ID %u",
+								LogMessage(LOG_LEVEL_ERROR,
+										   "Unable to clear monitor data for transmitter ID %u",
 										   object_transmitter_ids[i]);
 							}
 						}
@@ -1672,16 +1678,17 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
  *			elapsed before abort should occur
  * \return 0 on success, -1 otherwise
  */
-int readMonitorDataTimeoutSetting(struct timeval * timeout) {
+int readMonitorDataTimeoutSetting(struct timeval *timeout) {
 	uint8_t maxMissingMonitorMessages = 0;
+
 	const struct timeval monitorDataPeriod = { 1 / MONR_EXPECTED_FREQUENCY_HZ,
-		(1000000 / MONR_EXPECTED_FREQUENCY_HZ) % 1000000 };
+		(1000000 / MONR_EXPECTED_FREQUENCY_HZ) % 1000000
+	};
 	*timeout = monitorDataPeriod;
 
 	DataDictionaryGetMaxPacketsLost(&maxMissingMonitorMessages);
 
-	LogMessage(LOG_LEVEL_INFO, "Read max allowed missing monitor packets: %u",
-			   maxMissingMonitorMessages);
+	LogMessage(LOG_LEVEL_INFO, "Read max allowed missing monitor packets: %u", maxMissingMonitorMessages);
 	for (uint8_t i = 0; i < maxMissingMonitorMessages; ++i) {
 		timeradd(timeout, &monitorDataPeriod, timeout);
 	}

@@ -2736,7 +2736,8 @@ int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr
 				retval = -1;
 			}
 			else if (UtilMonitorDataToString(monitorData, monitorDataString,
-											 sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) == -1) {
+											 sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) ==
+					 -1) {
 				LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
 				retval = -1;
 			}
