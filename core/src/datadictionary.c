@@ -96,6 +96,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
+	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMonitorData() : Res;
 	if (Res != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
@@ -1688,6 +1689,49 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
 }
 
 /*END OBCState*/
+
+/*MaxPacketLoss*/
+ReadWriteAccess_t DataDictionaryInitMaxPacketsLost(void) {
+	// TODO implement shmem solution
+	return READ_OK;
+}
+
+ReadWriteAccess_t DataDictionarySetMaxPacketsLost(uint8_t maxPacketsLostSetting) {
+	// TODO implement shmem solution
+	return UNDEFINED;
+}
+
+ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSetting) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char* endPtr;
+	uint64_t readSetting;
+
+	if (DataDictionarySearchParameter("MaxPacketsLost=", resultBuffer)) {
+		readSetting = strtoul(resultBuffer, &endPtr, 10);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for MaxPacketsLost");
+			result = PARAMETER_NOTFOUND;
+			*maxPacketsLostSetting = DEFAULT_MAX_PACKETS_LOST;
+		}
+		else if (readSetting > UINT8_MAX) {
+			LogMessage(LOG_LEVEL_WARNING, "Configuration for MaxPacketsLost outside accepted range");
+			result = READ_OK;
+			*maxPacketsLostSetting = UINT8_MAX;
+		}
+		else {
+			result = READ_OK;
+			*maxPacketsLostSetting = (uint8_t)readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "MaxPacketsLost not found!");
+		result = PARAMETER_NOTFOUND;
+		*maxPacketsLostSetting = DEFAULT_MAX_PACKETS_LOST;
+	}
+}
+/*END MaxPacketLoss*/
 
 /*!
  * \brief DataDictionaryInitMonitorData inits a data structure for saving object monr
