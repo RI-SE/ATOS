@@ -2005,10 +2005,6 @@ ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs
 		monitorDataMemory = releaseSharedMemory(monitorDataMemory);
 		return UNDEFINED;
 	}
-	else if ((uint32_t) retval != arraySize) {
-		LogMessage(LOG_LEVEL_WARNING,
-				   "Transmitter ID array is larger than necessary: may indicate the number of objects has changed between calls to data dictionary");
-	}
 
 	for (int i = 0; i < retval; ++i) {
 		transmitterIDs[i] = monitorDataMemory[i].ClientID;
