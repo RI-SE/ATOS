@@ -2860,7 +2860,7 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 
 				U8 diff = numberOfResponses - SYSTEM_CONTROL_NO_OF_MODULES_IN_USE;
 
-                LogMessage(LOG_LEVEL_ERROR, "%d too many responses to GET_STATUS command", diff);
+				LogMessage(LOG_LEVEL_ERROR, "%d too many responses to GET_STATUS command", diff);
 
 			}
 
@@ -2869,7 +2869,7 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 
 				U8 diff = SYSTEM_CONTROL_NO_OF_MODULES_IN_USE - numberOfResponses;
 
-                LogMessage(LOG_LEVEL_ERROR, "%d module(s) not responding to GET_STATUS command", diff);
+				LogMessage(LOG_LEVEL_ERROR, "%d module(s) not responding to GET_STATUS command", diff);
 			}
 
 			//Just right
