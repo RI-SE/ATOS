@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <fstream>
 #include <regex>
+#include <systemd/sd-daemon.h>
 
 #include "supervisionstate.h"
 #include "geofence.h"
@@ -70,6 +71,9 @@ int main()
     while(iCommInit() && !quit) {
         nanosleep(&sleepTimePeriod,&remTime);
     }
+
+	// Notify service handler that startup was successful
+	sd_notify(0, "READY=1");
 
     while(!quit) {
         if (state.get() == SupervisionState::ERROR) {
