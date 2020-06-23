@@ -241,6 +241,7 @@ typedef struct
 typedef struct
 {
 	ObjectMonitorType data;
+	struct timeval lastDataUpdate;
     in_addr_t ClientIP;
 	uint32_t ClientID;
 } MonitorDataType;
