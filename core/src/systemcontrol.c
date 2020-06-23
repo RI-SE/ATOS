@@ -2728,27 +2728,29 @@ int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr
 	int32_t retval = 0;
 
 	for (uint32_t i = 0; i < numberOfObjects; ++i) {
-		if (DataDictionaryGetMonitorData(&monitorData, transmitterIDs[i]) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR,
-					   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
-					   transmitterIDs[i]);
-			retval = -1;
-		}
-		else if (UtilMonitorDataToString(monitorData, monitorDataString,
-										 sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) == -1) {
-			LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
-			retval = -1;
-		}
-		else {
-			LogMessage(LOG_LEVEL_DEBUG, "%s: Transmitter ID %u", __FUNCTION__, transmitterIDs[i]);
-			messageLength =
-				(uint32_t) (strlen(monitorDataString) + sizeof (messageLength) + sizeof (RVSSChannel));
-			messageLength = htole32(messageLength);
-			RVSSChannel = htole32(RVSSChannel);
-			memcpy(RVSSData, &messageLength, sizeof (messageLength));
-			memcpy(RVSSData + sizeof (messageLength), &RVSSChannel, sizeof (RVSSChannel));
+		if (transmitterIDs[i] != 0) {
+			if (DataDictionaryGetMonitorData(&monitorData, transmitterIDs[i]) != READ_OK) {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
+						   transmitterIDs[i]);
+				retval = -1;
+			}
+			else if (UtilMonitorDataToString(monitorData, monitorDataString,
+											 sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) == -1) {
+				LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
+				retval = -1;
+			}
+			else {
+				LogMessage(LOG_LEVEL_DEBUG, "%s: Transmitter ID %u", __FUNCTION__, transmitterIDs[i]);
+				messageLength =
+					(uint32_t) (strlen(monitorDataString) + sizeof (messageLength) + sizeof (RVSSChannel));
+				messageLength = htole32(messageLength);
+				RVSSChannel = htole32(RVSSChannel);
+				memcpy(RVSSData, &messageLength, sizeof (messageLength));
+				memcpy(RVSSData + sizeof (messageLength), &RVSSChannel, sizeof (RVSSChannel));
 
-			UtilSendUDPData(MODULE_NAME, socket, addr, RVSSData, messageLength, 0);
+				UtilSendUDPData(MODULE_NAME, socket, addr, RVSSData, messageLength, 0);
+			}
 		}
 	}
 	free(transmitterIDs);
