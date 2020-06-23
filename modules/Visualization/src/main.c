@@ -9,6 +9,7 @@
 #include <time.h>
 #include <string.h>
 #include <signal.h>
+#include <systemd/sd-daemon.h>
 #include "logging.h"
 #include "maestroTime.h"
 #include "util.h"
@@ -93,7 +94,6 @@ int main() {
 	enum COMMAND command = COMM_INV;
 	char mqRecvData[MQ_MSG_SIZE];
 	const struct timespec sleepTimePeriod = { 0, 10000000 };
-	const struct timespec abortWaitTime = { 1, 0 };
 	struct timespec remTime;
 
 	MonitorDataType monitorData;
@@ -105,19 +105,19 @@ int main() {
 	int visual_server;
 	struct sockaddr_in visual_server_addr;
 
-	vConnectVisualizationChannel(&visual_server, &visual_server_addr);
-
 	//Setup signal handlers
 	if (signal(SIGINT, signalHandler) == SIG_ERR)
 		util_error("Unable to initialize signal handler");
-
-
-
 
 	// Initialize message bus connection
 	while (iCommInit()) {
 		nanosleep(&sleepTimePeriod, &remTime);
 	}
+
+	// Notify service handler that startup was successful
+	sd_notify(0, "READY=1");
+
+	vConnectVisualizationChannel(&visual_server, &visual_server_addr);
 
 	while (!iExit) {
 

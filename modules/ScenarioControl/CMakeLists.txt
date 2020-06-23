@@ -39,9 +39,16 @@ target_link_libraries(${SCENARIO_CONTROL_TARGET} LINK_PUBLIC
 	${MESSAGE_BUS_LIBRARY}
 	${POSITIONING_LIBRARY}
 	${ISO_22133_LIBRARY}
+	${SYSTEMD_LIBRARIES}
 )
 target_include_directories(${SCENARIO_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+
+# Generate service file with correct details
+message(STATUS "Configuring ${PROJECT_NAME} service file")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/linux/maestro-scenario-control.service.in
+	${PROJECT_BINARY_DIR}/maestro-scenario-control.service
 )
 
 # Installation rules
@@ -53,5 +60,10 @@ install(TARGETS ${SCENARIO_CONTROL_TARGET}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Ensure linkage is reloaded after install
-install(CODE "execute_process(COMMAND ldconfig)")
+# Install the service
+install(CODE "MESSAGE(STATUS \"Installing ${PROJECT_NAME} service to ${CMAKE_INSTALL_FULL_LIBDIR}/systemd/system\")")
+install(FILES ${PROJECT_BINARY_DIR}/maestro-scenario-control.service
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/systemd/system
+  COMPONENT service
+)
+

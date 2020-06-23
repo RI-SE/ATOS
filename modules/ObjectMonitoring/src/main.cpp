@@ -3,6 +3,7 @@
 #include <typeindex>
 #include <vector>
 #include <algorithm>
+#include <systemd/sd-daemon.h>
 
 #include <MQTTClient.h>
 
@@ -38,6 +39,9 @@ int main()
 	while(iCommInit()) {
         nanosleep(&sleepTimePeriod,&remTime);
     }
+
+	// Notify service handler that startup was successful
+	sd_notify(0, "READY=1");
 
 	// TODO: start MQ communication handler
 
