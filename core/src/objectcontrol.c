@@ -128,7 +128,7 @@ static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, c
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 							C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
 							in_addr_t objectIPs[MAX_OBJECTS], I32 * nbr_objects);
-static int readMonitorDataTimeoutSetting(struct timeval *timeout, GSDType * GSD);
+static int readMonitorDataTimeoutSetting(struct timeval *timeout);
 
 OBCState_t vInitializeState(OBCState_t firstState, GSDType * GSD);
 inline OBCState_t vGetState(GSDType * GSD);
@@ -708,7 +708,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					// Get objects; name and drive file
 					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 					// Get number of allowed missing monitor messages before abort
-					readMonitorDataTimeoutSetting(&monitorDataTimeout, GSD);
+					readMonitorDataTimeoutSetting(&monitorDataTimeout);
 
 					resetCommandActionList(commandActions,
 										   sizeof (commandActions) / sizeof (commandActions[0]));
@@ -1657,13 +1657,13 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
  * \param GSD
  * \return 0 on success, -1 otherwise
  */
-int readMonitorDataTimeoutSetting(struct timeval * timeout, GSDType * GSD) {
+int readMonitorDataTimeoutSetting(struct timeval * timeout) {
 	uint8_t maxMissingMonitorMessages = 0;
 	const struct timeval monitorDataPeriod = { 1 / MONR_EXPECTED_FREQUENCY_HZ,
 		(1000000 / MONR_EXPECTED_FREQUENCY_HZ) % 1000000 };
 	*timeout = monitorDataPeriod;
 
-	// TODO: read from data dict
+	DataDictionaryGetMaxPacketLoss(&maxMissingMonitorMessages);
 
 	for (uint8_t i = 0; i < maxMissingMonitorMessages; ++i) {
 		timeradd(timeout, &monitorDataPeriod, timeout);
