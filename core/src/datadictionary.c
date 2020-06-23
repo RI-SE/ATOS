@@ -1837,6 +1837,40 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 }
 
 /*!
+ * \brief DataDictionaryClearMonitorData Clears existing monitor data tagged with
+ *			a certain transmitter ID.
+ * \param transmitterID Transmitter ID of the monitor data to be cleared.
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryClearMonitorData(const uint32_t transmitterID) {
+	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
+
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (monitorDataMemory[i].ClientID == transmitterID) {
+			memset(&monitorDataMemory[i], 0, sizeof (MonitorDataType));
+			result = WRITE_OK;
+		}
+	}
+
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
+	if (result == PARAMETER_NOTFOUND) {
+		LogMessage(LOG_LEVEL_WARNING, "Unable to find monitor data for transmitter ID %u", transmitterID);
+	}
+
+	return result;
+}
+
+/*!
  * \brief DataDictionaryGetMonitorData Reads variable from shared memory
  * \param monitorData Return variable pointer
  * \param transmitterId requested object transmitterId

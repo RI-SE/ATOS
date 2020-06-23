@@ -128,6 +128,7 @@ ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSettin
 ReadWriteAccess_t DataDictionaryFreeMonitorData();
 ReadWriteAccess_t DataDictionaryInitMonitorData();
 ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorData);
+ReadWriteAccess_t DataDictionaryClearMonitorData(const uint32_t transmitterID);
 ReadWriteAccess_t DataDictionaryGetMonitorData(MonitorDataType * monitorData, const uint32_t TransmitterId);
 ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs[], const uint32_t arraySize);
 

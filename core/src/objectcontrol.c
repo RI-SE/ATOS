@@ -320,8 +320,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					struct timeval timeSinceLastMonitorData;
 					timersub(&currentTime, &monitorData.lastDataUpdate, &timeSinceLastMonitorData);
 					if (timercmp(&timeSinceLastMonitorData, &monitorDataTimeout, >)) {
-						LogMessage(LOG_LEVEL_WARNING, "MONR timeout (ID %u):\n\tlast message %d s %d µs\n\tcurrent time %d s %d µs",
-								   object_transmitter_ids[iIndex], monitorData.lastDataUpdate.tv_sec, monitorData.lastDataUpdate.tv_usec,
+						LogMessage(LOG_LEVEL_WARNING, "MONR timeout (ID %u):\n\ttimeout time %d s %d µs\n\tlast message %d s %d µs\n\tcurrent time %d s %d µs",
+								   object_transmitter_ids[iIndex], monitorDataTimeout.tv_sec, monitorDataTimeout.tv_usec,
+								   monitorData.lastDataUpdate.tv_sec, monitorData.lastDataUpdate.tv_usec,
 								   currentTime.tv_sec, currentTime.tv_usec);
 						DisconnectU8 = 1;
 					}
@@ -705,6 +706,19 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
 				nbr_objects = 0;
 				if (iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects) == 0) {
+					// Reset preexisting stored monitor data
+					DataDictionaryGetMonitorTransmitterIDs(object_transmitter_ids,
+														   sizeof (object_transmitter_ids) / sizeof (object_transmitter_ids[0]));
+					for (unsigned int i = 0;
+						 i < sizeof (object_transmitter_ids) / sizeof (object_transmitter_ids[0]);
+						 ++i) {
+						if (object_transmitter_ids[i] != 0) {
+							if (DataDictionaryClearMonitorData(object_transmitter_ids[0]) != WRITE_OK) {
+								LogMessage(LOG_LEVEL_ERROR, "Unable to clear monitor data for transmitter ID %u",
+										   object_transmitter_ids[i]);
+							}
+						}
+					}
 					// Get objects; name and drive file
 					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 					// Get number of allowed missing monitor messages before abort
@@ -1652,9 +1666,10 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 }
 
 /*!
- * \brief readMonitorDataTimeout
- * \param timeout
- * \param GSD
+ * \brief readMonitorDataTimeout Reads the maximum allowed missing monitor
+ *			messages from settings and calculates a timeout period.
+ * \param timeout Time since last monitor message which should have
+ *			elapsed before abort should occur
  * \return 0 on success, -1 otherwise
  */
 int readMonitorDataTimeoutSetting(struct timeval * timeout) {
@@ -1665,9 +1680,12 @@ int readMonitorDataTimeoutSetting(struct timeval * timeout) {
 
 	DataDictionaryGetMaxPacketsLost(&maxMissingMonitorMessages);
 
+	LogMessage(LOG_LEVEL_INFO, "Read max allowed missing monitor packets: %u",
+			   maxMissingMonitorMessages);
 	for (uint8_t i = 0; i < maxMissingMonitorMessages; ++i) {
 		timeradd(timeout, &monitorDataPeriod, timeout);
 	}
+
 	return 0;
 }
 
