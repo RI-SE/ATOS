@@ -1663,7 +1663,7 @@ int readMonitorDataTimeoutSetting(struct timeval * timeout) {
 		(1000000 / MONR_EXPECTED_FREQUENCY_HZ) % 1000000 };
 	*timeout = monitorDataPeriod;
 
-	DataDictionaryGetMaxPacketLoss(&maxMissingMonitorMessages);
+	DataDictionaryGetMaxPacketsLost(&maxMissingMonitorMessages);
 
 	for (uint8_t i = 0; i < maxMissingMonitorMessages; ++i) {
 		timeradd(timeout, &monitorDataPeriod, timeout);
