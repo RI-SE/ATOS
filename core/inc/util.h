@@ -239,11 +239,19 @@ typedef struct
 } GeoPosition;
 
 
+typedef enum {
+  OBJECT_ENABLED = 1,
+  OBJECT_DISABLED = 2,
+  OBJECT_UNDEFINED = 3
+} ObjectEnabledType;
+
+
 typedef struct
 {
-	ObjectMonitorType data;
+	ObjectEnabledType Enabled;
   in_addr_t ClientIP;
 	uint32_t ClientID;
+  ObjectMonitorType data;
 } MonitorDataType;
 
 
@@ -269,11 +277,6 @@ typedef struct {
 	uint8_t mode;
 } TrajectoryFileLine;
 
-typedef enum {
-  OBJECT_ENABLED = 1,
-  OBJECT_DISABLED = 2,
-  OBJECT_UNDEFINED = 3
-} ObjectEnabledType;
 
 typedef struct {
   in_addr_t objectIP;
@@ -358,7 +361,7 @@ typedef struct
   U8 ASPDebugDataU8[sizeof(ASPType)];
   U32 SupChunkSize;
   U8 SupChunk[6200];
-  MonitorDataType* MonrMessages;
+  //MonitorDataType* MonrMessages;
   U8 MONRSizeU8;
   U8 MONRData[100];
   U8 HEABSizeU8;

@@ -1749,7 +1749,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 		if (monitorDataMemory[i].ClientID == monitorData->ClientID) {
 
 			if (monitorDataMemory[i].ClientIP == monitorData->ClientIP) {
-				memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
+				memcpy(&monitorDataMemory[i].data, &monitorData->data, sizeof (ObjectMonitorType));
 				result = WRITE_OK;
 			}
 			else {
@@ -1771,7 +1771,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 				   monitorData->ClientID);
 		for (int i = 0; i < numberOfObjects; ++i) {
 			if (monitorDataMemory[i].ClientID == 0) {
-				memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
+				memcpy(&monitorDataMemory[i].data, &monitorData->data, sizeof (ObjectMonitorType));
 				result = WRITE_OK;
 			}
 		}
@@ -1783,7 +1783,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 				numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
-				memcpy(&monitorDataMemory[numberOfObjects - 1], monitorData, sizeof (MonitorDataType));
+				memcpy(&monitorDataMemory[numberOfObjects - 1].data, &monitorData->data, sizeof (ObjectMonitorType));
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -1821,7 +1821,11 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(MonitorDataType * monitorData, co
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (monitorDataMemory[i].ClientID == transmitterId) {
-			memcpy(monitorData, &monitorDataMemory[i], sizeof (MonitorDataType));
+			memcpy(&monitorData->data, &monitorDataMemory[i].data, sizeof (ObjectMonitorType));
+			monitorData->Enabled = monitorDataMemory[i].Enabled;
+			monitorData->ClientID = monitorDataMemory[i].ClientID;
+			monitorData->ClientIP = monitorDataMemory[i].ClientIP;
+
 			result = READ_OK;
 		}
 	}
@@ -1982,6 +1986,8 @@ ReadWriteAccess_t DataDictionaryInitObjectStatusArray(GSDType * GSD) {
 
 	return Res;
 }
+/*END of ObjectStatusArray*/
+
 
 /*!
  * \brief DataDictionarySetObjectStatusIPElement Set object status IP address
@@ -2039,18 +2045,165 @@ ReadWriteAccess_t DataDictionaryGetObjectStatusEnabledElement(GSDType * GSD, uin
 }
 
 
-
 /*!
- * \brief DataDictionaryGetSupervisorTCPPortU16 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param SupervisorTCPPort Return variable pointer
+ * \brief DataDictionaryInitObjectObjectInformation 
+ * \param objectInformation data to be initialized
  * \return Result according to ::ReadWriteAccess_t
  */
-//ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(GSDType * GSD, U16 * SupervisorTCPPort) {
-//	pthread_mutex_lock(&SupervisorTCPPortMutex);
-//	*SupervisorTCPPort = GSD->SupervisorTCPPortU16;
-//	pthread_mutex_unlock(&SupervisorTCPPortMutex);
-//	return READ_OK;
-//}
 
-/*END of ObjectStatusArray*/
+ReadWriteAccess_t DataDictionaryInitObjectInformation(const MonitorDataType * objectInformationData) {
+
+	ReadWriteAccess_t result;
+
+	if (monitorDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (objectInformationData == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (objectInformationData->ClientID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	if (monitorDataMemory == NULL) {
+		// If this code executes, monitorDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+
+	if (result == PARAMETER_NOTFOUND) {
+		// Search for unused memory space and place monitor data there
+		LogMessage(LOG_LEVEL_INFO, "First Object Information data from added with ID %u",
+				   objectInformationData->ClientID);
+		for (int i = 0; i < numberOfObjects; ++i) {
+			if (monitorDataMemory[i].ClientID == objectInformationData->ClientID) {
+				memcpy(&monitorDataMemory[i], objectInformationData, sizeof (MonitorDataType));
+				result = WRITE_OK;
+			}
+		}
+
+		// No uninitialized memory space found - create new
+		if (result == PARAMETER_NOTFOUND) {
+			monitorDataMemory = resizeSharedMemory(monitorDataMemory, (unsigned int)(numberOfObjects + 1));
+			if (monitorDataMemory != NULL) {
+				numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+				LogMessage(LOG_LEVEL_INFO,
+						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
+				memcpy(&monitorDataMemory[numberOfObjects - 1], objectInformationData, sizeof (MonitorDataType));
+			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
+				result = UNDEFINED;
+			}
+		}
+	}
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
+
+	if(result != PARAMETER_NOTFOUND)
+
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
+	return result;
+} 
+
+
+
+
+/*!
+ * \brief DataDictionarySetObjectEnableStatus sets the object enable status
+ * \param transmitterId requested object transmitterId
+ * \param enabledStatus the enable status - enable, disable, undefined
+ * \return Result according to ::ReadWriteAccess_t
+ */
+
+ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitterId, ObjectEnabledType enabledStatus) {
+
+	ReadWriteAccess_t result;
+
+	if (monitorDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterId == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	if (monitorDataMemory == NULL) {
+		// If this code executes, monitorDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterId == monitorDataMemory[i].ClientID) {
+				monitorDataMemory[i].Enabled = enabledStatus;
+				result = WRITE_OK;
+			}
+	}
+
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
+	return result;
+} 
+
+/*!
+ * \brief DataDictionaryGetObjectEnableStatus 
+ * \param transmitterId requested object transmitterId
+ * \param *enabledStatus Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
+
+ReadWriteAccess_t DataDictionaryGetObjectEnableStatus(const uint32_t transmitterId, ObjectEnabledType *enabledStatus) {
+
+	ReadWriteAccess_t result;
+
+	if (monitorDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterId == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	if (monitorDataMemory == NULL) {
+		// If this code executes, monitorDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterId == monitorDataMemory[i].ClientID) {
+				*enabledStatus = monitorDataMemory[i].Enabled;
+				result = READ_OK;
+			}
+	}
+
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
+	return result;
+} 
