@@ -27,7 +27,6 @@ get_target_property(MESSAGE_BUS_HEADERS ${MESSAGE_BUS_LIBRARY} INCLUDE_DIRECTORI
 get_target_property(SHARED_MEMORY_HEADERS ${SHARED_MEMORY_LIBRARY} INCLUDE_DIRECTORIES)
 get_target_property(ISO_22133_HEADERS ${ISO_22133_LIBRARY} INCLUDE_DIRECTORIES)
 
-
 include(GNUInstallDirs)
 
 add_executable(${CORE_TARGET} 
@@ -74,6 +73,7 @@ target_link_libraries(${CORE_TARGET} LINK_PUBLIC
 	${COREUTILS_TARGET}
 	${DATA_DICTIONARY_TARGET}
 	${ISO_22133_LIBRARY}
+	${SYSTEMD_LIBRARIES}
 )
 
 target_link_libraries(${COREUTILS_TARGET} LINK_PUBLIC
@@ -87,6 +87,13 @@ target_link_libraries(${COREUTILS_TARGET} LINK_PUBLIC
 target_link_libraries(${DATA_DICTIONARY_TARGET} LINK_PUBLIC
 	${SHARED_MEMORY_LIBRARY}
 	${COREUTILS_TARGET}
+)
+
+# Generate service file with correct details
+message(STATUS "Configuring ${PROJECT_NAME} service file")
+list(LENGTH ENABLED_MODULES NUMBER_ENABLED_MODULES)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/linux/maestro-core.service.in
+	${PROJECT_BINARY_DIR}/maestro-core.service
 )
 
 # Installation rules
@@ -108,5 +115,9 @@ install(CODE "MESSAGE(STATUS \"Creating shared memory directory ${SYSTEM_SHARED_
 install(DIRECTORY DESTINATION ${SYSTEM_SHARED_MEMORY_PATH})
 install(CODE "execute_process(COMMAND chown $ENV{USER} ${SYSTEM_SHARED_MEMORY_PATH})")
 
-# Ensure linkage is reloaded after install
-install(CODE "execute_process(COMMAND ldconfig)")
+# Install the service
+install(CODE "MESSAGE(STATUS \"Installing ${PROJECT_NAME} service to ${CMAKE_INSTALL_FULL_LIBDIR}/systemd/system\")")
+install(FILES ${PROJECT_BINARY_DIR}/maestro-core.service
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/systemd/system
+  COMPONENT service
+)
