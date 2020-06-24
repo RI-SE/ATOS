@@ -88,7 +88,7 @@
 #define PRIO_COMM_TRAJ_FROMSUP 12
 #define PRIO_COMM_GETSTATUS 10
 #define PRIO_COMM_REMOTECTRL_MANOEUVRE 12
-#define PRIO_COMM_GETSTATUS_OK 10
+#define PRIO_COMM_GETSTATUS_OK 255
 // Logging
 #define PRIO_COMM_LOG 10
 // Unused messages TODO: double check the priority of unused messages
