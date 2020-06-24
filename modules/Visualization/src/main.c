@@ -33,13 +33,13 @@
   ------------------------------------------------------------*/
 static void vConnectVisualizationChannel(int *sockfd, struct sockaddr_in *addr);
 static void vDisconnectVisualizationChannel(int *sockfd);
-void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualizationMessage,
+void vCreateVisualizationMessage(ObjectInformationDataType * _monitorData, char *_visualizationMessage,
 								 int _sizeOfVisualizationMessage, int _debug);
 static void signalHandler(int signo);
 
 I32 iExit = 0;
 
-void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualizationMessage,
+void vCreateVisualizationMessage(ObjectInformationDataType * _monitorData, char *_visualizationMessage,
 								 int _sizeOfVisualizationMessage, int _debug) {
 
 	char ipStringBuffer[INET_ADDRSTRLEN];
@@ -48,25 +48,25 @@ void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualiz
 			inet_ntop(AF_INET, &_monitorData->ClientIP, ipStringBuffer, sizeof (ipStringBuffer)));
 	char GPSMsOfWeekString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(GPSMsOfWeekString, "%u", TimeGetAsGPSqmsOfWeek(&_monitorData->data.timestamp));
+	sprintf(GPSMsOfWeekString, "%u", TimeGetAsGPSqmsOfWeek(&_monitorData->MonrData.timestamp));
 	char xPosString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(xPosString, "%.3f", _monitorData->data.position.xCoord_m);
+	sprintf(xPosString, "%.3f", _monitorData->MonrData.position.xCoord_m);
 	char yPosString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(yPosString, "%.3f", _monitorData->data.position.yCoord_m);
+	sprintf(yPosString, "%.3f", _monitorData->MonrData.position.yCoord_m);
 	char zPosString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(zPosString, "%.3f", _monitorData->data.position.zCoord_m);
+	sprintf(zPosString, "%.3f", _monitorData->MonrData.position.zCoord_m);
 	char headingString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(headingString, "%.2f", _monitorData->data.position.heading_rad * 180.0 / M_PI);
+	sprintf(headingString, "%.2f", _monitorData->MonrData.position.heading_rad * 180.0 / M_PI);
 	char longSpeedString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(longSpeedString, "%.3f", _monitorData->data.speed.longitudinal_m_s);
+	sprintf(longSpeedString, "%.3f", _monitorData->MonrData.speed.longitudinal_m_s);
 	char stateString[ENOUGH_BUFFER_SIZE];
 
-	sprintf(stateString, "%s", objectStateToASCII(_monitorData->data.state));
+	sprintf(stateString, "%s", objectStateToASCII(_monitorData->MonrData.state));
 
 	//Build message from MonitorStruct
 	snprintf(_visualizationMessage, _sizeOfVisualizationMessage, "%s;%s;%s;%s;%s;%s;%s;%s;",
@@ -96,7 +96,7 @@ int main() {
 	const struct timespec abortWaitTime = { 1, 0 };
 	struct timespec remTime;
 
-	MonitorDataType monitorData;
+	ObjectInformationDataType monitorData;
 
 
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
@@ -153,13 +153,13 @@ int main() {
 
 			//Calculate size of incoming buffer
 			sizeOfVisualizationMessage = snprintf(dummy, sizeof (dummy), "%u;%.3f;%.3f;%.3f;%.2f;%.2f;%s;",
-												  TimeGetAsGPSqmsOfWeek(&monitorData.data.timestamp),
-												  monitorData.data.position.xCoord_m,
-												  monitorData.data.position.yCoord_m,
-												  monitorData.data.position.zCoord_m,
-												  monitorData.data.position.heading_rad * 180.0 / M_PI,
-												  monitorData.data.speed.longitudinal_m_s,
-												  objectStateToASCII(monitorData.data.state));
+												  TimeGetAsGPSqmsOfWeek(&monitorData.MonrData.timestamp),
+												  monitorData.MonrData.position.xCoord_m,
+												  monitorData.MonrData.position.yCoord_m,
+												  monitorData.MonrData.position.zCoord_m,
+												  monitorData.MonrData.position.heading_rad * 180.0 / M_PI,
+												  monitorData.MonrData.speed.longitudinal_m_s,
+												  objectStateToASCII(monitorData.MonrData.state));
 			sizeOfVisualizationMessage += INET_ADDRSTRLEN;
 			sizeOfVisualizationMessage += 8;	//(;)
 

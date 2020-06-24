@@ -251,8 +251,8 @@ typedef struct
 	ObjectEnabledType Enabled;
   in_addr_t ClientIP;
 	uint32_t ClientID;
-  ObjectMonitorType data;
-} MonitorDataType;
+  ObjectMonitorType MonrData;
+} ObjectInformationDataType;
 
 
 typedef struct {
@@ -361,7 +361,7 @@ typedef struct
   U8 ASPDebugDataU8[sizeof(ASPType)];
   U32 SupChunkSize;
   U8 SupChunk[6200];
-  //MonitorDataType* MonrMessages;
+  //ObjectInformationDataType* MonrMessages;
   U8 MONRSizeU8;
   U8 MONRData[100];
   U8 HEABSizeU8;
@@ -651,8 +651,8 @@ int UtilParseTrajectoryFileFooter(char *footerLine);
 int UtilParseTrajectoryFileLine(char *fileLine, TrajectoryFileLine * line);
 
 
-int UtilMonitorDataToString(const MonitorDataType monrData, char* monrString, size_t stringLength);
-int UtilStringToMonitorData(const char* monrString, size_t stringLength, MonitorDataType * monrData);
+int UtilMonitorDataToString(const ObjectInformationDataType monrData, char* monrString, size_t stringLength);
+int UtilStringToMonitorData(const char* monrString, size_t stringLength, ObjectInformationDataType * monrData);
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
@@ -712,7 +712,7 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
 I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 
-int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, MonitorDataType *monitorData);
+int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectInformationDataType *monitorData);
 I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
 I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData);
 I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);

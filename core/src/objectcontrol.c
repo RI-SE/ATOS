@@ -215,7 +215,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	dbl OriginHeadingDbl = DEFAULT_ORIGIN_HEADING;
 	C8 pcSendBuffer[MBUS_MAX_DATALEN];
 	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
-	MonitorDataType monitorData;
+	ObjectInformationDataType monitorData;
 	ACCMData mqACCMData;
 	EXACData mqEXACData;
 	TRCMData mqTRCMData;
@@ -386,7 +386,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					monitorData.ClientIP = safety_object_addr[iIndex].sin_addr.s_addr;
 					if (decodeMONRMessage
-						(buffer, receivedMONRData, &monitorData.ClientID, &monitorData.data,
+						(buffer, receivedMONRData, &monitorData.ClientID, &monitorData.MonrData,
 						 0) != MESSAGE_OK) {
 						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object",
 								   object_address_name[iIndex]);
@@ -436,15 +436,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 							TimeCap1 = (uint64_t) CurrentTimeStruct.tv_sec * 1000 + (uint64_t) CurrentTimeStruct.tv_usec / 1000;	//Calculate initial timestamp
 
-							OP[iIndex].x = monitorData.data.position.xCoord_m;	//Set x and y on OP (ObjectPosition)
-							OP[iIndex].y = monitorData.data.position.yCoord_m;
+							OP[iIndex].x = monitorData.MonrData.position.xCoord_m;	//Set x and y on OP (ObjectPosition)
+							OP[iIndex].y = monitorData.MonrData.position.yCoord_m;
 
 							//OP[iIndex].OrigoDistance = sqrt(pow(OP[iIndex].x,2) + pow(OP[iIndex].y,2)); //Calculate hypotenuse
 
 							// TODO: check use of this function since it should take two lat/long points but is here used with x/y
 							UtilCalcPositionDelta(OriginLatitudeDbl, OriginLongitudeDbl,
-												  monitorData.data.position.xCoord_m,
-												  monitorData.data.position.yCoord_m, &OP[iIndex]);
+												  monitorData.MonrData.position.xCoord_m,
+												  monitorData.MonrData.position.yCoord_m, &OP[iIndex]);
 
 							if (OP[iIndex].BestFoundTrajectoryIndex <= OP[iIndex].SyncIndex) {
 								ASPData.CurrentTimeU32 = CurrentTimeU32;
@@ -493,7 +493,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								//ObjectControlBuildASPMessage(buffer, &ASPData, 0);
 								DataDictionarySetRVSSAsp(GSD, &ASPData);
 
-								if (TimeGetAsGPSqmsOfWeek(&monitorData.data.timestamp) % ASPDebugRate == 0) {
+								if (TimeGetAsGPSqmsOfWeek(&monitorData.MonrData.timestamp) % ASPDebugRate == 0) {
 									printf("%d, %d, %3.3f, %s, %s\n", CurrentTimeU32, StartTimeU32,
 										   ASPData.TimeToSyncPointDbl, object_address_name[iIndex],
 										   ASP[i].MasterIP);
@@ -511,8 +511,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 					}
 					OP[iIndex].Speed =
-						(float)sqrt(pow(monitorData.data.speed.lateral_m_s, 2) +
-									pow(monitorData.data.speed.longitudinal_m_s, 2));
+						(float)sqrt(pow(monitorData.MonrData.speed.lateral_m_s, 2) +
+									pow(monitorData.MonrData.speed.longitudinal_m_s, 2));
 				}
 				else if (receivedMONRData > 0)
 					LogMessage(LOG_LEVEL_WARNING, "Received unhandled message on monitoring socket");

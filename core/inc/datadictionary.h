@@ -123,8 +123,8 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD);
 
 ReadWriteAccess_t DataDictionaryFreeMonitorData();
 ReadWriteAccess_t DataDictionaryInitMonitorData();
-ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorData);
-ReadWriteAccess_t DataDictionaryGetMonitorData(MonitorDataType * monitorData, const uint32_t TransmitterId);
+ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectInformationDataType * monitorData);
+ReadWriteAccess_t DataDictionaryGetMonitorData(ObjectInformationDataType * monitorData, const uint32_t TransmitterId);
 ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs[], const uint32_t arraySize);
 
 ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObjects);

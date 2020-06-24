@@ -241,10 +241,10 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					j++;
 					if (SpecChars == SPECIFIC_CHAR_THRESHOLD_COUNT) {
-						MonitorDataType monrData;
+						ObjectInformationDataType monrData;
 
 						UtilStringToMonitorData(pcReadBuffer, sizeof (pcReadBuffer), &monrData);
-						NewTimestamp = TimeGetAsGPSqmsOfWeek(&monrData.data.timestamp);
+						NewTimestamp = TimeGetAsGPSqmsOfWeek(&monrData.MonrData.timestamp);
 
 						if (!FirstIteration) {	/* Wait a little bit */
 							sleep_time.tv_sec = 0;
@@ -596,7 +596,7 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 	char DateBuffer[MAX_DATE_STRLEN];
 	char ipStringBuffer[INET_ADDRSTRLEN];
 	char printBuffer[MAX_LOG_ROW_LENGTH];
-	MonitorDataType monitorData;
+	ObjectInformationDataType monitorData;
 	int printedBytes = 0;
 	int totalPrintedBytes = 0;
 
@@ -609,8 +609,8 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 	TimeGetAsDateTime(&recvTime, "%Y;%m;%d;%H;%M;%S;%q", DateBuffer, sizeof (DateBuffer));
 
 	printedBytes = snprintf(printBuffer, sizeof (printBuffer), "%s;%ld;%ld;%d;", DateBuffer,
-							TimeGetAsUTCms(&monitorData.data.timestamp),
-							TimeGetAsGPSms(&monitorData.data.timestamp), (unsigned char)COMM_MONR);
+							TimeGetAsUTCms(&monitorData.MonrData.timestamp),
+							TimeGetAsGPSms(&monitorData.MonrData.timestamp), (unsigned char)COMM_MONR);
 
 	totalPrintedBytes += printedBytes;
 	if (printedBytes < 0 || (size_t) totalPrintedBytes > sizeof (printBuffer)) {
@@ -638,7 +638,7 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 		return;
 	}
 
-	objectMonitorDataToASCII(&monitorData.data, printBuffer + totalPrintedBytes,
+	objectMonitorDataToASCII(&monitorData.MonrData, printBuffer + totalPrintedBytes,
 							 sizeof (printBuffer) - (size_t) totalPrintedBytes);
 
 	filefd = fopen(pcLogFile, ACCESS_MODE_APPEND_AND_READ);

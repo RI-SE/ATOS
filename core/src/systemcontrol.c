@@ -249,7 +249,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	struct in_addr ip_addr;
 	I32 RVSSChannelSocket;
 	struct timeval nextRVSSSendTime = { 0, 0 };
-	MonitorDataType monrData;
+	ObjectInformationDataType monrData;
 
 	ServerState_t server_state = SERVER_STATE_UNDEFINED;
 	OBCState_t objectControlState = OBC_STATE_UNDEFINED;
@@ -2768,7 +2768,7 @@ int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr
 	char *monitorDataString = RVSSData + sizeof (messageLength) + sizeof (RVSSChannel);
 	uint32_t *transmitterIDs = NULL;
 	uint32_t numberOfObjects;
-	MonitorDataType monitorData;
+	ObjectInformationDataType monitorData;
 
 	// Get number of objects present in shared memory
 	if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
