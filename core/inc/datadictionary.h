@@ -133,10 +133,11 @@ ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t *numberOfObjects);
 ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
 ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
 
-ReadWriteAccess_t DataDictionaryInitObjectStatusArray(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetObjectStatusIPElement(GSDType * GSD, uint32_t Index, uint32_t IP);
-ReadWriteAccess_t DataDictionarySetObjectStatusEnabledElement(GSDType * GSD, uint32_t Index, ObjectEnabledType Enabled);
-ReadWriteAccess_t DataDictionaryGetObjectStatusEnabledElement(GSDType * GSD, uint32_t IP, ObjectEnabledType *Enabled);
+
+ReadWriteAccess_t DataDictionaryInitObjectInformation(const ObjectInformationDataType * objectInformationData);
+ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitterId, ObjectEnabledType enabledStatus);
+ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmitterId, ObjectEnabledType *enabledStatus);
+ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const uint32_t ClientIP, ObjectEnabledType *enabledStatus);
 
 #endif 
 

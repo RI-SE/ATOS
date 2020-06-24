@@ -1117,7 +1117,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					if (inet_pton(AF_INET, SystemControlArgument[0], &enableCommand.objectIP) != -1) {
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
-						DataDictionaryGetObjectStatusEnabledElement(GSD, enableCommand.objectIP, &enableCommand.Enabled);
+						DataDictionaryGetObjectEnableStatusByIp(enableCommand.objectIP, &enableCommand);
 						bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 						ControlResponseBuffer[0] = (uint8_t) enableCommand.Enabled;
 						SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",

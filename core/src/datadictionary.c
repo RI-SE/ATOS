@@ -100,7 +100,6 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMonitorData() : Res;
-	Res = Res == READ_OK ? DataDictionaryInitObjectStatusArray(GSD) : Res;
 	if (Res != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
 	}
@@ -1965,92 +1964,12 @@ U64 DataDictionarySearchParameter(C8 * ParameterName, C8 * ResultBuffer) {
 	return strlen(ResultBuffer);
 }
 
-/*
-/*ObjectStatusArray*/
-/*!
- * \brief DataDictionaryInitObjectStatusArray Initializes ObjectStatus
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitObjectStatusArray(GSDType * GSD) {
-	ReadWriteAccess_t Res;
-	pthread_mutex_lock(&ObjectStatusMutex);
-	int32_t i;
-	for(i = 0; i < MAX_OBJECTS; i ++)
-	{
-		GSD->ObjectStatus[i].ClientIP = 0;
-		GSD->ObjectStatus[i].ClientID = 0;
-		GSD->ObjectStatus[i].Enabled = OBJECT_UNDEFINED;
-	}
-	pthread_mutex_unlock(&ObjectStatusMutex);
-
-	return Res;
-}
-/*END of ObjectStatusArray*/
-
-
-/*!
- * \brief DataDictionarySetObjectStatusIPElement Set object status IP address
- * \param GSD Pointer to shared allocated memory
- * \param IP
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionarySetObjectStatusIPElement(GSDType * GSD, uint32_t Index, uint32_t IP) {
-	ReadWriteAccess_t Res;
-	pthread_mutex_lock(&ObjectStatusMutex);
-	GSD->ObjectStatus[Index].ClientIP = IP;
-	pthread_mutex_unlock(&ObjectStatusMutex);
-	return Res;
-}
-
-
-/*!
- * \brief DataDictionarySetObjectStatusEnabledElement Set object enable status
- * \param GSD Pointer to shared allocated memory
- * \param Enabled
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionarySetObjectStatusEnabledElement(GSDType * GSD, uint32_t Index, ObjectEnabledType Enabled) {
-	ReadWriteAccess_t Res;
-	pthread_mutex_lock(&ObjectStatusMutex);
-	GSD->ObjectStatus[Index].Enabled = Enabled;
-	pthread_mutex_unlock(&ObjectStatusMutex);
-	return Res;
-}
-
-
-/*!
- * \brief DataDictionaryGetObjectStatusEnabledElement Get object enable status
- * \param GSD Pointer to shared allocated memory
- * \param IP number
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryGetObjectStatusEnabledElement(GSDType * GSD, uint32_t IP, ObjectEnabledType *Enabled) {
-	ReadWriteAccess_t Res;
-	int32_t Index = 0;
-	uint8_t Found = 0;
-	pthread_mutex_lock(&ObjectStatusMutex);
-	
-	while(Found == 0 && Index < MAX_OBJECTS)
-	{
-		if(GSD->ObjectStatus[Index].ClientIP == IP)
-		{
-			*Enabled = GSD->ObjectStatus[Index].Enabled; 
-			Found = 1;
-		} else *Enabled = OBJECT_UNDEFINED;
-	} 
-
-	pthread_mutex_unlock(&ObjectStatusMutex);
-	return Res;
-}
-
 
 /*!
  * \brief DataDictionaryInitObjectObjectInformation 
  * \param objectInformation data to be initialized
  * \return Result according to ::ReadWriteAccess_t
  */
-
 ReadWriteAccess_t DataDictionaryInitObjectInformation(const ObjectInformationDataType * objectInformationData) {
 
 	ReadWriteAccess_t result;
@@ -2126,7 +2045,6 @@ ReadWriteAccess_t DataDictionaryInitObjectInformation(const ObjectInformationDat
  * \param enabledStatus the enable status - enable, disable, undefined
  * \return Result according to ::ReadWriteAccess_t
  */
-
 ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitterId, ObjectEnabledType enabledStatus) {
 
 	ReadWriteAccess_t result;
@@ -2165,13 +2083,12 @@ ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitter
 } 
 
 /*!
- * \brief DataDictionaryGetObjectEnableStatus 
+ * \brief DataDictionaryGetObjectEnableStatusById 
  * \param transmitterId requested object transmitterId
  * \param *enabledStatus Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-
-ReadWriteAccess_t DataDictionaryGetObjectEnableStatus(const uint32_t transmitterId, ObjectEnabledType *enabledStatus) {
+ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmitterId, ObjectEnabledType *enabledStatus) {
 
 	ReadWriteAccess_t result;
 
@@ -2195,9 +2112,54 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatus(const uint32_t transmitter
 
 	result = PARAMETER_NOTFOUND;
 	int numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
+	*enabledStatus = UNDEFINED;
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (transmitterId == objectInformationDataMemory[i].ClientID) {
+				*enabledStatus = objectInformationDataMemory[i].Enabled;
+				result = READ_OK;
+			}
+	}
+
+	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+
+	return result;
+} 
+
+/*!
+ * \brief DataDictionaryGetObjectEnableStatusByIp 
+ * \param ClientIP requested object IP number
+ * \param *enabledStatus Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const uint32_t ClientIP, ObjectEnabledType *enabledStatus) {
+
+	ReadWriteAccess_t result;
+
+	if (objectInformationDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (ClientIP == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectInformationDataMemory = claimSharedMemory(objectInformationDataMemory);
+	if (objectInformationDataMemory == NULL) {
+		// If this code executes, objectInformationDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
+	*enabledStatus = UNDEFINED;
+	
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (ClientIP == objectInformationDataMemory[i].ClientIP) {
 				*enabledStatus = objectInformationDataMemory[i].Enabled;
 				result = READ_OK;
 			}
