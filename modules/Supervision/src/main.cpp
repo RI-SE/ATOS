@@ -181,6 +181,15 @@ int main()
             break;
         case COMM_OBC_STATE:
             break;
+        case COMM_GETSTATUS:
+            memset(mqSendData, 0, sizeof (mqSendData));
+            sprintf(mqSendData, "%s", MODULE_NAME);
+            if (iCommSend(COMM_GETSTATUS_OK, mqSendData, sizeof (mqSendData)) < 0) {
+                LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");
+            }
+            break;
+        case COMM_GETSTATUS_OK:
+            break;
         default:
             LogMessage(LOG_LEVEL_INFO,"Received unhandled command %u",command);
         }

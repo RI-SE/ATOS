@@ -93,6 +93,8 @@ void vCreateVisualizationMessage(MonitorDataType * _monitorData, char *_visualiz
 int main() {
 	enum COMMAND command = COMM_INV;
 	char mqRecvData[MQ_MSG_SIZE];
+	char mqSendData[MQ_MSG_SIZE];
+
 	const struct timespec sleepTimePeriod = { 0, 10000000 };
 	struct timespec remTime;
 
@@ -185,6 +187,15 @@ int main() {
 		case COMM_OBC_STATE:
 			break;
 		case COMM_STRT:
+			break;
+		case COMM_GETSTATUS:
+			memset(mqSendData, 0, sizeof (mqSendData));
+			sprintf(mqSendData, "%s", MODULE_NAME);
+			if (iCommSend(COMM_GETSTATUS_OK, mqSendData, sizeof (mqSendData)) < 0) {
+				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");
+			}
+			break;
+		case COMM_GETSTATUS_OK:
 			break;
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", (unsigned char)command);
