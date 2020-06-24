@@ -2853,8 +2853,6 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 			numberOfResponses++;
 		}
 
-		//LogMessage(LOG_LEVEL_INFO, "%d responses to GET_STATUS command", numberOfResponses);
-
 		if (timercmp(&getStatusTimeoutTimer, &currentSystemTime, <)) {
 
 			//Too many
