@@ -291,6 +291,18 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		case COMM_INV:
 			break;
+
+		case COMM_GETSTATUS:
+			memset(busSendBuffer, 0, sizeof (busSendBuffer));
+			sprintf(busSendBuffer, "%s", MODULE_NAME);
+			if (iCommSend(COMM_GETSTATUS_OK, busSendBuffer, sizeof (busSendBuffer)) < 0) {
+				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");
+			}
+			break;
+
+		case COMM_GETSTATUS_OK:
+			break;
+
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", command);
 		}

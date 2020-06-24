@@ -514,7 +514,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		bzero(pcRecvBuffer, RECV_MESSAGE_BUFFER);
 		//Have we recieved a command?
 		if (iCommRecv(&iCommand, pcRecvBuffer, RECV_MESSAGE_BUFFER, NULL)) {
-			LogMessage(LOG_LEVEL_INFO, "Received command %d", iCommand);
+			LogMessage(LOG_LEVEL_DEBUG, "Received command %d", iCommand);
 
 
 			if (iCommand == COMM_ARM && vGetState(GSD) == OBC_STATE_CONNECTED) {
@@ -1085,6 +1085,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				iExit = 1;
 				iCommClose();
 			}
+			else if (iCommand == COMM_GETSTATUS) {
+
+				memset(pcSendBuffer, 0, sizeof (pcSendBuffer));
+				sprintf(pcSendBuffer, "%s", MODULE_NAME);
+				iCommSend(COMM_GETSTATUS_OK, pcSendBuffer, sizeof (pcSendBuffer));
+			}
+			else if (iCommand == COMM_GETSTATUS_OK) {
+			}
+
 			else {
 				LogMessage(LOG_LEVEL_WARNING, "Unhandled command in object control: %d", iCommand);
 			}

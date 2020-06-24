@@ -64,7 +64,7 @@ extern "C"{
 #define DEFAULT_RVSS_CONF 3
 #define DEFAULT_RVSS_RATE 1
 
-#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1) // Message queue data minus one byte for the command
+#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length
 
 #define SAFETY_CHANNEL_PORT 53240
 #define CONTROL_CHANNEL_PORT 53241
@@ -215,6 +215,8 @@ COMM_TREO = 23,
 COMM_ACCM = 24,
 COMM_TRCM = 25,
 COMM_DISARM = 26,
+COMM_GETSTATUS = 237,
+COMM_GETSTATUS_OK = 238,
 COMM_REMOTECTRL_ENABLE = 27,
 COMM_REMOTECTRL_DISABLE = 28,
 COMM_REMOTECTRL_MANOEUVRE = 29,
