@@ -641,10 +641,27 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
             strcat(ControlResponseBuffer, buff);
 
+            pid_t pid = getpid();
+            FILE *pidstat = NULL;
+
+            char filename[100] = {0};
+            snprintf(filename, sizeof(filename), "/proc/%d/stat", pid);
+
+            pidstat = fopen(filename, "r");
+            if (pidstat == NULL) {
+                fprintf(stderr, "Error: Couldn't open [%s]\n", filename);
+            }
+
+            char strval1[100] = {0};
+            fgets (strval1, 255, pidstat);
+
+            fclose(pidstat);
+            strcat(ControlResponseBuffer, strval1);
+
 
             LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
             SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
-                                             ControlResponseBuffer, strlen(buff) + 2, &ClientSocket, 0);
+                                             ControlResponseBuffer, strlen(buff) + strlen(strval1) + 2, &ClientSocket, 0);
             break;
         case GetServerParameterList_0:
             SystemControlCommand = Idle_0;
