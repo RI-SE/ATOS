@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
+#include <sys/sysinfo.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -637,6 +638,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 			ControlResponseBuffer[0] = server_state;
 			ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD);	//OBCStateU8;
+            appendSysInfoString(ControlResponseBuffer);
 			LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
 											 ControlResponseBuffer, 2, &ClientSocket, 0);
@@ -2895,3 +2897,56 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 
 	return 0;
 }
+
+
+void appendSysInfoString(char *ControlResponseBuffer) {
+    // Server uptime
+    struct sysinfo info;
+
+    sysinfo(&info);
+
+    int h = (info.uptime / 3600);
+    int m = (info.uptime - (3600 * h)) / 60;
+    int s = (info.uptime - (3600 * h) - (m * 60));
+
+    char buff[255];
+
+    sprintf(buff, "Server Uptime: %i:%i:%i\n", h, m, s);
+
+    strcat(ControlResponseBuffer, buff);
+
+    pid_t pid = getpid();
+    FILE *pidstat = NULL;
+
+    char filename[100] = { 0 };
+    snprintf(filename, sizeof (filename), "/proc/%d/stat", pid);
+
+    pidstat = fopen(filename, "r");
+    if (pidstat == NULL) {
+        fprintf(stderr, "Error: Couldn't open [%s]\n", filename);
+    }
+
+    char strval1[100] = { 0 };
+    fgets(strval1, 255, pidstat);
+
+    fclose(pidstat);
+
+    // Get start time from proc/pid/stat
+    char *token = strtok(strval1, " ");
+    int loopCounter = 0;
+
+    while (token != NULL) {
+        printf(" %s\n", token);
+        if (loopCounter == 22) {
+            char temp[255];
+
+            sprintf(temp, "Pid %d was started at: %s\n", pid, token);
+            strcat(ControlResponseBuffer, temp);
+        }
+        token = strtok(NULL, " ");
+        loopCounter++;
+    }
+    //Make it clear that this is placeholder data
+    strcat(ControlResponseBuffer, "Maestro powerlevel: 90001 \n");
+}
+
