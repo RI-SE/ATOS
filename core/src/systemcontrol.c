@@ -2813,6 +2813,7 @@ void appendSysInfoString(char* ControlResponseBuffer){
 
     fclose(pidstat);
 
+    // Get start time from proc/pid/stat
     char * token = strtok(strval1, " ");
     int loopCounter = 0;
     while( token != NULL ) {
@@ -2825,5 +2826,6 @@ void appendSysInfoString(char* ControlResponseBuffer){
          token = strtok(NULL, " ");
          loopCounter ++;
       }
-
+    //Make it clear that this is placeholder data
+    strcat(ControlResponseBuffer, "Maestro powerlevel: 90001 \n");
 }
