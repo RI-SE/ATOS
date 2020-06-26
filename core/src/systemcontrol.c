@@ -229,6 +229,8 @@ static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, 
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
 
+void appendSysInfoString(char*);
+
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
@@ -628,40 +630,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             ControlResponseBuffer[0] = server_state;
             ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD);	//OBCStateU8;
 
-            // Server uptime
-            struct sysinfo info;
-            sysinfo(&info);
-
-            int h = (info.uptime/3600);
-            int m = (info.uptime -(3600*h))/60;
-            int s = (info.uptime -(3600*h)-(m*60));
-
-            char buff[255];
-            sprintf(buff, "Server Uptime: %i:%i:%i\n", h, m, s);
-
-            strcat(ControlResponseBuffer, buff);
-
-            pid_t pid = getpid();
-            FILE *pidstat = NULL;
-
-            char filename[100] = {0};
-            snprintf(filename, sizeof(filename), "/proc/%d/stat", pid);
-
-            pidstat = fopen(filename, "r");
-            if (pidstat == NULL) {
-                fprintf(stderr, "Error: Couldn't open [%s]\n", filename);
-            }
-
-            char strval1[100] = {0};
-            fgets (strval1, 255, pidstat);
-
-            fclose(pidstat);
-            strcat(ControlResponseBuffer, strval1);
+            appendSysInfoString(ControlResponseBuffer);
 
 
             LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
             SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
-                                             ControlResponseBuffer, strlen(buff) + strlen(strval1) + 2, &ClientSocket, 0);
+                                             ControlResponseBuffer, strlen(ControlResponseBuffer) + 2, &ClientSocket, 0);
             break;
         case GetServerParameterList_0:
             SystemControlCommand = Idle_0;
@@ -2806,4 +2780,50 @@ I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU
 
 
     return 0;
+}
+
+
+void appendSysInfoString(char* ControlResponseBuffer){
+    // Server uptime
+    struct sysinfo info;
+    sysinfo(&info);
+
+    int h = (info.uptime/3600);
+    int m = (info.uptime -(3600*h))/60;
+    int s = (info.uptime -(3600*h)-(m*60));
+
+    char buff[255];
+    sprintf(buff, "Server Uptime: %i:%i:%i\n", h, m, s);
+
+    strcat(ControlResponseBuffer, buff);
+
+    pid_t pid = getpid();
+    FILE *pidstat = NULL;
+
+    char filename[100] = {0};
+    snprintf(filename, sizeof(filename), "/proc/%d/stat", pid);
+
+    pidstat = fopen(filename, "r");
+    if (pidstat == NULL) {
+        fprintf(stderr, "Error: Couldn't open [%s]\n", filename);
+    }
+
+    char strval1[100] = {0};
+    fgets (strval1, 255, pidstat);
+
+    fclose(pidstat);
+
+    char * token = strtok(strval1, " ");
+    int loopCounter = 0;
+    while( token != NULL ) {
+         printf( " %s\n", token );
+         if(loopCounter == 22){
+             char temp[255];
+             sprintf(temp, "Pid %d was started at: %s\n", pid, token);
+             strcat(ControlResponseBuffer, temp);
+         }
+         token = strtok(NULL, " ");
+         loopCounter ++;
+      }
+
 }
