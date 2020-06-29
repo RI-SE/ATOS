@@ -11,6 +11,8 @@
 #include "geofence.h"
 #include "trajectory.h"
 #include "logging.h"
+#include "datadictionary.h"
+
 #include "util.h"
 
 #define MODULE_NAME "Supervision"
@@ -37,7 +39,7 @@ static void loadGeofenceFiles(std::vector<Geofence> &geofences);
 static void loadTrajectoryFiles(std::vector<Trajectory> &trajectories);
 static Geofence parseGeofenceFile(const std::string geofenceFile);
 static PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRData, std::vector<std::pair<Trajectory&, bool>> armVerified);
-
+static int readDataDictionaryMonitorData();
 static void signalHandler(int signo);
 
 /*------------------------------------------------------------
@@ -59,6 +61,7 @@ int main()
     const struct timespec sleepTimePeriod = {0,10000000};
     struct timespec remTime;
     SupervisionState state;
+
 
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
     LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
@@ -111,6 +114,9 @@ int main()
 
 			break;
         case COMM_MONR:
+            // Get number of objects present in shared memory
+
+            /*
 			MonitorDataType monitorMessage;
 			UtilPopulateMonitorDataStruct(mqRecvData, sizeof (mqRecvData), &monitorMessage);
 
@@ -146,6 +152,7 @@ int main()
                     break;
                 }
             }
+            */
             break;
         case COMM_ARM:
             try {
@@ -193,6 +200,7 @@ int main()
         default:
             LogMessage(LOG_LEVEL_INFO,"Received unhandled command %u",command);
         }
+        readDataDictionaryMonitorData();
     }
 
     iCommClose();
@@ -550,4 +558,18 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &monitorDa
         }
     }
     return OBJECT_HAS_NO_TRAJECTORY;
+}
+
+#define MAX_MONR_STRING_LENGTH 1024
+#define RVSS_MONITOR_CHANNEL 2
+
+int readDataDictionaryMonitorData(){
+    uint32_t numberOfObjects;
+;
+
+    if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
+        LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error");
+        return -1;
+    }
+    return 1;
 }
