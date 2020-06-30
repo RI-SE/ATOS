@@ -39,7 +39,7 @@ static void loadGeofenceFiles(std::vector<Geofence> &geofences);
 static void loadTrajectoryFiles(std::vector<Trajectory> &trajectories);
 static Geofence parseGeofenceFile(const std::string geofenceFile);
 static PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRData, std::vector<std::pair<Trajectory&, bool>> armVerified);
-static int readDataDictionaryMonitorData();
+static int checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &geofences, std::vector<std::pair<Trajectory&, bool>> armVerified);
 static void signalHandler(int signo);
 
 /*------------------------------------------------------------
@@ -117,41 +117,7 @@ int main()
             // Get number of objects present in shared memory
 
             /*
-			MonitorDataType monitorMessage;
-			UtilPopulateMonitorDataStruct(mqRecvData, sizeof (mqRecvData), &monitorMessage);
 
-			if (state.get() == SupervisionState::RUNNING && isViolatingGeofence(monitorMessage, geofences)) {
-                LogMessage(LOG_LEVEL_WARNING, "Object with IP %s is violating a geofence: sending ABORT",
-						   inet_ntop(AF_INET, &monitorMessage.ClientIP, ipString, sizeof (ipString)));
-                iCommSend(COMM_ABORT, nullptr, 0);
-                state.set(SupervisionState::READY);
-            }
-
-            if (state.get() == SupervisionState::VERIFYING_ARM) {
-				if (isViolatingGeofence(monitorMessage, geofences)) {
-                    LogMessage(LOG_LEVEL_INFO, "Arm not approved: object with IP address %s is violating a geofence",
-							   inet_ntop(AF_INET, &monitorMessage.ClientIP, ipString, sizeof (ipString)));
-                    iCommSend(COMM_DISARM, nullptr, 0);
-                    state.set(SupervisionState::READY);
-                    break;
-                }
-
-				switch (updateNearStartingPositionStatus(monitorMessage, armVerified)) {
-                case SINGLE_OBJECT_NOT_NEAR_START: // Object not near start: disarm
-                    LogMessage(LOG_LEVEL_INFO, "Arm not approved: sending disarm");
-                    iCommSend(COMM_DISARM, nullptr, 0);
-                    state.set(SupervisionState::READY);
-                    break;
-                case ALL_OBJECTS_NEAR_START:
-                    LogMessage(LOG_LEVEL_INFO, "Arm approved");
-                    state.set(SupervisionState::READY);
-                    break;
-                case SINGLE_OBJECT_NEAR_START: // Need to wait for all objects to report position
-                    break;
-                case OBJECT_HAS_NO_TRAJECTORY: // Object has no trajectory, no need to check it
-                    break;
-                }
-            }
             */
             break;
         case COMM_ARM:
@@ -200,7 +166,7 @@ int main()
         default:
             LogMessage(LOG_LEVEL_INFO,"Received unhandled command %u",command);
         }
-        readDataDictionaryMonitorData();
+        checkObjectsAgainstGeofences(state, geofences, armVerified);
     }
 
     iCommClose();
@@ -563,13 +529,70 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &monitorDa
 #define MAX_MONR_STRING_LENGTH 1024
 #define RVSS_MONITOR_CHANNEL 2
 
-int readDataDictionaryMonitorData(){
+int checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &geofences, std::vector<std::pair<Trajectory&, bool>> armVerified){
+    char ipString[INET_ADDRSTRLEN];
+
+    uint32_t messageLength = 0;
+    uint32_t RVSSChannel = RVSS_MONITOR_CHANNEL;
+    char RVSSData[MAX_MONR_STRING_LENGTH];
+    char *monitorDataString = RVSSData + sizeof (messageLength) + sizeof (RVSSChannel);
+    uint32_t *transmitterIDs = NULL;
     uint32_t numberOfObjects;
-;
+    MonitorDataType monitorData;
+
+    int retval = 0;
 
     if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
-        LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error");
-        return -1;
-    }
-    return 1;
+          LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error");
+          return -1;
+      }
+
+
+    for (uint32_t i = 0; i < numberOfObjects; ++i) {
+            if (DataDictionaryGetMonitorData(&monitorData, transmitterIDs[i]) != READ_OK) {
+                LogMessage(LOG_LEVEL_ERROR,
+                           "Data dictionary monitor data read error for transmitter ID %u",
+                           transmitterIDs[i]);
+                retval = -1;
+            }
+            else if (UtilMonitorDataToString(monitorData, monitorDataString,
+                                             sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) == -1) {
+                LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
+                retval = -1;
+            }
+            else {
+                if (state.get() == SupervisionState::RUNNING && isViolatingGeofence(monitorData, geofences)) {
+                    LogMessage(LOG_LEVEL_WARNING, "Object with IP %s is violating a geofence: sending ABORT",
+                               inet_ntop(AF_INET, &monitorData.ClientIP, ipString, sizeof (ipString)));
+                    iCommSend(COMM_ABORT, nullptr, 0);
+                    state.set(SupervisionState::READY);
+                }
+
+            if (state.get() == SupervisionState::VERIFYING_ARM) {
+                if (isViolatingGeofence(monitorData, geofences)) {
+                        LogMessage(LOG_LEVEL_INFO, "Arm not approved: object with IP address %s is violating a geofence",
+                                   inet_ntop(AF_INET, &monitorData.ClientIP, ipString, sizeof (ipString)));
+                        iCommSend(COMM_DISARM, nullptr, 0);
+                        state.set(SupervisionState::READY);
+                        break;
+                    }
+
+                    switch (updateNearStartingPositionStatus(monitorData, armVerified)) {
+                    case SINGLE_OBJECT_NOT_NEAR_START: // Object not near start: disarm
+                        LogMessage(LOG_LEVEL_INFO, "Arm not approved: sending disarm");
+                        iCommSend(COMM_DISARM, nullptr, 0);
+                        state.set(SupervisionState::READY);
+                        break;
+                    case ALL_OBJECTS_NEAR_START:
+                        LogMessage(LOG_LEVEL_INFO, "Arm approved");
+                        state.set(SupervisionState::READY);
+                        break;
+                    case SINGLE_OBJECT_NEAR_START: // Need to wait for all objects to report position
+                        break;
+                    case OBJECT_HAS_NO_TRAJECTORY: // Object has no trajectory, no need to check it
+                        break;
+                    }
+                }
+            }
+        }
 }
