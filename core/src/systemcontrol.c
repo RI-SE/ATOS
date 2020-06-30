@@ -1089,6 +1089,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 						if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
 							memcpy(pcBuffer, &enableCommand, sizeof (enableCommand));
+							printf("pcBuffer: %x %x %x %x %x\n", pcBuffer[0], pcBuffer[1], pcBuffer[2], pcBuffer[3], pcBuffer[4] );
 							iCommSend(COMM_ENABLE_OBJECT, pcBuffer, sizeof (enableCommand));	// TODO check return value
 							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						}
@@ -1117,7 +1118,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					if (inet_pton(AF_INET, SystemControlArgument[0], &enableCommand.objectIP) != -1) {
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
-						DataDictionaryGetObjectEnableStatusByIp(enableCommand.objectIP, &enableCommand);
+						DataDictionaryGetObjectEnableStatusByIp(enableCommand.objectIP, &enableCommand.Enabled);
 						bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 						ControlResponseBuffer[0] = (uint8_t) enableCommand.Enabled;
 						SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",

@@ -2157,10 +2157,55 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const uint32_t ClientI
 	result = PARAMETER_NOTFOUND;
 	int numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
 	*enabledStatus = UNDEFINED;
-	
+
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (ClientIP == objectInformationDataMemory[i].ClientIP) {
 				*enabledStatus = objectInformationDataMemory[i].Enabled;
+				result = READ_OK;
+			}
+	}
+
+	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+
+	return result;
+} 
+
+
+/*!
+ * \brief DataDictionaryGetTransmitterIdByIP 
+ * \param ClientIP requested object IP number
+ * \param *transmitterId Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetTransmitterIdByIP(const uint32_t ClientIP, uint32_t *transmitterId) {
+
+	ReadWriteAccess_t result;
+
+	if (objectInformationDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (ClientIP == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectInformationDataMemory = claimSharedMemory(objectInformationDataMemory);
+	if (objectInformationDataMemory == NULL) {
+		// If this code executes, objectInformationDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
+	*transmitterId = 0;
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (ClientIP == objectInformationDataMemory[i].ClientIP) {
+				*transmitterId = objectInformationDataMemory[i].ClientID;
 				result = READ_OK;
 			}
 	}

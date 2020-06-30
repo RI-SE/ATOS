@@ -276,6 +276,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	nextAdaptiveSyncMessageTime = currentTime;
 
 	ObjectEnabledType objectEnabledStatus;
+	uint32_t transmitterId;
+
 	while (!iExit) {
 
 		if (vGetState(GSD) == OBC_STATE_ERROR) {
@@ -310,25 +312,28 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			// Check if any object has disconnected - if so, disconnect all objects and return to idle
 			DisconnectU8 = 0;
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-				DisconnectU8 |= vCheckRemoteDisconnected(&socket_fds[iIndex]);
-				if (DisconnectU8) {
-					LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s - returning to IDLE",
-							   object_address_name[iIndex]);
+				DataDictionaryGetObjectEnableStatusById(iIndex+1, &objectEnabledStatus);
+				printf("objectEnabledStatus = %d, TransmitterId = %d, IP = %s\n", objectEnabledStatus, iIndex+1, object_address_name[iIndex]);
+				if(objectEnabledStatus == OBJECT_ENABLED){
+					DisconnectU8 |= vCheckRemoteDisconnected(&socket_fds[iIndex]);
+				 	printf("Checking status for IP = %s\n", object_address_name[iIndex]);
 
-					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-						DataDictionaryGetObjectEnableStatusById(iIndex+1, &objectEnabledStatus);
-						if(objectEnabledStatus == OBJECT_ENABLED)
+					if (DisconnectU8) {
+						LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s - returning to IDLE",
+								   object_address_name[iIndex]);
+
+						for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 							vDisconnectObject(&socket_fds[iIndex]);
-					}
+						}
 
-					/* Close safety socket */
-					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-						DataDictionaryGetObjectEnableStatusById(iIndex+1, &objectEnabledStatus);
-						if(objectEnabledStatus == OBJECT_ENABLED)
+						/* Close safety socket */
+						for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 							vCloseSafetyChannel(&safety_socket_fd[iIndex]);
+						}
+						
+						vSetState(OBC_STATE_IDLE, GSD);
+						break;
 					}
-					vSetState(OBC_STATE_IDLE, GSD);
-					break;
 				}
 			}
 		}
@@ -702,8 +707,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (vGetState(GSD) != OBC_STATE_RUNNING) {
 					iIndex = iGetObjectIndexFromObjectIP(enableCommand.objectIP, objectIPs,
 														sizeof (objectIPs) / sizeof (objectIPs[0]));
-					if(iIndex > -1){
-						DataDictionarySetObjectEnableStatus(iIndex, enableCommand.Enabled);
+					DataDictionaryGetTransmitterIdByIP(enableCommand.objectIP, &transmitterId);
+					if(transmitterId > 0){
+						DataDictionarySetObjectEnableStatus(transmitterId, enableCommand.Enabled);
 						if(enableCommand.Enabled == OBJECT_ENABLED)
 							LogMessage(LOG_LEVEL_INFO, "Enable object %s.", object_address_name[iIndex]);
 						else if(enableCommand.Enabled == OBJECT_DISABLED) 

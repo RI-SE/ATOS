@@ -138,6 +138,7 @@ ReadWriteAccess_t DataDictionaryInitObjectInformation(const ObjectInformationDat
 ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitterId, ObjectEnabledType enabledStatus);
 ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmitterId, ObjectEnabledType *enabledStatus);
 ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const uint32_t ClientIP, ObjectEnabledType *enabledStatus);
+ReadWriteAccess_t DataDictionaryGetTransmitterIdByIP(const uint32_t ClientIP, uint32_t *transmitterId);
 
 #endif 
 
