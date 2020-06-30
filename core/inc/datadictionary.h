@@ -10,6 +10,10 @@
 #ifndef __DATADICTIONARY_H_INCLUDED__
 #define __DATADICTIONARY_H_INCLUDED__
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 #define SHARED_MEMORY_PATH "/dev/shm/maestro/"
 
 #include "util.h"
@@ -132,6 +136,8 @@ ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t *numberOfObjects);
 
 ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
 ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
-
-#endif 
+#ifdef __cplusplus
+}
+#endif
+#endif
 
