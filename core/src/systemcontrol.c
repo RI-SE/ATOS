@@ -1089,7 +1089,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 						if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
 							memcpy(pcBuffer, &enableCommand, sizeof (enableCommand));
-							printf("pcBuffer: %x %x %x %x %x\n", pcBuffer[0], pcBuffer[1], pcBuffer[2], pcBuffer[3], pcBuffer[4] );
 							iCommSend(COMM_ENABLE_OBJECT, pcBuffer, sizeof (enableCommand));	// TODO check return value
 							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						}

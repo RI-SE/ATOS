@@ -313,11 +313,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			DisconnectU8 = 0;
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				DataDictionaryGetObjectEnableStatusById(iIndex+1, &objectEnabledStatus);
-				printf("objectEnabledStatus = %d, TransmitterId = %d, IP = %s\n", objectEnabledStatus, iIndex+1, object_address_name[iIndex]);
+				//printf("objectEnabledStatus = %d, TransmitterId = %d, IP = %s\n", objectEnabledStatus, iIndex+1, object_address_name[iIndex]);
 				if(objectEnabledStatus == OBJECT_ENABLED){
+					//printf("Checking status for IP = %s, %d, %x\n", object_address_name[iIndex], iIndex, socket_fds[iIndex]);
 					DisconnectU8 |= vCheckRemoteDisconnected(&socket_fds[iIndex]);
-				 	printf("Checking status for IP = %s\n", object_address_name[iIndex]);
-
 					if (DisconnectU8) {
 						LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s - returning to IDLE",
 								   object_address_name[iIndex]);
@@ -383,9 +382,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-				memset(buffer, 0, sizeof (buffer));
-				receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex], buffer, sizeof (buffer));
-
+				
+				DataDictionaryGetObjectEnableStatusById(iIndex+1, &objectEnabledStatus);
+				if(objectEnabledStatus == OBJECT_ENABLED){
+					memset(buffer, 0, sizeof (buffer));
+					receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex], buffer, sizeof (buffer));
+				}
+				
 				if (receivedMONRData > 0 && getISOMessageType(buffer, receivedMONRData, 0) == MESSAGE_ID_MONR) {
 					LogMessage(LOG_LEVEL_DEBUG, "Recieved %d bytes of new data from %s %d: %s",
 							   receivedMONRData, object_address_name[iIndex], object_udp_port[iIndex],
@@ -920,7 +923,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.");
 
 				/* Connect and send drive files */
-				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+				for (iIndex = 0; iIndex < nbr_objects; ++iIndex)
+				{
 
 					DataDictionaryGetObjectEnableStatusById(iIndex+1, &objectEnabledStatus);
 					if(objectEnabledStatus== OBJECT_ENABLED)
@@ -943,6 +947,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							iResult =
 								vConnectObject(&socket_fds[iIndex], object_address_name[iIndex],
 											   object_tcp_port[iIndex], &DisconnectU8);
+							printf("socket_fds[%d] = %x ", iIndex, socket_fds[iIndex]);
+							printf("object_address_name[%d] = %x ", iIndex, object_address_name[iIndex]);
+							printf("object_tcp_port[%d] = %x ", iIndex, object_tcp_port[iIndex]);
+							printf("DisconnectU8[%d] = %x ", iIndex, DisconnectU8);
 
 							if (iResult < 0) {
 								switch (errno) {
@@ -1070,37 +1078,38 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							}
 							/* ...end */
 						}
-					}
-					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-						DataDictionaryGetObjectEnableStatusById(iIndex+1, &objectEnabledStatus);
-						if(objectEnabledStatus == OBJECT_ENABLED)
-						{
-							if (USE_TEST_HOST == 0)
-								vCreateSafetyChannel(object_address_name[iIndex], object_udp_port[iIndex],
-													 &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
-							else if (USE_TEST_HOST == 1)
-								vCreateSafetyChannel(TESTSERVER_IP, object_udp_port[iIndex],
-													 &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
+					
+						for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+							DataDictionaryGetObjectEnableStatusById(iIndex+1, &objectEnabledStatus);
+							if(objectEnabledStatus == OBJECT_ENABLED)
+							{
+								if (USE_TEST_HOST == 0)
+									vCreateSafetyChannel(object_address_name[iIndex], object_udp_port[iIndex],
+														 &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
+								else if (USE_TEST_HOST == 1)
+									vCreateSafetyChannel(TESTSERVER_IP, object_udp_port[iIndex],
+														 &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
+							}
 						}
 					}
-
-					uiTimeCycle = 0;
-
-					/* Execution mode */
-					ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
-
-					/*Set server status */
-					objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
-
-					if (DisconnectU8 == 0) {
-						nextHeartbeatTime = currentTime;
-						nextAdaptiveSyncMessageTime = currentTime;
-						vSetState(OBC_STATE_CONNECTED, GSD);
-						iCommSend(COMM_OBJECTS_CONNECTED, NULL, 0);
-					}
-					else if (DisconnectU8 == 1)
-						vSetState(OBC_STATE_IDLE, GSD);
 				}
+				uiTimeCycle = 0;
+
+				/* Execution mode */
+				ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
+
+				/*Set server status */
+				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
+
+				if (DisconnectU8 == 0) {
+					nextHeartbeatTime = currentTime;
+					nextAdaptiveSyncMessageTime = currentTime;
+					vSetState(OBC_STATE_CONNECTED, GSD);
+					iCommSend(COMM_OBJECTS_CONNECTED, NULL, 0);
+				}
+				else if (DisconnectU8 == 1)
+					vSetState(OBC_STATE_IDLE, GSD);
+				
 			}
 			else if (iCommand == COMM_DATA_DICT) {
 
