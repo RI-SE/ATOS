@@ -1961,38 +1961,38 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 
 I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 
-	I32 RowCount, i;
-	C8 TextBuffer[SMALL_BUFFER_SIZE_128];
+	char* line;
+	size_t len;
 	FILE *fd;
 	char confPathDir[MAX_FILE_PATH];
+	ssize_t read;
 
 	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
 	strcat(confPathDir, CONF_FILE_NAME);
 
 	fd = fopen(confPathDir, "r");
-	if (fd > 0) {
-		RowCount = UtilCountFileRows(fd);
-		fclose(fd);
-		fd = fopen(confPathDir, "r");
-
-		for (i = 0; i < RowCount; i++) {
-			bzero(TextBuffer, SMALL_BUFFER_SIZE_128);
-			UtilReadLineCntSpecChars(fd, TextBuffer);
-			if (strlen(TextBuffer) > 0) {
-				strcat(ParameterList, TextBuffer);
+	if (fd != NULL) {
+		while ((read = getline(&line, &len, fd)) != -1) {
+			if (strlen(line) > 0) {
+				strcat(ParameterList, line);
 				strcat(ParameterList, ";");
 			}
 		}
-
 		fclose(fd);
+		if (line)
+			free(line);
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", confPathDir);
 	}
 
 	if (Debug) {
-		LogMessage(LOG_LEVEL_INFO, "ParameterList = %s\n", ParameterList);
+		LogPrint("ParameterList = %s\n", ParameterList);
 	}
 
 	return strlen(ParameterList);
 }
+
 
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 
