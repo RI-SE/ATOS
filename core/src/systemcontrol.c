@@ -1907,54 +1907,93 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 
 
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug) {
+
+	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 	if (Debug)
-		printf("[SystemControl] SetServerParameter: %s = %s\n", ParameterName, NewValue);
-	if (strcmp("OrigoLatitude", ParameterName) == 0)
-		DataDictionarySetOriginLatitudeDbl(GSD, NewValue);
-	else if (strcmp("OrigoLongitude", ParameterName) == 0)
-		DataDictionarySetOriginLongitudeDbl(GSD, NewValue);
-	else if (strcmp("OrigoAltitude", ParameterName) == 0)
-		DataDictionarySetOriginAltitudeDbl(GSD, NewValue);
-	else if (strcmp("VisualizationServerName", ParameterName) == 0)
-		DataDictionarySetVisualizationServerU32(GSD, NewValue);
-	else if (strcmp("ForceObjectToLocalhost", ParameterName) == 0)
-		DataDictionarySetForceToLocalhostU8(GSD, NewValue);
-	else if (strcmp("ASPMaxTimeDiff", ParameterName) == 0)
-		DataDictionarySetASPMaxTimeDiffDbl(GSD, NewValue);
-	else if (strcmp("ASPMaxTrajDiff", ParameterName) == 0)
-		DataDictionarySetASPMaxTrajDiffDbl(GSD, NewValue);
-	else if (strcmp("ASPStepBackCount", ParameterName) == 0)
-		DataDictionarySetASPStepBackCountU32(GSD, NewValue);
-	else if (strcmp("ASPFilterLevel", ParameterName) == 0)
-		DataDictionarySetASPFilterLevelDbl(GSD, NewValue);
-	else if (strcmp("ASPMaxDeltaTime", ParameterName) == 0)
-		DataDictionarySetASPMaxDeltaTimeDbl(GSD, NewValue);
-	else if (strcmp("TimeServerIP", ParameterName) == 0)
-		DataDictionarySetTimeServerIPU32(GSD, NewValue);
-	else if (strcmp("TimeServerPort", ParameterName) == 0)
-		DataDictionarySetTimeServerPortU16(GSD, NewValue);
-	else if (strcmp("SimulatorIP", ParameterName) == 0)
-		DataDictionarySetSimulatorIPU32(GSD, NewValue);
-	else if (strcmp("SimulatorTCPPort", ParameterName) == 0)
-		DataDictionarySetSimulatorTCPPortU16(GSD, NewValue);
-	else if (strcmp("SimulatorUDPPort", ParameterName) == 0)
-		DataDictionarySetSimulatorUDPPortU16(GSD, NewValue);
-	else if (strcmp("SimulatorMode", ParameterName) == 0)
-		DataDictionarySetSimulatorModeU8(GSD, NewValue);
-	else if (strcmp("VOILReceivers", ParameterName) == 0)
-		DataDictionarySetVOILReceiversC8(GSD, NewValue);
-	else if (strcmp("DTMReceivers", ParameterName) == 0)
-		DataDictionarySetDTMReceiversC8(GSD, NewValue);
-	else if (strcmp("SupervisorIP", ParameterName) == 0)
-		DataDictionarySetExternalSupervisorIPU32(GSD, NewValue);
-	else if (strcmp("SupervisorTCPPort", ParameterName) == 0)
-		DataDictionarySetSupervisorTCPPortU16(GSD, NewValue);
-	else if (strcmp("MiscData", ParameterName) == 0)
-		DataDictionarySetMiscDataC8(GSD, NewValue);
-	else if (strcmp("RVSSConfig", ParameterName) == 0)
-		DataDictionarySetRVSSConfigU32(GSD, (U32) atoi(NewValue));
-	else if (strcmp("RVSSRate", ParameterName) == 0)
-		DataDictionarySetRVSSRateU8(GSD, (U32) atoi(NewValue));
+		LogPrint("SetServerParameter: %s = %s", ParameterName, NewValue);
+
+	enum ConfigurationFileParameter parameter = UtilParseConfigurationParameter(ParameterName, strlen(ParameterName)+1);
+
+	switch (parameter) {
+	case CONFIGURATION_PARAMETER_SCENARIO_NAME:
+		result = DataDictionarySetScenarioName(NewValue, strlen(NewValue)+1);
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_LATITUDE:
+		result = DataDictionarySetOriginLatitudeDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
+		result = DataDictionarySetOriginLongitudeDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE:
+		result = DataDictionarySetOriginAltitudeDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
+		result = DataDictionarySetVisualizationServerU32(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST:
+		result = DataDictionarySetForceToLocalhostU8(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
+		result = DataDictionarySetASPMaxTimeDiffDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF:
+		result = DataDictionarySetASPMaxTrajDiffDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT:
+		result = DataDictionarySetASPStepBackCountU32(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL:
+		result = DataDictionarySetASPFilterLevelDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME:
+		result = DataDictionarySetASPMaxDeltaTimeDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_TIME_SERVER_IP:
+		result = DataDictionarySetTimeServerIPU32(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_TIME_SERVER_PORT:
+		result = DataDictionarySetTimeServerPortU16(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_IP:
+		result = DataDictionarySetSimulatorIPU32(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP:
+		result = DataDictionarySetSimulatorTCPPortU16(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP:
+		result = DataDictionarySetSimulatorUDPPortU16(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_MODE:
+		result = DataDictionarySetSimulatorModeU8(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_VOIL_RECEIVERS:
+		result = DataDictionarySetVOILReceiversC8(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_DTM_RECEIVERS:
+		result = DataDictionarySetDTMReceiversC8(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP:
+		result = DataDictionarySetExternalSupervisorIPU32(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP:
+		result = DataDictionarySetSupervisorTCPPortU16(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
+		result = DataDictionarySetRVSSConfigU32(GSD, (uint32_t) strtoul(NewValue,NULL,10));
+		break;
+	case CONFIGURATION_PARAMETER_RVSS_RATE:
+		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(NewValue,NULL,10));
+		break;
+	case CONFIGURATION_PARAMETER_MISC_DATA:
+		result = DataDictionarySetMiscDataC8(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_INVALID:
+		LogMessage(LOG_LEVEL_WARNING, "Attempted to set invalid parameter %s", ParameterName);
+	default:
+		LogMessage(LOG_LEVEL_ERROR, "No action is implemented for setting parameter %s");
+	}
+
+	return result == WRITE_OK ? 0 : -1;
 }
 
 
