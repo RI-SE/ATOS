@@ -230,6 +230,8 @@ static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, 
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
 
+void appendSysInfoString(char *ControlResponseBuffer);
+
 /*------------------------------------------------------------
 -- Private variables
 ------------------------------------------------------------*/
@@ -641,7 +643,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			appendSysInfoString(ControlResponseBuffer);
 			LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
-											 ControlResponseBuffer, 2, &ClientSocket, 0);
+                                             ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
 			break;
 		case GetServerParameterList_0:
 			SystemControlCommand = Idle_0;
