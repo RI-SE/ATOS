@@ -57,7 +57,6 @@ static volatile MonitorDataType *monitorDataMemory = NULL;
 /*------------------------------------------------------------
   -- Static function definitions
   ------------------------------------------------------------*/
-static U64 DataDictionarySearchParameter(C8 * ParameterName, C8 * ResultBuffer);
 
 /*------------------------------------------------------------
   -- Functions
@@ -130,7 +129,7 @@ ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("OrigoLatitude=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&OriginLatitudeMutex);
 		GSD->OriginLatitudeDbl = atof(ResultBufferC8);
@@ -155,7 +154,7 @@ ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType * GSD, C8 * Latitude) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("OrigoLatitude", Latitude, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, Latitude, strlen(Latitude)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&OriginLatitudeMutex);
 		GSD->OriginLatitudeDbl = atof(Latitude);
@@ -207,7 +206,7 @@ ReadWriteAccess_t DataDictionaryInitOriginLongitudeDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("OrigoLongitude=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&OriginLongitudeMutex);
 		GSD->OriginLongitudeDbl = atof(ResultBufferC8);
@@ -232,7 +231,7 @@ ReadWriteAccess_t DataDictionaryInitOriginLongitudeDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(GSDType * GSD, C8 * Longitude) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("OrigoLongitude", Longitude, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, Longitude, strlen(Longitude)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&OriginLongitudeMutex);
 		GSD->OriginLongitudeDbl = atof(Longitude);
@@ -284,7 +283,7 @@ ReadWriteAccess_t DataDictionaryInitOriginAltitudeDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("OrigoAltitude=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&OriginAltitudeMutex);
 		GSD->OriginAltitudeDbl = atof(ResultBufferC8);
@@ -309,7 +308,7 @@ ReadWriteAccess_t DataDictionaryInitOriginAltitudeDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(GSDType * GSD, C8 * Altitude) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("OrigoAltitude", Altitude, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, Altitude, strlen(Altitude)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&OriginAltitudeMutex);
 		GSD->OriginAltitudeDbl = atof(Altitude);
@@ -361,7 +360,7 @@ ReadWriteAccess_t DataDictionaryInitVisualizationServerU32(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("VisualizationServerName=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&VisualizationServerMutex);
 		GSD->VisualizationServerU32 = UtilIPStringToInt(ResultBufferC8);
@@ -386,7 +385,7 @@ ReadWriteAccess_t DataDictionaryInitVisualizationServerU32(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType * GSD, C8 * IP) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("VisualizationServerName", IP, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME, IP, strlen(IP)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&VisualizationServerMutex);
 		GSD->VisualizationServerU32 = UtilIPStringToInt(IP);
@@ -440,7 +439,7 @@ ReadWriteAccess_t DataDictionaryInitForceToLocalhostU8(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("ForceObjectToLocalhost=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ForceObjectToLocalhostMutex);
 		GSD->ForceObjectToLocalhostU8 = atoi(ResultBufferC8);
@@ -463,7 +462,7 @@ ReadWriteAccess_t DataDictionaryInitForceToLocalhostU8(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetForceToLocalhostU8(GSDType * GSD, C8 * ForceLocalhost) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("ForceObjectToLocalhost", ForceLocalhost, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST, ForceLocalhost, strlen(ForceLocalhost)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ForceObjectToLocalhostMutex);
 		GSD->ForceObjectToLocalhostU8 = atoi(ForceLocalhost);
@@ -499,7 +498,7 @@ ReadWriteAccess_t DataDictionaryInitASPMaxTimeDiffDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("ASPMaxTimeDiff=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ASPMaxTimeDiffMutex);
 		GSD->ASPMaxTimeDiffDbl = atof(ResultBufferC8);
@@ -522,7 +521,7 @@ ReadWriteAccess_t DataDictionaryInitASPMaxTimeDiffDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(GSDType * GSD, C8 * ASPMaxTimeDiff) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("ASPMaxTimeDiff", ASPMaxTimeDiff, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, ASPMaxTimeDiff, strlen(ASPMaxTimeDiff)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ASPMaxTimeDiffMutex);
 		GSD->ASPMaxTimeDiffDbl = atof(ASPMaxTimeDiff);
@@ -558,7 +557,7 @@ ReadWriteAccess_t DataDictionaryInitASPMaxTrajDiffDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("ASPMaxTrajDiff=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ASPMaxTrajDiffMutex);
 		GSD->ASPMaxTrajDiffDbl = atof(ResultBufferC8);
@@ -581,7 +580,7 @@ ReadWriteAccess_t DataDictionaryInitASPMaxTrajDiffDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(GSDType * GSD, C8 * ASPMaxTrajDiff) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("ASPMaxTrajDiff", ASPMaxTrajDiff, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF, ASPMaxTrajDiff, strlen(ASPMaxTrajDiff)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ASPMaxTrajDiffMutex);
 		GSD->ASPMaxTrajDiffDbl = atof(ASPMaxTrajDiff);
@@ -618,7 +617,7 @@ ReadWriteAccess_t DataDictionaryInitASPStepBackCountU32(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("ASPStepBackCount=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ASPStepBackCountMutex);
 		GSD->ASPStepBackCountU32 = atoi(ResultBufferC8);
@@ -641,7 +640,7 @@ ReadWriteAccess_t DataDictionaryInitASPStepBackCountU32(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(GSDType * GSD, C8 * ASPStepBackCount) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("ASPStepBackCount", ASPStepBackCount, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT, ASPStepBackCount, strlen(ASPStepBackCount)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ASPStepBackCountMutex);
 		GSD->ASPStepBackCountU32 = atoi(ASPStepBackCount);
@@ -677,7 +676,7 @@ ReadWriteAccess_t DataDictionaryInitASPFilterLevelDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("ASPFilterLevel=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ASPFilterLevelMutex);
 		GSD->ASPFilterLevelDbl = atof(ResultBufferC8);
@@ -700,7 +699,7 @@ ReadWriteAccess_t DataDictionaryInitASPFilterLevelDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(GSDType * GSD, C8 * ASPFilterLevel) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("ASPFilterLevel", ASPFilterLevel, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL, ASPFilterLevel, strlen(ASPFilterLevel)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ASPFilterLevelMutex);
 		GSD->ASPFilterLevelDbl = atof(ASPFilterLevel);
@@ -736,7 +735,7 @@ ReadWriteAccess_t DataDictionaryInitASPMaxDeltaTimeDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("ASPMaxDeltaTime=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ASPMaxDeltaTimeMutex);
 		GSD->ASPMaxDeltaTimeDbl = atof(ResultBufferC8);
@@ -759,7 +758,7 @@ ReadWriteAccess_t DataDictionaryInitASPMaxDeltaTimeDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(GSDType * GSD, C8 * ASPMaxDeltaTime) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("ASPMaxDeltaTime", ASPMaxDeltaTime, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME, ASPMaxDeltaTime, strlen(ASPMaxDeltaTime)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ASPMaxDeltaTimeMutex);
 		GSD->ASPMaxDeltaTimeDbl = atof(ASPMaxDeltaTime);
@@ -796,7 +795,7 @@ ReadWriteAccess_t DataDictionaryInitTimeServerIPU32(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("TimeServerIP=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_TIME_SERVER_IP, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&TimeServerIPMutex);
 		GSD->TimeServerIPU32 = UtilIPStringToInt(ResultBufferC8);
@@ -821,7 +820,7 @@ ReadWriteAccess_t DataDictionaryInitTimeServerIPU32(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetTimeServerIPU32(GSDType * GSD, C8 * TimeServerIP) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("TimeServerIP", TimeServerIP, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_TIME_SERVER_IP, TimeServerIP, strlen(TimeServerIP)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&TimeServerIPMutex);
 		GSD->TimeServerIPU32 = UtilIPStringToInt(TimeServerIP);
@@ -874,7 +873,7 @@ ReadWriteAccess_t DataDictionaryInitTimeServerPortU16(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("TimeServerPort=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_TIME_SERVER_PORT, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&TimeServerPortMutex);
 		GSD->TimeServerPortU16 = atoi(ResultBufferC8);
@@ -897,7 +896,7 @@ ReadWriteAccess_t DataDictionaryInitTimeServerPortU16(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetTimeServerPortU16(GSDType * GSD, C8 * TimeServerPort) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("TimeServerPort", TimeServerPort, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_TIME_SERVER_PORT, TimeServerPort, strlen(TimeServerPort)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&TimeServerPortMutex);
 		GSD->TimeServerPortU16 = atoi(TimeServerPort);
@@ -934,7 +933,7 @@ ReadWriteAccess_t DataDictionaryInitSimulatorIPU32(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("SimulatorIP=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_IP, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&SimulatorIPMutex);
 		GSD->SimulatorIPU32 = UtilIPStringToInt(ResultBufferC8);
@@ -959,7 +958,7 @@ ReadWriteAccess_t DataDictionaryInitSimulatorIPU32(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetSimulatorIPU32(GSDType * GSD, C8 * SimulatorIP) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("SimulatorIP", SimulatorIP, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_IP, SimulatorIP, strlen(SimulatorIP)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&SimulatorIPMutex);
 		GSD->SimulatorIPU32 = UtilIPStringToInt(SimulatorIP);
@@ -1011,7 +1010,7 @@ ReadWriteAccess_t DataDictionaryInitSimulatorTCPPortU16(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("SimulatorTCPPort=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&SimulatorTCPPortMutex);
 		GSD->SimulatorTCPPortU16 = atoi(ResultBufferC8);
@@ -1034,7 +1033,7 @@ ReadWriteAccess_t DataDictionaryInitSimulatorTCPPortU16(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(GSDType * GSD, C8 * SimulatorTCPPort) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("SimulatorTCPPort", SimulatorTCPPort, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP, SimulatorTCPPort, strlen(SimulatorTCPPort)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&SimulatorTCPPortMutex);
 		GSD->SimulatorTCPPortU16 = atoi(SimulatorTCPPort);
@@ -1070,7 +1069,7 @@ ReadWriteAccess_t DataDictionaryInitSimulatorUDPPortU16(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("SimulatorUDPPort=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&SimulatorUDPPortMutex);
 		GSD->SimulatorUDPPortU16 = atoi(ResultBufferC8);
@@ -1093,7 +1092,7 @@ ReadWriteAccess_t DataDictionaryInitSimulatorUDPPortU16(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(GSDType * GSD, C8 * SimulatorUDPPort) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("SimulatorUDPPort", SimulatorUDPPort, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP, SimulatorUDPPort, strlen(SimulatorUDPPort)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&SimulatorUDPPortMutex);
 		GSD->SimulatorUDPPortU16 = atoi(SimulatorUDPPort);
@@ -1129,7 +1128,7 @@ ReadWriteAccess_t DataDictionaryInitSimulatorModeU8(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("SimulatorMode=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_MODE, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&SimulatorModeMutex);
 		GSD->SimulatorModeU8 = atoi(ResultBufferC8);
@@ -1152,7 +1151,7 @@ ReadWriteAccess_t DataDictionaryInitSimulatorModeU8(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetSimulatorModeU8(GSDType * GSD, C8 * SimulatorMode) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("SimulatorMode", SimulatorMode, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_MODE, SimulatorMode, strlen(SimulatorMode)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&SimulatorModeMutex);
 		GSD->SimulatorModeU8 = atoi(SimulatorMode);
@@ -1188,7 +1187,7 @@ ReadWriteAccess_t DataDictionaryInitVOILReceiversC8(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
 
-	if (DataDictionarySearchParameter("VOILReceivers=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&VOILReceiversMutex);
 		strcpy(GSD->VOILReceiversC8, ResultBufferC8);
@@ -1211,7 +1210,7 @@ ReadWriteAccess_t DataDictionaryInitVOILReceiversC8(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType * GSD, C8 * VOILReceivers) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("VOILReceivers", VOILReceivers, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, VOILReceivers, strlen(VOILReceivers)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&VOILReceiversMutex);
 		strcpy(GSD->VOILReceiversC8, VOILReceivers);
@@ -1248,7 +1247,7 @@ ReadWriteAccess_t DataDictionaryInitDTMReceiversC8(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
 
-	if (DataDictionarySearchParameter("DTMReceivers=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_DTM_RECEIVERS, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&DTMReceiversMutex);
 		strcpy(GSD->DTMReceiversC8, ResultBufferC8);
@@ -1271,7 +1270,7 @@ ReadWriteAccess_t DataDictionaryInitDTMReceiversC8(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetDTMReceiversC8(GSDType * GSD, C8 * DTMReceivers) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("DTMReceivers", DTMReceivers, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_DTM_RECEIVERS, DTMReceivers, strlen(DTMReceivers)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&DTMReceiversMutex);
 		strcpy(GSD->DTMReceiversC8, DTMReceivers);
@@ -1308,7 +1307,7 @@ ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("SupervisorIP=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ExternalSupervisorIPMutex);
 		GSD->ExternalSupervisorIPU32 = UtilIPStringToInt(ResultBufferC8);
@@ -1334,7 +1333,7 @@ ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(GSDType * GSD, C8 * IP) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("SupervisorIP", IP, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, IP, strlen(IP)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ExternalSupervisorIPMutex);
 		GSD->ExternalSupervisorIPU32 = UtilIPStringToInt(IP);
@@ -1386,7 +1385,7 @@ ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("SupervisorTCPPort=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&SupervisorTCPPortMutex);
 		GSD->SupervisorTCPPortU16 = atoi(ResultBufferC8);
@@ -1409,7 +1408,7 @@ ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(GSDType * GSD, C8 * SupervisorTCPPort) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("SupervisorTCPPort", SupervisorTCPPort, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP, SupervisorTCPPort, strlen(SupervisorTCPPort)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&SupervisorTCPPortMutex);
 		GSD->SupervisorTCPPortU16 = atoi(SupervisorTCPPort);
@@ -1445,7 +1444,7 @@ ReadWriteAccess_t DataDictionaryInitRVSSConfigU32(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("RVSSConfig=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_RVSS_CONFIG, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&DataDictionaryRVSSConfigMutex);
 		GSD->DataDictionaryRVSSConfigU32 = atoi(ResultBufferC8);
@@ -1473,7 +1472,7 @@ ReadWriteAccess_t DataDictionarySetRVSSConfigU32(GSDType * GSD, U32 RVSSConfig) 
 	bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
 	sprintf(ResultBufferC8, "%" PRIu32, RVSSConfig);
 
-	if (UtilWriteConfigurationParameter("RVSSConfig", ResultBufferC8, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_RVSS_CONFIG, ResultBufferC8, strlen(ResultBufferC8)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&DataDictionaryRVSSConfigMutex);
 		GSD->DataDictionaryRVSSConfigU32 = RVSSConfig;
@@ -1510,7 +1509,7 @@ ReadWriteAccess_t DataDictionaryInitRVSSRateU8(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("RVSSRate=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_RVSS_RATE, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&DataDictionaryRVSSRateMutex);
 		GSD->DataDictionaryRVSSRateU8 = (U8) atoi(ResultBufferC8);
@@ -1538,7 +1537,7 @@ ReadWriteAccess_t DataDictionarySetRVSSRateU8(GSDType * GSD, U8 RVSSRate) {
 	bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
 	sprintf(ResultBufferC8, "%" PRIu8, RVSSRate);
 
-	if (UtilWriteConfigurationParameter("RVSSRate", ResultBufferC8, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_RVSS_RATE, ResultBufferC8, strlen(ResultBufferC8)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&DataDictionaryRVSSRateMutex);
 		GSD->DataDictionaryRVSSRateU8 = RVSSRate;
@@ -1604,7 +1603,7 @@ ReadWriteAccess_t DataDictionaryInitMiscDataC8(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("MiscData=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_MISC_DATA, ResultBufferC8, sizeof(ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&MiscDataMutex);
 		strcpy(GSD->MiscDataC8, ResultBufferC8);
@@ -1627,7 +1626,7 @@ ReadWriteAccess_t DataDictionaryInitMiscDataC8(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType * GSD, C8 * MiscData) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("MiscData", MiscData, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_MISC_DATA, MiscData, strlen(MiscData)+1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&MiscDataMutex);
 		bzero(GSD->MiscDataC8, DD_CONTROL_BUFFER_SIZE_1024);
@@ -1938,21 +1937,4 @@ ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs
 	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
 
 	return READ_OK;
-}
-
-/*!
- * \brief DataDictionarySearchParameter Searches for parameters in the configuration file and returns
-the parameter value.
- * \param ParameterName Parameter to search for
- * \param ResultBuffer Buffer where read result should be stored
- * \return Length of read parameter string
- */
-U64 DataDictionarySearchParameter(C8 * ParameterName, C8 * ResultBuffer) {
-	char confPathDir[MAX_FILE_PATH];
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcat(confPathDir, CONF_FILE_NAME);
-	bzero(ResultBuffer, DD_CONTROL_BUFFER_SIZE_20);
-	UtilSearchTextFile(confPathDir, ParameterName, "", ResultBuffer);
-	return strlen(ResultBuffer);
 }
