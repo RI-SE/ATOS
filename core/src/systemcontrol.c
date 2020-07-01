@@ -193,11 +193,9 @@ void SystemControlSendMONR(C8 * LogString, I32 * Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8 * name, const U32 port, I32 * sockfd,
 											  struct sockaddr_in *addr);
 //I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
-I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 debug);
+static I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 debug);
 I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * ReturnValue, U32 BufferLength,
 									U8 Debug);
-I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
-I32 SystemControlWriteServerParameter(C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
 I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
@@ -1809,21 +1807,6 @@ C8 SystemControlVerifyHostAddress(char *addr) {
 	return 0;
 }
 
-/*
-I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug)
-{
-    I32 result;
-
-    result = sendto(*sockfd, SendData, Length, 0, (const struct sockaddr *) addr, sizeof(struct sockaddr_in));
-
-    if (result < 0)
-    {
-        util_error("[SystemControl] Failed to send on process control socket.");
-    }
-
-    return 0;
-}
-*/
 
 I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * ReturnValue, U32 BufferLength,
 									U8 Debug) {
@@ -1974,116 +1957,6 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 		DataDictionarySetRVSSRateU8(GSD, (U32) atoi(NewValue));
 }
 
-
-
-I32 SystemControlWriteServerParameter(C8 * ParameterName, C8 * NewValue, U8 Debug) {
-
-	I32 RowCount, i;
-	C8 Parameter[SMALL_BUFFER_SIZE_64];
-	C8 Row[SMALL_BUFFER_SIZE_128];
-	C8 NewRow[SMALL_BUFFER_SIZE_128];
-	FILE *fd, *TempFd;
-	C8 *ptr1, *ptr2;
-	U8 ParameterFound = 0;
-	char confPathFileDir[MAX_FILE_PATH];
-	char tempConfPathFileDir[MAX_FILE_PATH];
-	const char TEMP_FILE_NAME[] = "temp-" MODULE_NAME ".conf";
-
-	UtilGetConfDirectoryPath(confPathFileDir, sizeof (confPathFileDir));
-	strcpy(tempConfPathFileDir, confPathFileDir);
-	strcat(confPathFileDir, CONF_FILE_NAME);
-	strcat(tempConfPathFileDir, TEMP_FILE_NAME);
-
-	bzero(Parameter, SMALL_BUFFER_SIZE_64);
-
-	strcat(Parameter, ParameterName);
-	strcat(Parameter, "=");
-
-	//Remove temporary file
-	remove(tempConfPathFileDir);
-
-	//Create temporary file
-	TempFd = fopen(tempConfPathFileDir, "w+");
-
-	//Open configuration file
-	fd = fopen(confPathFileDir, "r");
-
-	if (fd > 0) {
-		RowCount = UtilCountFileRows(fd);
-		fclose(fd);
-		fd = fopen(confPathFileDir, "r");
-
-		for (i = 0; i < RowCount; i++) {
-			bzero(Row, SMALL_BUFFER_SIZE_128);
-			UtilReadLine(fd, Row);
-
-			ptr1 = strstr(Row, Parameter);
-			ptr2 = strstr(Row, "//");
-			if (ptr2 == NULL)
-				ptr2 = ptr1;	//No comment found
-			if (ptr1 != NULL && (U64) ptr2 >= (U64) ptr1 && ParameterFound == 0) {
-				ParameterFound = 1;
-				bzero(NewRow, SMALL_BUFFER_SIZE_128);
-				strncpy(NewRow, Row, (U64) ptr1 - (U64) Row + strlen(Parameter));
-				strcat(NewRow, NewValue);
-				if ((U64) ptr2 > (U64) ptr1) {
-					strcat(NewRow, " ");	// Add space
-					strcat(NewRow, ptr2);	// Add the comment
-				}
-
-				if (Debug) {
-					LogMessage(LOG_LEVEL_DEBUG, "Changed parameter: %s", NewRow);
-				}
-
-				strcat(NewRow, "\n");
-				(void)fwrite(NewRow, 1, strlen(NewRow), TempFd);
-
-			}
-			else {
-				strcat(Row, "\n");
-				(void)fwrite(Row, 1, strlen(Row), TempFd);
-			}
-		}
-		fclose(TempFd);
-		fclose(fd);
-
-		//Remove test.conf
-		remove(confPathFileDir);
-
-		//Rename temp.conf to test.conf
-		rename(tempConfPathFileDir, confPathFileDir);
-
-		//Remove temporary file
-		remove(tempConfPathFileDir);
-	}
-
-	return 0;
-}
-
-
-
-I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 Debug) {
-
-	I32 RowCount, i;
-	C8 TextBuffer[SMALL_BUFFER_SIZE_128];
-	char confPathDir[MAX_FILE_PATH];
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcat(confPathDir, CONF_FILE_NAME);
-
-	bzero(TextBuffer, SMALL_BUFFER_SIZE_128);
-
-	strcat(TextBuffer, ParameterName);
-	strcat(TextBuffer, "=");
-
-	UtilSearchTextFile(confPathDir, TextBuffer, "", ReturnValue);
-
-	if (Debug) {
-		LogPrint("%s = %s\n", ParameterName, ReturnValue);
-	}
-
-	return strlen(ReturnValue);
-}
 
 
 I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
