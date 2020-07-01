@@ -241,7 +241,7 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					j++;
 					if (SpecChars == SPECIFIC_CHAR_THRESHOLD_COUNT) {
-						ObjectInformationDataType monrData;
+						ObjectDataType monrData;
 
 						UtilStringToMonitorData(pcReadBuffer, sizeof (pcReadBuffer), &monrData);
 						NewTimestamp = TimeGetAsGPSqmsOfWeek(&monrData.MonrData.timestamp);
@@ -596,7 +596,7 @@ void vLogMonitorData(char *commandData, ssize_t commandDatalen, struct timeval r
 	char DateBuffer[MAX_DATE_STRLEN];
 	char ipStringBuffer[INET_ADDRSTRLEN];
 	char printBuffer[MAX_LOG_ROW_LENGTH];
-	ObjectInformationDataType monitorData;
+	ObjectDataType monitorData;
 	int printedBytes = 0;
 	int totalPrintedBytes = 0;
 

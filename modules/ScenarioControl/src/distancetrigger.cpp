@@ -12,7 +12,7 @@ DistanceTrigger::DistanceTrigger(Trigger::TriggerID_t triggerID) : BooleanTrigge
 	this->setTriggerDistance(0.0);
 }
 
-Trigger::TriggerReturnCode_t DistanceTrigger::update(ObjectInformationDataType newValue) {
+Trigger::TriggerReturnCode_t DistanceTrigger::update(ObjectDataType newValue) {
 	double networkDelayCorrection_m = 0.0, networkDelay_s = 0.0;
 	struct timeval currentTime, triggerObjectNetworkDelay, actionObjectNetworkDelay;
 

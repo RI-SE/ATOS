@@ -163,7 +163,7 @@ void citscontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	char busReceiveBuffer[MBUS_MAX_DATALEN];	//!< Buffer for receiving from message bus
 	enum COMMAND command;
 	int mqtt_response_code = 0;
-	ObjectInformationDataType mqMONRdata;
+	ObjectDataType mqMONRdata;
 	MONRType MONRMessage;
 	MONRType LastMONRMessage;
 	ACCMData actionConfig;

@@ -33,13 +33,13 @@
   ------------------------------------------------------------*/
 static void vConnectVisualizationChannel(int *sockfd, struct sockaddr_in *addr);
 static void vDisconnectVisualizationChannel(int *sockfd);
-void vCreateVisualizationMessage(ObjectInformationDataType * _monitorData, char *_visualizationMessage,
+void vCreateVisualizationMessage(ObjectDataType * _monitorData, char *_visualizationMessage,
 								 int _sizeOfVisualizationMessage, int _debug);
 static void signalHandler(int signo);
 
 I32 iExit = 0;
 
-void vCreateVisualizationMessage(ObjectInformationDataType * _monitorData, char *_visualizationMessage,
+void vCreateVisualizationMessage(ObjectDataType * _monitorData, char *_visualizationMessage,
 								 int _sizeOfVisualizationMessage, int _debug) {
 
 	char ipStringBuffer[INET_ADDRSTRLEN];
@@ -96,7 +96,7 @@ int main() {
 	const struct timespec abortWaitTime = { 1, 0 };
 	struct timespec remTime;
 
-	ObjectInformationDataType monitorData;
+	ObjectDataType monitorData;
 
 
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);

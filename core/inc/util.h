@@ -249,11 +249,15 @@ typedef enum {
 typedef struct
 {
 	ObjectEnabledType Enabled;
-  in_addr_t ClientIP;
+  uint32_t ClientIP;
 	uint32_t ClientID;
   ObjectMonitorType MonrData;
-} ObjectInformationDataType;
+} ObjectDataType;
 
+typedef struct {
+  uint32_t objectIP;
+  ObjectEnabledType Enabled;
+} ObjectEnabledCommandType;
 
 typedef struct {
 	unsigned int ID;
@@ -276,20 +280,6 @@ typedef struct {
 	double curvature;
 	uint8_t mode;
 } TrajectoryFileLine;
-
-
-typedef struct {
-  in_addr_t objectIP;
-  ObjectEnabledType Enabled;
-} ObjectEnabledCommandType;
-
-typedef struct 
-{
-  in_addr_t ClientIP;
-  uint32_t ClientID;
-  ObjectEnabledType Enabled;
-} ObjectStatusType;
-
 
 typedef struct
 {
@@ -361,7 +351,6 @@ typedef struct
   U8 ASPDebugDataU8[sizeof(ASPType)];
   U32 SupChunkSize;
   U8 SupChunk[6200];
-  //ObjectInformationDataType* MonrMessages;
   U8 MONRSizeU8;
   U8 MONRData[100];
   U8 HEABSizeU8;
@@ -369,12 +358,6 @@ typedef struct
 
   U8 numberOfObjects;
   char *memory;
-  //U8 OSTMSizeU8;
-  //U8 OSTMData[100];
-  //U8 STRTSizeU8;
-  //U8 STRTData[100];
-  //U8 OSEMSizeU8;
-  //U8 OSEMData[100];
   volatile dbl OriginLatitudeDbl;
   C8 OriginLatitudeC8[DD_CONTROL_BUFFER_SIZE_20];
   volatile dbl OriginLongitudeDbl;
@@ -407,7 +390,6 @@ typedef struct
   ASPType ASPData;
   C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
   volatile OBCState_t OBCStateU8;
-  volatile ObjectStatusType ObjectStatus[MAX_OBJECTS];
 } GSDType;
 
 
@@ -651,8 +633,8 @@ int UtilParseTrajectoryFileFooter(char *footerLine);
 int UtilParseTrajectoryFileLine(char *fileLine, TrajectoryFileLine * line);
 
 
-int UtilMonitorDataToString(const ObjectInformationDataType monrData, char* monrString, size_t stringLength);
-int UtilStringToMonitorData(const char* monrString, size_t stringLength, ObjectInformationDataType * monrData);
+int UtilMonitorDataToString(const ObjectDataType monrData, char* monrString, size_t stringLength);
+int UtilStringToMonitorData(const char* monrString, size_t stringLength, ObjectDataType * monrData);
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
@@ -712,7 +694,7 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
 I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 
-int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectInformationDataType *monitorData);
+int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
 I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
 I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData);
 I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);

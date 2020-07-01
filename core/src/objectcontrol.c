@@ -211,7 +211,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	dbl OriginHeadingDbl = DEFAULT_ORIGIN_HEADING;
 	C8 pcSendBuffer[MBUS_MAX_DATALEN];
 	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
-	ObjectInformationDataType monitorData;
+	ObjectDataType monitorData;
 	ACCMData mqACCMData;
 	EXACData mqEXACData;
 	TRCMData mqTRCMData;
@@ -287,7 +287,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				DataDictionaryGetObjectEnableStatusById(iIndex+1, &objectEnabledStatus);
 				if(objectEnabledStatus == OBJECT_ENABLED)
-					UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
+					UtilSendUDPData(MODULE_NAME, &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
 								MessageBuffer, MessageLength, 0);
 			}
 		}
@@ -305,7 +305,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				DataDictionaryGetObjectEnableStatusById(iIndex+1, &objectEnabledStatus);
 				if(objectEnabledStatus == OBJECT_ENABLED)
-					UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
+					UtilSendUDPData(MODULE_NAME, &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
 								MessageBuffer, MessageLength, 0);
 			}
 
@@ -595,8 +595,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						(objectIPs[iIndex], commandActions,
 						 sizeof (commandActions) / sizeof (commandActions[0])))
 						DataDictionaryGetObjectEnableStatusById(iIndex+1, &objectEnabledStatus);
-						if(objectEnabledStatus == OBJECT_ENABLED)
-							UtilSendTCPData("Object Control", MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+						if(objectEnabledStatus == OBJECT_ENABLED){
+							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+						}
 				}
 				vSetState(OBC_STATE_RUNNING, GSD);
 
@@ -733,14 +734,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					// Get objects; name and drive file
 					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 					// Enable all objects at INIT
-					ObjectStatusType ObjStatus;
-					ObjectInformationDataType objectInformation;
+					ObjectDataType objectInformation;
 					for(iIndex = 0; iIndex < nbr_objects; iIndex ++)
 					{
 						objectInformation.Enabled = OBJECT_ENABLED;
 						objectInformation.ClientIP = objectIPs[iIndex];
 						objectInformation.ClientID = iIndex+1;
-						DataDictionaryInitObjectInformation(&objectInformation);
+						DataDictionaryInitObjectData(&objectInformation);
 					}
 
 					resetCommandActionList(commandActions,

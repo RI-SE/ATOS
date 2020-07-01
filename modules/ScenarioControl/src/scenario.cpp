@@ -459,7 +459,7 @@ void Scenario::resetISOTriggers(void)
     }
 }
 
-Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const ObjectInformationDataType &monr)
+Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const ObjectDataType &monr)
 {
     for (Trigger* tp : allTriggers)
 	{

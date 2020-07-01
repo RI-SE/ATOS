@@ -80,6 +80,7 @@
 #define PRIO_COMM_DISCONNECT 16
 #define PRIO_COMM_REMOTECTRL_ENABLE 16
 #define PRIO_COMM_REMOTECTRL_DISABLE 16
+#define PRIO_COMM_ENABLE_OBJECT 16
 // Single-shot messages relevant during test run
 #define PRIO_COMM_EXAC 14
 #define PRIO_COMM_TREO 14
@@ -87,7 +88,6 @@
 #define PRIO_COMM_TRAJ_TOSUP 12
 #define PRIO_COMM_TRAJ_FROMSUP 12
 #define PRIO_COMM_REMOTECTRL_MANOEUVRE 12
-#define PRIO_COMM_ENABLE_OBJECT 12
 // Logging
 #define PRIO_COMM_LOG 10
 // Unused messages TODO: double check the priority of unused messages
@@ -747,7 +747,7 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
  * \param stringLength Length of string in which converted data is to be placed
  * \return 0 upon success, -1 otherwise
  */
-int UtilMonitorDataToString(const ObjectInformationDataType monitorData, char *monitorDataString, size_t stringLength) {
+int UtilMonitorDataToString(const ObjectDataType monitorData, char *monitorDataString, size_t stringLength) {
 	memset(monitorDataString, 0, stringLength);
 	inet_ntop(AF_INET, &monitorData.ClientIP, monitorDataString,
 			  (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t) stringLength);
@@ -769,7 +769,7 @@ int UtilMonitorDataToString(const ObjectInformationDataType monitorData, char *m
  * \param monrData Struct containing relevant monitor data
  * \return 0 upon success, -1 otherwise
  */
-int UtilStringToMonitorData(const char *monitorString, size_t stringLength, ObjectInformationDataType * monitorData) {
+int UtilStringToMonitorData(const char *monitorString, size_t stringLength, ObjectDataType * monitorData) {
 	const char *token;
 	const char delim[] = ";";
 	struct in_addr addr;
@@ -3507,12 +3507,12 @@ I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug)
  * \return -1 on failure, 0 on success
  */
 int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize,
-								  ObjectInformationDataType * monitorData) {
+								  ObjectDataType * monitorData) {
 
-	if (rawDataSize != sizeof (ObjectInformationDataType)) {
+	if (rawDataSize != sizeof (ObjectDataType)) {
 		errno = EMSGSIZE;
 		LogMessage(LOG_LEVEL_ERROR, "Raw monitor data array wrong size, %d != %d",
-				   rawDataSize, sizeof (ObjectInformationDataType));
+				   rawDataSize, sizeof (ObjectDataType));
 		return -1;
 	}
 

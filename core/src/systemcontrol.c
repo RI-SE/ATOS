@@ -249,7 +249,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	struct in_addr ip_addr;
 	I32 RVSSChannelSocket;
 	struct timeval nextRVSSSendTime = { 0, 0 };
-	ObjectInformationDataType monrData;
 
 	ServerState_t server_state = SERVER_STATE_UNDEFINED;
 	OBCState_t objectControlState = OBC_STATE_UNDEFINED;
@@ -1118,7 +1117,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					if (inet_pton(AF_INET, SystemControlArgument[0], &enableCommand.objectIP) != -1) {
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						DataDictionaryGetObjectEnableStatusByIp(enableCommand.objectIP, &enableCommand.Enabled);
-						bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+						memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
 						ControlResponseBuffer[0] = (uint8_t) enableCommand.Enabled;
 						SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",
 											 ControlResponseBuffer, 1, &ClientSocket, 0);
@@ -2768,7 +2767,7 @@ int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr
 	char *monitorDataString = RVSSData + sizeof (messageLength) + sizeof (RVSSChannel);
 	uint32_t *transmitterIDs = NULL;
 	uint32_t numberOfObjects;
-	ObjectInformationDataType monitorData;
+	ObjectDataType monitorData;
 
 	// Get number of objects present in shared memory
 	if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {

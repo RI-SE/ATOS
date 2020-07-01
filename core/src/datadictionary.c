@@ -54,7 +54,7 @@ static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define MONR_DATA_FILENAME "MonitorData"
 
-static volatile ObjectInformationDataType *objectInformationDataMemory = NULL;
+static volatile ObjectDataType *objectDataMemory = NULL;
 
 
 /*------------------------------------------------------------
@@ -1700,8 +1700,8 @@ ReadWriteAccess_t DataDictionaryInitMonitorData() {
 
 	int createdMemory;
 
-	objectInformationDataMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (ObjectInformationDataType), &createdMemory);
-	if (objectInformationDataMemory == NULL) {
+	objectDataMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (ObjectDataType), &createdMemory);
+	if (objectDataMemory == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared monitor data memory");
 		return UNDEFINED;
 	}
@@ -1714,11 +1714,11 @@ ReadWriteAccess_t DataDictionaryInitMonitorData() {
  * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectInformationDataType * monitorData) {
+ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectDataType * monitorData) {
 
 	ReadWriteAccess_t result;
 
-	if (objectInformationDataMemory == NULL) {
+	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
 		return UNDEFINED;
@@ -1734,21 +1734,21 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectInformationDataType *
 		return UNDEFINED;
 	}
 
-	objectInformationDataMemory = claimSharedMemory(objectInformationDataMemory);
-	if (objectInformationDataMemory == NULL) {
-		// If this code executes, objectInformationDataMemory has been reallocated outside of DataDictionary
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
 		return UNDEFINED;
 	}
 
 	result = PARAMETER_NOTFOUND;
-	int numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 
 	for (int i = 0; i < numberOfObjects; ++i) {
-		if (objectInformationDataMemory[i].ClientID == monitorData->ClientID) {
+		if (objectDataMemory[i].ClientID == monitorData->ClientID) {
 
-			if (objectInformationDataMemory[i].ClientIP == monitorData->ClientIP) {
-				memcpy(&objectInformationDataMemory[i].MonrData, &monitorData->MonrData, sizeof (ObjectMonitorType));
+			if (objectDataMemory[i].ClientIP == monitorData->ClientIP) {
+				memcpy(&objectDataMemory[i].MonrData, &monitorData->MonrData, sizeof (ObjectMonitorType));
 				result = WRITE_OK;
 			}
 			else {
@@ -1756,7 +1756,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectInformationDataType *
 
 				LogMessage(LOG_LEVEL_WARNING,
 						   "Both IP addresses %s and %s have the transmitter ID %u and cannot be separated: data discarded",
-						   inet_ntop(AF_INET, &objectInformationDataMemory[i].ClientIP, addr1, sizeof (addr1)),
+						   inet_ntop(AF_INET, &objectDataMemory[i].ClientIP, addr1, sizeof (addr1)),
 						   inet_ntop(AF_INET, &monitorData->ClientIP, addr2, sizeof (addr2)),
 						   monitorData->ClientID);
 				result = UNDEFINED;
@@ -1769,20 +1769,20 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectInformationDataType *
 		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u",
 				   monitorData->ClientID);
 		for (int i = 0; i < numberOfObjects; ++i) {
-			if (objectInformationDataMemory[i].ClientID == 0) {
-				memcpy(&objectInformationDataMemory[i].MonrData, &monitorData->MonrData, sizeof (ObjectMonitorType));
+			if (objectDataMemory[i].ClientID == 0) {
+				memcpy(&objectDataMemory[i].MonrData, &monitorData->MonrData, sizeof (ObjectMonitorType));
 				result = WRITE_OK;
 			}
 		}
 
 		// No uninitialized memory space found - create new
 		if (result == PARAMETER_NOTFOUND) {
-			objectInformationDataMemory = resizeSharedMemory(objectInformationDataMemory, (unsigned int)(numberOfObjects + 1));
-			if (objectInformationDataMemory != NULL) {
-				numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
+			objectDataMemory = resizeSharedMemory(objectDataMemory, (unsigned int)(numberOfObjects + 1));
+			if (objectDataMemory != NULL) {
+				numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
-				memcpy(&objectInformationDataMemory[numberOfObjects - 1].MonrData, &monitorData->MonrData, sizeof (ObjectMonitorType));
+				memcpy(&objectDataMemory[numberOfObjects - 1].MonrData, &monitorData->MonrData, sizeof (ObjectMonitorType));
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -1790,7 +1790,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectInformationDataType *
 			}
 		}
 	}
-	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
 }
@@ -1801,7 +1801,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectInformationDataType *
  * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMonitorData(ObjectInformationDataType * monitorData, const uint32_t transmitterId) {
+ReadWriteAccess_t DataDictionaryGetMonitorData(ObjectDataType * monitorData, const uint32_t transmitterId) {
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 
 	if (monitorData == NULL) {
@@ -1815,21 +1815,21 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(ObjectInformationDataType * monit
 		return UNDEFINED;
 	}
 
-	objectInformationDataMemory = claimSharedMemory(objectInformationDataMemory);
-	int numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 
 	for (int i = 0; i < numberOfObjects; ++i) {
-		if (objectInformationDataMemory[i].ClientID == transmitterId) {
-			memcpy(&monitorData->MonrData, &objectInformationDataMemory[i].MonrData, sizeof (ObjectMonitorType));
-			monitorData->Enabled = objectInformationDataMemory[i].Enabled;
-			monitorData->ClientID = objectInformationDataMemory[i].ClientID;
-			monitorData->ClientIP = objectInformationDataMemory[i].ClientIP;
+		if (objectDataMemory[i].ClientID == transmitterId) {
+			memcpy(&monitorData->MonrData, &objectDataMemory[i].MonrData, sizeof (ObjectMonitorType));
+			monitorData->Enabled = objectDataMemory[i].Enabled;
+			monitorData->ClientID = objectDataMemory[i].ClientID;
+			monitorData->ClientIP = objectDataMemory[i].ClientIP;
 
 			result = READ_OK;
 		}
 	}
 
-	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	if (result == PARAMETER_NOTFOUND) {
 		LogMessage(LOG_LEVEL_WARNING, "Unable to find monitor data for transmitter ID %u", transmitterId);
@@ -1845,13 +1845,13 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(ObjectInformationDataType * monit
 ReadWriteAccess_t DataDictionaryFreeMonitorData() {
 	ReadWriteAccess_t result = WRITE_OK;
 
-	if (objectInformationDataMemory == NULL) {
+	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized memory");
 		return UNDEFINED;
 	}
 
-	destroySharedMemory(objectInformationDataMemory);
+	destroySharedMemory(objectDataMemory);
 
 	return result;
 }
@@ -1871,12 +1871,12 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObj
 	unsigned int numberOfObjects;
 	ReadWriteAccess_t result = WRITE_OK;
 
-	objectInformationDataMemory = claimSharedMemory(objectInformationDataMemory);
-	objectInformationDataMemory = resizeSharedMemory(objectInformationDataMemory, newNumberOfObjects);
-	numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
-	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	objectDataMemory = resizeSharedMemory(objectDataMemory, newNumberOfObjects);
+	numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
-	if (objectInformationDataMemory == NULL) {
+	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
 		return UNDEFINED;
@@ -1893,9 +1893,9 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObj
 ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t * numberOfObjects) {
 	int retval;
 
-	objectInformationDataMemory = claimSharedMemory(objectInformationDataMemory);
-	retval = getNumberOfMemoryElements(objectInformationDataMemory);
-	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	retval = getNumberOfMemoryElements(objectDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 	*numberOfObjects = retval == -1 ? 0 : (uint32_t) retval;
 	return retval == -1 ? UNDEFINED : READ_OK;
 }
@@ -1915,23 +1915,23 @@ ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs
 		LogMessage(LOG_LEVEL_ERROR, "Data dictionary input pointer error");
 		return UNDEFINED;
 	}
-	if (objectInformationDataMemory == NULL) {
+	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Data dictionary monitor data read error");
 		return UNDEFINED;
 	}
 
 	memset(transmitterIDs, 0, arraySize * sizeof (transmitterIDs[0]));
-	objectInformationDataMemory = claimSharedMemory(objectInformationDataMemory);
-	retval = getNumberOfMemoryElements(objectInformationDataMemory);
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	retval = getNumberOfMemoryElements(objectDataMemory);
 	if (retval == -1) {
 		LogMessage(LOG_LEVEL_ERROR, "Error reading number of objects from shared memory");
-		objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+		objectDataMemory = releaseSharedMemory(objectDataMemory);
 		return UNDEFINED;
 	}
 	else if ((uint32_t) retval > arraySize) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to list transmitter IDs in specified array");
-		objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+		objectDataMemory = releaseSharedMemory(objectDataMemory);
 		return UNDEFINED;
 	}
 	else if ((uint32_t) retval != arraySize) {
@@ -1940,9 +1940,9 @@ ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs
 	}
 
 	for (int i = 0; i < retval; ++i) {
-		transmitterIDs[i] = objectInformationDataMemory[i].ClientID;
+		transmitterIDs[i] = objectDataMemory[i].ClientID;
 	}
-	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return READ_OK;
 }
@@ -1966,59 +1966,59 @@ U64 DataDictionarySearchParameter(C8 * ParameterName, C8 * ResultBuffer) {
 
 
 /*!
- * \brief DataDictionaryInitObjectObjectInformation 
- * \param objectInformation data to be initialized
+ * \brief DataDictionaryInitObjectData 
+ * \param objectData data to be initialized
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitObjectInformation(const ObjectInformationDataType * objectInformationData) {
+ReadWriteAccess_t DataDictionaryInitObjectData(const ObjectDataType * objectData) {
 
 	ReadWriteAccess_t result;
 
-	if (objectInformationDataMemory == NULL) {
+	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
 		return UNDEFINED;
 	}
-	if (objectInformationData == NULL) {
+	if (objectData == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
-	if (objectInformationData->ClientID == 0) {
+	if (objectData->ClientID == 0) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
 		return UNDEFINED;
 	}
 
-	objectInformationDataMemory = claimSharedMemory(objectInformationDataMemory);
-	if (objectInformationDataMemory == NULL) {
-		// If this code executes, objectInformationDataMemory has been reallocated outside of DataDictionary
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
 		return UNDEFINED;
 	}
 
 	result = PARAMETER_NOTFOUND;
-	int numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 
 	if (result == PARAMETER_NOTFOUND) {
 		// Search for unused memory space and place monitor data there
 		LogMessage(LOG_LEVEL_INFO, "First Object Information data from added with ID %u",
-				   objectInformationData->ClientID);
+				   objectData->ClientID);
 		for (int i = 0; i < numberOfObjects; ++i) {
-			if (objectInformationDataMemory[i].ClientID == objectInformationData->ClientID) {
-				memcpy(&objectInformationDataMemory[i], objectInformationData, sizeof (ObjectInformationDataType));
+			if (objectDataMemory[i].ClientID == objectData->ClientID) {
+				memcpy(&objectDataMemory[i], objectData, sizeof (ObjectDataType));
 				result = WRITE_OK;
 			}
 		}
 
 		// No uninitialized memory space found - create new
 		if (result == PARAMETER_NOTFOUND) {
-			objectInformationDataMemory = resizeSharedMemory(objectInformationDataMemory, (unsigned int)(numberOfObjects + 1));
-			if (objectInformationDataMemory != NULL) {
-				numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
+			objectDataMemory = resizeSharedMemory(objectDataMemory, (unsigned int)(numberOfObjects + 1));
+			if (objectDataMemory != NULL) {
+				numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
-				memcpy(&objectInformationDataMemory[numberOfObjects - 1], objectInformationData, sizeof (ObjectInformationDataType));
+				memcpy(&objectDataMemory[numberOfObjects - 1], objectData, sizeof (ObjectDataType));
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -2026,12 +2026,12 @@ ReadWriteAccess_t DataDictionaryInitObjectInformation(const ObjectInformationDat
 			}
 		}
 	}
-	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 
 	if(result != PARAMETER_NOTFOUND)
 
-	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
 } 
@@ -2049,7 +2049,7 @@ ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitter
 
 	ReadWriteAccess_t result;
 
-	if (objectInformationDataMemory == NULL) {
+	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
 		return UNDEFINED;
@@ -2060,24 +2060,24 @@ ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitter
 		return UNDEFINED;
 	}
 
-	objectInformationDataMemory = claimSharedMemory(objectInformationDataMemory);
-	if (objectInformationDataMemory == NULL) {
-		// If this code executes, objectInformationDataMemory has been reallocated outside of DataDictionary
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
 		return UNDEFINED;
 	}
 
 	result = PARAMETER_NOTFOUND;
-	int numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 
 	for (int i = 0; i < numberOfObjects; ++i) {
-		if (transmitterId == objectInformationDataMemory[i].ClientID) {
-				objectInformationDataMemory[i].Enabled = enabledStatus;
+		if (transmitterId == objectDataMemory[i].ClientID) {
+				objectDataMemory[i].Enabled = enabledStatus;
 				result = WRITE_OK;
 			}
 	}
 
-	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
 } 
@@ -2092,7 +2092,7 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmi
 
 	ReadWriteAccess_t result;
 
-	if (objectInformationDataMemory == NULL) {
+	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
 		return UNDEFINED;
@@ -2103,25 +2103,25 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmi
 		return UNDEFINED;
 	}
 
-	objectInformationDataMemory = claimSharedMemory(objectInformationDataMemory);
-	if (objectInformationDataMemory == NULL) {
-		// If this code executes, objectInformationDataMemory has been reallocated outside of DataDictionary
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
 		return UNDEFINED;
 	}
 
 	result = PARAMETER_NOTFOUND;
-	int numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 	*enabledStatus = UNDEFINED;
 
 	for (int i = 0; i < numberOfObjects; ++i) {
-		if (transmitterId == objectInformationDataMemory[i].ClientID) {
-				*enabledStatus = objectInformationDataMemory[i].Enabled;
+		if (transmitterId == objectDataMemory[i].ClientID) {
+				*enabledStatus = objectDataMemory[i].Enabled;
 				result = READ_OK;
 			}
 	}
 
-	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
 } 
@@ -2136,7 +2136,7 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const uint32_t ClientI
 
 	ReadWriteAccess_t result;
 
-	if (objectInformationDataMemory == NULL) {
+	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
 		return UNDEFINED;
@@ -2147,25 +2147,25 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const uint32_t ClientI
 		return UNDEFINED;
 	}
 
-	objectInformationDataMemory = claimSharedMemory(objectInformationDataMemory);
-	if (objectInformationDataMemory == NULL) {
-		// If this code executes, objectInformationDataMemory has been reallocated outside of DataDictionary
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
 		return UNDEFINED;
 	}
 
 	result = PARAMETER_NOTFOUND;
-	int numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 	*enabledStatus = UNDEFINED;
 
 	for (int i = 0; i < numberOfObjects; ++i) {
-		if (ClientIP == objectInformationDataMemory[i].ClientIP) {
-				*enabledStatus = objectInformationDataMemory[i].Enabled;
+		if (ClientIP == objectDataMemory[i].ClientIP) {
+				*enabledStatus = objectDataMemory[i].Enabled;
 				result = READ_OK;
 			}
 	}
 
-	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
 } 
@@ -2181,7 +2181,7 @@ ReadWriteAccess_t DataDictionaryGetTransmitterIdByIP(const uint32_t ClientIP, ui
 
 	ReadWriteAccess_t result;
 
-	if (objectInformationDataMemory == NULL) {
+	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
 		return UNDEFINED;
@@ -2192,25 +2192,25 @@ ReadWriteAccess_t DataDictionaryGetTransmitterIdByIP(const uint32_t ClientIP, ui
 		return UNDEFINED;
 	}
 
-	objectInformationDataMemory = claimSharedMemory(objectInformationDataMemory);
-	if (objectInformationDataMemory == NULL) {
-		// If this code executes, objectInformationDataMemory has been reallocated outside of DataDictionary
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
 		return UNDEFINED;
 	}
 
 	result = PARAMETER_NOTFOUND;
-	int numberOfObjects = getNumberOfMemoryElements(objectInformationDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 	*transmitterId = 0;
 
 	for (int i = 0; i < numberOfObjects; ++i) {
-		if (ClientIP == objectInformationDataMemory[i].ClientIP) {
-				*transmitterId = objectInformationDataMemory[i].ClientID;
+		if (ClientIP == objectDataMemory[i].ClientIP) {
+				*transmitterId = objectDataMemory[i].ClientID;
 				result = READ_OK;
 			}
 	}
 
-	objectInformationDataMemory = releaseSharedMemory(objectInformationDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
 } 

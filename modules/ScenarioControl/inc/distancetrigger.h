@@ -16,7 +16,7 @@ public:
 	TriggerReturnCode_t parseParameters() override;
 
 	using BooleanTrigger::update;
-	TriggerReturnCode_t update(ObjectInformationDataType newValue) override;
+	TriggerReturnCode_t update(ObjectDataType newValue) override;
 
 	void setTriggerDistance(double distance_m) { this->triggerDistance_m = distance_m; }
 	void setReferencePoint(CartesianPosition point) { this->referencePoint = point; }
