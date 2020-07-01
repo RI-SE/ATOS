@@ -59,7 +59,7 @@
 // Object control state report
 #define PRIO_COMM_OBC_STATE 26
 // Internal configuration
-#define PRIO_DATA_DICT 24
+#define PRIO_COMM_DATA_DICT 24
 // Configuration affecting other configurations
 #define PRIO_COMM_OSEM 22
 // Configuration messages
@@ -100,6 +100,31 @@
 #define PRIO_COMM_EXIT 3
 // Monitoring messages
 #define PRIO_COMM_MONR 0
+
+// Configuration parameter strings
+static const char ParameterNameOriginLongitude[] = "OriginLongitude";
+static const char ParameterNameOriginLatitude[] = "OriginLatitude";
+static const char ParameterNameOriginAltitude[] = "OriginAltitude";
+static const char ParameterNameVisualizationServerName[] = "VisualizationServerName";
+static const char ParameterNameForceObjectToLocalhost[] = "ForceObjectToLocalhost";
+static const char ParameterNameASPMaxTimeDiff[] = "ASPMaxTimeDiff";
+static const char ParameterNameASPMaxTrajDiff[] = "ASPMaxTrajDiff";
+static const char ParameterNameASPStepBackCount[] = "ASPStepBackCount";
+static const char ParameterNameASPFilterLevel[] = "ASPFilterLevel";
+static const char ParameterNameASPMaxDeltaTime[] = "ASPMaxDeltaTime";
+static const char ParameterNameTimeServerIP[] = "TimeServerIP";
+static const char ParameterNameTimeServerPort[] = "TimeServerPort";
+static const char ParameterNameSimulatorIP[] = "SimulatorIP";
+static const char ParameterNameSimulatorPortTCP[] = "SimulatorTCPPort";
+static const char ParameterNameSimulatorPortUDP[] = "SimulatorUDPPort";
+static const char ParameterNameSimulatorMode[] = "SimulatorMode";
+static const char ParameterNameVOILReceivers[] = "VOILReceivers";
+static const char ParameterNameDTMReceivers[] = "DTMReceivers";
+static const char ParameterNameExternalSupervisorIP[] = "SupervisorIP";
+static const char ParameterNameExternalSupervisorPortTCP[] = "SupervisorTCPPort";
+static const char ParameterNameRVSSConfig[] = "RVSSConfig";
+static const char ParameterNameRVSSRate[] = "RVSSRate";
+static const char ParameterNameMiscData[] = "MiscData";
 
 /*------------------------------------------------------------
 -- Local type definitions
@@ -2053,7 +2078,8 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 		uiMessagePrio = PRIO_COMM_TRAJ_FROMSUP;
 		break;
 	case COMM_DATA_DICT:
-		uiMessagePrio = PRIO_DATA_DICT;
+		uiMessagePrio = PRIO_COMM_DATA_DICT;
+		break;
 	case COMM_EXAC:
 		uiMessagePrio = PRIO_COMM_EXAC;
 		break;
@@ -3420,27 +3446,32 @@ UtilWriteConfigurationParameter updates parameters in the file test.conf.
 - *NewValue the value of the parameter.
 - Debug enable(1)/disable(0) debug printouts
 */
-I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug) {
+int32_t UtilWriteConfigurationParameter(
+		const enum ConfigurationFileParameter parameterName,
+		const char* newValue,
+		const size_t bufferLength)
+{
 
-	I32 RowCount, i;
-	C8 Parameter[SMALL_BUFFER_SIZE_64];
-	C8 Row[SMALL_BUFFER_SIZE_128];
-	C8 NewRow[SMALL_BUFFER_SIZE_128];
+	int32_t RowCount, i;
+	char Parameter[SMALL_BUFFER_SIZE_64];
+	char Row[SMALL_BUFFER_SIZE_128];
+	char NewRow[SMALL_BUFFER_SIZE_128];
 	FILE *fd, *TempFd;
-	C8 *ptr1, *ptr2;
-	U8 ParameterFound = 0;
+	char *ptr1, *ptr2;
+	uint8_t ParameterFound = 0;
 	char confPathDir[MAX_FILE_PATH];
 	char tempConfPathDir[MAX_FILE_PATH];
-	char TEMP_FILE_NAME[] = "temp-util.conf";
+	const char TEMP_FILE_NAME[] = "temp-util.conf";
 
 	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
 	strcpy(tempConfPathDir, confPathDir);
 	strcat(confPathDir, CONF_FILE_NAME);
 	strcat(tempConfPathDir, TEMP_FILE_NAME);
 
-	bzero(Parameter, SMALL_BUFFER_SIZE_64);
+	memset(Parameter, 0, sizeof (Parameter));
 
-	strcat(Parameter, ParameterName);
+	UtilGetConfigurationParameterAsString(parameterName, Parameter, sizeof (Parameter));
+
 	strcat(Parameter, "=");
 
 	//Remove temporary file
@@ -3452,7 +3483,7 @@ I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug)
 	//Open configuration file
 	fd = fopen(confPathDir, "r");
 
-	if (fd > 0) {
+	if (fd != NULL) {
 		RowCount = UtilCountFileRows(fd);
 		fclose(fd);
 		fd = fopen(confPathDir, "r");
@@ -3469,15 +3500,12 @@ I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug)
 				ParameterFound = 1;
 				bzero(NewRow, SMALL_BUFFER_SIZE_128);
 				strncpy(NewRow, Row, (U64) ptr1 - (U64) Row + strlen(Parameter));
-				strcat(NewRow, NewValue);
+				strncat(NewRow, newValue, bufferLength);
 				if ((U64) ptr2 > (U64) ptr1) {
 					strcat(NewRow, " ");	// Add space
 					strcat(NewRow, ptr2);	// Add the comment
 				}
-
-				if (Debug) {
-					LogMessage(LOG_LEVEL_DEBUG, "Changed parameter: %s", NewRow);
-				}
+				LogMessage(LOG_LEVEL_DEBUG, "Changed parameter: %s", NewRow);
 
 				strcat(NewRow, "\n");
 				(void)fwrite(NewRow, 1, strlen(NewRow), TempFd);
@@ -3500,9 +3528,120 @@ I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug)
 		//Remove temporary file
 		remove(tempConfPathDir);
 	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to open configuration file %s", confPathDir);
+	}
 
-	return (I32) ParameterFound;
+	return (int32_t) ParameterFound;
 }
+
+int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength) {
+
+	char TextBuffer[SMALL_BUFFER_SIZE_128];
+	char confPathDir[MAX_FILE_PATH];
+
+	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
+	strcat(confPathDir, CONF_FILE_NAME);
+
+	memset(TextBuffer, 0, sizeof (TextBuffer));
+
+	UtilGetConfigurationParameterAsString(parameter, TextBuffer, sizeof (TextBuffer));
+	strcat(TextBuffer, "=");
+
+	UtilSearchTextFile(confPathDir, TextBuffer, "", returnValue);
+
+	LogMessage(LOG_LEVEL_DEBUG, "Read parameter: %s%s\n", TextBuffer, returnValue);
+
+	return strnlen(returnValue, bufferLength);
+}
+
+char* UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength) {
+	const char *outputString = NULL;
+	switch (parameter) {
+	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
+		outputString = ParameterNameOriginLongitude;
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_LATITUDE:
+		outputString = ParameterNameOriginLatitude;
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE:
+		outputString = ParameterNameOriginAltitude;
+		break;
+	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
+		outputString = ParameterNameVisualizationServerName;
+		break;
+	case CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST:
+		outputString = ParameterNameForceObjectToLocalhost;
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
+		outputString = ParameterNameASPMaxTimeDiff;
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF:
+		outputString = ParameterNameASPMaxTrajDiff;
+		break;
+	case CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT:
+		outputString = ParameterNameASPStepBackCount;
+		break;
+	case CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL:
+		outputString = ParameterNameASPFilterLevel;
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME:
+		outputString = ParameterNameASPMaxDeltaTime;
+		break;
+	case CONFIGURATION_PARAMETER_TIME_SERVER_IP:
+		outputString = ParameterNameTimeServerIP;
+		break;
+	case CONFIGURATION_PARAMETER_TIME_SERVER_PORT:
+		outputString = ParameterNameTimeServerPort;
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_IP:
+		outputString = ParameterNameSimulatorIP;
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP:
+		outputString = ParameterNameSimulatorPortTCP;
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP:
+		outputString = ParameterNameSimulatorPortUDP;
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_MODE:
+		outputString = ParameterNameSimulatorMode;
+		break;
+	case CONFIGURATION_PARAMETER_VOIL_RECEIVERS:
+		outputString = ParameterNameVOILReceivers;
+		break;
+	case CONFIGURATION_PARAMETER_DTM_RECEIVERS:
+		outputString = ParameterNameDTMReceivers;
+		break;
+	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP:
+		outputString = ParameterNameExternalSupervisorIP;
+		break;
+	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP:
+		outputString = ParameterNameExternalSupervisorPortTCP;
+		break;
+	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
+		outputString = ParameterNameRVSSConfig;
+		break;
+	case CONFIGURATION_PARAMETER_RVSS_RATE:
+		outputString = ParameterNameRVSSRate;
+		break;
+	case CONFIGURATION_PARAMETER_MISC_DATA:
+		outputString = ParameterNameMiscData;
+		break;
+	default:
+		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
+		outputString = "";
+	}
+	if (strlen(outputString) + 1 > bufferLength) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold configuration parameter name");
+		returnValue = "";
+	}
+	else {
+		strncpy(returnValue, outputString, bufferLength);
+	}
+	return returnValue;
+}
+
+
 
 /*!
  * \brief UtilPopulateMonitorDataStruct Takes an array of raw monitor data and fills a monitor data struct with the content
