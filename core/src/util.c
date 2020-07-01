@@ -3650,6 +3650,59 @@ char* UtilGetConfigurationParameterAsString(const enum ConfigurationFileParamete
 }
 
 
+enum ConfigurationFileParameter UtilParseConfigurationParameter(const char* parameter, const size_t bufferLength) {
+	if (strncmp(ParameterNameScenarioName, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_SCENARIO_NAME;
+	if (strncmp(ParameterNameOriginLatitude, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ORIGIN_LATITUDE;
+	else if (strncmp(ParameterNameOriginLongitude, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE;
+	else if (strncmp(ParameterNameOriginAltitude, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE;
+	else if (strncmp(ParameterNameVisualizationServerName, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME;
+	else if (strncmp(ParameterNameForceObjectToLocalhost, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST;
+	else if (strncmp(ParameterNameASPMaxTimeDiff, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF;
+	else if (strncmp(ParameterNameASPMaxTrajDiff, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF;
+	else if (strncmp(ParameterNameASPStepBackCount, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT;
+	else if (strncmp(ParameterNameASPFilterLevel, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL;
+	else if (strncmp(ParameterNameASPMaxDeltaTime, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME;
+	else if (strncmp(ParameterNameTimeServerIP, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_TIME_SERVER_IP;
+	else if (strncmp(ParameterNameTimeServerPort, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_TIME_SERVER_PORT;
+	else if (strncmp(ParameterNameSimulatorIP, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_SIMULATOR_IP;
+	else if (strncmp(ParameterNameSimulatorPortTCP, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP;
+	else if (strncmp(ParameterNameSimulatorPortUDP, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP;
+	else if (strncmp(ParameterNameSimulatorMode, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_SIMULATOR_MODE;
+	else if (strncmp(ParameterNameVOILReceivers, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_VOIL_RECEIVERS;
+	else if (strncmp(ParameterNameDTMReceivers, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_DTM_RECEIVERS;
+	else if (strncmp(ParameterNameExternalSupervisorIP, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP;
+	else if (strncmp(ParameterNameExternalSupervisorPortTCP, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP;
+	else if (strncmp(ParameterNameMiscData, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_MISC_DATA;
+	else if (strncmp(ParameterNameRVSSConfig, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_RVSS_CONFIG;
+	else if (strncmp(ParameterNameRVSSRate, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_RVSS_RATE;
+	else
+		return CONFIGURATION_PARAMETER_INVALID;
+}
+
 
 /*!
  * \brief UtilPopulateMonitorDataStruct Takes an array of raw monitor data and fills a monitor data struct with the content
