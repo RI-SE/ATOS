@@ -3535,7 +3535,11 @@ int32_t UtilWriteConfigurationParameter(
 	return (int32_t) ParameterFound;
 }
 
-int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength) {
+int32_t UtilReadConfigurationParameter(
+		const enum ConfigurationFileParameter parameter,
+		char* returnValue,
+		const size_t bufferLength)
+{
 
 	char TextBuffer[SMALL_BUFFER_SIZE_128];
 	char confPathDir[MAX_FILE_PATH];
