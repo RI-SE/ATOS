@@ -27,6 +27,7 @@
 #include "positioning.h"
 #include "maestroTime.h"
 #include "logger.h"
+#include "datadictionary.h"
 
 /*------------------------------------------------------------
   -- Defines
@@ -80,6 +81,7 @@ static volatile int iExit = 0;
 
 
 void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
+
 	char pcLogFile[MAX_FILE_PATH];	//!< Log file path and name buffer
 	char pcLogFileComp[MAX_FILE_PATH];	//!< CSV log file path and name buffer
 	char busReceiveBuffer[MBUS_MAX_DATALEN];	//!< Buffer for receiving from message bus
@@ -358,6 +360,7 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 	char trigFilePath[MAX_FILE_PATH];
 	char journalPathDir[MAX_FILE_PATH];
 	char DateBuffer[FILENAME_MAX];
+	char scenarioName[FILENAME_MAX];
 	FILE *filefd, *fileread;
 	char msString[10];
 	char sysCommand[100];
@@ -397,9 +400,14 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 	sprintf(msString, ".%i", (int)tvTime.tv_usec / 1000);
 	strcat(DateBuffer, msString);
 
-	// Create log folder named with initialization date and time
-	(void)strcpy(logFileDirectoryPath, journalPathDir);
-	(void)strcat(logFileDirectoryPath, DateBuffer);
+	// Create log folder named by scenario and initialization date and time
+	if (DataDictionaryGetScenarioName(scenarioName, sizeof (scenarioName)) != READ_OK) {
+
+	}
+
+	strcpy(logFileDirectoryPath, journalPathDir);
+	strcat(logFileDirectoryPath, scenarioName);
+	strcat(logFileDirectoryPath, DateBuffer); // TODO: GUC puts this part into the scenario name by itself if necessary
 
 	vCreateLogFolder(logFileDirectoryPath);
 
