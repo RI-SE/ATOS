@@ -72,6 +72,7 @@ Initialization data that is configurable is stored in test.conf.
 ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	ReadWriteAccess_t Res = READ_OK;
 
+	Res = Res == READ_OK ? DataDictionaryInitScenarioName() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitOriginLatitudeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitOriginLongitudeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitOriginAltitudeDbl(GSD) : Res;
@@ -117,6 +118,43 @@ ReadWriteAccess_t DataDictionaryDestructor(GSDType * GSD) {
 	result = result == WRITE_OK ? DataDictionaryFreeMonitorData() : result;
 
 	return result;
+}
+
+
+ReadWriteAccess_t DataDictionaryInitScenarioName() {
+	ReadWriteAccess_t Res = UNDEFINED;
+	char ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SCENARIO_NAME, ResultBufferC8, sizeof (ResultBufferC8))) {
+		Res = READ_OK;
+	}
+	else {
+		Res = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "ScenarioName not found!");
+	}
+	return Res;
+}
+
+ReadWriteAccess_t DataDictionarySetScenarioName(const char* name, const size_t nameLength) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_SCENARIO_NAME, name, nameLength)) {
+		return WRITE_OK;
+	}
+	else {
+		return PARAMETER_NOTFOUND;
+	}
+}
+
+ReadWriteAccess_t DataDictionaryGetScenarioName(char * name, const size_t nameLength) {
+	ReadWriteAccess_t Res = UNDEFINED;
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SCENARIO_NAME, name, nameLength)) {
+		Res = READ_OK;
+	}
+	else {
+		Res = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "ScenarioName not found!");
+	}
+	return Res;
 }
 
 

@@ -131,6 +131,7 @@ extern "C"{
 #define SLAVE_FILE_EXTENSION ".sync.s"
 
 enum ConfigurationFileParameter {
+	CONFIGURATION_PARAMETER_SCENARIO_NAME,
 	CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
 	CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
 	CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
@@ -153,7 +154,8 @@ enum ConfigurationFileParameter {
 	CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP,
 	CONFIGURATION_PARAMETER_RVSS_CONFIG,
 	CONFIGURATION_PARAMETER_RVSS_RATE,
-	CONFIGURATION_PARAMETER_MISC_DATA
+	CONFIGURATION_PARAMETER_MISC_DATA,
+	CONFIGURATION_PARAMETER_INVALID
 };
 
 
@@ -714,9 +716,10 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
-int32_t UtilWriteConfigurationParameter(const ConfigurationFileParameter parameter, const char* newValue, const size_t bufferLength);
-int32_t UtilReadConfigurationParameter(const ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength);
-char* UtilGetConfigurationParameterAsString(const ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength);
+int32_t UtilWriteConfigurationParameter(const enum ConfigurationFileParameter parameter, const char* newValue, const size_t bufferLength);
+int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength);
+char* UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength);
+enum ConfigurationFileParameter UtilParseConfigurationParameter(const char* parameter, const size_t bufferLength);
 
 int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, MonitorDataType *monitorData);
 I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);

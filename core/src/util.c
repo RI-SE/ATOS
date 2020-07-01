@@ -102,6 +102,7 @@
 #define PRIO_COMM_MONR 0
 
 // Configuration parameter strings
+static const char ParameterNameScenarioName[] = "ScenarioName";
 static const char ParameterNameOriginLongitude[] = "OriginLongitude";
 static const char ParameterNameOriginLatitude[] = "OriginLatitude";
 static const char ParameterNameOriginAltitude[] = "OriginAltitude";
@@ -3562,6 +3563,9 @@ int32_t UtilReadConfigurationParameter(
 char* UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength) {
 	const char *outputString = NULL;
 	switch (parameter) {
+	case CONFIGURATION_PARAMETER_SCENARIO_NAME:
+		outputString = ParameterNameScenarioName;
+		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
 		outputString = ParameterNameOriginLongitude;
 		break;

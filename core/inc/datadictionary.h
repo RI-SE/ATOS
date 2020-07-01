@@ -16,6 +16,10 @@
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
+ReadWriteAccess_t DataDictionaryInitScenarioName();
+ReadWriteAccess_t DataDictionarySetScenarioName(const char* name, const size_t nameLength);
+ReadWriteAccess_t DataDictionaryGetScenarioName(char* name, const size_t nameLength);
+
 ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType *GSD, C8 *Latitude);
 ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(GSDType *GSD, dbl *Latitude);
