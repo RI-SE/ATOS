@@ -1714,7 +1714,8 @@ ReadWriteAccess_t DataDictionaryInitObjectData() {
  * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId, const ObjectMonitorType * monitorData){
+ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
+											   const ObjectMonitorType * monitorData) {
 
 	ReadWriteAccess_t result;
 
@@ -1746,15 +1747,14 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId, con
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (objectDataMemory[i].ClientID == transmitterId) {
-				memcpy(&objectDataMemory[i].MonrData, &monitorData, sizeof (ObjectMonitorType));
-				result = WRITE_OK;
+			memcpy(&objectDataMemory[i].MonrData, &monitorData, sizeof (ObjectMonitorType));
+			result = WRITE_OK;
 		}
 	}
 
 	if (result == PARAMETER_NOTFOUND) {
 		// Search for unused memory space and place monitor data there
-		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u",
-				   transmitterId);
+		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", transmitterId);
 		for (int i = 0; i < numberOfObjects; ++i) {
 			if (objectDataMemory[i].ClientID == 0) {
 				memcpy(&objectDataMemory[i].MonrData, &monitorData, sizeof (ObjectMonitorType));
@@ -1769,7 +1769,8 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId, con
 				numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
-				memcpy(&objectDataMemory[numberOfObjects - 1].MonrData, &monitorData, sizeof (ObjectMonitorType));
+				memcpy(&objectDataMemory[numberOfObjects - 1].MonrData, &monitorData,
+					   sizeof (ObjectMonitorType));
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -2016,12 +2017,12 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 
-	if(result != PARAMETER_NOTFOUND)
+	if (result != PARAMETER_NOTFOUND)
 
-	objectDataMemory = releaseSharedMemory(objectDataMemory);
+		objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
-} 
+}
 
 
 
@@ -2032,7 +2033,8 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
  * \param enabledStatus the enable status - enable, disable, undefined
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitterId, ObjectEnabledType enabledStatus) {
+ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitterId,
+													  ObjectEnabledType enabledStatus) {
 
 	ReadWriteAccess_t result;
 
@@ -2059,15 +2061,15 @@ ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitter
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (transmitterId == objectDataMemory[i].ClientID) {
-				objectDataMemory[i].Enabled = enabledStatus;
-				result = WRITE_OK;
-			}
+			objectDataMemory[i].Enabled = enabledStatus;
+			result = WRITE_OK;
+		}
 	}
 
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
-} 
+}
 
 /*!
  * \brief DataDictionaryGetObjectEnableStatusById 
@@ -2075,7 +2077,8 @@ ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitter
  * \param *enabledStatus Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmitterId, ObjectEnabledType *enabledStatus) {
+ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmitterId,
+														  ObjectEnabledType * enabledStatus) {
 
 	ReadWriteAccess_t result;
 
@@ -2099,19 +2102,20 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmi
 
 	result = PARAMETER_NOTFOUND;
 	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
 	*enabledStatus = UNDEFINED;
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (transmitterId == objectDataMemory[i].ClientID) {
-				*enabledStatus = objectDataMemory[i].Enabled;
-				result = READ_OK;
-			}
+			*enabledStatus = objectDataMemory[i].Enabled;
+			result = READ_OK;
+		}
 	}
 
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
-} 
+}
 
 /*!
  * \brief DataDictionaryGetObjectEnableStatusByIp 
@@ -2119,7 +2123,8 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmi
  * \param *enabledStatus Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const uint32_t ClientIP, ObjectEnabledType *enabledStatus) {
+ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const uint32_t ClientIP,
+														  ObjectEnabledType * enabledStatus) {
 
 	ReadWriteAccess_t result;
 
@@ -2143,19 +2148,20 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const uint32_t ClientI
 
 	result = PARAMETER_NOTFOUND;
 	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
 	*enabledStatus = UNDEFINED;
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (ClientIP == objectDataMemory[i].ClientIP) {
-				*enabledStatus = objectDataMemory[i].Enabled;
-				result = READ_OK;
-			}
+			*enabledStatus = objectDataMemory[i].Enabled;
+			result = READ_OK;
+		}
 	}
 
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
-} 
+}
 
 
 /*!
@@ -2164,7 +2170,7 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const uint32_t ClientI
  * \param *transmitterId Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetTransmitterIdByIP(const uint32_t ClientIP, uint32_t *transmitterId) {
+ReadWriteAccess_t DataDictionaryGetTransmitterIdByIP(const uint32_t ClientIP, uint32_t * transmitterId) {
 
 	ReadWriteAccess_t result;
 
@@ -2188,16 +2194,17 @@ ReadWriteAccess_t DataDictionaryGetTransmitterIdByIP(const uint32_t ClientIP, ui
 
 	result = PARAMETER_NOTFOUND;
 	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
 	*transmitterId = 0;
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (ClientIP == objectDataMemory[i].ClientIP) {
-				*transmitterId = objectDataMemory[i].ClientID;
-				result = READ_OK;
-			}
+			*transmitterId = objectDataMemory[i].ClientID;
+			result = READ_OK;
+		}
 	}
 
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
-} 
+}

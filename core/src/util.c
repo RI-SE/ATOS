@@ -3506,8 +3506,7 @@ I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug)
  * \param MONR Struct where monitor data should be placed
  * \return -1 on failure, 0 on success
  */
-int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize,
-								  ObjectDataType * monitorData) {
+int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize, ObjectDataType * monitorData) {
 
 	if (rawDataSize != sizeof (ObjectDataType)) {
 		errno = EMSGSIZE;

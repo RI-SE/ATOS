@@ -151,7 +151,8 @@ static const char *SystemControlCommandsArr[] = {
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1",
 	"DeleteFileDirectory_1",
-	"ClearTrajectories_0", "ClearGeofences_0", "RemoteControl_1", "RemoteControlManoeuvre_2", "SetObjectEnableStatus_2",
+	"ClearTrajectories_0", "ClearGeofences_0", "RemoteControl_1", "RemoteControlManoeuvre_2",
+		"SetObjectEnableStatus_2",
 	"GetObjectEnableStatus_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 	"control_0",
 	"Exit_0", "start_ext_trigg_1"
@@ -1116,24 +1117,27 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					if (inet_pton(AF_INET, SystemControlArgument[0], &enableCommand.objectIP) != -1) {
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
-						DataDictionaryGetObjectEnableStatusByIp(enableCommand.objectIP, &enableCommand.Enabled);
+						DataDictionaryGetObjectEnableStatusByIp(enableCommand.objectIP,
+																&enableCommand.Enabled);
 						memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
 						ControlResponseBuffer[0] = (uint8_t) enableCommand.Enabled;
 						SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",
-											 ControlResponseBuffer, 1, &ClientSocket, 0);
+														 ControlResponseBuffer, 1, &ClientSocket, 0);
 					}
-					else responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+					else
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
 				}
-				else responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+				else
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
 			}
 			else {
 				LogMessage(LOG_LEVEL_WARNING, "GetObjectEnableStatus command parameter count error");
 				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
 			}
-		
-			if(responseCode != SYSTEM_CONTROL_RESPONSE_CODE_OK)
+
+			if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_OK)
 				SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",
-					ControlResponseBuffer, 0, &ClientSocket, 0);
+												 ControlResponseBuffer, 0, &ClientSocket, 0);
 			SystemControlCommand = Idle_0;
 			break;
 		case StartScenario_1:
