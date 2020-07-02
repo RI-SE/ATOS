@@ -643,7 +643,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			appendSysInfoString(ControlResponseBuffer);
 			LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
-                                             ControlResponseBuffer, strlen(ControlResponseBuffer), &ClientSocket, 0);
+											 ControlResponseBuffer, strlen(ControlResponseBuffer),
+											 &ClientSocket, 0);
 			break;
 		case GetServerParameterList_0:
 			SystemControlCommand = Idle_0;
@@ -2939,7 +2940,7 @@ void appendSysInfoString(char *ControlResponseBuffer) {
 
 	while (token != NULL) {
 		printf(" %s\n", token);
-		if (loopCounter == 22) { //Get  starttime  %llu from proc file for pid. 
+		if (loopCounter == 22) {	//Get  starttime  %llu from proc file for pid. 
 			char temp[255];
 
 			sprintf(temp, "Pid %d was started at: %s\n", pid, token);
