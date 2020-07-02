@@ -116,9 +116,10 @@ int main()
         case COMM_MONR:
             // Get number of objects present in shared memory
 
-            /*
 
-            */
+            checkObjectsAgainstGeofences(state, geofences, armVerified);
+
+
             break;
         case COMM_ARM:
             try {
@@ -166,7 +167,6 @@ int main()
         default:
             LogMessage(LOG_LEVEL_INFO,"Received unhandled command %u",command);
         }
-        checkObjectsAgainstGeofences(state, geofences, armVerified);
     }
 
     iCommClose();
@@ -541,6 +541,7 @@ int checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &
     MonitorDataType monitorData;
 
     int retval = 0;
+
 
     if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
           LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error");
