@@ -421,7 +421,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 
 					// Store monitor data in shared memory
-					if (DataDictionarySetMonitorData(&monitorData) == UNDEFINED) {
+					if (DataDictionarySetMonitorData(monitorData.ClientID, &monitorData.MonrData) == UNDEFINED) {
 						LogMessage(LOG_LEVEL_ERROR, "Unable to write monitor data to shared memory");
 						// TODO: handle the error
 					}
@@ -734,13 +734,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					// Get objects; name and drive file
 					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 					// Enable all objects at INIT
-					ObjectDataType objectInformation;
+					ObjectDataType objectData;
 					for(iIndex = 0; iIndex < nbr_objects; iIndex ++)
 					{
-						objectInformation.Enabled = OBJECT_ENABLED;
-						objectInformation.ClientIP = objectIPs[iIndex];
-						objectInformation.ClientID = iIndex+1;
-						DataDictionaryInitObjectData(&objectInformation);
+						objectData.Enabled = OBJECT_ENABLED;
+						objectData.ClientIP = objectIPs[iIndex];
+						objectData.ClientID = iIndex+1;
+						DataDictionarySetObjectData(&objectData);
 					}
 
 					resetCommandActionList(commandActions,

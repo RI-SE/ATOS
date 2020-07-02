@@ -249,13 +249,13 @@ typedef enum {
 typedef struct
 {
 	ObjectEnabledType Enabled;
-  uint32_t ClientIP;
+  in_addr_t ClientIP;
 	uint32_t ClientID;
   ObjectMonitorType MonrData;
 } ObjectDataType;
 
 typedef struct {
-  uint32_t objectIP;
+  in_addr_t objectIP;
   ObjectEnabledType Enabled;
 } ObjectEnabledCommandType;
 

@@ -250,12 +250,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	I32 RVSSChannelSocket;
 	struct timeval nextRVSSSendTime = { 0, 0 };
 
-	ServerState_t server_state = SERVER_STATE_UNDEFINED;
+	ServerState_t SystemControlState = SERVER_STATE_UNDEFINED;
 	OBCState_t objectControlState = OBC_STATE_UNDEFINED;
 	SystemControlCommand_t SystemControlCommand = Idle_0;
 	SystemControlCommand_t PreviousSystemControlCommand = Idle_0;
 	uint16_t responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-	int CommandArgCount = 0, /*CurrentCommandArgCounter=0, */ CurrentInputArgCount = 0;
+	int CommandArgCount = 0, CurrentInputArgCount = 0;
 	C8 pcBuffer[IPC_BUFFER_SIZE];
 	char inchr;
 	struct timeval tvTime;
@@ -351,20 +351,20 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	I32 FileLengthI32 = 0;
 
 	while (!iExit) {
-		if (server_state == SERVER_STATE_ERROR) {
+		if (SystemControlState == SERVER_STATE_ERROR) {
 			iCommSend(COMM_ABORT, NULL, 0);
 			continue;
 		}
 
 		if (ModeU8 == 0) {
 			if (ClientSocket <= 0) {
-				if (server_state == SERVER_STATE_UNDEFINED) {
+				if (SystemControlState == SERVER_STATE_UNDEFINED) {
 					//Do some initialization
 
 					//Send COMM_DATA_DICT to notify to update data from DataDictionary
 					iCommSend(COMM_DATA_DICT, ControlResponseBuffer, sizeof (ControlResponseBuffer));
 
-					server_state = SERVER_STATE_INITIALIZED;
+					SystemControlState = SERVER_STATE_INITIALIZED;
 				}
 
 				if (USE_LOCAL_USER_CONTROL == 0) {
@@ -385,7 +385,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 													  &RVSSChannelSocket, &RVSSChannelAddr);
 				}
 
-				server_state = SERVER_STATE_IDLE;
+				SystemControlState = SERVER_STATE_IDLE;
 			}
 
 			PreviousSystemControlCommand = SystemControlCommand;
@@ -414,7 +414,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 
 				SystemControlCommand = AbortScenario_0;	//Oops no client is connected, go to AbortScenario_0
-				server_state == SERVER_STATE_UNDEFINED;	// TODO: Should this be an assignment?
+				SystemControlState == SERVER_STATE_UNDEFINED;	// TODO: Should this be an assignment?
 			}
 			else if (ClientResult > 0 && ClientResult < TCP_RECV_BUFFER_SIZE) {
 				// TODO: Move this entire decoding process into a separate function
@@ -540,17 +540,17 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		objectControlState = DataDictionaryGetOBCStateU8(GSD);
 
-		if (server_state == SERVER_STATE_INWORK) {
+		if (SystemControlState == SERVER_STATE_INWORK) {
 			if (SystemControlCommand == AbortScenario_0) {
 				SystemControlCommand = SystemControlCommand;
 			}
 			else if (SystemControlCommand == GetServerStatus_0) {
 				LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, PreviousCommand: %s",
-						   SystemControlStatesArr[server_state],
+						   SystemControlStatesArr[SystemControlState],
 						   SystemControlOBCStatesArr[objectControlState],
 						   SystemControlCommandsArr[PreviousSystemControlCommand]);
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				ControlResponseBuffer[0] = server_state;
+				ControlResponseBuffer[0] = SystemControlState;
 				ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD);	//OBCStateU8;
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
 												 ControlResponseBuffer, 2, &ClientSocket, 0);
@@ -559,7 +559,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (SystemControlCommand != PreviousSystemControlCommand) {
 				LogMessage(LOG_LEVEL_WARNING,
 						   "Command not allowed, SystemControl is busy in state %s, PreviousCommand: %s",
-						   SystemControlStatesArr[server_state],
+						   SystemControlStatesArr[SystemControlState],
 						   SystemControlCommandsArr[PreviousSystemControlCommand]);
 				SystemControlSendLog
 					("[SystemControl] Command not allowed, SystemControl is busy in state INWORK.\n",
@@ -576,23 +576,23 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		switch (iCommand) {
 		case COMM_FAILURE:
-			if (server_state == SERVER_STATE_INWORK) {
+			if (SystemControlState == SERVER_STATE_INWORK) {
 				enum COMMAND failedCommand = (enum COMMAND)pcRecvBuffer[0];
 
 				if (failedCommand == COMM_INIT && PreviousSystemControlCommand == InitializeScenario_0) {
-					server_state = SERVER_STATE_IDLE;
+					SystemControlState = SERVER_STATE_IDLE;
 					SystemControlCommand = Idle_0;
 					LogMessage(LOG_LEVEL_INFO, "Initialization failed");
 					// TODO: report to user?
 				}
 				else {
 					LogMessage(LOG_LEVEL_ERROR, "Unhandled FAILURE (command: %u) reply in state %s",
-							   pcRecvBuffer[0], SystemControlStatesArr[server_state]);
+							   pcRecvBuffer[0], SystemControlStatesArr[SystemControlState]);
 				}
 			}
 			else {
 				LogMessage(LOG_LEVEL_WARNING, "Received unexpected FAILURE (command: %u) reply in state %s",
-						   pcRecvBuffer[0], SystemControlStatesArr[server_state]);
+						   pcRecvBuffer[0], SystemControlStatesArr[SystemControlState]);
 				// TODO: React more?
 			}
 			break;
@@ -619,12 +619,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case GetServerStatus_0:
 			if (SystemControlCommand != PreviousSystemControlCommand) {
 				LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, %d",
-						   SystemControlStatesArr[server_state],
+						   SystemControlStatesArr[SystemControlState],
 						   SystemControlOBCStatesArr[objectControlState], DataDictionaryGetOBCStateU8(GSD));
 			}
 			SystemControlCommand = Idle_0;
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-			ControlResponseBuffer[0] = server_state;
+			ControlResponseBuffer[0] = SystemControlState;
 			ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD);	//OBCStateU8;
 			LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
@@ -895,26 +895,26 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case InitializeScenario_0:
-			if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_IDLE) {
+			if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_IDLE) {
 				if (iCommSend(COMM_INIT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
 					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending INIT command");
-					server_state = SERVER_STATE_ERROR;
+					SystemControlState = SERVER_STATE_ERROR;
 				}
-				server_state = SERVER_STATE_INWORK;
+				SystemControlState = SERVER_STATE_INWORK;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeScenario:",
 												 ControlResponseBuffer, 0, &ClientSocket, 0);
 
 				SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
 			}
-			else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_INITIALIZED) {
+			else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_INITIALIZED) {
 				SystemControlSendLog
 					("[SystemControl] Simulate that all objects becomes successfully configured.\n",
 					 &ClientSocket, 0);
 				SystemControlCommand = Idle_0;
-				server_state = SERVER_STATE_IDLE;
+				SystemControlState = SERVER_STATE_IDLE;
 			}
-			else if (server_state == SERVER_STATE_IDLE) {
+			else if (SystemControlState == SERVER_STATE_IDLE) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
 												 "InitializeScenario:", ControlResponseBuffer, 0,
 												 &ClientSocket, 0);
@@ -923,10 +923,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case ConnectObject_0:
-			if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_INITIALIZED) {
+			if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_INITIALIZED) {
 				if (iCommSend(COMM_CONNECT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
 					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending CONNECT command");
-					server_state = SERVER_STATE_ERROR;
+					SystemControlState = SERVER_STATE_ERROR;
 				}
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -934,13 +934,13 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												 ControlResponseBuffer, 0, &ClientSocket, 0);
 				SystemControlSendLog("[SystemControl] Sending CONNECT.\n", &ClientSocket, 0);
 			}
-			else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_CONNECTED) {
+			else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_CONNECTED) {
 				SystemControlSendLog("[SystemControl] Simulate that all objects are connected.\n",
 									 &ClientSocket, 0);
 				SystemControlCommand = Idle_0;
-				server_state = SERVER_STATE_IDLE;
+				SystemControlState = SERVER_STATE_IDLE;
 			}
-			else if (server_state == SERVER_STATE_IDLE) {
+			else if (SystemControlState == SERVER_STATE_IDLE) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
 												 "ConnectObject:", ControlResponseBuffer, 0, &ClientSocket,
 												 0);
@@ -949,10 +949,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case DisconnectObject_0:
-			if (server_state == SERVER_STATE_IDLE) {
+			if (SystemControlState == SERVER_STATE_IDLE) {
 				if (iCommSend(COMM_DISCONNECT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
 					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending DISCONNECT command");
-					server_state = SERVER_STATE_ERROR;
+					SystemControlState = SERVER_STATE_ERROR;
 				}
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -970,25 +970,25 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case ArmScenario_0:
-			if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED) {
-				server_state = SERVER_STATE_INWORK;
+			if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED) {
+				SystemControlState = SERVER_STATE_INWORK;
 				if (iCommSend(COMM_ARM, NULL, 0) < 0) {
 					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ARM command");
-					server_state = SERVER_STATE_ERROR;
+					SystemControlState = SERVER_STATE_ERROR;
 				}
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ArmScenario:",
 												 ControlResponseBuffer, 0, &ClientSocket, 0);
 				SystemControlSendLog("[SystemControl] Sending ARM.\n", &ClientSocket, 0);
 			}
-			else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_ARMED) {
+			else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_ARMED) {
 				SystemControlSendLog("[SystemControl] Simulate that all objects become armed.\n",
 									 &ClientSocket, 0);
 
 				SystemControlCommand = Idle_0;
-				server_state = SERVER_STATE_IDLE;
+				SystemControlState = SERVER_STATE_IDLE;
 			}
-			else if (server_state == SERVER_STATE_IDLE) {
+			else if (SystemControlState == SERVER_STATE_IDLE) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
 												 "ArmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 				SystemControlSendLog("[SystemControl] ARM received, state errors!\n", &ClientSocket, 0);
@@ -998,7 +998,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case RemoteControl_1:
 			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
 			if (CurrentInputArgCount == CommandArgCount) {
-				if (server_state == SERVER_STATE_IDLE
+				if (SystemControlState == SERVER_STATE_IDLE
 					&& (objectControlState == OBC_STATE_CONNECTED
 						|| objectControlState == OBC_STATE_REMOTECTRL)) {
 					if (!strcasecmp(SystemControlArgument[0], ENABLE_COMMAND_STRING)
@@ -1033,7 +1033,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case RemoteControlManoeuvre_2:
 			if (CurrentInputArgCount == CommandArgCount) {
-				if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTECTRL) {
+				if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTECTRL) {
 					memset(pcBuffer, 0, sizeof (pcBuffer));
 					RemoteControlCommandType rcCommand;
 
@@ -1070,7 +1070,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case SetObjectEnableStatus_2:
 			if (CurrentInputArgCount == CommandArgCount) {
-				if (server_state == SERVER_STATE_IDLE && objectControlState != OBC_STATE_RUNNING) {
+				if (SystemControlState == SERVER_STATE_IDLE && objectControlState != OBC_STATE_RUNNING) {
 					memset(pcBuffer, 0, sizeof (pcBuffer));
 					ObjectEnabledCommandType enableCommand;
 
@@ -1110,7 +1110,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case GetObjectEnableStatus_1:
 			if (CurrentInputArgCount == CommandArgCount) {
-				if (server_state == SERVER_STATE_IDLE) {
+				if (SystemControlState == SERVER_STATE_IDLE) {
 					memset(pcBuffer, 0, sizeof (pcBuffer));
 					ObjectEnabledCommandType enableCommand;
 
@@ -1138,7 +1138,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case StartScenario_1:
 			if (CurrentInputArgCount == CommandArgCount) {
-				if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED)	//Temporary!
+				if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED)	//Temporary!
 				{
 					bzero(pcBuffer, IPC_BUFFER_SIZE);
 					TimeSetToCurrentSystemTime(&tvTime);
@@ -1155,21 +1155,21 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					if (iCommSend(COMM_STRT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
 						LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending STRT command");
-						server_state = SERVER_STATE_ERROR;
+						SystemControlState = SERVER_STATE_ERROR;
 					}
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "StartScenario:",
 													 ControlResponseBuffer, 0, &ClientSocket, 0);
-					server_state = SERVER_STATE_INWORK;
-					//server_state = SERVER_STATE_IDLE; //Temporary!
+					SystemControlState = SERVER_STATE_INWORK;
+					//SystemControlState = SERVER_STATE_IDLE; //Temporary!
 					//SystemControlCommand = Idle_0; //Temporary!
 				}
-				else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_RUNNING) {
+				else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_RUNNING) {
 
 					SystemControlCommand = Idle_0;
-					server_state = SERVER_STATE_IDLE;
+					SystemControlState = SERVER_STATE_IDLE;
 				}
-				else if (server_state == SERVER_STATE_IDLE) {
+				else if (SystemControlState == SERVER_STATE_IDLE) {
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
 													 "StartScenario:", ControlResponseBuffer, 0,
 													 &ClientSocket, 0);
@@ -1184,10 +1184,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case stop_0:
 			if (iCommSend(COMM_STOP, NULL, 0) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending STOP command");
-				server_state = SERVER_STATE_ERROR;
+				SystemControlState = SERVER_STATE_ERROR;
 			}
 			else {
-				server_state = SERVER_STATE_IDLE;
+				SystemControlState = SERVER_STATE_IDLE;
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "stop:",
@@ -1202,10 +1202,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			{
 				if (iCommSend(COMM_ABORT, NULL, 0) < 0) {
 					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ABORT command");
-					server_state = SERVER_STATE_ERROR;
+					SystemControlState = SERVER_STATE_ERROR;
 				}
 				else {
-					server_state = SERVER_STATE_IDLE;
+					SystemControlState = SERVER_STATE_IDLE;
 					SystemControlCommand = Idle_0;
 					if (ClientSocket >= 0) {
 						bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -1223,43 +1223,15 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 													 &ClientSocket, 0);
 					SystemControlSendLog("[SystemControl] ABORT received, state errors!\n", &ClientSocket, 0);
 				}
-				server_state = SERVER_STATE_IDLE;
+				SystemControlState = SERVER_STATE_IDLE;
 				SystemControlCommand = Idle_0;
 			}
 			break;
-			/*
-			   case replay_1:
-			   if(CurrentCommandArgCounter == CommandArgCount)
-			   {
-			   if(!strcmp(SystemControlArgument[CurrentCommandArgCounter],"-help"))
-			   {
-			   printf("[SystemControl] -----REPLAY-----\n");
-			   printf("[SystemControl] Syntax: replay [arg]\n");
-			   printf("[SystemControl] Ex: replay log/33/event.log\n");
-			   fflush(stdout);
-			   }
-			   else
-			   {
-			   (void)iCommSend(COMM_REPLAY, SystemControlArgument[CurrentCommandArgCounter]);
-			   printf("[SystemControl] System control sending REPLAY on IPC <%s>\n", SystemControlArgument[CurrentCommandArgCounter]);
-			   fflush(stdout);
-			   }
-			   SystemControlCommand = idle_0;
-			   CurrentCommandArgCounter = 0;
-			   } else CurrentCommandArgCounter ++;
-			   break;
-			   case control_0:
-			   (void)iCommSend(COMM_CONTROL, NULL);
-			   //printf("INF: System control sending CONTROL on IPC <%s>\n", pcBuffer);
-			   fflush(stdout);
-			   SystemControlCommand = idle_0;
-			   CurrentCommandArgCounter = 0;
-			   break; */
 		case Exit_0:
 
 			if (iCommSend(COMM_EXIT, NULL, 0) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending EXIT command");
-				server_state = SERVER_STATE_ERROR;
+				SystemControlState = SERVER_STATE_ERROR;
 			}
 			else {
 				iExit = 1;
@@ -1301,7 +1273,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				if (RVSSConfigU32 & RVSS_MAESTRO_CHANNEL) {
 					SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32, GSD,
-																server_state, 0);
+																SystemControlState, 0);
 					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 									RVSSMessageLengthU32, 0);
 				}
@@ -1325,7 +1297,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 		sleep_time = (iCommand == COMM_INV
-					  && server_state != SERVER_STATE_INWORK
+					  && SystemControlState != SERVER_STATE_INWORK
 					  && ClientResult < 0) ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
 		nanosleep(&sleep_time, &ref_time);
 	}
@@ -2722,7 +2694,7 @@ See the architecture document for the protocol of RVSS.
 - *RVSSData the buffer the message
 - *RVSSDataLengthU32 the length of the message
 - *GSD the Global System Data
-- U8 SysCtrlState the SystemControl state (server_state)
+- U8 SysCtrlState the SystemControl state (SystemControlState)
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
 I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
@@ -2796,7 +2768,7 @@ int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr
 	int32_t retval = 0;
 
 	for (uint32_t i = 0; i < numberOfObjects; ++i) {
-		if (DataDictionaryGetMonitorData(&monitorData, transmitterIDs[i]) != READ_OK) {
+		if (DataDictionaryGetMonitorData(transmitterIDs[i], &monitorData) != READ_OK) {
 			LogMessage(LOG_LEVEL_ERROR,
 					   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
 					   transmitterIDs[i]);

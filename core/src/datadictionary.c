@@ -99,7 +99,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitMonitorData() : Res;
+	Res = Res == READ_OK ? DataDictionaryInitObjectData() : Res;
 	if (Res != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
 	}
@@ -118,7 +118,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 ReadWriteAccess_t DataDictionaryDestructor(GSDType * GSD) {
 	ReadWriteAccess_t result = WRITE_OK;
 
-	result = result == WRITE_OK ? DataDictionaryFreeMonitorData() : result;
+	result = result == WRITE_OK ? DataDictionaryFreeObjectData() : result;
 
 	return result;
 }
@@ -1693,10 +1693,10 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
 /*END OBCState*/
 
 /*!
- * \brief DataDictionaryInitMonitorData inits a data structure for saving object monr
+ * \brief DataDictionaryInitObjectData inits a data structure for saving object monr
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitMonitorData() {
+ReadWriteAccess_t DataDictionaryInitObjectData() {
 
 	int createdMemory;
 
@@ -1714,7 +1714,7 @@ ReadWriteAccess_t DataDictionaryInitMonitorData() {
  * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectDataType * monitorData) {
+ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId, const ObjectMonitorType * monitorData){
 
 	ReadWriteAccess_t result;
 
@@ -1728,7 +1728,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectDataType * monitorDat
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
-	if (monitorData->ClientID == 0) {
+	if (transmitterId == 0) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
 		return UNDEFINED;
@@ -1745,32 +1745,19 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectDataType * monitorDat
 	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 
 	for (int i = 0; i < numberOfObjects; ++i) {
-		if (objectDataMemory[i].ClientID == monitorData->ClientID) {
-
-			if (objectDataMemory[i].ClientIP == monitorData->ClientIP) {
-				memcpy(&objectDataMemory[i].MonrData, &monitorData->MonrData, sizeof (ObjectMonitorType));
+		if (objectDataMemory[i].ClientID == transmitterId) {
+				memcpy(&objectDataMemory[i].MonrData, &monitorData, sizeof (ObjectMonitorType));
 				result = WRITE_OK;
-			}
-			else {
-				char addr1[INET_ADDRSTRLEN], addr2[INET_ADDRSTRLEN];
-
-				LogMessage(LOG_LEVEL_WARNING,
-						   "Both IP addresses %s and %s have the transmitter ID %u and cannot be separated: data discarded",
-						   inet_ntop(AF_INET, &objectDataMemory[i].ClientIP, addr1, sizeof (addr1)),
-						   inet_ntop(AF_INET, &monitorData->ClientIP, addr2, sizeof (addr2)),
-						   monitorData->ClientID);
-				result = UNDEFINED;
-			}
 		}
 	}
 
 	if (result == PARAMETER_NOTFOUND) {
 		// Search for unused memory space and place monitor data there
 		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u",
-				   monitorData->ClientID);
+				   transmitterId);
 		for (int i = 0; i < numberOfObjects; ++i) {
 			if (objectDataMemory[i].ClientID == 0) {
-				memcpy(&objectDataMemory[i].MonrData, &monitorData->MonrData, sizeof (ObjectMonitorType));
+				memcpy(&objectDataMemory[i].MonrData, &monitorData, sizeof (ObjectMonitorType));
 				result = WRITE_OK;
 			}
 		}
@@ -1782,7 +1769,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectDataType * monitorDat
 				numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
-				memcpy(&objectDataMemory[numberOfObjects - 1].MonrData, &monitorData->MonrData, sizeof (ObjectMonitorType));
+				memcpy(&objectDataMemory[numberOfObjects - 1].MonrData, &monitorData, sizeof (ObjectMonitorType));
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -1797,11 +1784,11 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectDataType * monitorDat
 
 /*!
  * \brief DataDictionaryGetMonitorData Reads variable from shared memory
- * \param monitorData Return variable pointer
  * \param transmitterId requested object transmitterId
+ * \param monitorData Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMonitorData(ObjectDataType * monitorData, const uint32_t transmitterId) {
+ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t transmitterId, ObjectDataType * monitorData) {
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 
 	if (monitorData == NULL) {
@@ -1839,10 +1826,10 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(ObjectDataType * monitorData, con
 }
 
 /*!
- * \brief DataDictionaryFreeMonitorData Releases data structure for saving object monitor data
+ * \brief DataDictionaryFreeObjectData Releases data structure for saving object monitor data
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryFreeMonitorData() {
+ReadWriteAccess_t DataDictionaryFreeObjectData() {
 	ReadWriteAccess_t result = WRITE_OK;
 
 	if (objectDataMemory == NULL) {
@@ -1966,11 +1953,11 @@ U64 DataDictionarySearchParameter(C8 * ParameterName, C8 * ResultBuffer) {
 
 
 /*!
- * \brief DataDictionaryInitObjectData 
+ * \brief DataDictionarySetObjectData 
  * \param objectData data to be initialized
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitObjectData(const ObjectDataType * objectData) {
+ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData) {
 
 	ReadWriteAccess_t result;
 

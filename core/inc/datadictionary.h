@@ -121,10 +121,8 @@ ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, C8 *MiscData, U32 Bu
 ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, OBCState_t OBCState);
 OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD);
 
-ReadWriteAccess_t DataDictionaryFreeMonitorData();
-ReadWriteAccess_t DataDictionaryInitMonitorData();
-ReadWriteAccess_t DataDictionarySetMonitorData(const ObjectDataType * monitorData);
-ReadWriteAccess_t DataDictionaryGetMonitorData(ObjectDataType * monitorData, const uint32_t TransmitterId);
+ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId, const ObjectMonitorType * monitorData);
+ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t transmitterId, ObjectDataType * monitorData);
 ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs[], const uint32_t arraySize);
 
 ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObjects);
@@ -133,12 +131,13 @@ ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t *numberOfObjects);
 ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
 ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
 
-
-ReadWriteAccess_t DataDictionaryInitObjectData(const ObjectDataType * objectData);
+ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData);
 ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitterId, ObjectEnabledType enabledStatus);
 ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmitterId, ObjectEnabledType *enabledStatus);
 ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const uint32_t ClientIP, ObjectEnabledType *enabledStatus);
 ReadWriteAccess_t DataDictionaryGetTransmitterIdByIP(const uint32_t ClientIP, uint32_t *transmitterId);
 
+ReadWriteAccess_t DataDictionaryFreeObjectData();
+ReadWriteAccess_t DataDictionaryInitObjectData();
 #endif 
 
