@@ -2798,7 +2798,8 @@ int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr
 				retval = -1;
 			}
 			else if (UtilObjectDataToString(monitorData, monitorDataString,
-											 sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) == -1) {
+											sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) ==
+					 -1) {
 				LogMessage(LOG_LEVEL_ERROR, "Error building object data string");
 				retval = -1;
 			}

@@ -325,7 +325,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			DisconnectU8 = 0;
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				if (object_transmitter_ids[iIndex] == 0 ||
-						DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus) != READ_OK) {
+					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+															&objectEnabledStatus) != READ_OK) {
 					continue;
 				}
 				if (objectEnabledStatus == OBJECT_ENABLED) {
@@ -333,6 +334,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					DisconnectU8 |= vCheckRemoteDisconnected(&socket_fds[iIndex]);
 					// Check time since last position update
 					struct timeval lastDataUpdate, timeSinceLastMonitorData;
+
 					DataDictionaryGetMonitorDataReceiveTime(object_transmitter_ids[iIndex], &lastDataUpdate);
 
 					timersub(&currentTime, &lastDataUpdate, &timeSinceLastMonitorData);
@@ -341,8 +343,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								   "MONR timeout (ID %u):\n\ttimeout time %d s %d µs\n\tlast message %d s %d µs\n\tcurrent time %d s %d µs",
 								   object_transmitter_ids[iIndex], monitorDataTimeout.tv_sec,
 								   monitorDataTimeout.tv_usec, lastDataUpdate.tv_sec,
-								   lastDataUpdate.tv_usec, currentTime.tv_sec,
-								   currentTime.tv_usec);
+								   lastDataUpdate.tv_usec, currentTime.tv_sec, currentTime.tv_usec);
 						DisconnectU8 = 1;
 					}
 
@@ -441,11 +442,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 
 					// TEMPORARY FIX: if an object sends with transmitter ID not matching the local, modify locally
-					//		stored transmitter ID
+					//      stored transmitter ID
 					uint32_t localTransmitterID;
-					if (DataDictionaryGetObjectTransmitterIDByIP(monitorData.ClientIP, &localTransmitterID) == READ_OK) {
+
+					if (DataDictionaryGetObjectTransmitterIDByIP(monitorData.ClientIP, &localTransmitterID) ==
+						READ_OK) {
 						if (monitorData.ClientID != localTransmitterID) {
-							LogMessage(LOG_LEVEL_WARNING, "Modifying local transmitter ID %u to %u in lieu of ability to set remote",
+							LogMessage(LOG_LEVEL_WARNING,
+									   "Modifying local transmitter ID %u to %u in lieu of ability to set remote",
 									   localTransmitterID, monitorData.ClientID);
 							DataDictionaryModifyTransmitterID(localTransmitterID, monitorData.ClientID);
 						}
@@ -455,8 +459,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						// TODO: Handle the error
 					}
 					// Store monitor data in shared memory
-					if (DataDictionarySetMonitorData(monitorData.ClientID, &monitorData.MonrData, &currentTime) ==
-						UNDEFINED) {
+					if (DataDictionarySetMonitorData
+						(monitorData.ClientID, &monitorData.MonrData, &currentTime) == UNDEFINED) {
 						LogMessage(LOG_LEVEL_ERROR, "Unable to write monitor data to shared memory");
 						// TODO: handle the error
 					}
@@ -595,10 +599,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					/*Send OSTM message */
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+															&objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED)
-						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex],
-										0);
+						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 				}
 
 				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
@@ -614,10 +618,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					/*Send OSTM message */
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+															&objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED)
-						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
-										&socket_fds[iIndex], 0);
+						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 				}
 
 				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
@@ -643,9 +647,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					if (!hasDelayedStart
 						(objectIPs[iIndex], commandActions,
 						 sizeof (commandActions) / sizeof (commandActions[0]))) {
-						DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+						DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+																&objectEnabledStatus);
 						if (objectEnabledStatus == OBJECT_ENABLED) {
-							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex],
+											0);
 						}
 					}
 				}
@@ -688,7 +694,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to remote control mode",
 							   object_address_name[iIndex]);
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+															&objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED)
 						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 				}
@@ -702,7 +709,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to disarmed mode",
 							   object_address_name[iIndex]);
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+															&objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED)
 						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
 				}
@@ -785,8 +793,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects) == 0) {
 					// Reset preexisting stored monitor data
 					DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids,
-														   sizeof (object_transmitter_ids) /
-														   sizeof (object_transmitter_ids[0]));
+														  sizeof (object_transmitter_ids) /
+														  sizeof (object_transmitter_ids[0]));
 
 					if (DataDictionarySetNumberOfObjects(0) != WRITE_OK) {
 						LogMessage(LOG_LEVEL_ERROR, "Error clearing old object data");
@@ -942,9 +950,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							TimeSetToCurrentSystemTime(&currentTime);
 							TimeSetToGPStime(&startTime, TimeGetAsGPSweek(&currentTime),
 											 mqEXACData.executionTime_qmsoW);
-							LogMessage(LOG_LEVEL_INFO,"Current time: %ld, Start time: %ld, delay: %u",
-									 TimeGetAsUTCms(&currentTime), TimeGetAsUTCms(&startTime),
-									 mqEXACData.executionTime_qmsoW);
+							LogMessage(LOG_LEVEL_INFO, "Current time: %ld, Start time: %ld, delay: %u",
+									   TimeGetAsUTCms(&currentTime), TimeGetAsUTCms(&startTime),
+									   mqEXACData.executionTime_qmsoW);
 							MessageLength =
 								encodeSTRTMessage(&startTime, MessageBuffer, sizeof (MessageBuffer), 0);
 							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex],
@@ -995,15 +1003,16 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				/* Connect and send drive files */
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+															&objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED) {
 						UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
 						float altitude = (float)OriginPosition.Altitude;
 
 						MessageLength =
-							encodeOSEMMessage(&currentTime, &OriginPosition.Latitude, &OriginPosition.Longitude,
-											  &altitude, NULL, NULL, NULL, MessageBuffer,
-											  sizeof (MessageBuffer), 0);
+							encodeOSEMMessage(&currentTime, &OriginPosition.Latitude,
+											  &OriginPosition.Longitude, &altitude, NULL, NULL, NULL,
+											  MessageBuffer, sizeof (MessageBuffer), 0);
 						if (MessageLength < 0) {
 							util_error("OSEM encoding error");
 						}
@@ -1032,7 +1041,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									util_error("[ObjectControl] Local address/port already in use");
 									break;
 								case EALREADY:
-									util_error("[ObjectControl] Previous connection attempt still in progress");
+									util_error
+										("[ObjectControl] Previous connection attempt still in progress");
 									break;
 								case EISCONN:
 									util_error("[ObjectControl] Socket is already connected");
@@ -1148,16 +1158,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 				TimeSetToCurrentSystemTime(&currentTime);
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+															&objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED) {
 						if (USE_TEST_HOST == 0)
 							vCreateSafetyChannel(object_address_name[iIndex], object_udp_port[iIndex],
-												 &safety_socket_fd[iIndex],
-												 &safety_object_addr[iIndex]);
+												 &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
 						else if (USE_TEST_HOST == 1)
 							vCreateSafetyChannel(TESTSERVER_IP, object_udp_port[iIndex],
-												 &safety_socket_fd[iIndex],
-												 &safety_object_addr[iIndex]);
+												 &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
 
 						// Set latest monitor data receive time to now, so the timeout doesn't trigger instantly
 						DataDictionarySetMonitorDataReceiveTime(object_transmitter_ids[iIndex], &currentTime);
@@ -1218,7 +1227,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_DISCONNECT) {
 				//#ifndef NOTCP
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+															&objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED)
 						vDisconnectObject(&socket_fds[iIndex]);
 				}
@@ -1228,7 +1238,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.");
 				/* Close safety socket */
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+															&objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED)
 						vCloseSafetyChannel(&safety_socket_fd[iIndex]);
 				}

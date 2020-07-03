@@ -1916,7 +1916,8 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t transmitterId, Obj
  * \param lastDataUpdate Return variable pointer
  * \return Value according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmitterID, struct timeval * lastDataUpdate) {
+ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmitterID,
+														  struct timeval * lastDataUpdate) {
 	ReadWriteAccess_t result = UNDEFINED;
 
 	if (objectDataMemory == NULL) {
@@ -1961,7 +1962,8 @@ ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmi
  * \param lastDataUpdate Time to set
  * \return Value according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmitterID, const struct timeval * lastDataUpdate) {
+ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmitterID,
+														  const struct timeval * lastDataUpdate) {
 	ReadWriteAccess_t result = UNDEFINED;
 
 	if (objectDataMemory == NULL) {
@@ -2383,7 +2385,8 @@ ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDByIP(const in_addr_t Clien
  * \param *ClientIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetObjectIPByTransmitterID(const in_addr_t transmitterID, in_addr_t * ClientIP) {
+ReadWriteAccess_t DataDictionaryGetObjectIPByTransmitterID(const in_addr_t transmitterID,
+														   in_addr_t * ClientIP) {
 
 	ReadWriteAccess_t result;
 
@@ -2428,7 +2431,8 @@ ReadWriteAccess_t DataDictionaryGetObjectIPByTransmitterID(const in_addr_t trans
  * \param newTransmitterID Desired new transmitter ID of object data
  * \return Value according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitterID, const uint32_t newTransmitterID) {
+ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitterID,
+													const uint32_t newTransmitterID) {
 	ReadWriteAccess_t result;
 
 	if (objectDataMemory == NULL) {
