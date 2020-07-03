@@ -128,6 +128,7 @@ static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, c
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 							C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
 							in_addr_t objectIPs[MAX_OBJECTS], I32 * nbr_objects);
+static int readMonitorDataTimeoutSetting(struct timeval *timeout);
 
 OBCState_t vInitializeState(OBCState_t firstState, GSDType * GSD);
 inline OBCState_t vGetState(GSDType * GSD);
@@ -163,6 +164,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	in_addr_t objectIPs[MAX_OBJECTS];
 	U32 object_udp_port[MAX_OBJECTS];
 	U32 object_tcp_port[MAX_OBJECTS];
+	U32 object_transmitter_ids[MAX_OBJECTS];
 	TestScenarioCommandAction commandActions[MAX_OBJECTS];
 	I32 nbr_objects = 0;
 	enum COMMAND iCommand;
@@ -182,6 +184,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	const struct timeval heartbeatPeriod = { 1 / HEAB_FREQUENCY_HZ,
 		(1000000 / HEAB_FREQUENCY_HZ) % 1000000
 	};
+	struct timeval monitorDataTimeout;	//!< Timeout after N missing monitor messages i.e. after this long
+
 	const struct timeval adaptiveSyncMessagePeriod = heartbeatPeriod;
 
 	U8 iForceObjectToLocalhostU8 = DEFAULT_FORCE_OBJECT_TO_LOCALHOST;
@@ -277,11 +281,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	nextAdaptiveSyncMessageTime = currentTime;
 
 	while (!iExit) {
+		TimeSetToCurrentSystemTime(&currentTime);
 
 		if (vGetState(GSD) == OBC_STATE_ERROR) {
 			objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 			MessageLength =
-				encodeHEABMessage(objectControlServerStatus, MessageBuffer, sizeof (MessageBuffer), 0);
+				encodeHEABMessage(&currentTime, objectControlServerStatus, MessageBuffer,
+								  sizeof (MessageBuffer), 0);
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
 								MessageBuffer, MessageLength, 0);
@@ -295,7 +301,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 			timeradd(&nextHeartbeatTime, &heartbeatPeriod, &nextHeartbeatTime);
 			MessageLength =
-				encodeHEABMessage(objectControlServerStatus, MessageBuffer, sizeof (MessageBuffer), 0);
+				encodeHEABMessage(&currentTime, objectControlServerStatus, MessageBuffer,
+								  sizeof (MessageBuffer), 0);
 
 			// Transmit heartbeat to all objects
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
@@ -305,8 +312,33 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 			// Check if any object has disconnected - if so, disconnect all objects and return to idle
 			DisconnectU8 = 0;
+			DataDictionaryGetMonitorTransmitterIDs(object_transmitter_ids,
+												   sizeof (object_transmitter_ids) /
+												   sizeof (object_transmitter_ids[0]));
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+				// Check broken TCP connection
 				DisconnectU8 |= vCheckRemoteDisconnected(&socket_fds[iIndex]);
+				// Check time since last position update
+				if (object_transmitter_ids[iIndex] != 0) {
+					DataDictionaryGetMonitorData(&monitorData, object_transmitter_ids[iIndex]);
+					struct timeval timeSinceLastMonitorData;
+
+					timersub(&currentTime, &monitorData.lastDataUpdate, &timeSinceLastMonitorData);
+					if (timercmp(&timeSinceLastMonitorData, &monitorDataTimeout, >)) {
+						LogMessage(LOG_LEVEL_WARNING,
+								   "MONR timeout (ID %u):\n\ttimeout time %d s %d µs\n\tlast message %d s %d µs\n\tcurrent time %d s %d µs",
+								   object_transmitter_ids[iIndex], monitorDataTimeout.tv_sec,
+								   monitorDataTimeout.tv_usec, monitorData.lastDataUpdate.tv_sec,
+								   monitorData.lastDataUpdate.tv_usec, currentTime.tv_sec,
+								   currentTime.tv_usec);
+						DisconnectU8 = 1;
+					}
+				}
+				else {
+					LogMessage(LOG_LEVEL_ERROR, "Object with IP %s has not reported any monitoring data",
+							   object_address_name[iIndex]);
+				}
+
 				if (DisconnectU8) {
 					LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s - returning to IDLE",
 							   object_address_name[iIndex]);
@@ -377,14 +409,18 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							   buffer);
 
 					monitorData.ClientIP = safety_object_addr[iIndex].sin_addr.s_addr;
+					TimeSetToCurrentSystemTime(&currentTime);
 					if (decodeMONRMessage
-						(buffer, receivedMONRData, &monitorData.ClientID, &monitorData.data,
+						(buffer, receivedMONRData, currentTime, &monitorData.ClientID, &monitorData.data,
 						 0) != MESSAGE_OK) {
 						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object",
 								   object_address_name[iIndex]);
 						vDisconnectObject(&safety_socket_fd[iIndex]);
 						// TODO smarter way of handling?
 						continue;
+					}
+					else {
+						TimeSetToCurrentSystemTime(&monitorData.lastDataUpdate);
 					}
 
 					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
@@ -679,8 +715,24 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
 				nbr_objects = 0;
 				if (iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects) == 0) {
+					// Reset preexisting stored monitor data
+					DataDictionaryGetMonitorTransmitterIDs(object_transmitter_ids,
+														   sizeof (object_transmitter_ids) /
+														   sizeof (object_transmitter_ids[0]));
+					for (unsigned int i = 0;
+						 i < sizeof (object_transmitter_ids) / sizeof (object_transmitter_ids[0]); ++i) {
+						if (object_transmitter_ids[i] != 0) {
+							if (DataDictionaryClearMonitorData(object_transmitter_ids[0]) != WRITE_OK) {
+								LogMessage(LOG_LEVEL_ERROR,
+										   "Unable to clear monitor data for transmitter ID %u",
+										   object_transmitter_ids[i]);
+							}
+						}
+					}
 					// Get objects; name and drive file
 					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
+					// Get number of allowed missing monitor messages before abort
+					readMonitorDataTimeoutSetting(&monitorDataTimeout);
 
 					resetCommandActionList(commandActions,
 										   sizeof (commandActions) / sizeof (commandActions[0]));
@@ -864,7 +916,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					float altitude = (float)OriginPosition.Altitude;
 
 					MessageLength =
-						encodeOSEMMessage(&OriginPosition.Latitude, &OriginPosition.Longitude,
+						encodeOSEMMessage(&currentTime, &OriginPosition.Latitude, &OriginPosition.Longitude,
 										  &altitude, NULL, NULL, NULL, MessageBuffer,
 										  sizeof (MessageBuffer), 0);
 					if (MessageLength < 0) {
@@ -1632,6 +1684,30 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 	return retval;
 }
 
+/*!
+ * \brief readMonitorDataTimeout Reads the maximum allowed missing monitor
+ *			messages from settings and calculates a timeout period.
+ * \param timeout Time since last monitor message which should have
+ *			elapsed before abort should occur
+ * \return 0 on success, -1 otherwise
+ */
+int readMonitorDataTimeoutSetting(struct timeval *timeout) {
+	uint8_t maxMissingMonitorMessages = 0;
+
+	const struct timeval monitorDataPeriod = { 1 / MONR_EXPECTED_FREQUENCY_HZ,
+		(1000000 / MONR_EXPECTED_FREQUENCY_HZ) % 1000000
+	};
+	*timeout = monitorDataPeriod;
+
+	DataDictionaryGetMaxPacketsLost(&maxMissingMonitorMessages);
+
+	LogMessage(LOG_LEVEL_INFO, "Read max allowed missing monitor packets: %u", maxMissingMonitorMessages);
+	for (uint8_t i = 0; i < maxMissingMonitorMessages; ++i) {
+		timeradd(timeout, &monitorDataPeriod, timeout);
+	}
+
+	return 0;
+}
 
 
 OBCState_t vGetState(GSDType * GSD) {
