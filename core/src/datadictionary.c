@@ -1760,7 +1760,8 @@ ReadWriteAccess_t DataDictionaryInitObjectData() {
  * \return Result according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
-											   const ObjectMonitorType * monitorData) {
+											   const ObjectMonitorType * monitorData,
+											   const struct timeval * receiveTime) {
 
 	ReadWriteAccess_t result;
 
@@ -1770,6 +1771,11 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 		return UNDEFINED;
 	}
 	if (monitorData == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (receiveTime == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
@@ -1792,7 +1798,8 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (objectDataMemory[i].ClientID == transmitterId) {
-			memcpy(&objectDataMemory[i].MonrData, &monitorData, sizeof (ObjectMonitorType));
+			objectDataMemory[i].MonrData = *monitorData;
+			objectDataMemory[i].lastDataUpdate = *receiveTime;
 			result = WRITE_OK;
 		}
 	}
@@ -1802,7 +1809,8 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", transmitterId);
 		for (int i = 0; i < numberOfObjects; ++i) {
 			if (objectDataMemory[i].ClientID == 0) {
-				memcpy(&objectDataMemory[i].MonrData, &monitorData, sizeof (ObjectMonitorType));
+				objectDataMemory[i].MonrData = *monitorData;
+				objectDataMemory[i].lastDataUpdate = *receiveTime;
 				result = WRITE_OK;
 			}
 		}
@@ -1814,8 +1822,8 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 				numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
-				memcpy(&objectDataMemory[numberOfObjects - 1].MonrData, &monitorData,
-					   sizeof (ObjectMonitorType));
+				objectDataMemory[numberOfObjects - 1].MonrData = *monitorData;
+				objectDataMemory[numberOfObjects - 1].lastDataUpdate = *receiveTime;
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -1938,6 +1946,48 @@ ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmi
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (transmitterID == objectDataMemory[i].ClientID) {
 			*lastDataUpdate = objectDataMemory[i].lastDataUpdate;
+			result = READ_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+/*!
+ * \brief DataDictionarySetMonitorDataReceiveTime Sets the last receive time of monitor data for specified object
+ * \param transmitterID Identifier of object
+ * \param lastDataUpdate Time to set
+ * \return Value according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmitterID, const struct timeval * lastDataUpdate) {
+	ReadWriteAccess_t result = UNDEFINED;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			objectDataMemory[i].lastDataUpdate = *lastDataUpdate;
 			result = READ_OK;
 		}
 	}
@@ -2364,6 +2414,48 @@ ReadWriteAccess_t DataDictionaryGetObjectIPByTransmitterID(const in_addr_t trans
 		if (transmitterID == objectDataMemory[i].ClientID) {
 			*ClientIP = objectDataMemory[i].ClientIP;
 			result = READ_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+/*!
+ * \brief DataDictionaryModifyTransmitterID Changes the transmitter ID of the object data identified by a transmitter ID
+ * \param oldTransmitterID Present transmitter ID of object data
+ * \param newTransmitterID Desired new transmitter ID of object data
+ * \return Value according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitterID, const uint32_t newTransmitterID) {
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (newTransmitterID == 0 || oldTransmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (oldTransmitterID == objectDataMemory[i].ClientID) {
+			objectDataMemory[i].ClientID = newTransmitterID;
+			result = WRITE_OK;
 		}
 	}
 
