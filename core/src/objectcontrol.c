@@ -446,6 +446,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					if (DataDictionaryGetObjectTransmitterIDByIP(monitorData.ClientIP, &localTransmitterID) == READ_OK) {
 						if (monitorData.ClientID != localTransmitterID) {
 							DataDictionaryModifyTransmitterID(localTransmitterID, monitorData.ClientID);
+							LogMessage(LOG_LEVEL_WARNING, "Modified local transmitter ID in lieu of ability to set it");
 						}
 					}
 					else {
