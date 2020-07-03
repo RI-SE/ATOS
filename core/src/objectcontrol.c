@@ -345,10 +345,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								   currentTime.tv_usec);
 						DisconnectU8 = 1;
 					}
-					else {
-						LogMessage(LOG_LEVEL_ERROR, "Object with IP %s has not reported any monitoring data",
-								   object_address_name[iIndex]);
-					}
 
 					if (DisconnectU8) {
 						LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s - returning to IDLE",
@@ -435,9 +431,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						 0) != MESSAGE_OK) {
 						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object",
 								   object_address_name[iIndex]);
-						DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
-						if (objectEnabledStatus == OBJECT_ENABLED)
-							vDisconnectObject(&safety_socket_fd[iIndex]);
+
+						vDisconnectObject(&safety_socket_fd[iIndex]);
 						// TODO smarter way of handling?
 						continue;
 					}
@@ -799,7 +794,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					for (iIndex = 0; iIndex < nbr_objects; iIndex++) {
 						objectData.Enabled = OBJECT_ENABLED;
 						objectData.ClientIP = objectIPs[iIndex];
-						objectData.ClientID = iIndex + 1;
+						objectData.ClientID = (uint32_t) (iIndex + 1);
+						objectData.lastDataUpdate.tv_sec = 0;
+						objectData.lastDataUpdate.tv_usec = 0;
 						DataDictionarySetObjectData(&objectData);
 					}
 					DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
