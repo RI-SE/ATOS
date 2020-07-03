@@ -32,11 +32,11 @@ typedef enum {
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
-static bool isViolatingGeofence(const MonitorDataType &monitorData, std::vector<Geofence> geofences);
+static bool isViolatingGeofence(const ObjectDataType &monitorData, std::vector<Geofence> geofences);
 static void loadGeofenceFiles(std::vector<Geofence> &geofences);
 static void loadTrajectoryFiles(std::vector<Trajectory> &trajectories);
 static Geofence parseGeofenceFile(const std::string geofenceFile);
-static PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRData, std::vector<std::pair<Trajectory&, bool>> armVerified);
+static PositionStatus updateNearStartingPositionStatus(const ObjectDataType &MONRData, std::vector<std::pair<Trajectory&, bool>> armVerified);
 
 static void signalHandler(int signo);
 
@@ -111,7 +111,7 @@ int main()
 
 			break;
         case COMM_MONR:
-			MonitorDataType monitorMessage;
+			ObjectDataType monitorMessage;
 			UtilPopulateMonitorDataStruct(mqRecvData, sizeof (mqRecvData), &monitorMessage);
 
 			if (state.get() == SupervisionState::RUNNING && isViolatingGeofence(monitorMessage, geofences)) {
@@ -455,9 +455,9 @@ Geofence parseGeofenceFile(const std::string geofenceFile) {
  * \param geofences Vector containing all geofences
  * \return True if MONR coordinate violates a geofence, false if not.
  */
-bool isViolatingGeofence(const MonitorDataType &monitorData, std::vector<Geofence> geofences) {
+bool isViolatingGeofence(const ObjectDataType &monitorData, std::vector<Geofence> geofences) {
 
-	const CartesianPosition monitorPoint = monitorData.data.position;
+	const CartesianPosition monitorPoint = monitorData.MonrData.position;
     char isInPolygon = 0;
     int retval = false;
 
@@ -499,7 +499,7 @@ bool isViolatingGeofence(const MonitorDataType &monitorData, std::vector<Geofenc
     to be near its starting position
  * \return A value according to ::PositionStatus
  */
-PositionStatus updateNearStartingPositionStatus(const MonitorDataType &monitorData, std::vector<std::pair<Trajectory&, bool>> armVerified) {
+PositionStatus updateNearStartingPositionStatus(const ObjectDataType &monitorData, std::vector<std::pair<Trajectory&, bool>> armVerified) {
 
     char ipString[INET_ADDRSTRLEN];
     for (std::pair<Trajectory&, bool> &element : armVerified) {
@@ -510,7 +510,7 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &monitorDa
             }
 
             CartesianPosition trajectoryPoint = element.first.points.front().getCartesianPosition();
-			CartesianPosition objectPosition = monitorData.data.position;
+			CartesianPosition objectPosition = monitorData.MonrData.position;
             if (UtilIsPositionNearTarget(objectPosition, trajectoryPoint, ARM_MAX_DISTANCE_TO_START_M)
 					&& UtilIsAngleNearTarget(objectPosition, trajectoryPoint, ARM_MAX_ANGLE_TO_START_DEG * M_PI / 180.0)) {
                 if (element.second == false) {

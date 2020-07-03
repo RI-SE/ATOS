@@ -80,6 +80,7 @@
 #define PRIO_COMM_DISCONNECT 16
 #define PRIO_COMM_REMOTECTRL_ENABLE 16
 #define PRIO_COMM_REMOTECTRL_DISABLE 16
+#define PRIO_COMM_ENABLE_OBJECT 16
 // Single-shot messages relevant during test run
 #define PRIO_COMM_EXAC 14
 #define PRIO_COMM_TREO 14
@@ -775,14 +776,14 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
  * \param stringLength Length of string in which converted data is to be placed
  * \return 0 upon success, -1 otherwise
  */
-int UtilMonitorDataToString(const MonitorDataType monitorData, char *monitorDataString, size_t stringLength) {
+int UtilObjectDataToString(const ObjectDataType monitorData, char *monitorDataString, size_t stringLength) {
 	memset(monitorDataString, 0, stringLength);
 	inet_ntop(AF_INET, &monitorData.ClientIP, monitorDataString,
 			  (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t) stringLength);
 	strcat(monitorDataString, ";0;");
 
 	if (objectMonitorDataToASCII
-		(&monitorData.data, monitorDataString + strlen(monitorDataString),
+		(&monitorData.MonrData, monitorDataString + strlen(monitorDataString),
 		 stringLength - strlen(monitorDataString)) < 0) {
 		memset(monitorDataString, 0, stringLength);
 		return -1;
@@ -797,7 +798,7 @@ int UtilMonitorDataToString(const MonitorDataType monitorData, char *monitorData
  * \param monrData Struct containing relevant monitor data
  * \return 0 upon success, -1 otherwise
  */
-int UtilStringToMonitorData(const char *monitorString, size_t stringLength, MonitorDataType * monitorData) {
+int UtilStringToMonitorData(const char *monitorString, size_t stringLength, ObjectDataType * monitorData) {
 	const char *token;
 	const char delim[] = ";";
 	struct in_addr addr;
@@ -814,7 +815,7 @@ int UtilStringToMonitorData(const char *monitorString, size_t stringLength, Moni
 
 	// MONR data
 	token = strtok(NULL, delim);
-	if (ASCIIToObjectMonitorData(token, &monitorData->data) == 0)
+	if (ASCIIToObjectMonitorData(token, &monitorData->MonrData) == 0)
 		return 0;
 	else
 		return -1;
@@ -2104,6 +2105,9 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 		break;
 	case COMM_REMOTECTRL_MANOEUVRE:
 		uiMessagePrio = PRIO_COMM_REMOTECTRL_MANOEUVRE;
+		break;
+	case COMM_ENABLE_OBJECT:
+		uiMessagePrio = PRIO_COMM_ENABLE_OBJECT;
 		break;
 	case COMM_FAILURE:
 		uiMessagePrio = PRIO_COMM_FAILURE;
@@ -3711,13 +3715,12 @@ enum ConfigurationFileParameter UtilParseConfigurationParameter(const char* para
  * \param MONR Struct where monitor data should be placed
  * \return -1 on failure, 0 on success
  */
-int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize,
-								  MonitorDataType * monitorData) {
+int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize, ObjectDataType * monitorData) {
 
-	if (rawDataSize != sizeof (MonitorDataType)) {
+	if (rawDataSize != sizeof (ObjectDataType)) {
 		errno = EMSGSIZE;
 		LogMessage(LOG_LEVEL_ERROR, "Raw monitor data array wrong size, %d != %d",
-				   rawDataSize, sizeof (MonitorDataType));
+				   rawDataSize, sizeof (ObjectDataType));
 		return -1;
 	}
 
