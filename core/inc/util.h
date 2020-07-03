@@ -95,7 +95,7 @@ extern "C"{
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "195.0.0.10"
+#define LOCAL_USER_CONTROL_IP "192.168.0.7"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -221,6 +221,7 @@ COMM_GETSTATUS_OK = 238,
 COMM_REMOTECTRL_ENABLE = 27,
 COMM_REMOTECTRL_DISABLE = 28,
 COMM_REMOTECTRL_MANOEUVRE = 29,
+COMM_ENABLE_OBJECT = 30,
 COMM_MONR = 239,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
@@ -241,14 +242,25 @@ typedef struct
 } GeoPosition;
 
 
-typedef struct
-{
-	ObjectMonitorType data;
-	struct timeval lastDataUpdate;
-    in_addr_t ClientIP;
-	uint32_t ClientID;
-} MonitorDataType;
+typedef enum {
+	OBJECT_ENABLED = 1,
+	OBJECT_DISABLED = 2,
+	OBJECT_UNDEFINED = 3
+} ObjectEnabledType;
 
+
+typedef struct {
+	uint32_t ClientID;
+	in_addr_t ClientIP;
+	ObjectEnabledType Enabled;
+	ObjectMonitorType MonrData;
+	struct timeval lastDataUpdate;
+} ObjectDataType;
+
+typedef struct {
+	in_addr_t objectIP;
+	ObjectEnabledType Enabled;
+} ObjectEnabledCommandType;
 
 typedef struct {
 	unsigned int ID;
@@ -322,7 +334,7 @@ typedef enum {
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
     OBC_STATE_RUNNING,
-	OBC_STATE_REMOTECTRL,
+	  OBC_STATE_REMOTECTRL,
     OBC_STATE_ERROR
 } OBCState_t;
 
@@ -342,7 +354,6 @@ typedef struct
   U8 ASPDebugDataU8[sizeof(ASPType)];
   U32 SupChunkSize;
   U8 SupChunk[6200];
-  MonitorDataType* MonrMessages;
   U8 MONRSizeU8;
   U8 MONRData[100];
   U8 HEABSizeU8;
@@ -350,12 +361,6 @@ typedef struct
 
   U8 numberOfObjects;
   char *memory;
-  //U8 OSTMSizeU8;
-  //U8 OSTMData[100];
-  //U8 STRTSizeU8;
-  //U8 STRTData[100];
-  //U8 OSEMSizeU8;
-  //U8 OSEMData[100];
   volatile dbl OriginLatitudeDbl;
   C8 OriginLatitudeC8[DD_CONTROL_BUFFER_SIZE_20];
   volatile dbl OriginLongitudeDbl;
@@ -631,8 +636,8 @@ int UtilParseTrajectoryFileFooter(char *footerLine);
 int UtilParseTrajectoryFileLine(char *fileLine, TrajectoryFileLine * line);
 
 
-int UtilMonitorDataToString(const MonitorDataType monrData, char* monrString, size_t stringLength);
-int UtilStringToMonitorData(const char* monrString, size_t stringLength, MonitorDataType * monrData);
+int UtilObjectDataToString(const ObjectDataType monrData, char* monrString, size_t stringLength);
+int UtilStringToMonitorData(const char* monrString, size_t stringLength, ObjectDataType * monrData);
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
@@ -692,7 +697,7 @@ U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
 I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
 
-int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, MonitorDataType *monitorData);
+int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
 I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
 I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData);
 I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);
