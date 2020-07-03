@@ -785,26 +785,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids,
 														   sizeof (object_transmitter_ids) /
 														   sizeof (object_transmitter_ids[0]));
-					for (unsigned int i = 0;
-						 i < sizeof (object_transmitter_ids) / sizeof (object_transmitter_ids[0]); ++i) {
-						if (object_transmitter_ids[i] != 0) {
-							if (DataDictionaryClearObjectData(object_transmitter_ids[i]) != WRITE_OK) {
-								LogMessage(LOG_LEVEL_ERROR,
-										   "Unable to clear monitor data for transmitter ID %u",
-										   object_transmitter_ids[i]);
-							}
-							else {
-								LogMessage(LOG_LEVEL_INFO, "Cleared old monitor data for transmitter ID %u", object_transmitter_ids[i]);
-							}
-						}
+
+					if (DataDictionarySetNumberOfObjects(0) != WRITE_OK) {
+						LogMessage(LOG_LEVEL_ERROR, "Error clearing old object data");
 					}
-					//LogPrint("Hej");
-					//if (DataDictionarySetNumberOfObjects(0) != WRITE_OK) {
-					//	LogMessage(LOG_LEVEL_ERROR, "Error clearing old object data");
-					//}
-					//else {
-					//	LogMessage(LOG_LEVEL_INFO, "Cleared previous object data");
-					//}
+					else {
+						LogMessage(LOG_LEVEL_INFO, "Cleared previous object data");
+					}
 					// Get objects; name and drive file
 					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 					// Get number of allowed missing monitor messages before abort
@@ -953,7 +940,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							TimeSetToCurrentSystemTime(&currentTime);
 							TimeSetToGPStime(&startTime, TimeGetAsGPSweek(&currentTime),
 											 mqEXACData.executionTime_qmsoW);
-							LogPrint("Current time: %ld, Start time: %ld, delay: %u",
+							LogMessage(LOG_LEVEL_INFO,"Current time: %ld, Start time: %ld, delay: %u",
 									 TimeGetAsUTCms(&currentTime), TimeGetAsUTCms(&startTime),
 									 mqEXACData.executionTime_qmsoW);
 							MessageLength =
@@ -1100,6 +1087,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							/* Here we send TRAJ, if the IP-address is not operating with a dynamic trajectory */
 							if (strstr(DTMReceivers, object_address_name[iIndex]) == NULL) {
 								LogMessage(LOG_LEVEL_INFO, "Sending TRAJ to %s", object_address_name[iIndex]);
+
 								if (ObjectControlSendTRAJMessage
 									(object_traj_file[iIndex], &socket_fds[iIndex], 0)
 									== -1) {
@@ -1228,7 +1216,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_DISCONNECT) {
 				//#ifndef NOTCP
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					DataDictionaryGetObjectEnableStatusById(iIndex + 1, &objectEnabledStatus);
+					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED)
 						vDisconnectObject(&socket_fds[iIndex]);
 				}
@@ -1238,7 +1226,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.");
 				/* Close safety socket */
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					DataDictionaryGetObjectEnableStatusById(iIndex + 1, &objectEnabledStatus);
+					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED)
 						vCloseSafetyChannel(&safety_socket_fd[iIndex]);
 				}
