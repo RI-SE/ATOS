@@ -20,6 +20,7 @@
 
 #define ARM_MAX_DISTANCE_TO_START_M 1.0
 #define ARM_MAX_ANGLE_TO_START_DEG 10.0
+#define SUPERVISION_SHMEM_READ_RATE 1
 
 /*------------------------------------------------------------
   -- Type definitions.
@@ -41,6 +42,8 @@ static Geofence parseGeofenceFile(const std::string geofenceFile);
 static PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRData, std::vector<std::pair<Trajectory&, bool>> armVerified);
 static int checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &geofences, std::vector<std::pair<Trajectory&, bool>> armVerified);
 static void signalHandler(int signo);
+static void updateSupervisionCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
+
 
 /*------------------------------------------------------------
   -- Static variables
@@ -61,6 +64,9 @@ int main()
     const struct timespec sleepTimePeriod = {0,10000000};
     struct timespec remTime;
     SupervisionState state;
+    struct timeval tvTime;
+    struct timeval nextRVSSSendTime = { 0, 0 };
+
 
 
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
@@ -114,10 +120,6 @@ int main()
 
 			break;
         case COMM_MONR:
-            // Get number of objects present in shared memory
-
-
-            checkObjectsAgainstGeofences(state, geofences, armVerified);
 
 
             break;
@@ -167,6 +169,16 @@ int main()
         default:
             LogMessage(LOG_LEVEL_INFO,"Received unhandled command %u",command);
         }
+
+
+        TimeSetToCurrentSystemTime(&tvTime);
+
+       if (timercmp(&tvTime, &nextRVSSSendTime, >)) {
+            updateSupervisionCheckTimer(&nextRVSSSendTime, SUPERVISION_SHMEM_READ_RATE);
+        if(geofences.size() > 0)
+        checkObjectsAgainstGeofences(state, geofences, armVerified);
+       }
+
     }
 
     iCommClose();
@@ -596,4 +608,32 @@ int checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &
                 }
             }
         }
+}
+
+/*!
+ * \brief SystemControlUpdateRVSSSendTime Adds a time interval onto the specified time struct in accordance
+ *			with the rate parameter
+ * \param currentRVSSSendTime Struct containing the time at which the last RVSS message was sent. After this
+ *			function has been executed, the struct contains the time at which the next RVSS message is to be
+ *			sent.
+ * \param RVSSRate_Hz Rate at which RVSS messages are to be sent - if this parameter is 0 the value
+ *			is clamped to 1 Hz
+ */
+void updateSupervisionCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz) {
+    struct timeval SHMEMTimeInterval, timeDiff, currentTime;
+
+    SHMEMReadRate_Hz = SHMEMReadRate_Hz == 0 ? 1 : SHMEMReadRate_Hz;	// Minimum frequency 1 Hz
+    SHMEMTimeInterval.tv_sec = (long)(1.0 / SHMEMReadRate_Hz);
+    SHMEMTimeInterval.tv_usec = (long)((1.0 / SHMEMReadRate_Hz - SHMEMTimeInterval.tv_sec) * 1000000.0);
+
+    // If there is a large difference between the current time and the time at which SHEM was sent, update based
+    // on current time instead of last send time to not spam messages until caught up
+    TimeSetToCurrentSystemTime(&currentTime);
+    timersub(&currentTime, currentSHMEMReadTime, &timeDiff);
+    if (timercmp(&timeDiff, &SHMEMTimeInterval, <)) {
+        timeradd(currentSHMEMReadTime, &SHMEMTimeInterval, currentSHMEMReadTime);
+    }
+    else {
+        timeradd(&currentTime, &SHMEMTimeInterval, currentSHMEMReadTime);
+    }
 }
