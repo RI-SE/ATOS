@@ -63,8 +63,9 @@ extern "C"{
 #define DEFAULT_SUPERVISOR_TCP_PORT 53010
 #define DEFAULT_RVSS_CONF 3
 #define DEFAULT_RVSS_RATE 1
+#define DEFAULT_MAX_PACKETS_LOST 0
 
-#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1) // Message queue data minus one byte for the command
+#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length
 
 #define SAFETY_CHANNEL_PORT 53240
 #define CONTROL_CHANNEL_PORT 53241
@@ -215,6 +216,8 @@ COMM_TREO = 23,
 COMM_ACCM = 24,
 COMM_TRCM = 25,
 COMM_DISARM = 26,
+COMM_GETSTATUS = 237,
+COMM_GETSTATUS_OK = 238,
 COMM_REMOTECTRL_ENABLE = 27,
 COMM_REMOTECTRL_DISABLE = 28,
 COMM_REMOTECTRL_MANOEUVRE = 29,
@@ -240,23 +243,23 @@ typedef struct
 
 
 typedef enum {
-  OBJECT_ENABLED = 1,
-  OBJECT_DISABLED = 2,
-  OBJECT_UNDEFINED = 3
+	OBJECT_ENABLED = 1,
+	OBJECT_DISABLED = 2,
+	OBJECT_UNDEFINED = 3
 } ObjectEnabledType;
 
 
-typedef struct
-{
-	ObjectEnabledType Enabled;
-  in_addr_t ClientIP;
+typedef struct {
 	uint32_t ClientID;
-  ObjectMonitorType MonrData;
+	in_addr_t ClientIP;
+	ObjectEnabledType Enabled;
+	ObjectMonitorType MonrData;
+	struct timeval lastDataUpdate;
 } ObjectDataType;
 
 typedef struct {
-  in_addr_t objectIP;
-  ObjectEnabledType Enabled;
+	in_addr_t objectIP;
+	ObjectEnabledType Enabled;
 } ObjectEnabledCommandType;
 
 typedef struct {

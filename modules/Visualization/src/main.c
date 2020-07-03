@@ -9,6 +9,7 @@
 #include <time.h>
 #include <string.h>
 #include <signal.h>
+#include <systemd/sd-daemon.h>
 #include "logging.h"
 #include "maestroTime.h"
 #include "util.h"
@@ -92,8 +93,9 @@ void vCreateVisualizationMessage(ObjectDataType * _monitorData, char *_visualiza
 int main() {
 	enum COMMAND command = COMM_INV;
 	char mqRecvData[MQ_MSG_SIZE];
+	char mqSendData[MQ_MSG_SIZE];
+
 	const struct timespec sleepTimePeriod = { 0, 10000000 };
-	const struct timespec abortWaitTime = { 1, 0 };
 	struct timespec remTime;
 
 	ObjectDataType monitorData;
@@ -105,19 +107,19 @@ int main() {
 	int visual_server;
 	struct sockaddr_in visual_server_addr;
 
-	vConnectVisualizationChannel(&visual_server, &visual_server_addr);
-
 	//Setup signal handlers
 	if (signal(SIGINT, signalHandler) == SIG_ERR)
 		util_error("Unable to initialize signal handler");
-
-
-
 
 	// Initialize message bus connection
 	while (iCommInit()) {
 		nanosleep(&sleepTimePeriod, &remTime);
 	}
+
+	// Notify service handler that startup was successful
+	sd_notify(0, "READY=1");
+
+	vConnectVisualizationChannel(&visual_server, &visual_server_addr);
 
 	while (!iExit) {
 
@@ -185,6 +187,15 @@ int main() {
 		case COMM_OBC_STATE:
 			break;
 		case COMM_STRT:
+			break;
+		case COMM_GETSTATUS:
+			memset(mqSendData, 0, sizeof (mqSendData));
+			sprintf(mqSendData, "%s", MODULE_NAME);
+			if (iCommSend(COMM_GETSTATUS_OK, mqSendData, sizeof (mqSendData)) < 0) {
+				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");
+			}
+			break;
+		case COMM_GETSTATUS_OK:
 			break;
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", (unsigned char)command);

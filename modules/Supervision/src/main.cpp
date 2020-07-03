@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <fstream>
 #include <regex>
+#include <systemd/sd-daemon.h>
 
 #include "supervisionstate.h"
 #include "geofence.h"
@@ -70,6 +71,9 @@ int main()
     while(iCommInit() && !quit) {
         nanosleep(&sleepTimePeriod,&remTime);
     }
+
+	// Notify service handler that startup was successful
+	sd_notify(0, "READY=1");
 
     while(!quit) {
         if (state.get() == SupervisionState::ERROR) {
@@ -176,6 +180,15 @@ int main()
             // TODO sleep?
             break;
         case COMM_OBC_STATE:
+            break;
+        case COMM_GETSTATUS:
+            memset(mqSendData, 0, sizeof (mqSendData));
+            sprintf(mqSendData, "%s", MODULE_NAME);
+            if (iCommSend(COMM_GETSTATUS_OK, mqSendData, sizeof (mqSendData)) < 0) {
+                LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");
+            }
+            break;
+        case COMM_GETSTATUS_OK:
             break;
         default:
             LogMessage(LOG_LEVEL_INFO,"Received unhandled command %u",command);

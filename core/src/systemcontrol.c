@@ -7,7 +7,6 @@
   -- Purpose     :
   -- Reference   :
   ------------------------------------------------------------------------------*/
-
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
@@ -23,7 +22,6 @@
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
-
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -32,13 +30,10 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <ifaddrs.h>
-
 #include "systemcontrol.h"
 #include "maestroTime.h"
 #include "timecontrol.h"
 #include "datadictionary.h"
-
-
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
@@ -63,6 +58,9 @@ typedef struct {
 #define SYSTEM_CONTROL_TASK_PERIOD_MS 1
 #define SYSTEM_CONTROL_RVSS_TIME_MS 10
 
+#define SYSTEM_CONTROL_GETSTATUS_TIME_MS 5000
+#define SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS 2000
+#define SYSTEM_CONTROL_NO_OF_MODULES_IN_USE 2	//TODO Create a file containing a list of which modules should be used. Check with this list to see if each module has responded.
 
 #define SYSTEM_CONTROL_CONTROL_PORT   54241	// Default port, control channel
 #define SYSTEM_CONTROL_PROCESS_PORT   54242	// Default port, process channel
@@ -226,6 +224,9 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
 static int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr);
 static void SystemControlUpdateRVSSSendTime(struct timeval *currentRVSSSendTime, uint8_t RVSSRate_Hz);
+
+I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8 debug);
+
 static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
@@ -302,7 +303,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 ParameterListC8[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
 	U32 LengthU32 = 0;
 	C8 BinBuffer[SMALL_BUFFER_SIZE_1024];
-
 	C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
 
 	HTTPHeaderContent HTTPHeader;
@@ -536,6 +536,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								 */
 			CurrentTimeU64 = UtilgetCurrentUTCtimeMS();
 			TimeDiffU64 = CurrentTimeU64 - OldTimeU64;
+
 		}
 
 
@@ -571,6 +572,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = PreviousSystemControlCommand;
 			}
 		}
+
+		//Call this from the loop to send
+		SystemControlGetStatusMessage("", 0, 0);
+
 
 		bzero(pcRecvBuffer, SC_RECV_MESSAGE_BUFFER);
 		bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
@@ -609,6 +614,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case COMM_INV:
 			break;
+
+		case COMM_GETSTATUS_OK:
+			SystemControlGetStatusMessage(pcRecvBuffer, sizeof (pcRecvBuffer), 0);
+			//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
+			break;
+
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", iCommand);
 		}
@@ -2760,7 +2771,7 @@ int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr
 	}
 
 	// Get transmitter IDs for all connected objects
-	if (DataDictionaryGetMonitorTransmitterIDs(transmitterIDs, numberOfObjects) != READ_OK) {
+	if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs, numberOfObjects) != READ_OK) {
 		free(transmitterIDs);
 		LogMessage(LOG_LEVEL_ERROR,
 				   "Data dictionary transmitter ID read error - RVSS messages cannot be sent");
@@ -2772,27 +2783,36 @@ int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr
 	int32_t retval = 0;
 
 	for (uint32_t i = 0; i < numberOfObjects; ++i) {
-		if (DataDictionaryGetMonitorData(transmitterIDs[i], &monitorData) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR,
-					   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
-					   transmitterIDs[i]);
-			retval = -1;
-		}
-		else if (UtilMonitorDataToString(monitorData, monitorDataString,
-										 sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) == -1) {
-			LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
-			retval = -1;
-		}
-		else {
-			LogMessage(LOG_LEVEL_DEBUG, "%s: Transmitter ID %u", __FUNCTION__, transmitterIDs[i]);
-			messageLength =
-				(uint32_t) (strlen(monitorDataString) + sizeof (messageLength) + sizeof (RVSSChannel));
-			messageLength = htole32(messageLength);
-			RVSSChannel = htole32(RVSSChannel);
-			memcpy(RVSSData, &messageLength, sizeof (messageLength));
-			memcpy(RVSSData + sizeof (messageLength), &RVSSChannel, sizeof (RVSSChannel));
+		if (transmitterIDs[i] != 0) {
+			monitorData.ClientID = transmitterIDs[i];
+			if (DataDictionaryGetObjectIPByTransmitterID(transmitterIDs[i], &monitorData.ClientIP) != READ_OK) {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
+						   transmitterIDs[i]);
+				retval = -1;
+			}
+			else if (DataDictionaryGetMonitorData(transmitterIDs[i], &monitorData.MonrData) != READ_OK) {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
+						   transmitterIDs[i]);
+				retval = -1;
+			}
+			else if (UtilObjectDataToString(monitorData, monitorDataString,
+											 sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) == -1) {
+				LogMessage(LOG_LEVEL_ERROR, "Error building object data string");
+				retval = -1;
+			}
+			else {
+				LogMessage(LOG_LEVEL_DEBUG, "%s: Transmitter ID %u", __FUNCTION__, transmitterIDs[i]);
+				messageLength =
+					(uint32_t) (strlen(monitorDataString) + sizeof (messageLength) + sizeof (RVSSChannel));
+				messageLength = htole32(messageLength);
+				RVSSChannel = htole32(RVSSChannel);
+				memcpy(RVSSData, &messageLength, sizeof (messageLength));
+				memcpy(RVSSData + sizeof (messageLength), &RVSSChannel, sizeof (RVSSChannel));
 
-			UtilSendUDPData(MODULE_NAME, socket, addr, RVSSData, messageLength, 0);
+				UtilSendUDPData(MODULE_NAME, socket, addr, RVSSData, messageLength, 0);
+			}
 		}
 	}
 	free(transmitterIDs);
@@ -2814,6 +2834,116 @@ I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU
 	RVSSTimeType RVSSTimeData;
 
 
+
+
+	return 0;
+}
+
+/*!
+ * \brief SystemControlGetStatusMessage Send a COMM_GETSTATUS message to all connected modules on the MQ-BUS.
+ * \param respondingModule Name of the responding module.
+ * \param arrayLength Length of the RespondingModule.
+ * \param debug Enable debug or not.
+ * \return
+ */
+I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8 debug) {
+
+	static struct timeval getStatusSendTimer;
+	static struct timeval getStatusTimeoutTimer;
+	static struct timeval currentSystemTime;
+	static uint8_t numberOfResponses = 0;
+
+	static enum {
+		GETSTATUS_SEND,
+		GETSTATUS_WAITFORRESPONSE
+	} getStatusState = GETSTATUS_SEND;
+
+	//Set current time
+	TimeSetToCurrentSystemTime(&currentSystemTime);
+
+	switch (getStatusState) {
+
+
+		//Waits until it's time to send getStatus
+	case GETSTATUS_SEND:
+
+		//If current time is more than sendTime
+		if (timercmp(&getStatusSendTimer, &currentSystemTime, <)) {
+
+			//Set next sendTime
+			TimeSetToCurrentSystemTime(&getStatusSendTimer);
+			getStatusSendTimer.tv_sec += SYSTEM_CONTROL_GETSTATUS_TIME_MS / 1000;
+
+			//Set when to timeout
+			TimeSetToCurrentSystemTime(&getStatusTimeoutTimer);
+			getStatusTimeoutTimer.tv_sec += SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS / 1000;
+
+			//Send getstatus
+			iCommSend(COMM_GETSTATUS, NULL, 0);
+
+
+			if (debug) {
+				LogMessage(LOG_LEVEL_INFO, "GETSTATUS SENT");
+			}
+
+			//Next Case
+			getStatusState = GETSTATUS_WAITFORRESPONSE;
+
+			return 1;
+		}
+		break;
+
+		//Waits until timeout-time and counts responses. Warn if too few or too many.
+	case GETSTATUS_WAITFORRESPONSE:
+		if (respondingModule == NULL) {
+			errno = EINVAL;
+			LogMessage(LOG_LEVEL_ERROR, "Responding module parameter is null");
+			return -1;
+		}
+
+		//Did a module respond
+		if (respondingModule[0]) {
+			numberOfResponses++;
+		}
+
+		if (timercmp(&getStatusTimeoutTimer, &currentSystemTime, <)) {
+
+			//Too many
+			if (numberOfResponses > SYSTEM_CONTROL_NO_OF_MODULES_IN_USE) {
+
+				U8 diff = numberOfResponses - SYSTEM_CONTROL_NO_OF_MODULES_IN_USE;
+
+				LogMessage(LOG_LEVEL_ERROR, "%d too many responses to GET_STATUS command", diff);
+
+			}
+
+			//Too few
+			else if (numberOfResponses < SYSTEM_CONTROL_NO_OF_MODULES_IN_USE) {
+
+				U8 diff = SYSTEM_CONTROL_NO_OF_MODULES_IN_USE - numberOfResponses;
+
+				LogMessage(LOG_LEVEL_ERROR, "%d module(s) not responding to GET_STATUS command", diff);
+			}
+
+			//Just right
+			else {
+				if (debug) {
+					LogPrint("GET_STATUS OK, received %d responses from %d modules.", numberOfResponses,
+							 SYSTEM_CONTROL_NO_OF_MODULES_IN_USE);
+				}
+			}
+
+			numberOfResponses = 0;
+			getStatusState = GETSTATUS_SEND;
+
+		}
+
+		break;
+
+	default:
+		LogMessage(LOG_LEVEL_INFO, "getStatusState: %d", getStatusState);
+		break;
+	}
 
 
 	return 0;

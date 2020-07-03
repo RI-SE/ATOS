@@ -87,7 +87,10 @@
 // Frequent messages relevant during test run
 #define PRIO_COMM_TRAJ_TOSUP 12
 #define PRIO_COMM_TRAJ_FROMSUP 12
+#define PRIO_COMM_GETSTATUS 10
 #define PRIO_COMM_REMOTECTRL_MANOEUVRE 12
+#define PRIO_COMM_GETSTATUS_OK 255
+
 // Logging
 #define PRIO_COMM_LOG 10
 // Unused messages TODO: double check the priority of unused messages
@@ -747,7 +750,7 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
  * \param stringLength Length of string in which converted data is to be placed
  * \return 0 upon success, -1 otherwise
  */
-int UtilMonitorDataToString(const ObjectDataType monitorData, char *monitorDataString, size_t stringLength) {
+int UtilObjectDataToString(const ObjectDataType monitorData, char *monitorDataString, size_t stringLength) {
 	memset(monitorDataString, 0, stringLength);
 	inet_ntop(AF_INET, &monitorData.ClientIP, monitorDataString,
 			  (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t) stringLength);
@@ -2081,6 +2084,12 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 		break;
 	case COMM_FAILURE:
 		uiMessagePrio = PRIO_COMM_FAILURE;
+		break;
+	case COMM_GETSTATUS:
+		uiMessagePrio = PRIO_COMM_GETSTATUS;
+		break;
+	case COMM_GETSTATUS_OK:
+		uiMessagePrio = PRIO_COMM_GETSTATUS_OK;
 		break;
 	default:
 		util_error("Unknown command");
