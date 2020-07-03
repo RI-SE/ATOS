@@ -440,6 +440,25 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						TimeSetToCurrentSystemTime(&monitorData.lastDataUpdate);
 					}
 
+					// TEMPORARY FIX: if an object sends with transmitter ID not matching the local, modify locally
+					//		stored transmitter ID
+					uint32_t localTransmitterID;
+					if (DataDictionaryGetObjectTransmitterIDByIP(monitorData.ClientIP, &localTransmitterID) == READ_OK) {
+						if (monitorData.ClientID != localTransmitterID) {
+							DataDictionaryModifyTransmitterID(localTransmitterID, monitorData.ClientID);
+						}
+					}
+					else {
+						LogMessage(LOG_LEVEL_ERROR, "Unable to read monitor data from shared memory");
+						// TODO: Handle the error
+					}
+					// Store monitor data in shared memory
+					if (DataDictionarySetMonitorData(monitorData.ClientID, &monitorData.MonrData, &currentTime) ==
+						UNDEFINED) {
+						LogMessage(LOG_LEVEL_ERROR, "Unable to write monitor data to shared memory");
+						// TODO: handle the error
+					}
+
 					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
 						// Place struct in buffer
 						memcpy(&buffer, &monitorData, sizeof (monitorData));
@@ -450,14 +469,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							vSetState(OBC_STATE_ERROR, GSD);
 							objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 						}
-					}
-
-
-					// Store monitor data in shared memory
-					if (DataDictionarySetMonitorData(monitorData.ClientID, &monitorData.MonrData) ==
-						UNDEFINED) {
-						LogMessage(LOG_LEVEL_ERROR, "Unable to write monitor data to shared memory");
-						// TODO: handle the error
 					}
 
 					memset(buffer, 0, sizeof (buffer));
@@ -777,13 +788,23 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					for (unsigned int i = 0;
 						 i < sizeof (object_transmitter_ids) / sizeof (object_transmitter_ids[0]); ++i) {
 						if (object_transmitter_ids[i] != 0) {
-							if (DataDictionaryClearObjectData(object_transmitter_ids[0]) != WRITE_OK) {
+							if (DataDictionaryClearObjectData(object_transmitter_ids[i]) != WRITE_OK) {
 								LogMessage(LOG_LEVEL_ERROR,
 										   "Unable to clear monitor data for transmitter ID %u",
 										   object_transmitter_ids[i]);
 							}
+							else {
+								LogMessage(LOG_LEVEL_INFO, "Cleared old monitor data for transmitter ID %u", object_transmitter_ids[i]);
+							}
 						}
 					}
+					//LogPrint("Hej");
+					//if (DataDictionarySetNumberOfObjects(0) != WRITE_OK) {
+					//	LogMessage(LOG_LEVEL_ERROR, "Error clearing old object data");
+					//}
+					//else {
+					//	LogMessage(LOG_LEVEL_INFO, "Cleared previous object data");
+					//}
 					// Get objects; name and drive file
 					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 					// Get number of allowed missing monitor messages before abort
