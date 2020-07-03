@@ -636,7 +636,7 @@ int UtilParseTrajectoryFileFooter(char *footerLine);
 int UtilParseTrajectoryFileLine(char *fileLine, TrajectoryFileLine * line);
 
 
-int UtilMonitorDataToString(const ObjectDataType monrData, char* monrString, size_t stringLength);
+int UtilObjectDataToString(const ObjectDataType monrData, char* monrString, size_t stringLength);
 int UtilStringToMonitorData(const char* monrString, size_t stringLength, ObjectDataType * monrData);
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance);
