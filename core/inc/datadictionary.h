@@ -121,9 +121,14 @@ ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, C8 *MiscData, U32 Bu
 ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, OBCState_t OBCState);
 OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD);
 
+ReadWriteAccess_t DataDictionaryInitMaxPacketsLost(void);
+ReadWriteAccess_t DataDictionarySetMaxPacketsLost(uint8_t maxPacketsLostSetting);
+ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSetting);
+
 ReadWriteAccess_t DataDictionaryFreeMonitorData();
 ReadWriteAccess_t DataDictionaryInitMonitorData();
 ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorData);
+ReadWriteAccess_t DataDictionaryClearMonitorData(const uint32_t transmitterID);
 ReadWriteAccess_t DataDictionaryGetMonitorData(MonitorDataType * monitorData, const uint32_t TransmitterId);
 ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs[], const uint32_t arraySize);
 

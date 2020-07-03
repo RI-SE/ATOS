@@ -96,6 +96,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
+	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMonitorData() : Res;
 	if (Res != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
@@ -1689,6 +1690,50 @@ OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
 
 /*END OBCState*/
 
+/*MaxPacketLoss*/
+ReadWriteAccess_t DataDictionaryInitMaxPacketsLost(void) {
+	// TODO implement shmem solution
+	return READ_OK;
+}
+
+ReadWriteAccess_t DataDictionarySetMaxPacketsLost(uint8_t maxPacketsLostSetting) {
+	// TODO implement shmem solution
+	return UNDEFINED;
+}
+
+ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSetting) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	uint64_t readSetting;
+
+	if (DataDictionarySearchParameter("MaxPacketsLost=", resultBuffer)) {
+		readSetting = strtoul(resultBuffer, &endPtr, 10);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for MaxPacketsLost");
+			result = PARAMETER_NOTFOUND;
+			*maxPacketsLostSetting = DEFAULT_MAX_PACKETS_LOST;
+		}
+		else if (readSetting > UINT8_MAX) {
+			LogMessage(LOG_LEVEL_WARNING, "Configuration for MaxPacketsLost outside accepted range");
+			result = READ_OK;
+			*maxPacketsLostSetting = UINT8_MAX;
+		}
+		else {
+			result = READ_OK;
+			*maxPacketsLostSetting = (uint8_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "MaxPacketsLost not found!");
+		result = PARAMETER_NOTFOUND;
+		*maxPacketsLostSetting = DEFAULT_MAX_PACKETS_LOST;
+	}
+}
+
+/*END MaxPacketLoss*/
+
 /*!
  * \brief DataDictionaryInitMonitorData inits a data structure for saving object monr
  * \return Result according to ::ReadWriteAccess_t
@@ -1788,6 +1833,40 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 		}
 	}
 	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
+	return result;
+}
+
+/*!
+ * \brief DataDictionaryClearMonitorData Clears existing monitor data tagged with
+ *			a certain transmitter ID.
+ * \param transmitterID Transmitter ID of the monitor data to be cleared.
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryClearMonitorData(const uint32_t transmitterID) {
+	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
+
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	monitorDataMemory = claimSharedMemory(monitorDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (monitorDataMemory[i].ClientID == transmitterID) {
+			memset(&monitorDataMemory[i], 0, sizeof (MonitorDataType));
+			result = WRITE_OK;
+		}
+	}
+
+	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+
+	if (result == PARAMETER_NOTFOUND) {
+		LogMessage(LOG_LEVEL_WARNING, "Unable to find monitor data for transmitter ID %u", transmitterID);
+	}
 
 	return result;
 }
@@ -1926,10 +2005,6 @@ ReadWriteAccess_t DataDictionaryGetMonitorTransmitterIDs(uint32_t transmitterIDs
 		LogMessage(LOG_LEVEL_ERROR, "Unable to list transmitter IDs in specified array");
 		monitorDataMemory = releaseSharedMemory(monitorDataMemory);
 		return UNDEFINED;
-	}
-	else if ((uint32_t) retval != arraySize) {
-		LogMessage(LOG_LEVEL_WARNING,
-				   "Transmitter ID array is larger than necessary: may indicate the number of objects has changed between calls to data dictionary");
 	}
 
 	for (int i = 0; i < retval; ++i) {
