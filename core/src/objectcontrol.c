@@ -277,11 +277,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	nextAdaptiveSyncMessageTime = currentTime;
 
 	while (!iExit) {
+		TimeSetToCurrentSystemTime(&currentTime);
 
 		if (vGetState(GSD) == OBC_STATE_ERROR) {
 			objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 			MessageLength =
-				encodeHEABMessage(objectControlServerStatus, MessageBuffer, sizeof (MessageBuffer), 0);
+				encodeHEABMessage(&currentTime, objectControlServerStatus, MessageBuffer,
+								  sizeof (MessageBuffer), 0);
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				UtilSendUDPData("Object Control", &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
 								MessageBuffer, MessageLength, 0);
@@ -295,7 +297,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 			timeradd(&nextHeartbeatTime, &heartbeatPeriod, &nextHeartbeatTime);
 			MessageLength =
-				encodeHEABMessage(objectControlServerStatus, MessageBuffer, sizeof (MessageBuffer), 0);
+				encodeHEABMessage(&currentTime, objectControlServerStatus, MessageBuffer,
+								  sizeof (MessageBuffer), 0);
 
 			// Transmit heartbeat to all objects
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
@@ -377,8 +380,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							   buffer);
 
 					monitorData.ClientIP = safety_object_addr[iIndex].sin_addr.s_addr;
+					TimeSetToCurrentSystemTime(&currentTime);
 					if (decodeMONRMessage
-						(buffer, receivedMONRData, &monitorData.ClientID, &monitorData.data,
+						(buffer, receivedMONRData, currentTime, &monitorData.ClientID, &monitorData.data,
 						 0) != MESSAGE_OK) {
 						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object",
 								   object_address_name[iIndex]);
@@ -864,7 +868,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					float altitude = (float)OriginPosition.Altitude;
 
 					MessageLength =
-						encodeOSEMMessage(&OriginPosition.Latitude, &OriginPosition.Longitude,
+						encodeOSEMMessage(&currentTime, &OriginPosition.Latitude, &OriginPosition.Longitude,
 										  &altitude, NULL, NULL, NULL, MessageBuffer,
 										  sizeof (MessageBuffer), 0);
 					if (MessageLength < 0) {
