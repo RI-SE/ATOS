@@ -20,7 +20,7 @@
 
 #define ARM_MAX_DISTANCE_TO_START_M 1.0
 #define ARM_MAX_ANGLE_TO_START_DEG 10.0
-#define SUPERVISION_SHMEM_READ_RATE 1000
+#define SUPERVISION_SHMEM_READ_RATE 10
 
 /*------------------------------------------------------------
   -- Type definitions.
@@ -84,6 +84,8 @@ int main()
 	// Notify service handler that startup was successful
 	sd_notify(0, "READY=1");
 
+    DataDictionaryInitObjectData();
+
     while(!quit) {
         if (state.get() == SupervisionState::ERROR) {
             iCommSend(COMM_ABORT, nullptr, 0);
@@ -120,7 +122,6 @@ int main()
 
 			break;
         case COMM_MONR:
-			ObjectDataType monitorMessage;
 
 
             break;
@@ -174,7 +175,7 @@ int main()
 
         TimeSetToCurrentSystemTime(&tvTime);
 
-        if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
+        if (timercmp(&tvTime, &nextSHMEMreadTime, >) && geofences.size() > 0) {
             updateSupervisionCheckTimer(&nextSHMEMreadTime, SUPERVISION_SHMEM_READ_RATE);
             checkObjectsAgainstGeofences(state, geofences, armVerified);
        }
@@ -554,6 +555,10 @@ uint32_t checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofen
                    "Data dictionary number of objects read error - Cannot check against Geofences");
         return -1;
     }
+    if(numberOfObjects == 0){
+        LogMessage(LOG_LEVEL_INFO, "No obects present in shared memory.");
+        return 0;
+    }
 
     // Allocate an array for objects' transmitter IDs
     transmitterIDs = new uint32_t(numberOfObjects * sizeof (uint32_t));
@@ -617,12 +622,12 @@ uint32_t checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofen
 }
 
 /*!
- * \brief SystemControlUpdateRVSSSendTime Adds a time interval onto the specified time struct in accordance
+ * \brief updateSupervisionCheckTimer Adds a time interval onto the specified time struct in accordance
  *			with the rate parameter
- * \param currentRVSSSendTime Struct containing the time at which the last RVSS message was sent. After this
- *			function has been executed, the struct contains the time at which the next RVSS message is to be
- *			sent.
- * \param RVSSRate_Hz Rate at which RVSS messages are to be sent - if this parameter is 0 the value
+ * \param currentSHMEMReadTime Struct containing the timewhen at when SHMEM was last accessed. After this
+ *			function has been executed, the struct contains the time at which the shared memory will be accessed is to be
+ *			accessed next time.
+ * \param SHMEMReadRate_Hz Rate at which SHMEM is read - if this parameter is 0 the value
  *			is clamped to 1 Hz
  */
 void updateSupervisionCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz) {
