@@ -11,6 +11,7 @@ set(SYSTEM_SHARED_MEMORY_PATH "/dev/shm/maestro")
 
 set(CORE_TARGET ${PROJECT_NAME})
 set(COREUTILS_TARGET MaestroCoreUtil)
+set(LOGGER_TARGET MaestroLogger)
 set(DATA_DICTIONARY_TARGET MaestroDataDictionary)
 
 set(TIME_LIBRARY MaestroTime)
@@ -31,10 +32,16 @@ include(GNUInstallDirs)
 
 add_executable(${CORE_TARGET} 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/logger.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
+)
+add_library(${LOGGER_TARGET} SHARED
+	${CMAKE_CURRENT_SOURCE_DIR}/src/logger.cpp
+)
+target_include_directories(${LOGGER_TARGET} PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+	${LOGGING_HEADERS}
 )
 
 add_library(${COREUTILS_TARGET} SHARED
@@ -70,6 +77,7 @@ set_target_properties(${DATA_DICTIONARY_TARGET} PROPERTIES
 target_link_libraries(${CORE_TARGET} LINK_PUBLIC
 	${TIME_LIBRARY}
 	${LOGGING_LIBRARY}
+	${LOGGER_TARGET}
 	${COREUTILS_TARGET}
 	${DATA_DICTIONARY_TARGET}
 	${ISO_22133_LIBRARY}
