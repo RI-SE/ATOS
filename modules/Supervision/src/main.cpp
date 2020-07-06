@@ -543,7 +543,7 @@ uint32_t checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofen
 
     uint32_t *transmitterIDs = NULL;
     uint32_t numberOfObjects;
-    MonitorDataType monitorData;
+    ObjectDataType monitorData;
 
     int retval = 0;
 
@@ -563,7 +563,7 @@ uint32_t checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofen
     }
 
     // Get transmitter IDs for all connected objects
-    if (DataDictionaryGetMonitorTransmitterIDs(transmitterIDs, numberOfObjects) != READ_OK) {
+    if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs, numberOfObjects) != READ_OK) {
         free(transmitterIDs);
         LogMessage(LOG_LEVEL_ERROR,
                    "Data dictionary transmitter ID read error - Cannot check against Geofences");
@@ -572,7 +572,7 @@ uint32_t checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofen
 
 
     for (uint32_t i = 0; i < numberOfObjects; ++i) {
-            if (DataDictionaryGetMonitorData(&monitorData, transmitterIDs[i]) != READ_OK) {
+            if (DataDictionaryGetMonitorData(transmitterIDs[i], &monitorData.MonrData) != READ_OK) {
                 LogMessage(LOG_LEVEL_ERROR,
                            "Data dictionary monitor data read error for transmitter ID %u",
                            transmitterIDs[i]);
