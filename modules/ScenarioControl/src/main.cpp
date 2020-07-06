@@ -23,7 +23,7 @@ int main()
     struct timespec remTime;
     Scenario scenario;
     TREOData treo;
-    MonitorDataType monr;
+    ObjectDataType monr;
     bool terminate = false;
     char configPath[MAX_FILE_PATH];
     UtilGetConfDirectoryPath(configPath, sizeof(configPath));

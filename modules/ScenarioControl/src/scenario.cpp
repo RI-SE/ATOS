@@ -459,7 +459,7 @@ void Scenario::resetISOTriggers(void)
     }
 }
 
-Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &monr)
+Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const ObjectDataType &monr)
 {
     for (Trigger* tp : allTriggers)
 	{
@@ -468,9 +468,9 @@ Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &mo
             switch (tp->getTypeCode())
             {
 			case Trigger::TriggerTypeCode_t::TRIGGER_BRAKE:
-				if (monr.data.speed.isLongitudinalValid && monr.data.isTimestampValid)
+				if (monr.MonrData.speed.isLongitudinalValid && monr.MonrData.isTimestampValid)
 				{
-					tp->update(monr.data.speed.longitudinal_m_s, monr.data.timestamp);
+					tp->update(monr.MonrData.speed.longitudinal_m_s, monr.MonrData.timestamp);
 				}
 				else
 				{
@@ -479,7 +479,7 @@ Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &mo
 				}
                 break;
 			case Trigger::TriggerTypeCode_t::TRIGGER_DISTANCE:
-				if (monr.data.position.isPositionValid) {
+				if (monr.MonrData.position.isPositionValid) {
 					tp->update(monr);
 				}
 				else {
