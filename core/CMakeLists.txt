@@ -43,6 +43,9 @@ target_include_directories(${LOGGER_TARGET} PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
 	${LOGGING_HEADERS}
 )
+add_library(MaestroBajs SHARED
+	${CMAKE_CURRENT_SOURCE_DIR}/src/logger.c
+)
 
 add_library(${COREUTILS_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
