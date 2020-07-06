@@ -3554,6 +3554,7 @@ int32_t UtilReadConfigurationParameter(
 	strcat(confPathDir, CONF_FILE_NAME);
 
 	memset(TextBuffer, 0, sizeof (TextBuffer));
+	memset(returnValue, 0, bufferLength);
 
 	UtilGetConfigurationParameterAsString(parameter, TextBuffer, sizeof (TextBuffer));
 	strcat(TextBuffer, "=");
