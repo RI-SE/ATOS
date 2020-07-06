@@ -12,7 +12,7 @@
 #include "trajectory.h"
 #include "logging.h"
 #include "datadictionary.h"
-
+#include "maestroTime.h"
 #include "util.h"
 
 #define MODULE_NAME "Supervision"
@@ -20,7 +20,7 @@
 
 #define ARM_MAX_DISTANCE_TO_START_M 1.0
 #define ARM_MAX_ANGLE_TO_START_DEG 10.0
-#define SUPERVISION_SHMEM_READ_RATE 1
+#define SUPERVISION_SHMEM_READ_RATE 1000
 
 /*------------------------------------------------------------
   -- Type definitions.
@@ -40,7 +40,7 @@ static void loadGeofenceFiles(std::vector<Geofence> &geofences);
 static void loadTrajectoryFiles(std::vector<Trajectory> &trajectories);
 static Geofence parseGeofenceFile(const std::string geofenceFile);
 static PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRData, std::vector<std::pair<Trajectory&, bool>> armVerified);
-static int checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &geofences, std::vector<std::pair<Trajectory&, bool>> armVerified);
+static uint32_t checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &geofences, std::vector<std::pair<Trajectory&, bool>> armVerified);
 static void signalHandler(int signo);
 static void updateSupervisionCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
 
@@ -65,7 +65,7 @@ int main()
     struct timespec remTime;
     SupervisionState state;
     struct timeval tvTime;
-    struct timeval nextRVSSSendTime = { 0, 0 };
+    struct timeval nextSHMEMreadTime = { 0, 0 };
 
 
 
@@ -173,12 +173,10 @@ int main()
 
         TimeSetToCurrentSystemTime(&tvTime);
 
-       if (timercmp(&tvTime, &nextRVSSSendTime, >)) {
-            updateSupervisionCheckTimer(&nextRVSSSendTime, SUPERVISION_SHMEM_READ_RATE);
-        if(geofences.size() > 0)
-        checkObjectsAgainstGeofences(state, geofences, armVerified);
+        if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
+            updateSupervisionCheckTimer(&nextSHMEMreadTime, SUPERVISION_SHMEM_READ_RATE);
+            checkObjectsAgainstGeofences(state, geofences, armVerified);
        }
-
     }
 
     iCommClose();
@@ -538,16 +536,10 @@ PositionStatus updateNearStartingPositionStatus(const MonitorDataType &monitorDa
     return OBJECT_HAS_NO_TRAJECTORY;
 }
 
-#define MAX_MONR_STRING_LENGTH 1024
-#define RVSS_MONITOR_CHANNEL 2
 
-int checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &geofences, std::vector<std::pair<Trajectory&, bool>> armVerified){
+uint32_t checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &geofences, std::vector<std::pair<Trajectory&, bool>> armVerified){
     char ipString[INET_ADDRSTRLEN];
 
-    uint32_t messageLength = 0;
-    uint32_t RVSSChannel = RVSS_MONITOR_CHANNEL;
-    char RVSSData[MAX_MONR_STRING_LENGTH];
-    char *monitorDataString = RVSSData + sizeof (messageLength) + sizeof (RVSSChannel);
     uint32_t *transmitterIDs = NULL;
     uint32_t numberOfObjects;
     MonitorDataType monitorData;
@@ -555,10 +547,27 @@ int checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &
     int retval = 0;
 
 
+    // Get number of objects present in shared memory
     if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
-          LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error");
-          return -1;
-      }
+        LogMessage(LOG_LEVEL_ERROR,
+                   "Data dictionary number of objects read error - Cannot check against Geofences");
+        return -1;
+    }
+
+    // Allocate an array for objects' transmitter IDs
+    transmitterIDs = new uint32_t(numberOfObjects * sizeof (uint32_t));
+    if (transmitterIDs == NULL) {
+        LogMessage(LOG_LEVEL_ERROR, "Memory allocation error - Cannot check against Geofences");
+        return -1;
+    }
+
+    // Get transmitter IDs for all connected objects
+    if (DataDictionaryGetMonitorTransmitterIDs(transmitterIDs, numberOfObjects) != READ_OK) {
+        free(transmitterIDs);
+        LogMessage(LOG_LEVEL_ERROR,
+                   "Data dictionary transmitter ID read error - Cannot check against Geofences");
+        return -1;
+    }
 
 
     for (uint32_t i = 0; i < numberOfObjects; ++i) {
@@ -566,11 +575,6 @@ int checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &
                 LogMessage(LOG_LEVEL_ERROR,
                            "Data dictionary monitor data read error for transmitter ID %u",
                            transmitterIDs[i]);
-                retval = -1;
-            }
-            else if (UtilMonitorDataToString(monitorData, monitorDataString,
-                                             sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) == -1) {
-                LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
                 retval = -1;
             }
             else {
@@ -608,6 +612,7 @@ int checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &
                 }
             }
         }
+    free(transmitterIDs);
 }
 
 /*!
