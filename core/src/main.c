@@ -25,7 +25,7 @@
 
 
 #include "util.h"
-#include "logger.h"
+#include "journalcontrol.h"
 #include "objectcontrol.h"
 #include "systemcontrol.h"
 #include "datadictionary.h"
@@ -70,7 +70,7 @@ static struct timeval waitStartTime, waitedTime;	//!< Poll timeout timers
 //! allModules contains the tasks to be run in the server. To enable or disable a task, add or remove the main module function in this array
 static const ModuleTask allModules[] = {
 
-	logger_task,
+	journalcontrol_task,
 	timecontrol_task,
 	systemcontrol_task,
 	objectcontrol_task

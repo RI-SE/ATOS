@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
   -- Copyright   : (C) 2020 AstaZero
   ------------------------------------------------------------------------------
-  -- File        : logger.cpp
+  -- File        : journalcontrol.cpp
   -- Author      : Lukas Wikander
   -- Description :
   -- Purpose     :
@@ -14,14 +14,15 @@
 
 #include <signal.h>
 #include <vector>
+#include <unordered_set>
 
-#include "logger.h"
+#include "journalcontrol.h"
 
 
 /*------------------------------------------------------------
   -- Definitions.
   ------------------------------------------------------------*/
-#define MODULE_NAME "Logger"
+#define MODULE_NAME "JournalControl"
 class Journal {
 public:
 	Journal();
@@ -29,25 +30,27 @@ public:
 /*------------------------------------------------------------
   -- Static variables.
   ------------------------------------------------------------*/
-static volatile int quit = 0;
-
+static volatile bool quit = false;
 
 /*------------------------------------------------------------
   -- Static function declarations.
   ------------------------------------------------------------*/
 static void signalHandler(int signo);
 static int initializeModule(LOG_LEVEL logLevel);
+static void storeJournalBookmarks(std::unordered_set<Journal> &journals);
 
 /*------------------------------------------------------------
   -- Main task.
   ------------------------------------------------------------*/
-void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
+void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	std::vector<char> mqReceiveBuffer(MBUS_MAX_DATALEN, 0);
 	std::vector<char> mqSendBuffer(MBUS_MAX_DATALEN, 0);
 	enum COMMAND command = COMM_INV;
 	ssize_t receivedBytes = 0;
 	struct timeval recvTime;
+
+	std::unordered_set<Journal> journals;
 
 	// Initialize
 	if (initializeModule(logLevel) < 0) {
@@ -60,6 +63,14 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		switch (command) {
 		case COMM_STRT:
+			// TODO: Save start references
+			storeJournalBookmarks(journals);
+			break;
+		case COMM_STOP:
+		case COMM_ABORT:
+			// Temporary: Treat ABORT as stop signal
+			// TODO: Save stop references
+			// TODO: Merge journals into named
 
 		case COMM_GETSTATUS:
 			std::fill(mqSendBuffer.begin(), mqSendBuffer.end(), 0);
@@ -68,6 +79,9 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (iCommSend(COMM_GETSTATUS_OK, mqSendBuffer.data(), mqSendBuffer.size()) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending status reply");
 			}
+			break;
+		case COMM_EXIT:
+			quit = true;
 			break;
 		// Do nothing with these messages
 		case COMM_GETSTATUS_OK:
@@ -84,7 +98,7 @@ void logger_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 void signalHandler(int signo) {
 	if (signo == SIGINT) {
 		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
-		quit = 1;
+		quit = true;
 	}
 	else {
 		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
@@ -121,4 +135,11 @@ int initializeModule(LOG_LEVEL logLevel) {
 	}
 
 	return retval;
+}
+
+void storeJournalBookmarks(std::unordered_set<Journal> &journals) {
+	journals.clear();
+
+	// TODO look in journals dir for how many journals
+	// TODO store line references for each
 }
