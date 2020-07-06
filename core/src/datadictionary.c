@@ -1747,7 +1747,7 @@ ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSettin
 	char *endPtr;
 	uint64_t readSetting;
 
-	if (DataDictionarySearchParameter("MaxPacketsLost=", resultBuffer)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_MAX_PACKETS_LOST, resultBuffer, sizeof (resultBuffer))) {
 		readSetting = strtoul(resultBuffer, &endPtr, 10);
 		if (endPtr == resultBuffer) {
 			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for MaxPacketsLost");

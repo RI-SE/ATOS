@@ -126,6 +126,7 @@ static const char ParameterNameExternalSupervisorIP[] = "SupervisorIP";
 static const char ParameterNameExternalSupervisorPortTCP[] = "SupervisorTCPPort";
 static const char ParameterNameRVSSConfig[] = "RVSSConfig";
 static const char ParameterNameRVSSRate[] = "RVSSRate";
+static const char ParameterNameMaxPacketsLost[] = "MaxPacketsLost";
 static const char ParameterNameMiscData[] = "MiscData";
 
 /*------------------------------------------------------------
@@ -3635,6 +3636,9 @@ char* UtilGetConfigurationParameterAsString(const enum ConfigurationFileParamete
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_RATE:
 		outputString = ParameterNameRVSSRate;
+		break;
+	case CONFIGURATION_PARAMETER_MAX_PACKETS_LOST:
+		outputString = ParameterNameMaxPacketsLost;
 		break;
 	case CONFIGURATION_PARAMETER_MISC_DATA:
 		outputString = ParameterNameMiscData;
