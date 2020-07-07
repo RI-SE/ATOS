@@ -52,7 +52,7 @@ public:
 	void reset(void);
     void clear(void);
 
-    ScenarioReturnCode_t updateTrigger(const MonitorDataType&);
+    ScenarioReturnCode_t updateTrigger(const ObjectDataType&);
 
 private:
     std::set<Causality> causalities;
