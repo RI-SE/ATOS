@@ -23,10 +23,10 @@
   -- Definitions.
   ------------------------------------------------------------*/
 #define MODULE_NAME "JournalControl"
-class Journal {
-public:
-	Journal();
-};
+//class Journal {
+//public:
+//	Journal();
+//};
 /*------------------------------------------------------------
   -- Static variables.
   ------------------------------------------------------------*/
@@ -37,7 +37,7 @@ static volatile bool quit = false;
   ------------------------------------------------------------*/
 static void signalHandler(int signo);
 static int initializeModule(LOG_LEVEL logLevel);
-static void storeJournalBookmarks(std::unordered_set<Journal> &journals);
+//static void storeJournalBookmarks(std::unordered_set<Journal> &journals);
 
 /*------------------------------------------------------------
   -- Main task.
@@ -50,7 +50,7 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 	ssize_t receivedBytes = 0;
 	struct timeval recvTime;
 
-	std::unordered_set<Journal> journals;
+	//std::unordered_set<Journal> journals;
 
 	// Initialize
 	if (initializeModule(logLevel) < 0) {
@@ -64,7 +64,7 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 		switch (command) {
 		case COMM_STRT:
 			// TODO: Save start references
-			storeJournalBookmarks(journals);
+			//storeJournalBookmarks(journals);
 			break;
 		case COMM_STOP:
 		case COMM_ABORT:
@@ -137,9 +137,13 @@ int initializeModule(LOG_LEVEL logLevel) {
 	return retval;
 }
 
-void storeJournalBookmarks(std::unordered_set<Journal> &journals) {
-	journals.clear();
-
-	// TODO look in journals dir for how many journals
-	// TODO store line references for each
-}
+//void storeJournalBookmarks(std::unordered_set<Journal> &journals) {
+//
+//	std::vector<char> buffer(MAX_FILE_PATH);
+//	journals.clear();
+//	UtilGetJournalDirectoryPath(buffer.data(), buffer.size());
+//	std::string journalDirPath(buffer.data(), buffer.size());
+//
+//	// TODO look in journals dir for how many journals
+//	// TODO store line references for each
+//}
