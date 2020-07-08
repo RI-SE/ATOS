@@ -196,11 +196,9 @@ void SystemControlSendMONR(C8 * LogString, I32 * Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8 * name, const U32 port, I32 * sockfd,
 											  struct sockaddr_in *addr);
 //I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
-I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 debug);
+static I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 debug);
 I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * ReturnValue, U32 BufferLength,
 									U8 Debug);
-I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
-I32 SystemControlWriteServerParameter(C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
 I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
@@ -1858,21 +1856,6 @@ C8 SystemControlVerifyHostAddress(char *addr) {
 	return 0;
 }
 
-/*
-I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug)
-{
-    I32 result;
-
-    result = sendto(*sockfd, SendData, Length, 0, (const struct sockaddr *) addr, sizeof(struct sockaddr_in));
-
-    if (result < 0)
-    {
-        util_error("[SystemControl] Failed to send on process control socket.");
-    }
-
-    return 0;
-}
-*/
 
 I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * ReturnValue, U32 BufferLength,
 									U8 Debug) {
@@ -1973,202 +1956,131 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 
 
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug) {
+
+	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 	if (Debug)
-		printf("[SystemControl] SetServerParameter: %s = %s\n", ParameterName, NewValue);
-	if (strcmp("OrigoLatitude", ParameterName) == 0)
-		DataDictionarySetOriginLatitudeDbl(GSD, NewValue);
-	else if (strcmp("OrigoLongitude", ParameterName) == 0)
-		DataDictionarySetOriginLongitudeDbl(GSD, NewValue);
-	else if (strcmp("OrigoAltitude", ParameterName) == 0)
-		DataDictionarySetOriginAltitudeDbl(GSD, NewValue);
-	else if (strcmp("VisualizationServerName", ParameterName) == 0)
-		DataDictionarySetVisualizationServerU32(GSD, NewValue);
-	else if (strcmp("ForceObjectToLocalhost", ParameterName) == 0)
-		DataDictionarySetForceToLocalhostU8(GSD, NewValue);
-	else if (strcmp("ASPMaxTimeDiff", ParameterName) == 0)
-		DataDictionarySetASPMaxTimeDiffDbl(GSD, NewValue);
-	else if (strcmp("ASPMaxTrajDiff", ParameterName) == 0)
-		DataDictionarySetASPMaxTrajDiffDbl(GSD, NewValue);
-	else if (strcmp("ASPStepBackCount", ParameterName) == 0)
-		DataDictionarySetASPStepBackCountU32(GSD, NewValue);
-	else if (strcmp("ASPFilterLevel", ParameterName) == 0)
-		DataDictionarySetASPFilterLevelDbl(GSD, NewValue);
-	else if (strcmp("ASPMaxDeltaTime", ParameterName) == 0)
-		DataDictionarySetASPMaxDeltaTimeDbl(GSD, NewValue);
-	else if (strcmp("TimeServerIP", ParameterName) == 0)
-		DataDictionarySetTimeServerIPU32(GSD, NewValue);
-	else if (strcmp("TimeServerPort", ParameterName) == 0)
-		DataDictionarySetTimeServerPortU16(GSD, NewValue);
-	else if (strcmp("SimulatorIP", ParameterName) == 0)
-		DataDictionarySetSimulatorIPU32(GSD, NewValue);
-	else if (strcmp("SimulatorTCPPort", ParameterName) == 0)
-		DataDictionarySetSimulatorTCPPortU16(GSD, NewValue);
-	else if (strcmp("SimulatorUDPPort", ParameterName) == 0)
-		DataDictionarySetSimulatorUDPPortU16(GSD, NewValue);
-	else if (strcmp("SimulatorMode", ParameterName) == 0)
-		DataDictionarySetSimulatorModeU8(GSD, NewValue);
-	else if (strcmp("VOILReceivers", ParameterName) == 0)
-		DataDictionarySetVOILReceiversC8(GSD, NewValue);
-	else if (strcmp("DTMReceivers", ParameterName) == 0)
-		DataDictionarySetDTMReceiversC8(GSD, NewValue);
-	else if (strcmp("SupervisorIP", ParameterName) == 0)
-		DataDictionarySetExternalSupervisorIPU32(GSD, NewValue);
-	else if (strcmp("SupervisorTCPPort", ParameterName) == 0)
-		DataDictionarySetSupervisorTCPPortU16(GSD, NewValue);
-	else if (strcmp("MiscData", ParameterName) == 0)
-		DataDictionarySetMiscDataC8(GSD, NewValue);
-	else if (strcmp("RVSSConfig", ParameterName) == 0)
-		DataDictionarySetRVSSConfigU32(GSD, (U32) atoi(NewValue));
-	else if (strcmp("RVSSRate", ParameterName) == 0)
-		DataDictionarySetRVSSRateU8(GSD, (U32) atoi(NewValue));
-}
+		LogPrint("SetServerParameter: %s = %s", ParameterName, NewValue);
 
+	enum ConfigurationFileParameter parameter = UtilParseConfigurationParameter(ParameterName, strlen(ParameterName)+1);
 
-
-I32 SystemControlWriteServerParameter(C8 * ParameterName, C8 * NewValue, U8 Debug) {
-
-	I32 RowCount, i;
-	C8 Parameter[SMALL_BUFFER_SIZE_64];
-	C8 Row[SMALL_BUFFER_SIZE_128];
-	C8 NewRow[SMALL_BUFFER_SIZE_128];
-	FILE *fd, *TempFd;
-	C8 *ptr1, *ptr2;
-	U8 ParameterFound = 0;
-	char confPathFileDir[MAX_FILE_PATH];
-	char tempConfPathFileDir[MAX_FILE_PATH];
-	const char TEMP_FILE_NAME[] = "temp-" MODULE_NAME ".conf";
-
-	UtilGetConfDirectoryPath(confPathFileDir, sizeof (confPathFileDir));
-	strcpy(tempConfPathFileDir, confPathFileDir);
-	strcat(confPathFileDir, CONF_FILE_NAME);
-	strcat(tempConfPathFileDir, TEMP_FILE_NAME);
-
-	bzero(Parameter, SMALL_BUFFER_SIZE_64);
-
-	strcat(Parameter, ParameterName);
-	strcat(Parameter, "=");
-
-	//Remove temporary file
-	remove(tempConfPathFileDir);
-
-	//Create temporary file
-	TempFd = fopen(tempConfPathFileDir, "w+");
-
-	//Open configuration file
-	fd = fopen(confPathFileDir, "r");
-
-	if (fd > 0) {
-		RowCount = UtilCountFileRows(fd);
-		fclose(fd);
-		fd = fopen(confPathFileDir, "r");
-
-		for (i = 0; i < RowCount; i++) {
-			bzero(Row, SMALL_BUFFER_SIZE_128);
-			UtilReadLine(fd, Row);
-
-			ptr1 = strstr(Row, Parameter);
-			ptr2 = strstr(Row, "//");
-			if (ptr2 == NULL)
-				ptr2 = ptr1;	//No comment found
-			if (ptr1 != NULL && (U64) ptr2 >= (U64) ptr1 && ParameterFound == 0) {
-				ParameterFound = 1;
-				bzero(NewRow, SMALL_BUFFER_SIZE_128);
-				strncpy(NewRow, Row, (U64) ptr1 - (U64) Row + strlen(Parameter));
-				strcat(NewRow, NewValue);
-				if ((U64) ptr2 > (U64) ptr1) {
-					strcat(NewRow, " ");	// Add space
-					strcat(NewRow, ptr2);	// Add the comment
-				}
-
-				if (Debug) {
-					LogMessage(LOG_LEVEL_DEBUG, "Changed parameter: %s", NewRow);
-				}
-
-				strcat(NewRow, "\n");
-				(void)fwrite(NewRow, 1, strlen(NewRow), TempFd);
-
-			}
-			else {
-				strcat(Row, "\n");
-				(void)fwrite(Row, 1, strlen(Row), TempFd);
-			}
-		}
-		fclose(TempFd);
-		fclose(fd);
-
-		//Remove test.conf
-		remove(confPathFileDir);
-
-		//Rename temp.conf to test.conf
-		rename(tempConfPathFileDir, confPathFileDir);
-
-		//Remove temporary file
-		remove(tempConfPathFileDir);
+	switch (parameter) {
+	case CONFIGURATION_PARAMETER_SCENARIO_NAME:
+		result = DataDictionarySetScenarioName(NewValue, strlen(NewValue)+1);
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_LATITUDE:
+		result = DataDictionarySetOriginLatitudeDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
+		result = DataDictionarySetOriginLongitudeDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE:
+		result = DataDictionarySetOriginAltitudeDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
+		result = DataDictionarySetVisualizationServerU32(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST:
+		result = DataDictionarySetForceToLocalhostU8(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
+		result = DataDictionarySetASPMaxTimeDiffDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF:
+		result = DataDictionarySetASPMaxTrajDiffDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT:
+		result = DataDictionarySetASPStepBackCountU32(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL:
+		result = DataDictionarySetASPFilterLevelDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME:
+		result = DataDictionarySetASPMaxDeltaTimeDbl(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_TIME_SERVER_IP:
+		result = DataDictionarySetTimeServerIPU32(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_TIME_SERVER_PORT:
+		result = DataDictionarySetTimeServerPortU16(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_IP:
+		result = DataDictionarySetSimulatorIPU32(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP:
+		result = DataDictionarySetSimulatorTCPPortU16(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP:
+		result = DataDictionarySetSimulatorUDPPortU16(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_MODE:
+		result = DataDictionarySetSimulatorModeU8(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_VOIL_RECEIVERS:
+		result = DataDictionarySetVOILReceiversC8(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_DTM_RECEIVERS:
+		result = DataDictionarySetDTMReceiversC8(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP:
+		result = DataDictionarySetExternalSupervisorIPU32(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP:
+		result = DataDictionarySetSupervisorTCPPortU16(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
+		result = DataDictionarySetRVSSConfigU32(GSD, (uint32_t) strtoul(NewValue,NULL,10));
+		break;
+	case CONFIGURATION_PARAMETER_RVSS_RATE:
+		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(NewValue,NULL,10));
+		break;
+	case CONFIGURATION_PARAMETER_MISC_DATA:
+		result = DataDictionarySetMiscDataC8(GSD, NewValue);
+		break;
+	case CONFIGURATION_PARAMETER_INVALID:
+		LogMessage(LOG_LEVEL_WARNING, "Attempted to set invalid parameter %s", ParameterName);
+	default:
+		LogMessage(LOG_LEVEL_ERROR, "No action is implemented for setting parameter %s");
 	}
 
-	return 0;
+	return result == WRITE_OK ? 0 : -1;
 }
 
-
-
-I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 Debug) {
-
-	I32 RowCount, i;
-	C8 TextBuffer[SMALL_BUFFER_SIZE_128];
-	char confPathDir[MAX_FILE_PATH];
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcat(confPathDir, CONF_FILE_NAME);
-
-	bzero(TextBuffer, SMALL_BUFFER_SIZE_128);
-
-	strcat(TextBuffer, ParameterName);
-	strcat(TextBuffer, "=");
-
-	UtilSearchTextFile(confPathDir, TextBuffer, "", ReturnValue);
-
-	if (Debug) {
-		LogPrint("%s = %s\n", ParameterName, ReturnValue);
-	}
-
-	return strlen(ReturnValue);
-}
 
 
 I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 
-	I32 RowCount, i;
-	C8 TextBuffer[SMALL_BUFFER_SIZE_128];
+	char* line;
+	size_t len;
 	FILE *fd;
 	char confPathDir[MAX_FILE_PATH];
+	ssize_t read;
 
 	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
 	strcat(confPathDir, CONF_FILE_NAME);
 
 	fd = fopen(confPathDir, "r");
-	if (fd > 0) {
-		RowCount = UtilCountFileRows(fd);
-		fclose(fd);
-		fd = fopen(confPathDir, "r");
-
-		for (i = 0; i < RowCount; i++) {
-			bzero(TextBuffer, SMALL_BUFFER_SIZE_128);
-			UtilReadLineCntSpecChars(fd, TextBuffer);
-			if (strlen(TextBuffer) > 0) {
-				strcat(ParameterList, TextBuffer);
+	if (fd != NULL) {
+		while ((read = getline(&line, &len, fd)) != -1) {
+			if (strlen(line) > 0) {
+				strcat(ParameterList, line);
 				strcat(ParameterList, ";");
 			}
 		}
-
 		fclose(fd);
+		if (line)
+			free(line);
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", confPathDir);
 	}
 
 	if (Debug) {
-		LogMessage(LOG_LEVEL_INFO, "ParameterList = %s\n", ParameterList);
+		LogPrint("ParameterList = %s\n", ParameterList);
 	}
 
 	return strlen(ParameterList);
 }
+
 
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 
