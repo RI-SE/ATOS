@@ -402,7 +402,7 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 
 	// Create log folder named by scenario and initialization date and time
 	if (DataDictionaryGetScenarioName(scenarioName, sizeof (scenarioName)) != READ_OK) {
-
+		LogMessage(LOG_LEVEL_ERROR, "Unable to read scenario name from configuration");
 	}
 
 	strcpy(logFileDirectoryPath, journalPathDir);
