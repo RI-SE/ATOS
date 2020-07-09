@@ -542,7 +542,7 @@ PositionStatus updateNearStartingPositionStatus(const ObjectDataType &monitorDat
 uint32_t checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofence> &geofences, std::vector<std::pair<Trajectory&, bool>> armVerified){
     char ipString[INET_ADDRSTRLEN];
 
-    uint32_t *transmitterIDs = NULL;
+    std::vector<uint32_t> transmitterIDs;
     uint32_t numberOfObjects;
     ObjectDataType monitorData;
 
