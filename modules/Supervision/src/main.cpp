@@ -20,7 +20,7 @@
 
 #define ARM_MAX_DISTANCE_TO_START_M 1.0
 #define ARM_MAX_ANGLE_TO_START_DEG 10.0
-#define SUPERVISION_SHMEM_READ_RATE 100
+#define SUPERVISION_SHMEM_READ_RATE_HZ 100
 
 /*------------------------------------------------------------
   -- Type definitions.
