@@ -556,7 +556,7 @@ uint32_t checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofen
         return -1;
     }
     if(numberOfObjects == 0){
-        LogMessage(LOG_LEVEL_INFO, "No obects present in shared memory.");
+        LogMessage(LOG_LEVEL_INFO, "No objects present in shared memory.");
         return 0;
     }
 
