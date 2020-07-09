@@ -560,12 +560,7 @@ uint32_t checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofen
         return 0;
     }
 
-    // Allocate an array for objects' transmitter IDs
-    transmitterIDs = new uint32_t(numberOfObjects * sizeof (uint32_t));
-    if (transmitterIDs == NULL) {
-        LogMessage(LOG_LEVEL_ERROR, "Memory allocation error - Cannot check against Geofences");
-        return -1;
-    }
+    transmitterIDs.resize(numberOfObjects, 0);
 
     // Get transmitter IDs for all connected objects
     if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs, numberOfObjects) != READ_OK) {
