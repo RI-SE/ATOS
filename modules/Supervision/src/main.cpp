@@ -571,7 +571,7 @@ uint32_t checkObjectsAgainstGeofences(SupervisionState state, std::vector<Geofen
     }
 
 
-    for (uint32_t i = 0; i < numberOfObjects; ++i) {
+    for (const uint32_t &transmitterID : transmitterIDs) {
             if (DataDictionaryGetMonitorData(transmitterIDs[i], &monitorData.MonrData) != READ_OK) {
                 LogMessage(LOG_LEVEL_ERROR,
                            "Data dictionary monitor data read error for transmitter ID %u",
