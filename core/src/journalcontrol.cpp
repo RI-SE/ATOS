@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <vector>
 #include <unordered_set>
+#include <set>
 #include <fstream>
 #include <iostream>
 #include <chrono>
@@ -24,6 +25,7 @@
 
 #include "journalcontrol.h"
 #include "journal.h"
+#include "datadictionary.h"
 
 namespace fs = std::experimental::filesystem;
 
@@ -36,7 +38,7 @@ public:
 		std::streampos filePosition;
 		bool valid = false;
 		void place(const fs::path &path, const std::ios_base::seekdir &pos) {
-			std::ifstream istrm(path.string(), pos == std::ios_base::end ? std::ios_base::ate
+			std::ifstream istrm(path, pos == std::ios_base::end ? std::ios_base::ate
 																		 : std::ios_base::in);
 			if (istrm.is_open()) {
 				LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark to file %s", path.c_str());
@@ -55,6 +57,7 @@ public:
 	std::string moduleName;
 	mutable Bookmark startReference;
 	mutable Bookmark stopReference;
+	mutable std::set<fs::path> containedFiles;
 
 	bool operator==(const Journal &other) const {
 		return this->moduleName == other.moduleName;
@@ -78,9 +81,10 @@ static volatile bool quit = false;
   -- Static function declarations.
   ------------------------------------------------------------*/
 static void signalHandler(int signo);
-static int initializeModule(LOG_LEVEL logLevel);
+static int initializeModule(const LOG_LEVEL logLevel);
 static void storeJournalStartBookmarks(std::unordered_set<Journal> &journals);
 static void storeJournalStopBookmarks(std::unordered_set<Journal> &journals);
+static int generateOutputJournal(std::unordered_set<Journal> &journals);
 static std::vector<fs::path> getJournalFilesFromToday(void);
 static std::string getCurrentDateAsString(void);
 
@@ -116,6 +120,7 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 			// Temporary: Treat ABORT as stop signal
 			// Save stop references
 			storeJournalStopBookmarks(journals);
+			generateOutputJournal(journals);
 			// TODO: Merge journals into named
 			break;
 
@@ -158,7 +163,7 @@ void signalHandler(int signo) {
  * \param logLevel Level of the module log to be used.
  * \return 0 on success, -1 otherwise
  */
-int initializeModule(LOG_LEVEL logLevel) {
+int initializeModule(const LOG_LEVEL logLevel) {
 	int retval = 0;
 	struct timespec sleepTimePeriod, remTime;
 	sleepTimePeriod.tv_sec = 0;
@@ -207,7 +212,7 @@ void storeJournalStartBookmarks(std::unordered_set<Journal> &journals) {
 		auto datePosition = journalFile.stem().string().find("-" + currentDate);
 		journal.moduleName = journalFile.stem().string().substr(0, datePosition);
 		journal.startReference.place(journalFile, std::ios_base::end);
-
+		journal.containedFiles.insert(journalFile);
 		LogPrint("Module name: %s", journal.moduleName.c_str());
 		journals.insert(journal);
 	}
@@ -232,6 +237,7 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 		// Insert checks if an equivalent element (same module) already exists
 		auto matchingJournal = journals.insert(soughtJournal).first;
 		matchingJournal->stopReference.place(journalFile, std::ios_base::end);
+		matchingJournal->containedFiles.insert(journalFile);
 	}
 
 	// Handle the journals for which no file existed from today
@@ -250,6 +256,52 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 	}
 }
 
+
+int generateOutputJournal(std::unordered_set<Journal> &journals) {
+
+	std::string scenarioName(PATH_MAX, '\0');
+	std::string journalDir(PATH_MAX, '\0');
+	if (DataDictionaryGetScenarioName(scenarioName.data(), scenarioName.size()) != READ_OK) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to get scenario name parameter to generate output file");
+		return -1;
+	}
+	UtilGetJournalDirectoryPath(journalDir.data(), journalDir.size());
+	fs::path journalDirPath(journalDir + scenarioName);
+
+	std::ofstream ostrm(journalDirPath);
+	if (!ostrm.is_open()) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to open %s for writing", journalDirPath.c_str());
+		return -1;
+	}
+
+	typedef struct {
+		fs::path path;
+		std::ifstream istrm;
+		std::streampos beg;
+		std::streampos end;
+	} JournalFileSection;
+
+	std::vector<JournalFileSection> inputFiles;
+	for (const auto &journal : journals) {
+		for (const auto &file : journal.containedFiles) {
+			auto &section = inputFiles.emplace_back();
+			section.path = file;
+			section.istrm.open(file);
+			section.beg = file == journal.startReference.filePath ?
+						journal.startReference.filePosition
+					  : section.istrm.tellg();
+			section.istrm.seekg(std::ios_base::end);
+			section.end = file == journal.stopReference.filePath ?
+						journal.stopReference.filePosition
+					  : section.istrm.tellg();
+			section.istrm.seekg(section.beg);
+		}
+	}
+
+	// TODO: Read one line from each (unless end reference reached)
+	// TODO: while an open journal exists:
+	// TODO: Print the one with lowest timestamp and replace with next line - if end reached, close journal
+}
 
 /*!
  * \brief getCurrentDateAsString Creates a string on the format YYYY-MM-DD of the current date.
@@ -273,9 +325,9 @@ std::string getCurrentDateAsString() {
  */
 std::vector<fs::path> getJournalFilesFromToday() {
 	std::vector<fs::path> journalsFromToday;
-	std::vector<char> buffer(MAX_FILE_PATH);
+	std::string buffer(PATH_MAX, '\0');
 	UtilGetJournalDirectoryPath(buffer.data(), buffer.size());
-	fs::path journalDirPath(buffer.data());
+	fs::path journalDirPath(buffer);
 	if (!exists(journalDirPath)) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to find journal directory %s", journalDirPath.string().c_str());
 		return journalsFromToday;

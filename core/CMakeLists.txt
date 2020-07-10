@@ -104,6 +104,7 @@ target_link_libraries(${DATA_DICTIONARY_TARGET} LINK_PUBLIC
 target_link_libraries(${JOURNAL_CONTROL_TARGET} LINK_PUBLIC
 	${FILESYSTEM_LIBRARY}
 	${COREUTILS_TARGET}
+	${DATA_DICTIONARY_TARGET}
 )
 
 # Generate service file with correct details
