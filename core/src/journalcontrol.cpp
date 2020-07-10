@@ -102,8 +102,6 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 		util_error("Failed to initialize module");
 	}
 
-	//storeJournalStartBookmarks(journals);
-
 	while (!quit) {
 		std::fill(mqReceiveBuffer.begin(), mqReceiveBuffer.end(), 0);
 		receivedBytes = iCommRecv(&command, mqReceiveBuffer.data(), mqReceiveBuffer.size(), &recvTime);
@@ -154,6 +152,12 @@ void signalHandler(int signo) {
 	}
 }
 
+/*!
+ * \brief initializeModule Initializes this module by creating log, connecting to the message queue bus,
+ *			setting up signal handers etc.
+ * \param logLevel Level of the module log to be used.
+ * \return 0 on success, -1 otherwise
+ */
 int initializeModule(LOG_LEVEL logLevel) {
 	int retval = 0;
 	struct timespec sleepTimePeriod, remTime;
