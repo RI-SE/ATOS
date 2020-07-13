@@ -213,7 +213,6 @@ void storeJournalStartBookmarks(std::unordered_set<Journal> &journals) {
 		journal.moduleName = journalFile.stem().string().substr(0, datePosition);
 		journal.startReference.place(journalFile, std::ios_base::end);
 		journal.containedFiles.insert(journalFile);
-		LogPrint("Module name: %s", journal.moduleName.c_str());
 		journals.insert(journal);
 	}
 }
@@ -245,14 +244,6 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 		if (!journal.stopReference.valid) {
 			journal.stopReference.place(journal.startReference.filePath, std::ios_base::end);
 		}
-	}
-
-	LogPrint("Number of journals: %d", journals.size());
-	for (auto &journal : journals) {
-		LogPrint("Bookmarks for %s: \n\tStart: %ld, %s\n\tStop: %ld, %s",
-				 journal.moduleName.c_str(), long(journal.startReference.filePosition),
-				 journal.startReference.filePath.c_str(), long(journal.stopReference.filePosition),
-				 journal.stopReference.filePath.c_str());
 	}
 }
 
