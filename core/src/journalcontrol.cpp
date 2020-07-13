@@ -111,7 +111,7 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 		receivedBytes = iCommRecv(&command, mqReceiveBuffer.data(), mqReceiveBuffer.size(), &recvTime);
 
 		switch (command) {
-		case COMM_STRT:
+		case COMM_ARM:
 			// Save start references
 			storeJournalStartBookmarks(journals);
 			break;
