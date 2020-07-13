@@ -259,6 +259,7 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 
 int generateOutputJournal(std::unordered_set<Journal> &journals) {
 
+	int retval = 0;
 	std::string scenarioName(PATH_MAX, '\0');
 	std::string journalDir(PATH_MAX, '\0');
 	if (DataDictionaryGetScenarioName(scenarioName.data(), scenarioName.size()) != READ_OK) {
@@ -266,7 +267,7 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 		return -1;
 	}
 	UtilGetJournalDirectoryPath(journalDir.data(), journalDir.size());
-	fs::path journalDirPath(journalDir + scenarioName);
+	fs::path journalDirPath(journalDir + scenarioName + JOURNAL_FILE_ENDING);
 
 	std::ofstream ostrm(journalDirPath);
 	if (!ostrm.is_open()) {
@@ -274,12 +275,21 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 		return -1;
 	}
 
-	typedef struct {
+	struct JournalFileSection {
 		fs::path path;
 		std::ifstream istrm;
 		std::streampos beg;
 		std::streampos end;
-	} JournalFileSection;
+		std::string lastRead;
+		//! The < operator tells which is oldest at its current line
+		bool operator< (const JournalFileSection &other) const {
+			std::istringstream strThis(lastRead), strOther(other.lastRead);
+			double timeThis, timeOther;
+			strThis >> timeThis;
+			strOther >> timeOther;
+			return timeThis < timeOther;
+		}
+	};
 
 	std::vector<JournalFileSection> inputFiles;
 	for (const auto &journal : journals) {
@@ -296,18 +306,33 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 							journal.stopReference.filePosition
 						  : section.istrm.tellg();
 				section.istrm.seekg(section.beg);
+				if (section.beg == section.end || !std::getline(section.istrm, section.lastRead)) {
+					section.istrm.close();
+					inputFiles.pop_back();
+				}
+				LogMessage(LOG_LEVEL_DEBUG, "File %s contained %d lines of log data from period of interest",
+						section.path.stem().c_str(), section.end-section.beg);
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Unable to open %s for reading", file.c_str());
 				inputFiles.pop_back();
+				retval = -1;
 			}
 		}
 	}
 
-	// TODO: Read one line from each (unless end reference reached)
-	// TODO: while an open journal exists:
-	// TODO: Print the one with lowest timestamp and replace with next line - if end reached, close journal
-	std::for_each(inputFiles.begin(), inputFiles.end(), [](JournalFileSection &fs){ fs.istrm.close(); });
+	while(!inputFiles.empty()) {
+		std::vector<JournalFileSection>::iterator oldestFile = std::min(inputFiles.begin(), inputFiles.end());
+		ostrm << oldestFile->lastRead;
+		if (!std::getline(oldestFile->istrm, oldestFile->lastRead)
+				|| oldestFile->istrm.tellg() == oldestFile->end) {
+			oldestFile->istrm.close();
+			inputFiles.erase(oldestFile);
+		}
+	}
+
+	ostrm.close();
+	return retval;
 }
 
 /*!
