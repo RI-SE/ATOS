@@ -287,20 +287,27 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 			auto &section = inputFiles.emplace_back();
 			section.path = file;
 			section.istrm.open(file);
-			section.beg = file == journal.startReference.filePath ?
-						journal.startReference.filePosition
-					  : section.istrm.tellg();
-			section.istrm.seekg(std::ios_base::end);
-			section.end = file == journal.stopReference.filePath ?
-						journal.stopReference.filePosition
-					  : section.istrm.tellg();
-			section.istrm.seekg(section.beg);
+			if (section.istrm.is_open()) {
+				section.beg = file == journal.startReference.filePath ?
+							journal.startReference.filePosition
+						  : section.istrm.tellg();
+				section.istrm.seekg(std::ios_base::end);
+				section.end = file == journal.stopReference.filePath ?
+							journal.stopReference.filePosition
+						  : section.istrm.tellg();
+				section.istrm.seekg(section.beg);
+			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR, "Unable to open %s for reading", file.c_str());
+				inputFiles.pop_back();
+			}
 		}
 	}
 
 	// TODO: Read one line from each (unless end reference reached)
 	// TODO: while an open journal exists:
 	// TODO: Print the one with lowest timestamp and replace with next line - if end reached, close journal
+	std::for_each(inputFiles.begin(), inputFiles.end(), [](JournalFileSection &fs){ fs.istrm.close(); });
 }
 
 /*!
