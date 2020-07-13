@@ -2905,7 +2905,6 @@ void appendSysInfoString(char *ControlResponseBuffer) {
 	int loopCounter = 0;
 
 	while (token != NULL) {
-		printf(" %s\n", token);
 		if (loopCounter == 22) {	//Get  starttime  %llu from proc file for pid. 
 			char temp[255];
 
