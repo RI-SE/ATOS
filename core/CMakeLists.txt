@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.1)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+SET(CMAKE_CXX_STANDARD 17)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(Core LANGUAGES C)
+project(Core LANGUAGES C CXX)
 
 # Specify locations for logs and shared memory
 # WARNING: These are used for installation and could hose
@@ -11,6 +13,7 @@ set(SYSTEM_SHARED_MEMORY_PATH "/dev/shm/maestro")
 
 set(CORE_TARGET ${PROJECT_NAME})
 set(COREUTILS_TARGET MaestroCoreUtil)
+set(JOURNAL_CONTROL_TARGET JournalControl)
 set(DATA_DICTIONARY_TARGET MaestroDataDictionary)
 
 set(TIME_LIBRARY MaestroTime)
@@ -31,14 +34,21 @@ include(GNUInstallDirs)
 
 add_executable(${CORE_TARGET} 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/logger.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
 )
+add_library(${JOURNAL_CONTROL_TARGET} SHARED
+	${CMAKE_CURRENT_SOURCE_DIR}/src/journalcontrol.cpp
+)
+target_include_directories(${JOURNAL_CONTROL_TARGET} PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+	${LOGGING_HEADERS}
+)
 
 add_library(${COREUTILS_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/journal.cpp
 )
 target_include_directories(${COREUTILS_TARGET} PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
@@ -70,6 +80,7 @@ set_target_properties(${DATA_DICTIONARY_TARGET} PROPERTIES
 target_link_libraries(${CORE_TARGET} LINK_PUBLIC
 	${TIME_LIBRARY}
 	${LOGGING_LIBRARY}
+	${JOURNAL_CONTROL_TARGET}
 	${COREUTILS_TARGET}
 	${DATA_DICTIONARY_TARGET}
 	${ISO_22133_LIBRARY}

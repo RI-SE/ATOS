@@ -12,6 +12,7 @@
   -- Include files.
   ------------------------------------------------------------*/
 #include "objectcontrol.h"
+#include "journal.h"
 
 #include <arpa/inet.h>
 #include <dirent.h>
@@ -264,6 +265,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	LogInit(MODULE_NAME, logLevel);
 	LogMessage(LOG_LEVEL_INFO, "Object control task running with PID: %i", getpid());
 
+	// Create test journal
+	if (JournalInit(MODULE_NAME) == -1) {
+		util_error("Unable to create test journal");
+	}
 
 	// Set up signal handlers
 	if (signal(SIGINT, signalHandler) == SIG_ERR)
@@ -466,6 +471,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 
 					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
+						JournalRecordMonitorData(&monitorData.MonrData);
 						// Place struct in buffer
 						memcpy(&buffer, &monitorData, sizeof (monitorData));
 						// Send MONR message as bytes
@@ -592,7 +598,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (iCommand == COMM_ARM && vGetState(GSD) == OBC_STATE_CONNECTED) {
 
 				LogMessage(LOG_LEVEL_INFO, "Sending ARM");
-				LOG_SEND(LogBuffer, "[ObjectControl] Sending ARM");
+				JournalRecordString("Sending ARM");
 				vSetState(OBC_STATE_ARMED, GSD);
 				MessageLength =
 					encodeOSTMMessage(OBJECT_COMMAND_ARM, MessageBuffer, sizeof (MessageBuffer), 0);
@@ -610,7 +616,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_DISARM && vGetState(GSD) == OBC_STATE_ARMED) {
 
 				LogMessage(LOG_LEVEL_INFO, "Sending DISARM");
-				LOG_SEND(LogBuffer, "[ObjectControl] Sending DISARM");
+				JournalRecordString("Sending DISARM");
 				vSetState(OBC_STATE_CONNECTED, GSD);
 
 				MessageLength =
@@ -668,8 +674,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				GSD->ScenarioStartTimeU32 = TimeGetAsGPSqmsOfWeek(&startTime) >> 2;
 				bzero(MiscText, SMALL_BUFFER_SIZE_0);
 				sprintf(MiscText, "%" PRIu32, GSD->ScenarioStartTimeU32 << 2);
-				LOG_SEND(LogBuffer, "[ObjectControl] START received <%s>, GPS time <%s>", pcRecvBuffer,
-						 MiscText);
+				JournalRecordString("Sending START with time %u [second of week]", TimeGetAsGPSSecondOfWeek(&startTime));
 			}
 			else if (iCommand == COMM_REPLAY) {
 				ObjectcontrolExecutionMode = OBJECT_CONTROL_REPLAY_MODE;
@@ -679,7 +684,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				vSetState(OBC_STATE_CONNECTED, GSD);
 				objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 				LogMessage(LOG_LEVEL_WARNING, "ABORT received");
-				LOG_SEND(LogBuffer, "[ObjectControl] ABORT received.");
+				JournalRecordString("ABORT received");
 			}
 			else if (iCommand == COMM_CONTROL) {
 				ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
@@ -787,8 +792,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 			}
 			else if (iCommand == COMM_INIT) {
-				LogMessage(LOG_LEVEL_INFO, "INIT received");
-				LOG_SEND(LogBuffer, "[ObjectControl] INIT received.");
+				JournalRecordString("INIT received");
 				nbr_objects = 0;
 				if (iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects) == 0) {
 					// Reset preexisting stored monitor data
@@ -852,8 +856,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 
 					vSetState(OBC_STATE_INITIALIZED, GSD);
-					LogMessage(LOG_LEVEL_INFO, "ObjectControl is initialized");
-					LOG_SEND(LogBuffer, "[ObjectControl] ObjectControl is initialized.");
+					LogMessage(LOG_LEVEL_INFO, "Successfully initialized");
 
 					//Remove temporary file
 					remove(TEMP_LOG_FILE);
@@ -996,8 +999,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else if (iCommand == COMM_CONNECT && vGetState(GSD) == OBC_STATE_INITIALIZED) {
 				LogMessage(LOG_LEVEL_INFO, "CONNECT received");
-				LOG_SEND(LogBuffer, "[ObjectControl] CONNECT received.");
-
+				JournalRecordString("CONNECT received.");
 
 				DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
 
@@ -1032,10 +1034,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 											   "Unable to connect to object %s:%d, retry in %d sec...",
 											   object_address_name[iIndex], object_tcp_port[iIndex],
 											   (!(1 & DisconnectU8)) * 3);
-									LOG_SEND(LogBuffer,
-											 "[ObjectControl] Was not able to connect to object, [IP: %s] [PORT: %d], retry in %d sec...",
-											 object_address_name[iIndex], object_tcp_port[iIndex],
-											 (!(1 & DisconnectU8)) * 3);
+									JournalRecordString("Was not able to connect to object, [IP: %s] [PORT: %d]",
+														object_address_name[iIndex], object_tcp_port[iIndex]);
 									break;
 								case EADDRINUSE:
 									util_error("[ObjectControl] Local address/port already in use");
@@ -1065,15 +1065,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							if (iCommRecv(&iCommand, pcRecvBuffer, RECV_MESSAGE_BUFFER, NULL)) {
 								if (iCommand == COMM_DISCONNECT) {
 									DisconnectU8 = 1;
-									LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.");
+									JournalRecordString("DISCONNECT received.");
 								}
 							}
 						} while (iExit == 0 && iResult < 0 && DisconnectU8 == 0);
 
 						if (iResult >= 0) {
+							JournalRecordString("Configuring connected objects.");
 							/* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates) */
 							LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
-							LOG_SEND(LogBuffer, "[ObjectControl] Sending OSEM.");
 
 							//Restore the buffers
 							DataDictionaryGetOriginLatitudeC8(GSD, OriginLatitude, SMALL_BUFFER_SIZE_0);
@@ -1213,7 +1213,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 				LogMessage(LOG_LEVEL_INFO, "ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
-				LOG_SEND(LogBuffer, "[ObjectControl] ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
 
 				DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ASPMaxTimeDiffDbl);
 				DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ASPMaxTrajDiffDbl);
@@ -1235,7 +1234,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				//#endif //NOTCP
 
 				LogMessage(LOG_LEVEL_INFO, "DISCONNECT received");
-				LOG_SEND(LogBuffer, "[ObjectControl] DISCONNECT received.");
+				JournalRecordString("DISCONNECT received.");
 				/* Close safety socket */
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],

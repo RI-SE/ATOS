@@ -28,7 +28,7 @@
 #include <netdb.h>
 
 #include "timecontrol.h"
-#include "logger.h"
+#include "journal.h"
 #include "maestroTime.h"
 #include "datadictionary.h"
 
@@ -116,6 +116,10 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	LogInit(MODULE_NAME, logLevel);
 	LogMessage(LOG_LEVEL_INFO, "Time control task running with PID: %i", getpid());
 
+	if (JournalInit(MODULE_NAME)) {
+		util_error("Unable to open journal");
+	}
+
 	// Set up signal handlers
 	if (signal(SIGINT, signalHandler) == SIG_ERR)
 		util_error("Unable to initialize signal handler");
@@ -147,11 +151,8 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 		else {
 			LogMessage(LOG_LEVEL_INFO, "Defaulting to system time");
-
-			// Send warning over MQ
-			LOG_SEND(LogBuffer, "Unable to connect to time server");
+			JournalRecordString("Unable to connect to time server at IP %s", ServerIPC8);
 		}
-
 	}
 
 	if (!GPSTime->isGPSenabled) {
@@ -207,6 +208,7 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						case EPERM:
 							LogMessage(LOG_LEVEL_ERROR,
 									   "Unable to set system time - ensure this program has the correct capabilities");
+							GPSTime->isGPSenabled = 0;
 							break;
 						case EINVAL:
 							LogMessage(LOG_LEVEL_ERROR, "Clock type not supported on this system");
