@@ -124,6 +124,101 @@ ReadWriteAccess_t DataDictionaryDestructor(GSDType * GSD) {
 	return result;
 }
 
+ReadWriteAccess_t DataDictionaryGetDbl(const enum ConfigurationFileParameter param,
+										  double *result) {
+	ReadWriteAccess_t retval = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endptr = NULL;
+	if (UtilReadConfigurationParameter(param, resultBuffer, sizeof (resultBuffer))) {
+		double r = strtod(resultBuffer, &endptr);
+		if (endptr != resultBuffer) {
+			retval = READ_OK;
+			*result = r;
+		}
+		else {
+			retval = PARAMETER_NOTFOUND;
+			LogMessage(LOG_LEVEL_ERROR, "Cannot cast parameter value <%s> to double",
+					   resultBuffer);
+		}
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
+				   UtilGetConfigurationParameterAsString(param, resultBuffer, sizeof (resultBuffer)));
+	}
+	return retval;
+}
+
+ReadWriteAccess_t DataDictionaryGetUInt(const enum ConfigurationFileParameter param,
+										void *result,
+										const size_t resultSize) {
+	ReadWriteAccess_t retval = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endptr = NULL;
+	if (UtilReadConfigurationParameter(param, resultBuffer, sizeof (resultBuffer))) {
+		uint64_t r = strtoul(resultBuffer, &endptr, 10);
+		if (endptr != resultBuffer) {
+			retval = READ_OK;
+			switch (resultSize) {
+			case sizeof (uint8_t):
+				if (r <= UINT8_MAX) {
+					uint8_t *u8ptr = result;
+					*u8ptr = (uint8_t)r;
+				}
+				else {
+					retval = OUT_OF_RANGE;
+				}
+				break;
+			case sizeof (uint16_t):
+				if (r <= UINT16_MAX) {
+					uint16_t *u16ptr = result;
+					*u16ptr = (uint16_t)r;
+				}
+				else {
+					retval = OUT_OF_RANGE;
+				}
+				break;
+			case sizeof (uint32_t):
+				if (r <= UINT32_MAX) {
+					uint32_t *u32ptr = result;
+					*u32ptr = (uint32_t)r;
+				}
+				else {
+					retval = OUT_OF_RANGE;
+				}
+				break;
+			case sizeof (uint64_t):
+				if (r <= UINT64_MAX) {
+					uint64_t *u64ptr = result;
+					*u64ptr = (uint64_t)r;
+				}
+				else {
+					retval = OUT_OF_RANGE;
+				}
+				break;
+			default:
+				LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", resultSize);
+				retval = UNDEFINED;
+				break;
+			}
+			if (retval == OUT_OF_RANGE) {
+				LogMessage(LOG_LEVEL_ERROR, "Value %u for parameter %s falls outside permitted range of integer parameter with size %u",
+						   r, UtilGetConfigurationParameterAsString(param, resultBuffer, sizeof (resultBuffer)), resultSize);
+			}
+		}
+		else {
+			retval = PARAMETER_NOTFOUND;
+			LogMessage(LOG_LEVEL_ERROR, "Cannot cast parameter value <%s> to integer",
+					   resultBuffer);
+		}
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
+				   UtilGetConfigurationParameterAsString(param, resultBuffer, sizeof (resultBuffer)));
+	}
+	return retval;
+}
 
 ReadWriteAccess_t DataDictionaryInitScenarioName() {
 	ReadWriteAccess_t Res = UNDEFINED;
