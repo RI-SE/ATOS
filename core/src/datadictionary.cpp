@@ -54,12 +54,63 @@ static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define MONR_DATA_FILENAME "MonitorData"
 
-static volatile ObjectDataType *objectDataMemory = NULL;
+static volatile ObjectDataType *objectDataMemory = nullptr;
+typedef ReadWriteAccess_t (*GetterFunctionReference)(
+		const enum DataDictionaryParameter,
+		void*,
+		const size_t
+);
+typedef ReadWriteAccess_t (*SetterFunctionReference)(
+		const enum DataDictionaryParameter,
+		const void*,
+		const size_t
+);
 
 
 /*------------------------------------------------------------
   -- Static function definitions
   ------------------------------------------------------------*/
+static ReadWriteAccess_t getConfigAsUnsignedInteger(
+		const enum DataDictionaryParameter,
+		void*,
+		const size_t);
+static ReadWriteAccess_t getConfigAsDouble(
+		const enum DataDictionaryParameter,
+		void*,
+		const size_t);
+static ReadWriteAccess_t getConfigAsString(
+		const enum DataDictionaryParameter,
+		void*,
+		const size_t);
+static ReadWriteAccess_t getAsIPAddress(
+		const enum DataDictionaryParameter,
+		void*,
+		const size_t);
+static ReadWriteAccess_t defaultGetter(
+		const enum DataDictionaryParameter,
+		void*,
+		const size_t);
+
+static ReadWriteAccess_t setConfigToUnsignedInteger(
+		const enum DataDictionaryParameter,
+		const void*,
+		const size_t);
+static ReadWriteAccess_t setConfigToDouble(
+		const enum DataDictionaryParameter,
+		const void*,
+		const size_t);
+static ReadWriteAccess_t setConfigToString(
+		const enum DataDictionaryParameter,
+		const void*,
+		const size_t);
+static ReadWriteAccess_t setToIPAddress(
+		const enum DataDictionaryParameter,
+		const void*,
+		const size_t);
+static ReadWriteAccess_t defaultSetter(
+		const enum DataDictionaryParameter,
+		const void*,
+		const size_t);
 
 /*------------------------------------------------------------
   -- Functions
@@ -124,16 +175,114 @@ ReadWriteAccess_t DataDictionaryDestructor(GSDType * GSD) {
 	return result;
 }
 
-ReadWriteAccess_t DataDictionaryGetDbl(const enum ConfigurationFileParameter param,
-										  double *result) {
+ReadWriteAccess_t DataDictionarySet(
+		const enum DataDictionaryParameter param,
+		const void* newValue,
+		const size_t newValueSize) {
+	SetterFunctionReference setterFunction = &defaultSetter;
+
+	switch (param) {
+	case DD_SCENARIO_NAME:
+	case DD_VOIL_RECEIVERS:
+	case DD_DTM_RECEIVERS:
+	case DD_MISC_DATA:
+		setterFunction = &setConfigToString;
+		break;
+	case DD_ORIGIN_LATITUDE:
+	case DD_ORIGIN_LONGITUDE:
+	case DD_ORIGIN_ALTITUDE:
+	case DD_ASP_MAX_TIME_DIFF:
+	case DD_ASP_MAX_TRAJ_DIFF:
+	case DD_ASP_FILTER_LEVEL:
+	case DD_ASP_MAX_DELTA_TIME:
+		setterFunction = &setConfigToDouble;
+		break;
+	case DD_FORCE_OBJECT_TO_LOCALHOST:
+	case DD_ASP_STEP_BACK_COUNT:
+	case DD_TIME_SERVER_PORT:
+	case DD_SIMULATOR_PORT_TCP:
+	case DD_SIMULATOR_PORT_UDP:
+	case DD_SIMULATOR_MODE:
+	case DD_EXTERNAL_SUPERVISOR_PORT_TCP:
+	case DD_RVSS_CONFIG:
+	case DD_RVSS_RATE:
+	case DD_MAX_PACKETS_LOST:
+		setterFunction = &setConfigToUnsignedInteger;
+		break;
+	case DD_VISUALIZATION_SERVER_NAME:
+	case DD_TIME_SERVER_IP:
+	case DD_SIMULATOR_IP:
+	case DD_EXTERNAL_SUPERVISOR_IP:
+		setterFunction = newValueSize == sizeof (in_addr_t) ? &setToIPAddress
+														  : &setConfigToString;
+		break;
+
+	}
+
+	return setterFunction(param, newValue, newValueSize);
+}
+
+ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
+									void* result,
+									const size_t resultSize) {
+	GetterFunctionReference getterFunction = &defaultGetter;
+
+	switch (param) {
+	case DD_SCENARIO_NAME:
+	case DD_VOIL_RECEIVERS:
+	case DD_DTM_RECEIVERS:
+	case DD_MISC_DATA:
+		getterFunction = &getConfigAsString;
+		break;
+	case DD_ORIGIN_LATITUDE:
+	case DD_ORIGIN_LONGITUDE:
+	case DD_ORIGIN_ALTITUDE:
+	case DD_ASP_MAX_TIME_DIFF:
+	case DD_ASP_MAX_TRAJ_DIFF:
+	case DD_ASP_FILTER_LEVEL:
+	case DD_ASP_MAX_DELTA_TIME:
+		getterFunction = resultSize == sizeof (double) ? &getConfigAsDouble
+													   : &getConfigAsString;
+		break;
+	case DD_FORCE_OBJECT_TO_LOCALHOST:
+	case DD_ASP_STEP_BACK_COUNT:
+	case DD_TIME_SERVER_PORT:
+	case DD_SIMULATOR_PORT_TCP:
+	case DD_SIMULATOR_PORT_UDP:
+	case DD_SIMULATOR_MODE:
+	case DD_EXTERNAL_SUPERVISOR_PORT_TCP:
+	case DD_RVSS_CONFIG:
+	case DD_RVSS_RATE:
+	case DD_MAX_PACKETS_LOST:
+		getterFunction = &getConfigAsUnsignedInteger;
+		break;
+	case DD_VISUALIZATION_SERVER_NAME:
+	case DD_TIME_SERVER_IP:
+	case DD_SIMULATOR_IP:
+	case DD_EXTERNAL_SUPERVISOR_IP:
+		getterFunction = resultSize == sizeof (in_addr_t) ? &getAsIPAddress
+														  : &getConfigAsString;
+		break;
+	}
+	return getterFunction(param, result, resultSize);
+}
+
+ReadWriteAccess_t getConfigAsDouble(const enum DataDictionaryParameter param,
+										void *result,
+										const size_t resultSize) {
 	ReadWriteAccess_t retval = UNDEFINED;
 	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
-	char *endptr = NULL;
-	if (UtilReadConfigurationParameter(param, resultBuffer, sizeof (resultBuffer))) {
-		double r = strtod(resultBuffer, &endptr);
+	char *endptr = nullptr;
+	if (resultSize != sizeof (double)) {
+		LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", resultSize);
+		return OUT_OF_RANGE;
+	}
+	if (UtilReadConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
+									   resultBuffer, sizeof (resultBuffer))) {
+		double r = std::strtod(resultBuffer, &endptr);
 		if (endptr != resultBuffer) {
 			retval = READ_OK;
-			*result = r;
+			*static_cast<double*>(result) = r;
 		}
 		else {
 			retval = PARAMETER_NOTFOUND;
@@ -144,26 +293,29 @@ ReadWriteAccess_t DataDictionaryGetDbl(const enum ConfigurationFileParameter par
 	else {
 		retval = PARAMETER_NOTFOUND;
 		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
-				   UtilGetConfigurationParameterAsString(param, resultBuffer, sizeof (resultBuffer)));
+				   UtilGetConfigurationParameterAsString(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						resultBuffer, sizeof (resultBuffer)));
 	}
 	return retval;
 }
 
-ReadWriteAccess_t DataDictionaryGetUInt(const enum ConfigurationFileParameter param,
-										void *result,
-										const size_t resultSize) {
+ReadWriteAccess_t getConfigAsUnsignedInteger(
+		const enum DataDictionaryParameter param,
+		void *result,
+		const size_t resultSize) {
 	ReadWriteAccess_t retval = UNDEFINED;
 	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
-	char *endptr = NULL;
-	if (UtilReadConfigurationParameter(param, resultBuffer, sizeof (resultBuffer))) {
-		uint64_t r = strtoul(resultBuffer, &endptr, 10);
+	char *endptr = nullptr;
+	if (UtilReadConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
+									   resultBuffer, sizeof (resultBuffer))) {
+		uint64_t r = std::strtoul(resultBuffer, &endptr, 10);
 		if (endptr != resultBuffer) {
 			retval = READ_OK;
 			switch (resultSize) {
 			case sizeof (uint8_t):
 				if (r <= UINT8_MAX) {
-					uint8_t *u8ptr = result;
-					*u8ptr = (uint8_t)r;
+					*static_cast<uint8_t*>(result) = static_cast<uint8_t>(r);
 				}
 				else {
 					retval = OUT_OF_RANGE;
@@ -171,8 +323,7 @@ ReadWriteAccess_t DataDictionaryGetUInt(const enum ConfigurationFileParameter pa
 				break;
 			case sizeof (uint16_t):
 				if (r <= UINT16_MAX) {
-					uint16_t *u16ptr = result;
-					*u16ptr = (uint16_t)r;
+					*static_cast<uint16_t*>(result) = static_cast<uint16_t>(r);
 				}
 				else {
 					retval = OUT_OF_RANGE;
@@ -180,8 +331,7 @@ ReadWriteAccess_t DataDictionaryGetUInt(const enum ConfigurationFileParameter pa
 				break;
 			case sizeof (uint32_t):
 				if (r <= UINT32_MAX) {
-					uint32_t *u32ptr = result;
-					*u32ptr = (uint32_t)r;
+					*static_cast<uint32_t*>(result) = static_cast<uint32_t>(r);
 				}
 				else {
 					retval = OUT_OF_RANGE;
@@ -189,8 +339,7 @@ ReadWriteAccess_t DataDictionaryGetUInt(const enum ConfigurationFileParameter pa
 				break;
 			case sizeof (uint64_t):
 				if (r <= UINT64_MAX) {
-					uint64_t *u64ptr = result;
-					*u64ptr = (uint64_t)r;
+					*static_cast<uint64_t*>(result) = r;
 				}
 				else {
 					retval = OUT_OF_RANGE;
@@ -203,7 +352,9 @@ ReadWriteAccess_t DataDictionaryGetUInt(const enum ConfigurationFileParameter pa
 			}
 			if (retval == OUT_OF_RANGE) {
 				LogMessage(LOG_LEVEL_ERROR, "Value %u for parameter %s falls outside permitted range of integer parameter with size %u",
-						   r, UtilGetConfigurationParameterAsString(param, resultBuffer, sizeof (resultBuffer)), resultSize);
+						   r, UtilGetConfigurationParameterAsString(
+								static_cast<const enum ConfigurationFileParameter>(param),
+								resultBuffer, sizeof (resultBuffer)), resultSize);
 			}
 		}
 		else {
@@ -215,9 +366,198 @@ ReadWriteAccess_t DataDictionaryGetUInt(const enum ConfigurationFileParameter pa
 	else {
 		retval = PARAMETER_NOTFOUND;
 		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
-				   UtilGetConfigurationParameterAsString(param, resultBuffer, sizeof (resultBuffer)));
+				   UtilGetConfigurationParameterAsString(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						resultBuffer, sizeof (resultBuffer)));
 	}
 	return retval;
+}
+
+
+ReadWriteAccess_t getConfigAsString(
+		const enum DataDictionaryParameter param,
+		void *result,
+		const size_t resultSize) {
+
+	ReadWriteAccess_t retval = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_1024];
+
+	if (UtilReadConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
+									   resultBuffer, sizeof (resultBuffer))) {
+		retval = READ_OK;
+		strncpy(static_cast<char*>(result), resultBuffer,
+				std::min(sizeof (resultBuffer), resultSize));
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
+				   UtilGetConfigurationParameterAsString(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						resultBuffer, sizeof (resultBuffer)));
+	}
+	return retval;
+}
+
+ReadWriteAccess_t getConfigAsIPAddress(
+		const enum DataDictionaryParameter param,
+		void *result,
+		const size_t resultSize) {
+
+	ReadWriteAccess_t retval = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_52];
+	if (resultSize != sizeof (in_addr_t)) {
+		LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", resultSize);
+		return OUT_OF_RANGE;
+	}
+	retval = getConfigAsString(param, resultBuffer, sizeof (resultBuffer));
+	if (retval == READ_OK) {
+		in_addr_t r;
+		if (inet_pton(AF_INET, resultBuffer, &r) > 0) {
+			*static_cast<in_addr_t*>(result) = r;
+		}
+		else {
+			char printoutBuffer[DD_CONTROL_BUFFER_SIZE_52];
+			LogMessage(LOG_LEVEL_ERROR, "Parameter %s configuration %s cannot be interpreted as an IP address",
+					   UtilGetConfigurationParameterAsString(
+						   static_cast<const enum ConfigurationFileParameter>(param),
+						   printoutBuffer, sizeof (printoutBuffer)), resultBuffer);
+			retval = PARAMETER_NOTFOUND;
+		}
+	}
+	return retval;
+}
+
+ReadWriteAccess_t defaultGetter(
+		const enum DataDictionaryParameter,
+		void *,
+		const size_t) {
+	LogMessage(LOG_LEVEL_ERROR, "No data dictionary function exists for getting selected parameter");
+	return PARAMETER_NOTFOUND;
+}
+
+
+ReadWriteAccess_t setConfigToDouble(
+		const enum DataDictionaryParameter param,
+		const void *newValue,
+		const size_t newValueSize) {
+
+	ReadWriteAccess_t retval = UNDEFINED;
+	char valueBuffer[DD_CONTROL_BUFFER_SIZE_20];
+
+	if (newValueSize != sizeof (double)) {
+		LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", newValueSize);
+		return OUT_OF_RANGE;
+	}
+
+	snprintf(valueBuffer, sizeof (valueBuffer), "%.15f", *static_cast<const double*>(newValue));
+	if (UtilWriteConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param), valueBuffer, sizeof (valueBuffer))) {
+		retval = WRITE_OK;
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
+				   UtilGetConfigurationParameterAsString(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						valueBuffer, sizeof (valueBuffer)));
+	}
+	return retval;
+}
+
+ReadWriteAccess_t setConfigToUnsignedInteger(
+		const enum DataDictionaryParameter param,
+		const void *newValue,
+		const size_t newValueSize) {
+
+	ReadWriteAccess_t retval = UNDEFINED;
+	char valueBuffer[DD_CONTROL_BUFFER_SIZE_20];
+
+	switch (newValueSize) {
+	case sizeof (uint8_t):
+		snprintf(valueBuffer, sizeof (valueBuffer), "%u", *static_cast<const uint8_t*>(newValue));
+		break;
+	case sizeof (uint16_t):
+		snprintf(valueBuffer, sizeof (valueBuffer), "%u", *static_cast<const uint16_t*>(newValue));
+		break;
+	case sizeof (uint32_t):
+		snprintf(valueBuffer, sizeof (valueBuffer), "%u", *static_cast<const uint32_t*>(newValue));
+		break;
+	case sizeof (uint64_t):
+		snprintf(valueBuffer, sizeof (valueBuffer), "%lu", *static_cast<const uint64_t*>(newValue));
+		break;
+	default:
+		LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", newValueSize);
+		return OUT_OF_RANGE;
+	}
+	if (UtilWriteConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
+										valueBuffer, sizeof (valueBuffer))) {
+		retval = WRITE_OK;
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
+				   UtilGetConfigurationParameterAsString(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						valueBuffer, sizeof (valueBuffer)));
+	}
+	return retval;
+}
+
+ReadWriteAccess_t setConfigToString(
+		const enum DataDictionaryParameter param,
+		const void *newValue,
+		const size_t newValueSize) {
+	if (UtilWriteConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
+										static_cast<const char*>(newValue), newValueSize)) {
+		return WRITE_OK;
+	}
+	else {
+		char parameterName[DD_CONTROL_BUFFER_SIZE_52];
+		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
+				   UtilGetConfigurationParameterAsString(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						parameterName, sizeof (parameterName)));
+		return PARAMETER_NOTFOUND;
+	}
+}
+
+ReadWriteAccess_t setConfigToIPAddress(
+		const enum DataDictionaryParameter param,
+		const void *newValue,
+		const size_t newValueSize) {
+
+	ReadWriteAccess_t retval = UNDEFINED;
+	char valueBuffer[DD_CONTROL_BUFFER_SIZE_52];
+	if (newValueSize != sizeof (in_addr_t)) {
+		LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", newValueSize);
+		return OUT_OF_RANGE;
+	}
+	if (inet_ntop(AF_INET, newValue, valueBuffer, sizeof (valueBuffer)) != nullptr) {
+		if (UtilWriteConfigurationParameter(
+					static_cast<const enum ConfigurationFileParameter>(param),
+					valueBuffer, sizeof (valueBuffer))) {
+			retval = WRITE_OK;
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR, "%s not found!",
+					   UtilGetConfigurationParameterAsString(
+							static_cast<const enum ConfigurationFileParameter>(param),
+							valueBuffer, sizeof (valueBuffer)));
+			retval = PARAMETER_NOTFOUND;
+		}
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Error converting value to IP string");
+		retval = UNDEFINED;
+	}
+	return retval;
+}
+
+ReadWriteAccess_t defaultSetter(
+		const enum DataDictionaryParameter,
+		const void *,
+		const size_t) {
+	LogMessage(LOG_LEVEL_ERROR, "No data dictionary function exists for setting selected parameter");
+	return PARAMETER_NOTFOUND;
 }
 
 ReadWriteAccess_t DataDictionaryInitScenarioName() {

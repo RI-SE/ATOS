@@ -63,7 +63,7 @@ set_target_properties(${COREUTILS_TARGET} PROPERTIES
 )
 
 add_library(${DATA_DICTIONARY_TARGET} SHARED
-	${CMAKE_CURRENT_SOURCE_DIR}/src/datadictionary.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/datadictionary.cpp
 )
 target_include_directories(${DATA_DICTIONARY_TARGET} PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
