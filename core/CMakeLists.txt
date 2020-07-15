@@ -22,6 +22,7 @@ set(MESSAGE_BUS_LIBRARY MaestroMQ)
 set(SHARED_MEMORY_LIBRARY MaestroSHM)
 set(ISO_22133_LIBRARY ISO22133)
 set(MATH_LIBRARY m)
+set(FILESYSTEM_LIBRARY stdc++fs)
 
 # Get header directories for build interface
 get_target_property(TIME_HEADERS ${TIME_LIBRARY} INCLUDE_DIRECTORIES)
@@ -97,6 +98,11 @@ target_link_libraries(${COREUTILS_TARGET} LINK_PUBLIC
 
 target_link_libraries(${DATA_DICTIONARY_TARGET} LINK_PUBLIC
 	${SHARED_MEMORY_LIBRARY}
+	${COREUTILS_TARGET}
+)
+
+target_link_libraries(${JOURNAL_CONTROL_TARGET} LINK_PUBLIC
+	${FILESYSTEM_LIBRARY}
 	${COREUTILS_TARGET}
 )
 
