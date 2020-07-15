@@ -115,7 +115,7 @@ public:
                 return *this->zCoord;
         }
         double getHeading() const { return this->heading; }
-        CartesianPosition getCartesianPosition();
+		CartesianPosition getCartesianPosition() const;
         double getLongitudinalVelocity() const {
             if (this->longitudinalVelocity == nullptr)
                 throw std::out_of_range("Uninitialized member longitudinal velocity");
