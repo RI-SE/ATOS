@@ -12,7 +12,8 @@
   -- Include files.
   ------------------------------------------------------------*/
 
-
+#include <string>
+#include <algorithm>
 #include <stdlib.h>
 #include <pthread.h>
 #include <sys/stat.h>
@@ -195,8 +196,14 @@ ReadWriteAccess_t DataDictionarySet(
 	case DD_ASP_MAX_TRAJ_DIFF:
 	case DD_ASP_FILTER_LEVEL:
 	case DD_ASP_MAX_DELTA_TIME:
-		setterFunction = &setConfigToDouble;
+	{
+		std::string str(static_cast<const char*>(newValue), newValueSize);
+		size_t nonNumericPos = str.find_first_not_of("0123456789+-,.");
+		bool isNumericString = nonNumericPos == std::string::npos || str[nonNumericPos] == '\0';
+		setterFunction = isNumericString ? &setConfigToString
+										 : &setConfigToDouble;
 		break;
+	}
 	case DD_FORCE_OBJECT_TO_LOCALHOST:
 	case DD_ASP_STEP_BACK_COUNT:
 	case DD_TIME_SERVER_PORT:
@@ -207,14 +214,20 @@ ReadWriteAccess_t DataDictionarySet(
 	case DD_RVSS_CONFIG:
 	case DD_RVSS_RATE:
 	case DD_MAX_PACKETS_LOST:
-		setterFunction = &setConfigToUnsignedInteger;
+	{
+		std::string str(static_cast<const char*>(newValue), newValueSize);
+		size_t nonNumericPos = str.find_first_not_of("0123456789+-");
+		bool isNumericString = nonNumericPos == std::string::npos || str[nonNumericPos] == '\0';
+		setterFunction = isNumericString ? &setConfigToString
+										 : &setConfigToUnsignedInteger;
 		break;
+	}
 	case DD_VISUALIZATION_SERVER_NAME:
 	case DD_TIME_SERVER_IP:
 	case DD_SIMULATOR_IP:
 	case DD_EXTERNAL_SUPERVISOR_IP:
 		setterFunction = newValueSize == sizeof (in_addr_t) ? &setToIPAddress
-														  : &setConfigToString;
+															: &setConfigToString;
 		break;
 
 	}
@@ -311,38 +324,30 @@ ReadWriteAccess_t getConfigAsUnsignedInteger(
 									   resultBuffer, sizeof (resultBuffer))) {
 		uint64_t r = std::strtoul(resultBuffer, &endptr, 10);
 		if (endptr != resultBuffer) {
-			retval = READ_OK;
+			retval = OUT_OF_RANGE;
 			switch (resultSize) {
 			case sizeof (uint8_t):
 				if (r <= UINT8_MAX) {
 					*static_cast<uint8_t*>(result) = static_cast<uint8_t>(r);
-				}
-				else {
-					retval = OUT_OF_RANGE;
+					retval = READ_OK;
 				}
 				break;
 			case sizeof (uint16_t):
 				if (r <= UINT16_MAX) {
 					*static_cast<uint16_t*>(result) = static_cast<uint16_t>(r);
-				}
-				else {
-					retval = OUT_OF_RANGE;
+					retval = READ_OK;
 				}
 				break;
 			case sizeof (uint32_t):
 				if (r <= UINT32_MAX) {
 					*static_cast<uint32_t*>(result) = static_cast<uint32_t>(r);
-				}
-				else {
-					retval = OUT_OF_RANGE;
+					retval = READ_OK;
 				}
 				break;
 			case sizeof (uint64_t):
 				if (r <= UINT64_MAX) {
 					*static_cast<uint64_t*>(result) = r;
-				}
-				else {
-					retval = OUT_OF_RANGE;
+					retval = READ_OK;
 				}
 				break;
 			default:
@@ -506,6 +511,13 @@ ReadWriteAccess_t setConfigToString(
 		const enum DataDictionaryParameter param,
 		const void *newValue,
 		const size_t newValueSize) {
+	if (!std::all_of(static_cast<const char*>(newValue),
+					 static_cast<const char*>(newValue)+newValueSize,
+					 [](const char &c){ return std::isprint(c) || c == '\0'; })) {
+		std::string str(static_cast<const char*>(newValue), newValueSize);
+		LogMessage(LOG_LEVEL_ERROR, "Detected nonprintable character in string %s", str.c_str());
+		return UNDEFINED;
+	}
 	if (UtilWriteConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
 										static_cast<const char*>(newValue), newValueSize)) {
 		return WRITE_OK;
