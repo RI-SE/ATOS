@@ -119,7 +119,7 @@ void Trajectory::initializeFromFile(const std::string fileName) {
 }
 
 
-CartesianPosition Trajectory::TrajectoryPoint::getCartesianPosition() {
+CartesianPosition Trajectory::TrajectoryPoint::getCartesianPosition() const {
     CartesianPosition retval;
     retval.xCoord_m = this->getXCoord();
     retval.yCoord_m = this->getYCoord();

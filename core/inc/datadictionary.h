@@ -10,6 +10,10 @@
 #ifndef __DATADICTIONARY_H_INCLUDED__
 #define __DATADICTIONARY_H_INCLUDED__
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 #define SHARED_MEMORY_PATH "/dev/shm/maestro/"
 
 #include "util.h"
@@ -141,6 +145,7 @@ ReadWriteAccess_t DataDictionaryInitObjectData();
 
 ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDs(uint32_t transmitterIDs[], const uint32_t arraySize);
 ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDByIP(const in_addr_t ClientIP, uint32_t *transmitterID);
+
 ReadWriteAccess_t DataDictionaryGetObjectIPByTransmitterID(const uint32_t transmitterID, in_addr_t * ClientIP);
 ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitterID, const uint32_t newTransmitterID);
 
@@ -152,6 +157,8 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t TransmitterID, Obj
 ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterID, const ObjectMonitorType * monitorData, const struct timeval * receiveTime);
 ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmitterID, struct timeval * lastDataUpdate);
 ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmitterID, const struct timeval * lastDataUpdate);
-
-#endif 
+#ifdef __cplusplus
+}
+#endif
+#endif
 
