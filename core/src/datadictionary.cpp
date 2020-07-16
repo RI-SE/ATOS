@@ -208,13 +208,14 @@ ReadWriteAccess_t DataDictionaryConstructor() {
 
 /*!
  * \brief DataDictionaryDestructor Deallocate data held by DataDictionary.
- * \param GSD Pointer to allocated shared memory
  * \return Error code defined by ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryDestructor(GSDType * GSD) {
+ReadWriteAccess_t DataDictionaryDestructor(void) {
 	ReadWriteAccess_t result = WRITE_OK;
 
 	result = result == WRITE_OK ? DataDictionaryFreeObjectData() : result;
+	result = result == WRITE_OK ? DataDictionaryFreeObjectControlStateData() : result;
+	result = result == WRITE_OK ? DataDictionaryFreeAdaptiveSyncPointData() : result;
 
 	return result;
 }
@@ -225,6 +226,7 @@ ReadWriteAccess_t DataDictionarySet(
 		const size_t newValueSize) {
 	SetterFunction* setterFunction = &defaultSetter;
 
+	const ConfigurationFileParameter configParam = static_cast<const enum ConfigurationFileParameter>(param);
 	switch (param) {
 	case DD_SCENARIO_NAME:
 	case DD_VOIL_RECEIVERS:
@@ -232,8 +234,7 @@ ReadWriteAccess_t DataDictionarySet(
 	case DD_MISC_DATA:
 	{
 		std::string str(static_cast<const char*>(newValue), newValueSize);
-		return setConfigTo<std::string>(
-					static_cast<const enum ConfigurationFileParameter>(param), &str);
+		return setConfigTo<std::string>(configParam, &str);
 	}
 	case DD_ORIGIN_LATITUDE:
 	case DD_ORIGIN_LONGITUDE:
@@ -247,19 +248,14 @@ ReadWriteAccess_t DataDictionarySet(
 		size_t nonNumericPos = str.find_first_not_of("0123456789+-,.");
 		bool isNumericString = nonNumericPos == std::string::npos || str[nonNumericPos] == '\0';
 		if (isNumericString) {
-			return setConfigTo<std::string>(
-						static_cast<const enum ConfigurationFileParameter>(param), &str);
+			return setConfigTo<std::string>(configParam, &str);
 		}
 		else {
 			switch (newValueSize) {
 			case sizeof (double):
-				return setConfigTo<double>(
-							static_cast<const enum ConfigurationFileParameter>(param),
-							static_cast<const double*>(newValue));
+				return setConfigTo<double>(configParam, static_cast<const double*>(newValue));
 			case sizeof (float):
-				return setConfigTo<float>(
-							static_cast<const enum ConfigurationFileParameter>(param),
-							static_cast<const float*>(newValue));
+				return setConfigTo<float>(configParam, static_cast<const float*>(newValue));
 			default:
 				return inputSizeError(newValueSize);
 			}
@@ -280,27 +276,18 @@ ReadWriteAccess_t DataDictionarySet(
 		size_t nonNumericPos = str.find_first_not_of("0123456789+-");
 		bool isNumericString = nonNumericPos == std::string::npos || str[nonNumericPos] == '\0';
 		if (isNumericString) {
-			return setConfigTo<std::string>(
-						static_cast<const enum ConfigurationFileParameter>(param), &str);
+			return setConfigTo<std::string>(configParam, &str);
 		}
 		else {
 			switch (newValueSize) {
 			case sizeof (uint8_t):
-				return setConfigTo<uint8_t>(
-							static_cast<const enum ConfigurationFileParameter>(param),
-							static_cast<const uint8_t*>(newValue));
+				return setConfigTo<uint8_t>(configParam, static_cast<const uint8_t*>(newValue));
 			case sizeof (uint16_t):
-				return setConfigTo<uint16_t>(
-							static_cast<const enum ConfigurationFileParameter>(param),
-							static_cast<const uint16_t*>(newValue));
+				return setConfigTo<uint16_t>(configParam, static_cast<const uint16_t*>(newValue));
 			case sizeof (uint32_t):
-				return setConfigTo<uint32_t>(
-							static_cast<const enum ConfigurationFileParameter>(param),
-							static_cast<const uint32_t*>(newValue));
+				return setConfigTo<uint32_t>(configParam, static_cast<const uint32_t*>(newValue));
 			case sizeof (uint64_t):
-				return setConfigTo<uint64_t>(
-							static_cast<const enum ConfigurationFileParameter>(param),
-							static_cast<const uint64_t*>(newValue));
+				return setConfigTo<uint64_t>(configParam, static_cast<const uint64_t*>(newValue));
 			default:
 				return inputSizeError(newValueSize);
 			}
@@ -336,6 +323,7 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 									const size_t resultSize) {
 	GetterFunction* getterFunction = &defaultGetter;
 
+	const ConfigurationFileParameter configParam = static_cast<const enum ConfigurationFileParameter>(param);
 	switch (param) {
 	case DD_SCENARIO_NAME:
 	case DD_VOIL_RECEIVERS:
@@ -354,19 +342,13 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 	case DD_ASP_FILTER_LEVEL:
 	case DD_ASP_MAX_DELTA_TIME:
 		if (resultSize == sizeof (double)) {
-			return getFromConfig<double>(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						static_cast<double*>(result));
+			return getFromConfig<double>(configParam, static_cast<double*>(result));
 		}
 		else if (resultSize == sizeof (float)) {
-			return getFromConfig<float>(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						static_cast<float*>(result));
+			return getFromConfig<float>(configParam, static_cast<float*>(result));
 		}
 		else {
-			return getFromConfig<char>(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						static_cast<char*>(result));
+			return getFromConfig<char>(configParam, static_cast<char*>(result));
 		}
 	case DD_FORCE_OBJECT_TO_LOCALHOST:
 	case DD_ASP_STEP_BACK_COUNT:
@@ -380,21 +362,13 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 	case DD_MAX_PACKETS_LOST:
 		switch (resultSize) {
 		case sizeof (uint8_t):
-			return getFromConfig<uint8_t>(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						static_cast<uint8_t*>(result));
+			return getFromConfig<uint8_t>(configParam, static_cast<uint8_t*>(result));
 		case sizeof (uint16_t):
-			return getFromConfig<uint16_t>(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						static_cast<uint16_t*>(result));
+			return getFromConfig<uint16_t>(configParam,	static_cast<uint16_t*>(result));
 		case sizeof (uint32_t):
-			return getFromConfig<uint32_t>(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						static_cast<uint32_t*>(result));
+			return getFromConfig<uint32_t>(configParam, static_cast<uint32_t*>(result));
 		case sizeof (uint64_t):
-			return getFromConfig<uint64_t>(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						static_cast<uint64_t*>(result));
+			return getFromConfig<uint64_t>(configParam, static_cast<uint64_t*>(result));
 		default:
 			return inputSizeError(resultSize);
 		}
@@ -503,70 +477,103 @@ ReadWriteAccess_t defaultSetter(
 
 
 // ***** Shared memory accessors ******************************************
-
 /*!
- * \brief getObjectControlState Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \return Current object control state according to ::OBCState_t
- */
-ReadWriteAccess_t getObjectControlState(
-		const enum DataDictionaryParameter,
-		void * inputPointer,
-		const size_t size) {
-
-	OBCState_t* retval = nullptr;
-
-	if (obcStateMemory == nullptr) {
-		return uninitializedError();
-	}
-
-	if (size == sizeof (OBCState_t) && inputPointer != nullptr) {
-		retval = static_cast<OBCState_t*>(inputPointer);
-	}
-	else {
-		return size != sizeof (OBCState_t) ? inputSizeError(size) : inputPointerError();
-	}
-
-	obcStateMemory = static_cast<volatile OBCState_t*>(claimSharedMemory(obcStateMemory));
-	*retval = obcStateMemory != nullptr ? *obcStateMemory : *retval;
-	obcStateMemory = static_cast<volatile OBCState_t*>(releaseSharedMemory(obcStateMemory));
-
-	return obcStateMemory != nullptr ? READ_OK : memoryError();
-}
-
-
-/*!
- * \brief DataDictionaryGetRVSSAsp Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param ASPD Return variable pointer
+ * \brief setNumberOfObjects Sets the number of objects to the specified value and clears all
+ *			monitor data currently present in the system
+ * \param numberOfobjects number of objects
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t getAdaptiveSyncPointData(
+ReadWriteAccess_t setNumberOfObjects(
 		const enum DataDictionaryParameter,
-		void * inputPointer,
+		const void* inputPointer,
 		const size_t size) {
 
-	ASPType* retval = nullptr;
+	ReadWriteAccess_t result = WRITE_OK;
+	const uint32_t* newNumberOfObjects = nullptr;
+	if (size == sizeof (uint32_t) && inputPointer != nullptr) {
+		newNumberOfObjects = static_cast<const uint32_t*>(inputPointer);
+	}
+	else {
+		return size != sizeof (uint32_t) ? OUT_OF_RANGE : UNDEFINED;
+	}
 
-	if (adaptiveSyncPointMemory == nullptr) {
+	objectDataMemory = static_cast<volatile ObjectDataType*>(claimSharedMemory(objectDataMemory));
+	objectDataMemory = static_cast<volatile ObjectDataType*>(resizeSharedMemory(objectDataMemory, *newNumberOfObjects));
+	objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
+
+	if (objectDataMemory == nullptr) {
+		return memoryError();
+	}
+
+	return result;
+}
+
+/*!
+ * \brief getNumberOfObjects Reads variable from shared memory
+ * \param numberOfobjects number of objects in a test
+ * \return Number of objects present in memory
+ */
+ReadWriteAccess_t getNumberOfObjects(
+		const enum DataDictionaryParameter,
+		void* inputPointer,
+		const size_t size) {
+	int retval;
+	uint32_t* numberOfObjects = nullptr;
+
+	if (size == sizeof (uint32_t) && inputPointer != nullptr) {
+		numberOfObjects = static_cast<uint32_t*>(inputPointer);
+	}
+	else {
+		return size != sizeof (uint32_t) ? OUT_OF_RANGE : UNDEFINED;
+	}
+	objectDataMemory = static_cast<volatile ObjectDataType*>(claimSharedMemory(objectDataMemory));
+	retval = getNumberOfMemoryElements(objectDataMemory);
+	objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
+	*numberOfObjects = retval == -1 ? 0 : static_cast<uint32_t>(retval);
+	return retval != -1 ? READ_OK : uninitializedError();
+}
+
+
+/*!
+ * \brief getObjectTransmitterIDs Reads variable from shared memory
+ * \param numberOfobjects number of objects in a test
+ * \return Number of objects present in memory
+ */
+ReadWriteAccess_t getObjectTransmitterIDs(
+		const enum DataDictionaryParameter,
+		void* inputPointer,
+		const size_t size) {
+	int32_t retval;
+
+	size_t arraySize = size / sizeof (uint32_t);
+	uint32_t* transmitterIDs = static_cast<uint32_t*>(inputPointer);
+	if (inputPointer == nullptr) {
+		return inputPointerError();
+	}
+	if (objectDataMemory == nullptr) {
 		return uninitializedError();
 	}
 
-	if (size == sizeof (ASPType) && inputPointer != nullptr) {
-		retval = static_cast<ASPType*>(inputPointer);
+	memset(inputPointer, 0, size);
+	objectDataMemory = static_cast<volatile ObjectDataType*>(claimSharedMemory(objectDataMemory));
+	retval = getNumberOfMemoryElements(objectDataMemory);
+	if (retval == -1) {
+		objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
+		return uninitializedError();
 	}
-	else {
-		return size != sizeof (ASPType) ? inputSizeError(size) : inputPointerError();
+	else if (static_cast<uint32_t>(retval) > arraySize) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to list transmitter IDs in specified array");
+		objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
+		return inputSizeError(size);
 	}
 
-	adaptiveSyncPointMemory = static_cast<volatile ASPType*>(claimSharedMemory(adaptiveSyncPointMemory));
-	*retval = adaptiveSyncPointMemory != nullptr ? *adaptiveSyncPointMemory : *retval;
-	adaptiveSyncPointMemory = static_cast<volatile ASPType*>(releaseSharedMemory(adaptiveSyncPointMemory));
+	for (uint32_t i = 0; i < static_cast<uint32_t>(retval) && i < arraySize; ++i) {
+		transmitterIDs[i] = objectDataMemory[i].ClientID;
+	}
+	objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
 
-	return adaptiveSyncPointMemory != nullptr ? READ_OK : memoryError();
+	return READ_OK;
 }
-
-/*END ASPDebug*/
 
 
 /*!
@@ -810,104 +817,9 @@ ReadWriteAccess_t DataDictionaryFreeObjectData() {
 
 
 /*NbrOfObjects*/
-/*!
- * \brief setNumberOfObjects Sets the number of objects to the specified value and clears all
- *			monitor data currently present in the system
- * \param numberOfobjects number of objects
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t setNumberOfObjects(
-		const enum DataDictionaryParameter,
-		const void* inputPointer,
-		const size_t size) {
-
-	ReadWriteAccess_t result = WRITE_OK;
-	const uint32_t* newNumberOfObjects = nullptr;
-	if (size == sizeof (uint32_t) && inputPointer != nullptr) {
-		newNumberOfObjects = static_cast<const uint32_t*>(inputPointer);
-	}
-	else {
-		return size != sizeof (uint32_t) ? OUT_OF_RANGE : UNDEFINED;
-	}
-
-	objectDataMemory = static_cast<volatile ObjectDataType*>(claimSharedMemory(objectDataMemory));
-	objectDataMemory = static_cast<volatile ObjectDataType*>(resizeSharedMemory(objectDataMemory, *newNumberOfObjects));
-	objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
-
-	if (objectDataMemory == nullptr) {
-		return memoryError();
-	}
-
-	return result;
-}
-
-/*!
- * \brief getNumberOfObjects Reads variable from shared memory
- * \param numberOfobjects number of objects in a test
- * \return Number of objects present in memory
- */
-ReadWriteAccess_t getNumberOfObjects(
-		const enum DataDictionaryParameter,
-		void* inputPointer,
-		const size_t size) {
-	int retval;
-	uint32_t* numberOfObjects = nullptr;
-
-	if (size == sizeof (uint32_t) && inputPointer != nullptr) {
-		numberOfObjects = static_cast<uint32_t*>(inputPointer);
-	}
-	else {
-		return size != sizeof (uint32_t) ? OUT_OF_RANGE : UNDEFINED;
-	}
-	objectDataMemory = static_cast<volatile ObjectDataType*>(claimSharedMemory(objectDataMemory));
-	retval = getNumberOfMemoryElements(objectDataMemory);
-	objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
-	*numberOfObjects = retval == -1 ? 0 : static_cast<uint32_t>(retval);
-	return retval != -1 ? READ_OK : uninitializedError();
-}
 
 /*END of NbrOfObjects*/
 
-/*!
- * \brief getObjectTransmitterIDs Reads variable from shared memory
- * \param numberOfobjects number of objects in a test
- * \return Number of objects present in memory
- */
-ReadWriteAccess_t getObjectTransmitterIDs(
-		const enum DataDictionaryParameter,
-		void* inputPointer,
-		const size_t size) {
-	int32_t retval;
-
-	size_t arraySize = size / sizeof (uint32_t);
-	uint32_t* transmitterIDs = static_cast<uint32_t*>(inputPointer);
-	if (inputPointer == nullptr) {
-		return inputPointerError();
-	}
-	if (objectDataMemory == nullptr) {
-		return uninitializedError();
-	}
-
-	memset(inputPointer, 0, size);
-	objectDataMemory = static_cast<volatile ObjectDataType*>(claimSharedMemory(objectDataMemory));
-	retval = getNumberOfMemoryElements(objectDataMemory);
-	if (retval == -1) {
-		objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
-		return uninitializedError();
-	}
-	else if (static_cast<uint32_t>(retval) > arraySize) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to list transmitter IDs in specified array");
-		objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
-		return inputSizeError(size);
-	}
-
-	for (uint32_t i = 0; i < static_cast<uint32_t>(retval) && i < arraySize; ++i) {
-		transmitterIDs[i] = objectDataMemory[i].ClientID;
-	}
-	objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
-
-	return READ_OK;
-}
 
 
 /*!

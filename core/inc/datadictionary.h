@@ -44,8 +44,8 @@ enum DataDictionaryParameter {
 	DD_MAX_PACKETS_LOST = CONFIGURATION_PARAMETER_MAX_PACKETS_LOST,						//!	[uint]
 	DD_MISC_DATA = CONFIGURATION_PARAMETER_MISC_DATA,									//! [string]
 	DD_PARAMETER_INVALID = CONFIGURATION_PARAMETER_INVALID,								//!
-	DD_RVSS_ASP,																		//!
-	DD_OBC_STATE,																		//!
+	DD_RVSS_ASP,																		//! [ASPType]
+	DD_OBC_STATE,																		//!	[OBCState_t]
 	DD_OBJECT_DATA,																		//!
 	DD_NUMBER_OF_OBJECTS,																//!
 	DD_OBJECT_TRANSMITTER_IDS,															//!
@@ -61,7 +61,7 @@ ReadWriteAccess_t DataDictionarySet(const enum DataDictionaryParameter param, co
 
 
 ReadWriteAccess_t DataDictionaryConstructor(void);
-ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
+ReadWriteAccess_t DataDictionaryDestructor(void);
 
 ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData);
 ReadWriteAccess_t DataDictionaryClearObjectData(const uint32_t transmitterID);
