@@ -145,6 +145,7 @@ ReadWriteAccess_t DataDictionaryInitObjectData();
 
 ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDs(uint32_t transmitterIDs[], const uint32_t arraySize);
 ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDByIP(const in_addr_t ClientIP, uint32_t *transmitterID);
+
 ReadWriteAccess_t DataDictionaryGetObjectIPByTransmitterID(const uint32_t transmitterID, in_addr_t * ClientIP);
 ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitterID, const uint32_t newTransmitterID);
 
@@ -160,5 +161,5 @@ ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmi
 #ifdef __cplusplus
 }
 #endif
-#endif 
+#endif
 
