@@ -60,13 +60,6 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param, vo
 ReadWriteAccess_t DataDictionarySet(const enum DataDictionaryParameter param, const void *newValue, const size_t newValueSize);
 
 
-
-ReadWriteAccess_t DataDictionarySetRVSSAsp(GSDType *GSD, ASPType *ASPData);
-ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType *GSD, ASPType *ASPData);
-
-ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, OBCState_t OBCState);
-OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD);
-
 ReadWriteAccess_t DataDictionaryConstructor(void);
 ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
 

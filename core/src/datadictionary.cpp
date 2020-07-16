@@ -1,9 +1,9 @@
 /*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2019 CHRONOS II project
+  -- Copyright   : (C) 2020 AstaZero
   ------------------------------------------------------------------------------
-  -- File        : datadictionary.c
-  -- Author      : Sebastian Loh Lindholm
-  -- Description : CHRONOS II
+  -- File        : datadictionary.cpp
+  -- Author      : Lukas Wikander
+  -- Description :
   -- Purpose     :
   -- Reference   :
   ------------------------------------------------------------------------------*/
@@ -24,40 +24,19 @@
 
 
 // Parameters and variables
-static pthread_mutex_t OriginLatitudeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t OriginLongitudeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t OriginAltitudeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t VisualizationServerMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ForceObjectToLocalhostMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPMaxTimeDiffMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPMaxTrajDiffMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPStepBackCountMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPFilterLevelMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPMaxDeltaTimeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t TimeServerIPMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t TimeServerPortMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SimulatorIPMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SimulatorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SimulatorUDPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SimulatorModeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t VOILReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t DTMReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ExternalSupervisorIPMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SupervisorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t DataDictionaryRVSSConfigMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t DataDictionaryRVSSRateMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 
 #define MONR_DATA_FILENAME "MonitorData"
 #define OBC_STATE_FILENAME "ObjectControlState"
+#define ASP_FILENAME "SyncPointData"
 
 static volatile ObjectDataType *objectDataMemory = nullptr;
 static volatile OBCState_t *obcStateMemory = nullptr;
+static volatile ASPType *adaptiveSyncPointMemory = nullptr;
 
 typedef ReadWriteAccess_t GetterFunction(
 		const enum DataDictionaryParameter,
@@ -79,6 +58,8 @@ static GetterFunction getAsIPAddress;
 static GetterFunction defaultGetter;
 static GetterFunction getNumberOfObjects;
 static GetterFunction getObjectTransmitterIDs;
+static GetterFunction getObjectControlState;
+static GetterFunction getAdaptiveSyncPointData;
 
 static SetterFunction setConfigToUnsignedInteger;
 static SetterFunction setConfigToDouble;
@@ -86,6 +67,8 @@ static SetterFunction setConfigToString;
 static SetterFunction setToIPAddress;
 static SetterFunction defaultSetter;
 static SetterFunction setNumberOfObjects;
+static SetterFunction setObjectControlState;
+static SetterFunction setAdaptiveSyncPointData;
 
 static ReadWriteAccess_t uninitializedError(void);
 static ReadWriteAccess_t inputPointerError(void);
@@ -107,11 +90,13 @@ ReadWriteAccess_t DataDictionaryConstructor() {
 	ReadWriteAccess_t Res = READ_OK;
 
 
-	int createdMonitorData, createdObcState;
+	int createdMonitorData, createdObcState, createdASP;
 	objectDataMemory = static_cast<volatile ObjectDataType*>(
 				createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (ObjectDataType), &createdMonitorData));
 	obcStateMemory = static_cast<volatile OBCState_t*>(
 				createSharedMemory(OBC_STATE_FILENAME, 1, sizeof(OBCState_t), &createdObcState));
+	adaptiveSyncPointMemory = static_cast<volatile ASPType*>(
+				createSharedMemory(ASP_FILENAME, 1, sizeof(ASPType), &createdASP));
 
 	if (!createdMonitorData) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
@@ -219,6 +204,12 @@ ReadWriteAccess_t DataDictionarySet(
 	case DD_NUMBER_OF_OBJECTS:
 		setterFunction = &setNumberOfObjects;
 		break;
+	case DD_OBC_STATE:
+		setterFunction = &setObjectControlState;
+		break;
+	case DD_RVSS_ASP:
+		setterFunction = &setAdaptiveSyncPointData;
+		break;
 	}
 
 	return setterFunction(param, newValue, newValueSize);
@@ -270,6 +261,12 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 		break;
 	case DD_OBJECT_TRANSMITTER_IDS:
 		getterFunction = &getObjectTransmitterIDs;
+		break;
+	case DD_OBC_STATE:
+		getterFunction = &getObjectControlState;
+		break;
+	case DD_RVSS_ASP:
+		getterFunction = &getAdaptiveSyncPointData;
 		break;
 	}
 	return getterFunction(param, result, resultSize);
@@ -565,39 +562,35 @@ ReadWriteAccess_t defaultSetter(
 
 // ***** Shared memory accessors ******************************************
 
-
-/*ASPDebug*/
 /*!
- * \brief DataDictionarySetRVSSAsp Parses input variable and sets variable to corresponding value
+ * \brief getObjectControlState Reads variable from shared memory
  * \param GSD Pointer to shared allocated memory
- * \param ASPD
- * \return Result according to ::ReadWriteAccess_t
+ * \return Current object control state according to ::OBCState_t
  */
-ReadWriteAccess_t DataDictionarySetRVSSAsp(GSDType * GSD, ASPType * ASPD) {
-	pthread_mutex_lock(&ASPDataMutex);
-	GSD->ASPData = *ASPD;
-	pthread_mutex_unlock(&ASPDataMutex);
-	return WRITE_OK;
+ReadWriteAccess_t getObjectControlState(
+		const enum DataDictionaryParameter,
+		void * inputPointer,
+		const size_t size) {
+
+	OBCState_t* retval = nullptr;
+
+	if (obcStateMemory == nullptr) {
+		return uninitializedError();
+	}
+
+	if (size == sizeof (OBCState_t) && inputPointer != nullptr) {
+		retval = static_cast<OBCState_t*>(inputPointer);
+	}
+	else {
+		return size != sizeof (OBCState_t) ? inputSizeError(size) : inputPointerError();
+	}
+
+	obcStateMemory = static_cast<volatile OBCState_t*>(claimSharedMemory(obcStateMemory));
+	*retval = obcStateMemory != nullptr ? *obcStateMemory : *retval;
+	obcStateMemory = static_cast<volatile OBCState_t*>(releaseSharedMemory(obcStateMemory));
+
+	return obcStateMemory != nullptr ? READ_OK : memoryError();
 }
-
-/*!
- * \brief DataDictionaryGetRVSSAsp Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param ASPD Return variable pointer
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType * GSD, ASPType * ASPD) {
-	pthread_mutex_lock(&ASPDataMutex);
-	*ASPD = GSD->ASPData;
-	pthread_mutex_unlock(&ASPDataMutex);
-	return READ_OK;
-}
-
-/*END ASPDebug*/
-
-
-/*OBCState*/
-
 
 /*!
  * \brief setObjectControlState Parses input variable and sets variable to corresponding value
@@ -631,36 +624,70 @@ ReadWriteAccess_t setObjectControlState(
 }
 
 /*!
- * \brief DataDictionaryGetOBCStateU8 Reads variable from shared memory
+ * \brief setAdaptiveSyncPointData Parses input variable and sets variable to corresponding value
  * \param GSD Pointer to shared allocated memory
- * \return Current object control state according to ::OBCState_t
+ * \param ASPD
+ * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t getObjectControlState(
+ReadWriteAccess_t setAdaptiveSyncPointData(
+		const enum DataDictionaryParameter,
+		const void * inputPointer,
+		const size_t size) {
+
+	const volatile ASPType* newValue = nullptr;
+
+	if (adaptiveSyncPointMemory == nullptr) {
+		return uninitializedError();
+	}
+
+	if (size == sizeof (ASPType) && inputPointer != nullptr) {
+		newValue = static_cast<const volatile ASPType*>(inputPointer);
+	}
+	else {
+		return size != sizeof (ASPType) ? inputSizeError(size) : inputPointerError();
+	}
+
+	adaptiveSyncPointMemory = static_cast<volatile ASPType*>(claimSharedMemory(adaptiveSyncPointMemory));
+	*adaptiveSyncPointMemory = *newValue;
+	adaptiveSyncPointMemory = static_cast<volatile ASPType*>(releaseSharedMemory(adaptiveSyncPointMemory));
+
+	return adaptiveSyncPointMemory != nullptr ? READ_OK : memoryError();
+	return WRITE_OK;
+}
+
+/*!
+ * \brief DataDictionaryGetRVSSAsp Reads variable from shared memory
+ * \param GSD Pointer to shared allocated memory
+ * \param ASPD Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t getAdaptiveSyncPointData(
 		const enum DataDictionaryParameter,
 		void * inputPointer,
 		const size_t size) {
 
-	OBCState_t* retval = nullptr;
+	ASPType* retval = nullptr;
 
-	if (obcStateMemory == nullptr) {
+	if (adaptiveSyncPointMemory == nullptr) {
 		return uninitializedError();
 	}
 
-	if (size == sizeof (OBCState_t) && inputPointer != nullptr) {
-		retval = static_cast<OBCState_t*>(inputPointer);
+	if (size == sizeof (ASPType) && inputPointer != nullptr) {
+		retval = static_cast<ASPType*>(inputPointer);
 	}
 	else {
-		return size != sizeof (OBCState_t) ? inputSizeError(size) : inputPointerError();
+		return size != sizeof (ASPType) ? inputSizeError(size) : inputPointerError();
 	}
 
-	obcStateMemory = static_cast<volatile OBCState_t*>(claimSharedMemory(obcStateMemory));
-	*retval = obcStateMemory != nullptr ? *obcStateMemory : *retval;
-	obcStateMemory = static_cast<volatile OBCState_t*>(releaseSharedMemory(obcStateMemory));
+	adaptiveSyncPointMemory = static_cast<volatile ASPType*>(claimSharedMemory(adaptiveSyncPointMemory));
+	*retval = adaptiveSyncPointMemory != nullptr ? *adaptiveSyncPointMemory : *retval;
+	adaptiveSyncPointMemory = static_cast<volatile ASPType*>(releaseSharedMemory(adaptiveSyncPointMemory));
 
-	return obcStateMemory != nullptr ? READ_OK : memoryError();
+	return adaptiveSyncPointMemory != nullptr ? READ_OK : memoryError();
 }
 
-/*END OBCState*/
+/*END ASPDebug*/
+
 
 /*!
  * \brief DataDictionarySetMonitorData Parses input variable and sets variable to corresponding value
@@ -777,9 +804,7 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t transmitterId, Obj
 		return inputPointerError();
 	}
 	if (transmitterId == 0) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
-		return UNDEFINED;
+		return reservedIDError();
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
