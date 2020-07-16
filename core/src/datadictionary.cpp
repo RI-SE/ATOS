@@ -14,6 +14,7 @@
 
 #include <string>
 #include <algorithm>
+#include <sstream>
 #include <stdlib.h>
 #include <pthread.h>
 #include <sys/stat.h>
@@ -27,7 +28,6 @@
 static pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
-
 
 
 #define MONR_DATA_FILENAME "MonitorData"
@@ -51,30 +51,101 @@ typedef ReadWriteAccess_t SetterFunction(
 /*------------------------------------------------------------
   -- Static function declarations
   ------------------------------------------------------------*/
-static GetterFunction getConfigAsUnsignedInteger;
-static GetterFunction getConfigAsDouble;
-static GetterFunction getConfigAsString;
 static GetterFunction getAsIPAddress;
 static GetterFunction defaultGetter;
 static GetterFunction getNumberOfObjects;
 static GetterFunction getObjectTransmitterIDs;
-static GetterFunction getObjectControlState;
-static GetterFunction getAdaptiveSyncPointData;
 
-static SetterFunction setConfigToUnsignedInteger;
-static SetterFunction setConfigToDouble;
-static SetterFunction setConfigToString;
 static SetterFunction setToIPAddress;
 static SetterFunction defaultSetter;
 static SetterFunction setNumberOfObjects;
-static SetterFunction setObjectControlState;
-static SetterFunction setAdaptiveSyncPointData;
 
 static ReadWriteAccess_t uninitializedError(void);
 static ReadWriteAccess_t inputPointerError(void);
 static ReadWriteAccess_t inputSizeError(const size_t);
 static ReadWriteAccess_t memoryError(void);
 static ReadWriteAccess_t reservedIDError(void);
+static ReadWriteAccess_t parameterNotFoundError(const enum ConfigurationFileParameter);
+static ReadWriteAccess_t valueParseError(char *);
+
+template <typename T>
+ReadWriteAccess_t getFromMemory(
+		volatile T* dataDictMemory,
+		T* inputPointer) {
+
+	if (dataDictMemory == nullptr) {
+		return uninitializedError();
+	}
+	if (inputPointer == nullptr) {
+		return inputPointerError();
+	}
+
+	dataDictMemory = static_cast<volatile T*>(claimSharedMemory(dataDictMemory));
+	*inputPointer = dataDictMemory != nullptr ? *const_cast<T*>(dataDictMemory) : *inputPointer;
+	dataDictMemory = static_cast<volatile T*>(releaseSharedMemory(dataDictMemory));
+
+	return dataDictMemory != nullptr ? READ_OK : memoryError();
+}
+
+template <typename T>
+ReadWriteAccess_t setMemoryTo(
+		volatile T* dataDictMemory,
+		const T* inputPointer) {
+
+	if (dataDictMemory == nullptr) {
+		return uninitializedError();
+	}
+	if (inputPointer == nullptr) {
+		return inputPointerError();
+	}
+
+	dataDictMemory = static_cast<volatile T*>(claimSharedMemory(dataDictMemory));
+	if (dataDictMemory != nullptr) {
+		*const_cast<T*>(dataDictMemory) = *inputPointer;
+	}
+	dataDictMemory = static_cast<volatile T*>(releaseSharedMemory(dataDictMemory));
+
+	return dataDictMemory != nullptr ? WRITE_OK : memoryError();
+}
+
+template <typename T>
+ReadWriteAccess_t getFromConfig(
+		const enum ConfigurationFileParameter param,
+		T* inputPointer) {
+
+	if (inputPointer == nullptr)
+		return inputPointerError();
+
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_52];
+	if (UtilReadConfigurationParameter(param, resultBuffer, sizeof (resultBuffer))) {
+		std::istringstream ss(resultBuffer);
+		return (ss >> *inputPointer) ? READ_OK
+									 : valueParseError(resultBuffer);
+	}
+	else {
+		return parameterNotFoundError(param);
+	}
+
+}
+template <typename T>
+ReadWriteAccess_t setConfigTo(
+		const enum ConfigurationFileParameter param,
+		const T* inputPointer) {
+
+	if (inputPointer == nullptr)
+		return inputPointerError();
+
+	std::string setting;
+	std::ostringstream ss(setting);
+	ss << *inputPointer;
+	if (UtilWriteConfigurationParameter(param, setting.c_str(), setting.length()+1)){
+		return WRITE_OK;
+	}
+	else {
+		return parameterNotFoundError(param);
+	}
+}
+
 /*------------------------------------------------------------
   -- Functions
   ------------------------------------------------------------*/
@@ -159,8 +230,11 @@ ReadWriteAccess_t DataDictionarySet(
 	case DD_VOIL_RECEIVERS:
 	case DD_DTM_RECEIVERS:
 	case DD_MISC_DATA:
-		setterFunction = &setConfigToString;
-		break;
+	{
+		std::string str(static_cast<const char*>(newValue), newValueSize);
+		return setConfigTo<std::string>(
+					static_cast<const enum ConfigurationFileParameter>(param), &str);
+	}
 	case DD_ORIGIN_LATITUDE:
 	case DD_ORIGIN_LONGITUDE:
 	case DD_ORIGIN_ALTITUDE:
@@ -172,9 +246,24 @@ ReadWriteAccess_t DataDictionarySet(
 		std::string str(static_cast<const char*>(newValue), newValueSize);
 		size_t nonNumericPos = str.find_first_not_of("0123456789+-,.");
 		bool isNumericString = nonNumericPos == std::string::npos || str[nonNumericPos] == '\0';
-		setterFunction = isNumericString ? &setConfigToString
-										 : &setConfigToDouble;
-		break;
+		if (isNumericString) {
+			return setConfigTo<std::string>(
+						static_cast<const enum ConfigurationFileParameter>(param), &str);
+		}
+		else {
+			switch (newValueSize) {
+			case sizeof (double):
+				return setConfigTo<double>(
+							static_cast<const enum ConfigurationFileParameter>(param),
+							static_cast<const double*>(newValue));
+			case sizeof (float):
+				return setConfigTo<float>(
+							static_cast<const enum ConfigurationFileParameter>(param),
+							static_cast<const float*>(newValue));
+			default:
+				return inputSizeError(newValueSize);
+			}
+		}
 	}
 	case DD_FORCE_OBJECT_TO_LOCALHOST:
 	case DD_ASP_STEP_BACK_COUNT:
@@ -190,9 +279,32 @@ ReadWriteAccess_t DataDictionarySet(
 		std::string str(static_cast<const char*>(newValue), newValueSize);
 		size_t nonNumericPos = str.find_first_not_of("0123456789+-");
 		bool isNumericString = nonNumericPos == std::string::npos || str[nonNumericPos] == '\0';
-		setterFunction = isNumericString ? &setConfigToString
-										 : &setConfigToUnsignedInteger;
-		break;
+		if (isNumericString) {
+			return setConfigTo<std::string>(
+						static_cast<const enum ConfigurationFileParameter>(param), &str);
+		}
+		else {
+			switch (newValueSize) {
+			case sizeof (uint8_t):
+				return setConfigTo<uint8_t>(
+							static_cast<const enum ConfigurationFileParameter>(param),
+							static_cast<const uint8_t*>(newValue));
+			case sizeof (uint16_t):
+				return setConfigTo<uint16_t>(
+							static_cast<const enum ConfigurationFileParameter>(param),
+							static_cast<const uint16_t*>(newValue));
+			case sizeof (uint32_t):
+				return setConfigTo<uint32_t>(
+							static_cast<const enum ConfigurationFileParameter>(param),
+							static_cast<const uint32_t*>(newValue));
+			case sizeof (uint64_t):
+				return setConfigTo<uint64_t>(
+							static_cast<const enum ConfigurationFileParameter>(param),
+							static_cast<const uint64_t*>(newValue));
+			default:
+				return inputSizeError(newValueSize);
+			}
+		}
 	}
 	case DD_VISUALIZATION_SERVER_NAME:
 	case DD_TIME_SERVER_IP:
@@ -205,11 +317,15 @@ ReadWriteAccess_t DataDictionarySet(
 		setterFunction = &setNumberOfObjects;
 		break;
 	case DD_OBC_STATE:
-		setterFunction = &setObjectControlState;
-		break;
+		return newValueSize == sizeof (OBCState_t) ? setMemoryTo<OBCState_t>(
+														 obcStateMemory,
+														 static_cast<const OBCState_t*>(newValue))
+												   : inputSizeError(newValueSize);
 	case DD_RVSS_ASP:
-		setterFunction = &setAdaptiveSyncPointData;
-		break;
+		return newValueSize == sizeof (ASPType) ? setMemoryTo<ASPType>(
+													  adaptiveSyncPointMemory,
+													  static_cast<const ASPType*>(newValue))
+												: inputSizeError(newValueSize);
 	}
 
 	return setterFunction(param, newValue, newValueSize);
@@ -225,8 +341,11 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 	case DD_VOIL_RECEIVERS:
 	case DD_DTM_RECEIVERS:
 	case DD_MISC_DATA:
-		getterFunction = &getConfigAsString;
-		break;
+	{
+		return getFromConfig<char>(
+					static_cast<const enum ConfigurationFileParameter>(param),
+					static_cast<char*>(result));
+	}
 	case DD_ORIGIN_LATITUDE:
 	case DD_ORIGIN_LONGITUDE:
 	case DD_ORIGIN_ALTITUDE:
@@ -234,9 +353,21 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 	case DD_ASP_MAX_TRAJ_DIFF:
 	case DD_ASP_FILTER_LEVEL:
 	case DD_ASP_MAX_DELTA_TIME:
-		getterFunction = resultSize == sizeof (double) ? &getConfigAsDouble
-													   : &getConfigAsString;
-		break;
+		if (resultSize == sizeof (double)) {
+			return getFromConfig<double>(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						static_cast<double*>(result));
+		}
+		else if (resultSize == sizeof (float)) {
+			return getFromConfig<float>(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						static_cast<float*>(result));
+		}
+		else {
+			return getFromConfig<char>(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						static_cast<char*>(result));
+		}
 	case DD_FORCE_OBJECT_TO_LOCALHOST:
 	case DD_ASP_STEP_BACK_COUNT:
 	case DD_TIME_SERVER_PORT:
@@ -247,8 +378,26 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 	case DD_RVSS_CONFIG:
 	case DD_RVSS_RATE:
 	case DD_MAX_PACKETS_LOST:
-		getterFunction = &getConfigAsUnsignedInteger;
-		break;
+		switch (resultSize) {
+		case sizeof (uint8_t):
+			return getFromConfig<uint8_t>(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						static_cast<uint8_t*>(result));
+		case sizeof (uint16_t):
+			return getFromConfig<uint16_t>(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						static_cast<uint16_t*>(result));
+		case sizeof (uint32_t):
+			return getFromConfig<uint32_t>(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						static_cast<uint32_t*>(result));
+		case sizeof (uint64_t):
+			return getFromConfig<uint64_t>(
+						static_cast<const enum ConfigurationFileParameter>(param),
+						static_cast<uint64_t*>(result));
+		default:
+			return inputSizeError(resultSize);
+		}
 	case DD_VISUALIZATION_SERVER_NAME:
 	case DD_TIME_SERVER_IP:
 	case DD_SIMULATOR_IP:
@@ -263,135 +412,16 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 		getterFunction = &getObjectTransmitterIDs;
 		break;
 	case DD_OBC_STATE:
-		getterFunction = &getObjectControlState;
-		break;
+		return resultSize == sizeof (OBCState_t) ? getFromMemory<OBCState_t>(obcStateMemory, static_cast<OBCState_t*>(result))
+												 : inputSizeError(resultSize);
 	case DD_RVSS_ASP:
-		getterFunction = &getAdaptiveSyncPointData;
-		break;
+		return resultSize == sizeof (ASPType) ? getFromMemory<ASPType>(adaptiveSyncPointMemory, static_cast<ASPType*>(result))
+											  : inputSizeError(resultSize);
 	}
 	return getterFunction(param, result, resultSize);
 }
 
-ReadWriteAccess_t getConfigAsDouble(
-		const enum DataDictionaryParameter param,
-		void *result,
-		const size_t resultSize) {
-	ReadWriteAccess_t retval = UNDEFINED;
-	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
-	char *endptr = nullptr;
-	if (resultSize != sizeof (double)) {
-		return inputSizeError(resultSize);
-	}
-	if (UtilReadConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
-									   resultBuffer, sizeof (resultBuffer))) {
-		double r = std::strtod(resultBuffer, &endptr);
-		if (endptr != resultBuffer) {
-			retval = READ_OK;
-			*static_cast<double*>(result) = r;
-		}
-		else {
-			retval = PARAMETER_NOTFOUND;
-			LogMessage(LOG_LEVEL_ERROR, "Cannot cast parameter value <%s> to double",
-					   resultBuffer);
-		}
-	}
-	else {
-		retval = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
-				   UtilGetConfigurationParameterAsString(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						resultBuffer, sizeof (resultBuffer)));
-	}
-	return retval;
-}
 
-ReadWriteAccess_t getConfigAsUnsignedInteger(
-		const enum DataDictionaryParameter param,
-		void *result,
-		const size_t resultSize) {
-	ReadWriteAccess_t retval = UNDEFINED;
-	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
-	char *endptr = nullptr;
-	if (UtilReadConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
-									   resultBuffer, sizeof (resultBuffer))) {
-		uint64_t r = std::strtoul(resultBuffer, &endptr, 10);
-		if (endptr != resultBuffer) {
-			retval = OUT_OF_RANGE;
-			switch (resultSize) {
-			case sizeof (uint8_t):
-				if (r <= UINT8_MAX) {
-					*static_cast<uint8_t*>(result) = static_cast<uint8_t>(r);
-					retval = READ_OK;
-				}
-				break;
-			case sizeof (uint16_t):
-				if (r <= UINT16_MAX) {
-					*static_cast<uint16_t*>(result) = static_cast<uint16_t>(r);
-					retval = READ_OK;
-				}
-				break;
-			case sizeof (uint32_t):
-				if (r <= UINT32_MAX) {
-					*static_cast<uint32_t*>(result) = static_cast<uint32_t>(r);
-					retval = READ_OK;
-				}
-				break;
-			case sizeof (uint64_t):
-				if (r <= UINT64_MAX) {
-					*static_cast<uint64_t*>(result) = r;
-					retval = READ_OK;
-				}
-				break;
-			default:
-				return inputSizeError(resultSize);
-			}
-			if (retval == OUT_OF_RANGE) {
-				LogMessage(LOG_LEVEL_ERROR, "Value %u for parameter %s falls outside permitted range of integer parameter with size %u",
-						   r, UtilGetConfigurationParameterAsString(
-								static_cast<const enum ConfigurationFileParameter>(param),
-								resultBuffer, sizeof (resultBuffer)), resultSize);
-			}
-		}
-		else {
-			retval = PARAMETER_NOTFOUND;
-			LogMessage(LOG_LEVEL_ERROR, "Cannot cast parameter value <%s> to integer",
-					   resultBuffer);
-		}
-	}
-	else {
-		retval = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
-				   UtilGetConfigurationParameterAsString(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						resultBuffer, sizeof (resultBuffer)));
-	}
-	return retval;
-}
-
-
-ReadWriteAccess_t getConfigAsString(
-		const enum DataDictionaryParameter param,
-		void *result,
-		const size_t resultSize) {
-
-	ReadWriteAccess_t retval = UNDEFINED;
-	char resultBuffer[DD_CONTROL_BUFFER_SIZE_1024];
-
-	if (UtilReadConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
-									   resultBuffer, sizeof (resultBuffer))) {
-		retval = READ_OK;
-		strncpy(static_cast<char*>(result), resultBuffer,
-				std::min(sizeof (resultBuffer), resultSize));
-	}
-	else {
-		retval = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
-				   UtilGetConfigurationParameterAsString(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						resultBuffer, sizeof (resultBuffer)));
-	}
-	return retval;
-}
 
 ReadWriteAccess_t getConfigAsIPAddress(
 		const enum DataDictionaryParameter param,
@@ -430,94 +460,6 @@ ReadWriteAccess_t defaultGetter(
 }
 
 
-ReadWriteAccess_t setConfigToDouble(
-		const enum DataDictionaryParameter param,
-		const void *newValue,
-		const size_t newValueSize) {
-
-	ReadWriteAccess_t retval = UNDEFINED;
-	char valueBuffer[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (newValueSize != sizeof (double)) {
-		return inputSizeError(newValueSize);
-	}
-
-	snprintf(valueBuffer, sizeof (valueBuffer), "%.15f", *static_cast<const double*>(newValue));
-	if (UtilWriteConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param), valueBuffer, sizeof (valueBuffer))) {
-		retval = WRITE_OK;
-	}
-	else {
-		retval = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
-				   UtilGetConfigurationParameterAsString(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						valueBuffer, sizeof (valueBuffer)));
-	}
-	return retval;
-}
-
-ReadWriteAccess_t setConfigToUnsignedInteger(
-		const enum DataDictionaryParameter param,
-		const void *newValue,
-		const size_t newValueSize) {
-
-	ReadWriteAccess_t retval = UNDEFINED;
-	char valueBuffer[DD_CONTROL_BUFFER_SIZE_20];
-
-	switch (newValueSize) {
-	case sizeof (uint8_t):
-		snprintf(valueBuffer, sizeof (valueBuffer), "%u", *static_cast<const uint8_t*>(newValue));
-		break;
-	case sizeof (uint16_t):
-		snprintf(valueBuffer, sizeof (valueBuffer), "%u", *static_cast<const uint16_t*>(newValue));
-		break;
-	case sizeof (uint32_t):
-		snprintf(valueBuffer, sizeof (valueBuffer), "%u", *static_cast<const uint32_t*>(newValue));
-		break;
-	case sizeof (uint64_t):
-		snprintf(valueBuffer, sizeof (valueBuffer), "%lu", *static_cast<const uint64_t*>(newValue));
-		break;
-	default:
-		return inputSizeError(newValueSize);
-	}
-	if (UtilWriteConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
-										valueBuffer, sizeof (valueBuffer))) {
-		retval = WRITE_OK;
-	}
-	else {
-		retval = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
-				   UtilGetConfigurationParameterAsString(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						valueBuffer, sizeof (valueBuffer)));
-	}
-	return retval;
-}
-
-ReadWriteAccess_t setConfigToString(
-		const enum DataDictionaryParameter param,
-		const void *newValue,
-		const size_t newValueSize) {
-	if (!std::all_of(static_cast<const char*>(newValue),
-					 static_cast<const char*>(newValue)+newValueSize,
-					 [](const char &c){ return std::isprint(c) || c == '\0'; })) {
-		std::string str(static_cast<const char*>(newValue), newValueSize);
-		LogMessage(LOG_LEVEL_ERROR, "Detected nonprintable character in string %s", str.c_str());
-		return UNDEFINED;
-	}
-	if (UtilWriteConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
-										static_cast<const char*>(newValue), newValueSize)) {
-		return WRITE_OK;
-	}
-	else {
-		char parameterName[DD_CONTROL_BUFFER_SIZE_52];
-		LogMessage(LOG_LEVEL_ERROR, "%s not found!",
-				   UtilGetConfigurationParameterAsString(
-						static_cast<const enum ConfigurationFileParameter>(param),
-						parameterName, sizeof (parameterName)));
-		return PARAMETER_NOTFOUND;
-	}
-}
 
 ReadWriteAccess_t setConfigToIPAddress(
 		const enum DataDictionaryParameter param,
@@ -592,68 +534,6 @@ ReadWriteAccess_t getObjectControlState(
 	return obcStateMemory != nullptr ? READ_OK : memoryError();
 }
 
-/*!
- * \brief setObjectControlState Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
- * \param OBCState
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t setObjectControlState(
-		const enum DataDictionaryParameter,
-		const void * inputPointer,
-		const size_t size) {
-
-	const OBCState_t* newValue = nullptr;
-
-	if (obcStateMemory == nullptr) {
-		return uninitializedError();
-	}
-
-	if (size == sizeof (OBCState_t) && inputPointer != nullptr) {
-		newValue = static_cast<const OBCState_t*>(inputPointer);
-	}
-	else {
-		return size != sizeof (OBCState_t) ? inputSizeError(size) : inputPointerError();
-	}
-
-	obcStateMemory = static_cast<volatile OBCState_t*>(claimSharedMemory(obcStateMemory));
-	*obcStateMemory = *newValue;
-	obcStateMemory = static_cast<volatile OBCState_t*>(releaseSharedMemory(obcStateMemory));
-
-	return obcStateMemory != nullptr ? WRITE_OK : memoryError();
-}
-
-/*!
- * \brief setAdaptiveSyncPointData Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
- * \param ASPD
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t setAdaptiveSyncPointData(
-		const enum DataDictionaryParameter,
-		const void * inputPointer,
-		const size_t size) {
-
-	const volatile ASPType* newValue = nullptr;
-
-	if (adaptiveSyncPointMemory == nullptr) {
-		return uninitializedError();
-	}
-
-	if (size == sizeof (ASPType) && inputPointer != nullptr) {
-		newValue = static_cast<const volatile ASPType*>(inputPointer);
-	}
-	else {
-		return size != sizeof (ASPType) ? inputSizeError(size) : inputPointerError();
-	}
-
-	adaptiveSyncPointMemory = static_cast<volatile ASPType*>(claimSharedMemory(adaptiveSyncPointMemory));
-	*adaptiveSyncPointMemory = *newValue;
-	adaptiveSyncPointMemory = static_cast<volatile ASPType*>(releaseSharedMemory(adaptiveSyncPointMemory));
-
-	return adaptiveSyncPointMemory != nullptr ? READ_OK : memoryError();
-	return WRITE_OK;
-}
 
 /*!
  * \brief DataDictionaryGetRVSSAsp Reads variable from shared memory
@@ -1360,4 +1240,19 @@ ReadWriteAccess_t reservedIDError() {
 	errno = EINVAL;
 	LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
 	return UNDEFINED;
+}
+
+ReadWriteAccess_t parameterNotFoundError(const ConfigurationFileParameter param) {
+	errno = EINVAL;
+	char valueBuffer[DD_CONTROL_BUFFER_SIZE_52];
+	LogMessage(LOG_LEVEL_ERROR, "%s not found",
+			   UtilGetConfigurationParameterAsString(
+					param, valueBuffer, sizeof (valueBuffer)));
+	return PARAMETER_NOTFOUND;
+}
+
+ReadWriteAccess_t valueParseError(char* string) {
+	errno = EINVAL;
+	LogMessage(LOG_LEVEL_ERROR, "Unable to parse value %s into value", string);
+	return PARAMETER_NOTFOUND;
 }
