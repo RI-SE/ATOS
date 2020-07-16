@@ -72,12 +72,8 @@ ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
 
 ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData);
 ReadWriteAccess_t DataDictionaryClearObjectData(const uint32_t transmitterID);
-ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObjects);
-ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t *numberOfObjects);
 ReadWriteAccess_t DataDictionaryFreeObjectData();
-ReadWriteAccess_t DataDictionaryInitObjectData();
 
-ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDs(uint32_t transmitterIDs[], const uint32_t arraySize);
 ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDByIP(const in_addr_t ClientIP, uint32_t *transmitterID);
 ReadWriteAccess_t DataDictionaryGetObjectIPByTransmitterID(const uint32_t transmitterID, in_addr_t * ClientIP);
 ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitterID, const uint32_t newTransmitterID);

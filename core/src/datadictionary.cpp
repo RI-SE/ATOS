@@ -236,7 +236,9 @@ ReadWriteAccess_t DataDictionarySet(
 		setterFunction = newValueSize == sizeof (in_addr_t) ? &setToIPAddress
 															: &setConfigToString;
 		break;
-
+	case DD_NUMBER_OF_OBJECTS:
+		setterFunction = &setNumberOfObjects;
+		break;
 	}
 
 	return setterFunction(param, newValue, newValueSize);
@@ -283,13 +285,20 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 		getterFunction = resultSize == sizeof (in_addr_t) ? &getAsIPAddress
 														  : &getConfigAsString;
 		break;
+	case DD_NUMBER_OF_OBJECTS:
+		getterFunction = &getNumberOfObjects;
+		break;
+	case DD_OBJECT_TRANSMITTER_IDS:
+		getterFunction = &getObjectTransmitterIDs;
+		break;
 	}
 	return getterFunction(param, result, resultSize);
 }
 
-ReadWriteAccess_t getConfigAsDouble(const enum DataDictionaryParameter param,
-										void *result,
-										const size_t resultSize) {
+ReadWriteAccess_t getConfigAsDouble(
+		const enum DataDictionaryParameter param,
+		void *result,
+		const size_t resultSize) {
 	ReadWriteAccess_t retval = UNDEFINED;
 	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
 	char *endptr = nullptr;
@@ -574,10 +583,14 @@ ReadWriteAccess_t setConfigToIPAddress(
 ReadWriteAccess_t defaultSetter(
 		const enum DataDictionaryParameter,
 		const void *,
-		const size_t) {
-	LogMessage(LOG_LEVEL_ERROR, "No data dictionary function exists for setting selected parameter");
+		const size_t size) {
+	LogMessage(LOG_LEVEL_ERROR, "No data dictionary function exists for setting selected parameter with size %d", size);
 	return PARAMETER_NOTFOUND;
 }
+
+
+
+// ***** Shared memory accessors ******************************************
 
 
 /*ASPDebug*/
@@ -611,20 +624,37 @@ ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType * GSD, ASPType * ASPD) {
 
 
 /*OBCState*/
+
+
 /*!
- * \brief DataDictionarySetOBCStateU8 Parses input variable and sets variable to corresponding value
+ * \brief setObjectControlState Parses input variable and sets variable to corresponding value
  * \param GSD Pointer to shared allocated memory
  * \param OBCState
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType * GSD, OBCState_t OBCState) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t setObjectControlState(
+		const enum DataDictionaryParameter,
+		const void * inputPointer,
+		const size_t size) {
 
-	Res = WRITE_OK;
-	pthread_mutex_lock(&OBCStateMutex);
-	GSD->OBCStateU8 = OBCState;
-	pthread_mutex_unlock(&OBCStateMutex);
-	return Res;
+	const OBCState_t* newValue = nullptr;
+
+	if (obcStateMemory == nullptr) {
+		return uninitializedError();
+	}
+
+	if (size == sizeof (OBCState_t) && inputPointer != nullptr) {
+		newValue = static_cast<const OBCState_t*>(inputPointer);
+	}
+	else {
+		return size != sizeof (OBCState_t) ? inputSizeError(size) : inputPointerError();
+	}
+
+	obcStateMemory = static_cast<volatile OBCState_t*>(claimSharedMemory(obcStateMemory));
+	*obcStateMemory = *newValue;
+	obcStateMemory = static_cast<volatile OBCState_t*>(releaseSharedMemory(obcStateMemory));
+
+	return obcStateMemory != nullptr ? WRITE_OK : memoryError();
 }
 
 /*!
@@ -632,32 +662,32 @@ ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType * GSD, OBCState_t OBCState
  * \param GSD Pointer to shared allocated memory
  * \return Current object control state according to ::OBCState_t
  */
-OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
-	OBCState_t Ret;
+ReadWriteAccess_t getObjectControlState(
+		const enum DataDictionaryParameter,
+		void * inputPointer,
+		const size_t size) {
 
-	pthread_mutex_lock(&OBCStateMutex);
-	Ret = GSD->OBCStateU8;
-	pthread_mutex_unlock(&OBCStateMutex);
-	return Ret;
+	OBCState_t* retval = nullptr;
+
+	if (obcStateMemory == nullptr) {
+		return uninitializedError();
+	}
+
+	if (size == sizeof (OBCState_t) && inputPointer != nullptr) {
+		retval = static_cast<OBCState_t*>(inputPointer);
+	}
+	else {
+		return size != sizeof (OBCState_t) ? inputSizeError(size) : inputPointerError();
+	}
+
+	obcStateMemory = static_cast<volatile OBCState_t*>(claimSharedMemory(obcStateMemory));
+	*retval = obcStateMemory != nullptr ? *obcStateMemory : *retval;
+	obcStateMemory = static_cast<volatile OBCState_t*>(releaseSharedMemory(obcStateMemory));
+
+	return obcStateMemory != nullptr ? READ_OK : memoryError();
 }
 
 /*END OBCState*/
-
-/*!
- * \brief DataDictionaryInitObjectData inits a data structure for saving object monr
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitObjectData() {
-
-	int createdMemory;
-
-	objectDataMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (ObjectDataType), &createdMemory);
-	if (objectDataMemory == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared monitor data memory");
-		return UNDEFINED;
-	}
-	return createdMemory ? WRITE_OK : READ_OK;
-}
 
 /*!
  * \brief DataDictionarySetMonitorData Parses input variable and sets variable to corresponding value
@@ -928,84 +958,100 @@ ReadWriteAccess_t DataDictionaryFreeObjectData() {
 
 /*NbrOfObjects*/
 /*!
- * \brief DataDictionarySetNumberOfObjects Sets the number of objects to the specified value and clears all
+ * \brief setNumberOfObjects Sets the number of objects to the specified value and clears all
  *			monitor data currently present in the system
  * \param numberOfobjects number of objects
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObjects) {
+ReadWriteAccess_t setNumberOfObjects(
+		const enum DataDictionaryParameter,
+		const void* inputPointer,
+		const size_t size) {
 
-	unsigned int numberOfObjects;
 	ReadWriteAccess_t result = WRITE_OK;
+	const uint32_t* newNumberOfObjects = nullptr;
+	if (size == sizeof (uint32_t) && inputPointer != nullptr) {
+		newNumberOfObjects = static_cast<const uint32_t*>(inputPointer);
+	}
+	else {
+		return size != sizeof (uint32_t) ? OUT_OF_RANGE : UNDEFINED;
+	}
 
-	objectDataMemory = claimSharedMemory(objectDataMemory);
-	objectDataMemory = resizeSharedMemory(objectDataMemory, newNumberOfObjects);
-	numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
-	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	objectDataMemory = static_cast<volatile ObjectDataType*>(claimSharedMemory(objectDataMemory));
+	objectDataMemory = static_cast<volatile ObjectDataType*>(resizeSharedMemory(objectDataMemory, *newNumberOfObjects));
+	objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
 
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return memoryError();
 	}
 
 	return result;
 }
 
 /*!
- * \brief DataDictionaryGetNumberOfObjects Reads variable from shared memory
+ * \brief getNumberOfObjects Reads variable from shared memory
  * \param numberOfobjects number of objects in a test
  * \return Number of objects present in memory
  */
-ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t * numberOfObjects) {
+ReadWriteAccess_t getNumberOfObjects(
+		const enum DataDictionaryParameter,
+		void* inputPointer,
+		const size_t size) {
 	int retval;
+	uint32_t* numberOfObjects = nullptr;
 
-	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (size == sizeof (uint32_t) && inputPointer != nullptr) {
+		numberOfObjects = static_cast<uint32_t*>(inputPointer);
+	}
+	else {
+		return size != sizeof (uint32_t) ? OUT_OF_RANGE : UNDEFINED;
+	}
+	objectDataMemory = static_cast<volatile ObjectDataType*>(claimSharedMemory(objectDataMemory));
 	retval = getNumberOfMemoryElements(objectDataMemory);
-	objectDataMemory = releaseSharedMemory(objectDataMemory);
-	*numberOfObjects = retval == -1 ? 0 : (uint32_t) retval;
-	return retval == -1 ? UNDEFINED : READ_OK;
+	objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
+	*numberOfObjects = retval == -1 ? 0 : static_cast<uint32_t>(retval);
+	return retval != -1 ? READ_OK : uninitializedError();
 }
 
 /*END of NbrOfObjects*/
 
 /*!
- * \brief DataDictionaryGetNumberOfObjects Reads variable from shared memory
+ * \brief getObjectTransmitterIDs Reads variable from shared memory
  * \param numberOfobjects number of objects in a test
  * \return Number of objects present in memory
  */
-ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDs(uint32_t transmitterIDs[], const uint32_t arraySize) {
+ReadWriteAccess_t getObjectTransmitterIDs(
+		const enum DataDictionaryParameter,
+		void* inputPointer,
+		const size_t size) {
 	int32_t retval;
 
-	if (transmitterIDs == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Data dictionary input pointer error");
-		return UNDEFINED;
+	size_t arraySize = size / sizeof (uint32_t);
+	uint32_t* transmitterIDs = static_cast<uint32_t*>(inputPointer);
+	if (inputPointer == nullptr) {
+		return inputPointerError();
 	}
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Data dictionary monitor data read error");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return uninitializedError();
 	}
 
-	memset(transmitterIDs, 0, arraySize * sizeof (transmitterIDs[0]));
-	objectDataMemory = claimSharedMemory(objectDataMemory);
+	memset(inputPointer, 0, size);
+	objectDataMemory = static_cast<volatile ObjectDataType*>(claimSharedMemory(objectDataMemory));
 	retval = getNumberOfMemoryElements(objectDataMemory);
 	if (retval == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Error reading number of objects from shared memory");
-		objectDataMemory = releaseSharedMemory(objectDataMemory);
-		return UNDEFINED;
+		objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
+		return uninitializedError();
 	}
-	else if ((uint32_t) retval > arraySize) {
+	else if (static_cast<uint32_t>(retval) > arraySize) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to list transmitter IDs in specified array");
-		objectDataMemory = releaseSharedMemory(objectDataMemory);
-		return UNDEFINED;
+		objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
+		return inputSizeError(size);
 	}
 
-	for (int i = 0; i < retval; ++i) {
+	for (uint32_t i = 0; i < static_cast<uint32_t>(retval) && i < arraySize; ++i) {
 		transmitterIDs[i] = objectDataMemory[i].ClientID;
 	}
-	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	objectDataMemory = static_cast<volatile ObjectDataType*>(releaseSharedMemory(objectDataMemory));
 
 	return READ_OK;
 }
@@ -1073,11 +1119,6 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 		}
 	}
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
-
-
-	if (result != PARAMETER_NOTFOUND)
-
-		objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
 }
