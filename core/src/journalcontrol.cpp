@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <vector>
 #include <unordered_set>
+#include <set>
 #include <fstream>
 #include <iostream>
 #include <chrono>
@@ -24,6 +25,7 @@
 
 #include "journalcontrol.h"
 #include "journal.h"
+#include "datadictionary.h"
 
 namespace fs = std::experimental::filesystem;
 
@@ -36,7 +38,7 @@ public:
 		std::streampos filePosition;
 		bool valid = false;
 		void place(const fs::path &path, const std::ios_base::seekdir &pos) {
-			std::ifstream istrm(path.string(), pos == std::ios_base::end ? std::ios_base::ate
+			std::ifstream istrm(path, pos == std::ios_base::end ? std::ios_base::ate
 																		 : std::ios_base::in);
 			if (istrm.is_open()) {
 				LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark to file %s", path.c_str());
@@ -55,6 +57,7 @@ public:
 	std::string moduleName;
 	mutable Bookmark startReference;
 	mutable Bookmark stopReference;
+	mutable std::set<fs::path> containedFiles;
 
 	bool operator==(const Journal &other) const {
 		return this->moduleName == other.moduleName;
@@ -78,9 +81,10 @@ static volatile bool quit = false;
   -- Static function declarations.
   ------------------------------------------------------------*/
 static void signalHandler(int signo);
-static int initializeModule(LOG_LEVEL logLevel);
+static int initializeModule(const LOG_LEVEL logLevel);
 static void storeJournalStartBookmarks(std::unordered_set<Journal> &journals);
 static void storeJournalStopBookmarks(std::unordered_set<Journal> &journals);
+static int generateOutputJournal(std::unordered_set<Journal> &journals);
 static std::vector<fs::path> getJournalFilesFromToday(void);
 static std::string getCurrentDateAsString(void);
 
@@ -107,7 +111,7 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 		receivedBytes = iCommRecv(&command, mqReceiveBuffer.data(), mqReceiveBuffer.size(), &recvTime);
 
 		switch (command) {
-		case COMM_STRT:
+		case COMM_ARM:
 			// Save start references
 			storeJournalStartBookmarks(journals);
 			break;
@@ -116,7 +120,8 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 			// Temporary: Treat ABORT as stop signal
 			// Save stop references
 			storeJournalStopBookmarks(journals);
-			// TODO: Merge journals into named
+			// Merge journals into named output
+			generateOutputJournal(journals);
 			break;
 
 		case COMM_GETSTATUS:
@@ -158,7 +163,7 @@ void signalHandler(int signo) {
  * \param logLevel Level of the module log to be used.
  * \return 0 on success, -1 otherwise
  */
-int initializeModule(LOG_LEVEL logLevel) {
+int initializeModule(const LOG_LEVEL logLevel) {
 	int retval = 0;
 	struct timespec sleepTimePeriod, remTime;
 	sleepTimePeriod.tv_sec = 0;
@@ -193,7 +198,7 @@ int initializeModule(LOG_LEVEL logLevel) {
 
 /*!
  * \brief storeJournalStartBookmarks Stores references to the current end of file of all journals.
- * \param journals
+ * \param journals Set of journals in which start bookmarks are to be saved
  */
 void storeJournalStartBookmarks(std::unordered_set<Journal> &journals) {
 
@@ -207,8 +212,7 @@ void storeJournalStartBookmarks(std::unordered_set<Journal> &journals) {
 		auto datePosition = journalFile.stem().string().find("-" + currentDate);
 		journal.moduleName = journalFile.stem().string().substr(0, datePosition);
 		journal.startReference.place(journalFile, std::ios_base::end);
-
-		LogPrint("Module name: %s", journal.moduleName.c_str());
+		journal.containedFiles.insert(journalFile);
 		journals.insert(journal);
 	}
 }
@@ -232,6 +236,7 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 		// Insert checks if an equivalent element (same module) already exists
 		auto matchingJournal = journals.insert(soughtJournal).first;
 		matchingJournal->stopReference.place(journalFile, std::ios_base::end);
+		matchingJournal->containedFiles.insert(journalFile);
 	}
 
 	// Handle the journals for which no file existed from today
@@ -240,16 +245,107 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 			journal.stopReference.place(journal.startReference.filePath, std::ios_base::end);
 		}
 	}
-
-	LogPrint("Number of journals: %d", journals.size());
-	for (auto &journal : journals) {
-		LogPrint("Bookmarks for %s: \n\tStart: %ld, %s\n\tStop: %ld, %s",
-				 journal.moduleName.c_str(), long(journal.startReference.filePosition),
-				 journal.startReference.filePath.c_str(), long(journal.stopReference.filePosition),
-				 journal.stopReference.filePath.c_str());
-	}
 }
 
+
+/*!
+ * \brief generateOutputJournal Generates a merged file based on input journals
+ *			with ascending timestamps. The output journal file is created by
+ *			interleaving relevant entries from all input journals.
+ * \param journals Set of journals in which data can be found
+ * \return 0 on success, -1 otherwise
+ */
+int generateOutputJournal(std::unordered_set<Journal> &journals) {
+
+	int retval = 0;
+	std::string scenarioName(PATH_MAX, '\0');
+	std::string journalDir(PATH_MAX, '\0');
+
+	// Construct output file name and path
+	if (DataDictionaryGetScenarioName(scenarioName.data(), scenarioName.size()) != READ_OK) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to get scenario name parameter to generate output file");
+		return -1;
+	}
+	UtilGetJournalDirectoryPath(journalDir.data(), journalDir.size());
+	scenarioName.resize(scenarioName.find_first_of('\0'));
+	journalDir.resize(journalDir.find_first_of('\0'));
+	fs::path journalDirPath(journalDir + scenarioName + JOURNAL_FILE_ENDING);
+
+	std::ofstream ostrm(journalDirPath);
+	if (!ostrm.is_open()) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to open %s for writing", journalDirPath.c_str());
+		return -1;
+	}
+
+	/*!
+	 * \brief The JournalFileSection struct is used to keep track of reading one
+	 *			file section which is part of a journal.
+	 */
+	struct JournalFileSection {
+		fs::path path;			//!< Path to the file referred to
+		std::ifstream istrm;	//!< Input stream for accessing the file
+		std::streampos beg;		//!< First character index of relevant section
+		std::streampos end;		//!< Last character index of relevant section
+		std::string lastRead;	//!< Last read string from ::istrm member
+		//! The < operator tells which of two is oldest at its last read line
+		bool operator< (const JournalFileSection &other) const {
+			std::istringstream strThis(lastRead), strOther(other.lastRead);
+			double timeThis = 0.0, timeOther = 0.0;
+			strThis >> timeThis;
+			strOther >> timeOther;
+			return timeThis < timeOther;
+		}
+	};
+
+	// Fill a vector with all files pertaining to recorded data,
+	// along with the correct start and stop references.
+	// After this, the vector contains opened streams positioned
+	// for reading at the line closest to the start time.
+	std::vector<JournalFileSection> inputFiles;
+	for (const auto &journal : journals) {
+		for (const auto &file : journal.containedFiles) {
+			auto &section = inputFiles.emplace_back();
+			section.path = file;
+			section.istrm.open(file);
+			if (section.istrm.is_open()) {
+				section.beg = file == journal.startReference.filePath ?
+							journal.startReference.filePosition
+						  : section.istrm.tellg();
+				section.istrm.seekg(std::ios_base::end);
+				section.end = file == journal.stopReference.filePath ?
+							journal.stopReference.filePosition
+						  : section.istrm.tellg();
+				section.istrm.seekg(section.beg);
+				LogMessage(LOG_LEVEL_DEBUG, "File %s contained %d characters of log data from period of interest",
+						section.path.filename().c_str(), section.end-section.beg);
+				if (section.beg == section.end || !std::getline(section.istrm, section.lastRead)) {
+					section.istrm.close();
+					inputFiles.pop_back();
+				}
+			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR, "Unable to open %s for reading", file.c_str());
+				inputFiles.pop_back();
+				retval = -1;
+			}
+		}
+	}
+
+	// Each iteration, transfer the line starting with the oldest timestamp to the output file and read the next
+	while(!inputFiles.empty()) {
+		std::vector<JournalFileSection>::iterator oldestFile = std::min_element(inputFiles.begin(), inputFiles.end());
+		ostrm << oldestFile->lastRead << std::endl;
+		if (!std::getline(oldestFile->istrm, oldestFile->lastRead)
+				|| oldestFile->istrm.tellg() > oldestFile->end) {
+			LogMessage(LOG_LEVEL_DEBUG, "Reached end of log file %s", oldestFile->path.filename().c_str());
+			oldestFile->istrm.close();
+			inputFiles.erase(oldestFile);
+		}
+	}
+
+	ostrm.close();
+	return retval;
+}
 
 /*!
  * \brief getCurrentDateAsString Creates a string on the format YYYY-MM-DD of the current date.
@@ -273,9 +369,10 @@ std::string getCurrentDateAsString() {
  */
 std::vector<fs::path> getJournalFilesFromToday() {
 	std::vector<fs::path> journalsFromToday;
-	std::vector<char> buffer(MAX_FILE_PATH);
+	std::string buffer(PATH_MAX, '\0');
 	UtilGetJournalDirectoryPath(buffer.data(), buffer.size());
-	fs::path journalDirPath(buffer.data());
+	buffer.resize(buffer.find_first_of('\0'));
+	fs::path journalDirPath(buffer);
 	if (!exists(journalDirPath)) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to find journal directory %s", journalDirPath.string().c_str());
 		return journalsFromToday;

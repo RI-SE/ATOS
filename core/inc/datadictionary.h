@@ -10,13 +10,13 @@
 #ifndef __DATADICTIONARY_H_INCLUDED__
 #define __DATADICTIONARY_H_INCLUDED__
 
-#ifdef __cplusplus
-extern "C"{
-#endif
-
 #define SHARED_MEMORY_PATH "/dev/shm/maestro/"
 
 #include "util.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -157,6 +157,7 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t TransmitterID, Obj
 ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterID, const ObjectMonitorType * monitorData, const struct timeval * receiveTime);
 ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmitterID, struct timeval * lastDataUpdate);
 ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmitterID, const struct timeval * lastDataUpdate);
+
 #ifdef __cplusplus
 }
 #endif
