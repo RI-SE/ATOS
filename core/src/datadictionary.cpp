@@ -54,65 +54,44 @@ static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 #define MONR_DATA_FILENAME "MonitorData"
+#define OBC_STATE_FILENAME "ObjectControlState"
 
 static volatile ObjectDataType *objectDataMemory = nullptr;
-typedef ReadWriteAccess_t (*GetterFunctionReference)(
+static volatile OBCState_t *obcStateMemory = nullptr;
+
+typedef ReadWriteAccess_t GetterFunction(
 		const enum DataDictionaryParameter,
 		void*,
-		const size_t
-);
-typedef ReadWriteAccess_t (*SetterFunctionReference)(
+		const size_t);
+typedef ReadWriteAccess_t SetterFunction(
 		const enum DataDictionaryParameter,
 		const void*,
-		const size_t
-);
+		const size_t);
 
 
 /*------------------------------------------------------------
-  -- Static function definitions
+  -- Static function declarations
   ------------------------------------------------------------*/
-static ReadWriteAccess_t getConfigAsUnsignedInteger(
-		const enum DataDictionaryParameter,
-		void*,
-		const size_t);
-static ReadWriteAccess_t getConfigAsDouble(
-		const enum DataDictionaryParameter,
-		void*,
-		const size_t);
-static ReadWriteAccess_t getConfigAsString(
-		const enum DataDictionaryParameter,
-		void*,
-		const size_t);
-static ReadWriteAccess_t getAsIPAddress(
-		const enum DataDictionaryParameter,
-		void*,
-		const size_t);
-static ReadWriteAccess_t defaultGetter(
-		const enum DataDictionaryParameter,
-		void*,
-		const size_t);
+static GetterFunction getConfigAsUnsignedInteger;
+static GetterFunction getConfigAsDouble;
+static GetterFunction getConfigAsString;
+static GetterFunction getAsIPAddress;
+static GetterFunction defaultGetter;
+static GetterFunction getNumberOfObjects;
+static GetterFunction getObjectTransmitterIDs;
 
-static ReadWriteAccess_t setConfigToUnsignedInteger(
-		const enum DataDictionaryParameter,
-		const void*,
-		const size_t);
-static ReadWriteAccess_t setConfigToDouble(
-		const enum DataDictionaryParameter,
-		const void*,
-		const size_t);
-static ReadWriteAccess_t setConfigToString(
-		const enum DataDictionaryParameter,
-		const void*,
-		const size_t);
-static ReadWriteAccess_t setToIPAddress(
-		const enum DataDictionaryParameter,
-		const void*,
-		const size_t);
-static ReadWriteAccess_t defaultSetter(
-		const enum DataDictionaryParameter,
-		const void*,
-		const size_t);
+static SetterFunction setConfigToUnsignedInteger;
+static SetterFunction setConfigToDouble;
+static SetterFunction setConfigToString;
+static SetterFunction setToIPAddress;
+static SetterFunction defaultSetter;
+static SetterFunction setNumberOfObjects;
 
+static ReadWriteAccess_t uninitializedError(void);
+static ReadWriteAccess_t inputPointerError(void);
+static ReadWriteAccess_t inputSizeError(const size_t);
+static ReadWriteAccess_t memoryError(void);
+static ReadWriteAccess_t reservedIDError(void);
 /*------------------------------------------------------------
   -- Functions
   ------------------------------------------------------------*/
@@ -126,6 +105,17 @@ Initialization data that is configurable is stored in test.conf.
  */
 ReadWriteAccess_t DataDictionaryConstructor() {
 	ReadWriteAccess_t Res = READ_OK;
+
+
+	int createdMonitorData, createdObcState;
+	objectDataMemory = static_cast<volatile ObjectDataType*>(
+				createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (ObjectDataType), &createdMonitorData));
+	obcStateMemory = static_cast<volatile OBCState_t*>(
+				createSharedMemory(OBC_STATE_FILENAME, 1, sizeof(OBCState_t), &createdObcState));
+
+	if (!createdMonitorData) {
+		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
+	}
 
 	char resultChar[DD_CONTROL_BUFFER_SIZE_1024];
 	double resultDouble;
@@ -157,18 +147,8 @@ ReadWriteAccess_t DataDictionaryConstructor() {
 	Res = Res != READ_OK ? Res : DataDictionaryGet(DD_MAX_PACKETS_LOST, &resultInteger, sizeof (resultInteger));
 	Res = Res != READ_OK ? Res : DataDictionaryGet(DD_MISC_DATA, &resultChar, sizeof (resultChar));
 
-
-	Res = Res == READ_OK ? DataDictionaryInitObjectData() : Res;
-	if (Res != WRITE_OK) {
-		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
-	}
-
-	OBCState_t initState = OBC_STATE_UNDEFINED;
-	DataDictionarySet(DD_OBC_STATE, &initState, sizeof (initState));
-
 	return Res;
 }
-
 
 /*!
  * \brief DataDictionaryDestructor Deallocate data held by DataDictionary.
@@ -187,7 +167,7 @@ ReadWriteAccess_t DataDictionarySet(
 		const enum DataDictionaryParameter param,
 		const void* newValue,
 		const size_t newValueSize) {
-	SetterFunctionReference setterFunction = &defaultSetter;
+	SetterFunction* setterFunction = &defaultSetter;
 
 	switch (param) {
 	case DD_SCENARIO_NAME:
@@ -247,7 +227,7 @@ ReadWriteAccess_t DataDictionarySet(
 ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 									void* result,
 									const size_t resultSize) {
-	GetterFunctionReference getterFunction = &defaultGetter;
+	GetterFunction* getterFunction = &defaultGetter;
 
 	switch (param) {
 	case DD_SCENARIO_NAME:
@@ -303,8 +283,7 @@ ReadWriteAccess_t getConfigAsDouble(
 	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
 	char *endptr = nullptr;
 	if (resultSize != sizeof (double)) {
-		LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", resultSize);
-		return OUT_OF_RANGE;
+		return inputSizeError(resultSize);
 	}
 	if (UtilReadConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
 									   resultBuffer, sizeof (resultBuffer))) {
@@ -367,9 +346,7 @@ ReadWriteAccess_t getConfigAsUnsignedInteger(
 				}
 				break;
 			default:
-				LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", resultSize);
-				retval = UNDEFINED;
-				break;
+				return inputSizeError(resultSize);
 			}
 			if (retval == OUT_OF_RANGE) {
 				LogMessage(LOG_LEVEL_ERROR, "Value %u for parameter %s falls outside permitted range of integer parameter with size %u",
@@ -427,8 +404,7 @@ ReadWriteAccess_t getConfigAsIPAddress(
 	ReadWriteAccess_t retval = UNDEFINED;
 	char resultBuffer[DD_CONTROL_BUFFER_SIZE_52];
 	if (resultSize != sizeof (in_addr_t)) {
-		LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", resultSize);
-		return OUT_OF_RANGE;
+		return inputSizeError(resultSize);
 	}
 	retval = getConfigAsString(param, resultBuffer, sizeof (resultBuffer));
 	if (retval == READ_OK) {
@@ -466,8 +442,7 @@ ReadWriteAccess_t setConfigToDouble(
 	char valueBuffer[DD_CONTROL_BUFFER_SIZE_20];
 
 	if (newValueSize != sizeof (double)) {
-		LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", newValueSize);
-		return OUT_OF_RANGE;
+		return inputSizeError(newValueSize);
 	}
 
 	snprintf(valueBuffer, sizeof (valueBuffer), "%.15f", *static_cast<const double*>(newValue));
@@ -506,8 +481,7 @@ ReadWriteAccess_t setConfigToUnsignedInteger(
 		snprintf(valueBuffer, sizeof (valueBuffer), "%lu", *static_cast<const uint64_t*>(newValue));
 		break;
 	default:
-		LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", newValueSize);
-		return OUT_OF_RANGE;
+		return inputSizeError(newValueSize);
 	}
 	if (UtilWriteConfigurationParameter(static_cast<const enum ConfigurationFileParameter>(param),
 										valueBuffer, sizeof (valueBuffer))) {
@@ -556,8 +530,7 @@ ReadWriteAccess_t setConfigToIPAddress(
 	ReadWriteAccess_t retval = UNDEFINED;
 	char valueBuffer[DD_CONTROL_BUFFER_SIZE_52];
 	if (newValueSize != sizeof (in_addr_t)) {
-		LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", newValueSize);
-		return OUT_OF_RANGE;
+		return inputSizeError(newValueSize);
 	}
 	if (inet_ntop(AF_INET, newValue, valueBuffer, sizeof (valueBuffer)) != nullptr) {
 		if (UtilWriteConfigurationParameter(
@@ -701,32 +674,19 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 
 	ReadWriteAccess_t result;
 
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return uninitializedError();
 	}
-	if (monitorData == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
-		return UNDEFINED;
-	}
-	if (receiveTime == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
-		return UNDEFINED;
+	if (monitorData == nullptr || receiveTime == nullptr) {
+		return inputPointerError();
 	}
 	if (transmitterId == 0) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
-		return UNDEFINED;
+		return reservedIDError();
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
-	if (objectDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return memoryError();
 	}
 
 	result = PARAMETER_NOTFOUND;
@@ -782,9 +742,7 @@ ReadWriteAccess_t DataDictionaryClearObjectData(const uint32_t transmitterID) {
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 
 	if (transmitterID == 0) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
-		return UNDEFINED;
+		return reservedIDError();
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
@@ -815,10 +773,8 @@ ReadWriteAccess_t DataDictionaryClearObjectData(const uint32_t transmitterID) {
 ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t transmitterId, ObjectMonitorType * monitorData) {
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 
-	if (monitorData == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
-		return UNDEFINED;
+	if (monitorData == nullptr) {
+		return inputPointerError();
 	}
 	if (transmitterId == 0) {
 		errno = EINVAL;
@@ -856,22 +812,19 @@ ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmi
 														  struct timeval * lastDataUpdate) {
 	ReadWriteAccess_t result = UNDEFINED;
 
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
+	if (lastDataUpdate == nullptr) {
+		return inputPointerError();
+	}
+	if (objectDataMemory == nullptr) {
+		return uninitializedError();
 	}
 	if (transmitterID == 0) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
-		return UNDEFINED;
+		return reservedIDError();
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
-	if (objectDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return memoryError();
 	}
 
 	result = PARAMETER_NOTFOUND;
@@ -902,22 +855,19 @@ ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmi
 														  const struct timeval * lastDataUpdate) {
 	ReadWriteAccess_t result = UNDEFINED;
 
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
+	if (lastDataUpdate == nullptr) {
+		return inputPointerError();
+	}
+	if (objectDataMemory == nullptr) {
+		return uninitializedError();
 	}
 	if (transmitterID == 0) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
-		return UNDEFINED;
+		return reservedIDError();
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
-	if (objectDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return memoryError();
 	}
 
 	result = PARAMETER_NOTFOUND;
@@ -942,10 +892,8 @@ ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmi
 ReadWriteAccess_t DataDictionaryFreeObjectData() {
 	ReadWriteAccess_t result = WRITE_OK;
 
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized memory");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return uninitializedError();
 	}
 
 	destroySharedMemory(objectDataMemory);
@@ -1066,27 +1014,19 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 
 	ReadWriteAccess_t result;
 
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return uninitializedError();
 	}
-	if (objectData == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
-		return UNDEFINED;
+	if (objectData == nullptr) {
+		return inputPointerError();
 	}
 	if (objectData->ClientID == 0) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
-		return UNDEFINED;
+		return reservedIDError();
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
-	if (objectDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return memoryError();
 	}
 
 	result = PARAMETER_NOTFOUND;
@@ -1137,22 +1077,16 @@ ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitter
 
 	ReadWriteAccess_t result;
 
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return uninitializedError();
 	}
 	if (transmitterId == 0) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
-		return UNDEFINED;
+		return reservedIDError();
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
-	if (objectDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return memoryError();
 	}
 
 	result = PARAMETER_NOTFOUND;
@@ -1181,22 +1115,16 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmi
 
 	ReadWriteAccess_t result;
 
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return uninitializedError();
 	}
 	if (transmitterId == 0) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
-		return UNDEFINED;
+		return reservedIDError();
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
-	if (objectDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return memoryError();
 	}
 
 	result = PARAMETER_NOTFOUND;
@@ -1227,10 +1155,8 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const in_addr_t Client
 
 	ReadWriteAccess_t result;
 
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return uninitializedError();
 	}
 	if (ClientIP == 0) {
 		errno = EINVAL;
@@ -1239,10 +1165,8 @@ ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const in_addr_t Client
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
-	if (objectDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return memoryError();
 	}
 
 	result = PARAMETER_NOTFOUND;
@@ -1273,10 +1197,8 @@ ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDByIP(const in_addr_t Clien
 
 	ReadWriteAccess_t result;
 
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return uninitializedError();
 	}
 	if (ClientIP == 0) {
 		errno = EINVAL;
@@ -1285,10 +1207,8 @@ ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDByIP(const in_addr_t Clien
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
-	if (objectDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return memoryError();
 	}
 
 	result = PARAMETER_NOTFOUND;
@@ -1320,22 +1240,16 @@ ReadWriteAccess_t DataDictionaryGetObjectIPByTransmitterID(const in_addr_t trans
 
 	ReadWriteAccess_t result;
 
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return uninitializedError();
 	}
 	if (transmitterID == 0) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
-		return UNDEFINED;
+		return reservedIDError();
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
-	if (objectDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return memoryError();
 	}
 
 	result = PARAMETER_NOTFOUND;
@@ -1365,22 +1279,16 @@ ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitte
 													const uint32_t newTransmitterID) {
 	ReadWriteAccess_t result;
 
-	if (objectDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return uninitializedError();
 	}
 	if (newTransmitterID == 0 || oldTransmitterID == 0) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
-		return UNDEFINED;
+		return reservedIDError();
 	}
 
 	objectDataMemory = claimSharedMemory(objectDataMemory);
-	if (objectDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
+	if (objectDataMemory == nullptr) {
+		return memoryError();
 	}
 
 	result = PARAMETER_NOTFOUND;
@@ -1398,3 +1306,33 @@ ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitte
 	return result;
 }
 
+
+ReadWriteAccess_t uninitializedError() {
+	errno = EADDRNOTAVAIL;
+	LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+	return UNDEFINED;
+}
+
+ReadWriteAccess_t inputPointerError() {
+	errno = EFAULT;
+	LogMessage(LOG_LEVEL_ERROR, "Invalid reference supplied to function");
+	return UNDEFINED;
+}
+
+ReadWriteAccess_t inputSizeError(const size_t size) {
+	errno = EOVERFLOW;
+	LogMessage(LOG_LEVEL_ERROR, "Parameter size %u invalid", size);
+	return OUT_OF_RANGE;
+}
+
+ReadWriteAccess_t memoryError() {
+	errno = EIO;
+	LogMessage(LOG_LEVEL_ERROR, "Shared memory operation error");
+	return UNDEFINED;
+}
+
+ReadWriteAccess_t reservedIDError() {
+	errno = EINVAL;
+	LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+	return UNDEFINED;
+}
