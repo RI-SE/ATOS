@@ -89,6 +89,7 @@ static int generateOutputJournal(std::unordered_set<Journal> &journals);
 static std::vector<fs::path> getJournalFilesFromToday(void);
 static std::string getCurrentDateAsString(void);
 static int printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile);
+static int printJournalHeaderTo(std::ofstream &ostrm);
 
 /*------------------------------------------------------------
   -- Main task.
@@ -290,7 +291,12 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 		return -1;
 	}
 
-	printJournalHeader(ostrm);
+	if (printJournalHeaderTo(ostrm) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Error writing journal header");
+		if (!ostrm.is_open()) {
+			ostrm.open(journalDirPath);
+		}
+	}
 
 	/*!
 	 * \brief The JournalFileSection struct is used to keep track of reading one
