@@ -180,8 +180,6 @@ int main() {
 
 		}
 			break;
-		case COMM_LOG:
-			break;
 		case COMM_INV:
 			break;
 		case COMM_OBC_STATE:
