@@ -25,8 +25,6 @@
 
 
 // Parameters and variables
-static pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
@@ -211,13 +209,10 @@ ReadWriteAccess_t DataDictionaryConstructor() {
  * \return Error code defined by ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryDestructor(void) {
-	ReadWriteAccess_t result = WRITE_OK;
-
-	result = result == WRITE_OK ? DataDictionaryFreeObjectData() : result;
-	result = result == WRITE_OK ? DataDictionaryFreeObjectControlStateData() : result;
-	result = result == WRITE_OK ? DataDictionaryFreeAdaptiveSyncPointData() : result;
-
-	return result;
+	destroySharedMemory(objectDataMemory);
+	destroySharedMemory(obcStateMemory);
+	destroySharedMemory(adaptiveSyncPointMemory);
+	return WRITE_OK;
 }
 
 ReadWriteAccess_t DataDictionarySet(
@@ -234,7 +229,7 @@ ReadWriteAccess_t DataDictionarySet(
 	case DD_MISC_DATA:
 	{
 		std::string str(static_cast<const char*>(newValue), newValueSize);
-		return setConfigTo<std::string>(configParam, &str);
+		return setConfigTo(configParam, &str);
 	}
 	case DD_ORIGIN_LATITUDE:
 	case DD_ORIGIN_LONGITUDE:
@@ -248,14 +243,14 @@ ReadWriteAccess_t DataDictionarySet(
 		size_t nonNumericPos = str.find_first_not_of("0123456789+-,.");
 		bool isNumericString = nonNumericPos == std::string::npos || str[nonNumericPos] == '\0';
 		if (isNumericString) {
-			return setConfigTo<std::string>(configParam, &str);
+			return setConfigTo(configParam, &str);
 		}
 		else {
 			switch (newValueSize) {
 			case sizeof (double):
-				return setConfigTo<double>(configParam, static_cast<const double*>(newValue));
+				return setConfigTo(configParam, static_cast<const double*>(newValue));
 			case sizeof (float):
-				return setConfigTo<float>(configParam, static_cast<const float*>(newValue));
+				return setConfigTo(configParam, static_cast<const float*>(newValue));
 			default:
 				return inputSizeError(newValueSize);
 			}
@@ -276,18 +271,18 @@ ReadWriteAccess_t DataDictionarySet(
 		size_t nonNumericPos = str.find_first_not_of("0123456789+-");
 		bool isNumericString = nonNumericPos == std::string::npos || str[nonNumericPos] == '\0';
 		if (isNumericString) {
-			return setConfigTo<std::string>(configParam, &str);
+			return setConfigTo(configParam, &str);
 		}
 		else {
 			switch (newValueSize) {
 			case sizeof (uint8_t):
-				return setConfigTo<uint8_t>(configParam, static_cast<const uint8_t*>(newValue));
+				return setConfigTo(configParam, static_cast<const uint8_t*>(newValue));
 			case sizeof (uint16_t):
-				return setConfigTo<uint16_t>(configParam, static_cast<const uint16_t*>(newValue));
+				return setConfigTo(configParam, static_cast<const uint16_t*>(newValue));
 			case sizeof (uint32_t):
-				return setConfigTo<uint32_t>(configParam, static_cast<const uint32_t*>(newValue));
+				return setConfigTo(configParam, static_cast<const uint32_t*>(newValue));
 			case sizeof (uint64_t):
-				return setConfigTo<uint64_t>(configParam, static_cast<const uint64_t*>(newValue));
+				return setConfigTo(configParam, static_cast<const uint64_t*>(newValue));
 			default:
 				return inputSizeError(newValueSize);
 			}
@@ -304,14 +299,12 @@ ReadWriteAccess_t DataDictionarySet(
 		setterFunction = &setNumberOfObjects;
 		break;
 	case DD_OBC_STATE:
-		return newValueSize == sizeof (OBCState_t) ? setMemoryTo<OBCState_t>(
-														 obcStateMemory,
-														 static_cast<const OBCState_t*>(newValue))
+		return newValueSize == sizeof (OBCState_t) ? setMemoryTo(obcStateMemory,
+																 static_cast<const OBCState_t*>(newValue))
 												   : inputSizeError(newValueSize);
 	case DD_RVSS_ASP:
-		return newValueSize == sizeof (ASPType) ? setMemoryTo<ASPType>(
-													  adaptiveSyncPointMemory,
-													  static_cast<const ASPType*>(newValue))
+		return newValueSize == sizeof (ASPType) ? setMemoryTo(adaptiveSyncPointMemory,
+															  static_cast<const ASPType*>(newValue))
 												: inputSizeError(newValueSize);
 	}
 
@@ -329,11 +322,7 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 	case DD_VOIL_RECEIVERS:
 	case DD_DTM_RECEIVERS:
 	case DD_MISC_DATA:
-	{
-		return getFromConfig<char>(
-					static_cast<const enum ConfigurationFileParameter>(param),
-					static_cast<char*>(result));
-	}
+		return getFromConfig(configParam, static_cast<char*>(result));
 	case DD_ORIGIN_LATITUDE:
 	case DD_ORIGIN_LONGITUDE:
 	case DD_ORIGIN_ALTITUDE:
@@ -342,13 +331,13 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 	case DD_ASP_FILTER_LEVEL:
 	case DD_ASP_MAX_DELTA_TIME:
 		if (resultSize == sizeof (double)) {
-			return getFromConfig<double>(configParam, static_cast<double*>(result));
+			return getFromConfig(configParam, static_cast<double*>(result));
 		}
 		else if (resultSize == sizeof (float)) {
-			return getFromConfig<float>(configParam, static_cast<float*>(result));
+			return getFromConfig(configParam, static_cast<float*>(result));
 		}
 		else {
-			return getFromConfig<char>(configParam, static_cast<char*>(result));
+			return getFromConfig(configParam, static_cast<char*>(result));
 		}
 	case DD_FORCE_OBJECT_TO_LOCALHOST:
 	case DD_ASP_STEP_BACK_COUNT:
@@ -362,13 +351,13 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 	case DD_MAX_PACKETS_LOST:
 		switch (resultSize) {
 		case sizeof (uint8_t):
-			return getFromConfig<uint8_t>(configParam, static_cast<uint8_t*>(result));
+			return getFromConfig(configParam, static_cast<uint8_t*>(result));
 		case sizeof (uint16_t):
-			return getFromConfig<uint16_t>(configParam,	static_cast<uint16_t*>(result));
+			return getFromConfig(configParam,	static_cast<uint16_t*>(result));
 		case sizeof (uint32_t):
-			return getFromConfig<uint32_t>(configParam, static_cast<uint32_t*>(result));
+			return getFromConfig(configParam, static_cast<uint32_t*>(result));
 		case sizeof (uint64_t):
-			return getFromConfig<uint64_t>(configParam, static_cast<uint64_t*>(result));
+			return getFromConfig(configParam, static_cast<uint64_t*>(result));
 		default:
 			return inputSizeError(resultSize);
 		}
@@ -376,8 +365,12 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 	case DD_TIME_SERVER_IP:
 	case DD_SIMULATOR_IP:
 	case DD_EXTERNAL_SUPERVISOR_IP:
-		getterFunction = resultSize == sizeof (in_addr_t) ? &getAsIPAddress
-														  : &getConfigAsString;
+		if (resultSize == sizeof (in_addr_t)) {
+			// TODO parse IP string
+		}
+		else {
+			return getFromConfig(configParam, static_cast<char*>(result));
+		}
 		break;
 	case DD_NUMBER_OF_OBJECTS:
 		getterFunction = &getNumberOfObjects;
@@ -797,21 +790,6 @@ ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmi
 	return result;
 }
 
-/*!
- * \brief DataDictionaryFreeObjectData Releases data structure for saving object monitor data
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryFreeObjectData() {
-	ReadWriteAccess_t result = WRITE_OK;
-
-	if (objectDataMemory == nullptr) {
-		return uninitializedError();
-	}
-
-	destroySharedMemory(objectDataMemory);
-
-	return result;
-}
 
 /*END of MONR*/
 
