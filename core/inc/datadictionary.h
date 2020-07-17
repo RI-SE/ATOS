@@ -13,6 +13,10 @@
 #define SHARED_MEMORY_PATH "/dev/shm/maestro/"
 
 #include "util.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*------------------------------------------------------------
   -- Function declarations.
   ------------------------------------------------------------*/
@@ -68,6 +72,7 @@ ReadWriteAccess_t DataDictionaryClearObjectData(const uint32_t transmitterID);
 ReadWriteAccess_t DataDictionaryFreeObjectData();
 
 ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDByIP(const in_addr_t ClientIP, uint32_t *transmitterID);
+
 ReadWriteAccess_t DataDictionaryGetObjectIPByTransmitterID(const uint32_t transmitterID, in_addr_t * ClientIP);
 ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitterID, const uint32_t newTransmitterID);
 
@@ -80,5 +85,8 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterID, con
 ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmitterID, struct timeval * lastDataUpdate);
 ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmitterID, const struct timeval * lastDataUpdate);
 
-#endif 
+#ifdef __cplusplus
+}
+#endif
+#endif
 
