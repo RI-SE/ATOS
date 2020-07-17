@@ -36,27 +36,9 @@ static volatile ObjectDataType *objectDataMemory = nullptr;
 static volatile OBCState_t *obcStateMemory = nullptr;
 static volatile ASPType *adaptiveSyncPointMemory = nullptr;
 
-typedef ReadWriteAccess_t GetterFunction(
-		const enum DataDictionaryParameter,
-		void*,
-		const size_t);
-typedef ReadWriteAccess_t SetterFunction(
-		const enum DataDictionaryParameter,
-		const void*,
-		const size_t);
-
-
 /*------------------------------------------------------------
   -- Static function declarations
   ------------------------------------------------------------*/
-static GetterFunction getAsIPAddress;
-static GetterFunction defaultGetter;
-static GetterFunction getNumberOfObjects;
-static GetterFunction getObjectTransmitterIDs;
-
-static SetterFunction setToIPAddress;
-static SetterFunction defaultSetter;
-static SetterFunction setNumberOfObjects;
 
 static ReadWriteAccess_t uninitializedError(void);
 static ReadWriteAccess_t inputPointerError(void);
@@ -65,9 +47,12 @@ static ReadWriteAccess_t memoryError(void);
 static ReadWriteAccess_t reservedIDError(void);
 static ReadWriteAccess_t parameterNotFoundError(const enum ConfigurationFileParameter);
 static ReadWriteAccess_t valueParseError(char *);
+static ReadWriteAccess_t inputValueError(void);
+static ReadWriteAccess_t unimplementedGetterError(void);
+static ReadWriteAccess_t unimplementedSetterError(void);
 
 template <typename T>
-ReadWriteAccess_t getFromMemory(
+static ReadWriteAccess_t getFromMemory(
 		volatile T* dataDictMemory,
 		T* inputPointer) {
 
@@ -86,7 +71,7 @@ ReadWriteAccess_t getFromMemory(
 }
 
 template <typename T>
-ReadWriteAccess_t setMemoryTo(
+static ReadWriteAccess_t setMemoryTo(
 		volatile T* dataDictMemory,
 		const T* inputPointer) {
 
@@ -107,7 +92,7 @@ ReadWriteAccess_t setMemoryTo(
 }
 
 template <typename T>
-ReadWriteAccess_t getFromConfig(
+static ReadWriteAccess_t getFromConfig(
 		const enum ConfigurationFileParameter param,
 		T* inputPointer) {
 
@@ -126,7 +111,7 @@ ReadWriteAccess_t getFromConfig(
 
 }
 template <typename T>
-ReadWriteAccess_t setConfigTo(
+static ReadWriteAccess_t setConfigTo(
 		const enum ConfigurationFileParameter param,
 		const T* inputPointer) {
 
@@ -142,6 +127,37 @@ ReadWriteAccess_t setConfigTo(
 	else {
 		return parameterNotFoundError(param);
 	}
+}
+
+static ReadWriteAccess_t setConfigToIP(
+		const enum ConfigurationFileParameter param,
+		const in_addr_t* ipAddr) {
+
+	char valueBuffer[INET_ADDRSTRLEN];
+
+	if (inet_ntop(AF_INET, ipAddr, valueBuffer, sizeof (valueBuffer)) != nullptr) {
+		return setConfigTo(param, static_cast<const char*>(valueBuffer));
+	}
+	else {
+		return inputValueError();
+	}
+}
+
+static ReadWriteAccess_t getIPFromConfig(
+		const enum ConfigurationFileParameter param,
+		in_addr_t* ipAddr) {
+
+	char valueBuffer[INET_ADDRSTRLEN];
+	in_addr_t parsedAddr;
+	ReadWriteAccess_t retval = getFromConfig(param, valueBuffer);
+	if (retval != READ_OK) {
+		return retval;
+	}
+	else if (inet_pton(AF_INET, valueBuffer, &parsedAddr) <= 0) {
+		return valueParseError(valueBuffer);
+	}
+	*ipAddr = parsedAddr;
+	return retval;
 }
 
 /*------------------------------------------------------------
@@ -219,7 +235,6 @@ ReadWriteAccess_t DataDictionarySet(
 		const enum DataDictionaryParameter param,
 		const void* newValue,
 		const size_t newValueSize) {
-	SetterFunction* setterFunction = &defaultSetter;
 
 	const ConfigurationFileParameter configParam = static_cast<const enum ConfigurationFileParameter>(param);
 	switch (param) {
@@ -292,9 +307,10 @@ ReadWriteAccess_t DataDictionarySet(
 	case DD_TIME_SERVER_IP:
 	case DD_SIMULATOR_IP:
 	case DD_EXTERNAL_SUPERVISOR_IP:
-		setterFunction = newValueSize == sizeof (in_addr_t) ? &setToIPAddress
-															: &setConfigToString;
-		break;
+		return newValueSize == sizeof (in_addr_t) ? setConfigToIP(configParam,
+																  static_cast<const in_addr_t*>(newValue))
+												  : setConfigTo(configParam,
+																static_cast<const char*>(newValue));
 	case DD_NUMBER_OF_OBJECTS:
 		setterFunction = &setNumberOfObjects;
 		break;
@@ -308,13 +324,12 @@ ReadWriteAccess_t DataDictionarySet(
 												: inputSizeError(newValueSize);
 	}
 
-	return setterFunction(param, newValue, newValueSize);
+	return unimplementedSetterError();
 }
 
 ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 									void* result,
 									const size_t resultSize) {
-	GetterFunction* getterFunction = &defaultGetter;
 
 	const ConfigurationFileParameter configParam = static_cast<const enum ConfigurationFileParameter>(param);
 	switch (param) {
@@ -366,12 +381,11 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 	case DD_SIMULATOR_IP:
 	case DD_EXTERNAL_SUPERVISOR_IP:
 		if (resultSize == sizeof (in_addr_t)) {
-			// TODO parse IP string
+			return getIPFromConfig(configParam, static_cast<in_addr_t*>(result));
 		}
 		else {
 			return getFromConfig(configParam, static_cast<char*>(result));
 		}
-		break;
 	case DD_NUMBER_OF_OBJECTS:
 		getterFunction = &getNumberOfObjects;
 		break;
@@ -385,89 +399,8 @@ ReadWriteAccess_t DataDictionaryGet(const enum DataDictionaryParameter param,
 		return resultSize == sizeof (ASPType) ? getFromMemory<ASPType>(adaptiveSyncPointMemory, static_cast<ASPType*>(result))
 											  : inputSizeError(resultSize);
 	}
-	return getterFunction(param, result, resultSize);
+	return unimplementedGetterError();
 }
-
-
-
-ReadWriteAccess_t getConfigAsIPAddress(
-		const enum DataDictionaryParameter param,
-		void *result,
-		const size_t resultSize) {
-
-	ReadWriteAccess_t retval = UNDEFINED;
-	char resultBuffer[DD_CONTROL_BUFFER_SIZE_52];
-	if (resultSize != sizeof (in_addr_t)) {
-		return inputSizeError(resultSize);
-	}
-	retval = getConfigAsString(param, resultBuffer, sizeof (resultBuffer));
-	if (retval == READ_OK) {
-		in_addr_t r;
-		if (inet_pton(AF_INET, resultBuffer, &r) > 0) {
-			*static_cast<in_addr_t*>(result) = r;
-		}
-		else {
-			char printoutBuffer[DD_CONTROL_BUFFER_SIZE_52];
-			LogMessage(LOG_LEVEL_ERROR, "Parameter %s configuration %s cannot be interpreted as an IP address",
-					   UtilGetConfigurationParameterAsString(
-						   static_cast<const enum ConfigurationFileParameter>(param),
-						   printoutBuffer, sizeof (printoutBuffer)), resultBuffer);
-			retval = PARAMETER_NOTFOUND;
-		}
-	}
-	return retval;
-}
-
-ReadWriteAccess_t defaultGetter(
-		const enum DataDictionaryParameter,
-		void *,
-		const size_t) {
-	LogMessage(LOG_LEVEL_ERROR, "No data dictionary function exists for getting selected parameter");
-	return PARAMETER_NOTFOUND;
-}
-
-
-
-ReadWriteAccess_t setConfigToIPAddress(
-		const enum DataDictionaryParameter param,
-		const void *newValue,
-		const size_t newValueSize) {
-
-	ReadWriteAccess_t retval = UNDEFINED;
-	char valueBuffer[DD_CONTROL_BUFFER_SIZE_52];
-	if (newValueSize != sizeof (in_addr_t)) {
-		return inputSizeError(newValueSize);
-	}
-	if (inet_ntop(AF_INET, newValue, valueBuffer, sizeof (valueBuffer)) != nullptr) {
-		if (UtilWriteConfigurationParameter(
-					static_cast<const enum ConfigurationFileParameter>(param),
-					valueBuffer, sizeof (valueBuffer))) {
-			retval = WRITE_OK;
-		}
-		else {
-			LogMessage(LOG_LEVEL_ERROR, "%s not found!",
-					   UtilGetConfigurationParameterAsString(
-							static_cast<const enum ConfigurationFileParameter>(param),
-							valueBuffer, sizeof (valueBuffer)));
-			retval = PARAMETER_NOTFOUND;
-		}
-	}
-	else {
-		LogMessage(LOG_LEVEL_ERROR, "Error converting value to IP string");
-		retval = UNDEFINED;
-	}
-	return retval;
-}
-
-ReadWriteAccess_t defaultSetter(
-		const enum DataDictionaryParameter,
-		const void *,
-		const size_t size) {
-	LogMessage(LOG_LEVEL_ERROR, "No data dictionary function exists for setting selected parameter with size %d", size);
-	return PARAMETER_NOTFOUND;
-}
-
-
 
 // ***** Shared memory accessors ******************************************
 /*!
@@ -1144,5 +1077,23 @@ ReadWriteAccess_t parameterNotFoundError(const ConfigurationFileParameter param)
 ReadWriteAccess_t valueParseError(char* string) {
 	errno = EINVAL;
 	LogMessage(LOG_LEVEL_ERROR, "Unable to parse value %s into value", string);
+	return PARAMETER_NOTFOUND;
+}
+
+ReadWriteAccess_t inputValueError() {
+	errno = EINVAL;
+	LogMessage(LOG_LEVEL_ERROR, "An input parameter contained an invalid value");
+	return UNDEFINED;
+}
+
+ReadWriteAccess_t unimplementedGetterError() {
+	errno = ENOSYS;
+	LogMessage(LOG_LEVEL_ERROR, "No data dictionary function exists for getting selected parameter");
+	return PARAMETER_NOTFOUND;
+}
+
+ReadWriteAccess_t unimplementedSetterError() {
+	errno = ENOSYS;
+	LogMessage(LOG_LEVEL_ERROR, "No data dictionary function exists for setting selected parameter");
 	return PARAMETER_NOTFOUND;
 }
