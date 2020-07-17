@@ -1954,14 +1954,16 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug) {
 
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
+
 	if (Debug)
 		LogPrint("SetServerParameter: %s = %s", ParameterName, NewValue);
 
-	enum ConfigurationFileParameter parameter = UtilParseConfigurationParameter(ParameterName, strlen(ParameterName)+1);
+	enum ConfigurationFileParameter parameter =
+		UtilParseConfigurationParameter(ParameterName, strlen(ParameterName) + 1);
 
 	switch (parameter) {
 	case CONFIGURATION_PARAMETER_SCENARIO_NAME:
-		result = DataDictionarySetScenarioName(NewValue, strlen(NewValue)+1);
+		result = DataDictionarySetScenarioName(NewValue, strlen(NewValue) + 1);
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_LATITUDE:
 		result = DataDictionarySetOriginLatitudeDbl(GSD, NewValue);
@@ -2024,10 +2026,10 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 		result = DataDictionarySetSupervisorTCPPortU16(GSD, NewValue);
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
-		result = DataDictionarySetRVSSConfigU32(GSD, (uint32_t) strtoul(NewValue,NULL,10));
+		result = DataDictionarySetRVSSConfigU32(GSD, (uint32_t) strtoul(NewValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_RATE:
-		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(NewValue,NULL,10));
+		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(NewValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_MISC_DATA:
 		result = DataDictionarySetMiscDataC8(GSD, NewValue);
@@ -2045,7 +2047,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 
 I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 
-	char* line;
+	char *line;
 	size_t len;
 	FILE *fd;
 	char confPathDir[MAX_FILE_PATH];
