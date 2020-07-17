@@ -14,6 +14,7 @@
 #include <set>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <chrono>
 #include <algorithm>
 // GCC version 8.1 brings non-experimental support for std::filesystem
@@ -87,6 +88,7 @@ static void storeJournalStopBookmarks(std::unordered_set<Journal> &journals);
 static int generateOutputJournal(std::unordered_set<Journal> &journals);
 static std::vector<fs::path> getJournalFilesFromToday(void);
 static std::string getCurrentDateAsString(void);
+static int printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile);
 
 /*------------------------------------------------------------
   -- Main task.
@@ -105,6 +107,7 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 	if (initializeModule(logLevel) < 0) {
 		util_error("Failed to initialize module");
 	}
+
 
 	while (!quit) {
 		std::fill(mqReceiveBuffer.begin(), mqReceiveBuffer.end(), 0);
@@ -131,6 +134,13 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 			if (iCommSend(COMM_GETSTATUS_OK, mqSendBuffer.data(), mqSendBuffer.size()) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending status reply");
 			}
+			break;
+		case COMM_CONTROL:
+			LogMessage(LOG_LEVEL_WARNING, "Replay function out of date");
+			[[fallthrough]];
+		case COMM_REPLAY:
+			if (iCommSend(COMM_CONTROL, nullptr, 0) < 0)
+				util_error("Communication error - exiting");
 			break;
 		case COMM_EXIT:
 			quit = true;
@@ -208,6 +218,7 @@ void storeJournalStartBookmarks(std::unordered_set<Journal> &journals) {
 	journals.clear();
 
 	for (const auto &journalFile : journalFilesFromToday) {
+		LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark in file %s", journalFile.c_str());
 		Journal journal;
 		auto datePosition = journalFile.stem().string().find("-" + currentDate);
 		journal.moduleName = journalFile.stem().string().substr(0, datePosition);
@@ -228,6 +239,7 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 	auto currentDate = getCurrentDateAsString();
 
 	for (const auto &journalFile : journalFilesFromToday) {
+		LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark in file %s", journalFile.c_str());
 		// Find existing journal matching module name from file
 		Journal soughtJournal;
 		auto datePosition = journalFile.stem().string().find("-" + currentDate);
@@ -242,6 +254,7 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 	// Handle the journals for which no file existed from today
 	for (auto &journal : journals) {
 		if (!journal.stopReference.valid) {
+			LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark in file %s", journal.stopReference.filePath.c_str());
 			journal.stopReference.place(journal.startReference.filePath, std::ios_base::end);
 		}
 	}
@@ -276,6 +289,8 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to open %s for writing", journalDirPath.c_str());
 		return -1;
 	}
+
+	printJournalHeader(ostrm);
 
 	/*!
 	 * \brief The JournalFileSection struct is used to keep track of reading one
@@ -316,7 +331,7 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 							journal.stopReference.filePosition
 						  : section.istrm.tellg();
 				section.istrm.seekg(section.beg);
-				LogMessage(LOG_LEVEL_DEBUG, "File %s contained %d characters of log data from period of interest",
+				LogMessage(LOG_LEVEL_DEBUG, "File %s contained %d characters of journal data from period of interest",
 						section.path.filename().c_str(), section.end-section.beg);
 				if (section.beg == section.end || !std::getline(section.istrm, section.lastRead)) {
 					section.istrm.close();
@@ -337,13 +352,14 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 		ostrm << oldestFile->lastRead << std::endl;
 		if (!std::getline(oldestFile->istrm, oldestFile->lastRead)
 				|| oldestFile->istrm.tellg() > oldestFile->end) {
-			LogMessage(LOG_LEVEL_DEBUG, "Reached end of log file %s", oldestFile->path.filename().c_str());
+			LogMessage(LOG_LEVEL_DEBUG, "Reached end of journal file %s", oldestFile->path.c_str());
 			oldestFile->istrm.close();
 			inputFiles.erase(oldestFile);
 		}
 	}
 
 	ostrm.close();
+	LogMessage(LOG_LEVEL_INFO, "Generated output journal %s", journalDirPath.stem().c_str());
 	return retval;
 }
 
@@ -361,6 +377,69 @@ std::string getCurrentDateAsString() {
 	return currentDate;
 }
 
+int printJournalHeaderTo(std::ofstream &ostrm) {
+	std::string buffer(PATH_MAX, '\0');
+	std::ifstream istrm;
+	fs::path fileDirectory;
+
+	UtilGetTrajDirectoryPath(buffer.data(), buffer.size());
+	buffer.resize(buffer.find_first_of('\0'));
+	fileDirectory.assign(buffer);
+
+	ostrm << "------------------------------------------" << std::endl;
+	ostrm << "Whole trajectory files" << std::endl;
+	ostrm << "------------------------------------------" << std::endl;
+
+	if (printFilesTo(fileDirectory, ostrm) == -1) {
+		return -1;
+	}
+
+	ostrm << "------------------------------------------" << std::endl;
+	ostrm << "Whole configuration files" << std::endl;
+	ostrm << "------------------------------------------" << std::endl;
+
+	UtilGetConfDirectoryPath(buffer.data(), buffer.size());
+	buffer.resize(buffer.find_first_of('\0'));
+	fileDirectory.assign(buffer);
+
+	if (printFilesTo(fileDirectory, ostrm) == -1) {
+		return -1;
+	}
+
+	// TODO: information about file structure
+
+	return 0;
+}
+
+/*!
+ * \brief printFilesTo Prints the contents of all files in chosen directory to the
+ *			selected stream
+ * \param inputDirectory Directory containing files to be printed
+ * \param outputFile Stream to which contents are to be printed
+ * \return 0 on success, -1 otherwise
+ */
+int printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile) {
+
+	if (!exists(inputDirectory)) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to find directory %s", inputDirectory.c_str());
+		return -1;
+	}
+	for (const auto &dirEntry : fs::directory_iterator(inputDirectory)) {
+		if (fs::is_regular_file(dirEntry.status())) {
+			const auto inputFile = dirEntry.path();
+			std::ifstream istrm(inputFile.filename());
+			if (!istrm.is_open()) {
+				LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", inputFile.c_str());
+				return -1;
+			}
+			for (std::istream_iterator<char> it(istrm) ; it != std::istream_iterator<char>(); ++it) {
+				outputFile << *it;
+			}
+			istrm.close();
+		}
+	}
+	return 0;
+}
 
 /*!
  * \brief getJournalFilesFromToday Fetches a list of file paths corresponding to journal
