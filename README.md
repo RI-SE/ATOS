@@ -13,7 +13,7 @@ To build Maestro follow the guide below.
 
 Install necessary development packages.
 
-*Ubuntu*
+**Ubuntu**
 ```sh
 sudo apt-get install libsystemd-dev
 ``` 
@@ -114,37 +114,6 @@ To disable the CITS module, remake the `cmake` procedure
 cmake "Unix Makefiles" -DUSE_CITS:BOOL=FALSE ..
 ```
 
-# To communicate with server start program.
-./UserControl [IP] [port]
-
-## How to build and run gui server
-cd server_gui
-mkdir build & cd build
-"/home/kj/Qt/5.7/gcc_64/bin/qmake" ../server_gui.pro -spec linux-g++ (if debug add CONFIG+=debug CONFIG+=qml_debug; if windows -spec win32-g++)
-make
-./server_gui
-
-## Visualization adaption
-mkdir build_websocket_visualization && cd build_websocket_visualization
-"/home/kj/Qt/5.7/gcc_64/bin/qmake" ../websocket_visualization/websocket_visualization.pro -spec linux-g++ 
-("/opt/Qt5.7.1/5.7/gcc_64/bin/qmake"  ../websocket_visualization.pro -spec linux-g++)
-make
-./websocket_visualization 53251 1 ./../data/ 100
-
-## How to start objects
-./object 57.12345 12.54321 123.43 99999 99998
-
-# CentOS installation for server
-yum install cmake
-yum groupinstall 'Development Tools'
-wget http://download.qt.io/official_releases/qt/5.7/5.7.1/qt-opensource-linux-x64-5.7.1.run
-./http://download.qt.io/official_releases/qt/5.7/5.7.1/qt-opensource-linux-x64-5.7.1.run
-
-# Install on raspberry
-sudo apt-get install qt-sdk
-sudo apt install libqt5websockets5_dev
-qmake -qt=5 ../websocket_visualization.pro -spec linux-g++
-
 # poti
 Make sure that the system has the correct locale, such that float numbers are defined with '.'
 If not the right locale, do
@@ -161,23 +130,6 @@ Now you are able to run the program through
 ```sh
 ./poti
 ```
-
-# Eclipse project
-cd /home/kj/Repos/chronos
-mkdir buildEclipse
-cd buildEclipse
-cmake -G"Eclipse CDT4 - Unix Makefiles" -D CMAKE_BUILD_TYPE=Debug ../server/
-Import project using Menu File->Import
-Select General->Existing projects into workspace:
-Browse root directory /home/kj/Repos/chronos/build_server_eclipse
-
-# KDevelop ubuntu
-wget -O KDevelop.AppImage https://download.kde.org/stable/kdevelop/5.1.0/bin/linux/KDevelop-5.1.0-x86_64.AppImage
-chmod +x KDevelop.AppImage
-./KDevelop.AppImage
-Project -> Open/import cmake
-Build main, usercontrol & VisualizationAdapter
-Run -> Configure Launches
 
 # Compile and run RTKLIB
 ```sh
