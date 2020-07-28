@@ -2049,8 +2049,8 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 
 I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 
-    char* line = NULL;
-    size_t len = 0;
+	char* line = NULL;
+	size_t len = 0;
 	FILE *fd;
 	char confPathDir[MAX_FILE_PATH];
 	ssize_t read;
@@ -2067,7 +2067,7 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 			}
 		}
 		fclose(fd);
-        free(line);
+		free(line);
 	}
 	else {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", confPathDir);
