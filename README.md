@@ -1,5 +1,5 @@
 # Maestro 
-<img align="left" width="100" height="100" src="https://github.com/RI-SE/Maestro/blob/dev/server/src/icon/MaestroICON.svg">
+<img align="left" width="100" height="100" src="/doc/MaestroServer.svg">
 
 The Maestro server is a communication hub for all test objects. The server monitors and controls the test objects and is also responsible for creating logfiles.
 
