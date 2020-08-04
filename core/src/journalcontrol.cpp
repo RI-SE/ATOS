@@ -260,21 +260,21 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 int generateOutputJournal(std::unordered_set<Journal> &journals) {
 
 	int retval = 0;
-    //std::string scenarioName(PATH_MAX, '\0');
-    //std::string journalDir(PATH_MAX, '\0');
+	//std::string scenarioName(PATH_MAX, '\0');
+	//std::string journalDir(PATH_MAX, '\0');
 
-    char scenarioName[PATH_MAX] = {'\0'};
-    char journalDir[PATH_MAX] = {'\0'};
+	char scenarioName[PATH_MAX] = {'\0'};
+	char journalDir[PATH_MAX] = {'\0'};
 
 	// Construct output file name and path
-    if (DataDictionaryGetScenarioName(scenarioName, PATH_MAX) != READ_OK) {
+	if (DataDictionaryGetScenarioName(scenarioName, PATH_MAX) != READ_OK) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to get scenario name parameter to generate output file");
 		return -1;
 	}
-    UtilGetJournalDirectoryPath(journalDir, PATH_MAX);
-    fs::path journalDirPath(std::string(journalDir) + std::string(scenarioName) + JOURNAL_FILE_ENDING);
+	UtilGetJournalDirectoryPath(journalDir, PATH_MAX);
+	fs::path journalDirPath(std::string(journalDir) + std::string(scenarioName) + JOURNAL_FILE_ENDING);
 
-    LogMessage(LOG_LEVEL_ERROR, "Path is: %s", journalDirPath.c_str());
+	LogMessage(LOG_LEVEL_ERROR, "Path is: %s", journalDirPath.c_str());
 
 	std::ofstream ostrm(journalDirPath);
 	if (!ostrm.is_open()) {
@@ -307,10 +307,10 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 	// After this, the vector contains opened streams positioned
 	// for reading at the line closest to the start time.
 	std::vector<JournalFileSection> inputFiles;
-    for (const Journal &journal : journals) {
-        for (const fs::path &file : journal.containedFiles) {
-            inputFiles.emplace_back();
-            JournalFileSection &section = inputFiles.back();
+	for (const Journal &journal : journals) {
+		for (const fs::path &file : journal.containedFiles) {
+			inputFiles.emplace_back();
+			JournalFileSection &section = inputFiles.back();
 			section.path = file;
 			section.istrm.open(file);
 			if (section.istrm.is_open()) {
@@ -359,10 +359,10 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
  */
 std::string getCurrentDateAsString() {
 	using Clock = std::chrono::system_clock;
-    char currentDate[DATE_STRING_MAX_LEN] = {'\0'};
+	char currentDate[DATE_STRING_MAX_LEN] = {'\0'};
 	auto now = Clock::to_time_t(Clock::now());
 	auto now_tm = std::localtime(&now);
-    std::strftime(currentDate, DATE_STRING_MAX_LEN, "%Y-%m-%d", now_tm);
+	std::strftime(currentDate, DATE_STRING_MAX_LEN, "%Y-%m-%d", now_tm);
 	return currentDate;
 }
 
@@ -374,8 +374,8 @@ std::string getCurrentDateAsString() {
  */
 std::vector<fs::path> getJournalFilesFromToday() {
 	std::vector<fs::path> journalsFromToday;
-    char buffer[PATH_MAX] = {'\0'};
-    UtilGetJournalDirectoryPath(buffer, PATH_MAX);
+	char buffer[PATH_MAX] = {'\0'};
+	UtilGetJournalDirectoryPath(buffer, PATH_MAX);
 	fs::path journalDirPath(buffer);
 	if (!exists(journalDirPath)) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to find journal directory %s", journalDirPath.string().c_str());
