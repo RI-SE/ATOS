@@ -260,9 +260,6 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 int generateOutputJournal(std::unordered_set<Journal> &journals) {
 
 	int retval = 0;
-	//std::string scenarioName(PATH_MAX, '\0');
-	//std::string journalDir(PATH_MAX, '\0');
-
 	char scenarioName[PATH_MAX] = {'\0'};
 	char journalDir[PATH_MAX] = {'\0'};
 
