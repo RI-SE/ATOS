@@ -268,7 +268,7 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to get scenario name parameter to generate output file");
 		return -1;
 	}
-	UtilGetJournalDirectoryPath(journalDir, PATH_MAX);
+	UtilGetJournalDirectoryPath(journalDir, sizeof (journalDir));
 	fs::path journalDirPath(std::string(journalDir) + std::string(scenarioName) + JOURNAL_FILE_ENDING);
 
 	LogMessage(LOG_LEVEL_ERROR, "Path is: %s", journalDirPath.c_str());
