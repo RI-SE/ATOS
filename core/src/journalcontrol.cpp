@@ -304,7 +304,7 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 	// After this, the vector contains opened streams positioned
 	// for reading at the line closest to the start time.
 	std::vector<JournalFileSection> inputFiles;
-	for (const Journal &journal : journals) {
+	for (const auto &journal : journals) {
 		for (const fs::path &file : journal.containedFiles) {
 			inputFiles.emplace_back();
 			JournalFileSection &section = inputFiles.back();
