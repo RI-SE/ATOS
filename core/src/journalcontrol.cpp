@@ -264,7 +264,7 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 	char journalDir[PATH_MAX] = {'\0'};
 
 	// Construct output file name and path
-	if (DataDictionaryGetScenarioName(scenarioName, PATH_MAX) != READ_OK) {
+	if (DataDictionaryGetScenarioName(scenarioName, sizeof (scenarioName)) != READ_OK) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to get scenario name parameter to generate output file");
 		return -1;
 	}
