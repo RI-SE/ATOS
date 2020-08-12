@@ -9,7 +9,9 @@ pipeline {
 		stage('Build') {
 			steps {
 				sh 'echo "Executing build steps..."'
-				cmakeBuild cleanBuild: true, buildDir: 'build', installation: 'InSearchPath', steps: [[envVars: 'DESTDIR=${WORKSPACE}/artifacts', withCmake: true]]
+				cmakeBuild cleanBuild: true, buildDir: 'build', installation: 'InSearchPath', steps: [[envVars: '''DESTDIR=${WORKSPACE}/artifacts
+CC=/usr/bin/gcc8
+CXX=/usr/bin/g++8''', withCmake: true]]
 			}
 		}
 		stage('Run tests') {
