@@ -3452,11 +3452,8 @@ UtilWriteConfigurationParameter updates parameters in the file test.conf.
 - *NewValue the value of the parameter.
 - Debug enable(1)/disable(0) debug printouts
 */
-int32_t UtilWriteConfigurationParameter(
-		const enum ConfigurationFileParameter parameterName,
-		const char* newValue,
-		const size_t bufferLength)
-{
+int32_t UtilWriteConfigurationParameter(const enum ConfigurationFileParameter parameterName,
+										const char *newValue, const size_t bufferLength) {
 
 	int32_t RowCount, i;
 	char Parameter[SMALL_BUFFER_SIZE_64];
@@ -3541,11 +3538,8 @@ int32_t UtilWriteConfigurationParameter(
 	return (int32_t) ParameterFound;
 }
 
-int32_t UtilReadConfigurationParameter(
-		const enum ConfigurationFileParameter parameter,
-		char* returnValue,
-		const size_t bufferLength)
-{
+int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter parameter,
+									   char *returnValue, const size_t bufferLength) {
 
 	char TextBuffer[SMALL_BUFFER_SIZE_128];
 	char confPathDir[MAX_FILE_PATH];
@@ -3566,8 +3560,10 @@ int32_t UtilReadConfigurationParameter(
 	return strnlen(returnValue, bufferLength);
 }
 
-char* UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength) {
+char *UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter,
+											char *returnValue, const size_t bufferLength) {
 	const char *outputString = NULL;
+
 	switch (parameter) {
 	case CONFIGURATION_PARAMETER_SCENARIO_NAME:
 		outputString = ParameterNameScenarioName;
@@ -3659,7 +3655,8 @@ char* UtilGetConfigurationParameterAsString(const enum ConfigurationFileParamete
 }
 
 
-enum ConfigurationFileParameter UtilParseConfigurationParameter(const char* parameter, const size_t bufferLength) {
+enum ConfigurationFileParameter UtilParseConfigurationParameter(const char *parameter,
+																const size_t bufferLength) {
 	if (strncmp(ParameterNameScenarioName, parameter, bufferLength) == 0)
 		return CONFIGURATION_PARAMETER_SCENARIO_NAME;
 	if (strncmp(ParameterNameOriginLatitude, parameter, bufferLength) == 0)

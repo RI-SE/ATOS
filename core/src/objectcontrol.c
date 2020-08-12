@@ -674,7 +674,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				GSD->ScenarioStartTimeU32 = TimeGetAsGPSqmsOfWeek(&startTime) >> 2;
 				bzero(MiscText, SMALL_BUFFER_SIZE_0);
 				sprintf(MiscText, "%" PRIu32, GSD->ScenarioStartTimeU32 << 2);
-				JournalRecordString("Sending START with time %u [second of week]", TimeGetAsGPSSecondOfWeek(&startTime));
+				JournalRecordString("Sending START with time %u [second of week]",
+									TimeGetAsGPSSecondOfWeek(&startTime));
 			}
 			else if (iCommand == COMM_REPLAY) {
 				ObjectcontrolExecutionMode = OBJECT_CONTROL_REPLAY_MODE;
@@ -1034,8 +1035,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 											   "Unable to connect to object %s:%d, retry in %d sec...",
 											   object_address_name[iIndex], object_tcp_port[iIndex],
 											   (!(1 & DisconnectU8)) * 3);
-									JournalRecordString("Was not able to connect to object, [IP: %s] [PORT: %d]",
-														object_address_name[iIndex], object_tcp_port[iIndex]);
+									JournalRecordString
+										("Was not able to connect to object, [IP: %s] [PORT: %d]",
+										 object_address_name[iIndex], object_tcp_port[iIndex]);
 									break;
 								case EADDRINUSE:
 									util_error("[ObjectControl] Local address/port already in use");
