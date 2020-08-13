@@ -2890,7 +2890,7 @@ void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
 
 	snprintf(stringBuffer, sizeof (stringBuffer), "Machine uptime: %ld:%ld:%ld\n", hours, minutes, seconds);
 	strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
-	remainingBufferSpace -= strlen(ControlResponseBuffer);
+	remainingBufferSpace -= strlen(stringBuffer);
 
 	pid = getpid();
 	snprintf(procFilename, sizeof (procFilename), "/proc/%d/stat", pid);
@@ -2919,7 +2919,7 @@ void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
 			seconds = (serverUptime - (3600 * hours) - (minutes * 60));
 			sprintf(stringBuffer, "Server uptime: %ld:%ld:%ld\n", hours, minutes, seconds);
 			strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
-			remainingBufferSpace -= strlen(ControlResponseBuffer);
+			remainingBufferSpace -= strlen(stringBuffer);
 			break;
 		}
 		token = strtok(NULL, " ");
