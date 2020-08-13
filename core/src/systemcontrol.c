@@ -2875,7 +2875,6 @@ void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
 	struct sysinfo info;
 	char procFilename[100] = { 0 };
 	char stringBuffer[255], statFileBuffer[255];
-	char strval1[100] = { 0 };
 	long hours, minutes, seconds;
 	pid_t pid = 0;
 	FILE *pidstat = NULL;
