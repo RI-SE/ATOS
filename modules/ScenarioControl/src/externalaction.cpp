@@ -6,6 +6,7 @@
 #include <algorithm>
 
 #include "logging.h"
+#include "journal.h"
 #include "util.h"
 #include "maestroTime.h"
 
@@ -23,6 +24,9 @@ Action::ActionReturnCode_t ExternalAction::execute(void)
 		data.executionTime_qmsoW  = actionDelayTime_qms == 0 ? TimeGetAsGPSqmsOfWeek(&systemTime) : TimeGetAsGPSqmsOfWeek(&systemTime) + actionDelayTime_qms;
 
         data.ip = actionObjectIP;
+		std::string type = getTypeAsString(getTypeCode());
+		JournalRecordEvent("Executing action %s (ID %d) - to occur at time %u [seconds of week]",
+						   type.c_str(), actionID, data.executionTime_qmsoW);
 
         LogMessage(LOG_LEVEL_INFO, "Sending execute action message over message bus (action ID %u)", actionID);
         if(iCommSendEXAC(data) == -1)

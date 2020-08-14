@@ -465,22 +465,21 @@ Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const ObjectDataType &mon
 	{
         if(tp->getObjectIP() == monr.ClientIP && dynamic_cast<ISOTrigger*>(tp) == nullptr)
         {
+			Trigger::TriggerReturnCode_t result = Trigger::NO_TRIGGER_OCCURRED;
             switch (tp->getTypeCode())
             {
 			case Trigger::TriggerTypeCode_t::TRIGGER_BRAKE:
-				if (monr.MonrData.speed.isLongitudinalValid && monr.MonrData.isTimestampValid)
-				{
-					tp->update(monr.MonrData.speed.longitudinal_m_s, monr.MonrData.timestamp);
+				if (monr.MonrData.speed.isLongitudinalValid && monr.MonrData.isTimestampValid) {
+					result = tp->update(monr.MonrData.speed.longitudinal_m_s, monr.MonrData.timestamp);
 				}
-				else
-				{
+				else {
 					LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
 							   tp->getTypeAsString(tp->getTypeCode()).c_str());
 				}
                 break;
 			case Trigger::TriggerTypeCode_t::TRIGGER_DISTANCE:
 				if (monr.MonrData.position.isPositionValid) {
-					tp->update(monr);
+					result = tp->update(monr);
 				}
 				else {
 					LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
@@ -491,6 +490,11 @@ Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const ObjectDataType &mon
                 LogMessage(LOG_LEVEL_WARNING, "Unhandled trigger type in update: %s",
                            tp->getTypeAsString(tp->getTypeCode()).c_str());
             }
+			if (result == Trigger::TRIGGER_OCCURRED) {
+				std::string triggerType = Trigger::getTypeAsString(tp->getTypeCode());
+				JournalRecordEvent("Trigger %s (ID %d) occurred - triggering data timestamped %u [¼ ms of week]",
+								   triggerType.c_str(), tp->getID(), TimeGetAsGPSqmsOfWeek(&monr.MonrData.timestamp));
+			}
         }
     }
 }
