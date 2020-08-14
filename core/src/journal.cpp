@@ -54,6 +54,24 @@ int JournalRecordString(const char* format, ...) {
 	}
 }
 
+int JournalRecordEvent(const char* format, ...) {
+	va_list args;
+	FILE* fp;
+	checkDate();
+	fp = beginJournalEntry();
+	if (fp != nullptr) {
+		fprintf(fp, "<!> ");
+		va_start(args, format);
+		vfprintf(fp, format, args);
+		va_end(args);
+		return endJournalEntry(fp);
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to open journal file %s for writing", journalPath.c_str());
+		return -1;
+	}
+}
+
 int JournalRecordMonitorData(const ObjectMonitorType* data) {
 	FILE* fp;
 	char errorString[1024];
@@ -183,7 +201,6 @@ int checkDate() {
 FILE* beginJournalEntry() {
 	FILE *fp = fopen(journalPath.c_str(), JOURNAL_FILE_WRITE_MODE);
 	if (fp != nullptr) {
-		//Seconds now = Clock::now().time_since_epoch();
 		auto now = std::chrono::time_point_cast<Seconds>(Clock::now());
 		fprintf(fp, "%f: ", now.time_since_epoch().count());
 	}

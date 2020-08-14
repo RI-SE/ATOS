@@ -11,6 +11,7 @@ extern "C" {
 
 int JournalInit(const char* name);
 int JournalRecordString(const char* format, ...);
+int JournalRecordEvent(const char* format, ...);
 int JournalRecordMonitorData(const ObjectMonitorType* data);
 
 #ifdef __cplusplus
