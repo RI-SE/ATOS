@@ -63,6 +63,9 @@ target_include_directories(${COREUTILS_TARGET} PUBLIC
 set_target_properties(${COREUTILS_TARGET} PROPERTIES
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/inc/util.h
 )
+set_property(TARGET ${COREUTILS_TARGET} APPEND PROPERTY
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/inc/journal.h
+)
 
 add_library(${DATA_DICTIONARY_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/src/datadictionary.c
