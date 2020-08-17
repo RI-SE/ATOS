@@ -74,7 +74,6 @@
 #define PRIO_COMM_DISARM 16
 #define PRIO_COMM_STOP 16
 #define PRIO_COMM_REPLAY 16
-#define PRIO_COMM_CONTROL 16
 #define PRIO_COMM_INIT 16
 #define PRIO_COMM_CONNECT 16
 #define PRIO_COMM_DISCONNECT 16
@@ -2038,9 +2037,6 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 		break;
 	case COMM_REPLAY:
 		uiMessagePrio = PRIO_COMM_REPLAY;
-		break;
-	case COMM_CONTROL:
-		uiMessagePrio = PRIO_COMM_CONTROL;
 		break;
 	case COMM_ABORT:
 		uiMessagePrio = PRIO_COMM_ABORT;
