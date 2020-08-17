@@ -28,7 +28,11 @@
 #include "journal.h"
 #include "datadictionary.h"
 
+#if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
+namespace fs = std::filesystem;
+#else
 namespace fs = std::experimental::filesystem;
+#endif
 
 #define MODULE_NAME "JournalControl"
 class Journal {
