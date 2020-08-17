@@ -630,7 +630,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case Idle_0:
 			break;
 		case GetServerStatus_0:
-			LogPrint("GetServerStatus");
 			if (SystemControlCommand != PreviousSystemControlCommand) {
 				LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, %d",
 						   SystemControlStatesArr[SystemControlState],
