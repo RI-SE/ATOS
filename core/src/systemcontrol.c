@@ -230,7 +230,7 @@ static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, 
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
 
-void appendSysInfoString(char *ControlResponseBuffer);
+void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -639,7 +639,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 			ControlResponseBuffer[0] = SystemControlState;
 			ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD);	//OBCStateU8;
-			appendSysInfoString(ControlResponseBuffer);
+			appendSysInfoString(ControlResponseBuffer + 2, sizeof (ControlResponseBuffer) - 2);
 			LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
 											 ControlResponseBuffer, strlen(ControlResponseBuffer),
@@ -1958,14 +1958,16 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug) {
 
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
+
 	if (Debug)
 		LogPrint("SetServerParameter: %s = %s", ParameterName, NewValue);
 
-	enum ConfigurationFileParameter parameter = UtilParseConfigurationParameter(ParameterName, strlen(ParameterName)+1);
+	enum ConfigurationFileParameter parameter =
+		UtilParseConfigurationParameter(ParameterName, strlen(ParameterName) + 1);
 
 	switch (parameter) {
 	case CONFIGURATION_PARAMETER_SCENARIO_NAME:
-		result = DataDictionarySetScenarioName(NewValue, strlen(NewValue)+1);
+		result = DataDictionarySetScenarioName(NewValue, strlen(NewValue) + 1);
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_LATITUDE:
 		result = DataDictionarySetOriginLatitudeDbl(GSD, NewValue);
@@ -2028,10 +2030,10 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 		result = DataDictionarySetSupervisorTCPPortU16(GSD, NewValue);
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
-		result = DataDictionarySetRVSSConfigU32(GSD, (uint32_t) strtoul(NewValue,NULL,10));
+		result = DataDictionarySetRVSSConfigU32(GSD, (uint32_t) strtoul(NewValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_RATE:
-		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(NewValue,NULL,10));
+		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(NewValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_MISC_DATA:
 		result = DataDictionarySetMiscDataC8(GSD, NewValue);
@@ -2049,8 +2051,8 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 
 I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 
-	char* line;
-	size_t len;
+	char *line = NULL;
+	size_t len = 0;
 	FILE *fd;
 	char confPathDir[MAX_FILE_PATH];
 	ssize_t read;
@@ -2067,8 +2069,7 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 			}
 		}
 		fclose(fd);
-		if (line)
-			free(line);
+		free(line);
 	}
 	else {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", confPathDir);
@@ -2868,52 +2869,60 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 }
 
 
-void appendSysInfoString(char *ControlResponseBuffer) {
-	// Server uptime
+void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
+
+	size_t remainingBufferSpace = bufferSize;
 	struct sysinfo info;
-
-	sysinfo(&info);
-
-	int h = (info.uptime / 3600);
-	int m = (info.uptime - (3600 * h)) / 60;
-	int s = (info.uptime - (3600 * h) - (m * 60));
-
-	char buff[255];
-
-	sprintf(buff, "Server Uptime: %i:%i:%i\n", h, m, s);
-
-	strcat(ControlResponseBuffer, buff);
-
-	pid_t pid = getpid();
+	char procFilename[100] = { 0 };
+	char stringBuffer[255], statFileBuffer[255];
+	long hours, minutes, seconds;
+	pid_t pid = 0;
 	FILE *pidstat = NULL;
 
-	char filename[100] = { 0 };
-	snprintf(filename, sizeof (filename), "/proc/%d/stat", pid);
+	// Server uptime
+	sysinfo(&info);
 
-	pidstat = fopen(filename, "r");
+	hours = info.uptime / 3600;
+	minutes = (info.uptime - (3600 * hours)) / 60;
+	seconds = (info.uptime - (3600 * hours) - (minutes * 60));
+
+	snprintf(stringBuffer, sizeof (stringBuffer), "Machine uptime: %ld:%ld:%ld\n", hours, minutes, seconds);
+	strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
+	remainingBufferSpace -= strlen(stringBuffer);
+
+	pid = getpid();
+	snprintf(procFilename, sizeof (procFilename), "/proc/%d/stat", pid);
+
+	pidstat = fopen(procFilename, "r");
 	if (pidstat == NULL) {
-		fprintf(stderr, "Error: Couldn't open [%s]\n", filename);
+		LogMessage(LOG_LEVEL_ERROR, "Could not open file %s", procFilename);
+		return;
 	}
 
-	char strval1[100] = { 0 };
-	fgets(strval1, 255, pidstat);
-
+	fgets(statFileBuffer, sizeof (statFileBuffer), pidstat);
 	fclose(pidstat);
 
 	// Get start time from proc/pid/stat
-	char *token = strtok(strval1, " ");
-	int loopCounter = 0;
+	char *token = strtok(statFileBuffer, " ");
+	int statIndex = 0;
 
 	while (token != NULL) {
-		if (loopCounter == 22) {	//Get  starttime  %llu from proc file for pid. 
-			char temp[255];
+		if (statIndex == 22) {	//Get  starttime  %llu from proc file for pid.
+			unsigned long long timeAtStart =
+				strtoull(token, NULL, 10) / (unsigned long long)(sysconf(_SC_CLK_TCK));
+			long serverUptime = (long)((unsigned long long)info.uptime - timeAtStart);
 
-			sprintf(temp, "Pid %d was started at: %s\n", pid, token);
-			strcat(ControlResponseBuffer, temp);
+			hours = serverUptime / 3600;
+			minutes = (serverUptime - (3600 * hours)) / 60;
+			seconds = (serverUptime - (3600 * hours) - (minutes * 60));
+			sprintf(stringBuffer, "Server uptime: %ld:%ld:%ld\n", hours, minutes, seconds);
+			strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
+			remainingBufferSpace -= strlen(stringBuffer);
+			break;
 		}
 		token = strtok(NULL, " ");
-		loopCounter++;
+		statIndex++;
 	}
 	//Make it clear that this is placeholder data
-	strcat(ControlResponseBuffer, "Maestro powerlevel: 90001 \n");
+	strncat(ControlResponseBuffer, "Maestro powerlevel: 90001\n", remainingBufferSpace - 1);
 }
