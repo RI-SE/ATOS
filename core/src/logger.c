@@ -407,7 +407,7 @@ void vInitializeLog(char *logFilePath, unsigned int filePathLength, char *csvLog
 
 	strcpy(logFileDirectoryPath, journalPathDir);
 	strcat(logFileDirectoryPath, scenarioName);
-	strcat(logFileDirectoryPath, DateBuffer); // TODO: GUC puts this part into the scenario name by itself if necessary
+	strcat(logFileDirectoryPath, DateBuffer);	// TODO: GUC puts this part into the scenario name by itself if necessary
 
 	vCreateLogFolder(logFileDirectoryPath);
 
