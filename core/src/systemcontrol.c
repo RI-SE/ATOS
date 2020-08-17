@@ -644,7 +644,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
 											 ControlResponseBuffer, strlen(ControlResponseBuffer),
 											 &ClientSocket, 0);
-			LogPrint("GetServerStatus Handled");
 			break;
 		case GetServerParameterList_0:
 			SystemControlCommand = Idle_0;
