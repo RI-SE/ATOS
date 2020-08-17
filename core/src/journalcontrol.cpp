@@ -140,12 +140,8 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending status reply");
 			}
 			break;
-		case COMM_CONTROL:
-			LogMessage(LOG_LEVEL_WARNING, "Replay function out of date");
-			[[fallthrough]];
 		case COMM_REPLAY:
-			if (iCommSend(COMM_CONTROL, nullptr, 0) < 0)
-				util_error("Communication error - exiting");
+			LogMessage(LOG_LEVEL_WARNING, "Replay function out of date");
 			break;
 		case COMM_EXIT:
 			quit = true;
