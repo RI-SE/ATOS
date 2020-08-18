@@ -205,11 +205,6 @@ enum ConfigurationFileParameter {
 #define FAILED_DELETE 0x02
 #define FILE_TO_MUCH_DATA 0x06
 
-
-// The do - while loop makes sure that each function call is properly handled using macros
-#define LOG_SEND(buf, ...) \
-    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);LogMessage(LOG_LEVEL_INFO,buf);fflush(stdout);} while (0)
-
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
 
@@ -226,13 +221,11 @@ COMM_ARM = 2,
 COMM_STOP = 3,
 COMM_EXIT = 5,
 COMM_REPLAY = 6,
-COMM_CONTROL = 7,
 COMM_ABORT = 8,
 COMM_INIT = 10,
 COMM_CONNECT = 11,
 COMM_OBC_STATE = 12,
 COMM_DISCONNECT = 13,
-COMM_LOG = 14,
 COMM_VIOP = 15,
 COMM_TRAJ = 16,
 COMM_TRAJ_TOSUP = 17,

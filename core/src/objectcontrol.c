@@ -678,18 +678,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									TimeGetAsGPSSecondOfWeek(&startTime));
 			}
 			else if (iCommand == COMM_REPLAY) {
-				ObjectcontrolExecutionMode = OBJECT_CONTROL_REPLAY_MODE;
-				LogMessage(LOG_LEVEL_INFO, "Entering REPLAY mode <%s>", pcRecvBuffer);
+				//ObjectcontrolExecutionMode = OBJECT_CONTROL_REPLAY_MODE;
+				//LogMessage(LOG_LEVEL_INFO, "Entering REPLAY mode <%s>", pcRecvBuffer);
+				LogMessage(LOG_LEVEL_WARNING, "REPLAY mode support deprecated");
 			}
 			else if (iCommand == COMM_ABORT && vGetState(GSD) == OBC_STATE_RUNNING) {
 				vSetState(OBC_STATE_CONNECTED, GSD);
 				objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 				LogMessage(LOG_LEVEL_WARNING, "ABORT received");
 				JournalRecordString("ABORT received");
-			}
-			else if (iCommand == COMM_CONTROL) {
-				ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
-				printf("[ObjectControl] Object control in CONTROL mode\n");
 			}
 			else if (iCommand == COMM_REMOTECTRL_ENABLE) {
 				vSetState(OBC_STATE_REMOTECTRL, GSD);
