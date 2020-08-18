@@ -2700,6 +2700,7 @@ int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr
 		if (transmitterIDs[i] != 0) {
 			monitorData.ClientID = transmitterIDs[i];
 			struct timeval recvTime;
+
 			if (DataDictionaryGetMonitorDataReceiveTime(transmitterIDs[i], &recvTime) != READ_OK) {
 				LogMessage(LOG_LEVEL_ERROR,
 						   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
