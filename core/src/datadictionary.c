@@ -101,6 +101,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitObjectData() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
+	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
 	if (Res != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
 	}
@@ -1820,6 +1821,51 @@ ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSettin
 }
 
 /*END MaxPacketLoss*/
+/*TransmitterID*/
+ReadWriteAccess_t DataDictionaryInitTransmitterID(void) {
+	// TODO implement shmem solution
+	return READ_OK;
+}
+
+ReadWriteAccess_t DataDictionaryGetTransmitterID(uint32_t * transmitterID) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	uint64_t readSetting;
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_TRANSMITTER_ID, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtoul(resultBuffer, &endPtr, 10);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for TransmitterID");
+			result = PARAMETER_NOTFOUND;
+			*transmitterID = DEFAULT_TRANSMITTER_ID;
+		}
+		else if (readSetting > UINT32_MAX) {
+			LogMessage(LOG_LEVEL_WARNING, "Configuration for TransmitterID outside accepted range");
+			result = READ_OK;
+			*transmitterID = UINT32_MAX;
+		}
+		else {
+			result = READ_OK;
+			*transmitterID = (uint32_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "TransmitterID not found!");
+		result = PARAMETER_NOTFOUND;
+		*transmitterID = DEFAULT_TRANSMITTER_ID;
+	}
+	return result;
+}
+
+ReadWriteAccess_t DataDictionarySetTransmitterID(const uint32_t transmitterID) {
+	// TODO implement shmem solution
+	return UNDEFINED;
+}
+
+/*END TransmitterID*/
 
 /*!
  * \brief DataDictionaryInitObjectData inits a data structure for saving object monr
