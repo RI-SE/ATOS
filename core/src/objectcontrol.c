@@ -456,7 +456,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							LogMessage(LOG_LEVEL_WARNING,
 									   "Modifying local transmitter ID %u to %u in lieu of ability to set remote",
 									   localTransmitterID, monitorData.ClientID);
-							DataDictionaryModifyTransmitterID(localTransmitterID, monitorData.ClientID);
+							DataDictionaryModifyTransmitterIDByIP(monitorData.ClientIP, monitorData.ClientID);
 						}
 					}
 					else {
