@@ -148,7 +148,7 @@ int main() {
 		{
 
 			//Populate the monitorType
-			UtilPopulateMonitorDataStruct(mqRecvData, (size_t)(sizeof (mqRecvData)), &monitorData);
+			UtilPopulateMonitorDataStruct(mqRecvData, (size_t) (sizeof (mqRecvData)), &monitorData);
 
 			char dummy[1];
 			int sizeOfVisualizationMessage;
