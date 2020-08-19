@@ -1078,6 +1078,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							DataDictionaryGetOriginLatitudeC8(GSD, OriginLatitude, SMALL_BUFFER_SIZE_0);
 							DataDictionaryGetOriginLongitudeC8(GSD, OriginLongitude, SMALL_BUFFER_SIZE_0);
 							DataDictionaryGetOriginAltitudeC8(GSD, OriginAltitude, SMALL_BUFFER_SIZE_0);
+							uint32_t transmitterID;
+							uint8_t isoTransmitterID;
+							DataDictionaryGetTransmitterID(&transmitterID);
+							isoTransmitterID = (uint8_t) transmitterID;
+							setTransmitterID(isoTransmitterID);
 
 							memset(pcSendBuffer, 0, sizeof (pcSendBuffer));
 							snprintf(pcSendBuffer, sizeof (pcSendBuffer), "%u;",
