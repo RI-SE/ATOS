@@ -1864,6 +1864,7 @@ ReadWriteAccess_t DataDictionarySetTransmitterID(const uint32_t transmitterID) {
 	// TODO implement shmem solution
 	return UNDEFINED;
 }
+
 /*END TransmitterID*/
 
 /*!

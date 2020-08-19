@@ -1080,6 +1080,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							DataDictionaryGetOriginAltitudeC8(GSD, OriginAltitude, SMALL_BUFFER_SIZE_0);
 							uint32_t transmitterID;
 							uint8_t isoTransmitterID;
+
 							DataDictionaryGetTransmitterID(&transmitterID);
 							isoTransmitterID = (uint8_t) transmitterID;
 							setTransmitterID(isoTransmitterID);
