@@ -2534,3 +2534,47 @@ ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitte
 
 	return result;
 }
+
+
+/*!
+ * \brief DataDictionaryModifyTransmitterIDByIP Changes the transmitter ID of the object data identified by a transmitter IP (this is a temporary function, don't use this too much)
+ * \param ipKey IP identifying an object
+ * \param newTransmitterID Desired new transmitter ID of object data
+ * \return Value according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryModifyTransmitterIDByIP(const in_addr_t ipKey,
+                                                    const uint32_t newTransmitterID) {
+    ReadWriteAccess_t result;
+
+    if (objectDataMemory == NULL) {
+        errno = EINVAL;
+        LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+        return UNDEFINED;
+    }
+    if (newTransmitterID == 0) {
+        errno = EINVAL;
+        LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+        return UNDEFINED;
+    }
+
+    objectDataMemory = claimSharedMemory(objectDataMemory);
+    if (objectDataMemory == NULL) {
+        // If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+        LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+        return UNDEFINED;
+    }
+
+    result = PARAMETER_NOTFOUND;
+    int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+    for (int i = 0; i < numberOfObjects; ++i) {
+        if (ipKey == objectDataMemory[i].ClientIP) {
+            objectDataMemory[i].ClientID = newTransmitterID;
+            result = WRITE_OK;
+        }
+    }
+
+    objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+    return result;
+}
