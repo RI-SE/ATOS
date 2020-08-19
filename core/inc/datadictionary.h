@@ -133,6 +133,10 @@ ReadWriteAccess_t DataDictionaryInitMaxPacketsLost(void);
 ReadWriteAccess_t DataDictionarySetMaxPacketsLost(uint8_t maxPacketsLostSetting);
 ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSetting);
 
+ReadWriteAccess_t DataDictionaryInitTransmitterID(void);
+ReadWriteAccess_t DataDictionaryGetTransmitterID(uint32_t * transmitterID);
+ReadWriteAccess_t DataDictionarySetTransmitterID(const uint32_t transmitterID);
+
 ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
 ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
 
