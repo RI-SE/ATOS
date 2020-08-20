@@ -340,18 +340,20 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					// Check time since last position update
 					struct timeval lastDataUpdate, timeSinceLastMonitorData;
 
+					
 					DataDictionaryGetMonitorDataReceiveTime(object_transmitter_ids[iIndex], &lastDataUpdate);
 
-					timersub(&currentTime, &lastDataUpdate, &timeSinceLastMonitorData);
-					if (timercmp(&timeSinceLastMonitorData, &monitorDataTimeout, >)) {
-						LogMessage(LOG_LEVEL_WARNING,
-								   "MONR timeout (ID %u):\n\ttimeout time %d s %d µs\n\tlast message %d s %d µs\n\tcurrent time %d s %d µs",
-								   object_transmitter_ids[iIndex], monitorDataTimeout.tv_sec,
-								   monitorDataTimeout.tv_usec, lastDataUpdate.tv_sec,
-								   lastDataUpdate.tv_usec, currentTime.tv_sec, currentTime.tv_usec);
-						DisconnectU8 = 1;
+					if(monitorDataTimeout.tv_usec > 0){
+						timersub(&currentTime, &lastDataUpdate, &timeSinceLastMonitorData);
+						if (timercmp(&timeSinceLastMonitorData, &monitorDataTimeout, >)) {
+							LogMessage(LOG_LEVEL_WARNING,
+							"MONR timeout (ID %u):\n\ttimeout time %d s %d µs\n\tlast message %d s %d µs\n\tcurrent time %d s %d µs",
+							object_transmitter_ids[iIndex], monitorDataTimeout.tv_sec,
+							monitorDataTimeout.tv_usec, lastDataUpdate.tv_sec,
+							lastDataUpdate.tv_usec, currentTime.tv_sec, currentTime.tv_usec);
+							DisconnectU8 = 1;
+						}
 					}
-
 					if (DisconnectU8) {
 						LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s - returning to IDLE",
 								   object_address_name[iIndex]);
@@ -1813,10 +1815,8 @@ int readMonitorDataTimeoutSetting(struct timeval *timeout) {
 	const struct timeval monitorDataPeriod = { 1 / MONR_EXPECTED_FREQUENCY_HZ,
 		(1000000 / MONR_EXPECTED_FREQUENCY_HZ) % 1000000
 	};
-	*timeout = monitorDataPeriod;
 
 	DataDictionaryGetMaxPacketsLost(&maxMissingMonitorMessages);
-
 	LogMessage(LOG_LEVEL_INFO, "Read max allowed missing monitor packets: %u", maxMissingMonitorMessages);
 	for (uint8_t i = 0; i < maxMissingMonitorMessages; ++i) {
 		timeradd(timeout, &monitorDataPeriod, timeout);
