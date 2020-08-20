@@ -52,6 +52,7 @@
 #define CONFIGURATION_DIR_NAME "conf"
 #define TRAJECTORY_DIR_NAME "traj"
 #define GEOFENCE_DIR_NAME "geofence"
+#define OBJECT_DIR_NAME "objects"
 
 /* Message priorities on message queue */
 // Abort message
@@ -126,6 +127,10 @@ static const char ParameterNameRVSSRate[] = "RVSSRate";
 static const char ParameterNameMaxPacketsLost[] = "MaxPacketsLost";
 static const char ParameterNameTransmitterID[] = "TransmitterID";
 static const char ParameterNameMiscData[] = "MiscData";
+
+static const char ObjectSettingNameID[] = "ID";
+static const char ObjectSettingNameIP[] = "IP";
+static const char ObjectSettingNameTraj[] = "traj";
 
 /*------------------------------------------------------------
 -- Local type definitions
@@ -2468,6 +2473,23 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
 }
 
 /*!
+ * \brief UtilGetObjectDirectoryPath Fetches the absolute path to where object files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetObjectDirectoryPath(char *path, size_t pathLen) {
+	if (pathLen > MAX_FILE_PATH) {
+		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		path[0] = '\0';
+		return;
+	}
+	UtilGetTestDirectoryPath(path, pathLen);
+	strcat(path, OBJECT_DIR_NAME);
+	strcat(path, "/");
+}
+
+/*!
  * \brief UtilDeleteTrajectoryFile deletes the specified trajectory
  * \param name
  * \param nameLen
@@ -2535,6 +2557,39 @@ int UtilDeleteGeofenceFile(const char *name, const size_t nameLen) {
 }
 
 /*!
+ * \brief UtilDeleteObjectFile deletes the specified object file
+ * \param name
+ * \param nameLen
+ * \return returns 0 if the object is now deleted. Non-zero values otherwise.
+ */
+int UtilDeleteObjectFile(const char *name, const size_t nameLen) {
+	char filePath[MAX_FILE_PATH] = { '\0' };
+	UtilGetObjectDirectoryPath(filePath, sizeof (filePath));
+
+	if (name == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null object file");
+		return -1;
+	}
+	if (strstr(name, "..") != NULL || strstr(name, "/") != NULL) {
+		errno = EPERM;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on object file and navigate out of directory");
+		return -1;
+	}
+	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
+		errno = ENOBUFS;
+		LogMessage(LOG_LEVEL_ERROR, "Object file name too long");
+		return -1;
+	}
+
+	if (filePath[0] == '\0')
+		return -1;
+
+	strcat(filePath, name);
+	return deleteFile(filePath, sizeof (filePath));
+}
+
+/*!
  * \brief UtilDeleteGeofenceFile deletes the specified file and deletes it
  * \param pathRelativeToWorkspace
  * \return returns 0 if the geofence is now deleted. Non-zero values otherwise.
@@ -2582,11 +2637,23 @@ int UtilDeleteTrajectoryFiles(void) {
 
 /*!
  * \brief UtilDeleteGeofenceFiles finds the geofence folder and deletes its contents
- * \return returns 0 if succesfull if the trajectory folder now is empty. Non-zero values otherwise.
+ * \return returns 0 if succesful if the geofence folder now is empty. Non-zero values otherwise.
  */
 int UtilDeleteGeofenceFiles(void) {
 	char filePath[MAX_FILE_PATH] = { '\0' };
 	UtilGetGeofenceDirectoryPath(filePath, sizeof (filePath));
+	if (filePath[0] == '\0')
+		return -1;
+	return deleteDirectoryContents(filePath, sizeof (filePath));
+}
+
+/*!
+ * \brief UtilDeleteObjectFiles finds the object folder and deletes its contents
+ * \return returns 0 if succesful if the object folder now is empty. Non-zero values otherwise.
+ */
+int UtilDeleteObjectFiles(void) {
+	char filePath[MAX_FILE_PATH] = { '\0' };
+	UtilGetObjectDirectoryPath(filePath, sizeof (filePath));
 	if (filePath[0] == '\0')
 		return -1;
 	return deleteDirectoryContents(filePath, sizeof (filePath));
@@ -3704,6 +3771,66 @@ enum ConfigurationFileParameter UtilParseConfigurationParameter(const char *para
 		return CONFIGURATION_PARAMETER_INVALID;
 }
 
+/*!
+ * \brief UtilGetObjectFileSetting Gets the specified setting from an object file
+ * \param setting Setting to get
+ * \param objectFilePath File containing the setting
+ * \param filePathLength Length of the file path variable
+ * \param objectSetting Output variable
+ * \param objectSettingSize Size of output variable
+ * \return 0 if successful, -1 otherwise
+ */
+int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char* objectFilePath,
+							 const size_t filePathLength, char* objectSetting,
+							 const size_t objectSettingSize) {
+	char textBuffer[SMALL_BUFFER_SIZE_128];
+	UtilGetObjectParameterAsString(setting, textBuffer, sizeof (textBuffer));
+	strcat(textBuffer, "=");
+
+	memset(objectSetting, 0, objectSettingSize);
+	UtilSearchTextFile(objectFilePath, textBuffer, "", objectSetting);
+
+	LogMessage(LOG_LEVEL_DEBUG, "Read object parameter: %s%s\n", textBuffer, objectSetting);
+
+	return objectSetting[0] == '\0' ? -1 : 0;
+}
+
+/*!
+ * \brief UtilGetObjectParameterAsString Converts an enumerated value to its string representation,
+ *			or an empty string if an invalid parameter was requested.
+ * \param parameter
+ * \param returnValue
+ * \param bufferLength
+ * \return Pointer to the string
+ */
+char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
+											char *returnValue, const size_t bufferLength) {
+	const char *outputString = NULL;
+
+	switch (parameter) {
+	case OBJECT_SETTING_ID:
+		outputString = ObjectSettingNameID;
+		break;
+	case OBJECT_SETTING_IP:
+		outputString = ObjectSettingNameIP;
+		break;
+	case OBJECT_SETTING_TRAJ:
+		outputString = ObjectSettingNameTraj;
+		break;
+	default:
+		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
+		outputString = "";
+	}
+
+	if (strlen(outputString) + 1 > bufferLength) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold object setting parameter name");
+		returnValue = "";
+	}
+	else {
+		strncpy(returnValue, outputString, bufferLength);
+	}
+	return returnValue;
+}
 
 /*!
  * \brief UtilPopulateMonitorDataStruct Takes an array of raw monitor data and fills a monitor data struct with the content

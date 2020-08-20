@@ -162,6 +162,12 @@ enum ConfigurationFileParameter {
 	CONFIGURATION_PARAMETER_INVALID
 };
 
+enum ObjectFileParameter {
+	OBJECT_SETTING_ID,
+	OBJECT_SETTING_IP,
+	OBJECT_SETTING_TRAJ
+};
+
 
 #define UNKNOWN 0
 #define C8_CODE  1
@@ -645,12 +651,15 @@ void UtilGetJournalDirectoryPath(char* path, size_t pathLen);
 void UtilGetConfDirectoryPath(char* path, size_t pathLen);
 void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
 void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
+void UtilGetObjectDirectoryPath(char* path, size_t pathLen);
 
 int UtilDeleteTrajectoryFiles(void);
 int UtilDeleteGeofenceFiles(void);
+int UtilDeleteObjectFiles(void);
 
 int UtilDeleteTrajectoryFile(const char * geofencePath, const size_t nameLen);
 int UtilDeleteGeofenceFile(const char * geofencePath, const size_t nameLen);
+int UtilDeleteObjectFile(const char * geofencePath, const size_t nameLen);
 int UtilDeleteGenericFile(const char * genericFilePath, const size_t nameLen);
 
 // File parsing functions
@@ -723,6 +732,10 @@ int32_t UtilWriteConfigurationParameter(const enum ConfigurationFileParameter pa
 int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength);
 char* UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength);
 enum ConfigurationFileParameter UtilParseConfigurationParameter(const char* parameter, const size_t bufferLength);
+char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter, char *returnValue, const size_t bufferLength);
+int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char* objectFilePath,
+							 const size_t filePathLength, char* objectSetting,
+							 const size_t objectSettingSize);
 
 int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
 I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
