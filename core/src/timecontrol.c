@@ -151,7 +151,7 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 		else {
 			LogMessage(LOG_LEVEL_INFO, "Defaulting to system time");
-			JournalRecordData(JOURNAL_RECORD_STRING,"Unable to connect to time server at IP %s", ServerIPC8);
+			JournalRecordData(JOURNAL_RECORD_STRING, "Unable to connect to time server at IP %s", ServerIPC8);
 		}
 	}
 
