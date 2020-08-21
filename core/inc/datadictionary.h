@@ -133,6 +133,10 @@ ReadWriteAccess_t DataDictionaryInitMaxPacketsLost(void);
 ReadWriteAccess_t DataDictionarySetMaxPacketsLost(uint8_t maxPacketsLostSetting);
 ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSetting);
 
+ReadWriteAccess_t DataDictionaryInitTransmitterID(void);
+ReadWriteAccess_t DataDictionaryGetTransmitterID(uint32_t * transmitterID);
+ReadWriteAccess_t DataDictionarySetTransmitterID(const uint32_t transmitterID);
+
 ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
 ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
 
@@ -148,6 +152,7 @@ ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDByIP(const in_addr_t Clien
 
 ReadWriteAccess_t DataDictionaryGetObjectIPByTransmitterID(const uint32_t transmitterID, in_addr_t * ClientIP);
 ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitterID, const uint32_t newTransmitterID);
+ReadWriteAccess_t DataDictionaryModifyTransmitterIDByIP(const in_addr_t ipKey, const uint32_t newTransmitterID);
 
 ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitterID, ObjectEnabledType enabledStatus);
 ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmitterID, ObjectEnabledType *enabledStatus);

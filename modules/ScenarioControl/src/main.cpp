@@ -87,9 +87,8 @@ int main()
                 scenario.sendConfiguration();
             }
             break;
-        case COMM_OBC_STATE:
-        case COMM_LOG:
-            // Ignore the state of object control and logging messages
+		case COMM_OBC_STATE:
+			// Ignore the state of object control
             break;
         case COMM_TREO:
             // Decode MQ data
