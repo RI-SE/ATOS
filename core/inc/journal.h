@@ -9,10 +9,17 @@
 extern "C" {
 #endif
 
+typedef enum {
+	JOURNAL_RECORD_MONITOR_DATA,
+	JOURNAL_RECORD_EVENT,
+	JOURNAL_RECORD_STRING
+} JournalRecordType;
+
 int JournalInit(const char* name);
-int JournalRecordString(const char* format, ...);
-int JournalRecordEvent(const char* format, ...);
+int JournalRecordData(JournalRecordType type, const char* format, ...);
 int JournalRecordMonitorData(const ObjectMonitorType* data);
+
+
 
 #ifdef __cplusplus
 }

@@ -44,7 +44,7 @@ public:
 				if (retval == Trigger::TRIGGER_OCCURRED) {
 					std::string type = Trigger::getTypeAsString(tp->getTypeCode());
 					LogMessage(LOG_LEVEL_DEBUG, "Triggered ID %u", id);
-					JournalRecordEvent("Trigger %s (ID %u) occurred", type.c_str(), id);
+					JournalRecordData(JOURNAL_RECORD_EVENT, "Trigger %s (ID %u) occurred", type.c_str(), id);
 				}
                 return (retval == Trigger::NOT_OK) ? INVALID_ARGUMENT : OK;
             }

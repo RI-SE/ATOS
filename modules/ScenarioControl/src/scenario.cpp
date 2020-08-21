@@ -492,7 +492,7 @@ Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const ObjectDataType &mon
             }
 			if (result == Trigger::TRIGGER_OCCURRED) {
 				std::string triggerType = Trigger::getTypeAsString(tp->getTypeCode());
-				JournalRecordEvent("Trigger %s (ID %d) occurred - triggering data timestamped %u [¼ ms of week]",
+				JournalRecordData(JOURNAL_RECORD_EVENT, "Trigger %s (ID %d) occurred - triggering data timestamped %u [¼ ms of week]",
 								   triggerType.c_str(), tp->getID(), TimeGetAsGPSqmsOfWeek(&monr.MonrData.timestamp));
 			}
         }

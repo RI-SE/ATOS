@@ -598,7 +598,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (iCommand == COMM_ARM && vGetState(GSD) == OBC_STATE_CONNECTED) {
 
 				LogMessage(LOG_LEVEL_INFO, "Sending ARM");
-				JournalRecordString("Sending ARM");
+				JournalRecordData(JOURNAL_RECORD_EVENT, "Sending ARM");
 				vSetState(OBC_STATE_ARMED, GSD);
 				MessageLength =
 					encodeOSTMMessage(OBJECT_COMMAND_ARM, MessageBuffer, sizeof (MessageBuffer), 0);
@@ -616,7 +616,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_DISARM && vGetState(GSD) == OBC_STATE_ARMED) {
 
 				LogMessage(LOG_LEVEL_INFO, "Sending DISARM");
-				JournalRecordString("Sending DISARM");
+				JournalRecordData(JOURNAL_RECORD_EVENT, "Sending DISARM");
 				vSetState(OBC_STATE_CONNECTED, GSD);
 
 				MessageLength =
@@ -674,7 +674,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				GSD->ScenarioStartTimeU32 = TimeGetAsGPSqmsOfWeek(&startTime) >> 2;
 				bzero(MiscText, SMALL_BUFFER_SIZE_0);
 				sprintf(MiscText, "%" PRIu32, GSD->ScenarioStartTimeU32 << 2);
-				JournalRecordString("Sending START with time %u [second of week]",
+				JournalRecordData(JOURNAL_RECORD_EVENT, "Sending START with time %u [second of week]",
 									TimeGetAsGPSSecondOfWeek(&startTime));
 			}
 			else if (iCommand == COMM_REPLAY) {
@@ -686,7 +686,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				vSetState(OBC_STATE_CONNECTED, GSD);
 				objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 				LogMessage(LOG_LEVEL_WARNING, "ABORT received");
-				JournalRecordString("ABORT received");
+				JournalRecordData(JOURNAL_RECORD_EVENT,"ABORT received");
 			}
 			else if (iCommand == COMM_REMOTECTRL_ENABLE) {
 				vSetState(OBC_STATE_REMOTECTRL, GSD);
@@ -790,7 +790,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 			}
 			else if (iCommand == COMM_INIT) {
-				JournalRecordString("INIT received");
+				JournalRecordData(JOURNAL_RECORD_EVENT,"INIT received");
 				nbr_objects = 0;
 				if (iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, &nbr_objects) == 0) {
 					// Reset preexisting stored monitor data
