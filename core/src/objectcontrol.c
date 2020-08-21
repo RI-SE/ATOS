@@ -997,7 +997,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else if (iCommand == COMM_CONNECT && vGetState(GSD) == OBC_STATE_INITIALIZED) {
 				LogMessage(LOG_LEVEL_INFO, "CONNECT received");
-				JournalRecordString("CONNECT received.");
+				JournalRecordData(JOURNAL_RECORD_EVENT,"CONNECT received.");
 
 				DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
 
@@ -1032,8 +1032,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 											   "Unable to connect to object %s:%d, retry in %d sec...",
 											   object_address_name[iIndex], object_tcp_port[iIndex],
 											   (!(1 & DisconnectU8)) * 3);
-									JournalRecordString
-										("Was not able to connect to object, [IP: %s] [PORT: %d]",
+									JournalRecordData
+										(JOURNAL_RECORD_STRING,"Was not able to connect to object, [IP: %s] [PORT: %d]",
 										 object_address_name[iIndex], object_tcp_port[iIndex]);
 									break;
 								case EADDRINUSE:
@@ -1064,13 +1064,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							if (iCommRecv(&iCommand, pcRecvBuffer, RECV_MESSAGE_BUFFER, NULL)) {
 								if (iCommand == COMM_DISCONNECT) {
 									DisconnectU8 = 1;
-									JournalRecordString("DISCONNECT received.");
+									JournalRecordData(JOURNAL_RECORD_EVENT,"DISCONNECT received.");
 								}
 							}
 						} while (iExit == 0 && iResult < 0 && DisconnectU8 == 0);
 
 						if (iResult >= 0) {
-							JournalRecordString("Configuring connected objects.");
+							JournalRecordData(JOURNAL_RECORD_STRING,"Configuring connected objects.");
 							/* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates) */
 							LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
 
@@ -1239,7 +1239,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				//#endif //NOTCP
 
 				LogMessage(LOG_LEVEL_INFO, "DISCONNECT received");
-				JournalRecordString("DISCONNECT received.");
+				JournalRecordData(JOURNAL_RECORD_EVENT,"DISCONNECT received.");
 				/* Close safety socket */
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],

@@ -25,7 +25,7 @@ Action::ActionReturnCode_t ExternalAction::execute(void)
 
         data.ip = actionObjectIP;
 		std::string type = getTypeAsString(getTypeCode());
-		JournalRecordEvent("Executing action %s (ID %d) - to occur at time %u [seconds of week]",
+		JournalRecordData(JOURNAL_RECORD_EVENT, "Executing action %s (ID %d) - to occur at time %u [seconds of week]",
 						   type.c_str(), actionID, data.executionTime_qmsoW);
 
         LogMessage(LOG_LEVEL_INFO, "Sending execute action message over message bus (action ID %u)", actionID);
