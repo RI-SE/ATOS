@@ -8,6 +8,7 @@
 #include "scenario.h"
 #include "logging.h"
 #include "util.h"
+#include "journal.h"
 
 #define MODULE_NAME "ScenarioControl"
 
@@ -32,6 +33,8 @@ int main()
 
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
     LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
+
+	JournalInit(MODULE_NAME);
 
     // Initialize message bus connection
     while(iCommInit())
