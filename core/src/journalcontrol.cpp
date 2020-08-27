@@ -285,8 +285,6 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 	UtilGetJournalDirectoryPath(journalDir, sizeof (journalDir));
 	fs::path journalDirPath(std::string(journalDir) + std::string(scenarioName) + JOURNAL_FILE_ENDING);
 
-	LogMessage(LOG_LEVEL_ERROR, "Path is: %s", journalDirPath.c_str());
-
 	std::ofstream ostrm(journalDirPath);
 	if (!ostrm.is_open()) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to open %s for writing", journalDirPath.c_str());
