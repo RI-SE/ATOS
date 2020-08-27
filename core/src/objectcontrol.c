@@ -18,6 +18,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <signal.h>
+#include <pthread.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <inttypes.h>
@@ -54,6 +55,8 @@
 #define OC_SLEEP_TIME_NONEMPTY_MQ_S 0
 #define OC_SLEEP_TIME_NONEMPTY_MQ_NS 0
 
+#define OBJECT_CONNECTION_TIMEOUT_S 10
+
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
 #define OBJECT_CONTROL_ABORT_MODE 1
@@ -88,6 +91,11 @@ typedef struct {
 	in_addr_t ip;
 } TestScenarioCommandAction;	//!< Struct describing a command to be sent as action, e.g. delayed start
 
+typedef struct {
+	const in_addr_t* ipAddr;
+	const uint16_t* port;
+	int* socketfd;
+} ConnectorThreadArguments;		//!< TODO
 
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
@@ -103,8 +111,10 @@ typedef StateTransitionResult(*StateTransition) (OBCState_t * currentState, OBCS
 /*------------------------------------------------------------
 -- Function declarations.
 ------------------------------------------------------------*/
-static I32 vConnectObject(int *sockfd, const char *name, const uint32_t port, U8 * Disconnect);
+static I32 vConnectObject(int *sockfd, const char *name, const uint32_t port);
 static void vDisconnectObject(int *sockfd);
+static int connectAllObjects(int *socket_fds, const in_addr_t objectHostnames[], const uint32_t objectTCPPorts[], const unsigned int numberOfObjects);
+static void* objectConnectorThread(void* args);
 static I32 vCheckRemoteDisconnected(int *sockfd);
 
 static void vCreateSafetyChannel(const char *name, const uint32_t port, int *sockfd,
@@ -160,7 +170,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	I32 socket_fds[MAX_OBJECTS];
 	I32 socket_fd = 0;
 	C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH];
-	C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH];
+	char object_address_name[MAX_OBJECTS][MAX_FILE_PATH];
 	in_addr_t objectIPs[MAX_OBJECTS];
 	U32 object_udp_port[MAX_OBJECTS];
 	U32 object_tcp_port[MAX_OBJECTS];
@@ -999,6 +1009,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_INFO, "CONNECT received");
 				JournalRecordData(JOURNAL_RECORD_EVENT, "CONNECT received.");
 
+				if (connectAllObjects(socket_fds, objectIPs, object_tcp_port, nbr_objects) < 0) {
+					LogMessage(LOG_LEVEL_INFO, "Unable to connect all objects");
+				}
+				util_error("Exiting!!");
+			}
+			else if (false) {
+				LogMessage(LOG_LEVEL_INFO, "CONNECT received");
+				JournalRecordData(JOURNAL_RECORD_EVENT, "CONNECT received.");
+
 				DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
 
 				/* Connect and send drive files */
@@ -1021,9 +1040,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 						do {
 
-							iResult =
-								vConnectObject(&socket_fds[iIndex], object_address_name[iIndex],
-											   object_tcp_port[iIndex], &DisconnectU8);
+							//iResult =
+							//	vConnectObject(&socket_fds[iIndex], object_address_name[iIndex],
+							//				   object_tcp_port[iIndex], &DisconnectU8);
 
 							if (iResult < 0) {
 								switch (errno) {
@@ -1584,14 +1603,121 @@ int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigne
 	return -1;
 }
 
-static I32 vConnectObject(int *sockfd, const char *name, const uint32_t port, U8 * Disconnect) {
+void* objectConnectorThread(void* inputArgs) {
+	struct sockaddr_in serv_addr;
+	ConnectorThreadArguments* args = (ConnectorThreadArguments*)inputArgs;
+	int retval;
+	char ipString[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, args->ipAddr, ipString, sizeof (ipString));
+
+	*args->socketfd = socket(AF_INET, SOCK_STREAM, 0);
+
+	if (*args->socketfd < 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to open control socket");
+		retval = -1;
+		pthread_exit(&retval);
+	}
+
+	memset(&serv_addr, 0, sizeof (serv_addr));
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = *args->ipAddr;
+	serv_addr.sin_port = htons(*args->port);
+
+	// Begin connection attempt
+	struct timeval currentTime, timeoutTime;
+	struct timespec retryPeriod;
+	retryPeriod.tv_sec = 1;
+	retryPeriod.tv_nsec = 0;
+
+	if (setsockopt(*args->socketfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&retryPeriod, sizeof (retryPeriod)) < 0
+			|| setsockopt(*args->socketfd, SOL_SOCKET, SO_SNDTIMEO, (char*)&retryPeriod, sizeof (retryPeriod))) {
+		LogMessage(LOG_LEVEL_ERROR, "Error setting socket options");
+		retval = -1;
+		pthread_exit(&retval);
+	}
+
+	LogMessage(LOG_LEVEL_INFO, "Attempting to connect to socket: %s:%u", ipString, *args->port);
+	TimeSetToCurrentSystemTime(&timeoutTime);
+	timeoutTime.tv_sec += OBJECT_CONNECTION_TIMEOUT_S;
+	do {
+		retval = connect(*args->socketfd, (struct sockaddr *)&serv_addr, sizeof (serv_addr));
+		if (retval == -1 /* && errno == ECONNREFUSED */) { // Retry for all errors for now
+			LogMessage(LOG_LEVEL_ERROR, "Failed connection attempt to %s, retrying in %.3f s ...",
+					   ipString, (double)retryPeriod.tv_sec + (double)retryPeriod.tv_nsec/1000000000.0);
+			nanosleep(&retryPeriod, NULL);
+		}
+		TimeSetToCurrentSystemTime(&currentTime);
+	} while (timercmp(&currentTime, &timeoutTime, <) && retval != 0);
+
+	if (retval == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed connection to socket: %s:%u", ipString, *args->port);
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "Connected to socket: %s:%u", ipString, *args->port);
+	}
+	pthread_exit(&retval);
+}
+
+int connectAllObjects(int * socket_fds,
+					  const in_addr_t objectAddresses[],
+					  const uint32_t objectTCPPorts[],
+					  const unsigned int numberOfObjects) {
+
+
+	uint32_t* transmitterIDs = (uint32_t*) malloc(sizeof (uint32_t) * numberOfObjects);
+	pthread_t* connectors = (pthread_t*) malloc(sizeof (pthread_t) * numberOfObjects);
+	ConnectorThreadArguments* connectorArgs =
+			(ConnectorThreadArguments*) malloc(sizeof (ConnectorThreadArguments) * numberOfObjects);
+	uint16_t* objectTCPPorts_tmp = (uint16_t*)malloc(sizeof (uint16_t) * numberOfObjects); // Ports numbers are uint16's
+
+	ObjectEnabledType enabledStatus;
+	int retval;
+
+	DataDictionaryGetObjectTransmitterIDs(transmitterIDs, numberOfObjects);
+
+	LogPrint("Starting threads");
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+
+		DataDictionaryGetObjectEnableStatusById(transmitterIDs[i],
+												&enabledStatus);
+
+		if (enabledStatus == OBJECT_ENABLED) {
+			objectTCPPorts_tmp[i] = (uint16_t) objectTCPPorts[i];
+			connectorArgs[i].ipAddr = &objectAddresses[i];
+			connectorArgs[i].port = &objectTCPPorts_tmp[i];
+			connectorArgs[i].socketfd = &socket_fds[i];
+			retval = pthread_create(&connectors[i], NULL, objectConnectorThread, (void*)(connectorArgs+i));
+			if (retval == -1) {
+				LogMessage(LOG_LEVEL_ERROR, "Failed to start connection thread");
+			}
+		}
+	}
+	// TODO: await all threads to finish successfully
+
+	retval = 0;
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		int* threadReturn;
+		if (pthread_join(connectors[i], (void**)&threadReturn)) {
+			LogMessage(LOG_LEVEL_ERROR, "Error joining thread");
+			// TODO handle
+			retval = -1;
+		}
+		else {
+			retval = *threadReturn == -1 ? -1 : retval;
+		}
+	}
+	return retval;
+}
+
+
+static I32 vConnectObject(int *sockfd, const char *name, const uint32_t port) {
 	struct sockaddr_in serv_addr;
 	struct hostent *server;
 
 	char buffer[256];
 	int iResult;
 
-	*sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	*sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 
 	if (*sockfd < 0) {
 		util_error("[ObjectControl] ERR: Failed to open control socket");
@@ -1610,29 +1736,8 @@ static I32 vConnectObject(int *sockfd, const char *name, const uint32_t port, U8
 
 	LogMessage(LOG_LEVEL_INFO, "Attempting to connect to socket: %s %i", name, port);
 
-	// do
-	{
-		iResult = connect(*sockfd, (struct sockaddr *)&serv_addr, sizeof (serv_addr));
-
-		/*if ( iResult < 0)
-		   {
-		   if(errno == ECONNREFUSED)
-		   {
-		   printf("WARNiNG: Was not able to connect to object, [IP: %s] [PORT: %d], %d retry in 3 sec...\n",name,port, *Disconnect);
-		   fflush(stdout);
-		   (void)sleep(3);
-		   }
-		   else
-		   {
-		   util_error("ERR: Failed to connect to control socket");
-		   } */
-	}
-	//} while(iResult < 0 && *Disconnect == 0);
-
-	LogMessage(LOG_LEVEL_INFO, "Connected to command socket: %s %i", name, port);
-	// Enable polling of status to detect remote disconnect
-	fcntl(*sockfd, F_SETFL, O_NONBLOCK);
-
+	// Begin connection attempt
+	iResult = connect(*sockfd, (struct sockaddr *)&serv_addr, sizeof (serv_addr));
 
 	return iResult;
 }
