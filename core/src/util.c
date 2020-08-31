@@ -3079,7 +3079,7 @@ I32 UtilConnectTCPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 }
 
 
-void UtilSendTCPData(const C8 * Module, const C8 * Data, I32 Length, I32 * Sockfd, U8 Debug) {
+void UtilSendTCPData(const C8 * Module, const C8 * Data, I32 Length, const int * Sockfd, U8 Debug) {
 	I32 i, n, error = 0;
 
 	socklen_t len = sizeof (error);
@@ -3169,18 +3169,16 @@ void UtilCreateUDPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 }
 
 
-void UtilSendUDPData(const C8 * Module, I32 * Sockfd, struct sockaddr_in *Addr, C8 * Data, I32 Length,
+void UtilSendUDPData(const C8 * Module, I32 * Sockfd, struct sockaddr_in *Addr, C8 * Data, size_t Length,
 					 U8 Debug) {
-	I32 result, i;
+	ssize_t result;
 
-
-	result = sendto(*Sockfd, Data, Length, 0, (const struct sockaddr *)Addr, sizeof (struct sockaddr_in));
+	result = sendto(*Sockfd, Data, Length, 0, (struct sockaddr *)Addr, sizeof (struct sockaddr_in));
 
 	// TODO: Change this when bytes thingy has been implemented in logging
 	if (Debug) {
 		printf("[%s] Bytes sent: ", Module);
-		i = 0;
-		for (i = 0; i < Length; i++)
+		for (size_t i = 0; i < Length; i++)
 			printf("%x-", (unsigned char)*(Data + i));
 		printf("\n");
 	}
