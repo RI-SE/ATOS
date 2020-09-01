@@ -14,6 +14,7 @@
 #define FILENAME_DATESTR_FORMAT "%Y-%m-%d"
 #define JOURNAL_FILE_WRITE_MODE "a"
 #define DELIMITER ";"
+#define EVENT_FLAG "<!> "
 
 #define DAY_LENGTH_S (24*60*60)
 
@@ -37,13 +38,25 @@ int JournalInit(const char* journalName) {
 	return reinitializeJournal();
 }
 
-int JournalRecordString(const char* format, ...) {
+int JournalRecordData(const JournalRecordType type, const char* format, ...) {
 	va_list args;
 	FILE* fp;
 	checkDate();
 	fp = beginJournalEntry();
 	if (fp != nullptr) {
 		va_start(args, format);
+		switch (type) {
+		case JOURNAL_RECORD_EVENT:
+			fprintf(fp, EVENT_FLAG);
+			break;
+		case JOURNAL_RECORD_STRING:
+			// TODO: print some specifier
+			break;
+		case JOURNAL_RECORD_MONITOR_DATA:
+			// TODO: print some specifier
+			// TODO: call recordMonitorData with args somehow
+			break;
+		}
 		vfprintf(fp, format, args);
 		va_end(args);
 		return endJournalEntry(fp);
@@ -53,6 +66,7 @@ int JournalRecordString(const char* format, ...) {
 		return -1;
 	}
 }
+
 
 int JournalRecordMonitorData(const ObjectMonitorType* data) {
 	FILE* fp;
@@ -158,7 +172,7 @@ int reinitializeJournal() {
 	}
 
 	// Print initialization message to journal to catch errors
-	if (JournalRecordString(printout.c_str()) == -1) {
+	if (JournalRecordData(JOURNAL_RECORD_STRING,printout.c_str()) == -1) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to write to file %s", journalPath.c_str());
 		return -1;
 	}
@@ -183,7 +197,6 @@ int checkDate() {
 FILE* beginJournalEntry() {
 	FILE *fp = fopen(journalPath.c_str(), JOURNAL_FILE_WRITE_MODE);
 	if (fp != nullptr) {
-		//Seconds now = Clock::now().time_since_epoch();
 		auto now = std::chrono::time_point_cast<Seconds>(Clock::now());
 		fprintf(fp, "%f: ", now.time_since_epoch().count());
 	}
