@@ -3076,7 +3076,7 @@ I32 UtilConnectTCPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 }
 
 
-void UtilSendTCPData(const C8 * Module, const C8 * Data, I32 Length, const int * Sockfd, U8 Debug) {
+void UtilSendTCPData(const C8 * Module, const C8 * Data, I32 Length, const int *Sockfd, U8 Debug) {
 	I32 i, n, error = 0;
 
 	socklen_t len = sizeof (error);

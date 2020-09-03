@@ -2157,7 +2157,8 @@ ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDs(uint32_t transmitterIDs[
 		return UNDEFINED;
 	}
 	else if ((uint32_t) retval > arraySize) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to list %d transmitter IDs in specified array of size %u", retval, arraySize);
+		LogMessage(LOG_LEVEL_ERROR, "Unable to list %d transmitter IDs in specified array of size %u", retval,
+				   arraySize);
 		objectDataMemory = releaseSharedMemory(objectDataMemory);
 		return UNDEFINED;
 	}
