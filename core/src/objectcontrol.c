@@ -150,7 +150,6 @@ static int findCommandAction(const uint16_t actionID, const TestScenarioCommandA
 static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const char debug);
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
-							C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
 							ObjectConnection objectConnections[], unsigned int *nbr_objects);
 static int readMonitorDataTimeoutSetting(struct timeval *timeout);
 
@@ -181,7 +180,6 @@ static volatile int iExit = 0;
 void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH];
-	char object_address_name[MAX_OBJECTS][MAX_FILE_PATH];
 	char ipString[INET_ADDRSTRLEN];
 	U32 object_transmitter_ids[MAX_OBJECTS];
 	ObjectConnection objectConnections[MAX_OBJECTS];
@@ -362,9 +360,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				TimeSetToGPStime(&estSyncPointTime, TimeGetAsGPSweek(&currentTime), ASPData.MTSPU32);
 				DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+					inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
+							  &objectConnections[iIndex].objectMonitorAddress.sin_addr,
+							  ipString, sizeof (ipString));
 					for (int i = 0; i < SyncPointCount; i++) {
 						if (TEST_SYNC_POINTS == 0
-							&& strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL
+							&& strstr(ipString, ASP[i].SlaveIP) != NULL
 							&& ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1) {
 
 							/*Send Master time to adaptive sync point */
@@ -391,7 +392,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 			DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-
+				inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
+						  &objectConnections[iIndex].objectMonitorAddress.sin_addr,
+						  ipString, sizeof (ipString));
 				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
 				if (objectEnabledStatus == OBJECT_ENABLED) {
 					memset(buffer, 0, sizeof (buffer));
@@ -400,9 +403,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 
 				if (receivedMONRData > 0 && getISOMessageType(buffer, receivedMONRData, 0) == MESSAGE_ID_MONR) {
-					inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
-							  &objectConnections[iIndex].objectMonitorAddress.sin_addr,
-							  ipString, sizeof (ipString));
 					LogMessage(LOG_LEVEL_DEBUG, "Recieved %d bytes of new data from %s %u",
 							   receivedMONRData, ipString,
 							   objectConnections[iIndex].objectMonitorAddress.sin_port);
@@ -471,7 +471,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					//Ok, let's do the ASP
 					for (int i = 0; i < SyncPointCount; i++) {
 						if (TEST_SYNC_POINTS == 0
-							&& strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL
+							&& strstr(ipString, ASP[i].MasterIP) != NULL
 							&& CurrentTimeU32 > StartTimeU32 && StartTimeU32 > 0
 							&& ASPData.TimeToSyncPointDbl > -1
 							/*|| TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU32 > 0 && iIndex == 0 && TimeToSyncPoint > -1 */
@@ -541,8 +541,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								if (TimeGetAsGPSqmsOfWeek(&monitorData.MonrData.timestamp) % ASPDebugRate ==
 									0) {
 									printf("%d, %d, %3.3f, %s, %s\n", CurrentTimeU32, StartTimeU32,
-										   ASPData.TimeToSyncPointDbl, object_address_name[iIndex],
-										   ASP[i].MasterIP);
+										   ASPData.TimeToSyncPointDbl, ipString, ASP[i].MasterIP);
 									printf
 										("TtS=%3.3f, BestIndex=%d, MTSP=%d, iIndex=%d, IterationTime=%3.0f ms\n",
 										 ASPData.TimeToSyncPointDbl, OP[iIndex].BestFoundTrajectoryIndex,
@@ -777,7 +776,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_INIT) {
 				JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
 				nbr_objects = 0;
-				if (iFindObjectsInfo(object_traj_file, object_address_name, objectConnections, &nbr_objects)
+				if (iFindObjectsInfo(object_traj_file, objectConnections, &nbr_objects)
 					== 0) {
 					// Reset preexisting stored monitor data
 					DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids,
@@ -1799,7 +1798,6 @@ size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 }
 
 int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
-					 C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
 					 ObjectConnection objectConnections[], unsigned int *nbr_objects) {
 	DIR *traj_directory;
 	struct dirent *directory_entry;
@@ -1819,7 +1817,6 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 		/* Check so it's not . or .. */
 		if (strncmp(directory_entry->d_name, ".", 1) && (strstr(directory_entry->d_name, "sync") == NULL)) {
-			bzero(object_address_name[(*nbr_objects)], MAX_FILE_PATH);
 
 			bzero(object_traj_file[(*nbr_objects)], MAX_FILE_PATH);
 			(void)strcat(object_traj_file[(*nbr_objects)], trajPathDir);
@@ -1832,9 +1829,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 				retval = -1;
 			}
 
-			(void)strncat(object_address_name[(*nbr_objects)], directory_entry->d_name,
-						  strlen(directory_entry->d_name));
-			result = inet_pton(AF_INET, object_address_name[*nbr_objects],
+			result = inet_pton(AF_INET, directory_entry->d_name,
 							   &objectConnections[*nbr_objects].objectCommandAddress.sin_addr);
 			if (result == -1) {
 				LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
@@ -1843,7 +1838,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 			}
 			else if (result == 0) {
 				LogMessage(LOG_LEVEL_WARNING, "Address <%s> is not a valid IPv4 address",
-						   object_address_name[*nbr_objects]);
+						   directory_entry->d_name);
 				retval = -1;
 				continue;
 			}
