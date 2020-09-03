@@ -1859,22 +1859,26 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 	dbl ValueDbl = 0;
 	U32 ValueU32 = 0;
 	U16 ValueU16 = 0;
-	U8 ValueU8 = 0;
+    U8 ValueU8 = 0;
+
+    sprintf(ReturnValue, "%s", ParameterName);
+    sprintf(ReturnValue + strlen(ReturnValue), "%s", ": ");
+
 
 	if (strcmp("OrigoLatitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLatitudeDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.12f", ValueDbl);
+        sprintf(ReturnValue +  strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
 	else if (strcmp("OrigoLongitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLongitudeDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.12f", ValueDbl);
+        sprintf(ReturnValue + strlen (ReturnValue), "%3.12f", ValueDbl);
 	}
 	else if (strcmp("OrigoAltitude", ParameterName) == 0) {
 		DataDictionaryGetOriginAltitudeDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.12f", ValueDbl);
+        sprintf(ReturnValue + strlen (ReturnValue), "%3.12f", ValueDbl);
 	}
 	else if (strcmp("VisualizationServerName", ParameterName) == 0) {
-		DataDictionaryGetVisualizationServerC8(GSD, ReturnValue, BufferLength);
+        DataDictionaryGetVisualizationServerC8(GSD, ReturnValue + strlen (ReturnValue), BufferLength);
 	}
 	else if (strcmp("ForceObjectToLocalhost", ParameterName) == 0) {
 		DataDictionaryGetForceToLocalhostU8(GSD, &ValueU8);
@@ -1882,23 +1886,23 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 	}
 	else if (strcmp("ASPMaxTimeDiff", ParameterName) == 0) {
 		DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.3f", ValueDbl);
+        sprintf(ReturnValue + strlen (ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPMaxTrajDiff", ParameterName) == 0) {
 		DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.3f", ValueDbl);
+        sprintf(ReturnValue + strlen (ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPStepBackCount", ParameterName) == 0) {
 		DataDictionaryGetASPStepBackCountU32(GSD, &ValueU32);
-		sprintf(ReturnValue, "%" PRIu32, ValueU32);
+        sprintf(ReturnValue + strlen (ReturnValue), "%" PRIu32, ValueU32);
 	}
 	else if (strcmp("ASPFilterLevel", ParameterName) == 0) {
 		DataDictionaryGetASPFilterLevelDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.3f", ValueDbl);
+        sprintf(ReturnValue + strlen (ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPMaxDeltaTime", ParameterName) == 0) {
 		DataDictionaryGetASPMaxDeltaTimeDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.3f", ValueDbl);
+        sprintf(ReturnValue + strlen (ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("TimeServerIP", ParameterName) == 0) {
 		DataDictionaryGetTimeServerIPC8(GSD, ReturnValue, BufferLength);
@@ -1908,45 +1912,47 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 		sprintf(ReturnValue, "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorIP", ParameterName) == 0) {
-		DataDictionaryGetSimulatorIPC8(GSD, ReturnValue, BufferLength);
+        DataDictionaryGetSimulatorIPC8(GSD, ReturnValue + strlen (ReturnValue), BufferLength);
 	}
 	else if (strcmp("SimulatorTCPPort", ParameterName) == 0) {
 		DataDictionaryGetSimulatorTCPPortU16(GSD, &ValueU16);
-		sprintf(ReturnValue, "%" PRIu16, ValueU16);
+        sprintf(ReturnValue + strlen (ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorUDPPort", ParameterName) == 0) {
 		DataDictionaryGetSimulatorUDPPortU16(GSD, &ValueU16);
-		sprintf(ReturnValue, "%" PRIu16, ValueU16);
+        sprintf(ReturnValue + strlen (ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorMode", ParameterName) == 0) {
 		DataDictionaryGetSimulatorModeU8(GSD, &ValueU8);
-		sprintf(ReturnValue, "%" PRIu8, ValueU8);
+        sprintf(ReturnValue + strlen (ReturnValue), "%" PRIu8, ValueU8);
 	}
 	else if (strcmp("VOILReceivers", ParameterName) == 0) {
-		DataDictionaryGetVOILReceiversC8(GSD, ReturnValue, BufferLength);
+        DataDictionaryGetVOILReceiversC8(GSD, ReturnValue + strlen (ReturnValue), BufferLength);
 	}
 	else if (strcmp("DTMReceivers", ParameterName) == 0) {
-		DataDictionaryGetDTMReceiversC8(GSD, ReturnValue, BufferLength);
+        DataDictionaryGetDTMReceiversC8(GSD, ReturnValue + strlen (ReturnValue), BufferLength);
 	}
 	else if (strcmp("SupervisorIP", ParameterName) == 0) {
-		DataDictionaryGetExternalSupervisorIPC8(GSD, ReturnValue, BufferLength);
+        DataDictionaryGetExternalSupervisorIPC8(GSD, ReturnValue + strlen (ReturnValue), BufferLength);
 	}
 	else if (strcmp("SupervisorTCPPort", ParameterName) == 0) {
 		DataDictionaryGetSupervisorTCPPortU16(GSD, &ValueU16);
-		sprintf(ReturnValue, "%" PRIu16, ValueU16);
+        sprintf(ReturnValue + strlen (ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("MiscData", ParameterName) == 0) {
-		DataDictionaryGetMiscDataC8(GSD, ReturnValue, BufferLength);
+        DataDictionaryGetMiscDataC8(GSD, ReturnValue + strlen (ReturnValue), BufferLength);
 	}
 	else if (strcmp("RVSSConfig", ParameterName) == 0) {
 		DataDictionaryGetRVSSConfigU32(GSD, &ValueU32);
-		sprintf(ReturnValue, "%" PRIu32, ValueU32);
+        sprintf(ReturnValue + strlen (ReturnValue), "%" PRIu32, ValueU32);
 	}
 	else if (strcmp("RVSSRate", ParameterName) == 0) {
 		DataDictionaryGetRVSSRateU8(GSD, &ValueU8);
-		sprintf(ReturnValue, "%" PRIu8, ValueU8);
+        sprintf(ReturnValue + strlen (ReturnValue), "%" PRIu8, ValueU8);
 	}
-
+    else if (strcmp("ScenarioName", ParameterName) == 0) {
+        DataDictionaryGetScenarioName(ReturnValue + strlen (ReturnValue), BufferLength);
+    }
 }
 
 
