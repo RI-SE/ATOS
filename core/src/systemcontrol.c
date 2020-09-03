@@ -1882,7 +1882,7 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 	}
 	else if (strcmp("ForceObjectToLocalhost", ParameterName) == 0) {
 		DataDictionaryGetForceToLocalhostU8(GSD, &ValueU8);
-		sprintf(ReturnValue, "%" PRIu8, ValueU8);
+        sprintf(ReturnValue + strlen (ReturnValue), "%" PRIu8, ValueU8);
 	}
 	else if (strcmp("ASPMaxTimeDiff", ParameterName) == 0) {
 		DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ValueDbl);
@@ -1905,7 +1905,7 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
         sprintf(ReturnValue + strlen (ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("TimeServerIP", ParameterName) == 0) {
-		DataDictionaryGetTimeServerIPC8(GSD, ReturnValue, BufferLength);
+        DataDictionaryGetTimeServerIPC8(GSD, ReturnValue + strlen (ReturnValue), BufferLength);
 	}
 	else if (strcmp("TimeServerPort", ParameterName) == 0) {
 		DataDictionaryGetTimeServerPortU16(GSD, &ValueU16);
