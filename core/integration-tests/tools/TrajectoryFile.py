@@ -17,5 +17,5 @@ def ReadTrajectoryFile(trajectoryDir, fileName="random"):
     print("=== Reading trajectory file " + fname)
     with open(fname, "r") as fp:
         data = fp.read()    
-    return data
+    return [data, fname.split('/')[-1]]
 
