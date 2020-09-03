@@ -4,13 +4,17 @@
 
 #include "braketrigger.h"
 #include "trigger.h"
-
+#include "datadictionary.h"
+#include "maestroTime.h"
 #include "scenario.h"
 #include "logging.h"
 #include "util.h"
 #include "journal.h"
 
 #define MODULE_NAME "ScenarioControl"
+#define SCENARIOCONTROL_SHMEM_READ_RATE_HZ 100
+
+void updateScenarioControlCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
 
 
 /************************ Main task ******************************************/
@@ -36,6 +40,11 @@ int main()
 
 	JournalInit(MODULE_NAME);
 
+    struct timeval tvTime;
+    struct timeval nextSHMEMreadTime = { 0, 0 };
+
+    DataDictionaryInitObjectData();
+
     // Initialize message bus connection
     while(iCommInit())
     {
@@ -53,6 +62,15 @@ int main()
             scenario.refresh();
             // Allow for retriggering on received TREO messages
             scenario.resetISOTriggers();
+
+            TimeSetToCurrentSystemTime(&tvTime);
+
+            if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
+                updateScenarioControlCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
+                UtilPopulateMonitorDataStruct(mqRecvData, static_cast<size_t>(recvDataLength), &monr);
+                scenario.updateTrigger(monr);
+            }
+            break;
         }
 
 		if ((recvDataLength = iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr)) < 0)
@@ -138,11 +156,11 @@ int main()
             }
             else LogMessage(LOG_LEVEL_ERROR, "Received unexpected START command (current state: %u)",static_cast<unsigned char>(state));
             break;
-        case COMM_MONR:
+       // case COMM_MONR:
             // Update triggers
-			UtilPopulateMonitorDataStruct(mqRecvData, static_cast<size_t>(recvDataLength), &monr);
-            scenario.updateTrigger(monr);
-			break;
+            //UtilPopulateMonitorDataStruct(mqRecvData, static_cast<size_t>(recvDataLength), &monr);
+            //scenario.updateTrigger(monr);
+        //	break;
         case COMM_DISCONNECT:
             LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
             state = UNINITIALIZED;
@@ -162,4 +180,32 @@ int main()
     }
 
     return 0;
+}
+
+/*!
+ * \brief updateScenarioControlCheckTimer Adds a time interval onto the specified time struct in accordance
+ *			with the rate parameter
+ * \param currentSHMEMReadTime Struct containing the timewhen at when SHMEM was last accessed. After this
+ *			function has been executed, the struct contains the time at which the shared memory will be accessed is to be
+ *			accessed next time.
+ * \param SHMEMReadRate_Hz Rate at which SHMEM is read - if this parameter is 0 the value
+ *			is clamped to 1 Hz
+ */
+void updateScenarioControlCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz) {
+    struct timeval SHMEMTimeInterval, timeDiff, currentTime;
+
+    SHMEMReadRate_Hz = SHMEMReadRate_Hz == 0 ? 1 : SHMEMReadRate_Hz;	// Minimum frequency 1 Hz
+    SHMEMTimeInterval.tv_sec = (long)(1.0 / SHMEMReadRate_Hz);
+    SHMEMTimeInterval.tv_usec = (long)((1.0 / SHMEMReadRate_Hz - SHMEMTimeInterval.tv_sec) * 1000000.0);
+
+    // If there is a large difference between the current time and the time at which SHEM was sent, update based
+    // on current time instead of last send time to not spam messages until caught up
+    TimeSetToCurrentSystemTime(&currentTime);
+    timersub(&currentTime, currentSHMEMReadTime, &timeDiff);
+    if (timercmp(&timeDiff, &SHMEMTimeInterval, <)) {
+        timeradd(currentSHMEMReadTime, &SHMEMTimeInterval, currentSHMEMReadTime);
+    }
+    else {
+        timeradd(&currentTime, &SHMEMTimeInterval, currentSHMEMReadTime);
+    }
 }
