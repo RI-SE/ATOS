@@ -92,15 +92,6 @@ typedef struct {
 	in_addr_t ip;
 } TestScenarioCommandAction;	//!< Struct describing a command to be sent as action, e.g. delayed start
 
-typedef struct {
-	const in_addr_t* ipAddr;
-	struct sockaddr_in* remoteSafetyAddr;
-	const uint16_t* tcpPort;
-	const uint16_t* udpPort;
-	int* commandSocket;
-	int* safetySocket;
-} ConnectorThreadArguments;		//!< TODO
-
 
 typedef struct {
 	int commandSocket;
@@ -130,6 +121,13 @@ static int configureAllObjects(ObjectConnection objectConnections[],
 							   const GeoPosition originPosition,
 							   const struct timeval currentTime, const char trajectoryFiles[MAX_OBJECTS][MAX_FILE_PATH],
 							   const unsigned int numberOfObjects);
+static int configureAdaptiveSynchronizationPoints(
+		const char trajectoryFiles[MAX_OBJECTS][MAX_FILE_PATH],
+		const ObjectConnection objectConnections[],
+		ObjectPosition objectPositions[],
+		const unsigned int numberOfObjects,
+		const AdaptiveSyncPoint ASP[],
+		const unsigned int adaptiveSyncPointCount);
 static void* objectConnectorThread(void* args);
 static int checkObjectConnections(ObjectConnection objectConnections[], const struct timeval monitorTimeout, const unsigned int numberOfObjects);
 static int hasRemoteDisconnected(int *sockfd);
@@ -208,8 +206,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	const struct timeval adaptiveSyncMessagePeriod = heartbeatPeriod;
 
-	U8 iForceObjectToLocalhostU8 = DEFAULT_FORCE_OBJECT_TO_LOCALHOST;
-
 	FILE *fd;
 	ssize_t MessageLength;
 	C8 *MiscPtr;
@@ -221,6 +217,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	struct timeval CurrentTimeStruct;
 
 	ObjectPosition OP[MAX_OBJECTS];
+	memset(OP, 0, sizeof (OP));
 	C8 OriginLatitude[SMALL_BUFFER_SIZE_0], OriginLongitude[SMALL_BUFFER_SIZE_0],
 		OriginAltitude[SMALL_BUFFER_SIZE_0], OriginHeading[SMALL_BUFFER_SIZE_0];
 	C8 TextBuffer[SMALL_BUFFER_SIZE_0];
@@ -777,7 +774,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						LogMessage(LOG_LEVEL_INFO, "Cleared previous object data");
 					}
 					// Get objects; name and drive file
-					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
 					// Get number of allowed missing monitor messages before abort
 					readMonitorDataTimeoutSetting(&monitorDataTimeout);
 					// Enable all objects at INIT
@@ -797,14 +793,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 										   sizeof (commandActions) / sizeof (commandActions[0]));
 
 					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-						if (0 == iForceObjectToLocalhostU8) {
-							objectConnections[iIndex].objectMonitorAddress.sin_port = htons(SAFETY_CHANNEL_PORT);
-							objectConnections[iIndex].objectCommandAddress.sin_port = htons(CONTROL_CHANNEL_PORT);
-						}
-						else {
-							objectConnections[iIndex].objectMonitorAddress.sin_port = SAFETY_CHANNEL_PORT + iIndex * 2;
-							objectConnections[iIndex].objectCommandAddress.sin_port = CONTROL_CHANNEL_PORT + iIndex * 2;
-						}
+						objectConnections[iIndex].objectMonitorAddress.sin_port = htons(SAFETY_CHANNEL_PORT);
+						objectConnections[iIndex].objectCommandAddress.sin_port = htons(CONTROL_CHANNEL_PORT);
 					}
 
 					/*Setup Adaptive Sync Points (ASP) */
@@ -979,7 +969,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						vSetState(OBC_STATE_IDLE, GSD);
 					}
 					else {
-						// TODO set up adaptive sync points
+						// Set up adaptive sync points
+						LogMessage(LOG_LEVEL_INFO, "Configuring adaptive synchronization points");
+						if (configureAdaptiveSynchronizationPoints(object_traj_file, objectConnections,
+																   OP, nbr_objects, ASP, SyncPointCount) < 0) {
+							LogMessage(LOG_LEVEL_ERROR, "Unable to set up adaptive synchronization points");
+						}
 
 						// Set latest monitor data receive time to now, so the timeout doesn't trigger instantly
 						uiTimeCycle = 0;
@@ -1012,9 +1007,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				OriginPosition.Longitude = OriginLongitudeDbl;
 				OriginPosition.Altitude = OriginAltitudeDbl;
 				OriginPosition.Heading = OriginHeadingDbl;
-
-				DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
-				LogMessage(LOG_LEVEL_INFO, "ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
 
 				DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ASPMaxTimeDiffDbl);
 				DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ASPMaxTrajDiffDbl);
@@ -1507,7 +1499,7 @@ int connectAllObjects(ObjectConnection objectConnections[],
 			break;
 		}
 	}
-	LogPrint("Joining");
+
 	for (unsigned int i = 0; i < numberOfObjects; ++i) {
 		long threadReturn;
 		if (pthread_join(connectors[i], (void**)&threadReturn)) {
@@ -1560,52 +1552,7 @@ int configureAllObjects(ObjectConnection objectConnections[],
 				  &objectConnections[i].objectCommandAddress.sin_addr,
 				  ipString, sizeof (ipString));
 		if (enabledStatus == OBJECT_ENABLED) {
-			//if (1) { // TODO move
-			//	UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
-			//	/* Adaptive ->remoteSafetyAddr->sin_addr.s_addrSync Points object configuration start... */
-			//	if (TEST_SYNC_POINTS == 1)
-			//		printf("Trajfile: %s\n", object_traj_file[iIndex]);
-			//	OP[iIndex].TrajectoryPositionCount = RowCount;
-			//	OP[iIndex].SpaceArr = SpaceArr[iIndex];
-			//	OP[iIndex].TimeArr = TimeArr[iIndex];
-			//	OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
-			//	UtilPopulateSpaceTimeArr(&OP[iIndex], object_traj_file[iIndex]);
-			//
-			//	LogMessage(LOG_LEVEL_INFO, "Sync point counts: %d", SyncPointCount);
-			//	for (i = 0; i < SyncPointCount; i++) {
-			//		struct timeval syncPointTime, syncStopTime;
-			//
-			//		TimeSetToUTCms(&syncPointTime,
-			//					   (int64_t) (ASP[i].SlaveTrajSyncTime * 1000.0f));
-			//		TimeSetToUTCms(&syncStopTime, (int64_t) (ASP[i].SlaveSyncStopTime * 1000.0f));
-			//		if (TEST_SYNC_POINTS == 1 && iIndex == 1) {
-			//			/*Send SYPM to slave */
-			//			MessageLength =
-			//				encodeSYPMMessage(syncPointTime, syncStopTime, MessageBuffer,
-			//									LogPrint("IP %s", ipString);	  sizeof (MessageBuffer), 0);
-			//			UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
-			//							&socket_fds[iIndex], 0);
-			//		}
-			//		else if (TEST_SYNC_POINTS == 0
-			//				 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL) {
-			//			/*Send SYPM to slave */
-			//			MessageLength =
-			//				encodeSYPMMessage(syncPointTime, syncStopTime, MessageBuffer,
-			//								  sizeof (MessageBuffer), 0);
-			//			UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
-			//							&socket_fds[iIndex], 0);
-			//		}
-			//	}
-			//
-			//	/*Set Sync point in OP */
-			//	for (i = 0; i < SyncPointCount; i++) {
-			//		if (TEST_SYNC_POINTS == 1 && iIndex == 0)
-			//			UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, ASP[i].MasterTrajSyncTime);
-			//		else if (TEST_SYNC_POINTS == 0
-			//				 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL)
-			//			UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, ASP[i].MasterTrajSyncTime);
-			//	}
-			//}
+			
 
 			float altitude = (float)originPosition.Altitude;
 			messageLength =
@@ -1724,6 +1671,90 @@ static int hasRemoteDisconnected(int *sockfd) {
 	return 1;
 }
 
+int configureAdaptiveSynchronizationPoints(
+		const char trajectoryFiles[MAX_OBJECTS][MAX_FILE_PATH],
+		const ObjectConnection objectConnections[],
+		ObjectPosition objectPositions[],
+		const unsigned int numberOfObjects,
+		const AdaptiveSyncPoint ASP[],
+		const unsigned int adaptiveSyncPointCount) {
+	
+	char ipString[INET_ADDRSTRLEN];
+	char messageBuffer[1024];
+	ssize_t messageLength = 0;
+	unsigned int rowCount;
+
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		inet_ntop(objectConnections[i].objectCommandAddress.sin_family,
+				  &objectConnections[i].objectCommandAddress.sin_addr.s_addr,
+				  ipString, sizeof (ipString));
+
+		rowCount = 0;
+		FILE *trajectory_fd = fopen(trajectoryFiles[i], "r");
+		if (trajectory_fd) {
+			rowCount = UtilCountFileRows(trajectory_fd) - 2;
+			fclose(trajectory_fd);
+		}
+
+		if (objectPositions[i].SpaceArr != NULL) {
+			free(objectPositions[i].SpaceArr);
+			objectPositions[i].SpaceArr = NULL;
+		}
+		if (objectPositions[i].TimeArr != NULL) {
+			free(objectPositions[i].TimeArr);
+			objectPositions[i].TimeArr = NULL;
+		}
+		if (objectPositions[i].SpaceTimeArr != NULL) {
+			free(objectPositions[i].SpaceTimeArr);
+			objectPositions[i].SpaceTimeArr = NULL;
+		}
+
+		UtilSetObjectPositionIP(&objectPositions[i], ipString);
+		objectPositions[i].TrajectoryPositionCount = rowCount;
+		if (rowCount > 0) {
+			objectPositions[i].SpaceArr = malloc(sizeof (*objectPositions[i].SpaceArr) * rowCount);
+			objectPositions[i].TimeArr = malloc(sizeof (*objectPositions[i].TimeArr) * rowCount);
+			objectPositions[i].SpaceTimeArr = malloc(sizeof (*objectPositions[i].SpaceTimeArr) * rowCount);
+
+			UtilPopulateSpaceTimeArr(&objectPositions[i], trajectoryFiles[i]);
+
+		}
+	
+		LogMessage(LOG_LEVEL_INFO, "Sync point counts: %d", adaptiveSyncPointCount);
+		for (unsigned int j = 0; j < adaptiveSyncPointCount; j++) {
+			struct timeval syncPointTime, syncStopTime;
+	
+			TimeSetToUTCms(&syncPointTime,
+						   (int64_t) (ASP[i].SlaveTrajSyncTime * 1000.0f));
+			TimeSetToUTCms(&syncStopTime, (int64_t) (ASP[i].SlaveSyncStopTime * 1000.0f));
+			if (TEST_SYNC_POINTS == 1 && i == 1) {
+				/*Send SYPM to slave */
+				messageLength =
+					encodeSYPMMessage(syncPointTime, syncStopTime, messageBuffer, sizeof (messageBuffer), 0);
+				UtilSendTCPData(MODULE_NAME, messageBuffer, messageLength,
+								&objectConnections[i].commandSocket, 0);
+			}
+			else if (TEST_SYNC_POINTS == 0
+					 && strstr(ipString, ASP[i].SlaveIP) != NULL) {
+				/*Send SYPM to slave */
+				messageLength =
+					encodeSYPMMessage(syncPointTime, syncStopTime, messageBuffer,
+									  sizeof (messageBuffer), 0);
+				UtilSendTCPData(MODULE_NAME, messageBuffer, messageLength,
+								&objectConnections[i].commandSocket, 0);
+			}
+		}
+	
+		/*Set Sync point in OP */
+		for (unsigned int j = 0; j < adaptiveSyncPointCount; j++) {
+			if (TEST_SYNC_POINTS == 1 && i == 0)
+				UtilSetSyncPoint(&objectPositions[i], 0, 0, 0, ASP[i].MasterTrajSyncTime);
+			else if (TEST_SYNC_POINTS == 0
+					 && strstr(ipString, ASP[i].MasterIP) != NULL)
+				UtilSetSyncPoint(&objectPositions[i], 0, 0, 0, ASP[i].MasterTrajSyncTime);
+		}
+	}
+}
 
 size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 	ssize_t result = 0;
@@ -1753,7 +1784,6 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 					 unsigned int * nbr_objects) {
 	DIR *traj_directory;
 	struct dirent *directory_entry;
-	int iForceObjectToLocalhost = DEFAULT_FORCE_OBJECT_TO_LOCALHOST;
 	struct sockaddr_in sockaddr;
 	int result;
 	char trajPathDir[MAX_FILE_PATH];
@@ -1761,14 +1791,10 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 	UtilGetTrajDirectoryPath(trajPathDir, sizeof (trajPathDir));
 
-	iForceObjectToLocalhost = 0;
-
 	traj_directory = opendir(trajPathDir);
 	if (traj_directory == NULL) {
 		util_error("ERR: Failed to open trajectory directory");
 	}
-
-	(void)iUtilGetIntParaConfFile("ForceObjectToLocalhost", &iForceObjectToLocalhost);
 
 	while ((directory_entry = readdir(traj_directory)) && ((*nbr_objects) < MAX_OBJECTS)) {
 
@@ -1787,34 +1813,25 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 				retval = -1;
 			}
 
-			if (0 == iForceObjectToLocalhost) {
-				(void)strncat(object_address_name[(*nbr_objects)], directory_entry->d_name,
-							  strlen(directory_entry->d_name));
-				result = inet_pton(AF_INET, object_address_name[*nbr_objects],
-						&objectConnections[*nbr_objects].objectCommandAddress.sin_addr);
-				if (result == -1) {
-					LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
-					retval = -1;
-					continue;
-				}
-				else if (result == 0) {
-					LogMessage(LOG_LEVEL_WARNING, "Address <%s> is not a valid IPv4 address",
-							   object_address_name[*nbr_objects]);
-					retval = -1;
-					continue;
-				}
-				else {
-					objectConnections[*nbr_objects].objectCommandAddress.sin_family = AF_INET;
-					objectConnections[*nbr_objects].objectMonitorAddress =
-							objectConnections[*nbr_objects].objectCommandAddress;
-				}
+			(void)strncat(object_address_name[(*nbr_objects)], directory_entry->d_name,
+						  strlen(directory_entry->d_name));
+			result = inet_pton(AF_INET, object_address_name[*nbr_objects],
+					&objectConnections[*nbr_objects].objectCommandAddress.sin_addr);
+			if (result == -1) {
+				LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+				retval = -1;
+				continue;
+			}
+			else if (result == 0) {
+				LogMessage(LOG_LEVEL_WARNING, "Address <%s> is not a valid IPv4 address",
+						   object_address_name[*nbr_objects]);
+				retval = -1;
+				continue;
 			}
 			else {
-				if (USE_TEST_HOST == 0)
-					(void)strcat(object_address_name[(*nbr_objects)], LOCALHOST);
-				else if (USE_TEST_HOST == 1)
-					(void)strcat(object_address_name[(*nbr_objects)], TESTHOST_IP);
-
+				objectConnections[*nbr_objects].objectCommandAddress.sin_family = AF_INET;
+				objectConnections[*nbr_objects].objectMonitorAddress =
+						objectConnections[*nbr_objects].objectCommandAddress;
 			}
 
 			++(*nbr_objects);

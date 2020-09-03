@@ -1876,10 +1876,6 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 	else if (strcmp("VisualizationServerName", ParameterName) == 0) {
 		DataDictionaryGetVisualizationServerC8(GSD, ReturnValue, BufferLength);
 	}
-	else if (strcmp("ForceObjectToLocalhost", ParameterName) == 0) {
-		DataDictionaryGetForceToLocalhostU8(GSD, &ValueU8);
-		sprintf(ReturnValue, "%" PRIu8, ValueU8);
-	}
 	else if (strcmp("ASPMaxTimeDiff", ParameterName) == 0) {
 		DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ValueDbl);
 		sprintf(ReturnValue, "%3.3f", ValueDbl);
@@ -1976,9 +1972,6 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 		break;
 	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
 		result = DataDictionarySetVisualizationServerU32(GSD, NewValue);
-		break;
-	case CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST:
-		result = DataDictionarySetForceToLocalhostU8(GSD, NewValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
 		result = DataDictionarySetASPMaxTimeDiffDbl(GSD, NewValue);

@@ -105,7 +105,6 @@ static const char ParameterNameOriginLongitude[] = "OriginLongitude";
 static const char ParameterNameOriginLatitude[] = "OriginLatitude";
 static const char ParameterNameOriginAltitude[] = "OriginAltitude";
 static const char ParameterNameVisualizationServerName[] = "VisualizationServerName";
-static const char ParameterNameForceObjectToLocalhost[] = "ForceObjectToLocalhost";
 static const char ParameterNameASPMaxTimeDiff[] = "ASPMaxTimeDiff";
 static const char ParameterNameASPMaxTrajDiff[] = "ASPMaxTrajDiff";
 static const char ParameterNameASPStepBackCount[] = "ASPStepBackCount";
@@ -1040,7 +1039,6 @@ int UtilPopulateSpaceTimeArr(ObjectPosition * OP, char *TrajFile) {
 	Trajfd = fopen(TrajFile, "r");
 	if (Trajfd) {
 		Rows = OP->TrajectoryPositionCount;
-		//printf("Rows = %d\n", Rows);
 		double x, y, z;
 		float t;
 		char ValueStr[NUMBER_CHAR_LENGTH];
@@ -1048,7 +1046,7 @@ int UtilPopulateSpaceTimeArr(ObjectPosition * OP, char *TrajFile) {
 		char *src2;
 
 		do {
-			bzero(TrajRow, TRAJECTORY_LINE_LENGTH);
+			memset(TrajRow, 0, sizeof (TrajRow));
 			if (UtilReadLineCntSpecChars(Trajfd, TrajRow) >= 10) {
 				bzero(ValueStr, NUMBER_CHAR_LENGTH);
 				src1 = strchr(TrajRow, ';');
@@ -1099,7 +1097,6 @@ int UtilPopulateSpaceTimeArr(ObjectPosition * OP, char *TrajFile) {
 		//{
 		//  printf("OrigoDistance=%4.3f, Time=%4.3f, Index=%d\n", OP->SpaceTimeArr[g].OrigoDistance, OP->SpaceTimeArr[g].Time, OP->SpaceTimeArr[g].Index);
 		//}
-
 
 		fclose(Trajfd);
 	}
@@ -3570,9 +3567,6 @@ char *UtilGetConfigurationParameterAsString(const enum ConfigurationFileParamete
 	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
 		outputString = ParameterNameVisualizationServerName;
 		break;
-	case CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST:
-		outputString = ParameterNameForceObjectToLocalhost;
-		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
 		outputString = ParameterNameASPMaxTimeDiff;
 		break;
@@ -3660,8 +3654,6 @@ enum ConfigurationFileParameter UtilParseConfigurationParameter(const char *para
 		return CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE;
 	else if (strncmp(ParameterNameVisualizationServerName, parameter, bufferLength) == 0)
 		return CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME;
-	else if (strncmp(ParameterNameForceObjectToLocalhost, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST;
 	else if (strncmp(ParameterNameASPMaxTimeDiff, parameter, bufferLength) == 0)
 		return CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF;
 	else if (strncmp(ParameterNameASPMaxTrajDiff, parameter, bufferLength) == 0)
