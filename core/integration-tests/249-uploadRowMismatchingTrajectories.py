@@ -1,11 +1,13 @@
 from tools.MSCP import MSCP
 from tools.Executable import Executable
 from tools.TrajectoryFile import *
+from tools.ObjectFile import *
 from tools.PortChecker import *
 import time
 import subprocess
 import sys
-
+import random
+import string
 
 userControl = None
 server = None
@@ -38,12 +40,22 @@ if __name__ == "__main__":
         checkProgramStatus("=== Connecting to the server caused a problem")
 
         # 2: Load trajectory
-        fewRowTraj = ReadTrajectoryFile("resources/trajectories/faulty",fileName="GarageplanInnerring_lessRowsThanSpecified.traj")
-        manyRowTraj = ReadTrajectoryFile("resources/trajectories/faulty",fileName="GarageplanInnerring_moreRowsThanSpecified.traj")
-        normalTraj = ReadTrajectoryFile("resources/trajectories")
+        [fewRowTraj,frTrajName] = ReadTrajectoryFile("resources/trajectories/faulty",fileName="GarageplanInnerring_lessRowsThanSpecified.traj")
+        [manyRowTraj,mrTrajName] = ReadTrajectoryFile("resources/trajectories/faulty",fileName="GarageplanInnerring_moreRowsThanSpecified.traj")
+        [normalTraj,nTrajName] = ReadTrajectoryFile("resources/trajectories")
+
+        # Clear old data
+        userControl.ClearTrajectories()
+        userControl.ClearGeofences()
+        userControl.ClearObjects()
 
         # 4: Upload short trajectory
-        userControl.UploadFile("127.0.0.1", fewRowTraj, "trajectory")
+        userControl.UploadFile(frTrajName, fewRowTraj, "trajectory")
+        userControl.UploadFile(mrTrajName, manyRowTraj, "trajectory")
+        userControl.UploadFile(nTrajName, normalTraj, "trajectory")
+
+        objData = ConstructObjectFileData("127.0.0.1",frTrajName,random.randint(1,100))
+        userControl.UploadFile(''.join(random.choice(string.ascii_letters) for i in range(10)) + ".obj",objData,"object")
 
         # 5: Send init
         try:
@@ -59,8 +71,9 @@ if __name__ == "__main__":
         time.sleep(0.05) 
         
         # 6: Upload normal trajectory, to verify we can still initialise
-        userControl.UploadFile("127.0.0.1", normalTraj, "trajectory")
-
+        userControl.ClearObjects()
+        objData = ConstructObjectFileData("127.0.0.1",nTrajName,random.randint(1,100))
+        userControl.UploadFile(''.join(random.choice(string.ascii_letters) for i in range(10)) + ".obj",objData,"object")
         userControl.Init()
         userControl.waitForObjectControlState("INITIALIZED")
         
@@ -70,8 +83,10 @@ if __name__ == "__main__":
         userControl.waitForObjectControlState("IDLE")
 
         # 7: Upload long trajectory
-        userControl.UploadFile("127.0.0.1", manyRowTraj, "trajectory")
-
+        userControl.ClearObjects()
+        objData = ConstructObjectFileData("127.0.0.1",mrTrajName,random.randint(1,100))
+        userControl.UploadFile(''.join(random.choice(string.ascii_letters) for i in range(10)) + ".obj",objData,"object")
+        
         # 8: Send init
         try:
             userControl.Init()
@@ -86,8 +101,10 @@ if __name__ == "__main__":
         time.sleep(0.05)
         
         # 9: Upload normal trajectory, to verify we can still initialise
-        userControl.UploadFile("127.0.0.1", normalTraj,"trajectory")
-
+        userControl.ClearObjects()
+        objData = ConstructObjectFileData("127.0.0.1",nTrajName,random.randint(1,100))
+        userControl.UploadFile(''.join(random.choice(string.ascii_letters) for i in range(10)) + ".obj",objData,"object")
+        
         userControl.Init()
         userControl.waitForObjectControlState("INITIALIZED")
 

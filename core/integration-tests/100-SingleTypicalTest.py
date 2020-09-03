@@ -44,7 +44,7 @@ if __name__ == "__main__":
     [traj,fileName] = ReadTrajectoryFile("resources/trajectories/",fileName="random")
     objID = random.randint(1,100)
     objData = ConstructObjectFileData("127.0.0.1", fileName, objID)
-    print("TJENA: " + str(fileName))
+    
     # 3: Start a test object
     WaitForPortAvailable(53240,"UDP",timeout=0)
     WaitForPortAvailable(53241,"TCP",timeout=0)
