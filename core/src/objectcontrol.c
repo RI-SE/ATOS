@@ -127,7 +127,8 @@ static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, c
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 							C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
-							in_addr_t objectIPs[MAX_OBJECTS], uint32_t objectIDs[MAX_OBJECTS], I32 * nbr_objects);
+							in_addr_t objectIPs[MAX_OBJECTS], uint32_t objectIDs[MAX_OBJECTS],
+							I32 * nbr_objects);
 static int readMonitorDataTimeoutSetting(struct timeval *timeout);
 
 OBCState_t vInitializeState(OBCState_t firstState, GSDType * GSD);
@@ -792,7 +793,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_INIT) {
 				JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
 				nbr_objects = 0;
-				if (iFindObjectsInfo(object_traj_file, object_address_name, objectIPs, object_transmitter_ids, &nbr_objects) == 0) {
+				if (iFindObjectsInfo
+					(object_traj_file, object_address_name, objectIPs, object_transmitter_ids,
+					 &nbr_objects) == 0) {
 					// Reset preexisting stored monitor data
 					if (DataDictionarySetNumberOfObjects(0) != WRITE_OK) {
 						LogMessage(LOG_LEVEL_ERROR, "Error clearing old object data");
@@ -1726,9 +1729,7 @@ size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 
 int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 					 C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
-					 in_addr_t objectIPs[MAX_OBJECTS],
-					 uint32_t objectIDs[MAX_OBJECTS],
-					 I32 * nbr_objects) {
+					 in_addr_t objectIPs[MAX_OBJECTS], uint32_t objectIDs[MAX_OBJECTS], I32 * nbr_objects) {
 	DIR *traj_directory;
 	DIR *object_directory;
 	struct dirent *directory_entry;
@@ -1738,6 +1739,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 	char objectPathDir[MAX_FILE_PATH];
 	char objectFilePath[MAX_FILE_PATH];
 	int retval = 0;
+
 	*nbr_objects = 0;
 
 	UtilGetTrajDirectoryPath(trajPathDir, sizeof (trajPathDir));
@@ -1756,6 +1758,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 		if (strncmp(directory_entry->d_name, ".", 1)) {
 			LogPrint("Dir: %s", directory_entry->d_name);
 			char objectSetting[100];
+
 			strcpy(objectFilePath, objectPathDir);
 			strcat(objectFilePath, directory_entry->d_name);
 			memset(object_address_name[*nbr_objects], 0, MAX_FILE_PATH);
@@ -1818,11 +1821,13 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 				continue;
 			}
 			else {
-				char* endptr;
+				char *endptr;
 				uint32_t id = (uint32_t) strtoul(objectSetting, &endptr, 10);
+
 				if (endptr == objectSetting) {
 					errno = EINVAL;
-					LogMessage(LOG_LEVEL_ERROR, "ID <%s> in file <%s> is invalid", objectSetting, objectFilePath);
+					LogMessage(LOG_LEVEL_ERROR, "ID <%s> in file <%s> is invalid", objectSetting,
+							   objectFilePath);
 					retval = -1;
 					continue;
 				}
@@ -1830,8 +1835,9 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 					objectIDs[*nbr_objects] = id;
 				}
 			}
-			LogMessage(LOG_LEVEL_INFO, "Loaded object with ID %u, IP %s and trajectory file <%s>", objectIDs[*nbr_objects],
-					object_address_name[*nbr_objects], object_traj_file[*nbr_objects]);
+			LogMessage(LOG_LEVEL_INFO, "Loaded object with ID %u, IP %s and trajectory file <%s>",
+					   objectIDs[*nbr_objects], object_address_name[*nbr_objects],
+					   object_traj_file[*nbr_objects]);
 			++(*nbr_objects);
 		}
 	}
@@ -1841,7 +1847,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 	// Check so there are no duplicates
 	for (int i = 0; i < *nbr_objects; ++i) {
-		for (int j = i+1; j < *nbr_objects; ++j) {
+		for (int j = i + 1; j < *nbr_objects; ++j) {
 			if (objectIDs[i] == objectIDs[j]) {
 				errno = EINVAL;
 				LogMessage(LOG_LEVEL_ERROR, "Found two objects with configured ID %u", objectIDs[i]);

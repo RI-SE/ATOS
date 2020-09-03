@@ -3780,10 +3780,11 @@ enum ConfigurationFileParameter UtilParseConfigurationParameter(const char *para
  * \param objectSettingSize Size of output variable
  * \return 0 if successful, -1 otherwise
  */
-int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char* objectFilePath,
-							 const size_t filePathLength, char* objectSetting,
+int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char *objectFilePath,
+							 const size_t filePathLength, char *objectSetting,
 							 const size_t objectSettingSize) {
 	char textBuffer[SMALL_BUFFER_SIZE_128];
+
 	UtilGetObjectParameterAsString(setting, textBuffer, sizeof (textBuffer));
 	strcat(textBuffer, "=");
 
@@ -3804,7 +3805,7 @@ int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char*
  * \return Pointer to the string
  */
 char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
-											char *returnValue, const size_t bufferLength) {
+									 char *returnValue, const size_t bufferLength) {
 	const char *outputString = NULL;
 
 	switch (parameter) {
