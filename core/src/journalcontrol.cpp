@@ -34,6 +34,8 @@ namespace fs = std::filesystem;
 namespace fs = std::experimental::filesystem;
 #endif
 
+#define DATE_STRING_MAX_LEN 20
+
 #define MODULE_NAME "JournalControl"
 class Journal {
 public:
@@ -272,18 +274,16 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 int generateOutputJournal(std::unordered_set<Journal> &journals) {
 
 	int retval = 0;
-	std::string scenarioName(PATH_MAX, '\0');
-	std::string journalDir(PATH_MAX, '\0');
+	char scenarioName[PATH_MAX] = {'\0'};
+	char journalDir[PATH_MAX] = {'\0'};
 
 	// Construct output file name and path
-	if (DataDictionaryGetScenarioName(scenarioName.data(), scenarioName.size()) != READ_OK) {
+	if (DataDictionaryGetScenarioName(scenarioName, sizeof (scenarioName)) != READ_OK) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to get scenario name parameter to generate output file");
 		return -1;
 	}
-	UtilGetJournalDirectoryPath(journalDir.data(), journalDir.size());
-	scenarioName.resize(scenarioName.find_first_of('\0'));
-	journalDir.resize(journalDir.find_first_of('\0'));
-	fs::path journalDirPath(journalDir + scenarioName + JOURNAL_FILE_ENDING);
+	UtilGetJournalDirectoryPath(journalDir, sizeof (journalDir));
+	fs::path journalDirPath(std::string(journalDir) + std::string(scenarioName) + JOURNAL_FILE_ENDING);
 
 	std::ofstream ostrm(journalDirPath);
 	if (!ostrm.is_open()) {
@@ -324,8 +324,8 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 	// for reading at the line closest to the start time.
 	std::vector<JournalFileSection> inputFiles;
 	for (const auto &journal : journals) {
-		for (const auto &file : journal.containedFiles) {
-			auto &section = inputFiles.emplace_back();
+		for (const fs::path &file : journal.containedFiles) {
+			JournalFileSection &section = inputFiles.emplace_back();
 			section.path = file;
 			section.istrm.open(file);
 			if (section.istrm.is_open()) {
@@ -375,22 +375,22 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
  */
 std::string getCurrentDateAsString() {
 	using Clock = std::chrono::system_clock;
-	std::string currentDate(12, '\0');
+	char currentDate[DATE_STRING_MAX_LEN] = {'\0'};
 	auto now = Clock::to_time_t(Clock::now());
 	auto now_tm = std::localtime(&now);
-	std::strftime(currentDate.data(), currentDate.size(), "%Y-%m-%d", now_tm);
-	currentDate.resize(currentDate.find_first_of('\0'));
+	std::strftime(currentDate, DATE_STRING_MAX_LEN, "%Y-%m-%d", now_tm);
 	return currentDate;
 }
 
 int printJournalHeaderTo(std::ofstream &ostrm) {
-	std::string buffer(PATH_MAX, '\0');
+	std::vector<char> trajectoryDirectory(PATH_MAX, '\0');
+	std::vector<char> configurationDirectory(PATH_MAX, '\0');
 	std::ifstream istrm;
 	fs::path fileDirectory;
-
-	UtilGetTrajDirectoryPath(buffer.data(), buffer.size());
-	buffer.resize(buffer.find_first_of('\0'));
-	fileDirectory.assign(buffer);
+	UtilGetTrajDirectoryPath(trajectoryDirectory.data(), trajectoryDirectory.size());
+	trajectoryDirectory.erase(std::find(trajectoryDirectory.begin(), trajectoryDirectory.end(), '\0'),
+							  trajectoryDirectory.end());
+	fileDirectory.assign(trajectoryDirectory.begin(), trajectoryDirectory.end());
 
 	ostrm << "------------------------------------------" << std::endl;
 	ostrm << "Whole trajectory files" << std::endl;
@@ -404,16 +404,18 @@ int printJournalHeaderTo(std::ofstream &ostrm) {
 	ostrm << "Whole configuration files" << std::endl;
 	ostrm << "------------------------------------------" << std::endl;
 
-	UtilGetConfDirectoryPath(buffer.data(), buffer.size());
-	buffer.resize(buffer.find_first_of('\0'));
-	fileDirectory.assign(buffer);
+	UtilGetConfDirectoryPath(configurationDirectory.data(), configurationDirectory.size());
+	configurationDirectory.erase(std::find(configurationDirectory.begin(), configurationDirectory.end(), '\0'),
+								 configurationDirectory.end());
+	std::remove(std::find(configurationDirectory.begin(), configurationDirectory.end(), '\0'),
+				configurationDirectory.end(), '\0');
+	fileDirectory.assign(configurationDirectory.begin(), configurationDirectory.end());
 
 	if (printFilesTo(fileDirectory, ostrm) == -1) {
 		return -1;
 	}
 
 	// TODO: information about file structure
-
 	return 0;
 }
 
@@ -433,14 +435,16 @@ int printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile) {
 	for (const auto &dirEntry : fs::directory_iterator(inputDirectory)) {
 		if (fs::is_regular_file(dirEntry.status())) {
 			const auto inputFile = dirEntry.path();
-			std::ifstream istrm(inputFile.filename());
+			std::ifstream istrm(inputFile.string());
 			if (!istrm.is_open()) {
 				LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", inputFile.c_str());
 				return -1;
 			}
-			for (std::istream_iterator<char> it(istrm) ; it != std::istream_iterator<char>(); ++it) {
+			istrm.unsetf(std::ios_base::skipws);
+			for (std::istream_iterator<char> it(istrm); it != std::istream_iterator<char>(); ++it) {
 				outputFile << *it;
 			}
+			outputFile << std::endl;
 			istrm.close();
 		}
 	}
@@ -454,10 +458,13 @@ int printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile) {
  */
 std::vector<fs::path> getJournalFilesFromToday() {
 	std::vector<fs::path> journalsFromToday;
-	std::string buffer(PATH_MAX, '\0');
+	std::vector<char> buffer(PATH_MAX, '\0');
+  
 	UtilGetJournalDirectoryPath(buffer.data(), buffer.size());
-	buffer.resize(buffer.find_first_of('\0'));
-	fs::path journalDirPath(buffer);
+	buffer.erase(std::find(buffer.begin(), buffer.end(), '\0'),
+								 buffer.end());
+	fs::path journalDirPath(buffer.begin(), buffer.end());
+  
 	if (!exists(journalDirPath)) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to find journal directory %s", journalDirPath.string().c_str());
 		return journalsFromToday;

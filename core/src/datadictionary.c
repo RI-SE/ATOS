@@ -101,6 +101,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitObjectData() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
+	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
 	if (Res != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
 	}
@@ -1820,6 +1821,51 @@ ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSettin
 }
 
 /*END MaxPacketLoss*/
+/*TransmitterID*/
+ReadWriteAccess_t DataDictionaryInitTransmitterID(void) {
+	// TODO implement shmem solution
+	return READ_OK;
+}
+
+ReadWriteAccess_t DataDictionaryGetTransmitterID(uint32_t * transmitterID) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	uint64_t readSetting;
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_TRANSMITTER_ID, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtoul(resultBuffer, &endPtr, 10);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for TransmitterID");
+			result = PARAMETER_NOTFOUND;
+			*transmitterID = DEFAULT_TRANSMITTER_ID;
+		}
+		else if (readSetting > UINT32_MAX) {
+			LogMessage(LOG_LEVEL_WARNING, "Configuration for TransmitterID outside accepted range");
+			result = READ_OK;
+			*transmitterID = UINT32_MAX;
+		}
+		else {
+			result = READ_OK;
+			*transmitterID = (uint32_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "TransmitterID not found!");
+		result = PARAMETER_NOTFOUND;
+		*transmitterID = DEFAULT_TRANSMITTER_ID;
+	}
+	return result;
+}
+
+ReadWriteAccess_t DataDictionarySetTransmitterID(const uint32_t transmitterID) {
+	// TODO implement shmem solution
+	return UNDEFINED;
+}
+
+/*END TransmitterID*/
 
 /*!
  * \brief DataDictionaryInitObjectData inits a data structure for saving object monr
@@ -2254,7 +2300,6 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 
 
 	if (result != PARAMETER_NOTFOUND)
-
 		objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
@@ -2525,6 +2570,50 @@ ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitte
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (oldTransmitterID == objectDataMemory[i].ClientID) {
+			objectDataMemory[i].ClientID = newTransmitterID;
+			result = WRITE_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+
+/*!
+ * \brief DataDictionaryModifyTransmitterIDByIP Changes the transmitter ID of the object data identified by a transmitter IP (this is a temporary function, don't use this too much)
+ * \param ipKey IP identifying an object
+ * \param newTransmitterID Desired new transmitter ID of object data
+ * \return Value according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryModifyTransmitterIDByIP(const in_addr_t ipKey,
+														const uint32_t newTransmitterID) {
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (newTransmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (ipKey == objectDataMemory[i].ClientIP) {
 			objectDataMemory[i].ClientID = newTransmitterID;
 			result = WRITE_OK;
 		}
