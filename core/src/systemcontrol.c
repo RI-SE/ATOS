@@ -1862,7 +1862,7 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
     U8 ValueU8 = 0;
 
     sprintf(ReturnValue, "%s", ParameterName);
-    sprintf(ReturnValue + strlen(ReturnValue), "%s", ": ");
+    strcat(ReturnValue, ": ");
 
 
 	if (strcmp("OrigoLatitude", ParameterName) == 0) {
