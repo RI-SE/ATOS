@@ -1863,7 +1863,7 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 
     sprintf(ReturnValue, "%s", ParameterName);
     strcat(ReturnValue, ": ");
-
+    BufferLength = BufferLength - strlen(ReturnValue);
 
 	if (strcmp("OrigoLatitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLatitudeDbl(GSD, &ValueDbl);
