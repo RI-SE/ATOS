@@ -15,7 +15,7 @@
 #define SCENARIOCONTROL_SHMEM_READ_RATE_HZ 100
 
 void updateScenarioControlCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
-
+int updateTriggers(Scenario scenario);
 
 /************************ Main task ******************************************/
 int main()
@@ -63,52 +63,8 @@ int main()
             // Allow for retriggering on received TREO messages
             scenario.resetISOTriggers();
 
-            TimeSetToCurrentSystemTime(&tvTime);
-
-            if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
-                updateScenarioControlCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
-
-
-                std::vector<uint32_t> transmitterIDs;
-                uint32_t numberOfObjects;
-                ObjectDataType monitorData;
-
-                int retval = 0;
-
-                // Get number of objects present in shared memory
-                if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
-                    LogMessage(LOG_LEVEL_ERROR,
-                               "Data dictionary number of objects read error - Cannot update triggers");
-                    return -1;
-                }
-                if(numberOfObjects == 0) {
-                    LogMessage(LOG_LEVEL_ERROR, "No objects present in shared memory");
-                    return -1;
-                }
-
-                transmitterIDs.resize(numberOfObjects, 0);
-
-                // Get transmitter IDs for all connected objects
-                if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size()) != READ_OK) {
-                    LogMessage(LOG_LEVEL_ERROR,
-                               "Data dictionary transmitter ID read error - Cannot update triggers");
-                    return -1;
-                }
-
-
-                for (const uint32_t &transmitterID : transmitterIDs) {
-                    if (DataDictionaryGetMonitorData(transmitterID, &monitorData.MonrData) != READ_OK) {
-                        LogMessage(LOG_LEVEL_ERROR,
-                                   "Data dictionary monitor data read error for transmitter ID %u",
-                                   transmitterID);
-                        retval = -1;
-                    }
-                    else{
-                        scenario.updateTrigger(monr);
-                    }
-                }
-            }
         }
+
 
 		if ((recvDataLength = iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr)) < 0)
         {
@@ -193,11 +149,11 @@ int main()
             }
             else LogMessage(LOG_LEVEL_ERROR, "Received unexpected START command (current state: %u)",static_cast<unsigned char>(state));
             break;
-       // case COMM_MONR:
+        case COMM_MONR:
             // Update triggers
             //UtilPopulateMonitorDataStruct(mqRecvData, static_cast<size_t>(recvDataLength), &monr);
             //scenario.updateTrigger(monr);
-        //	break;
+        break;
         case COMM_DISCONNECT:
             LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
             state = UNINITIALIZED;
@@ -218,6 +174,53 @@ int main()
 
     return 0;
 }
+
+
+int updateTriggers(Scenario scenario){
+
+
+        std::vector<uint32_t> transmitterIDs;
+        uint32_t numberOfObjects;
+        ObjectDataType monitorData;
+
+        int retval = 0;
+        // Get number of objects present in shared memory
+        if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
+            LogMessage(LOG_LEVEL_ERROR,
+                       "Data dictionary number of objects read error - Cannot update triggers");
+            return -1;
+        }
+        if(numberOfObjects == 0) {
+            LogMessage(LOG_LEVEL_ERROR, "No objects present in shared memory");
+            return -1;
+        }
+
+        transmitterIDs.resize(numberOfObjects, 0);
+        LogMessage(LOG_LEVEL_ERROR,
+                   "Data dictionary number of objects %d", numberOfObjects);
+
+        // Get transmitter IDs for all connected objects
+        if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size()) != READ_OK) {
+            LogMessage(LOG_LEVEL_ERROR,
+                       "Data dictionary transmitter ID read error - Cannot update triggers");
+            return -1;
+        }
+
+
+        for (const uint32_t &transmitterID : transmitterIDs) {
+            if (DataDictionaryGetMonitorData(transmitterID, &monitorData.MonrData) != READ_OK) {
+                LogMessage(LOG_LEVEL_ERROR,
+                           "Data dictionary monitor data read error for transmitter ID %u",
+                           transmitterID);
+                retval = -1;
+            }
+            else{
+                scenario.updateTrigger(monitorData);
+            }
+        }
+        return 1;
+    }
+
 
 /*!
  * \brief updateScenarioControlCheckTimer Adds a time interval onto the specified time struct in accordance
