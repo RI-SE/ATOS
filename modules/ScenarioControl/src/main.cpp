@@ -67,10 +67,47 @@ int main()
 
             if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
                 updateScenarioControlCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
-                UtilPopulateMonitorDataStruct(mqRecvData, static_cast<size_t>(recvDataLength), &monr);
-                scenario.updateTrigger(monr);
+
+
+                std::vector<uint32_t> transmitterIDs;
+                uint32_t numberOfObjects;
+                ObjectDataType monitorData;
+
+                int retval = 0;
+
+                // Get number of objects present in shared memory
+                if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
+                    LogMessage(LOG_LEVEL_ERROR,
+                               "Data dictionary number of objects read error - Cannot update triggers");
+                    return -1;
+                }
+                if(numberOfObjects == 0) {
+                    LogMessage(LOG_LEVEL_ERROR, "No objects present in shared memory");
+                    return -1;
+                }
+
+                transmitterIDs.resize(numberOfObjects, 0);
+
+                // Get transmitter IDs for all connected objects
+                if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size()) != READ_OK) {
+                    LogMessage(LOG_LEVEL_ERROR,
+                               "Data dictionary transmitter ID read error - Cannot update triggers");
+                    return -1;
+                }
+
+
+                for (const uint32_t &transmitterID : transmitterIDs) {
+                    if (DataDictionaryGetMonitorData(transmitterID, &monitorData.MonrData) != READ_OK) {
+                        LogMessage(LOG_LEVEL_ERROR,
+                                   "Data dictionary monitor data read error for transmitter ID %u",
+                                   transmitterID);
+                        retval = -1;
+                    }
+                    else{
+                        scenario.updateTrigger(monr);
+                    }
+                }
             }
-            break;
         }
 
 		if ((recvDataLength = iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr)) < 0)
