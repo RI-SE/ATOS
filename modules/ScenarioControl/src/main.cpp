@@ -12,7 +12,7 @@
 #include "journal.h"
 
 #define MODULE_NAME "ScenarioControl"
-#define SCENARIOCONTROL_SHMEM_READ_RATE_HZ 100
+#define SCENARIOCONTROL_SHMEM_READ_RATE_HZ 500
 
 void updateScenarioControlCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
 int updateTriggers(Scenario scenario);
@@ -192,7 +192,6 @@ int updateTriggers(Scenario scenario){
         uint32_t numberOfObjects;
         ObjectDataType monitorData;
 
-        int retval = 0;
         // Get number of objects present in shared memory
         if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
             LogMessage(LOG_LEVEL_ERROR,
@@ -218,12 +217,13 @@ int updateTriggers(Scenario scenario){
                 LogMessage(LOG_LEVEL_ERROR,
                            "Data dictionary monitor data read error for transmitter ID %u",
                            transmitterID);
-                retval = -1;
+                return -1;
             }
             else{
                 scenario.updateTrigger(monitorData);
                 LogMessage(LOG_LEVEL_ERROR,
-                           "Update succesfull for %d objects", numberOfObjects);
+                           "Updated trigger for ID %u",
+                           transmitterID);
             }
 
         }
