@@ -205,9 +205,6 @@ int updateTriggers(Scenario scenario){
         }
 
         transmitterIDs.resize(numberOfObjects, 0);
-        LogMessage(LOG_LEVEL_ERROR,
-                   "Data dictionary number of objects %d", numberOfObjects);
-
         // Get transmitter IDs for all connected objects
         if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size()) != READ_OK) {
             LogMessage(LOG_LEVEL_ERROR,
