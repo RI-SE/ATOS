@@ -170,10 +170,19 @@ int main()
         default:
             LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
         }
+        TimeSetToCurrentSystemTime(&tvTime);
+        if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
+                      updateScenarioControlCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
+                      updateTriggers(scenario);
+
+        }
     }
 
     return 0;
 }
+
+
+
 
 
 int updateTriggers(Scenario scenario){
@@ -216,7 +225,10 @@ int updateTriggers(Scenario scenario){
             }
             else{
                 scenario.updateTrigger(monitorData);
+                LogMessage(LOG_LEVEL_ERROR,
+                           "Update succesfull for %d objects", numberOfObjects);
             }
+
         }
         return 1;
     }
