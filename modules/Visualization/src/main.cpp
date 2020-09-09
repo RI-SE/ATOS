@@ -52,6 +52,7 @@ int main(int argc, char const* argv[]){
 	struct timespec remTime;
 	struct timeval monitorDataReceiveTime;
 	uint32_t transmitterId;
+	uint8_t isoTransmitterID;
 
 	int bytesent = 1;
 	char debug = 0;
@@ -119,6 +120,7 @@ int main(int argc, char const* argv[]){
 			DataDictionaryGetObjectTransmitterIDs(transmitterids.data(),transmitterids.size());
 			transmitterids.resize(nOBJ);
 			for (auto &transmitterID : transmitterids) {
+				std::cout<<"transmitterid"<<transmitterID<<std::endl;
 				if (transmitterID <= 0){
 					break;
 				}
@@ -126,7 +128,8 @@ int main(int argc, char const* argv[]){
 				DataDictionaryGetMonitorData(transmitterID, &monitorData);
 				DataDictionaryGetMonitorDataReceiveTime(transmitterID, &monitorDataReceiveTime);
 				if (monitorDataReceiveTime.tv_sec > 0) {
-
+					isoTransmitterID = (uint8_t) transmitterID;
+					setTransmitterID(isoTransmitterID);
 					long retval = encodeMONRMessage(&monitorData.timestamp,monitorData.position,monitorData.speed,monitorData.acceleration,monitorData.drivingDirection,monitorData.state, monitorData.armReadiness, objectErrorState,TCPBuffer.data(),TCPBuffer.size(),debug);
 					TCPBuffer.resize(static_cast<unsigned long>(retval));
 					bytesread = ServerVisualizer.receiveTCP(chekingTCPconn, 0);
