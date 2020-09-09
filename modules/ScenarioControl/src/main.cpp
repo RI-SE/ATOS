@@ -15,7 +15,7 @@
 #define SCENARIOCONTROL_SHMEM_READ_RATE_HZ 500
 
 void updateScenarioControlCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
-int updateTriggers(Scenario scenario);
+int updateTriggers(Scenario* scenario);
 
 /************************ Main task ******************************************/
 int main()
@@ -60,9 +60,9 @@ int main()
         {
             // Make all active triggers cause their corresponding actions
             scenario.refresh();
+
             // Allow for retriggering on received TREO messages
             scenario.resetISOTriggers();
-
         }
 
 
@@ -173,7 +173,7 @@ int main()
         TimeSetToCurrentSystemTime(&tvTime);
         if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
                       updateScenarioControlCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
-                      updateTriggers(scenario);
+                      updateTriggers(&scenario);
 
         }
     }
@@ -185,7 +185,7 @@ int main()
 
 
 
-int updateTriggers(Scenario scenario){
+int updateTriggers(Scenario* scenario){
 
 
         std::vector<uint32_t> transmitterIDs;
@@ -199,7 +199,7 @@ int updateTriggers(Scenario scenario){
             return -1;
         }
         if(numberOfObjects == 0) {
-            LogMessage(LOG_LEVEL_ERROR, "No objects present in shared memory");
+           // LogMessage(LOG_LEVEL_ERROR, "No objects present in shared memory");
             return -1;
         }
 
@@ -220,10 +220,8 @@ int updateTriggers(Scenario scenario){
                 return -1;
             }
             else{
-                scenario.updateTrigger(monitorData);
-                LogMessage(LOG_LEVEL_ERROR,
-                           "Updated trigger for ID %u",
-                           transmitterID);
+                scenario->updateTrigger(monitorData);
+
             }
 
         }
