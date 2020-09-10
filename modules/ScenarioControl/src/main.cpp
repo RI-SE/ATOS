@@ -213,7 +213,7 @@ int updateTriggers(Scenario* scenario){
 
 
         for (const uint32_t &transmitterID : transmitterIDs) {
-            if (DataDictionaryGetMonitorData(transmitterID, &monitorData.MonrData) != READ_OK) {
+            if (DataDictionaryGetMonitorData(transmitterID, &monitorData.MonrData) && DataDictionaryGetObjectIPByTransmitterID(transmitterID, &monitorData.ClientIP) != READ_OK) {
                 LogMessage(LOG_LEVEL_ERROR,
                            "Data dictionary monitor data read error for transmitter ID %u",
                            transmitterID);
