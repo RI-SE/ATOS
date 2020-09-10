@@ -12,7 +12,7 @@
 #include "journal.h"
 
 #define MODULE_NAME "ScenarioControl"
-#define SCENARIOCONTROL_SHMEM_READ_RATE_HZ 500
+#define SCENARIOCONTROL_SHMEM_READ_RATE_HZ 100
 
 void updateScenarioControlCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
 int updateTriggers(Scenario* scenario);
