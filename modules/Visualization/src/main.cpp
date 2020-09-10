@@ -124,7 +124,7 @@ int main(int argc, char const* argv[]){
 				if (transmitterID <= 0){
 					break;
 				}
-				std::cout <<"Transmitter id "<< transmitterID <<std::endl;
+				//std::cout <<"Transmitter id "<< transmitterID <<std::endl;
 				DataDictionaryGetMonitorData(transmitterID, &monitorData);
 				DataDictionaryGetMonitorDataReceiveTime(transmitterID, &monitorDataReceiveTime);
 				if (monitorDataReceiveTime.tv_sec > 0) {
