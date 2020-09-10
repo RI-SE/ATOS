@@ -184,9 +184,12 @@ int main()
 
 
 
-
+/*!
+ * \brief updateTriggers reads monr messages from the shared memory and passes the iformation along to scenario which handles trigger updates.
+ *			with the rate parameter
+ * \param Scenario scenario object keeping information about which trigger is linked to which action and the updating and parsing of the same.
+ */
 int updateTriggers(Scenario* scenario){
-
 
         std::vector<uint32_t> transmitterIDs;
         uint32_t numberOfObjects;
