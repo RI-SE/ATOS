@@ -325,7 +325,8 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 	std::vector<JournalFileSection> inputFiles;
 	for (const auto &journal : journals) {
 		for (const fs::path &file : journal.containedFiles) {
-			JournalFileSection &section = inputFiles.emplace_back();
+			inputFiles.emplace_back();
+			JournalFileSection &section = inputFiles.back();
 			section.path = file;
 			section.istrm.open(file);
 			if (section.istrm.is_open()) {
