@@ -115,7 +115,7 @@ int main(int argc, char const* argv[]){
             	util_error("Message bus receive error");
         	}
 			bytesread = ServerVisualizer.receiveTCP(chekingTCPconn, 0);
-			//iCommRecv(nullptr,nullptr,0,nullptr);
+			
 			DataDictionaryGetNumberOfObjects(&nOBJ);
 			DataDictionaryGetObjectTransmitterIDs(transmitterids.data(),transmitterids.size());
 			transmitterids.resize(nOBJ);
