@@ -115,7 +115,7 @@ int main(int argc, char const* argv[]){
             	util_error("Message bus receive error");
         	}
 			bytesread = ServerVisualizer.receiveTCP(chekingTCPconn, 0);
-			
+			nanosleep(&sleepTimePeriod,&remTime);
 			DataDictionaryGetNumberOfObjects(&nOBJ);
 			DataDictionaryGetObjectTransmitterIDs(transmitterids.data(),transmitterids.size());
 			transmitterids.resize(nOBJ);
@@ -124,10 +124,9 @@ int main(int argc, char const* argv[]){
 				if (transmitterID <= 0){
 					break;
 				}
-				//std::cout <<"Transmitter id "<< transmitterID <<std::endl;
 				DataDictionaryGetMonitorData(transmitterID, &monitorData);
 				DataDictionaryGetMonitorDataReceiveTime(transmitterID, &monitorDataReceiveTime);
-				if (monitorDataReceiveTime.tv_sec > 0) {
+				if (monitorDataReceiveTime.tv_sec > 0&&monitorData.position.isPositionValid && monitorData.position.isHeadingValid) { // this dose not seam to work, it looks like the datastructs are initlized before data is comming from virtual obj
 					isoTransmitterID = (uint8_t) transmitterID;
 					setTransmitterID(isoTransmitterID);
 					long retval = encodeMONRMessage(&monitorData.timestamp,monitorData.position,monitorData.speed,monitorData.acceleration,monitorData.drivingDirection,monitorData.state, monitorData.armReadiness, objectErrorState,TCPBuffer.data(),TCPBuffer.size(),debug);
@@ -142,7 +141,7 @@ int main(int argc, char const* argv[]){
 				}
 				
 			}
-			nanosleep(&sleepTimePeriod,&remTime);
+			
 			
 		}
 		std::cout <<"Disconnected"<<std::endl;
