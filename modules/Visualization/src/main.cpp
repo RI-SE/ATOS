@@ -115,7 +115,6 @@ int main(int argc, char const* argv[]){
             	util_error("Message bus receive error");
         	}
 			bytesread = ServerVisualizer.receiveTCP(chekingTCPconn, 0);
-			nanosleep(&sleepTimePeriod,&remTime);
 			DataDictionaryGetNumberOfObjects(&nOBJ);
 			DataDictionaryGetObjectTransmitterIDs(transmitterids.data(),transmitterids.size());
 			transmitterids.resize(nOBJ);
@@ -141,6 +140,7 @@ int main(int argc, char const* argv[]){
 				}
 				
 			}
+			nanosleep(&sleepTimePeriod,&remTime); // sleep might not be needed! but added it becouse i am not sure how much it will use sharedmemory resources
 			
 			
 		}
