@@ -445,6 +445,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 					else {
 						TimeSetToCurrentSystemTime(&monitorData.lastDataUpdate);
+						struct timeval monitorDataAge;
+						timersub(&monitorData.lastDataUpdate, &monitorData.MonrData.timestamp, &monitorDataAge);
+						if (monitorDataAge.tv_sec || monitorDataAge.tv_usec > 100000) {
+							LogMessage(LOG_LEVEL_WARNING, "Network delay from object %u exceeds 100 ms", object_transmitter_ids[iIndex]);
+						}
 					}
 
 					// TEMPORARY FIX: if an object sends with transmitter ID not matching the local, modify locally
