@@ -1989,6 +1989,7 @@ int configureObjectDataInjection(DataInjectionMap injectionMaps[],
 		free(injectionMaps[i].targetIDs);
 		injectionMaps[i].targetIDs = NULL;
 		injectionMaps[i].numberOfTargets = 0;
+		injectionMaps[i].isActive = 1;
 	}
 
 	UtilGetObjectDirectoryPath(objectDirPath, sizeof (objectDirPath));
