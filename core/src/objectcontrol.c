@@ -151,8 +151,7 @@ static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, c
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 							ObjectConnection objectConnections[],
-							uint32_t objectIDs[MAX_OBJECTS],
-							unsigned int *nbr_objects);
+							uint32_t objectIDs[MAX_OBJECTS], unsigned int *nbr_objects);
 static int readMonitorDataTimeoutSetting(struct timeval *timeout);
 
 OBCState_t vInitializeState(OBCState_t firstState, GSDType * GSD);
@@ -778,7 +777,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_INIT) {
 				JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
 				nbr_objects = 0;
-				if (iFindObjectsInfo(object_traj_file, objectConnections, object_transmitter_ids, &nbr_objects)
+				if (iFindObjectsInfo
+					(object_traj_file, objectConnections, object_transmitter_ids, &nbr_objects)
 					== 0) {
 
 					// Reset preexisting stored monitor data
@@ -1797,8 +1797,7 @@ size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 
 int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 					 ObjectConnection objectConnections[],
-					 uint32_t objectIDs[MAX_OBJECTS],
-					 unsigned int *nbr_objects) {
+					 uint32_t objectIDs[MAX_OBJECTS], unsigned int *nbr_objects) {
 	DIR *traj_directory;
 	DIR *object_directory;
 	struct dirent *directory_entry;
@@ -1835,8 +1834,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 		// Get IP setting
 		if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFilePath,
-									 sizeof (objectFilePath), objectSetting,
-									 sizeof (objectSetting)) == -1) {
+									 sizeof (objectFilePath), objectSetting, sizeof (objectSetting)) == -1) {
 			errno = EINVAL;
 			LogMessage(LOG_LEVEL_ERROR, "Cannot find IP setting in file <%s>", objectFilePath);
 			retval = -1;
@@ -1860,7 +1858,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 			else {
 				objectConnections[*nbr_objects].objectCommandAddress.sin_family = AF_INET;
 				objectConnections[*nbr_objects].objectMonitorAddress =
-						objectConnections[*nbr_objects].objectCommandAddress;
+					objectConnections[*nbr_objects].objectCommandAddress;
 			}
 		}
 
@@ -1898,8 +1896,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 			if (endptr == objectSetting) {
 				errno = EINVAL;
-				LogMessage(LOG_LEVEL_ERROR, "ID <%s> in file <%s> is invalid", objectSetting,
-						   objectFilePath);
+				LogMessage(LOG_LEVEL_ERROR, "ID <%s> in file <%s> is invalid", objectSetting, objectFilePath);
 				retval = -1;
 				continue;
 			}
@@ -1909,8 +1906,11 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 		}
 
 		LogMessage(LOG_LEVEL_INFO, "Loaded object with ID %u, IP %s and trajectory file <%s>",
-				   objectIDs[*nbr_objects], inet_ntop(AF_INET, &objectConnections[*nbr_objects].objectCommandAddress.sin_addr,
-				objectSetting, sizeof (objectSetting)), object_traj_file[*nbr_objects]);
+				   objectIDs[*nbr_objects], inet_ntop(AF_INET,
+													  &objectConnections[*nbr_objects].
+													  objectCommandAddress.sin_addr, objectSetting,
+													  sizeof (objectSetting)),
+				   object_traj_file[*nbr_objects]);
 		++(*nbr_objects);
 	}
 
