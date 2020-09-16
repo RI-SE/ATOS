@@ -44,10 +44,6 @@ ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType *GSD, C8 *IP);
 ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(GSDType *GSD, U32 *IP);
 ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType *GSD, C8 *IP, U32 BuffLen);
 
-ReadWriteAccess_t DataDictionaryInitForceToLocalhostU8(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetForceToLocalhostU8(GSDType *GSD, C8 *ForceLocalhost);
-ReadWriteAccess_t DataDictionaryGetForceToLocalhostU8(GSDType *GSD, U8 *ForceLocalhost);
-
 ReadWriteAccess_t DataDictionaryInitASPMaxTimeDiffDbl(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(GSDType *GSD, C8 *ASPMaxTimeDiff);
 ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(GSDType *GSD, dbl *ASPMaxTimeDiff);
