@@ -1953,10 +1953,23 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 	return retval;
 }
 
+/*!
+ * \brief configureObjectDataInjection Parses all object files to fill an array of maps between
+ *			objects according to the injectorIDs settings found in the files.
+ * \param injectionMaps Array of maps to be filled. The pointers contained in its elements are
+ *			assumed to either be NULL or returned from a previous call to this function. The
+ *			array is assumed to have the same number of elements as transmitterIDs.
+ * \param transmitterIDs Configured scenario transmitter IDs.
+ * \param numberOfObjects Number of elements in the arrays.
+ * \return 0 if successful, -1 otherwise.
+ */
+int configureObjectDataInjection(
+		DataInjectionMap injectionMaps[],
+		const uint32_t transmitterIDs[],
+		const unsigned int numberOfObjects) {
 
-int configureObjectDataInjection(DataInjectionMap injectionMaps[], const uint32_t transmitterIDs[], const unsigned int numberOfObjects) {
-
-	char objectPathDir[MAX_FILE_PATH];
+	char objectDirPath[MAX_FILE_PATH];
+	char objectFilePath[MAX_FILE_PATH];
 	DIR* objectDirectory;
 	struct dirent* dirEntry;
 	int retval = 0;
@@ -1975,8 +1988,8 @@ int configureObjectDataInjection(DataInjectionMap injectionMaps[], const uint32_
 		injectionMaps[i].numberOfTargets = 0;
 	}
 
-	UtilGetObjectDirectoryPath(objectPathDir, sizeof (objectPathDir));
-	objectDirectory = opendir(objectPathDir);
+	UtilGetObjectDirectoryPath(objectDirPath, sizeof (objectDirPath));
+	objectDirectory = opendir(objectDirPath);
 	if (objectDirectory == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed to open object directory");
 		return -1;
@@ -1986,17 +1999,26 @@ int configureObjectDataInjection(DataInjectionMap injectionMaps[], const uint32_
 		if (!strncmp(dirEntry->d_name, ".", 1)) {
 			continue;
 		}
-
-		if (parseDataInjectionSetting(dirEntry->d_name, injectionMaps, numberOfObjects) == -1) {
+		strcpy(objectFilePath, objectDirPath);
+		strcat(objectFilePath, dirEntry->d_name);
+		if (parseDataInjectionSetting(objectFilePath, injectionMaps, numberOfObjects) == -1) {
 			retval = -1;
-			LogMessage(LOG_LEVEL_ERROR, "Failed to parse injection settings of file %s", dirEntry->d_name);
+			LogMessage(LOG_LEVEL_ERROR, "Failed to parse injection settings of file %s", objectFilePath);
 		}
 	}
 
 	return retval;
 }
 
-
+/*!
+ * \brief parseDataInjectionSetting Parses the injectorIDs setting of a single object file and inputs the data into
+ *			the corresponding injection maps.
+ * \param objectFilePath File path of the object file to be parsed.
+ * \param injectionMaps Array of maps between objects. The pointers contained in its elements are
+ *			assumed to either be NULL or returned from a previous memory allocation call.
+ * \param numberOfMaps Number of elements in injection map array.
+ * \return 0 if successful, -1 otherwise.
+ */
 int parseDataInjectionSetting(
 		const char objectFilePath[MAX_FILE_PATH],
 		DataInjectionMap injectionMaps[],
