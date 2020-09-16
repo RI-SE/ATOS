@@ -140,6 +140,10 @@ static int configureObjectDataInjection(DataInjectionMap injectionMaps[], const 
 										const unsigned int numberOfObjects);
 static int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
 									 DataInjectionMap injectionMaps[], const unsigned int numberOfMaps);
+static int sendDataInjectionMessages(const ObjectDataType * monitorData,
+									 const DataInjectionMap dataInjectionMaps[],
+									 const ObjectConnection objectConnections[],
+									 const uint32_t transmitterIDs[], const unsigned int numberOfObjects);
 static void *objectConnectorThread(void *args);
 static int checkObjectConnections(ObjectConnection objectConnections[], const struct timeval monitorTimeout,
 								  const unsigned int numberOfObjects);
@@ -572,6 +576,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					OP[iIndex].Speed =
 						(float)sqrt(pow(monitorData.MonrData.speed.lateral_m_s, 2) +
 									pow(monitorData.MonrData.speed.longitudinal_m_s, 2));
+
+					// Pass on the information to the configured injection targets
+					sendDataInjectionMessages(&monitorData, dataInjectionMaps, objectConnections,
+											  object_transmitter_ids, nbr_objects);
 				}
 				else if (receivedMONRData > 0)
 					LogMessage(LOG_LEVEL_WARNING, "Received unhandled message on monitoring socket");
@@ -2092,6 +2100,74 @@ int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
 	} while ((token = strtok(NULL, delimiter)) != NULL);
 
 	return retval;
+}
+
+/*!
+ * \brief sendDataInjectionMessages Translates the passed monitor data to an injection message
+ *			and sends it to all configured receivers.
+ * \param objectData Monitor data to be passed on.
+ * \param dataInjectionMaps Map showing which objects are the receivers of injection data.
+ * \param objectConnections Connections to objects. Assumed to be ordered in the same way
+ *			as the transmitter ID array.
+ * \param transmitterIDs Transmitter IDs of objects.
+ * \param numberOfObjects Size of all three arrays.
+ * \return 0 if successful, -1 otherwise.
+ */
+int sendDataInjectionMessages(const ObjectDataType * objectData,
+							  const DataInjectionMap dataInjectionMaps[],
+							  const ObjectConnection objectConnections[],
+							  const uint32_t transmitterIDs[], const unsigned int numberOfObjects) {
+
+	if (objectData == NULL || dataInjectionMaps == NULL || objectConnections == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Attempted to pass null pointer to %s", __FUNCTION__);
+		return -1;
+	}
+
+	const ObjectMonitorType *monitorData = &objectData->MonrData;
+	char transmissionBuffer[1024];
+	ssize_t messageSize;
+	const DataInjectionMap *relevantMap = NULL;
+	PeerObjectInjectionType injectionMessage;
+
+	// Find the map for source of monitor data
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		if (dataInjectionMaps[i].sourceID == objectData->ClientID) {
+			relevantMap = &dataInjectionMaps[i];
+		}
+	}
+	if (relevantMap == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Found no injection settings for sender ID %u", objectData->ClientID);
+		return -1;
+	}
+	if (relevantMap->numberOfTargets == 0) {
+		return 0;
+	}
+
+	// Create the message
+	injectionMessage.dataTimestamp = monitorData->timestamp;
+	injectionMessage.position = monitorData->position;
+	injectionMessage.state = monitorData->state;
+	injectionMessage.speed = monitorData->speed;
+	injectionMessage.foreignTransmitterID = objectData->ClientID;
+	injectionMessage.isRollValid = 0;
+	injectionMessage.isPitchValid = 0;
+
+	messageSize = encodePODIMessage(&injectionMessage, transmissionBuffer, sizeof (transmissionBuffer), 0);
+	if (messageSize == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to encode PODI message");
+		return -1;
+	}
+
+	// Send message to all configured receivers
+	for (unsigned int i = 0; i < relevantMap->numberOfTargets; ++i) {
+		for (unsigned int j = 0; j < numberOfObjects; j++) {
+			if (transmitterIDs[j] == relevantMap->targetIDs[i]) {
+				UtilSendTCPData(MODULE_NAME, transmissionBuffer, messageSize,
+								&objectConnections[j].commandSocket, 0);
+			}
+		}
+	}
+	return 0;
 }
 
 /*!
