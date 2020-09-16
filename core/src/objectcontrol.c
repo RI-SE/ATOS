@@ -423,9 +423,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					else {
 						TimeSetToCurrentSystemTime(&monitorData.lastDataUpdate);
 						struct timeval monitorDataAge;
-						timersub(&monitorData.lastDataUpdate, &monitorData.MonrData.timestamp, &monitorDataAge);
+
+						timersub(&monitorData.lastDataUpdate, &monitorData.MonrData.timestamp,
+								 &monitorDataAge);
 						if (monitorDataAge.tv_sec || monitorDataAge.tv_usec > MAX_NETWORK_DELAY_USEC) {
-							LogMessage(LOG_LEVEL_WARNING, "Network delay from object %u exceeds 100 ms", object_transmitter_ids[iIndex]);
+							LogMessage(LOG_LEVEL_WARNING, "Network delay from object %u exceeds 100 ms",
+									   object_transmitter_ids[iIndex]);
 						}
 					}
 
