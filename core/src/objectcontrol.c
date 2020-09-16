@@ -100,6 +100,13 @@ typedef struct {
 	struct sockaddr_in objectMonitorAddress;
 } ObjectConnection;
 
+
+typedef struct {
+	uint32_t sourceID;
+	unsigned int numberOfTargets;
+	uint32_t* targetIDs;
+} DataInjectionMap;
+
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
       void (*fooptr)(int,float) = foo;
@@ -263,8 +270,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 
 	FILE *TempFd;
-
-	U8 STRTSentU8 = 0;
 
 	// Create log
 	LogInit(MODULE_NAME, logLevel);
@@ -643,12 +648,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 				vSetState(OBC_STATE_RUNNING, GSD);
 
-				//Store STRT in GSD
-				if (STRTSentU8 == 0) {
-					//for(i = 0; i < MessageLength; i++) GSD->STRTData[i] = MessageBuffer[i];
-					//GSD->STRTSizeU8 = (U8)MessageLength;
-					STRTSentU8 = 1;
-				}
 				//OBCState = OBC_STATE_INITIALIZED; //This is temporary!
 				//printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
 				GSD->ScenarioStartTimeU32 = TimeGetAsGPSqmsOfWeek(&startTime) >> 2;
@@ -838,9 +837,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						//Create temporary file
 						TempFd = fopen(TEMP_LOG_FILE, "w+");
 					}
-
-					//OSEMSentU8 = 0;
-					STRTSentU8 = 0;
 				}
 				else {
 					LogMessage(LOG_LEVEL_INFO,
