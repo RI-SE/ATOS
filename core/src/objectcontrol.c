@@ -135,6 +135,11 @@ static int configureAdaptiveSynchronizationPoints(const char trajectoryFiles[MAX
 												  const unsigned int numberOfObjects,
 												  const AdaptiveSyncPoint ASP[],
 												  const unsigned int adaptiveSyncPointCount);
+static int configureObjectDataInjection(DataInjectionMap injectionMaps[], const uint32_t transmitterIDs[], const unsigned int numberOfObjects);
+static int parseDataInjectionSetting(
+		const char objectFilePath[MAX_FILE_PATH],
+		DataInjectionMap injectionMaps[],
+		const unsigned int numberOfMaps);
 static void *objectConnectorThread(void *args);
 static int checkObjectConnections(ObjectConnection objectConnections[], const struct timeval monitorTimeout,
 								  const unsigned int numberOfObjects);
@@ -193,6 +198,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U32 object_transmitter_ids[MAX_OBJECTS];
 	ObjectConnection objectConnections[MAX_OBJECTS];
 	TestScenarioCommandAction commandActions[MAX_OBJECTS];
+	DataInjectionMap dataInjectionMaps[MAX_OBJECTS];
+	memset(dataInjectionMaps, 0, sizeof (dataInjectionMaps));
 	unsigned int nbr_objects = 0;
 	enum COMMAND iCommand;
 	U8 pcRecvBuffer[RECV_MESSAGE_BUFFER];
@@ -1923,6 +1930,119 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 			}
 		}
 	}
+
+	return retval;
+}
+
+
+int configureObjectDataInjection(DataInjectionMap injectionMaps[], const uint32_t transmitterIDs[], const unsigned int numberOfObjects) {
+
+	char objectPathDir[MAX_FILE_PATH];
+	DIR* objectDirectory;
+	struct dirent* dirEntry;
+	int retval = 0;
+
+	if (injectionMaps == NULL || transmitterIDs == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Data injection configuration input pointer error");
+		return -1;
+	}
+
+	// Reset maps
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		injectionMaps[i].sourceID = transmitterIDs[i];
+		free(injectionMaps[i].targetIDs);
+		injectionMaps[i].targetIDs = NULL;
+		injectionMaps[i].numberOfTargets = 0;
+	}
+
+	UtilGetObjectDirectoryPath(objectPathDir, sizeof (objectPathDir));
+	objectDirectory = opendir(objectPathDir);
+	if (objectDirectory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to open object directory");
+		return -1;
+	}
+
+	while ((dirEntry = readdir(objectDirectory)) != NULL) {
+		if (!strncmp(dirEntry->d_name, ".", 1)) {
+			continue;
+		}
+
+		if (parseDataInjectionSetting(dirEntry->d_name, injectionMaps, numberOfObjects) == -1) {
+			retval = -1;
+			LogMessage(LOG_LEVEL_ERROR, "Failed to parse injection settings of file %s", dirEntry->d_name);
+		}
+	}
+
+	return retval;
+}
+
+
+int parseDataInjectionSetting(
+		const char objectFilePath[MAX_FILE_PATH],
+		DataInjectionMap injectionMaps[],
+		const unsigned int numberOfMaps) {
+
+	char objectSetting[100];
+	char *token = NULL, *endptr = NULL;
+	const char delimiter[] = ",";
+	int retval = 0;
+	uint32_t sourceID = 0, targetID = 0;
+
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_ID,
+								 objectFilePath, MAX_FILE_PATH,
+								 objectSetting, sizeof (objectSetting)) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Object ID missing from file <%s>", objectFilePath);
+		return -1;
+	}
+
+	targetID = (uint32_t) strtoul(objectSetting, &endptr, 10);
+	if (endptr == objectSetting) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Invalid ID setting <%s> in file %s", objectSetting, objectFilePath);
+		return -1;
+	}
+
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_INJECTOR_IDS,
+								 objectFilePath, MAX_FILE_PATH,
+								 objectSetting, sizeof (objectSetting)) == -1) {
+		return 0;			// No setting found
+	}
+
+	token = strtok(objectSetting, delimiter);
+	if (token == NULL) {
+		return 0;			// Empty setting found
+	}
+
+	do {
+		sourceID = (uint32_t) strtoul(token, &endptr, 10);
+		if (endptr == token) {
+			errno = EINVAL;
+			LogMessage(LOG_LEVEL_ERROR, "Unparsable injector ID setting <%s>", token);
+			retval = -1;
+		}
+		else {
+			// Find the map matching source ID in configuration
+			int found = false;
+			for (unsigned int i = 0; i < numberOfMaps; ++i) {
+				if (injectionMaps[i].sourceID == sourceID) {
+					found = true;
+					// Append object ID of open file to targets of ID in configuration
+					injectionMaps[i].targetIDs = realloc(injectionMaps[i].targetIDs, ++injectionMaps[i].numberOfTargets * sizeof (uint32_t));
+					if (injectionMaps[i].targetIDs == NULL) {
+						LogMessage(LOG_LEVEL_ERROR, "Memory allocation error");
+						return -1;
+					}
+					injectionMaps[i].targetIDs[injectionMaps[i].numberOfTargets-1] = targetID;
+				}
+			}
+			if (!found) {
+				LogMessage(LOG_LEVEL_ERROR, "Data injection source object with ID %u not among configured transmitter IDs",
+						   sourceID, objectFilePath);
+				retval = -1;
+			}
+		}
+	} while ((token = strtok(NULL, delimiter)) != NULL);
 
 	return retval;
 }
