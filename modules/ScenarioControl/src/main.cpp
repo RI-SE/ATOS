@@ -244,7 +244,7 @@ void updateObjectCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMR
     SHMEMTimeInterval.tv_sec = (long)(1.0 / SHMEMReadRate_Hz);
     SHMEMTimeInterval.tv_usec = (long)((1.0 / SHMEMReadRate_Hz - SHMEMTimeInterval.tv_sec) * 1000000.0);
 
-    // If there is a large difference between the current time and the time at which SHEM was sent, update based
+    // If there is a large difference between the current time and the time at which time at which shared memory was updated, update based
     // on current time instead of last send time to not spam messages until caught up
     TimeSetToCurrentSystemTime(&currentTime);
     timersub(&currentTime, currentSHMEMReadTime, &timeDiff);
