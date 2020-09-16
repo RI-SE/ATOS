@@ -784,10 +784,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_INIT) {
 				JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
 				nbr_objects = 0;
+				int initSuccessful = true;
 				// Get objects; name and drive file
 				if (iFindObjectsInfo(object_traj_file, objectConnections, object_transmitter_ids, &nbr_objects)
 					== 0) {
-					int initSuccessful = true;
 
 					// Reset preexisting stored monitor data
 					if (DataDictionarySetNumberOfObjects(0) != WRITE_OK) {
@@ -849,12 +849,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						initSuccessful = false;
 					}
 
-					if (initSuccessful) {
-						vSetState(OBC_STATE_INITIALIZED, GSD);
-						LogMessage(LOG_LEVEL_INFO, "Successfully initialized");
-					}
-					else {
-						LogMessage(LOG_LEVEL_INFO, "Initialization failed");
+					LogPrint("NBR: %u", nbr_objects);
+					for (unsigned int kk = 0; kk < nbr_objects; ++kk) {
+						LogPrint("kk: %u: txID: %u, sourceID: %u, nbr targets: %u", kk,
+								 object_transmitter_ids[kk], dataInjectionMaps[kk].sourceID,
+								dataInjectionMaps[kk].numberOfTargets);
+						for (unsigned int ll = 0; ll < dataInjectionMaps[kk].numberOfTargets; ++ll) {
+							LogPrint("Target ID: %u", dataInjectionMaps[kk].targetIDs[ll]);
+						}
 					}
 
 					//Remove temporary file
@@ -865,11 +867,20 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 				}
 				else {
-					LogMessage(LOG_LEVEL_INFO,
-							   "Could not initialize: object info was not processed successfully");
+					initSuccessful = false;
+					LogMessage(LOG_LEVEL_INFO, "Object info was not processed successfully");
+				}
+
+				if (initSuccessful) {
+					vSetState(OBC_STATE_INITIALIZED, GSD);
+					LogMessage(LOG_LEVEL_INFO, "Successfully initialized");
+				}
+				else {
+					LogMessage(LOG_LEVEL_INFO, "Initialization failed");
 					pcSendBuffer[0] = (uint8_t) iCommand;
 					iCommSend(COMM_FAILURE, pcSendBuffer, sizeof (iCommand));
 				}
+
 			}
 			else if (iCommand == COMM_ACCM && vGetState(GSD) == OBC_STATE_CONNECTED) {
 				UtilPopulateACCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqACCMData);
