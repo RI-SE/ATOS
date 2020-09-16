@@ -2209,8 +2209,7 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 
 	if (result == PARAMETER_NOTFOUND) {
 		// Search for unused memory space and place monitor data there
-		LogMessage(LOG_LEVEL_INFO, "First object information data from ID %u added",
-				   objectData->ClientID);
+		LogMessage(LOG_LEVEL_INFO, "First object information data from ID %u added", objectData->ClientID);
 		for (int i = 0; i < numberOfObjects; ++i) {
 			if (objectDataMemory[i].ClientID == objectData->ClientID) {
 				memcpy(&objectDataMemory[i], objectData, sizeof (ObjectDataType));

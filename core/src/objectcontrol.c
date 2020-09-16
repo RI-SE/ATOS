@@ -104,7 +104,7 @@ typedef struct {
 typedef struct {
 	uint32_t sourceID;
 	unsigned int numberOfTargets;
-	uint32_t* targetIDs;
+	uint32_t *targetIDs;
 } DataInjectionMap;
 
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
@@ -135,11 +135,10 @@ static int configureAdaptiveSynchronizationPoints(const char trajectoryFiles[MAX
 												  const unsigned int numberOfObjects,
 												  const AdaptiveSyncPoint ASP[],
 												  const unsigned int adaptiveSyncPointCount);
-static int configureObjectDataInjection(DataInjectionMap injectionMaps[], const uint32_t transmitterIDs[], const unsigned int numberOfObjects);
-static int parseDataInjectionSetting(
-		const char objectFilePath[MAX_FILE_PATH],
-		DataInjectionMap injectionMaps[],
-		const unsigned int numberOfMaps);
+static int configureObjectDataInjection(DataInjectionMap injectionMaps[], const uint32_t transmitterIDs[],
+										const unsigned int numberOfObjects);
+static int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
+									 DataInjectionMap injectionMaps[], const unsigned int numberOfMaps);
 static void *objectConnectorThread(void *args);
 static int checkObjectConnections(ObjectConnection objectConnections[], const struct timeval monitorTimeout,
 								  const unsigned int numberOfObjects);
@@ -163,8 +162,7 @@ static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, c
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 							ObjectConnection objectConnections[],
-							uint32_t objectIDs[MAX_OBJECTS],
-							unsigned int *nbr_objects);
+							uint32_t objectIDs[MAX_OBJECTS], unsigned int *nbr_objects);
 static int readMonitorDataTimeoutSetting(struct timeval *timeout);
 
 OBCState_t vInitializeState(OBCState_t firstState, GSDType * GSD);
@@ -199,6 +197,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	ObjectConnection objectConnections[MAX_OBJECTS];
 	TestScenarioCommandAction commandActions[MAX_OBJECTS];
 	DataInjectionMap dataInjectionMaps[MAX_OBJECTS];
+
 	memset(dataInjectionMaps, 0, sizeof (dataInjectionMaps));
 	unsigned int nbr_objects = 0;
 	enum COMMAND iCommand;
@@ -785,8 +784,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
 				nbr_objects = 0;
 				int initSuccessful = true;
+
 				// Get objects; name and drive file
-				if (iFindObjectsInfo(object_traj_file, objectConnections, object_transmitter_ids, &nbr_objects)
+				if (iFindObjectsInfo
+					(object_traj_file, objectConnections, object_transmitter_ids, &nbr_objects)
 					== 0) {
 
 					// Reset preexisting stored monitor data
@@ -806,6 +807,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					// Enable all objects at INIT
 					ObjectDataType objectData;
+
 					for (iIndex = 0; iIndex < nbr_objects; iIndex++) {
 						objectData.Enabled = OBJECT_ENABLED;
 						objectData.ClientIP = objectConnections[iIndex].objectCommandAddress.sin_addr.s_addr;
@@ -844,7 +846,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						fclose(fd);
 					}
 
-					if (configureObjectDataInjection(dataInjectionMaps, object_transmitter_ids, nbr_objects) == -1) {
+					if (configureObjectDataInjection(dataInjectionMaps, object_transmitter_ids, nbr_objects)
+						== -1) {
 						LogMessage(LOG_LEVEL_ERROR, "Error reading monitor data timeout setting");
 						initSuccessful = false;
 					}
@@ -853,7 +856,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					for (unsigned int kk = 0; kk < nbr_objects; ++kk) {
 						LogPrint("kk: %u: txID: %u, sourceID: %u, nbr targets: %u", kk,
 								 object_transmitter_ids[kk], dataInjectionMaps[kk].sourceID,
-								dataInjectionMaps[kk].numberOfTargets);
+								 dataInjectionMaps[kk].numberOfTargets);
 						for (unsigned int ll = 0; ll < dataInjectionMaps[kk].numberOfTargets; ++ll) {
 							LogPrint("Target ID: %u", dataInjectionMaps[kk].targetIDs[ll]);
 						}
@@ -1830,8 +1833,7 @@ size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 
 int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 					 ObjectConnection objectConnections[],
-					 uint32_t objectIDs[MAX_OBJECTS],
-					 unsigned int *nbr_objects) {
+					 uint32_t objectIDs[MAX_OBJECTS], unsigned int *nbr_objects) {
 	DIR *traj_directory;
 	DIR *object_directory;
 	struct dirent *directory_entry;
@@ -1868,8 +1870,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 		// Get IP setting
 		if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFilePath,
-									 sizeof (objectFilePath), objectSetting,
-									 sizeof (objectSetting)) == -1) {
+									 sizeof (objectFilePath), objectSetting, sizeof (objectSetting)) == -1) {
 			errno = EINVAL;
 			LogMessage(LOG_LEVEL_ERROR, "Cannot find IP setting in file <%s>", objectFilePath);
 			retval = -1;
@@ -1893,7 +1894,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 			else {
 				objectConnections[*nbr_objects].objectCommandAddress.sin_family = AF_INET;
 				objectConnections[*nbr_objects].objectMonitorAddress =
-						objectConnections[*nbr_objects].objectCommandAddress;
+					objectConnections[*nbr_objects].objectCommandAddress;
 			}
 		}
 
@@ -1931,8 +1932,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 			if (endptr == objectSetting) {
 				errno = EINVAL;
-				LogMessage(LOG_LEVEL_ERROR, "ID <%s> in file <%s> is invalid", objectSetting,
-						   objectFilePath);
+				LogMessage(LOG_LEVEL_ERROR, "ID <%s> in file <%s> is invalid", objectSetting, objectFilePath);
 				retval = -1;
 				continue;
 			}
@@ -1942,8 +1942,11 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 		}
 
 		LogMessage(LOG_LEVEL_INFO, "Loaded object with ID %u, IP %s and trajectory file <%s>",
-				   objectIDs[*nbr_objects], inet_ntop(AF_INET, &objectConnections[*nbr_objects].objectCommandAddress.sin_addr,
-				objectSetting, sizeof (objectSetting)), object_traj_file[*nbr_objects]);
+				   objectIDs[*nbr_objects], inet_ntop(AF_INET,
+													  &objectConnections[*nbr_objects].
+													  objectCommandAddress.sin_addr, objectSetting,
+													  sizeof (objectSetting)),
+				   object_traj_file[*nbr_objects]);
 		++(*nbr_objects);
 	}
 
@@ -1974,15 +1977,13 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
  * \param numberOfObjects Number of elements in the arrays.
  * \return 0 if successful, -1 otherwise.
  */
-int configureObjectDataInjection(
-		DataInjectionMap injectionMaps[],
-		const uint32_t transmitterIDs[],
-		const unsigned int numberOfObjects) {
+int configureObjectDataInjection(DataInjectionMap injectionMaps[],
+								 const uint32_t transmitterIDs[], const unsigned int numberOfObjects) {
 
 	char objectDirPath[MAX_FILE_PATH];
 	char objectFilePath[MAX_FILE_PATH];
-	DIR* objectDirectory;
-	struct dirent* dirEntry;
+	DIR *objectDirectory;
+	struct dirent *dirEntry;
 	int retval = 0;
 
 	if (injectionMaps == NULL || transmitterIDs == NULL) {
@@ -2030,10 +2031,8 @@ int configureObjectDataInjection(
  * \param numberOfMaps Number of elements in injection map array.
  * \return 0 if successful, -1 otherwise.
  */
-int parseDataInjectionSetting(
-		const char objectFilePath[MAX_FILE_PATH],
-		DataInjectionMap injectionMaps[],
-		const unsigned int numberOfMaps) {
+int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
+							  DataInjectionMap injectionMaps[], const unsigned int numberOfMaps) {
 
 	char objectSetting[100];
 	char *token = NULL, *endptr = NULL;
@@ -2058,12 +2057,12 @@ int parseDataInjectionSetting(
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_INJECTOR_IDS,
 								 objectFilePath, MAX_FILE_PATH,
 								 objectSetting, sizeof (objectSetting)) == -1) {
-		return 0;			// No setting found
+		return 0;				// No setting found
 	}
 
 	token = strtok(objectSetting, delimiter);
 	if (token == NULL) {
-		return 0;			// Empty setting found
+		return 0;				// Empty setting found
 	}
 
 	do {
@@ -2076,20 +2075,24 @@ int parseDataInjectionSetting(
 		else {
 			// Find the map matching source ID in configuration
 			int found = false;
+
 			for (unsigned int i = 0; i < numberOfMaps; ++i) {
 				if (injectionMaps[i].sourceID == sourceID) {
 					found = true;
 					// Append object ID of open file to targets of ID in configuration
-					injectionMaps[i].targetIDs = realloc(injectionMaps[i].targetIDs, ++injectionMaps[i].numberOfTargets * sizeof (uint32_t));
+					injectionMaps[i].targetIDs =
+						realloc(injectionMaps[i].targetIDs,
+								++injectionMaps[i].numberOfTargets * sizeof (uint32_t));
 					if (injectionMaps[i].targetIDs == NULL) {
 						LogMessage(LOG_LEVEL_ERROR, "Memory allocation error");
 						return -1;
 					}
-					injectionMaps[i].targetIDs[injectionMaps[i].numberOfTargets-1] = targetID;
+					injectionMaps[i].targetIDs[injectionMaps[i].numberOfTargets - 1] = targetID;
 				}
 			}
 			if (!found) {
-				LogMessage(LOG_LEVEL_ERROR, "Data injection source object with ID %u not among configured transmitter IDs",
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Data injection source object with ID %u not among configured transmitter IDs",
 						   sourceID, objectFilePath);
 				retval = -1;
 			}
