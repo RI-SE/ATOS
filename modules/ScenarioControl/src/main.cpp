@@ -15,7 +15,7 @@
 #define SCENARIOCONTROL_SHMEM_READ_RATE_HZ 100
 
 void updateScenarioControlCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
-int updateTriggers(Scenario* scenario);
+int updateTriggers(Scenario& scenario);
 
 /************************ Main task ******************************************/
 int main()
@@ -150,9 +150,6 @@ int main()
             else LogMessage(LOG_LEVEL_ERROR, "Received unexpected START command (current state: %u)",static_cast<unsigned char>(state));
             break;
         case COMM_MONR:
-            // Update triggers
-            //UtilPopulateMonitorDataStruct(mqRecvData, static_cast<size_t>(recvDataLength), &monr);
-            //scenario.updateTrigger(monr);
         break;
         case COMM_DISCONNECT:
             LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
@@ -173,7 +170,7 @@ int main()
         TimeSetToCurrentSystemTime(&tvTime);
         if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
                       updateScenarioControlCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
-                      updateTriggers(&scenario);
+                      updateTriggers(scenario);
 
         }
     }
@@ -202,8 +199,7 @@ int updateTriggers(Scenario* scenario){
             return -1;
         }
         if(numberOfObjects == 0) {
-           // LogMessage(LOG_LEVEL_ERROR, "No objects present in shared memory");
-            return -1;
+            return 1;
         }
 
         transmitterIDs.resize(numberOfObjects, 0);
@@ -233,7 +229,7 @@ int updateTriggers(Scenario* scenario){
 
 
 /*!
- * \brief updateScenarioControlCheckTimer Adds a time interval onto the specified time struct in accordance
+ * \brief updateObjectCheckTimer Adds a time interval onto the specified time struct in accordance
  *			with the rate parameter
  * \param currentSHMEMReadTime Struct containing the timewhen at when SHMEM was last accessed. After this
  *			function has been executed, the struct contains the time at which the shared memory will be accessed is to be
@@ -241,7 +237,7 @@ int updateTriggers(Scenario* scenario){
  * \param SHMEMReadRate_Hz Rate at which SHMEM is read - if this parameter is 0 the value
  *			is clamped to 1 Hz
  */
-void updateScenarioControlCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz) {
+void updateObjectCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz) {
     struct timeval SHMEMTimeInterval, timeDiff, currentTime;
 
     SHMEMReadRate_Hz = SHMEMReadRate_Hz == 0 ? 1 : SHMEMReadRate_Hz;	// Minimum frequency 1 Hz
