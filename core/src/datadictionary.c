@@ -2226,6 +2226,7 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
 				memcpy(&objectDataMemory[numberOfObjects - 1], objectData, sizeof (ObjectDataType));
+				result = WRITE_OK;
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
