@@ -139,11 +139,10 @@ static int configureObjectDataInjection(DataInjectionMap injectionMaps[], const 
 										const unsigned int numberOfObjects);
 static int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
 									 DataInjectionMap injectionMaps[], const unsigned int numberOfMaps);
-static int sendDataInjectionMessages(const ObjectDataType* monitorData,
+static int sendDataInjectionMessages(const ObjectDataType * monitorData,
 									 const DataInjectionMap dataInjectionMaps[],
 									 const ObjectConnection objectConnections[],
-									 const uint32_t transmitterIDs[],
-									 const unsigned int numberOfObjects);
+									 const uint32_t transmitterIDs[], const unsigned int numberOfObjects);
 static void *objectConnectorThread(void *args);
 static int checkObjectConnections(ObjectConnection objectConnections[], const struct timeval monitorTimeout,
 								  const unsigned int numberOfObjects);
@@ -578,7 +577,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									pow(monitorData.MonrData.speed.longitudinal_m_s, 2));
 
 					// Pass on the information to the configured injection targets
-					sendDataInjectionMessages(&monitorData, dataInjectionMaps, objectConnections, object_transmitter_ids, nbr_objects);
+					sendDataInjectionMessages(&monitorData, dataInjectionMaps, objectConnections,
+											  object_transmitter_ids, nbr_objects);
 				}
 				else if (receivedMONRData > 0)
 					LogMessage(LOG_LEVEL_WARNING, "Received unhandled message on monitoring socket");
@@ -2111,22 +2111,20 @@ int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
  * \param numberOfObjects Size of all three arrays.
  * \return 0 if successful, -1 otherwise.
  */
-int sendDataInjectionMessages(
-		const ObjectDataType* objectData,
-		const DataInjectionMap dataInjectionMaps[],
-		const ObjectConnection objectConnections[],
-		const uint32_t transmitterIDs[],
-		const unsigned int numberOfObjects) {
+int sendDataInjectionMessages(const ObjectDataType * objectData,
+							  const DataInjectionMap dataInjectionMaps[],
+							  const ObjectConnection objectConnections[],
+							  const uint32_t transmitterIDs[], const unsigned int numberOfObjects) {
 
 	if (objectData == NULL || dataInjectionMaps == NULL || objectConnections == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Attempted to pass null pointer to %s", __FUNCTION__);
 		return -1;
 	}
 
-	const ObjectMonitorType* monitorData = &objectData->MonrData;
+	const ObjectMonitorType *monitorData = &objectData->MonrData;
 	char transmissionBuffer[1024];
 	ssize_t messageSize;
-	const DataInjectionMap* relevantMap = NULL;
+	const DataInjectionMap *relevantMap = NULL;
 	PeerObjectInjectionType injectionMessage;
 
 	// Find the map for source of monitor data
@@ -2162,7 +2160,8 @@ int sendDataInjectionMessages(
 	for (unsigned int i = 0; i < relevantMap->numberOfTargets; ++i) {
 		for (unsigned int j = 0; j < numberOfObjects; j++) {
 			if (transmitterIDs[j] == relevantMap->targetIDs[i]) {
-				UtilSendTCPData(MODULE_NAME, transmissionBuffer, messageSize, &objectConnections[j].commandSocket, 0);
+				UtilSendTCPData(MODULE_NAME, transmissionBuffer, messageSize,
+								&objectConnections[j].commandSocket, 0);
 			}
 		}
 	}
