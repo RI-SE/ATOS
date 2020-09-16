@@ -784,29 +784,38 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_INIT) {
 				JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
 				nbr_objects = 0;
+				// Get objects; name and drive file
 				if (iFindObjectsInfo(object_traj_file, objectConnections, object_transmitter_ids, &nbr_objects)
 					== 0) {
+					int initSuccessful = true;
 
 					// Reset preexisting stored monitor data
 					if (DataDictionarySetNumberOfObjects(0) != WRITE_OK) {
 						LogMessage(LOG_LEVEL_ERROR, "Error clearing old object data");
+						initSuccessful = false;
 					}
 					else {
 						LogMessage(LOG_LEVEL_INFO, "Cleared previous object data");
 					}
-					// Get objects; name and drive file
+
 					// Get number of allowed missing monitor messages before abort
-					readMonitorDataTimeoutSetting(&monitorDataTimeout);
+					if (readMonitorDataTimeoutSetting(&monitorDataTimeout) == -1) {
+						LogMessage(LOG_LEVEL_ERROR, "Error reading monitor data timeout setting");
+						initSuccessful = false;
+					}
+
 					// Enable all objects at INIT
 					ObjectDataType objectData;
-
 					for (iIndex = 0; iIndex < nbr_objects; iIndex++) {
 						objectData.Enabled = OBJECT_ENABLED;
 						objectData.ClientIP = objectConnections[iIndex].objectCommandAddress.sin_addr.s_addr;
 						objectData.ClientID = object_transmitter_ids[iIndex];
 						objectData.lastDataUpdate.tv_sec = 0;
 						objectData.lastDataUpdate.tv_usec = 0;
-						DataDictionarySetObjectData(&objectData);
+						if (DataDictionarySetObjectData(&objectData) != WRITE_OK) {
+							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
+							initSuccessful = false;
+						}
 					}
 
 					resetCommandActionList(commandActions,
@@ -835,8 +844,18 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						fclose(fd);
 					}
 
-					vSetState(OBC_STATE_INITIALIZED, GSD);
-					LogMessage(LOG_LEVEL_INFO, "Successfully initialized");
+					if (configureObjectDataInjection(dataInjectionMaps, object_transmitter_ids, nbr_objects) == -1) {
+						LogMessage(LOG_LEVEL_ERROR, "Error reading monitor data timeout setting");
+						initSuccessful = false;
+					}
+
+					if (initSuccessful) {
+						vSetState(OBC_STATE_INITIALIZED, GSD);
+						LogMessage(LOG_LEVEL_INFO, "Successfully initialized");
+					}
+					else {
+						LogMessage(LOG_LEVEL_INFO, "Initialization failed");
+					}
 
 					//Remove temporary file
 					remove(TEMP_LOG_FILE);
