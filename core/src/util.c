@@ -130,16 +130,11 @@ static const char ParameterNameMiscData[] = "MiscData";
 static const char ObjectSettingNameID[] = "ID";
 static const char ObjectSettingNameIP[] = "IP";
 static const char ObjectSettingNameTraj[] = "traj";
+static const char ObjectSettingNameInjectorIDs[] = "injectorIDs";
 
 /*------------------------------------------------------------
 -- Local type definitions
 ------------------------------------------------------------*/
-
-/*------------------------------------------------------------
--- Public variables
-------------------------------------------------------------*/
-
-//static int debug = DEBUG_LEVEL_HIGH;
 
 /*------------------------------------------------------------
 -- Private variables
@@ -3807,6 +3802,9 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 		break;
 	case OBJECT_SETTING_TRAJ:
 		outputString = ObjectSettingNameTraj;
+		break;
+	case OBJECT_SETTING_INJECTOR_IDS:
+		outputString = ObjectSettingNameInjectorIDs;
 		break;
 	default:
 		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
