@@ -105,6 +105,7 @@ typedef struct {
 	uint32_t sourceID;
 	unsigned int numberOfTargets;
 	uint32_t *targetIDs;
+	int isActive;
 } DataInjectionMap;
 
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
