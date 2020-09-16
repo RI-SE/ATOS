@@ -163,7 +163,8 @@ enum ConfigurationFileParameter {
 enum ObjectFileParameter {
 	OBJECT_SETTING_ID,
 	OBJECT_SETTING_IP,
-	OBJECT_SETTING_TRAJ
+	OBJECT_SETTING_TRAJ,
+	OBJECT_SETTING_INJECTOR_IDS
 };
 
 
