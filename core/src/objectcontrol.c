@@ -44,8 +44,6 @@
 // Macro for determining individual struct member sizes
 #define member_sizeof(type, member) sizeof(((type *)0)->member)
 
-#define LOCALHOST "127.0.0.1"
-
 #define RECV_MESSAGE_BUFFER 6200
 #define BUFFER_SIZE_3100 3100
 #define TRAJ_FILE_HEADER_ROW 256
@@ -57,6 +55,8 @@
 
 #define OBJECT_CONNECTION_TIMEOUT_S 10
 #define OBJECT_CONNECTION_RETRY_PERIOD_MS 1000
+
+#define MAX_NETWORK_DELAY_USEC 100000
 
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
@@ -424,7 +424,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						TimeSetToCurrentSystemTime(&monitorData.lastDataUpdate);
 						struct timeval monitorDataAge;
 						timersub(&monitorData.lastDataUpdate, &monitorData.MonrData.timestamp, &monitorDataAge);
-						if (monitorDataAge.tv_sec || monitorDataAge.tv_usec > 100000) {
+						if (monitorDataAge.tv_sec || monitorDataAge.tv_usec > MAX_NETWORK_DELAY_USEC) {
 							LogMessage(LOG_LEVEL_WARNING, "Network delay from object %u exceeds 100 ms", object_transmitter_ids[iIndex]);
 						}
 					}
