@@ -14,8 +14,8 @@
 #define MODULE_NAME "ScenarioControl"
 #define SCENARIOCONTROL_SHMEM_READ_RATE_HZ 100
 
-void updateScenarioControlCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
-int updateTriggers(Scenario& scenario);
+void updateObjectCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
+int updateTriggers(Scenario* scenario);
 
 /************************ Main task ******************************************/
 int main()
@@ -169,8 +169,8 @@ int main()
         }
         TimeSetToCurrentSystemTime(&tvTime);
         if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
-                      updateScenarioControlCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
-                      updateTriggers(scenario);
+                      updateObjectCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
+                      updateTriggers(&scenario);
 
         }
     }
