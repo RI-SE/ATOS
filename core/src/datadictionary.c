@@ -2209,8 +2209,7 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 
 	if (result == PARAMETER_NOTFOUND) {
 		// Search for unused memory space and place monitor data there
-		LogMessage(LOG_LEVEL_INFO, "First Object Information data from added with ID %u",
-				   objectData->ClientID);
+		LogMessage(LOG_LEVEL_INFO, "First object information data from ID %u added", objectData->ClientID);
 		for (int i = 0; i < numberOfObjects; ++i) {
 			if (objectDataMemory[i].ClientID == objectData->ClientID) {
 				memcpy(&objectDataMemory[i], objectData, sizeof (ObjectDataType));
@@ -2226,6 +2225,7 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
 				memcpy(&objectDataMemory[numberOfObjects - 1], objectData, sizeof (ObjectDataType));
+				result = WRITE_OK;
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -2234,10 +2234,6 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 		}
 	}
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
-
-
-	if (result != PARAMETER_NOTFOUND)
-		objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
 }

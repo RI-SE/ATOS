@@ -44,8 +44,6 @@
 // Macro for determining individual struct member sizes
 #define member_sizeof(type, member) sizeof(((type *)0)->member)
 
-#define LOCALHOST "127.0.0.1"
-
 #define RECV_MESSAGE_BUFFER 6200
 #define BUFFER_SIZE_3100 3100
 #define TRAJ_FILE_HEADER_ROW 256
@@ -57,6 +55,8 @@
 
 #define OBJECT_CONNECTION_TIMEOUT_S 10
 #define OBJECT_CONNECTION_RETRY_PERIOD_MS 1000
+
+#define MAX_NETWORK_DELAY_USEC 100000
 
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
@@ -100,6 +100,14 @@ typedef struct {
 	struct sockaddr_in objectMonitorAddress;
 } ObjectConnection;
 
+
+typedef struct {
+	uint32_t sourceID;
+	unsigned int numberOfTargets;
+	uint32_t *targetIDs;
+	int isActive;
+} DataInjectionMap;
+
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
       void (*fooptr)(int,float) = foo;
@@ -128,6 +136,14 @@ static int configureAdaptiveSynchronizationPoints(const char trajectoryFiles[MAX
 												  const unsigned int numberOfObjects,
 												  const AdaptiveSyncPoint ASP[],
 												  const unsigned int adaptiveSyncPointCount);
+static int configureObjectDataInjection(DataInjectionMap injectionMaps[], const uint32_t transmitterIDs[],
+										const unsigned int numberOfObjects);
+static int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
+									 DataInjectionMap injectionMaps[], const unsigned int numberOfMaps);
+static int sendDataInjectionMessages(const ObjectDataType * monitorData,
+									 const DataInjectionMap dataInjectionMaps[],
+									 const ObjectConnection objectConnections[],
+									 const uint32_t transmitterIDs[], const unsigned int numberOfObjects);
 static void *objectConnectorThread(void *args);
 static int checkObjectConnections(ObjectConnection objectConnections[], const struct timeval monitorTimeout,
 								  const unsigned int numberOfObjects);
@@ -185,6 +201,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U32 object_transmitter_ids[MAX_OBJECTS];
 	ObjectConnection objectConnections[MAX_OBJECTS];
 	TestScenarioCommandAction commandActions[MAX_OBJECTS];
+	DataInjectionMap dataInjectionMaps[MAX_OBJECTS];
+
+	memset(dataInjectionMaps, 0, sizeof (dataInjectionMaps));
 	unsigned int nbr_objects = 0;
 	enum COMMAND iCommand;
 	U8 pcRecvBuffer[RECV_MESSAGE_BUFFER];
@@ -262,8 +281,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 
 	FILE *TempFd;
-
-	U8 STRTSentU8 = 0;
 
 	// Create log
 	LogInit(MODULE_NAME, logLevel);
@@ -422,6 +439,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 					else {
 						TimeSetToCurrentSystemTime(&monitorData.lastDataUpdate);
+						struct timeval monitorDataAge;
+
+						timersub(&monitorData.lastDataUpdate, &monitorData.MonrData.timestamp,
+								 &monitorDataAge);
+						if (monitorDataAge.tv_sec || monitorDataAge.tv_usec > MAX_NETWORK_DELAY_USEC) {
+							LogMessage(LOG_LEVEL_WARNING, "Network delay from object %u exceeds 100 ms",
+									   object_transmitter_ids[iIndex]);
+						}
 					}
 
 					// TEMPORARY FIX: if an object sends with transmitter ID not matching the local, modify locally
@@ -559,6 +584,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					OP[iIndex].Speed =
 						(float)sqrt(pow(monitorData.MonrData.speed.lateral_m_s, 2) +
 									pow(monitorData.MonrData.speed.longitudinal_m_s, 2));
+
+					// Pass on the information to the configured injection targets
+					sendDataInjectionMessages(&monitorData, dataInjectionMaps, objectConnections,
+											  object_transmitter_ids, nbr_objects);
 				}
 				else if (receivedMONRData > 0)
 					LogMessage(LOG_LEVEL_WARNING, "Received unhandled message on monitoring socket");
@@ -642,12 +671,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 				vSetState(OBC_STATE_RUNNING, GSD);
 
-				//Store STRT in GSD
-				if (STRTSentU8 == 0) {
-					//for(i = 0; i < MessageLength; i++) GSD->STRTData[i] = MessageBuffer[i];
-					//GSD->STRTSizeU8 = (U8)MessageLength;
-					STRTSentU8 = 1;
-				}
 				//OBCState = OBC_STATE_INITIALIZED; //This is temporary!
 				//printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
 				GSD->ScenarioStartTimeU32 = TimeGetAsGPSqmsOfWeek(&startTime) >> 2;
@@ -777,6 +800,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_INIT) {
 				JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
 				nbr_objects = 0;
+				int initSuccessful = true;
+
+				// Get objects; name and drive file
 				if (iFindObjectsInfo
 					(object_traj_file, objectConnections, object_transmitter_ids, &nbr_objects)
 					== 0) {
@@ -784,13 +810,18 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					// Reset preexisting stored monitor data
 					if (DataDictionarySetNumberOfObjects(0) != WRITE_OK) {
 						LogMessage(LOG_LEVEL_ERROR, "Error clearing old object data");
+						initSuccessful = false;
 					}
 					else {
 						LogMessage(LOG_LEVEL_INFO, "Cleared previous object data");
 					}
-					// Get objects; name and drive file
+
 					// Get number of allowed missing monitor messages before abort
-					readMonitorDataTimeoutSetting(&monitorDataTimeout);
+					if (readMonitorDataTimeoutSetting(&monitorDataTimeout) == -1) {
+						LogMessage(LOG_LEVEL_ERROR, "Error reading monitor data timeout setting");
+						initSuccessful = false;
+					}
+
 					// Enable all objects at INIT
 					ObjectDataType objectData;
 
@@ -800,7 +831,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						objectData.ClientID = object_transmitter_ids[iIndex];
 						objectData.lastDataUpdate.tv_sec = 0;
 						objectData.lastDataUpdate.tv_usec = 0;
-						DataDictionarySetObjectData(&objectData);
+						if (DataDictionarySetObjectData(&objectData) != WRITE_OK) {
+							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
+							initSuccessful = false;
+						}
 					}
 
 					resetCommandActionList(commandActions,
@@ -829,8 +863,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						fclose(fd);
 					}
 
-					vSetState(OBC_STATE_INITIALIZED, GSD);
-					LogMessage(LOG_LEVEL_INFO, "Successfully initialized");
+					if (configureObjectDataInjection(dataInjectionMaps, object_transmitter_ids, nbr_objects)
+						== -1) {
+						LogMessage(LOG_LEVEL_ERROR, "Error reading monitor data timeout setting");
+						initSuccessful = false;
+					}
 
 					//Remove temporary file
 					remove(TEMP_LOG_FILE);
@@ -838,16 +875,22 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						//Create temporary file
 						TempFd = fopen(TEMP_LOG_FILE, "w+");
 					}
-
-					//OSEMSentU8 = 0;
-					STRTSentU8 = 0;
 				}
 				else {
-					LogMessage(LOG_LEVEL_INFO,
-							   "Could not initialize: object info was not processed successfully");
+					initSuccessful = false;
+					LogMessage(LOG_LEVEL_INFO, "Object info was not processed successfully");
+				}
+
+				if (initSuccessful) {
+					vSetState(OBC_STATE_INITIALIZED, GSD);
+					LogMessage(LOG_LEVEL_INFO, "Successfully initialized");
+				}
+				else {
+					LogMessage(LOG_LEVEL_INFO, "Initialization failed");
 					pcSendBuffer[0] = (uint8_t) iCommand;
 					iCommSend(COMM_FAILURE, pcSendBuffer, sizeof (iCommand));
 				}
+
 			}
 			else if (iCommand == COMM_ACCM && vGetState(GSD) == OBC_STATE_CONNECTED) {
 				UtilPopulateACCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqACCMData);
@@ -1929,6 +1972,210 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 	}
 
 	return retval;
+}
+
+/*!
+ * \brief configureObjectDataInjection Parses all object files to fill an array of maps between
+ *			objects according to the injectorIDs settings found in the files.
+ * \param injectionMaps Array of maps to be filled. The pointers contained in its elements are
+ *			assumed to either be NULL or returned from a previous call to this function. The
+ *			array is assumed to have the same number of elements as transmitterIDs.
+ * \param transmitterIDs Configured scenario transmitter IDs.
+ * \param numberOfObjects Number of elements in the arrays.
+ * \return 0 if successful, -1 otherwise.
+ */
+int configureObjectDataInjection(DataInjectionMap injectionMaps[],
+								 const uint32_t transmitterIDs[], const unsigned int numberOfObjects) {
+
+	char objectDirPath[MAX_FILE_PATH];
+	char objectFilePath[MAX_FILE_PATH];
+	DIR *objectDirectory;
+	struct dirent *dirEntry;
+	int retval = 0;
+
+	if (injectionMaps == NULL || transmitterIDs == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Data injection configuration input pointer error");
+		return -1;
+	}
+
+	// Reset maps
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		injectionMaps[i].sourceID = transmitterIDs[i];
+		free(injectionMaps[i].targetIDs);
+		injectionMaps[i].targetIDs = NULL;
+		injectionMaps[i].numberOfTargets = 0;
+		injectionMaps[i].isActive = 1;
+	}
+
+	UtilGetObjectDirectoryPath(objectDirPath, sizeof (objectDirPath));
+	objectDirectory = opendir(objectDirPath);
+	if (objectDirectory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to open object directory");
+		return -1;
+	}
+
+	while ((dirEntry = readdir(objectDirectory)) != NULL) {
+		if (!strncmp(dirEntry->d_name, ".", 1)) {
+			continue;
+		}
+		strcpy(objectFilePath, objectDirPath);
+		strcat(objectFilePath, dirEntry->d_name);
+		if (parseDataInjectionSetting(objectFilePath, injectionMaps, numberOfObjects) == -1) {
+			retval = -1;
+			LogMessage(LOG_LEVEL_ERROR, "Failed to parse injection settings of file %s", objectFilePath);
+		}
+	}
+
+	return retval;
+}
+
+/*!
+ * \brief parseDataInjectionSetting Parses the injectorIDs setting of a single object file and inputs the data into
+ *			the corresponding injection maps.
+ * \param objectFilePath File path of the object file to be parsed.
+ * \param injectionMaps Array of maps between objects. The pointers contained in its elements are
+ *			assumed to either be NULL or returned from a previous memory allocation call.
+ * \param numberOfMaps Number of elements in injection map array.
+ * \return 0 if successful, -1 otherwise.
+ */
+int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
+							  DataInjectionMap injectionMaps[], const unsigned int numberOfMaps) {
+
+	char objectSetting[100];
+	char *token = NULL, *endptr = NULL;
+	const char delimiter[] = ",";
+	int retval = 0;
+	uint32_t sourceID = 0, targetID = 0;
+
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_ID,
+								 objectFilePath, MAX_FILE_PATH,
+								 objectSetting, sizeof (objectSetting)) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Object ID missing from file <%s>", objectFilePath);
+		return -1;
+	}
+
+	targetID = (uint32_t) strtoul(objectSetting, &endptr, 10);
+	if (endptr == objectSetting) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Invalid ID setting <%s> in file %s", objectSetting, objectFilePath);
+		return -1;
+	}
+
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_INJECTOR_IDS,
+								 objectFilePath, MAX_FILE_PATH,
+								 objectSetting, sizeof (objectSetting)) == -1) {
+		return 0;				// No setting found
+	}
+
+	token = strtok(objectSetting, delimiter);
+	if (token == NULL) {
+		return 0;				// Empty setting found
+	}
+
+	do {
+		sourceID = (uint32_t) strtoul(token, &endptr, 10);
+		if (endptr == token) {
+			errno = EINVAL;
+			LogMessage(LOG_LEVEL_ERROR, "Unparsable injector ID setting <%s>", token);
+			retval = -1;
+		}
+		else {
+			// Find the map matching source ID in configuration
+			int found = false;
+
+			for (unsigned int i = 0; i < numberOfMaps; ++i) {
+				if (injectionMaps[i].sourceID == sourceID) {
+					found = true;
+					// Append object ID of open file to targets of ID in configuration
+					injectionMaps[i].targetIDs =
+						realloc(injectionMaps[i].targetIDs,
+								++injectionMaps[i].numberOfTargets * sizeof (uint32_t));
+					if (injectionMaps[i].targetIDs == NULL) {
+						LogMessage(LOG_LEVEL_ERROR, "Memory allocation error");
+						return -1;
+					}
+					injectionMaps[i].targetIDs[injectionMaps[i].numberOfTargets - 1] = targetID;
+				}
+			}
+			if (!found) {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Data injection source object with ID %u not among configured transmitter IDs",
+						   sourceID, objectFilePath);
+				retval = -1;
+			}
+		}
+	} while ((token = strtok(NULL, delimiter)) != NULL);
+
+	return retval;
+}
+
+/*!
+ * \brief sendDataInjectionMessages Translates the passed monitor data to an injection message
+ *			and sends it to all configured receivers.
+ * \param objectData Monitor data to be passed on.
+ * \param dataInjectionMaps Map showing which objects are the receivers of injection data.
+ * \param objectConnections Connections to objects. Assumed to be ordered in the same way
+ *			as the transmitter ID array.
+ * \param transmitterIDs Transmitter IDs of objects.
+ * \param numberOfObjects Size of all three arrays.
+ * \return 0 if successful, -1 otherwise.
+ */
+int sendDataInjectionMessages(const ObjectDataType * objectData,
+							  const DataInjectionMap dataInjectionMaps[],
+							  const ObjectConnection objectConnections[],
+							  const uint32_t transmitterIDs[], const unsigned int numberOfObjects) {
+
+	if (objectData == NULL || dataInjectionMaps == NULL || objectConnections == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Attempted to pass null pointer to %s", __FUNCTION__);
+		return -1;
+	}
+
+	const ObjectMonitorType *monitorData = &objectData->MonrData;
+	char transmissionBuffer[1024];
+	ssize_t messageSize;
+	const DataInjectionMap *relevantMap = NULL;
+	PeerObjectInjectionType injectionMessage;
+
+	// Find the map for source of monitor data
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		if (dataInjectionMaps[i].sourceID == objectData->ClientID) {
+			relevantMap = &dataInjectionMaps[i];
+		}
+	}
+	if (relevantMap == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Found no injection settings for sender ID %u", objectData->ClientID);
+		return -1;
+	}
+	if (relevantMap->numberOfTargets == 0) {
+		return 0;
+	}
+
+	// Create the message
+	injectionMessage.dataTimestamp = monitorData->timestamp;
+	injectionMessage.position = monitorData->position;
+	injectionMessage.state = monitorData->state;
+	injectionMessage.speed = monitorData->speed;
+	injectionMessage.foreignTransmitterID = objectData->ClientID;
+	injectionMessage.isRollValid = 0;
+	injectionMessage.isPitchValid = 0;
+
+	messageSize = encodePODIMessage(&injectionMessage, transmissionBuffer, sizeof (transmissionBuffer), 0);
+	if (messageSize == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to encode PODI message");
+		return -1;
+	}
+
+	// Send message to all configured receivers
+	for (unsigned int i = 0; i < relevantMap->numberOfTargets; ++i) {
+		for (unsigned int j = 0; j < numberOfObjects; j++) {
+			if (transmitterIDs[j] == relevantMap->targetIDs[i]) {
+				UtilSendTCPData(MODULE_NAME, transmissionBuffer, messageSize,
+								&objectConnections[j].commandSocket, 0);
+			}
+		}
+	}
+	return 0;
 }
 
 /*!
