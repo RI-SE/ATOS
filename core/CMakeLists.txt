@@ -23,6 +23,7 @@ set(SHARED_MEMORY_LIBRARY MaestroSHM)
 set(ISO_22133_LIBRARY ISO22133)
 set(MATH_LIBRARY m)
 set(FILESYSTEM_LIBRARY stdc++fs)
+set(PTHREAD_LIBRARY pthread)
 
 # Get header directories for build interface
 get_target_property(TIME_HEADERS ${TIME_LIBRARY} INCLUDE_DIRECTORIES)
@@ -90,6 +91,7 @@ target_link_libraries(${CORE_TARGET} LINK_PUBLIC
 	${DATA_DICTIONARY_TARGET}
 	${ISO_22133_LIBRARY}
 	${SYSTEMD_LIBRARIES}
+	${PTHREAD_LIBRARY}
 )
 
 target_link_libraries(${COREUTILS_TARGET} LINK_PUBLIC

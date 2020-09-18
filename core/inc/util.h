@@ -45,7 +45,6 @@ extern "C"{
 #define DEFAULT_ORIGIN_ALT 193.114
 #define DEFAULT_ORIGIN_HEADING 0
 #define DEFAULT_VISUALISATION_SERVER_NAME 0
-#define DEFAULT_FORCE_OBJECT_TO_LOCALHOST 0
 #define DEFAULT_ASP_MAX_TIME_DIFF 2.5
 #define DEFAULT_ASP_MAX_TRAJ_DIFF 1.52
 #define DEFAULT_ASP_STEP_BACK_COUNT 0
@@ -138,7 +137,6 @@ enum ConfigurationFileParameter {
 	CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
 	CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
 	CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME,
-	CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST,
 	CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF,
 	CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF,
 	CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT,
@@ -165,7 +163,8 @@ enum ConfigurationFileParameter {
 enum ObjectFileParameter {
 	OBJECT_SETTING_ID,
 	OBJECT_SETTING_IP,
-	OBJECT_SETTING_TRAJ
+	OBJECT_SETTING_TRAJ,
+	OBJECT_SETTING_INJECTOR_IDS
 };
 
 
@@ -399,7 +398,6 @@ typedef struct
   C8 OriginAltitudeC8[DD_CONTROL_BUFFER_SIZE_20];
   volatile U32 VisualizationServerU32;
   C8 VisualizationServerC8[DD_CONTROL_BUFFER_SIZE_20];
-  volatile U8 ForceObjectToLocalhostU8;
   volatile dbl ASPMaxTimeDiffDbl;
   volatile dbl ASPMaxTrajDiffDbl;
   volatile U32 ASPStepBackCountU32;
@@ -717,10 +715,10 @@ I64 SwapI64(I64 val);
 U64 SwapU64(U64 val);
 
 I32 UtilConnectTCPChannel(const C8* Module, I32* Sockfd, const C8* IP, const U32 Port);
-void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, U8 Debug);
+void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, const int* Sockfd, U8 Debug);
 I32 UtilReceiveTCPData(const C8* Module, I32* Sockfd, C8* Data, I32 Length, U8 Debug);
 void UtilCreateUDPChannel(const C8* Module, I32 *Sockfd, const C8* IP, const U32 Port, struct sockaddr_in* Addr);
-void UtilSendUDPData(const C8* Module, I32 *Sockfd, struct sockaddr_in* Addr, C8 *Data, I32 Length, U8 Debug);
+void UtilSendUDPData(const C8* Module, I32 *Sockfd, struct sockaddr_in* Addr, C8 *Data, size_t Length, U8 Debug);
 void UtilReceiveUDPData(const C8* Module, I32* Sockfd, C8* Buffer, I32 Length, I32* ReceivedNewData, U8 Debug);
 U32 UtilIPStringToInt(C8 *IP);
 U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug);

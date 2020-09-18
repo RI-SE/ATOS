@@ -18,6 +18,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <signal.h>
+#include <pthread.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <inttypes.h>
@@ -43,8 +44,6 @@
 // Macro for determining individual struct member sizes
 #define member_sizeof(type, member) sizeof(((type *)0)->member)
 
-#define LOCALHOST "127.0.0.1"
-
 #define RECV_MESSAGE_BUFFER 6200
 #define BUFFER_SIZE_3100 3100
 #define TRAJ_FILE_HEADER_ROW 256
@@ -53,6 +52,11 @@
 #define OC_SLEEP_TIME_EMPTY_MQ_NS 1000000
 #define OC_SLEEP_TIME_NONEMPTY_MQ_S 0
 #define OC_SLEEP_TIME_NONEMPTY_MQ_NS 0
+
+#define OBJECT_CONNECTION_TIMEOUT_S 10
+#define OBJECT_CONNECTION_RETRY_PERIOD_MS 1000
+
+#define MAX_NETWORK_DELAY_USEC 100000
 
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
@@ -89,6 +93,21 @@ typedef struct {
 } TestScenarioCommandAction;	//!< Struct describing a command to be sent as action, e.g. delayed start
 
 
+typedef struct {
+	int commandSocket;
+	int monitorSocket;
+	struct sockaddr_in objectCommandAddress;
+	struct sockaddr_in objectMonitorAddress;
+} ObjectConnection;
+
+
+typedef struct {
+	uint32_t sourceID;
+	unsigned int numberOfTargets;
+	uint32_t *targetIDs;
+	int isActive;
+} DataInjectionMap;
+
 /* Small note: syntax for declaring a function pointer is (example for a function taking an int and a float,
    returning nothing) where the function foo(int a, float b) is declared elsewhere:
       void (*fooptr)(int,float) = foo;
@@ -103,15 +122,36 @@ typedef StateTransitionResult(*StateTransition) (OBCState_t * currentState, OBCS
 /*------------------------------------------------------------
 -- Function declarations.
 ------------------------------------------------------------*/
-static I32 vConnectObject(int *sockfd, const char *name, const uint32_t port, U8 * Disconnect);
-static void vDisconnectObject(int *sockfd);
-static I32 vCheckRemoteDisconnected(int *sockfd);
+static void disconnectObject(ObjectConnection * objectConnection);
+static void disconnectAllObjects(ObjectConnection objectConnections[], const unsigned int numberOfObjects);
+static int connectAllObjects(ObjectConnection objectConnections[], const unsigned int numberOfObjects);
+static int configureAllObjects(ObjectConnection objectConnections[],
+							   const GeoPosition originPosition,
+							   const struct timeval currentTime,
+							   const char trajectoryFiles[MAX_OBJECTS][MAX_FILE_PATH],
+							   const unsigned int numberOfObjects);
+static int configureAdaptiveSynchronizationPoints(const char trajectoryFiles[MAX_OBJECTS][MAX_FILE_PATH],
+												  const ObjectConnection objectConnections[],
+												  ObjectPosition objectPositions[],
+												  const unsigned int numberOfObjects,
+												  const AdaptiveSyncPoint ASP[],
+												  const unsigned int adaptiveSyncPointCount);
+static int configureObjectDataInjection(DataInjectionMap injectionMaps[], const uint32_t transmitterIDs[],
+										const unsigned int numberOfObjects);
+static int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
+									 DataInjectionMap injectionMaps[], const unsigned int numberOfMaps);
+static int sendDataInjectionMessages(const ObjectDataType * monitorData,
+									 const DataInjectionMap dataInjectionMaps[],
+									 const ObjectConnection objectConnections[],
+									 const uint32_t transmitterIDs[], const unsigned int numberOfObjects);
+static void *objectConnectorThread(void *args);
+static int checkObjectConnections(ObjectConnection objectConnections[], const struct timeval monitorTimeout,
+								  const unsigned int numberOfObjects);
+static int hasRemoteDisconnected(int *sockfd);
 
-static void vCreateSafetyChannel(const char *name, const uint32_t port, int *sockfd,
-								 struct sockaddr_in *addr);
-static void vCloseSafetyChannel(int *sockfd);
 static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
-static int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects);
+static int getObjectIndexFromIP(const in_addr_t ipAddr, const ObjectConnection objectConnections[],
+								unsigned int numberOfObjects);
 static void signalHandler(int signo);
 static void resetCommandActionList(TestScenarioCommandAction commandActions[],
 								   const int numberOfElementsInList);
@@ -126,9 +166,8 @@ static int findCommandAction(const uint16_t actionID, const TestScenarioCommandA
 static ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const char debug);
 
 static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
-							C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
-							in_addr_t objectIPs[MAX_OBJECTS], uint32_t objectIDs[MAX_OBJECTS],
-							I32 * nbr_objects);
+							ObjectConnection objectConnections[],
+							uint32_t objectIDs[MAX_OBJECTS], unsigned int *nbr_objects);
 static int readMonitorDataTimeoutSetting(struct timeval *timeout);
 
 OBCState_t vInitializeState(OBCState_t firstState, GSDType * GSD);
@@ -156,23 +195,21 @@ static volatile int iExit = 0;
   ------------------------------------------------------------*/
 
 void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
-	I32 safety_socket_fd[MAX_OBJECTS];
-	struct sockaddr_in safety_object_addr[MAX_OBJECTS];
-	I32 socket_fds[MAX_OBJECTS];
-	I32 socket_fd = 0;
+
 	C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH];
-	C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH];
-	in_addr_t objectIPs[MAX_OBJECTS];
-	U32 object_udp_port[MAX_OBJECTS];
-	U32 object_tcp_port[MAX_OBJECTS];
+	char ipString[INET_ADDRSTRLEN];
 	U32 object_transmitter_ids[MAX_OBJECTS];
+	ObjectConnection objectConnections[MAX_OBJECTS];
 	TestScenarioCommandAction commandActions[MAX_OBJECTS];
-	I32 nbr_objects = 0;
+	DataInjectionMap dataInjectionMaps[MAX_OBJECTS];
+
+	memset(dataInjectionMaps, 0, sizeof (dataInjectionMaps));
+	unsigned int nbr_objects = 0;
 	enum COMMAND iCommand;
 	U8 pcRecvBuffer[RECV_MESSAGE_BUFFER];
 	C8 pcTempBuffer[512];
 	C8 MessageBuffer[BUFFER_SIZE_3100];
-	I32 iIndex = 0, i = 0;
+	I32 iIndex = 0;
 	struct timespec sleep_time, ref_time;
 
 	/*! Timers for reporting state over message bus */
@@ -189,11 +226,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	const struct timeval adaptiveSyncMessagePeriod = heartbeatPeriod;
 
-	U8 iForceObjectToLocalhostU8 = DEFAULT_FORCE_OBJECT_TO_LOCALHOST;
-
 	FILE *fd;
-	C8 Timestamp[SMALL_BUFFER_SIZE_0];
-	C8 GPSWeek[SMALL_BUFFER_SIZE_0];
 	ssize_t MessageLength;
 	C8 *MiscPtr;
 	C8 MiscText[SMALL_BUFFER_SIZE_0];
@@ -202,12 +235,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	U32 OldTimeU32 = 0;
 	U64 TimeCap1, TimeCap2;
 	struct timeval CurrentTimeStruct;
-	I32 HeartbeatMessageCounter = 0;
 
 	ObjectPosition OP[MAX_OBJECTS];
-	flt SpaceArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
-	flt TimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
-	SpaceTime SpaceTimeArr[MAX_OBJECTS][TRAJECTORY_FILE_MAX_ROWS];
+
+	memset(OP, 0, sizeof (OP));
 	C8 OriginLatitude[SMALL_BUFFER_SIZE_0], OriginLongitude[SMALL_BUFFER_SIZE_0],
 		OriginAltitude[SMALL_BUFFER_SIZE_0], OriginHeading[SMALL_BUFFER_SIZE_0];
 	C8 TextBuffer[SMALL_BUFFER_SIZE_0];
@@ -216,7 +247,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	dbl OriginAltitudeDbl = DEFAULT_ORIGIN_ALT;
 	dbl OriginHeadingDbl = DEFAULT_ORIGIN_HEADING;
 	C8 pcSendBuffer[MBUS_MAX_DATALEN];
-	C8 ObjectPort[SMALL_BUFFER_SIZE_0];
 	ObjectDataType monitorData;
 	ACCMData mqACCMData;
 	EXACData mqEXACData;
@@ -246,21 +276,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	I32 ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
 
 	C8 Buffer2[SMALL_BUFFER_SIZE_1];
-	C8 LogBuffer[LOG_BUFFER_LENGTH];
 	C8 VOILReceivers[SMALL_BUFFER_SIZE_254];
 	C8 DTMReceivers[SMALL_BUFFER_SIZE_254];
-	U32 RowCount;
 
-	U8 DisconnectU8 = 0;
-	I32 iResult;
 
 	FILE *TempFd;
-	U16 MiscU16;
-	I32 j = 0;
-
-	U8 STRTSentU8 = 0;
-	C8 FileHeaderBufferC8[TRAJ_FILE_HEADER_ROW];
-
 
 	// Create log
 	LogInit(MODULE_NAME, logLevel);
@@ -302,7 +322,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
 				if (objectEnabledStatus == OBJECT_ENABLED)
-					UtilSendUDPData(MODULE_NAME, &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
+					UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
+									&objectConnections[iIndex].objectMonitorAddress,
 									MessageBuffer, MessageLength, 0);
 			}
 		}
@@ -323,54 +344,19 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
 				if (objectEnabledStatus == OBJECT_ENABLED)
-					UtilSendUDPData(MODULE_NAME, &safety_socket_fd[iIndex], &safety_object_addr[iIndex],
+					UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
+									&objectConnections[iIndex].objectMonitorAddress,
 									MessageBuffer, MessageLength, 0);
 			}
 
 			// Check if any object has disconnected - if so, disconnect all objects and return to idle
-			DisconnectU8 = 0;
-			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-				if (object_transmitter_ids[iIndex] == 0 ||
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
-															&objectEnabledStatus) != READ_OK) {
-					continue;
-				}
-				if (objectEnabledStatus == OBJECT_ENABLED) {
-					// Check broken TCP connection
-					DisconnectU8 |= vCheckRemoteDisconnected(&socket_fds[iIndex]);
-					// Check time since last position update
-					struct timeval lastDataUpdate, timeSinceLastMonitorData;
-
-					DataDictionaryGetMonitorDataReceiveTime(object_transmitter_ids[iIndex], &lastDataUpdate);
-
-					timersub(&currentTime, &lastDataUpdate, &timeSinceLastMonitorData);
-					if (timercmp(&timeSinceLastMonitorData, &monitorDataTimeout, >)) {
-						LogMessage(LOG_LEVEL_WARNING,
-								   "MONR timeout (ID %u):\n\ttimeout time %d s %d µs\n\tlast message %d s %d µs\n\tcurrent time %d s %d µs",
-								   object_transmitter_ids[iIndex], monitorDataTimeout.tv_sec,
-								   monitorDataTimeout.tv_usec, lastDataUpdate.tv_sec,
-								   lastDataUpdate.tv_usec, currentTime.tv_sec, currentTime.tv_usec);
-						DisconnectU8 = 1;
-					}
-
-					if (DisconnectU8) {
-						LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s - returning to IDLE",
-								   object_address_name[iIndex]);
-
-						for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-							vDisconnectObject(&socket_fds[iIndex]);
-						}
-
-						/* Close safety socket */
-						for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-							vCloseSafetyChannel(&safety_socket_fd[iIndex]);
-						}
-
-						vSetState(OBC_STATE_IDLE, GSD);
-						break;
-					}
-				}
+			if (checkObjectConnections(objectConnections, monitorDataTimeout, nbr_objects)) {
+				disconnectAllObjects(objectConnections, nbr_objects);
+				vSetState(OBC_STATE_IDLE, GSD);
+				break;
 			}
+
+
 		}
 
 		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_CONNECTED
@@ -390,21 +376,26 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				struct timeval estSyncPointTime;
 
 				TimeSetToGPStime(&estSyncPointTime, TimeGetAsGPSweek(&currentTime), ASPData.MTSPU32);
-
+				DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					for (i = 0; i < SyncPointCount; i++) {
+					inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
+							  &objectConnections[iIndex].objectMonitorAddress.sin_addr,
+							  ipString, sizeof (ipString));
+					for (int i = 0; i < SyncPointCount; i++) {
 						if (TEST_SYNC_POINTS == 0
-							&& strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL
+							&& strstr(ipString, ASP[i].SlaveIP) != NULL
 							&& ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1) {
 
 							/*Send Master time to adaptive sync point */
 							MessageLength =
 								encodeMTSPMessage(&estSyncPointTime, MessageBuffer, sizeof (MessageBuffer),
 												  0);
-							DataDictionaryGetObjectEnableStatusByIp(objectIPs[iIndex], &objectEnabledStatus);
+							DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+																	&objectEnabledStatus);
 							if (objectEnabledStatus == OBJECT_ENABLED)
-								UtilSendUDPData(MODULE_NAME, &safety_socket_fd[iIndex],
-												&safety_object_addr[iIndex], MessageBuffer, MessageLength, 0);
+								UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
+												&objectConnections[iIndex].objectMonitorAddress,
+												MessageBuffer, MessageLength, 0);
 						}
 						/*else if(TEST_SYNC_POINTS == 1 && iIndex == 1 && ASPData.MTSPU32 > 0 && ASPData.TimeToSyncPointDbl > -1 )
 						   {
@@ -419,32 +410,43 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 			DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-
+				inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
+						  &objectConnections[iIndex].objectMonitorAddress.sin_addr,
+						  ipString, sizeof (ipString));
 				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
 				if (objectEnabledStatus == OBJECT_ENABLED) {
 					memset(buffer, 0, sizeof (buffer));
-					receivedMONRData = uiRecvMonitor(&safety_socket_fd[iIndex], buffer, sizeof (buffer));
+					receivedMONRData =
+						uiRecvMonitor(&objectConnections[iIndex].monitorSocket, buffer, sizeof (buffer));
 				}
 
 				if (receivedMONRData > 0 && getISOMessageType(buffer, receivedMONRData, 0) == MESSAGE_ID_MONR) {
-					LogMessage(LOG_LEVEL_DEBUG, "Recieved %d bytes of new data from %s %d: %s",
-							   receivedMONRData, object_address_name[iIndex], object_udp_port[iIndex],
-							   buffer);
+					LogMessage(LOG_LEVEL_DEBUG, "Recieved %d bytes of new data from %s %u",
+							   receivedMONRData, ipString,
+							   objectConnections[iIndex].objectMonitorAddress.sin_port);
 
-					monitorData.ClientIP = safety_object_addr[iIndex].sin_addr.s_addr;
+					monitorData.ClientIP = objectConnections[iIndex].objectMonitorAddress.sin_addr.s_addr;
 					TimeSetToCurrentSystemTime(&currentTime);
 					if (decodeMONRMessage
 						(buffer, receivedMONRData, currentTime, &monitorData.ClientID, &monitorData.MonrData,
 						 0) != MESSAGE_OK) {
 						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object",
-								   object_address_name[iIndex]);
+								   ipString);
 
-						vDisconnectObject(&safety_socket_fd[iIndex]);
+						disconnectObject(&objectConnections[iIndex]);
 						// TODO smarter way of handling?
 						continue;
 					}
 					else {
 						TimeSetToCurrentSystemTime(&monitorData.lastDataUpdate);
+						struct timeval monitorDataAge;
+
+						timersub(&monitorData.lastDataUpdate, &monitorData.MonrData.timestamp,
+								 &monitorDataAge);
+						if (monitorDataAge.tv_sec || monitorDataAge.tv_usec > MAX_NETWORK_DELAY_USEC) {
+							LogMessage(LOG_LEVEL_WARNING, "Network delay from object %u exceeds 100 ms",
+									   object_transmitter_ids[iIndex]);
+						}
 					}
 
 					// TEMPORARY FIX: if an object sends with transmitter ID not matching the local, modify locally
@@ -493,9 +495,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 
 					//Ok, let's do the ASP
-					for (i = 0; i < SyncPointCount; i++) {
+					for (int i = 0; i < SyncPointCount; i++) {
 						if (TEST_SYNC_POINTS == 0
-							&& strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL
+							&& strstr(ipString, ASP[i].MasterIP) != NULL
 							&& CurrentTimeU32 > StartTimeU32 && StartTimeU32 > 0
 							&& ASPData.TimeToSyncPointDbl > -1
 							/*|| TEST_SYNC_POINTS == 1 && ASP[0].TestPort == object_udp_port[iIndex] && StartTimeU32 > 0 && iIndex == 0 && TimeToSyncPoint > -1 */
@@ -565,8 +567,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								if (TimeGetAsGPSqmsOfWeek(&monitorData.MonrData.timestamp) % ASPDebugRate ==
 									0) {
 									printf("%d, %d, %3.3f, %s, %s\n", CurrentTimeU32, StartTimeU32,
-										   ASPData.TimeToSyncPointDbl, object_address_name[iIndex],
-										   ASP[i].MasterIP);
+										   ASPData.TimeToSyncPointDbl, ipString, ASP[i].MasterIP);
 									printf
 										("TtS=%3.3f, BestIndex=%d, MTSP=%d, iIndex=%d, IterationTime=%3.0f ms\n",
 										 ASPData.TimeToSyncPointDbl, OP[iIndex].BestFoundTrajectoryIndex,
@@ -583,6 +584,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					OP[iIndex].Speed =
 						(float)sqrt(pow(monitorData.MonrData.speed.lateral_m_s, 2) +
 									pow(monitorData.MonrData.speed.longitudinal_m_s, 2));
+
+					// Pass on the information to the configured injection targets
+					sendDataInjectionMessages(&monitorData, dataInjectionMaps, objectConnections,
+											  object_transmitter_ids, nbr_objects);
 				}
 				else if (receivedMONRData > 0)
 					LogMessage(LOG_LEVEL_WARNING, "Received unhandled message on monitoring socket");
@@ -609,7 +614,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
 															&objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED)
-						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+										&objectConnections[iIndex].commandSocket, 0);
 				}
 
 				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
@@ -628,7 +634,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
 															&objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED)
-						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+										&objectConnections[iIndex].commandSocket, 0);
 				}
 
 				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
@@ -652,24 +659,18 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					if (!hasDelayedStart
-						(objectIPs[iIndex], commandActions,
+						(objectConnections[iIndex].objectCommandAddress.sin_addr.s_addr, commandActions,
 						 sizeof (commandActions) / sizeof (commandActions[0]))) {
 						DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
 																&objectEnabledStatus);
 						if (objectEnabledStatus == OBJECT_ENABLED) {
-							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex],
-											0);
+							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+											&objectConnections[iIndex].commandSocket, 0);
 						}
 					}
 				}
 				vSetState(OBC_STATE_RUNNING, GSD);
 
-				//Store STRT in GSD
-				if (STRTSentU8 == 0) {
-					//for(i = 0; i < MessageLength; i++) GSD->STRTData[i] = MessageBuffer[i];
-					//GSD->STRTSizeU8 = (U8)MessageLength;
-					STRTSentU8 = 1;
-				}
 				//OBCState = OBC_STATE_INITIALIZED; //This is temporary!
 				//printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
 				GSD->ScenarioStartTimeU32 = TimeGetAsGPSqmsOfWeek(&startTime) >> 2;
@@ -696,12 +697,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					encodeOSTMMessage(OBJECT_COMMAND_REMOTE_CONTROL, MessageBuffer, sizeof (MessageBuffer),
 									  0);
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to remote control mode",
-							   object_address_name[iIndex]);
+					inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
+							  &objectConnections[iIndex].objectMonitorAddress.sin_addr,
+							  ipString, sizeof (ipString));
+					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to remote control mode", ipString);
 					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
 															&objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED)
-						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+										&objectConnections[iIndex].commandSocket, 0);
 				}
 				// TODO: check objects' states
 				LogMessage(LOG_LEVEL_INFO, "Enabled remote control mode");
@@ -711,12 +715,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				MessageLength =
 					encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to disarmed mode",
-							   object_address_name[iIndex]);
+					inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
+							  &objectConnections[iIndex].objectMonitorAddress.sin_addr,
+							  ipString, sizeof (ipString));
+					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to disarmed mode", ipString);
 					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
 															&objectEnabledStatus);
 					if (objectEnabledStatus == OBJECT_ENABLED)
-						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex], 0);
+						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+										&objectConnections[iIndex].commandSocket, 0);
 				}
 				// TODO: check objects' states
 				// TODO: objectControlServerStatus = something
@@ -725,7 +732,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else if (iCommand == COMM_REMOTECTRL_MANOEUVRE) {
 				RemoteControlCommandType rcCommand;
-				char ipString[INET_ADDRSTRLEN];
 
 				// TODO check size of received data
 				memcpy(&rcCommand, pcRecvBuffer, sizeof (rcCommand));
@@ -733,27 +739,26 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
 					switch (rcCommand.manoeuvre) {
 					case MANOEUVRE_BACK_TO_START:
-						iIndex =
-							iGetObjectIndexFromObjectIP(rcCommand.objectIP, objectIPs,
-														sizeof (objectIPs) / sizeof (objectIPs[0]));
+						iIndex = getObjectIndexFromIP(rcCommand.objectIP, objectConnections, nbr_objects);
 						DataDictionaryGetObjectEnableStatusByIp(rcCommand.objectIP, &objectEnabledStatus);
 						if (iIndex != -1 && objectEnabledStatus == OBJECT_ENABLED) {
+							inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
+									  &objectConnections[iIndex].objectMonitorAddress.sin_addr,
+									  ipString, sizeof (ipString));
 							LogMessage(LOG_LEVEL_INFO, "Sending back to start command to object with IP %s",
-									   object_address_name[iIndex]);
+									   ipString);
 							MessageLength =
 								encodeRCMMMessage(rcCommand.manoeuvre, MessageBuffer, sizeof (MessageBuffer),
 												  0);
 							if (MessageLength > 0) {
 								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
-												&socket_fds[iIndex], 0);
+												&objectConnections[iIndex].commandSocket, 0);
 							}
 							else {
 								LogMessage(LOG_LEVEL_ERROR, "Error encoding RCMM message");
 							}
 						}
 						else {
-							char ipString[INET_ADDRSTRLEN];
-
 							LogMessage(LOG_LEVEL_ERROR, "Back to start command for invalid IP %s received",
 									   inet_ntop(AF_INET, &rcCommand.objectIP, ipString, sizeof (ipString)));
 						}
@@ -772,15 +777,17 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				memcpy(&enableCommand, pcRecvBuffer, sizeof (enableCommand));
 				if (vGetState(GSD) != OBC_STATE_RUNNING && vGetState(GSD) != OBC_STATE_ARMED) {
-					iIndex = iGetObjectIndexFromObjectIP(enableCommand.objectIP, objectIPs,
-														 sizeof (objectIPs) / sizeof (objectIPs[0]));
+					iIndex = getObjectIndexFromIP(enableCommand.objectIP, objectConnections, nbr_objects);
 					DataDictionaryGetObjectTransmitterIDByIP(enableCommand.objectIP, &transmitterId);
 					if (transmitterId > 0) {
+						inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
+								  &objectConnections[iIndex].objectMonitorAddress.sin_addr,
+								  ipString, sizeof (ipString));
 						DataDictionarySetObjectEnableStatus(transmitterId, enableCommand.Enabled);
 						if (enableCommand.Enabled == OBJECT_ENABLED)
-							LogMessage(LOG_LEVEL_INFO, "Enable object %s.", object_address_name[iIndex]);
+							LogMessage(LOG_LEVEL_INFO, "Enable object %s.", ipString);
 						else if (enableCommand.Enabled == OBJECT_DISABLED)
-							LogMessage(LOG_LEVEL_INFO, "Disable object %s.", object_address_name[iIndex]);
+							LogMessage(LOG_LEVEL_INFO, "Disable object %s.", ipString);
 					}
 					else
 						LogMessage(LOG_LEVEL_ERROR, "Disable/Enabled of object IP %x not found!",
@@ -793,44 +800,49 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_INIT) {
 				JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
 				nbr_objects = 0;
+				int initSuccessful = true;
+
+				// Get objects; name and drive file
 				if (iFindObjectsInfo
-					(object_traj_file, object_address_name, objectIPs, object_transmitter_ids,
-					 &nbr_objects) == 0) {
+					(object_traj_file, objectConnections, object_transmitter_ids, &nbr_objects)
+					== 0) {
+
 					// Reset preexisting stored monitor data
 					if (DataDictionarySetNumberOfObjects(0) != WRITE_OK) {
 						LogMessage(LOG_LEVEL_ERROR, "Error clearing old object data");
+						initSuccessful = false;
 					}
 					else {
 						LogMessage(LOG_LEVEL_INFO, "Cleared previous object data");
 					}
-					// Get objects; name and drive file
-					DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
+
 					// Get number of allowed missing monitor messages before abort
-					readMonitorDataTimeoutSetting(&monitorDataTimeout);
+					if (readMonitorDataTimeoutSetting(&monitorDataTimeout) == -1) {
+						LogMessage(LOG_LEVEL_ERROR, "Error reading monitor data timeout setting");
+						initSuccessful = false;
+					}
+
 					// Enable all objects at INIT
 					ObjectDataType objectData;
 
 					for (iIndex = 0; iIndex < nbr_objects; iIndex++) {
 						objectData.Enabled = OBJECT_ENABLED;
-						objectData.ClientIP = objectIPs[iIndex];
+						objectData.ClientIP = objectConnections[iIndex].objectCommandAddress.sin_addr.s_addr;
 						objectData.ClientID = object_transmitter_ids[iIndex];
 						objectData.lastDataUpdate.tv_sec = 0;
 						objectData.lastDataUpdate.tv_usec = 0;
-						DataDictionarySetObjectData(&objectData);
+						if (DataDictionarySetObjectData(&objectData) != WRITE_OK) {
+							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
+							initSuccessful = false;
+						}
 					}
 
 					resetCommandActionList(commandActions,
 										   sizeof (commandActions) / sizeof (commandActions[0]));
 
 					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-						if (0 == iForceObjectToLocalhostU8) {
-							object_udp_port[iIndex] = SAFETY_CHANNEL_PORT;
-							object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT;
-						}
-						else {
-							object_udp_port[iIndex] = SAFETY_CHANNEL_PORT + iIndex * 2;
-							object_tcp_port[iIndex] = CONTROL_CHANNEL_PORT + iIndex * 2;
-						}
+						objectConnections[iIndex].objectMonitorAddress.sin_port = htons(SAFETY_CHANNEL_PORT);
+						objectConnections[iIndex].objectCommandAddress.sin_port = htons(CONTROL_CHANNEL_PORT);
 					}
 
 					/*Setup Adaptive Sync Points (ASP) */
@@ -843,7 +855,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						fd = fopen(confDirectoryPath, "r");
 						UtilReadLineCntSpecChars(fd, pcTempBuffer);	//Read header
 
-						for (i = 0; i < SyncPointCount; i++) {
+						for (int i = 0; i < SyncPointCount; i++) {
 							UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);
 							if (TEST_SYNC_POINTS == 1)
 								ASP[i].TestPort = SAFETY_CHANNEL_PORT;
@@ -851,8 +863,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						fclose(fd);
 					}
 
-					vSetState(OBC_STATE_INITIALIZED, GSD);
-					LogMessage(LOG_LEVEL_INFO, "Successfully initialized");
+					if (configureObjectDataInjection(dataInjectionMaps, object_transmitter_ids, nbr_objects)
+						== -1) {
+						LogMessage(LOG_LEVEL_ERROR, "Error reading monitor data timeout setting");
+						initSuccessful = false;
+					}
 
 					//Remove temporary file
 					remove(TEMP_LOG_FILE);
@@ -860,16 +875,22 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						//Create temporary file
 						TempFd = fopen(TEMP_LOG_FILE, "w+");
 					}
-
-					//OSEMSentU8 = 0;
-					STRTSentU8 = 0;
 				}
 				else {
-					LogMessage(LOG_LEVEL_INFO,
-							   "Could not initialize: object info was not processed successfully");
+					initSuccessful = false;
+					LogMessage(LOG_LEVEL_INFO, "Object info was not processed successfully");
+				}
+
+				if (initSuccessful) {
+					vSetState(OBC_STATE_INITIALIZED, GSD);
+					LogMessage(LOG_LEVEL_INFO, "Successfully initialized");
+				}
+				else {
+					LogMessage(LOG_LEVEL_INFO, "Initialization failed");
 					pcSendBuffer[0] = (uint8_t) iCommand;
 					iCommSend(COMM_FAILURE, pcSendBuffer, sizeof (iCommand));
 				}
+
 			}
 			else if (iCommand == COMM_ACCM && vGetState(GSD) == OBC_STATE_CONNECTED) {
 				UtilPopulateACCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqACCMData);
@@ -893,8 +914,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 				else {
 					// Send ACCM to objects
-					iIndex = iGetObjectIndexFromObjectIP(mqACCMData.ip, objectIPs,
-														 sizeof (objectIPs) / sizeof (objectIPs[0]));
+					iIndex = getObjectIndexFromIP(mqACCMData.ip, objectConnections, nbr_objects);
 					DataDictionaryGetObjectEnableStatusByIp(mqACCMData.ip, &objectEnabledStatus);
 					if (iIndex != -1 && objectEnabledStatus == OBJECT_ENABLED) {
 						MessageLength =
@@ -903,7 +923,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 											  &mqACCMData.actionTypeParameter2,
 											  &mqACCMData.actionTypeParameter3, MessageBuffer,
 											  sizeof (MessageBuffer), 0);
-						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
+						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+										&(objectConnections[iIndex].commandSocket), 0);
 					}
 					else if (mqACCMData.ip == 0) {
 						LogMessage(LOG_LEVEL_DEBUG, "ACCM with no configured target IP: no message sent");
@@ -915,8 +936,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			else if (iCommand == COMM_TRCM && vGetState(GSD) == OBC_STATE_CONNECTED) {
 				UtilPopulateTRCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqTRCMData);
-				iIndex = iGetObjectIndexFromObjectIP(mqTRCMData.ip, objectIPs,
-													 sizeof (objectIPs) / sizeof (objectIPs[0]));
+				iIndex = getObjectIndexFromIP(mqTRCMData.ip, objectConnections, nbr_objects);
 				DataDictionaryGetObjectEnableStatusByIp(mqTRCMData.ip, &objectEnabledStatus);
 				if (iIndex != -1 && objectEnabledStatus == OBJECT_ENABLED) {
 					MessageLength =
@@ -925,7 +945,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 										  &mqTRCMData.triggerTypeParameter2,
 										  &mqTRCMData.triggerTypeParameter3, MessageBuffer,
 										  sizeof (MessageBuffer), 0);
-					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
+					UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+									&(objectConnections[iIndex].commandSocket), 0);
 				}
 				else
 					LogMessage(LOG_LEVEL_WARNING, "Unable to send TRCM: no valid socket found");
@@ -939,9 +960,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									   sizeof (commandActions) / sizeof (commandActions[0]))) != -1) {
 					switch (commandActions[commandIndex].command) {
 					case ACTION_PARAMETER_VS_SEND_START:
-						iIndex =
-							iGetObjectIndexFromObjectIP(mqEXACData.ip, objectIPs,
-														sizeof (objectIPs) / sizeof (objectIPs[0]));
+						iIndex = getObjectIndexFromIP(mqEXACData.ip, objectConnections, nbr_objects);
 						DataDictionaryGetObjectEnableStatusByIp(mqEXACData.ip, &objectEnabledStatus);
 						if (iIndex != -1 && objectEnabledStatus == OBJECT_ENABLED) {
 							struct timeval startTime;
@@ -954,8 +973,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									   mqEXACData.executionTime_qmsoW);
 							MessageLength =
 								encodeSTRTMessage(&startTime, MessageBuffer, sizeof (MessageBuffer), 0);
-							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex],
-											0);
+							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+											&objectConnections[iIndex].commandSocket, 0);
 						}
 						else if (mqEXACData.ip == 0) {
 							LogMessage(LOG_LEVEL_DEBUG,
@@ -971,9 +990,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 				}
 				else {
-					iIndex =
-						iGetObjectIndexFromObjectIP(mqEXACData.ip, objectIPs,
-													sizeof (objectIPs) / sizeof (objectIPs[0]));
+					iIndex = getObjectIndexFromIP(mqEXACData.ip, objectConnections, nbr_objects);
 					DataDictionaryGetObjectEnableStatusById(mqEXACData.ip, &objectEnabledStatus);
 					if (iIndex != -1 && objectEnabledStatus == OBJECT_ENABLED) {
 						struct timeval executionTime;
@@ -983,7 +1000,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						MessageLength =
 							encodeEXACMessage(&mqEXACData.actionID, &executionTime, MessageBuffer,
 											  sizeof (MessageBuffer), 0);
-						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &(socket_fds[iIndex]), 0);
+						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+										&(objectConnections[iIndex].commandSocket), 0);
 					}
 					else if (mqEXACData.ip == 0) {
 						LogMessage(LOG_LEVEL_DEBUG, "EXAC with no configured target IP: no message sent");
@@ -997,203 +1015,38 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_INFO, "CONNECT received");
 				JournalRecordData(JOURNAL_RECORD_EVENT, "CONNECT received.");
 
-				DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
-
-				/* Connect and send drive files */
-				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
-															&objectEnabledStatus);
-					if (objectEnabledStatus == OBJECT_ENABLED) {
-						UtilSetObjectPositionIP(&OP[iIndex], object_address_name[iIndex]);
-						float altitude = (float)OriginPosition.Altitude;
-
-						MessageLength =
-							encodeOSEMMessage(&currentTime, &OriginPosition.Latitude,
-											  &OriginPosition.Longitude, &altitude, NULL, NULL, NULL,
-											  MessageBuffer, sizeof (MessageBuffer), 0);
-						if (MessageLength < 0) {
-							util_error("OSEM encoding error");
-						}
-
-						DisconnectU8 = 0;
-
-						do {
-
-							iResult =
-								vConnectObject(&socket_fds[iIndex], object_address_name[iIndex],
-											   object_tcp_port[iIndex], &DisconnectU8);
-
-							if (iResult < 0) {
-								switch (errno) {
-								case ECONNREFUSED:
-									LogMessage(LOG_LEVEL_INFO,
-											   "Unable to connect to object %s:%d, retry in %d sec...",
-											   object_address_name[iIndex], object_tcp_port[iIndex],
-											   (!(1 & DisconnectU8)) * 3);
-									JournalRecordData
-										(JOURNAL_RECORD_STRING,
-										 "Was not able to connect to object, [IP: %s] [PORT: %d]",
-										 object_address_name[iIndex], object_tcp_port[iIndex]);
-									break;
-								case EADDRINUSE:
-									util_error("[ObjectControl] Local address/port already in use");
-									break;
-								case EALREADY:
-									util_error
-										("[ObjectControl] Previous connection attempt still in progress");
-									break;
-								case EISCONN:
-									util_error("[ObjectControl] Socket is already connected");
-									break;
-								case ENETUNREACH:
-									util_error("[ObjectControl] Network unreachable");
-									break;
-								case ETIMEDOUT:
-									util_error("[ObjectControl] Connection timed out");
-									break;
-								default:
-									util_error("ERR: Failed to connect to control socket");
-									break;
-								}
-
-							}
-
-							bzero(pcRecvBuffer, RECV_MESSAGE_BUFFER);
-							//Have we received a command?
-							if (iCommRecv(&iCommand, pcRecvBuffer, RECV_MESSAGE_BUFFER, NULL)) {
-								if (iCommand == COMM_DISCONNECT) {
-									DisconnectU8 = 1;
-									JournalRecordData(JOURNAL_RECORD_EVENT, "DISCONNECT received.");
-								}
-							}
-						} while (iExit == 0 && iResult < 0 && DisconnectU8 == 0);
-
-						if (iResult >= 0) {
-							JournalRecordData(JOURNAL_RECORD_STRING, "Configuring connected objects.");
-							/* Send OSEM command in mq so that we get some information like GPSweek, origin (latitude,logitude,altitude in gps coordinates) */
-							LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
-
-							//Restore the buffers
-							DataDictionaryGetOriginLatitudeC8(GSD, OriginLatitude, SMALL_BUFFER_SIZE_0);
-							DataDictionaryGetOriginLongitudeC8(GSD, OriginLongitude, SMALL_BUFFER_SIZE_0);
-							DataDictionaryGetOriginAltitudeC8(GSD, OriginAltitude, SMALL_BUFFER_SIZE_0);
-							uint32_t transmitterID;
-							uint8_t isoTransmitterID;
-
-							DataDictionaryGetTransmitterID(&transmitterID);
-							isoTransmitterID = (uint8_t) transmitterID;
-							setTransmitterID(isoTransmitterID);
-
-							memset(pcSendBuffer, 0, sizeof (pcSendBuffer));
-							snprintf(pcSendBuffer, sizeof (pcSendBuffer), "%u;",
-									 TimeGetAsGPSweek(&currentTime));
-							snprintf(pcSendBuffer + strlen(pcSendBuffer),
-									 sizeof (pcSendBuffer) - strlen(pcSendBuffer), "%s;%s;%s;%s;",
-									 OriginLatitude, OriginLongitude, OriginAltitude, OriginHeading);
-
-							if (iCommSend(COMM_OSEM, pcSendBuffer, strlen(pcSendBuffer) + 1) < 0) {
-								LogMessage(LOG_LEVEL_ERROR,
-										   "Fatal communication fault when sending OSEM command - entering error state");
-								vSetState(OBC_STATE_ERROR, GSD);
-								objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
-							}
-							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength, &socket_fds[iIndex],
-											0);
-
-							/* Here we send TRAJ, if the IP-address is not operating with a dynamic trajectory */
-							if (strstr(DTMReceivers, object_address_name[iIndex]) == NULL) {
-								LogMessage(LOG_LEVEL_INFO, "Sending TRAJ to %s", object_address_name[iIndex]);
-
-								if (ObjectControlSendTRAJMessage
-									(object_traj_file[iIndex], &socket_fds[iIndex], 0)
-									== -1) {
-									LogMessage(LOG_LEVEL_ERROR, "Failed to send TRAJ to %s",
-											   object_address_name[iIndex]);
-									continue;
-								}
-							}
-
-							/* Adaptive Sync Points object configuration start... */
-							if (TEST_SYNC_POINTS == 1)
-								printf("Trajfile: %s\n", object_traj_file[iIndex]);
-							OP[iIndex].TrajectoryPositionCount = RowCount;
-							OP[iIndex].SpaceArr = SpaceArr[iIndex];
-							OP[iIndex].TimeArr = TimeArr[iIndex];
-							OP[iIndex].SpaceTimeArr = SpaceTimeArr[iIndex];
-							UtilPopulateSpaceTimeArr(&OP[iIndex], object_traj_file[iIndex]);
-
-							LogMessage(LOG_LEVEL_INFO, "Sync point counts: %d", SyncPointCount);
-							for (i = 0; i < SyncPointCount; i++) {
-								struct timeval syncPointTime, syncStopTime;
-
-								TimeSetToUTCms(&syncPointTime,
-											   (int64_t) (ASP[i].SlaveTrajSyncTime * 1000.0f));
-								TimeSetToUTCms(&syncStopTime, (int64_t) (ASP[i].SlaveSyncStopTime * 1000.0f));
-								if (TEST_SYNC_POINTS == 1 && iIndex == 1) {
-									/*Send SYPM to slave */
-									MessageLength =
-										encodeSYPMMessage(syncPointTime, syncStopTime, MessageBuffer,
-														  sizeof (MessageBuffer), 0);
-									UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
-													&socket_fds[iIndex], 0);
-								}
-								else if (TEST_SYNC_POINTS == 0
-										 && strstr(object_address_name[iIndex], ASP[i].SlaveIP) != NULL) {
-									/*Send SYPM to slave */
-									MessageLength =
-										encodeSYPMMessage(syncPointTime, syncStopTime, MessageBuffer,
-														  sizeof (MessageBuffer), 0);
-									UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
-													&socket_fds[iIndex], 0);
-								}
-							}
-
-							/*Set Sync point in OP */
-							for (i = 0; i < SyncPointCount; i++) {
-								if (TEST_SYNC_POINTS == 1 && iIndex == 0)
-									UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, ASP[i].MasterTrajSyncTime);
-								else if (TEST_SYNC_POINTS == 0
-										 && strstr(object_address_name[iIndex], ASP[i].MasterIP) != NULL)
-									UtilSetSyncPoint(&OP[iIndex], 0, 0, 0, ASP[i].MasterTrajSyncTime);
-							}
-							/* ...end */
-						}
-					}
+				if (connectAllObjects(objectConnections, nbr_objects) < 0) {
+					LogMessage(LOG_LEVEL_INFO, "Unable to connect all objects");
+					vSetState(OBC_STATE_IDLE, GSD);
 				}
-				TimeSetToCurrentSystemTime(&currentTime);
-				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
-															&objectEnabledStatus);
-					if (objectEnabledStatus == OBJECT_ENABLED) {
-						if (USE_TEST_HOST == 0)
-							vCreateSafetyChannel(object_address_name[iIndex], object_udp_port[iIndex],
-												 &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
-						else if (USE_TEST_HOST == 1)
-							vCreateSafetyChannel(TESTSERVER_IP, object_udp_port[iIndex],
-												 &safety_socket_fd[iIndex], &safety_object_addr[iIndex]);
+				else {
+					JournalRecordData(JOURNAL_RECORD_STRING, "Configuring connected objects.");
+					if (configureAllObjects
+						(objectConnections, OriginPosition, currentTime, object_traj_file, nbr_objects) < 0) {
+						LogMessage(LOG_LEVEL_INFO, "Unable to configure connected objects");
+						// TODO disconnect all objects
+						vSetState(OBC_STATE_IDLE, GSD);
+					}
+					else {
+						// Set up adaptive sync points
+						LogMessage(LOG_LEVEL_INFO, "Configuring adaptive synchronization points");
+						if (configureAdaptiveSynchronizationPoints(object_traj_file, objectConnections,
+																   OP, nbr_objects, ASP,
+																   SyncPointCount) < 0) {
+							LogMessage(LOG_LEVEL_ERROR, "Unable to set up adaptive synchronization points");
+						}
 
 						// Set latest monitor data receive time to now, so the timeout doesn't trigger instantly
-						DataDictionarySetMonitorDataReceiveTime(object_transmitter_ids[iIndex], &currentTime);
+						uiTimeCycle = 0;
+						ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
+						objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
+						nextHeartbeatTime = currentTime;
+						nextAdaptiveSyncMessageTime = currentTime;
+
+						vSetState(OBC_STATE_CONNECTED, GSD);
+						iCommSend(COMM_OBJECTS_CONNECTED, NULL, 0);
 					}
 				}
-				uiTimeCycle = 0;
-
-				/* Execution mode */
-				ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
-
-				/*Set server status */
-				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
-
-				if (DisconnectU8 == 0) {
-					nextHeartbeatTime = currentTime;
-					nextAdaptiveSyncMessageTime = currentTime;
-
-					vSetState(OBC_STATE_CONNECTED, GSD);
-					iCommSend(COMM_OBJECTS_CONNECTED, NULL, 0);
-				}
-				else if (DisconnectU8 == 1)
-					vSetState(OBC_STATE_IDLE, GSD);
-
 			}
 			else if (iCommand == COMM_DATA_DICT) {
 
@@ -1215,9 +1068,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				OriginPosition.Altitude = OriginAltitudeDbl;
 				OriginPosition.Heading = OriginHeadingDbl;
 
-				DataDictionaryGetForceToLocalhostU8(GSD, &iForceObjectToLocalhostU8);
-				LogMessage(LOG_LEVEL_INFO, "ForceObjectToLocalhost = %d", iForceObjectToLocalhostU8);
-
 				DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ASPMaxTimeDiffDbl);
 				DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ASPMaxTrajDiffDbl);
 				DataDictionaryGetASPStepBackCountU32(GSD, &ASPStepBackCount);
@@ -1228,24 +1078,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				DataDictionaryGetDTMReceiversC8(GSD, DTMReceivers, SMALL_BUFFER_SIZE_254);
 			}
 			else if (iCommand == COMM_DISCONNECT) {
-				//#ifndef NOTCP
-				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
-															&objectEnabledStatus);
-					if (objectEnabledStatus == OBJECT_ENABLED)
-						vDisconnectObject(&socket_fds[iIndex]);
-				}
-				//#endif //NOTCP
-
 				LogMessage(LOG_LEVEL_INFO, "DISCONNECT received");
 				JournalRecordData(JOURNAL_RECORD_EVENT, "DISCONNECT received.");
-				/* Close safety socket */
-				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
-															&objectEnabledStatus);
-					if (objectEnabledStatus == OBJECT_ENABLED)
-						vCloseSafetyChannel(&safety_socket_fd[iIndex]);
-				}
+				disconnectAllObjects(objectConnections, nbr_objects);
 				vSetState(OBC_STATE_IDLE, GSD);
 			}
 			else if (iCommand == COMM_EXIT) {
@@ -1574,109 +1409,306 @@ int findCommandAction(const uint16_t actionID, const TestScenarioCommandAction c
 }
 
 
-int iGetObjectIndexFromObjectIP(in_addr_t ipAddr, in_addr_t objectIPs[], unsigned int numberOfObjects) {
+int getObjectIndexFromIP(const in_addr_t ipAddr,
+						 const ObjectConnection objectConnections[], unsigned int numberOfObjects) {
 	for (unsigned int i = 0; i < numberOfObjects; ++i) {
-		if (objectIPs[i] == ipAddr)
+		if (objectConnections[i].objectCommandAddress.sin_addr.s_addr == ipAddr)
 			return (int)i;
 	}
 	return -1;
 }
 
-static I32 vConnectObject(int *sockfd, const char *name, const uint32_t port, U8 * Disconnect) {
-	struct sockaddr_in serv_addr;
-	struct hostent *server;
+void *objectConnectorThread(void *inputArgs) {
+	ObjectConnection *args = (ObjectConnection *) inputArgs;
+	int retval;
+	char ipString[INET_ADDRSTRLEN];
 
-	char buffer[256];
-	int iResult;
+	inet_ntop(AF_INET, &args->objectCommandAddress.sin_addr, ipString, sizeof (ipString));
 
-	*sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
-	if (*sockfd < 0) {
-		util_error("[ObjectControl] ERR: Failed to open control socket");
+	if (args->objectCommandAddress.sin_addr.s_addr == 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Invalid connection IP specified: %s", ipString);
+		pthread_exit((void *)-1);
 	}
 
-	server = gethostbyname(name);
-	if (server == NULL) {
-		util_error("[ObjectControl] ERR: Unknown host ");
+	args->commandSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+	if (args->commandSocket < 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to open control socket");
+		args->monitorSocket = -1;
+		pthread_exit((void *)-1);
 	}
 
-	bzero((char *)&serv_addr, sizeof (serv_addr));
-	serv_addr.sin_family = AF_INET;
+	// Begin connection attempt
+	struct timeval currentTime, timeoutTime;
+	struct timespec retryPeriod;
 
-	bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-	serv_addr.sin_port = htons(port);
+	retryPeriod.tv_sec = OBJECT_CONNECTION_RETRY_PERIOD_MS / 1000;
+	retryPeriod.tv_nsec = (OBJECT_CONNECTION_RETRY_PERIOD_MS * 1000000) % 1000000000;
 
-	LogMessage(LOG_LEVEL_INFO, "Attempting to connect to socket: %s %i", name, port);
+	LogMessage(LOG_LEVEL_INFO, "Attempting to connect to socket: %s:%u", ipString,
+			   args->objectCommandAddress.sin_port);
+	TimeSetToCurrentSystemTime(&timeoutTime);
+	timeoutTime.tv_sec += OBJECT_CONNECTION_TIMEOUT_S;
+	do {
+		retval =
+			connect(args->commandSocket, (struct sockaddr *)&args->objectCommandAddress,
+					sizeof (args->objectCommandAddress));
+		if (retval == -1 /* && errno == ECONNREFUSED */ ) {	// Retry for all errors for now
+			LogMessage(LOG_LEVEL_ERROR, "Failed connection attempt to %s, retrying in %.3f s ...",
+					   ipString, (double)retryPeriod.tv_sec + (double)retryPeriod.tv_nsec / 1000000000.0);
+			nanosleep(&retryPeriod, NULL);
+		}
+		TimeSetToCurrentSystemTime(&currentTime);
+	} while (timercmp(&currentTime, &timeoutTime, <) && retval != 0);
 
-	// do
-	{
-		iResult = connect(*sockfd, (struct sockaddr *)&serv_addr, sizeof (serv_addr));
-
-		/*if ( iResult < 0)
-		   {
-		   if(errno == ECONNREFUSED)
-		   {
-		   printf("WARNiNG: Was not able to connect to object, [IP: %s] [PORT: %d], %d retry in 3 sec...\n",name,port, *Disconnect);
-		   fflush(stdout);
-		   (void)sleep(3);
-		   }
-		   else
-		   {
-		   util_error("ERR: Failed to connect to control socket");
-		   } */
+	if (retval == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed connection to socket: %s:%u", ipString,
+				   args->objectCommandAddress.sin_port);
+		close(args->commandSocket);
+		args->commandSocket = -1;
+		args->monitorSocket = -1;
+		pthread_exit((void *)-1);
 	}
-	//} while(iResult < 0 && *Disconnect == 0);
+	LogMessage(LOG_LEVEL_INFO, "Connected to socket: %s:%u", ipString, args->objectCommandAddress.sin_port);
 
-	LogMessage(LOG_LEVEL_INFO, "Connected to command socket: %s %i", name, port);
-	// Enable polling of status to detect remote disconnect
-	fcntl(*sockfd, F_SETFL, O_NONBLOCK);
+	// Set command socket to nonblocking
+	retval = fcntl(args->commandSocket, F_SETFL, fcntl(args->commandSocket, F_GETFL, 0) | O_NONBLOCK);
+	if (retval == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Error calling fcntl");
+		close(args->commandSocket);
+		args->commandSocket = -1;
+		args->monitorSocket = -1;
+		pthread_exit((void *)-1);
+	}
 
-
-	return iResult;
-}
-
-static void vDisconnectObject(int *sockfd) {
-	close(*sockfd);
-}
-
-
-static void vCreateSafetyChannel(const char *name, const uint32_t port, int *sockfd, struct sockaddr_in *addr) {
-	int result;
-	struct hostent *object;
-
-	/* Connect to object safety socket */
+	// Create monitor socket
 	LogMessage(LOG_LEVEL_DEBUG, "Creating safety socket");
-
-	*sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (*sockfd < 0) {
-		util_error("ERR: Failed to connect to monitor socket");
+	args->monitorSocket = socket(AF_INET, SOCK_DGRAM, 0);
+	if (args->monitorSocket < 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to create monitor socket");
+		close(args->commandSocket);
+		args->commandSocket = -1;
+		args->monitorSocket = -1;
+		pthread_exit((void *)-1);
 	}
 
-	/* Set address to object */
-	object = gethostbyname(name);
-
-	if (object == 0) {
-		util_error("ERR: Unknown host");
+	retval = fcntl(args->monitorSocket, F_SETFL, fcntl(args->monitorSocket, F_GETFL, 0) | O_NONBLOCK);
+	if (retval < 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Error calling fcntl");
+		close(args->commandSocket);
+		close(args->monitorSocket);
+		args->commandSocket = -1;
+		args->monitorSocket = -1;
+		pthread_exit((void *)-1);
 	}
-
-	bcopy((char *)object->h_addr, (char *)&addr->sin_addr.s_addr, object->h_length);
-	addr->sin_family = AF_INET;
-	addr->sin_port = htons(port);
-
-	/* set socket to non-blocking */
-	result = fcntl(*sockfd, F_SETFL, fcntl(*sockfd, F_GETFL, 0) | O_NONBLOCK);
-	if (result < 0) {
-		util_error("ERR: calling fcntl");
+	else {
+		LogMessage(LOG_LEVEL_INFO, "Created monitor socket: %s:%u", ipString,
+				   args->objectMonitorAddress.sin_port);
 	}
-
-	LogMessage(LOG_LEVEL_INFO, "Created socket and safety address: %s:%d", name, port);
+	pthread_exit((void *)0);
 }
 
-static void vCloseSafetyChannel(int *sockfd) {
-	close(*sockfd);
+int connectAllObjects(ObjectConnection objectConnections[], const unsigned int numberOfObjects) {
+
+	uint32_t *transmitterIDs = (uint32_t *) malloc(sizeof (uint32_t) * numberOfObjects);
+	pthread_t *connectors = (pthread_t *) malloc(sizeof (pthread_t) * numberOfObjects);
+
+	ObjectEnabledType enabledStatus;
+	int retval;
+
+	DataDictionaryGetObjectTransmitterIDs(transmitterIDs, numberOfObjects);
+
+	LogMessage(LOG_LEVEL_DEBUG, "Connecting to %u objects", numberOfObjects);
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+
+		DataDictionaryGetObjectEnableStatusById(transmitterIDs[i], &enabledStatus);
+
+		if (enabledStatus == OBJECT_ENABLED) {
+			retval = pthread_create(&connectors[i], NULL, objectConnectorThread, objectConnections + i);
+			if (retval == -1) {
+				LogMessage(LOG_LEVEL_ERROR, "Failed to start connection thread");
+			}
+		}
+	}
+
+	// Await all threads to finish successfully
+	retval = 0;
+	while (!iExit) {
+		char mqBuffer[MBUS_MAX_DATALEN];
+		enum COMMAND command;
+
+		// Check if any command arrived
+		iCommRecv(&command, mqBuffer, sizeof (mqBuffer), NULL);
+		switch (command) {
+		case COMM_EXIT:
+		case COMM_ABORT:
+		case COMM_DISCONNECT:
+			for (unsigned int i = 0; i < numberOfObjects; ++i) {
+				pthread_cancel(connectors[i]);
+			}
+			retval = -1;
+			break;
+		case COMM_GETSTATUS:
+			iCommSend(COMM_GETSTATUS_OK, MODULE_NAME, sizeof (MODULE_NAME));
+			break;
+		}
+
+		int allConnectionsCompleted = 1;
+
+		for (unsigned int i = 0; i < numberOfObjects; ++i) {
+			allConnectionsCompleted = allConnectionsCompleted
+				&& objectConnections[i].commandSocket != 0 && objectConnections[i].monitorSocket != 0;
+		}
+		if (allConnectionsCompleted || retval == -1) {
+			break;
+		}
+	}
+
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		long threadReturn;
+
+		if (pthread_join(connectors[i], (void **)&threadReturn)) {
+			LogMessage(LOG_LEVEL_ERROR, "Error joining connector thread");
+			retval = -1;
+		}
+		else {
+			retval = threadReturn == -1 ? -1 : retval;
+		}
+	}
+
+	// If one connection failed, close all connections
+	if (retval == -1) {
+		disconnectAllObjects(objectConnections, numberOfObjects);
+	}
+
+	free(transmitterIDs);
+	free(connectors);
+	return retval;
 }
 
-static I32 vCheckRemoteDisconnected(int *sockfd) {
+void disconnectAllObjects(ObjectConnection objectConnections[], const unsigned int numberOfObjects) {
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		disconnectObject(&objectConnections[i]);
+	}
+}
+
+int configureAllObjects(ObjectConnection objectConnections[],
+						const GeoPosition originPosition,
+						const struct timeval currentTime,
+						const char trajectoryFiles[MAX_OBJECTS][MAX_FILE_PATH],
+						const unsigned int numberOfObjects) {
+
+	ObjectEnabledType enabledStatus;
+	uint32_t *transmitterIDs = (uint32_t *) malloc(sizeof (uint32_t) * numberOfObjects);
+	ssize_t messageLength;
+	char messageBuffer[1024];
+	char ipString[INET_ADDRSTRLEN];
+	uint32_t serverTransmitterID;
+	uint8_t isoTransmitterID;
+	int retval = 0;
+
+	DataDictionaryGetObjectTransmitterIDs(transmitterIDs, numberOfObjects);
+	// Send configuration
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		DataDictionaryGetObjectEnableStatusById(transmitterIDs[i], &enabledStatus);
+		inet_ntop(objectConnections[i].objectCommandAddress.sin_family,
+				  &objectConnections[i].objectCommandAddress.sin_addr, ipString, sizeof (ipString));
+		if (enabledStatus == OBJECT_ENABLED) {
+
+
+			float altitude = (float)originPosition.Altitude;
+
+			messageLength =
+				encodeOSEMMessage(&currentTime, &originPosition.Latitude,
+								  &originPosition.Longitude, &altitude, NULL, NULL, NULL,
+								  messageBuffer, sizeof (messageBuffer), 0);
+			if (messageLength < 0) {
+				LogMessage(LOG_LEVEL_ERROR, "OSEM encoding error");
+				retval = -1;
+				break;
+			}
+
+			LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
+
+			DataDictionaryGetTransmitterID(&serverTransmitterID);
+			isoTransmitterID = (uint8_t) serverTransmitterID;
+			setTransmitterID(isoTransmitterID);
+
+			UtilSendTCPData(MODULE_NAME, messageBuffer, messageLength, &objectConnections[i].commandSocket,
+							0);
+
+			if (1 /* TODO Check that object is not among DTM receivers */ ) {
+				LogMessage(LOG_LEVEL_INFO, "Sending TRAJ to %s", ipString);
+				if (ObjectControlSendTRAJMessage(trajectoryFiles[i], &objectConnections[i].commandSocket, 0)
+					== -1) {
+					LogMessage(LOG_LEVEL_ERROR, "Failed to send TRAJ to %s", ipString);
+					retval = -1;
+					break;
+				}
+			}
+			DataDictionarySetMonitorDataReceiveTime(transmitterIDs[i], &currentTime);
+		}
+	}
+	free(transmitterIDs);
+	return retval;
+}
+
+
+int checkObjectConnections(ObjectConnection objectConnections[], const struct timeval monitorTimeout,
+						   const unsigned int numberOfObjects) {
+
+	ObjectEnabledType enabledStatus;
+	uint32_t *transmitterIDs = malloc(sizeof (uint32_t) * numberOfObjects);
+	uint8_t disconnected = 0;
+	struct timeval lastDataUpdate, timeSinceLastMonitorData, currentTime;
+	char ipString[INET_ADDRSTRLEN];
+
+	TimeSetToCurrentSystemTime(&currentTime);
+
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+
+		if (transmitterIDs[i] == 0 ||
+			DataDictionaryGetObjectEnableStatusById(transmitterIDs[i], &enabledStatus)
+			!= READ_OK || enabledStatus != OBJECT_ENABLED) {
+			continue;
+		}
+		// Check broken TCP connection
+		disconnected |= hasRemoteDisconnected(&objectConnections[i].commandSocket);
+
+		// Check time since last position update
+		DataDictionaryGetMonitorDataReceiveTime(transmitterIDs[i], &lastDataUpdate);
+
+		timersub(&currentTime, &lastDataUpdate, &timeSinceLastMonitorData);
+		if (timercmp(&timeSinceLastMonitorData, &monitorTimeout, >)) {
+			LogMessage(LOG_LEVEL_WARNING,
+					   "MONR timeout (ID %u):\n\ttimeout time %d s %d µs\n\tlast message %d s %d µs\n\tcurrent time %d s %d µs",
+					   transmitterIDs[i], monitorTimeout.tv_sec,
+					   monitorTimeout.tv_usec, lastDataUpdate.tv_sec,
+					   lastDataUpdate.tv_usec, currentTime.tv_sec, currentTime.tv_usec);
+			disconnected = 1;
+		}
+
+		if (disconnected) {
+			inet_ntop(objectConnections[i].objectCommandAddress.sin_family,
+					  &objectConnections[i].objectCommandAddress.sin_addr, ipString, sizeof (ipString));
+			LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s - returning to IDLE", ipString);
+		}
+	}
+	return disconnected;
+}
+
+void disconnectObject(ObjectConnection * objectConnection) {
+	if (objectConnection->commandSocket > 0) {
+		close(objectConnection->commandSocket);
+		objectConnection->commandSocket = 0;
+	}
+	if (objectConnection->monitorSocket > 0) {
+		close(objectConnection->monitorSocket);
+		objectConnection->monitorSocket = 0;
+	}
+}
+
+static int hasRemoteDisconnected(int *sockfd) {
 	char dummy;
 	ssize_t x = recv(*sockfd, &dummy, 1, MSG_PEEK);
 
@@ -1704,6 +1736,85 @@ static I32 vCheckRemoteDisconnected(int *sockfd) {
 	return 1;
 }
 
+int configureAdaptiveSynchronizationPoints(const char trajectoryFiles[MAX_OBJECTS][MAX_FILE_PATH],
+										   const ObjectConnection objectConnections[],
+										   ObjectPosition objectPositions[],
+										   const unsigned int numberOfObjects,
+										   const AdaptiveSyncPoint ASP[],
+										   const unsigned int adaptiveSyncPointCount) {
+
+	char ipString[INET_ADDRSTRLEN];
+	char messageBuffer[1024];
+	ssize_t messageLength = 0;
+	unsigned int rowCount;
+
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		inet_ntop(objectConnections[i].objectCommandAddress.sin_family,
+				  &objectConnections[i].objectCommandAddress.sin_addr.s_addr, ipString, sizeof (ipString));
+
+		rowCount = 0;
+		FILE *trajectory_fd = fopen(trajectoryFiles[i], "r");
+
+		if (trajectory_fd) {
+			rowCount = UtilCountFileRows(trajectory_fd) - 2;
+			fclose(trajectory_fd);
+		}
+
+		if (objectPositions[i].SpaceArr != NULL) {
+			free(objectPositions[i].SpaceArr);
+			objectPositions[i].SpaceArr = NULL;
+		}
+		if (objectPositions[i].TimeArr != NULL) {
+			free(objectPositions[i].TimeArr);
+			objectPositions[i].TimeArr = NULL;
+		}
+		if (objectPositions[i].SpaceTimeArr != NULL) {
+			free(objectPositions[i].SpaceTimeArr);
+			objectPositions[i].SpaceTimeArr = NULL;
+		}
+
+		UtilSetObjectPositionIP(&objectPositions[i], ipString);
+		objectPositions[i].TrajectoryPositionCount = rowCount;
+		if (rowCount > 0) {
+			objectPositions[i].SpaceArr = malloc(sizeof (*objectPositions[i].SpaceArr) * rowCount);
+			objectPositions[i].TimeArr = malloc(sizeof (*objectPositions[i].TimeArr) * rowCount);
+			objectPositions[i].SpaceTimeArr = malloc(sizeof (*objectPositions[i].SpaceTimeArr) * rowCount);
+
+			UtilPopulateSpaceTimeArr(&objectPositions[i], trajectoryFiles[i]);
+
+		}
+
+		LogMessage(LOG_LEVEL_INFO, "Sync point counts: %d", adaptiveSyncPointCount);
+		for (unsigned int j = 0; j < adaptiveSyncPointCount; j++) {
+			struct timeval syncPointTime, syncStopTime;
+
+			TimeSetToUTCms(&syncPointTime, (int64_t) (ASP[i].SlaveTrajSyncTime * 1000.0f));
+			TimeSetToUTCms(&syncStopTime, (int64_t) (ASP[i].SlaveSyncStopTime * 1000.0f));
+			if (TEST_SYNC_POINTS == 1 && i == 1) {
+				/*Send SYPM to slave */
+				messageLength =
+					encodeSYPMMessage(syncPointTime, syncStopTime, messageBuffer, sizeof (messageBuffer), 0);
+				UtilSendTCPData(MODULE_NAME, messageBuffer, messageLength,
+								&objectConnections[i].commandSocket, 0);
+			}
+			else if (TEST_SYNC_POINTS == 0 && strstr(ipString, ASP[i].SlaveIP) != NULL) {
+				/*Send SYPM to slave */
+				messageLength =
+					encodeSYPMMessage(syncPointTime, syncStopTime, messageBuffer, sizeof (messageBuffer), 0);
+				UtilSendTCPData(MODULE_NAME, messageBuffer, messageLength,
+								&objectConnections[i].commandSocket, 0);
+			}
+		}
+
+		/*Set Sync point in OP */
+		for (unsigned int j = 0; j < adaptiveSyncPointCount; j++) {
+			if (TEST_SYNC_POINTS == 1 && i == 0)
+				UtilSetSyncPoint(&objectPositions[i], 0, 0, 0, ASP[i].MasterTrajSyncTime);
+			else if (TEST_SYNC_POINTS == 0 && strstr(ipString, ASP[i].MasterIP) != NULL)
+				UtilSetSyncPoint(&objectPositions[i], 0, 0, 0, ASP[i].MasterTrajSyncTime);
+		}
+	}
+}
 
 size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 	ssize_t result = 0;
@@ -1728,12 +1839,11 @@ size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 }
 
 int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
-					 C8 object_address_name[MAX_OBJECTS][MAX_FILE_PATH],
-					 in_addr_t objectIPs[MAX_OBJECTS], uint32_t objectIDs[MAX_OBJECTS], I32 * nbr_objects) {
+					 ObjectConnection objectConnections[],
+					 uint32_t objectIDs[MAX_OBJECTS], unsigned int *nbr_objects) {
 	DIR *traj_directory;
 	DIR *object_directory;
 	struct dirent *directory_entry;
-	struct sockaddr_in sockaddr;
 	int result;
 	char trajPathDir[MAX_FILE_PATH];
 	char objectPathDir[MAX_FILE_PATH];
@@ -1744,8 +1854,8 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 	UtilGetTrajDirectoryPath(trajPathDir, sizeof (trajPathDir));
 	UtilGetObjectDirectoryPath(objectPathDir, sizeof (objectPathDir));
-
 	object_directory = opendir(objectPathDir);
+
 	traj_directory = opendir(trajPathDir);
 	if (traj_directory == NULL) {
 		util_error("Failed to open trajectory directory");
@@ -1754,100 +1864,105 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 		util_error("Failed to open object directory");
 	}
 
+	// Check all entries in the object directory
 	while ((directory_entry = readdir(object_directory)) && ((*nbr_objects) < MAX_OBJECTS)) {
-		if (strncmp(directory_entry->d_name, ".", 1)) {
-			LogPrint("Dir: %s", directory_entry->d_name);
-			char objectSetting[100];
-
-			strcpy(objectFilePath, objectPathDir);
-			strcat(objectFilePath, directory_entry->d_name);
-			memset(object_address_name[*nbr_objects], 0, MAX_FILE_PATH);
-			memset(object_traj_file[*nbr_objects], 0, MAX_FILE_PATH);
-			// Get IP setting
-			if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFilePath,
-										 sizeof (objectFilePath), objectSetting,
-										 sizeof (objectSetting)) == -1) {
-				errno = EINVAL;
-				LogMessage(LOG_LEVEL_ERROR, "Cannot find IP setting in file <%s>", objectFilePath);
-				retval = -1;
-				continue;
-			}
-			else {
-				result = inet_pton(AF_INET, objectSetting, &sockaddr.sin_addr);
-				if (result == -1) {
-					errno = EINVAL;
-					LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
-					retval = -1;
-					continue;
-				}
-				else if (result == 0) {
-					errno = EINVAL;
-					LogMessage(LOG_LEVEL_ERROR, "Address %s in object file %s is not a valid IPv4 address",
-							   objectSetting, objectFilePath);
-					retval = -1;
-					continue;
-				}
-				else {
-					strcpy(object_address_name[*nbr_objects], objectSetting);
-					objectIPs[*nbr_objects] = sockaddr.sin_addr.s_addr;
-				}
-			}
-			// Get trajectory file setting
-			if (UtilGetObjectFileSetting(OBJECT_SETTING_TRAJ, objectFilePath, sizeof (objectFilePath),
-										 objectSetting, sizeof (objectSetting)) == -1) {
-				errno = EINVAL;
-				LogMessage(LOG_LEVEL_ERROR, "Cannot find IP setting in file <%s>", objectFilePath);
-				retval = -1;
-				continue;
-			}
-			else {
-				strcpy(object_traj_file[*nbr_objects], trajPathDir);
-				strcat(object_traj_file[*nbr_objects], objectSetting);
-
-				if (UtilCheckTrajectoryFileFormat
-					(object_traj_file[*nbr_objects], sizeof (object_traj_file[*nbr_objects]))) {
-					errno = EINVAL;
-					LogMessage(LOG_LEVEL_ERROR, "Trajectory file <%s> is not valid",
-							   object_traj_file[*nbr_objects]);
-					retval = -1;
-					continue;
-				}
-			}
-			if (UtilGetObjectFileSetting(OBJECT_SETTING_ID, objectFilePath, sizeof (objectFilePath),
-										 objectSetting, sizeof (objectSetting)) == -1) {
-				errno = EINVAL;
-				LogMessage(LOG_LEVEL_ERROR, "Cannot find ID setting in file <%s>", objectFilePath);
-				retval = -1;
-				continue;
-			}
-			else {
-				char *endptr;
-				uint32_t id = (uint32_t) strtoul(objectSetting, &endptr, 10);
-
-				if (endptr == objectSetting) {
-					errno = EINVAL;
-					LogMessage(LOG_LEVEL_ERROR, "ID <%s> in file <%s> is invalid", objectSetting,
-							   objectFilePath);
-					retval = -1;
-					continue;
-				}
-				else {
-					objectIDs[*nbr_objects] = id;
-				}
-			}
-			LogMessage(LOG_LEVEL_INFO, "Loaded object with ID %u, IP %s and trajectory file <%s>",
-					   objectIDs[*nbr_objects], object_address_name[*nbr_objects],
-					   object_traj_file[*nbr_objects]);
-			++(*nbr_objects);
+		if (!strncmp(directory_entry->d_name, ".", 1)) {
+			continue;
 		}
+		char objectSetting[100];
+
+		strcpy(objectFilePath, objectPathDir);
+		strcat(objectFilePath, directory_entry->d_name);
+		memset(object_traj_file[*nbr_objects], 0, MAX_FILE_PATH);
+
+		// Get IP setting
+		if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFilePath,
+									 sizeof (objectFilePath), objectSetting, sizeof (objectSetting)) == -1) {
+			errno = EINVAL;
+			LogMessage(LOG_LEVEL_ERROR, "Cannot find IP setting in file <%s>", objectFilePath);
+			retval = -1;
+			continue;
+		}
+		else {
+			result = inet_pton(AF_INET, objectSetting,
+							   &objectConnections[*nbr_objects].objectCommandAddress.sin_addr);
+			if (result == -1) {
+				LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+				retval = -1;
+				continue;
+			}
+			else if (result == 0) {
+				errno = EINVAL;
+				LogMessage(LOG_LEVEL_ERROR, "Address %s in object file %s is not a valid IPv4 address",
+						   objectSetting, objectFilePath);
+				retval = -1;
+				continue;
+			}
+			else {
+				objectConnections[*nbr_objects].objectCommandAddress.sin_family = AF_INET;
+				objectConnections[*nbr_objects].objectMonitorAddress =
+					objectConnections[*nbr_objects].objectCommandAddress;
+			}
+		}
+
+		// Get trajectory file setting
+		if (UtilGetObjectFileSetting(OBJECT_SETTING_TRAJ, objectFilePath, sizeof (objectFilePath),
+									 objectSetting, sizeof (objectSetting)) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Cannot find trajectory setting in file <%s>", objectFilePath);
+			retval = -1;
+			continue;
+		}
+		else {
+			strcpy(object_traj_file[*nbr_objects], trajPathDir);
+			strcat(object_traj_file[*nbr_objects], objectSetting);
+
+			if (UtilCheckTrajectoryFileFormat
+				(object_traj_file[*nbr_objects], sizeof (object_traj_file[*nbr_objects]))) {
+				errno = EINVAL;
+				LogMessage(LOG_LEVEL_ERROR, "Trajectory file <%s> is not valid",
+						   object_traj_file[*nbr_objects]);
+				retval = -1;
+				continue;
+			}
+		}
+
+		if (UtilGetObjectFileSetting(OBJECT_SETTING_ID, objectFilePath, sizeof (objectFilePath),
+									 objectSetting, sizeof (objectSetting)) == -1) {
+			errno = EINVAL;
+			LogMessage(LOG_LEVEL_ERROR, "Cannot find ID setting in file <%s>", objectFilePath);
+			retval = -1;
+			continue;
+		}
+		else {
+			char *endptr;
+			uint32_t id = (uint32_t) strtoul(objectSetting, &endptr, 10);
+
+			if (endptr == objectSetting) {
+				errno = EINVAL;
+				LogMessage(LOG_LEVEL_ERROR, "ID <%s> in file <%s> is invalid", objectSetting, objectFilePath);
+				retval = -1;
+				continue;
+			}
+			else {
+				objectIDs[*nbr_objects] = id;
+			}
+		}
+
+		LogMessage(LOG_LEVEL_INFO, "Loaded object with ID %u, IP %s and trajectory file <%s>",
+				   objectIDs[*nbr_objects], inet_ntop(AF_INET,
+													  &objectConnections[*nbr_objects].
+													  objectCommandAddress.sin_addr, objectSetting,
+													  sizeof (objectSetting)),
+				   object_traj_file[*nbr_objects]);
+		++(*nbr_objects);
 	}
 
 	(void)closedir(object_directory);
 	(void)closedir(traj_directory);
 
 	// Check so there are no duplicates
-	for (int i = 0; i < *nbr_objects; ++i) {
-		for (int j = i + 1; j < *nbr_objects; ++j) {
+	for (unsigned int i = 0; i < *nbr_objects; ++i) {
+		for (unsigned int j = i + 1; j < *nbr_objects; ++j) {
 			if (objectIDs[i] == objectIDs[j]) {
 				errno = EINVAL;
 				LogMessage(LOG_LEVEL_ERROR, "Found two objects with configured ID %u", objectIDs[i]);
@@ -1857,6 +1972,210 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 	}
 
 	return retval;
+}
+
+/*!
+ * \brief configureObjectDataInjection Parses all object files to fill an array of maps between
+ *			objects according to the injectorIDs settings found in the files.
+ * \param injectionMaps Array of maps to be filled. The pointers contained in its elements are
+ *			assumed to either be NULL or returned from a previous call to this function. The
+ *			array is assumed to have the same number of elements as transmitterIDs.
+ * \param transmitterIDs Configured scenario transmitter IDs.
+ * \param numberOfObjects Number of elements in the arrays.
+ * \return 0 if successful, -1 otherwise.
+ */
+int configureObjectDataInjection(DataInjectionMap injectionMaps[],
+								 const uint32_t transmitterIDs[], const unsigned int numberOfObjects) {
+
+	char objectDirPath[MAX_FILE_PATH];
+	char objectFilePath[MAX_FILE_PATH];
+	DIR *objectDirectory;
+	struct dirent *dirEntry;
+	int retval = 0;
+
+	if (injectionMaps == NULL || transmitterIDs == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Data injection configuration input pointer error");
+		return -1;
+	}
+
+	// Reset maps
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		injectionMaps[i].sourceID = transmitterIDs[i];
+		free(injectionMaps[i].targetIDs);
+		injectionMaps[i].targetIDs = NULL;
+		injectionMaps[i].numberOfTargets = 0;
+		injectionMaps[i].isActive = 1;
+	}
+
+	UtilGetObjectDirectoryPath(objectDirPath, sizeof (objectDirPath));
+	objectDirectory = opendir(objectDirPath);
+	if (objectDirectory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to open object directory");
+		return -1;
+	}
+
+	while ((dirEntry = readdir(objectDirectory)) != NULL) {
+		if (!strncmp(dirEntry->d_name, ".", 1)) {
+			continue;
+		}
+		strcpy(objectFilePath, objectDirPath);
+		strcat(objectFilePath, dirEntry->d_name);
+		if (parseDataInjectionSetting(objectFilePath, injectionMaps, numberOfObjects) == -1) {
+			retval = -1;
+			LogMessage(LOG_LEVEL_ERROR, "Failed to parse injection settings of file %s", objectFilePath);
+		}
+	}
+
+	return retval;
+}
+
+/*!
+ * \brief parseDataInjectionSetting Parses the injectorIDs setting of a single object file and inputs the data into
+ *			the corresponding injection maps.
+ * \param objectFilePath File path of the object file to be parsed.
+ * \param injectionMaps Array of maps between objects. The pointers contained in its elements are
+ *			assumed to either be NULL or returned from a previous memory allocation call.
+ * \param numberOfMaps Number of elements in injection map array.
+ * \return 0 if successful, -1 otherwise.
+ */
+int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
+							  DataInjectionMap injectionMaps[], const unsigned int numberOfMaps) {
+
+	char objectSetting[100];
+	char *token = NULL, *endptr = NULL;
+	const char delimiter[] = ",";
+	int retval = 0;
+	uint32_t sourceID = 0, targetID = 0;
+
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_ID,
+								 objectFilePath, MAX_FILE_PATH,
+								 objectSetting, sizeof (objectSetting)) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Object ID missing from file <%s>", objectFilePath);
+		return -1;
+	}
+
+	targetID = (uint32_t) strtoul(objectSetting, &endptr, 10);
+	if (endptr == objectSetting) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Invalid ID setting <%s> in file %s", objectSetting, objectFilePath);
+		return -1;
+	}
+
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_INJECTOR_IDS,
+								 objectFilePath, MAX_FILE_PATH,
+								 objectSetting, sizeof (objectSetting)) == -1) {
+		return 0;				// No setting found
+	}
+
+	token = strtok(objectSetting, delimiter);
+	if (token == NULL) {
+		return 0;				// Empty setting found
+	}
+
+	do {
+		sourceID = (uint32_t) strtoul(token, &endptr, 10);
+		if (endptr == token) {
+			errno = EINVAL;
+			LogMessage(LOG_LEVEL_ERROR, "Unparsable injector ID setting <%s>", token);
+			retval = -1;
+		}
+		else {
+			// Find the map matching source ID in configuration
+			int found = false;
+
+			for (unsigned int i = 0; i < numberOfMaps; ++i) {
+				if (injectionMaps[i].sourceID == sourceID) {
+					found = true;
+					// Append object ID of open file to targets of ID in configuration
+					injectionMaps[i].targetIDs =
+						realloc(injectionMaps[i].targetIDs,
+								++injectionMaps[i].numberOfTargets * sizeof (uint32_t));
+					if (injectionMaps[i].targetIDs == NULL) {
+						LogMessage(LOG_LEVEL_ERROR, "Memory allocation error");
+						return -1;
+					}
+					injectionMaps[i].targetIDs[injectionMaps[i].numberOfTargets - 1] = targetID;
+				}
+			}
+			if (!found) {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Data injection source object with ID %u not among configured transmitter IDs",
+						   sourceID, objectFilePath);
+				retval = -1;
+			}
+		}
+	} while ((token = strtok(NULL, delimiter)) != NULL);
+
+	return retval;
+}
+
+/*!
+ * \brief sendDataInjectionMessages Translates the passed monitor data to an injection message
+ *			and sends it to all configured receivers.
+ * \param objectData Monitor data to be passed on.
+ * \param dataInjectionMaps Map showing which objects are the receivers of injection data.
+ * \param objectConnections Connections to objects. Assumed to be ordered in the same way
+ *			as the transmitter ID array.
+ * \param transmitterIDs Transmitter IDs of objects.
+ * \param numberOfObjects Size of all three arrays.
+ * \return 0 if successful, -1 otherwise.
+ */
+int sendDataInjectionMessages(const ObjectDataType * objectData,
+							  const DataInjectionMap dataInjectionMaps[],
+							  const ObjectConnection objectConnections[],
+							  const uint32_t transmitterIDs[], const unsigned int numberOfObjects) {
+
+	if (objectData == NULL || dataInjectionMaps == NULL || objectConnections == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Attempted to pass null pointer to %s", __FUNCTION__);
+		return -1;
+	}
+
+	const ObjectMonitorType *monitorData = &objectData->MonrData;
+	char transmissionBuffer[1024];
+	ssize_t messageSize;
+	const DataInjectionMap *relevantMap = NULL;
+	PeerObjectInjectionType injectionMessage;
+
+	// Find the map for source of monitor data
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		if (dataInjectionMaps[i].sourceID == objectData->ClientID) {
+			relevantMap = &dataInjectionMaps[i];
+		}
+	}
+	if (relevantMap == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Found no injection settings for sender ID %u", objectData->ClientID);
+		return -1;
+	}
+	if (relevantMap->numberOfTargets == 0) {
+		return 0;
+	}
+
+	// Create the message
+	injectionMessage.dataTimestamp = monitorData->timestamp;
+	injectionMessage.position = monitorData->position;
+	injectionMessage.state = monitorData->state;
+	injectionMessage.speed = monitorData->speed;
+	injectionMessage.foreignTransmitterID = objectData->ClientID;
+	injectionMessage.isRollValid = 0;
+	injectionMessage.isPitchValid = 0;
+
+	messageSize = encodePODIMessage(&injectionMessage, transmissionBuffer, sizeof (transmissionBuffer), 0);
+	if (messageSize == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to encode PODI message");
+		return -1;
+	}
+
+	// Send message to all configured receivers
+	for (unsigned int i = 0; i < relevantMap->numberOfTargets; ++i) {
+		for (unsigned int j = 0; j < numberOfObjects; j++) {
+			if (transmitterIDs[j] == relevantMap->targetIDs[i]) {
+				UtilSendTCPData(MODULE_NAME, transmissionBuffer, messageSize,
+								&objectConnections[j].commandSocket, 0);
+			}
+		}
+	}
+	return 0;
 }
 
 /*!
