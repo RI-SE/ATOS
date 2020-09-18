@@ -27,7 +27,6 @@ static pthread_mutex_t OriginLatitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OriginLongitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OriginAltitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t VisualizationServerMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ForceObjectToLocalhostMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPMaxTimeDiffMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPMaxTrajDiffMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPStepBackCountMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -80,7 +79,6 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitOriginLongitudeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitOriginAltitudeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitVisualizationServerU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitForceToLocalhostU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitASPMaxTimeDiffDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitASPMaxTrajDiffDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitASPStepBackCountU32(GSD) : Res;
@@ -479,68 +477,6 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType * GSD, C8 * IP,
 }
 
 /*END of VisualizationServer*/
-
-
-/*ForceToLocalhost*/
-/*!
- * \brief DataDictionaryInitForceToLocalhostU8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitForceToLocalhostU8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ForceObjectToLocalhostMutex);
-		GSD->ForceObjectToLocalhostU8 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&ForceObjectToLocalhostMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ForceObjectToLocalhost not found!");
-	}
-
-	return Res;
-}
-
-/*!
- * \brief DataDictionarySetForceToLocalhostU8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
- * \param ForceLocalhost
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionarySetForceToLocalhostU8(GSDType * GSD, C8 * ForceLocalhost) {
-	ReadWriteAccess_t Res;
-
-	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST, ForceLocalhost, strlen(ForceLocalhost) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&ForceObjectToLocalhostMutex);
-		GSD->ForceObjectToLocalhostU8 = atoi(ForceLocalhost);
-		pthread_mutex_unlock(&ForceObjectToLocalhostMutex);
-	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
-}
-
-/*!
- * \brief DataDictionaryGetForceToLocalhostU8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param ForceLocalhost Return variable pointer
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryGetForceToLocalhostU8(GSDType * GSD, U8 * ForceLocalhost) {
-	pthread_mutex_lock(&ForceObjectToLocalhostMutex);
-	*ForceLocalhost = GSD->ForceObjectToLocalhostU8;
-	pthread_mutex_unlock(&ForceObjectToLocalhostMutex);
-	return READ_OK;
-}
-
-/*END of ForceToLocalhost*/
 
 /*ASPMaxTimeDiff*/
 /*!
@@ -2221,7 +2157,8 @@ ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDs(uint32_t transmitterIDs[
 		return UNDEFINED;
 	}
 	else if ((uint32_t) retval > arraySize) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to list transmitter IDs in specified array");
+		LogMessage(LOG_LEVEL_ERROR, "Unable to list %d transmitter IDs in specified array of size %u", retval,
+				   arraySize);
 		objectDataMemory = releaseSharedMemory(objectDataMemory);
 		return UNDEFINED;
 	}
@@ -2272,8 +2209,7 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 
 	if (result == PARAMETER_NOTFOUND) {
 		// Search for unused memory space and place monitor data there
-		LogMessage(LOG_LEVEL_INFO, "First Object Information data from added with ID %u",
-				   objectData->ClientID);
+		LogMessage(LOG_LEVEL_INFO, "First object information data from ID %u added", objectData->ClientID);
 		for (int i = 0; i < numberOfObjects; ++i) {
 			if (objectDataMemory[i].ClientID == objectData->ClientID) {
 				memcpy(&objectDataMemory[i], objectData, sizeof (ObjectDataType));
@@ -2289,6 +2225,7 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
 				memcpy(&objectDataMemory[numberOfObjects - 1], objectData, sizeof (ObjectDataType));
+				result = WRITE_OK;
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -2297,10 +2234,6 @@ ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData)
 		}
 	}
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
-
-
-	if (result != PARAMETER_NOTFOUND)
-		objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	return result;
 }
