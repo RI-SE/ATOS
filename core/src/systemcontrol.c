@@ -128,6 +128,7 @@ typedef struct {
 #define MAESTRO_TRAJ_FILE_TYPE        2
 #define MAESTRO_CONF_FILE_TYPE        3
 #define MAESTRO_GEOFENCE_FILE_TYPE    4
+#define MAESTRO_OBJECT_FILE_TYPE	  5
 #define MSCP_RESPONSE_DATALENGTH_BYTES 4
 #define MSCP_RESPONSE_STATUS_CODE_BYTES 2
 
@@ -137,7 +138,8 @@ typedef enum {
 	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
 	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
 	DeleteFileDirectory_1,
-	ClearTrajectories_0, ClearGeofences_0, RemoteControl_1, RemoteControlManoeuvre_2, SetObjectEnableStatus_2,
+	ClearTrajectories_0, ClearGeofences_0, ClearObjects_0, RemoteControl_1, RemoteControlManoeuvre_2,
+	SetObjectEnableStatus_2,
 	GetObjectEnableStatus_1,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
 	start_ext_trigg_1, nocommand
@@ -150,7 +152,8 @@ static const char *SystemControlCommandsArr[] = {
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1",
 	"DeleteFileDirectory_1",
-	"ClearTrajectories_0", "ClearGeofences_0", "RemoteControl_1", "RemoteControlManoeuvre_2",
+	"ClearTrajectories_0", "ClearGeofences_0", "ClearObjects_0", "RemoteControl_1",
+	"RemoteControlManoeuvre_2",
 	"SetObjectEnableStatus_2",
 	"GetObjectEnableStatus_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 	"control_0",
@@ -210,6 +213,7 @@ static C8 SystemControlDeleteGeofence(const C8 * geofenceName, const size_t name
 static C8 SystemControlDeleteGenericFile(const C8 * filePath, const size_t nameLen);
 static C8 SystemControlClearTrajectories(void);
 static C8 SystemControlClearGeofences(void);
+static C8 SystemControlClearObjects(void);
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug);
 I32 SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile);
@@ -835,6 +839,21 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else {
 				LogMessage(LOG_LEVEL_ERROR,
 						   "Wrong parameter count in ClearGeofences()! got:%d, expected:%d",
+						   CurrentInputArgCount, CommandArgCount);
+				SystemControlCommand = Idle_0;
+			}
+			break;
+		case ClearObjects_0:
+			if (CurrentInputArgCount == CommandArgCount) {
+				SystemControlCommand = Idle_0;
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				*ControlResponseBuffer = SystemControlClearObjects();
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearObjects:",
+												 ControlResponseBuffer, 1, &ClientSocket, 0);
+			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Wrong parameter count in ClearObjects()! got:%d, expected:%d",
 						   CurrentInputArgCount, CommandArgCount);
 				SystemControlCommand = Idle_0;
 			}
@@ -1861,92 +1880,94 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 	U16 ValueU16 = 0;
 	U8 ValueU8 = 0;
 
-	if (strcmp("OrigoLatitude", ParameterName) == 0) {
+	sprintf(ReturnValue, "%s", ParameterName);
+	strcat(ReturnValue, ": ");
+	BufferLength = BufferLength - strlen(ReturnValue);
+
+	if (strcmp("OriginLatitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLatitudeDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.12f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
-	else if (strcmp("OrigoLongitude", ParameterName) == 0) {
+	else if (strcmp("OriginLongitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLongitudeDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.12f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
-	else if (strcmp("OrigoAltitude", ParameterName) == 0) {
+	else if (strcmp("OriginAltitude", ParameterName) == 0) {
 		DataDictionaryGetOriginAltitudeDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.12f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
 	else if (strcmp("VisualizationServerName", ParameterName) == 0) {
-		DataDictionaryGetVisualizationServerC8(GSD, ReturnValue, BufferLength);
-	}
-	else if (strcmp("ForceObjectToLocalhost", ParameterName) == 0) {
-		DataDictionaryGetForceToLocalhostU8(GSD, &ValueU8);
-		sprintf(ReturnValue, "%" PRIu8, ValueU8);
+		DataDictionaryGetVisualizationServerC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("ASPMaxTimeDiff", ParameterName) == 0) {
 		DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.3f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPMaxTrajDiff", ParameterName) == 0) {
 		DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.3f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPStepBackCount", ParameterName) == 0) {
 		DataDictionaryGetASPStepBackCountU32(GSD, &ValueU32);
-		sprintf(ReturnValue, "%" PRIu32, ValueU32);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu32, ValueU32);
 	}
 	else if (strcmp("ASPFilterLevel", ParameterName) == 0) {
 		DataDictionaryGetASPFilterLevelDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.3f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPMaxDeltaTime", ParameterName) == 0) {
 		DataDictionaryGetASPMaxDeltaTimeDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.3f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("TimeServerIP", ParameterName) == 0) {
-		DataDictionaryGetTimeServerIPC8(GSD, ReturnValue, BufferLength);
+		DataDictionaryGetTimeServerIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("TimeServerPort", ParameterName) == 0) {
 		DataDictionaryGetTimeServerPortU16(GSD, &ValueU16);
 		sprintf(ReturnValue, "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorIP", ParameterName) == 0) {
-		DataDictionaryGetSimulatorIPC8(GSD, ReturnValue, BufferLength);
+		DataDictionaryGetSimulatorIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SimulatorTCPPort", ParameterName) == 0) {
 		DataDictionaryGetSimulatorTCPPortU16(GSD, &ValueU16);
-		sprintf(ReturnValue, "%" PRIu16, ValueU16);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorUDPPort", ParameterName) == 0) {
 		DataDictionaryGetSimulatorUDPPortU16(GSD, &ValueU16);
-		sprintf(ReturnValue, "%" PRIu16, ValueU16);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorMode", ParameterName) == 0) {
 		DataDictionaryGetSimulatorModeU8(GSD, &ValueU8);
-		sprintf(ReturnValue, "%" PRIu8, ValueU8);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu8, ValueU8);
 	}
 	else if (strcmp("VOILReceivers", ParameterName) == 0) {
-		DataDictionaryGetVOILReceiversC8(GSD, ReturnValue, BufferLength);
+		DataDictionaryGetVOILReceiversC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("DTMReceivers", ParameterName) == 0) {
-		DataDictionaryGetDTMReceiversC8(GSD, ReturnValue, BufferLength);
+		DataDictionaryGetDTMReceiversC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SupervisorIP", ParameterName) == 0) {
-		DataDictionaryGetExternalSupervisorIPC8(GSD, ReturnValue, BufferLength);
+		DataDictionaryGetExternalSupervisorIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SupervisorTCPPort", ParameterName) == 0) {
 		DataDictionaryGetSupervisorTCPPortU16(GSD, &ValueU16);
-		sprintf(ReturnValue, "%" PRIu16, ValueU16);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("MiscData", ParameterName) == 0) {
-		DataDictionaryGetMiscDataC8(GSD, ReturnValue, BufferLength);
+		DataDictionaryGetMiscDataC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("RVSSConfig", ParameterName) == 0) {
 		DataDictionaryGetRVSSConfigU32(GSD, &ValueU32);
-		sprintf(ReturnValue, "%" PRIu32, ValueU32);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu32, ValueU32);
 	}
 	else if (strcmp("RVSSRate", ParameterName) == 0) {
 		DataDictionaryGetRVSSRateU8(GSD, &ValueU8);
-		sprintf(ReturnValue, "%" PRIu8, ValueU8);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu8, ValueU8);
 	}
-
+	else if (strcmp("ScenarioName", ParameterName) == 0) {
+		DataDictionaryGetScenarioName(ReturnValue + strlen(ReturnValue), BufferLength);
+	}
 }
 
 
@@ -1976,9 +1997,6 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 		break;
 	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
 		result = DataDictionarySetVisualizationServerU32(GSD, NewValue);
-		break;
-	case CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST:
-		result = DataDictionarySetForceToLocalhostU8(GSD, NewValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
 		result = DataDictionarySetASPMaxTimeDiffDbl(GSD, NewValue);
@@ -2207,6 +2225,17 @@ C8 SystemControlClearGeofences(void) {
 	return SUCCEEDED_DELETE;
 }
 
+/*!
+ * \brief SystemControlClearObjects Clears the objects directory on the machine
+ * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
+ */
+C8 SystemControlClearObjects(void) {
+	if (UtilDeleteObjectFiles() != 0) {
+		return FAILED_DELETE;
+	}
+	return SUCCEEDED_DELETE;
+}
+
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 
 	DIR *pDir;
@@ -2324,6 +2353,9 @@ I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * 
 		break;
 	case MAESTRO_GEOFENCE_FILE_TYPE:
 		UtilGetGeofenceDirectoryPath(CompletePath, sizeof (CompletePath));
+		break;
+	case MAESTRO_OBJECT_FILE_TYPE:
+		UtilGetObjectDirectoryPath(CompletePath, sizeof (CompletePath));
 		break;
 	default:
 		LogMessage(LOG_LEVEL_ERROR, "Received invalid file type upload request");
