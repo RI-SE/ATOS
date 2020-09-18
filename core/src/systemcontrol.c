@@ -1884,15 +1884,15 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 	strcat(ReturnValue, ": ");
 	BufferLength = BufferLength - strlen(ReturnValue);
 
-	if (strcmp("OrigoLatitude", ParameterName) == 0) {
+	if (strcmp("OriginLatitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLatitudeDbl(GSD, &ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
-	else if (strcmp("OrigoLongitude", ParameterName) == 0) {
+	else if (strcmp("OriginLongitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLongitudeDbl(GSD, &ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
-	else if (strcmp("OrigoAltitude", ParameterName) == 0) {
+	else if (strcmp("OriginAltitude", ParameterName) == 0) {
 		DataDictionaryGetOriginAltitudeDbl(GSD, &ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
