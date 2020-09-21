@@ -1666,13 +1666,24 @@ int checkObjectConnections(ObjectConnection objectConnections[], const struct ti
 
 	TimeSetToCurrentSystemTime(&currentTime);
 
+	if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs, numberOfObjects) != READ_OK) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to read object transmitter IDs from shared memory");
+		free(transmitterIDs);
+		return -1;
+	}
+
 	for (unsigned int i = 0; i < numberOfObjects; ++i) {
 
-		if (transmitterIDs[i] == 0 ||
-			DataDictionaryGetObjectEnableStatusById(transmitterIDs[i], &enabledStatus)
-			!= READ_OK || enabledStatus != OBJECT_ENABLED) {
+		if (DataDictionaryGetObjectEnableStatusById(transmitterIDs[i], &enabledStatus) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR, "Failed to read enabled status from shared memory");
+			free(transmitterIDs);
+			return -1;
+		}
+
+		if (transmitterIDs[i] == 0 || enabledStatus != OBJECT_ENABLED) {
 			continue;
 		}
+
 		// Check broken TCP connection
 		disconnected |= hasRemoteDisconnected(&objectConnections[i].commandSocket);
 
@@ -1692,9 +1703,10 @@ int checkObjectConnections(ObjectConnection objectConnections[], const struct ti
 		if (disconnected) {
 			inet_ntop(objectConnections[i].objectCommandAddress.sin_family,
 					  &objectConnections[i].objectCommandAddress.sin_addr, ipString, sizeof (ipString));
-			LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s - returning to IDLE", ipString);
+			LogMessage(LOG_LEVEL_WARNING, "Lost connection to IP %s", ipString);
 		}
 	}
+	free(transmitterIDs);
 	return disconnected;
 }
 
