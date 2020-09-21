@@ -47,6 +47,7 @@ int main(int argc, char const* argv[]){
 	std::vector<char> UDPBuffer(MONR_BUFFER_LENGTH);
 	std::vector<uint32_t> transmitterids(MONR_BUFFER_LENGTH);
 	std::vector<char> chekingTCPconn(MONR_BUFFER_LENGTH);
+	std::vector<char> chekingUDPconn(MONR_BUFFER_LENGTH);
 	ObjectMonitorType monitorData;
 	std::string IPaddr;
 	
@@ -102,6 +103,7 @@ int main(int argc, char const* argv[]){
 		while(OnTCP <= 0)
 		{
 			TCPServerVisualizer.TCPHandlerAccept(5);
+			
 			OnTCP = TCPServerVisualizer.ConnectionON;
 			if (OnTCP<0){
 				break;
@@ -267,6 +269,7 @@ int main(int argc, char const* argv[]){
 			}
 			
 			bytesread = TCPServerVisualizer.receiveTCP(chekingTCPconn, 0);
+			bytesent = UDPServerVisualizer.receiveUDP(chekingUDPconn);
 			
 			DataDictionaryGetNumberOfObjects(&nOBJ);
 			DataDictionaryGetObjectTransmitterIDs(transmitterids.data(),transmitterids.size());
@@ -280,13 +283,14 @@ int main(int argc, char const* argv[]){
 			
 				DataDictionaryGetMonitorData(transmitterID, &monitorData);
 				DataDictionaryGetMonitorDataReceiveTime(transmitterID, &monitorDataReceiveTime);// i am getting duplicates from this one
-				std::cout<<monitorDataReceiveTime.tv_sec<< "\nposvalid "<<monitorData.position.isPositionValid <<"\nheadingvalid" <<monitorData.position.isHeadingValid <<std::endl;
+				//std::cout<<monitorDataReceiveTime.tv_sec<< "\nposvalid "<<monitorData.position.isPositionValid <<"\nheadingvalid" <<monitorData.position.isHeadingValid <<std::endl;
 				if (monitorDataReceiveTime.tv_sec > 0&& monitorData.position.isPositionValid && monitorData.position.isHeadingValid) {
 					// get transmitterid and encode monr to iso.
 					isoTransmitterID = (uint8_t) transmitterID;
 					setTransmitterID(isoTransmitterID);
+					bytesent = UDPServerVisualizer.receiveUDP(chekingUDPconn);
 					long retval = encodeMONRMessage(&monitorData.timestamp,monitorData.position,monitorData.speed,monitorData.acceleration,monitorData.drivingDirection,monitorData.state, monitorData.armReadiness, objectErrorState,UDPBuffer.data(), UDPBuffer.size(),debug);
-					std::cout << monitorData.position.yCoord_m<<std::endl;
+					//std::cout << monitorData.position.yCoord_m<<std::endl;
 					UDPBuffer.resize(static_cast<unsigned long>(retval));
 					// Cheking so we still connected to visualizer
 
@@ -297,7 +301,7 @@ int main(int argc, char const* argv[]){
 
            			}
 					//n sending message with udp.
-
+					
 					bytesent = UDPServerVisualizer.sendUDP(UDPBuffer);	
 				}
 				
