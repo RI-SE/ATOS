@@ -1628,7 +1628,8 @@ int configureAllObjects(ObjectConnection objectConnections[],
 				break;
 			}
 
-			LogMessage(LOG_LEVEL_INFO, "Sending OSEM to object ID %u with IP %s", transmitterIDs[i], ipString);
+			LogMessage(LOG_LEVEL_INFO, "Sending OSEM to object ID %u with IP %s", transmitterIDs[i],
+					   ipString);
 
 			DataDictionaryGetTransmitterID(&serverTransmitterID);
 			isoTransmitterID = (uint8_t) serverTransmitterID;
