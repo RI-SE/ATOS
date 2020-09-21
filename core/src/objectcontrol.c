@@ -1619,7 +1619,7 @@ int configureAllObjects(ObjectConnection objectConnections[],
 			float altitude = (float)originPosition.Altitude;
 
 			messageLength =
-				encodeOSEMMessage(&currentTime, &originPosition.Latitude,
+				encodeOSEMMessage(&currentTime, &transmitterIDs[i], &originPosition.Latitude,
 								  &originPosition.Longitude, &altitude, NULL, NULL, NULL,
 								  messageBuffer, sizeof (messageBuffer), 0);
 			if (messageLength < 0) {
