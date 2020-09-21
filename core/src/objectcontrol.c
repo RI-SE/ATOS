@@ -353,7 +353,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (checkObjectConnections(objectConnections, monitorDataTimeout, nbr_objects)) {
 				disconnectAllObjects(objectConnections, nbr_objects);
 				vSetState(OBC_STATE_IDLE, GSD);
-				break;
 			}
 
 
