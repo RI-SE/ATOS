@@ -36,6 +36,7 @@ target_link_libraries(${VISUALIZATION_TARGET} LINK_PUBLIC
 	${MESSAGE_BUS_LIBRARY}
 	${SYSTEMD_LIBRARIES}
 	${TCP_UDP_Socket_LIBRARY}
+	stdc++fs
 )
 
 target_include_directories(${VISUALIZATION_TARGET} PUBLIC
