@@ -4,14 +4,18 @@
 
 #include "braketrigger.h"
 #include "trigger.h"
-
+#include "datadictionary.h"
+#include "maestroTime.h"
 #include "scenario.h"
 #include "logging.h"
 #include "util.h"
 #include "journal.h"
 
 #define MODULE_NAME "ScenarioControl"
+#define SCENARIOCONTROL_SHMEM_READ_RATE_HZ 100
 
+void updateObjectCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
+int updateTriggers(Scenario* scenario);
 
 /************************ Main task ******************************************/
 int main()
@@ -36,6 +40,11 @@ int main()
 
 	JournalInit(MODULE_NAME);
 
+    struct timeval tvTime;
+    struct timeval nextSHMEMreadTime = { 0, 0 };
+
+    DataDictionaryInitObjectData();
+
     // Initialize message bus connection
     while(iCommInit())
     {
@@ -51,9 +60,11 @@ int main()
         {
             // Make all active triggers cause their corresponding actions
             scenario.refresh();
+
             // Allow for retriggering on received TREO messages
             scenario.resetISOTriggers();
         }
+
 
 		if ((recvDataLength = iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr)) < 0)
         {
@@ -139,10 +150,7 @@ int main()
             else LogMessage(LOG_LEVEL_ERROR, "Received unexpected START command (current state: %u)",static_cast<unsigned char>(state));
             break;
         case COMM_MONR:
-            // Update triggers
-			UtilPopulateMonitorDataStruct(mqRecvData, static_cast<size_t>(recvDataLength), &monr);
-            scenario.updateTrigger(monr);
-			break;
+        break;
         case COMM_DISCONNECT:
             LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
             state = UNINITIALIZED;
@@ -159,7 +167,91 @@ int main()
         default:
             LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
         }
+        TimeSetToCurrentSystemTime(&tvTime);
+        if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
+                      updateObjectCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
+                      updateTriggers(&scenario);
+
+        }
     }
 
     return 0;
+}
+
+
+
+
+/*!
+ * \brief updateTriggers reads monr messages from the shared memory and passes the iformation along to scenario which handles trigger updates.
+ *			with the rate parameter
+ * \param Scenario scenario object keeping information about which trigger is linked to which action and the updating and parsing of the same.
+ */
+int updateTriggers(Scenario* scenario){
+
+        std::vector<uint32_t> transmitterIDs;
+        uint32_t numberOfObjects;
+        ObjectDataType monitorData;
+
+        // Get number of objects present in shared memory
+        if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
+            LogMessage(LOG_LEVEL_ERROR,
+                       "Data dictionary number of objects read error - Cannot update triggers");
+            return -1;
+        }
+        if(numberOfObjects == 0) {
+            return 1;
+        }
+
+        transmitterIDs.resize(numberOfObjects, 0);
+        // Get transmitter IDs for all connected objects
+        if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size()) != READ_OK) {
+            LogMessage(LOG_LEVEL_ERROR,
+                       "Data dictionary transmitter ID read error - Cannot update triggers");
+            return -1;
+        }
+
+
+        for (const uint32_t &transmitterID : transmitterIDs) {
+            if (DataDictionaryGetMonitorData(transmitterID, &monitorData.MonrData) && DataDictionaryGetObjectIPByTransmitterID(transmitterID, &monitorData.ClientIP) != READ_OK) {
+                LogMessage(LOG_LEVEL_ERROR,
+                           "Data dictionary monitor data read error for transmitter ID %u",
+                           transmitterID);
+                return -1;
+            }
+            else{
+                scenario->updateTrigger(monitorData);
+
+            }
+
+        }
+        return 1;
+    }
+
+
+/*!
+ * \brief updateObjectCheckTimer Adds a time interval onto the specified time struct in accordance
+ *			with the rate parameter
+ * \param currentSHMEMReadTime Struct containing the timewhen at when SHMEM was last accessed. After this
+ *			function has been executed, the struct contains the time at which the shared memory will be accessed is to be
+ *			accessed next time.
+ * \param SHMEMReadRate_Hz Rate at which SHMEM is read - if this parameter is 0 the value
+ *			is clamped to 1 Hz
+ */
+void updateObjectCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz) {
+    struct timeval SHMEMTimeInterval, timeDiff, currentTime;
+
+    SHMEMReadRate_Hz = SHMEMReadRate_Hz == 0 ? 1 : SHMEMReadRate_Hz;	// Minimum frequency 1 Hz
+    SHMEMTimeInterval.tv_sec = (long)(1.0 / SHMEMReadRate_Hz);
+    SHMEMTimeInterval.tv_usec = (long)((1.0 / SHMEMReadRate_Hz - SHMEMTimeInterval.tv_sec) * 1000000.0);
+
+    // If there is a large difference between the current time and the time at which time at which shared memory was updated, update based
+    // on current time instead of last send time to not spam messages until caught up
+    TimeSetToCurrentSystemTime(&currentTime);
+    timersub(&currentTime, currentSHMEMReadTime, &timeDiff);
+    if (timercmp(&timeDiff, &SHMEMTimeInterval, <)) {
+        timeradd(currentSHMEMReadTime, &SHMEMTimeInterval, currentSHMEMReadTime);
+    }
+    else {
+        timeradd(&currentTime, &SHMEMTimeInterval, currentSHMEMReadTime);
+    }
 }

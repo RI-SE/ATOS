@@ -106,7 +106,6 @@ static const char ParameterNameOriginLongitude[] = "OriginLongitude";
 static const char ParameterNameOriginLatitude[] = "OriginLatitude";
 static const char ParameterNameOriginAltitude[] = "OriginAltitude";
 static const char ParameterNameVisualizationServerName[] = "VisualizationServerName";
-static const char ParameterNameForceObjectToLocalhost[] = "ForceObjectToLocalhost";
 static const char ParameterNameASPMaxTimeDiff[] = "ASPMaxTimeDiff";
 static const char ParameterNameASPMaxTrajDiff[] = "ASPMaxTrajDiff";
 static const char ParameterNameASPStepBackCount[] = "ASPStepBackCount";
@@ -131,16 +130,11 @@ static const char ParameterNameMiscData[] = "MiscData";
 static const char ObjectSettingNameID[] = "ID";
 static const char ObjectSettingNameIP[] = "IP";
 static const char ObjectSettingNameTraj[] = "traj";
+static const char ObjectSettingNameInjectorIDs[] = "injectorIDs";
 
 /*------------------------------------------------------------
 -- Local type definitions
 ------------------------------------------------------------*/
-
-/*------------------------------------------------------------
--- Public variables
-------------------------------------------------------------*/
-
-//static int debug = DEBUG_LEVEL_HIGH;
 
 /*------------------------------------------------------------
 -- Private variables
@@ -1045,7 +1039,6 @@ int UtilPopulateSpaceTimeArr(ObjectPosition * OP, char *TrajFile) {
 	Trajfd = fopen(TrajFile, "r");
 	if (Trajfd) {
 		Rows = OP->TrajectoryPositionCount;
-		//printf("Rows = %d\n", Rows);
 		double x, y, z;
 		float t;
 		char ValueStr[NUMBER_CHAR_LENGTH];
@@ -1053,7 +1046,7 @@ int UtilPopulateSpaceTimeArr(ObjectPosition * OP, char *TrajFile) {
 		char *src2;
 
 		do {
-			bzero(TrajRow, TRAJECTORY_LINE_LENGTH);
+			memset(TrajRow, 0, sizeof (TrajRow));
 			if (UtilReadLineCntSpecChars(Trajfd, TrajRow) >= 10) {
 				bzero(ValueStr, NUMBER_CHAR_LENGTH);
 				src1 = strchr(TrajRow, ';');
@@ -1104,7 +1097,6 @@ int UtilPopulateSpaceTimeArr(ObjectPosition * OP, char *TrajFile) {
 		//{
 		//  printf("OrigoDistance=%4.3f, Time=%4.3f, Index=%d\n", OP->SpaceTimeArr[g].OrigoDistance, OP->SpaceTimeArr[g].Time, OP->SpaceTimeArr[g].Index);
 		//}
-
 
 		fclose(Trajfd);
 	}
@@ -3146,7 +3138,7 @@ I32 UtilConnectTCPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 }
 
 
-void UtilSendTCPData(const C8 * Module, const C8 * Data, I32 Length, I32 * Sockfd, U8 Debug) {
+void UtilSendTCPData(const C8 * Module, const C8 * Data, I32 Length, const int *Sockfd, U8 Debug) {
 	I32 i, n, error = 0;
 
 	socklen_t len = sizeof (error);
@@ -3236,18 +3228,16 @@ void UtilCreateUDPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 }
 
 
-void UtilSendUDPData(const C8 * Module, I32 * Sockfd, struct sockaddr_in *Addr, C8 * Data, I32 Length,
+void UtilSendUDPData(const C8 * Module, I32 * Sockfd, struct sockaddr_in *Addr, C8 * Data, size_t Length,
 					 U8 Debug) {
-	I32 result, i;
+	ssize_t result;
 
-
-	result = sendto(*Sockfd, Data, Length, 0, (const struct sockaddr *)Addr, sizeof (struct sockaddr_in));
+	result = sendto(*Sockfd, Data, Length, 0, (struct sockaddr *)Addr, sizeof (struct sockaddr_in));
 
 	// TODO: Change this when bytes thingy has been implemented in logging
 	if (Debug) {
 		printf("[%s] Bytes sent: ", Module);
-		i = 0;
-		for (i = 0; i < Length; i++)
+		for (size_t i = 0; i < Length; i++)
 			printf("%x-", (unsigned char)*(Data + i));
 		printf("\n");
 	}
@@ -3639,9 +3629,6 @@ char *UtilGetConfigurationParameterAsString(const enum ConfigurationFileParamete
 	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
 		outputString = ParameterNameVisualizationServerName;
 		break;
-	case CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST:
-		outputString = ParameterNameForceObjectToLocalhost;
-		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
 		outputString = ParameterNameASPMaxTimeDiff;
 		break;
@@ -3729,8 +3716,6 @@ enum ConfigurationFileParameter UtilParseConfigurationParameter(const char *para
 		return CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE;
 	else if (strncmp(ParameterNameVisualizationServerName, parameter, bufferLength) == 0)
 		return CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME;
-	else if (strncmp(ParameterNameForceObjectToLocalhost, parameter, bufferLength) == 0)
-		return CONFIGURATION_PARAMETER_FORCE_OBJECT_TO_LOCALHOST;
 	else if (strncmp(ParameterNameASPMaxTimeDiff, parameter, bufferLength) == 0)
 		return CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF;
 	else if (strncmp(ParameterNameASPMaxTrajDiff, parameter, bufferLength) == 0)
@@ -3817,6 +3802,9 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 		break;
 	case OBJECT_SETTING_TRAJ:
 		outputString = ObjectSettingNameTraj;
+		break;
+	case OBJECT_SETTING_INJECTOR_IDS:
+		outputString = ObjectSettingNameInjectorIDs;
 		break;
 	default:
 		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
