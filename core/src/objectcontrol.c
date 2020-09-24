@@ -592,6 +592,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				else if (receivedMONRData > 0)
 					LogMessage(LOG_LEVEL_WARNING, "Received unhandled message on monitoring socket");
 			}
+
 		}
 
 
@@ -865,7 +866,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					if (configureObjectDataInjection(dataInjectionMaps, object_transmitter_ids, nbr_objects)
 						== -1) {
-						LogMessage(LOG_LEVEL_ERROR, "Error reading monitor data timeout setting");
+						LogMessage(LOG_LEVEL_ERROR, "Error when configuring object data injection.");
 						initSuccessful = false;
 					}
 
@@ -2166,12 +2167,14 @@ int sendDataInjectionMessages(const ObjectDataType * objectData,
 		return -1;
 	}
 
+	
 	// Send message to all configured receivers
 	for (unsigned int i = 0; i < relevantMap->numberOfTargets; ++i) {
 		for (unsigned int j = 0; j < numberOfObjects; j++) {
 			if (transmitterIDs[j] == relevantMap->targetIDs[i]) {
-				UtilSendTCPData(MODULE_NAME, transmissionBuffer, messageSize,
-								&objectConnections[j].commandSocket, 0);
+				UtilSendUDPData(MODULE_NAME, &objectConnections[0].monitorSocket,
+									&objectConnections[0].objectMonitorAddress,
+									transmissionBuffer, messageSize, 0);
 			}
 		}
 	}
