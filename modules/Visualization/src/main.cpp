@@ -27,7 +27,6 @@
   ------------------------------------------------------------*/
 static bool quit = false;
 
-
 /*------------------------------------------------------------
   -- Function declarations
   ------------------------------------------------------------*/
@@ -37,17 +36,21 @@ static bool quit = false;
   -- Private functions
   ------------------------------------------------------------*/
 static void signalHandler(int signo);
+int parseTraj(std::string line, std::vector<char> TCPbuffer);
 /*------------------------------------------------------------
   -- Main task
   ------------------------------------------------------------*/
 
 int main(int argc, char const* argv[]){
 
-	//std::vector<char> TCPBuffer(MONR_BUFFER_LENGTH);
+	std::vector<char> TCPBuffer(MONR_BUFFER_LENGTH);
 	std::vector<char> UDPBuffer(MONR_BUFFER_LENGTH);
 	std::vector<uint32_t> transmitterids(MONR_BUFFER_LENGTH);
 	std::vector<char> chekingTCPconn(MONR_BUFFER_LENGTH);
 	std::vector<char> chekingUDPconn(MONR_BUFFER_LENGTH);
+	std::vector<char> trajPath (PATH_MAX, '\0');
+	
+
 	ObjectMonitorType monitorData;
 	std::string IPaddr;
 	
@@ -74,6 +77,35 @@ int main(int argc, char const* argv[]){
 
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
 
+	//UtilGetTrajDirectoryPath (trajPath.data(), trajPath.size());
+	//for (const auto & entry : std::experimental::filesystem::directory_iterator(trajPath.data())){
+	//	/* TO DO:
+	//		should have a checker 
+	//		here to see that all the objects are connected
+	//		before sending traj to visualizer*/
+	//	
+	//	std::ifstream file(entry.path());
+	//	std::string line;
+	//	int count;
+	//	int retval = 0;
+	//	while(std::getline(file,line)){
+//
+	//		retval = parseTraj(line,count, TCPBuffer)
+	//		
+	//		
+	//	}
+	//	//ssize_t encodeTRAJMessageHeader(const uint16_t trajectoryID, const uint16_t trajectoryVersion, const char * trajectoryName, const size_t nameLength, const uint32_t numberOfPointsInTraj, char * trajDataBuffer, const size_t bufferLength, const char debug);
+	//	//ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const CartesianPosition position, const SpeedType speed, const AccelerationType acceleration, const float curvature, char * trajDataBufferPointer, const size_t remainingBufferLength, const char debug);
+	//	//ssize_t encodeTRAJMessageFooter(char * trajDataBuffer, const size_t bufferLength, const char debug);
+	//}	
+
+
+
+
+
+
+
+
 	// Set up signal handlers
     if (signal(SIGINT, signalHandler) == SIG_ERR)
         util_error("Unable to initialize signal handler");
@@ -98,29 +130,32 @@ int main(int argc, char const* argv[]){
 		
 		TCPHandler TCPServerVisualizer(TCP_VISUAL_SERVER_PORT, "", "Server", 1, O_NONBLOCK);
 		UDPHandler UDPServerVisualizer (UDP_VISUAL_SERVER_PORT,"",0,"Server");
-		OnTCP = TCPServerVisualizer.ConnectionON;
+		OnTCP = TCPServerVisualizer.getConnectionOn();
 		
 		while(OnTCP <= 0)
 		{
 			TCPServerVisualizer.TCPHandlerAccept(5);
 			
-			OnTCP = TCPServerVisualizer.ConnectionON;
+			OnTCP = TCPServerVisualizer.getConnectionOn();
 			if (OnTCP<0){
 				break;
 			}
-			
-			if (iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr) < 0)
-			{
-				util_error("Message bus receive error");
-			}
-			switch (command)
-			{
-			case COMM_CONNECT:
-				SendLater = COMM_CONNECT; 
-				break;
-			
-			default:
-				break;
+			DataDictionaryGetNumberOfObjects(&nOBJ);
+
+			for (int i = 0; i<nOBJ; i++ ){
+				if (iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr) < 0)
+				{
+					util_error("Message bus receive error");
+				}
+				switch (command)
+				{
+				case COMM_CONNECT:
+					SendLater = COMM_CONNECT; 
+					break;
+				
+				default:
+					break;
+				}
 			}
 
 		}
@@ -128,151 +163,71 @@ int main(int argc, char const* argv[]){
 		
 		
 		std::cout<<"Connection recived"<<std::endl;
-		/*
-		if (SendLater == COMM_CONNECT)
-		{
-			//TO DO: check if transmitterid's are bound to ip in datadictonary
-			
-			std::cout <<"Sending trajectory to visualizer"<<std::endl;
-			TrajectoryFileHeader fileHeader;
-			TrajectoryFileLine fileLine;
-			char trajPathDir[MAX_FILE_PATH];
 		
-			UtilGetTrajDirectoryPath(trajPathDir,sizeof(trajPathDir));
-			std::string str(trajPathDir);
-			
-			for (auto& entry : std::experimental::filesystem::directory_iterator(trajPathDir)){
-				memset(&fileHeader, 0, sizeof (fileHeader));
-				memset(&fileLine, 0, sizeof (fileLine));
-				char messageBuffer[TRAJECTORY_TX_BUFFER_SIZE];
-				size_t remainingBufferSpace = sizeof (messageBuffer);
-				char *messageBufferPosition = messageBuffer;
-				
-				if (UtilCheckTrajectoryFileFormat(entry.path().string().c_str(), strlen(entry.path().string().c_str())) == -1) {
-					LogMessage(LOG_LEVEL_ERROR, "Incorrect trajectory file format - cannot proceed to send message");
-					break;
-				}
+		/* So what do I need for the new system here? */
+		
+		/* fpro eller opro fpro skall jag tydligen skicka
+			traj skall jag också skicka.
 
-				std::ifstream infile(entry.path().string());
-				std::string line;
-				std::getline(infile, line);
-				std::vector<char> cstr(line.c_str(), line.c_str() + line.size() + 1);
-				if(UtilParseTrajectoryFileHeader(cstr.data(), &fileHeader) == -1){
-					LogMessage(LOG_LEVEL_ERROR, "Failed to parse header of file <%s>", entry.path().string());
-					break;
-				}
-				
-				if ((encodeTRAJMessageHeader(fileHeader.ID > UINT16_MAX ? 0 : (uint16_t) fileHeader.ID,
-					fileHeader.majorVersion, fileHeader.name,
-					strlen(fileHeader.name), fileHeader.numberOfLines,
-					messageBufferPosition, remainingBufferSpace, debug)) == -1) {
-					LogMessage(LOG_LEVEL_ERROR, "Unable to encode trajectory message");
-					break;
-				}
-
-				while (std::getline(infile, line)){
-					std::vector<char> cstr(line.c_str(), line.c_str() + line.size() + 1);
-					struct timeval relTime;
-					CartesianPosition position;
-					SpeedType speed;
-					AccelerationType acceleration;
-					if (UtilParseTrajectoryFileLine(cstr.data(), &fileLine) == -1) {
-						// TODO: how to terminate an ISO message when an error has occurred?
-						LogMessage(LOG_LEVEL_ERROR, "Unable to parse line %u of trajectory file <%s>", i + 1, Filename);
-						break;
-					}
-					relTime.tv_sec = (time_t) fileLine.time;
-					relTime.tv_usec = (time_t) ((fileLine.time - relTime.tv_sec) * 1000000);
-					position.xCoord_m = fileLine.xCoord;
-					position.yCoord_m = fileLine.yCoord;
-					position.isPositionValid = fileLine.zCoord != NULL;
-					position.zCoord_m = position.isPositionValid ? *fileLine.zCoord : 0;
-					position.heading_rad = fileLine.heading;
-					position.isHeadingValid = true;
-					speed.isLongitudinalValid = fileLine.longitudinalVelocity != NULL;
-					speed.isLateralValid = fileLine.lateralVelocity != NULL;
-					speed.longitudinal_m_s = fileLine.longitudinalVelocity != NULL ? *fileLine.longitudinalVelocity : 0;
-					speed.lateral_m_s = fileLine.lateralVelocity != NULL ? *fileLine.lateralVelocity : 0;
-					acceleration.isLongitudinalValid = fileLine.longitudinalAcceleration != NULL;
-					acceleration.isLateralValid = fileLine.lateralAcceleration != NULL;
-					acceleration.longitudinal_m_s2 =
-						fileLine.longitudinalAcceleration != NULL ? *fileLine.longitudinalAcceleration : 0;
-
-					acceleration.lateral_m_s2 = fileLine.lateralAcceleration != NULL ? *fileLine.lateralAcceleration : 0;
-
-					// Print to buffer
-					if ((printedBytes = encodeTRAJMessagePoint(&relTime, position, speed, acceleration,
-															(float)fileLine.curvature, messageBufferPosition,
-															remainingBufferSpace, debug)) == -1) {
-
-						if (errno == ENOBUFS) {
-							// Reached the end of buffer, send buffered data and
-							// try again
-							UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket,
-											debug);
-
-							messageBufferPosition = messageBuffer;
-							remainingBufferSpace = sizeof (messageBuffer);
-							if ((printedBytes =
-								encodeTRAJMessagePoint(&relTime, position, speed, acceleration, fileLine.curvature,
-														messageBufferPosition, remainingBufferSpace, debug)) == -1) {
-								// TODO how to terminate an ISO message when an error has occurred?
-								LogMessage(LOG_LEVEL_ERROR, "Error encoding trajectory message point");
-								fclose(fd);
-								return -1;
-							}
-							messageBufferPosition += printedBytes;
-							totalPrintedBytes += printedBytes;
-							remainingBufferSpace -= (size_t) printedBytes;
-						}
-						else {
-							// TODO how to terminate an ISO message when an error has occurred?
-							LogMessage(LOG_LEVEL_ERROR, "Error encoding trajectory message point");
-							fclose(fd);
-							return -1;
-						}
-					}
-					else {
-						totalPrintedBytes += printedBytes;
-						messageBufferPosition += printedBytes;
-						remainingBufferSpace -= (size_t) printedBytes;
-					}
-
-
-				}
-				
-			}
-
-		}
 		*/
 
+		//if (SendLater == COMM_CONNECT)
+		//{
+		//	UtilGetTrajDirectoryPath (trajPath.data(), trajPath.size());
+		//	//UtilGetObjectDirectoryPath
+		//	
+		//	for (const auto & entry : std::experimental::filesystem::directory_iterator(trajPath.data())){
+		//		/* TO DO:
+		//			should have a checker 
+		//			here to see that all the objects are connected
+		//			before sending traj to visualizer*/
+		//		
+		//		std::ifstream file(entry.path());
+		//		std::string line;
+//
+		//		while(std::getline(file,line,';')){
+		//			std::cout<< line <<std::endl;
+		//			
+//
+		//			// header check is TRAJECTORY, id, name, version, numberoflines
+		//			// fotter for traj is ENDTRAJ
+		//			
+		//			// need the opro message to stich trajectorys to transmitter id:s
+		//		} 		
+		//	}
+//
+		//}
+	
+
 		while(bytesread >= 0 && OnTCP > 0){
-
+			DataDictionaryGetNumberOfObjects(&nOBJ);
+			DataDictionaryGetObjectTransmitterIDs(transmitterids.data(),transmitterids.size());
 			
-			if (iCommRecv(&command,mqRecvData, MQ_MSG_SIZE,nullptr) < 0)
-			{
-            	util_error("Message bus receive error");
-        	}
-			switch (command)
-			{
-			case COMM_CONNECT:
-				//TODO send traj
-				break;
+			for (int i = 0; i<nOBJ; i++ ){
+				if (iCommRecv(&command,mqRecvData, MQ_MSG_SIZE, nullptr) < 0)
+				{
+					util_error("Message bus receive error");
+				}
+				switch (command)
+				{
+				case COMM_CONNECT:
+					//TODO send traj
+					break;
+				
+				default:
+					break;
+				}
+			}
 			
-			default:
-				break;
-			}
 
-			if (command ==COMM_CONNECT)
-			{
-				//TO DO add so it sends traj with tcp to ar vis 				
-			}
+			//if (command ==COMM_CONNECT)
+			//{
+			//	//TO DO add so it sends traj with tcp to ar vis 				
+			//}
 			
 			bytesread = TCPServerVisualizer.receiveTCP(chekingTCPconn, 0);
 			bytesent = UDPServerVisualizer.receiveUDP(chekingUDPconn);
 			
-			DataDictionaryGetNumberOfObjects(&nOBJ);
-			DataDictionaryGetObjectTransmitterIDs(transmitterids.data(),transmitterids.size());
 			transmitterids.resize(nOBJ);
 			std::cout <<nOBJ<<std::endl;
 			for (auto &transmitterID : transmitterids) {
@@ -317,12 +272,10 @@ int main(int argc, char const* argv[]){
         TCPServerVisualizer.TCPHandlerclose();
 		UDPServerVisualizer.UDPHandlerclose();
 	}
-
-	//ServerVisualizer.TCPHandlerclose();
 }
 
 
-void signalHandler(int signo) {
+void signalHandler(int signo){
     if (signo == SIGINT) {
         LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
         quit = true;
@@ -333,3 +286,73 @@ void signalHandler(int signo) {
     }
 }
 
+
+//int parseTraj(std::string line,std::vector<char> buffer)
+//{
+//	struct timeval relTime;
+//	CartesianPosition position;
+//	SpeedType speed;
+//	AccelerationType acceleration;
+//	int count = 0;
+//	TrajectoryFileHeader trajHeader;
+//	char *dotToken;
+//	int noOfLines = 0;
+//	int retretvalval = 0;
+//
+//	std::stringstream ss (line);
+//	std::string segement;
+//	while (getline(ss,segement)){
+//		
+//		if(segement.compare("TRAJECTORY") == 0){
+//			count = 1;
+//		}
+//		else if (segement.compare("LINE") == 0){
+//			count = 5;
+//		}
+//		else{
+//			count++
+//		}
+//		switch (count)
+//		{
+//		case 1/:
+//			trajHeader->ID = static_cast<unsigned int> (atoi(segement));
+//			break;
+//		case 2/:
+//			if (segement.length() > sizeof(header->name)){
+//				LogMessage(LOG_LEVEL_ERROR, "Name field \"%s\" in trajectory too long", segement);	
+//				retval = -1;
+//			}
+//			else{
+//					strcpy(header->name, segement.c_str());
+//			}
+//			break;
+//		case 3/:
+//			header->majorVersion = (unsigned short)atoi(segement);
+//			if ((dotToken = strchr(segement.c_str(), '.')) != NULL && *(dotToken + 1) != '\0') {
+//				header->minorVersion = (unsigned short)atoi(dotToken + 1);
+//			}
+//			else {
+//				header->minorVersion = 0;
+//			}
+//			break;
+//		case 4/:
+//			noOfLines = atoi(token);
+//			if (noOfLines >= 0)
+//				header->numberOfLines = (unsigned int)noOfLines;
+//			else {
+//				LogMessage(LOG_LEVEL_ERROR, "Found negative number of lines in trajectory");
+//				retval = -1;
+//			}
+//			break;
+//		
+//			
+//		
+//		default:
+//			break;
+//		}
+//
+//	}
+//
+//
+//}
+//
