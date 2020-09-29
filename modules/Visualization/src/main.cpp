@@ -142,7 +142,7 @@ int main(int argc, char const* argv[]){
 			}
 			DataDictionaryGetNumberOfObjects(&nOBJ);
 
-			for (int i = 0; i<nOBJ; i++ ){
+			for (int i = 0; i<nOBJ+1; i++ ){
 				if (iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr) < 0)
 				{
 					util_error("Message bus receive error");
@@ -203,7 +203,7 @@ int main(int argc, char const* argv[]){
 			DataDictionaryGetNumberOfObjects(&nOBJ);
 			DataDictionaryGetObjectTransmitterIDs(transmitterids.data(),transmitterids.size());
 			
-			for (int i = 0; i<nOBJ; i++ ){
+			for (int i = 0; i<nOBJ+1; i++ ){
 				if (iCommRecv(&command,mqRecvData, MQ_MSG_SIZE, nullptr) < 0)
 				{
 					util_error("Message bus receive error");
