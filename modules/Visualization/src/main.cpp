@@ -9,9 +9,10 @@
 #include "logging.h"
 #include "util.h"
 #include "datadictionary.h"
-#include "tcphandler.h"
 #include "iso22133.h"
-#include "udphandler.h"
+
+#include "udphandler.hpp"
+#include "tcphandler.hpp"
 
 /*------------------------------------------------------------
   -- Defines
@@ -36,14 +37,14 @@ static bool quit = false;
   -- Private functions
   ------------------------------------------------------------*/
 static void signalHandler(int signo);
-int parseTraj(std::string line, std::vector<char> TCPbuffer);
+int parseTraj(std::string line, std::vector<char>& TCPbuffer);
 /*------------------------------------------------------------
   -- Main task
   ------------------------------------------------------------*/
 
 int main(int argc, char const* argv[]){
 
-	std::vector<char> TCPBuffer(MONR_BUFFER_LENGTH);
+	std::vector<char> TCPBuffer;
 	std::vector<char> UDPBuffer(MONR_BUFFER_LENGTH);
 	std::vector<uint32_t> transmitterids(MONR_BUFFER_LENGTH);
 	std::vector<char> chekingTCPconn(MONR_BUFFER_LENGTH);
@@ -77,34 +78,7 @@ int main(int argc, char const* argv[]){
 
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
 
-	//UtilGetTrajDirectoryPath (trajPath.data(), trajPath.size());
-	//for (const auto & entry : std::experimental::filesystem::directory_iterator(trajPath.data())){
-	//	/* TO DO:
-	//		should have a checker 
-	//		here to see that all the objects are connected
-	//		before sending traj to visualizer*/
-	//	
-	//	std::ifstream file(entry.path());
-	//	std::string line;
-	//	int count;
-	//	int retval = 0;
-	//	while(std::getline(file,line)){
-//
-	//		retval = parseTraj(line,count, TCPBuffer)
-	//		
-	//		
-	//	}
-	//	//ssize_t encodeTRAJMessageHeader(const uint16_t trajectoryID, const uint16_t trajectoryVersion, const char * trajectoryName, const size_t nameLength, const uint32_t numberOfPointsInTraj, char * trajDataBuffer, const size_t bufferLength, const char debug);
-	//	//ssize_t encodeTRAJMessagePoint(const struct timeval * pointTimeFromStart, const CartesianPosition position, const SpeedType speed, const AccelerationType acceleration, const float curvature, char * trajDataBufferPointer, const size_t remainingBufferLength, const char debug);
-	//	//ssize_t encodeTRAJMessageFooter(char * trajDataBuffer, const size_t bufferLength, const char debug);
-	//}	
-
-
-
-
-
-
-
+	UtilGetTrajDirectoryPath (trajPath.data(), trajPath.size());
 
 	// Set up signal handlers
     if (signal(SIGINT, signalHandler) == SIG_ERR)
@@ -160,8 +134,6 @@ int main(int argc, char const* argv[]){
 
 		}
 		
-		
-		
 		std::cout<<"Connection recived"<<std::endl;
 		
 		/* So what do I need for the new system here? */
@@ -171,32 +143,43 @@ int main(int argc, char const* argv[]){
 
 		*/
 
-		//if (SendLater == COMM_CONNECT)
-		//{
-		//	UtilGetTrajDirectoryPath (trajPath.data(), trajPath.size());
-		//	//UtilGetObjectDirectoryPath
-		//	
-		//	for (const auto & entry : std::experimental::filesystem::directory_iterator(trajPath.data())){
-		//		/* TO DO:
-		//			should have a checker 
-		//			here to see that all the objects are connected
-		//			before sending traj to visualizer*/
-		//		
-		//		std::ifstream file(entry.path());
-		//		std::string line;
-//
-		//		while(std::getline(file,line,';')){
-		//			std::cout<< line <<std::endl;
-		//			
-//
-		//			// header check is TRAJECTORY, id, name, version, numberoflines
-		//			// fotter for traj is ENDTRAJ
-		//			
-		//			// need the opro message to stich trajectorys to transmitter id:s
-		//		} 		
-		//	}
-//
-		//}
+		if (SendLater == COMM_CONNECT || command == COMM_CONNECT)
+		{
+			UtilGetTrajDirectoryPath (trajPath.data(), trajPath.size());
+			//UtilGetObjectDirectoryPath
+			
+			for (const auto & entry : std::experimental::filesystem::directory_iterator(trajPath.data())){
+				/* TO DO:
+				should have a checker 
+				here to see that all the objects are connected
+				before sending traj to visualizer*/
+			
+				std::ifstream file(entry.path());
+				std::string line;
+				int retval = 0;
+				while(std::getline(file,line)){
+					retval = parseTraj(line, TCPBuffer);
+									
+					if (retval == -1){
+						
+						break;
+					}
+					else if ((MONR_BUFFER_LENGTH-retval)<TCPBuffer.size()){
+					
+						//TCPServerVisualizer.sendTCP(TCPBuffer.data(),TCPBuffer.size());
+						TCPBuffer.clear();
+					}
+			
+			
+				}
+		
+			}
+			if (SendLater == COMM_CONNECT){
+				SendLater =	COMM_INV;
+			}
+			
+
+		}
 	
 
 		while(bytesread >= 0 && OnTCP > 0){
@@ -211,25 +194,50 @@ int main(int argc, char const* argv[]){
 				switch (command)
 				{
 				case COMM_CONNECT:
-					//TODO send traj
+					if (SendLater == COMM_CONNECT || command == COMM_CONNECT){
+						UtilGetTrajDirectoryPath (trajPath.data(), trajPath.size());
+			
+						for (const auto & entry : std::experimental::filesystem::directory_iterator(trajPath.data())){
+							/* TO DO:
+							should have a checker 
+							here to see that all the objects are connected
+							before sending traj to visualizer*/
+				
+							std::ifstream file(entry.path());
+							std::string line;
+							int retval = 0;
+							while(std::getline(file,line)){
+								retval = parseTraj(line, TCPBuffer);
+												
+								if (retval == -1){
+									
+									break;
+								}
+								else if ((MONR_BUFFER_LENGTH-retval*2)<TCPBuffer.size()){
+								
+									TCPServerVisualizer.sendTCP(TCPBuffer);
+									TCPBuffer.clear();
+								}
+				
+				
+							}
+			
+						}
+						if (SendLater == COMM_CONNECT){
+							SendLater =	COMM_INV;
+						}
+					}
 					break;
 				
 				default:
 					break;
 				}
 			}
-			
-
-			//if (command ==COMM_CONNECT)
-			//{
-			//	//TO DO add so it sends traj with tcp to ar vis 				
-			//}
-			
+	
 			bytesread = TCPServerVisualizer.receiveTCP(chekingTCPconn, 0);
 			bytesent = UDPServerVisualizer.receiveUDP(chekingUDPconn);
 			
 			transmitterids.resize(nOBJ);
-			std::cout <<nOBJ<<std::endl;
 			for (auto &transmitterID : transmitterids) {
 			
 				if (transmitterID <= 0){
@@ -238,14 +246,12 @@ int main(int argc, char const* argv[]){
 			
 				DataDictionaryGetMonitorData(transmitterID, &monitorData);
 				DataDictionaryGetMonitorDataReceiveTime(transmitterID, &monitorDataReceiveTime);// i am getting duplicates from this one
-				//std::cout<<monitorDataReceiveTime.tv_sec<< "\nposvalid "<<monitorData.position.isPositionValid <<"\nheadingvalid" <<monitorData.position.isHeadingValid <<std::endl;
 				if (monitorDataReceiveTime.tv_sec > 0&& monitorData.position.isPositionValid && monitorData.position.isHeadingValid) {
 					// get transmitterid and encode monr to iso.
 					isoTransmitterID = (uint8_t) transmitterID;
-					setTransmitterID(isoTransmitterID);
+					setTransmitterID(isoTransmitterID); // TO:Do voi message we now cheat wit transmitter id
 					bytesent = UDPServerVisualizer.receiveUDP(chekingUDPconn);
 					long retval = encodeMONRMessage(&monitorData.timestamp,monitorData.position,monitorData.speed,monitorData.acceleration,monitorData.drivingDirection,monitorData.state, monitorData.armReadiness, objectErrorState,UDPBuffer.data(), UDPBuffer.size(),debug);
-					//std::cout << monitorData.position.yCoord_m<<std::endl;
 					UDPBuffer.resize(static_cast<unsigned long>(retval));
 					// Cheking so we still connected to visualizer
 
@@ -287,72 +293,114 @@ void signalHandler(int signo){
 }
 
 
-//int parseTraj(std::string line,std::vector<char> buffer)
-//{
-//	struct timeval relTime;
-//	CartesianPosition position;
-//	SpeedType speed;
-//	AccelerationType acceleration;
-//	int count = 0;
-//	TrajectoryFileHeader trajHeader;
-//	char *dotToken;
-//	int noOfLines = 0;
-//	int retretvalval = 0;
-//
-//	std::stringstream ss (line);
-//	std::string segement;
-//	while (getline(ss,segement)){
-//		
-//		if(segement.compare("TRAJECTORY") == 0){
-//			count = 1;
-//		}
-//		else if (segement.compare("LINE") == 0){
-//			count = 5;
-//		}
-//		else{
-//			count++
-//		}
-//		switch (count)
-//		{
-//		case 1/:
-//			trajHeader->ID = static_cast<unsigned int> (atoi(segement));
-//			break;
-//		case 2/:
-//			if (segement.length() > sizeof(header->name)){
-//				LogMessage(LOG_LEVEL_ERROR, "Name field \"%s\" in trajectory too long", segement);	
-//				retval = -1;
-//			}
-//			else{
-//					strcpy(header->name, segement.c_str());
-//			}
-//			break;
-//		case 3/:
-//			header->majorVersion = (unsigned short)atoi(segement);
-//			if ((dotToken = strchr(segement.c_str(), '.')) != NULL && *(dotToken + 1) != '\0') {
-//				header->minorVersion = (unsigned short)atoi(dotToken + 1);
-//			}
-//			else {
-//				header->minorVersion = 0;
-//			}
-//			break;
-//		case 4/:
-//			noOfLines = atoi(token);
-//			if (noOfLines >= 0)
-//				header->numberOfLines = (unsigned int)noOfLines;
-//			else {
-//				LogMessage(LOG_LEVEL_ERROR, "Found negative number of lines in trajectory");
-//				retval = -1;
-//			}
-//			break;
-//		
-//			
-//		
-//		default:
-//			break;
-//		}
-//
-//	}
-//
-//
-//}
-//
+int parseTraj(std::string line,std::vector<char>& buffer)
+{
+	struct timeval relTime;
+	CartesianPosition position;
+	SpeedType speed;
+	AccelerationType acceleration;
+	TrajectoryFileHeader fileHeader;
+	TrajectoryFileLine fileLine;
+	
+	double curvature = 0;
+	std::stringstream ss (line);
+	std::string segment;
+	getline(ss,segment,';');
+	ssize_t printedBytes;
+	int debug = 0;
+
+	memset(&fileHeader, 0, sizeof (fileHeader));
+	memset(&fileLine, 0, sizeof (fileLine));
+	
+	std::vector<char> tmpvector(MONR_BUFFER_LENGTH);
+	std::vector<char> cstr(line.c_str(), line.c_str() + line.size() + 1);
+	
+	if(segment.compare("TRAJECTORY") == 0){
+		
+		UtilParseTrajectoryFileHeader(cstr.data(),&fileHeader);
+		if ((printedBytes = encodeTRAJMessageHeader(fileHeader.ID > UINT16_MAX ? 0 : (uint16_t) fileHeader.ID,
+												fileHeader.majorVersion, fileHeader.name,
+												strlen(fileHeader.name), fileHeader.numberOfLines,
+												tmpvector.data(), tmpvector.size(), debug)) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to encode trajectory message");
+		
+		return -1;
+		}	
+		
+
+	}
+	else if (segment.compare("LINE") == 0){
+		
+		
+		UtilParseTrajectoryFileLine(cstr.data(), &fileLine);
+	
+		relTime.tv_sec = (time_t) fileLine.time;
+		relTime.tv_usec = (time_t) ((fileLine.time - relTime.tv_sec) * 1000000);
+		position.xCoord_m = fileLine.xCoord;
+		position.yCoord_m = fileLine.yCoord;
+		position.isPositionValid = fileLine.zCoord != NULL;
+		position.zCoord_m = position.isPositionValid ? *fileLine.zCoord : 0;
+		position.heading_rad = fileLine.heading;
+		position.isHeadingValid = true;
+		speed.isLongitudinalValid = fileLine.longitudinalVelocity != NULL;
+		speed.isLateralValid = fileLine.lateralVelocity != NULL;
+		speed.longitudinal_m_s = fileLine.longitudinalVelocity != NULL ? *fileLine.longitudinalVelocity : 0;
+		speed.lateral_m_s = fileLine.lateralVelocity != NULL ? *fileLine.lateralVelocity : 0;
+		acceleration.isLongitudinalValid = fileLine.longitudinalAcceleration != NULL;
+		acceleration.isLateralValid = fileLine.lateralAcceleration != NULL;
+		acceleration.longitudinal_m_s2 =
+			fileLine.longitudinalAcceleration != NULL ? *fileLine.longitudinalAcceleration : 0;
+
+		acceleration.lateral_m_s2 = fileLine.lateralAcceleration != NULL ? *fileLine.lateralAcceleration : 0;
+		if ((printedBytes = encodeTRAJMessagePoint(&relTime, position, speed, acceleration,
+												   (float)fileLine.curvature, tmpvector.data(),
+												   tmpvector.size(), debug)) == -1) {
+			return -1;									   
+		}
+	}
+	else if(segment.compare("ENDTRAJECTORY")== 0){
+	
+		if((printedBytes = encodeTRAJMessageFooter(tmpvector.data(), tmpvector.size(), debug))==-1){
+			return -1;
+		
+		}
+	
+	}
+	else{
+
+		UtilParseTrajectoryFileLine(cstr.data(),&fileLine);
+		
+		
+		relTime.tv_sec = (time_t) fileLine.time;
+		relTime.tv_usec = (time_t) ((fileLine.time - relTime.tv_sec) * 1000000);
+		position.xCoord_m = fileLine.xCoord;
+		position.yCoord_m = fileLine.yCoord;
+		position.isPositionValid = fileLine.zCoord != NULL;
+		position.zCoord_m = position.isPositionValid ? *fileLine.zCoord : 0;
+		position.heading_rad = fileLine.heading;
+		position.isHeadingValid = true;
+		speed.isLongitudinalValid = fileLine.longitudinalVelocity != NULL;
+		speed.isLateralValid = fileLine.lateralVelocity != NULL;
+		speed.longitudinal_m_s = fileLine.longitudinalVelocity != NULL ? *fileLine.longitudinalVelocity : 0;
+		speed.lateral_m_s = fileLine.lateralVelocity != NULL ? *fileLine.lateralVelocity : 0;
+		acceleration.isLongitudinalValid = fileLine.longitudinalAcceleration != NULL;
+		acceleration.isLateralValid = fileLine.lateralAcceleration != NULL;
+		acceleration.longitudinal_m_s2 =
+			fileLine.longitudinalAcceleration != NULL ? *fileLine.longitudinalAcceleration : 0;
+
+		acceleration.lateral_m_s2 = fileLine.lateralAcceleration != NULL ? *fileLine.lateralAcceleration : 0;
+		if ((printedBytes = encodeTRAJMessagePoint(&relTime, position, speed, acceleration,
+												   (float)fileLine.curvature, tmpvector.data(),
+												   tmpvector.size(), debug)) == -1) {
+			return -1;									   
+		}
+	}
+	tmpvector.resize(printedBytes);
+	for (auto val : tmpvector) buffer.push_back(val);
+	
+
+	return printedBytes;
+
+
+}
+
