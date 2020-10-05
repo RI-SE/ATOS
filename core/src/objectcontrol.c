@@ -1834,7 +1834,7 @@ void disconnectObject(ObjectConnection * objectConnection) {
 	}
 }
 
-static int hasRemoteDisconnected(int *sockfd) {
+int hasRemoteDisconnected(int *sockfd) {
 	char dummy;
 	ssize_t x = recv(*sockfd, &dummy, 1, MSG_PEEK);
 
@@ -1855,7 +1855,6 @@ static int hasRemoteDisconnected(int *sockfd) {
 
 	// Something has been received on socket
 	if (x > 0) {
-		LogMessage(LOG_LEVEL_INFO, "Received unexpected communication from object on command channel");
 		return 0;
 	}
 
