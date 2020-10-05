@@ -2557,9 +2557,8 @@ ReadWriteAccess_t DataDictionaryModifyTransmitterIDByIP(const in_addr_t ipKey,
 	return result;
 }
 
-ReadWriteAccess_t DataDictionarySetObjectProperties(
-		const uint32_t transmitterID,
-		const ObjectPropertiesType* objectProperties) {
+ReadWriteAccess_t DataDictionarySetObjectProperties(const uint32_t transmitterID,
+													const ObjectPropertiesType * objectProperties) {
 
 	ReadWriteAccess_t result;
 
@@ -2597,9 +2596,8 @@ ReadWriteAccess_t DataDictionarySetObjectProperties(
 }
 
 
-ReadWriteAccess_t DataDictionaryGetObjectProperties(
-		const uint32_t transmitterID,
-		ObjectPropertiesType* objectProperties) {
+ReadWriteAccess_t DataDictionaryGetObjectProperties(const uint32_t transmitterID,
+													ObjectPropertiesType * objectProperties) {
 
 	ReadWriteAccess_t result;
 
@@ -2642,8 +2640,7 @@ ReadWriteAccess_t DataDictionaryGetObjectProperties(
 	return result;
 }
 
-ReadWriteAccess_t DataDictionaryClearObjectProperties(
-		const uint32_t transmitterID) {
+ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitterID) {
 
 	ReadWriteAccess_t result;
 
@@ -2680,4 +2677,3 @@ ReadWriteAccess_t DataDictionaryClearObjectProperties(
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 	return result;
 }
-

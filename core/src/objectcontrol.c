@@ -148,11 +148,10 @@ static void *objectConnectorThread(void *args);
 static int checkObjectConnections(ObjectConnection objectConnections[], const struct timeval monitorTimeout,
 								  const unsigned int numberOfObjects);
 static int hasRemoteDisconnected(int *sockfd);
-static int handleObjectPropertiesData(const ObjectPropertiesType* properties,
+static int handleObjectPropertiesData(const ObjectPropertiesType * properties,
 									  const DataInjectionMap injectionMaps[],
 									  const ObjectConnection objectConnections[],
-									  const uint32_t transmitterIDs[],
-									  const unsigned int numberOfObjects);
+									  const uint32_t transmitterIDs[], const unsigned int numberOfObjects);
 static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int getObjectIndexFromIP(const in_addr_t ipAddr, const ObjectConnection objectConnections[],
 								unsigned int numberOfObjects);
@@ -602,9 +601,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					UtilReceiveTCPData(MODULE_NAME, &objectConnections[iIndex].commandSocket,
 									   buffer, sizeof (buffer), 0);
 					if (receivedTCPData > 0 && getISOMessageType(buffer, receivedTCPData, 0)
-							== MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO) {
+						== MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO) {
 						// Received OPRO message
 						ObjectPropertiesType properties;
+
 						if (decodeOPROMessage(&properties, buffer, sizeof (buffer), 0) == MESSAGE_OK) {
 							DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
 							if (handleObjectPropertiesData(&properties, dataInjectionMaps,
@@ -1381,28 +1381,25 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
  * \param numberOfObjects Number of objects in scenario
  * \return 0 if successful, -1 otherwise
  */
-int handleObjectPropertiesData(
-		const ObjectPropertiesType* properties,
-		const DataInjectionMap injectionMaps[],
-		const ObjectConnection objectConnections[],
-		const uint32_t transmitterIDs[],
-		const unsigned int numberOfObjects) {
+int handleObjectPropertiesData(const ObjectPropertiesType * properties,
+							   const DataInjectionMap injectionMaps[],
+							   const ObjectConnection objectConnections[],
+							   const uint32_t transmitterIDs[], const unsigned int numberOfObjects) {
 
-	const DataInjectionMap* relevantMap = NULL;
+	const DataInjectionMap *relevantMap = NULL;
 	ForeignObjectPropertiesType propertyMessage;
 	ssize_t messageSize = 0;
 	char transmissionBuffer[1024];
 
 	if (DataDictionarySetObjectProperties(properties->objectID, properties)
-			!= WRITE_OK) {
+		!= WRITE_OK) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed to write object property data to data dictionary");
 		return -1;
 	}
 
 	// Find the map for source of monitor data
 	for (unsigned int i = 0; i < numberOfObjects; ++i) {
-		if (injectionMaps[i].sourceID == properties->objectID
-				&& injectionMaps[i].isActive) {
+		if (injectionMaps[i].sourceID == properties->objectID && injectionMaps[i].isActive) {
 			relevantMap = &injectionMaps[i];
 		}
 	}

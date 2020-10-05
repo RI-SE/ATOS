@@ -3179,7 +3179,7 @@ I32 UtilReceiveTCPData(const C8 * Module, I32 * Sockfd, C8 * Data, I32 Length, U
 	else
 		Result = recv(*Sockfd, Data, Length, MSG_DONTWAIT);
 
-	if (Result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)){
+	if (Result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
 		Result = 0;
 	}
 	// TODO: Change this when bytes thingy has been implemented in logging
