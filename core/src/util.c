@@ -3175,10 +3175,13 @@ I32 UtilReceiveTCPData(const C8 * Module, I32 * Sockfd, C8 * Data, I32 Length, U
 	I32 i, Result;
 
 	if (Length <= 0)
-		Result = recv(*Sockfd, Data, TCP_RX_BUFFER, 0);
+		Result = recv(*Sockfd, Data, TCP_RX_BUFFER, MSG_DONTWAIT);
 	else
-		Result = recv(*Sockfd, Data, Length, 0);
+		Result = recv(*Sockfd, Data, Length, MSG_DONTWAIT);
 
+	if (Result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)){
+		Result = 0;
+	}
 	// TODO: Change this when bytes thingy has been implemented in logging
 	if (Debug == 1 && Result < 0) {
 		printf("[%s] Received TCP data: ", Module);
