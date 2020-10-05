@@ -17,7 +17,7 @@ typedef enum {
 
 int JournalInit(const char* name);
 int JournalRecordData(JournalRecordType type, const char* format, ...);
-int JournalRecordMonitorData(const ObjectMonitorType* data);
+int JournalRecordMonitorData(const ObjectMonitorType* data, const uint32_t objectID);
 
 
 
