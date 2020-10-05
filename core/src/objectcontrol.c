@@ -617,6 +617,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							LogMessage(LOG_LEVEL_ERROR, "Failed to decode OPRO message");
 						}
 					}
+					else if (receivedTCPData > 0) {
+						LogMessage(LOG_LEVEL_WARNING, "Unhandled TCP data received from IP %s",
+								   inet_ntop(AF_INET, &objectConnections->objectCommandAddress,
+											 ipString, sizeof (ipString)));
+					}
 				}
 			}
 
