@@ -143,43 +143,6 @@ int main() {
 		switch (command) {
 		case COMM_INIT:
 			break;
-
-		case COMM_MONR:
-		{
-
-			//Populate the monitorType
-			UtilPopulateMonitorDataStruct(mqRecvData, (size_t) (sizeof (mqRecvData)), &monitorData);
-
-			char dummy[1];
-			int sizeOfVisualizationMessage;
-
-			//Calculate size of incoming buffer
-			sizeOfVisualizationMessage = snprintf(dummy, sizeof (dummy), "%u;%.3f;%.3f;%.3f;%.2f;%.2f;%s;",
-												  TimeGetAsGPSqmsOfWeek(&monitorData.MonrData.timestamp),
-												  monitorData.MonrData.position.xCoord_m,
-												  monitorData.MonrData.position.yCoord_m,
-												  monitorData.MonrData.position.zCoord_m,
-												  monitorData.MonrData.position.heading_rad * 180.0 / M_PI,
-												  monitorData.MonrData.speed.longitudinal_m_s,
-												  objectStateToASCII(monitorData.MonrData.state));
-			sizeOfVisualizationMessage += INET_ADDRSTRLEN;
-			sizeOfVisualizationMessage += 8;	//(;)
-
-			//Allocate memory
-			char *visualizationMessage = malloc(sizeOfVisualizationMessage * sizeof (char));
-
-			//Create visualization message and insert values from the monitor datastruct above
-			vCreateVisualizationMessage(&monitorData, visualizationMessage, sizeOfVisualizationMessage, 0);
-
-			//Send visualization message on the UDP socket
-			UtilSendUDPData((const uint8_t *)"Visualization", &visual_server, &visual_server_addr,
-							visualizationMessage, strlen(visualizationMessage), 0);
-
-			//Free memory used by malloc
-			free(visualizationMessage);
-
-		}
-			break;
 		case COMM_INV:
 			break;
 		case COMM_OBC_STATE:

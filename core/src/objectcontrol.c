@@ -480,13 +480,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						JournalRecordMonitorData(&monitorData.MonrData);
 						// Place struct in buffer
 						memcpy(&buffer, &monitorData, sizeof (monitorData));
-						// Send MONR message as bytes
-						if (iCommSend(COMM_MONR, buffer, sizeof (monitorData)) < 0) {
-							LogMessage(LOG_LEVEL_ERROR,
-									   "Fatal communication fault when sending MONR command - entering error state");
-							vSetState(OBC_STATE_ERROR, GSD);
-							objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
-						}
 					}
 
 					memset(buffer, 0, sizeof (buffer));

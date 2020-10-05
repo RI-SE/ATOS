@@ -97,8 +97,6 @@
 #define PRIO_COMM_ASP 5
 // Server exit message
 #define PRIO_COMM_EXIT 3
-// Monitoring messages
-#define PRIO_COMM_MONR 0
 
 // Configuration parameter strings
 static const char ParameterNameScenarioName[] = "ScenarioName";
@@ -2026,9 +2024,6 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 		break;
 	case COMM_STOP:
 		uiMessagePrio = PRIO_COMM_STOP;
-		break;
-	case COMM_MONR:
-		uiMessagePrio = PRIO_COMM_MONR;
 		break;
 	case COMM_EXIT:
 		uiMessagePrio = PRIO_COMM_EXIT;

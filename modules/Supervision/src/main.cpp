@@ -136,8 +136,6 @@ int main()
             // TODO: check so that OSEM is not null island?
 
 			break;
-        case COMM_MONR:
-            break;
         case COMM_ARM:
 			try {
                 state.set(SupervisionState::VERIFYING_ARM);
