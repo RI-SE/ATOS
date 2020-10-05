@@ -283,6 +283,8 @@ typedef struct {
 	in_addr_t ClientIP;
 	ObjectEnabledType Enabled;
 	ObjectMonitorType MonrData;
+	ObjectPropertiesType properties;
+	bool propertiesReceived;
 	struct timeval lastDataUpdate;
 } ObjectDataType;
 
@@ -554,6 +556,7 @@ typedef enum {
     UNDEFINED, /*!< Undefined result */
     WRITE_OK, /*!< Write successful */
     READ_OK, /*!< Read successful */
+	UNINITIALIZED, /*!< Read successful but data not initialized */
     READ_WRITE_OK, /*!< Combined read/write successful */
     PARAMETER_NOTFOUND, /*!< Read/write not successful */
     OUT_OF_RANGE /*!< Attempted to read out of range */
