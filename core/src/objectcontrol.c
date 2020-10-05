@@ -1433,6 +1433,8 @@ int handleObjectPropertiesData(const ObjectPropertiesType * properties,
 	for (unsigned int i = 0; i < relevantMap->numberOfTargets; ++i) {
 		for (unsigned int j = 0; j < numberOfObjects; j++) {
 			if (transmitterIDs[j] == relevantMap->targetIDs[i]) {
+				LogMessage(LOG_LEVEL_INFO, "Configuring object %u to receive injection data from object %u",
+						   relevantMap->targetIDs[i], relevantMap->sourceID);
 				UtilSendTCPData(MODULE_NAME, transmissionBuffer, messageSize,
 								&objectConnections[j].commandSocket, 0);
 			}
