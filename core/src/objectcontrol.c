@@ -477,7 +477,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 
 					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
-						JournalRecordMonitorData(&monitorData.MonrData);
+						JournalRecordMonitorData(&monitorData.MonrData, monitorData.ClientID);
 						// Place struct in buffer
 						memcpy(&buffer, &monitorData, sizeof (monitorData));
 					}
