@@ -68,7 +68,7 @@ int JournalRecordData(const JournalRecordType type, const char* format, ...) {
 }
 
 
-int JournalRecordMonitorData(const ObjectMonitorType* data, const uint32_t objectID) {
+int JournalRecordMonitorData(const ObjectMonitorType* data, const uint32_t objectID, const char* clientIPstr) {
 	FILE* fp;
 	char errorString[1024];
 	checkDate();
