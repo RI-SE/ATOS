@@ -394,13 +394,14 @@ int printJournalHeaderTo(std::ofstream &ostrm) {
 	ostrm << "------------------------------------------" << std::endl;
 
 	UtilGetObjectDirectoryPath(objectDirectory.data(), objectDirectory.size());
-	trajectoryDirectory.erase(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
+	objectDirectory.erase(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
 							  objectDirectory.end());
 	std::remove(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
 				objectDirectory.end(), '\0');
 	fileDirectory.assign(objectDirectory.begin(), objectDirectory.end());
 
 	if (printFilesTo(fileDirectory, ostrm) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to write object log. Terminatig log generation");
 		return -1;
 	}
 
