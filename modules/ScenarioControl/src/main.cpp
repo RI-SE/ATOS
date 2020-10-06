@@ -168,7 +168,7 @@ int main()
         TimeSetToCurrentSystemTime(&tvTime);
         if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
 			updateObjectCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
-			if (state == RUNNING) {
+			if (state == RUNNING || state == CONNECTED) {
 				updateTriggers(scenario);
 			}
         }
