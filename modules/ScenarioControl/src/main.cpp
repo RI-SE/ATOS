@@ -15,7 +15,7 @@
 #define SCENARIOCONTROL_SHMEM_READ_RATE_HZ 100
 
 void updateObjectCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
-int updateTriggers(Scenario* scenario);
+int updateTriggers(Scenario& scenario);
 
 /************************ Main task ******************************************/
 int main()
@@ -167,9 +167,10 @@ int main()
         }
         TimeSetToCurrentSystemTime(&tvTime);
         if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
-                      updateObjectCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
-                      updateTriggers(&scenario);
-
+			updateObjectCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
+			if (state == RUNNING) {
+				updateTriggers(scenario);
+			}
         }
     }
 
@@ -184,7 +185,7 @@ int main()
  *			with the rate parameter
  * \param Scenario scenario object keeping information about which trigger is linked to which action and the updating and parsing of the same.
  */
-int updateTriggers(Scenario* scenario){
+int updateTriggers(Scenario& scenario){
 
         std::vector<uint32_t> transmitterIDs;
         uint32_t numberOfObjects;
@@ -217,7 +218,7 @@ int updateTriggers(Scenario* scenario){
                 return -1;
             }
             else{
-                scenario->updateTrigger(monitorData);
+				scenario.updateTrigger(monitorData);
 
             }
 
