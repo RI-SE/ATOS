@@ -11,7 +11,7 @@ project(Maestro VERSION 0.5.0)
 set(WITH_SCENARIO_CONTROL ON CACHE BOOL "Enable ScenarioControl module")
 set(WITH_SUPERVISION ON CACHE BOOL "Enable Supervision module")
 set(WITH_VISUALIZATION ON CACHE BOOL "Enable Visualization module")
-set(WITH_OBJECT_MONITORING ON CACHE BOOL "Enable ObjectMonitoring module")
+set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
 
 set(MAESTRO_TEST_DIR ".maestro" CACHE STRING "Directory where test data is to be stored")
 
