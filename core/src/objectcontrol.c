@@ -476,10 +476,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						// TODO: handle the error
 					}
 
+					// Log the data
 					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
-						JournalRecordMonitorData(&monitorData.MonrData);
-						// Place struct in buffer
-						memcpy(&buffer, &monitorData, sizeof (monitorData));
+						JournalRecordMonitorData(&monitorData);
 					}
 
 					memset(buffer, 0, sizeof (buffer));
@@ -591,8 +590,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				if (objectEnabledStatus == OBJECT_ENABLED) {
 					memset(buffer, 0, sizeof (buffer));
-					receivedTCPData = UtilReceiveTCPData(MODULE_NAME, &objectConnections[iIndex].commandSocket,
-														 buffer, sizeof (buffer), 0);
+					receivedTCPData =
+						UtilReceiveTCPData(MODULE_NAME, &objectConnections[iIndex].commandSocket, buffer,
+										   sizeof (buffer), 0);
 
 					if (receivedTCPData > 0 && getISOMessageType(buffer, receivedTCPData, 0)
 						== MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO) {
@@ -2071,8 +2071,9 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 		LogMessage(LOG_LEVEL_INFO, "Loaded object with ID %u, IP %s and trajectory file <%s>",
 				   objectIDs[*nbr_objects], inet_ntop(AF_INET,
-													  &objectConnections[*nbr_objects].objectCommandAddress.
-													  sin_addr, objectSetting, sizeof (objectSetting)),
+													  &objectConnections[*nbr_objects].
+													  objectCommandAddress.sin_addr, objectSetting,
+													  sizeof (objectSetting)),
 				   object_traj_file[*nbr_objects]);
 		++(*nbr_objects);
 	}
