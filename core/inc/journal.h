@@ -3,7 +3,7 @@
 
 #define JOURNAL_FILE_ENDING ".jnl"
 
-#include "positioning.h"
+#include "util.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,7 +17,7 @@ typedef enum {
 
 int JournalInit(const char* name);
 int JournalRecordData(JournalRecordType type, const char* format, ...);
-int JournalRecordMonitorData(const ObjectMonitorType* data);
+int JournalRecordMonitorData(const ObjectDataType* data);
 
 
 

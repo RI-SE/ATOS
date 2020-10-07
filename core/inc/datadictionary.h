@@ -154,10 +154,14 @@ ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitter
 ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmitterID, ObjectEnabledType *enabledStatus);
 ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const in_addr_t ClientIP, ObjectEnabledType *enabledStatus);
 
-ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t TransmitterID, ObjectMonitorType * monitorData);
+ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t transmitterID, ObjectMonitorType * monitorData);
 ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterID, const ObjectMonitorType * monitorData, const struct timeval * receiveTime);
 ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmitterID, struct timeval * lastDataUpdate);
 ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmitterID, const struct timeval * lastDataUpdate);
+
+ReadWriteAccess_t DataDictionarySetObjectProperties(const uint32_t transmitterID, const ObjectPropertiesType* objectProperties);
+ReadWriteAccess_t DataDictionaryGetObjectProperties(const uint32_t transmitterID, ObjectPropertiesType* objectProperties);
+ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitterID);
 
 #ifdef __cplusplus
 }

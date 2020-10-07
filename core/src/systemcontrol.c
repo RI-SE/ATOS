@@ -607,10 +607,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				// TODO: React more?
 			}
 			break;
-		case COMM_MONR:
-			// Ignore MONR messages over MQ to silence unhandled message warning
-			// TODO: delete
-			break;
 		case COMM_OBC_STATE:
 			break;
 		case COMM_INV:

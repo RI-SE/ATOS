@@ -148,9 +148,7 @@ int main()
                 state = RUNNING;
             }
             else LogMessage(LOG_LEVEL_ERROR, "Received unexpected START command (current state: %u)",static_cast<unsigned char>(state));
-            break;
-        case COMM_MONR:
-        break;
+			break;
         case COMM_DISCONNECT:
             LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
             state = UNINITIALIZED;
