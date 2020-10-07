@@ -3,7 +3,7 @@
 
 #define JOURNAL_FILE_ENDING ".jnl"
 
-#include "positioning.h"
+#include "util.h"
 
 #ifdef __cplusplus
 extern "C" {
