@@ -401,7 +401,7 @@ int printJournalHeaderTo(std::ofstream &ostrm) {
 	fileDirectory.assign(objectDirectory.begin(), objectDirectory.end());
 
 	if (printFilesTo(fileDirectory, ostrm) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to write object log. Terminating log generation");
+		LogMessage(LOG_LEVEL_ERROR, "Unable to print object files to log - terminating log generation");
 		return -1;
 	}
 
@@ -417,6 +417,7 @@ int printJournalHeaderTo(std::ofstream &ostrm) {
 	fileDirectory.assign(trajectoryDirectory.begin(), trajectoryDirectory.end());
 
 	if (printFilesTo(fileDirectory, ostrm) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to print trajectory files to log - terminating log generation");
 		return -1;
 	}
 
@@ -432,6 +433,7 @@ int printJournalHeaderTo(std::ofstream &ostrm) {
 	fileDirectory.assign(configurationDirectory.begin(), configurationDirectory.end());
 
 	if (printFilesTo(fileDirectory, ostrm) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to print configuration files to log - terminating log generation");
 		return -1;
 	}
 

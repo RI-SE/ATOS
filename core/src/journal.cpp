@@ -68,16 +68,18 @@ int JournalRecordData(const JournalRecordType type, const char* format, ...) {
 }
 
 
-int JournalRecordMonitorData(const ObjectMonitorType* data, const uint32_t objectID, const char* clientIPstr) {
+int JournalRecordMonitorData(const ObjectDataType* objectData) {
 	FILE* fp;
 	char errorString[1024];
+	char ipString[INET_ADDRSTRLEN];
+	const ObjectMonitorType* data = &objectData->MonrData;
 	checkDate();
 	fp = beginJournalEntry();
 	if (fp != nullptr) {
 		data->isTimestampValid ? fprintf(fp, "%.6f" DELIMITER, data->timestamp.tv_sec + data->timestamp.tv_usec / 1000000.0)
 							   : fprintf(fp, "NaN" DELIMITER);
-		fprintf(fp, "%u" DELIMITER, objectID);
-		fprintf(fp, "%s" DELIMITER, clientIPstr);
+		fprintf(fp, "%u" DELIMITER, objectData->ClientID);
+		fprintf(fp, "%s" DELIMITER, inet_ntop(AF_INET, &objectData->ClientIP, ipString, sizeof (ipString)));
 		data->position.isPositionValid	? fprintf(fp, "%.3f" DELIMITER "%.3f" DELIMITER "%.3f" DELIMITER,
 												 data->position.xCoord_m, data->position.yCoord_m, data->position.zCoord_m)
 										: fprintf(fp, "NaN" DELIMITER "NaN" DELIMITER "NaN" DELIMITER);
