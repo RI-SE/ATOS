@@ -12,7 +12,7 @@
 #include "journal.h"
 
 #define MODULE_NAME "ScenarioControl"
-#define SCENARIOCONTROL_SHMEM_READ_RATE_HZ 100
+#define SHMEM_READ_RATE_HZ 100
 
 void updateObjectCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
 int updateTriggers(Scenario& scenario);
@@ -144,8 +144,13 @@ int main()
 			break;
         case COMM_STRT:
             if (state == CONNECTED)
-            {
+			{
                 state = RUNNING;
+				// Update the triggers immediately on transition
+				// to ensure they are always in a valid state when
+				// they are checked for the first time
+				updateObjectCheckTimer(&nextSHMEMreadTime, SHMEM_READ_RATE_HZ);
+				updateTriggers(scenario);
             }
             else LogMessage(LOG_LEVEL_ERROR, "Received unexpected START command (current state: %u)",static_cast<unsigned char>(state));
 			break;
@@ -167,8 +172,8 @@ int main()
         }
         TimeSetToCurrentSystemTime(&tvTime);
         if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
-			updateObjectCheckTimer(&nextSHMEMreadTime, SCENARIOCONTROL_SHMEM_READ_RATE_HZ);
-			if (state == RUNNING || state == CONNECTED) {
+			updateObjectCheckTimer(&nextSHMEMreadTime, SHMEM_READ_RATE_HZ);
+			if (state == RUNNING) {
 				updateTriggers(scenario);
 			}
         }
@@ -240,8 +245,8 @@ void updateObjectCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMR
     struct timeval SHMEMTimeInterval, timeDiff, currentTime;
 
     SHMEMReadRate_Hz = SHMEMReadRate_Hz == 0 ? 1 : SHMEMReadRate_Hz;	// Minimum frequency 1 Hz
-    SHMEMTimeInterval.tv_sec = (long)(1.0 / SHMEMReadRate_Hz);
-    SHMEMTimeInterval.tv_usec = (long)((1.0 / SHMEMReadRate_Hz - SHMEMTimeInterval.tv_sec) * 1000000.0);
+	SHMEMTimeInterval.tv_sec = static_cast<long>(1.0 / SHMEMReadRate_Hz);
+	SHMEMTimeInterval.tv_usec = static_cast<long>((1.0 / SHMEMReadRate_Hz - SHMEMTimeInterval.tv_sec) * 1000000.0);
 
     // If there is a large difference between the current time and the time at which time at which shared memory was updated, update based
     // on current time instead of last send time to not spam messages until caught up
