@@ -590,8 +590,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				if (objectEnabledStatus == OBJECT_ENABLED) {
 					memset(buffer, 0, sizeof (buffer));
-					UtilReceiveTCPData(MODULE_NAME, &objectConnections[iIndex].commandSocket,
-									   buffer, sizeof (buffer), 0);
+					receivedTCPData = UtilReceiveTCPData(MODULE_NAME, &objectConnections[iIndex].commandSocket,
+														 buffer, sizeof (buffer), 0);
+
 					if (receivedTCPData > 0 && getISOMessageType(buffer, receivedTCPData, 0)
 						== MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO) {
 						// Received OPRO message
