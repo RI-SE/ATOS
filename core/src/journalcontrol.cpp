@@ -401,7 +401,7 @@ int printJournalHeaderTo(std::ofstream &ostrm) {
 	fileDirectory.assign(objectDirectory.begin(), objectDirectory.end());
 
 	if (printFilesTo(fileDirectory, ostrm) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to write object log. Terminatig log generation");
+		LogMessage(LOG_LEVEL_ERROR, "Unable to write object log. Terminating log generation");
 		return -1;
 	}
 
