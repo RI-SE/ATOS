@@ -148,7 +148,10 @@ static void *objectConnectorThread(void *args);
 static int checkObjectConnections(ObjectConnection objectConnections[], const struct timeval monitorTimeout,
 								  const unsigned int numberOfObjects);
 static int hasRemoteDisconnected(int *sockfd);
-
+static int handleObjectPropertiesData(const ObjectPropertiesType * properties,
+									  const DataInjectionMap injectionMaps[],
+									  const ObjectConnection objectConnections[],
+									  const uint32_t transmitterIDs[], const unsigned int numberOfObjects);
 static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int getObjectIndexFromIP(const in_addr_t ipAddr, const ObjectConnection objectConnections[],
 								unsigned int numberOfObjects);
@@ -362,6 +365,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			|| vGetState(GSD) == OBC_STATE_ARMED || vGetState(GSD) == OBC_STATE_REMOTECTRL) {
 			char buffer[RECV_MESSAGE_BUFFER];
 			size_t receivedMONRData = 0;
+			size_t receivedTCPData = 0;
 
 			CurrentTimeU32 =
 				((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime)) << 2) +
@@ -442,9 +446,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 						timersub(&monitorData.lastDataUpdate, &monitorData.MonrData.timestamp,
 								 &monitorDataAge);
-						if (monitorDataAge.tv_sec || monitorDataAge.tv_usec > MAX_NETWORK_DELAY_USEC) {
-							LogMessage(LOG_LEVEL_WARNING, "Network delay from object %u exceeds 100 ms",
-									   object_transmitter_ids[iIndex]);
+						if (monitorDataAge.tv_sec || labs(monitorDataAge.tv_usec) > MAX_NETWORK_DELAY_USEC) {
+							LogMessage(LOG_LEVEL_WARNING,
+									   "Network delay from object %u exceeds 100 ms (%ld ms delay)",
+									   object_transmitter_ids[iIndex], TimeGetAsUTCms(&monitorDataAge));
 						}
 					}
 
@@ -472,17 +477,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						// TODO: handle the error
 					}
 
+					// Log the data
 					if (ObjectcontrolExecutionMode == OBJECT_CONTROL_CONTROL_MODE) {
-						JournalRecordMonitorData(&monitorData.MonrData);
-						// Place struct in buffer
-						memcpy(&buffer, &monitorData, sizeof (monitorData));
-						// Send MONR message as bytes
-						if (iCommSend(COMM_MONR, buffer, sizeof (monitorData)) < 0) {
-							LogMessage(LOG_LEVEL_ERROR,
-									   "Fatal communication fault when sending MONR command - entering error state");
-							vSetState(OBC_STATE_ERROR, GSD);
-							objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
-						}
+						JournalRecordMonitorData(&monitorData);
 					}
 
 					memset(buffer, 0, sizeof (buffer));
@@ -588,8 +585,39 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					sendDataInjectionMessages(&monitorData, dataInjectionMaps, objectConnections,
 											  object_transmitter_ids, nbr_objects);
 				}
-				else if (receivedMONRData > 0)
+				else if (receivedMONRData > 0) {
 					LogMessage(LOG_LEVEL_WARNING, "Received unhandled message on monitoring socket");
+				}
+
+				if (objectEnabledStatus == OBJECT_ENABLED) {
+					memset(buffer, 0, sizeof (buffer));
+					receivedTCPData =
+						UtilReceiveTCPData(MODULE_NAME, &objectConnections[iIndex].commandSocket, buffer,
+										   sizeof (buffer), 0);
+
+					if (receivedTCPData > 0 && getISOMessageType(buffer, receivedTCPData, 0)
+						== MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO) {
+						// Received OPRO message
+						ObjectPropertiesType properties;
+
+						if (decodeOPROMessage(&properties, buffer, sizeof (buffer), 0) == MESSAGE_OK) {
+							DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
+							if (handleObjectPropertiesData(&properties, dataInjectionMaps,
+														   objectConnections, object_transmitter_ids,
+														   nbr_objects) < 0) {
+								LogMessage(LOG_LEVEL_ERROR, "Error handling object property data");
+							}
+						}
+						else {
+							LogMessage(LOG_LEVEL_ERROR, "Failed to decode OPRO message");
+						}
+					}
+					else if (receivedTCPData > 0) {
+						LogMessage(LOG_LEVEL_WARNING, "Unhandled TCP data received from IP %s",
+								   inet_ntop(AF_INET, &objectConnections->objectCommandAddress,
+											 ipString, sizeof (ipString)));
+					}
+				}
 			}
 
 		}
@@ -831,6 +859,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						objectData.ClientID = object_transmitter_ids[iIndex];
 						objectData.lastDataUpdate.tv_sec = 0;
 						objectData.lastDataUpdate.tv_usec = 0;
+						objectData.propertiesReceived = 0;
 						if (DataDictionarySetObjectData(&objectData) != WRITE_OK) {
 							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
 							initSuccessful = false;
@@ -1336,6 +1365,87 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 
 
 /*!
+ * \brief handleObjectPropertiesData Retransmits object properties data
+ *			according to the configured injection maps. Assumes all
+ *			objects are connected.
+ * \param properties Properties of the object which are to be shared
+ * \param injectionMaps Maps showing which objects' data should be
+ *			retransmitted to which objects
+ * \param objectConnections Object connection structs
+ * \param transmitterIDs Object transmitter ID arrays
+ * \param numberOfObjects Number of objects in scenario
+ * \return 0 if successful, -1 otherwise
+ */
+int handleObjectPropertiesData(const ObjectPropertiesType * properties,
+							   const DataInjectionMap injectionMaps[],
+							   const ObjectConnection objectConnections[],
+							   const uint32_t transmitterIDs[], const unsigned int numberOfObjects) {
+
+	const DataInjectionMap *relevantMap = NULL;
+	ForeignObjectPropertiesType propertyMessage;
+	ssize_t messageSize = 0;
+	char transmissionBuffer[1024];
+
+	if (DataDictionarySetObjectProperties(properties->objectID, properties)
+		!= WRITE_OK) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to write object property data to data dictionary");
+		return -1;
+	}
+
+	// Find the map for source of monitor data
+	for (unsigned int i = 0; i < numberOfObjects; ++i) {
+		if (injectionMaps[i].sourceID == properties->objectID && injectionMaps[i].isActive) {
+			relevantMap = &injectionMaps[i];
+		}
+	}
+
+	if (relevantMap == NULL) {
+		return 0;
+	}
+	if (relevantMap->numberOfTargets == 0) {
+		return 0;
+	}
+
+	// Create the message
+	propertyMessage.foreignTransmitterID = properties->objectID;
+	propertyMessage.mass_kg = properties->mass_kg;
+	propertyMessage.actorType = properties->actorType;
+	propertyMessage.objectType = properties->objectType;
+	propertyMessage.operationMode = properties->operationMode;
+	propertyMessage.objectXDimension_m = properties->objectXDimension_m;
+	propertyMessage.objectYDimension_m = properties->objectYDimension_m;
+	propertyMessage.objectZDimension_m = properties->objectZDimension_m;
+
+	propertyMessage.isMassValid = properties->isMassValid;
+	propertyMessage.isObjectXDimensionValid = properties->isObjectXDimensionValid;
+	propertyMessage.isObjectYDimensionValid = properties->isObjectYDimensionValid;
+	propertyMessage.isObjectZDimensionValid = properties->isObjectZDimensionValid;
+	propertyMessage.isObjectXDisplacementValid = properties->isObjectXDisplacementValid;
+	propertyMessage.isObjectYDisplacementValid = properties->isObjectYDisplacementValid;
+	propertyMessage.isObjectZDisplacementValid = properties->isObjectZDisplacementValid;
+
+	messageSize = encodeFOPRMessage(&propertyMessage, transmissionBuffer, sizeof (transmissionBuffer), 0);
+	if (messageSize == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to encode FOPR message");
+		return -1;
+	}
+
+
+	// Send message to all configured receivers
+	for (unsigned int i = 0; i < relevantMap->numberOfTargets; ++i) {
+		for (unsigned int j = 0; j < numberOfObjects; j++) {
+			if (transmitterIDs[j] == relevantMap->targetIDs[i]) {
+				LogMessage(LOG_LEVEL_INFO, "Configuring object %u to receive injection data from object %u",
+						   relevantMap->targetIDs[i], relevantMap->sourceID);
+				UtilSendTCPData(MODULE_NAME, transmissionBuffer, messageSize,
+								&objectConnections[j].commandSocket, 0);
+			}
+		}
+	}
+	return 0;
+}
+
+/*!
  * \brief resetCommandActionList Resets the list back to unset values: 0 for the IP and ID, and
  *			::ACTION_PARAMETER_UNAVAILABLE for the command.
  * \param commandActions List of command actions
@@ -1721,7 +1831,7 @@ void disconnectObject(ObjectConnection * objectConnection) {
 	}
 }
 
-static int hasRemoteDisconnected(int *sockfd) {
+int hasRemoteDisconnected(int *sockfd) {
 	char dummy;
 	ssize_t x = recv(*sockfd, &dummy, 1, MSG_PEEK);
 
@@ -1742,7 +1852,6 @@ static int hasRemoteDisconnected(int *sockfd) {
 
 	// Something has been received on socket
 	if (x > 0) {
-		LogMessage(LOG_LEVEL_INFO, "Received unexpected communication from object on command channel");
 		return 0;
 	}
 
@@ -1963,8 +2072,9 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 		LogMessage(LOG_LEVEL_INFO, "Loaded object with ID %u, IP %s and trajectory file <%s>",
 				   objectIDs[*nbr_objects], inet_ntop(AF_INET,
-													  &objectConnections[*nbr_objects].objectCommandAddress.
-													  sin_addr, objectSetting, sizeof (objectSetting)),
+													  &objectConnections[*nbr_objects].
+													  objectCommandAddress.sin_addr, objectSetting,
+													  sizeof (objectSetting)),
 				   object_traj_file[*nbr_objects]);
 		++(*nbr_objects);
 	}

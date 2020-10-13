@@ -97,8 +97,6 @@
 #define PRIO_COMM_ASP 5
 // Server exit message
 #define PRIO_COMM_EXIT 3
-// Monitoring messages
-#define PRIO_COMM_MONR 0
 
 // Configuration parameter strings
 static const char ParameterNameScenarioName[] = "ScenarioName";
@@ -2027,9 +2025,6 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_STOP:
 		uiMessagePrio = PRIO_COMM_STOP;
 		break;
-	case COMM_MONR:
-		uiMessagePrio = PRIO_COMM_MONR;
-		break;
 	case COMM_EXIT:
 		uiMessagePrio = PRIO_COMM_EXIT;
 		break;
@@ -3175,10 +3170,13 @@ I32 UtilReceiveTCPData(const C8 * Module, I32 * Sockfd, C8 * Data, I32 Length, U
 	I32 i, Result;
 
 	if (Length <= 0)
-		Result = recv(*Sockfd, Data, TCP_RX_BUFFER, 0);
+		Result = recv(*Sockfd, Data, TCP_RX_BUFFER, MSG_DONTWAIT);
 	else
-		Result = recv(*Sockfd, Data, Length, 0);
+		Result = recv(*Sockfd, Data, Length, MSG_DONTWAIT);
 
+	if (Result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+		Result = 0;
+	}
 	// TODO: Change this when bytes thingy has been implemented in logging
 	if (Debug == 1 && Result < 0) {
 		printf("[%s] Received TCP data: ", Module);

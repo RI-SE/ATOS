@@ -2556,3 +2556,124 @@ ReadWriteAccess_t DataDictionaryModifyTransmitterIDByIP(const in_addr_t ipKey,
 
 	return result;
 }
+
+ReadWriteAccess_t DataDictionarySetObjectProperties(const uint32_t transmitterID,
+													const ObjectPropertiesType * objectProperties) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			objectDataMemory[i].propertiesReceived = 1;
+			objectDataMemory[i].properties = *objectProperties;
+			result = WRITE_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
+
+
+ReadWriteAccess_t DataDictionaryGetObjectProperties(const uint32_t transmitterID,
+													ObjectPropertiesType * objectProperties) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	memset(objectProperties, 0, sizeof (*objectProperties));
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			if (objectDataMemory[i].propertiesReceived) {
+				*objectProperties = objectDataMemory[i].properties;
+				result = READ_OK;
+			}
+			else {
+				result = UNINITIALIZED;
+			}
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
+
+ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitterID) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			memset(&objectDataMemory[i].properties, 0, sizeof (objectDataMemory[i].properties));
+			objectDataMemory[i].propertiesReceived = 0;
+			result = WRITE_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
