@@ -46,7 +46,7 @@ int main(int argc, char const* argv[]){
 
 	std::vector<char> TCPBuffer;
 	std::vector<char> UDPBuffer(MONR_BUFFER_LENGTH);
-	std::vector<uint32_t> transmitterids(MONR_BUFFER_LENGTH);
+    std::vector<uint32_t> transmitterIDs(MONR_BUFFER_LENGTH);
 	std::vector<char> chekingTCPconn(MONR_BUFFER_LENGTH);
 	std::vector<char> chekingUDPconn(MONR_BUFFER_LENGTH);
 	std::vector<char> trajPath (PATH_MAX, '\0');
@@ -184,7 +184,7 @@ int main(int argc, char const* argv[]){
 
 		while(bytesread >= 0 && OnTCP > 0){
 			DataDictionaryGetNumberOfObjects(&nOBJ);
-			DataDictionaryGetObjectTransmitterIDs(transmitterids.data(),transmitterids.size());
+            DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(),transmitterIDs.size());
 			
 			for (int i = 0; i<nOBJ+1; i++ ){
 				if (iCommRecv(&command,mqRecvData, MQ_MSG_SIZE, nullptr) < 0)
@@ -237,8 +237,8 @@ int main(int argc, char const* argv[]){
 			bytesread = TCPServerVisualizer.receiveTCP(chekingTCPconn, 0);
 			bytesent = UDPServerVisualizer.receiveUDP(chekingUDPconn);
 			
-			transmitterids.resize(nOBJ);
-			for (auto &transmitterID : transmitterids) {
+            transmitterIDs.resize(nOBJ);
+            for (auto &transmitterID : transmitterIDs) {
 			
 				if (transmitterID <= 0){
 					break;
