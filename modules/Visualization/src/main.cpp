@@ -250,7 +250,19 @@ int main(int argc, char const* argv[]){
                     isoTransmitterID = (uint8_t) transmitterID;
                     setTransmitterID(isoTransmitterID); // TO:Do voi message we now cheat wit transmitter id
                     bytesSent = UDPServerVisualizer.receiveUDP(chekingUDPconn);
-                    long retval = encodeMONRMessage(&monitorData.timestamp,monitorData.position,monitorData.speed,monitorData.acceleration,monitorData.drivingDirection,monitorData.state, monitorData.armReadiness, objectErrorState,UDPBuffer.data(), UDPBuffer.size(),debug);
+
+                    PeerObjectInjectionType podi;
+                    podi.speed = monitorData.speed;
+                    podi.state = monitorData.state;
+                    podi.position = monitorData.position;
+                    //podi.roll_rad =
+                    //podi.pitch_rad =
+                    //podi.isRollValid =
+                    //podi.isPitchValid =
+                    podi.foreignTransmitterID = transmitterID;
+                    podi.dataTimestamp = monitorData.timestamp;
+
+                    long retval = encodePODIMessage(&podi, UDPBuffer.data(), UDPBuffer.size(), debug);
                     UDPBuffer.resize(static_cast<unsigned long>(retval));
                     // Cheking so we still connected to visualizer
 
