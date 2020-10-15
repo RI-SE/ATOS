@@ -98,7 +98,7 @@ int main(int argc, char const* argv[]){
         exit(EXIT_FAILURE);
     }
 
-    std::cout << "Awaiting TCP connection..." << std::endl;
+    LogMessage(LOG_LEVEL_INFO, "Awaiting TCP connection...");
     while(!quit){
 
         TCPHandler TCPServerVisualizer(TCP_VISUALIZATION_SERVER_PORT , "", "Server", 1, O_NONBLOCK);
@@ -133,7 +133,7 @@ int main(int argc, char const* argv[]){
 
         }
 
-        std::cout<<"Connection recived"<<std::endl;
+         LogMessage(LOG_LEVEL_INFO, "Connection recived");
 
         /* So what do I need for the new system here? */
 
