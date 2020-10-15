@@ -47,8 +47,8 @@ int main(int argc, char const* argv[]){
     std::vector<char> TCPBuffer;
     std::vector<char> UDPBuffer(MONR_BUFFER_LENGTH);
     std::vector<uint32_t> transmitterIDs(MONR_BUFFER_LENGTH);
-    std::vector<char> chekingTCPconn(MONR_BUFFER_LENGTH);
-    std::vector<char> chekingUDPconn(MONR_BUFFER_LENGTH);
+    std::vector<char> checkTCPconnectionBuffer(MONR_BUFFER_LENGTH);
+    std::vector<char> checkUDPconnectionBuffer(MONR_BUFFER_LENGTH);
     std::vector<char> trajPath (PATH_MAX, '\0');
 
 
@@ -233,8 +233,8 @@ int main(int argc, char const* argv[]){
                 }
             }
 
-            bytesRead = TCPServerVisualizer.receiveTCP(chekingTCPconn, 0);
-            bytesSent = UDPServerVisualizer.receiveUDP(chekingUDPconn);
+            bytesRead = TCPServerVisualizer.receiveTCP(checkTCPconnectionBuffer, 0);
+            bytesSent = UDPServerVisualizer.receiveUDP(checkUDPconnectionBuffer);
 
             transmitterIDs.resize(nOBJ);
             for (auto &transmitterID : transmitterIDs) {
@@ -249,7 +249,7 @@ int main(int argc, char const* argv[]){
                     // get transmitterid and encode monr to iso.
                     isoTransmitterID = (uint8_t) transmitterID;
                     setTransmitterID(isoTransmitterID); // TO:Do voi message we now cheat wit transmitter id
-                    bytesSent = UDPServerVisualizer.receiveUDP(chekingUDPconn);
+                    bytesSent = UDPServerVisualizer.receiveUDP(checkUDPconnectionBuffer);
 
                     PeerObjectInjectionType podi;
                     podi.speed = monitorData.speed;
@@ -266,7 +266,7 @@ int main(int argc, char const* argv[]){
                     UDPBuffer.resize(static_cast<unsigned long>(retval));
                     // Cheking so we still connected to visualizer
 
-                    bytesRead = TCPServerVisualizer.receiveTCP(chekingTCPconn, 0);
+                    bytesRead = TCPServerVisualizer.receiveTCP(checkTCPconnectionBuffer, 0);
                     if (bytesRead < 0) {
                          LogMessage(LOG_LEVEL_ERROR, "Error when reading from Maestro TCP socket");
                         break;
