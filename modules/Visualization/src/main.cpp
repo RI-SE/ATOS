@@ -137,7 +137,7 @@ int main(int argc, char const* argv[]){
 
         /* So what do I need for the new system here? */
 
-        /* fpro eller opro fpro skall jag tydligen skicka
+        /* fpro or opro fpro should be sent here
             traj skall jag också skicka.
 
         */
