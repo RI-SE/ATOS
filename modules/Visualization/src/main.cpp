@@ -138,7 +138,7 @@ int main(int argc, char const* argv[]){
         /* So what do I need for the new system here? */
 
         /* fpro or opro fpro should be sent here
-            traj skall jag också skicka.
+            traj should also be sent.
 
         */
 
@@ -256,7 +256,7 @@ int main(int argc, char const* argv[]){
 
                     bytesRead = TCPServerVisualizer.receiveTCP(chekingTCPconn, 0);
                     if (bytesRead < 0) {
-                        std::cout<<"Error when reading from Maestro TCP socket"<<std::endl;
+                         LogMessage(LOG_LEVEL_ERROR, "Error when reading from Maestro TCP socket");
                         break;
 
                     }
@@ -270,8 +270,8 @@ int main(int argc, char const* argv[]){
 
 
         }
-        std::cout <<"Disconnected"<<std::endl;
-        std::cout << "Awaiting TCP connection..." << std::endl;
+        LogMessage(LOG_LEVEL_INFO, "Disconnected");
+        LogMessage(LOG_LEVEL_INFO, "Awaiting TCP connection...");
         OnTCP = 0;
         bytesRead = 1;
         TCPServerVisualizer.TCPHandlerclose();
