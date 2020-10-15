@@ -37,7 +37,7 @@ static bool quit = false;
   -- Private functions
   ------------------------------------------------------------*/
 static void signalHandler(int signo);
-int parseTraj(std::string line, std::vector<char>& TCPbuffer);
+static int parseTraj(std::string line, std::vector<char>& TCPbuffer);
 /*------------------------------------------------------------
   -- Main task
   ------------------------------------------------------------*/
