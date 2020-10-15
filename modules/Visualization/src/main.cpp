@@ -18,10 +18,10 @@
   -- Defines
   ------------------------------------------------------------*/
 #define MODULE_NAME "Visualization"
-#define RECV_MESSAGE_BUFFER 1024
+#define RECV_MESSAGE_BUFFER_LENGTH 1024
 #define MONR_BUFFER_LENGTH 1024
-#define TCP_VISUAL_SERVER_PORT 53250
-#define UDP_VISUAL_SERVER_PORT 53251 
+#define TCP_VISUALIZATION_SERVER_PORT 53250
+#define UDP_VISUALIZATION_SERVER_PORT 53251 
 #define TRAJECTORY_TX_BUFFER_SIZE 2048
 /*------------------------------------------------------------
   -- Static variables
@@ -403,4 +403,3 @@ int parseTraj(std::string line,std::vector<char>& buffer)
 
 
 }
-
