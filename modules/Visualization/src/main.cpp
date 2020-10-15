@@ -102,8 +102,8 @@ int main(int argc, char const* argv[]){
 	std::cout << "Awaiting TCP connection..." << std::endl;
 	while(!quit){
 		
-		TCPHandler TCPServerVisualizer(TCP_VISUAL_SERVER_PORT, "", "Server", 1, O_NONBLOCK);
-		UDPHandler UDPServerVisualizer (UDP_VISUAL_SERVER_PORT,"",0,"Server");
+        TCPHandler TCPServerVisualizer(TCP_VISUALIZATION_SERVER_PORT , "", "Server", 1, O_NONBLOCK);
+        UDPHandler UDPServerVisualizer (UDP_VISUALIZATION_SERVER_PORT,"",0,"Server");
 		OnTCP = TCPServerVisualizer.getConnectionOn();
 		
 		while(OnTCP <= 0)
