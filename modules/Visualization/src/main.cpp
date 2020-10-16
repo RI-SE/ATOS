@@ -4,7 +4,6 @@
 #include <sstream>
 #include <string>
 #include <iostream>
-#include <experimental/filesystem>
 
 #include "logging.h"
 #include "util.h"
@@ -13,6 +12,14 @@
 
 #include "udphandler.hpp"
 #include "tcphandler.hpp"
+
+#if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
+#include <filesystem>
+namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 
 /*------------------------------------------------------------
   -- Defines
@@ -249,7 +256,7 @@ int transmitTrajectories(TCPHandler &tcpPort) {
 
 	UtilGetTrajDirectoryPath(trajPath.data(), trajPath.size());
 
-	for (const auto &entry : std::experimental::filesystem::directory_iterator(trajPath.data())) {
+	for (const auto &entry : fs::directory_iterator(trajPath.data())) {
 		/* TO DO:
 		should have a checker
 		here to see that all the objects are connected
