@@ -252,18 +252,20 @@ int main(int argc, char const* argv[]){
 					setTransmitterID(isoTransmitterID); // TO:Do voi message we now cheat wit transmitter id
 					bytesent = UDPServerVisualizer.receiveUDP(chekingUDPconn);
 					long retval = encodeMONRMessage(&monitorData.timestamp,monitorData.position,monitorData.speed,monitorData.acceleration,monitorData.drivingDirection,monitorData.state, monitorData.armReadiness, objectErrorState,UDPBuffer.data(), UDPBuffer.size(),debug);
-					UDPBuffer.resize(static_cast<unsigned long>(retval));
-					// Cheking so we still connected to visualizer
+					if (retval >= 0) {
+						UDPBuffer.resize(static_cast<unsigned long>(retval));
+						// Cheking so we still connected to visualizer
 
-					bytesread = TCPServerVisualizer.receiveTCP(chekingTCPconn, 0);
-					if (bytesread < 0) {
-						std::cout<<"Error when reading from Maestro TCP socket"<<std::endl;
-						break;
+						bytesread = TCPServerVisualizer.receiveTCP(chekingTCPconn, 0);
+						if (bytesread < 0) {
+							std::cout<<"Error when reading from Maestro TCP socket"<<std::endl;
+							break;
 
-           			}
-					//n sending message with udp.
-					
-					bytesent = UDPServerVisualizer.sendUDP(UDPBuffer);	
+						}
+						//n sending message with udp.
+						
+						bytesent = UDPServerVisualizer.sendUDP(UDPBuffer);
+					}
 				}
 				
 			}
