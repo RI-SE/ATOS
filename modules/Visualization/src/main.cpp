@@ -50,7 +50,7 @@ int main(int argc, char const* argv[]) {
 	COMMAND command = COMM_INV;
 
 	char mqRecvData[MBUS_MAX_DATALEN];
-    const struct timespec sleepTimePeriod = {0,10000000};
+	const struct timespec sleepTimePeriod = {0,10000000};
 
 	struct timespec remTime;
 
@@ -60,25 +60,25 @@ int main(int argc, char const* argv[]) {
 
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
 
-    // Set up signal handlers
-    if (signal(SIGINT, signalHandler) == SIG_ERR)
-        util_error("Unable to initialize signal handler");
+	// Set up signal handlers
+	if (signal(SIGINT, signalHandler) == SIG_ERR)
+		util_error("Unable to initialize signal handler");
 
-    // Initialize message bus connection
-    while(iCommInit() && !quit) {
-        nanosleep(&sleepTimePeriod,&remTime);
-    }
+	// Initialize message bus connection
+	while(iCommInit() && !quit) {
+		nanosleep(&sleepTimePeriod,&remTime);
+	}
 
-    // Notify service handler that startup was successful
-    sd_notify(0, "READY=1");
+	// Notify service handler that startup was successful
+	sd_notify(0, "READY=1");
 
-    ReadWriteAccess_t retval = DataDictionaryInitObjectData();
+	ReadWriteAccess_t retval = DataDictionaryInitObjectData();
 
 	if (retval != READ_OK) {
-        exit(EXIT_FAILURE);
-    }
+		exit(EXIT_FAILURE);
+	}
 
-    while(!quit){
+	while(!quit){
 		TCPHandler visualizerTCPPort(TCP_VISUALIZATION_SERVER_PORT , "", "Server", 1, O_NONBLOCK);
 		UDPHandler visualizerUDPPort(UDP_VISUALIZATION_SERVER_PORT, "", 0, "Server");
 
@@ -91,16 +91,16 @@ int main(int argc, char const* argv[]) {
 		}
 
 
-        /* So what do I need for the new system here? */
+		/* So what do I need for the new system here? */
 
-        /* fpro or opro fpro should be sent here
-            traj should also be sent.
+		/* fpro or opro fpro should be sent here
+			traj should also be sent.
 
-        */
+		*/
 
 		if (areObjectsConnected) {
 			transmitTrajectories(visualizerTCPPort);
-        }
+		}
 
 		while(!quit && visualizerTCPPort.getConnectionOn() > 0){
 			do {
@@ -123,24 +123,24 @@ int main(int argc, char const* argv[]) {
 				break;
 			}
 
-            nanosleep(&sleepTimePeriod,&remTime); // sleep might not be needed! but added it becouse i am not sure how much it will use sharedmemory resources
+			nanosleep(&sleepTimePeriod,&remTime); // sleep might not be needed! but added it becouse i am not sure how much it will use sharedmemory resources
 		}
 		visualizerTCPPort.TCPHandlerclose();
 		visualizerUDPPort.UDPHandlerclose();
 		LogMessage(LOG_LEVEL_INFO, "Disconnected");
-    }
+	}
 }
 
 
 void signalHandler(int signo){
-    if (signo == SIGINT) {
-        LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
-        quit = true;
-        exit(EXIT_FAILURE);
-    }
-    else {
-        LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
-    }
+	if (signo == SIGINT) {
+		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+		quit = true;
+		exit(EXIT_FAILURE);
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+	}
 }
 
 
@@ -276,111 +276,111 @@ int transmitTrajectories(TCPHandler &tcpPort) {
 
 int parseTraj(std::string line,std::vector<char>& buffer)
 {
-    struct timeval relTime;
-    CartesianPosition position;
-    SpeedType speed;
-    AccelerationType acceleration;
-    TrajectoryFileHeader fileHeader;
-    TrajectoryFileLine fileLine;
+	struct timeval relTime;
+	CartesianPosition position;
+	SpeedType speed;
+	AccelerationType acceleration;
+	TrajectoryFileHeader fileHeader;
+	TrajectoryFileLine fileLine;
 
-    double curvature = 0;
-    std::stringstream ss (line);
-    std::string segment;
-    getline(ss,segment,';');
-    ssize_t printedBytes;
-    int debug = 0;
+	double curvature = 0;
+	std::stringstream ss (line);
+	std::string segment;
+	getline(ss,segment,';');
+	ssize_t printedBytes;
+	int debug = 0;
 
-    memset(&fileHeader, 0, sizeof (fileHeader));
-    memset(&fileLine, 0, sizeof (fileLine));
+	memset(&fileHeader, 0, sizeof (fileHeader));
+	memset(&fileLine, 0, sizeof (fileLine));
 
-    std::vector<char> tmpvector(MONR_BUFFER_LENGTH);
-    std::vector<char> cstr(line.c_str(), line.c_str() + line.size() + 1);
+	std::vector<char> tmpvector(MONR_BUFFER_LENGTH);
+	std::vector<char> cstr(line.c_str(), line.c_str() + line.size() + 1);
 
-    if(segment.compare("TRAJECTORY") == 0){
+	if(segment.compare("TRAJECTORY") == 0){
 
-        UtilParseTrajectoryFileHeader(cstr.data(),&fileHeader);
-        if ((printedBytes = encodeTRAJMessageHeader(fileHeader.ID > UINT16_MAX ? 0 : (uint16_t) fileHeader.ID,
-                                                fileHeader.majorVersion, fileHeader.name,
-                                                strlen(fileHeader.name), fileHeader.numberOfLines,
-                                                tmpvector.data(), tmpvector.size(), debug)) == -1) {
-        LogMessage(LOG_LEVEL_ERROR, "Unable to encode trajectory message");
+		UtilParseTrajectoryFileHeader(cstr.data(),&fileHeader);
+		if ((printedBytes = encodeTRAJMessageHeader(fileHeader.ID > UINT16_MAX ? 0 : (uint16_t) fileHeader.ID,
+													fileHeader.majorVersion, fileHeader.name,
+													strlen(fileHeader.name), fileHeader.numberOfLines,
+													tmpvector.data(), tmpvector.size(), debug)) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Unable to encode trajectory message");
 
-        return -1;
-        }
-
-
-    }
-    else if (segment.compare("LINE") == 0){
+			return -1;
+		}
 
 
-        UtilParseTrajectoryFileLine(cstr.data(), &fileLine);
-
-        relTime.tv_sec = (time_t) fileLine.time;
-        relTime.tv_usec = (time_t) ((fileLine.time - relTime.tv_sec) * 1000000);
-        position.xCoord_m = fileLine.xCoord;
-        position.yCoord_m = fileLine.yCoord;
-        position.isPositionValid = fileLine.zCoord != NULL;
-        position.zCoord_m = position.isPositionValid ? *fileLine.zCoord : 0;
-        position.heading_rad = fileLine.heading;
-        position.isHeadingValid = true;
-        speed.isLongitudinalValid = fileLine.longitudinalVelocity != NULL;
-        speed.isLateralValid = fileLine.lateralVelocity != NULL;
-        speed.longitudinal_m_s = fileLine.longitudinalVelocity != NULL ? *fileLine.longitudinalVelocity : 0;
-        speed.lateral_m_s = fileLine.lateralVelocity != NULL ? *fileLine.lateralVelocity : 0;
-        acceleration.isLongitudinalValid = fileLine.longitudinalAcceleration != NULL;
-        acceleration.isLateralValid = fileLine.lateralAcceleration != NULL;
-        acceleration.longitudinal_m_s2 =
-            fileLine.longitudinalAcceleration != NULL ? *fileLine.longitudinalAcceleration : 0;
-
-        acceleration.lateral_m_s2 = fileLine.lateralAcceleration != NULL ? *fileLine.lateralAcceleration : 0;
-        if ((printedBytes = encodeTRAJMessagePoint(&relTime, position, speed, acceleration,
-                                                   (float)fileLine.curvature, tmpvector.data(),
-                                                   tmpvector.size(), debug)) == -1) {
-            return -1;
-        }
-    }
-    else if(segment.compare("ENDTRAJECTORY")== 0){
-
-        if((printedBytes = encodeTRAJMessageFooter(tmpvector.data(), tmpvector.size(), debug))==-1){
-            return -1;
-
-        }
-
-    }
-    else{
-
-        UtilParseTrajectoryFileLine(cstr.data(),&fileLine);
+	}
+	else if (segment.compare("LINE") == 0){
 
 
-        relTime.tv_sec = (time_t) fileLine.time;
-        relTime.tv_usec = (time_t) ((fileLine.time - relTime.tv_sec) * 1000000);
-        position.xCoord_m = fileLine.xCoord;
-        position.yCoord_m = fileLine.yCoord;
-        position.isPositionValid = fileLine.zCoord != NULL;
-        position.zCoord_m = position.isPositionValid ? *fileLine.zCoord : 0;
-        position.heading_rad = fileLine.heading;
-        position.isHeadingValid = true;
-        speed.isLongitudinalValid = fileLine.longitudinalVelocity != NULL;
-        speed.isLateralValid = fileLine.lateralVelocity != NULL;
-        speed.longitudinal_m_s = fileLine.longitudinalVelocity != NULL ? *fileLine.longitudinalVelocity : 0;
-        speed.lateral_m_s = fileLine.lateralVelocity != NULL ? *fileLine.lateralVelocity : 0;
-        acceleration.isLongitudinalValid = fileLine.longitudinalAcceleration != NULL;
-        acceleration.isLateralValid = fileLine.lateralAcceleration != NULL;
-        acceleration.longitudinal_m_s2 =
-            fileLine.longitudinalAcceleration != NULL ? *fileLine.longitudinalAcceleration : 0;
+		UtilParseTrajectoryFileLine(cstr.data(), &fileLine);
 
-        acceleration.lateral_m_s2 = fileLine.lateralAcceleration != NULL ? *fileLine.lateralAcceleration : 0;
-        if ((printedBytes = encodeTRAJMessagePoint(&relTime, position, speed, acceleration,
-                                                   (float)fileLine.curvature, tmpvector.data(),
-                                                   tmpvector.size(), debug)) == -1) {
-            return -1;
-        }
-    }
-    tmpvector.resize(printedBytes);
-    for (auto val : tmpvector) buffer.push_back(val);
+		relTime.tv_sec = (time_t) fileLine.time;
+		relTime.tv_usec = (time_t) ((fileLine.time - relTime.tv_sec) * 1000000);
+		position.xCoord_m = fileLine.xCoord;
+		position.yCoord_m = fileLine.yCoord;
+		position.isPositionValid = fileLine.zCoord != NULL;
+		position.zCoord_m = position.isPositionValid ? *fileLine.zCoord : 0;
+		position.heading_rad = fileLine.heading;
+		position.isHeadingValid = true;
+		speed.isLongitudinalValid = fileLine.longitudinalVelocity != NULL;
+		speed.isLateralValid = fileLine.lateralVelocity != NULL;
+		speed.longitudinal_m_s = fileLine.longitudinalVelocity != NULL ? *fileLine.longitudinalVelocity : 0;
+		speed.lateral_m_s = fileLine.lateralVelocity != NULL ? *fileLine.lateralVelocity : 0;
+		acceleration.isLongitudinalValid = fileLine.longitudinalAcceleration != NULL;
+		acceleration.isLateralValid = fileLine.lateralAcceleration != NULL;
+		acceleration.longitudinal_m_s2 =
+				fileLine.longitudinalAcceleration != NULL ? *fileLine.longitudinalAcceleration : 0;
+
+		acceleration.lateral_m_s2 = fileLine.lateralAcceleration != NULL ? *fileLine.lateralAcceleration : 0;
+		if ((printedBytes = encodeTRAJMessagePoint(&relTime, position, speed, acceleration,
+												   (float)fileLine.curvature, tmpvector.data(),
+												   tmpvector.size(), debug)) == -1) {
+			return -1;
+		}
+	}
+	else if(segment.compare("ENDTRAJECTORY")== 0){
+
+		if((printedBytes = encodeTRAJMessageFooter(tmpvector.data(), tmpvector.size(), debug))==-1){
+			return -1;
+
+		}
+
+	}
+	else{
+
+		UtilParseTrajectoryFileLine(cstr.data(),&fileLine);
 
 
-    return printedBytes;
+		relTime.tv_sec = (time_t) fileLine.time;
+		relTime.tv_usec = (time_t) ((fileLine.time - relTime.tv_sec) * 1000000);
+		position.xCoord_m = fileLine.xCoord;
+		position.yCoord_m = fileLine.yCoord;
+		position.isPositionValid = fileLine.zCoord != NULL;
+		position.zCoord_m = position.isPositionValid ? *fileLine.zCoord : 0;
+		position.heading_rad = fileLine.heading;
+		position.isHeadingValid = true;
+		speed.isLongitudinalValid = fileLine.longitudinalVelocity != NULL;
+		speed.isLateralValid = fileLine.lateralVelocity != NULL;
+		speed.longitudinal_m_s = fileLine.longitudinalVelocity != NULL ? *fileLine.longitudinalVelocity : 0;
+		speed.lateral_m_s = fileLine.lateralVelocity != NULL ? *fileLine.lateralVelocity : 0;
+		acceleration.isLongitudinalValid = fileLine.longitudinalAcceleration != NULL;
+		acceleration.isLateralValid = fileLine.lateralAcceleration != NULL;
+		acceleration.longitudinal_m_s2 =
+				fileLine.longitudinalAcceleration != NULL ? *fileLine.longitudinalAcceleration : 0;
+
+		acceleration.lateral_m_s2 = fileLine.lateralAcceleration != NULL ? *fileLine.lateralAcceleration : 0;
+		if ((printedBytes = encodeTRAJMessagePoint(&relTime, position, speed, acceleration,
+												   (float)fileLine.curvature, tmpvector.data(),
+												   tmpvector.size(), debug)) == -1) {
+			return -1;
+		}
+	}
+	tmpvector.resize(printedBytes);
+	for (auto val : tmpvector) buffer.push_back(val);
+
+
+	return printedBytes;
 
 
 }
