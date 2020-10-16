@@ -23,6 +23,7 @@ include(GNUInstallDirs)
 # Create project main executable target
 add_executable(${VISUALIZATION_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/filehandler.cpp
 )
 
 # Link project executable to util libraries
