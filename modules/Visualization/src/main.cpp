@@ -45,15 +45,7 @@ static int transmitObjectData(TCPHandler &tcpPort, UDPHandler &udpPort);
   -- Main task
   ------------------------------------------------------------*/
 
-int main(int argc, char const* argv[]){
-
-    std::vector<char> TCPBuffer;
-	std::vector<char> UDPBuffer(MONR_BUFFER_LENGTH);
-    std::vector<char> checkTCPconnectionBuffer(MONR_BUFFER_LENGTH);
-	std::vector<char> checkUDPconnectionBuffer(MONR_BUFFER_LENGTH);
-
-
-    std::string IPaddr;
+int main(int argc, char const* argv[]) {
 
 	COMMAND command = COMM_INV;
 
@@ -64,7 +56,7 @@ int main(int argc, char const* argv[]){
 
 	char debug = 0;
 	bool areObjectsConnected = false;
-    LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
+	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
 
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
 
