@@ -14,6 +14,7 @@
 #include <sstream>
 #include <string>
 #include <iostream>
+#include <systemd/sd-daemon.h>
 
 #include "logging.h"
 #include "util.h"
@@ -67,12 +68,11 @@ static int transmitObjectData(TCPHandler &tcpPort, UDPHandler &udpPort);
 
 int main(int argc, char const* argv[]) {
 	COMMAND command = COMM_INV;
-
+	std::vector<char> buffer(MONR_BUFFER_LENGTH);
 	char mqRecvData[MBUS_MAX_DATALEN];
 	const struct timespec sleepTimePeriod = {0,10000000};
-
 	struct timespec remTime;
-
+	int bytesread = 0;
 	char debug = 0;
 	bool areObjectsConnected = false;
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
@@ -88,6 +88,7 @@ int main(int argc, char const* argv[]) {
 	}
 
 	// Notify service handler that startup was successful
+	
 	sd_notify(0, "READY=1");
 
 	ReadWriteAccess_t retval = DataDictionaryInitObjectData();
@@ -107,12 +108,19 @@ int main(int argc, char const* argv[]) {
 			}
 			continue;
 		}
+		visualizerUDPPort.receiveUDP(buffer);
+		buffer.clear();
+		// have to read inbetween loops or we could end in limbo becouse getonconnection only looks att acceept not recive atm, 
+		// TO DO: fix so that get connection also is looked at on recv andchange that to a bool but that means we have to change somestuff in tcphandler.
+		visualizerTCPPort.receiveTCP(buffer,0);
 
 		if (areObjectsConnected) {
 			transmitTrajectories(visualizerTCPPort);
 		}
 
-		while(!quit && visualizerTCPPort.getConnectionOn() > 0){
+
+		
+		while(!quit && visualizerTCPPort.getConnectionOn() > 0 && bytesread>=0){
 			do {
 				if (iCommRecv(&command, mqRecvData, sizeof (mqRecvData), nullptr) < 0) {
 					util_error("Message bus receive error");
@@ -127,7 +135,7 @@ int main(int argc, char const* argv[]) {
 					break;
 				}
 			} while (command != COMM_INV);
-
+			
 			if (transmitObjectData(visualizerTCPPort, visualizerUDPPort) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Failed to transmit object data");
 				break;
@@ -164,26 +172,29 @@ int transmitObjectData(TCPHandler &tcpPort, UDPHandler &udpPort) {
 	std::vector<char> udpTransmitBuffer(MONR_BUFFER_LENGTH);
 
 	DataDictionaryGetNumberOfObjects(&numberOfObjects);
+	if (numberOfObjects<=0){
+		return 0;
+	}
 	transmitterIDs.resize(numberOfObjects);
 	DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size());
-
 	for (const auto &transmitterID : transmitterIDs) {
 		if (transmitterID == 0){
 			continue;
 		}
 
 		DataDictionaryGetMonitorData(transmitterID, &monitorData);
-		DataDictionaryGetMonitorDataReceiveTime(transmitterID, &monitorDataReceiveTime);// i am getting duplicates from this one
+		DataDictionaryGetMonitorDataReceiveTime(transmitterID, &monitorDataReceiveTime);
 		if (timerisset(&monitorDataReceiveTime)
 				&& monitorData.position.isPositionValid
 				&& monitorData.position.isHeadingValid) {
 			// get transmitterid and encode monr to iso.
 			// Checking so we still connected to visualizer
-			if (tcpPort.receiveTCP(trashBuffer, 0) < 0
-					|| udpPort.receiveUDP(trashBuffer) < 0) {
+			if (tcpPort.receiveTCP(trashBuffer, 0) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Error when checking visualizer socket");
 				return -1;
 			}
+			// only here to get server/client behavior
+			
 
 			// TODO PODI - now we cheat with header transmitter ID
 			isoTransmitterID = static_cast<uint8_t>(transmitterID);
@@ -200,14 +211,14 @@ int transmitObjectData(TCPHandler &tcpPort, UDPHandler &udpPort) {
 											udpTransmitBuffer.size(), 0);
 			if (retval < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Failed when encoding MONR message");
-				return -1;
+				return 0; //TO DO fix this, we can't break out of the while look becouse we failed with encoding monr, that will end up killing tcp and udp becouse a bad encode, should be handled in another way 
 			}
 			udpTransmitBuffer.resize(static_cast<unsigned long>(retval));
-
+			udpPort.receiveUDP(trashBuffer);
 			bytesSent = udpPort.sendUDP(udpTransmitBuffer);
 			if (bytesSent < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Error when sending on visualizer UDP socket");
-				return -1;
+				return 0;//TO DO fix this, we can't break just becouse we couldent send a UDP message, even do it should not happen, but a example when it will happen is depending on which task started first visualizer or app etc.
 			}
 		}
 	}
