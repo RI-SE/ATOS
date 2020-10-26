@@ -2293,6 +2293,7 @@ int sendDataInjectionMessages(const ObjectDataType * objectData,
 	for (unsigned int i = 0; i < relevantMap->numberOfTargets; ++i) {
 		for (unsigned int j = 0; j < numberOfObjects; j++) {
 			if (transmitterIDs[j] == relevantMap->targetIDs[i]) {
+				usleep(700000);
 				UtilSendUDPData(MODULE_NAME, &objectConnections[j].monitorSocket,
 								&objectConnections[j].objectMonitorAddress,
 								transmissionBuffer, messageSize, 0);
