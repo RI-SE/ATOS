@@ -385,18 +385,39 @@ std::string getCurrentDateAsString() {
 int printJournalHeaderTo(std::ofstream &ostrm) {
 	std::vector<char> trajectoryDirectory(PATH_MAX, '\0');
 	std::vector<char> configurationDirectory(PATH_MAX, '\0');
+	std::vector<char> objectDirectory(PATH_MAX, '\0');
 	std::ifstream istrm;
 	fs::path fileDirectory;
-	UtilGetTrajDirectoryPath(trajectoryDirectory.data(), trajectoryDirectory.size());
-	trajectoryDirectory.erase(std::find(trajectoryDirectory.begin(), trajectoryDirectory.end(), '\0'),
-							  trajectoryDirectory.end());
-	fileDirectory.assign(trajectoryDirectory.begin(), trajectoryDirectory.end());
+
+	ostrm << "------------------------------------------" << std::endl;
+	ostrm << "Whole object files" << std::endl;
+	ostrm << "------------------------------------------" << std::endl;
+
+	UtilGetObjectDirectoryPath(objectDirectory.data(), objectDirectory.size());
+	objectDirectory.erase(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
+							  objectDirectory.end());
+	std::remove(std::find(objectDirectory.begin(), objectDirectory.end(), '\0'),
+				objectDirectory.end(), '\0');
+	fileDirectory.assign(objectDirectory.begin(), objectDirectory.end());
+
+	if (printFilesTo(fileDirectory, ostrm) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to print object files to log - terminating log generation");
+		return -1;
+	}
 
 	ostrm << "------------------------------------------" << std::endl;
 	ostrm << "Whole trajectory files" << std::endl;
 	ostrm << "------------------------------------------" << std::endl;
 
+	UtilGetTrajDirectoryPath(trajectoryDirectory.data(), trajectoryDirectory.size());
+	trajectoryDirectory.erase(std::find(trajectoryDirectory.begin(), trajectoryDirectory.end(), '\0'),
+							  trajectoryDirectory.end());
+	std::remove(std::find(trajectoryDirectory.begin(), trajectoryDirectory.end(), '\0'),
+				trajectoryDirectory.end(), '\0');
+	fileDirectory.assign(trajectoryDirectory.begin(), trajectoryDirectory.end());
+
 	if (printFilesTo(fileDirectory, ostrm) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to print trajectory files to log - terminating log generation");
 		return -1;
 	}
 
@@ -412,6 +433,7 @@ int printJournalHeaderTo(std::ofstream &ostrm) {
 	fileDirectory.assign(configurationDirectory.begin(), configurationDirectory.end());
 
 	if (printFilesTo(fileDirectory, ostrm) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to print configuration files to log - terminating log generation");
 		return -1;
 	}
 

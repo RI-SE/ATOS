@@ -2,33 +2,46 @@ cmake_minimum_required(VERSION 3.1)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(Visualization LANGUAGES C)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+project(Visualization LANGUAGES C CXX)
+
 
 # Define target names
 set(VISUALIZATION_TARGET ${PROJECT_NAME})
 
 set(COREUTILS_LIBRARY MaestroCoreUtil)
 set(ISO_22133_LIBRARY ISO22133)
+set(DATA_DICTIONARY_LIBRARY MaestroDataDictionary)
 set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MESSAGE_BUS_LIBRARY MaestroMQ)
-
+set(TCP_UDP_Socket_LIBRARY TCPUDPSocket)
 include(GNUInstallDirs)
 
 # Create project main executable target
 add_executable(${VISUALIZATION_TARGET}
-	${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/trajfilehandler.cpp
 )
 
 # Link project executable to util libraries
 target_link_libraries(${VISUALIZATION_TARGET} LINK_PUBLIC
 	${COREUTILS_LIBRARY}
+	${DATA_DICTIONARY_LIBRARY}
 	${ISO_22133_LIBRARY}
 	${POSITIONING_LIBRARY}
 	${TIME_LIBRARY}
 	${LOGGING_LIBRARY}
 	${MESSAGE_BUS_LIBRARY}
 	${SYSTEMD_LIBRARIES}
+	${TCP_UDP_Socket_LIBRARY}
+	stdc++fs
+)
+
+target_include_directories(${VISUALIZATION_TARGET} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
 # Generate service file with correct details
