@@ -178,18 +178,18 @@ int main()
             char *token = strtok(strval1, " ");
             int loopCounter = 0;
 
-            char temp[247];
+            char statusBuffer[247];
 
             while (token != NULL) {
                 if (loopCounter == 21) {	//Get  starttime  %llu from proc file for pid.
-                    sprintf(temp, "%s with Pid: %d was started at: %s", MODULE_NAME, pid, token);
-                    LogMessage(LOG_LEVEL_INFO, temp);
+                    sprintf(statusBuffer, "%s with Pid: %d was started at: %s", MODULE_NAME, pid, token);
+                    LogMessage(LOG_LEVEL_INFO, statusBuffer);
                 }
                 token = strtok(NULL, " ");
                 loopCounter++;
             }
             memset(mqSendData, 0, sizeof (mqSendData));
-            sprintf(mqSendData, "%s", temp);
+            sprintf(mqSendData, "%s", statusBuffer);
 
             if (iCommSend(COMM_GETSTATUS_OK, mqSendData, sizeof (mqSendData)) < 0) {
                 LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");
