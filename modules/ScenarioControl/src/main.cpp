@@ -158,12 +158,44 @@ int main()
             LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
             state = UNINITIALIZED;
             break;
-        case COMM_GETSTATUS:
+        case COMM_GETSTATUS: {
+            pid_t pid = getpid();
+            FILE *pidstat = NULL;
+
+            char filename[100] = { 0 };
+            snprintf(filename, sizeof (filename), "/proc/%d/stat", pid);
+
+            pidstat = fopen(filename, "r");
+            if (pidstat == NULL) {
+                fprintf(stderr, "Error: Couldn't open [%s]\n", filename);
+            }
+
+            char strval1[100] = { 0 };
+            fgets(strval1, 255, pidstat);
+
+            fclose(pidstat);
+            // Get start time from proc/pid/stat
+            char *token = strtok(strval1, " ");
+            int loopCounter = 0;
+
+            char temp[247];
+
+            while (token != NULL) {
+                if (loopCounter == 21) {	//Get  starttime  %llu from proc file for pid.
+                    sprintf(temp, "%s with Pid: %d was started at: %s", MODULE_NAME, pid, token);
+                    LogMessage(LOG_LEVEL_INFO, temp);
+                }
+                token = strtok(NULL, " ");
+                loopCounter++;
+            }
             memset(mqSendData, 0, sizeof (mqSendData));
-            sprintf(mqSendData, "%s", MODULE_NAME);
+            sprintf(mqSendData, "%s", temp);
+
             if (iCommSend(COMM_GETSTATUS_OK, mqSendData, sizeof (mqSendData)) < 0) {
                 LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");
             }
+
+        }
             break;
         case COMM_GETSTATUS_OK:
             break;
