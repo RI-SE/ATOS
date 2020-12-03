@@ -2863,6 +2863,9 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 			numberOfResponses++;
 		}
 
+		LogMessage(LOG_LEVEL_ERROR, "GOT RESPONSE: ");
+		LogMessage(LOG_LEVEL_ERROR, respondingModule);
+
 		if (timercmp(&getStatusTimeoutTimer, &currentSystemTime, <)) {
 
 			//Too many
