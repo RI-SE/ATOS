@@ -39,6 +39,9 @@ class Executable():
                 died.append(pid)
         return died
     
+    def alive(self):
+        return len(self.poll()) == 0
+    
     # Kill all started processes
     def stop(self):
         procName = self.args[0].split("/")
