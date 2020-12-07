@@ -432,7 +432,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					TimeSetToCurrentSystemTime(&currentTime);
 					if (decodeMONRMessage
 						(buffer, receivedMONRData, currentTime, &monitorData.ClientID, &monitorData.MonrData,
-						 0) != MESSAGE_OK) {
+						 0) < 0) {
 						LogMessage(LOG_LEVEL_INFO, "Error decoding MONR from %s: disconnecting object",
 								   ipString);
 
@@ -600,7 +600,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						// Received OPRO message
 						ObjectPropertiesType properties;
 
-						if (decodeOPROMessage(&properties, buffer, sizeof (buffer), 0) == MESSAGE_OK) {
+						if (decodeOPROMessage(&properties, buffer, sizeof (buffer), 0) >= 0) {
 							DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
 							if (handleObjectPropertiesData(&properties, dataInjectionMaps,
 														   objectConnections, object_transmitter_ids,
