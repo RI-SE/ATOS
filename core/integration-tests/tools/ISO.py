@@ -9,8 +9,14 @@ from threading import Thread
 
 
 
-def as_hex_little_endian(value):
-    value = format(int(value),'x').rjust(8,'0')
+def as_hex_little_endian(value,expected_bytes):
+    sign = lambda x: (1,-1)[x < 0]
+    value = int(value)
+    value_sign = sign(value)
+    value = format(int(abs(value)),'x').rjust(expected_bytes*2,'0')
+    if value_sign < 0:
+        msb = int(value[0]) | 0b1000
+        value = format(msb,'x') + value[1:]
     value = [value[i:i+2] for i in range(len(value)-2, -1, -2)]
     return ''.join(value)
 
@@ -50,18 +56,44 @@ class ISO:
         self.SendRawUDP(header)
         print("=== TREO() sent")
 
-    def MONR(self, timestamp=None, position=None, heading_deg=None):
+    def MONR(self, timestamp=None, position=None, heading_deg=None, speed=None, acceleration=None, drive_direction=None, object_state=None, ready_to_arm=None, object_error_status=None):
         if not position:
             position = {'x': 0.0, 'y': 0.0, 'z': 0.0}
-        if not heading_deg:
+        if heading_deg == None:
             heading_deg = 0.0
-        if not timestamp:
-            timestamp = "80001e00"
-        position['x'] = as_hex_little_endian(position['x']*1000)
-        position['y'] = as_hex_little_endian(position['y']*1000)
-        position['z'] = as_hex_little_endian(position['z']*1000)
-        heading_deg = as_hex_little_endian(heading_deg*100)
-        return bytearray.fromhex("7e7e004602060022000000" + str(timestamp) + position['x'] + position['y'] + position['z'] + str(heading_deg) + "0000f93e0000000000000000000301000000")
+        if timestamp == None:
+            timestamp = '1111223'
+        if not speed:
+            speed = {'lateral': 0.0, 'longitudinal': 0.0}
+        if not acceleration:
+            acceleration = {'lateral': 0.0, 'longitudinal': 0.0}
+        if drive_direction == None:
+            drive_direction = 0
+        if object_state == None:
+            object_state = 4
+        if ready_to_arm == None:
+            ready_to_arm = 1
+        if object_error_status == None:
+            object_error_status = 0
+
+        timestamp = as_hex_little_endian(timestamp, 4)
+        position['x'] = as_hex_little_endian(position['x']*1000, 4)
+        position['y'] = as_hex_little_endian(position['y']*1000, 4)
+        position['z'] = as_hex_little_endian(position['z']*1000, 4)
+        heading_deg = as_hex_little_endian(heading_deg*100, 2)
+        speed['longitudinal'] = as_hex_little_endian(speed['longitudinal'], 2)
+        speed['lateral'] = as_hex_little_endian(speed['lateral'], 2)
+        acceleration['longitudinal'] = as_hex_little_endian(acceleration['longitudinal'], 2)
+        acceleration['lateral'] = as_hex_little_endian(acceleration['lateral'], 2)
+        drive_direction = as_hex_little_endian(drive_direction, 1)
+        object_state = as_hex_little_endian(object_state, 1)
+        ready_to_arm = as_hex_little_endian(ready_to_arm, 1)
+        object_error_status = as_hex_little_endian(object_error_status, 1)
+        
+        retval = bytearray.fromhex("7e7e00460206002200000080001e00" + timestamp + position['x'] + position['y'] + position['z'] + heading_deg
+                    + speed['longitudinal'] + speed['lateral'] + acceleration['longitudinal'] + acceleration['lateral'] + drive_direction + object_state
+                    + ready_to_arm + object_error_status + "0000")
+        return retval
     
     def HEAB(self):         
         message = bytearray.fromhex("7e7e0000020500090000009000050083c00d4a010000") 
