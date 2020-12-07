@@ -4,7 +4,6 @@ import threading
 import re
 import time
 import encodings
-import asyncio
 from threading import Thread
 
 
@@ -44,8 +43,6 @@ class ISO:
             print("UDP port: {} is already in use. Continuing...".format(self.udpPort))
         
 
-
-
     def StringTest(self):    
         message = bytearray.fromhex("48454c4c4f")
         header = bytearray.fromhex("7e7e00000213002200000080001e00")
@@ -56,13 +53,13 @@ class ISO:
         self.SendRawUDP(header)
         print("=== TREO() sent")
 
-    def MONR(self, timestamp=None, position=None, heading_deg=None, speed=None, acceleration=None, drive_direction=None, object_state=None, ready_to_arm=None, object_error_status=None):
+    def MONR(self, transmitter_id=None, timestamp=None, position=None, heading_deg=None, speed=None, acceleration=None, drive_direction=None, object_state=None, ready_to_arm=None, object_error_status=None):
         if not position:
             position = {'x': 0.0, 'y': 0.0, 'z': 0.0}
         if heading_deg == None:
             heading_deg = 0.0
         if timestamp == None:
-            timestamp = '1111223'
+            timestamp = (time.time() + 18 - 315964800)*4000 % 2419200000
         if not speed:
             speed = {'lateral': 0.0, 'longitudinal': 0.0}
         if not acceleration:
@@ -75,6 +72,8 @@ class ISO:
             ready_to_arm = 1
         if object_error_status == None:
             object_error_status = 0
+        if not transmitter_id:
+            transmitter_id = 2
 
         timestamp = as_hex_little_endian(timestamp, 4)
         position['x'] = as_hex_little_endian(position['x']*1000, 4)
@@ -89,8 +88,9 @@ class ISO:
         object_state = as_hex_little_endian(object_state, 1)
         ready_to_arm = as_hex_little_endian(ready_to_arm, 1)
         object_error_status = as_hex_little_endian(object_error_status, 1)
+        transmitter_id = as_hex_little_endian(transmitter_id, 1)
         
-        retval = bytearray.fromhex("7e7e00460206002200000080001e00" + timestamp + position['x'] + position['y'] + position['z'] + heading_deg
+        retval = bytearray.fromhex("7e7e" + transmitter_id + "460206002200000080001e00" + timestamp + position['x'] + position['y'] + position['z'] + heading_deg
                     + speed['longitudinal'] + speed['lateral'] + acceleration['longitudinal'] + acceleration['lateral'] + drive_direction + object_state
                     + ready_to_arm + object_error_status + "0000")
         return retval
@@ -156,14 +156,15 @@ class ISOObject(ISO):
             self.port = 53240
             self.host = host
             self.remoteAddr = None
-            t = Thread(target=self.create_connection, name='prc-thread')
-            t.start()
+            self.quit = False
+            self.thread = Thread(target=self.create_connection, name='prc-thread')
+            self.thread.start()
 
         def create_connection(self):
             print("=== Creating a UDP socket")
             self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.udpSocket.bind((self.host, self.port))
-            while True:
+            while not self.quit:
                 data, remoteAddr = self.udpSocket.recvfrom(2048)
                 self.remoteAddr = remoteAddr
 
@@ -184,8 +185,9 @@ class ISOObject(ISO):
             self.transport = None
             self.remoteAddr = None
             self.tcpSocket = None
-            t = Thread(target=self.create_connection,name="cmd-thread")
-            t.start()
+            self.quit = False
+            self.thread = Thread(target=self.create_connection,name="cmd-thread")
+            self.thread.start()
 
         def create_connection(self):
             self.tcpSocket = socket.socket()
@@ -193,7 +195,6 @@ class ISOObject(ISO):
             self.tcpSocket.bind((self.host,self.port))
             self.tcpSocket.listen()
             self.transport, self.remoteAddr = self.tcpSocket.accept()
-            print("Transport " + str(self.transport) + ", remote: " + str(self.remoteAddr))
 
         def close(self):
             return self.tcpSocket.close()
@@ -204,14 +205,18 @@ class ISOObject(ISO):
         self.commandChannel = self.ObjectCommandChannel(self.host)
         self.processChannel = self.ObjectProcessChannel(self.host)
 
-    def MONR(self, timestamp=None, position=None, heading_deg=None):
-        return self.processChannel.send(ISO.MONR(self,timestamp,position,heading_deg))
+    def MONR(self, transmitter_id=None, timestamp=None, position=None, heading_deg=None, speed=None, acceleration=None, drive_direction=None, object_state=None, ready_to_arm=None, object_error_status=None):
+        return self.processChannel.send(ISO.MONR(self,transmitter_id,timestamp,position,heading_deg,speed,acceleration,drive_direction,object_state,ready_to_arm,object_error_status))
 
     def isConnected(self):
         return self.processChannel.remoteAddr != None
 
     def shutdown(self):
+        self.commandChannel.quit = True
+        self.processChannel.quit = True
+        self.commandChannel.thread.join()
         self.commandChannel.close()
+        self.processChannel.thread.join()
         self.processChannel.close()
 
 
@@ -220,8 +225,8 @@ if __name__ == "__main__":
     while not obj.isConnected():
         pass
     print("Sending a bunch of MONR")
-    for i in range(10000):
-        obj.MONR(position={'x':10.0,'y':15.0,'z':4.5})
+    for i in range(1000):
+        obj.MONR(transmitter_id=2,position={'x':10.0,'y':15.0,'z':4.5})
         time.sleep(0.01)
     obj.shutdown()
     exit(1)
