@@ -3979,6 +3979,7 @@ unsigned long getPIDuptime(pid_t pID) {
 	pidstat = fopen(filename, "r");
 	if (pidstat == NULL) {
 		fprintf(stderr, "Error: Couldn't open [%s]\n", filename);
+        return -1;
 	}
 
 	char strval1[100] = { 0 };
