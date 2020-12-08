@@ -3973,7 +3973,7 @@ clock ticks (divide by sysconf(_SC_CLK_TCK)).
 unsigned long getPIDuptime(pid_t pID) {
 	FILE *pidstat = NULL;
 
-	char filename[100] = { 0 };
+    char filename[PATH_MAX] = { 0 };
 	snprintf(filename, sizeof (filename), "/proc/%d/stat", pID);
 
 	pidstat = fopen(filename, "r");
@@ -3989,11 +3989,11 @@ unsigned long getPIDuptime(pid_t pID) {
 	char *token = strtok(strval1, " ");
 	int loopCounter = 0;
 
-	char uptime[247];
+    char uptime[247];
 
 	while (token != NULL) {
 		if (loopCounter == 21) {	//Get  starttime  %llu from proc file for pid.
-			sprintf(uptime, "%s", token);
+            sprintf(uptime, "%s", token);
 		}
 		token = strtok(NULL, " ");
 		loopCounter++;
