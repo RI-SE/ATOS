@@ -15,21 +15,103 @@ time.sleep(0.25)
 obj = ISOObject()
 
 def geofenceTransgressionTest():
-    assert core.alive()
-    assert sup.alive()
+    assert core.alive(), "Core terminated unexpectedly"
+    assert sup.alive(), "Supervision terminated unexpectedly"
 
-    # 2: Load trajectory
-    testcases = [x[0] for x in os.walk("resources/geofence-tests")]
-    # TODO pick random test case
-    [traj,fileName] = ReadTrajectoryFile("/",fileName="random")
+    geofencePoints = [(-50,-50),
+                      ( 50,-50),
+                      ( 50, 50),
+                      (-50, 50)]
+    testPts = [(25.000,25.000),
+               (30.000,30.000),
+               (40.000,40.000),
+               (40.000,49.999),
+               (50.001,49.999),
+               ( 1.000, 1.000),
+               ( 0.000, 0.000)]
+    maxAbortDelay = 0.1
+
+    # Load trajectory
+    trajPts = [{'time': 0.00, 'x': 0.0,  'y': 0.0, 'heading': 0.0},
+               {'time': 0.50, 'x': 5.0,  'y': 0.0, 'heading': 0.0},
+               {'time': 0.10, 'x': 10.0, 'y': 0.0, 'heading': 0.0},
+               {'time': 0.15, 'x': 15.0, 'y': 0.0, 'heading': 0.0},
+               {'time': 0.20, 'x': 20.0, 'y': 0.0, 'heading': 0.0},
+               {'time': 0.25, 'x': 25.0, 'y': 0.0, 'heading': 0.0}]
+    traj = ConstructTrajectoryFileData(trajPts, "GeofenceTestTrajectory1")
+
+    # Create geofence
+    geofence = ConstructGeofenceFileData(geofencePoints, "GeofenceTestGeofence1", forbidden=False)
+
+    # Upload config
+    mscp.ClearTrajectories()
+    mscp.ClearGeofences()
+    mscp.ClearObjects()
+
+    trajFileName = "GeofenceTestTrajectory1.traj"
+    mscp.UploadFile(trajFileName,traj,"trajectory")
+    geofenceFileName = "GeofenceTestGeofence1.geofence"
+    mscp.UploadFile(geofenceFileName,geofence,"geofence")
+
     objID = random.randint(1,100)
-    objData = ConstructObjectFileData("127.0.0.1", fileName, objID)
+    objData = ConstructObjectFileData("127.0.0.1", trajFileName, objID)
+    mscp.UploadFile(''.join(random.choice(string.ascii_letters) for i in range(10)) + ".not.obj",objData,"object")
+
+    # Initialize
+    mscp.Init()
+    mscp.waitForObjectControlState("INITIALIZED")
+
+    # Connect
+    mscp.Connect()
+    mscp.waitForObjectControlState("CONNECTED")
+
+    obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/3.14159)
+
+    # Arm
+    mscp.Arm()
+    mscp.waitForObjectControlState("ARMED",timeout=0.5)
+
+    obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/3.14159)
+
+    # Start
+    mscp.Start()
+    mscp.waitForObjectControlState("RUNNING",timeout=0.5)
+
+    # Report a number of MONR inside geofence
+    print("=== Entered running state, sending test MONR data")
+    obj.MONR(transmitter_id=objID,position=testPts[0])
+    sleep(0.001*random.randint(1,7))
+    obj.MONR(transmitter_id=objID,position=testPts[1])
+    sleep(0.001*random.randint(1,7))
+    obj.MONR(transmitter_id=objID,position=testPts[2])
+    sleep(0.001*random.randint(1,7))
+    obj.MONR(transmitter_id=objID,position=testPts[3])
+    sleep(0.001*random.randint(1,7))
+
+    # Check last HEAB so it is not ABORT
+    assert obj.lastCCStatus() == "running"
+
+    # Report one MONR outside geofence
+    obj.MONR(transmitter_id=objID,position=testPts[4])
+    transgressionTime = time.time()
+    sleep(0.001*random.randint(1,7))
+    obj.MONR(transmitter_id=objID,position=testPts[5])
+    sleep(0.001*random.randint(1,7))
+    obj.MONR(transmitter_id=objID,position=testPts[6])
+
+    # Sleep until max allowed time passed
+    time.sleep(maxAbortDelay-(time.time()-transgressionTime))
+
+    # Check last HEAB so it is ABORT
+    assert obj.lastCCStatus() == "abort"
+    return
+
 
 
 
 if __name__ == "__main__":
     try:
-        failed = geofenceTransgressionTest()
+        geofenceTransgressionTest()
     finally:
         if mscp:
             mscp.shutdown()
@@ -37,4 +119,4 @@ if __name__ == "__main__":
             sup.stop()
         if core:
             core.stop()
-    exit(failed)
+
