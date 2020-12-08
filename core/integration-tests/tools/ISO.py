@@ -23,6 +23,7 @@ class ISO:
 
     udpPort = 57074
     tcpPort = 54242
+    ccStatus = {0: "init", 1: "ready", 2: "abort", 3: "running", 4: "testDone", 5: "normalStop"}
 
     def __init__(self,host="127.0.0.1",port=54241):
         self.host = host
@@ -53,9 +54,9 @@ class ISO:
         self.SendRawUDP(header)
         print("=== TREO() sent")
 
-    def MONR(self, transmitter_id=None, timestamp=None, position=None, heading_deg=None, speed=None, acceleration=None, drive_direction=None, object_state=None, ready_to_arm=None, object_error_status=None):
-        if not position:
-            position = {'x': 0.0, 'y': 0.0, 'z': 0.0}
+    def MONR(self, transmitter_id=None, timestamp=None, in_position=None, heading_deg=None, speed=None, acceleration=None, drive_direction=None, object_state=None, ready_to_arm=None, object_error_status=None):
+        if not in_position:
+            in_position = {'x': 0.0, 'y': 0.0, 'z': 0.0}
         if heading_deg == None:
             heading_deg = 0.0
         if timestamp == None:
@@ -75,10 +76,23 @@ class ISO:
         if not transmitter_id:
             transmitter_id = 2
 
+        position = {}
         timestamp = as_hex_little_endian(timestamp, 4)
-        position['x'] = as_hex_little_endian(position['x']*1000, 4)
-        position['y'] = as_hex_little_endian(position['y']*1000, 4)
-        position['z'] = as_hex_little_endian(position['z']*1000, 4)
+        try:
+            position['x'] = as_hex_little_endian(in_position['x']*1000, 4)
+            position['y'] = as_hex_little_endian(in_position['y']*1000, 4)
+        except KeyError:
+            position['x'] = as_hex_little_endian(in_position[0]*1000, 4)
+            position['y'] = as_hex_little_endian(in_position[1]*1000, 4)
+            
+        position['z'] = as_hex_little_endian(0, 4)
+        try:
+            position['z'] = as_hex_little_endian(in_position['z']*1000, 4)
+        except KeyError:
+            try:
+                position['z'] = as_hex_little_endian(in_position[2]*1000, 4)
+            except IndexError:
+                pass
         heading_deg = as_hex_little_endian(heading_deg*100, 2)
         speed['longitudinal'] = as_hex_little_endian(speed['longitudinal'], 2)
         speed['lateral'] = as_hex_little_endian(speed['lateral'], 2)
@@ -156,6 +170,7 @@ class ISOObject(ISO):
             self.port = 53240
             self.host = host
             self.remoteAddr = None
+            self.lastHEAB = None
             self.quit = False
             self.thread = Thread(target=self.create_connection, name='prc-thread')
             self.thread.start()
@@ -167,6 +182,7 @@ class ISOObject(ISO):
             while not self.quit:
                 data, remoteAddr = self.udpSocket.recvfrom(2048)
                 self.remoteAddr = remoteAddr
+                self.lastHEAB = data
 
         def send(self,message):
             if not self.remoteAddr:
@@ -208,6 +224,13 @@ class ISOObject(ISO):
     def MONR(self, transmitter_id=None, timestamp=None, position=None, heading_deg=None, speed=None, acceleration=None, drive_direction=None, object_state=None, ready_to_arm=None, object_error_status=None):
         return self.processChannel.send(ISO.MONR(self,transmitter_id,timestamp,position,heading_deg,speed,acceleration,drive_direction,object_state,ready_to_arm,object_error_status))
 
+    def lastHEAB(self):
+        return self.processChannel.lastHEAB
+
+    def lastCCStatus(self):
+        return ISO.ccStatus[self.lastHEAB()[-3]]
+
+
     def isConnected(self):
         return self.processChannel.remoteAddr != None
 
@@ -228,5 +251,6 @@ if __name__ == "__main__":
     for i in range(1000):
         obj.MONR(transmitter_id=2,position={'x':10.0,'y':15.0,'z':4.5})
         time.sleep(0.01)
+    print("Last HEAB: " + str(obj.lastHEAB()))
     obj.shutdown()
     exit(1)
