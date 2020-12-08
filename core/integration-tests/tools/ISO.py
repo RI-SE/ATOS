@@ -91,7 +91,7 @@ class ISO:
         except KeyError:
             try:
                 position['z'] = as_hex_little_endian(in_position[2]*1000, 4)
-            except IndexError:
+            except (IndexError, KeyError):
                 pass
         heading_deg = as_hex_little_endian(heading_deg*100, 2)
         speed['longitudinal'] = as_hex_little_endian(speed['longitudinal'], 2)

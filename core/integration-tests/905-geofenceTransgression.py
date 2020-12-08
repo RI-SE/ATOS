@@ -3,9 +3,9 @@ from tools.Executable import Executable
 from tools.ConfigurationFiles import *
 from tools.ISO import ISO, ISOObject
 import time
+import random
+import string
 import subprocess
-import sys
-import os
 
 core = Executable("../../build/bin/Core",["-m","1"])
 sup = Executable("../../build/bin/Supervision")
@@ -74,7 +74,7 @@ def geofenceTransgressionTest():
     obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/3.14159)
 
     # Start
-    mscp.Start()
+    mscp.Start(0)
     mscp.waitForObjectControlState("RUNNING",timeout=0.5)
 
     # Report a number of MONR inside geofence
