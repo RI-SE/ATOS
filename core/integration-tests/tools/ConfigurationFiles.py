@@ -27,3 +27,10 @@ def ReadFile(directory,fileName="random",fileEnding=".traj"):
         data = fp.read()
     return [data, fname.split('/')[-1]]
 
+def ConstructObjectFileData(objectIP, trajectoryFileName, transmitterID):
+    data = ""
+    data = data + "IP="     + str(objectIP) + "\n"
+    data = data + "traj="   + str(trajectoryFileName) + "\n"
+    data = data + "ID="     + str(transmitterID) + "\n"
+    
+    return data
