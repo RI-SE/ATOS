@@ -1,8 +1,6 @@
 from tools.MSCP import MSCP
 from tools.Executable import Executable
-#from tools.GeofenceFile import *
-from tools.TrajectoryFile import *
-from tools.ObjectFile import *
+from tools.ConfigurationFiles import *
 from tools.ISO import ISO, ISOObject
 import time
 import subprocess

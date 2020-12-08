@@ -1,6 +1,6 @@
 from tools.MSCP import MSCP
 from tools.Executable import Executable
-from tools.TrajectoryFile import *
+from tools.ConfigurationFiles import *
 from tools.ObjectFile import *
 from tools.PortChecker import *
 import time
