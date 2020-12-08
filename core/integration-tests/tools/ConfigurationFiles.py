@@ -34,3 +34,49 @@ def ConstructObjectFileData(objectIP, trajectoryFileName, transmitterID):
     data = data + "ID="     + str(transmitterID) + "\n"
     
     return data
+
+def ConstructTrajectoryFileData(trajPoints=None,trajectoryName="Unnamed"):
+    if trajPoints == None:
+        nPoints = 0
+    else:
+        nPoints = len(trajPoints)
+
+    data = ""
+    data = data + "TRAJECTORY;0;" + str(trajectoryName) + ";1.0;" + str(nPoints) + ";\n"
+    for trajPoint in trajPoints:
+        data = data + str(trajPoint['time']) + ";"
+        data = data + str(trajPoint['x']) + ";"
+        data = data + str(trajPoint['y']) + ";"
+        data = data + str(trajPoint['z']) + ";"
+        try:
+            data = data + str(trajPoint['heading']) + ";"
+        except KeyError:
+            data = data + "0.0;"
+        try:
+            data = data + str(trajPoint['longitudinal_speed']) + ";"
+        except KeyError:
+            data = data + "0.0;"
+        try:
+            data = data + str(trajPoint['lateral_speed']) + ";"
+        except KeyError:
+            data = data + ";"
+        try:
+            data = data + str(trajPoint['longitudinal_acceleration']) + ";"
+        except KeyError:
+            data = data + "0.0;"
+        try:
+            data = data + str(trajPoint['lateral_acceleration']) + ";"
+        except KeyError:
+            data = data + ";"
+        try:
+            data = data + str(trajPoint['curvature']) + ";"
+        except KeyError:
+            data = data + "0.0;"
+        try:
+            data = data + str(trajPoint['drive_mode']) + ";"
+        except KeyError:
+            data = data + "0;"
+        data = data + "\n"
+    data = data + "ENDTRAJECTORY;"
+    return data
+    
