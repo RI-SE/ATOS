@@ -2002,7 +2002,7 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	dataLength += headerSize;
 
 	// Check if message is too large to send
-	if (dataLength > 500) {
+	if (dataLength > MQ_MSG_SIZE) {
 		LogMessage(LOG_LEVEL_ERROR, "Cannot send message %d of size %lu: maximum size is %lu", iCommand,
 				   dataLength + 1, MQ_MSG_SIZE);
 		return -1;
