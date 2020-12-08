@@ -99,8 +99,14 @@ def ConstructGeofenceFileData(geofencePoints=None,geofenceName="Unnamed",forbidd
     data = data + str(minHeight) + ";" + str(maxHeight) + ";\n"
     for vertex in geofencePoints:
         data = data + "LINE;"
-        data = data + str(vertex['x']) + ";"
-        data = data + str(vertex['y']) + ";"
+        try:
+            data = data + str(vertex[0]) + ";"
+        except TypeError:
+            data = data + str(vertex['x']) + ";"
+        try:
+            data = data + str(vertex[1]) + ";"
+        except TypeError:
+            data = data + str(vertex['y']) + ";"
         data = data + "ENDLINE;\n"
     data = data + "ENDGEOFENCE;"
     return data
