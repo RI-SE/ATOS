@@ -183,7 +183,6 @@ int main()
             while (token != NULL) {
                 if (loopCounter == 21) {	//Get  starttime  %llu from proc file for pid.
                     sprintf(statusBuffer, "%s with Pid: %d was started at: %s", MODULE_NAME, pid, token);
-                    LogMessage(LOG_LEVEL_INFO, statusBuffer);
                 }
                 token = strtok(NULL, " ");
                 loopCounter++;
