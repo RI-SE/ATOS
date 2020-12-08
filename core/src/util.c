@@ -2002,7 +2002,7 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	dataLength += headerSize;
 
 	// Check if message is too large to send
-	if (dataLength > MQ_MSG_SIZE) {
+	if (dataLength > 500) {
 		LogMessage(LOG_LEVEL_ERROR, "Cannot send message %d of size %lu: maximum size is %lu", iCommand,
 				   dataLength + 1, MQ_MSG_SIZE);
 		return -1;
@@ -3961,6 +3961,48 @@ I32 UtilPopulateACCMDataStructFromMQ(C8 * rawACCM, size_t rawACCMsize, ACCMData 
 
 	return 0;
 }
+
+
+/*!
+ * \brief getPIDuptime reads the proc file of the pid in question and returns start time of the process after boot. In kernels before Linux 2.6, this value was expressed in
+jiffies. Since Linux 2.6, the value is expressed in
+clock ticks (divide by sysconf(_SC_CLK_TCK)).
+ * \param pid the pid in question.
+ * \return The time the process started after system boot.
+ */
+unsigned long getPIDuptime(pid_t pID) {
+	FILE *pidstat = NULL;
+
+	char filename[100] = { 0 };
+	snprintf(filename, sizeof (filename), "/proc/%d/stat", pID);
+
+	pidstat = fopen(filename, "r");
+	if (pidstat == NULL) {
+		fprintf(stderr, "Error: Couldn't open [%s]\n", filename);
+	}
+
+	char strval1[100] = { 0 };
+	fgets(strval1, 255, pidstat);
+
+	fclose(pidstat);
+	// Get start time from proc/pid/stat
+	char *token = strtok(strval1, " ");
+	int loopCounter = 0;
+
+	char uptime[247];
+
+	while (token != NULL) {
+		if (loopCounter == 21) {	//Get  starttime  %llu from proc file for pid.
+			sprintf(uptime, "%s", token);
+		}
+		token = strtok(NULL, " ");
+		loopCounter++;
+	}
+
+	return strtoul(token, NULL, 10);
+
+}
+
 
 /*!
  * \brief UtilgetDistance calculates the distance between two log lat positions usgin haversine formula.

@@ -2864,7 +2864,7 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 		}
 
 		LogMessage(LOG_LEVEL_ERROR, "GOT RESPONSE: ");
-		LogMessage(LOG_LEVEL_ERROR, respondingModule);
+		LogMessage(LOG_LEVEL_ERROR, "%s", respondingModule);
 
 		if (timercmp(&getStatusTimeoutTimer, &currentSystemTime, <)) {
 
@@ -2931,39 +2931,17 @@ void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
 	strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
 	remainingBufferSpace -= strlen(stringBuffer);
 
-	pid = getpid();
-	snprintf(procFilename, sizeof (procFilename), "/proc/%d/stat", pid);
+    unsigned long startTime = UtilGetPIDuptime(getpid());
 
-	pidstat = fopen(procFilename, "r");
-	if (pidstat == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Could not open file %s", procFilename);
-		return;
-	}
+	unsigned long long timeAtStart = startTime / (unsigned long long)(sysconf(_SC_CLK_TCK));
+	long serverUptime = (long)((unsigned long long)info.uptime - timeAtStart);
 
-	fgets(statFileBuffer, sizeof (statFileBuffer), pidstat);
-	fclose(pidstat);
-
-	// Get start time from proc/pid/stat
-	char *token = strtok(statFileBuffer, " ");
-	int statIndex = 0;
-
-	while (token != NULL) {
-		if (statIndex == 22) {	//Get  starttime  %llu from proc file for pid.
-			unsigned long long timeAtStart =
-				strtoull(token, NULL, 10) / (unsigned long long)(sysconf(_SC_CLK_TCK));
-			long serverUptime = (long)((unsigned long long)info.uptime - timeAtStart);
-
-			hours = serverUptime / 3600;
-			minutes = (serverUptime - (3600 * hours)) / 60;
-			seconds = (serverUptime - (3600 * hours) - (minutes * 60));
-			sprintf(stringBuffer, "Server uptime: %ld:%ld:%ld\n", hours, minutes, seconds);
-			strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
-			remainingBufferSpace -= strlen(stringBuffer);
-			break;
-		}
-		token = strtok(NULL, " ");
-		statIndex++;
-	}
+	hours = serverUptime / 3600;
+	minutes = (serverUptime - (3600 * hours)) / 60;
+	seconds = (serverUptime - (3600 * hours) - (minutes * 60));
+	sprintf(stringBuffer, "Server uptime: %ld:%ld:%ld\n", hours, minutes, seconds);
+	strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
+	remainingBufferSpace -= strlen(stringBuffer);
 	//Make it clear that this is placeholder data
 	strncat(ControlResponseBuffer, "Maestro powerlevel: 90001\n", remainingBufferSpace - 1);
 }
