@@ -747,6 +747,8 @@ unsigned long UtilGetPIDuptime(pid_t pID);
 double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
 
 
+enum procFields {startTime = 21, vSize = 22};
+
 typedef struct {
   uint64_t timestamp;
   int32_t  latitude;

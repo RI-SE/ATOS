@@ -3992,7 +3992,7 @@ unsigned long getPIDuptime(pid_t pID) {
     char uptime[247];
 
 	while (token != NULL) {
-		if (loopCounter == 21) {	//Get  starttime  %llu from proc file for pid.
+        if (loopCounter == startTime) {	//Get  starttime  %llu from proc file for pid.
             sprintf(uptime, "%s", token);
 		}
 		token = strtok(NULL, " ");
