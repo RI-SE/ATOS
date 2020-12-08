@@ -44,10 +44,14 @@ def ConstructTrajectoryFileData(trajPoints=None,trajectoryName="Unnamed"):
     data = ""
     data = data + "TRAJECTORY;0;" + str(trajectoryName) + ";1.0;" + str(nPoints) + ";\n"
     for trajPoint in trajPoints:
+        data = data + "LINE;"
         data = data + str(trajPoint['time']) + ";"
         data = data + str(trajPoint['x']) + ";"
         data = data + str(trajPoint['y']) + ";"
-        data = data + str(trajPoint['z']) + ";"
+        try:
+            data = data + str(trajPoint['z']) + ";"
+        except KeyError:
+            data = data + "0.0;"
         try:
             data = data + str(trajPoint['heading']) + ";"
         except KeyError:
@@ -76,7 +80,27 @@ def ConstructTrajectoryFileData(trajPoints=None,trajectoryName="Unnamed"):
             data = data + str(trajPoint['drive_mode']) + ";"
         except KeyError:
             data = data + "0;"
-        data = data + "\n"
+        data = data + "ENDLINE;\n"
     data = data + "ENDTRAJECTORY;"
     return data
     
+def ConstructGeofenceFileData(geofencePoints=None,geofenceName="Unnamed",forbidden=True, minHeight=0, maxHeight=100):
+    if geofencePoints == None:
+        nPoints = 0
+    else:
+        nPoints = len(geofencePoints)
+
+    data = ""
+    data = data + "GEOFENCE;" + str(geofenceName) + ";" + str(nPoints) + ";"
+    if forbidden:
+        data = data + "forbidden;"
+    else:
+        data = data + "permitted;"
+    data = data + str(minHeight) + ";" + str(maxHeight) + ";\n"
+    for vertex in geofencePoints:
+        data = data + "LINE;"
+        data = data + str(vertex['x']) + ";"
+        data = data + str(vertex['y']) + ";"
+        data = data + "ENDLINE;\n"
+    data = data + "ENDGEOFENCE;"
+    return data
