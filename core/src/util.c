@@ -3970,7 +3970,7 @@ clock ticks (divide by sysconf(_SC_CLK_TCK)).
  * \param pid the pid in question.
  * \return The time the process started after system boot.
  */
-unsigned long  UtilGetPIDuptime(pid_t pID);(pid_t pID) {
+unsigned long  UtilGetPIDuptime(pid_t pID) {
 	FILE *pidstat = NULL;
 
     char filename[PATH_MAX] = { 0 };
