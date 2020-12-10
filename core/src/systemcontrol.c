@@ -2945,7 +2945,7 @@ void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
 	int statIndex = 0;
 
 	while (token != NULL) {
-		if (statIndex == 22) {	//Get  starttime  %llu from proc file for pid.
+		if (statIndex == 21) {	//Get  starttime  %llu from proc file for pid.
 			unsigned long long timeAtStart =
 				strtoull(token, NULL, 10) / (unsigned long long)(sysconf(_SC_CLK_TCK));
 			long serverUptime = (long)((unsigned long long)info.uptime - timeAtStart);
