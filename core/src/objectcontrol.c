@@ -360,6 +360,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			// Check if any object has disconnected - if so, disconnect all objects and return to idle
 			if (checkObjectConnections(objectConnections, monitorDataTimeout, nbr_objects)) {
 				disconnectAllObjects(objectConnections, nbr_objects);
+				iCommSend(COMM_DISCONNECT, NULL, 0);
 				vSetState(OBC_STATE_IDLE, GSD);
 			}
 
@@ -1833,6 +1834,7 @@ void disconnectObject(ObjectConnection * objectConnection) {
 
 int hasRemoteDisconnected(int *sockfd) {
 	char dummy;
+
 	if (*sockfd == 0) {
 		return 1;
 	}
@@ -1952,7 +1954,7 @@ ssize_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 
 		if (result < 0) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-				LogMessage(LOG_LEVEL_ERROR,"Failed to receive from monitor socket");
+				LogMessage(LOG_LEVEL_ERROR, "Failed to receive from monitor socket");
 				return -1;
 			}
 		}
