@@ -360,6 +360,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			// Check if any object has disconnected - if so, disconnect all objects and return to idle
 			if (checkObjectConnections(objectConnections, monitorDataTimeout, nbr_objects)) {
 				disconnectAllObjects(objectConnections, nbr_objects);
+				iCommSend(COMM_DISCONNECT, NULL, 0);
 				vSetState(OBC_STATE_IDLE, GSD);
 			}
 
