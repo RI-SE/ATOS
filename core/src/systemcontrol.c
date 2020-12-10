@@ -2863,7 +2863,6 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 			numberOfResponses++;
 		}
 
-		LogMessage(LOG_LEVEL_INFO, "Received status response: %s", respondingModule);
 
 		if (timercmp(&getStatusTimeoutTimer, &currentSystemTime, <)) {
 
