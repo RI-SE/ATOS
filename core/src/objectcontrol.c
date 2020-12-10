@@ -1834,6 +1834,7 @@ void disconnectObject(ObjectConnection * objectConnection) {
 
 int hasRemoteDisconnected(int *sockfd) {
 	char dummy;
+
 	if (*sockfd == 0) {
 		return 1;
 	}
@@ -1953,7 +1954,7 @@ ssize_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 
 		if (result < 0) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-				LogMessage(LOG_LEVEL_ERROR,"Failed to receive from monitor socket");
+				LogMessage(LOG_LEVEL_ERROR, "Failed to receive from monitor socket");
 				return -1;
 			}
 		}
