@@ -164,7 +164,7 @@ public:
     std::string name = "";
     int version = 0;
     int id = 0;
-    in_addr_t ip = 0;
+	uint32_t objectID = 0;
 
     void initializeFromFile(const std::string fileName);
 private:
