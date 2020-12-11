@@ -2912,7 +2912,7 @@ void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
 
 	size_t remainingBufferSpace = bufferSize;
 	struct sysinfo info;
-    char stringBuffer[255];
+	char stringBuffer[255];
 	long hours, minutes, seconds;
 
 	// Server uptime
@@ -2926,7 +2926,7 @@ void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
 	strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
 	remainingBufferSpace -= strlen(stringBuffer);
 
-  unsigned long startTime = UtilGetPIDuptime(getpid());
+	unsigned long startTime = UtilGetPIDuptime(getpid());
 
 	unsigned long long timeAtStart = startTime / (unsigned long long)(sysconf(_SC_CLK_TCK));
 	long serverUptime = (long)((unsigned long long)info.uptime - timeAtStart);
