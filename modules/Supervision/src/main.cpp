@@ -9,7 +9,7 @@
 
 #include "supervisionstate.hpp"
 #include "geofence.hpp"
-#include "objectdata.hpp"
+#include "objectconfiguration.hpp"
 #include "logging.h"
 #include "datadictionary.h"
 #include "maestroTime.h"
