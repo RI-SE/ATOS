@@ -1,8 +1,8 @@
 #include <fstream>
 
-#include "regexpatterns.h"
+#include "regexpatterns.hpp"
 #include "logging.h"
-#include "trajectory.h"
+#include "trajectory.hpp"
 
 const std::regex Trajectory::fileHeaderPattern("TRAJECTORY;(" + RegexPatterns::intPattern + ");("
         + RegexPatterns::namePattern + ");" + RegexPatterns::versionPattern + ";("
@@ -16,8 +16,7 @@ const std::regex Trajectory::fileLinePattern("LINE;(" + RegexPatterns::floatPatt
 const std::regex Trajectory::fileFooterPattern("ENDTRAJECTORY;");
 
 Trajectory::Trajectory(const Trajectory& other) {
-    this->id = other.id;
-    this->ip = other.ip;
+	this->id = other.id;
     this->name = other.name;
     this->version = other.version;
     this->points = std::vector<TrajectoryPoint>(other.points);
@@ -69,7 +68,7 @@ void Trajectory::initializeFromFile(const std::string fileName) {
             else if (lineCount == nPoints + 1) {
                 if (regex_search(line, match, fileFooterPattern)) {
                     file.close();
-                    inet_pton(AF_INET, ipAddr.c_str(), &this->ip);
+					inet_pton(AF_INET, ipAddr.c_str(), &this->ip);
                     LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", trajFilePath.c_str());
                     return;
                 }
