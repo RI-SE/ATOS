@@ -93,7 +93,7 @@ class ISO:
                 position['z'] = as_hex_little_endian(in_position[2]*1000, 4)
             except (IndexError, KeyError):
                 pass
-        heading_deg = as_hex_little_endian(heading_deg*100, 2)
+        heading_deg = as_hex_little_endian(((90 - heading_deg + 360) % 360)*100, 2)
         speed['longitudinal'] = as_hex_little_endian(speed['longitudinal'], 2)
         speed['lateral'] = as_hex_little_endian(speed['lateral'], 2)
         acceleration['longitudinal'] = as_hex_little_endian(acceleration['longitudinal'], 2)
