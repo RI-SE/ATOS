@@ -1,6 +1,7 @@
 #include "objectdata.hpp"
 #include "util.h"
 #include <exception>
+#include <fstream>
 
 ObjectData::ObjectData() {
 }
@@ -15,6 +16,13 @@ void ObjectData::initializeFromFile(
 	using namespace std;
 	char objectSetting[100];
 	int result = 0;
+	ifstream file(fileName);
+
+	// Sanity check
+	if (!file.is_open()) {
+		throw ifstream::failure("Unable to open file <" + fileName + ">");
+	}
+	file.close();
 
 	// Get ID setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_ID, fileName.c_str(), fileName.length()+1,
@@ -42,4 +50,5 @@ void ObjectData::initializeFromFile(
 		throw invalid_argument("Cannot find trajectory file setting in file <" + fileName + ">");
 	}
 	trajectory.initializeFromFile(objectSetting);
+	LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectory.points.size());
 }
