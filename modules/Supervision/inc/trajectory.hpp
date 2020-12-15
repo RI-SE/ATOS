@@ -165,7 +165,7 @@ public:
     int version = 0;
 	int id = 0;
 
-    void initializeFromFile(const std::string fileName);
+	void initializeFromFile(const std::string& fileName);
 private:
     static const std::regex fileHeaderPattern;
     static const std::regex fileLinePattern;

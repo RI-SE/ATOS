@@ -22,7 +22,7 @@ Trajectory::Trajectory(const Trajectory& other) {
     this->points = std::vector<TrajectoryPoint>(other.points);
 }
 
-void Trajectory::initializeFromFile(const std::string fileName) {
+void Trajectory::initializeFromFile(const std::string &fileName) {
 
     using namespace std;
     char trajDirPath[PATH_MAX];
@@ -30,8 +30,7 @@ void Trajectory::initializeFromFile(const std::string fileName) {
     smatch match;
     ifstream file;
     bool isHeaderParsedSuccessfully = false;
-    unsigned long nPoints = 0;
-    const string ipAddr(fileName);
+	unsigned long nPoints = 0;
 
     UtilGetTrajDirectoryPath(trajDirPath, sizeof (trajDirPath));
     string trajFilePath(trajDirPath);
@@ -67,13 +66,12 @@ void Trajectory::initializeFromFile(const std::string fileName) {
             }
             else if (lineCount == nPoints + 1) {
                 if (regex_search(line, match, fileFooterPattern)) {
-                    file.close();
-					inet_pton(AF_INET, ipAddr.c_str(), &this->ip);
+					file.close();
                     LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", trajFilePath.c_str());
                     return;
                 }
                 else {
-                    errMsg = "Final line of geofence file <" + trajFilePath + "> badly formatted";
+					errMsg = "Final line of trajectory file <" + trajFilePath + "> badly formatted";
                     break;
                 }
             }
