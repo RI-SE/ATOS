@@ -29,7 +29,6 @@
 static bool isViolatingGeofence(const ObjectDataType &monitorData, const std::vector<Geofence>& geofences);
 static void loadGeofenceFiles(std::vector<Geofence> &geofences);
 static void loadObjectData(std::vector<ObjectConfiguration> &objectData);
-static Geofence parseGeofenceFile(const std::string geofenceFile);
 static int checkObjectsAgainstStartingPositions(const std::vector<ObjectConfiguration>& trajectories);
 static int checkObjectsAgainstGeofences(const std::vector<Geofence>& geofences, const std::vector<ObjectConfiguration> &trajetories);
 static void signalHandler(int signo);
@@ -306,17 +305,19 @@ void loadGeofenceFiles(std::vector<Geofence> &geofences) {
         }
         else {
             try {
-                Geofence geofence = parseGeofenceFile(pDirent->d_name);
+				Geofence geofence;
+				geofence.initializeFromFile(pDirent->d_name);
                 geofences.push_back(geofence);
             } catch (std::invalid_argument e) {
                 closedir(pDir);
                 geofences.clear();
-                LogMessage(LOG_LEVEL_ERROR, "Error parsing file <%s>", pDirent->d_name);
+				LogMessage(LOG_LEVEL_ERROR, "Error parsing file <%s>: %s",
+						   pDirent->d_name, e.what());
                 throw;
             } catch (std::ifstream::failure e) {
                 closedir(pDir);
                 geofences.clear();
-                LogMessage(LOG_LEVEL_ERROR, "Error opening file <%s>", pDirent->d_name);
+				LogMessage(LOG_LEVEL_ERROR, e.what());
                 throw;
             }
 
@@ -328,111 +329,6 @@ void loadGeofenceFiles(std::vector<Geofence> &geofences) {
 
     return;
 }
-
-/*!
-* \brief parseGeofenceFile Parse a geofence file into a Geofence object
-* \param geofenceFile A string containing a .geofence filename.
-* \return A Geofence object representing the data in the input file
-*/
-Geofence parseGeofenceFile(const std::string geofenceFile) {
-
-    using namespace std;
-    Geofence geofence;
-    char geofenceDirPath[MAX_FILE_PATH];
-    ifstream file;
-    string errMsg;
-
-    string floatPattern("[-+]?[0-9]*\\.?[0-9]+");
-    string intPattern("[0-9]+");
-    regex headerPattern("GEOFENCE;([a-zA-Z0-9]+);(" + intPattern
-                        +");(permitted|forbidden);(" + floatPattern + ");(" + floatPattern + ");");
-    regex linePattern("LINE;(" + floatPattern + ");(" + floatPattern + ");ENDLINE;");
-    regex footerPattern("ENDGEOFENCE;");
-    smatch match;
-
-    bool isHeaderParsedSuccessfully = false;
-    unsigned long nPoints = 0;
-
-    UtilGetGeofenceDirectoryPath(geofenceDirPath, sizeof (geofenceDirPath));
-    string geofenceFilePath(geofenceDirPath);
-    geofenceFilePath += geofenceFile;
-
-    file.open(geofenceFilePath);
-    if (file.is_open()) {
-        string line;
-        errMsg = "Encountered unexpected end of file while reading file <" + geofenceFilePath + ">";
-        for (unsigned long lineCount = 0; getline(file, line); lineCount++) {
-            if (lineCount == 0) {
-                if (regex_search(line, match, headerPattern)) {
-                    geofence.name = match[1];
-                    nPoints = stoul(match[2]);
-                    geofence.polygonPoints.reserve(nPoints);
-                    geofence.isPermitted = match[3].compare("permitted") == 0;
-                    geofence.minHeight = stod(match[4]);
-                    geofence.minHeight = stod(match[5]);
-                    isHeaderParsedSuccessfully = true;
-                }
-                else {
-                    errMsg = "The header of geofence file <" + geofenceFilePath + "> is badly formatted";
-                    break;
-                }
-            }
-            else if (lineCount > 0 && !isHeaderParsedSuccessfully) {
-                errMsg = "Attempt to parse geofence file <" + geofenceFilePath + "> before encountering header";
-                break;
-            }
-            else if (lineCount > nPoints + 1) {
-                errMsg = "Geofence line count of file <" + geofenceFilePath
-                        + "> does not match specified line count";
-                break;
-            }
-            else if (lineCount == nPoints + 1) {
-                if (regex_search(line, match, footerPattern)) {
-                    file.close();
-                    LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", geofenceFilePath.c_str());
-                    return geofence;
-                }
-                else {
-                    errMsg = "Final line of geofence file <" + geofenceFilePath + "> badly formatted";
-                    break;
-                }
-            }
-            else {
-                if (regex_search(line, match, linePattern)) {
-                    CartesianPosition pos;
-                    pos.xCoord_m = stod(match[1]);
-                    pos.yCoord_m = stod(match[2]);
-                    pos.zCoord_m = (geofence.maxHeight + geofence.minHeight) / 2.0;
-					pos.isPositionValid = true;
-					pos.heading_rad = 0;
-					pos.isHeadingValid = false;
-
-                    LogMessage(LOG_LEVEL_DEBUG, "Point: (%.3f, %.3f, %.3f)",
-                               pos.xCoord_m,
-                               pos.yCoord_m,
-                               pos.zCoord_m);
-                    geofence.polygonPoints.push_back(pos);
-                }
-                else {
-                    errMsg = "Line " + to_string(lineCount) + " of geofence file <"
-                            + geofenceFilePath + "> badly formatted";
-                    break;
-                }
-            }
-
-        }
-        file.close();
-        LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", geofenceFilePath.c_str());
-        LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
-        throw invalid_argument(errMsg);
-    }
-    else {
-        errMsg = "Unable to open file <" + geofenceFilePath + ">";
-        LogMessage(LOG_LEVEL_ERROR,errMsg.c_str());
-        throw ifstream::failure(errMsg);
-    }
-}
-
 
 /*!
  * \brief SupervisionCheckGeofences Checks all geofences to verify that the point represented by the MONR data lies within all permitted geofences and outside all forbidden geofences
