@@ -4,13 +4,20 @@
 #include "util.h"
 #include "regexpatterns.hpp"
 
-const std::regex fileHeaderPattern("GEOFENCE;([a-zA-Z0-9]+);(" + RegexPatterns::intPattern
+const std::regex Geofence::fileHeaderPattern("GEOFENCE;([a-zA-Z0-9]+);(" + RegexPatterns::intPattern
 					+ ");(permitted|forbidden);(" + RegexPatterns::floatPattern + ");("
 							   + RegexPatterns::floatPattern + ");");
-const std::regex fileLinePattern("LINE;(" + RegexPatterns::floatPattern + ");("
+const std::regex Geofence::fileLinePattern("LINE;(" + RegexPatterns::floatPattern + ");("
 							 + RegexPatterns::floatPattern + ");ENDLINE;");
-const std::regex fileFooterPattern("ENDGEOFENCE;");
+const std::regex Geofence::fileFooterPattern("ENDGEOFENCE;");
 
+Geofence::Geofence(const Geofence& other) {
+	this->name = other.name;
+	this->maxHeight = other.maxHeight;
+	this->minHeight = other.minHeight;
+	this->isPermitted = other.isPermitted;
+	this->polygonPoints = std::vector<CartesianPosition>(other.polygonPoints);
+}
 
 /*!
 * \brief parseGeofenceFile Parse the given file into a Geofence object

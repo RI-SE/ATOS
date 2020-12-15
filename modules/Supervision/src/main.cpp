@@ -43,10 +43,9 @@ static bool quit = false;
 /*------------------------------------------------------------
   -- Main task
   ------------------------------------------------------------*/
-int main()
-{
+int main() {
     COMMAND command = COMM_INV;
-	char mqRecvData[MQ_MSG_SIZE], mqSendData[MQ_MSG_SIZE];
+	char mqRecvData[MBUS_MAX_DATALEN], mqSendData[MBUS_MAX_DATALEN];
     std::vector<Geofence> geofences;
 	std::vector<ObjectConfiguration> objectData;
     const struct timespec sleepTimePeriod = {0,10000000};
@@ -54,8 +53,6 @@ int main()
     SupervisionState state;
     struct timeval tvTime;
     struct timeval nextSHMEMreadTime = { 0, 0 };
-
-
 
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
     LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
