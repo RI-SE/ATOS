@@ -76,6 +76,7 @@ def geofenceTransgressionTest():
     # Start
     mscp.Start(0)
     mscp.waitForObjectControlState("RUNNING",timeout=0.5)
+    time.sleep(0.01) # Await one new HEAB
     assert obj.lastCCStatus() == "running", "HEAB state not set to running after start"
 
     # Report a number of MONR inside geofence
