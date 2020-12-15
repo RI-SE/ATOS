@@ -167,8 +167,8 @@ public:
 
 	void initializeFromFile(const std::string& fileName);
 private:
-    static const std::regex fileHeaderPattern;
-    static const std::regex fileLinePattern;
-    static const std::regex fileFooterPattern;
+	static const std::regex fileHeaderPattern;
+	static const std::regex fileLinePattern;
+	static const std::regex fileFooterPattern;
 };
 #endif
