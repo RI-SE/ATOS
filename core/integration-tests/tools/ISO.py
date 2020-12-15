@@ -180,9 +180,12 @@ class ISOObject(ISO):
             self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.udpSocket.bind((self.host, self.port))
             while not self.quit:
-                data, remoteAddr = self.udpSocket.recvfrom(2048)
-                self.remoteAddr = remoteAddr
-                self.lastHEAB = data
+                ready = select.select([self.udpSocket],[],[],0)
+                if ready[0]:
+                    data, remoteAddr = self.udpSocket.recvfrom(2048)
+                    self.remoteAddr = remoteAddr
+                    self.lastHEAB = data
+                time.sleep(0.001)
 
         def send(self,message):
             if not self.remoteAddr:
