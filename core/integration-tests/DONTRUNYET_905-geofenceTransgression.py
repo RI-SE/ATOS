@@ -80,13 +80,13 @@ def geofenceTransgressionTest():
     # Report a number of MONR inside geofence
     print("=== Entered running state, sending test MONR data")
     obj.MONR(transmitter_id=objID,position=testPts[0])
-    sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*random.randint(1,7))
     obj.MONR(transmitter_id=objID,position=testPts[1])
-    sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*random.randint(1,7))
     obj.MONR(transmitter_id=objID,position=testPts[2])
-    sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*random.randint(1,7))
     obj.MONR(transmitter_id=objID,position=testPts[3])
-    sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*random.randint(1,7))
 
     # Check last HEAB so it is not ABORT
     assert obj.lastCCStatus() == "running"
@@ -94,9 +94,9 @@ def geofenceTransgressionTest():
     # Report one MONR outside geofence
     obj.MONR(transmitter_id=objID,position=testPts[4])
     transgressionTime = time.time()
-    sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*random.randint(1,7))
     obj.MONR(transmitter_id=objID,position=testPts[5])
-    sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*random.randint(1,7))
     obj.MONR(transmitter_id=objID,position=testPts[6])
 
     # Sleep until max allowed time passed
