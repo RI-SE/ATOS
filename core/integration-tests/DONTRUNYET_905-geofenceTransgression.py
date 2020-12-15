@@ -76,6 +76,7 @@ def geofenceTransgressionTest():
     # Start
     mscp.Start(0)
     mscp.waitForObjectControlState("RUNNING",timeout=0.5)
+    assert obj.lastCCStatus() == "running", "HEAB state not set to running after start"
 
     # Report a number of MONR inside geofence
     print("=== Entered running state, sending test MONR data")
@@ -89,7 +90,9 @@ def geofenceTransgressionTest():
     time.sleep(0.001*random.randint(1,7))
 
     # Check last HEAB so it is not ABORT
-    assert obj.lastCCStatus() == "running"
+    print(obj.lastCCStatus())
+    assert obj.lastCCStatus() == "running", "HEAB state not kept at running after valid positions"
+    print("=== Sending transgressing MONR data")
 
     # Report one MONR outside geofence
     obj.MONR(transmitter_id=objID,position=testPts[4])
@@ -103,7 +106,7 @@ def geofenceTransgressionTest():
     time.sleep(maxAbortDelay-(time.time()-transgressionTime))
 
     # Check last HEAB so it is ABORT
-    assert obj.lastCCStatus() == "abort"
+    assert obj.lastCCStatus() == "abort", "HEAB state not set to abort after exiting geofence"
     return
 
 
@@ -119,4 +122,6 @@ if __name__ == "__main__":
             sup.stop()
         if core:
             core.stop()
+        if obj:
+            obj.shutdown()
 
