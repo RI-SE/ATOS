@@ -3775,7 +3775,7 @@ int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char 
 	memset(objectSetting, 0, objectSettingSize);
 	UtilSearchTextFile(objectFilePath, textBuffer, "", objectSetting);
 
-	LogMessage(LOG_LEVEL_DEBUG, "Read object parameter: %s%s\n", textBuffer, objectSetting);
+	LogMessage(LOG_LEVEL_DEBUG, "Read object parameter: %s%s", textBuffer, objectSetting);
 
 	return objectSetting[0] == '\0' ? -1 : 0;
 }
