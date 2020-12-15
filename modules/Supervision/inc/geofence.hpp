@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "util.h"
+#include "positioning.h"
 
 class Geofence
 {
@@ -15,6 +16,8 @@ public:
     double minHeight = 0;
     double maxHeight = 0;
 
+	bool permits(const CartesianPosition &position) const;
+	bool forbids(const CartesianPosition &position) const;
 };
 
 #endif
