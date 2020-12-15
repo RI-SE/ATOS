@@ -81,14 +81,14 @@ class ISO:
         try:
             position['x'] = as_hex_little_endian(in_position['x']*1000, 4)
             position['y'] = as_hex_little_endian(in_position['y']*1000, 4)
-        except KeyError:
+        except (KeyError,TypeError):
             position['x'] = as_hex_little_endian(in_position[0]*1000, 4)
             position['y'] = as_hex_little_endian(in_position[1]*1000, 4)
             
         position['z'] = as_hex_little_endian(0, 4)
         try:
             position['z'] = as_hex_little_endian(in_position['z']*1000, 4)
-        except KeyError:
+        except  (KeyError,TypeError):
             try:
                 position['z'] = as_hex_little_endian(in_position[2]*1000, 4)
             except (IndexError, KeyError):
