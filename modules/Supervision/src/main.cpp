@@ -445,36 +445,25 @@ bool isViolatingGeofence(
 		const std::vector<Geofence> &geofences) {
 
 	const CartesianPosition monitorPoint = monitorData.MonrData.position;
-    char isInPolygon = 0;
-    int retval = false;
+	bool anyViolated = false;
 
-    for (Geofence geofence : geofences)
-    {
-		isInPolygon = UtilIsPointInPolygon(monitorPoint, geofence.polygonPoints.data(),
-                                     static_cast<unsigned int>(geofence.polygonPoints.size()));
-        if (isInPolygon == -1) {
-            LogMessage(LOG_LEVEL_WARNING, "No points in polygon");
-            throw std::invalid_argument("No points in polygon");
-        }
+	for (const Geofence &geofence : geofences) {
+		bool isViolated = geofence.forbids(monitorPoint);
+		if (isViolated && geofence.isPermitted) {
+			LogMessage(LOG_LEVEL_WARNING,
+					   "Object with ID %u is outside a permitted area %s",
+					   monitorData.ClientID, geofence.name.c_str());
+		}
+		else if (isViolated && !geofence.isPermitted) {
+			LogMessage(LOG_LEVEL_WARNING,
+					   "Object with ID %u is inside a forbidden area %s",
+					   monitorData.ClientID, geofence.name.c_str());
+		}
 
-        if ((geofence.isPermitted && isInPolygon)
-                || (!geofence.isPermitted && !isInPolygon)) {
-            // Inside the polygon if it is permitted, alt. outside the polygon if it is forbidden: all is fine
-        }
-        else {
-            if (geofence.isPermitted)
-                LogMessage(LOG_LEVEL_WARNING,
-						   "Object with ID %u is outside a permitted area %s",
-						   monitorData.ClientID, geofence.name.c_str());
-            else
-                LogMessage(LOG_LEVEL_WARNING,
-						   "Object with ID %u is inside a forbidden area %s",
-						   monitorData.ClientID, geofence.name.c_str());
-            retval = true;
-        }
+		anyViolated = anyViolated || isViolated;
     }
 
-    return retval;
+	return anyViolated;
 }
 
 
