@@ -24,7 +24,7 @@ add_executable(${SUPERVISION_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/supervisionstate.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/trajectory.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/objectdata.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/objectconfiguration.cpp
 )
 
 # Link project executable to util libraries
