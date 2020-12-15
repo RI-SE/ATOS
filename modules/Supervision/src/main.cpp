@@ -7,9 +7,9 @@
 #include <regex>
 #include <systemd/sd-daemon.h>
 
-#include "supervisionstate.h"
-#include "geofence.h"
-#include "trajectory.h"
+#include "supervisionstate.hpp"
+#include "geofence.hpp"
+#include "objectdata.hpp"
 #include "logging.h"
 #include "datadictionary.h"
 #include "maestroTime.h"
@@ -28,7 +28,7 @@
   ------------------------------------------------------------*/
 static bool isViolatingGeofence(const ObjectDataType &monitorData, std::vector<Geofence> geofences);
 static void loadGeofenceFiles(std::vector<Geofence> &geofences);
-static void loadTrajectoryFiles(std::vector<Trajectory> &trajectories);
+static void loadObjectData(std::vector<ObjectData> &objectData);
 static Geofence parseGeofenceFile(const std::string geofenceFile);
 static int checkObjectsAgainstStartingPositions(const std::vector<Trajectory> &trajectories);
 static int checkObjectsAgainstGeofences(const std::vector<Geofence>& geofences, const std::vector<Trajectory> &trajetories);
@@ -49,7 +49,7 @@ int main()
     COMMAND command = COMM_INV;
 	char mqRecvData[MQ_MSG_SIZE], mqSendData[MQ_MSG_SIZE];
     std::vector<Geofence> geofences;
-	std::vector<Trajectory> trajectories;
+	std::vector<ObjectData> objectData;
     const struct timespec sleepTimePeriod = {0,10000000};
     struct timespec remTime;
     SupervisionState state;
@@ -104,10 +104,10 @@ int main()
 			break;
 		case SupervisionState::VERIFYING_INIT:
 			geofences.clear();
-			trajectories.clear();
+			objectData.clear();
 			try {
 				loadGeofenceFiles(geofences);
-				loadTrajectoryFiles(trajectories);
+				loadObjectData(objectData);
 			}
 			catch (std::invalid_argument e) {
 				LogMessage(LOG_LEVEL_ERROR, "Unable to initialize due to file parsing error");
@@ -197,22 +197,22 @@ void signalHandler(int signo) {
 
 
 /*!
-* \brief Open a directory and look for trajectory files which are then parsed.
+* \brief Open a directory and look for object data which is then parsed.
 * \param Trajectories A vector of trajectories to be filled
 */
-void loadTrajectoryFiles(std::vector<Trajectory> &trajectories) {
+void loadObjectData(std::vector<ObjectData>& objectData) {
 
     struct dirent *ent;
     DIR *dir;
     unsigned int n = 0;
-    char trajectoryPathDir[MAX_FILE_PATH];
-    UtilGetTrajDirectoryPath(trajectoryPathDir, sizeof (trajectoryPathDir));
+	char objectPathDir[MAX_FILE_PATH];
+	UtilGetObjectDirectoryPath(objectPathDir, sizeof (objectPathDir));
     LogMessage(LOG_LEVEL_DEBUG, "Loading trajectories");
 
-    dir = opendir(trajectoryPathDir);
+	dir = opendir(objectPathDir);
     if (dir == nullptr) {
-        LogMessage(LOG_LEVEL_ERROR, "Cannot open trajectory directory");
-        throw std::invalid_argument("Cannot open trajectory directory");
+		LogMessage(LOG_LEVEL_ERROR, "Cannot open object directory");
+		throw std::invalid_argument("Cannot open object directory");
     }
 
     // Count the number of trajectory files in the directory
@@ -223,12 +223,12 @@ void loadTrajectoryFiles(std::vector<Trajectory> &trajectories) {
     }
     closedir(dir);
 
-    LogMessage(LOG_LEVEL_DEBUG, "Found %u trajectory files: proceeding to parse", n);
+	LogMessage(LOG_LEVEL_DEBUG, "Found %u object files: proceeding to parse", n);
 
-    dir = opendir(trajectoryPathDir);
+	dir = opendir(objectPathDir);
     if (dir == nullptr) {
-        LogMessage(LOG_LEVEL_ERROR, "Cannot open trajectory directory");
-        throw std::invalid_argument("Cannot open trajectory directory");
+		LogMessage(LOG_LEVEL_ERROR, "Cannot open object directory");
+		throw std::invalid_argument("Cannot open object directory");
     }
 
     while ((ent = readdir(dir)) != nullptr) {
@@ -236,26 +236,25 @@ void loadTrajectoryFiles(std::vector<Trajectory> &trajectories) {
             LogMessage(LOG_LEVEL_DEBUG, "Ignored <%s>", ent->d_name);
         }
         else {
-            try {
-                Trajectory trajectory;
-                trajectory.initializeFromFile(ent->d_name);
-                trajectories.push_back(trajectory); // This does not copy IP value correctly
-                LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectories.back().points.size());
+			try {
+				ObjectData o;
+				o.initializeFromFile(ent->d_name);
+				objectData.push_back(o);
             } catch (std::invalid_argument e) {
                 closedir(dir);
-                trajectories.clear();
-                LogMessage(LOG_LEVEL_ERROR, "Error parsing file <%s>", ent->d_name);
+				objectData.clear();
+				LogMessage(LOG_LEVEL_ERROR, "Error parsing file <%s>: %s", ent->d_name, e.what());
                 throw;
             } catch (std::ifstream::failure e) {
                 closedir(dir);
-                trajectories.clear();
-                LogMessage(LOG_LEVEL_ERROR, "Error opening file <%s>", ent->d_name);
+				objectData.clear();
+				LogMessage(LOG_LEVEL_ERROR, e.what());
                 throw;
             }
         }
     }
     closedir(dir);
-    LogMessage(LOG_LEVEL_INFO, "Loaded %d trajectories", trajectories.size());
+	LogMessage(LOG_LEVEL_INFO, "Loaded %d trajectories", objectData.size());
     return;
 }
 
@@ -484,7 +483,7 @@ int checkObjectsAgainstStartingPositions(const std::vector<Trajectory>& trajecto
 
 	for (const auto &trajectory : trajectories) {
 		ObjectDataType objectData;
-		objectData.ClientIP = trajectory.ip;
+		//objectData.ClientIP = trajectory.ip;
 
 		if (DataDictionaryGetObjectTransmitterIDByIP(objectData.ClientIP, &objectData.ClientID) != READ_OK
 				|| DataDictionaryGetObjectEnableStatusById(objectData.ClientID, &objectData.Enabled) != READ_OK
