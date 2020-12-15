@@ -1165,7 +1165,7 @@ float UtilCalculateTimeToSync(ObjectPosition * OP) {
  * \param nPtsInPolygon length of the vertex array
  * \return true if the point lies within the polygon, false otherwise
  */
-char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition * vertices, unsigned int nPtsInPolygon) {
+char UtilIsPointInPolygon(const CartesianPosition point, const CartesianPosition * vertices, unsigned int nPtsInPolygon) {
 	int nIntersects = 0;
 
 	if (nPtsInPolygon == 0) {
