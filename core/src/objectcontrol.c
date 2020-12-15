@@ -152,7 +152,7 @@ static int handleObjectPropertiesData(const ObjectPropertiesType * properties,
 									  const DataInjectionMap injectionMaps[],
 									  const ObjectConnection objectConnections[],
 									  const uint32_t transmitterIDs[], const unsigned int numberOfObjects);
-static size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
+static ssize_t uiRecvMonitor(int *sockfd, char *buffer, size_t length);
 static int getObjectIndexFromIP(const in_addr_t ipAddr, const ObjectConnection objectConnections[],
 								unsigned int numberOfObjects);
 static void signalHandler(int signo);
@@ -351,6 +351,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									&objectConnections[iIndex].objectMonitorAddress,
 									MessageBuffer, MessageLength, 0);
 			}
+		}
+
+		// Every iteration while connected, do
+		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_CONNECTED
+			|| vGetState(GSD) == OBC_STATE_ARMED || vGetState(GSD) == OBC_STATE_REMOTECTRL) {
 
 			// Check if any object has disconnected - if so, disconnect all objects and return to idle
 			if (checkObjectConnections(objectConnections, monitorDataTimeout, nbr_objects)) {
@@ -359,11 +364,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				vSetState(OBC_STATE_IDLE, GSD);
 			}
 
-
-		}
-
-		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_CONNECTED
-			|| vGetState(GSD) == OBC_STATE_ARMED || vGetState(GSD) == OBC_STATE_REMOTECTRL) {
 			char buffer[RECV_MESSAGE_BUFFER];
 			size_t receivedMONRData = 0;
 			size_t receivedTCPData = 0;
@@ -1834,6 +1834,11 @@ void disconnectObject(ObjectConnection * objectConnection) {
 
 int hasRemoteDisconnected(int *sockfd) {
 	char dummy;
+
+	if (*sockfd == 0) {
+		return 1;
+	}
+
 	ssize_t x = recv(*sockfd, &dummy, 1, MSG_PEEK);
 
 	// Remote has disconnected: EOF => x=0
@@ -1939,9 +1944,9 @@ int configureAdaptiveSynchronizationPoints(const char trajectoryFiles[MAX_OBJECT
 	}
 }
 
-size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
+ssize_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 	ssize_t result = 0;
-	size_t recvDataSize = 0;
+	ssize_t recvDataSize = 0;
 
 	// Read until receive buffer is empty, return last read message
 	do {
@@ -1949,11 +1954,12 @@ size_t uiRecvMonitor(int *sockfd, char *buffer, size_t length) {
 
 		if (result < 0) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-				util_error("Failed to receive from monitor socket");
+				LogMessage(LOG_LEVEL_ERROR, "Failed to receive from monitor socket");
+				return -1;
 			}
 		}
 		else {
-			recvDataSize = (size_t) (result);
+			recvDataSize = result;
 			LogMessage(LOG_LEVEL_DEBUG, "Received: <%s>", buffer);
 		}
 	} while (result > 0);
