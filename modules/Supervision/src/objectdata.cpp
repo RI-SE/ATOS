@@ -3,14 +3,14 @@
 #include <exception>
 #include <fstream>
 
-ObjectData::ObjectData() {
+ObjectConfiguration::ObjectConfiguration() {
 }
 
-ObjectData::ObjectData(const std::string &fromFile) {
+ObjectConfiguration::ObjectConfiguration(const std::string &fromFile) {
 	initializeFromFile(fromFile);
 }
 
-void ObjectData::initializeFromFile(
+void ObjectConfiguration::initializeFromFile(
 		const std::string &fileName) {
 
 	using namespace std;

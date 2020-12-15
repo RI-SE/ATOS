@@ -26,12 +26,12 @@
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
-static bool isViolatingGeofence(const ObjectDataType &monitorData, std::vector<Geofence> geofences);
+static bool isViolatingGeofence(const ObjectDataType &monitorData, const std::vector<Geofence>& geofences);
 static void loadGeofenceFiles(std::vector<Geofence> &geofences);
-static void loadObjectData(std::vector<ObjectData> &objectData);
+static void loadObjectData(std::vector<ObjectConfiguration> &objectData);
 static Geofence parseGeofenceFile(const std::string geofenceFile);
-static int checkObjectsAgainstStartingPositions(const std::vector<Trajectory> &trajectories);
-static int checkObjectsAgainstGeofences(const std::vector<Geofence>& geofences, const std::vector<Trajectory> &trajetories);
+static int checkObjectsAgainstStartingPositions(const std::vector<ObjectConfiguration>& trajectories);
+static int checkObjectsAgainstGeofences(const std::vector<Geofence>& geofences, const std::vector<ObjectConfiguration> &trajetories);
 static void signalHandler(int signo);
 static void updateSupervisionCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
 
@@ -49,7 +49,7 @@ int main()
     COMMAND command = COMM_INV;
 	char mqRecvData[MQ_MSG_SIZE], mqSendData[MQ_MSG_SIZE];
     std::vector<Geofence> geofences;
-	std::vector<ObjectData> objectData;
+	std::vector<ObjectConfiguration> objectData;
     const struct timespec sleepTimePeriod = {0,10000000};
     struct timespec remTime;
     SupervisionState state;
@@ -85,18 +85,18 @@ int main()
 
 			if (timercmp(&tvTime, &nextSHMEMreadTime, >) && geofences.size() > 0) {
 				updateSupervisionCheckTimer(&nextSHMEMreadTime, SUPERVISION_SHMEM_READ_RATE_HZ);
-				if (checkObjectsAgainstGeofences(geofences, trajectories) != 0) {
+				if (checkObjectsAgainstGeofences(geofences, objectData) != 0) {
 					iCommSend(COMM_ABORT, nullptr, 0);
 					state.set(SupervisionState::READY);
 				}
 			}
 			break;
 		case SupervisionState::VERIFYING_ARM:
-			if (checkObjectsAgainstGeofences(geofences, trajectories) != 0) {
+			if (checkObjectsAgainstGeofences(geofences, objectData) != 0) {
 				LogMessage(LOG_LEVEL_INFO, "Found object violating geofence: sending DISARM");
 				iCommSend(COMM_DISARM, nullptr, 0);
 			}
-			if (checkObjectsAgainstStartingPositions(trajectories) != 0) {
+			if (checkObjectsAgainstStartingPositions(objectData) != 0) {
 				LogMessage(LOG_LEVEL_INFO, "All objects not near their starting positions: sending DISARM");
 				iCommSend(COMM_DISARM, nullptr, 0);
 			}
@@ -200,7 +200,7 @@ void signalHandler(int signo) {
 * \brief Open a directory and look for object data which is then parsed.
 * \param Trajectories A vector of trajectories to be filled
 */
-void loadObjectData(std::vector<ObjectData>& objectData) {
+void loadObjectData(std::vector<ObjectConfiguration>& objectData) {
 
     struct dirent *ent;
     DIR *dir;
@@ -237,7 +237,7 @@ void loadObjectData(std::vector<ObjectData>& objectData) {
         }
         else {
 			try {
-				ObjectData o;
+				ObjectConfiguration o;
 				o.initializeFromFile(ent->d_name);
 				objectData.push_back(o);
             } catch (std::invalid_argument e) {
@@ -440,7 +440,9 @@ Geofence parseGeofenceFile(const std::string geofenceFile) {
  * \param geofences Vector containing all geofences
  * \return True if MONR coordinate violates a geofence, false if not.
  */
-bool isViolatingGeofence(const ObjectDataType &monitorData, std::vector<Geofence> geofences) {
+bool isViolatingGeofence(
+		const ObjectDataType &monitorData,
+		const std::vector<Geofence> &geofences) {
 
 	const CartesianPosition monitorPoint = monitorData.MonrData.position;
     char isInPolygon = 0;
@@ -476,53 +478,57 @@ bool isViolatingGeofence(const ObjectDataType &monitorData, std::vector<Geofence
 }
 
 
-int checkObjectsAgainstStartingPositions(const std::vector<Trajectory>& trajectories) {
+int checkObjectsAgainstStartingPositions(
+		const std::vector<ObjectConfiguration>& objectConfigurations) {
 
 	bool allAtStart = true;
-	char ipString[INET_ADDRSTRLEN];
 
-	for (const auto &trajectory : trajectories) {
+	for (const auto &objectConfiguration : objectConfigurations) {
 		ObjectDataType objectData;
-		//objectData.ClientIP = trajectory.ip;
 
-		if (DataDictionaryGetObjectTransmitterIDByIP(objectData.ClientIP, &objectData.ClientID) != READ_OK
-				|| DataDictionaryGetObjectEnableStatusById(objectData.ClientID, &objectData.Enabled) != READ_OK
+		if (DataDictionaryGetObjectEnableStatusById(objectConfiguration.id, &objectData.Enabled) != READ_OK
 				|| (objectData.Enabled != OBJECT_DISABLED
-				&& (DataDictionaryGetMonitorData(objectData.ClientID, &objectData.MonrData) != READ_OK
-					|| DataDictionaryGetMonitorDataReceiveTime(objectData.ClientID, &objectData.lastDataUpdate) != READ_OK))) {
-			LogMessage(LOG_LEVEL_INFO, "Unable to read from data dictionary for object with IP %s",
-					   inet_ntop(AF_INET, &objectData.ClientIP, ipString, sizeof (ipString)));
+				&& (DataDictionaryGetMonitorData(objectConfiguration.id, &objectData.MonrData) != READ_OK
+					|| DataDictionaryGetMonitorDataReceiveTime(objectConfiguration.id, &objectData.lastDataUpdate) != READ_OK))) {
+			LogMessage(LOG_LEVEL_INFO, "Unable to read from data dictionary for object with ID %u",
+					   objectConfiguration.id);
 			allAtStart = false;
 			continue;
 		}
 
-		if (trajectory.points.empty() || objectData.Enabled == OBJECT_DISABLED) {
+		if (objectConfiguration.trajectory.points.empty()
+				|| objectData.Enabled == OBJECT_DISABLED) {
 			continue;
 		}
 
-		CartesianPosition firstTrajectoryPoint = trajectory.points.front().getCartesianPosition();
+		CartesianPosition firstTrajectoryPoint = objectConfiguration.trajectory.points.front().getCartesianPosition();
 		bool isPositionNearTarget = UtilIsPositionNearTarget(objectData.MonrData.position, firstTrajectoryPoint, ARM_MAX_DISTANCE_TO_START_M);
 		bool isAngleNearTarget = UtilIsAngleNearTarget(objectData.MonrData.position, firstTrajectoryPoint, ARM_MAX_ANGLE_TO_START_DEG * M_PI / 180.0);
 		if (isPositionNearTarget && isAngleNearTarget) {
-				LogMessage(LOG_LEVEL_INFO, "Object with IP %s and position (%.2f, %.2f, %.2f) detected within %.2f m and %.2f degrees of the first point (%.2f, %.2f, %.2f) in trajectory %s",
-						   inet_ntop(AF_INET, &objectData.ClientIP, ipString, sizeof (ipString)),
-						   objectData.MonrData.position.xCoord_m, objectData.MonrData.position.yCoord_m,
-						   objectData.MonrData.position.zCoord_m, ARM_MAX_DISTANCE_TO_START_M,
-						   ARM_MAX_ANGLE_TO_START_DEG, firstTrajectoryPoint.xCoord_m, firstTrajectoryPoint.yCoord_m,
-						   firstTrajectoryPoint.zCoord_m, trajectory.name.c_str());
+				LogMessage(LOG_LEVEL_INFO, "Object with ID %u and position (%.2f, %.2f, %.2f) detected within %.2f m "
+										   "and %.2f degrees of the first point (%.2f, %.2f, %.2f) in trajectory %s",
+						   objectConfiguration.id, objectData.MonrData.position.xCoord_m,
+						   objectData.MonrData.position.yCoord_m, objectData.MonrData.position.zCoord_m,
+						   ARM_MAX_DISTANCE_TO_START_M, ARM_MAX_ANGLE_TO_START_DEG, firstTrajectoryPoint.xCoord_m,
+						   firstTrajectoryPoint.yCoord_m, firstTrajectoryPoint.zCoord_m,
+						   objectConfiguration.trajectory.name.c_str());
 		}
 		else {
 			if (!isPositionNearTarget) {
-				LogMessage(LOG_LEVEL_INFO, "Object with IP %s and position (%.2f, %.2f, %.2f) farther than %.2f m from first point (%.2f, %.2f, %.2f) in trajectory %s",
-							inet_ntop(AF_INET, &objectData.ClientIP, ipString, sizeof (ipString)),
-							objectData.MonrData.position.xCoord_m, objectData.MonrData.position.yCoord_m, objectData.MonrData.position.zCoord_m,
-							ARM_MAX_DISTANCE_TO_START_M, firstTrajectoryPoint.xCoord_m, firstTrajectoryPoint.yCoord_m, firstTrajectoryPoint.zCoord_m,
-							trajectory.points.front().getZCoord(), trajectory.name.c_str());
+				LogMessage(LOG_LEVEL_INFO, "Object with ID %u and position (%.2f, %.2f, %.2f) farther than %.2f m "
+										   "from first point (%.2f, %.2f, %.2f) in trajectory %s",
+							objectConfiguration.id, objectData.MonrData.position.xCoord_m,
+							objectData.MonrData.position.yCoord_m, objectData.MonrData.position.zCoord_m,
+							ARM_MAX_DISTANCE_TO_START_M, firstTrajectoryPoint.xCoord_m,
+							firstTrajectoryPoint.yCoord_m, firstTrajectoryPoint.zCoord_m,
+							objectConfiguration.trajectory.name.c_str());
 			}
 			else {
-				LogMessage(LOG_LEVEL_INFO, "Object with IP %s (heading: %.2f degrees) not facing direction specified by first point (heading: %.2f degrees) in trajectory %s (tolerance: %.2f degrees)",
-							inet_ntop(AF_INET, &objectData.ClientIP, ipString, sizeof (ipString)), objectData.MonrData.position.heading_rad * 180.0 / M_PI,
-						   firstTrajectoryPoint.heading_rad * 180.0 / M_PI, trajectory.name.c_str(), ARM_MAX_ANGLE_TO_START_DEG);
+				LogMessage(LOG_LEVEL_INFO, "Object with ID %u (heading: %.2f degrees) not facing direction specified"
+										   " by first point (heading: %.2f degrees) in trajectory %s (tolerance: %.2f degrees)",
+						   objectConfiguration.id, objectData.MonrData.position.heading_rad * 180.0 / M_PI,
+						   firstTrajectoryPoint.heading_rad * 180.0 / M_PI, objectConfiguration.trajectory.name.c_str(),
+						   ARM_MAX_ANGLE_TO_START_DEG);
 			}
 			allAtStart = false;
 		}
@@ -531,8 +537,9 @@ int checkObjectsAgainstStartingPositions(const std::vector<Trajectory>& trajecto
 }
 
 
-int checkObjectsAgainstGeofences(const std::vector<Geofence> &geofences, const std::vector<Trajectory>& trajetories) {
-    char ipString[INET_ADDRSTRLEN];
+int checkObjectsAgainstGeofences(
+		const std::vector<Geofence> &geofences,
+		const std::vector<ObjectConfiguration>& objectData) {
 
     std::vector<uint32_t> transmitterIDs;
     uint32_t numberOfObjects;
@@ -544,11 +551,11 @@ int checkObjectsAgainstGeofences(const std::vector<Geofence> &geofences, const s
     // Get number of objects present in shared memory
     if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
         LogMessage(LOG_LEVEL_ERROR,
-                   "Data dictionary number of objects read error - Cannot check against Geofences");
+				   "Data dictionary number of objects read error - cannot check against geofences");
         return -1;
     }
-	if(numberOfObjects == 0 && trajetories.size() != 0) {
-		LogMessage(LOG_LEVEL_ERROR, "No objects present in shared memory while expecting %u", trajetories.size());
+	if(numberOfObjects == 0 && objectData.size() != 0) {
+		LogMessage(LOG_LEVEL_ERROR, "No objects present in shared memory while expecting %u", objectData.size());
 		return -1;
     }
 
@@ -570,8 +577,8 @@ int checkObjectsAgainstGeofences(const std::vector<Geofence> &geofences, const s
 			retval = -1;
 		}
 		else if (isViolatingGeofence(monitorData, geofences)) {
-			LogMessage(LOG_LEVEL_INFO, "Object with IP %s is violating a geofence",
-					   inet_ntop(AF_INET, &monitorData.ClientIP, ipString, sizeof (ipString)));
+			LogMessage(LOG_LEVEL_INFO, "Object with ID %u is violating a geofence",
+					   transmitterID);
 			retval = -1;
 		}
 	}
