@@ -163,8 +163,7 @@ public:
     std::vector<TrajectoryPoint> points;
     std::string name = "";
     int version = 0;
-    int id = 0;
-	uint32_t objectID = 0;
+	int id = 0;
 
     void initializeFromFile(const std::string fileName);
 private:
