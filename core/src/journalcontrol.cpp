@@ -200,8 +200,8 @@ void JournalCollection::placeStartBookmarks() {
 		journal.containedFiles.insert(journalFile);
 		this->insert(journal);
 	}
-
-	this->startTime = std::chrono::system_clock::now();
+	using namespace std::chrono;
+	this->startDay = floor<days>(system_clock::now());
 }
 
 
@@ -225,8 +225,8 @@ void JournalCollection::placeStopBookmarks() {
 		matchingJournal->stopReference.place(journalFile, std::ios_base::end);
 		matchingJournal->containedFiles.insert(journalFile);
 	}
-
-	this->stopTime = std::chrono::system_clock::now();
+	using namespace std::chrono;
+	this->stopDay = floor<days>(system_clock::now());
 }
 
 
