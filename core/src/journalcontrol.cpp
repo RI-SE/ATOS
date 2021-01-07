@@ -71,6 +71,8 @@ public:
 	}
 };
 
+
+
 //! Template specialization of std::hash for Journal
 namespace std {
 	template <> struct hash<Journal> {
@@ -79,6 +81,16 @@ namespace std {
 		}
 	};
 }
+
+class JournalCollection : public std::unordered_set<Journal> {
+public:
+	void placeStartBookmarks();
+	void placeStopBookmarks();
+private:
+	std::chrono::system_clock::time_point startTime;
+	std::chrono::system_clock::time_point stopTime;
+};
+
 /*------------------------------------------------------------
   -- Static variables.
   ------------------------------------------------------------*/
@@ -89,9 +101,9 @@ static volatile bool quit = false;
   ------------------------------------------------------------*/
 static void signalHandler(int signo);
 static int initializeModule(const LOG_LEVEL logLevel);
-static void storeJournalStartBookmarks(std::unordered_set<Journal> &journals);
-static void storeJournalStopBookmarks(std::unordered_set<Journal> &journals);
+static void collectJournalsBetween(std::unordered_set<Journal> &journals);
 static int generateOutputJournal(std::unordered_set<Journal> &journals);
+static std::vector<fs::path> getJournalFilesFrom(const std::chrono::system_clock::time_point &date);
 static std::vector<fs::path> getJournalFilesFromToday(void);
 static std::string getCurrentDateAsString(void);
 static std::string getDateAsString(const std::chrono::system_clock::time_point &date);
@@ -109,7 +121,7 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 	ssize_t receivedBytes = 0;
 	struct timeval recvTime;
 
-	std::unordered_set<Journal> journals;
+	JournalCollection journals;
 
 	// Initialize
 	if (initializeModule(logLevel) < 0) {
@@ -124,13 +136,15 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 		switch (command) {
 		case COMM_ARM:
 			// Save start references
-			storeJournalStartBookmarks(journals);
+			journals.placeStartBookmarks();
 			break;
 		case COMM_STOP:
 		case COMM_ABORT:
 			// Temporary: Treat ABORT as stop signal
 			// Save stop references
-			storeJournalStopBookmarks(journals);
+			journals.placeStopBookmarks();
+			// TODO: document
+			collectAllJournals(journals);
 			// Merge journals into named output
 			generateOutputJournal(journals);
 			break;
@@ -211,15 +225,14 @@ int initializeModule(const LOG_LEVEL logLevel) {
 
 
 /*!
- * \brief storeJournalStartBookmarks Stores references to the current end of file of all journals.
- * \param journals Set of journals in which start bookmarks are to be saved
+ * \brief placeStartBookmarks Stores references to the current end of file of all journals.
  */
-void storeJournalStartBookmarks(std::unordered_set<Journal> &journals) {
+void JournalCollection::placeStartBookmarks() {
 
 	auto journalFilesFromToday = getJournalFilesFromToday();
 	auto currentDate = getCurrentDateAsString();
 
-	journals.clear();
+	this->clear();
 
 	for (const auto &journalFile : journalFilesFromToday) {
 		LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark in file %s", journalFile.c_str());
@@ -228,16 +241,17 @@ void storeJournalStartBookmarks(std::unordered_set<Journal> &journals) {
 		journal.moduleName = journalFile.stem().string().substr(0, datePosition);
 		journal.startReference.place(journalFile, std::ios_base::end);
 		journal.containedFiles.insert(journalFile);
-		journals.insert(journal);
+		this->insert(journal);
 	}
+
+	this->startTime = std::chrono::system_clock::now();
 }
 
 
 /*!
- * \brief storeJournalStopBookmarks Stores references to the current end of file of all journals.
- * \param journals Set of journals in which stop bookmarks are to be saved
+ * \brief placeStopBookmarks Stores references to the current end of file of all journals.
  */
-void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
+void JournalCollection::placeStopBookmarks() {
 
 	auto journalFilesFromToday = getJournalFilesFromToday();
 	auto currentDate = getCurrentDateAsString();
@@ -250,20 +264,12 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 		soughtJournal.moduleName = journalFile.stem().string().substr(0, datePosition);
 		soughtJournal.startReference.place(journalFile, std::ios_base::beg);
 		// Insert checks if an equivalent element (same module) already exists
-		auto matchingJournal = journals.insert(soughtJournal).first;
+		auto matchingJournal = this->insert(soughtJournal).first;
 		matchingJournal->stopReference.place(journalFile, std::ios_base::end);
 		matchingJournal->containedFiles.insert(journalFile);
-		insertAllFilesBetween(matchingJournal->startReference, matchingJournal->stopReference,
-							  journals);
 	}
 
-	// Handle the journals for which no file existed from today
-	for (auto &journal : journals) {
-		if (!journal.stopReference.valid) {
-			LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark in file %s", journal.stopReference.filePath.c_str());
-			journal.stopReference.place(journal.startReference.filePath, std::ios_base::end);
-		}
-	}
+	this->stopTime = std::chrono::system_clock::now();
 }
 
 
@@ -490,30 +496,41 @@ int printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile) {
  * \return A std::vector containing file paths
  */
 std::vector<fs::path> getJournalFilesFromToday() {
-	std::vector<fs::path> journalsFromToday;
+	return getJournalFilesFrom(std::chrono::system_clock::now());
+}
+
+
+/*!
+ * \brief getJournalFilesFrom Fetches a list of file paths corresponding to journal
+ *			files created on the specified date.
+ * \param date Date for which journals are to be fetched
+ * \return A std::vector containing file paths
+ */
+std::vector<fs::path> getJournalFilesFrom(const std::chrono::system_clock::time_point &date) {
+	std::vector<fs::path> journalsFromDate;
 	std::vector<char> buffer(PATH_MAX, '\0');
-  
+
 	UtilGetJournalDirectoryPath(buffer.data(), buffer.size());
 	buffer.erase(std::find(buffer.begin(), buffer.end(), '\0'),
 								 buffer.end());
 	fs::path journalDirPath(buffer.begin(), buffer.end());
-  
+
 	if (!exists(journalDirPath)) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to find journal directory %s", journalDirPath.string().c_str());
-		return journalsFromToday;
+		return journalsFromDate;
 	}
 
-	auto currentDate = getCurrentDateAsString();
+	auto dateString = getDateAsString(date);
 
 	for (const auto &dirEntry : fs::directory_iterator(journalDirPath)) {
 		if (fs::is_regular_file(dirEntry.status())
 				&& dirEntry.path().extension().string().find(JOURNAL_FILE_ENDING) != std::string::npos) {
 			// Check if file contains current date
-			size_t pos =  dirEntry.path().string().find(currentDate);
+			size_t pos =  dirEntry.path().string().find(dateString);
 			if (pos != std::string::npos) {
-				journalsFromToday.push_back(dirEntry.path());
+				journalsFromDate.push_back(dirEntry.path());
 			}
 		}
 	}
-	return journalsFromToday;
+	return journalsFromDate;
 }
