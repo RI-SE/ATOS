@@ -230,6 +230,12 @@ void JournalCollection::placeStopBookmarks() {
 }
 
 
+/*!
+ * \brief JournalCollection::insertNonBookmarked Inserts journal files that were not included
+ *			among the start/stop bookmarks for some reason, e.g. that the start/stop bookmarks
+ *			are separated by more than a day, or that the journal file did not extend to the
+ *			stop bookmark day.
+ */
 void JournalCollection::insertNonBookmarked() {
 
 	if (startDay.time_since_epoch().count() == 0) {
@@ -241,6 +247,9 @@ void JournalCollection::insertNonBookmarked() {
 		return;
 	}
 
+	// For each spanned day, check if any journal files exist that are not
+	// known to this object. If so, insert them, and if the start reference
+	// is not specified, place it at beginning of the first file found.
 	for (auto day = startDay; day <= stopDay; day += std::chrono::days(1)) {
 		auto journalFilesFromDay = getJournalFilesFrom(day);
 		auto date = getDateAsString(day);
@@ -252,15 +261,20 @@ void JournalCollection::insertNonBookmarked() {
 			soughtJournal.moduleName = journalFile.stem().string().substr(0, datePosition);
 			// Insert checks if an equivalent element (same module) already exists
 			auto matchingJournal = insert(soughtJournal).first;
-			matchingJournal->containedFiles.insert(journalFile);
+			if (matchingJournal->containedFiles.insert(journalFile).second) {
+				LogMessage(LOG_LEVEL_DEBUG, "Inserted non-bookmarked file %s",
+						   journalFile.c_str());
+			}
 			if (!matchingJournal->startReference.valid) {
-				LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark at beginning of file %s",
+				LogMessage(LOG_LEVEL_DEBUG, "Storing start bookmark at beginning of file %s",
 						   journalFile.c_str());
 				matchingJournal->startReference.place(journalFile, std::ios_base::beg);
 			}
 		}
 	}
 
+	// For each journal, loop backward over the contained files to insert a
+	// stop reference at the end of the file with the highest date.
 	for (auto journal : *this) {
 		if (!journal.stopReference.valid) {
 			for (auto day = stopDay; day >= startDay; day -= std::chrono::days(1)) {
@@ -271,6 +285,8 @@ void JournalCollection::insertNonBookmarked() {
 				auto matchingFile = std::find_if(journal.containedFiles.begin(),
 												 journal.containedFiles.end(), isFromDate);
 				if (matchingFile != journal.containedFiles.end()) {
+					LogMessage(LOG_LEVEL_DEBUG, "Storing end bookmark at end of file %s",
+							   matchingFile->c_str());
 					journal.stopReference.place(*matchingFile, std::ios_base::end);
 					break;
 				}
