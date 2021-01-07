@@ -94,6 +94,7 @@ static void storeJournalStopBookmarks(std::unordered_set<Journal> &journals);
 static int generateOutputJournal(std::unordered_set<Journal> &journals);
 static std::vector<fs::path> getJournalFilesFromToday(void);
 static std::string getCurrentDateAsString(void);
+static std::string getDateAsString(const std::chrono::system_clock::time_point &date);
 static int printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile);
 static int printJournalHeaderTo(std::ofstream &ostrm);
 
@@ -252,6 +253,8 @@ void storeJournalStopBookmarks(std::unordered_set<Journal> &journals) {
 		auto matchingJournal = journals.insert(soughtJournal).first;
 		matchingJournal->stopReference.place(journalFile, std::ios_base::end);
 		matchingJournal->containedFiles.insert(journalFile);
+		insertAllFilesBetween(matchingJournal->startReference, matchingJournal->stopReference,
+							  journals);
 	}
 
 	// Handle the journals for which no file existed from today
@@ -293,9 +296,8 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 
 	if (printJournalHeaderTo(ostrm) == -1) {
 		LogMessage(LOG_LEVEL_ERROR, "Error writing journal header");
-		if (!ostrm.is_open()) {
-			ostrm.open(journalDirPath);
-		}
+		ostrm.close();
+		return -1;
 	}
 
 	/*!
@@ -374,12 +376,21 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
  * \return A std::string containing the current date
  */
 std::string getCurrentDateAsString() {
+	return getDateAsString(std::chrono::system_clock::now());
+}
+
+/*!
+ * \brief getDateAsString Creates a string on the format YYYY-MM-DD of the specified date.
+ * \param date Timestamp for which date string is to be extracted.
+ * \return A std::string containing the date representation
+ */
+std::string getDateAsString(const std::chrono::system_clock::time_point &date) {
 	using Clock = std::chrono::system_clock;
-	char currentDate[DATE_STRING_MAX_LEN] = {'\0'};
-	auto now = Clock::to_time_t(Clock::now());
-	auto now_tm = std::localtime(&now);
-	std::strftime(currentDate, DATE_STRING_MAX_LEN, "%Y-%m-%d", now_tm);
-	return currentDate;
+	char dateString[DATE_STRING_MAX_LEN] = {'\0'};
+	auto dateRaw = Clock::to_time_t(date);
+	auto dateStructPtr = std::localtime(&dateRaw);
+	std::strftime(dateString, DATE_STRING_MAX_LEN, "%Y-%m-%d", dateStructPtr);
+	return dateString;
 }
 
 int printJournalHeaderTo(std::ofstream &ostrm) {
