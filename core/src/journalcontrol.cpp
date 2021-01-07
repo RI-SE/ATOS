@@ -230,6 +230,55 @@ void JournalCollection::placeStopBookmarks() {
 }
 
 
+void JournalCollection::insertNonBookmarked() {
+
+	if (startDay.time_since_epoch().count() == 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Start time invalid, unable to insert non-bookmarked journals");
+		return;
+	}
+	if (stopDay.time_since_epoch().count() == 0) {
+		LogMessage(LOG_LEVEL_ERROR, "Stop time invalid, unable to insert non-bookmarked journals");
+		return;
+	}
+
+	for (auto day = startDay; day <= stopDay; day += std::chrono::days(1)) {
+		auto journalFilesFromDay = getJournalFilesFrom(day);
+		auto date = getDateAsString(day);
+
+		for (const auto &journalFile : journalFilesFromDay) {
+			// Find existing journal matching module name from file
+			Journal soughtJournal;
+			auto datePosition = journalFile.stem().string().find("-" + date);
+			soughtJournal.moduleName = journalFile.stem().string().substr(0, datePosition);
+			// Insert checks if an equivalent element (same module) already exists
+			auto matchingJournal = insert(soughtJournal).first;
+			matchingJournal->containedFiles.insert(journalFile);
+			if (!matchingJournal->startReference.valid) {
+				LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark at beginning of file %s",
+						   journalFile.c_str());
+				matchingJournal->startReference.place(journalFile, std::ios_base::beg);
+			}
+		}
+	}
+
+	for (auto journal : *this) {
+		if (!journal.stopReference.valid) {
+			for (auto day = stopDay; day >= startDay; day -= std::chrono::days(1)) {
+				auto date = getDateAsString(day);
+				auto isFromDate = [date](const fs::path& filePath) {
+					return filePath.filename().string().find(date) != std::string::npos;
+				};
+				auto matchingFile = std::find_if(journal.containedFiles.begin(),
+												 journal.containedFiles.end(), isFromDate);
+				if (matchingFile != journal.containedFiles.end()) {
+					journal.stopReference.place(*matchingFile, std::ios_base::end);
+					break;
+				}
+			}
+		}
+	}
+}
+
 /*!
  * \brief dumpToFile Generates a merged file based on input journals
  *			with ascending timestamps. The output journal file is created by
