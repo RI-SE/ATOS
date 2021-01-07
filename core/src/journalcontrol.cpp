@@ -108,8 +108,6 @@ static volatile bool quit = false;
   ------------------------------------------------------------*/
 static void signalHandler(int signo);
 static int initializeModule(const LOG_LEVEL logLevel);
-static void collectJournalsBetween(std::unordered_set<Journal> &journals);
-static int generateOutputJournal(std::unordered_set<Journal> &journals);
 static std::vector<fs::path> getJournalFilesFrom(const std::chrono::system_clock::time_point &date);
 static std::vector<fs::path> getJournalFilesFromToday(void);
 static std::string getCurrentDateAsString(void);
@@ -150,10 +148,11 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 			// Temporary: Treat ABORT as stop signal
 			// Save stop references
 			journals.placeStopBookmarks();
-			// TODO: document
-			collectAllJournals(journals);
+			// If any additional journals were created in the start-stop interval,
+			// insert them
+			journals.insertNonBookmarked();
 			// Merge journals into named output
-			generateOutputJournal(journals);
+			journals.dumpToFile();
 			break;
 
 		case COMM_GETSTATUS:
@@ -232,13 +231,12 @@ void JournalCollection::placeStopBookmarks() {
 
 
 /*!
- * \brief generateOutputJournal Generates a merged file based on input journals
+ * \brief dumpToFile Generates a merged file based on input journals
  *			with ascending timestamps. The output journal file is created by
- *			interleaving relevant entries from all input journals.
- * \param journals Set of journals in which data can be found
+ *			interleaving relevant entries from all contained journals.
  * \return 0 on success, -1 otherwise
  */
-int generateOutputJournal(std::unordered_set<Journal> &journals) {
+int JournalCollection::dumpToFile() {
 
 	int retval = 0;
 	char scenarioName[PATH_MAX] = {'\0'};
@@ -289,7 +287,7 @@ int generateOutputJournal(std::unordered_set<Journal> &journals) {
 	// After this, the vector contains opened streams positioned
 	// for reading at the line closest to the start time.
 	std::vector<JournalFileSection> inputFiles;
-	for (const auto &journal : journals) {
+	for (const auto &journal : *this) {
 		for (const fs::path &file : journal.containedFiles) {
 			JournalFileSection &section = inputFiles.emplace_back();
 			section.path = file;
