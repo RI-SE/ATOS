@@ -34,6 +34,11 @@ namespace fs = std::filesystem;
 namespace fs = std::experimental::filesystem;
 #endif
 
+// Add a C++20 type
+namespace std::chrono {
+	typedef duration<int64_t, ratio<60*60*24>> days;
+}
+
 #define DATE_STRING_MAX_LEN 20
 
 #define MODULE_NAME "JournalControl"
@@ -86,9 +91,11 @@ class JournalCollection : public std::unordered_set<Journal> {
 public:
 	void placeStartBookmarks();
 	void placeStopBookmarks();
+	void insertNonBookmarked();
+	int dumpToFile();
 private:
-	std::chrono::system_clock::time_point startTime;
-	std::chrono::system_clock::time_point stopTime;
+	std::chrono::time_point<std::chrono::system_clock, std::chrono::days> startDay;
+	std::chrono::time_point<std::chrono::system_clock, std::chrono::days> stopDay;
 };
 
 /*------------------------------------------------------------
