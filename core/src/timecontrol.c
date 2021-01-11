@@ -172,15 +172,15 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	}
 
 	while (!iExit) {
-
 		// Ignore any commands received, just empty the bus
 		do {
 			iCommRecv(&command, busReceiveBuffer, sizeof (busReceiveBuffer), NULL);
-            if (command == COMM_EXIT) {
-                iExit = 1;
-                iCommClose();
-            }
 		} while (command != COMM_INV);
+
+		if (command == COMM_EXIT) {
+			iExit = 1;
+			iCommClose();
+		}
 
 		gettimeofday(&ExecTime, NULL);
 		CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
