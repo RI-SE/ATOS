@@ -1,8 +1,7 @@
 from tools.MSCP import MSCP
 from tools.Executable import Executable
-from tools.TrajectoryFile import *
+from tools.ConfigurationFiles import *
 from tools.PortChecker import *
-from tools.ObjectFile import *
 import time
 import subprocess
 import sys
