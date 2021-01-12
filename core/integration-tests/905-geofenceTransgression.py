@@ -76,34 +76,39 @@ def geofenceTransgressionTest():
     # Start
     mscp.Start(0)
     mscp.waitForObjectControlState("RUNNING",timeout=0.5)
+    time.sleep(0.01) # Await one new HEAB
+    assert obj.lastCCStatus() == "running", "HEAB state not set to running after start"
 
     # Report a number of MONR inside geofence
     print("=== Entered running state, sending test MONR data")
     obj.MONR(transmitter_id=objID,position=testPts[0])
-    sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*random.randint(1,7))
     obj.MONR(transmitter_id=objID,position=testPts[1])
-    sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*random.randint(1,7))
     obj.MONR(transmitter_id=objID,position=testPts[2])
-    sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*random.randint(1,7))
     obj.MONR(transmitter_id=objID,position=testPts[3])
-    sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*random.randint(1,7))
 
     # Check last HEAB so it is not ABORT
-    assert obj.lastCCStatus() == "running"
+    print(obj.lastCCStatus())
+    assert obj.lastCCStatus() == "running", "HEAB state not kept at running after valid positions"
+    print("=== Sending transgressing MONR data")
 
     # Report one MONR outside geofence
     obj.MONR(transmitter_id=objID,position=testPts[4])
     transgressionTime = time.time()
-    sleep(0.001*random.randint(1,7))
+    time.sleep(0.01)
+    
     obj.MONR(transmitter_id=objID,position=testPts[5])
-    sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*random.randint(1,7))
     obj.MONR(transmitter_id=objID,position=testPts[6])
 
     # Sleep until max allowed time passed
     time.sleep(maxAbortDelay-(time.time()-transgressionTime))
 
     # Check last HEAB so it is ABORT
-    assert obj.lastCCStatus() == "abort"
+    assert obj.lastCCStatus() == "abort", "HEAB state not set to abort after exiting geofence"
     return
 
 
@@ -119,4 +124,6 @@ if __name__ == "__main__":
             sup.stop()
         if core:
             core.stop()
+        if obj:
+            obj.shutdown()
 
