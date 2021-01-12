@@ -81,19 +81,19 @@ class ISO:
         try:
             position['x'] = as_hex_little_endian(in_position['x']*1000, 4)
             position['y'] = as_hex_little_endian(in_position['y']*1000, 4)
-        except KeyError:
+        except (KeyError,TypeError):
             position['x'] = as_hex_little_endian(in_position[0]*1000, 4)
             position['y'] = as_hex_little_endian(in_position[1]*1000, 4)
             
         position['z'] = as_hex_little_endian(0, 4)
         try:
             position['z'] = as_hex_little_endian(in_position['z']*1000, 4)
-        except KeyError:
+        except  (KeyError,TypeError):
             try:
                 position['z'] = as_hex_little_endian(in_position[2]*1000, 4)
             except (IndexError, KeyError):
                 pass
-        heading_deg = as_hex_little_endian(heading_deg*100, 2)
+        heading_deg = as_hex_little_endian(((90 - heading_deg + 360) % 360)*100, 2)
         speed['longitudinal'] = as_hex_little_endian(speed['longitudinal'], 2)
         speed['lateral'] = as_hex_little_endian(speed['lateral'], 2)
         acceleration['longitudinal'] = as_hex_little_endian(acceleration['longitudinal'], 2)
@@ -180,9 +180,12 @@ class ISOObject(ISO):
             self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.udpSocket.bind((self.host, self.port))
             while not self.quit:
-                data, remoteAddr = self.udpSocket.recvfrom(2048)
-                self.remoteAddr = remoteAddr
-                self.lastHEAB = data
+                ready = select.select([self.udpSocket],[],[],0)
+                if ready[0]:
+                    data, remoteAddr = self.udpSocket.recvfrom(2048)
+                    self.remoteAddr = remoteAddr
+                    self.lastHEAB = data
+                time.sleep(0.001)
 
         def send(self,message):
             if not self.remoteAddr:
