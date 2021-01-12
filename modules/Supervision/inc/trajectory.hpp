@@ -163,13 +163,12 @@ public:
     std::vector<TrajectoryPoint> points;
     std::string name = "";
     int version = 0;
-    int id = 0;
-    in_addr_t ip = 0;
+	int id = 0;
 
-    void initializeFromFile(const std::string fileName);
+	void initializeFromFile(const std::string& fileName);
 private:
-    static const std::regex fileHeaderPattern;
-    static const std::regex fileLinePattern;
-    static const std::regex fileFooterPattern;
+	static const std::regex fileHeaderPattern;
+	static const std::regex fileLinePattern;
+	static const std::regex fileFooterPattern;
 };
 #endif
