@@ -403,14 +403,19 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (errno != EAGAIN && errno != EWOULDBLOCK) {
 					LogMessage(LOG_LEVEL_ERROR, "Failed to receive from command socket");
 					if (DataDictionaryGetOBCStateU8(GSD) == OBC_STATE_RUNNING) {
-						LogMessage(LOG_LEVEL_INFO, "Sending ABORT");
+						LogMessage(LOG_LEVEL_INFO, "User control disconnected: aborting test");
 						if (iCommSend(COMM_ABORT, NULL, 0) < 0)
 							util_error("Fatal communication fault when sending ABORT command");
 					}
-					else {
-						LogMessage(LOG_LEVEL_INFO, "Sending DISCONNECT");
-						if (iCommSend(COMM_DISCONNECT, NULL, 0) < 0)
-							util_error("Fatal communication fault when sending DISCONNECT command");
+					else if (DataDictionaryGetOBCStateU8(GSD) == OBC_STATE_ARMED) {
+						LogMessage(LOG_LEVEL_INFO, "User control disconnected: disarming test");
+						if (iCommSend(COMM_DISARM, NULL, 0) < 0)
+							util_error("Fatal communication fault when sending DISARM command");
+					}
+					else if (DataDictionaryGetOBCStateU8(GSD) == OBC_STATE_REMOTECTRL) {
+						LogMessage(LOG_LEVEL_INFO, "User control disconnected: disabling remote control");
+						if (iCommSend(COMM_REMOTECTRL_DISABLE, NULL, 0) < 0)
+							util_error("Fatal communication fault when sending REMOTECTRL_DISABLE command");
 					}
 				}
 			}
