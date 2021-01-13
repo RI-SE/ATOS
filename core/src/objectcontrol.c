@@ -684,7 +684,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SearchStartIndex = -1;
 				ASPData.PrevTimeToSyncPointDbl = 0;
 				OldTimeU32 = CurrentTimeU32;
-				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
 
 				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 					if (!hasDelayedStart
@@ -699,8 +698,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 				}
 				vSetState(OBC_STATE_RUNNING, GSD);
+				objectControlServerStatus = CONTROL_CENTER_STATUS_RUNNING;
 
-				//OBCState = OBC_STATE_INITIALIZED; //This is temporary!
 				//printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
 				GSD->ScenarioStartTimeU32 = TimeGetAsGPSqmsOfWeek(&startTime) >> 2;
 				bzero(MiscText, SMALL_BUFFER_SIZE_0);
