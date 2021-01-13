@@ -161,7 +161,7 @@ int main()
         case COMM_GETSTATUS: {
             unsigned long startTime = UtilGetPIDUptime(getpid()).tv_sec;
             memset(mqSendData, 0, sizeof (mqSendData));
-            sprintf(mqSendData, "%llu", startTime);
+            sprintf(mqSendData, "%s:%lu", MODULE_NAME, startTime);
 
             if (iCommSend(COMM_GETSTATUS_OK, mqSendData, sizeof (mqSendData)) < 0) {
                 LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");

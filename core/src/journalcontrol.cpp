@@ -134,14 +134,16 @@ void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) 
 			generateOutputJournal(journals);
 			break;
 
-		case COMM_GETSTATUS:
+        case COMM_GETSTATUS: {
 			std::fill(mqSendBuffer.begin(), mqSendBuffer.end(), 0);
-			snprintf(mqSendBuffer.data(), mqSendBuffer.size(), "%s", MODULE_NAME);
+            unsigned long startTime = UtilGetPIDUptime(getpid()).tv_sec;
+            snprintf(mqSendBuffer.data(), mqSendBuffer.size(), "%s:%lu", MODULE_NAME, startTime);
 			mqSendBuffer.back() = '\0';
 			if (iCommSend(COMM_GETSTATUS_OK, mqSendBuffer.data(), mqSendBuffer.size()) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending status reply");
 			}
 			break;
+        }
 		case COMM_REPLAY:
 			LogMessage(LOG_LEVEL_WARNING, "Replay function out of date");
 			break;
