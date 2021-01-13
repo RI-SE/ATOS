@@ -65,7 +65,16 @@ def geofenceTransgressionTest():
     mscp.Connect()
     mscp.waitForObjectControlState("CONNECTED")
 
-    obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/3.14159)
+    # Wait for first HEAB
+    connectTime = time.time()
+    maxHEABWaitTime = 0.05
+    while True:
+        try:
+            obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/3.14159)
+            break
+        except ConnectionError:
+            pass
+        assert time.time() - connectTime < maxHEABWaitTime, f"No HEAB received within {maxHEABWaitTime} s"
 
     # Arm
     mscp.Arm()
