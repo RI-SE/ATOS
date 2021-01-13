@@ -159,7 +159,7 @@ int main()
             state = UNINITIALIZED;
             break;
         case COMM_GETSTATUS: {
-            unsigned long startTime = UtilGetPIDuptime(getpid());
+            unsigned long startTime = UtilGetPIDUptime(getpid()).tv_sec;
             memset(mqSendData, 0, sizeof (mqSendData));
             sprintf(mqSendData, "%llu", startTime);
 

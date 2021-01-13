@@ -3971,20 +3971,24 @@ clock ticks (divide by sysconf(_SC_CLK_TCK)).
  * \param pid the pid in question.
  * \return The time the process started after system boot.
  */
-unsigned long UtilGetPIDUptime(pid_t pID) {
+struct timeval UtilGetPIDUptime(pid_t pID) {
 	FILE *pidstat = NULL;
-
+    struct timeval timeSinceStart;
 	char filename[PATH_MAX] = { 0 };
-	snprintf(filename, sizeof (filename), "/proc/%d/stat", pID);
+	snprintf(filename, sizeof (filename), "/proc/%d/stat", pID);    
 
 	pidstat = fopen(filename, "r");
 	if (pidstat == NULL) {
-		fprintf(stderr, "Error: Couldn't open [%s]\n", filename);
-		return -1;
+        LogMessage(LOG_LEVEL_ERROR, "Error: Couldn't open [%s]\n", filename);
+        timeSinceStart.tv_sec = -1;
+        timeSinceStart.tv_usec = -1;
+        return timeSinceStart;
 	}
 
+    LogMessage(LOG_LEVEL_INFO, "Getting PID: %s", filename);
+
 	char strval1[100] = { 0 };
-	fgets(strval1, 255, pidstat);
+    fgets(strval1, 255, pidstat);
 
 	fclose(pidstat);
 	// Get start time from proc/pid/stat
@@ -4001,8 +4005,10 @@ unsigned long UtilGetPIDUptime(pid_t pID) {
 		loopCounter++;
 	}
 
-	return strtoul(token, NULL, 10);
+   LogMessage(LOG_LEVEL_INFO, "started at: %s", uptime);
 
+    timeSinceStart.tv_sec = (strtoul(uptime, NULL, 10)) ;
+    return timeSinceStart;
 }
 
 
