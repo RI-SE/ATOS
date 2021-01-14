@@ -20,8 +20,14 @@ pipeline {
 		stage('Run tests') {
 			parallel {
 				stage('Integration tests') {
+					when{
+						expression {
+							GIT_BRANCH = 'origin/' + sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
+							return GIT_BRANCH == 'origin/master'
+						}	
+					}
 					steps {
-						sh 'echo "Running Maestro integration tests..."'
+						sh 'echo "Running all mestro integration tests..."'
 						sh './allMaestroIntegrationTests.sh'
 					}
 				}
