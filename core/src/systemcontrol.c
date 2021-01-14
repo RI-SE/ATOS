@@ -61,7 +61,7 @@ typedef struct {
 
 #define SYSTEM_CONTROL_GETSTATUS_TIME_MS 5000
 #define SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS 2000
-#define SYSTEM_CONTROL_NO_OF_MODULES_IN_USE 2	//TODO Create a file containing a list of which modules should be used. Check with this list to see if each module has responded.
+#define SYSTEM_CONTROL_NO_OF_MODULES_IN_USE 4	//TODO Create a file containing a list of which modules should be used. Check with this list to see if each module has responded.
 
 #define SYSTEM_CONTROL_CONTROL_PORT   54241	// Default port, control channel
 #define SYSTEM_CONTROL_PROCESS_PORT   54242	// Default port, process channel
@@ -614,7 +614,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		case COMM_GETSTATUS_OK:
 			SystemControlGetStatusMessage(pcRecvBuffer, sizeof (pcRecvBuffer), 0);
-			//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
+			LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
+
+
 			break;
 
 		default:
@@ -2926,16 +2928,16 @@ void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
 	strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
 	remainingBufferSpace -= strlen(stringBuffer);
 
-    unsigned long startTime = UtilGetPIDUptime(getpid()).tv_sec;
+	unsigned long startTime = UtilGetPIDUptime(getpid()).tv_sec;
 
-    unsigned long long timeAtStart = startTime / (unsigned long long)(sysconf(_SC_CLK_TCK));
-    long serverUptime = (long)((unsigned long long)info.uptime - timeAtStart);
+	unsigned long long timeAtStart = startTime / (unsigned long long)(sysconf(_SC_CLK_TCK));
+	long serverUptime = (long)((unsigned long long)info.uptime - timeAtStart);
 
 
-    hours = serverUptime / 3600;
-    minutes = (serverUptime - (3600 * hours)) / 60;
-    seconds = (serverUptime - (3600 * hours) - (minutes * 60));
-    sprintf(stringBuffer, "Server uptime: %ld:%ld:%ld\n", hours, minutes, seconds);
+	hours = serverUptime / 3600;
+	minutes = (serverUptime - (3600 * hours)) / 60;
+	seconds = (serverUptime - (3600 * hours) - (minutes * 60));
+	sprintf(stringBuffer, "Server uptime: %ld:%ld:%ld\n", hours, minutes, seconds);
 	strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
 	remainingBufferSpace -= strlen(stringBuffer);
 	//Make it clear that this is placeholder data
