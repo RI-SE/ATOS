@@ -34,7 +34,7 @@ pipeline {
 				stage('Dev Integration tests') {
 					steps {
 						sh 'echo "Running standard Maestro integration tests..."'
-						sh './allMaestroStandardTests.sh'
+						sh './maestroStandardTests.sh'
 					}
 				}
 				stage('Format check') {
