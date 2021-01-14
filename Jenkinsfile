@@ -27,7 +27,7 @@ pipeline {
 						}	
 					}
 					steps {
-						sh 'echo "Running all mestro integration tests..."'
+						sh 'echo "Running all Maestro integration tests..."'
 						sh './allMaestroIntegrationTests.sh'
 					}
 				}
@@ -41,5 +41,4 @@ pipeline {
 		}
 	}
 }
-
 
