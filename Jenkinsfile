@@ -27,14 +27,14 @@ pipeline {
 						}	
 					}
 					steps {
-						sh 'echo "Running all Maestro integration tests..."'
-						sh './allMaestroIntegrationTests.sh'
+						sh 'echo "Running extensive Maestro integration tests..."'
+						sh './maestroExtensiveTests.sh'
 					}
 				}
 				stage('Dev Integration tests') {
 					steps {
 						sh 'echo "Running standard Maestro integration tests..."'
-						sh './allMaestroIntegrationTests.sh'
+						sh './allMaestroStandardTests.sh'
 					}
 				}
 				stage('Format check') {
