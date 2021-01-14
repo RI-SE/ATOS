@@ -61,7 +61,7 @@ typedef struct {
 
 #define SYSTEM_CONTROL_GETSTATUS_TIME_MS 5000
 #define SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS 2000
-#define SYSTEM_CONTROL_NO_OF_MODULES_IN_USE 4	//TODO Create a file containing a list of which modules should be used. Check with this list to see if each module has responded.
+#define SYSTEM_CONTROL_NO_OF_MODULES_IN_USE 2	//TODO Create a file containing a list of which modules should be used. Check with this list to see if each module has responded.
 
 #define SYSTEM_CONTROL_CONTROL_PORT   54241	// Default port, control channel
 #define SYSTEM_CONTROL_PROCESS_PORT   54242	// Default port, process channel
@@ -614,9 +614,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		case COMM_GETSTATUS_OK:
 			SystemControlGetStatusMessage(pcRecvBuffer, sizeof (pcRecvBuffer), 0);
-			LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
-
-
+            //LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
 			break;
 
 		default:
@@ -2864,7 +2862,6 @@ I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8
 		if (respondingModule[0]) {
 			numberOfResponses++;
 		}
-
 
 		if (timercmp(&getStatusTimeoutTimer, &currentSystemTime, <)) {
 
