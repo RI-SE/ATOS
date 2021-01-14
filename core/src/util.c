@@ -3973,22 +3973,20 @@ clock ticks (divide by sysconf(_SC_CLK_TCK)).
  */
 struct timeval UtilGetPIDUptime(pid_t pID) {
 	FILE *pidstat = NULL;
-    struct timeval timeSinceStart;
+	struct timeval timeSinceStart;
 	char filename[PATH_MAX] = { 0 };
-	snprintf(filename, sizeof (filename), "/proc/%d/stat", pID);    
+	snprintf(filename, sizeof (filename), "/proc/%d/stat", pID);
 
 	pidstat = fopen(filename, "r");
 	if (pidstat == NULL) {
-        LogMessage(LOG_LEVEL_ERROR, "Error: Couldn't open [%s]\n", filename);
-        timeSinceStart.tv_sec = -1;
-        timeSinceStart.tv_usec = -1;
-        return timeSinceStart;
+		LogMessage(LOG_LEVEL_ERROR, "Error: Couldn't open [%s]\n", filename);
+		timeSinceStart.tv_sec = -1;
+		timeSinceStart.tv_usec = -1;
+		return timeSinceStart;
 	}
 
-    LogMessage(LOG_LEVEL_INFO, "Getting PID: %s", filename);
-
 	char strval1[100] = { 0 };
-    fgets(strval1, 255, pidstat);
+	fgets(strval1, 255, pidstat);
 
 	fclose(pidstat);
 	// Get start time from proc/pid/stat
@@ -4005,10 +4003,9 @@ struct timeval UtilGetPIDUptime(pid_t pID) {
 		loopCounter++;
 	}
 
-   LogMessage(LOG_LEVEL_INFO, "started at: %s", uptime);
 
-    timeSinceStart.tv_sec = (strtoul(uptime, NULL, 10)) ;
-    return timeSinceStart;
+	timeSinceStart.tv_sec = (strtoul(uptime, NULL, 10));
+	return timeSinceStart;
 }
 
 
