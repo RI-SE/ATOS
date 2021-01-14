@@ -614,7 +614,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		case COMM_GETSTATUS_OK:
 			SystemControlGetStatusMessage(pcRecvBuffer, sizeof (pcRecvBuffer), 0);
-            //LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
+			//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
 			break;
 
 		default:
