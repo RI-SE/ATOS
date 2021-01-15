@@ -230,6 +230,15 @@ class ISOObject(ISO):
     def lastHEAB(self):
         return self.processChannel.lastHEAB
 
+    def waitForHEAB(self,heabTimeout=0.1):
+        self.processChannel.lastHEAB = None
+        timeoutTime = time.time() + heabTimeout
+        while self.processChannel.lastHEAB == None:
+            if time.time() > timeoutTime:
+                raise TimeoutError(f"No HEAB arrived in wait period of {heabTimeout} s")
+            time.sleep(0.001)
+        return ISO.ccStatus[self.lastHEAB()[-3]]
+
     def lastCCStatus(self):
         return ISO.ccStatus[self.lastHEAB()[-3]]
 
