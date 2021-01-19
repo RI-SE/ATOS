@@ -130,8 +130,6 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
 
         # Check last HEAB so it is not ABORT
         assert mscp.lastStatusReply["objectControlState"] == "RUNNING", print("Last OBC status is != RUNNING")
-        if obj.lastCCStatus() == "abort":
-            success = 0
 
 
     # Arm
@@ -142,6 +140,16 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
 
     # Sleep until max allowed time passed
     time.sleep(maxAbortDelay-(time.time()-transgressionTime))
+
+    #Check if abort was sent as it should have
+    if(_shouldPass):
+        if obj.lastCCStatus() != "abort":
+            print("Error: No abort was sent.")
+            success = 0
+    else:
+        if obj.lastCCStatus() == "abort":
+            print("Error: Abort was sent when it should not have been.")
+            success = 0
 
     #invert value if it shouldn't pass
     if(_shouldPass):
