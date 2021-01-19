@@ -9,7 +9,6 @@ import string
 import subprocess
 import sys
 
-#core = Executable("Core")
 core = Executable("Core",["-m","1"])
 sup = Executable("Supervision")
 time.sleep(0.05)
@@ -155,10 +154,6 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
 
 if __name__ == "__main__":
 
-
-    #Create a log file if the file does not exist
-    f = open("404TransgressionLog.txt","w")
-
     try:
 
         t_end = time.time() + 60 * 15
@@ -175,19 +170,15 @@ if __name__ == "__main__":
                 print("Test successful with geofence[" + str(geofInt) + "] and trajectory[" + str(trajInt) + "]")
             else:
                 failedRuns += 1
-                print("Test failed with geofence[" + str(geofInt) + "] and trajectory[" + str(trajInt) + "]")
-                f.write("Test failed with geofence[" + str(geofInt) + "] and trajectory[" + str(trajInt) + "]\n")
+                print("Test failed with geofence[" + str(geofInt) + "] and trajectory[" + str(trajInt) + "]\n")
 
             #How many tests that has run so far
             runCounter += 1
     finally:
 
-
-        f.write("\n")
-        f.write("The test has been run "+str(runCounter)+" times \n")
-        f.write("The test failed " + str(failedRuns)+ " times and was successful " + str(successfulRuns) + " times.")
-
-        f.close()
+        print("\n")
+        print("The test has been run "+str(runCounter)+" times \n")
+        print("The test failed " + str(failedRuns)+ " times and was successful " + str(successfulRuns) + " times.")
 
         if mscp:
             mscp.shutdown()
