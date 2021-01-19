@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
             #Select a random geofence and traj and test them to eachother
             geofInt = random.randint(0,len(geofArr)-1)
-            trajInt = random.randint(0,len(geofArr)-1)
+            trajInt = random.randint(0,len(trajPtsArr)-1)
             willPass = trajInt in geofAllowedTrajs[geofInt]     #LUT for pass-fail criteria
 
             if geofenceTransgressionTest(trajPtsArr[trajInt], geofArr[geofInt], willPass):
@@ -194,4 +194,3 @@ if __name__ == "__main__":
             sup.stop()
         if core:
             core.stop()
-
