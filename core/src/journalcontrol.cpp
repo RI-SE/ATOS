@@ -246,6 +246,10 @@ void JournalCollection::insertNonBookmarked() {
 		LogMessage(LOG_LEVEL_ERROR, "Stop time invalid, unable to insert non-bookmarked journals");
 		return;
 	}
+	if (stopDay.time_since_epoch().count() < startDay.time_since_epoch().count()) {
+		LogMessage(LOG_LEVEL_ERROR, "Stop time is before start time, unable to insert non-bookmarked journals");
+		return;
+	}
 
 	// For each spanned day, check if any journal files exist that are not
 	// known to this object. If so, insert them, and if the start reference
