@@ -84,7 +84,7 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
     mscp.ClearGeofences()
     mscp.ClearObjects()
 
-    trajFileName = "127.0.0.1"
+    trajFileName = "trajectoryFileName.traj"
     mscp.UploadFile(trajFileName,traj,"trajectory")
     geofenceFileName = "GeofenceTestGeofence1.geofence"
     mscp.UploadFile(geofenceFileName,geofence,"geofence")
