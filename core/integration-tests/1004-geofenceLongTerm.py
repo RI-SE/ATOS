@@ -9,6 +9,8 @@ import string
 import subprocess
 import sys
 
+S_PI = 3.1415926535
+
 core = Executable("Core",["-m","1"])
 sup = Executable("Supervision")
 time.sleep(0.05)
@@ -106,7 +108,7 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
     maxHEABWaitTime = 0.05
     while True:
         try:
-            obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/3.14159)
+            obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/S_PI)
             break
         except ConnectionError:
             pass
@@ -114,9 +116,9 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
 
     # Arm
     mscp.Arm()
-    mscp.waitForObjectControlState("ARMED")
+    mscp.waitForObjectControlState("ARMED", 10)
 
-    obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=(trajPts[0]['heading']*180.0/3.14159))
+    obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=(trajPts[0]['heading']*180.0/S_PI))
 
     # Start
     mscp.Start(0)
@@ -128,18 +130,8 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
         obj.MONR(transmitter_id=objID,position=trajPts[x])
         sleep(0.01)
 
-        # Check last HEAB so it is not ABORT
-        assert mscp.lastStatusReply["objectControlState"] == "RUNNING", print("Last OBC status is != RUNNING")
+        #assert mscp.lastStatusReply["objectControlState"] == "RUNNING", print("Last OBC status is != RUNNING")
 
-
-    # Arm
-    mscp.Abort()
-    mscp.waitForObjectControlState("IDLE")
-
-    transgressionTime = time.time()
-
-    # Sleep until max allowed time passed
-    time.sleep(maxAbortDelay-(time.time()-transgressionTime))
 
     #Check if abort was sent as it should have
     if(_shouldPass):
@@ -151,7 +143,23 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
             print("Error: Abort was sent when it should not have been.")
             success = 0
 
-    #invert value if it shouldn't pass
+    # Abort
+    mscp.Abort()
+    mscp.waitForObjectControlState("CONNECTED")
+
+    # Disconnect
+    mscp.Disconnect()
+    mscp.waitForObjectControlState("IDLE")
+
+
+
+    transgressionTime = time.time()
+
+    # Sleep until max allowed time passed
+    time.sleep(maxAbortDelay-(time.time()-transgressionTime))
+
+
+
     if(_shouldPass):
         return success  
     return not success
@@ -175,18 +183,18 @@ if __name__ == "__main__":
 
             if geofenceTransgressionTest(trajPtsArr[trajInt], geofArr[geofInt], willPass):
                 successfulRuns += 1
-                print("Test successful with geofence[" + str(geofInt) + "] and trajectory[" + str(trajInt) + "]")
+                print(f"Test successful with geofence[{str(geofInt)}] and trajectory[{str(trajInt)}]")
             else:
                 failedRuns += 1
-                print("Test failed with geofence[" + str(geofInt) + "] and trajectory[" + str(trajInt) + "]\n")
+                print(f"Test failed with geofence[{str(geofInt)}] and trajectory[{str(trajInt)}]\n")
 
             #How many tests that has run so far
             runCounter += 1
     finally:
 
         print("\n")
-        print("The test has been run "+str(runCounter)+" times \n")
-        print("The test failed " + str(failedRuns)+ " times and was successful " + str(successfulRuns) + " times.")
+        print(f"The test has been run {str(runCounter)} times \n")
+        print(f"The test failed {str(failedRuns)} times and was successful {str(successfulRuns)} times.")
 
         if mscp:
             mscp.shutdown()
@@ -194,3 +202,7 @@ if __name__ == "__main__":
             sup.stop()
         if core:
             core.stop()
+        if obj: 
+            obj.shutdown()
+
+        assert failedRuns == 0, f"Geofence robustness test failed {failedRuns}/{runCounter} test(s)"
