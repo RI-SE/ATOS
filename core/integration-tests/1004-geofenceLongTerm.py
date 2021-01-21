@@ -97,11 +97,19 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
 
     # Initialize
     mscp.Init()
-    mscp.waitForObjectControlState("INITIALIZED")
+    try:
+        mscp.waitForObjectControlState("INITIALIZED")
+    except:
+        print("Couldn't enter INITIALIZED state. Test failed.")
+        return False
 
     # Connect
     mscp.Connect()
-    mscp.waitForObjectControlState("CONNECTED")
+    try:
+        mscp.waitForObjectControlState("CONNECTED")
+    except:
+        print("Couldn't enter CONNECTED state. Test failed.")
+        return False
 
     # Wait for first HEAB
     connectTime = time.time()
@@ -116,13 +124,21 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
 
     # Arm
     mscp.Arm()
-    mscp.waitForObjectControlState("ARMED", 10)
+    try:
+        mscp.waitForObjectControlState("ARMED", 2)
+    except:
+        print("Couldn't enter ARMED state. Test failed.")
+        return False
 
     obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=(trajPts[0]['heading']*180.0/S_PI))
 
     # Start
     mscp.Start(0)
-    mscp.waitForObjectControlState("RUNNING")
+    try:
+        mscp.waitForObjectControlState("RUNNING")
+    except:
+        print("Couldn't enter RUNNING state. Test failed.")
+        return False
 
     # Report a number of MONR inside geofence
     print("=== Entered running state, sending test MONR data")
@@ -145,11 +161,19 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
 
     # Abort
     mscp.Abort()
-    mscp.waitForObjectControlState("CONNECTED")
+    try:
+        mscp.waitForObjectControlState("CONNECTED")
+    except:
+        print("Couldn't enter CONNECTED state. Test failed.")
+        return False
 
     # Disconnect
     mscp.Disconnect()
-    mscp.waitForObjectControlState("IDLE")
+    try:
+        mscp.waitForObjectControlState("IDLE")
+    except:
+        print("Couldn't enter IDLE state. Test failed.")
+        return False
 
 
 
@@ -190,6 +214,8 @@ if __name__ == "__main__":
 
             #How many tests that has run so far
             runCounter += 1
+
+            sleep(0.5)
     finally:
 
         print("\n")
