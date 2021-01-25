@@ -338,14 +338,22 @@ bool isViolatingGeofence(
 		const std::vector<Geofence> &geofences) {
 
 	const CartesianPosition monitorPoint = monitorData.MonrData.position;
+	if (!monitorData.MonrData.position.isPositionValid) {
+		LogMessage(LOG_LEVEL_ERROR,
+				   "Cannot check object with ID %u against geofences due to invalid position data",
+				   monitorData.ClientID);
+		return true;
+	}
 	bool anyViolated = false;
 
 	for (const Geofence &geofence : geofences) {
 		bool isViolated = geofence.forbids(monitorPoint);
 		if (isViolated && geofence.isPermitted) {
 			LogMessage(LOG_LEVEL_WARNING,
-					   "Object with ID %u is outside a permitted area %s",
-					   monitorData.ClientID, geofence.name.c_str());
+					   "Object with ID %u (%.2f, %.2f, %.2f) is outside a permitted area %s",
+					   monitorData.ClientID, monitorData.MonrData.position.xCoord_m,
+					   monitorData.MonrData.position.yCoord_m, monitorData.MonrData.position.zCoord_m,
+					   geofence.name.c_str());
 		}
 		else if (isViolated && !geofence.isPermitted) {
 			LogMessage(LOG_LEVEL_WARNING,
@@ -452,6 +460,7 @@ int checkObjectsAgainstGeofences(
 
 
     for (const uint32_t &transmitterID : transmitterIDs) {
+		monitorData.ClientID = transmitterID;
 		if (DataDictionaryGetMonitorData(transmitterID, &monitorData.MonrData) != READ_OK) {
 			LogMessage(LOG_LEVEL_ERROR,
 					   "Data dictionary monitor data read error for transmitter ID %u",
