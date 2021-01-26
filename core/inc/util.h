@@ -743,8 +743,11 @@ I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *
 I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);
 I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *accmData);
 
+struct timeval UtilGetPIDUptime(pid_t pID);
 double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
 
+
+enum procFields {startTime = 21, vSize = 22};
 
 typedef struct {
   uint64_t timestamp;
