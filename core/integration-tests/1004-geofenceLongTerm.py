@@ -8,8 +8,7 @@ import random
 import string
 import subprocess
 import sys
-
-S_PI = 3.1415926535
+import math
 
 core = Executable("Core",["-m","1"])
 sup = Executable("Supervision")
@@ -49,21 +48,21 @@ trajPtsArr = [[{'time': 0.00, 'x': 0.000,  'y': 0.000, 'heading': 0.0},
             {'time': 0.20, 'x': 20.000, 'y': 0.000, 'heading': 0.0},
             {'time': 0.25, 'x': 25.001, 'y': 0.000, 'heading': 0.0}],
 
-            [{'time': 0.00, 'x': 0.000, 'y': 0.000,  'heading': 90.0 * S_PI/180},
-            {'time': 0.05, 'x': 0.000, 'y': -5.000,  'heading': 90.0 * S_PI/180},
-            {'time': 0.10, 'x': 0.000, 'y': -10.000, 'heading': 90.0 * S_PI/180},
-            {'time': 0.15, 'x': 0.000, 'y': -15.000, 'heading': 90.0 * S_PI/180},
-            {'time': 0.20, 'x': 0.000, 'y': -20.000, 'heading': 90.0 * S_PI/180},
-            {'time': 0.25, 'x': 0.000, 'y': -25.000, 'heading': 90.0 * S_PI/180},
-            {'time': 0.30, 'x': 0.000, 'y': -30.000, 'heading': 90.0 * S_PI/180}],
+            [{'time': 0.00, 'x': 0.000, 'y': 0.000,  'heading': 90.0 * math.pi/180},
+            {'time': 0.05, 'x': 0.000, 'y': -5.000,  'heading': 90.0 * math.pi/180},
+            {'time': 0.10, 'x': 0.000, 'y': -10.000, 'heading': 90.0 * math.pi/180},
+            {'time': 0.15, 'x': 0.000, 'y': -15.000, 'heading': 90.0 * math.pi/180},
+            {'time': 0.20, 'x': 0.000, 'y': -20.000, 'heading': 90.0 * math.pi/180},
+            {'time': 0.25, 'x': 0.000, 'y': -25.000, 'heading': 90.0 * math.pi/180},
+            {'time': 0.30, 'x': 0.000, 'y': -30.000, 'heading': 90.0 * math.pi/180}],
 
-            [{'time': 0.00, 'x': 0.000,   'y': 0.000,   'heading': 135.0 * S_PI/180},
-            {'time': 0.05, 'x': -5.000,  'y': -5.000,  'heading': 135.0 * S_PI/180},
-            {'time': 0.10, 'x': -15.000, 'y': -15.000, 'heading': 135.0 * S_PI/180},
-            {'time': 0.15, 'x': -25.000, 'y': -25.000, 'heading': 135.0 * S_PI/180},
-            {'time': 0.20, 'x': -35.000, 'y': -35.000, 'heading': 135.0 * S_PI/180},
-            {'time': 0.25, 'x': -45.000, 'y': -45.000, 'heading': 135.0 * S_PI/180},
-            {'time': 0.30, 'x': -55.000, 'y': -55.000, 'heading': 135.0 * S_PI/180}]]
+            [{'time': 0.00, 'x': 0.000,   'y': 0.000,   'heading': 135.0 * math.pi/180},
+            {'time': 0.05, 'x': -5.000,  'y': -5.000,  'heading': 135.0 * math.pi/180},
+            {'time': 0.10, 'x': -15.000, 'y': -15.000, 'heading': 135.0 * math.pi/180},
+            {'time': 0.15, 'x': -25.000, 'y': -25.000, 'heading': 135.0 * math.pi/180},
+            {'time': 0.20, 'x': -35.000, 'y': -35.000, 'heading': 135.0 * math.pi/180},
+            {'time': 0.25, 'x': -45.000, 'y': -45.000, 'heading': 135.0 * math.pi/180},
+            {'time': 0.30, 'x': -55.000, 'y': -55.000, 'heading': 135.0 * math.pi/180}]]
 
 def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
     assert core.alive(), "Core terminated unexpectedly"
@@ -116,7 +115,7 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
     maxHEABWaitTime = 0.05
     while True:
         try:
-            obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/S_PI)
+            obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/math.pi)
             break
         except ConnectionError:
             pass
@@ -130,7 +129,7 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
         print("Couldn't enter ARMED state. Test failed.")
         return False
 
-    obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=(trajPts[0]['heading']*180.0/S_PI))
+    obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=(trajPts[0]['heading']*180.0/math.pi))
 
     # Start
     mscp.Start(0)
@@ -145,8 +144,6 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
     for x in range(len(trajPts)):
         obj.MONR(transmitter_id=objID,position=trajPts[x])
         sleep(0.01)
-
-        #assert mscp.lastStatusReply["objectControlState"] == "RUNNING", print("Last OBC status is != RUNNING")
 
 
 
