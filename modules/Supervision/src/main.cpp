@@ -162,12 +162,15 @@ int main() {
             break;
         case COMM_OBC_STATE:
             break;
-        case COMM_GETSTATUS:
+        case COMM_GETSTATUS: {
+            unsigned long startTime = UtilGetPIDUptime(getpid()).tv_sec;
             memset(mqSendData, 0, sizeof (mqSendData));
-            sprintf(mqSendData, "%s", MODULE_NAME);
+            sprintf(mqSendData, "%s:%lu", MODULE_NAME, startTime);
+
             if (iCommSend(COMM_GETSTATUS_OK, mqSendData, sizeof (mqSendData)) < 0) {
                 LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");
             }
+        }
             break;
         case COMM_GETSTATUS_OK:
             break;
@@ -338,14 +341,22 @@ bool isViolatingGeofence(
 		const std::vector<Geofence> &geofences) {
 
 	const CartesianPosition monitorPoint = monitorData.MonrData.position;
+	if (!monitorData.MonrData.position.isPositionValid) {
+		LogMessage(LOG_LEVEL_ERROR,
+				   "Cannot check object with ID %u against geofences due to invalid position data",
+				   monitorData.ClientID);
+		return true;
+	}
 	bool anyViolated = false;
 
 	for (const Geofence &geofence : geofences) {
 		bool isViolated = geofence.forbids(monitorPoint);
 		if (isViolated && geofence.isPermitted) {
 			LogMessage(LOG_LEVEL_WARNING,
-					   "Object with ID %u is outside a permitted area %s",
-					   monitorData.ClientID, geofence.name.c_str());
+					   "Object with ID %u (%.2f, %.2f, %.2f) is outside a permitted area %s",
+					   monitorData.ClientID, monitorData.MonrData.position.xCoord_m,
+					   monitorData.MonrData.position.yCoord_m, monitorData.MonrData.position.zCoord_m,
+					   geofence.name.c_str());
 		}
 		else if (isViolated && !geofence.isPermitted) {
 			LogMessage(LOG_LEVEL_WARNING,
@@ -452,6 +463,7 @@ int checkObjectsAgainstGeofences(
 
 
     for (const uint32_t &transmitterID : transmitterIDs) {
+		monitorData.ClientID = transmitterID;
 		if (DataDictionaryGetMonitorData(transmitterID, &monitorData.MonrData) != READ_OK) {
 			LogMessage(LOG_LEVEL_ERROR,
 					   "Data dictionary monitor data read error for transmitter ID %u",
