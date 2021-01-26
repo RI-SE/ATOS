@@ -3963,6 +3963,52 @@ I32 UtilPopulateACCMDataStructFromMQ(C8 * rawACCM, size_t rawACCMsize, ACCMData 
 	return 0;
 }
 
+
+/*!
+ * \brief getPIDuptime reads the proc file of the pid in question and returns start time of the process after boot. In kernels before Linux 2.6, this value was expressed in
+jiffies. Since Linux 2.6, the value is expressed in
+clock ticks (divide by sysconf(_SC_CLK_TCK)).
+ * \param pid the pid in question.
+ * \return The time the process started after system boot.
+ */
+struct timeval UtilGetPIDUptime(pid_t pID) {
+	FILE *pidstat = NULL;
+	struct timeval timeSinceStart;
+	char filename[PATH_MAX] = { 0 };
+	snprintf(filename, sizeof (filename), "/proc/%d/stat", pID);
+
+	pidstat = fopen(filename, "r");
+	if (pidstat == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Error: Couldn't open [%s]\n", filename);
+		timeSinceStart.tv_sec = -1;
+		timeSinceStart.tv_usec = -1;
+		return timeSinceStart;
+	}
+
+	char strval1[100] = { 0 };
+	fgets(strval1, 255, pidstat);
+
+	fclose(pidstat);
+	// Get start time from proc/pid/stat
+	char *token = strtok(strval1, " ");
+	int loopCounter = 0;
+
+	char uptime[247];
+
+	while (token != NULL) {
+		if (loopCounter == startTime) {	//Get  starttime  %llu from proc file for pid.
+			sprintf(uptime, "%s", token);
+		}
+		token = strtok(NULL, " ");
+		loopCounter++;
+	}
+
+
+	timeSinceStart.tv_sec = (strtoul(uptime, NULL, 10));
+	return timeSinceStart;
+}
+
+
 /*!
  * \brief UtilgetDistance calculates the distance between two log lat positions usgin haversine formula.
  * \param lat1 Latitude of first coordinate
