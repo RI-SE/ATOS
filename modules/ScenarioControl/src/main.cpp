@@ -158,12 +158,15 @@ int main()
             LogMessage(LOG_LEVEL_INFO,"Received disconnect command");
             state = UNINITIALIZED;
             break;
-        case COMM_GETSTATUS:
+        case COMM_GETSTATUS: {
+            unsigned long startTime = UtilGetPIDUptime(getpid()).tv_sec;
             memset(mqSendData, 0, sizeof (mqSendData));
-            sprintf(mqSendData, "%s", MODULE_NAME);
+            sprintf(mqSendData, "%s:%lu", MODULE_NAME, startTime);
+
             if (iCommSend(COMM_GETSTATUS_OK, mqSendData, sizeof (mqSendData)) < 0) {
                 LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");
             }
+        }
             break;
         case COMM_GETSTATUS_OK:
             break;
