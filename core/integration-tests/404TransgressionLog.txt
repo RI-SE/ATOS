@@ -1,8 +1,0 @@
-Test failed with geofence[1] and trajectory[0]
-Test failed with geofence[2] and trajectory[2]
-Test failed with geofence[1] and trajectory[1]
-Test failed with geofence[1] and trajectory[0]
-Test failed with geofence[1] and trajectory[0]
-
-The test has been run 12 times 
-The test failed 5 times and was successful 7 times.
