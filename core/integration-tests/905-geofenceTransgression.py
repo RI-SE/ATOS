@@ -29,7 +29,7 @@ def geofenceTransgressionTest():
                (50.001,49.999),
                ( 1.000, 1.000),
                ( 0.000, 0.000)]
-    maxAbortDelay = 0.5
+    maxAbortDelay = 5
 
     # Load trajectory
     trajPts = [{'time': 0.00, 'x': 0.0,  'y': 0.0, 'heading': 0.0},
@@ -67,7 +67,7 @@ def geofenceTransgressionTest():
 
     # Wait for first HEAB
     connectTime = time.time()
-    maxHEABWaitTime = 0.05
+    maxHEABWaitTime = 0.5
     while True:
         try:
             obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/3.14159)
