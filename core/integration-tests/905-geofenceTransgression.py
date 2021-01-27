@@ -29,7 +29,7 @@ def geofenceTransgressionTest():
                (50.001,49.999),
                ( 1.000, 1.000),
                ( 0.000, 0.000)]
-    maxAbortDelay = 0.1
+    maxAbortDelay = 0.5
 
     # Load trajectory
     trajPts = [{'time': 0.00, 'x': 0.0,  'y': 0.0, 'heading': 0.0},
@@ -67,7 +67,7 @@ def geofenceTransgressionTest():
 
     # Wait for first HEAB
     connectTime = time.time()
-    maxHEABWaitTime = 0.05
+    maxHEABWaitTime = 1
     while True:
         try:
             obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/3.14159)
@@ -108,16 +108,15 @@ def geofenceTransgressionTest():
     # Report one MONR outside geofence
     obj.MONR(transmitter_id=objID,position=testPts[4])
     transgressionTime = time.time()
-    time.sleep(0.01)
+    time.sleep(0.1)
     
     obj.MONR(transmitter_id=objID,position=testPts[5])
-    time.sleep(0.001*random.randint(1,7))
+    time.sleep(0.01*random.randint(1,7))
     obj.MONR(transmitter_id=objID,position=testPts[6])
     obj.waitForHEAB() # temporary - may allow longer time to pass
 
     # Sleep until max allowed time passed
     time.sleep(maxAbortDelay-(time.time()-transgressionTime))
-
     # Check last HEAB so it is ABORT
     print(obj.lastCCStatus())
     assert obj.lastCCStatus() == "abort", "HEAB state not set to abort after exiting geofence"
