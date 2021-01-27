@@ -1,98 +1,118 @@
 from tools.MSCP import MSCP
 from tools.Executable import Executable
 from tools.ConfigurationFiles import *
-from tools.PortChecker import *
+from tools.ISO import ISO, ISOObject
 import time
-import subprocess
-import sys
 import random
 import string
+import subprocess
 
-userControl = None
-server = None
-obj = None
+core = Executable("../../build/bin/Core",["-m","1"])
+sup = Executable("../../build/bin/Supervision")
+time.sleep(0.05)
+mscp = MSCP("127.0.0.1")
+time.sleep(0.25)
+obj = ISOObject()
+
+def defCCStateTest():
+    assert core.alive(), "Core terminated unexpectedly"
+    assert sup.alive(), "Supervision terminated unexpectedly"
+
+    maxAbortDelay = 0.1
+
+    # Load trajectory
+    trajPts = [{'time': 0.00, 'x': 0.0,  'y': 0.0, 'heading': 0.0},
+               {'time': 0.50, 'x': 5.0,  'y': 0.0, 'heading': 0.0},
+               {'time': 0.10, 'x': 10.0, 'y': 0.0, 'heading': 0.0},
+               {'time': 0.15, 'x': 15.0, 'y': 0.0, 'heading': 0.0},
+               {'time': 0.20, 'x': 20.0, 'y': 0.0, 'heading': 0.0},
+               {'time': 0.25, 'x': 25.0, 'y': 0.0, 'heading': 0.0}]
+    traj = ConstructTrajectoryFileData(trajPts, "GeofenceTestTrajectory1")
+
+    # Upload config
+    mscp.ClearTrajectories()
+    mscp.ClearGeofences()
+    mscp.ClearObjects()
+
+    trajFileName = "GeofenceTestTrajectory1.traj"
+    mscp.UploadFile(trajFileName,traj,"trajectory")
+   
+    objID = random.randint(1,100)
+    objData = ConstructObjectFileData("127.0.0.1", trajFileName, objID)
+    mscp.UploadFile(''.join(random.choice(string.ascii_letters) for i in range(10)) + ".not.obj",objData,"object")
+
+    # Initialize
+    mscp.Init()
+    mscp.waitForObjectControlState("INITIALIZED")
+
+    # Connect
+    mscp.Connect()
+    mscp.waitForObjectControlState("CONNECTED")
+
+    # Wait for first HEAB
+    connectTime = time.time()
+    maxHEABWaitTime = 0.05
+    while True:
+        try:
+            obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/3.14159)
+            break
+        except ConnectionError:
+            pass
+        assert time.time() - connectTime < maxHEABWaitTime, f"No HEAB received within {maxHEABWaitTime} s"
+
+    # Arm
+    mscp.Arm()
+    mscp.waitForObjectControlState("ARMED",timeout=0.5)
+
+    obj.MONR(transmitter_id=objID,position=trajPts[0],heading_deg=trajPts[0]['heading']*180.0/3.14159)
+
+    # Start
+    mscp.Start(0)
+    mscp.waitForObjectControlState("RUNNING",timeout=0.5)
+    time.sleep(0.01)
+    obj.waitForHEAB() # Await one new HEAB
+    assert obj.lastCCStatus() == "running", "HEAB state not set to running after start"
+
+    # Report a number of MONR inside geofence
+    print("=== Entered running state, sending test MONR data")
+    obj.MONR(transmitter_id=objID,position=testPts[0])
+    time.sleep(0.001*random.randint(1,7))
+    obj.MONR(transmitter_id=objID,position=testPts[1])
+    time.sleep(0.001*random.randint(1,7))
+    obj.MONR(transmitter_id=objID,position=testPts[2])
+    time.sleep(0.001*random.randint(1,7))
+    obj.MONR(transmitter_id=objID,position=testPts[3])
+    time.sleep(0.001*random.randint(1,7))
+
+    # Check last HEAB so it is not ABORT
+    print(obj.lastCCStatus())
+    assert obj.lastCCStatus() == "running", "HEAB state not kept at running after valid positions"
+    print("=== Sending transgressing MONR data")
+    
+    obj.MONR(transmitter_id=objID,position=testPts[5])
+    time.sleep(0.001*random.randint(1,7))
+    obj.MONR(transmitter_id=objID,position=testPts[6])
+    obj.waitForHEAB() # temporary - may allow longer time to pass
+
+    # Sleep until max allowed time passed
+    time.sleep(maxAbortDelay-(time.time()-transgressionTime))
+
+    # Check last HEAB so it is ABORT
+    assert obj.lastCCStatus() == "abort", "HEAB state not set to abort which is actually fine since it should not be"
+    return
 
 
-def checkProgramStatus(failurePrintout):
-    if server != None:
-        deadPIDs = server.poll()
-        if deadPIDs:
-            print(failurePrintout)
-            print("Dead PIDs: " + str(deadPIDs))
-            if userControl != None:
-                userControl.shutdown()
-            server.stop()
-            if obj != None:
-                obj.stop()
-            sys.exit(1)
+
 
 if __name__ == "__main__":
-
-    # Note: server does not close sockets properly so this fails frequently (cross fingers for now):
-    #WaitForPortAvailable(54241,"TCP",timeout=0)
-    server = Executable("../../build/bin/Core",["-m","0"])
-    time.sleep(0.05)
-    checkProgramStatus("=== Starting the server caused a problem")
-    
-    # 1: Connect to the server
-    userControl = MSCP("127.0.0.1")
-    time.sleep(0.25)
-    checkProgramStatus("=== Connecting to the server caused a problem")
-
-    # 2: Load trajectory
-    [traj,fileName] = ReadTrajectoryFile("resources/trajectories/",fileName="random")
-    objID = random.randint(1,100)
-    objData = ConstructObjectFileData("127.0.0.1", fileName, objID)
-    
-    # 3: Start a test object
-    WaitForPortAvailable(53240,"UDP",timeout=0)
-    WaitForPortAvailable(53241,"TCP",timeout=0)
-    obj = Executable("VirtualObject",["-nogui"]) #TODO txid objID
-   
-    # Clear old files
-    userControl.ClearTrajectories()
-    userControl.ClearGeofences()
-    userControl.ClearObjects()
-
-    # 4: Upload trajectory
-    userControl.UploadFile(fileName,traj,"trajectory")
-    userControl.UploadFile(''.join(random.choice(string.ascii_letters) for i in range(10)) + ".obj",objData,"object")
-
-    # 5: Send init
-    userControl.Init()
-    userControl.waitForObjectControlState("INITIALIZED")
-    checkProgramStatus("Sending init to the server caused a problem")
-
-    # 6: Send connect
-    userControl.Connect()
-    userControl.waitForObjectControlState("CONNECTED")
-    checkProgramStatus("Sending connect to the server caused a problem")
-
-    # 7: Send arm
-    userControl.Arm()
-    userControl.waitForObjectControlState("ARMED")
-    checkProgramStatus("Sending arm to the server caused a problem")
-
-    # 8: Send start
-    userControl.Start(10)
-    userControl.waitForObjectControlState("RUNNING")
-    checkProgramStatus("Sending start to the server caused a problem")
-
-    # 9: Send abort
-    userControl.Abort()
-    userControl.waitForObjectControlState("CONNECTED")
-    checkProgramStatus("Sending abort to the server caused a problem")
-
-    # 10: Send reset
-    userControl.Disconnect()
-    userControl.waitForObjectControlState("IDLE")
-    checkProgramStatus("Sending disconnect to the server caused a problem")
-    
-    # 11: Done!
-    userControl.shutdown()
-    server.stop()
-    obj.stop()
-    sys.exit(0)
-
-
-
+    try:
+        defCCStateTest()
+    finally:
+        if mscp:
+            mscp.shutdown()
+        if sup:
+            sup.stop()
+        if core:
+            core.stop()
+        if obj:
+            obj.shutdown()
