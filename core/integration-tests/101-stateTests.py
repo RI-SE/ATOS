@@ -20,6 +20,15 @@ def defCCStateTest():
 
     maxAbortDelay = 0.1
 
+    testPts = [(25.000,25.000),
+               (30.000,30.000),
+               (40.000,40.000),
+               (40.000,49.999),
+               (50.001,49.999),
+               ( 1.000, 1.000),
+               ( 0.000, 0.000)]
+    maxAbortDelay = 0.1
+
     # Load trajectory
     trajPts = [{'time': 0.00, 'x': 0.0,  'y': 0.0, 'heading': 0.0},
                {'time': 0.50, 'x': 5.0,  'y': 0.0, 'heading': 0.0},
