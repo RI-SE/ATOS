@@ -204,13 +204,14 @@ if __name__ == "__main__":
             trajInt = random.randint(0,len(trajPtsArr)-1)
             willPass = trajInt in geofAllowedTrajs[geofInt]     #LUT for pass-fail criteria
 
+            #Maybe wrap this with a try/except and remove the ones inside the function.
             if geofenceTransgressionTest(trajPtsArr[trajInt], geofArr[geofInt], willPass):
                 successfulRuns += 1
                 print(f"Test successful with geofence[{str(geofInt)}] and trajectory[{str(trajInt)}]")
             else:
                 failedRuns += 1
                 print(f"Test failed with geofence[{str(geofInt)}] and trajectory[{str(trajInt)}]\n")
-                return
+                break
 
             #How many tests that has run so far
             runCounter += 1
