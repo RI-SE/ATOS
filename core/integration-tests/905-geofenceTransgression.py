@@ -119,6 +119,7 @@ def geofenceTransgressionTest():
     time.sleep(maxAbortDelay-(time.time()-transgressionTime))
 
     # Check last HEAB so it is ABORT
+    print(obj.lastCCStatus())
     assert obj.lastCCStatus() == "abort", "HEAB state not set to abort after exiting geofence"
     return
 
