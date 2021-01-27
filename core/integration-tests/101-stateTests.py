@@ -105,7 +105,7 @@ def defCCtests():
     obj.waitForHEAB() # temporary - may allow longer time to pass
 
     # Sleep until max allowed time passed
-    #time.sleep(maxAbortDelay-(time.time()-transgressionTime))
+    time.sleep(maxAbortDelay-(time.time()-transgressionTime))
 
     # Check last HEAB so it is ABORT
     assert obj.lastCCStatus() == "abort", "HEAB state not set to abort after exiting geofence fishy"
