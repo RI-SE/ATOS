@@ -8,17 +8,13 @@ import string
 import subprocess
 
 core = Executable("../../build/bin/Core",["-m","1"])
-sup = Executable("../../build/bin/Supervision")
 time.sleep(0.05)
 mscp = MSCP("127.0.0.1")
 time.sleep(0.25)
 obj = ISOObject()
 
-def defCCStateTest():
+def defCCtests():
     assert core.alive(), "Core terminated unexpectedly"
-    assert sup.alive(), "Supervision terminated unexpectedly"
-
-    maxAbortDelay = 0.1
 
     testPts = [(25.000,25.000),
                (30.000,30.000),
@@ -45,7 +41,7 @@ def defCCStateTest():
 
     trajFileName = "GeofenceTestTrajectory1.traj"
     mscp.UploadFile(trajFileName,traj,"trajectory")
-   
+
     objID = random.randint(1,100)
     objData = ConstructObjectFileData("127.0.0.1", trajFileName, objID)
     mscp.UploadFile(''.join(random.choice(string.ascii_letters) for i in range(10)) + ".not.obj",objData,"object")
@@ -67,7 +63,7 @@ def defCCStateTest():
             break
         except ConnectionError:
             pass
-        assert time.time() - connectTime < maxHEABWaitTime, f"No HEAB received within {maxHEABWaitTime} s"
+        assert time.time() - connectTime < maxHEABWaitTime, f"No HEAB received within {maxHEABWaitTime} s, fishy"
 
     # Arm
     mscp.Arm()
@@ -95,8 +91,13 @@ def defCCStateTest():
 
     # Check last HEAB so it is not ABORT
     print(obj.lastCCStatus())
-    assert obj.lastCCStatus() == "running", "HEAB state not kept at running after valid positions"
-    print("=== Sending fake MONR data")
+    assert obj.lastCCStatus() == "running", "HEAB state not kept at running after valid positions fishy"
+    print("=== Sending fishy MONR data")
+
+    # Report one MONR outside geofence
+    obj.MONR(transmitter_id=objID,position=testPts[4])
+    transgressionTime = time.time()
+    time.sleep(0.01)
     
     obj.MONR(transmitter_id=objID,position=testPts[5])
     time.sleep(0.001*random.randint(1,7))
@@ -107,7 +108,7 @@ def defCCStateTest():
     time.sleep(maxAbortDelay-(time.time()-transgressionTime))
 
     # Check last HEAB so it is ABORT
-    assert obj.lastCCStatus() == "abort", "HEAB state not set to abort which is actually fine since it should not be"
+    assert obj.lastCCStatus() == "abort", "HEAB state not set to abort after exiting geofence fishy"
     return
 
 
@@ -115,7 +116,7 @@ def defCCStateTest():
 
 if __name__ == "__main__":
     try:
-        defCCStateTest()
+        defCCtests()
     finally:
         if mscp:
             mscp.shutdown()
