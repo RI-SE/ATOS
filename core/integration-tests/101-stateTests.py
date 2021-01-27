@@ -71,7 +71,7 @@ def defCCStateTest():
     mscp.waitForObjectControlState("RUNNING",timeout=0.5)
     time.sleep(0.01)
     obj.waitForHEAB() # Await one new HEAB
-    assert obj.lastCCStatus() == "running", "HEAB state not set to running after start"
+    assert obj.lastCCStatus() == "running", "HEAB state not set to running after start fishy"
 
     # Report a number of MONR inside geofence
     print("=== Entered running state, sending test MONR data")
@@ -87,7 +87,7 @@ def defCCStateTest():
     # Check last HEAB so it is not ABORT
     print(obj.lastCCStatus())
     assert obj.lastCCStatus() == "running", "HEAB state not kept at running after valid positions"
-    print("=== Sending transgressing MONR data")
+    print("=== Sending fake MONR data")
     
     obj.MONR(transmitter_id=objID,position=testPts[5])
     time.sleep(0.001*random.randint(1,7))
