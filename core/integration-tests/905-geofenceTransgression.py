@@ -111,7 +111,7 @@ def geofenceTransgressionTest():
     time.sleep(0.1)
     
     obj.MONR(transmitter_id=objID,position=testPts[5])
-    time.sleep(0.1*random.randint(1,7))
+    time.sleep(0.01*random.randint(1,7))
     obj.MONR(transmitter_id=objID,position=testPts[6])
     obj.waitForHEAB() # temporary - may allow longer time to pass
 
