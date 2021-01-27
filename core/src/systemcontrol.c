@@ -635,7 +635,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 			ControlResponseBuffer[0] = SystemControlState;
 			ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD);	//OBCStateU8;
-			//appendSysInfoString(ControlResponseBuffer + 2, sizeof (ControlResponseBuffer) - 2);
+			appendSysInfoString(ControlResponseBuffer + 2, sizeof (ControlResponseBuffer) - 2);
 			LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
 											 ControlResponseBuffer, strlen(ControlResponseBuffer),
