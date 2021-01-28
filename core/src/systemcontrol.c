@@ -402,14 +402,24 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (ClientResult <= -1) {
 				if (errno != EAGAIN && errno != EWOULDBLOCK) {
 					LogMessage(LOG_LEVEL_ERROR, "Failed to receive from command socket");
-					LogMessage(LOG_LEVEL_ERROR, "Waiting 5 seconds before exiting");
-					usleep(5000000);	//Wait 5 sec before sending exit, just so ObjectControl can send abort in HEAB before exit
-					if (iCommSend(COMM_EXIT, NULL, 0) < 0)
-						util_error("Fatal communication fault when sending EXIT command");
-					LogMessage(LOG_LEVEL_ERROR, "System control exiting");
-					exit(EXIT_FAILURE);
+					if (DataDictionaryGetOBCStateU8(GSD) == OBC_STATE_RUNNING) {
+						LogMessage(LOG_LEVEL_INFO, "User control disconnected: aborting test");
+						if (iCommSend(COMM_ABORT, NULL, 0) < 0)
+							util_error("Fatal communication fault when sending ABORT command");
+					}
+					else if (DataDictionaryGetOBCStateU8(GSD) == OBC_STATE_ARMED) {
+						LogMessage(LOG_LEVEL_INFO, "User control disconnected: disarming test");
+						if (iCommSend(COMM_DISARM, NULL, 0) < 0)
+							util_error("Fatal communication fault when sending DISARM command");
+					}
+					else if (DataDictionaryGetOBCStateU8(GSD) == OBC_STATE_REMOTECTRL) {
+						LogMessage(LOG_LEVEL_INFO, "User control disconnected: disabling remote control");
+						if (iCommSend(COMM_REMOTECTRL_DISABLE, NULL, 0) < 0)
+							util_error("Fatal communication fault when sending REMOTECTRL_DISABLE command");
+					}
 				}
 			}
+
 			else if (ClientResult == 0) {
 				LogMessage(LOG_LEVEL_INFO, "Client closed connection");
 				close(ClientSocket);
@@ -1386,7 +1396,7 @@ SystemControlCommand_t SystemControlFindCommand(const char *CommandBuffer,
 	return nocommand;
 }
 
-/*! 
+/*!
  * \brief SystemControlReceiveUserControlData Performs similarly to the recv function (see manpage for recv) except that it
  *        only fills the input data buffer with messages ending with ";\r\n\r\n" and saves any remaining data in a local
  *        buffer awaiting the next call to this function.
