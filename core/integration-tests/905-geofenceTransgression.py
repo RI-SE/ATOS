@@ -108,7 +108,7 @@ def geofenceTransgressionTest():
     # Report one MONR outside geofence
     obj.MONR(transmitter_id=objID,position=testPts[4])
     transgressionTime = time.time()
-    time.sleep(0.01)
+    time.sleep(0.1)
     obj.MONR(transmitter_id=objID,position=testPts[5])
     time.sleep(0.001*random.randint(1,7))
     obj.MONR(transmitter_id=objID,position=testPts[6])
@@ -116,7 +116,7 @@ def geofenceTransgressionTest():
 
     # Sleep until max allowed time passed
     time.sleep(maxAbortDelay-(time.time()-transgressionTime))
-
+    print("Sleeping for: " + maxAbortDelay-(time.time()-transgressionTime))
     # Check last HEAB so it is ABORT
     assert obj.lastCCStatus() == "abort", "HEAB state not set to abort after exiting geofence"
     return
