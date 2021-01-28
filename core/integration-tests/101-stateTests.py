@@ -13,11 +13,11 @@ mscp = MSCP("127.0.0.1")
 time.sleep(0.25)
 obj = ISOObject()
 
-def geofenceTransgressionTest():
+def ccStatusTest():
     assert core.alive(), "Core terminated unexpectedly"
 
    
-    testPts = [(25.000,25.000),
+    testPts = [(0,0),
                (30.000,30.000),
                (40.000,40.000),
                (40.000,49.999),
@@ -108,8 +108,8 @@ def geofenceTransgressionTest():
     # Sleep until max allowed time passed
     time.sleep(maxAbortDelay-(time.time()-transgressionTime))
 
-    # Check last HEAB so it is ABORT
-    assert obj.lastCCStatus() == "abort", "HEAB state not set to abort after exiting geofence"
+    # Check last HEAB so it is RUNNING
+    assert obj.lastCCStatus() == "running", "HEAB state not kept at running after valid positions"
     return
 
 
@@ -117,12 +117,10 @@ def geofenceTransgressionTest():
 
 if __name__ == "__main__":
     try:
-        geofenceTransgressionTest()
+        ccStatusTest()
     finally:
         if mscp:
             mscp.shutdown()
-        if sup:
-            sup.stop()
         if core:
             core.stop()
         if obj:
