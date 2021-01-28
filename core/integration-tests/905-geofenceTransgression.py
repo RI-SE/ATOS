@@ -108,7 +108,7 @@ def geofenceTransgressionTest():
     # Report one MONR outside geofence
     obj.MONR(transmitter_id=objID,position=testPts[4])
     transgressionTime = time.time()
-    time.sleep(0.1)
+    time.sleep(0.05)
     print("============1============")
     print(obj.lastCCStatus())
     obj.MONR(transmitter_id=objID,position=testPts[5])
