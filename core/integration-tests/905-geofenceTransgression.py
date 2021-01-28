@@ -29,7 +29,7 @@ def geofenceTransgressionTest():
                (50.001,49.999),
                ( 1.000, 1.000),
                ( 0.000, 0.000)]
-    maxAbortDelay = 0.2
+    maxAbortDelay = 0.1
 
     # Load trajectory
     trajPts = [{'time': 0.00, 'x': 0.0,  'y': 0.0, 'heading': 0.0},
@@ -92,13 +92,13 @@ def geofenceTransgressionTest():
     # Report a number of MONR inside geofence
     print("=== Entered running state, sending test MONR data")
     obj.MONR(transmitter_id=objID,position=testPts[0])
-    time.sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*5)
     obj.MONR(transmitter_id=objID,position=testPts[1])
-    time.sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*5)
     obj.MONR(transmitter_id=objID,position=testPts[2])
-    time.sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*5)
     obj.MONR(transmitter_id=objID,position=testPts[3])
-    time.sleep(0.001*random.randint(1,7))
+    time.sleep(0.001*5)
 
     # Check last HEAB so it is not ABORT
     print(obj.lastCCStatus())
