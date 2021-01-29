@@ -109,7 +109,7 @@ def geofenceTransgressionTest():
     obj.MONR(transmitter_id=objID,position=testPts[4])
     transgressionTime = time.time()
     time.sleep(0.01)
-    # Report another MONR outside geofence
+    # Report another MONR outside geofence TODO: remove
     obj.MONR(transmitter_id=objID,position=testPts[4])
     time.sleep(0.01)
     
@@ -140,4 +140,3 @@ if __name__ == "__main__":
             core.stop()
         if obj:
             obj.shutdown()
-
