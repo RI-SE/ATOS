@@ -181,11 +181,14 @@ def geofenceTransgressionTest(_trajectory, _geofence, _shouldPass = False):
 
 
 
-    if _shouldPass:
-        assert success , "Abort received even though all reported positions lay within allowed geofence"
-    else:
-        assert not success, "No abort received when reporting position outside allowed geofence"
-    return
+    if _shouldPass and not success:
+        print("Abort received even though all reported positions lay within allowed geofence")
+        return 0
+    elif not _shouldPass and success:
+        print("No abort received when reporting position outside allowed geofence")
+        return 0
+
+    return 1
 
 
 
@@ -211,7 +214,7 @@ if __name__ == "__main__":
             else:
                 failedRuns += 1
                 print(f"Test failed with geofence[{str(geofInt)}] and trajectory[{str(trajInt)}]\n")
-                break
+                #break
 
             #How many tests that has run so far
             runCounter += 1
