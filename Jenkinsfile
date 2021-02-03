@@ -19,6 +19,18 @@ pipeline {
 		}
 		stage('Run tests') {
 			parallel {
+				stage('Format check') {
+					steps {
+						sh 'echo "Running code formatting check..."'
+						sh './checkCodeFormat.sh'
+					}
+				}
+				stage('Dev Integration tests') {
+					steps {
+						sh 'echo "Running standard Maestro integration tests..."'
+						sh './maestroStandardTests.sh'
+					}
+				}
 				stage('Master Integration tests') {
 					when{
 						expression {
@@ -29,18 +41,6 @@ pipeline {
 					steps {
 						sh 'echo "Running extensive Maestro integration tests..."'
 						sh './maestroExtensiveTests.sh'
-					}
-				}
-				stage('Dev Integration tests') {
-					steps {
-						sh 'echo "Running standard Maestro integration tests..."'
-						sh './maestroStandardTests.sh'
-					}
-				}
-				stage('Format check') {
-					steps {
-						sh 'echo "Running code formatting check..."'
-						sh './checkCodeFormat.sh'
 					}
 				}
 	    		}
