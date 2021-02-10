@@ -2701,7 +2701,7 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const Ge
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
-		if (receiveTime == NULL) {
+	if (receiveTime == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
