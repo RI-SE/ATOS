@@ -77,6 +77,30 @@ public:
 	bool operator==(const Journal &other) const {
 		return this->moduleName == other.moduleName;
 	}
+
+	std::string toString() const {
+		std::string retval = "";
+		retval += moduleName + " journal\n\tFiles:\n";
+		for (const auto &file : containedFiles) {
+			retval += "\t\t* " + file.string() + "\n";
+		}
+		retval += "\tStart / end references\n";
+		retval += "\t\ts: ";
+		if (startReference.valid) {
+			retval += startReference.getFilePath().string() + " @" + std::to_string(startReference.getPosition());
+		}
+		else {
+			retval += "<unset>";
+		}
+		retval += "\n\t\te: ";
+		if (stopReference.valid) {
+			retval += stopReference.getFilePath().string() + " @" + std::to_string(stopReference.getPosition());
+		}
+		else {
+			retval += "<unset>";
+		}
+		return retval;
+	}
 };
 
 
@@ -96,6 +120,13 @@ public:
 	void placeStopBookmarks();
 	void insertNonBookmarked();
 	int dumpToFile();
+	std::string toString() const {
+		std::string retval = "";
+		for (const auto &journal : *this) {
+			retval += journal.toString() + "\n";
+		}
+		return retval;
+	}
 private:
 	std::chrono::time_point<std::chrono::system_clock, std::chrono::days> startDay;
 	std::chrono::time_point<std::chrono::system_clock, std::chrono::days> stopDay;
