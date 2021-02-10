@@ -285,7 +285,7 @@ typedef struct {
 	ObjectPropertiesType properties;
 	bool propertiesReceived;
 	struct timeval lastDataUpdate;
-  GeoPosition Origin;
+  GeoPosition origin;
 } ObjectDataType;
 
 typedef struct {
