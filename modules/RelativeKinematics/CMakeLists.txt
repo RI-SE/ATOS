@@ -21,6 +21,8 @@ include(GNUInstallDirs)
 # Create project main executable target
 add_executable(${RELATIVE_KINEMATICS_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/state.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/objecthandler.cpp
 )
 # Link project executable to util libraries
 target_link_libraries(${RELATIVE_KINEMATICS_TARGET} LINK_PUBLIC
