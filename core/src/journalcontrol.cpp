@@ -367,11 +367,12 @@ int JournalCollection::dumpToFile() {
 	 *			file section which is part of a journal.
 	 */
 	struct JournalFileSection {
-		fs::path path;			//!< Path to the file referred to
-		std::ifstream istrm;	//!< Input stream for accessing the file
-		std::streampos beg;		//!< First character index of relevant section
-		std::streampos end;		//!< Last character index of relevant section
-		std::string lastRead;	//!< Last read string from ::istrm member
+		fs::path path;				//!< Path to the file referred to
+		std::ifstream istrm;		//!< Input stream for accessing the file
+		std::streampos beg;			//!< First character index of relevant section
+		std::streampos end;			//!< Last character index of relevant section
+		std::string lastRead;		//!< Last read string from ::istrm member
+		unsigned int nReadRows = 0;	//!< Number of rows read from ::istrm member
 		//! The < operator tells which of two is oldest at its last read line
 		bool operator< (const JournalFileSection &other) const {
 			std::istringstream strThis(lastRead), strOther(other.lastRead);
@@ -382,6 +383,7 @@ int JournalCollection::dumpToFile() {
 		}
 	};
 
+	LogMessage(LOG_LEVEL_INFO, "Creating output log for journals\n%s", this->toString().c_str());
 	// Fill a vector with all files pertaining to recorded data,
 	// along with the correct start and stop references.
 	// After this, the vector contains opened streams positioned
@@ -393,19 +395,42 @@ int JournalCollection::dumpToFile() {
 			section.path = file;
 			section.istrm.open(file);
 			if (section.istrm.is_open()) {
-				section.beg = file == journal.startReference.filePath ?
-							journal.startReference.filePosition
-						  : section.istrm.tellg();
-				section.istrm.seekg(std::ios_base::end);
-				section.end = file == journal.stopReference.filePath ?
-							journal.stopReference.filePosition
-						  : section.istrm.tellg();
+				LogMessage(LOG_LEVEL_DEBUG, "Opened file %s", file.c_str());
+				if (file == journal.startReference.getFilePath()) {
+					section.beg = journal.startReference.getPosition();
+				}
+				else {
+					section.istrm.seekg(0, section.istrm.beg);
+					section.beg = section.istrm.tellg();
+				}
+
+				if (file == journal.stopReference.getFilePath()) {
+					section.end = journal.stopReference.getPosition();
+				}
+				else {
+					section.istrm.seekg(0, section.istrm.end);
+					section.end = section.istrm.tellg();
+				}
 				section.istrm.seekg(section.beg);
-				LogMessage(LOG_LEVEL_DEBUG, "File %s contained %d characters of journal data from period of interest",
-						section.path.filename().c_str(), section.end-section.beg);
-				if (section.beg == section.end || !std::getline(section.istrm, section.lastRead)) {
+
+				if (section.end - section.beg < 0) {
+					LogMessage(LOG_LEVEL_ERROR, "End precedes beginning in file %s: beg @%ld, end @%ld",
+							   file.c_str(), section.beg, section.end);
 					section.istrm.close();
 					inputFiles.pop_back();
+				}
+				else if (section.beg == section.end) {
+					LogMessage(LOG_LEVEL_DEBUG, "No data found");
+					section.istrm.close();
+					inputFiles.pop_back();
+				}
+				else if (!std::getline(section.istrm, section.lastRead)) {
+					LogMessage(LOG_LEVEL_DEBUG, "Failed to read line");
+					section.istrm.close();
+					inputFiles.pop_back();
+				}
+				else {
+					section.nReadRows++;
 				}
 			}
 			else {
