@@ -66,6 +66,10 @@ public:
 		}
 		const std::streampos& getPosition() const { return filePosition; }
 		const fs::path& getFilePath() const { return filePath; }
+		std::string toString() const {
+			return valid ? getFilePath().string() + " @" + std::to_string(getPosition())
+						 : "<unset>";
+		}
 	};
 
 	Journal() {}
@@ -84,21 +88,9 @@ public:
 		for (const auto &file : containedFiles) {
 			retval += "\t\t* " + file.string() + "\n";
 		}
-		retval += "\tStart / end references\n";
-		retval += "\t\ts: ";
-		if (startReference.valid) {
-			retval += startReference.getFilePath().string() + " @" + std::to_string(startReference.getPosition());
-		}
-		else {
-			retval += "<unset>";
-		}
-		retval += "\n\t\te: ";
-		if (stopReference.valid) {
-			retval += stopReference.getFilePath().string() + " @" + std::to_string(stopReference.getPosition());
-		}
-		else {
-			retval += "<unset>";
-		}
+		retval += "\tStart / end references:\n";
+		retval += "\t\ts: " + startReference.toString() + "\n";
+		retval += "\t\te: " + stopReference.toString();
 		return retval;
 	}
 };
@@ -124,6 +116,9 @@ public:
 		std::string retval = "";
 		for (const auto &journal : *this) {
 			retval += journal.toString() + "\n";
+		}
+		if (this->size() > 0) {
+			retval.pop_back();
 		}
 		return retval;
 	}
