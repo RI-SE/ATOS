@@ -855,7 +855,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					ObjectDataType objectData;
 
 					for (iIndex = 0; iIndex < nbr_objects; iIndex++) {
-						LogMessage(LOG_LEVEL_DEBUG, "Configuring object data for object %u", object_transmitter_ids[iIndex]);
+						LogMessage(LOG_LEVEL_DEBUG, "Configuring object data for object %u",
+								   object_transmitter_ids[iIndex]);
 						objectData.Enabled = OBJECT_ENABLED;
 						objectData.ClientIP = objectConnections[iIndex].objectCommandAddress.sin_addr.s_addr;
 						objectData.ClientID = object_transmitter_ids[iIndex];
