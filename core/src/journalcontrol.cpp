@@ -45,13 +45,14 @@ namespace std::chrono {
 class Journal {
 public:
 	class Bookmark {
-	public:
+	private:
 		fs::path filePath;
 		std::streampos filePosition;
+	public:
 		bool valid = false;
-		void place(const fs::path &path, const std::ios_base::seekdir &pos) {
-			std::ifstream istrm(path, pos == std::ios_base::end ? std::ios_base::ate
-																		 : std::ios_base::in);
+		void place(const fs::path &path, const bool placeAtBeginning=false) {
+			std::ifstream istrm(path, placeAtBeginning ? std::ios_base::in
+													   : std::ios_base::ate);
 			if (istrm.is_open()) {
 				LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark to file %s", path.c_str());
 				filePosition = istrm.tellg();
@@ -63,6 +64,8 @@ public:
 				LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", path.c_str());
 			}
 		}
+		const std::streampos& getPosition() const { return filePosition; }
+		const fs::path& getFilePath() const { return filePath; }
 	};
 
 	Journal() {}
@@ -194,11 +197,11 @@ void JournalCollection::placeStartBookmarks() {
 	this->clear();
 
 	for (const auto &journalFile : journalFilesFromToday) {
-		LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark in file %s", journalFile.c_str());
+		LogMessage(LOG_LEVEL_DEBUG, "Storing start bookmark in file %s", journalFile.c_str());
 		Journal journal;
 		auto datePosition = journalFile.stem().string().find("-" + currentDate);
 		journal.moduleName = journalFile.stem().string().substr(0, datePosition);
-		journal.startReference.place(journalFile, std::ios_base::end);
+		journal.startReference.place(journalFile);
 		journal.containedFiles.insert(journalFile);
 		this->insert(journal);
 	}
@@ -216,15 +219,15 @@ void JournalCollection::placeStopBookmarks() {
 	auto currentDate = getCurrentDateAsString();
 
 	for (const auto &journalFile : journalFilesFromToday) {
-		LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark in file %s", journalFile.c_str());
+		LogMessage(LOG_LEVEL_DEBUG, "Storing stop bookmark in file %s", journalFile.c_str());
 		// Find existing journal matching module name from file
 		Journal soughtJournal;
 		auto datePosition = journalFile.stem().string().find("-" + currentDate);
 		soughtJournal.moduleName = journalFile.stem().string().substr(0, datePosition);
-		soughtJournal.startReference.place(journalFile, std::ios_base::beg);
+		soughtJournal.startReference.place(journalFile, true); // In case we are emplacing, startReference at beginning
 		// Insert checks if an equivalent element (same module) already exists
 		auto matchingJournal = this->insert(soughtJournal).first;
-		matchingJournal->stopReference.place(journalFile, std::ios_base::end);
+		matchingJournal->stopReference.place(journalFile);
 		matchingJournal->containedFiles.insert(journalFile);
 	}
 	using namespace std::chrono;
@@ -274,7 +277,7 @@ void JournalCollection::insertNonBookmarked() {
 			if (!matchingJournal->startReference.valid) {
 				LogMessage(LOG_LEVEL_DEBUG, "Storing start bookmark at beginning of file %s",
 						   journalFile.c_str());
-				matchingJournal->startReference.place(journalFile, std::ios_base::beg);
+				matchingJournal->startReference.place(journalFile, true);
 			}
 		}
 	}
@@ -293,7 +296,7 @@ void JournalCollection::insertNonBookmarked() {
 				if (matchingFile != journal.containedFiles.end()) {
 					LogMessage(LOG_LEVEL_DEBUG, "Storing end bookmark at end of file %s",
 							   matchingFile->c_str());
-					journal.stopReference.place(*matchingFile, std::ios_base::end);
+					journal.stopReference.place(*matchingFile);
 					break;
 				}
 			}
