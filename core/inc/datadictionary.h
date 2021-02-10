@@ -24,7 +24,7 @@ ReadWriteAccess_t DataDictionaryInitScenarioName();
 ReadWriteAccess_t DataDictionarySetScenarioName(const char* name, const size_t nameLength);
 ReadWriteAccess_t DataDictionaryGetScenarioName(char* name, const size_t nameLength);
 
-//TODO: We should have one call for the origin, this in order to make sure that all the three crusal position informations are updated at the same time, otherwise there is a small risk of us using old and new values for origin thereby we might get a completly messed up origin
+//TODO: We should have one call for the origin, this in order to make sure that all the three parts of the position are updated at the same time, otherwise there is a small risk of us using old and new values for origin thereby we might get a completely messed up origin
 ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType *GSD, C8 *Latitude);
 ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(GSDType *GSD, dbl *Latitude);
@@ -172,4 +172,3 @@ ReadWriteAccess_t DataDictionaryInitOrigin();
 }
 #endif
 #endif
-
