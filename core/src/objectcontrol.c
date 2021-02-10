@@ -2005,7 +2005,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 		strcpy(objectFilePath, objectPathDir);
 		strcat(objectFilePath, directory_entry->d_name);
 		memset(object_traj_file[*nbr_objects], 0, MAX_FILE_PATH);
-		//TODO: add so you can add origin on objects in .opro message 
+		//TODO: add so you can add origin on objects in object file
 		// Get IP setting
 		if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFilePath,
 									 sizeof (objectFilePath), objectSetting, sizeof (objectSetting)) == -1) {
