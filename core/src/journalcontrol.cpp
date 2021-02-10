@@ -445,11 +445,20 @@ int JournalCollection::dumpToFile() {
 	while(!inputFiles.empty()) {
 		std::vector<JournalFileSection>::iterator oldestFile = std::min_element(inputFiles.begin(), inputFiles.end());
 		ostrm << oldestFile->lastRead << std::endl;
-		if (!std::getline(oldestFile->istrm, oldestFile->lastRead)
-				|| oldestFile->istrm.tellg() > oldestFile->end) {
-			LogMessage(LOG_LEVEL_DEBUG, "Reached end of journal file %s", oldestFile->path.c_str());
+		if (!std::getline(oldestFile->istrm, oldestFile->lastRead)) {
+			LogMessage(LOG_LEVEL_DEBUG, "Reached end of journal file %s, read %u rows",
+					   oldestFile->path.c_str(), oldestFile->nReadRows);
 			oldestFile->istrm.close();
 			inputFiles.erase(oldestFile);
+		}
+		else if (oldestFile->nReadRows > oldestFile->end - oldestFile->beg) {
+			LogMessage(LOG_LEVEL_DEBUG, "Read %u rows from journal file %s",
+					   oldestFile->nReadRows, oldestFile->path.c_str());
+			oldestFile->istrm.close();
+			inputFiles.erase(oldestFile);
+		}
+		else {
+			oldestFile->nReadRows++;
 		}
 	}
 
