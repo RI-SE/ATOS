@@ -2724,7 +2724,7 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const Ge
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (objectDataMemory[i].ClientID == transmitterID) {
-			objectDataMemory[i].Origin = *origin;
+			objectDataMemory[i].origin = *origin;
 			objectDataMemory[i].lastDataUpdate = *receiveTime;
 			result = WRITE_OK;
 		}
@@ -2735,7 +2735,7 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const Ge
 		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", transmitterID);
 		for (int i = 0; i < numberOfObjects; ++i) {
 			if (objectDataMemory[i].ClientID == 0) {
-				objectDataMemory[i].Origin = *origin;
+				objectDataMemory[i].origin = *origin;
 				objectDataMemory[i].lastDataUpdate = *receiveTime;
 				result = WRITE_OK;
 			}
@@ -2748,7 +2748,7 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const Ge
 				numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
-				objectDataMemory[numberOfObjects - 1].Origin = *origin;
+				objectDataMemory[numberOfObjects - 1].origin = *origin;
 				objectDataMemory[numberOfObjects - 1].lastDataUpdate = *receiveTime;
 			}
 			else {
@@ -2762,7 +2762,7 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const Ge
 	return result;
 }
 /**
- * @brief DataDictionaryGetOrigin Read Geoposition(origin) value from shared memory for object
+ * @brief DataDictionaryGetOrigin Read Geoposition(origin) value from shared memory for object. Assumes objectDataMemory has already been allocated.
  * 
  * @param transmitterID requested object transmitterId
  * @param origin Return variable pointer
@@ -2788,7 +2788,7 @@ ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosit
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (objectDataMemory[i].ClientID == transmitterID) {
-			memcpy(origin, &objectDataMemory[i].Origin, sizeof (GeoPosition));
+			memcpy(origin, &objectDataMemory[i].origin, sizeof (GeoPosition));
 
 			result = READ_OK;
 		}
@@ -2815,8 +2815,8 @@ ReadWriteAccess_t DataDictionaryInitOrigin(){
 	for(int i = 0; i < numberOfObjects; ++i){
 		if (UtilReadConfigurationParameter
 		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, ResultBufferC8, sizeof (ResultBufferC8))){
-			objectDataMemory[i].Origin.Longitude = atof(ResultBufferC8);
-			bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
+			objectDataMemory[i].origin.Longitude = atof(ResultBufferC8);
+			memset(ResultBufferC8,0 ,DD_CONTROL_BUFFER_SIZE_20);
 		}
 		else{
 			Res = PARAMETER_NOTFOUND;
@@ -2827,8 +2827,8 @@ ReadWriteAccess_t DataDictionaryInitOrigin(){
 
 		if (UtilReadConfigurationParameter
 			(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, ResultBufferC8, sizeof (ResultBufferC8))){	
-			objectDataMemory[i].Origin.Latitude = atof(ResultBufferC8);
-			bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
+			objectDataMemory[i].origin.Latitude = atof(ResultBufferC8);
+			memset(ResultBufferC8,0 ,DD_CONTROL_BUFFER_SIZE_20);
 		}
 		else{
 			Res = PARAMETER_NOTFOUND;
@@ -2838,8 +2838,8 @@ ReadWriteAccess_t DataDictionaryInitOrigin(){
 
 		if (UtilReadConfigurationParameter
 			(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, ResultBufferC8, sizeof (ResultBufferC8))){
-			objectDataMemory[i].Origin.Altitude = atof(ResultBufferC8);
-			bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
+			objectDataMemory[i].origin.Altitude = atof(ResultBufferC8);
+			memset(ResultBufferC8,0 ,DD_CONTROL_BUFFER_SIZE_20);
 		}
 		else{
 			Res = PARAMETER_NOTFOUND;

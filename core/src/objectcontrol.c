@@ -860,9 +860,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						objectData.lastDataUpdate.tv_sec = 0;
 						objectData.lastDataUpdate.tv_usec = 0;
 						objectData.propertiesReceived = 0;
-						objectData.Origin = origo;
+						objectData.origin = origo;
 
-						//lässa in origo
+						//TODO read origin from object property file
 						if (DataDictionarySetObjectData(&objectData) != WRITE_OK) {
 							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
 							initSuccessful = false;
