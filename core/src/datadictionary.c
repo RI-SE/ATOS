@@ -2701,7 +2701,7 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const Ge
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
-		if (receiveTime == NULL) {
+	if (receiveTime == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
@@ -2797,7 +2797,7 @@ ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosit
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	if (result == PARAMETER_NOTFOUND) {
-		LogMessage(LOG_LEVEL_WARNING, "Unable to find monitor data for transmitter ID %u", transmitterID);
+		LogMessage(LOG_LEVEL_WARNING, "Unable to find origin setting for transmitter ID %u", transmitterID);
 	}
 
 	return result;
