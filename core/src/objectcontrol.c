@@ -852,7 +852,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					// Enable all objects at INIT
 					ObjectDataType objectData;
-
+					GeoPosition origo;
 					for (iIndex = 0; iIndex < nbr_objects; iIndex++) {
 						objectData.Enabled = OBJECT_ENABLED;
 						objectData.ClientIP = objectConnections[iIndex].objectCommandAddress.sin_addr.s_addr;
@@ -860,6 +860,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						objectData.lastDataUpdate.tv_sec = 0;
 						objectData.lastDataUpdate.tv_usec = 0;
 						objectData.propertiesReceived = 0;
+						objectData.Origin = origo;
 
 						//lässa in origo
 						if (DataDictionarySetObjectData(&objectData) != WRITE_OK) {

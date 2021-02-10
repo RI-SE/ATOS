@@ -2788,7 +2788,7 @@ ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosit
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (objectDataMemory[i].ClientID == transmitterID) {
-			memcpy(origin, &objectDataMemory[i].Origin, sizeof (ObjectMonitorType));
+			memcpy(origin, &objectDataMemory[i].Origin, sizeof (GeoPosition));
 
 			result = READ_OK;
 		}

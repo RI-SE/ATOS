@@ -2057,11 +2057,14 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 				}
 				origin.Longitude = atof(NewValue);
 				gettimeofday(&tv, NULL);
+				
 				if(DataDictionarySetOrigin(object_transmitter_ids[i], &origin, &tv)!=WRITE_OK){
 					LogMessage(LOG_LEVEL_ERROR, 
 						"Data dictionary set origin from object write error - cannot write the origin for one of the objects");
+					
 					break;
 				}
+				
 			}
 		}
 		result = DataDictionarySetOriginLongitudeDbl(GSD, NewValue);
