@@ -2009,18 +2009,23 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 
 		for (int i = 0; i < numberOfObjects; i++)
 		{
-			if(DataDictionaryGetOrigin(object_transmitter_ids[i], &origin)!= READ_OK){
-				LogMessage(LOG_LEVEL_ERROR, 
-					"Data dictionary get origin from object read error - cannot read the origin for one of the objects");
-			
-				break;
+			if (object_transmitter_ids[i] == 0){
+				continue;
 			}
-			origin.Latitude = atof(NewValue);
-			gettimeofday(&tv, NULL);
-			if(DataDictionarySetOrigin(object_transmitter_ids[i], &origin, &tv)!=WRITE_OK){
-				LogMessage(LOG_LEVEL_ERROR, 
-					"Data dictionary set origin from object write error - cannot write the origin for one of the objects");
-				break;
+			else{
+				if(DataDictionaryGetOrigin(object_transmitter_ids[i], &origin)!= READ_OK){
+					LogMessage(LOG_LEVEL_ERROR, 
+						"Data dictionary get origin from object read error - cannot read the origin for one of the objects");
+				
+					break;
+				}
+				origin.Latitude = atof(NewValue);
+				gettimeofday(&tv, NULL);
+				if(DataDictionarySetOrigin(object_transmitter_ids[i], &origin, &tv)!=WRITE_OK){
+					LogMessage(LOG_LEVEL_ERROR, 
+						"Data dictionary set origin from object write error - cannot write the origin for one of the objects");
+					break;
+				}
 			}
 		}
 
@@ -2040,18 +2045,23 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 
 		for (int i = 0; i < numberOfObjects; i++)
 		{
-			if(DataDictionaryGetOrigin(object_transmitter_ids[i], &origin)!= READ_OK){
-				LogMessage(LOG_LEVEL_ERROR, 
-					"Data dictionary get origin from object read error - cannot read the origin for one of the objects");
-			
-				break;
+			if(object_transmitter_ids[i] == 0){
+				continue;
 			}
-			origin.Longitude = atof(NewValue);
-			gettimeofday(&tv, NULL);
-			if(DataDictionarySetOrigin(object_transmitter_ids[i], &origin, &tv)!=WRITE_OK){
-				LogMessage(LOG_LEVEL_ERROR, 
-					"Data dictionary set origin from object write error - cannot write the origin for one of the objects");
-				break;
+			else{
+				if(DataDictionaryGetOrigin(object_transmitter_ids[i], &origin)!= READ_OK){
+					LogMessage(LOG_LEVEL_ERROR, 
+						"Data dictionary get origin from object read error - cannot read the origin for one of the objects");
+				
+					break;
+				}
+				origin.Longitude = atof(NewValue);
+				gettimeofday(&tv, NULL);
+				if(DataDictionarySetOrigin(object_transmitter_ids[i], &origin, &tv)!=WRITE_OK){
+					LogMessage(LOG_LEVEL_ERROR, 
+						"Data dictionary set origin from object write error - cannot write the origin for one of the objects");
+					break;
+				}
 			}
 		}
 		result = DataDictionarySetOriginLongitudeDbl(GSD, NewValue);
@@ -2071,18 +2081,23 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewV
 
 		for (int i = 0; i < numberOfObjects; i++)
 		{
-			if(DataDictionaryGetOrigin(object_transmitter_ids[i], &origin)!= READ_OK){
-				LogMessage(LOG_LEVEL_ERROR, 
-					"Data dictionary get origin from object read error - cannot read the origin for one of the objects");
-			
-				break;
+			if (object_transmitter_ids[i] == 0){
+				continue;
 			}
-			origin.Altitude = atof(NewValue);
-			gettimeofday(&tv, NULL);
-			if(DataDictionarySetOrigin(object_transmitter_ids[i], &origin, &tv)!=WRITE_OK){
-				LogMessage(LOG_LEVEL_ERROR, 
-					"Data dictionary set origin from object write error - cannot write the origin for one of the objects");
-				break;
+			else{
+				if(DataDictionaryGetOrigin(object_transmitter_ids[i], &origin)!= READ_OK){
+					LogMessage(LOG_LEVEL_ERROR, 
+						"Data dictionary get origin from object read error - cannot read the origin for one of the objects");
+				
+					break;
+				}
+				origin.Altitude = atof(NewValue);
+				gettimeofday(&tv, NULL);
+				if(DataDictionarySetOrigin(object_transmitter_ids[i], &origin, &tv)!=WRITE_OK){
+					LogMessage(LOG_LEVEL_ERROR, 
+						"Data dictionary set origin from object write error - cannot write the origin for one of the objects");
+					break;
+				}
 			}
 		}
 		result = DataDictionarySetOriginAltitudeDbl(GSD, NewValue);

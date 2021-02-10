@@ -60,7 +60,7 @@ static void signalHandler(int signo);
 static int awaitConnection(TCPHandler &tcpPort, enum COMMAND &receivedCommand, bool& areObjectsConnected);
 static int transmitTrajectories(TCPHandler &tcpPort);
 static int transmitObjectData(TCPHandler &tcpPort, UDPHandler &udpPort);
-
+static int transmitOSEM(TCPHandler &tcpPort);
 
 ///ssize_t encodeOSEMMessage(const struct timeval* controlCenterTime, const uint32_t *desiredTransmitterID, const double_t * latitude_deg, const double_t * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
 /*------------------------------------------------------------
