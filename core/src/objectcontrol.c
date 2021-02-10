@@ -860,6 +860,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						objectData.lastDataUpdate.tv_sec = 0;
 						objectData.lastDataUpdate.tv_usec = 0;
 						objectData.propertiesReceived = 0;
+
+						//lässa in origo
 						if (DataDictionarySetObjectData(&objectData) != WRITE_OK) {
 							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
 							initSuccessful = false;
@@ -2002,7 +2004,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 		strcpy(objectFilePath, objectPathDir);
 		strcat(objectFilePath, directory_entry->d_name);
 		memset(object_traj_file[*nbr_objects], 0, MAX_FILE_PATH);
-
+		//TODO: add so you can add origin on objects in .opro message 
 		// Get IP setting
 		if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFilePath,
 									 sizeof (objectFilePath), objectSetting, sizeof (objectSetting)) == -1) {

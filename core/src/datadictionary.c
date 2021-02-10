@@ -100,6 +100,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitObjectData() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
+	Res = Res == READ_OK ? DataDictionaryInitOrigin() : Res;
 	if (Res != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
 	}
@@ -2676,4 +2677,177 @@ ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitter
 
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 	return result;
+}
+/**
+ * @brief DataDictionarySetOrigin Parses Geopositon(origin) and time information on Objects shared memmory corresponding to the transmitterID 
+ * 
+ * @param transmitterID That we will parse new Geoposition values to. 
+ * @param origin Geoposition data. 
+ * @param receiveTime update latest time that data was changed
+ * @return ReadWriteAccess_t 
+ */
+ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const GeoPosition * origin, const struct timeval * receiveTime ){
+	
+	
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (origin == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+		if (receiveTime == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (objectDataMemory[i].ClientID == transmitterID) {
+			objectDataMemory[i].Origin = *origin;
+			objectDataMemory[i].lastDataUpdate = *receiveTime;
+			result = WRITE_OK;
+		}
+	}
+
+	if (result == PARAMETER_NOTFOUND) {
+		// Search for unused memory space and place monitor data there
+		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", transmitterID);
+		for (int i = 0; i < numberOfObjects; ++i) {
+			if (objectDataMemory[i].ClientID == 0) {
+				objectDataMemory[i].Origin = *origin;
+				objectDataMemory[i].lastDataUpdate = *receiveTime;
+				result = WRITE_OK;
+			}
+		}
+
+		// No uninitialized memory space found - create new
+		if (result == PARAMETER_NOTFOUND) {
+			objectDataMemory = resizeSharedMemory(objectDataMemory, (unsigned int)(numberOfObjects + 1));
+			if (objectDataMemory != NULL) {
+				numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+				LogMessage(LOG_LEVEL_INFO,
+						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
+				objectDataMemory[numberOfObjects - 1].Origin = *origin;
+				objectDataMemory[numberOfObjects - 1].lastDataUpdate = *receiveTime;
+			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
+				result = UNDEFINED;
+			}
+		}
+	}
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+/**
+ * @brief DataDictionaryGetOrigin Read Geoposition(origin) value from shared memory for object
+ * 
+ * @param transmitterID requested object transmitterId
+ * @param origin Return variable pointer
+ * @return ReadWriteAccess_t 
+ */
+ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosition * origin){
+	
+	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
+
+	if (origin == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (objectDataMemory[i].ClientID == transmitterID) {
+			memcpy(origin, &objectDataMemory[i].Origin, sizeof (ObjectMonitorType));
+
+			result = READ_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	if (result == PARAMETER_NOTFOUND) {
+		LogMessage(LOG_LEVEL_WARNING, "Unable to find monitor data for transmitter ID %u", transmitterID);
+	}
+
+	return result;
+}
+/**
+ * @brief DataDictionaryInitOrigin Read config file and add the origin in .conf to all the objects that are created
+ * 
+ * @return ReadWriteAccess_t 
+ */
+ReadWriteAccess_t DataDictionaryInitOrigin(){
+	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+	ReadWriteAccess_t Res = WRITE_OK;
+	
+	for(int i = 0; i < numberOfObjects; ++i){
+		if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, ResultBufferC8, sizeof (ResultBufferC8))){
+			objectDataMemory[i].Origin.Longitude = atof(ResultBufferC8);
+			bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
+		}
+		else{
+			Res = PARAMETER_NOTFOUND;
+			LogMessage(LOG_LEVEL_ERROR, "OriginLongitude not found!");
+			//Question: Decided to return here if not being able find one of the originvalues what do you think about this!
+			return Res;  
+		}
+
+		if (UtilReadConfigurationParameter
+			(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, ResultBufferC8, sizeof (ResultBufferC8))){	
+			objectDataMemory[i].Origin.Latitude = atof(ResultBufferC8);
+			bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
+		}
+		else{
+			Res = PARAMETER_NOTFOUND;
+			LogMessage(LOG_LEVEL_ERROR, "OriginLatitude not found!");
+			return Res;
+		}
+
+		if (UtilReadConfigurationParameter
+			(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, ResultBufferC8, sizeof (ResultBufferC8))){
+			objectDataMemory[i].Origin.Altitude = atof(ResultBufferC8);
+			bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
+		}
+		else{
+			Res = PARAMETER_NOTFOUND;
+			LogMessage(LOG_LEVEL_ERROR, "OriginAltitude not found!");
+			return Res;
+
+		}
+
+	}
+	return Res; 
 }

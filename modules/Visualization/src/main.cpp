@@ -61,6 +61,8 @@ static int awaitConnection(TCPHandler &tcpPort, enum COMMAND &receivedCommand, b
 static int transmitTrajectories(TCPHandler &tcpPort);
 static int transmitObjectData(TCPHandler &tcpPort, UDPHandler &udpPort);
 
+
+///ssize_t encodeOSEMMessage(const struct timeval* controlCenterTime, const uint32_t *desiredTransmitterID, const double_t * latitude_deg, const double_t * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
 /*------------------------------------------------------------
   -- Main task
   ------------------------------------------------------------*/
@@ -75,6 +77,7 @@ int main(int argc, char const* argv[]) {
 	int bytesread = 0;
 	char debug = 0;
 	bool areObjectsConnected = false;
+
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
 
@@ -116,6 +119,7 @@ int main(int argc, char const* argv[]) {
 
 		if (areObjectsConnected) {
 			transmitTrajectories(visualizerTCPPort);
+			transmitOSEM(visualizerTCPPort);
 		}
 
 
@@ -131,11 +135,15 @@ int main(int argc, char const* argv[]) {
 					break;
 				case COMM_OBJECTS_CONNECTED:
 					transmitTrajectories(visualizerTCPPort);
+					transmitOSEM(visualizerTCPPort);
 					areObjectsConnected = true;
 					break;
 				}
 			} while (command != COMM_INV);
-			
+
+			// TODO fix the timing we send etc
+				
+
 			if (transmitObjectData(visualizerTCPPort, visualizerUDPPort) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Failed to transmit object data");
 				break;
@@ -291,4 +299,59 @@ int transmitTrajectories(TCPHandler &tcpPort) {
 		}
 	}
 	return retval;
+}
+
+
+int transmitOSEM(TCPHandler &tcp){
+	timeval tv;
+	GeoPosition originPosition;
+	std::vector<char> tcpTransmitBuffer(MONR_BUFFER_LENGTH);
+	std::vector<uint32_t> transmitterIDs;
+	int bytesent;
+	uint32_t numberOfObjects;	
+
+	if(DataDictionaryGetNumberOfObjects(&numberOfObjects)!=READ_OK){
+		LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error ");
+	}
+	if (numberOfObjects<=0){
+		return 0;
+	}
+
+	if(DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size())!=READ_OK){
+		LogMessage(LOG_LEVEL_ERROR,"Data dictionary get TransmitterID read error");
+	}
+	//Question: do we want to send for each
+	for (const auto &transmitterID : transmitterIDs) {
+		if (transmitterID == 0){
+			continue;
+		}
+		
+		if(DataDictionaryGetOrigin(transmitterID, &originPosition)!=READ_OK){
+			LogMessage(LOG_LEVEL_ERROR,
+						"Data dictionary origion data read error for transmitter ID %u",
+						transmitterID);
+		}
+		gettimeofday(&tv, NULL);
+		float Altitude = (float) originPosition.Altitude;
+		long retval = encodeOSEMMessage(&tv, 
+										&transmitterID, 
+										&originPosition.Latitude,
+										&originPosition.Longitude,
+										&Altitude, // don't like but this is how it is...
+										NULL, 
+										NULL, 
+										NULL,
+										tcpTransmitBuffer.data(), 
+										tcpTransmitBuffer.size(),
+										0);//TODO
+		tcpTransmitBuffer.resize(static_cast<unsigned long>(retval));
+		bytesent = tcp.sendTCP(tcpTransmitBuffer);
+
+		if (bytesent < 0){
+			LogMessage(LOG_LEVEL_ERROR,"Error when sending on the visualizer tcp socket");
+
+		}
+	}
+
+	return 0;
 }
