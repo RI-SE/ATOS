@@ -867,6 +867,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
 							initSuccessful = false;
 						}
+						if (DataDictionaryInitOrigin(&objectData) != WRITE_OK) {
+							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
+							initSuccessful = false;
+						}
 					}
 
 					resetCommandActionList(commandActions,
