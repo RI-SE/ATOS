@@ -118,7 +118,9 @@ int main(int argc, char const* argv[]) {
 		visualizerTCPPort.receiveTCP(buffer,0);
 
 		if (areObjectsConnected) {
-			transmitTrajectories(visualizerTCPPort);
+			//LogMessage(LOG_LEVEL_INFO, "Sending Traj");
+			//transmitTrajectories(visualizerTCPPort);
+			LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
 			transmitOSEM(visualizerTCPPort);
 		}
 
@@ -134,7 +136,9 @@ int main(int argc, char const* argv[]) {
 					quit = true;
 					break;
 				case COMM_OBJECTS_CONNECTED:
-					transmitTrajectories(visualizerTCPPort);
+					//LogMessage(LOG_LEVEL_INFO, "Sending Traj");
+					//transmitTrajectories(visualizerTCPPort);
+					LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
 					transmitOSEM(visualizerTCPPort);
 					areObjectsConnected = true;
 					break;
@@ -189,7 +193,7 @@ int transmitObjectData(TCPHandler &tcpPort, UDPHandler &udpPort) {
 		if (transmitterID == 0){
 			continue;
 		}
-
+		
 		DataDictionaryGetMonitorData(transmitterID, &monitorData);
 		DataDictionaryGetMonitorDataReceiveTime(transmitterID, &monitorDataReceiveTime);
 		if (timerisset(&monitorDataReceiveTime)
@@ -317,6 +321,7 @@ int transmitOSEM(TCPHandler &tcp){
 		return 0;
 	}
 
+	transmitterIDs.resize(numberOfObjects);
 	if(DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size())!=READ_OK){
 		LogMessage(LOG_LEVEL_ERROR,"Data dictionary get TransmitterID read error");
 	}
@@ -326,7 +331,7 @@ int transmitOSEM(TCPHandler &tcp){
 			continue;
 		}
 		
-		if(DataDictionaryGetOrigin(transmitterID, &originPosition)!=READ_OK){
+		if(DataDictionaryGetOrigin(transmitterID, &originPosition) != READ_OK){
 			LogMessage(LOG_LEVEL_ERROR,
 						"Data dictionary origion data read error for transmitter ID %u",
 						transmitterID);
