@@ -100,7 +100,6 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitObjectData() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
-	Res = Res == READ_OK ? DataDictionaryInitOrigin() : Res;
 	if (Res != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
 	}
@@ -1402,7 +1401,7 @@ ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPC8(GSDType * GSD, C8 * IP
 ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
+	
 	if (UtilReadConfigurationParameter
 		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
@@ -1761,6 +1760,7 @@ ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSettin
 /*TransmitterID*/
 ReadWriteAccess_t DataDictionaryInitTransmitterID(void) {
 	// TODO implement shmem solution
+
 	return READ_OK;
 }
 
@@ -1809,7 +1809,7 @@ ReadWriteAccess_t DataDictionarySetTransmitterID(const uint32_t transmitterID) {
  * \return Result according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryInitObjectData() {
-
+	
 	int createdMemory;
 
 	objectDataMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (ObjectDataType), &createdMemory);
@@ -2795,7 +2795,7 @@ ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosit
 	}
 
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
-
+	printf("get origin %f",origin->Latitude);
 	if (result == PARAMETER_NOTFOUND) {
 		LogMessage(LOG_LEVEL_WARNING, "Unable to find origin setting for transmitter ID %u", transmitterID);
 	}
@@ -2811,12 +2811,15 @@ ReadWriteAccess_t DataDictionaryInitOrigin(){
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 	ReadWriteAccess_t Res = WRITE_OK;
+	// should it be write or read Iam writeing to memory but also reading from config file?
 	
 	for(int i = 0; i < numberOfObjects; ++i){
 		if (UtilReadConfigurationParameter
 		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, ResultBufferC8, sizeof (ResultBufferC8))){
-			objectDataMemory[i].origin.Longitude = atof(ResultBufferC8);
+			double longitude = atof(ResultBufferC8);
+			objectDataMemory[i].origin.Longitude = longitude;
 			memset(ResultBufferC8,0 ,DD_CONTROL_BUFFER_SIZE_20);
+			
 		}
 		else{
 			Res = PARAMETER_NOTFOUND;
@@ -2827,7 +2830,8 @@ ReadWriteAccess_t DataDictionaryInitOrigin(){
 
 		if (UtilReadConfigurationParameter
 			(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, ResultBufferC8, sizeof (ResultBufferC8))){	
-			objectDataMemory[i].origin.Latitude = atof(ResultBufferC8);
+			double latitude = atof(ResultBufferC8);
+			objectDataMemory[i].origin.Latitude = latitude;
 			memset(ResultBufferC8,0 ,DD_CONTROL_BUFFER_SIZE_20);
 		}
 		else{
@@ -2838,7 +2842,8 @@ ReadWriteAccess_t DataDictionaryInitOrigin(){
 
 		if (UtilReadConfigurationParameter
 			(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, ResultBufferC8, sizeof (ResultBufferC8))){
-			objectDataMemory[i].origin.Altitude = atof(ResultBufferC8);
+			double altitude = atof(ResultBufferC8);
+			objectDataMemory[i].origin.Altitude = altitude;
 			memset(ResultBufferC8,0 ,DD_CONTROL_BUFFER_SIZE_20);
 		}
 		else{
