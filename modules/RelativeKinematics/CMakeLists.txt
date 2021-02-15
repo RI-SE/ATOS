@@ -15,20 +15,32 @@ set(POSITIONING_LIBRARY MaestroPositioning)
 set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MESSAGE_BUS_LIBRARY MaestroMQ)
+set(FILESYSTEM_LIBRARY stdc++fs)
 
 include(GNUInstallDirs)
 
 # Create project main executable target
 add_executable(${RELATIVE_KINEMATICS_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/state.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objecthandler.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/testobject.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/state.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/idle.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/initialized.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/connecting.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/ready.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/aborting.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/testlive.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/disarming.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/armed.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/done.cpp
 )
 # Link project executable to util libraries
 target_link_libraries(${RELATIVE_KINEMATICS_TARGET} LINK_PUBLIC
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
+	${FILESYSTEM_LIBRARY}
 )
 target_include_directories(${RELATIVE_KINEMATICS_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
