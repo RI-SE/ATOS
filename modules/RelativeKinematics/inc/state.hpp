@@ -1,288 +1,286 @@
-#ifndef STATE_HPP
-#define STATE_HPP
+#pragma once
 
+#include "objecthandler.hpp"
 #include <stdexcept>
 
 class ObjectHandler;
 
-namespace RelativeKinematics {
-
-class AbstractState {
+class ObjectControlState {
 public:
 	//! The below transitions represent user commands and can be expected
 	//! any time - thus any inheriting class must handle them all nicely
-	virtual void initializeRequest() = 0;
-	virtual void disconnectRequest() = 0;
-	virtual void connectRequest() = 0;
-	virtual void armRequest() = 0;
-	virtual void disarmRequest() = 0;
-	virtual void startRequest() = 0;
-	virtual void stopRequest() = 0;
-	virtual void abortRequest() = 0;
-	virtual void allClearRequest() = 0;
+	virtual void initializeRequest(ObjectHandler&) = 0;
+	virtual void disconnectRequest(ObjectHandler&) = 0;
+	virtual void connectRequest(ObjectHandler&) = 0;
+	virtual void armRequest(ObjectHandler&) = 0;
+	virtual void disarmRequest(ObjectHandler&) = 0;
+	virtual void startRequest(ObjectHandler&) = 0;
+	virtual void stopRequest(ObjectHandler&) = 0;
+	virtual void abortRequest(ObjectHandler&) = 0;
+	virtual void allClearRequest(ObjectHandler&) = 0;
 
 	//! The below transitions represent spontaneous actions uninitiated by
 	//! the user - inheriting classes may throw exceptions if transitions
 	//! are deemed unreasonable
-	virtual void initializationError() = 0;
-	virtual void connectedToObject() = 0;
-	virtual void disconnectedFromObject() = 0;
-	virtual void connectedToLiveObject() = 0;
-	virtual void connectedToArmedObject() = 0;
-	virtual void allObjectsDisarmed() = 0;
-	virtual void allObjectsConnected() = 0;
-	virtual void testCompleted() = 0;
-	virtual void postProcessingCompleted() = 0;
+	virtual void connectedToObject(ObjectHandler&) = 0;
+	virtual void disconnectedFromObject(ObjectHandler&) = 0;
+	virtual void connectedToLiveObject(ObjectHandler&) = 0;
+	virtual void connectedToArmedObject(ObjectHandler&) = 0;
+	virtual void allObjectsDisarmed(ObjectHandler&) = 0;
+	virtual void allObjectsConnected(ObjectHandler&) = 0;
+	virtual void testCompleted(ObjectHandler&) = 0;
+	virtual void postProcessingCompleted(ObjectHandler&) = 0;
 
-	virtual ~AbstractState();
+	virtual ~ObjectControlState();
 protected:
-	void setState(ObjectHandler &handler, AbstractState *st);
+
+	void setState(ObjectHandler& handler, ObjectControlState *st);
 };
 
-class Idle : public AbstractState {
+namespace RelativeKinematics {
+
+class Idle : public ObjectControlState {
 public:
 	Idle();
 	//! Handle initialization requests
-	void initializeRequest();
+	void initializeRequest(ObjectHandler&);
 
 	//! Ignore other commands
-	void disconnectRequest() {}
-	void connectRequest() {}
-	void armRequest() {}
-	void disarmRequest() {}
-	void startRequest() {}
-	void stopRequest() {}
-	void abortRequest() {}
-	void allClearRequest() {}
+	void disconnectRequest(ObjectHandler&) {}
+	void connectRequest(ObjectHandler&) {}
+	void armRequest(ObjectHandler&) {}
+	void disarmRequest(ObjectHandler&) {}
+	void startRequest(ObjectHandler&) {}
+	void stopRequest(ObjectHandler&) {}
+	void abortRequest(ObjectHandler&) {}
+	void allClearRequest(ObjectHandler&) {}
 
 	//! All spontaneous events unexpected
-	void initializationError() { throw std::runtime_error("Unexpected initialization error"); }
-	void connectedToObject() { throw std::runtime_error("Unexpected connection"); }
-	void disconnectedFromObject() { throw std::runtime_error("Unexpected disconnection"); }
-	void connectedToLiveObject() { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject() { throw std::runtime_error("Unexpected connection to armed object"); }
-	void allObjectsDisarmed() { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected() { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted() { throw std::runtime_error("Unexpected test completion"); }
-	void postProcessingCompleted() { throw std::runtime_error("Unexpected postprocessing completion"); }
+	void connectedToObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection"); }
+	void disconnectedFromObject(ObjectHandler&) { throw std::runtime_error("Unexpected disconnection"); }
+	void connectedToLiveObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection to live object"); }
+	void connectedToArmedObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection to armed object"); }
+	void allObjectsDisarmed(ObjectHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
+	void allObjectsConnected(ObjectHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
+	void testCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected test completion"); }
+	void postProcessingCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 };
 
-class Initialized : public AbstractState {
+class Initialized : public ObjectControlState {
 public:
+	Initialized();
 	//! Handle connect/disconnect requests
-	void disconnectRequest();
-	void connectRequest();
-	void initializationError();
+	void disconnectRequest(ObjectHandler&);
+	void connectRequest(ObjectHandler&);
 
 	//! Ignore other commands
-	void initializeRequest() {}
-	void armRequest() {}
-	void disarmRequest() {}
-	void startRequest() {}
-	void stopRequest() {}
-	void abortRequest() {}
-	void allClearRequest() {}
+	void initializeRequest(ObjectHandler&) {}
+	void armRequest(ObjectHandler&) {}
+	void disarmRequest(ObjectHandler&) {}
+	void startRequest(ObjectHandler&) {}
+	void stopRequest(ObjectHandler&) {}
+	void abortRequest(ObjectHandler&) {}
+	void allClearRequest(ObjectHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void connectedToObject() { throw std::runtime_error("Unexpected connection"); }
-	void disconnectedFromObject() { throw std::runtime_error("Unexpected disconnection"); }
-	void connectedToLiveObject() { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject() { throw std::runtime_error("Unexpected connection to armed object"); }
-	void allObjectsDisarmed() { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected() { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted() { throw std::runtime_error("Unexpected test completion"); }
-	void postProcessingCompleted() { throw std::runtime_error("Unexpected postprocessing completion"); }
+	void connectedToObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection"); }
+	void disconnectedFromObject(ObjectHandler&) { throw std::runtime_error("Unexpected disconnection"); }
+	void connectedToLiveObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection to live object"); }
+	void connectedToArmedObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection to armed object"); }
+	void allObjectsDisarmed(ObjectHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
+	void allObjectsConnected(ObjectHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
+	void testCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected test completion"); }
+	void postProcessingCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 };
 
-class Connecting : public AbstractState {
+class Connecting : public ObjectControlState {
 public:
+	Connecting();
 	//! Handle only connect/disconnect requests
-	void disconnectRequest();
-	void connectRequest();
-	void connectedToObject();
-	void disconnectedFromObject();
-	void connectedToLiveObject();
-	void connectedToArmedObject();
-	void allObjectsConnected();
+	void disconnectRequest(ObjectHandler&);
+	void connectRequest(ObjectHandler&);
+	void connectedToObject(ObjectHandler&);
+	void disconnectedFromObject(ObjectHandler&);
+	void connectedToLiveObject(ObjectHandler&);
+	void connectedToArmedObject(ObjectHandler&);
+	void allObjectsConnected(ObjectHandler&);
 
 	//! Ignore other commands
-	void initializeRequest() {}
-	void armRequest() {}
-	void disarmRequest() {}
-	void startRequest() {}
-	void stopRequest() {}
-	void abortRequest() {}
-	void allClearRequest() {}
+	void initializeRequest(ObjectHandler&) {}
+	void armRequest(ObjectHandler&) {}
+	void disarmRequest(ObjectHandler&) {}
+	void startRequest(ObjectHandler&) {}
+	void stopRequest(ObjectHandler&) {}
+	void abortRequest(ObjectHandler&) {}
+	void allClearRequest(ObjectHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void initializationError() { throw std::runtime_error("Unexpected initialization error"); }
-	void allObjectsDisarmed() { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void testCompleted() { throw std::runtime_error("Unexpected test completion"); }
-	void postProcessingCompleted() { throw std::runtime_error("Unexpected postprocessing completion"); }
+	void allObjectsDisarmed(ObjectHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
+	void testCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected test completion"); }
+	void postProcessingCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 };
 
-class Ready : public AbstractState {
+class Ready : public ObjectControlState {
 public:
+	Ready();
 	//! Handle arm and disconnect requests
-	void armRequest();
-	void disconnectRequest();
-	void disconnectedFromObject();
+	void armRequest(ObjectHandler&);
+	void disconnectRequest(ObjectHandler&);
+	void disconnectedFromObject(ObjectHandler&);
 
 	//! Ignore other commands
-	void initializeRequest() {}
-	void connectRequest() {}
-	void disarmRequest() {}
-	void startRequest() {}
-	void stopRequest() {}
-	void abortRequest() {}
-	void allClearRequest() {}
+	void initializeRequest(ObjectHandler&) {}
+	void connectRequest(ObjectHandler&) {}
+	void disarmRequest(ObjectHandler&) {}
+	void startRequest(ObjectHandler&) {}
+	void stopRequest(ObjectHandler&) {}
+	void abortRequest(ObjectHandler&) {}
+	void allClearRequest(ObjectHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void initializationError() { throw std::runtime_error("Unexpected initialization error"); }
-	void connectedToObject() { throw std::runtime_error("Unexpected connection"); }
-	void connectedToLiveObject() { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject() { throw std::runtime_error("Unexpected connection to armed object"); }
-	void allObjectsDisarmed() { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected() { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted() { throw std::runtime_error("Unexpected test completion"); }
-	void postProcessingCompleted() { throw std::runtime_error("Unexpected postprocessing completion"); }
+	void connectedToObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection"); }
+	void connectedToLiveObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection to live object"); }
+	void connectedToArmedObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection to armed object"); }
+	void allObjectsDisarmed(ObjectHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
+	void allObjectsConnected(ObjectHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
+	void testCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected test completion"); }
+	void postProcessingCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 };
 
-class Aborting : public AbstractState {
+class Aborting : public ObjectControlState {
 public:
+	Aborting();
 	//! Only handle all clear signal
-	void allClearRequest();
-	void connectedToObject();
-	void disconnectedFromObject();
-	void connectedToLiveObject();
-	void connectedToArmedObject();
+	void allClearRequest(ObjectHandler&);
+	void connectedToObject(ObjectHandler&);
+	void disconnectedFromObject(ObjectHandler&);
+	void connectedToLiveObject(ObjectHandler&);
+	void connectedToArmedObject(ObjectHandler&);
 
 	//! Ignore other commands
-	void initializeRequest() {}
-	void disconnectRequest() {}
-	void connectRequest() {}
-	void armRequest() {}
-	void disarmRequest() {}
-	void startRequest() {}
-	void stopRequest() {}
-	void abortRequest() {}
+	void initializeRequest(ObjectHandler&) {}
+	void disconnectRequest(ObjectHandler&) {}
+	void connectRequest(ObjectHandler&) {}
+	void armRequest(ObjectHandler&) {}
+	void disarmRequest(ObjectHandler&) {}
+	void startRequest(ObjectHandler&) {}
+	void stopRequest(ObjectHandler&) {}
+	void abortRequest(ObjectHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void initializationError() { throw std::runtime_error("Unexpected initialization error"); }
-	void allObjectsDisarmed() { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected() { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted() { throw std::runtime_error("Unexpected test completion"); }
-	void postProcessingCompleted() { throw std::runtime_error("Unexpected postprocessing completion"); }
+	void allObjectsDisarmed(ObjectHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
+	void allObjectsConnected(ObjectHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
+	void testCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected test completion"); }
+	void postProcessingCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 };
 
-class TestLive : public AbstractState {
+class TestLive : public ObjectControlState {
 public:
+	TestLive();
 	//! Only stop/abort allowed in live state
-	void stopRequest();
-	void abortRequest();
-	void testCompleted();
-	void disconnectedFromObject();
+	void stopRequest(ObjectHandler&);
+	void abortRequest(ObjectHandler&);
+	void testCompleted(ObjectHandler&);
+	void disconnectedFromObject(ObjectHandler&);
 
 	//! Ignore other commands
-	void initializeRequest() {}
-	void disconnectRequest() {}
-	void connectRequest() {}
-	void armRequest() {}
-	void disarmRequest() {}
-	void startRequest() {}
-	void allClearRequest() {}
+	void initializeRequest(ObjectHandler&) {}
+	void disconnectRequest(ObjectHandler&) {}
+	void connectRequest(ObjectHandler&) {}
+	void armRequest(ObjectHandler&) {}
+	void disarmRequest(ObjectHandler&) {}
+	void startRequest(ObjectHandler&) {}
+	void allClearRequest(ObjectHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void initializationError() { throw std::runtime_error("Unexpected initialization error"); }
-	void connectedToObject() { throw std::runtime_error("Unexpected connection"); }
-	void connectedToLiveObject() { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject() { throw std::runtime_error("Unexpected connection to armed object"); }
-	void allObjectsDisarmed() { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected() { throw std::runtime_error("Unexpected all objects connected"); }
-	void postProcessingCompleted() { throw std::runtime_error("Unexpected postprocessing completion"); }
+	void connectedToObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection"); }
+	void connectedToLiveObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection to live object"); }
+	void connectedToArmedObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection to armed object"); }
+	void allObjectsDisarmed(ObjectHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
+	void allObjectsConnected(ObjectHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
+	void postProcessingCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 };
 
-class Disarming : public AbstractState {
+class Disarming : public ObjectControlState {
 public:
+	Disarming();
 	//! Only allow disconnect command
-	void disconnectRequest();
-	void connectedToObject();
-	void disconnectedFromObject();
-	void connectedToArmedObject();
-	void connectedToLiveObject();
-	void allObjectsDisarmed();
+	void disconnectRequest(ObjectHandler&);
+	void connectedToObject(ObjectHandler&);
+	void disconnectedFromObject(ObjectHandler&);
+	void connectedToArmedObject(ObjectHandler&);
+	void connectedToLiveObject(ObjectHandler&);
+	void allObjectsDisarmed(ObjectHandler&);
 
 	//! Ignore other commands
-	void initializeRequest() {}
-	void connectRequest() {}
-	void armRequest() {}
-	void disarmRequest() {}
-	void startRequest() {}
-	void stopRequest() {}
-	void abortRequest() {}
-	void allClearRequest() {}
+	void initializeRequest(ObjectHandler&) {}
+	void connectRequest(ObjectHandler&) {}
+	void armRequest(ObjectHandler&) {}
+	void disarmRequest(ObjectHandler&) {}
+	void startRequest(ObjectHandler&) {}
+	void stopRequest(ObjectHandler&) {}
+	void abortRequest(ObjectHandler&) {}
+	void allClearRequest(ObjectHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void initializationError() { throw std::runtime_error("Unexpected initialization error"); }
-	void allObjectsConnected() { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted() { throw std::runtime_error("Unexpected test completion"); }
-	void postProcessingCompleted() { throw std::runtime_error("Unexpected postprocessing completion"); }
+	void allObjectsConnected(ObjectHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
+	void testCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected test completion"); }
+	void postProcessingCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 };
 
-class Armed : public AbstractState {
+class Armed : public ObjectControlState {
 public:
+	Armed();
 	//! Only allow start/disarm
-	void startRequest();
-	void disarmRequest();
-	void disconnectedFromObject();
+	void startRequest(ObjectHandler&);
+	void disarmRequest(ObjectHandler&);
+	void disconnectedFromObject(ObjectHandler&);
 
 	//! Ignore other commands
-	void initializeRequest() {}
-	void disconnectRequest() {}
-	void connectRequest() {}
-	void armRequest() {}
-	void stopRequest() {}
-	void abortRequest() {}
-	void allClearRequest() {}
+	void initializeRequest(ObjectHandler&) {}
+	void disconnectRequest(ObjectHandler&) {}
+	void connectRequest(ObjectHandler&) {}
+	void armRequest(ObjectHandler&) {}
+	void stopRequest(ObjectHandler&) {}
+	void abortRequest(ObjectHandler&) {}
+	void allClearRequest(ObjectHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void initializationError() { throw std::runtime_error("Unexpected initialization error"); }
-	void connectedToObject() { throw std::runtime_error("Unexpected connection"); }
-	void connectedToLiveObject() { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject() { throw std::runtime_error("Unexpected connection to armed object"); }
-	void allObjectsDisarmed() { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected() { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted() { throw std::runtime_error("Unexpected test completion"); }
-	void postProcessingCompleted() { throw std::runtime_error("Unexpected postprocessing completion"); }
+	void connectedToObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection"); }
+	void connectedToLiveObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection to live object"); }
+	void connectedToArmedObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection to armed object"); }
+	void allObjectsDisarmed(ObjectHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
+	void allObjectsConnected(ObjectHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
+	void testCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected test completion"); }
+	void postProcessingCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 };
 
-class Done : public AbstractState {
+class Done : public ObjectControlState {
 public:
+	Done();
 	//! Completing postprocessing allows exiting this state
-	void postProcessingCompleted();
+	void postProcessingCompleted(ObjectHandler&);
 
 	//! Ignore other commands
-	void initializeRequest() {}
-	void disconnectRequest() {}
-	void connectRequest() {}
-	void armRequest() {}
-	void disarmRequest() {}
-	void startRequest() {}
-	void stopRequest() {}
-	void abortRequest() {}
-	void allClearRequest() {}
+	void initializeRequest(ObjectHandler&) {}
+	void disconnectRequest(ObjectHandler&) {}
+	void connectRequest(ObjectHandler&) {}
+	void armRequest(ObjectHandler&) {}
+	void disarmRequest(ObjectHandler&) {}
+	void startRequest(ObjectHandler&) {}
+	void stopRequest(ObjectHandler&) {}
+	void abortRequest(ObjectHandler&) {}
+	void allClearRequest(ObjectHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void initializationError() { throw std::runtime_error("Unexpected initialization error"); }
-	void connectedToObject() { throw std::runtime_error("Unexpected connection"); }
-	void disconnectedFromObject() { throw std::runtime_error("Unexpected disconnection"); }
-	void connectedToLiveObject() { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject() { throw std::runtime_error("Unexpected connection to armed object"); }
-	void allObjectsDisarmed() { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected() { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted() { throw std::runtime_error("Unexpected test completion"); }
+	void connectedToObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection"); }
+	void disconnectedFromObject(ObjectHandler&) { throw std::runtime_error("Unexpected disconnection"); }
+	void connectedToLiveObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection to live object"); }
+	void connectedToArmedObject(ObjectHandler&) { throw std::runtime_error("Unexpected connection to armed object"); }
+	void allObjectsDisarmed(ObjectHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
+	void allObjectsConnected(ObjectHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
+	void testCompleted(ObjectHandler&) { throw std::runtime_error("Unexpected test completion"); }
 };
 
 }
 
-#endif
