@@ -5,6 +5,7 @@
 #include "state.hpp"
 #include "logging.h"
 #include "util.h"
+#include "journal.h"
 
 #define MODULE_NAME "RelativeKinematics"
 
@@ -82,6 +83,12 @@ int initializeModule(const LOG_LEVEL logLevel) {
 		perror("signal");
 		retval = -1;
 		LogMessage(LOG_LEVEL_ERROR, "Unable to initialize signal handler");
+	}
+
+	// Create test journal
+	if (JournalInit(MODULE_NAME) == -1) {
+		retval = -1;
+		LogMessage(LOG_LEVEL_ERROR, "Unable to create test journal");
 	}
 
 	// Initialize message bus connection
