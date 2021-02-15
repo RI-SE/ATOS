@@ -15,18 +15,23 @@ set(POSITIONING_LIBRARY MaestroPositioning)
 set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MESSAGE_BUS_LIBRARY MaestroMQ)
+set(SOCKET_LIBRARY TCPUDPSocket)
+set(THREAD_LIBRARY pthread)
 
 include(GNUInstallDirs)
 
 # Create project main executable target
 add_executable(${DIRECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/directcontrol.cpp
 )
 # Link project executable to util libraries
 target_link_libraries(${DIRECT_CONTROL_TARGET} LINK_PUBLIC
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
+	${SOCKET_LIBRARY}
+	${THREAD_LIBRARY}
 )
 target_include_directories(${DIRECT_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
