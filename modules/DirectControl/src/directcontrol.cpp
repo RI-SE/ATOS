@@ -3,9 +3,12 @@
 #include "util.h"
 #include "tcphandler.hpp"
 #include "logging.h"
+#include "maestroTime.h"
 
-DirectControl::DirectControl() {
+#define TCP_BUFFER_SIZE 2048
 
+DirectControl::DirectControl()
+	: tcpHandler(commandPort, "", "off") {
 }
 
 int DirectControl::run() {
@@ -26,32 +29,77 @@ int DirectControl::run() {
 }
 
 void DirectControl::readSocketData() {
-	std::vector<char> data(2048);
+	std::vector<char> data(TCP_BUFFER_SIZE);
 	int recvData = 0;
 
 	while (!this->quit) {
 		// TODO set up TCP connection (wait until connected before continue)
 		LogMessage(LOG_LEVEL_INFO, "Awaiting TCP connection...");
-		TCPHandler tcpHandler(this->commandPort, "", "Server");
+		tcpHandler.CreateServer();
 
 		while (!this->quit && tcpHandler.isConnected()) {
+			data.resize(TCP_BUFFER_SIZE);
+			std::fill(data.begin(), data.end(), 0);
 			recvData = tcpHandler.receiveTCP(data, 0);
 			if (recvData == TCPHandler::TCPHANDLER_FAIL) {
 				break;
 			}
 			else if (recvData > 0) {
-
-				LogPrint("Received %d bytes!", recvData);
+				try {
+					this->handleISOMessage(data, static_cast<size_t>(recvData));
+				} catch (std::invalid_argument& e) {
+					LogMessage(LOG_LEVEL_ERROR, e.what());
+					std::fill(data.begin(), data.end(), 0);
+				}
 			}
 
 			// TODO check for RDCI (optional)
 			// TODO if RDCI, respond with DCTI (optional)
 
-			// TODO accept RDCA
 			// TODO if format valid, OBC correct state enter into shared memory
 			// TODO if not, respond with error (optional)
 		}
 	}
+}
+
+void DirectControl::handleISOMessage(
+		std::vector<char>& byteData,
+		size_t receivedBytes) {
+	while (receivedBytes > 0) {
+		ISOMessageID recvMessage = getISOMessageType(byteData.data(), byteData.size(), false);
+		switch (recvMessage) {
+		case MESSAGE_ID_INVALID:
+			throw std::invalid_argument("Received invalid ISO message");
+		case MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_RDCA:
+			receivedBytes -= this->handleRDCAMessage(byteData);
+			break;
+		default:
+			throw std::invalid_argument("Received unhandled ISO message");
+		}
+	}
+}
+
+size_t DirectControl::handleRDCAMessage(
+		std::vector<char> &byteData) {
+	RequestControlActionType recvMessage;
+	struct timeval currentTime;
+	TimeSetToCurrentSystemTime(&currentTime);
+	ssize_t bytesRead = decodeRDCAMessage(byteData.data(), &recvMessage, byteData.size(), currentTime, false);
+	if (bytesRead < 0) {
+		throw std::invalid_argument("Failed to decode RDCA message");
+	}
+	byteData.erase(byteData.begin(), byteData.begin() + bytesRead);
+	// TODO handle message
+	std::cout << "Received RDCA data:" << std::endl
+			  << "Timestamp: " << static_cast<double>(recvMessage.dataTimestamp.tv_sec) + recvMessage.dataTimestamp.tv_usec / 1000000.0
+			  << " s " << std::endl << "Pinion angle: " << recvMessage.pinionAngle_rad << " rad" << std::endl;
+	return static_cast<size_t>(bytesRead);
+}
+
+size_t DirectControl::handleUnknownMessage(
+		std::vector<char> &byteData) {
+	std::fill(byteData.begin(), byteData.end(), 0);
+	return byteData.size();
 }
 
 void DirectControl::readMessageBus() {
@@ -82,5 +130,6 @@ void DirectControl::readMessageBus() {
 void DirectControl::exit() {
 	quit = true;
 	// Make the receive socket exit
-	TCPHandler selfPipe(this->commandPort, "127.0.0.1", "Client", 1, SOCK_NONBLOCK);
+	TCPHandler selfPipe(this->commandPort, "127.0.0.1", "Client");
+	selfPipe.TCPHandlerclose();
 }
