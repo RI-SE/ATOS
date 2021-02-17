@@ -4,6 +4,7 @@
 
 #include "logging.h"
 #include "util.h"
+#include "datadictionary.h"
 #include "directcontrol.hpp"
 
 #define MODULE_NAME "DirectControl"
@@ -56,6 +57,10 @@ int initializeModule(const LOG_LEVEL logLevel) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to initialize connection to message bus");
 	}
 
+	if (DataDictionaryInitObjectData() != READ_OK) {
+		retval = -1;
+		LogMessage(LOG_LEVEL_ERROR, "Preexisting data dictionary not found");
+	}
 	return retval;
 }
 

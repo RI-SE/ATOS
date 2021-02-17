@@ -1865,7 +1865,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (objectDataMemory[i].ClientID == transmitterId) {
 			objectDataMemory[i].MonrData = *monitorData;
-			objectDataMemory[i].lastDataUpdate = *receiveTime;
+			objectDataMemory[i].lastPositionUpdate = *receiveTime;
 			result = WRITE_OK;
 		}
 	}
@@ -1876,7 +1876,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 		for (int i = 0; i < numberOfObjects; ++i) {
 			if (objectDataMemory[i].ClientID == 0) {
 				objectDataMemory[i].MonrData = *monitorData;
-				objectDataMemory[i].lastDataUpdate = *receiveTime;
+				objectDataMemory[i].lastPositionUpdate = *receiveTime;
 				result = WRITE_OK;
 			}
 		}
@@ -1889,7 +1889,7 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
 				objectDataMemory[numberOfObjects - 1].MonrData = *monitorData;
-				objectDataMemory[numberOfObjects - 1].lastDataUpdate = *receiveTime;
+				objectDataMemory[numberOfObjects - 1].lastPositionUpdate = *receiveTime;
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -2012,7 +2012,7 @@ ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmi
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (transmitterID == objectDataMemory[i].ClientID) {
-			*lastDataUpdate = objectDataMemory[i].lastDataUpdate;
+			*lastDataUpdate = objectDataMemory[i].lastPositionUpdate;
 			result = READ_OK;
 		}
 	}
@@ -2055,7 +2055,7 @@ ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmi
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (transmitterID == objectDataMemory[i].ClientID) {
-			objectDataMemory[i].lastDataUpdate = *lastDataUpdate;
+			objectDataMemory[i].lastPositionUpdate = *lastDataUpdate;
 			result = READ_OK;
 		}
 	}
@@ -2674,6 +2674,110 @@ ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitter
 		}
 	}
 
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
+
+ReadWriteAccess_t DataDictionarySetRequestedControlAction(
+		const uint32_t transmitterID,
+		const RequestControlActionType* reqCtrlAction) {
+
+	ReadWriteAccess_t result;
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			objectDataMemory[i].requestedControlAction = *reqCtrlAction;
+			result = WRITE_OK;
+		}
+	}
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+
+}
+
+ReadWriteAccess_t DataDictionaryGetRequestedControlAction(
+		const uint32_t transmitterID,
+		RequestControlActionType* reqCtrlAction) {
+	ReadWriteAccess_t result;
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			*reqCtrlAction = objectDataMemory[i].requestedControlAction;
+			result = READ_OK;
+		}
+	}
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
+
+ReadWriteAccess_t DataDictionaryResetRequestedControlAction(
+		const uint32_t transmitterID) {
+
+	ReadWriteAccess_t result;
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			timerclear(&objectDataMemory[i].requestedControlAction.dataTimestamp);
+			result = WRITE_OK;
+		}
+	}
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 	return result;
 }

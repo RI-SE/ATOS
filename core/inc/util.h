@@ -282,9 +282,10 @@ typedef struct {
 	in_addr_t ClientIP;
 	ObjectEnabledType Enabled;
 	ObjectMonitorType MonrData;
+	struct timeval lastPositionUpdate;
 	ObjectPropertiesType properties;
 	bool propertiesReceived;
-	struct timeval lastDataUpdate;
+	RequestControlActionType requestedControlAction;
 } ObjectDataType;
 
 typedef struct {

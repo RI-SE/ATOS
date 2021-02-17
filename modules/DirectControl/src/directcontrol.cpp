@@ -4,6 +4,7 @@
 #include "tcphandler.hpp"
 #include "logging.h"
 #include "maestroTime.h"
+#include "datadictionary.h"
 
 #define TCP_BUFFER_SIZE 2048
 
@@ -52,12 +53,6 @@ void DirectControl::readSocketData() {
 					std::fill(data.begin(), data.end(), 0);
 				}
 			}
-
-			// TODO check for RDCI (optional)
-			// TODO if RDCI, respond with DCTI (optional)
-
-			// TODO if format valid, OBC correct state enter into shared memory
-			// TODO if not, respond with error (optional)
 		}
 	}
 }
@@ -67,6 +62,8 @@ void DirectControl::handleISOMessage(
 		size_t receivedBytes) {
 	while (receivedBytes > 0) {
 		ISOMessageID recvMessage = getISOMessageType(byteData.data(), byteData.size(), false);
+		// TODO check for RDCI (optional)
+		// TODO if RDCI, respond with DCTI (optional)
 		switch (recvMessage) {
 		case MESSAGE_ID_INVALID:
 			throw std::invalid_argument("Received invalid ISO message");
@@ -81,19 +78,20 @@ void DirectControl::handleISOMessage(
 
 size_t DirectControl::handleRDCAMessage(
 		std::vector<char> &byteData) {
+	LogPrint("Handling RDCA message");
 	RequestControlActionType recvMessage;
 	struct timeval currentTime;
 	TimeSetToCurrentSystemTime(&currentTime);
 	ssize_t bytesRead = decodeRDCAMessage(byteData.data(), &recvMessage, byteData.size(), currentTime, false);
-	if (bytesRead < 0) {
+	if (bytesRead >= 0) {
+		byteData.erase(byteData.begin(), byteData.begin() + bytesRead);
+		DataDictionarySetRequestedControlAction(recvMessage.executingID, &recvMessage);
+		return static_cast<size_t>(bytesRead);
+	}
+	else {
+		// TODO respond with error (optional)
 		throw std::invalid_argument("Failed to decode RDCA message");
 	}
-	byteData.erase(byteData.begin(), byteData.begin() + bytesRead);
-	// TODO handle message
-	std::cout << "Received RDCA data:" << std::endl
-			  << "Timestamp: " << static_cast<double>(recvMessage.dataTimestamp.tv_sec) + recvMessage.dataTimestamp.tv_usec / 1000000.0
-			  << " s " << std::endl << "Pinion angle: " << recvMessage.pinionAngle_rad << " rad" << std::endl;
-	return static_cast<size_t>(bytesRead);
 }
 
 size_t DirectControl::handleUnknownMessage(
