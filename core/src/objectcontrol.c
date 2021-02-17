@@ -57,6 +57,7 @@
 #define OBJECT_CONNECTION_RETRY_PERIOD_MS 1000
 
 #define MAX_NETWORK_DELAY_USEC 100000
+#define MAX_REMOTE_CONTROL_COMMAND_AGE_US 50000
 
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
@@ -324,10 +325,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
-				if (objectEnabledStatus == OBJECT_ENABLED)
+				if (objectEnabledStatus == OBJECT_ENABLED) {
 					UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
 									&objectConnections[iIndex].objectMonitorAddress,
 									MessageBuffer, MessageLength, 0);
+				}
 			}
 		}
 
@@ -346,10 +348,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			// Transmit heartbeat to all objects
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
-				if (objectEnabledStatus == OBJECT_ENABLED)
+				if (objectEnabledStatus == OBJECT_ENABLED) {
 					UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
 									&objectConnections[iIndex].objectMonitorAddress,
 									MessageBuffer, MessageLength, 0);
+				}
 			}
 		}
 
@@ -442,10 +445,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						continue;
 					}
 					else {
-						TimeSetToCurrentSystemTime(&monitorData.lastDataUpdate);
+						TimeSetToCurrentSystemTime(&monitorData.lastPositionUpdate);
 						struct timeval monitorDataAge;
 
-						timersub(&monitorData.lastDataUpdate, &monitorData.MonrData.timestamp,
+						timersub(&monitorData.lastPositionUpdate, &monitorData.MonrData.timestamp,
 								 &monitorDataAge);
 						if (monitorDataAge.tv_sec || labs(monitorDataAge.tv_usec) > MAX_NETWORK_DELAY_USEC) {
 							LogMessage(LOG_LEVEL_WARNING,
@@ -623,6 +626,48 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		}
 
+		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_REMOTECTRL) {
+
+			DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
+
+			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+				if (objectEnabledStatus == OBJECT_ENABLED) {
+					RequestControlActionType req;
+					struct timeval requestAge;
+					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &req) == READ_OK
+							&& timerisset(&req.dataTimestamp)) {
+						timersub(&currentTime, &req.dataTimestamp, &requestAge);
+						if (timerpos(&requestAge) && requestAge.tv_sec == 0
+								&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
+							if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
+								// TODO RCMM encode
+								// MessageLength = encodeRCMMMessage()
+							}
+							else {
+								// Encode DCMM
+								// MessageLength = encodeDCMMMessage()
+							}
+
+							if (MessageLength > 0) {
+								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+												&objectConnections[iIndex].commandSocket, 0);
+							}
+							else {
+								LogMessage(LOG_LEVEL_ERROR, "Error encoding remote control message");
+							}
+						}
+						else {
+							LogMessage(LOG_LEVEL_WARNING, "Ignoring remote control command - age is %ld s %ld µs",
+									   requestAge.tv_sec, requestAge.tv_usec);
+						}
+					}
+					else {
+						LogMessage(LOG_LEVEL_ERROR,"Failed to read from data dictionary");
+					}
+				}
+			}
+		}
 
 		bzero(pcRecvBuffer, RECV_MESSAGE_BUFFER);
 		//Have we recieved a command?
@@ -860,8 +905,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						objectData.Enabled = OBJECT_ENABLED;
 						objectData.ClientIP = objectConnections[iIndex].objectCommandAddress.sin_addr.s_addr;
 						objectData.ClientID = object_transmitter_ids[iIndex];
-						objectData.lastDataUpdate.tv_sec = 0;
-						objectData.lastDataUpdate.tv_usec = 0;
+						objectData.lastPositionUpdate.tv_sec = 0;
+						objectData.lastPositionUpdate.tv_usec = 0;
 						objectData.propertiesReceived = 0;
 						if (DataDictionarySetObjectData(&objectData) != WRITE_OK) {
 							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
