@@ -851,9 +851,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 
 					// Enable all objects at INIT
+					LogMessage(LOG_LEVEL_DEBUG, "Initializing object data");
 					ObjectDataType objectData;
 
 					for (iIndex = 0; iIndex < nbr_objects; iIndex++) {
+						LogMessage(LOG_LEVEL_DEBUG, "Configuring object data for object %u",
+								   object_transmitter_ids[iIndex]);
 						objectData.Enabled = OBJECT_ENABLED;
 						objectData.ClientIP = objectConnections[iIndex].objectCommandAddress.sin_addr.s_addr;
 						objectData.ClientID = object_transmitter_ids[iIndex];
@@ -866,15 +869,18 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 					}
 
+					LogMessage(LOG_LEVEL_DEBUG, "Resetting command actions");
 					resetCommandActionList(commandActions,
 										   sizeof (commandActions) / sizeof (commandActions[0]));
 
+					LogMessage(LOG_LEVEL_DEBUG, "Setting object connection ports");
 					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 						objectConnections[iIndex].objectMonitorAddress.sin_port = htons(SAFETY_CHANNEL_PORT);
 						objectConnections[iIndex].objectCommandAddress.sin_port = htons(CONTROL_CHANNEL_PORT);
 					}
 
 					/*Setup Adaptive Sync Points (ASP) */
+					LogMessage(LOG_LEVEL_DEBUG, "Configuring adaptive synchronisation points");
 					UtilGetConfDirectoryPath(confDirectoryPath, sizeof (confDirectoryPath));
 					strcat(confDirectoryPath, ADAPTIVE_SYNC_FILE_NAME);
 					fd = fopen(confDirectoryPath, "r");
