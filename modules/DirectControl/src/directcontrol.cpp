@@ -78,7 +78,6 @@ void DirectControl::handleISOMessage(
 
 size_t DirectControl::handleRDCAMessage(
 		std::vector<char> &byteData) {
-	LogPrint("Handling RDCA message");
 	RequestControlActionType recvMessage;
 	struct timeval currentTime;
 	TimeSetToCurrentSystemTime(&currentTime);

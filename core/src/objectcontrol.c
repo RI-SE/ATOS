@@ -804,7 +804,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_INFO, "Disabled remote control mode");
 			}
 			else if (iCommand == COMM_REMOTECTRL_MANOEUVRE) {
-				RemoteControlCommandType rcCommand;
+				ManoeuvreCommandType rcCommand;
 
 				// TODO check size of received data
 				memcpy(&rcCommand, pcRecvBuffer, sizeof (rcCommand));
@@ -820,8 +820,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									  ipString, sizeof (ipString));
 							LogMessage(LOG_LEVEL_INFO, "Sending back to start command to object with IP %s",
 									   ipString);
+							RemoteControlManoeuvreMessageType rcmmMessage;
+							rcmmMessage.command = rcCommand.manoeuvre;
+							rcmmMessage.isSpeedManoeuvreValid = 0;
+							rcmmMessage.isSteeringManoeuvreValid = 0;
 							MessageLength =
-								encodeRCMMMessage(rcCommand.manoeuvre, MessageBuffer, sizeof (MessageBuffer),
+								encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof (MessageBuffer),
 												  0);
 							if (MessageLength > 0) {
 								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,

@@ -257,9 +257,9 @@ COMM_INV = 255
 };
 
 typedef struct {
-	RemoteControlManoeuvreType manoeuvre;
+	RemoteControlManoeuvreCommandType manoeuvre;
 	in_addr_t objectIP;
-} RemoteControlCommandType;
+} ManoeuvreCommandType;
 
 typedef struct
 {
