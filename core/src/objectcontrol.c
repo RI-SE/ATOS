@@ -635,11 +635,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (objectEnabledStatus == OBJECT_ENABLED) {
 					RequestControlActionType req;
 					struct timeval requestAge;
-					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &req) == READ_OK
-							&& timerisset(&req.dataTimestamp)) {
+
+					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &req) ==
+						READ_OK && timerisset(&req.dataTimestamp)) {
 						timersub(&currentTime, &req.dataTimestamp, &requestAge);
 						if (timerpos(&requestAge) && requestAge.tv_sec == 0
-								&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
+							&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
 							if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
 								// TODO RCMM encode
 								// MessageLength = encodeRCMMMessage()
@@ -658,12 +659,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							}
 						}
 						else {
-							LogMessage(LOG_LEVEL_WARNING, "Ignoring remote control command - age is %ld s %ld µs",
+							LogMessage(LOG_LEVEL_WARNING,
+									   "Ignoring remote control command - age is %ld s %ld µs",
 									   requestAge.tv_sec, requestAge.tv_usec);
 						}
 					}
 					else {
-						LogMessage(LOG_LEVEL_ERROR,"Failed to read from data dictionary");
+						LogMessage(LOG_LEVEL_ERROR, "Failed to read from data dictionary");
 					}
 				}
 			}
@@ -821,12 +823,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							LogMessage(LOG_LEVEL_INFO, "Sending back to start command to object with IP %s",
 									   ipString);
 							RemoteControlManoeuvreMessageType rcmmMessage;
+
 							rcmmMessage.command = rcCommand.manoeuvre;
 							rcmmMessage.isSpeedManoeuvreValid = 0;
 							rcmmMessage.isSteeringManoeuvreValid = 0;
 							MessageLength =
-								encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof (MessageBuffer),
-												  0);
+								encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof (MessageBuffer), 0);
 							if (MessageLength > 0) {
 								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 												&objectConnections[iIndex].commandSocket, 0);
