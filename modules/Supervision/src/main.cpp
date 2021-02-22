@@ -214,9 +214,9 @@ void loadObjectData(std::vector<ObjectConfiguration>& objectData) {
 		throw std::invalid_argument("Cannot open object directory");
     }
 
-    // Count the number of trajectory files in the directory
+	// Count the number of object files in the directory
     while ((ent = readdir(dir)) != nullptr) {
-        if (ent->d_type == DT_REG) {
+		if (ent->d_type != DT_DIR) {
             n++;
         }
     }
@@ -231,7 +231,7 @@ void loadObjectData(std::vector<ObjectConfiguration>& objectData) {
     }
 
     while ((ent = readdir(dir)) != nullptr) {
-        if (ent->d_type != DT_REG) {
+		if (ent->d_type == DT_DIR) {
             LogMessage(LOG_LEVEL_DEBUG, "Ignored <%s>", ent->d_name);
         }
         else {
