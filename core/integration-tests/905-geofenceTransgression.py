@@ -65,6 +65,7 @@ def geofenceTransgressionTest():
     mscp.Connect()
     mscp.waitForObjectControlState("CONNECTED")
 
+    obj.waitForHEAB(heabTimeout=maxHEABWaitTime)
     # Wait for first HEAB
     connectTime = time.time()
     maxHEABWaitTime = 0.05
