@@ -644,23 +644,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
 								// Encode RCMM
 								RemoteControlManoeuvreMessageType rcmmMessage;
-								if( reqDCAction.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE || 
-									reqDCAction.steeringUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE){
-									rcmmMessage.status = 0; //Shall be 0 when controlled by percentage
-									rcmmMessage.steeringManoeuvre.pct =  reqDCAction.steeringAction.pct;
-									rcmmMessage.isSteeringManoeuvreValid = 1;
-									rcmmMessage.speedManoeuvre.pct =  reqDCAction.speedAction.pct;
-									rcmmMessage.isSpeedManoeuvreValid = 1;
-									MessageLength = encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof(MessageBuffer),0);
-								} else if (reqDCAction.steeringUnit == ISO_UNIT_TYPE_STEERING_DEGREES ||
-									       reqDCAction.steeringUnit == ISO_UNIT_TYPE_SPEED_METER_SECOND){
-									rcmmMessage.status = 1; //Shall be 1 when controlled by absolute value
-									rcmmMessage.steeringManoeuvre.rad =  reqDCAction.steeringAction.rad;
-									rcmmMessage.isSteeringManoeuvreValid = 1;
-									rcmmMessage.speedManoeuvre.m_s =  reqDCAction.speedAction.m_s;
-									rcmmMessage.isSpeedManoeuvreValid = 1;
-									MessageLength = encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof(MessageBuffer),0);
-								}
+								rcmmMessage.steeringManoeuvre =  reqDCAction.steeringAction;
+								rcmmMessage.isSteeringManoeuvreValid = reqDCAction.isSteeringActionValid;
+								rcmmMessage.speedManoeuvre =  reqDCAction.speedAction;
+								rcmmMessage.isSpeedManoeuvreValid = reqDCAction.isSpeedActionValid;
+								MessageLength = encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof(MessageBuffer),0);
 							}
 							else {
 								// Encode DCMM
