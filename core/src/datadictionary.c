@@ -1827,7 +1827,7 @@ ReadWriteAccess_t DataDictionaryInitObjectData() {
  */
 ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 											   const ObjectMonitorType * monitorData,
-											   const struct timeval * receiveTime) {
+											   const struct timeval *receiveTime) {
 
 	ReadWriteAccess_t result;
 
@@ -1983,7 +1983,7 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t transmitterId, Obj
  * \return Value according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmitterID,
-														  struct timeval * lastDataUpdate) {
+														  struct timeval *lastDataUpdate) {
 	ReadWriteAccess_t result = UNDEFINED;
 
 	if (objectDataMemory == NULL) {
@@ -2029,7 +2029,7 @@ ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmi
  * \return Value according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmitterID,
-														  const struct timeval * lastDataUpdate) {
+														  const struct timeval *lastDataUpdate) {
 	ReadWriteAccess_t result = UNDEFINED;
 
 	if (objectDataMemory == NULL) {
@@ -2678,11 +2678,11 @@ ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitter
 	return result;
 }
 
-ReadWriteAccess_t DataDictionarySetRequestedControlAction(
-		const uint32_t transmitterID,
-		const RequestControlActionType* reqCtrlAction) {
+ReadWriteAccess_t DataDictionarySetRequestedControlAction(const uint32_t transmitterID,
+														  const RequestControlActionType * reqCtrlAction) {
 
 	ReadWriteAccess_t result;
+
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
@@ -2714,10 +2714,10 @@ ReadWriteAccess_t DataDictionarySetRequestedControlAction(
 
 }
 
-ReadWriteAccess_t DataDictionaryGetRequestedControlAction(
-		const uint32_t transmitterID,
-		RequestControlActionType* reqCtrlAction) {
+ReadWriteAccess_t DataDictionaryGetRequestedControlAction(const uint32_t transmitterID,
+														  RequestControlActionType * reqCtrlAction) {
 	ReadWriteAccess_t result;
+
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
@@ -2748,10 +2748,10 @@ ReadWriteAccess_t DataDictionaryGetRequestedControlAction(
 	return result;
 }
 
-ReadWriteAccess_t DataDictionaryResetRequestedControlAction(
-		const uint32_t transmitterID) {
+ReadWriteAccess_t DataDictionaryResetRequestedControlAction(const uint32_t transmitterID) {
 
 	ReadWriteAccess_t result;
+
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");

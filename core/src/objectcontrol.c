@@ -358,8 +358,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		// Every iteration while connected, do
 		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_CONNECTED
-			|| vGetState(GSD) == OBC_STATE_ARMED || vGetState(GSD) == OBC_STATE_REMOTECTRL) 
-		{
+			|| vGetState(GSD) == OBC_STATE_ARMED || vGetState(GSD) == OBC_STATE_REMOTECTRL) {
 
 			// Check if any object has disconnected - if so, disconnect all objects and return to idle
 			if (checkObjectConnections(objectConnections, monitorDataTimeout, nbr_objects)) {
@@ -417,8 +416,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 
 			DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
-			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) 
-			{
+			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
 						  &objectConnections[iIndex].objectMonitorAddress.sin_addr,
 						  ipString, sizeof (ipString));
@@ -636,35 +634,45 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (objectEnabledStatus == OBJECT_ENABLED) {
 					RequestControlActionType reqDCAction;
 					struct timeval requestAge;
-					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &reqDCAction) == READ_OK
-							&& timerisset(&reqDCAction.dataTimestamp)) {
+
+					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &reqDCAction)
+						== READ_OK && timerisset(&reqDCAction.dataTimestamp)) {
 						timersub(&currentTime, &reqDCAction.dataTimestamp, &requestAge);
 						if (timerpos(&requestAge) && requestAge.tv_sec == 0
-								&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
+							&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
 							if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
 								// Encode RCMM
 								RemoteControlManoeuvreMessageType rcmmMessage;
-								if( reqDCAction.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE || 
-									reqDCAction.steeringUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE){
-									rcmmMessage.status = 0; //Shall be 0 when controlled by percentage
-								} else rcmmMessage.status = 1; //Shall be 1 when controlled by absolute value
-								rcmmMessage.steeringManoeuvre.pct =  reqDCAction.steeringAction.pct;
+
+								if (reqDCAction.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE ||
+									reqDCAction.steeringUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE) {
+									rcmmMessage.status = 0;	//Shall be 0 when controlled by percentage
+								}
+								else
+									rcmmMessage.status = 1;	//Shall be 1 when controlled by absolute value
+								rcmmMessage.steeringManoeuvre.pct = reqDCAction.steeringAction.pct;
 								rcmmMessage.isSteeringManoeuvreValid = reqDCAction.isSteeringActionValid;
-								rcmmMessage.speedManoeuvre.pct =  reqDCAction.speedAction.pct;
+								rcmmMessage.speedManoeuvre.pct = reqDCAction.speedAction.pct;
 								rcmmMessage.isSpeedManoeuvreValid = reqDCAction.isSpeedActionValid;
-								MessageLength = encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof(MessageBuffer),0);
-							} else {
+								MessageLength =
+									encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof (MessageBuffer), 0);
+							}
+							else {
 								// Encode DCMM
 								RemoteControlManoeuvreMessageType dcmmMessage;
-								if( reqDCAction.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE || 
-									reqDCAction.steeringUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE){
-									dcmmMessage.status = 0; //Shall be 0 when controlled by percentage
-									} else dcmmMessage.status = 1; //Shall be 1 when controlled by absolute value
-									dcmmMessage.steeringManoeuvre.pct =  reqDCAction.steeringAction.pct;
-									dcmmMessage.isSteeringManoeuvreValid = reqDCAction.isSteeringActionValid;
-									dcmmMessage.speedManoeuvre.pct  =  reqDCAction.speedAction.pct;
-									dcmmMessage.isSpeedManoeuvreValid = reqDCAction.isSpeedActionValid;
-									MessageLength = encodeDCMMMessage(&dcmmMessage, MessageBuffer, sizeof(MessageBuffer),0);
+
+								if (reqDCAction.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE ||
+									reqDCAction.steeringUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE) {
+									dcmmMessage.status = 0;	//Shall be 0 when controlled by percentage
+								}
+								else
+									dcmmMessage.status = 1;	//Shall be 1 when controlled by absolute value
+								dcmmMessage.steeringManoeuvre.pct = reqDCAction.steeringAction.pct;
+								dcmmMessage.isSteeringManoeuvreValid = reqDCAction.isSteeringActionValid;
+								dcmmMessage.speedManoeuvre.pct = reqDCAction.speedAction.pct;
+								dcmmMessage.isSpeedManoeuvreValid = reqDCAction.isSpeedActionValid;
+								MessageLength =
+									encodeDCMMMessage(&dcmmMessage, MessageBuffer, sizeof (MessageBuffer), 0);
 							}
 
 							if (MessageLength > 0) {
@@ -677,12 +685,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							}
 						}
 						else {
-							LogMessage(LOG_LEVEL_WARNING, "Ignoring remote control command - age is %ld s %ld µs",
+							LogMessage(LOG_LEVEL_WARNING,
+									   "Ignoring remote control command - age is %ld s %ld µs",
 									   requestAge.tv_sec, requestAge.tv_usec);
 						}
 					}
 					else {
-						LogMessage(LOG_LEVEL_ERROR,"Failed to read from data dictionary");
+						LogMessage(LOG_LEVEL_ERROR, "Failed to read from data dictionary");
 					}
 				}
 			}
@@ -840,12 +849,12 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							LogMessage(LOG_LEVEL_INFO, "Sending back to start command to object with IP %s",
 									   ipString);
 							RemoteControlManoeuvreMessageType rcmmMessage;
+
 							rcmmMessage.command = rcCommand.manoeuvre;
 							rcmmMessage.isSpeedManoeuvreValid = 0;
 							rcmmMessage.isSteeringManoeuvreValid = 0;
 							MessageLength =
-								encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof (MessageBuffer),
-												  0);
+								encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof (MessageBuffer), 0);
 							if (MessageLength > 0) {
 								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 												&objectConnections[iIndex].commandSocket, 0);
@@ -1316,7 +1325,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 
 	totalPrintedBytes += printedBytes;
 	messageBufferPosition += printedBytes;
-	remainingBufferSpace -= (size_t) printedBytes;
+	remainingBufferSpace -= (size_t)printedBytes;
 
 	read = getline(&line, &len, fd);
 	for (unsigned int i = 0; i < fileHeader.numberOfLines && read != -1; ++i, read = getline(&line, &len, fd)) {
@@ -1376,7 +1385,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 				}
 				messageBufferPosition += printedBytes;
 				totalPrintedBytes += printedBytes;
-				remainingBufferSpace -= (size_t) printedBytes;
+				remainingBufferSpace -= (size_t)printedBytes;
 			}
 			else {
 				// TODO how to terminate an ISO message when an error has occurred?
@@ -1388,7 +1397,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 		else {
 			totalPrintedBytes += printedBytes;
 			messageBufferPosition += printedBytes;
-			remainingBufferSpace -= (size_t) printedBytes;
+			remainingBufferSpace -= (size_t)printedBytes;
 		}
 	}
 
@@ -1408,7 +1417,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 			}
 			messageBufferPosition += printedBytes;
 			totalPrintedBytes += printedBytes;
-			remainingBufferSpace -= (size_t) printedBytes;
+			remainingBufferSpace -= (size_t)printedBytes;
 		}
 		else {
 			// TODO how to terminate an ISO message when an error has occurred?
@@ -1420,7 +1429,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 	else {
 		totalPrintedBytes += printedBytes;
 		messageBufferPosition += printedBytes;
-		remainingBufferSpace -= (size_t) printedBytes;
+		remainingBufferSpace -= (size_t)printedBytes;
 	}
 
 	UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket, debug);
@@ -2152,9 +2161,8 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 		LogMessage(LOG_LEVEL_INFO, "Loaded object with ID %u, IP %s and trajectory file <%s>",
 				   objectIDs[*nbr_objects], inet_ntop(AF_INET,
-													  &objectConnections[*nbr_objects].
-													  objectCommandAddress.sin_addr, objectSetting,
-													  sizeof (objectSetting)),
+													  &objectConnections[*nbr_objects].objectCommandAddress.
+													  sin_addr, objectSetting, sizeof (objectSetting)),
 				   object_traj_file[*nbr_objects]);
 		++(*nbr_objects);
 	}
