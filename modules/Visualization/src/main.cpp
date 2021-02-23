@@ -115,7 +115,7 @@ int main(int argc, char const* argv[]) {
 		buffer.clear();
 		// have to read inbetween loops or we could end in limbo becouse getonconnection only looks att acceept not recive atm, 
 		// TO DO: fix so that get connection also is looked at on recv andchange that to a bool but that means we have to change somestuff in tcphandler.
-		visualizerTCPPort.receiveTCP(buffer,0);
+		visualizerTCPPort.receiveTCP(buffer, 0);
 
 		if (areObjectsConnected) {
 			//LogMessage(LOG_LEVEL_INFO, "Sending Traj");
