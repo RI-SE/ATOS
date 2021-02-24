@@ -62,7 +62,6 @@ static int transmitTrajectories(TCPHandler &tcpPort);
 static int transmitObjectData(TCPHandler &tcpPort, UDPHandler &udpPort);
 static int transmitOSEM(TCPHandler &tcpPort);
 
-///ssize_t encodeOSEMMessage(const struct timeval* controlCenterTime, const uint32_t *desiredTransmitterID, const double_t * latitude_deg, const double_t * longitude_deg, const float * altitude_m, const float * maxPositionDeviation_m, const float * maxLateralDeviation_m, const float * minimumPositioningAccuracy_m, char * osemDataBuffer, const size_t bufferLength, const char debug);
 /*------------------------------------------------------------
   -- Main task
   ------------------------------------------------------------*/
@@ -242,7 +241,6 @@ int awaitConnection(
 		enum COMMAND &receivedCommand,
 		bool &areObjectsConnected) {
 
-	uint32_t numberOfObjects = 0;
 	receivedCommand = COMM_INV;
 	char mqRecvData[MBUS_MAX_DATALEN];
 
@@ -311,50 +309,52 @@ int transmitOSEM(TCPHandler &tcp){
 	GeoPosition originPosition;
 	std::vector<char> tcpTransmitBuffer(MONR_BUFFER_LENGTH);
 	std::vector<uint32_t> transmitterIDs;
-	int bytesent;
+	int bytesSent;
 	uint32_t numberOfObjects;	
 
-	if(DataDictionaryGetNumberOfObjects(&numberOfObjects)!=READ_OK){
-		LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error ");
+	if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
+		throw std::ios_base::failure("Data dictionary number of objects read error");
 	}
-	if (numberOfObjects<=0){
+	if (numberOfObjects <= 0) {
 		return 0;
 	}
 
 	transmitterIDs.resize(numberOfObjects);
-	if(DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size())!=READ_OK){
-		LogMessage(LOG_LEVEL_ERROR,"Data dictionary get TransmitterID read error");
+	if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size()) != READ_OK) {
+		throw std::ios_base::failure("Data dictionary transmitter ID read error");
 	}
-	//Question: do we want to send for each
+
 	for (const auto &transmitterID : transmitterIDs) {
-		if (transmitterID == 0){
+		if (transmitterID == 0) {
 			continue;
 		}
 		
-		if(DataDictionaryGetOrigin(transmitterID, &originPosition) != READ_OK){
-			LogMessage(LOG_LEVEL_ERROR,
-						"Data dictionary origion data read error for transmitter ID %u",
-						transmitterID);
+		if (DataDictionaryGetOrigin(transmitterID, &originPosition) != READ_OK) {
+			throw std::ios_base::failure("Data dictionary origin read error for transmitter ID " + std::to_string(transmitterID));
 		}
-		gettimeofday(&tv, NULL);
-		float Altitude = (float) originPosition.Altitude;
+
+		gettimeofday(&tv, nullptr);
+		float altitude = static_cast<float>(originPosition.Altitude);
 		long retval = encodeOSEMMessage(&tv, 
 										&transmitterID, 
 										&originPosition.Latitude,
 										&originPosition.Longitude,
-										&Altitude, // don't like but this is how it is...
-										NULL, 
-										NULL, 
-										NULL,
+										&altitude, // don't like but this is how it is...
+										nullptr,
+										nullptr,
+										nullptr,
 										tcpTransmitBuffer.data(), 
 										tcpTransmitBuffer.size(),
 										0);//TODO
+		if (retval < 0) {
+			throw std::invalid_argument("Failed to encode OSEM message");
+		}
+
 		tcpTransmitBuffer.resize(static_cast<unsigned long>(retval));
-		bytesent = tcp.sendTCP(tcpTransmitBuffer);
+		bytesSent = tcp.sendTCP(tcpTransmitBuffer);
 
-		if (bytesent < 0){
-			LogMessage(LOG_LEVEL_ERROR,"Error when sending on the visualizer tcp socket");
-
+		if (bytesSent < 0){
+			throw std::ios_base::failure("Error when sending on the visualizer tcp socket");
 		}
 	}
 
