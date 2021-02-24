@@ -2678,14 +2678,12 @@ ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitter
 	return result;
 }
 /**
- * @brief DataDictionarySetOrigin Parses Geopositon(origin) and time information on Objects shared memmory corresponding to the transmitterID 
- * 
- * @param transmitterID That we will parse new Geoposition values to. 
- * @param origin Geoposition data. 
- * @param receiveTime update latest time that data was changed
- * @return ReadWriteAccess_t 
+ * \brief DataDictionarySetOrigin Sets the test origin for one or more objects.
+ * \param transmitterID ID of the object to set origin for. If set to null, all objects' origins will be modified.
+ * \param origin Geoposition data.
+ * \return ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const GeoPosition * origin){
+ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t* transmitterID, const GeoPosition * origin){
 	
 	
 	ReadWriteAccess_t result;
@@ -2700,7 +2698,7 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const Ge
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
-	if (transmitterID == 0) {
+	if (transmitterID != NULL && transmitterID == 0) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
 		return UNDEFINED;
@@ -2753,11 +2751,11 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const Ge
 	return result;
 }
 /**
- * @brief DataDictionaryGetOrigin Read Geoposition(origin) value from shared memory for object. Assumes objectDataMemory has already been allocated.
- * 
- * @param transmitterID requested object transmitterId
- * @param origin Return variable pointer
- * @return ReadWriteAccess_t 
+ * \brief DataDictionaryGetOrigin Read origin setting for specified object. Shared memory must have been
+ *			initialized prior to this function call.
+ * \param transmitterID Transmitter ID of object for which origin is requested.
+ * \param origin Return variable pointer
+ * \return ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosition * origin){
 	
@@ -2793,9 +2791,8 @@ ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosit
 	return result;
 }
 /**
- * @brief DataDictionaryInitOrigin Read config file and add the origin in .conf to all the objects that are created
- * 
- * @return ReadWriteAccess_t 
+ * \brief DataDictionaryInitOrigin Read config file and add the origin in .conf to all the objects that are created
+ * \return ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryInitOrigin(){
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
