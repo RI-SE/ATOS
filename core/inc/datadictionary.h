@@ -163,6 +163,10 @@ ReadWriteAccess_t DataDictionarySetObjectProperties(const uint32_t transmitterID
 ReadWriteAccess_t DataDictionaryGetObjectProperties(const uint32_t transmitterID, ObjectPropertiesType* objectProperties);
 ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitterID);
 
+ReadWriteAccess_t DataDictionarySetRequestedControlAction(const uint32_t transmitterID, const RequestControlActionType* reqCtrlAction);
+ReadWriteAccess_t DataDictionaryGetRequestedControlAction(const uint32_t transmitterID, RequestControlActionType* reqCtrlAction);
+ReadWriteAccess_t DataDictionaryResetRequestedControlAction(const uint32_t transmitterID);
+
 #ifdef __cplusplus
 }
 #endif
