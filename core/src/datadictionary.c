@@ -2715,35 +2715,15 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t* transmitterID, const G
 	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 
 	for (int i = 0; i < numberOfObjects; ++i) {
-		if (objectDataMemory[i].ClientID == transmitterID) {
-			objectDataMemory[i].origin = *origin;
-			result = WRITE_OK;
-		}
-	}
-
-	if (result == PARAMETER_NOTFOUND) {
-		// Search for unused memory space and place monitor data there
-		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", transmitterID);
-		for (int i = 0; i < numberOfObjects; ++i) {
-			if (objectDataMemory[i].ClientID == 0) {
+		if (transmitterID != NULL) {
+			if (objectDataMemory[i].ClientID == *transmitterID) {
 				objectDataMemory[i].origin = *origin;
 				result = WRITE_OK;
 			}
 		}
-
-		// No uninitialized memory space found - create new
-		if (result == PARAMETER_NOTFOUND) {
-			objectDataMemory = resizeSharedMemory(objectDataMemory, (unsigned int)(numberOfObjects + 1));
-			if (objectDataMemory != NULL) {
-				numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
-				LogMessage(LOG_LEVEL_INFO,
-						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
-				objectDataMemory[numberOfObjects - 1].origin = *origin;
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
-				result = UNDEFINED;
-			}
+		else {
+			objectDataMemory[i].origin = *origin;
+			result = WRITE_OK;
 		}
 	}
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
@@ -2783,11 +2763,6 @@ ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosit
 	}
 
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
-	printf("get origin %f",origin->Latitude);
-	if (result == PARAMETER_NOTFOUND) {
-		LogMessage(LOG_LEVEL_WARNING, "Unable to find origin setting for transmitter ID %u", transmitterID);
-	}
-
 	return result;
 }
 /**
