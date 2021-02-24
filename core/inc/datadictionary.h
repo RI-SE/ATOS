@@ -165,8 +165,7 @@ ReadWriteAccess_t DataDictionaryGetObjectProperties(const uint32_t transmitterID
 ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitterID);
 
 ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosition * origin);
-ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const GeoPosition * origin);
-ReadWriteAccess_t DataDictionarySetOrigin(const GeoPosition * origin);
+ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t* transmitterID, const GeoPosition * origin);
 ReadWriteAccess_t DataDictionaryInitOrigin();
 
 #ifdef __cplusplus
