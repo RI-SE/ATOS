@@ -2686,7 +2686,7 @@ ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitter
  * @param receiveTime update latest time that data was changed
  * @return ReadWriteAccess_t 
  */
-ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const GeoPosition * origin, const struct timeval * receiveTime ){
+ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const GeoPosition * origin){
 	
 	
 	ReadWriteAccess_t result;
@@ -2697,11 +2697,6 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const Ge
 		return UNDEFINED;
 	}
 	if (origin == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
-		return UNDEFINED;
-	}
-	if (receiveTime == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
@@ -2725,7 +2720,6 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const Ge
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (objectDataMemory[i].ClientID == transmitterID) {
 			objectDataMemory[i].origin = *origin;
-			objectDataMemory[i].lastDataUpdate = *receiveTime;
 			result = WRITE_OK;
 		}
 	}
@@ -2736,7 +2730,6 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const Ge
 		for (int i = 0; i < numberOfObjects; ++i) {
 			if (objectDataMemory[i].ClientID == 0) {
 				objectDataMemory[i].origin = *origin;
-				objectDataMemory[i].lastDataUpdate = *receiveTime;
 				result = WRITE_OK;
 			}
 		}
@@ -2749,7 +2742,6 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t transmitterID, const Ge
 				LogMessage(LOG_LEVEL_INFO,
 						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
 				objectDataMemory[numberOfObjects - 1].origin = *origin;
-				objectDataMemory[numberOfObjects - 1].lastDataUpdate = *receiveTime;
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -2789,7 +2781,6 @@ ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosit
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (objectDataMemory[i].ClientID == transmitterID) {
 			memcpy(origin, &objectDataMemory[i].origin, sizeof (GeoPosition));
-
 			result = READ_OK;
 		}
 	}
