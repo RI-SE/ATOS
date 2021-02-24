@@ -2770,51 +2770,62 @@ ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosit
  * \return ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryInitOrigin(){
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
+
+	char resultBuffer[100];
+	char* endptr = NULL;
 	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
-	ReadWriteAccess_t Res = WRITE_OK;
+	ReadWriteAccess_t retval = WRITE_OK;
 	// should it be write or read Iam writeing to memory but also reading from config file?
-	
-	for(int i = 0; i < numberOfObjects; ++i){
-		if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, ResultBufferC8, sizeof (ResultBufferC8))){
-			double longitude = atof(ResultBufferC8);
-			objectDataMemory[i].origin.Longitude = longitude;
-			memset(ResultBufferC8,0 ,DD_CONTROL_BUFFER_SIZE_20);
-			
-		}
-		else{
-			Res = PARAMETER_NOTFOUND;
-			LogMessage(LOG_LEVEL_ERROR, "OriginLongitude not found!");
-			//Question: Decided to return here if not being able find one of the originvalues what do you think about this!
-			return Res;  
-		}
+	GeoPosition origin;
 
-		if (UtilReadConfigurationParameter
-			(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, ResultBufferC8, sizeof (ResultBufferC8))){	
-			double latitude = atof(ResultBufferC8);
-			objectDataMemory[i].origin.Latitude = latitude;
-			memset(ResultBufferC8,0 ,DD_CONTROL_BUFFER_SIZE_20);
+	if (UtilReadConfigurationParameter(
+				CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
+				resultBuffer, sizeof (resultBuffer)) > 0) {
+		origin.Longitude = strtod(resultBuffer, &endptr);
+		if (endptr == resultBuffer) {
+			LogMessage(LOG_LEVEL_ERROR, "OriginLongitude badly formatted");
+			retval = PARAMETER_NOTFOUND;
 		}
-		else{
-			Res = PARAMETER_NOTFOUND;
-			LogMessage(LOG_LEVEL_ERROR, "OriginLatitude not found!");
-			return Res;
-		}
-
-		if (UtilReadConfigurationParameter
-			(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, ResultBufferC8, sizeof (ResultBufferC8))){
-			double altitude = atof(ResultBufferC8);
-			objectDataMemory[i].origin.Altitude = altitude;
-			memset(ResultBufferC8,0 ,DD_CONTROL_BUFFER_SIZE_20);
-		}
-		else{
-			Res = PARAMETER_NOTFOUND;
-			LogMessage(LOG_LEVEL_ERROR, "OriginAltitude not found!");
-			return Res;
-
-		}
-
+		memset(resultBuffer, 0, sizeof (resultBuffer));
 	}
-	return Res; 
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "OriginLongitude not found!");
+	}
+
+	if (UtilReadConfigurationParameter(
+				CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
+				resultBuffer, sizeof (resultBuffer)) > 0) {
+		origin.Latitude = strtod(resultBuffer, &endptr);
+		if (endptr == resultBuffer) {
+			LogMessage(LOG_LEVEL_ERROR, "OriginLongitude badly formatted");
+			retval = PARAMETER_NOTFOUND;
+		}
+		memset(resultBuffer, 0, sizeof (resultBuffer));
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "OriginLatitude not found!");
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, resultBuffer, sizeof (resultBuffer))){
+		origin.Altitude = strtod(resultBuffer, &endptr);
+		if (endptr == resultBuffer) {
+			LogMessage(LOG_LEVEL_ERROR, "OriginAltitude badly formatted");
+			retval = PARAMETER_NOTFOUND;
+		}
+		memset(resultBuffer, 0, sizeof (resultBuffer));
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "OriginAltitude not found!");
+	}
+
+	if (retval != PARAMETER_NOTFOUND) {
+		for(int i = 0; i < numberOfObjects; ++i){
+			objectDataMemory[i].origin = origin;
+		}
+	}
+	return retval;
 }
