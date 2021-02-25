@@ -3,7 +3,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "Enable verbose make")
 set(CMAKE_COLOR_MAKEFILE   ON)
 
 project(Maestro VERSION 0.5.0)
@@ -53,6 +53,7 @@ endif()
 
 # Add corresponding subprojects
 add_subdirectory(util/C)
+add_subdirectory(common)
 add_subdirectory(core)
 foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})

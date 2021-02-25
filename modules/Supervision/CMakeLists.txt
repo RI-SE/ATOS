@@ -15,6 +15,7 @@ set(ISO_22133_LIBRARY ISO22133)
 set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MESSAGE_BUS_LIBRARY MaestroMQ)
+set(MAESTRO_COMMON_LIBRARY MaestroCommon)
 
 include(GNUInstallDirs)
 
@@ -23,20 +24,21 @@ add_executable(${SUPERVISION_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/geofence.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/supervisionstate.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/trajectory.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectconfiguration.cpp
 )
 
 # Link project executable to util libraries
-target_link_libraries(${SUPERVISION_TARGET} LINK_PUBLIC
+target_link_libraries(${SUPERVISION_TARGET} PUBLIC
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
-        ${DATA_DICTIONARY_LIBRARY}
+	${DATA_DICTIONARY_LIBRARY}
 	${ISO_22133_LIBRARY}
-        ${POSITIONING_LIBRARY}
-        ${LOGGING_LIBRARY}
+	${POSITIONING_LIBRARY}
+	${LOGGING_LIBRARY}
+	${MAESTRO_COMMON_LIBRARY}
 	${SYSTEMD_LIBRARIES}
 )
+
 target_include_directories(${SUPERVISION_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
