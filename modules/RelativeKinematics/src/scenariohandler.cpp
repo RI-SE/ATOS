@@ -1,4 +1,4 @@
-#include "objecthandler.hpp"
+#include "scenariohandler.hpp"
 #include "logging.h"
 #include "util.h"
 #include <algorithm>
@@ -48,8 +48,18 @@ void ScenarioHandler::loadObjectFiles() {
 			try {
 				object.parseConfigurationFile(entry.path());
 				LogMessage(LOG_LEVEL_INFO, "Loaded configuration: %s", object.toString().c_str());
-				// TODO check preexisting
-				objects[object.getTransmitterID()] = object;
+				// Check preexisting
+				auto foundObject = objects.find(object.getTransmitterID());
+				if (foundObject == objects.end()) {
+					objects[object.getTransmitterID()] = object;
+				}
+				else {
+					auto badID = object.getTransmitterID();
+					std::string errMsg = "Duplicate object ID " + std::to_string(badID)
+							+ " detected in files " + objects[badID].getTrajectoryFile().string()
+							+ " and " + object.getTrajectoryFile().string();
+					throw std::invalid_argument(errMsg);
+				}
 			}
 			catch (std::invalid_argument& e) {
 				LogMessage(LOG_LEVEL_ERROR, e.what());
