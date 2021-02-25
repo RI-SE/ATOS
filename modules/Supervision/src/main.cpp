@@ -382,7 +382,7 @@ int checkObjectsAgainstStartingPositions(
 		if (DataDictionaryGetObjectEnableStatusById(objectConfiguration.id, &objectData.Enabled) != READ_OK
 				|| (objectData.Enabled != OBJECT_DISABLED
 				&& (DataDictionaryGetMonitorData(objectConfiguration.id, &objectData.MonrData) != READ_OK
-					|| DataDictionaryGetMonitorDataReceiveTime(objectConfiguration.id, &objectData.lastDataUpdate) != READ_OK))) {
+					|| DataDictionaryGetMonitorDataReceiveTime(objectConfiguration.id, &objectData.lastPositionUpdate) != READ_OK))) {
 			LogMessage(LOG_LEVEL_INFO, "Unable to read from data dictionary for object with ID %u",
 					   objectConfiguration.id);
 			allAtStart = false;
