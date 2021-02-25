@@ -1,6 +1,6 @@
 #pragma once
 
-#include "objecthandler.hpp"
+#include "scenariohandler.hpp"
 #include <stdexcept>
 
 class ScenarioHandler;
