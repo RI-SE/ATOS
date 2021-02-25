@@ -623,7 +623,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 				}
 			}
-
 		}
 
 		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_REMOTECTRL) {
@@ -633,26 +632,53 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
 				if (objectEnabledStatus == OBJECT_ENABLED) {
-					RequestControlActionType req;
+					RequestControlActionType reqDCAction;
 					struct timeval requestAge;
 
-					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &req) ==
-						READ_OK && timerisset(&req.dataTimestamp)) {
-						timersub(&currentTime, &req.dataTimestamp, &requestAge);
+					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &reqDCAction)
+						== READ_OK && timerisset(&reqDCAction.dataTimestamp)) {
+						timersub(&currentTime, &reqDCAction.dataTimestamp, &requestAge);
 						if (timerpos(&requestAge) && requestAge.tv_sec == 0
 							&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
 							if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
-								// TODO RCMM encode
-								// MessageLength = encodeRCMMMessage()
+								// Encode RCMM
+								RemoteControlManoeuvreMessageType rcmmMessage;
+
+								if (reqDCAction.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE ||
+									reqDCAction.steeringUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE) {
+									rcmmMessage.status = 0;	//Shall be 0 when controlled by percentage
+								}
+								else
+									rcmmMessage.status = 1;	//Shall be 1 when controlled by absolute value
+								rcmmMessage.steeringManoeuvre.pct = reqDCAction.steeringAction.pct;
+								rcmmMessage.isSteeringManoeuvreValid = reqDCAction.isSteeringActionValid;
+								rcmmMessage.speedManoeuvre.pct = reqDCAction.speedAction.pct;
+								rcmmMessage.isSpeedManoeuvreValid = reqDCAction.isSpeedActionValid;
+								MessageLength =
+									encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof (MessageBuffer), 0);
 							}
 							else {
 								// Encode DCMM
-								// MessageLength = encodeDCMMMessage()
+								RemoteControlManoeuvreMessageType dcmmMessage;
+
+								if (reqDCAction.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE ||
+									reqDCAction.steeringUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE) {
+									dcmmMessage.status = 0;	//Shall be 0 when controlled by percentage
+								}
+								else
+									dcmmMessage.status = 1;	//Shall be 1 when controlled by absolute value
+								dcmmMessage.steeringManoeuvre.pct = reqDCAction.steeringAction.pct;
+								dcmmMessage.isSteeringManoeuvreValid = reqDCAction.isSteeringActionValid;
+								dcmmMessage.speedManoeuvre.pct = reqDCAction.speedAction.pct;
+								dcmmMessage.isSpeedManoeuvreValid = reqDCAction.isSpeedActionValid;
+								MessageLength =
+									encodeDCMMMessage(&dcmmMessage, MessageBuffer, sizeof (MessageBuffer), 0);
 							}
 
 							if (MessageLength > 0) {
 								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 												&objectConnections[iIndex].commandSocket, 0);
+								MessageLength = 0;
 							}
 							else {
 								LogMessage(LOG_LEVEL_ERROR, "Error encoding remote control message");
