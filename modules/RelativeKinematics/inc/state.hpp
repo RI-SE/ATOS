@@ -31,7 +31,8 @@ public:
 	virtual void testCompleted(ScenarioHandler&) = 0;
 	virtual void postProcessingCompleted(ScenarioHandler&) = 0;
 
-	virtual ~ObjectControlState();
+	ObjectControlState(){}
+	virtual ~ObjectControlState() {}
 protected:
 
 	void setState(ScenarioHandler& handler, ObjectControlState *st);

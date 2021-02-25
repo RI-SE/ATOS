@@ -1,4 +1,5 @@
 #include <netinet/in.h>
+#include "trajectory.hpp"
 
 // GCC version 8.1 brings non-experimental support for std::filesystem
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
@@ -27,6 +28,7 @@ private:
 	fs::path objectFile;
 	fs::path trajectoryFile;
 	uint32_t transmitterID;
+	Trajectory trajectory;
 };
 
 // Template specialisation of std::less for TestObject

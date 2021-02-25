@@ -17,11 +17,11 @@ void TestObject::setMonitorAddress(
 
 std::string TestObject::toString() const {
 	char ipAddr[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &this->commandAddress, ipAddr, sizeof (ipAddr));
+	inet_ntop(AF_INET, &this->commandAddress.sin_addr, ipAddr, sizeof (ipAddr));
 	std::string retval = "";
 	retval += "Object ID " + std::to_string(transmitterID)
-			+ ", IP " + ipAddr + ", trajectory file " + trajectoryFile.stem().string()
-			+ ", object file " + objectFile.stem().string();
+			+ ", IP " + ipAddr + ", trajectory file " + trajectoryFile.filename().string()
+			+ ", object file " + objectFile.filename().string();
 	return retval;
 }
 
@@ -31,6 +31,9 @@ void TestObject::parseConfigurationFile(
 	char setting[100];
 	int result;
 	struct sockaddr_in addr;
+	char path[MAX_FILE_PATH];
+
+	UtilGetTrajDirectoryPath(path, sizeof (path));
 
 	// Get IP setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFile.c_str(),
@@ -59,7 +62,8 @@ void TestObject::parseConfigurationFile(
 		throw std::invalid_argument("Cannot find trajectory setting in file " + objectFile.string());
 	}
 
-	fs::path trajFile(setting);
+	fs::path trajFile(std::string(path) + std::string(setting));
+	std::cout << "HÄR: " << trajFile;
 	if (!fs::exists(trajFile)) {
 		throw std::invalid_argument("Configured trajectory file " + std::string(setting)
 									+ " in file " + objectFile.string() + " not found");
@@ -81,10 +85,13 @@ void TestObject::parseConfigurationFile(
 									+ objectFile.string() + " is invalid");
 	}
 	this->transmitterID = id;
+	this->objectFile = objectFile;
 }
 
 
 void TestObject::parseTrajectoryFile(
 		const fs::path& file) {
-	// TODO
+	trajectory.initializeFromFile(file.filename());
+	LogMessage(LOG_LEVEL_INFO, "Successfully parsed trajectory %s for object %u",
+			   file.filename().c_str(), this->getTransmitterID());
 }

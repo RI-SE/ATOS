@@ -21,13 +21,13 @@ int main() {
 	const struct timespec abortWaitTime = {1,0};
 	struct timespec remTime;
 	const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
-
 	// Initialize
 	if (initializeModule(logLevel) < 0) {
 		util_error("Failed to initialize module");
 	}
 
 
+	ScenarioHandler scenarioHandler(ScenarioHandler::RELATIVE_KINEMATICS);
 	while (!quit) {
 		if (iCommRecv(&command, mqRecvData, MQ_MSG_SIZE, nullptr) < 0) {
 			util_error("Message bus receive error");
@@ -38,6 +38,18 @@ int main() {
 			nanosleep(&sleepTimePeriod,&remTime);
 			break;
 		case COMM_OBC_STATE:
+			break;
+		case COMM_GETSTATUS:
+			break;
+		case COMM_GETSTATUS_OK:
+			break;
+		case COMM_INIT:
+			try {
+				scenarioHandler.handleInitCommand();
+			} catch (std::invalid_argument& e) {
+				LogMessage(LOG_LEVEL_ERROR, "Initialization failed");
+				iCommSend(COMM_FAILURE, nullptr, 0);
+			}
 			break;
 		default:
 			LogMessage(LOG_LEVEL_INFO, "Received command %u", command);
