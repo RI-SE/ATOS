@@ -7,12 +7,12 @@ RelativeKinematics::Idle::Idle() {
 }
 
 void RelativeKinematics::Idle::initializeRequest(
-		ObjectHandler& handler) {
+		ScenarioHandler& handler) {
 	LogMessage(LOG_LEVEL_INFO, "Handling initialization request");
 	JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
 
 	try {
-		handler.loadConfiguration();
+		handler.loadScenario();
 		// TODO Transform
 		setState(handler, new RelativeKinematics::Initialized());
 	}

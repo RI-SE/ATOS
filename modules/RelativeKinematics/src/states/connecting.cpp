@@ -6,30 +6,30 @@ RelativeKinematics::Connecting::Connecting() {
 }
 
 
-void RelativeKinematics::Connecting::disconnectRequest(ObjectHandler&) {
+void RelativeKinematics::Connecting::disconnectRequest(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Connecting::connectRequest(ObjectHandler&) {
+void RelativeKinematics::Connecting::connectRequest(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Connecting::connectedToObject(ObjectHandler&) {
+void RelativeKinematics::Connecting::connectedToObject(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Connecting::disconnectedFromObject(ObjectHandler&) {
+void RelativeKinematics::Connecting::disconnectedFromObject(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Connecting::connectedToLiveObject(ObjectHandler&) {
+void RelativeKinematics::Connecting::connectedToLiveObject(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Connecting::connectedToArmedObject(ObjectHandler&) {
+void RelativeKinematics::Connecting::connectedToArmedObject(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Connecting::allObjectsConnected(ObjectHandler&) {
+void RelativeKinematics::Connecting::allObjectsConnected(ScenarioHandler&) {
 	// TODO
 }

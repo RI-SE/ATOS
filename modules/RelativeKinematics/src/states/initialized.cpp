@@ -8,12 +8,12 @@ RelativeKinematics::Initialized::Initialized() {
 }
 
 void RelativeKinematics::Initialized::connectRequest(
-		ObjectHandler& handler) {
+		ScenarioHandler& handler) {
 	// TODO
 }
 
 void RelativeKinematics::Initialized::disconnectRequest(
-		ObjectHandler& handler) {
+		ScenarioHandler& handler) {
 	// TODO
 }
 

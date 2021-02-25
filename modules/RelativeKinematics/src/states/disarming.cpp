@@ -4,26 +4,26 @@ RelativeKinematics::Disarming::Disarming() {
 
 }
 
-void RelativeKinematics::Disarming::disconnectRequest(ObjectHandler&) {
+void RelativeKinematics::Disarming::disconnectRequest(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Disarming::connectedToObject(ObjectHandler&) {
+void RelativeKinematics::Disarming::connectedToObject(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Disarming::disconnectedFromObject(ObjectHandler&) {
+void RelativeKinematics::Disarming::disconnectedFromObject(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Disarming::connectedToArmedObject(ObjectHandler&) {
+void RelativeKinematics::Disarming::connectedToArmedObject(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Disarming::connectedToLiveObject(ObjectHandler&) {
+void RelativeKinematics::Disarming::connectedToLiveObject(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Disarming::allObjectsDisarmed(ObjectHandler&) {
+void RelativeKinematics::Disarming::allObjectsDisarmed(ScenarioHandler&) {
 	// TODO
 }

@@ -4,18 +4,18 @@ RelativeKinematics::TestLive::TestLive() {
 
 }
 
-void RelativeKinematics::TestLive::stopRequest(ObjectHandler&) {
+void RelativeKinematics::TestLive::stopRequest(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::TestLive::abortRequest(ObjectHandler&) {
+void RelativeKinematics::TestLive::abortRequest(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::TestLive::testCompleted(ObjectHandler&) {
+void RelativeKinematics::TestLive::testCompleted(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::TestLive::disconnectedFromObject(ObjectHandler&) {
+void RelativeKinematics::TestLive::disconnectedFromObject(ScenarioHandler&) {
 	// TODO
 }

@@ -4,7 +4,7 @@
 #include <exception>
 
 void ObjectControlState::setState(
-		ObjectHandler& handler,
+		ScenarioHandler& handler,
 		ObjectControlState *st) {
 	LogMessage(LOG_LEVEL_INFO, "Transitioning to state %s", typeid (*st).name());
 	ObjectControlState* temp = handler.state;
@@ -17,54 +17,54 @@ void ObjectControlState::setState(
 // Function bodies for pure virtual functions
 // TODO: any subclass independent implementations may be placed in these and
 // called from respective subclass
-void ObjectControlState::initializeRequest(ObjectHandler&) {
+void ObjectControlState::initializeRequest(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::disconnectRequest(ObjectHandler&) {
+void ObjectControlState::disconnectRequest(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::connectRequest(ObjectHandler&) {
+void ObjectControlState::connectRequest(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::armRequest(ObjectHandler&) {
+void ObjectControlState::armRequest(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::disarmRequest(ObjectHandler&) {
+void ObjectControlState::disarmRequest(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::startRequest(ObjectHandler&) {
+void ObjectControlState::startRequest(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::stopRequest(ObjectHandler&) {
+void ObjectControlState::stopRequest(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::abortRequest(ObjectHandler&) {
+void ObjectControlState::abortRequest(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::allClearRequest(ObjectHandler&) {
+void ObjectControlState::allClearRequest(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::connectedToObject(ObjectHandler&) {
+void ObjectControlState::connectedToObject(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::disconnectedFromObject(ObjectHandler&) {
+void ObjectControlState::disconnectedFromObject(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::connectedToLiveObject(ObjectHandler&) {
+void ObjectControlState::connectedToLiveObject(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::connectedToArmedObject(ObjectHandler&) {
+void ObjectControlState::connectedToArmedObject(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::allObjectsDisarmed(ObjectHandler&) {
+void ObjectControlState::allObjectsDisarmed(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::allObjectsConnected(ObjectHandler&) {
+void ObjectControlState::allObjectsConnected(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::testCompleted(ObjectHandler&) {
+void ObjectControlState::testCompleted(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::postProcessingCompleted(ObjectHandler&) {
+void ObjectControlState::postProcessingCompleted(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }

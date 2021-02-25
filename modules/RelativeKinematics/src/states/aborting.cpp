@@ -4,22 +4,22 @@ RelativeKinematics::Aborting::Aborting() {
 
 }
 
-void RelativeKinematics::Aborting::allClearRequest(ObjectHandler&) {
+void RelativeKinematics::Aborting::allClearRequest(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Aborting::connectedToObject(ObjectHandler&) {
+void RelativeKinematics::Aborting::connectedToObject(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Aborting::disconnectedFromObject(ObjectHandler&) {
+void RelativeKinematics::Aborting::disconnectedFromObject(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Aborting::connectedToLiveObject(ObjectHandler&) {
+void RelativeKinematics::Aborting::connectedToLiveObject(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Aborting::connectedToArmedObject(ObjectHandler&) {
+void RelativeKinematics::Aborting::connectedToArmedObject(ScenarioHandler&) {
 	// TODO
 }

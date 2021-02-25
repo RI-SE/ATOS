@@ -5,6 +5,6 @@ RelativeKinematics::Done::Done() {
 }
 
 void RelativeKinematics::Done::postProcessingCompleted(
-		ObjectHandler& handler) {
+		ScenarioHandler& handler) {
 	// TODO
 }

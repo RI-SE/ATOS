@@ -4,14 +4,14 @@ RelativeKinematics::Ready::Ready() {
 
 }
 
-void RelativeKinematics::Ready::armRequest(ObjectHandler&) {
+void RelativeKinematics::Ready::armRequest(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Ready::disconnectRequest(ObjectHandler&) {
+void RelativeKinematics::Ready::disconnectRequest(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Ready::disconnectedFromObject(ObjectHandler&) {
+void RelativeKinematics::Ready::disconnectedFromObject(ScenarioHandler&) {
 	// TODO
 }
