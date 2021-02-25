@@ -634,8 +634,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (objectEnabledStatus == OBJECT_ENABLED) {
 					RequestControlActionType reqDCAction;
 					struct timeval requestAge;
+
 					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &reqDCAction)
-							== READ_OK && timerisset(&reqDCAction.dataTimestamp)) {
+						== READ_OK && timerisset(&reqDCAction.dataTimestamp)) {
 						timersub(&currentTime, &reqDCAction.dataTimestamp, &requestAge);
 						if (timerpos(&requestAge) && requestAge.tv_sec == 0
 							&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
@@ -1324,7 +1325,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 
 	totalPrintedBytes += printedBytes;
 	messageBufferPosition += printedBytes;
-	remainingBufferSpace -= (size_t)printedBytes;
+	remainingBufferSpace -= (size_t) printedBytes;
 
 	read = getline(&line, &len, fd);
 	for (unsigned int i = 0; i < fileHeader.numberOfLines && read != -1; ++i, read = getline(&line, &len, fd)) {
@@ -1384,7 +1385,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 				}
 				messageBufferPosition += printedBytes;
 				totalPrintedBytes += printedBytes;
-				remainingBufferSpace -= (size_t)printedBytes;
+				remainingBufferSpace -= (size_t) printedBytes;
 			}
 			else {
 				// TODO how to terminate an ISO message when an error has occurred?
@@ -1396,7 +1397,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 		else {
 			totalPrintedBytes += printedBytes;
 			messageBufferPosition += printedBytes;
-			remainingBufferSpace -= (size_t)printedBytes;
+			remainingBufferSpace -= (size_t) printedBytes;
 		}
 	}
 
@@ -1416,7 +1417,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 			}
 			messageBufferPosition += printedBytes;
 			totalPrintedBytes += printedBytes;
-			remainingBufferSpace -= (size_t)printedBytes;
+			remainingBufferSpace -= (size_t) printedBytes;
 		}
 		else {
 			// TODO how to terminate an ISO message when an error has occurred?
@@ -1428,7 +1429,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 	else {
 		totalPrintedBytes += printedBytes;
 		messageBufferPosition += printedBytes;
-		remainingBufferSpace -= (size_t)printedBytes;
+		remainingBufferSpace -= (size_t) printedBytes;
 	}
 
 	UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket, debug);
@@ -2160,8 +2161,9 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 		LogMessage(LOG_LEVEL_INFO, "Loaded object with ID %u, IP %s and trajectory file <%s>",
 				   objectIDs[*nbr_objects], inet_ntop(AF_INET,
-													  &objectConnections[*nbr_objects].objectCommandAddress.
-													  sin_addr, objectSetting, sizeof (objectSetting)),
+													  &objectConnections[*nbr_objects].
+													  objectCommandAddress.sin_addr, objectSetting,
+													  sizeof (objectSetting)),
 				   object_traj_file[*nbr_objects]);
 		++(*nbr_objects);
 	}
