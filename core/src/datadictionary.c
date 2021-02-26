@@ -1827,7 +1827,7 @@ ReadWriteAccess_t DataDictionaryInitObjectData() {
  */
 ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 											   const ObjectMonitorType * monitorData,
-											   const struct timeval * receiveTime) {
+											   const struct timeval *receiveTime) {
 
 	ReadWriteAccess_t result;
 
@@ -1983,7 +1983,7 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t transmitterId, Obj
  * \return Value according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmitterID,
-														  struct timeval * lastDataUpdate) {
+														  struct timeval *lastDataUpdate) {
 	ReadWriteAccess_t result = UNDEFINED;
 
 	if (objectDataMemory == NULL) {
@@ -2029,7 +2029,7 @@ ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmi
  * \return Value according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmitterID,
-														  const struct timeval * lastDataUpdate) {
+														  const struct timeval *lastDataUpdate) {
 	ReadWriteAccess_t result = UNDEFINED;
 
 	if (objectDataMemory == NULL) {
@@ -2681,47 +2681,12 @@ ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitter
 
 ReadWriteAccess_t DataDictionarySetRequestedControlAction(const uint32_t transmitterID,
 														  const RequestControlActionType * reqCtrlAction) {
-  ReadWriteAccess_t result;
-
-    if (objectDataMemory == NULL) {
-      errno = EINVAL;
-      LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-      return UNDEFINED;
-    }
-    if (transmitterID == 0) {
-    errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
-		return UNDEFINED;
-	}
-  objectDataMemory = claimSharedMemory(objectDataMemory);
-	if (objectDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
-	}
-
-	result = PARAMETER_NOTFOUND;
-	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
-
-	for (int i = 0; i < numberOfObjects; ++i) {
-  	if (transmitterID == objectDataMemory[i].ClientID) {
-			objectDataMemory[i].requestedControlAction = *reqCtrlAction;
-      result = WRITE_OK;
-		}
-	}
-	objectDataMemory = releaseSharedMemory(objectDataMemory);
-  return result;
-
-}
-
-ReadWriteAccess_t DataDictionaryGetRequestedControlAction(const uint32_t transmitterID,
-														  RequestControlActionType * reqCtrlAction) {
 	ReadWriteAccess_t result;
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-    return UNDEFINED;
+		return UNDEFINED;
 	}
 	if (transmitterID == 0) {
 		errno = EINVAL;
@@ -2740,7 +2705,42 @@ ReadWriteAccess_t DataDictionaryGetRequestedControlAction(const uint32_t transmi
 
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (transmitterID == objectDataMemory[i].ClientID) {
-      *reqCtrlAction = objectDataMemory[i].requestedControlAction;
+			objectDataMemory[i].requestedControlAction = *reqCtrlAction;
+			result = WRITE_OK;
+		}
+	}
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+
+}
+
+ReadWriteAccess_t DataDictionaryGetRequestedControlAction(const uint32_t transmitterID,
+														  RequestControlActionType * reqCtrlAction) {
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			*reqCtrlAction = objectDataMemory[i].requestedControlAction;
 			result = READ_OK;
 		}
 	}
@@ -2781,15 +2781,16 @@ ReadWriteAccess_t DataDictionaryResetRequestedControlAction(const uint32_t trans
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 	return result;
 }
+
 /**
  * \brief DataDictionarySetOrigin Sets the test origin for one or more objects.
  * \param transmitterID ID of the object to set origin for. If set to null, all objects' origins will be modified.
  * \param origin Geoposition data.
  * \return ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t* transmitterID, const GeoPosition * origin) {	
-  
-  ReadWriteAccess_t result;
+ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t * transmitterID, const GeoPosition * origin) {
+
+	ReadWriteAccess_t result;
 
 	if (objectDataMemory == NULL) {
 		errno = EINVAL;
@@ -2833,6 +2834,7 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t* transmitterID, const G
 
 	return result;
 }
+
 /**
  * \brief DataDictionaryGetOrigin Read origin setting for specified object. Shared memory must have been
  *			initialized prior to this function call.
@@ -2840,8 +2842,8 @@ ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t* transmitterID, const G
  * \param origin Return variable pointer
  * \return ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosition * origin){
-	
+ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosition * origin) {
+
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 
 	if (origin == NULL) {
@@ -2868,22 +2870,23 @@ ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosit
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 	return result;
 }
+
 /**
  * \brief DataDictionaryInitOrigin Read config file and add the origin in .conf to all the objects that are created
  * \return ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitOrigin(){
+ReadWriteAccess_t DataDictionaryInitOrigin() {
 
 	char resultBuffer[100];
-	char* endptr = NULL;
+	char *endptr = NULL;
 	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 	ReadWriteAccess_t retval = WRITE_OK;
+
 	// should it be write or read Iam writeing to memory but also reading from config file?
 	GeoPosition origin;
 
-	if (UtilReadConfigurationParameter(
-				CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
-				resultBuffer, sizeof (resultBuffer)) > 0) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
+									   resultBuffer, sizeof (resultBuffer)) > 0) {
 		origin.Longitude = strtod(resultBuffer, &endptr);
 		if (endptr == resultBuffer) {
 			LogMessage(LOG_LEVEL_ERROR, "OriginLongitude badly formatted");
@@ -2896,9 +2899,8 @@ ReadWriteAccess_t DataDictionaryInitOrigin(){
 		LogMessage(LOG_LEVEL_ERROR, "OriginLongitude not found!");
 	}
 
-	if (UtilReadConfigurationParameter(
-				CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
-				resultBuffer, sizeof (resultBuffer)) > 0) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
+									   resultBuffer, sizeof (resultBuffer)) > 0) {
 		origin.Latitude = strtod(resultBuffer, &endptr);
 		if (endptr == resultBuffer) {
 			LogMessage(LOG_LEVEL_ERROR, "OriginLongitude badly formatted");
@@ -2912,7 +2914,7 @@ ReadWriteAccess_t DataDictionaryInitOrigin(){
 	}
 
 	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, resultBuffer, sizeof (resultBuffer))){
+		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, resultBuffer, sizeof (resultBuffer))) {
 		origin.Altitude = strtod(resultBuffer, &endptr);
 		if (endptr == resultBuffer) {
 			LogMessage(LOG_LEVEL_ERROR, "OriginAltitude badly formatted");
@@ -2926,7 +2928,7 @@ ReadWriteAccess_t DataDictionaryInitOrigin(){
 	}
 
 	if (retval != PARAMETER_NOTFOUND) {
-		for(int i = 0; i < numberOfObjects; ++i){
+		for (int i = 0; i < numberOfObjects; ++i) {
 			objectDataMemory[i].origin = origin;
 		}
 	}

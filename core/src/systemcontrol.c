@@ -1417,13 +1417,13 @@ ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t 
 
 	readResult = recv(socket, recvBuffer + bytesInBuffer, sizeof (recvBuffer) - bytesInBuffer, MSG_DONTWAIT);
 	if (readResult > 0) {
-		bytesInBuffer += (size_t) readResult;
+		bytesInBuffer += (size_t)readResult;
 	}
 
 	if (bytesInBuffer > 0) {
 		if ((endOfMessage = strstr(recvBuffer, endOfMessagePattern)) != NULL) {
 			endOfMessage += sizeof (endOfMessagePattern) - 1;
-			messageLength = (size_t) (endOfMessage - recvBuffer);
+			messageLength = (size_t)(endOfMessage - recvBuffer);
 		}
 		else {
 			messageLength = 0;
@@ -1984,7 +1984,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 	U32 object_transmitter_ids[MAX_OBJECTS];
 	U32 numberOfObjects;
 	GeoPosition origin;
-	char* endptr;
+	char *endptr;
 
 	if (parameterName == NULL || newValue == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Set server parameter null pointer error");
@@ -2004,14 +2004,15 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_LATITUDE:
 		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR,"Data dictionary number of objects read error"
+			LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error"
 					   "- cannot set origin on objects");
 			break;
 		}
 
-		if ((result = DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR, "Data dictionary TransmitterID read error"
-					   "- cannot set origin on objects");
+		if ((result =
+			 DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Data dictionary TransmitterID read error" "- cannot set origin on objects");
 			break;
 		}
 
@@ -2022,7 +2023,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 			else {
 				if (DataDictionaryGetOrigin(object_transmitter_ids[i], &origin) != READ_OK) {
 					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin read error"
-								"- cannot read the origin for object %u", object_transmitter_ids[i]);
+							   "- cannot read the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
 					continue;
 				}
@@ -2034,7 +2035,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 				}
 				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
 					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
-												"- cannot set the origin for object %u", object_transmitter_ids[i]);
+							   "- cannot set the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
 					break;
 				}
@@ -2046,14 +2047,15 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
 		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR,"Data dictionary number of objects read error"
+			LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error"
 					   "- cannot set origin on objects");
 			break;
 		}
 
-		if ((result = DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR, "Data dictionary TransmitterID read error"
-					   "- cannot set origin on objects");
+		if ((result =
+			 DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Data dictionary TransmitterID read error" "- cannot set origin on objects");
 			break;
 		}
 
@@ -2064,7 +2066,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 			else {
 				if (DataDictionaryGetOrigin(object_transmitter_ids[i], &origin) != READ_OK) {
 					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin read error"
-								"- cannot read the origin for object %u", object_transmitter_ids[i]);
+							   "- cannot read the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
 					continue;
 				}
@@ -2074,9 +2076,9 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 					result = UNDEFINED;
 					break;
 				}
-				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK){
+				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
 					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
-												"- cannot set the origin for object %u", object_transmitter_ids[i]);
+							   "- cannot set the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
 					break;
 				}
@@ -2088,14 +2090,15 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE:
 		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR,"Data dictionary number of objects read error"
+			LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error"
 					   "- cannot set origin on objects");
 			break;
 		}
 
-		if ((result = DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR, "Data dictionary TransmitterID read error"
-					   "- cannot set origin on objects");
+		if ((result =
+			 DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Data dictionary TransmitterID read error" "- cannot set origin on objects");
 			break;
 		}
 
@@ -2106,7 +2109,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 			else {
 				if (DataDictionaryGetOrigin(object_transmitter_ids[i], &origin) != READ_OK) {
 					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin read error"
-								"- cannot read the origin for object %u", object_transmitter_ids[i]);
+							   "- cannot read the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
 					continue;
 				}
@@ -2116,9 +2119,9 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 					result = UNDEFINED;
 					break;
 				}
-				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK){
+				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
 					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
-												"- cannot set the origin for object %u", object_transmitter_ids[i]);
+							   "- cannot set the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
 					break;
 				}
@@ -2826,7 +2829,7 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
  * \param addr Address struct pointer for RVSS socket
  * \return 0 on success, -1 otherwise
  */
-int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in * addr) {
+int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr) {
 	uint32_t messageLength = 0;
 	uint32_t RVSSChannel = RVSS_MONITOR_CHANNEL;
 	char RVSSData[MAX_MONR_STRING_LENGTH];
@@ -2891,7 +2894,7 @@ int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr
 				retval = -1;
 			}
 			else if (UtilObjectDataToString(monitorData, monitorDataString,
-											sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) ==
+											sizeof (RVSSData) - (size_t)(monitorDataString - RVSSData)) ==
 					 -1) {
 				LogMessage(LOG_LEVEL_ERROR, "Error building object data string");
 				retval = -1;

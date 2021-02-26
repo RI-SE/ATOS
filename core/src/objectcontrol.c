@@ -931,6 +931,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					LogMessage(LOG_LEVEL_DEBUG, "Initializing object data");
 					ObjectDataType objectData;
 					GeoPosition origin;
+
 					for (iIndex = 0; iIndex < nbr_objects; iIndex++) {
 						LogMessage(LOG_LEVEL_DEBUG, "Configuring object data for object %u",
 								   object_transmitter_ids[iIndex]);
@@ -1332,7 +1333,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 
 	totalPrintedBytes += printedBytes;
 	messageBufferPosition += printedBytes;
-	remainingBufferSpace -= (size_t) printedBytes;
+	remainingBufferSpace -= (size_t)printedBytes;
 
 	read = getline(&line, &len, fd);
 	for (unsigned int i = 0; i < fileHeader.numberOfLines && read != -1; ++i, read = getline(&line, &len, fd)) {
@@ -1392,7 +1393,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 				}
 				messageBufferPosition += printedBytes;
 				totalPrintedBytes += printedBytes;
-				remainingBufferSpace -= (size_t) printedBytes;
+				remainingBufferSpace -= (size_t)printedBytes;
 			}
 			else {
 				// TODO how to terminate an ISO message when an error has occurred?
@@ -1404,7 +1405,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 		else {
 			totalPrintedBytes += printedBytes;
 			messageBufferPosition += printedBytes;
-			remainingBufferSpace -= (size_t) printedBytes;
+			remainingBufferSpace -= (size_t)printedBytes;
 		}
 	}
 
@@ -1424,7 +1425,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 			}
 			messageBufferPosition += printedBytes;
 			totalPrintedBytes += printedBytes;
-			remainingBufferSpace -= (size_t) printedBytes;
+			remainingBufferSpace -= (size_t)printedBytes;
 		}
 		else {
 			// TODO how to terminate an ISO message when an error has occurred?
@@ -1436,7 +1437,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 	else {
 		totalPrintedBytes += printedBytes;
 		messageBufferPosition += printedBytes;
-		remainingBufferSpace -= (size_t) printedBytes;
+		remainingBufferSpace -= (size_t)printedBytes;
 	}
 
 	UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket, debug);
