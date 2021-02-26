@@ -2032,7 +2032,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 					result = UNDEFINED;
 					break;
 				}
-				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK){
+				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
 					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
 												"- cannot set the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
