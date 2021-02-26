@@ -1910,12 +1910,12 @@ int checkObjectConnections(ObjectConnection objectConnections[], const struct ti
 
 		timersub(&currentTime, &lastDataUpdate, &timeSinceLastMonitorData);
 		if (timercmp(&timeSinceLastMonitorData, &monitorTimeout, >)) {
-			//LogMessage(LOG_LEVEL_WARNING,
-			//		   "MONR timeout (ID %u):\n\ttimeout time %d s %d µs\n\tlast message %d s %d µs\n\tcurrent time %d s %d µs",
-			//		   transmitterIDs[i], monitorTimeout.tv_sec,
-			//		   monitorTimeout.tv_usec, lastDataUpdate.tv_sec,
-			//		   lastDataUpdate.tv_usec, currentTime.tv_sec, currentTime.tv_usec);
-			//disconnected = 1;
+			LogMessage(LOG_LEVEL_WARNING,
+					   "MONR timeout (ID %u):\n\ttimeout time %d s %d µs\n\tlast message %d s %d µs\n\tcurrent time %d s %d µs",
+					   transmitterIDs[i], monitorTimeout.tv_sec,
+					   monitorTimeout.tv_usec, lastDataUpdate.tv_sec,
+					   lastDataUpdate.tv_usec, currentTime.tv_sec, currentTime.tv_usec);
+			disconnected = 1;
 		}
 
 		if (disconnected) {

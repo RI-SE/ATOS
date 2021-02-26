@@ -83,10 +83,8 @@ size_t DirectControl::handleRDCAMessage(
 	RequestControlActionType recvMessage;
 	struct timeval currentTime;
 	TimeSetToCurrentSystemTime(&currentTime);
-	ssize_t bytesRead = decodeRDCAMessage(byteData.data(), &recvMessage, byteData.size(), currentTime, true);
+	ssize_t bytesRead = decodeRDCAMessage(byteData.data(), &recvMessage, byteData.size(), currentTime, false);
 	if (bytesRead >= 0) {
-
-		LogPrint("transmitterid %lu",recvMessage.executingID);
 		byteData.erase(byteData.begin(), byteData.begin() + bytesRead);
 		DataDictionarySetRequestedControlAction(recvMessage.executingID, &recvMessage);
 		return static_cast<size_t>(bytesRead);
