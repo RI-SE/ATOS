@@ -2699,12 +2699,12 @@ ReadWriteAccess_t DataDictionarySetRequestedControlAction(const uint32_t transmi
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
 		return UNDEFINED;
 	}
-
+							
 	result = PARAMETER_NOTFOUND;
 	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
-
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (transmitterID == objectDataMemory[i].ClientID) {
+			
 			objectDataMemory[i].requestedControlAction = *reqCtrlAction;
 			result = WRITE_OK;
 		}
@@ -2737,13 +2737,16 @@ ReadWriteAccess_t DataDictionaryGetRequestedControlAction(const uint32_t transmi
 
 	result = PARAMETER_NOTFOUND;
 	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
-
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (transmitterID == objectDataMemory[i].ClientID) {
 			*reqCtrlAction = objectDataMemory[i].requestedControlAction;
 			result = READ_OK;
 		}
 	}
+	//printf("Grad %f\n",reqCtrlAction->steeringAction.rad);
+	//printf("Gtime %d\n",reqCtrlAction->dataTimestamp.tv_sec);
+	//printf("Gexc_id %lu\n",reqCtrlAction->executingID);
+	//printf("Gspeed %f\n",reqCtrlAction->speedAction.m_s);
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 	return result;
 }

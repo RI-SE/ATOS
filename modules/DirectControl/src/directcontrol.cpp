@@ -37,7 +37,9 @@ void DirectControl::readSocketData() {
 		// TODO set up TCP connection (wait until connected before continue)
 		LogMessage(LOG_LEVEL_INFO, "Awaiting TCP connection...");
 		tcpHandler.CreateServer();
-
+		if (tcpHandler.isConnected()){
+			LogMessage(LOG_LEVEL_INFO, "Connected");
+		}
 		while (!this->quit && tcpHandler.isConnected()) {
 			data.resize(TCP_BUFFER_SIZE);
 			std::fill(data.begin(), data.end(), 0);
@@ -81,8 +83,10 @@ size_t DirectControl::handleRDCAMessage(
 	RequestControlActionType recvMessage;
 	struct timeval currentTime;
 	TimeSetToCurrentSystemTime(&currentTime);
-	ssize_t bytesRead = decodeRDCAMessage(byteData.data(), &recvMessage, byteData.size(), currentTime, false);
+	ssize_t bytesRead = decodeRDCAMessage(byteData.data(), &recvMessage, byteData.size(), currentTime, true);
 	if (bytesRead >= 0) {
+
+		LogPrint("transmitterid %lu",recvMessage.executingID);
 		byteData.erase(byteData.begin(), byteData.begin() + bytesRead);
 		DataDictionarySetRequestedControlAction(recvMessage.executingID, &recvMessage);
 		return static_cast<size_t>(bytesRead);
