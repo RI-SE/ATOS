@@ -2780,7 +2780,7 @@ ReadWriteAccess_t DataDictionaryResetRequestedControlAction(const uint32_t trans
 	}
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 	return result;
-	
+}
 /**
  * \brief DataDictionarySetOrigin Sets the test origin for one or more objects.
  * \param transmitterID ID of the object to set origin for. If set to null, all objects' origins will be modified.
