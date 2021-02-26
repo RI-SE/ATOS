@@ -1071,7 +1071,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (CurrentInputArgCount == CommandArgCount) {
 				if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTECTRL) {
 					memset(pcBuffer, 0, sizeof (pcBuffer));
-					RemoteControlCommandType rcCommand;
+					ManoeuvreCommandType rcCommand;
 
 					if (inet_pton(AF_INET, SystemControlArgument[0], &rcCommand.objectIP) != -1) {
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;

@@ -168,6 +168,11 @@ ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosit
 ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t* transmitterID, const GeoPosition * origin);
 ReadWriteAccess_t DataDictionaryInitOrigin();
 
+ReadWriteAccess_t DataDictionarySetRequestedControlAction(const uint32_t transmitterID, const RequestControlActionType* reqCtrlAction);
+ReadWriteAccess_t DataDictionaryGetRequestedControlAction(const uint32_t transmitterID, RequestControlActionType* reqCtrlAction);
+ReadWriteAccess_t DataDictionaryResetRequestedControlAction(const uint32_t transmitterID);
+
+
 #ifdef __cplusplus
 }
 #endif
