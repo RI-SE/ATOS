@@ -8,10 +8,17 @@ project(MaestroCommon LANGUAGES C CXX)
 
 set(MAESTRO_COMMON_TARGET ${TARGET_NAMESPACE}${PROJECT_NAME})
 
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+set(EIGEN_LIBRARY Eigen3::Eigen)
+
 include(GNUInstallDirs)
 
 add_library(${MAESTRO_COMMON_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/trajectory.cpp
+)
+
+target_link_libraries(${MAESTRO_COMMON_TARGET}
+	${EIGEN_LIBRARY}
 )
 
 target_include_directories(${MAESTRO_COMMON_TARGET} PUBLIC

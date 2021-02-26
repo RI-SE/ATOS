@@ -1,5 +1,5 @@
 #include <fstream>
-
+#include <Eigen/Eigen>
 #include "regexpatterns.hpp"
 #include "logging.h"
 #include "trajectory.hpp"
@@ -127,3 +127,13 @@ CartesianPosition Trajectory::TrajectoryPoint::getCartesianPosition() const {
 	retval.isPositionValid = true;
     return retval;
 }
+
+
+Trajectory Trajectory::relativeTo(
+		const Trajectory &other) const {
+	using namespace Eigen;
+	Trajectory relative(*this);
+	std::vector<double> aa = this->getZCoords();
+	return Trajectory();
+}
+
