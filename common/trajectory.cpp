@@ -132,8 +132,29 @@ CartesianPosition Trajectory::TrajectoryPoint::getCartesianPosition() const {
 Trajectory Trajectory::relativeTo(
 		const Trajectory &other) const {
 	using namespace Eigen;
+	// TODO check equal length with other
 	Trajectory relative(*this);
-	std::vector<double> aa = this->getZCoords();
-	return Trajectory();
+
+	// Position relative to another trajectory is simple subtraction
+	std::vector<double> relativePosition;
+	std::transform(points.begin(), points.end(), other.points.begin(),
+				   std::back_inserter(relativePosition),
+				   [](const TrajectoryPoint& p1, const TrajectoryPoint& p2) {
+		return p1.getXCoord() - p2.getXCoord();
+	});
+	//relative.setXCoords(relativePosition);
+	std::transform(points.begin(), points.end(), other.points.begin(),
+				   relativePosition.begin(),
+				   [](const TrajectoryPoint& p1, const TrajectoryPoint& p2) {
+		return p1.getYCoord() - p2.getYCoord();
+	});
+	//relative.setYCoords(relativePosition);
+	std::transform(points.begin(), points.end(), other.points.begin(),
+				   relativePosition.begin(),
+				   [](const TrajectoryPoint& p1, const TrajectoryPoint& p2) {
+		return p1.getZCoord() - p2.getZCoord();
+	});
+	//relative.setZCoords(relativePosition);
+	return relative;
 }
 
