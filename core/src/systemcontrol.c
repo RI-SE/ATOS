@@ -1978,88 +1978,218 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 
 
 
-I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug) {
+I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newValue, U8 debug) {
 
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
+	U32 object_transmitter_ids[MAX_OBJECTS];
+	U32 numberOfObjects;
+	GeoPosition origin;
+	char *endptr;
 
-	if (Debug)
-		LogPrint("SetServerParameter: %s = %s", ParameterName, NewValue);
+	if (parameterName == NULL || newValue == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Set server parameter null pointer error");
+		return -1;
+	}
+
+	if (debug) {
+		LogPrint("SetServerParameter: %s = %s", parameterName, newValue);
+	}
 
 	enum ConfigurationFileParameter parameter =
-		UtilParseConfigurationParameter(ParameterName, strlen(ParameterName) + 1);
+		UtilParseConfigurationParameter(parameterName, strlen(parameterName) + 1);
 
 	switch (parameter) {
 	case CONFIGURATION_PARAMETER_SCENARIO_NAME:
-		result = DataDictionarySetScenarioName(NewValue, strlen(NewValue) + 1);
+		result = DataDictionarySetScenarioName(newValue, strlen(newValue) + 1);
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_LATITUDE:
-		result = DataDictionarySetOriginLatitudeDbl(GSD, NewValue);
+		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error"
+					   "- cannot set origin on objects");
+			break;
+		}
+
+		if ((result =
+			 DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Data dictionary TransmitterID read error" "- cannot set origin on objects");
+			break;
+		}
+
+		for (unsigned int i = 0; i < numberOfObjects; ++i) {
+			if (object_transmitter_ids[i] == 0) {
+				continue;
+			}
+			else {
+				if (DataDictionaryGetOrigin(object_transmitter_ids[i], &origin) != READ_OK) {
+					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin read error"
+							   "- cannot read the origin for object %u", object_transmitter_ids[i]);
+					result = UNDEFINED;
+					continue;
+				}
+				origin.Latitude = strtod(newValue, &endptr);
+				if (endptr == newValue) {
+					LogMessage(LOG_LEVEL_ERROR, "Unable to convert origin setting %s to double", newValue);
+					result = UNDEFINED;
+					break;
+				}
+				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
+					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
+							   "- cannot set the origin for object %u", object_transmitter_ids[i]);
+					result = UNDEFINED;
+					break;
+				}
+			}
+		}
+
+		// TODO remove
+		result = DataDictionarySetOriginLatitudeDbl(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
-		result = DataDictionarySetOriginLongitudeDbl(GSD, NewValue);
+		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error"
+					   "- cannot set origin on objects");
+			break;
+		}
+
+		if ((result =
+			 DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Data dictionary TransmitterID read error" "- cannot set origin on objects");
+			break;
+		}
+
+		for (unsigned int i = 0; i < numberOfObjects; ++i) {
+			if (object_transmitter_ids[i] == 0) {
+				continue;
+			}
+			else {
+				if (DataDictionaryGetOrigin(object_transmitter_ids[i], &origin) != READ_OK) {
+					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin read error"
+							   "- cannot read the origin for object %u", object_transmitter_ids[i]);
+					result = UNDEFINED;
+					continue;
+				}
+				origin.Longitude = strtod(newValue, &endptr);
+				if (endptr == newValue) {
+					LogMessage(LOG_LEVEL_ERROR, "Unable to convert origin setting %s to double", newValue);
+					result = UNDEFINED;
+					break;
+				}
+				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
+					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
+							   "- cannot set the origin for object %u", object_transmitter_ids[i]);
+					result = UNDEFINED;
+					break;
+				}
+			}
+		}
+
+		// TODO remove
+		result = DataDictionarySetOriginLongitudeDbl(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE:
-		result = DataDictionarySetOriginAltitudeDbl(GSD, NewValue);
+		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error"
+					   "- cannot set origin on objects");
+			break;
+		}
+
+		if ((result =
+			 DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Data dictionary TransmitterID read error" "- cannot set origin on objects");
+			break;
+		}
+
+		for (unsigned int i = 0; i < numberOfObjects; ++i) {
+			if (object_transmitter_ids[i] == 0) {
+				continue;
+			}
+			else {
+				if (DataDictionaryGetOrigin(object_transmitter_ids[i], &origin) != READ_OK) {
+					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin read error"
+							   "- cannot read the origin for object %u", object_transmitter_ids[i]);
+					result = UNDEFINED;
+					continue;
+				}
+				origin.Altitude = strtod(newValue, &endptr);
+				if (endptr == newValue) {
+					LogMessage(LOG_LEVEL_ERROR, "Unable to convert origin setting %s to double", newValue);
+					result = UNDEFINED;
+					break;
+				}
+				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
+					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
+							   "- cannot set the origin for object %u", object_transmitter_ids[i]);
+					result = UNDEFINED;
+					break;
+				}
+			}
+		}
+
+		// TODO remove
+		result = DataDictionarySetOriginAltitudeDbl(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
-		result = DataDictionarySetVisualizationServerU32(GSD, NewValue);
+		result = DataDictionarySetVisualizationServerU32(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
-		result = DataDictionarySetASPMaxTimeDiffDbl(GSD, NewValue);
+		result = DataDictionarySetASPMaxTimeDiffDbl(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF:
-		result = DataDictionarySetASPMaxTrajDiffDbl(GSD, NewValue);
+		result = DataDictionarySetASPMaxTrajDiffDbl(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT:
-		result = DataDictionarySetASPStepBackCountU32(GSD, NewValue);
+		result = DataDictionarySetASPStepBackCountU32(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL:
-		result = DataDictionarySetASPFilterLevelDbl(GSD, NewValue);
+		result = DataDictionarySetASPFilterLevelDbl(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME:
-		result = DataDictionarySetASPMaxDeltaTimeDbl(GSD, NewValue);
+		result = DataDictionarySetASPMaxDeltaTimeDbl(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_TIME_SERVER_IP:
-		result = DataDictionarySetTimeServerIPU32(GSD, NewValue);
+		result = DataDictionarySetTimeServerIPU32(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_TIME_SERVER_PORT:
-		result = DataDictionarySetTimeServerPortU16(GSD, NewValue);
+		result = DataDictionarySetTimeServerPortU16(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_IP:
-		result = DataDictionarySetSimulatorIPU32(GSD, NewValue);
+		result = DataDictionarySetSimulatorIPU32(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP:
-		result = DataDictionarySetSimulatorTCPPortU16(GSD, NewValue);
+		result = DataDictionarySetSimulatorTCPPortU16(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP:
-		result = DataDictionarySetSimulatorUDPPortU16(GSD, NewValue);
+		result = DataDictionarySetSimulatorUDPPortU16(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_MODE:
-		result = DataDictionarySetSimulatorModeU8(GSD, NewValue);
+		result = DataDictionarySetSimulatorModeU8(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_VOIL_RECEIVERS:
-		result = DataDictionarySetVOILReceiversC8(GSD, NewValue);
+		result = DataDictionarySetVOILReceiversC8(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_DTM_RECEIVERS:
-		result = DataDictionarySetDTMReceiversC8(GSD, NewValue);
+		result = DataDictionarySetDTMReceiversC8(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP:
-		result = DataDictionarySetExternalSupervisorIPU32(GSD, NewValue);
+		result = DataDictionarySetExternalSupervisorIPU32(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP:
-		result = DataDictionarySetSupervisorTCPPortU16(GSD, NewValue);
+		result = DataDictionarySetSupervisorTCPPortU16(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
-		result = DataDictionarySetRVSSConfigU32(GSD, (uint32_t) strtoul(NewValue, NULL, 10));
+		result = DataDictionarySetRVSSConfigU32(GSD, (uint32_t) strtoul(newValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_RATE:
-		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(NewValue, NULL, 10));
+		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(newValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_MISC_DATA:
-		result = DataDictionarySetMiscDataC8(GSD, NewValue);
+		result = DataDictionarySetMiscDataC8(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_INVALID:
-		LogMessage(LOG_LEVEL_WARNING, "Attempted to set invalid parameter %s", ParameterName);
+		LogMessage(LOG_LEVEL_WARNING, "Attempted to set invalid parameter %s", parameterName);
 	default:
 		LogMessage(LOG_LEVEL_ERROR, "No action is implemented for setting parameter %s");
 	}
