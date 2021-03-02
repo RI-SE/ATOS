@@ -2678,9 +2678,9 @@ ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitter
 	return result;
 }
 
+
 ReadWriteAccess_t DataDictionarySetRequestedControlAction(const uint32_t transmitterID,
 														  const RequestControlActionType * reqCtrlAction) {
-
 	ReadWriteAccess_t result;
 
 	if (objectDataMemory == NULL) {
@@ -2783,4 +2783,157 @@ ReadWriteAccess_t DataDictionaryResetRequestedControlAction(const uint32_t trans
 	}
 	objectDataMemory = releaseSharedMemory(objectDataMemory);
 	return result;
+}
+
+/**
+ * \brief DataDictionarySetOrigin Sets the test origin for one or more objects.
+ * \param transmitterID ID of the object to set origin for. If set to null, all objects' origins will be modified.
+ * \param origin Geoposition data.
+ * \return ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t * transmitterID, const GeoPosition * origin) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (origin == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (transmitterID != NULL && transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID != NULL) {
+			if (objectDataMemory[i].ClientID == *transmitterID) {
+				objectDataMemory[i].origin = *origin;
+				result = WRITE_OK;
+			}
+		}
+		else {
+			objectDataMemory[i].origin = *origin;
+			result = WRITE_OK;
+		}
+	}
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+/**
+ * \brief DataDictionaryGetOrigin Read origin setting for specified object. Shared memory must have been
+ *			initialized prior to this function call.
+ * \param transmitterID Transmitter ID of object for which origin is requested.
+ * \param origin Return variable pointer
+ * \return ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosition * origin) {
+
+	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
+
+	if (origin == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (objectDataMemory[i].ClientID == transmitterID) {
+			memcpy(origin, &objectDataMemory[i].origin, sizeof (GeoPosition));
+			result = READ_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
+
+/**
+ * \brief DataDictionaryInitOrigin Read config file and add the origin in .conf to all the objects that are created
+ * \return ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryInitOrigin() {
+
+	char resultBuffer[100];
+	char *endptr = NULL;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+	ReadWriteAccess_t retval = WRITE_OK;
+
+	// should it be write or read Iam writeing to memory but also reading from config file?
+	GeoPosition origin;
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
+									   resultBuffer, sizeof (resultBuffer)) > 0) {
+		origin.Longitude = strtod(resultBuffer, &endptr);
+		if (endptr == resultBuffer) {
+			LogMessage(LOG_LEVEL_ERROR, "OriginLongitude badly formatted");
+			retval = PARAMETER_NOTFOUND;
+		}
+		memset(resultBuffer, 0, sizeof (resultBuffer));
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "OriginLongitude not found!");
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
+									   resultBuffer, sizeof (resultBuffer)) > 0) {
+		origin.Latitude = strtod(resultBuffer, &endptr);
+		if (endptr == resultBuffer) {
+			LogMessage(LOG_LEVEL_ERROR, "OriginLongitude badly formatted");
+			retval = PARAMETER_NOTFOUND;
+		}
+		memset(resultBuffer, 0, sizeof (resultBuffer));
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "OriginLatitude not found!");
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, resultBuffer, sizeof (resultBuffer))) {
+		origin.Altitude = strtod(resultBuffer, &endptr);
+		if (endptr == resultBuffer) {
+			LogMessage(LOG_LEVEL_ERROR, "OriginAltitude badly formatted");
+			retval = PARAMETER_NOTFOUND;
+		}
+		memset(resultBuffer, 0, sizeof (resultBuffer));
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "OriginAltitude not found!");
+	}
+
+	if (retval != PARAMETER_NOTFOUND) {
+		for (int i = 0; i < numberOfObjects; ++i) {
+			objectDataMemory[i].origin = origin;
+		}
+	}
+	return retval;
 }

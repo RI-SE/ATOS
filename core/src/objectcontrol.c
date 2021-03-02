@@ -955,6 +955,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					// Enable all objects at INIT
 					LogMessage(LOG_LEVEL_DEBUG, "Initializing object data");
 					ObjectDataType objectData;
+					GeoPosition origin;
 
 					for (iIndex = 0; iIndex < nbr_objects; iIndex++) {
 						LogMessage(LOG_LEVEL_DEBUG, "Configuring object data for object %u",
@@ -965,7 +966,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						objectData.lastPositionUpdate.tv_sec = 0;
 						objectData.lastPositionUpdate.tv_usec = 0;
 						objectData.propertiesReceived = 0;
+						objectData.origin = origin;
+
+						//TODO read origin from object property file
 						if (DataDictionarySetObjectData(&objectData) != WRITE_OK) {
+							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
+							initSuccessful = false;
+						}
+						if (DataDictionaryInitOrigin(&objectData) != WRITE_OK) {
 							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
 							initSuccessful = false;
 						}
@@ -2110,7 +2118,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 		strcpy(objectFilePath, objectPathDir);
 		strcat(objectFilePath, directory_entry->d_name);
 		memset(object_traj_file[*nbr_objects], 0, MAX_FILE_PATH);
-
+		//TODO: add so you can add origin on objects in object file
 		// Get IP setting
 		if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFilePath,
 									 sizeof (objectFilePath), objectSetting, sizeof (objectSetting)) == -1) {
