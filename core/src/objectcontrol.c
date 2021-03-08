@@ -637,8 +637,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &reqDCAction)
 						== READ_OK) {
 						C8 DCMMbuffer[35]; 
-						if(timerisset(&reqDCAction.dataTimestamp)) {	
-							timersub(&currentTime, &reqDCAction.dataTimestamp, &requestAge);
+						//if(timerisset(&reqDCAction.dataTimestamp)) {	
+							//timersub(&currentTime, &reqDCAction.dataTimestamp, &requestAge);
 							//if (timerpos(&requestAge) && requestAge.tv_sec == 0
 							//	&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
 							if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
@@ -710,10 +710,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							//			   "Ignoring remote control command - age is %ld s %ld µs",
 							//			   requestAge.tv_sec, requestAge.tv_usec);
 							//}
-						}
-						else {
-							LogMessage(LOG_LEVEL_ERROR, "Failed to set time");
-						}
+						//}
+						//else {
+						//	LogMessage(LOG_LEVEL_ERROR, "Failed to set time");
+						//}
 					}
 					else {
 						LogMessage(LOG_LEVEL_ERROR, "Failed to read from data dictionary");
