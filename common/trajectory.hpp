@@ -7,6 +7,7 @@
 #include <exception>
 #include <regex>
 #include <functional>
+#include <Eigen/Dense>
 
 #include "util.h"
 
@@ -19,144 +20,85 @@ public:
             CONTROLLED_BY_VEHICLE
         } ModeType;
 
-        TrajectoryPoint() = default;
+		TrajectoryPoint() {
+			position[2] = std::numeric_limits<double>::quiet_NaN();
+			velocity[0] = std::numeric_limits<double>::quiet_NaN();
+			velocity[1] = std::numeric_limits<double>::quiet_NaN();
+			acceleration[0] = std::numeric_limits<double>::quiet_NaN();
+			acceleration[1] = std::numeric_limits<double>::quiet_NaN();
+		}
 
-        ~TrajectoryPoint() {
-            delete zCoord;
-            delete longitudinalVelocity;
-            delete lateralVelocity;
-            delete longitudinalAcceleration;
-            delete lateralAcceleration;
-            zCoord = nullptr;
-            longitudinalVelocity = nullptr;
-            lateralVelocity = nullptr;
-            longitudinalAcceleration = nullptr;
-            lateralAcceleration = nullptr;
-        }
+		~TrajectoryPoint() { }
 
-        TrajectoryPoint(const TrajectoryPoint& other) {
-            this->setTime(other.getTime());
-            this->setXCoord(other.getXCoord());
-            this->setYCoord(other.getYCoord());
-            try {
-                this->setZCoord(other.getZCoord());
-            } catch (std::out_of_range) {
-                this->zCoord = nullptr;
-            }
-            this->setHeading(other.getHeading());
-            try {
-                this->setLongitudinalVelocity(other.getLongitudinalVelocity());
-            } catch (std::out_of_range) {
-                this->longitudinalVelocity = nullptr;
-            }
-            try {
-                this->setLateralVelocity(other.getLateralVelocity());
-            } catch (std::out_of_range) {
-                this->lateralVelocity = nullptr;
-            }
-            try {
-                this->setLongitudinalAcceleration(other.getLongitudinalAcceleration());
-            } catch (std::out_of_range) {
-                this->longitudinalAcceleration = nullptr;
-            }
-            try {
-                this->setLateralAcceleration(other.getLateralAcceleration());
-            } catch (std::out_of_range) {
-                this->lateralAcceleration = nullptr;
-            }
-            this->setCurvature(other.getCurvature());
-            this->setMode(other.getMode());
-        }
+		TrajectoryPoint relativeTo(const TrajectoryPoint& other) const;
 
+		void setTime(const double& value) { time = value; }
+		void setPosition(const Eigen::Vector3d& value) { position = value; }
+		void setXCoord(const double& value) { position[0] = value; }
+		void setYCoord(const double& value) { position[1] = value; }
+		void setZCoord(const double& value) { position[2] = value; }
+		void setHeading(const double& value) { heading = value; }
+		void setVelocity(const Eigen::Vector2d& value) { velocity = value; }
+		void setLongitudinalVelocity(const double& value) { velocity[0] = value; }
+		void setLateralVelocity(const double& value) { velocity[1] = value; }
+		void setAcceleration(const Eigen::Vector2d& value) { acceleration = value; }
+		void setLongitudinalAcceleration(const double& value) { acceleration[0] = value; }
+		void setLateralAcceleration(const double& value) { acceleration[1] = value; }
+		void setCurvature(const double& value) { curvature = value; }
+		void setMode(const ModeType& value) { mode = value; }
 
-        void setTime(double value) { this->time = value; }
-        void setXCoord(double value) { this->xCoord = value; }
-        void setYCoord(double value) { this->yCoord = value; }
-        void setZCoord(double value) {
-            if (this->zCoord == nullptr)
-                this->zCoord = new double(value);
-            else
-                *this->zCoord = value;
-        }
-        void setHeading(double value) {this->heading = value; }
-        void setLongitudinalVelocity(double value) {
-            if (this->longitudinalVelocity == nullptr)
-                this->longitudinalVelocity = new double(value);
-            else
-                *this->longitudinalVelocity = value;
-        }
-        void setLateralVelocity(double value) {
-            if (this->lateralVelocity == nullptr)
-                this->lateralVelocity = new double(value);
-            else
-                *this->lateralVelocity = value;
-        }
-        void setLongitudinalAcceleration(double value) {
-            if (this->longitudinalAcceleration == nullptr)
-                this->longitudinalAcceleration = new double(value);
-            else
-                *this->longitudinalAcceleration = value;
-        }
-        void setLateralAcceleration(double value) {
-            if (this->lateralAcceleration == nullptr)
-                this->lateralAcceleration = new double(value);
-            else
-                *this->lateralAcceleration = value;
-        }
-        void setCurvature(double value) { this->curvature = value; }
-        void setMode(ModeType value) { this->mode = value; }
-
-        double getTime() const { return this->time; }
-        double getXCoord() const { return this->xCoord; }
-        double getYCoord() const { return this->yCoord; }
+		double getTime() const { return time; }
+		Eigen::Vector3d getPosition() const { return position; }
+		double getXCoord() const { return position[0]; }
+		double getYCoord() const { return position[1]; }
         double getZCoord() const {
-            if (this->zCoord == nullptr)
+			if (std::isnan(position[2]))
                 throw std::out_of_range("Uninitialized member z");
             else
-                return *this->zCoord;
+				return position[2];
         }
-        double getHeading() const { return this->heading; }
+		double getHeading() const { return heading; }
 		CartesianPosition getCartesianPosition() const;
+		Eigen::Vector2d getVelocity() const { return velocity; }
         double getLongitudinalVelocity() const {
-            if (this->longitudinalVelocity == nullptr)
+			if (std::isnan(velocity[0]))
                 throw std::out_of_range("Uninitialized member longitudinal velocity");
             else
-                return *this->longitudinalVelocity;
+				return velocity[0];
         }
         double getLateralVelocity() const {
-            if (this->lateralVelocity == nullptr)
+			if (std::isnan(velocity[1]))
                 throw std::out_of_range("Uninitialized member lateral velocity");
             else
-                return *this->lateralVelocity;
+				return velocity[1];
         }
+		Eigen::Vector2d getAcceleration() const { return acceleration; }
         double getLongitudinalAcceleration() const {
-            if (this->longitudinalAcceleration == nullptr)
+			if (std::isnan(acceleration[0]))
                 throw std::out_of_range("Uninitialized member longitudinal acceleration");
             else
-                return *this->longitudinalAcceleration;
+				return acceleration[0];
         }
         double getLateralAcceleration() const {
-            if (this->lateralAcceleration == nullptr)
+			if (std::isnan(acceleration[1]))
                 throw std::out_of_range("Uninitialized member lateral acceleration");
             else
-                return *this->lateralAcceleration;
+				return acceleration[1];
         }
-        double getCurvature() const { return this->yCoord; }
+		double getCurvature() const { return this->curvature; }
         ModeType getMode() const { return this->mode; }
 
     private:
         double time = 0;
-        double xCoord = 0;
-        double yCoord = 0;
-        double *zCoord = nullptr;
-        double heading = 0;
-        double *longitudinalVelocity = nullptr;
-        double *lateralVelocity = nullptr;
-        double *longitudinalAcceleration = nullptr;
-        double *lateralAcceleration = nullptr;
+		Eigen::Vector3d position; //! x, y, z [m]
+		double heading = 0;		  //! heading from north? [rad]
+		Eigen::Vector2d velocity; //! Vehicle frame, x forward [m/s]
+		Eigen::Vector2d acceleration; //! Vehicle frame, x forward [m/s]
         double curvature = 0;
         ModeType mode = CONTROLLED_BY_VEHICLE;
     };
+	typedef std::vector<TrajectoryPoint>::iterator iterator;
+	typedef std::vector<TrajectoryPoint>::const_iterator const_iterator;
 
     Trajectory() = default;
     ~Trajectory() { points.clear(); }
@@ -168,16 +110,18 @@ public:
 
 	void initializeFromFile(const std::string& fileName);
 	Trajectory relativeTo(const Trajectory& other) const;
-
-
+	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
 
 	std::vector<double> getTimes() const { return collect(std::mem_fn(&TrajectoryPoint::getTime)); }
+	std::vector<Eigen::Vector3d> getPositions() const { return collect(std::mem_fn(&TrajectoryPoint::getPosition)); }
 	std::vector<double> getXCoords() const { return collect(std::mem_fn(&TrajectoryPoint::getXCoord)); }
 	std::vector<double> getYCoords() const { return collect(std::mem_fn(&TrajectoryPoint::getYCoord)); }
 	std::vector<double> getZCoords() const { return collect(std::mem_fn(&TrajectoryPoint::getZCoord)); }
 	std::vector<double> getHeadings() const { return collect(std::mem_fn(&TrajectoryPoint::getHeading)); }
+	std::vector<Eigen::Vector2d> getVelocities() const { return collect(std::mem_fn(&TrajectoryPoint::getVelocity)); }
 	std::vector<double> getLongitudinalVelocities() const { return collect(std::mem_fn(&TrajectoryPoint::getLongitudinalVelocity)); }
 	std::vector<double> getLateralVelocities() const { return collect(std::mem_fn(&TrajectoryPoint::getLateralVelocity)); }
+	std::vector<Eigen::Vector2d> getAccelerations() const { return collect(std::mem_fn(&TrajectoryPoint::getAcceleration)); }
 	std::vector<double> getLongitudinalAccelerations() const { return collect(std::mem_fn(&TrajectoryPoint::getLongitudinalAcceleration)); }
 	std::vector<double> getLateralAccelerations() const { return collect(std::mem_fn(&TrajectoryPoint::getLateralAcceleration)); }
 	std::vector<double> getCurvatures() const { return collect(std::mem_fn(&TrajectoryPoint::getCurvature)); }
@@ -214,11 +158,13 @@ private:
 	}
 
 	template<typename T>
-	void assign(std::_Mem_fn<void (Trajectory::TrajectoryPoint::*)(T)> f, const std::vector<T>& input) {
+	void assign(std::_Mem_fn<void (Trajectory::TrajectoryPoint::*)(const T&)> f, const std::vector<T>& input) {
 		if (input.size() != points.size()) {
 			throw std::out_of_range("Attempted to set trajectory point elements to vector of differing size");
 		}
 		std::transform(input.begin(), input.end(), points.begin(), f);
 	}
 };
+
+
 #endif

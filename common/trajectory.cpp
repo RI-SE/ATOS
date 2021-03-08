@@ -1,5 +1,6 @@
 #include <fstream>
 #include <Eigen/Eigen>
+#include <Eigen/Geometry>
 #include "regexpatterns.hpp"
 #include "logging.h"
 #include "trajectory.hpp"
@@ -128,33 +129,75 @@ CartesianPosition Trajectory::TrajectoryPoint::getCartesianPosition() const {
     return retval;
 }
 
+Trajectory::TrajectoryPoint Trajectory::TrajectoryPoint::relativeTo(
+		const TrajectoryPoint &other) const {
+
+	using namespace Eigen;
+	TrajectoryPoint relative;
+	auto zeroNaNs = [](const Vector2d& v){
+		Vector2d ret;
+		ret[0] = isnan(v[0]) ? 0.0 : v[0];
+		ret[1] = isnan(v[1]) ? 0.0 : v[1];
+		return ret;
+	};
+
+	relative.setTime(this->getTime());
+	try {
+		relative.setPosition(this->getPosition() - other.getPosition());
+	} catch (std::out_of_range) {
+		relative.setPosition(this->position - other.position);
+		relative.setZCoord(std::numeric_limits<double>::quiet_NaN());
+	}
+	relative.setHeading(this->getHeading() - other.getHeading());
+	Rotation2Dd R(relative.getHeading());
+	auto thisVel = zeroNaNs(this->getVelocity());
+	auto otherVel = zeroNaNs(other.getVelocity());
+	relative.setVelocity(R*thisVel - otherVel);
+
+	auto thisAcc = zeroNaNs(this->getAcceleration());
+	auto otherAcc = zeroNaNs(other.getAcceleration());
+	relative.setAcceleration(R*thisAcc - otherAcc);
+	// TODO Curvature
+
+	relative.setMode(this->getMode());
+	return relative;
+}
 
 Trajectory Trajectory::relativeTo(
 		const Trajectory &other) const {
 	using namespace Eigen;
 	// TODO check equal length with other
-	Trajectory relative(*this);
+	// TODO check that ranges are sorted by time
+	// TODO check versions
+	Trajectory relative;
+	relative.id = this->id;
+	relative.name = this->name + "_rel_" + other.name;
+	relative.version = this->version;
+	for (auto trajPt = this->points.begin(); trajPt != this->points.end(); ++trajPt) {
+		auto nearestTrajPtInOther = getNearest(other.points.begin(), other.points.end(), trajPt->getTime());
+		// TODO maybe a check on time difference here
+		relative.points.push_back(trajPt->relativeTo(*nearestTrajPtInOther));
+	}
 
-	// Position relative to another trajectory is simple subtraction
-	std::vector<double> relativePosition;
-	std::transform(points.begin(), points.end(), other.points.begin(),
-				   std::back_inserter(relativePosition),
-				   [](const TrajectoryPoint& p1, const TrajectoryPoint& p2) {
-		return p1.getXCoord() - p2.getXCoord();
-	});
-	//relative.setXCoords(relativePosition);
-	std::transform(points.begin(), points.end(), other.points.begin(),
-				   relativePosition.begin(),
-				   [](const TrajectoryPoint& p1, const TrajectoryPoint& p2) {
-		return p1.getYCoord() - p2.getYCoord();
-	});
-	//relative.setYCoords(relativePosition);
-	std::transform(points.begin(), points.end(), other.points.begin(),
-				   relativePosition.begin(),
-				   [](const TrajectoryPoint& p1, const TrajectoryPoint& p2) {
-		return p1.getZCoord() - p2.getZCoord();
-	});
-	//relative.setZCoords(relativePosition);
 	return relative;
+}
+
+Trajectory::const_iterator Trajectory::getNearest(
+		const_iterator first,
+		const_iterator last,
+		const double &time) {
+	// Assumption: input range is sorted by time
+	// Get first element with larger time than requested
+	const_iterator after = std::lower_bound(first, last, time, [](const TrajectoryPoint& trajPt, const double& t) {
+		return trajPt.getTime() < t;
+	});
+
+	if (after == first) return first;
+	if (after == last)  return last - 1;
+
+	const_iterator before = after - 1;
+
+	// Return the element nearest to the requested time
+	return (after->getTime() - time) < (time - before->getTime()) ? after : before;
 }
 
