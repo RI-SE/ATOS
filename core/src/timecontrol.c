@@ -123,7 +123,7 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 TimeBuffer[TIME_CONTROL_RECEIVE_BUFFER_SIZE];
 	C8 LogBuffer[LOG_BUFFER_LENGTH];
 	I32 ReceivedNewData, i;
-	C8 PitipSetupMessage[INIT_PITIPO_MESSAGE_LENGTH] = {0, 0, 0, 0xA, 0, 0, 0, 0x17, 1, 1, 0, 0, 3, 0xE8};
+	C8 PitipoSetupMessage[INIT_PITIPO_MESSAGE_LENGTH] = {0, 0, 0, 0xA, 0, 0, 0, 0x17, 1, 1, 0, 0, 3, 0xE8};
 	struct timespec sleep_time, ref_time;
 	C8 MqRecvBuffer[MBUS_MAX_DATALEN];
 	struct timeval tv, ExecTime;
@@ -171,7 +171,7 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		if (TimeControlCreateTimeChannel(ServerIPC8, ServerPortU16, &SocketfdI32, &time_addr)) {
 			LogMessage(LOG_LEVEL_INFO, "Using time server reference");
-			TimeControlSendUDPData(&SocketfdI32, &time_addr, PitipSetupMessage, INIT_PITIPO_MESSAGE_LENGTH, 0);
+			TimeControlSendUDPData(&SocketfdI32, &time_addr, PitipoSetupMessage, INIT_PITIPO_MESSAGE_LENGTH, 0);
 			GPSTime->isGPSenabled = 1;
 		}
 		else {
@@ -294,11 +294,11 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		if (GSD->ExitU8 == 1) {
 			if (GPSTime->isGPSenabled) {
-				PitipSetupMessage[10] = 0;
-				PitipSetupMessage[11] = 0;
-				PitipSetupMessage[12] = 0;
-				PitipSetupMessage[13] = 0;
-				TimeControlSendUDPData(&SocketfdI32, &time_addr, PitipSetupMessage, INIT_PITIPO_MESSAGE_LENGTH, 0);
+				PitipoSetupMessage[10] = 0;
+				PitipoSetupMessage[11] = 0;
+				PitipoSetupMessage[12] = 0;
+				PitipoSetupMessage[13] = 0;
+				TimeControlSendUDPData(&SocketfdI32, &time_addr, PitipoSetupMessage, INIT_PITIPO_MESSAGE_LENGTH, 0);
 			}
 			iExit = 1;
 			(void)iCommClose();
@@ -397,7 +397,7 @@ static int TimeControlCreateTimeChannel(const char *name, const uint32_t port, i
 		gettimeofday(&tCurr, NULL);
 		TimeControlRecvTime(sockfd, timeBuffer, TIME_CONTROL_RECEIVE_BUFFER_SIZE, &receivedNewData);
 		if (receivedNewData) {
-			TimeControlDecodeTimeBuffer(&tempGPSTime, timeBuffer, 1);
+			TimeControlDecodeTimeBuffer(&tempGPSTime, timeBuffer, 0);
 			switch (tempGPSTime.FixQualityU8) {
 			case FIX_QUALITY_NONE:
 				LogMessage(LOG_LEVEL_WARNING, "Received reply from time server: no satellite fix");
