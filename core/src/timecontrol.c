@@ -58,30 +58,30 @@
 #define TC_SLEEP_TIME_NONEMPTY_MQ_S 0
 #define TC_SLEEP_TIME_NONEMPTY_MQ_NS 0
 
-#define Status_index 0
-#define Length_index 2
-#define Id_index 5
-#define MessageCode_index 7
-#define MessageVersion_index 8 
-#define Year_index 9
-#define Month_index 11
-#define DayOfMonth_index 12
-#define Hour_index 13
-#define Minute_index 14
-#define Second_index 15
-#define Millisecond_index 16
-#define Microsecond_index 18
-#define SecondCounter_index 20
-#define GPSMilliseconds_index 24
-#define GPSMinutes_index 32
-#define GPSWeek_index 36
-#define GPSSOW_index 38
-#define GPSSOD_index 42
-#define ETSI_index 46
-#define Latitude_index 54
-#define Longitude_index 58
-#define FixQuality_index 62
-#define SatelliteCount_index 63 
+#define PROTO2_STATUS_INDEX 0
+#define PROTO2_LENGTH_INDEX 2
+#define PROTO2_ID_INDEX 5
+#define PROTO2_MESSAGE_CODE_INDEX 7
+#define PROTO2_MESSAGE_VERSION_INDEX 8 
+#define PROTO2_YEAR_INDEX 9
+#define PROTO2_MONTH_INDEX 11
+#define PROTO2_DAYOFMONTH_INDEX 12
+#define PROTO2_HOUR_INDEX 13
+#define PROTO2_MINUTE_INDEX 14
+#define PROTO2_SECOND_INDEX 15
+#define PROTO2_MILLISECOND_INDEX 16
+#define PROTO2_MICROSECOND_INDEX 18
+#define PROTO2_SECOND_COUNTER_INDEX 20
+#define PROTO2_GPS_MILLISECONDS_INDEX 24
+#define PROTO2_GPS_MINUTES_INDEX 32
+#define PROTO2_GPS_WEEK_INDEX 36
+#define PROTO2_GPSSOW_INDEX 38
+#define PROTO2_GPSSOD_INDEX 42
+#define PROTO2_ETSI_INDEX 46
+#define PROTO2_LATITUDE_INDEX 54
+#define PROTO2_LONGITUDE_INDEX 58
+#define PROTO2_FIX_QUALITY_INDEX 62
+#define PROTO2_SATELLITE_COUNT_INDEX 63 
 
 
 /*------------------------------------------------------------
@@ -530,47 +530,47 @@ static void TimeControlDecodeTimeBuffer(TimeType * GPSTime, C8 * TimeBuffer, C8 
 
 	gettimeofday(&tv, NULL);
 
-	GPSTime->ProtocolVersionU8 = TimeBuffer[MessageVersion_index];
-	GPSTime->YearU16 = ((U16) TimeBuffer[Year_index]) << 8 | TimeBuffer[Year_index+1];
-	GPSTime->MonthU8 = TimeBuffer[Month_index];
-	GPSTime->DayU8 = TimeBuffer[DayOfMonth_index];
-	GPSTime->HourU8 = TimeBuffer[Hour_index];
-	GPSTime->MinuteU8 = TimeBuffer[Minute_index];
-	GPSTime->SecondU8 = TimeBuffer[Second_index];
-	GPSTime->MillisecondU16 = ((U16) TimeBuffer[Millisecond_index]) << 8 | TimeBuffer[Millisecond_index+1];
-	GPSTime->MicroSecondU16 = ((U16) TimeBuffer[Microsecond_index]) << 8 | TimeBuffer[Microsecond_index+1];
+	GPSTime->ProtocolVersionU8 = TimeBuffer[PROTO2_MESSAGE_VERSION_INDEX];
+	GPSTime->YearU16 = ((U16) TimeBuffer[PROTO2_YEAR_INDEX]) << 8 | TimeBuffer[PROTO2_YEAR_INDEX+1];
+	GPSTime->MonthU8 = TimeBuffer[PROTO2_MONTH_INDEX];
+	GPSTime->DayU8 = TimeBuffer[PROTO2_DAYOFMONTH_INDEX];
+	GPSTime->HourU8 = TimeBuffer[PROTO2_HOUR_INDEX];
+	GPSTime->MinuteU8 = TimeBuffer[PROTO2_MINUTE_INDEX];
+	GPSTime->SecondU8 = TimeBuffer[PROTO2_SECOND_INDEX];
+	GPSTime->MillisecondU16 = ((U16) TimeBuffer[PROTO2_MILLISECOND_INDEX]) << 8 | TimeBuffer[PROTO2_MILLISECOND_INDEX+1];
+	GPSTime->MicroSecondU16 = ((U16) TimeBuffer[PROTO2_MICROSECOND_INDEX]) << 8 | TimeBuffer[PROTO2_MICROSECOND_INDEX+1];
 	GPSTime->SecondCounterU32 =
-		((U32) TimeBuffer[SecondCounter_index]) << 24 | ((U32) TimeBuffer[SecondCounter_index+1]) << 16 |
-		((U32) TimeBuffer[SecondCounter_index+2]) << 8 | TimeBuffer[SecondCounter_index+3];
+		((U32) TimeBuffer[PROTO2_SECOND_COUNTER_INDEX]) << 24 | ((U32) TimeBuffer[PROTO2_SECOND_COUNTER_INDEX+1]) << 16 |
+		((U32) TimeBuffer[PROTO2_SECOND_COUNTER_INDEX+2]) << 8 | TimeBuffer[PROTO2_SECOND_COUNTER_INDEX+3];
 	GPSTime->GPSMillisecondsU64 =
-		((U64) TimeBuffer[GPSMilliseconds_index]) << 56 | ((U64) TimeBuffer[GPSMilliseconds_index+1]) << 48 |
-		((U64) TimeBuffer[GPSMilliseconds_index+2]) << 40 | ((U64)TimeBuffer[GPSMilliseconds_index+3]) <<32 |
-		((U64) TimeBuffer[GPSMilliseconds_index+4]) << 24 | ((U64) TimeBuffer[GPSMilliseconds_index+5]) << 16 |
-		((U64) TimeBuffer[GPSMilliseconds_index+6]) << 8 | TimeBuffer[GPSMilliseconds_index+7];
+		((U64) TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX]) << 56 | ((U64) TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX+1]) << 48 |
+		((U64) TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX+2]) << 40 | ((U64)TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX+3]) <<32 |
+		((U64) TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX+4]) << 24 | ((U64) TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX+5]) << 16 |
+		((U64) TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX+6]) << 8 | TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX+7];
 	GPSTime->GPSMillisecondsU64 += MS_LEAP_SEC_DIFF_UTC_GPS;
 	GPSTime->GPSMinutesU32 =
-		((U32) TimeBuffer[GPSMinutes_index]) << 24 | ((U32) TimeBuffer[GPSMinutes_index+1]) << 16 |
-		((U32) TimeBuffer[GPSMinutes_index+2]) << 8 | TimeBuffer[GPSMinutes_index+3];
-	GPSTime->GPSWeekU16 = ((U16) TimeBuffer[GPSWeek_index]) << 8 | TimeBuffer[GPSWeek_index+1];
+		((U32) TimeBuffer[PROTO2_GPS_MINUTES_INDEX]) << 24 | ((U32) TimeBuffer[PROTO2_GPS_MINUTES_INDEX+1]) << 16 |
+		((U32) TimeBuffer[PROTO2_GPS_MINUTES_INDEX+2]) << 8 | TimeBuffer[PROTO2_GPS_MINUTES_INDEX+3];
+	GPSTime->GPSWeekU16 = ((U16) TimeBuffer[PROTO2_GPS_WEEK_INDEX]) << 8 | TimeBuffer[PROTO2_GPS_WEEK_INDEX+1];
 	GPSTime->GPSSecondsOfWeekU32 =
-		((U32) TimeBuffer[GPSSOW_index]) << 24 | ((U32) TimeBuffer[GPSSOW_index+1]) << 16 |
-		((U32) TimeBuffer[GPSSOW_index+2]) << 8 | TimeBuffer[GPSSOW_index+3] + MS_LEAP_SEC_DIFF_UTC_GPS / 1000;
+		((U32) TimeBuffer[PROTO2_GPSSOW_INDEX]) << 24 | ((U32) TimeBuffer[PROTO2_GPSSOW_INDEX+1]) << 16 |
+		((U32) TimeBuffer[PROTO2_GPSSOW_INDEX+2]) << 8 | TimeBuffer[PROTO2_GPSSOW_INDEX+3] + MS_LEAP_SEC_DIFF_UTC_GPS / 1000;
 	GPSTime->GPSSecondsOfDayU32 =
-		((U32) TimeBuffer[GPSSOD_index]) << 24 | ((U32) TimeBuffer[GPSSOD_index+1]) << 16 |
-		((U32) TimeBuffer[GPSSOD_index+2]) << 8 | TimeBuffer[GPSSOD_index+3];
+		((U32) TimeBuffer[PROTO2_GPSSOD_INDEX]) << 24 | ((U32) TimeBuffer[PROTO2_GPSSOD_INDEX+1]) << 16 |
+		((U32) TimeBuffer[PROTO2_GPSSOD_INDEX+2]) << 8 | TimeBuffer[PROTO2_GPSSOD_INDEX+3];
 	GPSTime->ETSIMillisecondsU64 =
-		((U64) TimeBuffer[ETSI_index]) << 56 | ((U64) TimeBuffer[ETSI_index+1]) << 48 |
-		((U64) TimeBuffer[ETSI_index+2]) << 40 | ((U64)TimeBuffer[ETSI_index+3]) << 32 | 
-		((U64) TimeBuffer[ETSI_index+4]) << 24 | ((U64) TimeBuffer[ETSI_index+5]) << 16 |
-		((U64) TimeBuffer[ETSI_index+6]) << 8 | TimeBuffer[ETSI_index+7];
+		((U64) TimeBuffer[PROTO2_ETSI_INDEX]) << 56 | ((U64) TimeBuffer[PROTO2_ETSI_INDEX+1]) << 48 |
+		((U64) TimeBuffer[PROTO2_ETSI_INDEX+2]) << 40 | ((U64)TimeBuffer[PROTO2_ETSI_INDEX+3]) << 32 | 
+		((U64) TimeBuffer[PROTO2_ETSI_INDEX+4]) << 24 | ((U64) TimeBuffer[PROTO2_ETSI_INDEX+5]) << 16 |
+		((U64) TimeBuffer[PROTO2_ETSI_INDEX+6]) << 8 | TimeBuffer[PROTO2_ETSI_INDEX+7];
 	GPSTime->LatitudeU32 =
-		((U32) TimeBuffer[Latitude_index]) << 24 | ((U32) TimeBuffer[Latitude_index+1]) << 16 |
-		((U32) TimeBuffer[Latitude_index+2]) << 8 | TimeBuffer[Latitude_index+3];
+		((U32) TimeBuffer[PROTO2_LATITUDE_INDEX]) << 24 | ((U32) TimeBuffer[PROTO2_LATITUDE_INDEX+1]) << 16 |
+		((U32) TimeBuffer[PROTO2_LATITUDE_INDEX+2]) << 8 | TimeBuffer[PROTO2_LATITUDE_INDEX+3];
 	GPSTime->LongitudeU32 =
-		((U32) TimeBuffer[Longitude_index]) << 24 | ((U32) TimeBuffer[Longitude_index+1]) << 16 | 
-		((U32) TimeBuffer[Longitude_index+2]) << 8 | TimeBuffer[Longitude_index+3];
-	GPSTime->FixQualityU8 = TimeBuffer[FixQuality_index];
-	GPSTime->NSatellitesU8 = TimeBuffer[SatelliteCount_index];
+		((U32) TimeBuffer[PROTO2_LONGITUDE_INDEX]) << 24 | ((U32) TimeBuffer[PROTO2_LONGITUDE_INDEX+1]) << 16 | 
+		((U32) TimeBuffer[PROTO2_LONGITUDE_INDEX+2]) << 8 | TimeBuffer[PROTO2_LONGITUDE_INDEX+3];
+	GPSTime->FixQualityU8 = TimeBuffer[PROTO2_FIX_QUALITY_INDEX];
+	GPSTime->NSatellitesU8 = TimeBuffer[PROTO2_SATELLITE_COUNT_INDEX];
 
 	gettimeofday(&tv, NULL);
 
@@ -589,7 +589,7 @@ static void TimeControlDecodeTimeBuffer(TimeType * GPSTime, C8 * TimeBuffer, C8 
 		//LogPrint("MinuteU8: %d", GPSTime->MinuteU8);
 		//LogPrint("SecondU8: %d", GPSTime->SecondU8);
 		//LogPrint("MillisecondU16: %d", GPSTime->MillisecondU16);
-		LogPrint("SecondCounterU32: %d - %d", GPSTime->SecondCounterU32, SecondCounter_index);
+		LogPrint("SecondCounterU32: %d", GPSTime->SecondCounterU32);
 		LogPrint("GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);
 		//LogPrint("GPSMinutesU32: %d", GPSTime->GPSMinutesU32);
 		//LogPrint("GPSWeekU16: %d", GPSTime->GPSWeekU16);
