@@ -88,6 +88,8 @@ public:
 		double getCurvature() const { return this->curvature; }
         ModeType getMode() const { return this->mode; }
 
+		std::string toString() const;
+		std::string getFormatString() const;
     private:
         double time = 0;
 		Eigen::Vector3d position; //! x, y, z [m]
@@ -112,58 +114,12 @@ public:
 	Trajectory relativeTo(const Trajectory& other) const;
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
 
-	std::vector<double> getTimes() const { return collect(std::mem_fn(&TrajectoryPoint::getTime)); }
-	std::vector<Eigen::Vector3d> getPositions() const { return collect(std::mem_fn(&TrajectoryPoint::getPosition)); }
-	std::vector<double> getXCoords() const { return collect(std::mem_fn(&TrajectoryPoint::getXCoord)); }
-	std::vector<double> getYCoords() const { return collect(std::mem_fn(&TrajectoryPoint::getYCoord)); }
-	std::vector<double> getZCoords() const { return collect(std::mem_fn(&TrajectoryPoint::getZCoord)); }
-	std::vector<double> getHeadings() const { return collect(std::mem_fn(&TrajectoryPoint::getHeading)); }
-	std::vector<Eigen::Vector2d> getVelocities() const { return collect(std::mem_fn(&TrajectoryPoint::getVelocity)); }
-	std::vector<double> getLongitudinalVelocities() const { return collect(std::mem_fn(&TrajectoryPoint::getLongitudinalVelocity)); }
-	std::vector<double> getLateralVelocities() const { return collect(std::mem_fn(&TrajectoryPoint::getLateralVelocity)); }
-	std::vector<Eigen::Vector2d> getAccelerations() const { return collect(std::mem_fn(&TrajectoryPoint::getAcceleration)); }
-	std::vector<double> getLongitudinalAccelerations() const { return collect(std::mem_fn(&TrajectoryPoint::getLongitudinalAcceleration)); }
-	std::vector<double> getLateralAccelerations() const { return collect(std::mem_fn(&TrajectoryPoint::getLateralAcceleration)); }
-	std::vector<double> getCurvatures() const { return collect(std::mem_fn(&TrajectoryPoint::getCurvature)); }
-	std::vector<TrajectoryPoint::ModeType> getModes() const { return collect(std::mem_fn(&TrajectoryPoint::getMode)); }
+	std::string toString() const;
 
-	void setTimes(const std::vector<double>& times) { assign(std::mem_fn(&TrajectoryPoint::setTime), times); }
-	void setXCoords(const std::vector<double>& xCoords) { assign(std::mem_fn(&TrajectoryPoint::setXCoord), xCoords); }
-	void setYCoords(const std::vector<double>& yCoords) { assign(std::mem_fn(&TrajectoryPoint::setYCoord), yCoords); }
-	void setZCoords(const std::vector<double>& zCoords) { assign(std::mem_fn(&TrajectoryPoint::setZCoord), zCoords); }
-	void setHeadings(const std::vector<double>& headings) { assign(std::mem_fn(&TrajectoryPoint::setHeading), headings); }
-	void setLongitudinalVelocities(const std::vector<double>& velocities) {
-		assign(std::mem_fn(&TrajectoryPoint::setLongitudinalVelocity), velocities); }
-	void setLateralVelocities(const std::vector<double>& velocities) {
-		assign(std::mem_fn(&TrajectoryPoint::setLateralVelocity), velocities); }
-	void setLongitudinalAccelerations(const std::vector<double>& accelerations) {
-		assign(std::mem_fn(&TrajectoryPoint::setLongitudinalAcceleration), accelerations); }
-	void setLateralAccelerations(const std::vector<double>& accelerations) {
-		assign(std::mem_fn(&TrajectoryPoint::setLateralAcceleration), accelerations); }
-	void setCurvatures(const std::vector<double>& curvatures) {
-		assign(std::mem_fn(&TrajectoryPoint::setCurvature), curvatures); }
-	void setModes(const std::vector<TrajectoryPoint::ModeType>& modes) {
-		assign(std::mem_fn(&TrajectoryPoint::setMode), modes); }
 private:
 	static const std::regex fileHeaderPattern;
 	static const std::regex fileLinePattern;
 	static const std::regex fileFooterPattern;
-
-	//! Creates a STL vector based on calls to the specified getter
-	template<typename T>
-	std::vector<T> collect(std::_Mem_fn<T (Trajectory::TrajectoryPoint::*)() const> f) const {
-		std::vector<T> output;
-		std::transform(points.begin(), points.end(), std::back_inserter(output), f);
-		return output;
-	}
-
-	template<typename T>
-	void assign(std::_Mem_fn<void (Trajectory::TrajectoryPoint::*)(const T&)> f, const std::vector<T>& input) {
-		if (input.size() != points.size()) {
-			throw std::out_of_range("Attempted to set trajectory point elements to vector of differing size");
-		}
-		std::transform(input.begin(), input.end(), points.begin(), f);
-	}
 };
 
 

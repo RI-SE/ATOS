@@ -149,14 +149,15 @@ Trajectory::TrajectoryPoint Trajectory::TrajectoryPoint::relativeTo(
 		relative.setZCoord(std::numeric_limits<double>::quiet_NaN());
 	}
 	relative.setHeading(this->getHeading() - other.getHeading());
-	Rotation2Dd R(relative.getHeading());
+	Rotation2Dd R(-relative.getHeading());
+
 	auto thisVel = zeroNaNs(this->getVelocity());
 	auto otherVel = zeroNaNs(other.getVelocity());
-	relative.setVelocity(R*thisVel - otherVel);
+	relative.setVelocity(R.inverse()*(R*thisVel - otherVel));
 
 	auto thisAcc = zeroNaNs(this->getAcceleration());
 	auto otherAcc = zeroNaNs(other.getAcceleration());
-	relative.setAcceleration(R*thisAcc - otherAcc);
+	relative.setAcceleration(R.inverse()*(R*thisAcc - otherAcc));
 	// TODO Curvature
 
 	relative.setMode(this->getMode());
@@ -201,3 +202,38 @@ Trajectory::const_iterator Trajectory::getNearest(
 	return (after->getTime() - time) < (time - before->getTime()) ? after : before;
 }
 
+std::string Trajectory::TrajectoryPoint::getFormatString() const {
+	return "x:[m], y:[m], z:[m], hdg:[rad CW from N], "
+		   "vx:[m/s,longitudinal], vy:[m/s,lateral], "
+		   "ax:[m/s2,longitudinal], ay:[m/s2,lateral], "
+		   "c:[1/m], md:[]";
+}
+
+std::string Trajectory::TrajectoryPoint::toString() const {
+	std::string retval = "";
+	std::stringstream ss(retval);
+	ss << "x:" << position[0] << ", "
+	   << "y:" << position[1] << ", "
+	   << "z:" << position[2] << ", "
+	   << "hdg:" << heading << ", "
+	   << "vx:" << velocity[0] << ", "
+	   << "vy:" << velocity[1] << ", "
+	   << "ax:" << acceleration[0] << ", "
+	   << "ay:" << acceleration[1] << ", "
+	   << "c:" << curvature << ", "
+	   << "md:" << mode;
+	return ss.str();
+}
+
+std::string Trajectory::toString() const {
+	std::string retval = "";
+	std::stringstream ss(retval);
+	ss << "Trajectory:"
+	   << "\n Name: " << this->name
+	   << "\n ID: " << this->id
+	   << "\n Version: " << this->version;
+	for (const auto& point : points) {
+		ss << "\n\t" << point.toString();
+	}
+	return ss.str();
+}
