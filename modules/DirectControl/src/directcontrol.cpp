@@ -45,6 +45,7 @@ void DirectControl::readSocketData() {
 			std::fill(data.begin(), data.end(), 0);
 			recvData = tcpHandler.receiveTCP(data, 0);
 			if (recvData == TCPHandler::TCPHANDLER_FAIL) {
+				this->tcpHandler.TCPHandlerclose();
 				break;
 			}
 			else if (recvData > 0) {
@@ -127,8 +128,9 @@ void DirectControl::readMessageBus() {
 }
 
 void DirectControl::exit() {
-	quit = true;
+	this->quit = true;
 	// Make the receive socket exit
-	TCPHandler selfPipe(this->commandPort, "127.0.0.1", "Client");
-	selfPipe.TCPHandlerclose();
+	this->tcpHandler.TCPHandlerclose();
+	//TCPHandler selfPipe(this->commandPort, "127.0.0.1", "Client");
+	//selfPipe.TCPHandlerclose();
 }
