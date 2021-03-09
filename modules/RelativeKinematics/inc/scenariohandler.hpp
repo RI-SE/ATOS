@@ -39,6 +39,15 @@ public:
 	~ScenarioHandler();
 
 	void handleInitCommand();
+
+	std::vector<uint32_t> getVehicleUnderTestIDs() const;
+	std::vector<uint32_t> getVehicleIDs() const {
+		std::vector<uint32_t> retval;
+		for (auto it  = objects.begin(); it != objects.end(); ++it) {
+			retval.push_back(it->first);
+		}
+		return retval;
+	}
 private:
 	ObjectControlState* state;
 	std::map<uint32_t,TestObject> objects;
@@ -46,6 +55,7 @@ private:
 	void loadScenario();
 	void loadObjectFiles();
 	void parseObjectFile(const fs::path& objectFile, TestObject& object);
+	void transformScenarioRelativeTo(const uint32_t objectID);
 };
 
 

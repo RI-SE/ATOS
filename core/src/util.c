@@ -128,6 +128,7 @@ static const char ParameterNameMiscData[] = "MiscData";
 static const char ObjectSettingNameID[] = "ID";
 static const char ObjectSettingNameIP[] = "IP";
 static const char ObjectSettingNameTraj[] = "traj";
+static const char ObjectSettingNameIsVUT[] = "isVUT";
 static const char ObjectSettingNameInjectorIDs[] = "injectorIDs";
 
 /*------------------------------------------------------------
@@ -3801,6 +3802,9 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 		break;
 	case OBJECT_SETTING_TRAJ:
 		outputString = ObjectSettingNameTraj;
+		break;
+	case OBJECT_SETTING_IS_VUT:
+		outputString = ObjectSettingNameIsVUT;
 		break;
 	case OBJECT_SETTING_INJECTOR_IDS:
 		outputString = ObjectSettingNameInjectorIDs;

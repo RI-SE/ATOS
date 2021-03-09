@@ -82,4 +82,32 @@ void ScenarioHandler::loadObjectFiles() {
 	}
 }
 
+std::vector<uint32_t> ScenarioHandler::getVehicleUnderTestIDs() const {
+	std::vector<uint32_t> retval;
+	for (auto& object : objects) {
+		if (object.second.isVehicleUnderTest()) {
+			retval.push_back(object.first);
+		}
+	}
+	return retval;
+}
+
+void ScenarioHandler::transformScenarioRelativeTo(
+		const uint32_t objectID) {
+	for (auto& id : getVehicleIDs()) {
+		if (id == objectID) {
+			// Skip for now TODO also here
+			continue;
+		}
+		auto traj = objects[id].getTrajectory();
+		auto relTraj = traj.relativeTo(objects[objectID].getTrajectory());
+		LogPrint("TRAJECTORIES:");
+		LogPrint(traj.toString().c_str());
+		LogPrint(objects[objectID].getTrajectory().toString().c_str());
+		LogPrint("RELATIVE:");
+		LogPrint(relTraj.toString().c_str());
+
+		objects[id].setTrajectory(relTraj);
+	}
+}
 

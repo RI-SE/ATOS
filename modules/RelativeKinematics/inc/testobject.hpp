@@ -13,14 +13,18 @@ namespace fs = std::experimental::filesystem;
 class TestObject {
 public:
 	TestObject();
-	void setCommandAddress(const sockaddr_in& newAddr);
-	void setMonitorAddress(const sockaddr_in& newAddr);
 	void parseConfigurationFile(const fs::path& file);
 	void parseTrajectoryFile(const fs::path& file);
 
 	uint32_t getTransmitterID() const { return transmitterID; }
 	fs::path getTrajectoryFile() const { return trajectoryFile; }
+	Trajectory getTrajectory() const { return trajectory; }
 
+	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }
+	void setCommandAddress(const sockaddr_in& newAddr);
+	void setMonitorAddress(const sockaddr_in& newAddr);
+
+	bool isVehicleUnderTest() const { return isVUT; }
 	std::string toString() const;
 private:
 	struct sockaddr_in commandAddress;
@@ -28,6 +32,7 @@ private:
 	fs::path objectFile;
 	fs::path trajectoryFile;
 	uint32_t transmitterID;
+	bool isVUT = false;
 	Trajectory trajectory;
 };
 
