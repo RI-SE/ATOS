@@ -10,6 +10,8 @@ set(MAESTRO_COMMON_TARGET ${TARGET_NAMESPACE}${PROJECT_NAME})
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 set(EIGEN_LIBRARY Eigen3::Eigen)
+set(LOGGING_LIBRARY MaestroLogging)
+set(COREUTILS_LIBRARY MaestroCoreUtil)
 
 include(GNUInstallDirs)
 
@@ -18,6 +20,8 @@ add_library(${MAESTRO_COMMON_TARGET} SHARED
 )
 
 target_link_libraries(${MAESTRO_COMMON_TARGET}
+	${LOGGING_LIBRARY}
+	${COREUTILS_LIBRARY}
 	${EIGEN_LIBRARY}
 )
 
@@ -29,6 +33,14 @@ set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
 )
 set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/regexpatterns.hpp
+)
+
+# Tests
+add_executable(test_relativetrajectory tests/test_relativetrajectory.cpp)
+add_test(relative_trajectory_point_test
+	${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_relativetrajectory)
+target_link_libraries(test_relativetrajectory
+	${MAESTRO_COMMON_TARGET}
 )
 
 install(CODE "MESSAGE(STATUS \"Installing target ${MAESTRO_COMMON_TARGET}\")")

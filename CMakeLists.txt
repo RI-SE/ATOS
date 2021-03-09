@@ -15,6 +15,8 @@ set(WITH_RELATIVE_KINEMATICS ON CACHE BOOL "Enable RelativeKinematics module")
 set(WITH_DIRECT_CONTROL ON CACHE BOOL "Enable DirectControl module")
 set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
 
+set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
+
 set(MAESTRO_TEST_DIR ".maestro" CACHE STRING "Directory where test data is to be stored")
 
 set(MAESTRO_JOURNAL_DIR "${MAESTRO_TEST_DIR}/journal")
@@ -49,6 +51,11 @@ if(WITH_OBJECT_MONITORING)
 endif()
 if(WITH_RELATIVE_KINEMATICS)
 	list(APPEND ENABLED_MODULES RelativeKinematics)
+endif()
+
+# Testing
+if(ENABLE_TESTS)
+	enable_testing()
 endif()
 
 # Add corresponding subprojects
