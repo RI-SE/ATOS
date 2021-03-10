@@ -83,6 +83,13 @@
 #define PROTO2_FIX_QUALITY_INDEX 62
 #define PROTO2_SATELLITE_COUNT_INDEX 63 
 
+#define PROTO2_INIT_MESSAGE_LENGTH 10
+#define PROTO2_INIT_TIME_FEED_MESSAGE_CODE 0x17 
+#define PROTO2_INIT_TIME_FEED_ACTIVE 1
+#define PROTO2_INIT_TIME_FEED_DEACTIVATE 0
+#define PROTO2_INIT_TIME_FEED_USE_PERIOD_IN_FILE 0
+#define PROTO2_INIT_TIME_FEED_USE_PERIOD_IN_MESSAGE 1
+
 
 /*------------------------------------------------------------
   -- Function declarations.
@@ -123,7 +130,10 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 TimeBuffer[TIME_CONTROL_RECEIVE_BUFFER_SIZE];
 	C8 LogBuffer[LOG_BUFFER_LENGTH];
 	I32 ReceivedNewData, i;
-	C8 PitipoSetupMessage[INIT_PITIPO_MESSAGE_LENGTH] = {0, 0, 0, 0xA, 0, 0, 0, 0x17, 1, 1, 0, 0, 3, 0xE8};
+	C8 PitipoSetupMessage[INIT_PITIPO_MESSAGE_LENGTH] = {0, 0, 0, PROTO2_INIT_MESSAGE_LENGTH,
+														 0, 0, 0, PROTO2_INIT_TIME_FEED_MESSAGE_CODE,
+														 PROTO2_INIT_TIME_FEED_ACTIVE, PROTO2_INIT_TIME_FEED_USE_PERIOD_IN_MESSAGE,
+														 0, 0, 3, 0xE8};
 	struct timespec sleep_time, ref_time;
 	C8 MqRecvBuffer[MBUS_MAX_DATALEN];
 	struct timeval tv, ExecTime;
@@ -294,6 +304,9 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		if (GSD->ExitU8 == 1) {
 			if (GPSTime->isGPSenabled) {
+				
+				PitipoSetupMessage[8] = PROTO2_INIT_TIME_FEED_DEACTIVATE;
+				PitipoSetupMessage[9] = PROTO2_INIT_TIME_FEED_USE_PERIOD_IN_MESSAGE;
 				PitipoSetupMessage[10] = 0;
 				PitipoSetupMessage[11] = 0;
 				PitipoSetupMessage[12] = 0;
