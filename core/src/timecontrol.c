@@ -36,7 +36,7 @@
 #define TIME_CONTROL_HOSTNAME_BUFFER_SIZE 20
 #define TIME_CONTROL_RECEIVE_BUFFER_SIZE 80
 #define TIME_CONTROL_TASK_PERIOD_MS 1
-#define INIT_PITIPO_MESSAGE_LENGTH 14
+#define TIME_CONTROL_TX_BUFFER_SIZE 14
 #define REPLY_TIMEOUT_S 3
 
 #define SLEEP_TIME_GPS_CONNECTED_S 0
@@ -90,6 +90,7 @@
 #define PROTO2_SETUP_TIME_FEED_USE_PERIOD_IN_FILE 0
 #define PROTO2_SETUP_TIME_FEED_USE_PERIOD_IN_MESSAGE 1
 #define PROTO2_SETUP_TIME_FEED_INTERVAL 1000
+#define PROTO2_SETUP_TIME_FEED_INTERVAL_FAST 100
 
 
 /*------------------------------------------------------------
@@ -131,7 +132,7 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 TimeBuffer[TIME_CONTROL_RECEIVE_BUFFER_SIZE];
 	C8 LogBuffer[LOG_BUFFER_LENGTH];
 	I32 ReceivedNewData, i;
-	C8 PitipoSetupMessage[INIT_PITIPO_MESSAGE_LENGTH] = {0, 0, 0, PROTO2_SETUP_MESSAGE_LENGTH,
+	C8 PitipoSetupMessage[TIME_CONTROL_TX_BUFFER_SIZE] = {0, 0, 0, PROTO2_SETUP_MESSAGE_LENGTH,
 														 0, 0, 0, PROTO2_SETUP_TIME_FEED_MESSAGE_CODE,
 														 PROTO2_SETUP_TIME_FEED_ACTIVE, PROTO2_SETUP_TIME_FEED_USE_PERIOD_IN_MESSAGE,
 														 0, 0, (uint8_t)(PROTO2_SETUP_TIME_FEED_INTERVAL>>8),
@@ -183,7 +184,7 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 		if (TimeControlCreateTimeChannel(ServerIPC8, ServerPortU16, &SocketfdI32, &time_addr)) {
 			LogMessage(LOG_LEVEL_INFO, "Using time server reference");
-			TimeControlSendUDPData(&SocketfdI32, &time_addr, PitipoSetupMessage, INIT_PITIPO_MESSAGE_LENGTH, 0);
+			TimeControlSendUDPData(&SocketfdI32, &time_addr, PitipoSetupMessage, TIME_CONTROL_TX_BUFFER_SIZE, 0);
 			GPSTime->isGPSenabled = 1;
 		}
 		else {
@@ -311,7 +312,7 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				PitipoSetupMessage[9] = PROTO2_SETUP_TIME_FEED_USE_PERIOD_IN_MESSAGE;
 				PitipoSetupMessage[12] = 0;
 				PitipoSetupMessage[13] = 0;
-				TimeControlSendUDPData(&SocketfdI32, &time_addr, PitipoSetupMessage, INIT_PITIPO_MESSAGE_LENGTH, 0);
+				TimeControlSendUDPData(&SocketfdI32, &time_addr, PitipoSetupMessage, TIME_CONTROL_TX_BUFFER_SIZE, 0);
 			}
 			iExit = 1;
 			(void)iCommClose();
@@ -357,8 +358,12 @@ static int TimeControlCreateTimeChannel(const char *name, const uint32_t port, i
 										struct sockaddr_in *addr) {
 	int result;
 	struct hostent *object;
-	//C8 packetIntervalMs[INIT_PITIPO_MESSAGE_LENGTH] = { 0, 0, 0, 100 };	// Make server send with this interval while waiting for first reply
-	C8 packetIntervalMs[INIT_PITIPO_MESSAGE_LENGTH] = {0, 0, 0, 0xA, 0, 0, 0, 0x17, 1, 1, 0, 0, 0, 100};
+
+	C8 packetIntervalMs[TIME_CONTROL_TX_BUFFER_SIZE] = {0, 0, 0, PROTO2_SETUP_MESSAGE_LENGTH,
+														 0, 0, 0, PROTO2_SETUP_TIME_FEED_MESSAGE_CODE,
+														 PROTO2_SETUP_TIME_FEED_ACTIVE, PROTO2_SETUP_TIME_FEED_USE_PERIOD_IN_MESSAGE,
+														 0, 0, (uint8_t)(PROTO2_SETUP_TIME_FEED_INTERVAL_FAST>>8),
+														 (uint8_t)PROTO2_SETUP_TIME_FEED_INTERVAL_FAST};
 	C8 timeBuffer[TIME_CONTROL_RECEIVE_BUFFER_SIZE];
 	int receivedNewData = 0;
 	struct timeval timeout = { REPLY_TIMEOUT_S, 0 };
@@ -400,7 +405,7 @@ static int TimeControlCreateTimeChannel(const char *name, const uint32_t port, i
 	// Check for existence of remote server
 	LogMessage(LOG_LEVEL_INFO, "Awaiting reply from time server...");
 	// Set send interval to be as short as possible to minimise wait for reply
-	TimeControlSendUDPData(sockfd, addr, packetIntervalMs, INIT_PITIPO_MESSAGE_LENGTH, 0);
+	TimeControlSendUDPData(sockfd, addr, packetIntervalMs, TIME_CONTROL_TX_BUFFER_SIZE, 0);
 
 	// Set time to stop waiting for reply
 	gettimeofday(&tEnd, NULL);
