@@ -89,6 +89,7 @@
 #define PROTO2_INIT_TIME_FEED_DEACTIVATE 0
 #define PROTO2_INIT_TIME_FEED_USE_PERIOD_IN_FILE 0
 #define PROTO2_INIT_TIME_FEED_USE_PERIOD_IN_MESSAGE 1
+#define PROTO2_INIT_TIME_FEED_INTERVAL 1000
 
 
 /*------------------------------------------------------------
@@ -133,7 +134,8 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 PitipoSetupMessage[INIT_PITIPO_MESSAGE_LENGTH] = {0, 0, 0, PROTO2_INIT_MESSAGE_LENGTH,
 														 0, 0, 0, PROTO2_INIT_TIME_FEED_MESSAGE_CODE,
 														 PROTO2_INIT_TIME_FEED_ACTIVE, PROTO2_INIT_TIME_FEED_USE_PERIOD_IN_MESSAGE,
-														 0, 0, 3, 0xE8};
+														 0, 0, (uint8_t)(PROTO2_INIT_TIME_FEED_INTERVAL>>8),
+														 (uint8_t)PROTO2_INIT_TIME_FEED_INTERVAL};
 	struct timespec sleep_time, ref_time;
 	C8 MqRecvBuffer[MBUS_MAX_DATALEN];
 	struct timeval tv, ExecTime;
@@ -307,8 +309,6 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				
 				PitipoSetupMessage[8] = PROTO2_INIT_TIME_FEED_DEACTIVATE;
 				PitipoSetupMessage[9] = PROTO2_INIT_TIME_FEED_USE_PERIOD_IN_MESSAGE;
-				PitipoSetupMessage[10] = 0;
-				PitipoSetupMessage[11] = 0;
 				PitipoSetupMessage[12] = 0;
 				PitipoSetupMessage[13] = 0;
 				TimeControlSendUDPData(&SocketfdI32, &time_addr, PitipoSetupMessage, INIT_PITIPO_MESSAGE_LENGTH, 0);
