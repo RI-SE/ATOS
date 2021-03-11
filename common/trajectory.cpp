@@ -164,12 +164,14 @@ Trajectory::TrajectoryPoint Trajectory::TrajectoryPoint::relativeTo(
 	auto otherAcc = zeroNaNs(other.getAcceleration());
 	relative.setAcceleration(R.inverse()*(R*thisAcc - otherAcc));
 
-	// K(t) = || r'(t) x r''(t) || / ||r'(t)||³
+	// K(t) = ||r'(t) x r''(t)|| / ||r'(t)||³
 	auto rPrim = R*this->getVelocity();
 	auto rBis = R*this->getAcceleration();
-	if (rPrim.norm() > 0.001) {
-		relative.setCurvature(rPrim.cross(rBis).norm()
-							  / std::pow(rPrim.norm(), 3));
+	Eigen::Vector3d rPrim3(rPrim[0], rPrim[1], 0.0);
+	Eigen::Vector3d rBis3(rBis[0], rBis[1], 0.0);
+	if (rPrim3.norm() > 0.001) {
+		relative.setCurvature(rPrim3.cross(rBis3).norm()
+							  / std::pow(rPrim3.norm(), 3));
 	}
 	else {
 		relative.setCurvature(0.0);
