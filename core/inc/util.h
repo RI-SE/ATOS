@@ -286,6 +286,8 @@ typedef struct {
 	struct timeval lastPositionUpdate;
 	ObjectPropertiesType properties;
 	bool propertiesReceived;
+	struct timeval lastDataUpdate;
+  GeoPosition origin;
 	RequestControlActionType requestedControlAction;
 } ObjectDataType;
 

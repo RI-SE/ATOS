@@ -60,6 +60,7 @@ static void signalHandler(int signo);
 static int awaitConnection(TCPHandler &tcpPort, enum COMMAND &receivedCommand, bool& areObjectsConnected);
 static int transmitTrajectories(TCPHandler &tcpPort);
 static int transmitObjectData(TCPHandler &tcpPort, UDPHandler &udpPort);
+static int transmitOSEM(TCPHandler &tcpPort);
 
 /*------------------------------------------------------------
   -- Main task
@@ -75,6 +76,7 @@ int main(int argc, char const* argv[]) {
 	int bytesread = 0;
 	char debug = 0;
 	bool areObjectsConnected = false;
+
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
 
@@ -112,10 +114,13 @@ int main(int argc, char const* argv[]) {
 		buffer.clear();
 		// have to read inbetween loops or we could end in limbo becouse getonconnection only looks att acceept not recive atm, 
 		// TO DO: fix so that get connection also is looked at on recv andchange that to a bool but that means we have to change somestuff in tcphandler.
-		visualizerTCPPort.receiveTCP(buffer,0);
+		visualizerTCPPort.receiveTCP(buffer, 0);
 
 		if (areObjectsConnected) {
-			transmitTrajectories(visualizerTCPPort);
+			//LogMessage(LOG_LEVEL_INFO, "Sending Traj");
+			//transmitTrajectories(visualizerTCPPort);
+			LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
+			transmitOSEM(visualizerTCPPort);
 		}
 
 
@@ -130,12 +135,18 @@ int main(int argc, char const* argv[]) {
 					quit = true;
 					break;
 				case COMM_OBJECTS_CONNECTED:
-					transmitTrajectories(visualizerTCPPort);
+					//LogMessage(LOG_LEVEL_INFO, "Sending Traj");
+					//transmitTrajectories(visualizerTCPPort);
+					LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
+					transmitOSEM(visualizerTCPPort);
 					areObjectsConnected = true;
 					break;
 				}
 			} while (command != COMM_INV);
-			
+
+			// TODO fix the timing we send etc
+				
+
 			if (transmitObjectData(visualizerTCPPort, visualizerUDPPort) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Failed to transmit object data");
 				break;
@@ -181,7 +192,7 @@ int transmitObjectData(TCPHandler &tcpPort, UDPHandler &udpPort) {
 		if (transmitterID == 0){
 			continue;
 		}
-
+		
 		DataDictionaryGetMonitorData(transmitterID, &monitorData);
 		DataDictionaryGetMonitorDataReceiveTime(transmitterID, &monitorDataReceiveTime);
 		if (timerisset(&monitorDataReceiveTime)
@@ -230,7 +241,6 @@ int awaitConnection(
 		enum COMMAND &receivedCommand,
 		bool &areObjectsConnected) {
 
-	uint32_t numberOfObjects = 0;
 	receivedCommand = COMM_INV;
 	char mqRecvData[MBUS_MAX_DATALEN];
 
@@ -291,4 +301,62 @@ int transmitTrajectories(TCPHandler &tcpPort) {
 		}
 	}
 	return retval;
+}
+
+
+int transmitOSEM(TCPHandler &tcp){
+	timeval tv;
+	GeoPosition originPosition;
+	std::vector<char> tcpTransmitBuffer(MONR_BUFFER_LENGTH);
+	std::vector<uint32_t> transmitterIDs;
+	int bytesSent;
+	uint32_t numberOfObjects;	
+
+	if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
+		throw std::ios_base::failure("Data dictionary number of objects read error");
+	}
+	if (numberOfObjects <= 0) {
+		return 0;
+	}
+
+	transmitterIDs.resize(numberOfObjects);
+	if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size()) != READ_OK) {
+		throw std::ios_base::failure("Data dictionary transmitter ID read error");
+	}
+
+	for (const auto &transmitterID : transmitterIDs) {
+		if (transmitterID == 0) {
+			continue;
+		}
+		
+		if (DataDictionaryGetOrigin(transmitterID, &originPosition) != READ_OK) {
+			throw std::ios_base::failure("Data dictionary origin read error for transmitter ID " + std::to_string(transmitterID));
+		}
+
+		gettimeofday(&tv, nullptr);
+		float altitude = static_cast<float>(originPosition.Altitude);
+		long retval = encodeOSEMMessage(&tv, 
+										&transmitterID, 
+										&originPosition.Latitude,
+										&originPosition.Longitude,
+										&altitude, // don't like but this is how it is...
+										nullptr,
+										nullptr,
+										nullptr,
+										tcpTransmitBuffer.data(), 
+										tcpTransmitBuffer.size(),
+										0);//TODO
+		if (retval < 0) {
+			throw std::invalid_argument("Failed to encode OSEM message");
+		}
+
+		tcpTransmitBuffer.resize(static_cast<unsigned long>(retval));
+		bytesSent = tcp.sendTCP(tcpTransmitBuffer);
+
+		if (bytesSent < 0){
+			throw std::ios_base::failure("Error when sending on the visualizer tcp socket");
+		}
+	}
+
+	return 0;
 }
