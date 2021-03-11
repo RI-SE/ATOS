@@ -163,7 +163,17 @@ Trajectory::TrajectoryPoint Trajectory::TrajectoryPoint::relativeTo(
 	auto thisAcc = zeroNaNs(this->getAcceleration());
 	auto otherAcc = zeroNaNs(other.getAcceleration());
 	relative.setAcceleration(R.inverse()*(R*thisAcc - otherAcc));
-	// TODO Curvature
+
+	// K(t) = || r'(t) x r''(t) || / ||r'(t)||³
+	auto rPrim = R*this->getVelocity();
+	auto rBis = R*this->getAcceleration();
+	if (rPrim.norm() > 0.001) {
+		relative.setCurvature(rPrim.cross(rBis).norm()
+							  / std::pow(rPrim.norm(), 3));
+	}
+	else {
+		relative.setCurvature(0.0);
+	}
 
 	relative.setMode(this->getMode());
 	return relative;
@@ -172,9 +182,12 @@ Trajectory::TrajectoryPoint Trajectory::TrajectoryPoint::relativeTo(
 Trajectory Trajectory::relativeTo(
 		const Trajectory &other) const {
 	using namespace Eigen;
-	// TODO check equal length with other
 	// TODO check that ranges are sorted by time
-	// TODO check versions
+	if (this->version != other.version) {
+		throw std::invalid_argument("Attempted to calculate relative trajectory "
+									"for two trajectories with differing versions");
+	}
+
 	Trajectory relative;
 	relative.id = this->id;
 	relative.name = this->name + "_rel_" + other.name;
