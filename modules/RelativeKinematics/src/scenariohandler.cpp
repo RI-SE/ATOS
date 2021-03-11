@@ -101,11 +101,6 @@ void ScenarioHandler::transformScenarioRelativeTo(
 		}
 		auto traj = objects[id].getTrajectory();
 		auto relTraj = traj.relativeTo(objects[objectID].getTrajectory());
-		LogPrint("TRAJECTORIES:");
-		LogPrint(traj.toString().c_str());
-		LogPrint(objects[objectID].getTrajectory().toString().c_str());
-		LogPrint("RELATIVE:");
-		LogPrint(relTraj.toString().c_str());
 
 		objects[id].setTrajectory(relTraj);
 	}
