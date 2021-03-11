@@ -273,20 +273,74 @@ void acceleration_test() {
 	} test_data;
 
 	std::vector<test_data> p1s =
-	{{},
-	 {}};
+	// Equidirectional lateral and longitudinal
+	{{0.0, 0.0, 0.0},
+	 {0.0, 5.0, 0.0},
+	 {0.0,-5.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 0.0, 5.0},
+	 {0.0, 0.0,-5.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 5.0, 0.0},
+	// Right angles
+	 {150.0, 5.0, -2.0},
+	 {280.0, -1.0, 2.0},
+	 {280.0, 0.0, 0.0},
+	 {190.0, 0.0, 0.0},
+	// Angled
+	 {130.0, 4.0, 0.0},
+	 {-60.0, 20.0, 0.0}
+	};
 	std::vector<test_data> p2s =
-	{{},
-	 {}};
+	// Equidirectional lateral and longitudinal
+	{{0.0, 0.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 5.0, 0.0},
+	 {0.0,-5.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 0.0, 5.0},
+	 {0.0, 0.0,-5.0},
+	 {0.0, 10.0, 0.0},
+	// Right angles
+	 {60.0, 1.0, 0.0},
+	 {190.0, 1.0, 1.5},
+	 {190.0, 0.0, 0.0},
+	 {10.0, 4.0, 0.0},
+	// Angled
+	 {10.0, 4.0, 0.0},
+	 {-30.0, 20.0, 0.0}
+	};
 	std::vector<test_data> out =
-	{{},
-	 {}};
+	// Equidirectional lateral and longitudinal
+	{{0.0,  0.0, 0.0},
+	 {0.0,  5.0, 0.0},
+	 {0.0, -5.0, 0.0},
+	 {0.0, -5.0, 0.0},
+	 {0.0,  5.0, 0.0},
+	 {0.0,  0.0, 5.0},
+	 {0.0,  0.0,-5.0},
+	 {0.0,  0.0,-5.0},
+	 {0.0,  0.0, 5.0},
+	 {0.0, -5.0, 0.0},
+	// Right angles
+	 {90.0, 5.0, -3.0},
+	 {90.0, 0.5, 1.0},
+	 {90.0, 0.0, 0.0},
+	 {180.0, 4.0, 0.0},
+	// Angled
+	 {120.0, 6.0, -3.464101615},
+	 {330.0, 2.679491924, 10.0}
+	};
 
 	for (unsigned long i=0; i < out.size(); ++i) {
-		p1.setHeading(p1s[i].hdg);
+		p1.setHeading(p1s[i].hdg*M_PI/180.0);
 		p1.setLongitudinalAcceleration(p1s[i].alon);
 		p1.setLateralAcceleration(p1s[i].alat);
-		p2.setHeading(p2s[i].hdg);
+		p2.setHeading(p2s[i].hdg*M_PI/180.0);
 		p2.setLongitudinalAcceleration(p2s[i].alon);
 		p2.setLateralAcceleration(p2s[i].alat);
 		auto pRel = p1.relativeTo(p2);
