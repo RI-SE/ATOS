@@ -5,6 +5,8 @@
 #include <iostream>
 #define TIME_TOL_S 0.000001
 #define POS_TOL_M 0.001
+#define VEL_TOL_M_S 0.001
+#define ACC_TOL_M_S2 0.001
 #define HDG_TOL_DEG 0.1
 
 using traj_pt = Trajectory::TrajectoryPoint;
@@ -139,8 +141,8 @@ void heading_test() {
 	 0.0, 20.0, 45.0, -50.0, -10.0,
 	 0.0, 180.0};
 	std::vector<double> out =
-	{0.0, 90.0, -90.0, -90.0, 90.0,
-	 20.0, 0.0, -25.0, 30.0, -10.0,
+	{0.0, 90.0, 270.0, 270.0, 90.0,
+	 20.0, 0.0, 335.0, 30.0, 350.0,
 	 10.0, 0.0};
 
 	for (unsigned long i=0; i < out.size(); ++i) {
@@ -160,11 +162,147 @@ void heading_test() {
 }
 
 void velocity_test() {
+	traj_pt p1, p2;
+	set_default(p1);
+	set_default(p2);
 
+	typedef struct {
+		double hdg;
+		double vlon;
+		double vlat;
+	} test_data;
+
+	std::vector<test_data> p1s =
+	// Equidirectional lateral and longitudinal
+	{{0.0, 0.0, 0.0},
+	 {0.0, 5.0, 0.0},
+	 {0.0,-5.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 0.0, 5.0},
+	 {0.0, 0.0,-5.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 5.0, 0.0},
+	// Right angles
+	 {150.0, 5.0, -2.0},
+	 {280.0, -1.0, 2.0},
+	 {280.0, 0.0, 0.0},
+	 {190.0, 0.0, 0.0},
+	// Angled
+	 {130.0, 4.0, 0.0},
+	 {-60.0, 20.0, 0.0}
+	};
+	std::vector<test_data> p2s =
+	// Equidirectional lateral and longitudinal
+	{{0.0, 0.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 5.0, 0.0},
+	 {0.0,-5.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 0.0, 0.0},
+	 {0.0, 0.0, 5.0},
+	 {0.0, 0.0,-5.0},
+	 {0.0, 10.0, 0.0},
+	// Right angles
+	 {60.0, 1.0, 0.0},
+	 {190.0, 1.0, 1.5},
+	 {190.0, 0.0, 0.0},
+	 {10.0, 4.0, 0.0},
+	// Angled
+	 {10.0, 4.0, 0.0},
+	 {-30.0, 20.0, 0.0}
+	};
+	std::vector<test_data> out =
+	// Equidirectional lateral and longitudinal
+	{{0.0,  0.0, 0.0},
+	 {0.0,  5.0, 0.0},
+	 {0.0, -5.0, 0.0},
+	 {0.0, -5.0, 0.0},
+	 {0.0,  5.0, 0.0},
+	 {0.0,  0.0, 5.0},
+	 {0.0,  0.0,-5.0},
+	 {0.0,  0.0,-5.0},
+	 {0.0,  0.0, 5.0},
+	 {0.0, -5.0, 0.0},
+	// Right angles
+	 {90.0, 5.0, -3.0},
+	 {90.0, 0.5, 1.0},
+	 {90.0, 0.0, 0.0},
+	 {180.0, 4.0, 0.0},
+	// Angled
+	 {120.0, 6.0, -3.464101615},
+	 {330.0, 2.679491924, 10.0}
+	};
+
+	assert(p1s.size() == p2s.size()
+		   && p2s.size() == out.size());
+	for (unsigned long i=0; i < out.size(); ++i) {
+		p1.setHeading(p1s[i].hdg*M_PI/180.0);
+		p1.setLongitudinalVelocity(p1s[i].vlon);
+		p1.setLateralVelocity(p1s[i].vlat);
+		p2.setHeading(p2s[i].hdg*M_PI/180.0);
+		p2.setLongitudinalVelocity(p2s[i].vlon);
+		p2.setLateralVelocity(p2s[i].vlat);
+		auto pRel = p1.relativeTo(p2);
+		if (std::abs(pRel.getHeading()*180.0/M_PI - out[i].hdg) > HDG_TOL_DEG
+				|| std::abs(pRel.getLongitudinalVelocity() - out[i].vlon) > VEL_TOL_M_S
+				|| std::abs(pRel.getLateralVelocity() - out[i].vlat) > VEL_TOL_M_S) {
+			std::stringstream ss;
+			ss << "Relative velocity not within error tolerance:" << std::endl;
+			ss << "p1:  (hdg:" << p1s[i].hdg << ",vlon:" << p1s[i].vlon << ",vlat:" << p1s[i].vlat << ")" << std::endl;
+			ss << "p2:  (hdg:" << p2s[i].hdg << ",vlon:" << p2s[i].vlon << ",vlat:" << p2s[i].vlat << ")" << std::endl;
+			ss << "exp: (hdg:" << out[i].hdg << ",vlon:" << out[i].vlon << ",vlat:" << out[i].vlat << ")" << std::endl;
+			ss << "act: (hdg:" << pRel.getHeading()*180.0/M_PI << ",vlon:" << pRel.getLongitudinalVelocity()
+			   << ",vlat:" << pRel.getLateralVelocity() << ")";
+			throw std::runtime_error(ss.str());
+		}
+	}
 }
 
 void acceleration_test() {
+	traj_pt p1, p2;
+	set_default(p1);
+	set_default(p2);
 
+	typedef struct {
+		double hdg;
+		double alon;
+		double alat;
+	} test_data;
+
+	std::vector<test_data> p1s =
+	{{},
+	 {}};
+	std::vector<test_data> p2s =
+	{{},
+	 {}};
+	std::vector<test_data> out =
+	{{},
+	 {}};
+
+	for (unsigned long i=0; i < out.size(); ++i) {
+		p1.setHeading(p1s[i].hdg);
+		p1.setLongitudinalAcceleration(p1s[i].alon);
+		p1.setLateralAcceleration(p1s[i].alat);
+		p2.setHeading(p2s[i].hdg);
+		p2.setLongitudinalAcceleration(p2s[i].alon);
+		p2.setLateralAcceleration(p2s[i].alat);
+		auto pRel = p1.relativeTo(p2);
+		if (std::abs(pRel.getHeading()*180.0/M_PI - out[i].hdg) > HDG_TOL_DEG
+				|| std::abs(pRel.getLongitudinalAcceleration() - out[i].alon) > ACC_TOL_M_S2
+				|| std::abs(pRel.getLateralAcceleration() - out[i].alat) > ACC_TOL_M_S2) {
+			std::stringstream ss;
+			ss << "Relative acceleration not within error tolerance:" << std::endl;
+			ss << "p1:  (hdg:" << p1s[i].hdg << ",alon:" << p1s[i].alon << ",alat:" << p1s[i].alat << ")" << std::endl;
+			ss << "p2:  (hdg:" << p2s[i].hdg << ",alon:" << p2s[i].alon << ",alat:" << p2s[i].alat << ")" << std::endl;
+			ss << "exp: (hdg:" << out[i].hdg << ",alon:" << out[i].alon << ",alat:" << out[i].alat << ")" << std::endl;
+			ss << "act: (hdg:" << pRel.getHeading()*180.0/M_PI << ",alon:" << pRel.getLongitudinalAcceleration()
+			   << ",alat:" << pRel.getLateralAcceleration() << ")";
+			throw std::runtime_error(ss.str());
+		}
+	}
 }
 
 void curvature_test() {

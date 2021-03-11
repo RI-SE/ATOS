@@ -129,6 +129,11 @@ CartesianPosition Trajectory::TrajectoryPoint::getCartesianPosition() const {
     return retval;
 }
 
+/*!
+ * \brief Trajectory::TrajectoryPoint::relativeTo
+ * \param other
+ * \return
+ */
 Trajectory::TrajectoryPoint Trajectory::TrajectoryPoint::relativeTo(
 		const TrajectoryPoint &other) const {
 
