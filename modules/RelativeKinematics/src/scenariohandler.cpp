@@ -27,6 +27,10 @@ void ScenarioHandler::handleInitCommand() {
 	this->state->initializeRequest(*this);
 }
 
+void ScenarioHandler::handleConnectCommand() {
+	this->state->connectRequest(*this);
+}
+
 void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
@@ -109,5 +113,9 @@ void ScenarioHandler::transformScenarioRelativeTo(
 
 		objects[id].setTrajectory(relTraj);
 	}
+}
+
+void ScenarioHandler::clearScenario() {
+	objects.clear();
 }
 

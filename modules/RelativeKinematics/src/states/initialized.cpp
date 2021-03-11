@@ -10,10 +10,12 @@ RelativeKinematics::Initialized::Initialized() {
 void RelativeKinematics::Initialized::connectRequest(
 		ScenarioHandler& handler) {
 	// TODO
+	setState(handler, new RelativeKinematics::Connecting());
 }
 
 void RelativeKinematics::Initialized::disconnectRequest(
 		ScenarioHandler& handler) {
-	// TODO
+	handler.clearScenario();
+	setState(handler, new RelativeKinematics::Idle());
 }
 

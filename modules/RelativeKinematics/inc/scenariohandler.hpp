@@ -39,6 +39,7 @@ public:
 	~ScenarioHandler();
 
 	void handleInitCommand();
+	void handleConnectCommand();
 
 	std::vector<uint32_t> getVehicleUnderTestIDs() const;
 	std::vector<uint32_t> getVehicleIDs() const {
@@ -56,6 +57,8 @@ private:
 	void loadObjectFiles();
 	void parseObjectFile(const fs::path& objectFile, TestObject& object);
 	void transformScenarioRelativeTo(const uint32_t objectID);
+
+	void clearScenario();
 };
 
 
