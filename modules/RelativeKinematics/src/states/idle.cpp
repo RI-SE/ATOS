@@ -13,7 +13,6 @@ void RelativeKinematics::Idle::initializeRequest(
 
 	try {
 		handler.loadScenario();
-		// TODO Transform
 		auto vutIDs = handler.getVehicleUnderTestIDs();
 		if (vutIDs.size() == 1) {
 			handler.transformScenarioRelativeTo(vutIDs[0]);
