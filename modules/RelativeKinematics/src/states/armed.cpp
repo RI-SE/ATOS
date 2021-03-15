@@ -1,6 +1,6 @@
 #include "state.hpp"
 
-RelativeKinematics::Armed::Armed() {
+ObjectControl::Armed::Armed() {
 
 }
 

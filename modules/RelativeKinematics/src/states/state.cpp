@@ -15,8 +15,6 @@ void ObjectControlState::setState(
 
 
 // Function bodies for pure virtual functions
-// TODO: any subclass independent implementations may be placed in these and
-// called from respective subclass
 void ObjectControlState::initializeRequest(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }

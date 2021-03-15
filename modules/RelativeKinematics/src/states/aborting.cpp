@@ -1,6 +1,6 @@
 #include "state.hpp"
 
-RelativeKinematics::Aborting::Aborting() {
+ObjectControl::Aborting::Aborting() {
 
 }
 

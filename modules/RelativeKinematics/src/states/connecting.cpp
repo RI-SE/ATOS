@@ -1,35 +1,82 @@
 #include "state.hpp"
 
 
-RelativeKinematics::Connecting::Connecting() {
+ObjectControl::Connecting::Connecting() {
 
 }
 
+void ObjectControl::Connecting::disconnectRequest(
+		ScenarioHandler& handler) {
+	handler.abortConnectionAttempt();
+	handler.disconnectObjects();
+	handler.clearScenario();
+}
 
-void RelativeKinematics::Connecting::disconnectRequest(ScenarioHandler&) {
+void ObjectControl::Connecting::connectRequest(
+		ScenarioHandler& handler) {
 	// TODO
 }
 
-void RelativeKinematics::Connecting::connectRequest(ScenarioHandler&) {
+void ObjectControl::Connecting::connectedToObject(
+		ScenarioHandler& handler) {
 	// TODO
 }
 
-void RelativeKinematics::Connecting::connectedToObject(ScenarioHandler&) {
+void ObjectControl::Connecting::disconnectedFromObject(
+		ScenarioHandler& handler) {
 	// TODO
 }
 
-void RelativeKinematics::Connecting::disconnectedFromObject(ScenarioHandler&) {
+void ObjectControl::Connecting::connectedToLiveObject(
+		ScenarioHandler& handler) {
 	// TODO
 }
 
-void RelativeKinematics::Connecting::connectedToLiveObject(ScenarioHandler&) {
+void ObjectControl::Connecting::connectedToArmedObject(
+		ScenarioHandler& handler) {
 	// TODO
 }
 
-void RelativeKinematics::Connecting::connectedToArmedObject(ScenarioHandler&) {
+void ObjectControl::Connecting::allObjectsConnected(
+		ScenarioHandler& handler) {
 	// TODO
 }
 
-void RelativeKinematics::Connecting::allObjectsConnected(ScenarioHandler&) {
-	// TODO
+void RelativeKinematics::Connecting::disconnectRequest(
+		ScenarioHandler& handler) {
+	ObjectControl::Connecting::disconnectRequest(handler);
+	setState(handler, new RelativeKinematics::Idle());
+}
+
+void RelativeKinematics::Connecting::connectRequest(
+		ScenarioHandler& handler) {
+	ObjectControl::Connecting::connectRequest(handler);
+}
+
+void RelativeKinematics::Connecting::connectedToObject(
+		ScenarioHandler& handler) {
+	ObjectControl::Connecting::connectedToObject(handler);
+}
+
+void RelativeKinematics::Connecting::disconnectedFromObject(
+		ScenarioHandler& handler) {
+	ObjectControl::Connecting::disconnectedFromObject(handler);
+}
+
+void RelativeKinematics::Connecting::connectedToLiveObject(
+		ScenarioHandler& handler) {
+	ObjectControl::Connecting::connectedToLiveObject(handler);
+	setState(handler, new RelativeKinematics::Aborting());
+}
+
+void RelativeKinematics::Connecting::connectedToArmedObject(
+		ScenarioHandler& handler) {
+	ObjectControl::Connecting::connectedToArmedObject(handler);
+	setState(handler, new RelativeKinematics::Disarming());
+}
+
+void RelativeKinematics::Connecting::allObjectsConnected(
+		ScenarioHandler& handler) {
+	ObjectControl::Connecting::connectedToArmedObject(handler);
+	setState(handler, new RelativeKinematics::Ready());
 }

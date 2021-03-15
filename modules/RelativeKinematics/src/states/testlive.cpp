@@ -1,6 +1,6 @@
 #include "state.hpp"
 
-RelativeKinematics::TestLive::TestLive() {
+ObjectControl::TestLive::TestLive() {
 
 }
 

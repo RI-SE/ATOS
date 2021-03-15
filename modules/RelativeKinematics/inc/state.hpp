@@ -38,13 +38,13 @@ protected:
 	void setState(ScenarioHandler& handler, ObjectControlState *st);
 };
 
-namespace RelativeKinematics {
+namespace ObjectControl {
 
 class Idle : public ObjectControlState {
 public:
 	Idle();
 	//! Handle initialization requests
-	void initializeRequest(ScenarioHandler&);
+	virtual void initializeRequest(ScenarioHandler&);
 
 	//! Ignore other commands
 	void disconnectRequest(ScenarioHandler&) {}
@@ -71,8 +71,8 @@ class Initialized : public ObjectControlState {
 public:
 	Initialized();
 	//! Handle connect/disconnect requests
-	void disconnectRequest(ScenarioHandler&);
-	void connectRequest(ScenarioHandler&);
+	virtual void disconnectRequest(ScenarioHandler&);
+	virtual void connectRequest(ScenarioHandler&);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -98,13 +98,13 @@ class Connecting : public ObjectControlState {
 public:
 	Connecting();
 	//! Handle only connect/disconnect requests
-	void disconnectRequest(ScenarioHandler&);
-	void connectRequest(ScenarioHandler&);
-	void connectedToObject(ScenarioHandler&);
-	void disconnectedFromObject(ScenarioHandler&);
-	void connectedToLiveObject(ScenarioHandler&);
-	void connectedToArmedObject(ScenarioHandler&);
-	void allObjectsConnected(ScenarioHandler&);
+	virtual void disconnectRequest(ScenarioHandler&);
+	virtual void connectRequest(ScenarioHandler&);
+	virtual void connectedToObject(ScenarioHandler&);
+	virtual void disconnectedFromObject(ScenarioHandler&);
+	virtual void connectedToLiveObject(ScenarioHandler&);
+	virtual void connectedToArmedObject(ScenarioHandler&);
+	virtual void allObjectsConnected(ScenarioHandler&);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -125,9 +125,9 @@ class Ready : public ObjectControlState {
 public:
 	Ready();
 	//! Handle arm and disconnect requests
-	void armRequest(ScenarioHandler&);
-	void disconnectRequest(ScenarioHandler&);
-	void disconnectedFromObject(ScenarioHandler&);
+	virtual void armRequest(ScenarioHandler&);
+	virtual void disconnectRequest(ScenarioHandler&);
+	virtual void disconnectedFromObject(ScenarioHandler&);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -152,11 +152,11 @@ class Aborting : public ObjectControlState {
 public:
 	Aborting();
 	//! Only handle all clear signal
-	void allClearRequest(ScenarioHandler&);
-	void connectedToObject(ScenarioHandler&);
-	void disconnectedFromObject(ScenarioHandler&);
-	void connectedToLiveObject(ScenarioHandler&);
-	void connectedToArmedObject(ScenarioHandler&);
+	virtual void allClearRequest(ScenarioHandler&);
+	virtual void connectedToObject(ScenarioHandler&);
+	virtual void disconnectedFromObject(ScenarioHandler&);
+	virtual void connectedToLiveObject(ScenarioHandler&);
+	virtual void connectedToArmedObject(ScenarioHandler&);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -179,10 +179,10 @@ class TestLive : public ObjectControlState {
 public:
 	TestLive();
 	//! Only stop/abort allowed in live state
-	void stopRequest(ScenarioHandler&);
-	void abortRequest(ScenarioHandler&);
-	void testCompleted(ScenarioHandler&);
-	void disconnectedFromObject(ScenarioHandler&);
+	virtual void stopRequest(ScenarioHandler&);
+	virtual void abortRequest(ScenarioHandler&);
+	virtual void testCompleted(ScenarioHandler&);
+	virtual void disconnectedFromObject(ScenarioHandler&);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -206,12 +206,12 @@ class Disarming : public ObjectControlState {
 public:
 	Disarming();
 	//! Only allow disconnect command
-	void disconnectRequest(ScenarioHandler&);
-	void connectedToObject(ScenarioHandler&);
-	void disconnectedFromObject(ScenarioHandler&);
-	void connectedToArmedObject(ScenarioHandler&);
-	void connectedToLiveObject(ScenarioHandler&);
-	void allObjectsDisarmed(ScenarioHandler&);
+	virtual void disconnectRequest(ScenarioHandler&);
+	virtual void connectedToObject(ScenarioHandler&);
+	virtual void disconnectedFromObject(ScenarioHandler&);
+	virtual void connectedToArmedObject(ScenarioHandler&);
+	virtual void connectedToLiveObject(ScenarioHandler&);
+	virtual void allObjectsDisarmed(ScenarioHandler&);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -233,9 +233,9 @@ class Armed : public ObjectControlState {
 public:
 	Armed();
 	//! Only allow start/disarm
-	void startRequest(ScenarioHandler&);
-	void disarmRequest(ScenarioHandler&);
-	void disconnectedFromObject(ScenarioHandler&);
+	virtual void startRequest(ScenarioHandler&);
+	virtual void disarmRequest(ScenarioHandler&);
+	virtual void disconnectedFromObject(ScenarioHandler&);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -260,7 +260,7 @@ class Done : public ObjectControlState {
 public:
 	Done();
 	//! Completing postprocessing allows exiting this state
-	void postProcessingCompleted(ScenarioHandler&);
+	virtual void postProcessingCompleted(ScenarioHandler&);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -285,3 +285,64 @@ public:
 
 }
 
+namespace RelativeKinematics {
+class Idle : public ObjectControl::Idle {
+	void initializeRequest(ScenarioHandler&);
+};
+
+class Initialized : public ObjectControl::Initialized {
+	void disconnectRequest(ScenarioHandler&);
+	void connectRequest(ScenarioHandler&);
+};
+
+class Connecting : public ObjectControl::Connecting {
+	void disconnectRequest(ScenarioHandler&);
+	void connectRequest(ScenarioHandler&);
+	void connectedToObject(ScenarioHandler&);
+	void disconnectedFromObject(ScenarioHandler&);
+	void connectedToLiveObject(ScenarioHandler&);
+	void connectedToArmedObject(ScenarioHandler&);
+	void allObjectsConnected(ScenarioHandler&);
+};
+
+class Ready : public ObjectControl::Ready {
+	void armRequest(ScenarioHandler&);
+	void disconnectRequest(ScenarioHandler&);
+	void disconnectedFromObject(ScenarioHandler&);
+};
+
+class Aborting : public ObjectControl::Aborting {
+	void allClearRequest(ScenarioHandler&);
+	void connectedToObject(ScenarioHandler&);
+	void disconnectedFromObject(ScenarioHandler&);
+	void connectedToLiveObject(ScenarioHandler&);
+	void connectedToArmedObject(ScenarioHandler&);
+};
+
+class TestLive : public ObjectControl::TestLive {
+	void stopRequest(ScenarioHandler&);
+	void abortRequest(ScenarioHandler&);
+	void testCompleted(ScenarioHandler&);
+	void disconnectedFromObject(ScenarioHandler&);
+};
+
+class Disarming : public ObjectControl::Disarming {
+	void disconnectRequest(ScenarioHandler&);
+	void connectedToObject(ScenarioHandler&);
+	void disconnectedFromObject(ScenarioHandler&);
+	void connectedToArmedObject(ScenarioHandler&);
+	void connectedToLiveObject(ScenarioHandler&);
+	void allObjectsDisarmed(ScenarioHandler&);
+};
+
+class Armed : public ObjectControl::Armed {
+	void startRequest(ScenarioHandler&);
+	void disarmRequest(ScenarioHandler&);
+	void disconnectedFromObject(ScenarioHandler&);
+};
+
+class Done : public ObjectControl::Done {
+	void postProcessingCompleted(ScenarioHandler&);
+};
+
+}

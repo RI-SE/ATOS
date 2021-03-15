@@ -20,6 +20,7 @@ public:
 	uint32_t getTransmitterID() const { return transmitterID; }
 	fs::path getTrajectoryFile() const { return trajectoryFile; }
 	Trajectory getTrajectory() const { return trajectory; }
+	ObjectStateType getState() const { return state; }
 
 	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }
 	void setCommandAddress(const sockaddr_in& newAddr);
@@ -42,6 +43,7 @@ private:
 		void disconnect();
 	};
 	ObjectConnection channel;
+	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 
 	fs::path objectFile;
 	fs::path trajectoryFile;

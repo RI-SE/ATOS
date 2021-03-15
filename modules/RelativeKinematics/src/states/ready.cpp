@@ -1,6 +1,6 @@
 #include "state.hpp"
 
-RelativeKinematics::Ready::Ready() {
+ObjectControl::Ready::Ready() {
 
 }
 

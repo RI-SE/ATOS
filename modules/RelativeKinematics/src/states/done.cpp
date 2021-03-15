@@ -1,6 +1,6 @@
 #include "state.hpp"
 
-RelativeKinematics::Done::Done() {
+ObjectControl::Done::Done() {
 
 }
 

@@ -129,10 +129,10 @@ void TestObject::parseTrajectoryFile(
 }
 
 void TestObject::initiateConnection(std::shared_future<void> stopRequest) {
-
 	connResult = connResultPromise.get_future();
 	connThread = std::thread(&TestObject::establishConnection,
-							 this, std::move(connResultPromise));
+							 this, std::move(connResultPromise),
+							 stopRequest);
 }
 
 void TestObject::establishConnection(
@@ -218,10 +218,17 @@ bool TestObject::ObjectConnection::connected() const {
 }
 
 bool TestObject::ObjectConnection::valid() const {
-	// TODO
+	return this->commandSocket != -1 && this->monitorSocket != -1;
 }
 
 void TestObject::ObjectConnection::disconnect() {
-	// TODO
+	if (this->commandSocket != -1) {
+		close(this->commandSocket);
+		this->commandSocket = -1;
+	}
+	if (this->monitorSocket != -1) {
+		close(this->monitorSocket);
+		this->monitorSocket = -1;
+	}
 }
 

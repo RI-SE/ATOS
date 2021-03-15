@@ -96,6 +96,14 @@ std::vector<uint32_t> ScenarioHandler::getVehicleUnderTestIDs() const {
 	return retval;
 }
 
+std::map<uint32_t,ObjectStateType> ScenarioHandler::getObjectStates() const {
+	std::map<uint32_t, ObjectStateType> retval;
+	for (const auto& elem : objects) {
+		retval[elem.first] = elem.second.getState();
+	}
+	return retval;
+}
+
 void ScenarioHandler::transformScenarioRelativeTo(
 		const uint32_t objectID) {
 	for (auto& id : getVehicleIDs()) {
@@ -112,5 +120,27 @@ void ScenarioHandler::transformScenarioRelativeTo(
 
 void ScenarioHandler::clearScenario() {
 	objects.clear();
+}
+
+
+void ScenarioHandler::beginConnectionAttempt() {
+	connStopReqFuture = connStopReqPromise.get_future();
+	for (const auto id : getVehicleIDs()) {
+		objects[id].initiateConnection(connStopReqFuture);
+	}
+}
+
+bool ScenarioHandler::isAnyObjectIn(
+		const ObjectStateType state) const {
+	return std::any_of(objects.cbegin(), objects.cend(), [state](const TestObject& obj) {
+		return obj.getState() == state;
+	});
+}
+
+bool ScenarioHandler::areAllObjectsIn(
+		const ObjectStateType state) const {
+	return std::all_of(objects.cbegin(), objects.cend(), [state](const TestObject& obj) {
+		return obj.getState() == state;
+	});
 }
 
