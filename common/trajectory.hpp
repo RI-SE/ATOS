@@ -1,7 +1,7 @@
 #ifndef TRAJECTORY_H
 #define TRAJECTORY_H
 
-#include <linux/limits.h>
+#include <limits>
 #include <vector>
 #include <iostream>
 #include <exception>
@@ -99,6 +99,17 @@ public:
 		Eigen::Vector2d acceleration; //! Vehicle frame, x forward [m/s]
         double curvature = 0;
         ModeType mode = CONTROLLED_BY_VEHICLE;
+
+		template<typename T, int rows>
+		Eigen::Matrix<T, rows, 1> zeroNaNs(
+				const Eigen::Matrix<T, rows, 1>& v) const {
+			static_assert(v.SizeAtCompileTime != 0, "Zero size matrix passed to zeroNaNs");
+			Eigen::Matrix<T, rows, 1> ret(v);
+			for (int i = 0; i < ret.SizeAtCompileTime; ++i) {
+				ret[i] = isnan(ret[i]) ? 0.0 : ret[i];
+			}
+			return ret;
+		}
     };
 	typedef std::vector<TrajectoryPoint>::iterator iterator;
 	typedef std::vector<TrajectoryPoint>::const_iterator const_iterator;
@@ -121,6 +132,7 @@ private:
 	static const std::regex fileHeaderPattern;
 	static const std::regex fileLinePattern;
 	static const std::regex fileFooterPattern;
+
 };
 
 
