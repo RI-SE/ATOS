@@ -1,7 +1,7 @@
 #ifndef TRAJECTORY_H
 #define TRAJECTORY_H
 
-#include <linux/limits.h>
+#include <limits>
 #include <vector>
 #include <iostream>
 #include <exception>
