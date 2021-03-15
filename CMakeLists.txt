@@ -3,7 +3,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "Enable verbose make")
 set(CMAKE_COLOR_MAKEFILE   ON)
 
 project(Maestro VERSION 0.5.0)
@@ -11,8 +11,11 @@ project(Maestro VERSION 0.5.0)
 set(WITH_SCENARIO_CONTROL ON CACHE BOOL "Enable ScenarioControl module")
 set(WITH_SUPERVISION ON CACHE BOOL "Enable Supervision module")
 set(WITH_VISUALIZATION ON CACHE BOOL "Enable Visualization module")
+set(WITH_RELATIVE_KINEMATICS ON CACHE BOOL "Enable RelativeKinematics module")
 set(WITH_DIRECT_CONTROL ON CACHE BOOL "Enable DirectControl module")
 set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
+
+set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
 set(MAESTRO_TEST_DIR ".maestro" CACHE STRING "Directory where test data is to be stored")
 
@@ -46,9 +49,18 @@ endif()
 if(WITH_OBJECT_MONITORING)
 	list(APPEND ENABLED_MODULES ObjectMonitoring)
 endif()
+if(WITH_RELATIVE_KINEMATICS)
+	list(APPEND ENABLED_MODULES RelativeKinematics)
+endif()
+
+# Testing
+if(ENABLE_TESTS)
+	enable_testing()
+endif()
 
 # Add corresponding subprojects
 add_subdirectory(util/C)
+add_subdirectory(common)
 add_subdirectory(core)
 foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
