@@ -24,6 +24,7 @@ ReadWriteAccess_t DataDictionaryInitScenarioName();
 ReadWriteAccess_t DataDictionarySetScenarioName(const char* name, const size_t nameLength);
 ReadWriteAccess_t DataDictionaryGetScenarioName(char* name, const size_t nameLength);
 
+//TODO: We should have one call for the origin, this in order to make sure that all the three parts of the position are updated at the same time, otherwise there is a small risk of us using old and new values for origin thereby we might get a completely messed up origin
 ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType *GSD, C8 *Latitude);
 ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(GSDType *GSD, dbl *Latitude);
@@ -125,6 +126,9 @@ ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, C8 *MiscData, U32 Bu
 ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, OBCState_t OBCState);
 OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD);
 
+ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
+ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
+
 ReadWriteAccess_t DataDictionaryInitMaxPacketsLost(void);
 ReadWriteAccess_t DataDictionarySetMaxPacketsLost(uint8_t maxPacketsLostSetting);
 ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSetting);
@@ -132,9 +136,6 @@ ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSettin
 ReadWriteAccess_t DataDictionaryInitTransmitterID(void);
 ReadWriteAccess_t DataDictionaryGetTransmitterID(uint32_t * transmitterID);
 ReadWriteAccess_t DataDictionarySetTransmitterID(const uint32_t transmitterID);
-
-ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
-ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
 
 ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData);
 ReadWriteAccess_t DataDictionaryClearObjectData(const uint32_t transmitterID);
@@ -163,8 +164,16 @@ ReadWriteAccess_t DataDictionarySetObjectProperties(const uint32_t transmitterID
 ReadWriteAccess_t DataDictionaryGetObjectProperties(const uint32_t transmitterID, ObjectPropertiesType* objectProperties);
 ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitterID);
 
+ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosition * origin);
+ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t* transmitterID, const GeoPosition * origin);
+ReadWriteAccess_t DataDictionaryInitOrigin();
+
+ReadWriteAccess_t DataDictionarySetRequestedControlAction(const uint32_t transmitterID, const RequestControlActionType* reqCtrlAction);
+ReadWriteAccess_t DataDictionaryGetRequestedControlAction(const uint32_t transmitterID, RequestControlActionType* reqCtrlAction);
+ReadWriteAccess_t DataDictionaryResetRequestedControlAction(const uint32_t transmitterID);
+
+
 #ifdef __cplusplus
 }
 #endif
 #endif
-

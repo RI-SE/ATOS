@@ -257,9 +257,9 @@ COMM_INV = 255
 };
 
 typedef struct {
-	RemoteControlManoeuvreType manoeuvre;
+	RemoteControlManoeuvreCommandType manoeuvre;
 	in_addr_t objectIP;
-} RemoteControlCommandType;
+} ManoeuvreCommandType;
 
 typedef struct
 {
@@ -282,9 +282,12 @@ typedef struct {
 	in_addr_t ClientIP;
 	ObjectEnabledType Enabled;
 	ObjectMonitorType MonrData;
+	struct timeval lastPositionUpdate;
 	ObjectPropertiesType properties;
 	bool propertiesReceived;
 	struct timeval lastDataUpdate;
+  GeoPosition origin;
+	RequestControlActionType requestedControlAction;
 } ObjectDataType;
 
 typedef struct {

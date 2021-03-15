@@ -57,6 +57,7 @@
 #define OBJECT_CONNECTION_RETRY_PERIOD_MS 1000
 
 #define MAX_NETWORK_DELAY_USEC 100000
+#define MAX_REMOTE_CONTROL_COMMAND_AGE_US 50000
 
 #define OBJECT_CONTROL_CONTROL_MODE 0
 #define OBJECT_CONTROL_REPLAY_MODE 1
@@ -324,10 +325,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
-				if (objectEnabledStatus == OBJECT_ENABLED)
+				if (objectEnabledStatus == OBJECT_ENABLED) {
 					UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
 									&objectConnections[iIndex].objectMonitorAddress,
 									MessageBuffer, MessageLength, 0);
+				}
 			}
 		}
 
@@ -346,10 +348,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			// Transmit heartbeat to all objects
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
-				if (objectEnabledStatus == OBJECT_ENABLED)
+				if (objectEnabledStatus == OBJECT_ENABLED) {
 					UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
 									&objectConnections[iIndex].objectMonitorAddress,
 									MessageBuffer, MessageLength, 0);
+				}
 			}
 		}
 
@@ -442,10 +445,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						continue;
 					}
 					else {
-						TimeSetToCurrentSystemTime(&monitorData.lastDataUpdate);
+						TimeSetToCurrentSystemTime(&monitorData.lastPositionUpdate);
 						struct timeval monitorDataAge;
 
-						timersub(&monitorData.lastDataUpdate, &monitorData.MonrData.timestamp,
+						timersub(&monitorData.lastPositionUpdate, &monitorData.MonrData.timestamp,
 								 &monitorDataAge);
 						if (monitorDataAge.tv_sec || labs(monitorDataAge.tv_usec) > MAX_NETWORK_DELAY_USEC) {
 							LogMessage(LOG_LEVEL_WARNING,
@@ -620,9 +623,79 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 				}
 			}
-
 		}
 
+		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_REMOTECTRL) {
+
+			DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
+
+			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+				if (objectEnabledStatus == OBJECT_ENABLED) {
+					RequestControlActionType reqDCAction;
+					struct timeval requestAge;
+
+					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &reqDCAction)
+						== READ_OK && timerisset(&reqDCAction.dataTimestamp)) {
+						timersub(&currentTime, &reqDCAction.dataTimestamp, &requestAge);
+						if (timerpos(&requestAge) && requestAge.tv_sec == 0
+							&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
+							if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
+								// Encode RCMM
+								RemoteControlManoeuvreMessageType rcmmMessage;
+
+								if (reqDCAction.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE ||
+									reqDCAction.steeringUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE) {
+									rcmmMessage.status = 0;	//Shall be 0 when controlled by percentage
+								}
+								else
+									rcmmMessage.status = 1;	//Shall be 1 when controlled by absolute value
+								rcmmMessage.steeringManoeuvre.pct = reqDCAction.steeringAction.pct;
+								rcmmMessage.isSteeringManoeuvreValid = reqDCAction.isSteeringActionValid;
+								rcmmMessage.speedManoeuvre.pct = reqDCAction.speedAction.pct;
+								rcmmMessage.isSpeedManoeuvreValid = reqDCAction.isSpeedActionValid;
+								MessageLength =
+									encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof (MessageBuffer), 0);
+							}
+							else {
+								// Encode DCMM
+								RemoteControlManoeuvreMessageType dcmmMessage;
+
+								if (reqDCAction.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE ||
+									reqDCAction.steeringUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE) {
+									dcmmMessage.status = 0;	//Shall be 0 when controlled by percentage
+								}
+								else
+									dcmmMessage.status = 1;	//Shall be 1 when controlled by absolute value
+								dcmmMessage.steeringManoeuvre.pct = reqDCAction.steeringAction.pct;
+								dcmmMessage.isSteeringManoeuvreValid = reqDCAction.isSteeringActionValid;
+								dcmmMessage.speedManoeuvre.pct = reqDCAction.speedAction.pct;
+								dcmmMessage.isSpeedManoeuvreValid = reqDCAction.isSpeedActionValid;
+								MessageLength =
+									encodeDCMMMessage(&dcmmMessage, MessageBuffer, sizeof (MessageBuffer), 0);
+							}
+
+							if (MessageLength > 0) {
+								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+												&objectConnections[iIndex].commandSocket, 0);
+								MessageLength = 0;
+							}
+							else {
+								LogMessage(LOG_LEVEL_ERROR, "Error encoding remote control message");
+							}
+						}
+						else {
+							LogMessage(LOG_LEVEL_WARNING,
+									   "Ignoring remote control command - age is %ld s %ld µs",
+									   requestAge.tv_sec, requestAge.tv_usec);
+						}
+					}
+					else {
+						LogMessage(LOG_LEVEL_ERROR, "Failed to read from data dictionary");
+					}
+				}
+			}
+		}
 
 		bzero(pcRecvBuffer, RECV_MESSAGE_BUFFER);
 		//Have we recieved a command?
@@ -759,7 +832,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_INFO, "Disabled remote control mode");
 			}
 			else if (iCommand == COMM_REMOTECTRL_MANOEUVRE) {
-				RemoteControlCommandType rcCommand;
+				ManoeuvreCommandType rcCommand;
 
 				// TODO check size of received data
 				memcpy(&rcCommand, pcRecvBuffer, sizeof (rcCommand));
@@ -775,9 +848,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									  ipString, sizeof (ipString));
 							LogMessage(LOG_LEVEL_INFO, "Sending back to start command to object with IP %s",
 									   ipString);
+							RemoteControlManoeuvreMessageType rcmmMessage;
+
+							rcmmMessage.command = rcCommand.manoeuvre;
+							rcmmMessage.isSpeedManoeuvreValid = 0;
+							rcmmMessage.isSteeringManoeuvreValid = 0;
 							MessageLength =
-								encodeRCMMMessage(rcCommand.manoeuvre, MessageBuffer, sizeof (MessageBuffer),
-												  0);
+								encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof (MessageBuffer), 0);
 							if (MessageLength > 0) {
 								UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 												&objectConnections[iIndex].commandSocket, 0);
@@ -853,6 +930,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					// Enable all objects at INIT
 					LogMessage(LOG_LEVEL_DEBUG, "Initializing object data");
 					ObjectDataType objectData;
+					GeoPosition origin;
 
 					for (iIndex = 0; iIndex < nbr_objects; iIndex++) {
 						LogMessage(LOG_LEVEL_DEBUG, "Configuring object data for object %u",
@@ -860,10 +938,17 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						objectData.Enabled = OBJECT_ENABLED;
 						objectData.ClientIP = objectConnections[iIndex].objectCommandAddress.sin_addr.s_addr;
 						objectData.ClientID = object_transmitter_ids[iIndex];
-						objectData.lastDataUpdate.tv_sec = 0;
-						objectData.lastDataUpdate.tv_usec = 0;
+						objectData.lastPositionUpdate.tv_sec = 0;
+						objectData.lastPositionUpdate.tv_usec = 0;
 						objectData.propertiesReceived = 0;
+						objectData.origin = origin;
+
+						//TODO read origin from object property file
 						if (DataDictionarySetObjectData(&objectData) != WRITE_OK) {
+							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
+							initSuccessful = false;
+						}
+						if (DataDictionaryInitOrigin(&objectData) != WRITE_OK) {
 							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
 							initSuccessful = false;
 						}
@@ -2008,7 +2093,7 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 		strcpy(objectFilePath, objectPathDir);
 		strcat(objectFilePath, directory_entry->d_name);
 		memset(object_traj_file[*nbr_objects], 0, MAX_FILE_PATH);
-
+		//TODO: add so you can add origin on objects in object file
 		// Get IP setting
 		if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFilePath,
 									 sizeof (objectFilePath), objectSetting, sizeof (objectSetting)) == -1) {
