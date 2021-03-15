@@ -139,20 +139,10 @@ Trajectory::TrajectoryPoint Trajectory::TrajectoryPoint::relativeTo(
 
 	using namespace Eigen;
 	TrajectoryPoint relative;
-	auto zeroNaNs = [](const Vector2d& v){
-		Vector2d ret;
-		ret[0] = isnan(v[0]) ? 0.0 : v[0];
-		ret[1] = isnan(v[1]) ? 0.0 : v[1];
-		return ret;
-	};
 
 	relative.setTime(this->getTime());
-	try {
-		relative.setPosition(this->getPosition() - other.getPosition());
-	} catch (std::out_of_range) {
-		relative.setPosition(this->position - other.position);
-		relative.setZCoord(std::numeric_limits<double>::quiet_NaN());
-	}
+	relative.setPosition(zeroNaNs(this->getPosition())
+						 - zeroNaNs(other.getPosition()));
 	relative.setHeading(this->getHeading() - other.getHeading());
 	Rotation2Dd R(-relative.getHeading());
 
