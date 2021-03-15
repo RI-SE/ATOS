@@ -1,5 +1,5 @@
 ## Relative kinematics module
-This module is executes control of objects according to a VUT-relative scenario such as is the case for a VIL rig or similar cases when the object of interest is physically standing still. 
+This module executes control of objects according to a VUT-relative scenario such as is the case for a VIL rig or similar cases when the object of interest is physically standing still. 
 
 ### Build process
 1) Ensure your util repo is up to date
@@ -14,4 +14,3 @@ This module is executes control of objects according to a VUT-relative scenario 
 2) Navigate to the build directory
 3) Ensure Core is running
 3) Run the module: ```./RelativeKinematics```
-
