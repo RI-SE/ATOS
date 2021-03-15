@@ -1,4 +1,5 @@
 #include <netinet/in.h>
+#include <future>
 #include "trajectory.hpp"
 
 // GCC version 8.1 brings non-experimental support for std::filesystem
@@ -26,14 +27,33 @@ public:
 
 	bool isVehicleUnderTest() const { return isVUT; }
 	std::string toString() const;
+
+	void initiateConnection(std::shared_future<void> stopRequest);
 private:
-	struct sockaddr_in commandAddress;
-	struct sockaddr_in monitorAddress;
+	class ObjectConnection {
+	public:
+		struct sockaddr_in cmdAddr;
+		struct sockaddr_in mntrAddr;
+		int commandSocket;
+		int monitorSocket;
+
+		bool valid() const;
+		bool connected() const;
+		void disconnect();
+	};
+	ObjectConnection channel;
+
 	fs::path objectFile;
 	fs::path trajectoryFile;
 	uint32_t transmitterID;
 	bool isVUT = false;
 	Trajectory trajectory;
+
+	static constexpr int connRetryPeriod_ms = 1000;
+	void establishConnection(std::promise<void> result, std::shared_future<void> stopRequest);
+	std::promise<void> connResultPromise;
+	std::future<void> connResult;
+	std::thread connThread;
 };
 
 // Template specialisation of std::less for TestObject
