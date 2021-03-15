@@ -1,0 +1,53 @@
+cmake_minimum_required(VERSION 3.1)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+project(MaestroCommon LANGUAGES C CXX)
+
+set(MAESTRO_COMMON_TARGET ${TARGET_NAMESPACE}${PROJECT_NAME})
+
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+set(EIGEN_LIBRARY Eigen3::Eigen)
+set(LOGGING_LIBRARY MaestroLogging)
+set(COREUTILS_LIBRARY MaestroCoreUtil)
+
+include(GNUInstallDirs)
+
+add_library(${MAESTRO_COMMON_TARGET} SHARED
+	${CMAKE_CURRENT_SOURCE_DIR}/trajectory.cpp
+)
+
+target_link_libraries(${MAESTRO_COMMON_TARGET}
+	${LOGGING_LIBRARY}
+	${COREUTILS_LIBRARY}
+	${EIGEN_LIBRARY}
+)
+
+target_include_directories(${MAESTRO_COMMON_TARGET} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}
+)
+set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/trajectory.hpp
+)
+set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/regexpatterns.hpp
+)
+
+# Tests
+add_executable(test_relativetrajectory tests/test_relativetrajectory.cpp)
+add_test(relative_trajectory_point_test
+	${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_relativetrajectory)
+target_link_libraries(test_relativetrajectory
+	${MAESTRO_COMMON_TARGET}
+)
+
+install(CODE "MESSAGE(STATUS \"Installing target ${MAESTRO_COMMON_TARGET}\")")
+install(TARGETS ${MAESTRO_COMMON_TARGET}
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
