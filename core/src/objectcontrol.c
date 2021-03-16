@@ -977,6 +977,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							LogMessage(LOG_LEVEL_ERROR, "Error setting object data");
 							initSuccessful = false;
 						}
+
+						//Reset direct control action data 
+						DataDictionaryResetRequestedControlAction(object_transmitter_ids[iIndex]);
 					}
 
 					LogMessage(LOG_LEVEL_DEBUG, "Resetting command actions");
