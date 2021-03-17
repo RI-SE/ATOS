@@ -42,7 +42,7 @@
 /*------------------------------------------------------------
 -- Types
 ------------------------------------------------------------*/
-typedef void (*ModuleTask) (TimeType *, GSDType *, LOG_LEVEL);	//!< Function pointer type for module "main" functions
+typedef void (*ModuleTask)(TimeType *, GSDType *, LOG_LEVEL);	//!< Function pointer type for module "main" functions
 typedef struct {
 	LOG_LEVEL commonLogLevel;	//!< Logging level of the server.
 	int extraMessageQueues;		//!< Number of extra message queues to create on startup.

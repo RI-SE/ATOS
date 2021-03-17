@@ -1827,7 +1827,7 @@ ReadWriteAccess_t DataDictionaryInitObjectData() {
  */
 ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
 											   const ObjectMonitorType * monitorData,
-											   const struct timeval * receiveTime) {
+											   const struct timeval *receiveTime) {
 
 	ReadWriteAccess_t result;
 
@@ -1983,7 +1983,7 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t transmitterId, Obj
  * \return Value according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmitterID,
-														  struct timeval * lastDataUpdate) {
+														  struct timeval *lastDataUpdate) {
 	ReadWriteAccess_t result = UNDEFINED;
 
 	if (objectDataMemory == NULL) {
@@ -2029,7 +2029,7 @@ ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmi
  * \return Value according to ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmitterID,
-														  const struct timeval * lastDataUpdate) {
+														  const struct timeval *lastDataUpdate) {
 	ReadWriteAccess_t result = UNDEFINED;
 
 	if (objectDataMemory == NULL) {
@@ -2699,12 +2699,13 @@ ReadWriteAccess_t DataDictionarySetRequestedControlAction(const uint32_t transmi
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
 		return UNDEFINED;
 	}
-							
+
 	result = PARAMETER_NOTFOUND;
 	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (transmitterID == objectDataMemory[i].ClientID) {
-			
+
 			objectDataMemory[i].requestedControlAction = *reqCtrlAction;
 			result = WRITE_OK;
 		}
@@ -2737,6 +2738,7 @@ ReadWriteAccess_t DataDictionaryGetRequestedControlAction(const uint32_t transmi
 
 	result = PARAMETER_NOTFOUND;
 	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
 	for (int i = 0; i < numberOfObjects; ++i) {
 		if (transmitterID == objectDataMemory[i].ClientID) {
 			*reqCtrlAction = objectDataMemory[i].requestedControlAction;
