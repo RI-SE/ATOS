@@ -564,36 +564,32 @@ static void TimeControlDecodeTimeBuffer(TimeType * GPSTime, C8 * TimeBuffer, C8 
 		((U16) TimeBuffer[PROTO2_MILLISECOND_INDEX]) << 8 | TimeBuffer[PROTO2_MILLISECOND_INDEX + 1];
 	GPSTime->MicroSecondU16 =
 		((U16) TimeBuffer[PROTO2_MICROSECOND_INDEX]) << 8 | TimeBuffer[PROTO2_MICROSECOND_INDEX + 1];
-	GPSTime->SecondCounterU32 =
-		((U32) TimeBuffer[PROTO2_SECOND_COUNTER_INDEX]) << 24 | ((U32)
-																 TimeBuffer[PROTO2_SECOND_COUNTER_INDEX +
-																			1]) << 16 | ((U32)
+	GPSTime->SecondCounterU32 = ((U32) TimeBuffer[PROTO2_SECOND_COUNTER_INDEX]) << 24 | ((U32)
 																						 TimeBuffer
 																						 [PROTO2_SECOND_COUNTER_INDEX
-																						  +
-																						  2]) << 8 |
-		TimeBuffer[PROTO2_SECOND_COUNTER_INDEX + 3];
-	GPSTime->GPSMillisecondsU64 =
-		((U64) TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX]) << 56 | ((U64)
-																   TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX +
-																			  1]) << 48 | ((U64)
-																						   TimeBuffer
-																						   [PROTO2_GPS_MILLISECONDS_INDEX
-																							+
-																							2]) << 40 | ((U64)
+																						  + 1]) << 16 | ((U32)
 																										 TimeBuffer
-																										 [PROTO2_GPS_MILLISECONDS_INDEX
+																										 [PROTO2_SECOND_COUNTER_INDEX
 																										  +
-																										  3])
-		<< 32 | ((U64) TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX + 4]) << 24 | ((U64)
-																			   TimeBuffer
-																			   [PROTO2_GPS_MILLISECONDS_INDEX
-																				+
-																				5]) << 16 | ((U64)
+																										  2])
+		<< 8 | TimeBuffer[PROTO2_SECOND_COUNTER_INDEX + 3];
+	GPSTime->GPSMillisecondsU64 = ((U64) TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX]) << 56 | ((U64)
 																							 TimeBuffer
 																							 [PROTO2_GPS_MILLISECONDS_INDEX
 																							  +
-																							  6]) << 8 |
+																							  1]) << 48 |
+		((U64)
+		 TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX + 2]) << 40 | ((U64)
+																 TimeBuffer
+																 [PROTO2_GPS_MILLISECONDS_INDEX + 3])
+		<< 32 | ((U64) TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX + 4]) << 24 | ((U64)
+																			   TimeBuffer
+																			   [PROTO2_GPS_MILLISECONDS_INDEX
+																				+ 5]) << 16 | ((U64)
+																							   TimeBuffer
+																							   [PROTO2_GPS_MILLISECONDS_INDEX
+																								+
+																								6]) << 8 |
 		TimeBuffer[PROTO2_GPS_MILLISECONDS_INDEX + 7];
 	GPSTime->GPSMillisecondsU64 += MS_LEAP_SEC_DIFF_UTC_GPS;
 	GPSTime->GPSMinutesU32 =
