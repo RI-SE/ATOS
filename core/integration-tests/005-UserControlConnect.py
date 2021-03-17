@@ -10,7 +10,7 @@ if __name__ == "__main__":
     time.sleep(1.05)
     M = MSCP("127.0.0.1")
 
-    time.sleep()
+    time.sleep(1)
     if S.poll():
         S.stop()
         M.shutdown()
