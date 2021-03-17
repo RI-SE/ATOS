@@ -710,7 +710,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 										   requestAge.tv_sec, requestAge.tv_usec);
 							}
 						} else {
-							LogMessage(LOG_LEVEL_ERROR, "Failed to set timer for direct control request action");
+							//LogMessage(LOG_LEVEL_ERROR, "Failed to set timer for direct control request action");
 						}
 					}
 					else {
