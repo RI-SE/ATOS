@@ -1,5 +1,6 @@
 #include <fstream>
-
+#include <Eigen/Eigen>
+#include <Eigen/Geometry>
 #include "regexpatterns.hpp"
 #include "logging.h"
 #include "trajectory.hpp"
@@ -126,4 +127,123 @@ CartesianPosition Trajectory::TrajectoryPoint::getCartesianPosition() const {
 	retval.isHeadingValid = true;
 	retval.isPositionValid = true;
     return retval;
+}
+
+/*!
+ * \brief Trajectory::TrajectoryPoint::relativeTo
+ * \param other
+ * \return
+ */
+Trajectory::TrajectoryPoint Trajectory::TrajectoryPoint::relativeTo(
+		const TrajectoryPoint &other) const {
+
+	using namespace Eigen;
+	TrajectoryPoint relative;
+
+	relative.setTime(this->getTime());
+	relative.setPosition(zeroNaNs(this->getPosition())
+						 - zeroNaNs(other.getPosition()));
+	relative.setHeading(this->getHeading() - other.getHeading());
+	Rotation2Dd R(-relative.getHeading());
+
+	auto thisVel = zeroNaNs(this->getVelocity());
+	auto otherVel = zeroNaNs(other.getVelocity());
+	relative.setVelocity(R.inverse()*(R*thisVel - otherVel));
+
+	auto thisAcc = zeroNaNs(this->getAcceleration());
+	auto otherAcc = zeroNaNs(other.getAcceleration());
+	relative.setAcceleration(R.inverse()*(R*thisAcc - otherAcc));
+
+	// K(t) = ||r'(t) x r''(t)|| / ||r'(t)||³
+	auto rPrim = R*this->getVelocity();
+	auto rBis = R*this->getAcceleration();
+	Eigen::Vector3d rPrim3(rPrim[0], rPrim[1], 0.0);
+	Eigen::Vector3d rBis3(rBis[0], rBis[1], 0.0);
+	if (rPrim3.norm() > 0.001) {
+		relative.setCurvature(rPrim3.cross(rBis3).norm()
+							  / std::pow(rPrim3.norm(), 3));
+	}
+	else {
+		relative.setCurvature(0.0);
+	}
+
+	relative.setMode(this->getMode());
+	return relative;
+}
+
+Trajectory Trajectory::relativeTo(
+		const Trajectory &other) const {
+	using namespace Eigen;
+	// TODO check that ranges are sorted by time
+	if (this->version != other.version) {
+		throw std::invalid_argument("Attempted to calculate relative trajectory "
+									"for two trajectories with differing versions");
+	}
+
+	Trajectory relative;
+	relative.id = this->id;
+	relative.name = this->name + "_rel_" + other.name;
+	relative.version = this->version;
+	for (auto trajPt = this->points.begin(); trajPt != this->points.end(); ++trajPt) {
+		auto nearestTrajPtInOther = getNearest(other.points.begin(), other.points.end(), trajPt->getTime());
+		// TODO maybe a check on time difference here
+		relative.points.push_back(trajPt->relativeTo(*nearestTrajPtInOther));
+	}
+
+	return relative;
+}
+
+Trajectory::const_iterator Trajectory::getNearest(
+		const_iterator first,
+		const_iterator last,
+		const double &time) {
+	// Assumption: input range is sorted by time
+	// Get first element with larger time than requested
+	const_iterator after = std::lower_bound(first, last, time, [](const TrajectoryPoint& trajPt, const double& t) {
+		return trajPt.getTime() < t;
+	});
+
+	if (after == first) return first;
+	if (after == last)  return last - 1;
+
+	const_iterator before = after - 1;
+
+	// Return the element nearest to the requested time
+	return (after->getTime() - time) < (time - before->getTime()) ? after : before;
+}
+
+std::string Trajectory::TrajectoryPoint::getFormatString() const {
+	return "x:[m], y:[m], z:[m], hdg:[rad CW from N], "
+		   "vx:[m/s,longitudinal], vy:[m/s,lateral], "
+		   "ax:[m/s2,longitudinal], ay:[m/s2,lateral], "
+		   "c:[1/m], md:[]";
+}
+
+std::string Trajectory::TrajectoryPoint::toString() const {
+	std::string retval = "";
+	std::stringstream ss(retval);
+	ss << "x:" << position[0] << ", "
+	   << "y:" << position[1] << ", "
+	   << "z:" << position[2] << ", "
+	   << "hdg:" << heading << ", "
+	   << "vx:" << velocity[0] << ", "
+	   << "vy:" << velocity[1] << ", "
+	   << "ax:" << acceleration[0] << ", "
+	   << "ay:" << acceleration[1] << ", "
+	   << "c:" << curvature << ", "
+	   << "md:" << mode;
+	return ss.str();
+}
+
+std::string Trajectory::toString() const {
+	std::string retval = "";
+	std::stringstream ss(retval);
+	ss << "Trajectory:"
+	   << "\n Name: " << this->name
+	   << "\n ID: " << this->id
+	   << "\n Version: " << this->version;
+	for (const auto& point : points) {
+		ss << "\n\t" << point.toString();
+	}
+	return ss.str();
 }
