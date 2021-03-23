@@ -1,6 +1,6 @@
 #include "state.hpp"
 
-RelativeKinematics::Disarming::Disarming() {
+ObjectControl::Disarming::Disarming() {
 
 }
 

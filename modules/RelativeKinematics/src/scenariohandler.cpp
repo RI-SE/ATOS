@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <stdexcept>
 #include <fstream>
+#include <functional>
+#include <thread>
 
 
 ScenarioHandler::ScenarioHandler(
@@ -125,22 +127,38 @@ void ScenarioHandler::clearScenario() {
 
 void ScenarioHandler::beginConnectionAttempt() {
 	connStopReqFuture = connStopReqPromise.get_future();
+
+	auto connect = [this](TestObject& obj, std::shared_future<void>& connStopReq) {
+		try {
+			obj.establishConnection(connStopReq);
+			this->state->connectedToObject(*this);
+		}
+		catch (std::runtime_error &e) {
+			LogMessage(LOG_LEVEL_ERROR, "Connection attempt for object %u failed: %s",
+					   obj.getTransmitterID(), e.what());
+		}
+		catch (std::invalid_argument &e) {
+			LogMessage(LOG_LEVEL_ERROR, "Bad connection attempt for object %u: %s",
+					   obj.getTransmitterID(), e.what());
+		}
+	};
+
 	for (const auto id : getVehicleIDs()) {
-		objects[id].initiateConnection(connStopReqFuture);
+		std::thread{connect, std::ref(objects[id]), std::ref(connStopReqFuture)};
 	}
 }
 
 bool ScenarioHandler::isAnyObjectIn(
 		const ObjectStateType state) const {
-	return std::any_of(objects.cbegin(), objects.cend(), [state](const TestObject& obj) {
-		return obj.getState() == state;
+	return std::any_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,TestObject>& obj) {
+		return obj.second.getState() == state;
 	});
 }
 
 bool ScenarioHandler::areAllObjectsIn(
 		const ObjectStateType state) const {
-	return std::all_of(objects.cbegin(), objects.cend(), [state](const TestObject& obj) {
-		return obj.getState() == state;
+	return std::all_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,TestObject>& obj) {
+		return obj.second.getState() == state;
 	});
 }
 

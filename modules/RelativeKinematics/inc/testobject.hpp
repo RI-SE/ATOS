@@ -29,7 +29,7 @@ public:
 	bool isVehicleUnderTest() const { return isVUT; }
 	std::string toString() const;
 
-	void initiateConnection(std::shared_future<void> stopRequest);
+	void establishConnection(std::shared_future<void> stopRequest);
 private:
 	class ObjectConnection {
 	public:
@@ -52,10 +52,6 @@ private:
 	Trajectory trajectory;
 
 	static constexpr int connRetryPeriod_ms = 1000;
-	void establishConnection(std::promise<void> result, std::shared_future<void> stopRequest);
-	std::promise<void> connResultPromise;
-	std::future<void> connResult;
-	std::thread connThread;
 };
 
 // Template specialisation of std::less for TestObject

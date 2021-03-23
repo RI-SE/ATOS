@@ -128,88 +128,74 @@ void TestObject::parseTrajectoryFile(
 			   file.filename().c_str(), this->getTransmitterID());
 }
 
-void TestObject::initiateConnection(std::shared_future<void> stopRequest) {
-	connResult = connResultPromise.get_future();
-	connThread = std::thread(&TestObject::establishConnection,
-							 this, std::move(connResultPromise),
-							 stopRequest);
-}
-
 void TestObject::establishConnection(
-		std::promise<void> result,
 		std::shared_future<void> stopRequest) {
 	char ipString[INET_ADDRSTRLEN];
 	std::stringstream errMsg;
 
-	try {
-		if (inet_ntop(AF_INET, &this->channel.cmdAddr.sin_addr, ipString, sizeof (ipString))
-				== nullptr) {
-			errMsg << "inet_ntop: " << strerror(errno);
-			throw std::invalid_argument(errMsg.str());
-		}
-
-		if (this->channel.cmdAddr.sin_addr.s_addr == 0) {
-			errMsg << "Invalid connection IP specified: " << ipString;
-			throw std::invalid_argument(errMsg.str());
-		}
-
-		this->channel.commandSocket = socket(AF_INET, SOCK_STREAM, 0);
-		if (this->channel.commandSocket < 0) {
-			errMsg << "Failed to open control socket: " << strerror(errno);
-			this->channel.disconnect();
-			throw std::runtime_error(errMsg.str());
-		}
-
-		// Begin connection attempt
-		LogMessage(LOG_LEVEL_INFO, "Attempting to connect to socket: %s:%u", ipString,
-				   this->channel.cmdAddr.sin_port);
-		while (true) {
-			if (connect(this->channel.commandSocket,
-						reinterpret_cast<struct sockaddr *>(&this->channel.cmdAddr),
-						sizeof (this->channel.cmdAddr)) == 0) {
-				break;
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR, "Failed connection attempt to %s, retrying in %.3f s ...",
-						   ipString, TestObject::connRetryPeriod_ms / 1000.0);
-				if (stopRequest.wait_for(std::chrono::milliseconds(TestObject::connRetryPeriod_ms))
-						!= std::future_status::timeout) {
-					errMsg << "Connection attempt interrupted";
-					throw std::runtime_error(errMsg.str());
-				}
-			}
-		}
-
-		// Set command socket to nonblocking
-		if (fcntl(this->channel.commandSocket, F_SETFL,
-				  fcntl(this->channel.commandSocket, F_GETFL, 0) | O_NONBLOCK) == -1) {
-			errMsg << "fcntl: " << strerror(errno);
-			this->channel.disconnect();
-			throw std::runtime_error(errMsg.str());
-		}
-
-		// Create monitor socket
-		LogMessage(LOG_LEVEL_DEBUG, "Creating safety socket");
-		this->channel.monitorSocket = socket(AF_INET, SOCK_DGRAM, 0);
-		if (!this->channel.valid()) {
-			errMsg << "Failed to create monitor socket: " << strerror(errno);
-			this->channel.disconnect();
-			throw std::runtime_error(errMsg.str());
-		}
-
-		// Set monitor socket to nonblocking
-		if (fcntl(this->channel.monitorSocket, F_SETFL,
-				  fcntl(this->channel.monitorSocket, F_GETFL, 0) | O_NONBLOCK) == -1) {
-			errMsg << "fcntl: " << strerror(errno);
-			this->channel.disconnect();
-			throw std::runtime_error(errMsg.str());
-		}
-		result.set_value();
-	} catch (std::runtime_error&) {
-		result.set_exception(std::current_exception());
-	} catch (std::invalid_argument&) {
-		result.set_exception(std::current_exception());
+	if (inet_ntop(AF_INET, &this->channel.cmdAddr.sin_addr, ipString, sizeof (ipString))
+			== nullptr) {
+		errMsg << "inet_ntop: " << strerror(errno);
+		throw std::invalid_argument(errMsg.str());
 	}
+
+	if (this->channel.cmdAddr.sin_addr.s_addr == 0) {
+		errMsg << "Invalid connection IP specified: " << ipString;
+		throw std::invalid_argument(errMsg.str());
+	}
+
+	this->channel.commandSocket = socket(AF_INET, SOCK_STREAM, 0);
+	if (this->channel.commandSocket < 0) {
+		errMsg << "Failed to open control socket: " << strerror(errno);
+		this->channel.disconnect();
+		throw std::runtime_error(errMsg.str());
+	}
+
+	// Begin connection attempt
+	LogMessage(LOG_LEVEL_INFO, "Attempting to connect to socket: %s:%u", ipString,
+			   this->channel.cmdAddr.sin_port);
+	while (true) {
+		if (connect(this->channel.commandSocket,
+					reinterpret_cast<struct sockaddr *>(&this->channel.cmdAddr),
+					sizeof (this->channel.cmdAddr)) == 0) {
+			break;
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR, "Failed connection attempt to %s, retrying in %.3f s ...",
+					   ipString, TestObject::connRetryPeriod_ms / 1000.0);
+			if (stopRequest.wait_for(std::chrono::milliseconds(TestObject::connRetryPeriod_ms))
+					!= std::future_status::timeout) {
+				errMsg << "Connection attempt interrupted";
+				throw std::runtime_error(errMsg.str());
+			}
+		}
+	}
+
+	// Set command socket to nonblocking
+	if (fcntl(this->channel.commandSocket, F_SETFL,
+			  fcntl(this->channel.commandSocket, F_GETFL, 0) | O_NONBLOCK) == -1) {
+		errMsg << "fcntl: " << strerror(errno);
+		this->channel.disconnect();
+		throw std::runtime_error(errMsg.str());
+	}
+
+	// Create monitor socket
+	LogMessage(LOG_LEVEL_DEBUG, "Creating safety socket");
+	this->channel.monitorSocket = socket(AF_INET, SOCK_DGRAM, 0);
+	if (!this->channel.valid()) {
+		errMsg << "Failed to create monitor socket: " << strerror(errno);
+		this->channel.disconnect();
+		throw std::runtime_error(errMsg.str());
+	}
+
+	// Set monitor socket to nonblocking
+	if (fcntl(this->channel.monitorSocket, F_SETFL,
+			  fcntl(this->channel.monitorSocket, F_GETFL, 0) | O_NONBLOCK) == -1) {
+		errMsg << "fcntl: " << strerror(errno);
+		this->channel.disconnect();
+		throw std::runtime_error(errMsg.str());
+	}
+	return;
 }
 
 
