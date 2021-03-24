@@ -1,6 +1,7 @@
 #pragma once
 
 #include "scenariohandler.hpp"
+#include "util.h"
 #include <stdexcept>
 
 class ScenarioHandler;
@@ -31,10 +32,14 @@ public:
 	virtual void testCompleted(ScenarioHandler&) = 0;
 	virtual void postProcessingCompleted(ScenarioHandler&) = 0;
 
+	virtual void onEnter(ScenarioHandler&) {}
+	virtual void onExit(ScenarioHandler&) {}
+
+	virtual OBCState_t asNumber() const { return OBC_STATE_UNDEFINED; };
+
 	ObjectControlState(){}
 	virtual ~ObjectControlState() {}
 protected:
-
 	void setState(ScenarioHandler& handler, ObjectControlState *st);
 };
 
@@ -45,6 +50,8 @@ public:
 	Idle();
 	//! Handle initialization requests
 	virtual void initializeRequest(ScenarioHandler&);
+
+	virtual void onEnter(ScenarioHandler&);
 
 	//! Ignore other commands
 	void disconnectRequest(ScenarioHandler&) {}
@@ -65,6 +72,8 @@ public:
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
+
+	OBCState_t asNumber() const { return OBC_STATE_IDLE; }
 };
 
 class Initialized : public ObjectControlState {
@@ -92,19 +101,24 @@ public:
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
+
+	OBCState_t asNumber() const { return OBC_STATE_INITIALIZED; }
 };
 
 class Connecting : public ObjectControlState {
 public:
 	Connecting();
-	//! Handle only connect/disconnect requests
+	//! Handle only connect/disconnect and abort requests
 	virtual void disconnectRequest(ScenarioHandler&);
 	virtual void connectRequest(ScenarioHandler&);
+	virtual void abortRequest(ScenarioHandler&);
 	virtual void connectedToObject(ScenarioHandler&);
 	virtual void disconnectedFromObject(ScenarioHandler&);
 	virtual void connectedToLiveObject(ScenarioHandler&);
 	virtual void connectedToArmedObject(ScenarioHandler&);
 	virtual void allObjectsConnected(ScenarioHandler&);
+
+	virtual void onEnter(ScenarioHandler&);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -112,13 +126,16 @@ public:
 	void disarmRequest(ScenarioHandler&) {}
 	void startRequest(ScenarioHandler&) {}
 	void stopRequest(ScenarioHandler&) {}
-	void abortRequest(ScenarioHandler&) {}
 	void allClearRequest(ScenarioHandler&) {}
 
 	//! Other spontaneous events unexpected
 	void allObjectsDisarmed(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
+
+
+	// TODO integrate this state into the enum variable
+	OBCState_t asNumber() const { return OBC_STATE_INITIALIZED; }
 };
 
 class Ready : public ObjectControlState {
@@ -146,6 +163,8 @@ public:
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
+
+	OBCState_t asNumber() const { return OBC_STATE_CONNECTED; }
 };
 
 class Aborting : public ObjectControlState {
@@ -173,6 +192,9 @@ public:
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
+
+	// TODO integrate this state into the enum variable
+	OBCState_t asNumber() const { return OBC_STATE_ERROR; }
 };
 
 class TestLive : public ObjectControlState {
@@ -200,6 +222,8 @@ public:
 	void allObjectsDisarmed(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
+
+	OBCState_t asNumber() const { return OBC_STATE_RUNNING; }
 };
 
 class Disarming : public ObjectControlState {
@@ -227,6 +251,9 @@ public:
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
+
+	// TODO integrate this state into the enum variable
+	OBCState_t asNumber() const { return OBC_STATE_ARMED; }
 };
 
 class Armed : public ObjectControlState {
@@ -236,6 +263,8 @@ public:
 	virtual void startRequest(ScenarioHandler&);
 	virtual void disarmRequest(ScenarioHandler&);
 	virtual void disconnectedFromObject(ScenarioHandler&);
+
+	virtual void onEnter(ScenarioHandler&);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -254,6 +283,8 @@ public:
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
+
+	OBCState_t asNumber() const { return OBC_STATE_ARMED; }
 };
 
 class Done : public ObjectControlState {
@@ -281,6 +312,9 @@ public:
 	void allObjectsDisarmed(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
+
+	// TODO integrate this state into the enum variable
+	OBCState_t asNumber() const { return OBC_STATE_RUNNING; }
 };
 
 }
@@ -298,6 +332,7 @@ class Initialized : public ObjectControl::Initialized {
 class Connecting : public ObjectControl::Connecting {
 	void disconnectRequest(ScenarioHandler&);
 	void connectRequest(ScenarioHandler&);
+	void abortRequest(ScenarioHandler&);
 	void connectedToObject(ScenarioHandler&);
 	void disconnectedFromObject(ScenarioHandler&);
 	void connectedToLiveObject(ScenarioHandler&);

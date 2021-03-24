@@ -1,18 +1,26 @@
 #include "state.hpp"
 
-
 ObjectControl::Connecting::Connecting() {
 
+}
+
+void ObjectControl::Connecting::onEnter(
+		ScenarioHandler& handler) {
+	handler.beginConnectionAttempt();
 }
 
 void ObjectControl::Connecting::disconnectRequest(
 		ScenarioHandler& handler) {
 	handler.abortConnectionAttempt();
 	handler.disconnectObjects();
-	handler.clearScenario();
 }
 
 void ObjectControl::Connecting::connectRequest(
+		ScenarioHandler& handler) {
+	// TODO
+}
+
+void ObjectControl::Connecting::abortRequest(
 		ScenarioHandler& handler) {
 	// TODO
 }
@@ -52,6 +60,13 @@ void RelativeKinematics::Connecting::connectRequest(
 		ScenarioHandler& handler) {
 	ObjectControl::Connecting::connectRequest(handler);
 }
+
+void RelativeKinematics::Connecting::abortRequest(
+		ScenarioHandler& handler) {
+	ObjectControl::Connecting::abortRequest(handler);
+	setState(handler, new RelativeKinematics::Aborting());
+}
+
 
 void RelativeKinematics::Connecting::connectedToObject(
 		ScenarioHandler& handler) {

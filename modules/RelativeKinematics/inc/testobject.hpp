@@ -29,7 +29,9 @@ public:
 	bool isVehicleUnderTest() const { return isVUT; }
 	std::string toString() const;
 
+	bool isConnected() const { return channel.connected(); }
 	void establishConnection(std::shared_future<void> stopRequest);
+	void disconnect() { this->channel.disconnect(); }
 private:
 	class ObjectConnection {
 	public:

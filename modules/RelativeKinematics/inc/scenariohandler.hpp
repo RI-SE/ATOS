@@ -63,6 +63,7 @@ public:
 
 	void handleInitCommand();
 	void handleConnectCommand();
+	void handleDisconnectCommand();
 
 	std::vector<uint32_t> getVehicleUnderTestIDs() const;
 	std::vector<uint32_t> getVehicleIDs() const {

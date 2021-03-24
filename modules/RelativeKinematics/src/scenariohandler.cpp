@@ -1,6 +1,7 @@
 #include "scenariohandler.hpp"
 #include "logging.h"
 #include "util.h"
+#include "datadictionary.h"
 #include <algorithm>
 #include <stdexcept>
 #include <fstream>
@@ -13,6 +14,7 @@ ScenarioHandler::ScenarioHandler(
 	switch (controlMode) {
 	case RELATIVE_KINEMATICS:
 		this->state = static_cast<ObjectControlState*>(new RelativeKinematics::Idle());
+		DataDictionarySetOBCState(this->state->asNumber());
 		break;
 	case ABSOLUTE_KINEMATICS:
 		// TODO
@@ -31,6 +33,10 @@ void ScenarioHandler::handleInitCommand() {
 
 void ScenarioHandler::handleConnectCommand() {
 	this->state->connectRequest(*this);
+}
+
+void ScenarioHandler::handleDisconnectCommand() {
+	this->state->disconnectRequest(*this);
 }
 
 void ScenarioHandler::loadScenario() {
@@ -130,8 +136,10 @@ void ScenarioHandler::beginConnectionAttempt() {
 
 	auto connect = [this](TestObject& obj, std::shared_future<void>& connStopReq) {
 		try {
-			obj.establishConnection(connStopReq);
-			this->state->connectedToObject(*this);
+			if (!obj.isConnected()) {
+				obj.establishConnection(connStopReq);
+				this->state->connectedToObject(*this);
+			}
 		}
 		catch (std::runtime_error &e) {
 			LogMessage(LOG_LEVEL_ERROR, "Connection attempt for object %u failed: %s",
@@ -143,8 +151,17 @@ void ScenarioHandler::beginConnectionAttempt() {
 		}
 	};
 
+	LogMessage(LOG_LEVEL_DEBUG, "Initiating connection attempt");
 	for (const auto id : getVehicleIDs()) {
-		std::thread{connect, std::ref(objects[id]), std::ref(connStopReqFuture)};
+		auto t = std::thread(connect, std::ref(objects[id]), std::ref(connStopReqFuture));
+		t.detach();
+	}
+}
+
+void ScenarioHandler::disconnectObjects() {
+	abortConnectionAttempt();
+	for (const auto id : getVehicleIDs()) {
+		objects[id].disconnect();
 	}
 }
 

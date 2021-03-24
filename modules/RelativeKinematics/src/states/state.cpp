@@ -1,15 +1,19 @@
 #include "state.hpp"
 #include "logging.h"
+#include "datadictionary.h"
 #include <typeinfo>
 #include <exception>
 
 void ObjectControlState::setState(
 		ScenarioHandler& handler,
 		ObjectControlState *st) {
+	handler.state->onExit(handler);
 	LogMessage(LOG_LEVEL_INFO, "Transitioning to state %s", typeid (*st).name());
 	ObjectControlState* temp = handler.state;
 	handler.state = st;
 	delete temp;
+	DataDictionarySetOBCState(handler.state->asNumber());
+	handler.state->onEnter(handler);
 }
 
 

@@ -67,7 +67,6 @@ void TestObject::parseConfigurationFile(
 	}
 
 	fs::path trajFile(std::string(path) + std::string(setting));
-	std::cout << "HÄR: " << trajFile;
 	if (!fs::exists(trajFile)) {
 		throw std::invalid_argument("Configured trajectory file " + std::string(setting)
 									+ " in file " + objectFile.string() + " not found");
@@ -201,6 +200,7 @@ void TestObject::establishConnection(
 
 bool TestObject::ObjectConnection::connected() const {
 	// TODO
+	return false;
 }
 
 bool TestObject::ObjectConnection::valid() const {

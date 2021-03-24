@@ -6,6 +6,11 @@ ObjectControl::Idle::Idle() {
 
 }
 
+void ObjectControl::Idle::onEnter(
+		ScenarioHandler& handler) {
+	handler.clearScenario();
+}
+
 void ObjectControl::Idle::initializeRequest(
 		ScenarioHandler& handler) {
 	LogMessage(LOG_LEVEL_INFO, "Handling initialization request");
@@ -20,6 +25,9 @@ void RelativeKinematics::Idle::initializeRequest(
 		auto vutIDs = handler.getVehicleUnderTestIDs();
 		if (vutIDs.size() == 1) {
 			handler.transformScenarioRelativeTo(vutIDs[0]);
+		}
+		else if (vutIDs.empty()) {
+			throw std::invalid_argument("Unable to transform scenario - no configured VUT");
 		}
 		else {
 			throw std::invalid_argument("Unable to transform scenario - several configured VUTs");
