@@ -46,14 +46,19 @@ static pthread_mutex_t DataDictionaryRVSSConfigMutex = PTHREAD_MUTEX_INITIALIZER
 static pthread_mutex_t DataDictionaryRVSSRateMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 
 #define MONR_DATA_FILENAME "MonitorData"
+#define STATE_DATA_FILENAME "StateData"
+
+typedef struct {
+	OBCState_t objectControlState;
+} StateDataType;
 
 static volatile ObjectDataType *objectDataMemory = NULL;
+static volatile StateDataType *stateDataMemory = NULL;
 
 
 /*------------------------------------------------------------
@@ -97,14 +102,19 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitObjectData() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
-	if (Res != WRITE_OK) {
-		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
+	if (Res == READ_OK && DataDictionaryInitObjectData() != WRITE_OK) {
+		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
+		Res = UNDEFINED;
 	}
-
-	DataDictionarySetOBCStateU8(GSD, OBC_STATE_UNDEFINED);
+	if (Res == READ_OK && DataDictionaryInitStateData() != WRITE_OK) {
+		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared state memory found by constructor");
+		Res = UNDEFINED;
+	}
+	if (Res == READ_OK) {
+		DataDictionarySetOBCState(OBC_STATE_UNDEFINED);
+	}
 
 	return Res;
 }
@@ -115,10 +125,11 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
  * \param GSD Pointer to allocated shared memory
  * \return Error code defined by ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryDestructor(GSDType * GSD) {
+ReadWriteAccess_t DataDictionaryDestructor() {
 	ReadWriteAccess_t result = WRITE_OK;
 
 	result = result == WRITE_OK ? DataDictionaryFreeObjectData() : result;
+	result = result == WRITE_OK ? DataDictionaryFreeStateData() : result;
 
 	return result;
 }
@@ -1682,33 +1693,84 @@ ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType * GSD, U8 * MiscData, U32 
 
 /*OBCState*/
 /*!
+ * \brief DataDictionaryInitOBCState Initializes a data structure for saving module state
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryInitStateData() {
+	int createdMemory;
+	stateDataMemory = createSharedMemory(STATE_DATA_FILENAME, 0, sizeof (StateDataType), &createdMemory);
+	if (stateDataMemory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared state data memory");
+		return UNDEFINED;
+	}
+	return createdMemory ? WRITE_OK : READ_OK;
+}
+
+/*!
  * \brief DataDictionarySetOBCStateU8 Parses input variable and sets variable to corresponding value
  * \param GSD Pointer to shared allocated memory
  * \param OBCState
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType * GSD, OBCState_t OBCState) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetOBCState(const OBCState_t OBCState) {
+	if (stateDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
 
-	Res = WRITE_OK;
-	pthread_mutex_lock(&OBCStateMutex);
-	GSD->OBCStateU8 = OBCState;
-	pthread_mutex_unlock(&OBCStateMutex);
-	return Res;
+	stateDataMemory = claimSharedMemory(stateDataMemory);
+	if (stateDataMemory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	stateDataMemory->objectControlState = OBCState;
+	stateDataMemory = releaseSharedMemory(stateDataMemory);
+	return WRITE_OK;
 }
 
 /*!
- * \brief DataDictionaryGetOBCStateU8 Reads variable from shared memory
+ * \brief DataDictionaryGetOBCState Reads variable from shared memory
  * \param GSD Pointer to shared allocated memory
  * \return Current object control state according to ::OBCState_t
  */
-OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
-	OBCState_t Ret;
+ReadWriteAccess_t DataDictionaryGetOBCState(OBCState_t * OBCState) {
+	if (stateDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (OBCState == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory inpput pointer error");
+		return UNDEFINED;
+	}
 
-	pthread_mutex_lock(&OBCStateMutex);
-	Ret = GSD->OBCStateU8;
-	pthread_mutex_unlock(&OBCStateMutex);
-	return Ret;
+	stateDataMemory = claimSharedMemory(stateDataMemory);
+	if (stateDataMemory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	*OBCState = stateDataMemory->objectControlState;
+	stateDataMemory = releaseSharedMemory(stateDataMemory);
+	return READ_OK;
+}
+
+/*!
+ * \brief Releases data structure for saving state data
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryFreeStateData() {
+	if (stateDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized memory");
+		return UNDEFINED;
+	}
+
+	destroySharedMemory(stateDataMemory);
+	return WRITE_OK;
 }
 
 /*END OBCState*/

@@ -123,11 +123,13 @@ ReadWriteAccess_t DataDictionaryInitMiscDataC8(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType *GSD, C8 *MiscData);
 ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, C8 *MiscData, U32 BuffLen);
 
-ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType *GSD, OBCState_t OBCState);
-OBCState_t DataDictionaryGetOBCStateU8(GSDType *GSD);
+ReadWriteAccess_t DataDictionaryInitStateData();
+ReadWriteAccess_t DataDictionarySetOBCState(const OBCState_t OBCState);
+ReadWriteAccess_t DataDictionaryGetOBCState(OBCState_t* OBCState);
+ReadWriteAccess_t DataDictionaryFreeStateData();
 
 ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
-ReadWriteAccess_t DataDictionaryDestructor(GSDType *GSD);
+ReadWriteAccess_t DataDictionaryDestructor();
 
 ReadWriteAccess_t DataDictionaryInitMaxPacketsLost(void);
 ReadWriteAccess_t DataDictionarySetMaxPacketsLost(uint8_t maxPacketsLostSetting);

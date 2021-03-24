@@ -425,7 +425,6 @@ typedef struct
   U32 DataDictionaryRVSSRateU8;
   ASPType ASPData;
   C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
-  volatile OBCState_t OBCStateU8;
 } GSDType;
 
 
