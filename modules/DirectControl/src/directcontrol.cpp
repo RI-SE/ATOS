@@ -33,14 +33,14 @@ void DirectControl::readSocketData() {
 	std::vector<char> data(TCP_BUFFER_SIZE);
 	int recvData = 0;
 
+	LogMessage(LOG_LEVEL_INFO, "Awaiting TCP connection...");
+	this->tcpHandler.CreateServer();
+
 	while (!this->quit) {
 		// TODO set up TCP connection (wait until connected before continue)
-		LogMessage(LOG_LEVEL_INFO, "Awaiting TCP connection...");
-		tcpHandler.CreateServer();
-		
-		tcpHandler.TCPHandlerAccept(1000);
+		this->tcpHandler.TCPHandlerAccept(1000);
 
-		if (tcpHandler.isConnected()){
+		if (this->tcpHandler.isConnected()){
 			LogMessage(LOG_LEVEL_INFO, "Connected");
 		
 			while (!this->quit && tcpHandler.isConnected()) {
@@ -49,6 +49,9 @@ void DirectControl::readSocketData() {
 				recvData = tcpHandler.receiveTCP(data, 0);
 				if (recvData == TCPHandler::TCPHANDLER_FAIL) {
 					this->tcpHandler.TCPHandlerclose();
+					LogMessage(LOG_LEVEL_INFO, "TCP connection closed unexpectedly...");
+					LogMessage(LOG_LEVEL_INFO, "Awaiting new TCP connection...");
+					this->tcpHandler.CreateServer();
 					break;
 				}
 				else if (recvData > 0) {
