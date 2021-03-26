@@ -960,8 +960,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					LogMessage(LOG_LEVEL_DEBUG, "Setting object connection ports");
 					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-						objectConnections[iIndex].objectMonitorAddress.sin_port = htons(SAFETY_CHANNEL_PORT);
-						objectConnections[iIndex].objectCommandAddress.sin_port = htons(CONTROL_CHANNEL_PORT);
+						objectConnections[iIndex].objectMonitorAddress.sin_port = htons(ISO_22133_OBJECT_UDP_PORT);
+						objectConnections[iIndex].objectCommandAddress.sin_port = htons(ISO_22133_DEFAULT_OBJECT_TCP_PORT);
 					}
 
 					/*Setup Adaptive Sync Points (ASP) */
@@ -978,7 +978,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						for (int i = 0; i < SyncPointCount; i++) {
 							UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);
 							if (TEST_SYNC_POINTS == 1)
-								ASP[i].TestPort = SAFETY_CHANNEL_PORT;
+								ASP[i].TestPort = htons(ISO_22133_OBJECT_UDP_PORT);
 						}
 						fclose(fd);
 					}
@@ -1806,6 +1806,7 @@ int configureAllObjects(ObjectConnection objectConnections[],
 	char ipString[INET_ADDRSTRLEN];
 	uint32_t serverTransmitterID;
 	uint8_t isoTransmitterID;
+	ObjectSettingsType osem;
 	int retval = 0;
 
 	DataDictionaryGetObjectTransmitterIDs(transmitterIDs, numberOfObjects);
@@ -1815,14 +1816,20 @@ int configureAllObjects(ObjectConnection objectConnections[],
 		inet_ntop(objectConnections[i].objectCommandAddress.sin_family,
 				  &objectConnections[i].objectCommandAddress.sin_addr, ipString, sizeof (ipString));
 		if (enabledStatus == OBJECT_ENABLED) {
+			memset(&osem, 0, sizeof (osem));
+			osem.currentTime = currentTime;
+			osem.isTimestampValid = 1;
+			osem.desiredTransmitterID = transmitterIDs[i];
+			osem.isTransmitterIDValid = 1;
+			osem.coordinateSystemOrigin.latitude_deg = originPosition.Latitude;
+			osem.coordinateSystemOrigin.longitude_deg = originPosition.Longitude;
+			osem.coordinateSystemOrigin.altitude_m = originPosition.Altitude;
+			osem.coordinateSystemOrigin.isLatitudeValid = 1;
+			osem.coordinateSystemOrigin.isLongitudeValid = 1;
+			osem.coordinateSystemOrigin.isAltitudeValid = 1;
 
-
-			float altitude = (float)originPosition.Altitude;
-
-			messageLength =
-				encodeOSEMMessage(&currentTime, &transmitterIDs[i], &originPosition.Latitude,
-								  &originPosition.Longitude, &altitude, NULL, NULL, NULL,
-								  messageBuffer, sizeof (messageBuffer), 0);
+			messageLength = encodeOSEMMessage(&osem, messageBuffer,
+											  sizeof (messageBuffer), 0);
 			if (messageLength < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "OSEM encoding error");
 				retval = -1;

@@ -67,9 +67,6 @@ extern "C"{
 
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length
 
-#define SAFETY_CHANNEL_PORT 53240
-#define CONTROL_CHANNEL_PORT 53241
-
 #define MAX_OBJECTS 10
 #define MAX_FILE_PATH PATH_MAX
 
