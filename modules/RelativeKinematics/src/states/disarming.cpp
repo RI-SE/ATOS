@@ -9,19 +9,27 @@ void ObjectControl::Disarming::disconnectRequest(
 	handler.disconnectObjects();
 }
 
-void ObjectControl::Disarming::connectedToObject(ScenarioHandler&) {
+void ObjectControl::Disarming::connectedToObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Disarming::disconnectedFromObject(ScenarioHandler&) {
+void ObjectControl::Disarming::disconnectedFromObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Disarming::connectedToArmedObject(ScenarioHandler&) {
+void ObjectControl::Disarming::connectedToArmedObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Disarming::connectedToLiveObject(ScenarioHandler&) {
+void ObjectControl::Disarming::connectedToLiveObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 
@@ -36,19 +44,27 @@ void RelativeKinematics::Disarming::disconnectRequest(
 	setState(handler, new RelativeKinematics::Idle());
 }
 
-void RelativeKinematics::Disarming::connectedToObject(ScenarioHandler&) {
+void RelativeKinematics::Disarming::connectedToObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 
-void RelativeKinematics::Disarming::disconnectedFromObject(ScenarioHandler&) {
+void RelativeKinematics::Disarming::disconnectedFromObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 
-void RelativeKinematics::Disarming::connectedToArmedObject(ScenarioHandler&) {
+void RelativeKinematics::Disarming::connectedToArmedObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 
-void RelativeKinematics::Disarming::connectedToLiveObject(ScenarioHandler&) {
+void RelativeKinematics::Disarming::connectedToLiveObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 

@@ -11,6 +11,26 @@ namespace fs = std::filesystem;
 namespace fs = std::experimental::filesystem;
 #endif
 
+class Channel {
+public:
+	struct sockaddr_in addr = {};
+	int socket = -1;
+	char transmitBuffer[1024];
+
+	friend Channel& operator<<(Channel&,const ObjectSettingsType&);
+	friend Channel& operator<<(Channel&,const Trajectory&);
+};
+
+class ObjectConnection {
+public:
+	Channel cmd;
+	Channel mntr;
+
+	bool valid() const;
+	bool connected() const;
+	void disconnect();
+};
+
 class TestObject {
 public:
 	TestObject();
@@ -20,6 +40,7 @@ public:
 	uint32_t getTransmitterID() const { return transmitterID; }
 	fs::path getTrajectoryFile() const { return trajectoryFile; }
 	Trajectory getTrajectory() const { return trajectory; }
+	GeographicPositionType getOrigin() const { return origin; }
 	ObjectStateType getState() const { return state; }
 
 	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }
@@ -29,22 +50,13 @@ public:
 	bool isVehicleUnderTest() const { return isVUT; }
 	std::string toString() const;
 
-	bool isConnected() const { return channel.connected(); }
+	bool isConnected() const { return comms.connected(); }
 	void establishConnection(std::shared_future<void> stopRequest);
-	void disconnect() { this->channel.disconnect(); }
-private:
-	class ObjectConnection {
-	public:
-		struct sockaddr_in cmdAddr;
-		struct sockaddr_in mntrAddr;
-		int commandSocket;
-		int monitorSocket;
+	void disconnect() { this->comms.disconnect(); }
 
-		bool valid() const;
-		bool connected() const;
-		void disconnect();
-	};
-	ObjectConnection channel;
+	void sendSettings();
+private:
+	ObjectConnection comms;
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 
 	fs::path objectFile;
@@ -52,6 +64,7 @@ private:
 	uint32_t transmitterID;
 	bool isVUT = false;
 	Trajectory trajectory;
+	GeographicPositionType origin = {};
 
 	static constexpr int connRetryPeriod_ms = 1000;
 };

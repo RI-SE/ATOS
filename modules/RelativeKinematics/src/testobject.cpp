@@ -1,5 +1,6 @@
 #include "testobject.hpp"
 #include "util.h"
+#include "maestroTime.h"
 
 TestObject::TestObject() {
 	// TODO
@@ -7,21 +8,21 @@ TestObject::TestObject() {
 
 void TestObject::setCommandAddress(
 		const sockaddr_in &newAddr) {
-	if (!this->channel.connected()) {
-		this->channel.cmdAddr = newAddr;
+	if (!this->comms.connected()) {
+		this->comms.cmd.addr = newAddr;
 	}
 }
 
 void TestObject::setMonitorAddress(
 		const sockaddr_in &newAddr) {
-	if (!this->channel.connected()) {
-		this->channel.mntrAddr = newAddr;
+	if (!this->comms.connected()) {
+		this->comms.mntr.addr = newAddr;
 	}
 }
 
 std::string TestObject::toString() const {
 	char ipAddr[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &this->channel.cmdAddr.sin_addr, ipAddr, sizeof (ipAddr));
+	inet_ntop(AF_INET, &this->comms.cmd.addr.sin_addr, ipAddr, sizeof (ipAddr));
 	std::string retval = "";
 	retval += "Object ID " + std::to_string(transmitterID)
 			+ ", IP " + ipAddr + ", trajectory file " + trajectoryFile.filename().string()
@@ -56,7 +57,9 @@ void TestObject::parseConfigurationFile(
 									+ " is not a valid IPv4 address");
 	}
 	addr.sin_family = AF_INET;
+	addr.sin_port = htons(ISO_22133_DEFAULT_OBJECT_TCP_PORT);
 	this->setCommandAddress(addr);
+	addr.sin_port = htons(ISO_22133_OBJECT_UDP_PORT);
 	this->setMonitorAddress(addr);
 
 	// Get trajectory file setting
@@ -132,31 +135,31 @@ void TestObject::establishConnection(
 	char ipString[INET_ADDRSTRLEN];
 	std::stringstream errMsg;
 
-	if (inet_ntop(AF_INET, &this->channel.cmdAddr.sin_addr, ipString, sizeof (ipString))
+	if (inet_ntop(AF_INET, &this->comms.cmd.addr.sin_addr, ipString, sizeof (ipString))
 			== nullptr) {
 		errMsg << "inet_ntop: " << strerror(errno);
 		throw std::invalid_argument(errMsg.str());
 	}
 
-	if (this->channel.cmdAddr.sin_addr.s_addr == 0) {
+	if (this->comms.cmd.addr.sin_addr.s_addr == 0) {
 		errMsg << "Invalid connection IP specified: " << ipString;
 		throw std::invalid_argument(errMsg.str());
 	}
 
-	this->channel.commandSocket = socket(AF_INET, SOCK_STREAM, 0);
-	if (this->channel.commandSocket < 0) {
+	this->comms.cmd.socket = socket(AF_INET, SOCK_STREAM, 0);
+	if (this->comms.cmd.socket < 0) {
 		errMsg << "Failed to open control socket: " << strerror(errno);
-		this->channel.disconnect();
+		this->comms.disconnect();
 		throw std::runtime_error(errMsg.str());
 	}
 
 	// Begin connection attempt
-	LogMessage(LOG_LEVEL_INFO, "Attempting to connect to socket: %s:%u", ipString,
-			   this->channel.cmdAddr.sin_port);
+	LogMessage(LOG_LEVEL_INFO, "Attempting connection to: %s:%u", ipString,
+			   ntohs(this->comms.cmd.addr.sin_port));
 	while (true) {
-		if (connect(this->channel.commandSocket,
-					reinterpret_cast<struct sockaddr *>(&this->channel.cmdAddr),
-					sizeof (this->channel.cmdAddr)) == 0) {
+		if (connect(this->comms.cmd.socket,
+					reinterpret_cast<struct sockaddr *>(&this->comms.cmd.addr),
+					sizeof (this->comms.cmd.addr)) == 0) {
 			break;
 		}
 		else {
@@ -171,50 +174,83 @@ void TestObject::establishConnection(
 	}
 
 	// Set command socket to nonblocking
-	if (fcntl(this->channel.commandSocket, F_SETFL,
-			  fcntl(this->channel.commandSocket, F_GETFL, 0) | O_NONBLOCK) == -1) {
+	if (fcntl(this->comms.cmd.socket, F_SETFL,
+			  fcntl(this->comms.cmd.socket, F_GETFL, 0) | O_NONBLOCK) == -1) {
 		errMsg << "fcntl: " << strerror(errno);
-		this->channel.disconnect();
+		this->comms.disconnect();
 		throw std::runtime_error(errMsg.str());
 	}
 
 	// Create monitor socket
 	LogMessage(LOG_LEVEL_DEBUG, "Creating safety socket");
-	this->channel.monitorSocket = socket(AF_INET, SOCK_DGRAM, 0);
-	if (!this->channel.valid()) {
+	this->comms.mntr.socket = socket(AF_INET, SOCK_DGRAM, 0);
+	if (!this->comms.valid()) {
 		errMsg << "Failed to create monitor socket: " << strerror(errno);
-		this->channel.disconnect();
+		this->comms.disconnect();
 		throw std::runtime_error(errMsg.str());
 	}
 
 	// Set monitor socket to nonblocking
-	if (fcntl(this->channel.monitorSocket, F_SETFL,
-			  fcntl(this->channel.monitorSocket, F_GETFL, 0) | O_NONBLOCK) == -1) {
+	if (fcntl(this->comms.mntr.socket, F_SETFL,
+			  fcntl(this->comms.mntr.socket, F_GETFL, 0) | O_NONBLOCK) == -1) {
 		errMsg << "fcntl: " << strerror(errno);
-		this->channel.disconnect();
+		this->comms.disconnect();
 		throw std::runtime_error(errMsg.str());
 	}
 	return;
 }
 
 
-bool TestObject::ObjectConnection::connected() const {
+bool ObjectConnection::connected() const {
 	// TODO
 	return false;
 }
 
-bool TestObject::ObjectConnection::valid() const {
-	return this->commandSocket != -1 && this->monitorSocket != -1;
+bool ObjectConnection::valid() const {
+	return this->cmd.socket != -1 && this->mntr.socket != -1;
 }
 
-void TestObject::ObjectConnection::disconnect() {
-	if (this->commandSocket != -1) {
-		close(this->commandSocket);
-		this->commandSocket = -1;
+void ObjectConnection::disconnect() {
+	if (this->cmd.socket != -1) {
+		close(this->cmd.socket);
+		this->cmd.socket = -1;
 	}
-	if (this->monitorSocket != -1) {
-		close(this->monitorSocket);
-		this->monitorSocket = -1;
+	if (this->mntr.socket != -1) {
+		close(this->mntr.socket);
+		this->mntr.socket = -1;
 	}
 }
 
+void TestObject::sendSettings() {
+
+	ObjectSettingsType objSettings;
+	objSettings.desiredTransmitterID = transmitterID;
+	objSettings.isTransmitterIDValid = true;
+
+	objSettings.coordinateSystemOrigin = origin;
+
+	TimeSetToCurrentSystemTime(&objSettings.currentTime);
+	objSettings.isTimestampValid = true;
+
+	objSettings.isLateralDeviationLimited = false;
+	objSettings.isPositionDeviationLimited = false;
+	objSettings.isPositioningAccuracyRequired = false;
+
+	this->comms.cmd << objSettings;
+}
+
+Channel& operator<<(Channel& chnl, const ObjectSettingsType& settings) {
+	auto nBytes = encodeOSEMMessage(&settings, chnl.transmitBuffer, sizeof (chnl.transmitBuffer), false);
+	if (nBytes < 0) {
+		throw std::invalid_argument("Failed to encode OSEM message");
+	}
+	nBytes = write(chnl.socket, chnl.transmitBuffer, static_cast<size_t>(nBytes));
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to send OSEM: ") + strerror(errno));
+	}
+	return chnl;
+}
+
+Channel& operator<<(Channel& chnl, const Trajectory& traj) {
+	// TODO
+}

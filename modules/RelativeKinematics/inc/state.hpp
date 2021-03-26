@@ -23,10 +23,10 @@ public:
 	//! The below transitions represent spontaneous actions uninitiated by
 	//! the user - inheriting classes may throw exceptions if transitions
 	//! are deemed unreasonable
-	virtual void connectedToObject(ScenarioHandler&) = 0;
-	virtual void disconnectedFromObject(ScenarioHandler&) = 0;
-	virtual void connectedToLiveObject(ScenarioHandler&) = 0;
-	virtual void connectedToArmedObject(ScenarioHandler&) = 0;
+	virtual void connectedToObject(ScenarioHandler&,uint32_t) = 0;
+	virtual void disconnectedFromObject(ScenarioHandler&,uint32_t) = 0;
+	virtual void connectedToLiveObject(ScenarioHandler&,uint32_t) = 0;
+	virtual void connectedToArmedObject(ScenarioHandler&,uint32_t) = 0;
 	virtual void allObjectsDisarmed(ScenarioHandler&) = 0;
 	virtual void allObjectsConnected(ScenarioHandler&) = 0;
 	virtual void testCompleted(ScenarioHandler&) = 0;
@@ -35,7 +35,7 @@ public:
 	virtual void onEnter(ScenarioHandler&) {}
 	virtual void onExit(ScenarioHandler&) {}
 
-	virtual OBCState_t asNumber() const { return OBC_STATE_UNDEFINED; };
+	virtual OBCState_t asNumber() const { return OBC_STATE_UNDEFINED; }
 
 	ObjectControlState(){}
 	virtual ~ObjectControlState() {}
@@ -64,10 +64,10 @@ public:
 	void allClearRequest(ScenarioHandler&) {}
 
 	//! All spontaneous events unexpected
-	void connectedToObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection"); }
-	void disconnectedFromObject(ScenarioHandler&) { throw std::runtime_error("Unexpected disconnection"); }
-	void connectedToLiveObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection to armed object"); }
+	void connectedToObject(ScenarioHandler&, uint32_t) { throw std::runtime_error("Unexpected connection"); }
+	void disconnectedFromObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected disconnection"); }
+	void connectedToLiveObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection to live object"); }
+	void connectedToArmedObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection to armed object"); }
 	void allObjectsDisarmed(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
@@ -93,10 +93,10 @@ public:
 	void allClearRequest(ScenarioHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void connectedToObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection"); }
-	void disconnectedFromObject(ScenarioHandler&) { throw std::runtime_error("Unexpected disconnection"); }
-	void connectedToLiveObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection to armed object"); }
+	void connectedToObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection"); }
+	void disconnectedFromObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected disconnection"); }
+	void connectedToLiveObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection to live object"); }
+	void connectedToArmedObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection to armed object"); }
 	void allObjectsDisarmed(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
@@ -112,10 +112,10 @@ public:
 	virtual void disconnectRequest(ScenarioHandler&);
 	virtual void connectRequest(ScenarioHandler&);
 	virtual void abortRequest(ScenarioHandler&);
-	virtual void connectedToObject(ScenarioHandler&);
-	virtual void disconnectedFromObject(ScenarioHandler&);
-	virtual void connectedToLiveObject(ScenarioHandler&);
-	virtual void connectedToArmedObject(ScenarioHandler&);
+	virtual void connectedToObject(ScenarioHandler&,uint32_t);
+	virtual void disconnectedFromObject(ScenarioHandler&,uint32_t);
+	virtual void connectedToLiveObject(ScenarioHandler&,uint32_t);
+	virtual void connectedToArmedObject(ScenarioHandler&,uint32_t);
 	virtual void allObjectsConnected(ScenarioHandler&);
 
 	virtual void onEnter(ScenarioHandler&);
@@ -144,7 +144,7 @@ public:
 	//! Handle arm and disconnect requests
 	virtual void armRequest(ScenarioHandler&);
 	virtual void disconnectRequest(ScenarioHandler&);
-	virtual void disconnectedFromObject(ScenarioHandler&);
+	virtual void disconnectedFromObject(ScenarioHandler&,uint32_t);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -156,9 +156,9 @@ public:
 	void allClearRequest(ScenarioHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void connectedToObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection"); }
-	void connectedToLiveObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection to armed object"); }
+	void connectedToObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection"); }
+	void connectedToLiveObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection to live object"); }
+	void connectedToArmedObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection to armed object"); }
 	void allObjectsDisarmed(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
@@ -172,10 +172,10 @@ public:
 	Aborting();
 	//! Only handle all clear signal
 	virtual void allClearRequest(ScenarioHandler&);
-	virtual void connectedToObject(ScenarioHandler&);
-	virtual void disconnectedFromObject(ScenarioHandler&);
-	virtual void connectedToLiveObject(ScenarioHandler&);
-	virtual void connectedToArmedObject(ScenarioHandler&);
+	virtual void connectedToObject(ScenarioHandler&,uint32_t);
+	virtual void disconnectedFromObject(ScenarioHandler&,uint32_t);
+	virtual void connectedToLiveObject(ScenarioHandler&,uint32_t);
+	virtual void connectedToArmedObject(ScenarioHandler&,uint32_t);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -204,7 +204,7 @@ public:
 	virtual void stopRequest(ScenarioHandler&);
 	virtual void abortRequest(ScenarioHandler&);
 	virtual void testCompleted(ScenarioHandler&);
-	virtual void disconnectedFromObject(ScenarioHandler&);
+	virtual void disconnectedFromObject(ScenarioHandler&,uint32_t);
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) {}
@@ -216,9 +216,9 @@ public:
 	void allClearRequest(ScenarioHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void connectedToObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection"); }
-	void connectedToLiveObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection to armed object"); }
+	void connectedToObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection"); }
+	void connectedToLiveObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection to live object"); }
+	void connectedToArmedObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection to armed object"); }
 	void allObjectsDisarmed(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
@@ -231,10 +231,10 @@ public:
 	Disarming();
 	//! Only allow disconnect command
 	virtual void disconnectRequest(ScenarioHandler&);
-	virtual void connectedToObject(ScenarioHandler&);
-	virtual void disconnectedFromObject(ScenarioHandler&);
-	virtual void connectedToArmedObject(ScenarioHandler&);
-	virtual void connectedToLiveObject(ScenarioHandler&);
+	virtual void connectedToObject(ScenarioHandler&,uint32_t);
+	virtual void disconnectedFromObject(ScenarioHandler&,uint32_t);
+	virtual void connectedToArmedObject(ScenarioHandler&,uint32_t);
+	virtual void connectedToLiveObject(ScenarioHandler&,uint32_t);
 	virtual void allObjectsDisarmed(ScenarioHandler&);
 
 	//! Ignore other commands
@@ -262,7 +262,7 @@ public:
 	//! Only allow start/disarm
 	virtual void startRequest(ScenarioHandler&);
 	virtual void disarmRequest(ScenarioHandler&);
-	virtual void disconnectedFromObject(ScenarioHandler&);
+	virtual void disconnectedFromObject(ScenarioHandler&,uint32_t);
 
 	virtual void onEnter(ScenarioHandler&);
 
@@ -276,9 +276,9 @@ public:
 	void allClearRequest(ScenarioHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void connectedToObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection"); }
-	void connectedToLiveObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection to armed object"); }
+	void connectedToObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection"); }
+	void connectedToLiveObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection to live object"); }
+	void connectedToArmedObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection to armed object"); }
 	void allObjectsDisarmed(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
@@ -305,10 +305,10 @@ public:
 	void allClearRequest(ScenarioHandler&) {}
 
 	//! Other spontaneous events unexpected
-	void connectedToObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection"); }
-	void disconnectedFromObject(ScenarioHandler&) { throw std::runtime_error("Unexpected disconnection"); }
-	void connectedToLiveObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject(ScenarioHandler&) { throw std::runtime_error("Unexpected connection to armed object"); }
+	void connectedToObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection"); }
+	void disconnectedFromObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected disconnection"); }
+	void connectedToLiveObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection to live object"); }
+	void connectedToArmedObject(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected connection to armed object"); }
 	void allObjectsDisarmed(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion"); }
@@ -333,47 +333,47 @@ class Connecting : public ObjectControl::Connecting {
 	void disconnectRequest(ScenarioHandler&);
 	void connectRequest(ScenarioHandler&);
 	void abortRequest(ScenarioHandler&);
-	void connectedToObject(ScenarioHandler&);
-	void disconnectedFromObject(ScenarioHandler&);
-	void connectedToLiveObject(ScenarioHandler&);
-	void connectedToArmedObject(ScenarioHandler&);
+	void connectedToObject(ScenarioHandler&,uint32_t);
+	void disconnectedFromObject(ScenarioHandler&,uint32_t);
+	void connectedToLiveObject(ScenarioHandler&,uint32_t);
+	void connectedToArmedObject(ScenarioHandler&,uint32_t);
 	void allObjectsConnected(ScenarioHandler&);
 };
 
 class Ready : public ObjectControl::Ready {
 	void armRequest(ScenarioHandler&);
 	void disconnectRequest(ScenarioHandler&);
-	void disconnectedFromObject(ScenarioHandler&);
+	void disconnectedFromObject(ScenarioHandler&,uint32_t);
 };
 
 class Aborting : public ObjectControl::Aborting {
 	void allClearRequest(ScenarioHandler&);
-	void connectedToObject(ScenarioHandler&);
-	void disconnectedFromObject(ScenarioHandler&);
-	void connectedToLiveObject(ScenarioHandler&);
-	void connectedToArmedObject(ScenarioHandler&);
+	void connectedToObject(ScenarioHandler&,uint32_t);
+	void disconnectedFromObject(ScenarioHandler&,uint32_t);
+	void connectedToLiveObject(ScenarioHandler&,uint32_t);
+	void connectedToArmedObject(ScenarioHandler&,uint32_t);
 };
 
 class TestLive : public ObjectControl::TestLive {
 	void stopRequest(ScenarioHandler&);
 	void abortRequest(ScenarioHandler&);
 	void testCompleted(ScenarioHandler&);
-	void disconnectedFromObject(ScenarioHandler&);
+	void disconnectedFromObject(ScenarioHandler&,uint32_t);
 };
 
 class Disarming : public ObjectControl::Disarming {
 	void disconnectRequest(ScenarioHandler&);
-	void connectedToObject(ScenarioHandler&);
-	void disconnectedFromObject(ScenarioHandler&);
-	void connectedToArmedObject(ScenarioHandler&);
-	void connectedToLiveObject(ScenarioHandler&);
+	void connectedToObject(ScenarioHandler&,uint32_t);
+	void disconnectedFromObject(ScenarioHandler&,uint32_t);
+	void connectedToArmedObject(ScenarioHandler&,uint32_t);
+	void connectedToLiveObject(ScenarioHandler&,uint32_t);
 	void allObjectsDisarmed(ScenarioHandler&);
 };
 
 class Armed : public ObjectControl::Armed {
 	void startRequest(ScenarioHandler&);
 	void disarmRequest(ScenarioHandler&);
-	void disconnectedFromObject(ScenarioHandler&);
+	void disconnectedFromObject(ScenarioHandler&,uint32_t);
 };
 
 class Done : public ObjectControl::Done {

@@ -15,7 +15,8 @@ void ObjectControl::Ready::disconnectRequest(
 }
 
 void ObjectControl::Ready::disconnectedFromObject(
-		ScenarioHandler&) {
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 

@@ -17,7 +17,9 @@ void ObjectControl::Armed::disarmRequest(ScenarioHandler&) {
 	// TODO
 }
 
-void ObjectControl::Armed::disconnectedFromObject(ScenarioHandler&) {
+void ObjectControl::Armed::disconnectedFromObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 
@@ -35,7 +37,8 @@ void RelativeKinematics::Armed::disarmRequest(
 }
 
 void RelativeKinematics::Armed::disconnectedFromObject(
-		ScenarioHandler& handler) {
-	ObjectControl::Armed::disconnectedFromObject(handler);
+		ScenarioHandler& handler,
+		uint32_t id) {
+	ObjectControl::Armed::disconnectedFromObject(handler, id);
 	setState(handler, new RelativeKinematics::Disarming());
 }

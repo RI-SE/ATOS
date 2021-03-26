@@ -92,6 +92,8 @@ private:
 	void parseObjectFile(const fs::path& objectFile, TestObject& object);
 	void transformScenarioRelativeTo(const uint32_t objectID);
 
+	void uploadObjectConfiguration(const uint32_t id);
+
 	void clearScenario();
 
 	bool isAnyObjectIn(const ObjectStateType state) const;

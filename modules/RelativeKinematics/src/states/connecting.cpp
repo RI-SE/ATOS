@@ -26,17 +26,21 @@ void ObjectControl::Connecting::abortRequest(
 }
 
 void ObjectControl::Connecting::connectedToObject(
-		ScenarioHandler& handler) {
-	// TODO
+		ScenarioHandler& handler,
+		uint32_t id) {
+	// TODO send OSEM
+	handler.uploadObjectConfiguration(id);
 }
 
 void ObjectControl::Connecting::disconnectedFromObject(
-		ScenarioHandler& handler) {
+		ScenarioHandler& handler,
+		uint32_t id) {
 	// TODO
 }
 
 void ObjectControl::Connecting::connectedToLiveObject(
-		ScenarioHandler& handler) {
+		ScenarioHandler& handler,
+		uint32_t id) {
 	// TODO
 }
 

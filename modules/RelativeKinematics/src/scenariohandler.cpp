@@ -2,6 +2,7 @@
 #include "logging.h"
 #include "util.h"
 #include "datadictionary.h"
+
 #include <algorithm>
 #include <stdexcept>
 #include <fstream>
@@ -138,7 +139,7 @@ void ScenarioHandler::beginConnectionAttempt() {
 		try {
 			if (!obj.isConnected()) {
 				obj.establishConnection(connStopReq);
-				this->state->connectedToObject(*this);
+				this->state->connectedToObject(*this, obj.getTransmitterID());
 			}
 		}
 		catch (std::runtime_error &e) {
@@ -163,6 +164,11 @@ void ScenarioHandler::disconnectObjects() {
 	for (const auto id : getVehicleIDs()) {
 		objects[id].disconnect();
 	}
+}
+
+void ScenarioHandler::uploadObjectConfiguration(
+		const uint32_t id) {
+	objects[id].sendSettings();
 }
 
 bool ScenarioHandler::isAnyObjectIn(
