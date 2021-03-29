@@ -8,8 +8,8 @@ project(MaestroCommon LANGUAGES C CXX)
 
 set(MAESTRO_COMMON_TARGET ${TARGET_NAMESPACE}${PROJECT_NAME})
 
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
-set(EIGEN_LIBRARY Eigen3::Eigen)
+find_package(Eigen3 REQUIRED IMPORTED)
+#set(EIGEN_LIBRARY Eigen3::Eigen)
 set(LOGGING_LIBRARY MaestroLogging)
 set(COREUTILS_LIBRARY MaestroCoreUtil)
 
