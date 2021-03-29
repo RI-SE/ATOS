@@ -1,6 +1,4 @@
 #include <fstream>
-//#include <eigen3/Eigen>
-//#include <eigen3/Geometry>
 #include "regexpatterns.hpp"
 #include "logging.h"
 #include "trajectory.hpp"
