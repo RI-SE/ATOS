@@ -72,8 +72,10 @@ static const ModuleTask allModules[] = {
 
 	journalcontrol_task,
 	timecontrol_task,
-	systemcontrol_task,
-	objectcontrol_task
+	systemcontrol_task
+#ifndef TURN_OFF_OBJECT_CONTROL
+	,objectcontrol_task
+#endif
 #ifdef CITS_ENABLED
 		, citscontrol_task
 #endif

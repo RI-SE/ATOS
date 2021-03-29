@@ -3,7 +3,6 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 SET(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 project(Core LANGUAGES C CXX)
 
 # Specify locations for logs and shared memory
@@ -34,14 +33,27 @@ get_target_property(ISO_22133_HEADERS ${ISO_22133_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
-add_executable(${CORE_TARGET} 
-	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
-)
+if(TurnOffObjectControl STREQUAL "No")
+		add_executable(${CORE_TARGET}
+			${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.c
+			${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+			${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.c
+			${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
+			)
+endif()
+
+if(TurnOffObjectControl STREQUAL "Yes")
+		add_definitions(-DTURN_OFF_OBJECT_CONTROL)
+		add_executable(${CORE_TARGET}
+			${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+			${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.c
+			${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
+			)
+endif()
+
 add_library(${JOURNAL_CONTROL_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/src/journalcontrol.cpp
+
 )
 target_include_directories(${JOURNAL_CONTROL_TARGET} PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
