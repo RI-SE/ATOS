@@ -240,11 +240,11 @@ void TestObject::sendSettings() {
 }
 
 Channel& operator<<(Channel& chnl, const ObjectSettingsType& settings) {
-	auto nBytes = encodeOSEMMessage(&settings, chnl.transmitBuffer, sizeof (chnl.transmitBuffer), false);
+	auto nBytes = encodeOSEMMessage(&settings, chnl.transmitBuffer.data(), sizeof (chnl.transmitBuffer.size()), false);
 	if (nBytes < 0) {
 		throw std::invalid_argument("Failed to encode OSEM message");
 	}
-	nBytes = write(chnl.socket, chnl.transmitBuffer, static_cast<size_t>(nBytes));
+	nBytes = write(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes));
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to send OSEM: ") + strerror(errno));
 	}
@@ -253,4 +253,30 @@ Channel& operator<<(Channel& chnl, const ObjectSettingsType& settings) {
 
 Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 	// TODO
+	auto bufPos = chnl.transmitBuffer.begin();
+	ssize_t nBytes;
+
+	nBytes = encodeTRAJMessageHeader(
+				traj.id, traj.version, traj.name.c_str(),traj.name.length(),
+				static_cast<uint32_t>(traj.points.size()), bufPos.base(),
+				static_cast<size_t>(chnl.transmitBuffer.end()-bufPos), false);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to encode TRAJ message: ") + strerror(errno));
+	}
+
+	// TODO add
+	for (const auto& pt : traj.points) {
+		struct timeval relTime;
+		CartesianPosition pos = pt.getISOPosition();
+		SpeedType spd = pt.getISOVelocity();
+		AccelerationType acc = pt.getISOAcceleration();
+
+		relTime.tv_sec = static_cast<time_t>(pt.getTime());
+		relTime.tv_usec = static_cast<time_t>((pt.getTime() - relTime.tv_sec) * 1000000);
+
+		nBytes = encodeTRAJMessagePoint(&relTime, pos, spd, acc, pt.getCurvature(),)
+		// TODO
+	}
+
+
 }

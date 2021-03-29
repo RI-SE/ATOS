@@ -1,5 +1,6 @@
 #include <netinet/in.h>
 #include <future>
+#include <vector>
 #include "trajectory.hpp"
 
 // GCC version 8.1 brings non-experimental support for std::filesystem
@@ -13,9 +14,10 @@ namespace fs = std::experimental::filesystem;
 
 class Channel {
 public:
+	Channel() : transmitBuffer(1024, 0) {}
 	struct sockaddr_in addr = {};
 	int socket = -1;
-	char transmitBuffer[1024];
+	std::vector<char> transmitBuffer;
 
 	friend Channel& operator<<(Channel&,const ObjectSettingsType&);
 	friend Channel& operator<<(Channel&,const Trajectory&);

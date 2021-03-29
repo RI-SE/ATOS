@@ -59,7 +59,6 @@ public:
 				return position[2];
         }
 		double getHeading() const { return heading; }
-		CartesianPosition getCartesianPosition() const;
 		Eigen::Vector2d getVelocity() const { return velocity; }
         double getLongitudinalVelocity() const {
 			if (std::isnan(velocity[0]))
@@ -88,6 +87,10 @@ public:
         }
 		double getCurvature() const { return this->curvature; }
         ModeType getMode() const { return this->mode; }
+
+		CartesianPosition getISOPosition() const;
+		SpeedType getISOVelocity() const;
+		AccelerationType getISOAcceleration() const;
 
 		std::string toString() const;
 		std::string getFormatString() const;
@@ -119,8 +122,8 @@ public:
     Trajectory(const Trajectory& other);
     std::vector<TrajectoryPoint> points;
     std::string name = "";
-    int version = 0;
-	int id = 0;
+	unsigned short version = 0;
+	unsigned short id = 0;
 
 	void initializeFromFile(const std::string& fileName);
 	Trajectory relativeTo(const Trajectory& other) const;

@@ -394,7 +394,7 @@ int checkObjectsAgainstStartingPositions(
 			continue;
 		}
 
-		CartesianPosition firstTrajectoryPoint = objectConfiguration.trajectory.points.front().getCartesianPosition();
+		CartesianPosition firstTrajectoryPoint = objectConfiguration.trajectory.points.front().getISOPosition();
 		bool isPositionNearTarget = UtilIsPositionNearTarget(objectData.MonrData.position, firstTrajectoryPoint, ARM_MAX_DISTANCE_TO_START_M);
 		bool isAngleNearTarget = UtilIsAngleNearTarget(objectData.MonrData.position, firstTrajectoryPoint, ARM_MAX_ANGLE_TO_START_DEG * M_PI / 180.0);
 		if (isPositionNearTarget && isAngleNearTarget) {
