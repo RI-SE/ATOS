@@ -33,7 +33,7 @@ get_target_property(ISO_22133_HEADERS ${ISO_22133_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
-if(TurnOffObjectControl STREQUAL "No")
+if(DISABLE_OBJECT_CONTROL STREQUAL "NO")
 		add_executable(${CORE_TARGET}
 			${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.c
 			${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
@@ -42,8 +42,8 @@ if(TurnOffObjectControl STREQUAL "No")
 			)
 endif()
 
-if(TurnOffObjectControl STREQUAL "Yes")
-		add_definitions(-DTURN_OFF_OBJECT_CONTROL)
+if(DISABLE_OBJECT_CONTROL STREQUAL "YES")
+		add_definitions(-DDISABLE_OBJECT_CONTROL)
 		add_executable(${CORE_TARGET}
 			${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
 			${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.c

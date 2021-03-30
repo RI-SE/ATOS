@@ -113,3 +113,12 @@ To disable the CITS module, remake the `cmake` procedure
 ```sh
 cmake "Unix Makefiles" -DUSE_CITS:BOOL=FALSE ..
 ```
+
+The server will build ObjectControl module by default. It's possible to disable the ObjectControl module by remake the `cmake` procedure with the argument -DDISABLE_OBJECT_CONTROL=YES, see following command
+```sh
+cmake .. -DDISABLE_OBJECT_CONTROL=YES
+```
+If the argument -DDISABLE_OBJECT_CONTROL=YES has been used it's necessary enable the ObjectControl module again, see following command
+```sh
+cmake .. -DDISABLE_OBJECT_CONTROL=NO
+```
