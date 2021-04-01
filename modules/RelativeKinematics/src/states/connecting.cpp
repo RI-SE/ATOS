@@ -45,7 +45,8 @@ void ObjectControl::Connecting::connectedToLiveObject(
 }
 
 void ObjectControl::Connecting::connectedToArmedObject(
-		ScenarioHandler& handler) {
+		ScenarioHandler& handler,
+		uint32_t id) {
 	// TODO
 }
 
@@ -73,29 +74,33 @@ void RelativeKinematics::Connecting::abortRequest(
 
 
 void RelativeKinematics::Connecting::connectedToObject(
-		ScenarioHandler& handler) {
-	ObjectControl::Connecting::connectedToObject(handler);
+		ScenarioHandler& handler,
+		uint32_t id) {
+	ObjectControl::Connecting::connectedToObject(handler, id);
 }
 
 void RelativeKinematics::Connecting::disconnectedFromObject(
-		ScenarioHandler& handler) {
-	ObjectControl::Connecting::disconnectedFromObject(handler);
+		ScenarioHandler& handler,
+		uint32_t id) {
+	ObjectControl::Connecting::disconnectedFromObject(handler, id);
 }
 
 void RelativeKinematics::Connecting::connectedToLiveObject(
-		ScenarioHandler& handler) {
-	ObjectControl::Connecting::connectedToLiveObject(handler);
+		ScenarioHandler& handler,
+		uint32_t id) {
+	ObjectControl::Connecting::connectedToLiveObject(handler, id);
 	setState(handler, new RelativeKinematics::Aborting());
 }
 
 void RelativeKinematics::Connecting::connectedToArmedObject(
-		ScenarioHandler& handler) {
-	ObjectControl::Connecting::connectedToArmedObject(handler);
+		ScenarioHandler& handler,
+		uint32_t id) {
+	ObjectControl::Connecting::connectedToArmedObject(handler, id);
 	setState(handler, new RelativeKinematics::Disarming());
 }
 
 void RelativeKinematics::Connecting::allObjectsConnected(
 		ScenarioHandler& handler) {
-	ObjectControl::Connecting::connectedToArmedObject(handler);
+	ObjectControl::Connecting::allObjectsConnected(handler);
 	setState(handler, new RelativeKinematics::Ready());
 }

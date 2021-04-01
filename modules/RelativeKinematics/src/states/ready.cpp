@@ -34,7 +34,8 @@ void RelativeKinematics::Ready::disconnectRequest(
 }
 
 void RelativeKinematics::Ready::disconnectedFromObject(
-		ScenarioHandler& handler) {
-	ObjectControl::Ready::disconnectedFromObject(handler);
+		ScenarioHandler& handler,
+		uint32_t id) {
+	ObjectControl::Ready::disconnectedFromObject(handler, id);
 	setState(handler, new RelativeKinematics::Connecting());
 }

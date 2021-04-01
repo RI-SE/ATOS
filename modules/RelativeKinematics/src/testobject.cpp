@@ -237,6 +237,7 @@ void TestObject::sendSettings() {
 	objSettings.isPositioningAccuracyRequired = false;
 
 	this->comms.cmd << objSettings;
+	this->comms.cmd << trajectory;
 }
 
 Channel& operator<<(Channel& chnl, const ObjectSettingsType& settings) {
@@ -252,19 +253,22 @@ Channel& operator<<(Channel& chnl, const ObjectSettingsType& settings) {
 }
 
 Channel& operator<<(Channel& chnl, const Trajectory& traj) {
-	// TODO
-	auto bufPos = chnl.transmitBuffer.begin();
 	ssize_t nBytes;
 
+	// TRAJ header
 	nBytes = encodeTRAJMessageHeader(
 				traj.id, traj.version, traj.name.c_str(),traj.name.length(),
-				static_cast<uint32_t>(traj.points.size()), bufPos.base(),
-				static_cast<size_t>(chnl.transmitBuffer.end()-bufPos), false);
+				static_cast<uint32_t>(traj.points.size()), chnl.transmitBuffer.data(),
+				chnl.transmitBuffer.size(), false);
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to encode TRAJ message: ") + strerror(errno));
 	}
+	nBytes = write(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes));
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to send TRAJ message: ") + strerror(errno));
+	}
 
-	// TODO add
+	// TRAJ points
 	for (const auto& pt : traj.points) {
 		struct timeval relTime;
 		CartesianPosition pos = pt.getISOPosition();
@@ -274,9 +278,27 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 		relTime.tv_sec = static_cast<time_t>(pt.getTime());
 		relTime.tv_usec = static_cast<time_t>((pt.getTime() - relTime.tv_sec) * 1000000);
 
-		nBytes = encodeTRAJMessagePoint(&relTime, pos, spd, acc, pt.getCurvature(),)
-		// TODO
+		nBytes = encodeTRAJMessagePoint(&relTime, pos, spd, acc, static_cast<float>(pt.getCurvature()),
+										chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
+		if (nBytes < 0) {
+			// TODO what to do here?
+			throw std::invalid_argument(std::string("Failed to encode TRAJ message point: ") + strerror(errno));
+		}
+		nBytes = write(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes));
+		if (nBytes < 0) {
+			// TODO what to do here?
+			throw std::invalid_argument(std::string("Failed to send TRAJ message: ") + strerror(errno));
+		}
 	}
 
-
+	// TRAJ footer
+	nBytes = encodeTRAJMessageFooter(chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to encode TRAJ message footer: ") + strerror(errno));
+	}
+	nBytes = write(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes));
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to send TRAJ message: ") + strerror(errno));
+	}
+	return chnl;
 }
