@@ -643,9 +643,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							timersub(&currentTime, &reqCtrlAction.dataTimestamp, &requestAge);
 
 							// Comment from Frida: Use if(true) below to be able to test remote control function
-							// if (timerpos(&requestAge) && requestAge.tv_sec == 0
-							// 	&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
-							if(true) { // qqq temp
+							if (timerpos(&requestAge) && requestAge.tv_sec == 0
+								&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
 
 								if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
 									// Encode RCMM
