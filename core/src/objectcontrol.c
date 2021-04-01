@@ -632,35 +632,54 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
 				if (objectEnabledStatus == OBJECT_ENABLED) {
-					RequestControlActionType reqDCAction;
+					RequestControlActionType reqCtrlAction;
 					struct timeval requestAge;
 
-					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &reqDCAction)
+					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &reqCtrlAction)
 						== READ_OK) {
-						C8 DCMMbuffer[35];
+						C8 ctrlMessageBuffer[35];
 
-						if (timerisset(&reqDCAction.dataTimestamp)) {
-							timersub(&currentTime, &reqDCAction.dataTimestamp, &requestAge);
-							if (timerpos(&requestAge) && requestAge.tv_sec == 0
-								&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
+						if (timerisset(&reqCtrlAction.dataTimestamp)) {
+							timersub(&currentTime, &reqCtrlAction.dataTimestamp, &requestAge);
+
+							// Comment from Frida: Use if(true) below to be able to test remote control function
+							// if (timerpos(&requestAge) && requestAge.tv_sec == 0
+							// 	&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
+							if(true) { // qqq temp
 
 								if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
 									// Encode RCMM
 									RemoteControlManoeuvreMessageType rcmmMessage;
 
-									if (reqDCAction.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE ||
-										reqDCAction.steeringUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE) {
-										rcmmMessage.status = 0;	//Shall be 0 when controlled by percentage
+									rcmmMessage.status = 0; // TODO: Remove later. Will be obsolete in next ISO version
+									rcmmMessage.command = MANOEUVRE_NONE;
+									rcmmMessage.isSteeringManoeuvreValid = reqCtrlAction.isSteeringActionValid;
+									rcmmMessage.isSpeedManoeuvreValid = reqCtrlAction.isSpeedActionValid;
+									rcmmMessage.steeringUnit = reqCtrlAction.steeringUnit;
+									rcmmMessage.speedUnit = reqCtrlAction.speedUnit;
+
+									if(reqCtrlAction.steeringUnit == ISO_UNIT_TYPE_STEERING_DEGREES) {
+										rcmmMessage.steeringManoeuvre.rad = reqCtrlAction.steeringAction.rad;
 									}
-									else
-										rcmmMessage.status = 1;	//Shall be 1 when controlled by absolute value
-									rcmmMessage.steeringManoeuvre.pct = reqDCAction.steeringAction.pct;
-									rcmmMessage.isSteeringManoeuvreValid = reqDCAction.isSteeringActionValid;
-									rcmmMessage.speedManoeuvre.pct = reqDCAction.speedAction.pct;
-									rcmmMessage.isSpeedManoeuvreValid = reqDCAction.isSpeedActionValid;
+									else if (rcmmMessage.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE) {
+										rcmmMessage.steeringManoeuvre.pct = reqCtrlAction.steeringAction.pct;
+									}
+									else {
+										LogMessage(LOG_LEVEL_INFO, "Error in declarion of RCMM steering unit");
+									}
+
+									if (rcmmMessage.speedUnit == ISO_UNIT_TYPE_SPEED_METER_SECOND) {
+										rcmmMessage.speedManoeuvre.m_s = reqCtrlAction.speedAction.m_s;
+									}
+									else if (rcmmMessage.speedUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE) {
+										rcmmMessage.speedManoeuvre.pct = reqCtrlAction.speedAction.pct;
+									}
+									else {
+										LogMessage(LOG_LEVEL_INFO, "Error in declarion of RCMM speed unit");
+									}
+
 									MessageLength =
-										encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof (MessageBuffer),
-														  0);
+										encodeRCMMMessage(&rcmmMessage, ctrlMessageBuffer, sizeof (ctrlMessageBuffer), 0);
 								}
 								else {
 									// Encode DCMM
@@ -668,54 +687,54 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 									dcmmMessage.status = 1;
 									dcmmMessage.command = 1;
-									dcmmMessage.isSpeedManoeuvreValid = reqDCAction.isSpeedActionValid;
-									dcmmMessage.isSteeringManoeuvreValid = reqDCAction.isSteeringActionValid;
-									dcmmMessage.steeringUnit = reqDCAction.steeringUnit;
-									dcmmMessage.speedUnit = reqDCAction.speedUnit;
+									dcmmMessage.isSpeedManoeuvreValid = reqCtrlAction.isSpeedActionValid;
+									dcmmMessage.isSteeringManoeuvreValid = reqCtrlAction.isSteeringActionValid;
+									dcmmMessage.steeringUnit = reqCtrlAction.steeringUnit;
+									dcmmMessage.speedUnit = reqCtrlAction.speedUnit;
 
 									if (dcmmMessage.steeringUnit == ISO_UNIT_TYPE_STEERING_DEGREES) {
-										dcmmMessage.steeringManoeuvre.rad = reqDCAction.steeringAction.rad;
+										dcmmMessage.steeringManoeuvre.rad = reqCtrlAction.steeringAction.rad;
 									}
 									else if (dcmmMessage.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE) {
-										dcmmMessage.steeringManoeuvre.pct = reqDCAction.steeringAction.pct;
+										dcmmMessage.steeringManoeuvre.pct = reqCtrlAction.steeringAction.pct;
 									}
 									else {
-										LogMessage(LOG_LEVEL_INFO, "Error in declarion of steering unit");
+										LogMessage(LOG_LEVEL_INFO, "Error in declarion of DCMM steering unit");
 									}
 
 									if (dcmmMessage.speedUnit == ISO_UNIT_TYPE_SPEED_METER_SECOND) {
-										dcmmMessage.speedManoeuvre.m_s = reqDCAction.speedAction.m_s;
+										dcmmMessage.speedManoeuvre.m_s = reqCtrlAction.speedAction.m_s;
 									}
 									else if (dcmmMessage.speedUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE) {
-										dcmmMessage.speedManoeuvre.pct = reqDCAction.speedAction.pct;
+										dcmmMessage.speedManoeuvre.pct = reqCtrlAction.speedAction.pct;
 									}
 									else {
-										LogMessage(LOG_LEVEL_INFO, "Error in declarion of speed unit");
+										LogMessage(LOG_LEVEL_INFO, "Error in declarion of DCMM speed unit");
 									}
 
 									//TODO: fix so that encoder can handle bigger messagebuffers?
 									MessageLength =
-										encodeDCMMMessage(&dcmmMessage, DCMMbuffer, sizeof (DCMMbuffer), 0);
+										encodeDCMMMessage(&dcmmMessage, ctrlMessageBuffer, sizeof (ctrlMessageBuffer), 0);
 									// when we sent the data with bigger fuffer we got a valueid error in decoder 
 								}
 								if (MessageLength > 0) {
-									UtilSendTCPData(MODULE_NAME, DCMMbuffer, MessageLength,
+									UtilSendTCPData(MODULE_NAME, ctrlMessageBuffer, MessageLength,
 													&objectConnections[iIndex].commandSocket, 0);
-									LogMessage(LOG_LEVEL_INFO, "RCMM message sent to object %lu",
+									LogMessage(LOG_LEVEL_INFO, "RCMM/DCMM message sent to object %lu",
 											   object_transmitter_ids[iIndex]);
 									MessageLength = 0;
-									memset(DCMMbuffer, 0, 100);
+									memset(ctrlMessageBuffer, 0, 100);
 								}
 								else {
-									LogMessage(LOG_LEVEL_ERROR, "Error encoding remote control message");
+									LogMessage(LOG_LEVEL_ERROR, "Error encoding remote/direct control message");
 								}
-								timerclear(&reqDCAction.dataTimestamp);
+								timerclear(&reqCtrlAction.dataTimestamp);
 								DataDictionarySetRequestedControlAction(object_transmitter_ids[iIndex],
-																		&reqDCAction);
+																		&reqCtrlAction);
 							}
 							else {
 								LogMessage(LOG_LEVEL_WARNING,
-										   "Ignoring remote control command - age is %ld s %ld µs",
+										   "Ignoring remote/direct control command - age is %ld s %ld µs",
 										   requestAge.tv_sec, requestAge.tv_usec);
 							}
 						}
