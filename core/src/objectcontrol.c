@@ -1369,7 +1369,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 
 	totalPrintedBytes += printedBytes;
 	messageBufferPosition += printedBytes;
-	remainingBufferSpace -= (size_t) printedBytes;
+	remainingBufferSpace -= (size_t)printedBytes;
 
 	read = getline(&line, &len, fd);
 	for (unsigned int i = 0; i < fileHeader.numberOfLines && read != -1; ++i, read = getline(&line, &len, fd)) {
@@ -1429,7 +1429,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 				}
 				messageBufferPosition += printedBytes;
 				totalPrintedBytes += printedBytes;
-				remainingBufferSpace -= (size_t) printedBytes;
+				remainingBufferSpace -= (size_t)printedBytes;
 			}
 			else {
 				// TODO how to terminate an ISO message when an error has occurred?
@@ -1441,7 +1441,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 		else {
 			totalPrintedBytes += printedBytes;
 			messageBufferPosition += printedBytes;
-			remainingBufferSpace -= (size_t) printedBytes;
+			remainingBufferSpace -= (size_t)printedBytes;
 		}
 	}
 
@@ -1461,7 +1461,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 			}
 			messageBufferPosition += printedBytes;
 			totalPrintedBytes += printedBytes;
-			remainingBufferSpace -= (size_t) printedBytes;
+			remainingBufferSpace -= (size_t)printedBytes;
 		}
 		else {
 			// TODO how to terminate an ISO message when an error has occurred?
@@ -1473,7 +1473,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 	else {
 		totalPrintedBytes += printedBytes;
 		messageBufferPosition += printedBytes;
-		remainingBufferSpace -= (size_t) printedBytes;
+		remainingBufferSpace -= (size_t)printedBytes;
 	}
 
 	UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket, debug);
@@ -2205,8 +2205,9 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 		LogMessage(LOG_LEVEL_INFO, "Loaded object with ID %u, IP %s and trajectory file <%s>",
 				   objectIDs[*nbr_objects], inet_ntop(AF_INET,
-													  &objectConnections[*nbr_objects].objectCommandAddress.
-													  sin_addr, objectSetting, sizeof (objectSetting)),
+													  &objectConnections[*nbr_objects].
+													  objectCommandAddress.sin_addr, objectSetting,
+													  sizeof (objectSetting)),
 				   object_traj_file[*nbr_objects]);
 		++(*nbr_objects);
 	}
