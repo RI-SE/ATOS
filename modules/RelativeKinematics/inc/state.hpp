@@ -36,6 +36,7 @@ public:
 	virtual void onExit(ScenarioHandler&) {}
 
 	virtual OBCState_t asNumber() const { return OBC_STATE_UNDEFINED; }
+	virtual ControlCenterStatusType asControlCenterStatus() const { return CONTROL_CENTER_STATUS_ABORT; }
 
 	ObjectControlState(){}
 	virtual ~ObjectControlState() {}
@@ -74,6 +75,7 @@ public:
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 
 	OBCState_t asNumber() const { return OBC_STATE_IDLE; }
+	virtual ControlCenterStatusType asControlCenterStatus() const { return CONTROL_CENTER_STATUS_INIT; }
 };
 
 class Initialized : public ObjectControlState {
@@ -103,6 +105,7 @@ public:
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 
 	OBCState_t asNumber() const { return OBC_STATE_INITIALIZED; }
+	virtual ControlCenterStatusType asControlCenterStatus() const { return CONTROL_CENTER_STATUS_INIT; }
 };
 
 class Connecting : public ObjectControlState {
@@ -136,6 +139,7 @@ public:
 
 	// TODO integrate this state into the enum variable
 	OBCState_t asNumber() const { return OBC_STATE_INITIALIZED; }
+	virtual ControlCenterStatusType asControlCenterStatus() const { return CONTROL_CENTER_STATUS_INIT; }
 };
 
 class Ready : public ObjectControlState {
@@ -165,6 +169,7 @@ public:
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 
 	OBCState_t asNumber() const { return OBC_STATE_CONNECTED; }
+	virtual ControlCenterStatusType asControlCenterStatus() const { return CONTROL_CENTER_STATUS_READY; }
 };
 
 class Aborting : public ObjectControlState {
@@ -195,6 +200,7 @@ public:
 
 	// TODO integrate this state into the enum variable
 	OBCState_t asNumber() const { return OBC_STATE_ERROR; }
+	virtual ControlCenterStatusType asControlCenterStatus() const { return CONTROL_CENTER_STATUS_ABORT; }
 };
 
 class TestLive : public ObjectControlState {
@@ -224,6 +230,7 @@ public:
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 
 	OBCState_t asNumber() const { return OBC_STATE_RUNNING; }
+	virtual ControlCenterStatusType asControlCenterStatus() const { return CONTROL_CENTER_STATUS_RUNNING; }
 };
 
 class Disarming : public ObjectControlState {
@@ -254,6 +261,7 @@ public:
 
 	// TODO integrate this state into the enum variable
 	OBCState_t asNumber() const { return OBC_STATE_ARMED; }
+	virtual ControlCenterStatusType asControlCenterStatus() const { return CONTROL_CENTER_STATUS_RUNNING; } // TODO
 };
 
 class Armed : public ObjectControlState {
@@ -285,6 +293,7 @@ public:
 	void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion"); }
 
 	OBCState_t asNumber() const { return OBC_STATE_ARMED; }
+	virtual ControlCenterStatusType asControlCenterStatus() const { return CONTROL_CENTER_STATUS_RUNNING; } // TODO
 };
 
 class Done : public ObjectControlState {
@@ -315,6 +324,7 @@ public:
 
 	// TODO integrate this state into the enum variable
 	OBCState_t asNumber() const { return OBC_STATE_RUNNING; }
+	virtual ControlCenterStatusType asControlCenterStatus() const { return CONTROL_CENTER_STATUS_TEST_DONE; }
 };
 
 }
