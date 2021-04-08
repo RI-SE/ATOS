@@ -1,9 +1,30 @@
 #include "testobject.hpp"
 #include "util.h"
 #include "maestroTime.h"
+#include "datadictionary.h"
 
 TestObject::TestObject() {
 	// TODO
+	origin.latitude_deg = origin.longitude_deg = origin.altitude_m = 0.0;
+	origin.isLongitudeValid = origin.isLatitudeValid = origin.isAltitudeValid = false;
+
+}
+
+TestObject::TestObject(TestObject&& other) :
+	state(other.state),
+	objectFile(other.objectFile),
+	trajectoryFile(other.trajectoryFile),
+	transmitterID(other.transmitterID),
+	isVUT(other.isVUT),
+	trajectory(other.trajectory),
+	origin(other.origin),
+	lastMonitor(other.lastMonitor),
+	maxAllowedMonitorPeriod(other.maxAllowedMonitorPeriod)
+{
+	this->comms = other.comms;
+	other.comms.cmd.socket = 0;
+	other.comms.mntr.socket = 0;
+	this->nextMonitor = std::move(other.nextMonitor);
 }
 
 void TestObject::setCommandAddress(
@@ -18,6 +39,64 @@ void TestObject::setMonitorAddress(
 	if (!this->comms.connected()) {
 		this->comms.mntr.addr = newAddr;
 	}
+}
+
+ObjectDataType TestObject::awaitNextMonitor() {
+	ssize_t result = 0;
+	ObjectDataType retval;
+	struct timeval tv;
+	// Read until receive buffer is empty, return last read message
+	result = recv(this->comms.mntr.socket, this->comms.mntr.receiveBuffer.data(),
+				  this->comms.mntr.receiveBuffer.size(), 0);
+	if (result < 0) {
+		this->comms.disconnect();
+		throw std::ios_base::failure(std::string("Failed to receive from monitor socket: ") + strerror(errno));
+	}
+	else if (result == 0) {
+		this->comms.disconnect();
+		throw std::ios_base::failure("Remote closed monitor socket");
+	}
+
+	if (getISOMessageType(this->comms.mntr.receiveBuffer.data(), static_cast<size_t>(result), false) == MESSAGE_ID_MONR) {
+		retval.ClientIP = this->comms.cmd.addr.sin_addr.s_addr;
+		TimeSetToCurrentSystemTime(&tv);
+		if (decodeMONRMessage(this->comms.mntr.receiveBuffer.data(), static_cast<size_t>(result),
+							  tv, &retval.ClientID, &retval.MonrData, false) < 0) {
+			this->comms.disconnect();
+			throw std::invalid_argument("Error decoding MONR from object"); // TODO add details which exact object sent the data
+		}
+		retval.lastPositionUpdate = tv;
+		// TODO check age
+	}
+	else {
+		throw std::invalid_argument("Received non-MONR message on MONR channel");
+	}
+
+	return retval;
+}
+
+void TestObject::updateMonitor(const ObjectDataType &data) {
+	if (data.ClientID != this->getTransmitterID()) {
+		throw std::invalid_argument("Attempted to set monitor data with non-matching transmitter ID");
+	}
+	this->state = data.MonrData.state;
+	this->lastMonitor = data;
+}
+
+ObjectStateType TestObject::getState(bool awaitUpdate) {
+	if (awaitUpdate) {
+		if (!nextMonitor.valid()) {
+			nextMonitor = std::async(std::launch::async, &TestObject::awaitNextMonitor, this);
+		}
+		auto status = nextMonitor.wait_for(maxAllowedMonitorPeriod);
+		if (status == std::future_status::ready) {
+			this->updateMonitor(nextMonitor.get());
+		}
+		else {
+			throw std::runtime_error("Timed out while waiting for monitor data");
+		}
+	}
+	return this->getState();
 }
 
 std::string TestObject::toString() const {
@@ -120,8 +199,56 @@ void TestObject::parseConfigurationFile(
 	}
 
 	this->objectFile = objectFile;
-}
 
+	this->origin = {};
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_ORIGIN_LATITUDE, objectFile.c_str(),
+								 objectFile.string().length(),
+								 setting, sizeof (setting)) != -1) {
+		origin.latitude_deg = strtod(setting, &endptr);
+		if (setting != endptr) {
+			origin.isLatitudeValid = true;
+		}
+	}
+
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_ORIGIN_LONGITUDE, objectFile.c_str(),
+								 objectFile.string().length(),
+								 setting, sizeof (setting)) != -1) {
+		origin.longitude_deg = strtod(setting, &endptr);
+		if (setting != endptr) {
+			origin.isLongitudeValid = true;
+		}
+	}
+
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_ORIGIN_ALTITUDE, objectFile.c_str(),
+								 objectFile.string().length(),
+								 setting, sizeof (setting)) != -1) {
+		origin.altitude_m = strtod(setting, &endptr);
+		if (setting != endptr) {
+			origin.isAltitudeValid = true;
+		}
+	}
+
+	if (origin.isAltitudeValid == origin.isLatitudeValid
+			&& origin.isLatitudeValid == origin.isLongitudeValid) {
+		if (!origin.isAltitudeValid) {
+			GeoPosition orig;
+			if (UtilReadOriginConfiguration(&orig) != -1) {
+				this->origin.latitude_deg = orig.Latitude;
+				this->origin.longitude_deg = orig.Longitude;
+				this->origin.altitude_m = orig.Altitude;
+				this->origin.isLatitudeValid = true;
+				this->origin.isLongitudeValid = true;
+				this->origin.isAltitudeValid = true;
+			}
+			else {
+				throw std::invalid_argument("No origin setting found");
+			}
+		}
+	}
+	else {
+		throw std::invalid_argument("Partial origin setting in file " + objectFile.string());
+	}
+}
 
 void TestObject::parseTrajectoryFile(
 		const fs::path& file) {
@@ -164,21 +291,13 @@ void TestObject::establishConnection(
 		}
 		else {
 			LogMessage(LOG_LEVEL_ERROR, "Failed connection attempt to %s, retrying in %.3f s ...",
-					   ipString, TestObject::connRetryPeriod_ms / 1000.0);
-			if (stopRequest.wait_for(std::chrono::milliseconds(TestObject::connRetryPeriod_ms))
+					   ipString, TestObject::connRetryPeriod.count() / 1000.0);
+			if (stopRequest.wait_for(TestObject::connRetryPeriod)
 					!= std::future_status::timeout) {
 				errMsg << "Connection attempt interrupted";
 				throw std::runtime_error(errMsg.str());
 			}
 		}
-	}
-
-	// Set command socket to nonblocking
-	if (fcntl(this->comms.cmd.socket, F_SETFL,
-			  fcntl(this->comms.cmd.socket, F_GETFL, 0) | O_NONBLOCK) == -1) {
-		errMsg << "fcntl: " << strerror(errno);
-		this->comms.disconnect();
-		throw std::runtime_error(errMsg.str());
 	}
 
 	// Create monitor socket
@@ -190,13 +309,13 @@ void TestObject::establishConnection(
 		throw std::runtime_error(errMsg.str());
 	}
 
-	// Set monitor socket to nonblocking
-	if (fcntl(this->comms.mntr.socket, F_SETFL,
-			  fcntl(this->comms.mntr.socket, F_GETFL, 0) | O_NONBLOCK) == -1) {
-		errMsg << "fcntl: " << strerror(errno);
+	sockaddr* sin = reinterpret_cast<sockaddr*>(&this->comms.mntr.addr);
+	if (connect(this->comms.mntr.socket, sin, sizeof (this->comms.mntr.addr)) < 0) {
+		errMsg << "Failed to connect monitor socket: " << strerror(errno);
 		this->comms.disconnect();
 		throw std::runtime_error(errMsg.str());
 	}
+
 	return;
 }
 
@@ -221,6 +340,14 @@ void ObjectConnection::disconnect() {
 	}
 }
 
+void TestObject::sendHeartbeat(
+		const ControlCenterStatusType ccStatus) {
+	HeabMessageDataType heartbeat;
+	TimeSetToCurrentSystemTime(&heartbeat.dataTimestamp);
+	heartbeat.controlCenterStatus = ccStatus;
+	this->comms.mntr << heartbeat;
+}
+
 void TestObject::sendSettings() {
 
 	ObjectSettingsType objSettings;
@@ -240,12 +367,25 @@ void TestObject::sendSettings() {
 	this->comms.cmd << trajectory;
 }
 
-Channel& operator<<(Channel& chnl, const ObjectSettingsType& settings) {
-	auto nBytes = encodeOSEMMessage(&settings, chnl.transmitBuffer.data(), sizeof (chnl.transmitBuffer.size()), false);
+Channel& operator<<(Channel& chnl, const HeabMessageDataType& heartbeat) {
+	auto nBytes = encodeHEABMessage(&heartbeat.dataTimestamp, heartbeat.controlCenterStatus,
+									chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
 	if (nBytes < 0) {
-		throw std::invalid_argument("Failed to encode OSEM message");
+		throw std::invalid_argument(std::string("Failed to encode HEAB message: ") + strerror(errno));
 	}
-	nBytes = write(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes));
+	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to send HEAB: ") + strerror(errno));
+	}
+	return chnl;
+}
+
+Channel& operator<<(Channel& chnl, const ObjectSettingsType& settings) {
+	auto nBytes = encodeOSEMMessage(&settings, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to encode OSEM message: ") + strerror(errno));
+	}
+	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to send OSEM: ") + strerror(errno));
 	}
@@ -263,7 +403,7 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to encode TRAJ message: ") + strerror(errno));
 	}
-	nBytes = write(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes));
+	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to send TRAJ message: ") + strerror(errno));
 	}
@@ -284,7 +424,7 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 			// TODO what to do here?
 			throw std::invalid_argument(std::string("Failed to encode TRAJ message point: ") + strerror(errno));
 		}
-		nBytes = write(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes));
+		nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 		if (nBytes < 0) {
 			// TODO what to do here?
 			throw std::invalid_argument(std::string("Failed to send TRAJ message: ") + strerror(errno));
@@ -296,7 +436,7 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to encode TRAJ message footer: ") + strerror(errno));
 	}
-	nBytes = write(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes));
+	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to send TRAJ message: ") + strerror(errno));
 	}

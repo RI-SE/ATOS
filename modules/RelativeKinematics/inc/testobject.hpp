@@ -14,11 +14,13 @@ namespace fs = std::experimental::filesystem;
 
 class Channel {
 public:
-	Channel() : transmitBuffer(1024, 0) {}
+	Channel() : transmitBuffer(1024, 0), receiveBuffer(1024, 0) {}
 	struct sockaddr_in addr = {};
 	int socket = -1;
 	std::vector<char> transmitBuffer;
+	std::vector<char> receiveBuffer;
 
+	friend Channel& operator<<(Channel&,const HeabMessageDataType&);
 	friend Channel& operator<<(Channel&,const ObjectSettingsType&);
 	friend Channel& operator<<(Channel&,const Trajectory&);
 };
@@ -36,6 +38,12 @@ public:
 class TestObject {
 public:
 	TestObject();
+	TestObject(const TestObject&) = delete;
+	TestObject(TestObject&&);
+
+	TestObject& operator=(const TestObject&) = delete;
+	TestObject& operator=(TestObject&&) = default;
+
 	void parseConfigurationFile(const fs::path& file);
 	void parseTrajectoryFile(const fs::path& file);
 
@@ -43,8 +51,8 @@ public:
 	fs::path getTrajectoryFile() const { return trajectoryFile; }
 	Trajectory getTrajectory() const { return trajectory; }
 	GeographicPositionType getOrigin() const { return origin; }
+	ObjectStateType getState(bool awaitUpdate);
 	ObjectStateType getState() const { return state; }
-
 	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
@@ -57,18 +65,27 @@ public:
 	void disconnect() { this->comms.disconnect(); }
 
 	void sendSettings();
+	void sendHeartbeat(const ControlCenterStatusType ccStatus);
+
+	void updateMonitor(const ObjectDataType&);
 private:
 	ObjectConnection comms;
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 
 	fs::path objectFile;
 	fs::path trajectoryFile;
-	uint32_t transmitterID;
+	uint32_t transmitterID = 0;
 	bool isVUT = false;
 	Trajectory trajectory;
-	GeographicPositionType origin = {};
+	GeographicPositionType origin;
+	bool isEnabled = true;
 
-	static constexpr int connRetryPeriod_ms = 1000;
+	ObjectDataType awaitNextMonitor();
+	std::future<ObjectDataType> nextMonitor;
+	ObjectDataType lastMonitor; // TODO change this into a more usable format
+
+	static constexpr std::chrono::milliseconds connRetryPeriod = std::chrono::milliseconds(1000);
+	std::chrono::milliseconds maxAllowedMonitorPeriod = std::chrono::milliseconds(static_cast<unsigned int>(1000.0 * 100.0 / MONR_EXPECTED_FREQUENCY_HZ ));
 };
 
 // Template specialisation of std::less for TestObject
