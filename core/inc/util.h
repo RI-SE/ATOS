@@ -162,7 +162,10 @@ enum ObjectFileParameter {
 	OBJECT_SETTING_IP,
 	OBJECT_SETTING_TRAJ,
 	OBJECT_SETTING_IS_VUT,
-	OBJECT_SETTING_INJECTOR_IDS
+	OBJECT_SETTING_INJECTOR_IDS,
+	OBJECT_SETTING_ORIGIN_LATITUDE,
+	OBJECT_SETTING_ORIGIN_LONGITUDE,
+	OBJECT_SETTING_ORIGIN_ALTITUDE
 };
 
 
@@ -736,6 +739,7 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter, c
 int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char* objectFilePath,
 							 const size_t filePathLength, char* objectSetting,
 							 const size_t objectSettingSize);
+int UtilReadOriginConfiguration(GeoPosition* origin);
 
 int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
 I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
@@ -745,9 +749,6 @@ I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *
 
 struct timeval UtilGetPIDUptime(pid_t pID);
 double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
-
-
-enum procFields {startTime = 21, vSize = 22};
 
 typedef struct {
   uint64_t timestamp;
