@@ -28,8 +28,9 @@ void ObjectControl::Connecting::abortRequest(
 void ObjectControl::Connecting::connectedToObject(
 		ScenarioHandler& handler,
 		uint32_t id) {
-	// TODO send OSEM
-	handler.uploadObjectConfiguration(id);
+	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+		this->allObjectsConnected(handler);
+	}
 }
 
 void ObjectControl::Connecting::disconnectedFromObject(
