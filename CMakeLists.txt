@@ -53,9 +53,6 @@ endif()
 if(WITH_RELATIVE_KINEMATICS)
 	list(APPEND ENABLED_MODULES RelativeKinematics)
 endif()
-if(WITH_OBJECT_CONTROL)
-	list(APPEND ENABLED_MODULES ObjectControl)
-endif()
 
 # Testing
 if(ENABLE_TESTS)
