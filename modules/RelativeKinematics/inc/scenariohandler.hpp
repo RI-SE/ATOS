@@ -83,7 +83,14 @@ private:
 	std::shared_future<void> connStopReqFuture;
 
 	void beginConnectionAttempt();
-	void abortConnectionAttempt() { connStopReqPromise.set_value(); }
+	void abortConnectionAttempt() {
+		try {
+			connStopReqPromise.set_value();
+		}
+		catch (std::future_error) {
+			// Attempted to stop when none in progress
+		}
+	}
 
 	void disconnectObjects();
 
@@ -96,8 +103,10 @@ private:
 
 	void clearScenario();
 
-	bool isAnyObjectIn(const ObjectStateType state) const;
-	bool areAllObjectsIn(const ObjectStateType state) const;
+	bool isAnyObjectIn(const ObjectStateType state);
+	bool areAllObjectsIn(const ObjectStateType state);
+
+	void connectToObject(TestObject& obj, std::shared_future<void>& connStopReq);
 };
 
 
