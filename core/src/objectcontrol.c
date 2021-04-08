@@ -2205,9 +2205,8 @@ int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 
 		LogMessage(LOG_LEVEL_INFO, "Loaded object with ID %u, IP %s and trajectory file <%s>",
 				   objectIDs[*nbr_objects], inet_ntop(AF_INET,
-													  &objectConnections[*nbr_objects].
-													  objectCommandAddress.sin_addr, objectSetting,
-													  sizeof (objectSetting)),
+													  &objectConnections[*nbr_objects].objectCommandAddress.
+													  sin_addr, objectSetting, sizeof (objectSetting)),
 				   object_traj_file[*nbr_objects]);
 		++(*nbr_objects);
 	}
