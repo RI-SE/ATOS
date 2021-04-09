@@ -5,8 +5,10 @@ ObjectControl::Ready::Ready() {
 }
 
 void ObjectControl::Ready::armRequest(
-		ScenarioHandler&) {
-	// TODO
+		ScenarioHandler& handler) {
+	if (!handler.areAllObjectsIn(std::set<ObjectStateType>({OBJECT_STATE_DISARMED, OBJECT_STATE_ARMED}))) {
+		throw std::invalid_argument("Not all objects in valid state prior to arm");
+	}
 }
 
 void ObjectControl::Ready::disconnectRequest(

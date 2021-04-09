@@ -40,6 +40,10 @@ void ScenarioHandler::handleDisconnectCommand() {
 	this->state->disconnectRequest(*this);
 }
 
+void ScenarioHandler::handleArmCommand() {
+	this->state->armRequest(*this);
+}
+
 void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
@@ -212,6 +216,12 @@ void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> 
 	}
 };
 
+void ScenarioHandler::armObjects() {
+	for (auto& id : getVehicleIDs()) {
+		objects[id].sendArm();
+	}
+}
+
 bool ScenarioHandler::isAnyObjectIn(
 		const ObjectStateType state) {
 	return std::any_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,TestObject>& obj) {
@@ -226,3 +236,16 @@ bool ScenarioHandler::areAllObjectsIn(
 	});
 }
 
+bool ScenarioHandler::isAnyObjectIn(
+		const std::set<ObjectStateType>& states) {
+	return std::any_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,TestObject>& obj) {
+		return states.find(obj.second.getState()) != states.end();
+	});
+}
+
+bool ScenarioHandler::areAllObjectsIn(
+		const std::set<ObjectStateType>& states) {
+	return std::all_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,TestObject>& obj) {
+		return states.find(obj.second.getState()) != states.end();
+	});
+}

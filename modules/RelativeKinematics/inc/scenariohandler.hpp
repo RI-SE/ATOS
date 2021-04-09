@@ -4,6 +4,7 @@
 #include "testobject.hpp"
 #include <map>
 #include <future>
+#include <set>
 
 // Forward declarations
 class ObjectControlState;
@@ -64,6 +65,7 @@ public:
 	void handleInitCommand();
 	void handleConnectCommand();
 	void handleDisconnectCommand();
+	void handleArmCommand();
 
 	std::vector<uint32_t> getVehicleUnderTestIDs() const;
 	std::vector<uint32_t> getVehicleIDs() const {
@@ -104,9 +106,13 @@ private:
 	void clearScenario();
 
 	bool isAnyObjectIn(const ObjectStateType state);
+	bool isAnyObjectIn(const std::set<ObjectStateType>& state);
 	bool areAllObjectsIn(const ObjectStateType state);
+	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
 
 	void connectToObject(TestObject& obj, std::shared_future<void>& connStopReq);
+
+	void armObjects();
 };
 
 

@@ -367,6 +367,14 @@ void TestObject::sendSettings() {
 	this->comms.cmd << trajectory;
 }
 
+void TestObject::sendArm() {
+	this->comms.cmd << OBJECT_COMMAND_ARM;
+}
+
+void TestObject::sendDisarm() {
+	this->comms.cmd << OBJECT_COMMAND_DISARM;
+}
+
 Channel& operator<<(Channel& chnl, const HeabMessageDataType& heartbeat) {
 	auto nBytes = encodeHEABMessage(&heartbeat.dataTimestamp, heartbeat.controlCenterStatus,
 									chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
@@ -442,3 +450,16 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 	}
 	return chnl;
 }
+
+Channel& operator<<(Channel& chnl, const ObjectCommandType& cmd) {
+	auto nBytes = encodeOSTMMessage(cmd, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to encode OSTM message: ") + strerror(errno));
+	}
+	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to send OSTM: ") + strerror(errno));
+	}
+	return chnl;
+}
+

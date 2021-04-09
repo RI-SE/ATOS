@@ -23,6 +23,8 @@ public:
 	friend Channel& operator<<(Channel&,const HeabMessageDataType&);
 	friend Channel& operator<<(Channel&,const ObjectSettingsType&);
 	friend Channel& operator<<(Channel&,const Trajectory&);
+	friend Channel& operator<<(Channel&,const ObjectCommandType&);
+
 };
 
 class ObjectConnection {
@@ -66,6 +68,8 @@ public:
 
 	void sendSettings();
 	void sendHeartbeat(const ControlCenterStatusType ccStatus);
+	void sendArm();
+	void sendDisarm();
 
 	void updateMonitor(const ObjectDataType&);
 private:

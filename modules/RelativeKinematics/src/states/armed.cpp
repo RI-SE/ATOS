@@ -7,6 +7,7 @@ ObjectControl::Armed::Armed() {
 void ObjectControl::Armed::onEnter(
 		ScenarioHandler& handler) {
 	// TODO send OSTMs
+	handler.armObjects();
 }
 
 void ObjectControl::Armed::startRequest(ScenarioHandler&) {
