@@ -398,7 +398,7 @@ uint64_t UtilgetETSIfromUTCMS(uint64_t utc_sec, uint64_t utc_usec) {
 void UtilgetDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t) {
 	time_t time_seconds = utc_ms / 1000;
 
-	if (size_t <26)
+	if (size_t < 26)
 		return;
 	strcpy(buffer, ctime(&time_seconds));
 }
