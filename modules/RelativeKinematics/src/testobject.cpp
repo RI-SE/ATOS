@@ -29,14 +29,14 @@ TestObject::TestObject(TestObject&& other) :
 
 void TestObject::setCommandAddress(
 		const sockaddr_in &newAddr) {
-	if (!this->comms.connected()) {
+	if (!this->comms.isConnected()) {
 		this->comms.cmd.addr = newAddr;
 	}
 }
 
 void TestObject::setMonitorAddress(
 		const sockaddr_in &newAddr) {
-	if (!this->comms.connected()) {
+	if (!this->comms.isConnected()) {
 		this->comms.mntr.addr = newAddr;
 	}
 }
@@ -303,7 +303,7 @@ void TestObject::establishConnection(
 	// Create monitor socket
 	LogMessage(LOG_LEVEL_DEBUG, "Creating safety socket");
 	this->comms.mntr.socket = socket(AF_INET, SOCK_DGRAM, 0);
-	if (!this->comms.valid()) {
+	if (!this->comms.isValid()) {
 		errMsg << "Failed to create monitor socket: " << strerror(errno);
 		this->comms.disconnect();
 		throw std::runtime_error(errMsg.str());
@@ -320,12 +320,12 @@ void TestObject::establishConnection(
 }
 
 
-bool ObjectConnection::connected() const {
+bool ObjectConnection::isConnected() const {
 	// TODO
 	return false;
 }
 
-bool ObjectConnection::valid() const {
+bool ObjectConnection::isValid() const {
 	return this->cmd.socket != -1 && this->mntr.socket != -1;
 }
 

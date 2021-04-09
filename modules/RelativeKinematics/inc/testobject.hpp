@@ -30,8 +30,8 @@ public:
 	Channel cmd;
 	Channel mntr;
 
-	bool valid() const;
-	bool connected() const;
+	bool isValid() const;
+	bool isConnected() const;
 	void disconnect();
 };
 
@@ -60,7 +60,7 @@ public:
 	bool isVehicleUnderTest() const { return isVUT; }
 	std::string toString() const;
 
-	bool isConnected() const { return comms.connected(); }
+	bool isConnected() const { return comms.isConnected(); }
 	void establishConnection(std::shared_future<void> stopRequest);
 	void disconnect() { this->comms.disconnect(); }
 
