@@ -14,6 +14,7 @@ set(WITH_VISUALIZATION ON CACHE BOOL "Enable Visualization module")
 set(WITH_RELATIVE_KINEMATICS ON CACHE BOOL "Enable RelativeKinematics module")
 set(WITH_DIRECT_CONTROL ON CACHE BOOL "Enable DirectControl module")
 set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
+set(WITH_OBJECT_CONTROL ON CACHE BOOL "Enable ObjectControl thread in Core")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -52,6 +53,12 @@ endif()
 if(WITH_RELATIVE_KINEMATICS)
 	list(APPEND ENABLED_MODULES RelativeKinematics)
 endif()
+
+#Delete comments below when ObjectControl becomes an Module instead
+#of a thread in Core 
+#if(WITH_OBJECT_CONTROL)
+#	list(APPEND ENABLED_MODULES ObjectControl)
+#endif()
 
 # Testing
 if(ENABLE_TESTS)

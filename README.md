@@ -113,3 +113,12 @@ To disable the CITS module, remake the `cmake` procedure
 ```sh
 cmake "Unix Makefiles" -DUSE_CITS:BOOL=FALSE ..
 ```
+
+The server will build ObjectControl thread in Core by default. It's possible to disable the ObjectControl thread by remake the `cmake` procedure with the argument -DWITH_OBJECT_CONTROL=OFF, see following command
+```sh
+cmake .. -DWITH_OBJECT_CONTROL=OFF
+```
+To include ObjectControl in the build again run the same command with ON, see following command
+```sh
+cmake .. -DWITH_OBJECT_CONTROL=ON
+```

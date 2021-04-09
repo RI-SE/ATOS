@@ -1935,7 +1935,7 @@ int iCommClose() {
  * \param timeRecv Receive time output variable
  * \return Size (in bytes) of received data
  */
-ssize_t iCommRecv(enum COMMAND * command, char *data, const size_t messageSize, struct timeval * timeRecv) {
+ssize_t iCommRecv(enum COMMAND *command, char *data, const size_t messageSize, struct timeval *timeRecv) {
 	char message[MQ_MSG_SIZE];
 	ssize_t result = MQBusRecv(message, MQ_MSG_SIZE);
 	size_t dataLength = 0;
@@ -1954,7 +1954,7 @@ ssize_t iCommRecv(enum COMMAND * command, char *data, const size_t messageSize, 
 		*command = (unsigned char)message[0];
 		memcpy(&dataLength, message + sizeof (char), sizeof (dataLength));
 
-		if (dataLength != (size_t) (result)) {
+		if (dataLength != (size_t)(result)) {
 			LogMessage(LOG_LEVEL_ERROR,
 					   "Received message with invalid length specification field: %d bytes, but %d bytes were received",
 					   dataLength, result);
