@@ -7,7 +7,7 @@
 #include <exception>
 #include <regex>
 #include <functional>
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 #include "util.h"
 

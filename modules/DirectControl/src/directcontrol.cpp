@@ -9,7 +9,7 @@
 #define TCP_BUFFER_SIZE 2048
 
 DirectControl::DirectControl()
-	: tcpHandler(commandPort, "", "off") {
+	: tcpHandler(commandPort, "", "off", 1, O_NONBLOCK) {
 }
 
 int DirectControl::run() {
@@ -33,24 +33,34 @@ void DirectControl::readSocketData() {
 	std::vector<char> data(TCP_BUFFER_SIZE);
 	int recvData = 0;
 
+	LogMessage(LOG_LEVEL_INFO, "Awaiting TCP connection...");
+	this->tcpHandler.CreateServer();
+
 	while (!this->quit) {
 		// TODO set up TCP connection (wait until connected before continue)
-		LogMessage(LOG_LEVEL_INFO, "Awaiting TCP connection...");
-		tcpHandler.CreateServer();
+		this->tcpHandler.TCPHandlerAccept(1000);
 
-		while (!this->quit && tcpHandler.isConnected()) {
-			data.resize(TCP_BUFFER_SIZE);
-			std::fill(data.begin(), data.end(), 0);
-			recvData = tcpHandler.receiveTCP(data, 0);
-			if (recvData == TCPHandler::TCPHANDLER_FAIL) {
-				break;
-			}
-			else if (recvData > 0) {
-				try {
-					this->handleISOMessage(data, static_cast<size_t>(recvData));
-				} catch (std::invalid_argument& e) {
-					LogMessage(LOG_LEVEL_ERROR, e.what());
-					std::fill(data.begin(), data.end(), 0);
+		if (this->tcpHandler.isConnected()){
+			LogMessage(LOG_LEVEL_INFO, "Connected");
+		
+			while (!this->quit && tcpHandler.isConnected()) {
+				data.resize(TCP_BUFFER_SIZE);
+				std::fill(data.begin(), data.end(), 0);
+				recvData = tcpHandler.receiveTCP(data, 0);
+				if (recvData == TCPHandler::TCPHANDLER_FAIL) {
+					this->tcpHandler.TCPHandlerclose();
+					LogMessage(LOG_LEVEL_INFO, "TCP connection closed unexpectedly...");
+					LogMessage(LOG_LEVEL_INFO, "Awaiting new TCP connection...");
+					this->tcpHandler.CreateServer();
+					break;
+				}
+				else if (recvData > 0) {
+					try {
+						this->handleISOMessage(data, static_cast<size_t>(recvData));
+					} catch (std::invalid_argument& e) {
+						LogMessage(LOG_LEVEL_ERROR, e.what());
+						std::fill(data.begin(), data.end(), 0);
+					}
 				}
 			}
 		}
@@ -116,6 +126,7 @@ void DirectControl::readMessageBus() {
 			nanosleep(&sleepTimePeriod,&remTime);
 			break;
 		case COMM_EXIT:
+			LogMessage(LOG_LEVEL_INFO, "Exit received");
 			this->exit();
 			break;
 		default:
@@ -125,8 +136,9 @@ void DirectControl::readMessageBus() {
 }
 
 void DirectControl::exit() {
-	quit = true;
+	this->quit = true;
 	// Make the receive socket exit
-	TCPHandler selfPipe(this->commandPort, "127.0.0.1", "Client");
-	selfPipe.TCPHandlerclose();
+	if(this->tcpHandler.isConnected()) this->tcpHandler.TCPHandlerclose();
+	//TCPHandler selfPipe(this->commandPort, "127.0.0.1", "Client");
+	//selfPipe.TCPHandlerclose();
 }
