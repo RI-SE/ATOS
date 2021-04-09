@@ -199,7 +199,7 @@ static volatile int iExit = 0;
   ------------------------------------------------------------*/
 
 void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
-	exit(EXIT_SUCCESS);
+
 	C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH];
 	char ipString[INET_ADDRSTRLEN];
 	U32 object_transmitter_ids[MAX_OBJECTS];
