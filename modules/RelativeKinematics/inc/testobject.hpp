@@ -12,9 +12,16 @@ namespace fs = std::filesystem;
 namespace fs = std::experimental::filesystem;
 #endif
 
+/*!
+ * \brief The Channel class represents any socket based connection
+ *			and allows transmission / reception of ISO messages
+ */
 class Channel {
 public:
-	Channel() : transmitBuffer(1024, 0), receiveBuffer(1024, 0) {}
+	Channel(const size_t bufferLength)
+		: transmitBuffer(bufferLength, 0),
+		  receiveBuffer(bufferLength, 0) {}
+	Channel() : Channel(1024) {}
 	struct sockaddr_in addr = {};
 	int socket = -1;
 	std::vector<char> transmitBuffer;
@@ -25,6 +32,11 @@ public:
 	friend Channel& operator<<(Channel&,const Trajectory&);
 };
 
+/*!
+ * \brief The ObjectConnection class holds network connection data for
+ *			a single object, i.e. the two channels for command and
+ *			safety data.
+ */
 class ObjectConnection {
 public:
 	Channel cmd;
@@ -32,6 +44,8 @@ public:
 
 	bool isValid() const;
 	bool isConnected() const;
+	void connect(std::shared_future<void> stopRequest,
+				 const std::chrono::milliseconds retryPeriod);
 	void disconnect();
 };
 
