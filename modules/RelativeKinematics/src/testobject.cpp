@@ -29,14 +29,14 @@ TestObject::TestObject(TestObject&& other) :
 
 void TestObject::setCommandAddress(
 		const sockaddr_in &newAddr) {
-	if (!this->comms.connected()) {
+	if (!this->comms.isConnected()) {
 		this->comms.cmd.addr = newAddr;
 	}
 }
 
 void TestObject::setMonitorAddress(
 		const sockaddr_in &newAddr) {
-	if (!this->comms.connected()) {
+	if (!this->comms.isConnected()) {
 		this->comms.mntr.addr = newAddr;
 	}
 }
@@ -257,42 +257,47 @@ void TestObject::parseTrajectoryFile(
 			   file.filename().c_str(), this->getTransmitterID());
 }
 
-void TestObject::establishConnection(
-		std::shared_future<void> stopRequest) {
+void TestObject::establishConnection(std::shared_future<void> stopRequest) {
+	this->comms.connect(stopRequest, TestObject::connRetryPeriod);
+}
+
+void ObjectConnection::connect(
+		std::shared_future<void> stopRequest,
+		const std::chrono::milliseconds retryPeriod) {
 	char ipString[INET_ADDRSTRLEN];
 	std::stringstream errMsg;
 
-	if (inet_ntop(AF_INET, &this->comms.cmd.addr.sin_addr, ipString, sizeof (ipString))
+	if (inet_ntop(AF_INET, &this->cmd.addr.sin_addr, ipString, sizeof (ipString))
 			== nullptr) {
 		errMsg << "inet_ntop: " << strerror(errno);
 		throw std::invalid_argument(errMsg.str());
 	}
 
-	if (this->comms.cmd.addr.sin_addr.s_addr == 0) {
+	if (this->cmd.addr.sin_addr.s_addr == 0) {
 		errMsg << "Invalid connection IP specified: " << ipString;
 		throw std::invalid_argument(errMsg.str());
 	}
 
-	this->comms.cmd.socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (this->comms.cmd.socket < 0) {
+	this->cmd.socket = socket(AF_INET, SOCK_STREAM, 0);
+	if (this->cmd.socket < 0) {
 		errMsg << "Failed to open control socket: " << strerror(errno);
-		this->comms.disconnect();
+		this->disconnect();
 		throw std::runtime_error(errMsg.str());
 	}
 
 	// Begin connection attempt
 	LogMessage(LOG_LEVEL_INFO, "Attempting connection to: %s:%u", ipString,
-			   ntohs(this->comms.cmd.addr.sin_port));
+			   ntohs(this->cmd.addr.sin_port));
 	while (true) {
-		if (connect(this->comms.cmd.socket,
-					reinterpret_cast<struct sockaddr *>(&this->comms.cmd.addr),
-					sizeof (this->comms.cmd.addr)) == 0) {
+		if (::connect(this->cmd.socket,
+					reinterpret_cast<struct sockaddr *>(&this->cmd.addr),
+					sizeof (this->cmd.addr)) == 0) {
 			break;
 		}
 		else {
 			LogMessage(LOG_LEVEL_ERROR, "Failed connection attempt to %s, retrying in %.3f s ...",
-					   ipString, TestObject::connRetryPeriod.count() / 1000.0);
-			if (stopRequest.wait_for(TestObject::connRetryPeriod)
+					   ipString, retryPeriod.count() / 1000.0);
+			if (stopRequest.wait_for(retryPeriod)
 					!= std::future_status::timeout) {
 				errMsg << "Connection attempt interrupted";
 				throw std::runtime_error(errMsg.str());
@@ -302,17 +307,17 @@ void TestObject::establishConnection(
 
 	// Create monitor socket
 	LogMessage(LOG_LEVEL_DEBUG, "Creating safety socket");
-	this->comms.mntr.socket = socket(AF_INET, SOCK_DGRAM, 0);
-	if (!this->comms.valid()) {
+	this->mntr.socket = socket(AF_INET, SOCK_DGRAM, 0);
+	if (!this->isValid()) {
 		errMsg << "Failed to create monitor socket: " << strerror(errno);
-		this->comms.disconnect();
+		this->disconnect();
 		throw std::runtime_error(errMsg.str());
 	}
 
-	sockaddr* sin = reinterpret_cast<sockaddr*>(&this->comms.mntr.addr);
-	if (connect(this->comms.mntr.socket, sin, sizeof (this->comms.mntr.addr)) < 0) {
+	sockaddr* sin = reinterpret_cast<sockaddr*>(&this->mntr.addr);
+	if (::connect(this->mntr.socket, sin, sizeof (this->mntr.addr)) < 0) {
 		errMsg << "Failed to connect monitor socket: " << strerror(errno);
-		this->comms.disconnect();
+		this->disconnect();
 		throw std::runtime_error(errMsg.str());
 	}
 
@@ -320,12 +325,12 @@ void TestObject::establishConnection(
 }
 
 
-bool ObjectConnection::connected() const {
+bool ObjectConnection::isConnected() const {
 	// TODO
 	return false;
 }
 
-bool ObjectConnection::valid() const {
+bool ObjectConnection::isValid() const {
 	return this->cmd.socket != -1 && this->mntr.socket != -1;
 }
 

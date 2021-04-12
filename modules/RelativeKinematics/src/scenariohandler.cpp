@@ -149,6 +149,15 @@ void ScenarioHandler::beginConnectionAttempt() {
 	}
 }
 
+void ScenarioHandler::abortConnectionAttempt() {
+	try {
+		connStopReqPromise.set_value();
+	}
+	catch (std::future_error) {
+		// Attempted to stop when none in progress
+	}
+}
+
 void ScenarioHandler::disconnectObjects() {
 	abortConnectionAttempt();
 	for (const auto id : getVehicleIDs()) {
