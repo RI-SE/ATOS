@@ -2,20 +2,32 @@
 #include "logging.h"
 #include "journal.h"
 
-RelativeKinematics::Idle::Idle() {
+ObjectControl::Idle::Idle() {
 
+}
+
+void ObjectControl::Idle::onEnter(
+		ScenarioHandler& handler) {
+	handler.clearScenario();
+}
+
+void ObjectControl::Idle::initializeRequest(
+		ScenarioHandler& handler) {
+	LogMessage(LOG_LEVEL_INFO, "Handling initialization request");
+	JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
+	handler.loadScenario();
 }
 
 void RelativeKinematics::Idle::initializeRequest(
 		ScenarioHandler& handler) {
-	LogMessage(LOG_LEVEL_INFO, "Handling initialization request");
-	JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
-
 	try {
-		handler.loadScenario();
+		ObjectControl::Idle::initializeRequest(handler);
 		auto vutIDs = handler.getVehicleUnderTestIDs();
 		if (vutIDs.size() == 1) {
 			handler.transformScenarioRelativeTo(vutIDs[0]);
+		}
+		else if (vutIDs.empty()) {
+			throw std::invalid_argument("Unable to transform scenario - no configured VUT");
 		}
 		else {
 			throw std::invalid_argument("Unable to transform scenario - several configured VUTs");

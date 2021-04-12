@@ -67,9 +67,6 @@ extern "C"{
 
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length
 
-#define SAFETY_CHANNEL_PORT 53240
-#define CONTROL_CHANNEL_PORT 53241
-
 #define MAX_OBJECTS 10
 #define MAX_FILE_PATH PATH_MAX
 
@@ -165,7 +162,10 @@ enum ObjectFileParameter {
 	OBJECT_SETTING_IP,
 	OBJECT_SETTING_TRAJ,
 	OBJECT_SETTING_IS_VUT,
-	OBJECT_SETTING_INJECTOR_IDS
+	OBJECT_SETTING_INJECTOR_IDS,
+	OBJECT_SETTING_ORIGIN_LATITUDE,
+	OBJECT_SETTING_ORIGIN_LONGITUDE,
+	OBJECT_SETTING_ORIGIN_ALTITUDE
 };
 
 
@@ -368,7 +368,7 @@ typedef enum {
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
     OBC_STATE_RUNNING,
-	  OBC_STATE_REMOTECTRL,
+	OBC_STATE_REMOTECTRL,
     OBC_STATE_ERROR
 } OBCState_t;
 
@@ -425,7 +425,6 @@ typedef struct
   U32 DataDictionaryRVSSRateU8;
   ASPType ASPData;
   C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
-  volatile OBCState_t OBCStateU8;
 } GSDType;
 
 
@@ -740,6 +739,7 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter, c
 int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char* objectFilePath,
 							 const size_t filePathLength, char* objectSetting,
 							 const size_t objectSettingSize);
+int UtilReadOriginConfiguration(GeoPosition* origin);
 
 int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
 I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
@@ -749,9 +749,6 @@ I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *
 
 struct timeval UtilGetPIDUptime(pid_t pID);
 double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
-
-
-enum procFields {startTime = 21, vSize = 22};
 
 typedef struct {
   uint64_t timestamp;

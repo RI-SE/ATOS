@@ -1,25 +1,62 @@
 #include "state.hpp"
 
-RelativeKinematics::Aborting::Aborting() {
+ObjectControl::Aborting::Aborting() {
 
 }
 
-void RelativeKinematics::Aborting::allClearRequest(ScenarioHandler&) {
+void ObjectControl::Aborting::allClearRequest(ScenarioHandler&) {
 	// TODO
 }
 
-void RelativeKinematics::Aborting::connectedToObject(ScenarioHandler&) {
+void ObjectControl::Aborting::connectedToObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 
-void RelativeKinematics::Aborting::disconnectedFromObject(ScenarioHandler&) {
+void ObjectControl::Aborting::disconnectedFromObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 
-void RelativeKinematics::Aborting::connectedToLiveObject(ScenarioHandler&) {
+void ObjectControl::Aborting::connectedToLiveObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
 
-void RelativeKinematics::Aborting::connectedToArmedObject(ScenarioHandler&) {
+void ObjectControl::Aborting::connectedToArmedObject(
+		ScenarioHandler&,
+		uint32_t) {
+	// TODO
+}
+
+void RelativeKinematics::Aborting::allClearRequest(
+		ScenarioHandler&) {
+	// TODO
+}
+
+void RelativeKinematics::Aborting::connectedToObject(
+		ScenarioHandler&,
+		uint32_t) {
+	// TODO
+}
+
+void RelativeKinematics::Aborting::disconnectedFromObject(
+		ScenarioHandler&,
+		uint32_t) {
+	// TODO
+}
+
+void RelativeKinematics::Aborting::connectedToLiveObject(
+		ScenarioHandler&,
+		uint32_t) {
+	// TODO
+}
+
+void RelativeKinematics::Aborting::connectedToArmedObject(
+		ScenarioHandler&,
+		uint32_t) {
 	// TODO
 }
