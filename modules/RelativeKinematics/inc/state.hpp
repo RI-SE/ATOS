@@ -32,6 +32,7 @@ public:
 	virtual void testCompleted(ScenarioHandler&) = 0;
 	virtual void postProcessingCompleted(ScenarioHandler&) = 0;
 
+	//! Enter/exit functionality - defaults to nothing
 	virtual void onEnter(ScenarioHandler&) {}
 	virtual void onExit(ScenarioHandler&) {}
 
