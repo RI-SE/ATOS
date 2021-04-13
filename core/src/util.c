@@ -130,10 +130,14 @@ static const char ObjectSettingNameIP[] = "IP";
 static const char ObjectSettingNameTraj[] = "traj";
 static const char ObjectSettingNameIsVUT[] = "isVUT";
 static const char ObjectSettingNameInjectorIDs[] = "injectorIDs";
+static const char ObjectSettingNameLatitude[] = "originLatitude";
+static const char ObjectSettingNameLongitude[] = "originLongitude";
+static const char ObjectSettingNameAltitude[] = "originAltitude";
 
 /*------------------------------------------------------------
 -- Local type definitions
 ------------------------------------------------------------*/
+enum procFields {startTime = 21, vSize = 22};
 
 /*------------------------------------------------------------
 -- Private variables
@@ -1931,7 +1935,7 @@ int iCommClose() {
  * \param timeRecv Receive time output variable
  * \return Size (in bytes) of received data
  */
-ssize_t iCommRecv(enum COMMAND * command, char *data, const size_t messageSize, struct timeval * timeRecv) {
+ssize_t iCommRecv(enum COMMAND *command, char *data, const size_t messageSize, struct timeval *timeRecv) {
 	char message[MQ_MSG_SIZE];
 	ssize_t result = MQBusRecv(message, MQ_MSG_SIZE);
 	size_t dataLength = 0;
@@ -1950,7 +1954,7 @@ ssize_t iCommRecv(enum COMMAND * command, char *data, const size_t messageSize, 
 		*command = (unsigned char)message[0];
 		memcpy(&dataLength, message + sizeof (char), sizeof (dataLength));
 
-		if (dataLength != (size_t) (result)) {
+		if (dataLength != (size_t)(result)) {
 			LogMessage(LOG_LEVEL_ERROR,
 					   "Received message with invalid length specification field: %d bytes, but %d bytes were received",
 					   dataLength, result);
@@ -3809,6 +3813,15 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 	case OBJECT_SETTING_INJECTOR_IDS:
 		outputString = ObjectSettingNameInjectorIDs;
 		break;
+	case OBJECT_SETTING_ORIGIN_LATITUDE:
+		outputString = ObjectSettingNameLatitude;
+		break;
+	case OBJECT_SETTING_ORIGIN_LONGITUDE:
+		outputString = ObjectSettingNameLongitude;
+		break;
+	case OBJECT_SETTING_ORIGIN_ALTITUDE:
+		outputString = ObjectSettingNameAltitude;
+		break;
 	default:
 		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
 		outputString = "";
@@ -3822,6 +3835,36 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 		strncpy(returnValue, outputString, bufferLength);
 	}
 	return returnValue;
+}
+
+int UtilReadOriginConfiguration(GeoPosition* origin) {
+	GeoPosition retval;
+	char setting[20];
+	char* endptr;
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
+									   setting, sizeof (setting))) {
+		retval.Latitude = strtod(setting, &endptr);
+		if (endptr == setting) {
+			return -1;
+		}
+	}
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
+									   setting, sizeof (setting))) {
+		retval.Longitude = strtod(setting, &endptr);
+		if (endptr == setting) {
+			return -1;
+		}
+	}
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
+									   setting, sizeof (setting))) {
+		retval.Altitude = strtod(setting, &endptr);
+		if (endptr == setting) {
+			return -1;
+		}
+	}
+	retval.Heading = 0; // TODO
+	*origin = retval;
+	return 0;
 }
 
 /*!

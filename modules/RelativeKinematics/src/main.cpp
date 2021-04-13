@@ -6,6 +6,7 @@
 #include "logging.h"
 #include "util.h"
 #include "journal.h"
+#include "datadictionary.h"
 
 #define MODULE_NAME "RelativeKinematics"
 
@@ -48,6 +49,22 @@ int main() {
 				scenarioHandler.handleInitCommand();
 			} catch (std::invalid_argument& e) {
 				LogMessage(LOG_LEVEL_ERROR, "Initialization failed");
+				iCommSend(COMM_FAILURE, nullptr, 0);
+			}
+			break;
+		case COMM_CONNECT:
+			try {
+				scenarioHandler.handleConnectCommand();
+			} catch (std::invalid_argument& e) {
+				LogMessage(LOG_LEVEL_ERROR, "Connection failed");
+				iCommSend(COMM_FAILURE, nullptr, 0);
+			}
+			break;
+		case COMM_DISCONNECT:
+			try {
+				scenarioHandler.handleDisconnectCommand();
+			} catch (std::invalid_argument& e) {
+				LogMessage(LOG_LEVEL_ERROR, "Connection failed");
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
 			break;
@@ -111,6 +128,14 @@ int initializeModule(const LOG_LEVEL logLevel) {
 	if (retryNumber == maxRetries) {
 		retval = -1;
 		LogMessage(LOG_LEVEL_ERROR, "Unable to initialize connection to message bus");
+	}
+	else {
+		if (DataDictionaryInitStateData() != READ_OK
+				|| DataDictionaryInitObjectData() != READ_OK) {
+			retval = -1;
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Found no previously initialized shared memory");
+		}
 	}
 
 	return retval;

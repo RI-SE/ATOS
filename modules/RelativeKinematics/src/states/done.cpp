@@ -1,10 +1,16 @@
 #include "state.hpp"
 
-RelativeKinematics::Done::Done() {
+ObjectControl::Done::Done() {
 
+}
+
+void ObjectControl::Done::postProcessingCompleted(
+		ScenarioHandler& handler) {
+	LogMessage(LOG_LEVEL_WARNING, "Nothing to be done for postprocessing"); // TODO
 }
 
 void RelativeKinematics::Done::postProcessingCompleted(
 		ScenarioHandler& handler) {
-	// TODO
+	ObjectControl::Done::postProcessingCompleted(handler);
+	setState(handler, new RelativeKinematics::Ready());
 }
