@@ -1,14 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 EXECDIR=../../build/bin
 EXECNAME=Core
 SLEEP_TIME_START=3
 SLEEP_TIME_KILL=1
 RESULT=0
-EXPECTED_PIDS[0]="Central"
-EXPECTED_PIDS[1]="SystemControl"
-EXPECTED_PIDS[2]="ObjectControl"
-EXPECTED_PIDS[3]="TimeControl"
-EXPECTED_PIDS[4]="JournalControl"
+EXPECTED_PIDS=("Central" "SystemControl" "ObjectControl" "TimeControl" "JournalControl")
 
 # Start the main executable
 rm -rf /dev/mqueue/*
