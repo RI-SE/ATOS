@@ -664,7 +664,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 										rcmmMessage.steeringManoeuvre.pct = reqCtrlAction.steeringAction.pct;
 									}
 									else {
-										LogMessage(LOG_LEVEL_INFO, "Error in declarion of RCMM steering unit");
+										LogMessage(LOG_LEVEL_INFO, "Invalid steering unit in request control action (RCMM)");
 									}
 
 									if (rcmmMessage.speedUnit == ISO_UNIT_TYPE_SPEED_METER_SECOND) {
@@ -674,7 +674,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 										rcmmMessage.speedManoeuvre.pct = reqCtrlAction.speedAction.pct;
 									}
 									else {
-										LogMessage(LOG_LEVEL_INFO, "Error in declarion of RCMM speed unit");
+										LogMessage(LOG_LEVEL_INFO, "Invalid speed unit in request control action (RCMM)");
 									}
 
 									MessageLength =
@@ -698,7 +698,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 										dcmmMessage.steeringManoeuvre.pct = reqCtrlAction.steeringAction.pct;
 									}
 									else {
-										LogMessage(LOG_LEVEL_INFO, "Error in declarion of DCMM steering unit");
+										LogMessage(LOG_LEVEL_INFO, "Invalid steering unit in request control action (DCMM)");
 									}
 
 									if (dcmmMessage.speedUnit == ISO_UNIT_TYPE_SPEED_METER_SECOND) {
@@ -708,7 +708,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 										dcmmMessage.speedManoeuvre.pct = reqCtrlAction.speedAction.pct;
 									}
 									else {
-										LogMessage(LOG_LEVEL_INFO, "Error in declarion of DCMM speed unit");
+										LogMessage(LOG_LEVEL_INFO, "Invalid speed unit in request control action (DCMM)");
 									}
 
 									//TODO: fix so that encoder can handle bigger messagebuffers?
