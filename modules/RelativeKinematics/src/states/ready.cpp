@@ -4,6 +4,11 @@ ObjectControl::Ready::Ready() {
 
 }
 
+void ObjectControl::Ready::onEnter(
+		ScenarioHandler& handler) {
+	handler.startListenerThreads();
+}
+
 void ObjectControl::Ready::armRequest(
 		ScenarioHandler& handler) {
 	if (!handler.areAllObjectsIn(std::set<ObjectStateType>({OBJECT_STATE_DISARMED, OBJECT_STATE_ARMED}))) {

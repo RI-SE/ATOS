@@ -151,6 +151,8 @@ public:
 	virtual void disconnectRequest(ScenarioHandler&) override;
 	virtual void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
 
+	virtual void onEnter(ScenarioHandler&) override;
+
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) override {}
 	void connectRequest(ScenarioHandler&) override {}

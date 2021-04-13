@@ -69,6 +69,7 @@ public:
 	void handleConnectCommand();
 	//! \brief Performs actions in response to a disconnect request.
 	void handleDisconnectCommand();
+	//! \brief Performs actions in response to an arm request.
 	void handleArmCommand();
 
 	//! Getters
@@ -104,6 +105,9 @@ private:
 	//!			MONR state. This is a blocking method.
 	void connectToObject(TestObject& obj, std::shared_future<void>& connStopReq);
 
+	void startListeners();
+	void listenToObject(TestObject& obj);
+
 	//! Configuration methods
 	//! \brief Read the configured object and trajectory files and load related data
 	//!			into the ScenarioHandler.
@@ -118,6 +122,11 @@ private:
 	//! \brief Clear loaded data and object list.
 	void clearScenario();
 
+	//! \brief TODO
+	void armObjects();
+	//! \brief TODO
+	void disarmObjects();
+
 	//! \brief Check if any test participant is in the specified state.
 	//!			The method does not wait for the next MONR to arrive.
 	bool isAnyObjectIn(const ObjectStateType state);
@@ -131,7 +140,6 @@ private:
 	//!			The method does not wait for the next MONR to arrive.
 	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
 
-	void armObjects();
 };
 
 

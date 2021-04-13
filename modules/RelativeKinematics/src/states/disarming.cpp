@@ -4,6 +4,11 @@ ObjectControl::Disarming::Disarming() {
 
 }
 
+void ObjectControl::Disarming::onEnter(
+		ScenarioHandler& handler) {
+	handler.disarmObjects();
+}
+
 void ObjectControl::Disarming::disconnectRequest(
 		ScenarioHandler& handler) {
 	handler.disconnectObjects();
@@ -33,7 +38,8 @@ void ObjectControl::Disarming::connectedToLiveObject(
 	// TODO
 }
 
-void ObjectControl::Disarming::allObjectsDisarmed(ScenarioHandler&) {
+void ObjectControl::Disarming::allObjectsDisarmed(
+		ScenarioHandler&) {
 	// TODO
 }
 
@@ -63,9 +69,10 @@ void RelativeKinematics::Disarming::connectedToArmedObject(
 }
 
 void RelativeKinematics::Disarming::connectedToLiveObject(
-		ScenarioHandler&,
-		uint32_t) {
-	// TODO
+		ScenarioHandler& handler,
+		uint32_t id) {
+	ObjectControl::Disarming::connectedToLiveObject(handler, id);
+	setState(handler, new RelativeKinematics::Aborting());
 }
 
 void RelativeKinematics::Disarming::allObjectsDisarmed(

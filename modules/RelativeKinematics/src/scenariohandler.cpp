@@ -231,6 +231,12 @@ void ScenarioHandler::armObjects() {
 	}
 }
 
+void ScenarioHandler::disarmObjects() {
+	for (auto& id : getVehicleIDs()) {
+		objects[id].sendDisarm();
+	}
+}
+
 bool ScenarioHandler::isAnyObjectIn(
 		const ObjectStateType state) {
 	return std::any_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,TestObject>& obj) {

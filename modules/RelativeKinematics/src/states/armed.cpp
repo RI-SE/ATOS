@@ -6,22 +6,23 @@ ObjectControl::Armed::Armed() {
 
 void ObjectControl::Armed::onEnter(
 		ScenarioHandler& handler) {
-	// TODO send OSTMs
 	handler.armObjects();
 }
 
-void ObjectControl::Armed::startRequest(ScenarioHandler&) {
-	// TODO
+void ObjectControl::Armed::startRequest(
+		ScenarioHandler& handler) {
+	if (!handler.areAllObjectsIn(OBJECT_STATE_ARMED)) {
+		throw std::invalid_argument("Start attempted when not all objects were armed");
+	}
 }
 
-void ObjectControl::Armed::disarmRequest(ScenarioHandler&) {
-	// TODO
+void ObjectControl::Armed::disarmRequest(
+		ScenarioHandler&) {
 }
 
 void ObjectControl::Armed::disconnectedFromObject(
 		ScenarioHandler&,
 		uint32_t) {
-	// TODO
 }
 
 
