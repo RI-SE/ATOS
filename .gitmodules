@@ -1,4 +1,4 @@
 [submodule "util"]
 	path = util
-	url = git://github.com/RI-SE/util.git
+	url = ../util.git
 
