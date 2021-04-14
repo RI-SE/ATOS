@@ -11,7 +11,7 @@ project(Maestro VERSION 0.5.0)
 set(WITH_SCENARIO_CONTROL ON CACHE BOOL "Enable ScenarioControl module")
 set(WITH_SUPERVISION ON CACHE BOOL "Enable Supervision module")
 set(WITH_VISUALIZATION ON CACHE BOOL "Enable Visualization module")
-set(WITH_RELATIVE_KINEMATICS ON CACHE BOOL "Enable RelativeKinematics module")
+set(WITH_RELATIVE_KINEMATICS OFF CACHE BOOL "Enable RelativeKinematics module")
 set(WITH_DIRECT_CONTROL ON CACHE BOOL "Enable DirectControl module")
 set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
 
