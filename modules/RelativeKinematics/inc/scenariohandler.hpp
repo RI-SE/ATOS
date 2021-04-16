@@ -89,6 +89,8 @@ public:
 private:
 	ObjectControlState* state;					//!< State of module
 	std::map<uint32_t,TestObject> objects;		//!< List of configured test participants
+	std::mutex monitorTimeMutex;
+	std::map<uint32_t,std::chrono::time_point<std::chrono::steady_clock>> lastMonitorTime;
 
 	std::shared_future<void> connStopReqFuture;	//!< Request to stop a connection attempt
 	std::promise<void> connStopReqPromise;		//!< Promise that the above value will be emitted

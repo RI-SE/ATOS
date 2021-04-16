@@ -6,7 +6,7 @@ ObjectControl::Ready::Ready() {
 
 void ObjectControl::Ready::onEnter(
 		ScenarioHandler& handler) {
-	handler.startListenerThreads();
+	handler.listenToObject(handler.objects.begin()->second); // TODO test
 }
 
 void ObjectControl::Ready::armRequest(

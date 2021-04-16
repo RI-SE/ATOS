@@ -41,46 +41,25 @@ void TestObject::setMonitorAddress(
 	}
 }
 
-ObjectDataType TestObject::awaitNextMonitor() {
-	ssize_t result = 0;
-	ObjectDataType retval;
-	struct timeval tv;
+MonitorMessage TestObject::awaitNextMonitor() {
+	MonitorMessage retval;
 	// Read until receive buffer is empty, return last read message
-	result = recv(this->comms.mntr.socket, this->comms.mntr.receiveBuffer.data(),
-				  this->comms.mntr.receiveBuffer.size(), 0);
-	if (result < 0) {
-		this->comms.disconnect();
-		throw std::ios_base::failure(std::string("Failed to receive from monitor socket: ") + strerror(errno));
-	}
-	else if (result == 0) {
-		this->comms.disconnect();
-		throw std::ios_base::failure("Remote closed monitor socket");
-	}
-
-	if (getISOMessageType(this->comms.mntr.receiveBuffer.data(), static_cast<size_t>(result), false) == MESSAGE_ID_MONR) {
-		retval.ClientIP = this->comms.cmd.addr.sin_addr.s_addr;
-		TimeSetToCurrentSystemTime(&tv);
-		if (decodeMONRMessage(this->comms.mntr.receiveBuffer.data(), static_cast<size_t>(result),
-							  tv, &retval.ClientID, &retval.MonrData, false) < 0) {
-			this->comms.disconnect();
-			throw std::invalid_argument("Error decoding MONR from object"); // TODO add details which exact object sent the data
-		}
-		retval.lastPositionUpdate = tv;
-		// TODO check age
+	if (this->comms.mntr.pendingMessageType(true) == MESSAGE_ID_MONR) {
+		this->comms.mntr >> retval;
+		return retval;
 	}
 	else {
 		throw std::invalid_argument("Received non-MONR message on MONR channel");
 	}
-
-	return retval;
 }
 
-void TestObject::updateMonitor(const ObjectDataType &data) {
-	if (data.ClientID != this->getTransmitterID()) {
-		throw std::invalid_argument("Attempted to set monitor data with non-matching transmitter ID");
+void TestObject::updateMonitor(const MonitorMessage& data) {
+	if (data.first != this->getTransmitterID()) {
+		throw std::invalid_argument("Attempted to set monitor data with non-matching transmitter ID ("
+									+ std::to_string(data.first) + " != " + std::to_string(this->getTransmitterID()) + ")");
 	}
-	this->state = data.MonrData.state;
-	this->lastMonitor = data;
+	this->state = data.second.state;
+	this->lastMonitor = data.second;
 }
 
 ObjectStateType TestObject::getState(bool awaitUpdate) {
@@ -258,6 +237,7 @@ void TestObject::parseTrajectoryFile(
 }
 
 void TestObject::establishConnection(std::shared_future<void> stopRequest) {
+	this->lastMonitorTime = std::chrono::steady_clock::time_point(); // reset
 	this->comms.connect(stopRequest, TestObject::connRetryPeriod);
 }
 
@@ -326,8 +306,15 @@ void ObjectConnection::connect(
 
 
 bool ObjectConnection::isConnected() const {
-	// TODO
-	return false;
+	if (!isValid()) {
+		return false;
+	}
+	pollfd fds[2];
+	fds[0].fd = mntr.socket;
+	fds[0].events = POLLIN | POLLOUT;
+	fds[1].fd = cmd.socket;
+	fds[1].events = POLLIN | POLLOUT;
+	return poll(fds, 2, 0) >= 0;
 }
 
 bool ObjectConnection::isValid() const {
@@ -378,6 +365,53 @@ void TestObject::sendArm() {
 
 void TestObject::sendDisarm() {
 	this->comms.cmd << OBJECT_COMMAND_DISARM;
+}
+
+ISOMessageID Channel::pendingMessageType(bool awaitNext) {
+	auto result = recv(this->socket, this->receiveBuffer.data(), this->receiveBuffer.size(), (awaitNext ? 0 : MSG_DONTWAIT) | MSG_PEEK);
+	if (result < 0 && !awaitNext && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+		return MESSAGE_ID_INVALID;
+	}
+	else if (result < 0) {
+		throw std::ios_base::failure("channel pendingmessagetype");
+		throw std::ios_base::failure(strerror(errno));
+	}
+	else if (result == 0) {
+		throw std::ios_base::failure("Connection reset by peer");
+	}
+	else {
+		ISOMessageID retval = getISOMessageType(this->receiveBuffer.data(), this->receiveBuffer.size(), false);
+		if (retval == MESSAGE_ID_INVALID) {
+			throw std::invalid_argument("Non-ISO message received from " + this->remoteIP());
+		}
+		return retval;
+	}
+}
+
+ISOMessageID ObjectConnection::pendingMessageType(bool awaitNext) {
+	if (awaitNext) {
+		fd_set fds;
+		FD_ZERO(&fds);
+		FD_SET(mntr.socket, &fds);
+		FD_SET(cmd.socket, &fds);
+		auto result = select(std::max(mntr.socket,cmd.socket)+1,
+							 &fds, nullptr, nullptr, nullptr);
+		if (result < 0) {
+			//throw std::ios_base::failure(strerror(errno));
+			throw std::ios_base::failure(std::string("select: ") + strerror(errno));
+		}
+		else if (FD_ISSET(mntr.socket, &fds)) {
+			return this->mntr.pendingMessageType();
+		}
+		else if (FD_ISSET(cmd.socket, &fds)) {
+			return this->cmd.pendingMessageType();
+		}
+		throw std::logic_error("Call to select returned unexpectedly");
+	}
+	else {
+		auto retval = this->mntr.pendingMessageType();
+		return retval != MESSAGE_ID_INVALID ? retval : this->cmd.pendingMessageType();
+	}
 }
 
 Channel& operator<<(Channel& chnl, const HeabMessageDataType& heartbeat) {
@@ -468,3 +502,45 @@ Channel& operator<<(Channel& chnl, const ObjectCommandType& cmd) {
 	return chnl;
 }
 
+Channel& operator>>(Channel& chnl, MonitorMessage& monitor) {
+	if (chnl.pendingMessageType() == MESSAGE_ID_MONR) {
+		struct timeval tv;
+		TimeSetToCurrentSystemTime(&tv);
+		auto nBytes = decodeMONRMessage(chnl.receiveBuffer.data(), chnl.receiveBuffer.size(), tv,
+										&monitor.first, &monitor.second, false);
+		if (nBytes < 0) {
+			throw std::invalid_argument(strerror(errno));
+		}
+		else {
+			nBytes = recv(chnl.socket, chnl.receiveBuffer.data(), static_cast<size_t>(nBytes), 0);
+			if (nBytes <= 0) {
+				throw std::ios_base::failure("recv could not clear monr");
+				throw std::ios_base::failure(strerror(errno));
+			}
+		}
+	}
+	return chnl;
+}
+
+Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
+	if (chnl.pendingMessageType() == MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO) {
+		auto nBytes = decodeOPROMessage(&prop, chnl.receiveBuffer.data(), chnl.receiveBuffer.size(), false);
+		if (nBytes < 0) {
+			throw std::invalid_argument(strerror(errno));
+		}
+		else {
+			nBytes = recv(chnl.socket, chnl.receiveBuffer.data(), static_cast<size_t>(nBytes), 0);
+			if (nBytes <= 0) {
+				throw std::ios_base::failure("recv could not clear opro: " + std::to_string(nBytes));
+				throw std::ios_base::failure(strerror(errno));
+			}
+		}
+	}
+	return chnl;
+}
+
+std::string Channel::remoteIP() const {
+	char ipString[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &this->addr.sin_addr, ipString, sizeof (ipString));
+	return std::string(ipString);
+}

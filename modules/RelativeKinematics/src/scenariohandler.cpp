@@ -170,6 +170,52 @@ void ScenarioHandler::uploadObjectConfiguration(
 	objects[id].sendSettings();
 }
 
+void ScenarioHandler::listenToObject(TestObject &obj) {
+	if (obj.isConnected()) {
+		try {
+			while (true) {
+				switch (obj.pendingMessageType(true)) {
+				case MESSAGE_ID_MONR: {
+					using std::chrono::steady_clock;
+					using std::chrono::milliseconds;
+
+					auto monr = obj.readMonitorMessage();
+					auto txID = obj.getTransmitterID();
+					std::lock_guard<std::mutex> lock(monitorTimeMutex);
+					auto diff = obj.getTimeSinceLastMonitor();
+					if (diff > obj.getMaxAllowedMonitorPeriod()) {
+						throw std::ios_base::failure("MONR timeout: " + std::to_string(
+														 std::chrono::duration_cast<milliseconds>(diff).count()) + " ms > "
+													 + std::to_string(obj.getMaxAllowedMonitorPeriod().count()) + " ms");
+					}
+					this->lastMonitorTime[txID] = steady_clock::now();
+					LogPrint("Received MONR!");
+					break;
+				}
+				case MESSAGE_ID_TREO:
+					// TODO
+					break;
+				case MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO:
+					obj.parseObjectPropertyMessage();
+					LogPrint("Received OPRO!");
+					// TODO
+					break;
+				default:
+					LogPrint("Received something!");
+					// TODO
+					break;
+				}
+			}
+		} catch (std::invalid_argument& e) {
+			LogMessage(LOG_LEVEL_ERROR, e.what());
+		} catch (std::ios_base::failure& e) {
+			LogMessage(LOG_LEVEL_ERROR, e.what());
+			obj.disconnect();
+			this->state->disconnectedFromObject(*this, obj.getTransmitterID());
+		}
+	}
+}
+
 void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> &connStopReq) {
 	try {
 		if (!obj.isConnected()) {
