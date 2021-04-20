@@ -84,7 +84,7 @@ std::string TestObject::toString() const {
 	std::string retval = "";
 	retval += "Object ID " + std::to_string(transmitterID)
 			+ ", IP " + ipAddr + ", trajectory file " + trajectoryFile.filename().string()
-			+ ", object file " + objectFile.filename().string() + ", VUT:" + (isVUT?"Yes":"No");
+			+ ", object file " + objectFile.filename().string() + ", VUT: " + (isVUT?"Yes":"No");
 	return retval;
 }
 
