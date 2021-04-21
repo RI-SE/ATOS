@@ -286,6 +286,7 @@ void ScenarioHandler::disarmObjects() {
 			LogMessage(LOG_LEVEL_ERROR, "Unable to disarm object %u: %s", id, e.what());
 		}
 	}
+	this->state->allObjectsDisarmed(*this); // TODO add a check on object states as well
 }
 
 bool ScenarioHandler::isAnyObjectIn(
