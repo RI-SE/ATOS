@@ -77,7 +77,7 @@ public:
 	Trajectory getTrajectory() const { return trajectory; }
 	GeographicPositionType getOrigin() const { return origin; }
 	ObjectStateType getState(bool awaitUpdate);
-	ObjectStateType getState() const { return state; }
+	ObjectStateType getState() const { return isConnected() ? state : OBJECT_STATE_UNKNOWN; }
 	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
