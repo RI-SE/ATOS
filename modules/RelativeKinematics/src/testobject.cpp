@@ -373,7 +373,7 @@ ISOMessageID Channel::pendingMessageType(bool awaitNext) {
 		return MESSAGE_ID_INVALID;
 	}
 	else if (result < 0) {
-		throw std::ios_base::failure("channel pendingmessagetype");
+		throw std::ios_base::failure("channel pendingmessagetype"); // TODO clearer
 		throw std::ios_base::failure(strerror(errno));
 	}
 	else if (result == 0) {
@@ -398,7 +398,7 @@ ISOMessageID ObjectConnection::pendingMessageType(bool awaitNext) {
 							 &fds, nullptr, nullptr, nullptr);
 		if (result < 0) {
 			//throw std::ios_base::failure(strerror(errno));
-			throw std::ios_base::failure(std::string("select: ") + strerror(errno));
+			throw std::ios_base::failure(std::string("select: ") + strerror(errno)); // TODO clearer
 		}
 		else if (FD_ISSET(mntr.socket, &fds)) {
 			return this->mntr.pendingMessageType();
@@ -514,7 +514,7 @@ Channel& operator>>(Channel& chnl, MonitorMessage& monitor) {
 		else {
 			nBytes = recv(chnl.socket, chnl.receiveBuffer.data(), static_cast<size_t>(nBytes), 0);
 			if (nBytes <= 0) {
-				throw std::ios_base::failure("recv could not clear monr");
+				throw std::ios_base::failure("recv could not clear monr"); // TODO clearer
 				throw std::ios_base::failure(strerror(errno));
 			}
 		}
@@ -531,7 +531,7 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 		else {
 			nBytes = recv(chnl.socket, chnl.receiveBuffer.data(), static_cast<size_t>(nBytes), 0);
 			if (nBytes <= 0) {
-				throw std::ios_base::failure("recv could not clear opro: " + std::to_string(nBytes));
+				throw std::ios_base::failure("recv could not clear opro: " + std::to_string(nBytes)); // TODO clearer
 				throw std::ios_base::failure(strerror(errno));
 			}
 		}
