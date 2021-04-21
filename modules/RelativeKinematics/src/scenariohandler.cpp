@@ -279,7 +279,12 @@ void ScenarioHandler::armObjects() {
 
 void ScenarioHandler::disarmObjects() {
 	for (auto& id : getVehicleIDs()) {
-		objects[id].sendDisarm();
+		try {
+			objects[id].sendDisarm();
+		}
+		catch (std::invalid_argument& e) {
+			LogMessage(LOG_LEVEL_ERROR, "Unable to disarm object %u: %s", id, e.what());
+		}
 	}
 }
 
