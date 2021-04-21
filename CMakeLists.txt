@@ -11,10 +11,9 @@ project(Maestro VERSION 0.5.0)
 set(WITH_SCENARIO_CONTROL ON CACHE BOOL "Enable ScenarioControl module")
 set(WITH_SUPERVISION ON CACHE BOOL "Enable Supervision module")
 set(WITH_VISUALIZATION ON CACHE BOOL "Enable Visualization module")
-set(WITH_RELATIVE_KINEMATICS ON CACHE BOOL "Enable RelativeKinematics module")
+set(WITH_RELATIVE_KINEMATICS OFF CACHE BOOL "Enable RelativeKinematics module")
 set(WITH_DIRECT_CONTROL ON CACHE BOOL "Enable DirectControl module")
 set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
-set(WITH_OBJECT_CONTROL ON CACHE BOOL "Enable ObjectControl thread in Core")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -52,6 +51,9 @@ if(WITH_OBJECT_MONITORING)
 endif()
 if(WITH_RELATIVE_KINEMATICS)
 	list(APPEND ENABLED_MODULES RelativeKinematics)
+	set(WITH_OBJECT_CONTROL OFF)
+else()
+	set(WITH_OBJECT_CONTROL ON)
 endif()
 
 #Delete comments below when ObjectControl becomes an Module instead

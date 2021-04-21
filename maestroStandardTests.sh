@@ -19,7 +19,8 @@ for f in $(pwd)/*; do
 			fi
 			NUM_TESTS=$((NUM_TESTS+1))
 		elif [ ${fname: -3} == ".sh" ]; then
-			if [ $(sh "$f" -H > /dev/null 2>&1) ]; then
+			"$f"
+			if [ $? -ne 0 ]; then
 				echo "Failed test ${fname}"
 				FAILURES=$((FAILURES+1))
 			fi

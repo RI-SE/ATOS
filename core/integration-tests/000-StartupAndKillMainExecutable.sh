@@ -4,14 +4,14 @@ EXECNAME=Core
 SLEEP_TIME_START=3
 SLEEP_TIME_KILL=1
 RESULT=0
-MIN_EXPECTED_PIDS=6
+EXPECTED_PIDS=("Central" "SystemControl" "ObjectControl" "TimeControl" "JournalControl")
 
 # Start the main executable
 rm -rf /dev/mqueue/*
 $EXECDIR/$EXECNAME &
 sleep $SLEEP_TIME_START
 RUNNING_PIDS="$(pgrep ${EXECNAME} | wc -l)"
-if [ $RUNNING_PIDS -lt $MIN_EXPECTED_PIDS ]; then
+if [ $RUNNING_PIDS -lt ${#EXPECTED_PIDS[@]} ]; then
 	echo "All processes not running after ${SLEEP_TIME_START} s"
 	RESULT=1
 fi

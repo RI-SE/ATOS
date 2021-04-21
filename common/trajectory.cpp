@@ -111,7 +111,7 @@ void Trajectory::initializeFromFile(const std::string &fileName) {
 }
 
 
-CartesianPosition Trajectory::TrajectoryPoint::getCartesianPosition() const {
+CartesianPosition Trajectory::TrajectoryPoint::getISOPosition() const {
     CartesianPosition retval;
     retval.xCoord_m = this->getXCoord();
     retval.yCoord_m = this->getYCoord();
@@ -125,6 +125,44 @@ CartesianPosition Trajectory::TrajectoryPoint::getCartesianPosition() const {
 	retval.isHeadingValid = true;
 	retval.isPositionValid = true;
     return retval;
+}
+
+SpeedType Trajectory::TrajectoryPoint::getISOVelocity() const {
+	SpeedType retval;
+	try {
+	   retval.longitudinal_m_s = getLongitudinalVelocity();
+	   retval.isLongitudinalValid = true;
+	} catch (std::out_of_range) {
+	   retval.longitudinal_m_s = 0.0;
+	   retval.isLongitudinalValid = false;
+	}
+	try {
+	   retval.lateral_m_s = getLateralVelocity();
+	   retval.isLateralValid = true;
+	} catch (std::out_of_range) {
+	   retval.lateral_m_s = 0.0;
+	   retval.isLateralValid = false;
+	}
+	return retval;
+}
+
+AccelerationType Trajectory::TrajectoryPoint::getISOAcceleration() const {
+	AccelerationType retval;
+	try {
+	   retval.longitudinal_m_s2 = getLongitudinalAcceleration();
+	   retval.isLongitudinalValid = true;
+	} catch (std::out_of_range) {
+	   retval.longitudinal_m_s2 = 0.0;
+	   retval.isLongitudinalValid = false;
+	}
+	try {
+	   retval.lateral_m_s2 = getLateralAcceleration();
+	   retval.isLateralValid = true;
+	} catch (std::out_of_range) {
+	   retval.lateral_m_s2 = 0.0;
+	   retval.isLateralValid = false;
+	}
+	return retval;
 }
 
 /*!
