@@ -1,11 +1,24 @@
-#ifndef OBJECTLISTENER_HPP
-#define OBJECTLISTENER_HPP
+#pragma once
 
+#include "scenariohandler.hpp"
+#include "testobject.hpp"
+#include "state.hpp"
+#include <thread>
+
+class ScenarioHandler;
+class ObjectControlState;
 
 class ObjectListener
 {
 public:
-	ObjectListener();
+	ObjectListener(ScenarioHandler*, TestObject*);
+	~ObjectListener();
+private:
+	TestObject* obj;
+	ScenarioHandler* handler;
+	std::thread listener;
+
+	void listen();
+	bool quit = false;
 };
 
-#endif // OBJECTLISTENER_HPP
