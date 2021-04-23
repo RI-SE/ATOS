@@ -97,7 +97,7 @@ public:
     private:
         double time = 0;
 		Eigen::Vector3d position; //! x, y, z [m]
-		double heading = 0;		  //! heading from north? [rad]
+		double heading = 0;		  //! Heading ccw from x axis [rad]
 		Eigen::Vector2d velocity; //! Vehicle frame, x forward [m/s]
 		Eigen::Vector2d acceleration; //! Vehicle frame, x forward [m/s]
         double curvature = 0;

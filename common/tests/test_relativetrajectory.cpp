@@ -86,23 +86,53 @@ void position_test() {
 		double x;
 		double y;
 		double z;
+		double hdg;
+	} pos_hdg;
+	typedef struct {
+		double x;
+		double y;
+		double z;
 	} pos;
 
 	std::vector<pos> p1s =
 	{{    0.0,    0.0,    0.0},
 	 {   10.0,   -5.0,    2.2},
 	 {  -10.0,    5.0,    2.2},
-	 { 5001.0, 4001.0, 3001.0}};
-	std::vector<pos> p2s =
-	{{    0.0,    0.0,    0.0},
-	 {    5.0,    5.0,    1.3},
-	 {   10.0,   -5.0,    4.2},
-	 {    1.0,    1.0,    1.0}};
+	 { 5001.0, 4001.0, 3001.0},
+	 {    0.0,    0.0,    0.0},
+	 {    4.0,    5.0,    2.0},
+	 {    5.0,    5.0,    2.0},
+	 {    4.0,    5.0,    2.0},
+	 {    4.0,    5.0,    2.0},
+	 {    2.0,    3.0,    0.0},
+	 {    1.0,    2.0,    0.0},
+	 {   61.11111,  -20.0,    0.0}};
+	std::vector<pos_hdg> p2s =
+	{{    0.0,    0.0,    0.0,   0.0},
+	 {    5.0,    5.0,    1.3,   0.0},
+	 {   10.0,   -5.0,    4.2,   0.0},
+	 {    1.0,    1.0,    1.0,   0.0},
+	 {	  0.0,    0.0,    0.0,  98.0},
+	 {    0.0,    0.0,    0.0,  90.0},
+	 {    0.0,    0.0,    0.0,  45.0},
+	 {    0.0,    0.0,    0.0, 180.0},
+	 {    0.0,    0.0,    0.0, -90.0},
+	 {   -2.0,   -3.0,   -1.0,  90.0},
+	 {    2.0,    3.0,    0.0, 270.0},
+	 {  110.0,  -36.0,    0.0, 161.8781398}};
 	std::vector<pos> out =
 	{{    0.0,    0.0,    0.0},
 	 {    5.0,  -10.0,    0.9},
 	 {  -20.0,   10.0,   -2.0},
-	 { 5000.0, 4000.0, 3000.0}};
+	 { 5000.0, 4000.0, 3000.0},
+	 {    0.0,    0.0,    0.0},
+	 {    5.0,   -4.0,    2.0},
+	 {7.07107,    0.0,    2.0},
+	 {   -4.0,   -5.0,    2.0},
+	 {   -5.0,    4.0,    2.0},
+	 {    6.0,   -4.0,    1.0},
+	 {    1.0,   -1.0,    0.0},
+	 {51.44048,   0.0,    0.0}};
 
 	for (unsigned long i=0; i < out.size(); ++i) {
 		p1.setXCoord(p1s[i].x);
@@ -111,6 +141,7 @@ void position_test() {
 		p2.setXCoord(p2s[i].x);
 		p2.setYCoord(p2s[i].y);
 		p2.setZCoord(p2s[i].z);
+		p2.setHeading(p2s[i].hdg * M_PI/180.0);
 		auto pRel = p1.relativeTo(p2);
 		if (std::abs(pRel.getXCoord() - out[i].x) > POS_TOL_M
 				|| std::abs(pRel.getYCoord() - out[i].y) > POS_TOL_M
@@ -118,7 +149,7 @@ void position_test() {
 			std::stringstream ss;
 			ss << "Relative position not within error tolerance:" << std::endl;
 			ss << "p1:  (" << p1s[i].x << "," << p1s[i].y << "," << p1s[i].z << ")" << std::endl;
-			ss << "p2:  (" << p2s[i].x << "," << p2s[i].y << "," << p2s[i].z << ")" << std::endl;
+			ss << "p2:  (" << p2s[i].x << "," << p2s[i].y << "," << p2s[i].z << "), hdg: " << p2s[i].hdg << std::endl;
 			ss << "exp: (" << out[i].x << "," << out[i].y << "," << out[i].z << ")" << std::endl;
 			ss << "act: (" << pRel.getXCoord() << "," << pRel.getYCoord()
 			   << "," << pRel.getZCoord() << ")";
