@@ -2,12 +2,14 @@
 
 #include "state.hpp"
 #include "testobject.hpp"
+#include "objectlistener.hpp"
 #include <map>
 #include <future>
 #include <set>
 
 // Forward declarations
 class ObjectControlState;
+class ObjectListener;
 
 namespace ObjectControl {
 	class Idle;
@@ -53,6 +55,8 @@ class ScenarioHandler {
 	friend class RelativeKinematics::TestLive;
 	friend class RelativeKinematics::Disarming;
 	friend class RelativeKinematics::Done;
+
+	friend class ObjectListener;
 public:
 	typedef enum {
 		RELATIVE_KINEMATICS,	//!< Scenario executed relative to immobile VUT
@@ -71,6 +75,10 @@ public:
 	void handleDisconnectCommand();
 	//! \brief Performs actions in response to an arm request.
 	void handleArmCommand();
+	//! \brief Performs actions in response to a start request.
+	void handleStartCommand();
+	//! \brief Performs actions in response to an abort request.
+	void handleAbortCommand();
 
 	//! Getters
 	//! \brief Get transmitter ID(s) of VUT(s) participating in test.
@@ -87,10 +95,15 @@ public:
 	std::map<uint32_t,ObjectStateType> getObjectStates() const;
 
 private:
+	using clock = std::chrono::steady_clock;
+
 	ObjectControlState* state;					//!< State of module
 	std::map<uint32_t,TestObject> objects;		//!< List of configured test participants
+	std::map<uint32_t,ObjectListener> objectListeners;
 	std::mutex monitorTimeMutex;
-	std::map<uint32_t,std::chrono::time_point<std::chrono::steady_clock>> lastMonitorTime;
+	static constexpr auto heartbeatPeriod = std::chrono::milliseconds(1000 / HEAB_FREQUENCY_HZ);
+	std::thread safetyThread;
+	std::promise<void> stopHeartbeatSignal;
 
 	std::shared_future<void> connStopReqFuture;	//!< Request to stop a connection attempt
 	std::promise<void> connStopReqPromise;		//!< Promise that the above value will be emitted
@@ -108,7 +121,9 @@ private:
 	void connectToObject(TestObject& obj, std::shared_future<void>& connStopReq);
 
 	void startListeners();
-	void listenToObject(TestObject& obj);
+
+	void startSafetyThread();
+	void heartbeat();
 
 	//! Configuration methods
 	//! \brief Read the configured object and trajectory files and load related data
@@ -128,6 +143,8 @@ private:
 	void armObjects();
 	//! \brief TODO
 	void disarmObjects();
+	//! \brief
+	void startObjects();
 
 	//! \brief Check if any test participant is in the specified state.
 	//!			The method does not wait for the next MONR to arrive.

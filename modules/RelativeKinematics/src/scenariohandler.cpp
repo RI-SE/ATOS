@@ -44,6 +44,14 @@ void ScenarioHandler::handleArmCommand() {
 	this->state->armRequest(*this);
 }
 
+void ScenarioHandler::handleStartCommand() {
+	this->state->startRequest(*this);
+}
+
+void ScenarioHandler::handleAbortCommand() {
+	this->state->abortRequest(*this);
+}
+
 void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
@@ -170,49 +178,41 @@ void ScenarioHandler::uploadObjectConfiguration(
 	objects[id].sendSettings();
 }
 
-void ScenarioHandler::listenToObject(TestObject &obj) {
-	if (obj.isConnected()) {
-		try {
-			while (true) {
-				switch (obj.pendingMessageType(true)) {
-				case MESSAGE_ID_MONR: {
-					using std::chrono::steady_clock;
-					using std::chrono::milliseconds;
+void ScenarioHandler::startSafetyThread() {
+	stopHeartbeatSignal = std::promise<void>();
+	safetyThread = std::thread(&ScenarioHandler::heartbeat, this);
+}
 
-					auto monr = obj.readMonitorMessage();
-					auto txID = obj.getTransmitterID();
-					std::lock_guard<std::mutex> lock(monitorTimeMutex);
-					auto diff = obj.getTimeSinceLastMonitor();
-					if (diff > obj.getMaxAllowedMonitorPeriod()) {
-						throw std::ios_base::failure("MONR timeout: " + std::to_string(
-														 std::chrono::duration_cast<milliseconds>(diff).count()) + " ms > "
-													 + std::to_string(obj.getMaxAllowedMonitorPeriod().count()) + " ms");
-					}
-					this->lastMonitorTime[txID] = steady_clock::now();
-					LogPrint("Received MONR!");
-					break;
-				}
-				case MESSAGE_ID_TREO:
-					// TODO
-					break;
-				case MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO:
-					obj.parseObjectPropertyMessage();
-					LogPrint("Received OPRO!");
-					// TODO
-					break;
-				default:
-					LogPrint("Received something!");
-					// TODO
-					break;
-				}
+void ScenarioHandler::heartbeat() {
+	using std::chrono::milliseconds;
+	auto stopRequest = stopHeartbeatSignal.get_future();
+	clock::time_point nextHeartbeat = clock::now();
+	while (stopRequest.wait_until(nextHeartbeat) == std::future_status::timeout) {
+		nextHeartbeat += heartbeatPeriod;
+
+		// Check time since MONR for all objects
+		for (const auto& id : getVehicleIDs()) {
+			auto diff = objects[id].getTimeSinceLastMonitor();
+			if (diff > objects[id].getMaxAllowedMonitorPeriod()) {
+				LogMessage(LOG_LEVEL_WARNING, "MONR timeout for object %u: %d ms > %d ms", id,
+						   diff.count(), objects[id].getMaxAllowedMonitorPeriod().count());
+				objects[id].disconnect();
+				this->state->disconnectedFromObject(*this, id);
 			}
-		} catch (std::invalid_argument& e) {
-			LogMessage(LOG_LEVEL_ERROR, e.what());
-		} catch (std::ios_base::failure& e) {
-			LogMessage(LOG_LEVEL_ERROR, e.what());
-			obj.disconnect();
-			this->state->disconnectedFromObject(*this, obj.getTransmitterID());
 		}
+
+		// Send heartbeat
+		for (const auto& id : getVehicleIDs()) {
+			objects[id].sendHeartbeat(this->state->asControlCenterStatus());
+		}
+	}
+}
+
+void ScenarioHandler::startListeners() {
+	LogMessage(LOG_LEVEL_DEBUG, "Starting listeners");
+	objectListeners.clear();
+	for (const auto& id : getVehicleIDs()) {
+		objectListeners.try_emplace(id, this, &objects[id]);
 	}
 }
 
@@ -287,6 +287,12 @@ void ScenarioHandler::disarmObjects() {
 		}
 	}
 	this->state->allObjectsDisarmed(*this); // TODO add a check on object states as well
+}
+
+void ScenarioHandler::startObjects() {
+	for (auto& id : getVehicleIDs()) {
+		objects[id].sendStart();
+	}
 }
 
 bool ScenarioHandler::isAnyObjectIn(

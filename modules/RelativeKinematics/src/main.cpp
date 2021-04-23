@@ -64,7 +64,7 @@ int main() {
 			try {
 				scenarioHandler.handleDisconnectCommand();
 			} catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Connection failed");
+				LogMessage(LOG_LEVEL_ERROR, "Disconnection failed");
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
 			break;
@@ -75,6 +75,19 @@ int main() {
 				LogMessage(LOG_LEVEL_ERROR, "Arm failed");
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
+			break;
+		case COMM_STRT:
+			try {
+				// TODO set start delay
+				scenarioHandler.handleStartCommand();
+			} catch (std::invalid_argument& e) {
+				LogMessage(LOG_LEVEL_ERROR, "Start failed - %s", e.what());
+				iCommSend(COMM_FAILURE, nullptr, 0);
+			}
+			break;
+		case COMM_ABORT:
+			// Any exceptions here should crash the program
+			scenarioHandler.handleAbortCommand();
 			break;
 		default:
 			LogMessage(LOG_LEVEL_INFO, "Received command %u", command);

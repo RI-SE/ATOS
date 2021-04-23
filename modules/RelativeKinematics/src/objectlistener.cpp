@@ -24,8 +24,6 @@ void ObjectListener::listen() {
 			switch (obj->pendingMessageType(true)) {
 			case MESSAGE_ID_MONR: {
 				auto monr = obj->readMonitorMessage();
-				//
-				LogPrint("Received MONR!");
 				break;
 			}
 			case MESSAGE_ID_TREO:
@@ -33,11 +31,10 @@ void ObjectListener::listen() {
 				break;
 			case MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO:
 				obj->parseObjectPropertyMessage();
-				LogPrint("Received OPRO!");
 				// TODO
 				break;
 			default:
-				LogPrint("Received something!");
+				LogMessage(LOG_LEVEL_WARNING, "Received unknown message type");
 				// TODO
 				break;
 			}

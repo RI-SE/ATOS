@@ -4,6 +4,11 @@ ObjectControl::TestLive::TestLive() {
 
 }
 
+void ObjectControl::TestLive::onEnter(
+		ScenarioHandler &handler) {
+	handler.startObjects();
+}
+
 void ObjectControl::TestLive::stopRequest(ScenarioHandler&) {
 	// TODO
 }
@@ -23,8 +28,10 @@ void ObjectControl::TestLive::disconnectedFromObject(
 }
 
 
-void RelativeKinematics::TestLive::stopRequest(ScenarioHandler&) {
-	// TODO
+void RelativeKinematics::TestLive::stopRequest(
+		ScenarioHandler& handler) {
+	ObjectControl::TestLive::stopRequest(handler);
+	// TODO more?
 }
 
 void RelativeKinematics::TestLive::abortRequest(
@@ -33,8 +40,10 @@ void RelativeKinematics::TestLive::abortRequest(
 	setState(handler, new RelativeKinematics::Aborting());
 }
 
-void RelativeKinematics::TestLive::testCompleted(ScenarioHandler&) {
-	// TODO
+void RelativeKinematics::TestLive::testCompleted(
+		ScenarioHandler& handler) {
+	ObjectControl::TestLive::testCompleted(handler);
+	setState(handler, new RelativeKinematics::Done());
 }
 
 void RelativeKinematics::TestLive::disconnectedFromObject(

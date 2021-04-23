@@ -215,6 +215,8 @@ public:
 	virtual void testCompleted(ScenarioHandler&) override;
 	virtual void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
 
+	virtual void onEnter(ScenarioHandler&) override;
+
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) override {}
 	void disconnectRequest(ScenarioHandler&) override {}
@@ -307,6 +309,8 @@ public:
 	//! Completing postprocessing allows exiting this state
 	virtual void postProcessingCompleted(ScenarioHandler&) override;
 
+	virtual void onEnter(ScenarioHandler&) override;
+
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) override {}
 	void disconnectRequest(ScenarioHandler&) override {}
@@ -315,7 +319,7 @@ public:
 	void disarmRequest(ScenarioHandler&) override {}
 	void startRequest(ScenarioHandler&) override {}
 	void stopRequest(ScenarioHandler&) override {}
-	void abortRequest(ScenarioHandler&) override {}
+	void abortRequest(ScenarioHandler&) override {} // safe?
 	void allClearRequest(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected

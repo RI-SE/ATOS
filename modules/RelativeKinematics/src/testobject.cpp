@@ -367,14 +367,21 @@ void TestObject::sendDisarm() {
 	this->comms.cmd << OBJECT_COMMAND_DISARM;
 }
 
+void TestObject::sendStart() {
+	StartMessageType strt;
+	TimeSetToCurrentSystemTime(&strt.startTime); // TODO make possible to modify
+	strt.isTimestampValid = true;
+	this->comms.cmd << strt;
+}
+
 ISOMessageID Channel::pendingMessageType(bool awaitNext) {
 	auto result = recv(this->socket, this->receiveBuffer.data(), this->receiveBuffer.size(), (awaitNext ? 0 : MSG_DONTWAIT) | MSG_PEEK);
 	if (result < 0 && !awaitNext && (errno == EAGAIN || errno == EWOULDBLOCK)) {
 		return MESSAGE_ID_INVALID;
 	}
 	else if (result < 0) {
-		throw std::ios_base::failure("channel pendingmessagetype"); // TODO clearer
-		throw std::ios_base::failure(strerror(errno));
+		throw std::ios_base::failure(std::string("Failed to check pending message type (recv: ")
+									 + strerror(errno) + ")");
 	}
 	else if (result == 0) {
 		throw std::ios_base::failure("Connection reset by peer");
@@ -397,8 +404,7 @@ ISOMessageID ObjectConnection::pendingMessageType(bool awaitNext) {
 		auto result = select(std::max(mntr.socket,cmd.socket)+1,
 							 &fds, nullptr, nullptr, nullptr);
 		if (result < 0) {
-			//throw std::ios_base::failure(strerror(errno));
-			throw std::ios_base::failure(std::string("select: ") + strerror(errno)); // TODO clearer
+			throw std::ios_base::failure(std::string("Failed socket operation (select: ") + strerror(errno) + ")"); // TODO clearer
 		}
 		else if (FD_ISSET(mntr.socket, &fds)) {
 			return this->mntr.pendingMessageType();
@@ -502,6 +508,19 @@ Channel& operator<<(Channel& chnl, const ObjectCommandType& cmd) {
 	return chnl;
 }
 
+Channel& operator<<(Channel& chnl, const StartMessageType& strt) {
+	auto nBytes = encodeSTRTMessage(&strt, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to encode STRT message: ") + strerror(errno));
+	}
+
+	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to send STRT: ") + strerror(errno));
+	}
+	return chnl;
+}
+
 Channel& operator>>(Channel& chnl, MonitorMessage& monitor) {
 	if (chnl.pendingMessageType() == MESSAGE_ID_MONR) {
 		struct timeval tv;
@@ -509,13 +528,12 @@ Channel& operator>>(Channel& chnl, MonitorMessage& monitor) {
 		auto nBytes = decodeMONRMessage(chnl.receiveBuffer.data(), chnl.receiveBuffer.size(), tv,
 										&monitor.first, &monitor.second, false);
 		if (nBytes < 0) {
-			throw std::invalid_argument(strerror(errno));
+			throw std::invalid_argument("Failed to decode MONR message");
 		}
 		else {
 			nBytes = recv(chnl.socket, chnl.receiveBuffer.data(), static_cast<size_t>(nBytes), 0);
 			if (nBytes <= 0) {
-				throw std::ios_base::failure("recv could not clear monr"); // TODO clearer
-				throw std::ios_base::failure(strerror(errno));
+				throw std::ios_base::failure("Unable to clear from socket buffer");
 			}
 		}
 	}
@@ -531,8 +549,7 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 		else {
 			nBytes = recv(chnl.socket, chnl.receiveBuffer.data(), static_cast<size_t>(nBytes), 0);
 			if (nBytes <= 0) {
-				throw std::ios_base::failure("recv could not clear opro: " + std::to_string(nBytes)); // TODO clearer
-				throw std::ios_base::failure(strerror(errno));
+				throw std::ios_base::failure("Unable to clear from socket buffer");
 			}
 		}
 	}

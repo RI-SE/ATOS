@@ -4,9 +4,15 @@ ObjectControl::Done::Done() {
 
 }
 
-void ObjectControl::Done::postProcessingCompleted(
+void ObjectControl::Done::onEnter(
 		ScenarioHandler& handler) {
 	LogMessage(LOG_LEVEL_WARNING, "Nothing to be done for postprocessing"); // TODO
+	handler.state->postProcessingCompleted(handler);
+}
+
+void ObjectControl::Done::postProcessingCompleted(
+		ScenarioHandler& handler) {
+	// TODO
 }
 
 void RelativeKinematics::Done::postProcessingCompleted(

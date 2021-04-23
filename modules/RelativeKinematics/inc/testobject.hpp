@@ -1,3 +1,5 @@
+#pragma once
+
 #include <netinet/in.h>
 #include <future>
 #include <vector>
@@ -36,6 +38,7 @@ public:
 	friend Channel& operator<<(Channel&,const ObjectSettingsType&);
 	friend Channel& operator<<(Channel&,const Trajectory&);
 	friend Channel& operator<<(Channel&,const ObjectCommandType&);
+	friend Channel& operator<<(Channel&,const StartMessageType&);
 
 	friend Channel& operator>>(Channel&,MonitorMessage&);
 	friend Channel& operator>>(Channel&,ObjectPropertiesType&);
@@ -93,6 +96,7 @@ public:
 	void sendHeartbeat(const ControlCenterStatusType ccStatus);
 	void sendArm();
 	void sendDisarm();
+	void sendStart();
 
 	std::chrono::milliseconds getTimeSinceLastMonitor() const {
 		if (lastMonitorTime.time_since_epoch().count() == 0) {
@@ -109,11 +113,13 @@ public:
 		MonitorMessage retval;
 		this->comms.mntr >> retval;
 		lastMonitorTime = std::chrono::steady_clock::now();
+		updateMonitor(retval);
 		return retval;
 	}
 	ObjectPropertiesType parseObjectPropertyMessage() {
 		ObjectPropertiesType retval;
 		this->comms.cmd >> retval; // TODO make use of this
+		LogMessage(LOG_LEVEL_DEBUG, "Ignoring object properties message");
 		return retval;
 	}
 
@@ -138,7 +144,7 @@ private:
 	ObjectMonitorType lastMonitor; // TODO change this into a more usable format
 	std::chrono::steady_clock::time_point lastMonitorTime;
 
-	static constexpr std::chrono::milliseconds connRetryPeriod = std::chrono::milliseconds(1000);
+	static constexpr auto connRetryPeriod = std::chrono::milliseconds(1000);
 	std::chrono::milliseconds maxAllowedMonitorPeriod = std::chrono::milliseconds(static_cast<unsigned int>(1000.0 * 100.0 / MONR_EXPECTED_FREQUENCY_HZ ));
 };
 
