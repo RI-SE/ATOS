@@ -41,6 +41,31 @@ void TestObject::setMonitorAddress(
 	}
 }
 
+ObjectDataType TestObject::getAsObjectData() const {
+	ObjectDataType retval;
+	// TODO check on isValid for each
+	retval.origin.Latitude = this->origin.latitude_deg;
+	retval.origin.Longitude = this->origin.longitude_deg;
+	retval.origin.Altitude = this->origin.altitude_m;
+
+	retval.Enabled = OBJECT_ENABLED; // TODO maybe a setting for this
+	retval.ClientIP = this->comms.cmd.addr.sin_addr.s_addr;
+	retval.ClientID =  this->getTransmitterID();
+	auto diff = this->getTimeSinceLastMonitor();
+	if (diff.count() == 0) {
+		retval.lastPositionUpdate = {0, 0};
+	}
+	else {
+		struct timeval tvnow, tvdiff;
+		TimeSetToCurrentSystemTime(&tvnow);
+		to_timeval(diff, tvdiff);
+		timersub(&tvnow, &tvdiff, &retval.lastPositionUpdate);
+	}
+	retval.propertiesReceived = false; // TODO once OPRO is parsed
+
+	return retval;
+}
+
 MonitorMessage TestObject::awaitNextMonitor() {
 	MonitorMessage retval;
 	// Read until receive buffer is empty, return last read message

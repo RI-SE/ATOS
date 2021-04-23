@@ -22,6 +22,7 @@ ScenarioHandler::ScenarioHandler(
 		LogMessage(LOG_LEVEL_ERROR, "Unimplemented control mode requested");
 		break;
 	}
+	this->controlMode = controlMode;
 }
 
 ScenarioHandler::~ScenarioHandler() {
@@ -56,6 +57,10 @@ void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
 		o.second.parseTrajectoryFile(o.second.getTrajectoryFile());
+	});
+	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
+		auto data = o.second.getAsObjectData();
+		DataDictionarySetObjectData(&data);
 	});
 }
 

@@ -1,4 +1,6 @@
 #include "objectlistener.hpp"
+#include "datadictionary.h"
+#include "maestroTime.h"
 
 ObjectListener::ObjectListener(
 		ScenarioHandler* sh,
@@ -23,7 +25,16 @@ void ObjectListener::listen() {
 		while (!this->quit) {
 			switch (obj->pendingMessageType(true)) {
 			case MESSAGE_ID_MONR: {
+				struct timeval currentTime;
 				auto monr = obj->readMonitorMessage();
+				TimeSetToCurrentSystemTime(&currentTime);
+				if (handler->controlMode == ScenarioHandler::RELATIVE_KINEMATICS && obj->isVehicleUnderTest()) {
+					// TODO transform
+				}
+				else {
+
+				}
+				DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime); // TODO move to abs_kin
 				break;
 			}
 			case MESSAGE_ID_TREO:

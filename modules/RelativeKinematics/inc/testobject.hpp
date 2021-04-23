@@ -64,6 +64,7 @@ public:
 };
 
 class TestObject {
+	using clock = std::chrono::steady_clock;
 public:
 	TestObject();
 	TestObject(const TestObject&) = delete;
@@ -87,6 +88,7 @@ public:
 
 	bool isVehicleUnderTest() const { return isVUT; }
 	std::string toString() const;
+	ObjectDataType getAsObjectData() const;
 
 	bool isConnected() const { return comms.isConnected(); }
 	void establishConnection(std::shared_future<void> stopRequest);
@@ -103,7 +105,7 @@ public:
 			return std::chrono::milliseconds(0);
 		}
 		return std::chrono::duration_cast<std::chrono::milliseconds>(
-					std::chrono::steady_clock::now() - lastMonitorTime);
+					clock::now() - lastMonitorTime);
 	}
 
 	std::chrono::milliseconds getMaxAllowedMonitorPeriod() const {
@@ -112,7 +114,7 @@ public:
 	MonitorMessage readMonitorMessage() {
 		MonitorMessage retval;
 		this->comms.mntr >> retval;
-		lastMonitorTime = std::chrono::steady_clock::now();
+		lastMonitorTime = clock::now();
 		updateMonitor(retval);
 		return retval;
 	}
@@ -142,7 +144,7 @@ private:
 	MonitorMessage awaitNextMonitor();
 	std::future<MonitorMessage> nextMonitor;
 	ObjectMonitorType lastMonitor; // TODO change this into a more usable format
-	std::chrono::steady_clock::time_point lastMonitorTime;
+	clock::time_point lastMonitorTime;
 
 	static constexpr auto connRetryPeriod = std::chrono::milliseconds(1000);
 	std::chrono::milliseconds maxAllowedMonitorPeriod = std::chrono::milliseconds(static_cast<unsigned int>(1000.0 * 100.0 / MONR_EXPECTED_FREQUENCY_HZ ));
@@ -155,4 +157,12 @@ namespace std {
 			return lhs.getTransmitterID() < rhs.getTransmitterID();
 		}
 	};
+}
+
+template<typename Duration>
+void to_timeval(Duration&& d, struct timeval & tv) {
+	std::chrono::seconds const sec = std::chrono::duration_cast<std::chrono::seconds>(d);
+
+	tv.tv_sec  = sec.count();
+	tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(d - sec).count();
 }

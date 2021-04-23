@@ -97,6 +97,7 @@ public:
 private:
 	using clock = std::chrono::steady_clock;
 
+	ControlMode controlMode;
 	ObjectControlState* state;					//!< State of module
 	std::map<uint32_t,TestObject> objects;		//!< List of configured test participants
 	std::map<uint32_t,ObjectListener> objectListeners;
