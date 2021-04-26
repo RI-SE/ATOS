@@ -112,14 +112,13 @@ void ScenarioHandler::loadObjectFiles() {
 	}
 }
 
-std::vector<uint32_t> ScenarioHandler::getVehicleUnderTestIDs() const {
-	std::vector<uint32_t> retval;
+uint32_t ScenarioHandler::getAnchorObjectID() const {
 	for (auto& object : objects) {
-		if (object.second.isVehicleUnderTest()) {
-			retval.push_back(object.first);
+		if (object.second.isAnchor()) {
+			return object.first;
 		}
 	}
-	return retval;
+	throw std::invalid_argument("No configured anchor object found");
 }
 
 std::map<uint32_t,ObjectStateType> ScenarioHandler::getObjectStates() const {
@@ -134,7 +133,7 @@ void ScenarioHandler::transformScenarioRelativeTo(
 		const uint32_t objectID) {
 	for (auto& id : getVehicleIDs()) {
 		if (id == objectID) {
-			// Skip for now TODO also here
+			// Skip for now TODO also here - maybe?
 			continue;
 		}
 		auto traj = objects[id].getTrajectory();

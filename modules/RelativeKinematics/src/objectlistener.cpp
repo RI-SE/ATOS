@@ -28,25 +28,23 @@ void ObjectListener::listen() {
 				struct timeval currentTime;
 				auto monr = obj->readMonitorMessage();
 				TimeSetToCurrentSystemTime(&currentTime);
-				if (handler->controlMode == ScenarioHandler::RELATIVE_KINEMATICS && obj->isVehicleUnderTest()) {
+				if (handler->controlMode == ScenarioHandler::RELATIVE_KINEMATICS && obj->isAnchor()) {
 					// TODO transform
 				}
 				else {
-
+					// TODO
 				}
 				DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime); // TODO move to abs_kin
 				break;
 			}
 			case MESSAGE_ID_TREO:
-				// TODO
+				LogMessage(LOG_LEVEL_WARNING, "Unhandled TREO message");
 				break;
 			case MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO:
 				obj->parseObjectPropertyMessage();
-				// TODO
 				break;
 			default:
 				LogMessage(LOG_LEVEL_WARNING, "Received unknown message type");
-				// TODO
 				break;
 			}
 		}

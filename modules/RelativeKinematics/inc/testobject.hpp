@@ -86,7 +86,7 @@ public:
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
 
-	bool isVehicleUnderTest() const { return isVUT; }
+	bool isAnchor() const { return isAnchorObject; }
 	std::string toString() const;
 	ObjectDataType getAsObjectData() const;
 
@@ -135,7 +135,7 @@ private:
 	fs::path objectFile;
 	fs::path trajectoryFile;
 	uint32_t transmitterID = 0;
-	bool isVUT = false;
+	bool isAnchorObject = false;
 	Trajectory trajectory;
 	GeographicPositionType origin;
 	bool isEnabled = true;

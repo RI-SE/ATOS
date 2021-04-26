@@ -81,8 +81,8 @@ public:
 	void handleAbortCommand();
 
 	//! Getters
-	//! \brief Get transmitter ID(s) of VUT(s) participating in test.
-	std::vector<uint32_t> getVehicleUnderTestIDs() const;
+	//! \brief Get transmitter ID of anchor object participating in test.
+	uint32_t getAnchorObjectID() const;
 	//! \brief Get transmitter IDs of all test participants.
 	std::vector<uint32_t> getVehicleIDs() const {
 		std::vector<uint32_t> retval;

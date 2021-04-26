@@ -15,7 +15,7 @@ TestObject::TestObject(TestObject&& other) :
 	objectFile(other.objectFile),
 	trajectoryFile(other.trajectoryFile),
 	transmitterID(other.transmitterID),
-	isVUT(other.isVUT),
+	isAnchorObject(other.isAnchorObject),
 	trajectory(other.trajectory),
 	origin(other.origin),
 	lastMonitor(other.lastMonitor),
@@ -109,7 +109,7 @@ std::string TestObject::toString() const {
 	std::string retval = "";
 	retval += "Object ID " + std::to_string(transmitterID)
 			+ ", IP " + ipAddr + ", trajectory file " + trajectoryFile.filename().string()
-			+ ", object file " + objectFile.filename().string() + ", VUT: " + (isVUT?"Yes":"No");
+			+ ", object file " + objectFile.filename().string() + ", anchor: " + (isAnchorObject?"Yes":"No");
 	return retval;
 }
 
@@ -174,29 +174,29 @@ void TestObject::parseConfigurationFile(
 	}
 	this->transmitterID = id;
 
-	// Get VUT setting
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_IS_VUT, objectFile.c_str(),
+	// Get anchor setting
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_IS_ANCHOR, objectFile.c_str(),
 								 objectFile.string().length(),
 								 setting, sizeof (setting)) == -1) {
-		this->isVUT = false;
+		this->isAnchorObject = false;
 	}
 	else {
 		if (setting[0] == '1' || setting[0] == '0') {
-			this->isVUT = setting[0] == '1';
+			this->isAnchorObject = setting[0] == '1';
 		}
 		else {
-			std::string vutSetting(setting);
-			for (char &c : vutSetting) {
+			std::string anchorSetting(setting);
+			for (char &c : anchorSetting) {
 				c = std::tolower(c, std::locale());
 			}
-			if (vutSetting.compare("true") == 0) {
-				this->isVUT = true;
+			if (anchorSetting.compare("true") == 0) {
+				this->isAnchorObject = true;
 			}
-			else if (vutSetting.compare("false") == 0) {
-				this->isVUT = false;
+			else if (anchorSetting.compare("false") == 0) {
+				this->isAnchorObject = false;
 			}
 			else {
-				throw std::invalid_argument("VUT setting " + std::string(setting) + " in file "
+				throw std::invalid_argument("Anchor setting " + std::string(setting) + " in file "
 											+ objectFile.string() + " is invalid");
 			}
 		}
