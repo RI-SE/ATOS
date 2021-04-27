@@ -841,7 +841,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_WARNING, "ABORT received");
 				JournalRecordData(JOURNAL_RECORD_EVENT, "ABORT received");
 			}
-			else if (iCommand == COMM_REMOTECTRL_ENABLE) {
+			else if (iCommand == COMM_REMOTECTRL_ENABLE && vGetState() == OBC_STATE_CONNECTED) {
+
 				vSetState(OBC_STATE_REMOTECTRL);
 				// TODO: objectControlServerStatus = something
 				MessageLength =
@@ -917,7 +918,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								LogMessage(LOG_LEVEL_INFO, "Disabled remote control mode");
 							}
 							else {
-								LogMessage(LOG_LEVEL_ERROR, "Object must stand still when disabling remote control mode! WILL NOT DISABLE REMOTE CTRL");
+								LogMessage(LOG_LEVEL_ERROR,
+								"Object must stand still when disabling remote control mode! WILL NOT DISABLE REMOTE CTRL. Speed [m/s] = %f",
+								monitorData.MonrData.speed.longitudinal_m_s);
 							}
 						}
 					}
