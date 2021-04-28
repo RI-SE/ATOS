@@ -70,7 +70,7 @@ void RelativeKinematics::TestLive::objectDisarmed(
 		uint32_t id) {
 	ObjectControl::TestLive::objectDisarmed(handler,id);
 	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
-		RelativeKinematics::TestLive::allObjectsDisarmed(handler);
+		RelativeKinematics::TestLive::testCompleted(handler);
 	}
 }
 

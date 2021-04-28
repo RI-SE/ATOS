@@ -65,7 +65,7 @@ void ObjectControl::Connecting::objectAborting(
 
 void ObjectControl::Connecting::allObjectsConnected(
 		ScenarioHandler& handler) {
-	// TODO
+	handler.startListeners();
 }
 
 void RelativeKinematics::Connecting::disconnectRequest(

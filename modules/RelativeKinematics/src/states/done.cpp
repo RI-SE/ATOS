@@ -7,6 +7,7 @@ ObjectControl::Done::Done() {
 void ObjectControl::Done::onEnter(
 		ScenarioHandler& handler) {
 	LogMessage(LOG_LEVEL_WARNING, "Nothing to be done for postprocessing"); // TODO
+	iCommSend(COMM_ABORT, nullptr, 0); // TODO temporary to trigger logging etc.
 	handler.state->postProcessingCompleted(handler);
 }
 

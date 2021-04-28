@@ -6,7 +6,6 @@ ObjectControl::Ready::Ready() {
 
 void ObjectControl::Ready::onEnter(
 		ScenarioHandler& handler) {
-	handler.startListeners();
 }
 
 void ObjectControl::Ready::armRequest(
