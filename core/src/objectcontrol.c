@@ -643,9 +643,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							timersub(&currentTime, &reqCtrlAction.dataTimestamp, &requestAge);
 
 							// Comment from Frida: Use if(true) below to be able to test remote control function
-							if(true) { // temp remove later
-							//if (timerpos(&requestAge) && requestAge.tv_sec == 0
-							//	&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
+							if (timerpos(&requestAge) && requestAge.tv_sec == 0
+								&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
 
 								if (vGetState() == OBC_STATE_REMOTECTRL) {
 									// Encode RCMM
@@ -678,6 +677,19 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 									MessageLength =
 										encodeRCMMMessage(&rcmmMessage, ctrlMessageBuffer, sizeof (ctrlMessageBuffer), 0);
+
+									if (MessageLength > 0) {
+										UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
+											&objectConnections[iIndex].objectMonitorAddress,
+											ctrlMessageBuffer, MessageLength, 0);
+										LogMessage(LOG_LEVEL_INFO, "RCMM message sent to object %lu",
+												object_transmitter_ids[iIndex]);
+										MessageLength = 0;
+										memset(ctrlMessageBuffer, 0, 100);
+									}
+									else {
+										LogMessage(LOG_LEVEL_ERROR, "Error encoding remote control message");
+									}
 								}
 								else {
 									// Encode DCMM
@@ -714,18 +726,20 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									MessageLength =
 										encodeDCMMMessage(&dcmmMessage, ctrlMessageBuffer, sizeof (ctrlMessageBuffer), 0);
 									// when we sent the data with bigger fuffer we got a valueid error in decoder 
+
+									if (MessageLength > 0) {
+										UtilSendTCPData(MODULE_NAME, ctrlMessageBuffer, MessageLength,
+														&objectConnections[iIndex].commandSocket, 0);
+										LogMessage(LOG_LEVEL_INFO, "DCMM message sent to object %lu",
+												   object_transmitter_ids[iIndex]);
+										MessageLength = 0;
+										memset(ctrlMessageBuffer, 0, 100);
+									}
+									else {
+										LogMessage(LOG_LEVEL_ERROR, "Error encoding direct control message");
+									}
 								}
-								if (MessageLength > 0) {
-									UtilSendTCPData(MODULE_NAME, ctrlMessageBuffer, MessageLength,
-													&objectConnections[iIndex].commandSocket, 0);
-									//LogMessage(LOG_LEVEL_INFO, "RCMM/DCMM message sent to object %lu",
-									//		   object_transmitter_ids[iIndex]); // frida temp uncomment later
-									MessageLength = 0;
-									memset(ctrlMessageBuffer, 0, 100);
-								}
-								else {
-									LogMessage(LOG_LEVEL_ERROR, "Error encoding remote/direct control message");
-								}
+
 								timerclear(&reqCtrlAction.dataTimestamp);
 								DataDictionarySetRequestedControlAction(object_transmitter_ids[iIndex],
 																		&reqCtrlAction);
