@@ -835,7 +835,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				//LogMessage(LOG_LEVEL_INFO, "Entering REPLAY mode <%s>", pcRecvBuffer);
 				LogMessage(LOG_LEVEL_WARNING, "REPLAY mode support deprecated");
 			}
-			else if (iCommand == COMM_ABORT && vGetState() == OBC_STATE_RUNNING) {
+			else if (iCommand == COMM_ABORT && (vGetState() == OBC_STATE_RUNNING || vGetState() == OBC_STATE_REMOTECTRL)) {
 				vSetState(OBC_STATE_CONNECTED);
 				objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 				LogMessage(LOG_LEVEL_WARNING, "ABORT received");
