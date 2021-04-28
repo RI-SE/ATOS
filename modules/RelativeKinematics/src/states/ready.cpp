@@ -27,6 +27,12 @@ void ObjectControl::Ready::disconnectedFromObject(
 	// TODO
 }
 
+void ObjectControl::Ready::objectAborting(
+		ScenarioHandler &handler,
+		uint32_t id) {
+	// TODO
+}
+
 
 void RelativeKinematics::Ready::armRequest(
 		ScenarioHandler& handler) {
@@ -45,4 +51,11 @@ void RelativeKinematics::Ready::disconnectedFromObject(
 		uint32_t id) {
 	ObjectControl::Ready::disconnectedFromObject(handler, id);
 	setState(handler, new RelativeKinematics::Connecting());
+}
+
+void RelativeKinematics::Ready::objectAborting(
+		ScenarioHandler &handler,
+		uint32_t id) {
+	ObjectControl::Ready::objectAborting(handler,id);
+	setState(handler, new RelativeKinematics::Aborting());
 }

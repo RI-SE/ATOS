@@ -27,6 +27,18 @@ void ObjectControl::TestLive::disconnectedFromObject(
 	// TODO
 }
 
+void ObjectControl::TestLive::objectDisarmed(
+		ScenarioHandler &,
+		uint32_t) {
+
+}
+
+void ObjectControl::TestLive::objectAborting(
+		ScenarioHandler &,
+		uint32_t) {
+
+}
+
 
 void RelativeKinematics::TestLive::stopRequest(
 		ScenarioHandler& handler) {
@@ -50,5 +62,21 @@ void RelativeKinematics::TestLive::disconnectedFromObject(
 		ScenarioHandler& handler,
 		uint32_t id) {
 	ObjectControl::TestLive::disconnectedFromObject(handler, id);
+	setState(handler, new RelativeKinematics::Aborting());
+}
+
+void RelativeKinematics::TestLive::objectDisarmed(
+		ScenarioHandler &handler,
+		uint32_t id) {
+	ObjectControl::TestLive::objectDisarmed(handler,id);
+	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+		RelativeKinematics::TestLive::allObjectsDisarmed(handler);
+	}
+}
+
+void RelativeKinematics::TestLive::objectAborting(
+		ScenarioHandler &handler,
+		uint32_t id) {
+	ObjectControl::TestLive::objectAborting(handler,id);
 	setState(handler, new RelativeKinematics::Aborting());
 }

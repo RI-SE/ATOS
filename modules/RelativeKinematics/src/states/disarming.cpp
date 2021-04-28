@@ -43,6 +43,24 @@ void ObjectControl::Disarming::allObjectsDisarmed(
 	// TODO
 }
 
+void ObjectControl::Disarming::objectArmed(
+		ScenarioHandler &,
+		uint32_t) {
+	// TODO
+}
+
+void ObjectControl::Disarming::objectDisarmed(
+		ScenarioHandler &,
+		uint32_t) {
+	// TODO
+}
+
+void ObjectControl::Disarming::objectAborting(
+		ScenarioHandler &,
+		uint32_t) {
+	// TODO
+}
+
 
 void RelativeKinematics::Disarming::disconnectRequest(
 		ScenarioHandler& handler) {
@@ -79,4 +97,27 @@ void RelativeKinematics::Disarming::allObjectsDisarmed(
 		ScenarioHandler& handler) {
 	ObjectControl::Disarming::allObjectsDisarmed(handler);
 	setState(handler, new RelativeKinematics::Connecting());
+}
+
+void RelativeKinematics::Disarming::objectArmed(
+		ScenarioHandler &handler,
+		uint32_t id) {
+	ObjectControl::Disarming::objectArmed(handler,id);
+	RelativeKinematics::Disarming::connectedToArmedObject(handler,id);
+}
+
+void RelativeKinematics::Disarming::objectDisarmed(
+		ScenarioHandler &handler,
+		uint32_t id) {
+	ObjectControl::Disarming::objectDisarmed(handler,id);
+	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+		RelativeKinematics::Disarming::allObjectsDisarmed(handler);
+	}
+}
+
+void RelativeKinematics::Disarming::objectAborting(
+		ScenarioHandler &handler,
+		uint32_t id) {
+	ObjectControl::Disarming::objectAborting(handler,id);
+	RelativeKinematics::Disarming::connectedToLiveObject(handler,id);
 }

@@ -31,15 +31,29 @@ void ObjectListener::listen() {
 			switch (obj->pendingMessageType(true)) {
 			case MESSAGE_ID_MONR: {
 				struct timeval currentTime;
+				auto prevObjState = obj->getState();
 				auto monr = obj->readMonitorMessage();
 				TimeSetToCurrentSystemTime(&currentTime);
 				if (handler->controlMode == ScenarioHandler::RELATIVE_KINEMATICS && !obj->isAnchor()) {
 					monr.second = transformCoordinate(monr.second, handler->getLastAnchorData());
 				}
-				else {
-					// TODO
+				DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime);
+				// Check if state has changed
+				if (obj->getState() != prevObjState) {
+					switch (obj->getState()) {
+					case OBJECT_STATE_DISARMED:
+						handler->state->objectDisarmed(*handler, obj->getTransmitterID());
+						break;
+					case OBJECT_STATE_POSTRUN:
+						break;
+					case OBJECT_STATE_ARMED:
+						handler->state->objectArmed(*handler, obj->getTransmitterID());
+						break;
+					case OBJECT_STATE_ABORTING:
+						handler->state->objectAborting(*handler, obj->getTransmitterID());
+						break;
+					}
 				}
-				DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime); // TODO move to abs_kin
 				break;
 			}
 			case MESSAGE_ID_TREO:
