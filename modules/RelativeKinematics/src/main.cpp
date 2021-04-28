@@ -30,7 +30,6 @@ int main() {
 		util_error("Failed to initialize module");
 	}
 
-
 	ScenarioHandler scenarioHandler(ScenarioHandler::RELATIVE_KINEMATICS);
 	while (!quit) {
 		if (iCommRecv(&command, mqRecvData, MQ_MSG_SIZE, nullptr) < 0) {

@@ -83,6 +83,8 @@ public:
 	//! Getters
 	//! \brief Get transmitter ID of anchor object participating in test.
 	uint32_t getAnchorObjectID() const;
+	//! \brief Get last reported data by anchor object
+	ObjectMonitorType getLastAnchorData() const;
 	//! \brief Get transmitter IDs of all test participants.
 	std::vector<uint32_t> getVehicleIDs() const {
 		std::vector<uint32_t> retval;
@@ -94,6 +96,18 @@ public:
 	//! \brief Get last known ISO state of test participants.
 	std::map<uint32_t,ObjectStateType> getObjectStates() const;
 
+	//! \brief Check if any test participant is in the specified state.
+	//!			The method does not wait for the next MONR to arrive.
+	bool isAnyObjectIn(const ObjectStateType state);
+	//! \brief Check if any test participant is in any of the specified states.
+	//!			The method does not wait for the next MONR to arrive.
+	bool isAnyObjectIn(const std::set<ObjectStateType>& state);
+	//! \brief Checks if all test participants are in the specified state.
+	//!			The method does not wait for the next MONR to arrive.
+	bool areAllObjectsIn(const ObjectStateType state);
+	//! \brief Checks if all test participants are in any of the specified states.
+	//!			The method does not wait for the next MONR to arrive.
+	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
 private:
 	using clock = std::chrono::steady_clock;
 
@@ -147,18 +161,6 @@ private:
 	//! \brief
 	void startObjects();
 
-	//! \brief Check if any test participant is in the specified state.
-	//!			The method does not wait for the next MONR to arrive.
-	bool isAnyObjectIn(const ObjectStateType state);
-	//! \brief Check if any test participant is in any of the specified states.
-	//!			The method does not wait for the next MONR to arrive.
-	bool isAnyObjectIn(const std::set<ObjectStateType>& state);
-	//! \brief Checks if all test participants are in the specified state.
-	//!			The method does not wait for the next MONR to arrive.
-	bool areAllObjectsIn(const ObjectStateType state);
-	//! \brief Checks if all test participants are in any of the specified states.
-	//!			The method does not wait for the next MONR to arrive.
-	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
 
 };
 

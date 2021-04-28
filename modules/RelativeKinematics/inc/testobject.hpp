@@ -16,6 +16,7 @@ namespace fs = std::experimental::filesystem;
 
 struct MonitorMessage : std::pair<uint32_t,ObjectMonitorType> {};
 
+
 /*!
  * \brief The Channel class represents any socket based connection
  *			and allows transmission / reception of ISO messages
@@ -82,6 +83,7 @@ public:
 	GeographicPositionType getOrigin() const { return origin; }
 	ObjectStateType getState(bool awaitUpdate);
 	ObjectStateType getState() const { return isConnected() ? state : OBJECT_STATE_UNKNOWN; }
+	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
 	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
@@ -165,4 +167,12 @@ void to_timeval(Duration&& d, struct timeval & tv) {
 
 	tv.tv_sec  = sec.count();
 	tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(d - sec).count();
+}
+
+template<typename Duration>
+void from_timeval(struct timeval & tv, Duration& d) {
+	// TODO
+	//const auto sec = std::chrono::seconds(tv.tv_sec);
+	//const auto usec = std::chrono::microseconds(tv.tv_usec);
+	//d = sec + usec;
 }

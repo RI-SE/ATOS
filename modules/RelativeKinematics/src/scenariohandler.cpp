@@ -121,6 +121,11 @@ uint32_t ScenarioHandler::getAnchorObjectID() const {
 	throw std::invalid_argument("No configured anchor object found");
 }
 
+ObjectMonitorType ScenarioHandler::getLastAnchorData() const {
+	auto anchorID = getAnchorObjectID();
+	return objects.at(anchorID).getLastMonitorData();
+}
+
 std::map<uint32_t,ObjectStateType> ScenarioHandler::getObjectStates() const {
 	std::map<uint32_t, ObjectStateType> retval;
 	for (const auto& elem : objects) {
