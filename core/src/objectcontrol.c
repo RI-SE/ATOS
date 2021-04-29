@@ -895,7 +895,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								rcmm.steeringUnit = ISO_UNIT_TYPE_STEERING_PERCENTAGE;
 								rcmm.steeringManoeuvre.pct = 0;
 								rcmm.speedUnit = ISO_UNIT_TYPE_SPEED_PERCENTAGE;
-								rcmm.steeringManoeuvre.pct = 0;
+								rcmm.speedManoeuvre.pct = 0;
 
 								C8 ctrlMessageBuffer[35];
 								MessageLength = encodeRCMMMessage(&rcmm, ctrlMessageBuffer, sizeof (ctrlMessageBuffer), 1);
