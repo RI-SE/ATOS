@@ -869,9 +869,10 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to remote control mode", ipString);
 					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
 															&objectEnabledStatus);
-					if (objectEnabledStatus == OBJECT_ENABLED)
+					if (objectEnabledStatus == OBJECT_ENABLED) {
 						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 										&objectConnections[iIndex].commandSocket, 0);
+					}
 				}
 				// TODO: check objects' states
 				LogMessage(LOG_LEVEL_INFO, "Enabled remote control mode");
@@ -900,8 +901,9 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								C8 ctrlMessageBuffer[35];
 								MessageLength = encodeRCMMMessage(&rcmm, ctrlMessageBuffer, sizeof (ctrlMessageBuffer), 1);
 								if (MessageLength > 0) {
-									UtilSendTCPData(MODULE_NAME, ctrlMessageBuffer, MessageLength,
-													&objectConnections[iIndex].commandSocket, 0);
+									UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
+													&objectConnections[iIndex].objectMonitorAddress,
+													MessageBuffer, MessageLength, 0);
 									LogMessage(LOG_LEVEL_INFO, "RCMM was sent to object %lu",
 												object_transmitter_ids[iIndex]);
 									MessageLength = 0;
