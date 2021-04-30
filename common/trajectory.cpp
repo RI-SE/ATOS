@@ -177,10 +177,12 @@ Trajectory::TrajectoryPoint Trajectory::TrajectoryPoint::relativeTo(
 	TrajectoryPoint relative;
 
 	relative.setTime(this->getTime());
-	relative.setPosition(zeroNaNs(this->getPosition())
-						 - zeroNaNs(other.getPosition()));
 	relative.setHeading(this->getHeading() - other.getHeading());
+
+	AngleAxis R3(-other.getHeading(), Vector3d::UnitZ());
 	Rotation2Dd R(-relative.getHeading());
+	relative.setPosition(R3*(zeroNaNs(this->getPosition())
+						 - zeroNaNs(other.getPosition())));
 
 	auto thisVel = zeroNaNs(this->getVelocity());
 	auto otherVel = zeroNaNs(other.getVelocity());

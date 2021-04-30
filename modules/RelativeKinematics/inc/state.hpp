@@ -30,6 +30,9 @@ public:
 	virtual void allObjectsDisarmed(ScenarioHandler&) = 0;
 	virtual void allObjectsConnected(ScenarioHandler&) = 0;
 	virtual void testCompleted(ScenarioHandler&) = 0;
+	virtual void objectDisarmed(ScenarioHandler&,uint32_t) = 0;
+	virtual void objectArmed(ScenarioHandler&,uint32_t) = 0;
+	virtual void objectAborting(ScenarioHandler&,uint32_t) = 0;
 	virtual void postProcessingCompleted(ScenarioHandler&) = 0;
 
 	//! Enter/exit functionality - defaults to nothing
@@ -73,6 +76,9 @@ public:
 	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
+	void objectDisarmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object disarmed"); }
+	void objectArmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object armed"); }
+	void objectAborting(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object aborting"); }
 	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
 
 	OBCState_t asNumber() const override { return OBC_STATE_IDLE; }
@@ -103,6 +109,9 @@ public:
 	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
+	void objectDisarmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object disarmed"); }
+	void objectArmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object armed"); }
+	void objectAborting(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object aborting"); }
 	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
 
 	OBCState_t asNumber() const override { return OBC_STATE_INITIALIZED; }
@@ -119,6 +128,8 @@ public:
 	virtual void connectedToObject(ScenarioHandler&, uint32_t) override;
 	virtual void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
 	virtual void connectedToLiveObject(ScenarioHandler&, uint32_t) override;
+	virtual void objectAborting(ScenarioHandler&,uint32_t) override;
+	virtual void objectArmed(ScenarioHandler&,uint32_t) override;
 	virtual void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
 	virtual void allObjectsConnected(ScenarioHandler&) override;
 
@@ -135,6 +146,7 @@ public:
 	//! Other spontaneous events unexpected
 	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
+	void objectDisarmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object disarmed"); }
 	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
 
 
@@ -150,6 +162,7 @@ public:
 	virtual void armRequest(ScenarioHandler&) override;
 	virtual void disconnectRequest(ScenarioHandler&) override;
 	virtual void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
+	virtual void objectAborting(ScenarioHandler&,uint32_t) override;
 
 	virtual void onEnter(ScenarioHandler&) override;
 
@@ -169,6 +182,8 @@ public:
 	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
+	void objectDisarmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object disarmed"); }
+	void objectArmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object armed"); }
 	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
 
 	OBCState_t asNumber() const override { return OBC_STATE_CONNECTED; }
@@ -184,6 +199,7 @@ public:
 	virtual void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
 	virtual void connectedToLiveObject(ScenarioHandler&, uint32_t) override;
 	virtual void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
+	virtual void objectAborting(ScenarioHandler&,uint32_t) override;
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) override {}
@@ -199,6 +215,8 @@ public:
 	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
+	void objectDisarmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object disarmed"); }
+	void objectArmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object armed"); }
 	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
 
 	// TODO integrate this state into the enum variable
@@ -214,6 +232,10 @@ public:
 	virtual void abortRequest(ScenarioHandler&) override;
 	virtual void testCompleted(ScenarioHandler&) override;
 	virtual void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
+	virtual void objectDisarmed(ScenarioHandler&,uint32_t) override;
+	virtual void objectAborting(ScenarioHandler&,uint32_t) override;
+
+	virtual void onEnter(ScenarioHandler&) override;
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) override {}
@@ -230,6 +252,7 @@ public:
 	void connectedToArmedObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to armed object"); }
 	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
+	void objectArmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object armed"); }
 	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
 
 	OBCState_t asNumber() const override { return OBC_STATE_RUNNING; }
@@ -246,6 +269,9 @@ public:
 	virtual void connectedToArmedObject(ScenarioHandler&,uint32_t) override;
 	virtual void connectedToLiveObject(ScenarioHandler&,uint32_t) override;
 	virtual void allObjectsDisarmed(ScenarioHandler&) override;
+	virtual void objectDisarmed(ScenarioHandler&,uint32_t) override;
+	virtual void objectArmed(ScenarioHandler&,uint32_t) override;
+	virtual void objectAborting(ScenarioHandler&,uint32_t) override;
 
 	virtual void onEnter(ScenarioHandler&) override;
 
@@ -276,6 +302,9 @@ public:
 	virtual void startRequest(ScenarioHandler&) override;
 	virtual void disarmRequest(ScenarioHandler&) override;
 	virtual void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
+	virtual void objectArmed(ScenarioHandler&,uint32_t) override;
+	virtual void objectDisarmed(ScenarioHandler&,uint32_t) override;
+	virtual void objectAborting(ScenarioHandler&,uint32_t) override;
 
 	virtual void onEnter(ScenarioHandler&) override;
 
@@ -307,6 +336,8 @@ public:
 	//! Completing postprocessing allows exiting this state
 	virtual void postProcessingCompleted(ScenarioHandler&) override;
 
+	virtual void onEnter(ScenarioHandler&) override;
+
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) override {}
 	void disconnectRequest(ScenarioHandler&) override {}
@@ -315,7 +346,7 @@ public:
 	void disarmRequest(ScenarioHandler&) override {}
 	void startRequest(ScenarioHandler&) override {}
 	void stopRequest(ScenarioHandler&) override {}
-	void abortRequest(ScenarioHandler&) override {}
+	void abortRequest(ScenarioHandler&) override {} // safe?
 	void allClearRequest(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected
@@ -326,6 +357,9 @@ public:
 	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
 	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
 	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
+	void objectDisarmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object disarmed"); }
+	void objectArmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object armed"); }
+	void objectAborting(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object aborting"); }
 
 	// TODO integrate this state into the enum variable
 	OBCState_t asNumber() const override { return OBC_STATE_RUNNING; }
@@ -353,12 +387,15 @@ class Connecting : public ObjectControl::Connecting {
 	void connectedToLiveObject(ScenarioHandler&, uint32_t) override;
 	void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
 	void allObjectsConnected(ScenarioHandler&) override;
+	void objectArmed(ScenarioHandler&, uint32_t) override;
+	void objectAborting(ScenarioHandler&, uint32_t) override;
 };
 
 class Ready : public ObjectControl::Ready {
 	void armRequest(ScenarioHandler&) override;
 	void disconnectRequest(ScenarioHandler&) override;
 	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
+	void objectAborting(ScenarioHandler&, uint32_t) override;
 };
 
 class Aborting : public ObjectControl::Aborting {
@@ -367,6 +404,7 @@ class Aborting : public ObjectControl::Aborting {
 	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
 	void connectedToLiveObject(ScenarioHandler&, uint32_t) override;
 	void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
+	void objectAborting(ScenarioHandler&, uint32_t) override;
 };
 
 class TestLive : public ObjectControl::TestLive {
@@ -374,6 +412,8 @@ class TestLive : public ObjectControl::TestLive {
 	void abortRequest(ScenarioHandler&) override;
 	void testCompleted(ScenarioHandler&) override;
 	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
+	void objectDisarmed(ScenarioHandler&, uint32_t) override;
+	void objectAborting(ScenarioHandler&, uint32_t) override;
 };
 
 class Disarming : public ObjectControl::Disarming {
@@ -383,12 +423,18 @@ class Disarming : public ObjectControl::Disarming {
 	void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
 	void connectedToLiveObject(ScenarioHandler&, uint32_t) override;
 	void allObjectsDisarmed(ScenarioHandler&) override;
+	void objectDisarmed(ScenarioHandler&,uint32_t) override;
+	void objectArmed(ScenarioHandler&,uint32_t) override;
+	void objectAborting(ScenarioHandler&,uint32_t) override;
 };
 
 class Armed : public ObjectControl::Armed {
 	void startRequest(ScenarioHandler&) override;
 	void disarmRequest(ScenarioHandler&) override;
 	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
+	void objectArmed(ScenarioHandler&,uint32_t) override;
+	void objectDisarmed(ScenarioHandler&,uint32_t) override;
+	void objectAborting(ScenarioHandler&,uint32_t) override;
 };
 
 class Done : public ObjectControl::Done {

@@ -22,11 +22,13 @@ int main() {
 	const struct timespec abortWaitTime = {1,0};
 	struct timespec remTime;
 	const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
+
+	std::string statusReply = MODULE_NAME;
+
 	// Initialize
 	if (initializeModule(logLevel) < 0) {
 		util_error("Failed to initialize module");
 	}
-
 
 	ScenarioHandler scenarioHandler(ScenarioHandler::RELATIVE_KINEMATICS);
 	while (!quit) {
@@ -41,6 +43,7 @@ int main() {
 		case COMM_OBC_STATE:
 			break;
 		case COMM_GETSTATUS:
+			iCommSend(COMM_GETSTATUS_OK, statusReply.c_str(), statusReply.size()+1);
 			break;
 		case COMM_GETSTATUS_OK:
 			break;
@@ -48,7 +51,7 @@ int main() {
 			try {
 				scenarioHandler.handleInitCommand();
 			} catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Initialization failed");
+				LogMessage(LOG_LEVEL_ERROR, "Initialization failed - %s", e.what());
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
 			break;
@@ -56,7 +59,7 @@ int main() {
 			try {
 				scenarioHandler.handleConnectCommand();
 			} catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Connection failed");
+				LogMessage(LOG_LEVEL_ERROR, "Connection failed - %s", e.what());
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
 			break;
@@ -64,7 +67,7 @@ int main() {
 			try {
 				scenarioHandler.handleDisconnectCommand();
 			} catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Connection failed");
+				LogMessage(LOG_LEVEL_ERROR, "Disconnection failed - %s", e.what());
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
 			break;
@@ -72,9 +75,22 @@ int main() {
 			try {
 				scenarioHandler.handleArmCommand();
 			} catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Arm failed");
+				LogMessage(LOG_LEVEL_ERROR, "Arm failed - %s", e.what());
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
+			break;
+		case COMM_STRT:
+			try {
+				// TODO set start delay
+				scenarioHandler.handleStartCommand();
+			} catch (std::invalid_argument& e) {
+				LogMessage(LOG_LEVEL_ERROR, "Start failed - %s", e.what());
+				iCommSend(COMM_FAILURE, nullptr, 0);
+			}
+			break;
+		case COMM_ABORT:
+			// Any exceptions here should crash the program
+			scenarioHandler.handleAbortCommand();
 			break;
 		default:
 			LogMessage(LOG_LEVEL_INFO, "Received command %u", command);

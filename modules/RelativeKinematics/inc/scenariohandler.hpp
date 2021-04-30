@@ -2,12 +2,14 @@
 
 #include "state.hpp"
 #include "testobject.hpp"
+#include "objectlistener.hpp"
 #include <map>
 #include <future>
 #include <set>
 
 // Forward declarations
 class ObjectControlState;
+class ObjectListener;
 
 namespace ObjectControl {
 	class Idle;
@@ -53,6 +55,8 @@ class ScenarioHandler {
 	friend class RelativeKinematics::TestLive;
 	friend class RelativeKinematics::Disarming;
 	friend class RelativeKinematics::Done;
+
+	friend class ObjectListener;
 public:
 	typedef enum {
 		RELATIVE_KINEMATICS,	//!< Scenario executed relative to immobile VUT
@@ -71,10 +75,16 @@ public:
 	void handleDisconnectCommand();
 	//! \brief Performs actions in response to an arm request.
 	void handleArmCommand();
+	//! \brief Performs actions in response to a start request.
+	void handleStartCommand();
+	//! \brief Performs actions in response to an abort request.
+	void handleAbortCommand();
 
 	//! Getters
-	//! \brief Get transmitter ID(s) of VUT(s) participating in test.
-	std::vector<uint32_t> getVehicleUnderTestIDs() const;
+	//! \brief Get transmitter ID of anchor object participating in test.
+	uint32_t getAnchorObjectID() const;
+	//! \brief Get last reported data by anchor object
+	ObjectMonitorType getLastAnchorData() const;
 	//! \brief Get transmitter IDs of all test participants.
 	std::vector<uint32_t> getVehicleIDs() const {
 		std::vector<uint32_t> retval;
@@ -86,11 +96,29 @@ public:
 	//! \brief Get last known ISO state of test participants.
 	std::map<uint32_t,ObjectStateType> getObjectStates() const;
 
+	//! \brief Check if any test participant is in the specified state.
+	//!			The method does not wait for the next MONR to arrive.
+	bool isAnyObjectIn(const ObjectStateType state);
+	//! \brief Check if any test participant is in any of the specified states.
+	//!			The method does not wait for the next MONR to arrive.
+	bool isAnyObjectIn(const std::set<ObjectStateType>& state);
+	//! \brief Checks if all test participants are in the specified state.
+	//!			The method does not wait for the next MONR to arrive.
+	bool areAllObjectsIn(const ObjectStateType state);
+	//! \brief Checks if all test participants are in any of the specified states.
+	//!			The method does not wait for the next MONR to arrive.
+	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
 private:
+	using clock = std::chrono::steady_clock;
+
+	ControlMode controlMode;
 	ObjectControlState* state;					//!< State of module
 	std::map<uint32_t,TestObject> objects;		//!< List of configured test participants
+	std::map<uint32_t,ObjectListener> objectListeners;
 	std::mutex monitorTimeMutex;
-	std::map<uint32_t,std::chrono::time_point<std::chrono::steady_clock>> lastMonitorTime;
+	static constexpr auto heartbeatPeriod = std::chrono::milliseconds(1000 / HEAB_FREQUENCY_HZ);
+	std::thread safetyThread;
+	std::promise<void> stopHeartbeatSignal;
 
 	std::shared_future<void> connStopReqFuture;	//!< Request to stop a connection attempt
 	std::promise<void> connStopReqPromise;		//!< Promise that the above value will be emitted
@@ -108,7 +136,9 @@ private:
 	void connectToObject(TestObject& obj, std::shared_future<void>& connStopReq);
 
 	void startListeners();
-	void listenToObject(TestObject& obj);
+
+	void startSafetyThread();
+	void heartbeat();
 
 	//! Configuration methods
 	//! \brief Read the configured object and trajectory files and load related data
@@ -128,19 +158,8 @@ private:
 	void armObjects();
 	//! \brief TODO
 	void disarmObjects();
-
-	//! \brief Check if any test participant is in the specified state.
-	//!			The method does not wait for the next MONR to arrive.
-	bool isAnyObjectIn(const ObjectStateType state);
-	//! \brief Check if any test participant is in any of the specified states.
-	//!			The method does not wait for the next MONR to arrive.
-	bool isAnyObjectIn(const std::set<ObjectStateType>& state);
-	//! \brief Checks if all test participants are in the specified state.
-	//!			The method does not wait for the next MONR to arrive.
-	bool areAllObjectsIn(const ObjectStateType state);
-	//! \brief Checks if all test participants are in any of the specified states.
-	//!			The method does not wait for the next MONR to arrive.
-	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
+	//! \brief
+	void startObjects();
 
 };
 
