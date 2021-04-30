@@ -16,7 +16,9 @@ set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MESSAGE_BUS_LIBRARY MaestroMQ)
 set(MAESTRO_COMMON_LIBRARY MaestroCommon)
+set(MAESTRO_DATA_DICTIONARY_LIBRARY MaestroDataDictionary)
 set(FILESYSTEM_LIBRARY stdc++fs)
+set(THREAD_LIBRARY pthread)
 
 include(GNUInstallDirs)
 
@@ -25,6 +27,7 @@ add_executable(${RELATIVE_KINEMATICS_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/scenariohandler.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/testobject.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/objectlistener.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/state.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/idle.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/initialized.cpp
@@ -42,7 +45,9 @@ target_link_libraries(${RELATIVE_KINEMATICS_TARGET} LINK_PUBLIC
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
 	${FILESYSTEM_LIBRARY}
+	${THREAD_LIBRARY}
 	${MAESTRO_COMMON_LIBRARY}
+	${MAESTRO_DATA_DICTIONARY_LIBRARY}
 )
 target_include_directories(${RELATIVE_KINEMATICS_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
