@@ -68,6 +68,14 @@ int main() {
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
 			break;
+		case COMM_ARM:
+			try {
+				scenarioHandler.handleArmCommand();
+			} catch (std::invalid_argument& e) {
+				LogMessage(LOG_LEVEL_ERROR, "Arm failed");
+				iCommSend(COMM_FAILURE, nullptr, 0);
+			}
+			break;
 		default:
 			LogMessage(LOG_LEVEL_INFO, "Received command %u", command);
 		}

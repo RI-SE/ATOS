@@ -1,7 +1,7 @@
 #include "state.hpp"
 #include "logging.h"
+#include "type.h"
 #include "datadictionary.h"
-#include <typeinfo>
 #include <exception>
 
 void ObjectControlState::setState(
@@ -9,7 +9,7 @@ void ObjectControlState::setState(
 		ObjectControlState *st) {
 	// Before replacing state, execute any exit behaviour
 	handler.state->onExit(handler);
-	LogMessage(LOG_LEVEL_INFO, "Transitioning to state %s", typeid (*st).name());
+	LogMessage(LOG_LEVEL_INFO, "Transitioning to state %s", type(*st).c_str());
 	// Store state in a temporary variable to avoid handler.state being null at any point
 	ObjectControlState* temp = handler.state;
 	handler.state = st;

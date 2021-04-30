@@ -40,6 +40,10 @@ void ScenarioHandler::handleDisconnectCommand() {
 	this->state->disconnectRequest(*this);
 }
 
+void ScenarioHandler::handleArmCommand() {
+	this->state->armRequest(*this);
+}
+
 void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
@@ -166,6 +170,52 @@ void ScenarioHandler::uploadObjectConfiguration(
 	objects[id].sendSettings();
 }
 
+void ScenarioHandler::listenToObject(TestObject &obj) {
+	if (obj.isConnected()) {
+		try {
+			while (true) {
+				switch (obj.pendingMessageType(true)) {
+				case MESSAGE_ID_MONR: {
+					using std::chrono::steady_clock;
+					using std::chrono::milliseconds;
+
+					auto monr = obj.readMonitorMessage();
+					auto txID = obj.getTransmitterID();
+					std::lock_guard<std::mutex> lock(monitorTimeMutex);
+					auto diff = obj.getTimeSinceLastMonitor();
+					if (diff > obj.getMaxAllowedMonitorPeriod()) {
+						throw std::ios_base::failure("MONR timeout: " + std::to_string(
+														 std::chrono::duration_cast<milliseconds>(diff).count()) + " ms > "
+													 + std::to_string(obj.getMaxAllowedMonitorPeriod().count()) + " ms");
+					}
+					this->lastMonitorTime[txID] = steady_clock::now();
+					LogPrint("Received MONR!");
+					break;
+				}
+				case MESSAGE_ID_TREO:
+					// TODO
+					break;
+				case MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO:
+					obj.parseObjectPropertyMessage();
+					LogPrint("Received OPRO!");
+					// TODO
+					break;
+				default:
+					LogPrint("Received something!");
+					// TODO
+					break;
+				}
+			}
+		} catch (std::invalid_argument& e) {
+			LogMessage(LOG_LEVEL_ERROR, e.what());
+		} catch (std::ios_base::failure& e) {
+			LogMessage(LOG_LEVEL_ERROR, e.what());
+			obj.disconnect();
+			this->state->disconnectedFromObject(*this, obj.getTransmitterID());
+		}
+	}
+}
+
 void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> &connStopReq) {
 	try {
 		if (!obj.isConnected()) {
@@ -221,6 +271,24 @@ void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> 
 	}
 };
 
+void ScenarioHandler::armObjects() {
+	for (auto& id : getVehicleIDs()) {
+		objects[id].sendArm();
+	}
+}
+
+void ScenarioHandler::disarmObjects() {
+	for (auto& id : getVehicleIDs()) {
+		try {
+			objects[id].sendDisarm();
+		}
+		catch (std::invalid_argument& e) {
+			LogMessage(LOG_LEVEL_ERROR, "Unable to disarm object %u: %s", id, e.what());
+		}
+	}
+	this->state->allObjectsDisarmed(*this); // TODO add a check on object states as well
+}
+
 bool ScenarioHandler::isAnyObjectIn(
 		const ObjectStateType state) {
 	return std::any_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,TestObject>& obj) {
@@ -235,3 +303,16 @@ bool ScenarioHandler::areAllObjectsIn(
 	});
 }
 
+bool ScenarioHandler::isAnyObjectIn(
+		const std::set<ObjectStateType>& states) {
+	return std::any_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,TestObject>& obj) {
+		return states.find(obj.second.getState()) != states.end();
+	});
+}
+
+bool ScenarioHandler::areAllObjectsIn(
+		const std::set<ObjectStateType>& states) {
+	return std::all_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,TestObject>& obj) {
+		return states.find(obj.second.getState()) != states.end();
+	});
+}
