@@ -161,7 +161,6 @@ private:
 	//! \brief
 	void startObjects();
 
-
 };
 
 

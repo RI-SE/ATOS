@@ -6,6 +6,7 @@ ObjectControl::Ready::Ready() {
 
 void ObjectControl::Ready::onEnter(
 		ScenarioHandler& handler) {
+	handler.startSafetyThread();
 }
 
 void ObjectControl::Ready::armRequest(

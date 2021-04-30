@@ -189,13 +189,17 @@ void ScenarioHandler::uploadObjectConfiguration(
 
 void ScenarioHandler::startSafetyThread() {
 	stopHeartbeatSignal = std::promise<void>();
+	if (safetyThread.joinable()) {
+		safetyThread.join();
+	}
 	safetyThread = std::thread(&ScenarioHandler::heartbeat, this);
 }
 
 void ScenarioHandler::heartbeat() {
-	using std::chrono::milliseconds;
 	auto stopRequest = stopHeartbeatSignal.get_future();
 	clock::time_point nextHeartbeat = clock::now();
+
+	LogMessage(LOG_LEVEL_DEBUG, "Starting heartbeat thread");
 	while (stopRequest.wait_until(nextHeartbeat) == std::future_status::timeout) {
 		nextHeartbeat += heartbeatPeriod;
 
@@ -215,6 +219,7 @@ void ScenarioHandler::heartbeat() {
 			objects[id].sendHeartbeat(this->state->asControlCenterStatus());
 		}
 	}
+	LogMessage(LOG_LEVEL_INFO, "Heartbeat thread exiting");
 }
 
 void ScenarioHandler::startListeners() {
