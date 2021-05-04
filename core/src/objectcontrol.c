@@ -685,7 +685,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 										LogMessage(LOG_LEVEL_INFO, "RCMM message sent to object %lu",
 												object_transmitter_ids[iIndex]);
 										MessageLength = 0;
-										memset(ctrlMessageBuffer, 0, 100);
+										memset(ctrlMessageBuffer, 0, sizeof(ctrlMessageBuffer));
 									}
 									else {
 										LogMessage(LOG_LEVEL_ERROR, "Error encoding remote control message");
@@ -733,7 +733,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 										LogMessage(LOG_LEVEL_INFO, "DCMM message sent to object %lu",
 												   object_transmitter_ids[iIndex]);
 										MessageLength = 0;
-										memset(ctrlMessageBuffer, 0, 100);
+										memset(ctrlMessageBuffer, 0, sizeof(ctrlMessageBuffer));
 									}
 									else {
 										LogMessage(LOG_LEVEL_ERROR, "Error encoding direct control message");
@@ -888,32 +888,27 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							ObjectDataType monitorData;
 							DataDictionaryGetMonitorData(object_transmitter_ids[iIndex], &monitorData.MonrData);
 							if(monitorData.MonrData.speed.isLongitudinalValid && !monitorData.MonrData.speed.longitudinal_m_s > 0.0) {
-							// FR 21-05-04: Commented out due to a bug. Se Jira SWD-1074:
-							// "HEAB related issues in Car_Client when disabling Remote control"
-							// 	// If object is standing still -> Send RCMM with zero speed and steering
-							// 	RemoteControlManoeuvreMessageType rcmm;
-							// 	rcmm.command = MANOEUVRE_NONE;
-							// 	rcmm.isSteeringManoeuvreValid = true;
-							// 	rcmm.isSpeedManoeuvreValid = true;
-							// 	rcmm.steeringUnit = ISO_UNIT_TYPE_STEERING_PERCENTAGE;
-							// 	rcmm.steeringManoeuvre.pct = 0;
-							// 	rcmm.speedUnit = ISO_UNIT_TYPE_SPEED_PERCENTAGE;
-							// 	rcmm.speedManoeuvre.pct = 0;
+								// When object is standing still -> Send RCMM with zero speed and steering
+								RemoteControlManoeuvreMessageType rcmm;
+								rcmm.command = MANOEUVRE_NONE;
+								rcmm.isSteeringManoeuvreValid = true;
+								rcmm.isSpeedManoeuvreValid = true;
+								rcmm.steeringUnit = ISO_UNIT_TYPE_STEERING_PERCENTAGE;
+								rcmm.steeringManoeuvre.pct = 0;
+								rcmm.speedUnit = ISO_UNIT_TYPE_SPEED_PERCENTAGE;
+								rcmm.speedManoeuvre.pct = 0;
 
-							// 	C8 ctrlMessageBuffer[35];
-							// 	MessageLength = encodeRCMMMessage(&rcmm, ctrlMessageBuffer, sizeof (ctrlMessageBuffer), 1);
-							// 	if (MessageLength > 0) {
-							// 		UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
-							// 						&objectConnections[iIndex].objectMonitorAddress,
-							// 						MessageBuffer, MessageLength, 0);
-							// 		LogMessage(LOG_LEVEL_INFO, "Stop RCMM was sent to object %lu",
-							// 					object_transmitter_ids[iIndex]);
-							// 		MessageLength = 0;
-							// 		memset(ctrlMessageBuffer, 0, 100);
-							// 	}
-							// 	else {
-							// 		LogMessage(LOG_LEVEL_ERROR, "Error encoding RCMM");
-							// 	}
+								MessageLength = encodeRCMMMessage(&rcmm, MessageBuffer, sizeof (MessageBuffer), 0);
+								if (MessageLength > 0) {
+									UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
+													&objectConnections[iIndex].objectMonitorAddress,
+													MessageBuffer, MessageLength, 0);
+									LogMessage(LOG_LEVEL_INFO, "Stop RCMM was sent to object %lu",
+												object_transmitter_ids[iIndex]);
+								}
+								else {
+									LogMessage(LOG_LEVEL_ERROR, "Error encoding RCMM");
+								}
 
 								MessageLength =
 									encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
