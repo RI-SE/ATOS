@@ -888,6 +888,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							ObjectDataType monitorData;
 							DataDictionaryGetMonitorData(object_transmitter_ids[iIndex], &monitorData.MonrData);
 							if(monitorData.MonrData.speed.isLongitudinalValid && !monitorData.MonrData.speed.longitudinal_m_s > 0.0) {
+							// FR 21-05-04: Commented out due to a bug. Se Jira SWD-1074:
+							// "HEAB related issues in Car_Client when disabling Remote control"
 							// 	// If object is standing still -> Send RCMM with zero speed and steering
 							// 	RemoteControlManoeuvreMessageType rcmm;
 							// 	rcmm.command = MANOEUVRE_NONE;
