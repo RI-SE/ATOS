@@ -809,12 +809,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_STRT && (vGetState() == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED) */ )	//OBC_STATE_INITIALIZED is temporary!
 			{
 				struct timeval startTime, startDelay;
+				StartMessageType startMsg;
+				startMsg.isTimestampValid = true;
 
 				MiscPtr = pcRecvBuffer;
 				TimeSetToUTCms(&startTime, (int64_t) strtoul(MiscPtr, &MiscPtr, 10));
 				TimeSetToUTCms(&startDelay, (int64_t) strtoul(MiscPtr + 1, NULL, 10));
 				timeradd(&startTime, &startDelay, &startTime);
-				MessageLength = encodeSTRTMessage(&startTime, MessageBuffer, sizeof (MessageBuffer), 0);
+				startMsg.startTime = startTime;
+				MessageLength = encodeSTRTMessage(&startMsg, MessageBuffer, sizeof (MessageBuffer), 0);
 
 				ASPData.MTSPU32 = 0;
 				ASPData.TimeToSyncPointDbl = 0;
@@ -1186,6 +1189,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				UtilPopulateEXACDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqEXACData);
 				int commandIndex;
 
+
+
 				if ((commandIndex =
 					 findCommandAction(mqEXACData.actionID, commandActions,
 									   sizeof (commandActions) / sizeof (commandActions[0]))) != -1) {
@@ -1195,15 +1200,17 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						DataDictionaryGetObjectEnableStatusByIp(mqEXACData.ip, &objectEnabledStatus);
 						if (iIndex != -1 && objectEnabledStatus == OBJECT_ENABLED) {
 							struct timeval startTime;
-
+							StartMessageType startMsg;
+							startMsg.isTimestampValid = true;
 							TimeSetToCurrentSystemTime(&currentTime);
 							TimeSetToGPStime(&startTime, TimeGetAsGPSweek(&currentTime),
 											 mqEXACData.executionTime_qmsoW);
 							LogMessage(LOG_LEVEL_INFO, "Current time: %ld, Start time: %ld, delay: %u",
 									   TimeGetAsUTCms(&currentTime), TimeGetAsUTCms(&startTime),
 									   mqEXACData.executionTime_qmsoW);
+							startMsg.startTime = startTime;
 							MessageLength =
-								encodeSTRTMessage(&startTime, MessageBuffer, sizeof (MessageBuffer), 0);
+								encodeSTRTMessage(&startMsg, MessageBuffer, sizeof (MessageBuffer), 0);
 							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 											&objectConnections[iIndex].commandSocket, 0);
 						}

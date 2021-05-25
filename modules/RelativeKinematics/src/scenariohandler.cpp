@@ -22,6 +22,7 @@ ScenarioHandler::ScenarioHandler(
 		LogMessage(LOG_LEVEL_ERROR, "Unimplemented control mode requested");
 		break;
 	}
+	this->controlMode = controlMode;
 }
 
 ScenarioHandler::~ScenarioHandler() {
@@ -40,10 +41,26 @@ void ScenarioHandler::handleDisconnectCommand() {
 	this->state->disconnectRequest(*this);
 }
 
+void ScenarioHandler::handleArmCommand() {
+	this->state->armRequest(*this);
+}
+
+void ScenarioHandler::handleStartCommand() {
+	this->state->startRequest(*this);
+}
+
+void ScenarioHandler::handleAbortCommand() {
+	this->state->abortRequest(*this);
+}
+
 void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
 		o.second.parseTrajectoryFile(o.second.getTrajectoryFile());
+	});
+	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
+		auto data = o.second.getAsObjectData();
+		DataDictionarySetObjectData(&data);
 	});
 }
 
@@ -95,14 +112,18 @@ void ScenarioHandler::loadObjectFiles() {
 	}
 }
 
-std::vector<uint32_t> ScenarioHandler::getVehicleUnderTestIDs() const {
-	std::vector<uint32_t> retval;
+uint32_t ScenarioHandler::getAnchorObjectID() const {
 	for (auto& object : objects) {
-		if (object.second.isVehicleUnderTest()) {
-			retval.push_back(object.first);
+		if (object.second.isAnchor()) {
+			return object.first;
 		}
 	}
-	return retval;
+	throw std::invalid_argument("No configured anchor object found");
+}
+
+ObjectMonitorType ScenarioHandler::getLastAnchorData() const {
+	auto anchorID = getAnchorObjectID();
+	return objects.at(anchorID).getLastMonitorData();
 }
 
 std::map<uint32_t,ObjectStateType> ScenarioHandler::getObjectStates() const {
@@ -117,7 +138,7 @@ void ScenarioHandler::transformScenarioRelativeTo(
 		const uint32_t objectID) {
 	for (auto& id : getVehicleIDs()) {
 		if (id == objectID) {
-			// Skip for now TODO also here
+			// Skip for now TODO also here - maybe?
 			continue;
 		}
 		auto traj = objects[id].getTrajectory();
@@ -164,6 +185,57 @@ void ScenarioHandler::disconnectObjects() {
 void ScenarioHandler::uploadObjectConfiguration(
 		const uint32_t id) {
 	objects[id].sendSettings();
+}
+
+void ScenarioHandler::startSafetyThread() {
+	stopHeartbeatSignal = std::promise<void>();
+	if (safetyThread.joinable()) {
+		safetyThread.join();
+	}
+	safetyThread = std::thread(&ScenarioHandler::heartbeat, this);
+}
+
+void ScenarioHandler::heartbeat() {
+	auto stopRequest = stopHeartbeatSignal.get_future();
+	clock::time_point nextHeartbeat = clock::now();
+
+	LogMessage(LOG_LEVEL_DEBUG, "Starting heartbeat thread");
+	while (stopRequest.wait_until(nextHeartbeat) == std::future_status::timeout) {
+		nextHeartbeat += heartbeatPeriod;
+
+		// Check time since MONR for all objects
+		for (const auto& id : getVehicleIDs()) {
+			auto diff = objects[id].getTimeSinceLastMonitor();
+			if (diff > objects[id].getMaxAllowedMonitorPeriod()) {
+				LogMessage(LOG_LEVEL_WARNING, "MONR timeout for object %u: %d ms > %d ms", id,
+						   diff.count(), objects[id].getMaxAllowedMonitorPeriod().count());
+				objects[id].disconnect();
+				this->state->disconnectedFromObject(*this, id);
+			}
+		}
+
+		// Send heartbeat
+		for (const auto& id : getVehicleIDs()) {
+			try {
+				objects[id].sendHeartbeat(this->state->asControlCenterStatus());
+			}
+			catch (std::invalid_argument& e) {
+				LogMessage(LOG_LEVEL_WARNING, e.what());
+				LogMessage(LOG_LEVEL_WARNING, "Disconnecting object %u", id);
+				objects[id].disconnect();
+				this->state->disconnectedFromObject(*this, id);
+			}
+		}
+	}
+	LogMessage(LOG_LEVEL_INFO, "Heartbeat thread exiting");
+}
+
+void ScenarioHandler::startListeners() {
+	LogMessage(LOG_LEVEL_DEBUG, "Starting listeners");
+	objectListeners.clear();
+	for (const auto& id : getVehicleIDs()) {
+		objectListeners.try_emplace(id, this, &objects[id]);
+	}
 }
 
 void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> &connStopReq) {
@@ -221,6 +293,30 @@ void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> 
 	}
 };
 
+void ScenarioHandler::armObjects() {
+	for (auto& id : getVehicleIDs()) {
+		objects[id].sendArm();
+	}
+}
+
+void ScenarioHandler::disarmObjects() {
+	for (auto& id : getVehicleIDs()) {
+		try {
+			objects[id].sendDisarm();
+		}
+		catch (std::invalid_argument& e) {
+			LogMessage(LOG_LEVEL_ERROR, "Unable to disarm object %u: %s", id, e.what());
+		}
+	}
+	this->state->allObjectsDisarmed(*this); // TODO add a check on object states as well
+}
+
+void ScenarioHandler::startObjects() {
+	for (auto& id : getVehicleIDs()) {
+		objects[id].sendStart();
+	}
+}
+
 bool ScenarioHandler::isAnyObjectIn(
 		const ObjectStateType state) {
 	return std::any_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,TestObject>& obj) {
@@ -235,3 +331,16 @@ bool ScenarioHandler::areAllObjectsIn(
 	});
 }
 
+bool ScenarioHandler::isAnyObjectIn(
+		const std::set<ObjectStateType>& states) {
+	return std::any_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,TestObject>& obj) {
+		return states.find(obj.second.getState()) != states.end();
+	});
+}
+
+bool ScenarioHandler::areAllObjectsIn(
+		const std::set<ObjectStateType>& states) {
+	return std::all_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,TestObject>& obj) {
+		return states.find(obj.second.getState()) != states.end();
+	});
+}

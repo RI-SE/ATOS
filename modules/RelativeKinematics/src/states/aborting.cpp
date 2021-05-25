@@ -32,9 +32,16 @@ void ObjectControl::Aborting::connectedToArmedObject(
 	// TODO
 }
 
-void RelativeKinematics::Aborting::allClearRequest(
-		ScenarioHandler&) {
+void ObjectControl::Aborting::objectAborting(
+		ScenarioHandler &,
+		uint32_t) {
 	// TODO
+}
+
+void RelativeKinematics::Aborting::allClearRequest(
+		ScenarioHandler &handler) {
+	ObjectControl::Aborting::allClearRequest(handler);
+	setState(handler, new RelativeKinematics::Ready());
 }
 
 void RelativeKinematics::Aborting::connectedToObject(
@@ -58,5 +65,12 @@ void RelativeKinematics::Aborting::connectedToLiveObject(
 void RelativeKinematics::Aborting::connectedToArmedObject(
 		ScenarioHandler&,
 		uint32_t) {
+	// TODO
+}
+
+void RelativeKinematics::Aborting::objectAborting(
+		ScenarioHandler &handler,
+		uint32_t id) {
+	ObjectControl::Aborting::objectAborting(handler, id);
 	// TODO
 }

@@ -15,7 +15,7 @@ TestObject::TestObject(TestObject&& other) :
 	objectFile(other.objectFile),
 	trajectoryFile(other.trajectoryFile),
 	transmitterID(other.transmitterID),
-	isVUT(other.isVUT),
+	isAnchorObject(other.isAnchorObject),
 	trajectory(other.trajectory),
 	origin(other.origin),
 	lastMonitor(other.lastMonitor),
@@ -41,46 +41,50 @@ void TestObject::setMonitorAddress(
 	}
 }
 
-ObjectDataType TestObject::awaitNextMonitor() {
-	ssize_t result = 0;
+ObjectDataType TestObject::getAsObjectData() const {
 	ObjectDataType retval;
-	struct timeval tv;
-	// Read until receive buffer is empty, return last read message
-	result = recv(this->comms.mntr.socket, this->comms.mntr.receiveBuffer.data(),
-				  this->comms.mntr.receiveBuffer.size(), 0);
-	if (result < 0) {
-		this->comms.disconnect();
-		throw std::ios_base::failure(std::string("Failed to receive from monitor socket: ") + strerror(errno));
-	}
-	else if (result == 0) {
-		this->comms.disconnect();
-		throw std::ios_base::failure("Remote closed monitor socket");
-	}
+	// TODO check on isValid for each
+	retval.origin.Latitude = this->origin.latitude_deg;
+	retval.origin.Longitude = this->origin.longitude_deg;
+	retval.origin.Altitude = this->origin.altitude_m;
 
-	if (getISOMessageType(this->comms.mntr.receiveBuffer.data(), static_cast<size_t>(result), false) == MESSAGE_ID_MONR) {
-		retval.ClientIP = this->comms.cmd.addr.sin_addr.s_addr;
-		TimeSetToCurrentSystemTime(&tv);
-		if (decodeMONRMessage(this->comms.mntr.receiveBuffer.data(), static_cast<size_t>(result),
-							  tv, &retval.ClientID, &retval.MonrData, false) < 0) {
-			this->comms.disconnect();
-			throw std::invalid_argument("Error decoding MONR from object"); // TODO add details which exact object sent the data
-		}
-		retval.lastPositionUpdate = tv;
-		// TODO check age
+	retval.Enabled = OBJECT_ENABLED; // TODO maybe a setting for this
+	retval.ClientIP = this->comms.cmd.addr.sin_addr.s_addr;
+	retval.ClientID =  this->getTransmitterID();
+	auto diff = this->getTimeSinceLastMonitor();
+	if (diff.count() == 0) {
+		retval.lastPositionUpdate = {0, 0};
 	}
 	else {
-		throw std::invalid_argument("Received non-MONR message on MONR channel");
+		struct timeval tvnow, tvdiff;
+		TimeSetToCurrentSystemTime(&tvnow);
+		to_timeval(diff, tvdiff);
+		timersub(&tvnow, &tvdiff, &retval.lastPositionUpdate);
 	}
+	retval.propertiesReceived = false; // TODO once OPRO is parsed
 
 	return retval;
 }
 
-void TestObject::updateMonitor(const ObjectDataType &data) {
-	if (data.ClientID != this->getTransmitterID()) {
-		throw std::invalid_argument("Attempted to set monitor data with non-matching transmitter ID");
+MonitorMessage TestObject::awaitNextMonitor() {
+	MonitorMessage retval;
+	// Read until receive buffer is empty, return last read message
+	if (this->comms.mntr.pendingMessageType(true) == MESSAGE_ID_MONR) {
+		this->comms.mntr >> retval;
+		return retval;
 	}
-	this->state = data.MonrData.state;
-	this->lastMonitor = data;
+	else {
+		throw std::invalid_argument("Received non-MONR message on MONR channel");
+	}
+}
+
+void TestObject::updateMonitor(const MonitorMessage& data) {
+	if (data.first != this->getTransmitterID()) {
+		throw std::invalid_argument("Attempted to set monitor data with non-matching transmitter ID ("
+									+ std::to_string(data.first) + " != " + std::to_string(this->getTransmitterID()) + ")");
+	}
+	this->state = data.second.state;
+	this->lastMonitor = data.second;
 }
 
 ObjectStateType TestObject::getState(bool awaitUpdate) {
@@ -105,7 +109,7 @@ std::string TestObject::toString() const {
 	std::string retval = "";
 	retval += "Object ID " + std::to_string(transmitterID)
 			+ ", IP " + ipAddr + ", trajectory file " + trajectoryFile.filename().string()
-			+ ", object file " + objectFile.filename().string() + ", VUT:" + (isVUT?"Yes":"No");
+			+ ", object file " + objectFile.filename().string() + ", anchor: " + (isAnchorObject?"Yes":"No");
 	return retval;
 }
 
@@ -170,29 +174,29 @@ void TestObject::parseConfigurationFile(
 	}
 	this->transmitterID = id;
 
-	// Get VUT setting
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_IS_VUT, objectFile.c_str(),
+	// Get anchor setting
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_IS_ANCHOR, objectFile.c_str(),
 								 objectFile.string().length(),
 								 setting, sizeof (setting)) == -1) {
-		this->isVUT = false;
+		this->isAnchorObject = false;
 	}
 	else {
 		if (setting[0] == '1' || setting[0] == '0') {
-			this->isVUT = setting[0] == '1';
+			this->isAnchorObject = setting[0] == '1';
 		}
 		else {
-			std::string vutSetting(setting);
-			for (char &c : vutSetting) {
+			std::string anchorSetting(setting);
+			for (char &c : anchorSetting) {
 				c = std::tolower(c, std::locale());
 			}
-			if (vutSetting.compare("true") == 0) {
-				this->isVUT = true;
+			if (anchorSetting.compare("true") == 0) {
+				this->isAnchorObject = true;
 			}
-			else if (vutSetting.compare("false") == 0) {
-				this->isVUT = false;
+			else if (anchorSetting.compare("false") == 0) {
+				this->isAnchorObject = false;
 			}
 			else {
-				throw std::invalid_argument("VUT setting " + std::string(setting) + " in file "
+				throw std::invalid_argument("Anchor setting " + std::string(setting) + " in file "
 											+ objectFile.string() + " is invalid");
 			}
 		}
@@ -258,6 +262,7 @@ void TestObject::parseTrajectoryFile(
 }
 
 void TestObject::establishConnection(std::shared_future<void> stopRequest) {
+	this->lastMonitorTime = std::chrono::steady_clock::time_point(); // reset
 	this->comms.connect(stopRequest, TestObject::connRetryPeriod);
 }
 
@@ -326,8 +331,15 @@ void ObjectConnection::connect(
 
 
 bool ObjectConnection::isConnected() const {
-	// TODO
-	return false;
+	if (!isValid()) {
+		return false;
+	}
+	pollfd fds[2];
+	fds[0].fd = mntr.socket;
+	fds[0].events = POLLIN | POLLOUT;
+	fds[1].fd = cmd.socket;
+	fds[1].events = POLLIN | POLLOUT;
+	return poll(fds, 2, 0) >= 0;
 }
 
 bool ObjectConnection::isValid() const {
@@ -370,6 +382,67 @@ void TestObject::sendSettings() {
 
 	this->comms.cmd << objSettings;
 	this->comms.cmd << trajectory;
+}
+
+void TestObject::sendArm() {
+	this->comms.cmd << OBJECT_COMMAND_ARM;
+}
+
+void TestObject::sendDisarm() {
+	this->comms.cmd << OBJECT_COMMAND_DISARM;
+}
+
+void TestObject::sendStart() {
+	StartMessageType strt;
+	TimeSetToCurrentSystemTime(&strt.startTime); // TODO make possible to modify
+	strt.isTimestampValid = true;
+	this->comms.cmd << strt;
+}
+
+ISOMessageID Channel::pendingMessageType(bool awaitNext) {
+	auto result = recv(this->socket, this->receiveBuffer.data(), this->receiveBuffer.size(), (awaitNext ? 0 : MSG_DONTWAIT) | MSG_PEEK);
+	if (result < 0 && !awaitNext && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+		return MESSAGE_ID_INVALID;
+	}
+	else if (result < 0) {
+		throw std::ios_base::failure(std::string("Failed to check pending message type (recv: ")
+									 + strerror(errno) + ")");
+	}
+	else if (result == 0) {
+		throw std::ios_base::failure("Connection reset by peer");
+	}
+	else {
+		ISOMessageID retval = getISOMessageType(this->receiveBuffer.data(), this->receiveBuffer.size(), false);
+		if (retval == MESSAGE_ID_INVALID) {
+			throw std::invalid_argument("Non-ISO message received from " + this->remoteIP());
+		}
+		return retval;
+	}
+}
+
+ISOMessageID ObjectConnection::pendingMessageType(bool awaitNext) {
+	if (awaitNext) {
+		fd_set fds;
+		FD_ZERO(&fds);
+		FD_SET(mntr.socket, &fds);
+		FD_SET(cmd.socket, &fds);
+		auto result = select(std::max(mntr.socket,cmd.socket)+1,
+							 &fds, nullptr, nullptr, nullptr);
+		if (result < 0) {
+			throw std::ios_base::failure(std::string("Failed socket operation (select: ") + strerror(errno) + ")"); // TODO clearer
+		}
+		else if (FD_ISSET(mntr.socket, &fds)) {
+			return this->mntr.pendingMessageType();
+		}
+		else if (FD_ISSET(cmd.socket, &fds)) {
+			return this->cmd.pendingMessageType();
+		}
+		throw std::logic_error("Call to select returned unexpectedly");
+	}
+	else {
+		auto retval = this->mntr.pendingMessageType();
+		return retval != MESSAGE_ID_INVALID ? retval : this->cmd.pendingMessageType();
+	}
 }
 
 Channel& operator<<(Channel& chnl, const HeabMessageDataType& heartbeat) {
@@ -446,4 +519,70 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 		throw std::invalid_argument(std::string("Failed to send TRAJ message: ") + strerror(errno));
 	}
 	return chnl;
+}
+
+Channel& operator<<(Channel& chnl, const ObjectCommandType& cmd) {
+	auto nBytes = encodeOSTMMessage(cmd, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to encode OSTM message: ") + strerror(errno));
+	}
+	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to send OSTM: ") + strerror(errno));
+	}
+	return chnl;
+}
+
+Channel& operator<<(Channel& chnl, const StartMessageType& strt) {
+	auto nBytes = encodeSTRTMessage(&strt, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to encode STRT message: ") + strerror(errno));
+	}
+
+	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to send STRT: ") + strerror(errno));
+	}
+	return chnl;
+}
+
+Channel& operator>>(Channel& chnl, MonitorMessage& monitor) {
+	if (chnl.pendingMessageType() == MESSAGE_ID_MONR) {
+		struct timeval tv;
+		TimeSetToCurrentSystemTime(&tv);
+		auto nBytes = decodeMONRMessage(chnl.receiveBuffer.data(), chnl.receiveBuffer.size(), tv,
+										&monitor.first, &monitor.second, false);
+		if (nBytes < 0) {
+			throw std::invalid_argument("Failed to decode MONR message");
+		}
+		else {
+			nBytes = recv(chnl.socket, chnl.receiveBuffer.data(), static_cast<size_t>(nBytes), 0);
+			if (nBytes <= 0) {
+				throw std::ios_base::failure("Unable to clear from socket buffer");
+			}
+		}
+	}
+	return chnl;
+}
+
+Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
+	if (chnl.pendingMessageType() == MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO) {
+		auto nBytes = decodeOPROMessage(&prop, chnl.receiveBuffer.data(), chnl.receiveBuffer.size(), false);
+		if (nBytes < 0) {
+			throw std::invalid_argument(strerror(errno));
+		}
+		else {
+			nBytes = recv(chnl.socket, chnl.receiveBuffer.data(), static_cast<size_t>(nBytes), 0);
+			if (nBytes <= 0) {
+				throw std::ios_base::failure("Unable to clear from socket buffer");
+			}
+		}
+	}
+	return chnl;
+}
+
+std::string Channel::remoteIP() const {
+	char ipString[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &this->addr.sin_addr, ipString, sizeof (ipString));
+	return std::string(ipString);
 }

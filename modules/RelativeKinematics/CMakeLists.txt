@@ -27,6 +27,7 @@ add_executable(${RELATIVE_KINEMATICS_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/scenariohandler.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/testobject.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/objectlistener.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/state.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/idle.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/initialized.cpp
