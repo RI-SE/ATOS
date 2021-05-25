@@ -216,7 +216,15 @@ void ScenarioHandler::heartbeat() {
 
 		// Send heartbeat
 		for (const auto& id : getVehicleIDs()) {
-			objects[id].sendHeartbeat(this->state->asControlCenterStatus());
+			try {
+				objects[id].sendHeartbeat(this->state->asControlCenterStatus());
+			}
+			catch (std::invalid_argument& e) {
+				LogMessage(LOG_LEVEL_WARNING, e.what());
+				LogMessage(LOG_LEVEL_WARNING, "Disconnecting object %u", id);
+				objects[id].disconnect();
+				this->state->disconnectedFromObject(*this, id);
+			}
 		}
 	}
 	LogMessage(LOG_LEVEL_INFO, "Heartbeat thread exiting");
