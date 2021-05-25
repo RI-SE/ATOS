@@ -649,8 +649,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								if (vGetState() == OBC_STATE_REMOTECTRL) {
 									// Encode RCMM
 									RemoteControlManoeuvreMessageType rcmmMessage;
-
-									rcmmMessage.status = 0; // TODO: Remove later. Will be obsolete in next ISO version
 									rcmmMessage.command = MANOEUVRE_NONE;
 									rcmmMessage.isSteeringManoeuvreValid = reqCtrlAction.isSteeringActionValid;
 									rcmmMessage.isSpeedManoeuvreValid = reqCtrlAction.isSpeedActionValid;
@@ -679,6 +677,19 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 									MessageLength =
 										encodeRCMMMessage(&rcmmMessage, ctrlMessageBuffer, sizeof (ctrlMessageBuffer), 0);
+
+									if (MessageLength > 0) {
+										UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
+											&objectConnections[iIndex].objectMonitorAddress,
+											ctrlMessageBuffer, MessageLength, 0);
+										LogMessage(LOG_LEVEL_INFO, "RCMM message sent to object %lu",
+												object_transmitter_ids[iIndex]);
+										MessageLength = 0;
+										memset(ctrlMessageBuffer, 0, sizeof(ctrlMessageBuffer));
+									}
+									else {
+										LogMessage(LOG_LEVEL_ERROR, "Error encoding remote control message");
+									}
 								}
 								else {
 									// Encode DCMM
@@ -715,18 +726,20 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 									MessageLength =
 										encodeDCMMMessage(&dcmmMessage, ctrlMessageBuffer, sizeof (ctrlMessageBuffer), 0);
 									// when we sent the data with bigger fuffer we got a valueid error in decoder 
+
+									if (MessageLength > 0) {
+										UtilSendTCPData(MODULE_NAME, ctrlMessageBuffer, MessageLength,
+														&objectConnections[iIndex].commandSocket, 0);
+										LogMessage(LOG_LEVEL_INFO, "DCMM message sent to object %lu",
+												   object_transmitter_ids[iIndex]);
+										MessageLength = 0;
+										memset(ctrlMessageBuffer, 0, sizeof(ctrlMessageBuffer));
+									}
+									else {
+										LogMessage(LOG_LEVEL_ERROR, "Error encoding direct control message");
+									}
 								}
-								if (MessageLength > 0) {
-									UtilSendTCPData(MODULE_NAME, ctrlMessageBuffer, MessageLength,
-													&objectConnections[iIndex].commandSocket, 0);
-									LogMessage(LOG_LEVEL_INFO, "RCMM/DCMM message sent to object %lu",
-											   object_transmitter_ids[iIndex]);
-									MessageLength = 0;
-									memset(ctrlMessageBuffer, 0, 100);
-								}
-								else {
-									LogMessage(LOG_LEVEL_ERROR, "Error encoding remote/direct control message");
-								}
+
 								timerclear(&reqCtrlAction.dataTimestamp);
 								DataDictionarySetRequestedControlAction(object_transmitter_ids[iIndex],
 																		&reqCtrlAction);
@@ -839,13 +852,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				//LogMessage(LOG_LEVEL_INFO, "Entering REPLAY mode <%s>", pcRecvBuffer);
 				LogMessage(LOG_LEVEL_WARNING, "REPLAY mode support deprecated");
 			}
-			else if (iCommand == COMM_ABORT && vGetState() == OBC_STATE_RUNNING) {
+			else if (iCommand == COMM_ABORT && (vGetState() == OBC_STATE_RUNNING || vGetState() == OBC_STATE_REMOTECTRL)) {
 				vSetState(OBC_STATE_CONNECTED);
 				objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 				LogMessage(LOG_LEVEL_WARNING, "ABORT received");
 				JournalRecordData(JOURNAL_RECORD_EVENT, "ABORT received");
 			}
-			else if (iCommand == COMM_REMOTECTRL_ENABLE) {
+			else if (iCommand == COMM_REMOTECTRL_ENABLE && vGetState() == OBC_STATE_CONNECTED) {
+
 				vSetState(OBC_STATE_REMOTECTRL);
 				// TODO: objectControlServerStatus = something
 				MessageLength =
@@ -858,32 +872,75 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to remote control mode", ipString);
 					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
 															&objectEnabledStatus);
-					if (objectEnabledStatus == OBJECT_ENABLED)
+					if (objectEnabledStatus == OBJECT_ENABLED) {
 						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 										&objectConnections[iIndex].commandSocket, 0);
+					}
 				}
 				// TODO: check objects' states
 				LogMessage(LOG_LEVEL_INFO, "Enabled remote control mode");
 			}
 			else if (iCommand == COMM_REMOTECTRL_DISABLE) {
-				// TODO set objects' states to connected
-				MessageLength =
-					encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
-				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
-							  &objectConnections[iIndex].objectMonitorAddress.sin_addr,
-							  ipString, sizeof (ipString));
-					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to disarmed mode", ipString);
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
-															&objectEnabledStatus);
-					if (objectEnabledStatus == OBJECT_ENABLED)
-						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
-										&objectConnections[iIndex].commandSocket, 0);
+
+				if (vGetState() == OBC_STATE_REMOTECTRL) {
+
+					DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
+					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+						DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+						if (objectEnabledStatus == OBJECT_ENABLED) {
+							ObjectDataType monitorData;
+							DataDictionaryGetMonitorData(object_transmitter_ids[iIndex], &monitorData.MonrData);
+							if(monitorData.MonrData.speed.isLongitudinalValid && !monitorData.MonrData.speed.longitudinal_m_s > 0.0) {
+								// When object is standing still -> Send RCMM with zero speed and steering
+								RemoteControlManoeuvreMessageType rcmm;
+								rcmm.command = MANOEUVRE_NONE;
+								rcmm.isSteeringManoeuvreValid = true;
+								rcmm.isSpeedManoeuvreValid = true;
+								rcmm.steeringUnit = ISO_UNIT_TYPE_STEERING_PERCENTAGE;
+								rcmm.steeringManoeuvre.pct = 0;
+								rcmm.speedUnit = ISO_UNIT_TYPE_SPEED_PERCENTAGE;
+								rcmm.speedManoeuvre.pct = 0;
+
+								MessageLength = encodeRCMMMessage(&rcmm, MessageBuffer, sizeof (MessageBuffer), 0);
+								if (MessageLength > 0) {
+									UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
+													&objectConnections[iIndex].objectMonitorAddress,
+													MessageBuffer, MessageLength, 0);
+									LogMessage(LOG_LEVEL_INFO, "Stop RCMM was sent to object %lu",
+												object_transmitter_ids[iIndex]);
+								}
+								else {
+									LogMessage(LOG_LEVEL_ERROR, "Error encoding RCMM");
+								}
+
+								MessageLength =
+									encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
+								for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+									inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
+											&objectConnections[iIndex].objectMonitorAddress.sin_addr,
+											ipString, sizeof (ipString));
+									LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to disarmed mode", ipString);
+									DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+																			&objectEnabledStatus);
+									if (objectEnabledStatus == OBJECT_ENABLED) {
+										UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+														&objectConnections[iIndex].commandSocket, 0);
+									}
+									else {
+										LogMessage(LOG_LEVEL_INFO, "Not sending since objectEnabledStatus = %s", objectEnabledStatus);
+									}
+								}
+								vSetState(OBC_STATE_CONNECTED);
+								LogMessage(LOG_LEVEL_INFO, "Disabled remote control mode");
+							}
+							else {
+								LogMessage(LOG_LEVEL_ERROR,
+								"Object must stand still when disabling remote control mode! WILL NOT DISABLE REMOTE CTRL. Speed [m/s] = %f",
+								monitorData.MonrData.speed.longitudinal_m_s);
+							}
+						}
+					}
 				}
-				// TODO: check objects' states
-				// TODO: objectControlServerStatus = something
-				vSetState(OBC_STATE_CONNECTED);
-				LogMessage(LOG_LEVEL_INFO, "Disabled remote control mode");
 			}
 			else if (iCommand == COMM_REMOTECTRL_MANOEUVRE) {
 				ManoeuvreCommandType rcCommand;
