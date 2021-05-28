@@ -1,6 +1,4 @@
-﻿#ifndef SCENARIOHANDLER_H
-#define SCENARIOHANDLER_H
-#pragma once
+﻿#pragma once
 
 #include "state.hpp"
 #include "testobject.hpp"
@@ -164,5 +162,4 @@ private:
 	void startObjects();
 
 };
-#endif
 

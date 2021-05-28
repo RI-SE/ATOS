@@ -1,5 +1,3 @@
-#ifndef OBJECTLISTENER_H
-#define OBJECTLISTENER_H
 #pragma once
 #include "positioning.h"
 #include "scenariohandler.hpp"
@@ -23,5 +21,4 @@ private:
 	void listen();
 	bool quit = false;
 };
-#endif
 

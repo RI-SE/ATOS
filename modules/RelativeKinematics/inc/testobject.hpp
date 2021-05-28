@@ -1,5 +1,3 @@
-#ifndef TESTOBJECT_H
-#define TESTOBJECT_H
 #pragma once
 
 #include <netinet/in.h>
@@ -178,4 +176,3 @@ void from_timeval(struct timeval & tv, Duration& d) {
 	//const auto usec = std::chrono::microseconds(tv.tv_usec);
 	//d = sec + usec;
 }
-#endif
