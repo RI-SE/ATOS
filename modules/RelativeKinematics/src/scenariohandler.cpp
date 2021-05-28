@@ -242,13 +242,25 @@ void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> 
 	try {
 		if (!obj.isConnected()) {
 			obj.establishConnection(connStopReq);
-			obj.sendHeartbeat(this->state->asControlCenterStatus());
 			obj.sendSettings();
 
 			int nReadMonr = 0;
 			constexpr int maxInitializingMonrs = 10;
+			int connectionHeartbeats = 10;
 			while (true) {
-				auto objState = obj.getState(true);
+				obj.sendHeartbeat(this->state->asControlCenterStatus());
+				ObjectStateType objState = OBJECT_STATE_UNKNOWN;
+				try {
+					objState = obj.getState(true, heartbeatPeriod);
+				} catch (std::ios_base::failure& e) {
+					if (connectionHeartbeats--) {
+						continue;
+					}
+					else {
+						throw e;
+					}
+				}
+
 				switch (objState) {
 				case OBJECT_STATE_ARMED:
 				case OBJECT_STATE_REMOTE_CONTROL:

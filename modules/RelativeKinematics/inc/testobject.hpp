@@ -81,7 +81,8 @@ public:
 	fs::path getTrajectoryFile() const { return trajectoryFile; }
 	Trajectory getTrajectory() const { return trajectory; }
 	GeographicPositionType getOrigin() const { return origin; }
-	ObjectStateType getState(bool awaitUpdate);
+	ObjectStateType getState(const bool awaitUpdate);
+	ObjectStateType getState(const bool awaitUpdate, const std::chrono::milliseconds timeout);
 	ObjectStateType getState() const { return isConnected() ? state : OBJECT_STATE_UNKNOWN; }
 	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
 	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }

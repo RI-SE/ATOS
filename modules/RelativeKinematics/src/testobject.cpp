@@ -87,12 +87,18 @@ void TestObject::updateMonitor(const MonitorMessage& data) {
 	this->lastMonitor = data.second;
 }
 
-ObjectStateType TestObject::getState(bool awaitUpdate) {
+ObjectStateType TestObject::getState(const bool awaitUpdate) {
+	return getState(awaitUpdate, maxAllowedMonitorPeriod);
+}
+
+ObjectStateType TestObject::getState(
+		const bool awaitUpdate,
+		const std::chrono::milliseconds timeout) {
 	if (awaitUpdate) {
 		if (!nextMonitor.valid()) {
 			nextMonitor = std::async(std::launch::async, &TestObject::awaitNextMonitor, this);
 		}
-		auto status = nextMonitor.wait_for(maxAllowedMonitorPeriod);
+		auto status = nextMonitor.wait_for(timeout);
 		if (status == std::future_status::ready) {
 			this->updateMonitor(nextMonitor.get());
 		}
