@@ -252,7 +252,7 @@ void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> 
 				ObjectStateType objState = OBJECT_STATE_UNKNOWN;
 				try {
 					objState = obj.getState(true, heartbeatPeriod);
-				} catch (std::ios_base::failure& e) {
+				} catch (std::runtime_error& e) {
 					if (connectionHeartbeats--) {
 						continue;
 					}

@@ -42,14 +42,17 @@ void ObjectListener::listen() {
 				if (obj->getState() != prevObjState) {
 					switch (obj->getState()) {
 					case OBJECT_STATE_DISARMED:
+						LogMessage(LOG_LEVEL_INFO, "Object %u disarmed", obj->getTransmitterID());
 						handler->state->objectDisarmed(*handler, obj->getTransmitterID());
 						break;
 					case OBJECT_STATE_POSTRUN:
 						break;
 					case OBJECT_STATE_ARMED:
+						LogMessage(LOG_LEVEL_INFO, "Object %u armed", obj->getTransmitterID());
 						handler->state->objectArmed(*handler, obj->getTransmitterID());
 						break;
 					case OBJECT_STATE_ABORTING:
+						LogMessage(LOG_LEVEL_INFO, "Object %u aborting", obj->getTransmitterID());
 						handler->state->objectAborting(*handler, obj->getTransmitterID());
 						break;
 					}
