@@ -2,32 +2,6 @@ pipeline {
   agent any
   stages {
     stage('Build') {
-      checkout(
-        [
-          steps {
-                branches: [
-                            name: '*/master'
-                          ]
-    doGenerateSubmoduleConfigurations: false, 
-    extensions: [
-      [
-        $class: 'SubmoduleOption', 
-        disableSubmodules: false, 
-        parentCredentials: true, 
-        recursiveSubmodules: true, 
-        reference: '', 
-        trackingSubmodules: false
-      ]
-    ], 
-    submoduleCfg: [], 
-    userRemoteConfigs: [
-      [
-        credentialsId: 'jenkins', 
-        url: 'git@gitlab.com:/RI-SE/util.git'
-      ]
-    ]
-  ]
-       )}
       steps {
         sh 'echo "Executing build steps..."'
         cmakeBuild(cleanBuild: true, buildDir: 'build', installation: 'InSearchPath', steps: [[envVars: 'DESTDIR=${WORKSPACE}/artifacts', withCmake: true]])
