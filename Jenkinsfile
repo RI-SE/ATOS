@@ -6,10 +6,8 @@ pipeline {
         [
           steps {
                 branches: [
-                          [
                             name: '*/master'
                           ]
-    ], 
     doGenerateSubmoduleConfigurations: false, 
     extensions: [
       [
