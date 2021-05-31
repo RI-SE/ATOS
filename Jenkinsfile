@@ -3,13 +3,12 @@ pipeline {
   stages {
     stage('Build') {
       checkout(
-  [
-     steps {
-    $class: 'GitSCM', 
-    branches: [
-      [
-        name: '*/master'
-      ]
+        [
+          steps {
+                branches: [
+                          [
+                            name: '*/master'
+                          ]
     ], 
     doGenerateSubmoduleConfigurations: false, 
     extensions: [
