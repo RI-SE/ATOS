@@ -20,6 +20,7 @@
 #include "util.h"
 #include "datadictionary.h"
 #include "iso22133.h"
+#include "maestroTime.h"
 
 #include "trajfilehandler.hpp"
 #include "udphandler.hpp"
@@ -305,7 +306,7 @@ int transmitTrajectories(TCPHandler &tcpPort) {
 
 
 int transmitOSEM(TCPHandler &tcp){
-	timeval tv;
+	ObjectSettingsType osem;
 	GeoPosition originPosition;
 	std::vector<char> tcpTransmitBuffer(MONR_BUFFER_LENGTH);
 	std::vector<uint32_t> transmitterIDs;
@@ -333,19 +334,16 @@ int transmitOSEM(TCPHandler &tcp){
 			throw std::ios_base::failure("Data dictionary origin read error for transmitter ID " + std::to_string(transmitterID));
 		}
 
-		gettimeofday(&tv, nullptr);
-		float altitude = static_cast<float>(originPosition.Altitude);
-		long retval = encodeOSEMMessage(&tv, 
-										&transmitterID, 
-										&originPosition.Latitude,
-										&originPosition.Longitude,
-										&altitude, // don't like but this is how it is...
-										nullptr,
-										nullptr,
-										nullptr,
-										tcpTransmitBuffer.data(), 
-										tcpTransmitBuffer.size(),
-										0);//TODO
+		osem.desiredTransmitterID = transmitterID;
+		osem.coordinateSystemOrigin.latitude_deg = originPosition.Latitude;
+		osem.coordinateSystemOrigin.longitude_deg = originPosition.Longitude;
+		osem.coordinateSystemOrigin.altitude_m = originPosition.Altitude;
+		osem.coordinateSystemOrigin.isLatitudeValid = true;
+		osem.coordinateSystemOrigin.isLongitudeValid = true;
+		osem.coordinateSystemOrigin.isAltitudeValid = true;
+
+		TimeSetToCurrentSystemTime(&osem.currentTime);
+		long retval = encodeOSEMMessage(&osem, tcpTransmitBuffer.data(), tcpTransmitBuffer.size(), false);
 		if (retval < 0) {
 			throw std::invalid_argument("Failed to encode OSEM message");
 		}

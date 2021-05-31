@@ -174,9 +174,9 @@ static int iFindObjectsInfo(C8 object_traj_file[MAX_OBJECTS][MAX_FILE_PATH],
 							uint32_t objectIDs[MAX_OBJECTS], unsigned int *nbr_objects);
 static int readMonitorDataTimeoutSetting(struct timeval *timeout);
 
-OBCState_t vInitializeState(OBCState_t firstState, GSDType * GSD);
-inline OBCState_t vGetState(GSDType * GSD);
-StateTransitionResult vSetState(OBCState_t requestedState, GSDType * GSD);
+OBCState_t vInitializeState(OBCState_t firstState);
+inline OBCState_t vGetState(void);
+StateTransitionResult vSetState(OBCState_t requestedState);
 StateTransition tGetTransition(OBCState_t fromState);
 StateTransitionResult tFromIdle(OBCState_t * currentState, OBCState_t requestedState);
 StateTransitionResult tFromInitialized(OBCState_t * currentState, OBCState_t requestedState);
@@ -275,7 +275,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	ControlCenterStatusType objectControlServerStatus = CONTROL_CENTER_STATUS_INIT;
 
-	vInitializeState(OBC_STATE_IDLE, GSD);
+	vInitializeState(OBC_STATE_IDLE);
 	U8 uiTimeCycle = 0;
 	I32 ObjectcontrolExecutionMode = OBJECT_CONTROL_CONTROL_MODE;
 
@@ -315,7 +315,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	while (!iExit) {
 		TimeSetToCurrentSystemTime(&currentTime);
 
-		if (vGetState(GSD) == OBC_STATE_ERROR) {
+		if (vGetState() == OBC_STATE_ERROR) {
 			objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 			MessageLength =
 				encodeHEABMessage(&currentTime, objectControlServerStatus, MessageBuffer,
@@ -334,8 +334,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 		// Heartbeat
-		if ((vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_ARMED
-			 || vGetState(GSD) == OBC_STATE_CONNECTED || vGetState(GSD) == OBC_STATE_REMOTECTRL)
+		if ((vGetState() == OBC_STATE_RUNNING || vGetState() == OBC_STATE_ARMED
+			 || vGetState() == OBC_STATE_CONNECTED || vGetState() == OBC_STATE_REMOTECTRL)
 			&& timercmp(&currentTime, &nextHeartbeatTime, >)) {
 
 			DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
@@ -357,14 +357,14 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 		// Every iteration while connected, do
-		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_CONNECTED
-			|| vGetState(GSD) == OBC_STATE_ARMED || vGetState(GSD) == OBC_STATE_REMOTECTRL) {
+		if (vGetState() == OBC_STATE_RUNNING || vGetState() == OBC_STATE_CONNECTED
+			|| vGetState() == OBC_STATE_ARMED || vGetState() == OBC_STATE_REMOTECTRL) {
 
 			// Check if any object has disconnected - if so, disconnect all objects and return to idle
 			if (checkObjectConnections(objectConnections, monitorDataTimeout, nbr_objects)) {
 				disconnectAllObjects(objectConnections, nbr_objects);
 				iCommSend(COMM_DISCONNECT, NULL, 0);
-				vSetState(OBC_STATE_IDLE, GSD);
+				vSetState(OBC_STATE_IDLE);
 			}
 
 			char buffer[RECV_MESSAGE_BUFFER];
@@ -625,42 +625,71 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 		}
 
-		if (vGetState(GSD) == OBC_STATE_RUNNING || vGetState(GSD) == OBC_STATE_REMOTECTRL) {
+		if (vGetState() == OBC_STATE_RUNNING || vGetState() == OBC_STATE_REMOTECTRL) {
 
 			DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
 
 			for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
 				DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
 				if (objectEnabledStatus == OBJECT_ENABLED) {
-					RequestControlActionType reqDCAction;
+					RequestControlActionType reqCtrlAction;
 					struct timeval requestAge;
 
-					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &reqDCAction)
+					if (DataDictionaryGetRequestedControlAction(object_transmitter_ids[iIndex], &reqCtrlAction)
 						== READ_OK) {
-						C8 DCMMbuffer[35];
+						C8 ctrlMessageBuffer[35];
 
-						if (timerisset(&reqDCAction.dataTimestamp)) {
-							timersub(&currentTime, &reqDCAction.dataTimestamp, &requestAge);
+						if (timerisset(&reqCtrlAction.dataTimestamp)) {
+							timersub(&currentTime, &reqCtrlAction.dataTimestamp, &requestAge);
+
+							// Comment from Frida: Use if(true) below to be able to test remote control function
 							if (timerpos(&requestAge) && requestAge.tv_sec == 0
 								&& requestAge.tv_usec < MAX_REMOTE_CONTROL_COMMAND_AGE_US) {
 
-								if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
+								if (vGetState() == OBC_STATE_REMOTECTRL) {
 									// Encode RCMM
 									RemoteControlManoeuvreMessageType rcmmMessage;
+									rcmmMessage.command = MANOEUVRE_NONE;
+									rcmmMessage.isSteeringManoeuvreValid = reqCtrlAction.isSteeringActionValid;
+									rcmmMessage.isSpeedManoeuvreValid = reqCtrlAction.isSpeedActionValid;
+									rcmmMessage.steeringUnit = reqCtrlAction.steeringUnit;
+									rcmmMessage.speedUnit = reqCtrlAction.speedUnit;
 
-									if (reqDCAction.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE ||
-										reqDCAction.steeringUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE) {
-										rcmmMessage.status = 0;	//Shall be 0 when controlled by percentage
+									if(reqCtrlAction.steeringUnit == ISO_UNIT_TYPE_STEERING_DEGREES) {
+										rcmmMessage.steeringManoeuvre.rad = reqCtrlAction.steeringAction.rad;
 									}
-									else
-										rcmmMessage.status = 1;	//Shall be 1 when controlled by absolute value
-									rcmmMessage.steeringManoeuvre.pct = reqDCAction.steeringAction.pct;
-									rcmmMessage.isSteeringManoeuvreValid = reqDCAction.isSteeringActionValid;
-									rcmmMessage.speedManoeuvre.pct = reqDCAction.speedAction.pct;
-									rcmmMessage.isSpeedManoeuvreValid = reqDCAction.isSpeedActionValid;
+									else if (rcmmMessage.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE) {
+										rcmmMessage.steeringManoeuvre.pct = reqCtrlAction.steeringAction.pct;
+									}
+									else {
+										LogMessage(LOG_LEVEL_INFO, "Invalid steering unit in request control action (RCMM)");
+									}
+
+									if (rcmmMessage.speedUnit == ISO_UNIT_TYPE_SPEED_METER_SECOND) {
+										rcmmMessage.speedManoeuvre.m_s = reqCtrlAction.speedAction.m_s;
+									}
+									else if (rcmmMessage.speedUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE) {
+										rcmmMessage.speedManoeuvre.pct = reqCtrlAction.speedAction.pct;
+									}
+									else {
+										LogMessage(LOG_LEVEL_INFO, "Invalid speed unit in request control action (RCMM)");
+									}
+
 									MessageLength =
-										encodeRCMMMessage(&rcmmMessage, MessageBuffer, sizeof (MessageBuffer),
-														  0);
+										encodeRCMMMessage(&rcmmMessage, ctrlMessageBuffer, sizeof (ctrlMessageBuffer), 0);
+
+									if (MessageLength > 0) {
+										UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
+											&objectConnections[iIndex].objectMonitorAddress,
+											ctrlMessageBuffer, MessageLength, 0);
+										LogMessage(LOG_LEVEL_INFO, "RCMM message sent to object %lu",
+												object_transmitter_ids[iIndex]);
+										MessageLength = 0;
+										memset(ctrlMessageBuffer, 0, sizeof(ctrlMessageBuffer));
+									}
+									else {
+										LogMessage(LOG_LEVEL_ERROR, "Error encoding remote control message");
+									}
 								}
 								else {
 									// Encode DCMM
@@ -668,54 +697,56 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 									dcmmMessage.status = 1;
 									dcmmMessage.command = 1;
-									dcmmMessage.isSpeedManoeuvreValid = reqDCAction.isSpeedActionValid;
-									dcmmMessage.isSteeringManoeuvreValid = reqDCAction.isSteeringActionValid;
-									dcmmMessage.steeringUnit = reqDCAction.steeringUnit;
-									dcmmMessage.speedUnit = reqDCAction.speedUnit;
+									dcmmMessage.isSpeedManoeuvreValid = reqCtrlAction.isSpeedActionValid;
+									dcmmMessage.isSteeringManoeuvreValid = reqCtrlAction.isSteeringActionValid;
+									dcmmMessage.steeringUnit = reqCtrlAction.steeringUnit;
+									dcmmMessage.speedUnit = reqCtrlAction.speedUnit;
 
 									if (dcmmMessage.steeringUnit == ISO_UNIT_TYPE_STEERING_DEGREES) {
-										dcmmMessage.steeringManoeuvre.rad = reqDCAction.steeringAction.rad;
+										dcmmMessage.steeringManoeuvre.rad = reqCtrlAction.steeringAction.rad;
 									}
 									else if (dcmmMessage.steeringUnit == ISO_UNIT_TYPE_STEERING_PERCENTAGE) {
-										dcmmMessage.steeringManoeuvre.pct = reqDCAction.steeringAction.pct;
+										dcmmMessage.steeringManoeuvre.pct = reqCtrlAction.steeringAction.pct;
 									}
 									else {
-										LogMessage(LOG_LEVEL_INFO, "Error in declarion of steering unit");
+										LogMessage(LOG_LEVEL_INFO, "Invalid steering unit in request control action (DCMM)");
 									}
 
 									if (dcmmMessage.speedUnit == ISO_UNIT_TYPE_SPEED_METER_SECOND) {
-										dcmmMessage.speedManoeuvre.m_s = reqDCAction.speedAction.m_s;
+										dcmmMessage.speedManoeuvre.m_s = reqCtrlAction.speedAction.m_s;
 									}
 									else if (dcmmMessage.speedUnit == ISO_UNIT_TYPE_SPEED_PERCENTAGE) {
-										dcmmMessage.speedManoeuvre.pct = reqDCAction.speedAction.pct;
+										dcmmMessage.speedManoeuvre.pct = reqCtrlAction.speedAction.pct;
 									}
 									else {
-										LogMessage(LOG_LEVEL_INFO, "Error in declarion of speed unit");
+										LogMessage(LOG_LEVEL_INFO, "Invalid speed unit in request control action (DCMM)");
 									}
 
 									//TODO: fix so that encoder can handle bigger messagebuffers?
 									MessageLength =
-										encodeDCMMMessage(&dcmmMessage, DCMMbuffer, sizeof (DCMMbuffer), 0);
+										encodeDCMMMessage(&dcmmMessage, ctrlMessageBuffer, sizeof (ctrlMessageBuffer), 0);
 									// when we sent the data with bigger fuffer we got a valueid error in decoder 
+
+									if (MessageLength > 0) {
+										UtilSendTCPData(MODULE_NAME, ctrlMessageBuffer, MessageLength,
+														&objectConnections[iIndex].commandSocket, 0);
+										LogMessage(LOG_LEVEL_INFO, "DCMM message sent to object %lu",
+												   object_transmitter_ids[iIndex]);
+										MessageLength = 0;
+										memset(ctrlMessageBuffer, 0, sizeof(ctrlMessageBuffer));
+									}
+									else {
+										LogMessage(LOG_LEVEL_ERROR, "Error encoding direct control message");
+									}
 								}
-								if (MessageLength > 0) {
-									UtilSendTCPData(MODULE_NAME, DCMMbuffer, MessageLength,
-													&objectConnections[iIndex].commandSocket, 0);
-									LogMessage(LOG_LEVEL_INFO, "RCMM message sent to object %lu",
-											   object_transmitter_ids[iIndex]);
-									MessageLength = 0;
-									memset(DCMMbuffer, 0, 100);
-								}
-								else {
-									LogMessage(LOG_LEVEL_ERROR, "Error encoding remote control message");
-								}
-								timerclear(&reqDCAction.dataTimestamp);
+
+								timerclear(&reqCtrlAction.dataTimestamp);
 								DataDictionarySetRequestedControlAction(object_transmitter_ids[iIndex],
-																		&reqDCAction);
+																		&reqCtrlAction);
 							}
 							else {
 								LogMessage(LOG_LEVEL_WARNING,
-										   "Ignoring remote control command - age is %ld s %ld µs",
+										   "Ignoring remote/direct control command - age is %ld s %ld µs",
 										   requestAge.tv_sec, requestAge.tv_usec);
 							}
 						}
@@ -736,11 +767,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			LogMessage(LOG_LEVEL_DEBUG, "Received command %d", iCommand);
 
 			DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
-			if (iCommand == COMM_ARM && vGetState(GSD) == OBC_STATE_CONNECTED) {
+			if (iCommand == COMM_ARM && vGetState() == OBC_STATE_CONNECTED) {
 
 				LogMessage(LOG_LEVEL_INFO, "Sending ARM");
 				JournalRecordData(JOURNAL_RECORD_EVENT, "Sending ARM");
-				vSetState(OBC_STATE_ARMED, GSD);
+				vSetState(OBC_STATE_ARMED);
 				MessageLength =
 					encodeOSTMMessage(OBJECT_COMMAND_ARM, MessageBuffer, sizeof (MessageBuffer), 0);
 
@@ -755,11 +786,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
 			}
-			else if (iCommand == COMM_DISARM && vGetState(GSD) == OBC_STATE_ARMED) {
+			else if (iCommand == COMM_DISARM && vGetState() == OBC_STATE_ARMED) {
 
 				LogMessage(LOG_LEVEL_INFO, "Sending DISARM");
 				JournalRecordData(JOURNAL_RECORD_EVENT, "Sending DISARM");
-				vSetState(OBC_STATE_CONNECTED, GSD);
+				vSetState(OBC_STATE_CONNECTED);
 
 				MessageLength =
 					encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
@@ -775,15 +806,18 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 				objectControlServerStatus = CONTROL_CENTER_STATUS_READY;
 			}
-			else if (iCommand == COMM_STRT && (vGetState(GSD) == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED) */ )	//OBC_STATE_INITIALIZED is temporary!
+			else if (iCommand == COMM_STRT && (vGetState() == OBC_STATE_ARMED) /*|| OBC_STATE_INITIALIZED) */ )	//OBC_STATE_INITIALIZED is temporary!
 			{
 				struct timeval startTime, startDelay;
+				StartMessageType startMsg;
+				startMsg.isTimestampValid = true;
 
 				MiscPtr = pcRecvBuffer;
 				TimeSetToUTCms(&startTime, (int64_t) strtoul(MiscPtr, &MiscPtr, 10));
 				TimeSetToUTCms(&startDelay, (int64_t) strtoul(MiscPtr + 1, NULL, 10));
 				timeradd(&startTime, &startDelay, &startTime);
-				MessageLength = encodeSTRTMessage(&startTime, MessageBuffer, sizeof (MessageBuffer), 0);
+				startMsg.startTime = startTime;
+				MessageLength = encodeSTRTMessage(&startMsg, MessageBuffer, sizeof (MessageBuffer), 0);
 
 				ASPData.MTSPU32 = 0;
 				ASPData.TimeToSyncPointDbl = 0;
@@ -803,7 +837,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 					}
 				}
-				vSetState(OBC_STATE_RUNNING, GSD);
+				vSetState(OBC_STATE_RUNNING);
 				objectControlServerStatus = CONTROL_CENTER_STATUS_RUNNING;
 
 				//printf("OutgoingStartTimeU32 = %d\n", OutgoingStartTimeU32);
@@ -818,14 +852,15 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				//LogMessage(LOG_LEVEL_INFO, "Entering REPLAY mode <%s>", pcRecvBuffer);
 				LogMessage(LOG_LEVEL_WARNING, "REPLAY mode support deprecated");
 			}
-			else if (iCommand == COMM_ABORT && vGetState(GSD) == OBC_STATE_RUNNING) {
-				vSetState(OBC_STATE_CONNECTED, GSD);
+			else if (iCommand == COMM_ABORT && (vGetState() == OBC_STATE_RUNNING || vGetState() == OBC_STATE_REMOTECTRL)) {
+				vSetState(OBC_STATE_CONNECTED);
 				objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 				LogMessage(LOG_LEVEL_WARNING, "ABORT received");
 				JournalRecordData(JOURNAL_RECORD_EVENT, "ABORT received");
 			}
-			else if (iCommand == COMM_REMOTECTRL_ENABLE) {
-				vSetState(OBC_STATE_REMOTECTRL, GSD);
+			else if (iCommand == COMM_REMOTECTRL_ENABLE && vGetState() == OBC_STATE_CONNECTED) {
+
+				vSetState(OBC_STATE_REMOTECTRL);
 				// TODO: objectControlServerStatus = something
 				MessageLength =
 					encodeOSTMMessage(OBJECT_COMMAND_REMOTE_CONTROL, MessageBuffer, sizeof (MessageBuffer),
@@ -837,32 +872,75 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to remote control mode", ipString);
 					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
 															&objectEnabledStatus);
-					if (objectEnabledStatus == OBJECT_ENABLED)
+					if (objectEnabledStatus == OBJECT_ENABLED) {
 						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 										&objectConnections[iIndex].commandSocket, 0);
+					}
 				}
 				// TODO: check objects' states
 				LogMessage(LOG_LEVEL_INFO, "Enabled remote control mode");
 			}
 			else if (iCommand == COMM_REMOTECTRL_DISABLE) {
-				// TODO set objects' states to connected
-				MessageLength =
-					encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
-				for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-					inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
-							  &objectConnections[iIndex].objectMonitorAddress.sin_addr,
-							  ipString, sizeof (ipString));
-					LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to disarmed mode", ipString);
-					DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
-															&objectEnabledStatus);
-					if (objectEnabledStatus == OBJECT_ENABLED)
-						UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
-										&objectConnections[iIndex].commandSocket, 0);
+
+				if (vGetState() == OBC_STATE_REMOTECTRL) {
+
+					DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, nbr_objects);
+					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+						DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex], &objectEnabledStatus);
+						if (objectEnabledStatus == OBJECT_ENABLED) {
+							ObjectDataType monitorData;
+							DataDictionaryGetMonitorData(object_transmitter_ids[iIndex], &monitorData.MonrData);
+							if(monitorData.MonrData.speed.isLongitudinalValid && !monitorData.MonrData.speed.longitudinal_m_s > 0.0) {
+								// When object is standing still -> Send RCMM with zero speed and steering
+								RemoteControlManoeuvreMessageType rcmm;
+								rcmm.command = MANOEUVRE_NONE;
+								rcmm.isSteeringManoeuvreValid = true;
+								rcmm.isSpeedManoeuvreValid = true;
+								rcmm.steeringUnit = ISO_UNIT_TYPE_STEERING_PERCENTAGE;
+								rcmm.steeringManoeuvre.pct = 0;
+								rcmm.speedUnit = ISO_UNIT_TYPE_SPEED_PERCENTAGE;
+								rcmm.speedManoeuvre.pct = 0;
+
+								MessageLength = encodeRCMMMessage(&rcmm, MessageBuffer, sizeof (MessageBuffer), 0);
+								if (MessageLength > 0) {
+									UtilSendUDPData(MODULE_NAME, &objectConnections[iIndex].monitorSocket,
+													&objectConnections[iIndex].objectMonitorAddress,
+													MessageBuffer, MessageLength, 0);
+									LogMessage(LOG_LEVEL_INFO, "Stop RCMM was sent to object %lu",
+												object_transmitter_ids[iIndex]);
+								}
+								else {
+									LogMessage(LOG_LEVEL_ERROR, "Error encoding RCMM");
+								}
+
+								MessageLength =
+									encodeOSTMMessage(OBJECT_COMMAND_DISARM, MessageBuffer, sizeof (MessageBuffer), 0);
+								for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
+									inet_ntop(objectConnections[iIndex].objectMonitorAddress.sin_family,
+											&objectConnections[iIndex].objectMonitorAddress.sin_addr,
+											ipString, sizeof (ipString));
+									LogMessage(LOG_LEVEL_INFO, "Setting object with IP %s to disarmed mode", ipString);
+									DataDictionaryGetObjectEnableStatusById(object_transmitter_ids[iIndex],
+																			&objectEnabledStatus);
+									if (objectEnabledStatus == OBJECT_ENABLED) {
+										UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
+														&objectConnections[iIndex].commandSocket, 0);
+									}
+									else {
+										LogMessage(LOG_LEVEL_INFO, "Not sending since objectEnabledStatus = %s", objectEnabledStatus);
+									}
+								}
+								vSetState(OBC_STATE_CONNECTED);
+								LogMessage(LOG_LEVEL_INFO, "Disabled remote control mode");
+							}
+							else {
+								LogMessage(LOG_LEVEL_ERROR,
+								"Object must stand still when disabling remote control mode! WILL NOT DISABLE REMOTE CTRL. Speed [m/s] = %f",
+								monitorData.MonrData.speed.longitudinal_m_s);
+							}
+						}
+					}
 				}
-				// TODO: check objects' states
-				// TODO: objectControlServerStatus = something
-				vSetState(OBC_STATE_CONNECTED, GSD);
-				LogMessage(LOG_LEVEL_INFO, "Disabled remote control mode");
 			}
 			else if (iCommand == COMM_REMOTECTRL_MANOEUVRE) {
 				ManoeuvreCommandType rcCommand;
@@ -870,7 +948,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				// TODO check size of received data
 				memcpy(&rcCommand, pcRecvBuffer, sizeof (rcCommand));
 				LogMessage(LOG_LEVEL_INFO, "Received remote control manoeuvre for object with IP %s", inet_ntop(AF_INET, &rcCommand.objectIP, ipString, sizeof (ipString)));	// TODO print command type
-				if (vGetState(GSD) == OBC_STATE_REMOTECTRL) {
+				if (vGetState() == OBC_STATE_REMOTECTRL) {
 					switch (rcCommand.manoeuvre) {
 					case MANOEUVRE_BACK_TO_START:
 						iIndex = getObjectIndexFromIP(rcCommand.objectIP, objectConnections, nbr_objects);
@@ -914,7 +992,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				ObjectEnabledCommandType enableCommand;
 
 				memcpy(&enableCommand, pcRecvBuffer, sizeof (enableCommand));
-				if (vGetState(GSD) != OBC_STATE_RUNNING && vGetState(GSD) != OBC_STATE_ARMED) {
+				if (vGetState() != OBC_STATE_RUNNING && vGetState() != OBC_STATE_ARMED) {
 					iIndex = getObjectIndexFromIP(enableCommand.objectIP, objectConnections, nbr_objects);
 					DataDictionaryGetObjectTransmitterIDByIP(enableCommand.objectIP, &transmitterId);
 					if (transmitterId > 0) {
@@ -996,8 +1074,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					LogMessage(LOG_LEVEL_DEBUG, "Setting object connection ports");
 					for (iIndex = 0; iIndex < nbr_objects; ++iIndex) {
-						objectConnections[iIndex].objectMonitorAddress.sin_port = htons(SAFETY_CHANNEL_PORT);
-						objectConnections[iIndex].objectCommandAddress.sin_port = htons(CONTROL_CHANNEL_PORT);
+						objectConnections[iIndex].objectMonitorAddress.sin_port = htons(ISO_22133_OBJECT_UDP_PORT);
+						objectConnections[iIndex].objectCommandAddress.sin_port = htons(ISO_22133_DEFAULT_OBJECT_TCP_PORT);
 					}
 
 					/*Setup Adaptive Sync Points (ASP) */
@@ -1014,7 +1092,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						for (int i = 0; i < SyncPointCount; i++) {
 							UtilSetAdaptiveSyncPoint(&ASP[i], fd, 0);
 							if (TEST_SYNC_POINTS == 1)
-								ASP[i].TestPort = SAFETY_CHANNEL_PORT;
+								ASP[i].TestPort = htons(ISO_22133_OBJECT_UDP_PORT);
 						}
 						fclose(fd);
 					}
@@ -1038,7 +1116,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 
 				if (initSuccessful) {
-					vSetState(OBC_STATE_INITIALIZED, GSD);
+					vSetState(OBC_STATE_INITIALIZED);
 					LogMessage(LOG_LEVEL_INFO, "Successfully initialized");
 				}
 				else {
@@ -1048,7 +1126,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 
 			}
-			else if (iCommand == COMM_ACCM && vGetState(GSD) == OBC_STATE_CONNECTED) {
+			else if (iCommand == COMM_ACCM && vGetState() == OBC_STATE_CONNECTED) {
 				UtilPopulateACCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqACCMData);
 				if (mqACCMData.actionType == ACTION_TEST_SCENARIO_COMMAND) {
 					// Special handling is required from Maestro for test scenario command
@@ -1090,7 +1168,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 				}
 			}
-			else if (iCommand == COMM_TRCM && vGetState(GSD) == OBC_STATE_CONNECTED) {
+			else if (iCommand == COMM_TRCM && vGetState() == OBC_STATE_CONNECTED) {
 				UtilPopulateTRCMDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqTRCMData);
 				iIndex = getObjectIndexFromIP(mqTRCMData.ip, objectConnections, nbr_objects);
 				DataDictionaryGetObjectEnableStatusByIp(mqTRCMData.ip, &objectEnabledStatus);
@@ -1107,9 +1185,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				else
 					LogMessage(LOG_LEVEL_WARNING, "Unable to send TRCM: no valid socket found");
 			}
-			else if (iCommand == COMM_EXAC && vGetState(GSD) == OBC_STATE_RUNNING) {
+			else if (iCommand == COMM_EXAC && vGetState() == OBC_STATE_RUNNING) {
 				UtilPopulateEXACDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqEXACData);
 				int commandIndex;
+
+
 
 				if ((commandIndex =
 					 findCommandAction(mqEXACData.actionID, commandActions,
@@ -1120,15 +1200,17 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						DataDictionaryGetObjectEnableStatusByIp(mqEXACData.ip, &objectEnabledStatus);
 						if (iIndex != -1 && objectEnabledStatus == OBJECT_ENABLED) {
 							struct timeval startTime;
-
+							StartMessageType startMsg;
+							startMsg.isTimestampValid = true;
 							TimeSetToCurrentSystemTime(&currentTime);
 							TimeSetToGPStime(&startTime, TimeGetAsGPSweek(&currentTime),
 											 mqEXACData.executionTime_qmsoW);
 							LogMessage(LOG_LEVEL_INFO, "Current time: %ld, Start time: %ld, delay: %u",
 									   TimeGetAsUTCms(&currentTime), TimeGetAsUTCms(&startTime),
 									   mqEXACData.executionTime_qmsoW);
+							startMsg.startTime = startTime;
 							MessageLength =
-								encodeSTRTMessage(&startTime, MessageBuffer, sizeof (MessageBuffer), 0);
+								encodeSTRTMessage(&startMsg, MessageBuffer, sizeof (MessageBuffer), 0);
 							UtilSendTCPData(MODULE_NAME, MessageBuffer, MessageLength,
 											&objectConnections[iIndex].commandSocket, 0);
 						}
@@ -1167,13 +1249,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 					}
 				}
 			}
-			else if (iCommand == COMM_CONNECT && vGetState(GSD) == OBC_STATE_INITIALIZED) {
+			else if (iCommand == COMM_CONNECT && vGetState() == OBC_STATE_INITIALIZED) {
 				LogMessage(LOG_LEVEL_INFO, "CONNECT received");
 				JournalRecordData(JOURNAL_RECORD_EVENT, "CONNECT received.");
 
 				if (connectAllObjects(objectConnections, nbr_objects) < 0) {
 					LogMessage(LOG_LEVEL_INFO, "Unable to connect all objects");
-					vSetState(OBC_STATE_IDLE, GSD);
+					vSetState(OBC_STATE_IDLE);
 				}
 				else {
 					JournalRecordData(JOURNAL_RECORD_STRING, "Configuring connected objects.");
@@ -1181,7 +1263,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						(objectConnections, OriginPosition, currentTime, object_traj_file, nbr_objects) < 0) {
 						LogMessage(LOG_LEVEL_INFO, "Unable to configure connected objects");
 						// TODO disconnect all objects
-						vSetState(OBC_STATE_IDLE, GSD);
+						vSetState(OBC_STATE_IDLE);
 					}
 					else {
 						// Set up adaptive sync points
@@ -1199,7 +1281,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						nextHeartbeatTime = currentTime;
 						nextAdaptiveSyncMessageTime = currentTime;
 
-						vSetState(OBC_STATE_CONNECTED, GSD);
+						vSetState(OBC_STATE_CONNECTED);
 						iCommSend(COMM_OBJECTS_CONNECTED, NULL, 0);
 					}
 				}
@@ -1237,7 +1319,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				LogMessage(LOG_LEVEL_INFO, "DISCONNECT received");
 				JournalRecordData(JOURNAL_RECORD_EVENT, "DISCONNECT received.");
 				disconnectAllObjects(objectConnections, nbr_objects);
-				vSetState(OBC_STATE_IDLE, GSD);
+				vSetState(OBC_STATE_IDLE);
 			}
 			else if (iCommand == COMM_EXIT) {
 				iExit = 1;
@@ -1267,11 +1349,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				timeradd(&nextStateReportTime, &stateReportPeriod, &nextStateReportTime);
 
 				bzero(Buffer2, sizeof (Buffer2));
-				Buffer2[0] = (uint8_t) (DataDictionaryGetOBCStateU8(GSD));
+				Buffer2[0] = (uint8_t) (vGetState());
 				if (iCommSend(COMM_OBC_STATE, Buffer2, sizeof (Buffer2)) < 0) {
 					LogMessage(LOG_LEVEL_ERROR,
 							   "Fatal communication fault when sending OBC_STATE command - entering error state");
-					vSetState(OBC_STATE_ERROR, GSD);
+					vSetState(OBC_STATE_ERROR);
 					objectControlServerStatus = CONTROL_CENTER_STATUS_ABORT;
 				}
 			}
@@ -1369,7 +1451,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 
 	totalPrintedBytes += printedBytes;
 	messageBufferPosition += printedBytes;
-	remainingBufferSpace -= (size_t) printedBytes;
+	remainingBufferSpace -= (size_t)printedBytes;
 
 	read = getline(&line, &len, fd);
 	for (unsigned int i = 0; i < fileHeader.numberOfLines && read != -1; ++i, read = getline(&line, &len, fd)) {
@@ -1429,7 +1511,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 				}
 				messageBufferPosition += printedBytes;
 				totalPrintedBytes += printedBytes;
-				remainingBufferSpace -= (size_t) printedBytes;
+				remainingBufferSpace -= (size_t)printedBytes;
 			}
 			else {
 				// TODO how to terminate an ISO message when an error has occurred?
@@ -1441,7 +1523,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 		else {
 			totalPrintedBytes += printedBytes;
 			messageBufferPosition += printedBytes;
-			remainingBufferSpace -= (size_t) printedBytes;
+			remainingBufferSpace -= (size_t)printedBytes;
 		}
 	}
 
@@ -1461,7 +1543,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 			}
 			messageBufferPosition += printedBytes;
 			totalPrintedBytes += printedBytes;
-			remainingBufferSpace -= (size_t) printedBytes;
+			remainingBufferSpace -= (size_t)printedBytes;
 		}
 		else {
 			// TODO how to terminate an ISO message when an error has occurred?
@@ -1473,7 +1555,7 @@ ssize_t ObjectControlSendTRAJMessage(const char *Filename, int *Socket, const ch
 	else {
 		totalPrintedBytes += printedBytes;
 		messageBufferPosition += printedBytes;
-		remainingBufferSpace -= (size_t) printedBytes;
+		remainingBufferSpace -= (size_t)printedBytes;
 	}
 
 	UtilSendTCPData(MODULE_NAME, messageBuffer, messageBufferPosition - messageBuffer, Socket, debug);
@@ -1842,6 +1924,7 @@ int configureAllObjects(ObjectConnection objectConnections[],
 	char ipString[INET_ADDRSTRLEN];
 	uint32_t serverTransmitterID;
 	uint8_t isoTransmitterID;
+	ObjectSettingsType osem;
 	int retval = 0;
 
 	DataDictionaryGetObjectTransmitterIDs(transmitterIDs, numberOfObjects);
@@ -1851,14 +1934,20 @@ int configureAllObjects(ObjectConnection objectConnections[],
 		inet_ntop(objectConnections[i].objectCommandAddress.sin_family,
 				  &objectConnections[i].objectCommandAddress.sin_addr, ipString, sizeof (ipString));
 		if (enabledStatus == OBJECT_ENABLED) {
+			memset(&osem, 0, sizeof (osem));
+			osem.currentTime = currentTime;
+			osem.isTimestampValid = 1;
+			osem.desiredTransmitterID = transmitterIDs[i];
+			osem.isTransmitterIDValid = 1;
+			osem.coordinateSystemOrigin.latitude_deg = originPosition.Latitude;
+			osem.coordinateSystemOrigin.longitude_deg = originPosition.Longitude;
+			osem.coordinateSystemOrigin.altitude_m = originPosition.Altitude;
+			osem.coordinateSystemOrigin.isLatitudeValid = 1;
+			osem.coordinateSystemOrigin.isLongitudeValid = 1;
+			osem.coordinateSystemOrigin.isAltitudeValid = 1;
 
-
-			float altitude = (float)originPosition.Altitude;
-
-			messageLength =
-				encodeOSEMMessage(&currentTime, &transmitterIDs[i], &originPosition.Latitude,
-								  &originPosition.Longitude, &altitude, NULL, NULL, NULL,
-								  messageBuffer, sizeof (messageBuffer), 0);
+			messageLength = encodeOSEMMessage(&osem, messageBuffer,
+											  sizeof (messageBuffer), 0);
 			if (messageLength < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "OSEM encoding error");
 				retval = -1;
@@ -2460,18 +2549,23 @@ int readMonitorDataTimeoutSetting(struct timeval *timeout) {
 }
 
 
-OBCState_t vGetState(GSDType * GSD) {
-	return DataDictionaryGetOBCStateU8(GSD);
+OBCState_t vGetState() {
+	OBCState_t retval;
+	if (DataDictionaryGetOBCState(&retval) != READ_OK) {
+		LogMessage(LOG_LEVEL_ERROR, "Data dictionary state read error");
+		return OBC_STATE_UNDEFINED;
+	}
+	return retval;
 }
 
-StateTransitionResult vSetState(OBCState_t requestedState, GSDType * GSD) {
+StateTransitionResult vSetState(OBCState_t requestedState) {
 	StateTransition transitionFunction;
 	StateTransitionResult retval = TRANSITION_RESULT_UNDEFINED;
-	OBCState_t currentState = DataDictionaryGetOBCStateU8(GSD);
+	OBCState_t currentState = vGetState();
 
 	// Always allow transitions to these two states
 	if (requestedState == OBC_STATE_ERROR || requestedState == OBC_STATE_UNDEFINED) {
-		if (DataDictionarySetOBCStateU8(GSD, requestedState) == WRITE_OK) {
+		if (DataDictionarySetOBCState(requestedState) == WRITE_OK) {
 			LogMessage(LOG_LEVEL_WARNING, "Transitioning to state %u", (unsigned char)requestedState);
 			retval = TRANSITION_OK;
 		}
@@ -2485,7 +2579,7 @@ StateTransitionResult vSetState(OBCState_t requestedState, GSDType * GSD) {
 		transitionFunction = tGetTransition(currentState);
 		retval = transitionFunction(&currentState, requestedState);
 		if (retval != TRANSITION_INVALID) {
-			if (DataDictionarySetOBCStateU8(GSD, currentState) == WRITE_OK) {
+			if (DataDictionarySetOBCState(currentState) == WRITE_OK) {
 				LogMessage(LOG_LEVEL_INFO, "Transitioning to state %u", (unsigned char)requestedState);
 				retval = TRANSITION_OK;
 			}
@@ -2589,16 +2683,16 @@ StateTransitionResult tFromUndefined(OBCState_t * currentState, OBCState_t reque
 }
 
 
-OBCState_t vInitializeState(OBCState_t firstState, GSDType * GSD) {
+OBCState_t vInitializeState(OBCState_t firstState) {
 	static int8_t isInitialized = 0;
 
 	if (!isInitialized) {
 		isInitialized = 1;
-		if (DataDictionarySetOBCStateU8(GSD, firstState) != WRITE_OK)
+		if (DataDictionarySetOBCState(firstState) != WRITE_OK)
 			util_error("Unable to write object control state to shared memory");
 	}
 	else {
 		LogMessage(LOG_LEVEL_WARNING, "Object control state already initialized");
 	}
-	return DataDictionaryGetOBCStateU8(GSD);
+	return vGetState();
 }

@@ -402,24 +402,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (ClientResult <= -1) {
 				if (errno != EAGAIN && errno != EWOULDBLOCK) {
 					LogMessage(LOG_LEVEL_ERROR, "Failed to receive from command socket");
-					if (DataDictionaryGetOBCStateU8(GSD) == OBC_STATE_RUNNING) {
-						LogMessage(LOG_LEVEL_INFO, "User control disconnected: aborting test");
-						if (iCommSend(COMM_ABORT, NULL, 0) < 0)
-							util_error("Fatal communication fault when sending ABORT command");
-					}
-					else if (DataDictionaryGetOBCStateU8(GSD) == OBC_STATE_ARMED) {
-						LogMessage(LOG_LEVEL_INFO, "User control disconnected: disarming test");
-						if (iCommSend(COMM_DISARM, NULL, 0) < 0)
-							util_error("Fatal communication fault when sending DISARM command");
-					}
-					else if (DataDictionaryGetOBCStateU8(GSD) == OBC_STATE_REMOTECTRL) {
-						LogMessage(LOG_LEVEL_INFO, "User control disconnected: disabling remote control");
-						if (iCommSend(COMM_REMOTECTRL_DISABLE, NULL, 0) < 0)
-							util_error("Fatal communication fault when sending REMOTECTRL_DISABLE command");
-					}
+					if (iCommSend(COMM_ABORT, NULL, 0) < 0)
+						util_error("Fatal communication fault when sending ABORT command");
 				}
 			}
-
 			else if (ClientResult == 0) {
 				LogMessage(LOG_LEVEL_INFO, "Client closed connection");
 				close(ClientSocket);
@@ -555,7 +541,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 
-		objectControlState = DataDictionaryGetOBCStateU8(GSD);
+		if (DataDictionaryGetOBCState(&objectControlState) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR, "Error fetching object control state");
+			// TODO more?
+		}
 
 		if (SystemControlState == SERVER_STATE_INWORK) {
 			if (SystemControlCommand == AbortScenario_0) {
@@ -568,7 +557,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						   SystemControlCommandsArr[PreviousSystemControlCommand]);
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				ControlResponseBuffer[0] = SystemControlState;
-				ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD);	//OBCStateU8;
+				ControlResponseBuffer[1] = objectControlState;	//OBCStateU8;
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
 												 ControlResponseBuffer, 2, &ClientSocket, 0);
 				SystemControlCommand = PreviousSystemControlCommand;
@@ -636,15 +625,16 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case Idle_0:
 			break;
 		case GetServerStatus_0:
+			DataDictionaryGetOBCState(&objectControlState);
 			if (SystemControlCommand != PreviousSystemControlCommand) {
-				LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, %d",
+				LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s",
 						   SystemControlStatesArr[SystemControlState],
-						   SystemControlOBCStatesArr[objectControlState], DataDictionaryGetOBCStateU8(GSD));
+						   SystemControlOBCStatesArr[objectControlState]);
 			}
 			SystemControlCommand = Idle_0;
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 			ControlResponseBuffer[0] = SystemControlState;
-			ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD);	//OBCStateU8;
+			ControlResponseBuffer[1] = objectControlState;
 			appendSysInfoString(ControlResponseBuffer + 2, sizeof (ControlResponseBuffer) - 2);
 			LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
@@ -1234,40 +1224,22 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case AbortScenario_0:
-			if (objectControlState == OBC_STATE_RUNNING
-				/* || strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL
-				 * || strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/ )
-				// Abort should only be allowed in running state
-			{
-				if (iCommSend(COMM_ABORT, NULL, 0) < 0) {
-					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ABORT command");
-					SystemControlState = SERVER_STATE_ERROR;
-				}
-				else {
-					SystemControlState = SERVER_STATE_IDLE;
-					SystemControlCommand = Idle_0;
-					if (ClientSocket >= 0) {
-						bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-						ControlResponseBuffer[0] = 1;
-						SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "AbortScenario:",
-														 ControlResponseBuffer, 1, &ClientSocket, 0);
-					}
-				}
+			if (iCommSend(COMM_ABORT, NULL, 0) < 0) {
+				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ABORT command");
+				SystemControlState = SERVER_STATE_ERROR;
 			}
 			else {
-				if (ClientSocket >= 0) {
-					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-													 "AbortScenario:", ControlResponseBuffer, 1,
-													 &ClientSocket, 0);
-					SystemControlSendLog("[SystemControl] ABORT received, state errors!\n", &ClientSocket, 0);
-				}
 				SystemControlState = SERVER_STATE_IDLE;
 				SystemControlCommand = Idle_0;
+				if (ClientSocket >= 0) {
+					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+					ControlResponseBuffer[0] = 1;
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "AbortScenario:",
+													 ControlResponseBuffer, 1, &ClientSocket, 0);
+				}
 			}
 			break;
 		case Exit_0:
-
 			if (iCommSend(COMM_EXIT, NULL, 0) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending EXIT command");
 				SystemControlState = SERVER_STATE_ERROR;
@@ -1417,13 +1389,13 @@ ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t 
 
 	readResult = recv(socket, recvBuffer + bytesInBuffer, sizeof (recvBuffer) - bytesInBuffer, MSG_DONTWAIT);
 	if (readResult > 0) {
-		bytesInBuffer += (size_t) readResult;
+		bytesInBuffer += (size_t)readResult;
 	}
 
 	if (bytesInBuffer > 0) {
 		if ((endOfMessage = strstr(recvBuffer, endOfMessagePattern)) != NULL) {
 			endOfMessage += sizeof (endOfMessagePattern) - 1;
-			messageLength = (size_t) (endOfMessage - recvBuffer);
+			messageLength = (size_t)(endOfMessage - recvBuffer);
 		}
 		else {
 			messageLength = 0;
@@ -2801,10 +2773,12 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 
 
 	RVSSMaestroType RVSSMaestroData;
+	OBCState_t obcState;
 
 	RVSSMaestroData.MessageLengthU32 = SwapU32((U32) sizeof (RVSSMaestroType) - 4);
 	RVSSMaestroData.ChannelCodeU32 = SwapU32((U32) RVSS_MAESTRO_CHANNEL);
-	RVSSMaestroData.OBCStateU8 = DataDictionaryGetOBCStateU8(GSD);
+	DataDictionaryGetOBCState(&obcState);
+	RVSSMaestroData.OBCStateU8 = (uint8_t) (obcState);
 	RVSSMaestroData.SysCtrlStateU8 = SysCtrlState;
 
 	p = (C8 *) & RVSSMaestroData;
@@ -2829,7 +2803,7 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
  * \param addr Address struct pointer for RVSS socket
  * \return 0 on success, -1 otherwise
  */
-int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in * addr) {
+int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr) {
 	uint32_t messageLength = 0;
 	uint32_t RVSSChannel = RVSS_MONITOR_CHANNEL;
 	char RVSSData[MAX_MONR_STRING_LENGTH];
@@ -2894,7 +2868,7 @@ int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr
 				retval = -1;
 			}
 			else if (UtilObjectDataToString(monitorData, monitorDataString,
-											sizeof (RVSSData) - (size_t) (monitorDataString - RVSSData)) ==
+											sizeof (RVSSData) - (size_t)(monitorDataString - RVSSData)) ==
 					 -1) {
 				LogMessage(LOG_LEVEL_ERROR, "Error building object data string");
 				retval = -1;
