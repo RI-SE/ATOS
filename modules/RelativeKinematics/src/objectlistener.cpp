@@ -2,6 +2,7 @@
 #include "datadictionary.h"
 #include "maestroTime.h"
 #include "iso22133.h"
+#include "journal.h"
 #include <eigen3/Eigen/Dense>
 
 
@@ -37,7 +38,13 @@ void ObjectListener::listen() {
 				if (handler->controlMode == ScenarioHandler::RELATIVE_KINEMATICS && !obj->isAnchor()) {
 					monr.second = transformCoordinate(monr.second, handler->getLastAnchorData());
 				}
+
+				// Save to memory
 				DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime);
+				auto objData = obj->getAsObjectData();
+				objData.MonrData = monr.second;
+				JournalRecordMonitorData(&objData);
+
 				// Check if state has changed
 				if (obj->getState() != prevObjState) {
 					switch (obj->getState()) {
