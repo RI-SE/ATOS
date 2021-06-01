@@ -1,10 +1,13 @@
-pipeline {
-  agent any
-  stages {
+try {
+        timeout(time: 240, unit: 'MINUTES') {
+            timestamps {
+                stage 'checkout' {
+                    git credentialsId: '4691426b-aa51-428b-901d-4e851ee37b01', url: 'git@github.com:nuxeo/nuxeo.git'
+                }
     stage('Build') {
       steps {
         sh 'echo "Executing build steps..."'
-        cmakeBuild(cleanBuild: true, buildDir: 'build', installation: 'InSearchPath', steps: [[withCmake: true]])
+        cmakeBuild(cleanBuild: true, buildDir: 'build', installation: 'InSearchPath', steps: [[envVars: 'DESTDIR=${WORKSPACE}/artifacts', withCmake: true]])
       }
     }
 
@@ -41,8 +44,10 @@ pipeline {
       }
     }
 
-  }
-  options {
-    timeout(time: 15, unit: 'MINUTES')
-  }
-}
+            }
+        }
+    } catch(e) {
+        currentBuild.result = "FAILURE"
+        step([$class: 'ClaimPublisher'])
+        throw e
+    }
