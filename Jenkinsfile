@@ -1,3 +1,4 @@
+node('Main') {
 try {
         timeout(time: 240, unit: 'MINUTES') {
             timestamps {
@@ -51,3 +52,4 @@ try {
         step([$class: 'ClaimPublisher'])
         throw e
     }
+}
