@@ -177,6 +177,7 @@ void ScenarioHandler::abortConnectionAttempt() {
 
 void ScenarioHandler::disconnectObjects() {
 	abortConnectionAttempt();
+	stopHeartbeatSignal.set_value();
 	for (const auto id : getVehicleIDs()) {
 		objects[id].disconnect();
 	}
@@ -241,7 +242,9 @@ void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> 
 	try {
 		if (!obj.isConnected()) {
 			obj.establishConnection(connStopReq);
+			LogPrint("Before send TRAJ");
 			obj.sendSettings();
+			LogPrint("After send TRAJ");
 
 			int nReadMonr = 0;
 			constexpr int maxInitializingMonrs = 10;
