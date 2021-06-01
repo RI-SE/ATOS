@@ -3,7 +3,7 @@ pipeline {
   stages {
     stage('Checkout'){
       steps{
-          checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [[$class: 'CheckoutOption', timeout: 5], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: true, recursiveSubmodules: true, reference: '', timeout: 5, trackingSubmodules: false]], userRemoteConfigs: [[credentialsId: '4c683913-52c5-4e02-a46f-36e5b9a14903', url: 'https://github.com/RI-SE/Maestro/']]])
+          checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [[$class: 'CheckoutOption', timeout: 50], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: true, recursiveSubmodules: true, reference: '', timeout: 50, trackingSubmodules: false]], userRemoteConfigs: [[credentialsId: '4c683913-52c5-4e02-a46f-36e5b9a14903', url: 'https://github.com/RI-SE/Maestro/']]])
       }
     }
     
