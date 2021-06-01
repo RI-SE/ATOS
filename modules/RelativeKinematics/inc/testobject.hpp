@@ -95,7 +95,11 @@ public:
 
 	bool isConnected() const { return comms.isConnected(); }
 	void establishConnection(std::shared_future<void> stopRequest);
-	void disconnect() { this->comms.disconnect(); }
+	void disconnect() {
+		LogMessage(LOG_LEVEL_INFO, "Disconnecting object %u",
+				   this->transmitterID);
+		this->comms.disconnect();
+	}
 
 	void sendSettings();
 	void sendHeartbeat(const ControlCenterStatusType ccStatus);

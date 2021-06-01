@@ -2,6 +2,7 @@
 
 #include "scenariohandler.hpp"
 #include "util.h"
+#include "type.h"
 #include <stdexcept>
 
 class ScenarioHandler;
@@ -23,17 +24,17 @@ public:
 	//! The below transitions represent spontaneous actions uninitiated by
 	//! the user - inheriting classes may throw exceptions if transitions
 	//! are deemed unreasonable
-	virtual void connectedToObject(ScenarioHandler&,uint32_t) = 0;
-	virtual void disconnectedFromObject(ScenarioHandler&,uint32_t) = 0;
-	virtual void connectedToLiveObject(ScenarioHandler&,uint32_t) = 0;
-	virtual void connectedToArmedObject(ScenarioHandler&,uint32_t) = 0;
-	virtual void allObjectsDisarmed(ScenarioHandler&) = 0;
-	virtual void allObjectsConnected(ScenarioHandler&) = 0;
-	virtual void testCompleted(ScenarioHandler&) = 0;
-	virtual void objectDisarmed(ScenarioHandler&,uint32_t) = 0;
-	virtual void objectArmed(ScenarioHandler&,uint32_t) = 0;
-	virtual void objectAborting(ScenarioHandler&,uint32_t) = 0;
-	virtual void postProcessingCompleted(ScenarioHandler&) = 0;
+	virtual void connectedToObject(ScenarioHandler&, uint32_t) { throw std::runtime_error("Unexpected connection in state " + type(*this)); }
+	virtual void disconnectedFromObject(ScenarioHandler&, uint32_t) { throw std::runtime_error("Unexpected disconnection in state " + type(*this)); }
+	virtual void connectedToLiveObject(ScenarioHandler&, uint32_t) { throw std::runtime_error("Unexpected connection to live object in state " + type(*this)); }
+	virtual void connectedToArmedObject(ScenarioHandler&, uint32_t) { throw std::runtime_error("Unexpected connection to armed object in state " + type(*this)); }
+	virtual void allObjectsDisarmed(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects disarmed in state " + type(*this)); }
+	virtual void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected in state " + type(*this)); }
+	virtual void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion in state " + type(*this)); }
+	virtual void objectDisarmed(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected object disarmed in state " + type(*this)); }
+	virtual void objectArmed(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected object armed in state " + type(*this)); }
+	virtual void objectAborting(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected object aborting in state " + type(*this)); }
+	virtual void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion in state " + type(*this)); }
 
 	//! Enter/exit functionality - defaults to nothing
 	virtual void onEnter(ScenarioHandler&) {}
@@ -69,17 +70,7 @@ public:
 	void allClearRequest(ScenarioHandler&) override {}
 
 	//! All spontaneous events unexpected
-	void connectedToObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection"); }
-	void disconnectedFromObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected disconnection"); }
-	void connectedToLiveObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to armed object"); }
-	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
-	void objectDisarmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object disarmed"); }
-	void objectArmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object armed"); }
-	void objectAborting(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object aborting"); }
-	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
+	//
 
 	OBCState_t asNumber() const override { return OBC_STATE_IDLE; }
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_INIT; }
@@ -102,17 +93,7 @@ public:
 	void allClearRequest(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected
-	void connectedToObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection"); }
-	void disconnectedFromObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected disconnection"); }
-	void connectedToLiveObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to armed object"); }
-	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
-	void objectDisarmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object disarmed"); }
-	void objectArmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object armed"); }
-	void objectAborting(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object aborting"); }
-	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
+	//
 
 	OBCState_t asNumber() const override { return OBC_STATE_INITIALIZED; }
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_INIT; }
@@ -144,11 +125,7 @@ public:
 	void allClearRequest(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected
-	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
-	void objectDisarmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object disarmed"); }
-	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
-
+	//
 
 	// TODO integrate this state into the enum variable
 	OBCState_t asNumber() const override { return OBC_STATE_INITIALIZED; }
@@ -176,15 +153,7 @@ public:
 	void allClearRequest(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected
-	void connectedToObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection"); }
-	void connectedToLiveObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to armed object"); }
-	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
-	void objectDisarmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object disarmed"); }
-	void objectArmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object armed"); }
-	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
+	//
 
 	OBCState_t asNumber() const override { return OBC_STATE_CONNECTED; }
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_READY; }
@@ -212,12 +181,7 @@ public:
 	void abortRequest(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected
-	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
-	void objectDisarmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object disarmed"); }
-	void objectArmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object armed"); }
-	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
+	//
 
 	// TODO integrate this state into the enum variable
 	OBCState_t asNumber() const override { return OBC_STATE_ERROR; }
@@ -247,13 +211,7 @@ public:
 	void allClearRequest(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected
-	void connectedToObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection"); }
-	void connectedToLiveObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to armed object"); }
-	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
-	void objectArmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object armed"); }
-	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
+	//
 
 	OBCState_t asNumber() const override { return OBC_STATE_RUNNING; }
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_RUNNING; }
@@ -286,9 +244,7 @@ public:
 	void allClearRequest(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected
-	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
-	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
+	//
 
 	// TODO integrate this state into the enum variable
 	OBCState_t asNumber() const override { return OBC_STATE_ARMED; }
@@ -318,13 +274,7 @@ public:
 	void allClearRequest(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected
-	void connectedToObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection"); }
-	void connectedToLiveObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to armed object"); }
-	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
-	void postProcessingCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected postprocessing completion"); }
+	//
 
 	OBCState_t asNumber() const override { return OBC_STATE_ARMED; }
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_RUNNING; } // TODO
@@ -350,16 +300,7 @@ public:
 	void allClearRequest(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected
-	void connectedToObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection"); }
-	void disconnectedFromObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected disconnection"); }
-	void connectedToLiveObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to live object"); }
-	void connectedToArmedObject(ScenarioHandler&, uint32_t) override { throw std::runtime_error("Unexpected connection to armed object"); }
-	void allObjectsDisarmed(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects disarmed"); }
-	void allObjectsConnected(ScenarioHandler&) override { throw std::runtime_error("Unexpected all objects connected"); }
-	void testCompleted(ScenarioHandler&) override { throw std::runtime_error("Unexpected test completion"); }
-	void objectDisarmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object disarmed"); }
-	void objectArmed(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object armed"); }
-	void objectAborting(ScenarioHandler&,uint32_t) override { throw std::runtime_error("Unexpected object aborting"); }
+	//
 
 	// TODO integrate this state into the enum variable
 	OBCState_t asNumber() const override { return OBC_STATE_RUNNING; }

@@ -221,7 +221,6 @@ void ScenarioHandler::heartbeat() {
 			}
 			catch (std::invalid_argument& e) {
 				LogMessage(LOG_LEVEL_WARNING, e.what());
-				LogMessage(LOG_LEVEL_WARNING, "Disconnecting object %u", id);
 				objects[id].disconnect();
 				this->state->disconnectedFromObject(*this, id);
 			}
