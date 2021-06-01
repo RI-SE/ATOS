@@ -305,10 +305,12 @@ void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> 
 	catch (std::runtime_error &e) {
 		LogMessage(LOG_LEVEL_ERROR, "Connection attempt for object %u failed: %s",
 				   obj.getTransmitterID(), e.what());
+		obj.disconnect();
 	}
 	catch (std::invalid_argument &e) {
 		LogMessage(LOG_LEVEL_ERROR, "Bad connection attempt for object %u: %s",
 				   obj.getTransmitterID(), e.what());
+		obj.disconnect();
 	}
 };
 
