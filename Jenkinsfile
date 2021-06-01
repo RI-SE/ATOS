@@ -2,7 +2,7 @@ try {
         timeout(time: 240, unit: 'MINUTES') {
             timestamps {
                 stage 'checkout' {
-                    git credentialsId: '4691426b-aa51-428b-901d-4e851ee37b01', url: 'git@github.com:nuxeo/nuxeo.git'
+                    git credentialsId: '7f1fc5b7-78e5-43d6-a9db-ff98937b02cc', url: 'https://github.com/RI-SE/Maestro'
                 }
     stage('Build') {
       steps {
