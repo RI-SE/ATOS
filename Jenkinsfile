@@ -1,6 +1,10 @@
 pipeline {
   agent any
   stages {
+    stage('Checkout){
+          checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [[$class: 'CheckoutOption', timeout: 5], [$class: 'SubmoduleOption', disableSubmodules: false, parentCredentials: true, recursiveSubmodules: true, reference: '', timeout: 5, trackingSubmodules: false]], userRemoteConfigs: [[credentialsId: '4c683913-52c5-4e02-a46f-36e5b9a14903', url: 'https://github.com/RI-SE/Maestro/']]])
+          }
+    
     stage('Build') {
       steps {
         sh 'echo "Executing build steps..."'
@@ -46,3 +50,6 @@ pipeline {
     timeout(time: 15, unit: 'MINUTES')
   }
 }
+
+
+
