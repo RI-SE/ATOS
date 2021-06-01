@@ -354,11 +354,21 @@ bool ObjectConnection::isValid() const {
 
 void ObjectConnection::disconnect() {
 	if (this->cmd.socket != -1) {
-		close(this->cmd.socket);
+		if (shutdown(this->cmd.socket, SHUT_RDWR) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Command socket shutdown: %s", strerror(errno));
+		}
+		if (close(this->cmd.socket) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Command socket close: %s", strerror(errno));
+		}
 		this->cmd.socket = -1;
 	}
 	if (this->mntr.socket != -1) {
-		close(this->mntr.socket);
+		if (shutdown(this->mntr.socket, SHUT_RDWR) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Safety socket shutdown: %s", strerror(errno));
+		}
+		if (close(this->mntr.socket) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Safety socket close: %s", strerror(errno));
+		};
 		this->mntr.socket = -1;
 	}
 }

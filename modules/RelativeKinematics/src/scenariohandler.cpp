@@ -185,6 +185,7 @@ void ScenarioHandler::disconnectObjects() {
 	}
 	for (const auto id : getVehicleIDs()) {
 		objects[id].disconnect();
+		// how to handle the object listeners?
 	}
 }
 
@@ -247,9 +248,7 @@ void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> 
 	try {
 		if (!obj.isConnected()) {
 			obj.establishConnection(connStopReq);
-			LogPrint("Before send TRAJ");
 			obj.sendSettings();
-			LogPrint("After send TRAJ");
 
 			int nReadMonr = 0;
 			constexpr int maxInitializingMonrs = 10;

@@ -84,6 +84,7 @@ void ObjectListener::listen() {
 		obj->disconnect();
 		handler->state->disconnectedFromObject(*handler, obj->getTransmitterID());
 	}
+	LogMessage(LOG_LEVEL_INFO, "Listener thread exiting");
 }
 
 /*!
