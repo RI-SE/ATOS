@@ -49,27 +49,4 @@ void ObjectControlState::abortRequest(ScenarioHandler&) {
 void ObjectControlState::allClearRequest(ScenarioHandler&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-//void ObjectControlState::connectedToObject(ScenarioHandler&,uint32_t) {
-//	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
-//}
-//void ObjectControlState::disconnectedFromObject(ScenarioHandler&,uint32_t) {
-//	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
-//}
-//void ObjectControlState::connectedToLiveObject(ScenarioHandler&,uint32_t) {
-//	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
-//}
-//void ObjectControlState::connectedToArmedObject(ScenarioHandler&,uint32_t) {
-//	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
-//}
-//void ObjectControlState::allObjectsDisarmed(ScenarioHandler&) {
-//	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
-//}
-//void ObjectControlState::allObjectsConnected(ScenarioHandler&) {
-//	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
-//}
-//void ObjectControlState::testCompleted(ScenarioHandler&) {
-//	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
-//}
-//void ObjectControlState::postProcessingCompleted(ScenarioHandler&) {
-//	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
-//}
+
