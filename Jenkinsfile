@@ -1,12 +1,10 @@
-
   pipeline {
   agent any
   stages {
     stage('Build') {
   steps {
     sh 'echo "Executing build steps..."'
-    cmakeBuild(cleanBuild: true, buildDir: 'build',      credentialsId: '7f1fc5b7-78e5-43d6-a9db-ff98937b02cc'
-, installation: 'InSearchPath', steps: [[envVars: 'DESTDIR=${WORKSPACE}/artifacts', withCmake: true]])
+    cmakeBuild(cleanBuild: true, buildDir: 'build', credentialsId: '7f1fc5b7-78e5-43d6-a9db-ff98937b02cc', installation: 'InSearchPath', steps: [[envVars: 'DESTDIR=${WORKSPACE}/artifacts', withCmake: true]])
   }
 }
     stage('Run tests') {
@@ -46,5 +44,3 @@
   options {
     timeout(time: 15, unit: 'MINUTES')
   }
-
-
