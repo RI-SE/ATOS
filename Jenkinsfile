@@ -1,8 +1,4 @@
-node('MASTER') {
-try {
-        timeout(time: 5, unit: 'MINUTES') {
-            timestamps {
-                stage 'checkout' {
+              stage 'checkout' {
                     git credentialsId: '7f1fc5b7-78e5-43d6-a9db-ff98937b02cc', url: 'https://github.com/RI-SE/Maestro'
                 }
     stage('Build') {
@@ -45,11 +41,4 @@ try {
       }
     }
 
-            }
-        }
-    } catch(e) {
-        currentBuild.result = "FAILURE"
-        step([$class: 'ClaimPublisher'])
-        throw e
-    }
-}
+
