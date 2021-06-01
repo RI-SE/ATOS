@@ -1,5 +1,35 @@
 pipeline {
   agent any
+  
+  checkout(
+  [
+    $class: 'GitSCM', 
+    branches: [
+      [
+        name: '*/master'
+      ]
+    ], 
+    doGenerateSubmoduleConfigurations: false, 
+    extensions: [
+      [
+        $class: 'SubmoduleOption', 
+        disableSubmodules: false, 
+        parentCredentials: true, 
+        recursiveSubmodules: true, 
+        reference: '', 
+        trackingSubmodules: false
+      ]
+    ], 
+    submoduleCfg: [], 
+    userRemoteConfigs: [
+      [
+        credentialsId: 'jenkinsUser', 
+        url: 'git@github.com:RI-SE/Maestro.git'
+      ]
+    ]
+  ]
+)
+  
   stages {
     stage('Build') {
       steps {
