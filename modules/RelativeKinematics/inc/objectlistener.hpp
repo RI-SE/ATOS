@@ -22,4 +22,3 @@ private:
 	bool quit = false;
 };
 
-
