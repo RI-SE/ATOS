@@ -1,12 +1,7 @@
-node('master') {
-try {
-        timeout(time: 5, unit: 'MINUTES') {
-            timestamps {
-                stage 'checkout' {
-                    git credentialsId: '7f1fc5b7-78e5-43d6-a9db-ff98937b02cc', url: 'https://github.com/RI-SE/Maestro'
-                }
+
     stage('Build') {
       steps {
+              credentialsId: '7f1fc5b7-78e5-43d6-a9db-ff98937b02cc'
         sh 'echo "Executing build steps..."'
         cmakeBuild(cleanBuild: true, buildDir: 'build', installation: 'InSearchPath', steps: [[envVars: 'DESTDIR=${WORKSPACE}/artifacts', withCmake: true]])
       }
@@ -47,9 +42,4 @@ try {
 
             }
         }
-    } catch(e) {
-        currentBuild.result = "FAILURE"
-        step([$class: 'ClaimPublisher'])
-        throw e
-    }
-}
+  
