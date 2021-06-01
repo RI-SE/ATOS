@@ -1,41 +1,10 @@
 pipeline {
-  agent any 
+  agent any
   stages {
     stage('Build') {
-            steps {
-
-          checkout(
-              [
-                $class: 'GitSCM', 
-                branches: [
-                  [
-                    name: '*/master'
-                  ]
-                ], 
-                doGenerateSubmoduleConfigurations: false, 
-                extensions: [
-                  [
-                    $class: 'SubmoduleOption', 
-                    disableSubmodules: false, 
-                    parentCredentials: true, 
-                    recursiveSubmodules: true, 
-                    reference: '', 
-                    trackingSubmodules: false
-                  ]
-                ], 
-                submoduleCfg: [], 
-                userRemoteConfigs: [
-                  [
-                    credentialsId: 'JenkinsUser', 
-                    url: 'git@github.com:RI-SE/Maestro.git'
-                  ]
-                ]
-              ]
-            )
-            }
-    }
+      steps {
         sh 'echo "Executing build steps..."'
-        cmakeBuild(cleanBuild: true, buildDir: 'build', installation: 'InSearchPath', steps: [[envVars: 'DESTDIR=${WORKSPACE}/artifacts', withCmake: true]])
+        cmakeBuild(cleanBuild: true, buildDir: 'build', installation: 'InSearchPath', steps: [[withCmake: true]])
       }
     }
 
@@ -76,4 +45,4 @@ pipeline {
   options {
     timeout(time: 15, unit: 'MINUTES')
   }
-
+}
