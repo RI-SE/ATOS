@@ -35,9 +35,7 @@
             sh 'echo "Running code formatting check..."'
             sh './checkCodeFormat.sh'
           }
-        }
-
-      }
+       }
     }
 
             }
