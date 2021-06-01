@@ -1,7 +1,7 @@
 pipeline {
-  agent any
-  
-  checkout(
+  agent any 
+  stages {
+      checkout(
   [
     $class: 'GitSCM', 
     branches: [
@@ -23,14 +23,12 @@ pipeline {
     submoduleCfg: [], 
     userRemoteConfigs: [
       [
-        credentialsId: 'jenkinsUser', 
+        credentialsId: 'JenkinsUser', 
         url: 'git@github.com:RI-SE/Maestro.git'
       ]
     ]
   ]
 )
-  
-  stages {
     stage('Build') {
       steps {
         sh 'echo "Executing build steps..."'
