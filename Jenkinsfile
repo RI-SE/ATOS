@@ -1,4 +1,4 @@
-node('Master') {
+node('master') {
 try {
         timeout(time: 5, unit: 'MINUTES') {
             timestamps {
