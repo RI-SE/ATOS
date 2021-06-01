@@ -1,47 +1,16 @@
-  pipeline {
-  agent any
-  stages {
-    stage('Build') {
-  steps {
-    sh 'echo "Executing build steps..."'
-    cmakeBuild(cleanBuild: true, buildDir: 'build', credentialsId: '7f1fc5b7-78e5-43d6-a9db-ff98937b02cc', installation: 'InSearchPath', steps: [[envVars: 'DESTDIR=${WORKSPACE}/artifacts', withCmake: true]])
-  }
-}
-    stage('Run tests') {
-      parallel {
-        stage('Master Integration tests') {
-          when {
-            expression {
-              GIT_BRANCH = 'origin/' + sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
-              return GIT_BRANCH == 'origin/master'
-            }
+ pipeline {
+    agent any
 
-          }
-          steps {
-            sh 'echo "Running extensive Maestro integration tests..."'
-            sh './maestroExtensiveTests.sh'
-          }
-        }
-
-        stage('Dev Integration tests') {
-          steps {
-            sh 'echo "Running standard Maestro integration tests..."'
-            sh './maestroStandardTests.sh'
-          }
-        }
-
-        stage('Format check') {
-          steps {
-            sh 'echo "Running code formatting check..."'
-            sh './checkCodeFormat.sh'
-          }
-        }
-
-      }
+    environment {
+        GIT_SSH_COMMAND = 'ssh -i /home/u93029@sp.se/github/key'
     }
 
-  }
-  options {
-    timeout(time: 15, unit: 'MINUTES')
-  }
-  }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'printenv'
+                sh 'git submodule update --init --recursive'
+            }
+        }
+    }
+} 
