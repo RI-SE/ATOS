@@ -515,6 +515,7 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 			throw std::invalid_argument(std::string("Failed to encode TRAJ message point: ") + strerror(errno));
 		}
 		nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
+
 		if (nBytes < 0) {
 			// TODO what to do here?
 			throw std::invalid_argument(std::string("Failed to send TRAJ message point: ") + strerror(errno));

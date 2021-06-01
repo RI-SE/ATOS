@@ -177,7 +177,12 @@ void ScenarioHandler::abortConnectionAttempt() {
 
 void ScenarioHandler::disconnectObjects() {
 	abortConnectionAttempt();
-	stopHeartbeatSignal.set_value();
+	try {
+		stopHeartbeatSignal.set_value();
+	}
+	catch (std::future_error) {
+		// Attempted to stop when none in progress
+	}
 	for (const auto id : getVehicleIDs()) {
 		objects[id].disconnect();
 	}
