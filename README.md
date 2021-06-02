@@ -114,13 +114,13 @@ To disable the CITS module, remake the `cmake` procedure
 cmake "Unix Makefiles" -DUSE_CITS:BOOL=FALSE ..
 ```
 
-## How to build with or without ObjectControl
+## How to build with RelativeKinematics instead of ObjectControl
 
-The server will build ObjectControl thread in Core by default. It's possible to disable the ObjectControl thread by remake the `cmake` procedure with the argument -DWITH_OBJECT_CONTROL=OFF, see following command
+The server will build ObjectControl thread in Core by default. It's possible to replace ObjectControl with the RelativeKinematics module remaking the `cmake` procedure with the argument -DWITH_RELATIVE_KINEMATICS=ON, see following command
 ```sh
-cmake .. -DWITH_OBJECT_CONTROL=OFF
+cmake .. -DWITH_RELATIVE_KINEMATICS=ON
 ```
-To include ObjectControl in the build again run the same command with ON, see following command
+To include ObjectControl in the build again run the same command with OFF, see following command
 ```sh
-cmake .. -DWITH_OBJECT_CONTROL=ON
+cmake .. -DWITH_RELATIVE_KINEMATICS=OFF
 ```
