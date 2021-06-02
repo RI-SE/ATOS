@@ -81,7 +81,8 @@ public:
 	fs::path getTrajectoryFile() const { return trajectoryFile; }
 	Trajectory getTrajectory() const { return trajectory; }
 	GeographicPositionType getOrigin() const { return origin; }
-	ObjectStateType getState(bool awaitUpdate);
+	ObjectStateType getState(const bool awaitUpdate);
+	ObjectStateType getState(const bool awaitUpdate, const std::chrono::milliseconds timeout);
 	ObjectStateType getState() const { return isConnected() ? state : OBJECT_STATE_UNKNOWN; }
 	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
 	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }
@@ -94,7 +95,11 @@ public:
 
 	bool isConnected() const { return comms.isConnected(); }
 	void establishConnection(std::shared_future<void> stopRequest);
-	void disconnect() { this->comms.disconnect(); }
+	void disconnect() {
+		LogMessage(LOG_LEVEL_INFO, "Disconnecting object %u",
+				   this->transmitterID);
+		this->comms.disconnect();
+	}
 
 	void sendSettings();
 	void sendHeartbeat(const ControlCenterStatusType ccStatus);
