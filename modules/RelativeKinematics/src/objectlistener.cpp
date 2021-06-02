@@ -2,6 +2,7 @@
 #include "datadictionary.h"
 #include "maestroTime.h"
 #include "iso22133.h"
+#include "journal.h"
 #include <eigen3/Eigen/Dense>
 
 
@@ -37,19 +38,28 @@ void ObjectListener::listen() {
 				if (handler->controlMode == ScenarioHandler::RELATIVE_KINEMATICS && !obj->isAnchor()) {
 					monr.second = transformCoordinate(monr.second, handler->getLastAnchorData());
 				}
+
+				// Save to memory
 				DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime);
+				auto objData = obj->getAsObjectData();
+				objData.MonrData = monr.second;
+				JournalRecordMonitorData(&objData);
+
 				// Check if state has changed
 				if (obj->getState() != prevObjState) {
 					switch (obj->getState()) {
 					case OBJECT_STATE_DISARMED:
+						LogMessage(LOG_LEVEL_INFO, "Object %u disarmed", obj->getTransmitterID());
 						handler->state->objectDisarmed(*handler, obj->getTransmitterID());
 						break;
 					case OBJECT_STATE_POSTRUN:
 						break;
 					case OBJECT_STATE_ARMED:
+						LogMessage(LOG_LEVEL_INFO, "Object %u armed", obj->getTransmitterID());
 						handler->state->objectArmed(*handler, obj->getTransmitterID());
 						break;
 					case OBJECT_STATE_ABORTING:
+						LogMessage(LOG_LEVEL_INFO, "Object %u aborting", obj->getTransmitterID());
 						handler->state->objectAborting(*handler, obj->getTransmitterID());
 						break;
 					}
@@ -74,6 +84,7 @@ void ObjectListener::listen() {
 		obj->disconnect();
 		handler->state->disconnectedFromObject(*handler, obj->getTransmitterID());
 	}
+	LogMessage(LOG_LEVEL_INFO, "Listener thread exiting");
 }
 
 /*!

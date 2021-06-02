@@ -41,6 +41,7 @@
 *kdev4
 # Catalogs
 build*/
+.vscode*/
 PlaygroundPlatform*/
 
 # Autosave files
