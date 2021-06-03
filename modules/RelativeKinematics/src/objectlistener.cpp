@@ -4,6 +4,7 @@
 #include "iso22133.h"
 #include "journal.h"
 #include <eigen3/Eigen/Dense>
+#include <csignal>
 
 
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor);
@@ -23,7 +24,9 @@ ObjectListener::ObjectListener(
 ObjectListener::~ObjectListener() {
 	this->quit = true;
 	LogMessage(LOG_LEVEL_DEBUG, "Awaiting thread exit");
-	listener.join(); // TODO this blocks if MONR timeout
+	pthread_cancel(listener.native_handle());
+	listener.join(); // TODO this blocks if MONR timeout (still?)
+	LogMessage(LOG_LEVEL_DEBUG, "Thread exited");
 }
 
 void ObjectListener::listen() {
@@ -39,11 +42,16 @@ void ObjectListener::listen() {
 					monr.second = transformCoordinate(monr.second, handler->getLastAnchorData());
 				}
 
+				// Disable thread cancelling while accessing shared memory and journals
+				int oldCancelState;
+				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancelState);
 				// Save to memory
 				DataDictionarySetMonitorData(monr.first, &monr.second, &currentTime);
 				auto objData = obj->getAsObjectData();
 				objData.MonrData = monr.second;
 				JournalRecordMonitorData(&objData);
+				// Reset thread cancelling
+				pthread_setcancelstate(oldCancelState, nullptr);
 
 				// Check if state has changed
 				if (obj->getState() != prevObjState) {
@@ -84,7 +92,7 @@ void ObjectListener::listen() {
 		obj->disconnect();
 		handler->state->disconnectedFromObject(*handler, obj->getTransmitterID());
 	}
-	LogMessage(LOG_LEVEL_INFO, "Listener thread exiting");
+	LogMessage(LOG_LEVEL_INFO, "Listener thread for object %u exiting", obj->getTransmitterID());
 }
 
 /*!

@@ -187,6 +187,8 @@ void ScenarioHandler::disconnectObjects() {
 		objects[id].disconnect();
 		// how to handle the object listeners?
 	}
+	LogPrint("Clearing listener list");
+	objectListeners.clear();
 }
 
 void ScenarioHandler::uploadObjectConfiguration(
