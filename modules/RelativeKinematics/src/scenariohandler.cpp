@@ -191,6 +191,12 @@ void ScenarioHandler::disconnectObjects() {
 	objectListeners.clear();
 }
 
+void ScenarioHandler::disconnectObject(
+		const uint32_t id) {
+	objects[id].disconnect();
+	objectListeners.erase(id);
+}
+
 void ScenarioHandler::uploadObjectConfiguration(
 		const uint32_t id) {
 	objects[id].sendSettings();

@@ -131,6 +131,10 @@ private:
 	void abortConnectionAttempt();
 	//! \brief Abort ongoing connection attempts and disconnect objects.
 	void disconnectObjects();
+
+	//! \brief Disconnect specific object.
+	void disconnectObject(const uint32_t id);
+
 	//! \brief Establishe a connection to a specified object, and check the first
 	//!			MONR state. This is a blocking method.
 	void connectToObject(TestObject& obj, std::shared_future<void>& connStopReq);
