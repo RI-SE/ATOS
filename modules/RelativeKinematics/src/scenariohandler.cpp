@@ -185,9 +185,7 @@ void ScenarioHandler::disconnectObjects() {
 	}
 	for (const auto id : getVehicleIDs()) {
 		objects[id].disconnect();
-		// how to handle the object listeners?
 	}
-	LogPrint("Clearing listener list");
 	objectListeners.clear();
 }
 
@@ -220,19 +218,23 @@ void ScenarioHandler::heartbeat() {
 
 		// Check time since MONR for all objects
 		for (const auto& id : getVehicleIDs()) {
-			auto diff = objects[id].getTimeSinceLastMonitor();
-			if (diff > objects[id].getMaxAllowedMonitorPeriod()) {
-				LogMessage(LOG_LEVEL_WARNING, "MONR timeout for object %u: %d ms > %d ms", id,
-						   diff.count(), objects[id].getMaxAllowedMonitorPeriod().count());
-				objects[id].disconnect();
-				this->state->disconnectedFromObject(*this, id);
+			if (objects[id].isConnected()) {
+				auto diff = objects[id].getTimeSinceLastMonitor();
+				if (diff > objects[id].getMaxAllowedMonitorPeriod()) {
+					LogMessage(LOG_LEVEL_WARNING, "MONR timeout for object %u: %d ms > %d ms", id,
+							   diff.count(), objects[id].getMaxAllowedMonitorPeriod().count());
+					objects[id].disconnect();
+					this->state->disconnectedFromObject(*this, id);
+				}
 			}
 		}
 
 		// Send heartbeat
 		for (const auto& id : getVehicleIDs()) {
 			try {
-				objects[id].sendHeartbeat(this->state->asControlCenterStatus());
+				if (objects[id].isConnected()) {
+					objects[id].sendHeartbeat(this->state->asControlCenterStatus());
+				}
 			}
 			catch (std::invalid_argument& e) {
 				LogMessage(LOG_LEVEL_WARNING, e.what());
