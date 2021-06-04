@@ -92,6 +92,15 @@ int main() {
 			// Any exceptions here should crash the program
 			scenarioHandler.handleAbortCommand();
 			break;
+		case COMM_ABORT_DONE:
+			//Abort is done at object level
+			try	{ 
+				scenarioHandler.handleAllClearCommand();
+			} catch(std::invalid_argument& e) {
+				LogMessage(LOG_LEVEL_ERROR, "Failed clear abort - %s", e.what());
+				iCommSend(COMM_FAILURE, nullptr, 0);
+			}		
+			break;
 		default:
 			LogMessage(LOG_LEVEL_INFO, "Received command %u", command);
 		}
