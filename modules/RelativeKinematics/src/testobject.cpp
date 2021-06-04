@@ -87,12 +87,18 @@ void TestObject::updateMonitor(const MonitorMessage& data) {
 	this->lastMonitor = data.second;
 }
 
-ObjectStateType TestObject::getState(bool awaitUpdate) {
+ObjectStateType TestObject::getState(const bool awaitUpdate) {
+	return getState(awaitUpdate, maxAllowedMonitorPeriod);
+}
+
+ObjectStateType TestObject::getState(
+		const bool awaitUpdate,
+		const std::chrono::milliseconds timeout) {
 	if (awaitUpdate) {
 		if (!nextMonitor.valid()) {
 			nextMonitor = std::async(std::launch::async, &TestObject::awaitNextMonitor, this);
 		}
-		auto status = nextMonitor.wait_for(maxAllowedMonitorPeriod);
+		auto status = nextMonitor.wait_for(timeout);
 		if (status == std::future_status::ready) {
 			this->updateMonitor(nextMonitor.get());
 		}
@@ -348,11 +354,21 @@ bool ObjectConnection::isValid() const {
 
 void ObjectConnection::disconnect() {
 	if (this->cmd.socket != -1) {
-		close(this->cmd.socket);
+		if (shutdown(this->cmd.socket, SHUT_RDWR) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Command socket shutdown: %s", strerror(errno));
+		}
+		if (close(this->cmd.socket) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Command socket close: %s", strerror(errno));
+		}
 		this->cmd.socket = -1;
 	}
 	if (this->mntr.socket != -1) {
-		close(this->mntr.socket);
+		if (shutdown(this->mntr.socket, SHUT_RDWR) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Safety socket shutdown: %s", strerror(errno));
+		}
+		if (close(this->mntr.socket) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Safety socket close: %s", strerror(errno));
+		};
 		this->mntr.socket = -1;
 	}
 }
@@ -422,6 +438,9 @@ ISOMessageID Channel::pendingMessageType(bool awaitNext) {
 
 ISOMessageID ObjectConnection::pendingMessageType(bool awaitNext) {
 	if (awaitNext) {
+		if (!isValid()) {
+			throw std::invalid_argument("Attempted to check pending message type for unconnected object");
+		}
 		fd_set fds;
 		FD_ZERO(&fds);
 		FD_SET(mntr.socket, &fds);
@@ -431,13 +450,16 @@ ISOMessageID ObjectConnection::pendingMessageType(bool awaitNext) {
 		if (result < 0) {
 			throw std::ios_base::failure(std::string("Failed socket operation (select: ") + strerror(errno) + ")"); // TODO clearer
 		}
+		else if (!isValid()) {
+			throw std::invalid_argument("Connection invalidated during select call");
+		}
 		else if (FD_ISSET(mntr.socket, &fds)) {
 			return this->mntr.pendingMessageType();
 		}
 		else if (FD_ISSET(cmd.socket, &fds)) {
 			return this->cmd.pendingMessageType();
 		}
-		throw std::logic_error("Call to select returned unexpectedly");
+		throw std::logic_error("Call to select returned unexpectedly: " + std::to_string(result));
 	}
 	else {
 		auto retval = this->mntr.pendingMessageType();
@@ -483,7 +505,7 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 	}
 	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 	if (nBytes < 0) {
-		throw std::invalid_argument(std::string("Failed to send TRAJ message: ") + strerror(errno));
+		throw std::invalid_argument(std::string("Failed to send TRAJ message header: ") + strerror(errno));
 	}
 
 	// TRAJ points
@@ -503,9 +525,10 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 			throw std::invalid_argument(std::string("Failed to encode TRAJ message point: ") + strerror(errno));
 		}
 		nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
+
 		if (nBytes < 0) {
 			// TODO what to do here?
-			throw std::invalid_argument(std::string("Failed to send TRAJ message: ") + strerror(errno));
+			throw std::invalid_argument(std::string("Failed to send TRAJ message point: ") + strerror(errno));
 		}
 	}
 
@@ -516,7 +539,7 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 	}
 	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 	if (nBytes < 0) {
-		throw std::invalid_argument(std::string("Failed to send TRAJ message: ") + strerror(errno));
+		throw std::invalid_argument(std::string("Failed to send TRAJ message footer: ") + strerror(errno));
 	}
 	return chnl;
 }

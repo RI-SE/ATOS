@@ -177,8 +177,15 @@ void ScenarioHandler::abortConnectionAttempt() {
 
 void ScenarioHandler::disconnectObjects() {
 	abortConnectionAttempt();
+	try {
+		stopHeartbeatSignal.set_value();
+	}
+	catch (std::future_error) {
+		// Attempted to stop when none in progress
+	}
 	for (const auto id : getVehicleIDs()) {
 		objects[id].disconnect();
+		// how to handle the object listeners?
 	}
 }
 
@@ -216,7 +223,14 @@ void ScenarioHandler::heartbeat() {
 
 		// Send heartbeat
 		for (const auto& id : getVehicleIDs()) {
-			objects[id].sendHeartbeat(this->state->asControlCenterStatus());
+			try {
+				objects[id].sendHeartbeat(this->state->asControlCenterStatus());
+			}
+			catch (std::invalid_argument& e) {
+				LogMessage(LOG_LEVEL_WARNING, e.what());
+				objects[id].disconnect();
+				this->state->disconnectedFromObject(*this, id);
+			}
 		}
 	}
 	LogMessage(LOG_LEVEL_INFO, "Heartbeat thread exiting");
@@ -234,13 +248,25 @@ void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> 
 	try {
 		if (!obj.isConnected()) {
 			obj.establishConnection(connStopReq);
-			obj.sendHeartbeat(this->state->asControlCenterStatus());
 			obj.sendSettings();
 
 			int nReadMonr = 0;
 			constexpr int maxInitializingMonrs = 10;
+			int connectionHeartbeats = 10;
 			while (true) {
-				auto objState = obj.getState(true);
+				obj.sendHeartbeat(this->state->asControlCenterStatus());
+				ObjectStateType objState = OBJECT_STATE_UNKNOWN;
+				try {
+					objState = obj.getState(true, heartbeatPeriod);
+				} catch (std::runtime_error& e) {
+					if (connectionHeartbeats--) {
+						continue;
+					}
+					else {
+						throw e;
+					}
+				}
+
 				switch (objState) {
 				case OBJECT_STATE_ARMED:
 				case OBJECT_STATE_REMOTE_CONTROL:
@@ -278,10 +304,14 @@ void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> 
 	catch (std::runtime_error &e) {
 		LogMessage(LOG_LEVEL_ERROR, "Connection attempt for object %u failed: %s",
 				   obj.getTransmitterID(), e.what());
+		obj.disconnect();
+		// TODO: connection failed event?
 	}
 	catch (std::invalid_argument &e) {
 		LogMessage(LOG_LEVEL_ERROR, "Bad connection attempt for object %u: %s",
 				   obj.getTransmitterID(), e.what());
+		obj.disconnect();
+		// TODO: connection failed event?
 	}
 };
 
