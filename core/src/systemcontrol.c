@@ -142,7 +142,7 @@ typedef enum {
 	SetObjectEnableStatus_2,
 	GetObjectEnableStatus_1,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
-	start_ext_trigg_1, nocommand
+	start_ext_trigg_1, ClearAllScenario_0 ,nocommand
 } SystemControlCommand_t;
 
 static const char *SystemControlCommandsArr[] = {
@@ -157,7 +157,7 @@ static const char *SystemControlCommandsArr[] = {
 	"SetObjectEnableStatus_2",
 	"GetObjectEnableStatus_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 	"control_0",
-	"Exit_0", "start_ext_trigg_1"
+	"Exit_0", "start_ext_trigg_1", "ClearAllScenario_0"
 };
 
 const char *SystemControlStatesArr[] =
@@ -1238,7 +1238,23 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 													 ControlResponseBuffer, 1, &ClientSocket, 0);
 				}
 			}
-			break;
+		break;
+		case ClearAllScenario_0:
+			if (iCommSend(COMM_ABORT_DONE, NULL, 0) < 0) {
+				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending COMM_ABORT_DONE command");
+				SystemControlState = SERVER_STATE_ERROR;
+			}
+			else {
+				SystemControlState = SERVER_STATE_IDLE;
+				SystemControlCommand = Idle_0;
+				if (ClientSocket >= 0) {
+					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+					ControlResponseBuffer[0] = 1;
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearAllScenario:",
+													 ControlResponseBuffer, 1, &ClientSocket, 0);
+				}
+			}
+		break;
 		case Exit_0:
 			if (iCommSend(COMM_EXIT, NULL, 0) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending EXIT command");

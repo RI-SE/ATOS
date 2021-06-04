@@ -80,6 +80,8 @@ public:
 	//! \brief Performs actions in response to an abort request.
 	void handleAbortCommand();
 
+	void handleAllClearCommand();
+
 	//! Getters
 	//! \brief Get transmitter ID of anchor object participating in test.
 	uint32_t getAnchorObjectID() const;

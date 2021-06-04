@@ -53,6 +53,10 @@ void ScenarioHandler::handleAbortCommand() {
 	this->state->abortRequest(*this);
 }
 
+void ScenarioHandler::handleAllClearCommand() {
+	this->state->allClearRequest(*this);
+}
+
 void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
