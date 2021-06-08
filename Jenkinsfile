@@ -1,6 +1,7 @@
 pipeline {
   agent any
   stages {
+
     stage('Build') {
       steps {
         sh 'echo "Executing build steps..."'
@@ -46,5 +47,3 @@ pipeline {
     timeout(time: 15, unit: 'MINUTES')
   }
 }
-
-
