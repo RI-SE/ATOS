@@ -1,7 +1,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <systemd/sd-daemon.h>
-
+#include <csignal>
 #include "braketrigger.h"
 #include "trigger.h"
 #include "datadictionary.h"
@@ -16,7 +16,12 @@
 
 void updateObjectCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
 int updateTriggers(Scenario& scenario);
+static void signalHandler(int signo);
 
+/*------------------------------------------------------------
+  -- Static variables
+  ------------------------------------------------------------*/
+static bool quit = false;
 /************************ Main task ******************************************/
 int main()
 {
@@ -38,6 +43,10 @@ int main()
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
     LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
 
+	// Set up signal handlers
+	if (signal(SIGINT, signalHandler) == SIG_ERR)
+		util_error("Unable to initialize signal handler");
+
 	JournalInit(MODULE_NAME);
 
     struct timeval tvTime;
@@ -46,7 +55,7 @@ int main()
     DataDictionaryInitObjectData();
 
     // Initialize message bus connection
-    while(iCommInit())
+	while(iCommInit() && !quit)
     {
         nanosleep(&sleepTimePeriod,&remTime);
     }
@@ -54,7 +63,7 @@ int main()
 	// Notify service handler that startup was successful
 	sd_notify(0, "READY=1");
 
-    while(!terminate)
+	while(!quit)
     {
         if (state == RUNNING)
         {
@@ -181,8 +190,9 @@ int main()
 			}
         }
     }
-
-    return 0;
+	LogMessage(LOG_LEVEL_INFO, MODULE_NAME " exiting");
+	iCommClose();
+	return 0;
 }
 
 
@@ -262,3 +272,14 @@ void updateObjectCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMR
         timeradd(&currentTime, &SHMEMTimeInterval, currentSHMEMReadTime);
     }
 }
+
+void signalHandler(int signo) {
+	if (signo == SIGINT) {
+		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+		quit = true;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+	}
+}
+
