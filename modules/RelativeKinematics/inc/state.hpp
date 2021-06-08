@@ -180,6 +180,10 @@ public:
 	void stopRequest(ScenarioHandler&) override {}
 	void abortRequest(ScenarioHandler&) override {}
 
+	//! Handle strange object transitions
+	void objectDisarmed(ScenarioHandler&, uint32_t) override;
+	void objectArmed(ScenarioHandler&, uint32_t) override;
+
 	//! Other spontaneous events unexpected
 	//
 

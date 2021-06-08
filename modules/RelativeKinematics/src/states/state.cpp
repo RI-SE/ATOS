@@ -7,6 +7,7 @@
 void ObjectControlState::setState(
 		ScenarioHandler& handler,
 		ObjectControlState *st) {
+	// TODO mutex on state modification
 	// Before replacing state, execute any exit behaviour
 	handler.state->onExit(handler);
 	LogMessage(LOG_LEVEL_INFO, "Transitioning to state %s", type(*st).c_str());

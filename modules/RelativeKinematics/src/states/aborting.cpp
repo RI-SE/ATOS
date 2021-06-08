@@ -38,6 +38,20 @@ void ObjectControl::Aborting::objectAborting(
 	// TODO
 }
 
+void ObjectControl::Aborting::objectDisarmed(
+		ScenarioHandler &handler,
+		uint32_t id) {
+	LogMessage(LOG_LEVEL_WARNING, "Object disarmed while expecting abort");
+	handler.disconnectObject(id); // TODO just stop sending HEAB to keep tracking available
+}
+
+void ObjectControl::Aborting::objectArmed(
+		ScenarioHandler &handler,
+		uint32_t id) {
+	LogMessage(LOG_LEVEL_WARNING, "Object armed while expecting abort");
+	handler.disconnectObject(id); // TODO just stop sending HEAB to keep tracking available
+}
+
 void RelativeKinematics::Aborting::allClearRequest(
 		ScenarioHandler &handler) {
 	ObjectControl::Aborting::allClearRequest(handler);
