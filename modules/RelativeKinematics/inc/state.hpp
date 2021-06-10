@@ -188,7 +188,7 @@ public:
 	//
 
 	// TODO integrate this state into the enum variable
-	OBCState_t asNumber() const override { return OBC_STATE_ERROR; }
+	OBCState_t asNumber() const override { return OBC_STATE_ABORTING; }
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_ABORT; }
 };
 
