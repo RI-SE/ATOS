@@ -81,6 +81,7 @@
 #define PRIO_COMM_REMOTECTRL_ENABLE 16
 #define PRIO_COMM_REMOTECTRL_DISABLE 16
 #define PRIO_COMM_ENABLE_OBJECT 16
+#define PRIO_COMM_ABORTING_DONE 16
 // Single-shot messages relevant during test run
 #define PRIO_COMM_EXAC 14
 #define PRIO_COMM_TREO 14
@@ -2040,6 +2041,9 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_ABORT:
 		uiMessagePrio = PRIO_COMM_ABORT;
 		break;
+	case COMM_ABORT_DONE:
+		uiMessagePrio = PRIO_COMM_ABORTING_DONE;
+	break;
 	case COMM_INIT:
 		uiMessagePrio = PRIO_COMM_INIT;
 		break;
