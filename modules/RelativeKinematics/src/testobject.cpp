@@ -41,6 +41,13 @@ void TestObject::setMonitorAddress(
 	}
 }
 
+void TestObject::setOsiAddress(
+		const sockaddr_in &newAddr) {
+	if (!this->comms.isConnected()) {
+		this->comms.osi.addr = newAddr;
+	}
+}
+
 ObjectDataType TestObject::getAsObjectData() const {
 	ObjectDataType retval;
 	// TODO check on isValid for each
@@ -150,6 +157,8 @@ void TestObject::parseConfigurationFile(
 	this->setCommandAddress(addr);
 	addr.sin_port = htons(ISO_22133_OBJECT_UDP_PORT);
 	this->setMonitorAddress(addr);
+	addr.sin_port = htons(OSI_DEFAULT_OBJECT_TCP_PORT);
+	this->setMonitorAddress(addr);
 
 	// Get trajectory file setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_TRAJ, objectFile.c_str(),
@@ -203,6 +212,34 @@ void TestObject::parseConfigurationFile(
 			}
 			else {
 				throw std::invalid_argument("Anchor setting " + std::string(setting) + " in file "
+											+ objectFile.string() + " is invalid");
+			}
+		}
+	}
+
+	// Get OSI compatible setting
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_IS_OSI_COMPATIBLE, objectFile.c_str(),
+								 objectFile.string().length(),
+								 setting, sizeof (setting)) == -1) {
+		this->isOsiObject = false;
+	}
+	else {
+		if (setting[0] == '1' || setting[0] == '0') {
+			this->isOsiObject = setting[0] == '1';
+		}
+		else {
+			std::string anchorSetting(setting);
+			for (char &c : anchorSetting) {
+				c = std::tolower(c, std::locale());
+			}
+			if (anchorSetting.compare("true") == 0) {
+				this->isOsiObject = true;
+			}
+			else if (anchorSetting.compare("false") == 0) {
+				this->isOsiObject = false;
+			}
+			else {
+				throw std::invalid_argument("OSI setting " + std::string(setting) + " in file "
 											+ objectFile.string() + " is invalid");
 			}
 		}
@@ -269,12 +306,13 @@ void TestObject::parseTrajectoryFile(
 
 void TestObject::establishConnection(std::shared_future<void> stopRequest) {
 	this->lastMonitorTime = std::chrono::steady_clock::time_point(); // reset
-	this->comms.connect(stopRequest, TestObject::connRetryPeriod);
+	this->comms.connect(stopRequest, TestObject::connRetryPeriod, this->isOsiCompatible());
 }
 
 void ObjectConnection::connect(
 		std::shared_future<void> stopRequest,
-		const std::chrono::milliseconds retryPeriod) {
+		const std::chrono::milliseconds retryPeriod,
+		const bool isOsiObject) {
 	char ipString[INET_ADDRSTRLEN];
 	std::stringstream errMsg;
 
@@ -291,13 +329,13 @@ void ObjectConnection::connect(
 
 	this->cmd.socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (this->cmd.socket < 0) {
-		errMsg << "Failed to open control socket: " << strerror(errno);
+		errMsg << "Failed to open ISO control socket: " << strerror(errno);
 		this->disconnect();
 		throw std::runtime_error(errMsg.str());
 	}
 
 	// Begin connection attempt
-	LogMessage(LOG_LEVEL_INFO, "Attempting connection to: %s:%u", ipString,
+	LogMessage(LOG_LEVEL_INFO, "Attempting connection to ISO object: %s:%u", ipString,
 			   ntohs(this->cmd.addr.sin_port));
 	while (true) {
 		if (::connect(this->cmd.socket,
@@ -306,12 +344,52 @@ void ObjectConnection::connect(
 			break;
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Failed connection attempt to %s, retrying in %.3f s ...",
+			LogMessage(LOG_LEVEL_ERROR, "Failed connection attempt to ISO object %s, retrying in %.3f s ...",
 					   ipString, retryPeriod.count() / 1000.0);
 			if (stopRequest.wait_for(retryPeriod)
 					!= std::future_status::timeout) {
 				errMsg << "Connection attempt interrupted";
 				throw std::runtime_error(errMsg.str());
+			}
+		}
+	}
+
+	if(isOsiObject == true){
+		if (inet_ntop(AF_INET, &this->osi.addr.sin_addr, ipString, sizeof (ipString))
+				== nullptr) {
+			errMsg << "inet_ntop: " << strerror(errno);
+			throw std::invalid_argument(errMsg.str());
+		}
+
+		if (this->osi.addr.sin_addr.s_addr == 0) {
+			errMsg << "Invalid connection IP specified: " << ipString;
+			throw std::invalid_argument(errMsg.str());
+		}
+
+		this->osi.socket = socket(AF_INET, SOCK_STREAM, 0);
+		if (this->osi.socket < 0) {
+			errMsg << "Failed to open OSI control socket: " << strerror(errno);
+			this->disconnect();
+			throw std::runtime_error(errMsg.str());
+		}
+
+		// Begin connection attempt
+		LogMessage(LOG_LEVEL_INFO, "Attempting connection to OSI object: %s:%u", ipString,
+				   ntohs(this->osi.addr.sin_port));
+		while (true) {
+			if (::connect(this->osi.socket,
+						reinterpret_cast<struct sockaddr *>(&this->osi.addr),
+						sizeof (this->osi.addr)) == 0) {
+				break;
+			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR, "Failed connection attempt to OSI object%s, retrying in %.3f s ...",
+						   ipString, retryPeriod.count() / 1000.0);
+				if (stopRequest.wait_for(retryPeriod)
+						!= std::future_status::timeout) {
+					errMsg << "Connection attempt interrupted";
+					throw std::runtime_error(errMsg.str());
+				}
 			}
 		}
 	}

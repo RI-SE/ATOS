@@ -16,6 +16,7 @@ namespace fs = std::experimental::filesystem;
 
 struct MonitorMessage : std::pair<uint32_t,ObjectMonitorType> {};
 
+#define OSI_DEFAULT_OBJECT_TCP_PORT 53250
 
 /*!
  * \brief The Channel class represents any socket based connection
@@ -55,11 +56,13 @@ class ObjectConnection {
 public:
 	Channel cmd;
 	Channel mntr;
+	Channel osi;
 
 	bool isValid() const;
 	bool isConnected() const;
 	void connect(std::shared_future<void> stopRequest,
-				 const std::chrono::milliseconds retryPeriod);
+				 const std::chrono::milliseconds retryPeriod,
+				 const bool isOsiObject);
 	void disconnect();
 	ISOMessageID pendingMessageType(bool awaitNext = false);
 };
@@ -88,8 +91,10 @@ public:
 	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
+	void setOsiAddress(const sockaddr_in& newAddr);
 
 	bool isAnchor() const { return isAnchorObject; }
+	bool isOsiCompatible() const { return isOsiObject; }
 	std::string toString() const;
 	ObjectDataType getAsObjectData() const;
 
@@ -143,6 +148,7 @@ private:
 	fs::path trajectoryFile;
 	uint32_t transmitterID = 0;
 	bool isAnchorObject = false;
+	bool isOsiObject = false;
 	Trajectory trajectory;
 	GeographicPositionType origin;
 	bool isEnabled = true;

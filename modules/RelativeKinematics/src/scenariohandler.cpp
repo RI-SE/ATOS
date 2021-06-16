@@ -261,12 +261,13 @@ void ScenarioHandler::startListeners() {
 void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> &connStopReq) {
 	try {
 		if (!obj.isConnected()) {
+			obj.isOsiCompatible() == true;
 			obj.establishConnection(connStopReq);
 			obj.sendSettings();
 
 			int nReadMonr = 0;
-			constexpr int maxInitializingMonrs = 10;
-			int connectionHeartbeats = 10;
+			constexpr int maxInitializingMonrs = 100;
+			int connectionHeartbeats = 100;
 			while (true) {
 				obj.sendHeartbeat(this->state->asControlCenterStatus());
 				ObjectStateType objState = OBJECT_STATE_UNKNOWN;
