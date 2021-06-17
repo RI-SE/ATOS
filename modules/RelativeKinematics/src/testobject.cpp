@@ -454,11 +454,9 @@ ISOMessageID ObjectConnection::pendingMessageType(bool awaitNext) {
 			throw std::invalid_argument("Connection invalidated during select call");
 		}
 		else if (FD_ISSET(mntr.socket, &fds)) {
-			LogMessage(LOG_LEVEL_DEBUG, "Received message on monitor channel");
 			return this->mntr.pendingMessageType();
 		}
 		else if (FD_ISSET(cmd.socket, &fds)) {
-			LogMessage(LOG_LEVEL_DEBUG, "Received message on command channel");
 			return this->cmd.pendingMessageType();
 		}
 		throw std::logic_error("Call to select returned unexpectedly: " + std::to_string(result));
