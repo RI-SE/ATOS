@@ -6,6 +6,7 @@
 #include "util.h"
 #include "datadictionary.h"
 #include "tcphandler.hpp"
+#include "osi_handler.h"
 
 #define MODULE_NAME "OSI"
 
@@ -79,7 +80,10 @@ int main()
             ObjectMonitorType monrData;
             DataDictionaryGetMonitorData(8,&monrData);
             printf("y = %3.3f\n", monrData.position.yCoord_m);
-
+            OsiHandler osi;
+            std::string mystr;
+            std::vector<char> myChar;
+            osi.encodeSvGtMessage(myChar,10, &mystr, true);
             //encodeSvGtMessage(std::vector<char> msg, int msgSize, bool debug);
             //encodeOSI
 
