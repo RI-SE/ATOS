@@ -1,3 +1,6 @@
 [submodule "util"]
 	path = util
 	url = https://github.com/RI-SE/util
+[submodule "osi-Tools"]
+	path = osi-Tools
+	url = git@github.com:RI-SE/osi-Tools.git

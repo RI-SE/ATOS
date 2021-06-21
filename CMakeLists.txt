@@ -14,6 +14,7 @@ set(WITH_VISUALIZATION ON CACHE BOOL "Enable Visualization module")
 set(WITH_RELATIVE_KINEMATICS OFF CACHE BOOL "Enable RelativeKinematics module")
 set(WITH_DIRECT_CONTROL ON CACHE BOOL "Enable DirectControl module")
 set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
+set(WITH_OSI_CONTROL ON CACHE BOOL "Enable OsiControl module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -55,6 +56,10 @@ if(WITH_RELATIVE_KINEMATICS)
 else()
 	set(WITH_OBJECT_CONTROL ON)
 endif()
+if(WITH_OSI_CONTROL)
+	list(APPEND ENABLED_MODULES OsiControl)
+endif()
+
 
 #Delete comments below when ObjectControl becomes an Module instead
 #of a thread in Core 
@@ -69,6 +74,7 @@ endif()
 
 # Add corresponding subprojects
 add_subdirectory(util/C)
+add_subdirectory(osi-Tools/Cpp)
 add_subdirectory(common)
 add_subdirectory(core)
 foreach(MODULE ${ENABLED_MODULES})
