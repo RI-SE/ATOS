@@ -9,6 +9,7 @@
 #include "osi_handler.h"
 
 #define MODULE_NAME "OSI"
+#define OSI_RECEIVER_PORT 53250
 
 int main()
 {
@@ -26,7 +27,11 @@ int main()
     DataDictionaryInitObjectData();
     TCPHandler tcp;
     std::vector<char> msg(1000);
-
+    uint32_t nofObjects;
+    uint32_t transmitterIDs[10];
+    int32_t TCPSocketfdI32;
+    C8 osiReceiverIP[] = {"192.168.0.59"};
+    int32_t tcpRes = 0;
  
     // Initialize message bus connection
     while(iCommInit())
@@ -50,10 +55,13 @@ int main()
             printf("OBCState = %d\n", OBCState);
             break;
         case COMM_CONNECT:
+            DataDictionaryGetNumberOfObjects(&nofObjects);
+            DataDictionaryGetObjectTransmitterIDs(transmitterIDs, nofObjects);
            // OBCState = (OBCState_t)mqRecvData[0];
-            tcp.CreateClient(53250, "192.168.0.59");
-            tcp.TCPHandlerclose();
-            tcp.receiveTCP(msg, 1000);
+            //tcp.CreateClient(53250, "192.168.0.59");
+
+            tcpRes = UtilConnectTCPChannel((const C8*)MODULE_NAME, &TCPSocketfdI32, 
+                                            osiReceiverIP, OSI_RECEIVER_PORT);
             break;
         case COMM_STRT:
             nanosleep(&abortWaitTime,&remTime);
@@ -61,7 +69,7 @@ int main()
             //iCommSend(COMM_ABORT,nullptr,0);
             break;
         case COMM_ABORT:
-            tcp.TCPHandlerclose();
+            //tcp.TCPHandlerclose();
             nanosleep(&abortWaitTime,&remTime);
             break;
         default:
@@ -71,23 +79,27 @@ int main()
 
 
         if(OBCState == OBC_STATE_ARMED || OBCState == OBC_STATE_RUNNING){
-                 uint32_t numberOfObjects;
-           DataDictionaryGetNumberOfObjects(&numberOfObjects);
-            if (numberOfObjects<=0){
-                return 0;
-            }
- 
-            ObjectMonitorType monrData;
-            DataDictionaryGetMonitorData(8,&monrData);
-            printf("y = %3.3f\n", monrData.position.yCoord_m);
-            OsiHandler osi;
-            std::string mystr;
-            std::vector<char> myChar;
-            osi.encodeSvGtMessage(myChar,10, &mystr, true);
-            //encodeSvGtMessage(std::vector<char> msg, int msgSize, bool debug);
-            //encodeOSI
 
-            //tcp.transmitTCP();
+            ObjectMonitorType monrData;
+            for(int i = 0; i < nofObjects; i ++){
+                
+                DataDictionaryGetMonitorData(transmitterIDs[i],&monrData);
+                auto ptr = reinterpret_cast<char*>(&monrData);
+                std::vector<char> buffer(ptr, ptr + sizeof(monrData));
+                OsiHandler osi;
+                std::string protoBuffed;
+                osi.encodeSvGtFromMonr(buffer, buffer.size(), &protoBuffed, true);
+
+                std::vector<char> inBuffer(protoBuffed.begin(), protoBuffed.end());
+                osi.decodeSvGtMessage(inBuffer, inBuffer.size(), true);
+
+                auto ptr1 = reinterpret_cast<const C8*>(&protoBuffed);
+                UtilSendTCPData((const C8*)MODULE_NAME, ptr1, inBuffer.size(),
+                           &TCPSocketfdI32, 0);
+                //tcp.sendTCP(inBuffer);
+            }
+            
+            
         }
 
     }
