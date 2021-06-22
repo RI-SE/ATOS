@@ -36,11 +36,6 @@ int main()
             break;
         case COMM_OBC_STATE:
             break;
-        case COMM_STRT:
-            nanosleep(&abortWaitTime,&remTime);
-            LogMessage(LOG_LEVEL_WARNING,"Sending ABORT");
-            iCommSend(COMM_ABORT,nullptr,0);
-            break;
         default:
             LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
         }
