@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(dummy)
+project(BackToStart)
 
 # Define target names
 set(BACK_TO_START ${PROJECT_NAME})
