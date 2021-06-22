@@ -1,11 +1,12 @@
 from tools.MSCP import MSCP
 from tools.Executable import Executable
-from tools.TrajectoryFile import *
+from tools.ConfigurationFiles import *
 from tools.PortChecker import *
 import time
 import subprocess
 import sys
-
+import random
+import string
 
 userControl = None
 server = None
@@ -39,15 +40,23 @@ if __name__ == "__main__":
     checkProgramStatus("=== Connecting to the server caused a problem")
 
     # 2: Load trajectory
-    traj = ReadTrajectoryFile("resources/trajectories/",fileName="random")
+    [traj,fileName] = ReadTrajectoryFile("resources/trajectories/",fileName="random")
+    objID = random.randint(1,100)
+    objData = ConstructObjectFileData("127.0.0.1", fileName, objID)
     
     # 3: Start a test object
     WaitForPortAvailable(53240,"UDP",timeout=0)
     WaitForPortAvailable(53241,"TCP",timeout=0)
-    obj = Executable("VirtualObject",["-nogui"])
-    
+    obj = Executable("VirtualObject",["-nogui"]) #TODO txid objID
+   
+    # Clear old files
+    userControl.ClearTrajectories()
+    userControl.ClearGeofences()
+    userControl.ClearObjects()
+
     # 4: Upload trajectory
-    userControl.UploadFile("127.0.0.1",traj,"trajectory")
+    userControl.UploadFile(fileName,traj,"trajectory")
+    userControl.UploadFile(''.join(random.choice(string.ascii_letters) for i in range(10)) + ".obj",objData,"object")
 
     # 5: Send init
     userControl.Init()

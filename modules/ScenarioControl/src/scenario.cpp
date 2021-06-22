@@ -459,28 +459,27 @@ void Scenario::resetISOTriggers(void)
     }
 }
 
-Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &monr)
+Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const ObjectDataType &monr)
 {
     for (Trigger* tp : allTriggers)
 	{
         if(tp->getObjectIP() == monr.ClientIP && dynamic_cast<ISOTrigger*>(tp) == nullptr)
         {
+			Trigger::TriggerReturnCode_t result = Trigger::NO_TRIGGER_OCCURRED;
             switch (tp->getTypeCode())
             {
 			case Trigger::TriggerTypeCode_t::TRIGGER_BRAKE:
-				if (monr.data.speed.isLongitudinalValid && monr.data.isTimestampValid)
-				{
-					tp->update(monr.data.speed.longitudinal_m_s, monr.data.timestamp);
+				if (monr.MonrData.speed.isLongitudinalValid && monr.MonrData.isTimestampValid) {
+					result = tp->update(monr.MonrData.speed.longitudinal_m_s, monr.MonrData.timestamp);
 				}
-				else
-				{
+				else {
 					LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
 							   tp->getTypeAsString(tp->getTypeCode()).c_str());
 				}
                 break;
 			case Trigger::TriggerTypeCode_t::TRIGGER_DISTANCE:
-				if (monr.data.position.isPositionValid) {
-					tp->update(monr);
+				if (monr.MonrData.position.isPositionValid) {
+					result = tp->update(monr);
 				}
 				else {
 					LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
@@ -491,6 +490,11 @@ Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &mo
                 LogMessage(LOG_LEVEL_WARNING, "Unhandled trigger type in update: %s",
                            tp->getTypeAsString(tp->getTypeCode()).c_str());
             }
+			if (result == Trigger::TRIGGER_OCCURRED) {
+				std::string triggerType = Trigger::getTypeAsString(tp->getTypeCode());
+				JournalRecordData(JOURNAL_RECORD_EVENT, "Trigger %s (ID %d) occurred - triggering data timestamped %u [¼ ms of week]",
+								   triggerType.c_str(), tp->getID(), TimeGetAsGPSqmsOfWeek(&monr.MonrData.timestamp));
+			}
         }
     }
 }

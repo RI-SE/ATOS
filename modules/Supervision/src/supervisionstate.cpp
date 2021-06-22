@@ -1,6 +1,6 @@
 #include <stdexcept>
 
-#include "supervisionstate.h"
+#include "supervisionstate.hpp"
 
 SupervisionState::SupervisionState() {
     // Loopback transitions

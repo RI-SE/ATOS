@@ -7,10 +7,10 @@ class Executable():
         print("=== Starting executable " + str(path))
         self.args = [path] + argList
         try:
-            self.proc = subprocess.Popen(' '.join(self.args),shell=True)
-        except FileNotFoundError as e:
+            self.proc = subprocess.Popen(self.args)
+        except OSError as e:
             print("=== Executable " + str(path) + " not found")
-            raise ValueError(e.message)
+            raise e
         self.pids = []
         
         # Wait for a short time to allow the process to reach "steady-state"
@@ -38,6 +38,9 @@ class Executable():
             if int(subprocess.call(["kill","-0",str(pid)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)):
                 died.append(pid)
         return died
+    
+    def alive(self):
+        return len(self.poll()) == 0
     
     # Kill all started processes
     def stop(self):
