@@ -6,7 +6,7 @@
 #include "util.h"
 #include "datadictionary.h"
 #include "tcphandler.hpp"
-#include "osi_handler.h"
+#include "osi_handler.hpp"
 
 #define MODULE_NAME "OSI"
 #define OSI_RECEIVER_PORT 53250

@@ -74,7 +74,6 @@ endif()
 
 # Add corresponding subprojects
 add_subdirectory(util/C)
-add_subdirectory(osi-Tools/Cpp)
 add_subdirectory(common)
 add_subdirectory(core)
 foreach(MODULE ${ENABLED_MODULES})
