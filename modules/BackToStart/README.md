@@ -1,5 +1,5 @@
-## Dummy module
-This module is an example for how to build a Maestro-external module and connect it via message bus. It is also written in C++ so can serve as an example for how to import Maestro C code and connect to message bus using another code language.
+## Back To Start module
+This module is an intended to handle the back to start functionality in Maestro. 
 
 ### Build process
 1) Ensure your util repo is up to date
