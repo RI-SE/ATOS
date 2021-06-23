@@ -241,7 +241,7 @@ void ScenarioHandler::heartbeat() {
 				DataDictionaryGetMonitorData(objects[id].getTransmitterID(),&monrData);
 				OsiHandler osi;
 			    OsiHandler::GlobalObjectGroundTruth_t gt;
-			    std::chrono::system_clock::time_point ositime;
+			    std::chrono::system_clock::time_point<std::chrono::system_clock> ositime;
 			    gt.id = 1;
 			    gt.pos_m.x = monrData.position.xCoord_m;
 			    gt.pos_m.y = monrData.position.yCoord_m;
@@ -279,69 +279,78 @@ void ScenarioHandler::startListeners() {
 	}
 }
 
-void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> &connStopReq) {
+void ScenarioHandler::connectToObject(
+		TestObject &obj,
+		std::shared_future<void> &connStopReq) {
+
 	try {
 		if (!obj.isConnected()) {
-			obj.isOsiCompatible() == true;
-			obj.establishConnection(connStopReq);
-			obj.sendSettings();
+			try {
+				obj.establishConnection(connStopReq);
+				obj.sendSettings();
+			}
+			catch (std::runtime_error& e) {
+				LogMessage(LOG_LEVEL_ERROR, "Connection attempt for object %u failed: %s",
+						   obj.getTransmitterID(), e.what());
+				obj.disconnect();
+				// TODO connection failed event?
+			}
+			try {
+				int initializingMonrs = 10;
+				int connectionHeartbeats = 10;
+				while (true) {
+					ObjectStateType objState = OBJECT_STATE_UNKNOWN;
+					try {
+						obj.sendHeartbeat(this->state->asControlCenterStatus());
+						objState = obj.getState(true, heartbeatPeriod);
+					} catch (std::runtime_error& e) {
+						if (connectionHeartbeats-- > 0) {
+							continue;
+						}
+						else {
+							throw e;
+						}
+					}
 
-			int nReadMonr = 0;
-			constexpr int maxInitializingMonrs = 100;
-			int connectionHeartbeats = 100;
-			while (true) {
-				obj.sendHeartbeat(this->state->asControlCenterStatus());
-				ObjectStateType objState = OBJECT_STATE_UNKNOWN;
-				try {
-					objState = obj.getState(true, heartbeatPeriod);
-				} catch (std::runtime_error& e) {
-					if (connectionHeartbeats--) {
-						continue;
-					}
-					else {
-						throw e;
-					}
-				}
-
-				switch (objState) {
-				case OBJECT_STATE_ARMED:
-				case OBJECT_STATE_REMOTE_CONTROL:
-					LogMessage(LOG_LEVEL_INFO, "Connected to armed object");
-					this->state->connectedToArmedObject(*this, obj.getTransmitterID());
-					break;
-				case OBJECT_STATE_ABORTING:
-				case OBJECT_STATE_POSTRUN:
-				case OBJECT_STATE_RUNNING:
-					LogMessage(LOG_LEVEL_INFO, "Connected to running object");
-					this->state->connectedToLiveObject(*this, obj.getTransmitterID());
-					break;
-				case OBJECT_STATE_INIT:
-					if (nReadMonr < maxInitializingMonrs) {
-						++nReadMonr;
-						continue;
-					}
-					else {
-						LogMessage(LOG_LEVEL_INFO, "Connected object in initializing state after connection");
+					switch (objState) {
+					case OBJECT_STATE_ARMED:
+					case OBJECT_STATE_REMOTE_CONTROL:
+						LogMessage(LOG_LEVEL_INFO, "Connected to armed object");
+						this->state->connectedToArmedObject(*this, obj.getTransmitterID());
+						break;
+					case OBJECT_STATE_ABORTING:
+					case OBJECT_STATE_POSTRUN:
+					case OBJECT_STATE_RUNNING:
+						LogMessage(LOG_LEVEL_INFO, "Connected to running object");
+						this->state->connectedToLiveObject(*this, obj.getTransmitterID());
+						break;
+					case OBJECT_STATE_INIT:
+						if (initializingMonrs-- > 0) {
+							continue;
+						}
+						else {
+							LogMessage(LOG_LEVEL_INFO, "Connected object in initializing state after connection");
+							this->state->connectedToLiveObject(*this, obj.getTransmitterID());
+						}
+						break;
+					case OBJECT_STATE_DISARMED:
+						LogMessage(LOG_LEVEL_INFO, "Connected to disarmed object");
+						this->state->connectedToObject(*this, obj.getTransmitterID());
+						break;
+					default:
+						LogMessage(LOG_LEVEL_INFO, "Connected to object in unknown state");
 						this->state->connectedToLiveObject(*this, obj.getTransmitterID());
 					}
 					break;
-				case OBJECT_STATE_DISARMED:
-					LogMessage(LOG_LEVEL_INFO, "Connected to disarmed object");
-					this->state->connectedToObject(*this, obj.getTransmitterID());
-					break;
-				default:
-					LogMessage(LOG_LEVEL_INFO, "Connected to object in unknown state");
-					this->state->connectedToLiveObject(*this, obj.getTransmitterID());
 				}
-				break;
+			}
+			catch (std::runtime_error &e) {
+				LogMessage(LOG_LEVEL_ERROR, "Connection startup procedure failed for object %u: %s",
+						   obj.getTransmitterID(), e.what());
+				obj.disconnect();
+				// TODO: connection failed event?
 			}
 		}
-	}
-	catch (std::runtime_error &e) {
-		LogMessage(LOG_LEVEL_ERROR, "Connection attempt for object %u failed: %s",
-				   obj.getTransmitterID(), e.what());
-		obj.disconnect();
-		// TODO: connection failed event?
 	}
 	catch (std::invalid_argument &e) {
 		LogMessage(LOG_LEVEL_ERROR, "Bad connection attempt for object %u: %s",
@@ -350,6 +359,7 @@ void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> 
 		// TODO: connection failed event?
 	}
 };
+
 
 void ScenarioHandler::armObjects() {
 	for (auto& id : getVehicleIDs()) {
