@@ -134,6 +134,8 @@ static const char ObjectSettingNameInjectorIDs[] = "injectorIDs";
 static const char ObjectSettingNameLatitude[] = "originLatitude";
 static const char ObjectSettingNameLongitude[] = "originLongitude";
 static const char ObjectSettingNameAltitude[] = "originAltitude";
+static const char ObjectSettingNameTurningRadius[] = "turningRadius";
+static const char ObjectSettingNameMaxSpeed[] = "maxSpeed";
 
 /*------------------------------------------------------------
 -- Local type definitions
@@ -3825,6 +3827,12 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 		break;
 	case OBJECT_SETTING_ORIGIN_ALTITUDE:
 		outputString = ObjectSettingNameAltitude;
+		break;
+	case OBJECT_SETTING_TURNING_RADIUS:
+		outputString = ObjectSettingNameTurningRadius;
+		break;
+	case OBJECT_SETTING_MAX_SPEED:
+		outputString = ObjectSettingNameMaxSpeed;
 		break;
 	default:
 		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
