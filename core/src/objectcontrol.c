@@ -2426,7 +2426,6 @@ int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
 		else {
 			// Find the map matching source ID in configuration
 			int found = false;
-
 			for (unsigned int i = 0; i < numberOfMaps; ++i) {
 				if (injectionMaps[i].sourceID == sourceID) {
 					found = true;
@@ -2439,6 +2438,9 @@ int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
 						return -1;
 					}
 					injectionMaps[i].targetIDs[injectionMaps[i].numberOfTargets - 1] = targetID;
+					LogMessage(LOG_LEVEL_INFO,
+						   "Data injection from source ID %u to target ID %u",
+						   sourceID, targetID);
 				}
 			}
 			if (!found) {

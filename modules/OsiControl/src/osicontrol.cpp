@@ -82,19 +82,38 @@ int main()
 
             ObjectMonitorType monrData;
             for(int i = 0; i < nofObjects; i ++){
-                
                 DataDictionaryGetMonitorData(transmitterIDs[i],&monrData);
-                auto ptr = reinterpret_cast<char*>(&monrData);
-                std::vector<char> buffer(ptr, ptr + sizeof(monrData));
+                
                 OsiHandler osi;
-                std::string protoBuffed;
-                osi.encodeSvGtFromMonr(buffer, buffer.size(), &protoBuffed, true);
+                OsiHandler::GlobalObjectGroundTruth_t gt;
+                std::chrono::system_clock::time_point ositime;
+                gt.id = transmitterIDs[i];
+                gt.pos_m.x = monrData.position.xCoord_m;
+                gt.pos_m.y = monrData.position.yCoord_m;
+                gt.pos_m.z = monrData.position.zCoord_m;
+                std::string projstr;
+                std::string sendstr;
+                /*
+                auto xVelocity = MonrUserData->velocity.longitudinal_m_s;
+                auto yVelocity = MonrUserData->velocity.lateral_m_s;
+                auto zVelocity = 0;
+                auto xAcc = MonrUserData->acceleration.longitudinal_m_s2;
+                auto yAcc = MonrUserData->acceleration.lateral_m_s2;
+                auto zAcc = 0;
+                auto secs = MonrUserData->timestamp.tv_sec;
+                auto nanos = MonrUserData->timestamp.tv_usec*1000;
+                */
+                //auto ptr = reinterpret_cast<char*>(&monrData);
+                //std::vector<char> buffer(ptr, ptr + sizeof(monrData));
 
-                std::vector<char> inBuffer(protoBuffed.begin(), protoBuffed.end());
-                osi.decodeSvGtMessage(inBuffer, inBuffer.size(), true);
+                //std::string protoBuffed;
+                sendstr = osi.encodeSvGtMessage(gt, ositime, projstr, true);
 
-                auto ptr1 = reinterpret_cast<const C8*>(&protoBuffed);
-                UtilSendTCPData((const C8*)MODULE_NAME, ptr1, inBuffer.size(),
+                //std::vector<char> inBuffer(protoBuffed.begin(), protoBuffed.end());
+                //osi.decodeSvGtMessage(inBuffer, inBuffer.size(), true);
+
+                auto ptr1 = reinterpret_cast<const C8*>(&sendstr);
+                UtilSendTCPData((const C8*)MODULE_NAME, ptr1, sendstr.size(),
                            &TCPSocketfdI32, 0);
                 //tcp.sendTCP(inBuffer);
             }

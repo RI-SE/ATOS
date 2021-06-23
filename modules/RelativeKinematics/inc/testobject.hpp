@@ -5,6 +5,7 @@
 #include <vector>
 #include "trajectory.hpp"
 
+
 // GCC version 8.1 brings non-experimental support for std::filesystem
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
 #include <filesystem>
@@ -41,6 +42,7 @@ public:
 	friend Channel& operator<<(Channel&,const Trajectory&);
 	friend Channel& operator<<(Channel&,const ObjectCommandType&);
 	friend Channel& operator<<(Channel&,const StartMessageType&);
+	friend Channel& operator<<(Channel&,std::vector<char>&);
 
 	friend Channel& operator>>(Channel&,MonitorMessage&);
 	friend Channel& operator>>(Channel&,ObjectPropertiesType&);
@@ -111,6 +113,9 @@ public:
 	void sendArm();
 	void sendDisarm();
 	void sendStart();
+	//void sendOsiGlobalObjectGroundTruth(OsiHandler::GlobalObjectGroundTruth_t gogt);
+	//void sendOsiGlobalObjectGroundTruth(OsiHandler::GlobalObjectGroundTruth_t gogt);
+	void sendOsiData(std::vector<char> osidata);
 
 	std::chrono::milliseconds getTimeSinceLastMonitor() const {
 		if (lastMonitorTime.time_since_epoch().count() == 0) {

@@ -2,6 +2,7 @@
 #include "logging.h"
 #include "util.h"
 #include "datadictionary.h"
+#include "osi_handler.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -232,7 +233,27 @@ void ScenarioHandler::heartbeat() {
 				}
 			}
 		}
-
+		//Check if new monr to send as OSI
+		for(const auto& id: getVehicleIDs())
+		{
+			if(objects[id].isConnected() && objects[id].isOsiCompatible()){
+				ObjectMonitorType monrData;
+				DataDictionaryGetMonitorData(objects[id].getTransmitterID(),&monrData);
+				OsiHandler osi;
+			    OsiHandler::GlobalObjectGroundTruth_t gt;
+			    std::chrono::system_clock::time_point ositime;
+			    gt.id = 1;
+			    gt.pos_m.x = monrData.position.xCoord_m;
+			    gt.pos_m.y = monrData.position.yCoord_m;
+			    gt.pos_m.z = monrData.position.zCoord_m;
+			    std::string projstr = "TheProjectionString";
+			    std::string sendstr;
+			    sendstr = osi.encodeSvGtMessage(gt, ositime, projstr, true);
+			    std::vector<char> outBuffer(sendstr.begin(), sendstr.end());
+			    objects[id].sendOsiData(outBuffer);
+  			}
+		}
+		
 		// Send heartbeat
 		for (const auto& id : getVehicleIDs()) {
 			try {

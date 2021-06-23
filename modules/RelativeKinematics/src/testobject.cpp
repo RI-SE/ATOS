@@ -2,6 +2,7 @@
 #include "util.h"
 #include "maestroTime.h"
 #include "datadictionary.h"
+#include "osi_handler.hpp"
 
 TestObject::TestObject() {
 	// TODO
@@ -486,6 +487,16 @@ void TestObject::sendDisarm() {
 	this->comms.cmd << OBJECT_COMMAND_DISARM;
 }
 
+//void TestObject::sendOsiGlobalObjectGroundTruth(
+//	GlobalObjectGroundTruth_t gogt) {
+	//this->comms.osi << llls;
+//}
+
+void TestObject::sendOsiData(std::vector<char> osidata) {
+	this->comms.cmd << osidata;
+}
+
+
 void TestObject::sendStart() {
 	StartMessageType strt;
 	TimeSetToCurrentSystemTime(&strt.startTime); // TODO make possible to modify
@@ -681,6 +692,18 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 	}
 	return chnl;
 }
+
+
+Channel& operator<<(Channel& chnl, std::vector<char>& osi) {
+	
+	auto nBytes = send(chnl.socket, osi.data(), osi.size(), 0);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to send OSI data: ") + strerror(errno));
+	}
+	return chnl;
+}
+
+
 
 std::string Channel::remoteIP() const {
 	char ipString[INET_ADDRSTRLEN];
