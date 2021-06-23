@@ -118,7 +118,6 @@ public:
 	//! \brief Checks if all test participants are in any of the specified states.
 	//!			The method does not wait for the next MONR to arrive.
 	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
-	DataInjectionMap dataInjectionMaps[MAX_OBJECTS];
 private:
 	using clock = std::chrono::steady_clock;
 
@@ -134,7 +133,8 @@ private:
 	std::shared_future<void> connStopReqFuture;	//!< Request to stop a connection attempt
 	std::promise<void> connStopReqPromise;		//!< Promise that the above value will be emitted
 
-
+	DataInjectionMap dataInjectionMaps[MAX_OBJECTS];
+	
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
 	//!			and can be terminated by calling ::abortConnectionAttempt or setting ::connStopReqFuture.
