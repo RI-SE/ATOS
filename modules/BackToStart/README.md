@@ -12,7 +12,7 @@ This module is an intended to handle the back to start functionality in Maestro.
 ### Run the module
 1) Ensure you have built the module
 2) Navigate to the build directory
-3) Run the module: ```./dummy```
+3) Run the module: ```./BackToStart```
 4) Run Maestro
 
 Note: steps 3 and 4 can be replaced with running the runServer.sh script in the top directory of this repository
