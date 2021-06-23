@@ -63,6 +63,14 @@ public:
 		ABSOLUTE_KINEMATICS		//!< Scenario executed relative to earth-fixed point
 	} ControlMode;
 
+
+	typedef struct {
+		uint32_t sourceID;
+		unsigned int numberOfTargets;
+		uint32_t *targetIDs;
+		int isActive;
+	} DataInjectionMap;
+
 	ScenarioHandler(ControlMode);
 	~ScenarioHandler();
 
@@ -110,6 +118,7 @@ public:
 	//! \brief Checks if all test participants are in any of the specified states.
 	//!			The method does not wait for the next MONR to arrive.
 	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
+	DataInjectionMap dataInjectionMaps[MAX_OBJECTS];
 private:
 	using clock = std::chrono::steady_clock;
 
@@ -124,6 +133,7 @@ private:
 
 	std::shared_future<void> connStopReqFuture;	//!< Request to stop a connection attempt
 	std::promise<void> connStopReqPromise;		//!< Promise that the above value will be emitted
+
 
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
@@ -166,6 +176,13 @@ private:
 	void disarmObjects();
 	//! \brief
 	void startObjects();
+	int configureObjectDataInjection(DataInjectionMap injectionMaps[],
+								 const uint32_t transmitterIDs[],
+								 const unsigned int numberOfObjects);
+	int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
+								  DataInjectionMap injectionMaps[],
+								  const unsigned int numberOfMaps);
+
 
 };
 
