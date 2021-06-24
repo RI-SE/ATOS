@@ -44,6 +44,8 @@ int main()
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
 			break;
+		case COMM_REMOTECTRL_MANOEUVRE:
+			LogMessage(LOG_LEVEL_INFO,"Received COMM_REMOTECTRL_MANOEUVRE command");
 		default:
 			LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
 		}
