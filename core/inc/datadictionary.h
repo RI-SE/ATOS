@@ -11,6 +11,7 @@
 #define __DATADICTIONARY_H_INCLUDED__
 
 #define SHARED_MEMORY_PATH "/dev/shm/maestro/"
+#define MISC_DATA_MAX_SIZE 1024
 
 #include "util.h"
 
@@ -120,8 +121,11 @@ ReadWriteAccess_t DataDictionarySetRVSSAsp(GSDType *GSD, ASPType *ASPData);
 ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType *GSD, ASPType *ASPData);
 
 ReadWriteAccess_t DataDictionaryInitMiscDataC8(GSDType *GSD);
+ReadWriteAccess_t DataDictionaryInitMiscData(void);
 ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType *GSD, C8 *MiscData);
+ReadWriteAccess_t DataDictionarySetMiscData(const char * miscData);
 ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType *GSD, C8 *MiscData, U32 BuffLen);
+ReadWriteAccess_t DataDictionaryGetMiscData(char* miscData);
 
 ReadWriteAccess_t DataDictionaryInitStateData();
 ReadWriteAccess_t DataDictionarySetOBCState(const OBCState_t OBCState);

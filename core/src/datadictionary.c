@@ -52,6 +52,8 @@ static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define MONR_DATA_FILENAME "MonitorData"
 #define STATE_DATA_FILENAME "StateData"
+#define MISC_DATA_FILENAME "MiscData"
+#define MISC_DATA_MAX_SIZE 1024
 
 typedef struct {
 	OBCState_t objectControlState;
@@ -59,7 +61,7 @@ typedef struct {
 
 static volatile ObjectDataType *objectDataMemory = NULL;
 static volatile StateDataType *stateDataMemory = NULL;
-
+static volatile char *miscDataMemory = NULL;
 
 /*------------------------------------------------------------
   -- Static function definitions
@@ -101,9 +103,13 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitRVSSConfigU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
+	/*Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;*/
 	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
+	if (Res == READ_OK && DataDictionaryInitMiscData() != WRITE_OK) {
+		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
+		Res = UNDEFINED;
+	}
 	if (Res == READ_OK && DataDictionaryInitObjectData() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
 		Res = UNDEFINED;
@@ -1654,6 +1660,23 @@ ReadWriteAccess_t DataDictionaryInitMiscDataC8(GSDType * GSD) {
 }
 
 /*!
+ * \brief DataDictionaryInitMiscData inits a data structure for saving misc data
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryInitMiscData() {
+
+	int createdMemory;
+
+	miscDataMemory = createSharedMemory(MISC_DATA_FILENAME, 0, MISC_DATA_MAX_SIZE, &miscDataMemory);
+	if (miscDataMemory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared misc data memory");
+		return UNDEFINED;
+	}
+	return createdMemory ? WRITE_OK : READ_OK;
+}
+
+
+/*!
  * \brief DataDictionarySetMiscDataC8 Parses input variable and sets variable to corresponding value
  * \param GSD Pointer to shared allocated memory
  * \param MiscData
@@ -1674,6 +1697,48 @@ ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType * GSD, C8 * MiscData) {
 	return Res;
 }
 
+/**
+ * \brief DataDictionarySetMiscData Sets the test misc data.
+ * \param miscData The misc data string (ASCII).
+ * \return ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionarySetMiscData(const char * miscData) {
+
+	ReadWriteAccess_t result;
+
+	if (miscDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (miscData == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (strlen(miscData) > MISC_DATA_MAX_SIZE) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "To much misc data");
+		return UNDEFINED;
+	}
+
+	miscDataMemory = claimSharedMemory(miscDataMemory);
+	if (miscDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+
+	strcpy(miscDataMemory, miscData);
+	result = WRITE_OK;
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+
 /*!
  * \brief DataDictionaryGetMiscDataC8 Reads variable from shared memory
  * \param GSD Pointer to shared allocated memory
@@ -1688,6 +1753,39 @@ ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType * GSD, U8 * MiscData, U32 
 	return READ_OK;
 }
 
+
+
+/*!
+ * \brief DataDictionaryGetMiscData Reads misc data from shared memory
+ * \param MiscData Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetMiscData(char* miscData) {
+	ReadWriteAccess_t result;
+
+	if (miscDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (miscData == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	miscDataMemory = claimSharedMemory(miscDataMemory);
+	if (miscDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	miscData = miscDataMemory;
+	result = READ_OK;
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
 /*END of MiscData*/
 
 
