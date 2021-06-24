@@ -22,6 +22,7 @@ int reverseTraj()
 		// Line contains string of length > 0 then save it in vector
 		std::cout << str << "\n";
 		if(str.size() > 0){
+			//if(str.find("LINE"))
 			fileVector.push_back(str);
 		}
 	}
@@ -37,12 +38,16 @@ int reverseTraj()
 		std::string str = fileVector.at(i);
 		size_t pos = 0;
 		std::string token;
+		int count = 0;
 		while ((pos = str.find(delimiter)) != std::string::npos) {
 			token = str.substr(0, pos);
-			if(pos == 5){
-				std::cout << token << std::endl;
+			std::cout << "pos: " << pos << " Token: " << token << std::endl;
+
+			if(count == 1){
+				//std::cout << token << std::endl;
 				timeVector.push_back(token);
 			}
+			count ++;
 			str.erase(0, pos + delimiter.length());
 		}
 	}
@@ -52,7 +57,29 @@ int reverseTraj()
 	std::cout << header << "\n";
 	while (!fileVector.empty())
 	  {
-		std::cout << fileVector.back() << "\n";
+		//std::cout << "Running: " << str << std::endl;
+
+		size_t pos = 0;
+		int count = 0;
+		std::string token;
+		std::string newTimeStr;
+		std::string line = fileVector.back();
+		while ((pos = line.find(delimiter)) != std::string::npos) {
+			token = line.substr(0, pos);
+			if(count == 1){
+				//std::cout << token << std::endl;
+				token = timeVector.front();
+				timeVector.erase(timeVector.begin());
+			}
+			newTimeStr.append(token);
+			newTimeStr.append(";");
+			count++;
+			line.erase(0, pos + delimiter.length());
+
+		}
+		std::cout << newTimeStr << "\n";
+
+		//std::cout << fileVector.back() << "\n";
 		fileVector.pop_back();
 	  }
 	std::cout << endLine << "\n";
