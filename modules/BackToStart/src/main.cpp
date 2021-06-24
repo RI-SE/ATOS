@@ -1,9 +1,10 @@
 #include <iostream>
 #include <unistd.h>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <algorithm>
-#include <iterator>
+#include <math.h>
 #include "logging.h"
 #include "util.h"
 
@@ -44,7 +45,6 @@ int reverseTraj()
 			std::cout << "pos: " << pos << " Token: " << token << std::endl;
 
 			if(count == 1){
-				//std::cout << token << std::endl;
 				timeVector.push_back(token);
 			}
 			count ++;
@@ -70,6 +70,13 @@ int reverseTraj()
 				//std::cout << token << std::endl;
 				token = timeVector.front();
 				timeVector.erase(timeVector.begin());
+			}
+			if(count == 5){
+				double newAngle = std::stof(token) + (M_PI);
+				std::ostringstream ss;
+				ss << newAngle;
+				std::string s(ss.str());
+				token = s;
 			}
 			newTimeStr.append(token);
 			newTimeStr.append(";");
