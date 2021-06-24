@@ -21,6 +21,7 @@ include(GNUInstallDirs)
 # Create project main executable target
 add_executable(${BACK_TO_START}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/objectconfig.cpp
 )
 # Link project executable to util libraries
 target_link_libraries(${BACK_TO_START} LINK_PUBLIC
