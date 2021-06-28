@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/jesper/Documents/gitz/Maestro/modules/BackToStart/src/main.cpp
+iostream
+-
+unistd.h
+-
+math.h
+-
+trajectory.hpp
+/home/jesper/Documents/gitz/Maestro/modules/BackToStart/src/trajectory.hpp
+logging.h
+/home/jesper/Documents/gitz/Maestro/modules/BackToStart/src/logging.h
+util.h
+/home/jesper/Documents/gitz/Maestro/modules/BackToStart/src/util.h
+

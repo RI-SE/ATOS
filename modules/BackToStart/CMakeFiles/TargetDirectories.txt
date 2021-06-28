@@ -1,0 +1,7 @@
+/home/jesper/Documents/gitz/Maestro/modules/BackToStart/CMakeFiles/install/strip.dir
+/home/jesper/Documents/gitz/Maestro/modules/BackToStart/CMakeFiles/edit_cache.dir
+/home/jesper/Documents/gitz/Maestro/modules/BackToStart/CMakeFiles/BackToStart.dir
+/home/jesper/Documents/gitz/Maestro/modules/BackToStart/CMakeFiles/rebuild_cache.dir
+/home/jesper/Documents/gitz/Maestro/modules/BackToStart/CMakeFiles/list_install_components.dir
+/home/jesper/Documents/gitz/Maestro/modules/BackToStart/CMakeFiles/install/local.dir
+/home/jesper/Documents/gitz/Maestro/modules/BackToStart/CMakeFiles/install.dir

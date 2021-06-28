@@ -129,7 +129,7 @@ public:
 	Trajectory relativeTo(const Trajectory& other) const;
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
 	std::string toString() const;
-	void reverse();
+	void reverse(Trajectory &reversedTraj);
 
 private:
 	static const std::regex fileHeaderPattern;

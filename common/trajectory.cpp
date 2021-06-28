@@ -286,20 +286,20 @@ std::string Trajectory::toString() const {
 	return ss.str();
 }
 
-void Trajectory::reverse(){
+void Trajectory::reverse(Trajectory& reversedTraj){
 	if(points.empty()){
 		throw std::invalid_argument("Attempted to reverse non existing trajectory");
 	}
 
 	std::vector<TrajectoryPoint> pointsToReverse(points);
-	std::vector<TrajectoryPoint> reversePts;
 
+	reversedTraj.name = this->name + "_reversed";
 
 	for (const auto& point : points) {
 		TrajectoryPoint newPoint = pointsToReverse.back();
 		newPoint.setTime(point.getTime());
 		newPoint.setHeading(point.getHeading() * PI);
 		pointsToReverse.pop_back();
-		reversePts.push_back(newPoint);
+		reversedTraj.points.push_back(newPoint);
 	}
 }

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <math.h>
-#include "../../common/trajectory.hpp"
+#include "trajectory.hpp"
 #include "logging.h"
 #include "util.h"
 
@@ -35,10 +35,13 @@ int main()
 			break;
 		case COMM_INIT:{
 			Trajectory traj;
-			traj.initializeFromFile("/home/jesper/Documents/gitz/Maestro/core/traj/GarageplanInnerring.traj");
-			traj.toString();
-			traj.reverse();
-			traj.toString();
+			traj.initializeFromFile("VO20kmIntersection");
+			std::cout << "TRAJ UNREVERSED: \n";
+			std::cout << traj.toString();
+			Trajectory reversedTraj;
+			traj.reverse(reversedTraj);
+			std::cout << "TRAJ REVERSED: \n";
+			std::cout <<  reversedTraj.toString();
 			break;
 		}
 		default:
