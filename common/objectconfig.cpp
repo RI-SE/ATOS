@@ -9,7 +9,9 @@ ObjectConfig::ObjectConfig() {
 ObjectConfig::ObjectConfig(const ObjectConfig&& other) :
 	objectFile(other.objectFile),
 	transmitterID(other.transmitterID),
+	injectionMap(other.injectionMap),
 	isAnchorObject(other.isAnchorObject),
+	isOSICompatible(other.isOSICompatible),
 	trajectory(other.trajectory),
 	origin(other.origin)
 {
@@ -21,10 +23,17 @@ std::string ObjectConfig::toString() const {
 	inet_ntop(AF_INET, &ip_addr, ipAddr, sizeof (ipAddr));
 	std::string retval = "";
 
+	std::string idsString;
+	for(auto id: injectionMap.targetIDs) {
+		idsString += std::to_string(id) + " ";
+	}
+
 	retval += "Object ID " + std::to_string(transmitterID)
-			+ ", IP " + ipAddr + ", trajectory " + trajectory.name.c_str()
-			+ ", turning diameter " + std::to_string(turningDiameter) + ", max speed " + std::to_string(maximumSpeed)
-			+ ", object file " + objectFile.filename().string() + ", anchor: " + (isAnchorObject?"Yes":"No");
+			+ ", IP " + ipAddr + ", Trajectory " + trajectory.name.c_str()
+			+ ", Turning diameter " + std::to_string(turningDiameter) + ", Max speed " + std::to_string(maximumSpeed)
+			+ ", Object file " + objectFile.filename().string() + ", Anchor: " + (isAnchorObject? "Yes":"No")
+			+ ", OSI compatible: " + (isOSICompatible? "Yes":"No")
+			+ ", Injection IDs " + idsString;
 	return retval;
 }
 
@@ -81,20 +90,7 @@ void ObjectConfig::parseConfigurationFile(
 			this->isAnchorObject = setting[0] == '1';
 		}
 		else {
-			std::string anchorSetting(setting);
-			for (char &c : anchorSetting) {
-				c = std::tolower(c, std::locale());
-			}
-			if (anchorSetting.compare("true") == 0) {
-				this->isAnchorObject = true;
-			}
-			else if (anchorSetting.compare("false") == 0) {
-				this->isAnchorObject = false;
-			}
-			else {
-				throw std::invalid_argument("Anchor setting " + std::string(setting) + " in file "
-											+ objectFile.string() + " is invalid");
-			}
+			this->isAnchorObject = this->isSettingTrue(std::string(setting));
 		}
 	}
 
@@ -197,5 +193,67 @@ void ObjectConfig::parseConfigurationFile(
 		this->maximumSpeed = val;
 	}
 
+	// Get OSI compatibility
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_IS_OSI_COMPATIBLE, objectFile.c_str(),
+								 objectFile.string().length(),
+								 setting, sizeof (setting)) == -1) {
+		this->isOSICompatible = false;
+	}
+	else {
+		if (setting[0] == '1' || setting[0] == '0') {
+			this->isOSICompatible = setting[0] == '1';
+		}
+		else {
+			this->isOSICompatible = this->isSettingTrue(std::string(setting));
+		}
+	}
+
+	// Get Injector IDs
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_INJECTOR_IDS, objectFile.c_str(),
+								 objectFile.string().length(),
+								 setting, sizeof (setting)) == -1) {
+		throw std::invalid_argument("Cannot find Injector IDs setting in file " + objectFile.string());
+	}
+
+	std::vector<int> ids;
+	std::string settingString(setting);
+	this->split(settingString, ',', ids);
+
+	this->injectionMap.numberOfTargets = ids.size();
+	this->injectionMap.sourceID = id;
+	this->injectionMap.isActive = true;
+	this->injectionMap.targetIDs.clear();
+
+	for(auto i = ids.begin(); i != ids.end(); ++i) {
+		LogMessage(LOG_LEVEL_INFO, "Injection ID %d", *i);
+		this->injectionMap.targetIDs.push_back(*i);
+	}
+
 	this->objectFile = objectFile;
+}
+
+bool ObjectConfig::isSettingTrue(std::string setting) {
+	for (char &c : setting) {
+		c = std::tolower(c, std::locale());
+	}
+	if (setting.compare("true") == 0) {
+		return true;
+	}
+	else if (setting.compare("false") == 0) {
+		return false;
+	}
+	else {
+		throw std::invalid_argument("Setting " + setting + " is invalid");
+	}
+}
+
+void ObjectConfig::split(std::string &str, char delim, std::vector<int> &out) {
+	size_t start;
+	size_t end = 0;
+
+	while ((start = str.find_first_not_of(delim, end)) != std::string::npos)
+	{
+		end = str.find(delim, start);
+		out.push_back(stoi(str.substr(start, end - start)));
+	}
 }

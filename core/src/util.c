@@ -136,6 +136,7 @@ static const char ObjectSettingNameLongitude[] = "originLongitude";
 static const char ObjectSettingNameAltitude[] = "originAltitude";
 static const char ObjectSettingNameTurningDiameter[] = "turningDiameter";
 static const char ObjectSettingNameMaxSpeed[] = "maxSpeed";
+static const char ObjectSettingNameIsOSI[] = "isOsiCompatible";
 
 /*------------------------------------------------------------
 -- Local type definitions
@@ -3833,6 +3834,9 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 		break;
 	case OBJECT_SETTING_MAX_SPEED:
 		outputString = ObjectSettingNameMaxSpeed;
+		break;
+	case OBJECT_SETTING_IS_OSI_COMPATIBLE:
+		outputString = ObjectSettingNameIsOSI;
 		break;
 	default:
 		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
