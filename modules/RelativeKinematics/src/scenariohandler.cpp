@@ -250,29 +250,8 @@ void ScenarioHandler::heartbeat() {
 					if(objects[id].getTransmitterID() == this->dataInjectionMaps[i].sourceID &&
 						objects[id].getTimeSinceLastMonitor() > std::chrono::milliseconds(0))
 					{
-
-						ObjectMonitorType monrData;
-						DataDictionaryGetMonitorData(objects[id].getTransmitterID(),&monrData);
-						OsiHandler osi;
-
-					    OsiHandler::GlobalObjectGroundTruth_t gt;
-
-		                auto d = std::chrono::seconds{monrData.timestamp.tv_sec};
-		                + std::chrono::nanoseconds{monrData.timestamp.tv_usec*1000};
-		                std::chrono::system_clock::time_point ositime {d};
-
-					    gt.id = objects[id].getTransmitterID();
-
-					    gt.pos_m.x = monrData.position.xCoord_m;
-					    gt.pos_m.y = monrData.position.yCoord_m;
-					    gt.pos_m.z = monrData.position.zCoord_m;
-					    char miscData[MISC_DATA_MAX_SIZE];
-					    DataDictionaryGetMiscData(miscData);
-					    std::string projstr(miscData);
-					    std::string sendstr;
-					    sendstr = osi.encodeSvGtMessage(gt, ositime, projstr, true);
-					    std::vector<char> outBuffer(sendstr.begin(), sendstr.end());
-
+						std::vector<char> outBuffer =
+						buildOSIGlobalObjectGroundTruth(objects[id].getTransmitterID());
 						for(int j = 0; j < this->dataInjectionMaps[i].numberOfTargets; j ++){
 						    objects[this->dataInjectionMaps[i].targetIDs[j]].sendOsiData(outBuffer);
 		  				}
@@ -297,6 +276,32 @@ void ScenarioHandler::heartbeat() {
 	}
 	LogMessage(LOG_LEVEL_INFO, "Heartbeat thread exiting");
 }
+
+std::vector<char> ScenarioHandler::buildOSIGlobalObjectGroundTruth(uint32_t transmitterId) {
+	ObjectMonitorType monrData;
+	DataDictionaryGetMonitorData(transmitterId, &monrData);
+	OsiHandler osi;
+
+    OsiHandler::GlobalObjectGroundTruth_t gt;
+
+    auto d = std::chrono::seconds{monrData.timestamp.tv_sec};
+    + std::chrono::nanoseconds{monrData.timestamp.tv_usec*1000};
+    std::chrono::system_clock::time_point ositime {d};
+
+    gt.id = transmitterId;
+
+    gt.pos_m.x = monrData.position.xCoord_m;
+    gt.pos_m.y = monrData.position.yCoord_m;
+    gt.pos_m.z = monrData.position.zCoord_m;
+    char miscData[MISC_DATA_MAX_SIZE];
+    DataDictionaryGetMiscData(miscData);
+    std::string projstr(miscData);
+    std::string sendstr;
+    sendstr = osi.encodeSvGtMessage(gt, ositime, projstr, true);
+    std::vector<char> outBuffer(sendstr.begin(), sendstr.end());
+    return outBuffer;
+}
+
 
 void ScenarioHandler::startListeners() {
 	LogMessage(LOG_LEVEL_DEBUG, "Starting listeners");

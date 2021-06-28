@@ -176,12 +176,16 @@ private:
 	void disarmObjects();
 	//! \brief
 	void startObjects();
+	//! \brief TODO
 	int configureObjectDataInjection(DataInjectionMap injectionMaps[],
 								 const uint32_t transmitterIDs[],
 								 const unsigned int numberOfObjects);
+	//! \brief TODO
 	int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
 								  DataInjectionMap injectionMaps[],
 								  const unsigned int numberOfMaps);
+	//! \brief TODO
+	std::vector<char> buildOSIGlobalObjectGroundTruth(uint32_t transmitterId);
 
 
 };
