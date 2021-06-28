@@ -261,7 +261,8 @@ void ScenarioHandler::startListeners() {
 void ScenarioHandler::connectToObject(
 		TestObject &obj,
 		std::shared_future<void> &connStopReq) {
-
+	constexpr int maxConnHeabs = 100;
+	constexpr int maxConnMonrs = 10;
 	try {
 		if (!obj.isConnected()) {
 			try {
@@ -275,8 +276,8 @@ void ScenarioHandler::connectToObject(
 				// TODO connection failed event?
 			}
 			try {
-				int initializingMonrs = 10;
-				int connectionHeartbeats = 10;
+				int initializingMonrs = maxConnMonrs;
+				int connectionHeartbeats = maxConnHeabs;
 				while (true) {
 					ObjectStateType objState = OBJECT_STATE_UNKNOWN;
 					try {
@@ -287,7 +288,7 @@ void ScenarioHandler::connectToObject(
 							continue;
 						}
 						else {
-							throw e;
+							throw std::runtime_error("No monitor reply after " + std::to_string(maxConnHeabs) + " heartbeats. Details:\n" + e.what());
 						}
 					}
 
