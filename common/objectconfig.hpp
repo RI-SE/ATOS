@@ -19,23 +19,23 @@ public:
 
 	void parseConfigurationFile(const fs::path& file);
 
+	bool isAnchor() const { return isAnchorObject; }
 	in_addr_t getIP(void) const { return ip_addr; }
+	double getMaximumSpeed() const { return maximumSpeed; }
+	GeographicPositionType getOrigin() const { return origin; }
+	Trajectory getTrajectory() const { return trajectory; }
 	uint32_t getTransmitterID() const { return transmitterID; }
 	double getTurningDiameter() const { return turningDiameter; }
-	double getMaximumSpeed() const { return maximumSpeed; }
-	Trajectory getTrajectory() const { return trajectory; }
-	GeographicPositionType getOrigin() const { return origin; }
-	bool isAnchor() const { return isAnchorObject; }
 
 	std::string toString() const;
 
 private:
 	fs::path objectFile;
-	in_addr_t ip_addr = 0;
-	uint32_t transmitterID = 0;
 	bool isAnchorObject = false;
-	Trajectory trajectory;
-	GeographicPositionType origin;
-	double turningDiameter = 0;
+	in_addr_t ip_addr = 0;
 	double maximumSpeed = 0;
+	GeographicPositionType origin;
+	Trajectory trajectory;
+	uint32_t transmitterID = 0;
+	double turningDiameter = 0;
 };
