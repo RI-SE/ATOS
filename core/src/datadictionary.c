@@ -106,10 +106,12 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	/*Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;*/
 	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
+	/*
 	if (Res == READ_OK && DataDictionaryInitMiscData() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
 		Res = UNDEFINED;
 	}
+	*/
 	if (Res == READ_OK && DataDictionaryInitObjectData() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
 		Res = UNDEFINED;

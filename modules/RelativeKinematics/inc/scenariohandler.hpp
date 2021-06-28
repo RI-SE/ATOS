@@ -68,7 +68,7 @@ public:
 		uint32_t sourceID;
 		unsigned int numberOfTargets;
 		uint32_t *targetIDs;
-		int isActive;
+		bool isActive;
 	} DataInjectionMap;
 
 	ScenarioHandler(ControlMode);
@@ -133,6 +133,7 @@ private:
 	std::shared_future<void> connStopReqFuture;	//!< Request to stop a connection attempt
 	std::promise<void> connStopReqPromise;		//!< Promise that the above value will be emitted
 
+	//std::vector<DataInjectionMap> dataInjectionMaps;
 	DataInjectionMap dataInjectionMaps[MAX_OBJECTS];
 	
 	//! Connection methods
@@ -185,7 +186,7 @@ private:
 								  DataInjectionMap injectionMaps[],
 								  const unsigned int numberOfMaps);
 	//! \brief TODO
-	std::vector<char> buildOSIGlobalObjectGroundTruth(uint32_t transmitterId);
+	std::vector<char> buildOSIgogtArray(uint32_t transmitterId);
 
 
 };

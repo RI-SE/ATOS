@@ -159,7 +159,7 @@ void TestObject::parseConfigurationFile(
 	addr.sin_port = htons(ISO_22133_OBJECT_UDP_PORT);
 	this->setMonitorAddress(addr);
 	addr.sin_port = htons(OSI_DEFAULT_OBJECT_TCP_PORT);
-	this->setMonitorAddress(addr);
+	this->setOsiAddress(addr);
 
 	// Get trajectory file setting
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_TRAJ, objectFile.c_str(),
@@ -229,14 +229,14 @@ void TestObject::parseConfigurationFile(
 			this->isOsiObject = setting[0] == '1';
 		}
 		else {
-			std::string anchorSetting(setting);
-			for (char &c : anchorSetting) {
+			std::string osiSetting(setting);
+			for (char &c : osiSetting) {
 				c = std::tolower(c, std::locale());
 			}
-			if (anchorSetting.compare("true") == 0) {
+			if (osiSetting.compare("true") == 0) {
 				this->isOsiObject = true;
 			}
-			else if (anchorSetting.compare("false") == 0) {
+			else if (osiSetting.compare("false") == 0) {
 				this->isOsiObject = false;
 			}
 			else {

@@ -72,6 +72,10 @@ void ObjectListener::listen() {
 						break;
 					}
 				}
+
+				//OSI sending here
+				obj->getTimeSinceLastMonitor();
+
 				break;
 			}
 			case MESSAGE_ID_TREO:

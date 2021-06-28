@@ -251,7 +251,7 @@ void ScenarioHandler::heartbeat() {
 						objects[id].getTimeSinceLastMonitor() > std::chrono::milliseconds(0))
 					{
 						std::vector<char> outBuffer =
-						buildOSIGlobalObjectGroundTruth(objects[id].getTransmitterID());
+						buildOSIgogtArray(objects[id].getTransmitterID());
 						for(int j = 0; j < this->dataInjectionMaps[i].numberOfTargets; j ++){
 						    objects[this->dataInjectionMaps[i].targetIDs[j]].sendOsiData(outBuffer);
 		  				}
@@ -277,7 +277,7 @@ void ScenarioHandler::heartbeat() {
 	LogMessage(LOG_LEVEL_INFO, "Heartbeat thread exiting");
 }
 
-std::vector<char> ScenarioHandler::buildOSIGlobalObjectGroundTruth(uint32_t transmitterId) {
+std::vector<char> ScenarioHandler::buildOSIgogtArray(uint32_t transmitterId) {
 	ObjectMonitorType monrData;
 	DataDictionaryGetMonitorData(transmitterId, &monrData);
 	OsiHandler osi;
@@ -497,7 +497,7 @@ int ScenarioHandler::parseDataInjectionSetting(const char objectFilePath[MAX_FIL
 							  DataInjectionMap injectionMaps[], const unsigned int numberOfMaps) {
 
 	char objectSetting[100];
-	char *token = NULL, *endptr = NULL;
+	char *token = nullptr, *endptr = nullptr;
 	const char delimiter[] = ",";
 	int retval = 0;
 	uint32_t sourceID = 0, targetID = 0;
