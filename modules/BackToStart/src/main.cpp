@@ -71,6 +71,7 @@ void loadObjectFiles() {
 			try {
 				object.parseConfigurationFile(entry.path());
 				LogMessage(LOG_LEVEL_INFO, "Loaded configuration: %s", object.toString().c_str());
+
 				// Check preexisting
 				auto foundObject = objects.find(object.getTransmitterID());
 				if (foundObject == objects.end()) {

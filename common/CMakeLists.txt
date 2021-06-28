@@ -16,6 +16,7 @@ include(GNUInstallDirs)
 
 add_library(${MAESTRO_COMMON_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/trajectory.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/objectconfig.cpp
 )
 
 target_link_libraries(${MAESTRO_COMMON_TARGET}
@@ -29,6 +30,7 @@ target_include_directories(${MAESTRO_COMMON_TARGET} PUBLIC
 )
 set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/trajectory.hpp
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/objectconfig.hpp
 )
 set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/regexpatterns.hpp
