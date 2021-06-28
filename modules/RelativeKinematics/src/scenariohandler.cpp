@@ -261,7 +261,7 @@ void ScenarioHandler::startListeners() {
 void ScenarioHandler::connectToObject(
 		TestObject &obj,
 		std::shared_future<void> &connStopReq) {
-	constexpr int maxConnHeabs = 100;
+	constexpr int maxConnHeabs = 10;
 	constexpr int maxConnMonrs = 10;
 	try {
 		if (!obj.isConnected()) {
@@ -280,11 +280,14 @@ void ScenarioHandler::connectToObject(
 				int connectionHeartbeats = maxConnHeabs;
 				while (true) {
 					ObjectStateType objState = OBJECT_STATE_UNKNOWN;
+					auto nextSendTime = std::chrono::system_clock::now();
 					try {
 						obj.sendHeartbeat(this->state->asControlCenterStatus());
+						nextSendTime += heartbeatPeriod;
 						objState = obj.getState(true, heartbeatPeriod);
 					} catch (std::runtime_error& e) {
 						if (connectionHeartbeats-- > 0) {
+							std::this_thread::sleep_until(nextSendTime);
 							continue;
 						}
 						else {
