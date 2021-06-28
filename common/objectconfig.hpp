@@ -21,7 +21,7 @@ public:
 
 	in_addr_t getIP(void) const { return ip_addr; }
 	uint32_t getTransmitterID() const { return transmitterID; }
-	double getTurningRadius() const { return turningRadius; }
+	double getTurningDiameter() const { return turningDiameter; }
 	double getMaximumSpeed() const { return maximumSpeed; }
 	Trajectory getTrajectory() const { return trajectory; }
 	GeographicPositionType getOrigin() const { return origin; }
@@ -36,6 +36,6 @@ private:
 	bool isAnchorObject = false;
 	Trajectory trajectory;
 	GeographicPositionType origin;
-	double turningRadius = 0;
+	double turningDiameter = 0;
 	double maximumSpeed = 0;
 };

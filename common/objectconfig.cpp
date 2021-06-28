@@ -23,7 +23,7 @@ std::string ObjectConfig::toString() const {
 
 	retval += "Object ID " + std::to_string(transmitterID)
 			+ ", IP " + ipAddr + ", trajectory " + trajectory.name.c_str()
-			+ ", turning radius " + std::to_string(turningRadius) + ", max speed " + std::to_string(maximumSpeed)
+			+ ", turning diameter " + std::to_string(turningDiameter) + ", max speed " + std::to_string(maximumSpeed)
 			+ ", object file " + objectFile.filename().string() + ", anchor: " + (isAnchorObject?"Yes":"No");
 	return retval;
 }
@@ -163,21 +163,21 @@ void ObjectConfig::parseConfigurationFile(
 		throw std::invalid_argument("Partial origin setting in file " + objectFile.string());
 	}
 
-	// Get Turning Radius
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_TURNING_RADIUS, objectFile.c_str(),
+	// Get Turning diameter
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_TURNING_DIAMETER, objectFile.c_str(),
 								 objectFile.string().length(),
 								 setting, sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find Turning radius setting in file " + objectFile.string());
+		throw std::invalid_argument("Cannot find Turning diameter setting in file " + objectFile.string());
 	}
 	else {
 		char *endptr;
 		double val = strtod(setting, &endptr);
 
 		if (endptr == setting) {
-			throw std::invalid_argument("Turning radius " + std::string(setting) + " in file "
+			throw std::invalid_argument("Turning diameter " + std::string(setting) + " in file "
 									+ objectFile.string() + " is invalid");
 		}
-		this->turningRadius = val;
+		this->turningDiameter = val;
 	}
 
 	// Get Maximum speed
