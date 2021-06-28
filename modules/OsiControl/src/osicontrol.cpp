@@ -94,7 +94,9 @@ int main()
                 gt.pos_m.x = monrData.position.xCoord_m;
                 gt.pos_m.y = monrData.position.yCoord_m;
                 gt.pos_m.z = monrData.position.zCoord_m;
-                std::string projstr;
+                char miscData[MISC_DATA_MAX_SIZE];
+                DataDictionaryGetMiscData(miscData);
+                std::string projstr(miscData);
                 std::string sendstr;
                 sendstr = osi.encodeSvGtMessage(gt, ositime, projstr, true);
 
