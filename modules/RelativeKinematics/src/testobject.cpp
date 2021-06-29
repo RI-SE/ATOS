@@ -502,7 +502,7 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 }
 
 Channel& operator<<(Channel& chnl, const std::vector<char>& data) {
-	auto nBytes = send(chnl.socket, data.data(), data.length(), 0);
+	auto nBytes = send(chnl.socket, data.data(), data.size(), 0);
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to send raw data: ") + strerror(errno));
 	}
