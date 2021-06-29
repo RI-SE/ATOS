@@ -5,6 +5,7 @@
 #include <vector>
 #include "trajectory.hpp"
 #include "objectconfig.hpp"
+#include "osi_handler.hpp"
 
 
 // GCC version 8.1 brings non-experimental support for std::filesystem
@@ -50,7 +51,7 @@ public:
 	friend Channel& operator<<(Channel&,const Trajectory&);
 	friend Channel& operator<<(Channel&,const ObjectCommandType&);
 	friend Channel& operator<<(Channel&,const StartMessageType&);
-	friend Channel& operator<<(Channel&,std::vector<char>&);
+	friend Channel& operator<<(Channel&,const std::vector<char>&);
 
 	friend Channel& operator>>(Channel&,MonitorMessage&);
 	friend Channel& operator>>(Channel&,ObjectPropertiesType&);
@@ -107,6 +108,7 @@ public:
 	bool isAnchor() const { return conf.isAnchor(); }
 	bool isOsiCompatible() const { return conf.isOSI(); }
 	std::string toString() const;
+	std::string getProjString() const { return conf.getProjString(); }
 	ObjectDataType getAsObjectData() const;
 
 	bool isConnected() const { return comms.isConnected(); }
@@ -122,7 +124,9 @@ public:
 	void sendArm();
 	void sendDisarm();
 	void sendStart();
-	void sendOsiData(std::vector<char> osidata);
+	void sendOsiData(const OsiHandler::LocalObjectGroundTruth_t& osidata,
+					 const std::string& projStr,
+					 const std::chrono::system_clock::time_point& timestamp);
 
 	std::chrono::milliseconds getTimeSinceLastMonitor() const {
 		if (lastMonitorTime.time_since_epoch().count() == 0) {

@@ -293,8 +293,15 @@ void TestObject::sendDisarm() {
 	//this->comms.osi << llls;
 //}
 
-void TestObject::sendOsiData(std::vector<char> osidata) {
-	this->comms.cmd << osidata;
+void TestObject::sendOsiData(
+		const OsiHandler::LocalObjectGroundTruth_t& osidata,
+		const std::string& projStr,
+		const std::chrono::system_clock::time_point& timestamp) {
+	OsiHandler osi;
+	auto rawData = osi.encodeSvGtMessage(osidata, timestamp, projStr, true);
+	std::vector<char> vec(rawData.length());
+	std::copy(rawData.begin(), rawData.end(), vec.begin());
+	this->comms.cmd << vec;
 }
 
 
@@ -494,12 +501,10 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 	return chnl;
 }
 
-
-Channel& operator<<(Channel& chnl, std::vector<char>& osi) {
-	
-	auto nBytes = send(chnl.socket, osi.data(), osi.size(), 0);
+Channel& operator<<(Channel& chnl, const std::vector<char>& data) {
+	auto nBytes = send(chnl.socket, data.data(), data.length(), 0);
 	if (nBytes < 0) {
-		throw std::invalid_argument(std::string("Failed to send OSI data: ") + strerror(errno));
+		throw std::invalid_argument(std::string("Failed to send raw data: ") + strerror(errno));
 	}
 	return chnl;
 }

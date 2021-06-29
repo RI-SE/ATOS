@@ -73,18 +73,7 @@ void ObjectListener::listen() {
 					}
 				}
 
-				//OSI sending here
-				if(	obj->getObjectConfig().getTransmitterID() ==
-					obj->getObjectConfig().getInjectionMap().sourceID)
-				{
-					std::vector<char> outBuffer = 
-					handler->buildOSIgogtArray(obj->getTransmitterID());
-					for (int j = 0; j < obj->getObjectConfig().getInjectionMap().targetIDs.size(); j ++){
-					    if(handler->objects[obj->getObjectConfig().getInjectionMap().targetIDs[j]].getObjectConfig().isOSI()){
-					    	handler->objects[obj->getObjectConfig().getInjectionMap().targetIDs[j]].sendOsiData(outBuffer);
-					    }
-	  				}
-	  			}
+				handler->injectObjectData(monr);
 
 				break;
 			}

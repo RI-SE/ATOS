@@ -176,7 +176,9 @@ private:
 	//! \brief
 	void startObjects();
 	//! \brief TODO
-	std::vector<char> buildOSIgogtArray(uint32_t transmitterId);
+	void injectObjectData(const MonitorMessage& monr);
+	//! \brief TODO
+	OsiHandler::LocalObjectGroundTruth_t buildOSILocalGroundTruth(const MonitorMessage&) const;
 
 
 };

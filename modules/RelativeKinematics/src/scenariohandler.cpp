@@ -234,25 +234,7 @@ void ScenarioHandler::heartbeat() {
 				}
 			}
 		}
-		/*
-		//Check if new monr to send as OSI
-		for(const auto& id: getVehicleIDs())
-		{
-			int32_t nofObjects = getVehicleIDs().size();
-			for(int i = 0; i < getVehicleIDs().size(); i ++){
 
-					if(objects[id].getTransmitterID() == this->dataInjectionMaps[i].sourceID &&
-						objects[id].getTimeSinceLastMonitor() > std::chrono::milliseconds(0))
-					{
-						std::vector<char> outBuffer =
-						buildOSIgogtArray(objects[id].getTransmitterID());
-						for(int j = 0; j < this->dataInjectionMaps[i].numberOfTargets; j ++){
-						    objects[this->dataInjectionMaps[i].targetIDs[j]].sendOsiData(outBuffer);
-		  				}
-		  			}
-	  			}
-		}
-		*/
 		// Send heartbeat
 		for (const auto& id : getVehicleIDs()) {
 			try {
@@ -270,29 +252,41 @@ void ScenarioHandler::heartbeat() {
 	LogMessage(LOG_LEVEL_INFO, "Heartbeat thread exiting");
 }
 
-std::vector<char> ScenarioHandler::buildOSIgogtArray(uint32_t transmitterId) {
-	ObjectMonitorType monrData;
-	DataDictionaryGetMonitorData(transmitterId, &monrData);
-	OsiHandler osi;
+OsiHandler::LocalObjectGroundTruth_t ScenarioHandler::buildOSILocalGroundTruth(
+		const MonitorMessage& monr) const {
 
-    OsiHandler::GlobalObjectGroundTruth_t gt;
+	OsiHandler::LocalObjectGroundTruth_t gt;
 
-    auto d = std::chrono::seconds{monrData.timestamp.tv_sec};
-    + std::chrono::nanoseconds{monrData.timestamp.tv_usec*1000};
-    std::chrono::system_clock::time_point ositime {d};
+	gt.id = monr.first;
+	gt.pos_m.x = monr.second.position.xCoord_m;
+	gt.pos_m.y = monr.second.position.yCoord_m;
+	gt.pos_m.z = monr.second.position.zCoord_m;
+	gt.vel_m_s.lon = monr.second.speed.isLongitudinalValid ? monr.second.speed.longitudinal_m_s : 0.0;
+	gt.vel_m_s.lat = monr.second.speed.isLateralValid ? monr.second.speed.lateral_m_s : 0.0;
+	gt.vel_m_s.up = 0.0;
+	gt.acc_m_s2.lon = monr.second.acceleration.isLongitudinalValid ? monr.second.acceleration.longitudinal_m_s2 : 0.0;
+	gt.acc_m_s2.lat = monr.second.acceleration.isLateralValid ? monr.second.acceleration.lateral_m_s2 : 0.0;
+	gt.acc_m_s2.up = 0.0;
+	gt.orientation_rad.yaw = monr.second.position.isHeadingValid ? monr.second.position.heading_rad : 0.0;
+	gt.orientation_rad.roll = 0.0;
+	gt.orientation_rad.pitch = 0.0;
 
-    gt.id = transmitterId;
+	return gt;
+}
 
-    gt.pos_m.x = monrData.position.xCoord_m;
-    gt.pos_m.y = monrData.position.yCoord_m;
-    gt.pos_m.z = monrData.position.zCoord_m;
-    char miscData[MISC_DATA_MAX_SIZE];
-    DataDictionaryGetMiscData(miscData);
-    std::string projstr(miscData);
-    std::string sendstr;
-    sendstr = osi.encodeSvGtMessage(gt, ositime, projstr, true);
-    std::vector<char> outBuffer(sendstr.begin(), sendstr.end());
-    return outBuffer;
+void ScenarioHandler::injectObjectData(const MonitorMessage &monr) {
+	if (objects[monr.first].getObjectConfig().getInjectionMap().isActive) {
+		std::chrono::system_clock::time_point ts;
+		auto secs = std::chrono::seconds(monr.second.timestamp.tv_sec);
+		auto usecs = std::chrono::microseconds(monr.second.timestamp.tv_usec);
+		ts += secs + usecs;
+		auto osiGtData = buildOSILocalGroundTruth(monr);
+		for (const auto& targetID : objects[monr.first].getObjectConfig().getInjectionMap().targetIDs) {
+			if (objects[targetID].isOsiCompatible()) {
+				objects[targetID].sendOsiData(osiGtData, objects[targetID].getProjString(), ts);
+			}
+		}
+	}
 }
 
 
