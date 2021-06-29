@@ -31,6 +31,7 @@ public:
 	in_addr_t getIP(void) const { return remoteIP; }
 	double getMaximumSpeed() const { return maximumSpeed; }
 	GeographicPositionType getOrigin() const { return origin; }
+	std::string getProjString() const;
 	Trajectory getTrajectory() const { return trajectory; }
 	void setTrajectory(const Trajectory& newTraj) { trajectory = newTraj; } // TODO danger danger - don't do this
 	uint32_t getTransmitterID() const { return transmitterID; }

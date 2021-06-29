@@ -246,3 +246,12 @@ void ObjectConfig::split(std::string &str, char delim, std::vector<int> &out) {
 		out.push_back(stoi(str.substr(start, end - start)));
 	}
 }
+
+std::string ObjectConfig::getProjString() const {
+	std::stringstream projStr;
+	projStr << "+proj=topocentric +ellps=GRS80 ";
+	projStr << "+lat_0=" << this->getOrigin().latitude_deg << " ";
+	projStr << "+lon_0=" << this->getOrigin().longitude_deg << " ";
+	projStr << "+h_0=" << this->getOrigin().altitude_m;
+	return projStr.str();
+}
