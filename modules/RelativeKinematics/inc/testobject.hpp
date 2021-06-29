@@ -26,17 +26,24 @@ struct MonitorMessage : std::pair<uint32_t,ObjectMonitorType> {};
  */
 class Channel {
 public:
-	Channel(const size_t bufferLength)
-		: transmitBuffer(bufferLength, 0),
-		  receiveBuffer(bufferLength, 0) {}
-	Channel() : Channel(1024) {}
+	Channel(const size_t bufferLength, const int type)
+		: channelType(type),
+		  transmitBuffer(bufferLength, 0),
+		  receiveBuffer(bufferLength, 0)
+	{}
+	Channel() : Channel(1024, SOCK_STREAM) {}
 	struct sockaddr_in addr = {};
 	int socket = -1;
+	int channelType = 0; //!< SOCK_STREAM or SOCK_DGRAM
 	std::vector<char> transmitBuffer;
 	std::vector<char> receiveBuffer;
 
 	ISOMessageID pendingMessageType(bool awaitNext = false);
 	std::string remoteIP() const;
+	bool isValid() const { return socket != -1; }
+	void connect(std::shared_future<void> stopRequest,
+				 const std::chrono::milliseconds retryPeriod);
+	void disconnect();
 
 	friend Channel& operator<<(Channel&,const HeabMessageDataType&);
 	friend Channel& operator<<(Channel&,const ObjectSettingsType&);
@@ -145,8 +152,8 @@ public:
 		return this->comms.pendingMessageType(awaitNext);
 	}
 private:
-	Channel osi;
 	ObjectConnection comms;
+	Channel osiChannel;
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 
 	fs::path objectFile;

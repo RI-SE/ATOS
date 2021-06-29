@@ -310,46 +310,64 @@ void TestObject::parseTrajectoryFile(
 
 void TestObject::establishConnection(std::shared_future<void> stopRequest) {
 	this->lastMonitorTime = std::chrono::steady_clock::time_point(); // reset
-	//std::cout << "this->isOsiCompatible() = " << this->isOsiCompatible() << std::endl;
 	this->comms.connect(stopRequest, TestObject::connRetryPeriod);
+
+	if (this->isOsiCompatible()) {
+		try {
+			this->osiChannel.connect(stopRequest, TestObject::connRetryPeriod);
+		}
+		catch (std::runtime_error& e) {
+			this->osiChannel.disconnect();
+			throw std::runtime_error(std::string("Failed to establish OSI connection. Reason: \n") + e.what());
+		}
+	}
 }
 
-void ObjectConnection::connect(
+void Channel::connect(
 		std::shared_future<void> stopRequest,
 		const std::chrono::milliseconds retryPeriod) {
 	char ipString[INET_ADDRSTRLEN];
 	std::stringstream errMsg;
 
-	if (inet_ntop(AF_INET, &this->cmd.addr.sin_addr, ipString, sizeof (ipString))
+	if (inet_ntop(AF_INET, &this->addr.sin_addr, ipString, sizeof (ipString))
 			== nullptr) {
 		errMsg << "inet_ntop: " << strerror(errno);
 		throw std::invalid_argument(errMsg.str());
 	}
 
-	if (this->cmd.addr.sin_addr.s_addr == 0) {
+	if (this->addr.sin_addr.s_addr == 0) {
 		errMsg << "Invalid connection IP specified: " << ipString;
 		throw std::invalid_argument(errMsg.str());
 	}
 
-	this->cmd.socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (this->cmd.socket < 0) {
-		errMsg << "Failed to open ISO control socket: " << strerror(errno);
+	std::string type = "???";
+	if (this->channelType == SOCK_STREAM) {
+		type = "TCP";
+	}
+	else if (this->channelType == SOCK_DGRAM) {
+		type = "UDP";
+	}
+
+	this->socket = ::socket(AF_INET, this->channelType, 0);
+	if (this->socket < 0) {
+		errMsg << "Failed to open " << type << " socket: " << strerror(errno);
 		this->disconnect();
 		throw std::runtime_error(errMsg.str());
 	}
 
 	// Begin connection attempt
-	LogMessage(LOG_LEVEL_INFO, "Attempting connection to ISO object: %s:%u", ipString,
-			   ntohs(this->cmd.addr.sin_port));
+	LogMessage(LOG_LEVEL_INFO, "Attempting %s connection to %s:%u", type.c_str(), ipString,
+			   ntohs(this->addr.sin_port));
+
 	while (true) {
-		if (::connect(this->cmd.socket,
-					reinterpret_cast<struct sockaddr *>(&this->cmd.addr),
-					sizeof (this->cmd.addr)) == 0) {
+		if (::connect(this->socket,
+					reinterpret_cast<struct sockaddr *>(&this->addr),
+					sizeof (this->addr)) == 0) {
 			break;
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Failed connection attempt to ISO object %s, retrying in %.3f s ...",
-					   ipString, retryPeriod.count() / 1000.0);
+			LogMessage(LOG_LEVEL_ERROR, "Failed %s connection attempt to %s:%u, retrying in %.3f s ...",
+					   type.c_str(), ipString, ntohs(this->addr.sin_port), retryPeriod.count() / 1000.0);
 			if (stopRequest.wait_for(retryPeriod)
 					!= std::future_status::timeout) {
 				errMsg << "Connection attempt interrupted";
@@ -357,62 +375,29 @@ void ObjectConnection::connect(
 			}
 		}
 	}
+}
 
-	printf("coonennct isOsiObject = %d\n", isOsiObject);
-	if(this->isOsiObject){
-		if (inet_ntop(AF_INET, &this->osi.addr.sin_addr, ipString, sizeof (ipString))
-				== nullptr) {
-			errMsg << "inet_ntop: " << strerror(errno);
-			throw std::invalid_argument(errMsg.str());
+void Channel::disconnect() {
+	if (this->socket != -1) {
+		if (shutdown(this->socket, SHUT_RDWR) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Socket shutdown: %s", strerror(errno));
 		}
-
-		if (this->osi.addr.sin_addr.s_addr == 0) {
-			errMsg << "Invalid connection IP specified: " << ipString;
-			throw std::invalid_argument(errMsg.str());
+		if (close(this->socket) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Socket close: %s", strerror(errno));
 		}
-
-		this->osi.socket = socket(AF_INET, SOCK_STREAM, 0);
-		if (this->osi.socket < 0) {
-			errMsg << "Failed to open OSI control socket: " << strerror(errno);
-			this->disconnect();
-			throw std::runtime_error(errMsg.str());
-		}
-
-		// Begin connection attempt
-		LogMessage(LOG_LEVEL_INFO, "Attempting connection to OSI object: %s:%u", ipString,
-				   ntohs(this->osi.addr.sin_port));
-		while (true) {
-			if (::connect(this->osi.socket,
-						reinterpret_cast<struct sockaddr *>(&this->osi.addr),
-						sizeof (this->osi.addr)) == 0) {
-				break;
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR, "Failed connection attempt to OSI object%s, retrying in %.3f s ...",
-						   ipString, retryPeriod.count() / 1000.0);
-				if (stopRequest.wait_for(retryPeriod)
-						!= std::future_status::timeout) {
-					errMsg << "Connection attempt interrupted";
-					throw std::runtime_error(errMsg.str());
-				}
-			}
-		}
+		this->socket = -1;
 	}
+}
 
-	// Create monitor socket
-	LogMessage(LOG_LEVEL_DEBUG, "Creating safety socket");
-	this->mntr.socket = socket(AF_INET, SOCK_DGRAM, 0);
-	if (!this->isValid()) {
-		errMsg << "Failed to create monitor socket: " << strerror(errno);
+void ObjectConnection::connect(
+		std::shared_future<void> stopRequest,
+		const std::chrono::milliseconds retryPeriod) {
+	try {
+		this->cmd.connect(stopRequest, retryPeriod);
+		this->mntr.connect(stopRequest, retryPeriod);
+	} catch (std::runtime_error& e) {
 		this->disconnect();
-		throw std::runtime_error(errMsg.str());
-	}
-
-	sockaddr* sin = reinterpret_cast<sockaddr*>(&this->mntr.addr);
-	if (::connect(this->mntr.socket, sin, sizeof (this->mntr.addr)) < 0) {
-		errMsg << "Failed to connect monitor socket: " << strerror(errno);
-		this->disconnect();
-		throw std::runtime_error(errMsg.str());
+		throw std::runtime_error(std::string("Failed to establish ISO 22133 connection. Reason: \n") + e.what());
 	}
 
 	return;
@@ -432,28 +417,12 @@ bool ObjectConnection::isConnected() const {
 }
 
 bool ObjectConnection::isValid() const {
-	return this->cmd.socket != -1 && this->mntr.socket != -1;
+	return this->cmd.isValid() && this->mntr.isValid();
 }
 
 void ObjectConnection::disconnect() {
-	if (this->cmd.socket != -1) {
-		if (shutdown(this->cmd.socket, SHUT_RDWR) == -1) {
-			LogMessage(LOG_LEVEL_ERROR, "Command socket shutdown: %s", strerror(errno));
-		}
-		if (close(this->cmd.socket) == -1) {
-			LogMessage(LOG_LEVEL_ERROR, "Command socket close: %s", strerror(errno));
-		}
-		this->cmd.socket = -1;
-	}
-	if (this->mntr.socket != -1) {
-		if (shutdown(this->mntr.socket, SHUT_RDWR) == -1) {
-			LogMessage(LOG_LEVEL_ERROR, "Safety socket shutdown: %s", strerror(errno));
-		}
-		if (close(this->mntr.socket) == -1) {
-			LogMessage(LOG_LEVEL_ERROR, "Safety socket close: %s", strerror(errno));
-		};
-		this->mntr.socket = -1;
-	}
+	this->cmd.disconnect();
+	this->mntr.disconnect();
 }
 
 void TestObject::sendHeartbeat(
