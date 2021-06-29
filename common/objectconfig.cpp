@@ -213,9 +213,9 @@ void ObjectConfig::parseConfigurationFile(
 	this->injectionMap.isActive = true;
 	this->injectionMap.targetIDs.clear();
 
-	for(auto i = ids.begin(); i != ids.end(); ++i) {
-		LogMessage(LOG_LEVEL_INFO, "Injection ID %d", *i);
-		this->injectionMap.targetIDs.push_back(*i);
+	for (const auto& id : ids) {
+		LogMessage(LOG_LEVEL_DEBUG, "Injection ID %d", id);
+		this->injectionMap.targetIDs.push_back(id);
 	}
 
 	this->objectFile = objectFile;
@@ -247,8 +247,7 @@ void ObjectConfig::split(std::string &str, char delim, std::vector<int> &out) {
 	size_t start;
 	size_t end = 0;
 
-	while ((start = str.find_first_not_of(delim, end)) != std::string::npos)
-	{
+	while ((start = str.find_first_not_of(delim, end)) != std::string::npos) {
 		end = str.find(delim, start);
 		out.push_back(stoi(str.substr(start, end - start)));
 	}
