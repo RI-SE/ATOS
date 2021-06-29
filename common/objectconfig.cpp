@@ -213,9 +213,9 @@ void ObjectConfig::parseConfigurationFile(
 	this->injectionMap.isActive = true;
 	this->injectionMap.targetIDs.clear();
 
-	for(auto i = ids.begin(); i != ids.end(); ++i) {
-		LogMessage(LOG_LEVEL_INFO, "Injection ID %d", *i);
-		this->injectionMap.targetIDs.push_back(*i);
+	for (const auto& id : ids) {
+		LogMessage(LOG_LEVEL_DEBUG, "Injection ID %d", id);
+		this->injectionMap.targetIDs.push_back(id);
 	}
 
 	this->objectFile = objectFile;
