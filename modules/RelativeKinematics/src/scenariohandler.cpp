@@ -3,6 +3,7 @@
 #include "util.h"
 #include "datadictionary.h"
 #include "osi_handler.hpp"
+#include "objectconfig.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -87,6 +88,10 @@ void ScenarioHandler::loadObjectFiles() {
 			TestObject object;
 			try {
 				object.parseConfigurationFile(entry.path());
+				ObjectConfig objectConfig;
+				objectConfig.parseConfigurationFile(entry.path());
+				//Compilation error when this is used:
+				//object.setObjectConfig(&objectConfig);
 				LogMessage(LOG_LEVEL_INFO, "Loaded configuration: %s", object.toString().c_str());
 				// Check preexisting
 				auto foundObject = objects.find(object.getTransmitterID());

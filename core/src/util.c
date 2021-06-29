@@ -135,8 +135,9 @@ static const char ObjectSettingNameLatitude[] = "originLatitude";
 static const char ObjectSettingNameLongitude[] = "originLongitude";
 static const char ObjectSettingNameAltitude[] = "originAltitude";
 static const char ObjectSettingNameIsOsiCompatible[] = "isOsiCompatible";
-static const char ObjectSettingNameTurningRadius[] = "turningRadius";
+static const char ObjectSettingNameTurningDiameter[] = "turningDiameter";
 static const char ObjectSettingNameMaxSpeed[] = "maxSpeed";
+
 
 /*------------------------------------------------------------
 -- Local type definitions
@@ -3832,8 +3833,8 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 	case OBJECT_SETTING_IS_OSI_COMPATIBLE:
 		outputString = ObjectSettingNameIsOsiCompatible;
 		break;
-	case OBJECT_SETTING_TURNING_RADIUS:
-		outputString = ObjectSettingNameTurningRadius;
+	case OBJECT_SETTING_TURNING_DIAMETER:
+		outputString = ObjectSettingNameTurningDiameter;
 		break;
 	case OBJECT_SETTING_MAX_SPEED:
 		outputString = ObjectSettingNameMaxSpeed;

@@ -4,6 +4,7 @@
 #include <future>
 #include <vector>
 #include "trajectory.hpp"
+#include "objectconfig.hpp"
 
 
 // GCC version 8.1 brings non-experimental support for std::filesystem
@@ -90,11 +91,13 @@ public:
 	ObjectStateType getState(const bool awaitUpdate, const std::chrono::milliseconds timeout);
 	ObjectStateType getState() const { return isConnected() ? state : OBJECT_STATE_UNKNOWN; }
 	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
+	//ObjectConfig getObjectConfig(){ return objectConfig; }
 	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
 	void setOsiAddress(const sockaddr_in& newAddr);
-
+	//void setObjectConfig(ObjectConfig& newObjectConfig); 
+	
 	bool isAnchor() const { return isAnchorObject; }
 	bool isOsiCompatible() const { return isOsiObject; }
 	std::string toString() const;
@@ -113,8 +116,6 @@ public:
 	void sendArm();
 	void sendDisarm();
 	void sendStart();
-	//void sendOsiGlobalObjectGroundTruth(OsiHandler::GlobalObjectGroundTruth_t gogt);
-	//void sendOsiGlobalObjectGroundTruth(OsiHandler::GlobalObjectGroundTruth_t gogt);
 	void sendOsiData(std::vector<char> osidata);
 
 	std::chrono::milliseconds getTimeSinceLastMonitor() const {
@@ -154,6 +155,7 @@ private:
 	uint32_t transmitterID = 0;
 	bool isAnchorObject = false;
 	bool isOsiObject = false;
+	ObjectConfig objectConfig;
 	Trajectory trajectory;
 	GeographicPositionType origin;
 	bool isEnabled = true;

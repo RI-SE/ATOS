@@ -75,14 +75,17 @@ void ObjectListener::listen() {
 
 				//OSI sending here
 				//TODO: Use ObjectSettingClass
-				if(obj->getTransmitterID() == handler->dataInjectionMaps[0].sourceID)
+
+				for(int i = 0; i < handler->getVehicleIDs().size(); i ++){
+					if(obj->getTransmitterID() == handler->dataInjectionMaps[i].sourceID)
 					{
 						std::vector<char> outBuffer = 
 						handler->buildOSIgogtArray(obj->getTransmitterID());
-						for(int j = 0; j < handler->dataInjectionMaps[0].numberOfTargets; j ++){
+						for(int j = 0; j < handler->dataInjectionMaps[i].numberOfTargets; j ++){
 						    obj->sendOsiData(outBuffer);
 		  				}
 		  			}
+		  		}
 
 				break;
 			}
