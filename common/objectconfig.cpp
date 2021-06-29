@@ -28,12 +28,12 @@ std::string ObjectConfig::toString() const {
 		idsString += std::to_string(id) + " ";
 	}
 
-	retval += "Object ID " + std::to_string(transmitterID)
-			+ ", IP " + ipAddr + ", Trajectory " + trajectory.name.c_str()
-			+ ", Turning diameter " + std::to_string(turningDiameter) + ", Max speed " + std::to_string(maximumSpeed)
-			+ ", Object file " + objectFile.filename().string() + ", Anchor: " + (isAnchorObject? "Yes":"No")
+	retval += "Object ID: " + std::to_string(transmitterID)
+			+ ", IP: " + ipAddr + ", Trajectory: " + trajectory.name.c_str()
+			+ ", Turning diameter: " + std::to_string(turningDiameter) + ", Max speed: " + std::to_string(maximumSpeed)
+			+ ", Object file: " + objectFile.filename().string() + ", Anchor: " + (isAnchorObject? "Yes":"No")
 			+ ", OSI compatible: " + (isOSICompatible? "Yes":"No")
-			+ ", Injection IDs " + idsString;
+			+ ", Injection IDs: " + idsString;
 	return retval;
 }
 
@@ -42,7 +42,6 @@ void ObjectConfig::parseConfigurationFile(
 
 	char setting[100];
 	int result;
-	struct sockaddr_in addr;
 	char path[MAX_FILE_PATH];
 
 	UtilGetTrajDirectoryPath(path, sizeof (path));
@@ -86,12 +85,7 @@ void ObjectConfig::parseConfigurationFile(
 		this->isAnchorObject = false;
 	}
 	else {
-		if (setting[0] == '1' || setting[0] == '0') {
-			this->isAnchorObject = setting[0] == '1';
-		}
-		else {
-			this->isAnchorObject = this->isSettingTrue(std::string(setting));
-		}
+		this->isAnchorObject = this->isSettingTrue(setting);
 	}
 
 	// Get trajectory file setting
@@ -200,12 +194,7 @@ void ObjectConfig::parseConfigurationFile(
 		this->isOSICompatible = false;
 	}
 	else {
-		if (setting[0] == '1' || setting[0] == '0') {
-			this->isOSICompatible = setting[0] == '1';
-		}
-		else {
-			this->isOSICompatible = this->isSettingTrue(std::string(setting));
-		}
+		this->isOSICompatible = this->isSettingTrue(setting);
 	}
 
 	// Get Injector IDs
@@ -232,18 +221,25 @@ void ObjectConfig::parseConfigurationFile(
 	this->objectFile = objectFile;
 }
 
-bool ObjectConfig::isSettingTrue(std::string setting) {
-	for (char &c : setting) {
-		c = std::tolower(c, std::locale());
-	}
-	if (setting.compare("true") == 0) {
-		return true;
-	}
-	else if (setting.compare("false") == 0) {
-		return false;
+template<size_t N>
+bool ObjectConfig::isSettingTrue(char (&setting)[N]) {
+	if (setting[0] == '1' || setting[0] == '0') {
+		return setting[0] == '1';
 	}
 	else {
-		throw std::invalid_argument("Setting " + setting + " is invalid");
+		std::string settingString(setting);
+		for (char &c : settingString) {
+			c = std::tolower(c, std::locale());
+		}
+		if (settingString.compare("true") == 0) {
+			return true;
+		}
+		else if (settingString.compare("false") == 0) {
+			return false;
+		}
+		else {
+			throw std::invalid_argument("Setting " + settingString + " is invalid");
+		}
 	}
 }
 

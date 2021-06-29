@@ -50,6 +50,7 @@ private:
 	double turningDiameter = 0;
 	DataInjectionMap injectionMap;
 
-	bool isSettingTrue(std::string setting);
+	template<size_t N>
+	bool isSettingTrue(char (&setting)[N]);
 	void split(std::string &str, char delim, std::vector<int> &out);
 };
