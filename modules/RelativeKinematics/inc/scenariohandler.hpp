@@ -118,6 +118,7 @@ public:
 	//! \brief Checks if all test participants are in any of the specified states.
 	//!			The method does not wait for the next MONR to arrive.
 	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
+
 private:
 	using clock = std::chrono::steady_clock;
 

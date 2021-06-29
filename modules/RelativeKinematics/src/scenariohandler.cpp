@@ -241,6 +241,7 @@ void ScenarioHandler::heartbeat() {
 				}
 			}
 		}
+		/*
 		//Check if new monr to send as OSI
 		for(const auto& id: getVehicleIDs())
 		{
@@ -259,7 +260,7 @@ void ScenarioHandler::heartbeat() {
 	  			}
   				
 		}
-		
+		*/
 		// Send heartbeat
 		for (const auto& id : getVehicleIDs()) {
 			try {
@@ -328,8 +329,8 @@ void ScenarioHandler::connectToObject(
 				// TODO connection failed event?
 			}
 			try {
-				int initializingMonrs = 10;
-				int connectionHeartbeats = 10;
+				int initializingMonrs = 500;
+				int connectionHeartbeats = 500;
 				while (true) {
 					ObjectStateType objState = OBJECT_STATE_UNKNOWN;
 					try {
