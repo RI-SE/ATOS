@@ -197,7 +197,6 @@ void ObjectConfig::parseConfigurationFile(
 	else {
 		this->isOSICompatible = this->isSettingTrue(setting);
 	}
-
 	// Get Injector IDs
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_INJECTOR_IDS, objectFile.c_str(),
 								 objectFile.string().length(),

@@ -310,13 +310,13 @@ void TestObject::parseTrajectoryFile(
 
 void TestObject::establishConnection(std::shared_future<void> stopRequest) {
 	this->lastMonitorTime = std::chrono::steady_clock::time_point(); // reset
-	this->comms.connect(stopRequest, TestObject::connRetryPeriod, this->isOsiCompatible());
+	//std::cout << "this->isOsiCompatible() = " << this->isOsiCompatible() << std::endl;
+	this->comms.connect(stopRequest, TestObject::connRetryPeriod);
 }
 
 void ObjectConnection::connect(
 		std::shared_future<void> stopRequest,
-		const std::chrono::milliseconds retryPeriod,
-		const bool isOsiObject) {
+		const std::chrono::milliseconds retryPeriod) {
 	char ipString[INET_ADDRSTRLEN];
 	std::stringstream errMsg;
 
@@ -358,7 +358,8 @@ void ObjectConnection::connect(
 		}
 	}
 
-	if(isOsiObject == true){
+	printf("coonennct isOsiObject = %d\n", isOsiObject);
+	if(this->isOsiObject){
 		if (inet_ntop(AF_INET, &this->osi.addr.sin_addr, ipString, sizeof (ipString))
 				== nullptr) {
 			errMsg << "inet_ntop: " << strerror(errno);

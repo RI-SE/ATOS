@@ -88,11 +88,11 @@ void ScenarioHandler::loadObjectFiles() {
 			TestObject object;
 			try {
 				object.parseConfigurationFile(entry.path());
+				std::cout << "object.isOsiCompatible1 = " << object.isOsiCompatible() << std::endl;
 				object.getObjectConfig().parseConfigurationFile(entry.path());
-				//ObjectConfig objectConfig;
-				//objectConfig.parseConfigurationFile(entry.path());
-				//Compilation error when this is used:
-				//object.setObjectConfig(&objectConfig);
+				std::cout << "object.getObjectConfig().isOSI() = " << object.getObjectConfig().isOSI() << std::endl;
+				
+				//std::cout << "object.isOsiCompatible2 = " << object.isOsiCompatible() << std::endl;
 				LogMessage(LOG_LEVEL_INFO, "Loaded configuration: %s", object.toString().c_str());
 				// Check preexisting
 				auto foundObject = objects.find(object.getTransmitterID());

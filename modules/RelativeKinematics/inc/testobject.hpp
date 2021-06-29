@@ -59,13 +59,11 @@ class ObjectConnection {
 public:
 	Channel cmd;
 	Channel mntr;
-	Channel osi;
 
 	bool isValid() const;
 	bool isConnected() const;
 	void connect(std::shared_future<void> stopRequest,
-				 const std::chrono::milliseconds retryPeriod,
-				 const bool isOsiObject);
+				 const std::chrono::milliseconds retryPeriod);
 	void disconnect();
 	ISOMessageID pendingMessageType(bool awaitNext = false);
 };
@@ -147,6 +145,7 @@ public:
 		return this->comms.pendingMessageType(awaitNext);
 	}
 private:
+	Channel osi;
 	ObjectConnection comms;
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 
