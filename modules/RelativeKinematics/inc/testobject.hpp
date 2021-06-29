@@ -31,7 +31,7 @@ public:
 		  transmitBuffer(bufferLength, 0),
 		  receiveBuffer(bufferLength, 0)
 	{}
-	Channel() : Channel(1024, SOCK_STREAM) {}
+	Channel(int type) : Channel(1024, type) {}
 	struct sockaddr_in addr = {};
 	int socket = -1;
 	int channelType = 0; //!< SOCK_STREAM or SOCK_DGRAM
@@ -67,6 +67,8 @@ public:
 	Channel cmd;
 	Channel mntr;
 
+	ObjectConnection() : cmd(SOCK_STREAM), mntr(SOCK_DGRAM) {}
+
 	bool isValid() const;
 	bool isConnected() const;
 	void connect(std::shared_future<void> stopRequest,
@@ -86,25 +88,24 @@ public:
 	TestObject& operator=(TestObject&&) = default;
 
 	void parseConfigurationFile(const fs::path& file);
-	void parseTrajectoryFile(const fs::path& file);
 
-	uint32_t getTransmitterID() const { return transmitterID; }
-	fs::path getTrajectoryFile() const { return trajectoryFile; }
-	Trajectory getTrajectory() const { return trajectory; }
-	GeographicPositionType getOrigin() const { return origin; }
+	uint32_t getTransmitterID() const { return conf.getTransmitterID(); }
+	std::string getTrajectoryFileName() const { return conf.getTrajectoryFileName(); }
+	Trajectory getTrajectory() const { return conf.getTrajectory(); }
+	GeographicPositionType getOrigin() const { return conf.getOrigin(); }
 	ObjectStateType getState(const bool awaitUpdate);
 	ObjectStateType getState(const bool awaitUpdate, const std::chrono::milliseconds timeout);
 	ObjectStateType getState() const { return isConnected() ? state : OBJECT_STATE_UNKNOWN; }
 	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
-	ObjectConfig getObjectConfig(){ return objectConfig; }
-	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }
+	ObjectConfig getObjectConfig(){ return conf; }
+	void setTrajectory(const Trajectory& newTrajectory) { conf.setTrajectory(newTrajectory); }
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
 	void setOsiAddress(const sockaddr_in& newAddr);
 	void setObjectConfig(ObjectConfig& newObjectConfig); 
 	
-	bool isAnchor() const { return isAnchorObject; }
-	bool isOsiCompatible() const { return isOsiObject; }
+	bool isAnchor() const { return conf.isAnchor(); }
+	bool isOsiCompatible() const { return conf.isOSI(); }
 	std::string toString() const;
 	ObjectDataType getAsObjectData() const;
 
@@ -112,7 +113,7 @@ public:
 	void establishConnection(std::shared_future<void> stopRequest);
 	void disconnect() {
 		LogMessage(LOG_LEVEL_INFO, "Disconnecting object %u",
-				   this->transmitterID);
+				   this->getTransmitterID());
 		this->comms.disconnect();
 	}
 
@@ -156,15 +157,7 @@ private:
 	Channel osiChannel;
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 
-	fs::path objectFile;
-	fs::path trajectoryFile;
-	uint32_t transmitterID = 0;
-	bool isAnchorObject = false;
-	bool isOsiObject = false;
-	ObjectConfig objectConfig;
-	Trajectory trajectory;
-	GeographicPositionType origin;
-	bool isEnabled = true;
+	ObjectConfig conf;
 
 	void updateMonitor(const MonitorMessage&);
 	MonitorMessage awaitNextMonitor();

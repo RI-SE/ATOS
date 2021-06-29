@@ -4,27 +4,21 @@
 #include "datadictionary.h"
 #include "osi_handler.hpp"
 
-TestObject::TestObject() {
-	// TODO
-	origin.latitude_deg = origin.longitude_deg = origin.altitude_m = 0.0;
-	origin.isLongitudeValid = origin.isLatitudeValid = origin.isAltitudeValid = false;
-
+TestObject::TestObject() : osiChannel(SOCK_STREAM) {
 }
 
 TestObject::TestObject(TestObject&& other) :
+	osiChannel(SOCK_STREAM),
 	state(other.state),
-	objectFile(other.objectFile),
-	trajectoryFile(other.trajectoryFile),
-	transmitterID(other.transmitterID),
-	isAnchorObject(other.isAnchorObject),
-	trajectory(other.trajectory),
-	origin(other.origin),
+	conf(other.conf),
 	lastMonitor(other.lastMonitor),
 	maxAllowedMonitorPeriod(other.maxAllowedMonitorPeriod)
 {
 	this->comms = other.comms;
+	this->osiChannel = other.osiChannel;
 	other.comms.cmd.socket = 0;
 	other.comms.mntr.socket = 0;
+	other.osiChannel.socket = 0;
 	this->nextMonitor = std::move(other.nextMonitor);
 }
 
@@ -45,19 +39,19 @@ void TestObject::setMonitorAddress(
 void TestObject::setOsiAddress(
 		const sockaddr_in &newAddr) {
 	if (!this->comms.isConnected()) {
-		this->comms.osi.addr = newAddr;
+		this->osiChannel.addr = newAddr;
 	}
 }
 
 void TestObject::setObjectConfig(ObjectConfig& newObjectConfig){
-	this->objectConfig = newObjectConfig; }
+	this->conf = newObjectConfig; }
 
 ObjectDataType TestObject::getAsObjectData() const {
 	ObjectDataType retval;
 	// TODO check on isValid for each
-	retval.origin.Latitude = this->origin.latitude_deg;
-	retval.origin.Longitude = this->origin.longitude_deg;
-	retval.origin.Altitude = this->origin.altitude_m;
+	retval.origin.Latitude = this->conf.getOrigin().latitude_deg;
+	retval.origin.Longitude = this->conf.getOrigin().longitude_deg;
+	retval.origin.Altitude = this->conf.getOrigin().altitude_m;
 
 	retval.Enabled = OBJECT_ENABLED; // TODO maybe a setting for this
 	retval.ClientIP = this->comms.cmd.addr.sin_addr.s_addr;
@@ -124,38 +118,15 @@ std::string TestObject::toString() const {
 	char ipAddr[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, &this->comms.cmd.addr.sin_addr, ipAddr, sizeof (ipAddr));
 	std::string retval = "";
-	retval += "Object ID " + std::to_string(transmitterID)
-			+ ", IP " + ipAddr + ", trajectory file " + trajectoryFile.filename().string()
-			+ ", object file " + objectFile.filename().string() + ", anchor: " + (isAnchorObject?"Yes":"No");
+	retval += conf.toString(); // TODO add more
 	return retval;
 }
 
 void TestObject::parseConfigurationFile(
 		const fs::path &objectFile) {
-
-	char setting[100];
-	int result;
 	struct sockaddr_in addr;
-	char path[MAX_FILE_PATH];
-
-	UtilGetTrajDirectoryPath(path, sizeof (path));
-
-	// Get IP setting
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFile.c_str(),
-								 objectFile.string().length()+1, setting,
-								 sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find IP setting in file " + objectFile.string());
-	}
-	result = inet_pton(AF_INET, setting, &addr.sin_addr);
-	if (result == -1) {
-		using namespace std;
-		throw system_error(make_error_code(static_cast<errc>(errno)));
-	}
-	else if (result == 0) {
-		throw std::invalid_argument("Address " + std::string(setting)
-									+ " in object file " + objectFile.string()
-									+ " is not a valid IPv4 address");
-	}
+	this->conf.parseConfigurationFile(objectFile);
+	addr.sin_addr.s_addr = conf.getIP();
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(ISO_22133_DEFAULT_OBJECT_TCP_PORT);
 	this->setCommandAddress(addr);
@@ -163,149 +134,6 @@ void TestObject::parseConfigurationFile(
 	this->setMonitorAddress(addr);
 	addr.sin_port = htons(OSI_DEFAULT_OBJECT_TCP_PORT);
 	this->setOsiAddress(addr);
-
-	// Get trajectory file setting
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_TRAJ, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find trajectory setting in file " + objectFile.string());
-	}
-
-	fs::path trajFile(std::string(path) + std::string(setting));
-	if (!fs::exists(trajFile)) {
-		throw std::invalid_argument("Configured trajectory file " + std::string(setting)
-									+ " in file " + objectFile.string() + " not found");
-	}
-	this->trajectoryFile = trajFile;
-
-	// Get ID setting
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_ID, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find ID setting in file " + objectFile.string());
-	}
-	char *endptr;
-	uint32_t id = static_cast<uint32_t>(strtoul(setting, &endptr, 10));
-
-	if (endptr == setting) {
-		throw std::invalid_argument("ID " + std::string(setting) + " in file "
-									+ objectFile.string() + " is invalid");
-	}
-	this->transmitterID = id;
-
-	// Get anchor setting
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_IS_ANCHOR, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		this->isAnchorObject = false;
-	}
-	else {
-		if (setting[0] == '1' || setting[0] == '0') {
-			this->isAnchorObject = setting[0] == '1';
-		}
-		else {
-			std::string anchorSetting(setting);
-			for (char &c : anchorSetting) {
-				c = std::tolower(c, std::locale());
-			}
-			if (anchorSetting.compare("true") == 0) {
-				this->isAnchorObject = true;
-			}
-			else if (anchorSetting.compare("false") == 0) {
-				this->isAnchorObject = false;
-			}
-			else {
-				throw std::invalid_argument("Anchor setting " + std::string(setting) + " in file "
-											+ objectFile.string() + " is invalid");
-			}
-		}
-	}
-
-	// Get OSI compatible setting
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_IS_OSI_COMPATIBLE, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		this->isOsiObject = false;
-	}
-	else {
-		if (setting[0] == '1' || setting[0] == '0') {
-			this->isOsiObject = setting[0] == '1';
-		}
-		else {
-			std::string osiSetting(setting);
-			for (char &c : osiSetting) {
-				c = std::tolower(c, std::locale());
-			}
-			if (osiSetting.compare("true") == 0) {
-				this->isOsiObject = true;
-			}
-			else if (osiSetting.compare("false") == 0) {
-				this->isOsiObject = false;
-			}
-			else {
-				throw std::invalid_argument("OSI setting " + std::string(setting) + " in file "
-											+ objectFile.string() + " is invalid");
-			}
-		}
-	}
-
-	this->objectFile = objectFile;
-
-	this->origin = {};
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_ORIGIN_LATITUDE, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) != -1) {
-		origin.latitude_deg = strtod(setting, &endptr);
-		if (setting != endptr) {
-			origin.isLatitudeValid = true;
-		}
-	}
-
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_ORIGIN_LONGITUDE, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) != -1) {
-		origin.longitude_deg = strtod(setting, &endptr);
-		if (setting != endptr) {
-			origin.isLongitudeValid = true;
-		}
-	}
-
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_ORIGIN_ALTITUDE, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) != -1) {
-		origin.altitude_m = strtod(setting, &endptr);
-		if (setting != endptr) {
-			origin.isAltitudeValid = true;
-		}
-	}
-
-	if (origin.isAltitudeValid == origin.isLatitudeValid
-			&& origin.isLatitudeValid == origin.isLongitudeValid) {
-		if (!origin.isAltitudeValid) {
-			GeoPosition orig;
-			if (UtilReadOriginConfiguration(&orig) != -1) {
-				this->origin.latitude_deg = orig.Latitude;
-				this->origin.longitude_deg = orig.Longitude;
-				this->origin.altitude_m = orig.Altitude;
-				this->origin.isLatitudeValid = true;
-				this->origin.isLongitudeValid = true;
-				this->origin.isAltitudeValid = true;
-			}
-			else {
-				throw std::invalid_argument("No origin setting found");
-			}
-		}
-	}
-	else {
-		throw std::invalid_argument("Partial origin setting in file " + objectFile.string());
-	}
-}
-
-void TestObject::parseTrajectoryFile(
-		const fs::path& file) {
-	trajectory.initializeFromFile(file.filename());
-	LogMessage(LOG_LEVEL_INFO, "Successfully parsed trajectory %s for object %u",
-			   file.filename().c_str(), this->getTransmitterID());
 }
 
 void TestObject::establishConnection(std::shared_future<void> stopRequest) {
@@ -436,10 +264,10 @@ void TestObject::sendHeartbeat(
 void TestObject::sendSettings() {
 
 	ObjectSettingsType objSettings;
-	objSettings.desiredTransmitterID = transmitterID;
+	objSettings.desiredTransmitterID = conf.getTransmitterID();
 	objSettings.isTransmitterIDValid = true;
 
-	objSettings.coordinateSystemOrigin = origin;
+	objSettings.coordinateSystemOrigin = conf.getOrigin();
 
 	TimeSetToCurrentSystemTime(&objSettings.currentTime);
 	objSettings.isTimestampValid = true;
@@ -449,7 +277,7 @@ void TestObject::sendSettings() {
 	objSettings.isPositioningAccuracyRequired = false;
 
 	this->comms.cmd << objSettings;
-	this->comms.cmd << trajectory;
+	this->comms.cmd << conf.getTrajectory();
 }
 
 void TestObject::sendArm() {

@@ -63,9 +63,6 @@ void ScenarioHandler::handleAllClearCommand() {
 void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
-		o.second.parseTrajectoryFile(o.second.getTrajectoryFile());
-	});
-	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
 		auto data = o.second.getAsObjectData();
 		DataDictionarySetObjectData(&data);
 	});
@@ -88,11 +85,7 @@ void ScenarioHandler::loadObjectFiles() {
 			TestObject object;
 			try {
 				object.parseConfigurationFile(entry.path());
-				std::cout << "object.isOsiCompatible1 = " << object.isOsiCompatible() << std::endl;
-				object.getObjectConfig().parseConfigurationFile(entry.path());
-				std::cout << "object.getObjectConfig().isOSI() = " << object.getObjectConfig().isOSI() << std::endl;
-				
-				//std::cout << "object.isOsiCompatible2 = " << object.isOsiCompatible() << std::endl;
+
 				LogMessage(LOG_LEVEL_INFO, "Loaded configuration: %s", object.toString().c_str());
 				// Check preexisting
 				auto foundObject = objects.find(object.getTransmitterID());
@@ -102,8 +95,8 @@ void ScenarioHandler::loadObjectFiles() {
 				else {
 					auto badID = object.getTransmitterID();
 					std::string errMsg = "Duplicate object ID " + std::to_string(badID)
-							+ " detected in files " + objects[badID].getTrajectoryFile().string()
-							+ " and " + object.getTrajectoryFile().string();
+							+ " detected in files " + objects[badID].getTrajectoryFileName()
+							+ " and " + object.getTrajectoryFileName();
 					throw std::invalid_argument(errMsg);
 				}
 			}
@@ -113,15 +106,6 @@ void ScenarioHandler::loadObjectFiles() {
 			}
 		}
 	}
-	//Load injectorIds
-
-
-	//DataDictionaryGetNumberOfObjects(&numberOfObjects);
-	/*printf("Num obj = %d\n", numberOfObjects);
- 	uint32_t transmitterIDs[numberOfObjects];
- 	DataDictionaryGetObjectTransmitterIDs(transmitterIDs, numberOfObjects);
-	configureObjectDataInjection(this->dataInjectionMaps, transmitterIDs, numberOfObjects);
-	*/
 	
 	if (!errors.empty()) {
 		objects.clear();
