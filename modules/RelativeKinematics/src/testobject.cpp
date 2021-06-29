@@ -301,7 +301,7 @@ void TestObject::sendOsiData(
 	auto rawData = osi.encodeSvGtMessage(osidata, timestamp, projStr, true);
 	std::vector<char> vec(rawData.length());
 	std::copy(rawData.begin(), rawData.end(), vec.begin());
-	this->comms.cmd << vec;
+	this->osiChannel << vec;
 }
 
 
