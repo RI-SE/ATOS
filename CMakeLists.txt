@@ -14,7 +14,6 @@ set(WITH_VISUALIZATION ON CACHE BOOL "Enable Visualization module")
 set(WITH_RELATIVE_KINEMATICS OFF CACHE BOOL "Enable RelativeKinematics module")
 set(WITH_DIRECT_CONTROL ON CACHE BOOL "Enable DirectControl module")
 set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
-set(WITH_OSI_CONTROL ON CACHE BOOL "Enable OsiControl module")
 set(WITH_BACK_TO_START ON CACHE BOOL "Enable BackToStart module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
@@ -59,9 +58,6 @@ if(WITH_RELATIVE_KINEMATICS)
 	set(WITH_OBJECT_CONTROL OFF)
 else()
 	set(WITH_OBJECT_CONTROL ON)
-endif()
-if(WITH_OSI_CONTROL)
-	list(APPEND ENABLED_MODULES OsiControl)
 endif()
 
 
