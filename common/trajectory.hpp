@@ -130,6 +130,7 @@ public:
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
 	std::string toString() const;
 	void reverse(Trajectory &reversedTraj);
+	TrajectoryPoint scalePoint(TrajectoryPoint toScale, TrajectoryPoint refPoint);
 
 private:
 	static const std::regex fileHeaderPattern;

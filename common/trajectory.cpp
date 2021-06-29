@@ -286,6 +286,10 @@ std::string Trajectory::toString() const {
 	return ss.str();
 }
 
+Trajectory::TrajectoryPoint scalePoint(Trajectory::TrajectoryPoint toScale, Trajectory::TrajectoryPoint refPoint){
+
+}
+
 void Trajectory::reverse(Trajectory& reversedTraj){
 	if(points.empty()){
 		throw std::invalid_argument("Attempted to reverse non existing trajectory");
