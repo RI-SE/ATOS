@@ -6,6 +6,7 @@ ObjectConfig::ObjectConfig() {
 	origin.isLongitudeValid = origin.isLatitudeValid = origin.isAltitudeValid = false;
 }
 
+/*
 ObjectConfig::ObjectConfig(const ObjectConfig&& other) :
 	objectFile(other.objectFile),
 	transmitterID(other.transmitterID),
@@ -17,7 +18,7 @@ ObjectConfig::ObjectConfig(const ObjectConfig&& other) :
 {
 
 }
-
+*/
 std::string ObjectConfig::toString() const {
 	char ipAddr[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, &ip_addr, ipAddr, sizeof (ipAddr));

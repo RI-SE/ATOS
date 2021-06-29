@@ -134,9 +134,6 @@ private:
 	std::shared_future<void> connStopReqFuture;	//!< Request to stop a connection attempt
 	std::promise<void> connStopReqPromise;		//!< Promise that the above value will be emitted
 
-	//std::vector<DataInjectionMap> dataInjectionMaps;
-	DataInjectionMap dataInjectionMaps[MAX_OBJECTS];
-	
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
 	//!			and can be terminated by calling ::abortConnectionAttempt or setting ::connStopReqFuture.
@@ -178,14 +175,6 @@ private:
 	void disarmObjects();
 	//! \brief
 	void startObjects();
-	//! \brief TODO
-	int configureObjectDataInjection(DataInjectionMap injectionMaps[],
-								 const uint32_t transmitterIDs[],
-								 const unsigned int numberOfObjects);
-	//! \brief TODO
-	int parseDataInjectionSetting(const char objectFilePath[MAX_FILE_PATH],
-								  DataInjectionMap injectionMaps[],
-								  const unsigned int numberOfMaps);
 	//! \brief TODO
 	std::vector<char> buildOSIgogtArray(uint32_t transmitterId);
 

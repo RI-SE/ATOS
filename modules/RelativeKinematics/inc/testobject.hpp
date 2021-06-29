@@ -91,12 +91,12 @@ public:
 	ObjectStateType getState(const bool awaitUpdate, const std::chrono::milliseconds timeout);
 	ObjectStateType getState() const { return isConnected() ? state : OBJECT_STATE_UNKNOWN; }
 	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
-	//ObjectConfig getObjectConfig(){ return objectConfig; }
+	ObjectConfig getObjectConfig(){ return objectConfig; }
 	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
 	void setOsiAddress(const sockaddr_in& newAddr);
-	//void setObjectConfig(ObjectConfig& newObjectConfig); 
+	void setObjectConfig(ObjectConfig& newObjectConfig); 
 	
 	bool isAnchor() const { return isAnchorObject; }
 	bool isOsiCompatible() const { return isOsiObject; }

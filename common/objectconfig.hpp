@@ -22,11 +22,11 @@ struct DataInjectionMap {
 class ObjectConfig {
 public:
 	ObjectConfig();
-	ObjectConfig(const ObjectConfig&&);
+	//ObjectConfig(const ObjectConfig&&);
 
 	void parseConfigurationFile(const fs::path& file);
 
-	bool isAnchor() const { return isAnchorObject; }
+	bool isAnchor() { return isAnchorObject; }
 	bool isOSI() const { return isOSICompatible; }
 	DataInjectionMap getInjectionMap() const { return injectionMap; }
 	in_addr_t getIP(void) const { return ip_addr; }

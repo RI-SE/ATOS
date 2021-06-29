@@ -49,10 +49,8 @@ void TestObject::setOsiAddress(
 	}
 }
 
-/*
 void TestObject::setObjectConfig(ObjectConfig& newObjectConfig){
 	this->objectConfig = newObjectConfig; }
-*/
 
 ObjectDataType TestObject::getAsObjectData() const {
 	ObjectDataType retval;
