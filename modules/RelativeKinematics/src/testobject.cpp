@@ -298,7 +298,7 @@ void TestObject::sendOsiData(
 		const std::string& projStr,
 		const std::chrono::system_clock::time_point& timestamp) {
 	OsiHandler osi;
-	auto rawData = osi.encodeSvGtMessage(osidata, timestamp, projStr, true);
+	auto rawData = osi.encodeSvGtMessage(osidata, timestamp, projStr, false);
 	std::vector<char> vec(rawData.length());
 	std::copy(rawData.begin(), rawData.end(), vec.begin());
 	this->osiChannel << vec;
@@ -500,6 +500,7 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 	}
 	return chnl;
 }
+
 
 Channel& operator<<(Channel& chnl, const std::vector<char>& data) {
 	auto nBytes = send(chnl.socket, data.data(), data.size(), 0);

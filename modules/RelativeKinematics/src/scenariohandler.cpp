@@ -106,6 +106,16 @@ void ScenarioHandler::loadObjectFiles() {
 			}
 		}
 	}
+
+	// Fix injector ID maps - reverse their direction
+	for (const auto& id : getVehicleIDs()) {
+		auto injMap = objects[id].getObjectConfig().getInjectionMap();
+		for (const auto& sourceID : injMap.sourceIDs) {
+			auto conf = objects[sourceID].getObjectConfig();
+			conf.addInjectionTarget(id);
+			objects[sourceID].setObjectConfig(conf);
+		}
+	}
 	
 	if (!errors.empty()) {
 		objects.clear();
@@ -275,7 +285,7 @@ OsiHandler::LocalObjectGroundTruth_t ScenarioHandler::buildOSILocalGroundTruth(
 }
 
 void ScenarioHandler::injectObjectData(const MonitorMessage &monr) {
-	if (objects[monr.first].getObjectConfig().getInjectionMap().isActive) {
+	if (!objects[monr.first].getObjectConfig().getInjectionMap().targetIDs.empty()) {
 		std::chrono::system_clock::time_point ts;
 		auto secs = std::chrono::seconds(monr.second.timestamp.tv_sec);
 		auto usecs = std::chrono::microseconds(monr.second.timestamp.tv_usec);

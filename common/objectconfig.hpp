@@ -1,6 +1,7 @@
 #pragma once
 
 #include <netinet/in.h>
+#include <set>
 #include "trajectory.hpp"
 
 // GCC version 8.1 brings non-experimental support for std::filesystem
@@ -12,10 +13,10 @@ namespace fs = std::filesystem;
 namespace fs = std::experimental::filesystem;
 #endif
 
+// TODO move out of object config class (which should only contain sourceIDs per setting file)
 struct DataInjectionMap {
-	uint32_t sourceID;
-	std::vector<uint32_t> targetIDs;
-	bool isActive;
+	std::set<uint32_t> sourceIDs;
+	std::set<uint32_t> targetIDs;
 };
 
 class ObjectConfig {
@@ -38,7 +39,8 @@ public:
 	double getTurningDiameter() const { return turningDiameter; }
 	std::string getObjectFileName() const { return objectFile.filename().string(); }
 	std::string getTrajectoryFileName() const { return trajectoryFile.filename().string(); }
-
+	void addInjectionTarget(const uint32_t target) { this->injectionMap.targetIDs.insert(target); }
+	void clearInjectionSources() { this->injectionMap.sourceIDs.clear(); }
 
 	std::string toString() const;
 

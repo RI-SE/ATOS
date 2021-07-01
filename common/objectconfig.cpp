@@ -26,7 +26,7 @@ std::string ObjectConfig::toString() const {
 	std::string retval = "";
 
 	std::string idsString;
-	for(auto id: injectionMap.targetIDs) {
+	for(auto id: injectionMap.sourceIDs) {
 		idsString += std::to_string(id) + " ";
 	}
 
@@ -203,13 +203,12 @@ void ObjectConfig::parseConfigurationFile(
 		std::string settingString(setting);
 		this->split(settingString, ',', ids);
 
-		this->injectionMap.sourceID = id;
-		this->injectionMap.isActive = true;
+		this->injectionMap.sourceIDs.clear();
 		this->injectionMap.targetIDs.clear();
 
 		for (const auto& id : ids) {
 			LogMessage(LOG_LEVEL_DEBUG, "Injection ID %d", id);
-			this->injectionMap.targetIDs.push_back(static_cast<uint32_t>(id));
+			this->injectionMap.sourceIDs.insert(static_cast<uint32_t>(id));
 		}
 	}
 	this->objectFile = objectFile;

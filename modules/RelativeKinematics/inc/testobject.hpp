@@ -98,7 +98,7 @@ public:
 	ObjectStateType getState(const bool awaitUpdate, const std::chrono::milliseconds timeout);
 	ObjectStateType getState() const { return isConnected() ? state : OBJECT_STATE_UNKNOWN; }
 	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
-	ObjectConfig getObjectConfig(){ return conf; }
+	ObjectConfig getObjectConfig() const { return conf; }
 	void setTrajectory(const Trajectory& newTrajectory) { conf.setTrajectory(newTrajectory); }
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);

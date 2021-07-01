@@ -65,7 +65,6 @@ public:
 
 
 	typedef struct {
-		uint32_t sourceID;
 		unsigned int numberOfTargets;
 		uint32_t *targetIDs;
 		bool isActive;
