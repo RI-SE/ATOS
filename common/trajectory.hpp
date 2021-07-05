@@ -129,8 +129,11 @@ public:
 	Trajectory relativeTo(const Trajectory& other) const;
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
 	std::string toString() const;
+
+	float lerp(float start, float end, float amnt);
+	void  saveToFile(const std::string& fileName);
 	void reverse(Trajectory &reversedTraj);
-	TrajectoryPoint scalePoint(TrajectoryPoint toScale, TrajectoryPoint refPoint);
+	void scaleTraj(Trajectory &toScale, int scale);
 
 private:
 	static const std::regex fileHeaderPattern;

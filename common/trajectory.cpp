@@ -1,41 +1,44 @@
 #include <fstream>
+#include <iostream>
+#include <iomanip>
+#include <cmath>
 #include "regexpatterns.hpp"
 #include "logging.h"
 #include "trajectory.hpp"
 
 const std::regex Trajectory::fileHeaderPattern("TRAJECTORY;(" + RegexPatterns::intPattern + ");("
-        + RegexPatterns::namePattern + ");" + RegexPatterns::versionPattern + ";("
-        + RegexPatterns::intPattern + ");");
+		+ RegexPatterns::namePattern + ");" + RegexPatterns::versionPattern + ";("
+		+ RegexPatterns::intPattern + ");");
 const std::regex Trajectory::fileLinePattern("LINE;(" + RegexPatterns::floatPattern + ");("
-        + RegexPatterns::floatPattern + ");(" + RegexPatterns::floatPattern + ");("
-        + RegexPatterns::floatPattern + ")?;(" + RegexPatterns::floatPattern + ");("
-        + RegexPatterns::floatPattern + ")?;(" + RegexPatterns::floatPattern + ")?;("
-        + RegexPatterns::floatPattern + ")?;(" + RegexPatterns::floatPattern + ")?;("
-        + RegexPatterns::floatPattern + ");(" + RegexPatterns::intPattern + ");ENDLINE;");
+		+ RegexPatterns::floatPattern + ");(" + RegexPatterns::floatPattern + ");("
+		+ RegexPatterns::floatPattern + ")?;(" + RegexPatterns::floatPattern + ");("
+		+ RegexPatterns::floatPattern + ")?;(" + RegexPatterns::floatPattern + ")?;("
+		+ RegexPatterns::floatPattern + ")?;(" + RegexPatterns::floatPattern + ")?;("
+		+ RegexPatterns::floatPattern + ");(" + RegexPatterns::intPattern + ");ENDLINE;");
 const std::regex Trajectory::fileFooterPattern("ENDTRAJECTORY;");
 
 Trajectory::Trajectory(const Trajectory& other) {
 	this->id = other.id;
-    this->name = other.name;
-    this->version = other.version;
-    this->points = std::vector<TrajectoryPoint>(other.points);
+	this->name = other.name;
+	this->version = other.version;
+	this->points = std::vector<TrajectoryPoint>(other.points);
 }
 
 void Trajectory::initializeFromFile(const std::string &fileName) {
 
-    using namespace std;
-    char trajDirPath[PATH_MAX];
-    string errMsg;
-    smatch match;
-    ifstream file;
-    bool isHeaderParsedSuccessfully = false;
+	using namespace std;
+	char trajDirPath[PATH_MAX];
+	string errMsg;
+	smatch match;
+	ifstream file;
+	bool isHeaderParsedSuccessfully = false;
 	unsigned long nPoints = 0;
 
-    UtilGetTrajDirectoryPath(trajDirPath, sizeof (trajDirPath));
-    string trajFilePath(trajDirPath);
-    trajFilePath += fileName;
+	UtilGetTrajDirectoryPath(trajDirPath, sizeof (trajDirPath));
+	string trajFilePath(trajDirPath);
+	trajFilePath += fileName;
 
-    file.open(trajFilePath);
+	file.open(trajFilePath);
 	if (!file.is_open()) {
 		throw ifstream::failure("Unable to open file <" + trajFilePath + ">");
 	}
@@ -112,19 +115,19 @@ void Trajectory::initializeFromFile(const std::string &fileName) {
 
 
 CartesianPosition Trajectory::TrajectoryPoint::getISOPosition() const {
-    CartesianPosition retval;
-    retval.xCoord_m = this->getXCoord();
-    retval.yCoord_m = this->getYCoord();
-    try {
-        retval.zCoord_m = this->getZCoord();
-    } catch (std::out_of_range e) {
-        LogMessage(LOG_LEVEL_WARNING, "Casting trajectory point to cartesian position: optional z value assumed to be 0");
-        retval.zCoord_m = 0.0;
-    }
+	CartesianPosition retval;
+	retval.xCoord_m = this->getXCoord();
+	retval.yCoord_m = this->getYCoord();
+	try {
+		retval.zCoord_m = this->getZCoord();
+	} catch (std::out_of_range e) {
+		LogMessage(LOG_LEVEL_WARNING, "Casting trajectory point to cartesian position: optional z value assumed to be 0");
+		retval.zCoord_m = 0.0;
+	}
 	retval.heading_rad = this->getHeading();
 	retval.isHeadingValid = true;
 	retval.isPositionValid = true;
-    return retval;
+	return retval;
 }
 
 SpeedType Trajectory::TrajectoryPoint::getISOVelocity() const {
@@ -286,8 +289,48 @@ std::string Trajectory::toString() const {
 	return ss.str();
 }
 
-Trajectory::TrajectoryPoint scalePoint(Trajectory::TrajectoryPoint toScale, Trajectory::TrajectoryPoint refPoint){
+float Trajectory::lerp(float start, float end, float amnt) {
+	return start * (1 - amnt) + end * amnt;
+}
 
+void Trajectory::scaleTraj(Trajectory& scaledTraj, int factor){
+	int index = 0;
+	for (const auto& point : points) {
+		if(index < this->points.size()-2){
+			index++;
+		}
+		/*
+		for(int i = 0; i < factor; i++){
+			TrajectoryPoint newPoint = point;
+			//newPoint.setXCoord(Trajectory::lerp(point.getXCoord(), this->points.at(index+1).getXCoord(), double(i)/double(factor)));
+			//newPoint.setYCoord(Trajectory::lerp(point.getYCoord(), this->points.at(index+1).getYCoord(), double(i/factor)));
+			newPoint.setTime(Trajectory::lerp(point.getTime(), this->points.at(index).getTime(), double(i)/double(factor)));
+			//newPoint.setHeading(Trajectory::lerp(point.getHeading(), this->points.at(index).getHeading(), double(i)/double(factor)));
+		*/
+		TrajectoryPoint newPoint = point;
+		newPoint.setTime(point.getTime()*3);
+
+		double timeToFind = point.getTime()*3;
+		/*
+		for (const auto& point : points) {
+			if((timeToFind - 0.1) <= point.getTime()*3 && point.getTime()*3 <= timeToFind + 0.1){
+				newPoint.setHeading(point.getHeading());
+			}
+
+		}
+/*
+			if(point.getLongitudinalVelocity() > 0.5){
+				newPoint.setLongitudinalAcceleration(0);
+				newPoint.setLongitudinalVelocity(0.5);
+				newPoint.setLateralAcceleration(0);
+				newPoint.setLateralVelocity(0.1);
+			}
+			*/
+			scaledTraj.points.push_back(newPoint);
+		}
+
+	//}
+	scaledTraj.name = this->name + "SL";
 }
 
 void Trajectory::reverse(Trajectory& reversedTraj){
@@ -297,13 +340,52 @@ void Trajectory::reverse(Trajectory& reversedTraj){
 
 	std::vector<TrajectoryPoint> pointsToReverse(points);
 
-	reversedTraj.name = this->name + "_reversed";
+	reversedTraj.name = this->name + "Reversed";
 
 	for (const auto& point : points) {
 		TrajectoryPoint newPoint = pointsToReverse.back();
 		newPoint.setTime(point.getTime());
-		newPoint.setHeading(point.getHeading() * PI);
+		newPoint.setHeading(newPoint.getHeading()+M_PI);
+		std::cout <<"Long velocity: " << point.getLongitudinalVelocity() << "\n";
 		pointsToReverse.pop_back();
 		reversedTraj.points.push_back(newPoint);
 	}
+}
+
+
+void  Trajectory::saveToFile(const std::string& fileName){
+	using namespace std;
+	char trajDirPath[PATH_MAX];
+	string errMsg;
+	smatch match;
+	ifstream file;
+
+	UtilGetTrajDirectoryPath(trajDirPath, sizeof (trajDirPath));
+	string trajFilePath(trajDirPath);
+	trajFilePath += fileName;
+
+	std::cout << std::fixed;
+	std::cout << std::setprecision(4);
+	ofstream outputTraj;
+	outputTraj.open (trajFilePath);
+
+	outputTraj << "TRAJECTORY;" << "0;" << this->name << ";" << "0.1" << ";" << this->points.size() << ";" <<  "\n";
+	for (const auto& point : points) {
+		outputTraj << "LINE;"
+		<<  std::fixed << std::setprecision(2) <<(point.getTime()) << ";"
+		<<  std::fixed << std::setprecision(6) <<(point.getXCoord()) << ";"
+		<<  std::fixed << std::setprecision(6) <<(point.getYCoord()) << ";"
+		<<  std::fixed << std::setprecision(6) <<(point.getZCoord()) << ";"
+		<<  std::fixed << std::setprecision(6) <<(point.getHeading()) << ";"
+		<<  std::fixed << std::setprecision(6) <<(point.getLongitudinalVelocity()) << ";"
+		<< ";" //point.getLateralVelocity() << ";"
+		<<  std::fixed << std::setprecision(6) <<(point.getLongitudinalAcceleration()) << ";"
+		<< ";" //point.getLateralAcceleration() << ";"
+		<<  std::fixed << std::setprecision(6) <<(point.getCurvature()) << ";"
+		<<  std::fixed << std::setprecision(6) <<(point.getMode())
+		<<";ENDLINE;" << "\n";
+	}
+	outputTraj << "ENDTRAJECTORY;" <<  "\n";
+
+	outputTraj.close();
 }
