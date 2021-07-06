@@ -133,7 +133,7 @@ public:
 	float lerp(float start, float end, float amnt);
 	void  saveToFile(const std::string& fileName);
 	void reverse(Trajectory &reversedTraj);
-	void scaleTraj(Trajectory &toScale, int scale);
+	void scaleBTSTraj(Trajectory &toScale, int scale);
 
 private:
 	static const std::regex fileHeaderPattern;

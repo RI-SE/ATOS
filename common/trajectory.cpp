@@ -6,6 +6,8 @@
 #include "logging.h"
 #include "trajectory.hpp"
 
+#define MAX_BACK_TO_START_SPEED_MS 5.5
+
 const std::regex Trajectory::fileHeaderPattern("TRAJECTORY;(" + RegexPatterns::intPattern + ");("
 		+ RegexPatterns::namePattern + ");" + RegexPatterns::versionPattern + ";("
 		+ RegexPatterns::intPattern + ");");
@@ -294,42 +296,19 @@ float Trajectory::lerp(float start, float end, float amnt) {
 }
 
 void Trajectory::scaleTraj(Trajectory& scaledTraj, int factor){
-	int index = 0;
+
 	for (const auto& point : points) {
-		if(index < this->points.size()-2){
-			index++;
-		}
-		/*
-		for(int i = 0; i < factor; i++){
-			TrajectoryPoint newPoint = point;
-			//newPoint.setXCoord(Trajectory::lerp(point.getXCoord(), this->points.at(index+1).getXCoord(), double(i)/double(factor)));
-			//newPoint.setYCoord(Trajectory::lerp(point.getYCoord(), this->points.at(index+1).getYCoord(), double(i/factor)));
-			newPoint.setTime(Trajectory::lerp(point.getTime(), this->points.at(index).getTime(), double(i)/double(factor)));
-			//newPoint.setHeading(Trajectory::lerp(point.getHeading(), this->points.at(index).getHeading(), double(i)/double(factor)));
-		*/
 		TrajectoryPoint newPoint = point;
-		newPoint.setTime(point.getTime()*3);
+		newPoint.setTime(point.getTime()*factor);
 
-		double timeToFind = point.getTime()*3;
-		/*
-		for (const auto& point : points) {
-			if((timeToFind - 0.1) <= point.getTime()*3 && point.getTime()*3 <= timeToFind + 0.1){
-				newPoint.setHeading(point.getHeading());
-			}
+		double timeToFind = point.getTime()*factor;
 
+		if(point.getLongitudinalVelocity() > MAX_BACK_TO_START_SPEED_MS){
+			newPoint.setLongitudinalAcceleration(0);
+			newPoint.setLongitudinalVelocity(MAX_BACK_TO_START_SPEED_MS);
 		}
-/*
-			if(point.getLongitudinalVelocity() > 0.5){
-				newPoint.setLongitudinalAcceleration(0);
-				newPoint.setLongitudinalVelocity(0.5);
-				newPoint.setLateralAcceleration(0);
-				newPoint.setLateralVelocity(0.1);
-			}
-			*/
 			scaledTraj.points.push_back(newPoint);
 		}
-
-	//}
 	scaledTraj.name = this->name + "SL";
 }
 
@@ -346,7 +325,6 @@ void Trajectory::reverse(Trajectory& reversedTraj){
 		TrajectoryPoint newPoint = pointsToReverse.back();
 		newPoint.setTime(point.getTime());
 		newPoint.setHeading(newPoint.getHeading()+M_PI);
-		std::cout <<"Long velocity: " << point.getLongitudinalVelocity() << "\n";
 		pointsToReverse.pop_back();
 		reversedTraj.points.push_back(newPoint);
 	}
