@@ -291,10 +291,6 @@ std::string Trajectory::toString() const {
 	return ss.str();
 }
 
-float Trajectory::lerp(float start, float end, float amnt) {
-	return start * (1 - amnt) + end * amnt;
-}
-
 void Trajectory::scaleTraj(Trajectory& scaledTraj, int factor){
 
 	for (const auto& point : points) {

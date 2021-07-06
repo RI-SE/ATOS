@@ -130,7 +130,6 @@ public:
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
 	std::string toString() const;
 
-	float lerp(float start, float end, float amnt);
 	void  saveToFile(const std::string& fileName);
 	void reverse(Trajectory &reversedTraj);
 	void scaleTraj(Trajectory &toScale, int scale);
