@@ -1949,7 +1949,7 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("MiscData", ParameterName) == 0) {
-		DataDictionaryGetMiscDataC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetMiscData(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("RVSSConfig", ParameterName) == 0) {
 		DataDictionaryGetRVSSConfigU32(GSD, &ValueU32);
@@ -2174,7 +2174,8 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(newValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_MISC_DATA:
-		result = DataDictionarySetMiscDataC8(GSD, newValue);
+		LogMessage(LOG_LEVEL_WARNING, "Unable to set MiscData - size unknown");
+		result = DataDictionarySetMiscData(newValue, 0);
 		break;
 	case CONFIGURATION_PARAMETER_INVALID:
 		LogMessage(LOG_LEVEL_WARNING, "Attempted to set invalid parameter %s", parameterName);

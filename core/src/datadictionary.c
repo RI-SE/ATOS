@@ -52,6 +52,8 @@ static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define MONR_DATA_FILENAME "MonitorData"
 #define STATE_DATA_FILENAME "StateData"
+#define MISC_DATA_FILENAME "MiscData"
+#define MISC_DATA_MAX_SIZE 1024
 
 typedef struct {
 	OBCState_t objectControlState;
@@ -59,7 +61,7 @@ typedef struct {
 
 static volatile ObjectDataType *objectDataMemory = NULL;
 static volatile StateDataType *stateDataMemory = NULL;
-
+static volatile char *miscDataMemory = NULL;
 
 /*------------------------------------------------------------
   -- Static function definitions
@@ -101,7 +103,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitRVSSConfigU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
+	Res = Res == READ_OK ? DataDictionaryInitMiscData() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
 	if (Res == READ_OK && DataDictionaryInitObjectData() != WRITE_OK) {
@@ -1630,64 +1632,43 @@ ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType * GSD, ASPType * ASPD) {
 
 /*MiscData*/
 /*!
- * \brief DataDictionaryInitMiscDataC8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryInitMiscData inits a data structure for saving misc data
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitMiscDataC8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_MISC_DATA, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&MiscDataMutex);
-		strcpy(GSD->MiscDataC8, ResultBufferC8);
-		pthread_mutex_unlock(&MiscDataMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "MiscData not found!");
-	}
-
-	return Res;
-}
-
-/*!
- * \brief DataDictionarySetMiscDataC8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
- * \param MiscData
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType * GSD, C8 * MiscData) {
-	ReadWriteAccess_t Res;
-
-	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_MISC_DATA, MiscData, strlen(MiscData) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&MiscDataMutex);
-		bzero(GSD->MiscDataC8, DD_CONTROL_BUFFER_SIZE_1024);
-		strcpy(GSD->MiscDataC8, MiscData);
-		pthread_mutex_unlock(&MiscDataMutex);
-	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
-}
-
-/*!
- * \brief DataDictionaryGetMiscDataC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param MiscData Return variable pointer
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType * GSD, U8 * MiscData, U32 BuffLen) {
-	pthread_mutex_lock(&MiscDataMutex);
-	bzero(MiscData, BuffLen);
-	strcpy(MiscData, GSD->MiscDataC8);
-	pthread_mutex_unlock(&MiscDataMutex);
+ReadWriteAccess_t DataDictionaryInitMiscData(void) {
 	return READ_OK;
 }
 
+/**
+ * \brief DataDictionarySetMiscData Sets the test misc data.
+ * \param miscData The misc data string (ASCII).
+ * \return ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionarySetMiscData(
+		const char* data,
+		const size_t datalen) {
+	// TODO implement setting of conf file
+	return UNDEFINED;
+}
+
+/*!
+ * \brief DataDictionaryGetMiscData Reads misc data from shared memory
+ * \param MiscData Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetMiscData(char * miscDataBuffer, const size_t buflen) {
+	ReadWriteAccess_t result = UNDEFINED;
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_MISC_DATA, miscDataBuffer, buflen)) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "MiscData not found!");
+		result = PARAMETER_NOTFOUND;
+		memset(miscDataBuffer, 0, buflen);
+	}
+}
 /*END of MiscData*/
 
 

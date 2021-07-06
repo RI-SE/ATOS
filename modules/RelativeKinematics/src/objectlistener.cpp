@@ -72,6 +72,9 @@ void ObjectListener::listen() {
 						break;
 					}
 				}
+
+				handler->injectObjectData(monr);
+
 				break;
 			}
 			case MESSAGE_ID_TREO:

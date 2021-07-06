@@ -16,6 +16,7 @@ set(TIME_LIBRARY MaestroTime)
 set(MAESTRO_COMMON_LIBRARY MaestroCommon)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MESSAGE_BUS_LIBRARY MaestroMQ)
+set(MAESTRO_COMMON_LIBRARY MaestroCommon)
 
 include(GNUInstallDirs)
 
