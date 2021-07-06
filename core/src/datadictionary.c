@@ -103,15 +103,9 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitRVSSConfigU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
-	/*Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;*/
+	Res = Res == READ_OK ? DataDictionaryInitMiscData() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
-	/*
-	if (Res == READ_OK && DataDictionaryInitMiscData() != WRITE_OK) {
-		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
-		Res = UNDEFINED;
-	}
-	*/
 	if (Res == READ_OK && DataDictionaryInitObjectData() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
 		Res = UNDEFINED;
@@ -1638,65 +1632,11 @@ ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType * GSD, ASPType * ASPD) {
 
 /*MiscData*/
 /*!
- * \brief DataDictionaryInitMiscDataC8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitMiscDataC8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_MISC_DATA, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&MiscDataMutex);
-		strcpy(GSD->MiscDataC8, ResultBufferC8);
-		pthread_mutex_unlock(&MiscDataMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "MiscData not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionaryInitMiscData inits a data structure for saving misc data
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitMiscData() {
-
-	int createdMemory;
-
-	miscDataMemory = createSharedMemory(MISC_DATA_FILENAME, 0, MISC_DATA_MAX_SIZE, &miscDataMemory);
-	if (miscDataMemory == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared misc data memory");
-		return UNDEFINED;
-	}
-	return createdMemory ? WRITE_OK : READ_OK;
-}
-
-
-/*!
- * \brief DataDictionarySetMiscDataC8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
- * \param MiscData
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType * GSD, C8 * MiscData) {
-	ReadWriteAccess_t Res;
-
-	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_MISC_DATA, MiscData, strlen(MiscData) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&MiscDataMutex);
-		bzero(GSD->MiscDataC8, DD_CONTROL_BUFFER_SIZE_1024);
-		strcpy(GSD->MiscDataC8, MiscData);
-		pthread_mutex_unlock(&MiscDataMutex);
-	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+ReadWriteAccess_t DataDictionaryInitMiscData(void) {
+	return READ_OK;
 }
 
 /**
@@ -1704,89 +1644,30 @@ ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType * GSD, C8 * MiscData) {
  * \param miscData The misc data string (ASCII).
  * \return ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMiscData(const char * miscData) {
-
-	ReadWriteAccess_t result;
-
-	if (miscDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
-	}
-	if (miscData == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
-		return UNDEFINED;
-	}
-	if (strlen(miscData) > MISC_DATA_MAX_SIZE) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "To much misc data");
-		return UNDEFINED;
-	}
-
-	miscDataMemory = claimSharedMemory(miscDataMemory);
-	if (miscDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
-	}
-
-
-	strcpy(miscDataMemory, miscData);
-	result = WRITE_OK;
-
-	objectDataMemory = releaseSharedMemory(objectDataMemory);
-
-	return result;
+ReadWriteAccess_t DataDictionarySetMiscData(
+		const char* data,
+		const size_t datalen) {
+	// TODO implement setting of conf file
+	return UNDEFINED;
 }
-
-
-/*!
- * \brief DataDictionaryGetMiscDataC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param MiscData Return variable pointer
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType * GSD, U8 * MiscData, U32 BuffLen) {
-	pthread_mutex_lock(&MiscDataMutex);
-	bzero(MiscData, BuffLen);
-	strcpy(MiscData, GSD->MiscDataC8);
-	pthread_mutex_unlock(&MiscDataMutex);
-	return READ_OK;
-}
-
-
 
 /*!
  * \brief DataDictionaryGetMiscData Reads misc data from shared memory
  * \param MiscData Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMiscData(char* miscData) {
-	ReadWriteAccess_t result;
+ReadWriteAccess_t DataDictionaryGetMiscData(char * miscDataBuffer, const size_t buflen) {
+	ReadWriteAccess_t result = UNDEFINED;
 
-	if (miscDataMemory == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
-		return UNDEFINED;
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_MISC_DATA, miscDataBuffer, buflen)) {
+		return READ_OK;
 	}
-	if (miscData == NULL) {
-		errno = EINVAL;
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
-		return UNDEFINED;
+	else {
+		LogMessage(LOG_LEVEL_INFO, "MiscData not found!");
+		result = PARAMETER_NOTFOUND;
+		memset(miscDataBuffer, 0, buflen);
 	}
-	miscDataMemory = claimSharedMemory(miscDataMemory);
-	if (miscDataMemory == NULL) {
-		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
-		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
-		return UNDEFINED;
-	}
-
-	miscData = miscDataMemory;
-	result = READ_OK;
-
-	objectDataMemory = releaseSharedMemory(objectDataMemory);
-	return result;
 }
 /*END of MiscData*/
 
