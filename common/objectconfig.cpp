@@ -1,11 +1,13 @@
 #include "objectconfig.hpp"
 #include "util.h"
+#include "logging.h"
 
 ObjectConfig::ObjectConfig() {
 	origin.latitude_deg = origin.longitude_deg = origin.altitude_m = 0.0;
 	origin.isLongitudeValid = origin.isLatitudeValid = origin.isAltitudeValid = false;
 }
 
+/*
 ObjectConfig::ObjectConfig(const ObjectConfig&& other) :
 	objectFile(other.objectFile),
 	transmitterID(other.transmitterID),
@@ -17,14 +19,14 @@ ObjectConfig::ObjectConfig(const ObjectConfig&& other) :
 {
 
 }
-
+*/
 std::string ObjectConfig::toString() const {
 	char ipAddr[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &ip_addr, ipAddr, sizeof (ipAddr));
+	inet_ntop(AF_INET, &remoteIP, ipAddr, sizeof (ipAddr));
 	std::string retval = "";
 
 	std::string idsString;
-	for(auto id: injectionMap.targetIDs) {
+	for(auto id: injectionMap.sourceIDs) {
 		idsString += std::to_string(id) + " ";
 	}
 
@@ -52,7 +54,7 @@ void ObjectConfig::parseConfigurationFile(
 								 sizeof (setting)) == -1) {
 		throw std::invalid_argument("Cannot find IP setting in file " + objectFile.string());
 	}
-	result = inet_pton(AF_INET, setting, &this->ip_addr);
+	result = inet_pton(AF_INET, setting, &this->remoteIP);
 	if (result == -1) {
 		using namespace std;
 		throw system_error(make_error_code(static_cast<errc>(errno)));
@@ -96,10 +98,11 @@ void ObjectConfig::parseConfigurationFile(
 	}
 
 	fs::path trajFile(std::string(path) + std::string(setting));
-	if (!fs::exists(trajFile)) {
+	if (!fs::exists(trajFile.string())) {
 		throw std::invalid_argument("Configured trajectory file " + std::string(setting)
 									+ " in file " + objectFile.string() + " not found");
 	}
+	this->trajectoryFile = trajFile;
 	this->trajectory.initializeFromFile(setting);
 	LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectory.points.size());
 
@@ -156,10 +159,7 @@ void ObjectConfig::parseConfigurationFile(
 	// Get Turning diameter
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_TURNING_DIAMETER, objectFile.c_str(),
 								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find Turning diameter setting in file " + objectFile.string());
-	}
-	else {
+								 setting, sizeof (setting)) != -1) {
 		char *endptr;
 		double val = strtod(setting, &endptr);
 
@@ -167,16 +167,14 @@ void ObjectConfig::parseConfigurationFile(
 			throw std::invalid_argument("Turning diameter " + std::string(setting) + " in file "
 									+ objectFile.string() + " is invalid");
 		}
+		this->turningDiameterKnown = true;
 		this->turningDiameter = val;
 	}
 
 	// Get Maximum speed
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_MAX_SPEED, objectFile.c_str(),
 								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find Max speed setting in file " + objectFile.string());
-	}
-	else {
+								 setting, sizeof (setting)) != -1) {
 		char *endptr;
 		double val = strtod(setting, &endptr);
 
@@ -184,6 +182,7 @@ void ObjectConfig::parseConfigurationFile(
 			throw std::invalid_argument("Max speed " + std::string(setting) + " in file "
 									+ objectFile.string() + " is invalid");
 		}
+		this->hasMaximumSpeed = true;
 		this->maximumSpeed = val;
 	}
 
@@ -196,28 +195,22 @@ void ObjectConfig::parseConfigurationFile(
 	else {
 		this->isOSICompatible = this->isSettingTrue(setting);
 	}
-
 	// Get Injector IDs
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_INJECTOR_IDS, objectFile.c_str(),
 								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find Injector IDs setting in file " + objectFile.string());
+								 setting, sizeof (setting)) != -1) {
+		std::vector<int> ids;
+		std::string settingString(setting);
+		this->split(settingString, ',', ids);
+
+		this->injectionMap.sourceIDs.clear();
+		this->injectionMap.targetIDs.clear();
+
+		for (const auto& id : ids) {
+			LogMessage(LOG_LEVEL_DEBUG, "Injection ID %d", id);
+			this->injectionMap.sourceIDs.insert(static_cast<uint32_t>(id));
+		}
 	}
-
-	std::vector<int> ids;
-	std::string settingString(setting);
-	this->split(settingString, ',', ids);
-
-	this->injectionMap.numberOfTargets = ids.size();
-	this->injectionMap.sourceID = id;
-	this->injectionMap.isActive = true;
-	this->injectionMap.targetIDs.clear();
-
-	for (const auto& id : ids) {
-		LogMessage(LOG_LEVEL_DEBUG, "Injection ID %d", id);
-		this->injectionMap.targetIDs.push_back(id);
-	}
-
 	this->objectFile = objectFile;
 }
 
@@ -251,4 +244,13 @@ void ObjectConfig::split(std::string &str, char delim, std::vector<int> &out) {
 		end = str.find(delim, start);
 		out.push_back(stoi(str.substr(start, end - start)));
 	}
+}
+
+std::string ObjectConfig::getProjString() const {
+	std::stringstream projStr;
+	projStr << "+proj=topocentric +ellps=GRS80 ";
+	projStr << "+lat_0=" << this->getOrigin().latitude_deg << " ";
+	projStr << "+lon_0=" << this->getOrigin().longitude_deg << " ";
+	projStr << "+h_0=" << this->getOrigin().altitude_m;
+	return projStr.str();
 }

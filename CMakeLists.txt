@@ -60,6 +60,7 @@ else()
 	set(WITH_OBJECT_CONTROL ON)
 endif()
 
+
 #Delete comments below when ObjectControl becomes an Module instead
 #of a thread in Core 
 #if(WITH_OBJECT_CONTROL)

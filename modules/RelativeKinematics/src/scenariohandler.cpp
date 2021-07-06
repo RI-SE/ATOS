@@ -2,12 +2,15 @@
 #include "logging.h"
 #include "util.h"
 #include "datadictionary.h"
+#include "osi_handler.hpp"
+#include "objectconfig.hpp"
 
 #include <algorithm>
 #include <stdexcept>
 #include <fstream>
 #include <functional>
 #include <thread>
+#include <dirent.h>
 
 
 ScenarioHandler::ScenarioHandler(
@@ -60,9 +63,6 @@ void ScenarioHandler::handleAllClearCommand() {
 void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
-		o.second.parseTrajectoryFile(o.second.getTrajectoryFile());
-	});
-	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
 		auto data = o.second.getAsObjectData();
 		DataDictionarySetObjectData(&data);
 	});
@@ -85,6 +85,7 @@ void ScenarioHandler::loadObjectFiles() {
 			TestObject object;
 			try {
 				object.parseConfigurationFile(entry.path());
+
 				LogMessage(LOG_LEVEL_INFO, "Loaded configuration: %s", object.toString().c_str());
 				// Check preexisting
 				auto foundObject = objects.find(object.getTransmitterID());
@@ -94,8 +95,8 @@ void ScenarioHandler::loadObjectFiles() {
 				else {
 					auto badID = object.getTransmitterID();
 					std::string errMsg = "Duplicate object ID " + std::to_string(badID)
-							+ " detected in files " + objects[badID].getTrajectoryFile().string()
-							+ " and " + object.getTrajectoryFile().string();
+							+ " detected in files " + objects[badID].getTrajectoryFileName()
+							+ " and " + object.getTrajectoryFileName();
 					throw std::invalid_argument(errMsg);
 				}
 			}
@@ -105,6 +106,17 @@ void ScenarioHandler::loadObjectFiles() {
 			}
 		}
 	}
+
+	// Fix injector ID maps - reverse their direction
+	for (const auto& id : getVehicleIDs()) {
+		auto injMap = objects[id].getObjectConfig().getInjectionMap();
+		for (const auto& sourceID : injMap.sourceIDs) {
+			auto conf = objects[sourceID].getObjectConfig();
+			conf.addInjectionTarget(id);
+			objects[sourceID].setObjectConfig(conf);
+		}
+	}
+	
 	if (!errors.empty()) {
 		objects.clear();
 		std::ostringstream ostr;
@@ -250,6 +262,44 @@ void ScenarioHandler::heartbeat() {
 	LogMessage(LOG_LEVEL_INFO, "Heartbeat thread exiting");
 }
 
+OsiHandler::LocalObjectGroundTruth_t ScenarioHandler::buildOSILocalGroundTruth(
+		const MonitorMessage& monr) const {
+
+	OsiHandler::LocalObjectGroundTruth_t gt;
+
+	gt.id = monr.first;
+	gt.pos_m.x = monr.second.position.xCoord_m;
+	gt.pos_m.y = monr.second.position.yCoord_m;
+	gt.pos_m.z = monr.second.position.zCoord_m;
+	gt.vel_m_s.lon = monr.second.speed.isLongitudinalValid ? monr.second.speed.longitudinal_m_s : 0.0;
+	gt.vel_m_s.lat = monr.second.speed.isLateralValid ? monr.second.speed.lateral_m_s : 0.0;
+	gt.vel_m_s.up = 0.0;
+	gt.acc_m_s2.lon = monr.second.acceleration.isLongitudinalValid ? monr.second.acceleration.longitudinal_m_s2 : 0.0;
+	gt.acc_m_s2.lat = monr.second.acceleration.isLateralValid ? monr.second.acceleration.lateral_m_s2 : 0.0;
+	gt.acc_m_s2.up = 0.0;
+	gt.orientation_rad.yaw = monr.second.position.isHeadingValid ? monr.second.position.heading_rad : 0.0;
+	gt.orientation_rad.roll = 0.0;
+	gt.orientation_rad.pitch = 0.0;
+
+	return gt;
+}
+
+void ScenarioHandler::injectObjectData(const MonitorMessage &monr) {
+	if (!objects[monr.first].getObjectConfig().getInjectionMap().targetIDs.empty()) {
+		std::chrono::system_clock::time_point ts;
+		auto secs = std::chrono::seconds(monr.second.timestamp.tv_sec);
+		auto usecs = std::chrono::microseconds(monr.second.timestamp.tv_usec);
+		ts += secs + usecs;
+		auto osiGtData = buildOSILocalGroundTruth(monr);
+		for (const auto& targetID : objects[monr.first].getObjectConfig().getInjectionMap().targetIDs) {
+			if (objects[targetID].isOsiCompatible()) {
+				objects[targetID].sendOsiData(osiGtData, objects[targetID].getProjString(), ts);
+			}
+		}
+	}
+}
+
+
 void ScenarioHandler::startListeners() {
 	LogMessage(LOG_LEVEL_DEBUG, "Starting listeners");
 	objectListeners.clear();
@@ -278,6 +328,7 @@ void ScenarioHandler::connectToObject(
 			try {
 				int initializingMonrs = maxConnMonrs;
 				int connectionHeartbeats = maxConnHeabs;
+
 				while (true) {
 					ObjectStateType objState = OBJECT_STATE_UNKNOWN;
 					auto nextSendTime = std::chrono::system_clock::now();
@@ -342,6 +393,7 @@ void ScenarioHandler::connectToObject(
 		// TODO: connection failed event?
 	}
 };
+
 
 void ScenarioHandler::armObjects() {
 	for (auto& id : getVehicleIDs()) {
