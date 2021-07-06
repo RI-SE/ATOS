@@ -33,8 +33,25 @@ int main()
 			break;
 		case COMM_OBC_STATE:
 			break;
-		case COMM_INIT:
+		case COMM_INIT:{
+
+			Trajectory traj;
+			int a;
+			traj.initializeFromFile("../GarageplanInnerring.traj");
+			std::cout << "TRAJ UNREVERSED: \n";
+			std::cout << traj.toString();
+			Trajectory reversedTraj;
+			traj.reverse(reversedTraj);
+			std::cout << "TRAJ REVERSED: \n";
+			std::cout <<  reversedTraj.toString();
+			reversedTraj.saveToFile("reversed.traj");
+
+			Trajectory longTraj;
+			reversedTraj.scaleTraj(longTraj, 3);
+			longTraj.saveToFile("reversedLong.traj");
+
 			break;
+		}
 		default:
 			LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
 		}
