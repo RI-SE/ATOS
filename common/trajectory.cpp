@@ -305,7 +305,7 @@ void Trajectory::scaleTraj(Trajectory& scaledTraj, int factor){
 		}
 			scaledTraj.points.push_back(newPoint);
 		}
-	scaledTraj.name = this->name + "SL";
+	scaledTraj.name = this->name;
 }
 
 void Trajectory::reverse(Trajectory& reversedTraj){
