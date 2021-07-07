@@ -341,6 +341,7 @@ void  Trajectory::saveToFile(const std::string& fileName){
 	std::cout << std::fixed;
 	std::cout << std::setprecision(4);
 	ofstream outputTraj;
+	LogMessage(LOG_LEVEL_DEBUG, "Opening file %s", trajFilePath.c_str());
 	outputTraj.open (trajFilePath);
 
 	outputTraj << "TRAJECTORY;" << "0;" << this->name << ";" << "0.1" << ";" << this->points.size() << ";" <<  "\n";
