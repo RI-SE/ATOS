@@ -360,4 +360,5 @@ void Trajectory::saveToFile(const std::string& fileName) {
 	outputTraj << "ENDTRAJECTORY;" <<  "\n";
 
 	outputTraj.close();
+	LogMessage(LOG_LEVEL_DEBUG, "Closed file %s", trajFilePath.c_str());
 }
