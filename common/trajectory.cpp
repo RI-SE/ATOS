@@ -291,7 +291,7 @@ std::string Trajectory::toString() const {
 	return ss.str();
 }
 
-void Trajectory::scaleTraj(Trajectory& scaledTraj, int factor){
+void Trajectory::constrainVelocityTo(double vel_m_s){
 
 	for (const auto& point : points) {
 		TrajectoryPoint newPoint = point;
@@ -335,26 +335,24 @@ void Trajectory::saveToFile(const std::string& fileName) {
 	string trajFilePath(trajDirPath);
 	trajFilePath += fileName;
 
-	std::cout << std::fixed;
-	std::cout << std::setprecision(4);
 	ofstream outputTraj;
 	LogMessage(LOG_LEVEL_DEBUG, "Opening file %s", trajFilePath.c_str());
 	outputTraj.open (trajFilePath);
 	LogMessage(LOG_LEVEL_DEBUG, "Outputting trajectory to file");
-	outputTraj << "TRAJECTORY;" << "0;" << this->name << ";" << "0.1" << ";" << this->points.size() << ";" <<  "\n";
+	outputTraj << "TRAJECTORY;" << this->id <<";" << this->name << ";" << this->version << ";" << this->points.size() << ";" <<  "\n";
 	for (const auto& point : points) {
 		outputTraj << "LINE;"
-		<<  std::fixed << std::setprecision(2) <<(point.getTime()) << ";"
-		<<  std::fixed << std::setprecision(6) <<(point.getXCoord()) << ";"
-		<<  std::fixed << std::setprecision(6) <<(point.getYCoord()) << ";"
-		<<  std::fixed << std::setprecision(6) <<(point.getZCoord()) << ";"
-		<<  std::fixed << std::setprecision(6) <<(point.getHeading()) << ";"
-		<<  std::fixed << std::setprecision(6) <<(point.getLongitudinalVelocity()) << ";"
-		<< ";" //point.getLateralVelocity() << ";"
-		<<  std::fixed << std::setprecision(6) <<(point.getLongitudinalAcceleration()) << ";"
-		<< ";" //point.getLateralAcceleration() << ";"
-		<<  std::fixed << std::setprecision(6) <<(point.getCurvature()) << ";"
-		<<  std::fixed << std::setprecision(6) <<(point.getMode())
+		<< std::fixed << std::setprecision(2) << point.getTime() << ";"
+		<< std::fixed << std::setprecision(6) << point.getXCoord() << ";"
+		<< std::fixed << std::setprecision(6) << point.getYCoord() << ";"
+		<< std::fixed << std::setprecision(6) << point.getZCoord() << ";"
+		<< std::fixed << std::setprecision(6) << point.getHeading() << ";"
+		<< std::fixed << std::setprecision(6) << point.getLongitudinalVelocity() << ";"
+		<< std::fixed << std::setprecision(6) << point.getLateralVelocity() << ";"
+		<< std::fixed << std::setprecision(6) << point.getLongitudinalAcceleration() << ";"
+		<< std::fixed << std::setprecision(6) << point.getLateralAcceleration() << ";"
+		<< std::fixed << std::setprecision(6) << point.getCurvature() << ";"
+		<< std::fixed << std::setprecision(6) << point.getMode()
 		<<";ENDLINE;" << "\n";
 	}
 	outputTraj << "ENDTRAJECTORY;" <<  "\n";

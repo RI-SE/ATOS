@@ -130,7 +130,7 @@ public:
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
 	std::string toString() const;
 
-	void  saveToFile(const std::string& fileName);
+	void saveToFile(const std::string& fileName);
 	void reverse(Trajectory &reversedTraj);
 	void constrainVelocityTo(double vel_m_s);
 
