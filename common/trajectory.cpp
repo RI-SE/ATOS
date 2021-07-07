@@ -327,7 +327,7 @@ void Trajectory::reverse(Trajectory& reversedTraj){
 }
 
 
-void  Trajectory::saveToFile(const std::string& fileName){
+void Trajectory::saveToFile(const std::string& fileName) {
 	using namespace std;
 	char trajDirPath[PATH_MAX];
 
