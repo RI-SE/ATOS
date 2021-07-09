@@ -320,7 +320,8 @@ void Trajectory::reverse(){
 		while (point != points.rend()) {
 			point->setHeading(point->getHeading()+M_PI);
 			point->setCurvature(point->getCurvature()*-1);
-			point->setLateralVelocity(point->getLateralVelocity()*-1);
+			point->setLongitudinalVelocity(point->getLongitudinalVelocity()*-1);
+			point->setLongitudinalAcceleration(point->getLongitudinalVelocity()*-1);
 			timeVector.push_back(point->getTime());
 			point++;
 		}
