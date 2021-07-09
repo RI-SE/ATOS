@@ -293,37 +293,44 @@ std::string Trajectory::toString() const {
 
 void Trajectory::constrainVelocityTo(double vel_m_s){
 
-	for (const auto& point : points) {
-		TrajectoryPoint newPoint = point;
-		newPoint.setTime(point.getTime()*factor);
 
-		double timeToFind = point.getTime()*factor;
-
-		if(point.getLongitudinalVelocity() > MAX_BACK_TO_START_SPEED_MS){
-			newPoint.setLongitudinalAcceleration(0);
-			newPoint.setLongitudinalVelocity(MAX_BACK_TO_START_SPEED_MS);
+	auto point = points.rbegin();
+		while (point != points.rend()) {
+			if(point->getLongitudinalVelocity() > vel_m_s){
+				point->setLongitudinalAcceleration(0);
+				point->setLongitudinalVelocity(vel_m_s);
+			}
+			point++;
 		}
-			scaledTraj.points.push_back(newPoint);
-		}
-	scaledTraj.name = this->name;
+	this->name = this->name + "_" + std::to_string(vel_m_s);
 }
 
-void Trajectory::reverse(Trajectory& reversedTraj){
+void Trajectory::reverse(){
 	if(points.empty()){
 		throw std::invalid_argument("Attempted to reverse non existing trajectory");
 	}
 
-	std::vector<TrajectoryPoint> pointsToReverse(points);
+	this->name = this->name + "_Reversed";
 
-	reversedTraj.name = this->name + "Reversed";
+	std::reverse(points.begin(), points.end());
 
-	for (const auto& point : points) {
-		TrajectoryPoint newPoint = pointsToReverse.back();
-		newPoint.setTime(point.getTime());
-		newPoint.setHeading(newPoint.getHeading()+M_PI);
-		pointsToReverse.pop_back();
-		reversedTraj.points.push_back(newPoint);
-	}
+	std::vector<double> timeVector;
+
+	auto point = points.rbegin();
+		while (point != points.rend()) {
+			point->setHeading(point->getHeading()+M_PI);
+			point->setCurvature(point->getCurvature()*-1);
+			point->setLateralVelocity(point->getLateralVelocity()*-1);
+			timeVector.push_back(point->getTime());
+			point++;
+		}
+
+	point = points.rbegin();
+		while (point != points.rend()) {
+			point->setTime(timeVector.back());
+			timeVector.pop_back();
+			point++;
+		}
 }
 
 
@@ -348,9 +355,9 @@ void Trajectory::saveToFile(const std::string& fileName) {
 		<< std::fixed << std::setprecision(6) << point.getZCoord() << ";"
 		<< std::fixed << std::setprecision(6) << point.getHeading() << ";"
 		<< std::fixed << std::setprecision(6) << point.getLongitudinalVelocity() << ";"
-		<< std::fixed << std::setprecision(6) << point.getLateralVelocity() << ";"
-		<< std::fixed << std::setprecision(6) << point.getLongitudinalAcceleration() << ";"
-		<< std::fixed << std::setprecision(6) << point.getLateralAcceleration() << ";"
+		<< ";" //point.getLateralVelocity() << ";"
+		<<  std::fixed << std::setprecision(6) <<(point.getLongitudinalAcceleration()) << ";"
+		<< ";" //point.getLateralAcceleration() << ";"
 		<< std::fixed << std::setprecision(6) << point.getCurvature() << ";"
 		<< std::fixed << std::setprecision(6) << point.getMode()
 		<<";ENDLINE;" << "\n";
