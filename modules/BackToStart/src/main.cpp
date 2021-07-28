@@ -45,10 +45,10 @@ int main()
 			std::cout << "TRAJ REVERSED: \n";
 			std::cout <<  traj.toString();
 			traj.saveToFile("reversed.traj");
+			std::cout << "Donelidone with math!!!: \n";
 
-			Trajectory longTraj;
-			//reversedTraj.scaleTraj(longTraj, 3);
-			//longTraj.saveToFile("reversedLong.traj");
+			reversedTraj.constrainVelocityTo(2);
+			reversedTraj.saveToFile("reversedLong.traj");
 
 			break;
 		}

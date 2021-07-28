@@ -297,6 +297,7 @@ void Trajectory::constrainVelocityTo(double vel_m_s){
 	auto point = points.rbegin();
 		while (point != points.rend()) {
 			if(point->getLongitudinalVelocity() > vel_m_s){
+				point->setTime(point->getTime()*vel_m_s);
 				point->setLongitudinalAcceleration(0);
 				point->setLongitudinalVelocity(vel_m_s);
 			}
@@ -318,7 +319,7 @@ void Trajectory::reverse(){
 
 	auto point = points.rbegin();
 		while (point != points.rend()) {
-			point->setHeading(point->getHeading()+M_PI);
+			point->setHeading(point->getHeading()-M_PI);
 			point->setCurvature(point->getCurvature()*-1);
 			point->setLongitudinalVelocity(point->getLongitudinalVelocity()*-1);
 			point->setLongitudinalAcceleration(point->getLongitudinalVelocity()*-1);
