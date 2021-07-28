@@ -34,22 +34,6 @@ int main()
 		case COMM_OBC_STATE:
 			break;
 		case COMM_INIT:{
-
-			Trajectory traj;
-			int a;
-			traj.initializeFromFile("../GarageplanInnerring.traj");
-			std::cout << "TRAJ UNREVERSED: \n";
-			std::cout << traj.toString();
-			Trajectory reversedTraj;
-			traj.reverse();
-			std::cout << "TRAJ REVERSED: \n";
-			std::cout <<  traj.toString();
-			traj.saveToFile("reversed.traj");
-			std::cout << "Donelidone with math!!!: \n";
-
-			reversedTraj.constrainVelocityTo(2);
-			reversedTraj.saveToFile("reversedLong.traj");
-
 			break;
 		}
 		default:
