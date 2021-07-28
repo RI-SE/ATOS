@@ -293,17 +293,20 @@ std::string Trajectory::toString() const {
 
 void Trajectory::constrainVelocityTo(double vel_m_s){
 
-
 	auto point = points.rbegin();
 		while (point != points.rend()) {
 			if(point->getLongitudinalVelocity() > vel_m_s){
-				point->setTime(point->getTime()*vel_m_s);
 				point->setLongitudinalAcceleration(0);
 				point->setLongitudinalVelocity(vel_m_s);
 			}
+			if(point->getLateralVelocity() > vel_m_s){
+				point->setLateralAcceleration(0);
+				point->setLateralVelocity(vel_m_s);
+			}
+
 			point++;
 		}
-	this->name = this->name + "_" + std::to_string(vel_m_s);
+	this->name = this->name + "_" + std::to_string(vel_m_s) + "MS";
 }
 
 void Trajectory::reverse(){
