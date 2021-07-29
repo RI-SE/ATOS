@@ -295,18 +295,27 @@ void Trajectory::constrainVelocityTo(double vel_m_s){
 
 	auto point = points.rbegin();
 		while (point != points.rend()) {
-			if(point->getLongitudinalVelocity() > vel_m_s){
+				if(point->getLongitudinalVelocity() > vel_m_s){
 				point->setLongitudinalAcceleration(0);
 				point->setLongitudinalVelocity(vel_m_s);
 			}
-			if(point->getLateralVelocity() > vel_m_s){
-				point->setLateralAcceleration(0);
-				point->setLateralVelocity(vel_m_s);
-			}
-
 			point++;
 		}
 	this->name = this->name + "_" + std::to_string(vel_m_s) + "MS";
+}
+
+void Trajectory::addAccelerationTo(double vel_m_s){
+
+	auto point = points.rbegin();
+	int a = 5;
+	int b = -2;
+		while (point != points.rend()) {
+			point->setLongitudinalVelocity((vel_m_s / (1 + (exp(a + (b * point->getTime()))))));
+			if(vel_m_s / (1 + (exp(a + (b * point->getTime()))))==vel_m_s){
+				break;
+			}
+			point++;
+		}
 }
 
 void Trajectory::reverse(){
@@ -324,8 +333,8 @@ void Trajectory::reverse(){
 		while (point != points.rend()) {
 			point->setHeading(point->getHeading()-M_PI);
 			point->setCurvature(point->getCurvature()*-1);
-			point->setLongitudinalVelocity(point->getLongitudinalVelocity()*-1);
-			point->setLongitudinalAcceleration(point->getLongitudinalVelocity()*-1);
+			point->setLateralVelocity(point->getLongitudinalVelocity()*-1);
+			point->setLateralAcceleration(point->getLongitudinalVelocity()*-1);
 			timeVector.push_back(point->getTime());
 			point++;
 		}

@@ -133,6 +133,8 @@ public:
 	void saveToFile(const std::string& fileName);
 	void reverse();
 	void constrainVelocityTo(double vel_m_s);
+	void addAccelerationTo(double vel_m_s);
+	void addDeccelerationFrom(double vel_m_s);
 
 private:
 	static const std::regex fileHeaderPattern;
