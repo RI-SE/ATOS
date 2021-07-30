@@ -296,21 +296,28 @@ void Trajectory::constrainVelocityTo(double vel_m_s){
 	auto point = points.rbegin();
 		while (point != points.rend()) {
 				if(point->getLongitudinalVelocity() > vel_m_s){
-				point->setLongitudinalAcceleration(0);
-				point->setLongitudinalVelocity(vel_m_s);
+					point->setLongitudinalAcceleration(0);
+					point->setLongitudinalVelocity(vel_m_s);
 			}
 			point++;
 		}
+
+		//TODO: something to take lateral into account.
+
 	this->name = this->name + "_" + std::to_string(vel_m_s) + "MS";
 }
 
+
 void Trajectory::addAccelerationTo(double vel_m_s){
 
-	auto point = points.rbegin();
+	auto point = points.begin();
 	int a = 5;
 	int b = -2;
-		while (point != points.rend()) {
+		while (point != points.end()) {
 			point->setLongitudinalVelocity((vel_m_s / (1 + (exp(a + (b * point->getTime()))))));
+
+			point->setLongitudinalAcceleration(-((b*point->getTime()*exp((b*point->getTime())+a)) /(pow(1 + (exp(a + (a + (b * point->getTime())))),2))));
+
 			if(vel_m_s / (1 + (exp(a + (b * point->getTime()))))==vel_m_s){
 				break;
 			}
@@ -333,8 +340,18 @@ void Trajectory::reverse(){
 		while (point != points.rend()) {
 			point->setHeading(point->getHeading()-M_PI);
 			point->setCurvature(point->getCurvature()*-1);
-			point->setLateralVelocity(point->getLongitudinalVelocity()*-1);
-			point->setLateralAcceleration(point->getLongitudinalVelocity()*-1);
+			try{
+				point->setLateralVelocity(point->getLateralVelocity()*-1);
+			}
+			catch(std::out_of_range){
+				std::cout<<"Ignoring uninitialized lateral velocity";
+			}
+			try{
+				point->setLateralAcceleration(point->getLateralAcceleration()*-1);
+			}
+			catch(std::out_of_range){
+				std::cout<<"Ignoring uninitialized lateral acceleration";
+			}
 			timeVector.push_back(point->getTime());
 			point++;
 		}
