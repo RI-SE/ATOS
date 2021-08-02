@@ -316,7 +316,7 @@ void Trajectory::addAccelerationTo(double vel_m_s){
 		while (point != points.end()) {
 			point->setLongitudinalVelocity((vel_m_s / (1 + (exp(a + (b * point->getTime()))))));
 
-			point->setLongitudinalAcceleration(-((b*point->getTime()*exp((b*point->getTime())+a)) /(pow(1 + (exp(a + (a + (b * point->getTime())))),2))));
+			point->setLongitudinalAcceleration(-((b*point->getTime()*exp(((b*point->getTime()))+a)) /(pow(1 + (exp(a + (b * point->getTime()))),2))));
 
 			if(vel_m_s / (1 + (exp(a + (b * point->getTime()))))==vel_m_s){
 				break;
