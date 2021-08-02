@@ -6,8 +6,6 @@
 #include "logging.h"
 #include "trajectory.hpp"
 
-#define MAX_BACK_TO_START_SPEED_MS 5.5
-
 const std::regex Trajectory::fileHeaderPattern("TRAJECTORY;(" + RegexPatterns::intPattern + ");("
 		+ RegexPatterns::namePattern + ");" + RegexPatterns::versionPattern + ";("
 		+ RegexPatterns::intPattern + ");");
@@ -314,8 +312,8 @@ void Trajectory::addAccelerationTo(double vel_m_s){
 	int a = 5;
 	int b = -2;
 		while (point != points.end()) {
+						
 			point->setLongitudinalVelocity((vel_m_s / (1 + (exp(a + (b * point->getTime()))))));
-
 			point->setLongitudinalAcceleration(-((b*point->getTime()*exp(((b*point->getTime()))+a)) /(pow(1 + (exp(a + (b * point->getTime()))),2))));
 
 			if(vel_m_s / (1 + (exp(a + (b * point->getTime()))))==vel_m_s){
