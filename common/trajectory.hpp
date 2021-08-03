@@ -128,8 +128,13 @@ public:
 	void initializeFromFile(const std::string& fileName);
 	Trajectory relativeTo(const Trajectory& other) const;
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
-
 	std::string toString() const;
+
+	void saveToFile(const std::string& fileName);
+	void reverse();
+	void constrainVelocityTo(double vel_m_s);
+	void addAccelerationTo(double vel_m_s);
+	void addDeccelerationFrom(double vel_m_s);
 
 private:
 	static const std::regex fileHeaderPattern;
