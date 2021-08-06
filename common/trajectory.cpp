@@ -320,7 +320,132 @@ void Trajectory::addAccelerationTo(double vel_m_s){
 				break;
 			}
 			point++;
-		}
+        }
+}
+
+std::vector<Trajectory::TrajectoryPoint> Trajectory::createWilliamsonTurn(double turnRadius = 5, Eigen::Vector3d startPoint = Eigen::Vector3d(0,0,0), double initialHeading = 0)
+{
+
+    using Eigen::MatrixXd;
+
+    double acceleration = 1;        //m/s/s
+    double topSpeed = 2.7777;
+    const int noOfPoints = 1000;
+    double radius = turnRadius;
+    double heading = initialHeading;
+
+    double headingRad = (heading-90) * M_PI/180;
+
+    Eigen::Matrix<double, 2,2> rotM;
+    Eigen::VectorXd theta0;         //First section
+    Eigen::VectorXd theta1;         //Second section
+    Eigen::VectorXd endStraight;    //Third section
+    Eigen::Matrix<double, 2, noOfPoints> xyM;
+    Eigen::Matrix<double, 2, noOfPoints> resM;
+    Eigen::Array<double, 1,noOfPoints> headingArray;
+    Eigen::Array<double, 1,noOfPoints> speedArray;
+    Eigen::Array<double, 1,noOfPoints> timeArray;
+
+
+    //Calculate length of each section
+    double len0 = (M_PI * 2 * radius) / 4;
+    double len1 = 3 * ((M_PI * 2 * radius) / 4);
+    double len2 = radius * 2;
+    double totalLength = len0 + len1 + len2;
+
+    //First section
+    int n0 = int(noOfPoints * (len0 / totalLength));
+    theta0 = Eigen::VectorXd::LinSpaced(n0, M_PI, M_PI_2);
+
+    for(int i = 0; i < theta0.size(); i++)
+    {
+        xyM(0,i) = radius * cos(theta0[i]) + radius + startPoint.x();
+        xyM(1,i) = radius * sin(theta0[i]) + startPoint.y();
+        headingArray[i] = theta0[i] - M_PI_2;
+    }
+
+    //second section
+    int n1 = int(noOfPoints * (len1 / totalLength));
+    theta1 = Eigen::VectorXd::LinSpaced(n1, -1*M_PI_2, M_PI);
+
+    for(int i = 0; i < theta1.size(); i++)
+    {
+        xyM(0,i+n0) = radius * cos(theta1[i]) + radius + startPoint.x();
+        xyM(1,i+n0) = radius * sin(theta1[i]) + 2 * radius + startPoint.y();
+        headingArray[i+n0] = theta1[i] + M_PI_2;
+    }
+
+    //third section
+    int n2 = int(noOfPoints * (len2 / totalLength));
+    endStraight = Eigen::VectorXd::LinSpaced(n2, radius * 2, 0);
+    for(int i = 0; i < n2; i++)
+    {
+        xyM(0,i+n0+n1) = startPoint.x();
+        xyM(1,i+n0+n1) = endStraight[i] + startPoint.y();
+        headingArray[i+n0+n1] = -1*M_PI_2;
+    }
+
+    //Values for rotation matrix
+    rotM <<   cos(headingRad), -sin(headingRad),
+                sin(headingRad), cos(headingRad);
+
+    resM = rotM * xyM;
+    Eigen::ArrayXd oneArray = Eigen::ArrayXd::Ones(noOfPoints);
+    headingArray += headingRad*oneArray;
+
+
+    //Speed
+
+    //AccelerationSection
+    double accelerationPeriod = topSpeed / acceleration;
+    double accelerationDistance = ((pow(topSpeed, 2))/acceleration)/2;
+
+    //Topspeed section
+    double topSpeedDistance = totalLength - accelerationDistance;
+    double topSpeedPeriod = topSpeedDistance / topSpeed;
+
+    double totalRuntime = accelerationPeriod + topSpeedPeriod;
+
+    double timeStep = totalRuntime / noOfPoints;
+
+    //Speed for each point
+    double currSpeed = 0;
+    for(int i = 0; i < noOfPoints; i++)
+    {
+        timeArray[i] = i*timeStep;
+        currSpeed = i * (acceleration*timeStep);
+        if(currSpeed > topSpeed)
+        {
+            currSpeed = topSpeed;
+        }
+        speedArray[i] = currSpeed;
+
+    }
+
+    int actualNoOfPoints = n0+n1+n2;
+
+    //create trajectory points
+    std::vector<TrajectoryPoint> tempVector;
+    for(int i = 0; i < noOfPoints; i++)
+    {
+
+        TrajectoryPoint tempPoint;
+        tempPoint.setXCoord(resM(0,i));
+        tempPoint.setYCoord(resM(1,i));
+        tempPoint.setZCoord(0.00000);
+        tempPoint.setHeading(headingArray[i]);
+        tempPoint.setLongitudinalVelocity(speedArray[i]);
+        tempPoint.setLateralVelocity(0);
+        tempPoint.setLongitudinalAcceleration(0);
+        tempPoint.setLateralAcceleration(0);
+        tempPoint.setCurvature(0);
+
+        tempVector.push_back(tempPoint);
+    }
+
+    return tempVector;
+
+
 }
 
 void Trajectory::reverse(){

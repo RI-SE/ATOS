@@ -8,6 +8,7 @@
 #include <regex>
 #include <functional>
 #include <eigen3/Eigen/Dense>
+#include <math.h>
 
 #include "util.h"
 
@@ -135,6 +136,7 @@ public:
 	void constrainVelocityTo(double vel_m_s);
 	void addAccelerationTo(double vel_m_s);
 	void addDeccelerationFrom(double vel_m_s);
+    std::vector<TrajectoryPoint> createWilliamsonTurn(double turnRadius, Eigen::Vector3d startPoint, double initialHeading);
 
 private:
 	static const std::regex fileHeaderPattern;
