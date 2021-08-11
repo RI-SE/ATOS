@@ -38,8 +38,8 @@ public:
 		void setXCoord(const double& value) { position[0] = value; }
 		void setYCoord(const double& value) { position[1] = value; }
 		void setZCoord(const double& value) { position[2] = value; }
-		void setHeading(const double& value) { heading = std::fmod(value, 2*M_PI);
-											   heading += heading < 0 ? 2*M_PI : 0.0; }
+        void setHeading(const double& value) { heading = std::fmod(value, 2*M_PI);
+                                               heading += heading < 0 ? 2*M_PI : 0.0; }
 		void setVelocity(const Eigen::Vector2d& value) { velocity = value; }
 		void setLongitudinalVelocity(const double& value) { velocity[0] = value; }
 		void setLateralVelocity(const double& value) { velocity[1] = value; }
@@ -136,7 +136,7 @@ public:
 	void constrainVelocityTo(double vel_m_s);
 	void addAccelerationTo(double vel_m_s);
 	void addDeccelerationFrom(double vel_m_s);
-    void addWilliamsonTurn(double turnRadius, TrajectoryPoint startPoint, double initialHeading);
+    void addWilliamsonTurn(double turnRadius, TrajectoryPoint startPoint);
 
 private:
 	static const std::regex fileHeaderPattern;

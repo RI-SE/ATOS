@@ -71,10 +71,13 @@ void backToStart() {
     //Testpath
     currentTraj.initializeFromFile(trajName);
 
-    std::cout << "HEADIIIIIING: " << currentTraj.points.end()->getHeading();
+    for(int i = 0; i < currentTraj.points.size(); i++)
+    {
+        std::cout << "HEADIIIIIING: " << currentTraj.points[i].getHeading();
+    }
 
     //Add first turn
-    b2sTraj.addWilliamsonTurn(5,currentTraj.points.back(),currentTraj.points.end()->getHeading());
+    b2sTraj.addWilliamsonTurn(5,currentTraj.points[currentTraj.points.size()-1]);
 
     //Add reversed original traj
     Trajectory rev = currentTraj;
@@ -82,7 +85,7 @@ void backToStart() {
     b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(rev.points), std::end(rev.points));
 
     //Add last turn
-    b2sTraj.addWilliamsonTurn(5,b2sTraj.points.back(),b2sTraj.points.end()->getHeading());
+    b2sTraj.addWilliamsonTurn(5,b2sTraj.points[b2sTraj.points.size()-1]);
 
     //Save file
     b2sTraj.saveToFile(trajName);
