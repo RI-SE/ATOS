@@ -132,11 +132,11 @@ public:
 	std::string toString() const;
 
 	void saveToFile(const std::string& fileName);
-	void reverse();
+    void reverse(double startTime);
 	void constrainVelocityTo(double vel_m_s);
 	void addAccelerationTo(double vel_m_s);
 	void addDeccelerationFrom(double vel_m_s);
-    void addWilliamsonTurn(double turnRadius, TrajectoryPoint startPoint);
+    void addWilliamsonTurn(double turnRadius, TrajectoryPoint startPoint, double startTime);
 
 private:
 	static const std::regex fileHeaderPattern;

@@ -77,15 +77,15 @@ void backToStart() {
     }
 
     //Add first turn
-    b2sTraj.addWilliamsonTurn(5,currentTraj.points[currentTraj.points.size()-1]);
+    b2sTraj.addWilliamsonTurn(5,currentTraj.points[currentTraj.points.size()-1], 0);
 
     //Add reversed original traj
     Trajectory rev = currentTraj;
-    rev.reverse();
+    rev.reverse(b2sTraj.points[b2sTraj.points.size()-1].getTime());
     b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(rev.points), std::end(rev.points));
 
     //Add last turn
-    b2sTraj.addWilliamsonTurn(5,b2sTraj.points[b2sTraj.points.size()-1]);
+    b2sTraj.addWilliamsonTurn(5,b2sTraj.points[b2sTraj.points.size()-1], b2sTraj.points[b2sTraj.points.size()-1].getTime());
 
     //Save file
     b2sTraj.saveToFile(trajName);

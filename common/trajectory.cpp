@@ -323,7 +323,7 @@ void Trajectory::addAccelerationTo(double vel_m_s){
         }
 }
 
-void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startPoint = TrajectoryPoint())
+void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startPoint = TrajectoryPoint(), double startTime = 0)
 {
 
     std::cout << std::endl << "X: " << startPoint.getXCoord() << std::endl;
@@ -443,11 +443,11 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
     {
 
         TrajectoryPoint tempPoint;
-        tempPoint.setTime(timeArray[i]);
+        tempPoint.setTime(timeArray[i]+startTime);
         tempPoint.setXCoord(resM(0,i));
         tempPoint.setYCoord(resM(1,i));
         tempPoint.setZCoord(0.00000);
-        tempPoint.setHeading(headingArray[i]);
+        tempPoint.setHeading(-headingArray[i] + M_PI);
         tempPoint.setLongitudinalVelocity(speedArray[i]);
         tempPoint.setLateralVelocity(0.00000);
         tempPoint.setLongitudinalAcceleration(accelerationArray[i]);
@@ -462,7 +462,7 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
 
 }
 
-void Trajectory::reverse(){
+void Trajectory::reverse(double startTime = 0){
 	if(points.empty()){
 		throw std::invalid_argument("Attempted to reverse non existing trajectory");
 	}
@@ -489,7 +489,7 @@ void Trajectory::reverse(){
 			catch(std::out_of_range){
 				std::cout<<"Ignoring uninitialized lateral acceleration";
 			}
-			timeVector.push_back(point->getTime());
+            timeVector.push_back(point->getTime()+startTime);
 			point++;
 		}
 
