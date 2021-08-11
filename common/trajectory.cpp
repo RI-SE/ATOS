@@ -323,8 +323,10 @@ void Trajectory::addAccelerationTo(double vel_m_s){
         }
 }
 
-std::vector<Trajectory::TrajectoryPoint> Trajectory::createWilliamsonTurn(double turnRadius = 5, Eigen::Vector3d startPoint = Eigen::Vector3d(0,0,0), double initialHeading = 0)
+void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startPoint = TrajectoryPoint(), double initialHeading = 0)
 {
+    std::cout << "X: " << startPoint.getXCoord();
+    std::cout << "Y: " << startPoint.getYCoord();
 
     using Eigen::MatrixXd;
 
@@ -344,6 +346,7 @@ std::vector<Trajectory::TrajectoryPoint> Trajectory::createWilliamsonTurn(double
     Eigen::Matrix<double, 2, noOfPoints> resM;
     Eigen::Array<double, 1,noOfPoints> headingArray;
     Eigen::Array<double, 1,noOfPoints> speedArray;
+    Eigen::Array<double, 1,noOfPoints> accelerationArray;
     Eigen::Array<double, 1,noOfPoints> timeArray;
 
 
@@ -359,8 +362,8 @@ std::vector<Trajectory::TrajectoryPoint> Trajectory::createWilliamsonTurn(double
 
     for(int i = 0; i < theta0.size(); i++)
     {
-        xyM(0,i) = radius * cos(theta0[i]) + radius + startPoint.x();
-        xyM(1,i) = radius * sin(theta0[i]) + startPoint.y();
+        xyM(1,i) = radius * cos(theta0[i]) + radius + startPoint.getXCoord();
+        xyM(0,i) = radius * sin(theta0[i]) - startPoint.getYCoord();
         headingArray[i] = theta0[i] - M_PI_2;
     }
 
@@ -370,8 +373,8 @@ std::vector<Trajectory::TrajectoryPoint> Trajectory::createWilliamsonTurn(double
 
     for(int i = 0; i < theta1.size(); i++)
     {
-        xyM(0,i+n0) = radius * cos(theta1[i]) + radius + startPoint.x();
-        xyM(1,i+n0) = radius * sin(theta1[i]) + 2 * radius + startPoint.y();
+        xyM(1,i+n0) = radius * cos(theta1[i]) + radius + startPoint.getXCoord();
+        xyM(0,i+n0) = radius * sin(theta1[i]) + 2 * radius - startPoint.getYCoord();
         headingArray[i+n0] = theta1[i] + M_PI_2;
     }
 
@@ -380,8 +383,8 @@ std::vector<Trajectory::TrajectoryPoint> Trajectory::createWilliamsonTurn(double
     endStraight = Eigen::VectorXd::LinSpaced(n2, radius * 2, 0);
     for(int i = 0; i < n2; i++)
     {
-        xyM(0,i+n0+n1) = startPoint.x();
-        xyM(1,i+n0+n1) = endStraight[i] + startPoint.y();
+        xyM(1,i+n0+n1) = startPoint.getXCoord();
+        xyM(0,i+n0+n1) = endStraight[i] - startPoint.getYCoord();
         headingArray[i+n0+n1] = -1*M_PI_2;
     }
 
@@ -418,6 +421,7 @@ std::vector<Trajectory::TrajectoryPoint> Trajectory::createWilliamsonTurn(double
         {
             currSpeed = topSpeed;
         }
+        accelerationArray[i] = acceleration;
         speedArray[i] = currSpeed;
 
     }
@@ -426,24 +430,25 @@ std::vector<Trajectory::TrajectoryPoint> Trajectory::createWilliamsonTurn(double
 
     //create trajectory points
     std::vector<TrajectoryPoint> tempVector;
-    for(int i = 0; i < noOfPoints; i++)
+    for(int i = 0; i < actualNoOfPoints; i++)
     {
 
         TrajectoryPoint tempPoint;
+        tempPoint.setTime(timeArray[i]);
         tempPoint.setXCoord(resM(0,i));
         tempPoint.setYCoord(resM(1,i));
         tempPoint.setZCoord(0.00000);
         tempPoint.setHeading(headingArray[i]);
         tempPoint.setLongitudinalVelocity(speedArray[i]);
-        tempPoint.setLateralVelocity(0);
-        tempPoint.setLongitudinalAcceleration(0);
-        tempPoint.setLateralAcceleration(0);
+        tempPoint.setLateralVelocity(0.00000);
+        tempPoint.setLongitudinalAcceleration(accelerationArray[i]);
+        tempPoint.setLateralAcceleration(0.00000);
         tempPoint.setCurvature(0);
 
         tempVector.push_back(tempPoint);
     }
 
-    return tempVector;
+    points.insert(std::end(points), std::begin(tempVector), std::end(tempVector));
 
 
 }

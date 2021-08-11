@@ -136,7 +136,7 @@ public:
 	void constrainVelocityTo(double vel_m_s);
 	void addAccelerationTo(double vel_m_s);
 	void addDeccelerationFrom(double vel_m_s);
-    std::vector<TrajectoryPoint> createWilliamsonTurn(double turnRadius, Eigen::Vector3d startPoint, double initialHeading);
+    void addWilliamsonTurn(double turnRadius, TrajectoryPoint startPoint, double initialHeading);
 
 private:
 	static const std::regex fileHeaderPattern;

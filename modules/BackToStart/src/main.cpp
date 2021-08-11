@@ -3,12 +3,14 @@
 
 #include "util.h"
 #include "objectconfig.hpp"
+#include "trajectory.hpp"
 
 #define MODULE_NAME "BackToStart"
 
 std::map<uint32_t,ObjectConfig> objects; //!< List of configured test objects
 
 static void loadObjectFiles();
+static void backToStart();
 
 int main()
 {
@@ -44,6 +46,10 @@ int main()
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
 			break;
+        case COMM_INIT:
+                backToStart();
+            break;
+
 		case COMM_REMOTECTRL_MANOEUVRE:
 			LogMessage(LOG_LEVEL_INFO,"Received COMM_REMOTECTRL_MANOEUVRE command");
 		default:
@@ -51,6 +57,36 @@ int main()
 		}
 	}
 	return 0;
+}
+
+void backToStart() {
+
+    std::string trajName = "GarageRektangelInre";
+    Trajectory currentTraj;
+    Trajectory b2sTraj;
+
+    //Name
+    b2sTraj.name = trajName;
+
+    //Testpath
+    currentTraj.initializeFromFile(trajName);
+
+    std::cout << "HEADIIIIIING: " << currentTraj.points.end()->getHeading();
+
+    //Add first turn
+    b2sTraj.addWilliamsonTurn(5,currentTraj.points.back(),currentTraj.points.end()->getHeading());
+
+    //Add reversed original traj
+    Trajectory rev = currentTraj;
+    rev.reverse();
+    b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(rev.points), std::end(rev.points));
+
+    //Add last turn
+    b2sTraj.addWilliamsonTurn(5,b2sTraj.points.back(),b2sTraj.points.end()->getHeading());
+
+    //Save file
+    b2sTraj.saveToFile(trajName);
+
 }
 
 void loadObjectFiles() {
