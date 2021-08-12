@@ -61,7 +61,7 @@ int main()
 
 void backToStart() {
 
-    std::string trajName = "GarageRektangelInre";
+    std::string trajName = "StraightLine";
     Trajectory currentTraj;
     Trajectory b2sTraj;
 
@@ -70,11 +70,6 @@ void backToStart() {
 
     //Testpath
     currentTraj.initializeFromFile(trajName);
-
-    for(int i = 0; i < currentTraj.points.size(); i++)
-    {
-        std::cout << "HEADIIIIIING: " << currentTraj.points[i].getHeading();
-    }
 
     //Add first turn
     b2sTraj.addWilliamsonTurn(5,currentTraj.points[currentTraj.points.size()-1], 0);

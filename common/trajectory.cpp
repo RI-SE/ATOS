@@ -447,7 +447,7 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
         tempPoint.setXCoord(resM(0,i));
         tempPoint.setYCoord(resM(1,i));
         tempPoint.setZCoord(0.00000);
-        tempPoint.setHeading(-headingArray[i] + M_PI);
+        tempPoint.setHeading(-headingArray[i] - M_PI_2);
         tempPoint.setLongitudinalVelocity(speedArray[i]);
         tempPoint.setLateralVelocity(0.00000);
         tempPoint.setLongitudinalAcceleration(accelerationArray[i]);
