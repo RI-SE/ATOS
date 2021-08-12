@@ -1714,6 +1714,18 @@ int UtilCountFileRows(FILE * fd) {
 	return rows;
 }
 
+int UtilCountFileRowsInPath(C8 path) {
+	int c = 0;
+	int rows = 0;
+	FILE *fd;
+	fd = fopen(path, "r");
+	if (fd != NULL) rows = UtilCountFileRows(fd);
+	else rows = 0;
+	fclose(fd);
+	return rows;
+}
+
+
 int UtilReadLineCntSpecChars(FILE * fd, char *Buffer) {
 	int c = 0;
 	int d = 0;

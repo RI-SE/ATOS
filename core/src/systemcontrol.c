@@ -142,7 +142,7 @@ typedef enum {
 	SetObjectEnableStatus_2,
 	GetObjectEnableStatus_1,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
-	start_ext_trigg_1, ClearAllScenario_0 ,nocommand
+	start_ext_trigg_1, ClearAllScenario_0 , DownloadDirectoryContent_1, DownloadTrajFiles_0, nocommand
 } SystemControlCommand_t;
 
 static const char *SystemControlCommandsArr[] = {
@@ -157,7 +157,7 @@ static const char *SystemControlCommandsArr[] = {
 	"SetObjectEnableStatus_2",
 	"GetObjectEnableStatus_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 	"control_0",
-	"Exit_0", "start_ext_trigg_1", "ClearAllScenario_0"
+	"Exit_0", "start_ext_trigg_1", "ClearAllScenario_0", "DownloadDirectoryContent_1", "DownloadTrajFiles_0"
 };
 
 const char *SystemControlStatesArr[] =
@@ -750,7 +750,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
 					SystemControlDestroyFileContentInfo("dir.info", 1);
 				}
-
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR,
@@ -874,6 +873,61 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 			}
 			else {
+				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
+				SystemControlCommand = Idle_0;
+			}
+			break;
+		case DownloadTrajFiles_0:
+		case DownloadDirectoryContent_1:	
+
+			if (CurrentInputArgCount == CommandArgCount) {
+				SystemControlCommand = Idle_0;
+				C8 functionReturnName[50];
+				bzero(functionReturnName, 50);
+				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				if(SystemControlCommand == DownloadTrajFiles_0){
+					strcat(functionReturnName, "DownloadTrajFiles:");
+					ControlResponseBuffer[0] == FOLDER_EXIST;
+				} else if(SystemControlCommand == DownloadDirectoryContent_1){
+					strcat(functionReturnName, "DownloadDirectoryContent:");
+					SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+				}
+				
+				if(ControlResponseBuffer[0] == FOLDER_EXIST){
+					if(SystemControlCommand == DownloadTrajFiles_0){
+						UtilCreateDirContent(SystemControlArgument[0], "dir.info");
+					} else if(SystemControlCommand == DownloadDirectoryContent_1){
+						UtilCreateDirContent("/traj", "dir.info");
+					}
+					//Open configuration file
+					C8 CompletePath[MAX_PATH_LENGTH];
+					bzero(CompletePath, MAX_PATH_LENGTH);
+					UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
+					//strcat(CompletePath, DirPath);	//Concatenate dir path
+					//int rows = UtilCountFileRowsInPath(C8 path);
+					
+					
+					//Here we examine the file content
+
+					SystemControlDestroyFileContentInfo("dir.info", 1);
+
+					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+					FileLengthI32 = SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
+					SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
+													  FileLengthI32, &ClientSocket, 0);
+					SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0],
+												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
+					SystemControlDestroyFileContentInfo(SystemControlArgument[0], 0);
+
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
+													ControlResponseBuffer, 3, &ClientSocket, 0);
+				} else {
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
+														ControlResponseBuffer, 3, &ClientSocket, 0);
+				}
+
+			} else {
 				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
 				SystemControlCommand = Idle_0;
 			}
@@ -2223,11 +2277,9 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 
 
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
-
-
 	struct stat st;
 	C8 CompletePath[MAX_FILE_PATH];
-	C8 temporaryCompletePath[MAX_FILE_PATH];
+	//C8 temporaryCompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
 

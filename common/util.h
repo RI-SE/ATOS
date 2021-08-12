@@ -695,6 +695,7 @@ float UtilCalculateTimeToSync(ObjectPosition *OP);
 char UtilIsPointInPolygon(const CartesianPosition point, const CartesianPosition* polygonPoints, unsigned int nPtsInPolygon);
 
 int UtilCountFileRows(FILE *fd);
+int UtilCountFileRowsInPath(C8 path);
 int UtilReadLineCntSpecChars(FILE *fd, char *Buffer);
 int UtilReadLine(FILE *fd, char *Buffer);
 char UtilGetch();
