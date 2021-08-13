@@ -1714,12 +1714,12 @@ int UtilCountFileRows(FILE * fd) {
 	return rows;
 }
 
-int UtilCountFileRowsInPath(C8 path) {
+int UtilCountFileRowsInPath(C8 *path) {
 	int c = 0;
 	int rows = 0;
 	FILE *fd;
 	fd = fopen(path, "r");
-	if (fd != NULL) rows = UtilCountFileRows(fd);
+	if (fd != NULL)	rows = UtilCountFileRows(fd);
 	else rows = 0;
 	fclose(fd);
 	return rows;
@@ -1790,7 +1790,27 @@ int UtilReadLine(FILE * fd, char *Buffer) {
 	return d;
 }
 
-
+int UtilGetRowInFile(C8 *path, I32 rowIndex, char *rowBuffer){
+	int c = 0;
+	int rows = 0;
+	int length = 0;
+	FILE *fd;
+	fd = fopen(path, "r");
+	if (fd != NULL){
+		rows = UtilCountFileRows(fd);
+		fclose(fd);
+		fd = fopen(path, "r");
+		for(int i = 0; i < rows; i ++){
+			length = UtilReadLine(fd, rowBuffer);
+			if(rowIndex == i){
+				*(rowBuffer+length) = NULL;
+				return i;
+			} 
+		}
+	}
+	fclose(fd);
+	return -1;
+}
 
 C8 *UtilSearchTextFile(C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
 

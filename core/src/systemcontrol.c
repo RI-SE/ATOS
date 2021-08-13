@@ -879,54 +879,67 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case DownloadTrajFiles_0:
 		case DownloadDirectoryContent_1:	
-
 			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
 				C8 functionReturnName[50];
 				bzero(functionReturnName, 50);
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				if(SystemControlCommand == DownloadTrajFiles_0){
 					strcat(functionReturnName, "DownloadTrajFiles:");
-					ControlResponseBuffer[0] == FOLDER_EXIST;
+					ControlResponseBuffer[0] = FOLDER_EXIST;
 				} else if(SystemControlCommand == DownloadDirectoryContent_1){
 					strcat(functionReturnName, "DownloadDirectoryContent:");
 					SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
 				}
-				
 				if(ControlResponseBuffer[0] == FOLDER_EXIST){
 					if(SystemControlCommand == DownloadTrajFiles_0){
-						UtilCreateDirContent(SystemControlArgument[0], "dir.info");
+						UtilCreateDirContent("traj", "dir.info");
 					} else if(SystemControlCommand == DownloadDirectoryContent_1){
-						UtilCreateDirContent("/traj", "dir.info");
+						UtilCreateDirContent(SystemControlArgument[0], "dir.info");
 					}
-					//Open configuration file
+
+					C8 TestDirectoryPath[MAX_PATH_LENGTH];
+					bzero(TestDirectoryPath, MAX_PATH_LENGTH);
 					C8 CompletePath[MAX_PATH_LENGTH];
 					bzero(CompletePath, MAX_PATH_LENGTH);
-					UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
-					//strcat(CompletePath, DirPath);	//Concatenate dir path
-					//int rows = UtilCountFileRowsInPath(C8 path);
-					
-					
-					//Here we examine the file content
+					C8 InPath[MAX_PATH_LENGTH];
+					bzero(InPath, MAX_PATH_LENGTH);
+	
+					UtilGetTestDirectoryPath(TestDirectoryPath, sizeof (TestDirectoryPath));
+					strcat(CompletePath, TestDirectoryPath);
+					strcat(CompletePath,"dir.info");
+					int rows = UtilCountFileRowsInPath(CompletePath);
+					C8 RowBuffer[SMALL_BUFFER_SIZE_128];
 
+					for(int i = 0; i < rows; i ++)
+					{
+						bzero(CompletePath, MAX_PATH_LENGTH);
+						strcat(CompletePath, TestDirectoryPath);
+						strcat(CompletePath,"dir.info");
+						UtilGetRowInFile(CompletePath, i, RowBuffer);
+						if(*RowBuffer == 'F'){
+							bzero(InPath, MAX_PATH_LENGTH);
+							if(SystemControlCommand == DownloadTrajFiles_0) strcat(InPath, "traj/");
+							else if(SystemControlCommand == DownloadDirectoryContent_1) strcat(InPath, SystemControlArgument[0]);
+							strcat(InPath, strstr(RowBuffer, "-")+1);
+							bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+							FileLengthI32 = SystemControlBuildFileContentInfo(InPath, 0);
+							SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
+													  FileLengthI32, &ClientSocket, 0);
+							SystemControlSendFileContent(&ClientSocket, InPath,
+												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 1);
+							SystemControlDestroyFileContentInfo(InPath, 0);
+						}
+
+					}
+					SystemControlDirectoryInfo.exist = 1; //Force to exist
 					SystemControlDestroyFileContentInfo("dir.info", 1);
 
-					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					FileLengthI32 = SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
-					SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
-													  FileLengthI32, &ClientSocket, 0);
-					SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0],
-												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
-												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
-					SystemControlDestroyFileContentInfo(SystemControlArgument[0], 0);
-
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
-													ControlResponseBuffer, 3, &ClientSocket, 0);
 				} else {
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
 														ControlResponseBuffer, 3, &ClientSocket, 0);
 				}
-
+				SystemControlCommand = Idle_0;
 			} else {
 				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
 				SystemControlCommand = Idle_0;
@@ -2280,15 +2293,13 @@ I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 	struct stat st;
 	C8 CompletePath[MAX_FILE_PATH];
 	//C8 temporaryCompletePath[MAX_FILE_PATH];
-
 	bzero(CompletePath, MAX_FILE_PATH);
-
 	if (SystemControlDirectoryInfo.exist)
 		return -1;
-
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
 	stat(CompletePath, &st);
+	printf("CompletePath = %s\n", CompletePath);
 
 	// Create mmap of the file and return the length
 	SystemControlDirectoryInfo.fd = open(CompletePath, O_RDWR);
@@ -2303,11 +2314,11 @@ I32 SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile) {
 	char CompletePath[MAX_FILE_PATH];
 	struct stat st;
 
-	if (!SystemControlDirectoryInfo.exist)
+	if (!SystemControlDirectoryInfo.exist){
 		return -1;
+	}
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
-
 	munmap(SystemControlDirectoryInfo.info_buffer, SystemControlDirectoryInfo.size);
 	close(SystemControlDirectoryInfo.fd);
 	SystemControlDirectoryInfo.exist = 0;
