@@ -31,26 +31,34 @@ mkdir build && cd build
 ```
 create project
 ```sh
-cmake -G "Unix Makefiles" ..
-```
-For debug data add the following: 
-
-```sh
-cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
+cmake ..
 ```
 
-make the project
+make the project and install (requires superuser privileges). This will create required directories for logs, configuration files etc.:
 ```sh
-make
+make && sudo make install
 ```
 
 Start the server
 ```sh
-cd bin
-./Core
+bin/Core
 ```
 
-To run one or several of the modules along with Core, modify the runServer.sh script by adding the modules you wish to execute in the variable near the top. Then run the script from the top level directory:
+To get debug printouts, add the verbose option when running:
+```
+bin/Core -v
+```
+
+To run one or several of the modules along with Core, either run them in a separate terminal after starting Core (with the required number of additional message queue slots with `-m`):
+```
+# Core binary
+bin/Core -m 2
+# Module binaries in new terminals
+bin/RelativeKinematics
+bin/Visualization
+```
+
+or, modify the runServer.sh script by adding the modules you wish to execute in the variable near the top. Then run the script from the top level directory:
 ```sh
 ./runServer.sh
 ```
@@ -60,11 +68,11 @@ To see which modules are available, check the build output inside the ```build/b
 To install the server (recommended) navigate to the build directory and configure the project:
 ```sh
 cd build
-cmake -G "Unix Makefiles" ..
+cmake ..
 ```
 then build and install the server (be aware that this requires superuser privileges)
 ```sh
-make install
+sudo make install
 ```
 
 ## Building the server with CITS module and mqtt
