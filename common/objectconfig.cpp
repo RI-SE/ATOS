@@ -1,30 +1,41 @@
 #include "objectconfig.hpp"
 #include "util.h"
+#include "logging.h"
 
 ObjectConfig::ObjectConfig() {
 	origin.latitude_deg = origin.longitude_deg = origin.altitude_m = 0.0;
 	origin.isLongitudeValid = origin.isLatitudeValid = origin.isAltitudeValid = false;
 }
 
+/*
 ObjectConfig::ObjectConfig(const ObjectConfig&& other) :
 	objectFile(other.objectFile),
 	transmitterID(other.transmitterID),
+	injectionMap(other.injectionMap),
 	isAnchorObject(other.isAnchorObject),
+	isOSICompatible(other.isOSICompatible),
 	trajectory(other.trajectory),
 	origin(other.origin)
 {
 
 }
-
+*/
 std::string ObjectConfig::toString() const {
 	char ipAddr[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &ip_addr, ipAddr, sizeof (ipAddr));
+	inet_ntop(AF_INET, &remoteIP, ipAddr, sizeof (ipAddr));
 	std::string retval = "";
 
-	retval += "Object ID " + std::to_string(transmitterID)
-			+ ", IP " + ipAddr + ", trajectory " + trajectory.name.c_str()
-			+ ", turning diameter " + std::to_string(turningDiameter) + ", max speed " + std::to_string(maximumSpeed)
-			+ ", object file " + objectFile.filename().string() + ", anchor: " + (isAnchorObject?"Yes":"No");
+	std::string idsString;
+	for(auto id: injectionMap.sourceIDs) {
+		idsString += std::to_string(id) + " ";
+	}
+
+	retval += "Object ID: " + std::to_string(transmitterID)
+			+ ", IP: " + ipAddr + ", Trajectory: " + trajectory.name.c_str()
+			+ ", Turning diameter: " + std::to_string(turningDiameter) + ", Max speed: " + std::to_string(maximumSpeed)
+			+ ", Object file: " + objectFile.filename().string() + ", Anchor: " + (isAnchorObject? "Yes":"No")
+			+ ", OSI compatible: " + (isOSICompatible? "Yes":"No")
+			+ ", Injection IDs: " + idsString;
 	return retval;
 }
 
@@ -33,7 +44,6 @@ void ObjectConfig::parseConfigurationFile(
 
 	char setting[100];
 	int result;
-	struct sockaddr_in addr;
 	char path[MAX_FILE_PATH];
 
 	UtilGetTrajDirectoryPath(path, sizeof (path));
@@ -44,7 +54,7 @@ void ObjectConfig::parseConfigurationFile(
 								 sizeof (setting)) == -1) {
 		throw std::invalid_argument("Cannot find IP setting in file " + objectFile.string());
 	}
-	result = inet_pton(AF_INET, setting, &this->ip_addr);
+	result = inet_pton(AF_INET, setting, &this->remoteIP);
 	if (result == -1) {
 		using namespace std;
 		throw system_error(make_error_code(static_cast<errc>(errno)));
@@ -77,25 +87,7 @@ void ObjectConfig::parseConfigurationFile(
 		this->isAnchorObject = false;
 	}
 	else {
-		if (setting[0] == '1' || setting[0] == '0') {
-			this->isAnchorObject = setting[0] == '1';
-		}
-		else {
-			std::string anchorSetting(setting);
-			for (char &c : anchorSetting) {
-				c = std::tolower(c, std::locale());
-			}
-			if (anchorSetting.compare("true") == 0) {
-				this->isAnchorObject = true;
-			}
-			else if (anchorSetting.compare("false") == 0) {
-				this->isAnchorObject = false;
-			}
-			else {
-				throw std::invalid_argument("Anchor setting " + std::string(setting) + " in file "
-											+ objectFile.string() + " is invalid");
-			}
-		}
+		this->isAnchorObject = this->isSettingTrue(setting);
 	}
 
 	// Get trajectory file setting
@@ -106,10 +98,11 @@ void ObjectConfig::parseConfigurationFile(
 	}
 
 	fs::path trajFile(std::string(path) + std::string(setting));
-	if (!fs::exists(trajFile)) {
+	if (!fs::exists(trajFile.string())) {
 		throw std::invalid_argument("Configured trajectory file " + std::string(setting)
 									+ " in file " + objectFile.string() + " not found");
 	}
+	this->trajectoryFile = trajFile;
 	this->trajectory.initializeFromFile(setting);
 	LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectory.points.size());
 
@@ -166,10 +159,7 @@ void ObjectConfig::parseConfigurationFile(
 	// Get Turning diameter
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_TURNING_DIAMETER, objectFile.c_str(),
 								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find Turning diameter setting in file " + objectFile.string());
-	}
-	else {
+								 setting, sizeof (setting)) != -1) {
 		char *endptr;
 		double val = strtod(setting, &endptr);
 
@@ -177,16 +167,14 @@ void ObjectConfig::parseConfigurationFile(
 			throw std::invalid_argument("Turning diameter " + std::string(setting) + " in file "
 									+ objectFile.string() + " is invalid");
 		}
+		this->turningDiameterKnown = true;
 		this->turningDiameter = val;
 	}
 
 	// Get Maximum speed
 	if (UtilGetObjectFileSetting(OBJECT_SETTING_MAX_SPEED, objectFile.c_str(),
 								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find Max speed setting in file " + objectFile.string());
-	}
-	else {
+								 setting, sizeof (setting)) != -1) {
 		char *endptr;
 		double val = strtod(setting, &endptr);
 
@@ -194,8 +182,75 @@ void ObjectConfig::parseConfigurationFile(
 			throw std::invalid_argument("Max speed " + std::string(setting) + " in file "
 									+ objectFile.string() + " is invalid");
 		}
+		this->hasMaximumSpeed = true;
 		this->maximumSpeed = val;
 	}
 
+	// Get OSI compatibility
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_IS_OSI_COMPATIBLE, objectFile.c_str(),
+								 objectFile.string().length(),
+								 setting, sizeof (setting)) == -1) {
+		this->isOSICompatible = false;
+	}
+	else {
+		this->isOSICompatible = this->isSettingTrue(setting);
+	}
+	// Get Injector IDs
+	if (UtilGetObjectFileSetting(OBJECT_SETTING_INJECTOR_IDS, objectFile.c_str(),
+								 objectFile.string().length(),
+								 setting, sizeof (setting)) != -1) {
+		std::vector<int> ids;
+		std::string settingString(setting);
+		this->split(settingString, ',', ids);
+
+		this->injectionMap.sourceIDs.clear();
+		this->injectionMap.targetIDs.clear();
+
+		for (const auto& id : ids) {
+			LogMessage(LOG_LEVEL_DEBUG, "Injection ID %d", id);
+			this->injectionMap.sourceIDs.insert(static_cast<uint32_t>(id));
+		}
+	}
 	this->objectFile = objectFile;
+}
+
+template<size_t N>
+bool ObjectConfig::isSettingTrue(char (&setting)[N]) {
+	if (setting[0] == '1' || setting[0] == '0') {
+		return setting[0] == '1';
+	}
+	else {
+		std::string settingString(setting);
+		for (char &c : settingString) {
+			c = std::tolower(c, std::locale());
+		}
+		if (settingString.compare("true") == 0) {
+			return true;
+		}
+		else if (settingString.compare("false") == 0) {
+			return false;
+		}
+		else {
+			throw std::invalid_argument("Setting " + settingString + " is invalid");
+		}
+	}
+}
+
+void ObjectConfig::split(std::string &str, char delim, std::vector<int> &out) {
+	size_t start;
+	size_t end = 0;
+
+	while ((start = str.find_first_not_of(delim, end)) != std::string::npos) {
+		end = str.find(delim, start);
+		out.push_back(stoi(str.substr(start, end - start)));
+	}
+}
+
+std::string ObjectConfig::getProjString() const {
+	std::stringstream projStr;
+	projStr << "+proj=topocentric +ellps=GRS80 ";
+	projStr << "+lat_0=" << this->getOrigin().latitude_deg << " ";
+	projStr << "+lon_0=" << this->getOrigin().longitude_deg << " ";
+	projStr << "+h_0=" << this->getOrigin().altitude_m;
+	return projStr.str();
 }

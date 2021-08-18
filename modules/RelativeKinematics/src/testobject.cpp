@@ -2,28 +2,23 @@
 #include "util.h"
 #include "maestroTime.h"
 #include "datadictionary.h"
+#include "osi_handler.hpp"
 
-TestObject::TestObject() {
-	// TODO
-	origin.latitude_deg = origin.longitude_deg = origin.altitude_m = 0.0;
-	origin.isLongitudeValid = origin.isLatitudeValid = origin.isAltitudeValid = false;
-
+TestObject::TestObject() : osiChannel(SOCK_STREAM) {
 }
 
 TestObject::TestObject(TestObject&& other) :
+	osiChannel(SOCK_STREAM),
 	state(other.state),
-	objectFile(other.objectFile),
-	trajectoryFile(other.trajectoryFile),
-	transmitterID(other.transmitterID),
-	isAnchorObject(other.isAnchorObject),
-	trajectory(other.trajectory),
-	origin(other.origin),
+	conf(other.conf),
 	lastMonitor(other.lastMonitor),
 	maxAllowedMonitorPeriod(other.maxAllowedMonitorPeriod)
 {
 	this->comms = other.comms;
+	this->osiChannel = other.osiChannel;
 	other.comms.cmd.socket = 0;
 	other.comms.mntr.socket = 0;
+	other.osiChannel.socket = 0;
 	this->nextMonitor = std::move(other.nextMonitor);
 }
 
@@ -41,12 +36,22 @@ void TestObject::setMonitorAddress(
 	}
 }
 
+void TestObject::setOsiAddress(
+		const sockaddr_in &newAddr) {
+	if (!this->comms.isConnected()) {
+		this->osiChannel.addr = newAddr;
+	}
+}
+
+void TestObject::setObjectConfig(ObjectConfig& newObjectConfig){
+	this->conf = newObjectConfig; }
+
 ObjectDataType TestObject::getAsObjectData() const {
 	ObjectDataType retval;
 	// TODO check on isValid for each
-	retval.origin.Latitude = this->origin.latitude_deg;
-	retval.origin.Longitude = this->origin.longitude_deg;
-	retval.origin.Altitude = this->origin.altitude_m;
+	retval.origin.Latitude = this->conf.getOrigin().latitude_deg;
+	retval.origin.Longitude = this->conf.getOrigin().longitude_deg;
+	retval.origin.Altitude = this->conf.getOrigin().altitude_m;
 
 	retval.Enabled = OBJECT_ENABLED; // TODO maybe a setting for this
 	retval.ClientIP = this->comms.cmd.addr.sin_addr.s_addr;
@@ -113,201 +118,84 @@ std::string TestObject::toString() const {
 	char ipAddr[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, &this->comms.cmd.addr.sin_addr, ipAddr, sizeof (ipAddr));
 	std::string retval = "";
-	retval += "Object ID " + std::to_string(transmitterID)
-			+ ", IP " + ipAddr + ", trajectory file " + trajectoryFile.filename().string()
-			+ ", object file " + objectFile.filename().string() + ", anchor: " + (isAnchorObject?"Yes":"No");
+	retval += conf.toString(); // TODO add more
 	return retval;
 }
 
 void TestObject::parseConfigurationFile(
 		const fs::path &objectFile) {
-
-	char setting[100];
-	int result;
 	struct sockaddr_in addr;
-	char path[MAX_FILE_PATH];
-
-	UtilGetTrajDirectoryPath(path, sizeof (path));
-
-	// Get IP setting
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_IP, objectFile.c_str(),
-								 objectFile.string().length()+1, setting,
-								 sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find IP setting in file " + objectFile.string());
-	}
-	result = inet_pton(AF_INET, setting, &addr.sin_addr);
-	if (result == -1) {
-		using namespace std;
-		throw system_error(make_error_code(static_cast<errc>(errno)));
-	}
-	else if (result == 0) {
-		throw std::invalid_argument("Address " + std::string(setting)
-									+ " in object file " + objectFile.string()
-									+ " is not a valid IPv4 address");
-	}
+	this->conf.parseConfigurationFile(objectFile);
+	addr.sin_addr.s_addr = conf.getIP();
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(ISO_22133_DEFAULT_OBJECT_TCP_PORT);
 	this->setCommandAddress(addr);
 	addr.sin_port = htons(ISO_22133_OBJECT_UDP_PORT);
 	this->setMonitorAddress(addr);
-
-	// Get trajectory file setting
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_TRAJ, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find trajectory setting in file " + objectFile.string());
-	}
-
-	fs::path trajFile(std::string(path) + std::string(setting));
-	if (!fs::exists(trajFile)) {
-		throw std::invalid_argument("Configured trajectory file " + std::string(setting)
-									+ " in file " + objectFile.string() + " not found");
-	}
-	this->trajectoryFile = trajFile;
-
-	// Get ID setting
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_ID, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		throw std::invalid_argument("Cannot find ID setting in file " + objectFile.string());
-	}
-	char *endptr;
-	uint32_t id = static_cast<uint32_t>(strtoul(setting, &endptr, 10));
-
-	if (endptr == setting) {
-		throw std::invalid_argument("ID " + std::string(setting) + " in file "
-									+ objectFile.string() + " is invalid");
-	}
-	this->transmitterID = id;
-
-	// Get anchor setting
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_IS_ANCHOR, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) == -1) {
-		this->isAnchorObject = false;
-	}
-	else {
-		if (setting[0] == '1' || setting[0] == '0') {
-			this->isAnchorObject = setting[0] == '1';
-		}
-		else {
-			std::string anchorSetting(setting);
-			for (char &c : anchorSetting) {
-				c = std::tolower(c, std::locale());
-			}
-			if (anchorSetting.compare("true") == 0) {
-				this->isAnchorObject = true;
-			}
-			else if (anchorSetting.compare("false") == 0) {
-				this->isAnchorObject = false;
-			}
-			else {
-				throw std::invalid_argument("Anchor setting " + std::string(setting) + " in file "
-											+ objectFile.string() + " is invalid");
-			}
-		}
-	}
-
-	this->objectFile = objectFile;
-
-	this->origin = {};
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_ORIGIN_LATITUDE, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) != -1) {
-		origin.latitude_deg = strtod(setting, &endptr);
-		if (setting != endptr) {
-			origin.isLatitudeValid = true;
-		}
-	}
-
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_ORIGIN_LONGITUDE, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) != -1) {
-		origin.longitude_deg = strtod(setting, &endptr);
-		if (setting != endptr) {
-			origin.isLongitudeValid = true;
-		}
-	}
-
-	if (UtilGetObjectFileSetting(OBJECT_SETTING_ORIGIN_ALTITUDE, objectFile.c_str(),
-								 objectFile.string().length(),
-								 setting, sizeof (setting)) != -1) {
-		origin.altitude_m = strtod(setting, &endptr);
-		if (setting != endptr) {
-			origin.isAltitudeValid = true;
-		}
-	}
-
-	if (origin.isAltitudeValid == origin.isLatitudeValid
-			&& origin.isLatitudeValid == origin.isLongitudeValid) {
-		if (!origin.isAltitudeValid) {
-			GeoPosition orig;
-			if (UtilReadOriginConfiguration(&orig) != -1) {
-				this->origin.latitude_deg = orig.Latitude;
-				this->origin.longitude_deg = orig.Longitude;
-				this->origin.altitude_m = orig.Altitude;
-				this->origin.isLatitudeValid = true;
-				this->origin.isLongitudeValid = true;
-				this->origin.isAltitudeValid = true;
-			}
-			else {
-				throw std::invalid_argument("No origin setting found");
-			}
-		}
-	}
-	else {
-		throw std::invalid_argument("Partial origin setting in file " + objectFile.string());
-	}
-}
-
-void TestObject::parseTrajectoryFile(
-		const fs::path& file) {
-	trajectory.initializeFromFile(file.filename());
-	LogMessage(LOG_LEVEL_INFO, "Successfully parsed trajectory %s for object %u",
-			   file.filename().c_str(), this->getTransmitterID());
+	addr.sin_port = htons(OSI_DEFAULT_OBJECT_TCP_PORT);
+	this->setOsiAddress(addr);
 }
 
 void TestObject::establishConnection(std::shared_future<void> stopRequest) {
 	this->lastMonitorTime = std::chrono::steady_clock::time_point(); // reset
 	this->comms.connect(stopRequest, TestObject::connRetryPeriod);
+
+	if (this->isOsiCompatible()) {
+		try {
+			this->osiChannel.connect(stopRequest, TestObject::connRetryPeriod);
+		}
+		catch (std::runtime_error& e) {
+			this->osiChannel.disconnect();
+			throw std::runtime_error(std::string("Failed to establish OSI connection. Reason: \n") + e.what());
+		}
+	}
 }
 
-void ObjectConnection::connect(
+void Channel::connect(
 		std::shared_future<void> stopRequest,
 		const std::chrono::milliseconds retryPeriod) {
 	char ipString[INET_ADDRSTRLEN];
 	std::stringstream errMsg;
 
-	if (inet_ntop(AF_INET, &this->cmd.addr.sin_addr, ipString, sizeof (ipString))
+	if (inet_ntop(AF_INET, &this->addr.sin_addr, ipString, sizeof (ipString))
 			== nullptr) {
 		errMsg << "inet_ntop: " << strerror(errno);
 		throw std::invalid_argument(errMsg.str());
 	}
 
-	if (this->cmd.addr.sin_addr.s_addr == 0) {
+	if (this->addr.sin_addr.s_addr == 0) {
 		errMsg << "Invalid connection IP specified: " << ipString;
 		throw std::invalid_argument(errMsg.str());
 	}
 
-	this->cmd.socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (this->cmd.socket < 0) {
-		errMsg << "Failed to open control socket: " << strerror(errno);
+	std::string type = "???";
+	if (this->channelType == SOCK_STREAM) {
+		type = "TCP";
+	}
+	else if (this->channelType == SOCK_DGRAM) {
+		type = "UDP";
+	}
+
+	this->socket = ::socket(AF_INET, this->channelType, 0);
+	if (this->socket < 0) {
+		errMsg << "Failed to open " << type << " socket: " << strerror(errno);
 		this->disconnect();
 		throw std::runtime_error(errMsg.str());
 	}
 
 	// Begin connection attempt
-	LogMessage(LOG_LEVEL_INFO, "Attempting connection to: %s:%u", ipString,
-			   ntohs(this->cmd.addr.sin_port));
+	LogMessage(LOG_LEVEL_INFO, "Attempting %s connection to %s:%u", type.c_str(), ipString,
+			   ntohs(this->addr.sin_port));
+
 	while (true) {
-		if (::connect(this->cmd.socket,
-					reinterpret_cast<struct sockaddr *>(&this->cmd.addr),
-					sizeof (this->cmd.addr)) == 0) {
+		if (::connect(this->socket,
+					reinterpret_cast<struct sockaddr *>(&this->addr),
+					sizeof (this->addr)) == 0) {
 			break;
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Failed connection attempt to %s, retrying in %.3f s ...",
-					   ipString, retryPeriod.count() / 1000.0);
+			LogMessage(LOG_LEVEL_ERROR, "Failed %s connection attempt to %s:%u, retrying in %.3f s ...",
+					   type.c_str(), ipString, ntohs(this->addr.sin_port), retryPeriod.count() / 1000.0);
 			if (stopRequest.wait_for(retryPeriod)
 					!= std::future_status::timeout) {
 				errMsg << "Connection attempt interrupted";
@@ -315,21 +203,29 @@ void ObjectConnection::connect(
 			}
 		}
 	}
+}
 
-	// Create monitor socket
-	LogMessage(LOG_LEVEL_DEBUG, "Creating safety socket");
-	this->mntr.socket = socket(AF_INET, SOCK_DGRAM, 0);
-	if (!this->isValid()) {
-		errMsg << "Failed to create monitor socket: " << strerror(errno);
-		this->disconnect();
-		throw std::runtime_error(errMsg.str());
+void Channel::disconnect() {
+	if (this->socket != -1) {
+		if (shutdown(this->socket, SHUT_RDWR) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Socket shutdown: %s", strerror(errno));
+		}
+		if (close(this->socket) == -1) {
+			LogMessage(LOG_LEVEL_ERROR, "Socket close: %s", strerror(errno));
+		}
+		this->socket = -1;
 	}
+}
 
-	sockaddr* sin = reinterpret_cast<sockaddr*>(&this->mntr.addr);
-	if (::connect(this->mntr.socket, sin, sizeof (this->mntr.addr)) < 0) {
-		errMsg << "Failed to connect monitor socket: " << strerror(errno);
+void ObjectConnection::connect(
+		std::shared_future<void> stopRequest,
+		const std::chrono::milliseconds retryPeriod) {
+	try {
+		this->cmd.connect(stopRequest, retryPeriod);
+		this->mntr.connect(stopRequest, retryPeriod);
+	} catch (std::runtime_error& e) {
 		this->disconnect();
-		throw std::runtime_error(errMsg.str());
+		throw std::runtime_error(std::string("Failed to establish ISO 22133 connection. Reason: \n") + e.what());
 	}
 
 	return;
@@ -349,28 +245,12 @@ bool ObjectConnection::isConnected() const {
 }
 
 bool ObjectConnection::isValid() const {
-	return this->cmd.socket != -1 && this->mntr.socket != -1;
+	return this->cmd.isValid() && this->mntr.isValid();
 }
 
 void ObjectConnection::disconnect() {
-	if (this->cmd.socket != -1) {
-		if (shutdown(this->cmd.socket, SHUT_RDWR) == -1) {
-			LogMessage(LOG_LEVEL_ERROR, "Command socket shutdown: %s", strerror(errno));
-		}
-		if (close(this->cmd.socket) == -1) {
-			LogMessage(LOG_LEVEL_ERROR, "Command socket close: %s", strerror(errno));
-		}
-		this->cmd.socket = -1;
-	}
-	if (this->mntr.socket != -1) {
-		if (shutdown(this->mntr.socket, SHUT_RDWR) == -1) {
-			LogMessage(LOG_LEVEL_ERROR, "Safety socket shutdown: %s", strerror(errno));
-		}
-		if (close(this->mntr.socket) == -1) {
-			LogMessage(LOG_LEVEL_ERROR, "Safety socket close: %s", strerror(errno));
-		};
-		this->mntr.socket = -1;
-	}
+	this->cmd.disconnect();
+	this->mntr.disconnect();
 }
 
 void TestObject::sendHeartbeat(
@@ -384,10 +264,10 @@ void TestObject::sendHeartbeat(
 void TestObject::sendSettings() {
 
 	ObjectSettingsType objSettings;
-	objSettings.desiredTransmitterID = transmitterID;
+	objSettings.desiredTransmitterID = conf.getTransmitterID();
 	objSettings.isTransmitterIDValid = true;
 
-	objSettings.coordinateSystemOrigin = origin;
+	objSettings.coordinateSystemOrigin = conf.getOrigin();
 
 	TimeSetToCurrentSystemTime(&objSettings.currentTime);
 	objSettings.isTimestampValid = true;
@@ -397,7 +277,7 @@ void TestObject::sendSettings() {
 	objSettings.isPositioningAccuracyRequired = false;
 
 	this->comms.cmd << objSettings;
-	this->comms.cmd << trajectory;
+	this->comms.cmd << conf.getTrajectory();
 }
 
 void TestObject::sendArm() {
@@ -407,6 +287,23 @@ void TestObject::sendArm() {
 void TestObject::sendDisarm() {
 	this->comms.cmd << OBJECT_COMMAND_DISARM;
 }
+
+//void TestObject::sendOsiGlobalObjectGroundTruth(
+//	GlobalObjectGroundTruth_t gogt) {
+	//this->comms.osi << llls;
+//}
+
+void TestObject::sendOsiData(
+		const OsiHandler::LocalObjectGroundTruth_t& osidata,
+		const std::string& projStr,
+		const std::chrono::system_clock::time_point& timestamp) {
+	OsiHandler osi;
+	auto rawData = osi.encodeSvGtMessage(osidata, timestamp, projStr, false);
+	std::vector<char> vec(rawData.length());
+	std::copy(rawData.begin(), rawData.end(), vec.begin());
+	this->osiChannel << vec;
+}
+
 
 void TestObject::sendStart() {
 	StartMessageType strt;
@@ -603,6 +500,17 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 	}
 	return chnl;
 }
+
+
+Channel& operator<<(Channel& chnl, const std::vector<char>& data) {
+	auto nBytes = send(chnl.socket, data.data(), data.size(), 0);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to send raw data: ") + strerror(errno));
+	}
+	return chnl;
+}
+
+
 
 std::string Channel::remoteIP() const {
 	char ipString[INET_ADDRSTRLEN];
