@@ -132,6 +132,8 @@ typedef struct {
 #define MSCP_RESPONSE_DATALENGTH_BYTES 4
 #define MSCP_RESPONSE_STATUS_CODE_BYTES 2
 
+#define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
+
 typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
 	InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
@@ -880,9 +882,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case DownloadTrajFiles_0:
 		case DownloadDirectoryContent_1:	
 			if (CurrentInputArgCount == CommandArgCount) {
-				C8 functionReturnName[50];
-				bzero(functionReturnName, 50);
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				char functionReturnName[50];
+				memset(functionReturnName, 0, 50);
+				memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				if(SystemControlCommand == DownloadTrajFiles_0){
 					strcat(functionReturnName, "DownloadTrajFiles:");
 					ControlResponseBuffer[0] = FOLDER_EXIST;
@@ -892,36 +894,36 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 				if(ControlResponseBuffer[0] == FOLDER_EXIST){
 					if(SystemControlCommand == DownloadTrajFiles_0){
-						UtilCreateDirContent("traj", "dir.info");
+						UtilCreateDirContent(MAESTRO_TRAJ_DIRECTORY_STRING, "dir.info");
 					} else if(SystemControlCommand == DownloadDirectoryContent_1){
 						UtilCreateDirContent(SystemControlArgument[0], "dir.info");
 					}
 
-					C8 TestDirectoryPath[MAX_PATH_LENGTH];
-					bzero(TestDirectoryPath, MAX_PATH_LENGTH);
-					C8 CompletePath[MAX_PATH_LENGTH];
-					bzero(CompletePath, MAX_PATH_LENGTH);
-					C8 InPath[MAX_PATH_LENGTH];
-					bzero(InPath, MAX_PATH_LENGTH);
+					char TestDirectoryPath[MAX_PATH_LENGTH];
+					memset(TestDirectoryPath, 0,MAX_PATH_LENGTH);
+					char CompletePath[MAX_PATH_LENGTH];
+					memset(CompletePath, 0, MAX_PATH_LENGTH);
+					char InPath[MAX_PATH_LENGTH];
+					memset(InPath, 0, MAX_PATH_LENGTH);
 	
 					UtilGetTestDirectoryPath(TestDirectoryPath, sizeof (TestDirectoryPath));
 					strcat(CompletePath, TestDirectoryPath);
 					strcat(CompletePath,"dir.info");
-					int rows = UtilCountFileRowsInPath(CompletePath);
-					C8 RowBuffer[SMALL_BUFFER_SIZE_128];
+					int rows = UtilCountFileRowsInPath(CompletePath, strlen(CompletePath));
+					char RowBuffer[SMALL_BUFFER_SIZE_128];
 
 					for(int i = 0; i < rows; i ++)
 					{
-						bzero(CompletePath, MAX_PATH_LENGTH);
+						memset(CompletePath, 0, MAX_PATH_LENGTH);
 						strcat(CompletePath, TestDirectoryPath);
 						strcat(CompletePath,"dir.info");
-						UtilGetRowInFile(CompletePath, i, RowBuffer);
+						UtilGetRowInFile(CompletePath, strlen(CompletePath), i, RowBuffer, SMALL_BUFFER_SIZE_128);
 						if(*RowBuffer == 'F'){
-							bzero(InPath, MAX_PATH_LENGTH);
-							if(SystemControlCommand == DownloadTrajFiles_0) strcat(InPath, "traj/");
+							memset(InPath, 0, MAX_PATH_LENGTH);
+							if(SystemControlCommand == DownloadTrajFiles_0) strcat(InPath, MAESTRO_TRAJ_DIRECTORY_STRING);
 							else if(SystemControlCommand == DownloadDirectoryContent_1) strcat(InPath, SystemControlArgument[0]);
 							strcat(InPath, strstr(RowBuffer, "-")+1);
-							bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+							memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 							FileLengthI32 = SystemControlBuildFileContentInfo(InPath, 0);
 							SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
 													  FileLengthI32, &ClientSocket, 0);
@@ -2292,7 +2294,6 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 	struct stat st;
 	C8 CompletePath[MAX_FILE_PATH];
-	//C8 temporaryCompletePath[MAX_FILE_PATH];
 	bzero(CompletePath, MAX_FILE_PATH);
 	if (SystemControlDirectoryInfo.exist)
 		return -1;

@@ -92,7 +92,7 @@ extern "C"{
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.59"
+#define LOCAL_USER_CONTROL_IP "192.168.0.10"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -695,8 +695,8 @@ float UtilCalculateTimeToSync(ObjectPosition *OP);
 char UtilIsPointInPolygon(const CartesianPosition point, const CartesianPosition* polygonPoints, unsigned int nPtsInPolygon);
 
 int UtilCountFileRows(FILE *fd);
-int UtilCountFileRowsInPath(C8 *path);
-int UtilGetRowInFile(C8 *path, I32 rowIndex, char *rowBuffer);
+int UtilCountFileRowsInPath(const char *path, const size_t pathlen);
+int UtilGetRowInFile(const char *path, const size_t pathLength, I32 rowIndex, char *rowBuffer, const size_t bufferLength);
 int UtilReadLineCntSpecChars(FILE *fd, char *Buffer);
 int UtilReadLine(FILE *fd, char *Buffer);
 char UtilGetch();
