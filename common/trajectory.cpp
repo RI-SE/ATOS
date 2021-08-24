@@ -289,9 +289,11 @@ std::string Trajectory::toString() const {
 	return ss.str();
 }
 
-void Trajectory::constrainVelocityTo(double vel_m_s){
+Trajectory Trajectory::constrainVelocityTo(double vel_m_s){
 
-	for (auto point = points.rbegin(); point != points.rend(); ++point) {
+	Trajectory newTrajectory = Trajectory(*this);
+
+	for (auto point = newTrajectory.points.rbegin(); point !=  newTrajectory.points.rend(); ++point) {
 		if(point->getLongitudinalVelocity() > vel_m_s) {
 			point->setLongitudinalAcceleration(0);
 			point->setLongitudinalVelocity(vel_m_s);
@@ -300,7 +302,8 @@ void Trajectory::constrainVelocityTo(double vel_m_s){
 
 		//TODO: something to take lateral into account.
 
-	this->name = this->name + "_" + std::to_string(vel_m_s) + "MS";
+	newTrajectory.name = newTrajectory.name + "_" + std::to_string(vel_m_s) + "MS";
+	return newTrajectory;
 }
 
 
@@ -322,18 +325,21 @@ void Trajectory::addAccelerationTo(double vel_m_s) {
 }
 
 Trajectory Trajectory::reversed() const {
+
+	Trajectory newTrajectory = Trajectory(*this);
+
 	if(points.empty()){
 		throw std::invalid_argument("Attempted to reverse non existing trajectory");
 	}
 
-	this->name = this->name + "_Reversed";
+	newTrajectory.name = newTrajectory.name + "_Reversed";
 
-	std::reverse(points.begin(), points.end());
+	std::reverse(newTrajectory.points.begin(), newTrajectory.points.end());
 
 	std::vector<double> timeVector;
 
-	auto point = points.rbegin();
-		while (point != points.rend()) {
+	auto point = newTrajectory.points.rbegin();
+		while (point != newTrajectory.points.rend()) {
 			point->setHeading(point->getHeading()-M_PI);
 			point->setCurvature(point->getCurvature()*-1);
 			try {
@@ -352,12 +358,14 @@ Trajectory Trajectory::reversed() const {
 			point++;
 		}
 
-	point = points.rbegin();
-		while (point != points.rend()) {
+	point = newTrajectory.points.rbegin();
+		while (point != newTrajectory.points.rend()) {
 			point->setTime(timeVector.back());
 			timeVector.pop_back();
 			point++;
 		}
+
+	return newTrajectory;
 }
 
 
@@ -396,7 +404,7 @@ void Trajectory::saveToFile(const std::string& fileName) const{
 	}
 	catch (const ofstream::failure& e) {
 		std::cerr << "\n\nException occured when writing to a file\n"
-		<< e.what()
+		<< e.what() << "lslslslsl"
 		<< std::endl;
 	}
 }
