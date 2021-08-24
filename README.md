@@ -6,17 +6,61 @@ The Maestro server is a communication hub for all test objects. The server monit
 <br />
 <br />
 
+
 To build Maestro follow the guide below.
 
 
 ## How to build and run the server
 
-Install necessary development packages.
+Prerequisites: Access to AstaZero github, C/C++ compiler.
 
 **Ubuntu**
+
+Make sure to have an updated package index (apt update).
+
+##### Dependencies (required)
+Install `cmake` (minimum version 3.10.2):
+```sh
+$ sudo apt-get install cmake
+```
+
+Install necessary development packages:
+
 ```sh
 sudo apt-get install libsystemd-dev
-``` 
+```
+
+Install Protobuf:
+
+```sh
+sudo apt-get install libprotobuf-dev protobuf-compiler
+```
+
+Install OpenSimulationInterface (see [https://github.com/OpenSimulationInterface](https://github.com/OpenSimulationInterface/open-simulation-interface#installation)):
+
+```sh
+$ git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git
+$ cd open-simulation-interface
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+$ sudo make install
+```
+
+Install Eigen3:
+
+```sh
+sudo apt-get install libeigen3-dev
+```
+
+##### Dependencies (optional)
+Install SWIG:
+
+See https://github.com/RI-SE/iso22133#readme
+
+
+##### Build and run the server
 
 Clone the repo and make sure you run the following command to update all submodules:
 
