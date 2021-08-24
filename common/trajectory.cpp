@@ -342,7 +342,7 @@ void Trajectory::reverse(){
 			catch (std::out_of_range) {
 				LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized lateral velocity");
 			}
-			try{
+			try {
 				point->setLateralAcceleration(point->getLateralAcceleration()*-1);
 			}
 			catch(std::out_of_range){
