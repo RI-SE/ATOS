@@ -361,7 +361,7 @@ Trajectory Trajectory::reversed() const {
 }
 
 
-void Trajectory::saveToFile(const std::string& fileName) {
+void Trajectory::saveToFile(const std::string& fileName) const{
 	using std::string, std::smatch, std::ofstream;
 	char trajDirPath[PATH_MAX];
 
@@ -371,27 +371,32 @@ void Trajectory::saveToFile(const std::string& fileName) {
 
 	ofstream outputTraj;
 	LogMessage(LOG_LEVEL_DEBUG, "Opening file %s", trajFilePath.c_str());
-	LogMessage(LOG_LEVEL_DEBUG, "Opening file %s", trajFilePath.c_str());
-	outputTraj.open (trajFilePath);
-	LogMessage(LOG_LEVEL_DEBUG, "Outputting trajectory to file");
-	outputTraj << "TRAJECTORY;" << this->id <<";" << this->name << ";" << this->version << ";" << this->points.size() << ";" <<  "\n";
-	for (const auto& point : points) {
-		outputTraj << "LINE;"
-		<< std::fixed << std::setprecision(2) << point.getTime() << ";"
-		<< std::fixed << std::setprecision(6) << point.getXCoord() << ";"
-		<< std::fixed << std::setprecision(6) << point.getYCoord() << ";"
-		<< std::fixed << std::setprecision(6) << point.getZCoord() << ";"
-		<< std::fixed << std::setprecision(6) << point.getHeading() << ";"
-		<< std::fixed << std::setprecision(6) << point.getLongitudinalVelocity() << ";"
-		<< ";" //point.getLateralVelocity() << ";"
-		<<  std::fixed << std::setprecision(6) <<(point.getLongitudinalAcceleration()) << ";"
-		<< ";" //point.getLateralAcceleration() << ";"
-		<< std::fixed << std::setprecision(6) << point.getCurvature() << ";"
-		<< std::fixed << std::setprecision(6) << point.getMode()
-		<<";ENDLINE;" << "\n";
+	try {
+		outputTraj.open (trajFilePath);
+		LogMessage(LOG_LEVEL_DEBUG, "Outputting trajectory to file");
+		outputTraj << "TRAJECTORY;" << this->id <<";" << this->name << ";" << this->version << ";" << this->points.size() << ";" <<  "\n";
+		for (const auto& point : points) {
+			outputTraj << "LINE;"
+			<< std::fixed << std::setprecision(2) << point.getTime() << ";"
+			<< std::fixed << std::setprecision(6) << point.getXCoord() << ";"
+			<< std::fixed << std::setprecision(6) << point.getYCoord() << ";"
+			<< std::fixed << std::setprecision(6) << point.getZCoord() << ";"
+			<< std::fixed << std::setprecision(6) << point.getHeading() << ";"
+			<< std::fixed << std::setprecision(6) << point.getLongitudinalVelocity() << ";"
+			<< ";" //point.getLateralVelocity() << ";"
+			<<  std::fixed << std::setprecision(6) <<(point.getLongitudinalAcceleration()) << ";"
+			<< ";" //point.getLateralAcceleration() << ";"
+			<< std::fixed << std::setprecision(6) << point.getCurvature() << ";"
+			<< std::fixed << std::setprecision(6) << point.getMode()
+			<<";ENDLINE;" << "\n";
+		}
+		outputTraj << "ENDTRAJECTORY;" <<  "\n";
+		outputTraj.close();
+		LogMessage(LOG_LEVEL_DEBUG, "Closed file %s", trajFilePath.c_str());
 	}
-	outputTraj << "ENDTRAJECTORY;" <<  "\n";
-
-	outputTraj.close();
-	LogMessage(LOG_LEVEL_DEBUG, "Closed file %s", trajFilePath.c_str());
+	catch (const ofstream::failure& e) {
+		std::cerr << "\n\nException occured when writing to a file\n"
+		<< e.what()
+		<< std::endl;
+	}
 }
