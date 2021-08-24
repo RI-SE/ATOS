@@ -291,14 +291,12 @@ std::string Trajectory::toString() const {
 
 void Trajectory::constrainVelocityTo(double vel_m_s){
 
-	auto point = points.rbegin();
-		while (point != points.rend()) {
-				if(point->getLongitudinalVelocity() > vel_m_s){
-					point->setLongitudinalAcceleration(0);
-					point->setLongitudinalVelocity(vel_m_s);
-			}
-			point++;
+	for (auto point = points.rbegin(); point != points.rend(); ++point) {
+		if(point->getLongitudinalVelocity() > vel_m_s) {
+			point->setLongitudinalAcceleration(0);
+			point->setLongitudinalVelocity(vel_m_s);
 		}
+	}
 
 		//TODO: something to take lateral into account.
 
