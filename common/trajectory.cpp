@@ -304,7 +304,7 @@ void Trajectory::constrainVelocityTo(double vel_m_s){
 }
 
 
-void Trajectory::addAccelerationTo(double vel_m_s){
+void Trajectory::addAccelerationTo(double vel_m_s) {
 
 	auto point = points.begin();
 	int a = 5;
