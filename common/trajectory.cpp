@@ -336,7 +336,7 @@ void Trajectory::reverse(){
 		while (point != points.rend()) {
 			point->setHeading(point->getHeading()-M_PI);
 			point->setCurvature(point->getCurvature()*-1);
-			try{
+			try {
 				point->setLateralVelocity(point->getLateralVelocity()*-1);
 			}
 			catch(std::out_of_range){
