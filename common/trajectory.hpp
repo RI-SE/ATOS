@@ -131,7 +131,7 @@ public:
 	std::string toString() const;
 
 	void saveToFile(const std::string& fileName) const;
-	void reverse();
+	Trajectory reversed() const;
 	Trajectory constrainVelocityTo(double vel_m_s);
 	void addAccelerationTo(double vel_m_s);
 	void addDecelerationFrom(double vel_m_s);
