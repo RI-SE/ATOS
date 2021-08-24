@@ -345,8 +345,8 @@ void Trajectory::reverse(){
 			try {
 				point->setLateralAcceleration(point->getLateralAcceleration()*-1);
 			}
-			catch(std::out_of_range){
-				std::cout<<"Ignoring uninitialized lateral acceleration";
+			catch (std::out_of_range) {
+				LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized lateral acceleration");
 			}
 			timeVector.push_back(point->getTime());
 			point++;
