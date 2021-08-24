@@ -321,7 +321,7 @@ void Trajectory::addAccelerationTo(double vel_m_s) {
 		}
 }
 
-void Trajectory::reverse(){
+Trajectory Trajectory::reversed() const {
 	if(points.empty()){
 		throw std::invalid_argument("Attempted to reverse non existing trajectory");
 	}
