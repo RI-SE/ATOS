@@ -21,7 +21,7 @@ Make sure to have an updated package index (apt update).
 ##### Dependencies (required)
 Install `cmake` (minimum version 3.10.2):
 ```sh
-$ sudo apt-get install cmake
+sudo apt-get install cmake
 ```
 
 Install necessary development packages:
@@ -39,13 +39,13 @@ sudo apt-get install libprotobuf-dev protobuf-compiler
 Install OpenSimulationInterface (see [https://github.com/OpenSimulationInterface](https://github.com/OpenSimulationInterface/open-simulation-interface#installation)):
 
 ```sh
-$ git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git
-$ cd open-simulation-interface
-$ mkdir build
-$ cd build
-$ cmake ..
-$ make
-$ sudo make install
+git clone https://github.com/OpenSimulationInterface/open-simulation-interface.git
+cd open-simulation-interface
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
 ```
 
 Install Eigen3:
