@@ -12,28 +12,18 @@ To build Maestro follow the guide below.
 
 ## How to build and run the server
 
-Prerequisites: Access to AstaZero github, C/C++ compiler.
+Prerequisites: C/C++ compiler, CMake (minimum version 3.10.2)
 
 **Ubuntu**
 
 Make sure to have an updated package index (apt update).
 
 ##### Dependencies (required)
-Install `cmake` (minimum version 3.10.2):
-```sh
-sudo apt-get install cmake
-```
 
 Install necessary development packages:
 
 ```sh
-sudo apt-get install libsystemd-dev
-```
-
-Install Protobuf:
-
-```sh
-sudo apt-get install libprotobuf-dev protobuf-compiler
+sudo apt install libsystemd-dev libprotobuf-dev protobuf-compiler libeigen3-dev
 ```
 
 Install OpenSimulationInterface (see [https://github.com/OpenSimulationInterface](https://github.com/OpenSimulationInterface/open-simulation-interface#installation)):
@@ -46,12 +36,6 @@ cd build
 cmake ..
 make
 sudo make install
-```
-
-Install Eigen3:
-
-```sh
-sudo apt-get install libeigen3-dev
 ```
 
 ##### Dependencies (optional)
