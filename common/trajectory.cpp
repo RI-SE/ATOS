@@ -293,35 +293,25 @@ Trajectory Trajectory::constrainVelocityTo(double vel_m_s){
 
 	Trajectory newTrajectory = Trajectory(*this);
 
-	for (auto point = newTrajectory.points.rbegin(); point !=  newTrajectory.points.rend(); ++point) {
-		if(point->getLongitudinalVelocity() > vel_m_s) {
+	int index = 0;
+	for (auto point = newTrajectory.points.begin(); point !=  newTrajectory.points.end(); ++point) {
+		if(index > 0 ) {
 			point->setLongitudinalAcceleration(0);
 			point->setLongitudinalVelocity(vel_m_s);
+
+			if(point->getTime() > 0){
+				double distance =   sqrt(abs(newTrajectory.points.at(index).getYCoord() - newTrajectory.points.at(index-1).getYCoord()) + abs(newTrajectory.points.at(index).getXCoord() - newTrajectory.points.at(index-1).getXCoord()));
+				double time = distance/vel_m_s;
+				point->setTime(newTrajectory.points.at(index-1).getTime() + time);
+			}
 		}
+		index++;
 	}
 
 		//TODO: something to take lateral into account.
 
-	newTrajectory.name = newTrajectory.name + "_" + std::to_string(vel_m_s) + "MS";
+	newTrajectory.name = newTrajectory.name + "constrained";
 	return newTrajectory;
-}
-
-
-void Trajectory::addAccelerationTo(double vel_m_s) {
-
-	auto point = points.begin();
-	int a = 5;
-	int b = -2;
-		while (point != points.end()) {
-						
-			point->setLongitudinalVelocity((vel_m_s / (1 + (exp(a + (b * point->getTime()))))));
-			point->setLongitudinalAcceleration(-((b*point->getTime()*exp(((b*point->getTime()))+a)) /(pow(1 + (exp(a + (b * point->getTime()))),2))));
-
-			if(vel_m_s / (1 + (exp(a + (b * point->getTime()))))==vel_m_s){
-				break;
-			}
-			point++;
-		}
 }
 
 Trajectory Trajectory::reversed() const {
@@ -358,13 +348,10 @@ Trajectory Trajectory::reversed() const {
 			point++;
 		}
 
-	point = newTrajectory.points.rbegin();
-		while (point != newTrajectory.points.rend()) {
-			point->setTime(timeVector.back());
-			timeVector.pop_back();
-			point++;
-		}
 
+		for(int i = 0 ; i < newTrajectory.points.size(); i++){
+			newTrajectory.points.at(i).setTime(this->points.at(newTrajectory.points.size()-1).getTime() - newTrajectory.points.at(i).getTime());
+		}
 	return newTrajectory;
 }
 
@@ -404,7 +391,7 @@ void Trajectory::saveToFile(const std::string& fileName) const{
 	}
 	catch (const ofstream::failure& e) {
 		std::cerr << "\n\nException occured when writing to a file\n"
-		<< e.what() << "lslslslsl"
+		<< e.what()
 		<< std::endl;
 	}
 }
