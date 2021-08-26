@@ -289,6 +289,11 @@ std::string Trajectory::toString() const {
 	return ss.str();
 }
 
+/*!
+ * \brief Trajectory::TrajectoryPoint::constrainVelocityTo returns a copy of the trajectory constrained to a certain constant speed.
+ * \param vel_m_s
+ * \return Trajectory
+ */
 Trajectory Trajectory::constrainVelocityTo(double vel_m_s){
 
 	Trajectory newTrajectory = Trajectory(*this);
@@ -314,6 +319,9 @@ Trajectory Trajectory::constrainVelocityTo(double vel_m_s){
 	return newTrajectory;
 }
 
+/*!
+ * \brief Trajectory::TrajectoryPoint::reversed returns a revered copy of the trajectory
+ */
 Trajectory Trajectory::reversed() const {
 
 	Trajectory newTrajectory = Trajectory(*this);
@@ -355,7 +363,11 @@ Trajectory Trajectory::reversed() const {
 	return newTrajectory;
 }
 
-
+/*!
+ * \brief Trajectory::saveToFile saves a .traj file of the trajectory to the traj directory.
+ * \param fileName
+ * \return
+ */
 void Trajectory::saveToFile(const std::string& fileName) const{
 	using std::string, std::smatch, std::ofstream;
 	char trajDirPath[PATH_MAX];
