@@ -926,7 +926,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 							FileLengthI32 = SystemControlBuildFileContentInfo(InPath, 0);
 							SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
-													  FileLengthI32, &ClientSocket, 0);
+													  strlen(functionReturnName), &ClientSocket, 0);
 							SystemControlSendFileContent(&ClientSocket, InPath,
 												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
 												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 1);
