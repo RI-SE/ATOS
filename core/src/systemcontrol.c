@@ -1631,28 +1631,23 @@ void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 	Status[0] = (C8) (ResponseStatus >> 8);
 	Status[1] = (C8) ResponseStatus;
 
-	//if (n + MSCP_RESPONSE_DATALENGTH_BYTES < SYSTEM_CONTROL_SEND_BUFFER_SIZE) {
-		for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
-			Data[j] = Length[i];
-		for (i = 0; i < MSCP_RESPONSE_STATUS_CODE_BYTES; i++, j++)
-			Data[j] = Status[i];
-		t = strlen(ResponseString);
-		for (i = 0; i < t; i++, j++)
-			Data[j] = *(ResponseString + i);
+	for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
+		Data[j] = Length[i];
+	for (i = 0; i < MSCP_RESPONSE_STATUS_CODE_BYTES; i++, j++)
+		Data[j] = Status[i];
+	t = strlen(ResponseString);
+	for (i = 0; i < t; i++, j++)
+		Data[j] = *(ResponseString + i);
 
-		if (Debug) {
-			for (i = 0; i < n + MSCP_RESPONSE_DATALENGTH_BYTES; i++)
-				printf("%x-", Data[i]);
-			printf("\n");
-		}
+	if (Debug) {
+		for (i = 0; i < n + MSCP_RESPONSE_DATALENGTH_BYTES; i++)
+			printf("%x-", Data[i]);
+		printf("\n");
+	}
 
-		//SystemControlSendBytes(Data, n + 4, Sockfd, 0);
-		UtilSendTCPData("System Control", Data,
-						MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES +
-						strlen(ResponseString), Sockfd, 0);
-	//}
-	//else
-	//	LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+	UtilSendTCPData("System Control", Data,
+					MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES +
+					strlen(ResponseString), Sockfd, 0);
 }
 
 
