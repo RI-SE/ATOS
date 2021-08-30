@@ -334,7 +334,7 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
 
     double acceleration = 1;        //m/s/s
     double topSpeed = 2.7777;
-    const int noOfPoints = 1000;
+    const int noOfPoints = 500;
     double radius = turnRadius;
     double heading = startPoint.getHeading();
     double headingRad = heading;//(heading-90) * M_PI/180;
@@ -411,28 +411,42 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
     //Speed
 
     //AccelerationSection
-    double accelerationPeriod = topSpeed / acceleration;
+    double accelerationPeriod = topSpeed / acceleration;                //t = (v - u) / a
     double accelerationDistance = ((pow(topSpeed, 2))/acceleration)/2;
 
     //Topspeed section
-    double topSpeedDistance = totalLength - accelerationDistance;
+    double topSpeedDistance = totalLength - accelerationDistance*2;
     double topSpeedPeriod = topSpeedDistance / topSpeed;
 
-    double totalRuntime = accelerationPeriod + topSpeedPeriod;
+    double totalRuntime = accelerationPeriod + topSpeedPeriod + accelerationPeriod; //Accelerate -> Top Speed -> Decelerate
 
     double timeStep = totalRuntime / noOfPoints;
+
 
     //Speed for each point
     double currSpeed = 0;
     for(int i = 0; i < noOfPoints; i++)
     {
         timeArray[i] = i*timeStep;
-        currSpeed = i * (acceleration*timeStep);
-        if(currSpeed > topSpeed)
+
+        if(timeArray[i] < accelerationPeriod)
         {
-            currSpeed = topSpeed;
+            currSpeed = i * (acceleration*timeStep);
+            accelerationArray[i] = -acceleration;
         }
-        accelerationArray[i] = acceleration;
+        else if(timeArray[i] < topSpeedPeriod + accelerationPeriod)
+        {
+            if(currSpeed > topSpeed)
+            {
+                currSpeed = topSpeed;
+            }
+            accelerationArray[i] = 0;
+        }
+        else
+        {
+            currSpeed -= acceleration*timeStep;
+            accelerationArray[i] = acceleration;
+        }
         speedArray[i] = currSpeed;
 
     }

@@ -508,8 +508,11 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								}
 							}
 
-							if (CmdPtr != NULL)
-								SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+                            if (CmdPtr != NULL)
+                            {
+                                SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+                                LogPrint("GOT MSCP");
+                            }
 							else
 								LogMessage(LOG_LEVEL_WARNING, "Invalid MSCP command received");
 						}
@@ -620,7 +623,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", iCommand);
 		}
 
-		switch (SystemControlCommand) {
+        switch (SystemControlCommand) {
+            //LogMessage(LOG_LEVEL_INFO, SystemControlCommand);
 			// can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
 		case Idle_0:
 			break;
@@ -1067,7 +1071,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						switch (atoi(SystemControlArgument[1])) {
 						case MSCP_BACK_TO_START:
-							rcCommand.manoeuvre = MANOEUVRE_BACK_TO_START;
+                            LogPrint("GOT BACK TO START");
+                            rcCommand.manoeuvre = MANOEUVRE_BACK_TO_START;
 							break;
 						default:
 							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
