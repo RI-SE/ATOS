@@ -865,7 +865,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (ControlResponseBuffer[0] == FILE_EXIST) {
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					FileLengthI32 = SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
-					SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubDownloadFile:",
+					char functionReturnName[50];
+					memset(functionReturnName, 0, 50);
+					sprintf(functionReturnName, "SubDownloadFile:%d", FileLengthI32);
+					SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
 													  FileLengthI32, &ClientSocket, 0);
 					SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0],
 												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
@@ -925,6 +928,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							strcat(InPath, strstr(RowBuffer, "-")+1);
 							memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 							FileLengthI32 = SystemControlBuildFileContentInfo(InPath, 0);
+							sprintf(functionReturnName + strlen(functionReturnName), "%d", FileLengthI32);
 							SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
 													  FileLengthI32, &ClientSocket, 0);
 							SystemControlSendFileContent(&ClientSocket, InPath,
