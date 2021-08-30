@@ -132,7 +132,7 @@ public:
 
 	void saveToFile(const std::string& fileName) const;
 	Trajectory reversed() const;
-	Trajectory constrainVelocityTo(double vel_m_s);
+	Trajectory rescaledToVelocity(const double vel_m_s) const;
 
 private:
 	static const std::regex fileHeaderPattern;
