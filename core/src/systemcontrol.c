@@ -865,11 +865,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				if (ControlResponseBuffer[0] == FILE_EXIST) {
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					FileLengthI32 = SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
-					char functionReturnName[50];
-					memset(functionReturnName, 0, 50);
-					sprintf(functionReturnName, "SubDownloadFile:%d", FileLengthI32);
-					SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
-													  strlen(functionReturnName), &ClientSocket, 0);
+					SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubDownloadFile:",
+													  FileLengthI32, &ClientSocket, 0);
 					SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0],
 												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
 												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
@@ -928,9 +925,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 							strcat(InPath, strstr(RowBuffer, "-")+1);
 							memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 							FileLengthI32 = SystemControlBuildFileContentInfo(InPath, 0);
-							sprintf(functionReturnName + strlen(functionReturnName), "%d", FileLengthI32);
 							SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
-													  strlen(functionReturnName), &ClientSocket, 0);
+													  FileLengthI32, &ClientSocket, 0);
 							SystemControlSendFileContent(&ClientSocket, InPath,
 												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
 												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 1);
@@ -1635,7 +1631,7 @@ void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 	Status[0] = (C8) (ResponseStatus >> 8);
 	Status[1] = (C8) ResponseStatus;
 
-	if (n + MSCP_RESPONSE_DATALENGTH_BYTES < SYSTEM_CONTROL_SEND_BUFFER_SIZE) {
+	//if (n + MSCP_RESPONSE_DATALENGTH_BYTES < SYSTEM_CONTROL_SEND_BUFFER_SIZE) {
 		for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
 			Data[j] = Length[i];
 		for (i = 0; i < MSCP_RESPONSE_STATUS_CODE_BYTES; i++, j++)
@@ -1654,9 +1650,9 @@ void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 		UtilSendTCPData("System Control", Data,
 						MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES +
 						strlen(ResponseString), Sockfd, 0);
-	}
-	else
-		LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+	//}
+	//else
+	//	LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
 
 
