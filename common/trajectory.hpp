@@ -18,7 +18,7 @@ public:
         typedef enum {
             CONTROLLED_BY_DRIVE_FILE,
             CONTROLLED_BY_VEHICLE
-        } ModeType;
+		} ModeType;
 
 		TrajectoryPoint() {
 			position[2] = std::numeric_limits<double>::quiet_NaN();
@@ -117,9 +117,9 @@ public:
 	typedef std::vector<TrajectoryPoint>::iterator iterator;
 	typedef std::vector<TrajectoryPoint>::const_iterator const_iterator;
 
-    Trajectory() = default;
-    ~Trajectory() { points.clear(); }
-    Trajectory(const Trajectory& other);
+	Trajectory() = default;
+	~Trajectory() { points.clear(); }
+	Trajectory(const Trajectory& other);
     std::vector<TrajectoryPoint> points;
     std::string name = "";
 	unsigned short version = 0;
@@ -128,8 +128,11 @@ public:
 	void initializeFromFile(const std::string& fileName);
 	Trajectory relativeTo(const Trajectory& other) const;
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
-
 	std::string toString() const;
+
+	void saveToFile(const std::string& fileName) const;
+	Trajectory reversed() const;
+	Trajectory rescaledToVelocity(const double vel_m_s) const;
 
 private:
 	static const std::regex fileHeaderPattern;
