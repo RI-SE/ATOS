@@ -36,7 +36,7 @@ int main()
 			break;
 		case COMM_OBC_STATE:
 			break;
-		case COMM_CONNECT:
+		case COMM_INIT:
 			try {
 				loadObjectFiles();
 			} catch (std::invalid_argument& e) {
@@ -100,5 +100,4 @@ void loadObjectFiles() {
 		throw std::invalid_argument("Failed to parse object file(s):\n" + ostr.str());
 	}
 }
-
 
