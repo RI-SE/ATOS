@@ -70,6 +70,12 @@ public:
 		bool isActive;
 	} DataInjectionMap;
 
+	typedef struct {
+		uint16_t actionID;
+		uint32_t objectID;
+		ActionTypeParameter_t command;
+	} TestScenarioCommandAction;
+
 	ScenarioHandler(ControlMode);
 	~ScenarioHandler();
 
@@ -127,6 +133,7 @@ private:
 	ObjectControlState* state;					//!< State of module
 	std::map<uint32_t,TestObject> objects;		//!< List of configured test participants
 	std::map<uint32_t,ObjectListener> objectListeners;
+	std::map<uint16_t,std::function<void()>> storedActions;
 	std::mutex monitorTimeMutex;
 	static constexpr auto heartbeatPeriod = std::chrono::milliseconds(1000 / HEAB_FREQUENCY_HZ);
 	std::thread safetyThread;

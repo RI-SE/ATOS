@@ -60,9 +60,15 @@ void ScenarioHandler::handleAllClearCommand() {
 	this->state->allClearRequest(*this);
 }
 
-void ScenarioHandler::handleActionConfigurationCommand() {
+void ScenarioHandler::handleActionConfigurationCommand(
+		const TestScenarioCommandAction& action) {
 	this->state->settingModificationRequested(*this);
-	// TODO modify setting
+	if (action.command == ACTION_PARAMETER_VS_SEND_START) {
+		LogMessage(LOG_LEVEL_INFO, "Configuring delayed start for object %u", action.objectID);
+		objects[action.objectID].setTriggerStart(true);
+		this->storedActions[action.actionID] = std::bind(&TestObject::sendStart,
+														 &objects[action.objectID]);
+	}
 }
 
 void ScenarioHandler::loadScenario() {
@@ -74,7 +80,7 @@ void ScenarioHandler::loadScenario() {
 }
 
 void ScenarioHandler::loadObjectFiles() {
-	this->objects.clear();
+	this->clearScenario();
 	char path[MAX_FILE_PATH];
 	std::vector<std::invalid_argument> errors;
 
@@ -171,6 +177,7 @@ void ScenarioHandler::transformScenarioRelativeTo(
 
 void ScenarioHandler::clearScenario() {
 	objects.clear();
+	storedActions.clear();
 }
 
 
