@@ -1,11 +1,13 @@
 ﻿#pragma once
 
+#include "maestroTime.h"
 #include "state.hpp"
 #include "testobject.hpp"
 #include "objectlistener.hpp"
 #include <map>
 #include <future>
 #include <set>
+#include <chrono>
 
 // Forward declarations
 class ObjectControlState;
@@ -96,6 +98,8 @@ public:
 	void handleAllClearCommand();
 	//! \brief
 	void handleActionConfigurationCommand(const TestScenarioCommandAction&);
+	//! \brief
+	void handleExecuteActionCommand(const uint16_t& actionID, const std::chrono::system_clock::time_point& when);
 
 	//! Getters
 	//! \brief Get transmitter ID of anchor object participating in test.

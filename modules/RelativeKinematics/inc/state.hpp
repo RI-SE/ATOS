@@ -36,6 +36,7 @@ public:
 	virtual void objectAborting(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected object aborting in state " + type(*this)); }
 	virtual void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion in state " + type(*this)); }
 	virtual void settingModificationRequested(ScenarioHandler&) { throw std::runtime_error("Unexpected setting modification in state " + type(*this)); }
+	virtual void actionExecutionRequested(ScenarioHandler&) { throw std::runtime_error("Unexpected action execution in state " + type(*this)); }
 
 	//! Enter/exit functionality - defaults to nothing
 	virtual void onEnter(ScenarioHandler&) {}
@@ -220,6 +221,7 @@ public:
 	void disarmRequest(ScenarioHandler&) override {}
 	void startRequest(ScenarioHandler&) override {}
 	void allClearRequest(ScenarioHandler&) override {}
+	void actionExecutionRequested(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected
 	//

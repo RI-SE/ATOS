@@ -71,6 +71,19 @@ void ScenarioHandler::handleActionConfigurationCommand(
 	}
 }
 
+void ScenarioHandler::handleExecuteActionCommand(
+		const uint16_t &actionID,
+		const std::chrono::system_clock::time_point &when) {
+	this->state->actionExecutionRequested(*this);
+	auto delayedExecutor = [&](){
+		std::this_thread::sleep_until(when);
+		LogMessage(LOG_LEVEL_INFO, "Executing action %u", actionID);
+		this->storedActions[actionID]();
+	};
+	auto executor = std::thread(delayedExecutor);
+	executor.detach();
+}
+
 void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
