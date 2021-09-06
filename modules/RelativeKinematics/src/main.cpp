@@ -103,7 +103,15 @@ int main() {
 			break;
 		case COMM_ACCM:
 			// TODO
-			scenarioHandler.handleActionConfigurationCommand();
+			ACCMData accm;
+			UtilPopulateACCMDataStructFromMQ(mqRecvData, sizeof (mqRecvData), &accm);
+			if (accm.actionType == ACTION_TEST_SCENARIO_COMMAND) {
+				ScenarioHandler::TestScenarioCommandAction cmdAction;
+				cmdAction.command = static_cast<ActionTypeParameter_t>(accm.actionTypeParameter1);
+				cmdAction.actionID = accm.actionID;
+				cmdAction.objectID = scenarioHandler.getVehicleIDByIP(accm.ip);
+				scenarioHandler.handleActionConfigurationCommand(cmdAction);
+			}
 			break;
 		case COMM_EXAC:
 			// TODO

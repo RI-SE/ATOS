@@ -95,7 +95,7 @@ public:
 	//! \brief Performs actions in response to an all clear request.
 	void handleAllClearCommand();
 	//! \brief
-	void handleActionConfigurationCommand();
+	void handleActionConfigurationCommand(const TestScenarioCommandAction&);
 
 	//! Getters
 	//! \brief Get transmitter ID of anchor object participating in test.
@@ -110,6 +110,15 @@ public:
 		}
 		return retval;
 	}
+
+	[[deprecated("Avoid referring to objects by IP")]]
+	uint32_t getVehicleIDByIP(const in_addr_t& ip) {
+		auto res = std::find_if(objects.begin(), objects.end(), [&](const std::pair<uint32_t,TestObject>& elem){
+			return elem.second.getObjectConfig().getIP() == ip;
+		});
+		return res->first;
+	}
+
 	//! \brief Get last known ISO state of test participants.
 	std::map<uint32_t,ObjectStateType> getObjectStates() const;
 
