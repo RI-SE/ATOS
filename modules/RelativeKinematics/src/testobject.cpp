@@ -79,7 +79,7 @@ ObjectDataType TestObject::getAsObjectData() const {
 	else {
 		struct timeval tvnow, tvdiff;
 		TimeSetToCurrentSystemTime(&tvnow);
-		to_timeval(diff, tvdiff);
+		tvdiff = to_timeval(diff);
 		timersub(&tvnow, &tvdiff, &retval.lastPositionUpdate);
 	}
 	retval.propertiesReceived = false; // TODO once OPRO is parsed

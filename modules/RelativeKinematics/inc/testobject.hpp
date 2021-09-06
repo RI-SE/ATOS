@@ -186,18 +186,3 @@ namespace std {
 	};
 }
 
-template<typename Duration>
-void to_timeval(Duration&& d, struct timeval & tv) {
-	std::chrono::seconds const sec = std::chrono::duration_cast<std::chrono::seconds>(d);
-
-	tv.tv_sec  = sec.count();
-	tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(d - sec).count();
-}
-
-template<typename Duration>
-void from_timeval(struct timeval & tv, Duration& d) {
-	// TODO
-	//const auto sec = std::chrono::seconds(tv.tv_sec);
-	//const auto usec = std::chrono::microseconds(tv.tv_usec);
-	//d = sec + usec;
-}

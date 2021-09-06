@@ -124,7 +124,7 @@ int main() {
 				EXACData exac;
 				UtilPopulateEXACDataStructFromMQ(mqRecvData, sizeof (mqRecvData), &exac);
 				quartermilliseconds qmsow(exac.executionTime_qmsoW);
-				auto now = to_timeval(system_clock::now());
+				auto now = to_timeval(system_clock::now().time_since_epoch());
 				auto startOfWeek = system_clock::time_point(weeks(TimeGetAsGPSweek(&now)));
 				scenarioHandler.handleExecuteActionCommand(exac.actionID, startOfWeek+qmsow);
 			}

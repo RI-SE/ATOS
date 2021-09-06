@@ -117,7 +117,7 @@ public:
 
 	[[deprecated("Avoid referring to objects by IP")]]
 	uint32_t getVehicleIDByIP(const in_addr_t& ip) {
-		auto res = std::find_if(objects.begin(), objects.end(), [&](const std::pair<uint32_t,TestObject>& elem){
+		auto res = std::find_if(objects.begin(), objects.end(), [&](const std::pair<const uint32_t,TestObject>& elem){
 			return elem.second.getObjectConfig().getIP() == ip;
 		});
 		return res->first;
