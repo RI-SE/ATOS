@@ -101,6 +101,13 @@ int main() {
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}		
 			break;
+		case COMM_ACCM:
+			// TODO
+			scenarioHandler.handleActionConfigurationCommand();
+			break;
+		case COMM_EXAC:
+			// TODO
+			break;
 		default:
 			LogMessage(LOG_LEVEL_INFO, "Received command %u", command);
 		}

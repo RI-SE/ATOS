@@ -60,6 +60,11 @@ void ScenarioHandler::handleAllClearCommand() {
 	this->state->allClearRequest(*this);
 }
 
+void ScenarioHandler::handleActionConfigurationCommand() {
+	this->state->settingModificationRequested(*this);
+	// TODO modify setting
+}
+
 void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {

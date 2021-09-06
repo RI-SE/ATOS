@@ -86,8 +86,10 @@ public:
 	void handleStartCommand();
 	//! \brief Performs actions in response to an abort request.
 	void handleAbortCommand();
-
+	//! \brief Performs actions in response to an all clear request.
 	void handleAllClearCommand();
+	//! \brief
+	void handleActionConfigurationCommand();
 
 	//! Getters
 	//! \brief Get transmitter ID of anchor object participating in test.
