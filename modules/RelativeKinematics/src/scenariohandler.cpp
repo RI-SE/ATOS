@@ -415,7 +415,9 @@ void ScenarioHandler::disarmObjects() {
 
 void ScenarioHandler::startObjects() {
 	for (auto& id : getVehicleIDs()) {
-		objects[id].sendStart();
+		if (!objects[id].isStartingOnTrigger()) {
+			objects[id].sendStart();
+		}
 	}
 }
 
