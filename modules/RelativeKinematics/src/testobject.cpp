@@ -43,8 +43,24 @@ void TestObject::setOsiAddress(
 	}
 }
 
-void TestObject::setObjectConfig(ObjectConfig& newObjectConfig){
-	this->conf = newObjectConfig; }
+void TestObject::setObjectConfig(
+		ObjectConfig& newObjectConfig) {
+	this->conf = newObjectConfig;
+}
+
+void TestObject::setTriggerStart(
+		const bool startOnTrigger) {
+	auto st = this->getState();
+	if (st == OBJECT_STATE_INIT || st == OBJECT_STATE_DISARMED) {
+		this->startOnTrigger = startOnTrigger;
+	}
+	else {
+		std::stringstream errMsg;
+		errMsg << "Attempted to change trigger configuration while in state ";
+		errMsg << objectStateToASCII(st);
+		throw std::invalid_argument(errMsg.str());
+	}
+}
 
 ObjectDataType TestObject::getAsObjectData() const {
 	ObjectDataType retval;

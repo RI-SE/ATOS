@@ -103,10 +103,12 @@ public:
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
 	void setOsiAddress(const sockaddr_in& newAddr);
-	void setObjectConfig(ObjectConfig& newObjectConfig); 
+	void setObjectConfig(ObjectConfig& newObjectConfig);
+	void setTriggerStart(const bool startOnTrigger = true);
 	
 	bool isAnchor() const { return conf.isAnchor(); }
 	bool isOsiCompatible() const { return conf.isOSI(); }
+	bool isStartingOnTrigger() const { return startOnTrigger; }
 	std::string toString() const;
 	std::string getProjString() const { return conf.getProjString(); }
 	ObjectDataType getAsObjectData() const;
@@ -157,11 +159,13 @@ public:
 		return this->comms.pendingMessageType(awaitNext);
 	}
 private:
-	ObjectConnection comms;
-	Channel osiChannel;
+	ObjectConnection comms;		//!< Channel for communication with object over the ISO 22133 protocol
+	Channel osiChannel;			//!< Channel for communication with object over the OSI protocol
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 
 	ObjectConfig conf;
+
+	bool startOnTrigger = false;
 
 	void updateMonitor(const MonitorMessage&);
 	MonitorMessage awaitNextMonitor();
