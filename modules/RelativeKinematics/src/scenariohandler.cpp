@@ -80,8 +80,8 @@ void ScenarioHandler::handleExecuteActionCommand(
 		LogMessage(LOG_LEVEL_INFO, "Executing action %u", actionID);
 		this->storedActions[actionID]();
 	};
-	auto executor = std::thread(delayedExecutor);
-	executor.detach();
+	auto thd = std::thread(delayedExecutor);
+	thd.detach();
 }
 
 void ScenarioHandler::loadScenario() {

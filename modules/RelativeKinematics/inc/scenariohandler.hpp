@@ -96,9 +96,9 @@ public:
 	void handleAbortCommand();
 	//! \brief Performs actions in response to an all clear request.
 	void handleAllClearCommand();
-	//! \brief
+	//! \brief Performs actions in response to an action configuration request.
 	void handleActionConfigurationCommand(const TestScenarioCommandAction&);
-	//! \brief
+	//! \brief Performs actions in response to an action execution request.
 	void handleExecuteActionCommand(const uint16_t& actionID, const std::chrono::system_clock::time_point& when);
 
 	//! Getters
