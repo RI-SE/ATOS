@@ -42,6 +42,7 @@ target_link_libraries(${VISUALIZATION_TARGET} LINK_PUBLIC
 target_include_directories(${VISUALIZATION_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
+
 add_executable(test_visualizer ${TEST_VISUALIZER_TARGET})
 target_link_libraries(test_visualizer PRIVATE Catch2::Catch2)
 include(CTest)
