@@ -49,6 +49,7 @@ public:
 	virtual ~ObjectControlState() {}
 protected:
 	void setState(ScenarioHandler& handler, ObjectControlState *st);
+	void controlModeInitialization(ScenarioHandler& handler);
 };
 
 namespace ObjectControl {
@@ -323,9 +324,7 @@ public:
 }
 
 namespace RelativeKinematics {
-class Idle : public ObjectControl::Idle {
-	void initializeRequest(ScenarioHandler&) override;
-};
+using Idle = ObjectControl::Idle;
 
 class Initialized : public ObjectControl::Initialized {
 	void disconnectRequest(ScenarioHandler&) override;
@@ -399,9 +398,7 @@ class Done : public ObjectControl::Done {
 }
 
 namespace AbsoluteKinematics {
-class Idle : public ObjectControl::Idle {
-	void initializeRequest(ScenarioHandler&) override;
-};
+using Idle = ObjectControl::Idle;
 
 class Initialized : public ObjectControl::Initialized {
 	void disconnectRequest(ScenarioHandler&) override;

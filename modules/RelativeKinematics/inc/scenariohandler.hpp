@@ -26,7 +26,6 @@ namespace ObjectControl {
 }
 
 namespace RelativeKinematics {
-	class Idle;
 	class Initialized;
 	class Connecting;
 	class Ready;
@@ -38,7 +37,6 @@ namespace RelativeKinematics {
 }
 
 namespace AbsoluteKinematics {
-	class Idle;
 	class Initialized;
 	class Connecting;
 	class Ready;
@@ -66,7 +64,6 @@ class ScenarioHandler {
 	friend class ObjectControl::TestLive;
 	friend class ObjectControl::Disarming;
 	friend class ObjectControl::Done;
-	friend class RelativeKinematics::Idle;
 	friend class RelativeKinematics::Initialized;
 	friend class RelativeKinematics::Connecting;
 	friend class RelativeKinematics::Ready;
@@ -75,7 +72,6 @@ class ScenarioHandler {
 	friend class RelativeKinematics::TestLive;
 	friend class RelativeKinematics::Disarming;
 	friend class RelativeKinematics::Done;
-	friend class AbsoluteKinematics::Idle;
 	friend class AbsoluteKinematics::Initialized;
 	friend class AbsoluteKinematics::Connecting;
 	friend class AbsoluteKinematics::Ready;
@@ -105,7 +101,7 @@ public:
 		ActionTypeParameter_t command;
 	} TestScenarioCommandAction;
 
-	ScenarioHandler(ControlMode);
+	ScenarioHandler();
 	~ScenarioHandler();
 
 	//! Handlers for MQ bus messages
