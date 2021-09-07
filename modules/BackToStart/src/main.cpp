@@ -74,7 +74,8 @@ bool checkIfBackToStartAllowed(uint32_t transmitterID, Trajectory generatedTraje
 	firstPointInTraj.isHeadingValid = true;
 	firstPointInTraj.isPositionValid = true; //Should somehting be checked here?
 
-	return UtilIsPositionNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_DISTANCE_TOLERANCE) && UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE);
+	return UtilIsPositionNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_DISTANCE_TOLERANCE)
+			&& UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE);
 }
 
 
