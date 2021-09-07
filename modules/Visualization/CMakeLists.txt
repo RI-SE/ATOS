@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(Visualization LANGUAGES C CXX)
 
-
+find_package(Catch2 REQUIRED)
 # Define target names
 set(VISUALIZATION_TARGET ${PROJECT_NAME})
 
@@ -19,6 +19,7 @@ set(MESSAGE_BUS_LIBRARY MaestroMQ)
 set(TCP_UDP_Socket_LIBRARY TCPUDPSocket)
 include(GNUInstallDirs)
 
+file(GLOB TEST_VISUALIZER_TARGET CONFIGURE_DEPENDS "tests/*.cpp")
 # Create project main executable target
 add_executable(${VISUALIZATION_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
@@ -41,7 +42,11 @@ target_link_libraries(${VISUALIZATION_TARGET} LINK_PUBLIC
 target_include_directories(${VISUALIZATION_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
-
+add_executable(test_visualizer ${TEST_VISUALIZER_TARGET})
+target_link_libraries(test_visualizer PRIVATE Catch2::Catch2)
+include(CTest)
+include(Catch)
+catch_discover_tests(test_visualizer ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_visualizer) 
 # Generate service file with correct details
 message(STATUS "Configuring ${PROJECT_NAME} service file")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/linux/maestro-visualization.service.in
