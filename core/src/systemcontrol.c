@@ -132,6 +132,8 @@ typedef struct {
 #define MSCP_RESPONSE_DATALENGTH_BYTES 4
 #define MSCP_RESPONSE_STATUS_CODE_BYTES 2
 
+#define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
+
 typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
 	InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
@@ -142,7 +144,7 @@ typedef enum {
 	SetObjectEnableStatus_2,
 	GetObjectEnableStatus_1,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
-	start_ext_trigg_1, ClearAllScenario_0 ,nocommand
+	start_ext_trigg_1, ClearAllScenario_0 , DownloadDirectoryContent_1, DownloadTrajFiles_0, nocommand
 } SystemControlCommand_t;
 
 static const char *SystemControlCommandsArr[] = {
@@ -157,7 +159,7 @@ static const char *SystemControlCommandsArr[] = {
 	"SetObjectEnableStatus_2",
 	"GetObjectEnableStatus_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 	"control_0",
-	"Exit_0", "start_ext_trigg_1", "ClearAllScenario_0"
+	"Exit_0", "start_ext_trigg_1", "ClearAllScenario_0", "DownloadDirectoryContent_1", "DownloadTrajFiles_0"
 };
 
 const char *SystemControlStatesArr[] =
@@ -750,7 +752,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
 					SystemControlDestroyFileContentInfo("dir.info", 1);
 				}
-
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR,
@@ -874,6 +875,74 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 			}
 			else {
+				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
+				SystemControlCommand = Idle_0;
+			}
+			break;
+		case DownloadTrajFiles_0:
+		case DownloadDirectoryContent_1:	
+			if (CurrentInputArgCount == CommandArgCount) {
+				char functionReturnName[50];
+				memset(functionReturnName, 0, 50);
+				memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				if(SystemControlCommand == DownloadTrajFiles_0){
+					strcat(functionReturnName, "DownloadTrajFiles:");
+					ControlResponseBuffer[0] = FOLDER_EXIST;
+				} else if(SystemControlCommand == DownloadDirectoryContent_1){
+					strcat(functionReturnName, "DownloadDirectoryContent:");
+					SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+				}
+				if(ControlResponseBuffer[0] == FOLDER_EXIST){
+					if(SystemControlCommand == DownloadTrajFiles_0){
+						UtilCreateDirContent(MAESTRO_TRAJ_DIRECTORY_STRING, "dir.info");
+					} else if(SystemControlCommand == DownloadDirectoryContent_1){
+						UtilCreateDirContent(SystemControlArgument[0], "dir.info");
+					}
+
+					char TestDirectoryPath[MAX_PATH_LENGTH];
+					memset(TestDirectoryPath, 0,MAX_PATH_LENGTH);
+					char CompletePath[MAX_PATH_LENGTH];
+					memset(CompletePath, 0, MAX_PATH_LENGTH);
+					char InPath[MAX_PATH_LENGTH];
+					memset(InPath, 0, MAX_PATH_LENGTH);
+	
+					UtilGetTestDirectoryPath(TestDirectoryPath, sizeof (TestDirectoryPath));
+					strcat(CompletePath, TestDirectoryPath);
+					strcat(CompletePath,"dir.info");
+					int rows = UtilCountFileRowsInPath(CompletePath, strlen(CompletePath));
+					char RowBuffer[SMALL_BUFFER_SIZE_128];
+
+					for(int i = 0; i < rows; i ++)
+					{
+						memset(CompletePath, 0, MAX_PATH_LENGTH);
+						strcat(CompletePath, TestDirectoryPath);
+						strcat(CompletePath,"dir.info");
+						UtilGetRowInFile(CompletePath, strlen(CompletePath), i, RowBuffer, SMALL_BUFFER_SIZE_128);
+						if(*RowBuffer == 'F'){
+							memset(InPath, 0, MAX_PATH_LENGTH);
+							if(SystemControlCommand == DownloadTrajFiles_0) strcat(InPath, MAESTRO_TRAJ_DIRECTORY_STRING);
+							else if(SystemControlCommand == DownloadDirectoryContent_1) strcat(InPath, SystemControlArgument[0]);
+							strcat(InPath, strstr(RowBuffer, "-")+1);
+							memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+							FileLengthI32 = SystemControlBuildFileContentInfo(InPath, 0);
+							SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
+													  FileLengthI32, &ClientSocket, 0);
+							SystemControlSendFileContent(&ClientSocket, InPath,
+												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 1);
+							SystemControlDestroyFileContentInfo(InPath, 0);
+						}
+
+					}
+					SystemControlDirectoryInfo.exist = 1; //Force to exist
+					SystemControlDestroyFileContentInfo("dir.info", 1);
+
+				} else {
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
+														ControlResponseBuffer, 3, &ClientSocket, 0);
+				}
+				SystemControlCommand = Idle_0;
+			} else {
 				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
 				SystemControlCommand = Idle_0;
 			}
@@ -1562,28 +1631,23 @@ void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 	Status[0] = (C8) (ResponseStatus >> 8);
 	Status[1] = (C8) ResponseStatus;
 
-	if (n + MSCP_RESPONSE_DATALENGTH_BYTES < SYSTEM_CONTROL_SEND_BUFFER_SIZE) {
-		for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
-			Data[j] = Length[i];
-		for (i = 0; i < MSCP_RESPONSE_STATUS_CODE_BYTES; i++, j++)
-			Data[j] = Status[i];
-		t = strlen(ResponseString);
-		for (i = 0; i < t; i++, j++)
-			Data[j] = *(ResponseString + i);
+	for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
+		Data[j] = Length[i];
+	for (i = 0; i < MSCP_RESPONSE_STATUS_CODE_BYTES; i++, j++)
+		Data[j] = Status[i];
+	t = strlen(ResponseString);
+	for (i = 0; i < t; i++, j++)
+		Data[j] = *(ResponseString + i);
 
-		if (Debug) {
-			for (i = 0; i < n + MSCP_RESPONSE_DATALENGTH_BYTES; i++)
-				printf("%x-", Data[i]);
-			printf("\n");
-		}
-
-		//SystemControlSendBytes(Data, n + 4, Sockfd, 0);
-		UtilSendTCPData("System Control", Data,
-						MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES +
-						strlen(ResponseString), Sockfd, 0);
+	if (Debug) {
+		for (i = 0; i < n + MSCP_RESPONSE_DATALENGTH_BYTES; i++)
+			printf("%x-", Data[i]);
+		printf("\n");
 	}
-	else
-		LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+
+	UtilSendTCPData("System Control", Data,
+					MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES +
+					strlen(ResponseString), Sockfd, 0);
 }
 
 
@@ -2223,20 +2287,15 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 
 
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
-
-
 	struct stat st;
 	C8 CompletePath[MAX_FILE_PATH];
-	C8 temporaryCompletePath[MAX_FILE_PATH];
-
 	bzero(CompletePath, MAX_FILE_PATH);
-
 	if (SystemControlDirectoryInfo.exist)
 		return -1;
-
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
 	stat(CompletePath, &st);
+	printf("CompletePath = %s\n", CompletePath);
 
 	// Create mmap of the file and return the length
 	SystemControlDirectoryInfo.fd = open(CompletePath, O_RDWR);
@@ -2251,11 +2310,11 @@ I32 SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile) {
 	char CompletePath[MAX_FILE_PATH];
 	struct stat st;
 
-	if (!SystemControlDirectoryInfo.exist)
+	if (!SystemControlDirectoryInfo.exist){
 		return -1;
+	}
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
-
 	munmap(SystemControlDirectoryInfo.info_buffer, SystemControlDirectoryInfo.size);
 	close(SystemControlDirectoryInfo.fd);
 	SystemControlDirectoryInfo.exist = 0;
