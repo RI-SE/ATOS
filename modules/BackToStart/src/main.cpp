@@ -1,6 +1,6 @@
 #include <map>
 #include <algorithm>
-
+#include "datadictionary.h"
 #include "util.h"
 #include "objectconfig.hpp"
 
@@ -52,6 +52,31 @@ int main()
 	}
 	return 0;
 }
+
+/*!
+ * \brief checkIfBackToStartAllowed verifies if the position and heading of an
+ *			object is in line with the first point of a BTS trajectory
+ * \param transmitterID of objectToCheck
+ * \param generatedTrajectory TrajectoryToCheck against
+ * \return True if allowed False if not
+ */
+bool checkIfBackToStartAllowed(uint32_t transmitterID, Trajectory generatedTrajectory){
+
+	ObjectMonitorType monitorData;
+	DataDictionaryGetMonitorData(transmitterID, &monitorData);
+
+	CartesianPosition firstPointInTraj;
+	firstPointInTraj.xCoord_m = generatedTrajectory.points.at(0).getXCoord();
+	firstPointInTraj.yCoord_m = generatedTrajectory.points.at(0).getYCoord();
+	firstPointInTraj.zCoord_m = generatedTrajectory.points.at(0).getZCoord();
+	firstPointInTraj.heading_rad = generatedTrajectory.points.at(0).getHeading();
+
+	firstPointInTraj.isHeadingValid = true;
+	firstPointInTraj.isPositionValid = true; //Should somehting be checked here?
+
+	return UtilIsPositionNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_DISTANCE_TOLERANCE) && UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE);
+}
+
 
 void loadObjectFiles() {
 	objects.clear();
