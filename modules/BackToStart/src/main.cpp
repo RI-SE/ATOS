@@ -65,14 +65,7 @@ bool isObjectNearTrajectoryStart(uint32_t transmitterID, Trajectory trajectory){
 	ObjectMonitorType monitorData;
 	DataDictionaryGetMonitorData(transmitterID, &monitorData);
 
-	CartesianPosition firstPointInTraj;
-	firstPointInTraj.xCoord_m = trajectory.points.at(0).getXCoord();
-	firstPointInTraj.yCoord_m = trajectory.points.at(0).getYCoord();
-	firstPointInTraj.zCoord_m = trajectory.points.at(0).getZCoord();
-	firstPointInTraj.heading_rad = trajectory.points.at(0).getHeading();
-
-	firstPointInTraj.isHeadingValid = true;
-	firstPointInTraj.isPositionValid = true; //Should somehting be checked here?
+	auto firstPointInTraj = trajectory.points.front().getISOPosition();
 
 	return UtilIsPositionNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_DISTANCE_TOLERANCE)
 			&& UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE);
