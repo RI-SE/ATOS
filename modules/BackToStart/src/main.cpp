@@ -55,21 +55,21 @@ int main()
 
 /*!
  * \brief checkIfBackToStartAllowed verifies if the position and heading of an
- *			object is in line with the first point of a BTS trajectory
+ *			object is in line with the first point of a trajectory
  * \param transmitterID of objectToCheck
- * \param generatedTrajectory TrajectoryToCheck against
+ * \param generatedTrajectory trajectory to check against
  * \return True if allowed False if not
  */
-bool checkIfBackToStartAllowed(uint32_t transmitterID, Trajectory generatedTrajectory){
+bool checkIfBackToStartAllowed(uint32_t transmitterID, Trajectory trajectory){
 
 	ObjectMonitorType monitorData;
 	DataDictionaryGetMonitorData(transmitterID, &monitorData);
 
 	CartesianPosition firstPointInTraj;
-	firstPointInTraj.xCoord_m = generatedTrajectory.points.at(0).getXCoord();
-	firstPointInTraj.yCoord_m = generatedTrajectory.points.at(0).getYCoord();
-	firstPointInTraj.zCoord_m = generatedTrajectory.points.at(0).getZCoord();
-	firstPointInTraj.heading_rad = generatedTrajectory.points.at(0).getHeading();
+	firstPointInTraj.xCoord_m = trajectory.points.at(0).getXCoord();
+	firstPointInTraj.yCoord_m = trajectory.points.at(0).getYCoord();
+	firstPointInTraj.zCoord_m = trajectory.points.at(0).getZCoord();
+	firstPointInTraj.heading_rad = trajectory.points.at(0).getHeading();
 
 	firstPointInTraj.isHeadingValid = true;
 	firstPointInTraj.isPositionValid = true; //Should somehting be checked here?
