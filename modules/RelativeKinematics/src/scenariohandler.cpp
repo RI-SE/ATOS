@@ -17,12 +17,14 @@ ScenarioHandler::ScenarioHandler(
 		ControlMode controlMode) {
 	switch (controlMode) {
 	case RELATIVE_KINEMATICS:
-		this->state = static_cast<ObjectControlState*>(new RelativeKinematics::Idle());
+		LogMessage(LOG_LEVEL_INFO, "Relative control mode enabled");
+		this->state = static_cast<ObjectControlState*>(new RelativeKinematics::Idle);
 		DataDictionarySetOBCState(this->state->asNumber());
 		break;
 	case ABSOLUTE_KINEMATICS:
-		// TODO
-		LogMessage(LOG_LEVEL_ERROR, "Unimplemented control mode requested");
+		LogMessage(LOG_LEVEL_INFO, "Absolute control mode enabled");
+		this->state = static_cast<ObjectControlState*>(new AbsoluteKinematics::Idle);
+		DataDictionarySetOBCState(this->state->asNumber());
 		break;
 	}
 	this->controlMode = controlMode;

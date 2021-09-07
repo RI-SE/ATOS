@@ -397,3 +397,80 @@ class Done : public ObjectControl::Done {
 };
 
 }
+
+namespace AbsoluteKinematics {
+class Idle : public ObjectControl::Idle {
+	void initializeRequest(ScenarioHandler&) override;
+};
+
+class Initialized : public ObjectControl::Initialized {
+	void disconnectRequest(ScenarioHandler&) override;
+	void connectRequest(ScenarioHandler&) override;
+};
+
+class Connecting : public ObjectControl::Connecting {
+	void disconnectRequest(ScenarioHandler&) override;
+	void connectRequest(ScenarioHandler&) override;
+	void abortRequest(ScenarioHandler&) override;
+	void connectedToObject(ScenarioHandler&, uint32_t) override;
+	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
+	void connectedToLiveObject(ScenarioHandler&, uint32_t) override;
+	void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
+	void allObjectsConnected(ScenarioHandler&) override;
+	void objectArmed(ScenarioHandler&, uint32_t) override;
+	void objectAborting(ScenarioHandler&, uint32_t) override;
+};
+
+class Ready : public ObjectControl::Ready {
+	void armRequest(ScenarioHandler&) override;
+	void disconnectRequest(ScenarioHandler&) override;
+	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
+	void objectAborting(ScenarioHandler&, uint32_t) override;
+	void settingModificationRequested(ScenarioHandler&) override;
+};
+
+class Aborting : public ObjectControl::Aborting {
+	void allClearRequest(ScenarioHandler&) override;
+	void connectedToObject(ScenarioHandler&, uint32_t) override;
+	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
+	void connectedToLiveObject(ScenarioHandler&, uint32_t) override;
+	void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
+	void objectAborting(ScenarioHandler&, uint32_t) override;
+};
+
+class TestLive : public ObjectControl::TestLive {
+	void stopRequest(ScenarioHandler&) override;
+	void abortRequest(ScenarioHandler&) override;
+	void testCompleted(ScenarioHandler&) override;
+	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
+	void objectDisarmed(ScenarioHandler&, uint32_t) override;
+	void objectAborting(ScenarioHandler&, uint32_t) override;
+};
+
+
+class Disarming : public ObjectControl::Disarming {
+	void disconnectRequest(ScenarioHandler&) override;
+	void connectedToObject(ScenarioHandler&, uint32_t) override;
+	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
+	void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
+	void connectedToLiveObject(ScenarioHandler&, uint32_t) override;
+	void allObjectsDisarmed(ScenarioHandler&) override;
+	void objectDisarmed(ScenarioHandler&,uint32_t) override;
+	void objectArmed(ScenarioHandler&,uint32_t) override;
+	void objectAborting(ScenarioHandler&,uint32_t) override;
+};
+
+
+class Armed : public ObjectControl::Armed {
+	void startRequest(ScenarioHandler&) override;
+	void disarmRequest(ScenarioHandler&) override;
+	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
+	void objectArmed(ScenarioHandler&,uint32_t) override;
+	void objectDisarmed(ScenarioHandler&,uint32_t) override;
+	void objectAborting(ScenarioHandler&,uint32_t) override;
+};
+
+class Done : public ObjectControl::Done {
+	void postProcessingCompleted(ScenarioHandler&) override;
+};
+}

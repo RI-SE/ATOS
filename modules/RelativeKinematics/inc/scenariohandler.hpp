@@ -37,6 +37,24 @@ namespace RelativeKinematics {
 	class Done;
 }
 
+namespace AbsoluteKinematics {
+	class Idle;
+	class Initialized;
+	class Connecting;
+	class Ready;
+	class Aborting;
+	class Armed;
+	class TestLive;
+	class Disarming;
+	class Done;
+}
+
+/*!
+ * \brief The ScenarioHandler class is intended as an overarching device
+ *			used to control a scenario. No behaviour is implemented in it
+ *			(this is left up to the State to determine), only functionality
+ *			which can be called.
+ */
 class ScenarioHandler {
 	friend class ObjectControlState;
 	friend class ObjectControl::Idle;
@@ -57,6 +75,15 @@ class ScenarioHandler {
 	friend class RelativeKinematics::TestLive;
 	friend class RelativeKinematics::Disarming;
 	friend class RelativeKinematics::Done;
+	friend class AbsoluteKinematics::Idle;
+	friend class AbsoluteKinematics::Initialized;
+	friend class AbsoluteKinematics::Connecting;
+	friend class AbsoluteKinematics::Ready;
+	friend class AbsoluteKinematics::Aborting;
+	friend class AbsoluteKinematics::Armed;
+	friend class AbsoluteKinematics::TestLive;
+	friend class AbsoluteKinematics::Disarming;
+	friend class AbsoluteKinematics::Done;
 
 	friend class ObjectListener;
 public:

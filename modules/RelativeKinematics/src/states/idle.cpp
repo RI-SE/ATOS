@@ -18,10 +18,24 @@ void ObjectControl::Idle::initializeRequest(
 	handler.loadScenario();
 }
 
+/*! ******************************************************
+ * \section RelativeKinematics
+ *  ******************************************************
+ */
 void RelativeKinematics::Idle::initializeRequest(
 		ScenarioHandler& handler) {
 	ObjectControl::Idle::initializeRequest(handler);
 	auto anchorID = handler.getAnchorObjectID();
 	handler.transformScenarioRelativeTo(anchorID);
-	setState(handler, new RelativeKinematics::Initialized());
+	setState(handler, new RelativeKinematics::Initialized);
+}
+
+/*! ******************************************************
+ * \section AbsoluteKinematics
+ *  ******************************************************
+ */
+void AbsoluteKinematics::Idle::initializeRequest(
+		ScenarioHandler& handler) {
+	ObjectControl::Idle::initializeRequest(handler);
+	setState(handler, new AbsoluteKinematics::Initialized);
 }
