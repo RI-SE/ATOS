@@ -79,7 +79,6 @@ int main(int argc, char const* argv[]) {
 
     LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
     LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
-
     // Set up signal handlers
     if (signal(SIGINT, signalHandler) == SIG_ERR)
         util_error("Unable to initialize signal handler");
@@ -89,8 +88,8 @@ int main(int argc, char const* argv[]) {
         nanosleep(&sleepTimePeriod, &remTime);
     }
 
+    sd_notify(0, "READY=1");
     ReadWriteAccess_t retval = DataDictionaryInitObjectData();
-
     if (retval != READ_OK) {
         exit(EXIT_FAILURE);
     }
@@ -112,7 +111,6 @@ int main(int argc, char const* argv[]) {
         }
 
         transmitObjectData(visualizerTCPPort, visualizerUDPPort, areObjectsConnected);
-
         if (awaitMQCommand(visualizerTCPPort, command) == -1) {
             LogMessage(LOG_LEVEL_ERROR, "Exit command sent, Visualization module shutting down");
             if (command == COMM_EXIT) {
@@ -156,8 +154,8 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& areObject
     if (numberOfObjects <= 0) {
         return 0;
     }
-    transmitterIDs.resize(numberOfObjects);
 
+    transmitterIDs.resize(numberOfObjects);
     // get transmitterid and encode monr to iso.
     DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size());
     for (const auto& transmitterID : transmitterIDs) {
@@ -189,8 +187,9 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& areObject
                                             udpTransmitBuffer.size(), 0);
             if (retval < 0) {
                 LogMessage(LOG_LEVEL_ERROR, "Failed when encoding MONR message");
-                return 0;  //TODO: fix this, we can't break out of the while look becouse we failed with encoding monr, that will end up killing tcp and udp becouse a bad encode, should be handled in another way
+                return 0;  
             }
+
             udpTransmitBuffer.resize(static_cast<unsigned long>(retval));
             udpPort.receiveUDP(trashBuffer);
             bytesSent = udpPort.sendUDP(udpTransmitBuffer);
@@ -211,6 +210,7 @@ int awaitConnection(
     if (tcpPort.getConnectionOn() != 1) {
         LogMessage(LOG_LEVEL_INFO, "Awaiting TCP connection...");
     }
+
     while (tcpPort.getConnectionOn() != 1) {
         tcpPort.TCPHandlerAccept(5);
 
