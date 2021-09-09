@@ -76,6 +76,9 @@ void ScenarioHandler::handleExecuteActionCommand(
 		const std::chrono::system_clock::time_point &when) {
 	this->state->actionExecutionRequested(*this);
 	auto delayedExecutor = [&](){
+		using namespace std::chrono;
+		LogMessage(LOG_LEVEL_DEBUG, "Executing action %u in %d ms", actionID,
+				   duration_cast<milliseconds>(when - system_clock::now()).count());
 		std::this_thread::sleep_until(when);
 		LogMessage(LOG_LEVEL_INFO, "Executing action %u", actionID);
 		this->storedActions[actionID]();
