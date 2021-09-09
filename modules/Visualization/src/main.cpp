@@ -35,8 +35,8 @@ namespace fs = std::experimental::filesystem;
 #endif
 
 /*------------------------------------------------------------
-  -- Defines
-  ------------------------------------------------------------*/
+-- Defines
+------------------------------------------------------------*/
 #define MODULE_NAME "Visualization"
 #define RECV_MESSAGE_BUFFER_LENGTH 1024
 #define MONR_BUFFER_LENGTH 1024
@@ -45,17 +45,17 @@ namespace fs = std::experimental::filesystem;
 #define TRAJECTORY_TX_BUFFER_SIZE 2048
 
 /*------------------------------------------------------------
-	-- Static variables
-	------------------------------------------------------------*/
+-- Static variables
+------------------------------------------------------------*/
 static bool quit = false;
 
 /*------------------------------------------------------------
-  -- Function declarations
-  ------------------------------------------------------------*/
+-- Function declarations
+------------------------------------------------------------*/
 
 /*------------------------------------------------------------
-	-- Private functions
-	------------------------------------------------------------*/
+-- Private functions
+------------------------------------------------------------*/
 static void signalHandler(int signo);
 static int awaitConnection(TCPHandler& tcpPort, enum COMMAND& receivedCommand, bool& areObjectsConnected);
 static int awaitMQCommand(TCPHandler& tcpPort, enum COMMAND& receivedCommand);
@@ -64,8 +64,8 @@ static int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& ar
 static int transmitOSEM(TCPHandler& tcpPort);
 
 /*------------------------------------------------------------
-  -- Main task
-  ------------------------------------------------------------*/
+-- Main task
+------------------------------------------------------------*/
 
 int main(int argc, char const* argv[]) {
     COMMAND command = COMM_INV;
@@ -87,7 +87,6 @@ int main(int argc, char const* argv[]) {
     while (iCommInit() && !quit) {
         nanosleep(&sleepTimePeriod, &remTime);
     }
-
     sd_notify(0, "READY=1");
     ReadWriteAccess_t retval = DataDictionaryInitObjectData();
     if (retval != READ_OK) {
@@ -187,7 +186,7 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& areObject
                                             udpTransmitBuffer.size(), 0);
             if (retval < 0) {
                 LogMessage(LOG_LEVEL_ERROR, "Failed when encoding MONR message");
-                return 0;  
+                return 0;
             }
 
             udpTransmitBuffer.resize(static_cast<unsigned long>(retval));
@@ -250,9 +249,9 @@ int transmitTrajectories(TCPHandler& tcpPort) {
 
     for (const auto& entry : fs::directory_iterator(trajPath.data())) {
         /* TO DO:
-		should have a checker
-		here to see that all the objects are connected
-		before sending traj to visualizer*/
+should have a checker
+here to see that all the objects are connected
+before sending traj to visualizer*/
 
         std::ifstream file(entry.path());
         std::string line;
