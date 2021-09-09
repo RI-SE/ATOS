@@ -87,7 +87,6 @@ int main(int argc, char const* argv[]) {
     while (iCommInit() && !quit) {
         nanosleep(&sleepTimePeriod, &remTime);
     }
-
     sd_notify(0, "READY=1");
     ReadWriteAccess_t retval = DataDictionaryInitObjectData();
     if (retval != READ_OK) {
@@ -187,7 +186,7 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& areObject
                                             udpTransmitBuffer.size(), 0);
             if (retval < 0) {
                 LogMessage(LOG_LEVEL_ERROR, "Failed when encoding MONR message");
-                return 0;  
+                return 0;
             }
 
             udpTransmitBuffer.resize(static_cast<unsigned long>(retval));
