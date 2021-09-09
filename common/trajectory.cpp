@@ -213,6 +213,23 @@ Trajectory::TrajectoryPoint Trajectory::TrajectoryPoint::relativeTo(
 	return relative;
 }
 
+
+bool Trajectory::TrajectoryPoint::operator==(
+		const TrajectoryPoint &other) const {
+	return getMode() == other.getMode()
+			&& abs(getTime() - other.getTime()) < 1e-6
+			&& (getPosition() - other.getPosition()).norm() < 1e-6
+			&& (getVelocity() - other.getVelocity()).norm() < 1e-4
+			&& (getAcceleration() - other.getAcceleration()).norm() < 1e-2
+			&& abs(getHeading() - other.getHeading()) < 1e-4
+			&& abs(getCurvature() - other.getCurvature()) < 1e-4;
+}
+
+bool Trajectory::operator==(
+		const Trajectory &other) const {
+	return points == other.points && id == other.id;
+}
+
 Trajectory Trajectory::relativeTo(
 		const Trajectory &other) const {
 	using namespace Eigen;

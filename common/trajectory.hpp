@@ -94,6 +94,8 @@ public:
 
 		std::string toString() const;
 		std::string getFormatString() const;
+
+		bool operator==(const TrajectoryPoint& other) const;
     private:
         double time = 0;
 		Eigen::Vector3d position; //! x, y, z [m]
@@ -133,6 +135,8 @@ public:
 	void saveToFile(const std::string& fileName) const;
 	Trajectory reversed() const;
 	Trajectory rescaledToVelocity(const double vel_m_s) const;
+
+	bool operator==(const Trajectory& other) const;
 
 private:
 	static const std::regex fileHeaderPattern;
