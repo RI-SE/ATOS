@@ -19,7 +19,6 @@ int main() {
 	COMMAND command = COMM_INV;
 	char mqRecvData[MQ_MSG_SIZE];
 	const struct timespec sleepTimePeriod = {0,10000000};
-	const struct timespec abortWaitTime = {1,0};
 	struct timespec remTime;
 	const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 
@@ -30,7 +29,7 @@ int main() {
 		util_error("Failed to initialize module");
 	}
 
-	ScenarioHandler scenarioHandler(ScenarioHandler::RELATIVE_KINEMATICS);
+	ScenarioHandler scenarioHandler;
 	while (!quit) {
 		if (iCommRecv(&command, mqRecvData, MQ_MSG_SIZE, nullptr) < 0) {
 			util_error("Message bus receive error");

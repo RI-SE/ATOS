@@ -13,19 +13,9 @@
 #include <dirent.h>
 
 
-ScenarioHandler::ScenarioHandler(
-		ControlMode controlMode) {
-	switch (controlMode) {
-	case RELATIVE_KINEMATICS:
-		this->state = static_cast<ObjectControlState*>(new RelativeKinematics::Idle());
-		DataDictionarySetOBCState(this->state->asNumber());
-		break;
-	case ABSOLUTE_KINEMATICS:
-		// TODO
-		LogMessage(LOG_LEVEL_ERROR, "Unimplemented control mode requested");
-		break;
-	}
-	this->controlMode = controlMode;
+ScenarioHandler::ScenarioHandler() {
+	this->state = static_cast<ObjectControlState*>(new ObjectControl::Idle);
+	DataDictionarySetOBCState(this->state->asNumber());
 }
 
 ScenarioHandler::~ScenarioHandler() {

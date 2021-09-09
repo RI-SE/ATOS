@@ -26,7 +26,6 @@ namespace ObjectControl {
 }
 
 namespace RelativeKinematics {
-	class Idle;
 	class Initialized;
 	class Connecting;
 	class Ready;
@@ -37,6 +36,23 @@ namespace RelativeKinematics {
 	class Done;
 }
 
+namespace AbsoluteKinematics {
+	class Initialized;
+	class Connecting;
+	class Ready;
+	class Aborting;
+	class Armed;
+	class TestLive;
+	class Disarming;
+	class Done;
+}
+
+/*!
+ * \brief The ScenarioHandler class is intended as an overarching device
+ *			used to control a scenario. No behaviour is implemented in it
+ *			(this is left up to the State to determine), only functionality
+ *			which can be called.
+ */
 class ScenarioHandler {
 	friend class ObjectControlState;
 	friend class ObjectControl::Idle;
@@ -48,7 +64,6 @@ class ScenarioHandler {
 	friend class ObjectControl::TestLive;
 	friend class ObjectControl::Disarming;
 	friend class ObjectControl::Done;
-	friend class RelativeKinematics::Idle;
 	friend class RelativeKinematics::Initialized;
 	friend class RelativeKinematics::Connecting;
 	friend class RelativeKinematics::Ready;
@@ -57,6 +72,14 @@ class ScenarioHandler {
 	friend class RelativeKinematics::TestLive;
 	friend class RelativeKinematics::Disarming;
 	friend class RelativeKinematics::Done;
+	friend class AbsoluteKinematics::Initialized;
+	friend class AbsoluteKinematics::Connecting;
+	friend class AbsoluteKinematics::Ready;
+	friend class AbsoluteKinematics::Aborting;
+	friend class AbsoluteKinematics::Armed;
+	friend class AbsoluteKinematics::TestLive;
+	friend class AbsoluteKinematics::Disarming;
+	friend class AbsoluteKinematics::Done;
 
 	friend class ObjectListener;
 public:
@@ -78,7 +101,7 @@ public:
 		ActionTypeParameter_t command;
 	} TestScenarioCommandAction;
 
-	ScenarioHandler(ControlMode);
+	ScenarioHandler();
 	~ScenarioHandler();
 
 	//! Handlers for MQ bus messages
