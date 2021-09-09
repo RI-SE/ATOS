@@ -450,7 +450,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 						timersub(&monitorData.lastPositionUpdate, &monitorData.MonrData.timestamp,
 								 &monitorDataAge);
-						if (monitorDataAge.tv_sec || labs(monitorDataAge.tv_usec) > MAX_NETWORK_DELAY_USEC) {
+						if (/*monitorDataAge.tv_sec ||*/ labs(monitorDataAge.tv_usec) > MAX_NETWORK_DELAY_USEC) {
 							LogMessage(LOG_LEVEL_WARNING,
 									   "Network delay from object %u exceeds 100 ms (%ld ms delay)",
 									   object_transmitter_ids[iIndex], TimeGetAsUTCms(&monitorDataAge));

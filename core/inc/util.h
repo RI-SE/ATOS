@@ -92,7 +92,7 @@ extern "C"{
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.10"
+#define LOCAL_USER_CONTROL_IP "192.168.0.18"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -749,10 +749,10 @@ int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char*
 int UtilReadOriginConfiguration(GeoPosition* origin);
 
 int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
-int UtilPopulateTREODataStructFromMQ(char* rawTREO, size_t rawTREOsize, TREOData *treoData);
-int UtilPopulateEXACDataStructFromMQ(char* rawEXAC, size_t rawEXACsize, EXACData *exacData);
-int UtilPopulateTRCMDataStructFromMQ(char* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);
-int UtilPopulateACCMDataStructFromMQ(char* rawACCM, size_t rawACCMsize, ACCMData *accmData);
+I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
+I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData);
+I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);
+I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *accmData);
 
 struct timeval UtilGetPIDUptime(pid_t pID);
 double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
