@@ -105,6 +105,12 @@ add_test(relative_trajectory_point_test
 target_link_libraries(test_relativetrajectory
 	${MAESTRO_COMMON_TARGET}
 )
+add_executable(test_reversetrajectory tests/test_reversetrajectory.cpp)
+add_test(reverse_trajectory_test
+	${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_reversetrajectory)
+target_link_libraries(test_reversetrajectory
+	${MAESTRO_COMMON_TARGET}
+)
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${MAESTRO_UTIL_TARGET}\")")
 install(TARGETS ${MAESTRO_UTIL_TARGET}
