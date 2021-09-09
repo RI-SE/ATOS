@@ -1,11 +1,13 @@
 ﻿#pragma once
 
+#include "maestroTime.h"
 #include "state.hpp"
 #include "testobject.hpp"
 #include "objectlistener.hpp"
 #include <map>
 #include <future>
 #include <set>
+#include <chrono>
 
 // Forward declarations
 class ObjectControlState;
@@ -70,6 +72,12 @@ public:
 		bool isActive;
 	} DataInjectionMap;
 
+	typedef struct {
+		uint16_t actionID;
+		uint32_t objectID;
+		ActionTypeParameter_t command;
+	} TestScenarioCommandAction;
+
 	ScenarioHandler(ControlMode);
 	~ScenarioHandler();
 
@@ -86,8 +94,12 @@ public:
 	void handleStartCommand();
 	//! \brief Performs actions in response to an abort request.
 	void handleAbortCommand();
-
+	//! \brief Performs actions in response to an all clear request.
 	void handleAllClearCommand();
+	//! \brief Performs actions in response to an action configuration request.
+	void handleActionConfigurationCommand(const TestScenarioCommandAction&);
+	//! \brief Performs actions in response to an action execution request.
+	void handleExecuteActionCommand(const uint16_t& actionID, const std::chrono::system_clock::time_point& when);
 
 	//! Getters
 	//! \brief Get transmitter ID of anchor object participating in test.
@@ -102,6 +114,15 @@ public:
 		}
 		return retval;
 	}
+
+	[[deprecated("Avoid referring to objects by IP")]]
+	uint32_t getVehicleIDByIP(const in_addr_t& ip) {
+		auto res = std::find_if(objects.begin(), objects.end(), [&](const std::pair<const uint32_t,TestObject>& elem){
+			return elem.second.getObjectConfig().getIP() == ip;
+		});
+		return res->first;
+	}
+
 	//! \brief Get last known ISO state of test participants.
 	std::map<uint32_t,ObjectStateType> getObjectStates() const;
 
@@ -125,6 +146,7 @@ private:
 	ObjectControlState* state;					//!< State of module
 	std::map<uint32_t,TestObject> objects;		//!< List of configured test participants
 	std::map<uint32_t,ObjectListener> objectListeners;
+	std::map<uint16_t,std::function<void()>> storedActions;
 	std::mutex monitorTimeMutex;
 	static constexpr auto heartbeatPeriod = std::chrono::milliseconds(1000 / HEAB_FREQUENCY_HZ);
 	std::thread safetyThread;

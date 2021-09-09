@@ -66,6 +66,7 @@ void ObjectControl::Connecting::objectAborting(
 void ObjectControl::Connecting::allObjectsConnected(
 		ScenarioHandler& handler) {
 	handler.startListeners();
+	iCommSend(COMM_OBJECTS_CONNECTED, nullptr, 0);
 }
 
 void RelativeKinematics::Connecting::disconnectRequest(

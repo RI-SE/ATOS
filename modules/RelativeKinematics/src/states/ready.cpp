@@ -33,6 +33,10 @@ void ObjectControl::Ready::objectAborting(
 	// TODO
 }
 
+void ObjectControl::Ready::settingModificationRequested(
+		ScenarioHandler &handler) {
+	// TODO
+}
 
 void RelativeKinematics::Ready::armRequest(
 		ScenarioHandler& handler) {
@@ -58,4 +62,10 @@ void RelativeKinematics::Ready::objectAborting(
 		uint32_t id) {
 	ObjectControl::Ready::objectAborting(handler,id);
 	setState(handler, new RelativeKinematics::Aborting());
+}
+
+void RelativeKinematics::Ready::settingModificationRequested(
+		ScenarioHandler &handler) {
+	ObjectControl::Ready::settingModificationRequested(handler);
+	// TODO call scenariohandler to update OSEM if modified etc.
 }

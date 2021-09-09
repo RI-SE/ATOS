@@ -35,6 +35,8 @@ public:
 	virtual void objectArmed(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected object armed in state " + type(*this)); }
 	virtual void objectAborting(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected object aborting in state " + type(*this)); }
 	virtual void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion in state " + type(*this)); }
+	virtual void settingModificationRequested(ScenarioHandler&) { throw std::runtime_error("Unexpected setting modification in state " + type(*this)); }
+	virtual void actionExecutionRequested(ScenarioHandler&) { throw std::runtime_error("Unexpected action execution in state " + type(*this)); }
 
 	//! Enter/exit functionality - defaults to nothing
 	virtual void onEnter(ScenarioHandler&) {}
@@ -69,7 +71,9 @@ public:
 	void abortRequest(ScenarioHandler&) override {}
 	void allClearRequest(ScenarioHandler&) override {}
 
-	//! All spontaneous events unexpected
+	//! Allow modifications of the settings to occur
+	void settingModificationRequested(ScenarioHandler&) override {}
+	//! All other spontaneous events unexpected
 	//
 
 	OBCState_t asNumber() const override { return OBC_STATE_IDLE; }
@@ -92,6 +96,8 @@ public:
 	void abortRequest(ScenarioHandler&) override {}
 	void allClearRequest(ScenarioHandler&) override {}
 
+	//! Allow modifications of the settings to occur
+	void settingModificationRequested(ScenarioHandler&) override {}
 	//! Other spontaneous events unexpected
 	//
 
@@ -125,7 +131,7 @@ public:
 	void allClearRequest(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected
-	//
+	// TODO perhaps settings may be modified here?
 
 	// TODO integrate this state into the enum variable
 	OBCState_t asNumber() const override { return OBC_STATE_INITIALIZED; }
@@ -152,6 +158,8 @@ public:
 	void abortRequest(ScenarioHandler&) override {}
 	void allClearRequest(ScenarioHandler&) override {}
 
+	//! Allow modifications of the settings to occur
+	void settingModificationRequested(ScenarioHandler&) override;
 	//! Other spontaneous events unexpected
 	//
 
@@ -213,6 +221,7 @@ public:
 	void disarmRequest(ScenarioHandler&) override {}
 	void startRequest(ScenarioHandler&) override {}
 	void allClearRequest(ScenarioHandler&) override {}
+	void actionExecutionRequested(ScenarioHandler&) override {}
 
 	//! Other spontaneous events unexpected
 	//
@@ -341,6 +350,7 @@ class Ready : public ObjectControl::Ready {
 	void disconnectRequest(ScenarioHandler&) override;
 	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
 	void objectAborting(ScenarioHandler&, uint32_t) override;
+	void settingModificationRequested(ScenarioHandler&) override;
 };
 
 class Aborting : public ObjectControl::Aborting {
