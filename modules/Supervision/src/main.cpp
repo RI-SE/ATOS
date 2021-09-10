@@ -5,11 +5,14 @@
 #include <dirent.h>
 #include <fstream>
 #include <regex>
+#include <systemd/sd-daemon.h>
 
-#include "supervisionstate.h"
-#include "geofence.h"
-#include "trajectory.h"
+#include "supervisionstate.hpp"
+#include "geofence.hpp"
+#include "objectconfiguration.hpp"
 #include "logging.h"
+#include "datadictionary.h"
+#include "maestroTime.h"
 #include "util.h"
 
 #define MODULE_NAME "Supervision"
@@ -17,27 +20,20 @@
 
 #define ARM_MAX_DISTANCE_TO_START_M 1.0
 #define ARM_MAX_ANGLE_TO_START_DEG 10.0
+#define SUPERVISION_SHMEM_READ_RATE_HZ 100
 
-/*------------------------------------------------------------
-  -- Type definitions.
-  ------------------------------------------------------------*/
-typedef enum {
-    ALL_OBJECTS_NEAR_START,         //!< The queried object is near its starting position and all objects have been checked
-    SINGLE_OBJECT_NOT_NEAR_START,   //!< The queried object is not near its starting position
-    SINGLE_OBJECT_NEAR_START,       //!< The queried object is near its starting position but all objects have not yet been checked
-    OBJECT_HAS_NO_TRAJECTORY        //!< The queried object has no trajectory
-} PositionStatus;
 
 /*------------------------------------------------------------
   -- Private functions
   ------------------------------------------------------------*/
-static bool isViolatingGeofence(const MonitorDataType &monitorData, std::vector<Geofence> geofences);
+static bool isViolatingGeofence(const ObjectDataType &monitorData, const std::vector<Geofence>& geofences);
 static void loadGeofenceFiles(std::vector<Geofence> &geofences);
-static void loadTrajectoryFiles(std::vector<Trajectory> &trajectories);
-static Geofence parseGeofenceFile(const std::string geofenceFile);
-static PositionStatus updateNearStartingPositionStatus(const MonitorDataType &MONRData, std::vector<std::pair<Trajectory&, bool>> armVerified);
-
+static void loadObjectData(std::vector<ObjectConfiguration> &objectData);
+static int checkObjectsAgainstStartingPositions(const std::vector<ObjectConfiguration>& trajectories);
+static int checkObjectsAgainstGeofences(const std::vector<Geofence>& geofences, const std::vector<ObjectConfiguration> &trajetories);
 static void signalHandler(int signo);
+static void updateSupervisionCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz);
+
 
 /*------------------------------------------------------------
   -- Static variables
@@ -47,17 +43,16 @@ static bool quit = false;
 /*------------------------------------------------------------
   -- Main task
   ------------------------------------------------------------*/
-int main()
-{
+int main() {
     COMMAND command = COMM_INV;
-    char mqRecvData[MQ_MSG_SIZE], mqSendData[MQ_MSG_SIZE];
-    char ipString[INET_ADDRSTRLEN];
+	char mqRecvData[MBUS_MAX_DATALEN], mqSendData[MBUS_MAX_DATALEN];
     std::vector<Geofence> geofences;
-    std::vector<Trajectory> trajectories;
-    std::vector<std::pair<Trajectory&, bool>> armVerified;
+	std::vector<ObjectConfiguration> objectData;
     const struct timespec sleepTimePeriod = {0,10000000};
     struct timespec remTime;
     SupervisionState state;
+    struct timeval tvTime;
+    struct timeval nextSHMEMreadTime = { 0, 0 };
 
     LogInit(MODULE_NAME,LOG_LEVEL_DEBUG);
     LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u",getpid());
@@ -71,10 +66,53 @@ int main()
         nanosleep(&sleepTimePeriod,&remTime);
     }
 
+	// Notify service handler that startup was successful
+	sd_notify(0, "READY=1");
+
+    DataDictionaryInitObjectData();
+
     while(!quit) {
-        if (state.get() == SupervisionState::ERROR) {
+		switch (state.get()) {
+		case SupervisionState::ERROR:
             iCommSend(COMM_ABORT, nullptr, 0);
-        }
+			break;
+		case SupervisionState::RUNNING:
+			TimeSetToCurrentSystemTime(&tvTime);
+
+			if (timercmp(&tvTime, &nextSHMEMreadTime, >) && geofences.size() > 0) {
+				updateSupervisionCheckTimer(&nextSHMEMreadTime, SUPERVISION_SHMEM_READ_RATE_HZ);
+				if (checkObjectsAgainstGeofences(geofences, objectData) != 0) {
+					iCommSend(COMM_ABORT, nullptr, 0);
+					state.set(SupervisionState::READY);
+				}
+			}
+			break;
+		case SupervisionState::VERIFYING_ARM:
+			if (checkObjectsAgainstGeofences(geofences, objectData) != 0) {
+				LogMessage(LOG_LEVEL_INFO, "Found object violating geofence: sending DISARM");
+				iCommSend(COMM_DISARM, nullptr, 0);
+			}
+			if (checkObjectsAgainstStartingPositions(objectData) != 0) {
+				LogMessage(LOG_LEVEL_INFO, "All objects not near their starting positions: sending DISARM");
+				iCommSend(COMM_DISARM, nullptr, 0);
+			}
+			state.set(SupervisionState::READY);
+			break;
+		case SupervisionState::VERIFYING_INIT:
+			geofences.clear();
+			objectData.clear();
+			try {
+				loadGeofenceFiles(geofences);
+				loadObjectData(objectData);
+			}
+			catch (std::invalid_argument e) {
+				LogMessage(LOG_LEVEL_ERROR, "Unable to initialize due to file parsing error");
+				iCommSend(COMM_DISCONNECT, nullptr, 0);
+			}
+			state.set(SupervisionState::READY);
+			break;
+		}
+
 
         if (iCommRecv(&command, mqRecvData, sizeof (mqRecvData), nullptr) < 0) {
             util_error("Message bus receive error");
@@ -82,75 +120,23 @@ int main()
 
         switch (command) {
         case COMM_INIT:
-            state.set(SupervisionState::VERIFYING_INIT);
-            if (!geofences.empty())
-                geofences.clear();
-            if (!trajectories.empty()) {
-                trajectories.clear();
-                armVerified.clear();
-            }
-            try {
-                loadGeofenceFiles(geofences);
-                loadTrajectoryFiles(trajectories);
-                for (Trajectory &trajectory : trajectories) {
-                    armVerified.push_back({trajectory, false});
-                }
-            }
-            catch (std::invalid_argument e) {
-                LogMessage(LOG_LEVEL_ERROR, "Unable to initialize due to file parsing error");
-                iCommSend(COMM_DISCONNECT, nullptr, 0);
-            }
-            state.set(SupervisionState::READY);
+			try {
+				state.set(SupervisionState::VERIFYING_INIT);
+			}
+			catch (std::invalid_argument e) {
+				LogMessage(LOG_LEVEL_ERROR, "Attempted to verify INIT while previous command not yet verified");
+				iCommSend(COMM_DISCONNECT, nullptr, 0);
+			}
             break;
         case COMM_OSEM:
             // TODO: check so that OSEM is not null island?
 
 			break;
-        case COMM_MONR:
-			MonitorDataType monitorMessage;
-			UtilPopulateMonitorDataStruct(mqRecvData, sizeof (mqRecvData), &monitorMessage);
-
-			if (state.get() == SupervisionState::RUNNING && isViolatingGeofence(monitorMessage, geofences)) {
-                LogMessage(LOG_LEVEL_WARNING, "Object with IP %s is violating a geofence: sending ABORT",
-						   inet_ntop(AF_INET, &monitorMessage.ClientIP, ipString, sizeof (ipString)));
-                iCommSend(COMM_ABORT, nullptr, 0);
-                state.set(SupervisionState::READY);
-            }
-
-            if (state.get() == SupervisionState::VERIFYING_ARM) {
-				if (isViolatingGeofence(monitorMessage, geofences)) {
-                    LogMessage(LOG_LEVEL_INFO, "Arm not approved: object with IP address %s is violating a geofence",
-							   inet_ntop(AF_INET, &monitorMessage.ClientIP, ipString, sizeof (ipString)));
-                    iCommSend(COMM_DISARM, nullptr, 0);
-                    state.set(SupervisionState::READY);
-                    break;
-                }
-
-				switch (updateNearStartingPositionStatus(monitorMessage, armVerified)) {
-                case SINGLE_OBJECT_NOT_NEAR_START: // Object not near start: disarm
-                    LogMessage(LOG_LEVEL_INFO, "Arm not approved: sending disarm");
-                    iCommSend(COMM_DISARM, nullptr, 0);
-                    state.set(SupervisionState::READY);
-                    break;
-                case ALL_OBJECTS_NEAR_START:
-                    LogMessage(LOG_LEVEL_INFO, "Arm approved");
-                    state.set(SupervisionState::READY);
-                    break;
-                case SINGLE_OBJECT_NEAR_START: // Need to wait for all objects to report position
-                    break;
-                case OBJECT_HAS_NO_TRAJECTORY: // Object has no trajectory, no need to check it
-                    break;
-                }
-            }
-            break;
         case COMM_ARM:
-            try {
-                std::for_each(armVerified.begin(), armVerified.end(),
-                              [](std::pair<Trajectory&, bool> &pair) { pair.second = false; });
+			try {
                 state.set(SupervisionState::VERIFYING_ARM);
             }
-            catch (std::invalid_argument e)
-            {
+			catch (std::invalid_argument e) {
                 LogMessage(LOG_LEVEL_ERROR, "Attempted to verify ARM while previous command not yet verified");
                 iCommSend(COMM_DISARM, nullptr, 0);
             }
@@ -159,8 +145,7 @@ int main()
             try {
                 state.set(SupervisionState::RUNNING);
             }
-            catch (std::invalid_argument e)
-            {
+			catch (std::invalid_argument e) {
                 LogMessage(LOG_LEVEL_ERROR, "START command received while not ready: sending ABORT");
                 iCommSend(COMM_ABORT, nullptr, 0);
                 state.set(SupervisionState::READY);
@@ -177,11 +162,24 @@ int main()
             break;
         case COMM_OBC_STATE:
             break;
+        case COMM_GETSTATUS: {
+            unsigned long startTime = UtilGetPIDUptime(getpid()).tv_sec;
+            memset(mqSendData, 0, sizeof (mqSendData));
+            sprintf(mqSendData, "%s:%lu", MODULE_NAME, startTime);
+
+            if (iCommSend(COMM_GETSTATUS_OK, mqSendData, sizeof (mqSendData)) < 0) {
+                LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending GETSTATUS.");
+            }
+        }
+            break;
+        case COMM_GETSTATUS_OK:
+            break;
         default:
             LogMessage(LOG_LEVEL_INFO,"Received unhandled command %u",command);
         }
     }
 
+	LogMessage(LOG_LEVEL_INFO, MODULE_NAME " exiting");
     iCommClose();
     return 0;
 }
@@ -198,22 +196,22 @@ void signalHandler(int signo) {
 
 
 /*!
-* \brief Open a directory and look for trajectory files which are then parsed.
+* \brief Open a directory and look for object data which is then parsed.
 * \param Trajectories A vector of trajectories to be filled
 */
-void loadTrajectoryFiles(std::vector<Trajectory> &trajectories) {
+void loadObjectData(std::vector<ObjectConfiguration>& objectData) {
 
     struct dirent *ent;
     DIR *dir;
     unsigned int n = 0;
-    char trajectoryPathDir[MAX_FILE_PATH];
-    UtilGetTrajDirectoryPath(trajectoryPathDir, sizeof (trajectoryPathDir));
+	char objectPathDir[MAX_FILE_PATH];
+	UtilGetObjectDirectoryPath(objectPathDir, sizeof (objectPathDir));
     LogMessage(LOG_LEVEL_DEBUG, "Loading trajectories");
 
-    dir = opendir(trajectoryPathDir);
+	dir = opendir(objectPathDir);
     if (dir == nullptr) {
-        LogMessage(LOG_LEVEL_ERROR, "Cannot open trajectory directory");
-        throw std::invalid_argument("Cannot open trajectory directory");
+		LogMessage(LOG_LEVEL_ERROR, "Cannot open object directory");
+		throw std::invalid_argument("Cannot open object directory");
     }
 
     // Count the number of trajectory files in the directory
@@ -224,12 +222,12 @@ void loadTrajectoryFiles(std::vector<Trajectory> &trajectories) {
     }
     closedir(dir);
 
-    LogMessage(LOG_LEVEL_DEBUG, "Found %u trajectory files: proceeding to parse", n);
+	LogMessage(LOG_LEVEL_DEBUG, "Found %u object files: proceeding to parse", n);
 
-    dir = opendir(trajectoryPathDir);
+	dir = opendir(objectPathDir);
     if (dir == nullptr) {
-        LogMessage(LOG_LEVEL_ERROR, "Cannot open trajectory directory");
-        throw std::invalid_argument("Cannot open trajectory directory");
+		LogMessage(LOG_LEVEL_ERROR, "Cannot open object directory");
+		throw std::invalid_argument("Cannot open object directory");
     }
 
     while ((ent = readdir(dir)) != nullptr) {
@@ -237,26 +235,25 @@ void loadTrajectoryFiles(std::vector<Trajectory> &trajectories) {
             LogMessage(LOG_LEVEL_DEBUG, "Ignored <%s>", ent->d_name);
         }
         else {
-            try {
-                Trajectory trajectory;
-                trajectory.initializeFromFile(ent->d_name);
-                trajectories.push_back(trajectory); // This does not copy IP value correctly
-                LogMessage(LOG_LEVEL_DEBUG, "Loaded trajectory with %u points", trajectories.back().points.size());
+			try {
+				ObjectConfiguration o;
+				o.initializeFromFile(ent->d_name);
+				objectData.push_back(o);
             } catch (std::invalid_argument e) {
                 closedir(dir);
-                trajectories.clear();
-                LogMessage(LOG_LEVEL_ERROR, "Error parsing file <%s>", ent->d_name);
+				objectData.clear();
+				LogMessage(LOG_LEVEL_ERROR, "Error parsing file <%s>: %s", ent->d_name, e.what());
                 throw;
             } catch (std::ifstream::failure e) {
                 closedir(dir);
-                trajectories.clear();
-                LogMessage(LOG_LEVEL_ERROR, "Error opening file <%s>", ent->d_name);
+				objectData.clear();
+				LogMessage(LOG_LEVEL_ERROR, e.what());
                 throw;
             }
         }
     }
     closedir(dir);
-    LogMessage(LOG_LEVEL_INFO, "Loaded %d trajectories", trajectories.size());
+	LogMessage(LOG_LEVEL_INFO, "Loaded %d trajectories", objectData.size());
     return;
 }
 
@@ -308,17 +305,19 @@ void loadGeofenceFiles(std::vector<Geofence> &geofences) {
         }
         else {
             try {
-                Geofence geofence = parseGeofenceFile(pDirent->d_name);
+				Geofence geofence;
+				geofence.initializeFromFile(pDirent->d_name);
                 geofences.push_back(geofence);
             } catch (std::invalid_argument e) {
                 closedir(pDir);
                 geofences.clear();
-                LogMessage(LOG_LEVEL_ERROR, "Error parsing file <%s>", pDirent->d_name);
+				LogMessage(LOG_LEVEL_ERROR, "Error parsing file <%s>: %s",
+						   pDirent->d_name, e.what());
                 throw;
             } catch (std::ifstream::failure e) {
                 closedir(pDir);
                 geofences.clear();
-                LogMessage(LOG_LEVEL_ERROR, "Error opening file <%s>", pDirent->d_name);
+				LogMessage(LOG_LEVEL_ERROR, e.what());
                 throw;
             }
 
@@ -332,209 +331,178 @@ void loadGeofenceFiles(std::vector<Geofence> &geofences) {
 }
 
 /*!
-* \brief parseGeofenceFile Parse a geofence file into a Geofence object
-* \param geofenceFile A string containing a .geofence filename.
-* \return A Geofence object representing the data in the input file
-*/
-Geofence parseGeofenceFile(const std::string geofenceFile) {
-
-    using namespace std;
-    Geofence geofence;
-    char geofenceDirPath[MAX_FILE_PATH];
-    ifstream file;
-    string errMsg;
-
-    string floatPattern("[-+]?[0-9]*\\.?[0-9]+");
-    string intPattern("[0-9]+");
-    regex headerPattern("GEOFENCE;([a-zA-Z0-9]+);(" + intPattern
-                        +");(permitted|forbidden);(" + floatPattern + ");(" + floatPattern + ");");
-    regex linePattern("LINE;(" + floatPattern + ");(" + floatPattern + ");ENDLINE;");
-    regex footerPattern("ENDGEOFENCE;");
-    smatch match;
-
-    bool isHeaderParsedSuccessfully = false;
-    unsigned long nPoints = 0;
-
-    UtilGetGeofenceDirectoryPath(geofenceDirPath, sizeof (geofenceDirPath));
-    string geofenceFilePath(geofenceDirPath);
-    geofenceFilePath += geofenceFile;
-
-    file.open(geofenceFilePath);
-    if (file.is_open()) {
-        string line;
-        errMsg = "Encountered unexpected end of file while reading file <" + geofenceFilePath + ">";
-        for (unsigned long lineCount = 0; getline(file, line); lineCount++) {
-            if (lineCount == 0) {
-                if (regex_search(line, match, headerPattern)) {
-                    geofence.name = match[1];
-                    nPoints = stoul(match[2]);
-                    geofence.polygonPoints.reserve(nPoints);
-                    geofence.isPermitted = match[3].compare("permitted") == 0;
-                    geofence.minHeight = stod(match[4]);
-                    geofence.minHeight = stod(match[5]);
-                    isHeaderParsedSuccessfully = true;
-                }
-                else {
-                    errMsg = "The header of geofence file <" + geofenceFilePath + "> is badly formatted";
-                    break;
-                }
-            }
-            else if (lineCount > 0 && !isHeaderParsedSuccessfully) {
-                errMsg = "Attempt to parse geofence file <" + geofenceFilePath + "> before encountering header";
-                break;
-            }
-            else if (lineCount > nPoints + 1) {
-                errMsg = "Geofence line count of file <" + geofenceFilePath
-                        + "> does not match specified line count";
-                break;
-            }
-            else if (lineCount == nPoints + 1) {
-                if (regex_search(line, match, footerPattern)) {
-                    file.close();
-                    LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", geofenceFilePath.c_str());
-                    return geofence;
-                }
-                else {
-                    errMsg = "Final line of geofence file <" + geofenceFilePath + "> badly formatted";
-                    break;
-                }
-            }
-            else {
-                if (regex_search(line, match, linePattern)) {
-                    CartesianPosition pos;
-                    pos.xCoord_m = stod(match[1]);
-                    pos.yCoord_m = stod(match[2]);
-                    pos.zCoord_m = (geofence.maxHeight + geofence.minHeight) / 2.0;
-					pos.isPositionValid = true;
-					pos.heading_rad = 0;
-					pos.isHeadingValid = false;
-
-                    LogMessage(LOG_LEVEL_DEBUG, "Point: (%.3f, %.3f, %.3f)",
-                               pos.xCoord_m,
-                               pos.yCoord_m,
-                               pos.zCoord_m);
-                    geofence.polygonPoints.push_back(pos);
-                }
-                else {
-                    errMsg = "Line " + to_string(lineCount) + " of geofence file <"
-                            + geofenceFilePath + "> badly formatted";
-                    break;
-                }
-            }
-
-        }
-        file.close();
-        LogMessage(LOG_LEVEL_DEBUG, "Closed <%s>", geofenceFilePath.c_str());
-        LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
-        throw invalid_argument(errMsg);
-    }
-    else {
-        errMsg = "Unable to open file <" + geofenceFilePath + ">";
-        LogMessage(LOG_LEVEL_ERROR,errMsg.c_str());
-        throw ifstream::failure(errMsg);
-    }
-}
-
-
-/*!
  * \brief SupervisionCheckGeofences Checks all geofences to verify that the point represented by the MONR data lies within all permitted geofences and outside all forbidden geofences
  * \param monitorData monitor data struct containing the object coordinate data
  * \param geofences Vector containing all geofences
  * \return True if MONR coordinate violates a geofence, false if not.
  */
-bool isViolatingGeofence(const MonitorDataType &monitorData, std::vector<Geofence> geofences) {
+bool isViolatingGeofence(
+		const ObjectDataType &monitorData,
+		const std::vector<Geofence> &geofences) {
 
-	const CartesianPosition monitorPoint = monitorData.data.position;
-    char isInPolygon = 0;
-    int retval = false;
+	const CartesianPosition monitorPoint = monitorData.MonrData.position;
+	if (!monitorData.MonrData.position.isPositionValid) {
+		LogMessage(LOG_LEVEL_ERROR,
+				   "Cannot check object with ID %u against geofences due to invalid position data",
+				   monitorData.ClientID);
+		return true;
+	}
+	bool anyViolated = false;
 
-    for (Geofence geofence : geofences)
-    {
-		isInPolygon = UtilIsPointInPolygon(monitorPoint, geofence.polygonPoints.data(),
-                                     static_cast<unsigned int>(geofence.polygonPoints.size()));
-        if (isInPolygon == -1) {
-            LogMessage(LOG_LEVEL_WARNING, "No points in polygon");
-            throw std::invalid_argument("No points in polygon");
-        }
+	for (const Geofence &geofence : geofences) {
+		bool isViolated = geofence.forbids(monitorPoint);
+		if (isViolated && geofence.isPermitted) {
+			LogMessage(LOG_LEVEL_WARNING,
+					   "Object with ID %u (%.2f, %.2f, %.2f) is outside a permitted area %s",
+					   monitorData.ClientID, monitorData.MonrData.position.xCoord_m,
+					   monitorData.MonrData.position.yCoord_m, monitorData.MonrData.position.zCoord_m,
+					   geofence.name.c_str());
+		}
+		else if (isViolated && !geofence.isPermitted) {
+			LogMessage(LOG_LEVEL_WARNING,
+					   "Object with ID %u is inside a forbidden area %s",
+					   monitorData.ClientID, geofence.name.c_str());
+		}
 
-        if ((geofence.isPermitted && isInPolygon)
-                || (!geofence.isPermitted && !isInPolygon)) {
-            // Inside the polygon if it is permitted, alt. outside the polygon if it is forbidden: all is fine
-        }
-        else {
-            if (geofence.isPermitted)
-                LogMessage(LOG_LEVEL_WARNING,
-						   "Object with ID %u is outside a permitted area %s",
-						   monitorData.ClientID, geofence.name.c_str());
-            else
-                LogMessage(LOG_LEVEL_WARNING,
-						   "Object with ID %u is inside a forbidden area %s",
-						   monitorData.ClientID, geofence.name.c_str());
-            retval = true;
-        }
+		anyViolated = anyViolated || isViolated;
     }
 
-    return retval;
+	return anyViolated;
+}
+
+
+int checkObjectsAgainstStartingPositions(
+		const std::vector<ObjectConfiguration>& objectConfigurations) {
+
+	bool allAtStart = true;
+
+	for (const auto &objectConfiguration : objectConfigurations) {
+		ObjectDataType objectData;
+
+		if (DataDictionaryGetObjectEnableStatusById(objectConfiguration.id, &objectData.Enabled) != READ_OK
+				|| (objectData.Enabled != OBJECT_DISABLED
+				&& (DataDictionaryGetMonitorData(objectConfiguration.id, &objectData.MonrData) != READ_OK
+					|| DataDictionaryGetMonitorDataReceiveTime(objectConfiguration.id, &objectData.lastPositionUpdate) != READ_OK))) {
+			LogMessage(LOG_LEVEL_INFO, "Unable to read from data dictionary for object with ID %u",
+					   objectConfiguration.id);
+			allAtStart = false;
+			continue;
+		}
+
+		if (objectConfiguration.trajectory.points.empty()
+				|| objectData.Enabled == OBJECT_DISABLED) {
+			continue;
+		}
+
+		CartesianPosition firstTrajectoryPoint = objectConfiguration.trajectory.points.front().getISOPosition();
+		bool isPositionNearTarget = UtilIsPositionNearTarget(objectData.MonrData.position, firstTrajectoryPoint, ARM_MAX_DISTANCE_TO_START_M);
+		bool isAngleNearTarget = UtilIsAngleNearTarget(objectData.MonrData.position, firstTrajectoryPoint, ARM_MAX_ANGLE_TO_START_DEG * M_PI / 180.0);
+		if (isPositionNearTarget && isAngleNearTarget) {
+				LogMessage(LOG_LEVEL_INFO, "Object with ID %u and position (%.2f, %.2f, %.2f) detected within %.2f m "
+										   "and %.2f degrees of the first point (%.2f, %.2f, %.2f) in trajectory %s",
+						   objectConfiguration.id, objectData.MonrData.position.xCoord_m,
+						   objectData.MonrData.position.yCoord_m, objectData.MonrData.position.zCoord_m,
+						   ARM_MAX_DISTANCE_TO_START_M, ARM_MAX_ANGLE_TO_START_DEG, firstTrajectoryPoint.xCoord_m,
+						   firstTrajectoryPoint.yCoord_m, firstTrajectoryPoint.zCoord_m,
+						   objectConfiguration.trajectory.name.c_str());
+		}
+		else {
+			if (!isPositionNearTarget) {
+				LogMessage(LOG_LEVEL_INFO, "Object with ID %u and position (%.2f, %.2f, %.2f) farther than %.2f m "
+										   "from first point (%.2f, %.2f, %.2f) in trajectory %s",
+							objectConfiguration.id, objectData.MonrData.position.xCoord_m,
+							objectData.MonrData.position.yCoord_m, objectData.MonrData.position.zCoord_m,
+							ARM_MAX_DISTANCE_TO_START_M, firstTrajectoryPoint.xCoord_m,
+							firstTrajectoryPoint.yCoord_m, firstTrajectoryPoint.zCoord_m,
+							objectConfiguration.trajectory.name.c_str());
+			}
+			else {
+				LogMessage(LOG_LEVEL_INFO, "Object with ID %u (heading: %.2f degrees) not facing direction specified"
+										   " by first point (heading: %.2f degrees) in trajectory %s (tolerance: %.2f degrees)",
+						   objectConfiguration.id, objectData.MonrData.position.heading_rad * 180.0 / M_PI,
+						   firstTrajectoryPoint.heading_rad * 180.0 / M_PI, objectConfiguration.trajectory.name.c_str(),
+						   ARM_MAX_ANGLE_TO_START_DEG);
+			}
+			allAtStart = false;
+		}
+	}
+	return allAtStart ? 0 : -1;
+}
+
+
+int checkObjectsAgainstGeofences(
+		const std::vector<Geofence> &geofences,
+		const std::vector<ObjectConfiguration>& objectData) {
+
+    std::vector<uint32_t> transmitterIDs;
+    uint32_t numberOfObjects;
+    ObjectDataType monitorData;
+
+    int retval = 0;
+
+
+    // Get number of objects present in shared memory
+    if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
+        LogMessage(LOG_LEVEL_ERROR,
+				   "Data dictionary number of objects read error - cannot check against geofences");
+        return -1;
+    }
+	if(numberOfObjects == 0 && objectData.size() != 0) {
+		LogMessage(LOG_LEVEL_ERROR, "No objects present in shared memory while expecting %u", objectData.size());
+		return -1;
+    }
+
+    transmitterIDs.resize(numberOfObjects, 0);
+
+    // Get transmitter IDs for all connected objects
+	if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size()) != READ_OK) {
+        LogMessage(LOG_LEVEL_ERROR,
+				   "Data dictionary transmitter ID read error - unable to check against geofences");
+        return -1;
+    }
+
+
+    for (const uint32_t &transmitterID : transmitterIDs) {
+		monitorData.ClientID = transmitterID;
+		if (DataDictionaryGetMonitorData(transmitterID, &monitorData.MonrData) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Data dictionary monitor data read error for transmitter ID %u",
+					   transmitterID);
+			retval = -1;
+		}
+		else if (isViolatingGeofence(monitorData, geofences)) {
+			LogMessage(LOG_LEVEL_INFO, "Object with ID %u is violating a geofence",
+					   transmitterID);
+			retval = -1;
+		}
+	}
+	return retval;
 }
 
 /*!
- * \brief updateNearStartingPositionStatus Loops through the armVerified vector for a trajectory that matches the input monitor data packet,
- *  and sets the armVerified boolean to true if the object is near its starting position. It also performs a check on the entire vector
- *  to determine whether all objects have been verified near starting position.
- * \param monitorData Monitor data struct containing the object coordinate data
- * \param armVerified Vector containing trajectories paired with a boolean showing whether or not the associated object has been previously verified
-    to be near its starting position
- * \return A value according to ::PositionStatus
+ * \brief updateSupervisionCheckTimer Adds a time interval onto the specified time struct in accordance
+ *			with the rate parameter
+ * \param currentSHMEMReadTime Struct containing the timewhen at when SHMEM was last accessed. After this
+ *			function has been executed, the struct contains the time at which the shared memory will be accessed is to be
+ *			accessed next time.
+ * \param SHMEMReadRate_Hz Rate at which SHMEM is read - if this parameter is 0 the value
+ *			is clamped to 1 Hz
  */
-PositionStatus updateNearStartingPositionStatus(const MonitorDataType &monitorData, std::vector<std::pair<Trajectory&, bool>> armVerified) {
+void updateSupervisionCheckTimer(struct timeval *currentSHMEMReadTime, uint8_t SHMEMReadRate_Hz) {
+    struct timeval SHMEMTimeInterval, timeDiff, currentTime;
 
-    char ipString[INET_ADDRSTRLEN];
-    for (std::pair<Trajectory&, bool> &element : armVerified) {
-		if (element.first.ip == monitorData.ClientIP) {
-            if (element.first.points.empty()) {
-                element.second = true;
-                return OBJECT_HAS_NO_TRAJECTORY;
-            }
+    SHMEMReadRate_Hz = SHMEMReadRate_Hz == 0 ? 1 : SHMEMReadRate_Hz;	// Minimum frequency 1 Hz
+    SHMEMTimeInterval.tv_sec = (long)(1.0 / SHMEMReadRate_Hz);
+    SHMEMTimeInterval.tv_usec = (long)((1.0 / SHMEMReadRate_Hz - SHMEMTimeInterval.tv_sec) * 1000000.0);
 
-            CartesianPosition trajectoryPoint = element.first.points.front().getCartesianPosition();
-			CartesianPosition objectPosition = monitorData.data.position;
-            if (UtilIsPositionNearTarget(objectPosition, trajectoryPoint, ARM_MAX_DISTANCE_TO_START_M)
-					&& UtilIsAngleNearTarget(objectPosition, trajectoryPoint, ARM_MAX_ANGLE_TO_START_DEG * M_PI / 180.0)) {
-                if (element.second == false) {
-                    LogMessage(LOG_LEVEL_INFO, "Object with IP %s and position (%.2f, %.2f, %.2f) detected within %.2f m and %.2f degrees of the first point (%.2f, %.2f, %.2f) in trajectory %s",
-							   inet_ntop(AF_INET, &monitorData.ClientIP, ipString, sizeof (ipString)),
-                               objectPosition.xCoord_m, objectPosition.yCoord_m, objectPosition.zCoord_m,
-                               ARM_MAX_DISTANCE_TO_START_M, ARM_MAX_ANGLE_TO_START_DEG,
-                               trajectoryPoint.xCoord_m, trajectoryPoint.yCoord_m, trajectoryPoint.zCoord_m,
-                               element.first.name.c_str());
-                }
-                element.second = true;
-                // Object was near starting position, now check if all objects have passed
-                if (std::any_of(armVerified.begin(), armVerified.end(),
-                                [](const std::pair<Trajectory&, bool> &pair) { return pair.second == false; })) {
-                    return SINGLE_OBJECT_NEAR_START;
-                }
-                else {
-                    return ALL_OBJECTS_NEAR_START;
-                }
-            }
-            else {
-                if (!UtilIsPositionNearTarget(objectPosition, trajectoryPoint, ARM_MAX_DISTANCE_TO_START_M)) {
-                    LogMessage(LOG_LEVEL_INFO, "Object with IP %s and position (%.2f, %.2f, %.2f) farther than %.2f m from first point (%.2f, %.2f, %.2f) in trajectory %s",
-								inet_ntop(AF_INET, &monitorData.ClientIP, ipString, sizeof (ipString)),
-                                objectPosition.xCoord_m, objectPosition.yCoord_m, objectPosition.zCoord_m,
-                                ARM_MAX_DISTANCE_TO_START_M, trajectoryPoint.xCoord_m, trajectoryPoint.yCoord_m, trajectoryPoint.zCoord_m,
-                                element.first.points.front().getZCoord(), element.first.name.c_str());
-                }
-                else {
-                    LogMessage(LOG_LEVEL_INFO, "Object with IP %s (heading: %.2f degrees) not facing direction specified by first point (heading: %.2f degrees) in trajectory %s (tolerance: %.2f degrees)",
-								inet_ntop(AF_INET, &monitorData.ClientIP, ipString, sizeof (ipString)), objectPosition.heading_rad * 180.0 / M_PI,
-							   trajectoryPoint.heading_rad * 180.0 / M_PI, element.first.name.c_str(), ARM_MAX_ANGLE_TO_START_DEG);
-                }
-                element.second = false;
-                return SINGLE_OBJECT_NOT_NEAR_START;
-            }
-        }
+    // If there is a large difference between the current time and the time at which SHEM was sent, update based
+    // on current time instead of last send time to not spam messages until caught up
+    TimeSetToCurrentSystemTime(&currentTime);
+    timersub(&currentTime, currentSHMEMReadTime, &timeDiff);
+    if (timercmp(&timeDiff, &SHMEMTimeInterval, <)) {
+        timeradd(currentSHMEMReadTime, &SHMEMTimeInterval, currentSHMEMReadTime);
     }
-    return OBJECT_HAS_NO_TRAJECTORY;
+    else {
+        timeradd(&currentTime, &SHMEMTimeInterval, currentSHMEMReadTime);
+    }
 }

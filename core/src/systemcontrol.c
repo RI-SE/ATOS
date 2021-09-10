@@ -7,7 +7,6 @@
   -- Purpose     :
   -- Reference   :
   ------------------------------------------------------------------------------*/
-
 /*------------------------------------------------------------
   -- Include files.
   ------------------------------------------------------------*/
@@ -23,7 +22,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
-
+#include <sys/sysinfo.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -32,13 +31,10 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <ifaddrs.h>
-
 #include "systemcontrol.h"
 #include "maestroTime.h"
 #include "timecontrol.h"
 #include "datadictionary.h"
-
-
 /*------------------------------------------------------------
   -- Defines
   ------------------------------------------------------------*/
@@ -63,6 +59,9 @@ typedef struct {
 #define SYSTEM_CONTROL_TASK_PERIOD_MS 1
 #define SYSTEM_CONTROL_RVSS_TIME_MS 10
 
+#define SYSTEM_CONTROL_GETSTATUS_TIME_MS 5000
+#define SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS 2000
+#define SYSTEM_CONTROL_NO_OF_MODULES_IN_USE 2	//TODO Create a file containing a list of which modules should be used. Check with this list to see if each module has responded.
 
 #define SYSTEM_CONTROL_CONTROL_PORT   54241	// Default port, control channel
 #define SYSTEM_CONTROL_PROCESS_PORT   54242	// Default port, process channel
@@ -112,7 +111,7 @@ typedef struct {
 #define KEEP_FILE 0
 
 #define RVSS_TIME_CHANNEL 1
-#define RVSS_MONR_CHANNEL 2
+#define RVSS_MONITOR_CHANNEL 2
 #define RVSS_MAESTRO_CHANNEL 4
 #define RVSS_ASP_CHANNEL 8
 
@@ -129,8 +128,11 @@ typedef struct {
 #define MAESTRO_TRAJ_FILE_TYPE        2
 #define MAESTRO_CONF_FILE_TYPE        3
 #define MAESTRO_GEOFENCE_FILE_TYPE    4
+#define MAESTRO_OBJECT_FILE_TYPE	  5
 #define MSCP_RESPONSE_DATALENGTH_BYTES 4
 #define MSCP_RESPONSE_STATUS_CODE_BYTES 2
+
+#define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
 
 typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
@@ -138,9 +140,11 @@ typedef enum {
 	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
 	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
 	DeleteFileDirectory_1,
-	ClearTrajectories_0, ClearGeofences_0, RemoteControl_1, RemoteControlManoeuvre_2,
+	ClearTrajectories_0, ClearGeofences_0, ClearObjects_0, RemoteControl_1, RemoteControlManoeuvre_2,
+	SetObjectEnableStatus_2,
+	GetObjectEnableStatus_1,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
-	start_ext_trigg_1, nocommand
+	start_ext_trigg_1, ClearAllScenario_0 , DownloadDirectoryContent_1, DownloadTrajFiles_0, nocommand
 } SystemControlCommand_t;
 
 static const char *SystemControlCommandsArr[] = {
@@ -150,10 +154,12 @@ static const char *SystemControlCommandsArr[] = {
 	"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
 	"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1",
 	"DeleteFileDirectory_1",
-	"ClearTrajectories_0", "ClearGeofences_0", "RemoteControl_1", "RemoteControlManoeuvre_2",
-	"CreateDirectory_1", "GetTestOrigin_0", "replay_1",
+	"ClearTrajectories_0", "ClearGeofences_0", "ClearObjects_0", "RemoteControl_1",
+	"RemoteControlManoeuvre_2",
+	"SetObjectEnableStatus_2",
+	"GetObjectEnableStatus_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 	"control_0",
-	"Exit_0", "start_ext_trigg_1"
+	"Exit_0", "start_ext_trigg_1", "ClearAllScenario_0", "DownloadDirectoryContent_1", "DownloadTrajFiles_0"
 };
 
 const char *SystemControlStatesArr[] =
@@ -195,11 +201,9 @@ void SystemControlSendMONR(C8 * LogString, I32 * Sockfd, U8 Debug);
 static void SystemControlCreateProcessChannel(const C8 * name, const U32 port, I32 * sockfd,
 											  struct sockaddr_in *addr);
 //I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
-I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 debug);
+static I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 debug);
 I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * ReturnValue, U32 BufferLength,
 									U8 Debug);
-I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
-I32 SystemControlWriteServerParameter(C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug);
 I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
 I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
@@ -211,6 +215,7 @@ static C8 SystemControlDeleteGeofence(const C8 * geofenceName, const size_t name
 static C8 SystemControlDeleteGenericFile(const C8 * filePath, const size_t nameLen);
 static C8 SystemControlClearTrajectories(void);
 static C8 SystemControlClearGeofences(void);
+static C8 SystemControlClearObjects(void);
 I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug);
 I32 SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile);
@@ -222,11 +227,16 @@ I32 SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLength
 I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
 												U8 SysCtrlState, U8 Debug);
 I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
-I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
-											 U8 Debug);
+static int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr);
+static void SystemControlUpdateRVSSSendTime(struct timeval *currentRVSSSendTime, uint8_t RVSSRate_Hz);
+
+I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8 debug);
+
 static ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
 static C8 SystemControlVerifyHostAddress(char *ip);
 static void signalHandler(int signo);
+
+void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize);
 
 /*------------------------------------------------------------
 -- Private variables
@@ -247,14 +257,14 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	struct sockaddr_in RVSSChannelAddr;
 	struct in_addr ip_addr;
 	I32 RVSSChannelSocket;
-	MonitorDataType monrData;
+	struct timeval nextRVSSSendTime = { 0, 0 };
 
-	ServerState_t server_state = SERVER_STATE_UNDEFINED;
+	ServerState_t SystemControlState = SERVER_STATE_UNDEFINED;
 	OBCState_t objectControlState = OBC_STATE_UNDEFINED;
 	SystemControlCommand_t SystemControlCommand = Idle_0;
 	SystemControlCommand_t PreviousSystemControlCommand = Idle_0;
 	uint16_t responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-	int CommandArgCount = 0, /*CurrentCommandArgCounter=0, */ CurrentInputArgCount = 0;
+	int CommandArgCount = 0, CurrentInputArgCount = 0;
 	C8 pcBuffer[IPC_BUFFER_SIZE];
 	char inchr;
 	struct timeval tvTime;
@@ -272,9 +282,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
 	char ObjectIP[SMALL_BUFFER_SIZE_16];
 	char ObjectPort[SMALL_BUFFER_SIZE_6];
-	char TriggId[SMALL_BUFFER_SIZE_6];
-	char TriggAction[SMALL_BUFFER_SIZE_6];
-	char TriggDelay[SMALL_BUFFER_SIZE_20];
 	U64 uiTime;
 	U32 DelayedStartU32;
 	U8 ModeU8 = 0;
@@ -298,21 +305,16 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	C8 ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
 	C8 TextBuffer20[SMALL_BUFFER_SIZE_20];
 	C8 UserControlIPC8[SMALL_BUFFER_SIZE_20];
-	struct timeval now;
 	U16 MilliU16 = 0, NowU16 = 0;
 	U64 GPSmsU64 = 0;
 	C8 ParameterListC8[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
 	U32 LengthU32 = 0;
 	C8 BinBuffer[SMALL_BUFFER_SIZE_1024];
-
 	C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
 
 	HTTPHeaderContent HTTPHeader;
 
-	//C8 SIDSData[128][10000][8];
-
 	C8 RVSSData[SYSTEM_CONTROL_RVSS_DATA_BUFFER];
-	U16 RVSSSendCounterU16 = 0;
 	U32 RVSSConfigU32 = DEFAULT_RVSS_CONF;
 	U32 RVSSMessageLengthU32;
 	U16 PCDMessageCodeU16;
@@ -334,12 +336,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	LogMessage(LOG_LEVEL_INFO, "RVSSConfigU32 = %d", RVSSConfigU32);
 
 	U8 RVSSRateU8 = DEFAULT_RVSS_RATE;
-	dbl RVSSRateDbl = DEFAULT_RVSS_RATE;
 
 	DataDictionaryGetRVSSRateU8(GSD, &RVSSRateU8);
-	RVSSRateDbl = RVSSRateU8;
-	RVSSRateDbl = (1 / RVSSRateDbl) * 1000;
-	LogMessage(LOG_LEVEL_INFO, "RVSSRateU8 = %d", RVSSRateU8);
+	LogMessage(LOG_LEVEL_INFO, "Real-time variable subscription service rate set to %u Hz", RVSSRateU8);
 
 	if (ModeU8 == 0) {
 
@@ -360,20 +359,20 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	I32 FileLengthI32 = 0;
 
 	while (!iExit) {
-		if (server_state == SERVER_STATE_ERROR) {
+		if (SystemControlState == SERVER_STATE_ERROR) {
 			iCommSend(COMM_ABORT, NULL, 0);
 			continue;
 		}
 
 		if (ModeU8 == 0) {
 			if (ClientSocket <= 0) {
-				if (server_state == SERVER_STATE_UNDEFINED) {
+				if (SystemControlState == SERVER_STATE_UNDEFINED) {
 					//Do some initialization
 
 					//Send COMM_DATA_DICT to notify to update data from DataDictionary
 					iCommSend(COMM_DATA_DICT, ControlResponseBuffer, sizeof (ControlResponseBuffer));
 
-					server_state = SERVER_STATE_INITIALIZED;
+					SystemControlState = SERVER_STATE_INITIALIZED;
 				}
 
 				if (USE_LOCAL_USER_CONTROL == 0) {
@@ -394,7 +393,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 													  &RVSSChannelSocket, &RVSSChannelAddr);
 				}
 
-				server_state = SERVER_STATE_IDLE;
+				SystemControlState = SERVER_STATE_IDLE;
 			}
 
 			PreviousSystemControlCommand = SystemControlCommand;
@@ -405,12 +404,8 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			if (ClientResult <= -1) {
 				if (errno != EAGAIN && errno != EWOULDBLOCK) {
 					LogMessage(LOG_LEVEL_ERROR, "Failed to receive from command socket");
-					LogMessage(LOG_LEVEL_ERROR, "Waiting 5 seconds before exiting");
-					usleep(5000000);	//Wait 5 sec before sending exit, just so ObjectControl can send abort in HEAB before exit
-					if (iCommSend(COMM_EXIT, NULL, 0) < 0)
-						util_error("Fatal communication fault when sending EXIT command");
-					LogMessage(LOG_LEVEL_ERROR, "System control exiting");
-					exit(EXIT_FAILURE);
+					if (iCommSend(COMM_ABORT, NULL, 0) < 0)
+						util_error("Fatal communication fault when sending ABORT command");
 				}
 			}
 			else if (ClientResult == 0) {
@@ -423,7 +418,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				}
 
 				SystemControlCommand = AbortScenario_0;	//Oops no client is connected, go to AbortScenario_0
-				server_state == SERVER_STATE_UNDEFINED;	// TODO: Should this be an assignment?
+				SystemControlState == SERVER_STATE_UNDEFINED;	// TODO: Should this be an assignment?
 			}
 			else if (ClientResult > 0 && ClientResult < TCP_RECV_BUFFER_SIZE) {
 				// TODO: Move this entire decoding process into a separate function
@@ -544,23 +539,27 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								 */
 			CurrentTimeU64 = UtilgetCurrentUTCtimeMS();
 			TimeDiffU64 = CurrentTimeU64 - OldTimeU64;
+
 		}
 
 
-		objectControlState = DataDictionaryGetOBCStateU8(GSD);
+		if (DataDictionaryGetOBCState(&objectControlState) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR, "Error fetching object control state");
+			// TODO more?
+		}
 
-		if (server_state == SERVER_STATE_INWORK) {
+		if (SystemControlState == SERVER_STATE_INWORK) {
 			if (SystemControlCommand == AbortScenario_0) {
 				SystemControlCommand = SystemControlCommand;
 			}
 			else if (SystemControlCommand == GetServerStatus_0) {
 				LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, PreviousCommand: %s",
-						   SystemControlStatesArr[server_state],
+						   SystemControlStatesArr[SystemControlState],
 						   SystemControlOBCStatesArr[objectControlState],
 						   SystemControlCommandsArr[PreviousSystemControlCommand]);
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				ControlResponseBuffer[0] = server_state;
-				ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD);	//OBCStateU8;
+				ControlResponseBuffer[0] = SystemControlState;
+				ControlResponseBuffer[1] = objectControlState;	//OBCStateU8;
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
 												 ControlResponseBuffer, 2, &ClientSocket, 0);
 				SystemControlCommand = PreviousSystemControlCommand;
@@ -568,7 +567,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (SystemControlCommand != PreviousSystemControlCommand) {
 				LogMessage(LOG_LEVEL_WARNING,
 						   "Command not allowed, SystemControl is busy in state %s, PreviousCommand: %s",
-						   SystemControlStatesArr[server_state],
+						   SystemControlStatesArr[SystemControlState],
 						   SystemControlCommandsArr[PreviousSystemControlCommand]);
 				SystemControlSendLog
 					("[SystemControl] Command not allowed, SystemControl is busy in state INWORK.\n",
@@ -580,47 +579,45 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 		}
 
+		//Call this from the loop to send
+		SystemControlGetStatusMessage("", 0, 0);
+
+
 		bzero(pcRecvBuffer, SC_RECV_MESSAGE_BUFFER);
 		bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 
 		switch (iCommand) {
 		case COMM_FAILURE:
-			if (server_state == SERVER_STATE_INWORK) {
+			if (SystemControlState == SERVER_STATE_INWORK) {
 				enum COMMAND failedCommand = (enum COMMAND)pcRecvBuffer[0];
 
 				if (failedCommand == COMM_INIT && PreviousSystemControlCommand == InitializeScenario_0) {
-					server_state = SERVER_STATE_IDLE;
+					SystemControlState = SERVER_STATE_IDLE;
 					SystemControlCommand = Idle_0;
 					LogMessage(LOG_LEVEL_INFO, "Initialization failed");
 					// TODO: report to user?
 				}
 				else {
 					LogMessage(LOG_LEVEL_ERROR, "Unhandled FAILURE (command: %u) reply in state %s",
-							   pcRecvBuffer[0], SystemControlStatesArr[server_state]);
+							   pcRecvBuffer[0], SystemControlStatesArr[SystemControlState]);
 				}
 			}
 			else {
 				LogMessage(LOG_LEVEL_WARNING, "Received unexpected FAILURE (command: %u) reply in state %s",
-						   pcRecvBuffer[0], SystemControlStatesArr[server_state]);
+						   pcRecvBuffer[0], SystemControlStatesArr[SystemControlState]);
 				// TODO: React more?
 			}
 			break;
 		case COMM_OBC_STATE:
 			break;
-		case COMM_LOG:
-			// This creates a problem in GUC: disabled it for now
-			//SystemControlSendLog(pcRecvBuffer, &ClientSocket, 0);
-			break;
-		case COMM_MONR:
-			if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONR_CHANNEL && bytesReceived >= 0) {
-				UtilPopulateMonitorDataStruct(pcRecvBuffer, (size_t) bytesReceived, &monrData);
-				SystemControlBuildRVSSMONRChannelMessage(RVSSData, &RVSSMessageLengthU32, monrData, 0);
-				UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
-								RVSSMessageLengthU32, 0);
-			}
-			break;
 		case COMM_INV:
 			break;
+
+		case COMM_GETSTATUS_OK:
+			SystemControlGetStatusMessage(pcRecvBuffer, sizeof (pcRecvBuffer), 0);
+			//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
+			break;
+
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", iCommand);
 		}
@@ -630,18 +627,21 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case Idle_0:
 			break;
 		case GetServerStatus_0:
+			DataDictionaryGetOBCState(&objectControlState);
 			if (SystemControlCommand != PreviousSystemControlCommand) {
-				LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, %d",
-						   SystemControlStatesArr[server_state],
-						   SystemControlOBCStatesArr[objectControlState], DataDictionaryGetOBCStateU8(GSD));
+				LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s",
+						   SystemControlStatesArr[SystemControlState],
+						   SystemControlOBCStatesArr[objectControlState]);
 			}
 			SystemControlCommand = Idle_0;
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-			ControlResponseBuffer[0] = server_state;
-			ControlResponseBuffer[1] = DataDictionaryGetOBCStateU8(GSD);	//OBCStateU8;
+			ControlResponseBuffer[0] = SystemControlState;
+			ControlResponseBuffer[1] = objectControlState;
+			appendSysInfoString(ControlResponseBuffer + 2, sizeof (ControlResponseBuffer) - 2);
 			LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
-											 ControlResponseBuffer, 2, &ClientSocket, 0);
+											 ControlResponseBuffer, strlen(ControlResponseBuffer),
+											 &ClientSocket, 0);
 			break;
 		case GetServerParameterList_0:
 			SystemControlCommand = Idle_0;
@@ -752,7 +752,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
 					SystemControlDestroyFileContentInfo("dir.info", 1);
 				}
-
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR,
@@ -841,6 +840,21 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				SystemControlCommand = Idle_0;
 			}
 			break;
+		case ClearObjects_0:
+			if (CurrentInputArgCount == CommandArgCount) {
+				SystemControlCommand = Idle_0;
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				*ControlResponseBuffer = SystemControlClearObjects();
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearObjects:",
+												 ControlResponseBuffer, 1, &ClientSocket, 0);
+			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Wrong parameter count in ClearObjects()! got:%d, expected:%d",
+						   CurrentInputArgCount, CommandArgCount);
+				SystemControlCommand = Idle_0;
+			}
+			break;
 		case DownloadFile_1:
 			if (CurrentInputArgCount == CommandArgCount) {
 				SystemControlCommand = Idle_0;
@@ -861,6 +875,74 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 			}
 			else {
+				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
+				SystemControlCommand = Idle_0;
+			}
+			break;
+		case DownloadTrajFiles_0:
+		case DownloadDirectoryContent_1:	
+			if (CurrentInputArgCount == CommandArgCount) {
+				char functionReturnName[50];
+				memset(functionReturnName, 0, 50);
+				memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				if(SystemControlCommand == DownloadTrajFiles_0){
+					strcat(functionReturnName, "DownloadTrajFiles:");
+					ControlResponseBuffer[0] = FOLDER_EXIST;
+				} else if(SystemControlCommand == DownloadDirectoryContent_1){
+					strcat(functionReturnName, "DownloadDirectoryContent:");
+					SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+				}
+				if(ControlResponseBuffer[0] == FOLDER_EXIST){
+					if(SystemControlCommand == DownloadTrajFiles_0){
+						UtilCreateDirContent(MAESTRO_TRAJ_DIRECTORY_STRING, "dir.info");
+					} else if(SystemControlCommand == DownloadDirectoryContent_1){
+						UtilCreateDirContent(SystemControlArgument[0], "dir.info");
+					}
+
+					char TestDirectoryPath[MAX_PATH_LENGTH];
+					memset(TestDirectoryPath, 0,MAX_PATH_LENGTH);
+					char CompletePath[MAX_PATH_LENGTH];
+					memset(CompletePath, 0, MAX_PATH_LENGTH);
+					char InPath[MAX_PATH_LENGTH];
+					memset(InPath, 0, MAX_PATH_LENGTH);
+	
+					UtilGetTestDirectoryPath(TestDirectoryPath, sizeof (TestDirectoryPath));
+					strcat(CompletePath, TestDirectoryPath);
+					strcat(CompletePath,"dir.info");
+					int rows = UtilCountFileRowsInPath(CompletePath, strlen(CompletePath));
+					char RowBuffer[SMALL_BUFFER_SIZE_128];
+
+					for(int i = 0; i < rows; i ++)
+					{
+						memset(CompletePath, 0, MAX_PATH_LENGTH);
+						strcat(CompletePath, TestDirectoryPath);
+						strcat(CompletePath,"dir.info");
+						UtilGetRowInFile(CompletePath, strlen(CompletePath), i, RowBuffer, SMALL_BUFFER_SIZE_128);
+						if(*RowBuffer == 'F'){
+							memset(InPath, 0, MAX_PATH_LENGTH);
+							if(SystemControlCommand == DownloadTrajFiles_0) strcat(InPath, MAESTRO_TRAJ_DIRECTORY_STRING);
+							else if(SystemControlCommand == DownloadDirectoryContent_1) strcat(InPath, SystemControlArgument[0]);
+							strcat(InPath, strstr(RowBuffer, "-")+1);
+							memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+							FileLengthI32 = SystemControlBuildFileContentInfo(InPath, 0);
+							SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
+													  FileLengthI32, &ClientSocket, 0);
+							SystemControlSendFileContent(&ClientSocket, InPath,
+												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 1);
+							SystemControlDestroyFileContentInfo(InPath, 0);
+						}
+
+					}
+					SystemControlDirectoryInfo.exist = 1; //Force to exist
+					SystemControlDestroyFileContentInfo("dir.info", 1);
+
+				} else {
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
+														ControlResponseBuffer, 3, &ClientSocket, 0);
+				}
+				SystemControlCommand = Idle_0;
+			} else {
 				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
 				SystemControlCommand = Idle_0;
 			}
@@ -908,26 +990,26 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case InitializeScenario_0:
-			if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_IDLE) {
+			if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_IDLE) {
 				if (iCommSend(COMM_INIT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
 					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending INIT command");
-					server_state = SERVER_STATE_ERROR;
+					SystemControlState = SERVER_STATE_ERROR;
 				}
-				server_state = SERVER_STATE_INWORK;
+				SystemControlState = SERVER_STATE_INWORK;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeScenario:",
 												 ControlResponseBuffer, 0, &ClientSocket, 0);
 
 				SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
 			}
-			else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_INITIALIZED) {
+			else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_INITIALIZED) {
 				SystemControlSendLog
 					("[SystemControl] Simulate that all objects becomes successfully configured.\n",
 					 &ClientSocket, 0);
 				SystemControlCommand = Idle_0;
-				server_state = SERVER_STATE_IDLE;
+				SystemControlState = SERVER_STATE_IDLE;
 			}
-			else if (server_state == SERVER_STATE_IDLE) {
+			else if (SystemControlState == SERVER_STATE_IDLE) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
 												 "InitializeScenario:", ControlResponseBuffer, 0,
 												 &ClientSocket, 0);
@@ -936,10 +1018,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case ConnectObject_0:
-			if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_INITIALIZED) {
+			if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_INITIALIZED) {
 				if (iCommSend(COMM_CONNECT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
 					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending CONNECT command");
-					server_state = SERVER_STATE_ERROR;
+					SystemControlState = SERVER_STATE_ERROR;
 				}
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -947,13 +1029,13 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												 ControlResponseBuffer, 0, &ClientSocket, 0);
 				SystemControlSendLog("[SystemControl] Sending CONNECT.\n", &ClientSocket, 0);
 			}
-			else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_CONNECTED) {
+			else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_CONNECTED) {
 				SystemControlSendLog("[SystemControl] Simulate that all objects are connected.\n",
 									 &ClientSocket, 0);
 				SystemControlCommand = Idle_0;
-				server_state = SERVER_STATE_IDLE;
+				SystemControlState = SERVER_STATE_IDLE;
 			}
-			else if (server_state == SERVER_STATE_IDLE) {
+			else if (SystemControlState == SERVER_STATE_IDLE) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
 												 "ConnectObject:", ControlResponseBuffer, 0, &ClientSocket,
 												 0);
@@ -962,10 +1044,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case DisconnectObject_0:
-			if (server_state == SERVER_STATE_IDLE) {
+			if (SystemControlState == SERVER_STATE_IDLE) {
 				if (iCommSend(COMM_DISCONNECT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
 					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending DISCONNECT command");
-					server_state = SERVER_STATE_ERROR;
+					SystemControlState = SERVER_STATE_ERROR;
 				}
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -983,25 +1065,25 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case ArmScenario_0:
-			if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED) {
-				server_state = SERVER_STATE_INWORK;
+			if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED) {
+				SystemControlState = SERVER_STATE_INWORK;
 				if (iCommSend(COMM_ARM, NULL, 0) < 0) {
 					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ARM command");
-					server_state = SERVER_STATE_ERROR;
+					SystemControlState = SERVER_STATE_ERROR;
 				}
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ArmScenario:",
 												 ControlResponseBuffer, 0, &ClientSocket, 0);
 				SystemControlSendLog("[SystemControl] Sending ARM.\n", &ClientSocket, 0);
 			}
-			else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_ARMED) {
+			else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_ARMED) {
 				SystemControlSendLog("[SystemControl] Simulate that all objects become armed.\n",
 									 &ClientSocket, 0);
 
 				SystemControlCommand = Idle_0;
-				server_state = SERVER_STATE_IDLE;
+				SystemControlState = SERVER_STATE_IDLE;
 			}
-			else if (server_state == SERVER_STATE_IDLE) {
+			else if (SystemControlState == SERVER_STATE_IDLE) {
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
 												 "ArmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
 				SystemControlSendLog("[SystemControl] ARM received, state errors!\n", &ClientSocket, 0);
@@ -1011,7 +1093,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case RemoteControl_1:
 			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
 			if (CurrentInputArgCount == CommandArgCount) {
-				if (server_state == SERVER_STATE_IDLE
+				if (SystemControlState == SERVER_STATE_IDLE
 					&& (objectControlState == OBC_STATE_CONNECTED
 						|| objectControlState == OBC_STATE_REMOTECTRL)) {
 					if (!strcasecmp(SystemControlArgument[0], ENABLE_COMMAND_STRING)
@@ -1046,9 +1128,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 		case RemoteControlManoeuvre_2:
 			if (CurrentInputArgCount == CommandArgCount) {
-				if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTECTRL) {
+				if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTECTRL) {
 					memset(pcBuffer, 0, sizeof (pcBuffer));
-					RemoteControlCommandType rcCommand;
+					ManoeuvreCommandType rcCommand;
 
 					if (inet_pton(AF_INET, SystemControlArgument[0], &rcCommand.objectIP) != -1) {
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
@@ -1081,9 +1163,80 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			SystemControlSendControlResponse(responseCode, "RemoteControlManoeuvre:",
 											 ControlResponseBuffer, 0, &ClientSocket, 0);
 			break;
+		case SetObjectEnableStatus_2:
+			if (CurrentInputArgCount == CommandArgCount) {
+				if (SystemControlState == SERVER_STATE_IDLE && objectControlState != OBC_STATE_RUNNING) {
+					memset(pcBuffer, 0, sizeof (pcBuffer));
+					ObjectEnabledCommandType enableCommand;
+
+					if (inet_pton(AF_INET, SystemControlArgument[0], &enableCommand.objectIP) != -1) {
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+						switch (atoi(SystemControlArgument[1])) {
+						case OBJECT_ENABLED:
+							enableCommand.Enabled = OBJECT_ENABLED;
+							break;
+						case OBJECT_DISABLED:
+							enableCommand.Enabled = OBJECT_DISABLED;
+							break;
+						default:
+							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
+						}
+						if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
+							memcpy(pcBuffer, &enableCommand, sizeof (enableCommand));
+							iCommSend(COMM_ENABLE_OBJECT, pcBuffer, sizeof (enableCommand));	// TODO check return value
+							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+						}
+					}
+					else {
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+					}
+				}
+				else {
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+				}
+			}
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "SetObjectEnableStatus command parameter count error");
+				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+			}
+			SystemControlCommand = Idle_0;
+			SystemControlSendControlResponse(responseCode, "SetObjectEnableStatus:",
+											 ControlResponseBuffer, 0, &ClientSocket, 0);
+			break;
+		case GetObjectEnableStatus_1:
+			if (CurrentInputArgCount == CommandArgCount) {
+				if (SystemControlState == SERVER_STATE_IDLE) {
+					memset(pcBuffer, 0, sizeof (pcBuffer));
+					ObjectEnabledCommandType enableCommand;
+
+					if (inet_pton(AF_INET, SystemControlArgument[0], &enableCommand.objectIP) != -1) {
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+						DataDictionaryGetObjectEnableStatusByIp(enableCommand.objectIP,
+																&enableCommand.Enabled);
+						memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+						ControlResponseBuffer[0] = (uint8_t) enableCommand.Enabled;
+						SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",
+														 ControlResponseBuffer, 1, &ClientSocket, 0);
+					}
+					else
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+				}
+				else
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+			}
+			else {
+				LogMessage(LOG_LEVEL_WARNING, "GetObjectEnableStatus command parameter count error");
+				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+			}
+
+			if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_OK)
+				SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",
+												 ControlResponseBuffer, 0, &ClientSocket, 0);
+			SystemControlCommand = Idle_0;
+			break;
 		case StartScenario_1:
 			if (CurrentInputArgCount == CommandArgCount) {
-				if (server_state == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED)	//Temporary!
+				if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED)	//Temporary!
 				{
 					bzero(pcBuffer, IPC_BUFFER_SIZE);
 					TimeSetToCurrentSystemTime(&tvTime);
@@ -1100,21 +1253,21 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 					if (iCommSend(COMM_STRT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
 						LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending STRT command");
-						server_state = SERVER_STATE_ERROR;
+						SystemControlState = SERVER_STATE_ERROR;
 					}
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "StartScenario:",
 													 ControlResponseBuffer, 0, &ClientSocket, 0);
-					server_state = SERVER_STATE_INWORK;
-					//server_state = SERVER_STATE_IDLE; //Temporary!
+					SystemControlState = SERVER_STATE_INWORK;
+					//SystemControlState = SERVER_STATE_IDLE; //Temporary!
 					//SystemControlCommand = Idle_0; //Temporary!
 				}
-				else if (server_state == SERVER_STATE_INWORK && objectControlState == OBC_STATE_RUNNING) {
+				else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_RUNNING) {
 
 					SystemControlCommand = Idle_0;
-					server_state = SERVER_STATE_IDLE;
+					SystemControlState = SERVER_STATE_IDLE;
 				}
-				else if (server_state == SERVER_STATE_IDLE) {
+				else if (SystemControlState == SERVER_STATE_IDLE) {
 					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
 													 "StartScenario:", ControlResponseBuffer, 0,
 													 &ClientSocket, 0);
@@ -1129,10 +1282,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case stop_0:
 			if (iCommSend(COMM_STOP, NULL, 0) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending STOP command");
-				server_state = SERVER_STATE_ERROR;
+				SystemControlState = SERVER_STATE_ERROR;
 			}
 			else {
-				server_state = SERVER_STATE_IDLE;
+				SystemControlState = SERVER_STATE_IDLE;
 				SystemControlCommand = Idle_0;
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "stop:",
@@ -1140,71 +1293,41 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			}
 			break;
 		case AbortScenario_0:
-			if (objectControlState == OBC_STATE_RUNNING
-				/* || strstr(SystemControlOBCStatesArr[OBCStateU8], "CONNECTED") != NULL
-				 * || strstr(SystemControlOBCStatesArr[OBCStateU8], "ARMED") != NULL*/ )
-				// Abort should only be allowed in running state
-			{
-				if (iCommSend(COMM_ABORT, NULL, 0) < 0) {
-					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ABORT command");
-					server_state = SERVER_STATE_ERROR;
-				}
-				else {
-					server_state = SERVER_STATE_IDLE;
-					SystemControlCommand = Idle_0;
-					if (ClientSocket >= 0) {
-						bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-						ControlResponseBuffer[0] = 1;
-						SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "AbortScenario:",
-														 ControlResponseBuffer, 1, &ClientSocket, 0);
-					}
-				}
+			if (iCommSend(COMM_ABORT, NULL, 0) < 0) {
+				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ABORT command");
+				SystemControlState = SERVER_STATE_ERROR;
 			}
 			else {
+				SystemControlState = SERVER_STATE_IDLE;
+				SystemControlCommand = Idle_0;
 				if (ClientSocket >= 0) {
 					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-													 "AbortScenario:", ControlResponseBuffer, 1,
-													 &ClientSocket, 0);
-					SystemControlSendLog("[SystemControl] ABORT received, state errors!\n", &ClientSocket, 0);
+					ControlResponseBuffer[0] = 1;
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "AbortScenario:",
+													 ControlResponseBuffer, 1, &ClientSocket, 0);
 				}
-				server_state = SERVER_STATE_IDLE;
-				SystemControlCommand = Idle_0;
 			}
-			break;
-			/*
-			   case replay_1:
-			   if(CurrentCommandArgCounter == CommandArgCount)
-			   {
-			   if(!strcmp(SystemControlArgument[CurrentCommandArgCounter],"-help"))
-			   {
-			   printf("[SystemControl] -----REPLAY-----\n");
-			   printf("[SystemControl] Syntax: replay [arg]\n");
-			   printf("[SystemControl] Ex: replay log/33/event.log\n");
-			   fflush(stdout);
-			   }
-			   else
-			   {
-			   (void)iCommSend(COMM_REPLAY, SystemControlArgument[CurrentCommandArgCounter]);
-			   printf("[SystemControl] System control sending REPLAY on IPC <%s>\n", SystemControlArgument[CurrentCommandArgCounter]);
-			   fflush(stdout);
-			   }
-			   SystemControlCommand = idle_0;
-			   CurrentCommandArgCounter = 0;
-			   } else CurrentCommandArgCounter ++;
-			   break;
-			   case control_0:
-			   (void)iCommSend(COMM_CONTROL, NULL);
-			   //printf("INF: System control sending CONTROL on IPC <%s>\n", pcBuffer);
-			   fflush(stdout);
-			   SystemControlCommand = idle_0;
-			   CurrentCommandArgCounter = 0;
-			   break; */
+		break;
+		case ClearAllScenario_0:
+			if (iCommSend(COMM_ABORT_DONE, NULL, 0) < 0) {
+				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending COMM_ABORT_DONE command");
+				SystemControlState = SERVER_STATE_ERROR;
+			}
+			else {
+				SystemControlState = SERVER_STATE_IDLE;
+				SystemControlCommand = Idle_0;
+				if (ClientSocket >= 0) {
+					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+					ControlResponseBuffer[0] = 1;
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearAllScenario:",
+													 ControlResponseBuffer, 1, &ClientSocket, 0);
+				}
+			}
+		break;
 		case Exit_0:
-
 			if (iCommSend(COMM_EXIT, NULL, 0) < 0) {
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending EXIT command");
-				server_state = SERVER_STATE_ERROR;
+				SystemControlState = SERVER_STATE_ERROR;
 			}
 			else {
 				iExit = 1;
@@ -1230,36 +1353,38 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 
+		TimeSetToCurrentSystemTime(&tvTime);
 
-		sleep_time.tv_sec = 0;
-		sleep_time.tv_nsec = SYSTEM_CONTROL_TASK_PERIOD_MS * 1000000;
-		++RVSSSendCounterU16;
-		if (RVSSSendCounterU16 >= ((U16) RVSSRateDbl)) {
-			RVSSSendCounterU16 = 0;
-			DataDictionaryGetRVSSRateU8(GSD, &RVSSRateU8);
-			RVSSRateDbl = RVSSRateU8;
-			RVSSRateDbl = (1 / RVSSRateDbl) * 100;	//This is strange!! Should be 1000, but if it is the RVSSData is sent to slow by a factor of 10.
+		if (timercmp(&tvTime, &nextRVSSSendTime, >)) {
+			SystemControlUpdateRVSSSendTime(&nextRVSSSendTime, RVSSRateU8);
 
-			if (RVSSChannelSocket != 0 && RVSSSendCounterU16 == 0 && RVSSConfigU32 > 0) {
-				bzero(RVSSData, SYSTEM_CONTROL_RVSS_DATA_BUFFER);
+			if (RVSSChannelSocket != 0 && RVSSConfigU32 > 0) {
+				memset(RVSSData, 0, sizeof (RVSSData));
 
 				if (RVSSConfigU32 & RVSS_TIME_CHANNEL) {
 					SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
-					UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 									RVSSMessageLengthU32, 0);
 				}
 
 				if (RVSSConfigU32 & RVSS_MAESTRO_CHANNEL) {
 					SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32, GSD,
-																server_state, 0);
-					UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+																SystemControlState, 0);
+					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 									RVSSMessageLengthU32, 0);
 				}
 
 				if (RVSSConfigU32 & RVSS_ASP_CHANNEL) {
 					SystemControlBuildRVSSAspChannelMessage(RVSSData, &RVSSMessageLengthU32, 0);
-					UtilSendUDPData("SystemControl", &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
 									RVSSMessageLengthU32, 0);
+				}
+
+				if (RVSSConfigU32 & RVSS_MONITOR_CHANNEL) {
+					// Build and send MONR data of all objects
+					if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONITOR_CHANNEL && bytesReceived >= 0) {
+						SystemControlSendRVSSMonitorChannelMessages(&RVSSChannelSocket, &RVSSChannelAddr);
+					}
 				}
 
 			}
@@ -1268,7 +1393,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
 		sleep_time = (iCommand == COMM_INV
-					  && server_state != SERVER_STATE_INWORK
+					  && SystemControlState != SERVER_STATE_INWORK
 					  && ClientResult < 0) ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
 		nanosleep(&sleep_time, &ref_time);
 	}
@@ -1328,7 +1453,7 @@ SystemControlCommand_t SystemControlFindCommand(const char *CommandBuffer,
 	return nocommand;
 }
 
-/*! 
+/*!
  * \brief SystemControlReceiveUserControlData Performs similarly to the recv function (see manpage for recv) except that it
  *        only fills the input data buffer with messages ending with ";\r\n\r\n" and saves any remaining data in a local
  *        buffer awaiting the next call to this function.
@@ -1349,13 +1474,13 @@ ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t 
 
 	readResult = recv(socket, recvBuffer + bytesInBuffer, sizeof (recvBuffer) - bytesInBuffer, MSG_DONTWAIT);
 	if (readResult > 0) {
-		bytesInBuffer += (size_t) readResult;
+		bytesInBuffer += (size_t)readResult;
 	}
 
 	if (bytesInBuffer > 0) {
 		if ((endOfMessage = strstr(recvBuffer, endOfMessagePattern)) != NULL) {
 			endOfMessage += sizeof (endOfMessagePattern) - 1;
-			messageLength = (size_t) (endOfMessage - recvBuffer);
+			messageLength = (size_t)(endOfMessage - recvBuffer);
 		}
 		else {
 			messageLength = 0;
@@ -1506,28 +1631,23 @@ void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 	Status[0] = (C8) (ResponseStatus >> 8);
 	Status[1] = (C8) ResponseStatus;
 
-	if (n + MSCP_RESPONSE_DATALENGTH_BYTES < SYSTEM_CONTROL_SEND_BUFFER_SIZE) {
-		for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
-			Data[j] = Length[i];
-		for (i = 0; i < MSCP_RESPONSE_STATUS_CODE_BYTES; i++, j++)
-			Data[j] = Status[i];
-		t = strlen(ResponseString);
-		for (i = 0; i < t; i++, j++)
-			Data[j] = *(ResponseString + i);
+	for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
+		Data[j] = Length[i];
+	for (i = 0; i < MSCP_RESPONSE_STATUS_CODE_BYTES; i++, j++)
+		Data[j] = Status[i];
+	t = strlen(ResponseString);
+	for (i = 0; i < t; i++, j++)
+		Data[j] = *(ResponseString + i);
 
-		if (Debug) {
-			for (i = 0; i < n + MSCP_RESPONSE_DATALENGTH_BYTES; i++)
-				printf("%x-", Data[i]);
-			printf("\n");
-		}
-
-		//SystemControlSendBytes(Data, n + 4, Sockfd, 0);
-		UtilSendTCPData("System Control", Data,
-						MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES +
-						strlen(ResponseString), Sockfd, 0);
+	if (Debug) {
+		for (i = 0; i < n + MSCP_RESPONSE_DATALENGTH_BYTES; i++)
+			printf("%x-", Data[i]);
+		printf("\n");
 	}
-	else
-		LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+
+	UtilSendTCPData("System Control", Data,
+					MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES +
+					strlen(ResponseString), Sockfd, 0);
 }
 
 
@@ -1809,21 +1929,6 @@ C8 SystemControlVerifyHostAddress(char *addr) {
 	return 0;
 }
 
-/*
-I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug)
-{
-    I32 result;
-
-    result = sendto(*sockfd, SendData, Length, 0, (const struct sockaddr *) addr, sizeof(struct sockaddr_in));
-
-    if (result < 0)
-    {
-        util_error("[SystemControl] Failed to send on process control socket.");
-    }
-
-    return 0;
-}
-*/
 
 I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * ReturnValue, U32 BufferLength,
 									U8 Debug) {
@@ -1833,309 +1938,364 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 	U16 ValueU16 = 0;
 	U8 ValueU8 = 0;
 
-	if (strcmp("OrigoLatitude", ParameterName) == 0) {
+	sprintf(ReturnValue, "%s", ParameterName);
+	strcat(ReturnValue, ": ");
+	BufferLength = BufferLength - strlen(ReturnValue);
+
+	if (strcmp("OriginLatitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLatitudeDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.12f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
-	else if (strcmp("OrigoLongitude", ParameterName) == 0) {
+	else if (strcmp("OriginLongitude", ParameterName) == 0) {
 		DataDictionaryGetOriginLongitudeDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.12f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
-	else if (strcmp("OrigoAltitude", ParameterName) == 0) {
+	else if (strcmp("OriginAltitude", ParameterName) == 0) {
 		DataDictionaryGetOriginAltitudeDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.12f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
 	else if (strcmp("VisualizationServerName", ParameterName) == 0) {
-		DataDictionaryGetVisualizationServerC8(GSD, ReturnValue, BufferLength);
-	}
-	else if (strcmp("ForceObjectToLocalhost", ParameterName) == 0) {
-		DataDictionaryGetForceToLocalhostU8(GSD, &ValueU8);
-		sprintf(ReturnValue, "%" PRIu8, ValueU8);
+		DataDictionaryGetVisualizationServerC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("ASPMaxTimeDiff", ParameterName) == 0) {
 		DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.3f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPMaxTrajDiff", ParameterName) == 0) {
 		DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.3f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPStepBackCount", ParameterName) == 0) {
 		DataDictionaryGetASPStepBackCountU32(GSD, &ValueU32);
-		sprintf(ReturnValue, "%" PRIu32, ValueU32);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu32, ValueU32);
 	}
 	else if (strcmp("ASPFilterLevel", ParameterName) == 0) {
 		DataDictionaryGetASPFilterLevelDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.3f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPMaxDeltaTime", ParameterName) == 0) {
 		DataDictionaryGetASPMaxDeltaTimeDbl(GSD, &ValueDbl);
-		sprintf(ReturnValue, "%3.3f", ValueDbl);
+		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("TimeServerIP", ParameterName) == 0) {
-		DataDictionaryGetTimeServerIPC8(GSD, ReturnValue, BufferLength);
+		DataDictionaryGetTimeServerIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("TimeServerPort", ParameterName) == 0) {
 		DataDictionaryGetTimeServerPortU16(GSD, &ValueU16);
 		sprintf(ReturnValue, "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorIP", ParameterName) == 0) {
-		DataDictionaryGetSimulatorIPC8(GSD, ReturnValue, BufferLength);
+		DataDictionaryGetSimulatorIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SimulatorTCPPort", ParameterName) == 0) {
 		DataDictionaryGetSimulatorTCPPortU16(GSD, &ValueU16);
-		sprintf(ReturnValue, "%" PRIu16, ValueU16);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorUDPPort", ParameterName) == 0) {
 		DataDictionaryGetSimulatorUDPPortU16(GSD, &ValueU16);
-		sprintf(ReturnValue, "%" PRIu16, ValueU16);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorMode", ParameterName) == 0) {
 		DataDictionaryGetSimulatorModeU8(GSD, &ValueU8);
-		sprintf(ReturnValue, "%" PRIu8, ValueU8);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu8, ValueU8);
 	}
 	else if (strcmp("VOILReceivers", ParameterName) == 0) {
-		DataDictionaryGetVOILReceiversC8(GSD, ReturnValue, BufferLength);
+		DataDictionaryGetVOILReceiversC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("DTMReceivers", ParameterName) == 0) {
-		DataDictionaryGetDTMReceiversC8(GSD, ReturnValue, BufferLength);
+		DataDictionaryGetDTMReceiversC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SupervisorIP", ParameterName) == 0) {
-		DataDictionaryGetExternalSupervisorIPC8(GSD, ReturnValue, BufferLength);
+		DataDictionaryGetExternalSupervisorIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SupervisorTCPPort", ParameterName) == 0) {
 		DataDictionaryGetSupervisorTCPPortU16(GSD, &ValueU16);
-		sprintf(ReturnValue, "%" PRIu16, ValueU16);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("MiscData", ParameterName) == 0) {
-		DataDictionaryGetMiscDataC8(GSD, ReturnValue, BufferLength);
+		DataDictionaryGetMiscData(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("RVSSConfig", ParameterName) == 0) {
 		DataDictionaryGetRVSSConfigU32(GSD, &ValueU32);
-		sprintf(ReturnValue, "%" PRIu32, ValueU32);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu32, ValueU32);
 	}
 	else if (strcmp("RVSSRate", ParameterName) == 0) {
 		DataDictionaryGetRVSSRateU8(GSD, &ValueU8);
-		sprintf(ReturnValue, "%" PRIu8, ValueU8);
+		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu8, ValueU8);
+	}
+	else if (strcmp("ScenarioName", ParameterName) == 0) {
+		DataDictionaryGetScenarioName(ReturnValue + strlen(ReturnValue), BufferLength);
+	}
+}
+
+
+
+I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newValue, U8 debug) {
+
+	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
+	U32 object_transmitter_ids[MAX_OBJECTS];
+	U32 numberOfObjects;
+	GeoPosition origin;
+	char *endptr;
+
+	if (parameterName == NULL || newValue == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Set server parameter null pointer error");
+		return -1;
 	}
 
-}
+	if (debug) {
+		LogPrint("SetServerParameter: %s = %s", parameterName, newValue);
+	}
 
+	enum ConfigurationFileParameter parameter =
+		UtilParseConfigurationParameter(parameterName, strlen(parameterName) + 1);
 
+	switch (parameter) {
+	case CONFIGURATION_PARAMETER_SCENARIO_NAME:
+		result = DataDictionarySetScenarioName(newValue, strlen(newValue) + 1);
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_LATITUDE:
+		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error"
+					   "- cannot set origin on objects");
+			break;
+		}
 
-I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug) {
-	if (Debug)
-		printf("[SystemControl] SetServerParameter: %s = %s\n", ParameterName, NewValue);
-	if (strcmp("OrigoLatitude", ParameterName) == 0)
-		DataDictionarySetOriginLatitudeDbl(GSD, NewValue);
-	else if (strcmp("OrigoLongitude", ParameterName) == 0)
-		DataDictionarySetOriginLongitudeDbl(GSD, NewValue);
-	else if (strcmp("OrigoAltitude", ParameterName) == 0)
-		DataDictionarySetOriginAltitudeDbl(GSD, NewValue);
-	else if (strcmp("VisualizationServerName", ParameterName) == 0)
-		DataDictionarySetVisualizationServerU32(GSD, NewValue);
-	else if (strcmp("ForceObjectToLocalhost", ParameterName) == 0)
-		DataDictionarySetForceToLocalhostU8(GSD, NewValue);
-	else if (strcmp("ASPMaxTimeDiff", ParameterName) == 0)
-		DataDictionarySetASPMaxTimeDiffDbl(GSD, NewValue);
-	else if (strcmp("ASPMaxTrajDiff", ParameterName) == 0)
-		DataDictionarySetASPMaxTrajDiffDbl(GSD, NewValue);
-	else if (strcmp("ASPStepBackCount", ParameterName) == 0)
-		DataDictionarySetASPStepBackCountU32(GSD, NewValue);
-	else if (strcmp("ASPFilterLevel", ParameterName) == 0)
-		DataDictionarySetASPFilterLevelDbl(GSD, NewValue);
-	else if (strcmp("ASPMaxDeltaTime", ParameterName) == 0)
-		DataDictionarySetASPMaxDeltaTimeDbl(GSD, NewValue);
-	else if (strcmp("TimeServerIP", ParameterName) == 0)
-		DataDictionarySetTimeServerIPU32(GSD, NewValue);
-	else if (strcmp("TimeServerPort", ParameterName) == 0)
-		DataDictionarySetTimeServerPortU16(GSD, NewValue);
-	else if (strcmp("SimulatorIP", ParameterName) == 0)
-		DataDictionarySetSimulatorIPU32(GSD, NewValue);
-	else if (strcmp("SimulatorTCPPort", ParameterName) == 0)
-		DataDictionarySetSimulatorTCPPortU16(GSD, NewValue);
-	else if (strcmp("SimulatorUDPPort", ParameterName) == 0)
-		DataDictionarySetSimulatorUDPPortU16(GSD, NewValue);
-	else if (strcmp("SimulatorMode", ParameterName) == 0)
-		DataDictionarySetSimulatorModeU8(GSD, NewValue);
-	else if (strcmp("VOILReceivers", ParameterName) == 0)
-		DataDictionarySetVOILReceiversC8(GSD, NewValue);
-	else if (strcmp("DTMReceivers", ParameterName) == 0)
-		DataDictionarySetDTMReceiversC8(GSD, NewValue);
-	else if (strcmp("SupervisorIP", ParameterName) == 0)
-		DataDictionarySetExternalSupervisorIPU32(GSD, NewValue);
-	else if (strcmp("SupervisorTCPPort", ParameterName) == 0)
-		DataDictionarySetSupervisorTCPPortU16(GSD, NewValue);
-	else if (strcmp("MiscData", ParameterName) == 0)
-		DataDictionarySetMiscDataC8(GSD, NewValue);
-	else if (strcmp("RVSSConfig", ParameterName) == 0)
-		DataDictionarySetRVSSConfigU32(GSD, (U32) atoi(NewValue));
-	else if (strcmp("RVSSRate", ParameterName) == 0)
-		DataDictionarySetRVSSRateU8(GSD, (U32) atoi(NewValue));
-}
+		if ((result =
+			 DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Data dictionary TransmitterID read error" "- cannot set origin on objects");
+			break;
+		}
 
-
-
-I32 SystemControlWriteServerParameter(C8 * ParameterName, C8 * NewValue, U8 Debug) {
-
-	I32 RowCount, i;
-	C8 Parameter[SMALL_BUFFER_SIZE_64];
-	C8 Row[SMALL_BUFFER_SIZE_128];
-	C8 NewRow[SMALL_BUFFER_SIZE_128];
-	FILE *fd, *TempFd;
-	C8 *ptr1, *ptr2;
-	U8 ParameterFound = 0;
-	char confPathFileDir[MAX_FILE_PATH];
-	char tempConfPathFileDir[MAX_FILE_PATH];
-	const char TEMP_FILE_NAME[] = "temp-" MODULE_NAME ".conf";
-
-	UtilGetConfDirectoryPath(confPathFileDir, sizeof (confPathFileDir));
-	strcpy(tempConfPathFileDir, confPathFileDir);
-	strcat(confPathFileDir, CONF_FILE_NAME);
-	strcat(tempConfPathFileDir, TEMP_FILE_NAME);
-
-	bzero(Parameter, SMALL_BUFFER_SIZE_64);
-
-	strcat(Parameter, ParameterName);
-	strcat(Parameter, "=");
-
-	//Remove temporary file
-	remove(tempConfPathFileDir);
-
-	//Create temporary file
-	TempFd = fopen(tempConfPathFileDir, "w+");
-
-	//Open configuration file
-	fd = fopen(confPathFileDir, "r");
-
-	if (fd > 0) {
-		RowCount = UtilCountFileRows(fd);
-		fclose(fd);
-		fd = fopen(confPathFileDir, "r");
-
-		for (i = 0; i < RowCount; i++) {
-			bzero(Row, SMALL_BUFFER_SIZE_128);
-			UtilReadLine(fd, Row);
-
-			ptr1 = strstr(Row, Parameter);
-			ptr2 = strstr(Row, "//");
-			if (ptr2 == NULL)
-				ptr2 = ptr1;	//No comment found
-			if (ptr1 != NULL && (U64) ptr2 >= (U64) ptr1 && ParameterFound == 0) {
-				ParameterFound = 1;
-				bzero(NewRow, SMALL_BUFFER_SIZE_128);
-				strncpy(NewRow, Row, (U64) ptr1 - (U64) Row + strlen(Parameter));
-				strcat(NewRow, NewValue);
-				if ((U64) ptr2 > (U64) ptr1) {
-					strcat(NewRow, " ");	// Add space
-					strcat(NewRow, ptr2);	// Add the comment
-				}
-
-				if (Debug) {
-					LogMessage(LOG_LEVEL_DEBUG, "Changed parameter: %s", NewRow);
-				}
-
-				strcat(NewRow, "\n");
-				(void)fwrite(NewRow, 1, strlen(NewRow), TempFd);
-
+		for (unsigned int i = 0; i < numberOfObjects; ++i) {
+			if (object_transmitter_ids[i] == 0) {
+				continue;
 			}
 			else {
-				strcat(Row, "\n");
-				(void)fwrite(Row, 1, strlen(Row), TempFd);
+				if (DataDictionaryGetOrigin(object_transmitter_ids[i], &origin) != READ_OK) {
+					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin read error"
+							   "- cannot read the origin for object %u", object_transmitter_ids[i]);
+					result = UNDEFINED;
+					continue;
+				}
+				origin.Latitude = strtod(newValue, &endptr);
+				if (endptr == newValue) {
+					LogMessage(LOG_LEVEL_ERROR, "Unable to convert origin setting %s to double", newValue);
+					result = UNDEFINED;
+					break;
+				}
+				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
+					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
+							   "- cannot set the origin for object %u", object_transmitter_ids[i]);
+					result = UNDEFINED;
+					break;
+				}
 			}
 		}
-		fclose(TempFd);
-		fclose(fd);
 
-		//Remove test.conf
-		remove(confPathFileDir);
+		// TODO remove
+		result = DataDictionarySetOriginLatitudeDbl(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
+		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error"
+					   "- cannot set origin on objects");
+			break;
+		}
 
-		//Rename temp.conf to test.conf
-		rename(tempConfPathFileDir, confPathFileDir);
+		if ((result =
+			 DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Data dictionary TransmitterID read error" "- cannot set origin on objects");
+			break;
+		}
 
-		//Remove temporary file
-		remove(tempConfPathFileDir);
+		for (unsigned int i = 0; i < numberOfObjects; ++i) {
+			if (object_transmitter_ids[i] == 0) {
+				continue;
+			}
+			else {
+				if (DataDictionaryGetOrigin(object_transmitter_ids[i], &origin) != READ_OK) {
+					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin read error"
+							   "- cannot read the origin for object %u", object_transmitter_ids[i]);
+					result = UNDEFINED;
+					continue;
+				}
+				origin.Longitude = strtod(newValue, &endptr);
+				if (endptr == newValue) {
+					LogMessage(LOG_LEVEL_ERROR, "Unable to convert origin setting %s to double", newValue);
+					result = UNDEFINED;
+					break;
+				}
+				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
+					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
+							   "- cannot set the origin for object %u", object_transmitter_ids[i]);
+					result = UNDEFINED;
+					break;
+				}
+			}
+		}
+
+		// TODO remove
+		result = DataDictionarySetOriginLongitudeDbl(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE:
+		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error"
+					   "- cannot set origin on objects");
+			break;
+		}
+
+		if ((result =
+			 DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Data dictionary TransmitterID read error" "- cannot set origin on objects");
+			break;
+		}
+
+		for (unsigned int i = 0; i < numberOfObjects; ++i) {
+			if (object_transmitter_ids[i] == 0) {
+				continue;
+			}
+			else {
+				if (DataDictionaryGetOrigin(object_transmitter_ids[i], &origin) != READ_OK) {
+					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin read error"
+							   "- cannot read the origin for object %u", object_transmitter_ids[i]);
+					result = UNDEFINED;
+					continue;
+				}
+				origin.Altitude = strtod(newValue, &endptr);
+				if (endptr == newValue) {
+					LogMessage(LOG_LEVEL_ERROR, "Unable to convert origin setting %s to double", newValue);
+					result = UNDEFINED;
+					break;
+				}
+				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
+					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
+							   "- cannot set the origin for object %u", object_transmitter_ids[i]);
+					result = UNDEFINED;
+					break;
+				}
+			}
+		}
+
+		// TODO remove
+		result = DataDictionarySetOriginAltitudeDbl(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
+		result = DataDictionarySetVisualizationServerU32(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
+		result = DataDictionarySetASPMaxTimeDiffDbl(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF:
+		result = DataDictionarySetASPMaxTrajDiffDbl(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT:
+		result = DataDictionarySetASPStepBackCountU32(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL:
+		result = DataDictionarySetASPFilterLevelDbl(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME:
+		result = DataDictionarySetASPMaxDeltaTimeDbl(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_TIME_SERVER_IP:
+		result = DataDictionarySetTimeServerIPU32(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_TIME_SERVER_PORT:
+		result = DataDictionarySetTimeServerPortU16(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_IP:
+		result = DataDictionarySetSimulatorIPU32(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP:
+		result = DataDictionarySetSimulatorTCPPortU16(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP:
+		result = DataDictionarySetSimulatorUDPPortU16(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_MODE:
+		result = DataDictionarySetSimulatorModeU8(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_VOIL_RECEIVERS:
+		result = DataDictionarySetVOILReceiversC8(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_DTM_RECEIVERS:
+		result = DataDictionarySetDTMReceiversC8(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP:
+		result = DataDictionarySetExternalSupervisorIPU32(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP:
+		result = DataDictionarySetSupervisorTCPPortU16(GSD, newValue);
+		break;
+	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
+		result = DataDictionarySetRVSSConfigU32(GSD, (uint32_t) strtoul(newValue, NULL, 10));
+		break;
+	case CONFIGURATION_PARAMETER_RVSS_RATE:
+		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(newValue, NULL, 10));
+		break;
+	case CONFIGURATION_PARAMETER_MISC_DATA:
+		LogMessage(LOG_LEVEL_WARNING, "Unable to set MiscData - size unknown");
+		result = DataDictionarySetMiscData(newValue, 0);
+		break;
+	case CONFIGURATION_PARAMETER_INVALID:
+		LogMessage(LOG_LEVEL_WARNING, "Attempted to set invalid parameter %s", parameterName);
+	default:
+		LogMessage(LOG_LEVEL_ERROR, "No action is implemented for setting parameter %s");
 	}
 
-	return 0;
+	return result == WRITE_OK ? 0 : -1;
 }
 
-
-
-I32 SystemControlReadServerParameter(C8 * ParameterName, C8 * ReturnValue, U8 Debug) {
-
-	I32 RowCount, i;
-	C8 TextBuffer[SMALL_BUFFER_SIZE_128];
-	char confPathDir[MAX_FILE_PATH];
-
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcat(confPathDir, CONF_FILE_NAME);
-
-	bzero(TextBuffer, SMALL_BUFFER_SIZE_128);
-
-	strcat(TextBuffer, ParameterName);
-	strcat(TextBuffer, "=");
-
-	UtilSearchTextFile(confPathDir, TextBuffer, "", ReturnValue);
-
-	if (Debug) {
-		LogPrint("%s = %s\n", ParameterName, ReturnValue);
-	}
-
-	return strlen(ReturnValue);
-}
 
 
 I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 
-	I32 RowCount, i;
-	C8 TextBuffer[SMALL_BUFFER_SIZE_128];
+	char *line = NULL;
+	size_t len = 0;
 	FILE *fd;
 	char confPathDir[MAX_FILE_PATH];
+	ssize_t read;
 
 	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
 	strcat(confPathDir, CONF_FILE_NAME);
 
 	fd = fopen(confPathDir, "r");
-	if (fd > 0) {
-		RowCount = UtilCountFileRows(fd);
-		fclose(fd);
-		fd = fopen(confPathDir, "r");
-
-		for (i = 0; i < RowCount; i++) {
-			bzero(TextBuffer, SMALL_BUFFER_SIZE_128);
-			UtilReadLineCntSpecChars(fd, TextBuffer);
-			if (strlen(TextBuffer) > 0) {
-				strcat(ParameterList, TextBuffer);
+	if (fd != NULL) {
+		while ((read = getline(&line, &len, fd)) != -1) {
+			if (strlen(line) > 0) {
+				strcat(ParameterList, line);
 				strcat(ParameterList, ";");
 			}
 		}
-
 		fclose(fd);
+		free(line);
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", confPathDir);
 	}
 
 	if (Debug) {
-		LogMessage(LOG_LEVEL_INFO, "ParameterList = %s\n", ParameterList);
+		LogPrint("ParameterList = %s\n", ParameterList);
 	}
 
 	return strlen(ParameterList);
 }
 
+
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
-
-
 	struct stat st;
 	C8 CompletePath[MAX_FILE_PATH];
-	C8 temporaryCompletePath[MAX_FILE_PATH];
-
 	bzero(CompletePath, MAX_FILE_PATH);
-
 	if (SystemControlDirectoryInfo.exist)
 		return -1;
-
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
 	stat(CompletePath, &st);
+	printf("CompletePath = %s\n", CompletePath);
 
 	// Create mmap of the file and return the length
 	SystemControlDirectoryInfo.fd = open(CompletePath, O_RDWR);
@@ -2150,11 +2310,11 @@ I32 SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile) {
 	char CompletePath[MAX_FILE_PATH];
 	struct stat st;
 
-	if (!SystemControlDirectoryInfo.exist)
+	if (!SystemControlDirectoryInfo.exist){
 		return -1;
+	}
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
-
 	munmap(SystemControlDirectoryInfo.info_buffer, SystemControlDirectoryInfo.size);
 	close(SystemControlDirectoryInfo.fd);
 	SystemControlDirectoryInfo.exist = 0;
@@ -2244,6 +2404,17 @@ C8 SystemControlClearTrajectories(void) {
  */
 C8 SystemControlClearGeofences(void) {
 	if (UtilDeleteGeofenceFiles() != 0) {
+		return FAILED_DELETE;
+	}
+	return SUCCEEDED_DELETE;
+}
+
+/*!
+ * \brief SystemControlClearObjects Clears the objects directory on the machine
+ * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
+ */
+C8 SystemControlClearObjects(void) {
+	if (UtilDeleteObjectFiles() != 0) {
 		return FAILED_DELETE;
 	}
 	return SUCCEEDED_DELETE;
@@ -2366,6 +2537,9 @@ I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * 
 		break;
 	case MAESTRO_GEOFENCE_FILE_TYPE:
 		UtilGetGeofenceDirectoryPath(CompletePath, sizeof (CompletePath));
+		break;
+	case MAESTRO_OBJECT_FILE_TYPE:
+		UtilGetObjectDirectoryPath(CompletePath, sizeof (CompletePath));
 		break;
 	default:
 		LogMessage(LOG_LEVEL_ERROR, "Received invalid file type upload request");
@@ -2581,6 +2755,35 @@ I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * 
 }
 
 
+/*!
+ * \brief SystemControlUpdateRVSSSendTime Adds a time interval onto the specified time struct in accordance
+ *			with the rate parameter
+ * \param currentRVSSSendTime Struct containing the time at which the last RVSS message was sent. After this
+ *			function has been executed, the struct contains the time at which the next RVSS message is to be
+ *			sent.
+ * \param RVSSRate_Hz Rate at which RVSS messages are to be sent - if this parameter is 0 the value
+ *			is clamped to 1 Hz
+ */
+void SystemControlUpdateRVSSSendTime(struct timeval *currentRVSSSendTime, uint8_t RVSSRate_Hz) {
+	struct timeval RVSSTimeInterval, timeDiff, currentTime;
+
+	RVSSRate_Hz = RVSSRate_Hz == 0 ? 1 : RVSSRate_Hz;	// Minimum frequency 1 Hz
+	RVSSTimeInterval.tv_sec = (long)(1.0 / RVSSRate_Hz);
+	RVSSTimeInterval.tv_usec = (long)((1.0 / RVSSRate_Hz - RVSSTimeInterval.tv_sec) * 1000000.0);
+
+	// If there is a large difference between the current time and the time at which RVSS was sent, update based
+	// on current time instead of last send time to not spam messages until caught up
+	TimeSetToCurrentSystemTime(&currentTime);
+	timersub(&currentTime, currentRVSSSendTime, &timeDiff);
+	if (timercmp(&timeDiff, &RVSSTimeInterval, <)) {
+		timeradd(currentRVSSSendTime, &RVSSTimeInterval, currentRVSSSendTime);
+	}
+	else {
+		timeradd(&currentTime, &RVSSTimeInterval, currentRVSSSendTime);
+	}
+}
+
+
 /*
 SystemControlBuildRVSSTimeChannelMessage builds a message from data in *GPSTime. The message is stored in *RVSSData.
 See the architecture document for the protocol of RVSS.
@@ -2636,7 +2839,7 @@ See the architecture document for the protocol of RVSS.
 - *RVSSData the buffer the message
 - *RVSSDataLengthU32 the length of the message
 - *GSD the Global System Data
-- U8 SysCtrlState the SystemControl state (server_state)
+- U8 SysCtrlState the SystemControl state (SystemControlState)
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
 I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
@@ -2646,10 +2849,12 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 
 
 	RVSSMaestroType RVSSMaestroData;
+	OBCState_t obcState;
 
 	RVSSMaestroData.MessageLengthU32 = SwapU32((U32) sizeof (RVSSMaestroType) - 4);
 	RVSSMaestroData.ChannelCodeU32 = SwapU32((U32) RVSS_MAESTRO_CHANNEL);
-	RVSSMaestroData.OBCStateU8 = DataDictionaryGetOBCStateU8(GSD);
+	DataDictionaryGetOBCState(&obcState);
+	RVSSMaestroData.OBCStateU8 = (uint8_t) (obcState);
 	RVSSMaestroData.SysCtrlStateU8 = SysCtrlState;
 
 	p = (C8 *) & RVSSMaestroData;
@@ -2667,45 +2872,98 @@ I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLen
 
 
 #define MAX_MONR_STRING_LENGTH 1024
-/*
-SystemControlBuildRVSSMONRChannelMessage builds a message from data in *MonrData. The message is stored in *RVSSData.
-See the architecture document for the protocol of RVSS.
+/*!
+ * \brief SystemControlSendRVSSMONRChannelMessages Sends RVSS monitoring data messages based on objects present
+ *			in data dictionary
+ * \param socket Socket descriptor pointer for RVSS socket
+ * \param addr Address struct pointer for RVSS socket
+ * \return 0 on success, -1 otherwise
+ */
+int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr) {
+	uint32_t messageLength = 0;
+	uint32_t RVSSChannel = RVSS_MONITOR_CHANNEL;
+	char RVSSData[MAX_MONR_STRING_LENGTH];
+	char *monitorDataString = RVSSData + sizeof (messageLength) + sizeof (RVSSChannel);
+	uint32_t *transmitterIDs = NULL;
+	uint32_t numberOfObjects;
+	ObjectDataType monitorData;
 
-- *RVSSData the buffer the message
-- *RVSSDataLengthU32 the length of the message
-- *MonrData MONR data from an object
-- Debug enable(1)/disable(0) debug printouts (Not used)
-*/
-
-I32 SystemControlBuildRVSSMONRChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, MonitorDataType MonrData,
-											 U8 Debug) {
-	I32 MessageLength = 0;
-	char MonrDataString[MAX_MONR_STRING_LENGTH];
-
-	// TODO: Convert MonrData to string
-	if (UtilMonitorDataToString(MonrData, MonrDataString, sizeof (MonrDataString)) == -1) {
-		// TODO memset rvssdata to 0
-		LogMessage(LOG_LEVEL_ERROR, "Error building monitor data string");
-		*RVSSDataLengthU32 = 0;
+	// Get number of objects present in shared memory
+	if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
+		LogMessage(LOG_LEVEL_ERROR,
+				   "Data dictionary number of objects read error - RVSS messages cannot be sent");
 		return -1;
 	}
 
-	MessageLength = strlen(MonrDataString) + 8;
-	bzero(RVSSData, MessageLength);
-	*RVSSDataLengthU32 = MessageLength;
-
-	*(RVSSData + 0) = (C8) (MessageLength >> 24);
-	*(RVSSData + 1) = (C8) (MessageLength >> 16);
-	*(RVSSData + 2) = (C8) (MessageLength >> 8);
-	*(RVSSData + 3) = (C8) (MessageLength);
-	*(RVSSData + 7) = (C8) (RVSS_MONR_CHANNEL);
-	strcat(RVSSData + 8, MonrDataString);
-
-	if (Debug) {
-
+	// Allocate an array for objects' transmitter IDs
+	transmitterIDs = malloc(numberOfObjects * sizeof (uint32_t));
+	if (transmitterIDs == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Memory allocation error - RVSS messages cannot be sent");
+		return -1;
 	}
 
-	return 0;
+	// Get transmitter IDs for all connected objects
+	if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs, numberOfObjects) != READ_OK) {
+		free(transmitterIDs);
+		LogMessage(LOG_LEVEL_ERROR,
+				   "Data dictionary transmitter ID read error - RVSS messages cannot be sent");
+		return -1;
+	}
+
+	LogMessage(LOG_LEVEL_DEBUG, "%s: Found %u transmitter IDs", __FUNCTION__, numberOfObjects);
+	// Loop over transmitter IDs, sending a message on the RVSS channel for each
+	int32_t retval = 0;
+
+	for (uint32_t i = 0; i < numberOfObjects; ++i) {
+		if (transmitterIDs[i] != 0) {
+			monitorData.ClientID = transmitterIDs[i];
+			struct timeval recvTime;
+
+			if (DataDictionaryGetMonitorDataReceiveTime(transmitterIDs[i], &recvTime) != READ_OK) {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
+						   transmitterIDs[i]);
+				retval = -1;
+			}
+			else {
+				if (recvTime.tv_sec == 0 && recvTime.tv_usec == 0) {
+					continue;
+				}
+			}
+
+			if (DataDictionaryGetObjectIPByTransmitterID(transmitterIDs[i], &monitorData.ClientIP) != READ_OK) {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
+						   transmitterIDs[i]);
+				retval = -1;
+			}
+			else if (DataDictionaryGetMonitorData(transmitterIDs[i], &monitorData.MonrData) != READ_OK) {
+				LogMessage(LOG_LEVEL_ERROR,
+						   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
+						   transmitterIDs[i]);
+				retval = -1;
+			}
+			else if (UtilObjectDataToString(monitorData, monitorDataString,
+											sizeof (RVSSData) - (size_t)(monitorDataString - RVSSData)) ==
+					 -1) {
+				LogMessage(LOG_LEVEL_ERROR, "Error building object data string");
+				retval = -1;
+			}
+			else {
+				LogMessage(LOG_LEVEL_DEBUG, "%s: Transmitter ID %u", __FUNCTION__, transmitterIDs[i]);
+				messageLength =
+					(uint32_t) (strlen(monitorDataString) + sizeof (messageLength) + sizeof (RVSSChannel));
+				messageLength = htole32(messageLength);
+				RVSSChannel = htole32(RVSSChannel);
+				memcpy(RVSSData, &messageLength, sizeof (messageLength));
+				memcpy(RVSSData + sizeof (messageLength), &RVSSChannel, sizeof (RVSSChannel));
+
+				UtilSendUDPData(MODULE_NAME, socket, addr, RVSSData, messageLength, 0);
+			}
+		}
+	}
+	free(transmitterIDs);
+	return retval;
 }
 
 
@@ -2726,4 +2984,149 @@ I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU
 
 
 	return 0;
+}
+
+/*!
+ * \brief SystemControlGetStatusMessage Send a COMM_GETSTATUS message to all connected modules on the MQ-BUS.
+ * \param respondingModule Name of the responding module.
+ * \param arrayLength Length of the RespondingModule.
+ * \param debug Enable debug or not.
+ * \return
+ */
+I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8 debug) {
+
+	static struct timeval getStatusSendTimer;
+	static struct timeval getStatusTimeoutTimer;
+	static struct timeval currentSystemTime;
+	static uint8_t numberOfResponses = 0;
+
+	static enum {
+		GETSTATUS_SEND,
+		GETSTATUS_WAITFORRESPONSE
+	} getStatusState = GETSTATUS_SEND;
+
+	//Set current time
+	TimeSetToCurrentSystemTime(&currentSystemTime);
+
+	switch (getStatusState) {
+
+
+		//Waits until it's time to send getStatus
+	case GETSTATUS_SEND:
+
+		//If current time is more than sendTime
+		if (timercmp(&getStatusSendTimer, &currentSystemTime, <)) {
+
+			//Set next sendTime
+			TimeSetToCurrentSystemTime(&getStatusSendTimer);
+			getStatusSendTimer.tv_sec += SYSTEM_CONTROL_GETSTATUS_TIME_MS / 1000;
+
+			//Set when to timeout
+			TimeSetToCurrentSystemTime(&getStatusTimeoutTimer);
+			getStatusTimeoutTimer.tv_sec += SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS / 1000;
+
+			//Send getstatus
+			iCommSend(COMM_GETSTATUS, NULL, 0);
+
+
+			if (debug) {
+				LogMessage(LOG_LEVEL_INFO, "GETSTATUS SENT");
+			}
+
+			//Next Case
+			getStatusState = GETSTATUS_WAITFORRESPONSE;
+
+			return 1;
+		}
+		break;
+
+		//Waits until timeout-time and counts responses. Warn if too few or too many.
+	case GETSTATUS_WAITFORRESPONSE:
+		if (respondingModule == NULL) {
+			errno = EINVAL;
+			LogMessage(LOG_LEVEL_ERROR, "Responding module parameter is null");
+			return -1;
+		}
+
+		//Did a module respond
+		if (respondingModule[0]) {
+			numberOfResponses++;
+		}
+
+		if (timercmp(&getStatusTimeoutTimer, &currentSystemTime, <)) {
+
+			//Too many
+			if (numberOfResponses > SYSTEM_CONTROL_NO_OF_MODULES_IN_USE) {
+
+				U8 diff = numberOfResponses - SYSTEM_CONTROL_NO_OF_MODULES_IN_USE;
+
+				LogMessage(LOG_LEVEL_ERROR, "%d too many responses to GET_STATUS command", diff);
+
+			}
+
+			//Too few
+			else if (numberOfResponses < SYSTEM_CONTROL_NO_OF_MODULES_IN_USE) {
+
+				U8 diff = SYSTEM_CONTROL_NO_OF_MODULES_IN_USE - numberOfResponses;
+
+				LogMessage(LOG_LEVEL_ERROR, "%d module(s) not responding to GET_STATUS command", diff);
+			}
+
+			//Just right
+			else {
+				if (debug) {
+					LogPrint("GET_STATUS OK, received %d responses from %d modules.", numberOfResponses,
+							 SYSTEM_CONTROL_NO_OF_MODULES_IN_USE);
+				}
+			}
+
+			numberOfResponses = 0;
+			getStatusState = GETSTATUS_SEND;
+
+		}
+
+		break;
+
+	default:
+		LogMessage(LOG_LEVEL_INFO, "getStatusState: %d", getStatusState);
+		break;
+	}
+
+
+	return 0;
+}
+
+
+void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
+
+	size_t remainingBufferSpace = bufferSize;
+	struct sysinfo info;
+	char stringBuffer[255];
+	long hours, minutes, seconds;
+
+	// Server uptime
+	sysinfo(&info);
+
+	hours = info.uptime / 3600;
+	minutes = (info.uptime - (3600 * hours)) / 60;
+	seconds = (info.uptime - (3600 * hours) - (minutes * 60));
+
+	snprintf(stringBuffer, sizeof (stringBuffer), "Machine uptime: %ld:%ld:%ld\n", hours, minutes, seconds);
+	strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
+	remainingBufferSpace -= strlen(stringBuffer);
+
+	unsigned long startTime = UtilGetPIDUptime(getpid()).tv_sec;
+
+	unsigned long long timeAtStart = startTime / (unsigned long long)(sysconf(_SC_CLK_TCK));
+	long serverUptime = (long)((unsigned long long)info.uptime - timeAtStart);
+
+
+	hours = serverUptime / 3600;
+	minutes = (serverUptime - (3600 * hours)) / 60;
+	seconds = (serverUptime - (3600 * hours) - (minutes * 60));
+	sprintf(stringBuffer, "Server uptime: %ld:%ld:%ld\n", hours, minutes, seconds);
+	strncat(ControlResponseBuffer, stringBuffer, remainingBufferSpace - 1);
+	remainingBufferSpace -= strlen(stringBuffer);
+	//Make it clear that this is placeholder data
+	strncat(ControlResponseBuffer, "Maestro powerlevel: 90001\n", remainingBufferSpace - 1);
 }

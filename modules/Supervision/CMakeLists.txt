@@ -14,6 +14,7 @@ set(ISO_22133_LIBRARY ISO22133)
 set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MESSAGE_BUS_LIBRARY MaestroMQ)
+set(MAESTRO_COMMON_LIBRARY MaestroCommon)
 
 include(GNUInstallDirs)
 
@@ -22,19 +23,28 @@ add_executable(${SUPERVISION_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/geofence.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/supervisionstate.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/trajectory.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/objectconfiguration.cpp
 )
 
 # Link project executable to util libraries
-target_link_libraries(${SUPERVISION_TARGET} LINK_PUBLIC
+target_link_libraries(${SUPERVISION_TARGET} PUBLIC
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${ISO_22133_LIBRARY}
 	${POSITIONING_LIBRARY}
 	${LOGGING_LIBRARY}
+	${MAESTRO_COMMON_LIBRARY}
+	${SYSTEMD_LIBRARIES}
 )
+
 target_include_directories(${SUPERVISION_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+
+# Generate service file with correct details
+message(STATUS "Configuring ${PROJECT_NAME} service file")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/linux/maestro-supervision.service.in
+	${PROJECT_BINARY_DIR}/maestro-supervision.service
 )
 
 # Installation rules
@@ -46,5 +56,9 @@ install(TARGETS ${SUPERVISION_TARGET}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Ensure linkage is reloaded after install
-install(CODE "execute_process(COMMAND ldconfig)")
+# Install the service
+install(CODE "MESSAGE(STATUS \"Installing ${PROJECT_NAME} service to ${CMAKE_INSTALL_FULL_LIBDIR}/systemd/system\")")
+install(FILES ${PROJECT_BINARY_DIR}/maestro-supervision.service
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/systemd/system
+  COMPONENT service
+)

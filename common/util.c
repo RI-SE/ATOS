@@ -52,6 +52,7 @@
 #define CONFIGURATION_DIR_NAME "conf"
 #define TRAJECTORY_DIR_NAME "traj"
 #define GEOFENCE_DIR_NAME "geofence"
+#define OBJECT_DIR_NAME "objects"
 
 /* Message priorities on message queue */
 // Abort message
@@ -59,7 +60,7 @@
 // Object control state report
 #define PRIO_COMM_OBC_STATE 26
 // Internal configuration
-#define PRIO_DATA_DICT 24
+#define PRIO_COMM_DATA_DICT 24
 // Configuration affecting other configurations
 #define PRIO_COMM_OSEM 22
 // Configuration messages
@@ -74,39 +75,74 @@
 #define PRIO_COMM_DISARM 16
 #define PRIO_COMM_STOP 16
 #define PRIO_COMM_REPLAY 16
-#define PRIO_COMM_CONTROL 16
 #define PRIO_COMM_INIT 16
 #define PRIO_COMM_CONNECT 16
 #define PRIO_COMM_DISCONNECT 16
 #define PRIO_COMM_REMOTECTRL_ENABLE 16
 #define PRIO_COMM_REMOTECTRL_DISABLE 16
+#define PRIO_COMM_ENABLE_OBJECT 16
+#define PRIO_COMM_ABORTING_DONE 16
 // Single-shot messages relevant during test run
 #define PRIO_COMM_EXAC 14
 #define PRIO_COMM_TREO 14
 // Frequent messages relevant during test run
 #define PRIO_COMM_TRAJ_TOSUP 12
 #define PRIO_COMM_TRAJ_FROMSUP 12
+#define PRIO_COMM_GETSTATUS 10
 #define PRIO_COMM_REMOTECTRL_MANOEUVRE 12
-// Logging
-#define PRIO_COMM_LOG 10
+#define PRIO_COMM_GETSTATUS_OK 255
+
 // Unused messages TODO: double check the priority of unused messages
 #define PRIO_COMM_VIOP 5
 #define PRIO_COMM_TRAJ 5
 #define PRIO_COMM_ASP 5
 // Server exit message
 #define PRIO_COMM_EXIT 3
-// Monitoring messages
-#define PRIO_COMM_MONR 0
+
+// Configuration parameter strings
+static const char ParameterNameScenarioName[] = "ScenarioName";
+static const char ParameterNameOriginLongitude[] = "OriginLongitude";
+static const char ParameterNameOriginLatitude[] = "OriginLatitude";
+static const char ParameterNameOriginAltitude[] = "OriginAltitude";
+static const char ParameterNameVisualizationServerName[] = "VisualizationServerName";
+static const char ParameterNameASPMaxTimeDiff[] = "ASPMaxTimeDiff";
+static const char ParameterNameASPMaxTrajDiff[] = "ASPMaxTrajDiff";
+static const char ParameterNameASPStepBackCount[] = "ASPStepBackCount";
+static const char ParameterNameASPFilterLevel[] = "ASPFilterLevel";
+static const char ParameterNameASPMaxDeltaTime[] = "ASPMaxDeltaTime";
+static const char ParameterNameTimeServerIP[] = "TimeServerIP";
+static const char ParameterNameTimeServerPort[] = "TimeServerPort";
+static const char ParameterNameSimulatorIP[] = "SimulatorIP";
+static const char ParameterNameSimulatorPortTCP[] = "SimulatorTCPPort";
+static const char ParameterNameSimulatorPortUDP[] = "SimulatorUDPPort";
+static const char ParameterNameSimulatorMode[] = "SimulatorMode";
+static const char ParameterNameVOILReceivers[] = "VOILReceivers";
+static const char ParameterNameDTMReceivers[] = "DTMReceivers";
+static const char ParameterNameExternalSupervisorIP[] = "SupervisorIP";
+static const char ParameterNameExternalSupervisorPortTCP[] = "SupervisorTCPPort";
+static const char ParameterNameRVSSConfig[] = "RVSSConfig";
+static const char ParameterNameRVSSRate[] = "RVSSRate";
+static const char ParameterNameMaxPacketsLost[] = "MaxPacketsLost";
+static const char ParameterNameTransmitterID[] = "TransmitterID";
+static const char ParameterNameMiscData[] = "MiscData";
+
+static const char ObjectSettingNameID[] = "ID";
+static const char ObjectSettingNameIP[] = "IP";
+static const char ObjectSettingNameTraj[] = "traj";
+static const char ObjectSettingNameIsAnchor[] = "isAnchor";
+static const char ObjectSettingNameInjectorIDs[] = "injectorIDs";
+static const char ObjectSettingNameLatitude[] = "originLatitude";
+static const char ObjectSettingNameLongitude[] = "originLongitude";
+static const char ObjectSettingNameAltitude[] = "originAltitude";
+static const char ObjectSettingNameIsOsiCompatible[] = "isOsiCompatible";
+static const char ObjectSettingNameTurningDiameter[] = "turningDiameter";
+static const char ObjectSettingNameMaxSpeed[] = "maxSpeed";
+
 
 /*------------------------------------------------------------
 -- Local type definitions
 ------------------------------------------------------------*/
-
-/*------------------------------------------------------------
--- Public variables
-------------------------------------------------------------*/
-
-//static int debug = DEBUG_LEVEL_HIGH;
+enum procFields {startTime = 21, vSize = 22};
 
 /*------------------------------------------------------------
 -- Private variables
@@ -746,14 +782,14 @@ int UtilSetSlaveObject(ObjectPosition * OP, char *Filename, char debug) {
  * \param stringLength Length of string in which converted data is to be placed
  * \return 0 upon success, -1 otherwise
  */
-int UtilMonitorDataToString(const MonitorDataType monitorData, char *monitorDataString, size_t stringLength) {
+int UtilObjectDataToString(const ObjectDataType monitorData, char *monitorDataString, size_t stringLength) {
 	memset(monitorDataString, 0, stringLength);
 	inet_ntop(AF_INET, &monitorData.ClientIP, monitorDataString,
 			  (stringLength > UINT_MAX) ? UINT_MAX : (socklen_t) stringLength);
 	strcat(monitorDataString, ";0;");
 
 	if (objectMonitorDataToASCII
-		(&monitorData.data, monitorDataString + strlen(monitorDataString),
+		(&monitorData.MonrData, monitorDataString + strlen(monitorDataString),
 		 stringLength - strlen(monitorDataString)) < 0) {
 		memset(monitorDataString, 0, stringLength);
 		return -1;
@@ -768,7 +804,7 @@ int UtilMonitorDataToString(const MonitorDataType monitorData, char *monitorData
  * \param monrData Struct containing relevant monitor data
  * \return 0 upon success, -1 otherwise
  */
-int UtilStringToMonitorData(const char *monitorString, size_t stringLength, MonitorDataType * monitorData) {
+int UtilStringToMonitorData(const char *monitorString, size_t stringLength, ObjectDataType * monitorData) {
 	const char *token;
 	const char delim[] = ";";
 	struct in_addr addr;
@@ -785,7 +821,7 @@ int UtilStringToMonitorData(const char *monitorString, size_t stringLength, Moni
 
 	// MONR data
 	token = strtok(NULL, delim);
-	if (ASCIIToObjectMonitorData(token, &monitorData->data) == 0)
+	if (ASCIIToObjectMonitorData(token, &monitorData->MonrData) == 0)
 		return 0;
 	else
 		return -1;
@@ -1011,7 +1047,6 @@ int UtilPopulateSpaceTimeArr(ObjectPosition * OP, char *TrajFile) {
 	Trajfd = fopen(TrajFile, "r");
 	if (Trajfd) {
 		Rows = OP->TrajectoryPositionCount;
-		//printf("Rows = %d\n", Rows);
 		double x, y, z;
 		float t;
 		char ValueStr[NUMBER_CHAR_LENGTH];
@@ -1019,7 +1054,7 @@ int UtilPopulateSpaceTimeArr(ObjectPosition * OP, char *TrajFile) {
 		char *src2;
 
 		do {
-			bzero(TrajRow, TRAJECTORY_LINE_LENGTH);
+			memset(TrajRow, 0, sizeof (TrajRow));
 			if (UtilReadLineCntSpecChars(Trajfd, TrajRow) >= 10) {
 				bzero(ValueStr, NUMBER_CHAR_LENGTH);
 				src1 = strchr(TrajRow, ';');
@@ -1070,7 +1105,6 @@ int UtilPopulateSpaceTimeArr(ObjectPosition * OP, char *TrajFile) {
 		//{
 		//  printf("OrigoDistance=%4.3f, Time=%4.3f, Index=%d\n", OP->SpaceTimeArr[g].OrigoDistance, OP->SpaceTimeArr[g].Time, OP->SpaceTimeArr[g].Index);
 		//}
-
 
 		fclose(Trajfd);
 	}
@@ -1141,7 +1175,8 @@ float UtilCalculateTimeToSync(ObjectPosition * OP) {
  * \param nPtsInPolygon length of the vertex array
  * \return true if the point lies within the polygon, false otherwise
  */
-char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition * vertices, unsigned int nPtsInPolygon) {
+char UtilIsPointInPolygon(const CartesianPosition point, const CartesianPosition * vertices,
+						  unsigned int nPtsInPolygon) {
 	int nIntersects = 0;
 
 	if (nPtsInPolygon == 0) {
@@ -1664,12 +1699,16 @@ int UtilFindCurrentTrajectoryPositionOld(ObjectPosition * OP, int StartIndex, do
 	return PositionFound;
 }
 
+/*!
+ * \brief UtilCountFileRows Count number of rows terminated with \n (0x0A) 
+ * \param fd fileDescriptor
+ * \return number of rows
+ */
 int UtilCountFileRows(FILE * fd) {
 	int c = 0;
 	int rows = 0;
 
 	while (c != EOF) {
-
 		c = fgetc(fd);
 		//printf("%x-", c);
 		if (c == '\n')
@@ -1678,6 +1717,28 @@ int UtilCountFileRows(FILE * fd) {
 
 	return rows;
 }
+
+/*!
+ * \brief UtilCountFileRowsInPath Count number of rows terminated with \n (0x0A) 
+ * \                              in a file specificed by path
+ * \param path Path to file
+ * \param cpData Command data
+ * \param dataLength Length of command data array
+ * \return number of rows on success, -1 on error
+ */
+int UtilCountFileRowsInPath(const char *path, const size_t pathlen) {
+	int c = 0;
+	int rows = 0;
+	if(pathlen <= 0)
+		return -1;
+	FILE *fd;
+	fd = fopen(path, "r");
+	if (fd != NULL)	rows = UtilCountFileRows(fd);
+	else rows = -1;
+	fclose(fd);
+	return rows;
+}
+
 
 int UtilReadLineCntSpecChars(FILE * fd, char *Buffer) {
 	int c = 0;
@@ -1744,6 +1805,46 @@ int UtilReadLine(FILE * fd, char *Buffer) {
 }
 
 
+
+/*!
+ * \brief UtilGetRowInFile Gets a specific row in file specified by rowIndex
+ * \param path Path to file
+ * \param pathLength Length of path
+ * \param rowIndex Selected row
+ * \param rowBuffer Pointer to where to store the read row
+ * \param bufferLength Length of buffer
+ * \return 1 on success, -1 on error
+ */
+int UtilGetRowInFile(const char *path, const size_t pathLength,
+					I32 rowIndex, char *rowBuffer, const size_t bufferLength){
+	int c = 0;
+	int rows = 0;
+	int length = 0;
+	FILE *fd;
+	
+	if(pathLength < 0)
+		return -1;
+	
+	fd = fopen(path, "r");
+	if (fd != NULL){
+		rows = UtilCountFileRows(fd);
+		fclose(fd);
+		fd = fopen(path, "r");
+		for(int i = 0; i < rows; i ++){
+			length = UtilReadLine(fd, rowBuffer);
+			if(length > bufferLength){ 
+				LogMessage(LOG_LEVEL_ERROR, "Buffer to small for read row in file");
+				return -1;
+			}
+			if(rowIndex == i){
+				*(rowBuffer+length) = NULL;
+				return i;
+			} 
+		}
+	}
+	fclose(fd);
+	return -1;
+}
 
 C8 *UtilSearchTextFile(C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
 
@@ -1905,7 +2006,7 @@ int iCommClose() {
  * \param timeRecv Receive time output variable
  * \return Size (in bytes) of received data
  */
-ssize_t iCommRecv(enum COMMAND * command, char *data, const size_t messageSize, struct timeval * timeRecv) {
+ssize_t iCommRecv(enum COMMAND *command, char *data, const size_t messageSize, struct timeval *timeRecv) {
 	char message[MQ_MSG_SIZE];
 	ssize_t result = MQBusRecv(message, MQ_MSG_SIZE);
 	size_t dataLength = 0;
@@ -1924,7 +2025,7 @@ ssize_t iCommRecv(enum COMMAND * command, char *data, const size_t messageSize, 
 		*command = (unsigned char)message[0];
 		memcpy(&dataLength, message + sizeof (char), sizeof (dataLength));
 
-		if (dataLength != (size_t) (result)) {
+		if (dataLength != (size_t)(result)) {
 			LogMessage(LOG_LEVEL_ERROR,
 					   "Received message with invalid length specification field: %d bytes, but %d bytes were received",
 					   dataLength, result);
@@ -2001,21 +2102,18 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_STOP:
 		uiMessagePrio = PRIO_COMM_STOP;
 		break;
-	case COMM_MONR:
-		uiMessagePrio = PRIO_COMM_MONR;
-		break;
 	case COMM_EXIT:
 		uiMessagePrio = PRIO_COMM_EXIT;
 		break;
 	case COMM_REPLAY:
 		uiMessagePrio = PRIO_COMM_REPLAY;
 		break;
-	case COMM_CONTROL:
-		uiMessagePrio = PRIO_COMM_CONTROL;
-		break;
 	case COMM_ABORT:
 		uiMessagePrio = PRIO_COMM_ABORT;
 		break;
+	case COMM_ABORT_DONE:
+		uiMessagePrio = PRIO_COMM_ABORTING_DONE;
+	break;
 	case COMM_INIT:
 		uiMessagePrio = PRIO_COMM_INIT;
 		break;
@@ -2027,9 +2125,6 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 		break;
 	case COMM_DISCONNECT:
 		uiMessagePrio = PRIO_COMM_DISCONNECT;
-		break;
-	case COMM_LOG:
-		uiMessagePrio = PRIO_COMM_LOG;
 		break;
 	case COMM_OSEM:
 		uiMessagePrio = PRIO_COMM_OSEM;
@@ -2050,7 +2145,8 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 		uiMessagePrio = PRIO_COMM_TRAJ_FROMSUP;
 		break;
 	case COMM_DATA_DICT:
-		uiMessagePrio = PRIO_DATA_DICT;
+		uiMessagePrio = PRIO_COMM_DATA_DICT;
+		break;
 	case COMM_EXAC:
 		uiMessagePrio = PRIO_COMM_EXAC;
 		break;
@@ -2075,8 +2171,17 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_REMOTECTRL_MANOEUVRE:
 		uiMessagePrio = PRIO_COMM_REMOTECTRL_MANOEUVRE;
 		break;
+	case COMM_ENABLE_OBJECT:
+		uiMessagePrio = PRIO_COMM_ENABLE_OBJECT;
+		break;
 	case COMM_FAILURE:
 		uiMessagePrio = PRIO_COMM_FAILURE;
+		break;
+	case COMM_GETSTATUS:
+		uiMessagePrio = PRIO_COMM_GETSTATUS;
+		break;
+	case COMM_GETSTATUS_OK:
+		uiMessagePrio = PRIO_COMM_GETSTATUS_OK;
 		break;
 	default:
 		util_error("Unknown command");
@@ -2435,6 +2540,23 @@ void UtilGetGeofenceDirectoryPath(char *path, size_t pathLen) {
 }
 
 /*!
+ * \brief UtilGetObjectDirectoryPath Fetches the absolute path to where object files
+ * are stored, ending with a forward slash.
+ * \param path Char array to hold the path
+ * \param pathLen Length of char array
+ */
+void UtilGetObjectDirectoryPath(char *path, size_t pathLen) {
+	if (pathLen > MAX_FILE_PATH) {
+		LogMessage(LOG_LEVEL_ERROR, "Path variable too small to hold path data");
+		path[0] = '\0';
+		return;
+	}
+	UtilGetTestDirectoryPath(path, pathLen);
+	strcat(path, OBJECT_DIR_NAME);
+	strcat(path, "/");
+}
+
+/*!
  * \brief UtilDeleteTrajectoryFile deletes the specified trajectory
  * \param name
  * \param nameLen
@@ -2502,6 +2624,39 @@ int UtilDeleteGeofenceFile(const char *name, const size_t nameLen) {
 }
 
 /*!
+ * \brief UtilDeleteObjectFile deletes the specified object file
+ * \param name
+ * \param nameLen
+ * \return returns 0 if the object is now deleted. Non-zero values otherwise.
+ */
+int UtilDeleteObjectFile(const char *name, const size_t nameLen) {
+	char filePath[MAX_FILE_PATH] = { '\0' };
+	UtilGetObjectDirectoryPath(filePath, sizeof (filePath));
+
+	if (name == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on null object file");
+		return -1;
+	}
+	if (strstr(name, "..") != NULL || strstr(name, "/") != NULL) {
+		errno = EPERM;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to call delete on object file and navigate out of directory");
+		return -1;
+	}
+	if (strlen(filePath) + nameLen > MAX_FILE_PATH) {
+		errno = ENOBUFS;
+		LogMessage(LOG_LEVEL_ERROR, "Object file name too long");
+		return -1;
+	}
+
+	if (filePath[0] == '\0')
+		return -1;
+
+	strcat(filePath, name);
+	return deleteFile(filePath, sizeof (filePath));
+}
+
+/*!
  * \brief UtilDeleteGeofenceFile deletes the specified file and deletes it
  * \param pathRelativeToWorkspace
  * \return returns 0 if the geofence is now deleted. Non-zero values otherwise.
@@ -2549,11 +2704,23 @@ int UtilDeleteTrajectoryFiles(void) {
 
 /*!
  * \brief UtilDeleteGeofenceFiles finds the geofence folder and deletes its contents
- * \return returns 0 if succesfull if the trajectory folder now is empty. Non-zero values otherwise.
+ * \return returns 0 if succesful if the geofence folder now is empty. Non-zero values otherwise.
  */
 int UtilDeleteGeofenceFiles(void) {
 	char filePath[MAX_FILE_PATH] = { '\0' };
 	UtilGetGeofenceDirectoryPath(filePath, sizeof (filePath));
+	if (filePath[0] == '\0')
+		return -1;
+	return deleteDirectoryContents(filePath, sizeof (filePath));
+}
+
+/*!
+ * \brief UtilDeleteObjectFiles finds the object folder and deletes its contents
+ * \return returns 0 if succesful if the object folder now is empty. Non-zero values otherwise.
+ */
+int UtilDeleteObjectFiles(void) {
+	char filePath[MAX_FILE_PATH] = { '\0' };
+	UtilGetObjectDirectoryPath(filePath, sizeof (filePath));
 	if (filePath[0] == '\0')
 		return -1;
 	return deleteDirectoryContents(filePath, sizeof (filePath));
@@ -3046,7 +3213,7 @@ I32 UtilConnectTCPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 }
 
 
-void UtilSendTCPData(const C8 * Module, const C8 * Data, I32 Length, I32 * Sockfd, U8 Debug) {
+void UtilSendTCPData(const C8 * Module, const C8 * Data, I32 Length, const int *Sockfd, U8 Debug) {
 	I32 i, n, error = 0;
 
 	socklen_t len = sizeof (error);
@@ -3083,10 +3250,13 @@ I32 UtilReceiveTCPData(const C8 * Module, I32 * Sockfd, C8 * Data, I32 Length, U
 	I32 i, Result;
 
 	if (Length <= 0)
-		Result = recv(*Sockfd, Data, TCP_RX_BUFFER, 0);
+		Result = recv(*Sockfd, Data, TCP_RX_BUFFER, MSG_DONTWAIT);
 	else
-		Result = recv(*Sockfd, Data, Length, 0);
+		Result = recv(*Sockfd, Data, Length, MSG_DONTWAIT);
 
+	if (Result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+		Result = 0;
+	}
 	// TODO: Change this when bytes thingy has been implemented in logging
 	if (Debug == 1 && Result < 0) {
 		printf("[%s] Received TCP data: ", Module);
@@ -3136,18 +3306,16 @@ void UtilCreateUDPChannel(const C8 * Module, I32 * Sockfd, const C8 * IP, const 
 }
 
 
-void UtilSendUDPData(const C8 * Module, I32 * Sockfd, struct sockaddr_in *Addr, C8 * Data, I32 Length,
+void UtilSendUDPData(const C8 * Module, I32 * Sockfd, struct sockaddr_in *Addr, C8 * Data, size_t Length,
 					 U8 Debug) {
-	I32 result, i;
+	ssize_t result;
 
-
-	result = sendto(*Sockfd, Data, Length, 0, (const struct sockaddr *)Addr, sizeof (struct sockaddr_in));
+	result = sendto(*Sockfd, Data, Length, 0, (struct sockaddr *)Addr, sizeof (struct sockaddr_in));
 
 	// TODO: Change this when bytes thingy has been implemented in logging
 	if (Debug) {
 		printf("[%s] Bytes sent: ", Module);
-		i = 0;
-		for (i = 0; i < Length; i++)
+		for (size_t i = 0; i < Length; i++)
 			printf("%x-", (unsigned char)*(Data + i));
 		printf("\n");
 	}
@@ -3411,27 +3579,29 @@ UtilWriteConfigurationParameter updates parameters in the file test.conf.
 - *NewValue the value of the parameter.
 - Debug enable(1)/disable(0) debug printouts
 */
-I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug) {
+int32_t UtilWriteConfigurationParameter(const enum ConfigurationFileParameter parameterName,
+										const char *newValue, const size_t bufferLength) {
 
-	I32 RowCount, i;
-	C8 Parameter[SMALL_BUFFER_SIZE_64];
-	C8 Row[SMALL_BUFFER_SIZE_128];
-	C8 NewRow[SMALL_BUFFER_SIZE_128];
+	int32_t RowCount, i;
+	char Parameter[SMALL_BUFFER_SIZE_64];
+	char Row[SMALL_BUFFER_SIZE_128];
+	char NewRow[SMALL_BUFFER_SIZE_128];
 	FILE *fd, *TempFd;
-	C8 *ptr1, *ptr2;
-	U8 ParameterFound = 0;
+	char *ptr1, *ptr2;
+	uint8_t ParameterFound = 0;
 	char confPathDir[MAX_FILE_PATH];
 	char tempConfPathDir[MAX_FILE_PATH];
-	char TEMP_FILE_NAME[] = "temp-util.conf";
+	const char TEMP_FILE_NAME[] = "temp-util.conf";
 
 	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
 	strcpy(tempConfPathDir, confPathDir);
 	strcat(confPathDir, CONF_FILE_NAME);
 	strcat(tempConfPathDir, TEMP_FILE_NAME);
 
-	bzero(Parameter, SMALL_BUFFER_SIZE_64);
+	memset(Parameter, 0, sizeof (Parameter));
 
-	strcat(Parameter, ParameterName);
+	UtilGetConfigurationParameterAsString(parameterName, Parameter, sizeof (Parameter));
+
 	strcat(Parameter, "=");
 
 	//Remove temporary file
@@ -3443,7 +3613,7 @@ I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug)
 	//Open configuration file
 	fd = fopen(confPathDir, "r");
 
-	if (fd > 0) {
+	if (fd != NULL) {
 		RowCount = UtilCountFileRows(fd);
 		fclose(fd);
 		fd = fopen(confPathDir, "r");
@@ -3460,15 +3630,12 @@ I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug)
 				ParameterFound = 1;
 				bzero(NewRow, SMALL_BUFFER_SIZE_128);
 				strncpy(NewRow, Row, (U64) ptr1 - (U64) Row + strlen(Parameter));
-				strcat(NewRow, NewValue);
+				strncat(NewRow, newValue, bufferLength);
 				if ((U64) ptr2 > (U64) ptr1) {
 					strcat(NewRow, " ");	// Add space
 					strcat(NewRow, ptr2);	// Add the comment
 				}
-
-				if (Debug) {
-					LogMessage(LOG_LEVEL_DEBUG, "Changed parameter: %s", NewRow);
-				}
+				LogMessage(LOG_LEVEL_DEBUG, "Changed parameter: %s", NewRow);
 
 				strcat(NewRow, "\n");
 				(void)fwrite(NewRow, 1, strlen(NewRow), TempFd);
@@ -3491,8 +3658,296 @@ I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug)
 		//Remove temporary file
 		remove(tempConfPathDir);
 	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to open configuration file %s", confPathDir);
+	}
 
-	return (I32) ParameterFound;
+	return (int32_t) ParameterFound;
+}
+
+int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter parameter,
+									   char *returnValue, const size_t bufferLength) {
+
+	char TextBuffer[SMALL_BUFFER_SIZE_128];
+	char confPathDir[MAX_FILE_PATH];
+
+	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
+	strcat(confPathDir, CONF_FILE_NAME);
+
+	memset(TextBuffer, 0, sizeof (TextBuffer));
+	memset(returnValue, 0, bufferLength);
+
+	UtilGetConfigurationParameterAsString(parameter, TextBuffer, sizeof (TextBuffer));
+	strcat(TextBuffer, "=");
+
+	UtilSearchTextFile(confPathDir, TextBuffer, "", returnValue);
+
+	LogMessage(LOG_LEVEL_DEBUG, "Read parameter: %s%s\n", TextBuffer, returnValue);
+
+	return strnlen(returnValue, bufferLength);
+}
+
+char *UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter,
+											char *returnValue, const size_t bufferLength) {
+	const char *outputString = NULL;
+
+	switch (parameter) {
+	case CONFIGURATION_PARAMETER_SCENARIO_NAME:
+		outputString = ParameterNameScenarioName;
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
+		outputString = ParameterNameOriginLongitude;
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_LATITUDE:
+		outputString = ParameterNameOriginLatitude;
+		break;
+	case CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE:
+		outputString = ParameterNameOriginAltitude;
+		break;
+	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
+		outputString = ParameterNameVisualizationServerName;
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
+		outputString = ParameterNameASPMaxTimeDiff;
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF:
+		outputString = ParameterNameASPMaxTrajDiff;
+		break;
+	case CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT:
+		outputString = ParameterNameASPStepBackCount;
+		break;
+	case CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL:
+		outputString = ParameterNameASPFilterLevel;
+		break;
+	case CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME:
+		outputString = ParameterNameASPMaxDeltaTime;
+		break;
+	case CONFIGURATION_PARAMETER_TIME_SERVER_IP:
+		outputString = ParameterNameTimeServerIP;
+		break;
+	case CONFIGURATION_PARAMETER_TIME_SERVER_PORT:
+		outputString = ParameterNameTimeServerPort;
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_IP:
+		outputString = ParameterNameSimulatorIP;
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP:
+		outputString = ParameterNameSimulatorPortTCP;
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP:
+		outputString = ParameterNameSimulatorPortUDP;
+		break;
+	case CONFIGURATION_PARAMETER_SIMULATOR_MODE:
+		outputString = ParameterNameSimulatorMode;
+		break;
+	case CONFIGURATION_PARAMETER_VOIL_RECEIVERS:
+		outputString = ParameterNameVOILReceivers;
+		break;
+	case CONFIGURATION_PARAMETER_DTM_RECEIVERS:
+		outputString = ParameterNameDTMReceivers;
+		break;
+	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP:
+		outputString = ParameterNameExternalSupervisorIP;
+		break;
+	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP:
+		outputString = ParameterNameExternalSupervisorPortTCP;
+		break;
+	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
+		outputString = ParameterNameRVSSConfig;
+		break;
+	case CONFIGURATION_PARAMETER_RVSS_RATE:
+		outputString = ParameterNameRVSSRate;
+		break;
+	case CONFIGURATION_PARAMETER_MAX_PACKETS_LOST:
+		outputString = ParameterNameMaxPacketsLost;
+		break;
+	case CONFIGURATION_PARAMETER_TRANSMITTER_ID:
+		outputString = ParameterNameTransmitterID;
+		break;
+	case CONFIGURATION_PARAMETER_MISC_DATA:
+		outputString = ParameterNameMiscData;
+		break;
+	default:
+		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
+		outputString = "";
+	}
+	if (strlen(outputString) + 1 > bufferLength) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold configuration parameter name");
+		returnValue = "";
+	}
+	else {
+		strncpy(returnValue, outputString, bufferLength);
+	}
+	return returnValue;
+}
+
+
+enum ConfigurationFileParameter UtilParseConfigurationParameter(const char *parameter,
+																const size_t bufferLength) {
+	if (strncmp(ParameterNameScenarioName, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_SCENARIO_NAME;
+	if (strncmp(ParameterNameOriginLatitude, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ORIGIN_LATITUDE;
+	else if (strncmp(ParameterNameOriginLongitude, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE;
+	else if (strncmp(ParameterNameOriginAltitude, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE;
+	else if (strncmp(ParameterNameVisualizationServerName, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME;
+	else if (strncmp(ParameterNameASPMaxTimeDiff, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF;
+	else if (strncmp(ParameterNameASPMaxTrajDiff, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF;
+	else if (strncmp(ParameterNameASPStepBackCount, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT;
+	else if (strncmp(ParameterNameASPFilterLevel, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL;
+	else if (strncmp(ParameterNameASPMaxDeltaTime, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME;
+	else if (strncmp(ParameterNameTimeServerIP, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_TIME_SERVER_IP;
+	else if (strncmp(ParameterNameTimeServerPort, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_TIME_SERVER_PORT;
+	else if (strncmp(ParameterNameSimulatorIP, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_SIMULATOR_IP;
+	else if (strncmp(ParameterNameSimulatorPortTCP, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP;
+	else if (strncmp(ParameterNameSimulatorPortUDP, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP;
+	else if (strncmp(ParameterNameSimulatorMode, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_SIMULATOR_MODE;
+	else if (strncmp(ParameterNameVOILReceivers, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_VOIL_RECEIVERS;
+	else if (strncmp(ParameterNameDTMReceivers, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_DTM_RECEIVERS;
+	else if (strncmp(ParameterNameExternalSupervisorIP, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP;
+	else if (strncmp(ParameterNameExternalSupervisorPortTCP, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP;
+	else if (strncmp(ParameterNameMiscData, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_MISC_DATA;
+	else if (strncmp(ParameterNameRVSSConfig, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_RVSS_CONFIG;
+	else if (strncmp(ParameterNameRVSSRate, parameter, bufferLength) == 0)
+		return CONFIGURATION_PARAMETER_RVSS_RATE;
+	else
+		return CONFIGURATION_PARAMETER_INVALID;
+}
+
+/*!
+ * \brief UtilGetObjectFileSetting Gets the specified setting from an object file
+ * \param setting Setting to get
+ * \param objectFilePath File containing the setting
+ * \param filePathLength Length of the file path variable
+ * \param objectSetting Output variable
+ * \param objectSettingSize Size of output variable
+ * \return 0 if successful, -1 otherwise
+ */
+int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char *objectFilePath,
+							 const size_t filePathLength, char *objectSetting,
+							 const size_t objectSettingSize) {
+	char textBuffer[SMALL_BUFFER_SIZE_128];
+
+	UtilGetObjectParameterAsString(setting, textBuffer, sizeof (textBuffer));
+	strcat(textBuffer, "=");
+
+	memset(objectSetting, 0, objectSettingSize);
+	UtilSearchTextFile(objectFilePath, textBuffer, "", objectSetting);
+
+	LogMessage(LOG_LEVEL_DEBUG, "Read object parameter: %s%s", textBuffer, objectSetting);
+
+	return objectSetting[0] == '\0' ? -1 : 0;
+}
+
+/*!
+ * \brief UtilGetObjectParameterAsString Converts an enumerated value to its string representation,
+ *			or an empty string if an invalid parameter was requested.
+ * \param parameter
+ * \param returnValue
+ * \param bufferLength
+ * \return Pointer to the string
+ */
+char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
+									 char *returnValue, const size_t bufferLength) {
+	const char *outputString = NULL;
+
+	switch (parameter) {
+	case OBJECT_SETTING_ID:
+		outputString = ObjectSettingNameID;
+		break;
+	case OBJECT_SETTING_IP:
+		outputString = ObjectSettingNameIP;
+		break;
+	case OBJECT_SETTING_TRAJ:
+		outputString = ObjectSettingNameTraj;
+		break;
+	case OBJECT_SETTING_IS_ANCHOR:
+		outputString = ObjectSettingNameIsAnchor;
+		break;
+	case OBJECT_SETTING_INJECTOR_IDS:
+		outputString = ObjectSettingNameInjectorIDs;
+		break;
+	case OBJECT_SETTING_ORIGIN_LATITUDE:
+		outputString = ObjectSettingNameLatitude;
+		break;
+	case OBJECT_SETTING_ORIGIN_LONGITUDE:
+		outputString = ObjectSettingNameLongitude;
+		break;
+	case OBJECT_SETTING_ORIGIN_ALTITUDE:
+		outputString = ObjectSettingNameAltitude;
+		break;
+	case OBJECT_SETTING_IS_OSI_COMPATIBLE:
+		outputString = ObjectSettingNameIsOsiCompatible;
+		break;
+	case OBJECT_SETTING_TURNING_DIAMETER:
+		outputString = ObjectSettingNameTurningDiameter;
+		break;
+	case OBJECT_SETTING_MAX_SPEED:
+		outputString = ObjectSettingNameMaxSpeed;
+		break;
+	default:
+		LogMessage(LOG_LEVEL_ERROR, "No matching configuration parameter for enumerated input");
+		outputString = "";
+	}
+
+	if (strlen(outputString) + 1 > bufferLength) {
+		LogMessage(LOG_LEVEL_ERROR, "Buffer too small to hold object setting parameter name");
+		returnValue = "";
+	}
+	else {
+		strncpy(returnValue, outputString, bufferLength);
+	}
+	return returnValue;
+}
+
+int UtilReadOriginConfiguration(GeoPosition* origin) {
+	GeoPosition retval;
+	char setting[20];
+	char* endptr;
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
+									   setting, sizeof (setting))) {
+		retval.Latitude = strtod(setting, &endptr);
+		if (endptr == setting) {
+			return -1;
+		}
+	}
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
+									   setting, sizeof (setting))) {
+		retval.Longitude = strtod(setting, &endptr);
+		if (endptr == setting) {
+			return -1;
+		}
+	}
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
+									   setting, sizeof (setting))) {
+		retval.Altitude = strtod(setting, &endptr);
+		if (endptr == setting) {
+			return -1;
+		}
+	}
+	retval.Heading = 0; // TODO
+	*origin = retval;
+	return 0;
 }
 
 /*!
@@ -3502,13 +3957,12 @@ I32 UtilWriteConfigurationParameter(C8 * ParameterName, C8 * NewValue, U8 Debug)
  * \param MONR Struct where monitor data should be placed
  * \return -1 on failure, 0 on success
  */
-int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize,
-								  MonitorDataType * monitorData) {
+int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize, ObjectDataType * monitorData) {
 
-	if (rawDataSize != sizeof (MonitorDataType)) {
+	if (rawDataSize != sizeof (ObjectDataType)) {
 		errno = EMSGSIZE;
 		LogMessage(LOG_LEVEL_ERROR, "Raw monitor data array wrong size, %d != %d",
-				   rawDataSize, sizeof (MonitorDataType));
+				   rawDataSize, sizeof (ObjectDataType));
 		return -1;
 	}
 
@@ -3523,8 +3977,8 @@ int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize,
  * \param rawTREOsize size of MQ data
  * \param treoData Data struct to be filled
  */
-I32 UtilPopulateTREODataStructFromMQ(C8 * rawTREO, size_t rawTREOsize, TREOData * treoData) {
-	C8 *rdPtr = rawTREO;
+int UtilPopulateTREODataStructFromMQ(char * rawTREO, size_t rawTREOsize, TREOData * treoData) {
+	char *rdPtr = rawTREO;
 
 	if (rawTREOsize < sizeof (TREOData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw TREO array too small to hold all necessary TREO data");
@@ -3549,8 +4003,8 @@ I32 UtilPopulateTREODataStructFromMQ(C8 * rawTREO, size_t rawTREOsize, TREOData 
  * \param rawEXACsize size of MQ data
  * \param exacData Data struct to be filled
  */
-I32 UtilPopulateEXACDataStructFromMQ(C8 * rawEXAC, size_t rawEXACsize, EXACData * exacData) {
-	C8 *rdPtr = rawEXAC;
+int UtilPopulateEXACDataStructFromMQ(char * rawEXAC, size_t rawEXACsize, EXACData * exacData) {
+	char *rdPtr = rawEXAC;
 
 	if (rawEXACsize < sizeof (EXACData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw EXAC array too small to hold all necessary EXAC data");
@@ -3575,8 +4029,8 @@ I32 UtilPopulateEXACDataStructFromMQ(C8 * rawEXAC, size_t rawEXACsize, EXACData 
  * \param rawTRCMsize size of MQ data
  * \param trcmData Data struct to be filled
  */
-I32 UtilPopulateTRCMDataStructFromMQ(C8 * rawTRCM, size_t rawTRCMsize, TRCMData * trcmData) {
-	C8 *rdPtr = rawTRCM;
+int UtilPopulateTRCMDataStructFromMQ(char * rawTRCM, size_t rawTRCMsize, TRCMData * trcmData) {
+	char *rdPtr = rawTRCM;
 
 	if (rawTRCMsize < sizeof (TRCMData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw TRCM array too small to hold all necessary TRCM data");
@@ -3610,8 +4064,8 @@ I32 UtilPopulateTRCMDataStructFromMQ(C8 * rawTRCM, size_t rawTRCMsize, TRCMData 
  * \param rawACCMsize size of MQ data
  * \param accmData Data struct to be filled
  */
-I32 UtilPopulateACCMDataStructFromMQ(C8 * rawACCM, size_t rawACCMsize, ACCMData * accmData) {
-	C8 *rdPtr = rawACCM;
+int UtilPopulateACCMDataStructFromMQ(char * rawACCM, size_t rawACCMsize, ACCMData * accmData) {
+	char *rdPtr = rawACCM;
 
 	if (rawACCMsize < sizeof (ACCMData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw ACCM array too small to hold all necessary ACCM data");
@@ -3638,6 +4092,52 @@ I32 UtilPopulateACCMDataStructFromMQ(C8 * rawACCM, size_t rawACCMsize, ACCMData 
 
 	return 0;
 }
+
+
+/*!
+ * \brief getPIDuptime reads the proc file of the pid in question and returns start time of the process after boot. In kernels before Linux 2.6, this value was expressed in
+jiffies. Since Linux 2.6, the value is expressed in
+clock ticks (divide by sysconf(_SC_CLK_TCK)).
+ * \param pid the pid in question.
+ * \return The time the process started after system boot.
+ */
+struct timeval UtilGetPIDUptime(pid_t pID) {
+	FILE *pidstat = NULL;
+	struct timeval timeSinceStart;
+	char filename[PATH_MAX] = { 0 };
+	snprintf(filename, sizeof (filename), "/proc/%d/stat", pID);
+
+	pidstat = fopen(filename, "r");
+	if (pidstat == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Error: Couldn't open [%s]\n", filename);
+		timeSinceStart.tv_sec = -1;
+		timeSinceStart.tv_usec = -1;
+		return timeSinceStart;
+	}
+
+	char strval1[100] = { 0 };
+	fgets(strval1, 255, pidstat);
+
+	fclose(pidstat);
+	// Get start time from proc/pid/stat
+	char *token = strtok(strval1, " ");
+	int loopCounter = 0;
+
+	char uptime[247];
+
+	while (token != NULL) {
+		if (loopCounter == startTime) {	//Get  starttime  %llu from proc file for pid.
+			sprintf(uptime, "%s", token);
+		}
+		token = strtok(NULL, " ");
+		loopCounter++;
+	}
+
+
+	timeSinceStart.tv_sec = (strtoul(uptime, NULL, 10));
+	return timeSinceStart;
+}
+
 
 /*!
  * \brief UtilgetDistance calculates the distance between two log lat positions usgin haversine formula.

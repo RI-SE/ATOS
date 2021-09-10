@@ -8,6 +8,7 @@
 #include "action.h"
 #include "causality.h"
 #include "logging.h"
+#include "journal.h"
 
 class Scenario
 {
@@ -40,7 +41,11 @@ public:
             if (tp->getID() == id)
             {
                 retval = tp->update(value);
-                if (retval == Trigger::TRIGGER_OCCURRED) LogMessage(LOG_LEVEL_DEBUG, "Triggered ID %u", id);
+				if (retval == Trigger::TRIGGER_OCCURRED) {
+					std::string type = Trigger::getTypeAsString(tp->getTypeCode());
+					LogMessage(LOG_LEVEL_DEBUG, "Triggered ID %u", id);
+					JournalRecordData(JOURNAL_RECORD_EVENT, "Trigger %s (ID %u) occurred", type.c_str(), id);
+				}
                 return (retval == Trigger::NOT_OK) ? INVALID_ARGUMENT : OK;
             }
         }
@@ -52,7 +57,7 @@ public:
 	void reset(void);
     void clear(void);
 
-    ScenarioReturnCode_t updateTrigger(const MonitorDataType&);
+    ScenarioReturnCode_t updateTrigger(const ObjectDataType&);
 
 private:
     std::set<Causality> causalities;

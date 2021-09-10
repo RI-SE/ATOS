@@ -15,62 +15,62 @@
 
 Scenario::Scenario(const std::string scenarioFilePath)
 {
-    initialize(scenarioFilePath);
+	initialize(scenarioFilePath);
 }
 
 
 Scenario::~Scenario()
 {
-    clear();
+	clear();
 }
 
 void Scenario::clear()
 {
-    for (Trigger* tp : allTriggers)
-        delete tp;
+	for (Trigger* tp : allTriggers)
+		delete tp;
 
-    for (Action* ap : allActions)
-        delete ap;
+	for (Action* ap : allActions)
+		delete ap;
 
-    causalities.clear();
-    allTriggers.clear();
-    allActions.clear();
+	causalities.clear();
+	allTriggers.clear();
+	allActions.clear();
 }
 
 void Scenario::initialize(const std::string scenarioFilePath)
 {
-    std::ifstream file;
-    std::string debugStr;
+	std::ifstream file;
+	std::string debugStr;
 
-    clear();
-    LogMessage(LOG_LEVEL_DEBUG, "Opening scenario file <%s>", scenarioFilePath.c_str());
-    file.open(scenarioFilePath);
+	clear();
+	LogMessage(LOG_LEVEL_DEBUG, "Opening scenario file <%s>", scenarioFilePath.c_str());
+	file.open(scenarioFilePath);
 
-    if (file.is_open())
-    {
-        try {
-            parseScenarioFile(file);
-        } catch (std::invalid_argument) {
-            file.close();
-            throw;
-        }
-        file.close();
-    }
-    else {
-        throw std::ifstream::failure("Unable to open file <" + scenarioFilePath + ">");
-    }
-    LogMessage(LOG_LEVEL_INFO, "Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
+	if (file.is_open())
+	{
+		try {
+			parseScenarioFile(file);
+		} catch (std::invalid_argument) {
+			file.close();
+			throw;
+		}
+		file.close();
+	}
+	else {
+		throw std::ifstream::failure("Unable to open file <" + scenarioFilePath + ">");
+	}
+	LogMessage(LOG_LEVEL_INFO, "Successfully initialized scenario with %d unique triggers and %d unique actions", allTriggers.size(), allActions.size());
 
 	debugStr =  "\nTriggers:\n";
-    for (Trigger* tp : allTriggers)
+	for (Trigger* tp : allTriggers)
 		debugStr += "\t" + tp->getObjectIPAsString() + "\t" + tp->getTypeAsString(tp->getTypeCode()) + "\n";
 
-    debugStr += "Actions:\n";
-    for (Action* ap : allActions)
+	debugStr += "Actions:\n";
+	for (Action* ap : allActions)
 		debugStr += "\t" + ap->getObjectIPAsString() + "\t" + ap->getTypeAsString(ap->getTypeCode()) + "\n";
 
-    debugStr.pop_back();
-    LogMessage(LOG_LEVEL_DEBUG, debugStr.c_str());
+	debugStr.pop_back();
+	LogMessage(LOG_LEVEL_DEBUG, debugStr.c_str());
 }
 
 void Scenario::reset() {
@@ -84,17 +84,17 @@ void Scenario::reset() {
  */
 void Scenario::sendConfiguration(void) const
 {
-    for (Trigger* tp : allTriggers)
-    {
-        if(iCommSendTRCM(tp->getConfigurationMessageData()) == -1)
-            util_error("Fatal communication error sending TRCM");
-    }
+	for (Trigger* tp : allTriggers)
+	{
+		if(iCommSendTRCM(tp->getConfigurationMessageData()) == -1)
+			util_error("Fatal communication error sending TRCM");
+	}
 
-    for (Action* ap : allActions)
-    {
-        if(iCommSendACCM(ap->getConfigurationMessageData()) == -1)
-            util_error("Fatal communication error sending ACCM");
-    }
+	for (Action* ap : allActions)
+	{
+		if(iCommSendACCM(ap->getConfigurationMessageData()) == -1)
+			util_error("Fatal communication error sending ACCM");
+	}
 }
 
 /*!
@@ -105,10 +105,10 @@ void Scenario::sendConfiguration(void) const
  */
 void Scenario::splitLine(const std::string &line, const char delimiter, std::vector<std::string> &result)
 {
-    std::istringstream strm(line);
-    std::string part;
-    while (getline(strm,part,delimiter)) result.push_back(part);
-    return;
+	std::istringstream strm(line);
+	std::string part;
+	while (getline(strm,part,delimiter)) result.push_back(part);
+	return;
 }
 
 /*!
@@ -118,105 +118,105 @@ void Scenario::splitLine(const std::string &line, const char delimiter, std::vec
  */
 void Scenario::parseScenarioFileLine(const std::string &inputLine)
 {
-    using namespace std;
-    if (inputLine[0] == '#' || inputLine.length() == 0) return;
-    string line = inputLine;
+	using namespace std;
+	if (inputLine[0] == '#' || inputLine.length() == 0) return;
+	string line = inputLine;
 
-    // Remove whitespace
-    string::iterator endPos = remove_if(line.begin(), line.end(), ::isspace);
-    line.erase(endPos,line.end());
+	// Remove whitespace
+	string::iterator endPos = remove_if(line.begin(), line.end(), ::isspace);
+	line.erase(endPos,line.end());
 
-    // Split into parts
-    vector<string> parts;
-    constexpr char delimiter = ';';
-    splitLine(line,delimiter,parts);
+	// Split into parts
+	vector<string> parts;
+	constexpr char delimiter = ';';
+	splitLine(line,delimiter,parts);
 
-    // Match relevant field according to below patterns
-    regex ipAddrPattern("([0-2]?[0-9]?[0-9]\\.){3}([0-2]?[0-9]?[0-9])"); // Match 3 "<000-299>." followed by "<000-299>"
+	// Match relevant field according to below patterns
+	regex ipAddrPattern("([0-2]?[0-9]?[0-9]\\.){3}([0-2]?[0-9]?[0-9])"); // Match 3 "<000-299>." followed by "<000-299>"
 	regex triggerActionPattern("(([a-zA-Z_])+\\[([a-zA-Z0-9\\.,\\-<=>_:()])+\\])+");
-    in_addr triggerIP, actionIP;
-    string errMsg;
-    set<Action*> actions;
-    set<Trigger*> triggers;
+	in_addr triggerIP, actionIP;
+	string errMsg;
+	set<Action*> actions;
+	set<Trigger*> triggers;
 
-    // Expect a line to consist of trigger IP, triggers, action IP and actions in that order
-    enum {TRIGGER_IP,TRIGGER,ACTION_IP,ACTION,DONE} parseState = TRIGGER_IP;
+	// Expect a line to consist of trigger IP, triggers, action IP and actions in that order
+	enum {TRIGGER_IP,TRIGGER,ACTION_IP,ACTION,DONE} parseState = TRIGGER_IP;
 
-    for (const string &part : parts) {
-        switch (parseState) {
-        case TRIGGER_IP:
-            if(!regex_match(part,ipAddrPattern)) {
-                errMsg = "Specified trigger IP address field <" + part + "> is invalid";
-                LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
-                throw invalid_argument(errMsg);
-            }
+	for (const string &part : parts) {
+		switch (parseState) {
+		case TRIGGER_IP:
+			if(!regex_match(part,ipAddrPattern)) {
+				errMsg = "Specified trigger IP address field <" + part + "> is invalid";
+				LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+				throw invalid_argument(errMsg);
+			}
 
-            if(inet_pton(AF_INET, part.c_str(), &triggerIP) <= 0) {
-                errMsg = "Error parsing IP string <" + part + ">";
-                LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
-                throw invalid_argument(errMsg);
-            }
-            parseState = TRIGGER;
-            break;
-        case TRIGGER:
-            if(!regex_match(part,triggerActionPattern)) {
-                errMsg = "Trigger configuration field <" + part + "> is invalid";
-                LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
-                throw invalid_argument(errMsg);
-            }
+			if(inet_pton(AF_INET, part.c_str(), &triggerIP) <= 0) {
+				errMsg = "Error parsing IP string <" + part + ">";
+				LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+				throw invalid_argument(errMsg);
+			}
+			parseState = TRIGGER;
+			break;
+		case TRIGGER:
+			if(!regex_match(part,triggerActionPattern)) {
+				errMsg = "Trigger configuration field <" + part + "> is invalid";
+				LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+				throw invalid_argument(errMsg);
+			}
 
-            triggers = parseTriggerConfiguration(part);
-            for (Trigger* tp : triggers) {
-                tp->setObjectIP(triggerIP.s_addr);
-                for (Trigger* knownTrigger : allTriggers)
-                {
-                    if(tp->isSimilar(*knownTrigger))
-                    {
-                        triggers.erase(tp);
-                        triggers.insert(knownTrigger);
-                        tp = knownTrigger;
-                    }
-                }
-                addTrigger(tp);
-            }
-            parseState = ACTION_IP;
-            break;
-        case ACTION_IP:
-            if(!regex_match(part,ipAddrPattern)) {
-                errMsg = "Specified action IP address field <" + part + "> is invalid";
-                LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
-                throw invalid_argument(errMsg);
-            }
+			triggers = parseTriggerConfiguration(part);
+			for (Trigger* tp : triggers) {
+				tp->setObjectIP(triggerIP.s_addr);
+				for (Trigger* knownTrigger : allTriggers)
+				{
+					if(tp->isSimilar(*knownTrigger))
+					{
+						triggers.erase(tp);
+						triggers.insert(knownTrigger);
+						tp = knownTrigger;
+					}
+				}
+				addTrigger(tp);
+			}
+			parseState = ACTION_IP;
+			break;
+		case ACTION_IP:
+			if(!regex_match(part,ipAddrPattern)) {
+				errMsg = "Specified action IP address field <" + part + "> is invalid";
+				LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+				throw invalid_argument(errMsg);
+			}
 
-            if(inet_pton(AF_INET, part.c_str(), &actionIP) <= 0) {
-                errMsg = "Error parsing IP string <" + part + ">";
-                LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
-                throw invalid_argument(errMsg);
-            }
-            parseState = ACTION;
-            break;
-        case ACTION:
-            if(!regex_match(part,triggerActionPattern)) {
-                errMsg = "Action configuration field <" + part + "> is invalid";
-                LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
-                throw invalid_argument(errMsg);
-            }
+			if(inet_pton(AF_INET, part.c_str(), &actionIP) <= 0) {
+				errMsg = "Error parsing IP string <" + part + ">";
+				LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+				throw invalid_argument(errMsg);
+			}
+			parseState = ACTION;
+			break;
+		case ACTION:
+			if(!regex_match(part,triggerActionPattern)) {
+				errMsg = "Action configuration field <" + part + "> is invalid";
+				LogMessage(LOG_LEVEL_ERROR, errMsg.c_str());
+				throw invalid_argument(errMsg);
+			}
 
-            actions = parseActionConfiguration(part);
-            for (Action* ap : actions) {
-                ap->setObjectIP(actionIP.s_addr);
-                addAction(ap);
-            }
-            parseState = DONE;
-            break;
-        case DONE:
-            if (part.length() != 0) LogMessage(LOG_LEVEL_WARNING,"Ignored tail field of row in configuration file: <%s>",part.c_str());
-            break;
-        }
-    }
+			actions = parseActionConfiguration(part);
+			for (Action* ap : actions) {
+				ap->setObjectIP(actionIP.s_addr);
+				addAction(ap);
+			}
+			parseState = DONE;
+			break;
+		case DONE:
+			if (part.length() != 0) LogMessage(LOG_LEVEL_WARNING,"Ignored tail field of row in configuration file: <%s>",part.c_str());
+			break;
+		}
+	}
 
-    linkTriggersWithActions(triggers, actions);
-    return;
+	linkTriggersWithActions(triggers, actions);
+	return;
 }
 
 /*!
@@ -227,48 +227,48 @@ void Scenario::parseScenarioFileLine(const std::string &inputLine)
  */
 std::set<Trigger*> Scenario::parseTriggerConfiguration(const std::string &inputConfig)
 {
-    using namespace std;
-    regex triggerPattern("([a-zA-Z_]+)\\[([^,^\\]]+)(?:,([^,^\\]]+))?(?:,([^,^\\]]+))?\\]");
-    smatch match;
-    string errMsg;
-    vector<string> configs;
-    Trigger::TriggerTypeCode_t triggerType;
-    set<Trigger*> returnTriggers;
-    Trigger* trigger;
-    Trigger::TriggerID_t baseTriggerID = static_cast<Trigger::TriggerID_t>(allTriggers.size());
+	using namespace std;
+	regex triggerPattern("([a-zA-Z_]+)\\[([^,^\\]]+)(?:,([^,^\\]]+))?(?:,([^,^\\]]+))?\\]");
+	smatch match;
+	string errMsg;
+	vector<string> configs;
+	Trigger::TriggerTypeCode_t triggerType;
+	set<Trigger*> returnTriggers;
+	Trigger* trigger;
+	Trigger::TriggerID_t baseTriggerID = static_cast<Trigger::TriggerID_t>(allTriggers.size());
 
-    // Split the configuration to allow for several in a row
-    splitLine(inputConfig, ']', configs);
-    for (string &config : configs)
-        config.append("]");
+	// Split the configuration to allow for several in a row
+	splitLine(inputConfig, ']', configs);
+	for (string &config : configs)
+		config.append("]");
 
-    // Loop through the specified triggers and generate a trigger for each
-    for(const string &config : configs)
-    {
-        if (!regex_search(config, match, triggerPattern))
-        {
-            errMsg = "The following is not a valid configuration: <" + config + ">";
-            LogMessage(LOG_LEVEL_ERROR,errMsg.c_str());
-            throw invalid_argument(errMsg);
-        }
+	// Loop through the specified triggers and generate a trigger for each
+	for(const string &config : configs)
+	{
+		if (!regex_search(config, match, triggerPattern))
+		{
+			errMsg = "The following is not a valid configuration: <" + config + ">";
+			LogMessage(LOG_LEVEL_ERROR,errMsg.c_str());
+			throw invalid_argument(errMsg);
+		}
 
-        triggerType = Trigger::asTypeCode(match[1]);
-        switch (triggerType) {
-        // If the trigger type has Maestro monitoring implemented, use that
-        case TRIGGER_BRAKE:
-            trigger = new BrakeTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()));
-            // TODO: possibly the OR between the Maestro trigger and possible TREO messages
-            break;
+		triggerType = Trigger::asTypeCode(match[1]);
+		switch (triggerType) {
+		// If the trigger type has Maestro monitoring implemented, use that
+		case TRIGGER_BRAKE:
+			trigger = new BrakeTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()));
+			// TODO: possibly the OR between the Maestro trigger and possible TREO messages
+			break;
 		case TRIGGER_DISTANCE:
 			trigger = new DistanceTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()));
 			break;
-        default:
-            // Trigger with unimplemented Maestro monitoring: let object handle trigger reporting
-            trigger = new ISOTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()), triggerType);
-            break;
-        }
+		default:
+			// Trigger with unimplemented Maestro monitoring: let object handle trigger reporting
+			trigger = new ISOTrigger(baseTriggerID + static_cast<Trigger::TriggerID_t>(returnTriggers.size()), triggerType);
+			break;
+		}
 
-        // Transfer specified parameters to relevant containers
+		// Transfer specified parameters to relevant containers
 		for (unsigned int i = 2; i < match.size(); ++i) {
 			if (!match[i].str().empty()){
 				if (trigger->appendParameter(match[i].str()) != Trigger::OK) {
@@ -283,9 +283,9 @@ std::set<Trigger*> Scenario::parseTriggerConfiguration(const std::string &inputC
 		}
 
 		returnTriggers.insert(trigger);
-    }
+	}
 
-    return returnTriggers;
+	return returnTriggers;
 }
 
 /*!
@@ -296,47 +296,47 @@ std::set<Trigger*> Scenario::parseTriggerConfiguration(const std::string &inputC
  */
 std::set<Action*> Scenario::parseActionConfiguration(const std::string &inputConfig)
 {
-    using namespace std;
-    regex triggerPattern("([a-zA-Z_]+)\\[([^,^\\]]+)(?:,([^,^\\]]+))?(?:,([^,^\\]]+))?\\]");
-    smatch match;
-    string errMsg;
-    vector<string> configs;
-    Action::ActionTypeCode_t actionType;
-    set<Action*> returnActions;
-    Action* action;
-    Action::ActionID_t baseActionID = static_cast<Action::ActionID_t>(allActions.size());
+	using namespace std;
+	regex triggerPattern("([a-zA-Z_]+)\\[([^,^\\]]+)(?:,([^,^\\]]+))?(?:,([^,^\\]]+))?\\]");
+	smatch match;
+	string errMsg;
+	vector<string> configs;
+	Action::ActionTypeCode_t actionType;
+	set<Action*> returnActions;
+	Action* action;
+	Action::ActionID_t baseActionID = static_cast<Action::ActionID_t>(allActions.size());
 
-    // Split the configuration to allow for several in a row
-    splitLine(inputConfig, ']', configs);
-    for (string &config : configs)
-        config.append("]");
+	// Split the configuration to allow for several in a row
+	splitLine(inputConfig, ']', configs);
+	for (string &config : configs)
+		config.append("]");
 
-    // Loop through specified actions and generate an action for each
-    for(const string &config : configs)
-    {
-        if (!regex_search(config, match, triggerPattern))
-        {
-            errMsg = "The following is not a valid configuration: <" + config + ">";
-            LogMessage(LOG_LEVEL_ERROR,errMsg.c_str());
-            throw invalid_argument(errMsg);
-        }
+	// Loop through specified actions and generate an action for each
+	for(const string &config : configs)
+	{
+		if (!regex_search(config, match, triggerPattern))
+		{
+			errMsg = "The following is not a valid configuration: <" + config + ">";
+			LogMessage(LOG_LEVEL_ERROR,errMsg.c_str());
+			throw invalid_argument(errMsg);
+		}
 
-        actionType = Action::asTypeCode(match[1]);
-        switch (actionType) {
-        // Handle any specialised action types
-        case ACTION_INFRASTRUCTURE:
-            action = new InfrastructureAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()));
-            break;
+		actionType = Action::asTypeCode(match[1]);
+		switch (actionType) {
+		// Handle any specialised action types
+		case ACTION_INFRASTRUCTURE:
+			action = new InfrastructureAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()));
+			break;
 		case ACTION_TEST_SCENARIO_COMMAND:
 			action = new TestScenarioCommandAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()));
 			break;
-        default:
-            // Regular action (only ACCM and EXAC)
-            action = new ExternalAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()), actionType);
-            break;
-        }
+		default:
+			// Regular action (only ACCM and EXAC)
+			action = new ExternalAction(baseActionID + static_cast<Action::ActionID_t>(returnActions.size()), actionType);
+			break;
+		}
 
-        // Transfer specified parameters to relevant containers
+		// Transfer specified parameters to relevant containers
 		for (unsigned int i = 2; i < match.size(); ++i) {
 			if(!match[i].str().empty()) {
 				if (action->appendParameter(match[i].str()) != Action::OK) {
@@ -349,10 +349,10 @@ std::set<Action*> Scenario::parseActionConfiguration(const std::string &inputCon
 			throw std::invalid_argument("Unable to interpret trigger configuration " + inputConfig);
 		}
 
-        returnActions.insert(action);
-    }
+		returnActions.insert(action);
+	}
 
-    return returnActions;
+	return returnActions;
 }
 
 /*!
@@ -361,11 +361,11 @@ std::set<Action*> Scenario::parseActionConfiguration(const std::string &inputCon
  */
 void Scenario::parseScenarioFile(std::ifstream &file)
 {
-    LogMessage(LOG_LEVEL_DEBUG, "Parsing scenario file");
+	LogMessage(LOG_LEVEL_DEBUG, "Parsing scenario file");
 
-    std::string line;
-    while ( std::getline(file, line) ) parseScenarioFileLine(line);
-    return;
+	std::string line;
+	while ( std::getline(file, line) ) parseScenarioFileLine(line);
+	return;
 }
 
 /*!
@@ -375,12 +375,12 @@ void Scenario::parseScenarioFile(std::ifstream &file)
  */
 Scenario::ScenarioReturnCode_t Scenario::addTrigger(Trigger* tp)
 {
-    for (Trigger* knownTrigger : allTriggers)
-        if (knownTrigger->getID() == tp->getID()) return DUPLICATE_ELEMENT;
+	for (Trigger* knownTrigger : allTriggers)
+		if (knownTrigger->getID() == tp->getID()) return DUPLICATE_ELEMENT;
 
-    LogMessage(LOG_LEVEL_DEBUG,"Adding trigger with ID: %d",tp->getID());
-    allTriggers.insert(tp);
-    return OK;
+	LogMessage(LOG_LEVEL_DEBUG,"Adding trigger with ID: %d",tp->getID());
+	allTriggers.insert(tp);
+	return OK;
 }
 
 /*!
@@ -390,108 +390,112 @@ Scenario::ScenarioReturnCode_t Scenario::addTrigger(Trigger* tp)
  */
 Scenario::ScenarioReturnCode_t Scenario::addAction(Action* ap)
 {
-    for (Action* knownAction : allActions)
-        if (knownAction->getID() == ap->getID()) return DUPLICATE_ELEMENT;
+	for (Action* knownAction : allActions)
+		if (knownAction->getID() == ap->getID()) return DUPLICATE_ELEMENT;
 
-    allActions.insert(ap);
-    return OK;
+	allActions.insert(ap);
+	return OK;
 }
 
 
 Scenario::ScenarioReturnCode_t Scenario::linkTriggersWithActions(std::set<Trigger *> ts, std::set<Action *> aps)
 {
-    Causality c(Causality::AND);
+	Causality c(Causality::AND);
 
-    for (Trigger* tp : ts)
-    {
-        c.addTrigger(tp);
-    }
+	for (Trigger* tp : ts)
+	{
+		c.addTrigger(tp);
+	}
 
-    for (Action* ap : aps)
-    {
-        c.addAction(ap);
-    }
+	for (Action* ap : aps)
+	{
+		c.addAction(ap);
+	}
 
-    causalities.insert(c);
-    return OK;
+	causalities.insert(c);
+	return OK;
 }
 
 Scenario::ScenarioReturnCode_t Scenario::linkTriggerWithAction(Trigger *tp, Action *ap)
 {
-    std::set<Trigger*> tps;
-    std::set<Action*> aps;
-    tps.insert(tp);
-    aps.insert(ap);
-    return linkTriggersWithActions(tps, aps);
+	std::set<Trigger*> tps;
+	std::set<Action*> aps;
+	tps.insert(tp);
+	aps.insert(ap);
+	return linkTriggersWithActions(tps, aps);
 }
 
 Scenario::ScenarioReturnCode_t Scenario::linkTriggersWithAction(std::set<Trigger*> tps, Action* ap)
 {
-    std::set<Action*> aps;
-    aps.insert(ap);
-    return linkTriggersWithActions(tps, aps);
+	std::set<Action*> aps;
+	aps.insert(ap);
+	return linkTriggersWithActions(tps, aps);
 }
 
 Scenario::ScenarioReturnCode_t Scenario::linkTriggerWithActions(Trigger *tp, std::set<Action *> aps)
 {
-    std::set<Trigger*> tps;
-    tps.insert(tp);
-    return linkTriggersWithActions(tps, aps);
+	std::set<Trigger*> tps;
+	tps.insert(tp);
+	return linkTriggersWithActions(tps, aps);
 }
 
 void Scenario::refresh(void) const
 {
-    for (const Causality &c : causalities)
-    {
-        c.refresh();
-    }
+	for (const Causality &c : causalities)
+	{
+		c.refresh();
+	}
 }
 
 void Scenario::resetISOTriggers(void)
 {
-    for (Trigger* tp : allTriggers)
-    {
-        if (dynamic_cast<ISOTrigger*>(tp) != nullptr)
-        {
-            // "untrigger" the trigger
-            tp->update();
-        }
-    }
+	for (Trigger* tp : allTriggers)
+	{
+		if (dynamic_cast<ISOTrigger*>(tp) != nullptr)
+		{
+			// "untrigger" the trigger
+			tp->update();
+		}
+	}
 }
 
-Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const MonitorDataType &monr)
+Scenario::ScenarioReturnCode_t Scenario::updateTrigger(const ObjectDataType &monr)
 {
-    for (Trigger* tp : allTriggers)
+	for (Trigger* tp : allTriggers)
 	{
-        if(tp->getObjectIP() == monr.ClientIP && dynamic_cast<ISOTrigger*>(tp) == nullptr)
-        {
-            switch (tp->getTypeCode())
-            {
+		if(tp->getObjectIP() == monr.ClientIP && dynamic_cast<ISOTrigger*>(tp) == nullptr)
+		{
+			Trigger::TriggerReturnCode_t result = Trigger::NO_TRIGGER_OCCURRED;
+			switch (tp->getTypeCode())
+			{
 			case Trigger::TriggerTypeCode_t::TRIGGER_BRAKE:
-				if (monr.data.speed.isLongitudinalValid && monr.data.isTimestampValid)
-				{
-					tp->update(monr.data.speed.longitudinal_m_s, monr.data.timestamp);
-				}
-				else
-				{
-					LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
-							   tp->getTypeAsString(tp->getTypeCode()).c_str());
-				}
-                break;
-			case Trigger::TriggerTypeCode_t::TRIGGER_DISTANCE:
-				if (monr.data.position.isPositionValid) {
-					tp->update(monr);
+				if (monr.MonrData.speed.isLongitudinalValid && monr.MonrData.isTimestampValid) {
+					result = tp->update(monr.MonrData.speed.longitudinal_m_s, monr.MonrData.timestamp);
 				}
 				else {
 					LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
 							   tp->getTypeAsString(tp->getTypeCode()).c_str());
 				}
 				break;
-            default:
-                LogMessage(LOG_LEVEL_WARNING, "Unhandled trigger type in update: %s",
-                           tp->getTypeAsString(tp->getTypeCode()).c_str());
-            }
-        }
-    }
+			case Trigger::TriggerTypeCode_t::TRIGGER_DISTANCE:
+				if (monr.MonrData.position.isPositionValid) {
+					result = tp->update(monr);
+				}
+				else {
+					LogMessage(LOG_LEVEL_WARNING, "Could not update trigger type %s due to invalid monitor data values",
+							   tp->getTypeAsString(tp->getTypeCode()).c_str());
+				}
+				break;
+			default:
+				LogMessage(LOG_LEVEL_WARNING, "Unhandled trigger type in update: %s",
+						   tp->getTypeAsString(tp->getTypeCode()).c_str());
+			}
+			if (result == Trigger::TRIGGER_OCCURRED) {
+				std::string triggerType = Trigger::getTypeAsString(tp->getTypeCode());
+				JournalRecordData(JOURNAL_RECORD_EVENT, "Trigger %s (ID %d) occurred - triggering data timestamped %u [¼ ms of week]",
+								  triggerType.c_str(), tp->getID(), TimeGetAsGPSqmsOfWeek(&monr.MonrData.timestamp));
+			}
+		}
+	}
 }
 

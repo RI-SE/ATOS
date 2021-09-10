@@ -11,6 +11,7 @@ class MSCP:
         self.socket = socket.socket()
         print("=== MSCP connecting to " + str(self.host) + ":" + str(self.port))
         self.socket.connect((self.host,self.port))
+        print("=== MSCP connected to " + str(self.host) + ":" + str(self.port))
         self.lastStatusReply = {}
         self.lastAbortReply = {}
         self.lastStartReply = {}
@@ -225,6 +226,8 @@ class MSCP:
             message = message + ",3"
         elif fileType == "geofence":
             message = message + ",4"
+        elif fileType == "object":
+            message = message + ",5"
         elif fileType == "generic":
             message = message + ",1"
         else:
@@ -286,6 +289,21 @@ class MSCP:
         self.Send(message)
         print("=== GetServerTime() sent")
 
+    def ClearTrajectories(self):
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nClearTrajectories();\r\n\r\n"
+        self.Send(message)
+        print("=== ClearTrajectories() sent")
+        
+    def ClearObjects(self):
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nClearObjects();\r\n\r\n"
+        self.Send(message)
+        print("=== ClearObjects() sent")
+
+    def ClearGeofences(self):
+        message = "POST /maestro HTTP/1.1\r\nHost:" + self.host + "\r\n\r\nClearGeofences();\r\n\r\n"
+        self.Send(message)
+        print("=== ClearGeofences() sent")
+    
     def Send(self,message):
         self.socket.send(message.encode())
 

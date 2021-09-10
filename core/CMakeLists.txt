@@ -1,8 +1,9 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.8)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-
-project(Core LANGUAGES C)
+SET(CMAKE_CXX_STANDARD 17)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+project(Core LANGUAGES C CXX)
 
 # Specify locations for logs and shared memory
 # WARNING: These are used for installation and could hose
@@ -10,15 +11,18 @@ project(Core LANGUAGES C)
 set(SYSTEM_SHARED_MEMORY_PATH "/dev/shm/maestro")
 
 set(CORE_TARGET ${PROJECT_NAME})
-set(COREUTILS_TARGET MaestroCoreUtil)
-set(DATA_DICTIONARY_TARGET MaestroDataDictionary)
+set(JOURNAL_CONTROL_TARGET JournalControl)
 
+set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(COMMON_LIBRARY MaestroCommon)
 set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MESSAGE_BUS_LIBRARY MaestroMQ)
 set(SHARED_MEMORY_LIBRARY MaestroSHM)
 set(ISO_22133_LIBRARY ISO22133)
 set(MATH_LIBRARY m)
+set(FILESYSTEM_LIBRARY stdc++fs)
+set(PTHREAD_LIBRARY pthread)
 
 # Get header directories for build interface
 get_target_property(TIME_HEADERS ${TIME_LIBRARY} INCLUDE_DIRECTORIES)
@@ -26,73 +30,71 @@ get_target_property(LOGGING_HEADERS ${LOGGING_LIBRARY} INCLUDE_DIRECTORIES)
 get_target_property(MESSAGE_BUS_HEADERS ${MESSAGE_BUS_LIBRARY} INCLUDE_DIRECTORIES)
 get_target_property(SHARED_MEMORY_HEADERS ${SHARED_MEMORY_LIBRARY} INCLUDE_DIRECTORIES)
 get_target_property(ISO_22133_HEADERS ${ISO_22133_LIBRARY} INCLUDE_DIRECTORIES)
-
+get_target_property(COREUTILS_HEADERS ${COREUTILS_LIBRARY} INCLUDE_DIRECTORIES)
+get_target_property(COMMON_HEADERS ${COMMON_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
-add_executable(${CORE_TARGET} 
-	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/logger.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
-)
 
-add_library(${COREUTILS_TARGET} SHARED
-	${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
-)
-target_include_directories(${COREUTILS_TARGET} PUBLIC
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
-	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-	${TIME_HEADERS}
-	${LOGGING_HEADERS}
-	${MESSAGE_BUS_HEADERS}
-	${ISO_22133_HEADERS}
-)
-set_target_properties(${COREUTILS_TARGET} PROPERTIES
-	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/inc/util.h
-)
+if(WITH_OBJECT_CONTROL)
+    add_executable(${CORE_TARGET}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
+    )
+else()
+    message(STATUS "Excluding ObjectControl")
+    add_definitions(-DDISABLE_OBJECT_CONTROL)
+    add_executable(${CORE_TARGET}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
+    )
+endif()
 
-add_library(${DATA_DICTIONARY_TARGET} SHARED
-	${CMAKE_CURRENT_SOURCE_DIR}/src/datadictionary.c
+
+add_library(${JOURNAL_CONTROL_TARGET} SHARED
+	${CMAKE_CURRENT_SOURCE_DIR}/src/journalcontrol.cpp
+
 )
-target_include_directories(${DATA_DICTIONARY_TARGET} PUBLIC
+target_include_directories(${JOURNAL_CONTROL_TARGET} PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
 	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 	${LOGGING_HEADERS}
-	${MESSAGE_BUS_HEADERS}
-	${SHARED_MEMORY_HEADERS}
 )
-set_target_properties(${DATA_DICTIONARY_TARGET} PROPERTIES
-	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/inc/datadictionary.h
-)
+
 
 # Linking
 target_link_libraries(${CORE_TARGET} LINK_PUBLIC
 	${TIME_LIBRARY}
 	${LOGGING_LIBRARY}
-	${COREUTILS_TARGET}
-	${DATA_DICTIONARY_TARGET}
+	${JOURNAL_CONTROL_TARGET}
+	${COREUTILS_LIBRARY}
 	${ISO_22133_LIBRARY}
+	${SYSTEMD_LIBRARIES}
+	${PTHREAD_LIBRARY}
 )
 
-target_link_libraries(${COREUTILS_TARGET} LINK_PUBLIC
-	${TIME_LIBRARY}
-	${LOGGING_LIBRARY}
-	${MESSAGE_BUS_LIBRARY}
-	${MATH_LIBRARY}
-	${ISO_22133_LIBRARY}
+target_link_libraries(${JOURNAL_CONTROL_TARGET} LINK_PUBLIC
+	${FILESYSTEM_LIBRARY}
+	${COREUTILS_LIBRARY}
 )
 
-target_link_libraries(${DATA_DICTIONARY_TARGET} LINK_PUBLIC
-	${SHARED_MEMORY_LIBRARY}
-	${COREUTILS_TARGET}
+target_include_directories(${JOURNAL_CONTROL_TARGET} PUBLIC
+	${COREUTILS_HEADERS}
+)
+
+# Generate service file with correct details
+message(STATUS "Configuring ${PROJECT_NAME} service file")
+list(LENGTH ENABLED_MODULES NUMBER_ENABLED_MODULES)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/linux/maestro-core.service.in
+	${PROJECT_BINARY_DIR}/maestro-core.service
 )
 
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${CORE_TARGET}\")")
-install(TARGETS ${CORE_TARGET} ${COREUTILS_TARGET}
-		${DATA_DICTIONARY_TARGET}
+install(TARGETS ${CORE_TARGET} ${JOURNAL_CONTROL_TARGET}
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -108,5 +110,9 @@ install(CODE "MESSAGE(STATUS \"Creating shared memory directory ${SYSTEM_SHARED_
 install(DIRECTORY DESTINATION ${SYSTEM_SHARED_MEMORY_PATH})
 install(CODE "execute_process(COMMAND chown $ENV{USER} ${SYSTEM_SHARED_MEMORY_PATH})")
 
-# Ensure linkage is reloaded after install
-install(CODE "execute_process(COMMAND ldconfig)")
+# Install the service
+install(CODE "MESSAGE(STATUS \"Installing ${PROJECT_NAME} service to ${CMAKE_INSTALL_FULL_LIBDIR}/systemd/system\")")
+install(FILES ${PROJECT_BINARY_DIR}/maestro-core.service
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/systemd/system
+  COMPONENT service
+)

@@ -12,18 +12,18 @@ DistanceTrigger::DistanceTrigger(Trigger::TriggerID_t triggerID) : BooleanTrigge
 	this->setTriggerDistance(0.0);
 }
 
-Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue) {
+Trigger::TriggerReturnCode_t DistanceTrigger::update(ObjectDataType newValue) {
 	double networkDelayCorrection_m = 0.0, networkDelay_s = 0.0;
 	struct timeval currentTime, triggerObjectNetworkDelay, actionObjectNetworkDelay;
 
-	if (!newValue.data.position.isPositionValid || !referencePoint.isPositionValid) {
+	if (!newValue.MonrData.position.isPositionValid || !referencePoint.isPositionValid) {
 		throw std::logic_error("Unable to update distance trigger on invalid data");
 	}
 
 	// Correct for two-way network delay effects on trigger distance
-	if (newValue.data.speed.isLongitudinalValid && newValue.data.isTimestampValid) {
+	if (newValue.MonrData.speed.isLongitudinalValid && newValue.MonrData.isTimestampValid) {
 		TimeSetToCurrentSystemTime(&currentTime);
-		timersub(&currentTime, &newValue.data.timestamp, &triggerObjectNetworkDelay);
+		timersub(&currentTime, &newValue.MonrData.timestamp, &triggerObjectNetworkDelay);
 
 		// TODO Get rid of this false assumption
 		actionObjectNetworkDelay = triggerObjectNetworkDelay;
@@ -31,11 +31,11 @@ Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue) {
 		// Network delay consists of both positional data reporting delay and action execution message delay
 		networkDelay_s = fabs(static_cast<double>(triggerObjectNetworkDelay.tv_sec)
 							  + static_cast<double>(triggerObjectNetworkDelay.tv_usec) / 1000000.0)
-						+ fabs(static_cast<double>(actionObjectNetworkDelay.tv_sec)
-							   + static_cast<double>(actionObjectNetworkDelay.tv_usec) / 1000000.0);
+				+ fabs(static_cast<double>(actionObjectNetworkDelay.tv_sec)
+					   + static_cast<double>(actionObjectNetworkDelay.tv_usec) / 1000000.0);
 
 		// Predict position offset
-		networkDelayCorrection_m = networkDelay_s * newValue.data.speed.longitudinal_m_s;
+		networkDelayCorrection_m = networkDelay_s * newValue.MonrData.speed.longitudinal_m_s;
 	}
 	else {
 		LogMessage(LOG_LEVEL_WARNING, "Invalid monitor data speed or timestamp: cannot correct for network delay");
@@ -43,11 +43,11 @@ Trigger::TriggerReturnCode_t DistanceTrigger::update(MonitorDataType newValue) {
 
 	switch (this->oper) {
 	case LESS_THAN:
-		return update(static_cast<bool>(UtilIsPositionNearTarget(newValue.data.position, this->referencePoint, this->triggerDistance_m + networkDelayCorrection_m)),
-				newValue.data.timestamp);
+		return update(static_cast<bool>(UtilIsPositionNearTarget(newValue.MonrData.position, this->referencePoint, this->triggerDistance_m + networkDelayCorrection_m)),
+					  newValue.MonrData.timestamp);
 	case GREATER_THAN:
-		return update(static_cast<bool>(!UtilIsPositionNearTarget(newValue.data.position, this->referencePoint, this->triggerDistance_m - networkDelayCorrection_m)),
-				newValue.data.timestamp);
+		return update(static_cast<bool>(!UtilIsPositionNearTarget(newValue.MonrData.position, this->referencePoint, this->triggerDistance_m - networkDelayCorrection_m)),
+					  newValue.MonrData.timestamp);
 	}
 	throw std::logic_error("Distance trigger unimplemented operator");
 }

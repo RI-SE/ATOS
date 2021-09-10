@@ -45,7 +45,6 @@ extern "C"{
 #define DEFAULT_ORIGIN_ALT 193.114
 #define DEFAULT_ORIGIN_HEADING 0
 #define DEFAULT_VISUALISATION_SERVER_NAME 0
-#define DEFAULT_FORCE_OBJECT_TO_LOCALHOST 0
 #define DEFAULT_ASP_MAX_TIME_DIFF 2.5
 #define DEFAULT_ASP_MAX_TRAJ_DIFF 1.52
 #define DEFAULT_ASP_STEP_BACK_COUNT 0
@@ -63,11 +62,10 @@ extern "C"{
 #define DEFAULT_SUPERVISOR_TCP_PORT 53010
 #define DEFAULT_RVSS_CONF 3
 #define DEFAULT_RVSS_RATE 1
+#define DEFAULT_MAX_PACKETS_LOST 0
+#define DEFAULT_TRANSMITTER_ID 0
 
-#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-1) // Message queue data minus one byte for the command
-
-#define SAFETY_CHANNEL_PORT 53240
-#define CONTROL_CHANNEL_PORT 53241
+#define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length
 
 #define MAX_OBJECTS 10
 #define MAX_FILE_PATH PATH_MAX
@@ -94,7 +92,7 @@ extern "C"{
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "195.0.0.10"
+#define LOCAL_USER_CONTROL_IP "192.168.0.18"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -129,6 +127,49 @@ extern "C"{
 
 #define MASTER_FILE_EXTENSION ".sync.m"
 #define SLAVE_FILE_EXTENSION ".sync.s"
+
+enum ConfigurationFileParameter {
+	CONFIGURATION_PARAMETER_SCENARIO_NAME,
+	CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
+	CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
+	CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
+	CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME,
+	CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF,
+	CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF,
+	CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT,
+	CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL,
+	CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME,
+	CONFIGURATION_PARAMETER_TIME_SERVER_IP,
+	CONFIGURATION_PARAMETER_TIME_SERVER_PORT,
+	CONFIGURATION_PARAMETER_SIMULATOR_IP,
+	CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP,
+	CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP,
+	CONFIGURATION_PARAMETER_SIMULATOR_MODE,
+	CONFIGURATION_PARAMETER_VOIL_RECEIVERS,
+	CONFIGURATION_PARAMETER_DTM_RECEIVERS,
+	CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP,
+	CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP,
+	CONFIGURATION_PARAMETER_RVSS_CONFIG,
+	CONFIGURATION_PARAMETER_RVSS_RATE,
+	CONFIGURATION_PARAMETER_MAX_PACKETS_LOST,
+	CONFIGURATION_PARAMETER_TRANSMITTER_ID,
+	CONFIGURATION_PARAMETER_MISC_DATA,
+	CONFIGURATION_PARAMETER_INVALID
+};
+
+enum ObjectFileParameter {
+	OBJECT_SETTING_ID,
+	OBJECT_SETTING_IP,
+	OBJECT_SETTING_TRAJ,
+	OBJECT_SETTING_IS_ANCHOR,
+	OBJECT_SETTING_INJECTOR_IDS,
+	OBJECT_SETTING_ORIGIN_LATITUDE,
+	OBJECT_SETTING_ORIGIN_LONGITUDE,
+	OBJECT_SETTING_ORIGIN_ALTITUDE,
+	OBJECT_SETTING_TURNING_DIAMETER,
+	OBJECT_SETTING_MAX_SPEED,
+	OBJECT_SETTING_IS_OSI_COMPATIBLE
+};
 
 
 #define UNKNOWN 0
@@ -175,11 +216,6 @@ extern "C"{
 #define FAILED_DELETE 0x02
 #define FILE_TO_MUCH_DATA 0x06
 
-
-// The do - while loop makes sure that each function call is properly handled using macros
-#define LOG_SEND(buf, ...) \
-    do {sprintf(buf,__VA_ARGS__);iCommSend(COMM_LOG,buf,strlen(buf)+1);LogMessage(LOG_LEVEL_INFO,buf);fflush(stdout);} while (0)
-
 #define GetCurrentDir getcwd
 #define MAX_PATH_LENGTH 255
 
@@ -196,13 +232,12 @@ COMM_ARM = 2,
 COMM_STOP = 3,
 COMM_EXIT = 5,
 COMM_REPLAY = 6,
-COMM_CONTROL = 7,
 COMM_ABORT = 8,
+COMM_ABORT_DONE = 9,
 COMM_INIT = 10,
 COMM_CONNECT = 11,
 COMM_OBC_STATE = 12,
 COMM_DISCONNECT = 13,
-COMM_LOG = 14,
 COMM_VIOP = 15,
 COMM_TRAJ = 16,
 COMM_TRAJ_TOSUP = 17,
@@ -215,19 +250,21 @@ COMM_TREO = 23,
 COMM_ACCM = 24,
 COMM_TRCM = 25,
 COMM_DISARM = 26,
+COMM_GETSTATUS = 237,
+COMM_GETSTATUS_OK = 238,
 COMM_REMOTECTRL_ENABLE = 27,
 COMM_REMOTECTRL_DISABLE = 28,
 COMM_REMOTECTRL_MANOEUVRE = 29,
-COMM_MONR = 239,
+COMM_ENABLE_OBJECT = 30,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
 COMM_INV = 255
 };
 
 typedef struct {
-	RemoteControlManoeuvreType manoeuvre;
+	RemoteControlManoeuvreCommandType manoeuvre;
 	in_addr_t objectIP;
-} RemoteControlCommandType;
+} ManoeuvreCommandType;
 
 typedef struct
 {
@@ -238,13 +275,30 @@ typedef struct
 } GeoPosition;
 
 
-typedef struct
-{
-	ObjectMonitorType data;
-    in_addr_t ClientIP;
-	uint32_t ClientID;
-} MonitorDataType;
+typedef enum {
+	OBJECT_ENABLED = 1,
+	OBJECT_DISABLED = 2,
+	OBJECT_UNDEFINED = 3
+} ObjectEnabledType;
 
+
+typedef struct {
+	uint32_t ClientID;
+	in_addr_t ClientIP;
+	ObjectEnabledType Enabled;
+	ObjectMonitorType MonrData;
+	struct timeval lastPositionUpdate;
+	ObjectPropertiesType properties;
+	bool propertiesReceived;
+	struct timeval lastDataUpdate;
+  GeoPosition origin;
+	RequestControlActionType requestedControlAction;
+} ObjectDataType;
+
+typedef struct {
+	in_addr_t objectIP;
+	ObjectEnabledType Enabled;
+} ObjectEnabledCommandType;
 
 typedef struct {
 	unsigned int ID;
@@ -318,8 +372,9 @@ typedef enum {
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
     OBC_STATE_RUNNING,
-	OBC_STATE_REMOTECTRL,
-    OBC_STATE_ERROR
+	  OBC_STATE_REMOTECTRL,
+    OBC_STATE_ERROR,
+    OBC_STATE_ABORTING
 } OBCState_t;
 
 typedef struct
@@ -338,7 +393,6 @@ typedef struct
   U8 ASPDebugDataU8[sizeof(ASPType)];
   U32 SupChunkSize;
   U8 SupChunk[6200];
-  MonitorDataType* MonrMessages;
   U8 MONRSizeU8;
   U8 MONRData[100];
   U8 HEABSizeU8;
@@ -346,12 +400,6 @@ typedef struct
 
   U8 numberOfObjects;
   char *memory;
-  //U8 OSTMSizeU8;
-  //U8 OSTMData[100];
-  //U8 STRTSizeU8;
-  //U8 STRTData[100];
-  //U8 OSEMSizeU8;
-  //U8 OSEMData[100];
   volatile dbl OriginLatitudeDbl;
   C8 OriginLatitudeC8[DD_CONTROL_BUFFER_SIZE_20];
   volatile dbl OriginLongitudeDbl;
@@ -360,7 +408,6 @@ typedef struct
   C8 OriginAltitudeC8[DD_CONTROL_BUFFER_SIZE_20];
   volatile U32 VisualizationServerU32;
   C8 VisualizationServerC8[DD_CONTROL_BUFFER_SIZE_20];
-  volatile U8 ForceObjectToLocalhostU8;
   volatile dbl ASPMaxTimeDiffDbl;
   volatile dbl ASPMaxTrajDiffDbl;
   volatile U32 ASPStepBackCountU32;
@@ -383,7 +430,6 @@ typedef struct
   U32 DataDictionaryRVSSRateU8;
   ASPType ASPData;
   C8 MiscDataC8[DD_CONTROL_BUFFER_SIZE_1024];
-  volatile OBCState_t OBCStateU8;
 } GSDType;
 
 
@@ -517,6 +563,7 @@ typedef enum {
     UNDEFINED, /*!< Undefined result */
     WRITE_OK, /*!< Write successful */
     READ_OK, /*!< Read successful */
+	UNINITIALIZED, /*!< Read successful but data not initialized */
     READ_WRITE_OK, /*!< Combined read/write successful */
     PARAMETER_NOTFOUND, /*!< Read/write not successful */
     OUT_OF_RANGE /*!< Attempted to read out of range */
@@ -612,12 +659,15 @@ void UtilGetJournalDirectoryPath(char* path, size_t pathLen);
 void UtilGetConfDirectoryPath(char* path, size_t pathLen);
 void UtilGetTrajDirectoryPath(char* path, size_t pathLen);
 void UtilGetGeofenceDirectoryPath(char* path, size_t pathLen);
+void UtilGetObjectDirectoryPath(char* path, size_t pathLen);
 
 int UtilDeleteTrajectoryFiles(void);
 int UtilDeleteGeofenceFiles(void);
+int UtilDeleteObjectFiles(void);
 
 int UtilDeleteTrajectoryFile(const char * geofencePath, const size_t nameLen);
 int UtilDeleteGeofenceFile(const char * geofencePath, const size_t nameLen);
+int UtilDeleteObjectFile(const char * geofencePath, const size_t nameLen);
 int UtilDeleteGenericFile(const char * genericFilePath, const size_t nameLen);
 
 // File parsing functions
@@ -627,8 +677,8 @@ int UtilParseTrajectoryFileFooter(char *footerLine);
 int UtilParseTrajectoryFileLine(char *fileLine, TrajectoryFileLine * line);
 
 
-int UtilMonitorDataToString(const MonitorDataType monrData, char* monrString, size_t stringLength);
-int UtilStringToMonitorData(const char* monrString, size_t stringLength, MonitorDataType * monrData);
+int UtilObjectDataToString(const ObjectDataType monrData, char* monrString, size_t stringLength);
+int UtilStringToMonitorData(const char* monrString, size_t stringLength, ObjectDataType * monrData);
 uint8_t UtilIsPositionNearTarget(CartesianPosition position, CartesianPosition target, double tolerance_m);
 uint8_t UtilIsAngleNearTarget(CartesianPosition position, CartesianPosition target, double tolerance);
 double UtilCalcPositionDelta(double P1Lat, double P1Long, double P2Lat, double P2Long, ObjectPosition *OP);
@@ -642,9 +692,11 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition *OP, int StartIndex, dou
 int UtilSetSyncPoint(ObjectPosition *OP, double x, double y, double z, double time);
 float UtilCalculateTimeToSync(ObjectPosition *OP);
 
-char UtilIsPointInPolygon(CartesianPosition point, CartesianPosition *polygonPoints, unsigned int nPtsInPolygon);
+char UtilIsPointInPolygon(const CartesianPosition point, const CartesianPosition* polygonPoints, unsigned int nPtsInPolygon);
 
 int UtilCountFileRows(FILE *fd);
+int UtilCountFileRowsInPath(const char *path, const size_t pathlen);
+int UtilGetRowInFile(const char *path, const size_t pathLength, I32 rowIndex, char *rowBuffer, const size_t bufferLength);
 int UtilReadLineCntSpecChars(FILE *fd, char *Buffer);
 int UtilReadLine(FILE *fd, char *Buffer);
 char UtilGetch();
@@ -675,10 +727,10 @@ I64 SwapI64(I64 val);
 U64 SwapU64(U64 val);
 
 I32 UtilConnectTCPChannel(const C8* Module, I32* Sockfd, const C8* IP, const U32 Port);
-void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, I32* Sockfd, U8 Debug);
+void UtilSendTCPData(const C8* Module, const C8* Data, I32 Length, const int* Sockfd, U8 Debug);
 I32 UtilReceiveTCPData(const C8* Module, I32* Sockfd, C8* Data, I32 Length, U8 Debug);
 void UtilCreateUDPChannel(const C8* Module, I32 *Sockfd, const C8* IP, const U32 Port, struct sockaddr_in* Addr);
-void UtilSendUDPData(const C8* Module, I32 *Sockfd, struct sockaddr_in* Addr, C8 *Data, I32 Length, U8 Debug);
+void UtilSendUDPData(const C8* Module, I32 *Sockfd, struct sockaddr_in* Addr, C8 *Data, size_t Length, U8 Debug);
 void UtilReceiveUDPData(const C8* Module, I32* Sockfd, C8* Buffer, I32 Length, I32* ReceivedNewData, U8 Debug);
 U32 UtilIPStringToInt(C8 *IP);
 U32 UtilBinaryToHexText(U32 DataLength, C8 *Binary, C8 *Text, U8 Debug);
@@ -686,16 +738,24 @@ U32 UtilHexTextToBinary(U32 DataLength, C8 *Text, C8 *Binary, U8 Debug);
 
 U32 UtilCreateDirContent(C8* DirPath, C8* TempPath);
 U16 UtilGetMillisecond(TimeType *GPSTime);
-I32 UtilWriteConfigurationParameter(C8 *ParameterName, C8 *NewValue, U8 Debug);
+int32_t UtilWriteConfigurationParameter(const enum ConfigurationFileParameter parameter, const char* newValue, const size_t bufferLength);
+int32_t UtilReadConfigurationParameter(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength);
+char* UtilGetConfigurationParameterAsString(const enum ConfigurationFileParameter parameter, char* returnValue, const size_t bufferLength);
+enum ConfigurationFileParameter UtilParseConfigurationParameter(const char* parameter, const size_t bufferLength);
+char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter, char *returnValue, const size_t bufferLength);
+int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char* objectFilePath,
+							 const size_t filePathLength, char* objectSetting,
+							 const size_t objectSettingSize);
+int UtilReadOriginConfiguration(GeoPosition* origin);
 
-int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, MonitorDataType *monitorData);
+int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
 I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
 I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData);
 I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);
 I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *accmData);
 
+struct timeval UtilGetPIDUptime(pid_t pID);
 double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);
-
 
 typedef struct {
   uint64_t timestamp;

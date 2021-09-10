@@ -27,7 +27,6 @@ static pthread_mutex_t OriginLatitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OriginLongitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OriginAltitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t VisualizationServerMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ForceObjectToLocalhostMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPMaxTimeDiffMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPMaxTrajDiffMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPStepBackCountMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -47,17 +46,26 @@ static pthread_mutex_t DataDictionaryRVSSConfigMutex = PTHREAD_MUTEX_INITIALIZER
 static pthread_mutex_t DataDictionaryRVSSRateMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t OBCStateMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
+
+
 
 #define MONR_DATA_FILENAME "MonitorData"
+#define STATE_DATA_FILENAME "StateData"
+#define MISC_DATA_FILENAME "MiscData"
+#define MISC_DATA_MAX_SIZE 1024
 
-static volatile MonitorDataType *monitorDataMemory = NULL;
+typedef struct {
+	OBCState_t objectControlState;
+} StateDataType;
 
+static volatile ObjectDataType *objectDataMemory = NULL;
+static volatile StateDataType *stateDataMemory = NULL;
+static volatile char *miscDataMemory = NULL;
 
 /*------------------------------------------------------------
   -- Static function definitions
   ------------------------------------------------------------*/
-static U64 DataDictionarySearchParameter(C8 * ParameterName, C8 * ResultBuffer);
 
 /*------------------------------------------------------------
   -- Functions
@@ -73,11 +81,11 @@ Initialization data that is configurable is stored in test.conf.
 ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	ReadWriteAccess_t Res = READ_OK;
 
+	Res = Res == READ_OK ? DataDictionaryInitScenarioName() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitOriginLatitudeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitOriginLongitudeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitOriginAltitudeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitVisualizationServerU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitForceToLocalhostU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitASPMaxTimeDiffDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitASPMaxTrajDiffDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitASPStepBackCountU32(GSD) : Res;
@@ -95,13 +103,20 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitRVSSConfigU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitMiscDataC8(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitMonitorData() : Res;
-	if (Res != WRITE_OK) {
-		LogMessage(LOG_LEVEL_WARNING, "Preexisting monitor data memory found");
+	Res = Res == READ_OK ? DataDictionaryInitMiscData() : Res;
+	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
+	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
+	if (Res == READ_OK && DataDictionaryInitObjectData() != WRITE_OK) {
+		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
+		Res = UNDEFINED;
 	}
-
-	DataDictionarySetOBCStateU8(GSD, OBC_STATE_UNDEFINED);
+	if (Res == READ_OK && DataDictionaryInitStateData() != WRITE_OK) {
+		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared state memory found by constructor");
+		Res = UNDEFINED;
+	}
+	if (Res == READ_OK) {
+		DataDictionarySetOBCState(OBC_STATE_UNDEFINED);
+	}
 
 	return Res;
 }
@@ -112,12 +127,51 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
  * \param GSD Pointer to allocated shared memory
  * \return Error code defined by ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryDestructor(GSDType * GSD) {
+ReadWriteAccess_t DataDictionaryDestructor() {
 	ReadWriteAccess_t result = WRITE_OK;
 
-	result = result == WRITE_OK ? DataDictionaryFreeMonitorData() : result;
+	result = result == WRITE_OK ? DataDictionaryFreeObjectData() : result;
+	result = result == WRITE_OK ? DataDictionaryFreeStateData() : result;
 
 	return result;
+}
+
+
+ReadWriteAccess_t DataDictionaryInitScenarioName() {
+	ReadWriteAccess_t Res = UNDEFINED;
+	char ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_SCENARIO_NAME, ResultBufferC8, sizeof (ResultBufferC8))) {
+		Res = READ_OK;
+	}
+	else {
+		Res = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "ScenarioName not found!");
+	}
+	return Res;
+}
+
+ReadWriteAccess_t DataDictionarySetScenarioName(const char *name, const size_t nameLength) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_SCENARIO_NAME, name, nameLength)) {
+		return WRITE_OK;
+	}
+	else {
+		return PARAMETER_NOTFOUND;
+	}
+}
+
+ReadWriteAccess_t DataDictionaryGetScenarioName(char *name, const size_t nameLength) {
+	ReadWriteAccess_t Res = UNDEFINED;
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SCENARIO_NAME, name, nameLength)) {
+		Res = READ_OK;
+	}
+	else {
+		Res = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "ScenarioName not found!");
+	}
+	return Res;
 }
 
 
@@ -130,7 +184,8 @@ ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("OrigoLatitude=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&OriginLatitudeMutex);
 		GSD->OriginLatitudeDbl = atof(ResultBufferC8);
@@ -155,7 +210,8 @@ ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType * GSD, C8 * Latitude) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("OrigoLatitude", Latitude, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, Latitude, strlen(Latitude) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&OriginLatitudeMutex);
 		GSD->OriginLatitudeDbl = atof(Latitude);
@@ -207,7 +263,8 @@ ReadWriteAccess_t DataDictionaryInitOriginLongitudeDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("OrigoLongitude=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&OriginLongitudeMutex);
 		GSD->OriginLongitudeDbl = atof(ResultBufferC8);
@@ -232,7 +289,8 @@ ReadWriteAccess_t DataDictionaryInitOriginLongitudeDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(GSDType * GSD, C8 * Longitude) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("OrigoLongitude", Longitude, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, Longitude, strlen(Longitude) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&OriginLongitudeMutex);
 		GSD->OriginLongitudeDbl = atof(Longitude);
@@ -284,7 +342,8 @@ ReadWriteAccess_t DataDictionaryInitOriginAltitudeDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("OrigoAltitude=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&OriginAltitudeMutex);
 		GSD->OriginAltitudeDbl = atof(ResultBufferC8);
@@ -309,7 +368,8 @@ ReadWriteAccess_t DataDictionaryInitOriginAltitudeDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(GSDType * GSD, C8 * Altitude) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("OrigoAltitude", Altitude, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, Altitude, strlen(Altitude) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&OriginAltitudeMutex);
 		GSD->OriginAltitudeDbl = atof(Altitude);
@@ -361,7 +421,8 @@ ReadWriteAccess_t DataDictionaryInitVisualizationServerU32(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("VisualizationServerName=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&VisualizationServerMutex);
 		GSD->VisualizationServerU32 = UtilIPStringToInt(ResultBufferC8);
@@ -386,7 +447,8 @@ ReadWriteAccess_t DataDictionaryInitVisualizationServerU32(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType * GSD, C8 * IP) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("VisualizationServerName", IP, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME, IP, strlen(IP) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&VisualizationServerMutex);
 		GSD->VisualizationServerU32 = UtilIPStringToInt(IP);
@@ -429,66 +491,6 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType * GSD, C8 * IP,
 
 /*END of VisualizationServer*/
 
-
-/*ForceToLocalhost*/
-/*!
- * \brief DataDictionaryInitForceToLocalhostU8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitForceToLocalhostU8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (DataDictionarySearchParameter("ForceObjectToLocalhost=", ResultBufferC8)) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ForceObjectToLocalhostMutex);
-		GSD->ForceObjectToLocalhostU8 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&ForceObjectToLocalhostMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ForceObjectToLocalhost not found!");
-	}
-
-	return Res;
-}
-
-/*!
- * \brief DataDictionarySetForceToLocalhostU8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
- * \param ForceLocalhost
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionarySetForceToLocalhostU8(GSDType * GSD, C8 * ForceLocalhost) {
-	ReadWriteAccess_t Res;
-
-	if (UtilWriteConfigurationParameter("ForceObjectToLocalhost", ForceLocalhost, 0)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&ForceObjectToLocalhostMutex);
-		GSD->ForceObjectToLocalhostU8 = atoi(ForceLocalhost);
-		pthread_mutex_unlock(&ForceObjectToLocalhostMutex);
-	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
-}
-
-/*!
- * \brief DataDictionaryGetForceToLocalhostU8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param ForceLocalhost Return variable pointer
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryGetForceToLocalhostU8(GSDType * GSD, U8 * ForceLocalhost) {
-	pthread_mutex_lock(&ForceObjectToLocalhostMutex);
-	*ForceLocalhost = GSD->ForceObjectToLocalhostU8;
-	pthread_mutex_unlock(&ForceObjectToLocalhostMutex);
-	return READ_OK;
-}
-
-/*END of ForceToLocalhost*/
-
 /*ASPMaxTimeDiff*/
 /*!
  * \brief DataDictionaryInitASPMaxTimeDiffDbl Initializes variable according to the configuration file
@@ -499,7 +501,8 @@ ReadWriteAccess_t DataDictionaryInitASPMaxTimeDiffDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("ASPMaxTimeDiff=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ASPMaxTimeDiffMutex);
 		GSD->ASPMaxTimeDiffDbl = atof(ResultBufferC8);
@@ -522,7 +525,8 @@ ReadWriteAccess_t DataDictionaryInitASPMaxTimeDiffDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(GSDType * GSD, C8 * ASPMaxTimeDiff) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("ASPMaxTimeDiff", ASPMaxTimeDiff, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, ASPMaxTimeDiff, strlen(ASPMaxTimeDiff) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ASPMaxTimeDiffMutex);
 		GSD->ASPMaxTimeDiffDbl = atof(ASPMaxTimeDiff);
@@ -558,7 +562,8 @@ ReadWriteAccess_t DataDictionaryInitASPMaxTrajDiffDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("ASPMaxTrajDiff=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ASPMaxTrajDiffMutex);
 		GSD->ASPMaxTrajDiffDbl = atof(ResultBufferC8);
@@ -581,7 +586,8 @@ ReadWriteAccess_t DataDictionaryInitASPMaxTrajDiffDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(GSDType * GSD, C8 * ASPMaxTrajDiff) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("ASPMaxTrajDiff", ASPMaxTrajDiff, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF, ASPMaxTrajDiff, strlen(ASPMaxTrajDiff) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ASPMaxTrajDiffMutex);
 		GSD->ASPMaxTrajDiffDbl = atof(ASPMaxTrajDiff);
@@ -618,7 +624,8 @@ ReadWriteAccess_t DataDictionaryInitASPStepBackCountU32(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("ASPStepBackCount=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ASPStepBackCountMutex);
 		GSD->ASPStepBackCountU32 = atoi(ResultBufferC8);
@@ -641,7 +648,8 @@ ReadWriteAccess_t DataDictionaryInitASPStepBackCountU32(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(GSDType * GSD, C8 * ASPStepBackCount) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("ASPStepBackCount", ASPStepBackCount, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT, ASPStepBackCount, strlen(ASPStepBackCount) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ASPStepBackCountMutex);
 		GSD->ASPStepBackCountU32 = atoi(ASPStepBackCount);
@@ -677,7 +685,8 @@ ReadWriteAccess_t DataDictionaryInitASPFilterLevelDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("ASPFilterLevel=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ASPFilterLevelMutex);
 		GSD->ASPFilterLevelDbl = atof(ResultBufferC8);
@@ -700,7 +709,8 @@ ReadWriteAccess_t DataDictionaryInitASPFilterLevelDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(GSDType * GSD, C8 * ASPFilterLevel) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("ASPFilterLevel", ASPFilterLevel, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL, ASPFilterLevel, strlen(ASPFilterLevel) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ASPFilterLevelMutex);
 		GSD->ASPFilterLevelDbl = atof(ASPFilterLevel);
@@ -736,7 +746,8 @@ ReadWriteAccess_t DataDictionaryInitASPMaxDeltaTimeDbl(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("ASPMaxDeltaTime=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ASPMaxDeltaTimeMutex);
 		GSD->ASPMaxDeltaTimeDbl = atof(ResultBufferC8);
@@ -759,7 +770,8 @@ ReadWriteAccess_t DataDictionaryInitASPMaxDeltaTimeDbl(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(GSDType * GSD, C8 * ASPMaxDeltaTime) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("ASPMaxDeltaTime", ASPMaxDeltaTime, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME, ASPMaxDeltaTime, strlen(ASPMaxDeltaTime) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ASPMaxDeltaTimeMutex);
 		GSD->ASPMaxDeltaTimeDbl = atof(ASPMaxDeltaTime);
@@ -796,7 +808,8 @@ ReadWriteAccess_t DataDictionaryInitTimeServerIPU32(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("TimeServerIP=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_TIME_SERVER_IP, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&TimeServerIPMutex);
 		GSD->TimeServerIPU32 = UtilIPStringToInt(ResultBufferC8);
@@ -821,7 +834,8 @@ ReadWriteAccess_t DataDictionaryInitTimeServerIPU32(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetTimeServerIPU32(GSDType * GSD, C8 * TimeServerIP) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("TimeServerIP", TimeServerIP, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_TIME_SERVER_IP, TimeServerIP, strlen(TimeServerIP) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&TimeServerIPMutex);
 		GSD->TimeServerIPU32 = UtilIPStringToInt(TimeServerIP);
@@ -874,7 +888,8 @@ ReadWriteAccess_t DataDictionaryInitTimeServerPortU16(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("TimeServerPort=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_TIME_SERVER_PORT, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&TimeServerPortMutex);
 		GSD->TimeServerPortU16 = atoi(ResultBufferC8);
@@ -897,7 +912,8 @@ ReadWriteAccess_t DataDictionaryInitTimeServerPortU16(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetTimeServerPortU16(GSDType * GSD, C8 * TimeServerPort) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("TimeServerPort", TimeServerPort, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_TIME_SERVER_PORT, TimeServerPort, strlen(TimeServerPort) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&TimeServerPortMutex);
 		GSD->TimeServerPortU16 = atoi(TimeServerPort);
@@ -934,7 +950,8 @@ ReadWriteAccess_t DataDictionaryInitSimulatorIPU32(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("SimulatorIP=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_SIMULATOR_IP, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&SimulatorIPMutex);
 		GSD->SimulatorIPU32 = UtilIPStringToInt(ResultBufferC8);
@@ -959,7 +976,8 @@ ReadWriteAccess_t DataDictionaryInitSimulatorIPU32(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetSimulatorIPU32(GSDType * GSD, C8 * SimulatorIP) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("SimulatorIP", SimulatorIP, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_SIMULATOR_IP, SimulatorIP, strlen(SimulatorIP) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&SimulatorIPMutex);
 		GSD->SimulatorIPU32 = UtilIPStringToInt(SimulatorIP);
@@ -1011,7 +1029,8 @@ ReadWriteAccess_t DataDictionaryInitSimulatorTCPPortU16(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("SimulatorTCPPort=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&SimulatorTCPPortMutex);
 		GSD->SimulatorTCPPortU16 = atoi(ResultBufferC8);
@@ -1034,7 +1053,8 @@ ReadWriteAccess_t DataDictionaryInitSimulatorTCPPortU16(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(GSDType * GSD, C8 * SimulatorTCPPort) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("SimulatorTCPPort", SimulatorTCPPort, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP, SimulatorTCPPort, strlen(SimulatorTCPPort) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&SimulatorTCPPortMutex);
 		GSD->SimulatorTCPPortU16 = atoi(SimulatorTCPPort);
@@ -1070,7 +1090,8 @@ ReadWriteAccess_t DataDictionaryInitSimulatorUDPPortU16(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("SimulatorUDPPort=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&SimulatorUDPPortMutex);
 		GSD->SimulatorUDPPortU16 = atoi(ResultBufferC8);
@@ -1093,7 +1114,8 @@ ReadWriteAccess_t DataDictionaryInitSimulatorUDPPortU16(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(GSDType * GSD, C8 * SimulatorUDPPort) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("SimulatorUDPPort", SimulatorUDPPort, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP, SimulatorUDPPort, strlen(SimulatorUDPPort) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&SimulatorUDPPortMutex);
 		GSD->SimulatorUDPPortU16 = atoi(SimulatorUDPPort);
@@ -1129,7 +1151,8 @@ ReadWriteAccess_t DataDictionaryInitSimulatorModeU8(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("SimulatorMode=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_SIMULATOR_MODE, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&SimulatorModeMutex);
 		GSD->SimulatorModeU8 = atoi(ResultBufferC8);
@@ -1152,7 +1175,8 @@ ReadWriteAccess_t DataDictionaryInitSimulatorModeU8(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetSimulatorModeU8(GSDType * GSD, C8 * SimulatorMode) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("SimulatorMode", SimulatorMode, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_SIMULATOR_MODE, SimulatorMode, strlen(SimulatorMode) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&SimulatorModeMutex);
 		GSD->SimulatorModeU8 = atoi(SimulatorMode);
@@ -1188,7 +1212,8 @@ ReadWriteAccess_t DataDictionaryInitVOILReceiversC8(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
 
-	if (DataDictionarySearchParameter("VOILReceivers=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&VOILReceiversMutex);
 		strcpy(GSD->VOILReceiversC8, ResultBufferC8);
@@ -1211,7 +1236,8 @@ ReadWriteAccess_t DataDictionaryInitVOILReceiversC8(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType * GSD, C8 * VOILReceivers) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("VOILReceivers", VOILReceivers, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, VOILReceivers, strlen(VOILReceivers) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&VOILReceiversMutex);
 		strcpy(GSD->VOILReceiversC8, VOILReceivers);
@@ -1248,7 +1274,8 @@ ReadWriteAccess_t DataDictionaryInitDTMReceiversC8(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
 
-	if (DataDictionarySearchParameter("DTMReceivers=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_DTM_RECEIVERS, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&DTMReceiversMutex);
 		strcpy(GSD->DTMReceiversC8, ResultBufferC8);
@@ -1271,7 +1298,8 @@ ReadWriteAccess_t DataDictionaryInitDTMReceiversC8(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetDTMReceiversC8(GSDType * GSD, C8 * DTMReceivers) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("DTMReceivers", DTMReceivers, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_DTM_RECEIVERS, DTMReceivers, strlen(DTMReceivers) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&DTMReceiversMutex);
 		strcpy(GSD->DTMReceiversC8, DTMReceivers);
@@ -1308,7 +1336,8 @@ ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("SupervisorIP=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&ExternalSupervisorIPMutex);
 		GSD->ExternalSupervisorIPU32 = UtilIPStringToInt(ResultBufferC8);
@@ -1334,7 +1363,7 @@ ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(GSDType * GSD, C8 * IP) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("SupervisorIP", IP, 0)) {
+	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, IP, strlen(IP) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&ExternalSupervisorIPMutex);
 		GSD->ExternalSupervisorIPU32 = UtilIPStringToInt(IP);
@@ -1386,7 +1415,8 @@ ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("SupervisorTCPPort=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&SupervisorTCPPortMutex);
 		GSD->SupervisorTCPPortU16 = atoi(ResultBufferC8);
@@ -1409,7 +1439,9 @@ ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType * GSD) {
 ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(GSDType * GSD, C8 * SupervisorTCPPort) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter("SupervisorTCPPort", SupervisorTCPPort, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP, SupervisorTCPPort,
+		 strlen(SupervisorTCPPort) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&SupervisorTCPPortMutex);
 		GSD->SupervisorTCPPortU16 = atoi(SupervisorTCPPort);
@@ -1445,7 +1477,8 @@ ReadWriteAccess_t DataDictionaryInitRVSSConfigU32(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("RVSSConfig=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_RVSS_CONFIG, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&DataDictionaryRVSSConfigMutex);
 		GSD->DataDictionaryRVSSConfigU32 = atoi(ResultBufferC8);
@@ -1473,7 +1506,8 @@ ReadWriteAccess_t DataDictionarySetRVSSConfigU32(GSDType * GSD, U32 RVSSConfig) 
 	bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
 	sprintf(ResultBufferC8, "%" PRIu32, RVSSConfig);
 
-	if (UtilWriteConfigurationParameter("RVSSConfig", ResultBufferC8, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_RVSS_CONFIG, ResultBufferC8, strlen(ResultBufferC8) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&DataDictionaryRVSSConfigMutex);
 		GSD->DataDictionaryRVSSConfigU32 = RVSSConfig;
@@ -1510,7 +1544,8 @@ ReadWriteAccess_t DataDictionaryInitRVSSRateU8(GSDType * GSD) {
 	ReadWriteAccess_t Res = UNDEFINED;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	if (DataDictionarySearchParameter("RVSSRate=", ResultBufferC8)) {
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_RVSS_RATE, ResultBufferC8, sizeof (ResultBufferC8))) {
 		Res = READ_OK;
 		pthread_mutex_lock(&DataDictionaryRVSSRateMutex);
 		GSD->DataDictionaryRVSSRateU8 = (U8) atoi(ResultBufferC8);
@@ -1538,7 +1573,8 @@ ReadWriteAccess_t DataDictionarySetRVSSRateU8(GSDType * GSD, U8 RVSSRate) {
 	bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
 	sprintf(ResultBufferC8, "%" PRIu8, RVSSRate);
 
-	if (UtilWriteConfigurationParameter("RVSSRate", ResultBufferC8, 0)) {
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_RVSS_RATE, ResultBufferC8, strlen(ResultBufferC8) + 1)) {
 		Res = WRITE_OK;
 		pthread_mutex_lock(&DataDictionaryRVSSRateMutex);
 		GSD->DataDictionaryRVSSRateU8 = RVSSRate;
@@ -1596,109 +1632,231 @@ ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType * GSD, ASPType * ASPD) {
 
 /*MiscData*/
 /*!
- * \brief DataDictionaryInitMiscDataC8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryInitMiscData inits a data structure for saving misc data
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitMiscDataC8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (DataDictionarySearchParameter("MiscData=", ResultBufferC8)) {
-		Res = READ_OK;
-		pthread_mutex_lock(&MiscDataMutex);
-		strcpy(GSD->MiscDataC8, ResultBufferC8);
-		pthread_mutex_unlock(&MiscDataMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "MiscData not found!");
-	}
-
-	return Res;
-}
-
-/*!
- * \brief DataDictionarySetMiscDataC8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
- * \param MiscData
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionarySetMiscDataC8(GSDType * GSD, C8 * MiscData) {
-	ReadWriteAccess_t Res;
-
-	if (UtilWriteConfigurationParameter("MiscData", MiscData, 0)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&MiscDataMutex);
-		bzero(GSD->MiscDataC8, DD_CONTROL_BUFFER_SIZE_1024);
-		strcpy(GSD->MiscDataC8, MiscData);
-		pthread_mutex_unlock(&MiscDataMutex);
-	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
-}
-
-/*!
- * \brief DataDictionaryGetMiscDataC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param MiscData Return variable pointer
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryGetMiscDataC8(GSDType * GSD, U8 * MiscData, U32 BuffLen) {
-	pthread_mutex_lock(&MiscDataMutex);
-	bzero(MiscData, BuffLen);
-	strcpy(MiscData, GSD->MiscDataC8);
-	pthread_mutex_unlock(&MiscDataMutex);
+ReadWriteAccess_t DataDictionaryInitMiscData(void) {
 	return READ_OK;
 }
 
+/**
+ * \brief DataDictionarySetMiscData Sets the test misc data.
+ * \param miscData The misc data string (ASCII).
+ * \return ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionarySetMiscData(
+		const char* data,
+		const size_t datalen) {
+	// TODO implement setting of conf file
+	return UNDEFINED;
+}
+
+/*!
+ * \brief DataDictionaryGetMiscData Reads misc data from shared memory
+ * \param MiscData Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetMiscData(char * miscDataBuffer, const size_t buflen) {
+	ReadWriteAccess_t result = UNDEFINED;
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_MISC_DATA, miscDataBuffer, buflen)) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "MiscData not found!");
+		result = PARAMETER_NOTFOUND;
+		memset(miscDataBuffer, 0, buflen);
+	}
+}
 /*END of MiscData*/
 
 
 /*OBCState*/
+/*!
+ * \brief DataDictionaryInitOBCState Initializes a data structure for saving module state
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryInitStateData() {
+	int createdMemory;
+	stateDataMemory = createSharedMemory(STATE_DATA_FILENAME, 0, sizeof (StateDataType), &createdMemory);
+	if (stateDataMemory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared state data memory");
+		return UNDEFINED;
+	}
+	return createdMemory ? WRITE_OK : READ_OK;
+}
+
 /*!
  * \brief DataDictionarySetOBCStateU8 Parses input variable and sets variable to corresponding value
  * \param GSD Pointer to shared allocated memory
  * \param OBCState
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOBCStateU8(GSDType * GSD, OBCState_t OBCState) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetOBCState(const OBCState_t OBCState) {
+	if (stateDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
 
-	Res = WRITE_OK;
-	pthread_mutex_lock(&OBCStateMutex);
-	GSD->OBCStateU8 = OBCState;
-	pthread_mutex_unlock(&OBCStateMutex);
-	return Res;
+	stateDataMemory = claimSharedMemory(stateDataMemory);
+	if (stateDataMemory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	stateDataMemory->objectControlState = OBCState;
+	stateDataMemory = releaseSharedMemory(stateDataMemory);
+	return WRITE_OK;
 }
 
 /*!
- * \brief DataDictionaryGetOBCStateU8 Reads variable from shared memory
+ * \brief DataDictionaryGetOBCState Reads variable from shared memory
  * \param GSD Pointer to shared allocated memory
  * \return Current object control state according to ::OBCState_t
  */
-OBCState_t DataDictionaryGetOBCStateU8(GSDType * GSD) {
-	OBCState_t Ret;
+ReadWriteAccess_t DataDictionaryGetOBCState(OBCState_t * OBCState) {
+	if (stateDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (OBCState == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory inpput pointer error");
+		return UNDEFINED;
+	}
 
-	pthread_mutex_lock(&OBCStateMutex);
-	Ret = GSD->OBCStateU8;
-	pthread_mutex_unlock(&OBCStateMutex);
-	return Ret;
+	stateDataMemory = claimSharedMemory(stateDataMemory);
+	if (stateDataMemory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	*OBCState = stateDataMemory->objectControlState;
+	stateDataMemory = releaseSharedMemory(stateDataMemory);
+	return READ_OK;
+}
+
+/*!
+ * \brief Releases data structure for saving state data
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryFreeStateData() {
+	if (stateDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized memory");
+		return UNDEFINED;
+	}
+
+	destroySharedMemory(stateDataMemory);
+	return WRITE_OK;
 }
 
 /*END OBCState*/
 
+/*MaxPacketLoss*/
+ReadWriteAccess_t DataDictionaryInitMaxPacketsLost(void) {
+	// TODO implement shmem solution
+	return READ_OK;
+}
+
+ReadWriteAccess_t DataDictionarySetMaxPacketsLost(uint8_t maxPacketsLostSetting) {
+	// TODO implement shmem solution
+	return UNDEFINED;
+}
+
+ReadWriteAccess_t DataDictionaryGetMaxPacketsLost(uint8_t * maxPacketsLostSetting) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	uint64_t readSetting;
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_MAX_PACKETS_LOST, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtoul(resultBuffer, &endPtr, 10);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for MaxPacketsLost");
+			result = PARAMETER_NOTFOUND;
+			*maxPacketsLostSetting = DEFAULT_MAX_PACKETS_LOST;
+		}
+		else if (readSetting > UINT8_MAX) {
+			LogMessage(LOG_LEVEL_WARNING, "Configuration for MaxPacketsLost outside accepted range");
+			result = READ_OK;
+			*maxPacketsLostSetting = UINT8_MAX;
+		}
+		else {
+			result = READ_OK;
+			*maxPacketsLostSetting = (uint8_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "MaxPacketsLost not found!");
+		result = PARAMETER_NOTFOUND;
+		*maxPacketsLostSetting = DEFAULT_MAX_PACKETS_LOST;
+	}
+}
+
+/*END MaxPacketLoss*/
+/*TransmitterID*/
+ReadWriteAccess_t DataDictionaryInitTransmitterID(void) {
+	// TODO implement shmem solution
+	return READ_OK;
+}
+
+ReadWriteAccess_t DataDictionaryGetTransmitterID(uint32_t * transmitterID) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	uint64_t readSetting;
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_TRANSMITTER_ID, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtoul(resultBuffer, &endPtr, 10);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for TransmitterID");
+			result = PARAMETER_NOTFOUND;
+			*transmitterID = DEFAULT_TRANSMITTER_ID;
+		}
+		else if (readSetting > UINT32_MAX) {
+			LogMessage(LOG_LEVEL_WARNING, "Configuration for TransmitterID outside accepted range");
+			result = READ_OK;
+			*transmitterID = UINT32_MAX;
+		}
+		else {
+			result = READ_OK;
+			*transmitterID = (uint32_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "TransmitterID not found!");
+		result = PARAMETER_NOTFOUND;
+		*transmitterID = DEFAULT_TRANSMITTER_ID;
+	}
+	return result;
+}
+
+ReadWriteAccess_t DataDictionarySetTransmitterID(const uint32_t transmitterID) {
+	// TODO implement shmem solution
+	return UNDEFINED;
+}
+
+/*END TransmitterID*/
+
 /*!
- * \brief DataDictionaryInitMonitorData inits a data structure for saving object monr
+ * \brief DataDictionaryInitObjectData inits a data structure for saving object monr
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryInitMonitorData() {
+ReadWriteAccess_t DataDictionaryInitObjectData() {
 
 	int createdMemory;
 
-	monitorDataMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (MonitorDataType), &createdMemory);
-	if (monitorDataMemory == NULL) {
+	objectDataMemory = createSharedMemory(MONR_DATA_FILENAME, 0, sizeof (ObjectDataType), &createdMemory);
+	if (objectDataMemory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared monitor data memory");
 		return UNDEFINED;
 	}
 	return createdMemory ? WRITE_OK : READ_OK;
@@ -1710,11 +1868,13 @@ ReadWriteAccess_t DataDictionaryInitMonitorData() {
  * \param transmitterId requested object transmitterId
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorData) {
+ReadWriteAccess_t DataDictionarySetMonitorData(const uint32_t transmitterId,
+											   const ObjectMonitorType * monitorData,
+											   const struct timeval *receiveTime) {
 
 	ReadWriteAccess_t result;
 
-	if (monitorDataMemory == NULL) {
+	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
 		return UNDEFINED;
@@ -1724,45 +1884,55 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
 		return UNDEFINED;
 	}
-	if (monitorData->ClientID == 0) {
+	if (receiveTime == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (transmitterId == 0) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
 		return UNDEFINED;
 	}
 
-	monitorDataMemory = claimSharedMemory(monitorDataMemory);
-	result = PARAMETER_NOTFOUND;
-	unsigned int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
 
-	LogPrint("Number of objects currently in memory: %u", numberOfObjects);
-	for (uint32_t i = 0; i < numberOfObjects; ++i) {
-		if (monitorDataMemory[i].ClientID == monitorData->ClientID) {
-			memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (objectDataMemory[i].ClientID == transmitterId) {
+			objectDataMemory[i].MonrData = *monitorData;
+			objectDataMemory[i].lastPositionUpdate = *receiveTime;
 			result = WRITE_OK;
 		}
 	}
 
 	if (result == PARAMETER_NOTFOUND) {
 		// Search for unused memory space and place monitor data there
-		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u",
-				   monitorData->ClientID);
-		for (uint32_t i = 0; i < numberOfObjects; ++i) {
-			if (monitorDataMemory[i].ClientID == 0) {
-				memcpy(&monitorDataMemory[i], monitorData, sizeof (MonitorDataType));
+		LogMessage(LOG_LEVEL_INFO, "Received first monitor data from transmitter ID %u", transmitterId);
+		for (int i = 0; i < numberOfObjects; ++i) {
+			if (objectDataMemory[i].ClientID == 0) {
+				objectDataMemory[i].MonrData = *monitorData;
+				objectDataMemory[i].lastPositionUpdate = *receiveTime;
 				result = WRITE_OK;
 			}
 		}
 
 		// No uninitialized memory space found - create new
 		if (result == PARAMETER_NOTFOUND) {
-			monitorDataMemory = resizeSharedMemory(monitorDataMemory, numberOfObjects + 1);
-			if (monitorDataMemory != NULL) {
-				numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+			objectDataMemory = resizeSharedMemory(objectDataMemory, (unsigned int)(numberOfObjects + 1));
+			if (objectDataMemory != NULL) {
+				numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 				LogMessage(LOG_LEVEL_INFO,
-						   "Modified shared memory to hold MONR data for %u objects, mp now %p",
-						   numberOfObjects, monitorDataMemory);
-				memcpy(&monitorDataMemory[numberOfObjects - 1], monitorData, sizeof (MonitorDataType));
-				LogPrint("Printed MONR");
+						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
+				objectDataMemory[numberOfObjects - 1].MonrData = *monitorData;
+				objectDataMemory[numberOfObjects - 1].lastPositionUpdate = *receiveTime;
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
@@ -1770,18 +1940,52 @@ ReadWriteAccess_t DataDictionarySetMonitorData(const MonitorDataType * monitorDa
 			}
 		}
 	}
-	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+/*!
+ * \brief DataDictionaryClearObjectData Clears existing object data tagged with
+ *			a certain transmitter ID.
+ * \param transmitterID Transmitter ID of the monitor data to be cleared.
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryClearObjectData(const uint32_t transmitterID) {
+	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
+
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (objectDataMemory[i].ClientID == transmitterID) {
+			memset(&objectDataMemory[i], 0, sizeof (objectDataMemory));
+			result = WRITE_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	if (result == PARAMETER_NOTFOUND) {
+		LogMessage(LOG_LEVEL_WARNING, "Unable to find object data for transmitter ID %u", transmitterID);
+	}
 
 	return result;
 }
 
 /*!
  * \brief DataDictionaryGetMonitorData Reads variable from shared memory
- * \param monitorData Return variable pointer
  * \param transmitterId requested object transmitterId
+ * \param monitorData Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMonitorData(MonitorDataType * monitorData, const uint32_t transmitterId) {
+ReadWriteAccess_t DataDictionaryGetMonitorData(const uint32_t transmitterId, ObjectMonitorType * monitorData) {
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 
 	if (monitorData == NULL) {
@@ -1795,17 +1999,18 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(MonitorDataType * monitorData, co
 		return UNDEFINED;
 	}
 
-	monitorDataMemory = claimSharedMemory(monitorDataMemory);
-	unsigned int numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
 
-	for (unsigned int i = 0; i < numberOfObjects; ++i) {
-		if (monitorDataMemory[i].ClientID == transmitterId) {
-			memcpy(monitorData, &monitorDataMemory[i], sizeof (MonitorDataType));
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (objectDataMemory[i].ClientID == transmitterId) {
+			memcpy(monitorData, &objectDataMemory[i].MonrData, sizeof (ObjectMonitorType));
+
 			result = READ_OK;
 		}
 	}
 
-	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
 	if (result == PARAMETER_NOTFOUND) {
 		LogMessage(LOG_LEVEL_WARNING, "Unable to find monitor data for transmitter ID %u", transmitterId);
@@ -1815,19 +2020,108 @@ ReadWriteAccess_t DataDictionaryGetMonitorData(MonitorDataType * monitorData, co
 }
 
 /*!
- * \brief DataDictionaryFreeMonitorData Releases data structure for saving object monitor data
+ * \brief DataDictionaryGetMonitorDataReceiveTime Gets the last receive time of monitor data for specified object
+ * \param transmitterID Identifier of object
+ * \param lastDataUpdate Return variable pointer
+ * \return Value according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetMonitorDataReceiveTime(const uint32_t transmitterID,
+														  struct timeval *lastDataUpdate) {
+	ReadWriteAccess_t result = UNDEFINED;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	lastDataUpdate->tv_sec = 0;
+	lastDataUpdate->tv_usec = 0;
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			*lastDataUpdate = objectDataMemory[i].lastPositionUpdate;
+			result = READ_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+/*!
+ * \brief DataDictionarySetMonitorDataReceiveTime Sets the last receive time of monitor data for specified object
+ * \param transmitterID Identifier of object
+ * \param lastDataUpdate Time to set
+ * \return Value according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionarySetMonitorDataReceiveTime(const uint32_t transmitterID,
+														  const struct timeval *lastDataUpdate) {
+	ReadWriteAccess_t result = UNDEFINED;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			objectDataMemory[i].lastPositionUpdate = *lastDataUpdate;
+			result = READ_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+/*!
+ * \brief DataDictionaryFreeObjectData Releases data structure for saving object monitor data
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryFreeMonitorData() {
+ReadWriteAccess_t DataDictionaryFreeObjectData() {
 	ReadWriteAccess_t result = WRITE_OK;
 
-	if (monitorDataMemory == NULL) {
+	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized memory");
 		return UNDEFINED;
 	}
 
-	destroySharedMemory(monitorDataMemory);
+	destroySharedMemory(objectDataMemory);
 
 	return result;
 }
@@ -1847,12 +2141,12 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObj
 	unsigned int numberOfObjects;
 	ReadWriteAccess_t result = WRITE_OK;
 
-	monitorDataMemory = claimSharedMemory(monitorDataMemory);
-	monitorDataMemory = resizeSharedMemory(monitorDataMemory, newNumberOfObjects);
-	numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
-	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	objectDataMemory = resizeSharedMemory(objectDataMemory, newNumberOfObjects);
+	numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
 
-	if (monitorDataMemory == NULL) {
+	if (objectDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
 		return UNDEFINED;
@@ -1864,33 +2158,827 @@ ReadWriteAccess_t DataDictionarySetNumberOfObjects(const uint32_t newNumberOfObj
 /*!
  * \brief DataDictionaryGetNumberOfObjects Reads variable from shared memory
  * \param numberOfobjects number of objects in a test
- * \return Current object control state according to ::OBCState_t
+ * \return Number of objects present in memory
  */
 ReadWriteAccess_t DataDictionaryGetNumberOfObjects(uint32_t * numberOfObjects) {
+	int retval;
 
-	monitorDataMemory = claimSharedMemory(monitorDataMemory);
-	*numberOfObjects = getNumberOfMemoryElements(monitorDataMemory);
-	monitorDataMemory = releaseSharedMemory(monitorDataMemory);
-
-	return READ_OK;
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	retval = getNumberOfMemoryElements(objectDataMemory);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	*numberOfObjects = retval == -1 ? 0 : (uint32_t) retval;
+	return retval == -1 ? UNDEFINED : READ_OK;
 }
 
 /*END of NbrOfObjects*/
 
+/*!
+ * \brief DataDictionaryGetNumberOfObjects Reads variable from shared memory
+ * \param numberOfobjects number of objects in a test
+ * \return Number of objects present in memory
+ */
+ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDs(uint32_t transmitterIDs[], const uint32_t arraySize) {
+	int32_t retval;
+
+	if (transmitterIDs == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Data dictionary input pointer error");
+		return UNDEFINED;
+	}
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Data dictionary monitor data read error");
+		return UNDEFINED;
+	}
+
+	memset(transmitterIDs, 0, arraySize * sizeof (transmitterIDs[0]));
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	retval = getNumberOfMemoryElements(objectDataMemory);
+	if (retval == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Error reading number of objects from shared memory");
+		objectDataMemory = releaseSharedMemory(objectDataMemory);
+		return UNDEFINED;
+	}
+	else if ((uint32_t) retval > arraySize) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to list %d transmitter IDs in specified array of size %u", retval,
+				   arraySize);
+		objectDataMemory = releaseSharedMemory(objectDataMemory);
+		return UNDEFINED;
+	}
+
+	for (int i = 0; i < retval; ++i) {
+		transmitterIDs[i] = objectDataMemory[i].ClientID;
+	}
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return READ_OK;
+}
+
 
 /*!
- * \brief DataDictionarySearchParameter Searches for parameters in the configuration file and returns
-the parameter value.
- * \param ParameterName Parameter to search for
- * \param ResultBuffer Buffer where read result should be stored
- * \return Length of read parameter string
+ * \brief DataDictionarySetObjectData 
+ * \param objectData data to be initialized
+ * \return Result according to ::ReadWriteAccess_t
  */
-U64 DataDictionarySearchParameter(C8 * ParameterName, C8 * ResultBuffer) {
-	char confPathDir[MAX_FILE_PATH];
+ReadWriteAccess_t DataDictionarySetObjectData(const ObjectDataType * objectData) {
 
-	UtilGetConfDirectoryPath(confPathDir, sizeof (confPathDir));
-	strcat(confPathDir, CONF_FILE_NAME);
-	bzero(ResultBuffer, DD_CONTROL_BUFFER_SIZE_20);
-	UtilSearchTextFile(confPathDir, ParameterName, "", ResultBuffer);
-	return strlen(ResultBuffer);
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (objectData == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (objectData->ClientID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	if (result == PARAMETER_NOTFOUND) {
+		// Search for unused memory space and place monitor data there
+		LogMessage(LOG_LEVEL_INFO, "First object information data from ID %u added", objectData->ClientID);
+		for (int i = 0; i < numberOfObjects; ++i) {
+			if (objectDataMemory[i].ClientID == objectData->ClientID) {
+				memcpy(&objectDataMemory[i], objectData, sizeof (ObjectDataType));
+				result = WRITE_OK;
+			}
+		}
+
+		// No uninitialized memory space found - create new
+		if (result == PARAMETER_NOTFOUND) {
+			objectDataMemory = resizeSharedMemory(objectDataMemory, (unsigned int)(numberOfObjects + 1));
+			if (objectDataMemory != NULL) {
+				numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+				LogMessage(LOG_LEVEL_INFO,
+						   "Modified shared memory to hold monitor data for %u objects", numberOfObjects);
+				memcpy(&objectDataMemory[numberOfObjects - 1], objectData, sizeof (ObjectDataType));
+				result = WRITE_OK;
+			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR, "Error resizing shared memory");
+				result = UNDEFINED;
+			}
+		}
+	}
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+
+
+
+/*!
+ * \brief DataDictionarySetObjectEnableStatus sets the object enable status
+ * \param transmitterId requested object transmitterId
+ * \param enabledStatus the enable status - enable, disable, undefined
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionarySetObjectEnableStatus(const uint32_t transmitterId,
+													  ObjectEnabledType enabledStatus) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterId == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterId == objectDataMemory[i].ClientID) {
+			objectDataMemory[i].Enabled = enabledStatus;
+			result = WRITE_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+/*!
+ * \brief DataDictionaryGetObjectEnableStatusById 
+ * \param transmitterId requested object transmitterId
+ * \param *enabledStatus Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetObjectEnableStatusById(const uint32_t transmitterId,
+														  ObjectEnabledType * enabledStatus) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterId == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	*enabledStatus = OBJECT_UNDEFINED;
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterId == objectDataMemory[i].ClientID) {
+			*enabledStatus = objectDataMemory[i].Enabled;
+			result = READ_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+/*!
+ * \brief DataDictionaryGetObjectEnableStatusByIp 
+ * \param ClientIP requested object IP number
+ * \param *enabledStatus Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetObjectEnableStatusByIp(const in_addr_t ClientIP,
+														  ObjectEnabledType * enabledStatus) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (ClientIP == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	*enabledStatus = OBJECT_UNDEFINED;
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (ClientIP == objectDataMemory[i].ClientIP) {
+			*enabledStatus = objectDataMemory[i].Enabled;
+			result = READ_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+
+/*!
+ * \brief DataDictionaryGetObjectTransmitterIDByIP
+ * \param ClientIP requested object IP number
+ * \param *transmitterId Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetObjectTransmitterIDByIP(const in_addr_t ClientIP, uint32_t * transmitterId) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (ClientIP == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Unable to get transmitter ID for IP 0.0.0.0");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	*transmitterId = 0;
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (ClientIP == objectDataMemory[i].ClientIP) {
+			*transmitterId = objectDataMemory[i].ClientID;
+			result = READ_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+
+/*!
+ * \brief DataDictionaryGetTransmitterIdByIP
+ * \param transmitterID requested object ID
+ * \param *ClientIP Return variable pointer
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetObjectIPByTransmitterID(const in_addr_t transmitterID,
+														   in_addr_t * ClientIP) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	*ClientIP = 0;
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			*ClientIP = objectDataMemory[i].ClientIP;
+			result = READ_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+/*!
+ * \brief DataDictionaryModifyTransmitterID Changes the transmitter ID of the object data identified by a transmitter ID
+ * \param oldTransmitterID Present transmitter ID of object data
+ * \param newTransmitterID Desired new transmitter ID of object data
+ * \return Value according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryModifyTransmitterID(const uint32_t oldTransmitterID,
+													const uint32_t newTransmitterID) {
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (newTransmitterID == 0 || oldTransmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (oldTransmitterID == objectDataMemory[i].ClientID) {
+			objectDataMemory[i].ClientID = newTransmitterID;
+			result = WRITE_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+
+/*!
+ * \brief DataDictionaryModifyTransmitterIDByIP Changes the transmitter ID of the object data identified by a transmitter IP (this is a temporary function, don't use this too much)
+ * \param ipKey IP identifying an object
+ * \param newTransmitterID Desired new transmitter ID of object data
+ * \return Value according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryModifyTransmitterIDByIP(const in_addr_t ipKey,
+														const uint32_t newTransmitterID) {
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (newTransmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (ipKey == objectDataMemory[i].ClientIP) {
+			objectDataMemory[i].ClientID = newTransmitterID;
+			result = WRITE_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+ReadWriteAccess_t DataDictionarySetObjectProperties(const uint32_t transmitterID,
+													const ObjectPropertiesType * objectProperties) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			objectDataMemory[i].propertiesReceived = 1;
+			objectDataMemory[i].properties = *objectProperties;
+			result = WRITE_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
+
+
+ReadWriteAccess_t DataDictionaryGetObjectProperties(const uint32_t transmitterID,
+													ObjectPropertiesType * objectProperties) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	memset(objectProperties, 0, sizeof (*objectProperties));
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			if (objectDataMemory[i].propertiesReceived) {
+				*objectProperties = objectDataMemory[i].properties;
+				result = READ_OK;
+			}
+			else {
+				result = UNINITIALIZED;
+			}
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
+
+ReadWriteAccess_t DataDictionaryClearObjectProperties(const uint32_t transmitterID) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			memset(&objectDataMemory[i].properties, 0, sizeof (objectDataMemory[i].properties));
+			objectDataMemory[i].propertiesReceived = 0;
+			result = WRITE_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
+
+
+ReadWriteAccess_t DataDictionarySetRequestedControlAction(const uint32_t transmitterID,
+														  const RequestControlActionType * reqCtrlAction) {
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+
+			objectDataMemory[i].requestedControlAction = *reqCtrlAction;
+			result = WRITE_OK;
+		}
+	}
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+
+}
+
+ReadWriteAccess_t DataDictionaryGetRequestedControlAction(const uint32_t transmitterID,
+														  RequestControlActionType * reqCtrlAction) {
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			*reqCtrlAction = objectDataMemory[i].requestedControlAction;
+			result = READ_OK;
+		}
+	}
+	//printf("Grad %f\n",reqCtrlAction->steeringAction.rad);
+	//printf("Gtime %d\n",reqCtrlAction->dataTimestamp.tv_sec);
+	//printf("Gexc_id %lu\n",reqCtrlAction->executingID);
+	//printf("Gspeed %f\n",reqCtrlAction->speedAction.m_s);
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
+
+ReadWriteAccess_t DataDictionaryResetRequestedControlAction(const uint32_t transmitterID) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID == objectDataMemory[i].ClientID) {
+			timerclear(&objectDataMemory[i].requestedControlAction.dataTimestamp);
+			result = WRITE_OK;
+		}
+	}
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
+
+/**
+ * \brief DataDictionarySetOrigin Sets the test origin for one or more objects.
+ * \param transmitterID ID of the object to set origin for. If set to null, all objects' origins will be modified.
+ * \param origin Geoposition data.
+ * \return ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionarySetOrigin(const uint32_t * transmitterID, const GeoPosition * origin) {
+
+	ReadWriteAccess_t result;
+
+	if (objectDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory not initialized");
+		return UNDEFINED;
+	}
+	if (origin == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (transmitterID != NULL && transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	if (objectDataMemory == NULL) {
+		// If this code executes, objectDataMemory has been reallocated outside of DataDictionary
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory pointer modified unexpectedly");
+		return UNDEFINED;
+	}
+
+	result = PARAMETER_NOTFOUND;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (transmitterID != NULL) {
+			if (objectDataMemory[i].ClientID == *transmitterID) {
+				objectDataMemory[i].origin = *origin;
+				result = WRITE_OK;
+			}
+		}
+		else {
+			objectDataMemory[i].origin = *origin;
+			result = WRITE_OK;
+		}
+	}
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+
+	return result;
+}
+
+/**
+ * \brief DataDictionaryGetOrigin Read origin setting for specified object. Shared memory must have been
+ *			initialized prior to this function call.
+ * \param transmitterID Transmitter ID of object for which origin is requested.
+ * \param origin Return variable pointer
+ * \return ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryGetOrigin(const uint32_t transmitterID, GeoPosition * origin) {
+
+	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
+
+	if (origin == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+	if (transmitterID == 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Transmitter ID 0 is reserved");
+		return UNDEFINED;
+	}
+
+	objectDataMemory = claimSharedMemory(objectDataMemory);
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+
+	for (int i = 0; i < numberOfObjects; ++i) {
+		if (objectDataMemory[i].ClientID == transmitterID) {
+			memcpy(origin, &objectDataMemory[i].origin, sizeof (GeoPosition));
+			result = READ_OK;
+		}
+	}
+
+	objectDataMemory = releaseSharedMemory(objectDataMemory);
+	return result;
+}
+
+/**
+ * \brief DataDictionaryInitOrigin Read config file and add the origin in .conf to all the objects that are created
+ * \return ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryInitOrigin() {
+
+	char resultBuffer[100];
+	char *endptr = NULL;
+	int numberOfObjects = getNumberOfMemoryElements(objectDataMemory);
+	ReadWriteAccess_t retval = WRITE_OK;
+
+	// should it be write or read Iam writeing to memory but also reading from config file?
+	GeoPosition origin;
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
+									   resultBuffer, sizeof (resultBuffer)) > 0) {
+		origin.Longitude = strtod(resultBuffer, &endptr);
+		if (endptr == resultBuffer) {
+			LogMessage(LOG_LEVEL_ERROR, "OriginLongitude badly formatted");
+			retval = PARAMETER_NOTFOUND;
+		}
+		memset(resultBuffer, 0, sizeof (resultBuffer));
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "OriginLongitude not found!");
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
+									   resultBuffer, sizeof (resultBuffer)) > 0) {
+		origin.Latitude = strtod(resultBuffer, &endptr);
+		if (endptr == resultBuffer) {
+			LogMessage(LOG_LEVEL_ERROR, "OriginLongitude badly formatted");
+			retval = PARAMETER_NOTFOUND;
+		}
+		memset(resultBuffer, 0, sizeof (resultBuffer));
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "OriginLatitude not found!");
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, resultBuffer, sizeof (resultBuffer))) {
+		origin.Altitude = strtod(resultBuffer, &endptr);
+		if (endptr == resultBuffer) {
+			LogMessage(LOG_LEVEL_ERROR, "OriginAltitude badly formatted");
+			retval = PARAMETER_NOTFOUND;
+		}
+		memset(resultBuffer, 0, sizeof (resultBuffer));
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+		LogMessage(LOG_LEVEL_ERROR, "OriginAltitude not found!");
+	}
+
+	if (retval != PARAMETER_NOTFOUND) {
+		for (int i = 0; i < numberOfObjects; ++i) {
+			objectDataMemory[i].origin = origin;
+		}
+	}
+	return retval;
 }
