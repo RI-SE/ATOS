@@ -216,20 +216,20 @@ int awaitConnection(TCPHandler& tcpPort, enum COMMAND& receivedCommand, bool& ar
 		}
 
 		switch (receivedCommand) {
-			case COMM_EXIT:
-				return -1;
-			case COMM_OBJECTS_CONNECTED:
-				areObjectsConnected = true;
-				break;
-			case COMM_DISCONNECT:  // TODO what happens when an object forces
-								   // the disconnection?
-				areObjectsConnected = false;
-				break;
-			case COMM_CONNECT:
-				areObjectsConnected = true;
-				break;
-			default:
-				continue;
+		case COMM_EXIT:
+			return -1;
+		case COMM_OBJECTS_CONNECTED:
+			areObjectsConnected = true;
+			break;
+		case COMM_DISCONNECT:  // TODO what happens when an object forces
+							   // the disconnection?
+			areObjectsConnected = false;
+			break;
+		case COMM_CONNECT:
+			areObjectsConnected = true;
+			break;
+		default:
+			continue;
 		}
 	}
 	return 0;
@@ -329,15 +329,15 @@ int awaitMQCommand(TCPHandler& tcpPort, COMMAND& receivedCommand) {
 		util_error("Message bus receive error");
 	}
 	switch (receivedCommand) {
-		case COMM_EXIT:
-			return -1;
-		case COMM_OBJECTS_CONNECTED:
-			LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
-			transmitOSEM(tcpPort);
-			break;
-		case COMM_CONNECT:
-			LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
-			transmitOSEM(tcpPort);
-			break;
+	case COMM_EXIT:
+		return -1;
+	case COMM_OBJECTS_CONNECTED:
+		LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
+		transmitOSEM(tcpPort);
+		break;
+	case COMM_CONNECT:
+		LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
+		transmitOSEM(tcpPort);
+		break;
 	}
 }
