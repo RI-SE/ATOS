@@ -13,19 +13,9 @@
 #include <dirent.h>
 
 
-ScenarioHandler::ScenarioHandler(
-		ControlMode controlMode) {
-	switch (controlMode) {
-	case RELATIVE_KINEMATICS:
-		this->state = static_cast<ObjectControlState*>(new RelativeKinematics::Idle());
-		DataDictionarySetOBCState(this->state->asNumber());
-		break;
-	case ABSOLUTE_KINEMATICS:
-		// TODO
-		LogMessage(LOG_LEVEL_ERROR, "Unimplemented control mode requested");
-		break;
-	}
-	this->controlMode = controlMode;
+ScenarioHandler::ScenarioHandler() {
+	this->state = static_cast<ObjectControlState*>(new ObjectControl::Idle);
+	DataDictionarySetOBCState(this->state->asNumber());
 }
 
 ScenarioHandler::~ScenarioHandler() {
@@ -60,6 +50,33 @@ void ScenarioHandler::handleAllClearCommand() {
 	this->state->allClearRequest(*this);
 }
 
+void ScenarioHandler::handleActionConfigurationCommand(
+		const TestScenarioCommandAction& action) {
+	this->state->settingModificationRequested(*this);
+	if (action.command == ACTION_PARAMETER_VS_SEND_START) {
+		LogMessage(LOG_LEVEL_INFO, "Configuring delayed start for object %u", action.objectID);
+		objects[action.objectID].setTriggerStart(true);
+		this->storedActions[action.actionID] = std::bind(&TestObject::sendStart,
+														 &objects[action.objectID]);
+	}
+}
+
+void ScenarioHandler::handleExecuteActionCommand(
+		const uint16_t &actionID,
+		const std::chrono::system_clock::time_point &when) {
+	this->state->actionExecutionRequested(*this);
+	auto delayedExecutor = [&](){
+		using namespace std::chrono;
+		LogMessage(LOG_LEVEL_DEBUG, "Executing action %u in %d ms", actionID,
+				   duration_cast<milliseconds>(when - system_clock::now()).count());
+		std::this_thread::sleep_until(when);
+		LogMessage(LOG_LEVEL_INFO, "Executing action %u", actionID);
+		this->storedActions[actionID]();
+	};
+	auto thd = std::thread(delayedExecutor);
+	thd.detach();
+}
+
 void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
@@ -69,7 +86,7 @@ void ScenarioHandler::loadScenario() {
 }
 
 void ScenarioHandler::loadObjectFiles() {
-	this->objects.clear();
+	this->clearScenario();
 	char path[MAX_FILE_PATH];
 	std::vector<std::invalid_argument> errors;
 
@@ -166,6 +183,7 @@ void ScenarioHandler::transformScenarioRelativeTo(
 
 void ScenarioHandler::clearScenario() {
 	objects.clear();
+	storedActions.clear();
 }
 
 
@@ -415,7 +433,9 @@ void ScenarioHandler::disarmObjects() {
 
 void ScenarioHandler::startObjects() {
 	for (auto& id : getVehicleIDs()) {
-		objects[id].sendStart();
+		if (!objects[id].isStartingOnTrigger()) {
+			objects[id].sendStart();
+		}
 	}
 }
 

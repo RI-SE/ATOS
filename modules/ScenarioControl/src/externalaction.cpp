@@ -12,29 +12,29 @@
 
 Action::ActionReturnCode_t ExternalAction::execute(void)
 {
-    EXACData data;
-    struct timeval systemTime;
+	EXACData data;
+	struct timeval systemTime;
 
-    if (remainingAllowedRuns == 0)
-        return NO_REMAINING_RUNS;
-    else {
+	if (remainingAllowedRuns == 0)
+		return NO_REMAINING_RUNS;
+	else {
 		TimeSetToCurrentSystemTime(&systemTime);
 
-        data.actionID = actionID;
+		data.actionID = actionID;
 		data.executionTime_qmsoW  = actionDelayTime_qms == 0 ? TimeGetAsGPSqmsOfWeek(&systemTime) : TimeGetAsGPSqmsOfWeek(&systemTime) + actionDelayTime_qms;
 
-        data.ip = actionObjectIP;
+		data.ip = actionObjectIP;
 		std::string type = getTypeAsString(getTypeCode());
 		JournalRecordData(JOURNAL_RECORD_EVENT, "Executing action %s (ID %d) - to occur at time %u [seconds of week]",
-						   type.c_str(), actionID, data.executionTime_qmsoW);
+						  type.c_str(), actionID, data.executionTime_qmsoW);
 
-        LogMessage(LOG_LEVEL_INFO, "Sending execute action message over message bus (action ID %u)", actionID);
-        if(iCommSendEXAC(data) == -1)
-            return NOT_OK;
+		LogMessage(LOG_LEVEL_INFO, "Sending execute action message over message bus (action ID %u)", actionID);
+		if(iCommSendEXAC(data) == -1)
+			return NOT_OK;
 
-        remainingAllowedRuns--;
-        return OK;
-    }
+		remainingAllowedRuns--;
+		return OK;
+	}
 }
 
 
@@ -95,20 +95,20 @@ Action::ActionReturnCode_t TestScenarioCommandAction::parseNumericParameter(std:
 
 // ******* Infrastructure action
 InfrastructureAction::InfrastructureAction(ActionID_t actionID, uint32_t allowedNumberOfRuns)
-    : ExternalAction(actionID, Action::ActionTypeCode_t::ACTION_INFRASTRUCTURE, allowedNumberOfRuns)
+	: ExternalAction(actionID, Action::ActionTypeCode_t::ACTION_INFRASTRUCTURE, allowedNumberOfRuns)
 {
 }
 
 Action::ActionParameter_t InfrastructureAction::asParameterCode(const std::string &inputStr) const
 {
-    try {
-        return Action::asParameterCode(inputStr);
-    } catch (std::invalid_argument e) {
-        std::string str = inputStr;
-        for (char &ch : str)
-            ch = toUpper(ch);
-        if (!str.compare("DENM_BRAKE_WARNING"))
-            return ACTION_PARAMETER_VS_BRAKE_WARNING;
-        throw e;
-    }
+	try {
+		return Action::asParameterCode(inputStr);
+	} catch (std::invalid_argument e) {
+		std::string str = inputStr;
+		for (char &ch : str)
+			ch = toUpper(ch);
+		if (!str.compare("DENM_BRAKE_WARNING"))
+			return ACTION_PARAMETER_VS_BRAKE_WARNING;
+		throw e;
+	}
 }

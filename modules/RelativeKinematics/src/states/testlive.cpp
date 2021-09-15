@@ -40,6 +40,10 @@ void ObjectControl::TestLive::objectAborting(
 }
 
 
+/*! ******************************************************
+ * \section RelativeKinematics
+ *  ******************************************************
+ */
 void RelativeKinematics::TestLive::stopRequest(
 		ScenarioHandler& handler) {
 	ObjectControl::TestLive::stopRequest(handler);
@@ -49,20 +53,20 @@ void RelativeKinematics::TestLive::stopRequest(
 void RelativeKinematics::TestLive::abortRequest(
 		ScenarioHandler& handler) {
 	ObjectControl::TestLive::abortRequest(handler);
-	setState(handler, new RelativeKinematics::Aborting());
+	setState(handler, new RelativeKinematics::Aborting);
 }
 
 void RelativeKinematics::TestLive::testCompleted(
 		ScenarioHandler& handler) {
 	ObjectControl::TestLive::testCompleted(handler);
-	setState(handler, new RelativeKinematics::Done());
+	setState(handler, new RelativeKinematics::Done);
 }
 
 void RelativeKinematics::TestLive::disconnectedFromObject(
 		ScenarioHandler& handler,
 		uint32_t id) {
 	ObjectControl::TestLive::disconnectedFromObject(handler, id);
-	setState(handler, new RelativeKinematics::Aborting());
+	setState(handler, new RelativeKinematics::Aborting);
 }
 
 void RelativeKinematics::TestLive::objectDisarmed(
@@ -78,5 +82,51 @@ void RelativeKinematics::TestLive::objectAborting(
 		ScenarioHandler &handler,
 		uint32_t id) {
 	ObjectControl::TestLive::objectAborting(handler,id);
-	setState(handler, new RelativeKinematics::Aborting());
+	setState(handler, new RelativeKinematics::Aborting);
+}
+
+
+/*! ******************************************************
+ * \section AbsoluteKinematics
+ *  ******************************************************
+ */
+void AbsoluteKinematics::TestLive::stopRequest(
+		ScenarioHandler& handler) {
+	ObjectControl::TestLive::stopRequest(handler);
+	// TODO more?
+}
+
+void AbsoluteKinematics::TestLive::abortRequest(
+		ScenarioHandler& handler) {
+	ObjectControl::TestLive::abortRequest(handler);
+	setState(handler, new AbsoluteKinematics::Aborting);
+}
+
+void AbsoluteKinematics::TestLive::testCompleted(
+		ScenarioHandler& handler) {
+	ObjectControl::TestLive::testCompleted(handler);
+	setState(handler, new AbsoluteKinematics::Done);
+}
+
+void AbsoluteKinematics::TestLive::disconnectedFromObject(
+		ScenarioHandler& handler,
+		uint32_t id) {
+	ObjectControl::TestLive::disconnectedFromObject(handler, id);
+	setState(handler, new AbsoluteKinematics::Aborting);
+}
+
+void AbsoluteKinematics::TestLive::objectDisarmed(
+		ScenarioHandler &handler,
+		uint32_t id) {
+	ObjectControl::TestLive::objectDisarmed(handler,id);
+	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
+		AbsoluteKinematics::TestLive::testCompleted(handler);
+	}
+}
+
+void AbsoluteKinematics::TestLive::objectAborting(
+		ScenarioHandler &handler,
+		uint32_t id) {
+	ObjectControl::TestLive::objectAborting(handler,id);
+	setState(handler, new AbsoluteKinematics::Aborting);
 }

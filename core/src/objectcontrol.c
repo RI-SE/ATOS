@@ -1188,9 +1188,6 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_EXAC && vGetState() == OBC_STATE_RUNNING) {
 				UtilPopulateEXACDataStructFromMQ(pcRecvBuffer, sizeof (pcRecvBuffer), &mqEXACData);
 				int commandIndex;
-
-
-
 				if ((commandIndex =
 					 findCommandAction(mqEXACData.actionID, commandActions,
 									   sizeof (commandActions) / sizeof (commandActions[0]))) != -1) {
