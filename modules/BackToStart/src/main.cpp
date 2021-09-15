@@ -60,7 +60,9 @@ int main()
  * \param generatedTrajectory trajectory to check against
  * \return True if allowed False if not
  */
-bool isObjectNearTrajectoryStart(uint32_t transmitterID, Trajectory trajectory){
+bool isObjectNearTrajectoryStart(
+	const uint32_t transmitterID,
+	const Trajectory& trajectory) {
 
 	ObjectMonitorType monitorData;
 	DataDictionaryGetMonitorData(transmitterID, &monitorData);
