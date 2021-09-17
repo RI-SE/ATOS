@@ -152,7 +152,7 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& ReSendOse
 	}
 
 	DataDictionaryGetNumberOfObjects(&numberOfObjects);
-	if (numberOfObjects <= 0) {
+	if (numberOfObjects == 0) {
 		return 0;
 	}
 
