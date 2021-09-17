@@ -19,15 +19,37 @@ void ObjectControl::Initialized::disconnectRequest(
 }
 
 
+/*! ******************************************************
+ * \section RelativeKinematics
+ *  ******************************************************
+ */
 void RelativeKinematics::Initialized::connectRequest(
 		ScenarioHandler& handler) {
 	ObjectControl::Initialized::connectRequest(handler);
-	setState(handler, new RelativeKinematics::Connecting());
+	setState(handler, new RelativeKinematics::Connecting);
 }
 
 void RelativeKinematics::Initialized::disconnectRequest(
 		ScenarioHandler& handler) {
 	ObjectControl::Initialized::disconnectRequest(handler);
-	setState(handler, new RelativeKinematics::Idle());
+	setState(handler, new RelativeKinematics::Idle);
 }
+
+
+/*! ******************************************************
+ * \section AbsoluteKinematics
+ *  ******************************************************
+ */
+void AbsoluteKinematics::Initialized::connectRequest(
+		ScenarioHandler& handler) {
+	ObjectControl::Initialized::connectRequest(handler);
+	setState(handler, new AbsoluteKinematics::Connecting);
+}
+
+void AbsoluteKinematics::Initialized::disconnectRequest(
+		ScenarioHandler& handler) {
+	ObjectControl::Initialized::disconnectRequest(handler);
+	setState(handler, new AbsoluteKinematics::Idle);
+}
+
 

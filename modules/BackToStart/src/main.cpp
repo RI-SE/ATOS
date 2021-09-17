@@ -1,6 +1,6 @@
 #include <map>
 #include <algorithm>
-
+#include "datadictionary.h"
 #include "util.h"
 #include "objectconfig.hpp"
 
@@ -53,6 +53,27 @@ int main()
 	return 0;
 }
 
+/*!
+ * \brief checkIfBackToStartAllowed verifies if the position and heading of an
+ *			object is in line with the first point of a trajectory
+ * \param transmitterID of objectToCheck
+ * \param generatedTrajectory trajectory to check against
+ * \return True if allowed False if not
+ */
+bool isObjectNearTrajectoryStart(
+	const uint32_t transmitterID,
+	const Trajectory& trajectory) {
+
+	ObjectMonitorType monitorData;
+	DataDictionaryGetMonitorData(transmitterID, &monitorData);
+
+	auto firstPointInTraj = trajectory.points.front().getISOPosition();
+
+	return UtilIsPositionNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_DISTANCE_TOLERANCE)
+			&& UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE);
+}
+
+
 void loadObjectFiles() {
 	objects.clear();
 	char path[MAX_FILE_PATH];
@@ -100,4 +121,3 @@ void loadObjectFiles() {
 		throw std::invalid_argument("Failed to parse object file(s):\n" + ostr.str());
 	}
 }
-
