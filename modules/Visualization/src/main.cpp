@@ -59,7 +59,7 @@ static bool quit = false;
 ------------------------------------------------------------*/
 static void signalHandler(int signo);
 static int awaitConnection(TCPHandler& tcpPort, enum COMMAND& receivedCommand, bool& areObjectsConnected);
-static int awaitMQCommand(TCPHandler& tcpPort, enum COMMAND& receivedCommand);
+static int actOnMQCommand(TCPHandler& tcpPort, enum COMMAND& receivedCommand);
 static int transmitTrajectories(TCPHandler& tcpPort);
 static int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& areObjectsConnected);
 static int transmitOSEM(TCPHandler& tcpPort);
@@ -111,7 +111,7 @@ int main(int argc, char const* argv[]) {
 		}
 
 		transmitObjectData(visualizerTCPPort, visualizerUDPPort, areObjectsConnected);
-		if (awaitMQCommand(visualizerTCPPort, command) == -1) {
+		if (actOnMQCommand(visualizerTCPPort, command) == -1) {
 			LogMessage(LOG_LEVEL_ERROR, "Exit command sent, Visualization module shutting down");
 			if (command == COMM_EXIT) {
 				quit = true;
@@ -321,7 +321,7 @@ int transmitOSEM(TCPHandler& tcp) {
 	return 0;
 }
 
-int awaitMQCommand(TCPHandler& tcpPort, COMMAND& receivedCommand) {
+int actOnMQCommand(TCPHandler& tcpPort, COMMAND& receivedCommand) {
 	receivedCommand = COMM_INV;
 	char mqRecvData[MBUS_MAX_DATALEN];
 
