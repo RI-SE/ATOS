@@ -104,7 +104,7 @@ int main(int argc, char const* argv[]) {
 			}
 		}
 		// Send osem to a Simulater/Visualizer/object/AR-app that is connected to the visualizer module given
-		// that a VUT/testobjekt etc is connected to the objectcontroll/realtimekinematics module
+		// that a VUT/(test object) etc is connected to the objectcontroll/realtimekinematics module
 		if (sendOsemOnConnection) {
 			LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
 			transmitOSEM(visualizerTCPPort);
