@@ -58,10 +58,10 @@ static bool quit = false;
 -- Private functions
 ------------------------------------------------------------*/
 static void signalHandler(int signo);
-static int awaitConnection(TCPHandler& tcpPort, enum COMMAND& receivedCommand, bool& areObjectsConnected);
+static int awaitConnection(TCPHandler& tcpPort, enum COMMAND& receivedCommand, bool& sendOsemOnConnection);
 static int actOnMQCommand(TCPHandler& tcpPort, enum COMMAND& receivedCommand);
 static int transmitTrajectories(TCPHandler& tcpPort);
-static int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& areObjectsConnected);
+static int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& ReSendOsemOnConnection);
 static int transmitOSEM(TCPHandler& tcpPort);
 
 /*------------------------------------------------------------
@@ -76,7 +76,7 @@ int main(int argc, char const* argv[]) {
 	struct timespec remTime;
 	int bytesread = 0;
 	char debug = 0;
-	bool areObjectsConnected = false;
+	bool sendOsemOnConnection = false;
 
 	LogInit(MODULE_NAME, LOG_LEVEL_DEBUG);
 	LogMessage(LOG_LEVEL_INFO, "Task running with PID: %u", getpid());
@@ -97,20 +97,21 @@ int main(int argc, char const* argv[]) {
 	TCPHandler visualizerTCPPort(TCP_VISUALIZATION_SERVER_PORT, "", "Server", 1, O_NONBLOCK);
 	UDPHandler visualizerUDPPort(UDP_VISUALIZATION_SERVER_PORT, "", 0, "Server");
 	while (!quit) {
-		if (awaitConnection(visualizerTCPPort, command, areObjectsConnected) == -1) {
+		if (awaitConnection(visualizerTCPPort, command, sendOsemOnConnection) == -1) {
 			LogMessage(LOG_LEVEL_ERROR, "Exit command sent, Visualization module shutting down");
 			if (command == COMM_EXIT) {
 				quit = true;
 			}
 		}
-
-		if (areObjectsConnected) {
+		// Send osem to a Simulater/Visualizer/object/AR-app that is connected to the visualizer module given
+		// that a VUT/testobjekt etc is connected to the objectcontroll/realtimekinematics module
+		if (sendOsemOnConnection) {
 			LogMessage(LOG_LEVEL_INFO, "Sending OSEM");
 			transmitOSEM(visualizerTCPPort);
-			areObjectsConnected = false;
+			sendOsemOnConnection = false;
 		}
 
-		transmitObjectData(visualizerTCPPort, visualizerUDPPort, areObjectsConnected);
+		transmitObjectData(visualizerTCPPort, visualizerUDPPort, sendOsemOnConnection);
 		if (actOnMQCommand(visualizerTCPPort, command) == -1) {
 			LogMessage(LOG_LEVEL_ERROR, "Exit command sent, Visualization module shutting down");
 			if (command == COMM_EXIT) {
@@ -134,7 +135,7 @@ void signalHandler(int signo) {
 	}
 }
 
-int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& areObjectsConnected) {
+int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& ReSendOsemOnConnection) {
 	uint32_t numberOfObjects;
 	std::vector<uint32_t> transmitterIDs;
 	ObjectMonitorType monitorData;
@@ -146,12 +147,12 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& areObject
 
 	if (tcpPort.receiveTCP(trashBuffer, 0) < 0) {
 		LogMessage(LOG_LEVEL_INFO, "Disconnected");
-		areObjectsConnected = true;
+		ReSendOsemOnConnection = true;
 		return -1;
 	}
 
 	DataDictionaryGetNumberOfObjects(&numberOfObjects);
-	if (numberOfObjects == 0) {
+	if (numberOfObjects <= 0) {
 		return 0;
 	}
 
@@ -169,7 +170,7 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& areObject
 			&& monitorData.position.isHeadingValid) {
 			if (tcpPort.receiveTCP(trashBuffer, 0) < 0) {
 				LogMessage(LOG_LEVEL_INFO, "Disconnected");
-				areObjectsConnected = true;
+				ReSendOsemOnConnection = true;
 				return -1;
 			}
 
@@ -197,7 +198,7 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& areObject
 	return 0;
 }
 
-int awaitConnection(TCPHandler& tcpPort, enum COMMAND& receivedCommand, bool& areObjectsConnected) {
+int awaitConnection(TCPHandler& tcpPort, enum COMMAND& receivedCommand, bool& sendOsemOnConnection) {
 	receivedCommand = COMM_INV;
 	char mqRecvData[MBUS_MAX_DATALEN];
 	if (tcpPort.getConnectionOn() != 1) {
@@ -219,14 +220,14 @@ int awaitConnection(TCPHandler& tcpPort, enum COMMAND& receivedCommand, bool& ar
 		case COMM_EXIT:
 			return -1;
 		case COMM_OBJECTS_CONNECTED:
-			areObjectsConnected = true;
+			sendOsemOnConnection = true;
 			break;
 		case COMM_DISCONNECT:  // TODO what happens when an object forces
 							   // the disconnection?
-			areObjectsConnected = false;
+			sendOsemOnConnection = false;
 			break;
 		case COMM_CONNECT:
-			areObjectsConnected = true;
+			sendOsemOnConnection = true;
 			break;
 		default:
 			continue;
