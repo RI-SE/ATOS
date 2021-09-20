@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
+#include <algorithm>
 #include "regexpatterns.hpp"
 #include "logging.h"
 #include "trajectory.hpp"
@@ -289,37 +290,34 @@ std::string Trajectory::toString() const {
 	return ss.str();
 }
 
-void Trajectory::constrainVelocityTo(double vel_m_s){
+/*!
+ * \brief Trajectory::TrajectoryPoint::rescaleToVelocity Returns a copy of the trajectory rescaled to match a certain constant speed.
+ * \param vel_m_s Speed to which trajectory is to be reduced
+ * \return Trajectory
+ */
+Trajectory Trajectory::rescaledToVelocity(
+		const double vel_m_s) const {
 
-	auto point = points.rbegin();
-		while (point != points.rend()) {
-				if(point->getLongitudinalVelocity() > vel_m_s){
-					point->setLongitudinalAcceleration(0);
-					point->setLongitudinalVelocity(vel_m_s);
-			}
-			point++;
-		}
+	Trajectory newTrajectory = Trajectory(*this);
+	newTrajectory.name = newTrajectory.name + "_rescaled";
+	if (newTrajectory.points.empty()) {
+		return newTrajectory;
+	}
+	Eigen::Vector2d maxVel_m_s = std::max_element(newTrajectory.points.begin(), newTrajectory.points.end(), [](const TrajectoryPoint& pt1, const TrajectoryPoint& pt2)
+								{ return pt1.getVelocity().norm() < pt2.getVelocity().norm(); }).base()->getVelocity();
+	if (vel_m_s > maxVel_m_s.norm()) {
+		LogMessage(LOG_LEVEL_DEBUG, "Requested max velocity is larger than current max velocity");
+		return newTrajectory;
+	}
+	double scaleFactor = vel_m_s / maxVel_m_s.norm();
+	double startTime = newTrajectory.points.front().getTime();
+	for (auto& point : newTrajectory.points) {
+		point.setVelocity(point.getVelocity()*scaleFactor);
+		point.setTime(startTime + (point.getTime()-startTime)/scaleFactor);
+		point.setAcceleration(point.getAcceleration()*pow(scaleFactor, 2));
+	}
 
-		//TODO: something to take lateral into account.
-
-	this->name = this->name + "_" + std::to_string(vel_m_s) + "MS";
-}
-
-
-void Trajectory::addAccelerationTo(double vel_m_s){
-
-	auto point = points.begin();
-	int a = 5;
-	int b = -2;
-		while (point != points.end()) {
-						
-			point->setLongitudinalVelocity((vel_m_s / (1 + (exp(a + (b * point->getTime()))))));
-			point->setLongitudinalAcceleration(-((b*point->getTime()*exp(((b*point->getTime()))+a)) /(pow(1 + (exp(a + (b * point->getTime()))),2))));
-
-			if(vel_m_s / (1 + (exp(a + (b * point->getTime()))))==vel_m_s){
-				break;
-			}
-			point++;
+	return newTrajectory;
         }
 }
 
@@ -477,46 +475,43 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
 }
 
 void Trajectory::reverse(double startTime = 0){
-	if(points.empty()){
-		throw std::invalid_argument("Attempted to reverse non existing trajectory");
+
+	Trajectory newTrajectory = Trajectory(*this);
+
+	newTrajectory.name = newTrajectory.name + "_reversed";
+
+	std::reverse(newTrajectory.points.begin(), newTrajectory.points.end());
+
+	for (auto & point : newTrajectory.points) {
+		point.setHeading(point.getHeading()-M_PI);
+		point.setCurvature(point.getCurvature()*-1);
+		try {
+			point.setLateralVelocity(point.getLateralVelocity()*-1);
+		}
+		catch (std::out_of_range) {
+			LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized lateral velocity");
+		}
+		try {
+			point.setLateralAcceleration(point.getLateralAcceleration()*-1);
+		}
+		catch (std::out_of_range) {
+			LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized lateral acceleration");
+		}
+			timeVector.push_back(point->getTime());
 	}
 
-	this->name = this->name + "_Reversed";
-
-	std::reverse(points.begin(), points.end());
-
-	std::vector<double> timeVector;
-
-	auto point = points.rbegin();
-		while (point != points.rend()) {
-			point->setHeading(point->getHeading()-M_PI);
-			point->setCurvature(point->getCurvature()*-1);
-			try{
-				point->setLateralVelocity(point->getLateralVelocity()*-1);
-			}
-			catch(std::out_of_range){
-				std::cout<<"Ignoring uninitialized lateral velocity";
-			}
-			try{
-				point->setLateralAcceleration(point->getLateralAcceleration()*-1);
-			}
-			catch(std::out_of_range){
-				std::cout<<"Ignoring uninitialized lateral acceleration";
-			}
-            timeVector.push_back(point->getTime()+startTime);
-			point++;
-		}
-
-	point = points.rbegin();
-		while (point != points.rend()) {
-			point->setTime(timeVector.back());
-			timeVector.pop_back();
-			point++;
-		}
+	for (unsigned long i = 0 ; i < newTrajectory.points.size(); i++) {
+		newTrajectory.points[i].setTime(this->points.back().getTime() - this->points[i].getTime());
+	}
+	return newTrajectory;
 }
 
-
-void Trajectory::saveToFile(const std::string& fileName) {
+/*!
+ * \brief Trajectory::saveToFile saves a .traj file of the trajectory to the traj directory.
+ * \param fileName
+ * \return
+ */
+void Trajectory::saveToFile(const std::string& fileName) const{
 	using std::string, std::smatch, std::ofstream;
 	char trajDirPath[PATH_MAX];
 
@@ -526,26 +521,30 @@ void Trajectory::saveToFile(const std::string& fileName) {
 
 	ofstream outputTraj;
 	LogMessage(LOG_LEVEL_DEBUG, "Opening file %s", trajFilePath.c_str());
-	outputTraj.open (trajFilePath);
-	LogMessage(LOG_LEVEL_DEBUG, "Outputting trajectory to file");
-	outputTraj << "TRAJECTORY;" << this->id <<";" << this->name << ";" << this->version << ";" << this->points.size() << ";" <<  "\n";
-	for (const auto& point : points) {
-		outputTraj << "LINE;"
-		<< std::fixed << std::setprecision(2) << point.getTime() << ";"
-		<< std::fixed << std::setprecision(6) << point.getXCoord() << ";"
-		<< std::fixed << std::setprecision(6) << point.getYCoord() << ";"
-		<< std::fixed << std::setprecision(6) << point.getZCoord() << ";"
-		<< std::fixed << std::setprecision(6) << point.getHeading() << ";"
-		<< std::fixed << std::setprecision(6) << point.getLongitudinalVelocity() << ";"
-		<< ";" //point.getLateralVelocity() << ";"
-		<<  std::fixed << std::setprecision(6) <<(point.getLongitudinalAcceleration()) << ";"
-		<< ";" //point.getLateralAcceleration() << ";"
-		<< std::fixed << std::setprecision(6) << point.getCurvature() << ";"
-		<< std::fixed << std::setprecision(6) << point.getMode()
-		<<";ENDLINE;" << "\n";
+	try {
+		outputTraj.open(trajFilePath);
+		LogMessage(LOG_LEVEL_DEBUG, "Outputting trajectory to file");
+		outputTraj << "TRAJECTORY;" << this->id <<";" << this->name << ";" << this->version << ";" << this->points.size() << ";" <<  "\n";
+		for (const auto& point : points) {
+			outputTraj << "LINE;"
+			<< std::fixed << std::setprecision(2) << point.getTime() << ";"
+			<< std::fixed << std::setprecision(6) << point.getXCoord() << ";"
+			<< std::fixed << std::setprecision(6) << point.getYCoord() << ";"
+			<< std::fixed << std::setprecision(6) << point.getZCoord() << ";"
+			<< std::fixed << std::setprecision(6) << point.getHeading() << ";"
+			<< std::fixed << std::setprecision(6) << point.getLongitudinalVelocity() << ";"
+			<< ";" //point.getLateralVelocity() << ";"
+			<<  std::fixed << std::setprecision(6) <<(point.getLongitudinalAcceleration()) << ";"
+			<< ";" //point.getLateralAcceleration() << ";"
+			<< std::fixed << std::setprecision(6) << point.getCurvature() << ";"
+			<< std::fixed << std::setprecision(6) << point.getMode()
+			<<";ENDLINE;" << "\n";
+		}
+		outputTraj << "ENDTRAJECTORY;" <<  "\n";
+		outputTraj.close();
+		LogMessage(LOG_LEVEL_DEBUG, "Closed file %s", trajFilePath.c_str());
 	}
-	outputTraj << "ENDTRAJECTORY;" <<  "\n";
-
-	outputTraj.close();
-	LogMessage(LOG_LEVEL_DEBUG, "Closed file %s", trajFilePath.c_str());
+	catch (const ofstream::failure& e) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed when writing to file %s", trajFilePath.c_str());
+	}
 }

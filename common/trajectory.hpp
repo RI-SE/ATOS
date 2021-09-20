@@ -19,7 +19,7 @@ public:
         typedef enum {
             CONTROLLED_BY_DRIVE_FILE,
             CONTROLLED_BY_VEHICLE
-        } ModeType;
+		} ModeType;
 
 		TrajectoryPoint() {
 			position[2] = std::numeric_limits<double>::quiet_NaN();
@@ -118,9 +118,9 @@ public:
 	typedef std::vector<TrajectoryPoint>::iterator iterator;
 	typedef std::vector<TrajectoryPoint>::const_iterator const_iterator;
 
-    Trajectory() = default;
-    ~Trajectory() { points.clear(); }
-    Trajectory(const Trajectory& other);
+	Trajectory() = default;
+	~Trajectory() { points.clear(); }
+	Trajectory(const Trajectory& other);
     std::vector<TrajectoryPoint> points;
     std::string name = "";
 	unsigned short version = 0;
@@ -131,11 +131,9 @@ public:
 	static const_iterator getNearest(const_iterator first, const_iterator last, const double& time);
 	std::string toString() const;
 
-	void saveToFile(const std::string& fileName);
+	void saveToFile(const std::string& fileName) const;
     void reverse(double startTime);
-	void constrainVelocityTo(double vel_m_s);
-	void addAccelerationTo(double vel_m_s);
-	void addDeccelerationFrom(double vel_m_s);
+	Trajectory rescaledToVelocity(const double vel_m_s) const;
     void addWilliamsonTurn(double turnRadius, TrajectoryPoint startPoint, double startTime);
 
 private:
