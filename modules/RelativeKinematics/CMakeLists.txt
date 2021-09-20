@@ -19,6 +19,7 @@ set(THREAD_LIBRARY pthread)
 set(OSI_LIBRARY OSIHandler)
 
 get_target_property(OSI_HEADERS ${OSI_LIBRARY} INCLUDE_DIRECTORIES)
+get_target_property(OSI_HEADERS ${TIME_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
@@ -53,6 +54,7 @@ target_link_libraries(${RELATIVE_KINEMATICS_TARGET} LINK_PUBLIC
 target_include_directories(${RELATIVE_KINEMATICS_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${OSI_HEADERS}
+	${TIME_HEADERS}
 )
 
 # Installation rules

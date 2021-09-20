@@ -16,8 +16,24 @@ void ObjectControl::Done::postProcessingCompleted(
 	// TODO
 }
 
+
+/*! ******************************************************
+ * \section RelativeKinematics
+ *  ******************************************************
+ */
 void RelativeKinematics::Done::postProcessingCompleted(
 		ScenarioHandler& handler) {
 	ObjectControl::Done::postProcessingCompleted(handler);
-	setState(handler, new RelativeKinematics::Ready());
+	setState(handler, new RelativeKinematics::Ready);
+}
+
+
+/*! ******************************************************
+ * \section AbsoluteKinematics
+ *  ******************************************************
+ */
+void AbsoluteKinematics::Done::postProcessingCompleted(
+		ScenarioHandler& handler) {
+	ObjectControl::Done::postProcessingCompleted(handler);
+	setState(handler, new AbsoluteKinematics::Ready);
 }

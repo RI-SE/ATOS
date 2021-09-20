@@ -16,12 +16,15 @@ void ObjectControl::Idle::initializeRequest(
 	LogMessage(LOG_LEVEL_INFO, "Handling initialization request");
 	JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
 	handler.loadScenario();
-}
-
-void RelativeKinematics::Idle::initializeRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Idle::initializeRequest(handler);
-	auto anchorID = handler.getAnchorObjectID();
-	handler.transformScenarioRelativeTo(anchorID);
-	setState(handler, new RelativeKinematics::Initialized());
+	try {
+		auto anchorID = handler.getAnchorObjectID();
+		handler.transformScenarioRelativeTo(anchorID);
+		handler.controlMode = ScenarioHandler::RELATIVE_KINEMATICS;
+		setState(handler, new RelativeKinematics::Initialized);
+		LogMessage(LOG_LEVEL_INFO, "Relative control mode enabled");
+	} catch (std::invalid_argument) {
+		handler.controlMode = ScenarioHandler::ABSOLUTE_KINEMATICS;
+		setState(handler, new AbsoluteKinematics::Initialized);
+		LogMessage(LOG_LEVEL_INFO, "Absolute control mode enabled");
+	}
 }

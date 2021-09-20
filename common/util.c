@@ -1699,12 +1699,16 @@ int UtilFindCurrentTrajectoryPositionOld(ObjectPosition * OP, int StartIndex, do
 	return PositionFound;
 }
 
+/*!
+ * \brief UtilCountFileRows Count number of rows terminated with \n (0x0A) 
+ * \param fd fileDescriptor
+ * \return number of rows
+ */
 int UtilCountFileRows(FILE * fd) {
 	int c = 0;
 	int rows = 0;
 
 	while (c != EOF) {
-
 		c = fgetc(fd);
 		//printf("%x-", c);
 		if (c == '\n')
@@ -1713,6 +1717,28 @@ int UtilCountFileRows(FILE * fd) {
 
 	return rows;
 }
+
+/*!
+ * \brief UtilCountFileRowsInPath Count number of rows terminated with \n (0x0A) 
+ * \                              in a file specificed by path
+ * \param path Path to file
+ * \param cpData Command data
+ * \param dataLength Length of command data array
+ * \return number of rows on success, -1 on error
+ */
+int UtilCountFileRowsInPath(const char *path, const size_t pathlen) {
+	int c = 0;
+	int rows = 0;
+	if(pathlen <= 0)
+		return -1;
+	FILE *fd;
+	fd = fopen(path, "r");
+	if (fd != NULL)	rows = UtilCountFileRows(fd);
+	else rows = -1;
+	fclose(fd);
+	return rows;
+}
+
 
 int UtilReadLineCntSpecChars(FILE * fd, char *Buffer) {
 	int c = 0;
@@ -1779,6 +1805,46 @@ int UtilReadLine(FILE * fd, char *Buffer) {
 }
 
 
+
+/*!
+ * \brief UtilGetRowInFile Gets a specific row in file specified by rowIndex
+ * \param path Path to file
+ * \param pathLength Length of path
+ * \param rowIndex Selected row
+ * \param rowBuffer Pointer to where to store the read row
+ * \param bufferLength Length of buffer
+ * \return 1 on success, -1 on error
+ */
+int UtilGetRowInFile(const char *path, const size_t pathLength,
+					I32 rowIndex, char *rowBuffer, const size_t bufferLength){
+	int c = 0;
+	int rows = 0;
+	int length = 0;
+	FILE *fd;
+	
+	if(pathLength < 0)
+		return -1;
+	
+	fd = fopen(path, "r");
+	if (fd != NULL){
+		rows = UtilCountFileRows(fd);
+		fclose(fd);
+		fd = fopen(path, "r");
+		for(int i = 0; i < rows; i ++){
+			length = UtilReadLine(fd, rowBuffer);
+			if(length > bufferLength){ 
+				LogMessage(LOG_LEVEL_ERROR, "Buffer to small for read row in file");
+				return -1;
+			}
+			if(rowIndex == i){
+				*(rowBuffer+length) = NULL;
+				return i;
+			} 
+		}
+	}
+	fclose(fd);
+	return -1;
+}
 
 C8 *UtilSearchTextFile(C8 * Filename, C8 * Text1, C8 * Text2, C8 * Result) {
 
@@ -3911,8 +3977,8 @@ int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize,
  * \param rawTREOsize size of MQ data
  * \param treoData Data struct to be filled
  */
-I32 UtilPopulateTREODataStructFromMQ(C8 * rawTREO, size_t rawTREOsize, TREOData * treoData) {
-	C8 *rdPtr = rawTREO;
+int UtilPopulateTREODataStructFromMQ(char * rawTREO, size_t rawTREOsize, TREOData * treoData) {
+	char *rdPtr = rawTREO;
 
 	if (rawTREOsize < sizeof (TREOData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw TREO array too small to hold all necessary TREO data");
@@ -3937,8 +4003,8 @@ I32 UtilPopulateTREODataStructFromMQ(C8 * rawTREO, size_t rawTREOsize, TREOData 
  * \param rawEXACsize size of MQ data
  * \param exacData Data struct to be filled
  */
-I32 UtilPopulateEXACDataStructFromMQ(C8 * rawEXAC, size_t rawEXACsize, EXACData * exacData) {
-	C8 *rdPtr = rawEXAC;
+int UtilPopulateEXACDataStructFromMQ(char * rawEXAC, size_t rawEXACsize, EXACData * exacData) {
+	char *rdPtr = rawEXAC;
 
 	if (rawEXACsize < sizeof (EXACData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw EXAC array too small to hold all necessary EXAC data");
@@ -3963,8 +4029,8 @@ I32 UtilPopulateEXACDataStructFromMQ(C8 * rawEXAC, size_t rawEXACsize, EXACData 
  * \param rawTRCMsize size of MQ data
  * \param trcmData Data struct to be filled
  */
-I32 UtilPopulateTRCMDataStructFromMQ(C8 * rawTRCM, size_t rawTRCMsize, TRCMData * trcmData) {
-	C8 *rdPtr = rawTRCM;
+int UtilPopulateTRCMDataStructFromMQ(char * rawTRCM, size_t rawTRCMsize, TRCMData * trcmData) {
+	char *rdPtr = rawTRCM;
 
 	if (rawTRCMsize < sizeof (TRCMData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw TRCM array too small to hold all necessary TRCM data");
@@ -3998,8 +4064,8 @@ I32 UtilPopulateTRCMDataStructFromMQ(C8 * rawTRCM, size_t rawTRCMsize, TRCMData 
  * \param rawACCMsize size of MQ data
  * \param accmData Data struct to be filled
  */
-I32 UtilPopulateACCMDataStructFromMQ(C8 * rawACCM, size_t rawACCMsize, ACCMData * accmData) {
-	C8 *rdPtr = rawACCM;
+int UtilPopulateACCMDataStructFromMQ(char * rawACCM, size_t rawACCMsize, ACCMData * accmData) {
+	char *rdPtr = rawACCM;
 
 	if (rawACCMsize < sizeof (ACCMData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw ACCM array too small to hold all necessary ACCM data");
