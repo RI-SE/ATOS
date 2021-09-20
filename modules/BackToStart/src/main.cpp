@@ -61,42 +61,6 @@ int main()
     return 0;
 }
 
-void backToStart() {
-
-    std::string trajName = "StraightLine";
-    Trajectory currentTraj;
-    Trajectory b2sTraj;
-
-    //Name
-    b2sTraj.name = trajName;
-
-    //Testpath
-    currentTraj.initializeFromFile(trajName);
-
-    //TODO
-    //Get transmitter ID:s
-    //Check distance and rotation
-    //Send pass or fail
-    //generate BTS
-    //send BTS trajectories
-    //???
-    //profit
-
-    //Add first turn
-    b2sTraj.addWilliamsonTurn(5,currentTraj.points[currentTraj.points.size()-1], 0);
-
-    //Add reversed original traj
-    Trajectory rev = currentTraj;
-    rev = rev.reversed(b2sTraj.points[b2sTraj.points.size()-1].getTime());
-    b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(rev.points), std::end(rev.points));
-
-    //Add last turn
-    b2sTraj.addWilliamsonTurn(5,b2sTraj.points[b2sTraj.points.size()-1], b2sTraj.points[b2sTraj.points.size()-1].getTime());
-
-    //Save file
-    b2sTraj.saveToFile(trajName);
-
-}
 
 /*!
  * \brief checkIfBackToStartAllowed verifies if the position and heading of an
@@ -118,6 +82,66 @@ bool isObjectNearTrajectoryStart(
             && UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE);
 }
 
+
+
+void backToStart() {
+
+    //Get transmitter IDs
+    uint32_t *noOfObjects;
+    DataDictionaryGetNumberOfObjects(noOfObjects);
+    uint32_t transmitterIDs[*noOfObjects];
+    DataDictionaryGetObjectTransmitterIDs(transmitterIDs, *noOfObjects);
+
+    //Array to save b2s trajs
+    Trajectory b2sTrajectories[*noOfObjects];
+
+    for(int i = 0; i < *noOfObjects; i++)
+    {
+        std::string trajName = "BTS" + std::to_string(i);
+        Trajectory currentTraj;
+        Trajectory b2sTraj;
+
+        //Name
+        b2sTraj.name = trajName;
+
+        //Testpath
+        currentTraj.initializeFromFile(trajName);
+
+        //TODO
+        //Get transmitter ID:s
+        //Check distance and rotation
+        //Send pass or fail
+        //generate BTS
+        //send BTS trajectories
+        //???
+        //profit
+
+        //Add first turn
+        b2sTraj.addWilliamsonTurn(5,currentTraj.points[currentTraj.points.size()-1], 0);
+
+        //Add reversed original traj
+        Trajectory rev = currentTraj;
+        rev = rev.reversed(b2sTraj.points[b2sTraj.points.size()-1].getTime());
+        b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(rev.points), std::end(rev.points));
+
+        //Add last turn
+        b2sTraj.addWilliamsonTurn(5,b2sTraj.points[b2sTraj.points.size()-1], b2sTraj.points[b2sTraj.points.size()-1].getTime());
+
+        //Check distance
+        if(!isObjectNearTrajectoryStart(transmitterIDs[i], b2sTraj))
+        {
+            //Send fail
+            return;
+        }
+    }
+
+    //If pass save files
+    for(int i = 0; i < *noOfObjects; i++)
+    {
+        b2sTrajectories[i].saveToFile(b2sTrajectories[i].name);
+    }
+
+}
 
 void loadObjectFiles() {
     objects.clear();
