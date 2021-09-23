@@ -31,8 +31,8 @@ Trigger::TriggerReturnCode_t DistanceTrigger::update(ObjectDataType newValue) {
 		// Network delay consists of both positional data reporting delay and action execution message delay
 		networkDelay_s = fabs(static_cast<double>(triggerObjectNetworkDelay.tv_sec)
 							  + static_cast<double>(triggerObjectNetworkDelay.tv_usec) / 1000000.0)
-						+ fabs(static_cast<double>(actionObjectNetworkDelay.tv_sec)
-							   + static_cast<double>(actionObjectNetworkDelay.tv_usec) / 1000000.0);
+				+ fabs(static_cast<double>(actionObjectNetworkDelay.tv_sec)
+					   + static_cast<double>(actionObjectNetworkDelay.tv_usec) / 1000000.0);
 
 		// Predict position offset
 		networkDelayCorrection_m = networkDelay_s * newValue.MonrData.speed.longitudinal_m_s;
@@ -44,10 +44,10 @@ Trigger::TriggerReturnCode_t DistanceTrigger::update(ObjectDataType newValue) {
 	switch (this->oper) {
 	case LESS_THAN:
 		return update(static_cast<bool>(UtilIsPositionNearTarget(newValue.MonrData.position, this->referencePoint, this->triggerDistance_m + networkDelayCorrection_m)),
-				newValue.MonrData.timestamp);
+					  newValue.MonrData.timestamp);
 	case GREATER_THAN:
 		return update(static_cast<bool>(!UtilIsPositionNearTarget(newValue.MonrData.position, this->referencePoint, this->triggerDistance_m - networkDelayCorrection_m)),
-				newValue.MonrData.timestamp);
+					  newValue.MonrData.timestamp);
 	}
 	throw std::logic_error("Distance trigger unimplemented operator");
 }

@@ -8,10 +8,10 @@
  */
 Trigger::TriggerReturnCode_t BooleanTrigger::update(bool currentStateValue, struct timeval)
 {
-    wasStateTrue = isStateTrue;
-    isStateTrue = currentStateValue;
+	wasStateTrue = isStateTrue;
+	isStateTrue = currentStateValue;
 	wasTriggeredByLastUpdate = checkIfTriggered();
-    return wasTriggeredByLastUpdate;
+	return wasTriggeredByLastUpdate;
 }
 
 /*!
@@ -20,20 +20,20 @@ Trigger::TriggerReturnCode_t BooleanTrigger::update(bool currentStateValue, stru
  */
 Trigger::TriggerReturnCode_t BooleanTrigger::checkIfTriggered() const
 {
-    switch (mode) {
-    case HIGH:
-        return isStateTrue ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
-    case LOW:
-        return !isStateTrue ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
-    case EDGE_ANY:
-        return (isStateTrue != wasStateTrue) ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
-    case EDGE_RISING:
-        return (isStateTrue && !wasStateTrue) ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
-    case EDGE_FALLING:
-        return (!isStateTrue && wasStateTrue) ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
-    case INVALID_MODE:
-        throw std::logic_error("Boolean trigger cannot be triggered if mode invalid");
-    }
+	switch (mode) {
+	case HIGH:
+		return isStateTrue ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
+	case LOW:
+		return !isStateTrue ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
+	case EDGE_ANY:
+		return (isStateTrue != wasStateTrue) ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
+	case EDGE_RISING:
+		return (isStateTrue && !wasStateTrue) ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
+	case EDGE_FALLING:
+		return (!isStateTrue && wasStateTrue) ? TRIGGER_OCCURRED : NO_TRIGGER_OCCURRED;
+	case INVALID_MODE:
+		throw std::logic_error("Boolean trigger cannot be triggered if mode invalid");
+	}
 }
 
 
