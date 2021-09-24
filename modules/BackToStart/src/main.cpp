@@ -6,6 +6,9 @@
 
 #define MODULE_NAME "BackToStart"
 
+#define MAX_BTS_DISTANCE_TOLERANCE 1
+#define MAX_BTS_HEADING_TOLERANCE 1
+
 std::map<uint32_t,ObjectConfig> objects; //!< List of configured test objects
 
 static void loadObjectFiles();
