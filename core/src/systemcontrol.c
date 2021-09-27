@@ -589,6 +589,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		bzero(pcRecvBuffer, SC_RECV_MESSAGE_BUFFER);
 		bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 
+        //BTS
+        char *btsConstChar = "BTS:";
+
 		switch (iCommand) {
 		case COMM_FAILURE:
 			if (SystemControlState == SERVER_STATE_INWORK) {
@@ -620,6 +623,14 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			SystemControlGetStatusMessage(pcRecvBuffer, sizeof (pcRecvBuffer), 0);
 			//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
 			break;
+
+        case COMM_BACKTOSTART:
+
+            bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+            SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
+                                             "0", 1,
+                                             &ClientSocket, 0);
+            break;
 
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", iCommand);
