@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(Visualization LANGUAGES C CXX)
 
-
 # Define target names
 set(VISUALIZATION_TARGET ${PROJECT_NAME})
 
