@@ -439,6 +439,12 @@ void ScenarioHandler::startObjects() {
 	}
 }
 
+void ScenarioHandler::allClearObjects() {
+	for (auto& id : getVehicleIDs()) {
+		objects[id].sendAllClear();
+	}
+}
+
 bool ScenarioHandler::isAnyObjectIn(
 		const ObjectStateType state) {
 	return std::any_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,TestObject>& obj) {

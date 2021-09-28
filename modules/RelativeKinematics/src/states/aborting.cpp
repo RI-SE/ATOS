@@ -4,8 +4,13 @@ ObjectControl::Aborting::Aborting() {
 
 }
 
-void ObjectControl::Aborting::allClearRequest(ScenarioHandler&) {
-	// TODO
+void ObjectControl::Aborting::onExit(
+		ScenarioHandler& handler) {
+	handler.allClearObjects();
+}
+
+void ObjectControl::Aborting::allClearRequest(
+		ScenarioHandler&) {
 }
 
 void ObjectControl::Aborting::connectedToObject(
