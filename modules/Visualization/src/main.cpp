@@ -41,8 +41,8 @@ namespace fs = std::experimental::filesystem;
 #define MODULE_NAME "Visualization"
 #define RECV_MESSAGE_BUFFER_LENGTH 1024
 #define MONR_BUFFER_LENGTH 1024
-#define TCP_VISUALIZATION_SERVER_PORT 53250
-#define UDP_VISUALIZATION_SERVER_PORT 53251
+#define TCP_VISUALIZATION_SERVER_PORT 53200
+#define UDP_VISUALIZATION_SERVER_PORT 53201
 #define TRAJECTORY_TX_BUFFER_SIZE 2048
 
 /*------------------------------------------------------------
