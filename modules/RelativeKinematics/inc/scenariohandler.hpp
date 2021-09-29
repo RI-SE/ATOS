@@ -219,6 +219,8 @@ private:
 	void disarmObjects();
 	//! \brief
 	void startObjects();
+	//! \brief
+	void allClearObjects();
 	//! \brief TODO
 	void injectObjectData(const MonitorMessage& monr);
 	//! \brief TODO
