@@ -379,7 +379,7 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
     {
         xyM(1,i) = radius * cos(theta0[i]) + radius;
         xyM(0,i) = radius * sin(theta0[i]);
-        headingArray[i] = theta0[i] - M_PI_2;
+        headingArray[i] = theta0[i] + M_PI_2;
     }
 
     //second section
@@ -390,7 +390,7 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
     {
         xyM(1,i+n0) = radius * cos(theta1[i]) + radius;
         xyM(0,i+n0) = radius * sin(theta1[i]) + 2 * radius;
-        headingArray[i+n0] = theta1[i] + M_PI_2;
+        headingArray[i+n0] = theta1[i] - M_PI_2;
     }
 
     //third section
@@ -400,7 +400,7 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
     {
         xyM(1,i+n0+n1) = 0;
         xyM(0,i+n0+n1) = endStraight[i];
-        headingArray[i+n0+n1] = -1*M_PI_2;
+        headingArray[i+n0+n1] = + M_PI_2;
     }
 
     //Values for rotation matrix
@@ -520,7 +520,8 @@ Trajectory Trajectory::reversed(double startTime = 0)const{
     }
 
     for (unsigned long i = 0 ; i < newTrajectory.points.size(); i++) {
-        newTrajectory.points[i].setTime(this->points.back().getTime() - this->points[i].getTime());
+        //newTrajectory.points[i].setTime(this->points.back().getTime() - this->points[i].getTime() + startTime);
+        newTrajectory.points[i].setTime(this->points[i].getTime() + startTime);
     }
     return newTrajectory;
 }

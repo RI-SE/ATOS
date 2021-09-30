@@ -11,6 +11,7 @@
 #define MAX_BTS_HEADING_TOLERANCE 30
 
 std::map<uint32_t,ObjectConfig> objects; //!< List of configured test objects
+std::map<uint32_t,ObjectConfig> BTSobjects; //!< List of configured test objects with BTS trajectories
 
 static void loadObjectFiles();
 static void backToStart();
@@ -46,7 +47,6 @@ int main()
         case COMM_INIT:
             try {
                 loadObjectFiles();
-                backToStart();
             } catch (std::invalid_argument& e) {
                 LogMessage(LOG_LEVEL_ERROR, "Loading of object files failed - %s", e.what());
                 iCommSend(COMM_FAILURE, nullptr, 0);
@@ -55,6 +55,7 @@ int main()
 
         case COMM_REMOTECTRL_MANOEUVRE:
             LogMessage(LOG_LEVEL_INFO,"Received COMM_REMOTECTRL_MANOEUVRE command");
+            backToStart();
             break;
         default:
             LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
@@ -99,7 +100,7 @@ void backToStart() {
     DataDictionaryGetObjectTransmitterIDs(transmitterIDs, *noOfObjects);
 
     //Array to save b2s trajs
-    Trajectory b2sTrajectories[*noOfObjects];
+    Trajectory b2sTrajectories[*noOfObjects]; //TODO remove
 
     for(int i = 0; i < objects.size(); i++)
     {
@@ -136,18 +137,28 @@ void backToStart() {
         b2sTraj.addWilliamsonTurn(5,b2sTraj.points[b2sTraj.points.size()-1], b2sTraj.points[b2sTraj.points.size()-1].getTime());
 
         //Check distance
-        //if(!isObjectNearTrajectoryStart(transmitterIDs[i], b2sTraj))
-        //{
+        if(!isObjectNearTrajectoryStart(transmitterIDs[i], b2sTraj))
+        {
             LogMessage(LOG_LEVEL_INFO, "BTS FAILED, SENDING 0 TO GUC");
             const char *btsChar = "BTS-FAIL";
             iCommSend(COMM_BACKTOSTART, btsChar, sizeof (btsChar));
-            //return;
-        //}
+            return;
+        }
+        const char *btsChar = "BTS-PASS";
+        iCommSend(COMM_BACKTOSTART, btsChar, sizeof (btsChar));
+        b2sTrajectories[i] = b2sTraj;
+
+    }
+
+    if(UtilDeleteTrajectoryFiles() == FAILED_DELETE)
+    {
+        LogMessage(LOG_LEVEL_ERROR, "Failed to remove trajectory files.");
     }
 
     //If pass save files
-    for(int i = 0; i < *noOfObjects; i++)
+    for(int i = 0; i < objects.size(); i++)
     {
+        std::cout << b2sTrajectories[i].name << std::endl;
         b2sTrajectories[i].saveToFile(b2sTrajectories[i].name);
     }
 

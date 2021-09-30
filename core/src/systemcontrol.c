@@ -625,11 +625,26 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 
         case COMM_BACKTOSTART:
-
-            bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-            SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
-                                             "0", 1,
-                                             &ClientSocket, 0);
+            if(strcmp(pcRecvBuffer, "BTS-FAIL"))
+            {
+                LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
+                bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
+                                                 "0", 1,
+                                                 &ClientSocket, 0);
+            }
+            else if(strcmp(pcRecvBuffer, "BTS-PASS"))
+            {
+                LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
+                bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
+                                                 "1", 1,
+                                                 &ClientSocket, 0);
+            }
+            else
+            {
+                LogMessage(LOG_LEVEL_ERROR, "Cannot parse COMM_BACKTOSTART message.");
+            }
             break;
 
 		default:
