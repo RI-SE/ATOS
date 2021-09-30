@@ -190,6 +190,7 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& ReSendOse
 			udpTransmitBuffer.resize(static_cast<unsigned long>(retval));
 			bytesSent = udpPort.sendUDP(udpTransmitBuffer);
 			if (bytesSent < 0) {
+				std::cout <<bytesSent <<std::endl;
 				LogMessage(LOG_LEVEL_INFO, "Unable to send ObjectData to Visualizer");
 			}
 		}
@@ -212,7 +213,7 @@ int awaitConnection(TCPHandler& tcpPort, UDPHandler& udpPort, enum COMMAND& rece
 			LogMessage(LOG_LEVEL_INFO, "TCP connection established with: %s port: %d ",tcpPort.getClientIP().c_str(), tcpPort.PORT);
 			LogMessage(LOG_LEVEL_INFO, "Configuring UDP connection to: %s port: %d", tcpPort.getClientIP().c_str(), udpPort.PORT);
 			int Success = udpPort.setIP(tcpPort.getClientIP());
-			if (Success == 1) {
+			if (Success >= 0) {
 				LogMessage(LOG_LEVEL_INFO, "Success: configuring UDP connection to: %s port: %d", tcpPort.getClientIP().c_str(), udpPort.PORT);
 			}
 			else {
