@@ -193,6 +193,8 @@ public:
 	void objectDisarmed(ScenarioHandler&, uint32_t) override;
 	void objectArmed(ScenarioHandler&, uint32_t) override;
 
+	virtual void onExit(ScenarioHandler&) override;
+
 	//! Other spontaneous events unexpected
 	//
 
