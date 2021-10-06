@@ -144,8 +144,6 @@ void backToStart() {
             iCommSend(COMM_BACKTOSTART, btsChar, sizeof (btsChar));
             return;
         }
-        const char *btsChar = "BTS-PASS";
-        iCommSend(COMM_BACKTOSTART, btsChar, sizeof (btsChar));
         b2sTrajectories[i] = b2sTraj;
 
     }
@@ -161,6 +159,9 @@ void backToStart() {
         std::cout << b2sTrajectories[i].name << std::endl;
         b2sTrajectories[i].saveToFile(b2sTrajectories[i].name);
     }
+
+    const char *btsChar = "BTS-PASS";
+    iCommSend(COMM_BACKTOSTART, btsChar, sizeof (btsChar));
 
 }
 
