@@ -341,6 +341,7 @@ void ScenarioHandler::connectToObject(
 				LogMessage(LOG_LEVEL_ERROR, "Connection attempt for object %u failed: %s",
 						   obj.getTransmitterID(), e.what());
 				obj.disconnect();
+				return;
 				// TODO connection failed event?
 			}
 			try {
