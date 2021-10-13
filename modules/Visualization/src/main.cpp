@@ -209,7 +209,6 @@ int awaitConnection(TCPHandler& tcpPort, UDPHandler& udpPort, enum COMMAND& rece
 		tcpPort.TCPHandlerAccept(5);
 
 		if (tcpPort.getConnectionOn() == 1) {
-			std::cout <<tcpPort.IPaddr<<std::endl;
 			LogMessage(LOG_LEVEL_INFO, "TCP connection established with: %s port: %d ",tcpPort.getClientIP().c_str(), tcpPort.PORT);
 			LogMessage(LOG_LEVEL_INFO, "Configuring UDP connection to: %s port: %d", tcpPort.getClientIP().c_str(), udpPort.PORT);
 			int Success = udpPort.setIP(tcpPort.getClientIP());

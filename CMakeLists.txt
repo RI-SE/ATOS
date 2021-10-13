@@ -74,7 +74,7 @@ if(ENABLE_TESTS)
 endif()
 
 # Add corresponding subprojects
-add_subdirectory(util/C)
+add_subdirectory(util/C util EXCLUDE_FROM_ALL)
 add_subdirectory(common)
 add_subdirectory(core)
 foreach(MODULE ${ENABLED_MODULES})
