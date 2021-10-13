@@ -152,7 +152,7 @@ ObjectMonitorType transformCoordinate(
 	}
 
 	// TODO check on timestamps
-	Vector3d pointInAnchorFrame = anchorPos + anchorToGlobal*pointPos; // TODO subtract also anchor velocity vector times tdiff
+	Vector3d pointInAnchorFrame = anchorPos + pointPos; // TODO subtract also anchor velocity vector times tdiff
 	anchorVel = anchorToGlobal*anchorVel; // To x/y speeds
 	pointVel = pointToGlobal*pointVel + anchorVel; // To x/y speeds
 	pointVel = pointToGlobal.inverse()*pointVel; // To long/lat speeds
