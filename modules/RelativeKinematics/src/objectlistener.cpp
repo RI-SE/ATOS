@@ -165,7 +165,7 @@ ObjectMonitorType transformCoordinate(
 	retval.position.zCoord_m = pointInAnchorFrame[2];
 	retval.position.isPositionValid = anchor.position.isPositionValid && anchor.position.isHeadingValid
 			&& point.position.isPositionValid;
-	retval.position.heading_rad = anchor.position.heading_rad + point.position.heading_rad;
+	retval.position.heading_rad = point.position.heading_rad;
 	retval.position.isHeadingValid = anchor.position.isHeadingValid && point.position.isHeadingValid;
 	retval.speed.longitudinal_m_s = pointVel[0];
 	retval.speed.lateral_m_s = pointVel[1];
