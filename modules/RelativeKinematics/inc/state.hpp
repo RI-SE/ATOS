@@ -34,6 +34,7 @@ public:
 	virtual void objectDisarmed(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected object disarmed in state " + type(*this)); }
 	virtual void objectArmed(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected object armed in state " + type(*this)); }
 	virtual void objectAborting(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected object aborting in state " + type(*this)); }
+	virtual void objectAbortDisarmed(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected object abort disarmed in state " + type(*this)); }
 	virtual void postProcessingCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected postprocessing completion in state " + type(*this)); }
 	virtual void settingModificationRequested(ScenarioHandler&) { throw std::runtime_error("Unexpected setting modification in state " + type(*this)); }
 	virtual void actionExecutionRequested(ScenarioHandler&) { throw std::runtime_error("Unexpected action execution in state " + type(*this)); }
@@ -147,6 +148,7 @@ public:
 	virtual void disconnectRequest(ScenarioHandler&) override;
 	virtual void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
 	virtual void objectAborting(ScenarioHandler&,uint32_t) override;
+	virtual void objectAbortDisarmed(ScenarioHandler&,uint32_t) override;
 
 	virtual void onEnter(ScenarioHandler&) override;
 
@@ -178,6 +180,8 @@ public:
 	virtual void connectedToLiveObject(ScenarioHandler&, uint32_t) override;
 	virtual void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
 	virtual void objectAborting(ScenarioHandler&,uint32_t) override;
+	virtual void objectAbortDisarmed(ScenarioHandler&,uint32_t) override;
+	virtual void allObjectsDisarmed(ScenarioHandler&) override;
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) override {}
@@ -192,6 +196,8 @@ public:
 	//! Handle strange object transitions
 	void objectDisarmed(ScenarioHandler&, uint32_t) override;
 	void objectArmed(ScenarioHandler&, uint32_t) override;
+
+	virtual void onExit(ScenarioHandler&) override;
 
 	//! Other spontaneous events unexpected
 	//
@@ -349,6 +355,7 @@ class Ready : public ObjectControl::Ready {
 	void disconnectRequest(ScenarioHandler&) override;
 	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
 	void objectAborting(ScenarioHandler&, uint32_t) override;
+	void objectAbortDisarmed(ScenarioHandler&, uint32_t) override;
 	void settingModificationRequested(ScenarioHandler&) override;
 };
 
@@ -359,6 +366,8 @@ class Aborting : public ObjectControl::Aborting {
 	void connectedToLiveObject(ScenarioHandler&, uint32_t) override;
 	void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
 	void objectAborting(ScenarioHandler&, uint32_t) override;
+	void objectAbortDisarmed(ScenarioHandler&, uint32_t) override;
+	void allObjectsDisarmed(ScenarioHandler&) override;
 };
 
 class TestLive : public ObjectControl::TestLive {
@@ -423,6 +432,7 @@ class Ready : public ObjectControl::Ready {
 	void disconnectRequest(ScenarioHandler&) override;
 	void disconnectedFromObject(ScenarioHandler&, uint32_t) override;
 	void objectAborting(ScenarioHandler&, uint32_t) override;
+	void objectAbortDisarmed(ScenarioHandler&, uint32_t) override;
 	void settingModificationRequested(ScenarioHandler&) override;
 };
 
@@ -433,6 +443,8 @@ class Aborting : public ObjectControl::Aborting {
 	void connectedToLiveObject(ScenarioHandler&, uint32_t) override;
 	void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
 	void objectAborting(ScenarioHandler&, uint32_t) override;
+	void objectAbortDisarmed(ScenarioHandler&, uint32_t) override;
+	void allObjectsDisarmed(ScenarioHandler&) override;
 };
 
 class TestLive : public ObjectControl::TestLive {

@@ -304,6 +304,10 @@ void TestObject::sendDisarm() {
 	this->comms.cmd << OBJECT_COMMAND_DISARM;
 }
 
+void TestObject::sendAllClear() {
+	this->comms.cmd << OBJECT_COMMAND_ALL_CLEAR;
+}
+
 //void TestObject::sendOsiGlobalObjectGroundTruth(
 //	GlobalObjectGroundTruth_t gogt) {
 	//this->comms.osi << llls;
@@ -334,16 +338,16 @@ ISOMessageID Channel::pendingMessageType(bool awaitNext) {
 		return MESSAGE_ID_INVALID;
 	}
 	else if (result < 0) {
-		throw std::ios_base::failure(std::string("Failed to check pending message type (recv: ")
+		throw std::runtime_error(std::string("Failed to check pending message type (recv: ")
 									 + strerror(errno) + ")");
 	}
 	else if (result == 0) {
-		throw std::ios_base::failure("Connection reset by peer");
+		throw std::runtime_error("Connection reset by peer");
 	}
 	else {
 		ISOMessageID retval = getISOMessageType(this->receiveBuffer.data(), this->receiveBuffer.size(), false);
 		if (retval == MESSAGE_ID_INVALID) {
-			throw std::invalid_argument("Non-ISO message received from " + this->remoteIP());
+			throw std::runtime_error("Non-ISO message received from " + this->remoteIP());
 		}
 		return retval;
 	}
@@ -361,7 +365,7 @@ ISOMessageID ObjectConnection::pendingMessageType(bool awaitNext) {
 		auto result = select(std::max(mntr.socket,cmd.socket)+1,
 							 &fds, nullptr, nullptr, nullptr);
 		if (result < 0) {
-			throw std::ios_base::failure(std::string("Failed socket operation (select: ") + strerror(errno) + ")"); // TODO clearer
+			throw std::runtime_error(std::string("Failed socket operation (select: ") + strerror(errno) + ")"); // TODO clearer
 		}
 		else if (!isValid()) {
 			throw std::invalid_argument("Connection invalidated during select call");
@@ -388,7 +392,7 @@ Channel& operator<<(Channel& chnl, const HeabMessageDataType& heartbeat) {
 	}
 	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 	if (nBytes < 0) {
-		throw std::invalid_argument(std::string("Failed to send HEAB: ") + strerror(errno));
+		throw std::runtime_error(std::string("Failed to send HEAB: ") + strerror(errno));
 	}
 	return chnl;
 }
@@ -400,7 +404,7 @@ Channel& operator<<(Channel& chnl, const ObjectSettingsType& settings) {
 	}
 	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 	if (nBytes < 0) {
-		throw std::invalid_argument(std::string("Failed to send OSEM: ") + strerror(errno));
+		throw std::runtime_error(std::string("Failed to send OSEM: ") + strerror(errno));
 	}
 	return chnl;
 }
@@ -418,7 +422,7 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 	}
 	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 	if (nBytes < 0) {
-		throw std::invalid_argument(std::string("Failed to send TRAJ message header: ") + strerror(errno));
+		throw std::runtime_error(std::string("Failed to send TRAJ message header: ") + strerror(errno));
 	}
 
 	// TRAJ points
@@ -441,7 +445,7 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 
 		if (nBytes < 0) {
 			// TODO what to do here?
-			throw std::invalid_argument(std::string("Failed to send TRAJ message point: ") + strerror(errno));
+			throw std::runtime_error(std::string("Failed to send TRAJ message point: ") + strerror(errno));
 		}
 	}
 
@@ -452,7 +456,7 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 	}
 	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 	if (nBytes < 0) {
-		throw std::invalid_argument(std::string("Failed to send TRAJ message footer: ") + strerror(errno));
+		throw std::runtime_error(std::string("Failed to send TRAJ message footer: ") + strerror(errno));
 	}
 	return chnl;
 }
@@ -464,7 +468,7 @@ Channel& operator<<(Channel& chnl, const ObjectCommandType& cmd) {
 	}
 	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 	if (nBytes < 0) {
-		throw std::invalid_argument(std::string("Failed to send OSTM: ") + strerror(errno));
+		throw std::runtime_error(std::string("Failed to send OSTM: ") + strerror(errno));
 	}
 	return chnl;
 }
@@ -477,7 +481,7 @@ Channel& operator<<(Channel& chnl, const StartMessageType& strt) {
 
 	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
 	if (nBytes < 0) {
-		throw std::invalid_argument(std::string("Failed to send STRT: ") + strerror(errno));
+		throw std::runtime_error(std::string("Failed to send STRT: ") + strerror(errno));
 	}
 	return chnl;
 }
@@ -494,7 +498,7 @@ Channel& operator>>(Channel& chnl, MonitorMessage& monitor) {
 		else {
 			nBytes = recv(chnl.socket, chnl.receiveBuffer.data(), static_cast<size_t>(nBytes), 0);
 			if (nBytes <= 0) {
-				throw std::ios_base::failure("Unable to clear from socket buffer");
+				throw std::runtime_error("Unable to clear from socket buffer");
 			}
 		}
 	}
@@ -510,7 +514,7 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 		else {
 			nBytes = recv(chnl.socket, chnl.receiveBuffer.data(), static_cast<size_t>(nBytes), 0);
 			if (nBytes <= 0) {
-				throw std::ios_base::failure("Unable to clear from socket buffer");
+				throw std::runtime_error("Unable to clear from socket buffer");
 			}
 		}
 	}
@@ -521,7 +525,7 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 Channel& operator<<(Channel& chnl, const std::vector<char>& data) {
 	auto nBytes = send(chnl.socket, data.data(), data.size(), 0);
 	if (nBytes < 0) {
-		throw std::invalid_argument(std::string("Failed to send raw data: ") + strerror(errno));
+		throw std::runtime_error(std::string("Failed to send raw data: ") + strerror(errno));
 	}
 	return chnl;
 }
