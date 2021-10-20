@@ -115,16 +115,6 @@ void backToStart() {
         //Testpath
         LogMessage(LOG_LEVEL_INFO, "TXID: %d", transmitterIDs[i]);
         currentTraj = objects.at(transmitterIDs[i]).getTrajectory();
-
-        //TODO
-        //Get transmitter ID:s
-        //Check distance and rotation
-        //Send pass or fail
-        //generate BTS
-        //send BTS trajectories
-        //???
-        //profit
-
         //Add first turn
         b2sTraj.addWilliamsonTurn(5,currentTraj.points[currentTraj.points.size()-1], 0);
 

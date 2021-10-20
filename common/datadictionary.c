@@ -1644,9 +1644,7 @@ ReadWriteAccess_t DataDictionaryInitMiscData(void) {
  * \param miscData The misc data string (ASCII).
  * \return ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetMiscData(
-		const char* data,
-		const size_t datalen) {
+ReadWriteAccess_t DataDictionarySetMiscData(const char *data, const size_t datalen) {
 	// TODO implement setting of conf file
 	return UNDEFINED;
 }
@@ -1656,11 +1654,10 @@ ReadWriteAccess_t DataDictionarySetMiscData(
  * \param MiscData Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetMiscData(char * miscDataBuffer, const size_t buflen) {
+ReadWriteAccess_t DataDictionaryGetMiscData(char *miscDataBuffer, const size_t buflen) {
 	ReadWriteAccess_t result = UNDEFINED;
 
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_MISC_DATA, miscDataBuffer, buflen)) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_MISC_DATA, miscDataBuffer, buflen)) {
 		return READ_OK;
 	}
 	else {
@@ -1669,6 +1666,7 @@ ReadWriteAccess_t DataDictionaryGetMiscData(char * miscDataBuffer, const size_t 
 		memset(miscDataBuffer, 0, buflen);
 	}
 }
+
 /*END of MiscData*/
 
 
@@ -1679,6 +1677,7 @@ ReadWriteAccess_t DataDictionaryGetMiscData(char * miscDataBuffer, const size_t 
  */
 ReadWriteAccess_t DataDictionaryInitStateData() {
 	int createdMemory;
+
 	stateDataMemory = createSharedMemory(STATE_DATA_FILENAME, 0, sizeof (StateDataType), &createdMemory);
 	if (stateDataMemory == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared state data memory");

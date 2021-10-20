@@ -143,7 +143,7 @@ static const char ObjectSettingNameMaxSpeed[] = "maxSpeed";
 /*------------------------------------------------------------
 -- Local type definitions
 ------------------------------------------------------------*/
-enum procFields {startTime = 21, vSize = 22};
+enum procFields { startTime = 21, vSize = 22 };
 
 /*------------------------------------------------------------
 -- Private variables
@@ -408,7 +408,7 @@ uint64_t UtilgetETSIfromUTCMS(uint64_t utc_sec, uint64_t utc_usec) {
 void UtilgetDateTimeFromUTCtime(int64_t utc_ms, char *buffer, int size_t) {
 	time_t time_seconds = utc_ms / 1000;
 
-	if (size_t < 26)
+	if (size_t <26)
 		return;
 	strcpy(buffer, ctime(&time_seconds));
 }
@@ -1730,12 +1730,16 @@ int UtilCountFileRows(FILE * fd) {
 int UtilCountFileRowsInPath(const char *path, const size_t pathlen) {
 	int c = 0;
 	int rows = 0;
-	if(pathlen <= 0)
+
+	if (pathlen <= 0)
 		return -1;
 	FILE *fd;
+
 	fd = fopen(path, "r");
-	if (fd != NULL)	rows = UtilCountFileRows(fd);
-	else rows = -1;
+	if (fd != NULL)
+		rows = UtilCountFileRows(fd);
+	else
+		rows = -1;
 	fclose(fd);
 	return rows;
 }
@@ -1817,30 +1821,30 @@ int UtilReadLine(FILE * fd, char *Buffer) {
  * \return 1 on success, -1 on error
  */
 int UtilGetRowInFile(const char *path, const size_t pathLength,
-					I32 rowIndex, char *rowBuffer, const size_t bufferLength){
+					 I32 rowIndex, char *rowBuffer, const size_t bufferLength) {
 	int c = 0;
 	int rows = 0;
 	int length = 0;
 	FILE *fd;
-	
-	if(pathLength < 0)
+
+	if (pathLength < 0)
 		return -1;
-	
+
 	fd = fopen(path, "r");
-	if (fd != NULL){
+	if (fd != NULL) {
 		rows = UtilCountFileRows(fd);
 		fclose(fd);
 		fd = fopen(path, "r");
-		for(int i = 0; i < rows; i ++){
+		for (int i = 0; i < rows; i++) {
 			length = UtilReadLine(fd, rowBuffer);
-			if(length > bufferLength){ 
+			if (length > bufferLength) {
 				LogMessage(LOG_LEVEL_ERROR, "Buffer to small for read row in file");
 				return -1;
 			}
-			if(rowIndex == i){
-				*(rowBuffer+length) = NULL;
+			if (rowIndex == i) {
+				*(rowBuffer + length) = NULL;
 				return i;
-			} 
+			}
 		}
 	}
 	fclose(fd);
@@ -2114,7 +2118,7 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 		break;
 	case COMM_ABORT_DONE:
 		uiMessagePrio = PRIO_COMM_ABORTING_DONE;
-	break;
+		break;
 	case COMM_INIT:
 		uiMessagePrio = PRIO_COMM_INIT;
 		break;
@@ -2172,9 +2176,9 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_REMOTECTRL_MANOEUVRE:
 		uiMessagePrio = PRIO_COMM_REMOTECTRL_MANOEUVRE;
 		break;
-    case COMM_BACKTOSTART:
-        uiMessagePrio = PRIO_COMM_BACKTOSTART;
-        break;
+	case COMM_BACKTOSTART:
+		uiMessagePrio = PRIO_COMM_BACKTOSTART;
+		break;
 	case COMM_ENABLE_OBJECT:
 		uiMessagePrio = PRIO_COMM_ENABLE_OBJECT;
 		break;
@@ -3924,32 +3928,30 @@ char *UtilGetObjectParameterAsString(const enum ObjectFileParameter parameter,
 	return returnValue;
 }
 
-int UtilReadOriginConfiguration(GeoPosition* origin) {
+int UtilReadOriginConfiguration(GeoPosition * origin) {
 	GeoPosition retval;
 	char setting[20];
-	char* endptr;
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE,
-									   setting, sizeof (setting))) {
+	char *endptr;
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, setting, sizeof (setting))) {
 		retval.Latitude = strtod(setting, &endptr);
 		if (endptr == setting) {
 			return -1;
 		}
 	}
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE,
-									   setting, sizeof (setting))) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, setting, sizeof (setting))) {
 		retval.Longitude = strtod(setting, &endptr);
 		if (endptr == setting) {
 			return -1;
 		}
 	}
-	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE,
-									   setting, sizeof (setting))) {
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, setting, sizeof (setting))) {
 		retval.Altitude = strtod(setting, &endptr);
 		if (endptr == setting) {
 			return -1;
 		}
 	}
-	retval.Heading = 0; // TODO
+	retval.Heading = 0;			// TODO
 	*origin = retval;
 	return 0;
 }
@@ -3981,7 +3983,7 @@ int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize,
  * \param rawTREOsize size of MQ data
  * \param treoData Data struct to be filled
  */
-int UtilPopulateTREODataStructFromMQ(char * rawTREO, size_t rawTREOsize, TREOData * treoData) {
+int UtilPopulateTREODataStructFromMQ(char *rawTREO, size_t rawTREOsize, TREOData * treoData) {
 	char *rdPtr = rawTREO;
 
 	if (rawTREOsize < sizeof (TREOData)) {
@@ -4007,7 +4009,7 @@ int UtilPopulateTREODataStructFromMQ(char * rawTREO, size_t rawTREOsize, TREODat
  * \param rawEXACsize size of MQ data
  * \param exacData Data struct to be filled
  */
-int UtilPopulateEXACDataStructFromMQ(char * rawEXAC, size_t rawEXACsize, EXACData * exacData) {
+int UtilPopulateEXACDataStructFromMQ(char *rawEXAC, size_t rawEXACsize, EXACData * exacData) {
 	char *rdPtr = rawEXAC;
 
 	if (rawEXACsize < sizeof (EXACData)) {
@@ -4033,7 +4035,7 @@ int UtilPopulateEXACDataStructFromMQ(char * rawEXAC, size_t rawEXACsize, EXACDat
  * \param rawTRCMsize size of MQ data
  * \param trcmData Data struct to be filled
  */
-int UtilPopulateTRCMDataStructFromMQ(char * rawTRCM, size_t rawTRCMsize, TRCMData * trcmData) {
+int UtilPopulateTRCMDataStructFromMQ(char *rawTRCM, size_t rawTRCMsize, TRCMData * trcmData) {
 	char *rdPtr = rawTRCM;
 
 	if (rawTRCMsize < sizeof (TRCMData)) {
@@ -4068,7 +4070,7 @@ int UtilPopulateTRCMDataStructFromMQ(char * rawTRCM, size_t rawTRCMsize, TRCMDat
  * \param rawACCMsize size of MQ data
  * \param accmData Data struct to be filled
  */
-int UtilPopulateACCMDataStructFromMQ(char * rawACCM, size_t rawACCMsize, ACCMData * accmData) {
+int UtilPopulateACCMDataStructFromMQ(char *rawACCM, size_t rawACCMsize, ACCMData * accmData) {
 	char *rdPtr = rawACCM;
 
 	if (rawACCMsize < sizeof (ACCMData)) {
