@@ -29,6 +29,7 @@ public:
 	virtual void connectedToLiveObject(ScenarioHandler&, uint32_t) { throw std::runtime_error("Unexpected connection to live object in state " + type(*this)); }
 	virtual void connectedToArmedObject(ScenarioHandler&, uint32_t) { throw std::runtime_error("Unexpected connection to armed object in state " + type(*this)); }
 	virtual void allObjectsDisarmed(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects disarmed in state " + type(*this)); }
+	virtual void allObjectsAbortDisarmed(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects disarmed in state " + type(*this)); }
 	virtual void allObjectsConnected(ScenarioHandler&) { throw std::runtime_error("Unexpected all objects connected in state " + type(*this)); }
 	virtual void testCompleted(ScenarioHandler&) { throw std::runtime_error("Unexpected test completion in state " + type(*this)); }
 	virtual void objectDisarmed(ScenarioHandler&,uint32_t) { throw std::runtime_error("Unexpected object disarmed in state " + type(*this)); }
@@ -182,6 +183,7 @@ public:
 	virtual void objectAborting(ScenarioHandler&,uint32_t) override;
 	virtual void objectAbortDisarmed(ScenarioHandler&,uint32_t) override;
 	virtual void allObjectsDisarmed(ScenarioHandler&) override;
+	virtual void allObjectsAbortDisarmed(ScenarioHandler&) override;
 
 	//! Ignore other commands
 	void initializeRequest(ScenarioHandler&) override {}
@@ -368,6 +370,7 @@ class Aborting : public ObjectControl::Aborting {
 	void objectAborting(ScenarioHandler&, uint32_t) override;
 	void objectAbortDisarmed(ScenarioHandler&, uint32_t) override;
 	void allObjectsDisarmed(ScenarioHandler&) override;
+	void allObjectsAbortDisarmed(ScenarioHandler&) override;
 };
 
 class TestLive : public ObjectControl::TestLive {
@@ -445,6 +448,7 @@ class Aborting : public ObjectControl::Aborting {
 	void objectAborting(ScenarioHandler&, uint32_t) override;
 	void objectAbortDisarmed(ScenarioHandler&, uint32_t) override;
 	void allObjectsDisarmed(ScenarioHandler&) override;
+	void allObjectsAbortDisarmed(ScenarioHandler&) override;
 };
 
 class TestLive : public ObjectControl::TestLive {
