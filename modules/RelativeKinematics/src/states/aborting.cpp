@@ -63,11 +63,6 @@ void ObjectControl::Aborting::objectArmed(
 	handler.disconnectObject(id); // TODO just stop sending HEAB to keep tracking available
 }
 
-void ObjectControl::Aborting::allObjectsDisarmed(
-		ScenarioHandler &handler) {
-}
-
-
 
 void ObjectControl::Aborting::allObjectsAbortDisarmed(
 		ScenarioHandler &handler) {
