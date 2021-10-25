@@ -9,6 +9,7 @@
 #include <functional>
 #include <eigen3/Eigen/Dense>
 #include <math.h>
+#include <chrono>
 
 #include "util.h"
 
@@ -134,7 +135,7 @@ public:
 	void saveToFile(const std::string& fileName) const;
 	Trajectory reversed(double startTime) const;
 	Trajectory rescaledToVelocity(const double vel_m_s) const;
-	static Trajectory createWilliamsonTurn(double turnRadius = 5, double acceleration = 1, TrajectoryPoint startPoint = TrajectoryPoint(), double startTime = 0);
+	static Trajectory createWilliamsonTurn(double turnRadius = 5, double acceleration = 1, TrajectoryPoint startPoint = TrajectoryPoint(), std::chrono::milliseconds startTime = std::chrono::milliseconds(0));
 
 private:
 	static const std::regex fileHeaderPattern;

@@ -324,7 +324,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 		double turnRadius,
 		double acceleration,
 		TrajectoryPoint startPoint,
-		double startTime)
+		std::chrono::milliseconds startTime)
 {
 
 	std::cout << std::endl << "X: " << startPoint.getXCoord() << std::endl;
