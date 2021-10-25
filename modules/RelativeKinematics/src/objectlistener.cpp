@@ -124,7 +124,7 @@ ObjectMonitorType transformCoordinate(
 	from_timeval(tvdiff, diff);
 
 	AngleAxis anchorToGlobal(anchor.position.heading_rad, Vector3d::UnitZ());
-	AngleAxis pointToGlobal(anchor.position.heading_rad+point.position.heading_rad, Vector3d::UnitZ());
+    AngleAxis pointToGlobal(point.position.heading_rad, Vector3d::UnitZ());
 	Vector3d pointPos(point.position.xCoord_m, point.position.yCoord_m, point.position.zCoord_m);
 	Vector3d anchorPos(anchor.position.xCoord_m, anchor.position.yCoord_m, anchor.position.zCoord_m);
 	Vector3d pointVel(point.speed.longitudinal_m_s, point.speed.lateral_m_s, 0.0);
