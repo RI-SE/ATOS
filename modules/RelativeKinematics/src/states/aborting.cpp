@@ -174,5 +174,6 @@ void AbsoluteKinematics::Aborting::objectAbortDisarmed(
 
 void AbsoluteKinematics::Aborting::allObjectsAbortDisarmed(
 		ScenarioHandler &handler) {
+	ObjectControl::Aborting::allObjectsAbortDisarmed(handler);
 	setState(handler, new AbsoluteKinematics::Ready);			
 }
