@@ -337,7 +337,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	const int noOfPoints = 500;
 	double radius = turnRadius;
 	double heading = startPoint.getHeading();
-	double headingRad = heading;//(heading-90) * M_PI/180;
+	double headingRad = heading;
 
 	Eigen::VectorXd theta0;         //First section
 	Eigen::VectorXd theta1;         //Second section
