@@ -320,24 +320,7 @@ Trajectory Trajectory::rescaledToVelocity(
     return newTrajectory;
 }
 
-//void Trajectory::addAccelerationTo(double vel_m_s){
-//
-//    auto point = points.begin();
-//    int a = 5;
-//    int b = -2;
-//        while (point != points.end()) {
-//
-//            point->setLongitudinalVelocity((vel_m_s / (1 + (exp(a + (b * point->getTime()))))));
-//            point->setLongitudinalAcceleration(-((b*point->getTime()*exp(((b*point->getTime()))+a)) /(pow(1 + (exp(a + (b * point->getTime()))),2))));
-//
-//            if(vel_m_s / (1 + (exp(a + (b * point->getTime()))))==vel_m_s){
-//                break;
-//            }
-//            point++;
-//        }
-//}
-
-void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startPoint = TrajectoryPoint(), double startTime = 0)
+Trajectory Trajectory::createWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startPoint = TrajectoryPoint(), double startTime = 0)
 {
 
     std::cout << std::endl << "X: " << startPoint.getXCoord() << std::endl;
@@ -359,10 +342,10 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
     Eigen::VectorXd endStraight;    //Third section
     Eigen::Matrix<double, 2, noOfPoints> xyM;
     Eigen::Matrix<double, 2, noOfPoints> resM;
-    Eigen::Array<double, 1,noOfPoints> headingArray;
-    Eigen::Array<double, 1,noOfPoints> speedArray;
-    Eigen::Array<double, 1,noOfPoints> accelerationArray;
-    Eigen::Array<double, 1,noOfPoints> timeArray;
+	Eigen::Array<double, 1, noOfPoints> headingArray;
+	Eigen::Array<double, 1, noOfPoints> speedArray;
+	Eigen::Array<double, 1, noOfPoints> accelerationArray;
+	Eigen::Array<double, 1, noOfPoints> timeArray;
 
 
     //Calculate length of each section
@@ -377,9 +360,9 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
 
     for(int i = 0; i < theta0.size(); i++)
     {
-        xyM(1,i) = radius * cos(theta0[i]) + radius;
-        xyM(0,i) = radius * sin(theta0[i]);
-        headingArray[i] = theta0[i] + M_PI_2;
+		xyM(0,i) = radius * cos(theta0[i]) + radius;
+		xyM(1,i) = radius * sin(theta0[i]);
+		headingArray[i] = theta0[i] - M_PI_2;
     }
 
     //second section
@@ -388,9 +371,9 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
 
     for(int i = 0; i < theta1.size(); i++)
     {
-        xyM(1,i+n0) = radius * cos(theta1[i]) + radius;
-        xyM(0,i+n0) = radius * sin(theta1[i]) + 2 * radius;
-        headingArray[i+n0] = theta1[i] - M_PI_2;
+		xyM(0,i+n0) = radius * cos(theta1[i]) + radius;
+		xyM(1,i+n0) = radius * sin(theta1[i]) + 2 * radius;
+		headingArray[i+n0] = theta1[i] + M_PI_2;
     }
 
     //third section
@@ -398,14 +381,13 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
     endStraight = Eigen::VectorXd::LinSpaced(n2, radius * 2, 0);
     for(int i = 0; i < n2; i++)
     {
-        xyM(1,i+n0+n1) = 0;
-        xyM(0,i+n0+n1) = endStraight[i];
-        headingArray[i+n0+n1] = + M_PI_2;
+		xyM(0,i+n0+n1) = 0;
+		xyM(1,i+n0+n1) = endStraight[i];
+		headingArray[i+n0+n1] = -M_PI_2;
     }
 
     //Values for rotation matrix
-    rotM <<   cos(headingRad), -sin(headingRad),
-                sin(headingRad), cos(headingRad);
+	Eigen::Rotation2Dd rotM(headingRad);
 
     resM = rotM * xyM;
 
@@ -416,17 +398,15 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
     {
         resM(0,i) += startPoint.getXCoord();
         resM(1,i) += startPoint.getYCoord();
-    }
+	}
 
-    Eigen::ArrayXd oneArray = Eigen::ArrayXd::Ones(noOfPoints);
-    headingArray += headingRad*oneArray;
-
+	headingArray += (headingRad-M_PI_2) * Eigen::ArrayXd::Ones(noOfPoints);
 
     //Speed
 
     //AccelerationSection
     double accelerationPeriod = topSpeed / acceleration;                //t = (v - u) / a
-    double accelerationDistance = ((pow(topSpeed, 2))/acceleration)/2;
+	double accelerationDistance = pow(topSpeed, 2) / acceleration / 2;
 
     //Topspeed section
     double topSpeedDistance = totalLength - accelerationDistance*2;
@@ -462,32 +442,39 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
             accelerationArray[i] = acceleration;
         }
         speedArray[i] = currSpeed;
-
     }
+
+	Eigen::VectorXd curvatureArray(noOfPoints);
+	curvatureArray << -1/radius*Eigen::ArrayXd::Ones(n0), 1/radius*Eigen::ArrayXd::Ones(n1), Eigen::ArrayXd::Zero(n2);
 
     //create trajectory points
     std::vector<TrajectoryPoint> tempVector;
-    for(int i = 0; i < actualNoOfPoints; i++)
-    {
-
+	for (int i = 0; i < actualNoOfPoints; i++) {
         TrajectoryPoint tempPoint;
         tempPoint.setTime(timeArray[i]+startTime);
         tempPoint.setXCoord(resM(0,i));
         tempPoint.setYCoord(resM(1,i));
-        tempPoint.setZCoord(0.00000);
-        tempPoint.setHeading(-headingArray[i] - M_PI_2);
+		tempPoint.setZCoord(startPoint.getZCoord());
+		tempPoint.setHeading(headingArray[i]);
         tempPoint.setLongitudinalVelocity(speedArray[i]);
         tempPoint.setLateralVelocity(0.00000);
         tempPoint.setLongitudinalAcceleration(accelerationArray[i]);
         tempPoint.setLateralAcceleration(0.00000);
-        tempPoint.setCurvature(0);
+		tempPoint.setCurvature(curvatureArray[i]);
+		tempPoint.setMode(TrajectoryPoint::CONTROLLED_BY_DRIVE_FILE);
 
         tempVector.push_back(tempPoint);
     }
 
-    points.insert(std::end(points), std::begin(tempVector), std::end(tempVector));
-
-
+	Trajectory retval;
+	retval.points = tempVector;
+	retval.name = "Williamson_x" + std::to_string(startPoint.getXCoord())
+			+ "_y" + std::to_string(startPoint.getYCoord())
+			+ "_z" + std::to_string(startPoint.getZCoord())
+			+ "_hdg" + std::to_string(headingRad*180.0/M_PI);
+	retval.id = 0;
+	retval.version = 0;
+	return retval;
 }
 
 Trajectory Trajectory::reversed(double startTime = 0)const{
