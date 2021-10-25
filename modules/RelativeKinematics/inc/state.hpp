@@ -369,7 +369,6 @@ class Aborting : public ObjectControl::Aborting {
 	void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
 	void objectAborting(ScenarioHandler&, uint32_t) override;
 	void objectAbortDisarmed(ScenarioHandler&, uint32_t) override;
-	void allObjectsDisarmed(ScenarioHandler&) override;
 	void allObjectsAbortDisarmed(ScenarioHandler&) override;
 };
 
