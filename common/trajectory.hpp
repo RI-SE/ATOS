@@ -134,7 +134,7 @@ public:
 	void saveToFile(const std::string& fileName) const;
 	Trajectory reversed(double startTime) const;
 	Trajectory rescaledToVelocity(const double vel_m_s) const;
-	void addWilliamsonTurn(double turnRadius, TrajectoryPoint startPoint, double startTime);
+	void addWilliamsonTurn(double turnRadius, double acceleration, TrajectoryPoint startPoint, double startTime);
 
 private:
 	static const std::regex fileHeaderPattern;
