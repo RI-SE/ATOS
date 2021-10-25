@@ -116,11 +116,6 @@ void RelativeKinematics::Aborting::objectAbortDisarmed(
 	ObjectControl::Aborting::objectAbortDisarmed(handler,id);
 }
 
-void RelativeKinematics::Aborting::allObjectsDisarmed(
-		ScenarioHandler &handler) {
-	ObjectControl::Aborting::allObjectsDisarmed(handler);
-	setState(handler, new RelativeKinematics::Ready);			
-}
 
 void RelativeKinematics::Aborting::allObjectsAbortDisarmed(
 		ScenarioHandler &handler) {
