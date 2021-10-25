@@ -290,6 +290,12 @@ std::string Trajectory::toString() const {
 	return ss.str();
 }
 
+/*!
+ * \brief Trajectory::appendedWith Creates a new trajectory where other has been
+ *			appended to the end of this object.
+ * \param other Trajectory to append.
+ * \return New trajectory, concatenation of two.
+ */
 Trajectory Trajectory::appendedWith(
 		const Trajectory &other) {
 	Trajectory newTrajectory = this->points.empty() ? Trajectory(other) : Trajectory(*this);
