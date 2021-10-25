@@ -7,8 +7,8 @@
 
 #define MODULE_NAME "BackToStart"
 
-#define MAX_BTS_DISTANCE_TOLERANCE 15
-#define MAX_BTS_HEADING_TOLERANCE 30
+#define MAX_BTS_DISTANCE_TOLERANCE 15	//DEGREES
+#define MAX_BTS_HEADING_TOLERANCE 30	//METERS
 
 std::map<uint32_t,ObjectConfig> objects; //!< List of configured test objects
 std::map<uint32_t,ObjectConfig> BTSobjects; //!< List of configured test objects with BTS trajectories
@@ -100,7 +100,7 @@ void backToStart() {
 	DataDictionaryGetObjectTransmitterIDs(transmitterIDs, noOfObjects);
 
 	//Array to save b2s trajs
-	Trajectory b2sTrajectories[noOfObjects]; //TODO remove, use BTSObjects instead.
+	Trajectory b2sTrajectories[noOfObjects];
 
 	for(int i = 0; i < objects.size(); i++)
 	{

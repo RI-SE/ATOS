@@ -337,7 +337,7 @@ Trajectory Trajectory::rescaledToVelocity(
 //        }
 //}
 
-void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startPoint = TrajectoryPoint(), double startTime = 0)
+void Trajectory::addWilliamsonTurn(double turnRadius = 5, double acceleration = 1, TrajectoryPoint startPoint = TrajectoryPoint(), double startTime = 0)
 {
 
 	std::cout << std::endl << "X: " << startPoint.getXCoord() << std::endl;
@@ -346,7 +346,6 @@ void Trajectory::addWilliamsonTurn(double turnRadius = 5, TrajectoryPoint startP
 
 	using Eigen::MatrixXd;
 
-	double acceleration = 1;        //m/s/s
 	double topSpeed = 2.7777;
 	const int noOfPoints = 500;
 	double radius = turnRadius;
