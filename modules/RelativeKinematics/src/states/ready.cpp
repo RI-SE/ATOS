@@ -33,6 +33,12 @@ void ObjectControl::Ready::objectAborting(
 	// TODO
 }
 
+void ObjectControl::Ready::objectAbortDisarmed(
+	ScenarioHandler &handler,
+	uint32_t id) {
+		// TODO
+}
+
 void ObjectControl::Ready::settingModificationRequested(
 		ScenarioHandler &handler) {
 	// TODO
@@ -67,6 +73,13 @@ void RelativeKinematics::Ready::objectAborting(
 		uint32_t id) {
 	ObjectControl::Ready::objectAborting(handler,id);
 	setState(handler, new RelativeKinematics::Aborting);
+}
+
+
+void RelativeKinematics::Ready::objectAbortDisarmed(
+	ScenarioHandler &handler,
+	uint32_t id) {
+	ObjectControl::Ready::objectAbortDisarmed(handler,id);
 }
 
 void RelativeKinematics::Ready::settingModificationRequested(
@@ -104,6 +117,12 @@ void AbsoluteKinematics::Ready::objectAborting(
 		uint32_t id) {
 	ObjectControl::Ready::objectAborting(handler,id);
 	setState(handler, new AbsoluteKinematics::Aborting);
+}
+
+void AbsoluteKinematics::Ready::objectAbortDisarmed(
+	ScenarioHandler &handler,
+	uint32_t id) {
+	ObjectControl::Ready::objectAbortDisarmed(handler,id);
 }
 
 void AbsoluteKinematics::Ready::settingModificationRequested(
