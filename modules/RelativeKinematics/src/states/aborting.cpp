@@ -69,6 +69,11 @@ void ObjectControl::Aborting::allObjectsDisarmed(
 
 
 
+void ObjectControl::Aborting::allObjectsAbortDisarmed(
+		ScenarioHandler &handler) {
+}
+
+
 /*! ******************************************************
  * \section RelativeKinematics
  *  ******************************************************
@@ -116,9 +121,9 @@ void RelativeKinematics::Aborting::objectAbortDisarmed(
 	ObjectControl::Aborting::objectAbortDisarmed(handler,id);
 }
 
-void RelativeKinematics::Aborting::allObjectsDisarmed(
+void RelativeKinematics::Aborting::allObjectsAbortDisarmed(
 		ScenarioHandler &handler) {
-	ObjectControl::Aborting::allObjectsDisarmed(handler);
+	ObjectControl::Aborting::allObjectsAbortDisarmed(handler);
 	setState(handler, new RelativeKinematics::Ready);			
 }
 
@@ -170,8 +175,8 @@ void AbsoluteKinematics::Aborting::objectAbortDisarmed(
 	ObjectControl::Aborting::objectAbortDisarmed(handler,id);
 }
 
-void AbsoluteKinematics::Aborting::allObjectsDisarmed(
+void AbsoluteKinematics::Aborting::allObjectsAbortDisarmed(
 		ScenarioHandler &handler) {
-	ObjectControl::Aborting::allObjectsDisarmed(handler);
+	ObjectControl::Aborting::allObjectsAbortDisarmed(handler);
 	setState(handler, new AbsoluteKinematics::Ready);			
 }
