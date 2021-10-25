@@ -297,7 +297,17 @@ Trajectory Trajectory::appendedWith(
 	if (this->points.empty() || other.points.empty()) {
 		return newTrajectory;
 	}
-	return Trajectory(); // TEMP
+
+	auto firstTrajEndTime = points.back().getTime(); // TODO maybe a time offset between the two trajectories?
+	auto secondTrajStartTime = newTrajectory.points.front().getTime(); // TODO maybe a time offset between the two trajectories?
+
+	std::transform(other.points.begin(), other.points.end(),
+				   std::back_inserter(newTrajectory.points),
+				   [&](TrajectoryPoint otherPt) {
+		otherPt.setTime(otherPt.getTime() - secondTrajStartTime + firstTrajEndTime);
+		return otherPt;
+	});
+	return newTrajectory;
 }
 
 /*!
