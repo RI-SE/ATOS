@@ -171,11 +171,6 @@ void AbsoluteKinematics::Aborting::objectAbortDisarmed(
 	ObjectControl::Aborting::objectAbortDisarmed(handler,id);
 }
 
-void AbsoluteKinematics::Aborting::allObjectsDisarmed(
-		ScenarioHandler &handler) {
-	ObjectControl::Aborting::allObjectsDisarmed(handler);
-	setState(handler, new AbsoluteKinematics::Ready);			
-}
 
 void AbsoluteKinematics::Aborting::allObjectsAbortDisarmed(
 		ScenarioHandler &handler) {
