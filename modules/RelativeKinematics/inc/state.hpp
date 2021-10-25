@@ -182,7 +182,6 @@ public:
 	virtual void connectedToArmedObject(ScenarioHandler&, uint32_t) override;
 	virtual void objectAborting(ScenarioHandler&,uint32_t) override;
 	virtual void objectAbortDisarmed(ScenarioHandler&,uint32_t) override;
-	virtual void allObjectsDisarmed(ScenarioHandler&) override;
 	virtual void allObjectsAbortDisarmed(ScenarioHandler&) override;
 
 	//! Ignore other commands
