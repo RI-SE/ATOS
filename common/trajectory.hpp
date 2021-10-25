@@ -8,6 +8,7 @@
 #include <regex>
 #include <functional>
 #include <eigen3/Eigen/Dense>
+#include <chrono>
 
 #include "util.h"
 
@@ -133,6 +134,15 @@ public:
 	void saveToFile(const std::string& fileName) const;
 	Trajectory reversed() const;
 	Trajectory rescaledToVelocity(const double vel_m_s) const;
+	template<class Rep,class Period>
+	Trajectory delayed(const std::chrono::duration<Rep,Period>& delay) const {
+		Trajectory newTrajectory = Trajectory(*this);
+		newTrajectory.name = newTrajectory.name + "_delayed";
+		for (auto& trajPt : newTrajectory.points) {
+			trajPt.setTime(trajPt.getTime() + std::chrono::duration<double>(delay).count());
+		}
+		return newTrajectory;
+	}
 
 private:
 	static const std::regex fileHeaderPattern;

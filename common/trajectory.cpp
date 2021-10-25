@@ -255,9 +255,9 @@ Trajectory::const_iterator Trajectory::getNearest(
 }
 
 std::string Trajectory::TrajectoryPoint::getFormatString() const {
-	return "x:[m], y:[m], z:[m], hdg:[rad CW from N], "
-		   "vx:[m/s,longitudinal], vy:[m/s,lateral], "
-		   "ax:[m/s2,longitudinal], ay:[m/s2,lateral], "
+	return "x:[m], y:[m], z:[m], hdg:[rad CCW from x axis], "
+           "vx:[m/s,longitudinal], vy:[m/s,lateral], "
+           "ax:[m/s2,longitudinal], ay:[m/s2,lateral], "
 		   "c:[1/m], md:[]";
 }
 
