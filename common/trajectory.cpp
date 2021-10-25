@@ -290,6 +290,16 @@ std::string Trajectory::toString() const {
 	return ss.str();
 }
 
+Trajectory Trajectory::appendedWith(
+		const Trajectory &other) {
+	Trajectory newTrajectory = this->points.empty() ? Trajectory(other) : Trajectory(*this);
+	newTrajectory.name = this->name + "_app_" + other.name;
+	if (this->points.empty() || other.points.empty()) {
+		return newTrajectory;
+	}
+	return Trajectory(); // TEMP
+}
+
 /*!
  * \brief Trajectory::TrajectoryPoint::rescaleToVelocity Returns a copy of the trajectory rescaled to match a certain constant speed.
  * \param vel_m_s Speed to which trajectory is to be reduced
