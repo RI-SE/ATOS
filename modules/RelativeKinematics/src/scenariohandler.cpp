@@ -443,7 +443,7 @@ void ScenarioHandler::allClearObjects() {
 	for (auto& id : getVehicleIDs()) {
 		objects[id].sendAllClear();
 	}
-	this->state->allObjectsAbortDisarmed(*this); // TODO 
+	this->state->allObjectsAbortDisarmed(*this); // TODO wait for all objects really are disarmed
 }
 
 bool ScenarioHandler::isAnyObjectIn(
