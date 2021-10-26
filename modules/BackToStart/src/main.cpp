@@ -130,7 +130,7 @@ void backToStart() {
 		//Check distance
 		if(!isObjectNearTrajectoryStart(transmitterIDs[i], b2sTraj))
 		{
-			LogMessage(LOG_LEVEL_INFO, "BTS FAILED, SENDING 0 TO GUC");
+			LogMessage(LOG_LEVEL_INFO, "Object %u not near starting point: sending back-to-start failure", txID);
 			const char *btsChar = "BTS-FAIL";
 			iCommSend(COMM_BACKTOSTART, btsChar, sizeof (btsChar));
 			return;
