@@ -139,9 +139,9 @@ void backToStart() {
 
 	}
 
-	if(UtilDeleteTrajectoryFiles() == FAILED_DELETE)
-	{
-		LogMessage(LOG_LEVEL_ERROR, "Failed to remove trajectory files.");
+	if (UtilDeleteTrajectoryFiles() == FAILED_DELETE) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to remove trajectory files");
+		return;
 	}
 
 	//If pass save files
