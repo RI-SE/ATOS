@@ -377,7 +377,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	}
 
 	//third section
-	int n2 = int(noOfPoints * (len2 / totalLength));
+	unsigned int n2 = static_cast<unsigned int>(noOfPoints * (len2 / totalLength));
 	endStraight = Eigen::VectorXd::LinSpaced(n2, radius * 2, 0);
 	for (int i = 0; i < n2; i++) {
 		xyM(0,i+n0+n1) = 0;
