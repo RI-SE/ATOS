@@ -333,11 +333,11 @@ Trajectory Trajectory::createWilliamsonTurn(
 
 	using Eigen::MatrixXd;
 
-	double topSpeed = 2.7777;
+	constexpr double topSpeed = 10 / 3.6;
 	const int noOfPoints = 500;
 	double radius = turnRadius;
 	double heading = startPoint.getHeading();
-	double headingRad = heading;//(heading-90) * M_PI/180;
+	double headingRad = heading;
 
 	Eigen::VectorXd theta0;         //First section
 	Eigen::VectorXd theta1;         //Second section
@@ -357,7 +357,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	double totalLength = len0 + len1 + len2;
 
 	//First section
-	int n0 = int(noOfPoints * (len0 / totalLength));
+	unsigned int n0 = static_cast<unsigned int>(noOfPoints * (len0 / totalLength));
 	theta0 = Eigen::VectorXd::LinSpaced(n0, M_PI, M_PI_2);
 
 	for (int i = 0; i < theta0.size(); i++) {
@@ -367,7 +367,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	}
 
 	//second section
-	int n1 = int(noOfPoints * (len1 / totalLength));
+	unsigned int n1 = static_cast<unsigned int>(noOfPoints * (len1 / totalLength));
 	theta1 = Eigen::VectorXd::LinSpaced(n1, -1*M_PI_2, M_PI);
 
 	for (int i = 0; i < theta1.size(); i++) {
@@ -377,7 +377,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	}
 
 	//third section
-	int n2 = int(noOfPoints * (len2 / totalLength));
+	unsigned int n2 = static_cast<unsigned int>(noOfPoints * (len2 / totalLength));
 	endStraight = Eigen::VectorXd::LinSpaced(n2, radius * 2, 0);
 	for (int i = 0; i < n2; i++) {
 		xyM(0,i+n0+n1) = 0;
