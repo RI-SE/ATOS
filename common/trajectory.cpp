@@ -327,9 +327,9 @@ Trajectory Trajectory::createWilliamsonTurn(
 		std::chrono::milliseconds startTime)
 {
 
-	std::cout << std::endl << "X: " << startPoint.getXCoord() << std::endl;
-	std::cout << "Y: " << startPoint.getYCoord() << std::endl ;
-	std::cout << "H: " << startPoint.getHeading() << std::endl ;
+	LogMessage(LOG_LEVEL_DEBUG, "X: %s", startPoint.getXCoord());
+	LogMessage(LOG_LEVEL_DEBUG, "Y: %s", startPoint.getYCoord());
+	LogMessage(LOG_LEVEL_DEBUG, "H: %s", startPoint.getHeading());
 
 	using Eigen::MatrixXd;
 
