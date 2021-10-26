@@ -471,7 +471,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 }
 
 Trajectory Trajectory::reversed(double startTime = 0)const{
-	if(points.empty()){
+	if (points.empty()) {
 		throw std::invalid_argument("Attempted to reverse non existing trajectory");
 	}
 
