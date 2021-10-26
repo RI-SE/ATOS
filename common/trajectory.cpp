@@ -419,21 +419,17 @@ Trajectory Trajectory::createWilliamsonTurn(
 	for (int i = 0; i < noOfPoints; i++) {
 		timeArray[i] = i*timeStep;
 
-		if(timeArray[i] < accelerationPeriod)
-		{
+		if (timeArray[i] < accelerationPeriod) {
 			currSpeed = i * (acceleration*timeStep);
 			accelerationArray[i] = -acceleration;
 		}
-		else if(timeArray[i] < topSpeedPeriod + accelerationPeriod)
-		{
-			if(currSpeed > topSpeed)
-			{
+		else if (timeArray[i] < topSpeedPeriod + accelerationPeriod) {
+			if (currSpeed > topSpeed) {
 				currSpeed = topSpeed;
 			}
 			accelerationArray[i] = 0;
 		}
-		else
-		{
+		else {
 			currSpeed -= acceleration*timeStep;
 			accelerationArray[i] = acceleration;
 		}
