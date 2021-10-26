@@ -510,10 +510,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								}
 							}
 
-                            if (CmdPtr != NULL)
-                            {
+                            if (CmdPtr != NULL) {
                                 SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
-                                LogPrint("GOT MSCP");
+                                LogMessage(LOG_LEVEL_DEBUG, "Received MSCP command %s", SystemControlCommand);
                             }
 							else
 								LogMessage(LOG_LEVEL_WARNING, "Invalid MSCP command received");
