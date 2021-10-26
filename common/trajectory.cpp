@@ -333,7 +333,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 
 	using Eigen::MatrixXd;
 
-	double topSpeed = 2.7777;
+	constexpr double topSpeed = 10 / 3.6;
 	const int noOfPoints = 500;
 	double radius = turnRadius;
 	double heading = startPoint.getHeading();
