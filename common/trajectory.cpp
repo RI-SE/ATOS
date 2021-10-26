@@ -416,8 +416,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 
 	//Speed for each point
 	double currSpeed = 0;
-	for(int i = 0; i < noOfPoints; i++)
-	{
+	for (int i = 0; i < noOfPoints; i++) {
 		timeArray[i] = i*timeStep;
 
 		if(timeArray[i] < accelerationPeriod)
