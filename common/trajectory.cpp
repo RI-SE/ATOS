@@ -357,7 +357,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	double totalLength = len0 + len1 + len2;
 
 	//First section
-	int n0 = int(noOfPoints * (len0 / totalLength));
+	unsigned int n0 = static_cast<unsigned int>(noOfPoints * (len0 / totalLength));
 	theta0 = Eigen::VectorXd::LinSpaced(n0, M_PI, M_PI_2);
 
 	for (int i = 0; i < theta0.size(); i++) {
