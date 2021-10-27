@@ -34,7 +34,8 @@ public:
 
 		TrajectoryPoint relativeTo(const TrajectoryPoint& other) const;
 
-		void setTime(const double& value) { time = value; }
+		void setTime(const std::chrono::milliseconds& value) { time = value; }
+		void setTime(const double value) { const unsigned long timeVar = static_cast<unsigned long>( value * 1000 ); time = std::chrono::milliseconds(timeVar); }
 		void setPosition(const Eigen::Vector3d& value) { position = value; }
 		void setXCoord(const double& value) { position[0] = value; }
 		void setYCoord(const double& value) { position[1] = value; }
@@ -50,7 +51,8 @@ public:
 		void setCurvature(const double& value) { curvature = value; }
 		void setMode(const ModeType& value) { mode = value; }
 
-		double getTime() const { return time; }
+		std::chrono::milliseconds getTime() const { return time; }
+		const double getTime() const { double v  = 5; return v; }
 		Eigen::Vector3d getPosition() const { return position; }
 		double getXCoord() const { return position[0]; }
 		double getYCoord() const { return position[1]; }
@@ -97,7 +99,7 @@ public:
 		std::string toString() const;
 		std::string getFormatString() const;
 	private:
-		double time = 0;
+		std::chrono::milliseconds time = std::chrono::milliseconds(0);
 		Eigen::Vector3d position; //! x, y, z [m]
 		double heading = 0;		  //! Heading ccw from x axis [rad]
 		Eigen::Vector2d velocity; //! Vehicle frame, x forward [m/s]
@@ -136,6 +138,16 @@ public:
 	Trajectory reversed(double startTime) const;
 	Trajectory rescaledToVelocity(const double vel_m_s) const;
 	static Trajectory createWilliamsonTurn(double turnRadius = 5, double acceleration = 1, TrajectoryPoint startPoint = TrajectoryPoint(), std::chrono::milliseconds startTime = std::chrono::milliseconds(0));
+
+	template<class Rep,class Period>
+	Trajectory delayed(const std::chrono::duration<Rep,Period>& delay) const {
+		Trajectory newTrajectory = Trajectory(*this);
+		newTrajectory.name = newTrajectory.name + "_delayed";
+		for (auto& trajPt : newTrajectory.points) {
+			trajPt.setTime(trajPt.getTime() + delay);
+		}
+		return newTrajectory;
+	}
 
 private:
 	static const std::regex fileHeaderPattern;

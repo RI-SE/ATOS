@@ -227,7 +227,7 @@ Trajectory Trajectory::relativeTo(
 	relative.name = this->name + "_rel_" + other.name;
 	relative.version = this->version;
 	for (auto trajPt = this->points.begin(); trajPt != this->points.end(); ++trajPt) {
-		auto nearestTrajPtInOther = getNearest(other.points.begin(), other.points.end(), trajPt->getTime());
+		auto nearestTrajPtInOther = getNearest(other.points.begin(), other.points.end(), std::chrono::duration<double>(trajPt->getTime()).count());
 		// TODO maybe a check on time difference here
 		relative.points.push_back(trajPt->relativeTo(*nearestTrajPtInOther));
 	}
@@ -242,7 +242,7 @@ Trajectory::const_iterator Trajectory::getNearest(
 	// Assumption: input range is sorted by time
 	// Get first element with larger time than requested
 	const_iterator after = std::lower_bound(first, last, time, [](const TrajectoryPoint& trajPt, const double& t) {
-		return trajPt.getTime() < t;
+		return std::chrono::duration<double>(trajPt.getTime()).count() < t;
 	});
 
 	if (after == first) return first;
@@ -251,11 +251,11 @@ Trajectory::const_iterator Trajectory::getNearest(
 	const_iterator before = after - 1;
 
 	// Return the element nearest to the requested time
-	return (after->getTime() - time) < (time - before->getTime()) ? after : before;
+	return (std::chrono::duration<double>(after->getTime()).count() - time) < (time - std::chrono::duration<double>(before->getTime()).count()) ? after : before;
 }
 
 std::string Trajectory::TrajectoryPoint::getFormatString() const {
-	return "x:[m], y:[m], z:[m], hdg:[rad CW from N], "
+	return "x:[m], y:[m], z:[m], hdg:[rad CCW from x axis], "
 		   "vx:[m/s,longitudinal], vy:[m/s,lateral], "
 		   "ax:[m/s2,longitudinal], ay:[m/s2,lateral], "
 		   "c:[1/m], md:[]";
@@ -310,10 +310,10 @@ Trajectory Trajectory::rescaledToVelocity(
 		return newTrajectory;
 	}
 	double scaleFactor = vel_m_s / maxVel_m_s.norm();
-	double startTime = newTrajectory.points.front().getTime();
+	double startTime = std::chrono::duration<double>(newTrajectory.points.front().getTime()).count();
 	for (auto& point : newTrajectory.points) {
 		point.setVelocity(point.getVelocity()*scaleFactor);
-		point.setTime(startTime + (point.getTime()-startTime)/scaleFactor);
+		point.setTime(startTime + (std::chrono::duration<double>(point.getTime()).count()-startTime)/scaleFactor);
 		point.setAcceleration(point.getAcceleration()*pow(scaleFactor, 2));
 	}
 
@@ -387,7 +387,8 @@ Trajectory Trajectory::createWilliamsonTurn(
 
 	// Rotate turn to match start point
 	Eigen::Rotation2Dd rotM(headingRad);
-	resM = rotM * xyM;
+	resM = rotM.toRotationMatrix() * xyM;
+
 
 	int actualNoOfPoints = n0+n1+n2;
 
@@ -444,7 +445,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	std::vector<TrajectoryPoint> tempVector;
 	for(int i = 0; i < actualNoOfPoints; i++) {
 		TrajectoryPoint tempPoint;
-		tempPoint.setTime(timeArray[i]+startTime);
+		tempPoint.setTime(timeArray[i]+std::chrono::duration<double>(startTime).count());
 		tempPoint.setXCoord(resM(0,i));
 		tempPoint.setYCoord(resM(1,i));
 		tempPoint.setZCoord(startPoint.getZCoord());
@@ -501,7 +502,7 @@ Trajectory Trajectory::reversed(double startTime = 0)const{
 
 	for (unsigned long i = 0 ; i < newTrajectory.points.size(); i++) {
 		//newTrajectory.points[i].setTime(this->points.back().getTime() - this->points[i].getTime() + startTime);
-		newTrajectory.points[i].setTime(this->points[i].getTime() + startTime);
+		newTrajectory.points[i].setTime(this->points[i].getTime() + (std::chrono::milliseconds(static_cast<unsigned long>( startTime * 1000 ))));
 	}
 	return newTrajectory;
 }
@@ -527,7 +528,7 @@ void Trajectory::saveToFile(const std::string& fileName) const{
 		outputTraj << "TRAJECTORY;" << this->id <<";" << this->name << ";" << this->version << ";" << this->points.size() << ";" <<  "\n";
 		for (const auto& point : points) {
 			outputTraj << "LINE;"
-					   << std::fixed << std::setprecision(2) << point.getTime() << ";"
+					   << std::fixed << std::setprecision(2) << std::chrono::duration<double>(point.getTime()).count() << ";"
 					   << std::fixed << std::setprecision(6) << point.getXCoord() << ";"
 					   << std::fixed << std::setprecision(6) << point.getYCoord() << ";"
 					   << std::fixed << std::setprecision(6) << point.getZCoord() << ";"
