@@ -291,6 +291,32 @@ std::string Trajectory::toString() const {
 }
 
 /*!
+ * \brief Trajectory::appendedWith Creates a new trajectory where other has been
+ *			appended to the end of this object.
+ * \param other Trajectory to append.
+ * \return New trajectory, concatenation of two.
+ */
+Trajectory Trajectory::appendedWith(
+		const Trajectory &other) {
+	Trajectory newTrajectory = this->points.empty() ? Trajectory(other) : Trajectory(*this);
+	newTrajectory.name = this->name + "_app_" + other.name;
+	if (this->points.empty() || other.points.empty()) {
+		return newTrajectory;
+	}
+
+	auto firstTrajEndTime = points.back().getTime(); // TODO maybe a time offset between the two trajectories?
+	auto secondTrajStartTime = newTrajectory.points.front().getTime(); // TODO maybe a time offset between the two trajectories?
+
+	std::transform(other.points.begin(), other.points.end(),
+				   std::back_inserter(newTrajectory.points),
+				   [&](TrajectoryPoint otherPt) {
+		otherPt.setTime(otherPt.getTime() - secondTrajStartTime + firstTrajEndTime);
+		return otherPt;
+	});
+	return newTrajectory;
+}
+
+/*!
  * \brief Trajectory::TrajectoryPoint::rescaleToVelocity Returns a copy of the trajectory rescaled to match a certain constant speed.
  * \param vel_m_s Speed to which trajectory is to be reduced
  * \return Trajectory

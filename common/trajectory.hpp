@@ -134,6 +134,7 @@ public:
 	void saveToFile(const std::string& fileName) const;
 	Trajectory reversed() const;
 	Trajectory rescaledToVelocity(const double vel_m_s) const;
+	Trajectory appendedWith(const Trajectory& other);
 	template<class Rep,class Period>
 	Trajectory delayed(const std::chrono::duration<Rep,Period>& delay) const {
 		Trajectory newTrajectory = Trajectory(*this);
