@@ -255,9 +255,9 @@ Trajectory::const_iterator Trajectory::getNearest(
 }
 
 std::string Trajectory::TrajectoryPoint::getFormatString() const {
-	return "x:[m], y:[m], z:[m], hdg:[rad CW from N], "
-		   "vx:[m/s,longitudinal], vy:[m/s,lateral], "
-		   "ax:[m/s2,longitudinal], ay:[m/s2,lateral], "
+	return "x:[m], y:[m], z:[m], hdg:[rad CCW from x axis], "
+           "vx:[m/s,longitudinal], vy:[m/s,lateral], "
+           "ax:[m/s2,longitudinal], ay:[m/s2,lateral], "
 		   "c:[1/m], md:[]";
 }
 
@@ -288,6 +288,32 @@ std::string Trajectory::toString() const {
 		ss << "\n\t" << point.toString();
 	}
 	return ss.str();
+}
+
+/*!
+ * \brief Trajectory::appendedWith Creates a new trajectory where other has been
+ *			appended to the end of this object.
+ * \param other Trajectory to append.
+ * \return New trajectory, concatenation of two.
+ */
+Trajectory Trajectory::appendedWith(
+		const Trajectory &other) {
+	Trajectory newTrajectory = this->points.empty() ? Trajectory(other) : Trajectory(*this);
+	newTrajectory.name = this->name + "_app_" + other.name;
+	if (this->points.empty() || other.points.empty()) {
+		return newTrajectory;
+	}
+
+	auto firstTrajEndTime = points.back().getTime(); // TODO maybe a time offset between the two trajectories?
+	auto secondTrajStartTime = newTrajectory.points.front().getTime(); // TODO maybe a time offset between the two trajectories?
+
+	std::transform(other.points.begin(), other.points.end(),
+				   std::back_inserter(newTrajectory.points),
+				   [&](TrajectoryPoint otherPt) {
+		otherPt.setTime(otherPt.getTime() - secondTrajStartTime + firstTrajEndTime);
+		return otherPt;
+	});
+	return newTrajectory;
 }
 
 /*!
