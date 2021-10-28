@@ -57,8 +57,14 @@ void ObjectListener::listen() {
 				if (obj->getState() != prevObjState) {
 					switch (obj->getState()) {
 					case OBJECT_STATE_DISARMED:
-						LogMessage(LOG_LEVEL_INFO, "Object %u disarmed", obj->getTransmitterID());
-						handler->state->objectDisarmed(*handler, obj->getTransmitterID());
+						if (prevObjState == OBJECT_STATE_ABORTING) {
+							LogMessage(LOG_LEVEL_INFO, "Object %u abort cleared", obj->getTransmitterID());
+							handler->state->objectAbortDisarmed(*handler, obj->getTransmitterID());
+						}
+						else {
+							LogMessage(LOG_LEVEL_INFO, "Object %u disarmed", obj->getTransmitterID());
+							handler->state->objectDisarmed(*handler, obj->getTransmitterID());
+						}
 						break;
 					case OBJECT_STATE_POSTRUN:
 						break;
@@ -118,7 +124,7 @@ ObjectMonitorType transformCoordinate(
 	from_timeval(tvdiff, diff);
 
 	AngleAxis anchorToGlobal(anchor.position.heading_rad, Vector3d::UnitZ());
-	AngleAxis pointToGlobal(anchor.position.heading_rad+point.position.heading_rad, Vector3d::UnitZ());
+    AngleAxis pointToGlobal(point.position.heading_rad, Vector3d::UnitZ());
 	Vector3d pointPos(point.position.xCoord_m, point.position.yCoord_m, point.position.zCoord_m);
 	Vector3d anchorPos(anchor.position.xCoord_m, anchor.position.yCoord_m, anchor.position.zCoord_m);
 	Vector3d pointVel(point.speed.longitudinal_m_s, point.speed.lateral_m_s, 0.0);
