@@ -119,6 +119,7 @@ public:
 		LogMessage(LOG_LEVEL_INFO, "Disconnecting object %u",
 				   this->getTransmitterID());
 		this->comms.disconnect();
+		this->osiChannel.disconnect();
 	}
 
 	void sendSettings();
