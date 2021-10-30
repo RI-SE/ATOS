@@ -53,6 +53,9 @@ void ScenarioHandler::handleAllClearCommand() {
 void ScenarioHandler::handleActionConfigurationCommand(
 		const TestScenarioCommandAction& action) {
 	this->state->settingModificationRequested(*this);
+    if (objects.count(action.objectID) == 0) {
+        throw std::invalid_argument("Attempted to configure action for nonexistent object " + std::to_string(action.objectID));
+    }
 	if (action.command == ACTION_PARAMETER_VS_SEND_START) {
 		LogMessage(LOG_LEVEL_INFO, "Configuring delayed start for object %u", action.objectID);
 		objects[action.objectID].setTriggerStart(true);

@@ -12,7 +12,12 @@ void ObjectControl::Ready::onEnter(
 void ObjectControl::Ready::armRequest(
 		ScenarioHandler& handler) {
 	if (!handler.areAllObjectsIn(std::set({OBJECT_STATE_DISARMED, OBJECT_STATE_ARMED}))) {
-		throw std::invalid_argument("Not all objects in valid state prior to arm");
+        std::stringstream ss;
+        for (const auto& object : handler.objects) {
+            ss << object.first << ": " << objectStateToASCII(object.second.getState());
+            ss << std::endl;
+        }
+        throw std::invalid_argument("Not all objects in valid state prior to arm\n" + ss.str());
 	}
 }
 
