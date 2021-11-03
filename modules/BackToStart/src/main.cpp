@@ -145,10 +145,9 @@ void backToStart() {
 	}
 
 	//If pass save files
-	for(int i = 0; i < objects.size(); i++)
-	{
-		std::cout << b2sTrajectories[i].name << std::endl;
-		b2sTrajectories[i].saveToFile(b2sTrajectories[i].name);
+	for (const auto& traj : b2sTrajectories) {
+		LogMessage(LOG_LEVEL_DEBUG, "Generated back-to-start trajectory %s", traj.name.c_str());
+		traj.saveToFile(traj.name + ".traj");
 	}
 
 	const char *btsChar = "BTS-PASS";
