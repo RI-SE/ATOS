@@ -291,6 +291,32 @@ std::string Trajectory::toString() const {
 }
 
 /*!
+ * \brief Trajectory::appendedWith Creates a new trajectory where other has been
+ *			appended to the end of this object.
+ * \param other Trajectory to append.
+ * \return New trajectory, concatenation of two.
+ */
+Trajectory Trajectory::appendedWith(
+		const Trajectory &other) {
+	Trajectory newTrajectory = this->points.empty() ? Trajectory(other) : Trajectory(*this);
+	newTrajectory.name = this->name + "_app_" + other.name;
+	if (this->points.empty() || other.points.empty()) {
+		return newTrajectory;
+	}
+
+	auto firstTrajEndTime = points.back().getTime(); // TODO maybe a time offset between the two trajectories?
+	auto secondTrajStartTime = newTrajectory.points.front().getTime(); // TODO maybe a time offset between the two trajectories?
+
+	std::transform(other.points.begin(), other.points.end(),
+				   std::back_inserter(newTrajectory.points),
+				   [&](TrajectoryPoint otherPt) {
+		otherPt.setTime(otherPt.getTime() - secondTrajStartTime + firstTrajEndTime);
+		return otherPt;
+	});
+	return newTrajectory;
+}
+
+/*!
  * \brief Trajectory::TrajectoryPoint::rescaleToVelocity Returns a copy of the trajectory rescaled to match a certain constant speed.
  * \param vel_m_s Speed to which trajectory is to be reduced
  * \return Trajectory
@@ -327,6 +353,8 @@ Trajectory Trajectory::createWilliamsonTurn(
 		std::chrono::milliseconds startTime)
 {
 
+	using namespace std::chrono;
+
 	LogMessage(LOG_LEVEL_DEBUG, "X: %s", startPoint.getXCoord());
 	LogMessage(LOG_LEVEL_DEBUG, "Y: %s", startPoint.getYCoord());
 	LogMessage(LOG_LEVEL_DEBUG, "H: %s", startPoint.getHeading());
@@ -347,7 +375,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	Eigen::Array<double, 1,noOfPoints> headingArray;
 	Eigen::Array<double, 1,noOfPoints> speedArray;
 	Eigen::Array<double, 1,noOfPoints> accelerationArray;
-	Eigen::Array<double, 1,noOfPoints> timeArray;
+	Eigen::Array<milliseconds, 1,noOfPoints> timeArray;
 
 
 	//Calculate length of each section
@@ -403,16 +431,16 @@ Trajectory Trajectory::createWilliamsonTurn(
 	//Speed
 
 	//AccelerationSection
-	double accelerationPeriod = topSpeed / acceleration;                //t = (v - u) / a
+	auto accelerationPeriod = milliseconds(static_cast<long>(topSpeed / acceleration * 1000));
 	double accelerationDistance = pow(topSpeed, 2) / acceleration / 2;
 
 	//Topspeed section
 	double topSpeedDistance = totalLength - accelerationDistance*2;
-	double topSpeedPeriod = topSpeedDistance / topSpeed;
+	auto topSpeedPeriod = milliseconds(static_cast<long>(topSpeedDistance / topSpeed * 1000));
 
-	double totalRuntime = accelerationPeriod + topSpeedPeriod + accelerationPeriod; //Accelerate -> Top Speed -> Decelerate
+	auto totalRuntime = accelerationPeriod + topSpeedPeriod + accelerationPeriod; //Accelerate -> Top Speed -> Decelerate
 
-	double timeStep = totalRuntime / noOfPoints;
+	auto timeStep = totalRuntime / noOfPoints;
 
 
 	//Speed for each point
@@ -421,7 +449,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 		timeArray[i] = i*timeStep;
 
 		if (timeArray[i] < accelerationPeriod) {
-			currSpeed = i * (acceleration*timeStep);
+			currSpeed = i * acceleration* duration_cast<seconds>(timeStep).count();
 			accelerationArray[i] = -acceleration;
 		}
 		else if (timeArray[i] < topSpeedPeriod + accelerationPeriod) {
@@ -431,7 +459,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 			accelerationArray[i] = 0;
 		}
 		else {
-			currSpeed -= acceleration*timeStep;
+			currSpeed -= acceleration* duration_cast<seconds>(timeStep).count();
 			accelerationArray[i] = acceleration;
 		}
 		speedArray[i] = currSpeed;
@@ -445,7 +473,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	std::vector<TrajectoryPoint> tempVector;
 	for(int i = 0; i < actualNoOfPoints; i++) {
 		TrajectoryPoint tempPoint;
-		tempPoint.setTime(timeArray[i]+std::chrono::duration<double>(startTime).count());
+		tempPoint.setTime(timeArray[i]+startTime);
 		tempPoint.setXCoord(resM(0,i));
 		tempPoint.setYCoord(resM(1,i));
 		tempPoint.setZCoord(startPoint.getZCoord());

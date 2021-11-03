@@ -55,7 +55,7 @@ int main()
 
 		case COMM_REMOTECTRL_MANOEUVRE:
 			LogMessage(LOG_LEVEL_INFO,"Received COMM_REMOTECTRL_MANOEUVRE command");
-			backToStart();
+			//backToStart();
 			break;
 		default:
 			LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
@@ -116,26 +116,26 @@ void backToStart() {
 		LogMessage(LOG_LEVEL_INFO, "TXID: %d", transmitterIDs[i]);
 		currentTraj = objects.at(transmitterIDs[i]).getTrajectory();
 
-		//Add first turn
-		b2sTraj.addWilliamsonTurn(5, 1, currentTraj.points[currentTraj.points.size()-1], 0);
-
-		//Add reversed original traj
-		Trajectory rev = currentTraj;
-		rev = rev.reversed(b2sTraj.points[b2sTraj.points.size()-1].getTime());
-		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(rev.points), std::end(rev.points));
-
-		//Add last turn
-		b2sTraj.addWilliamsonTurn(5, 1,b2sTraj.points[b2sTraj.points.size()-1], b2sTraj.points[b2sTraj.points.size()-1].getTime());
+		////Add first turn
+		//b2sTraj.addWilliamsonTurn(5, 1, currentTraj.points[currentTraj.points.size()-1], 0);
+		//
+		////Add reversed original traj
+		//Trajectory rev = currentTraj;
+		//rev = rev.reversed(b2sTraj.points[b2sTraj.points.size()-1].getTime());
+		//b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(rev.points), std::end(rev.points));
+		//
+		////Add last turn
+		//b2sTraj.addWilliamsonTurn(5, 1,b2sTraj.points[b2sTraj.points.size()-1], b2sTraj.points[b2sTraj.points.size()-1].getTime());
 
 		//Check distance
-		if(!isObjectNearTrajectoryStart(transmitterIDs[i], b2sTraj))
-		{
-			LogMessage(LOG_LEVEL_INFO, "Object %u not near starting point: sending back-to-start failure", txID);
-			const char *btsChar = "BTS-FAIL";
-			iCommSend(COMM_BACKTOSTART, btsChar, sizeof (btsChar));
-			return;
-		}
-		b2sTrajectories[i] = b2sTraj;
+		//if(!isObjectNearTrajectoryStart(transmitterIDs[i], b2sTraj))
+		//{
+		//	LogMessage(LOG_LEVEL_INFO, "Object %u not near starting point: sending back-to-start failure", txID);
+		//	const char *btsChar = "BTS-FAIL";
+		//	iCommSend(COMM_BACKTOSTART, btsChar, sizeof (btsChar));
+		//	return;
+		//}
+		//b2sTrajectories[i] = b2sTraj;
 
 	}
 

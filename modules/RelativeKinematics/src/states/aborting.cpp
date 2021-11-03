@@ -5,12 +5,12 @@ ObjectControl::Aborting::Aborting() {
 }
 
 void ObjectControl::Aborting::onExit(
-		ScenarioHandler& handler) {
-	handler.allClearObjects();
+		ScenarioHandler&) {
 }
 
 void ObjectControl::Aborting::allClearRequest(
-		ScenarioHandler&) {
+		ScenarioHandler& handler) {
+		handler.allClearObjects();
 }
 
 void ObjectControl::Aborting::connectedToObject(
@@ -43,6 +43,12 @@ void ObjectControl::Aborting::objectAborting(
 	// TODO
 }
 
+void ObjectControl::Aborting::objectAbortDisarmed(
+	ScenarioHandler &,
+	uint32_t) {
+	// TODO
+}
+
 void ObjectControl::Aborting::objectDisarmed(
 		ScenarioHandler &handler,
 		uint32_t id) {
@@ -55,6 +61,11 @@ void ObjectControl::Aborting::objectArmed(
 		uint32_t id) {
 	LogMessage(LOG_LEVEL_WARNING, "Object armed while expecting abort");
 	handler.disconnectObject(id); // TODO just stop sending HEAB to keep tracking available
+}
+
+
+void ObjectControl::Aborting::allObjectsAbortDisarmed(
+		ScenarioHandler &handler) {
 }
 
 
@@ -99,6 +110,19 @@ void RelativeKinematics::Aborting::objectAborting(
 	// TODO
 }
 
+void RelativeKinematics::Aborting::objectAbortDisarmed(
+	ScenarioHandler &handler,
+	uint32_t id) {
+	ObjectControl::Aborting::objectAbortDisarmed(handler,id);
+}
+
+
+void RelativeKinematics::Aborting::allObjectsAbortDisarmed(
+		ScenarioHandler &handler) {
+	ObjectControl::Aborting::allObjectsAbortDisarmed(handler);
+	setState(handler, new RelativeKinematics::Ready);			
+}
+
 
 /*! ******************************************************
  * \section AbsoluteKinematics
@@ -141,3 +165,15 @@ void AbsoluteKinematics::Aborting::objectAborting(
 	// TODO
 }
 
+void AbsoluteKinematics::Aborting::objectAbortDisarmed(
+	ScenarioHandler &handler,
+	uint32_t id) {
+	ObjectControl::Aborting::objectAbortDisarmed(handler,id);
+}
+
+
+void AbsoluteKinematics::Aborting::allObjectsAbortDisarmed(
+		ScenarioHandler &handler) {
+	ObjectControl::Aborting::allObjectsAbortDisarmed(handler);
+	setState(handler, new AbsoluteKinematics::Ready);			
+}
