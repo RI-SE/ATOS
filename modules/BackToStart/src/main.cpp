@@ -135,7 +135,7 @@ void backToStart() {
 			iCommSend(COMM_BACKTOSTART, btsChar, sizeof (btsChar));
 			return;
 		}
-		b2sTrajectories[i] = b2sTraj;
+		b2sTrajectories.push_back(b2sTraj);
 
 	}
 
