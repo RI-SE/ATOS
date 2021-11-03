@@ -623,7 +623,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
 			break;
 
-        case COMM_BACKTOSTART:
+		case COMM_BACKTOSTART_RESPONSE:
             if(strcmp(pcRecvBuffer, "BTS-FAIL"))
             {
                 LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
