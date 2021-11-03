@@ -81,10 +81,7 @@ bool isObjectNearTrajectoryStart(
 
 	auto firstPointInTraj = trajectory.points.front().getISOPosition();
 
-	LogMessage(LOG_LEVEL_INFO,"FIRST POINT IN TRAJ: %f:%f:%f:%f",firstPointInTraj.xCoord_m, firstPointInTraj.yCoord_m, firstPointInTraj.zCoord_m,firstPointInTraj.heading_rad);
-
-	LogMessage(LOG_LEVEL_INFO, "HEADING: %f, POSITION_X: %f", firstPointInTraj.heading_rad, firstPointInTraj.xCoord_m);
-
+	LogMessage(LOG_LEVEL_DEBUG, "First point in trajectory: %s", firstPointInTraj.toString().c_str());
 	return UtilIsPositionNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_DISTANCE_TOLERANCE)
 			&& UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE);
 }
@@ -100,10 +97,9 @@ void backToStart() {
 	DataDictionaryGetObjectTransmitterIDs(transmitterIDs, noOfObjects);
 
 	//Array to save b2s trajs
-	Trajectory b2sTrajectories[noOfObjects];
+	std::vector<Trajectory> b2sTrajectories;
 
-	for(int i = 0; i < objects.size(); i++)
-	{
+	for (const auto txID : transmitterIDs) {
 		LogMessage(LOG_LEVEL_INFO, "TRAJECTORY: %d", i);
 		std::string trajName = "BTS" + std::to_string(i);
 		Trajectory currentTraj;
@@ -120,16 +116,14 @@ void backToStart() {
 		b2sTraj.addWilliamsonTurn(5, 1, currentTraj.points[currentTraj.points.size()-1], 0);
 
 		//Add reversed original traj
-		Trajectory rev = currentTraj;
-		rev = rev.reversed(b2sTraj.points[b2sTraj.points.size()-1].getTime());
+		auto rev = currentTraj.reversed(b2sTraj.points[b2sTraj.points.size()-1].getTime());
 		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(rev.points), std::end(rev.points));
 
 		//Add last turn
 		b2sTraj.addWilliamsonTurn(5, 1,b2sTraj.points[b2sTraj.points.size()-1], b2sTraj.points[b2sTraj.points.size()-1].getTime());
 
 		//Check distance
-		if(!isObjectNearTrajectoryStart(transmitterIDs[i], b2sTraj))
-		{
+		if (!isObjectNearTrajectoryStart(txID, b2sTraj)) {
 			LogMessage(LOG_LEVEL_INFO, "Object %u not near starting point: sending back-to-start failure", txID);
 			const char *btsChar = "BTS-FAIL";
 			iCommSend(COMM_BACKTOSTART, btsChar, sizeof (btsChar));
