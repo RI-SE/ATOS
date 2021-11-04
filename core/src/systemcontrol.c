@@ -648,7 +648,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		}
 
         switch (SystemControlCommand) {
-            //LogMessage(LOG_LEVEL_INFO, SystemControlCommand);
 			// can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
 		case Idle_0:
 			break;
