@@ -624,7 +624,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			break;
 
 		case COMM_BACKTOSTART_RESPONSE:
-            if(strcmp(pcRecvBuffer, "BTS-FAIL"))
+			if(atoi(pcRecvBuffer) == BTS_FAIL)
             {
                 LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
                 bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -632,7 +632,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
                                                  "0", 1,
                                                  &ClientSocket, 0);
             }
-            else if(strcmp(pcRecvBuffer, "BTS-PASS"))
+			else if(atoi(pcRecvBuffer) == BTS_PASS)
             {
                 LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
                 bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -642,7 +642,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             }
             else
             {
-                LogMessage(LOG_LEVEL_ERROR, "Cannot parse COMM_BACKTOSTART message.");
+				LogMessage(LOG_LEVEL_ERROR, "Cannot parse COMM_BACKTOSTART_RESPONSE message.");
             }
             break;
 
@@ -1173,7 +1173,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 						if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
 							memcpy(pcBuffer, &rcCommand, sizeof (rcCommand));
-							iCommSend(COMM_REMOTECTRL_MANOEUVRE, pcBuffer, sizeof (rcCommand));	// TODO check return value
+							iCommSend(COMM_BACKTOSTART_CALL, pcBuffer, sizeof (rcCommand));
 							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						}
 					}
