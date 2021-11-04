@@ -634,7 +634,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
             }
 			else if(atoi(pcRecvBuffer) == BTS_PASS)
             {
-                LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
+                LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", pcRecvBuffer);
                 bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
                                                  "1", 1,
