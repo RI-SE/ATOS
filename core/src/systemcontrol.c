@@ -626,7 +626,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case COMM_BACKTOSTART_RESPONSE:
 			if(atoi(pcRecvBuffer) == BTS_FAIL)
             {
-                LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
+                LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", pcRecvBuffer);
                 bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
                                                  "0", 1,
