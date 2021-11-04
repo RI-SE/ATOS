@@ -626,16 +626,16 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case COMM_BACKTOSTART_RESPONSE:
 			if(atoi(pcRecvBuffer) == BTS_FAIL)
             {
-                LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
-                bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
                                                  "0", 1,
                                                  &ClientSocket, 0);
             }
 			else if(atoi(pcRecvBuffer) == BTS_PASS)
             {
-                LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
-                bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
                 SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
                                                  "1", 1,
                                                  &ClientSocket, 0);
