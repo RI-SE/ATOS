@@ -588,9 +588,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		bzero(pcRecvBuffer, SC_RECV_MESSAGE_BUFFER);
 		bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 
-        //BTS
-        char *btsConstChar = "BTS:";
-
 		switch (iCommand) {
 		case COMM_FAILURE:
 			if (SystemControlState == SERVER_STATE_INWORK) {
