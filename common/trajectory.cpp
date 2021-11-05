@@ -355,14 +355,14 @@ Trajectory Trajectory::createWilliamsonTurn(
 
 	using namespace std::chrono;
 
-	LogMessage(LOG_LEVEL_DEBUG, "X: %s", startPoint.getXCoord());
-	LogMessage(LOG_LEVEL_DEBUG, "Y: %s", startPoint.getYCoord());
-	LogMessage(LOG_LEVEL_DEBUG, "H: %s", startPoint.getHeading());
+	LogMessage(LOG_LEVEL_DEBUG, "X: %f", startPoint.getXCoord());
+	LogMessage(LOG_LEVEL_DEBUG, "Y: %f", startPoint.getYCoord());
+	LogMessage(LOG_LEVEL_DEBUG, "H: %f", startPoint.getHeading());
 
 	using Eigen::MatrixXd;
 
 	constexpr double topSpeed = 10 / 3.6;
-	const int noOfPoints = 500;
+	const int calculatedNoOfPoints = 500;
 	double radius = turnRadius;
 	double heading = startPoint.getHeading();
 	double headingRad = heading;
@@ -370,12 +370,12 @@ Trajectory Trajectory::createWilliamsonTurn(
 	Eigen::VectorXd theta0;         //First section
 	Eigen::VectorXd theta1;         //Second section
 	Eigen::VectorXd endStraight;    //Third section
-	Eigen::Matrix<double, 2, noOfPoints> xyM;
-	Eigen::Matrix<double, 2, noOfPoints> resM;
-	Eigen::Array<double, 1,noOfPoints> headingArray;
-	Eigen::Array<double, 1,noOfPoints> speedArray;
-	Eigen::Array<double, 1,noOfPoints> accelerationArray;
-	Eigen::Array<milliseconds, 1,noOfPoints> timeArray;
+	Eigen::Matrix<double, 2, calculatedNoOfPoints> xyM;
+	Eigen::Matrix<double, 2, calculatedNoOfPoints> resM;
+	Eigen::Array<double, 1,calculatedNoOfPoints> headingArray;
+	Eigen::Array<double, 1,calculatedNoOfPoints> speedArray;
+	Eigen::Array<double, 1,calculatedNoOfPoints> accelerationArray;
+	Eigen::Array<milliseconds, 1,calculatedNoOfPoints> timeArray;
 
 
 	//Calculate length of each section
@@ -385,7 +385,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	double totalLength = len0 + len1 + len2;
 
 	//First section
-	unsigned int n0 = static_cast<unsigned int>(noOfPoints * (len0 / totalLength));
+	unsigned int n0 = static_cast<unsigned int>(calculatedNoOfPoints * (len0 / totalLength));
 	theta0 = Eigen::VectorXd::LinSpaced(n0, M_PI, M_PI_2);
 
 	for (int i = 0; i < theta0.size(); i++) {
@@ -395,7 +395,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	}
 
 	//second section
-	unsigned int n1 = static_cast<unsigned int>(noOfPoints * (len1 / totalLength));
+	unsigned int n1 = static_cast<unsigned int>(calculatedNoOfPoints * (len1 / totalLength));
 	theta1 = Eigen::VectorXd::LinSpaced(n1, -1*M_PI_2, M_PI);
 
 	for (int i = 0; i < theta1.size(); i++) {
@@ -405,7 +405,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	}
 
 	//third section
-	unsigned int n2 = static_cast<unsigned int>(noOfPoints * (len2 / totalLength));
+	unsigned int n2 = static_cast<unsigned int>(calculatedNoOfPoints * (len2 / totalLength));
 	endStraight = Eigen::VectorXd::LinSpaced(n2, radius * 2, 0);
 	for (int i = 0; i < n2; i++) {
 		xyM(0,i+n0+n1) = 0;
@@ -426,7 +426,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 		resM(1,i) += startPoint.getYCoord();
 	}
 
-	headingArray += (headingRad-M_PI_2) * Eigen::ArrayXd::Ones(noOfPoints);
+	headingArray += (headingRad-M_PI_2) * Eigen::ArrayXd::Ones(calculatedNoOfPoints);
 
 	//Speed
 
@@ -440,12 +440,12 @@ Trajectory Trajectory::createWilliamsonTurn(
 
 	auto totalRuntime = accelerationPeriod + topSpeedPeriod + accelerationPeriod; //Accelerate -> Top Speed -> Decelerate
 
-	auto timeStep = totalRuntime / noOfPoints;
+	auto timeStep = totalRuntime / calculatedNoOfPoints;
 
 
 	//Speed for each point
 	double currSpeed = 0;
-	for (int i = 0; i < noOfPoints; i++) {
+	for (int i = 0; i < calculatedNoOfPoints; i++) {
 		timeArray[i] = i*timeStep;
 
 		if (timeArray[i] < accelerationPeriod) {
@@ -466,7 +466,14 @@ Trajectory Trajectory::createWilliamsonTurn(
 
 	}
 
-	Eigen::VectorXd curvatureArray(noOfPoints);
+	Eigen::VectorXd curvatureArray(actualNoOfPoints);
+	auto v1 = -1/radius*Eigen::ArrayXd::Ones(n0);
+	auto v2 = -1/radius*Eigen::ArrayXd::Ones(n1);
+	auto v3 = -1/radius*Eigen::ArrayXd::Zero(n2);
+	std::cout << curvatureArray.rows() << ", "  << curvatureArray.cols() << std::endl;
+	std::cout << v1.rows() << ", "  << v1.cols() << std::endl;
+	std::cout << v2.rows() << ", "  << v2.cols() << std::endl;
+	std::cout << v3.rows() << ", "  << v3.cols() << std::endl;
 	curvatureArray << -1/radius*Eigen::ArrayXd::Ones(n0), 1/radius*Eigen::ArrayXd::Ones(n1), Eigen::ArrayXd::Zero(n2);
 
 	//create trajectory points
@@ -499,7 +506,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	return retval;
 }
 
-Trajectory Trajectory::reversed(double startTime = 0)const{
+Trajectory Trajectory::reversed()const{
 	if (points.empty()) {
 		throw std::invalid_argument("Attempted to reverse non existing trajectory");
 	}
@@ -530,7 +537,7 @@ Trajectory Trajectory::reversed(double startTime = 0)const{
 
 	for (unsigned long i = 0 ; i < newTrajectory.points.size(); i++) {
 		//newTrajectory.points[i].setTime(this->points.back().getTime() - this->points[i].getTime() + startTime);
-		newTrajectory.points[i].setTime(this->points[i].getTime() + (std::chrono::milliseconds(static_cast<unsigned long>( startTime * 1000 ))));
+		newTrajectory.points[i].setTime(this->points[i].getTime());
 	}
 	return newTrajectory;
 }

@@ -135,7 +135,7 @@ public:
 	std::string toString() const;
 
 	void saveToFile(const std::string& fileName) const;
-	Trajectory reversed(double startTime) const;
+	Trajectory reversed() const;
 	Trajectory rescaledToVelocity(const double vel_m_s) const;
 	static Trajectory createWilliamsonTurn(double turnRadius = 5, double acceleration = 1, TrajectoryPoint startPoint = TrajectoryPoint(), std::chrono::milliseconds startTime = std::chrono::milliseconds(0));
 
