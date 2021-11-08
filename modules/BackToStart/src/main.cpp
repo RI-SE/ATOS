@@ -48,7 +48,6 @@ int main()
 		case COMM_INIT:
 			try {
 			loadObjectFiles();
-			backToStart();
 		} catch (std::invalid_argument& e) {
 				LogMessage(LOG_LEVEL_ERROR, "Loading of object files failed - %s", e.what());
 				iCommSend(COMM_FAILURE, nullptr, 0);
@@ -119,15 +118,17 @@ void backToStart() {
 		//Add first turn
 		Trajectory turn1 = Trajectory::createWilliamsonTurn(5, 1, currentTraj.points.back());
 		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(turn1.points), std::end(turn1.points));
+
 		//Add reversed original traj
 		auto rev = currentTraj.reversed();
-		rev.delayed(b2sTraj.points.end()->getTime());
+		rev = rev.delayed(b2sTraj.points.back().getTime());
 		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(rev.points), std::end(rev.points));
 
 		//Add last turn
-
 		Trajectory turn2 = Trajectory::createWilliamsonTurn(5, 1, b2sTraj.points[b2sTraj.points.size()-1]);
-		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(turn1.points), std::end(turn1.points));
+		turn2 = turn2.delayed(b2sTraj.points.back().getTime());
+		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(turn2.points), std::end(turn2.points));
+
 		//Check distance
 		if(!isObjectNearTrajectoryStart(txID, b2sTraj))
 		{
