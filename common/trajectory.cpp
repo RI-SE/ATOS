@@ -391,7 +391,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	for (int i = 0; i < theta0.size(); i++) {
 		xyM(0,i) = radius * cos(theta0[i]) + radius;
 		xyM(1,i) = radius * sin(theta0[i]);
-		headingArray[i] = theta0[i] - M_PI_2;
+		headingArray[i] = theta0[i] + M_PI_2 + M_PI;
 	}
 
 	//second section
@@ -401,7 +401,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 	for (int i = 0; i < theta1.size(); i++) {
 		xyM(0,i+n0) = radius * cos(theta1[i]) + radius;
 		xyM(1,i+n0) = radius * sin(theta1[i]) + 2 * radius;
-		headingArray[i+n0] = theta1[i] + M_PI_2;
+		headingArray[i+n0] = theta1[i] - M_PI_2 + M_PI;
 	}
 
 	//third section
@@ -410,11 +410,11 @@ Trajectory Trajectory::createWilliamsonTurn(
 	for (int i = 0; i < n2; i++) {
 		xyM(0,i+n0+n1) = 0;
 		xyM(1,i+n0+n1) = endStraight[i];
-		headingArray[i+n0+n1] = -M_PI_2;
+		headingArray[i+n0+n1] = M_PI_2 + M_PI;
 	}
 
 	// Rotate turn to match start point
-	Eigen::Rotation2Dd rotM(headingRad);
+	Eigen::Rotation2Dd rotM(headingRad-M_PI_2);
 	resM = rotM.toRotationMatrix() * xyM;
 
 
