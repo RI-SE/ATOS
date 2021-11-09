@@ -74,13 +74,8 @@ if(ENABLE_TESTS)
 endif()
 
 # Add corresponding subprojects
-add_subdirectory(util/C/time)
-add_subdirectory(util/C/logging)
-add_subdirectory(util/C/mqbus)
-add_subdirectory(util/C/shmem)
-add_subdirectory(util/C/iso22133)
-add_subdirectory(util/C/mathutils)
-add_subdirectory(util/C/osihandler)
+add_subdirectory(util/C util EXCLUDE_FROM_ALL)
+
 add_subdirectory(common)
 add_subdirectory(core)
 foreach(MODULE ${ENABLED_MODULES})
