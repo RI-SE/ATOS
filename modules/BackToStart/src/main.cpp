@@ -104,7 +104,6 @@ void backToStart() {
 	for (const auto txID : transmitterIDs) {
 		LogMessage(LOG_LEVEL_INFO, "TRAJECTORY: %d", txID);
 		std::string trajName = "BTS" + std::to_string(txID);
-		//Trajectory currentTraj;
 		Trajectory b2sTraj;
 
 		//Name
