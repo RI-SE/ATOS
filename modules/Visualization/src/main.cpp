@@ -201,14 +201,14 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& ReSendOse
 int awaitConnection(TCPHandler& tcpPort, UDPHandler& udpPort, enum COMMAND& receivedCommand, bool& sendOsemOnConnection) {
 	receivedCommand = COMM_INV;
 	char mqRecvData[MBUS_MAX_DATALEN];
-	if (tcpPort.getConnectionOn() != 1) {
+    if (tcpPort.getConnectionOn() != TCPHandler::SUCCESS) {
 		LogMessage(LOG_LEVEL_INFO, "Awaiting TCP connection...");
 	}
 
-	while (tcpPort.getConnectionOn() != 1) {
+    while (tcpPort.getConnectionOn() != TCPHandler::SUCCESS) {
 		tcpPort.TCPHandlerAccept(5);
 
-		if (tcpPort.getConnectionOn() == 1) {
+        if (tcpPort.getConnectionOn() == TCPHandler::SUCCESS) {
 			LogMessage(LOG_LEVEL_INFO, "TCP connection established with: %s port: %d ",tcpPort.getClientIP().c_str(), tcpPort.PORT);
 			int Success = udpPort.setIP(tcpPort.getClientIP());
 			if (Success >= 0) {
