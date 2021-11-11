@@ -1159,7 +1159,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						switch (atoi(SystemControlArgument[1])) {
 						case MSCP_BACK_TO_START:
-                            LogPrint("GOT BACK TO START");
                             rcCommand.manoeuvre = MANOEUVRE_BACK_TO_START;
 							break;
 						default:
