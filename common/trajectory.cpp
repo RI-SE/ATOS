@@ -450,7 +450,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 
 		if (timeArray[i] < accelerationPeriod) {
 			currSpeed = i * acceleration* duration_cast<seconds>(timeStep).count();
-			accelerationArray[i] = -acceleration;
+			accelerationArray[i] = acceleration;
 		}
 		else if (timeArray[i] < topSpeedPeriod + accelerationPeriod) {
 			if (currSpeed > topSpeed) {
@@ -460,7 +460,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 		}
 		else {
 			currSpeed -= acceleration* duration_cast<seconds>(timeStep).count();
-			accelerationArray[i] = acceleration;
+			accelerationArray[i] = -acceleration;
 		}
 		speedArray[i] = currSpeed;
 
@@ -532,6 +532,12 @@ Trajectory Trajectory::reversed()const{
 		}
 		catch (std::out_of_range) {
 			LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized lateral acceleration");
+		}
+		try {
+			point.setLongitudinalAcceleration(point.getLongitudinalAcceleration()*-1);
+		}
+		catch (std::out_of_range) {
+			LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized longitudinal acceleration");
 		}
 	}
 
