@@ -284,9 +284,9 @@ typedef enum {
 } ObjectEnabledType;
 
 typedef enum {
-	BTS_PASS = 1,
-	BTS_FAIL = 2,
-	BTS_ERROR = 3
+	BTS_FAIL = -2,
+	BTS_ERROR = -1,
+	BTS_PASS = 0
 } BTSResponse;
 
 
