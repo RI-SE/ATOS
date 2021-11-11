@@ -7,8 +7,8 @@
 
 #define MODULE_NAME "BackToStart"
 
-#define MAX_BTS_DISTANCE_TOLERANCE 15	//DEGREES
-#define MAX_BTS_HEADING_TOLERANCE 30	//METERS
+#define MAX_BTS_DISTANCE_TOLERANCE_M 15.0
+#define MAX_BTS_HEADING_TOLERANCE_DEG 30.0
 
 char btsResponseBuffer[sizeof (BTSResponse)];
 
