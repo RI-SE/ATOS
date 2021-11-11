@@ -542,7 +542,6 @@ Trajectory Trajectory::reversed()const{
 	}
 
 	for (unsigned long i = 0 ; i < newTrajectory.points.size(); i++) {
-		//newTrajectory.points[i].setTime(this->points.back().getTime() - this->points[i].getTime() + startTime);
 		newTrajectory.points[i].setTime(this->points[i].getTime());
 	}
 	return newTrajectory;
