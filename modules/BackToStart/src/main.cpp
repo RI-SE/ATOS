@@ -94,8 +94,8 @@ void backToStart() {
 	//Get transmitter IDs
 	uint32_t noOfObjects;
 	DataDictionaryGetNumberOfObjects(&noOfObjects);
-	uint32_t transmitterIDs[noOfObjects];
-	DataDictionaryGetObjectTransmitterIDs(transmitterIDs, noOfObjects);
+	std::vector<uint32_t> transmitterIDs(noOfObjects);
+	DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size());
 
 	//Array to save b2s trajs
 	std::vector<Trajectory> b2sTrajectories;
