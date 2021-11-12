@@ -443,7 +443,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 		timeArray[i] = i*timeStep;
 
 		if (timeArray[i] < accelerationPeriod) {
-			currSpeed = i * acceleration* duration_cast<seconds>(timeStep).count();
+			currSpeed += acceleration * duration_cast<milliseconds>(timeStep).count()/1000;
 			accelerationArray[i] = acceleration;
 		}
 		else if (timeArray[i] < topSpeedPeriod + accelerationPeriod) {
@@ -453,7 +453,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 			accelerationArray[i] = 0;
 		}
 		else {
-			currSpeed -= acceleration* duration_cast<seconds>(timeStep).count();
+			currSpeed -= acceleration * duration_cast<milliseconds>(timeStep).count()/1000;
 			accelerationArray[i] = -acceleration;
 		}
 		speedArray[i] = currSpeed;

@@ -81,8 +81,8 @@ bool isObjectNearTrajectoryStart(
 	auto firstPointInTraj = trajectory.points.front().getISOPosition();
 
 	LogMessage(LOG_LEVEL_DEBUG, "First point in trajectory: %s", trajectory.points.front().toString().c_str());
-	return UtilIsPositionNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_DISTANCE_TOLERANCE)
-			&& UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE);
+	return UtilIsPositionNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_DISTANCE_TOLERANCE_M)
+			&& UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE_DEG);
 }
 
 
