@@ -59,7 +59,6 @@ int main()
 			backToStart();
 			break;
 		default:
-			//LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
 			break;
 		}
 	}
