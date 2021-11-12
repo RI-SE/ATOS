@@ -425,9 +425,9 @@ Trajectory Trajectory::createWilliamsonTurn(
 		resM(1,i) += startPoint.getYCoord();
 	}
 
+	//Heading in rad with offset to match ENU
 	headingArray += (headingRad-M_PI_2) * Eigen::ArrayXd::Ones(calculatedNoOfPoints);
 
-	//Speed
 
 	//AccelerationSection
 	auto accelerationPeriod = milliseconds(static_cast<long>(topSpeed / acceleration * 1000));

@@ -10,8 +10,6 @@
 #define MAX_BTS_DISTANCE_TOLERANCE 15	//DEGREES
 #define MAX_BTS_HEADING_TOLERANCE 30	//METERS
 
-char btsResponseBuffer[sizeof (BTSResponse)];
-
 std::map<uint32_t,ObjectConfig> objects; //!< List of configured test objects
 
 static void loadObjectFiles();
@@ -97,6 +95,8 @@ void backToStart() {
 	DataDictionaryGetNumberOfObjects(&noOfObjects);
 	uint32_t transmitterIDs[noOfObjects];
 	DataDictionaryGetObjectTransmitterIDs(transmitterIDs, noOfObjects);
+
+	char btsResponseBuffer[sizeof (BTSResponse)];
 
 	//Array to save b2s trajs
 	std::vector<Trajectory> b2sTrajectories;
