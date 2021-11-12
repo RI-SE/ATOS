@@ -7,8 +7,8 @@
 
 #define MODULE_NAME "BackToStart"
 
-#define MAX_BTS_DISTANCE_TOLERANCE 15	//DEGREES
-#define MAX_BTS_HEADING_TOLERANCE 30	//METERS
+#define MAX_BTS_DISTANCE_TOLERANCE_M 15.0
+#define MAX_BTS_HEADING_TOLERANCE_DEG 30.0
 
 std::map<uint32_t,ObjectConfig> objects; //!< List of configured test objects
 
@@ -57,7 +57,6 @@ int main()
 			backToStart();
 			break;
 		default:
-			//LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
 			break;
 		}
 	}
@@ -93,8 +92,8 @@ void backToStart() {
 	//Get transmitter IDs
 	uint32_t noOfObjects;
 	DataDictionaryGetNumberOfObjects(&noOfObjects);
-	uint32_t transmitterIDs[noOfObjects];
-	DataDictionaryGetObjectTransmitterIDs(transmitterIDs, noOfObjects);
+	std::vector<uint32_t> transmitterIDs(noOfObjects);
+	DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size());
 
 	char btsResponseBuffer[sizeof (BTSResponse)];
 

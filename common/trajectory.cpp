@@ -354,11 +354,6 @@ Trajectory Trajectory::createWilliamsonTurn(
 {
 
 	using namespace std::chrono;
-
-	LogMessage(LOG_LEVEL_DEBUG, "X: %f", startPoint.getXCoord());
-	LogMessage(LOG_LEVEL_DEBUG, "Y: %f", startPoint.getYCoord());
-	LogMessage(LOG_LEVEL_DEBUG, "H: %f", startPoint.getHeading());
-
 	using Eigen::MatrixXd;
 
 	constexpr double topSpeed = 10 / 3.6;
