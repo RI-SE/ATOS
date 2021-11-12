@@ -45,8 +45,8 @@ int main()
 			break;
 		case COMM_INIT:
 			try {
-			loadObjectFiles();
-		} catch (std::invalid_argument& e) {
+				loadObjectFiles();
+			} catch (std::invalid_argument& e) {
 				LogMessage(LOG_LEVEL_ERROR, "Loading of object files failed - %s", e.what());
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
