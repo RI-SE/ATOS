@@ -125,8 +125,7 @@ void backToStart() {
 		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(turn2.points), std::end(turn2.points));
 
 		//Check distance
-		if(!isObjectNearTrajectoryStart(txID, b2sTraj))
-		{
+		if (!isObjectNearTrajectoryStart(txID, b2sTraj)) {
 			LogMessage(LOG_LEVEL_INFO, "Object %u not near starting point: sending back-to-start failure", txID);
 
 			memset(btsResponseBuffer, 0, sizeof (btsResponseBuffer));
