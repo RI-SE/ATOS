@@ -115,17 +115,17 @@ void backToStart() {
 
 		//Add first turn
 		Trajectory turn1 = Trajectory::createWilliamsonTurn(5, 1, currentTraj.points.back());
-		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(turn1.points), std::end(turn1.points));
+		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(turn1.points), turn1.points.end());
 
 		//Add reversed original traj
 		auto rev = currentTraj.reversed();
 		rev = rev.delayed(b2sTraj.points.back().getTime());
-		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(rev.points), std::end(rev.points));
+		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(rev.points), rev.points.end());
 
 		//Add last turn
 		Trajectory turn2 = Trajectory::createWilliamsonTurn(5, 1, b2sTraj.points[b2sTraj.points.size()-1]);
 		turn2 = turn2.delayed(b2sTraj.points.back().getTime());
-		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(turn2.points), std::end(turn2.points));
+		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(turn2.points), turn2.points.end());
 
 		//Check distance
 		if(!isObjectNearTrajectoryStart(txID, b2sTraj))
