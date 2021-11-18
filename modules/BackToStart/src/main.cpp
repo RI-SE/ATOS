@@ -109,7 +109,6 @@ void backToStart() {
 		b2sTraj.name = trajName;
 
 		//Testpath
-		LogMessage(LOG_LEVEL_INFO, "TXID: %d", txID);
 		auto currentTraj = objects.at(txID).getTrajectory();
 		LogPrint("%ld",currentTraj.points.size());
 
