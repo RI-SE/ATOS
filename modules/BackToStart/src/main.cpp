@@ -101,7 +101,7 @@ void backToStart() {
 	std::vector<Trajectory> b2sTrajectories;
 
 	for (const auto txID : transmitterIDs) {
-		LogMessage(LOG_LEVEL_INFO, "TRAJECTORY: %d", txID);
+		LogMessage(LOG_LEVEL_DEBUG, "Handling back-to-start for trajectory %u", txID);
 		std::string trajName = "BTS" + std::to_string(txID);
 		Trajectory b2sTraj;
 
@@ -109,17 +109,14 @@ void backToStart() {
 		b2sTraj.name = trajName;
 
 		//Testpath
-		LogMessage(LOG_LEVEL_INFO, "TXID: %d", txID);
 		auto currentTraj = objects.at(txID).getTrajectory();
-		LogPrint("%ld",currentTraj.points.size());
 
 		//Add first turn
 		Trajectory turn1 = Trajectory::createWilliamsonTurn(5, 1, currentTraj.points.back());
 		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(turn1.points), turn1.points.end());
 
 		//Add reversed original traj
-		auto rev = currentTraj.reversed();
-		rev = rev.delayed(b2sTraj.points.back().getTime());
+		auto rev = currentTraj.reversed().delayed(b2sTraj.points.back().getTime());
 		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(rev.points), rev.points.end());
 
 		//Add last turn
@@ -128,8 +125,7 @@ void backToStart() {
 		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(turn2.points), turn2.points.end());
 
 		//Check distance
-		if(!isObjectNearTrajectoryStart(txID, b2sTraj))
-		{
+		if (!isObjectNearTrajectoryStart(txID, b2sTraj)) {
 			LogMessage(LOG_LEVEL_INFO, "Object %u not near starting point: sending back-to-start failure", txID);
 
 			memset(btsResponseBuffer, 0, sizeof (btsResponseBuffer));
