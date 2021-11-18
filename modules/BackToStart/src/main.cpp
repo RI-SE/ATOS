@@ -110,7 +110,6 @@ void backToStart() {
 
 		//Testpath
 		auto currentTraj = objects.at(txID).getTrajectory();
-		LogPrint("%ld",currentTraj.points.size());
 
 		//Add first turn
 		Trajectory turn1 = Trajectory::createWilliamsonTurn(5, 1, currentTraj.points.back());
