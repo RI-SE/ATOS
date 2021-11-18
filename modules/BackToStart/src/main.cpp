@@ -101,7 +101,7 @@ void backToStart() {
 	std::vector<Trajectory> b2sTrajectories;
 
 	for (const auto txID : transmitterIDs) {
-		LogMessage(LOG_LEVEL_INFO, "TRAJECTORY: %d", txID);
+		LogMessage(LOG_LEVEL_DEBUG, "Handling back-to-start for trajectory %u", txID);
 		std::string trajName = "BTS" + std::to_string(txID);
 		Trajectory b2sTraj;
 
