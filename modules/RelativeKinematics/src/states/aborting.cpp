@@ -116,7 +116,6 @@ void RelativeKinematics::Aborting::objectAbortDisarmed(
 	ObjectControl::Aborting::objectAbortDisarmed(handler,id);
 }
 
-
 void RelativeKinematics::Aborting::allObjectsAbortDisarmed(
 		ScenarioHandler &handler) {
 	ObjectControl::Aborting::allObjectsAbortDisarmed(handler);
@@ -170,7 +169,6 @@ void AbsoluteKinematics::Aborting::objectAbortDisarmed(
 	uint32_t id) {
 	ObjectControl::Aborting::objectAbortDisarmed(handler,id);
 }
-
 
 void AbsoluteKinematics::Aborting::allObjectsAbortDisarmed(
 		ScenarioHandler &handler) {
