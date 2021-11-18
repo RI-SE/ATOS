@@ -120,7 +120,7 @@ void backToStart() {
 		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(rev.points), rev.points.end());
 
 		//Add last turn
-		Trajectory turn2 = Trajectory::createWilliamsonTurn(5, 1, b2sTraj.points[b2sTraj.points.size()-1]);
+		Trajectory turn2 = Trajectory::createWilliamsonTurn(5, 1, b2sTraj.points.back());
 		turn2 = turn2.delayed(b2sTraj.points.back().getTime());
 		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(turn2.points), turn2.points.end());
 
