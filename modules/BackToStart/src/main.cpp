@@ -116,8 +116,7 @@ void backToStart() {
 		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(turn1.points), std::end(turn1.points));
 
 		//Add reversed original traj
-		auto rev = currentTraj.reversed();
-		rev = rev.delayed(b2sTraj.points.back().getTime());
+		auto rev = currentTraj.reversed().delayed(b2sTraj.points.back().getTime());
 		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(rev.points), std::end(rev.points));
 
 		//Add last turn
