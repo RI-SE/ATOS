@@ -30,7 +30,10 @@ int main()
 		nanosleep(&sleepTimePeriod,&remTime);
 	}
 
-	DataDictionaryInitObjectData();
+	if(!DataDictionaryInitObjectData()) {
+		LogMessage(LOG_LEVEL_ERROR, "Could not initialize object data");
+		exit(EXIT_FAILURE);
+	}
 
 	while (true) {
 		if (iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr) < 0) {
