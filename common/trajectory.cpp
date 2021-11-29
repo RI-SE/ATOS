@@ -379,7 +379,8 @@ Trajectory Trajectory::createWilliamsonTurn(
 	double totalLength = len0 + len1 + len2;
 
 	//First section
-	unsigned int n0 = static_cast<unsigned int>(calculatedNoOfPoints * (len0 / totalLength));
+	double n0d = calculatedNoOfPoints * (len0 / totalLength);
+	int n0 = (n0d - std::floor(n0d) < 0.5) ? std::floor(n0d) : std::ceil(n0d);
 	theta0 = Eigen::VectorXd::LinSpaced(n0, M_PI, M_PI_2);
 
 	for (int i = 0; i < theta0.size(); i++) {
@@ -389,7 +390,8 @@ Trajectory Trajectory::createWilliamsonTurn(
 	}
 
 	//second section
-	unsigned int n1 = static_cast<unsigned int>(calculatedNoOfPoints * (len1 / totalLength));
+	double n1d = calculatedNoOfPoints * (len1 / totalLength);
+	int n1 = (n1d - std::floor(n1d) < 0.5) ? std::floor(n1d) : std::ceil(n1d);
 	theta1 = Eigen::VectorXd::LinSpaced(n1, -1*M_PI_2, M_PI);
 
 	for (int i = 0; i < theta1.size(); i++) {
@@ -399,7 +401,8 @@ Trajectory Trajectory::createWilliamsonTurn(
 	}
 
 	//third section
-	unsigned int n2 = static_cast<unsigned int>(calculatedNoOfPoints * (len2 / totalLength));
+	double n2d = calculatedNoOfPoints * (len2 / totalLength);
+	int n2 = (n2d - std::floor(n2d) < 0.5) ? std::floor(n2d) : std::ceil(n2d);
 	endStraight = Eigen::VectorXd::LinSpaced(n2, radius * 2, 0);
 	for (int i = 0; i < n2; i++) {
 		xyM(0,i+n0+n1) = 0;
@@ -412,10 +415,8 @@ Trajectory Trajectory::createWilliamsonTurn(
 	resM = rotM.toRotationMatrix() * xyM;
 
 
-	int actualNoOfPoints = n0+n1+n2;
-
 	//Offset result matrix
-	for (int i = 0; i < actualNoOfPoints; i++) {
+	for (int i = 0; i < calculatedNoOfPoints; i++) {
 		resM(0,i) += startPoint.getXCoord();
 		resM(1,i) += startPoint.getYCoord();
 	}
@@ -460,7 +461,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 
 	}
 
-	Eigen::VectorXd curvatureArray(actualNoOfPoints);
+	Eigen::VectorXd curvatureArray(calculatedNoOfPoints);
 	auto v1 = -1/radius*Eigen::ArrayXd::Ones(n0);
 	auto v2 = -1/radius*Eigen::ArrayXd::Ones(n1);
 	auto v3 = -1/radius*Eigen::ArrayXd::Zero(n2);
@@ -472,7 +473,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 
 	//create trajectory points
 	std::vector<TrajectoryPoint> tempVector;
-	for(int i = 0; i < actualNoOfPoints; i++) {
+	for(int i = 0; i < calculatedNoOfPoints; i++) {
 		TrajectoryPoint tempPoint;
 		tempPoint.setTime(timeArray[i]+startTime);
 		tempPoint.setXCoord(resM(0,i));
