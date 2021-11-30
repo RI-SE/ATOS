@@ -504,7 +504,7 @@ Trajectory Trajectory::reversed() const {
 		throw std::invalid_argument("Attempted to reverse non existing trajectory");
 	}
 	if (!this->isValid()) {
-		throw std::invalid_argument("");
+		throw std::invalid_argument("Attempted to reverse invalid trajectory");
 	}
 
 	Trajectory newTrajectory = Trajectory(*this);
@@ -591,5 +591,11 @@ void Trajectory::saveToFile(const std::string& fileName) const {
 }
 
 bool Trajectory::isValid() const {
-	return true;
+	return areTimestampsIncreasing();
+}
+
+bool Trajectory::areTimestampsIncreasing() const {
+	return std::is_sorted(points.begin(), points.end(), [](const TrajectoryPoint p1, const TrajectoryPoint p2) {
+		return p1.getTime() < p2.getTime();
+	});
 }

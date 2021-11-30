@@ -157,6 +157,8 @@ private:
 	static const std::regex fileHeaderPattern;
 	static const std::regex fileLinePattern;
 	static const std::regex fileFooterPattern;
+
+	bool areTimestampsIncreasing() const;
 };
 
 
