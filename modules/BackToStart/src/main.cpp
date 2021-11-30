@@ -3,15 +3,17 @@
 #include "datadictionary.h"
 #include "util.h"
 #include "objectconfig.hpp"
+#include "trajectory.hpp"
 
 #define MODULE_NAME "BackToStart"
 
-#define MAX_BTS_DISTANCE_TOLERANCE 1
-#define MAX_BTS_HEADING_TOLERANCE 1
+#define MAX_BTS_DISTANCE_TOLERANCE_M 15.0
+#define MAX_BTS_HEADING_TOLERANCE_DEG 30.0
 
 std::map<uint32_t,ObjectConfig> objects; //!< List of configured test objects
 
 static void loadObjectFiles();
+static void backToStart();
 
 int main()
 {
@@ -26,6 +28,11 @@ int main()
 	// Initialize message bus connection
 	while (iCommInit()) {
 		nanosleep(&sleepTimePeriod,&remTime);
+	}
+
+	if(!DataDictionaryInitObjectData()) {
+		LogMessage(LOG_LEVEL_ERROR, "Could not initialize object data");
+		exit(EXIT_FAILURE);
 	}
 
 	while (true) {
@@ -47,14 +54,18 @@ int main()
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
 			break;
-		case COMM_REMOTECTRL_MANOEUVRE:
-			LogMessage(LOG_LEVEL_INFO,"Received COMM_REMOTECTRL_MANOEUVRE command");
+
+		case COMM_BACKTOSTART_CALL:
+			LogMessage(LOG_LEVEL_INFO,"Received COMM_BACKTOSTART_CALL command");
+			backToStart();
+			break;
 		default:
-			LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
+			break;
 		}
 	}
 	return 0;
 }
+
 
 /*!
  * \brief checkIfBackToStartAllowed verifies if the position and heading of an
@@ -64,18 +75,89 @@ int main()
  * \return True if allowed False if not
  */
 bool isObjectNearTrajectoryStart(
-	const uint32_t transmitterID,
-	const Trajectory& trajectory) {
+		const uint32_t transmitterID,
+		const Trajectory& trajectory) {
 
 	ObjectMonitorType monitorData;
 	DataDictionaryGetMonitorData(transmitterID, &monitorData);
 
 	auto firstPointInTraj = trajectory.points.front().getISOPosition();
 
-	return UtilIsPositionNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_DISTANCE_TOLERANCE)
-			&& UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE);
+	LogMessage(LOG_LEVEL_DEBUG, "First point in trajectory: %s", trajectory.points.front().toString().c_str());
+	return UtilIsPositionNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_DISTANCE_TOLERANCE_M)
+			&& UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE_DEG);
 }
 
+
+
+void backToStart() {
+
+	//Get transmitter IDs
+	uint32_t noOfObjects;
+	DataDictionaryGetNumberOfObjects(&noOfObjects);
+	std::vector<uint32_t> transmitterIDs(noOfObjects);
+	DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size());
+
+	char btsResponseBuffer[sizeof (BTSResponse)];
+
+	//Array to save b2s trajs
+	std::vector<Trajectory> b2sTrajectories;
+
+	for (const auto txID : transmitterIDs) {
+		LogMessage(LOG_LEVEL_DEBUG, "Handling back-to-start for trajectory %u", txID);
+		std::string trajName = "BTS" + std::to_string(txID);
+		Trajectory b2sTraj;
+
+		//Name
+		b2sTraj.name = trajName;
+
+		//Testpath
+		auto currentTraj = objects.at(txID).getTrajectory();
+
+		//Add first turn
+		Trajectory turn1 = Trajectory::createWilliamsonTurn(5, 1, currentTraj.points.back());
+		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(turn1.points), turn1.points.end());
+
+		//Add reversed original traj
+		auto rev = currentTraj.reversed().delayed(b2sTraj.points.back().getTime());
+		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(rev.points), rev.points.end());
+
+		//Add last turn
+		Trajectory turn2 = Trajectory::createWilliamsonTurn(5, 1, b2sTraj.points.back());
+		turn2 = turn2.delayed(b2sTraj.points.back().getTime());
+		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(turn2.points), turn2.points.end());
+
+		//Check distance
+		if (!isObjectNearTrajectoryStart(txID, b2sTraj)) {
+			LogMessage(LOG_LEVEL_INFO, "Object %u not near starting point: sending back-to-start failure", txID);
+
+			memset(btsResponseBuffer, 0, sizeof (btsResponseBuffer));
+			BTSResponse btsResponse = BTS_FAIL;
+			memcpy(btsResponseBuffer, &btsResponse, sizeof (btsResponse));
+			iCommSend(COMM_BACKTOSTART_RESPONSE, btsResponseBuffer, sizeof (btsResponse));
+			return;
+		}
+		b2sTrajectories.push_back(b2sTraj);
+
+	}
+
+	if (UtilDeleteTrajectoryFiles() == FAILED_DELETE) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to remove trajectory files");
+		return;
+	}
+
+	//If pass save files
+	for (const auto& traj : b2sTrajectories) {
+		LogMessage(LOG_LEVEL_DEBUG, "Generated back-to-start trajectory %s", traj.name.c_str());
+		traj.saveToFile(traj.name + ".traj");
+	}
+
+	memset(btsResponseBuffer, 0, sizeof (btsResponseBuffer));
+	BTSResponse btsResponse = BTS_PASS;
+	memcpy(btsResponseBuffer, &btsResponse, sizeof (btsResponse));
+	iCommSend(COMM_BACKTOSTART_RESPONSE, btsResponseBuffer, sizeof (btsResponse));
+
+}
 
 void loadObjectFiles() {
 	objects.clear();
@@ -104,7 +186,7 @@ void loadObjectFiles() {
 				else {
 					auto badID = object.getTransmitterID();
 					std::string errMsg = "Duplicate object ID " + std::to_string(badID)
-						+ " detected";
+							+ " detected";
 					throw std::invalid_argument(errMsg);
 				}
 			}
