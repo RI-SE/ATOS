@@ -377,33 +377,31 @@ Trajectory Trajectory::createWilliamsonTurn(
 	double len1 = 3 * ((M_PI * 2 * radius) / 4);
 	double len2 = radius * 2;
 	double totalLength = len0 + len1 + len2;
+	assert (fabs(totalLength) > 0.001);
 
 	//First section
-	double n0d = calculatedNoOfPoints * (len0 / totalLength);
-	int n0 = (n0d - std::floor(n0d) < 0.5) ? std::floor(n0d) : std::ceil(n0d);
+	int n0 = static_cast<int>(std::round(calculatedNoOfPoints * (len0 / totalLength)));
 	theta0 = Eigen::VectorXd::LinSpaced(n0, M_PI, M_PI_2);
 
 	for (int i = 0; i < theta0.size(); i++) {
-		xyM(0,i) = radius * cos(theta0[i]) + radius;
+		xyM(0,i) = radius * cos(theta0[i]) + fabs(radius);
 		xyM(1,i) = radius * sin(theta0[i]);
 		headingArray[i] = theta0[i] + M_PI_2 + M_PI;
 	}
 
 	//second section
-	double n1d = calculatedNoOfPoints * (len1 / totalLength);
-	int n1 = (n1d - std::floor(n1d) < 0.5) ? std::floor(n1d) : std::ceil(n1d);
+	int n1 = static_cast<int>(std::round(calculatedNoOfPoints * (len1 / totalLength)));
 	theta1 = Eigen::VectorXd::LinSpaced(n1, -1*M_PI_2, M_PI);
 
 	for (int i = 0; i < theta1.size(); i++) {
-		xyM(0,i+n0) = radius * cos(theta1[i]) + radius;
-		xyM(1,i+n0) = radius * sin(theta1[i]) + 2 * radius;
+		xyM(0,i+n0) = radius * cos(theta1[i]) + fabs(radius);
+		xyM(1,i+n0) = radius * sin(theta1[i]) + 2 * fabs(radius);
 		headingArray[i+n0] = theta1[i] - M_PI_2 + M_PI;
 	}
 
 	//third section
-	double n2d = calculatedNoOfPoints * (len2 / totalLength);
-	int n2 = (n2d - std::floor(n2d) < 0.5) ? std::floor(n2d) : std::ceil(n2d);
-	endStraight = Eigen::VectorXd::LinSpaced(n2, radius * 2, 0);
+	int n2 = calculatedNoOfPoints - n1 - n0;
+	endStraight = Eigen::VectorXd::LinSpaced(n2, fabs(radius) * 2, 0);
 	for (int i = 0; i < n2; i++) {
 		xyM(0,i+n0+n1) = 0;
 		xyM(1,i+n0+n1) = endStraight[i];
