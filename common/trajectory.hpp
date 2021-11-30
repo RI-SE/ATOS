@@ -117,6 +117,8 @@ public:
 	};
 	typedef std::vector<TrajectoryPoint>::iterator iterator;
 	typedef std::vector<TrajectoryPoint>::const_iterator const_iterator;
+	typedef std::vector<TrajectoryPoint>::reverse_iterator reverse_iterator;
+	typedef std::vector<TrajectoryPoint>::const_reverse_iterator const_reverse_iterator;
 
 	Trajectory() = default;
 	~Trajectory() { points.clear(); }
@@ -132,15 +134,15 @@ public:
 	std::string toString() const;
 
 	void saveToFile(const std::string& fileName) const;
-	Trajectory reversed(double startTime) const;
+	Trajectory reversed() const;
 	Trajectory rescaledToVelocity(const double vel_m_s) const;
 	static Trajectory createWilliamsonTurn(double turnRadius = 5, double acceleration = 1, TrajectoryPoint startPoint = TrajectoryPoint(), double startTime = 0);
 
+	bool isValid() const;
 private:
 	static const std::regex fileHeaderPattern;
 	static const std::regex fileLinePattern;
 	static const std::regex fileFooterPattern;
-
 };
 
 

@@ -475,9 +475,12 @@ Trajectory Trajectory::createWilliamsonTurn(
 	return retval;
 }
 
-Trajectory Trajectory::reversed(double startTime = 0)const{
-	if(points.empty()){
+Trajectory Trajectory::reversed() const {
+	if (points.empty()) {
 		throw std::invalid_argument("Attempted to reverse non existing trajectory");
+	}
+	if (!this->isValid()) {
+		throw std::invalid_argument("");
 	}
 
 	Trajectory newTrajectory = Trajectory(*this);
@@ -504,9 +507,11 @@ Trajectory Trajectory::reversed(double startTime = 0)const{
 		}
 	}
 
-	for (unsigned long i = 0 ; i < newTrajectory.points.size(); i++) {
-		//newTrajectory.points[i].setTime(this->points.back().getTime() - this->points[i].getTime() + startTime);
-		newTrajectory.points[i].setTime(this->points[i].getTime() + startTime);
+	const_reverse_iterator origPoint = this->points.rbegin();
+	iterator newPoint = newTrajectory.points.begin();
+	for (; origPoint != this->points.crend() && newPoint != newTrajectory.points.end(); ++origPoint, ++newPoint) {
+		// t_new[i] = t_old[end] - t_old[end-i]
+		newPoint->setTime(this->points.back().getTime() - origPoint->getTime());
 	}
 	return newTrajectory;
 }
@@ -516,7 +521,7 @@ Trajectory Trajectory::reversed(double startTime = 0)const{
  * \param fileName
  * \return
  */
-void Trajectory::saveToFile(const std::string& fileName) const{
+void Trajectory::saveToFile(const std::string& fileName) const {
 	using std::string, std::smatch, std::ofstream;
 	char trajDirPath[PATH_MAX];
 
@@ -552,4 +557,8 @@ void Trajectory::saveToFile(const std::string& fileName) const{
 	catch (const ofstream::failure& e) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed when writing to file %s", trajFilePath.c_str());
 	}
+}
+
+bool Trajectory::isValid() const {
+	return true;
 }
