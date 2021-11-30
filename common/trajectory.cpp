@@ -227,7 +227,7 @@ Trajectory Trajectory::relativeTo(
 	relative.name = this->name + "_rel_" + other.name;
 	relative.version = this->version;
 	for (auto trajPt = this->points.begin(); trajPt != this->points.end(); ++trajPt) {
-		auto nearestTrajPtInOther = getNearest(other.points.begin(), other.points.end(), trajPt->getTime());
+		auto nearestTrajPtInOther = getNearest(other.points.begin(), other.points.end(), std::chrono::duration<double>(trajPt->getTime()).count());
 		// TODO maybe a check on time difference here
 		relative.points.push_back(trajPt->relativeTo(*nearestTrajPtInOther));
 	}
@@ -242,7 +242,7 @@ Trajectory::const_iterator Trajectory::getNearest(
 	// Assumption: input range is sorted by time
 	// Get first element with larger time than requested
 	const_iterator after = std::lower_bound(first, last, time, [](const TrajectoryPoint& trajPt, const double& t) {
-		return trajPt.getTime() < t;
+		return std::chrono::duration<double>(trajPt.getTime()).count() < t;
 	});
 
 	if (after == first) return first;
@@ -251,11 +251,11 @@ Trajectory::const_iterator Trajectory::getNearest(
 	const_iterator before = after - 1;
 
 	// Return the element nearest to the requested time
-	return (after->getTime() - time) < (time - before->getTime()) ? after : before;
+	return (std::chrono::duration<double>(after->getTime()).count() - time) < (time - std::chrono::duration<double>(before->getTime()).count()) ? after : before;
 }
 
 std::string Trajectory::TrajectoryPoint::getFormatString() const {
-	return "x:[m], y:[m], z:[m], hdg:[rad CW from N], "
+	return "x:[m], y:[m], z:[m], hdg:[rad CCW from x axis], "
 		   "vx:[m/s,longitudinal], vy:[m/s,lateral], "
 		   "ax:[m/s2,longitudinal], ay:[m/s2,lateral], "
 		   "c:[1/m], md:[]";
@@ -291,6 +291,32 @@ std::string Trajectory::toString() const {
 }
 
 /*!
+ * \brief Trajectory::appendedWith Creates a new trajectory where other has been
+ *			appended to the end of this object.
+ * \param other Trajectory to append.
+ * \return New trajectory, concatenation of two.
+ */
+Trajectory Trajectory::appendedWith(
+		const Trajectory &other) {
+	Trajectory newTrajectory = this->points.empty() ? Trajectory(other) : Trajectory(*this);
+	newTrajectory.name = this->name + "_app_" + other.name;
+	if (this->points.empty() || other.points.empty()) {
+		return newTrajectory;
+	}
+
+	auto firstTrajEndTime = points.back().getTime(); // TODO maybe a time offset between the two trajectories?
+	auto secondTrajStartTime = newTrajectory.points.front().getTime(); // TODO maybe a time offset between the two trajectories?
+
+	std::transform(other.points.begin(), other.points.end(),
+				   std::back_inserter(newTrajectory.points),
+				   [&](TrajectoryPoint otherPt) {
+		otherPt.setTime(otherPt.getTime() - secondTrajStartTime + firstTrajEndTime);
+		return otherPt;
+	});
+	return newTrajectory;
+}
+
+/*!
  * \brief Trajectory::TrajectoryPoint::rescaleToVelocity Returns a copy of the trajectory rescaled to match a certain constant speed.
  * \param vel_m_s Speed to which trajectory is to be reduced
  * \return Trajectory
@@ -310,10 +336,10 @@ Trajectory Trajectory::rescaledToVelocity(
 		return newTrajectory;
 	}
 	double scaleFactor = vel_m_s / maxVel_m_s.norm();
-	double startTime = newTrajectory.points.front().getTime();
+	double startTime = std::chrono::duration<double>(newTrajectory.points.front().getTime()).count();
 	for (auto& point : newTrajectory.points) {
 		point.setVelocity(point.getVelocity()*scaleFactor);
-		point.setTime(startTime + (point.getTime()-startTime)/scaleFactor);
+		point.setTime(startTime + (std::chrono::duration<double>(point.getTime()).count()-startTime)/scaleFactor);
 		point.setAcceleration(point.getAcceleration()*pow(scaleFactor, 2));
 	}
 
@@ -324,30 +350,26 @@ Trajectory Trajectory::createWilliamsonTurn(
 		double turnRadius,
 		double acceleration,
 		TrajectoryPoint startPoint,
-		double startTime)
+		std::chrono::milliseconds startTime)
 {
 
-	std::cout << std::endl << "X: " << startPoint.getXCoord() << std::endl;
-	std::cout << "Y: " << startPoint.getYCoord() << std::endl ;
-	std::cout << "H: " << startPoint.getHeading() << std::endl ;
-
+	using namespace std::chrono;
 	using Eigen::MatrixXd;
 
-	double topSpeed = 2.7777;
-	const int noOfPoints = 500;
+	constexpr double topSpeed = 10 / 3.6;
+	const int calculatedNoOfPoints = 500;
 	double radius = turnRadius;
-	double heading = startPoint.getHeading();
-	double headingRad = heading;
+	double headingRad = startPoint.getHeading();
 
 	Eigen::VectorXd theta0;         //First section
 	Eigen::VectorXd theta1;         //Second section
 	Eigen::VectorXd endStraight;    //Third section
-	Eigen::Matrix<double, 2, noOfPoints> xyM;
-	Eigen::Matrix<double, 2, noOfPoints> resM;
-	Eigen::Array<double, 1,noOfPoints> headingArray;
-	Eigen::Array<double, 1,noOfPoints> speedArray;
-	Eigen::Array<double, 1,noOfPoints> accelerationArray;
-	Eigen::Array<double, 1,noOfPoints> timeArray;
+	Eigen::Matrix<double, 2, calculatedNoOfPoints> xyM;
+	Eigen::Matrix<double, 2, calculatedNoOfPoints> resM;
+	Eigen::Array<double, 1,calculatedNoOfPoints> headingArray;
+	Eigen::Array<double, 1,calculatedNoOfPoints> speedArray;
+	Eigen::Array<double, 1,calculatedNoOfPoints> accelerationArray;
+	Eigen::Array<milliseconds, 1,calculatedNoOfPoints> timeArray;
 
 
 	//Calculate length of each section
@@ -357,97 +379,101 @@ Trajectory Trajectory::createWilliamsonTurn(
 	double totalLength = len0 + len1 + len2;
 
 	//First section
-	int n0 = int(noOfPoints * (len0 / totalLength));
+	double n0d = calculatedNoOfPoints * (len0 / totalLength);
+	int n0 = (n0d - std::floor(n0d) < 0.5) ? std::floor(n0d) : std::ceil(n0d);
 	theta0 = Eigen::VectorXd::LinSpaced(n0, M_PI, M_PI_2);
 
 	for (int i = 0; i < theta0.size(); i++) {
 		xyM(0,i) = radius * cos(theta0[i]) + radius;
 		xyM(1,i) = radius * sin(theta0[i]);
-		headingArray[i] = theta0[i] - M_PI_2;
+		headingArray[i] = theta0[i] + M_PI_2 + M_PI;
 	}
 
 	//second section
-	int n1 = int(noOfPoints * (len1 / totalLength));
+	double n1d = calculatedNoOfPoints * (len1 / totalLength);
+	int n1 = (n1d - std::floor(n1d) < 0.5) ? std::floor(n1d) : std::ceil(n1d);
 	theta1 = Eigen::VectorXd::LinSpaced(n1, -1*M_PI_2, M_PI);
 
 	for (int i = 0; i < theta1.size(); i++) {
 		xyM(0,i+n0) = radius * cos(theta1[i]) + radius;
 		xyM(1,i+n0) = radius * sin(theta1[i]) + 2 * radius;
-		headingArray[i+n0] = theta1[i] + M_PI_2;
+		headingArray[i+n0] = theta1[i] - M_PI_2 + M_PI;
 	}
 
 	//third section
-	int n2 = int(noOfPoints * (len2 / totalLength));
+	double n2d = calculatedNoOfPoints * (len2 / totalLength);
+	int n2 = (n2d - std::floor(n2d) < 0.5) ? std::floor(n2d) : std::ceil(n2d);
 	endStraight = Eigen::VectorXd::LinSpaced(n2, radius * 2, 0);
 	for (int i = 0; i < n2; i++) {
 		xyM(0,i+n0+n1) = 0;
 		xyM(1,i+n0+n1) = endStraight[i];
-		headingArray[i+n0+n1] = -M_PI_2;
+		headingArray[i+n0+n1] = M_PI_2 + M_PI;
 	}
 
 	// Rotate turn to match start point
-	Eigen::Rotation2Dd rotM(headingRad);
-	resM = rotM * xyM;
+	Eigen::Rotation2Dd rotM(headingRad-M_PI_2);
+	resM = rotM.toRotationMatrix() * xyM;
 
-	int actualNoOfPoints = n0+n1+n2;
 
 	//Offset result matrix
-	for (int i = 0; i < actualNoOfPoints; i++) {
+	for (int i = 0; i < calculatedNoOfPoints; i++) {
 		resM(0,i) += startPoint.getXCoord();
 		resM(1,i) += startPoint.getYCoord();
 	}
 
-	headingArray += (headingRad-M_PI_2) * Eigen::ArrayXd::Ones(noOfPoints);
+	//Heading in rad with offset to match ENU
+	headingArray += (headingRad-M_PI_2) * Eigen::ArrayXd::Ones(calculatedNoOfPoints);
 
-	//Speed
 
 	//AccelerationSection
-	double accelerationPeriod = topSpeed / acceleration;                //t = (v - u) / a
+	auto accelerationPeriod = milliseconds(static_cast<long>(topSpeed / acceleration * 1000));
 	double accelerationDistance = pow(topSpeed, 2) / acceleration / 2;
 
 	//Topspeed section
 	double topSpeedDistance = totalLength - accelerationDistance*2;
-	double topSpeedPeriod = topSpeedDistance / topSpeed;
+	auto topSpeedPeriod = milliseconds(static_cast<long>(topSpeedDistance / topSpeed * 1000));
 
-	double totalRuntime = accelerationPeriod + topSpeedPeriod + accelerationPeriod; //Accelerate -> Top Speed -> Decelerate
+	auto totalRuntime = accelerationPeriod + topSpeedPeriod + accelerationPeriod; //Accelerate -> Top Speed -> Decelerate
 
-	double timeStep = totalRuntime / noOfPoints;
+	auto timeStep = totalRuntime / calculatedNoOfPoints;
 
 
 	//Speed for each point
 	double currSpeed = 0;
-	for(int i = 0; i < noOfPoints; i++)
-	{
+	for (int i = 0; i < calculatedNoOfPoints; i++) {
 		timeArray[i] = i*timeStep;
 
-		if(timeArray[i] < accelerationPeriod)
-		{
-			currSpeed = i * (acceleration*timeStep);
-			accelerationArray[i] = -acceleration;
+		if (timeArray[i] < accelerationPeriod) {
+			currSpeed += acceleration * duration_cast<milliseconds>(timeStep).count()/1000;
+			accelerationArray[i] = acceleration;
 		}
-		else if(timeArray[i] < topSpeedPeriod + accelerationPeriod)
-		{
-			if(currSpeed > topSpeed)
-			{
+		else if (timeArray[i] < topSpeedPeriod + accelerationPeriod) {
+			if (currSpeed > topSpeed) {
 				currSpeed = topSpeed;
 			}
 			accelerationArray[i] = 0;
 		}
-		else
-		{
-			currSpeed -= acceleration*timeStep;
-			accelerationArray[i] = acceleration;
+		else {
+			currSpeed -= acceleration * duration_cast<milliseconds>(timeStep).count()/1000;
+			accelerationArray[i] = -acceleration;
 		}
 		speedArray[i] = currSpeed;
 
 	}
 
-	Eigen::VectorXd curvatureArray(noOfPoints);
+	Eigen::VectorXd curvatureArray(calculatedNoOfPoints);
+	auto v1 = -1/radius*Eigen::ArrayXd::Ones(n0);
+	auto v2 = -1/radius*Eigen::ArrayXd::Ones(n1);
+	auto v3 = -1/radius*Eigen::ArrayXd::Zero(n2);
+	std::cout << curvatureArray.rows() << ", "  << curvatureArray.cols() << std::endl;
+	std::cout << v1.rows() << ", "  << v1.cols() << std::endl;
+	std::cout << v2.rows() << ", "  << v2.cols() << std::endl;
+	std::cout << v3.rows() << ", "  << v3.cols() << std::endl;
 	curvatureArray << -1/radius*Eigen::ArrayXd::Ones(n0), 1/radius*Eigen::ArrayXd::Ones(n1), Eigen::ArrayXd::Zero(n2);
 
 	//create trajectory points
 	std::vector<TrajectoryPoint> tempVector;
-	for(int i = 0; i < actualNoOfPoints; i++) {
+	for(int i = 0; i < calculatedNoOfPoints; i++) {
 		TrajectoryPoint tempPoint;
 		tempPoint.setTime(timeArray[i]+startTime);
 		tempPoint.setXCoord(resM(0,i));
@@ -505,6 +531,12 @@ Trajectory Trajectory::reversed() const {
 		catch (std::out_of_range) {
 			LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized lateral acceleration");
 		}
+		try {
+			point.setLongitudinalAcceleration(point.getLongitudinalAcceleration()*-1);
+		}
+		catch (std::out_of_range) {
+			LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized longitudinal acceleration");
+		}
 	}
 
 	const_reverse_iterator origPoint = this->points.rbegin();
@@ -513,6 +545,7 @@ Trajectory Trajectory::reversed() const {
 		// t_new[i] = t_old[end] - t_old[end-i]
 		newPoint->setTime(this->points.back().getTime() - origPoint->getTime());
 	}
+
 	return newTrajectory;
 }
 
@@ -537,7 +570,7 @@ void Trajectory::saveToFile(const std::string& fileName) const {
 		outputTraj << "TRAJECTORY;" << this->id <<";" << this->name << ";" << this->version << ";" << this->points.size() << ";" <<  "\n";
 		for (const auto& point : points) {
 			outputTraj << "LINE;"
-					   << std::fixed << std::setprecision(2) << point.getTime() << ";"
+					   << std::fixed << std::setprecision(2) << std::chrono::duration<double>(point.getTime()).count() << ";"
 					   << std::fixed << std::setprecision(6) << point.getXCoord() << ";"
 					   << std::fixed << std::setprecision(6) << point.getYCoord() << ";"
 					   << std::fixed << std::setprecision(6) << point.getZCoord() << ";"

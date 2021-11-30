@@ -510,10 +510,9 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								}
 							}
 
-                            if (CmdPtr != NULL)
-                            {
+                            if (CmdPtr != NULL) {
                                 SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
-                                LogPrint("GOT MSCP");
+                                LogMessage(LOG_LEVEL_DEBUG, "Received MSCP command %s", SystemControlCommand);
                             }
 							else
 								LogMessage(LOG_LEVEL_WARNING, "Invalid MSCP command received");
@@ -589,9 +588,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		bzero(pcRecvBuffer, SC_RECV_MESSAGE_BUFFER);
 		bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 
-        //BTS
-        char *btsConstChar = "BTS:";
-
 		switch (iCommand) {
 		case COMM_FAILURE:
 			if (SystemControlState == SERVER_STATE_INWORK) {
@@ -624,35 +620,32 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
 			break;
 
-        case COMM_BACKTOSTART:
-            if(strcmp(pcRecvBuffer, "BTS-FAIL"))
-            {
-                LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
-                bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
-                                                 "0", 1,
-                                                 &ClientSocket, 0);
-            }
-            else if(strcmp(pcRecvBuffer, "BTS-PASS"))
-            {
-                LogMessage(LOG_LEVEL_INFO, "COMM_BACKTOSTART SAYS: %s", pcRecvBuffer);
-                bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-                SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
-                                                 "1", 1,
-                                                 &ClientSocket, 0);
-            }
-            else
-            {
-                LogMessage(LOG_LEVEL_ERROR, "Cannot parse COMM_BACKTOSTART message.");
-            }
-            break;
+		case COMM_BACKTOSTART_RESPONSE:
+
+			if(*pcRecvBuffer == BTS_FAIL){
+				LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", pcRecvBuffer);
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
+												 "0", 1,
+												 &ClientSocket, 0);		//TODO: Send SMCP response the right way(?)
+			}
+			else if(*pcRecvBuffer == BTS_PASS){
+				LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", pcRecvBuffer);
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
+												 "1", 1,
+												 &ClientSocket, 0);
+			}
+			else{
+				LogMessage(LOG_LEVEL_ERROR, "Cannot parse COMM_BACKTOSTART_RESPONSE message.");
+			}
+			break;
 
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", iCommand);
 		}
 
         switch (SystemControlCommand) {
-            //LogMessage(LOG_LEVEL_INFO, SystemControlCommand);
 			// can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
 		case Idle_0:
 			break;
@@ -1166,7 +1159,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						switch (atoi(SystemControlArgument[1])) {
 						case MSCP_BACK_TO_START:
-                            LogPrint("GOT BACK TO START");
                             rcCommand.manoeuvre = MANOEUVRE_BACK_TO_START;
 							break;
 						default:
@@ -1174,7 +1166,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						}
 						if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
 							memcpy(pcBuffer, &rcCommand, sizeof (rcCommand));
-							iCommSend(COMM_REMOTECTRL_MANOEUVRE, pcBuffer, sizeof (rcCommand));	// TODO check return value
+							iCommSend(COMM_BACKTOSTART_CALL, pcBuffer, sizeof (rcCommand));
 							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						}
 					}

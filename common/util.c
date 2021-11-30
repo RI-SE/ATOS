@@ -2172,9 +2172,12 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_REMOTECTRL_MANOEUVRE:
 		uiMessagePrio = PRIO_COMM_REMOTECTRL_MANOEUVRE;
 		break;
-    case COMM_BACKTOSTART:
+	case COMM_BACKTOSTART_CALL:
         uiMessagePrio = PRIO_COMM_BACKTOSTART;
         break;
+	case COMM_BACKTOSTART_RESPONSE:
+		uiMessagePrio = PRIO_COMM_BACKTOSTART;
+		break;
 	case COMM_ENABLE_OBJECT:
 		uiMessagePrio = PRIO_COMM_ENABLE_OBJECT;
 		break;

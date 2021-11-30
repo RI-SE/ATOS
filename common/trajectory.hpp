@@ -9,6 +9,7 @@
 #include <functional>
 #include <eigen3/Eigen/Dense>
 #include <math.h>
+#include <chrono>
 
 #include "util.h"
 
@@ -33,7 +34,9 @@ public:
 
 		TrajectoryPoint relativeTo(const TrajectoryPoint& other) const;
 
-		void setTime(const double& value) { time = value; }
+		template<class Rep,class Period>
+		void setTime(const std::chrono::duration<Rep,Period>& value) { time = value; }
+		void setTime(const double value) { const auto timeVar = static_cast<unsigned long>( value * 1000 ); time = std::chrono::milliseconds(timeVar); }
 		void setPosition(const Eigen::Vector3d& value) { position = value; }
 		void setXCoord(const double& value) { position[0] = value; }
 		void setYCoord(const double& value) { position[1] = value; }
@@ -49,7 +52,7 @@ public:
 		void setCurvature(const double& value) { curvature = value; }
 		void setMode(const ModeType& value) { mode = value; }
 
-		double getTime() const { return time; }
+		std::chrono::milliseconds getTime() const { return time; }
 		Eigen::Vector3d getPosition() const { return position; }
 		double getXCoord() const { return position[0]; }
 		double getYCoord() const { return position[1]; }
@@ -96,7 +99,7 @@ public:
 		std::string toString() const;
 		std::string getFormatString() const;
 	private:
-		double time = 0;
+		std::chrono::milliseconds time = std::chrono::milliseconds(0);
 		Eigen::Vector3d position; //! x, y, z [m]
 		double heading = 0;		  //! Heading ccw from x axis [rad]
 		Eigen::Vector2d velocity; //! Vehicle frame, x forward [m/s]
@@ -136,7 +139,18 @@ public:
 	void saveToFile(const std::string& fileName) const;
 	Trajectory reversed() const;
 	Trajectory rescaledToVelocity(const double vel_m_s) const;
-	static Trajectory createWilliamsonTurn(double turnRadius = 5, double acceleration = 1, TrajectoryPoint startPoint = TrajectoryPoint(), double startTime = 0);
+	static Trajectory createWilliamsonTurn(double turnRadius = 5, double acceleration = 1, TrajectoryPoint startPoint = TrajectoryPoint(), std::chrono::milliseconds startTime = std::chrono::milliseconds(0));
+
+	Trajectory appendedWith(const Trajectory& other);
+	template<class Rep,class Period>
+	Trajectory delayed(const std::chrono::duration<Rep,Period>& delay) const {
+		Trajectory newTrajectory = Trajectory(*this);
+		newTrajectory.name = newTrajectory.name + "_delayed";
+		for (auto& trajPt : newTrajectory.points) {
+			trajPt.setTime(trajPt.getTime() + delay);
+		}
+		return newTrajectory;
+	}
 
 	bool isValid() const;
 private:

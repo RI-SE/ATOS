@@ -7,11 +7,10 @@
 
 #define MODULE_NAME "BackToStart"
 
-#define MAX_BTS_DISTANCE_TOLERANCE 15	//DEGREES
-#define MAX_BTS_HEADING_TOLERANCE 30	//METERS
+#define MAX_BTS_DISTANCE_TOLERANCE_M 15.0
+#define MAX_BTS_HEADING_TOLERANCE_DEG 30.0
 
 std::map<uint32_t,ObjectConfig> objects; //!< List of configured test objects
-std::map<uint32_t,ObjectConfig> BTSobjects; //!< List of configured test objects with BTS trajectories
 
 static void loadObjectFiles();
 static void backToStart();
@@ -31,7 +30,10 @@ int main()
 		nanosleep(&sleepTimePeriod,&remTime);
 	}
 
-	DataDictionaryInitObjectData();
+	if(!DataDictionaryInitObjectData()) {
+		LogMessage(LOG_LEVEL_ERROR, "Could not initialize object data");
+		exit(EXIT_FAILURE);
+	}
 
 	while (true) {
 		if (iCommRecv(&command,mqRecvData,MQ_MSG_SIZE,nullptr) < 0) {
@@ -46,19 +48,19 @@ int main()
 			break;
 		case COMM_INIT:
 			try {
-			loadObjectFiles();
-		} catch (std::invalid_argument& e) {
+				loadObjectFiles();
+			} catch (std::invalid_argument& e) {
 				LogMessage(LOG_LEVEL_ERROR, "Loading of object files failed - %s", e.what());
 				iCommSend(COMM_FAILURE, nullptr, 0);
 			}
 			break;
 
-		case COMM_REMOTECTRL_MANOEUVRE:
-			LogMessage(LOG_LEVEL_INFO,"Received COMM_REMOTECTRL_MANOEUVRE command");
+		case COMM_BACKTOSTART_CALL:
+			LogMessage(LOG_LEVEL_INFO,"Received COMM_BACKTOSTART_CALL command");
 			backToStart();
 			break;
 		default:
-			LogMessage(LOG_LEVEL_INFO,"Received command %u",command);
+			break;
 		}
 	}
 	return 0;
@@ -81,12 +83,9 @@ bool isObjectNearTrajectoryStart(
 
 	auto firstPointInTraj = trajectory.points.front().getISOPosition();
 
-	LogMessage(LOG_LEVEL_INFO,"FIRST POINT IN TRAJ: %f:%f:%f:%f",firstPointInTraj.xCoord_m, firstPointInTraj.yCoord_m, firstPointInTraj.zCoord_m,firstPointInTraj.heading_rad);
-
-	LogMessage(LOG_LEVEL_INFO, "HEADING: %f, POSITION_X: %f", firstPointInTraj.heading_rad, firstPointInTraj.xCoord_m);
-
-	return UtilIsPositionNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_DISTANCE_TOLERANCE)
-			&& UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE);
+	LogMessage(LOG_LEVEL_DEBUG, "First point in trajectory: %s", trajectory.points.front().toString().c_str());
+	return UtilIsPositionNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_DISTANCE_TOLERANCE_M)
+			&& UtilIsAngleNearTarget(monitorData.position, firstPointInTraj, MAX_BTS_HEADING_TOLERANCE_DEG);
 }
 
 
@@ -96,63 +95,67 @@ void backToStart() {
 	//Get transmitter IDs
 	uint32_t noOfObjects;
 	DataDictionaryGetNumberOfObjects(&noOfObjects);
-	uint32_t transmitterIDs[noOfObjects];
-	DataDictionaryGetObjectTransmitterIDs(transmitterIDs, noOfObjects);
+	std::vector<uint32_t> transmitterIDs(noOfObjects);
+	DataDictionaryGetObjectTransmitterIDs(transmitterIDs.data(), transmitterIDs.size());
+
+	char btsResponseBuffer[sizeof (BTSResponse)];
 
 	//Array to save b2s trajs
-	Trajectory b2sTrajectories[noOfObjects];
+	std::vector<Trajectory> b2sTrajectories;
 
-	for(int i = 0; i < objects.size(); i++)
-	{
-		LogMessage(LOG_LEVEL_INFO, "TRAJECTORY: %d", i);
-		std::string trajName = "BTS" + std::to_string(i);
-		Trajectory currentTraj;
+	for (const auto txID : transmitterIDs) {
+		LogMessage(LOG_LEVEL_DEBUG, "Handling back-to-start for trajectory %u", txID);
+		std::string trajName = "BTS" + std::to_string(txID);
 		Trajectory b2sTraj;
 
 		//Name
 		b2sTraj.name = trajName;
 
 		//Testpath
-		LogMessage(LOG_LEVEL_INFO, "TXID: %d", transmitterIDs[i]);
-		currentTraj = objects.at(transmitterIDs[i]).getTrajectory();
+		auto currentTraj = objects.at(txID).getTrajectory();
 
 		//Add first turn
-		b2sTraj.addWilliamsonTurn(5, 1, currentTraj.points[currentTraj.points.size()-1], 0);
+		Trajectory turn1 = Trajectory::createWilliamsonTurn(5, 1, currentTraj.points.back());
+		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(turn1.points), turn1.points.end());
 
 		//Add reversed original traj
-		Trajectory rev = currentTraj;
-		rev = rev.reversed(b2sTraj.points[b2sTraj.points.size()-1].getTime());
-		b2sTraj.points.insert(std::end(b2sTraj.points), std::begin(rev.points), std::end(rev.points));
+		auto rev = currentTraj.reversed().delayed(b2sTraj.points.back().getTime());
+		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(rev.points), rev.points.end());
 
 		//Add last turn
-		b2sTraj.addWilliamsonTurn(5, 1,b2sTraj.points[b2sTraj.points.size()-1], b2sTraj.points[b2sTraj.points.size()-1].getTime());
+		Trajectory turn2 = Trajectory::createWilliamsonTurn(5, 1, b2sTraj.points.back());
+		turn2 = turn2.delayed(b2sTraj.points.back().getTime());
+		b2sTraj.points.insert(b2sTraj.points.end(), std::begin(turn2.points), turn2.points.end());
 
 		//Check distance
-		if(!isObjectNearTrajectoryStart(transmitterIDs[i], b2sTraj))
-		{
-			LogMessage(LOG_LEVEL_INFO, "BTS FAILED, SENDING 0 TO GUC");
-			const char *btsChar = "BTS-FAIL";
-			iCommSend(COMM_BACKTOSTART, btsChar, sizeof (btsChar));
+		if (!isObjectNearTrajectoryStart(txID, b2sTraj)) {
+			LogMessage(LOG_LEVEL_INFO, "Object %u not near starting point: sending back-to-start failure", txID);
+
+			memset(btsResponseBuffer, 0, sizeof (btsResponseBuffer));
+			BTSResponse btsResponse = BTS_FAIL;
+			memcpy(btsResponseBuffer, &btsResponse, sizeof (btsResponse));
+			iCommSend(COMM_BACKTOSTART_RESPONSE, btsResponseBuffer, sizeof (btsResponse));
 			return;
 		}
-		b2sTrajectories[i] = b2sTraj;
+		b2sTrajectories.push_back(b2sTraj);
 
 	}
 
-	if(UtilDeleteTrajectoryFiles() == FAILED_DELETE)
-	{
-		LogMessage(LOG_LEVEL_ERROR, "Failed to remove trajectory files.");
+	if (UtilDeleteTrajectoryFiles() == FAILED_DELETE) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to remove trajectory files");
+		return;
 	}
 
 	//If pass save files
-	for(int i = 0; i < objects.size(); i++)
-	{
-		std::cout << b2sTrajectories[i].name << std::endl;
-		b2sTrajectories[i].saveToFile(b2sTrajectories[i].name);
+	for (const auto& traj : b2sTrajectories) {
+		LogMessage(LOG_LEVEL_DEBUG, "Generated back-to-start trajectory %s", traj.name.c_str());
+		traj.saveToFile(traj.name + ".traj");
 	}
 
-	const char *btsChar = "BTS-PASS";
-	iCommSend(COMM_BACKTOSTART, btsChar, sizeof (btsChar));
+	memset(btsResponseBuffer, 0, sizeof (btsResponseBuffer));
+	BTSResponse btsResponse = BTS_PASS;
+	memcpy(btsResponseBuffer, &btsResponse, sizeof (btsResponse));
+	iCommSend(COMM_BACKTOSTART_RESPONSE, btsResponseBuffer, sizeof (btsResponse));
 
 }
 
