@@ -298,6 +298,12 @@ std::string Trajectory::toString() const {
  */
 Trajectory Trajectory::appendedWith(
 		const Trajectory &other) {
+	if (!other.isValid()) {
+		throw std::invalid_argument("Attempted to append invalid trajectory");
+	}
+	else if (!this->isValid()) {
+		throw std::invalid_argument("Attempted to append to invalid trajectory");
+	}
 	Trajectory newTrajectory = this->points.empty() ? Trajectory(other) : Trajectory(*this);
 	newTrajectory.name = this->name + "_app_" + other.name;
 	if (this->points.empty() || other.points.empty()) {
@@ -324,6 +330,9 @@ Trajectory Trajectory::appendedWith(
 Trajectory Trajectory::rescaledToVelocity(
 		const double vel_m_s) const {
 
+	if (!this->isValid()) {
+		throw std::invalid_argument("Attempted to rescale invalid trajectory");
+	}
 	Trajectory newTrajectory = Trajectory(*this);
 	newTrajectory.name = newTrajectory.name + "_rescaled";
 	if (newTrajectory.points.empty()) {
