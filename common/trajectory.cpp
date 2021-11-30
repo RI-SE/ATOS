@@ -390,7 +390,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 
 	//First section
 	int n0 = static_cast<int>(std::round(calculatedNoOfPoints * (len0 / totalLength)));
-	theta0 = Eigen::VectorXd::LinSpaced(n0, M_PI, M_PI_2);
+	theta0 = Eigen::VectorXd::LinSpaced(n0, M_PI, M_PI_2 - M_PI_2/(n0+1));
 
 	for (int i = 0; i < theta0.size(); i++) {
 		xyM(0,i) = radius * cos(theta0[i]) + fabs(radius);
@@ -400,7 +400,7 @@ Trajectory Trajectory::createWilliamsonTurn(
 
 	//second section
 	int n1 = static_cast<int>(std::round(calculatedNoOfPoints * (len1 / totalLength)));
-	theta1 = Eigen::VectorXd::LinSpaced(n1, -1*M_PI_2, M_PI);
+	theta1 = Eigen::VectorXd::LinSpaced(n1, -1*M_PI_2, M_PI - 3*M_PI_2/(n1+1));
 
 	for (int i = 0; i < theta1.size(); i++) {
 		xyM(0,i+n0) = radius * cos(theta1[i]) + fabs(radius);
