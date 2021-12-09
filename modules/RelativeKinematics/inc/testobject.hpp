@@ -103,10 +103,12 @@ public:
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
 	void setOsiAddress(const sockaddr_in& newAddr);
-	void setObjectConfig(ObjectConfig& newObjectConfig); 
+	void setObjectConfig(ObjectConfig& newObjectConfig);
+	void setTriggerStart(const bool startOnTrigger = true);
 	
 	bool isAnchor() const { return conf.isAnchor(); }
 	bool isOsiCompatible() const { return conf.isOSI(); }
+	bool isStartingOnTrigger() const { return startOnTrigger; }
 	std::string toString() const;
 	std::string getProjString() const { return conf.getProjString(); }
 	ObjectDataType getAsObjectData() const;
@@ -124,6 +126,7 @@ public:
 	void sendArm();
 	void sendDisarm();
 	void sendStart();
+	void sendAllClear();
 	void sendOsiData(const OsiHandler::LocalObjectGroundTruth_t& osidata,
 					 const std::string& projStr,
 					 const std::chrono::system_clock::time_point& timestamp);
@@ -157,11 +160,13 @@ public:
 		return this->comms.pendingMessageType(awaitNext);
 	}
 private:
-	ObjectConnection comms;
-	Channel osiChannel;
+	ObjectConnection comms;		//!< Channel for communication with object over the ISO 22133 protocol
+	Channel osiChannel;			//!< Channel for communication with object over the OSI protocol
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 
 	ObjectConfig conf;
+
+	bool startOnTrigger = false;
 
 	void updateMonitor(const MonitorMessage&);
 	MonitorMessage awaitNextMonitor();
@@ -182,18 +187,3 @@ namespace std {
 	};
 }
 
-template<typename Duration>
-void to_timeval(Duration&& d, struct timeval & tv) {
-	std::chrono::seconds const sec = std::chrono::duration_cast<std::chrono::seconds>(d);
-
-	tv.tv_sec  = sec.count();
-	tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(d - sec).count();
-}
-
-template<typename Duration>
-void from_timeval(struct timeval & tv, Duration& d) {
-	// TODO
-	//const auto sec = std::chrono::seconds(tv.tv_sec);
-	//const auto usec = std::chrono::microseconds(tv.tv_usec);
-	//d = sec + usec;
-}

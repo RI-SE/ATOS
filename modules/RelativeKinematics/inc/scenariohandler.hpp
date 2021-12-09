@@ -1,11 +1,13 @@
 ﻿#pragma once
 
+#include "maestroTime.h"
 #include "state.hpp"
 #include "testobject.hpp"
 #include "objectlistener.hpp"
 #include <map>
 #include <future>
 #include <set>
+#include <chrono>
 
 // Forward declarations
 class ObjectControlState;
@@ -24,7 +26,6 @@ namespace ObjectControl {
 }
 
 namespace RelativeKinematics {
-	class Idle;
 	class Initialized;
 	class Connecting;
 	class Ready;
@@ -35,6 +36,23 @@ namespace RelativeKinematics {
 	class Done;
 }
 
+namespace AbsoluteKinematics {
+	class Initialized;
+	class Connecting;
+	class Ready;
+	class Aborting;
+	class Armed;
+	class TestLive;
+	class Disarming;
+	class Done;
+}
+
+/*!
+ * \brief The ScenarioHandler class is intended as an overarching device
+ *			used to control a scenario. No behaviour is implemented in it
+ *			(this is left up to the State to determine), only functionality
+ *			which can be called.
+ */
 class ScenarioHandler {
 	friend class ObjectControlState;
 	friend class ObjectControl::Idle;
@@ -46,7 +64,6 @@ class ScenarioHandler {
 	friend class ObjectControl::TestLive;
 	friend class ObjectControl::Disarming;
 	friend class ObjectControl::Done;
-	friend class RelativeKinematics::Idle;
 	friend class RelativeKinematics::Initialized;
 	friend class RelativeKinematics::Connecting;
 	friend class RelativeKinematics::Ready;
@@ -55,6 +72,14 @@ class ScenarioHandler {
 	friend class RelativeKinematics::TestLive;
 	friend class RelativeKinematics::Disarming;
 	friend class RelativeKinematics::Done;
+	friend class AbsoluteKinematics::Initialized;
+	friend class AbsoluteKinematics::Connecting;
+	friend class AbsoluteKinematics::Ready;
+	friend class AbsoluteKinematics::Aborting;
+	friend class AbsoluteKinematics::Armed;
+	friend class AbsoluteKinematics::TestLive;
+	friend class AbsoluteKinematics::Disarming;
+	friend class AbsoluteKinematics::Done;
 
 	friend class ObjectListener;
 public:
@@ -70,7 +95,13 @@ public:
 		bool isActive;
 	} DataInjectionMap;
 
-	ScenarioHandler(ControlMode);
+	typedef struct {
+		uint16_t actionID;
+		uint32_t objectID;
+		ActionTypeParameter_t command;
+	} TestScenarioCommandAction;
+
+	ScenarioHandler();
 	~ScenarioHandler();
 
 	//! Handlers for MQ bus messages
@@ -86,8 +117,12 @@ public:
 	void handleStartCommand();
 	//! \brief Performs actions in response to an abort request.
 	void handleAbortCommand();
-
+	//! \brief Performs actions in response to an all clear request.
 	void handleAllClearCommand();
+	//! \brief Performs actions in response to an action configuration request.
+	void handleActionConfigurationCommand(const TestScenarioCommandAction&);
+	//! \brief Performs actions in response to an action execution request.
+	void handleExecuteActionCommand(const uint16_t& actionID, const std::chrono::system_clock::time_point& when);
 
 	//! Getters
 	//! \brief Get transmitter ID of anchor object participating in test.
@@ -102,6 +137,15 @@ public:
 		}
 		return retval;
 	}
+
+	[[deprecated("Avoid referring to objects by IP")]]
+	uint32_t getVehicleIDByIP(const in_addr_t& ip) {
+		auto res = std::find_if(objects.begin(), objects.end(), [&](const std::pair<const uint32_t,TestObject>& elem){
+			return elem.second.getObjectConfig().getIP() == ip;
+		});
+		return res->first;
+	}
+
 	//! \brief Get last known ISO state of test participants.
 	std::map<uint32_t,ObjectStateType> getObjectStates() const;
 
@@ -125,6 +169,7 @@ private:
 	ObjectControlState* state;					//!< State of module
 	std::map<uint32_t,TestObject> objects;		//!< List of configured test participants
 	std::map<uint32_t,ObjectListener> objectListeners;
+	std::map<uint16_t,std::function<void()>> storedActions;
 	std::mutex monitorTimeMutex;
 	static constexpr auto heartbeatPeriod = std::chrono::milliseconds(1000 / HEAB_FREQUENCY_HZ);
 	std::thread safetyThread;
@@ -174,6 +219,8 @@ private:
 	void disarmObjects();
 	//! \brief
 	void startObjects();
+	//! \brief
+	void allClearObjects();
 	//! \brief TODO
 	void injectObjectData(const MonitorMessage& monr);
 	//! \brief TODO

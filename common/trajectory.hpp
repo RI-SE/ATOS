@@ -8,16 +8,18 @@
 #include <regex>
 #include <functional>
 #include <eigen3/Eigen/Dense>
+#include <math.h>
+#include <chrono>
 
 #include "util.h"
 
 class Trajectory {
 public:
-    class TrajectoryPoint {
-    public:
-        typedef enum {
-            CONTROLLED_BY_DRIVE_FILE,
-            CONTROLLED_BY_VEHICLE
+	class TrajectoryPoint {
+	public:
+		typedef enum {
+			CONTROLLED_BY_DRIVE_FILE,
+			CONTROLLED_BY_VEHICLE
 		} ModeType;
 
 		TrajectoryPoint() {
@@ -32,7 +34,9 @@ public:
 
 		TrajectoryPoint relativeTo(const TrajectoryPoint& other) const;
 
-		void setTime(const double& value) { time = value; }
+		template<class Rep,class Period>
+		void setTime(const std::chrono::duration<Rep,Period>& value) { time = value; }
+		void setTime(const double value) { const auto timeVar = static_cast<unsigned long>( value * 1000 ); time = std::chrono::milliseconds(timeVar); }
 		void setPosition(const Eigen::Vector3d& value) { position = value; }
 		void setXCoord(const double& value) { position[0] = value; }
 		void setYCoord(const double& value) { position[1] = value; }
@@ -48,45 +52,45 @@ public:
 		void setCurvature(const double& value) { curvature = value; }
 		void setMode(const ModeType& value) { mode = value; }
 
-		double getTime() const { return time; }
+		std::chrono::milliseconds getTime() const { return time; }
 		Eigen::Vector3d getPosition() const { return position; }
 		double getXCoord() const { return position[0]; }
 		double getYCoord() const { return position[1]; }
-        double getZCoord() const {
+		double getZCoord() const {
 			if (std::isnan(position[2]))
-                throw std::out_of_range("Uninitialized member z");
-            else
+				throw std::out_of_range("Uninitialized member z");
+			else
 				return position[2];
-        }
+		}
 		double getHeading() const { return heading; }
 		Eigen::Vector2d getVelocity() const { return velocity; }
-        double getLongitudinalVelocity() const {
+		double getLongitudinalVelocity() const {
 			if (std::isnan(velocity[0]))
-                throw std::out_of_range("Uninitialized member longitudinal velocity");
-            else
+				throw std::out_of_range("Uninitialized member longitudinal velocity");
+			else
 				return velocity[0];
-        }
-        double getLateralVelocity() const {
+		}
+		double getLateralVelocity() const {
 			if (std::isnan(velocity[1]))
-                throw std::out_of_range("Uninitialized member lateral velocity");
-            else
+				throw std::out_of_range("Uninitialized member lateral velocity");
+			else
 				return velocity[1];
-        }
+		}
 		Eigen::Vector2d getAcceleration() const { return acceleration; }
-        double getLongitudinalAcceleration() const {
+		double getLongitudinalAcceleration() const {
 			if (std::isnan(acceleration[0]))
-                throw std::out_of_range("Uninitialized member longitudinal acceleration");
-            else
+				throw std::out_of_range("Uninitialized member longitudinal acceleration");
+			else
 				return acceleration[0];
-        }
-        double getLateralAcceleration() const {
+		}
+		double getLateralAcceleration() const {
 			if (std::isnan(acceleration[1]))
-                throw std::out_of_range("Uninitialized member lateral acceleration");
-            else
+				throw std::out_of_range("Uninitialized member lateral acceleration");
+			else
 				return acceleration[1];
-        }
+		}
 		double getCurvature() const { return this->curvature; }
-        ModeType getMode() const { return this->mode; }
+		ModeType getMode() const { return this->mode; }
 
 		CartesianPosition getISOPosition() const;
 		SpeedType getISOVelocity() const;
@@ -94,16 +98,21 @@ public:
 
 		std::string toString() const;
 		std::string getFormatString() const;
+<<<<<<< HEAD
 
 		bool operator==(const TrajectoryPoint& other) const;
     private:
         double time = 0;
+=======
+	private:
+		std::chrono::milliseconds time = std::chrono::milliseconds(0);
+>>>>>>> dev
 		Eigen::Vector3d position; //! x, y, z [m]
 		double heading = 0;		  //! Heading ccw from x axis [rad]
 		Eigen::Vector2d velocity; //! Vehicle frame, x forward [m/s]
 		Eigen::Vector2d acceleration; //! Vehicle frame, x forward [m/s]
-        double curvature = 0;
-        ModeType mode = CONTROLLED_BY_VEHICLE;
+		double curvature = 0;
+		ModeType mode = CONTROLLED_BY_VEHICLE;
 
 		template<typename T, int rows>
 		Eigen::Matrix<T, rows, 1> zeroNaNs(
@@ -115,15 +124,17 @@ public:
 			}
 			return ret;
 		}
-    };
+	};
 	typedef std::vector<TrajectoryPoint>::iterator iterator;
 	typedef std::vector<TrajectoryPoint>::const_iterator const_iterator;
+	typedef std::vector<TrajectoryPoint>::reverse_iterator reverse_iterator;
+	typedef std::vector<TrajectoryPoint>::const_reverse_iterator const_reverse_iterator;
 
 	Trajectory() = default;
 	~Trajectory() { points.clear(); }
 	Trajectory(const Trajectory& other);
-    std::vector<TrajectoryPoint> points;
-    std::string name = "";
+	std::vector<TrajectoryPoint> points;
+	std::string name = "";
 	unsigned short version = 0;
 	unsigned short id = 0;
 
@@ -135,14 +146,27 @@ public:
 	void saveToFile(const std::string& fileName) const;
 	Trajectory reversed() const;
 	Trajectory rescaledToVelocity(const double vel_m_s) const;
+	static Trajectory createWilliamsonTurn(double turnRadius = 5, double acceleration = 1, TrajectoryPoint startPoint = TrajectoryPoint(), std::chrono::milliseconds startTime = std::chrono::milliseconds(0));
+
+	Trajectory appendedWith(const Trajectory& other);
+	template<class Rep,class Period>
+	Trajectory delayed(const std::chrono::duration<Rep,Period>& delay) const {
+		Trajectory newTrajectory = Trajectory(*this);
+		newTrajectory.name = newTrajectory.name + "_delayed";
+		for (auto& trajPt : newTrajectory.points) {
+			trajPt.setTime(trajPt.getTime() + delay);
+		}
+		return newTrajectory;
+	}
 
 	bool operator==(const Trajectory& other) const;
-
+	bool isValid() const;
 private:
 	static const std::regex fileHeaderPattern;
 	static const std::regex fileLinePattern;
 	static const std::regex fileFooterPattern;
 
+	bool areTimestampsIncreasing() const;
 };
 
 

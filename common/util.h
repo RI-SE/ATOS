@@ -250,12 +250,14 @@ COMM_TREO = 23,
 COMM_ACCM = 24,
 COMM_TRCM = 25,
 COMM_DISARM = 26,
-COMM_GETSTATUS = 237,
-COMM_GETSTATUS_OK = 238,
-COMM_REMOTECTRL_ENABLE = 27,
-COMM_REMOTECTRL_DISABLE = 28,
-COMM_REMOTECTRL_MANOEUVRE = 29,
-COMM_ENABLE_OBJECT = 30,
+COMM_GETSTATUS = 27,
+COMM_GETSTATUS_OK = 28,
+COMM_BACKTOSTART_CALL = 29,
+COMM_BACKTOSTART_RESPONSE = 30,
+COMM_REMOTECTRL_ENABLE = 31,
+COMM_REMOTECTRL_DISABLE = 32,
+COMM_REMOTECTRL_MANOEUVRE = 33,
+COMM_ENABLE_OBJECT = 34,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
 COMM_INV = 255
@@ -280,6 +282,12 @@ typedef enum {
 	OBJECT_DISABLED = 2,
 	OBJECT_UNDEFINED = 3
 } ObjectEnabledType;
+
+typedef enum {
+	BTS_FAIL = -2,
+	BTS_ERROR = -1,
+	BTS_PASS = 0
+} BTSResponse;
 
 
 typedef struct {
@@ -749,10 +757,10 @@ int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char*
 int UtilReadOriginConfiguration(GeoPosition* origin);
 
 int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
-I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
-I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData);
-I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);
-I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *accmData);
+int UtilPopulateTREODataStructFromMQ(char* rawTREO, size_t rawTREOsize, TREOData *treoData);
+int UtilPopulateEXACDataStructFromMQ(char* rawEXAC, size_t rawEXACsize, EXACData *exacData);
+int UtilPopulateTRCMDataStructFromMQ(char* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);
+int UtilPopulateACCMDataStructFromMQ(char* rawACCM, size_t rawACCMsize, ACCMData *accmData);
 
 struct timeval UtilGetPIDUptime(pid_t pID);
 double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);

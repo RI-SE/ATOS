@@ -7,7 +7,7 @@
 #include <csignal>
 
 
-static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor);
+static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
 
 ObjectListener::ObjectListener(
 		ScenarioHandler* sh,
@@ -39,7 +39,7 @@ void ObjectListener::listen() {
 				auto monr = obj->readMonitorMessage();
 				TimeSetToCurrentSystemTime(&currentTime);
 				if (handler->controlMode == ScenarioHandler::RELATIVE_KINEMATICS && !obj->isAnchor()) {
-					monr.second = transformCoordinate(monr.second, handler->getLastAnchorData());
+					monr.second = transformCoordinate(monr.second, handler->getLastAnchorData(), true);
 				}
 
 				// Disable thread cancelling while accessing shared memory and journals
@@ -57,8 +57,14 @@ void ObjectListener::listen() {
 				if (obj->getState() != prevObjState) {
 					switch (obj->getState()) {
 					case OBJECT_STATE_DISARMED:
-						LogMessage(LOG_LEVEL_INFO, "Object %u disarmed", obj->getTransmitterID());
-						handler->state->objectDisarmed(*handler, obj->getTransmitterID());
+						if (prevObjState == OBJECT_STATE_ABORTING) {
+							LogMessage(LOG_LEVEL_INFO, "Object %u abort cleared", obj->getTransmitterID());
+							handler->state->objectAbortDisarmed(*handler, obj->getTransmitterID());
+						}
+						else {
+							LogMessage(LOG_LEVEL_INFO, "Object %u disarmed", obj->getTransmitterID());
+							handler->state->objectDisarmed(*handler, obj->getTransmitterID());
+						}
 						break;
 					case OBJECT_STATE_POSTRUN:
 						break;
@@ -90,7 +96,7 @@ void ObjectListener::listen() {
 		}
 	} catch (std::invalid_argument& e) {
 		LogMessage(LOG_LEVEL_ERROR, e.what());
-	} catch (std::ios_base::failure& e) {
+	} catch (std::runtime_error& e) {
 		LogMessage(LOG_LEVEL_ERROR, e.what());
 		obj->disconnect();
 		handler->state->disconnectedFromObject(*handler, obj->getTransmitterID());
@@ -107,8 +113,21 @@ void ObjectListener::listen() {
  */
 ObjectMonitorType transformCoordinate(
 		const ObjectMonitorType& point,
-		const ObjectMonitorType& anchor) {
+		const ObjectMonitorType& anchor,
+		const bool debug) {
 	using namespace Eigen;
+	using namespace std::chrono;
+	static auto nextPrintTime = steady_clock::now();
+	static constexpr auto printInterval = seconds(5);
+	bool print = false;
+	if (steady_clock::now() > nextPrintTime) {
+		print = debug;
+		nextPrintTime = steady_clock::now() - nextPrintTime > printInterval ?
+					steady_clock::now() + printInterval
+				  : nextPrintTime + printInterval;
+	}
+	std::stringstream dbg;
+
 	ObjectMonitorType retval = point;
 	struct timeval tvdiff = {0, 0};
 	std::chrono::milliseconds diff;
@@ -118,7 +137,7 @@ ObjectMonitorType transformCoordinate(
 	from_timeval(tvdiff, diff);
 
 	AngleAxis anchorToGlobal(anchor.position.heading_rad, Vector3d::UnitZ());
-	AngleAxis pointToGlobal(anchor.position.heading_rad+point.position.heading_rad, Vector3d::UnitZ());
+    AngleAxis pointToGlobal(point.position.heading_rad, Vector3d::UnitZ());
 	Vector3d pointPos(point.position.xCoord_m, point.position.yCoord_m, point.position.zCoord_m);
 	Vector3d anchorPos(anchor.position.xCoord_m, anchor.position.yCoord_m, anchor.position.zCoord_m);
 	Vector3d pointVel(point.speed.longitudinal_m_s, point.speed.lateral_m_s, 0.0);
@@ -126,9 +145,14 @@ ObjectMonitorType transformCoordinate(
 	Vector3d pointAcc(point.acceleration.longitudinal_m_s2, point.acceleration.lateral_m_s2, 0.0);
 	Vector3d anchorAcc(anchor.acceleration.longitudinal_m_s2, anchor.acceleration.lateral_m_s2, 0.0);
 
+	if (print) {
+		dbg << std::endl
+			<< "pt:   " << pointPos << ", " << point.position.heading_rad*180.0/M_PI << "deg" << std::endl
+			<< "anch: " << anchorPos << ", " << anchor.position.heading_rad*180.0/M_PI << "deg" << std::endl;
+	}
+
 	// TODO check on timestamps
-	//std::cout << "pt: " << pointPos << std::endl << "anch: " << anchorPos <<std::endl;
-	Vector3d pointInAnchorFrame = anchorPos + anchorToGlobal*pointPos; // TODO subtract also anchor velocity vector times tdiff
+	Vector3d pointInAnchorFrame = anchorPos + pointPos; // TODO subtract also anchor velocity vector times tdiff
 	anchorVel = anchorToGlobal*anchorVel; // To x/y speeds
 	pointVel = pointToGlobal*pointVel + anchorVel; // To x/y speeds
 	pointVel = pointToGlobal.inverse()*pointVel; // To long/lat speeds
@@ -141,7 +165,7 @@ ObjectMonitorType transformCoordinate(
 	retval.position.zCoord_m = pointInAnchorFrame[2];
 	retval.position.isPositionValid = anchor.position.isPositionValid && anchor.position.isHeadingValid
 			&& point.position.isPositionValid;
-	retval.position.heading_rad = anchor.position.heading_rad + point.position.heading_rad;
+	retval.position.heading_rad = point.position.heading_rad;
 	retval.position.isHeadingValid = anchor.position.isHeadingValid && point.position.isHeadingValid;
 	retval.speed.longitudinal_m_s = pointVel[0];
 	retval.speed.lateral_m_s = pointVel[1];
@@ -153,5 +177,9 @@ ObjectMonitorType transformCoordinate(
 	retval.acceleration.isLateralValid = retval.acceleration.isLongitudinalValid =
 			anchor.acceleration.isLateralValid && anchor.acceleration.isLongitudinalValid
 			&& point.acceleration.isLateralValid && point.acceleration.isLongitudinalValid;
+	if (print) {
+		dbg << "res:  " << pointInAnchorFrame << ", " << retval.position.heading_rad*180.0/M_PI << "deg";
+		LogPrint(dbg.str().c_str());
+	}
 	return retval;
 }

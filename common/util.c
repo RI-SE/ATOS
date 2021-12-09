@@ -90,6 +90,7 @@
 #define PRIO_COMM_TRAJ_FROMSUP 12
 #define PRIO_COMM_GETSTATUS 10
 #define PRIO_COMM_REMOTECTRL_MANOEUVRE 12
+#define PRIO_COMM_BACKTOSTART 12
 #define PRIO_COMM_GETSTATUS_OK 255
 
 // Unused messages TODO: double check the priority of unused messages
@@ -2171,6 +2172,12 @@ int iCommSend(const enum COMMAND iCommand, const char *cpData, size_t dataLength
 	case COMM_REMOTECTRL_MANOEUVRE:
 		uiMessagePrio = PRIO_COMM_REMOTECTRL_MANOEUVRE;
 		break;
+	case COMM_BACKTOSTART_CALL:
+        uiMessagePrio = PRIO_COMM_BACKTOSTART;
+        break;
+	case COMM_BACKTOSTART_RESPONSE:
+		uiMessagePrio = PRIO_COMM_BACKTOSTART;
+		break;
 	case COMM_ENABLE_OBJECT:
 		uiMessagePrio = PRIO_COMM_ENABLE_OBJECT;
 		break;
@@ -3977,8 +3984,8 @@ int UtilPopulateMonitorDataStruct(const char *rawData, const size_t rawDataSize,
  * \param rawTREOsize size of MQ data
  * \param treoData Data struct to be filled
  */
-I32 UtilPopulateTREODataStructFromMQ(C8 * rawTREO, size_t rawTREOsize, TREOData * treoData) {
-	C8 *rdPtr = rawTREO;
+int UtilPopulateTREODataStructFromMQ(char * rawTREO, size_t rawTREOsize, TREOData * treoData) {
+	char *rdPtr = rawTREO;
 
 	if (rawTREOsize < sizeof (TREOData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw TREO array too small to hold all necessary TREO data");
@@ -4003,8 +4010,8 @@ I32 UtilPopulateTREODataStructFromMQ(C8 * rawTREO, size_t rawTREOsize, TREOData 
  * \param rawEXACsize size of MQ data
  * \param exacData Data struct to be filled
  */
-I32 UtilPopulateEXACDataStructFromMQ(C8 * rawEXAC, size_t rawEXACsize, EXACData * exacData) {
-	C8 *rdPtr = rawEXAC;
+int UtilPopulateEXACDataStructFromMQ(char * rawEXAC, size_t rawEXACsize, EXACData * exacData) {
+	char *rdPtr = rawEXAC;
 
 	if (rawEXACsize < sizeof (EXACData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw EXAC array too small to hold all necessary EXAC data");
@@ -4029,8 +4036,8 @@ I32 UtilPopulateEXACDataStructFromMQ(C8 * rawEXAC, size_t rawEXACsize, EXACData 
  * \param rawTRCMsize size of MQ data
  * \param trcmData Data struct to be filled
  */
-I32 UtilPopulateTRCMDataStructFromMQ(C8 * rawTRCM, size_t rawTRCMsize, TRCMData * trcmData) {
-	C8 *rdPtr = rawTRCM;
+int UtilPopulateTRCMDataStructFromMQ(char * rawTRCM, size_t rawTRCMsize, TRCMData * trcmData) {
+	char *rdPtr = rawTRCM;
 
 	if (rawTRCMsize < sizeof (TRCMData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw TRCM array too small to hold all necessary TRCM data");
@@ -4064,8 +4071,8 @@ I32 UtilPopulateTRCMDataStructFromMQ(C8 * rawTRCM, size_t rawTRCMsize, TRCMData 
  * \param rawACCMsize size of MQ data
  * \param accmData Data struct to be filled
  */
-I32 UtilPopulateACCMDataStructFromMQ(C8 * rawACCM, size_t rawACCMsize, ACCMData * accmData) {
-	C8 *rdPtr = rawACCM;
+int UtilPopulateACCMDataStructFromMQ(char * rawACCM, size_t rawACCMsize, ACCMData * accmData) {
+	char *rdPtr = rawACCM;
 
 	if (rawACCMsize < sizeof (ACCMData)) {
 		LogMessage(LOG_LEVEL_ERROR, "Raw ACCM array too small to hold all necessary ACCM data");
