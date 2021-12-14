@@ -214,7 +214,7 @@ int awaitConnection(TCPHandler& tcpPort, UDPHandler& udpPort, enum COMMAND& rece
 				LogMessage(LOG_LEVEL_INFO, "Success: configuring UDP connection to: %s port: %d", tcpPort.getClientIP().c_str(), udpPort.PORT);
 			}
 			else {
-				LogMessage(LOG_LEVEL_INFO, "Fail: configuring UDP connection to: %s port: %d", tcpPort.getClientIP().c_str(), udpPort.PORT);
+				LogMessage(LOG_LEVEL_ERROR, "Fail: configuring UDP connection to: %s port: %d", tcpPort.getClientIP().c_str(), udpPort.PORT);
 			}
 				
 		}
