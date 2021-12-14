@@ -190,7 +190,6 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& ReSendOse
 			udpTransmitBuffer.resize(static_cast<unsigned long>(retval));
 			bytesSent = udpPort.sendUDP(udpTransmitBuffer);
 			if (bytesSent < 0) {
-				std::cout <<bytesSent <<std::endl;
 				LogMessage(LOG_LEVEL_INFO, "Unable to send ObjectData to Visualizer");
 			}
 		}
