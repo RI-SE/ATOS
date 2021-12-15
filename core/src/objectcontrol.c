@@ -562,7 +562,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								//Build ASP debug data and set to GSD
 								//bzero(buffer,OBJECT_MESS_BUFFER_SIZE);
 								//ObjectControlBuildASPMessage(buffer, &ASPData, 0);
-								DataDictionarySetRVSSAsp(GSD, &ASPData);
+								DataDictionarySetRVSSAsp(&ASPData);
 
 								if (TimeGetAsGPSqmsOfWeek(&monitorData.MonrData.timestamp) % ASPDebugRate ==
 									0) {
