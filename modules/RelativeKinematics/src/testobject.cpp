@@ -432,8 +432,7 @@ Channel& operator<<(Channel& chnl, const Trajectory& traj) {
 		SpeedType spd = pt.getISOVelocity();
 		AccelerationType acc = pt.getISOAcceleration();
 
-		relTime.tv_sec = static_cast<time_t>(pt.getTime());
-		relTime.tv_usec = static_cast<time_t>((pt.getTime() - relTime.tv_sec) * 1000000);
+		relTime = to_timeval(pt.getTime());
 
 		nBytes = encodeTRAJMessagePoint(&relTime, pos, spd, acc, static_cast<float>(pt.getCurvature()),
 										chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
