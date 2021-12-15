@@ -53,6 +53,7 @@ static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
 #define MONR_DATA_FILENAME "MonitorData"
 #define STATE_DATA_FILENAME "StateData"
 #define MISC_DATA_FILENAME "MiscData"
+#define RVSSASP_DATA_FILENAME "RvssAspData"
 #define MISC_DATA_MAX_SIZE 1024
 
 typedef struct {
@@ -62,6 +63,7 @@ typedef struct {
 static volatile ObjectDataType *objectDataMemory = NULL;
 static volatile StateDataType *stateDataMemory = NULL;
 static volatile char *miscDataMemory = NULL;
+static volatile ASPType *rvssAspDataMemory = NULL; 
 
 /*------------------------------------------------------------
   -- Static function definitions
@@ -103,6 +105,7 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitRVSSConfigU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
+	Res = Res == READ_OK ? DataDictionaryInitRVSSAsp() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMiscData() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
@@ -1602,16 +1605,36 @@ ReadWriteAccess_t DataDictionaryGetRVSSRateU8(GSDType * GSD, U8 * RVSSRate) {
 
 
 /*ASPDebug*/
+
+/*!
+ * \brief DataDictionaryInitRVSSAsp inits a data structure for saving RVSSAsp data
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryInitRVSSAsp() {
+
+	int createdMemory;
+
+	rvssAspDataMemory = createSharedMemory(RVSSASP_DATA_FILENAME, 0, sizeof (ASPType), &createdMemory);
+	if (rvssAspDataMemory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared RVSSAsp data memory");
+		return UNDEFINED;
+	}
+	return createdMemory ? WRITE_OK : READ_OK;
+}
+
+
 /*!
  * \brief DataDictionarySetRVSSAsp Parses input variable and sets variable to corresponding value
  * \param GSD Pointer to shared allocated memory
  * \param ASPD
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetRVSSAsp(GSDType * GSD, ASPType * ASPD) {
-	pthread_mutex_lock(&ASPDataMutex);
-	GSD->ASPData = *ASPD;
-	pthread_mutex_unlock(&ASPDataMutex);
+ReadWriteAccess_t DataDictionarySetRVSSAsp(ASPType * ASPD) {
+
+
+	rvssAspDataMemory = claimSharedMemory(rvssAspDataMemory);
+	memcpy(&rvssAspDataMemory, ASPD, sizeof (ASPType));
+	rvssAspDataMemory = releaseSharedMemory(rvssAspDataMemory);
 	return WRITE_OK;
 }
 
@@ -1621,10 +1644,12 @@ ReadWriteAccess_t DataDictionarySetRVSSAsp(GSDType * GSD, ASPType * ASPD) {
  * \param ASPD Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType * GSD, ASPType * ASPD) {
-	pthread_mutex_lock(&ASPDataMutex);
-	*ASPD = GSD->ASPData;
-	pthread_mutex_unlock(&ASPDataMutex);
+ReadWriteAccess_t DataDictionaryGetRVSSAsp(ASPType * ASPD) {
+	
+
+	rvssAspDataMemory = claimSharedMemory(rvssAspDataMemory);
+	memcpy(ASPD, &rvssAspDataMemory, sizeof (ASPType));
+	rvssAspDataMemory = releaseSharedMemory(rvssAspDataMemory);
 	return READ_OK;
 }
 

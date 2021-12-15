@@ -117,8 +117,9 @@ ReadWriteAccess_t DataDictionaryInitRVSSRateU8(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetRVSSRateU8(GSDType *GSD, U8 RVSSRate);
 ReadWriteAccess_t DataDictionaryGetRVSSRateU8(GSDType *GSD, U8 *RVSSRate);
 
-ReadWriteAccess_t DataDictionarySetRVSSAsp(GSDType *GSD, ASPType *ASPData);
-ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType *GSD, ASPType *ASPData);
+ReadWriteAccess_t DataDictionaryInitRVSSAsp();
+ReadWriteAccess_t DataDictionarySetRVSSAsp(ASPType *ASPData);
+ReadWriteAccess_t DataDictionaryGetRVSSAsp(ASPType *ASPData);
 
 ReadWriteAccess_t DataDictionaryInitMiscData(void);
 ReadWriteAccess_t DataDictionarySetMiscData(const char * miscData, const size_t datalen);
