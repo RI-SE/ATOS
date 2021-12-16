@@ -46,25 +46,20 @@ ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType *GSD, C8 *IP);
 ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(GSDType *GSD, U32 *IP);
 ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType *GSD, C8 *IP, U32 BuffLen);
 
-ReadWriteAccess_t DataDictionaryInitASPMaxTimeDiffDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(GSDType *GSD, C8 *ASPMaxTimeDiff);
-ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(GSDType *GSD, dbl *ASPMaxTimeDiff);
+ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(const char *ASPMaxTimeDiff);
+ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(double_t *ASPMaxTimeDiff);
 
-ReadWriteAccess_t DataDictionaryInitASPMaxTrajDiffDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(GSDType *GSD, C8 *ASPMaxTimeDiff);
-ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(GSDType *GSD, dbl *ASPMaxTimeDiff);
+ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(const char *ASPMaxTimeDiff);
+ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(double_t *ASPMaxTimeDiff);
 
-ReadWriteAccess_t DataDictionaryInitASPStepBackCountU32(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(GSDType *GSD, C8 *ASPStepBackCount);
-ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(GSDType *GSD, U32 *ASPStepBackCount);
+ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(const char *ASPStepBackCount);
+ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(uint32_t *ASPStepBackCount);
 
-ReadWriteAccess_t DataDictionaryInitASPFilterLevelDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(GSDType *GSD, C8 *ASPFilterLevel);
-ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(GSDType *GSD, dbl *ASPFilterLevel);
+ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(const char *ASPFilterLevel);
+ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(double_t *ASPFilterLevel);
 
-ReadWriteAccess_t DataDictionaryInitASPMaxDeltaTimeDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(GSDType *GSD, C8 *ASPMaxDeltaTime);
-ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(GSDType *GSD, dbl *ASPMaxDeltaTime);
+ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(const char *ASPMaxDeltaTime);
+ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(double_t *ASPMaxDeltaTime);
 
 ReadWriteAccess_t DataDictionarySetTimeServerIPU32(const char* timeServerIP);
 ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t* timeServerIP);

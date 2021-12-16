@@ -27,11 +27,6 @@ static pthread_mutex_t OriginLatitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OriginLongitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OriginAltitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t VisualizationServerMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPMaxTimeDiffMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPMaxTrajDiffMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPStepBackCountMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPFilterLevelMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPMaxDeltaTimeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t SimulatorIPMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t SimulatorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t SimulatorUDPPortMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -40,9 +35,6 @@ static pthread_mutex_t VOILReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t DTMReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ExternalSupervisorIPMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t SupervisorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t DataDictionaryRVSSConfigMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t DataDictionaryRVSSRateMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -86,11 +78,6 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitOriginLongitudeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitOriginAltitudeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitVisualizationServerU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitASPMaxTimeDiffDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitASPMaxTrajDiffDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitASPStepBackCountU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitASPFilterLevelDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitASPMaxDeltaTimeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSimulatorIPU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSimulatorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSimulatorUDPPortU16(GSD) : Res;
@@ -489,45 +476,25 @@ ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType * GSD, C8 * IP,
 /*END of VisualizationServer*/
 
 /*ASPMaxTimeDiff*/
-/*!
- * \brief DataDictionaryInitASPMaxTimeDiffDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitASPMaxTimeDiffDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ASPMaxTimeDiffMutex);
-		GSD->ASPMaxTimeDiffDbl = atof(ResultBufferC8);
-		pthread_mutex_unlock(&ASPMaxTimeDiffMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ASPMaxTimeDiff not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetASPMaxTimeDiffDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
- * \param ASPMaxTimeDiff
+  * \param ASPMaxTimeDiff
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(GSDType * GSD, C8 * ASPMaxTimeDiff) {
+ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(const char * ASPMaxTimeDiff) {
 	ReadWriteAccess_t Res;
+
+
+	if (ASPMaxTimeDiff == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, ASPMaxTimeDiff, strlen(ASPMaxTimeDiff) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&ASPMaxTimeDiffMutex);
-		GSD->ASPMaxTimeDiffDbl = atof(ASPMaxTimeDiff);
-		pthread_mutex_unlock(&ASPMaxTimeDiffMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -536,59 +503,64 @@ ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(GSDType * GSD, C8 * ASPMaxT
 
 /*!
  * \brief DataDictionaryGetASPMaxTimeDiffDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param ASPMaxTimeDiff Return variable pointer
+  * \param ASPMaxTimeDiff Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(GSDType * GSD, dbl * ASPMaxTimeDiff) {
-	pthread_mutex_lock(&ASPMaxTimeDiffMutex);
-	*ASPMaxTimeDiff = GSD->ASPMaxTimeDiffDbl;
-	pthread_mutex_unlock(&ASPMaxTimeDiffMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(dbl * ASPMaxTimeDiff) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	double_t readSetting;
+
+	if (ASPMaxTimeDiff == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtof(resultBuffer, &endPtr);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP max time diff configuration");
+			result = PARAMETER_NOTFOUND;
+			*ASPMaxTimeDiff = 0;
+		}
+		else {
+			result = READ_OK;
+			*ASPMaxTimeDiff = (double_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "ASP max time diff configuration not found!");
+		result = PARAMETER_NOTFOUND;
+		*ASPMaxTimeDiff = 0;
+	}
+
 }
 
 /*END of ASPMaxTimeDiff*/
 
 /*ASPMaxTrajDiff*/
-/*!
- * \brief DataDictionaryInitASPMaxTrajDiffDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitASPMaxTrajDiffDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ASPMaxTrajDiffMutex);
-		GSD->ASPMaxTrajDiffDbl = atof(ResultBufferC8);
-		pthread_mutex_unlock(&ASPMaxTrajDiffMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ASPMaxTrajDiff not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetASPMaxTrajDiffDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param ASPMaxTrajDiff
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(GSDType * GSD, C8 * ASPMaxTrajDiff) {
+ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(const char * ASPMaxTrajDiff) {
 	ReadWriteAccess_t Res;
+
+	if (ASPMaxTrajDiff == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF, ASPMaxTrajDiff, strlen(ASPMaxTrajDiff) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&ASPMaxTrajDiffMutex);
-		GSD->ASPMaxTrajDiffDbl = atof(ASPMaxTrajDiff);
-		pthread_mutex_unlock(&ASPMaxTrajDiffMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -597,15 +569,40 @@ ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(GSDType * GSD, C8 * ASPMaxT
 
 /*!
  * \brief DataDictionaryGetASPMaxTrajDiffDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param ASPMaxTrajDiff Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(GSDType * GSD, dbl * ASPMaxTrajDiff) {
-	pthread_mutex_lock(&ASPMaxTrajDiffMutex);
-	*ASPMaxTrajDiff = GSD->ASPMaxTrajDiffDbl;
-	pthread_mutex_unlock(&ASPMaxTrajDiffMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(double_t * ASPMaxTrajDiff) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	double_t readSetting;
+
+	if (ASPMaxTrajDiff == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtof(resultBuffer, &endPtr);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP max traj diff configuration");
+			result = PARAMETER_NOTFOUND;
+			*ASPMaxTrajDiff = 0;
+		}
+		else {
+			result = READ_OK;
+			*ASPMaxTrajDiff = (double_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "ASP max traj diff configuration not found!");
+		result = PARAMETER_NOTFOUND;
+		*ASPMaxTrajDiff = 0;
+	}
 }
 
 /*END of ASPMaxTrajDiff*/
@@ -613,44 +610,22 @@ ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(GSDType * GSD, dbl * ASPMax
 
 /*ASPStepBackCount*/
 /*!
- * \brief DataDictionaryInitASPStepBackCountU32 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitASPStepBackCountU32(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ASPStepBackCountMutex);
-		GSD->ASPStepBackCountU32 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&ASPStepBackCountMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ASPStepBackCount not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetASPStepBackCountU32 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param ASPStepBackCount
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(GSDType * GSD, C8 * ASPStepBackCount) {
+ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(const char * ASPStepBackCount) {
 	ReadWriteAccess_t Res;
+
+	if (ASPStepBackCount == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT, ASPStepBackCount, strlen(ASPStepBackCount) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&ASPStepBackCountMutex);
-		GSD->ASPStepBackCountU32 = atoi(ASPStepBackCount);
-		pthread_mutex_unlock(&ASPStepBackCountMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -659,59 +634,63 @@ ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(GSDType * GSD, C8 * ASPSt
 
 /*!
  * \brief DataDictionaryGetASPStepBackCountU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param ASPStepBackCount Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(GSDType * GSD, U32 * ASPStepBackCount) {
-	pthread_mutex_lock(&ASPStepBackCountMutex);
-	*ASPStepBackCount = GSD->ASPStepBackCountU32;
-	pthread_mutex_unlock(&ASPStepBackCountMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(uint32_t * ASPStepBackCount) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	uint64_t readSetting;
+
+	if (ASPStepBackCount == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtoul(resultBuffer, &endPtr, 10);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP step back count configuration");
+			result = PARAMETER_NOTFOUND;
+			*ASPStepBackCount = 0;
+		}
+		else {
+			result = READ_OK;
+			*ASPStepBackCount = (uint32_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "RASP step back count not found!");
+		result = PARAMETER_NOTFOUND;
+		*ASPStepBackCount = 0;
+	}
 }
 
 /*END of ASPStepBackCount*/
 
+
 /*ASPFilterLevel*/
 /*!
- * \brief DataDictionaryInitASPFilterLevelDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitASPFilterLevelDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ASPFilterLevelMutex);
-		GSD->ASPFilterLevelDbl = atof(ResultBufferC8);
-		pthread_mutex_unlock(&ASPFilterLevelMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ASPFilterLevel not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetASPFilterLevelDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param ASPFilterLevel
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(GSDType * GSD, C8 * ASPFilterLevel) {
+ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(const char * ASPFilterLevel) {
 	ReadWriteAccess_t Res;
+
+	if (ASPFilterLevel == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL, ASPFilterLevel, strlen(ASPFilterLevel) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&ASPFilterLevelMutex);
-		GSD->ASPFilterLevelDbl = atof(ASPFilterLevel);
-		pthread_mutex_unlock(&ASPFilterLevelMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -720,59 +699,63 @@ ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(GSDType * GSD, C8 * ASPFilt
 
 /*!
  * \brief DataDictionaryGetASPFilterLevelDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param ASPFilterLevel Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(GSDType * GSD, dbl * ASPFilterLevel) {
-	pthread_mutex_lock(&ASPFilterLevelMutex);
-	*ASPFilterLevel = GSD->ASPFilterLevelDbl;
-	pthread_mutex_unlock(&ASPFilterLevelMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(dbl * ASPFilterLevel) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	double_t readSetting;
+
+	if (ASPFilterLevel == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtof(resultBuffer, &endPtr);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP filter level configuration");
+			result = PARAMETER_NOTFOUND;
+			*ASPFilterLevel = 0;
+		}
+		else {
+			result = READ_OK;
+			*ASPFilterLevel = (double_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "ASP filter level configuration not found!");
+		result = PARAMETER_NOTFOUND;
+		*ASPFilterLevel = 0;
+	}
 }
 
 /*END of ASPFilterLevel*/
 
 /*ASPMaxDeltaTime*/
-/*!
- * \brief DataDictionaryInitASPMaxDeltaTimeDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitASPMaxDeltaTimeDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ASPMaxDeltaTimeMutex);
-		GSD->ASPMaxDeltaTimeDbl = atof(ResultBufferC8);
-		pthread_mutex_unlock(&ASPMaxDeltaTimeMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ASPMaxDeltaTime not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetASPMaxDeltaTimeDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param ASPMaxDeltaTime
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(GSDType * GSD, C8 * ASPMaxDeltaTime) {
+ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(const char * ASPMaxDeltaTime) {
 	ReadWriteAccess_t Res;
+
+	if (ASPMaxDeltaTime == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME, ASPMaxDeltaTime, strlen(ASPMaxDeltaTime) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&ASPMaxDeltaTimeMutex);
-		GSD->ASPMaxDeltaTimeDbl = atof(ASPMaxDeltaTime);
-		pthread_mutex_unlock(&ASPMaxDeltaTimeMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -781,15 +764,40 @@ ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(GSDType * GSD, C8 * ASPMax
 
 /*!
  * \brief DataDictionaryGetASPMaxDeltaTimeDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param ASPMaxDeltaTime Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(GSDType * GSD, dbl * ASPMaxDeltaTime) {
-	pthread_mutex_lock(&ASPMaxDeltaTimeMutex);
-	*ASPMaxDeltaTime = GSD->ASPMaxDeltaTimeDbl;
-	pthread_mutex_unlock(&ASPMaxDeltaTimeMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(double_t * ASPMaxDeltaTime) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	double_t readSetting;
+
+	if (ASPMaxDeltaTime == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtof(resultBuffer, &endPtr);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP max delta time configuration");
+			result = PARAMETER_NOTFOUND;
+			*ASPMaxDeltaTime = 0;
+		}
+		else {
+			result = READ_OK;
+			*ASPMaxDeltaTime = (double_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "ASP max delta time configuration not found!");
+		result = PARAMETER_NOTFOUND;
+		*ASPMaxDeltaTime = 0;
+	}
 }
 
 /*END of ASPFilterLevel*/
@@ -1475,7 +1483,6 @@ ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(GSDType * GSD, U16 * Sup
 
 /*!
  * \brief DataDictionarySetInitRVSSConfigU32 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param RVSSConfig
  * \return Result according to ::ReadWriteAccess_t
  */
@@ -1497,7 +1504,6 @@ ReadWriteAccess_t DataDictionarySetRVSSConfigU32(uint32_t RVSSConfig) {
 
 /*!
  * \brief DataDictionaryGetRVSSConfigU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param RVSSConfig Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
@@ -1547,7 +1553,6 @@ ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(uint32_t * RVSSConfig) {
 
 /*!
  * \brief DataDictionarySetRVSSRateU8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param RVSSRate
  * \return Result according to ::ReadWriteAccess_t
  */
@@ -1569,7 +1574,6 @@ ReadWriteAccess_t DataDictionarySetRVSSRateU8(uint8_t RVSSRate) {
 
 /*!
  * \brief DataDictionaryGetRVSSRateU8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param RVSSRate Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
