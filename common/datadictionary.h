@@ -66,14 +66,12 @@ ReadWriteAccess_t DataDictionaryInitASPMaxDeltaTimeDbl(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(GSDType *GSD, C8 *ASPMaxDeltaTime);
 ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(GSDType *GSD, dbl *ASPMaxDeltaTime);
 
-ReadWriteAccess_t DataDictionaryInitTimeServerIPU32(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetTimeServerIPU32(GSDType *GSD, C8 *TimeServerIP);
-ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(GSDType *GSD, U32 *TimeServerIP);
-ReadWriteAccess_t DataDictionaryGetTimeServerIPC8(GSDType *GSD, C8 *TimeServerIP, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetTimeServerIPU32(const char* timeServerIP);
+ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t* timeServerIP);
+ReadWriteAccess_t DataDictionaryGetTimeServerIPString(char* timeServerIP, size_t bufferLength);
 
-ReadWriteAccess_t DataDictionaryInitTimeServerPortU16(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetTimeServerPortU16(GSDType *GSD, C8 *TimeServerPort);
-ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(GSDType *GSD, U16 *TimeServerPort);
+ReadWriteAccess_t DataDictionarySetTimeServerPortU16(const char* timeServerPort);
+ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(uint16_t* timeServerPort);
 
 ReadWriteAccess_t DataDictionaryInitSimulatorIPU32(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetSimulatorIPU32(GSDType *GSD, C8 *SimulatorIP);
