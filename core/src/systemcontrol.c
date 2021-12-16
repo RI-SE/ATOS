@@ -337,7 +337,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 	U8 RVSSRateU8 = DEFAULT_RVSS_RATE;
 
-	DataDictionaryGetRVSSRateU8(GSD, &RVSSRateU8);
+	DataDictionaryGetRVSSRateU8(&RVSSRateU8);
 	LogMessage(LOG_LEVEL_INFO, "Real-time variable subscription service rate set to %u Hz", RVSSRateU8);
 
 	if (ModeU8 == 0) {
@@ -2001,10 +2001,10 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("TimeServerIP", ParameterName) == 0) {
-		DataDictionaryGetTimeServerIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetTimeServerIPString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("TimeServerPort", ParameterName) == 0) {
-		DataDictionaryGetTimeServerPortU16(GSD, &ValueU16);
+		DataDictionaryGetTimeServerPortU16(&ValueU16);
 		sprintf(ReturnValue, "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorIP", ParameterName) == 0) {
@@ -2043,7 +2043,7 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu32, ValueU32);
 	}
 	else if (strcmp("RVSSRate", ParameterName) == 0) {
-		DataDictionaryGetRVSSRateU8(GSD, &ValueU8);
+		DataDictionaryGetRVSSRateU8(&ValueU8);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu8, ValueU8);
 	}
 	else if (strcmp("ScenarioName", ParameterName) == 0) {
@@ -2225,10 +2225,10 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		result = DataDictionarySetASPMaxDeltaTimeDbl(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_TIME_SERVER_IP:
-		result = DataDictionarySetTimeServerIPU32(GSD, newValue);
+		result = DataDictionarySetTimeServerIPU32(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_TIME_SERVER_PORT:
-		result = DataDictionarySetTimeServerPortU16(GSD, newValue);
+		result = DataDictionarySetTimeServerPortU16(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_IP:
 		result = DataDictionarySetSimulatorIPU32(GSD, newValue);
@@ -2258,7 +2258,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		result = DataDictionarySetRVSSConfigU32((uint32_t) strtoul(newValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_RATE:
-		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(newValue, NULL, 10));
+		result = DataDictionarySetRVSSRateU8((uint8_t) strtoul(newValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_MISC_DATA:
 		LogMessage(LOG_LEVEL_WARNING, "Unable to set MiscData - size unknown");

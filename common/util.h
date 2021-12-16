@@ -62,7 +62,7 @@ extern "C"{
 #define DEFAULT_SUPERVISOR_TCP_PORT 53010
 #define DEFAULT_RVSS_CONF 3
 #define DEFAULT_RVSS_RATE 1
-#define DEFAULT_MAX_PACKETS_LOST 0
+#define DEFAULT_MAX_PACKETS_LOST 20
 #define DEFAULT_TRANSMITTER_ID 0
 
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length
@@ -568,15 +568,16 @@ typedef struct {
 
 /*! Data dictionary read/write return codes. */
 typedef enum {
-    UNDEFINED, /*!< Undefined result */
-    WRITE_OK, /*!< Write successful */
-    READ_OK, /*!< Read successful */
-	UNINITIALIZED, /*!< Read successful but data not initialized */
-    READ_WRITE_OK, /*!< Combined read/write successful */
-    PARAMETER_NOTFOUND, /*!< Read/write not successful */
-    OUT_OF_RANGE /*!< Attempted to read out of range */
+	UNDEFINED, /*!< Undefined result */
+	WRITE_OK,  /*!< Write successful */
+	READ_OK,   /*!< Read successful */
+	WRITE_FAIL, /*! Write unsuccessful */
+	READ_FAIL,  /*! Read unsuccessful */
+	UNINITIALIZED,		/*!< Read successful but data not initialized */
+	READ_WRITE_OK,		/*!< Combined read/write successful */
+	PARAMETER_NOTFOUND, /*!< Read/write not successful */
+	OUT_OF_RANGE		/*!< Attempted to read out of range */
 } ReadWriteAccess_t;
-
 
 #pragma pack(push,1)
 
