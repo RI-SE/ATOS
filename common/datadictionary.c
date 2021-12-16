@@ -150,241 +150,227 @@ ReadWriteAccess_t DataDictionaryGetScenarioName(char *name, const size_t nameLen
 	return Res;
 }
 
-
-/*!
- * \brief DataDictionaryInitOriginLatitudeDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&OriginLatitudeMutex);
-		GSD->OriginLatitudeDbl = atof(ResultBufferC8);
-		bzero(GSD->OriginLatitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->OriginLatitudeC8, ResultBufferC8);
-		pthread_mutex_unlock(&OriginLatitudeMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "OriginLatitude not found!");
-	}
-
-	return Res;
-}
-
 /*!
  * \brief DataDictionarySetOriginLatitudeDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param Latitude
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType * GSD, C8 * Latitude) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(const char* latitude) {
+	if (latitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, Latitude, strlen(Latitude) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&OriginLatitudeMutex);
-		GSD->OriginLatitudeDbl = atof(Latitude);
-		bzero(GSD->OriginLatitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->OriginLatitudeC8, Latitude);
-		pthread_mutex_unlock(&OriginLatitudeMutex);
+		(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, latitude, strlen(latitude) + 1)) {
+		return WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*!
  * \brief DataDictionaryGetOriginLatitudeDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param Latitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(GSDType * GSD, dbl * Latitude) {
-	pthread_mutex_lock(&OriginLatitudeMutex);
-	*Latitude = GSD->OriginLatitudeDbl;
-	pthread_mutex_unlock(&OriginLatitudeMutex);
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(double_t* latitude) {
+	char readValue[DD_CONTROL_BUFFER_SIZE_20];
+	char* endptr;
+	ReadWriteAccess_t retval;
+	if (latitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetOriginLatitudeString(readValue, sizeof (readValue))) != READ_OK) {
+		return retval;
+	}
+
+	*latitude = strtod(readValue, &endptr);
+
+	if (endptr == readValue) {
+		*latitude = 0;
+		LogMessage(LOG_LEVEL_ERROR, "Latitude badly formatted");
+		return PARAMETER_NOTFOUND;
+	}
 	return READ_OK;
 }
 
 /*!
- * \brief DataDictionaryGetOriginLatitudeC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetOriginLatitudeString Reads variable from shared memory
  * \param Latitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLatitudeC8(GSDType * GSD, C8 * Latitude, U32 BuffLen) {
-	pthread_mutex_lock(&OriginLatitudeMutex);
-	bzero(Latitude, BuffLen);
-	strcat(Latitude, GSD->OriginLatitudeC8);
-	pthread_mutex_unlock(&OriginLatitudeMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeString(char* latitude, const size_t bufferLength) {
+	if (latitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, latitude, bufferLength) > 0) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Latitude not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of Origin Latitude*/
 
 /*Origin Longitude*/
 /*!
- * \brief DataDictionaryInitOriginLongitudeDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitOriginLongitudeDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&OriginLongitudeMutex);
-		GSD->OriginLongitudeDbl = atof(ResultBufferC8);
-		bzero(GSD->OriginLongitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->OriginLongitudeC8, ResultBufferC8);
-		pthread_mutex_unlock(&OriginLongitudeMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "OriginLongitude not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetOriginLongitudeDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param Longitude
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(GSDType * GSD, C8 * Longitude) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(const char* longitude) {
+	if (longitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, Longitude, strlen(Longitude) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&OriginLongitudeMutex);
-		GSD->OriginLongitudeDbl = atof(Longitude);
-		bzero(GSD->OriginLongitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->OriginLongitudeC8, Longitude);
-		pthread_mutex_unlock(&OriginLongitudeMutex);
+		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, longitude, strlen(longitude) + 1)) {
+		return WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*!
  * \brief DataDictionaryGetOriginLongitudeDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param Longitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(GSDType * GSD, dbl * Longitude) {
-	pthread_mutex_lock(&OriginLongitudeMutex);
-	*Longitude = GSD->OriginLongitudeDbl;
-	pthread_mutex_unlock(&OriginLongitudeMutex);
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(double_t* longitude) {
+	char readValue[DD_CONTROL_BUFFER_SIZE_20];
+	char* endptr;
+	ReadWriteAccess_t retval;
+	if (longitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetOriginLongitudeString(readValue, sizeof (readValue))) != READ_OK) {
+		return retval;
+	}
+
+	*longitude = strtod(readValue, &endptr);
+
+	if (endptr == readValue) {
+		*longitude = 0;
+		LogMessage(LOG_LEVEL_ERROR, "Longitude badly formatted");
+		return PARAMETER_NOTFOUND;
+	}
 	return READ_OK;
 }
 
 /*!
- * \brief DataDictionaryGetOriginLongitudeC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetOriginLongitudeString Reads variable from shared memory
  * \param Longitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLongitudeC8(GSDType * GSD, C8 * Longitude, U32 BuffLen) {
-	pthread_mutex_lock(&OriginLongitudeMutex);
-	bzero(Longitude, BuffLen);
-	strcat(Longitude, GSD->OriginLongitudeC8);
-	pthread_mutex_unlock(&OriginLongitudeMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeString(char* longitude, const size_t bufferLength) {
+	if (longitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, longitude, bufferLength) > 0) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Longitude not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of Origin Longitude*/
 
 /*Origin Altitude*/
 /*!
- * \brief DataDictionaryInitOriginAltitudeDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitOriginAltitudeDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&OriginAltitudeMutex);
-		GSD->OriginAltitudeDbl = atof(ResultBufferC8);
-		bzero(GSD->OriginAltitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->OriginAltitudeC8, ResultBufferC8);
-		pthread_mutex_unlock(&OriginAltitudeMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "OriginAltitude not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetOriginAltitudeDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param Altitude
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(GSDType * GSD, C8 * Altitude) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(const char* altitude) {
+	if (altitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, Altitude, strlen(Altitude) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&OriginAltitudeMutex);
-		GSD->OriginAltitudeDbl = atof(Altitude);
-		bzero(GSD->OriginAltitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->OriginAltitudeC8, Altitude);
-		pthread_mutex_unlock(&OriginAltitudeMutex);
+		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, altitude, strlen(altitude) + 1)) {
+		return WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*!
  * \brief DataDictionaryGetOriginAltitudeDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param Altitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(GSDType * GSD, dbl * Altitude) {
-	pthread_mutex_lock(&OriginAltitudeMutex);
-	*Altitude = GSD->OriginAltitudeDbl;
-	pthread_mutex_unlock(&OriginAltitudeMutex);
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(double_t* altitude) {
+	char readValue[DD_CONTROL_BUFFER_SIZE_20];
+	char* endptr;
+	ReadWriteAccess_t retval;
+	if (altitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetOriginAltitudeString(readValue, sizeof (readValue))) != READ_OK) {
+		return retval;
+	}
+
+	*altitude = strtod(readValue, &endptr);
+
+	if (endptr == readValue) {
+		*altitude = 0;
+		LogMessage(LOG_LEVEL_ERROR, "Altitude badly formatted");
+		return PARAMETER_NOTFOUND;
+	}
 	return READ_OK;
 }
 
 /*!
- * \brief DataDictionaryGetOriginAltitudeC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetOriginAltitudeString Reads variable from shared memory
  * \param Altitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginAltitudeC8(GSDType * GSD, C8 * Altitude, U32 BuffLen) {
-	pthread_mutex_lock(&OriginAltitudeMutex);
-	bzero(Altitude, BuffLen);
-	strcat(Altitude, GSD->OriginAltitudeC8);
-	pthread_mutex_unlock(&OriginAltitudeMutex);
-	return READ_OK;
-}
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeString(char* altitude, const size_t bufferLength) {
+	if (altitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, altitude, bufferLength) > 0) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Altitude not found!");
+		return PARAMETER_NOTFOUND;
+	}
+}
 /*END of Origin Altitude*/
 
 /*VisualizationServer*/
