@@ -1191,12 +1191,12 @@ ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t* simulatorMode) {
 /*VOILReceivers*/
 
 /*!
- * \brief DataDictionarySetVOILReceiversStr Parses input variable and sets variable to corresponding value
+ * \brief DataDictionarySetVOILReceiversString Parses input variable and sets variable to corresponding value
 
  * \param VOILReceivers
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetVOILReceiversStr(const char * VOILReceivers) {
+ReadWriteAccess_t DataDictionarySetVOILReceiversString(const char * VOILReceivers) {
 	ReadWriteAccess_t Res;
 
 	if (VOILReceivers == NULL) {
@@ -1216,7 +1216,7 @@ ReadWriteAccess_t DataDictionarySetVOILReceiversStr(const char * VOILReceivers) 
 }
 
 /*!
- * \brief DataDictionaryGetVOILReceiversStr Reads variable from shared memory
+ * \brief DataDictionaryGetVOILReceiversString Reads variable from shared memory
  * \param VOILReceivers Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
@@ -1247,7 +1247,7 @@ ReadWriteAccess_t DataDictionaryGetVOILReceiversString(char * VOILReceivers, con
 /*DTMReceivers*/
 
 /*!
- * \brief DataDictionarySetDTMReceiversStr Parses input variable and sets variable to corresponding value
+ * \brief DataDictionarySetDTMReceiversString Parses input variable and sets variable to corresponding value
  * \param DTMReceivers
  * \return Result according to ::ReadWriteAccess_t
  */
@@ -1271,7 +1271,7 @@ ReadWriteAccess_t DataDictionarySetDTMReceiversString(const char * DTMReceivers)
 }
 
 /*!
- * \brief DataDictionaryGetDTMReceiversStr Reads variable from shared memory
+ * \brief DataDictionaryGetDTMReceiversString Reads variable from shared memory
  * \param DTMReceivers Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
