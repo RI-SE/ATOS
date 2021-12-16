@@ -73,22 +73,18 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPString(char* timeServerIP, size_t
 ReadWriteAccess_t DataDictionarySetTimeServerPortU16(const char* timeServerPort);
 ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(uint16_t* timeServerPort);
 
-ReadWriteAccess_t DataDictionaryInitSimulatorIPU32(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetSimulatorIPU32(GSDType *GSD, C8 *SimulatorIP);
-ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(GSDType *GSD, U32 *SimulatorIP);
-ReadWriteAccess_t DataDictionaryGetSimulatorIPC8(GSDType *GSD, C8 *SimulatorIP, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetSimulatorIPU32(const char* simulatorIP);
+ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(in_addr_t* simulatorIP);
+ReadWriteAccess_t DataDictionaryGetSimulatorIPString(char* simulatorIP, const size_t bufferLength);
 
-ReadWriteAccess_t DataDictionaryInitSimulatorTCPPortU16(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(GSDType *GSD, C8 *SimulatorTCPPort);
-ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(GSDType *GSD, U16 *SimulatorTCPPort);
+ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(const char* simulatorTCPPort);
+ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(uint16_t* simulatorTCPPort);
 
-ReadWriteAccess_t DataDictionaryInitSimulatorUDPPortU16(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(GSDType *GSD, C8 *SimulatorUDPPort);
-ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(GSDType *GSD, U16 *SimulatorUDPPort);
+ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(const char* simulatorUDPPort);
+ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(uint16_t* simulatorUDPPort);
 
-ReadWriteAccess_t DataDictionaryInitSimulatorModeU8(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetSimulatorModeU8(GSDType *GSD, C8 *SimulatorMode);
-ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(GSDType *GSD, U8 *SimulatorMode);
+ReadWriteAccess_t DataDictionarySetSimulatorModeU8(const char* simulatorMode);
+ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t* simulatorMode);
 
 ReadWriteAccess_t DataDictionaryInitVOILReceiversC8(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType *GSD, C8 *VOILReceivers);
