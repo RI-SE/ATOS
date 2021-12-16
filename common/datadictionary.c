@@ -845,7 +845,7 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t* timeServerIP) {
 		return UNDEFINED;
 	}
 
-	if ((retval = DataDictionaryGetTimeServerIPC8(ipString, sizeof (ipString))) != READ_OK) {
+	if ((retval = DataDictionaryGetTimeServerIPString(ipString, sizeof (ipString))) != READ_OK) {
 		return retval;
 	}
 	result = inet_pton(AF_INET, ipString, timeServerIP);
@@ -869,7 +869,7 @@ ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t* timeServerIP) {
  * \param bufferLength Size of return variable buffer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetTimeServerIPC8(char * timeServerIP, const size_t bufferLength) {
+ReadWriteAccess_t DataDictionaryGetTimeServerIPString(char * timeServerIP, const size_t bufferLength) {
 
 	if (timeServerIP == NULL) {
 		errno = EINVAL;

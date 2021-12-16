@@ -2001,7 +2001,7 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("TimeServerIP", ParameterName) == 0) {
-		DataDictionaryGetTimeServerIPC8(ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetTimeServerIPString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("TimeServerPort", ParameterName) == 0) {
 		DataDictionaryGetTimeServerPortU16(&ValueU16);

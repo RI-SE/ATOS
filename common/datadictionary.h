@@ -68,7 +68,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(GSDType *GSD, dbl *ASPMaxD
 
 ReadWriteAccess_t DataDictionarySetTimeServerIPU32(const char* timeServerIP);
 ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t* timeServerIP);
-ReadWriteAccess_t DataDictionaryGetTimeServerIPC8(char* timeServerIP, size_t bufferLength);
+ReadWriteAccess_t DataDictionaryGetTimeServerIPString(char* timeServerIP, size_t bufferLength);
 
 ReadWriteAccess_t DataDictionarySetTimeServerPortU16(const char* timeServerPort);
 ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(uint16_t* timeServerPort);
