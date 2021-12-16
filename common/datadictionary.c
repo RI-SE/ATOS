@@ -27,10 +27,6 @@ static pthread_mutex_t OriginLatitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OriginLongitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OriginAltitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t VisualizationServerMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SimulatorIPMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SimulatorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SimulatorUDPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SimulatorModeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t VOILReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t DTMReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ExternalSupervisorIPMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -78,10 +74,6 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitOriginLongitudeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitOriginAltitudeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitVisualizationServerU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitSimulatorIPU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitSimulatorTCPPortU16(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitSimulatorUDPPortU16(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitSimulatorModeU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitVOILReceiversC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitDTMReceiversC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitExternalSupervisorIPU32(GSD) : Res;
@@ -953,263 +945,266 @@ ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(uint16_t * timeServerPort) 
 
 
 /*SimulatorIP*/
-/*!
- * \brief DataDictionaryInitSimulatorIPU32 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitSimulatorIPU32(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_IP, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&SimulatorIPMutex);
-		GSD->SimulatorIPU32 = UtilIPStringToInt(ResultBufferC8);
-		bzero(GSD->SimulatorIPC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->SimulatorIPC8, ResultBufferC8);
-		pthread_mutex_unlock(&SimulatorIPMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorIP not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetSimulatorIPU32 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorIP
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSimulatorIPU32(GSDType * GSD, C8 * SimulatorIP) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetSimulatorIPU32(const char* simulatorIP) {
+	ReadWriteAccess_t retval;
+	int result;
+	in_addr_t inaddr;
 
-	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_IP, SimulatorIP, strlen(SimulatorIP) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&SimulatorIPMutex);
-		GSD->SimulatorIPU32 = UtilIPStringToInt(SimulatorIP);
-		bzero(GSD->SimulatorIPC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->SimulatorIPC8, SimulatorIP);
-		pthread_mutex_unlock(&SimulatorIPMutex);
+	if (simulatorIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+
+	result = inet_pton(AF_INET, simulatorIP, &inaddr);
+	if (result <= 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Specified IP %s is not valid", simulatorIP);
+		return WRITE_FAIL;
+	}
+	
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_SIMULATOR_IP, simulatorIP, strlen(simulatorIP) + 1)) {
+		retval = WRITE_OK;
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+	}
+	return retval;
 }
 
 /*!
  * \brief DataDictionaryGetSimulatorIPU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(GSDType * GSD, U32 * SimulatorIP) {
-	pthread_mutex_lock(&SimulatorIPMutex);
-	*SimulatorIP = GSD->SimulatorIPU32;
-	pthread_mutex_unlock(&SimulatorIPMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(in_addr_t* simulatorIP) {
+	char ipString[INET_ADDRSTRLEN];
+	ReadWriteAccess_t retval;
+	int result;
+
+	if (simulatorIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetSimulatorIPString(ipString, sizeof (ipString))) != READ_OK) {
+		return retval;
+	}
+	result = inet_pton(AF_INET, ipString, simulatorIP);
+	if (result > 0) {
+		retval = READ_OK;
+	}
+	else if (result == 0) {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorIP string %s is not a valid IPv4 address", ipString);
+		retval = PARAMETER_NOTFOUND;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+		retval = UNDEFINED;
+	}
+	return retval;
 }
 
 /*!
- * \brief DataDictionaryGetSimulatorIPC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetSimulatorIPString Reads variable from shared memory
  * \param SimulatorIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorIPC8(GSDType * GSD, C8 * SimulatorIP, U32 BuffLen) {
-	pthread_mutex_lock(&SimulatorIPMutex);
-	bzero(SimulatorIP, BuffLen);
-	strcat(SimulatorIP, GSD->SimulatorIPC8);
-	pthread_mutex_unlock(&SimulatorIPMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetSimulatorIPString(char* simulatorIP, const size_t bufferLength) {
+	if (simulatorIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_IP,
+				simulatorIP, bufferLength) > 0) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorIP not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of SimulatorIP*/
 
 /*SimulatorTCPPort*/
-/*!
- * \brief DataDictionaryInitSimulatorTCPPortU16 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitSimulatorTCPPortU16(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&SimulatorTCPPortMutex);
-		GSD->SimulatorTCPPortU16 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&SimulatorTCPPortMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorTCPPort not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetSimulatorTCPPortU16 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorTCPPort
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(GSDType * GSD, C8 * SimulatorTCPPort) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(const char* simulatorTCPPort) {
+	if (simulatorTCPPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP, SimulatorTCPPort, strlen(SimulatorTCPPort) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&SimulatorTCPPortMutex);
-		GSD->SimulatorTCPPortU16 = atoi(SimulatorTCPPort);
-		pthread_mutex_unlock(&SimulatorTCPPortMutex);
+		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP, simulatorTCPPort, strlen(simulatorTCPPort) + 1)) {
+		return WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*!
  * \brief DataDictionaryGetSimulatorTCPPortU16 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorTCPPort Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(GSDType * GSD, U16 * SimulatorTCPPort) {
-	pthread_mutex_lock(&SimulatorTCPPortMutex);
-	*SimulatorTCPPort = GSD->SimulatorTCPPortU16;
-	pthread_mutex_unlock(&SimulatorTCPPortMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(uint16_t* simulatorTCPPort) {
+	char resultBuffer[10];
+	char *endptr = NULL;
+
+	if (simulatorTCPPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP,
+				resultBuffer, sizeof(resultBuffer)) > 0) {
+		*simulatorTCPPort = strtoul(resultBuffer, &endptr, 10);
+		if (endptr == resultBuffer) {
+			*simulatorTCPPort = 0;
+			LogMessage(LOG_LEVEL_ERROR, "SimulatorPort badly formatted");
+			return PARAMETER_NOTFOUND;
+		}
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of SimulatorTCPPort*/
 
 /*SimulatorUDPPort*/
 /*!
- * \brief DataDictionaryInitSimulatorUDPPortU16 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitSimulatorUDPPortU16(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&SimulatorUDPPortMutex);
-		GSD->SimulatorUDPPortU16 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&SimulatorUDPPortMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorUDPPort not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetSimulatorUDPPortU16 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorUDPPort
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(GSDType * GSD, C8 * SimulatorUDPPort) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(const char* simulatorUDPPort) {
+	if (simulatorUDPPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP, SimulatorUDPPort, strlen(SimulatorUDPPort) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&SimulatorUDPPortMutex);
-		GSD->SimulatorUDPPortU16 = atoi(SimulatorUDPPort);
-		pthread_mutex_unlock(&SimulatorUDPPortMutex);
+		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP, simulatorUDPPort, strlen(simulatorUDPPort) + 1)) {
+		return WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*!
  * \brief DataDictionaryGetSimulatorUDPPortU16 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorUDPPort Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(GSDType * GSD, U16 * SimulatorUDPPort) {
-	pthread_mutex_lock(&SimulatorUDPPortMutex);
-	*SimulatorUDPPort = GSD->SimulatorUDPPortU16;
-	pthread_mutex_unlock(&SimulatorUDPPortMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(uint16_t* simulatorUDPPort) {
+	
+	char resultBuffer[10];
+	char *endptr = NULL;
+
+	if (simulatorUDPPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP,
+				resultBuffer, sizeof(resultBuffer)) > 0) {
+		*simulatorUDPPort = strtoul(resultBuffer, &endptr, 10);
+		if (endptr == resultBuffer) {
+			*simulatorUDPPort = 0;
+			LogMessage(LOG_LEVEL_ERROR, "SimulatorPort badly formatted");
+			return PARAMETER_NOTFOUND;
+		}
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of SimulatorUDPPort*/
 
 /*SimulatorMode*/
 /*!
- * \brief DataDictionaryInitSimulatorModeU8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitSimulatorModeU8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_MODE, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&SimulatorModeMutex);
-		GSD->SimulatorModeU8 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&SimulatorModeMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorMode not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetSimulatorModeU8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorMode
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSimulatorModeU8(GSDType * GSD, C8 * SimulatorMode) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetSimulatorModeU8(const char* simulatorMode) {
+	ReadWriteAccess_t retval;
 
-	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_MODE, SimulatorMode, strlen(SimulatorMode) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&SimulatorModeMutex);
-		GSD->SimulatorModeU8 = atoi(SimulatorMode);
-		pthread_mutex_unlock(&SimulatorModeMutex);
+	if (simulatorMode == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_SIMULATOR_MODE, simulatorMode, strlen(simulatorMode) + 1)) {
+		retval = WRITE_OK;
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+	}
+	return retval;
 }
 
 /*!
  * \brief DataDictionaryGetSimulatorModeU8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorMode Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(GSDType * GSD, U8 * SimulatorMode) {
-	pthread_mutex_lock(&SimulatorModeMutex);
-	*SimulatorMode = GSD->SimulatorModeU8;
-	pthread_mutex_unlock(&SimulatorModeMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t* simulatorMode) {
+	char readValue[10];
+	char* endptr;
+
+	if (simulatorMode == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(
+		CONFIGURATION_PARAMETER_SIMULATOR_MODE, readValue, sizeof (readValue)) > 0) {
+		*simulatorMode = strtoul(readValue, &endptr, 10);
+		if (endptr == readValue) {
+			*simulatorMode = 0;
+			LogMessage(LOG_LEVEL_ERROR, "SimulatorMode badly formatted");
+			return PARAMETER_NOTFOUND;
+		}
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorMode not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of SimulatorMode*/
