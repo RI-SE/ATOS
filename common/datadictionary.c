@@ -506,7 +506,7 @@ ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(const char * ASPMaxTimeDiff
   * \param ASPMaxTimeDiff Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(dbl * ASPMaxTimeDiff) {
+ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(double_t * ASPMaxTimeDiff) {
 	ReadWriteAccess_t result = UNDEFINED;
 	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
 	char *endPtr;
