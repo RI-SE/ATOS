@@ -781,7 +781,7 @@ ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(double_t * ASPMaxDeltaTime
 
 	if (UtilReadConfigurationParameter
 		(CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME, resultBuffer, sizeof (resultBuffer))) {
-		readSetting = strtof(resultBuffer, &endPtr);
+		readSetting = strtod(resultBuffer, &endPtr);
 		if (endPtr == resultBuffer) {
 			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP max delta time configuration");
 			result = PARAMETER_NOTFOUND;
