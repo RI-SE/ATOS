@@ -1220,7 +1220,7 @@ ReadWriteAccess_t DataDictionarySetVOILReceiversStr(const char * VOILReceivers) 
  * \param VOILReceivers Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetVOILReceiversStr(char * VOILReceivers, uint32_t buflen) {
+ReadWriteAccess_t DataDictionaryGetVOILReceiversString(char * VOILReceivers, const size_t buflen) {
 	ReadWriteAccess_t Res;
 
 	if (VOILReceivers == NULL) {
