@@ -2001,10 +2001,10 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("TimeServerIP", ParameterName) == 0) {
-		DataDictionaryGetTimeServerIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetTimeServerIPC8(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("TimeServerPort", ParameterName) == 0) {
-		DataDictionaryGetTimeServerPortU16(GSD, &ValueU16);
+		DataDictionaryGetTimeServerPortU16(&ValueU16);
 		sprintf(ReturnValue, "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorIP", ParameterName) == 0) {
@@ -2225,10 +2225,10 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		result = DataDictionarySetASPMaxDeltaTimeDbl(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_TIME_SERVER_IP:
-		result = DataDictionarySetTimeServerIPU32(GSD, newValue);
+		result = DataDictionarySetTimeServerIPU32(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_TIME_SERVER_PORT:
-		result = DataDictionarySetTimeServerPortU16(GSD, newValue);
+		result = DataDictionarySetTimeServerPortU16(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_IP:
 		result = DataDictionarySetSimulatorIPU32(GSD, newValue);

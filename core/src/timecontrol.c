@@ -175,11 +175,11 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
 	PrevMilliSecondU16 = CurrentMilliSecondU16;
 	// Set time server IP
-	DataDictionaryGetTimeServerIPC8(GSD, ServerIPC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
-	DataDictionaryGetTimeServerIPU32(GSD, &IpU32);
+	DataDictionaryGetTimeServerIPC8(ServerIPC8, TIME_CONTROL_HOSTNAME_BUFFER_SIZE);
+	DataDictionaryGetTimeServerIPU32(&IpU32);
 
 	// Set time server port
-	DataDictionaryGetTimeServerPortU16(GSD, &ServerPortU16);
+	DataDictionaryGetTimeServerPortU16(&ServerPortU16);
 
 	// If time server is specified, connect to it
 	if (IpU32 != 0) {
