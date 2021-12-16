@@ -332,7 +332,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	if (iCommInit())
 		util_error("Unable to connect to message bus");
 
-	DataDictionaryGetRVSSConfigU32(GSD, &RVSSConfigU32);
+	DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
 	LogMessage(LOG_LEVEL_INFO, "RVSSConfigU32 = %d", RVSSConfigU32);
 
 	U8 RVSSRateU8 = DEFAULT_RVSS_RATE;
@@ -2039,7 +2039,7 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 		DataDictionaryGetMiscData(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("RVSSConfig", ParameterName) == 0) {
-		DataDictionaryGetRVSSConfigU32(GSD, &ValueU32);
+		DataDictionaryGetRVSSConfigU32(&ValueU32);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu32, ValueU32);
 	}
 	else if (strcmp("RVSSRate", ParameterName) == 0) {
@@ -2255,7 +2255,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		result = DataDictionarySetSupervisorTCPPortU16(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
-		result = DataDictionarySetRVSSConfigU32(GSD, (uint32_t) strtoul(newValue, NULL, 10));
+		result = DataDictionarySetRVSSConfigU32((uint32_t) strtoul(newValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_RATE:
 		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(newValue, NULL, 10));
