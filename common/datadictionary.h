@@ -114,8 +114,8 @@ ReadWriteAccess_t DataDictionarySetRVSSConfigU32(GSDType *GSD, U32 RVSSConfig);
 ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(GSDType *GSD, U32 *RVSSConfig);
 
 ReadWriteAccess_t DataDictionaryInitRVSSRateU8(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetRVSSRateU8(GSDType *GSD, U8 RVSSRate);
-ReadWriteAccess_t DataDictionaryGetRVSSRateU8(GSDType *GSD, U8 *RVSSRate);
+ReadWriteAccess_t DataDictionarySetRVSSRateU8(U8 RVSSRate);
+ReadWriteAccess_t DataDictionaryGetRVSSRateU8(U8 *RVSSRate);
 
 ReadWriteAccess_t DataDictionaryInitRVSSAsp();
 ReadWriteAccess_t DataDictionarySetRVSSAsp(ASPType *ASPData);
