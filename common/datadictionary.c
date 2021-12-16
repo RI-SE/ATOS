@@ -1548,7 +1548,7 @@ ReadWriteAccess_t DataDictionarySetRVSSRateU8(U8 RVSSRate) {
 	ReadWriteAccess_t Res;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
+	memset(ResultBufferC8, 0, DD_CONTROL_BUFFER_SIZE_20);
 	sprintf(ResultBufferC8, "%" PRIu8, RVSSRate);
 
 	if (UtilWriteConfigurationParameter
