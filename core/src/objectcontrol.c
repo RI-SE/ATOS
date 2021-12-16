@@ -1286,13 +1286,13 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			else if (iCommand == COMM_DATA_DICT) {
 
 				LogMessage(LOG_LEVEL_INFO, "Updating variables from DataDictionary.");
-				DataDictionaryGetOriginLatitudeC8(GSD, OriginLatitude, SMALL_BUFFER_SIZE_0);
-				DataDictionaryGetOriginLongitudeC8(GSD, OriginLongitude, SMALL_BUFFER_SIZE_0);
-				DataDictionaryGetOriginAltitudeC8(GSD, OriginAltitude, SMALL_BUFFER_SIZE_0);
+				DataDictionaryGetOriginLatitudeString(OriginLatitude, SMALL_BUFFER_SIZE_0);
+				DataDictionaryGetOriginLongitudeString(OriginLongitude, SMALL_BUFFER_SIZE_0);
+				DataDictionaryGetOriginAltitudeString(OriginAltitude, SMALL_BUFFER_SIZE_0);
 
-				DataDictionaryGetOriginLatitudeDbl(GSD, &OriginLatitudeDbl);
-				DataDictionaryGetOriginLongitudeDbl(GSD, &OriginLongitudeDbl);
-				DataDictionaryGetOriginAltitudeDbl(GSD, &OriginAltitudeDbl);
+				DataDictionaryGetOriginLatitudeDbl(&OriginLatitudeDbl);
+				DataDictionaryGetOriginLongitudeDbl(&OriginLongitudeDbl);
+				DataDictionaryGetOriginAltitudeDbl(&OriginAltitudeDbl);
 
 				OriginLatitudeDbl = atof(OriginLatitude);
 				OriginLongitudeDbl = atof(OriginLongitude);

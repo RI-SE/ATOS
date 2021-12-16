@@ -70,9 +70,6 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	ReadWriteAccess_t Res = READ_OK;
 
 	Res = Res == READ_OK ? DataDictionaryInitScenarioName() : Res;
-	Res = Res == READ_OK ? DataDictionaryInitOriginLatitudeDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitOriginLongitudeDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitOriginAltitudeDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitVisualizationServerU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitVOILReceiversC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitDTMReceiversC8(GSD) : Res;
