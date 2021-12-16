@@ -678,13 +678,13 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case GetTestOrigin_0:
 			SystemControlCommand = Idle_0;
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-			DataDictionaryGetOriginLatitudeC8(GSD, TextBuffer20, SMALL_BUFFER_SIZE_20);
+			DataDictionaryGetOriginLatitudeString(TextBuffer20, SMALL_BUFFER_SIZE_20);
 			strcat(ControlResponseBuffer, TextBuffer20);
 			strcat(ControlResponseBuffer, ";");
-			DataDictionaryGetOriginLongitudeC8(GSD, TextBuffer20, SMALL_BUFFER_SIZE_20);
+			DataDictionaryGetOriginLongitudeString(TextBuffer20, SMALL_BUFFER_SIZE_20);
 			strcat(ControlResponseBuffer, TextBuffer20);
 			strcat(ControlResponseBuffer, ";");
-			DataDictionaryGetOriginAltitudeC8(GSD, TextBuffer20, SMALL_BUFFER_SIZE_20);
+			DataDictionaryGetOriginAltitudeString(TextBuffer20, SMALL_BUFFER_SIZE_20);
 			strcat(ControlResponseBuffer, TextBuffer20);
 			strcat(ControlResponseBuffer, ";");
 
@@ -1966,15 +1966,15 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 	BufferLength = BufferLength - strlen(ReturnValue);
 
 	if (strcmp("OriginLatitude", ParameterName) == 0) {
-		DataDictionaryGetOriginLatitudeDbl(GSD, &ValueDbl);
+		DataDictionaryGetOriginLatitudeDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
 	else if (strcmp("OriginLongitude", ParameterName) == 0) {
-		DataDictionaryGetOriginLongitudeDbl(GSD, &ValueDbl);
+		DataDictionaryGetOriginLongitudeDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
 	else if (strcmp("OriginAltitude", ParameterName) == 0) {
-		DataDictionaryGetOriginAltitudeDbl(GSD, &ValueDbl);
+		DataDictionaryGetOriginAltitudeDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
 	else if (strcmp("VisualizationServerName", ParameterName) == 0) {
@@ -2118,7 +2118,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		}
 
 		// TODO remove
-		result = DataDictionarySetOriginLatitudeDbl(GSD, newValue);
+		result = DataDictionarySetOriginLatitudeDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
 		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
@@ -2161,7 +2161,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		}
 
 		// TODO remove
-		result = DataDictionarySetOriginLongitudeDbl(GSD, newValue);
+		result = DataDictionarySetOriginLongitudeDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE:
 		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
@@ -2204,7 +2204,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		}
 
 		// TODO remove
-		result = DataDictionarySetOriginAltitudeDbl(GSD, newValue);
+		result = DataDictionarySetOriginAltitudeDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
 		result = DataDictionarySetVisualizationServerU32(GSD, newValue);

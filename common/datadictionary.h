@@ -26,20 +26,17 @@ ReadWriteAccess_t DataDictionarySetScenarioName(const char* name, const size_t n
 ReadWriteAccess_t DataDictionaryGetScenarioName(char* name, const size_t nameLength);
 
 //TODO: We should have one call for the origin, this in order to make sure that all the three parts of the position are updated at the same time, otherwise there is a small risk of us using old and new values for origin thereby we might get a completely messed up origin
-ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType *GSD, C8 *Latitude);
-ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(GSDType *GSD, dbl *Latitude);
-ReadWriteAccess_t DataDictionaryGetOriginLatitudeC8(GSDType *GSD, C8 *Latitude, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(const char* latitude);
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(double_t* latitude);
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeString(char* latitude, const size_t bufferLength);
 
-ReadWriteAccess_t DataDictionaryInitOriginLongitudeDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(GSDType *GSD, C8 *Longitude);
-ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(GSDType *GSD, dbl *Longitude);
-ReadWriteAccess_t DataDictionaryGetOriginLongitudeC8(GSDType *GSD, C8 *Longitude, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(const char* longitude);
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(double_t* longitude);
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeString(char* longitude, const size_t bufferLength);
 
-ReadWriteAccess_t DataDictionaryInitOriginAltitudeDbl(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(GSDType *GSD, C8 *Altitude);
-ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(GSDType *GSD, dbl *Altitude);
-ReadWriteAccess_t DataDictionaryGetOriginAltitudeC8(GSDType *GSD, C8 *Altitude, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(const char*  altitude);
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(double_t* altitude);
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeString(char* altitude, const size_t bufferLength);
 
 ReadWriteAccess_t DataDictionaryInitVisualizationServerU32(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType *GSD, C8 *IP);
