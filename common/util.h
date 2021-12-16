@@ -62,7 +62,7 @@ extern "C"{
 #define DEFAULT_SUPERVISOR_TCP_PORT 53010
 #define DEFAULT_RVSS_CONF 3
 #define DEFAULT_RVSS_RATE 1
-#define DEFAULT_MAX_PACKETS_LOST 0
+#define DEFAULT_MAX_PACKETS_LOST 20
 #define DEFAULT_TRANSMITTER_ID 0
 
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length

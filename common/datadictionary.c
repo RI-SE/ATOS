@@ -99,7 +99,6 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitDTMReceiversC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitExternalSupervisorIPU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitRVSSConfigU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitRVSSAsp() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMiscData() : Res;
@@ -1541,30 +1540,6 @@ ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(GSDType * GSD, U32 * RVSSConfig
 
 
 /*Runtime Variable Subscription Service (RVSS) Rate*/
-/*!
- * \brief DataDictionaryInitRVSSRateU8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitRVSSRateU8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_RVSS_RATE, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&DataDictionaryRVSSRateMutex);
-		GSD->DataDictionaryRVSSRateU8 = (U8) atoi(ResultBufferC8);
-		pthread_mutex_unlock(&DataDictionaryRVSSRateMutex);
-		//LogMessage(LOG_LEVEL_ERROR,"RVSSRate: %s", ResultBufferC8);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "RVSSRate not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetRVSSRateU8 Parses input variable and sets variable to corresponding value
@@ -1572,19 +1547,16 @@ ReadWriteAccess_t DataDictionaryInitRVSSRateU8(GSDType * GSD) {
  * \param RVSSRate
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetRVSSRateU8(GSDType * GSD, U8 RVSSRate) {
+ReadWriteAccess_t DataDictionarySetRVSSRateU8(uint8_t RVSSRate) {
 	ReadWriteAccess_t Res;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
+	memset(ResultBufferC8, 0, DD_CONTROL_BUFFER_SIZE_20);
 	sprintf(ResultBufferC8, "%" PRIu8, RVSSRate);
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_RVSS_RATE, ResultBufferC8, strlen(ResultBufferC8) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&DataDictionaryRVSSRateMutex);
-		GSD->DataDictionaryRVSSRateU8 = RVSSRate;
-		pthread_mutex_unlock(&DataDictionaryRVSSRateMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -1597,11 +1569,42 @@ ReadWriteAccess_t DataDictionarySetRVSSRateU8(GSDType * GSD, U8 RVSSRate) {
  * \param RVSSRate Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetRVSSRateU8(GSDType * GSD, U8 * RVSSRate) {
-	pthread_mutex_lock(&DataDictionaryRVSSRateMutex);
-	*RVSSRate = GSD->DataDictionaryRVSSRateU8;
-	pthread_mutex_unlock(&DataDictionaryRVSSRateMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetRVSSRateU8(uint8_t * RVSSRate) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	uint64_t readSetting;
+
+	if (RVSSRate == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_RVSS_RATE, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtoul(resultBuffer, &endPtr, 10);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for RVSS rate");
+			result = PARAMETER_NOTFOUND;
+			*RVSSRate = DEFAULT_RVSS_RATE;
+		}
+		else if (readSetting > UINT8_MAX) {
+			LogMessage(LOG_LEVEL_WARNING, "Configuration for RVSS rate outside accepted range");
+			result = READ_OK;
+			*RVSSRate = UINT8_MAX;
+		}
+		else {
+			result = READ_OK;
+			*RVSSRate = (uint8_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "RVSS rate not found!");
+		result = PARAMETER_NOTFOUND;
+		*RVSSRate = DEFAULT_MAX_PACKETS_LOST;
+	}
 }
 
 /*END of Runtime Variable Subscription Service (RVSS) Rate**/
