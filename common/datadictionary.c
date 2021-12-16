@@ -1544,7 +1544,7 @@ ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(GSDType * GSD, U32 * RVSSConfig
  * \param RVSSRate
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetRVSSRateU8(U8 RVSSRate) {
+ReadWriteAccess_t DataDictionarySetRVSSRateU8(const uint8_t RVSSRate) {
 	ReadWriteAccess_t Res;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
@@ -1566,7 +1566,7 @@ ReadWriteAccess_t DataDictionarySetRVSSRateU8(U8 RVSSRate) {
  * \param RVSSRate Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetRVSSRateU8(U8 * RVSSRate) {
+ReadWriteAccess_t DataDictionaryGetRVSSRateU8(const uint8_t * RVSSRate) {
 	ReadWriteAccess_t result = UNDEFINED;
 	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
 	char *endPtr;
