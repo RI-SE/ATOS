@@ -2008,18 +2008,18 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 		sprintf(ReturnValue, "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorIP", ParameterName) == 0) {
-		DataDictionaryGetSimulatorIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetSimulatorIPString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SimulatorTCPPort", ParameterName) == 0) {
-		DataDictionaryGetSimulatorTCPPortU16(GSD, &ValueU16);
+		DataDictionaryGetSimulatorTCPPortU16(&ValueU16);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorUDPPort", ParameterName) == 0) {
-		DataDictionaryGetSimulatorUDPPortU16(GSD, &ValueU16);
+		DataDictionaryGetSimulatorUDPPortU16(&ValueU16);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorMode", ParameterName) == 0) {
-		DataDictionaryGetSimulatorModeU8(GSD, &ValueU8);
+		DataDictionaryGetSimulatorModeU8(&ValueU8);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu8, ValueU8);
 	}
 	else if (strcmp("VOILReceivers", ParameterName) == 0) {
@@ -2231,16 +2231,16 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		result = DataDictionarySetTimeServerPortU16(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_IP:
-		result = DataDictionarySetSimulatorIPU32(GSD, newValue);
+		result = DataDictionarySetSimulatorIPU32(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP:
-		result = DataDictionarySetSimulatorTCPPortU16(GSD, newValue);
+		result = DataDictionarySetSimulatorTCPPortU16(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP:
-		result = DataDictionarySetSimulatorUDPPortU16(GSD, newValue);
+		result = DataDictionarySetSimulatorUDPPortU16(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_MODE:
-		result = DataDictionarySetSimulatorModeU8(GSD, newValue);
+		result = DataDictionarySetSimulatorModeU8(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_VOIL_RECEIVERS:
 		result = DataDictionarySetVOILReceiversC8(GSD, newValue);
