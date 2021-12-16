@@ -1477,7 +1477,7 @@ ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(GSDType * GSD, U16 * Sup
  * \param RVSSConfig
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetRVSSConfigU32(U32 RVSSConfig) {
+ReadWriteAccess_t DataDictionarySetRVSSConfigU32(uint32_t RVSSConfig) {
 	ReadWriteAccess_t Res;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
@@ -1499,11 +1499,17 @@ ReadWriteAccess_t DataDictionarySetRVSSConfigU32(U32 RVSSConfig) {
  * \param RVSSConfig Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(U32 * RVSSConfig) {
+ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(uint32_t * RVSSConfig) {
 	ReadWriteAccess_t result = UNDEFINED;
 	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
 	char *endPtr;
 	uint64_t readSetting;
+
+	if (RVSSConfig == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilReadConfigurationParameter
 		(CONFIGURATION_PARAMETER_RVSS_CONFIG, resultBuffer, sizeof (resultBuffer))) {
