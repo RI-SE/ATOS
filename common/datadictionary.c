@@ -32,8 +32,6 @@ static pthread_mutex_t ASPMaxTrajDiffMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPStepBackCountMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPFilterLevelMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ASPMaxDeltaTimeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t TimeServerIPMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t TimeServerPortMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t SimulatorIPMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t SimulatorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t SimulatorUDPPortMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -93,8 +91,6 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitASPStepBackCountU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitASPFilterLevelDbl(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitASPMaxDeltaTimeDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitTimeServerIPU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitTimeServerPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSimulatorIPU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSimulatorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSimulatorUDPPortU16(GSD) : Res;
@@ -800,144 +796,151 @@ ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(GSDType * GSD, dbl * ASPMa
 
 /*END of ASPFilterLevel*/
 
-
-/*TimeServerIP*/
-/*!
- * \brief DataDictionaryInitTimeServerIPU32 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitTimeServerIPU32(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_TIME_SERVER_IP, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&TimeServerIPMutex);
-		GSD->TimeServerIPU32 = UtilIPStringToInt(ResultBufferC8);
-		bzero(GSD->TimeServerIPC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->TimeServerIPC8, ResultBufferC8);
-		pthread_mutex_unlock(&TimeServerIPMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "TimeServerIP not found!");
-	}
-
-	return Res;
-}
-
 /*!
  * \brief DataDictionarySetTimeServerIPU32 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param TimeServerIP
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetTimeServerIPU32(GSDType * GSD, C8 * TimeServerIP) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetTimeServerIPU32(const char* timeServerIP) {
+	ReadWriteAccess_t retval;
+	int result;
+	in_addr_t inaddr;
 
-	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_TIME_SERVER_IP, TimeServerIP, strlen(TimeServerIP) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&TimeServerIPMutex);
-		GSD->TimeServerIPU32 = UtilIPStringToInt(TimeServerIP);
-		bzero(GSD->TimeServerIPC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->TimeServerIPC8, TimeServerIP);
-		pthread_mutex_unlock(&TimeServerIPMutex);
+	if (timeServerIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+
+	result = inet_pton(AF_INET, timeServerIP, &inaddr);
+	if (result <= 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Specified IP %s is not valid", timeServerIP);
+		return WRITE_FAIL;
+	}
+	
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_TIME_SERVER_IP, timeServerIP, strlen(timeServerIP) + 1)) {
+		retval = WRITE_OK;
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+	}
+	return retval;
 }
 
 /*!
  * \brief DataDictionaryGetTimeServerIPU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param TimeServerIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(GSDType * GSD, U32 * TimeServerIP) {
-	pthread_mutex_lock(&TimeServerIPMutex);
-	*TimeServerIP = GSD->TimeServerIPU32;
-	pthread_mutex_unlock(&TimeServerIPMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t* timeServerIP) {
+	char ipString[INET_ADDRSTRLEN];
+	ReadWriteAccess_t retval;
+	int result;
+
+	if (timeServerIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetTimeServerIPC8(ipString, sizeof (ipString))) != READ_OK) {
+		return retval;
+	}
+	result = inet_pton(AF_INET, ipString, timeServerIP);
+	if (result > 0) {
+		retval = READ_OK;
+	}
+	else if (result == 0) {
+		LogMessage(LOG_LEVEL_ERROR, "TimeServerIP string %s is not a valid IPv4 address", ipString);
+		retval = PARAMETER_NOTFOUND;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+		retval = UNDEFINED;
+	}
+	return retval;
 }
 
 /*!
  * \brief DataDictionaryGetTimeServerIPC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param TimeServerIP Return variable pointer
+ * \param bufferLength Size of return variable buffer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetTimeServerIPC8(GSDType * GSD, C8 * TimeServerIP, U32 BuffLen) {
-	pthread_mutex_lock(&TimeServerIPMutex);
-	bzero(TimeServerIP, BuffLen);
-	strcat(TimeServerIP, GSD->TimeServerIPC8);
-	pthread_mutex_unlock(&TimeServerIPMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetTimeServerIPC8(char * timeServerIP, const size_t bufferLength) {
+
+	if (timeServerIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_TIME_SERVER_IP,
+				timeServerIP, bufferLength) > 0) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "TimeServerIP not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of TimeServerIP*/
 
-
-/*TimeServerPort*/
-/*!
- * \brief DataDictionaryInitTimeServerPortU16 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitTimeServerPortU16(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_TIME_SERVER_PORT, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&TimeServerPortMutex);
-		GSD->TimeServerPortU16 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&TimeServerPortMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "TimeServerPort not found!");
-	}
-
-	return Res;
-}
-
 /*!
  * \brief DataDictionarySetTimeServerPortU16 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param TimeServerPort
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetTimeServerPortU16(GSDType * GSD, C8 * TimeServerPort) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetTimeServerPortU16(const char* timeServerPort) {
+
+	if (timeServerPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_TIME_SERVER_PORT, TimeServerPort, strlen(TimeServerPort) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&TimeServerPortMutex);
-		GSD->TimeServerPortU16 = atoi(TimeServerPort);
-		pthread_mutex_unlock(&TimeServerPortMutex);
+		(CONFIGURATION_PARAMETER_TIME_SERVER_PORT, timeServerPort, strlen(timeServerPort) + 1)) {
+		return WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "TimeServerPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*!
  * \brief DataDictionaryGetTimeServerPortU16 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param TimeServerPort Return variable pointer
+ * \param timeServerPort Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(GSDType * GSD, U16 * TimeServerPort) {
-	pthread_mutex_lock(&TimeServerPortMutex);
-	*TimeServerPort = GSD->TimeServerPortU16;
-	pthread_mutex_unlock(&TimeServerPortMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(uint16_t * timeServerPort) {
+	char resultBuffer[10];
+	char *endptr = NULL;
+
+	if (timeServerPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_TIME_SERVER_PORT,
+				resultBuffer, sizeof(resultBuffer)) > 0) {
+		*timeServerPort = strtoul(resultBuffer, &endptr, 10);
+		if (endptr == resultBuffer) {
+			*timeServerPort = 0;
+			LogMessage(LOG_LEVEL_ERROR, "TimeServerPort badly formatted");
+			return PARAMETER_NOTFOUND;
+		}
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "TimeServerPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of TimeServerPort*/
