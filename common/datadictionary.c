@@ -98,7 +98,6 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	Res = Res == READ_OK ? DataDictionaryInitVOILReceiversC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitDTMReceiversC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitExternalSupervisorIPU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitRVSSConfigU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitRVSSAsp() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMiscData() : Res;
@@ -1473,30 +1472,6 @@ ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(GSDType * GSD, U16 * Sup
 /*END of External SupervisorTCPPort*/
 
 /*Runtime Variable Subscription Service (RVSS) Configuration*/
-/*!
- * \brief DataDictionaryInitRVSSConfigU32 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitRVSSConfigU32(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_RVSS_CONFIG, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&DataDictionaryRVSSConfigMutex);
-		GSD->DataDictionaryRVSSConfigU32 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&DataDictionaryRVSSConfigMutex);
-		//LogMessage(LOG_LEVEL_ERROR,"RVSSConfig: %s", ResultBufferC8);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "RVSSConfig not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetInitRVSSConfigU32 Parses input variable and sets variable to corresponding value
@@ -1504,19 +1479,16 @@ ReadWriteAccess_t DataDictionaryInitRVSSConfigU32(GSDType * GSD) {
  * \param RVSSConfig
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetRVSSConfigU32(GSDType * GSD, U32 RVSSConfig) {
+ReadWriteAccess_t DataDictionarySetRVSSConfigU32(uint32_t RVSSConfig) {
 	ReadWriteAccess_t Res;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
+	memset(ResultBufferC8, 0, DD_CONTROL_BUFFER_SIZE_20);
 	sprintf(ResultBufferC8, "%" PRIu32, RVSSConfig);
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_RVSS_CONFIG, ResultBufferC8, strlen(ResultBufferC8) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&DataDictionaryRVSSConfigMutex);
-		GSD->DataDictionaryRVSSConfigU32 = RVSSConfig;
-		pthread_mutex_unlock(&DataDictionaryRVSSConfigMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -1529,11 +1501,43 @@ ReadWriteAccess_t DataDictionarySetRVSSConfigU32(GSDType * GSD, U32 RVSSConfig) 
  * \param RVSSConfig Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(GSDType * GSD, U32 * RVSSConfig) {
-	pthread_mutex_lock(&DataDictionaryRVSSConfigMutex);
-	*RVSSConfig = GSD->DataDictionaryRVSSConfigU32;
-	pthread_mutex_unlock(&DataDictionaryRVSSConfigMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(uint32_t * RVSSConfig) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	uint64_t readSetting;
+
+	if (RVSSConfig == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_RVSS_CONFIG, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtoul(resultBuffer, &endPtr, 10);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for RVSS configuration");
+			result = PARAMETER_NOTFOUND;
+			*RVSSConfig = DEFAULT_RVSS_CONF;
+		}
+		else if (readSetting > UINT32_MAX) {
+			LogMessage(LOG_LEVEL_WARNING, "Configuration for RVSS configuration outside accepted range");
+			result = READ_OK;
+			*RVSSConfig = UINT32_MAX;
+		}
+		else {
+			result = READ_OK;
+			*RVSSConfig = (uint32_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "RVSS configuration not found!");
+		result = PARAMETER_NOTFOUND;
+		*RVSSConfig = DEFAULT_RVSS_CONF;
+	}
+
 }
 
 /*END of Runtime Variable Subscription Service (RVSS) Configuration**/

@@ -107,9 +107,8 @@ ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(GSDType *GSD, C8 *SupervisorTCPPort);
 ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(GSDType *GSD, U16 *SupervisorTCPPort);
 
-ReadWriteAccess_t DataDictionaryInitRVSSConfigU32(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetRVSSConfigU32(GSDType *GSD, U32 RVSSConfig);
-ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(GSDType *GSD, U32 *RVSSConfig);
+ReadWriteAccess_t DataDictionarySetRVSSConfigU32(uint32_t RVSSConfig);
+ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(uint32_t *RVSSConfig);
 
 ReadWriteAccess_t DataDictionarySetRVSSRateU8(uint8_t RVSSRate);
 ReadWriteAccess_t DataDictionaryGetRVSSRateU8(uint8_t *RVSSRate);
