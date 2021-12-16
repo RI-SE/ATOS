@@ -1981,23 +1981,23 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 		DataDictionaryGetVisualizationServerC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("ASPMaxTimeDiff", ParameterName) == 0) {
-		DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ValueDbl);
+		DataDictionaryGetASPMaxTimeDiffDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPMaxTrajDiff", ParameterName) == 0) {
-		DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ValueDbl);
+		DataDictionaryGetASPMaxTrajDiffDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPStepBackCount", ParameterName) == 0) {
-		DataDictionaryGetASPStepBackCountU32(GSD, &ValueU32);
+		DataDictionaryGetASPStepBackCountU32(&ValueU32);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu32, ValueU32);
 	}
 	else if (strcmp("ASPFilterLevel", ParameterName) == 0) {
-		DataDictionaryGetASPFilterLevelDbl(GSD, &ValueDbl);
+		DataDictionaryGetASPFilterLevelDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPMaxDeltaTime", ParameterName) == 0) {
-		DataDictionaryGetASPMaxDeltaTimeDbl(GSD, &ValueDbl);
+		DataDictionaryGetASPMaxDeltaTimeDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("TimeServerIP", ParameterName) == 0) {
@@ -2210,19 +2210,19 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		result = DataDictionarySetVisualizationServerU32(GSD, newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
-		result = DataDictionarySetASPMaxTimeDiffDbl(GSD, newValue);
+		result = DataDictionarySetASPMaxTimeDiffDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF:
-		result = DataDictionarySetASPMaxTrajDiffDbl(GSD, newValue);
+		result = DataDictionarySetASPMaxTrajDiffDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT:
-		result = DataDictionarySetASPStepBackCountU32(GSD, newValue);
+		result = DataDictionarySetASPStepBackCountU32(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL:
-		result = DataDictionarySetASPFilterLevelDbl(GSD, newValue);
+		result = DataDictionarySetASPFilterLevelDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME:
-		result = DataDictionarySetASPMaxDeltaTimeDbl(GSD, newValue);
+		result = DataDictionarySetASPMaxDeltaTimeDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_TIME_SERVER_IP:
 		result = DataDictionarySetTimeServerIPU32(newValue);

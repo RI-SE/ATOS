@@ -1303,11 +1303,11 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				OriginPosition.Altitude = OriginAltitudeDbl;
 				OriginPosition.Heading = OriginHeadingDbl;
 
-				DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ASPMaxTimeDiffDbl);
-				DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ASPMaxTrajDiffDbl);
-				DataDictionaryGetASPStepBackCountU32(GSD, &ASPStepBackCount);
-				DataDictionaryGetASPFilterLevelDbl(GSD, &ASPFilterLevelDbl);
-				DataDictionaryGetASPMaxDeltaTimeDbl(GSD, &ASPMaxDeltaTimeDbl);
+				DataDictionaryGetASPMaxTimeDiffDbl(&ASPMaxTimeDiffDbl);
+				DataDictionaryGetASPMaxTrajDiffDbl(&ASPMaxTrajDiffDbl);
+				DataDictionaryGetASPStepBackCountU32(&ASPStepBackCount);
+				DataDictionaryGetASPFilterLevelDbl(&ASPFilterLevelDbl);
+				DataDictionaryGetASPMaxDeltaTimeDbl(&ASPMaxDeltaTimeDbl);
 				ASPDebugRate = 1;
 				DataDictionaryGetVOILReceiversC8(GSD, VOILReceivers, SMALL_BUFFER_SIZE_254);
 				DataDictionaryGetDTMReceiversC8(GSD, DTMReceivers, SMALL_BUFFER_SIZE_254);
