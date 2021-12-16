@@ -716,7 +716,7 @@ ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(dbl * ASPFilterLevel) {
 
 	if (UtilReadConfigurationParameter
 		(CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL, resultBuffer, sizeof (resultBuffer))) {
-		readSetting = strtof(resultBuffer, &endPtr);
+		readSetting = strtod(resultBuffer, &endPtr);
 		if (endPtr == resultBuffer) {
 			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP filter level configuration");
 			result = PARAMETER_NOTFOUND;
