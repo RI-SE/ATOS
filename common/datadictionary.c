@@ -1251,7 +1251,7 @@ ReadWriteAccess_t DataDictionaryGetVOILReceiversString(char * VOILReceivers, con
  * \param DTMReceivers
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetDTMReceiversStr(const char * DTMReceivers) {
+ReadWriteAccess_t DataDictionarySetDTMReceiversString(const char * DTMReceivers) {
 	ReadWriteAccess_t Res;
 
 	if (DTMReceivers == NULL) {
