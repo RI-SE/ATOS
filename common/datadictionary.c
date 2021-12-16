@@ -1275,7 +1275,7 @@ ReadWriteAccess_t DataDictionarySetDTMReceiversString(const char * DTMReceivers)
  * \param DTMReceivers Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetDTMReceiversStr(char* DTMReceivers, uint32_t buflen) {
+ReadWriteAccess_t DataDictionaryGetDTMReceiversString(char* DTMReceivers, const size_t buflen) {
 	ReadWriteAccess_t Res;
 
 	if (DTMReceivers == NULL) {
