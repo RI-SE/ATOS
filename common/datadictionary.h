@@ -78,13 +78,11 @@ ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(uint16_t* simulatorUDPPor
 ReadWriteAccess_t DataDictionarySetSimulatorModeU8(const char* simulatorMode);
 ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t* simulatorMode);
 
-ReadWriteAccess_t DataDictionaryInitVOILReceiversC8(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType *GSD, C8 *VOILReceivers);
-ReadWriteAccess_t DataDictionaryGetVOILReceiversC8(GSDType *GSD, C8 *VOILReceivers, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetVOILReceiversStr(const char* VOILReceivers);
+ReadWriteAccess_t DataDictionaryGetVOILReceiversStr(char* VOILReceivers, uint32_t buflen);
 
-ReadWriteAccess_t DataDictionaryInitDTMReceiversC8(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetDTMReceiversC8(GSDType *GSD, C8 *DTMReceivers);
-ReadWriteAccess_t DataDictionaryGetDTMReceiversC8(GSDType *GSD, C8 *DTMReceivers, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetDTMReceiversStr(const char *DTMReceivers);
+ReadWriteAccess_t DataDictionaryGetDTMReceiversStr(char *DTMReceivers, uint32_t buflen);
 
 ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType *GSD);
 ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(GSDType *GSD, C8 *IP);

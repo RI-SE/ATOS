@@ -27,8 +27,6 @@ static pthread_mutex_t OriginLatitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OriginLongitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t OriginAltitudeMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t VisualizationServerMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t VOILReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t DTMReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ExternalSupervisorIPMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t SupervisorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -71,8 +69,6 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 
 	Res = Res == READ_OK ? DataDictionaryInitScenarioName() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitVisualizationServerU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitVOILReceiversC8(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitDTMReceiversC8(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitExternalSupervisorIPU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitRVSSAsp() : Res;
@@ -1193,45 +1189,26 @@ ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t* simulatorMode) {
 /*END of SimulatorMode*/
 
 /*VOILReceivers*/
-/*!
- * \brief DataDictionaryInitVOILReceiversC8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitVOILReceiversC8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&VOILReceiversMutex);
-		strcpy(GSD->VOILReceiversC8, ResultBufferC8);
-		pthread_mutex_unlock(&VOILReceiversMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "VOILReceivers not found!");
-	}
-
-	return Res;
-}
 
 /*!
- * \brief DataDictionarySetVOILReceiversC8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionarySetVOILReceiversStr Parses input variable and sets variable to corresponding value
+
  * \param VOILReceivers
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType * GSD, C8 * VOILReceivers) {
+ReadWriteAccess_t DataDictionarySetVOILReceiversStr(const char * VOILReceivers) {
 	ReadWriteAccess_t Res;
+
+	if (VOILReceivers == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+	
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, VOILReceivers, strlen(VOILReceivers) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&VOILReceiversMutex);
-		strcpy(GSD->VOILReceiversC8, VOILReceivers);
-		pthread_mutex_unlock(&VOILReceiversMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -1239,61 +1216,54 @@ ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType * GSD, C8 * VOILRecei
 }
 
 /*!
- * \brief DataDictionaryGetVOILReceiversC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetVOILReceiversStr Reads variable from shared memory
  * \param VOILReceivers Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetVOILReceiversC8(GSDType * GSD, U8 * VOILReceivers, U32 BuffLen) {
-	pthread_mutex_lock(&VOILReceiversMutex);
-	bzero(VOILReceivers, BuffLen);
-	strcpy(VOILReceivers, GSD->VOILReceiversC8);
-	pthread_mutex_unlock(&VOILReceiversMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetVOILReceiversStr(char * VOILReceivers, uint32_t buflen) {
+	ReadWriteAccess_t Res;
+
+	if (VOILReceivers == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, VOILReceivers, buflen)) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "VOIL receivers not found!");
+		Res = PARAMETER_NOTFOUND;
+		memset(VOILReceivers, 0, buflen);
+	}
+
+	return Res;
 }
 
 /*END of VOILReceivers*/
 
 /*DTMReceivers*/
-/*!
- * \brief DataDictionaryInitDTMReceiversC8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitDTMReceiversC8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_DTM_RECEIVERS, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&DTMReceiversMutex);
-		strcpy(GSD->DTMReceiversC8, ResultBufferC8);
-		pthread_mutex_unlock(&DTMReceiversMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "DTMReceivers not found!");
-	}
-
-	return Res;
-}
 
 /*!
- * \brief DataDictionarySetDTMReceiversC8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionarySetDTMReceiversStr Parses input variable and sets variable to corresponding value
  * \param DTMReceivers
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetDTMReceiversC8(GSDType * GSD, C8 * DTMReceivers) {
+ReadWriteAccess_t DataDictionarySetDTMReceiversStr(const char * DTMReceivers) {
 	ReadWriteAccess_t Res;
+
+	if (DTMReceivers == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+	
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_DTM_RECEIVERS, DTMReceivers, strlen(DTMReceivers) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&DTMReceiversMutex);
-		strcpy(GSD->DTMReceiversC8, DTMReceivers);
-		pthread_mutex_unlock(&DTMReceiversMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -1301,17 +1271,31 @@ ReadWriteAccess_t DataDictionarySetDTMReceiversC8(GSDType * GSD, C8 * DTMReceive
 }
 
 /*!
- * \brief DataDictionaryGetDTMReceiversC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetDTMReceiversStr Reads variable from shared memory
  * \param DTMReceivers Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetDTMReceiversC8(GSDType * GSD, U8 * DTMReceivers, U32 BuffLen) {
-	pthread_mutex_lock(&DTMReceiversMutex);
-	bzero(DTMReceivers, BuffLen);
-	strcpy(DTMReceivers, GSD->DTMReceiversC8);
-	pthread_mutex_unlock(&DTMReceiversMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetDTMReceiversStr(char* DTMReceivers, uint32_t buflen) {
+	ReadWriteAccess_t Res;
+
+	if (DTMReceivers == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_DTM_RECEIVERS, DTMReceivers, buflen)) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "DTM receivers receivers not found!");
+		Res = PARAMETER_NOTFOUND;
+		memset(DTMReceivers, 0, buflen);
+	}
+
+	return Res;
+
 }
 
 /*END of DTMReceivers*/
