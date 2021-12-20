@@ -108,7 +108,7 @@ ReadWriteAccess_t DataDictionarySetOBCState(const OBCState_t OBCState);
 ReadWriteAccess_t DataDictionaryGetOBCState(OBCState_t* OBCState);
 ReadWriteAccess_t DataDictionaryFreeStateData();
 
-ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
+ReadWriteAccess_t DataDictionaryConstructor();
 ReadWriteAccess_t DataDictionaryDestructor();
 
 ReadWriteAccess_t DataDictionaryInitMaxPacketsLost(void);

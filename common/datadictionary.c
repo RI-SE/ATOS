@@ -50,10 +50,9 @@ static volatile ASPType *rvssAspDataMemory = NULL;
 /*!
  * \brief DataDictionaryConstructor Initialize data held by DataDictionary.
 Initialization data that is configurable is stored in test.conf.
- * \param GSD Pointer to allocated shared memory
  * \return Error code defined by ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
+ReadWriteAccess_t DataDictionaryConstructor() {
 	ReadWriteAccess_t Res = READ_OK;
 
 	Res = Res == READ_OK ? DataDictionaryInitScenarioName() : Res;
