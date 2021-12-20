@@ -1978,7 +1978,7 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
 	else if (strcmp("VisualizationServerName", ParameterName) == 0) {
-		DataDictionaryGetVisualizationServerC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetVisualizationServerIPString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("ASPMaxTimeDiff", ParameterName) == 0) {
 		DataDictionaryGetASPMaxTimeDiffDbl(&ValueDbl);
@@ -2207,7 +2207,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		result = DataDictionarySetOriginAltitudeDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
-		result = DataDictionarySetVisualizationServerU32(GSD, newValue);
+		result = DataDictionarySetVisualizationServerU32(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
 		result = DataDictionarySetASPMaxTimeDiffDbl(newValue);

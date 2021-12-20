@@ -17,16 +17,13 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <string.h>
 #include "datadictionary.h"
 #include "logging.h"
 #include "shmem.h"
 
 
 // Parameters and variables
-static pthread_mutex_t OriginLatitudeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t OriginLongitudeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t OriginAltitudeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t VisualizationServerMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t ExternalSupervisorIPMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t SupervisorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -68,7 +65,6 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
 	ReadWriteAccess_t Res = READ_OK;
 
 	Res = Res == READ_OK ? DataDictionaryInitScenarioName() : Res;
-	Res = Res == READ_OK ? DataDictionaryInitVisualizationServerU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitExternalSupervisorIPU32(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitRVSSAsp() : Res;
@@ -368,80 +364,94 @@ ReadWriteAccess_t DataDictionaryGetOriginAltitudeString(char* altitude, const si
 
 /*VisualizationServer*/
 /*!
- * \brief DataDictionaryInitVisualizationServerU32 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitVisualizationServerU32(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&VisualizationServerMutex);
-		GSD->VisualizationServerU32 = UtilIPStringToInt(ResultBufferC8);
-		bzero(GSD->VisualizationServerC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->VisualizationServerC8, ResultBufferC8);
-		pthread_mutex_unlock(&VisualizationServerMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "VisualizationServerName not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetVisualizationServerU32 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param IP
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType * GSD, C8 * IP) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetVisualizationServerU32(const char* IP) {
+	ReadWriteAccess_t retval;
+	int result;
+	in_addr_t inaddr;
 
+	if (IP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	result = inet_pton(AF_INET, IP, &inaddr);
+	if (result <= 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Specified IP %s is not valid", IP);
+		return WRITE_FAIL;
+	}
+	
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME, IP, strlen(IP) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&VisualizationServerMutex);
-		GSD->VisualizationServerU32 = UtilIPStringToInt(IP);
-		bzero(GSD->VisualizationServerC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->VisualizationServerC8, IP);
-		pthread_mutex_unlock(&VisualizationServerMutex);
+		retval = WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		retval = PARAMETER_NOTFOUND;
+	}
+	return retval;
 }
 
 /*!
  * \brief DataDictionaryGetVisualizationServerU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param IP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(GSDType * GSD, U32 * IP) {
-	pthread_mutex_lock(&VisualizationServerMutex);
-	*IP = GSD->VisualizationServerU32;
-	pthread_mutex_unlock(&VisualizationServerMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(in_addr_t* IP) {
+	char ipString[INET_ADDRSTRLEN];
+	ReadWriteAccess_t retval;
+	int result;
+
+	if (IP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetVisualizationServerIPString(ipString, sizeof (ipString))) != READ_OK) {
+		return retval;
+	}
+	result = inet_pton(AF_INET, ipString, IP);
+	if (result > 0) {
+		retval = READ_OK;
+	}
+	else if (result == 0) {
+		LogMessage(LOG_LEVEL_ERROR, "VisualizationServerIP string %s is not a valid IPv4 address", ipString);
+		retval = PARAMETER_NOTFOUND;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+		retval = UNDEFINED;
+	}
+	return retval;
 }
 
 
 /*!
- * \brief DataDictionaryGetVisualizationServerU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetVisualizationServerIPString Reads variable from shared memory
  * \param IP Return variable pointer
+ * \param bufferLength Size of return variable buffer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType * GSD, C8 * IP, U32 BuffLen) {
-	pthread_mutex_lock(&VisualizationServerMutex);
-	bzero(IP, BuffLen);
-	strcat(IP, GSD->VisualizationServerC8);
-	pthread_mutex_unlock(&VisualizationServerMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetVisualizationServerIPString(char* IP, const size_t bufferLength) {
+	if (IP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME,
+				IP, bufferLength) > 0) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "VisualizationServerIP not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of VisualizationServer*/

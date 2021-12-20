@@ -38,10 +38,9 @@ ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(const char*  altitude);
 ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(double_t* altitude);
 ReadWriteAccess_t DataDictionaryGetOriginAltitudeString(char* altitude, const size_t bufferLength);
 
-ReadWriteAccess_t DataDictionaryInitVisualizationServerU32(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType *GSD, C8 *IP);
-ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(GSDType *GSD, U32 *IP);
-ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType *GSD, C8 *IP, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetVisualizationServerU32(const char* IP);
+ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(in_addr_t* IP);
+ReadWriteAccess_t DataDictionaryGetVisualizationServerIPString(char* IP, const size_t bufferLength);
 
 ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(const char *ASPMaxTimeDiff);
 ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(double_t *ASPMaxTimeDiff);
