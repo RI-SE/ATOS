@@ -36,7 +36,6 @@ typedef struct {
 
 static volatile ObjectDataType *objectDataMemory = NULL;
 static volatile StateDataType *stateDataMemory = NULL;
-static volatile char *miscDataMemory = NULL;
 static volatile ASPType *rvssAspDataMemory = NULL; 
 
 /*------------------------------------------------------------
