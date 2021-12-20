@@ -83,14 +83,12 @@ ReadWriteAccess_t DataDictionaryGetVOILReceiversString(char* VOILReceivers, cons
 ReadWriteAccess_t DataDictionarySetDTMReceiversString(const char *DTMReceivers);
 ReadWriteAccess_t DataDictionaryGetDTMReceiversString(char *DTMReceivers, const size_t buflen);
 
-ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(GSDType *GSD, C8 *IP);
-ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(GSDType *GSD, U32 *IP);
-ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPC8(GSDType *GSD, C8 *IP, U32 BuffLen);
+ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(const char *IP);
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(uint32_t *IP);
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPString(char *IP, uint32_t buflen);
 
-ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType *GSD);
-ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(GSDType *GSD, C8 *SupervisorTCPPort);
-ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(GSDType *GSD, U16 *SupervisorTCPPort);
+ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(const char* SupervisorTCPPort);
+ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(uint16_t *SupervisorTCPPort);
 
 ReadWriteAccess_t DataDictionarySetRVSSConfigU32(uint32_t RVSSConfig);
 ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(uint32_t *RVSSConfig);
@@ -102,7 +100,6 @@ ReadWriteAccess_t DataDictionaryInitRVSSAsp();
 ReadWriteAccess_t DataDictionarySetRVSSAsp(ASPType *ASPData);
 ReadWriteAccess_t DataDictionaryGetRVSSAsp(ASPType *ASPData);
 
-ReadWriteAccess_t DataDictionaryInitMiscData(void);
 ReadWriteAccess_t DataDictionarySetMiscData(const char * miscData, const size_t datalen);
 ReadWriteAccess_t DataDictionaryGetMiscData(char* miscData, const size_t buflen);
 
@@ -111,7 +108,7 @@ ReadWriteAccess_t DataDictionarySetOBCState(const OBCState_t OBCState);
 ReadWriteAccess_t DataDictionaryGetOBCState(OBCState_t* OBCState);
 ReadWriteAccess_t DataDictionaryFreeStateData();
 
-ReadWriteAccess_t DataDictionaryConstructor(GSDType *GSD);
+ReadWriteAccess_t DataDictionaryConstructor();
 ReadWriteAccess_t DataDictionaryDestructor();
 
 ReadWriteAccess_t DataDictionaryInitMaxPacketsLost(void);

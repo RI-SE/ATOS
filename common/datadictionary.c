@@ -24,13 +24,6 @@
 
 
 // Parameters and variables
-static pthread_mutex_t ExternalSupervisorIPMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SupervisorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
-
-
-
 #define MONR_DATA_FILENAME "MonitorData"
 #define STATE_DATA_FILENAME "StateData"
 #define MISC_DATA_FILENAME "MiscData"
@@ -43,7 +36,6 @@ typedef struct {
 
 static volatile ObjectDataType *objectDataMemory = NULL;
 static volatile StateDataType *stateDataMemory = NULL;
-static volatile char *miscDataMemory = NULL;
 static volatile ASPType *rvssAspDataMemory = NULL; 
 
 /*------------------------------------------------------------
@@ -58,17 +50,13 @@ static volatile ASPType *rvssAspDataMemory = NULL;
 /*!
  * \brief DataDictionaryConstructor Initialize data held by DataDictionary.
 Initialization data that is configurable is stored in test.conf.
- * \param GSD Pointer to allocated shared memory
  * \return Error code defined by ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
+ReadWriteAccess_t DataDictionaryConstructor() {
 	ReadWriteAccess_t Res = READ_OK;
 
 	Res = Res == READ_OK ? DataDictionaryInitScenarioName() : Res;
-	Res = Res == READ_OK ? DataDictionaryInitExternalSupervisorIPU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
 	Res = Res == READ_OK ? DataDictionaryInitRVSSAsp() : Res;
-	Res = Res == READ_OK ? DataDictionaryInitMiscData() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
 	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
 	if (Res == READ_OK && DataDictionaryInitObjectData() != WRITE_OK) {
@@ -1305,38 +1293,11 @@ ReadWriteAccess_t DataDictionaryGetDTMReceiversString(char* DTMReceivers, const 
 	}
 
 	return Res;
-
 }
 
 /*END of DTMReceivers*/
 
 /*External Supervisor IP*/
-/*!
- * \brief DataDictionaryInitExternalSupervisorIPU32 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ExternalSupervisorIPMutex);
-		GSD->ExternalSupervisorIPU32 = UtilIPStringToInt(ResultBufferC8);
-		bzero(GSD->ExternalSupervisorIPC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->ExternalSupervisorIPC8, ResultBufferC8);
-		pthread_mutex_unlock(&ExternalSupervisorIPMutex);
-		//LogMessage(LOG_LEVEL_ERROR,"Supervisor IP: %s", ResultBufferC8);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "Supervisor IP not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetExternalSupervisorIPU32 Parses input variable and sets variable to corresponding value
@@ -1344,92 +1305,111 @@ ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType * GSD) {
  * \param IP
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(GSDType * GSD, C8 * IP) {
+ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(const char* IP) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, IP, strlen(IP) + 1)) {
+	if (IP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if(UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, IP, strlen(IP) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&ExternalSupervisorIPMutex);
-		GSD->ExternalSupervisorIPU32 = UtilIPStringToInt(IP);
-		bzero(GSD->ExternalSupervisorIPC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->ExternalSupervisorIPC8, IP);
-		pthread_mutex_unlock(&ExternalSupervisorIPMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
 	return Res;
+
 }
 
 /*!
  * \brief DataDictionaryGetExternalSupervisorIPU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param IP Return variable pointer
+ * \param externalSupervisorIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(GSDType * GSD, U32 * IP) {
-	pthread_mutex_lock(&ExternalSupervisorIPMutex);
-	*IP = GSD->ExternalSupervisorIPU32;
-	pthread_mutex_unlock(&ExternalSupervisorIPMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(in_addr_t* externalSupervisorIP) {
+	char ipString[INET_ADDRSTRLEN];
+	ReadWriteAccess_t retval;
+	int result;
+
+	if (externalSupervisorIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetExternalSupervisorIPString(ipString, sizeof (ipString))) != READ_OK) {
+		return retval;
+	}
+	result = inet_pton(AF_INET, ipString, externalSupervisorIP);
+	if (result > 0) {
+		retval = READ_OK;
+	}
+	else if (result == 0) {
+		LogMessage(LOG_LEVEL_ERROR, "External supervisor string %s is not a valid IPv4 address", ipString);
+		retval = PARAMETER_NOTFOUND;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+		retval = UNDEFINED;
+	}
+	return retval;
 }
 
+
 /*!
- * \brief DataDictionaryGetExternalSupervisorIPC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param IP Return variable pointer
+ * \brief DataDictionaryGetExternalSupervisorIPString Reads variable from shared memory
+ * \param externalSupervisorIP Return variable pointer
+ * \param buflen Return parameter buffer length
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPC8(GSDType * GSD, C8 * IP, U32 BuffLen) {
-	pthread_mutex_lock(&ExternalSupervisorIPMutex);
-	bzero(IP, BuffLen);
-	strcat(IP, GSD->ExternalSupervisorIPC8);
-	pthread_mutex_unlock(&ExternalSupervisorIPMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPString(char * externalSupervisorIP, uint32_t buflen) {
+	ReadWriteAccess_t Res;
+
+	if (externalSupervisorIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, externalSupervisorIP, buflen)) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "External supervisor IP not found!");
+		Res = PARAMETER_NOTFOUND;
+		memset(externalSupervisorIP, 0, buflen);
+	}
+
+	return Res;
 }
 
 /*END of External Supervisor IP*/
 
 /*External SupervisorTCPPort*/
-/*!
- * \brief DataDictionaryInitSupervisorTCPPortU16 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&SupervisorTCPPortMutex);
-		GSD->SupervisorTCPPortU16 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&SupervisorTCPPortMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "SupervisorTCPPort not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetSupervisorTCPPortU16 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param SupervisorTCPPort
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(GSDType * GSD, C8 * SupervisorTCPPort) {
+ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(const char * SupervisorTCPPort) {
 	ReadWriteAccess_t Res;
+
+
+	if (SupervisorTCPPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+	
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP, SupervisorTCPPort,
 		 strlen(SupervisorTCPPort) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&SupervisorTCPPortMutex);
-		GSD->SupervisorTCPPortU16 = atoi(SupervisorTCPPort);
-		pthread_mutex_unlock(&SupervisorTCPPortMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -1438,15 +1418,33 @@ ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(GSDType * GSD, C8 * Supe
 
 /*!
  * \brief DataDictionaryGetSupervisorTCPPortU16 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param SupervisorTCPPort Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(GSDType * GSD, U16 * SupervisorTCPPort) {
-	pthread_mutex_lock(&SupervisorTCPPortMutex);
-	*SupervisorTCPPort = GSD->SupervisorTCPPortU16;
-	pthread_mutex_unlock(&SupervisorTCPPortMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(uint16_t * SupervisorTCPPort) {
+	char resultBuffer[10];
+	char *endptr = NULL;
+
+	if (SupervisorTCPPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP,
+				resultBuffer, sizeof(resultBuffer)) > 0) {
+		*SupervisorTCPPort = strtoul(resultBuffer, &endptr, 10);
+		if (endptr == resultBuffer) {
+			*SupervisorTCPPort = 0;
+			LogMessage(LOG_LEVEL_ERROR, "External SupervisorTCPPort badly formatted");
+			return PARAMETER_NOTFOUND;
+		}
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "External SupervisorTCPPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of External SupervisorTCPPort*/
@@ -1642,14 +1640,6 @@ ReadWriteAccess_t DataDictionaryGetRVSSAsp(ASPType * ASPD) {
 /*END ASPDebug*/
 
 /*MiscData*/
-/*!
- * \brief DataDictionaryInitMiscData inits a data structure for saving misc data
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitMiscData(void) {
-	return READ_OK;
-}
-
 /**
  * \brief DataDictionarySetMiscData Sets the test misc data.
  * \param miscData The misc data string (ASCII).

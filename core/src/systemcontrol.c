@@ -2029,10 +2029,10 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 		DataDictionaryGetDTMReceiversString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SupervisorIP", ParameterName) == 0) {
-		DataDictionaryGetExternalSupervisorIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetExternalSupervisorIPString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SupervisorTCPPort", ParameterName) == 0) {
-		DataDictionaryGetSupervisorTCPPortU16(GSD, &ValueU16);
+		DataDictionaryGetSupervisorTCPPortU16(&ValueU16);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("MiscData", ParameterName) == 0) {
@@ -2249,10 +2249,10 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		result = DataDictionarySetDTMReceiversString(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP:
-		result = DataDictionarySetExternalSupervisorIPU32(GSD, newValue);
+		result = DataDictionarySetExternalSupervisorIPU32(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP:
-		result = DataDictionarySetSupervisorTCPPortU16(GSD, newValue);
+		result = DataDictionarySetSupervisorTCPPortU16(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
 		result = DataDictionarySetRVSSConfigU32((uint32_t) strtoul(newValue, NULL, 10));
