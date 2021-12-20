@@ -2023,10 +2023,10 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu8, ValueU8);
 	}
 	else if (strcmp("VOILReceivers", ParameterName) == 0) {
-		DataDictionaryGetVOILReceiversC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetVOILReceiversString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("DTMReceivers", ParameterName) == 0) {
-		DataDictionaryGetDTMReceiversC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetDTMReceiversString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SupervisorIP", ParameterName) == 0) {
 		DataDictionaryGetExternalSupervisorIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
@@ -2243,10 +2243,10 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		result = DataDictionarySetSimulatorModeU8(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_VOIL_RECEIVERS:
-		result = DataDictionarySetVOILReceiversC8(GSD, newValue);
+		result = DataDictionarySetVOILReceiversString(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_DTM_RECEIVERS:
-		result = DataDictionarySetDTMReceiversC8(GSD, newValue);
+		result = DataDictionarySetDTMReceiversString(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP:
 		result = DataDictionarySetExternalSupervisorIPU32(GSD, newValue);

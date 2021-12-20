@@ -1309,8 +1309,8 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 				DataDictionaryGetASPFilterLevelDbl(&ASPFilterLevelDbl);
 				DataDictionaryGetASPMaxDeltaTimeDbl(&ASPMaxDeltaTimeDbl);
 				ASPDebugRate = 1;
-				DataDictionaryGetVOILReceiversC8(GSD, VOILReceivers, SMALL_BUFFER_SIZE_254);
-				DataDictionaryGetDTMReceiversC8(GSD, DTMReceivers, SMALL_BUFFER_SIZE_254);
+				DataDictionaryGetVOILReceiversString(VOILReceivers, SMALL_BUFFER_SIZE_254);
+				DataDictionaryGetDTMReceiversString(DTMReceivers, SMALL_BUFFER_SIZE_254);
 			}
 			else if (iCommand == COMM_DISCONNECT) {
 				LogMessage(LOG_LEVEL_INFO, "DISCONNECT received");
