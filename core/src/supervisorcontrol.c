@@ -111,9 +111,9 @@ void supervisorcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLeve
 	LogInit(MODULE_NAME, logLevel);
 	LogMessage(LOG_LEVEL_INFO, "Supervisor control task running with PID: %i", getpid());
 
-	DataDictionaryGetExternalSupervisorIPU32(GSD, &SupervisorIpU32);
+	DataDictionaryGetExternalSupervisorIPU32(&SupervisorIpU32);
 
-	DataDictionaryGetExternalSupervisorIPC8(GSD, SupervisorServerIpC8, SUP_CONTROL_BUFFER_SIZE_20);
+	DataDictionaryGetExternalSupervisorIPString(SupervisorServerIpC8, SUP_CONTROL_BUFFER_SIZE_20);
 
 	LogMessage(LOG_LEVEL_INFO, "Supervisor IP: %s", SupervisorServerIpC8);
 
