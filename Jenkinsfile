@@ -28,6 +28,7 @@ pipeline {
         stage('Dev Integration tests') {
           steps {
             sh 'echo "Running standard Maestro integration tests..."'
+            sh 'rm -rf /dev/shm/*'
             sh './maestroStandardTests.sh'
           }
         }
