@@ -23,10 +23,9 @@
 
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>std_msgs</build_depend>
-  <exec_depend>roscpp</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
+  <depend>roscpp</depend>
+  <depend>std_msgs</depend>
+  <doc_depend>doxygen</doc_depend>
 
   <export>
     <!-- Other tools can request additional information be placed here -->
