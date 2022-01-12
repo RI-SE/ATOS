@@ -16,10 +16,15 @@
   <!-- <url type="website">http://wiki.ros.org/maestro</url> -->
 
 
-  <!-- Author tags are optional, multiple are allowed, one per tag -->
-  <!-- Authors do not have to be maintainers, but could be -->
-  <!-- Example: -->
-  <!-- <author email="jane.doe@example.com">Jane Doe</author> -->
+  <author email="lukas.wikander@astazero.com">Lukas Wikander</author>
+  <author email="sebastian.lindholm@astazero.com">Sebastian Loh Lindholm</author>
+  <author email="viktor.johansson@astazero.com">Viktor Johansson</author>
+  <author email="adam.eriksson@astazero.com">Adam Eriksson</author>
+  <author email="alfred.aronsson@astazero.com">Alfred Aronsson</author>
+  <author email="jesper.blidkvist@astazero.com">Jesper Blidkvist</author>
+  <author email="oscar.johansson@astazero.com">Oscar Johansson</author>
+  <author email="frida.reichenberg@astazero.com">Frida Reichenberg</author>
+  <author email="victor.jarlow@astazero.com">Victor Jarlow</author>
 
 
   <buildtool_depend>catkin</buildtool_depend>
