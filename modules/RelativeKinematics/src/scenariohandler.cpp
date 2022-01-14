@@ -2,27 +2,20 @@
 #include "logging.h"
 #include "util.h"
 #include "datadictionary.h"
+#include "osi_handler.hpp"
+#include "objectconfig.hpp"
 
 #include <algorithm>
 #include <stdexcept>
 #include <fstream>
 #include <functional>
 #include <thread>
+#include <dirent.h>
 
 
-ScenarioHandler::ScenarioHandler(
-		ControlMode controlMode) {
-	switch (controlMode) {
-	case RELATIVE_KINEMATICS:
-		this->state = static_cast<ObjectControlState*>(new RelativeKinematics::Idle());
-		DataDictionarySetOBCState(this->state->asNumber());
-		break;
-	case ABSOLUTE_KINEMATICS:
-		// TODO
-		LogMessage(LOG_LEVEL_ERROR, "Unimplemented control mode requested");
-		break;
-	}
-	this->controlMode = controlMode;
+ScenarioHandler::ScenarioHandler() {
+	this->state = static_cast<ObjectControlState*>(new ObjectControl::Idle);
+	DataDictionarySetOBCState(this->state->asNumber());
 }
 
 ScenarioHandler::~ScenarioHandler() {
@@ -57,11 +50,35 @@ void ScenarioHandler::handleAllClearCommand() {
 	this->state->allClearRequest(*this);
 }
 
+void ScenarioHandler::handleActionConfigurationCommand(
+		const TestScenarioCommandAction& action) {
+	this->state->settingModificationRequested(*this);
+	if (action.command == ACTION_PARAMETER_VS_SEND_START) {
+		LogMessage(LOG_LEVEL_INFO, "Configuring delayed start for object %u", action.objectID);
+		objects[action.objectID].setTriggerStart(true);
+		this->storedActions[action.actionID] = std::bind(&TestObject::sendStart,
+														 &objects[action.objectID]);
+	}
+}
+
+void ScenarioHandler::handleExecuteActionCommand(
+		const uint16_t &actionID,
+		const std::chrono::system_clock::time_point &when) {
+	this->state->actionExecutionRequested(*this);
+	auto delayedExecutor = [&](){
+		using namespace std::chrono;
+		LogMessage(LOG_LEVEL_DEBUG, "Executing action %u in %d ms", actionID,
+				   duration_cast<milliseconds>(when - system_clock::now()).count());
+		std::this_thread::sleep_until(when);
+		LogMessage(LOG_LEVEL_INFO, "Executing action %u", actionID);
+		this->storedActions[actionID]();
+	};
+	auto thd = std::thread(delayedExecutor);
+	thd.detach();
+}
+
 void ScenarioHandler::loadScenario() {
 	this->loadObjectFiles();
-	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
-		o.second.parseTrajectoryFile(o.second.getTrajectoryFile());
-	});
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
 		auto data = o.second.getAsObjectData();
 		DataDictionarySetObjectData(&data);
@@ -69,7 +86,7 @@ void ScenarioHandler::loadScenario() {
 }
 
 void ScenarioHandler::loadObjectFiles() {
-	this->objects.clear();
+	this->clearScenario();
 	char path[MAX_FILE_PATH];
 	std::vector<std::invalid_argument> errors;
 
@@ -85,6 +102,7 @@ void ScenarioHandler::loadObjectFiles() {
 			TestObject object;
 			try {
 				object.parseConfigurationFile(entry.path());
+
 				LogMessage(LOG_LEVEL_INFO, "Loaded configuration: %s", object.toString().c_str());
 				// Check preexisting
 				auto foundObject = objects.find(object.getTransmitterID());
@@ -94,8 +112,8 @@ void ScenarioHandler::loadObjectFiles() {
 				else {
 					auto badID = object.getTransmitterID();
 					std::string errMsg = "Duplicate object ID " + std::to_string(badID)
-							+ " detected in files " + objects[badID].getTrajectoryFile().string()
-							+ " and " + object.getTrajectoryFile().string();
+							+ " detected in files " + objects[badID].getTrajectoryFileName()
+							+ " and " + object.getTrajectoryFileName();
 					throw std::invalid_argument(errMsg);
 				}
 			}
@@ -105,6 +123,17 @@ void ScenarioHandler::loadObjectFiles() {
 			}
 		}
 	}
+
+	// Fix injector ID maps - reverse their direction
+	for (const auto& id : getVehicleIDs()) {
+		auto injMap = objects[id].getObjectConfig().getInjectionMap();
+		for (const auto& sourceID : injMap.sourceIDs) {
+			auto conf = objects[sourceID].getObjectConfig();
+			conf.addInjectionTarget(id);
+			objects[sourceID].setObjectConfig(conf);
+		}
+	}
+	
 	if (!errors.empty()) {
 		objects.clear();
 		std::ostringstream ostr;
@@ -154,6 +183,7 @@ void ScenarioHandler::transformScenarioRelativeTo(
 
 void ScenarioHandler::clearScenario() {
 	objects.clear();
+	storedActions.clear();
 }
 
 
@@ -250,6 +280,44 @@ void ScenarioHandler::heartbeat() {
 	LogMessage(LOG_LEVEL_INFO, "Heartbeat thread exiting");
 }
 
+OsiHandler::LocalObjectGroundTruth_t ScenarioHandler::buildOSILocalGroundTruth(
+		const MonitorMessage& monr) const {
+
+	OsiHandler::LocalObjectGroundTruth_t gt;
+
+	gt.id = monr.first;
+	gt.pos_m.x = monr.second.position.xCoord_m;
+	gt.pos_m.y = monr.second.position.yCoord_m;
+	gt.pos_m.z = monr.second.position.zCoord_m;
+	gt.vel_m_s.lon = monr.second.speed.isLongitudinalValid ? monr.second.speed.longitudinal_m_s : 0.0;
+	gt.vel_m_s.lat = monr.second.speed.isLateralValid ? monr.second.speed.lateral_m_s : 0.0;
+	gt.vel_m_s.up = 0.0;
+	gt.acc_m_s2.lon = monr.second.acceleration.isLongitudinalValid ? monr.second.acceleration.longitudinal_m_s2 : 0.0;
+	gt.acc_m_s2.lat = monr.second.acceleration.isLateralValid ? monr.second.acceleration.lateral_m_s2 : 0.0;
+	gt.acc_m_s2.up = 0.0;
+	gt.orientation_rad.yaw = monr.second.position.isHeadingValid ? monr.second.position.heading_rad : 0.0;
+	gt.orientation_rad.roll = 0.0;
+	gt.orientation_rad.pitch = 0.0;
+
+	return gt;
+}
+
+void ScenarioHandler::injectObjectData(const MonitorMessage &monr) {
+	if (!objects[monr.first].getObjectConfig().getInjectionMap().targetIDs.empty()) {
+		std::chrono::system_clock::time_point ts;
+		auto secs = std::chrono::seconds(monr.second.timestamp.tv_sec);
+		auto usecs = std::chrono::microseconds(monr.second.timestamp.tv_usec);
+		ts += secs + usecs;
+		auto osiGtData = buildOSILocalGroundTruth(monr);
+		for (const auto& targetID : objects[monr.first].getObjectConfig().getInjectionMap().targetIDs) {
+			if (objects[targetID].isOsiCompatible()) {
+				objects[targetID].sendOsiData(osiGtData, objects[targetID].getProjString(), ts);
+			}
+		}
+	}
+}
+
+
 void ScenarioHandler::startListeners() {
 	LogMessage(LOG_LEVEL_DEBUG, "Starting listeners");
 	objectListeners.clear();
@@ -258,68 +326,84 @@ void ScenarioHandler::startListeners() {
 	}
 }
 
-void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> &connStopReq) {
+void ScenarioHandler::connectToObject(
+		TestObject &obj,
+		std::shared_future<void> &connStopReq) {
+	constexpr int maxConnHeabs = 10;
+	constexpr int maxConnMonrs = 10;
 	try {
 		if (!obj.isConnected()) {
-			obj.establishConnection(connStopReq);
-			obj.sendSettings();
+			try {
+				obj.establishConnection(connStopReq);
+				obj.sendSettings();
+			}
+			catch (std::runtime_error& e) {
+				LogMessage(LOG_LEVEL_ERROR, "Connection attempt for object %u failed: %s",
+						   obj.getTransmitterID(), e.what());
+				obj.disconnect();
+				return;
+				// TODO connection failed event?
+			}
+			try {
+				int initializingMonrs = maxConnMonrs;
+				int connectionHeartbeats = maxConnHeabs;
 
-			int nReadMonr = 0;
-			constexpr int maxInitializingMonrs = 10;
-			int connectionHeartbeats = 10;
-			while (true) {
-				obj.sendHeartbeat(this->state->asControlCenterStatus());
-				ObjectStateType objState = OBJECT_STATE_UNKNOWN;
-				try {
-					objState = obj.getState(true, heartbeatPeriod);
-				} catch (std::runtime_error& e) {
-					if (connectionHeartbeats--) {
-						continue;
+				while (true) {
+					ObjectStateType objState = OBJECT_STATE_UNKNOWN;
+					auto nextSendTime = std::chrono::system_clock::now();
+					try {
+						obj.sendHeartbeat(this->state->asControlCenterStatus());
+						nextSendTime += heartbeatPeriod;
+						objState = obj.getState(true, heartbeatPeriod);
+					} catch (std::runtime_error& e) {
+						if (connectionHeartbeats-- > 0) {
+							std::this_thread::sleep_until(nextSendTime);
+							continue;
+						}
+						else {
+							throw std::runtime_error("No monitor reply after " + std::to_string(maxConnHeabs) + " heartbeats. Details:\n" + e.what());
+						}
 					}
-					else {
-						throw e;
-					}
-				}
 
-				switch (objState) {
-				case OBJECT_STATE_ARMED:
-				case OBJECT_STATE_REMOTE_CONTROL:
-					LogMessage(LOG_LEVEL_INFO, "Connected to armed object");
-					this->state->connectedToArmedObject(*this, obj.getTransmitterID());
-					break;
-				case OBJECT_STATE_ABORTING:
-				case OBJECT_STATE_POSTRUN:
-				case OBJECT_STATE_RUNNING:
-					LogMessage(LOG_LEVEL_INFO, "Connected to running object");
-					this->state->connectedToLiveObject(*this, obj.getTransmitterID());
-					break;
-				case OBJECT_STATE_INIT:
-					if (nReadMonr < maxInitializingMonrs) {
-						++nReadMonr;
-						continue;
-					}
-					else {
-						LogMessage(LOG_LEVEL_INFO, "Connected object in initializing state after connection");
+					switch (objState) {
+					case OBJECT_STATE_ARMED:
+					case OBJECT_STATE_REMOTE_CONTROL:
+						LogMessage(LOG_LEVEL_INFO, "Connected to armed object ID %u", obj.getTransmitterID());
+						this->state->connectedToArmedObject(*this, obj.getTransmitterID());
+						break;
+					case OBJECT_STATE_ABORTING:
+					case OBJECT_STATE_POSTRUN:
+					case OBJECT_STATE_RUNNING:
+						LogMessage(LOG_LEVEL_INFO, "Connected to running object ID %u", obj.getTransmitterID());
+						this->state->connectedToLiveObject(*this, obj.getTransmitterID());
+						break;
+					case OBJECT_STATE_INIT:
+						if (initializingMonrs-- > 0) {
+							continue;
+						}
+						else {
+							LogMessage(LOG_LEVEL_INFO, "Connected object %u in initializing state after connection", obj.getTransmitterID());
+							this->state->connectedToLiveObject(*this, obj.getTransmitterID());
+						}
+						break;
+					case OBJECT_STATE_DISARMED:
+						LogMessage(LOG_LEVEL_INFO, "Connected to disarmed object ID %u", obj.getTransmitterID());
+						this->state->connectedToObject(*this, obj.getTransmitterID());
+						break;
+					default:
+						LogMessage(LOG_LEVEL_INFO, "Connected to object %u in unknown state", obj.getTransmitterID());
 						this->state->connectedToLiveObject(*this, obj.getTransmitterID());
 					}
 					break;
-				case OBJECT_STATE_DISARMED:
-					LogMessage(LOG_LEVEL_INFO, "Connected to disarmed object");
-					this->state->connectedToObject(*this, obj.getTransmitterID());
-					break;
-				default:
-					LogMessage(LOG_LEVEL_INFO, "Connected to object in unknown state");
-					this->state->connectedToLiveObject(*this, obj.getTransmitterID());
 				}
-				break;
+			}
+			catch (std::runtime_error &e) {
+				LogMessage(LOG_LEVEL_ERROR, "Connection startup procedure failed for object %u: %s",
+						   obj.getTransmitterID(), e.what());
+				obj.disconnect();
+				// TODO: connection failed event?
 			}
 		}
-	}
-	catch (std::runtime_error &e) {
-		LogMessage(LOG_LEVEL_ERROR, "Connection attempt for object %u failed: %s",
-				   obj.getTransmitterID(), e.what());
-		obj.disconnect();
-		// TODO: connection failed event?
 	}
 	catch (std::invalid_argument &e) {
 		LogMessage(LOG_LEVEL_ERROR, "Bad connection attempt for object %u: %s",
@@ -328,6 +412,7 @@ void ScenarioHandler::connectToObject(TestObject &obj, std::shared_future<void> 
 		// TODO: connection failed event?
 	}
 };
+
 
 void ScenarioHandler::armObjects() {
 	for (auto& id : getVehicleIDs()) {
@@ -349,8 +434,17 @@ void ScenarioHandler::disarmObjects() {
 
 void ScenarioHandler::startObjects() {
 	for (auto& id : getVehicleIDs()) {
-		objects[id].sendStart();
+		if (!objects[id].isStartingOnTrigger()) {
+			objects[id].sendStart();
+		}
 	}
+}
+
+void ScenarioHandler::allClearObjects() {
+	for (auto& id : getVehicleIDs()) {
+		objects[id].sendAllClear();
+	}
+	this->state->allObjectsAbortDisarmed(*this); // TODO wait for all objects really are disarmed
 }
 
 bool ScenarioHandler::isAnyObjectIn(

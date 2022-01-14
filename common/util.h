@@ -62,7 +62,7 @@ extern "C"{
 #define DEFAULT_SUPERVISOR_TCP_PORT 53010
 #define DEFAULT_RVSS_CONF 3
 #define DEFAULT_RVSS_RATE 1
-#define DEFAULT_MAX_PACKETS_LOST 0
+#define DEFAULT_MAX_PACKETS_LOST 20
 #define DEFAULT_TRANSMITTER_ID 0
 
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length
@@ -92,7 +92,7 @@ extern "C"{
 #define MAX_ADAPTIVE_SYNC_POINTS  512
 
 #define USE_LOCAL_USER_CONTROL  0
-#define LOCAL_USER_CONTROL_IP "192.168.0.18"
+#define LOCAL_USER_CONTROL_IP "192.168.0.10"
 #define USE_TEST_HOST 0
 #define TESTHOST_IP LOCAL_USER_CONTROL_IP
 #define TESTSERVER_IP LOCAL_USER_CONTROL_IP
@@ -165,7 +165,10 @@ enum ObjectFileParameter {
 	OBJECT_SETTING_INJECTOR_IDS,
 	OBJECT_SETTING_ORIGIN_LATITUDE,
 	OBJECT_SETTING_ORIGIN_LONGITUDE,
-	OBJECT_SETTING_ORIGIN_ALTITUDE
+	OBJECT_SETTING_ORIGIN_ALTITUDE,
+	OBJECT_SETTING_TURNING_DIAMETER,
+	OBJECT_SETTING_MAX_SPEED,
+	OBJECT_SETTING_IS_OSI_COMPATIBLE
 };
 
 
@@ -247,12 +250,14 @@ COMM_TREO = 23,
 COMM_ACCM = 24,
 COMM_TRCM = 25,
 COMM_DISARM = 26,
-COMM_GETSTATUS = 237,
-COMM_GETSTATUS_OK = 238,
-COMM_REMOTECTRL_ENABLE = 27,
-COMM_REMOTECTRL_DISABLE = 28,
-COMM_REMOTECTRL_MANOEUVRE = 29,
-COMM_ENABLE_OBJECT = 30,
+COMM_GETSTATUS = 27,
+COMM_GETSTATUS_OK = 28,
+COMM_BACKTOSTART_CALL = 29,
+COMM_BACKTOSTART_RESPONSE = 30,
+COMM_REMOTECTRL_ENABLE = 31,
+COMM_REMOTECTRL_DISABLE = 32,
+COMM_REMOTECTRL_MANOEUVRE = 33,
+COMM_ENABLE_OBJECT = 34,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
 COMM_INV = 255
@@ -277,6 +282,12 @@ typedef enum {
 	OBJECT_DISABLED = 2,
 	OBJECT_UNDEFINED = 3
 } ObjectEnabledType;
+
+typedef enum {
+	BTS_FAIL = -2,
+	BTS_ERROR = -1,
+	BTS_PASS = 0
+} BTSResponse;
 
 
 typedef struct {
@@ -369,8 +380,9 @@ typedef enum {
     OBC_STATE_CONNECTED,
     OBC_STATE_ARMED,
     OBC_STATE_RUNNING,
-	OBC_STATE_REMOTECTRL,
-    OBC_STATE_ERROR
+	  OBC_STATE_REMOTECTRL,
+    OBC_STATE_ERROR,
+    OBC_STATE_ABORTING
 } OBCState_t;
 
 typedef struct
@@ -556,15 +568,16 @@ typedef struct {
 
 /*! Data dictionary read/write return codes. */
 typedef enum {
-    UNDEFINED, /*!< Undefined result */
-    WRITE_OK, /*!< Write successful */
-    READ_OK, /*!< Read successful */
-	UNINITIALIZED, /*!< Read successful but data not initialized */
-    READ_WRITE_OK, /*!< Combined read/write successful */
-    PARAMETER_NOTFOUND, /*!< Read/write not successful */
-    OUT_OF_RANGE /*!< Attempted to read out of range */
+	UNDEFINED, /*!< Undefined result */
+	WRITE_OK,  /*!< Write successful */
+	READ_OK,   /*!< Read successful */
+	WRITE_FAIL, /*! Write unsuccessful */
+	READ_FAIL,  /*! Read unsuccessful */
+	UNINITIALIZED,		/*!< Read successful but data not initialized */
+	READ_WRITE_OK,		/*!< Combined read/write successful */
+	PARAMETER_NOTFOUND, /*!< Read/write not successful */
+	OUT_OF_RANGE		/*!< Attempted to read out of range */
 } ReadWriteAccess_t;
-
 
 #pragma pack(push,1)
 
@@ -691,6 +704,8 @@ float UtilCalculateTimeToSync(ObjectPosition *OP);
 char UtilIsPointInPolygon(const CartesianPosition point, const CartesianPosition* polygonPoints, unsigned int nPtsInPolygon);
 
 int UtilCountFileRows(FILE *fd);
+int UtilCountFileRowsInPath(const char *path, const size_t pathlen);
+int UtilGetRowInFile(const char *path, const size_t pathLength, I32 rowIndex, char *rowBuffer, const size_t bufferLength);
 int UtilReadLineCntSpecChars(FILE *fd, char *Buffer);
 int UtilReadLine(FILE *fd, char *Buffer);
 char UtilGetch();
@@ -743,10 +758,10 @@ int UtilGetObjectFileSetting(const enum ObjectFileParameter setting, const char*
 int UtilReadOriginConfiguration(GeoPosition* origin);
 
 int UtilPopulateMonitorDataStruct(const char * rawMONR, const size_t rawMONRsize, ObjectDataType *monitorData);
-I32 UtilPopulateTREODataStructFromMQ(C8* rawTREO, size_t rawTREOsize, TREOData *treoData);
-I32 UtilPopulateEXACDataStructFromMQ(C8* rawEXAC, size_t rawEXACsize, EXACData *exacData);
-I32 UtilPopulateTRCMDataStructFromMQ(C8* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);
-I32 UtilPopulateACCMDataStructFromMQ(C8* rawACCM, size_t rawACCMsize, ACCMData *accmData);
+int UtilPopulateTREODataStructFromMQ(char* rawTREO, size_t rawTREOsize, TREOData *treoData);
+int UtilPopulateEXACDataStructFromMQ(char* rawEXAC, size_t rawEXACsize, EXACData *exacData);
+int UtilPopulateTRCMDataStructFromMQ(char* rawTRCM, size_t rawTRCMsize, TRCMData *trcmData);
+int UtilPopulateACCMDataStructFromMQ(char* rawACCM, size_t rawACCMsize, ACCMData *accmData);
 
 struct timeval UtilGetPIDUptime(pid_t pID);
 double UtilGetDistance(double lat1, double lon1, double lat2, double lon2);

@@ -4,6 +4,9 @@
 #include <future>
 #include <vector>
 #include "trajectory.hpp"
+#include "objectconfig.hpp"
+#include "osi_handler.hpp"
+
 
 // GCC version 8.1 brings non-experimental support for std::filesystem
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
@@ -16,6 +19,7 @@ namespace fs = std::experimental::filesystem;
 
 struct MonitorMessage : std::pair<uint32_t,ObjectMonitorType> {};
 
+#define OSI_DEFAULT_OBJECT_TCP_PORT 53250
 
 /*!
  * \brief The Channel class represents any socket based connection
@@ -23,23 +27,31 @@ struct MonitorMessage : std::pair<uint32_t,ObjectMonitorType> {};
  */
 class Channel {
 public:
-	Channel(const size_t bufferLength)
-		: transmitBuffer(bufferLength, 0),
-		  receiveBuffer(bufferLength, 0) {}
-	Channel() : Channel(1024) {}
+	Channel(const size_t bufferLength, const int type)
+		: channelType(type),
+		  transmitBuffer(bufferLength, 0),
+		  receiveBuffer(bufferLength, 0)
+	{}
+	Channel(int type) : Channel(1024, type) {}
 	struct sockaddr_in addr = {};
 	int socket = -1;
+	int channelType = 0; //!< SOCK_STREAM or SOCK_DGRAM
 	std::vector<char> transmitBuffer;
 	std::vector<char> receiveBuffer;
 
 	ISOMessageID pendingMessageType(bool awaitNext = false);
 	std::string remoteIP() const;
+	bool isValid() const { return socket != -1; }
+	void connect(std::shared_future<void> stopRequest,
+				 const std::chrono::milliseconds retryPeriod);
+	void disconnect();
 
 	friend Channel& operator<<(Channel&,const HeabMessageDataType&);
 	friend Channel& operator<<(Channel&,const ObjectSettingsType&);
 	friend Channel& operator<<(Channel&,const Trajectory&);
 	friend Channel& operator<<(Channel&,const ObjectCommandType&);
 	friend Channel& operator<<(Channel&,const StartMessageType&);
+	friend Channel& operator<<(Channel&,const std::vector<char>&);
 
 	friend Channel& operator>>(Channel&,MonitorMessage&);
 	friend Channel& operator>>(Channel&,ObjectPropertiesType&);
@@ -55,6 +67,8 @@ class ObjectConnection {
 public:
 	Channel cmd;
 	Channel mntr;
+
+	ObjectConnection() : cmd(SOCK_STREAM), mntr(SOCK_DGRAM) {}
 
 	bool isValid() const;
 	bool isConnected() const;
@@ -75,29 +89,35 @@ public:
 	TestObject& operator=(TestObject&&) = default;
 
 	void parseConfigurationFile(const fs::path& file);
-	void parseTrajectoryFile(const fs::path& file);
 
-	uint32_t getTransmitterID() const { return transmitterID; }
-	fs::path getTrajectoryFile() const { return trajectoryFile; }
-	Trajectory getTrajectory() const { return trajectory; }
-	GeographicPositionType getOrigin() const { return origin; }
+	uint32_t getTransmitterID() const { return conf.getTransmitterID(); }
+	std::string getTrajectoryFileName() const { return conf.getTrajectoryFileName(); }
+	Trajectory getTrajectory() const { return conf.getTrajectory(); }
+	GeographicPositionType getOrigin() const { return conf.getOrigin(); }
 	ObjectStateType getState(const bool awaitUpdate);
 	ObjectStateType getState(const bool awaitUpdate, const std::chrono::milliseconds timeout);
 	ObjectStateType getState() const { return isConnected() ? state : OBJECT_STATE_UNKNOWN; }
 	ObjectMonitorType getLastMonitorData() const { return lastMonitor; }
-	void setTrajectory(const Trajectory& newTrajectory) { trajectory = newTrajectory; }
+	ObjectConfig getObjectConfig() const { return conf; }
+	void setTrajectory(const Trajectory& newTrajectory) { conf.setTrajectory(newTrajectory); }
 	void setCommandAddress(const sockaddr_in& newAddr);
 	void setMonitorAddress(const sockaddr_in& newAddr);
-
-	bool isAnchor() const { return isAnchorObject; }
+	void setOsiAddress(const sockaddr_in& newAddr);
+	void setObjectConfig(ObjectConfig& newObjectConfig);
+	void setTriggerStart(const bool startOnTrigger = true);
+	
+	bool isAnchor() const { return conf.isAnchor(); }
+	bool isOsiCompatible() const { return conf.isOSI(); }
+	bool isStartingOnTrigger() const { return startOnTrigger; }
 	std::string toString() const;
+	std::string getProjString() const { return conf.getProjString(); }
 	ObjectDataType getAsObjectData() const;
 
 	bool isConnected() const { return comms.isConnected(); }
 	void establishConnection(std::shared_future<void> stopRequest);
 	void disconnect() {
 		LogMessage(LOG_LEVEL_INFO, "Disconnecting object %u",
-				   this->transmitterID);
+				   this->getTransmitterID());
 		this->comms.disconnect();
 	}
 
@@ -106,6 +126,10 @@ public:
 	void sendArm();
 	void sendDisarm();
 	void sendStart();
+	void sendAllClear();
+	void sendOsiData(const OsiHandler::LocalObjectGroundTruth_t& osidata,
+					 const std::string& projStr,
+					 const std::chrono::system_clock::time_point& timestamp);
 
 	std::chrono::milliseconds getTimeSinceLastMonitor() const {
 		if (lastMonitorTime.time_since_epoch().count() == 0) {
@@ -136,16 +160,13 @@ public:
 		return this->comms.pendingMessageType(awaitNext);
 	}
 private:
-	ObjectConnection comms;
+	ObjectConnection comms;		//!< Channel for communication with object over the ISO 22133 protocol
+	Channel osiChannel;			//!< Channel for communication with object over the OSI protocol
 	ObjectStateType state = OBJECT_STATE_UNKNOWN;
 
-	fs::path objectFile;
-	fs::path trajectoryFile;
-	uint32_t transmitterID = 0;
-	bool isAnchorObject = false;
-	Trajectory trajectory;
-	GeographicPositionType origin;
-	bool isEnabled = true;
+	ObjectConfig conf;
+
+	bool startOnTrigger = false;
 
 	void updateMonitor(const MonitorMessage&);
 	MonitorMessage awaitNextMonitor();
@@ -166,18 +187,3 @@ namespace std {
 	};
 }
 
-template<typename Duration>
-void to_timeval(Duration&& d, struct timeval & tv) {
-	std::chrono::seconds const sec = std::chrono::duration_cast<std::chrono::seconds>(d);
-
-	tv.tv_sec  = sec.count();
-	tv.tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(d - sec).count();
-}
-
-template<typename Duration>
-void from_timeval(struct timeval & tv, Duration& d) {
-	// TODO
-	//const auto sec = std::chrono::seconds(tv.tv_sec);
-	//const auto usec = std::chrono::microseconds(tv.tv_usec);
-	//d = sec + usec;
-}

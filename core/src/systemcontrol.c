@@ -132,6 +132,8 @@ typedef struct {
 #define MSCP_RESPONSE_DATALENGTH_BYTES 4
 #define MSCP_RESPONSE_STATUS_CODE_BYTES 2
 
+#define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
+
 typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
 	InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
@@ -142,7 +144,7 @@ typedef enum {
 	SetObjectEnableStatus_2,
 	GetObjectEnableStatus_1,
 	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
-	start_ext_trigg_1, ClearAllScenario_0 ,nocommand
+	start_ext_trigg_1, ClearAllScenario_0 , DownloadDirectoryContent_1, DownloadTrajFiles_0, nocommand
 } SystemControlCommand_t;
 
 static const char *SystemControlCommandsArr[] = {
@@ -157,7 +159,7 @@ static const char *SystemControlCommandsArr[] = {
 	"SetObjectEnableStatus_2",
 	"GetObjectEnableStatus_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
 	"control_0",
-	"Exit_0", "start_ext_trigg_1", "ClearAllScenario_0"
+	"Exit_0", "start_ext_trigg_1", "ClearAllScenario_0", "DownloadDirectoryContent_1", "DownloadTrajFiles_0"
 };
 
 const char *SystemControlStatesArr[] =
@@ -330,12 +332,12 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 	if (iCommInit())
 		util_error("Unable to connect to message bus");
 
-	DataDictionaryGetRVSSConfigU32(GSD, &RVSSConfigU32);
+	DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
 	LogMessage(LOG_LEVEL_INFO, "RVSSConfigU32 = %d", RVSSConfigU32);
 
 	U8 RVSSRateU8 = DEFAULT_RVSS_RATE;
 
-	DataDictionaryGetRVSSRateU8(GSD, &RVSSRateU8);
+	DataDictionaryGetRVSSRateU8(&RVSSRateU8);
 	LogMessage(LOG_LEVEL_INFO, "Real-time variable subscription service rate set to %u Hz", RVSSRateU8);
 
 	if (ModeU8 == 0) {
@@ -508,8 +510,10 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 								}
 							}
 
-							if (CmdPtr != NULL)
-								SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+                            if (CmdPtr != NULL) {
+                                SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+                                LogMessage(LOG_LEVEL_DEBUG, "Received MSCP command %s", SystemControlCommand);
+                            }
 							else
 								LogMessage(LOG_LEVEL_WARNING, "Invalid MSCP command received");
 						}
@@ -616,11 +620,32 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
 			break;
 
+		case COMM_BACKTOSTART_RESPONSE:
+
+			if(*pcRecvBuffer == BTS_FAIL){
+				LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", pcRecvBuffer);
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
+												 "0", 1,
+												 &ClientSocket, 0);		//TODO: Send SMCP response the right way(?)
+			}
+			else if(*pcRecvBuffer == BTS_PASS){
+				LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", pcRecvBuffer);
+				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
+												 "1", 1,
+												 &ClientSocket, 0);
+			}
+			else{
+				LogMessage(LOG_LEVEL_ERROR, "Cannot parse COMM_BACKTOSTART_RESPONSE message.");
+			}
+			break;
+
 		default:
 			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", iCommand);
 		}
 
-		switch (SystemControlCommand) {
+        switch (SystemControlCommand) {
 			// can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
 		case Idle_0:
 			break;
@@ -653,13 +678,13 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case GetTestOrigin_0:
 			SystemControlCommand = Idle_0;
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-			DataDictionaryGetOriginLatitudeC8(GSD, TextBuffer20, SMALL_BUFFER_SIZE_20);
+			DataDictionaryGetOriginLatitudeString(TextBuffer20, SMALL_BUFFER_SIZE_20);
 			strcat(ControlResponseBuffer, TextBuffer20);
 			strcat(ControlResponseBuffer, ";");
-			DataDictionaryGetOriginLongitudeC8(GSD, TextBuffer20, SMALL_BUFFER_SIZE_20);
+			DataDictionaryGetOriginLongitudeString(TextBuffer20, SMALL_BUFFER_SIZE_20);
 			strcat(ControlResponseBuffer, TextBuffer20);
 			strcat(ControlResponseBuffer, ";");
-			DataDictionaryGetOriginAltitudeC8(GSD, TextBuffer20, SMALL_BUFFER_SIZE_20);
+			DataDictionaryGetOriginAltitudeString(TextBuffer20, SMALL_BUFFER_SIZE_20);
 			strcat(ControlResponseBuffer, TextBuffer20);
 			strcat(ControlResponseBuffer, ";");
 
@@ -750,7 +775,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
 					SystemControlDestroyFileContentInfo("dir.info", 1);
 				}
-
 			}
 			else {
 				LogMessage(LOG_LEVEL_ERROR,
@@ -874,6 +898,74 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 
 			}
 			else {
+				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
+				SystemControlCommand = Idle_0;
+			}
+			break;
+		case DownloadTrajFiles_0:
+		case DownloadDirectoryContent_1:	
+			if (CurrentInputArgCount == CommandArgCount) {
+				char functionReturnName[50];
+				memset(functionReturnName, 0, 50);
+				memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				if(SystemControlCommand == DownloadTrajFiles_0){
+					strcat(functionReturnName, "DownloadTrajFiles:");
+					ControlResponseBuffer[0] = FOLDER_EXIST;
+				} else if(SystemControlCommand == DownloadDirectoryContent_1){
+					strcat(functionReturnName, "DownloadDirectoryContent:");
+					SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+				}
+				if(ControlResponseBuffer[0] == FOLDER_EXIST){
+					if(SystemControlCommand == DownloadTrajFiles_0){
+						UtilCreateDirContent(MAESTRO_TRAJ_DIRECTORY_STRING, "dir.info");
+					} else if(SystemControlCommand == DownloadDirectoryContent_1){
+						UtilCreateDirContent(SystemControlArgument[0], "dir.info");
+					}
+
+					char TestDirectoryPath[MAX_PATH_LENGTH];
+					memset(TestDirectoryPath, 0,MAX_PATH_LENGTH);
+					char CompletePath[MAX_PATH_LENGTH];
+					memset(CompletePath, 0, MAX_PATH_LENGTH);
+					char InPath[MAX_PATH_LENGTH];
+					memset(InPath, 0, MAX_PATH_LENGTH);
+	
+					UtilGetTestDirectoryPath(TestDirectoryPath, sizeof (TestDirectoryPath));
+					strcat(CompletePath, TestDirectoryPath);
+					strcat(CompletePath,"dir.info");
+					int rows = UtilCountFileRowsInPath(CompletePath, strlen(CompletePath));
+					char RowBuffer[SMALL_BUFFER_SIZE_128];
+
+					for(int i = 0; i < rows; i ++)
+					{
+						memset(CompletePath, 0, MAX_PATH_LENGTH);
+						strcat(CompletePath, TestDirectoryPath);
+						strcat(CompletePath,"dir.info");
+						UtilGetRowInFile(CompletePath, strlen(CompletePath), i, RowBuffer, SMALL_BUFFER_SIZE_128);
+						if(*RowBuffer == 'F'){
+							memset(InPath, 0, MAX_PATH_LENGTH);
+							if(SystemControlCommand == DownloadTrajFiles_0) strcat(InPath, MAESTRO_TRAJ_DIRECTORY_STRING);
+							else if(SystemControlCommand == DownloadDirectoryContent_1) strcat(InPath, SystemControlArgument[0]);
+							strcat(InPath, strstr(RowBuffer, "-")+1);
+							memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+							FileLengthI32 = SystemControlBuildFileContentInfo(InPath, 0);
+							SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
+													  FileLengthI32, &ClientSocket, 0);
+							SystemControlSendFileContent(&ClientSocket, InPath,
+												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 1);
+							SystemControlDestroyFileContentInfo(InPath, 0);
+						}
+
+					}
+					SystemControlDirectoryInfo.exist = 1; //Force to exist
+					SystemControlDestroyFileContentInfo("dir.info", 1);
+
+				} else {
+					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
+														ControlResponseBuffer, 3, &ClientSocket, 0);
+				}
+				SystemControlCommand = Idle_0;
+			} else {
 				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
 				SystemControlCommand = Idle_0;
 			}
@@ -1067,14 +1159,14 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						switch (atoi(SystemControlArgument[1])) {
 						case MSCP_BACK_TO_START:
-							rcCommand.manoeuvre = MANOEUVRE_BACK_TO_START;
+                            rcCommand.manoeuvre = MANOEUVRE_BACK_TO_START;
 							break;
 						default:
 							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
 						}
 						if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
 							memcpy(pcBuffer, &rcCommand, sizeof (rcCommand));
-							iCommSend(COMM_REMOTECTRL_MANOEUVRE, pcBuffer, sizeof (rcCommand));	// TODO check return value
+							iCommSend(COMM_BACKTOSTART_CALL, pcBuffer, sizeof (rcCommand));
 							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 						}
 					}
@@ -1562,28 +1654,23 @@ void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 	Status[0] = (C8) (ResponseStatus >> 8);
 	Status[1] = (C8) ResponseStatus;
 
-	if (n + MSCP_RESPONSE_DATALENGTH_BYTES < SYSTEM_CONTROL_SEND_BUFFER_SIZE) {
-		for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
-			Data[j] = Length[i];
-		for (i = 0; i < MSCP_RESPONSE_STATUS_CODE_BYTES; i++, j++)
-			Data[j] = Status[i];
-		t = strlen(ResponseString);
-		for (i = 0; i < t; i++, j++)
-			Data[j] = *(ResponseString + i);
+	for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
+		Data[j] = Length[i];
+	for (i = 0; i < MSCP_RESPONSE_STATUS_CODE_BYTES; i++, j++)
+		Data[j] = Status[i];
+	t = strlen(ResponseString);
+	for (i = 0; i < t; i++, j++)
+		Data[j] = *(ResponseString + i);
 
-		if (Debug) {
-			for (i = 0; i < n + MSCP_RESPONSE_DATALENGTH_BYTES; i++)
-				printf("%x-", Data[i]);
-			printf("\n");
-		}
-
-		//SystemControlSendBytes(Data, n + 4, Sockfd, 0);
-		UtilSendTCPData("System Control", Data,
-						MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES +
-						strlen(ResponseString), Sockfd, 0);
+	if (Debug) {
+		for (i = 0; i < n + MSCP_RESPONSE_DATALENGTH_BYTES; i++)
+			printf("%x-", Data[i]);
+		printf("\n");
 	}
-	else
-		LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+
+	UtilSendTCPData("System Control", Data,
+					MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES +
+					strlen(ResponseString), Sockfd, 0);
 }
 
 
@@ -1879,84 +1966,84 @@ I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * Retu
 	BufferLength = BufferLength - strlen(ReturnValue);
 
 	if (strcmp("OriginLatitude", ParameterName) == 0) {
-		DataDictionaryGetOriginLatitudeDbl(GSD, &ValueDbl);
+		DataDictionaryGetOriginLatitudeDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
 	else if (strcmp("OriginLongitude", ParameterName) == 0) {
-		DataDictionaryGetOriginLongitudeDbl(GSD, &ValueDbl);
+		DataDictionaryGetOriginLongitudeDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
 	else if (strcmp("OriginAltitude", ParameterName) == 0) {
-		DataDictionaryGetOriginAltitudeDbl(GSD, &ValueDbl);
+		DataDictionaryGetOriginAltitudeDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.12f", ValueDbl);
 	}
 	else if (strcmp("VisualizationServerName", ParameterName) == 0) {
-		DataDictionaryGetVisualizationServerC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetVisualizationServerIPString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("ASPMaxTimeDiff", ParameterName) == 0) {
-		DataDictionaryGetASPMaxTimeDiffDbl(GSD, &ValueDbl);
+		DataDictionaryGetASPMaxTimeDiffDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPMaxTrajDiff", ParameterName) == 0) {
-		DataDictionaryGetASPMaxTrajDiffDbl(GSD, &ValueDbl);
+		DataDictionaryGetASPMaxTrajDiffDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPStepBackCount", ParameterName) == 0) {
-		DataDictionaryGetASPStepBackCountU32(GSD, &ValueU32);
+		DataDictionaryGetASPStepBackCountU32(&ValueU32);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu32, ValueU32);
 	}
 	else if (strcmp("ASPFilterLevel", ParameterName) == 0) {
-		DataDictionaryGetASPFilterLevelDbl(GSD, &ValueDbl);
+		DataDictionaryGetASPFilterLevelDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("ASPMaxDeltaTime", ParameterName) == 0) {
-		DataDictionaryGetASPMaxDeltaTimeDbl(GSD, &ValueDbl);
+		DataDictionaryGetASPMaxDeltaTimeDbl(&ValueDbl);
 		sprintf(ReturnValue + strlen(ReturnValue), "%3.3f", ValueDbl);
 	}
 	else if (strcmp("TimeServerIP", ParameterName) == 0) {
-		DataDictionaryGetTimeServerIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetTimeServerIPString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("TimeServerPort", ParameterName) == 0) {
-		DataDictionaryGetTimeServerPortU16(GSD, &ValueU16);
+		DataDictionaryGetTimeServerPortU16(&ValueU16);
 		sprintf(ReturnValue, "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorIP", ParameterName) == 0) {
-		DataDictionaryGetSimulatorIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetSimulatorIPString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SimulatorTCPPort", ParameterName) == 0) {
-		DataDictionaryGetSimulatorTCPPortU16(GSD, &ValueU16);
+		DataDictionaryGetSimulatorTCPPortU16(&ValueU16);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorUDPPort", ParameterName) == 0) {
-		DataDictionaryGetSimulatorUDPPortU16(GSD, &ValueU16);
+		DataDictionaryGetSimulatorUDPPortU16(&ValueU16);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("SimulatorMode", ParameterName) == 0) {
-		DataDictionaryGetSimulatorModeU8(GSD, &ValueU8);
+		DataDictionaryGetSimulatorModeU8(&ValueU8);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu8, ValueU8);
 	}
 	else if (strcmp("VOILReceivers", ParameterName) == 0) {
-		DataDictionaryGetVOILReceiversC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetVOILReceiversString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("DTMReceivers", ParameterName) == 0) {
-		DataDictionaryGetDTMReceiversC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetDTMReceiversString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SupervisorIP", ParameterName) == 0) {
-		DataDictionaryGetExternalSupervisorIPC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetExternalSupervisorIPString(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("SupervisorTCPPort", ParameterName) == 0) {
-		DataDictionaryGetSupervisorTCPPortU16(GSD, &ValueU16);
+		DataDictionaryGetSupervisorTCPPortU16(&ValueU16);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu16, ValueU16);
 	}
 	else if (strcmp("MiscData", ParameterName) == 0) {
-		DataDictionaryGetMiscDataC8(GSD, ReturnValue + strlen(ReturnValue), BufferLength);
+		DataDictionaryGetMiscData(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
 	else if (strcmp("RVSSConfig", ParameterName) == 0) {
-		DataDictionaryGetRVSSConfigU32(GSD, &ValueU32);
+		DataDictionaryGetRVSSConfigU32(&ValueU32);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu32, ValueU32);
 	}
 	else if (strcmp("RVSSRate", ParameterName) == 0) {
-		DataDictionaryGetRVSSRateU8(GSD, &ValueU8);
+		DataDictionaryGetRVSSRateU8(&ValueU8);
 		sprintf(ReturnValue + strlen(ReturnValue), "%" PRIu8, ValueU8);
 	}
 	else if (strcmp("ScenarioName", ParameterName) == 0) {
@@ -2031,7 +2118,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		}
 
 		// TODO remove
-		result = DataDictionarySetOriginLatitudeDbl(GSD, newValue);
+		result = DataDictionarySetOriginLatitudeDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
 		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
@@ -2074,7 +2161,7 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		}
 
 		// TODO remove
-		result = DataDictionarySetOriginLongitudeDbl(GSD, newValue);
+		result = DataDictionarySetOriginLongitudeDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE:
 		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
@@ -2117,64 +2204,65 @@ I32 SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newV
 		}
 
 		// TODO remove
-		result = DataDictionarySetOriginAltitudeDbl(GSD, newValue);
+		result = DataDictionarySetOriginAltitudeDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME:
-		result = DataDictionarySetVisualizationServerU32(GSD, newValue);
+		result = DataDictionarySetVisualizationServerU32(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF:
-		result = DataDictionarySetASPMaxTimeDiffDbl(GSD, newValue);
+		result = DataDictionarySetASPMaxTimeDiffDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF:
-		result = DataDictionarySetASPMaxTrajDiffDbl(GSD, newValue);
+		result = DataDictionarySetASPMaxTrajDiffDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT:
-		result = DataDictionarySetASPStepBackCountU32(GSD, newValue);
+		result = DataDictionarySetASPStepBackCountU32(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL:
-		result = DataDictionarySetASPFilterLevelDbl(GSD, newValue);
+		result = DataDictionarySetASPFilterLevelDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME:
-		result = DataDictionarySetASPMaxDeltaTimeDbl(GSD, newValue);
+		result = DataDictionarySetASPMaxDeltaTimeDbl(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_TIME_SERVER_IP:
-		result = DataDictionarySetTimeServerIPU32(GSD, newValue);
+		result = DataDictionarySetTimeServerIPU32(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_TIME_SERVER_PORT:
-		result = DataDictionarySetTimeServerPortU16(GSD, newValue);
+		result = DataDictionarySetTimeServerPortU16(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_IP:
-		result = DataDictionarySetSimulatorIPU32(GSD, newValue);
+		result = DataDictionarySetSimulatorIPU32(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP:
-		result = DataDictionarySetSimulatorTCPPortU16(GSD, newValue);
+		result = DataDictionarySetSimulatorTCPPortU16(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP:
-		result = DataDictionarySetSimulatorUDPPortU16(GSD, newValue);
+		result = DataDictionarySetSimulatorUDPPortU16(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_SIMULATOR_MODE:
-		result = DataDictionarySetSimulatorModeU8(GSD, newValue);
+		result = DataDictionarySetSimulatorModeU8(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_VOIL_RECEIVERS:
-		result = DataDictionarySetVOILReceiversC8(GSD, newValue);
+		result = DataDictionarySetVOILReceiversString(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_DTM_RECEIVERS:
-		result = DataDictionarySetDTMReceiversC8(GSD, newValue);
+		result = DataDictionarySetDTMReceiversString(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP:
-		result = DataDictionarySetExternalSupervisorIPU32(GSD, newValue);
+		result = DataDictionarySetExternalSupervisorIPU32(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP:
-		result = DataDictionarySetSupervisorTCPPortU16(GSD, newValue);
+		result = DataDictionarySetSupervisorTCPPortU16(newValue);
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_CONFIG:
-		result = DataDictionarySetRVSSConfigU32(GSD, (uint32_t) strtoul(newValue, NULL, 10));
+		result = DataDictionarySetRVSSConfigU32((uint32_t) strtoul(newValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_RVSS_RATE:
-		result = DataDictionarySetRVSSRateU8(GSD, (uint8_t) strtoul(newValue, NULL, 10));
+		result = DataDictionarySetRVSSRateU8((uint8_t) strtoul(newValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_MISC_DATA:
-		result = DataDictionarySetMiscDataC8(GSD, newValue);
+		LogMessage(LOG_LEVEL_WARNING, "Unable to set MiscData - size unknown");
+		result = DataDictionarySetMiscData(newValue, 0);
 		break;
 	case CONFIGURATION_PARAMETER_INVALID:
 		LogMessage(LOG_LEVEL_WARNING, "Attempted to set invalid parameter %s", parameterName);
@@ -2222,20 +2310,15 @@ I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 
 
 I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
-
-
 	struct stat st;
 	C8 CompletePath[MAX_FILE_PATH];
-	C8 temporaryCompletePath[MAX_FILE_PATH];
-
 	bzero(CompletePath, MAX_FILE_PATH);
-
 	if (SystemControlDirectoryInfo.exist)
 		return -1;
-
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
 	stat(CompletePath, &st);
+	printf("CompletePath = %s\n", CompletePath);
 
 	// Create mmap of the file and return the length
 	SystemControlDirectoryInfo.fd = open(CompletePath, O_RDWR);
@@ -2250,11 +2333,11 @@ I32 SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile) {
 	char CompletePath[MAX_FILE_PATH];
 	struct stat st;
 
-	if (!SystemControlDirectoryInfo.exist)
+	if (!SystemControlDirectoryInfo.exist){
 		return -1;
+	}
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 	strcat(CompletePath, Path);
-
 	munmap(SystemControlDirectoryInfo.info_buffer, SystemControlDirectoryInfo.size);
 	close(SystemControlDirectoryInfo.fd);
 	SystemControlDirectoryInfo.exist = 0;

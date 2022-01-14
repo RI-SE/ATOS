@@ -7,13 +7,15 @@ set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "Enable verbose make")
 set(CMAKE_COLOR_MAKEFILE   ON)
 
 project(Maestro VERSION 0.5.0)
+
 # Enable or disable modules
 set(WITH_SCENARIO_CONTROL ON CACHE BOOL "Enable ScenarioControl module")
 set(WITH_SUPERVISION ON CACHE BOOL "Enable Supervision module")
-set(WITH_VISUALIZATION ON CACHE BOOL "Enable Visualization module")
+set(WITH_VISUALIZATION OFF CACHE BOOL "Enable Visualization module")
 set(WITH_RELATIVE_KINEMATICS OFF CACHE BOOL "Enable RelativeKinematics module")
-set(WITH_DIRECT_CONTROL ON CACHE BOOL "Enable DirectControl module")
+set(WITH_DIRECT_CONTROL OFF CACHE BOOL "Enable DirectControl module")
 set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
+set(WITH_BACK_TO_START OFF CACHE BOOL "Enable BackToStart module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -49,12 +51,16 @@ endif()
 if(WITH_OBJECT_MONITORING)
 	list(APPEND ENABLED_MODULES ObjectMonitoring)
 endif()
+if(WITH_BACK_TO_START)
+	list(APPEND ENABLED_MODULES BackToStart)
+endif()
 if(WITH_RELATIVE_KINEMATICS)
 	list(APPEND ENABLED_MODULES RelativeKinematics)
 	set(WITH_OBJECT_CONTROL OFF)
 else()
 	set(WITH_OBJECT_CONTROL ON)
 endif()
+
 
 #Delete comments below when ObjectControl becomes an Module instead
 #of a thread in Core 
@@ -68,7 +74,13 @@ if(ENABLE_TESTS)
 endif()
 
 # Add corresponding subprojects
-add_subdirectory(util/C)
+add_subdirectory(util/C/time)
+add_subdirectory(util/C/logging)
+add_subdirectory(util/C/mqbus)
+add_subdirectory(util/C/shmem)
+add_subdirectory(util/C/iso22133)
+add_subdirectory(util/C/mathutils)
+add_subdirectory(util/C/osihandler)
 add_subdirectory(common)
 add_subdirectory(core)
 foreach(MODULE ${ENABLED_MODULES})

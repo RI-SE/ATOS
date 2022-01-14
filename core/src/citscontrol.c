@@ -378,8 +378,8 @@ void citscontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 		case COMM_INV:
 			break;
 		case COMM_DATA_DICT:
-			DataDictionaryGetOriginLatitudeDbl(GSD, &origin.latitude);
-			DataDictionaryGetOriginLongitudeDbl(GSD, &origin.longitude);
+			DataDictionaryGetOriginLatitudeDbl(&origin.latitude);
+			DataDictionaryGetOriginLongitudeDbl(&origin.longitude);
 			break;
 
 		default:

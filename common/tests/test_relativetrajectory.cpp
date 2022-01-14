@@ -56,23 +56,26 @@ void time_test() {
 	set_default(p1);
 	set_default(p2);
 
-	std::vector<double> t1s =
-	{0.0, 0.1, 0.1, 0.2};
-	std::vector<double> t2s =
-	{0.0, 0.1, 0.2, 0.1};
-	std::vector<double> out = t1s;
+	using namespace std::chrono_literals;
+	using namespace std::chrono;
+
+	std::vector<milliseconds> t1s =
+	{0ms, 100ms, 100ms, 200ms};
+	std::vector<milliseconds> t2s =
+	{0ms, 100ms, 200ms, 100ms};
+	std::vector<milliseconds> out = t1s;
 
 	for (unsigned long i=0; i < out.size(); ++i) {
 		p1.setTime(t1s[i]);
 		p2.setTime(t2s[i]);
 		auto pRel = p1.relativeTo(p2);
-		if (std::abs(pRel.getTime() - out[i]) > TIME_TOL_S) {
+		if (std::abs(duration_cast<seconds>(pRel.getTime() - out[i]).count()) > TIME_TOL_S) {
 			std::stringstream ss;
 			ss << "Timestamp after getting relative not within error tolerance:" << std::endl;
-			ss << "p1:  " << t1s[i] << std::endl;
-			ss << "p2:  " << t2s[i] << std::endl;
-			ss << "exp: " << out[i] << std::endl;
-			ss << "act: " << pRel.getTime();
+			ss << "p1:  " << t1s[i].count() << std::endl;
+			ss << "p2:  " << t2s[i].count() << std::endl;
+			ss << "exp: " << out[i].count() << std::endl;
+			ss << "act: " << pRel.getTime().count();
 			throw std::runtime_error(ss.str());
 		}
 	}
