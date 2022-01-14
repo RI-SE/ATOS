@@ -1,12 +1,6 @@
-#include <iostream>
-#include <unistd.h>
-#include <signal.h>
-
-#include "state.hpp"
 #include "logging.h"
 #include "util.h"
-#include "journal.h"
-#include "datadictionary.h"
+#include "RelativeKinematicsModule.hpp"
 
 #define MODULE_NAME "RelativeKinematics"
 
@@ -14,15 +8,48 @@ static void signalHandler(int signo);
 static int initializeModule(const LOG_LEVEL logLevel);
 
 static bool quit = false;
+using std_msgs::Empty;
 
-int main() {
+int main(int argc, char **argv) {
+	/* Old message bus */
 	COMMAND command = COMM_INV;
 	char mqRecvData[MQ_MSG_SIZE];
 	const struct timespec sleepTimePeriod = {0,10000000};
 	struct timespec remTime;
 	const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
-
 	std::string statusReply = MODULE_NAME;
+	/*-----------------*/
+
+	// Initialize log
+	LogInit(MODULE_NAME, logLevel);
+	LogMessage(LOG_LEVEL_INFO, MODULE_NAME " task running with PID: %d", getpid());
+
+	if (JournalInit(MODULE_NAME) == -1) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to create test journal");
+		exit(EXIT_FAILURE);
+	}
+
+	if (DataDictionaryInitStateData() != READ_OK
+			|| DataDictionaryInitObjectData() != READ_OK) {
+		LogMessage(LOG_LEVEL_ERROR,
+					"Found no previously initialized shared memory");
+		exit(EXIT_FAILURE);
+	}
+	// Using ROS: 
+
+	//std::cout << name << std::endl;
+	ros::init(argc,argv,MODULE_NAME);
+	auto rk = RelativeKinematicsModule(MODULE_NAME);
+	ros::Rate loop_rate(10); // Rate at which module checks for messages (in Hz)
+
+
+	while (ros::ok()){
+		//rk.strtTopic.publish(msg);
+		ros::spinOnce();
+    	loop_rate.sleep();
+	}
+
+	exit(0);
 
 	// Initialize
 	if (initializeModule(logLevel) < 0) {
