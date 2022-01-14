@@ -25,21 +25,26 @@ class ISO:
     tcpPort = 54242
     ccStatus = {0: "init", 1: "ready", 2: "abort", 3: "running", 4: "testDone", 5: "normalStop"}
 
-    def __init__(self,host="127.0.0.1",port=54241):
+    def __init__(self,host="127.0.0.1",port=53241):
         self.host = host
         self.port = port
         
         try:
-            self.tcpSocket = socket.socket()
+            self.tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.tcpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             print("=== ISO connecting to " + str(self.host) + ":" + str(self.port))
             self.tcpSocket.connect((self.host,self.port))
         except:
-            print("TCP port: {} is already in use. Continuing...".format(self.tcpPort))
+
+            print("TCP port: {} is already in use. Continuing...".format(self.port))
 
         try:
             print("=== Creating a UDP socket")
             self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.udpSocket.bind((self.host, 53240))
+            self.udpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            #self.udpSocket.bind((self.host, self.udpPort))
+            self.udpHost = host
+            self.udpPort = 53240
         except:
             print("UDP port: {} is already in use. Continuing...".format(self.udpPort))
         
@@ -116,42 +121,42 @@ class ISO:
 
     def OSEM(self):         
         message = bytearray.fromhex("7e7e00000202004400000020000600d084fd85860021000600f82fc1c11d00220004006f4b0000040004001b3b3401030002002d0802000400629f0d4a70000200ffff72000200ffff7400020000000000") 
-        self.SendRawUDP(message)
+        self.SendTCP(message)
         print("=== OSEM() sent")
 
     def OSTM(self):         
         message = bytearray.fromhex("7e7e00000203000500000064000100020000") 
-        self.SendRawUDP(message)
+        self.SendTCP(message)
         print("=== OSTM() sent")
 
     def STRT(self):         
         message = bytearray.fromhex("7e7e00000204000e0000000200040038131e4a030002002d080000") 
-        self.SendRawUDP(message)
+        self.SendTCP(message)
         print("=== STRT() sent")
 
     def TRAJ(self):         
         message = bytearray.fromhex("7e7e0000020100387f00000101020000000201400047617261676552656b74616e67656c496e726500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010200000000a0040000000000") 
-        self.SendRawUDP(message)
+        self.SendTCP(message)
         print("=== TRAJ() sent")
 
     def TRCM(self):         
         message = bytearray.fromhex("7e7e00000211002400000001000200000002000200e000110004002200000012000400ffffffff13000400ffffffff0000") 
-        self.SendRawUDP(message)
+        self.SendTCP(message)
         print("=== TRCM() sent")        
     
     def ACCM(self):         
         message = bytearray.fromhex("7e7e00000212002400000002000200000003000200e000a100040001000000a2000400ffffffffa3000400ffffffff0000") 
-        self.SendRawUDP(message)
+        self.SendTCP(message)
         print("=== ACCM() sent")
 
     def TREO(self):         
         message = bytearray.fromhex("7e7e0000020100387f00000101020000000201400047617261676552656b74616e67656c496e726500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010200000000a0040000000000") 
-        self.SendRawUDP(message)
+        self.SendTCP(message)
         print("=== TREO() sent")
 
 
     def SendTCP(self,message):
-        self.tcpSocket.send(message.encode())
+        self.tcpSocket.send(message)
 
     def SendUDP(self, message):
         self.udpSocket.sendto(bytes(message, "utf-8"), (self.host, self.udpPort))
