@@ -19,11 +19,6 @@ class RelativeKinematicsModule : public Module
 	using Module::Module;
 	private:
 		ScenarioHandler scenarioHandler;
-
-		//void invCB(const Empty&) override;
-
-		//void startCB(const Empty&)override;
-
 		void initCB(const Empty&) override;
 		void connectCB(const Empty&) override;
 		void armCB(const Empty&) override;
