@@ -1,11 +1,7 @@
 //base class
 #include "module.hpp"
 //
-#include "state.hpp"
-#include "logging.h"
-#include "util.h"
-#include "journal.h"
-#include "datadictionary.h"
+#include "scenariohandler.hpp"
 // roscpp
 #include "ros/ros.h"
 // messages
