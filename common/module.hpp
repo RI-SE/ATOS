@@ -6,6 +6,7 @@
 
 using std_msgs::Empty;
 using std_msgs::String;
+
 template <typename T, class C> 
 class Topic {
 public:
