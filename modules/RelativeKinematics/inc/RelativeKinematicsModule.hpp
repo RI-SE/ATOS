@@ -25,7 +25,6 @@ class RelativeKinematicsModule : public Module
 		//void startCB(const Empty&)override;
 
 		void initCB(const Empty&) override;
-		//void connectCB(const Empty&) override;
 		void connectCB(const Empty&) override;
 		void armCB(const Empty&) override;
         void startCB(const Empty&) override;
