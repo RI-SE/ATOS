@@ -63,7 +63,6 @@ target_link_libraries(${MAESTRO_UTIL_TARGET} LINK_PUBLIC
 add_library(${MAESTRO_COMMON_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/trajectory.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/objectconfig.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/module.cpp
 )
 
 target_link_libraries(${MAESTRO_COMMON_TARGET}

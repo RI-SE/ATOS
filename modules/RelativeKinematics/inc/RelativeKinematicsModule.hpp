@@ -18,9 +18,4 @@ class RelativeKinematicsModule : public Module
 		void connectCB(const Empty&) override;
 		void armCB(const Empty&) override;
         void startCB(const Empty&) override;
-
-	public:
-		RelativeKinematicsModule(const RelativeKinematicsModule& rtm) : Module(rtm.name) { }; // explicit copy ctor
-		//Topic<Empty, RelativeKinematicsModule> invTopic = Topic<Empty, RelativeKinematicsModule> ("/inv",1000,&RelativeKinematicsModule::invCB,this);
-		//Topic<Empty, RelativeKinematicsModule> startTopic = Topic<Empty, RelativeKinematicsModule>("/start",1000,&RelativeKinematicsModule::startCB,this);
 };

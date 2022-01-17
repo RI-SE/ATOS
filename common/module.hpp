@@ -6,15 +6,28 @@
 
 using std_msgs::Empty;
 using std_msgs::String;
-
-template <typename T, class C> 
+/** 
+ *  Topic for publishing and subscribing to messages
+ * 
+ *  @tparam Msg Type of the message to be sent / recevied on this topic
+ *  @tparam Node ROS node that should subscribe / publish on this topic
+ * 
+*/
+template <typename Msg, class Node> 
 class Topic {
 public:
-    Topic(const std::string topicName,int queueSize,void(C::*fp)(const T&),C* m) {
-        this->pub=m->nh_. template advertise<T>(topicName, queueSize);
-        this->sub=m->nh_.subscribe(topicName.c_str(), queueSize, fp, m);
+   	/**
+    * Default constructor
+    * @param topicName name of topic
+	* @param queueSize maximum number of messages the topic can buffer before deleting new messages
+	* @param cb callback function 
+	* @param n ROS node subscribing/publishing to this topic
+    */
+    Topic(const std::string topicName,int queueSize,void(Node::*cb)(const Msg&),Node* n) {
+        this->pub = n->template advertise<Msg>(topicName, queueSize);
+        this->sub = n->subscribe(topicName, queueSize, cb, n);
     }
-    void publish(T message){
+    void publish(Msg message){
         pub.publish(message);
     }
 private:
@@ -22,26 +35,25 @@ private:
     ros::Subscriber sub;
 };
 
-class Module {
-    private:
-        //void startCB(const Empty&) { };
-        
+class Module : public ros::NodeHandle {
+    private:        
         void getStatusCB(const Empty&) { 
             String message;
-            message.data=this->name.c_str();
+            message.data=this->name;
             getStatusOKTopic.publish(message);
             };
         
         void getStatusOKCB(const String&) { };
         void failureCB(const Empty&){ };
         virtual void initCB(const Empty&) { };
-        virtual void connectCB(const Empty&){std::cout << "here!!!" << std::endl; };
+        virtual void connectCB(const Empty&){  };
         virtual void armCB(const Empty&) { };
         virtual void startCB(const Empty&) { };
+
     public:
         //ros::NodeHandle nh_;
-        ros::NodeHandle nh_;
-        Module(const std::string name );
+        //ros::NodeHandle nh_;
+        Module(const std::string name) :  name(name) {};
         //Topic<Empty, Module> strtTopic = Topic<Empty, Module> (std::string("/start"),1000,&Module::startCB,this);
         //Topic<Empty, Module> getStatusTopic = Topic<Empty, Module> ("/getStatus",1000,&Module::getStatusCB,this);
         Topic<String, Module> getStatusOKTopic = Topic<String, Module> (std::string("/getStatus"),1000,&Module::getStatusOKCB,this);

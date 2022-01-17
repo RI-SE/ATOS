@@ -1,6 +1,8 @@
 #include "logging.h"
 #include "util.h"
 #include "RelativeKinematicsModule.hpp"
+#include "journal.h"
+#include "datadictionary.h"
 
 #define MODULE_NAME "RelativeKinematics"
 
@@ -40,6 +42,7 @@ int main(int argc, char **argv) {
 	//std::cout << name << std::endl;
 	ros::init(argc,argv,MODULE_NAME);
 	auto rk = RelativeKinematicsModule(MODULE_NAME);
+	
 	ros::Rate loop_rate(10); // Rate at which module checks for messages (in Hz)
 
 
