@@ -10,8 +10,6 @@ using std_msgs::String;
 template <typename T, class C> 
 class Topic {
 public:
-    // *** ska modulerna subscriba och publisha till alla kanaler? Ger liknande funktionalitet som tidigare, 
-    // *** en modul "jackas in" och kan börja mottaga och skicka vilka meddelanden som helst
     Topic(const std::string topicName,int queueSize,void(C::*fp)(const T&),C* m) {
         this->pub=m->nh_. template advertise<T>(topicName, queueSize);
         this->sub=m->nh_.subscribe(topicName.c_str(), queueSize, fp, m);
