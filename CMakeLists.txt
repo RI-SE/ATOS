@@ -20,15 +20,6 @@ set(WITH_DIRECT_CONTROL OFF CACHE BOOL "Enable DirectControl module")
 set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
 set(WITH_BACK_TO_START OFF CACHE BOOL "Enable BackToStart module")
 
-# Enable or disable modules
-set(WITH_SCENARIO_CONTROL ON CACHE BOOL "Enable ScenarioControl module")
-set(WITH_SUPERVISION ON CACHE BOOL "Enable Supervision module")
-set(WITH_VISUALIZATION OFF CACHE BOOL "Enable Visualization module")
-set(WITH_RELATIVE_KINEMATICS OFF CACHE BOOL "Enable RelativeKinematics module")
-set(WITH_DIRECT_CONTROL OFF CACHE BOOL "Enable DirectControl module")
-set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
-set(WITH_BACK_TO_START OFF CACHE BOOL "Enable BackToStart module")
-
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
 set(MAESTRO_TEST_DIR ".maestro" CACHE STRING "Directory where test data is to be stored")
@@ -163,7 +154,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-# ${catkin_INCLUDE_DIRS}
+	${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -206,6 +197,7 @@ add_subdirectory(util/C/mathutils)
 add_subdirectory(util/C/osihandler)
 add_subdirectory(common)
 add_subdirectory(core)
+
 foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
 endforeach()
