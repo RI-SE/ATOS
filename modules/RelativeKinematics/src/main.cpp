@@ -10,25 +10,13 @@ static void signalHandler(int signo);
 static int initializeModule(const LOG_LEVEL logLevel);
 
 static bool quit = false;
-using std_msgs::Empty;
 
 int main(int argc, char **argv) {
-	/* Old message bus */
-	COMMAND command = COMM_INV;
-	char mqRecvData[MQ_MSG_SIZE];
-	const struct timespec sleepTimePeriod = {0,10000000};
-	struct timespec remTime;
 	const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
-	std::string statusReply = MODULE_NAME;
-	/*-----------------*/
+	constexpr int rosMessageCheckRate_Hz = 10;
 
-	// Initialize log
-	LogInit(MODULE_NAME, logLevel);
-	LogMessage(LOG_LEVEL_INFO, MODULE_NAME " task running with PID: %d", getpid());
-
-	if (JournalInit(MODULE_NAME) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to create test journal");
-		exit(EXIT_FAILURE);
+	if (initializeModule(logLevel) < 0) {
+		util_error("Failed to initialize module");
 	}
 
 	if (DataDictionaryInitStateData() != READ_OK
@@ -37,140 +25,20 @@ int main(int argc, char **argv) {
 					"Found no previously initialized shared memory");
 		exit(EXIT_FAILURE);
 	}
-	// Using ROS: 
 
-	//std::cout << name << std::endl;
-	ros::init(argc,argv,MODULE_NAME);
+	ros::init(argc, argv, MODULE_NAME);
 	auto rk = RelativeKinematicsModule(MODULE_NAME);
 	
-	ros::Rate loop_rate(10); // Rate at which module checks for messages (in Hz)
+	ros::Rate loop_rate(rosMessageCheckRate_Hz); // Rate at which module checks for messages (in Hz)
 
-
-	while (ros::ok()){
+	while (ros::ok() && !quit) {
 		//rk.strtTopic.publish(msg);
 		ros::spinOnce();
     	loop_rate.sleep();
 	}
 
-	exit(0);
-
-	// Initialize
-	if (initializeModule(logLevel) < 0) {
-		util_error("Failed to initialize module");
-	}
-
-	ScenarioHandler scenarioHandler;
-	while (!quit) {
-		if (iCommRecv(&command, mqRecvData, MQ_MSG_SIZE, nullptr) < 0) {
-			util_error("Message bus receive error");
-		}
-
-		switch (command) {
-		case COMM_INV:
-			nanosleep(&sleepTimePeriod,&remTime);
-			break;
-		case COMM_OBC_STATE:
-			break;
-		case COMM_GETSTATUS:
-			iCommSend(COMM_GETSTATUS_OK, statusReply.c_str(), statusReply.size()+1);
-			break;
-		case COMM_GETSTATUS_OK:
-			break;
-		case COMM_INIT:
-			try {
-				scenarioHandler.handleInitCommand();
-			} catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Initialization failed - %s", e.what());
-				iCommSend(COMM_FAILURE, nullptr, 0);
-			}
-			break;
-		case COMM_CONNECT:
-			try {
-				scenarioHandler.handleConnectCommand();
-			} catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Connection failed - %s", e.what());
-				iCommSend(COMM_FAILURE, nullptr, 0);
-			}
-			break;
-		case COMM_DISCONNECT:
-			try {
-				scenarioHandler.handleDisconnectCommand();
-			} catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Disconnection failed - %s", e.what());
-				iCommSend(COMM_FAILURE, nullptr, 0);
-			}
-			break;
-		case COMM_ARM:
-			try {
-				scenarioHandler.handleArmCommand();
-			} catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Arm failed - %s", e.what());
-				iCommSend(COMM_FAILURE, nullptr, 0);
-			}
-			break;
-		case COMM_STRT:
-			try {
-				// TODO set start delay
-				scenarioHandler.handleStartCommand();
-			} catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Start failed - %s", e.what());
-				iCommSend(COMM_FAILURE, nullptr, 0);
-			}
-			break;
-		case COMM_ABORT:
-			// Any exceptions here should crash the program
-			scenarioHandler.handleAbortCommand();
-			break;
-		case COMM_ABORT_DONE:
-			//Abort is done at object level
-			try	{ 
-				scenarioHandler.handleAllClearCommand();
-			} catch(std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Failed clear abort - %s", e.what());
-				iCommSend(COMM_FAILURE, nullptr, 0);
-			}		
-			break;
-		case COMM_ACCM:
-			try {
-				ACCMData accm;
-				UtilPopulateACCMDataStructFromMQ(mqRecvData, sizeof (mqRecvData), &accm);
-				if (accm.actionType == ACTION_TEST_SCENARIO_COMMAND) {
-					ScenarioHandler::TestScenarioCommandAction cmdAction;
-					cmdAction.command = static_cast<ActionTypeParameter_t>(accm.actionTypeParameter1);
-					cmdAction.actionID = accm.actionID;
-					cmdAction.objectID = scenarioHandler.getVehicleIDByIP(accm.ip);
-					scenarioHandler.handleActionConfigurationCommand(cmdAction);
-				}
-			}
-			catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Failed action configuration - %s", e.what());
-				iCommSend(COMM_FAILURE, nullptr, 0);
-			}
-			break;
-		case COMM_EXAC:
-			try {
-				using namespace std::chrono;
-				EXACData exac;
-				UtilPopulateEXACDataStructFromMQ(mqRecvData, sizeof (mqRecvData), &exac);
-				quartermilliseconds qmsow(exac.executionTime_qmsoW);
-				auto now = to_timeval(system_clock::now().time_since_epoch());
-				auto startOfWeek = system_clock::time_point(weeks(TimeGetAsGPSweek(&now)));
-				scenarioHandler.handleExecuteActionCommand(exac.actionID, startOfWeek+qmsow);
-			}
-			catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Failed action execution - %s", e.what());
-				iCommSend(COMM_FAILURE, nullptr, 0);
-			}
-			break;
-		default:
-			LogMessage(LOG_LEVEL_INFO, "Received command %u", command);
-		}
-	}
-
 	return 0;
 }
-
-
 
 
 void signalHandler(int signo) {
@@ -191,10 +59,6 @@ void signalHandler(int signo) {
  */
 int initializeModule(const LOG_LEVEL logLevel) {
 	int retval = 0;
-	struct timespec sleepTimePeriod, remTime;
-	sleepTimePeriod.tv_sec = 0;
-	sleepTimePeriod.tv_nsec = 1000000;
-	int maxRetries = 10, retryNumber;
 
 	// Initialize log
 	LogInit(MODULE_NAME, logLevel);
@@ -214,22 +78,11 @@ int initializeModule(const LOG_LEVEL logLevel) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to create test journal");
 	}
 
-	// Initialize message bus connection
-	LogMessage(LOG_LEVEL_DEBUG, "Initializing connection to message bus");
-	for (retryNumber = 0; iCommInit() != 0 && retryNumber < maxRetries; ++retryNumber) {
-		nanosleep(&sleepTimePeriod, &remTime);
-	}
-	if (retryNumber == maxRetries) {
+	if (DataDictionaryInitStateData() != READ_OK
+			|| DataDictionaryInitObjectData() != READ_OK) {
 		retval = -1;
-		LogMessage(LOG_LEVEL_ERROR, "Unable to initialize connection to message bus");
-	}
-	else {
-		if (DataDictionaryInitStateData() != READ_OK
-				|| DataDictionaryInitObjectData() != READ_OK) {
-			retval = -1;
-			LogMessage(LOG_LEVEL_ERROR,
-					   "Found no previously initialized shared memory");
-		}
+		LogMessage(LOG_LEVEL_ERROR,
+					"Found no previously initialized shared memory");
 	}
 
 	return retval;
