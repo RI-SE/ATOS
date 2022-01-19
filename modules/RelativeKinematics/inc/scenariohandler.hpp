@@ -116,6 +116,8 @@ public:
 	//! \brief Performs actions in response to a start request.
 	void handleStartCommand();
 	//! \brief Performs actions in response to an abort request.
+	void handleStopCommand();
+	//! \brief Performs actions in response to an abort request.
 	void handleAbortCommand();
 	//! \brief Performs actions in response to an all clear request.
 	void handleAllClearCommand();
