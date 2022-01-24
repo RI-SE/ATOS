@@ -51,13 +51,17 @@ target_link_libraries(${RELATIVE_KINEMATICS_TARGET} LINK_PUBLIC
 	${MAESTRO_COMMON_LIBRARY}
 	${ISO_22133_LIBRARY}
 	${OSI_LIBRARY}
-	${catkin_LIBRARIES}
 )
+ament_target_dependencies(${RELATIVE_KINEMATICS_TARGET} PUBLIC
+  rclcpp
+  std_msgs)
+
 target_include_directories(${RELATIVE_KINEMATICS_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${OSI_HEADERS}
 	${TIME_HEADERS}
 )
+
 
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${RELATIVE_KINEMATICS_TARGET}\")")

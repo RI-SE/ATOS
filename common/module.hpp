@@ -2,12 +2,15 @@
 #include <string>
 
 #include "util.h"
-#include "ros/ros.h"
-#include "std_msgs/Empty.h"
-#include "std_msgs/String.h"
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/empty.hpp"
 
-using std_msgs::Empty;
-using std_msgs::String;
+
+using std_msgs::msg::Empty;
+using std_msgs::msg::String;
+using std::placeholders::_1;
+using rclcpp::Node;
 
 /**
  *  Topic for publishing and subscribing to messages
@@ -16,7 +19,8 @@ using std_msgs::String;
  *  \tparam Node ROS node that should subscribe / publish on this topic
  *
  */
-template <typename Msg, class Node>
+//template <typename Msg, class ModuleNode, class = enable_if_t<is_base_of_v<rclcpp::Node, ModuleNode>>> // << dosnt work for now
+template <typename Mesg, class ModuleNode>
 class Topic {
    public:
 	/**
@@ -26,15 +30,17 @@ class Topic {
 	 * \param cb callback function
 	 * \param n ROS node subscribing/publishing to this topic
 	 */
-	Topic(const std::string topicName, int queueSize, void (Node::*cb)(typename Msg::ConstPtr), Node* n) {
-		this->pub = n->template advertise<Msg>(topicName, queueSize);
-		this->sub = n->subscribe(topicName, queueSize, cb, n);
+	Topic(const std::string topicName, int queueSize, void (ModuleNode::*cb)( typename Mesg::ConstSharedPtr), ModuleNode* n) {
+		//this->pub = n->template advertise<Msg>(topicName, queueSize);
+		this->pub = n->template create_publisher<Mesg>(topicName,queueSize);
+		//this->sub = n->subscribe(topicName, queueSize, cb, n);
+		this->sub = n->template create_subscription<Mesg>(n->get_name(), queueSize, std::bind(cb, n, _1));
 	}
-	void publish(Msg message) { pub.publish(message); }
+	void publish(Mesg msg) {} //{ pub.publish(msg); }
 
    private:
-	ros::Publisher pub;
-	ros::Subscriber sub;
+	typename rclcpp::Publisher<Mesg>::ConstSharedPtr pub;
+	typename rclcpp::Subscription<Mesg>::ConstSharedPtr sub;
 };
 
 static std::map<COMMAND, std::string> topicNames = {
@@ -78,81 +84,77 @@ static std::map<COMMAND, std::string> topicNames = {
  * This class is the base class for all modules.
  * It provides the basic functionality for all modules.
  */
-class Module : public ros::NodeHandle {
+class Module : public Node {
 public:
-	Module(const std::string name) : name(name){};
+	Module(const std::string name) : Node(name) {};
 	Module() = default;
 	
 	Topic<String, Module> getStatusResponseTopic
-		= Topic<String, Module>(topicNames[COMM_GETSTATUS_OK], 100, &Module::onGetStatusResponse, this);
-	Topic<Empty, Module> failureTopic
-		= Topic<Empty, Module>(topicNames[COMM_FAILURE], 100, &Module::onFailureMessage, this);
+		= Topic<String, Module>(topicNames[COMM_GETSTATUS_OK], 100, &Module::onGetStatusResponse,this);
+	Topic<String, Module> failureTopic
+		= Topic<String, Module>(topicNames[COMM_FAILURE], 100, &Module::onFailureMessage,this);
 	Topic<Empty, Module> initTopic
-		= Topic<Empty, Module>(topicNames[COMM_INIT], 1, &Module::onInitMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_INIT], 1, &Module::onInitMessage,this);
 	Topic<Empty, Module> connectTopic
-		= Topic<Empty, Module>(topicNames[COMM_CONNECT], 1, &Module::onConnectMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_CONNECT], 1, &Module::onConnectMessage,this);
 	Topic<Empty, Module> armTopic
-		= Topic<Empty, Module>(topicNames[COMM_ARM], 1, &Module::onArmMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_ARM], 1, &Module::onArmMessage,this);
 	Topic<Empty, Module> startTopic
-		= Topic<Empty, Module>(topicNames[COMM_STRT], 1, &Module::onStartMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_STRT], 1, &Module::onStartMessage,this);
 	Topic<Empty, Module> stopTopic
-		= Topic<Empty, Module>(topicNames[COMM_STOP], 1, &Module::onStopMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_STOP], 1, &Module::onStopMessage,this);
 	Topic<Empty, Module> exitTopic
-		= Topic<Empty, Module>(topicNames[COMM_EXIT], 1, &Module::onExitMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_EXIT], 1, &Module::onExitMessage,this);
 	Topic<Empty, Module> replayTopic
-		= Topic<Empty, Module>(topicNames[COMM_REPLAY], 1, &Module::onReplayMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_REPLAY], 1, &Module::onReplayMessage,this);
 	Topic<Empty, Module> abortTopic
-		= Topic<Empty, Module>(topicNames[COMM_ABORT], 1, &Module::onAbortMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_ABORT], 1, &Module::onAbortMessage,this);
 	Topic<Empty, Module> allClearTopic
-		= Topic<Empty, Module>(topicNames[COMM_ABORT_DONE], 1, &Module::onAllClearMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_ABORT_DONE], 1, &Module::onAllClearMessage,this);
 	Topic<Empty, Module> obcStateTopic
-		= Topic<Empty, Module>(topicNames[COMM_OBC_STATE], 1, &Module::onOBCStateMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_OBC_STATE], 1, &Module::onOBCStateMessage,this);
 	Topic<Empty, Module> disconnectTopic
-		= Topic<Empty, Module>(topicNames[COMM_DISCONNECT], 1, &Module::onDisconnectMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_DISCONNECT], 1, &Module::onDisconnectMessage,this);
 	Topic<Empty, Module> viopTopic
-		= Topic<Empty, Module>(topicNames[COMM_ABORT], 1, &Module::onVIOPMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_ABORT], 1, &Module::onVIOPMessage,this);
 	Topic<Empty, Module> trajTopic
-		= Topic<Empty, Module>(topicNames[COMM_TRAJ], 1, &Module::onTrajMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_TRAJ], 1, &Module::onTrajMessage,this);
 	Topic<Empty, Module> trajToSupTopic
-		= Topic<Empty, Module>(topicNames[COMM_TRAJ_TOSUP], 1, &Module::onTrajToSupMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_TRAJ_TOSUP], 1, &Module::onTrajToSupMessage,this);
 	Topic<Empty, Module> trajFromSupTopic
-		= Topic<Empty, Module>(topicNames[COMM_TRAJ_FROMSUP], 1, &Module::onTrajFromSupMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_TRAJ_FROMSUP], 1, &Module::onTrajFromSupMessage,this);
 	Topic<Empty, Module> aspTopic
-		= Topic<Empty, Module>(topicNames[COMM_ASP], 1, &Module::onASPMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_ASP], 1, &Module::onASPMessage,this);
 	Topic<Empty, Module> osemTopic
-		= Topic<Empty, Module>(topicNames[COMM_OSEM], 1, &Module::onOSEMMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_OSEM], 1, &Module::onOSEMMessage,this);
 	Topic<Empty, Module> dataDictTopic
-		= Topic<Empty, Module>(topicNames[COMM_DATA_DICT], 1, &Module::onDataDictMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_DATA_DICT], 1, &Module::onDataDictMessage,this);
 	Topic<Empty, Module> exacTopic
-		= Topic<Empty, Module>(topicNames[COMM_EXAC], 1, &Module::onEXACMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_EXAC], 1, &Module::onEXACMessage,this);
 	Topic<Empty, Module> accmTopic
-		= Topic<Empty, Module>(topicNames[COMM_ACCM], 1, &Module::onACCMMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_ACCM], 1, &Module::onACCMMessage,this);
 	Topic<Empty, Module> treoTopic
-		= Topic<Empty, Module>(topicNames[COMM_TREO], 1, &Module::onTREOMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_TREO], 1, &Module::onTREOMessage,this);
 	Topic<Empty, Module> trcmTopic
-		= Topic<Empty, Module>(topicNames[COMM_TRCM], 1, &Module::onTRCMMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_TRCM], 1, &Module::onTRCMMessage,this);
 	Topic<Empty, Module> disarmTopic
-		= Topic<Empty, Module>(topicNames[COMM_DISARM], 1, &Module::onDisarmMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_DISARM], 1, &Module::onDisarmMessage,this);
 	Topic<Empty, Module> backToStartTopic
-		= Topic<Empty, Module>(topicNames[COMM_BACKTOSTART_CALL], 1, &Module::onBackToStartMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_BACKTOSTART_CALL], 1, &Module::onBackToStartMessage,this);
 	Topic<Empty, Module> backToStartResponseTopic
-		= Topic<Empty, Module>(topicNames[COMM_BACKTOSTART_RESPONSE], 1, &Module::onBackToStartResponse, this);
+		= Topic<Empty, Module>(topicNames[COMM_BACKTOSTART_RESPONSE], 1, &Module::onBackToStartResponse,this);
 	Topic<Empty, Module> remoteControlEnableTopic
-		= Topic<Empty, Module>(topicNames[COMM_REMOTECTRL_ENABLE], 1, &Module::onRemoteControlEnableMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_REMOTECTRL_ENABLE], 1, &Module::onRemoteControlEnableMessage,this);
 	Topic<Empty, Module> remoteControlDisableTopic
-		= Topic<Empty, Module>(topicNames[COMM_REMOTECTRL_DISABLE], 1, &Module::onRemoteControlEnableMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_REMOTECTRL_DISABLE], 1, &Module::onRemoteControlEnableMessage,this);
 	Topic<Empty, Module> remoteControlManoeuvreTopic
-		= Topic<Empty, Module>(topicNames[COMM_REMOTECTRL_MANOEUVRE], 1, &Module::onRemoteControlManoeuvreMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_REMOTECTRL_MANOEUVRE], 1, &Module::onRemoteControlManoeuvreMessage,this);
 	Topic<Empty, Module> enableObjectTopic
-		= Topic<Empty, Module>(topicNames[COMM_ENABLE_OBJECT], 1, &Module::onEnableObjectMessage, this);
+		= Topic<Empty, Module>(topicNames[COMM_ENABLE_OBJECT], 1, &Module::onEnableObjectMessage,this);
 	Topic<Empty, Module> objectsConnectedTopic
-		= Topic<Empty, Module>(topicNames[COMM_OBJECTS_CONNECTED], 1, &Module::onObjectsConnectedMessage, this);
-
-	std::string getName() const { return name; }
+		= Topic<Empty, Module>(topicNames[COMM_OBJECTS_CONNECTED], 1, &Module::onObjectsConnectedMessage,this);
 
 private:
-	std::string name;
-
 	static void printUnhandledMessage(const std::string& topic, const std::string& message) {
 		std::cout << "Unhandled message on topic: " << topic << " (" << message << ")" << std::endl;
 	}
@@ -160,40 +162,40 @@ private:
 		std::cout << "Unhandled message on topic: " << topic << std::endl;
 	}
 
-	virtual void onFailureMessage(Empty::ConstPtr) { };
-	virtual void onGetStatusResponse(String::ConstPtr) { };
-	virtual void onGetStatusMessage(Empty::ConstPtr) { 
-		String msg;
-		msg.data = name;
+	virtual void onFailureMessage(String::ConstSharedPtr) { };
+	virtual void onGetStatusResponse(String::ConstSharedPtr) { };
+	virtual void onGetStatusMessage(Empty::ConstSharedPtr) { 
+		auto msg = String();
+		msg.data = this->get_name();
 		getStatusResponseTopic.publish(msg); };
-	virtual void onInitMessage(Empty::ConstPtr){};
-	virtual void onConnectMessage(Empty::ConstPtr){};
-	virtual void onDisconnectMessage(Empty::ConstPtr){};
-	virtual void onArmMessage(Empty::ConstPtr){};
-	virtual void onDisarmMessage(Empty::ConstPtr){};
-	virtual void onRemoteControlEnableMessage(Empty::ConstPtr){};
-	virtual void onRemoteControlDisableMessage(Empty::ConstPtr){};
-	virtual void onRemoteControlManoeuvreMessage(Empty::ConstPtr){};
-	virtual void onEnableObjectMessage(Empty::ConstPtr){};
-	virtual void onObjectsConnectedMessage(Empty::ConstPtr){};
-	virtual void onDataDictMessage(Empty::ConstPtr){};
-	virtual void onOSEMMessage(Empty::ConstPtr){};
-	virtual void onASPMessage(Empty::ConstPtr){};
-	virtual void onTrajMessage(Empty::ConstPtr){};
-	virtual void onTrajToSupMessage(Empty::ConstPtr){};
-	virtual void onTrajFromSupMessage(Empty::ConstPtr){};
-	virtual void onAllClearMessage(Empty::ConstPtr){};
-	virtual void onOBCStateMessage(Empty::ConstPtr){};
-	virtual void onVIOPMessage(Empty::ConstPtr){};
-	virtual void onStartMessage(Empty::ConstPtr){};
-	virtual void onStopMessage(Empty::ConstPtr){};
-	virtual void onAbortMessage(Empty::ConstPtr){};
-	virtual void onACCMMessage(Empty::ConstPtr){};
-	virtual void onTRCMMessage(Empty::ConstPtr){};
-	virtual void onEXACMessage(Empty::ConstPtr){};
-	virtual void onTREOMessage(Empty::ConstPtr){};
-	virtual void onExitMessage(Empty::ConstPtr){};
-	virtual void onReplayMessage(Empty::ConstPtr){};
-	virtual void onBackToStartMessage(Empty::ConstPtr){};
-	virtual void onBackToStartResponse(Empty::ConstPtr){};
+	virtual void onInitMessage(Empty::ConstSharedPtr){};
+	virtual void onConnectMessage(Empty::ConstSharedPtr){};
+	virtual void onDisconnectMessage(Empty::ConstSharedPtr){};
+	virtual void onArmMessage(Empty::ConstSharedPtr){};
+	virtual void onDisarmMessage(Empty::ConstSharedPtr){};
+	virtual void onRemoteControlEnableMessage(Empty::ConstSharedPtr){};
+	virtual void onRemoteControlDisableMessage(Empty::ConstSharedPtr){};
+	virtual void onRemoteControlManoeuvreMessage(Empty::ConstSharedPtr){};
+	virtual void onEnableObjectMessage(Empty::ConstSharedPtr){};
+	virtual void onObjectsConnectedMessage(Empty::ConstSharedPtr){};
+	virtual void onDataDictMessage(Empty::ConstSharedPtr){};
+	virtual void onOSEMMessage(Empty::ConstSharedPtr){};
+	virtual void onASPMessage(Empty::ConstSharedPtr){};
+	virtual void onTrajMessage(Empty::ConstSharedPtr){};
+	virtual void onTrajToSupMessage(Empty::ConstSharedPtr){};
+	virtual void onTrajFromSupMessage(Empty::ConstSharedPtr){};
+	virtual void onAllClearMessage(Empty::ConstSharedPtr){};
+	virtual void onOBCStateMessage(Empty::ConstSharedPtr){};
+	virtual void onVIOPMessage(Empty::ConstSharedPtr){};
+	virtual void onStartMessage(Empty::ConstSharedPtr){};
+	virtual void onStopMessage(Empty::ConstSharedPtr){};
+	virtual void onAbortMessage(Empty::ConstSharedPtr){};
+	virtual void onACCMMessage(Empty::ConstSharedPtr){};
+	virtual void onTRCMMessage(Empty::ConstSharedPtr){};
+	virtual void onEXACMessage(Empty::ConstSharedPtr){};
+	virtual void onTREOMessage(Empty::ConstSharedPtr){};
+	virtual void onExitMessage(Empty::ConstSharedPtr){};
+	virtual void onReplayMessage(Empty::ConstSharedPtr){};
+	virtual void onBackToStartMessage(Empty::ConstSharedPtr){};
+	virtual void onBackToStartResponse(Empty::ConstSharedPtr){};
 };
