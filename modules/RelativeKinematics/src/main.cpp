@@ -124,11 +124,15 @@ int initializeModule(const LOG_LEVEL logLevel) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to initialize connection to message bus");
 	}
 	else {
-		if (DataDictionaryInitStateData() != READ_OK
-				|| DataDictionaryInitObjectData() != READ_OK) {
+		if (DataDictionaryInitStateData() != READ_OK) {
 			retval = -1;
 			LogMessage(LOG_LEVEL_ERROR,
-					   "Found no previously initialized shared memory");
+					   "Found no previously initialized shared memory for state data");
+		}
+		if (DataDictionaryInitObjectData() != READ_OK) {
+			retval = -1;
+			LogMessage(LOG_LEVEL_ERROR,
+					   "Found no previously initialized shared memory for object data");
 		}
 	}
 
