@@ -12,8 +12,8 @@ using std_msgs::String;
 /**
  *  Topic for publishing and subscribing to messages
  *
- *  @tparam Msg Type of the message to be sent / recevied on this topic
- *  @tparam Node ROS node that should subscribe / publish on this topic
+ *  \tparam Msg Type of the message to be sent / recevied on this topic
+ *  \tparam Node ROS node that should subscribe / publish on this topic
  *
  */
 template <typename Msg, class Node>
@@ -81,6 +81,8 @@ static std::map<COMMAND, std::string> topicNames = {
 class Module : public ros::NodeHandle {
 public:
 	Module(const std::string name) : name(name){};
+	Module() = default;
+	
 	Topic<String, Module> getStatusResponseTopic
 		= Topic<String, Module>(topicNames[COMM_GETSTATUS_OK], 100, &Module::onGetStatusResponse, this);
 	Topic<Empty, Module> failureTopic

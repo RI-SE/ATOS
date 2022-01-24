@@ -8,8 +8,10 @@ set(CMAKE_COLOR_MAKEFILE   ON)
 
 project(maestro VERSION 0.5.0)
 
-## Find catkin macros and libraries
-find_package(catkin REQUIRED COMPONENTS roscpp std_msgs)
+## Find ament macros and libraries
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
 
 # Enable or disable modules
 set(WITH_SCENARIO_CONTROL ON CACHE BOOL "Enable ScenarioControl module")
@@ -32,6 +34,9 @@ set(MAESTRO_OBJECTS_DIR "${MAESTRO_TEST_DIR}/objects")
 # Dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/util/cmake)
 find_package(Systemd REQUIRED)
+
+# Always include mandatory modules
+#list(APPEND ENABLED_MODULES SystemControl)
 
 # Create list of all enabled modules
 if(WITH_SCENARIO_CONTROL)
@@ -139,12 +144,7 @@ endif()
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES maestro
-#  CATKIN_DEPENDS other_catkin_pkg
-#  DEPENDS system_lib
-)
+ament_package()
 
 ###########
 ## Build ##
@@ -152,11 +152,11 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(
+#include_directories(
 # include
-	${catkin_INCLUDE_DIRS}
-)
-
+#	${catkin_INCLUDE_DIRS}
+#)
+include_directories(include ${Boost_INCLUDE_DIRS})
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/maestro.cpp
@@ -262,6 +262,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CATKIN_PACKAGE_BIN_DESTINATION})
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
 
+#Tell colcon to place binaries in /lib of install dir. 
+install(TARGETS
+  Core
+  RelativeKinematics
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 # Create directory for test data in user home directory
 install(CODE "MESSAGE(STATUS \"Creating home directory environment under $ENV{HOME}\")")

@@ -9,80 +9,92 @@
 #include "datadictionary.h"
 #include "RelativeKinematicsModule.hpp"
 
-using std_msgs::Empty;
-using std_msgs::String;
+using std_msgs::msg::Empty;
+using std_msgs::msg::String;
 
-void RelativeKinematicsModule::onInitMessage(Empty::ConstPtr){
+void RelativeKinematicsModule::onInitMessage(Empty::ConstSharedPtr){
     try {
         scenarioHandler.handleInitCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Initialization failed - %s", e.what());
-        this->failureTopic.publish(Empty());
+		String msg;
+		msg.data = "/init";
+        this->failureTopic.publish(msg);
     }
 }
 
-void RelativeKinematicsModule::onConnectMessage(Empty::ConstPtr){	
+void RelativeKinematicsModule::onConnectMessage(Empty::ConstSharedPtr){	
     try {
         scenarioHandler.handleConnectCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Connection failed - %s", e.what());
-        this->failureTopic.publish(Empty());
+		String msg;
+		msg.data = "/connect";
+        this->failureTopic.publish(msg);
     }
 }
 
-void RelativeKinematicsModule::onArmMessage(Empty::ConstPtr){	
+void RelativeKinematicsModule::onArmMessage(Empty::ConstSharedPtr){	
     try {
         scenarioHandler.handleArmCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Arm failed - %s", e.what());
-        this->failureTopic.publish(Empty());
+		String msg;
+		msg.data = "/arm";
+        this->failureTopic.publish(msg);
     }
 }
 
-void RelativeKinematicsModule::onStartMessage(Empty::ConstPtr){	
+void RelativeKinematicsModule::onStartMessage(Empty::ConstSharedPtr){	
     try {
         scenarioHandler.handleStartCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Start failed - %s", e.what());
-        this->failureTopic.publish(Empty());
+		String msg;
+		msg.data = "/arm";
+        this->failureTopic.publish(msg);
     }
 }
 
-void RelativeKinematicsModule::onDisconnectMessage(Empty::ConstPtr){	
+void RelativeKinematicsModule::onDisconnectMessage(Empty::ConstSharedPtr){	
     try {
         scenarioHandler.handleDisconnectCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Disconnect failed - %s", e.what());
-        this->failureTopic.publish(Empty());
+		String msg;
+		msg.data = "/disconnect";
+        this->failureTopic.publish(msg);
     }
 }
 
-void RelativeKinematicsModule::onStopMessage(Empty::ConstPtr){	
+void RelativeKinematicsModule::onStopMessage(Empty::ConstSharedPtr){	
     try {
         scenarioHandler.handleStopCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Stop failed - %s", e.what());
+		String msg;
+		msg.data = "/stop";
         scenarioHandler.handleAbortCommand();
-        this->failureTopic.publish(Empty());
+        this->failureTopic.publish(msg);
         this->abortTopic.publish(Empty());
     }
 }
 
-void RelativeKinematicsModule::onAbortMessage(Empty::ConstPtr){	
+void RelativeKinematicsModule::onAbortMessage(Empty::ConstSharedPtr){	
 	// Any exceptions here should crash the program
     scenarioHandler.handleAbortCommand();
 }
 
-void RelativeKinematicsModule::onAllClearMessage(Empty::ConstPtr){	
+void RelativeKinematicsModule::onAllClearMessage(Empty::ConstSharedPtr){	
 	try {
 		scenarioHandler.handleAllClearCommand();
 	} catch (std::invalid_argument& e) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed clear abort - %s", e.what());
-		this->failureTopic.publish(Empty());
+		//this->failureTopic.publish(Empty());
 	}
 }
 
-void RelativeKinematicsModule::onACCMMessage(Empty::ConstPtr){
+void RelativeKinematicsModule::onACCMMessage(Empty::ConstSharedPtr){
 	/*
 			try {
 				ACCMData accm;
@@ -103,7 +115,7 @@ void RelativeKinematicsModule::onACCMMessage(Empty::ConstPtr){
 			*/
 }
 
-void RelativeKinematicsModule::onEXACMessage(Empty::ConstPtr){
+void RelativeKinematicsModule::onEXACMessage(Empty::ConstSharedPtr){
 	/*
 			
 			try {
