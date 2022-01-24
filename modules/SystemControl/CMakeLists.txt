@@ -5,6 +5,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "-fpermissive") #temporary
 
+
 project(SystemControl)
 
 # Define target names
@@ -33,7 +34,6 @@ target_link_libraries(${SYSTEM_CONTROL_TARGET} LINK_PUBLIC
 	${FILESYSTEM_LIBRARY}
 	${THREAD_LIBRARY}
 	${MAESTRO_COMMON_LIBRARY}
-	${catkin_LIBRARIES}
 )
 target_include_directories(${SYSTEM_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
@@ -52,3 +52,5 @@ install(TARGETS ${SYSTEM_CONTROL_TARGET}
 # Ensure linkage is reloaded after install
 install(CODE "execute_process(COMMAND ldconfig)")
 
+## Ignore building for now.. 
+set_target_properties(${SYSTEM_CONTROL_TARGET} PROPERTIES EXCLUDE_FROM_ALL 1 EXCLUDE_FROM_DEFAULT_BUILD 1) 
