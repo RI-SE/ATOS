@@ -53,21 +53,21 @@ Initialization data that is configurable is stored in test.conf.
  * \return Error code defined by ::ReadWriteAccess_t
  */
 ReadWriteAccess_t DataDictionaryConstructor() {
-	ReadWriteAccess_t Res = READ_OK;
+	ReadWriteAccess_t Res = WRITE_OK;
 
-	Res = Res == READ_OK ? DataDictionaryInitScenarioName() : Res;
-	Res = Res == READ_OK ? DataDictionaryInitRVSSAsp() : Res;
-	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
-	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
-	if (Res == READ_OK && DataDictionaryInitObjectData() != WRITE_OK) {
+	Res = Res == WRITE_OK ? DataDictionaryInitScenarioName() : Res;
+	Res = Res == WRITE_OK ? DataDictionaryInitRVSSAsp() : Res;
+	Res = Res == WRITE_OK ? DataDictionaryInitMaxPacketsLost() : Res;
+	Res = Res == WRITE_OK ? DataDictionaryInitTransmitterID() : Res;
+	if (Res == WRITE_OK && DataDictionaryInitObjectData() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
 		Res = UNDEFINED;
 	}
-	if (Res == READ_OK && DataDictionaryInitStateData() != WRITE_OK) {
+	if (Res == WRITE_OK && DataDictionaryInitStateData() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared state memory found by constructor");
 		Res = UNDEFINED;
 	}
-	if (Res == READ_OK) {
+	if (Res == WRITE_OK) {
 		DataDictionarySetOBCState(OBC_STATE_UNDEFINED);
 	}
 
