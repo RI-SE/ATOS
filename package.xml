@@ -27,13 +27,13 @@
   <author email="victor.jarlow@astazero.com">Victor Jarlow</author>
 
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
   <doc_depend>doxygen</doc_depend>
 
   <export>
     <!-- Other tools can request additional information be placed here -->
-
+	<build_type>ament_cmake</build_type>
   </export>
 </package>
