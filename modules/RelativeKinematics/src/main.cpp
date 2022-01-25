@@ -15,16 +15,16 @@ int main(int argc, char **argv) {
 	const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 	constexpr int rosMessageCheckRate_Hz = 10;
 
-	if (initializeModule(logLevel) < 0) {
-		util_error("Failed to initialize module");
-	}
-
 	if (DataDictionaryInitStateData() != READ_OK
 			|| DataDictionaryInitObjectData() != READ_OK) {
 		LogMessage(LOG_LEVEL_ERROR,
 					"Found no previously initialized shared memory");
-		exit(EXIT_FAILURE);
+		//exit(EXIT_FAILURE);
 	}
+	if (initializeModule(logLevel) < 0) {
+		util_error("Failed to initialize module");
+	}
+
 	rclcpp::init(argc,argv);
 	//auto rk = RelativeKinematicsModule(MODULE_NAME);
 	
@@ -91,10 +91,6 @@ int initializeModule(const LOG_LEVEL logLevel) {
 */
 int initializeModule(const LOG_LEVEL logLevel) {
 	int retval = 0;
-	struct timespec sleepTimePeriod, remTime;
-	sleepTimePeriod.tv_sec = 0;
-	sleepTimePeriod.tv_nsec = 1000000;
-	int maxRetries = 10, retryNumber;
 
 	// Initialize log
 	LogInit(MODULE_NAME, logLevel);
@@ -113,27 +109,15 @@ int initializeModule(const LOG_LEVEL logLevel) {
 		retval = -1;
 		LogMessage(LOG_LEVEL_ERROR, "Unable to create test journal");
 	}
-
-	// Initialize message bus connection
-	LogMessage(LOG_LEVEL_DEBUG, "Initializing connection to message bus");
-	for (retryNumber = 0; iCommInit() != 0 && retryNumber < maxRetries; ++retryNumber) {
-		nanosleep(&sleepTimePeriod, &remTime);
-	}
-	if (retryNumber == maxRetries) {
+	if (DataDictionaryInitStateData() != READ_OK) {
 		retval = -1;
-		LogMessage(LOG_LEVEL_ERROR, "Unable to initialize connection to message bus");
+		LogMessage(LOG_LEVEL_ERROR,
+					"Found no previously initialized shared memory for state data");
 	}
-	else {
-		if (DataDictionaryInitStateData() != READ_OK) {
-			retval = -1;
-			LogMessage(LOG_LEVEL_ERROR,
-					   "Found no previously initialized shared memory for state data");
-		}
-		if (DataDictionaryInitObjectData() != READ_OK) {
-			retval = -1;
-			LogMessage(LOG_LEVEL_ERROR,
-					   "Found no previously initialized shared memory for object data");
-		}
+	if (DataDictionaryInitObjectData() != READ_OK) {
+		retval = -1;
+		LogMessage(LOG_LEVEL_ERROR,
+					"Found no previously initialized shared memory for object data");
 	}
 
 	return retval;

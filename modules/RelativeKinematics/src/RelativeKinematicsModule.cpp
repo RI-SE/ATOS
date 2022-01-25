@@ -11,14 +11,15 @@
 
 using std_msgs::msg::Empty;
 using std_msgs::msg::String;
+using std_msgs::msg::UInt8;
 
 void RelativeKinematicsModule::onInitMessage(Empty::ConstSharedPtr){
     try {
         scenarioHandler.handleInitCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Initialization failed - %s", e.what());
-		String msg;
-		msg.data = "/init";
+		UInt8 msg;
+		msg.data = COMM_INIT;
         this->failureTopic.publish(msg);
     }
 }
@@ -28,8 +29,8 @@ void RelativeKinematicsModule::onConnectMessage(Empty::ConstSharedPtr){
         scenarioHandler.handleConnectCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Connection failed - %s", e.what());
-		String msg;
-		msg.data = "/connect";
+		UInt8 msg;
+		msg.data = COMM_CONNECT;
         this->failureTopic.publish(msg);
     }
 }
@@ -39,8 +40,8 @@ void RelativeKinematicsModule::onArmMessage(Empty::ConstSharedPtr){
         scenarioHandler.handleArmCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Arm failed - %s", e.what());
-		String msg;
-		msg.data = "/arm";
+		UInt8 msg;
+		msg.data = COMM_ARM;
         this->failureTopic.publish(msg);
     }
 }
@@ -50,8 +51,8 @@ void RelativeKinematicsModule::onStartMessage(Empty::ConstSharedPtr){
         scenarioHandler.handleStartCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Start failed - %s", e.what());
-		String msg;
-		msg.data = "/arm";
+		UInt8 msg;
+		msg.data = COMM_STRT;
         this->failureTopic.publish(msg);
     }
 }
@@ -61,8 +62,8 @@ void RelativeKinematicsModule::onDisconnectMessage(Empty::ConstSharedPtr){
         scenarioHandler.handleDisconnectCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Disconnect failed - %s", e.what());
-		String msg;
-		msg.data = "/disconnect";
+		UInt8 msg;
+		msg.data = COMM_DISCONNECT;
         this->failureTopic.publish(msg);
     }
 }
@@ -72,8 +73,8 @@ void RelativeKinematicsModule::onStopMessage(Empty::ConstSharedPtr){
         scenarioHandler.handleStopCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Stop failed - %s", e.what());
-		String msg;
-		msg.data = "/stop";
+		UInt8 msg;
+		msg.data = COMM_STOP;
         scenarioHandler.handleAbortCommand();
         this->failureTopic.publish(msg);
         this->abortTopic.publish(Empty());
