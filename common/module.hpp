@@ -5,10 +5,12 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
+#include "std_msgs/msg/u_int8.hpp"
 
 
 using std_msgs::msg::Empty;
 using std_msgs::msg::String;
+using std_msgs::msg::UInt8;
 using std::placeholders::_1;
 using rclcpp::Node;
 
@@ -20,7 +22,7 @@ using rclcpp::Node;
  *
  */
 //template <typename Msg, class ModuleNode, class = enable_if_t<is_base_of_v<rclcpp::Node, ModuleNode>>> // << dosnt work for now
-template <typename Mesg, class ModuleNode>
+template <typename MsgType, class ModuleType>
 class Topic {
    public:
 	/**
@@ -30,17 +32,17 @@ class Topic {
 	 * \param cb callback function
 	 * \param n ROS node subscribing/publishing to this topic
 	 */
-	Topic(const std::string topicName, int queueSize, void (ModuleNode::*cb)( typename Mesg::ConstSharedPtr), ModuleNode* n) {
+	Topic(const std::string topicName, int queueSize, void (ModuleType::*cb)( typename MsgType::ConstSharedPtr), ModuleType* n) {
 		//this->pub = n->template advertise<Msg>(topicName, queueSize);
-		this->pub = n->template create_publisher<Mesg>(topicName,queueSize);
+		this->pub = n->template create_publisher<MsgType>(topicName,queueSize);
 		//this->sub = n->subscribe(topicName, queueSize, cb, n);
-		this->sub = n->template create_subscription<Mesg>(n->get_name(), queueSize, std::bind(cb, n, _1));
+		this->sub = n->template create_subscription<MsgType>(n->get_name(), queueSize, std::bind(cb, n, _1));
 	}
-	void publish(Mesg msg) {} //{ pub.publish(msg); }
+	void publish(MsgType msg) {} //{ pub.publish(msg); }
 
    private:
-	typename rclcpp::Publisher<Mesg>::ConstSharedPtr pub;
-	typename rclcpp::Subscription<Mesg>::ConstSharedPtr sub;
+	typename rclcpp::Publisher<MsgType>::ConstSharedPtr pub;
+	typename rclcpp::Subscription<MsgType>::ConstSharedPtr sub;
 };
 
 static std::map<COMMAND, std::string> topicNames = {
@@ -91,8 +93,8 @@ public:
 	
 	Topic<String, Module> getStatusResponseTopic
 		= Topic<String, Module>(topicNames[COMM_GETSTATUS_OK], 100, &Module::onGetStatusResponse,this);
-	Topic<String, Module> failureTopic
-		= Topic<String, Module>(topicNames[COMM_FAILURE], 100, &Module::onFailureMessage,this);
+	Topic<UInt8, Module> failureTopic
+		= Topic<UInt8, Module>(topicNames[COMM_FAILURE], 100, &Module::onFailureMessage,this);
 	Topic<Empty, Module> initTopic
 		= Topic<Empty, Module>(topicNames[COMM_INIT], 1, &Module::onInitMessage,this);
 	Topic<Empty, Module> connectTopic
@@ -162,7 +164,7 @@ private:
 		std::cout << "Unhandled message on topic: " << topic << std::endl;
 	}
 
-	virtual void onFailureMessage(String::ConstSharedPtr) { };
+	virtual void onFailureMessage(UInt8::ConstSharedPtr) { };
 	virtual void onGetStatusResponse(String::ConstSharedPtr) { };
 	virtual void onGetStatusMessage(Empty::ConstSharedPtr) { 
 		auto msg = String();
