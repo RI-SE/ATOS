@@ -21,6 +21,7 @@ set(WITH_RELATIVE_KINEMATICS ON CACHE BOOL "Enable RelativeKinematics module")
 set(WITH_DIRECT_CONTROL OFF CACHE BOOL "Enable DirectControl module")
 set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
 set(WITH_BACK_TO_START OFF CACHE BOOL "Enable BackToStart module")
+set(WITH_SYSTEM_CONTROL ON CACHE BOOL "Enable SystemControl module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -56,6 +57,9 @@ if(WITH_OBJECT_MONITORING)
 endif()
 if(WITH_BACK_TO_START)
 	list(APPEND ENABLED_MODULES BackToStart)
+endif()
+if(WITH_SYSTEM_CONTROL)
+	list(APPEND ENABLED_MODULES SystemControl)
 endif()
 if(WITH_RELATIVE_KINEMATICS)
 	list(APPEND ENABLED_MODULES RelativeKinematics)
@@ -154,8 +158,7 @@ ament_package()
 ## Your package locations should be listed before other locations
 #include_directories(
 # include
-#	${catkin_INCLUDE_DIRS}
-#)
+#	${catkin_INCLUDE_DIRS}ament_pack
 include_directories(include ${Boost_INCLUDE_DIRS})
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -222,9 +225,6 @@ add_custom_target(buildTimeDirectory ALL
 # all install targets should use catkin DESTINATION variables
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 # Configure structure of output
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CATKIN_PACKAGE_LIB_DESTINATION})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CATKIN_PACKAGE_LIB_DESTINATION})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 
 ## Mark executable scripts (Python etc.) for installation
@@ -266,6 +266,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CATKIN_PACKAGE_BIN_DESTINATION})
 install(TARGETS
   Core
   RelativeKinematics
+  ScenarioControl
+  Supervision
+  SystemControl
   DESTINATION lib/${PROJECT_NAME}
 )
 
