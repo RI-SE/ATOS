@@ -70,11 +70,11 @@ ReadWriteAccess_t DataDictionaryConstructor() {
 	// Shared memory variables can either be preexisting or not
 	if (DataDictionaryInitObjectData() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
-		retval = UNDEFINED;
+		retval = WRITE_FAIL;
 	}
 	if (DataDictionaryInitStateData() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared state memory found by constructor");
-		retval = UNDEFINED;
+		retval = WRITE_FAIL;
 	}
 	else {
 		DataDictionarySetOBCState(OBC_STATE_UNDEFINED);
@@ -82,7 +82,7 @@ ReadWriteAccess_t DataDictionaryConstructor() {
 
 	if (DataDictionaryInitRVSSAsp() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared ASP memory found by constructor");
-		retval = UNDEFINED;
+		retval = WRITE_FAIL;
 	}
 
 	return retval;
