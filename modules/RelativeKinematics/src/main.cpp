@@ -195,11 +195,13 @@ int initializeModule(const LOG_LEVEL logLevel) {
 	}
 	else {
 		if (DataDictionaryInitStateData() != READ_OK) {
+			DataDictionaryFreeStateData();
 			retval = -1;
 			LogMessage(LOG_LEVEL_ERROR,
 					   "Found no previously initialized shared memory for state data");
 		}
 		if (DataDictionaryInitObjectData() != READ_OK) {
+			DataDictionaryFreeObjectData();
 			retval = -1;
 			LogMessage(LOG_LEVEL_ERROR,
 					   "Found no previously initialized shared memory for object data");

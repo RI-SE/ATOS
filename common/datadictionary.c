@@ -58,13 +58,13 @@ ReadWriteAccess_t DataDictionaryConstructor() {
 
 	// Configuration file parameters should always exist
 	if ((result = DataDictionaryInitScenarioName()) != READ_OK) {
-		retval = result;
+		retval = READ_FAIL;
 	}
 	if ((result = DataDictionaryInitMaxPacketsLost()) != READ_OK) {
-		retval = result;
+		retval = READ_FAIL;
 	}
 	if ((result = DataDictionaryInitTransmitterID()) != READ_OK) {
-		retval = result;
+		retval = READ_FAIL;
 	}
 
 	// Shared memory variables can either be preexisting or not
@@ -99,13 +99,13 @@ ReadWriteAccess_t DataDictionaryDestructor() {
 	ReadWriteAccess_t retval = WRITE_OK;
 
 	if ((result = DataDictionaryFreeObjectData()) != WRITE_OK) {
-		retval = result;
+		retval = WRITE_FAIL;
 	}
 	if ((result = DataDictionaryFreeStateData()) != WRITE_OK) {
-		retval = result;
+		retval = WRITE_FAIL;
 	}
 	if ((result = DataDictionaryFreeRVSSAsp()) != WRITE_OK) {
-		retval = result;
+		retval = WRITE_FAIL;
 	}
 	return retval;
 }
@@ -1659,8 +1659,6 @@ ReadWriteAccess_t DataDictionaryGetRVSSAsp(ASPType * ASPD) {
 }
 
 ReadWriteAccess_t DataDictionaryFreeRVSSAsp() {
-	ReadWriteAccess_t result = WRITE_OK;
-
 	if (rvssAspDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized ASP memory");
@@ -1669,7 +1667,7 @@ ReadWriteAccess_t DataDictionaryFreeRVSSAsp() {
 
 	destroySharedMemory(rvssAspDataMemory);
 
-	return result;
+	return WRITE_OK;
 }
 
 /*END ASPDebug*/
