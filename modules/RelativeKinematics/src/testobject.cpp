@@ -304,6 +304,10 @@ void TestObject::sendDisarm() {
 	this->comms.cmd << OBJECT_COMMAND_DISARM;
 }
 
+void TestObject::sendAllClear() {
+	this->comms.cmd << OBJECT_COMMAND_ALL_CLEAR;
+}
+
 //void TestObject::sendOsiGlobalObjectGroundTruth(
 //	GlobalObjectGroundTruth_t gogt) {
 	//this->comms.osi << llls;

@@ -11,11 +11,11 @@ project(Maestro VERSION 0.5.0)
 # Enable or disable modules
 set(WITH_SCENARIO_CONTROL ON CACHE BOOL "Enable ScenarioControl module")
 set(WITH_SUPERVISION ON CACHE BOOL "Enable Supervision module")
-set(WITH_VISUALIZATION ON CACHE BOOL "Enable Visualization module")
-set(WITH_RELATIVE_KINEMATICS ON CACHE BOOL "Enable RelativeKinematics module")
-set(WITH_DIRECT_CONTROL ON CACHE BOOL "Enable DirectControl module")
+set(WITH_VISUALIZATION OFF CACHE BOOL "Enable Visualization module")
+set(WITH_RELATIVE_KINEMATICS OFF CACHE BOOL "Enable RelativeKinematics module")
+set(WITH_DIRECT_CONTROL OFF CACHE BOOL "Enable DirectControl module")
 set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
-set(WITH_BACK_TO_START ON CACHE BOOL "Enable BackToStart module")
+set(WITH_BACK_TO_START OFF CACHE BOOL "Enable BackToStart module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -74,7 +74,14 @@ if(ENABLE_TESTS)
 endif()
 
 # Add corresponding subprojects
-add_subdirectory(util/C util EXCLUDE_FROM_ALL)
+add_subdirectory(util/C/time)
+add_subdirectory(util/C/logging)
+add_subdirectory(util/C/mqbus)
+add_subdirectory(util/C/shmem)
+add_subdirectory(util/C/iso22133)
+add_subdirectory(util/C/mathutils)
+add_subdirectory(util/C/osihandler)
+
 add_subdirectory(common)
 add_subdirectory(core)
 foreach(MODULE ${ENABLED_MODULES})
