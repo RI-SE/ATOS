@@ -127,9 +127,9 @@ int main(int argc, char *argv[]) {
 
 	// Initialise data dictionary
 	LogMessage(LOG_LEVEL_INFO, "Initializing data dictionary");
-	dataDictOperationResult = DataDictionaryConstructor(GSD);
-	if (dataDictOperationResult != READ_OK
-		&& dataDictOperationResult != READ_WRITE_OK && dataDictOperationResult != WRITE_OK) {
+	dataDictOperationResult = DataDictionaryConstructor();
+	if (dataDictOperationResult != READ_WRITE_OK) {
+		DataDictionaryDestructor();
 		util_error("Unable to initialize shared memory space");
 	}
 	else {
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
 	if (shutdownMessageQueueBus())
 		util_error("Unable to successfully clean up message bus resources");
 
-	dataDictOperationResult = DataDictionaryDestructor(GSD);
+	dataDictOperationResult = DataDictionaryDestructor();
 	if (dataDictOperationResult != WRITE_OK && dataDictOperationResult != READ_WRITE_OK) {
 		util_error("Unable to clear shared memory space");
 	}

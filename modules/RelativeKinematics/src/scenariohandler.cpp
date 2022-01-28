@@ -341,6 +341,7 @@ void ScenarioHandler::connectToObject(
 				LogMessage(LOG_LEVEL_ERROR, "Connection attempt for object %u failed: %s",
 						   obj.getTransmitterID(), e.what());
 				obj.disconnect();
+				return;
 				// TODO connection failed event?
 			}
 			try {
@@ -367,13 +368,13 @@ void ScenarioHandler::connectToObject(
 					switch (objState) {
 					case OBJECT_STATE_ARMED:
 					case OBJECT_STATE_REMOTE_CONTROL:
-						LogMessage(LOG_LEVEL_INFO, "Connected to armed object");
+						LogMessage(LOG_LEVEL_INFO, "Connected to armed object ID %u", obj.getTransmitterID());
 						this->state->connectedToArmedObject(*this, obj.getTransmitterID());
 						break;
 					case OBJECT_STATE_ABORTING:
 					case OBJECT_STATE_POSTRUN:
 					case OBJECT_STATE_RUNNING:
-						LogMessage(LOG_LEVEL_INFO, "Connected to running object");
+						LogMessage(LOG_LEVEL_INFO, "Connected to running object ID %u", obj.getTransmitterID());
 						this->state->connectedToLiveObject(*this, obj.getTransmitterID());
 						break;
 					case OBJECT_STATE_INIT:
@@ -381,16 +382,16 @@ void ScenarioHandler::connectToObject(
 							continue;
 						}
 						else {
-							LogMessage(LOG_LEVEL_INFO, "Connected object in initializing state after connection");
+							LogMessage(LOG_LEVEL_INFO, "Connected object %u in initializing state after connection", obj.getTransmitterID());
 							this->state->connectedToLiveObject(*this, obj.getTransmitterID());
 						}
 						break;
 					case OBJECT_STATE_DISARMED:
-						LogMessage(LOG_LEVEL_INFO, "Connected to disarmed object");
+						LogMessage(LOG_LEVEL_INFO, "Connected to disarmed object ID %u", obj.getTransmitterID());
 						this->state->connectedToObject(*this, obj.getTransmitterID());
 						break;
 					default:
-						LogMessage(LOG_LEVEL_INFO, "Connected to object in unknown state");
+						LogMessage(LOG_LEVEL_INFO, "Connected to object %u in unknown state", obj.getTransmitterID());
 						this->state->connectedToLiveObject(*this, obj.getTransmitterID());
 					}
 					break;
@@ -443,6 +444,7 @@ void ScenarioHandler::allClearObjects() {
 	for (auto& id : getVehicleIDs()) {
 		objects[id].sendAllClear();
 	}
+	this->state->allObjectsAbortDisarmed(*this); // TODO wait for all objects really are disarmed
 }
 
 bool ScenarioHandler::isAnyObjectIn(

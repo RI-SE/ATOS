@@ -8,14 +8,14 @@
 #include "trajectory.hpp"
 
 const std::regex Trajectory::fileHeaderPattern("TRAJECTORY;(" + RegexPatterns::intPattern + ");("
-		+ RegexPatterns::namePattern + ");" + RegexPatterns::versionPattern + ";("
-		+ RegexPatterns::intPattern + ");");
+											   + RegexPatterns::namePattern + ");" + RegexPatterns::versionPattern + ";("
+											   + RegexPatterns::intPattern + ");");
 const std::regex Trajectory::fileLinePattern("LINE;(" + RegexPatterns::floatPattern + ");("
-		+ RegexPatterns::floatPattern + ");(" + RegexPatterns::floatPattern + ");("
-		+ RegexPatterns::floatPattern + ")?;(" + RegexPatterns::floatPattern + ");("
-		+ RegexPatterns::floatPattern + ")?;(" + RegexPatterns::floatPattern + ")?;("
-		+ RegexPatterns::floatPattern + ")?;(" + RegexPatterns::floatPattern + ")?;("
-		+ RegexPatterns::floatPattern + ");(" + RegexPatterns::intPattern + ");ENDLINE;");
+											 + RegexPatterns::floatPattern + ");(" + RegexPatterns::floatPattern + ");("
+											 + RegexPatterns::floatPattern + ")?;(" + RegexPatterns::floatPattern + ");("
+											 + RegexPatterns::floatPattern + ")?;(" + RegexPatterns::floatPattern + ")?;("
+											 + RegexPatterns::floatPattern + ")?;(" + RegexPatterns::floatPattern + ")?;("
+											 + RegexPatterns::floatPattern + ");(" + RegexPatterns::intPattern + ");ENDLINE;");
 const std::regex Trajectory::fileFooterPattern("ENDTRAJECTORY;");
 
 Trajectory::Trajectory(const Trajectory& other) {
@@ -134,18 +134,18 @@ CartesianPosition Trajectory::TrajectoryPoint::getISOPosition() const {
 SpeedType Trajectory::TrajectoryPoint::getISOVelocity() const {
 	SpeedType retval;
 	try {
-	   retval.longitudinal_m_s = getLongitudinalVelocity();
-	   retval.isLongitudinalValid = true;
+		retval.longitudinal_m_s = getLongitudinalVelocity();
+		retval.isLongitudinalValid = true;
 	} catch (std::out_of_range) {
-	   retval.longitudinal_m_s = 0.0;
-	   retval.isLongitudinalValid = false;
+		retval.longitudinal_m_s = 0.0;
+		retval.isLongitudinalValid = false;
 	}
 	try {
-	   retval.lateral_m_s = getLateralVelocity();
-	   retval.isLateralValid = true;
+		retval.lateral_m_s = getLateralVelocity();
+		retval.isLateralValid = true;
 	} catch (std::out_of_range) {
-	   retval.lateral_m_s = 0.0;
-	   retval.isLateralValid = false;
+		retval.lateral_m_s = 0.0;
+		retval.isLateralValid = false;
 	}
 	return retval;
 }
@@ -153,18 +153,18 @@ SpeedType Trajectory::TrajectoryPoint::getISOVelocity() const {
 AccelerationType Trajectory::TrajectoryPoint::getISOAcceleration() const {
 	AccelerationType retval;
 	try {
-	   retval.longitudinal_m_s2 = getLongitudinalAcceleration();
-	   retval.isLongitudinalValid = true;
+		retval.longitudinal_m_s2 = getLongitudinalAcceleration();
+		retval.isLongitudinalValid = true;
 	} catch (std::out_of_range) {
-	   retval.longitudinal_m_s2 = 0.0;
-	   retval.isLongitudinalValid = false;
+		retval.longitudinal_m_s2 = 0.0;
+		retval.isLongitudinalValid = false;
 	}
 	try {
-	   retval.lateral_m_s2 = getLateralAcceleration();
-	   retval.isLateralValid = true;
+		retval.lateral_m_s2 = getLateralAcceleration();
+		retval.isLateralValid = true;
 	} catch (std::out_of_range) {
-	   retval.lateral_m_s2 = 0.0;
-	   retval.isLateralValid = false;
+		retval.lateral_m_s2 = 0.0;
+		retval.isLateralValid = false;
 	}
 	return retval;
 }
@@ -186,7 +186,7 @@ Trajectory::TrajectoryPoint Trajectory::TrajectoryPoint::relativeTo(
 	AngleAxis R3(-other.getHeading(), Vector3d::UnitZ());
 	Rotation2Dd R(-relative.getHeading());
 	relative.setPosition(R3*(zeroNaNs(this->getPosition())
-						 - zeroNaNs(other.getPosition())));
+							 - zeroNaNs(other.getPosition())));
 
 	auto thisVel = zeroNaNs(this->getVelocity());
 	auto otherVel = zeroNaNs(other.getVelocity());
@@ -227,7 +227,7 @@ Trajectory Trajectory::relativeTo(
 	relative.name = this->name + "_rel_" + other.name;
 	relative.version = this->version;
 	for (auto trajPt = this->points.begin(); trajPt != this->points.end(); ++trajPt) {
-		auto nearestTrajPtInOther = getNearest(other.points.begin(), other.points.end(), trajPt->getTime());
+		auto nearestTrajPtInOther = getNearest(other.points.begin(), other.points.end(), std::chrono::duration<double>(trajPt->getTime()).count());
 		// TODO maybe a check on time difference here
 		relative.points.push_back(trajPt->relativeTo(*nearestTrajPtInOther));
 	}
@@ -242,7 +242,7 @@ Trajectory::const_iterator Trajectory::getNearest(
 	// Assumption: input range is sorted by time
 	// Get first element with larger time than requested
 	const_iterator after = std::lower_bound(first, last, time, [](const TrajectoryPoint& trajPt, const double& t) {
-		return trajPt.getTime() < t;
+		return std::chrono::duration<double>(trajPt.getTime()).count() < t;
 	});
 
 	if (after == first) return first;
@@ -251,11 +251,11 @@ Trajectory::const_iterator Trajectory::getNearest(
 	const_iterator before = after - 1;
 
 	// Return the element nearest to the requested time
-	return (after->getTime() - time) < (time - before->getTime()) ? after : before;
+	return (std::chrono::duration<double>(after->getTime()).count() - time) < (time - std::chrono::duration<double>(before->getTime()).count()) ? after : before;
 }
 
 std::string Trajectory::TrajectoryPoint::getFormatString() const {
-	return "x:[m], y:[m], z:[m], hdg:[rad CW from N], "
+	return "x:[m], y:[m], z:[m], hdg:[rad CCW from x axis], "
 		   "vx:[m/s,longitudinal], vy:[m/s,lateral], "
 		   "ax:[m/s2,longitudinal], ay:[m/s2,lateral], "
 		   "c:[1/m], md:[]";
@@ -291,6 +291,38 @@ std::string Trajectory::toString() const {
 }
 
 /*!
+ * \brief Trajectory::appendedWith Creates a new trajectory where other has been
+ *			appended to the end of this object.
+ * \param other Trajectory to append.
+ * \return New trajectory, concatenation of two.
+ */
+Trajectory Trajectory::appendedWith(
+		const Trajectory &other) {
+	if (!other.isValid()) {
+		throw std::invalid_argument("Attempted to append invalid trajectory");
+	}
+	else if (!this->isValid()) {
+		throw std::invalid_argument("Attempted to append to invalid trajectory");
+	}
+	Trajectory newTrajectory = this->points.empty() ? Trajectory(other) : Trajectory(*this);
+	newTrajectory.name = this->name + "_app_" + other.name;
+	if (this->points.empty() || other.points.empty()) {
+		return newTrajectory;
+	}
+
+	auto firstTrajEndTime = points.back().getTime(); // TODO maybe a time offset between the two trajectories?
+	auto secondTrajStartTime = newTrajectory.points.front().getTime(); // TODO maybe a time offset between the two trajectories?
+
+	std::transform(other.points.begin(), other.points.end(),
+				   std::back_inserter(newTrajectory.points),
+				   [&](TrajectoryPoint otherPt) {
+		otherPt.setTime(otherPt.getTime() - secondTrajStartTime + firstTrajEndTime);
+		return otherPt;
+	});
+	return newTrajectory;
+}
+
+/*!
  * \brief Trajectory::TrajectoryPoint::rescaleToVelocity Returns a copy of the trajectory rescaled to match a certain constant speed.
  * \param vel_m_s Speed to which trajectory is to be reduced
  * \return Trajectory
@@ -298,38 +330,198 @@ std::string Trajectory::toString() const {
 Trajectory Trajectory::rescaledToVelocity(
 		const double vel_m_s) const {
 
+	if (!this->isValid()) {
+		throw std::invalid_argument("Attempted to rescale invalid trajectory");
+	}
 	Trajectory newTrajectory = Trajectory(*this);
 	newTrajectory.name = newTrajectory.name + "_rescaled";
 	if (newTrajectory.points.empty()) {
 		return newTrajectory;
 	}
 	Eigen::Vector2d maxVel_m_s = std::max_element(newTrajectory.points.begin(), newTrajectory.points.end(), [](const TrajectoryPoint& pt1, const TrajectoryPoint& pt2)
-								{ return pt1.getVelocity().norm() < pt2.getVelocity().norm(); }).base()->getVelocity();
+	{ return pt1.getVelocity().norm() < pt2.getVelocity().norm(); }).base()->getVelocity();
 	if (vel_m_s > maxVel_m_s.norm()) {
 		LogMessage(LOG_LEVEL_DEBUG, "Requested max velocity is larger than current max velocity");
 		return newTrajectory;
 	}
 	double scaleFactor = vel_m_s / maxVel_m_s.norm();
-	double startTime = newTrajectory.points.front().getTime();
+	double startTime = std::chrono::duration<double>(newTrajectory.points.front().getTime()).count();
 	for (auto& point : newTrajectory.points) {
 		point.setVelocity(point.getVelocity()*scaleFactor);
-		point.setTime(startTime + (point.getTime()-startTime)/scaleFactor);
+		point.setTime(startTime + (std::chrono::duration<double>(point.getTime()).count()-startTime)/scaleFactor);
 		point.setAcceleration(point.getAcceleration()*pow(scaleFactor, 2));
 	}
 
 	return newTrajectory;
 }
 
-/*!
- * \brief Trajectory::TrajectoryPoint::reversed Returns a reversed copy of the trajectory
- */
+Trajectory Trajectory::createWilliamsonTurn(
+		double turnRadius,
+		double acceleration,
+		TrajectoryPoint startPoint,
+		std::chrono::milliseconds startTime)
+{
+
+	using namespace std::chrono;
+	using Eigen::MatrixXd;
+
+	constexpr double topSpeed = 10 / 3.6;
+	const int calculatedNoOfPoints = 500;
+	double radius = turnRadius;
+	double headingRad = startPoint.getHeading();
+
+	Eigen::VectorXd theta0;         //First section
+	Eigen::VectorXd theta1;         //Second section
+	Eigen::VectorXd endStraight;    //Third section
+	Eigen::Matrix<double, 2, calculatedNoOfPoints> xyM;
+	Eigen::Matrix<double, 2, calculatedNoOfPoints> resM;
+	Eigen::Array<double, 1,calculatedNoOfPoints> headingArray;
+	Eigen::Array<double, 1,calculatedNoOfPoints> speedArray;
+	Eigen::Array<double, 1,calculatedNoOfPoints> accelerationArray;
+	Eigen::Array<milliseconds, 1,calculatedNoOfPoints> timeArray;
+
+
+	//Calculate length of each section
+	double len0 = (M_PI * 2 * radius) / 4;
+	double len1 = 3 * ((M_PI * 2 * radius) / 4);
+	double len2 = radius * 2;
+	double totalLength = len0 + len1 + len2;
+	assert (fabs(totalLength) > 0.001);
+
+	//First section
+	int n0 = static_cast<int>(std::round(calculatedNoOfPoints * (len0 / totalLength)));
+	theta0 = Eigen::VectorXd::LinSpaced(n0, M_PI, M_PI_2 - M_PI_2/(n0+1));
+
+	for (int i = 0; i < theta0.size(); i++) {
+		xyM(0,i) = radius * cos(theta0[i]) + fabs(radius);
+		xyM(1,i) = radius * sin(theta0[i]);
+		headingArray[i] = theta0[i] + M_PI_2 + M_PI;
+	}
+
+	//second section
+	int n1 = static_cast<int>(std::round(calculatedNoOfPoints * (len1 / totalLength)));
+	theta1 = Eigen::VectorXd::LinSpaced(n1, -1*M_PI_2, M_PI - 3*M_PI_2/(n1+1));
+
+	for (int i = 0; i < theta1.size(); i++) {
+		xyM(0,i+n0) = radius * cos(theta1[i]) + fabs(radius);
+		xyM(1,i+n0) = radius * sin(theta1[i]) + 2 * fabs(radius);
+		headingArray[i+n0] = theta1[i] - M_PI_2 + M_PI;
+	}
+
+	//third section
+	int n2 = calculatedNoOfPoints - n1 - n0;
+	endStraight = Eigen::VectorXd::LinSpaced(n2, fabs(radius) * 2, 0);
+	for (int i = 0; i < n2; i++) {
+		xyM(0,i+n0+n1) = 0;
+		xyM(1,i+n0+n1) = endStraight[i];
+		headingArray[i+n0+n1] = M_PI_2 + M_PI;
+	}
+
+	// Rotate turn to match start point
+	Eigen::Rotation2Dd rotM(headingRad-M_PI_2);
+	resM = rotM.toRotationMatrix() * xyM;
+
+
+	//Offset result matrix
+	for (int i = 0; i < calculatedNoOfPoints; i++) {
+		resM(0,i) += startPoint.getXCoord();
+		resM(1,i) += startPoint.getYCoord();
+	}
+
+	//Heading in rad with offset to match ENU
+	headingArray += (headingRad-M_PI_2) * Eigen::ArrayXd::Ones(calculatedNoOfPoints);
+
+
+	//AccelerationSection
+	auto accelerationPeriod = milliseconds(static_cast<long>(topSpeed / acceleration * 1000));
+	double accelerationDistance = pow(topSpeed, 2) / acceleration / 2;
+
+	//Topspeed section
+	double topSpeedDistance = totalLength - accelerationDistance*2;
+	auto topSpeedPeriod = milliseconds(static_cast<long>(topSpeedDistance / topSpeed * 1000));
+
+	auto totalRuntime = accelerationPeriod + topSpeedPeriod + accelerationPeriod; //Accelerate -> Top Speed -> Decelerate
+
+	auto timeStep = totalRuntime / calculatedNoOfPoints;
+
+
+	//Speed for each point
+	double currSpeed = 0;
+	for (int i = 0; i < calculatedNoOfPoints; i++) {
+		timeArray[i] = i*timeStep;
+
+		if (timeArray[i] < accelerationPeriod) {
+			currSpeed += acceleration * duration_cast<milliseconds>(timeStep).count()/1000;
+			accelerationArray[i] = acceleration;
+		}
+		else if (timeArray[i] < topSpeedPeriod + accelerationPeriod) {
+			if (currSpeed > topSpeed) {
+				currSpeed = topSpeed;
+			}
+			accelerationArray[i] = 0;
+		}
+		else {
+			currSpeed -= acceleration * duration_cast<milliseconds>(timeStep).count()/1000;
+			accelerationArray[i] = -acceleration;
+		}
+		speedArray[i] = currSpeed;
+
+	}
+
+	Eigen::VectorXd curvatureArray(calculatedNoOfPoints);
+	auto v1 = -1/radius*Eigen::ArrayXd::Ones(n0);
+	auto v2 = -1/radius*Eigen::ArrayXd::Ones(n1);
+	auto v3 = -1/radius*Eigen::ArrayXd::Zero(n2);
+	std::cout << curvatureArray.rows() << ", "  << curvatureArray.cols() << std::endl;
+	std::cout << v1.rows() << ", "  << v1.cols() << std::endl;
+	std::cout << v2.rows() << ", "  << v2.cols() << std::endl;
+	std::cout << v3.rows() << ", "  << v3.cols() << std::endl;
+	curvatureArray << -1/radius*Eigen::ArrayXd::Ones(n0), 1/radius*Eigen::ArrayXd::Ones(n1), Eigen::ArrayXd::Zero(n2);
+
+	//create trajectory points
+	std::vector<TrajectoryPoint> tempVector;
+	for(int i = 0; i < calculatedNoOfPoints; i++) {
+		TrajectoryPoint tempPoint;
+		tempPoint.setTime(timeArray[i]+startTime);
+		tempPoint.setXCoord(resM(0,i));
+		tempPoint.setYCoord(resM(1,i));
+		tempPoint.setZCoord(startPoint.getZCoord());
+		tempPoint.setHeading(headingArray[i]);
+		tempPoint.setLongitudinalVelocity(speedArray[i]);
+		tempPoint.setLateralVelocity(0.00000);
+		tempPoint.setLongitudinalAcceleration(accelerationArray[i]);
+		tempPoint.setLateralAcceleration(0.00000);
+		tempPoint.setCurvature(curvatureArray[i]);
+		tempPoint.setMode(TrajectoryPoint::CONTROLLED_BY_DRIVE_FILE);
+
+		tempVector.push_back(tempPoint);
+	}
+
+	Trajectory retval;
+	retval.points = tempVector;
+	retval.name = "Williamson_x" + std::to_string(startPoint.getXCoord())
+			+ "_y" + std::to_string(startPoint.getYCoord())
+			+ "_z" + std::to_string(startPoint.getZCoord())
+			+ "_hdg" + std::to_string(headingRad*180.0/M_PI);
+	retval.id = 0;
+	retval.version = 0;
+	return retval;
+}
+
 Trajectory Trajectory::reversed() const {
+	if (points.empty()) {
+		throw std::invalid_argument("Attempted to reverse non existing trajectory");
+	}
+	if (!this->isValid()) {
+		throw std::invalid_argument("Attempted to reverse invalid trajectory");
+	}
 
 	Trajectory newTrajectory = Trajectory(*this);
 
 	newTrajectory.name = newTrajectory.name + "_reversed";
 
 	std::reverse(newTrajectory.points.begin(), newTrajectory.points.end());
+	std::vector<double> timeVector;
 
 	for (auto & point : newTrajectory.points) {
 		point.setHeading(point.getHeading()-M_PI);
@@ -346,11 +538,21 @@ Trajectory Trajectory::reversed() const {
 		catch (std::out_of_range) {
 			LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized lateral acceleration");
 		}
+		try {
+			point.setLongitudinalAcceleration(point.getLongitudinalAcceleration()*-1);
+		}
+		catch (std::out_of_range) {
+			LogMessage(LOG_LEVEL_DEBUG, "Ignoring uninitialized longitudinal acceleration");
+		}
 	}
 
-	for (unsigned long i = 0 ; i < newTrajectory.points.size(); i++) {
-		newTrajectory.points[i].setTime(this->points.back().getTime() - this->points[i].getTime());
+	const_reverse_iterator origPoint = this->points.rbegin();
+	iterator newPoint = newTrajectory.points.begin();
+	for (; origPoint != this->points.crend() && newPoint != newTrajectory.points.end(); ++origPoint, ++newPoint) {
+		// t_new[i] = t_old[end] - t_old[end-i]
+		newPoint->setTime(this->points.back().getTime() - origPoint->getTime());
 	}
+
 	return newTrajectory;
 }
 
@@ -359,7 +561,7 @@ Trajectory Trajectory::reversed() const {
  * \param fileName
  * \return
  */
-void Trajectory::saveToFile(const std::string& fileName) const{
+void Trajectory::saveToFile(const std::string& fileName) const {
 	using std::string, std::smatch, std::ofstream;
 	char trajDirPath[PATH_MAX];
 
@@ -375,18 +577,18 @@ void Trajectory::saveToFile(const std::string& fileName) const{
 		outputTraj << "TRAJECTORY;" << this->id <<";" << this->name << ";" << this->version << ";" << this->points.size() << ";" <<  "\n";
 		for (const auto& point : points) {
 			outputTraj << "LINE;"
-			<< std::fixed << std::setprecision(2) << point.getTime() << ";"
-			<< std::fixed << std::setprecision(6) << point.getXCoord() << ";"
-			<< std::fixed << std::setprecision(6) << point.getYCoord() << ";"
-			<< std::fixed << std::setprecision(6) << point.getZCoord() << ";"
-			<< std::fixed << std::setprecision(6) << point.getHeading() << ";"
-			<< std::fixed << std::setprecision(6) << point.getLongitudinalVelocity() << ";"
-			<< ";" //point.getLateralVelocity() << ";"
-			<<  std::fixed << std::setprecision(6) <<(point.getLongitudinalAcceleration()) << ";"
-			<< ";" //point.getLateralAcceleration() << ";"
-			<< std::fixed << std::setprecision(6) << point.getCurvature() << ";"
-			<< std::fixed << std::setprecision(6) << point.getMode()
-			<<";ENDLINE;" << "\n";
+					   << std::fixed << std::setprecision(2) << std::chrono::duration<double>(point.getTime()).count() << ";"
+					   << std::fixed << std::setprecision(6) << point.getXCoord() << ";"
+					   << std::fixed << std::setprecision(6) << point.getYCoord() << ";"
+					   << std::fixed << std::setprecision(6) << point.getZCoord() << ";"
+					   << std::fixed << std::setprecision(6) << point.getHeading() << ";"
+					   << std::fixed << std::setprecision(6) << point.getLongitudinalVelocity() << ";"
+					   << ";" //point.getLateralVelocity() << ";"
+					   <<  std::fixed << std::setprecision(6) <<(point.getLongitudinalAcceleration()) << ";"
+						<< ";" //point.getLateralAcceleration() << ";"
+						<< std::fixed << std::setprecision(6) << point.getCurvature() << ";"
+						<< std::fixed << std::setprecision(6) << point.getMode()
+						<<";ENDLINE;" << "\n";
 		}
 		outputTraj << "ENDTRAJECTORY;" <<  "\n";
 		outputTraj.close();
@@ -395,4 +597,14 @@ void Trajectory::saveToFile(const std::string& fileName) const{
 	catch (const ofstream::failure& e) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed when writing to file %s", trajFilePath.c_str());
 	}
+}
+
+bool Trajectory::isValid() const {
+	return areTimestampsIncreasing();
+}
+
+bool Trajectory::areTimestampsIncreasing() const {
+	return std::is_sorted(points.begin(), points.end(), [](const TrajectoryPoint p1, const TrajectoryPoint p2) {
+		return p1.getTime() < p2.getTime();
+	});
 }
