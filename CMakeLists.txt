@@ -87,29 +87,6 @@ foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
 endforeach()
 
-# Ensure .maestro directory is created at build time in build directory
-add_custom_target(configurationDirectory ALL
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/conf
-		${CMAKE_BINARY_DIR}/${MAESTRO_CONFIGURATION_DIR}
-	)
-add_custom_target(buildTimeDirectory ALL
-	COMMAND ${CMAKE_COMMAND} -E make_directory
-		${CMAKE_BINARY_DIR}/${MAESTRO_JOURNAL_DIR}
-		${CMAKE_BINARY_DIR}/${MAESTRO_TRAJ_DIR}
-		${CMAKE_BINARY_DIR}/${MAESTRO_GEOFENCE_DIR}
-		${CMAKE_BINARY_DIR}/${MAESTRO_OBJECTS_DIR}
-)
-
-# Create directory for test data in user home directory
-install(CODE "MESSAGE(STATUS \"Creating home directory environment under $ENV{HOME}\")")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_TEST_DIR}")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_JOURNAL_DIR}")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_TRAJ_DIR}")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_GEOFENCE_DIR}")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_OBJECTS_DIR}")
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/conf DESTINATION "$ENV{HOME}/${MAESTRO_TEST_DIR}")
-
-install(CODE "execute_process(COMMAND chown -R $ENV{USER} $ENV{HOME}/${MAESTRO_TEST_DIR})")
-
 # Add post install instructions
-add_subdirectory(cmake/postinstall)
+#add_subdirectory(cmake/postinstall)
+add_subdirectory(cmake/cpack)
