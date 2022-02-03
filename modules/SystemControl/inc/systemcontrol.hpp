@@ -21,11 +21,10 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <ifaddrs.h>
-#include <map>
 //#include "systemcontrol.h"
 #include "maestroTime.h"
 #include "datadictionary.h"
-#include "util.h"
+//#include "util.h"
 #include "logging.h"
 
 #define MODULE_NAME "SystemControl"
@@ -109,15 +108,55 @@
 
 #define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
 
-using std_msgs::Empty;
-using std_msgs::String;
 
-class SystemControlModule : public Module
+class SystemControl : public Module
 {
+	private:
+		/* callbacks */
+		virtual void onGetStatusResponse(String::SharedPtr) override;
+		virtual void onFailureMessage(const UInt8::SharedPtr) override;
+		virtual void onBackToStartResponse(Int8::SharedPtr) override;
 	public:
-	SystemControlModule(std::string);
-	static volatile int iExit;
-		typedef enum {
+	SystemControl(std::string name) : Module(name){
+	
+	// ** Subscriptions
+	this->failureSub = this->create_subscription<UInt8>(name, 0, std::bind(&SystemControl::onFailureMessage, this, _1));
+	this->getStatusResponseSub= this->create_subscription<String>(name, 0, std::bind(&SystemControl::onGetStatusResponse, this, _1));
+	//this->failureSub = this->create_subscription<Empty>(name, 0, std::bind(onFailureMessage, this, _1));
+
+	// ** Publishers
+	this->initPub = this->create_publisher<Empty>(topicNames[COMM_INIT],0);
+	this->connectPub  = this->create_publisher<Empty>(topicNames[COMM_CONNECT],0);
+	this->disconnectPub = this->create_publisher<Empty>(topicNames[COMM_DISCONNECT],0);
+	this->armPub = this->create_publisher<Empty>(topicNames[COMM_ARM],0);
+	this->startPub = this->create_publisher<Empty>(topicNames[COMM_STRT],0);
+	this->stopPub = this->create_publisher<Empty>(topicNames[COMM_STOP],0);
+	this->abortPub = this->create_publisher<Empty>(topicNames[COMM_ABORT],0);
+	this->backToStartPub = this->create_publisher<ManoeuvreCommand>(topicNames[COMM_BACKTOSTART_CALL],0); // 
+	this->dataDictPub = this->create_publisher<Empty>(topicNames[COMM_DATA_DICT],0);
+	this->remoteControlEnablePub = this->create_publisher<Empty>(topicNames[COMM_REMOTECTRL_ENABLE],0);
+	this->remoteControlDisablePub = this->create_publisher<Empty>(topicNames[COMM_REMOTECTRL_DISABLE],0);
+	this->enableObjectPub = this->create_publisher<ObjectEnabled>(topicNames[COMM_ENABLE_OBJECT],0);
+	this->allClearPub = this->create_publisher<Empty>(topicNames[COMM_ABORT_DONE],0);
+	this->exitPub = this->create_publisher<Empty>(topicNames[COMM_EXIT],0);
+	this->getStatusPub = this->create_publisher<Empty>(topicNames[COMM_GETSTATUS],0); 
+	}; 
+
+	void SystemControl::mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	void SystemControl::sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	U8 ModeU8 = 0;
+	ServiceSessionType SessionData;
+	struct timeval CurrentTimeStruct;
+	I32 FileLengthI32 = 0;
+	U8 RVSSRateU8 = DEFAULT_RVSS_RATE;
+	U32 RVSSConfigU32 = DEFAULT_RVSS_CONF;
+	U64 OldTimeU64 = 0;
+	U64 PollRateU64 = 0;
+	U64 CurrentTimeU64 = 0;
+	void SystemControl::signalHandler(int signo);
+	volatile int iExit;
+	typedef enum {
 	SERVER_STATE_UNDEFINED,
 	SERVER_STATE_INITIALIZED,
 	SERVER_STATE_IDLE,
@@ -126,7 +165,6 @@ class SystemControlModule : public Module
 	SERVER_STATE_INWORK,
 	SERVER_STATE_ERROR,
 	} ServerState_t;
-	ServerState_t SystemControlState = SERVER_STATE_UNDEFINED;
 	typedef enum {
 		Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
 		InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
@@ -139,8 +177,6 @@ class SystemControlModule : public Module
 		CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
 		start_ext_trigg_1, ClearAllScenario_0 , DownloadDirectoryContent_1, DownloadTrajFiles_0, nocommand
 	} SystemControlCommand_t;
-	SystemControlCommand_t SystemControlCommand = Idle_0;
-	SystemControlCommand_t PreviousSystemControlCommand = Idle_0;
 
 	private:
 
@@ -169,13 +205,14 @@ class SystemControlModule : public Module
 	char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH];
 	C8 *STR_SYSTEM_CONTROL_RX_PACKET_SIZE;
 	C8 *STR_SYSTEM_CONTROL_TX_PACKET_SIZE;
+	
 
-	typedef struct {
+	struct content_dir_info {
 		int exist;
 		int fd;
 		char *info_buffer;
 		int size;
-	} content_dir_info;
+	};
 
 	typedef enum {
 		MSCP_BACK_TO_START = 3
@@ -229,22 +266,71 @@ class SystemControlModule : public Module
 	int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr);
 	void SystemControlUpdateRVSSSendTime(struct timeval *currentRVSSSendTime, uint8_t RVSSRate_Hz);
 
-	I32 SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8 debug);
+	I32 SystemControlGetStatusMessage(char *respondingModule, U8 debug);
 
 	ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
 	C8 SystemControlVerifyHostAddress(char *ip);
-	static void signalHandler(int signo);
 
 	void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize);
+	I32 ServerHandle;
+	I32 ClientSocket = 0;
+	I32 ClientResult = 0;
+	struct sockaddr_in RVSSChannelAddr;
+	struct in_addr ip_addr;
+	I32 RVSSChannelSocket;
+	struct timeval nextRVSSSendTime = { 0, 0 };
 
-	/* callbacks */
-	virtual void initCB(const Empty::ConstPtr&) override;
-	virtual void connectCB(const Empty::ConstPtr&) override;
-	virtual void armCB(const Empty::ConstPtr&) override;
-	virtual void startCB(const Empty::ConstPtr&) override;
-	virtual void failureCB(const String::ConstPtr&) override;
-	
-	public:
-	std::string name;
-	void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	ServerState_t SystemControlState = SERVER_STATE_UNDEFINED;
+	OBCState_t objectControlState = OBC_STATE_UNDEFINED;
+	SystemControlCommand_t SystemControlCommand = Idle_0;
+	SystemControlCommand_t PreviousSystemControlCommand = Idle_0;
+	uint16_t responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+	int CommandArgCount = 0, CurrentInputArgCount = 0;
+	C8 pcBuffer[IPC_BUFFER_SIZE];
+	char inchr;
+	struct timeval tvTime;
+
+	const struct timeval VirtualMachineLagCompensation = { VIRTUAL_MACHINE_LAG_COMPENSATION_S,
+		VIRTUAL_MACHINE_LAG_COMPENSATION_US
+	};
+
+	ObjectPosition OP;
+	int i, i1;
+	char *StartPtr, *StopPtr, *CmdPtr, *OpeningQuotationMarkPtr, *ClosingQuotationMarkPtr, *StringPos;
+	struct timespec tTime;
+	enum COMMAND iCommand;
+	ssize_t bytesReceived = 0;
+	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
+	char ObjectIP[SMALL_BUFFER_SIZE_16];
+	char ObjectPort[SMALL_BUFFER_SIZE_6];
+	U64 uiTime;
+	U32 DelayedStartU32;
+	C8 TextBufferC8[SMALL_BUFFER_SIZE_20];
+	C8 ServerIPC8[SMALL_BUFFER_SIZE_20];
+	C8 UsernameC8[SMALL_BUFFER_SIZE_20];
+	C8 PasswordC8[SMALL_BUFFER_SIZE_20];
+	U16 ServerPortU16;
+	I32 ServerSocketI32 = 0;
+	C8 RemoteServerRxData[1024];
+	struct timespec sleep_time, ref_time;
+	const struct timespec mqEmptyPollPeriod = { SC_SLEEP_TIME_EMPTY_MQ_S, SC_SLEEP_TIME_EMPTY_MQ_NS };
+	const struct timespec mqNonEmptyPollPeriod =
+		{ SC_SLEEP_TIME_NONEMPTY_MQ_S, SC_SLEEP_TIME_NONEMPTY_MQ_NS };
+	U64 TimeDiffU64 = 0;
+	C8 ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
+	C8 TextBuffer20[SMALL_BUFFER_SIZE_20];
+	C8 UserControlIPC8[SMALL_BUFFER_SIZE_20];
+	U16 MilliU16 = 0, NowU16 = 0;
+	U64 GPSmsU64 = 0;
+	C8 ParameterListC8[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
+	U32 LengthU32 = 0;
+	C8 BinBuffer[SMALL_BUFFER_SIZE_1024];
+	C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
+
+	HTTPHeaderContent HTTPHeader;
+
+	C8 RVSSData[SYSTEM_CONTROL_RVSS_DATA_BUFFER];
+	U32 RVSSMessageLengthU32;
+	U16 PCDMessageCodeU16;
+	C8 RxFilePath[MAX_FILE_PATH];
 };

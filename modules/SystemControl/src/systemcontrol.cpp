@@ -1,38 +1,8 @@
 #include "systemcontrol.hpp"
-std::map<std::string, COMMAND> topicStringToEnum = {
-        {"/start",COMM_STRT},
-        {"/arm",COMM_ARM},
-		{"/connect",COMM_CONNECT},
-		{"/init",COMM_INIT},
-		{"/stop",COMM_STOP},
-		{"/failure",COMM_FAILURE},
-		{"/getStatus",COMM_GETSTATUS}
-};
 
-SystemControlModule::SystemControlModule(std::string name){
-	name=name;
-	STR_SYSTEM_CONTROL_RX_PACKET_SIZE = (C8*) "1280";
-	STR_SYSTEM_CONTROL_TX_PACKET_SIZE = (C8*) "1200";
-	SystemControlDirectoryInfo = { 0, 0, NULL, 0 };
-}
-
-volatile int SystemControlModule::iExit=0;
-
-void SystemControlModule::initCB(const Empty::ConstPtr& msg){
-
-}
-void SystemControlModule::connectCB(const Empty::ConstPtr& msg){
-
-}
-void SystemControlModule::armCB(const Empty::ConstPtr& msg){
-
-}
-void SystemControlModule::startCB(const Empty::ConstPtr& msg){
-
-}
-void SystemControlModule::failureCB(const std_msgs::String::ConstPtr& msg){
+void SystemControl::onFailureMessage(const UInt8::SharedPtr msg){
 	if (SystemControlState == SERVER_STATE_INWORK) {
-		enum COMMAND failedCommand = topicStringToEnum.at(msg->data);
+		enum COMMAND failedCommand = (COMMAND) (msg->data);
 
 		if (failedCommand == COMM_INIT && PreviousSystemControlCommand == InitializeScenario_0) {
 			SystemControlState = SERVER_STATE_IDLE;
@@ -52,1198 +22,1086 @@ void SystemControlModule::failureCB(const std_msgs::String::ConstPtr& msg){
 	}
 }
 
-void SystemControlModule::systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
-
-	I32 ServerHandle;
-	I32 ClientSocket = 0;
-	I32 ClientResult = 0;
-	struct sockaddr_in RVSSChannelAddr;
-	struct in_addr ip_addr;
-	I32 RVSSChannelSocket;
-	struct timeval nextRVSSSendTime = { 0, 0 };
-
-	ServerState_t SystemControlState = SERVER_STATE_UNDEFINED;
-	OBCState_t objectControlState = OBC_STATE_UNDEFINED;
-	SystemControlCommand_t SystemControlCommand = Idle_0;
-	SystemControlCommand_t PreviousSystemControlCommand = Idle_0;
-	uint16_t responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-	int CommandArgCount = 0, CurrentInputArgCount = 0;
-	C8 pcBuffer[IPC_BUFFER_SIZE];
-	char inchr;
-	struct timeval tvTime;
-
-	const struct timeval VirtualMachineLagCompensation = { VIRTUAL_MACHINE_LAG_COMPENSATION_S,
-		VIRTUAL_MACHINE_LAG_COMPENSATION_US
-	};
-
-	ObjectPosition OP;
-	int i, i1;
-	char *StartPtr, *StopPtr, *CmdPtr, *OpeningQuotationMarkPtr, *ClosingQuotationMarkPtr, *StringPos;
-	struct timespec tTime;
-	enum COMMAND iCommand;
-	ssize_t bytesReceived = 0;
-	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
-	char ObjectIP[SMALL_BUFFER_SIZE_16];
-	char ObjectPort[SMALL_BUFFER_SIZE_6];
-	U64 uiTime;
-	U32 DelayedStartU32;
-	U8 ModeU8 = 0;
-	C8 TextBufferC8[SMALL_BUFFER_SIZE_20];
-	C8 ServerIPC8[SMALL_BUFFER_SIZE_20];
-	C8 UsernameC8[SMALL_BUFFER_SIZE_20];
-	C8 PasswordC8[SMALL_BUFFER_SIZE_20];
-	U16 ServerPortU16;
-	I32 ServerSocketI32 = 0;
-	ServiceSessionType SessionData;
-	C8 RemoteServerRxData[1024];
-	struct timespec sleep_time, ref_time;
-	const struct timespec mqEmptyPollPeriod = { SC_SLEEP_TIME_EMPTY_MQ_S, SC_SLEEP_TIME_EMPTY_MQ_NS };
-	const struct timespec mqNonEmptyPollPeriod =
-		{ SC_SLEEP_TIME_NONEMPTY_MQ_S, SC_SLEEP_TIME_NONEMPTY_MQ_NS };
-	struct timeval CurrentTimeStruct;
-	U64 CurrentTimeU64 = 0;
-	U64 TimeDiffU64 = 0;
-	U64 OldTimeU64 = 0;
-	U64 PollRateU64 = 0;
-	C8 ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
-	C8 TextBuffer20[SMALL_BUFFER_SIZE_20];
-	C8 UserControlIPC8[SMALL_BUFFER_SIZE_20];
-	U16 MilliU16 = 0, NowU16 = 0;
-	U64 GPSmsU64 = 0;
-	C8 ParameterListC8[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
-	U32 LengthU32 = 0;
-	C8 BinBuffer[SMALL_BUFFER_SIZE_1024];
-	C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
-
-	HTTPHeaderContent HTTPHeader;
-
-	C8 RVSSData[SYSTEM_CONTROL_RVSS_DATA_BUFFER];
-	U32 RVSSConfigU32 = DEFAULT_RVSS_CONF;
-	U32 RVSSMessageLengthU32;
-	U16 PCDMessageCodeU16;
-	C8 RxFilePath[MAX_FILE_PATH];
-
-	U32 IpU32;
-
-	LogInit(MODULE_NAME, logLevel);
-	LogMessage(LOG_LEVEL_INFO, "System control task running with PID: %i", getpid());
-
-	// Set up signal handlers
-	if (signal(SIGINT, signalHandler) == SIG_ERR)
-		util_error("Unable to initialize signal handler");
-
-	if (iCommInit())
-		util_error("Unable to connect to message bus");
-
-	DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
-	LogMessage(LOG_LEVEL_INFO, "RVSSConfigU32 = %d", RVSSConfigU32);
-
-	U8 RVSSRateU8 = DEFAULT_RVSS_RATE;
-
-	DataDictionaryGetRVSSRateU8(&RVSSRateU8);
-	LogMessage(LOG_LEVEL_INFO, "Real-time variable subscription service rate set to %u Hz", RVSSRateU8);
-
-	if (ModeU8 == 0) {
-
-	}
-	else if (ModeU8 == 1) {
-		SessionData.SessionIdU32 = 0;
-		SessionData.UserIdU32 = 0;
-		SessionData.UserTypeU8 = 0;
-
-		/* */
-		PollRateU64 = SYSTEM_CONTROL_SERVICE_POLL_TIME_MS;
-		CurrentTimeU64 =
-			(uint64_t) CurrentTimeStruct.tv_sec * 1000 + (uint64_t) CurrentTimeStruct.tv_usec / 1000;
-		OldTimeU64 = CurrentTimeU64;
-
-	}
-
-	I32 FileLengthI32 = 0;
-
-	while (!iExit) {
-		if (SystemControlState == SERVER_STATE_ERROR) {
-			this->abortTopic.publish(Empty());
-			//iCommSend(COMM_ABORT, NULL, 0); // Old
-			continue;
-		}
-
-		if (ModeU8 == 0) {
-			if (ClientSocket <= 0) {
-				if (SystemControlState == SERVER_STATE_UNDEFINED) {
-					//Do some initialization
-
-					//Send COMM_DATA_DICT to notify to update data from DataDictionary
-					iCommSend(COMM_DATA_DICT, (const char *)ControlResponseBuffer, sizeof (ControlResponseBuffer));
-					SystemControlState = SERVER_STATE_INITIALIZED;
-				}
-
-				if (USE_LOCAL_USER_CONTROL == 0) {
-
-					ClientResult = SystemControlInitServer(&ClientSocket, &ServerHandle, &ip_addr);
-					bzero(UserControlIPC8, SMALL_BUFFER_SIZE_20);
-					sprintf((char* )UserControlIPC8, "%s", inet_ntoa(ip_addr));
-					LogMessage(LOG_LEVEL_INFO, "UserControl IP address is %s", inet_ntoa(ip_addr));
-					SystemControlCreateProcessChannel(UserControlIPC8, SYSTEM_CONTROL_PROCESS_PORT,
-													  &RVSSChannelSocket, &RVSSChannelAddr);
-
-				}
-				if (USE_LOCAL_USER_CONTROL == 1) {
-					ClientResult =
-						SystemControlConnectServer(&ClientSocket, LOCAL_USER_CONTROL_IP,
-												   LOCAL_USER_CONTROL_PORT);
-					SystemControlCreateProcessChannel(LOCAL_USER_CONTROL_IP, SYSTEM_CONTROL_PROCESS_PORT,
-													  &RVSSChannelSocket, &RVSSChannelAddr);
-				}
-
-				SystemControlState = SERVER_STATE_IDLE;
-			}
-
-			PreviousSystemControlCommand = SystemControlCommand;
-			bzero(pcBuffer, IPC_BUFFER_SIZE);
-
-			ClientResult = SystemControlReceiveUserControlData(ClientSocket, pcBuffer, sizeof (pcBuffer));
-
-			if (ClientResult <= -1) {
-				if (errno != EAGAIN && errno != EWOULDBLOCK) {
-					LogMessage(LOG_LEVEL_ERROR, "Failed to receive from command socket");
-					if (iCommSend(COMM_ABORT, NULL, 0) < 0)
-						util_error("Fatal communication fault when sending ABORT command");
-				}
-			}
-			else if (ClientResult == 0) {
-				LogMessage(LOG_LEVEL_INFO, "Client closed connection");
-				close(ClientSocket);
-				ClientSocket = -1;
-				if (USE_LOCAL_USER_CONTROL == 0) {
-					close(ServerHandle);
-					ServerHandle = -1;
-				}
-
-				SystemControlCommand = AbortScenario_0;	//Oops no client is connected, go to AbortScenario_0
-				SystemControlState == SERVER_STATE_UNDEFINED;	// TODO: Should this be an assignment?
-			}
-			else if (ClientResult > 0 && ClientResult < TCP_RECV_BUFFER_SIZE) {
-				// TODO: Move this entire decoding process into a separate function
-				for (i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i++)
-					bzero(SystemControlArgument[i], SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
-
-				CurrentInputArgCount = 0;
-				StartPtr =  pcBuffer;
-				StopPtr = pcBuffer;
-				CmdPtr = NULL;
-				StringPos = pcBuffer;
-
-				// Check so that all POST request mandatory content is contained in the message
-				for (i = 0;
-					 i < sizeof (POSTRequestMandatoryContent) / sizeof (POSTRequestMandatoryContent[0]);
-					 ++i) {
-
-					StringPos = strstr(StringPos, POSTRequestMandatoryContent[i]);
-					if (StringPos == NULL) {
-						CmdPtr = NULL;
-						break;
-					}
-					else {
-						CmdPtr = StringPos + strlen(POSTRequestMandatoryContent[i]);
-					}
-				}
-
-				if (CmdPtr != NULL) {
-					// It is now known that the request contains "POST" and "\r\n\r\n", so we can decode the header
-					UtilDecodeHTTPRequestHeader((char*)pcBuffer, &HTTPHeader);
-
-					if (HTTPHeader.Host[0] == '\0') {
-						LogMessage(LOG_LEVEL_INFO, "Unspecified host in request <%s>", pcBuffer);
-					}
-					else if (SystemControlVerifyHostAddress(HTTPHeader.Host)) {
-						// Find opening parenthesis
-						StartPtr = strchr(CmdPtr, '(');
-						// If there was no opening or closing parenthesis, the format is not correct
-						if (StartPtr == NULL || strchr(StartPtr, ')') == NULL)
-							LogMessage(LOG_LEVEL_WARNING,
-									   "Received command not conforming to MSCP standards");
-						else {
-							StartPtr++;
-							while (StopPtr != NULL) {
-								StopPtr = (char *)strchr(StartPtr, ',');
-
-								// If there are no commas past this point, just copy the rest
-								if (StopPtr == NULL) {
-									strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr,
-											(uint64_t) strchr(StartPtr, ')') - (uint64_t) StartPtr);
-								}
-								// Otherwise, check if the comma we found was inside quotation marks
-								else {
-									OpeningQuotationMarkPtr = (char *)strchr(StartPtr, '"');
-
-									if (OpeningQuotationMarkPtr == NULL) {
-										// It was not within quotation marks: copy until the next comma
-										strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr,
-												(uint64_t) StopPtr - (uint64_t) StartPtr);
-									}
-									else if (OpeningQuotationMarkPtr != NULL
-											 && OpeningQuotationMarkPtr < StopPtr) {
-										// A quotation mark was found and it was before the next comma: find the closing quotation mark
-										ClosingQuotationMarkPtr =
-											(char *)strchr(OpeningQuotationMarkPtr + 1, '"');
-
-
-										if (ClosingQuotationMarkPtr == NULL) {
-											CmdPtr = NULL;
-											StopPtr = NULL;
-											LogMessage(LOG_LEVEL_WARNING,
-													   "Received MSCP command with single quotation mark");
-											break;
-										}
-										else {
-											// Copy all arguments within quotation marks including the quotation marks
-											strncpy(SystemControlArgument[CurrentInputArgCount],
-													OpeningQuotationMarkPtr + 1,
-													(uint64_t) (ClosingQuotationMarkPtr) -
-													(uint64_t) (OpeningQuotationMarkPtr + 1));
-											// Find next comma after closing quotation mark
-											StopPtr = strchr(ClosingQuotationMarkPtr, ',');
-										}
-									}
-								}
-								StartPtr = StopPtr + 1;
-								if (SystemControlArgument[CurrentInputArgCount][0] != '\0') {
-									CurrentInputArgCount++;	// In case the argument was empty, don't add it to the argument count
-								}
-							}
-
-                            if (CmdPtr != NULL) {
-                                SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
-                                LogMessage(LOG_LEVEL_DEBUG, "Received MSCP command %s", SystemControlCommand);
-                            }
-							else
-								LogMessage(LOG_LEVEL_WARNING, "Invalid MSCP command received");
-						}
-					}
-					else {
-						LogMessage(LOG_LEVEL_INFO,
-								   "Request specified host <%s> not among known local addresses",
-								   HTTPHeader.Host);
-					}
-				}
-				else {
-					LogMessage(LOG_LEVEL_WARNING,
-							   "Received badly formatted HTTP request: <%s>, must contain \"POST\" and \"\\r\\n\\r\\n\"",
-							   pcBuffer);
-				}
-			}
-			else {
-				LogMessage(LOG_LEVEL_WARNING, "Ignored received TCP message which was too large to handle");
-			}
-
-		}
-		else if (ModeU8 == 1) {	/* use util.c function to call time
-								   gettimeofday(&CurrentTimeStruct, NULL);
-								   CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
-								 */
-			CurrentTimeU64 = UtilgetCurrentUTCtimeMS();
-			TimeDiffU64 = CurrentTimeU64 - OldTimeU64;
-
-		}
-
-
-		if (DataDictionaryGetOBCState(&objectControlState) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR, "Error fetching object control state");
-			// TODO more?
-		}
-
-		if (SystemControlState == SERVER_STATE_INWORK) {
-			if (SystemControlCommand == AbortScenario_0) {
-				SystemControlCommand = SystemControlCommand;
-			}
-			else if (SystemControlCommand == GetServerStatus_0) {
-				LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, PreviousCommand: %s",
-						   SystemControlStatesArr[SystemControlState],
-						   SystemControlOBCStatesArr[objectControlState],
-						   SystemControlCommandsArr[PreviousSystemControlCommand]);
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				ControlResponseBuffer[0] = SystemControlState;
-				ControlResponseBuffer[1] = objectControlState;	//OBCStateU8;
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
-												 ControlResponseBuffer, 2, &ClientSocket, 0);
-				SystemControlCommand = PreviousSystemControlCommand;
-			}
-			else if (SystemControlCommand != PreviousSystemControlCommand) {
-				LogMessage(LOG_LEVEL_WARNING,
-						   "Command not allowed, SystemControl is busy in state %s, PreviousCommand: %s",
-						   SystemControlStatesArr[SystemControlState],
-						   SystemControlCommandsArr[PreviousSystemControlCommand]);
-				SystemControlSendLog
-					("[SystemControl] Command not allowed, SystemControl is busy in state INWORK.\n",
-					 &ClientSocket, 0);
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "",
-												 ControlResponseBuffer, 0, &ClientSocket, 0);
-				SystemControlCommand = PreviousSystemControlCommand;
-			}
-		}
-
-		//Call this from the loop to send
-		SystemControlGetStatusMessage("", 0, 0);
-
-
-		bzero(pcRecvBuffer, SC_RECV_MESSAGE_BUFFER);
-		bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
-
-		switch (iCommand) {
-		case COMM_FAILURE:
-			if (SystemControlState == SERVER_STATE_INWORK) {
-				enum COMMAND failedCommand = (enum COMMAND)pcRecvBuffer[0];
-
-				if (failedCommand == COMM_INIT && PreviousSystemControlCommand == InitializeScenario_0) {
-					SystemControlState = SERVER_STATE_IDLE;
-					SystemControlCommand = Idle_0;
-					LogMessage(LOG_LEVEL_INFO, "Initialization failed");
-					// TODO: report to user?
-				}
-				else {
-					LogMessage(LOG_LEVEL_ERROR, "Unhandled FAILURE (command: %u) reply in state %s",
-							   pcRecvBuffer[0], SystemControlStatesArr[SystemControlState]);
-				}
-			}
-			else {
-				LogMessage(LOG_LEVEL_WARNING, "Received unexpected FAILURE (command: %u) reply in state %s",
-						   pcRecvBuffer[0], SystemControlStatesArr[SystemControlState]);
-				// TODO: React more?
-			}
-			break;
-		case COMM_OBC_STATE:
-			break;
-		case COMM_INV:
-			break;
-
-		case COMM_GETSTATUS_OK:
-			SystemControlGetStatusMessage(pcRecvBuffer, sizeof (pcRecvBuffer), 0);
-			//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
-			break;
-
-		case COMM_BACKTOSTART_RESPONSE:
-
-			if(*pcRecvBuffer == BTS_FAIL){
-				LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", pcRecvBuffer);
-				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
-												 "0", 1,
-												 &ClientSocket, 0);		//TODO: Send SMCP response the right way(?)
-			}
-			else if(*pcRecvBuffer == BTS_PASS){
-				LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", pcRecvBuffer);
-				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
-												 "1", 1,
-												 &ClientSocket, 0);
-			}
-			else{
-				LogMessage(LOG_LEVEL_ERROR, "Cannot parse COMM_BACKTOSTART_RESPONSE message.");
-			}
-			break;
-
-		default:
-			LogMessage(LOG_LEVEL_WARNING, "Unhandled message bus command: %u", iCommand);
-		}
-
-
-		// VictorComment: Move this whole switch statement into a function, call from each callback?
-        switch (SystemControlCommand) {
-			// can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
-		case Idle_0:
-			break;
-		case GetServerStatus_0:
-			DataDictionaryGetOBCState(&objectControlState);
-			if (SystemControlCommand != PreviousSystemControlCommand) {
-				LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s",
-						   SystemControlStatesArr[SystemControlState],
-						   SystemControlOBCStatesArr[objectControlState]);
-			}
-			SystemControlCommand = Idle_0;
-			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-			ControlResponseBuffer[0] = SystemControlState;
-			ControlResponseBuffer[1] = objectControlState;
-			appendSysInfoString(ControlResponseBuffer + 2, sizeof (ControlResponseBuffer) - 2);
-			LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
-			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
-											 ControlResponseBuffer, strlen(ControlResponseBuffer),
-											 &ClientSocket, 0);
-			break;
-		case GetServerParameterList_0:
-			SystemControlCommand = Idle_0;
-			bzero(ParameterListC8, SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE);
-			SystemControlReadServerParameterList(ParameterListC8, 0);
-			SystemControlSendControlResponse(strlen(ParameterListC8) >
-											 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
-											 SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetServerParameterList:",
-											 ParameterListC8, strlen(ParameterListC8), &ClientSocket, 0);
-			break;
-		case GetTestOrigin_0:
-			SystemControlCommand = Idle_0;
-			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-			DataDictionaryGetOriginLatitudeString(TextBuffer20, SMALL_BUFFER_SIZE_20);
-			strcat(ControlResponseBuffer, TextBuffer20);
-			strcat(ControlResponseBuffer, ";");
-			DataDictionaryGetOriginLongitudeString(TextBuffer20, SMALL_BUFFER_SIZE_20);
-			strcat(ControlResponseBuffer, TextBuffer20);
-			strcat(ControlResponseBuffer, ";");
-			DataDictionaryGetOriginAltitudeString(TextBuffer20, SMALL_BUFFER_SIZE_20);
-			strcat(ControlResponseBuffer, TextBuffer20);
-			strcat(ControlResponseBuffer, ";");
-
-			SystemControlSendControlResponse(strlen(ParameterListC8) >
-											 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
-											 SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetTestOrigin:",
-											 ControlResponseBuffer, strlen(ControlResponseBuffer),
-											 &ClientSocket, 0);
-			break;
-		case GetServerParameter_1:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlGetServerParameter(GSD, SystemControlArgument[0], ControlResponseBuffer,
-												SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE, 0);
-				SystemControlSendControlResponse(strlen(ControlResponseBuffer) >
-												 0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
-												 SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetServerParameter:",
-												 ControlResponseBuffer, strlen(ControlResponseBuffer),
-												 &ClientSocket, 0);
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetServerParameter(Name)!");
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case SetServerParameter_2:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlSetServerParameter(GSD, SystemControlArgument[0], SystemControlArgument[1], 1);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:",
-												 ControlResponseBuffer, 0, &ClientSocket, 0);
-				//Send COMM_DATA_DICT to notify to update data from DataDictionary
-				iCommSend(COMM_DATA_DICT, ControlResponseBuffer, sizeof (ControlResponseBuffer));
-
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in SetServerParameter(Name, Value)!");
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case CheckFileDirectoryExist_1:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "CheckFileDirectoryExist:",
-												 ControlResponseBuffer, 1, &ClientSocket, 0);
-
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in CheckFFExist(path)!");
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case CreateDirectory_1:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlCreateDirectory(SystemControlArgument[0], ControlResponseBuffer, 0);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "CreateDirectory:",
-												 ControlResponseBuffer, 1, &ClientSocket, 0);
-
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in CreateDirectory(path)!");
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case GetRootDirectoryContent_0:
-			LogMessage(LOG_LEVEL_INFO, "GetRootDirectory called: defaulting to GetDirectoryContent");
-		case GetDirectoryContent_1:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetDirectoryContent:",
-												 ControlResponseBuffer, 1, &ClientSocket, 0);
-				if (ControlResponseBuffer[0] == FOLDER_EXIST) {
-					UtilCreateDirContent(SystemControlArgument[0], "dir.info");
-					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					FileLengthI32 = SystemControlBuildFileContentInfo("dir.info", 0);
-					SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK,
-													  "SubGetDirectoryContent:", FileLengthI32, &ClientSocket,
-													  0);
-					SystemControlSendFileContent(&ClientSocket, "dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
-												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
-					SystemControlDestroyFileContentInfo("dir.info", 1);
-				}
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR,
-						   "Wrong parameter count in GetDirectoryContent(path)! got:%d, expected:%d",
-						   CurrentInputArgCount, CommandArgCount);
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case DeleteTrajectory_1:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-				*ControlResponseBuffer =
-					SystemControlDeleteTrajectory(SystemControlArgument[0],
-												  sizeof (SystemControlArgument[0]));
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteTrajectory:",
-												 ControlResponseBuffer, 1, &ClientSocket, 0);
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR,
-						   "Wrong parameter count in DeleteTrajectory(name)! got:%d, expected:%d",
-						   CurrentInputArgCount, CommandArgCount);
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case DeleteGeofence_1:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-				*ControlResponseBuffer =
-					SystemControlDeleteGeofence(SystemControlArgument[0], sizeof (SystemControlArgument[0]));
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteGeofence:",
-												 ControlResponseBuffer, 1, &ClientSocket, 0);
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR,
-						   "Wrong parameter count in DeleteGeofence(name)! got:%d, expected:%d",
-						   CurrentInputArgCount, CommandArgCount);
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case DeleteFileDirectory_1:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-				*ControlResponseBuffer =
-					SystemControlDeleteGenericFile(SystemControlArgument[0],
-												   sizeof (SystemControlArgument[0]));
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteFileDirectory:",
-												 ControlResponseBuffer, 1, &ClientSocket, 0);
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR,
-						   "Wrong parameter count in DeleteFileDirectory(path)! got:%d, expected:%d",
-						   CurrentInputArgCount, CommandArgCount);
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case ClearTrajectories_0:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-				*ControlResponseBuffer = SystemControlClearTrajectories();
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearTrajectories:",
-												 ControlResponseBuffer, 1, &ClientSocket, 0);
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR,
-						   "Wrong parameter count in ClearTrajectories()! got:%d, expected:%d",
-						   CurrentInputArgCount, CommandArgCount);
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case ClearGeofences_0:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-				*ControlResponseBuffer = SystemControlClearGeofences();
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearGeofences:",
-												 ControlResponseBuffer, 1, &ClientSocket, 0);
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR,
-						   "Wrong parameter count in ClearGeofences()! got:%d, expected:%d",
-						   CurrentInputArgCount, CommandArgCount);
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case ClearObjects_0:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-				*ControlResponseBuffer = SystemControlClearObjects();
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearObjects:",
-												 ControlResponseBuffer, 1, &ClientSocket, 0);
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR,
-						   "Wrong parameter count in ClearObjects()! got:%d, expected:%d",
-						   CurrentInputArgCount, CommandArgCount);
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case DownloadFile_1:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DownloadFile:",
-												 ControlResponseBuffer, 1, &ClientSocket, 0);
-				if (ControlResponseBuffer[0] == FILE_EXIST) {
-					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					FileLengthI32 = SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
-					SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubDownloadFile:",
-													  FileLengthI32, &ClientSocket, 0);
-					SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0],
-												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
-												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
-					SystemControlDestroyFileContentInfo(SystemControlArgument[0], 0);
-				}
-
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case DownloadTrajFiles_0:
-		case DownloadDirectoryContent_1:	
-			if (CurrentInputArgCount == CommandArgCount) {
-				char functionReturnName[50];
-				memset(functionReturnName, 0, 50);
-				memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				if(SystemControlCommand == DownloadTrajFiles_0){
-					strcat(functionReturnName, "DownloadTrajFiles:");
-					ControlResponseBuffer[0] = FOLDER_EXIST;
-				} else if(SystemControlCommand == DownloadDirectoryContent_1){
-					strcat(functionReturnName, "DownloadDirectoryContent:");
-					SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
-				}
-				if(ControlResponseBuffer[0] == FOLDER_EXIST){
-					if(SystemControlCommand == DownloadTrajFiles_0){
-						UtilCreateDirContent(MAESTRO_TRAJ_DIRECTORY_STRING, "dir.info");
-					} else if(SystemControlCommand == DownloadDirectoryContent_1){
-						UtilCreateDirContent(SystemControlArgument[0], "dir.info");
-					}
-
-					char TestDirectoryPath[MAX_PATH_LENGTH];
-					memset(TestDirectoryPath, 0,MAX_PATH_LENGTH);
-					char CompletePath[MAX_PATH_LENGTH];
-					memset(CompletePath, 0, MAX_PATH_LENGTH);
-					char InPath[MAX_PATH_LENGTH];
-					memset(InPath, 0, MAX_PATH_LENGTH);
-	
-					UtilGetTestDirectoryPath(TestDirectoryPath, sizeof (TestDirectoryPath));
-					strcat(CompletePath, TestDirectoryPath);
-					strcat(CompletePath,"dir.info");
-					int rows = UtilCountFileRowsInPath(CompletePath, strlen(CompletePath));
-					char RowBuffer[SMALL_BUFFER_SIZE_128];
-
-					for(int i = 0; i < rows; i ++)
-					{
-						memset(CompletePath, 0, MAX_PATH_LENGTH);
-						strcat(CompletePath, TestDirectoryPath);
-						strcat(CompletePath,"dir.info");
-						UtilGetRowInFile(CompletePath, strlen(CompletePath), i, RowBuffer, SMALL_BUFFER_SIZE_128);
-						if(*RowBuffer == 'F'){
-							memset(InPath, 0, MAX_PATH_LENGTH);
-							if(SystemControlCommand == DownloadTrajFiles_0) strcat(InPath, MAESTRO_TRAJ_DIRECTORY_STRING);
-							else if(SystemControlCommand == DownloadDirectoryContent_1) strcat(InPath, SystemControlArgument[0]);
-							strcat(InPath, strstr(RowBuffer, "-")+1);
-							memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-							FileLengthI32 = SystemControlBuildFileContentInfo(InPath, 0);
-							SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
-													  FileLengthI32, &ClientSocket, 0);
-							SystemControlSendFileContent(&ClientSocket, InPath,
-												 STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
-												 SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 1);
-							SystemControlDestroyFileContentInfo(InPath, 0);
-						}
-
-					}
-					SystemControlDirectoryInfo.exist = 1; //Force to exist
-					SystemControlDestroyFileContentInfo("dir.info", 1);
-
-				} else {
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
-														ControlResponseBuffer, 3, &ClientSocket, 0);
-				}
-				SystemControlCommand = Idle_0;
-			} else {
-				LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case UploadFile_4:
-			if (CurrentInputArgCount == CommandArgCount) {
-				SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				bzero(RxFilePath, MAX_FILE_PATH);
-				SystemControlUploadFile(SystemControlArgument[0], SystemControlArgument[1],
-										SystemControlArgument[2], SystemControlArgument[3],
-										ControlResponseBuffer, RxFilePath, 0);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:",
-												 ControlResponseBuffer, 1, &ClientSocket, 0);
-				LogMessage(LOG_LEVEL_DEBUG, "UploadFile filelength: %s", SystemControlArgument[1]);
-				if (ControlResponseBuffer[0] == SERVER_PREPARED_BIG_PACKET_SIZE)	//Server is ready to receive data
-				{
-					LogMessage(LOG_LEVEL_INFO, "Receiving file: %s", SystemControlArgument[0]);
-					SystemControlReceiveRxData(&ClientSocket, RxFilePath,
-											   SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE,
-											   ControlResponseBuffer, 0);
-				}
-				else if (ControlResponseBuffer[0] == PATH_INVALID_MISSING) {
-					LogMessage(LOG_LEVEL_INFO, "Failed receiving file: %s", SystemControlArgument[0]);
-					SystemControlReceiveRxData(&ClientSocket, RxFilePath, SystemControlArgument[1],
-											   STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
-					SystemControlDeleteFileDirectory(RxFilePath, ControlResponseBuffer, 0);
-					ControlResponseBuffer[0] = PATH_INVALID_MISSING;
-				}
-				else {
-					LogMessage(LOG_LEVEL_INFO, "Receiving file: %s", SystemControlArgument[0]);
-					SystemControlReceiveRxData(&ClientSocket, RxFilePath,
-											   SystemControlArgument[1], SystemControlArgument[2],
-											   ControlResponseBuffer, 0);
-				}
-
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubUploadFile:",
-												 ControlResponseBuffer, 1, &ClientSocket, 0);
-
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR,
-						   "Wrong parameter count in UploadFile(path, filesize, packetsize, filetype)!");
-				SystemControlCommand = Idle_0;
-			}
-			break;
-		case InitializeScenario_0:
-			if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_IDLE) {
-				if (iCommSend(COMM_INIT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
-					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending INIT command");
-					SystemControlState = SERVER_STATE_ERROR;
-				}
-				SystemControlState = SERVER_STATE_INWORK;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeScenario:",
-												 ControlResponseBuffer, 0, &ClientSocket, 0);
-
-				SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
-			}
-			else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_INITIALIZED) {
-				SystemControlSendLog
-					("[SystemControl] Simulate that all objects becomes successfully configured.\n",
-					 &ClientSocket, 0);
-				SystemControlCommand = Idle_0;
-				SystemControlState = SERVER_STATE_IDLE;
-			}
-			else if (SystemControlState == SERVER_STATE_IDLE) {
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-												 "InitializeScenario:", ControlResponseBuffer, 0,
-												 &ClientSocket, 0);
-				SystemControlSendLog("[SystemControl] INIT received, state errors!\n", &ClientSocket, 0);
-				SystemControlCommand = PreviousSystemControlCommand;
-			}
-			break;
-		case ConnectObject_0:
-			if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_INITIALIZED) {
-				if (iCommSend(COMM_CONNECT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
-					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending CONNECT command");
-					SystemControlState = SERVER_STATE_ERROR;
-				}
-				SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ConnectObject:",
-												 ControlResponseBuffer, 0, &ClientSocket, 0);
-				SystemControlSendLog("[SystemControl] Sending CONNECT.\n", &ClientSocket, 0);
-			}
-			else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_CONNECTED) {
-				SystemControlSendLog("[SystemControl] Simulate that all objects are connected.\n",
-									 &ClientSocket, 0);
-				SystemControlCommand = Idle_0;
-				SystemControlState = SERVER_STATE_IDLE;
-			}
-			else if (SystemControlState == SERVER_STATE_IDLE) {
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-												 "ConnectObject:", ControlResponseBuffer, 0, &ClientSocket,
-												 0);
-				SystemControlSendLog("[SystemControl] CONNECT received, state errors!\n", &ClientSocket, 0);
-				SystemControlCommand = PreviousSystemControlCommand;
-			}
-			break;
-		case DisconnectObject_0:
-			if (SystemControlState == SERVER_STATE_IDLE) {
-				if (iCommSend(COMM_DISCONNECT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
-					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending DISCONNECT command");
-					SystemControlState = SERVER_STATE_ERROR;
-				}
-				SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DisconnectObject:",
-												 ControlResponseBuffer, 0, &ClientSocket, 0);
-				SystemControlSendLog("[SystemControl] Sending DISCONNECT.\n", &ClientSocket, 0);
-			}
-			else {
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-												 "ConnectObject:", ControlResponseBuffer, 0, &ClientSocket,
-												 0);
-				SystemControlSendLog("[SystemControl] DISCONNECT received, state errors!\n", &ClientSocket,
-									 0);
-				SystemControlCommand = PreviousSystemControlCommand;
-			}
-			break;
-		case ArmScenario_0:
-			if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED) {
-				SystemControlState = SERVER_STATE_INWORK;
-				if (iCommSend(COMM_ARM, NULL, 0) < 0) {
-					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ARM command");
-					SystemControlState = SERVER_STATE_ERROR;
-				}
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ArmScenario:",
-												 ControlResponseBuffer, 0, &ClientSocket, 0);
-				SystemControlSendLog("[SystemControl] Sending ARM.\n", &ClientSocket, 0);
-			}
-			else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_ARMED) {
-				SystemControlSendLog("[SystemControl] Simulate that all objects become armed.\n",
-									 &ClientSocket, 0);
-
-				SystemControlCommand = Idle_0;
-				SystemControlState = SERVER_STATE_IDLE;
-			}
-			else if (SystemControlState == SERVER_STATE_IDLE) {
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-												 "ArmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
-				SystemControlSendLog("[SystemControl] ARM received, state errors!\n", &ClientSocket, 0);
-				SystemControlCommand = PreviousSystemControlCommand;
-			}
-			break;
-		case RemoteControl_1:
-			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
-			if (CurrentInputArgCount == CommandArgCount) {
-				if (SystemControlState == SERVER_STATE_IDLE
-					&& (objectControlState == OBC_STATE_CONNECTED
-						|| objectControlState == OBC_STATE_REMOTECTRL)) {
-					if (!strcasecmp(SystemControlArgument[0], ENABLE_COMMAND_STRING)
-						&& objectControlState == OBC_STATE_CONNECTED) {
-						LogMessage(LOG_LEVEL_INFO, "Requesting enabling of remote control");
-						iCommSend(COMM_REMOTECTRL_ENABLE, NULL, 0);	// TODO check return value
-						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
-					}
-					else if (!strcasecmp(SystemControlArgument[0], DISABLE_COMMAND_STRING)
-							 && objectControlState == OBC_STATE_REMOTECTRL) {
-						LogMessage(LOG_LEVEL_INFO, "Requesting disabling of remote control");
-						iCommSend(COMM_REMOTECTRL_DISABLE, NULL, 0);	// TODO check return value
-						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
-					}
-					else {
-						LogMessage(LOG_LEVEL_WARNING, "Incorrect remote control command");
-						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-					}
-				}
-				else {
-					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
-				}
-
-			}
-			else {
-				LogMessage(LOG_LEVEL_WARNING, "Remote control command parameter count error");
-				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-			}
-			SystemControlCommand = Idle_0;
-			SystemControlSendControlResponse(responseCode, "RemoteControl:",
-											 ControlResponseBuffer, 0, &ClientSocket, 0);
-			break;
-		case RemoteControlManoeuvre_2:
-			if (CurrentInputArgCount == CommandArgCount) {
-				if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTECTRL) {
-					memset(pcBuffer, 0, sizeof (pcBuffer));
-					ManoeuvreCommandType rcCommand;
-
-					if (inet_pton(AF_INET, SystemControlArgument[0], &rcCommand.objectIP) != -1) {
-						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
-						switch (atoi(SystemControlArgument[1])) {
-						case MSCP_BACK_TO_START:
-                            rcCommand.manoeuvre = MANOEUVRE_BACK_TO_START;
-							break;
-						default:
-							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
-						}
-						if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
-							memcpy(pcBuffer, &rcCommand, sizeof (rcCommand));
-							iCommSend(COMM_BACKTOSTART_CALL, pcBuffer, sizeof (rcCommand));
-							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
-						}
-					}
-					else {
-						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-					}
-				}
-				else {
-					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
-				}
-			}
-			else {
-				LogMessage(LOG_LEVEL_WARNING, "Remote control manoeuvre command parameter count error");
-				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-			}
-			SystemControlCommand = Idle_0;
-			SystemControlSendControlResponse(responseCode, "RemoteControlManoeuvre:",
-											 ControlResponseBuffer, 0, &ClientSocket, 0);
-			break;
-		case SetObjectEnableStatus_2:
-			if (CurrentInputArgCount == CommandArgCount) {
-				if (SystemControlState == SERVER_STATE_IDLE && objectControlState != OBC_STATE_RUNNING) {
-					memset(pcBuffer, 0, sizeof (pcBuffer));
-					ObjectEnabledCommandType enableCommand;
-
-					if (inet_pton(AF_INET, SystemControlArgument[0], &enableCommand.objectIP) != -1) {
-						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
-						switch (atoi(SystemControlArgument[1])) {
-						case OBJECT_ENABLED:
-							enableCommand.Enabled = OBJECT_ENABLED;
-							break;
-						case OBJECT_DISABLED:
-							enableCommand.Enabled = OBJECT_DISABLED;
-							break;
-						default:
-							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
-						}
-						if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
-							memcpy(pcBuffer, &enableCommand, sizeof (enableCommand));
-							iCommSend(COMM_ENABLE_OBJECT, pcBuffer, sizeof (enableCommand));	// TODO check return value
-							responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
-						}
-					}
-					else {
-						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-					}
-				}
-				else {
-					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
-				}
-			}
-			else {
-				LogMessage(LOG_LEVEL_WARNING, "SetObjectEnableStatus command parameter count error");
-				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-			}
-			SystemControlCommand = Idle_0;
-			SystemControlSendControlResponse(responseCode, "SetObjectEnableStatus:",
-											 ControlResponseBuffer, 0, &ClientSocket, 0);
-			break;
-		case GetObjectEnableStatus_1:
-			if (CurrentInputArgCount == CommandArgCount) {
-				if (SystemControlState == SERVER_STATE_IDLE) {
-					memset(pcBuffer, 0, sizeof (pcBuffer));
-					ObjectEnabledCommandType enableCommand;
-
-					if (inet_pton(AF_INET, SystemControlArgument[0], &enableCommand.objectIP) != -1) {
-						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
-						DataDictionaryGetObjectEnableStatusByIp(enableCommand.objectIP,
-																&enableCommand.Enabled);
-						memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
-						ControlResponseBuffer[0] = (uint8_t) enableCommand.Enabled;
-						SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",
-														 ControlResponseBuffer, 1, &ClientSocket, 0);
-					}
-					else
-						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-				}
-				else
-					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
-			}
-			else {
-				LogMessage(LOG_LEVEL_WARNING, "GetObjectEnableStatus command parameter count error");
-				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
-			}
-
-			if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_OK)
-				SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",
-												 ControlResponseBuffer, 0, &ClientSocket, 0);
-			SystemControlCommand = Idle_0;
-			break;
-		case StartScenario_1:
-			if (CurrentInputArgCount == CommandArgCount) {
-				if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED)	//Temporary!
-				{
-					bzero(pcBuffer, IPC_BUFFER_SIZE);
-					TimeSetToCurrentSystemTime(&tvTime);
-
-					if (TIME_COMPENSATE_LAGING_VM)
-						timersub(&tvTime, &VirtualMachineLagCompensation, &tvTime);
-
-					LogMessage(LOG_LEVEL_INFO, "Current timestamp (epoch): %lu", TimeGetAsUTCms(&tvTime));
-
-					DelayedStartU32 = atoi(SystemControlArgument[0]);
-					sprintf(pcBuffer, "%" PRIi64 ";%" PRIu32 ";", TimeGetAsUTCms(&tvTime), DelayedStartU32);
-					LogMessage(LOG_LEVEL_INFO, "Sending START <%s> (delayed +%u ms)", pcBuffer,
-							   DelayedStartU32);
-
-					if (iCommSend(COMM_STRT, pcBuffer, strlen(pcBuffer) + 1) < 0) {
-						LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending STRT command");
-						SystemControlState = SERVER_STATE_ERROR;
-					}
-					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "StartScenario:",
-													 ControlResponseBuffer, 0, &ClientSocket, 0);
-					SystemControlState = SERVER_STATE_INWORK;
-					//SystemControlState = SERVER_STATE_IDLE; //Temporary!
-					//SystemControlCommand = Idle_0; //Temporary!
-				}
-				else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_RUNNING) {
-
-					SystemControlCommand = Idle_0;
-					SystemControlState = SERVER_STATE_IDLE;
-				}
-				else if (SystemControlState == SERVER_STATE_IDLE) {
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
-													 "StartScenario:", ControlResponseBuffer, 0,
-													 &ClientSocket, 0);
-					SystemControlSendLog("[SystemControl] START received, state errors!\n", &ClientSocket, 0);
-					SystemControlCommand = PreviousSystemControlCommand;
-				}
-
-			}
-			else
-				LogMessage(LOG_LEVEL_WARNING, "START command parameter count error");
-			break;
-		case stop_0:
-			if (iCommSend(COMM_STOP, NULL, 0) < 0) {
-				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending STOP command");
-				SystemControlState = SERVER_STATE_ERROR;
-			}
-			else {
-				SystemControlState = SERVER_STATE_IDLE;
-				SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "stop:",
-												 ControlResponseBuffer, 0, &ClientSocket, 0);
-			}
-			break;
-		case AbortScenario_0:
-			if (iCommSend(COMM_ABORT, NULL, 0) < 0) {
-				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ABORT command");
-				SystemControlState = SERVER_STATE_ERROR;
-			}
-			else {
-				SystemControlState = SERVER_STATE_IDLE;
-				SystemControlCommand = Idle_0;
-				if (ClientSocket >= 0) {
-					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					ControlResponseBuffer[0] = 1;
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "AbortScenario:",
-													 ControlResponseBuffer, 1, &ClientSocket, 0);
-				}
-			}
-		break;
-		case ClearAllScenario_0:
-			if (iCommSend(COMM_ABORT_DONE, NULL, 0) < 0) {
-				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending COMM_ABORT_DONE command");
-				SystemControlState = SERVER_STATE_ERROR;
-			}
-			else {
-				SystemControlState = SERVER_STATE_IDLE;
-				SystemControlCommand = Idle_0;
-				if (ClientSocket >= 0) {
-					bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-					ControlResponseBuffer[0] = 1;
-					SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearAllScenario:",
-													 ControlResponseBuffer, 1, &ClientSocket, 0);
-				}
-			}
-		break;
-		case Exit_0:
-			if (iCommSend(COMM_EXIT, NULL, 0) < 0) {
-				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending EXIT command");
-				SystemControlState = SERVER_STATE_ERROR;
-			}
-			else {
-				iExit = 1;
-				GSD->ExitU8 = 1;
-				usleep(1000000);
-				SystemControlCommand = Idle_0;
-				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "Exit:",
-												 ControlResponseBuffer, 0, &ClientSocket, 0);
-				close(ClientSocket);
-				ClientSocket = -1;
-				if (USE_LOCAL_USER_CONTROL == 0) {
-					close(ServerHandle);
-					ServerHandle = -1;
-				}
-				LogMessage(LOG_LEVEL_INFO, "Server closing");
-			}
-			break;
-
-		default:
-
-			break;
-		}
-
-		// VictorComment: can also be a function 
-		TimeSetToCurrentSystemTime(&tvTime);
-
-		if (timercmp(&tvTime, &nextRVSSSendTime, >)) {
-			SystemControlUpdateRVSSSendTime(&nextRVSSSendTime, RVSSRateU8);
-
-			if (RVSSChannelSocket != 0 && RVSSConfigU32 > 0) {
-				memset(RVSSData, 0, sizeof (RVSSData));
-
-				if (RVSSConfigU32 & RVSS_TIME_CHANNEL) {
-					SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
-					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
-									RVSSMessageLengthU32, 0);
-				}
-
-				if (RVSSConfigU32 & RVSS_MAESTRO_CHANNEL) {
-					SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32, GSD,
-																SystemControlState, 0);
-					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
-									RVSSMessageLengthU32, 0);
-				}
-
-				if (RVSSConfigU32 & RVSS_ASP_CHANNEL) {
-					SystemControlBuildRVSSAspChannelMessage(RVSSData, &RVSSMessageLengthU32, 0);
-					UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
-									RVSSMessageLengthU32, 0);
-				}
-
-				if (RVSSConfigU32 & RVSS_MONITOR_CHANNEL) {
-					// Build and send MONR data of all objects
-					if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONITOR_CHANNEL && bytesReceived >= 0) {
-						SystemControlSendRVSSMonitorChannelMessages(&RVSSChannelSocket, &RVSSChannelAddr);
-					}
-				}
-
-			}
-
-
-		}
-
-		sleep_time = (iCommand == COMM_INV
-					  && SystemControlState != SERVER_STATE_INWORK
-					  && ClientResult < 0) ? mqEmptyPollPeriod : mqNonEmptyPollPeriod;
-		nanosleep(&sleep_time, &ref_time);
-	}
-
-
-
-	(void)iCommClose();
-
-	LogMessage(LOG_LEVEL_INFO, "Exiting");
+void SystemControl::onGetStatusResponse(String::SharedPtr msg){
+	SystemControlGetStatusMessage(msg->data.c_str(), 0);
+	//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
 }
 
-void SystemControlModule::signalHandler(int signo) {
+void SystemControl::onBackToStartResponse(Int8::SharedPtr msg){
+	if(msg->data == BTS_FAIL){
+		LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", msg->data);
+		SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
+											"0", 1,
+											&ClientSocket, 0);		//TODO: Send SMCP response the right way(?)
+	}
+	else if(msg->data == BTS_PASS){
+		LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", msg->data);
+		memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+		SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
+											"1", 1,
+											&ClientSocket, 0);
+	}
+	else{
+		LogMessage(LOG_LEVEL_ERROR, "Cannot parse COMM_BACKTOSTART_RESPONSE message.");
+	}
+}
+
+void SystemControl::signalHandler(int signo) {
 	if (signo == SIGINT) {
 		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
-		iExit = 1;
+		this->iExit = 1;
 	}
 	else {
 		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
 	}
 }
 
-SystemControlModule::SystemControlCommand_t SystemControlModule::SystemControlFindCommand(const char *CommandBuffer,
+
+void SystemControl::mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+	if (SystemControlState == SERVER_STATE_ERROR) {
+		this->abortPub->publish(Empty());
+		return;
+	}
+
+	if (ModeU8 == 0) {
+		if (ClientSocket <= 0) {
+			if (SystemControlState == SERVER_STATE_UNDEFINED) {
+				//Do some initialization
+
+				//Send COMM_DATA_DICT to notify to update data from DataDictionary
+				this->dataDictPub->publish(Empty());
+				SystemControlState = SERVER_STATE_INITIALIZED;
+			}
+
+			if (USE_LOCAL_USER_CONTROL == 0) {
+
+				ClientResult = SystemControlInitServer(&ClientSocket, &ServerHandle, &ip_addr);
+				bzero(UserControlIPC8, SMALL_BUFFER_SIZE_20);
+				sprintf((char* )UserControlIPC8, "%s", inet_ntoa(ip_addr));
+				LogMessage(LOG_LEVEL_INFO, "UserControl IP address is %s", inet_ntoa(ip_addr));
+				SystemControlCreateProcessChannel(UserControlIPC8, SYSTEM_CONTROL_PROCESS_PORT,
+													&RVSSChannelSocket, &RVSSChannelAddr);
+
+			}
+			if (USE_LOCAL_USER_CONTROL == 1) {
+				ClientResult =
+					SystemControlConnectServer(&ClientSocket, LOCAL_USER_CONTROL_IP,
+												LOCAL_USER_CONTROL_PORT);
+				SystemControlCreateProcessChannel(LOCAL_USER_CONTROL_IP, SYSTEM_CONTROL_PROCESS_PORT,
+													&RVSSChannelSocket, &RVSSChannelAddr);
+			}
+
+			SystemControlState = SERVER_STATE_IDLE;
+		}
+
+		PreviousSystemControlCommand = SystemControlCommand;
+		bzero(pcBuffer, IPC_BUFFER_SIZE);
+
+		ClientResult = SystemControlReceiveUserControlData(ClientSocket, pcBuffer, sizeof (pcBuffer));
+
+		if (ClientResult <= -1) {
+			if (errno != EAGAIN && errno != EWOULDBLOCK) {
+				LogMessage(LOG_LEVEL_ERROR, "Failed to receive from command socket");
+				try{
+					this->abortPub->publish(Empty());
+				}
+				catch(...){
+					util_error("Fatal communication fault when sending ABORT command");
+				}
+			}
+		}
+		else if (ClientResult == 0) {
+			LogMessage(LOG_LEVEL_INFO, "Client closed connection");
+			close(ClientSocket);
+			ClientSocket = -1;
+			if (USE_LOCAL_USER_CONTROL == 0) {
+				close(ServerHandle);
+				ServerHandle = -1;
+			}
+
+			SystemControlCommand = AbortScenario_0;	//Oops no client is connected, go to AbortScenario_0
+			SystemControlState == SERVER_STATE_UNDEFINED;	// TODO: Should this be an assignment?
+		}
+		else if (ClientResult > 0 && ClientResult < TCP_RECV_BUFFER_SIZE) {
+			// TODO: Move this entire decoding process into a separate function
+			for (i = 0; i < SYSTEM_CONTROL_ARG_MAX_COUNT; i++)
+				bzero(SystemControlArgument[i], SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH);
+
+			CurrentInputArgCount = 0;
+			StartPtr =  pcBuffer;
+			StopPtr = pcBuffer;
+			CmdPtr = NULL;
+			StringPos = pcBuffer;
+
+			// Check so that all POST request mandatory content is contained in the message
+			for (i = 0;
+					i < sizeof (POSTRequestMandatoryContent) / sizeof (POSTRequestMandatoryContent[0]);
+					++i) {
+
+				StringPos = strstr(StringPos, POSTRequestMandatoryContent[i]);
+				if (StringPos == NULL) {
+					CmdPtr = NULL;
+					break;
+				}
+				else {
+					CmdPtr = StringPos + strlen(POSTRequestMandatoryContent[i]);
+				}
+			}
+
+			if (CmdPtr != NULL) {
+				// It is now known that the request contains "POST" and "\r\n\r\n", so we can decode the header
+				UtilDecodeHTTPRequestHeader((char*)pcBuffer, &HTTPHeader);
+
+				if (HTTPHeader.Host[0] == '\0') {
+					LogMessage(LOG_LEVEL_INFO, "Unspecified host in request <%s>", pcBuffer);
+				}
+				else if (SystemControlVerifyHostAddress(HTTPHeader.Host)) {
+					// Find opening parenthesis
+					StartPtr = strchr(CmdPtr, '(');
+					// If there was no opening or closing parenthesis, the format is not correct
+					if (StartPtr == NULL || strchr(StartPtr, ')') == NULL)
+						LogMessage(LOG_LEVEL_WARNING,
+									"Received command not conforming to MSCP standards");
+					else {
+						StartPtr++;
+						while (StopPtr != NULL) {
+							StopPtr = (char *)strchr(StartPtr, ',');
+
+							// If there are no commas past this point, just copy the rest
+							if (StopPtr == NULL) {
+								strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr,
+										(uint64_t) strchr(StartPtr, ')') - (uint64_t) StartPtr);
+							}
+							// Otherwise, check if the comma we found was inside quotation marks
+							else {
+								OpeningQuotationMarkPtr = (char *)strchr(StartPtr, '"');
+
+								if (OpeningQuotationMarkPtr == NULL) {
+									// It was not within quotation marks: copy until the next comma
+									strncpy(SystemControlArgument[CurrentInputArgCount], StartPtr,
+											(uint64_t) StopPtr - (uint64_t) StartPtr);
+								}
+								else if (OpeningQuotationMarkPtr != NULL
+											&& OpeningQuotationMarkPtr < StopPtr) {
+									// A quotation mark was found and it was before the next comma: find the closing quotation mark
+									ClosingQuotationMarkPtr =
+										(char *)strchr(OpeningQuotationMarkPtr + 1, '"');
+
+
+									if (ClosingQuotationMarkPtr == NULL) {
+										CmdPtr = NULL;
+										StopPtr = NULL;
+										LogMessage(LOG_LEVEL_WARNING,
+													"Received MSCP command with single quotation mark");
+										break;
+									}
+									else {
+										// Copy all arguments within quotation marks including the quotation marks
+										strncpy(SystemControlArgument[CurrentInputArgCount],
+												OpeningQuotationMarkPtr + 1,
+												(uint64_t) (ClosingQuotationMarkPtr) -
+												(uint64_t) (OpeningQuotationMarkPtr + 1));
+										// Find next comma after closing quotation mark
+										StopPtr = strchr(ClosingQuotationMarkPtr, ',');
+									}
+								}
+							}
+							StartPtr = StopPtr + 1;
+							if (SystemControlArgument[CurrentInputArgCount][0] != '\0') {
+								CurrentInputArgCount++;	// In case the argument was empty, don't add it to the argument count
+							}
+						}
+
+						if (CmdPtr != NULL) {
+							SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
+							LogMessage(LOG_LEVEL_DEBUG, "Received MSCP command %s", SystemControlCommand);
+						}
+						else
+							LogMessage(LOG_LEVEL_WARNING, "Invalid MSCP command received");
+					}
+				}
+				else {
+					LogMessage(LOG_LEVEL_INFO,
+								"Request specified host <%s> not among known local addresses",
+								HTTPHeader.Host);
+				}
+			}
+			else {
+				LogMessage(LOG_LEVEL_WARNING,
+							"Received badly formatted HTTP request: <%s>, must contain \"POST\" and \"\\r\\n\\r\\n\"",
+							pcBuffer);
+			}
+		}
+		else {
+			LogMessage(LOG_LEVEL_WARNING, "Ignored received TCP message which was too large to handle");
+		}
+
+	}
+	else if (ModeU8 == 1) {	/* use util.c function to call time
+								gettimeofday(&CurrentTimeStruct, NULL);
+								CurrentTimeU64 = (uint64_t)CurrentTimeStruct.tv_sec*1000 + (uint64_t)CurrentTimeStruct.tv_usec/1000;
+								*/
+		CurrentTimeU64 = UtilgetCurrentUTCtimeMS();
+		TimeDiffU64 = CurrentTimeU64 - OldTimeU64;
+
+	}
+
+
+	if (DataDictionaryGetOBCState(&objectControlState) != READ_OK) {
+		LogMessage(LOG_LEVEL_ERROR, "Error fetching object control state");
+		// TODO more?
+	}
+
+	if (SystemControlState == SERVER_STATE_INWORK) {
+		if (SystemControlCommand == AbortScenario_0) {
+			SystemControlCommand = SystemControlCommand;
+		}
+		else if (SystemControlCommand == GetServerStatus_0) {
+			LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, PreviousCommand: %s",
+						SystemControlStatesArr[SystemControlState],
+						SystemControlOBCStatesArr[objectControlState],
+						SystemControlCommandsArr[PreviousSystemControlCommand]);
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			ControlResponseBuffer[0] = SystemControlState;
+			ControlResponseBuffer[1] = objectControlState;	//OBCStateU8;
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
+												ControlResponseBuffer, 2, &ClientSocket, 0);
+			SystemControlCommand = PreviousSystemControlCommand;
+		}
+		else if (SystemControlCommand != PreviousSystemControlCommand) {
+			LogMessage(LOG_LEVEL_WARNING,
+						"Command not allowed, SystemControl is busy in state %s, PreviousCommand: %s",
+						SystemControlStatesArr[SystemControlState],
+						SystemControlCommandsArr[PreviousSystemControlCommand]);
+			SystemControlSendLog
+				("[SystemControl] Command not allowed, SystemControl is busy in state INWORK.\n",
+					&ClientSocket, 0);
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE, "",
+												ControlResponseBuffer, 0, &ClientSocket, 0);
+			SystemControlCommand = PreviousSystemControlCommand;
+		}
+	}
+
+	//Call this from the loop to send
+	SystemControlGetStatusMessage("", 0);
+
+
+	if (iExit != 0){
+		LogMessage(LOG_LEVEL_INFO, "Exiting");
+		return 1;
+	}
+}
+
+void SystemControl::sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+		TimeSetToCurrentSystemTime(&tvTime);
+
+	if (timercmp(&tvTime, &nextRVSSSendTime, >)) {
+		SystemControlUpdateRVSSSendTime(&nextRVSSSendTime, RVSSRateU8);
+
+		if (RVSSChannelSocket != 0 && RVSSConfigU32 > 0) {
+			memset(RVSSData, 0, sizeof (RVSSData));
+
+			if (RVSSConfigU32 & RVSS_TIME_CHANNEL) {
+				SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
+				UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+								RVSSMessageLengthU32, 0);
+			}
+
+			if (RVSSConfigU32 & RVSS_MAESTRO_CHANNEL) {
+				SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32, GSD,
+															SystemControlState, 0);
+				UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+								RVSSMessageLengthU32, 0);
+			}
+
+			if (RVSSConfigU32 & RVSS_ASP_CHANNEL) {
+				SystemControlBuildRVSSAspChannelMessage(RVSSData, &RVSSMessageLengthU32, 0);
+				UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+								RVSSMessageLengthU32, 0);
+			}
+
+			if (RVSSConfigU32 & RVSS_MONITOR_CHANNEL) {
+				// Build and send MONR data of all objects
+				if (RVSSChannelSocket != 0 && RVSSConfigU32 & RVSS_MONITOR_CHANNEL && bytesReceived >= 0) {
+					SystemControlSendRVSSMonitorChannelMessages(&RVSSChannelSocket, &RVSSChannelAddr);
+				}
+			}
+		}
+	}
+}
+
+void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+	switch (SystemControlCommand) {
+		// can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
+	case Idle_0:
+		break;
+	case GetServerStatus_0:
+		DataDictionaryGetOBCState(&objectControlState);
+		if (SystemControlCommand != PreviousSystemControlCommand) {
+			LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s",
+						SystemControlStatesArr[SystemControlState],
+						SystemControlOBCStatesArr[objectControlState]);
+		}
+		SystemControlCommand = Idle_0;
+		bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+		ControlResponseBuffer[0] = SystemControlState;
+		ControlResponseBuffer[1] = objectControlState;
+		appendSysInfoString(ControlResponseBuffer + 2, sizeof (ControlResponseBuffer) - 2);
+		LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
+		SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
+											ControlResponseBuffer, strlen(ControlResponseBuffer),
+											&ClientSocket, 0);
+		break;
+	case GetServerParameterList_0:
+		SystemControlCommand = Idle_0;
+		bzero(ParameterListC8, SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE);
+		SystemControlReadServerParameterList(ParameterListC8, 0);
+		SystemControlSendControlResponse(strlen(ParameterListC8) >
+											0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
+											SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetServerParameterList:",
+											ParameterListC8, strlen(ParameterListC8), &ClientSocket, 0);
+		break;
+	case GetTestOrigin_0:
+		SystemControlCommand = Idle_0;
+		bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+		DataDictionaryGetOriginLatitudeString(TextBuffer20, SMALL_BUFFER_SIZE_20);
+		strcat(ControlResponseBuffer, TextBuffer20);
+		strcat(ControlResponseBuffer, ";");
+		DataDictionaryGetOriginLongitudeString(TextBuffer20, SMALL_BUFFER_SIZE_20);
+		strcat(ControlResponseBuffer, TextBuffer20);
+		strcat(ControlResponseBuffer, ";");
+		DataDictionaryGetOriginAltitudeString(TextBuffer20, SMALL_BUFFER_SIZE_20);
+		strcat(ControlResponseBuffer, TextBuffer20);
+		strcat(ControlResponseBuffer, ";");
+
+		SystemControlSendControlResponse(strlen(ParameterListC8) >
+											0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
+											SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetTestOrigin:",
+											ControlResponseBuffer, strlen(ControlResponseBuffer),
+											&ClientSocket, 0);
+		break;
+	case GetServerParameter_1:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlGetServerParameter(GSD, SystemControlArgument[0], ControlResponseBuffer,
+											SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE, 0);
+			SystemControlSendControlResponse(strlen(ControlResponseBuffer) >
+												0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
+												SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetServerParameter:",
+												ControlResponseBuffer, strlen(ControlResponseBuffer),
+												&ClientSocket, 0);
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetServerParameter(Name)!");
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case SetServerParameter_2:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlSetServerParameter(GSD, SystemControlArgument[0], SystemControlArgument[1], 1);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:",
+												ControlResponseBuffer, 0, &ClientSocket, 0);
+			//Send COMM_DATA_DICT to notify to update data from DataDictionary
+			this->dataDictPub->publish(Empty());
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in SetServerParameter(Name, Value)!");
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case CheckFileDirectoryExist_1:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "CheckFileDirectoryExist:",
+												ControlResponseBuffer, 1, &ClientSocket, 0);
+
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in CheckFFExist(path)!");
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case CreateDirectory_1:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlCreateDirectory(SystemControlArgument[0], ControlResponseBuffer, 0);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "CreateDirectory:",
+												ControlResponseBuffer, 1, &ClientSocket, 0);
+
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in CreateDirectory(path)!");
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case GetRootDirectoryContent_0:
+		LogMessage(LOG_LEVEL_INFO, "GetRootDirectory called: defaulting to GetDirectoryContent");
+	case GetDirectoryContent_1:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetDirectoryContent:",
+												ControlResponseBuffer, 1, &ClientSocket, 0);
+			if (ControlResponseBuffer[0] == FOLDER_EXIST) {
+				UtilCreateDirContent(SystemControlArgument[0], "dir.info");
+				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				FileLengthI32 = SystemControlBuildFileContentInfo("dir.info", 0);
+				SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK,
+													"SubGetDirectoryContent:", FileLengthI32, &ClientSocket,
+													0);
+				SystemControlSendFileContent(&ClientSocket, "dir.info", STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+												SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
+				SystemControlDestroyFileContentInfo("dir.info", 1);
+			}
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR,
+						"Wrong parameter count in GetDirectoryContent(path)! got:%d, expected:%d",
+						CurrentInputArgCount, CommandArgCount);
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case DeleteTrajectory_1:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+			*ControlResponseBuffer =
+				SystemControlDeleteTrajectory(SystemControlArgument[0],
+												sizeof (SystemControlArgument[0]));
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteTrajectory:",
+												ControlResponseBuffer, 1, &ClientSocket, 0);
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR,
+						"Wrong parameter count in DeleteTrajectory(name)! got:%d, expected:%d",
+						CurrentInputArgCount, CommandArgCount);
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case DeleteGeofence_1:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+			*ControlResponseBuffer =
+				SystemControlDeleteGeofence(SystemControlArgument[0], sizeof (SystemControlArgument[0]));
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteGeofence:",
+												ControlResponseBuffer, 1, &ClientSocket, 0);
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR,
+						"Wrong parameter count in DeleteGeofence(name)! got:%d, expected:%d",
+						CurrentInputArgCount, CommandArgCount);
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case DeleteFileDirectory_1:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+			*ControlResponseBuffer =
+				SystemControlDeleteGenericFile(SystemControlArgument[0],
+												sizeof (SystemControlArgument[0]));
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DeleteFileDirectory:",
+												ControlResponseBuffer, 1, &ClientSocket, 0);
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR,
+						"Wrong parameter count in DeleteFileDirectory(path)! got:%d, expected:%d",
+						CurrentInputArgCount, CommandArgCount);
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case ClearTrajectories_0:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+			*ControlResponseBuffer = SystemControlClearTrajectories();
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearTrajectories:",
+												ControlResponseBuffer, 1, &ClientSocket, 0);
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR,
+						"Wrong parameter count in ClearTrajectories()! got:%d, expected:%d",
+						CurrentInputArgCount, CommandArgCount);
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case ClearGeofences_0:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+			*ControlResponseBuffer = SystemControlClearGeofences();
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearGeofences:",
+												ControlResponseBuffer, 1, &ClientSocket, 0);
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR,
+						"Wrong parameter count in ClearGeofences()! got:%d, expected:%d",
+						CurrentInputArgCount, CommandArgCount);
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case ClearObjects_0:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+			*ControlResponseBuffer = SystemControlClearObjects();
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearObjects:",
+												ControlResponseBuffer, 1, &ClientSocket, 0);
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR,
+						"Wrong parameter count in ClearObjects()! got:%d, expected:%d",
+						CurrentInputArgCount, CommandArgCount);
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case DownloadFile_1:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DownloadFile:",
+												ControlResponseBuffer, 1, &ClientSocket, 0);
+			if (ControlResponseBuffer[0] == FILE_EXIST) {
+				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				FileLengthI32 = SystemControlBuildFileContentInfo(SystemControlArgument[0], 0);
+				SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubDownloadFile:",
+													FileLengthI32, &ClientSocket, 0);
+				SystemControlSendFileContent(&ClientSocket, SystemControlArgument[0],
+												STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+												SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 0);
+				SystemControlDestroyFileContentInfo(SystemControlArgument[0], 0);
+			}
+
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case DownloadTrajFiles_0:
+	case DownloadDirectoryContent_1:	
+		if (CurrentInputArgCount == CommandArgCount) {
+			char functionReturnName[50];
+			memset(functionReturnName, 0, 50);
+			memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			if(SystemControlCommand == DownloadTrajFiles_0){
+				strcat(functionReturnName, "DownloadTrajFiles:");
+				ControlResponseBuffer[0] = FOLDER_EXIST;
+			} else if(SystemControlCommand == DownloadDirectoryContent_1){
+				strcat(functionReturnName, "DownloadDirectoryContent:");
+				SystemControlCheckFileDirectoryExist(SystemControlArgument[0], ControlResponseBuffer, 0);
+			}
+			if(ControlResponseBuffer[0] == FOLDER_EXIST){
+				if(SystemControlCommand == DownloadTrajFiles_0){
+					UtilCreateDirContent(MAESTRO_TRAJ_DIRECTORY_STRING, "dir.info");
+				} else if(SystemControlCommand == DownloadDirectoryContent_1){
+					UtilCreateDirContent(SystemControlArgument[0], "dir.info");
+				}
+
+				char TestDirectoryPath[MAX_PATH_LENGTH];
+				memset(TestDirectoryPath, 0,MAX_PATH_LENGTH);
+				char CompletePath[MAX_PATH_LENGTH];
+				memset(CompletePath, 0, MAX_PATH_LENGTH);
+				char InPath[MAX_PATH_LENGTH];
+				memset(InPath, 0, MAX_PATH_LENGTH);
+
+				UtilGetTestDirectoryPath(TestDirectoryPath, sizeof (TestDirectoryPath));
+				strcat(CompletePath, TestDirectoryPath);
+				strcat(CompletePath,"dir.info");
+				int rows = UtilCountFileRowsInPath(CompletePath, strlen(CompletePath));
+				char RowBuffer[SMALL_BUFFER_SIZE_128];
+
+				for(int i = 0; i < rows; i ++)
+				{
+					memset(CompletePath, 0, MAX_PATH_LENGTH);
+					strcat(CompletePath, TestDirectoryPath);
+					strcat(CompletePath,"dir.info");
+					UtilGetRowInFile(CompletePath, strlen(CompletePath), i, RowBuffer, SMALL_BUFFER_SIZE_128);
+					if(*RowBuffer == 'F'){
+						memset(InPath, 0, MAX_PATH_LENGTH);
+						if(SystemControlCommand == DownloadTrajFiles_0) strcat(InPath, MAESTRO_TRAJ_DIRECTORY_STRING);
+						else if(SystemControlCommand == DownloadDirectoryContent_1) strcat(InPath, SystemControlArgument[0]);
+						strcat(InPath, strstr(RowBuffer, "-")+1);
+						memset(ControlResponseBuffer, 0, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+						FileLengthI32 = SystemControlBuildFileContentInfo(InPath, 0);
+						SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
+													FileLengthI32, &ClientSocket, 0);
+						SystemControlSendFileContent(&ClientSocket, InPath,
+												STR_SYSTEM_CONTROL_TX_PACKET_SIZE,
+												SystemControlDirectoryInfo.info_buffer, KEEP_FILE, 1);
+						SystemControlDestroyFileContentInfo(InPath, 0);
+					}
+
+				}
+				SystemControlDirectoryInfo.exist = 1; //Force to exist
+				SystemControlDestroyFileContentInfo("dir.info", 1);
+
+			} else {
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, functionReturnName,
+													ControlResponseBuffer, 3, &ClientSocket, 0);
+			}
+			SystemControlCommand = Idle_0;
+		} else {
+			LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case UploadFile_4:
+		if (CurrentInputArgCount == CommandArgCount) {
+			SystemControlCommand = Idle_0;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			bzero(RxFilePath, MAX_FILE_PATH);
+			SystemControlUploadFile(SystemControlArgument[0], SystemControlArgument[1],
+									SystemControlArgument[2], SystemControlArgument[3],
+									ControlResponseBuffer, RxFilePath, 0);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:",
+												ControlResponseBuffer, 1, &ClientSocket, 0);
+			LogMessage(LOG_LEVEL_DEBUG, "UploadFile filelength: %s", SystemControlArgument[1]);
+			if (ControlResponseBuffer[0] == SERVER_PREPARED_BIG_PACKET_SIZE)	//Server is ready to receive data
+			{
+				LogMessage(LOG_LEVEL_INFO, "Receiving file: %s", SystemControlArgument[0]);
+				SystemControlReceiveRxData(&ClientSocket, RxFilePath,
+											SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE,
+											ControlResponseBuffer, 0);
+			}
+			else if (ControlResponseBuffer[0] == PATH_INVALID_MISSING) {
+				LogMessage(LOG_LEVEL_INFO, "Failed receiving file: %s", SystemControlArgument[0]);
+				SystemControlReceiveRxData(&ClientSocket, RxFilePath, SystemControlArgument[1],
+											STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
+				SystemControlDeleteFileDirectory(RxFilePath, ControlResponseBuffer, 0);
+				ControlResponseBuffer[0] = PATH_INVALID_MISSING;
+			}
+			else {
+				LogMessage(LOG_LEVEL_INFO, "Receiving file: %s", SystemControlArgument[0]);
+				SystemControlReceiveRxData(&ClientSocket, RxFilePath,
+											SystemControlArgument[1], SystemControlArgument[2],
+											ControlResponseBuffer, 0);
+			}
+
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SubUploadFile:",
+												ControlResponseBuffer, 1, &ClientSocket, 0);
+
+		}
+		else {
+			LogMessage(LOG_LEVEL_ERROR,
+						"Wrong parameter count in UploadFile(path, filesize, packetsize, filetype)!");
+			SystemControlCommand = Idle_0;
+		}
+		break;
+	case InitializeScenario_0:
+		if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_IDLE) {
+			try{
+				this->initPub->publish(Empty());
+			}
+			catch(...){
+				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending INIT command");
+				SystemControlState = SERVER_STATE_ERROR;
+
+			}
+			SystemControlState = SERVER_STATE_INWORK;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "InitializeScenario:",
+												ControlResponseBuffer, 0, &ClientSocket, 0);
+
+			SystemControlSendLog("[SystemControl] Sending INIT.\n", &ClientSocket, 0);
+		}
+		else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_INITIALIZED) {
+			SystemControlSendLog
+				("[SystemControl] Simulate that all objects becomes successfully configured.\n",
+					&ClientSocket, 0);
+			SystemControlCommand = Idle_0;
+			SystemControlState = SERVER_STATE_IDLE;
+		}
+		else if (SystemControlState == SERVER_STATE_IDLE) {
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
+												"InitializeScenario:", ControlResponseBuffer, 0,
+												&ClientSocket, 0);
+			SystemControlSendLog("[SystemControl] INIT received, state errors!\n", &ClientSocket, 0);
+			SystemControlCommand = PreviousSystemControlCommand;
+		}
+		break;
+	case ConnectObject_0:
+		if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_INITIALIZED) {
+			try{
+				this->connectPub->publish(Empty());
+			}
+			catch(...){
+				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending CONNECT command");
+				SystemControlState = SERVER_STATE_ERROR;
+
+			}		
+			SystemControlCommand = Idle_0;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ConnectObject:",
+												ControlResponseBuffer, 0, &ClientSocket, 0);
+			SystemControlSendLog("[SystemControl] Sending CONNECT.\n", &ClientSocket, 0);
+		}
+		else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_CONNECTED) {
+			SystemControlSendLog("[SystemControl] Simulate that all objects are connected.\n",
+									&ClientSocket, 0);
+			SystemControlCommand = Idle_0;
+			SystemControlState = SERVER_STATE_IDLE;
+		}
+		else if (SystemControlState == SERVER_STATE_IDLE) {
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
+												"ConnectObject:", ControlResponseBuffer, 0, &ClientSocket,
+												0);
+			SystemControlSendLog("[SystemControl] CONNECT received, state errors!\n", &ClientSocket, 0);
+			SystemControlCommand = PreviousSystemControlCommand;
+		}
+		break;
+	case DisconnectObject_0:
+		if (SystemControlState == SERVER_STATE_IDLE) {
+			try{
+				this->disconnectPub->publish(Empty());
+			}
+			catch(...){
+				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending DISCONNECT command");
+				SystemControlState = SERVER_STATE_ERROR;				
+			}
+			SystemControlCommand = Idle_0;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "DisconnectObject:",
+												ControlResponseBuffer, 0, &ClientSocket, 0);
+			SystemControlSendLog("[SystemControl] Sending DISCONNECT.\n", &ClientSocket, 0);
+		}
+		else {
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
+												"ConnectObject:", ControlResponseBuffer, 0, &ClientSocket,
+												0);
+			SystemControlSendLog("[SystemControl] DISCONNECT received, state errors!\n", &ClientSocket,
+									0);
+			SystemControlCommand = PreviousSystemControlCommand;
+		}
+		break;
+	case ArmScenario_0:
+		if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED) {
+			SystemControlState = SERVER_STATE_INWORK;
+			try{
+				this->disconnectPub->publish(Empty());
+			}
+			catch(...){
+				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ARM command");
+				SystemControlState = SERVER_STATE_ERROR;				
+			}
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ArmScenario:",
+												ControlResponseBuffer, 0, &ClientSocket, 0);
+			SystemControlSendLog("[SystemControl] Sending ARM.\n", &ClientSocket, 0);
+		}
+		else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_ARMED) {
+			SystemControlSendLog("[SystemControl] Simulate that all objects become armed.\n",
+									&ClientSocket, 0);
+
+			SystemControlCommand = Idle_0;
+			SystemControlState = SERVER_STATE_IDLE;
+		}
+		else if (SystemControlState == SERVER_STATE_IDLE) {
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
+												"ArmScenario:", ControlResponseBuffer, 0, &ClientSocket, 0);
+			SystemControlSendLog("[SystemControl] ARM received, state errors!\n", &ClientSocket, 0);
+			SystemControlCommand = PreviousSystemControlCommand;
+		}
+		break;
+	case RemoteControl_1:
+		responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+		if (CurrentInputArgCount == CommandArgCount) {
+			if (SystemControlState == SERVER_STATE_IDLE
+				&& (objectControlState == OBC_STATE_CONNECTED
+					|| objectControlState == OBC_STATE_REMOTECTRL)) {
+				if (!strcasecmp(SystemControlArgument[0], ENABLE_COMMAND_STRING)
+					&& objectControlState == OBC_STATE_CONNECTED) {
+					LogMessage(LOG_LEVEL_INFO, "Requesting enabling of remote control");
+					this->remoteControlEnablePub->publish(Empty());
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+				}
+				else if (!strcasecmp(SystemControlArgument[0], DISABLE_COMMAND_STRING)
+							&& objectControlState == OBC_STATE_REMOTECTRL) {
+					LogMessage(LOG_LEVEL_INFO, "Requesting disabling of remote control");
+					this->remoteControlDisablePub->publish(Empty());
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+				}
+				else {
+					LogMessage(LOG_LEVEL_WARNING, "Incorrect remote control command");
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+				}
+			}
+			else {
+				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+			}
+
+		}
+		else {
+			LogMessage(LOG_LEVEL_WARNING, "Remote control command parameter count error");
+			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+		}
+		SystemControlCommand = Idle_0;
+		SystemControlSendControlResponse(responseCode, "RemoteControl:",
+											ControlResponseBuffer, 0, &ClientSocket, 0);
+		break;
+	case RemoteControlManoeuvre_2:
+		if (CurrentInputArgCount == CommandArgCount) {
+			if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_REMOTECTRL) {
+				auto msg = ManoeuvreCommand();
+				if (inet_pton(AF_INET, SystemControlArgument[0], &msg.object_ip) != -1) {
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+					switch (atoi(SystemControlArgument[1])) {
+					case MSCP_BACK_TO_START:
+						msg.manoeuvre = MANOEUVRE_BACK_TO_START;
+						break;
+					default:
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
+					}
+					if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
+						this->backToStartPub->publish(msg);
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+					}
+				}
+				else {
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+				}
+			}
+			else {
+				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+			}
+		}
+		else {
+			LogMessage(LOG_LEVEL_WARNING, "Remote control manoeuvre command parameter count error");
+			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+		}
+		SystemControlCommand = Idle_0;
+		SystemControlSendControlResponse(responseCode, "RemoteControlManoeuvre:",
+											ControlResponseBuffer, 0, &ClientSocket, 0);
+		break;
+	case SetObjectEnableStatus_2:
+		if (CurrentInputArgCount == CommandArgCount) {
+			if (SystemControlState == SERVER_STATE_IDLE && objectControlState != OBC_STATE_RUNNING) {
+				auto msg = ObjectEnabled();
+				if (inet_pton(AF_INET, SystemControlArgument[0], &(msg.object_ip)) != -1) {
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+					switch (atoi(SystemControlArgument[1])) {
+					case OBJECT_ENABLED:
+						msg.enabled = OBJECT_ENABLED;
+						break;
+					case OBJECT_DISABLED:
+						msg.enabled = OBJECT_DISABLED;
+						break;
+					default:
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
+					}
+					if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
+						this->enableObjectPub->publish(msg);
+						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+					}
+				}
+				else {
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+				}
+			}
+			else {
+				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+			}
+		}
+		else {
+			LogMessage(LOG_LEVEL_WARNING, "SetObjectEnableStatus command parameter count error");
+			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+		}
+		SystemControlCommand = Idle_0;
+		SystemControlSendControlResponse(responseCode, "SetObjectEnableStatus:",
+											ControlResponseBuffer, 0, &ClientSocket, 0);
+		break;
+	case GetObjectEnableStatus_1:
+		if (CurrentInputArgCount == CommandArgCount) {
+			if (SystemControlState == SERVER_STATE_IDLE) {
+				memset(pcBuffer, 0, sizeof (pcBuffer));
+				ObjectEnabledCommandType enableCommand;
+
+				if (inet_pton(AF_INET, SystemControlArgument[0], &enableCommand.objectIP) != -1) {
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
+					DataDictionaryGetObjectEnableStatusByIp(enableCommand.objectIP,
+															&enableCommand.Enabled);
+					memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
+					ControlResponseBuffer[0] = (uint8_t) enableCommand.Enabled;
+					SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",
+														ControlResponseBuffer, 1, &ClientSocket, 0);
+				}
+				else
+					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+			}
+			else
+				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
+		}
+		else {
+			LogMessage(LOG_LEVEL_WARNING, "GetObjectEnableStatus command parameter count error");
+			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
+		}
+
+		if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_OK)
+			SystemControlSendControlResponse(responseCode, "GetObjectEnableStatus:",
+												ControlResponseBuffer, 0, &ClientSocket, 0);
+		SystemControlCommand = Idle_0;
+		break;
+	case StartScenario_1:
+		if (CurrentInputArgCount == CommandArgCount) {
+			if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_ARMED)	//Temporary!
+			{
+				bzero(pcBuffer, IPC_BUFFER_SIZE);
+				TimeSetToCurrentSystemTime(&tvTime);
+
+				if (TIME_COMPENSATE_LAGING_VM)
+					timersub(&tvTime, &VirtualMachineLagCompensation, &tvTime);
+
+				LogMessage(LOG_LEVEL_INFO, "Current timestamp (epoch): %lu", TimeGetAsUTCms(&tvTime));
+
+				DelayedStartU32 = atoi(SystemControlArgument[0]);
+				sprintf(pcBuffer, "%" PRIi64 ";%" PRIu32 ";", TimeGetAsUTCms(&tvTime), DelayedStartU32);
+				LogMessage(LOG_LEVEL_INFO, "Sending START <%s> (delayed +%u ms)", pcBuffer,
+							DelayedStartU32);
+				try{
+					this->startPub->publish(Empty());
+				}
+				catch(...){
+					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending STRT command");
+					SystemControlState = SERVER_STATE_ERROR;				
+				}
+				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "StartScenario:",
+													ControlResponseBuffer, 0, &ClientSocket, 0);
+				SystemControlState = SERVER_STATE_INWORK;
+				//SystemControlState = SERVER_STATE_IDLE; //Temporary!
+				//SystemControlCommand = Idle_0; //Temporary!
+			}
+			else if (SystemControlState == SERVER_STATE_INWORK && objectControlState == OBC_STATE_RUNNING) {
+
+				SystemControlCommand = Idle_0;
+				SystemControlState = SERVER_STATE_IDLE;
+			}
+			else if (SystemControlState == SERVER_STATE_IDLE) {
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE,
+													"StartScenario:", ControlResponseBuffer, 0,
+													&ClientSocket, 0);
+				SystemControlSendLog("[SystemControl] START received, state errors!\n", &ClientSocket, 0);
+				SystemControlCommand = PreviousSystemControlCommand;
+			}
+
+		}
+		else
+			LogMessage(LOG_LEVEL_WARNING, "START command parameter count error");
+		break;
+	case stop_0:
+		try{
+			this->stopPub->publish(Empty());
+			SystemControlState = SERVER_STATE_IDLE;
+			SystemControlCommand = Idle_0;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "stop:",
+												ControlResponseBuffer, 0, &ClientSocket, 0);
+		}
+		catch(...){this->disconnectPub->publish(Empty());
+			LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending DISCONSTOPNECTSTOP command");
+			SystemControlState = SERVER_STATE_ERROR;				
+		}
+		break;
+	case AbortScenario_0:
+		try{
+			this->abortPub->publish(Empty());
+			SystemControlState = SERVER_STATE_IDLE;
+			SystemControlCommand = Idle_0;
+			if (ClientSocket >= 0) {
+				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				ControlResponseBuffer[0] = 1;
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "AbortScenario:",
+													ControlResponseBuffer, 1, &ClientSocket, 0);
+			}
+		}
+		catch(...){
+			LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ABORT command");
+			SystemControlState = SERVER_STATE_ERROR;
+		}
+	break;
+	case ClearAllScenario_0:
+		try{
+			this->allClearPub->publish(Empty());
+			SystemControlState = SERVER_STATE_IDLE;
+			SystemControlCommand = Idle_0;
+			if (ClientSocket >= 0) {
+				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+				ControlResponseBuffer[0] = 1;
+				SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "ClearAllScenario:",
+													ControlResponseBuffer, 1, &ClientSocket, 0);
+			}
+		}
+		catch (...){
+			LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending COMM_ABORT_DONE command");
+			SystemControlState = SERVER_STATE_ERROR;
+		}
+	break;
+	case Exit_0:
+		try{
+			this->exitPub->publish(Empty());
+			iExit = 1;
+			GSD->ExitU8 = 1;
+			usleep(1000000);
+			SystemControlCommand = Idle_0;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "Exit:",
+												ControlResponseBuffer, 0, &ClientSocket, 0);
+			close(ClientSocket);
+			ClientSocket = -1;
+			if (USE_LOCAL_USER_CONTROL == 0) {
+				close(ServerHandle);
+				ServerHandle = -1;
+			}
+			LogMessage(LOG_LEVEL_INFO, "Server closing");
+		}
+		catch(...){
+			LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending EXIT command");
+			SystemControlState = SERVER_STATE_ERROR;
+
+		}
+		/*
+		if (iCommSend(COMM_EXIT, NULL, 0) < 0) {
+			LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending EXIT command");
+			SystemControlState = SERVER_STATE_ERROR;
+		}
+		else {
+			iExit = 1;
+			GSD->ExitU8 = 1;
+			usleep(1000000);
+			SystemControlCommand = Idle_0;
+			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
+			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "Exit:",
+												ControlResponseBuffer, 0, &ClientSocket, 0);
+			close(ClientSocket);
+			ClientSocket = -1;
+			if (USE_LOCAL_USER_CONTROL == 0) {
+				close(ServerHandle);
+				ServerHandle = -1;
+			}
+			LogMessage(LOG_LEVEL_INFO, "Server closing");
+		}*/
+		break;
+
+	default:
+
+		break;
+	}
+	if (iExit == 1){
+		return 1;
+	}
+}
+
+SystemControl::SystemControlCommand_t SystemControl::SystemControlFindCommand(const char *CommandBuffer,
 												SystemControlCommand_t * CurrentCommand,
 												int *CommandArgCount) {
 
@@ -1257,8 +1115,8 @@ SystemControlModule::SystemControlCommand_t SystemControlModule::SystemControlFi
 	//printf("StrippedCommandBuffer: %s\n", StrippedCommandBuffer);
 
 	for (command = Idle_0; command != nocommand; command=(SystemControlCommand_t)(command+1)) {
-		bzero(SystemControlModule::SystemControlCommandArgCnt, SYSTEM_CONTROL_ARG_CHAR_COUNT);
-		bzero(SystemControlModule::SystemControlStrippedCommand, SYSTEM_CONTROL_COMMAND_MAX_LENGTH);
+		bzero(SystemControl::SystemControlCommandArgCnt, SYSTEM_CONTROL_ARG_CHAR_COUNT);
+		bzero(SystemControl::SystemControlStrippedCommand, SYSTEM_CONTROL_COMMAND_MAX_LENGTH);
 		strncpy(SystemControlStrippedCommand, SystemControlCommandsArr[(int)command],
 				(uint64_t) strchr(SystemControlCommandsArr[(int)command],
 								  '_') - (uint64_t) SystemControlCommandsArr[(int)command]);
@@ -1290,7 +1148,7 @@ SystemControlModule::SystemControlCommand_t SystemControlModule::SystemControlFi
  *        constitutes an error with the appropriate errno has been set (see manpage for recv) with the addition of
  *         - ENOBUFS if the data buffer is too small to hold the received message
  */
-ssize_t SystemControlModule::SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength) {
+ssize_t SystemControl::SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength) {
 	static char recvBuffer[TCP_RECV_BUFFER_SIZE];
 	static size_t bytesInBuffer = 0;
 	const char endOfMessagePattern[] = ";\r\n\r\n";
@@ -1333,7 +1191,7 @@ ssize_t SystemControlModule::SystemControlReceiveUserControlData(I32 socket, C8 
 	return readResult;
 }
 
-void SystemControlModule::SystemControlSendMONR(C8 * MONRStr, I32 * Sockfd, U8 Debug) {
+void SystemControl::SystemControlSendMONR(C8 * MONRStr, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
 	C8 Length[4];
 	C8 Header[2] = { 0, 2 };
@@ -1363,7 +1221,7 @@ void SystemControlModule::SystemControlSendMONR(C8 * MONRStr, I32 * Sockfd, U8 D
 }
 
 
-void SystemControlModule::SystemControlSendLog(C8 * LogString, I32 * Sockfd, U8 Debug) {
+void SystemControl::SystemControlSendLog(C8 * LogString, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
 	C8 Length[4];
 	C8 Header[2] = { 0, 2 };
@@ -1398,7 +1256,7 @@ void SystemControlModule::SystemControlSendLog(C8 * LogString, I32 * Sockfd, U8 
 }
 
 
-void SystemControlModule::SystemControlSendControlResponse(U16 ResponseStatus, C8 * ResponseString, C8 * ResponseData,
+void SystemControl::SystemControlSendControlResponse(U16 ResponseStatus, C8 * ResponseString, C8 * ResponseData,
 									  I32 ResponseDataLength, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
 	C8 Length[4];
@@ -1439,7 +1297,7 @@ void SystemControlModule::SystemControlSendControlResponse(U16 ResponseStatus, C
 }
 
 
-void SystemControlModule::SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
+void SystemControl::SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
 									   I32 ResponseDataLength, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
 	C8 Length[MSCP_RESPONSE_DATALENGTH_BYTES];
@@ -1476,7 +1334,7 @@ void SystemControlModule::SystemControlFileDownloadResponse(U16 ResponseStatus, 
 
 
 
-I32 SystemControlModule::SystemControlBuildControlResponse(U16 ResponseStatus, C8 * ResponseString, C8 * ResponseData,
+I32 SystemControl::SystemControlBuildControlResponse(U16 ResponseStatus, C8 * ResponseString, C8 * ResponseData,
 									  I32 ResponseDataLength, U8 Debug) {
 	int i = 0, n = 0, j = 0, t = 0;
 	C8 Length[MSCP_RESPONSE_DATALENGTH_BYTES];
@@ -1523,7 +1381,7 @@ I32 SystemControlModule::SystemControlBuildControlResponse(U16 ResponseStatus, C
 }
 
 
-void SystemControlModule::SystemControlSendBytes(const char *data, int length, int *sockfd, int debug) {
+void SystemControl::SystemControlSendBytes(const char *data, int length, int *sockfd, int debug) {
 	int i, n;
 
 	if (debug == 1) {
@@ -1543,7 +1401,7 @@ void SystemControlModule::SystemControlSendBytes(const char *data, int length, i
 
 
 
-I32 SystemControlModule::SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct in_addr *ip_addr) {
+I32 SystemControl::SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct in_addr *ip_addr) {
 
 	struct sockaddr_in command_server_addr;
 	struct sockaddr_in cli_addr;
@@ -1605,8 +1463,8 @@ I32 SystemControlModule::SystemControlInitServer(int *ClientSocket, int *ServerH
 		*ClientSocket = accept(*ServerHandle, (struct sockaddr *)&cli_addr, &cli_length);
 		if ((*ClientSocket == -1 && errno != EAGAIN && errno != EWOULDBLOCK) || iExit)
 			util_error("Failed to establish connection");
-
-		bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
+		// Varför läser man bus-meddelanden här? Tömmer den bara sin queue?
+		//bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 	} while (*ClientSocket == -1);
 
 	LogMessage(LOG_LEVEL_INFO, "Connection established: %s:%i", inet_ntoa(cli_addr.sin_addr),
@@ -1624,7 +1482,7 @@ I32 SystemControlModule::SystemControlInitServer(int *ClientSocket, int *ServerH
 
 
 
-I32 SystemControlModule::SystemControlConnectServer(int *sockfd, const char *name, const uint32_t port) {
+I32 SystemControl::SystemControlConnectServer(int *sockfd, const char *name, const uint32_t port) {
 	struct sockaddr_in serv_addr;
 	struct hostent *server;
 
@@ -1673,7 +1531,7 @@ I32 SystemControlModule::SystemControlConnectServer(int *sockfd, const char *nam
 }
 
 
-void SystemControlModule::SystemControlCreateProcessChannel(const C8 * name, const U32 port, I32 * sockfd,
+void SystemControl::SystemControlCreateProcessChannel(const C8 * name, const U32 port, I32 * sockfd,
 											  struct sockaddr_in *addr) {
 	int result;
 	struct hostent *object;
@@ -1712,7 +1570,7 @@ void SystemControlModule::SystemControlCreateProcessChannel(const C8 * name, con
  * \param addr IP address to match against own IPs
  * \return true if match, false if not
  */
-C8 SystemControlModule::SystemControlVerifyHostAddress(char *addr) {
+C8 SystemControl::SystemControlVerifyHostAddress(char *addr) {
 	struct ifaddrs *ifaddr, *ifa;
 	int family, s, n;
 	char host[NI_MAXHOST];
@@ -1755,7 +1613,7 @@ C8 SystemControlModule::SystemControlVerifyHostAddress(char *addr) {
 }
 
 
-I32 SystemControlModule::SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * ReturnValue, U32 BufferLength,
+I32 SystemControl::SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * ReturnValue, U32 BufferLength,
 									U8 Debug) {
 	bzero(ReturnValue, 20);
 	dbl ValueDbl = 0;
@@ -1855,7 +1713,7 @@ I32 SystemControlModule::SystemControlGetServerParameter(GSDType * GSD, C8 * Par
 
 
 
-I32 SystemControlModule::SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newValue, U8 debug) {
+I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newValue, U8 debug) {
 
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 	U32 object_transmitter_ids[MAX_OBJECTS];
@@ -2077,7 +1935,7 @@ I32 SystemControlModule::SystemControlSetServerParameter(GSDType * GSD, C8 * par
 
 
 
-I32 SystemControlModule::SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
+I32 SystemControl::SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
 
 	char *line = NULL;
 	size_t len = 0;
@@ -2111,7 +1969,7 @@ I32 SystemControlModule::SystemControlReadServerParameterList(C8 * ParameterList
 }
 
 
-I32 SystemControlModule::SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
+I32 SystemControl::SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 	struct stat st;
 	C8 CompletePath[MAX_FILE_PATH];
 	bzero(CompletePath, MAX_FILE_PATH);
@@ -2131,7 +1989,7 @@ I32 SystemControlModule::SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) 
 	return st.st_size;
 }
 
-I32 SystemControlModule::SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile) {
+I32 SystemControl::SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile) {
 	char CompletePath[MAX_FILE_PATH];
 	struct stat st;
 
@@ -2149,7 +2007,7 @@ I32 SystemControlModule::SystemControlDestroyFileContentInfo(C8 * Path, U8 Remov
 	return 0;
 }
 
-I32 SystemControlModule::SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug) {
+I32 SystemControl::SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug) {
 
 	DIR *pDir;
 	FILE *fd;
@@ -2188,7 +2046,7 @@ I32 SystemControlModule::SystemControlCheckFileDirectoryExist(C8 * ParameterName
  * \param nameLen Length of the name string
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE
  */
-C8 SystemControlModule::SystemControlDeleteTrajectory(const C8 * trajectoryName, const size_t nameLen) {
+C8 SystemControl::SystemControlDeleteTrajectory(const C8 * trajectoryName, const size_t nameLen) {
 	return UtilDeleteTrajectoryFile(trajectoryName, nameLen) ? FAILED_DELETE : SUCCEEDED_DELETE;
 }
 
@@ -2198,7 +2056,7 @@ C8 SystemControlModule::SystemControlDeleteTrajectory(const C8 * trajectoryName,
  * \param nameLen Length of the name string
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE
  */
-C8 SystemControlModule::SystemControlDeleteGeofence(const C8 * geofenceName, const size_t nameLen) {
+C8 SystemControl::SystemControlDeleteGeofence(const C8 * geofenceName, const size_t nameLen) {
 	return UtilDeleteGeofenceFile(geofenceName, nameLen) ? FAILED_DELETE : SUCCEEDED_DELETE;
 }
 
@@ -2208,7 +2066,7 @@ C8 SystemControlModule::SystemControlDeleteGeofence(const C8 * geofenceName, con
  * \param nameLen Length of the name string
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE
  */
-C8 SystemControlModule::SystemControlDeleteGenericFile(const C8 * filePath, const size_t nameLen) {
+C8 SystemControl::SystemControlDeleteGenericFile(const C8 * filePath, const size_t nameLen) {
 	return UtilDeleteGenericFile(filePath, nameLen) ? FAILED_DELETE : SUCCEEDED_DELETE;
 }
 
@@ -2216,7 +2074,7 @@ C8 SystemControlModule::SystemControlDeleteGenericFile(const C8 * filePath, cons
  * \brief SystemControlClearTrajectories Clears the trajectory directory on the machine
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
-C8 SystemControlModule::SystemControlClearTrajectories(void) {
+C8 SystemControl::SystemControlClearTrajectories(void) {
 	if (UtilDeleteTrajectoryFiles() != 0) {
 		return FAILED_DELETE;
 	}
@@ -2227,7 +2085,7 @@ C8 SystemControlModule::SystemControlClearTrajectories(void) {
  * \brief SystemControlClearGeofences Clears the geofence directory on the machine
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
-C8 SystemControlModule::SystemControlClearGeofences(void) {
+C8 SystemControl::SystemControlClearGeofences(void) {
 	if (UtilDeleteGeofenceFiles() != 0) {
 		return FAILED_DELETE;
 	}
@@ -2238,14 +2096,14 @@ C8 SystemControlModule::SystemControlClearGeofences(void) {
  * \brief SystemControlClearObjects Clears the objects directory on the machine
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
-C8 SystemControlModule::SystemControlClearObjects(void) {
+C8 SystemControl::SystemControlClearObjects(void) {
 	if (UtilDeleteObjectFiles() != 0) {
 		return FAILED_DELETE;
 	}
 	return SUCCEEDED_DELETE;
 }
 
-I32 SystemControlModule::SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
+I32 SystemControl::SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 
 	DIR *pDir;
 	FILE *fd;
@@ -2292,7 +2150,7 @@ I32 SystemControlModule::SystemControlDeleteFileDirectory(C8 * Path, C8 * Return
 }
 
 
-I32 SystemControlModule::SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
+I32 SystemControl::SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
 
 	DIR *pDir;
 	FILE *fd;
@@ -2336,7 +2194,7 @@ I32 SystemControlModule::SystemControlCreateDirectory(C8 * Path, C8 * ReturnValu
 }
 
 
-I32 SystemControlModule::SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
+I32 SystemControl::SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
 							C8 * CompleteFilePath, U8 Debug) {
 
 	FILE *fd;
@@ -2431,7 +2289,7 @@ I32 SystemControlModule::SystemControlUploadFile(C8 * Filename, C8 * FileSize, C
 }
 
 
-I32 SystemControlModule::SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
+I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
 							   U8 Debug) {
 
 	FILE *fd;
@@ -2521,7 +2379,7 @@ I32 SystemControlModule::SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 
 }
 
 
-I32 SystemControlModule::SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * ReturnValue, U8 Remove,
+I32 SystemControl::SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * ReturnValue, U8 Remove,
 								 U8 Debug) {
 	FILE *fd;
 	C8 CompletePath[MAX_FILE_PATH];
@@ -2589,7 +2447,7 @@ I32 SystemControlModule::SystemControlSendFileContent(I32 * sockfd, C8 * Path, C
  * \param RVSSRate_Hz Rate at which RVSS messages are to be sent - if this parameter is 0 the value
  *			is clamped to 1 Hz
  */
-void SystemControlModule::SystemControlUpdateRVSSSendTime(struct timeval *currentRVSSSendTime, uint8_t RVSSRate_Hz) {
+void SystemControl::SystemControlUpdateRVSSSendTime(struct timeval *currentRVSSSendTime, uint8_t RVSSRate_Hz) {
 	struct timeval RVSSTimeInterval, timeDiff, currentTime;
 
 	RVSSRate_Hz = RVSSRate_Hz == 0 ? 1 : RVSSRate_Hz;	// Minimum frequency 1 Hz
@@ -2618,14 +2476,14 @@ See the architecture document for the protocol of RVSS.
 - *GPSTime current time data
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
-I32 SystemControlModule::SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, TimeType * GPSTime,
+I32 SystemControl::SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, TimeType * GPSTime,
 											 U8 Debug) {
-												 // TODO add RVSS buffer length as parameter or even better replace with std vector
+	// TODO add RVSS buffer length as parameter or even better replace with std vector
 	//I32 MessageIndex = 0, i;
 	//C8 *p;
-//
+	//
 	//RVSSTimeType RVSSTimeData;
-//
+	//
 	//RVSSTimeData.MessageLengthU32 = SwapU32((U32) sizeof (RVSSTimeType) - 4);
 	//RVSSTimeData.ChannelCodeU32 = SwapU32((U32) RVSS_TIME_CHANNEL);
 	//RVSSTimeData.YearU16 = SwapU16(GPSTime->YearU16);
@@ -2637,14 +2495,14 @@ I32 SystemControlModule::SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData,
 	//RVSSTimeData.MillisecondU16 = SwapU16(TimeControlGetMillisecond(GPSTime));
 	//RVSSTimeData.SecondCounterU32 = SwapU32(GPSTime->SecondCounterU32);
 	//RVSSTimeData.GPSMillisecondsU64 =
-	//	SwapU64(GPSTime->GPSMillisecondsU64 + (U64) TimeControlGetMillisecond(GPSTime));
+	//SwapU64(GPSTime->GPSMillisecondsU64 + (U64) TimeControlGetMillisecond(GPSTime));
 	//RVSSTimeData.GPSMinutesU32 = SwapU32(GPSTime->GPSMinutesU32);
 	//RVSSTimeData.GPSWeekU16 = SwapU16(GPSTime->GPSWeekU16);
 	//RVSSTimeData.GPSSecondsOfWeekU32 = SwapU32(GPSTime->GPSSecondsOfWeekU32);
 	//RVSSTimeData.GPSSecondsOfDayU32 = SwapU32(GPSTime->GPSSecondsOfDayU32);
 	//RVSSTimeData.FixQualityU8 = GPSTime->FixQualityU8;
 	//RVSSTimeData.NSatellitesU8 = GPSTime->NSatellitesU8;
-//
+	//
 	//p = (C8 *) & RVSSTimeData;
 	//for (i = 0; i < sizeof (RVSSTimeType); i++)
 	//	*(RVSSData + i) = *p++;
@@ -2680,7 +2538,7 @@ See the architecture document for the protocol of RVSS.
 - U8 SysCtrlState the SystemControl state (SystemControlState)
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
-I32 SystemControlModule::SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
+I32 SystemControl::SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
 												U8 SysCtrlState, U8 Debug) {
 	I32 MessageIndex = 0, i;
 	C8 *p;
@@ -2717,7 +2575,7 @@ I32 SystemControlModule::SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSDa
  * \param addr Address struct pointer for RVSS socket
  * \return 0 on success, -1 otherwise
  */
-int32_t SystemControlModule::SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr) {
+int32_t SystemControl::SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr) {
 	uint32_t messageLength = 0;
 	uint32_t RVSSChannel = RVSS_MONITOR_CHANNEL;
 	char RVSSData[MAX_MONR_STRING_LENGTH];
@@ -2815,7 +2673,7 @@ See the architecture document for the protocol of RVSS.
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
 
-I32 SystemControlModule::SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug) {
+I32 SystemControl::SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug) {
 	RVSSTimeType RVSSTimeData;
 
 
@@ -2827,11 +2685,10 @@ I32 SystemControlModule::SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, 
 /*!
  * \brief SystemControlGetStatusMessage Send a COMM_GETSTATUS message to all connected modules on the MQ-BUS.
  * \param respondingModule Name of the responding module.
- * \param arrayLength Length of the RespondingModule.
  * \param debug Enable debug or not.
  * \return
  */
-I32 SystemControlModule::SystemControlGetStatusMessage(char *respondingModule, size_t arrayLength, U8 debug) {
+I32 SystemControl::SystemControlGetStatusMessage(char *respondingModule, U8 debug) {
 
 	static struct timeval getStatusSendTimer;
 	static struct timeval getStatusTimeoutTimer;
@@ -2864,8 +2721,7 @@ I32 SystemControlModule::SystemControlGetStatusMessage(char *respondingModule, s
 			getStatusTimeoutTimer.tv_sec += SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS / 1000;
 
 			//Send getstatus
-			iCommSend(COMM_GETSTATUS, NULL, 0);
-
+			this->getStatusPub->publish(Empty());
 
 			if (debug) {
 				LogMessage(LOG_LEVEL_INFO, "GETSTATUS SENT");
@@ -2935,7 +2791,7 @@ I32 SystemControlModule::SystemControlGetStatusMessage(char *respondingModule, s
 }
 
 
-void SystemControlModule::appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
+void SystemControl::appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize) {
 
 	size_t remainingBufferSpace = bufferSize;
 	struct sysinfo info;
