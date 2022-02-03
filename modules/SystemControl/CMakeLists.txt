@@ -23,8 +23,8 @@ include(GNUInstallDirs)
 
 # Create project main executable target
 add_executable(${SYSTEM_CONTROL_TARGET}
-	${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.cpp
 )
 # Link project executable to util libraries
 target_link_libraries(${SYSTEM_CONTROL_TARGET} LINK_PUBLIC
@@ -35,6 +35,12 @@ target_link_libraries(${SYSTEM_CONTROL_TARGET} LINK_PUBLIC
 	${THREAD_LIBRARY}
 	${MAESTRO_COMMON_LIBRARY}
 )
+
+ament_target_dependencies(${SYSTEM_CONTROL_TARGET} PUBLIC
+  rclcpp
+  std_msgs
+  maestro_msgs)
+  
 target_include_directories(${SYSTEM_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${TIME_HEADERS}
@@ -51,6 +57,3 @@ install(TARGETS ${SYSTEM_CONTROL_TARGET}
 
 # Ensure linkage is reloaded after install
 install(CODE "execute_process(COMMAND ldconfig)")
-
-## Ignore building for now.. 
-set_target_properties(${SYSTEM_CONTROL_TARGET} PROPERTIES EXCLUDE_FROM_ALL 1 EXCLUDE_FROM_DEFAULT_BUILD 1) 

@@ -54,7 +54,8 @@ target_link_libraries(${RELATIVE_KINEMATICS_TARGET} LINK_PUBLIC
 )
 ament_target_dependencies(${RELATIVE_KINEMATICS_TARGET} PUBLIC
   rclcpp
-  std_msgs)
+  std_msgs
+  maestro_msgs)
 
 target_include_directories(${RELATIVE_KINEMATICS_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc

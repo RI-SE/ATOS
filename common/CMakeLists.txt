@@ -74,7 +74,8 @@ target_link_libraries(${MAESTRO_COMMON_TARGET}
 )
 ament_target_dependencies(${MAESTRO_COMMON_TARGET}
   rclcpp
-  std_msgs)
+  std_msgs
+  maestro_msgs)
 
 target_include_directories(${MAESTRO_COMMON_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}

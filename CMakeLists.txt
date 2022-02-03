@@ -19,6 +19,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/util/cmake)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(maestro_msgs REQUIRED)
 find_package(Systemd REQUIRED)
 
 # Enable or disable modules
@@ -111,6 +112,12 @@ install(CODE "execute_process(COMMAND chown -R $ENV{USER} $ENV{HOME}/${MAESTRO_T
 # Add post install instructions
 add_subdirectory(cmake/postinstall)
 
+# Install each node in ros install directory
+install(TARGETS 
+	Core
+	SystemControl
+	RelativeKinematics
+ DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
