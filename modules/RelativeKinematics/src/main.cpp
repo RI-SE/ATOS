@@ -4,8 +4,6 @@
 #include "journal.h"
 #include "datadictionary.h"
 
-#define MODULE_NAME "RelativeKinematics"
-
 static void signalHandler(int signo);
 static int initializeModule(const LOG_LEVEL logLevel);
 
@@ -14,28 +12,12 @@ static bool quit = false;
 int main(int argc, char **argv) {
 	const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 	constexpr int rosMessageCheckRate_Hz = 10;
-
-	if (DataDictionaryInitStateData() != READ_OK
-			|| DataDictionaryInitObjectData() != READ_OK) {
-		LogMessage(LOG_LEVEL_ERROR,
-					"Found no previously initialized shared memory");
-		//exit(EXIT_FAILURE);
-	}
 	if (initializeModule(logLevel) < 0) {
 		util_error("Failed to initialize module");
 	}
-
 	rclcpp::init(argc,argv);
-	//auto rk = RelativeKinematicsModule(MODULE_NAME);
-	
-	//clcpp::Rate loop_rate(rosMessageCheckRate_Hz); // Rate at which module checks for messages (in Hz)
 	rclcpp::spin(std::make_shared<RelativeKinematicsModule>(MODULE_NAME));
 	rclcpp::shutdown();
-	/*while (rclcpp::ok() && !quit) {
-		//rk.strtTopic.publish(msg);
-		rclcpp::spinOnce();
-    	loop_rate.sleep();
-	}*/
 
 	return 0;
 }
@@ -111,13 +93,14 @@ int initializeModule(const LOG_LEVEL logLevel) {
 	}
 	if (DataDictionaryInitStateData() != READ_OK) {
 		retval = -1;
-		LogMessage(LOG_LEVEL_ERROR,
-					"Found no previously initialized shared memory for state data");
+		LogMessage(LOG_LEVEL_ERROR,"Found no previously initialized shared memory");
+		DataDictionaryFreeStateData();
 	}
 	if (DataDictionaryInitObjectData() != READ_OK) {
 		retval = -1;
 		LogMessage(LOG_LEVEL_ERROR,
 					"Found no previously initialized shared memory for object data");
+		DataDictionaryFreeStateData();
 	}
 
 	return retval;

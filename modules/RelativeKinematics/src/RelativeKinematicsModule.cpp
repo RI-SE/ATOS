@@ -13,125 +13,126 @@ using std_msgs::msg::Empty;
 using std_msgs::msg::String;
 using std_msgs::msg::UInt8;
 
-void RelativeKinematicsModule::onInitMessage(Empty::ConstSharedPtr){
+void RelativeKinematicsModule::onInitMessage(const Empty::SharedPtr){
     try {
         scenarioHandler.handleInitCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Initialization failed - %s", e.what());
-		UInt8 msg;
+		UInt8 msg = std_msgs::msg::UInt8();
 		msg.data = COMM_INIT;
-        this->failureTopic.publish(msg);
+        failurePub->publish(msg);
     }
 }
 
-void RelativeKinematicsModule::onConnectMessage(Empty::ConstSharedPtr){	
+void RelativeKinematicsModule::onConnectMessage(Empty::SharedPtr){	
     try {
         scenarioHandler.handleConnectCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Connection failed - %s", e.what());
-		UInt8 msg;
+		auto msg = UInt8();
 		msg.data = COMM_CONNECT;
-        this->failureTopic.publish(msg);
+        this->failurePub->publish(msg);
     }
 }
 
-void RelativeKinematicsModule::onArmMessage(Empty::ConstSharedPtr){	
+void RelativeKinematicsModule::onArmMessage(Empty::SharedPtr){	
     try {
         scenarioHandler.handleArmCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Arm failed - %s", e.what());
-		UInt8 msg;
+		auto msg = UInt8();
 		msg.data = COMM_ARM;
-        this->failureTopic.publish(msg);
+        this->failurePub->publish(msg);
     }
 }
 
-void RelativeKinematicsModule::onStartMessage(Empty::ConstSharedPtr){	
+void RelativeKinematicsModule::onStartMessage(Empty::SharedPtr){	
     try {
         scenarioHandler.handleStartCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Start failed - %s", e.what());
-		UInt8 msg;
+		auto msg = UInt8();
 		msg.data = COMM_STRT;
-        this->failureTopic.publish(msg);
+        this->failurePub->publish(msg);
     }
 }
 
-void RelativeKinematicsModule::onDisconnectMessage(Empty::ConstSharedPtr){	
+void RelativeKinematicsModule::onDisconnectMessage(Empty::SharedPtr){	
     try {
         scenarioHandler.handleDisconnectCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Disconnect failed - %s", e.what());
-		UInt8 msg;
+		auto msg = UInt8();
 		msg.data = COMM_DISCONNECT;
-        this->failureTopic.publish(msg);
+        this->failurePub->publish(msg);
     }
 }
 
-void RelativeKinematicsModule::onStopMessage(Empty::ConstSharedPtr){	
+void RelativeKinematicsModule::onStopMessage(Empty::SharedPtr){	
     try {
         scenarioHandler.handleStopCommand();
     } catch (std::invalid_argument& e) {
         LogMessage(LOG_LEVEL_ERROR, "Stop failed - %s", e.what());
-		UInt8 msg;
+		auto msg = UInt8();
 		msg.data = COMM_STOP;
         scenarioHandler.handleAbortCommand();
-        this->failureTopic.publish(msg);
-        this->abortTopic.publish(Empty());
+        this->failurePub->publish(msg);
+        this->abortPub->publish(Empty());
     }
 }
 
-void RelativeKinematicsModule::onAbortMessage(Empty::ConstSharedPtr){	
+void RelativeKinematicsModule::onGetStatusMessage(Empty::SharedPtr){
+	String msg;
+	msg.data = MODULE_NAME;
+	this->getStatusResponsePub->publish(msg);
+}
+
+void RelativeKinematicsModule::onAbortMessage(Empty::SharedPtr){	
 	// Any exceptions here should crash the program
     scenarioHandler.handleAbortCommand();
 }
 
-void RelativeKinematicsModule::onAllClearMessage(Empty::ConstSharedPtr){	
+void RelativeKinematicsModule::onAllClearMessage(Empty::SharedPtr){	
 	try {
 		scenarioHandler.handleAllClearCommand();
 	} catch (std::invalid_argument& e) {
 		LogMessage(LOG_LEVEL_ERROR, "Failed clear abort - %s", e.what());
-		//this->failureTopic.publish(Empty());
+		auto msg = UInt8();
+		msg.data = COMM_ABORT_DONE;
+		this->failurePub->publish(msg);
 	}
 }
 
-void RelativeKinematicsModule::onACCMMessage(Empty::ConstSharedPtr){
-	/*
-			try {
-				ACCMData accm;
-				UtilPopulateACCMDataStructFromMQ(mqRecvData, sizeof (mqRecvData), &accm);
-				if (accm.actionType == ACTION_TEST_SCENARIO_COMMAND) {
-					ScenarioHandler::TestScenarioCommandAction cmdAction;
-					cmdAction.command = static_cast<ActionTypeParameter_t>(accm.actionTypeParameter1);
-					cmdAction.actionID = accm.actionID;
-					cmdAction.objectID = scenarioHandler.getVehicleIDByIP(accm.ip);
-					scenarioHandler.handleActionConfigurationCommand(cmdAction);
-				}
-			}
-			catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Failed action configuration - %s", e.what());
-				iCommSend(COMM_FAILURE, nullptr, 0);
-			}
-			break;
-			*/
+void RelativeKinematicsModule::onACCMMessage(Accm::SharedPtr accm){
+	try {
+		if (accm->action_type == ACTION_TEST_SCENARIO_COMMAND) {
+			ScenarioHandler::TestScenarioCommandAction cmdAction;
+			cmdAction.command = static_cast<ActionTypeParameter_t>(accm->action_type_parameter1);
+			cmdAction.actionID = accm->action_id;
+			cmdAction.objectID = scenarioHandler.getVehicleIDByIP(accm->ip);
+			scenarioHandler.handleActionConfigurationCommand(cmdAction);
+		}
+	}
+	catch (std::invalid_argument& e) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed action configuration - %s", e.what());
+		auto msg = UInt8();
+		msg.data = COMM_ACCM;
+        this->failurePub->publish(msg);
+	}
 }
 
-void RelativeKinematicsModule::onEXACMessage(Empty::ConstSharedPtr){
-	/*
-			
-			try {
-				using namespace std::chrono;
-				EXACData exac;
-				UtilPopulateEXACDataStructFromMQ(mqRecvData, sizeof (mqRecvData), &exac);
-				quartermilliseconds qmsow(exac.executionTime_qmsoW);
-				auto now = to_timeval(system_clock::now().time_since_epoch());
-				auto startOfWeek = system_clock::time_point(weeks(TimeGetAsGPSweek(&now)));
-				scenarioHandler.handleExecuteActionCommand(exac.actionID, startOfWeek+qmsow);
-			}
-			catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Failed action execution - %s", e.what());
-				iCommSend(COMM_FAILURE, nullptr, 0);
-			}
-			break;
-			*/
+void RelativeKinematicsModule::onEXACMessage(Exac::SharedPtr exac){	
+	try {
+		using namespace std::chrono;
+		quartermilliseconds qmsow(exac->executiontime_qmsow);
+		auto now = to_timeval(system_clock::now().time_since_epoch());
+		auto startOfWeek = system_clock::time_point(weeks(TimeGetAsGPSweek(&now)));
+		scenarioHandler.handleExecuteActionCommand(exac->action_id, startOfWeek+qmsow);
+	}
+	catch (std::invalid_argument& e) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed action execution - %s", e.what());
+		auto msg = UInt8();
+		msg.data = COMM_EXAC;
+        this->failurePub->publish(msg);
+	}
 }

@@ -6,44 +6,23 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/u_int8.hpp"
+#include "std_msgs/msg/int8.hpp"
+#include "maestro_msgs/msg/exac.hpp"
+#include "maestro_msgs/msg/accm.hpp"
+#include "maestro_msgs/msg/manoeuvre_command.hpp"
+#include "maestro_msgs/msg/object_enabled.hpp"
 
 
 using std_msgs::msg::Empty;
 using std_msgs::msg::String;
 using std_msgs::msg::UInt8;
+using std_msgs::msg::Int8;
+using maestro_msgs::msg::Exac;
+using maestro_msgs::msg::Accm;
+using maestro_msgs::msg::ManoeuvreCommand;
+using maestro_msgs::msg::ObjectEnabled;
 using std::placeholders::_1;
 using rclcpp::Node;
-
-/**
- *  Topic for publishing and subscribing to messages
- *
- *  \tparam Msg Type of the message to be sent / recevied on this topic
- *  \tparam Node ROS node that should subscribe / publish on this topic
- *
- */
-//template <typename Msg, class ModuleNode, class = enable_if_t<is_base_of_v<rclcpp::Node, ModuleNode>>> // << dosnt work for now
-template <typename MsgType, class ModuleType>
-class Topic {
-   public:
-	/**
-	 * Default constructor
-	 * \param topicName name of topic
-	 * \param queueSize maximum number of messages the topic can buffer before deleting new messages
-	 * \param cb callback function
-	 * \param n ROS node subscribing/publishing to this topic
-	 */
-	Topic(const std::string topicName, int queueSize, void (ModuleType::*cb)( typename MsgType::ConstSharedPtr), ModuleType* n) {
-		//this->pub = n->template advertise<Msg>(topicName, queueSize);
-		this->pub = n->template create_publisher<MsgType>(topicName,queueSize);
-		//this->sub = n->subscribe(topicName, queueSize, cb, n);
-		this->sub = n->template create_subscription<MsgType>(n->get_name(), queueSize, std::bind(cb, n, _1));
-	}
-	void publish(MsgType msg) {} //{ pub.publish(msg); }
-
-   private:
-	typename rclcpp::Publisher<MsgType>::ConstSharedPtr pub;
-	typename rclcpp::Subscription<MsgType>::ConstSharedPtr sub;
-};
 
 static std::map<COMMAND, std::string> topicNames = {
 	{COMM_STRT, "/start"},
@@ -84,77 +63,116 @@ static std::map<COMMAND, std::string> topicNames = {
 /*!
  * \brief The Module class
  * This class is the base class for all modules.
- * It provides the basic functionality for all modules.
+ * It is a derived class of ROS2 node. 
+ * It provides an interface for all modules.
+ * \param name name of the module
  */
 class Module : public Node {
 public:
 	Module(const std::string name) : Node(name) {};
 	Module() = default;
+protected:
+	rclcpp::Publisher<String>::SharedPtr getStatusResponsePub;
+	rclcpp::Subscription<String>::SharedPtr getStatusResponseSub;
+
+	rclcpp::Publisher<Empty>::SharedPtr getStatusPub;
+	rclcpp::Subscription<Empty>::SharedPtr getStatusSub;
+
+	rclcpp::Publisher<UInt8>::SharedPtr failurePub;
+	rclcpp::Subscription<UInt8>::SharedPtr failureSub;
+
+	rclcpp::Publisher<Empty>::SharedPtr initPub;
+	rclcpp::Subscription<Empty>::SharedPtr initSub;
+
+	rclcpp::Publisher<Empty>::SharedPtr connectPub;
+	rclcpp::Subscription<Empty>::SharedPtr connectSub;
+
+	rclcpp::Publisher<Empty>::SharedPtr armPub;
+	rclcpp::Subscription<Empty>::SharedPtr armSub;
+
+	rclcpp::Publisher<Empty>::SharedPtr startPub;
+	rclcpp::Subscription<Empty>::SharedPtr startSub;
+
+	rclcpp::Publisher<Empty>::SharedPtr stopPub;
+	rclcpp::Subscription<Empty>::SharedPtr stopSub;
+
+	rclcpp::Publisher<Empty>::SharedPtr exitPub;
+	rclcpp::Subscription<Empty>::SharedPtr exitSub;
+
+	rclcpp::Publisher<Empty>::SharedPtr replayPub;
+	rclcpp::Subscription<Empty>::SharedPtr replaySub;
+
+	rclcpp::Publisher<Empty>::SharedPtr abortPub;
+	rclcpp::Subscription<Empty>::SharedPtr abortSub;
+
+	rclcpp::Publisher<Empty>::SharedPtr allClearPub;
+	rclcpp::Subscription<Empty>::SharedPtr allClearSub;
 	
-	Topic<String, Module> getStatusResponseTopic
-		= Topic<String, Module>(topicNames[COMM_GETSTATUS_OK], 100, &Module::onGetStatusResponse,this);
-	Topic<UInt8, Module> failureTopic
-		= Topic<UInt8, Module>(topicNames[COMM_FAILURE], 100, &Module::onFailureMessage,this);
-	Topic<Empty, Module> initTopic
-		= Topic<Empty, Module>(topicNames[COMM_INIT], 1, &Module::onInitMessage,this);
-	Topic<Empty, Module> connectTopic
-		= Topic<Empty, Module>(topicNames[COMM_CONNECT], 1, &Module::onConnectMessage,this);
-	Topic<Empty, Module> armTopic
-		= Topic<Empty, Module>(topicNames[COMM_ARM], 1, &Module::onArmMessage,this);
-	Topic<Empty, Module> startTopic
-		= Topic<Empty, Module>(topicNames[COMM_STRT], 1, &Module::onStartMessage,this);
-	Topic<Empty, Module> stopTopic
-		= Topic<Empty, Module>(topicNames[COMM_STOP], 1, &Module::onStopMessage,this);
-	Topic<Empty, Module> exitTopic
-		= Topic<Empty, Module>(topicNames[COMM_EXIT], 1, &Module::onExitMessage,this);
-	Topic<Empty, Module> replayTopic
-		= Topic<Empty, Module>(topicNames[COMM_REPLAY], 1, &Module::onReplayMessage,this);
-	Topic<Empty, Module> abortTopic
-		= Topic<Empty, Module>(topicNames[COMM_ABORT], 1, &Module::onAbortMessage,this);
-	Topic<Empty, Module> allClearTopic
-		= Topic<Empty, Module>(topicNames[COMM_ABORT_DONE], 1, &Module::onAllClearMessage,this);
-	Topic<Empty, Module> obcStateTopic
-		= Topic<Empty, Module>(topicNames[COMM_OBC_STATE], 1, &Module::onOBCStateMessage,this);
-	Topic<Empty, Module> disconnectTopic
-		= Topic<Empty, Module>(topicNames[COMM_DISCONNECT], 1, &Module::onDisconnectMessage,this);
-	Topic<Empty, Module> viopTopic
-		= Topic<Empty, Module>(topicNames[COMM_ABORT], 1, &Module::onVIOPMessage,this);
-	Topic<Empty, Module> trajTopic
-		= Topic<Empty, Module>(topicNames[COMM_TRAJ], 1, &Module::onTrajMessage,this);
-	Topic<Empty, Module> trajToSupTopic
-		= Topic<Empty, Module>(topicNames[COMM_TRAJ_TOSUP], 1, &Module::onTrajToSupMessage,this);
-	Topic<Empty, Module> trajFromSupTopic
-		= Topic<Empty, Module>(topicNames[COMM_TRAJ_FROMSUP], 1, &Module::onTrajFromSupMessage,this);
-	Topic<Empty, Module> aspTopic
-		= Topic<Empty, Module>(topicNames[COMM_ASP], 1, &Module::onASPMessage,this);
-	Topic<Empty, Module> osemTopic
-		= Topic<Empty, Module>(topicNames[COMM_OSEM], 1, &Module::onOSEMMessage,this);
-	Topic<Empty, Module> dataDictTopic
-		= Topic<Empty, Module>(topicNames[COMM_DATA_DICT], 1, &Module::onDataDictMessage,this);
-	Topic<Empty, Module> exacTopic
-		= Topic<Empty, Module>(topicNames[COMM_EXAC], 1, &Module::onEXACMessage,this);
-	Topic<Empty, Module> accmTopic
-		= Topic<Empty, Module>(topicNames[COMM_ACCM], 1, &Module::onACCMMessage,this);
-	Topic<Empty, Module> treoTopic
-		= Topic<Empty, Module>(topicNames[COMM_TREO], 1, &Module::onTREOMessage,this);
-	Topic<Empty, Module> trcmTopic
-		= Topic<Empty, Module>(topicNames[COMM_TRCM], 1, &Module::onTRCMMessage,this);
-	Topic<Empty, Module> disarmTopic
-		= Topic<Empty, Module>(topicNames[COMM_DISARM], 1, &Module::onDisarmMessage,this);
-	Topic<Empty, Module> backToStartTopic
-		= Topic<Empty, Module>(topicNames[COMM_BACKTOSTART_CALL], 1, &Module::onBackToStartMessage,this);
-	Topic<Empty, Module> backToStartResponseTopic
-		= Topic<Empty, Module>(topicNames[COMM_BACKTOSTART_RESPONSE], 1, &Module::onBackToStartResponse,this);
-	Topic<Empty, Module> remoteControlEnableTopic
-		= Topic<Empty, Module>(topicNames[COMM_REMOTECTRL_ENABLE], 1, &Module::onRemoteControlEnableMessage,this);
-	Topic<Empty, Module> remoteControlDisableTopic
-		= Topic<Empty, Module>(topicNames[COMM_REMOTECTRL_DISABLE], 1, &Module::onRemoteControlEnableMessage,this);
-	Topic<Empty, Module> remoteControlManoeuvreTopic
-		= Topic<Empty, Module>(topicNames[COMM_REMOTECTRL_MANOEUVRE], 1, &Module::onRemoteControlManoeuvreMessage,this);
-	Topic<Empty, Module> enableObjectTopic
-		= Topic<Empty, Module>(topicNames[COMM_ENABLE_OBJECT], 1, &Module::onEnableObjectMessage,this);
-	Topic<Empty, Module> objectsConnectedTopic
-		= Topic<Empty, Module>(topicNames[COMM_OBJECTS_CONNECTED], 1, &Module::onObjectsConnectedMessage,this);
+	rclcpp::Publisher<Empty>::SharedPtr obcStatePub;
+	rclcpp::Subscription<Empty>::SharedPtr obcStateSub;
+
+	rclcpp::Publisher<Empty>::SharedPtr disconnectPub;
+	rclcpp::Subscription<Empty>::SharedPtr disconnectSub;
+
+	rclcpp::Subscription<Empty>::SharedPtr viopSub;
+	rclcpp::Publisher<Empty>::SharedPtr viopPub;
+
+	rclcpp::Subscription<Empty>::SharedPtr trajSub;
+	rclcpp::Publisher<Empty>::SharedPtr trajPub;
+
+	rclcpp::Subscription<Empty>::SharedPtr trajToSupSub;
+	rclcpp::Publisher<Empty>::SharedPtr trajToSupPub;
+
+	rclcpp::Subscription<Empty>::SharedPtr trajFromSupSub;
+	rclcpp::Publisher<Empty>::SharedPtr trajFromSupPub;
+
+	rclcpp::Subscription<Empty>::SharedPtr aspSub;
+	rclcpp::Publisher<Empty>::SharedPtr aspPub;
+
+	rclcpp::Subscription<Empty>::SharedPtr osemSub;
+	rclcpp::Publisher<Empty>::SharedPtr osemPub;
+
+	rclcpp::Subscription<Exac>::SharedPtr exacSub;
+	rclcpp::Publisher<Exac>::SharedPtr exacPub;
+
+	rclcpp::Subscription<Accm>::SharedPtr accmSub;
+	rclcpp::Publisher<Accm>::SharedPtr accmPub;
+
+	rclcpp::Subscription<Empty>::SharedPtr treoSub;
+	rclcpp::Publisher<Empty>::SharedPtr treoPub;
+
+	rclcpp::Subscription<Empty>::SharedPtr trcmSub;
+	rclcpp::Publisher<Empty>::SharedPtr trcmPub;
+
+	rclcpp::Subscription<Empty>::SharedPtr disarmSub;
+	rclcpp::Publisher<Empty>::SharedPtr disarmPub;
+
+	rclcpp::Subscription<ManoeuvreCommand>::SharedPtr backToStartSub;
+	rclcpp::Publisher<ManoeuvreCommand>::SharedPtr backToStartPub;
+
+	rclcpp::Subscription<Empty>::SharedPtr backToStartResponseSub;
+	rclcpp::Publisher<Empty>::SharedPtr backToStartResponsePub;
+
+	rclcpp::Subscription<Empty>::SharedPtr remoteControlEnableSub;
+	rclcpp::Publisher<Empty>::SharedPtr remoteControlEnablePub;
+
+	rclcpp::Subscription<Empty>::SharedPtr remoteControlDisableSub;
+	rclcpp::Publisher<Empty>::SharedPtr remoteControlDisablePub;
+
+	rclcpp::Subscription<Empty>::SharedPtr remoteControlManoeuvreSub;
+	rclcpp::Publisher<Empty>::SharedPtr remoteControlManoeuvrePub;
+
+	rclcpp::Subscription<ObjectEnabled>::SharedPtr enableObjectSub;
+	rclcpp::Publisher<ObjectEnabled>::SharedPtr enableObjectPub;
+
+	rclcpp::Subscription<Empty>::SharedPtr objectsConnectedSub;
+	rclcpp::Publisher<Empty>::SharedPtr objectsConnectedPub;
+
+	rclcpp::Subscription<Empty>::SharedPtr dataDictSub;
+	rclcpp::Publisher<Empty>::SharedPtr dataDictPub;
+
+	rclcpp::Subscription<Empty>::SharedPtr dataDictResponseSub;
+	rclcpp::Publisher<Empty>::SharedPtr dataDictResponsePub;
 
 private:
 	static void printUnhandledMessage(const std::string& topic, const std::string& message) {
@@ -164,40 +182,42 @@ private:
 		std::cout << "Unhandled message on topic: " << topic << std::endl;
 	}
 
-	virtual void onFailureMessage(UInt8::ConstSharedPtr) { };
-	virtual void onGetStatusResponse(String::ConstSharedPtr) { };
-	virtual void onGetStatusMessage(Empty::ConstSharedPtr) { 
-		auto msg = String();
+	virtual void onFailureMessage(const UInt8::SharedPtr) {};
+	virtual void onGetStatusResponse(String::SharedPtr) { };
+	virtual void onGetStatusMessage(Empty::SharedPtr) { 
+	/*	auto msg = String();
 		msg.data = this->get_name();
-		getStatusResponseTopic.publish(msg); };
-	virtual void onInitMessage(Empty::ConstSharedPtr){};
-	virtual void onConnectMessage(Empty::ConstSharedPtr){};
-	virtual void onDisconnectMessage(Empty::ConstSharedPtr){};
-	virtual void onArmMessage(Empty::ConstSharedPtr){};
-	virtual void onDisarmMessage(Empty::ConstSharedPtr){};
-	virtual void onRemoteControlEnableMessage(Empty::ConstSharedPtr){};
-	virtual void onRemoteControlDisableMessage(Empty::ConstSharedPtr){};
-	virtual void onRemoteControlManoeuvreMessage(Empty::ConstSharedPtr){};
-	virtual void onEnableObjectMessage(Empty::ConstSharedPtr){};
-	virtual void onObjectsConnectedMessage(Empty::ConstSharedPtr){};
-	virtual void onDataDictMessage(Empty::ConstSharedPtr){};
-	virtual void onOSEMMessage(Empty::ConstSharedPtr){};
-	virtual void onASPMessage(Empty::ConstSharedPtr){};
-	virtual void onTrajMessage(Empty::ConstSharedPtr){};
-	virtual void onTrajToSupMessage(Empty::ConstSharedPtr){};
-	virtual void onTrajFromSupMessage(Empty::ConstSharedPtr){};
-	virtual void onAllClearMessage(Empty::ConstSharedPtr){};
-	virtual void onOBCStateMessage(Empty::ConstSharedPtr){};
-	virtual void onVIOPMessage(Empty::ConstSharedPtr){};
-	virtual void onStartMessage(Empty::ConstSharedPtr){};
-	virtual void onStopMessage(Empty::ConstSharedPtr){};
-	virtual void onAbortMessage(Empty::ConstSharedPtr){};
-	virtual void onACCMMessage(Empty::ConstSharedPtr){};
-	virtual void onTRCMMessage(Empty::ConstSharedPtr){};
-	virtual void onEXACMessage(Empty::ConstSharedPtr){};
-	virtual void onTREOMessage(Empty::ConstSharedPtr){};
-	virtual void onExitMessage(Empty::ConstSharedPtr){};
-	virtual void onReplayMessage(Empty::ConstSharedPtr){};
-	virtual void onBackToStartMessage(Empty::ConstSharedPtr){};
-	virtual void onBackToStartResponse(Empty::ConstSharedPtr){};
+		getStatusResponseTopic.publish(msg);*/
+		 };
+	virtual void onInitMessage(const Empty::SharedPtr) {};
+	virtual void onConnectMessage(Empty::SharedPtr){};
+	virtual void onDisconnectMessage(Empty::SharedPtr){};
+	virtual void onArmMessage(Empty::SharedPtr){};
+	virtual void onDisarmMessage(Empty::SharedPtr){};
+	virtual void onRemoteControlEnableMessage(Empty::SharedPtr){};
+	virtual void onRemoteControlDisableMessage(Empty::SharedPtr){};
+	virtual void onRemoteControlManoeuvreMessage(Empty::SharedPtr){};
+	virtual void onEnableObjectMessage(ObjectEnabled::SharedPtr){};
+	virtual void onObjectsConnectedMessage(Empty::SharedPtr){};
+	virtual void onDataDictMessage(Empty::SharedPtr){};
+	virtual void onOSEMMessage(Empty::SharedPtr){};
+	virtual void onASPMessage(Empty::SharedPtr){};
+	virtual void onTrajMessage(Empty::SharedPtr){};
+	virtual void onTrajToSupMessage(Empty::SharedPtr){};
+	virtual void onTrajFromSupMessage(Empty::SharedPtr){};
+	virtual void onAllClearMessage(Empty::SharedPtr){};
+	virtual void onOBCStateMessage(Empty::SharedPtr){};
+	virtual void onVIOPMessage(Empty::SharedPtr){};
+	virtual void onStartMessage(Empty::SharedPtr){};
+	virtual void onStopMessage(Empty::SharedPtr){};
+	virtual void onAbortMessage(Empty::SharedPtr){};
+	virtual void onACCMMessage(Accm::SharedPtr){};
+	virtual void onTRCMMessage(Empty::SharedPtr){};
+	virtual void onEXACMessage(Exac::SharedPtr){};
+	virtual void onTREOMessage(Empty::SharedPtr){};
+	virtual void onExitMessage(Empty::SharedPtr){};
+	virtual void onReplayMessage(Empty::SharedPtr){};
+	virtual void onBackToStartMessage(Empty::SharedPtr){};
+	virtual void onBackToStartResponse(Int8::SharedPtr){};
+	virtual void onDataDictResponse(Empty::SharedPtr){};
 };
