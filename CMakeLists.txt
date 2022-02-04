@@ -19,13 +19,6 @@ set(WITH_BACK_TO_START OFF CACHE BOOL "Enable BackToStart module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
-set(MAESTRO_TEST_DIR ".maestro" CACHE STRING "Directory where test data is to be stored")
-
-set(MAESTRO_JOURNAL_DIR "${MAESTRO_TEST_DIR}/journal")
-set(MAESTRO_TRAJ_DIR "${MAESTRO_TEST_DIR}/traj")
-set(MAESTRO_GEOFENCE_DIR "${MAESTRO_TEST_DIR}/geofence")
-set(MAESTRO_OBJECTS_DIR "${MAESTRO_TEST_DIR}/objects")
-
 # Dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/util/cmake)
 find_package(Systemd REQUIRED)
