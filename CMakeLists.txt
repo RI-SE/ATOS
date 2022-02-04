@@ -87,6 +87,10 @@ foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
 endforeach()
 
+# Install configuration
+include(GNUInstallDirs)
+file(GLOB CONF_FILES ${CMAKE_CURRENT_SOURCE_DIR}/conf/*)
+install(FILES ${CONF_FILES} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
+
 # Add post install instructions
-#add_subdirectory(cmake/postinstall)
 add_subdirectory(cmake/cpack)
