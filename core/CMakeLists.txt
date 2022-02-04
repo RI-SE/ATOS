@@ -8,7 +8,6 @@ project(Core LANGUAGES C CXX)
 # Specify locations for logs and shared memory
 # WARNING: These are used for installation and could hose
 # 	your system if e.g. specified to "/"
-set(SYSTEM_SHARED_MEMORY_PATH "/dev/shm/maestro")
 
 set(CORE_TARGET ${PROJECT_NAME})
 set(JOURNAL_CONTROL_TARGET JournalControl)
