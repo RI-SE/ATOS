@@ -26,9 +26,7 @@
 // Parameters and variables
 #define MONR_DATA_FILENAME "MonitorData"
 #define STATE_DATA_FILENAME "StateData"
-#define MISC_DATA_FILENAME "MiscData"
 #define RVSSASP_DATA_FILENAME "RvssAspData"
-#define MISC_DATA_MAX_SIZE 1024
 
 typedef struct {
 	OBCState_t objectControlState;
@@ -1657,7 +1655,10 @@ ReadWriteAccess_t DataDictionaryGetRVSSAsp(ASPType * ASPD) {
 	rvssAspDataMemory = releaseSharedMemory(rvssAspDataMemory);
 	return READ_OK;
 }
-
+/*!
+ * \brief DataDictionaryFreeRVSSAsp Releases data structure for saving RVSS asp data
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryFreeRVSSAsp() {
 	if (rvssAspDataMemory == NULL) {
 		errno = EINVAL;
