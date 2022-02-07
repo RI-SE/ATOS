@@ -93,10 +93,7 @@
 #define DISABLE_COMMAND_STRING "DISABLE"
 
 // Time intervals for sleeping when no message bus message was received and for when one was received
-#define SC_SLEEP_TIME_EMPTY_MQ_S 0
-#define SC_SLEEP_TIME_EMPTY_MQ_NS 10000000
-#define SC_SLEEP_TIME_NONEMPTY_MQ_S 0
-#define SC_SLEEP_TIME_NONEMPTY_MQ_NS 0
+#define QUEUE_EMPTY_POLL_PERIOD 10000000
 
 #define MAESTRO_GENERIC_FILE_TYPE     1
 #define MAESTRO_TRAJ_FILE_TYPE        2
@@ -108,6 +105,27 @@
 
 #define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
 
+typedef enum {
+SERVER_STATE_UNDEFINED,
+SERVER_STATE_INITIALIZED,
+SERVER_STATE_IDLE,
+SERVER_STATE_READY,
+SERVER_STATE_RUNNING,
+SERVER_STATE_INWORK,
+SERVER_STATE_ERROR,
+} ServerState_t;
+typedef enum {
+	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
+	InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
+	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
+	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
+	DeleteFileDirectory_1,
+	ClearTrajectories_0, ClearGeofences_0, ClearObjects_0, RemoteControl_1, RemoteControlManoeuvre_2,
+	SetObjectEnableStatus_2,
+	GetObjectEnableStatus_1,
+	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
+	start_ext_trigg_1, ClearAllScenario_0 , DownloadDirectoryContent_1, DownloadTrajFiles_0, nocommand
+} SystemControlCommand_t;
 
 class SystemControl : public Module
 {
@@ -141,7 +159,7 @@ class SystemControl : public Module
 	this->exitPub = this->create_publisher<Empty>(topicNames[COMM_EXIT],0);
 	this->getStatusPub = this->create_publisher<Empty>(topicNames[COMM_GETSTATUS],0); 
 	}; 
-
+	void SystemControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
 	void SystemControl::mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
 	void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
 	void SystemControl::sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
@@ -156,27 +174,8 @@ class SystemControl : public Module
 	U64 CurrentTimeU64 = 0;
 	void SystemControl::signalHandler(int signo);
 	volatile int iExit;
-	typedef enum {
-	SERVER_STATE_UNDEFINED,
-	SERVER_STATE_INITIALIZED,
-	SERVER_STATE_IDLE,
-	SERVER_STATE_READY,
-	SERVER_STATE_RUNNING,
-	SERVER_STATE_INWORK,
-	SERVER_STATE_ERROR,
-	} ServerState_t;
-	typedef enum {
-		Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
-		InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
-		SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
-		GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
-		DeleteFileDirectory_1,
-		ClearTrajectories_0, ClearGeofences_0, ClearObjects_0, RemoteControl_1, RemoteControlManoeuvre_2,
-		SetObjectEnableStatus_2,
-		GetObjectEnableStatus_1,
-		CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
-		start_ext_trigg_1, ClearAllScenario_0 , DownloadDirectoryContent_1, DownloadTrajFiles_0, nocommand
-	} SystemControlCommand_t;
+	I32 ClientResult = 0;
+	ServerState_t SystemControlState = SERVER_STATE_UNDEFINED;
 
 	private:
 
@@ -274,13 +273,11 @@ class SystemControl : public Module
 	void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize);
 	I32 ServerHandle;
 	I32 ClientSocket = 0;
-	I32 ClientResult = 0;
 	struct sockaddr_in RVSSChannelAddr;
 	struct in_addr ip_addr;
 	I32 RVSSChannelSocket;
 	struct timeval nextRVSSSendTime = { 0, 0 };
 
-	ServerState_t SystemControlState = SERVER_STATE_UNDEFINED;
 	OBCState_t objectControlState = OBC_STATE_UNDEFINED;
 	SystemControlCommand_t SystemControlCommand = Idle_0;
 	SystemControlCommand_t PreviousSystemControlCommand = Idle_0;
@@ -313,9 +310,6 @@ class SystemControl : public Module
 	I32 ServerSocketI32 = 0;
 	C8 RemoteServerRxData[1024];
 	struct timespec sleep_time, ref_time;
-	const struct timespec mqEmptyPollPeriod = { SC_SLEEP_TIME_EMPTY_MQ_S, SC_SLEEP_TIME_EMPTY_MQ_NS };
-	const struct timespec mqNonEmptyPollPeriod =
-		{ SC_SLEEP_TIME_NONEMPTY_MQ_S, SC_SLEEP_TIME_NONEMPTY_MQ_NS };
 	U64 TimeDiffU64 = 0;
 	C8 ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
 	C8 TextBuffer20[SMALL_BUFFER_SIZE_20];

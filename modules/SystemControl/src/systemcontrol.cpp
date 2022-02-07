@@ -49,10 +49,36 @@ void SystemControl::onBackToStartResponse(Int8::SharedPtr msg){
 void SystemControl::signalHandler(int signo) {
 	if (signo == SIGINT) {
 		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
-		this->iExit = 1;
+		iExit = 1;
 	}
 	else {
 		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+	}
+}
+
+void SystemControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+	LogInit("SystemControl", logLevel);
+	LogMessage(LOG_LEVEL_INFO, "System control task running with PID: %i", getpid());
+
+	DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
+	LogMessage(LOG_LEVEL_INFO, "RVSSConfigU32 = %d", RVSSConfigU32);
+
+	DataDictionaryGetRVSSRateU8(&RVSSRateU8);
+	LogMessage(LOG_LEVEL_INFO, "Real-time variable subscription service rate set to %u Hz", RVSSRateU8);
+
+	if (ModeU8 == 0) {
+
+	}
+	else if (ModeU8 == 1) {
+		SessionData.SessionIdU32 = 0;
+		SessionData.UserIdU32 = 0;
+		SessionData.UserTypeU8 = 0;
+
+		PollRateU64 = SYSTEM_CONTROL_SERVICE_POLL_TIME_MS;
+		CurrentTimeU64 =
+			(uint64_t) CurrentTimeStruct.tv_sec * 1000 + (uint64_t) CurrentTimeStruct.tv_usec / 1000;
+		OldTimeU64 = CurrentTimeU64;
+
 	}
 }
 
@@ -285,12 +311,6 @@ void SystemControl::mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLev
 
 	//Call this from the loop to send
 	SystemControlGetStatusMessage("", 0);
-
-
-	if (iExit != 0){
-		LogMessage(LOG_LEVEL_INFO, "Exiting");
-		return 1;
-	}
 }
 
 void SystemControl::sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
@@ -1101,7 +1121,7 @@ void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL l
 	}
 }
 
-SystemControl::SystemControlCommand_t SystemControl::SystemControlFindCommand(const char *CommandBuffer,
+SystemControlCommand_t SystemControl::SystemControlFindCommand(const char *CommandBuffer,
 												SystemControlCommand_t * CurrentCommand,
 												int *CommandArgCount) {
 
