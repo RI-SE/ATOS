@@ -31,6 +31,7 @@ set(WITH_DIRECT_CONTROL OFF CACHE BOOL "Enable DirectControl module")
 set(WITH_OBJECT_MONITORING OFF CACHE BOOL "Enable ObjectMonitoring module")
 set(WITH_BACK_TO_START OFF CACHE BOOL "Enable BackToStart module")
 set(WITH_SYSTEM_CONTROL ON CACHE BOOL "Enable SystemControl module")
+set(WITH_TIME_CONTROL ON CACHE BOOL "Enable TimeControl module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
@@ -62,6 +63,9 @@ if(WITH_BACK_TO_START)
 endif()
 if(WITH_SYSTEM_CONTROL)
 	list(APPEND ENABLED_MODULES SystemControl)
+endif()
+if(WITH_TIME_CONTROL)
+	list(APPEND ENABLED_MODULES TimeControl)
 endif()
 if(WITH_RELATIVE_KINEMATICS)
 	list(APPEND ENABLED_MODULES RelativeKinematics)
@@ -115,6 +119,7 @@ add_subdirectory(cmake/postinstall)
 # Install each node in ros install directory
 install(TARGETS 
 	Core
+	TimeControl
 	SystemControl
 	RelativeKinematics
  DESTINATION lib/${PROJECT_NAME})
