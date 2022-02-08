@@ -159,10 +159,10 @@ class SystemControl : public Module
 	this->exitPub = this->create_publisher<Empty>(topicNames[COMM_EXIT],0);
 	this->getStatusPub = this->create_publisher<Empty>(topicNames[COMM_GETSTATUS],0); 
 	}; 
-	void SystemControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
-	void SystemControl::mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
-	void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
-	void SystemControl::sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	void initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	void mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	void handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	void sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
 	U8 ModeU8 = 0;
 	ServiceSessionType SessionData;
 	struct timeval CurrentTimeStruct;
@@ -172,7 +172,7 @@ class SystemControl : public Module
 	U64 OldTimeU64 = 0;
 	U64 PollRateU64 = 0;
 	U64 CurrentTimeU64 = 0;
-	void SystemControl::signalHandler(int signo);
+	void signalHandler(int signo);
 	volatile int iExit;
 	I32 ClientResult = 0;
 	ServerState_t SystemControlState = SERVER_STATE_UNDEFINED;
@@ -202,8 +202,8 @@ class SystemControl : public Module
 	char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
 	char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
 	char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH];
-	C8 *STR_SYSTEM_CONTROL_RX_PACKET_SIZE;
-	C8 *STR_SYSTEM_CONTROL_TX_PACKET_SIZE;
+	char *STR_SYSTEM_CONTROL_RX_PACKET_SIZE;
+	char *STR_SYSTEM_CONTROL_TX_PACKET_SIZE;
 	
 
 	struct content_dir_info {
@@ -225,50 +225,50 @@ class SystemControl : public Module
 	I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct in_addr *ip_addr);
 	I32 SystemControlConnectServer(int *sockfd, const char *name, const uint32_t port);
 	void SystemControlSendBytes(const char *data, int length, int *sockfd, int debug);
-	void SystemControlSendControlResponse(U16 ResponseStatus, C8 * ResponseString, C8 * ResponseData,
+	void SystemControlSendControlResponse(U16 ResponseStatus, const char * ResponseString, const char * ResponseData,
 										I32 ResponseDataLength, I32 * Sockfd, U8 Debug);
-	I32 SystemControlBuildControlResponse(U16 ResponseStatus, C8 * ResponseString, C8 * ResponseData,
+	I32 SystemControlBuildControlResponse(U16 ResponseStatus, char * ResponseString, char * ResponseData,
 										I32 ResponseDataLength, U8 Debug);
-	void SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
+	void SystemControlFileDownloadResponse(U16 ResponseStatus, const char * ResponseString,
 										I32 ResponseDataLength, I32 * Sockfd, U8 Debug);
-	void SystemControlSendLog(C8 * LogString, I32 * Sockfd, U8 Debug);
-	void SystemControlSendMONR(C8 * LogString, I32 * Sockfd, U8 Debug);
-	void SystemControlCreateProcessChannel(const C8 * name, const U32 port, I32 * sockfd,
+	void SystemControlSendLog(const char * LogString, I32 * Sockfd, U8 Debug);
+	void SystemControlSendMONR(const char * LogString, I32 * Sockfd, U8 Debug);
+	void SystemControlCreateProcessChannel(const char * name, const U32 port, I32 * sockfd,
 												struct sockaddr_in *addr);
-	//I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, C8 *SendData, I32 Length, U8 debug);
-	I32 SystemControlReadServerParameterList(C8 * ParameterList, U8 debug);
-	I32 SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * ReturnValue, U32 BufferLength,
+	//I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, char *SendData, I32 Length, U8 debug);
+	I32 SystemControlReadServerParameterList(char * ParameterList, U8 debug);
+	I32 SystemControlGetServerParameter(GSDType * GSD, char * ParameterName, char * ReturnValue, U32 BufferLength,
 										U8 Debug);
-	I32 SystemControlSetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * NewValue, U8 Debug);
-	I32 SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug);
-	I32 SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
-								C8 * CompleteFilePath, U8 Debug);
-	I32 SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
+	I32 SystemControlSetServerParameter(GSDType * GSD, char * ParameterName, char * NewValue, U8 Debug);
+	I32 SystemControlCheckFileDirectoryExist(char * ParameterName, char * ReturnValue, U8 Debug);
+	I32 SystemControlUploadFile(char * Filename, char * FileSize, char * PacketSize, char * FileType, char * ReturnValue,
+								char * CompleteFilePath, U8 Debug);
+	I32 SystemControlReceiveRxData(I32 * sockfd, char * Path, char * FileSize, char * PacketSize, char * ReturnValue,
 								U8 Debug);
-	C8 SystemControlDeleteTrajectory(const C8 * trajectoryName, const size_t nameLen);
-	C8 SystemControlDeleteGeofence(const C8 * geofenceName, const size_t nameLen);
-	C8 SystemControlDeleteGenericFile(const C8 * filePath, const size_t nameLen);
-	C8 SystemControlClearTrajectories(void);
-	C8 SystemControlClearGeofences(void);
-	C8 SystemControlClearObjects(void);
-	I32 SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
-	I32 SystemControlBuildFileContentInfo(C8 * Path, U8 Debug);
-	I32 SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile);
-	I32 SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * ReturnValue, U8 Remove,
+	char SystemControlDeleteTrajectory(const char * trajectoryName, const size_t nameLen);
+	char SystemControlDeleteGeofence(const char * geofenceName, const size_t nameLen);
+	char SystemControlDeleteGenericFile(const char * filePath, const size_t nameLen);
+	char SystemControlClearTrajectories(void);
+	char SystemControlClearGeofences(void);
+	char SystemControlClearObjects(void);
+	I32 SystemControlDeleteFileDirectory(const char * Path, char * ReturnValue, U8 Debug);
+	I32 SystemControlBuildFileContentInfo(const char * Path, U8 Debug);
+	I32 SystemControlDestroyFileContentInfo(const char * Path, U8 RemoveFile);
+	I32 SystemControlSendFileContent(I32 * sockfd, const char * Path, char * PacketSize, char * ReturnValue, U8 Remove,
 									U8 Debug);
-	I32 SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug);
-	I32 SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, TimeType * GPSTime,
+	I32 SystemControlCreateDirectory(const char * Path, char * ReturnValue, U8 Debug);
+	I32 SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, TimeType * GPSTime,
 												U8 Debug);
-	I32 SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
+	I32 SystemControlBuildRVSSMaestroChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
 													U8 SysCtrlState, U8 Debug);
-	I32 SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
+	I32 SystemControlBuildRVSSAspChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
 	int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr);
 	void SystemControlUpdateRVSSSendTime(struct timeval *currentRVSSSendTime, uint8_t RVSSRate_Hz);
 
-	I32 SystemControlGetStatusMessage(char *respondingModule, U8 debug);
+	I32 SystemControlGetStatusMessage(const char *respondingModule, U8 debug);
 
-	ssize_t SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength);
-	C8 SystemControlVerifyHostAddress(char *ip);
+	ssize_t SystemControlReceiveUserControlData(I32 socket, char * dataBuffer, size_t dataBufferLength);
+	char SystemControlVerifyHostAddress(char *ip);
 
 	void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize);
 	I32 ServerHandle;
@@ -283,7 +283,7 @@ class SystemControl : public Module
 	SystemControlCommand_t PreviousSystemControlCommand = Idle_0;
 	uint16_t responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
 	int CommandArgCount = 0, CurrentInputArgCount = 0;
-	C8 pcBuffer[IPC_BUFFER_SIZE];
+	char pcBuffer[IPC_BUFFER_SIZE];
 	char inchr;
 	struct timeval tvTime;
 
@@ -302,29 +302,29 @@ class SystemControl : public Module
 	char ObjectPort[SMALL_BUFFER_SIZE_6];
 	U64 uiTime;
 	U32 DelayedStartU32;
-	C8 TextBufferC8[SMALL_BUFFER_SIZE_20];
-	C8 ServerIPC8[SMALL_BUFFER_SIZE_20];
-	C8 UsernameC8[SMALL_BUFFER_SIZE_20];
-	C8 PasswordC8[SMALL_BUFFER_SIZE_20];
+	char TextBufferchar[SMALL_BUFFER_SIZE_20];
+	char ServerIPchar[SMALL_BUFFER_SIZE_20];
+	char Usernamechar[SMALL_BUFFER_SIZE_20];
+	char Passwordchar[SMALL_BUFFER_SIZE_20];
 	U16 ServerPortU16;
 	I32 ServerSocketI32 = 0;
-	C8 RemoteServerRxData[1024];
+	char RemoteServerRxData[1024];
 	struct timespec sleep_time, ref_time;
 	U64 TimeDiffU64 = 0;
-	C8 ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
-	C8 TextBuffer20[SMALL_BUFFER_SIZE_20];
-	C8 UserControlIPC8[SMALL_BUFFER_SIZE_20];
+	char ControlResponseBuffer[SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE];
+	char TextBuffer20[SMALL_BUFFER_SIZE_20];
+	char UserControlIPchar[SMALL_BUFFER_SIZE_20];
 	U16 MilliU16 = 0, NowU16 = 0;
 	U64 GPSmsU64 = 0;
-	C8 ParameterListC8[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
+	char ParameterListchar[SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE];
 	U32 LengthU32 = 0;
-	C8 BinBuffer[SMALL_BUFFER_SIZE_1024];
-	C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
+	char BinBuffer[SMALL_BUFFER_SIZE_1024];
+	char TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
 
 	HTTPHeaderContent HTTPHeader;
 
-	C8 RVSSData[SYSTEM_CONTROL_RVSS_DATA_BUFFER];
+	char RVSSData[SYSTEM_CONTROL_RVSS_DATA_BUFFER];
 	U32 RVSSMessageLengthU32;
 	U16 PCDMessageCodeU16;
-	C8 RxFilePath[MAX_FILE_PATH];
+	char RxFilePath[MAX_FILE_PATH];
 };
