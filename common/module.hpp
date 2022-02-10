@@ -179,7 +179,7 @@ private:
 		std::cout << "Unhandled message on topic: " << topic << " (" << message << ")" << std::endl;
 	}
 	static void printUnhandledMessage(const std::string& topic) {
-		std::cout << "Unhandled message on topic: " << topic << std::endl;
+		std::cout << "Unhandled empty message on topic: " << topic << std::endl;
 	}
 
 	virtual void onFailureMessage(const UInt8::SharedPtr) {};
