@@ -24,6 +24,7 @@ using maestro_msgs::msg::ObjectEnabled;
 using std::placeholders::_1;
 using rclcpp::Node;
 
+// TODO move somewhere else
 static std::map<COMMAND, std::string> topicNames = {
 	{COMM_STRT, "/start"},
 	{COMM_ARM, "/arm"},
