@@ -19,7 +19,7 @@ private:
 	virtual void onEXACMessage(Exac::SharedPtr) override;
 	virtual void onGetStatusMessage(Empty::SharedPtr) override;
 
-	public: 
+public:
 	RelativeKinematicsModule(std::string name) : Module(name){
 		
 		int queueSize=0;
