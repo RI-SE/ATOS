@@ -72,7 +72,6 @@ target_link_libraries(${CORE_TARGET} LINK_PUBLIC
 	${ISO_22133_LIBRARY}
 	${SYSTEMD_LIBRARIES}
 	${PTHREAD_LIBRARY}
-	${catkin_LIBRARIES}
 )
 
 target_link_libraries(${JOURNAL_CONTROL_TARGET} LINK_PUBLIC
