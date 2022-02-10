@@ -5,7 +5,7 @@
 
 class RelativeKinematicsModule : public Module
 {
-	private:
+private:
 	ScenarioHandler scenarioHandler;
 	virtual void onInitMessage(const Empty::SharedPtr) override;
 	virtual void onConnectMessage(Empty::SharedPtr) override;
