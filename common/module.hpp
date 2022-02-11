@@ -206,7 +206,7 @@ private:
 	virtual void onTrajMessage(Empty::SharedPtr){};
 	virtual void onTrajToSupMessage(Empty::SharedPtr){};
 	virtual void onTrajFromSupMessage(Empty::SharedPtr){};
-	virtual void onAllClearMessage(Empty::SharedPtr){};
+	virtual void onAllClearMessage(Empty::SharedPtr) = 0;
 	virtual void onOBCStateMessage(Empty::SharedPtr){};
 	virtual void onVIOPMessage(Empty::SharedPtr){};
 	virtual void onStartMessage(Empty::SharedPtr){};
