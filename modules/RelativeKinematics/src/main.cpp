@@ -92,15 +92,16 @@ int initializeModule(const LOG_LEVEL logLevel) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to create test journal");
 	}
 	if (DataDictionaryInitStateData() != READ_OK) {
-		retval = -1;
-		LogMessage(LOG_LEVEL_ERROR,"Found no previously initialized shared memory");
 		DataDictionaryFreeStateData();
+		retval = -1;
+		LogMessage(LOG_LEVEL_ERROR,
+					"Found no previously initialized shared memory for state data");
 	}
 	if (DataDictionaryInitObjectData() != READ_OK) {
+		DataDictionaryFreeObjectData();
 		retval = -1;
 		LogMessage(LOG_LEVEL_ERROR,
 					"Found no previously initialized shared memory for object data");
-		DataDictionaryFreeStateData();
 	}
 
 	return retval;
