@@ -73,6 +73,13 @@ install(TARGETS ${RELATIVE_KINEMATICS_TARGET}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
+#ros installation
+get_property(ros_install_dir GLOBAL PROPERTY ros_install_dir_property)
+
+install(TARGETS 
+	RelativeKinematics
+ DESTINATION ${ros_install_dir})
+
 # Ensure linkage is reloaded after install
 install(CODE "execute_process(COMMAND ldconfig)")
 

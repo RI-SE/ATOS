@@ -16,7 +16,8 @@ int main(int argc, char **argv) {
 		util_error("Failed to initialize module");
 	}
 	rclcpp::init(argc,argv);
-	rclcpp::spin(std::make_shared<RelativeKinematicsModule>(MODULE_NAME));
+	auto rk = std::make_shared<RelativeKinematicsModule>();
+	rclcpp::spin(rk);
 	rclcpp::shutdown();
 
 	return 0;

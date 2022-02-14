@@ -14,9 +14,6 @@ set(COREUTILS_LIBRARY MaestroCoreUtil)
 set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MAESTRO_COMMON_LIBRARY MaestroCommon)
-set(FILESYSTEM_LIBRARY stdc++fs)
-set(THREAD_LIBRARY pthread)
-
 
 include(GNUInstallDirs)
 
@@ -52,5 +49,14 @@ install(TARGETS ${SYSTEM_CONTROL_TARGET}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
+#ros installation
+get_property(ros_install_dir GLOBAL PROPERTY ros_install_dir_property)
+
+install(TARGETS 
+	SystemControl
+ DESTINATION ${ros_install_dir})
+
+ 
+#message(${CMAKE_INSTALL_DIR})
 # Ensure linkage is reloaded after install
 install(CODE "execute_process(COMMAND ldconfig)")

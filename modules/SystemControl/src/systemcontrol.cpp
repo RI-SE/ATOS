@@ -1,5 +1,71 @@
 #include "systemcontrol.hpp"
 
+#define SYSTEM_CONTROL_SERVICE_POLL_TIME_MS 5000
+#define SYSTEM_CONTROL_TASK_PERIOD_MS 1
+#define SYSTEM_CONTROL_RVSS_TIME_MS 10
+
+#define SYSTEM_CONTROL_GETSTATUS_TIME_MS 5000
+#define SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS 2000
+#define SYSTEM_CONTROL_NO_OF_MODULES_IN_USE 2	//TODO Create a file containing a list of which modules should be used. Check with this list to see if each module has responded.
+
+#define SYSTEM_CONTROL_CONTROL_PORT   54241	// Default port, control channel
+#define SYSTEM_CONTROL_PROCESS_PORT   54242	// Default port, process channel
+//#define IPC_BUFFER_SIZE   1024
+#define SYSTEM_CONTROL_RVSS_DATA_BUFFER	128
+
+#define SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE 1024
+
+#define GetCurrentDir getcwd
+#define REMOVE_FILE 1
+#define KEEP_FILE 0
+
+#define RVSS_TIME_CHANNEL 1
+#define RVSS_MONITOR_CHANNEL 2
+#define RVSS_MAESTRO_CHANNEL 4
+#define RVSS_ASP_CHANNEL 8
+
+#define ENABLE_COMMAND_STRING "ENABLE"
+#define DISABLE_COMMAND_STRING "DISABLE"
+
+#define MAESTRO_GENERIC_FILE_TYPE     1
+#define MAESTRO_TRAJ_FILE_TYPE        2
+#define MAESTRO_CONF_FILE_TYPE        3
+#define MAESTRO_GEOFENCE_FILE_TYPE    4
+#define MAESTRO_OBJECT_FILE_TYPE	  5
+#define MSCP_RESPONSE_DATALENGTH_BYTES 4
+#define MSCP_RESPONSE_STATUS_CODE_BYTES 2
+
+#define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
+
+
+SystemControl::SystemControl() : Module(SystemControl::module_name){
+
+	// ** Subscriptions
+	this->failureSub = this->create_subscription<UInt8>(topicNames[COMM_FAILURE], 0, std::bind(&SystemControl::onFailureMessage, this, _1));
+	this->getStatusResponseSub= this->create_subscription<String>(topicNames[COMM_GETSTATUS_OK], 0, std::bind(&SystemControl::onGetStatusResponse, this, _1));
+
+	// ** Publishers
+	this->initPub = this->create_publisher<Empty>(topicNames[COMM_INIT],0);
+	this->connectPub  = this->create_publisher<Empty>(topicNames[COMM_CONNECT],0);
+	this->disconnectPub = this->create_publisher<Empty>(topicNames[COMM_DISCONNECT],0);
+	this->armPub = this->create_publisher<Empty>(topicNames[COMM_ARM],0);
+	this->startPub = this->create_publisher<Empty>(topicNames[COMM_STRT],0);
+	this->stopPub = this->create_publisher<Empty>(topicNames[COMM_STOP],0);
+	this->abortPub = this->create_publisher<Empty>(topicNames[COMM_ABORT],0);
+	this->backToStartPub = this->create_publisher<ManoeuvreCommand>(topicNames[COMM_BACKTOSTART_CALL],0); 
+	this->dataDictPub = this->create_publisher<Empty>(topicNames[COMM_DATA_DICT],0);
+	this->remoteControlEnablePub = this->create_publisher<Empty>(topicNames[COMM_REMOTECTRL_ENABLE],0);
+	this->remoteControlDisablePub = this->create_publisher<Empty>(topicNames[COMM_REMOTECTRL_DISABLE],0);
+	this->enableObjectPub = this->create_publisher<ObjectEnabled>(topicNames[COMM_ENABLE_OBJECT],0);
+	this->allClearPub = this->create_publisher<Empty>(topicNames[COMM_ABORT_DONE],0);
+	this->exitPub = this->create_publisher<Empty>(topicNames[COMM_EXIT],0);
+	this->getStatusPub = this->create_publisher<Empty>(topicNames[COMM_GETSTATUS],0); 
+}; 
+
+void SystemControl::onAbortMessage(const Empty::SharedPtr){}
+
+void SystemControl::onAllClearMessage(const Empty::SharedPtr){}
+
 void SystemControl::onFailureMessage(const UInt8::SharedPtr msg){
 	if (SystemControlState == SERVER_STATE_INWORK) {
 		enum COMMAND failedCommand = (COMMAND) (msg->data);
@@ -22,12 +88,11 @@ void SystemControl::onFailureMessage(const UInt8::SharedPtr msg){
 	}
 }
 
-void SystemControl::onGetStatusResponse(String::SharedPtr msg){
+void SystemControl::onGetStatusResponse(const String::SharedPtr msg){
 	SystemControlGetStatusMessage(msg->data.c_str(), 0);
-	//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
 }
 
-void SystemControl::onBackToStartResponse(Int8::SharedPtr msg){
+void SystemControl::onBackToStartResponse(const Int8::SharedPtr msg){
 	if(msg->data == BTS_FAIL){
 		LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", msg->data);
 		SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
@@ -56,9 +121,27 @@ void SystemControl::signalHandler(int signo) {
 	}
 }
 
+bool SystemControl::isWorking(){
+	return !(SystemControlState != SERVER_STATE_INWORK && (ClientResult < 0));
+}
+bool SystemControl::shouldExit(){
+	return iExit;
+}
+
 void SystemControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 	LogInit("SystemControl", logLevel);
 	LogMessage(LOG_LEVEL_INFO, "System control task running with PID: %i", getpid());
+
+	// Initialise data dictionary
+	LogMessage(LOG_LEVEL_INFO, "Initializing data dictionary");
+	ReadWriteAccess_t dataDictOperationResult = DataDictionaryConstructor();
+	if (dataDictOperationResult != READ_WRITE_OK) {
+		DataDictionaryDestructor();
+		util_error("Unable to initialize shared memory space");
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "Data dictionary succesfully initialized");
+	}
 
 	DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
 	LogMessage(LOG_LEVEL_INFO, "RVSSConfigU32 = %d", RVSSConfigU32);
@@ -83,7 +166,7 @@ void SystemControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logL
 }
 
 
-void SystemControl::mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 	if (SystemControlState == SERVER_STATE_ERROR) {
 		this->abortPub->publish(Empty());
 		return;
@@ -313,7 +396,7 @@ void SystemControl::mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLev
 	SystemControlGetStatusMessage("", 0);
 }
 
-void SystemControl::sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+void SystemControl::sendUnsolicitedData(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 		TimeSetToCurrentSystemTime(&tvTime);
 
 	if (timercmp(&tvTime, &nextRVSSSendTime, >)) {
@@ -324,20 +407,20 @@ void SystemControl::sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVE
 
 			if (RVSSConfigU32 & RVSS_TIME_CHANNEL) {
 				SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
-				UtilSendUDPData((uint8_t*) MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
+				UtilSendUDPData((uint8_t*) module_name, &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
 								RVSSMessageLengthU32, 0);
 			}
 
 			if (RVSSConfigU32 & RVSS_MAESTRO_CHANNEL) {
 				SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32, GSD,
 															SystemControlState, 0);
-				UtilSendUDPData((uint8_t*) MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
+				UtilSendUDPData((uint8_t*) module_name, &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
 								RVSSMessageLengthU32, 0);
 			}
 
 			if (RVSSConfigU32 & RVSS_ASP_CHANNEL) {
 				SystemControlBuildRVSSAspChannelMessage(RVSSData, &RVSSMessageLengthU32, 0);
-				UtilSendUDPData((uint8_t*) MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
+				UtilSendUDPData((uint8_t*) module_name, &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
 								RVSSMessageLengthU32, 0);
 			}
 
@@ -351,7 +434,7 @@ void SystemControl::sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVE
 	}
 }
 
-void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 	switch (SystemControlCommand) {
 		// can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
 	case Idle_0:
@@ -808,7 +891,7 @@ void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL l
 		if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED) {
 			SystemControlState = SERVER_STATE_INWORK;
 			try{
-				this->disconnectPub->publish(Empty());
+				this->armPub->publish(Empty());
 			}
 			catch(...){
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ARM command");
@@ -1430,7 +1513,6 @@ I32 SystemControl::SystemControlInitServer(int *ClientSocket, int *ServerHandle,
 
 	enum COMMAND iCommand;
 	ssize_t bytesReceived = 0;
-	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
 
 
 	/* Init user control socket */
@@ -2212,7 +2294,7 @@ I32 SystemControl::SystemControlCreateDirectory(const char * Path, char * Return
 }
 
 
-I32 SystemControl::SystemControlUploadFile(char * Filename, char * FileSize, char * PacketSize, char * FileType, char * ReturnValue,
+I32 SystemControl::SystemControlUploadFile(const char * Filename, const char * FileSize, const char * PacketSize, const char * FileType, char * ReturnValue,
 							char * CompleteFilePath, U8 Debug) {
 
 	FILE *fd;
@@ -2307,7 +2389,7 @@ I32 SystemControl::SystemControlUploadFile(char * Filename, char * FileSize, cha
 }
 
 
-I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, char * Path, char * FileSize, char * PacketSize, char * ReturnValue,
+I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, const char * Path, const char * FileSize, const char * PacketSize, char * ReturnValue,
 							   U8 Debug) {
 
 	FILE *fd;
@@ -2397,7 +2479,7 @@ I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, char * Path, char * 
 }
 
 
-I32 SystemControl::SystemControlSendFileContent(I32 * sockfd, const char * Path, char * PacketSize, char * ReturnValue, U8 Remove,
+I32 SystemControl::SystemControlSendFileContent(I32 * sockfd, const char * Path, const char * PacketSize, char * ReturnValue, U8 Remove,
 								 U8 Debug) {
 	FILE *fd;
 	char CompletePath[MAX_FILE_PATH];
@@ -2672,7 +2754,7 @@ int32_t SystemControl::SystemControlSendRVSSMonitorChannelMessages(int *socket, 
 				memcpy(RVSSData, &messageLength, sizeof (messageLength));
 				memcpy(RVSSData + sizeof (messageLength), &RVSSChannel, sizeof (RVSSChannel));
 
-				UtilSendUDPData((uint8_t*) MODULE_NAME, socket, addr, (uint8_t*) RVSSData, messageLength, 0);
+				UtilSendUDPData((uint8_t*) module_name, socket, addr, (uint8_t*) RVSSData, messageLength, 0);
 			}
 		}
 	}

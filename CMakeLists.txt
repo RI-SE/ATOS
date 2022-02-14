@@ -15,6 +15,9 @@ endif()
 # point out where CMake scripts are located
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/util/cmake)
 
+#point out the ros install location for modules
+set_property(GLOBAL PROPERTY ros_install_dir_property "lib/maestro")
+
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -111,13 +114,6 @@ install(CODE "execute_process(COMMAND chown -R $ENV{USER} $ENV{HOME}/${MAESTRO_T
 
 # Add post install instructions
 add_subdirectory(cmake/postinstall)
-
-# Install each node in ros install directory
-install(TARGETS 
-	Core
-	SystemControl
-	RelativeKinematics
- DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

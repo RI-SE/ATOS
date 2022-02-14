@@ -21,30 +21,10 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <ifaddrs.h>
-//#include "systemcontrol.h"
 #include "maestroTime.h"
 #include "datadictionary.h"
-//#include "util.h"
+#include "util.h"
 #include "logging.h"
-
-#define MODULE_NAME "SystemControl"
-
-#define SYSTEM_CONTROL_SERVICE_POLL_TIME_MS 5000
-#define SYSTEM_CONTROL_TASK_PERIOD_MS 1
-#define SYSTEM_CONTROL_RVSS_TIME_MS 10
-
-#define SYSTEM_CONTROL_GETSTATUS_TIME_MS 5000
-#define SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS 2000
-#define SYSTEM_CONTROL_NO_OF_MODULES_IN_USE 2	//TODO Create a file containing a list of which modules should be used. Check with this list to see if each module has responded.
-
-#define SYSTEM_CONTROL_CONTROL_PORT   54241	// Default port, control channel
-#define SYSTEM_CONTROL_PROCESS_PORT   54242	// Default port, process channel
-#define SYSTEM_CONTROL_RX_PACKET_SIZE 1280
-#define SYSTEM_CONTROL_TX_PACKET_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
-#define IPC_BUFFER_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
-//#define IPC_BUFFER_SIZE   1024
-#define SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE 64
-#define SYSTEM_CONTROL_RVSS_DATA_BUFFER	128
 
 #define SYSTEM_CONTROL_ARG_CHAR_COUNT 		2
 #define SYSTEM_CONTROL_COMMAND_MAX_LENGTH 	32
@@ -54,8 +34,6 @@
 //#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH    80
 #define TCP_RECV_BUFFER_SIZE 2048
 
-#define SC_RECV_MESSAGE_BUFFER 1024
-
 #define SMALL_BUFFER_SIZE_1024 1024
 #define SMALL_BUFFER_SIZE_128 128
 #define SMALL_BUFFER_SIZE_64 64
@@ -64,9 +42,19 @@
 #define SMALL_BUFFER_SIZE_6 6
 #define SMALL_BUFFER_SIZE_3 3
 #define SMALL_BUFFER_SIZE_2 2
+
+#define SYSTEM_CONTROL_RVSS_DATA_BUFFER	128
+
 #define SYSTEM_CONTROL_SEND_BUFFER_SIZE 1024
 
+#define SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE 64
+
 #define SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE 1024
+
+#define SYSTEM_CONTROL_RX_PACKET_SIZE 1280
+#define SYSTEM_CONTROL_TX_PACKET_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
+#define IPC_BUFFER_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
+
 
 #define SYSTEM_CONTROL_RESPONSE_CODE_OK 						0x0001
 #define SYSTEM_CONTROL_RESPONSE_CODE_ERROR 						0x0F10
@@ -80,39 +68,17 @@
 #define SYSTEM_CONTROL_RESPONSE_CODE_DECRYPTION_ERROR			0x0F61
 #define SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA                    0x0F62
 
-#define GetCurrentDir getcwd
-#define REMOVE_FILE 1
-#define KEEP_FILE 0
-
-#define RVSS_TIME_CHANNEL 1
-#define RVSS_MONITOR_CHANNEL 2
-#define RVSS_MAESTRO_CHANNEL 4
-#define RVSS_ASP_CHANNEL 8
-
-#define ENABLE_COMMAND_STRING "ENABLE"
-#define DISABLE_COMMAND_STRING "DISABLE"
-
 // Time intervals for sleeping when no message bus message was received and for when one was received
 #define QUEUE_EMPTY_POLL_PERIOD 10000000
 
-#define MAESTRO_GENERIC_FILE_TYPE     1
-#define MAESTRO_TRAJ_FILE_TYPE        2
-#define MAESTRO_CONF_FILE_TYPE        3
-#define MAESTRO_GEOFENCE_FILE_TYPE    4
-#define MAESTRO_OBJECT_FILE_TYPE	  5
-#define MSCP_RESPONSE_DATALENGTH_BYTES 4
-#define MSCP_RESPONSE_STATUS_CODE_BYTES 2
-
-#define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
-
 typedef enum {
-SERVER_STATE_UNDEFINED,
-SERVER_STATE_INITIALIZED,
-SERVER_STATE_IDLE,
-SERVER_STATE_READY,
-SERVER_STATE_RUNNING,
-SERVER_STATE_INWORK,
-SERVER_STATE_ERROR,
+	SERVER_STATE_UNDEFINED,
+	SERVER_STATE_INITIALIZED,
+	SERVER_STATE_IDLE,
+	SERVER_STATE_READY,
+	SERVER_STATE_RUNNING,
+	SERVER_STATE_INWORK,
+	SERVER_STATE_ERROR,
 } ServerState_t;
 typedef enum {
 	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
@@ -129,55 +95,25 @@ typedef enum {
 
 class SystemControl : public Module
 {
-	private:
-		/* callbacks */
-		virtual void onGetStatusResponse(String::SharedPtr) override;
-		virtual void onFailureMessage(const UInt8::SharedPtr) override;
-		virtual void onBackToStartResponse(Int8::SharedPtr) override;
-	public:
-	SystemControl(std::string name) : Module(name){
-	
-	// ** Subscriptions
-	this->failureSub = this->create_subscription<UInt8>(name, 0, std::bind(&SystemControl::onFailureMessage, this, _1));
-	this->getStatusResponseSub= this->create_subscription<String>(name, 0, std::bind(&SystemControl::onGetStatusResponse, this, _1));
-	//this->failureSub = this->create_subscription<Empty>(name, 0, std::bind(onFailureMessage, this, _1));
 
-	// ** Publishers
-	this->initPub = this->create_publisher<Empty>(topicNames[COMM_INIT],0);
-	this->connectPub  = this->create_publisher<Empty>(topicNames[COMM_CONNECT],0);
-	this->disconnectPub = this->create_publisher<Empty>(topicNames[COMM_DISCONNECT],0);
-	this->armPub = this->create_publisher<Empty>(topicNames[COMM_ARM],0);
-	this->startPub = this->create_publisher<Empty>(topicNames[COMM_STRT],0);
-	this->stopPub = this->create_publisher<Empty>(topicNames[COMM_STOP],0);
-	this->abortPub = this->create_publisher<Empty>(topicNames[COMM_ABORT],0);
-	this->backToStartPub = this->create_publisher<ManoeuvreCommand>(topicNames[COMM_BACKTOSTART_CALL],0); // 
-	this->dataDictPub = this->create_publisher<Empty>(topicNames[COMM_DATA_DICT],0);
-	this->remoteControlEnablePub = this->create_publisher<Empty>(topicNames[COMM_REMOTECTRL_ENABLE],0);
-	this->remoteControlDisablePub = this->create_publisher<Empty>(topicNames[COMM_REMOTECTRL_DISABLE],0);
-	this->enableObjectPub = this->create_publisher<ObjectEnabled>(topicNames[COMM_ENABLE_OBJECT],0);
-	this->allClearPub = this->create_publisher<Empty>(topicNames[COMM_ABORT_DONE],0);
-	this->exitPub = this->create_publisher<Empty>(topicNames[COMM_EXIT],0);
-	this->getStatusPub = this->create_publisher<Empty>(topicNames[COMM_GETSTATUS],0); 
-	}; 
+public:
+	static constexpr char* module_name = "SystemControl";
+	SystemControl();
+	bool isWorking();
+	bool shouldExit();
 	void initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
-	void mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
-	void handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
-	void sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
-	U8 ModeU8 = 0;
-	ServiceSessionType SessionData;
-	struct timeval CurrentTimeStruct;
-	I32 FileLengthI32 = 0;
-	U8 RVSSRateU8 = DEFAULT_RVSS_RATE;
-	U32 RVSSConfigU32 = DEFAULT_RVSS_CONF;
-	U64 OldTimeU64 = 0;
-	U64 PollRateU64 = 0;
-	U64 CurrentTimeU64 = 0;
 	void signalHandler(int signo);
-	volatile int iExit;
-	I32 ClientResult = 0;
-	ServerState_t SystemControlState = SERVER_STATE_UNDEFINED;
+	void receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	void processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	void sendUnsolicitedData(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
 
-	private:
+private:
+	/* callbacks */
+	void onGetStatusResponse(const String::SharedPtr) override;
+	void onFailureMessage(const UInt8::SharedPtr) override;
+	void onBackToStartResponse(const Int8::SharedPtr) override;
+	void onAbortMessage(const Empty::SharedPtr) override;
+	void onAllClearMessage(const Empty::SharedPtr) override;
 
 	/* definitions and datatypes */
 	const char *SystemControlStatesArr[7] =
@@ -202,9 +138,8 @@ class SystemControl : public Module
 	char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
 	char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
 	char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH];
-	char *STR_SYSTEM_CONTROL_RX_PACKET_SIZE;
-	char *STR_SYSTEM_CONTROL_TX_PACKET_SIZE;
-	
+	char *STR_SYSTEM_CONTROL_RX_PACKET_SIZE="1280";
+	char *STR_SYSTEM_CONTROL_TX_PACKET_SIZE="1200";
 
 	struct content_dir_info {
 		int exist;
@@ -241,9 +176,9 @@ class SystemControl : public Module
 										U8 Debug);
 	I32 SystemControlSetServerParameter(GSDType * GSD, char * ParameterName, char * NewValue, U8 Debug);
 	I32 SystemControlCheckFileDirectoryExist(char * ParameterName, char * ReturnValue, U8 Debug);
-	I32 SystemControlUploadFile(char * Filename, char * FileSize, char * PacketSize, char * FileType, char * ReturnValue,
+	I32 SystemControlUploadFile(const char * Filename, const char * FileSize, const char * PacketSize, const char * FileType, char * ReturnValue,
 								char * CompleteFilePath, U8 Debug);
-	I32 SystemControlReceiveRxData(I32 * sockfd, char * Path, char * FileSize, char * PacketSize, char * ReturnValue,
+	I32 SystemControlReceiveRxData(I32 * sockfd, const char * Path, const char * FileSize, const char * PacketSize, char * ReturnValue,
 								U8 Debug);
 	char SystemControlDeleteTrajectory(const char * trajectoryName, const size_t nameLen);
 	char SystemControlDeleteGeofence(const char * geofenceName, const size_t nameLen);
@@ -254,7 +189,7 @@ class SystemControl : public Module
 	I32 SystemControlDeleteFileDirectory(const char * Path, char * ReturnValue, U8 Debug);
 	I32 SystemControlBuildFileContentInfo(const char * Path, U8 Debug);
 	I32 SystemControlDestroyFileContentInfo(const char * Path, U8 RemoveFile);
-	I32 SystemControlSendFileContent(I32 * sockfd, const char * Path, char * PacketSize, char * ReturnValue, U8 Remove,
+	I32 SystemControlSendFileContent(I32 * sockfd, const char * Path, const char * PacketSize, char * ReturnValue, U8 Remove,
 									U8 Debug);
 	I32 SystemControlCreateDirectory(const char * Path, char * ReturnValue, U8 Debug);
 	I32 SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, TimeType * GPSTime,
@@ -271,6 +206,19 @@ class SystemControl : public Module
 	char SystemControlVerifyHostAddress(char *ip);
 
 	void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize);
+
+	U8 ModeU8 = 0;
+	ServiceSessionType SessionData;
+	struct timeval CurrentTimeStruct;
+	I32 FileLengthI32 = 0;
+	U8 RVSSRateU8 = DEFAULT_RVSS_RATE;
+	U32 RVSSConfigU32 = DEFAULT_RVSS_CONF;
+	U64 OldTimeU64 = 0;
+	U64 PollRateU64 = 0;
+	U64 CurrentTimeU64 = 0;
+	volatile int iExit;
+	I32 ClientResult = 0;
+	ServerState_t SystemControlState = SERVER_STATE_UNDEFINED;
 	I32 ServerHandle;
 	I32 ClientSocket = 0;
 	struct sockaddr_in RVSSChannelAddr;
@@ -286,18 +234,15 @@ class SystemControl : public Module
 	char pcBuffer[IPC_BUFFER_SIZE];
 	char inchr;
 	struct timeval tvTime;
-
 	const struct timeval VirtualMachineLagCompensation = { VIRTUAL_MACHINE_LAG_COMPENSATION_S,
 		VIRTUAL_MACHINE_LAG_COMPENSATION_US
 	};
-
 	ObjectPosition OP;
 	int i, i1;
 	char *StartPtr, *StopPtr, *CmdPtr, *OpeningQuotationMarkPtr, *ClosingQuotationMarkPtr, *StringPos;
 	struct timespec tTime;
 	enum COMMAND iCommand;
 	ssize_t bytesReceived = 0;
-	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
 	char ObjectIP[SMALL_BUFFER_SIZE_16];
 	char ObjectPort[SMALL_BUFFER_SIZE_6];
 	U64 uiTime;
