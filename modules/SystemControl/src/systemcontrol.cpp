@@ -10,10 +10,6 @@
 
 #define SYSTEM_CONTROL_CONTROL_PORT   54241	// Default port, control channel
 #define SYSTEM_CONTROL_PROCESS_PORT   54242	// Default port, process channel
-//#define IPC_BUFFER_SIZE   1024
-#define SYSTEM_CONTROL_RVSS_DATA_BUFFER	128
-
-#define SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE 1024
 
 #define GetCurrentDir getcwd
 #define REMOVE_FILE 1
@@ -61,6 +57,8 @@ SystemControl::SystemControl() : Module(SystemControl::module_name){
 	this->exitPub = this->create_publisher<Empty>(topicNames[COMM_EXIT],0);
 	this->getStatusPub = this->create_publisher<Empty>(topicNames[COMM_GETSTATUS],0); 
 }; 
+
+const int64_t SystemControl::getQueueEmptyPollPeriod(){return QUEUE_EMPTY_POLL_PERIOD_NS;}
 
 void SystemControl::onAbortMessage(const Empty::SharedPtr){}
 
@@ -1201,11 +1199,11 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 	}
 }
 
-SystemControlCommand_t SystemControl::SystemControlFindCommand(const char *CommandBuffer,
-												SystemControlCommand_t * CurrentCommand,
+SystemControl::SystemControlCommand_t SystemControl::SystemControlFindCommand(const char *CommandBuffer,
+												SystemControl::SystemControlCommand_t * CurrentCommand,
 												int *CommandArgCount) {
 
-	SystemControlCommand_t command;
+	SystemControl::SystemControlCommand_t command;
 	char StrippedCommandBuffer[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
 
 	bzero(StrippedCommandBuffer, SYSTEM_CONTROL_COMMAND_MAX_LENGTH);

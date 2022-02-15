@@ -41,7 +41,7 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 
 		// If SystemControl is not in work state and clientResult < 0 then wait at most QUEUE_EMPTY_POLL_PERIOD for a msg
 		// else keep running at full speed.
-		int64_t sleeptime=sc->isWorking() ? 0 : QUEUE_EMPTY_POLL_PERIOD;
+		const int64_t sleeptime=sc->isWorking() ? 0 : sc->getQueueEmptyPollPeriod();
 		executor.spin_node_once(sc,duration<int64_t,nanoseconds::period>(sleeptime));
 	}
 	ReadWriteAccess_t dataDictOperationResult = DataDictionaryDestructor();

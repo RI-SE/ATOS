@@ -26,79 +26,12 @@
 #include "util.h"
 #include "logging.h"
 
-#define SYSTEM_CONTROL_ARG_CHAR_COUNT 		2
-#define SYSTEM_CONTROL_COMMAND_MAX_LENGTH 	32
-#define SYSTEM_CONTROL_ARG_MAX_COUNT	 	6
-#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH	32
-//#define SYSTEM_CONTROL_TOTAL_COMMAND_MAX_LENGTH SYSTEM_CONTROL_ARG_CHAR_COUNT + SYSTEM_CONTROL_COMMAND_MAX_LENGTH + SYSTEM_CONTROL_ARG_MAX_COUNT*SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH
-//#define SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH    80
-#define TCP_RECV_BUFFER_SIZE 2048
-
-#define SMALL_BUFFER_SIZE_1024 1024
-#define SMALL_BUFFER_SIZE_128 128
-#define SMALL_BUFFER_SIZE_64 64
-#define SMALL_BUFFER_SIZE_16 16
-#define SMALL_BUFFER_SIZE_20 20
-#define SMALL_BUFFER_SIZE_6 6
-#define SMALL_BUFFER_SIZE_3 3
-#define SMALL_BUFFER_SIZE_2 2
-
-#define SYSTEM_CONTROL_RVSS_DATA_BUFFER	128
-
-#define SYSTEM_CONTROL_SEND_BUFFER_SIZE 1024
-
-#define SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE 64
-
-#define SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE 1024
-
-#define SYSTEM_CONTROL_RX_PACKET_SIZE 1280
-#define SYSTEM_CONTROL_TX_PACKET_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
-#define IPC_BUFFER_SIZE SYSTEM_CONTROL_RX_PACKET_SIZE
-
-
-#define SYSTEM_CONTROL_RESPONSE_CODE_OK 						0x0001
-#define SYSTEM_CONTROL_RESPONSE_CODE_ERROR 						0x0F10
-#define SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE 	0x0F20
-#define SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE  		 	0x0F25
-
-#define SYSTEM_CONTROL_RESPONSE_CODE_INVALID_LENGTH				0x0F30
-#define SYSTEM_CONTROL_RESPONSE_CODE_BUSY						0x0F40
-#define SYSTEM_CONTROL_RESPONSE_CODE_INVALID_SCRIPT				0x0F50
-#define SYSTEM_CONTROL_RESPONSE_CODE_INVALID_ENCRYPTION_CODE	0x0F60
-#define SYSTEM_CONTROL_RESPONSE_CODE_DECRYPTION_ERROR			0x0F61
-#define SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA                    0x0F62
-
-// Time intervals for sleeping when no message bus message was received and for when one was received
-#define QUEUE_EMPTY_POLL_PERIOD 10000000
-
-typedef enum {
-	SERVER_STATE_UNDEFINED,
-	SERVER_STATE_INITIALIZED,
-	SERVER_STATE_IDLE,
-	SERVER_STATE_READY,
-	SERVER_STATE_RUNNING,
-	SERVER_STATE_INWORK,
-	SERVER_STATE_ERROR,
-} ServerState_t;
-typedef enum {
-	Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
-	InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
-	SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
-	GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
-	DeleteFileDirectory_1,
-	ClearTrajectories_0, ClearGeofences_0, ClearObjects_0, RemoteControl_1, RemoteControlManoeuvre_2,
-	SetObjectEnableStatus_2,
-	GetObjectEnableStatus_1,
-	CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
-	start_ext_trigg_1, ClearAllScenario_0 , DownloadDirectoryContent_1, DownloadTrajFiles_0, nocommand
-} SystemControlCommand_t;
-
 class SystemControl : public Module
 {
-
 public:
 	static constexpr char* module_name = "SystemControl";
 	SystemControl();
+	const int64_t getQueueEmptyPollPeriod();
 	bool isWorking();
 	bool shouldExit();
 	void initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
@@ -108,38 +41,68 @@ public:
 	void sendUnsolicitedData(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
 
 private:
-	/* callbacks */
-	void onGetStatusResponse(const String::SharedPtr) override;
-	void onFailureMessage(const UInt8::SharedPtr) override;
-	void onBackToStartResponse(const Int8::SharedPtr) override;
-	void onAbortMessage(const Empty::SharedPtr) override;
-	void onAllClearMessage(const Empty::SharedPtr) override;
+	/* constants and datatypes */
+	const int64_t QUEUE_EMPTY_POLL_PERIOD_NS = 10000000;
 
-	/* definitions and datatypes */
-	const char *SystemControlStatesArr[7] =
-		{ "UNDEFINED", "INITIALIZED", "IDLE", "READY", "RUNNING", "INWORK", "ERROR" };
-	const char *SystemControlOBCStatesArr[8] =
-		{ "UNDEFINED", "IDLE", "INITIALIZED", "CONNECTED", "ARMED", "RUNNING", "REMOTECONTROL", "ERROR" };
-	const char *POSTRequestMandatoryContent[3] = { "POST", "HTTP/1.1", "\r\n\r\n" };
-	const char *SystemControlCommandsArr[37] = {
-		"Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0",
-		"AbortScenario_0", "InitializeScenario_0",
-		"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
-		"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
-		"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1",
-		"DeleteFileDirectory_1",
-		"ClearTrajectories_0", "ClearGeofences_0", "ClearObjects_0", "RemoteControl_1",
-		"RemoteControlManoeuvre_2",
-		"SetObjectEnableStatus_2",
-		"GetObjectEnableStatus_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
-		"control_0",
-		"Exit_0", "start_ext_trigg_1", "ClearAllScenario_0", "DownloadDirectoryContent_1", "DownloadTrajFiles_0"
-	};
-	char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
-	char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
-	char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH];
-	char *STR_SYSTEM_CONTROL_RX_PACKET_SIZE="1280";
-	char *STR_SYSTEM_CONTROL_TX_PACKET_SIZE="1200";
+	static const int SYSTEM_CONTROL_RESPONSE_CODE_OK = 0x0001;
+	static const int SYSTEM_CONTROL_RESPONSE_CODE_ERROR = 0x0F10;
+	static const int SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE = 0x0F20;
+	static const int SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE = 0x0F25;
+
+	static const int SYSTEM_CONTROL_RESPONSE_CODE_INVALID_LENGTH = 0x0F30;
+	static const int SYSTEM_CONTROL_RESPONSE_CODE_BUSY = 0x0F40;
+	static const int SYSTEM_CONTROL_RESPONSE_CODE_INVALID_SCRIPT = 0x0F50;
+	static const int SYSTEM_CONTROL_RESPONSE_CODE_INVALID_ENCRYPTION_CODE = 0x0F60;
+	static const int SYSTEM_CONTROL_RESPONSE_CODE_DECRYPTION_ERROR = 0x0F61;
+	static const int SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA = 0x0F62;
+
+	static const int SMALL_BUFFER_SIZE_6 = 6;
+	static const int SMALL_BUFFER_SIZE_16 = 16;
+	static const int SMALL_BUFFER_SIZE_20 = 20;
+	static const int SMALL_BUFFER_SIZE_128 = 128;
+	static const int SMALL_BUFFER_SIZE_1024 = 1024;
+
+	static const int SYSTEM_CONTROL_ARG_CHAR_COUNT = 2;
+	static const int SYSTEM_CONTROL_COMMAND_MAX_LENGTH = 32;
+	static const int SYSTEM_CONTROL_ARG_MAX_COUNT = 6;
+	static const int SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH = 32;
+
+	static const int SYSTEM_CONTROL_RVSS_DATA_BUFFER = 128;
+
+	static const int TCP_RECV_BUFFER_SIZE = 2048;
+	
+	static const int SYSTEM_CONTROL_SEND_BUFFER_SIZE = 1024;
+
+	static const int SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE = 64;
+
+	static const int SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE = 1024;
+
+	static const int SYSTEM_CONTROL_RX_PACKET_SIZE = 1280;
+	static const int SYSTEM_CONTROL_TX_PACKET_SIZE = SYSTEM_CONTROL_RX_PACKET_SIZE;
+	static const int IPC_BUFFER_SIZE = SYSTEM_CONTROL_RX_PACKET_SIZE;
+
+	typedef enum {
+		SERVER_STATE_UNDEFINED,
+		SERVER_STATE_INITIALIZED,
+		SERVER_STATE_IDLE,
+		SERVER_STATE_READY,
+		SERVER_STATE_RUNNING,
+		SERVER_STATE_INWORK,
+		SERVER_STATE_ERROR,
+	} ServerState_t;
+
+	typedef enum {
+		Idle_0, GetServerStatus_0, ArmScenario_0, DisarmScenario_0, StartScenario_1, stop_0, AbortScenario_0,
+		InitializeScenario_0, ConnectObject_0, DisconnectObject_0, GetServerParameterList_0,
+		SetServerParameter_2, GetServerParameter_1, DownloadFile_1, UploadFile_4, CheckFileDirectoryExist_1,
+		GetRootDirectoryContent_0, GetDirectoryContent_1, DeleteTrajectory_1, DeleteGeofence_1,
+		DeleteFileDirectory_1,
+		ClearTrajectories_0, ClearGeofences_0, ClearObjects_0, RemoteControl_1, RemoteControlManoeuvre_2,
+		SetObjectEnableStatus_2,
+		GetObjectEnableStatus_1,
+		CreateDirectory_1, GetTestOrigin_0, replay_1, control_0, Exit_0,
+		start_ext_trigg_1, ClearAllScenario_0 , DownloadDirectoryContent_1, DownloadTrajFiles_0, nocommand
+	} SystemControlCommand_t;
 
 	struct content_dir_info {
 		int exist;
@@ -151,10 +114,15 @@ private:
 	typedef enum {
 		MSCP_BACK_TO_START = 3
 	} MSCPRemoteControlCommand;
+	
+	/* callbacks */
+	void onGetStatusResponse(const String::SharedPtr) override;
+	void onFailureMessage(const UInt8::SharedPtr) override;
+	void onBackToStartResponse(const Int8::SharedPtr) override;
+	void onAbortMessage(const Empty::SharedPtr) override;
+	void onAllClearMessage(const Empty::SharedPtr) override;
 
-	content_dir_info SystemControlDirectoryInfo;
-
-	/* private functions */
+	/* methods */
 	SystemControlCommand_t SystemControlFindCommand(const char *CommandBuffer,
 													SystemControlCommand_t * CurrentCommand, int *ArgCount);
 	I32 SystemControlInitServer(int *ClientSocket, int *ServerHandle, struct in_addr *ip_addr);
@@ -206,6 +174,34 @@ private:
 	char SystemControlVerifyHostAddress(char *ip);
 
 	void appendSysInfoString(char *ControlResponseBuffer, const size_t bufferSize);
+
+	/* variables */
+	const char *SystemControlStatesArr[7] =
+		{ "UNDEFINED", "INITIALIZED", "IDLE", "READY", "RUNNING", "INWORK", "ERROR" };
+	const char *SystemControlOBCStatesArr[8] =
+		{ "UNDEFINED", "IDLE", "INITIALIZED", "CONNECTED", "ARMED", "RUNNING", "REMOTECONTROL", "ERROR" };
+	const char *POSTRequestMandatoryContent[3] = { "POST", "HTTP/1.1", "\r\n\r\n" };
+	const char *SystemControlCommandsArr[37] = {
+		"Idle_0", "GetServerStatus_0", "ArmScenario_0", "DisarmScenario_0", "StartScenario_1", "stop_0",
+		"AbortScenario_0", "InitializeScenario_0",
+		"ConnectObject_0", "DisconnectObject_0", "GetServerParameterList_0", "SetServerParameter_2",
+		"GetServerParameter_1", "DownloadFile_1", "UploadFile_4", "CheckFileDirectoryExist_1",
+		"GetRootDirectoryContent_0", "GetDirectoryContent_1", "DeleteTrajectory_1", "DeleteGeofence_1",
+		"DeleteFileDirectory_1",
+		"ClearTrajectories_0", "ClearGeofences_0", "ClearObjects_0", "RemoteControl_1",
+		"RemoteControlManoeuvre_2",
+		"SetObjectEnableStatus_2",
+		"GetObjectEnableStatus_1", "CreateDirectory_1", "GetTestOrigin_0", "replay_1",
+		"control_0",
+		"Exit_0", "start_ext_trigg_1", "ClearAllScenario_0", "DownloadDirectoryContent_1", "DownloadTrajFiles_0"
+	};
+	char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
+	char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
+	char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH];
+	char * STR_SYSTEM_CONTROL_RX_PACKET_SIZE="1280";
+	char * STR_SYSTEM_CONTROL_TX_PACKET_SIZE="1200";
+
+	content_dir_info SystemControlDirectoryInfo;
 
 	U8 ModeU8 = 0;
 	ServiceSessionType SessionData;
