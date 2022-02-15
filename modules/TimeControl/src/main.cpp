@@ -4,8 +4,8 @@
 
 using namespace std::chrono;
 
-std::shared_ptr<TimeControl> tc;
-void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+static std::shared_ptr<TimeControl> tc;
+static void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
 
 int main(int argc, char** argv){
 	TimeType *GPSTime;
@@ -23,20 +23,21 @@ int main(int argc, char** argv){
 void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 	// Initialize ROS node
 	rclcpp::init(0,nullptr);
-	tc = std::make_shared<TimeControl>(MODULE_NAME);
+	tc = std::make_shared<TimeControl>();
 	tc->initialize(GPSTime,GSD,logLevel);
 
 	// Set up signal handlers
 	auto f = [](int signo) -> void {tc->signalHandler(signo);};
-	if (std::signal(SIGINT,f) == SIG_ERR)
+	if (std::signal(SIGINT,f) == SIG_ERR){
 		util_error("Unable to initialize signal handler");
+	}
 
 	// Create an executor for executing the callback functions of the node when messages arrive
 	rclcpp::executors::SingleThreadedExecutor executor;
 	
-	while (rclcpp::ok() && !tc->iExit){
+	while (rclcpp::ok() && !tc->shouldExit()){
 		//Do some work
-		tc->mainTask(GPSTime, GSD, logLevel);
+		tc->calibrateTime(GPSTime, GSD, logLevel);
 		
 		// spin_node_once() adds node to executor, spins and then removes node from executor.
 		// If message exists in queue, it instantly processed callback, else sleeps at most POLL_SLEEP_TIME for a message to arrive.

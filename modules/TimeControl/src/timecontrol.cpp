@@ -1,5 +1,10 @@
 #include "timecontrol.hpp"
 
+TimeControl::TimeControl() : Module(TimeControl::module_name){
+	// ** Subscriptions
+	this->exitSub = this->create_subscription<Empty>(topicNames[COMM_EXIT], 0, std::bind(&TimeControl::onExitMessage, this, _1));
+};
+
 void TimeControl::signalHandler(int signo) {
 	if (signo == SIGINT) {
 		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
@@ -13,13 +18,17 @@ void TimeControl::signalHandler(int signo) {
 void TimeControl::onExitMessage(Empty::SharedPtr) {
 	iExit=1;
 }
+void TimeControl::onAbortMessage(Empty::SharedPtr) {};
 
+bool TimeControl::shouldExit(){
+	return iExit;
+}
 
 void TimeControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 	LogInit("TimeControl", logLevel);
 	LogMessage(LOG_LEVEL_INFO, "Time control task running with PID: %i", getpid());
 
-	if (JournalInit(MODULE_NAME)) {
+	if (JournalInit(module_name)) {
 		util_error("Unable to open journal");
 	}
 
@@ -69,7 +78,7 @@ void TimeControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLev
 }
 
 
-void TimeControl::mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+void TimeControl::calibrateTime(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 	gettimeofday(&ExecTime, NULL);
 	CurrentMilliSecondU16 = (U16) (ExecTime.tv_usec / 1000);
 	if (CurrentMilliSecondU16 < PrevMilliSecondU16) {
@@ -282,49 +291,42 @@ int TimeControl::TimeControlCreateTimeChannel(const char *name, const uint32_t p
 }
 
 
-U32 TimeControl::TimeControlIPStringToInt(C8 * IP) {
-	/*
-	C8 *p, *ps;
-	C8 Buffer[3];
-	U32 IpU32 = 0;
+uint32_t TimeControl::TimeControlIPStringToInt(char * IP) {
+	char *p, *ps;
+	char Buffer[3];
+	uint32_t IpU32 = 0;
 
 	ps = IP;
-	p = strchr(reinterpret_cast<char*>(IP), '.');
+	p = strchr(IP, '.');
 	if (p != NULL) {
 		bzero(Buffer, 3);
-		strncpy(Buffer, ps, (U64) p - (U64) ps);
-		IpU32 = (IpU32 | (U32) atoi(Buffer)) << 8;
+		strncpy(Buffer, ps, (uint64_t) p - (uint64_t) ps);
+		IpU32 = (IpU32 | (uint32_t) atoi(Buffer)) << 8;
 
 		ps = p + 1;
 		p = strchr(ps, '.');
 		bzero(Buffer, 3);
-		strncpy(Buffer, ps, (U64) p - (U64) ps);
+		strncpy(Buffer, ps, (uint64_t) p - (uint64_t) ps);
 
-		IpU32 = (IpU32 | (U32) atoi(Buffer)) << 8;
+		IpU32 = (IpU32 | (uint32_t) atoi(Buffer)) << 8;
 
 		ps = p + 1;
 		p = strchr(ps, '.');
 		bzero(Buffer, 3);
-		strncpy(Buffer, ps, (U64) p - (U64) ps);
+		strncpy(Buffer, ps, (uint64_t) p - (uint64_t) ps);
 
-		IpU32 = (IpU32 | (U32) atoi(Buffer)) << 8;
+		IpU32 = (IpU32 | (uint32_t) atoi(Buffer)) << 8;
 
 		ps = p + 1;
 		p = strchr(ps, 0);
 		bzero(Buffer, 3);
-		strncpy(Buffer, ps, (U64) p - (U64) ps);
+		strncpy(Buffer, ps, (uint64_t) p - (uint64_t) ps);
 
-		IpU32 = (IpU32 | (U32) atoi(Buffer));
+		IpU32 = (IpU32 | (uint32_t) atoi(Buffer));
 
 		//printf("IpU32 = %x\n", IpU32);
 	}
-	return IpU32;*/
-
-	//This should work same as above?
-	//TODO: test this and make sure it works as intended.
-	struct sockaddr_in sa;
-	inet_pton(AF_INET, (char*)IP, &(sa.sin_addr));
-	return (uint32_t)sa.sin_addr.s_addr;
+	return IpU32;
 }
 
 
