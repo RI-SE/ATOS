@@ -15,6 +15,9 @@ endif()
 # point out where CMake scripts are located
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/util/cmake)
 
+#point out the ros install location for modules
+set_property(GLOBAL PROPERTY ros_install_dir_property "lib/maestro")
+
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -116,22 +119,11 @@ install(CODE "execute_process(COMMAND chown -R $ENV{USER} $ENV{HOME}/${MAESTRO_T
 # Add post install instructions
 add_subdirectory(cmake/postinstall)
 
-# Install each node in ros install directory
-install(TARGETS 
-	Core
-	TimeControl
-	SystemControl
-	RelativeKinematics
- DESTINATION lib/${PROJECT_NAME})
-
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
   # uncomment the line when a copyright and license is not present in all source files
   #set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # uncomment the line when this package is not in a git repo
-  #set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
 

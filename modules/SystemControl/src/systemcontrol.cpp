@@ -1,5 +1,71 @@
 #include "systemcontrol.hpp"
 
+#define SYSTEM_CONTROL_SERVICE_POLL_TIME_MS 5000
+#define SYSTEM_CONTROL_TASK_PERIOD_MS 1
+#define SYSTEM_CONTROL_RVSS_TIME_MS 10
+
+#define SYSTEM_CONTROL_GETSTATUS_TIME_MS 5000
+#define SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS 2000
+#define SYSTEM_CONTROL_NO_OF_MODULES_IN_USE 2	//TODO Create a file containing a list of which modules should be used. Check with this list to see if each module has responded.
+
+#define SYSTEM_CONTROL_CONTROL_PORT   54241	// Default port, control channel
+#define SYSTEM_CONTROL_PROCESS_PORT   54242	// Default port, process channel
+//#define IPC_BUFFER_SIZE   1024
+#define SYSTEM_CONTROL_RVSS_DATA_BUFFER	128
+
+#define SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE 1024
+
+#define GetCurrentDir getcwd
+#define REMOVE_FILE 1
+#define KEEP_FILE 0
+
+#define RVSS_TIME_CHANNEL 1
+#define RVSS_MONITOR_CHANNEL 2
+#define RVSS_MAESTRO_CHANNEL 4
+#define RVSS_ASP_CHANNEL 8
+
+#define ENABLE_COMMAND_STRING "ENABLE"
+#define DISABLE_COMMAND_STRING "DISABLE"
+
+#define MAESTRO_GENERIC_FILE_TYPE     1
+#define MAESTRO_TRAJ_FILE_TYPE        2
+#define MAESTRO_CONF_FILE_TYPE        3
+#define MAESTRO_GEOFENCE_FILE_TYPE    4
+#define MAESTRO_OBJECT_FILE_TYPE	  5
+#define MSCP_RESPONSE_DATALENGTH_BYTES 4
+#define MSCP_RESPONSE_STATUS_CODE_BYTES 2
+
+#define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
+
+
+SystemControl::SystemControl() : Module(SystemControl::module_name){
+
+	// ** Subscriptions
+	this->failureSub = this->create_subscription<UInt8>(topicNames[COMM_FAILURE], 0, std::bind(&SystemControl::onFailureMessage, this, _1));
+	this->getStatusResponseSub= this->create_subscription<String>(topicNames[COMM_GETSTATUS_OK], 0, std::bind(&SystemControl::onGetStatusResponse, this, _1));
+
+	// ** Publishers
+	this->initPub = this->create_publisher<Empty>(topicNames[COMM_INIT],0);
+	this->connectPub  = this->create_publisher<Empty>(topicNames[COMM_CONNECT],0);
+	this->disconnectPub = this->create_publisher<Empty>(topicNames[COMM_DISCONNECT],0);
+	this->armPub = this->create_publisher<Empty>(topicNames[COMM_ARM],0);
+	this->startPub = this->create_publisher<Empty>(topicNames[COMM_STRT],0);
+	this->stopPub = this->create_publisher<Empty>(topicNames[COMM_STOP],0);
+	this->abortPub = this->create_publisher<Empty>(topicNames[COMM_ABORT],0);
+	this->backToStartPub = this->create_publisher<ManoeuvreCommand>(topicNames[COMM_BACKTOSTART_CALL],0); 
+	this->dataDictPub = this->create_publisher<Empty>(topicNames[COMM_DATA_DICT],0);
+	this->remoteControlEnablePub = this->create_publisher<Empty>(topicNames[COMM_REMOTECTRL_ENABLE],0);
+	this->remoteControlDisablePub = this->create_publisher<Empty>(topicNames[COMM_REMOTECTRL_DISABLE],0);
+	this->enableObjectPub = this->create_publisher<ObjectEnabled>(topicNames[COMM_ENABLE_OBJECT],0);
+	this->allClearPub = this->create_publisher<Empty>(topicNames[COMM_ABORT_DONE],0);
+	this->exitPub = this->create_publisher<Empty>(topicNames[COMM_EXIT],0);
+	this->getStatusPub = this->create_publisher<Empty>(topicNames[COMM_GETSTATUS],0); 
+}; 
+
+void SystemControl::onAbortMessage(const Empty::SharedPtr){}
+
+void SystemControl::onAllClearMessage(const Empty::SharedPtr){}
+
 void SystemControl::onFailureMessage(const UInt8::SharedPtr msg){
 	if (SystemControlState == SERVER_STATE_INWORK) {
 		enum COMMAND failedCommand = (COMMAND) (msg->data);
@@ -22,12 +88,11 @@ void SystemControl::onFailureMessage(const UInt8::SharedPtr msg){
 	}
 }
 
-void SystemControl::onGetStatusResponse(String::SharedPtr msg){
+void SystemControl::onGetStatusResponse(const String::SharedPtr msg){
 	SystemControlGetStatusMessage(msg->data.c_str(), 0);
-	//LogMessage(LOG_LEVEL_INFO, "Received response from %s", pcRecvBuffer);
 }
 
-void SystemControl::onBackToStartResponse(Int8::SharedPtr msg){
+void SystemControl::onBackToStartResponse(const Int8::SharedPtr msg){
 	if(msg->data == BTS_FAIL){
 		LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", msg->data);
 		SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
@@ -49,15 +114,59 @@ void SystemControl::onBackToStartResponse(Int8::SharedPtr msg){
 void SystemControl::signalHandler(int signo) {
 	if (signo == SIGINT) {
 		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
-		this->iExit = 1;
+		iExit = 1;
 	}
 	else {
 		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
 	}
 }
 
+bool SystemControl::isWorking(){
+	return !(SystemControlState != SERVER_STATE_INWORK && (ClientResult < 0));
+}
+bool SystemControl::shouldExit(){
+	return iExit;
+}
 
-void SystemControl::mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+void SystemControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+	LogInit("SystemControl", logLevel);
+	LogMessage(LOG_LEVEL_INFO, "System control task running with PID: %i", getpid());
+
+	// Initialise data dictionary
+	LogMessage(LOG_LEVEL_INFO, "Initializing data dictionary");
+	ReadWriteAccess_t dataDictOperationResult = DataDictionaryConstructor();
+	if (dataDictOperationResult != READ_WRITE_OK) {
+		DataDictionaryDestructor();
+		util_error("Unable to initialize shared memory space");
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "Data dictionary succesfully initialized");
+	}
+
+	DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
+	LogMessage(LOG_LEVEL_INFO, "RVSSConfigU32 = %d", RVSSConfigU32);
+
+	DataDictionaryGetRVSSRateU8(&RVSSRateU8);
+	LogMessage(LOG_LEVEL_INFO, "Real-time variable subscription service rate set to %u Hz", RVSSRateU8);
+
+	if (ModeU8 == 0) {
+
+	}
+	else if (ModeU8 == 1) {
+		SessionData.SessionIdU32 = 0;
+		SessionData.UserIdU32 = 0;
+		SessionData.UserTypeU8 = 0;
+
+		PollRateU64 = SYSTEM_CONTROL_SERVICE_POLL_TIME_MS;
+		CurrentTimeU64 =
+			(uint64_t) CurrentTimeStruct.tv_sec * 1000 + (uint64_t) CurrentTimeStruct.tv_usec / 1000;
+		OldTimeU64 = CurrentTimeU64;
+
+	}
+}
+
+
+void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 	if (SystemControlState == SERVER_STATE_ERROR) {
 		this->abortPub->publish(Empty());
 		return;
@@ -76,10 +185,10 @@ void SystemControl::mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLev
 			if (USE_LOCAL_USER_CONTROL == 0) {
 
 				ClientResult = SystemControlInitServer(&ClientSocket, &ServerHandle, &ip_addr);
-				bzero(UserControlIPC8, SMALL_BUFFER_SIZE_20);
-				sprintf((char* )UserControlIPC8, "%s", inet_ntoa(ip_addr));
+				bzero(UserControlIPchar, SMALL_BUFFER_SIZE_20);
+				sprintf((char* )UserControlIPchar, "%s", inet_ntoa(ip_addr));
 				LogMessage(LOG_LEVEL_INFO, "UserControl IP address is %s", inet_ntoa(ip_addr));
-				SystemControlCreateProcessChannel(UserControlIPC8, SYSTEM_CONTROL_PROCESS_PORT,
+				SystemControlCreateProcessChannel(UserControlIPchar, SYSTEM_CONTROL_PROCESS_PORT,
 													&RVSSChannelSocket, &RVSSChannelAddr);
 
 			}
@@ -285,15 +394,9 @@ void SystemControl::mainTask(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLev
 
 	//Call this from the loop to send
 	SystemControlGetStatusMessage("", 0);
-
-
-	if (iExit != 0){
-		LogMessage(LOG_LEVEL_INFO, "Exiting");
-		return 1;
-	}
 }
 
-void SystemControl::sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+void SystemControl::sendUnsolicitedData(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 		TimeSetToCurrentSystemTime(&tvTime);
 
 	if (timercmp(&tvTime, &nextRVSSSendTime, >)) {
@@ -304,20 +407,20 @@ void SystemControl::sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVE
 
 			if (RVSSConfigU32 & RVSS_TIME_CHANNEL) {
 				SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
-				UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+				UtilSendUDPData((uint8_t*) module_name, &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
 								RVSSMessageLengthU32, 0);
 			}
 
 			if (RVSSConfigU32 & RVSS_MAESTRO_CHANNEL) {
 				SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32, GSD,
 															SystemControlState, 0);
-				UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+				UtilSendUDPData((uint8_t*) module_name, &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
 								RVSSMessageLengthU32, 0);
 			}
 
 			if (RVSSConfigU32 & RVSS_ASP_CHANNEL) {
 				SystemControlBuildRVSSAspChannelMessage(RVSSData, &RVSSMessageLengthU32, 0);
-				UtilSendUDPData(MODULE_NAME, &RVSSChannelSocket, &RVSSChannelAddr, RVSSData,
+				UtilSendUDPData((uint8_t*) module_name, &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
 								RVSSMessageLengthU32, 0);
 			}
 
@@ -331,7 +434,7 @@ void SystemControl::sendTimeMessages(TimeType * GPSTime, GSDType * GSD, LOG_LEVE
 	}
 }
 
-void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 	switch (SystemControlCommand) {
 		// can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
 	case Idle_0:
@@ -355,12 +458,12 @@ void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL l
 		break;
 	case GetServerParameterList_0:
 		SystemControlCommand = Idle_0;
-		bzero(ParameterListC8, SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE);
-		SystemControlReadServerParameterList(ParameterListC8, 0);
-		SystemControlSendControlResponse(strlen(ParameterListC8) >
+		bzero(ParameterListchar, SYSTEM_CONTROL_SERVER_PARAMETER_LIST_SIZE);
+		SystemControlReadServerParameterList(ParameterListchar, 0);
+		SystemControlSendControlResponse(strlen(ParameterListchar) >
 											0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
 											SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetServerParameterList:",
-											ParameterListC8, strlen(ParameterListC8), &ClientSocket, 0);
+											ParameterListchar, strlen(ParameterListchar), &ClientSocket, 0);
 		break;
 	case GetTestOrigin_0:
 		SystemControlCommand = Idle_0;
@@ -375,7 +478,7 @@ void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL l
 		strcat(ControlResponseBuffer, TextBuffer20);
 		strcat(ControlResponseBuffer, ";");
 
-		SystemControlSendControlResponse(strlen(ParameterListC8) >
+		SystemControlSendControlResponse(strlen(ParameterListchar) >
 											0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
 											SYSTEM_CONTROL_RESPONSE_CODE_NO_DATA, "GetTestOrigin:",
 											ControlResponseBuffer, strlen(ControlResponseBuffer),
@@ -451,7 +554,7 @@ void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL l
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetDirectoryContent:",
 												ControlResponseBuffer, 1, &ClientSocket, 0);
 			if (ControlResponseBuffer[0] == FOLDER_EXIST) {
-				UtilCreateDirContent(SystemControlArgument[0], "dir.info");
+				UtilCreateDirContent((uint8_t*) SystemControlArgument[0],(uint8_t*) "dir.info");
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 				FileLengthI32 = SystemControlBuildFileContentInfo("dir.info", 0);
 				SystemControlFileDownloadResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK,
@@ -603,9 +706,9 @@ void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL l
 			}
 			if(ControlResponseBuffer[0] == FOLDER_EXIST){
 				if(SystemControlCommand == DownloadTrajFiles_0){
-					UtilCreateDirContent(MAESTRO_TRAJ_DIRECTORY_STRING, "dir.info");
+					UtilCreateDirContent((uint8_t*) MAESTRO_TRAJ_DIRECTORY_STRING,(uint8_t*) "dir.info");
 				} else if(SystemControlCommand == DownloadDirectoryContent_1){
-					UtilCreateDirContent(SystemControlArgument[0], "dir.info");
+					UtilCreateDirContent((uint8_t*) SystemControlArgument[0], (uint8_t*) "dir.info");
 				}
 
 				char TestDirectoryPath[MAX_PATH_LENGTH];
@@ -788,7 +891,7 @@ void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL l
 		if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED) {
 			SystemControlState = SERVER_STATE_INWORK;
 			try{
-				this->disconnectPub->publish(Empty());
+				this->armPub->publish(Empty());
 			}
 			catch(...){
 				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ARM command");
@@ -1096,12 +1199,9 @@ void SystemControl::handleCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL l
 
 		break;
 	}
-	if (iExit == 1){
-		return 1;
-	}
 }
 
-SystemControl::SystemControlCommand_t SystemControl::SystemControlFindCommand(const char *CommandBuffer,
+SystemControlCommand_t SystemControl::SystemControlFindCommand(const char *CommandBuffer,
 												SystemControlCommand_t * CurrentCommand,
 												int *CommandArgCount) {
 
@@ -1148,7 +1248,7 @@ SystemControl::SystemControlCommand_t SystemControl::SystemControlFindCommand(co
  *        constitutes an error with the appropriate errno has been set (see manpage for recv) with the addition of
  *         - ENOBUFS if the data buffer is too small to hold the received message
  */
-ssize_t SystemControl::SystemControlReceiveUserControlData(I32 socket, C8 * dataBuffer, size_t dataBufferLength) {
+ssize_t SystemControl::SystemControlReceiveUserControlData(I32 socket, char * dataBuffer, size_t dataBufferLength) {
 	static char recvBuffer[TCP_RECV_BUFFER_SIZE];
 	static size_t bytesInBuffer = 0;
 	const char endOfMessagePattern[] = ";\r\n\r\n";
@@ -1191,18 +1291,18 @@ ssize_t SystemControl::SystemControlReceiveUserControlData(I32 socket, C8 * data
 	return readResult;
 }
 
-void SystemControl::SystemControlSendMONR(C8 * MONRStr, I32 * Sockfd, U8 Debug) {
+void SystemControl::SystemControlSendMONR(const char * MONRStr, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
-	C8 Length[4];
-	C8 Header[2] = { 0, 2 };
-	C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
+	char Length[4];
+	char Header[2] = { 0, 2 };
+	char Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
 
 	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 	n = 2 + strlen(MONRStr);
-	Length[0] = (C8) (n >> 24);
-	Length[1] = (C8) (n >> 16);
-	Length[2] = (C8) (n >> 8);
-	Length[3] = (C8) n;
+	Length[0] = (char) (n >> 24);
+	Length[1] = (char) (n >> 16);
+	Length[2] = (char) (n >> 8);
+	Length[3] = (char) n;
 
 
 	if (n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE) {
@@ -1214,25 +1314,25 @@ void SystemControl::SystemControlSendMONR(C8 * MONRStr, I32 * Sockfd, U8 Debug) 
 		for (i = 0; i < t; i++, j++)
 			Data[j] = *(MONRStr + i);
 		//SystemControlSendBytes(Data, n + 4, Sockfd, 0);
-		UtilSendTCPData("System Control", Data, n + 4, Sockfd, 0);
+		UtilSendTCPData((uint8_t*) "System Control", (uint8_t*) Data, n + 4, Sockfd, 0);
 	}
 	else
 		LogMessage(LOG_LEVEL_ERROR, "MONR string longer than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
 
 
-void SystemControl::SystemControlSendLog(C8 * LogString, I32 * Sockfd, U8 Debug) {
+void SystemControl::SystemControlSendLog(const char * LogString, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
-	C8 Length[4];
-	C8 Header[2] = { 0, 2 };
-	C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
+	char Length[4];
+	char Header[2] = { 0, 2 };
+	char Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
 
 	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 	n = 2 + strlen(LogString);
-	Length[0] = (C8) (n >> 24);
-	Length[1] = (C8) (n >> 16);
-	Length[2] = (C8) (n >> 8);
-	Length[3] = (C8) n;
+	Length[0] = (char) (n >> 24);
+	Length[1] = (char) (n >> 16);
+	Length[2] = (char) (n >> 8);
+	Length[3] = (char) n;
 
 	//SystemControlSendBytes(Length, 4, Sockfd, 0);
 	//SystemControlSendBytes(Header, 5, Sockfd, 0);
@@ -1248,7 +1348,7 @@ void SystemControl::SystemControlSendLog(C8 * LogString, I32 * Sockfd, U8 Debug)
 		for (i = 0; i < t; i++, j++)
 			Data[j] = *(LogString + i);
 		//SystemControlSendBytes(Data, n + 4, Sockfd, 0);
-		UtilSendTCPData("System Control", Data, n + 4, Sockfd, 0);
+		UtilSendTCPData((uint8_t*) "System Control", (uint8_t*) Data, n + 4, Sockfd, 0);
 	}
 	else
 		LogMessage(LOG_LEVEL_ERROR, "Log string longer than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
@@ -1256,21 +1356,21 @@ void SystemControl::SystemControlSendLog(C8 * LogString, I32 * Sockfd, U8 Debug)
 }
 
 
-void SystemControl::SystemControlSendControlResponse(U16 ResponseStatus, C8 * ResponseString, C8 * ResponseData,
+void SystemControl::SystemControlSendControlResponse(U16 ResponseStatus, const char * ResponseString, const char * ResponseData,
 									  I32 ResponseDataLength, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
-	C8 Length[4];
-	C8 Status[2];
-	C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
+	char Length[4];
+	char Status[2];
+	char Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
 
 	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 	n = 2 + strlen(ResponseString) + ResponseDataLength;
-	Length[0] = (C8) (n >> 24);
-	Length[1] = (C8) (n >> 16);
-	Length[2] = (C8) (n >> 8);
-	Length[3] = (C8) n;
-	Status[0] = (C8) (ResponseStatus >> 8);
-	Status[1] = (C8) ResponseStatus;
+	Length[0] = (char) (n >> 24);
+	Length[1] = (char) (n >> 16);
+	Length[2] = (char) (n >> 8);
+	Length[3] = (char) n;
+	Status[0] = (char) (ResponseStatus >> 8);
+	Status[1] = (char) ResponseStatus;
 
 	if (n + 4 < SYSTEM_CONTROL_SEND_BUFFER_SIZE) {
 		for (i = 0, j = 0; i < 4; i++, j++)
@@ -1290,28 +1390,28 @@ void SystemControl::SystemControlSendControlResponse(U16 ResponseStatus, C8 * Re
 		}
 
 		//SystemControlSendBytes(Data, n + 4, Sockfd, 0);
-		UtilSendTCPData("System Control", Data, n + 4, Sockfd, 0);
+		UtilSendTCPData((uint8_t*) "System Control", (uint8_t*) Data, n + 4, Sockfd, 0);
 	}
 	else
 		LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
 
 
-void SystemControl::SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * ResponseString,
+void SystemControl::SystemControlFileDownloadResponse(U16 ResponseStatus, const char * ResponseString,
 									   I32 ResponseDataLength, I32 * Sockfd, U8 Debug) {
 	int i, n, j, t;
-	C8 Length[MSCP_RESPONSE_DATALENGTH_BYTES];
-	C8 Status[MSCP_RESPONSE_STATUS_CODE_BYTES];
-	C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
+	char Length[MSCP_RESPONSE_DATALENGTH_BYTES];
+	char Status[MSCP_RESPONSE_STATUS_CODE_BYTES];
+	char Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
 
 	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 	n = MSCP_RESPONSE_STATUS_CODE_BYTES + strlen(ResponseString) + ResponseDataLength;
-	Length[0] = (C8) (n >> 24);
-	Length[1] = (C8) (n >> 16);
-	Length[2] = (C8) (n >> 8);
-	Length[3] = (C8) n;
-	Status[0] = (C8) (ResponseStatus >> 8);
-	Status[1] = (C8) ResponseStatus;
+	Length[0] = (char) (n >> 24);
+	Length[1] = (char) (n >> 16);
+	Length[2] = (char) (n >> 8);
+	Length[3] = (char) n;
+	Status[0] = (char) (ResponseStatus >> 8);
+	Status[1] = (char) ResponseStatus;
 
 	for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
 		Data[j] = Length[i];
@@ -1327,28 +1427,28 @@ void SystemControl::SystemControlFileDownloadResponse(U16 ResponseStatus, C8 * R
 		printf("\n");
 	}
 
-	UtilSendTCPData("System Control", Data,
+	UtilSendTCPData((uint8_t*) "System Control", (uint8_t*) Data,
 					MSCP_RESPONSE_DATALENGTH_BYTES + MSCP_RESPONSE_STATUS_CODE_BYTES +
 					strlen(ResponseString), Sockfd, 0);
 }
 
 
 
-I32 SystemControl::SystemControlBuildControlResponse(U16 ResponseStatus, C8 * ResponseString, C8 * ResponseData,
+I32 SystemControl::SystemControlBuildControlResponse(U16 ResponseStatus, char * ResponseString, char * ResponseData,
 									  I32 ResponseDataLength, U8 Debug) {
 	int i = 0, n = 0, j = 0, t = 0;
-	C8 Length[MSCP_RESPONSE_DATALENGTH_BYTES];
-	C8 Status[MSCP_RESPONSE_STATUS_CODE_BYTES];
-	C8 Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
+	char Length[MSCP_RESPONSE_DATALENGTH_BYTES];
+	char Status[MSCP_RESPONSE_STATUS_CODE_BYTES];
+	char Data[SYSTEM_CONTROL_SEND_BUFFER_SIZE];
 
 	bzero(Data, SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 	n = MSCP_RESPONSE_STATUS_CODE_BYTES + strlen(ResponseString) + ResponseDataLength;
-	Length[0] = (C8) (n >> 24);
-	Length[1] = (C8) (n >> 16);
-	Length[2] = (C8) (n >> 8);
-	Length[3] = (C8) n;
-	Status[0] = (C8) (ResponseStatus >> 8);
-	Status[1] = (C8) ResponseStatus;
+	Length[0] = (char) (n >> 24);
+	Length[1] = (char) (n >> 16);
+	Length[2] = (char) (n >> 8);
+	Length[3] = (char) n;
+	Status[0] = (char) (ResponseStatus >> 8);
+	Status[1] = (char) ResponseStatus;
 
 	if (n + MSCP_RESPONSE_DATALENGTH_BYTES < SYSTEM_CONTROL_SEND_BUFFER_SIZE) {
 		for (i = 0, j = 0; i < MSCP_RESPONSE_DATALENGTH_BYTES; i++, j++)
@@ -1389,7 +1489,7 @@ void SystemControl::SystemControlSendBytes(const char *data, int length, int *so
 		int i = 0;
 
 		for (i = 0; i < length; i++)
-			printf("%d ", (C8) * (data + i));
+			printf("%d ", (char) * (data + i));
 		printf("\n");
 	}
 
@@ -1413,7 +1513,6 @@ I32 SystemControl::SystemControlInitServer(int *ClientSocket, int *ServerHandle,
 
 	enum COMMAND iCommand;
 	ssize_t bytesReceived = 0;
-	char pcRecvBuffer[SC_RECV_MESSAGE_BUFFER];
 
 
 	/* Init user control socket */
@@ -1531,7 +1630,7 @@ I32 SystemControl::SystemControlConnectServer(int *sockfd, const char *name, con
 }
 
 
-void SystemControl::SystemControlCreateProcessChannel(const C8 * name, const U32 port, I32 * sockfd,
+void SystemControl::SystemControlCreateProcessChannel(const char * name, const U32 port, I32 * sockfd,
 											  struct sockaddr_in *addr) {
 	int result;
 	struct hostent *object;
@@ -1570,7 +1669,7 @@ void SystemControl::SystemControlCreateProcessChannel(const C8 * name, const U32
  * \param addr IP address to match against own IPs
  * \return true if match, false if not
  */
-C8 SystemControl::SystemControlVerifyHostAddress(char *addr) {
+char SystemControl::SystemControlVerifyHostAddress(char *addr) {
 	struct ifaddrs *ifaddr, *ifa;
 	int family, s, n;
 	char host[NI_MAXHOST];
@@ -1613,7 +1712,7 @@ C8 SystemControl::SystemControlVerifyHostAddress(char *addr) {
 }
 
 
-I32 SystemControl::SystemControlGetServerParameter(GSDType * GSD, C8 * ParameterName, C8 * ReturnValue, U32 BufferLength,
+I32 SystemControl::SystemControlGetServerParameter(GSDType * GSD, char * ParameterName, char * ReturnValue, U32 BufferLength,
 									U8 Debug) {
 	bzero(ReturnValue, 20);
 	dbl ValueDbl = 0;
@@ -1709,11 +1808,12 @@ I32 SystemControl::SystemControlGetServerParameter(GSDType * GSD, C8 * Parameter
 	else if (strcmp("ScenarioName", ParameterName) == 0) {
 		DataDictionaryGetScenarioName(ReturnValue + strlen(ReturnValue), BufferLength);
 	}
+	return 0;
 }
 
 
 
-I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, C8 * parameterName, C8 * newValue, U8 debug) {
+I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, char * parameterName, char * newValue, U8 debug) {
 
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 	U32 object_transmitter_ids[MAX_OBJECTS];
@@ -1935,7 +2035,7 @@ I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, C8 * parameter
 
 
 
-I32 SystemControl::SystemControlReadServerParameterList(C8 * ParameterList, U8 Debug) {
+I32 SystemControl::SystemControlReadServerParameterList(char * ParameterList, U8 Debug) {
 
 	char *line = NULL;
 	size_t len = 0;
@@ -1969,9 +2069,9 @@ I32 SystemControl::SystemControlReadServerParameterList(C8 * ParameterList, U8 D
 }
 
 
-I32 SystemControl::SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
+I32 SystemControl::SystemControlBuildFileContentInfo(const char * Path, U8 Debug) {
 	struct stat st;
-	C8 CompletePath[MAX_FILE_PATH];
+	char CompletePath[MAX_FILE_PATH];
 	bzero(CompletePath, MAX_FILE_PATH);
 	if (SystemControlDirectoryInfo.exist)
 		return -1;
@@ -1982,14 +2082,14 @@ I32 SystemControl::SystemControlBuildFileContentInfo(C8 * Path, U8 Debug) {
 
 	// Create mmap of the file and return the length
 	SystemControlDirectoryInfo.fd = open(CompletePath, O_RDWR);
-	SystemControlDirectoryInfo.info_buffer =
-		mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, SystemControlDirectoryInfo.fd, 0);
+	SystemControlDirectoryInfo.info_buffer = 
+		(char*) mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, SystemControlDirectoryInfo.fd, 0);
 	SystemControlDirectoryInfo.size = st.st_size;
 	SystemControlDirectoryInfo.exist = 1;
 	return st.st_size;
 }
 
-I32 SystemControl::SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile) {
+I32 SystemControl::SystemControlDestroyFileContentInfo(const char * Path, U8 RemoveFile) {
 	char CompletePath[MAX_FILE_PATH];
 	struct stat st;
 
@@ -2007,11 +2107,11 @@ I32 SystemControl::SystemControlDestroyFileContentInfo(C8 * Path, U8 RemoveFile)
 	return 0;
 }
 
-I32 SystemControl::SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 * ReturnValue, U8 Debug) {
+I32 SystemControl::SystemControlCheckFileDirectoryExist(char * ParameterName, char * ReturnValue, U8 Debug) {
 
 	DIR *pDir;
 	FILE *fd;
-	C8 CompletePath[MAX_FILE_PATH];
+	char CompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
@@ -2046,7 +2146,7 @@ I32 SystemControl::SystemControlCheckFileDirectoryExist(C8 * ParameterName, C8 *
  * \param nameLen Length of the name string
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE
  */
-C8 SystemControl::SystemControlDeleteTrajectory(const C8 * trajectoryName, const size_t nameLen) {
+char SystemControl::SystemControlDeleteTrajectory(const char * trajectoryName, const size_t nameLen) {
 	return UtilDeleteTrajectoryFile(trajectoryName, nameLen) ? FAILED_DELETE : SUCCEEDED_DELETE;
 }
 
@@ -2056,7 +2156,7 @@ C8 SystemControl::SystemControlDeleteTrajectory(const C8 * trajectoryName, const
  * \param nameLen Length of the name string
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE
  */
-C8 SystemControl::SystemControlDeleteGeofence(const C8 * geofenceName, const size_t nameLen) {
+char SystemControl::SystemControlDeleteGeofence(const char * geofenceName, const size_t nameLen) {
 	return UtilDeleteGeofenceFile(geofenceName, nameLen) ? FAILED_DELETE : SUCCEEDED_DELETE;
 }
 
@@ -2066,7 +2166,7 @@ C8 SystemControl::SystemControlDeleteGeofence(const C8 * geofenceName, const siz
  * \param nameLen Length of the name string
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE
  */
-C8 SystemControl::SystemControlDeleteGenericFile(const C8 * filePath, const size_t nameLen) {
+char SystemControl::SystemControlDeleteGenericFile(const char * filePath, const size_t nameLen) {
 	return UtilDeleteGenericFile(filePath, nameLen) ? FAILED_DELETE : SUCCEEDED_DELETE;
 }
 
@@ -2074,7 +2174,7 @@ C8 SystemControl::SystemControlDeleteGenericFile(const C8 * filePath, const size
  * \brief SystemControlClearTrajectories Clears the trajectory directory on the machine
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
-C8 SystemControl::SystemControlClearTrajectories(void) {
+char SystemControl::SystemControlClearTrajectories(void) {
 	if (UtilDeleteTrajectoryFiles() != 0) {
 		return FAILED_DELETE;
 	}
@@ -2085,7 +2185,7 @@ C8 SystemControl::SystemControlClearTrajectories(void) {
  * \brief SystemControlClearGeofences Clears the geofence directory on the machine
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
-C8 SystemControl::SystemControlClearGeofences(void) {
+char SystemControl::SystemControlClearGeofences(void) {
 	if (UtilDeleteGeofenceFiles() != 0) {
 		return FAILED_DELETE;
 	}
@@ -2096,18 +2196,18 @@ C8 SystemControl::SystemControlClearGeofences(void) {
  * \brief SystemControlClearObjects Clears the objects directory on the machine
  * \return Returns ::SUCCEDED_DELETE upon successfully deleting a file, otherwise ::FAILED_DELETE.
  */
-C8 SystemControl::SystemControlClearObjects(void) {
+char SystemControl::SystemControlClearObjects(void) {
 	if (UtilDeleteObjectFiles() != 0) {
 		return FAILED_DELETE;
 	}
 	return SUCCEEDED_DELETE;
 }
 
-I32 SystemControl::SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
+I32 SystemControl::SystemControlDeleteFileDirectory(const char * Path, char * ReturnValue, U8 Debug) {
 
 	DIR *pDir;
 	FILE *fd;
-	C8 CompletePath[MAX_FILE_PATH];
+	char CompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
@@ -2150,11 +2250,11 @@ I32 SystemControl::SystemControlDeleteFileDirectory(C8 * Path, C8 * ReturnValue,
 }
 
 
-I32 SystemControl::SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 Debug) {
+I32 SystemControl::SystemControlCreateDirectory(const char * Path, char * ReturnValue, U8 Debug) {
 
 	DIR *pDir;
 	FILE *fd;
-	C8 CompletePath[MAX_FILE_PATH];
+	char CompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
@@ -2194,11 +2294,11 @@ I32 SystemControl::SystemControlCreateDirectory(C8 * Path, C8 * ReturnValue, U8 
 }
 
 
-I32 SystemControl::SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * PacketSize, C8 * FileType, C8 * ReturnValue,
-							C8 * CompleteFilePath, U8 Debug) {
+I32 SystemControl::SystemControlUploadFile(const char * Filename, const char * FileSize, const char * PacketSize, const char * FileType, char * ReturnValue,
+							char * CompleteFilePath, U8 Debug) {
 
 	FILE *fd;
-	C8 CompletePath[MAX_FILE_PATH];
+	char CompletePath[MAX_FILE_PATH];
 
 	memset(CompletePath, 0, sizeof (CompletePath));
 	//GetCurrentDir(CompletePath, MAX_FILE_PATH);
@@ -2289,11 +2389,11 @@ I32 SystemControl::SystemControlUploadFile(C8 * Filename, C8 * FileSize, C8 * Pa
 }
 
 
-I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * FileSize, C8 * PacketSize, C8 * ReturnValue,
+I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, const char * Path, const char * FileSize, const char * PacketSize, char * ReturnValue,
 							   U8 Debug) {
 
 	FILE *fd;
-	C8 CompletePath[MAX_FILE_PATH];
+	char CompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
 	//UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
@@ -2301,7 +2401,7 @@ I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * File
 	U32 FileSizeU32 = atoi(FileSize);
 	U16 PacketSizeU16 = atoi(PacketSize);
 	I32 ClientStatus = 0, Time1 = 0, Time2 = 0, TimeDiff = 0, i = 0, j = 0;
-	C8 RxBuffer[SYSTEM_CONTROL_RX_PACKET_SIZE];
+	char RxBuffer[SYSTEM_CONTROL_RX_PACKET_SIZE];
 	U32 TotalRxCount = 0, TransmissionCount = (U32) (FileSizeU32 / PacketSizeU16), RestCount =
 		FileSizeU32 % PacketSizeU16;
 	struct timeval CurTime;
@@ -2379,10 +2479,10 @@ I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, C8 * Path, C8 * File
 }
 
 
-I32 SystemControl::SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * PacketSize, C8 * ReturnValue, U8 Remove,
+I32 SystemControl::SystemControlSendFileContent(I32 * sockfd, const char * Path, const char * PacketSize, char * ReturnValue, U8 Remove,
 								 U8 Debug) {
 	FILE *fd;
-	C8 CompletePath[MAX_FILE_PATH];
+	char CompletePath[MAX_FILE_PATH];
 
 	bzero(CompletePath, MAX_FILE_PATH);
 	UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
@@ -2390,7 +2490,7 @@ I32 SystemControl::SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * Pa
 	U32 FileSizeU32 = 0;
 	U16 PacketSizeU16 = atoi(PacketSize);
 	I32 ClientStatus = 0, Time1 = 0, Time2 = 0, TimeDiff = 0, i = 0, j = 0;
-	C8 TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
+	char TxBuffer[SYSTEM_CONTROL_TX_PACKET_SIZE];
 	U32 TotalRxCount = 0, TransmissionCount = 0, RestCount = 0;
 	struct timeval CurTime;
 	struct stat st;
@@ -2414,14 +2514,14 @@ I32 SystemControl::SystemControlSendFileContent(I32 * sockfd, C8 * Path, C8 * Pa
 			bzero(TxBuffer, PacketSizeU16);
 			fread(TxBuffer, 1, PacketSizeU16, fd);
 			//SystemControlSendBytes(TxBuffer, PacketSizeU16, sockfd, 0); //Send a packet
-			UtilSendTCPData("System Control", TxBuffer, PacketSizeU16, sockfd, 0);
+			UtilSendTCPData((uint8_t*) "System Control", (uint8_t*) TxBuffer, PacketSizeU16, sockfd, 0);
 		}
 
 		if (RestCount > 0) {
 			bzero(TxBuffer, PacketSizeU16);
 			fread(TxBuffer, 1, RestCount, fd);
 			//SystemControlSendBytes(TxBuffer, RestCount, sockfd, 0); //Send the rest
-			UtilSendTCPData("System Control", TxBuffer, RestCount, sockfd, 0);
+			UtilSendTCPData((uint8_t*) "System Control", (uint8_t*) TxBuffer, RestCount, sockfd, 0);
 		}
 
 		fclose(fd);
@@ -2476,11 +2576,11 @@ See the architecture document for the protocol of RVSS.
 - *GPSTime current time data
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
-I32 SystemControl::SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, TimeType * GPSTime,
+I32 SystemControl::SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, TimeType * GPSTime,
 											 U8 Debug) {
 	// TODO add RVSS buffer length as parameter or even better replace with std vector
 	//I32 MessageIndex = 0, i;
-	//C8 *p;
+	//char *p;
 	//
 	//RVSSTimeType RVSSTimeData;
 	//
@@ -2503,7 +2603,7 @@ I32 SystemControl::SystemControlBuildRVSSTimeChannelMessage(C8 * RVSSData, U32 *
 	//RVSSTimeData.FixQualityU8 = GPSTime->FixQualityU8;
 	//RVSSTimeData.NSatellitesU8 = GPSTime->NSatellitesU8;
 	//
-	//p = (C8 *) & RVSSTimeData;
+	//p = (char *) & RVSSTimeData;
 	//for (i = 0; i < sizeof (RVSSTimeType); i++)
 	//	*(RVSSData + i) = *p++;
 	//*RVSSDataLengthU32 = i;
@@ -2538,10 +2638,10 @@ See the architecture document for the protocol of RVSS.
 - U8 SysCtrlState the SystemControl state (SystemControlState)
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
-I32 SystemControl::SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
+I32 SystemControl::SystemControlBuildRVSSMaestroChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
 												U8 SysCtrlState, U8 Debug) {
 	I32 MessageIndex = 0, i;
-	C8 *p;
+	char *p;
 
 
 	RVSSMaestroType RVSSMaestroData;
@@ -2553,7 +2653,7 @@ I32 SystemControl::SystemControlBuildRVSSMaestroChannelMessage(C8 * RVSSData, U3
 	RVSSMaestroData.OBCStateU8 = (uint8_t) (obcState);
 	RVSSMaestroData.SysCtrlStateU8 = SysCtrlState;
 
-	p = (C8 *) & RVSSMaestroData;
+	p = (char *) & RVSSMaestroData;
 	for (i = 0; i < sizeof (RVSSMaestroType); i++)
 		*(RVSSData + i) = *p++;
 	*RVSSDataLengthU32 = i;
@@ -2592,7 +2692,7 @@ int32_t SystemControl::SystemControlSendRVSSMonitorChannelMessages(int *socket, 
 	}
 
 	// Allocate an array for objects' transmitter IDs
-	transmitterIDs = malloc(numberOfObjects * sizeof (uint32_t));
+	transmitterIDs = (uint32_t*) malloc(numberOfObjects * sizeof (uint32_t));
 	if (transmitterIDs == NULL) {
 		LogMessage(LOG_LEVEL_ERROR, "Memory allocation error - RVSS messages cannot be sent");
 		return -1;
@@ -2654,7 +2754,7 @@ int32_t SystemControl::SystemControlSendRVSSMonitorChannelMessages(int *socket, 
 				memcpy(RVSSData, &messageLength, sizeof (messageLength));
 				memcpy(RVSSData + sizeof (messageLength), &RVSSChannel, sizeof (RVSSChannel));
 
-				UtilSendUDPData(MODULE_NAME, socket, addr, RVSSData, messageLength, 0);
+				UtilSendUDPData((uint8_t*) module_name, socket, addr, (uint8_t*) RVSSData, messageLength, 0);
 			}
 		}
 	}
@@ -2673,7 +2773,7 @@ See the architecture document for the protocol of RVSS.
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
 
-I32 SystemControl::SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * RVSSDataLengthU32, U8 Debug) {
+I32 SystemControl::SystemControlBuildRVSSAspChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, U8 Debug) {
 	RVSSTimeType RVSSTimeData;
 
 
@@ -2688,7 +2788,7 @@ I32 SystemControl::SystemControlBuildRVSSAspChannelMessage(C8 * RVSSData, U32 * 
  * \param debug Enable debug or not.
  * \return
  */
-I32 SystemControl::SystemControlGetStatusMessage(char *respondingModule, U8 debug) {
+I32 SystemControl::SystemControlGetStatusMessage(const char *respondingModule, U8 debug) {
 
 	static struct timeval getStatusSendTimer;
 	static struct timeval getStatusTimeoutTimer;

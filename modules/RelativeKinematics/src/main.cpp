@@ -16,7 +16,8 @@ int main(int argc, char **argv) {
 		util_error("Failed to initialize module");
 	}
 	rclcpp::init(argc,argv);
-	rclcpp::spin(std::make_shared<RelativeKinematicsModule>(MODULE_NAME));
+	auto rk = std::make_shared<RelativeKinematicsModule>();
+	rclcpp::spin(rk);
 	rclcpp::shutdown();
 
 	return 0;
@@ -92,15 +93,16 @@ int initializeModule(const LOG_LEVEL logLevel) {
 		LogMessage(LOG_LEVEL_ERROR, "Unable to create test journal");
 	}
 	if (DataDictionaryInitStateData() != READ_OK) {
-		retval = -1;
-		LogMessage(LOG_LEVEL_ERROR,"Found no previously initialized shared memory");
 		DataDictionaryFreeStateData();
+		retval = -1;
+		LogMessage(LOG_LEVEL_ERROR,
+					"Found no previously initialized shared memory for state data");
 	}
 	if (DataDictionaryInitObjectData() != READ_OK) {
+		DataDictionaryFreeObjectData();
 		retval = -1;
 		LogMessage(LOG_LEVEL_ERROR,
 					"Found no previously initialized shared memory for object data");
-		DataDictionaryFreeStateData();
 	}
 
 	return retval;

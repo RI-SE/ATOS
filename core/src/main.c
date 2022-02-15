@@ -72,7 +72,6 @@ static const ModuleTask allModules[] = {
 
 	journalcontrol_task,
 	timecontrol_task
-	//systemcontrol_task
 #ifndef DISABLE_OBJECT_CONTROL
 		, objectcontrol_task
 #endif
@@ -129,6 +128,7 @@ int main(int argc, char *argv[]) {
 	LogMessage(LOG_LEVEL_INFO, "Initializing data dictionary");
 	dataDictOperationResult = DataDictionaryConstructor();
 	if (dataDictOperationResult != READ_WRITE_OK) {
+		DataDictionaryDestructor();
 		util_error("Unable to initialize shared memory space");
 	}
 	else {
