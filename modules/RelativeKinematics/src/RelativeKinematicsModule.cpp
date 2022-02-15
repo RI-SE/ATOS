@@ -13,18 +13,6 @@ using std_msgs::msg::Empty;
 using std_msgs::msg::String;
 using std_msgs::msg::UInt8;
 
-
-void RelativeKinematicsModule::tryHandleMessage(COMMAND commandCode, std::function<void()>& tryExecute,std::function<void()>& executeIfFail){
-	try{
-		LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames[commandCode]);
-		tryExecute();
-	}
-	catch (std::invalid_argument& e) {
-		LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames[commandCode], e.what());
-		executeIfFail();
-	}
-}
-
 RelativeKinematicsModule::RelativeKinematicsModule() : Module(RelativeKinematicsModule::module_name){
 	int queueSize=0;
 	// ** Subscriptions
@@ -43,49 +31,87 @@ RelativeKinematicsModule::RelativeKinematicsModule() : Module(RelativeKinematics
 	// ** Publishers
 	this->failurePub = this->create_publisher<UInt8>(topicNames[COMM_FAILURE],queueSize);
 	this->abortPub = this->create_publisher<Empty>(topicNames[COMM_ABORT],queueSize);
-	this->getStatusResponsePub = this->create_publisher<String>(topicNames[COMM_GETSTATUS_OK],queueSize);
-	
+	this->getStatusResponsePub = this->create_publisher<String>(topicNames[COMM_GETSTATUS_OK],queueSize);	
 };
+
+void RelativeKinematicsModule::tryHandleMessage(COMMAND commandCode, auto& tryExecute,auto&executeIfFail){
+	try{
+		LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames[commandCode]);
+		tryExecute();
+	}
+	catch (std::invalid_argument& e) {
+		LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames[commandCode], e.what());
+		executeIfFail();
+	}
+}
+
+int RelativeKinematicsModule::initialize(const LOG_LEVEL logLevel) {
+	int retval = 0;
+
+	// Initialize log
+	LogInit(module_name, logLevel);
+	LogMessage(LOG_LEVEL_INFO, "%s task running with PID: %d",module_name, getpid());
+
+	// Create test journal
+	if (JournalInit(module_name) == -1) {
+		retval = -1;
+		LogMessage(LOG_LEVEL_ERROR, "Unable to create test journal");
+	}
+	if (DataDictionaryInitStateData() != READ_OK) {
+		DataDictionaryFreeStateData();
+		retval = -1;
+		LogMessage(LOG_LEVEL_ERROR,
+					"Found no previously initialized shared memory for state data");
+	}
+	if (DataDictionaryInitObjectData() != READ_OK) {
+		DataDictionaryFreeObjectData();
+		retval = -1;
+		LogMessage(LOG_LEVEL_ERROR,
+					"Found no previously initialized shared memory for object data");
+	}
+
+	return retval;
+}
 
 void RelativeKinematicsModule::onInitMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_INIT;
-	std::function<void()> f_try = [&]() { scenarioHandler.handleInitCommand(); };
-	std::function<void()> f_catch = [&]() {	failurePub->publish(msgCtr1<UInt8>(cmd));};
+	const auto f_try = [&]() { scenarioHandler.handleInitCommand(); };
+	const auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd));};
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
 
 void RelativeKinematicsModule::onConnectMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_CONNECT;
-	std::function<void()> f_try = [&]() { scenarioHandler.handleConnectCommand(); };
-	std::function<void()> f_catch = [&]() {	failurePub->publish(msgCtr1<UInt8>(cmd));};
+	const auto f_try = [&]() { scenarioHandler.handleConnectCommand(); };
+	const auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd));};
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
 
 void RelativeKinematicsModule::onArmMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_ARM;
-	std::function<void()> f_try = [&]() { scenarioHandler.handleArmCommand(); };
-	std::function<void()> f_catch = [&]() {	failurePub->publish(msgCtr1<UInt8>(cmd));};
+	const auto f_try = [&]() { scenarioHandler.handleArmCommand(); };
+	const auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd));};
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
 
 void RelativeKinematicsModule::onStartMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_STRT;
-	std::function<void()> f_try = [&]() { scenarioHandler.handleStartCommand(); };
-	std::function<void()> f_catch = [&]() {	failurePub->publish(msgCtr1<UInt8>(cmd));};
+	const auto f_try = [&]() { scenarioHandler.handleStartCommand(); };
+	const auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd));};
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
 
 void RelativeKinematicsModule::onDisconnectMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_DISCONNECT;
-	std::function<void()> f_try = [&]() { scenarioHandler.handleDisconnectCommand(); };
-	std::function<void()> f_catch = [&]() {	failurePub->publish(msgCtr1<UInt8>(cmd));};
+	const auto f_try = [&]() { scenarioHandler.handleDisconnectCommand(); };
+	const auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd));};
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
 
 void RelativeKinematicsModule::onStopMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_STOP;
-	std::function<void()> f_try = [&]() { scenarioHandler.handleStopCommand(); };
-	std::function<void()> f_catch = [&]() {
+	const auto f_try = [&]() { scenarioHandler.handleStopCommand(); };
+	const auto f_catch = [&]() {
 			failurePub->publish(msgCtr1<UInt8>(cmd));
 			abortPub->publish(Empty());
 	};
@@ -99,13 +125,14 @@ void RelativeKinematicsModule::onAbortMessage(const Empty::SharedPtr){
 
 void RelativeKinematicsModule::onAllClearMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_ABORT_DONE;
-	std::function<void()> f_try = [&]() { scenarioHandler.handleAllClearCommand(); };
-	std::function<void()> f_catch = [&]() {	failurePub->publish(msgCtr1<UInt8>(cmd));};
+	const auto f_try = [&]() { scenarioHandler.handleAllClearCommand(); };
+	const auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd));};
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
 
 void RelativeKinematicsModule::onACCMMessage(const Accm::SharedPtr accm){
-	try {
+	COMMAND cmd = COMM_ACCM;
+	const auto f_try = [&]() {
 		if (accm->action_type == ACTION_TEST_SCENARIO_COMMAND) {
 			ScenarioHandler::TestScenarioCommandAction cmdAction;
 			cmdAction.command = static_cast<ActionTypeParameter_t>(accm->action_type_parameter1);
@@ -113,23 +140,20 @@ void RelativeKinematicsModule::onACCMMessage(const Accm::SharedPtr accm){
 			cmdAction.objectID = scenarioHandler.getVehicleIDByIP(accm->ip);
 			scenarioHandler.handleActionConfigurationCommand(cmdAction);
 		}
-	}
-	catch (std::invalid_argument& e) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed action configuration - %s", e.what());
-		this->failurePub->publish(msgCtr1<UInt8>(COMM_ACCM));
-	}
+	};
+	const auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(cmd,f_try,f_catch);
 }
 
-void RelativeKinematicsModule::onEXACMessage(const Exac::SharedPtr exac){	
-	try {
+void RelativeKinematicsModule::onEXACMessage(const Exac::SharedPtr exac){
+	COMMAND cmd = COMM_EXAC;
+	const auto f_try = [&]() {
 		using namespace std::chrono;
 		quartermilliseconds qmsow(exac->executiontime_qmsow);
 		auto now = to_timeval(system_clock::now().time_since_epoch());
 		auto startOfWeek = system_clock::time_point(weeks(TimeGetAsGPSweek(&now)));
-		scenarioHandler.handleExecuteActionCommand(exac->action_id, startOfWeek+qmsow);
-	}
-	catch (std::invalid_argument& e) {
-		LogMessage(LOG_LEVEL_ERROR, "Failed action execution - %s", e.what());
-		this->failurePub->publish(msgCtr1<UInt8>(COMM_EXAC));
-	}
+		scenarioHandler.handleExecuteActionCommand(exac->action_id, startOfWeek+qmsow);	
+	};
+	const auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(cmd,f_try,f_catch);
 }
