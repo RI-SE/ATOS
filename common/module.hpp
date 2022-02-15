@@ -234,46 +234,4 @@ private:
 	static void printUnhandledMessage(const std::string& topic) {
 		std::cout << "Unhandled empty message on topic: " << topic << std::endl;
 	}
-<<<<<<< HEAD
-=======
-
-	virtual void onFailureMessage(const UInt8::SharedPtr) {};
-	virtual void onGetStatusResponse(String::SharedPtr) { };
-	virtual void onGetStatusMessage(Empty::SharedPtr) { 
-	/*	auto msg = String();
-		msg.data = this->get_name();
-		getStatusResponseTopic.publish(msg);*/
-		 };
-	virtual void onInitMessage(const Empty::SharedPtr) {};
-	virtual void onConnectMessage(Empty::SharedPtr){};
-	virtual void onDisconnectMessage(Empty::SharedPtr){};
-	virtual void onArmMessage(Empty::SharedPtr){};
-	virtual void onDisarmMessage(Empty::SharedPtr){};
-	virtual void onRemoteControlEnableMessage(Empty::SharedPtr){};
-	virtual void onRemoteControlDisableMessage(Empty::SharedPtr){};
-	virtual void onRemoteControlManoeuvreMessage(Empty::SharedPtr){};
-	virtual void onEnableObjectMessage(ObjectEnabled::SharedPtr){};
-	virtual void onObjectsConnectedMessage(Empty::SharedPtr){};
-	virtual void onDataDictMessage(Empty::SharedPtr){};
-	virtual void onOSEMMessage(Empty::SharedPtr){};
-	virtual void onASPMessage(Empty::SharedPtr){};
-	virtual void onTrajMessage(Empty::SharedPtr){};
-	virtual void onTrajToSupMessage(Empty::SharedPtr){};
-	virtual void onTrajFromSupMessage(Empty::SharedPtr){};
-	virtual void onAllClearMessage(Empty::SharedPtr) = 0;
-	virtual void onOBCStateMessage(Empty::SharedPtr){};
-	virtual void onVIOPMessage(Empty::SharedPtr){};
-	virtual void onStartMessage(Empty::SharedPtr){};
-	virtual void onStopMessage(Empty::SharedPtr){};
-	virtual void onAbortMessage(Empty::SharedPtr){};
-	virtual void onACCMMessage(Accm::SharedPtr){};
-	virtual void onTRCMMessage(Empty::SharedPtr){};
-	virtual void onEXACMessage(Exac::SharedPtr){};
-	virtual void onTREOMessage(Empty::SharedPtr){};
-	virtual void onExitMessage(Empty::SharedPtr){};
-	virtual void onReplayMessage(Empty::SharedPtr){};
-	virtual void onBackToStartMessage(Empty::SharedPtr){};
-	virtual void onBackToStartResponse(Int8::SharedPtr){};
-	virtual void onDataDictResponse(Empty::SharedPtr){};
->>>>>>> 3d5f826a887ffa68d9ea47db2924bd57f154d659
 };
