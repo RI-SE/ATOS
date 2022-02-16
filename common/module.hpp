@@ -61,13 +61,13 @@ static std::map<COMMAND, std::string> topicNames = {
 	{COMM_FAILURE, "/failure"}
 };
 
-//TODO move somewhere else? also make generic to allow more args (variadic template)?
+//TODO move somewhere else? also make generic to allow more args?
 /*!
  * \brief Facilitates one-line intialization
  * of a ros message with one argument. 
  */
-template <typename Msg_T,typename MsgData_T>
-Msg_T msgCtr1(MsgData_T data){
+template <typename Msg_T>
+Msg_T msgCtr1(auto data){
     Msg_T ret;
     ret.data = data; 
     return ret;
