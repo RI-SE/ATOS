@@ -34,8 +34,7 @@
 #define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
 
 
-SystemControl::SystemControl() : Module(SystemControl::module_name){
-
+SystemControl::SystemControl() : Module(SystemControl::module_name) {
 	// ** Subscriptions
 	this->failureSub = this->create_subscription<UInt8>(topicNames[COMM_FAILURE], 0, std::bind(&SystemControl::onFailureMessage, this, _1));
 	this->getStatusResponseSub= this->create_subscription<String>(topicNames[COMM_GETSTATUS_OK], 0, std::bind(&SystemControl::onGetStatusResponse, this, _1));
@@ -405,20 +404,20 @@ void SystemControl::sendUnsolicitedData(TimeType * GPSTime, GSDType * GSD, LOG_L
 
 			if (RVSSConfigU32 & RVSS_TIME_CHANNEL) {
 				SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
-				UtilSendUDPData((uint8_t*) module_name, &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
+				UtilSendUDPData((uint8_t*) module_name.c_str(), &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
 								RVSSMessageLengthU32, 0);
 			}
 
 			if (RVSSConfigU32 & RVSS_MAESTRO_CHANNEL) {
 				SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32, GSD,
 															SystemControlState, 0);
-				UtilSendUDPData((uint8_t*) module_name, &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
+				UtilSendUDPData((uint8_t*) module_name.c_str(), &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
 								RVSSMessageLengthU32, 0);
 			}
 
 			if (RVSSConfigU32 & RVSS_ASP_CHANNEL) {
 				SystemControlBuildRVSSAspChannelMessage(RVSSData, &RVSSMessageLengthU32, 0);
-				UtilSendUDPData((uint8_t*) module_name, &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
+				UtilSendUDPData((uint8_t*) module_name.c_str(), &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
 								RVSSMessageLengthU32, 0);
 			}
 
@@ -2752,7 +2751,7 @@ int32_t SystemControl::SystemControlSendRVSSMonitorChannelMessages(int *socket, 
 				memcpy(RVSSData, &messageLength, sizeof (messageLength));
 				memcpy(RVSSData + sizeof (messageLength), &RVSSChannel, sizeof (RVSSChannel));
 
-				UtilSendUDPData((uint8_t*) module_name, socket, addr, (uint8_t*) RVSSData, messageLength, 0);
+				UtilSendUDPData((uint8_t*) module_name.c_str(), socket, addr, (uint8_t*) RVSSData, messageLength, 0);
 			}
 		}
 	}

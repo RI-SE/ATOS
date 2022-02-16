@@ -29,7 +29,6 @@
 class SystemControl : public Module
 {
 public:
-	static constexpr char* module_name = "SystemControl";
 	SystemControl();
 	const int64_t getQueueEmptyPollPeriod();
 	bool isWorking();
@@ -41,6 +40,8 @@ public:
 	void sendUnsolicitedData(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
 
 private:
+	static inline std::string const module_name = "SystemControl";
+	//const std::string module_name = std::string("SystemControl");
 	/* constants and datatypes */
 	const int64_t QUEUE_EMPTY_POLL_PERIOD_NS = 10000000;
 
@@ -198,8 +199,8 @@ private:
 	char SystemControlCommandArgCnt[SYSTEM_CONTROL_ARG_CHAR_COUNT];
 	char SystemControlStrippedCommand[SYSTEM_CONTROL_COMMAND_MAX_LENGTH];
 	char SystemControlArgument[SYSTEM_CONTROL_ARG_MAX_COUNT][SYSTEM_CONTROL_ARGUMENT_MAX_LENGTH];
-	char * STR_SYSTEM_CONTROL_RX_PACKET_SIZE="1280";
-	char * STR_SYSTEM_CONTROL_TX_PACKET_SIZE="1200";
+	const char * STR_SYSTEM_CONTROL_RX_PACKET_SIZE="1280";
+	const char * STR_SYSTEM_CONTROL_TX_PACKET_SIZE="1200";
 
 	content_dir_info SystemControlDirectoryInfo;
 
