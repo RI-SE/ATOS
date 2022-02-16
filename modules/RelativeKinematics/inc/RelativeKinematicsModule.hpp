@@ -4,10 +4,10 @@
 class RelativeKinematicsModule : public Module
 {
 public:
-	static constexpr char* module_name = "RelativeKinematics";
 	RelativeKinematicsModule();
 	int initialize(const LOG_LEVEL logLevel);
 private:
+	const std::string module_name = "RelativeKinematics";
 	ScenarioHandler scenarioHandler;
 	void onInitMessage(const Empty::SharedPtr) override;
 	void onConnectMessage(const Empty::SharedPtr) override;
@@ -20,5 +20,5 @@ private:
 	void onACCMMessage(const Accm::SharedPtr) override;
 	void onEXACMessage(const Exac::SharedPtr) override;
 
-	void tryHandleMessage(COMMAND commandCode, auto& tryExecute, auto& executeIfFail);
+	void tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail);
 };
