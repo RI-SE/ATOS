@@ -3,7 +3,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "-fpermissive") #temporary
 
 
 project(SystemControl)
@@ -15,9 +14,6 @@ set(COREUTILS_LIBRARY MaestroCoreUtil)
 set(TIME_LIBRARY MaestroTime)
 set(LOGGING_LIBRARY MaestroLogging)
 set(MAESTRO_COMMON_LIBRARY MaestroCommon)
-set(FILESYSTEM_LIBRARY stdc++fs)
-set(THREAD_LIBRARY pthread)
-
 
 include(GNUInstallDirs)
 
@@ -31,8 +27,6 @@ target_link_libraries(${SYSTEM_CONTROL_TARGET} LINK_PUBLIC
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
-	${FILESYSTEM_LIBRARY}
-	${THREAD_LIBRARY}
 	${MAESTRO_COMMON_LIBRARY}
 )
 
@@ -48,12 +42,13 @@ target_include_directories(${SYSTEM_CONTROL_TARGET} PUBLIC
 
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${SYSTEM_CONTROL_TARGET}\")")
-install(TARGETS ${SYSTEM_CONTROL_TARGET} 
-	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
+
+#ros installation
+get_property(ros_install_dir GLOBAL PROPERTY ros_install_dir_property)
+
+install(TARGETS 
+	SystemControl
+ DESTINATION ${ros_install_dir})
 
 # Ensure linkage is reloaded after install
 install(CODE "execute_process(COMMAND ldconfig)")

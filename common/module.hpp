@@ -24,6 +24,7 @@ using maestro_msgs::msg::ObjectEnabled;
 using std::placeholders::_1;
 using rclcpp::Node;
 
+// TODO move somewhere else
 static std::map<COMMAND, std::string> topicNames = {
 	{COMM_STRT, "/start"},
 	{COMM_ARM, "/arm"},
@@ -60,17 +61,30 @@ static std::map<COMMAND, std::string> topicNames = {
 	{COMM_FAILURE, "/failure"}
 };
 
+//TODO move somewhere else? also make generic to allow more args (variadic template)?
+/*!
+ * \brief Facilitates one-line intialization
+ * of a ros message with one argument. 
+ */
+template <typename Msg_T,typename MsgData_T>
+Msg_T msgCtr1(MsgData_T data){
+    Msg_T ret;
+    ret.data = data; 
+    return ret;
+}
+
 /*!
  * \brief The Module class
  * This class is the base class for all modules.
  * It is a derived class of ROS2 node. 
  * It provides an interface for all modules.
- * \param name name of the module
+ * \param name name of the module. Is passed to the ROS node.
  */
 class Module : public Node {
 public:
 	Module(const std::string name) : Node(name) {};
 	Module() = default;
+
 protected:
 	rclcpp::Publisher<String>::SharedPtr getStatusResponsePub;
 	rclcpp::Subscription<String>::SharedPtr getStatusResponseSub;
@@ -174,50 +188,50 @@ protected:
 	rclcpp::Subscription<Empty>::SharedPtr dataDictResponseSub;
 	rclcpp::Publisher<Empty>::SharedPtr dataDictResponsePub;
 
+	virtual void onFailureMessage(const UInt8::SharedPtr) {};
+	virtual void onGetStatusResponse(const String::SharedPtr) { };
+	virtual void onGetStatusMessage(const Empty::SharedPtr) { 
+		auto msg = String();
+		msg.data = this->get_name();
+		getStatusResponsePub->publish(msg);
+		 };
+	virtual void onInitMessage(const Empty::SharedPtr) {};
+	virtual void onConnectMessage(const Empty::SharedPtr){};
+	virtual void onDisconnectMessage(const Empty::SharedPtr){};
+	virtual void onArmMessage(const Empty::SharedPtr){};
+	virtual void onDisarmMessage(const Empty::SharedPtr){};
+	virtual void onRemoteControlEnableMessage(const Empty::SharedPtr){};
+	virtual void onRemoteControlDisableMessage(const Empty::SharedPtr){};
+	virtual void onRemoteControlManoeuvreMessage(const Empty::SharedPtr){};
+	virtual void onEnableObjectMessage(const ObjectEnabled::SharedPtr){};
+	virtual void onObjectsConnectedMessage(const Empty::SharedPtr){};
+	virtual void onDataDictMessage(const Empty::SharedPtr){};
+	virtual void onOSEMMessage(const Empty::SharedPtr){};
+	virtual void onASPMessage(const Empty::SharedPtr){};
+	virtual void onTrajMessage(const Empty::SharedPtr){};
+	virtual void onTrajToSupMessage(const Empty::SharedPtr){};
+	virtual void onTrajFromSupMessage(const Empty::SharedPtr){};
+	virtual void onAllClearMessage(const Empty::SharedPtr){};
+	virtual void onOBCStateMessage(const Empty::SharedPtr){};
+	virtual void onVIOPMessage(const Empty::SharedPtr){};
+	virtual void onStartMessage(const Empty::SharedPtr){};
+	virtual void onStopMessage(const Empty::SharedPtr){};
+	virtual void onAbortMessage(const Empty::SharedPtr) = 0;
+	virtual void onACCMMessage(const Accm::SharedPtr){};
+	virtual void onTRCMMessage(const Empty::SharedPtr){};
+	virtual void onEXACMessage(const Exac::SharedPtr){};
+	virtual void onTREOMessage(const Empty::SharedPtr){};
+	virtual void onExitMessage(const Empty::SharedPtr){};
+	virtual void onReplayMessage(const Empty::SharedPtr){};
+	virtual void onBackToStartMessage(const Empty::SharedPtr){};
+	virtual void onBackToStartResponse(const Int8::SharedPtr){};
+	virtual void onDataDictResponse(const Empty::SharedPtr){};
+
 private:
 	static void printUnhandledMessage(const std::string& topic, const std::string& message) {
 		std::cout << "Unhandled message on topic: " << topic << " (" << message << ")" << std::endl;
 	}
 	static void printUnhandledMessage(const std::string& topic) {
-		std::cout << "Unhandled message on topic: " << topic << std::endl;
+		std::cout << "Unhandled empty message on topic: " << topic << std::endl;
 	}
-
-	virtual void onFailureMessage(const UInt8::SharedPtr) {};
-	virtual void onGetStatusResponse(String::SharedPtr) { };
-	virtual void onGetStatusMessage(Empty::SharedPtr) { 
-	/*	auto msg = String();
-		msg.data = this->get_name();
-		getStatusResponseTopic.publish(msg);*/
-		 };
-	virtual void onInitMessage(const Empty::SharedPtr) {};
-	virtual void onConnectMessage(Empty::SharedPtr){};
-	virtual void onDisconnectMessage(Empty::SharedPtr){};
-	virtual void onArmMessage(Empty::SharedPtr){};
-	virtual void onDisarmMessage(Empty::SharedPtr){};
-	virtual void onRemoteControlEnableMessage(Empty::SharedPtr){};
-	virtual void onRemoteControlDisableMessage(Empty::SharedPtr){};
-	virtual void onRemoteControlManoeuvreMessage(Empty::SharedPtr){};
-	virtual void onEnableObjectMessage(ObjectEnabled::SharedPtr){};
-	virtual void onObjectsConnectedMessage(Empty::SharedPtr){};
-	virtual void onDataDictMessage(Empty::SharedPtr){};
-	virtual void onOSEMMessage(Empty::SharedPtr){};
-	virtual void onASPMessage(Empty::SharedPtr){};
-	virtual void onTrajMessage(Empty::SharedPtr){};
-	virtual void onTrajToSupMessage(Empty::SharedPtr){};
-	virtual void onTrajFromSupMessage(Empty::SharedPtr){};
-	virtual void onAllClearMessage(Empty::SharedPtr){};
-	virtual void onOBCStateMessage(Empty::SharedPtr){};
-	virtual void onVIOPMessage(Empty::SharedPtr){};
-	virtual void onStartMessage(Empty::SharedPtr){};
-	virtual void onStopMessage(Empty::SharedPtr){};
-	virtual void onAbortMessage(Empty::SharedPtr){};
-	virtual void onACCMMessage(Accm::SharedPtr){};
-	virtual void onTRCMMessage(Empty::SharedPtr){};
-	virtual void onEXACMessage(Exac::SharedPtr){};
-	virtual void onTREOMessage(Empty::SharedPtr){};
-	virtual void onExitMessage(Empty::SharedPtr){};
-	virtual void onReplayMessage(Empty::SharedPtr){};
-	virtual void onBackToStartMessage(Empty::SharedPtr){};
-	virtual void onBackToStartResponse(Int8::SharedPtr){};
-	virtual void onDataDictResponse(Empty::SharedPtr){};
 };

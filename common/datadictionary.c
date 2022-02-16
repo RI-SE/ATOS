@@ -26,9 +26,7 @@
 // Parameters and variables
 #define MONR_DATA_FILENAME "MonitorData"
 #define STATE_DATA_FILENAME "StateData"
-#define MISC_DATA_FILENAME "MiscData"
 #define RVSSASP_DATA_FILENAME "RvssAspData"
-#define MISC_DATA_MAX_SIZE 1024
 
 typedef struct {
 	OBCState_t objectControlState;
@@ -58,23 +56,23 @@ ReadWriteAccess_t DataDictionaryConstructor() {
 
 	// Configuration file parameters should always exist
 	if ((result = DataDictionaryInitScenarioName()) != READ_OK) {
-		retval = result;
+		retval = READ_FAIL;
 	}
 	if ((result = DataDictionaryInitMaxPacketsLost()) != READ_OK) {
-		retval = result;
+		retval = READ_FAIL;
 	}
 	if ((result = DataDictionaryInitTransmitterID()) != READ_OK) {
-		retval = result;
+		retval = READ_FAIL;
 	}
 
 	// Shared memory variables can either be preexisting or not
 	if (DataDictionaryInitObjectData() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
-		retval = UNDEFINED;
+		retval = WRITE_FAIL;
 	}
 	if (DataDictionaryInitStateData() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared state memory found by constructor");
-		retval = UNDEFINED;
+		retval = WRITE_FAIL;
 	}
 	else {
 		DataDictionarySetOBCState(OBC_STATE_UNDEFINED);
@@ -82,7 +80,7 @@ ReadWriteAccess_t DataDictionaryConstructor() {
 
 	if (DataDictionaryInitRVSSAsp() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared ASP memory found by constructor");
-		retval = UNDEFINED;
+		retval = WRITE_FAIL;
 	}
 
 	return retval;
@@ -99,13 +97,13 @@ ReadWriteAccess_t DataDictionaryDestructor() {
 	ReadWriteAccess_t retval = WRITE_OK;
 
 	if ((result = DataDictionaryFreeObjectData()) != WRITE_OK) {
-		retval = result;
+		retval = WRITE_FAIL;
 	}
 	if ((result = DataDictionaryFreeStateData()) != WRITE_OK) {
-		retval = result;
+		retval = WRITE_FAIL;
 	}
 	if ((result = DataDictionaryFreeRVSSAsp()) != WRITE_OK) {
-		retval = result;
+		retval = WRITE_FAIL;
 	}
 	return retval;
 }
@@ -1657,10 +1655,11 @@ ReadWriteAccess_t DataDictionaryGetRVSSAsp(ASPType * ASPD) {
 	rvssAspDataMemory = releaseSharedMemory(rvssAspDataMemory);
 	return READ_OK;
 }
-
+/*!
+ * \brief DataDictionaryFreeRVSSAsp Releases data structure for saving RVSS asp data
+ * \return Result according to ::ReadWriteAccess_t
+ */
 ReadWriteAccess_t DataDictionaryFreeRVSSAsp() {
-	ReadWriteAccess_t result = WRITE_OK;
-
 	if (rvssAspDataMemory == NULL) {
 		errno = EINVAL;
 		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized ASP memory");
@@ -1669,7 +1668,7 @@ ReadWriteAccess_t DataDictionaryFreeRVSSAsp() {
 
 	destroySharedMemory(rvssAspDataMemory);
 
-	return result;
+	return WRITE_OK;
 }
 
 /*END ASPDebug*/
