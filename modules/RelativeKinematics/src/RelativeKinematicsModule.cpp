@@ -30,7 +30,6 @@ RelativeKinematicsModule::RelativeKinematicsModule() : Module(RelativeKinematics
 
 	// ** Publishers
 	this->failurePub = this->create_publisher<UInt8>(topicNames[COMM_FAILURE],queueSize);
-	this->abortPub = this->create_publisher<Empty>(topicNames[COMM_ABORT],queueSize);
 	this->getStatusResponsePub = this->create_publisher<String>(topicNames[COMM_GETSTATUS_OK],queueSize);	
 };
 
