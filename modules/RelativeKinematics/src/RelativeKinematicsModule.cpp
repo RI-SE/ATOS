@@ -35,11 +35,11 @@ RelativeKinematicsModule::RelativeKinematicsModule() : Module(RelativeKinematics
 
 void RelativeKinematicsModule::tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail){
 	try{
-		LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames[commandCode]);
+		LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames[commandCode].c_str());
 		tryExecute();
 	}
 	catch (std::invalid_argument& e) {
-		LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames[commandCode], e.what());
+		LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames[commandCode].c_str(), e.what());
 		executeIfFail();
 	}
 }
