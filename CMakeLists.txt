@@ -74,6 +74,7 @@ add_subdirectory(util/C/shmem)
 add_subdirectory(util/C/iso22133)
 add_subdirectory(util/C/mathutils)
 add_subdirectory(util/C/osihandler)
+
 add_subdirectory(common)
 add_subdirectory(core)
 foreach(MODULE ${ENABLED_MODULES})
