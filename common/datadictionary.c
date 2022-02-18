@@ -17,43 +17,16 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <string.h>
 #include "datadictionary.h"
 #include "logging.h"
 #include "shmem.h"
 
 
 // Parameters and variables
-static pthread_mutex_t OriginLatitudeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t OriginLongitudeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t OriginAltitudeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t VisualizationServerMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPMaxTimeDiffMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPMaxTrajDiffMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPStepBackCountMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPFilterLevelMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPMaxDeltaTimeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t TimeServerIPMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t TimeServerPortMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SimulatorIPMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SimulatorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SimulatorUDPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SimulatorModeMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t VOILReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t DTMReceiversMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ExternalSupervisorIPMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t SupervisorTCPPortMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t DataDictionaryRVSSConfigMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t DataDictionaryRVSSRateMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ASPDataMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t MiscDataMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t ObjectStatusMutex = PTHREAD_MUTEX_INITIALIZER;
-
-
-
 #define MONR_DATA_FILENAME "MonitorData"
 #define STATE_DATA_FILENAME "StateData"
-#define MISC_DATA_FILENAME "MiscData"
-#define MISC_DATA_MAX_SIZE 1024
+#define RVSSASP_DATA_FILENAME "RvssAspData"
 
 typedef struct {
 	OBCState_t objectControlState;
@@ -61,7 +34,7 @@ typedef struct {
 
 static volatile ObjectDataType *objectDataMemory = NULL;
 static volatile StateDataType *stateDataMemory = NULL;
-static volatile char *miscDataMemory = NULL;
+static volatile ASPType *rvssAspDataMemory = NULL; 
 
 /*------------------------------------------------------------
   -- Static function definitions
@@ -75,50 +48,42 @@ static volatile char *miscDataMemory = NULL;
 /*!
  * \brief DataDictionaryConstructor Initialize data held by DataDictionary.
 Initialization data that is configurable is stored in test.conf.
- * \param GSD Pointer to allocated shared memory
  * \return Error code defined by ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
-	ReadWriteAccess_t Res = READ_OK;
+ReadWriteAccess_t DataDictionaryConstructor() {
+	ReadWriteAccess_t result = READ_WRITE_OK;
+	ReadWriteAccess_t retval = READ_WRITE_OK;
 
-	Res = Res == READ_OK ? DataDictionaryInitScenarioName() : Res;
-	Res = Res == READ_OK ? DataDictionaryInitOriginLatitudeDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitOriginLongitudeDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitOriginAltitudeDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitVisualizationServerU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitASPMaxTimeDiffDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitASPMaxTrajDiffDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitASPStepBackCountU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitASPFilterLevelDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitASPMaxDeltaTimeDbl(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitTimeServerIPU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitTimeServerPortU16(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitSimulatorIPU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitSimulatorTCPPortU16(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitSimulatorUDPPortU16(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitSimulatorModeU8(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitVOILReceiversC8(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitDTMReceiversC8(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitExternalSupervisorIPU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitRVSSConfigU32(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitRVSSRateU8(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitSupervisorTCPPortU16(GSD) : Res;
-	Res = Res == READ_OK ? DataDictionaryInitMiscData() : Res;
-	Res = Res == READ_OK ? DataDictionaryInitMaxPacketsLost() : Res;
-	Res = Res == READ_OK ? DataDictionaryInitTransmitterID() : Res;
-	if (Res == READ_OK && DataDictionaryInitObjectData() != WRITE_OK) {
+	// Configuration file parameters should always exist
+	if ((result = DataDictionaryInitScenarioName()) != READ_OK) {
+		retval = READ_FAIL;
+	}
+	if ((result = DataDictionaryInitMaxPacketsLost()) != READ_OK) {
+		retval = READ_FAIL;
+	}
+	if ((result = DataDictionaryInitTransmitterID()) != READ_OK) {
+		retval = READ_FAIL;
+	}
+
+	// Shared memory variables can either be preexisting or not
+	if (DataDictionaryInitObjectData() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared monitor data memory found by constructor");
-		Res = UNDEFINED;
+		retval = WRITE_FAIL;
 	}
-	if (Res == READ_OK && DataDictionaryInitStateData() != WRITE_OK) {
+	if (DataDictionaryInitStateData() != WRITE_OK) {
 		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared state memory found by constructor");
-		Res = UNDEFINED;
+		retval = WRITE_FAIL;
 	}
-	if (Res == READ_OK) {
+	else {
 		DataDictionarySetOBCState(OBC_STATE_UNDEFINED);
 	}
 
-	return Res;
+	if (DataDictionaryInitRVSSAsp() != WRITE_OK) {
+		LogMessage(LOG_LEVEL_WARNING, "Preexisting shared ASP memory found by constructor");
+		retval = WRITE_FAIL;
+	}
+
+	return retval;
 }
 
 
@@ -129,11 +94,18 @@ ReadWriteAccess_t DataDictionaryConstructor(GSDType * GSD) {
  */
 ReadWriteAccess_t DataDictionaryDestructor() {
 	ReadWriteAccess_t result = WRITE_OK;
+	ReadWriteAccess_t retval = WRITE_OK;
 
-	result = result == WRITE_OK ? DataDictionaryFreeObjectData() : result;
-	result = result == WRITE_OK ? DataDictionaryFreeStateData() : result;
-
-	return result;
+	if ((result = DataDictionaryFreeObjectData()) != WRITE_OK) {
+		retval = WRITE_FAIL;
+	}
+	if ((result = DataDictionaryFreeStateData()) != WRITE_OK) {
+		retval = WRITE_FAIL;
+	}
+	if ((result = DataDictionaryFreeRVSSAsp()) != WRITE_OK) {
+		retval = WRITE_FAIL;
+	}
+	return retval;
 }
 
 
@@ -174,363 +146,343 @@ ReadWriteAccess_t DataDictionaryGetScenarioName(char *name, const size_t nameLen
 	return Res;
 }
 
-
-/*!
- * \brief DataDictionaryInitOriginLatitudeDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitOriginLatitudeDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&OriginLatitudeMutex);
-		GSD->OriginLatitudeDbl = atof(ResultBufferC8);
-		bzero(GSD->OriginLatitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->OriginLatitudeC8, ResultBufferC8);
-		pthread_mutex_unlock(&OriginLatitudeMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "OriginLatitude not found!");
-	}
-
-	return Res;
-}
-
 /*!
  * \brief DataDictionarySetOriginLatitudeDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param Latitude
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(GSDType * GSD, C8 * Latitude) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetOriginLatitudeDbl(const char* latitude) {
+	if (latitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, Latitude, strlen(Latitude) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&OriginLatitudeMutex);
-		GSD->OriginLatitudeDbl = atof(Latitude);
-		bzero(GSD->OriginLatitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->OriginLatitudeC8, Latitude);
-		pthread_mutex_unlock(&OriginLatitudeMutex);
+		(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, latitude, strlen(latitude) + 1)) {
+		return WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*!
  * \brief DataDictionaryGetOriginLatitudeDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param Latitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(GSDType * GSD, dbl * Latitude) {
-	pthread_mutex_lock(&OriginLatitudeMutex);
-	*Latitude = GSD->OriginLatitudeDbl;
-	pthread_mutex_unlock(&OriginLatitudeMutex);
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeDbl(double_t* latitude) {
+	char readValue[DD_CONTROL_BUFFER_SIZE_20];
+	char* endptr;
+	ReadWriteAccess_t retval;
+	if (latitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetOriginLatitudeString(readValue, sizeof (readValue))) != READ_OK) {
+		return retval;
+	}
+
+	*latitude = strtod(readValue, &endptr);
+
+	if (endptr == readValue) {
+		*latitude = 0;
+		LogMessage(LOG_LEVEL_ERROR, "Latitude badly formatted");
+		return PARAMETER_NOTFOUND;
+	}
 	return READ_OK;
 }
 
 /*!
- * \brief DataDictionaryGetOriginLatitudeC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetOriginLatitudeString Reads variable from shared memory
  * \param Latitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLatitudeC8(GSDType * GSD, C8 * Latitude, U32 BuffLen) {
-	pthread_mutex_lock(&OriginLatitudeMutex);
-	bzero(Latitude, BuffLen);
-	strcat(Latitude, GSD->OriginLatitudeC8);
-	pthread_mutex_unlock(&OriginLatitudeMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetOriginLatitudeString(char* latitude, const size_t bufferLength) {
+	if (latitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_LATITUDE, latitude, bufferLength) > 0) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Latitude not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of Origin Latitude*/
 
 /*Origin Longitude*/
 /*!
- * \brief DataDictionaryInitOriginLongitudeDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitOriginLongitudeDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&OriginLongitudeMutex);
-		GSD->OriginLongitudeDbl = atof(ResultBufferC8);
-		bzero(GSD->OriginLongitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->OriginLongitudeC8, ResultBufferC8);
-		pthread_mutex_unlock(&OriginLongitudeMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "OriginLongitude not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetOriginLongitudeDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param Longitude
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(GSDType * GSD, C8 * Longitude) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetOriginLongitudeDbl(const char* longitude) {
+	if (longitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, Longitude, strlen(Longitude) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&OriginLongitudeMutex);
-		GSD->OriginLongitudeDbl = atof(Longitude);
-		bzero(GSD->OriginLongitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->OriginLongitudeC8, Longitude);
-		pthread_mutex_unlock(&OriginLongitudeMutex);
+		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, longitude, strlen(longitude) + 1)) {
+		return WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*!
  * \brief DataDictionaryGetOriginLongitudeDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param Longitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(GSDType * GSD, dbl * Longitude) {
-	pthread_mutex_lock(&OriginLongitudeMutex);
-	*Longitude = GSD->OriginLongitudeDbl;
-	pthread_mutex_unlock(&OriginLongitudeMutex);
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeDbl(double_t* longitude) {
+	char readValue[DD_CONTROL_BUFFER_SIZE_20];
+	char* endptr;
+	ReadWriteAccess_t retval;
+	if (longitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetOriginLongitudeString(readValue, sizeof (readValue))) != READ_OK) {
+		return retval;
+	}
+
+	*longitude = strtod(readValue, &endptr);
+
+	if (endptr == readValue) {
+		*longitude = 0;
+		LogMessage(LOG_LEVEL_ERROR, "Longitude badly formatted");
+		return PARAMETER_NOTFOUND;
+	}
 	return READ_OK;
 }
 
 /*!
- * \brief DataDictionaryGetOriginLongitudeC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetOriginLongitudeString Reads variable from shared memory
  * \param Longitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginLongitudeC8(GSDType * GSD, C8 * Longitude, U32 BuffLen) {
-	pthread_mutex_lock(&OriginLongitudeMutex);
-	bzero(Longitude, BuffLen);
-	strcat(Longitude, GSD->OriginLongitudeC8);
-	pthread_mutex_unlock(&OriginLongitudeMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetOriginLongitudeString(char* longitude, const size_t bufferLength) {
+	if (longitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE, longitude, bufferLength) > 0) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Longitude not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of Origin Longitude*/
 
 /*Origin Altitude*/
 /*!
- * \brief DataDictionaryInitOriginAltitudeDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitOriginAltitudeDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&OriginAltitudeMutex);
-		GSD->OriginAltitudeDbl = atof(ResultBufferC8);
-		bzero(GSD->OriginAltitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->OriginAltitudeC8, ResultBufferC8);
-		pthread_mutex_unlock(&OriginAltitudeMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "OriginAltitude not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetOriginAltitudeDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param Altitude
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(GSDType * GSD, C8 * Altitude) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetOriginAltitudeDbl(const char* altitude) {
+	if (altitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, Altitude, strlen(Altitude) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&OriginAltitudeMutex);
-		GSD->OriginAltitudeDbl = atof(Altitude);
-		bzero(GSD->OriginAltitudeC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->OriginAltitudeC8, Altitude);
-		pthread_mutex_unlock(&OriginAltitudeMutex);
+		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, altitude, strlen(altitude) + 1)) {
+		return WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*!
  * \brief DataDictionaryGetOriginAltitudeDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param Altitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(GSDType * GSD, dbl * Altitude) {
-	pthread_mutex_lock(&OriginAltitudeMutex);
-	*Altitude = GSD->OriginAltitudeDbl;
-	pthread_mutex_unlock(&OriginAltitudeMutex);
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeDbl(double_t* altitude) {
+	char readValue[DD_CONTROL_BUFFER_SIZE_20];
+	char* endptr;
+	ReadWriteAccess_t retval;
+	if (altitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetOriginAltitudeString(readValue, sizeof (readValue))) != READ_OK) {
+		return retval;
+	}
+
+	*altitude = strtod(readValue, &endptr);
+
+	if (endptr == readValue) {
+		*altitude = 0;
+		LogMessage(LOG_LEVEL_ERROR, "Altitude badly formatted");
+		return PARAMETER_NOTFOUND;
+	}
 	return READ_OK;
 }
 
 /*!
- * \brief DataDictionaryGetOriginAltitudeC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetOriginAltitudeString Reads variable from shared memory
  * \param Altitude Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetOriginAltitudeC8(GSDType * GSD, C8 * Altitude, U32 BuffLen) {
-	pthread_mutex_lock(&OriginAltitudeMutex);
-	bzero(Altitude, BuffLen);
-	strcat(Altitude, GSD->OriginAltitudeC8);
-	pthread_mutex_unlock(&OriginAltitudeMutex);
-	return READ_OK;
-}
+ReadWriteAccess_t DataDictionaryGetOriginAltitudeString(char* altitude, const size_t bufferLength) {
+	if (altitude == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE, altitude, bufferLength) > 0) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Altitude not found!");
+		return PARAMETER_NOTFOUND;
+	}
+}
 /*END of Origin Altitude*/
 
 /*VisualizationServer*/
 /*!
- * \brief DataDictionaryInitVisualizationServerU32 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitVisualizationServerU32(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&VisualizationServerMutex);
-		GSD->VisualizationServerU32 = UtilIPStringToInt(ResultBufferC8);
-		bzero(GSD->VisualizationServerC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->VisualizationServerC8, ResultBufferC8);
-		pthread_mutex_unlock(&VisualizationServerMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "VisualizationServerName not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetVisualizationServerU32 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param IP
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetVisualizationServerU32(GSDType * GSD, C8 * IP) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetVisualizationServerU32(const char* IP) {
+	ReadWriteAccess_t retval;
+	int result;
+	in_addr_t inaddr;
 
+	if (IP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	result = inet_pton(AF_INET, IP, &inaddr);
+	if (result <= 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Specified IP %s is not valid", IP);
+		return WRITE_FAIL;
+	}
+	
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME, IP, strlen(IP) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&VisualizationServerMutex);
-		GSD->VisualizationServerU32 = UtilIPStringToInt(IP);
-		bzero(GSD->VisualizationServerC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->VisualizationServerC8, IP);
-		pthread_mutex_unlock(&VisualizationServerMutex);
+		retval = WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		retval = PARAMETER_NOTFOUND;
+	}
+	return retval;
 }
 
 /*!
  * \brief DataDictionaryGetVisualizationServerU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param IP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(GSDType * GSD, U32 * IP) {
-	pthread_mutex_lock(&VisualizationServerMutex);
-	*IP = GSD->VisualizationServerU32;
-	pthread_mutex_unlock(&VisualizationServerMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetVisualizationServerU32(in_addr_t* IP) {
+	char ipString[INET_ADDRSTRLEN];
+	ReadWriteAccess_t retval;
+	int result;
+
+	if (IP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetVisualizationServerIPString(ipString, sizeof (ipString))) != READ_OK) {
+		return retval;
+	}
+	result = inet_pton(AF_INET, ipString, IP);
+	if (result > 0) {
+		retval = READ_OK;
+	}
+	else if (result == 0) {
+		LogMessage(LOG_LEVEL_ERROR, "VisualizationServerIP string %s is not a valid IPv4 address", ipString);
+		retval = PARAMETER_NOTFOUND;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+		retval = UNDEFINED;
+	}
+	return retval;
 }
 
 
 /*!
- * \brief DataDictionaryGetVisualizationServerU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetVisualizationServerIPString Reads variable from shared memory
  * \param IP Return variable pointer
+ * \param bufferLength Size of return variable buffer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetVisualizationServerC8(GSDType * GSD, C8 * IP, U32 BuffLen) {
-	pthread_mutex_lock(&VisualizationServerMutex);
-	bzero(IP, BuffLen);
-	strcat(IP, GSD->VisualizationServerC8);
-	pthread_mutex_unlock(&VisualizationServerMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetVisualizationServerIPString(char* IP, const size_t bufferLength) {
+	if (IP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_VISUALIZATION_SERVER_NAME,
+				IP, bufferLength) > 0) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "VisualizationServerIP not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of VisualizationServer*/
 
 /*ASPMaxTimeDiff*/
-/*!
- * \brief DataDictionaryInitASPMaxTimeDiffDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitASPMaxTimeDiffDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ASPMaxTimeDiffMutex);
-		GSD->ASPMaxTimeDiffDbl = atof(ResultBufferC8);
-		pthread_mutex_unlock(&ASPMaxTimeDiffMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ASPMaxTimeDiff not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetASPMaxTimeDiffDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
- * \param ASPMaxTimeDiff
+  * \param ASPMaxTimeDiff
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(GSDType * GSD, C8 * ASPMaxTimeDiff) {
+ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(const char * ASPMaxTimeDiff) {
 	ReadWriteAccess_t Res;
+
+
+	if (ASPMaxTimeDiff == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, ASPMaxTimeDiff, strlen(ASPMaxTimeDiff) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&ASPMaxTimeDiffMutex);
-		GSD->ASPMaxTimeDiffDbl = atof(ASPMaxTimeDiff);
-		pthread_mutex_unlock(&ASPMaxTimeDiffMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -539,59 +491,64 @@ ReadWriteAccess_t DataDictionarySetASPMaxTimeDiffDbl(GSDType * GSD, C8 * ASPMaxT
 
 /*!
  * \brief DataDictionaryGetASPMaxTimeDiffDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param ASPMaxTimeDiff Return variable pointer
+  * \param ASPMaxTimeDiff Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(GSDType * GSD, dbl * ASPMaxTimeDiff) {
-	pthread_mutex_lock(&ASPMaxTimeDiffMutex);
-	*ASPMaxTimeDiff = GSD->ASPMaxTimeDiffDbl;
-	pthread_mutex_unlock(&ASPMaxTimeDiffMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetASPMaxTimeDiffDbl(double_t * ASPMaxTimeDiff) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	double_t readSetting;
+
+	if (ASPMaxTimeDiff == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtod(resultBuffer, &endPtr);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP max time diff configuration");
+			result = PARAMETER_NOTFOUND;
+			*ASPMaxTimeDiff = 0;
+		}
+		else {
+			result = READ_OK;
+			*ASPMaxTimeDiff = (double_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "ASP max time diff configuration not found!");
+		result = PARAMETER_NOTFOUND;
+		*ASPMaxTimeDiff = 0;
+	}
+
 }
 
 /*END of ASPMaxTimeDiff*/
 
 /*ASPMaxTrajDiff*/
-/*!
- * \brief DataDictionaryInitASPMaxTrajDiffDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitASPMaxTrajDiffDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ASPMaxTrajDiffMutex);
-		GSD->ASPMaxTrajDiffDbl = atof(ResultBufferC8);
-		pthread_mutex_unlock(&ASPMaxTrajDiffMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ASPMaxTrajDiff not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetASPMaxTrajDiffDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param ASPMaxTrajDiff
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(GSDType * GSD, C8 * ASPMaxTrajDiff) {
+ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(const char * ASPMaxTrajDiff) {
 	ReadWriteAccess_t Res;
+
+	if (ASPMaxTrajDiff == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_ASP_MAX_TRAJ_DIFF, ASPMaxTrajDiff, strlen(ASPMaxTrajDiff) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&ASPMaxTrajDiffMutex);
-		GSD->ASPMaxTrajDiffDbl = atof(ASPMaxTrajDiff);
-		pthread_mutex_unlock(&ASPMaxTrajDiffMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -600,15 +557,40 @@ ReadWriteAccess_t DataDictionarySetASPMaxTrajDiffDbl(GSDType * GSD, C8 * ASPMaxT
 
 /*!
  * \brief DataDictionaryGetASPMaxTrajDiffDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param ASPMaxTrajDiff Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(GSDType * GSD, dbl * ASPMaxTrajDiff) {
-	pthread_mutex_lock(&ASPMaxTrajDiffMutex);
-	*ASPMaxTrajDiff = GSD->ASPMaxTrajDiffDbl;
-	pthread_mutex_unlock(&ASPMaxTrajDiffMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(double_t * ASPMaxTrajDiff) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	double_t readSetting;
+
+	if (ASPMaxTrajDiff == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_MAX_TIME_DIFF, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtod(resultBuffer, &endPtr);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP max traj diff configuration");
+			result = PARAMETER_NOTFOUND;
+			*ASPMaxTrajDiff = 0;
+		}
+		else {
+			result = READ_OK;
+			*ASPMaxTrajDiff = (double_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "ASP max traj diff configuration not found!");
+		result = PARAMETER_NOTFOUND;
+		*ASPMaxTrajDiff = 0;
+	}
 }
 
 /*END of ASPMaxTrajDiff*/
@@ -616,44 +598,22 @@ ReadWriteAccess_t DataDictionaryGetASPMaxTrajDiffDbl(GSDType * GSD, dbl * ASPMax
 
 /*ASPStepBackCount*/
 /*!
- * \brief DataDictionaryInitASPStepBackCountU32 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitASPStepBackCountU32(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ASPStepBackCountMutex);
-		GSD->ASPStepBackCountU32 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&ASPStepBackCountMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ASPStepBackCount not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetASPStepBackCountU32 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param ASPStepBackCount
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(GSDType * GSD, C8 * ASPStepBackCount) {
+ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(const char * ASPStepBackCount) {
 	ReadWriteAccess_t Res;
+
+	if (ASPStepBackCount == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT, ASPStepBackCount, strlen(ASPStepBackCount) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&ASPStepBackCountMutex);
-		GSD->ASPStepBackCountU32 = atoi(ASPStepBackCount);
-		pthread_mutex_unlock(&ASPStepBackCountMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -662,59 +622,63 @@ ReadWriteAccess_t DataDictionarySetASPStepBackCountU32(GSDType * GSD, C8 * ASPSt
 
 /*!
  * \brief DataDictionaryGetASPStepBackCountU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param ASPStepBackCount Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(GSDType * GSD, U32 * ASPStepBackCount) {
-	pthread_mutex_lock(&ASPStepBackCountMutex);
-	*ASPStepBackCount = GSD->ASPStepBackCountU32;
-	pthread_mutex_unlock(&ASPStepBackCountMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetASPStepBackCountU32(uint32_t * ASPStepBackCount) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	uint64_t readSetting;
+
+	if (ASPStepBackCount == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_STEP_BACK_COUNT, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtoul(resultBuffer, &endPtr, 10);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP step back count configuration");
+			result = PARAMETER_NOTFOUND;
+			*ASPStepBackCount = 0;
+		}
+		else {
+			result = READ_OK;
+			*ASPStepBackCount = (uint32_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "RASP step back count not found!");
+		result = PARAMETER_NOTFOUND;
+		*ASPStepBackCount = 0;
+	}
 }
 
 /*END of ASPStepBackCount*/
 
+
 /*ASPFilterLevel*/
 /*!
- * \brief DataDictionaryInitASPFilterLevelDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitASPFilterLevelDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ASPFilterLevelMutex);
-		GSD->ASPFilterLevelDbl = atof(ResultBufferC8);
-		pthread_mutex_unlock(&ASPFilterLevelMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ASPFilterLevel not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetASPFilterLevelDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param ASPFilterLevel
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(GSDType * GSD, C8 * ASPFilterLevel) {
+ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(const char * ASPFilterLevel) {
 	ReadWriteAccess_t Res;
+
+	if (ASPFilterLevel == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL, ASPFilterLevel, strlen(ASPFilterLevel) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&ASPFilterLevelMutex);
-		GSD->ASPFilterLevelDbl = atof(ASPFilterLevel);
-		pthread_mutex_unlock(&ASPFilterLevelMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -723,59 +687,63 @@ ReadWriteAccess_t DataDictionarySetASPFilterLevelDbl(GSDType * GSD, C8 * ASPFilt
 
 /*!
  * \brief DataDictionaryGetASPFilterLevelDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param ASPFilterLevel Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(GSDType * GSD, dbl * ASPFilterLevel) {
-	pthread_mutex_lock(&ASPFilterLevelMutex);
-	*ASPFilterLevel = GSD->ASPFilterLevelDbl;
-	pthread_mutex_unlock(&ASPFilterLevelMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetASPFilterLevelDbl(dbl * ASPFilterLevel) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	double_t readSetting;
+
+	if (ASPFilterLevel == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_FILTER_LEVEL, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtod(resultBuffer, &endPtr);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP filter level configuration");
+			result = PARAMETER_NOTFOUND;
+			*ASPFilterLevel = 0;
+		}
+		else {
+			result = READ_OK;
+			*ASPFilterLevel = (double_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "ASP filter level configuration not found!");
+		result = PARAMETER_NOTFOUND;
+		*ASPFilterLevel = 0;
+	}
 }
 
 /*END of ASPFilterLevel*/
 
 /*ASPMaxDeltaTime*/
-/*!
- * \brief DataDictionaryInitASPMaxDeltaTimeDbl Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitASPMaxDeltaTimeDbl(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ASPMaxDeltaTimeMutex);
-		GSD->ASPMaxDeltaTimeDbl = atof(ResultBufferC8);
-		pthread_mutex_unlock(&ASPMaxDeltaTimeMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "ASPMaxDeltaTime not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetASPMaxDeltaTimeDbl Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param ASPMaxDeltaTime
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(GSDType * GSD, C8 * ASPMaxDeltaTime) {
+ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(const char * ASPMaxDeltaTime) {
 	ReadWriteAccess_t Res;
+
+	if (ASPMaxDeltaTime == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME, ASPMaxDeltaTime, strlen(ASPMaxDeltaTime) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&ASPMaxDeltaTimeMutex);
-		GSD->ASPMaxDeltaTimeDbl = atof(ASPMaxDeltaTime);
-		pthread_mutex_unlock(&ASPMaxDeltaTimeMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -784,464 +752,480 @@ ReadWriteAccess_t DataDictionarySetASPMaxDeltaTimeDbl(GSDType * GSD, C8 * ASPMax
 
 /*!
  * \brief DataDictionaryGetASPMaxDeltaTimeDbl Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param ASPMaxDeltaTime Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(GSDType * GSD, dbl * ASPMaxDeltaTime) {
-	pthread_mutex_lock(&ASPMaxDeltaTimeMutex);
-	*ASPMaxDeltaTime = GSD->ASPMaxDeltaTimeDbl;
-	pthread_mutex_unlock(&ASPMaxDeltaTimeMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetASPMaxDeltaTimeDbl(double_t * ASPMaxDeltaTime) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	double_t readSetting;
+
+	if (ASPMaxDeltaTime == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_ASP_MAX_DELTA_TIME, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtod(resultBuffer, &endPtr);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for ASP max delta time configuration");
+			result = PARAMETER_NOTFOUND;
+			*ASPMaxDeltaTime = 0;
+		}
+		else {
+			result = READ_OK;
+			*ASPMaxDeltaTime = (double_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "ASP max delta time configuration not found!");
+		result = PARAMETER_NOTFOUND;
+		*ASPMaxDeltaTime = 0;
+	}
 }
 
 /*END of ASPFilterLevel*/
 
-
-/*TimeServerIP*/
-/*!
- * \brief DataDictionaryInitTimeServerIPU32 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitTimeServerIPU32(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_TIME_SERVER_IP, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&TimeServerIPMutex);
-		GSD->TimeServerIPU32 = UtilIPStringToInt(ResultBufferC8);
-		bzero(GSD->TimeServerIPC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->TimeServerIPC8, ResultBufferC8);
-		pthread_mutex_unlock(&TimeServerIPMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "TimeServerIP not found!");
-	}
-
-	return Res;
-}
-
 /*!
  * \brief DataDictionarySetTimeServerIPU32 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param TimeServerIP
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetTimeServerIPU32(GSDType * GSD, C8 * TimeServerIP) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetTimeServerIPU32(const char* timeServerIP) {
+	ReadWriteAccess_t retval;
+	int result;
+	in_addr_t inaddr;
 
-	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_TIME_SERVER_IP, TimeServerIP, strlen(TimeServerIP) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&TimeServerIPMutex);
-		GSD->TimeServerIPU32 = UtilIPStringToInt(TimeServerIP);
-		bzero(GSD->TimeServerIPC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->TimeServerIPC8, TimeServerIP);
-		pthread_mutex_unlock(&TimeServerIPMutex);
+	if (timeServerIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+
+	result = inet_pton(AF_INET, timeServerIP, &inaddr);
+	if (result <= 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Specified IP %s is not valid", timeServerIP);
+		return WRITE_FAIL;
+	}
+	
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_TIME_SERVER_IP, timeServerIP, strlen(timeServerIP) + 1)) {
+		retval = WRITE_OK;
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+	}
+	return retval;
 }
 
 /*!
  * \brief DataDictionaryGetTimeServerIPU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param TimeServerIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(GSDType * GSD, U32 * TimeServerIP) {
-	pthread_mutex_lock(&TimeServerIPMutex);
-	*TimeServerIP = GSD->TimeServerIPU32;
-	pthread_mutex_unlock(&TimeServerIPMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetTimeServerIPU32(in_addr_t* timeServerIP) {
+	char ipString[INET_ADDRSTRLEN];
+	ReadWriteAccess_t retval;
+	int result;
+
+	if (timeServerIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetTimeServerIPString(ipString, sizeof (ipString))) != READ_OK) {
+		return retval;
+	}
+	result = inet_pton(AF_INET, ipString, timeServerIP);
+	if (result > 0) {
+		retval = READ_OK;
+	}
+	else if (result == 0) {
+		LogMessage(LOG_LEVEL_ERROR, "TimeServerIP string %s is not a valid IPv4 address", ipString);
+		retval = PARAMETER_NOTFOUND;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+		retval = UNDEFINED;
+	}
+	return retval;
 }
 
 /*!
  * \brief DataDictionaryGetTimeServerIPC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param TimeServerIP Return variable pointer
+ * \param bufferLength Size of return variable buffer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetTimeServerIPC8(GSDType * GSD, C8 * TimeServerIP, U32 BuffLen) {
-	pthread_mutex_lock(&TimeServerIPMutex);
-	bzero(TimeServerIP, BuffLen);
-	strcat(TimeServerIP, GSD->TimeServerIPC8);
-	pthread_mutex_unlock(&TimeServerIPMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetTimeServerIPString(char * timeServerIP, const size_t bufferLength) {
+
+	if (timeServerIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_TIME_SERVER_IP,
+				timeServerIP, bufferLength) > 0) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "TimeServerIP not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of TimeServerIP*/
 
-
-/*TimeServerPort*/
-/*!
- * \brief DataDictionaryInitTimeServerPortU16 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitTimeServerPortU16(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_TIME_SERVER_PORT, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&TimeServerPortMutex);
-		GSD->TimeServerPortU16 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&TimeServerPortMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "TimeServerPort not found!");
-	}
-
-	return Res;
-}
-
 /*!
  * \brief DataDictionarySetTimeServerPortU16 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param TimeServerPort
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetTimeServerPortU16(GSDType * GSD, C8 * TimeServerPort) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetTimeServerPortU16(const char* timeServerPort) {
+
+	if (timeServerPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_TIME_SERVER_PORT, TimeServerPort, strlen(TimeServerPort) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&TimeServerPortMutex);
-		GSD->TimeServerPortU16 = atoi(TimeServerPort);
-		pthread_mutex_unlock(&TimeServerPortMutex);
+		(CONFIGURATION_PARAMETER_TIME_SERVER_PORT, timeServerPort, strlen(timeServerPort) + 1)) {
+		return WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "TimeServerPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*!
  * \brief DataDictionaryGetTimeServerPortU16 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param TimeServerPort Return variable pointer
+ * \param timeServerPort Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(GSDType * GSD, U16 * TimeServerPort) {
-	pthread_mutex_lock(&TimeServerPortMutex);
-	*TimeServerPort = GSD->TimeServerPortU16;
-	pthread_mutex_unlock(&TimeServerPortMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetTimeServerPortU16(uint16_t * timeServerPort) {
+	char resultBuffer[10];
+	char *endptr = NULL;
+
+	if (timeServerPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_TIME_SERVER_PORT,
+				resultBuffer, sizeof(resultBuffer)) > 0) {
+		*timeServerPort = strtoul(resultBuffer, &endptr, 10);
+		if (endptr == resultBuffer) {
+			*timeServerPort = 0;
+			LogMessage(LOG_LEVEL_ERROR, "TimeServerPort badly formatted");
+			return PARAMETER_NOTFOUND;
+		}
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "TimeServerPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of TimeServerPort*/
 
 
 /*SimulatorIP*/
-/*!
- * \brief DataDictionaryInitSimulatorIPU32 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitSimulatorIPU32(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_IP, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&SimulatorIPMutex);
-		GSD->SimulatorIPU32 = UtilIPStringToInt(ResultBufferC8);
-		bzero(GSD->SimulatorIPC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->SimulatorIPC8, ResultBufferC8);
-		pthread_mutex_unlock(&SimulatorIPMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorIP not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetSimulatorIPU32 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorIP
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSimulatorIPU32(GSDType * GSD, C8 * SimulatorIP) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetSimulatorIPU32(const char* simulatorIP) {
+	ReadWriteAccess_t retval;
+	int result;
+	in_addr_t inaddr;
 
-	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_IP, SimulatorIP, strlen(SimulatorIP) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&SimulatorIPMutex);
-		GSD->SimulatorIPU32 = UtilIPStringToInt(SimulatorIP);
-		bzero(GSD->SimulatorIPC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->SimulatorIPC8, SimulatorIP);
-		pthread_mutex_unlock(&SimulatorIPMutex);
+	if (simulatorIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+
+	result = inet_pton(AF_INET, simulatorIP, &inaddr);
+	if (result <= 0) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Specified IP %s is not valid", simulatorIP);
+		return WRITE_FAIL;
+	}
+	
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_SIMULATOR_IP, simulatorIP, strlen(simulatorIP) + 1)) {
+		retval = WRITE_OK;
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+	}
+	return retval;
 }
 
 /*!
  * \brief DataDictionaryGetSimulatorIPU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(GSDType * GSD, U32 * SimulatorIP) {
-	pthread_mutex_lock(&SimulatorIPMutex);
-	*SimulatorIP = GSD->SimulatorIPU32;
-	pthread_mutex_unlock(&SimulatorIPMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetSimulatorIPU32(in_addr_t* simulatorIP) {
+	char ipString[INET_ADDRSTRLEN];
+	ReadWriteAccess_t retval;
+	int result;
+
+	if (simulatorIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetSimulatorIPString(ipString, sizeof (ipString))) != READ_OK) {
+		return retval;
+	}
+	result = inet_pton(AF_INET, ipString, simulatorIP);
+	if (result > 0) {
+		retval = READ_OK;
+	}
+	else if (result == 0) {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorIP string %s is not a valid IPv4 address", ipString);
+		retval = PARAMETER_NOTFOUND;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+		retval = UNDEFINED;
+	}
+	return retval;
 }
 
 /*!
- * \brief DataDictionaryGetSimulatorIPC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetSimulatorIPString Reads variable from shared memory
  * \param SimulatorIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorIPC8(GSDType * GSD, C8 * SimulatorIP, U32 BuffLen) {
-	pthread_mutex_lock(&SimulatorIPMutex);
-	bzero(SimulatorIP, BuffLen);
-	strcat(SimulatorIP, GSD->SimulatorIPC8);
-	pthread_mutex_unlock(&SimulatorIPMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetSimulatorIPString(char* simulatorIP, const size_t bufferLength) {
+	if (simulatorIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_IP,
+				simulatorIP, bufferLength) > 0) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorIP not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of SimulatorIP*/
 
 /*SimulatorTCPPort*/
-/*!
- * \brief DataDictionaryInitSimulatorTCPPortU16 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitSimulatorTCPPortU16(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&SimulatorTCPPortMutex);
-		GSD->SimulatorTCPPortU16 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&SimulatorTCPPortMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorTCPPort not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetSimulatorTCPPortU16 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorTCPPort
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(GSDType * GSD, C8 * SimulatorTCPPort) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetSimulatorTCPPortU16(const char* simulatorTCPPort) {
+	if (simulatorTCPPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP, SimulatorTCPPort, strlen(SimulatorTCPPort) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&SimulatorTCPPortMutex);
-		GSD->SimulatorTCPPortU16 = atoi(SimulatorTCPPort);
-		pthread_mutex_unlock(&SimulatorTCPPortMutex);
+		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP, simulatorTCPPort, strlen(simulatorTCPPort) + 1)) {
+		return WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*!
  * \brief DataDictionaryGetSimulatorTCPPortU16 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorTCPPort Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(GSDType * GSD, U16 * SimulatorTCPPort) {
-	pthread_mutex_lock(&SimulatorTCPPortMutex);
-	*SimulatorTCPPort = GSD->SimulatorTCPPortU16;
-	pthread_mutex_unlock(&SimulatorTCPPortMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetSimulatorTCPPortU16(uint16_t* simulatorTCPPort) {
+	char resultBuffer[10];
+	char *endptr = NULL;
+
+	if (simulatorTCPPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_PORT_TCP,
+				resultBuffer, sizeof(resultBuffer)) > 0) {
+		*simulatorTCPPort = strtoul(resultBuffer, &endptr, 10);
+		if (endptr == resultBuffer) {
+			*simulatorTCPPort = 0;
+			LogMessage(LOG_LEVEL_ERROR, "SimulatorPort badly formatted");
+			return PARAMETER_NOTFOUND;
+		}
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of SimulatorTCPPort*/
 
 /*SimulatorUDPPort*/
 /*!
- * \brief DataDictionaryInitSimulatorUDPPortU16 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitSimulatorUDPPortU16(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&SimulatorUDPPortMutex);
-		GSD->SimulatorUDPPortU16 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&SimulatorUDPPortMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorUDPPort not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetSimulatorUDPPortU16 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorUDPPort
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(GSDType * GSD, C8 * SimulatorUDPPort) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetSimulatorUDPPortU16(const char* simulatorUDPPort) {
+	if (simulatorUDPPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
 
 	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP, SimulatorUDPPort, strlen(SimulatorUDPPort) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&SimulatorUDPPortMutex);
-		GSD->SimulatorUDPPortU16 = atoi(SimulatorUDPPort);
-		pthread_mutex_unlock(&SimulatorUDPPortMutex);
+		(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP, simulatorUDPPort, strlen(simulatorUDPPort) + 1)) {
+		return WRITE_OK;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*!
  * \brief DataDictionaryGetSimulatorUDPPortU16 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorUDPPort Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(GSDType * GSD, U16 * SimulatorUDPPort) {
-	pthread_mutex_lock(&SimulatorUDPPortMutex);
-	*SimulatorUDPPort = GSD->SimulatorUDPPortU16;
-	pthread_mutex_unlock(&SimulatorUDPPortMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetSimulatorUDPPortU16(uint16_t* simulatorUDPPort) {
+	
+	char resultBuffer[10];
+	char *endptr = NULL;
+
+	if (simulatorUDPPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_SIMULATOR_PORT_UDP,
+				resultBuffer, sizeof(resultBuffer)) > 0) {
+		*simulatorUDPPort = strtoul(resultBuffer, &endptr, 10);
+		if (endptr == resultBuffer) {
+			*simulatorUDPPort = 0;
+			LogMessage(LOG_LEVEL_ERROR, "SimulatorPort badly formatted");
+			return PARAMETER_NOTFOUND;
+		}
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of SimulatorUDPPort*/
 
 /*SimulatorMode*/
 /*!
- * \brief DataDictionaryInitSimulatorModeU8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitSimulatorModeU8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_MODE, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&SimulatorModeMutex);
-		GSD->SimulatorModeU8 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&SimulatorModeMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "SimulatorMode not found!");
-	}
-
-	return Res;
-}
-
-/*!
  * \brief DataDictionarySetSimulatorModeU8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorMode
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSimulatorModeU8(GSDType * GSD, C8 * SimulatorMode) {
-	ReadWriteAccess_t Res;
+ReadWriteAccess_t DataDictionarySetSimulatorModeU8(const char* simulatorMode) {
+	ReadWriteAccess_t retval;
 
-	if (UtilWriteConfigurationParameter
-		(CONFIGURATION_PARAMETER_SIMULATOR_MODE, SimulatorMode, strlen(SimulatorMode) + 1)) {
-		Res = WRITE_OK;
-		pthread_mutex_lock(&SimulatorModeMutex);
-		GSD->SimulatorModeU8 = atoi(SimulatorMode);
-		pthread_mutex_unlock(&SimulatorModeMutex);
+	if (simulatorMode == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
 	}
-	else
-		Res = PARAMETER_NOTFOUND;
-	return Res;
+	
+	if (UtilWriteConfigurationParameter
+		(CONFIGURATION_PARAMETER_SIMULATOR_MODE, simulatorMode, strlen(simulatorMode) + 1)) {
+		retval = WRITE_OK;
+	}
+	else {
+		retval = PARAMETER_NOTFOUND;
+	}
+	return retval;
 }
 
 /*!
  * \brief DataDictionaryGetSimulatorModeU8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param SimulatorMode Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(GSDType * GSD, U8 * SimulatorMode) {
-	pthread_mutex_lock(&SimulatorModeMutex);
-	*SimulatorMode = GSD->SimulatorModeU8;
-	pthread_mutex_unlock(&SimulatorModeMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetSimulatorModeU8(uint8_t* simulatorMode) {
+	char readValue[10];
+	char* endptr;
+
+	if (simulatorMode == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(
+		CONFIGURATION_PARAMETER_SIMULATOR_MODE, readValue, sizeof (readValue)) > 0) {
+		*simulatorMode = strtoul(readValue, &endptr, 10);
+		if (endptr == readValue) {
+			*simulatorMode = 0;
+			LogMessage(LOG_LEVEL_ERROR, "SimulatorMode badly formatted");
+			return PARAMETER_NOTFOUND;
+		}
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "SimulatorMode not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of SimulatorMode*/
 
 /*VOILReceivers*/
-/*!
- * \brief DataDictionaryInitVOILReceiversC8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitVOILReceiversC8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&VOILReceiversMutex);
-		strcpy(GSD->VOILReceiversC8, ResultBufferC8);
-		pthread_mutex_unlock(&VOILReceiversMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "VOILReceivers not found!");
-	}
-
-	return Res;
-}
 
 /*!
- * \brief DataDictionarySetVOILReceiversC8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionarySetVOILReceiversString Parses input variable and sets variable to corresponding value
+
  * \param VOILReceivers
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType * GSD, C8 * VOILReceivers) {
+ReadWriteAccess_t DataDictionarySetVOILReceiversString(const char * VOILReceivers) {
 	ReadWriteAccess_t Res;
+
+	if (VOILReceivers == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+	
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, VOILReceivers, strlen(VOILReceivers) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&VOILReceiversMutex);
-		strcpy(GSD->VOILReceiversC8, VOILReceivers);
-		pthread_mutex_unlock(&VOILReceiversMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -1249,61 +1233,54 @@ ReadWriteAccess_t DataDictionarySetVOILReceiversC8(GSDType * GSD, C8 * VOILRecei
 }
 
 /*!
- * \brief DataDictionaryGetVOILReceiversC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetVOILReceiversString Reads variable from shared memory
  * \param VOILReceivers Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetVOILReceiversC8(GSDType * GSD, U8 * VOILReceivers, U32 BuffLen) {
-	pthread_mutex_lock(&VOILReceiversMutex);
-	bzero(VOILReceivers, BuffLen);
-	strcpy(VOILReceivers, GSD->VOILReceiversC8);
-	pthread_mutex_unlock(&VOILReceiversMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetVOILReceiversString(char * VOILReceivers, const size_t buflen) {
+	ReadWriteAccess_t Res;
+
+	if (VOILReceivers == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_VOIL_RECEIVERS, VOILReceivers, buflen)) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "VOIL receivers not found!");
+		Res = PARAMETER_NOTFOUND;
+		memset(VOILReceivers, 0, buflen);
+	}
+
+	return Res;
 }
 
 /*END of VOILReceivers*/
 
 /*DTMReceivers*/
-/*!
- * \brief DataDictionaryInitDTMReceiversC8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitDTMReceiversC8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_1024];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_DTM_RECEIVERS, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&DTMReceiversMutex);
-		strcpy(GSD->DTMReceiversC8, ResultBufferC8);
-		pthread_mutex_unlock(&DTMReceiversMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "DTMReceivers not found!");
-	}
-
-	return Res;
-}
 
 /*!
- * \brief DataDictionarySetDTMReceiversC8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionarySetDTMReceiversString Parses input variable and sets variable to corresponding value
  * \param DTMReceivers
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetDTMReceiversC8(GSDType * GSD, C8 * DTMReceivers) {
+ReadWriteAccess_t DataDictionarySetDTMReceiversString(const char * DTMReceivers) {
 	ReadWriteAccess_t Res;
+
+	if (DTMReceivers == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+	
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_DTM_RECEIVERS, DTMReceivers, strlen(DTMReceivers) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&DTMReceiversMutex);
-		strcpy(GSD->DTMReceiversC8, DTMReceivers);
-		pthread_mutex_unlock(&DTMReceiversMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -1311,48 +1288,35 @@ ReadWriteAccess_t DataDictionarySetDTMReceiversC8(GSDType * GSD, C8 * DTMReceive
 }
 
 /*!
- * \brief DataDictionaryGetDTMReceiversC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
+ * \brief DataDictionaryGetDTMReceiversString Reads variable from shared memory
  * \param DTMReceivers Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetDTMReceiversC8(GSDType * GSD, U8 * DTMReceivers, U32 BuffLen) {
-	pthread_mutex_lock(&DTMReceiversMutex);
-	bzero(DTMReceivers, BuffLen);
-	strcpy(DTMReceivers, GSD->DTMReceiversC8);
-	pthread_mutex_unlock(&DTMReceiversMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetDTMReceiversString(char* DTMReceivers, const size_t buflen) {
+	ReadWriteAccess_t Res;
+
+	if (DTMReceivers == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_DTM_RECEIVERS, DTMReceivers, buflen)) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "DTM receivers receivers not found!");
+		Res = PARAMETER_NOTFOUND;
+		memset(DTMReceivers, 0, buflen);
+	}
+
+	return Res;
 }
 
 /*END of DTMReceivers*/
 
 /*External Supervisor IP*/
-/*!
- * \brief DataDictionaryInitExternalSupervisorIPU32 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&ExternalSupervisorIPMutex);
-		GSD->ExternalSupervisorIPU32 = UtilIPStringToInt(ResultBufferC8);
-		bzero(GSD->ExternalSupervisorIPC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->ExternalSupervisorIPC8, ResultBufferC8);
-		pthread_mutex_unlock(&ExternalSupervisorIPMutex);
-		//LogMessage(LOG_LEVEL_ERROR,"Supervisor IP: %s", ResultBufferC8);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "Supervisor IP not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetExternalSupervisorIPU32 Parses input variable and sets variable to corresponding value
@@ -1360,92 +1324,111 @@ ReadWriteAccess_t DataDictionaryInitExternalSupervisorIPU32(GSDType * GSD) {
  * \param IP
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(GSDType * GSD, C8 * IP) {
+ReadWriteAccess_t DataDictionarySetExternalSupervisorIPU32(const char* IP) {
 	ReadWriteAccess_t Res;
 
-	if (UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, IP, strlen(IP) + 1)) {
+	if (IP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if(UtilWriteConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, IP, strlen(IP) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&ExternalSupervisorIPMutex);
-		GSD->ExternalSupervisorIPU32 = UtilIPStringToInt(IP);
-		bzero(GSD->ExternalSupervisorIPC8, DD_CONTROL_BUFFER_SIZE_20);
-		strcat(GSD->ExternalSupervisorIPC8, IP);
-		pthread_mutex_unlock(&ExternalSupervisorIPMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
 	return Res;
+
 }
 
 /*!
  * \brief DataDictionaryGetExternalSupervisorIPU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param IP Return variable pointer
+ * \param externalSupervisorIP Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(GSDType * GSD, U32 * IP) {
-	pthread_mutex_lock(&ExternalSupervisorIPMutex);
-	*IP = GSD->ExternalSupervisorIPU32;
-	pthread_mutex_unlock(&ExternalSupervisorIPMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPU32(in_addr_t* externalSupervisorIP) {
+	char ipString[INET_ADDRSTRLEN];
+	ReadWriteAccess_t retval;
+	int result;
+
+	if (externalSupervisorIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Shared memory input pointer error");
+		return UNDEFINED;
+	}
+
+	if ((retval = DataDictionaryGetExternalSupervisorIPString(ipString, sizeof (ipString))) != READ_OK) {
+		return retval;
+	}
+	result = inet_pton(AF_INET, ipString, externalSupervisorIP);
+	if (result > 0) {
+		retval = READ_OK;
+	}
+	else if (result == 0) {
+		LogMessage(LOG_LEVEL_ERROR, "External supervisor string %s is not a valid IPv4 address", ipString);
+		retval = PARAMETER_NOTFOUND;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Invalid address family");
+		retval = UNDEFINED;
+	}
+	return retval;
 }
 
+
 /*!
- * \brief DataDictionaryGetExternalSupervisorIPC8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
- * \param IP Return variable pointer
+ * \brief DataDictionaryGetExternalSupervisorIPString Reads variable from shared memory
+ * \param externalSupervisorIP Return variable pointer
+ * \param buflen Return parameter buffer length
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPC8(GSDType * GSD, C8 * IP, U32 BuffLen) {
-	pthread_mutex_lock(&ExternalSupervisorIPMutex);
-	bzero(IP, BuffLen);
-	strcat(IP, GSD->ExternalSupervisorIPC8);
-	pthread_mutex_unlock(&ExternalSupervisorIPMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetExternalSupervisorIPString(char * externalSupervisorIP, uint32_t buflen) {
+	ReadWriteAccess_t Res;
+
+	if (externalSupervisorIP == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_IP, externalSupervisorIP, buflen)) {
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_INFO, "External supervisor IP not found!");
+		Res = PARAMETER_NOTFOUND;
+		memset(externalSupervisorIP, 0, buflen);
+	}
+
+	return Res;
 }
 
 /*END of External Supervisor IP*/
 
 /*External SupervisorTCPPort*/
-/*!
- * \brief DataDictionaryInitSupervisorTCPPortU16 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitSupervisorTCPPortU16(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&SupervisorTCPPortMutex);
-		GSD->SupervisorTCPPortU16 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&SupervisorTCPPortMutex);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "SupervisorTCPPort not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetSupervisorTCPPortU16 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param SupervisorTCPPort
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(GSDType * GSD, C8 * SupervisorTCPPort) {
+ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(const char * SupervisorTCPPort) {
 	ReadWriteAccess_t Res;
+
+
+	if (SupervisorTCPPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+	
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP, SupervisorTCPPort,
 		 strlen(SupervisorTCPPort) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&SupervisorTCPPortMutex);
-		GSD->SupervisorTCPPortU16 = atoi(SupervisorTCPPort);
-		pthread_mutex_unlock(&SupervisorTCPPortMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -1454,64 +1437,54 @@ ReadWriteAccess_t DataDictionarySetSupervisorTCPPortU16(GSDType * GSD, C8 * Supe
 
 /*!
  * \brief DataDictionaryGetSupervisorTCPPortU16 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param SupervisorTCPPort Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(GSDType * GSD, U16 * SupervisorTCPPort) {
-	pthread_mutex_lock(&SupervisorTCPPortMutex);
-	*SupervisorTCPPort = GSD->SupervisorTCPPortU16;
-	pthread_mutex_unlock(&SupervisorTCPPortMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetSupervisorTCPPortU16(uint16_t * SupervisorTCPPort) {
+	char resultBuffer[10];
+	char *endptr = NULL;
+
+	if (SupervisorTCPPort == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter(CONFIGURATION_PARAMETER_EXTERNAL_SUPERVISOR_PORT_TCP,
+				resultBuffer, sizeof(resultBuffer)) > 0) {
+		*SupervisorTCPPort = strtoul(resultBuffer, &endptr, 10);
+		if (endptr == resultBuffer) {
+			*SupervisorTCPPort = 0;
+			LogMessage(LOG_LEVEL_ERROR, "External SupervisorTCPPort badly formatted");
+			return PARAMETER_NOTFOUND;
+		}
+		return READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "External SupervisorTCPPort not found!");
+		return PARAMETER_NOTFOUND;
+	}
 }
 
 /*END of External SupervisorTCPPort*/
 
 /*Runtime Variable Subscription Service (RVSS) Configuration*/
-/*!
- * \brief DataDictionaryInitRVSSConfigU32 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitRVSSConfigU32(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_RVSS_CONFIG, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&DataDictionaryRVSSConfigMutex);
-		GSD->DataDictionaryRVSSConfigU32 = atoi(ResultBufferC8);
-		pthread_mutex_unlock(&DataDictionaryRVSSConfigMutex);
-		//LogMessage(LOG_LEVEL_ERROR,"RVSSConfig: %s", ResultBufferC8);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "RVSSConfig not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetInitRVSSConfigU32 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param RVSSConfig
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetRVSSConfigU32(GSDType * GSD, U32 RVSSConfig) {
+ReadWriteAccess_t DataDictionarySetRVSSConfigU32(uint32_t RVSSConfig) {
 	ReadWriteAccess_t Res;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
+	memset(ResultBufferC8, 0, DD_CONTROL_BUFFER_SIZE_20);
 	sprintf(ResultBufferC8, "%" PRIu32, RVSSConfig);
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_RVSS_CONFIG, ResultBufferC8, strlen(ResultBufferC8) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&DataDictionaryRVSSConfigMutex);
-		GSD->DataDictionaryRVSSConfigU32 = RVSSConfig;
-		pthread_mutex_unlock(&DataDictionaryRVSSConfigMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -1520,65 +1493,68 @@ ReadWriteAccess_t DataDictionarySetRVSSConfigU32(GSDType * GSD, U32 RVSSConfig) 
 
 /*!
  * \brief DataDictionaryGetRVSSConfigU32 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param RVSSConfig Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(GSDType * GSD, U32 * RVSSConfig) {
-	pthread_mutex_lock(&DataDictionaryRVSSConfigMutex);
-	*RVSSConfig = GSD->DataDictionaryRVSSConfigU32;
-	pthread_mutex_unlock(&DataDictionaryRVSSConfigMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetRVSSConfigU32(uint32_t * RVSSConfig) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	uint64_t readSetting;
+
+	if (RVSSConfig == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_RVSS_CONFIG, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtoul(resultBuffer, &endPtr, 10);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for RVSS configuration");
+			result = PARAMETER_NOTFOUND;
+			*RVSSConfig = DEFAULT_RVSS_CONF;
+		}
+		else if (readSetting > UINT32_MAX) {
+			LogMessage(LOG_LEVEL_WARNING, "Configuration for RVSS configuration outside accepted range");
+			result = READ_OK;
+			*RVSSConfig = UINT32_MAX;
+		}
+		else {
+			result = READ_OK;
+			*RVSSConfig = (uint32_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "RVSS configuration not found!");
+		result = PARAMETER_NOTFOUND;
+		*RVSSConfig = DEFAULT_RVSS_CONF;
+	}
+
 }
 
 /*END of Runtime Variable Subscription Service (RVSS) Configuration**/
 
 
 /*Runtime Variable Subscription Service (RVSS) Rate*/
-/*!
- * \brief DataDictionaryInitRVSSRateU8 Initializes variable according to the configuration file
- * \param GSD Pointer to shared allocated memory
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitRVSSRateU8(GSDType * GSD) {
-	ReadWriteAccess_t Res = UNDEFINED;
-	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
-
-	if (UtilReadConfigurationParameter
-		(CONFIGURATION_PARAMETER_RVSS_RATE, ResultBufferC8, sizeof (ResultBufferC8))) {
-		Res = READ_OK;
-		pthread_mutex_lock(&DataDictionaryRVSSRateMutex);
-		GSD->DataDictionaryRVSSRateU8 = (U8) atoi(ResultBufferC8);
-		pthread_mutex_unlock(&DataDictionaryRVSSRateMutex);
-		//LogMessage(LOG_LEVEL_ERROR,"RVSSRate: %s", ResultBufferC8);
-	}
-	else {
-		Res = PARAMETER_NOTFOUND;
-		LogMessage(LOG_LEVEL_ERROR, "RVSSRate not found!");
-	}
-
-	return Res;
-}
 
 /*!
  * \brief DataDictionarySetRVSSRateU8 Parses input variable and sets variable to corresponding value
- * \param GSD Pointer to shared allocated memory
  * \param RVSSRate
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetRVSSRateU8(GSDType * GSD, U8 RVSSRate) {
+ReadWriteAccess_t DataDictionarySetRVSSRateU8(uint8_t RVSSRate) {
 	ReadWriteAccess_t Res;
 	C8 ResultBufferC8[DD_CONTROL_BUFFER_SIZE_20];
 
-	bzero(ResultBufferC8, DD_CONTROL_BUFFER_SIZE_20);
+	memset(ResultBufferC8, 0, DD_CONTROL_BUFFER_SIZE_20);
 	sprintf(ResultBufferC8, "%" PRIu8, RVSSRate);
 
 	if (UtilWriteConfigurationParameter
 		(CONFIGURATION_PARAMETER_RVSS_RATE, ResultBufferC8, strlen(ResultBufferC8) + 1)) {
 		Res = WRITE_OK;
-		pthread_mutex_lock(&DataDictionaryRVSSRateMutex);
-		GSD->DataDictionaryRVSSRateU8 = RVSSRate;
-		pthread_mutex_unlock(&DataDictionaryRVSSRateMutex);
 	}
 	else
 		Res = PARAMETER_NOTFOUND;
@@ -1587,31 +1563,81 @@ ReadWriteAccess_t DataDictionarySetRVSSRateU8(GSDType * GSD, U8 RVSSRate) {
 
 /*!
  * \brief DataDictionaryGetRVSSRateU8 Reads variable from shared memory
- * \param GSD Pointer to shared allocated memory
  * \param RVSSRate Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetRVSSRateU8(GSDType * GSD, U8 * RVSSRate) {
-	pthread_mutex_lock(&DataDictionaryRVSSRateMutex);
-	*RVSSRate = GSD->DataDictionaryRVSSRateU8;
-	pthread_mutex_unlock(&DataDictionaryRVSSRateMutex);
-	return READ_OK;
+ReadWriteAccess_t DataDictionaryGetRVSSRateU8(uint8_t * RVSSRate) {
+	ReadWriteAccess_t result = UNDEFINED;
+	char resultBuffer[DD_CONTROL_BUFFER_SIZE_20];
+	char *endPtr;
+	uint64_t readSetting;
+
+	if (RVSSRate == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Input pointer error");
+		return UNDEFINED;
+	}
+
+	if (UtilReadConfigurationParameter
+		(CONFIGURATION_PARAMETER_RVSS_RATE, resultBuffer, sizeof (resultBuffer))) {
+		readSetting = strtoul(resultBuffer, &endPtr, 10);
+		if (endPtr == resultBuffer) {
+			LogMessage(LOG_LEVEL_WARNING, "Invalid configuration for RVSS rate");
+			result = PARAMETER_NOTFOUND;
+			*RVSSRate = DEFAULT_RVSS_RATE;
+		}
+		else if (readSetting > UINT8_MAX) {
+			LogMessage(LOG_LEVEL_WARNING, "Configuration for RVSS rate outside accepted range");
+			result = READ_OK;
+			*RVSSRate = UINT8_MAX;
+		}
+		else {
+			result = READ_OK;
+			*RVSSRate = (uint8_t) readSetting;
+		}
+		result = READ_OK;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "RVSS rate not found!");
+		result = PARAMETER_NOTFOUND;
+		*RVSSRate = DEFAULT_MAX_PACKETS_LOST;
+	}
 }
 
 /*END of Runtime Variable Subscription Service (RVSS) Rate**/
 
 
 /*ASPDebug*/
+
+/*!
+ * \brief DataDictionaryInitRVSSAsp inits a data structure for saving RVSSAsp data
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryInitRVSSAsp() {
+
+	int createdMemory;
+
+	rvssAspDataMemory = createSharedMemory(RVSSASP_DATA_FILENAME, 0, sizeof (ASPType), &createdMemory);
+	if (rvssAspDataMemory == NULL) {
+		LogMessage(LOG_LEVEL_ERROR, "Failed to create shared RVSSAsp data memory");
+		return UNDEFINED;
+	}
+	return createdMemory ? WRITE_OK : READ_OK;
+}
+
+
 /*!
  * \brief DataDictionarySetRVSSAsp Parses input variable and sets variable to corresponding value
  * \param GSD Pointer to shared allocated memory
  * \param ASPD
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionarySetRVSSAsp(GSDType * GSD, ASPType * ASPD) {
-	pthread_mutex_lock(&ASPDataMutex);
-	GSD->ASPData = *ASPD;
-	pthread_mutex_unlock(&ASPDataMutex);
+ReadWriteAccess_t DataDictionarySetRVSSAsp(ASPType * ASPD) {
+
+
+	rvssAspDataMemory = claimSharedMemory(rvssAspDataMemory);
+	memcpy(&rvssAspDataMemory, ASPD, sizeof (ASPType));
+	rvssAspDataMemory = releaseSharedMemory(rvssAspDataMemory);
 	return WRITE_OK;
 }
 
@@ -1621,24 +1647,33 @@ ReadWriteAccess_t DataDictionarySetRVSSAsp(GSDType * GSD, ASPType * ASPD) {
  * \param ASPD Return variable pointer
  * \return Result according to ::ReadWriteAccess_t
  */
-ReadWriteAccess_t DataDictionaryGetRVSSAsp(GSDType * GSD, ASPType * ASPD) {
-	pthread_mutex_lock(&ASPDataMutex);
-	*ASPD = GSD->ASPData;
-	pthread_mutex_unlock(&ASPDataMutex);
+ReadWriteAccess_t DataDictionaryGetRVSSAsp(ASPType * ASPD) {
+	
+
+	rvssAspDataMemory = claimSharedMemory(rvssAspDataMemory);
+	memcpy(ASPD, &rvssAspDataMemory, sizeof (ASPType));
+	rvssAspDataMemory = releaseSharedMemory(rvssAspDataMemory);
 	return READ_OK;
+}
+/*!
+ * \brief DataDictionaryFreeRVSSAsp Releases data structure for saving RVSS asp data
+ * \return Result according to ::ReadWriteAccess_t
+ */
+ReadWriteAccess_t DataDictionaryFreeRVSSAsp() {
+	if (rvssAspDataMemory == NULL) {
+		errno = EINVAL;
+		LogMessage(LOG_LEVEL_ERROR, "Attempt to free uninitialized ASP memory");
+		return UNDEFINED;
+	}
+
+	destroySharedMemory(rvssAspDataMemory);
+
+	return WRITE_OK;
 }
 
 /*END ASPDebug*/
 
 /*MiscData*/
-/*!
- * \brief DataDictionaryInitMiscData inits a data structure for saving misc data
- * \return Result according to ::ReadWriteAccess_t
- */
-ReadWriteAccess_t DataDictionaryInitMiscData(void) {
-	return READ_OK;
-}
-
 /**
  * \brief DataDictionarySetMiscData Sets the test misc data.
  * \param miscData The misc data string (ASCII).

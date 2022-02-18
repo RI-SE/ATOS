@@ -62,7 +62,7 @@ extern "C"{
 #define DEFAULT_SUPERVISOR_TCP_PORT 53010
 #define DEFAULT_RVSS_CONF 3
 #define DEFAULT_RVSS_RATE 1
-#define DEFAULT_MAX_PACKETS_LOST 0
+#define DEFAULT_MAX_PACKETS_LOST 20
 #define DEFAULT_TRANSMITTER_ID 0
 
 #define MBUS_MAX_DATALEN (MQ_MSG_SIZE-9) // Message queue data minus one byte for the command and 8 for the data length
@@ -568,15 +568,16 @@ typedef struct {
 
 /*! Data dictionary read/write return codes. */
 typedef enum {
-    UNDEFINED, /*!< Undefined result */
-    WRITE_OK, /*!< Write successful */
-    READ_OK, /*!< Read successful */
-	UNINITIALIZED, /*!< Read successful but data not initialized */
-    READ_WRITE_OK, /*!< Combined read/write successful */
-    PARAMETER_NOTFOUND, /*!< Read/write not successful */
-    OUT_OF_RANGE /*!< Attempted to read out of range */
+	UNDEFINED = -3, /*!< Undefined result */
+	WRITE_OK = 1,  /*!< Write successful */
+	READ_OK = 2,   /*!< Read successful */
+	WRITE_FAIL = -1, /*! Write unsuccessful */
+	READ_FAIL = -2,  /*! Read unsuccessful */
+	UNINITIALIZED = -4,		/*!< Read successful but data not initialized */
+	READ_WRITE_OK = 0,		/*!< Combined read/write successful */
+	PARAMETER_NOTFOUND = -5, /*!< Read/write not successful */
+	OUT_OF_RANGE = -6		/*!< Attempted to read out of range */
 } ReadWriteAccess_t;
-
 
 #pragma pack(push,1)
 
@@ -662,6 +663,7 @@ int iCommSendACCM(ACCMData data);
 
 // File system functions
 int UtilVerifyTestDirectory();
+int UtilCopyFile(const char* source, const size_t sourceLen, const char* dest, const size_t destLen);
 void UtilGetTestDirectoryPath(char* path, size_t pathLen);
 void UtilGetJournalDirectoryPath(char* path, size_t pathLen);
 void UtilGetConfDirectoryPath(char* path, size_t pathLen);
