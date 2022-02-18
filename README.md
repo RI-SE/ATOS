@@ -103,6 +103,32 @@ then build and install the server (be aware that this requires superuser privile
 sudo make install
 ```
 
+### Installation via dpkg
+First install dependencies
+```sh
+sudo apt install libsystemd-dev libprotobuf-dev libeigen3-dev
+```
+then navigate to the .deb file and install it
+```sh
+sudo dpkg -i Maestro-x.x.x-Linux.deb
+```
+on first install, it is necessary to reboot to reload groups
+
+## Troubleshooting
+The command
+```sh
+groups
+```
+should show the current user belonging to the maestro group, and
+```sh
+mount -l | grep -E "(shm|mqueue)"
+```
+should show two mount points on /dev/shm and /dev/mqueue. The directory
+```sh
+ls -lad /var/log/maestro
+```
+should be owned by the maestro group.
+
 ## Building the server with CITS module and mqtt
 
 The CITS module uses PAHO MQTT, which can be found through the following link:
