@@ -19,13 +19,6 @@ set(WITH_BACK_TO_START OFF CACHE BOOL "Enable BackToStart module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
-set(MAESTRO_TEST_DIR ".maestro" CACHE STRING "Directory where test data is to be stored")
-
-set(MAESTRO_JOURNAL_DIR "${MAESTRO_TEST_DIR}/journal")
-set(MAESTRO_TRAJ_DIR "${MAESTRO_TEST_DIR}/traj")
-set(MAESTRO_GEOFENCE_DIR "${MAESTRO_TEST_DIR}/geofence")
-set(MAESTRO_OBJECTS_DIR "${MAESTRO_TEST_DIR}/objects")
-
 # Dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/util/cmake)
 find_package(Systemd REQUIRED)
@@ -88,29 +81,10 @@ foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
 endforeach()
 
-# Ensure .maestro directory is created at build time in build directory
-add_custom_target(configurationDirectory ALL
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/conf
-		${CMAKE_BINARY_DIR}/${MAESTRO_CONFIGURATION_DIR}
-	)
-add_custom_target(buildTimeDirectory ALL
-	COMMAND ${CMAKE_COMMAND} -E make_directory
-		${CMAKE_BINARY_DIR}/${MAESTRO_JOURNAL_DIR}
-		${CMAKE_BINARY_DIR}/${MAESTRO_TRAJ_DIR}
-		${CMAKE_BINARY_DIR}/${MAESTRO_GEOFENCE_DIR}
-		${CMAKE_BINARY_DIR}/${MAESTRO_OBJECTS_DIR}
-)
-
-# Create directory for test data in user home directory
-install(CODE "MESSAGE(STATUS \"Creating home directory environment under $ENV{HOME}\")")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_TEST_DIR}")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_JOURNAL_DIR}")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_TRAJ_DIR}")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_GEOFENCE_DIR}")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_OBJECTS_DIR}")
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/conf DESTINATION "$ENV{HOME}/${MAESTRO_TEST_DIR}")
-
-install(CODE "execute_process(COMMAND chown -R $ENV{USER} $ENV{HOME}/${MAESTRO_TEST_DIR})")
+# Install configuration
+include(GNUInstallDirs)
+file(GLOB CONF_FILES ${CMAKE_CURRENT_SOURCE_DIR}/conf/*)
+install(FILES ${CONF_FILES} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
 
 # Add post install instructions
-add_subdirectory(cmake/postinstall)
+add_subdirectory(cmake/cpack)
