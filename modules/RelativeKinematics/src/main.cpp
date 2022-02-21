@@ -5,10 +5,7 @@
 int main(int argc, char **argv) {
 	const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 	rclcpp::init(argc,argv);
-	auto rk = std::make_shared<RelativeKinematicsModule>();
-	if (rk->initialize(logLevel) < 0) {
-		util_error("Failed to initialize module");
-	}
+	auto rk = std::make_shared<RelativeKinematicsModule>(logLevel);
 	rclcpp::spin(rk);
 	rclcpp::shutdown();
 

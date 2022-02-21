@@ -4,11 +4,11 @@
 class RelativeKinematicsModule : public Module
 {
 public:
-	RelativeKinematicsModule();
-	int initialize(const LOG_LEVEL logLevel);
+	int initialize(LOG_LEVEL logLevel);
+	RelativeKinematicsModule(LOG_LEVEL logLevel);
 private:
-	const std::string module_name = "RelativeKinematics";
-	ScenarioHandler scenarioHandler;
+	static inline std::string const module_name = "RelativeKinematics";
+	std::unique_ptr<ScenarioHandler> scenarioHandler;
 	void onInitMessage(const Empty::SharedPtr) override;
 	void onConnectMessage(const Empty::SharedPtr) override;
 	void onArmMessage(const Empty::SharedPtr) override;

@@ -34,8 +34,7 @@
 #define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
 
 
-SystemControl::SystemControl() : Module(SystemControl::module_name){
-
+SystemControl::SystemControl() : Module(SystemControl::module_name) {
 	// ** Subscriptions
 	this->failureSub = this->create_subscription<UInt8>(topicNames[COMM_FAILURE], 0, std::bind(&SystemControl::onFailureMessage, this, _1));
 	this->getStatusResponseSub= this->create_subscription<String>(topicNames[COMM_GETSTATUS_OK], 0, std::bind(&SystemControl::onGetStatusResponse, this, _1));

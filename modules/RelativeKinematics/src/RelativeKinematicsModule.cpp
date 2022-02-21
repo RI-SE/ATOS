@@ -13,7 +13,9 @@ using std_msgs::msg::Empty;
 using std_msgs::msg::String;
 using std_msgs::msg::UInt8;
 
-RelativeKinematicsModule::RelativeKinematicsModule() : Module(RelativeKinematicsModule::module_name){
+RelativeKinematicsModule::RelativeKinematicsModule(LOG_LEVEL logLevel) : Module(RelativeKinematicsModule::module_name){
+	this->initialize(logLevel);
+	scenarioHandler = std::make_unique<ScenarioHandler>();
 	int queueSize=0;
 	// ** Subscriptions
 	this->initSub = this->create_subscription<Empty>(topicNames[COMM_INIT], queueSize, std::bind(&RelativeKinematicsModule::onInitMessage, this, _1));
@@ -30,17 +32,16 @@ RelativeKinematicsModule::RelativeKinematicsModule() : Module(RelativeKinematics
 
 	// ** Publishers
 	this->failurePub = this->create_publisher<UInt8>(topicNames[COMM_FAILURE],queueSize);
-	this->abortPub = this->create_publisher<Empty>(topicNames[COMM_ABORT],queueSize);
 	this->getStatusResponsePub = this->create_publisher<String>(topicNames[COMM_GETSTATUS_OK],queueSize);	
 };
 
 void RelativeKinematicsModule::tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail){
 	try{
-		LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames[commandCode]);
+		LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames[commandCode].c_str());
 		tryExecute();
 	}
 	catch (std::invalid_argument& e) {
-		LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames[commandCode], e.what());
+		LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames[commandCode].c_str(), e.what());
 		executeIfFail();
 	}
 }
@@ -75,42 +76,42 @@ int RelativeKinematicsModule::initialize(const LOG_LEVEL logLevel) {
 
 void RelativeKinematicsModule::onInitMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_INIT;
-	auto f_try = [&]() { scenarioHandler.handleInitCommand(); };
+	auto f_try = [&]() { scenarioHandler->handleInitCommand(); };
 	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
 
 void RelativeKinematicsModule::onConnectMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_CONNECT;
-	auto f_try = [&]() { scenarioHandler.handleConnectCommand(); };
+	auto f_try = [&]() { scenarioHandler->handleConnectCommand(); };
 	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
 
 void RelativeKinematicsModule::onArmMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_ARM;
-	auto f_try = [&]() { scenarioHandler.handleArmCommand(); };
+	auto f_try = [&]() { scenarioHandler->handleArmCommand(); };
 	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
 
 void RelativeKinematicsModule::onStartMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_STRT;
-	auto f_try = [&]() { scenarioHandler.handleStartCommand(); };
+	auto f_try = [&]() { scenarioHandler->handleStartCommand(); };
 	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
 
 void RelativeKinematicsModule::onDisconnectMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_DISCONNECT;
-	auto f_try = [&]() { scenarioHandler.handleDisconnectCommand(); };
+	auto f_try = [&]() { scenarioHandler->handleDisconnectCommand(); };
 	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
 
 void RelativeKinematicsModule::onStopMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_STOP;
-	auto f_try = [&]() { scenarioHandler.handleStopCommand(); };
+	auto f_try = [&]() { scenarioHandler->handleStopCommand(); };
 	auto f_catch = [&]() {
 			failurePub->publish(msgCtr1<UInt8>(cmd));
 			abortPub->publish(Empty());
@@ -120,12 +121,12 @@ void RelativeKinematicsModule::onStopMessage(const Empty::SharedPtr){
 
 void RelativeKinematicsModule::onAbortMessage(const Empty::SharedPtr){	
 	// Any exceptions here should crash the program
-	scenarioHandler.handleAbortCommand();
+	scenarioHandler->handleAbortCommand();
 }
 
 void RelativeKinematicsModule::onAllClearMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_ABORT_DONE;
-	auto f_try = [&]() { scenarioHandler.handleAllClearCommand(); };
+	auto f_try = [&]() { scenarioHandler->handleAllClearCommand(); };
 	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
@@ -137,8 +138,8 @@ void RelativeKinematicsModule::onACCMMessage(const Accm::SharedPtr accm){
 			ScenarioHandler::TestScenarioCommandAction cmdAction;
 			cmdAction.command = static_cast<ActionTypeParameter_t>(accm->action_type_parameter1);
 			cmdAction.actionID = accm->action_id;
-			cmdAction.objectID = scenarioHandler.getVehicleIDByIP(accm->ip);
-			scenarioHandler.handleActionConfigurationCommand(cmdAction);
+			cmdAction.objectID = scenarioHandler->getVehicleIDByIP(accm->ip);
+			scenarioHandler->handleActionConfigurationCommand(cmdAction);
 		}
 	};
 	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
@@ -152,7 +153,7 @@ void RelativeKinematicsModule::onEXACMessage(const Exac::SharedPtr exac){
 		quartermilliseconds qmsow(exac->executiontime_qmsow);
 		auto now = to_timeval(system_clock::now().time_since_epoch());
 		auto startOfWeek = system_clock::time_point(weeks(TimeGetAsGPSweek(&now)));
-		scenarioHandler.handleExecuteActionCommand(exac->action_id, startOfWeek+qmsow);	
+		scenarioHandler->handleExecuteActionCommand(exac->action_id, startOfWeek+qmsow);	
 	};
 	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(cmd,f_try,f_catch);
