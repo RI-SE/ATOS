@@ -76,7 +76,7 @@
 class TimeControl : public Module
 {
 public:
-	static constexpr char* module_name = "TimeControl";
+	static inline std::string const module_name = "TimeControl";
 	TimeControl();
 	bool shouldExit();
 	void calibrateTime(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);

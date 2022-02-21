@@ -28,7 +28,7 @@ void TimeControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLev
 	LogInit("TimeControl", logLevel);
 	LogMessage(LOG_LEVEL_INFO, "Time control task running with PID: %i", getpid());
 
-	if (JournalInit(module_name)) {
+	if (JournalInit(module_name.c_str())) {
 		util_error("Unable to open journal");
 	}
 
