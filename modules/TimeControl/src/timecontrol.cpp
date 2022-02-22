@@ -29,7 +29,7 @@ const int64_t TimeControl::getQueueEmptyPollPeriod() const {
 }
 
 void TimeControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
-	LogInit("TimeControl", logLevel);
+	LogInit(module_name, logLevel);
 	LogMessage(LOG_LEVEL_INFO, "Time control task running with PID: %i", getpid());
 
 	if (JournalInit(module_name.c_str())) {
