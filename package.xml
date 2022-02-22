@@ -6,6 +6,7 @@
   <description>The maestro package</description>
   <license>TODO</license>
   <maintainer email="lukas.wikander@astazero.com">lukas</maintainer> 
+
   <author email="lukas.wikander@astazero.com">Lukas Wikander</author>
   <author email="sebastian.lindholm@astazero.com">Sebastian Loh Lindholm</author>
   <author email="viktor.johansson@astazero.com">Viktor Johansson</author>
@@ -15,7 +16,6 @@
   <author email="oscar.johansson@astazero.com">Oscar Johansson</author>
   <author email="frida.reichenberg@astazero.com">Frida Reichenberg</author>
   <author email="victor.jarlow@astazero.com">Victor Jarlow</author>
-
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>rclcpp</depend>
