@@ -21,7 +21,7 @@
 #include "datadictionary.h"
 #include "logging.h"
 
-
+/*
 #define TIME_CONTROL_HOSTNAME_BUFFER_SIZE 20
 #define TIME_CONTROL_RECEIVE_BUFFER_SIZE 80
 #define TIME_CONTROL_TASK_PERIOD_MS 1
@@ -71,18 +71,71 @@
 #define PROTO2_SETUP_TIME_FEED_USE_PERIOD_IN_FILE 0
 #define PROTO2_SETUP_TIME_FEED_USE_PERIOD_IN_MESSAGE 1
 #define PROTO2_SETUP_TIME_FEED_INTERVAL 1000
-#define PROTO2_SETUP_TIME_FEED_INTERVAL_FAST 100
+#define PROTO2_SETUP_TIME_FEED_INTERVAL_FAST 100*/
 
 class TimeControl : public Module
 {
 public:
-	static constexpr char* module_name = "TimeControl";
+	static inline const std::string module_name = "TimeControl";
 	TimeControl();
-	bool shouldExit();
+	bool shouldExit() const;
+	const int64_t getQueueEmptyPollPeriod() const;
 	void calibrateTime(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
 	void signalHandler(int signo);
 	void initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
 private:
+
+	/* definitions */
+	static const int TIME_CONTROL_HOSTNAME_BUFFER_SIZE = 20;
+	static const int TIME_CONTROL_RECEIVE_BUFFER_SIZE = 80;
+	static const int TIME_CONTROL_TASK_PERIOD_MS = 1;
+	static const int TIME_CONTROL_TX_BUFFER_SIZE = 14;
+	static const int REPLY_TIMEOUT_S = 3;
+
+	static inline const std::string LOG_PATH = "./timelog/";
+	static inline const std::string LOG_FILE = "time.log";
+	static const int LOG_BUFFER_LENGTH = 128;
+
+	static const int FIX_QUALITY_NONE = 0;
+	static const int FIX_QUALITY_BASIC = 1;
+	static const int FIX_QUALITY_DIFFERENTIAL = 2;
+
+	static const int QUEUE_EMPTY_POLL_PERIOD_NS = 10000000;
+
+	static const int PROTO2_STATUS_INDEX = 0;
+	static const int PROTO2_LENGTH_INDEX = 2;
+	static const int PROTO2_ID_INDEX = 5;
+	static const int PROTO2_SERNO_INDEX = 8;
+	static const int PROTO2_MESSAGE_CODE_INDEX = 11;
+	static const int PROTO2_MESSAGE_VERSION_INDEX = 12;
+	static const int PROTO2_YEAR_INDEX = 13;
+	static const int PROTO2_MONTH_INDEX = 15;
+	static const int PROTO2_DAYOFMONTH_INDEX = 16;
+	static const int PROTO2_HOUR_INDEX = 17;
+	static const int PROTO2_MINUTE_INDEX = 18;
+	static const int PROTO2_SECOND_INDEX = 19;
+	static const int PROTO2_MILLISECOND_INDEX = 20;
+	static const int PROTO2_MICROSECOND_INDEX = 22;
+	static const int PROTO2_SECOND_COUNTER_INDEX = 24;
+	static const int PROTO2_GPS_MILLISECONDS_INDEX = 28;
+	static const int PROTO2_GPS_MINUTES_INDEX = 36;
+	static const int PROTO2_GPS_WEEK_INDEX = 40;
+	static const int PROTO2_GPSSOW_INDEX = 42;
+	static const int PROTO2_GPSSOD_INDEX = 46;
+	static const int PROTO2_ETSI_INDEX = 50;
+	static const int PROTO2_LATITUDE_INDEX = 58;
+	static const int PROTO2_LONGITUDE_INDEX = 62;
+	static const int PROTO2_FIX_QUALITY_INDEX = 66;
+	static const int PROTO2_SATELLITE_COUNT_INDEX = 67;
+
+	static const int PROTO2_SETUP_MESSAGE_LENGTH = 10;
+	static const int PROTO2_SETUP_TIME_FEED_MESSAGE_CODE = 0x17;
+	static const int PROTO2_SETUP_TIME_FEED_ACTIVE = 1;
+	static const int PROTO2_SETUP_TIME_FEED_DEACTIVATE = 0;
+	static const int PROTO2_SETUP_TIME_FEED_USE_PERIOD_IN_FILE = 0;
+	static const int PROTO2_SETUP_TIME_FEED_USE_PERIOD_IN_MESSAGE = 1;
+	static const int PROTO2_SETUP_TIME_FEED_INTERVAL = 1000;
+	static const int PROTO2_SETUP_TIME_FEED_INTERVAL_FAST = 100;
 
 	/* callbacks */
 	void onAbortMessage(Empty::SharedPtr) override;
@@ -119,6 +172,7 @@ private:
 
 	enum COMMAND command;
 	char busReceiveBuffer[MBUS_MAX_DATALEN];
+
 	/*functions*/
 	void TimeControlDecodeTimeBuffer(TimeType * GPSTime, C8 * TimeBuffer, C8 debug);
 	void TimeControlRecvTime(int *sockfd, C8 * buffer, int length, int *receivedNewData);

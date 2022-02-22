@@ -41,7 +41,7 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 		
 		// spin_node_once() adds node to executor, spins and then removes node from executor.
 		// If message exists in queue, it instantly processed callback, else sleeps at most POLL_SLEEP_TIME for a message to arrive.
-		executor.spin_node_once(tc,duration<int64_t,nanoseconds::period>(QUEUE_EMPTY_POLL_PERIOD)); 
+		executor.spin_node_once(tc,duration<int64_t,nanoseconds::period>(tc->getQueueEmptyPollPeriod())); 
 	}
 	LogMessage(LOG_LEVEL_INFO, "Time control exiting");
 	rclcpp::shutdown();
