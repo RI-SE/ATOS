@@ -31,13 +31,6 @@ set(WITH_BACK_TO_START OFF CACHE BOOL "Enable BackToStart module")
 
 set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
-set(MAESTRO_TEST_DIR ".maestro" CACHE STRING "Directory where test data is to be stored")
-
-set(MAESTRO_JOURNAL_DIR "${MAESTRO_TEST_DIR}/journal")
-set(MAESTRO_TRAJ_DIR "${MAESTRO_TEST_DIR}/traj")
-set(MAESTRO_GEOFENCE_DIR "${MAESTRO_TEST_DIR}/geofence")
-set(MAESTRO_OBJECTS_DIR "${MAESTRO_TEST_DIR}/objects")
-
 # Dependencies
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/util/cmake)
 find_package(Systemd REQUIRED)
@@ -204,101 +197,17 @@ add_subdirectory(util/C/shmem)
 add_subdirectory(util/C/iso22133)
 add_subdirectory(util/C/mathutils)
 add_subdirectory(util/C/osihandler)
+
 add_subdirectory(common)
 add_subdirectory(core)
 foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
 endforeach()
 
-# Ensure .maestro directory is created at build time in build directory
-add_custom_target(configurationDirectory ALL
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/conf
-		${CMAKE_BINARY_DIR}/${MAESTRO_CONFIGURATION_DIR}
-	)
-add_custom_target(buildTimeDirectory ALL
-	COMMAND ${CMAKE_COMMAND} -E make_directory
-		${CMAKE_BINARY_DIR}/${MAESTRO_JOURNAL_DIR}
-		${CMAKE_BINARY_DIR}/${MAESTRO_TRAJ_DIR}
-		${CMAKE_BINARY_DIR}/${MAESTRO_GEOFENCE_DIR}
-		${CMAKE_BINARY_DIR}/${MAESTRO_OBJECTS_DIR}
-)
-
-#############
-## Install ##
-#############
-
-# all install targets should use catkin DESTINATION variables
-# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
-# Configure structure of output
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CATKIN_PACKAGE_LIB_DESTINATION})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CATKIN_PACKAGE_LIB_DESTINATION})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CATKIN_PACKAGE_BIN_DESTINATION})
-
-
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark executables for installation
-## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
-# install(TARGETS ${PROJECT_NAME}_node
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark libraries for installation
-## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_libraries.html
-# install(TARGETS ${PROJECT_NAME}
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
-# )
-
-## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
-
-## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
-
-
-# Create directory for test data in user home directory
-install(CODE "MESSAGE(STATUS \"Creating home directory environment under $ENV{HOME}\")")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_TEST_DIR}")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_JOURNAL_DIR}")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_TRAJ_DIR}")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_GEOFENCE_DIR}")
-install(DIRECTORY DESTINATION "$ENV{HOME}/${MAESTRO_OBJECTS_DIR}")
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/conf DESTINATION "$ENV{HOME}/${MAESTRO_TEST_DIR}")
-
-install(CODE "execute_process(COMMAND chown -R $ENV{USER} $ENV{HOME}/${MAESTRO_TEST_DIR})")
+# Install configuration
+include(GNUInstallDirs)
+file(GLOB CONF_FILES ${CMAKE_CURRENT_SOURCE_DIR}/conf/*)
+install(FILES ${CONF_FILES} DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
 
 # Add post install instructions
-add_subdirectory(cmake/postinstall)
-
-#############
-## Testing ##
-#############
-
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_maestro.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
-
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)
-
-# Testing
-#if(ENABLE_TESTS)
-#	enable_testing()
-#endif()
+add_subdirectory(cmake/cpack)

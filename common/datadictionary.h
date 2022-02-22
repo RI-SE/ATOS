@@ -99,6 +99,7 @@ ReadWriteAccess_t DataDictionaryGetRVSSRateU8(uint8_t *RVSSRate);
 ReadWriteAccess_t DataDictionaryInitRVSSAsp();
 ReadWriteAccess_t DataDictionarySetRVSSAsp(ASPType *ASPData);
 ReadWriteAccess_t DataDictionaryGetRVSSAsp(ASPType *ASPData);
+ReadWriteAccess_t DataDictionaryFreeRVSSAsp();
 
 ReadWriteAccess_t DataDictionarySetMiscData(const char * miscData, const size_t datalen);
 ReadWriteAccess_t DataDictionaryGetMiscData(char* miscData, const size_t buflen);
