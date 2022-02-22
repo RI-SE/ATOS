@@ -9,17 +9,21 @@
 
 #define MODULE_NAME "DirectControl"
 
-static DirectControl module;
+static std::shared_ptr<DirectControl> dc;
 static void signalHandler(int signo);
 int initializeModule(const LOG_LEVEL logLevel);
 
 int main() {
+	rclcpp::init(0,nullptr);
+	dc = std::make_shared<DirectControl>();
 	const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 	// Initialize
 	if (initializeModule(logLevel) < 0) {
 		util_error("Failed to initialize module");
 	}
-	return module.run();
+	dc->run();
+	rclcpp::shutdown();
+	return 0;
 }
 
 /*!
@@ -40,14 +44,17 @@ int initializeModule(const LOG_LEVEL logLevel) {
 	LogMessage(LOG_LEVEL_INFO, MODULE_NAME " task running with PID: %d", getpid());
 
 	// Set up signal handlers
+	/*
 	LogMessage(LOG_LEVEL_DEBUG, "Initializing signal handler");
 	if (signal(SIGINT, signalHandler) == SIG_ERR) {
 		perror("signal");
 		retval = -1;
 		LogMessage(LOG_LEVEL_ERROR, "Unable to initialize signal handler");
 	}
+	*/
 
 	// Initialize message bus connection
+	/*
 	LogMessage(LOG_LEVEL_DEBUG, "Initializing connection to message bus");
 	for (retryNumber = 0; iCommInit() != 0 && retryNumber < maxRetries; ++retryNumber) {
 		nanosleep(&sleepTimePeriod, &remTime);
@@ -56,7 +63,7 @@ int initializeModule(const LOG_LEVEL logLevel) {
 		retval = -1;
 		LogMessage(LOG_LEVEL_ERROR, "Unable to initialize connection to message bus");
 	}
-
+	*/
 	if (DataDictionaryInitObjectData() != READ_OK) {
 		retval = -1;
 		LogMessage(LOG_LEVEL_ERROR, "Preexisting data dictionary not found");
@@ -68,7 +75,7 @@ int initializeModule(const LOG_LEVEL logLevel) {
 void signalHandler(int signo) {
 	if (signo == SIGINT) {
 		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
-		module.exit();
+		dc->exit();
 	}
 	else {
 		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");

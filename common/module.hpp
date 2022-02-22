@@ -11,6 +11,7 @@
 #include "maestro_msgs/msg/accm.hpp"
 #include "maestro_msgs/msg/manoeuvre_command.hpp"
 #include "maestro_msgs/msg/object_enabled.hpp"
+#include "maestro_msgs/msg/dm_msg.hpp"
 
 
 using std_msgs::msg::Empty;
@@ -23,6 +24,7 @@ using maestro_msgs::msg::ManoeuvreCommand;
 using maestro_msgs::msg::ObjectEnabled;
 using std::placeholders::_1;
 using rclcpp::Node;
+using maestro_msgs::msg::DmMsg;
 
 // TODO move somewhere else
 static std::map<COMMAND, std::string> topicNames = {
@@ -187,6 +189,9 @@ protected:
 
 	rclcpp::Subscription<Empty>::SharedPtr dataDictResponseSub;
 	rclcpp::Publisher<Empty>::SharedPtr dataDictResponsePub;
+
+	rclcpp::Subscription<DmMsg>::SharedPtr dmSub;
+	rclcpp::Publisher<DmMsg>::SharedPtr dmPub;
 
 	virtual void onFailureMessage(const UInt8::SharedPtr) {};
 	virtual void onGetStatusResponse(const String::SharedPtr) { };

@@ -40,6 +40,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
  "msg/Accm.msg"
  "msg/ManoeuvreCommand.msg"
  "msg/ObjectEnabled.msg"
+ "msg/DmMsg.msg"
 )
 
 ament_package()
