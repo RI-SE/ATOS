@@ -39,6 +39,7 @@ add_executable(${RELATIVE_KINEMATICS_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/disarming.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/armed.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/done.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/RelativeKinematicsModule.cpp
 )
 # Link project executable to util libraries
 target_link_libraries(${RELATIVE_KINEMATICS_TARGET} LINK_PUBLIC
@@ -51,20 +52,27 @@ target_link_libraries(${RELATIVE_KINEMATICS_TARGET} LINK_PUBLIC
 	${ISO_22133_LIBRARY}
 	${OSI_LIBRARY}
 )
+ament_target_dependencies(${RELATIVE_KINEMATICS_TARGET} PUBLIC
+  rclcpp
+  std_msgs
+  maestro_msgs)
+
 target_include_directories(${RELATIVE_KINEMATICS_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${OSI_HEADERS}
 	${TIME_HEADERS}
 )
 
+
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${RELATIVE_KINEMATICS_TARGET}\")")
-install(TARGETS ${RELATIVE_KINEMATICS_TARGET} 
-	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
+
+#ros installation
+get_property(ros_install_dir GLOBAL PROPERTY ros_install_dir_property)
+
+install(TARGETS 
+	RelativeKinematics
+ DESTINATION ${ros_install_dir})
 
 # Ensure linkage is reloaded after install
 install(CODE "execute_process(COMMAND ldconfig)")

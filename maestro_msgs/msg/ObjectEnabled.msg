@@ -1,0 +1,2 @@
+uint32 object_ip
+int8 enabled

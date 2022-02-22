@@ -1,20 +1,11 @@
 <?xml version="1.0"?>
-<package format="2">
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
   <name>maestro</name>
   <version>0.5.0</version>
   <description>The maestro package</description>
-
-  <maintainer email="lukas.wikander@astazero.com">lukas</maintainer>
-
-
   <license>TODO</license>
-
-
-  <!-- Url tags are optional, but multiple are allowed, one per tag -->
-  <!-- Optional attribute type can be: website, bugtracker, or repository -->
-  <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/maestro</url> -->
-
+  <maintainer email="lukas.wikander@astazero.com">lukas</maintainer> 
 
   <author email="lukas.wikander@astazero.com">Lukas Wikander</author>
   <author email="sebastian.lindholm@astazero.com">Sebastian Loh Lindholm</author>
@@ -26,14 +17,17 @@
   <author email="frida.reichenberg@astazero.com">Frida Reichenberg</author>
   <author email="victor.jarlow@astazero.com">Victor Jarlow</author>
 
-
-  <buildtool_depend>catkin</buildtool_depend>
-  <depend>roscpp</depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
   <depend>std_msgs</depend>
+  <depend>maestro_msgs</depend>
   <doc_depend>doxygen</doc_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
 
   <export>
     <!-- Other tools can request additional information be placed here -->
-
+       <build_type>ament_cmake</build_type>
   </export>
 </package>

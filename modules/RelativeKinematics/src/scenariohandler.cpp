@@ -42,6 +42,10 @@ void ScenarioHandler::handleStartCommand() {
 	this->state->startRequest(*this);
 }
 
+void ScenarioHandler::handleStopCommand() {
+	this->state->stopRequest(*this);
+}
+
 void ScenarioHandler::handleAbortCommand() {
 	this->state->abortRequest(*this);
 }

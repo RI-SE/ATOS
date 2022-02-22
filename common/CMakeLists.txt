@@ -63,7 +63,7 @@ target_link_libraries(${MAESTRO_UTIL_TARGET} LINK_PUBLIC
 
 add_library(${MAESTRO_COMMON_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/trajectory.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/objectconfig.cpp	
+	${CMAKE_CURRENT_SOURCE_DIR}/objectconfig.cpp
 )
 
 target_link_libraries(${MAESTRO_COMMON_TARGET}
@@ -72,6 +72,10 @@ target_link_libraries(${MAESTRO_COMMON_TARGET}
 	${EIGEN_LIBRARY}
 	${FILESYSTEM_LIBRARY}
 )
+ament_target_dependencies(${MAESTRO_COMMON_TARGET}
+  rclcpp
+  std_msgs
+  maestro_msgs)
 
 target_include_directories(${MAESTRO_COMMON_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}
@@ -84,6 +88,10 @@ set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
 )
 set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/regexpatterns.hpp
+)
+
+set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/module.hpp
 )
 
 target_include_directories(${MAESTRO_UTIL_TARGET} PUBLIC
