@@ -49,13 +49,8 @@ set(ENABLE_TESTS ON CACHE BOOL "Enable testing on build")
 
 
 # Dependencies
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/util/cmake)
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/util/cmake)
 find_package(Systemd REQUIRED)
-
-# Configure structure of output
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Create list of all enabled modules
 if(WITH_SCENARIO_CONTROL)

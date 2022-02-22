@@ -58,7 +58,7 @@ static bool quit = false;
 -- Private functions
 ------------------------------------------------------------*/
 static void signalHandler(int signo);
-static int awaitConnection(TCPHandler& tcpPort, enum COMMAND& receivedCommand, bool& sendOsemOnConnection);
+static int awaitConnection(TCPHandler& tcpPort, UDPHandler& udpPort, enum COMMAND& receivedCommand, bool& sendOsemOnConnection);
 static int actOnMQCommand(TCPHandler& tcpPort, enum COMMAND& receivedCommand);
 static int transmitTrajectories(TCPHandler& tcpPort);
 static int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& ReSendOsemOnConnection);
@@ -95,9 +95,9 @@ int main(int argc, char const* argv[]) {
 	}
 
 	TCPHandler visualizerTCPPort(TCP_VISUALIZATION_SERVER_PORT, "", "Server", 1, O_NONBLOCK);
-	UDPHandler visualizerUDPPort(UDP_VISUALIZATION_SERVER_PORT, "", 0, "Server");
+	UDPHandler visualizerUDPPort(UDP_VISUALIZATION_SERVER_PORT, "", 0, "Client"); // TODO: this connection will break ARVisualizer
 	while (!quit) {
-		if (awaitConnection(visualizerTCPPort, command, sendOsemOnConnection) == -1) {
+		if (awaitConnection(visualizerTCPPort, visualizerUDPPort, command, sendOsemOnConnection) == -1) {
 			LogMessage(LOG_LEVEL_ERROR, "Exit command sent, Visualization module shutting down");
 			if (command == COMM_EXIT) {
 				quit = true;
@@ -188,7 +188,6 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& ReSendOse
 			}
 
 			udpTransmitBuffer.resize(static_cast<unsigned long>(retval));
-			udpPort.receiveUDP(trashBuffer);
 			bytesSent = udpPort.sendUDP(udpTransmitBuffer);
 			if (bytesSent < 0) {
 				LogMessage(LOG_LEVEL_INFO, "Unable to send ObjectData to Visualizer");
@@ -198,7 +197,7 @@ int transmitObjectData(TCPHandler& tcpPort, UDPHandler& udpPort, bool& ReSendOse
 	return 0;
 }
 
-int awaitConnection(TCPHandler& tcpPort, enum COMMAND& receivedCommand, bool& sendOsemOnConnection) {
+int awaitConnection(TCPHandler& tcpPort, UDPHandler& udpPort, enum COMMAND& receivedCommand, bool& sendOsemOnConnection) {
 	receivedCommand = COMM_INV;
 	char mqRecvData[MBUS_MAX_DATALEN];
 	if (tcpPort.getConnectionOn() != 1) {
@@ -209,7 +208,15 @@ int awaitConnection(TCPHandler& tcpPort, enum COMMAND& receivedCommand, bool& se
 		tcpPort.TCPHandlerAccept(5);
 
 		if (tcpPort.getConnectionOn() == 1) {
-			LogMessage(LOG_LEVEL_INFO, "TCP connection established");
+			LogMessage(LOG_LEVEL_INFO, "TCP connection established with: %s port: %d ",tcpPort.getClientIP().c_str(), tcpPort.PORT);
+			int success = udpPort.setIP(tcpPort.getClientIP());
+			if (success >= 0) {
+				LogMessage(LOG_LEVEL_DEBUG, "Success: configuring UDP connection to: %s port: %d", tcpPort.getClientIP().c_str(), udpPort.PORT);
+			}
+			else {
+				LogMessage(LOG_LEVEL_ERROR, "Fail: configuring UDP connection to: %s port: %d", tcpPort.getClientIP().c_str(), udpPort.PORT);
+			}
+				
 		}
 
 		if (iCommRecv(&receivedCommand, mqRecvData, sizeof(mqRecvData), nullptr) < 0) {
@@ -235,6 +242,7 @@ int awaitConnection(TCPHandler& tcpPort, enum COMMAND& receivedCommand, bool& se
 	}
 	return 0;
 }
+
 
 int transmitTrajectories(TCPHandler& tcpPort) {
 	std::vector<char> trajPath(PATH_MAX, '\0');

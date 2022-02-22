@@ -10,8 +10,8 @@ static void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLev
 int main(int argc, char** argv){
 	TimeType *GPSTime;
 	GSDType *GSD;
-	GPSTime = (TimeType*) mmap(NULL, sizeof *GPSTime, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-	GSD = (GSDType*) mmap(NULL, sizeof *GSD, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+	GPSTime = reinterpret_cast<TimeType*>(mmap(NULL, sizeof *GPSTime, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
+	GSD = reinterpret_cast<GSDType*>(mmap(NULL, sizeof *GSD, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
 	timecontrol_task(GPSTime,GSD,LOG_LEVEL_INFO);
 	return 0;
 }
@@ -41,7 +41,7 @@ void timecontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 		
 		// spin_node_once() adds node to executor, spins and then removes node from executor.
 		// If message exists in queue, it instantly processed callback, else sleeps at most POLL_SLEEP_TIME for a message to arrive.
-		executor.spin_node_once(tc,duration<int64_t,nanoseconds::period>(QUEUE_EMPTY_POLL_PERIOD)); 
+		executor.spin_node_once(tc,duration<int64_t,nanoseconds::period>(tc->getQueueEmptyPollPeriod())); 
 	}
 	LogMessage(LOG_LEVEL_INFO, "Time control exiting");
 	rclcpp::shutdown();
