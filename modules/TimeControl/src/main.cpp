@@ -11,7 +11,7 @@ int main(int argc, char** argv){
 	TimeType *GPSTime;
 	GSDType *GSD;
 	GPSTime = (TimeType*) mmap(NULL, sizeof *GPSTime, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-	GSD = (GSDType*) mmap(NULL, sizeof *GSD, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+	GSD = reinterpret_cast<GSDType*>(mmap(NULL, sizeof *GSD, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
 	timecontrol_task(GPSTime,GSD,LOG_LEVEL_INFO);
 	return 0;
 }
