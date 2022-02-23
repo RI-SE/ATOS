@@ -7,21 +7,30 @@
 
 class DirectControl : public Module {
 public:
+	static inline std::string const module_name = "DirectControl";
 	DirectControl();
-	void readMessageBus();
-	void readSocketData();
+	void signalHandler(int signo);
+	int initializeModule(const LOG_LEVEL logLevel);
+	bool shouldExit();
+	void startThreads();
+	void joinThreads();
+
+private:
+	static inline const int TCPPort = 53260;
+	static inline const int UDPPort = 53995;
+
+	void readTCPSocketData();
 	void readUDPSocketData();
 	void handleISOMessage(std::vector<char>& byteData, size_t receivedBytes);
 	size_t handleRDCAMessage(std::vector<char>& byteData);
 	size_t handleUnknownMessage(std::vector<char>& byteData);
-	int run();
-	void exit();
 
-	static constexpr unsigned int commandPort = 53260;
-	static inline const int UDPPort = 53995;
-private:
 	void onAbortMessage(const Empty::SharedPtr) override;
 	void onAllClearMessage(const Empty::SharedPtr) override;
+	void onExitMessage(const Empty::SharedPtr) override;
+
+	std::unique_ptr<std::thread> receiveThread;
+	std::unique_ptr<std::thread> receiveThreadUDP;
 	volatile bool quit = false;
 	TCPHandler tcpHandler;
 	UDPServer udpServer;

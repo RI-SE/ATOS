@@ -15,30 +15,30 @@ void DirectControl::onAbortMessage(const Empty::SharedPtr){}
 
 void DirectControl::onAllClearMessage(const Empty::SharedPtr){}
 
+bool DirectControl::shouldExit(){
+	return this->quit;
+}
+
 DirectControl::DirectControl() :
-	Module("DirectControl"),
-	tcpHandler(commandPort, "", "off", 1, O_NONBLOCK), 
-	udpServer("127.0.0.1",UDPPort) {
+	Module(module_name),
+	tcpHandler(TCPPort, "", "off", 1, O_NONBLOCK), 
+	udpServer("0.0.0.0",UDPPort) {
+	// Publishers
 	this->dmPub = this->create_publisher<DmMsg>("/dm",0);
 }
 
-int DirectControl::run() {
-	const struct timespec sleepTimePeriod = {0, 100000000};
-	struct timespec remTime;
+void DirectControl::startThreads() {
+	receiveThread=std::make_unique<std::thread>(&DirectControl::readTCPSocketData, this);
+	receiveThreadUDP=std::make_unique<std::thread>(&DirectControl::readUDPSocketData, this);
+}
 
-	//std::thread mqThread(&DirectControl::readMessageBus, this);
-	//std::thread receiveThread(&DirectControl::readSocketData, this);
-	std::thread receiveThreadUDP(&DirectControl::readUDPSocketData, this);
-
-	while(!this->quit) {
-		nanosleep(&sleepTimePeriod, &remTime);
-	}
-
-	//mqThread.join();
-	//receiveThread.join();
-	receiveThreadUDP.join();
-
-	return 0;
+void DirectControl::joinThreads(){
+	//Tear down connections
+	if(this->tcpHandler.isConnected()) this->tcpHandler.TCPHandlerclose();
+	this->udpServer.close();
+	//Join threads
+	receiveThread->join();
+	receiveThreadUDP->join();
 }
 
 /*!
@@ -64,37 +64,54 @@ void decodeNextXBytes(int x, T& field, int& idx, const std::vector<char>& bytes)
 /*!
  * \brief Decodes a DM message from esmini compatible sender. 
  *			if the message is not of type inputMode=1 (DRIVER_INPUT)
- *			connecting to the message queue bus, setting up signal handers etc.
+ *			the function returns
  *
  * \param bytes vector of (char) bytes
  * \param DMMsg the data structure to be populated with contents of the message 
- * \return 0 on success, 1 otherwise
+ * \return 1 on success, 0 otherwise
  */
 int decodeDMMessage(const std::vector<char>& bytes, DmMsg& DMMsg){
 	int idx=0;
 	decodeNextXBytes(4,DMMsg.version,idx,bytes);
 	decodeNextXBytes(4,DMMsg.input_mode,idx,bytes);
-	if (DMMsg.input_mode != 1) { DMMsg=DmMsg(); return 1;} // reset message and return error
+	if (DMMsg.input_mode != 1) { return 0;}
 	decodeNextXBytes(4,DMMsg.object_id,idx,bytes);
 	decodeNextXBytes(4,DMMsg.frame_number,idx,bytes);
 	decodeNextXBytes(8,DMMsg.throttle,idx,bytes);
 	decodeNextXBytes(8,DMMsg.brake,idx,bytes);
 	decodeNextXBytes(8,DMMsg.steering_angle,idx,bytes);
-	return 0;
+	return 1;
 }
 
+/*!
+ * \brief Listens for UDP data and sends DM message on ros topic when recevied
+ */
 void DirectControl::readUDPSocketData() {
 	std::pair<std::vector<char>, BasicSocket::HostInfo> message;
-	while (1){
-		message=udpServer.recvfrom();
+	int wasSuccessful;
+
+	LogMessage(LOG_LEVEL_INFO, "Listening on UDP port %d",UDPPort);
+	
+	while (!this->quit){
+		try{
+			message=udpServer.recvfrom();
+		}
+		catch(const SocketErrors::DisconnectedError& error){
+			//If we get a disconnected exception when we do not intend to exit, propagate said exception
+			if (!this->quit){
+				throw error;
+			}
+		}
 		DmMsg dmmsg = DmMsg();
-		decodeDMMessage(message.first,dmmsg);
-		dmPub->publish(dmmsg);
+		wasSuccessful = decodeDMMessage(message.first,dmmsg);
+		if (wasSuccessful){
+			dmPub->publish(dmmsg);
+		}
 	}
 }
 
 
-void DirectControl::readSocketData() {
+void DirectControl::readTCPSocketData() {
 	std::vector<char> data(TCP_BUFFER_SIZE);
 	int recvData = 0;
 
@@ -174,36 +191,36 @@ size_t DirectControl::handleUnknownMessage(
 	return byteData.size();
 }
 
-void DirectControl::readMessageBus() {
-	COMMAND command = COMM_INV;
-	char mqRecvData[MQ_MSG_SIZE];
-	const struct timespec sleepTimePeriod = {0, 10000000};
-	struct timespec remTime;
-
-	while (!this->quit) {
-		if (iCommRecv(&command, mqRecvData, sizeof (mqRecvData), nullptr) < 0) {
-			LogMessage(LOG_LEVEL_ERROR,"Message bus receive error");
-			this->exit();
-		}
-
-		switch (command) {
-		case COMM_INV:
-			nanosleep(&sleepTimePeriod,&remTime);
-			break;
-		case COMM_EXIT:
-			LogMessage(LOG_LEVEL_INFO, "Exit received");
-			this->exit();
-			break;
-		default:
-			break;
-		}
-	}
+void DirectControl::onExitMessage(const Empty::SharedPtr){
+	this->quit=true;
 }
 
-void DirectControl::exit() {
-	this->quit = true;
-	// Make the receive socket exit
-	if(this->tcpHandler.isConnected()) this->tcpHandler.TCPHandlerclose();
-	//TCPHandler selfPipe(this->commandPort, "127.0.0.1", "Client");
-	//selfPipe.TCPHandlerclose();
+/*!
+ * \brief initializeModule Initializes this module by creating log,
+ *			connecting to the message queue bus, setting up signal handers etc.
+ * \param logLevel Level of the module log to be used.
+ * \return 0 on success, -1 otherwise
+ */
+int DirectControl::initializeModule(const LOG_LEVEL logLevel) {
+	int retval = 0;
+
+	// Initialize log
+	LogInit(module_name.c_str(), logLevel);
+	LogMessage(LOG_LEVEL_INFO, "%s task running with PID: %d",module_name.c_str(), getpid());
+
+	if (DataDictionaryInitObjectData() != READ_OK) {
+		retval = -1;
+		LogMessage(LOG_LEVEL_ERROR, "Preexisting data dictionary not found");
+	}
+	return retval;
+}
+
+void DirectControl::signalHandler(int signo) {
+	if (signo == SIGINT) {
+		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+		this->quit = true;
+	}
+	else {
+		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+	}
 }
