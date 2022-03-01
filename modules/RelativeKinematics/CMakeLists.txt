@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(RelativeKinematics)
+project(relative_kinematics)
 
 # Define target names
 set(RELATIVE_KINEMATICS_TARGET ${PROJECT_NAME})
@@ -42,7 +42,7 @@ add_executable(${RELATIVE_KINEMATICS_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/RelativeKinematicsModule.cpp
 )
 # Link project executable to util libraries
-target_link_libraries(${RELATIVE_KINEMATICS_TARGET} LINK_PUBLIC
+target_link_libraries(${RELATIVE_KINEMATICS_TARGET}
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
@@ -52,10 +52,15 @@ target_link_libraries(${RELATIVE_KINEMATICS_TARGET} LINK_PUBLIC
 	${ISO_22133_LIBRARY}
 	${OSI_LIBRARY}
 )
-ament_target_dependencies(${RELATIVE_KINEMATICS_TARGET} PUBLIC
+
+# ROS specific settings
+rosidl_target_interfaces(${RELATIVE_KINEMATICS_TARGET}
+	maestro_msgs "rosidl_typesupport_cpp"
+)
+ament_target_dependencies(${RELATIVE_KINEMATICS_TARGET}
   rclcpp
   std_msgs
-  maestro_msgs)
+)
 
 target_include_directories(${RELATIVE_KINEMATICS_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
@@ -71,7 +76,7 @@ install(CODE "MESSAGE(STATUS \"Installing target ${RELATIVE_KINEMATICS_TARGET}\"
 get_property(ros_install_dir GLOBAL PROPERTY ros_install_dir_property)
 
 install(TARGETS 
-	RelativeKinematics
+	${RELATIVE_KINEMATICS_TARGET}
  DESTINATION ${ros_install_dir})
 
 # Ensure linkage is reloaded after install

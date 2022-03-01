@@ -39,14 +39,12 @@ if(WITH_OBJECT_CONTROL)
     add_executable(${CORE_TARGET}
         ${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
     )
 else()
     message(STATUS "Excluding ObjectControl")
     add_definitions(-DDISABLE_OBJECT_CONTROL)
     add_executable(${CORE_TARGET}
         ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
     )
 endif()
 

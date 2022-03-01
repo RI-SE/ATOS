@@ -29,8 +29,6 @@
 #include "objectcontrol.h"
 #include "systemcontrol.h"
 #include "datadictionary.h"
-#include "timecontrol.h"
-#include "supervisorcontrol.h"
 #include "citscontrol.h"
 
 #include "logging.h"

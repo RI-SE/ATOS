@@ -72,10 +72,12 @@ target_link_libraries(${MAESTRO_COMMON_TARGET}
 	${EIGEN_LIBRARY}
 	${FILESYSTEM_LIBRARY}
 )
+rosidl_target_interfaces(${MAESTRO_COMMON_TARGET}
+	maestro_msgs "rosidl_typesupport_cpp"
+)
 ament_target_dependencies(${MAESTRO_COMMON_TARGET}
   rclcpp
-  std_msgs
-  maestro_msgs)
+  std_msgs)
 
 target_include_directories(${MAESTRO_COMMON_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}
