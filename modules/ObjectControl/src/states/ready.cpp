@@ -1,46 +1,46 @@
 #include "state.hpp"
 
-ObjectControl::Ready::Ready() {
+AbstractKinematics::Ready::Ready() {
 
 }
 
-void ObjectControl::Ready::onEnter(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Ready::onEnter(
+		ObjectControl& handler) {
 	handler.startSafetyThread();
 }
 
-void ObjectControl::Ready::armRequest(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Ready::armRequest(
+		ObjectControl& handler) {
 	if (!handler.areAllObjectsIn(std::set({OBJECT_STATE_DISARMED, OBJECT_STATE_ARMED}))) {
 		throw std::invalid_argument("Not all objects in valid state prior to arm");
 	}
 }
 
-void ObjectControl::Ready::disconnectRequest(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Ready::disconnectRequest(
+		ObjectControl& handler) {
 	handler.disconnectObjects();
 }
 
-void ObjectControl::Ready::disconnectedFromObject(
-		ScenarioHandler&,
+void AbstractKinematics::Ready::disconnectedFromObject(
+		ObjectControl& handler,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Ready::objectAborting(
-		ScenarioHandler &handler,
+void AbstractKinematics::Ready::objectAborting(
+		ObjectControl& handler,
 		uint32_t id) {
 	// TODO
 }
 
-void ObjectControl::Ready::objectAbortDisarmed(
-	ScenarioHandler &handler,
+void AbstractKinematics::Ready::objectAbortDisarmed(
+	ObjectControl& handler,
 	uint32_t id) {
 		// TODO
 }
 
-void ObjectControl::Ready::settingModificationRequested(
-		ScenarioHandler &handler) {
+void AbstractKinematics::Ready::settingModificationRequested(
+		ObjectControl& handler) {
 	// TODO
 }
 
@@ -50,42 +50,42 @@ void ObjectControl::Ready::settingModificationRequested(
  *  ******************************************************
  */
 void RelativeKinematics::Ready::armRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Ready::armRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::armRequest(handler);
 	setState(handler, new RelativeKinematics::Armed);
 }
 
 void RelativeKinematics::Ready::disconnectRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Ready::disconnectRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::disconnectRequest(handler);
 	setState(handler, new RelativeKinematics::Idle);
 }
 
 void RelativeKinematics::Ready::disconnectedFromObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Ready::disconnectedFromObject(handler, id);
+	AbstractKinematics::Ready::disconnectedFromObject(handler, id);
 	setState(handler, new RelativeKinematics::Connecting);
 }
 
 void RelativeKinematics::Ready::objectAborting(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Ready::objectAborting(handler,id);
+	AbstractKinematics::Ready::objectAborting(handler,id);
 	setState(handler, new RelativeKinematics::Aborting);
 }
 
 
 void RelativeKinematics::Ready::objectAbortDisarmed(
-	ScenarioHandler &handler,
+	ObjectControl& handler,
 	uint32_t id) {
-	ObjectControl::Ready::objectAbortDisarmed(handler,id);
+	AbstractKinematics::Ready::objectAbortDisarmed(handler,id);
 }
 
 void RelativeKinematics::Ready::settingModificationRequested(
-		ScenarioHandler &handler) {
-	ObjectControl::Ready::settingModificationRequested(handler);
-	// TODO call scenariohandler to update OSEM if modified etc.
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::settingModificationRequested(handler);
+	// TODO call ObjectControl to update OSEM if modified etc.
 }
 
 
@@ -94,39 +94,39 @@ void RelativeKinematics::Ready::settingModificationRequested(
  *  ******************************************************
  */
 void AbsoluteKinematics::Ready::armRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Ready::armRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::armRequest(handler);
 	setState(handler, new AbsoluteKinematics::Armed);
 }
 
 void AbsoluteKinematics::Ready::disconnectRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Ready::disconnectRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::disconnectRequest(handler);
 	setState(handler, new AbsoluteKinematics::Idle);
 }
 
 void AbsoluteKinematics::Ready::disconnectedFromObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Ready::disconnectedFromObject(handler, id);
+	AbstractKinematics::Ready::disconnectedFromObject(handler, id);
 	setState(handler, new AbsoluteKinematics::Connecting);
 }
 
 void AbsoluteKinematics::Ready::objectAborting(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Ready::objectAborting(handler,id);
+	AbstractKinematics::Ready::objectAborting(handler,id);
 	setState(handler, new AbsoluteKinematics::Aborting);
 }
 
 void AbsoluteKinematics::Ready::objectAbortDisarmed(
-	ScenarioHandler &handler,
+	ObjectControl& handler,
 	uint32_t id) {
-	ObjectControl::Ready::objectAbortDisarmed(handler,id);
+	AbstractKinematics::Ready::objectAbortDisarmed(handler,id);
 }
 
 void AbsoluteKinematics::Ready::settingModificationRequested(
-		ScenarioHandler &handler) {
-	ObjectControl::Ready::settingModificationRequested(handler);
-	// TODO call scenariohandler to update OSEM if modified etc.
+		ObjectControl& handler) {
+	AbstractKinematics::Ready::settingModificationRequested(handler);
+	// TODO call ObjectControl to update OSEM if modified etc.
 }

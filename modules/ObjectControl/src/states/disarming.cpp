@@ -1,62 +1,62 @@
 #include "state.hpp"
 
-ObjectControl::Disarming::Disarming() {
+AbstractKinematics::Disarming::Disarming() {
 
 }
 
-void ObjectControl::Disarming::onEnter(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Disarming::onEnter(
+		ObjectControl& handler) {
 	handler.disarmObjects();
 }
 
-void ObjectControl::Disarming::disconnectRequest(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Disarming::disconnectRequest(
+		ObjectControl& handler) {
 	handler.disconnectObjects();
 }
 
-void ObjectControl::Disarming::connectedToObject(
-		ScenarioHandler&,
+void AbstractKinematics::Disarming::connectedToObject(
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Disarming::disconnectedFromObject(
-		ScenarioHandler&,
+void AbstractKinematics::Disarming::disconnectedFromObject(
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Disarming::connectedToArmedObject(
-		ScenarioHandler&,
+void AbstractKinematics::Disarming::connectedToArmedObject(
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Disarming::connectedToLiveObject(
-		ScenarioHandler&,
+void AbstractKinematics::Disarming::connectedToLiveObject(
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Disarming::allObjectsDisarmed(
-		ScenarioHandler&) {
+void AbstractKinematics::Disarming::allObjectsDisarmed(
+		ObjectControl&) {
 	// TODO
 }
 
-void ObjectControl::Disarming::objectArmed(
-		ScenarioHandler &,
+void AbstractKinematics::Disarming::objectArmed(
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Disarming::objectDisarmed(
-		ScenarioHandler &,
+void AbstractKinematics::Disarming::objectDisarmed(
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Disarming::objectAborting(
-		ScenarioHandler &,
+void AbstractKinematics::Disarming::objectAborting(
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
@@ -67,62 +67,62 @@ void ObjectControl::Disarming::objectAborting(
  *  ******************************************************
  */
 void RelativeKinematics::Disarming::disconnectRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Disarming::disconnectRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Disarming::disconnectRequest(handler);
 	setState(handler, new RelativeKinematics::Idle);
 }
 
 void RelativeKinematics::Disarming::connectedToObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void RelativeKinematics::Disarming::disconnectedFromObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void RelativeKinematics::Disarming::connectedToArmedObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void RelativeKinematics::Disarming::connectedToLiveObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Disarming::connectedToLiveObject(handler, id);
+	AbstractKinematics::Disarming::connectedToLiveObject(handler, id);
 	setState(handler, new RelativeKinematics::Aborting);
 }
 
 void RelativeKinematics::Disarming::allObjectsDisarmed(
-		ScenarioHandler& handler) {
-	ObjectControl::Disarming::allObjectsDisarmed(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Disarming::allObjectsDisarmed(handler);
 	setState(handler, new RelativeKinematics::Connecting);
 }
 
 void RelativeKinematics::Disarming::objectArmed(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Disarming::objectArmed(handler,id);
+	AbstractKinematics::Disarming::objectArmed(handler,id);
 	RelativeKinematics::Disarming::connectedToArmedObject(handler,id);
 }
 
 void RelativeKinematics::Disarming::objectDisarmed(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Disarming::objectDisarmed(handler,id);
+	AbstractKinematics::Disarming::objectDisarmed(handler,id);
 	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
 		RelativeKinematics::Disarming::allObjectsDisarmed(handler);
 	}
 }
 
 void RelativeKinematics::Disarming::objectAborting(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Disarming::objectAborting(handler,id);
+	AbstractKinematics::Disarming::objectAborting(handler,id);
 	RelativeKinematics::Disarming::connectedToLiveObject(handler,id);
 }
 
@@ -132,61 +132,61 @@ void RelativeKinematics::Disarming::objectAborting(
  *  ******************************************************
  */
 void AbsoluteKinematics::Disarming::disconnectRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Disarming::disconnectRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Disarming::disconnectRequest(handler);
 	setState(handler, new AbsoluteKinematics::Idle);
 }
 
 void AbsoluteKinematics::Disarming::connectedToObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void AbsoluteKinematics::Disarming::disconnectedFromObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void AbsoluteKinematics::Disarming::connectedToArmedObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void AbsoluteKinematics::Disarming::connectedToLiveObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Disarming::connectedToLiveObject(handler, id);
+	AbstractKinematics::Disarming::connectedToLiveObject(handler, id);
 	setState(handler, new AbsoluteKinematics::Aborting);
 }
 
 void AbsoluteKinematics::Disarming::allObjectsDisarmed(
-		ScenarioHandler& handler) {
-	ObjectControl::Disarming::allObjectsDisarmed(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Disarming::allObjectsDisarmed(handler);
 	setState(handler, new AbsoluteKinematics::Connecting);
 }
 
 void AbsoluteKinematics::Disarming::objectArmed(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Disarming::objectArmed(handler,id);
+	AbstractKinematics::Disarming::objectArmed(handler,id);
 	AbsoluteKinematics::Disarming::connectedToArmedObject(handler,id);
 }
 
 void AbsoluteKinematics::Disarming::objectDisarmed(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Disarming::objectDisarmed(handler,id);
+	AbstractKinematics::Disarming::objectDisarmed(handler,id);
 	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
 		AbsoluteKinematics::Disarming::allObjectsDisarmed(handler);
 	}
 }
 
 void AbsoluteKinematics::Disarming::objectAborting(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Disarming::objectAborting(handler,id);
+	AbstractKinematics::Disarming::objectAborting(handler,id);
 	AbsoluteKinematics::Disarming::connectedToLiveObject(handler,id);
 }

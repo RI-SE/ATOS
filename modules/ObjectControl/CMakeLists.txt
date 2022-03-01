@@ -4,10 +4,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(RelativeKinematics)
+project(ObjectControl)
 
 # Define target names
-set(RELATIVE_KINEMATICS_TARGET ${PROJECT_NAME})
+set(OBJECT_CONTROL_TARGET ${PROJECT_NAME})
 
 set(COREUTILS_LIBRARY MaestroCoreUtil)
 set(ISO_22133_LIBRARY ISO22133)
@@ -24,9 +24,8 @@ get_target_property(TIME_HEADERS ${TIME_LIBRARY} INCLUDE_DIRECTORIES)
 include(GNUInstallDirs)
 
 # Create project main executable target
-add_executable(${RELATIVE_KINEMATICS_TARGET}
+add_executable(${OBJECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/scenariohandler.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/testobject.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectlistener.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/state.cpp
@@ -39,10 +38,10 @@ add_executable(${RELATIVE_KINEMATICS_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/disarming.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/armed.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/done.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/RelativeKinematicsModule.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.cpp
 )
 # Link project executable to util libraries
-target_link_libraries(${RELATIVE_KINEMATICS_TARGET} LINK_PUBLIC
+target_link_libraries(${OBJECT_CONTROL_TARGET} LINK_PUBLIC
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
@@ -52,12 +51,12 @@ target_link_libraries(${RELATIVE_KINEMATICS_TARGET} LINK_PUBLIC
 	${ISO_22133_LIBRARY}
 	${OSI_LIBRARY}
 )
-ament_target_dependencies(${RELATIVE_KINEMATICS_TARGET} PUBLIC
+ament_target_dependencies(${OBJECT_CONTROL_TARGET} PUBLIC
   rclcpp
   std_msgs
   maestro_msgs)
 
-target_include_directories(${RELATIVE_KINEMATICS_TARGET} PUBLIC
+target_include_directories(${OBJECT_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${OSI_HEADERS}
 	${TIME_HEADERS}
@@ -65,13 +64,13 @@ target_include_directories(${RELATIVE_KINEMATICS_TARGET} PUBLIC
 
 
 # Installation rules
-install(CODE "MESSAGE(STATUS \"Installing target ${RELATIVE_KINEMATICS_TARGET}\")")
+install(CODE "MESSAGE(STATUS \"Installing target ${OBJECT_CONTROL_TARGET}\")")
 
 #ros installation
 get_property(ros_install_dir GLOBAL PROPERTY ros_install_dir_property)
 
 install(TARGETS 
-	RelativeKinematics
+	ObjectControl
  DESTINATION ${ros_install_dir})
 
 # Ensure linkage is reloaded after install

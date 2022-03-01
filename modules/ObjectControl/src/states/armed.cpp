@@ -1,42 +1,42 @@
 #include "state.hpp"
 
-ObjectControl::Armed::Armed() {
+AbstractKinematics::Armed::Armed() {
 
 }
 
-void ObjectControl::Armed::onEnter(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Armed::onEnter(
+		ObjectControl& handler) {
 	handler.armObjects();
 }
 
-void ObjectControl::Armed::startRequest(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Armed::startRequest(
+		ObjectControl& handler) {
 	if (!handler.areAllObjectsIn(OBJECT_STATE_ARMED)) {
 		throw std::invalid_argument("Start attempted when not all objects were armed");
 	}
 }
 
-void ObjectControl::Armed::disarmRequest(
-		ScenarioHandler&) {
+void AbstractKinematics::Armed::disarmRequest(
+		ObjectControl&) {
 }
 
-void ObjectControl::Armed::disconnectedFromObject(
-		ScenarioHandler&,
+void AbstractKinematics::Armed::disconnectedFromObject(
+		ObjectControl&,
 		uint32_t) {
 }
 
-void ObjectControl::Armed::objectArmed(
-		ScenarioHandler &,
+void AbstractKinematics::Armed::objectArmed(
+		ObjectControl&,
 		uint32_t) {
 }
 
-void ObjectControl::Armed::objectDisarmed(
-		ScenarioHandler &,
+void AbstractKinematics::Armed::objectDisarmed(
+		ObjectControl&,
 		uint32_t) {
 }
 
-void ObjectControl::Armed::objectAborting(
-		ScenarioHandler &,
+void AbstractKinematics::Armed::objectAborting(
+		ObjectControl&,
 		uint32_t) {
 }
 
@@ -46,42 +46,42 @@ void ObjectControl::Armed::objectAborting(
  *  ******************************************************
  */
 void RelativeKinematics::Armed::startRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Armed::startRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Armed::startRequest(handler);
 	setState(handler, new RelativeKinematics::TestLive);
 }
 
 void RelativeKinematics::Armed::disarmRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Armed::disarmRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Armed::disarmRequest(handler);
 	setState(handler, new RelativeKinematics::Disarming);
 }
 
 void RelativeKinematics::Armed::disconnectedFromObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Armed::disconnectedFromObject(handler, id);
+	AbstractKinematics::Armed::disconnectedFromObject(handler, id);
 	setState(handler, new RelativeKinematics::Disarming);
 }
 
 void RelativeKinematics::Armed::objectArmed(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Armed::objectArmed(handler, id);
+	AbstractKinematics::Armed::objectArmed(handler, id);
 	// TODO possible to do something here
 }
 
 void RelativeKinematics::Armed::objectDisarmed(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Armed::objectDisarmed(handler, id);
+	AbstractKinematics::Armed::objectDisarmed(handler, id);
 	setState(handler, new RelativeKinematics::Ready);
 }
 
 void RelativeKinematics::Armed::objectAborting(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Armed::objectAborting(handler, id);
+	AbstractKinematics::Armed::objectAborting(handler, id);
 	setState(handler, new RelativeKinematics::Aborting);
 }
 
@@ -91,41 +91,41 @@ void RelativeKinematics::Armed::objectAborting(
  *  ******************************************************
  */
 void AbsoluteKinematics::Armed::startRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Armed::startRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Armed::startRequest(handler);
 	setState(handler, new AbsoluteKinematics::TestLive);
 }
 
 void AbsoluteKinematics::Armed::disarmRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Armed::disarmRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Armed::disarmRequest(handler);
 	setState(handler, new AbsoluteKinematics::Disarming);
 }
 
 void AbsoluteKinematics::Armed::disconnectedFromObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Armed::disconnectedFromObject(handler, id);
+	AbstractKinematics::Armed::disconnectedFromObject(handler, id);
 	setState(handler, new AbsoluteKinematics::Disarming);
 }
 
 void AbsoluteKinematics::Armed::objectArmed(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Armed::objectArmed(handler, id);
+	AbstractKinematics::Armed::objectArmed(handler, id);
 	// TODO possible to do something here
 }
 
 void AbsoluteKinematics::Armed::objectDisarmed(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Armed::objectDisarmed(handler, id);
+	AbstractKinematics::Armed::objectDisarmed(handler, id);
 	setState(handler, new AbsoluteKinematics::Ready);
 }
 
 void AbsoluteKinematics::Armed::objectAborting(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Armed::objectAborting(handler, id);
+	AbstractKinematics::Armed::objectAborting(handler, id);
 	setState(handler, new AbsoluteKinematics::Aborting);
 }

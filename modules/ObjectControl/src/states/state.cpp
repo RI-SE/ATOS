@@ -5,7 +5,7 @@
 #include <exception>
 
 void ObjectControlState::setState(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		ObjectControlState *st) {
 	// TODO mutex on state modification
 	// Before replacing state, execute any exit behaviour
@@ -23,31 +23,31 @@ void ObjectControlState::setState(
 
 
 // Function bodies for pure virtual functions
-void ObjectControlState::initializeRequest(ScenarioHandler&) {
+void ObjectControlState::initializeRequest(ObjectControl&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::disconnectRequest(ScenarioHandler&) {
+void ObjectControlState::disconnectRequest(ObjectControl&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::connectRequest(ScenarioHandler&) {
+void ObjectControlState::connectRequest(ObjectControl&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::armRequest(ScenarioHandler&) {
+void ObjectControlState::armRequest(ObjectControl&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::disarmRequest(ScenarioHandler&) {
+void ObjectControlState::disarmRequest(ObjectControl&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::startRequest(ScenarioHandler&) {
+void ObjectControlState::startRequest(ObjectControl&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::stopRequest(ScenarioHandler&) {
+void ObjectControlState::stopRequest(ObjectControl&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::abortRequest(ScenarioHandler&) {
+void ObjectControlState::abortRequest(ObjectControl&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-void ObjectControlState::allClearRequest(ScenarioHandler&) {
+void ObjectControlState::allClearRequest(ObjectControl&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
 

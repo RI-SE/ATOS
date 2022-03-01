@@ -1,4 +1,5 @@
 #include "objectlistener.hpp"
+#include "objectcontrol.hpp"
 #include "datadictionary.h"
 #include "maestroTime.h"
 #include "iso22133.h"
@@ -10,7 +11,7 @@
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
 
 ObjectListener::ObjectListener(
-		ScenarioHandler* sh,
+		ObjectControl* sh,
 		TestObject* ob)
 	:  obj(ob), handler(sh)
 {
@@ -38,7 +39,7 @@ void ObjectListener::listen() {
 				auto prevObjState = obj->getState();
 				auto monr = obj->readMonitorMessage();
 				TimeSetToCurrentSystemTime(&currentTime);
-				if (handler->controlMode == ScenarioHandler::RELATIVE_KINEMATICS && !obj->isAnchor()) {
+				if (handler->controlMode == ObjectControl::RELATIVE_KINEMATICS && !obj->isAnchor()) {
 					monr.second = transformCoordinate(monr.second, handler->getLastAnchorData(), true);
 				}
 

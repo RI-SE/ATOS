@@ -1,71 +1,71 @@
 #include "state.hpp"
 
-ObjectControl::Aborting::Aborting() {
+AbstractKinematics::Aborting::Aborting() {
 
 }
 
-void ObjectControl::Aborting::onExit(
-		ScenarioHandler&) {
+void AbstractKinematics::Aborting::onExit(
+		ObjectControl&) {
 }
 
-void ObjectControl::Aborting::allClearRequest(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Aborting::allClearRequest(
+		ObjectControl& handler) {
 		handler.allClearObjects();
 }
 
-void ObjectControl::Aborting::connectedToObject(
-		ScenarioHandler&,
+void AbstractKinematics::Aborting::connectedToObject(
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Aborting::disconnectedFromObject(
-		ScenarioHandler&,
+void AbstractKinematics::Aborting::disconnectedFromObject(
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Aborting::connectedToLiveObject(
-		ScenarioHandler&,
+void AbstractKinematics::Aborting::connectedToLiveObject(
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Aborting::connectedToArmedObject(
-		ScenarioHandler&,
+void AbstractKinematics::Aborting::connectedToArmedObject(
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Aborting::objectAborting(
-		ScenarioHandler &,
+void AbstractKinematics::Aborting::objectAborting(
+		ObjectControl& ,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Aborting::objectAbortDisarmed(
-	ScenarioHandler &,
+void AbstractKinematics::Aborting::objectAbortDisarmed(
+	ObjectControl& ,
 	uint32_t) {
 	// TODO
 }
 
-void ObjectControl::Aborting::objectDisarmed(
-		ScenarioHandler &handler,
+void AbstractKinematics::Aborting::objectDisarmed(
+		ObjectControl& handler,
 		uint32_t id) {
 	LogMessage(LOG_LEVEL_WARNING, "Object disarmed while expecting abort");
 	handler.disconnectObject(id); // TODO just stop sending HEAB to keep tracking available
 }
 
-void ObjectControl::Aborting::objectArmed(
-		ScenarioHandler &handler,
+void AbstractKinematics::Aborting::objectArmed(
+		ObjectControl& handler,
 		uint32_t id) {
 	LogMessage(LOG_LEVEL_WARNING, "Object armed while expecting abort");
 	handler.disconnectObject(id); // TODO just stop sending HEAB to keep tracking available
 }
 
 
-void ObjectControl::Aborting::allObjectsAbortDisarmed(
-		ScenarioHandler &handler) {
+void AbstractKinematics::Aborting::allObjectsAbortDisarmed(
+		ObjectControl& handler) {
 }
 
 
@@ -74,51 +74,51 @@ void ObjectControl::Aborting::allObjectsAbortDisarmed(
  *  ******************************************************
  */
 void RelativeKinematics::Aborting::allClearRequest(
-		ScenarioHandler &handler) {
-	ObjectControl::Aborting::allClearRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Aborting::allClearRequest(handler);
 	setState(handler, new RelativeKinematics::Ready);
 }
 
 void RelativeKinematics::Aborting::connectedToObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void RelativeKinematics::Aborting::disconnectedFromObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void RelativeKinematics::Aborting::connectedToLiveObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void RelativeKinematics::Aborting::connectedToArmedObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void RelativeKinematics::Aborting::objectAborting(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Aborting::objectAborting(handler, id);
+	AbstractKinematics::Aborting::objectAborting(handler, id);
 	// TODO
 }
 
 void RelativeKinematics::Aborting::objectAbortDisarmed(
-	ScenarioHandler &handler,
+	ObjectControl& handler,
 	uint32_t id) {
-	ObjectControl::Aborting::objectAbortDisarmed(handler,id);
+	AbstractKinematics::Aborting::objectAbortDisarmed(handler,id);
 }
 
 void RelativeKinematics::Aborting::allObjectsAbortDisarmed(
-		ScenarioHandler &handler) {
-	ObjectControl::Aborting::allObjectsAbortDisarmed(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Aborting::allObjectsAbortDisarmed(handler);
 	setState(handler, new RelativeKinematics::Ready);			
 }
 
@@ -128,50 +128,50 @@ void RelativeKinematics::Aborting::allObjectsAbortDisarmed(
  *  ******************************************************
  */
 void AbsoluteKinematics::Aborting::allClearRequest(
-		ScenarioHandler &handler) {
-	ObjectControl::Aborting::allClearRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Aborting::allClearRequest(handler);
 	setState(handler, new AbsoluteKinematics::Ready);
 }
 
 void AbsoluteKinematics::Aborting::connectedToObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void AbsoluteKinematics::Aborting::disconnectedFromObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void AbsoluteKinematics::Aborting::connectedToLiveObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void AbsoluteKinematics::Aborting::connectedToArmedObject(
-		ScenarioHandler&,
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
 void AbsoluteKinematics::Aborting::objectAborting(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Aborting::objectAborting(handler, id);
+	AbstractKinematics::Aborting::objectAborting(handler, id);
 	// TODO
 }
 
 void AbsoluteKinematics::Aborting::objectAbortDisarmed(
-	ScenarioHandler &handler,
+	ObjectControl& handler,
 	uint32_t id) {
-	ObjectControl::Aborting::objectAbortDisarmed(handler,id);
+	AbstractKinematics::Aborting::objectAbortDisarmed(handler,id);
 }
 
 void AbsoluteKinematics::Aborting::allObjectsAbortDisarmed(
-		ScenarioHandler &handler) {
-	ObjectControl::Aborting::allObjectsAbortDisarmed(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Aborting::allObjectsAbortDisarmed(handler);
 	setState(handler, new AbsoluteKinematics::Ready);			
 }
