@@ -35,17 +35,6 @@ RelativeKinematicsModule::RelativeKinematicsModule(LOG_LEVEL logLevel) : Module(
 	this->getStatusResponsePub = this->create_publisher<String>(topicNames[COMM_GETSTATUS_OK],queueSize);	
 };
 
-void RelativeKinematicsModule::tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail){
-	try{
-		LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames[commandCode].c_str());
-		tryExecute();
-	}
-	catch (std::invalid_argument& e) {
-		LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames[commandCode].c_str(), e.what());
-		executeIfFail();
-	}
-}
-
 int RelativeKinematicsModule::initialize(const LOG_LEVEL logLevel) {
 	int retval = 0;
 
