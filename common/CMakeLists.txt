@@ -13,7 +13,6 @@ set(MAESTRO_UTIL_TARGET ${TARGET_NAMESPACE}MaestroCoreUtil)
 
 find_package(Eigen3 REQUIRED IMPORTED)
 find_package(rclcpp REQUIRED)
-find_package(ament_cmake REQUIRED)
 
 set(LOGGING_LIBRARY MaestroLogging)
 set(TIME_LIBRARY MaestroTime)
