@@ -1,8 +1,10 @@
 #include <iostream>
 #include <string>
+#include <functional>
 
+#include <rclcpp/rclcpp.hpp>
 #include "util.h"
-#include "rclcpp/rclcpp.hpp"
+
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/u_int8.hpp"
@@ -194,7 +196,7 @@ protected:
 		auto msg = String();
 		msg.data = this->get_name();
 		getStatusResponsePub->publish(msg);
-		 };
+	};
 	virtual void onInitMessage(const Empty::SharedPtr) {};
 	virtual void onConnectMessage(const Empty::SharedPtr){};
 	virtual void onDisconnectMessage(const Empty::SharedPtr){};

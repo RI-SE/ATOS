@@ -3,6 +3,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(journal_control)
 
@@ -12,12 +13,16 @@ find_package(rclcpp REQUIRED)
 set(JOURNAL_CONTROL_TARGET ${PROJECT_NAME})
 
 set(LOGGING_LIBRARY MaestroLogging)
+set(COREUTILS_LIBRARY MaestroCoreUtil)
+set(FILESYSTEM_LIBRARY stdc++fs)
 
 include(GNUInstallDirs)
 
 # Create project main executable target
 add_executable(${JOURNAL_CONTROL_TARGET}
+	${CMAKE_CURRENT_SOURCE_DIR}/src/journalcollection.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/journalcontrol.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/journal.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 )
 # Link project executable to util libraries
