@@ -4,50 +4,53 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(journal_control)
+project(maestro_base)
 
 find_package(rclcpp REQUIRED)
 
 # Define target names
-set(JOURNAL_CONTROL_TARGET ${PROJECT_NAME})
+set(MAESTRO_BASE_TARGET ${PROJECT_NAME})
 
-set(LOGGING_LIBRARY MaestroLogging)
 set(COREUTILS_LIBRARY MaestroCoreUtil)
-set(FILESYSTEM_LIBRARY stdc++fs)
+set(COMMON_LIBRARY MaestroCommon)
+set(POSITIONING_LIBRARY MaestroPositioning)
+set(TIME_LIBRARY MaestroTime)
+set(LOGGING_LIBRARY MaestroLogging)
+
+get_target_property(COREUTILS_HEADERS ${COREUTILS_LIBRARY} INCLUDE_DIRECTORIES)
+get_target_property(COMMON_HEADERS ${COMMON_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
 # Create project main executable target
-add_executable(${JOURNAL_CONTROL_TARGET}
-	${CMAKE_CURRENT_SOURCE_DIR}/src/journalcollection.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/journalcontrol.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/journal.cpp
+add_executable(${MAESTRO_BASE_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/maestrobase.cpp
 )
 # Link project executable to util libraries
-target_link_libraries(${JOURNAL_CONTROL_TARGET}
+target_link_libraries(${MAESTRO_BASE_TARGET}
 	${rclcpp_LIBRARIES}
-	${LOGGING_LIBRARY}
-	${FILESYSTEM_LIBRARY}
 	${COREUTILS_LIBRARY}
+	${COMMON_LIBRARY}
 )
-target_include_directories(${JOURNAL_CONTROL_TARGET} PUBLIC
+target_include_directories(${MAESTRO_BASE_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COREUTILS_HEADERS}
+	${COMMON_HEADERS}
 )
 
 # ROS specific rules
-rosidl_target_interfaces(${JOURNAL_CONTROL_TARGET}
+rosidl_target_interfaces(${MAESTRO_BASE_TARGET}
 	maestro_msgs "rosidl_typesupport_cpp"
 )
-ament_target_dependencies(${JOURNAL_CONTROL_TARGET}
+ament_target_dependencies(${MAESTRO_BASE_TARGET}
   rclcpp
   std_msgs
 )
 
 # Installation rules
-install(CODE "MESSAGE(STATUS \"Installing target ${JOURNAL_CONTROL_TARGET}\")")
-install(TARGETS ${JOURNAL_CONTROL_TARGET} 
+install(CODE "MESSAGE(STATUS \"Installing target ${MAESTRO_BASE_TARGET}\")")
+install(TARGETS ${MAESTRO_BASE_TARGET} 
 	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

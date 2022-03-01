@@ -47,12 +47,12 @@ target_include_directories(${SYSTEM_CONTROL_TARGET} PUBLIC
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${SYSTEM_CONTROL_TARGET}\")")
 
-#ros installation
-get_property(ros_install_dir GLOBAL PROPERTY ros_install_dir_property)
-
-install(TARGETS 
-	${SYSTEM_CONTROL_TARGET}
- DESTINATION ${ros_install_dir})
+install(TARGETS ${SYSTEM_CONTROL_TARGET}
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
 # Ensure linkage is reloaded after install
 install(CODE "execute_process(COMMAND ldconfig)")

@@ -87,7 +87,7 @@ add_subdirectory(util/C/mathutils)
 add_subdirectory(util/C/osihandler)
 
 add_subdirectory(common)
-add_subdirectory(core)
+add_subdirectory(modules/MaestroBase)
 
 foreach(MODULE ${ENABLED_MODULES})
 	add_subdirectory(modules/${MODULE})
