@@ -23,6 +23,7 @@ using std_msgs::msg::UInt8;
 ObjectControl::ObjectControl(LOG_LEVEL logLevel) : Module(ObjectControl::module_name){
 	this->initialize(logLevel);
 	int queueSize=0;
+	
 	// ** Subscriptions
 	this->initSub = this->create_subscription<Empty>(topicNames[COMM_INIT], queueSize, std::bind(&ObjectControl::onInitMessage, this, _1));
 	this->connectSub = this->create_subscription<Empty>(topicNames[COMM_CONNECT], queueSize, std::bind(&ObjectControl::onConnectMessage, this, _1));
@@ -39,9 +40,6 @@ ObjectControl::ObjectControl(LOG_LEVEL logLevel) : Module(ObjectControl::module_
 	// ** Publishers
 	this->failurePub = this->create_publisher<UInt8>(topicNames[COMM_FAILURE],queueSize);
 	this->getStatusResponsePub = this->create_publisher<String>(topicNames[COMM_GETSTATUS_OK],queueSize);	
-
-	this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
-	DataDictionarySetOBCState(this->state->asNumber());
 };
 
 void ObjectControl::tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail){
@@ -71,6 +69,8 @@ int ObjectControl::initialize(const LOG_LEVEL logLevel) {
 		retval = -1;
 		LogMessage(LOG_LEVEL_ERROR, "Unable to create test journal");
 	}
+
+	// Initialize state and object data
 	if (DataDictionaryInitStateData() != READ_OK) {
 		DataDictionaryFreeStateData();
 		retval = -1;
@@ -83,6 +83,10 @@ int ObjectControl::initialize(const LOG_LEVEL logLevel) {
 		LogMessage(LOG_LEVEL_ERROR,
 					"Found no previously initialized shared memory for object data");
 	}
+
+	// Set state
+	this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
+	DataDictionarySetOBCState(this->state->asNumber());
 
 	return retval;
 }
