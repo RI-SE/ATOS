@@ -94,18 +94,18 @@ void DirectControl::readUDPSocketData() {
 	
 	while (!this->quit){
 		try{
-			message=udpServer.recvfrom();
+			auto [data, remote] = udpServer.recvfrom();
+			DmMsg dmmsg = DmMsg();
+			wasSuccessful = decodeDMMessage(data, dmmsg);
+			if (wasSuccessful){
+				dmPub->publish(dmmsg);
+			}
 		}
 		catch(const SocketErrors::DisconnectedError& error){
 			//If we get a disconnected exception when we do not intend to exit, propagate said exception
 			if (!this->quit){
 				throw error;
 			}
-		}
-		DmMsg dmmsg = DmMsg();
-		wasSuccessful = decodeDMMessage(message.first,dmmsg);
-		if (wasSuccessful){
-			dmPub->publish(dmmsg);
 		}
 	}
 }
