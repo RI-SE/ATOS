@@ -1,4 +1,4 @@
-## Dummy module
+## JournalControl module
 This module is an example for how to build a Maestro-external module and connect it via message bus. It is also written in C++ so can serve as an example for how to import Maestro C code and connect to message bus using another code language.
 
 ### Build process
