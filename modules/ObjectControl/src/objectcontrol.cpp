@@ -42,17 +42,6 @@ ObjectControl::ObjectControl(LOG_LEVEL logLevel) : Module(ObjectControl::moduleN
 	this->getStatusResponsePub = this->create_publisher<String>(topicNames[COMM_GETSTATUS_OK],queueSize);	
 };
 
-void ObjectControl::tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail){
-	try{
-		LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames[commandCode].c_str());
-		tryExecute();
-	}
-	catch (std::invalid_argument& e) {
-		LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames[commandCode].c_str(), e.what());
-		executeIfFail();
-	}
-}
-
 ObjectControl::~ObjectControl() {
 	delete state;
 }

@@ -181,8 +181,6 @@ private:
 	void onACCMMessage(const Accm::SharedPtr) override;
 	void onEXACMessage(const Exac::SharedPtr) override;
 
-	void tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail);
-
 	using clock = std::chrono::steady_clock;
 
 	ControlMode controlMode;
