@@ -40,7 +40,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
  "msg/Accm.msg"
  "msg/ManoeuvreCommand.msg"
  "msg/ObjectEnabled.msg"
- "msg/DmMsg.msg"
+ "msg/MaestroHeader.msg"
+ "msg/ControlSignalPercentage.msg"
+ "msg/ObjectId.msg"
 )
 
 ament_package()
