@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(ScenarioControl LANGUAGES C CXX)
+project(scenario_control LANGUAGES C CXX)
 
 # Define target names
 set(SCENARIO_CONTROL_TARGET ${PROJECT_NAME})

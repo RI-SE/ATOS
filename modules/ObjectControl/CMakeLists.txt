@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(ObjectControl)
+project(object_control)
 
 # Define target names
 set(OBJECT_CONTROL_TARGET ${PROJECT_NAME})
@@ -41,7 +41,7 @@ add_executable(${OBJECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.cpp
 )
 # Link project executable to util libraries
-target_link_libraries(${OBJECT_CONTROL_TARGET} LINK_PUBLIC
+target_link_libraries(${OBJECT_CONTROL_TARGET} 
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
@@ -51,10 +51,15 @@ target_link_libraries(${OBJECT_CONTROL_TARGET} LINK_PUBLIC
 	${ISO_22133_LIBRARY}
 	${OSI_LIBRARY}
 )
-ament_target_dependencies(${OBJECT_CONTROL_TARGET} PUBLIC
+
+# ROS specific settings
+rosidl_target_interfaces(${OBJECT_CONTROL_TARGET}
+	maestro_msgs "rosidl_typesupport_cpp"
+)
+ament_target_dependencies(${OBJECT_CONTROL_TARGET}
   rclcpp
   std_msgs
-  maestro_msgs)
+)
 
 target_include_directories(${OBJECT_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
@@ -62,18 +67,9 @@ target_include_directories(${OBJECT_CONTROL_TARGET} PUBLIC
 	${TIME_HEADERS}
 )
 
-
 # Installation rules
 install(CODE "MESSAGE(STATUS \"Installing target ${OBJECT_CONTROL_TARGET}\")")
-
-#ros installation
-get_property(ros_install_dir GLOBAL PROPERTY ros_install_dir_property)
-
-install(TARGETS 
-	ObjectControl
- DESTINATION ${ros_install_dir})
-
-install(TARGETS ${OBJECT_CONTROL_TARGET} 
+install(TARGETS ${OBJECT_CONTROL_TARGET}
 	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

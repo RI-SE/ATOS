@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(Supervision LANGUAGES C CXX)
+project(supervision LANGUAGES C CXX)
 
 # Define target names
 set(SUPERVISION_TARGET ${PROJECT_NAME})
