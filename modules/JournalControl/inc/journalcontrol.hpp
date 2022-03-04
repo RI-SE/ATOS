@@ -18,14 +18,31 @@ extern "C" {
 #include "util.h"
 #include "logging.h"
 
-/*------------------------------------------------------------
-  -- Function declarations.
-  ------------------------------------------------------------*/
-
-void journalcontrol_task(TimeType *GPSTime, GSDType *GSD, LOG_LEVEL logLevel);
-
 #ifdef __cplusplus
 }
 #endif
+
+
+#include "module.hpp"
+#include "journalcollection.hpp"
+/*------------------------------------------------------------
+  -- Function declarations.
+  ------------------------------------------------------------*/
+class JournalControl : public Module
+{
+public:
+	explicit JournalControl(LOG_LEVEL logLevel);
+	void initialize(LOG_LEVEL logLevel);
+private:
+	static inline std::string const moduleName = "journal_control";
+
+	JournalCollection journals;
+
+	void onArmMessage(const Empty::SharedPtr) override;
+	void onStopMessage(const Empty::SharedPtr) override;
+	void onAbortMessage(const Empty::SharedPtr) override;
+  void onReplayMessage(const Empty::SharedPtr) override;
+  void onExitMessage(const Empty::SharedPtr) override;
+};
 
 #endif //__LOGGER_H_INCLUDED__

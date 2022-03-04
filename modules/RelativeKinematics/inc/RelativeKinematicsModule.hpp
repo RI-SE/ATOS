@@ -19,6 +19,4 @@ private:
 	void onAllClearMessage(const Empty::SharedPtr) override;
 	void onACCMMessage(const Accm::SharedPtr) override;
 	void onEXACMessage(const Exac::SharedPtr) override;
-
-	void tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail);
 };

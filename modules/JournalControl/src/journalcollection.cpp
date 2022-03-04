@@ -1,216 +1,12 @@
-/*------------------------------------------------------------------------------
-  -- Copyright   : (C) 2020 AstaZero
-  ------------------------------------------------------------------------------
-  -- File        : journalcontrol.cpp
-  -- Author      : Lukas Wikander
-  -- Description :
-  -- Purpose     :
-  -- Reference   :
-  ------------------------------------------------------------------------------*/
-
-#include <signal.h>
-#include <vector>
-#include <unordered_set>
-#include <set>
-#include <fstream>
-#include <iostream>
-#include <iterator>
-#include <chrono>
-#include <algorithm>
-// GCC version 8.1 brings non-experimental support for std::filesystem
-#if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
-#include <filesystem>
-#else
-#include <experimental/filesystem>
-#endif
-
-#include "journalcontrol.h"
-#include "journal.h"
+#include "journalcollection.hpp"
 #include "datadictionary.h"
+#include "journal.h"
+#include <fstream>
+#include <iterator>
+#include <algorithm>
 
-#if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
-namespace fs = std::filesystem;
-#else
-namespace fs = std::experimental::filesystem;
-#endif
-
-// Add a C++20 type
-namespace std::chrono {
-	typedef duration<int64_t, ratio<60*60*24>> days;
-}
 
 #define DATE_STRING_MAX_LEN 20
-
-#define MODULE_NAME "JournalControl"
-class Journal {
-public:
-	class Bookmark {
-	private:
-		fs::path filePath;
-		std::streampos filePosition;
-	public:
-		bool valid = false;
-		void place(const fs::path &path, const bool placeAtBeginning=false) {
-			std::ifstream istrm(path, placeAtBeginning ? std::ios_base::in
-													   : std::ios_base::ate);
-			if (istrm.is_open()) {
-				LogMessage(LOG_LEVEL_DEBUG, "Storing bookmark to file %s", path.c_str());
-				filePosition = istrm.tellg();
-				filePath = path;
-				valid = true;
-				istrm.close();
-			}
-			else {
-				LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", path.c_str());
-			}
-		}
-		const std::streampos& getPosition() const { return filePosition; }
-		const fs::path& getFilePath() const { return filePath; }
-		std::string toString() const {
-			return valid ? getFilePath().string() + " @" + std::to_string(getPosition())
-						 : "<unset>";
-		}
-	};
-
-	Journal() {}
-	std::string moduleName;
-	mutable Bookmark startReference;
-	mutable Bookmark stopReference;
-	mutable std::set<fs::path> containedFiles;
-
-	bool operator==(const Journal &other) const {
-		return this->moduleName == other.moduleName;
-	}
-
-	std::string toString() const {
-		std::string retval = "";
-		retval += moduleName + " journal\n\tFiles:\n";
-		for (const auto &file : containedFiles) {
-			retval += "\t\t* " + file.string() + "\n";
-		}
-		retval += "\tStart / end references:\n";
-		retval += "\t\ts: " + startReference.toString() + "\n";
-		retval += "\t\te: " + stopReference.toString();
-		return retval;
-	}
-};
-
-
-
-//! Template specialization of std::hash for Journal
-namespace std {
-	template <> struct hash<Journal> {
-		size_t operator() (const Journal &journal) const {
-			return std::hash<std::string>{}(journal.moduleName);
-		}
-	};
-}
-
-class JournalCollection : public std::unordered_set<Journal> {
-public:
-	void placeStartBookmarks();
-	void placeStopBookmarks();
-	void insertNonBookmarked();
-	int dumpToFile();
-	std::string toString() const {
-		std::string retval = "";
-		for (const auto &journal : *this) {
-			retval += journal.toString() + "\n";
-		}
-		if (this->size() > 0) {
-			retval.pop_back();
-		}
-		return retval;
-	}
-private:
-	std::chrono::time_point<std::chrono::system_clock, std::chrono::days> startDay;
-	std::chrono::time_point<std::chrono::system_clock, std::chrono::days> stopDay;
-};
-
-/*------------------------------------------------------------
-  -- Static variables.
-  ------------------------------------------------------------*/
-static volatile bool quit = false;
-
-/*------------------------------------------------------------
-  -- Static function declarations.
-  ------------------------------------------------------------*/
-static void signalHandler(int signo);
-static int initializeModule(const LOG_LEVEL logLevel);
-static std::vector<fs::path> getJournalFilesFrom(const std::chrono::system_clock::time_point &date);
-static std::vector<fs::path> getJournalFilesFromToday(void);
-static std::string getCurrentDateAsString(void);
-static std::string getDateAsString(const std::chrono::system_clock::time_point &date);
-static int printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile);
-static int printJournalHeaderTo(std::ofstream &ostrm);
-
-/*------------------------------------------------------------
-  -- Main task.
-  ------------------------------------------------------------*/
-void journalcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
-
-	std::vector<char> mqReceiveBuffer(MBUS_MAX_DATALEN, 0);
-	std::vector<char> mqSendBuffer(MBUS_MAX_DATALEN, 0);
-	enum COMMAND command = COMM_INV;
-	ssize_t receivedBytes = 0;
-	struct timeval recvTime;
-
-	JournalCollection journals;
-
-	// Initialize
-	if (initializeModule(logLevel) < 0) {
-		util_error("Failed to initialize module");
-	}
-
-
-	while (!quit) {
-		std::fill(mqReceiveBuffer.begin(), mqReceiveBuffer.end(), 0);
-		receivedBytes = iCommRecv(&command, mqReceiveBuffer.data(), mqReceiveBuffer.size(), &recvTime);
-
-		switch (command) {
-		case COMM_ARM:
-			// Save start references
-			journals.placeStartBookmarks();
-			break;
-		case COMM_STOP:
-		case COMM_ABORT:
-			// Temporary: Treat ABORT as stop signal
-			// Save stop references
-			journals.placeStopBookmarks();
-			// If any additional journals were created in the start-stop interval,
-			// insert them
-			journals.insertNonBookmarked();
-			// Merge journals into named output
-			journals.dumpToFile();
-			break;
-
-        case COMM_GETSTATUS: {
-			std::fill(mqSendBuffer.begin(), mqSendBuffer.end(), 0);
-            unsigned long startTime = UtilGetPIDUptime(getpid()).tv_sec;
-            snprintf(mqSendBuffer.data(), mqSendBuffer.size(), "%s:%lu", MODULE_NAME, startTime);
-			mqSendBuffer.back() = '\0';
-			if (iCommSend(COMM_GETSTATUS_OK, mqSendBuffer.data(), mqSendBuffer.size()) < 0) {
-				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending status reply");
-			}
-			break;
-        }
-		case COMM_REPLAY:
-			LogMessage(LOG_LEVEL_WARNING, "Replay function out of date");
-			break;
-		case COMM_EXIT:
-			quit = true;
-			break;
-		// Do nothing with these messages
-		case COMM_GETSTATUS_OK:
-			break;
-		}
-	}
-
-	iCommClose();
-
-	LogMessage(LOG_LEVEL_INFO, MODULE_NAME " exiting");
-}
-
 
 /*!
  * \brief placeStartBookmarks Stores references to the current end of file of all journals.
@@ -259,7 +55,6 @@ void JournalCollection::placeStopBookmarks() {
 	using namespace std::chrono;
 	this->stopDay = floor<days>(system_clock::now());
 }
-
 
 /*!
  * \brief JournalCollection::insertNonBookmarked Inserts journal files that were not included
@@ -329,6 +124,7 @@ void JournalCollection::insertNonBookmarked() {
 		}
 	}
 }
+
 
 /*!
  * \brief dumpToFile Generates a merged file based on input journals
@@ -467,29 +263,9 @@ int JournalCollection::dumpToFile() {
 	return retval;
 }
 
-/*!
- * \brief getCurrentDateAsString Creates a string on the format YYYY-MM-DD of the current date.
- * \return A std::string containing the current date
- */
-std::string getCurrentDateAsString() {
-	return getDateAsString(std::chrono::system_clock::now());
-}
 
-/*!
- * \brief getDateAsString Creates a string on the format YYYY-MM-DD of the specified date.
- * \param date Timestamp for which date string is to be extracted.
- * \return A std::string containing the date representation
- */
-std::string getDateAsString(const std::chrono::system_clock::time_point &date) {
-	using Clock = std::chrono::system_clock;
-	char dateString[DATE_STRING_MAX_LEN] = {'\0'};
-	auto dateRaw = Clock::to_time_t(date);
-	auto dateStructPtr = std::localtime(&dateRaw);
-	std::strftime(dateString, DATE_STRING_MAX_LEN, "%Y-%m-%d", dateStructPtr);
-	return dateString;
-}
 
-int printJournalHeaderTo(std::ofstream &ostrm) {
+int JournalCollection::printJournalHeaderTo(std::ofstream &ostrm) {
 	std::vector<char> trajectoryDirectory(PATH_MAX, '\0');
 	std::vector<char> configurationDirectory(PATH_MAX, '\0');
 	std::vector<char> objectDirectory(PATH_MAX, '\0');
@@ -548,47 +324,28 @@ int printJournalHeaderTo(std::ofstream &ostrm) {
 	return 0;
 }
 
-/*!
- * \brief printFilesTo Prints the contents of all files in chosen directory to the
- *			selected stream
- * \param inputDirectory Directory containing files to be printed
- * \param outputFile Stream to which contents are to be printed
- * \return 0 on success, -1 otherwise
- */
-int printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile) {
 
-	if (!exists(inputDirectory)) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to find directory %s", inputDirectory.c_str());
-		return -1;
-	}
-	for (const auto &dirEntry : fs::directory_iterator(inputDirectory)) {
-		if (fs::is_regular_file(dirEntry.status())) {
-			const auto inputFile = dirEntry.path();
-			std::ifstream istrm(inputFile.string());
-			if (!istrm.is_open()) {
-				LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", inputFile.c_str());
-				return -1;
-			}
-			istrm.unsetf(std::ios_base::skipws);
-			for (std::istream_iterator<char> it(istrm); it != std::istream_iterator<char>(); ++it) {
-				outputFile << *it;
-			}
-			outputFile << std::endl;
-			istrm.close();
-		}
-	}
-	return 0;
+/*!
+ * \brief getCurrentDateAsString Creates a string on the format YYYY-MM-DD of the current date.
+ * \return A std::string containing the current date
+ */
+std::string JournalCollection::getCurrentDateAsString() {
+	return getDateAsString(std::chrono::system_clock::now());
 }
 
 /*!
- * \brief getJournalFilesFromToday Fetches a list of file paths corresponding to journal
- *			files created on the current date.
- * \return A std::vector containing file paths
+ * \brief getDateAsString Creates a string on the format YYYY-MM-DD of the specified date.
+ * \param date Timestamp for which date string is to be extracted.
+ * \return A std::string containing the date representation
  */
-std::vector<fs::path> getJournalFilesFromToday() {
-	return getJournalFilesFrom(std::chrono::system_clock::now());
+std::string JournalCollection::getDateAsString(const std::chrono::system_clock::time_point &date) {
+	using Clock = std::chrono::system_clock;
+	char dateString[DATE_STRING_MAX_LEN] = {'\0'};
+	auto dateRaw = Clock::to_time_t(date);
+	auto dateStructPtr = std::localtime(&dateRaw);
+	std::strftime(dateString, DATE_STRING_MAX_LEN, "%Y-%m-%d", dateStructPtr);
+	return dateString;
 }
-
 
 /*!
  * \brief getJournalFilesFrom Fetches a list of file paths corresponding to journal
@@ -596,7 +353,7 @@ std::vector<fs::path> getJournalFilesFromToday() {
  * \param date Date for which journals are to be fetched
  * \return A std::vector containing file paths
  */
-std::vector<fs::path> getJournalFilesFrom(const std::chrono::system_clock::time_point &date) {
+std::vector<fs::path> JournalCollection::getJournalFilesFrom(const std::chrono::system_clock::time_point &date) {
 	std::vector<fs::path> journalsFromDate;
 	std::vector<char> buffer(PATH_MAX, '\0');
 
@@ -625,51 +382,34 @@ std::vector<fs::path> getJournalFilesFrom(const std::chrono::system_clock::time_
 	return journalsFromDate;
 }
 
-
-void signalHandler(int signo) {
-	if (signo == SIGINT) {
-		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
-		quit = true;
-	}
-	else {
-		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
-	}
-}
-
 /*!
- * \brief initializeModule Initializes this module by creating log, connecting to the message queue bus,
- *			setting up signal handers etc.
- * \param logLevel Level of the module log to be used.
+ * \brief printFilesTo Prints the contents of all files in chosen directory to the
+ *			selected stream
+ * \param inputDirectory Directory containing files to be printed
+ * \param outputFile Stream to which contents are to be printed
  * \return 0 on success, -1 otherwise
  */
-int initializeModule(const LOG_LEVEL logLevel) {
-	int retval = 0;
-	struct timespec sleepTimePeriod, remTime;
-	sleepTimePeriod.tv_sec = 0;
-	sleepTimePeriod.tv_nsec = 1000000;
-	int maxRetries = 10, retryNumber;
+int JournalCollection::printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile) {
 
-	// Initialize log
-	LogInit(MODULE_NAME, logLevel);
-	LogMessage(LOG_LEVEL_INFO, MODULE_NAME " task running with PID: %d", getpid());
-
-	// Set up signal handlers
-	LogMessage(LOG_LEVEL_DEBUG, "Initializing signal handler");
-	if (signal(SIGINT, signalHandler) == SIG_ERR) {
-		perror("signal");
-		retval = -1;
-		LogMessage(LOG_LEVEL_ERROR, "Unable to initialize signal handler");
+	if (!exists(inputDirectory)) {
+		LogMessage(LOG_LEVEL_ERROR, "Unable to find directory %s", inputDirectory.c_str());
+		return -1;
 	}
-
-	// Initialize message bus connection
-	LogMessage(LOG_LEVEL_DEBUG, "Initializing connection to message bus");
-	for (retryNumber = 0; iCommInit() != 0 && retryNumber < maxRetries; ++retryNumber) {
-		nanosleep(&sleepTimePeriod, &remTime);
+	for (const auto &dirEntry : fs::directory_iterator(inputDirectory)) {
+		if (fs::is_regular_file(dirEntry.status())) {
+			const auto inputFile = dirEntry.path();
+			std::ifstream istrm(inputFile.string());
+			if (!istrm.is_open()) {
+				LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", inputFile.c_str());
+				return -1;
+			}
+			istrm.unsetf(std::ios_base::skipws);
+			for (std::istream_iterator<char> it(istrm); it != std::istream_iterator<char>(); ++it) {
+				outputFile << *it;
+			}
+			outputFile << std::endl;
+			istrm.close();
+		}
 	}
-	if (retryNumber == maxRetries) {
-		retval = -1;
-		LogMessage(LOG_LEVEL_ERROR, "Unable to initialize connection to message bus");
-	}
-
-	return retval;
+	return 0;
 }

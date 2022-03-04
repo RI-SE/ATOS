@@ -1,8 +1,10 @@
 #include <iostream>
 #include <string>
+#include <functional>
 
+#include <rclcpp/rclcpp.hpp>
 #include "util.h"
-#include "rclcpp/rclcpp.hpp"
+
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/u_int8.hpp"
@@ -194,7 +196,7 @@ protected:
 		auto msg = String();
 		msg.data = this->get_name();
 		getStatusResponsePub->publish(msg);
-		 };
+	};
 	virtual void onInitMessage(const Empty::SharedPtr) {};
 	virtual void onConnectMessage(const Empty::SharedPtr){};
 	virtual void onDisconnectMessage(const Empty::SharedPtr){};
@@ -226,6 +228,17 @@ protected:
 	virtual void onBackToStartMessage(const Empty::SharedPtr){};
 	virtual void onBackToStartResponse(const Int8::SharedPtr){};
 	virtual void onDataDictResponse(const Empty::SharedPtr){};
+
+	static void tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail) {
+		try {
+			LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames[commandCode].c_str());
+			tryExecute();
+		}
+		catch (std::invalid_argument& e) {
+			LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames[commandCode].c_str(), e.what());
+			executeIfFail();
+		}
+	}
 
 private:
 	static void printUnhandledMessage(const std::string& topic, const std::string& message) {
