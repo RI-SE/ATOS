@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(DirectControl)
+project(direct_control)
 
 # Define target names
 set(DIRECT_CONTROL_TARGET ${PROJECT_NAME})

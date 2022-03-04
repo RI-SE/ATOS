@@ -10,7 +10,6 @@ project(Core LANGUAGES C CXX)
 # 	your system if e.g. specified to "/"
 
 set(CORE_TARGET ${PROJECT_NAME})
-set(JOURNAL_CONTROL_TARGET JournalControl)
 
 set(COREUTILS_LIBRARY MaestroCoreUtil)
 set(COMMON_LIBRARY MaestroCommon)
@@ -39,28 +38,16 @@ if(WITH_OBJECT_CONTROL)
     add_executable(${CORE_TARGET}
         ${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
     )
 else()
     message(STATUS "Excluding ObjectControl")
     add_definitions(-DDISABLE_OBJECT_CONTROL)
     add_executable(${CORE_TARGET}
         ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.c
     )
 endif()
 
-
-add_library(${JOURNAL_CONTROL_TARGET} SHARED
-	${CMAKE_CURRENT_SOURCE_DIR}/src/journalcontrol.cpp
-
-)
-target_include_directories(${JOURNAL_CONTROL_TARGET} PUBLIC
-	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
-	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-	${LOGGING_HEADERS}
-)
-
+target_include_directories(${CORE_TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc)
 
 # Linking
 target_link_libraries(${CORE_TARGET} LINK_PUBLIC
@@ -73,15 +60,6 @@ target_link_libraries(${CORE_TARGET} LINK_PUBLIC
 	${PTHREAD_LIBRARY}
 )
 
-target_link_libraries(${JOURNAL_CONTROL_TARGET} LINK_PUBLIC
-	${FILESYSTEM_LIBRARY}
-	${COREUTILS_LIBRARY}
-)
-
-target_include_directories(${JOURNAL_CONTROL_TARGET} PUBLIC
-	${COREUTILS_HEADERS}
-)
-
 # Generate service file with correct details
 message(STATUS "Configuring ${PROJECT_NAME} service file")
 list(LENGTH ENABLED_MODULES NUMBER_ENABLED_MODULES)
@@ -90,14 +68,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/linux/maestro-core.service.in
 )
 
 # Installation rules
-install(CODE "MESSAGE(STATUS \"Installing target ${CORE_TARGET}\")")
-install(TARGETS ${CORE_TARGET} ${JOURNAL_CONTROL_TARGET}
-	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-
 # Give built target ability to set system clock
 install(CODE "MESSAGE(STATUS \"Giving system time setting capabilities to target ${CORE_TARGET}\")")
 install(CODE "execute_process(COMMAND setcap CAP_SYS_TIME+ep ${CMAKE_INSTALL_FULL_BINDIR}/${CORE_TARGET})")
@@ -107,4 +77,12 @@ install(CODE "MESSAGE(STATUS \"Installing ${PROJECT_NAME} service to ${CMAKE_INS
 install(FILES ${PROJECT_BINARY_DIR}/maestro-core.service
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/systemd/system
   COMPONENT service
+)
+
+install(CODE "MESSAGE(STATUS \"Installing target ${CORE_TARGET}\")")
+install(TARGETS ${CORE_TARGET}
+    RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )

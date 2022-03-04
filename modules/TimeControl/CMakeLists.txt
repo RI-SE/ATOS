@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 
-project(TimeControl)
+project(time_control)
 
 # Define target names
 set(TIME_CONTROL_TARGET ${PROJECT_NAME})
@@ -26,7 +26,7 @@ add_executable(${TIME_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/timecontrol.cpp
 )
 # Link project executable to util libraries
-target_link_libraries(${TIME_CONTROL_TARGET} LINK_PUBLIC
+target_link_libraries(${TIME_CONTROL_TARGET}
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
@@ -35,10 +35,13 @@ target_link_libraries(${TIME_CONTROL_TARGET} LINK_PUBLIC
 	${MAESTRO_COMMON_LIBRARY}
 )
 
-ament_target_dependencies(${TIME_CONTROL_TARGET} PUBLIC
+rosidl_target_interfaces(${TIME_CONTROL_TARGET}
+	maestro_msgs "rosidl_typesupport_cpp"
+)
+ament_target_dependencies(${TIME_CONTROL_TARGET}
   rclcpp
   std_msgs
-  maestro_msgs)
+)
   
 target_include_directories(${TIME_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
@@ -54,12 +57,12 @@ install(TARGETS ${TIME_CONTROL_TARGET}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-#ros installation
-get_property(ros_install_dir GLOBAL PROPERTY ros_install_dir_property)
-
-install(TARGETS 
-	TimeControl
- DESTINATION ${ros_install_dir})
+install(TARGETS ${TIME_CONTROL_TARGET}
+	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
 # Ensure linkage is reloaded after install
 install(CODE "execute_process(COMMAND ldconfig)")

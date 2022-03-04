@@ -371,9 +371,7 @@ void objectcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel) {
 			size_t receivedMONRData = 0;
 			size_t receivedTCPData = 0;
 
-			CurrentTimeU32 =
-				((GPSTime->GPSSecondsOfWeekU32 * 1000 + (U32) TimeControlGetMillisecond(GPSTime)) << 2) +
-				GPSTime->MicroSecondU16;
+			CurrentTimeU32 = TimeGetAsGPSqmsOfWeek(&currentTime);
 
 			 /*MTSP*/ if (timercmp(&currentTime, &nextAdaptiveSyncMessageTime, >)) {
 
