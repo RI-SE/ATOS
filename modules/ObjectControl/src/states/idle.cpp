@@ -2,28 +2,28 @@
 #include "logging.h"
 #include "journal.h"
 
-ObjectControl::Idle::Idle() {
+AbstractKinematics::Idle::Idle() {
 
 }
 
-void ObjectControl::Idle::onEnter(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Idle::onEnter(
+		ObjectControl& handler) {
 	handler.clearScenario();
 }
 
-void ObjectControl::Idle::initializeRequest(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Idle::initializeRequest(
+		ObjectControl& handler) {
 	LogMessage(LOG_LEVEL_INFO, "Handling initialization request");
 	JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
 	handler.loadScenario();
 	try {
 		auto anchorID = handler.getAnchorObjectID();
 		handler.transformScenarioRelativeTo(anchorID);
-		handler.controlMode = ScenarioHandler::RELATIVE_KINEMATICS;
+		handler.controlMode = ObjectControl::RELATIVE_KINEMATICS;
 		setState(handler, new RelativeKinematics::Initialized);
 		LogMessage(LOG_LEVEL_INFO, "Relative control mode enabled");
 	} catch (std::invalid_argument) {
-		handler.controlMode = ScenarioHandler::ABSOLUTE_KINEMATICS;
+		handler.controlMode = ObjectControl::ABSOLUTE_KINEMATICS;
 		setState(handler, new AbsoluteKinematics::Initialized);
 		LogMessage(LOG_LEVEL_INFO, "Absolute control mode enabled");
 	}

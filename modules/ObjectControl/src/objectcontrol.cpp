@@ -1,10 +1,6 @@
-#include "scenariohandler.hpp"
-#include "logging.h"
-#include "util.h"
-#include "datadictionary.h"
-#include "osi_handler.hpp"
-#include "objectconfig.hpp"
-
+#include <iostream>
+#include <unistd.h>
+#include <signal.h>
 #include <algorithm>
 #include <stdexcept>
 #include <fstream>
@@ -12,49 +8,79 @@
 #include <thread>
 #include <dirent.h>
 
+#include "state.hpp"
+#include "logging.h"
+#include "util.h"
+#include "journal.h"
+#include "datadictionary.h"
 
-ScenarioHandler::ScenarioHandler() {
-	this->state = static_cast<ObjectControlState*>(new ObjectControl::Idle);
-	DataDictionarySetOBCState(this->state->asNumber());
-}
+#include "objectcontrol.hpp"
 
-ScenarioHandler::~ScenarioHandler() {
+using std_msgs::msg::Empty;
+using std_msgs::msg::String;
+using std_msgs::msg::UInt8;
+
+ObjectControl::ObjectControl(LOG_LEVEL logLevel) : Module(ObjectControl::moduleName){
+	this->initialize(logLevel);
+	int queueSize=0;
+	
+	// ** Subscriptions
+	this->initSub = this->create_subscription<Empty>(topicNames[COMM_INIT], queueSize, std::bind(&ObjectControl::onInitMessage, this, _1));
+	this->connectSub = this->create_subscription<Empty>(topicNames[COMM_CONNECT], queueSize, std::bind(&ObjectControl::onConnectMessage, this, _1));
+	this->armSub = this->create_subscription<Empty>(topicNames[COMM_ARM], queueSize, std::bind(&ObjectControl::onArmMessage, this, _1));
+	this->startSub = this->create_subscription<Empty>(topicNames[COMM_STRT], queueSize, std::bind(&ObjectControl::onStartMessage, this, _1));
+	this->disconnectSub = this->create_subscription<Empty>(topicNames[COMM_DISCONNECT], queueSize, std::bind(&ObjectControl::onDisconnectMessage, this, _1));
+	this->stopSub = this->create_subscription<Empty>(topicNames[COMM_STOP], queueSize, std::bind(&ObjectControl::onStopMessage, this, _1));
+	this->abortSub = this->create_subscription<Empty>(topicNames[COMM_ABORT], queueSize, std::bind(&ObjectControl::onAbortMessage, this, _1));
+	this->allClearSub = this->create_subscription<Empty>(topicNames[COMM_ABORT_DONE], queueSize, std::bind(&ObjectControl::onAllClearMessage, this, _1));
+	this->accmSub = this->create_subscription<Accm>(topicNames[COMM_ACCM], queueSize, std::bind(&ObjectControl::onACCMMessage, this, _1));
+	this->exacSub = this->create_subscription<Exac>(topicNames[COMM_EXAC], queueSize, std::bind(&ObjectControl::onEXACMessage, this, _1));
+	this->getStatusSub = this->create_subscription<Empty>(topicNames[COMM_GETSTATUS], queueSize, std::bind(&ObjectControl::onGetStatusMessage, this, _1));
+
+	// ** Publishers
+	this->failurePub = this->create_publisher<UInt8>(topicNames[COMM_FAILURE],queueSize);
+	this->getStatusResponsePub = this->create_publisher<String>(topicNames[COMM_GETSTATUS_OK],queueSize);	
+};
+
+ObjectControl::~ObjectControl() {
 	delete state;
 }
 
-void ScenarioHandler::handleInitCommand() {
-	this->state->initializeRequest(*this);
+int ObjectControl::initialize(const LOG_LEVEL logLevel) {
+	int retval = 0;
+
+	// Initialize log
+	LogInit(get_name(), logLevel);
+	LogMessage(LOG_LEVEL_INFO, "%s task running with PID: %d",get_name(), getpid());
+
+	// Create test journal
+	if (JournalInit(get_name()) == -1) {
+		retval = -1;
+		LogMessage(LOG_LEVEL_ERROR, "Unable to create test journal");
+	}
+
+	// Initialize state and object data
+	if (DataDictionaryInitStateData() != READ_OK) {
+		DataDictionaryFreeStateData();
+		retval = -1;
+		LogMessage(LOG_LEVEL_ERROR,
+					"Found no previously initialized shared memory for state data");
+	}
+	if (DataDictionaryInitObjectData() != READ_OK) {
+		DataDictionaryFreeObjectData();
+		retval = -1;
+		LogMessage(LOG_LEVEL_ERROR,
+					"Found no previously initialized shared memory for object data");
+	}
+
+	// Set state
+	this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
+	DataDictionarySetOBCState(this->state->asNumber());
+
+	return retval;
 }
 
-void ScenarioHandler::handleConnectCommand() {
-	this->state->connectRequest(*this);
-}
-
-void ScenarioHandler::handleDisconnectCommand() {
-	this->state->disconnectRequest(*this);
-}
-
-void ScenarioHandler::handleArmCommand() {
-	this->state->armRequest(*this);
-}
-
-void ScenarioHandler::handleStartCommand() {
-	this->state->startRequest(*this);
-}
-
-void ScenarioHandler::handleStopCommand() {
-	this->state->stopRequest(*this);
-}
-
-void ScenarioHandler::handleAbortCommand() {
-	this->state->abortRequest(*this);
-}
-
-void ScenarioHandler::handleAllClearCommand() {
-	this->state->allClearRequest(*this);
-}
-
-void ScenarioHandler::handleActionConfigurationCommand(
+void ObjectControl::handleActionConfigurationCommand(
 		const TestScenarioCommandAction& action) {
 	this->state->settingModificationRequested(*this);
 	if (action.command == ACTION_PARAMETER_VS_SEND_START) {
@@ -65,7 +91,7 @@ void ScenarioHandler::handleActionConfigurationCommand(
 	}
 }
 
-void ScenarioHandler::handleExecuteActionCommand(
+void ObjectControl::handleExecuteActionCommand(
 		const uint16_t &actionID,
 		const std::chrono::system_clock::time_point &when) {
 	this->state->actionExecutionRequested(*this);
@@ -81,7 +107,93 @@ void ScenarioHandler::handleExecuteActionCommand(
 	thd.detach();
 }
 
-void ScenarioHandler::loadScenario() {
+
+void ObjectControl::onInitMessage(const Empty::SharedPtr){
+	COMMAND cmd = COMM_INIT;
+	auto f_try = [&]() { this->state->initializeRequest(*this); };
+	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(cmd,f_try,f_catch);
+}
+
+void ObjectControl::onConnectMessage(const Empty::SharedPtr){	
+	COMMAND cmd = COMM_CONNECT;
+	auto f_try = [&]() { this->state->connectRequest(*this); };
+	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(cmd,f_try,f_catch);
+}
+
+void ObjectControl::onArmMessage(const Empty::SharedPtr){	
+	COMMAND cmd = COMM_ARM;
+	auto f_try = [&]() { this->state->armRequest(*this); };
+	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(cmd,f_try,f_catch);
+}
+
+void ObjectControl::onStartMessage(const Empty::SharedPtr){	
+	COMMAND cmd = COMM_STRT;
+	auto f_try = [&]() { this->state->startRequest(*this); };
+	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(cmd,f_try,f_catch);
+}
+
+void ObjectControl::onDisconnectMessage(const Empty::SharedPtr){	
+	COMMAND cmd = COMM_DISCONNECT;
+	auto f_try = [&]() { this->state->disconnectRequest(*this); };
+	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(cmd,f_try,f_catch);
+}
+
+void ObjectControl::onStopMessage(const Empty::SharedPtr){
+	COMMAND cmd = COMM_STOP;
+	auto f_try = [&]() { this->state->stopRequest(*this); };
+	auto f_catch = [&]() {
+			failurePub->publish(msgCtr1<UInt8>(cmd));
+			abortPub->publish(Empty());
+	};
+	this->tryHandleMessage(cmd,f_try,f_catch);	
+}
+
+void ObjectControl::onAbortMessage(const Empty::SharedPtr){	
+	// Any exceptions here should crash the program
+	this->state->abortRequest(*this);
+}
+
+void ObjectControl::onAllClearMessage(const Empty::SharedPtr){	
+	COMMAND cmd = COMM_ABORT_DONE;
+	auto f_try = [&]() { this->state->allClearRequest(*this); };
+	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(cmd,f_try,f_catch);
+}
+
+void ObjectControl::onACCMMessage(const Accm::SharedPtr accm){
+	COMMAND cmd = COMM_ACCM;
+	auto f_try = [&]() {
+		if (accm->action_type == ACTION_TEST_SCENARIO_COMMAND) {
+			ObjectControl::TestScenarioCommandAction cmdAction;
+			cmdAction.command = static_cast<ActionTypeParameter_t>(accm->action_type_parameter1);
+			cmdAction.actionID = accm->action_id;
+			cmdAction.objectID = getVehicleIDByIP(accm->ip);
+			handleActionConfigurationCommand(cmdAction);
+		}
+	};
+	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(cmd,f_try,f_catch);
+}
+
+void ObjectControl::onEXACMessage(const Exac::SharedPtr exac){
+	COMMAND cmd = COMM_EXAC;
+	auto f_try = [&]() {
+		using namespace std::chrono;
+		quartermilliseconds qmsow(exac->executiontime_qmsow);
+		auto now = to_timeval(system_clock::now().time_since_epoch());
+		auto startOfWeek = system_clock::time_point(weeks(TimeGetAsGPSweek(&now)));
+		handleExecuteActionCommand(exac->action_id, startOfWeek+qmsow);	
+	};
+	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(cmd,f_try,f_catch);
+}
+
+void ObjectControl::loadScenario() {
 	this->loadObjectFiles();
 	std::for_each(objects.begin(), objects.end(), [] (std::pair<const uint32_t, TestObject> &o) {
 		auto data = o.second.getAsObjectData();
@@ -89,7 +201,7 @@ void ScenarioHandler::loadScenario() {
 	});
 }
 
-void ScenarioHandler::loadObjectFiles() {
+void ObjectControl::loadObjectFiles() {
 	this->clearScenario();
 	char path[MAX_FILE_PATH];
 	std::vector<std::invalid_argument> errors;
@@ -149,7 +261,7 @@ void ScenarioHandler::loadObjectFiles() {
 	}
 }
 
-uint32_t ScenarioHandler::getAnchorObjectID() const {
+uint32_t ObjectControl::getAnchorObjectID() const {
 	for (auto& object : objects) {
 		if (object.second.isAnchor()) {
 			return object.first;
@@ -158,12 +270,12 @@ uint32_t ScenarioHandler::getAnchorObjectID() const {
 	throw std::invalid_argument("No configured anchor object found");
 }
 
-ObjectMonitorType ScenarioHandler::getLastAnchorData() const {
+ObjectMonitorType ObjectControl::getLastAnchorData() const {
 	auto anchorID = getAnchorObjectID();
 	return objects.at(anchorID).getLastMonitorData();
 }
 
-std::map<uint32_t,ObjectStateType> ScenarioHandler::getObjectStates() const {
+std::map<uint32_t,ObjectStateType> ObjectControl::getObjectStates() const {
 	std::map<uint32_t, ObjectStateType> retval;
 	for (const auto& elem : objects) {
 		retval[elem.first] = elem.second.getState();
@@ -171,7 +283,7 @@ std::map<uint32_t,ObjectStateType> ScenarioHandler::getObjectStates() const {
 	return retval;
 }
 
-void ScenarioHandler::transformScenarioRelativeTo(
+void ObjectControl::transformScenarioRelativeTo(
 		const uint32_t objectID) {
 	for (auto& id : getVehicleIDs()) {
 		if (id == objectID) {
@@ -185,26 +297,26 @@ void ScenarioHandler::transformScenarioRelativeTo(
 	}
 }
 
-void ScenarioHandler::clearScenario() {
+void ObjectControl::clearScenario() {
 	objects.clear();
 	storedActions.clear();
 }
 
 
-void ScenarioHandler::beginConnectionAttempt() {
+void ObjectControl::beginConnectionAttempt() {
 	connStopReqPromise = std::promise<void>();
 	connStopReqFuture = connStopReqPromise.get_future();
 
 	LogMessage(LOG_LEVEL_DEBUG, "Initiating connection attempt");
 	for (const auto id : getVehicleIDs()) {
-		auto t = std::thread(&ScenarioHandler::connectToObject, this,
+		auto t = std::thread(&ObjectControl::connectToObject, this,
 							 std::ref(objects[id]),
 							 std::ref(connStopReqFuture));
 		t.detach();
 	}
 }
 
-void ScenarioHandler::abortConnectionAttempt() {
+void ObjectControl::abortConnectionAttempt() {
 	try {
 		connStopReqPromise.set_value();
 	}
@@ -213,7 +325,7 @@ void ScenarioHandler::abortConnectionAttempt() {
 	}
 }
 
-void ScenarioHandler::disconnectObjects() {
+void ObjectControl::disconnectObjects() {
 	abortConnectionAttempt();
 	try {
 		stopHeartbeatSignal.set_value();
@@ -227,26 +339,26 @@ void ScenarioHandler::disconnectObjects() {
 	objectListeners.clear();
 }
 
-void ScenarioHandler::disconnectObject(
+void ObjectControl::disconnectObject(
 		const uint32_t id) {
 	objects[id].disconnect();
 	objectListeners.erase(id);
 }
 
-void ScenarioHandler::uploadObjectConfiguration(
+void ObjectControl::uploadObjectConfiguration(
 		const uint32_t id) {
 	objects[id].sendSettings();
 }
 
-void ScenarioHandler::startSafetyThread() {
+void ObjectControl::startSafetyThread() {
 	stopHeartbeatSignal = std::promise<void>();
 	if (safetyThread.joinable()) {
 		safetyThread.join();
 	}
-	safetyThread = std::thread(&ScenarioHandler::heartbeat, this);
+	safetyThread = std::thread(&ObjectControl::heartbeat, this);
 }
 
-void ScenarioHandler::heartbeat() {
+void ObjectControl::heartbeat() {
 	auto stopRequest = stopHeartbeatSignal.get_future();
 	clock::time_point nextHeartbeat = clock::now();
 
@@ -284,7 +396,7 @@ void ScenarioHandler::heartbeat() {
 	LogMessage(LOG_LEVEL_INFO, "Heartbeat thread exiting");
 }
 
-OsiHandler::LocalObjectGroundTruth_t ScenarioHandler::buildOSILocalGroundTruth(
+OsiHandler::LocalObjectGroundTruth_t ObjectControl::buildOSILocalGroundTruth(
 		const MonitorMessage& monr) const {
 
 	OsiHandler::LocalObjectGroundTruth_t gt;
@@ -306,7 +418,7 @@ OsiHandler::LocalObjectGroundTruth_t ScenarioHandler::buildOSILocalGroundTruth(
 	return gt;
 }
 
-void ScenarioHandler::injectObjectData(const MonitorMessage &monr) {
+void ObjectControl::injectObjectData(const MonitorMessage &monr) {
 	if (!objects[monr.first].getObjectConfig().getInjectionMap().targetIDs.empty()) {
 		std::chrono::system_clock::time_point ts;
 		auto secs = std::chrono::seconds(monr.second.timestamp.tv_sec);
@@ -322,7 +434,7 @@ void ScenarioHandler::injectObjectData(const MonitorMessage &monr) {
 }
 
 
-void ScenarioHandler::startListeners() {
+void ObjectControl::startListeners() {
 	LogMessage(LOG_LEVEL_DEBUG, "Starting listeners");
 	objectListeners.clear();
 	for (const auto& id : getVehicleIDs()) {
@@ -330,7 +442,7 @@ void ScenarioHandler::startListeners() {
 	}
 }
 
-void ScenarioHandler::connectToObject(
+void ObjectControl::connectToObject(
 		TestObject &obj,
 		std::shared_future<void> &connStopReq) {
 	constexpr int maxConnHeabs = 10;
@@ -418,13 +530,13 @@ void ScenarioHandler::connectToObject(
 };
 
 
-void ScenarioHandler::armObjects() {
+void ObjectControl::armObjects() {
 	for (auto& id : getVehicleIDs()) {
 		objects[id].sendArm();
 	}
 }
 
-void ScenarioHandler::disarmObjects() {
+void ObjectControl::disarmObjects() {
 	for (auto& id : getVehicleIDs()) {
 		try {
 			objects[id].sendDisarm();
@@ -436,7 +548,7 @@ void ScenarioHandler::disarmObjects() {
 	this->state->allObjectsDisarmed(*this); // TODO add a check on object states as well
 }
 
-void ScenarioHandler::startObjects() {
+void ObjectControl::startObjects() {
 	for (auto& id : getVehicleIDs()) {
 		if (!objects[id].isStartingOnTrigger()) {
 			objects[id].sendStart();
@@ -444,35 +556,35 @@ void ScenarioHandler::startObjects() {
 	}
 }
 
-void ScenarioHandler::allClearObjects() {
+void ObjectControl::allClearObjects() {
 	for (auto& id : getVehicleIDs()) {
 		objects[id].sendAllClear();
 	}
 	this->state->allObjectsAbortDisarmed(*this); // TODO wait for all objects really are disarmed
 }
 
-bool ScenarioHandler::isAnyObjectIn(
+bool ObjectControl::isAnyObjectIn(
 		const ObjectStateType state) {
 	return std::any_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,TestObject>& obj) {
 		return obj.second.getState() == state;
 	});
 }
 
-bool ScenarioHandler::areAllObjectsIn(
+bool ObjectControl::areAllObjectsIn(
 		const ObjectStateType state) {
 	return std::all_of(objects.cbegin(), objects.cend(), [state](const std::pair<const uint32_t,TestObject>& obj) {
 		return obj.second.getState() == state;
 	});
 }
 
-bool ScenarioHandler::isAnyObjectIn(
+bool ObjectControl::isAnyObjectIn(
 		const std::set<ObjectStateType>& states) {
 	return std::any_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,TestObject>& obj) {
 		return states.find(obj.second.getState()) != states.end();
 	});
 }
 
-bool ScenarioHandler::areAllObjectsIn(
+bool ObjectControl::areAllObjectsIn(
 		const std::set<ObjectStateType>& states) {
 	return std::all_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,TestObject>& obj) {
 		return states.find(obj.second.getState()) != states.end();

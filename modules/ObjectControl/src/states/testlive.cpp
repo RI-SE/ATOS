@@ -1,40 +1,40 @@
 #include "state.hpp"
 
-ObjectControl::TestLive::TestLive() {
+AbstractKinematics::TestLive::TestLive() {
 
 }
 
-void ObjectControl::TestLive::onEnter(
-		ScenarioHandler &handler) {
+void AbstractKinematics::TestLive::onEnter(
+		ObjectControl& handler) {
 	handler.startObjects();
 }
 
-void ObjectControl::TestLive::stopRequest(ScenarioHandler&) {
+void AbstractKinematics::TestLive::stopRequest(ObjectControl&) {
 	// TODO
 }
 
-void ObjectControl::TestLive::abortRequest(ScenarioHandler&) {
+void AbstractKinematics::TestLive::abortRequest(ObjectControl&) {
 	// TODO
 }
 
-void ObjectControl::TestLive::testCompleted(ScenarioHandler&) {
+void AbstractKinematics::TestLive::testCompleted(ObjectControl&) {
 	// TODO
 }
 
-void ObjectControl::TestLive::disconnectedFromObject(
-		ScenarioHandler&,
+void AbstractKinematics::TestLive::disconnectedFromObject(
+		ObjectControl&,
 		uint32_t) {
 	// TODO
 }
 
-void ObjectControl::TestLive::objectDisarmed(
-		ScenarioHandler &,
+void AbstractKinematics::TestLive::objectDisarmed(
+		ObjectControl&,
 		uint32_t) {
 
 }
 
-void ObjectControl::TestLive::objectAborting(
-		ScenarioHandler &,
+void AbstractKinematics::TestLive::objectAborting(
+		ObjectControl&,
 		uint32_t) {
 
 }
@@ -45,43 +45,43 @@ void ObjectControl::TestLive::objectAborting(
  *  ******************************************************
  */
 void RelativeKinematics::TestLive::stopRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::TestLive::stopRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::TestLive::stopRequest(handler);
 	// TODO more?
 }
 
 void RelativeKinematics::TestLive::abortRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::TestLive::abortRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::TestLive::abortRequest(handler);
 	setState(handler, new RelativeKinematics::Aborting);
 }
 
 void RelativeKinematics::TestLive::testCompleted(
-		ScenarioHandler& handler) {
-	ObjectControl::TestLive::testCompleted(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::TestLive::testCompleted(handler);
 	setState(handler, new RelativeKinematics::Done);
 }
 
 void RelativeKinematics::TestLive::disconnectedFromObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::TestLive::disconnectedFromObject(handler, id);
+	AbstractKinematics::TestLive::disconnectedFromObject(handler, id);
 	setState(handler, new RelativeKinematics::Aborting);
 }
 
 void RelativeKinematics::TestLive::objectDisarmed(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::TestLive::objectDisarmed(handler,id);
+	AbstractKinematics::TestLive::objectDisarmed(handler,id);
 	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
 		RelativeKinematics::TestLive::testCompleted(handler);
 	}
 }
 
 void RelativeKinematics::TestLive::objectAborting(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::TestLive::objectAborting(handler,id);
+	AbstractKinematics::TestLive::objectAborting(handler,id);
 	setState(handler, new RelativeKinematics::Aborting);
 }
 
@@ -91,42 +91,42 @@ void RelativeKinematics::TestLive::objectAborting(
  *  ******************************************************
  */
 void AbsoluteKinematics::TestLive::stopRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::TestLive::stopRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::TestLive::stopRequest(handler);
 	// TODO more?
 }
 
 void AbsoluteKinematics::TestLive::abortRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::TestLive::abortRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::TestLive::abortRequest(handler);
 	setState(handler, new AbsoluteKinematics::Aborting);
 }
 
 void AbsoluteKinematics::TestLive::testCompleted(
-		ScenarioHandler& handler) {
-	ObjectControl::TestLive::testCompleted(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::TestLive::testCompleted(handler);
 	setState(handler, new AbsoluteKinematics::Done);
 }
 
 void AbsoluteKinematics::TestLive::disconnectedFromObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::TestLive::disconnectedFromObject(handler, id);
+	AbstractKinematics::TestLive::disconnectedFromObject(handler, id);
 	setState(handler, new AbsoluteKinematics::Aborting);
 }
 
 void AbsoluteKinematics::TestLive::objectDisarmed(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::TestLive::objectDisarmed(handler,id);
+	AbstractKinematics::TestLive::objectDisarmed(handler,id);
 	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
 		AbsoluteKinematics::TestLive::testCompleted(handler);
 	}
 }
 
 void AbsoluteKinematics::TestLive::objectAborting(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::TestLive::objectAborting(handler,id);
+	AbstractKinematics::TestLive::objectAborting(handler,id);
 	setState(handler, new AbsoluteKinematics::Aborting);
 }

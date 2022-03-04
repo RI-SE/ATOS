@@ -3,18 +3,18 @@
 #include "journal.h"
 
 
-ObjectControl::Initialized::Initialized() {
+AbstractKinematics::Initialized::Initialized() {
 
 }
 
-void ObjectControl::Initialized::connectRequest(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Initialized::connectRequest(
+		ObjectControl& handler) {
 	LogMessage(LOG_LEVEL_INFO, "Handling connect request");
 	JournalRecordData(JOURNAL_RECORD_EVENT, "CONNECT received");
 }
 
-void ObjectControl::Initialized::disconnectRequest(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Initialized::disconnectRequest(
+		ObjectControl& handler) {
 	handler.clearScenario();
 }
 
@@ -24,14 +24,14 @@ void ObjectControl::Initialized::disconnectRequest(
  *  ******************************************************
  */
 void RelativeKinematics::Initialized::connectRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Initialized::connectRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Initialized::connectRequest(handler);
 	setState(handler, new RelativeKinematics::Connecting);
 }
 
 void RelativeKinematics::Initialized::disconnectRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Initialized::disconnectRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Initialized::disconnectRequest(handler);
 	setState(handler, new RelativeKinematics::Idle);
 }
 
@@ -41,14 +41,14 @@ void RelativeKinematics::Initialized::disconnectRequest(
  *  ******************************************************
  */
 void AbsoluteKinematics::Initialized::connectRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Initialized::connectRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Initialized::connectRequest(handler);
 	setState(handler, new AbsoluteKinematics::Connecting);
 }
 
 void AbsoluteKinematics::Initialized::disconnectRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Initialized::disconnectRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Initialized::disconnectRequest(handler);
 	setState(handler, new AbsoluteKinematics::Idle);
 }
 

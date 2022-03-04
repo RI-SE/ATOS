@@ -4,10 +4,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(relative_kinematics)
+project(object_control)
 
 # Define target names
-set(RELATIVE_KINEMATICS_TARGET ${PROJECT_NAME})
+set(OBJECT_CONTROL_TARGET ${PROJECT_NAME})
 
 set(COREUTILS_LIBRARY MaestroCoreUtil)
 set(ISO_22133_LIBRARY ISO22133)
@@ -24,9 +24,8 @@ get_target_property(TIME_HEADERS ${TIME_LIBRARY} INCLUDE_DIRECTORIES)
 include(GNUInstallDirs)
 
 # Create project main executable target
-add_executable(${RELATIVE_KINEMATICS_TARGET}
+add_executable(${OBJECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/scenariohandler.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/testobject.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectlistener.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/state.cpp
@@ -39,10 +38,10 @@ add_executable(${RELATIVE_KINEMATICS_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/disarming.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/armed.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/done.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/RelativeKinematicsModule.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.cpp
 )
 # Link project executable to util libraries
-target_link_libraries(${RELATIVE_KINEMATICS_TARGET}
+target_link_libraries(${OBJECT_CONTROL_TARGET} 
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
@@ -54,29 +53,25 @@ target_link_libraries(${RELATIVE_KINEMATICS_TARGET}
 )
 
 # ROS specific settings
-rosidl_target_interfaces(${RELATIVE_KINEMATICS_TARGET}
+rosidl_target_interfaces(${OBJECT_CONTROL_TARGET}
 	maestro_msgs "rosidl_typesupport_cpp"
 )
-ament_target_dependencies(${RELATIVE_KINEMATICS_TARGET}
+ament_target_dependencies(${OBJECT_CONTROL_TARGET}
   rclcpp
   std_msgs
 )
 
-target_include_directories(${RELATIVE_KINEMATICS_TARGET} PUBLIC
+target_include_directories(${OBJECT_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${OSI_HEADERS}
 	${TIME_HEADERS}
 )
 
 # Installation rules
-install(CODE "MESSAGE(STATUS \"Installing target ${RELATIVE_KINEMATICS_TARGET}\")")
-install(TARGETS ${RELATIVE_KINEMATICS_TARGET}
+install(CODE "MESSAGE(STATUS \"Installing target ${OBJECT_CONTROL_TARGET}\")")
+install(TARGETS ${OBJECT_CONTROL_TARGET}
 	RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/maestro"
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-
-# Ensure linkage is reloaded after install
-install(CODE "execute_process(COMMAND ldconfig)")
-

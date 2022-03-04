@@ -1,19 +1,20 @@
-﻿#pragma once
-
-#include "maestroTime.h"
-#include "state.hpp"
-#include "testobject.hpp"
-#include "objectlistener.hpp"
+#pragma once
 #include <map>
 #include <future>
 #include <set>
 #include <chrono>
 
+#include "module.hpp"
+#include "maestroTime.h"
+#include "state.hpp"
+#include "testobject.hpp"
+#include "objectlistener.hpp"
+
 // Forward declarations
 class ObjectControlState;
 class ObjectListener;
 
-namespace ObjectControl {
+namespace AbstractKinematics {
 	class Idle;
 	class Initialized;
 	class Connecting;
@@ -48,22 +49,23 @@ namespace AbsoluteKinematics {
 }
 
 /*!
- * \brief The ScenarioHandler class is intended as an overarching device
+ * \brief The ObjectControl class is intended as an overarching device
  *			used to control a scenario. No behaviour is implemented in it
  *			(this is left up to the State to determine), only functionality
  *			which can be called.
  */
-class ScenarioHandler {
+class ObjectControl : public Module
+{
 	friend class ObjectControlState;
-	friend class ObjectControl::Idle;
-	friend class ObjectControl::Initialized;
-	friend class ObjectControl::Connecting;
-	friend class ObjectControl::Ready;
-	friend class ObjectControl::Aborting;
-	friend class ObjectControl::Armed;
-	friend class ObjectControl::TestLive;
-	friend class ObjectControl::Disarming;
-	friend class ObjectControl::Done;
+	friend class AbstractKinematics::Idle;
+	friend class AbstractKinematics::Initialized;
+	friend class AbstractKinematics::Connecting;
+	friend class AbstractKinematics::Ready;
+	friend class AbstractKinematics::Aborting;
+	friend class AbstractKinematics::Armed;
+	friend class AbstractKinematics::TestLive;
+	friend class AbstractKinematics::Disarming;
+	friend class AbstractKinematics::Done;
 	friend class RelativeKinematics::Initialized;
 	friend class RelativeKinematics::Connecting;
 	friend class RelativeKinematics::Ready;
@@ -82,7 +84,10 @@ class ScenarioHandler {
 	friend class AbsoluteKinematics::Done;
 
 	friend class ObjectListener;
+
 public:
+	int initialize(LOG_LEVEL logLevel);
+	ObjectControl(LOG_LEVEL logLevel);
 	typedef enum {
 		RELATIVE_KINEMATICS,	//!< Scenario executed relative to immobile VUT
 		ABSOLUTE_KINEMATICS		//!< Scenario executed relative to earth-fixed point
@@ -101,8 +106,7 @@ public:
 		ActionTypeParameter_t command;
 	} TestScenarioCommandAction;
 
-	ScenarioHandler();
-	~ScenarioHandler();
+	~ObjectControl();
 
 	//! Handlers for MQ bus messages
 	//! \brief Performs actions in response to an initialization request.
@@ -165,6 +169,18 @@ public:
 	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
 
 private:
+	static inline std::string const moduleName = "ObjectControl";
+	void onInitMessage(const Empty::SharedPtr) override;
+	void onConnectMessage(const Empty::SharedPtr) override;
+	void onArmMessage(const Empty::SharedPtr) override;
+	void onStartMessage(const Empty::SharedPtr) override;
+	void onDisconnectMessage(const Empty::SharedPtr) override;
+	void onStopMessage(const Empty::SharedPtr) override;
+	void onAbortMessage(const Empty::SharedPtr) override;
+	void onAllClearMessage(const Empty::SharedPtr) override;
+	void onACCMMessage(const Accm::SharedPtr) override;
+	void onEXACMessage(const Exac::SharedPtr) override;
+
 	using clock = std::chrono::steady_clock;
 
 	ControlMode controlMode;
@@ -210,7 +226,7 @@ private:
 	//! \brief Transform the scenario trajectories relative to the trajectory of the
 	//!			specified object.
 	void transformScenarioRelativeTo(const uint32_t objectID);
-	//! \brief Upload the configuration in the ScenarioHandler to the connected objects.
+	//! \brief Upload the configuration in the ScenarioHandler to the connected obj	std::unique_ptr<ScenarioHandler> scenarioHandler;
 	void uploadObjectConfiguration(const uint32_t id);
 	//! \brief Clear loaded data and object list.
 	void clearScenario();
@@ -227,7 +243,5 @@ private:
 	void injectObjectData(const MonitorMessage& monr);
 	//! \brief TODO
 	OsiHandler::LocalObjectGroundTruth_t buildOSILocalGroundTruth(const MonitorMessage&) const;
-
-
 };
 

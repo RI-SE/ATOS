@@ -1,21 +1,21 @@
 #pragma once
 #include "positioning.h"
-#include "scenariohandler.hpp"
+#include "objectcontrol.hpp"
 #include "testobject.hpp"
 #include "state.hpp"
 #include <thread>
 
-class ScenarioHandler;
+class ObjectControl;
 class ObjectControlState;
 
 class ObjectListener
 {
 public:
-	ObjectListener(ScenarioHandler*, TestObject*);
+	ObjectListener(ObjectControl*, TestObject*);
 	~ObjectListener();
 private:
 	TestObject* obj;
-	ScenarioHandler* handler;
+	ObjectControl* handler;
 	std::thread listener;
 
 	void listen();

@@ -1,70 +1,70 @@
 #include "state.hpp"
 
-ObjectControl::Connecting::Connecting() {
+AbstractKinematics::Connecting::Connecting() {
 
 }
 
-void ObjectControl::Connecting::onEnter(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Connecting::onEnter(
+		ObjectControl& handler) {
 	handler.beginConnectionAttempt();
 }
 
-void ObjectControl::Connecting::disconnectRequest(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Connecting::disconnectRequest(
+		ObjectControl& handler) {
 	handler.abortConnectionAttempt();
 	handler.disconnectObjects();
 }
 
-void ObjectControl::Connecting::connectRequest(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Connecting::connectRequest(
+		ObjectControl& handler) {
 	// TODO
 }
 
-void ObjectControl::Connecting::abortRequest(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Connecting::abortRequest(
+		ObjectControl& handler) {
 	// TODO
 }
 
-void ObjectControl::Connecting::connectedToObject(
-		ScenarioHandler& handler,
+void AbstractKinematics::Connecting::connectedToObject(
+		ObjectControl& handler,
 		uint32_t id) {
 	if (handler.areAllObjectsIn(OBJECT_STATE_DISARMED)) {
 		this->allObjectsConnected(handler);
 	}
 }
 
-void ObjectControl::Connecting::disconnectedFromObject(
-		ScenarioHandler& handler,
+void AbstractKinematics::Connecting::disconnectedFromObject(
+		ObjectControl& handler,
 		uint32_t id) {
 	// TODO
 }
 
-void ObjectControl::Connecting::connectedToLiveObject(
-		ScenarioHandler& handler,
+void AbstractKinematics::Connecting::connectedToLiveObject(
+		ObjectControl& handler,
 		uint32_t id) {
 	// TODO
 }
 
-void ObjectControl::Connecting::connectedToArmedObject(
-		ScenarioHandler& handler,
+void AbstractKinematics::Connecting::connectedToArmedObject(
+		ObjectControl& handler,
 		uint32_t id) {
 	// TODO
 }
 
-void ObjectControl::Connecting::objectArmed(
-		ScenarioHandler &handler,
+void AbstractKinematics::Connecting::objectArmed(
+		ObjectControl& handler,
 		uint32_t id) {
 	// TODO
 }
 
-void ObjectControl::Connecting::objectAborting(
-		ScenarioHandler &handler,
+void AbstractKinematics::Connecting::objectAborting(
+		ObjectControl& handler,
 		uint32_t id) {
 	// TODO
 }
 
-void ObjectControl::Connecting::allObjectsConnected(
-		ScenarioHandler& handler) {
+void AbstractKinematics::Connecting::allObjectsConnected(
+		ObjectControl& handler) {
 	handler.startListeners();
 	iCommSend(COMM_OBJECTS_CONNECTED, nullptr, 0);
 }
@@ -75,66 +75,66 @@ void ObjectControl::Connecting::allObjectsConnected(
  *  ******************************************************
  */
 void RelativeKinematics::Connecting::disconnectRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Connecting::disconnectRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Connecting::disconnectRequest(handler);
 	setState(handler, new RelativeKinematics::Idle);
 }
 
 void RelativeKinematics::Connecting::connectRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Connecting::connectRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Connecting::connectRequest(handler);
 }
 
 void RelativeKinematics::Connecting::abortRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Connecting::abortRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Connecting::abortRequest(handler);
 	setState(handler, new RelativeKinematics::Aborting);
 }
 
 
 void RelativeKinematics::Connecting::connectedToObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Connecting::connectedToObject(handler, id);
+	AbstractKinematics::Connecting::connectedToObject(handler, id);
 }
 
 void RelativeKinematics::Connecting::disconnectedFromObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Connecting::disconnectedFromObject(handler, id);
+	AbstractKinematics::Connecting::disconnectedFromObject(handler, id);
 }
 
 void RelativeKinematics::Connecting::connectedToLiveObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Connecting::connectedToLiveObject(handler, id);
+	AbstractKinematics::Connecting::connectedToLiveObject(handler, id);
 	setState(handler, new RelativeKinematics::Aborting);
 }
 
 void RelativeKinematics::Connecting::connectedToArmedObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Connecting::connectedToArmedObject(handler, id);
+	AbstractKinematics::Connecting::connectedToArmedObject(handler, id);
 	setState(handler, new RelativeKinematics::Disarming);
 }
 
 void RelativeKinematics::Connecting::allObjectsConnected(
-		ScenarioHandler& handler) {
-	ObjectControl::Connecting::allObjectsConnected(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Connecting::allObjectsConnected(handler);
 	setState(handler, new RelativeKinematics::Ready);
 }
 
 void RelativeKinematics::Connecting::objectArmed(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Connecting::objectArmed(handler, id);
+	AbstractKinematics::Connecting::objectArmed(handler, id);
 	RelativeKinematics::Connecting::connectedToArmedObject(handler, id);
 }
 
 void RelativeKinematics::Connecting::objectAborting(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Connecting::objectAborting(handler, id);
+	AbstractKinematics::Connecting::objectAborting(handler, id);
 	RelativeKinematics::Connecting::connectedToLiveObject(handler, id);
 }
 
@@ -144,65 +144,65 @@ void RelativeKinematics::Connecting::objectAborting(
  *  ******************************************************
  */
 void AbsoluteKinematics::Connecting::disconnectRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Connecting::disconnectRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Connecting::disconnectRequest(handler);
 	setState(handler, new AbsoluteKinematics::Idle);
 }
 
 void AbsoluteKinematics::Connecting::connectRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Connecting::connectRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Connecting::connectRequest(handler);
 }
 
 void AbsoluteKinematics::Connecting::abortRequest(
-		ScenarioHandler& handler) {
-	ObjectControl::Connecting::abortRequest(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Connecting::abortRequest(handler);
 	setState(handler, new AbsoluteKinematics::Aborting);
 }
 
 
 void AbsoluteKinematics::Connecting::connectedToObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Connecting::connectedToObject(handler, id);
+	AbstractKinematics::Connecting::connectedToObject(handler, id);
 }
 
 void AbsoluteKinematics::Connecting::disconnectedFromObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Connecting::disconnectedFromObject(handler, id);
+	AbstractKinematics::Connecting::disconnectedFromObject(handler, id);
 }
 
 void AbsoluteKinematics::Connecting::connectedToLiveObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Connecting::connectedToLiveObject(handler, id);
+	AbstractKinematics::Connecting::connectedToLiveObject(handler, id);
 	setState(handler, new AbsoluteKinematics::Aborting);
 }
 
 void AbsoluteKinematics::Connecting::connectedToArmedObject(
-		ScenarioHandler& handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Connecting::connectedToArmedObject(handler, id);
+	AbstractKinematics::Connecting::connectedToArmedObject(handler, id);
 	setState(handler, new AbsoluteKinematics::Disarming);
 }
 
 void AbsoluteKinematics::Connecting::allObjectsConnected(
-		ScenarioHandler& handler) {
-	ObjectControl::Connecting::allObjectsConnected(handler);
+		ObjectControl& handler) {
+	AbstractKinematics::Connecting::allObjectsConnected(handler);
 	setState(handler, new AbsoluteKinematics::Ready);
 }
 
 void AbsoluteKinematics::Connecting::objectArmed(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Connecting::objectArmed(handler, id);
+	AbstractKinematics::Connecting::objectArmed(handler, id);
 	AbsoluteKinematics::Connecting::connectedToArmedObject(handler, id);
 }
 
 void AbsoluteKinematics::Connecting::objectAborting(
-		ScenarioHandler &handler,
+		ObjectControl& handler,
 		uint32_t id) {
-	ObjectControl::Connecting::objectAborting(handler, id);
+	AbstractKinematics::Connecting::objectAborting(handler, id);
 	AbsoluteKinematics::Connecting::connectedToLiveObject(handler, id);
 }
