@@ -20,7 +20,7 @@ using std_msgs::msg::Empty;
 using std_msgs::msg::String;
 using std_msgs::msg::UInt8;
 
-ObjectControl::ObjectControl(LOG_LEVEL logLevel) : Module(ObjectControl::module_name){
+ObjectControl::ObjectControl(LOG_LEVEL logLevel) : Module(ObjectControl::moduleName){
 	this->initialize(logLevel);
 	int queueSize=0;
 	
@@ -61,11 +61,11 @@ int ObjectControl::initialize(const LOG_LEVEL logLevel) {
 	int retval = 0;
 
 	// Initialize log
-	LogInit(module_name.c_str(), logLevel);
-	LogMessage(LOG_LEVEL_INFO, "%s task running with PID: %d",module_name.c_str(), getpid());
+	LogInit(get_name(), logLevel);
+	LogMessage(LOG_LEVEL_INFO, "%s task running with PID: %d",get_name(), getpid());
 
 	// Create test journal
-	if (JournalInit(module_name.c_str()) == -1) {
+	if (JournalInit(get_name()) == -1) {
 		retval = -1;
 		LogMessage(LOG_LEVEL_ERROR, "Unable to create test journal");
 	}
@@ -121,7 +121,7 @@ void ObjectControl::handleExecuteActionCommand(
 
 void ObjectControl::onInitMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_INIT;
-	auto f_try = [&]() { this->state->initializeRequest(*this) };
+	auto f_try = [&]() { this->state->initializeRequest(*this); };
 	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(cmd,f_try,f_catch);
 }
