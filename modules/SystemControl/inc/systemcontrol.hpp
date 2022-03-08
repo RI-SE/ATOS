@@ -39,7 +39,7 @@ public:
 	void sendUnsolicitedData(TimeType * GPSTime, LOG_LEVEL logLevel);
 
 private:
-	static inline std::string const module_name = "SystemControl";
+	static inline std::string const module_name = "system_control";
 	//const std::string module_name = std::string("SystemControl");
 	/* constants and datatypes */
 	const int64_t QUEUE_EMPTY_POLL_PERIOD_NS = 10000000;

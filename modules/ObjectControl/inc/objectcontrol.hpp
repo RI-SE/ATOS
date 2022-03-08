@@ -169,7 +169,7 @@ public:
 	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
 
 private:
-	static inline std::string const moduleName = "ObjectControl";
+	static inline std::string const moduleName = "object_control";
 	void onInitMessage(const Empty::SharedPtr) override;
 	void onConnectMessage(const Empty::SharedPtr) override;
 	void onArmMessage(const Empty::SharedPtr) override;
