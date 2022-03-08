@@ -6,7 +6,7 @@ AbstractKinematics::Done::Done() {
 
 void AbstractKinematics::Done::onEnter(
 		ObjectControl& handler) {
-	LogMessage(LOG_LEVEL_WARNING, "Nothing to be done for postprocessing"); // TODO
+	RCLCPP_WARN(handler.get_logger(), "Nothing to be done for postprocessing"); // TODO
 	iCommSend(COMM_ABORT, nullptr, 0); // TODO temporary to trigger logging etc.
 	handler.state->postProcessingCompleted(handler);
 }

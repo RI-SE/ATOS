@@ -3,15 +3,16 @@
 #include "objectcontrol.hpp"
 #include "testobject.hpp"
 #include "state.hpp"
+#include "loggable.hpp"
 #include <thread>
 
 class ObjectControl;
 class ObjectControlState;
 
-class ObjectListener
+class ObjectListener : public Loggable
 {
 public:
-	ObjectListener(ObjectControl*, TestObject*);
+	ObjectListener(ObjectControl*, TestObject*, rclcpp::Logger);
 	~ObjectListener();
 private:
 	TestObject* obj;

@@ -4,6 +4,7 @@
 #include "util.h"
 #include "type.h"
 #include <stdexcept>
+#include <rclcpp/logging.hpp>
 
 class ObjectControl;
 

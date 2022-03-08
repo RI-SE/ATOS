@@ -9,7 +9,7 @@ AbstractKinematics::Initialized::Initialized() {
 
 void AbstractKinematics::Initialized::connectRequest(
 		ObjectControl& handler) {
-	LogMessage(LOG_LEVEL_INFO, "Handling connect request");
+	RCLCPP_INFO(handler.get_logger(), "Handling connect request");
 	JournalRecordData(JOURNAL_RECORD_EVENT, "CONNECT received");
 }
 

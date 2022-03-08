@@ -13,7 +13,7 @@ void AbstractKinematics::Idle::onEnter(
 
 void AbstractKinematics::Idle::initializeRequest(
 		ObjectControl& handler) {
-	LogMessage(LOG_LEVEL_INFO, "Handling initialization request");
+	RCLCPP_INFO(handler.get_logger(), "Handling initialization request");
 	JournalRecordData(JOURNAL_RECORD_EVENT, "INIT received");
 	handler.loadScenario();
 	try {
@@ -21,10 +21,10 @@ void AbstractKinematics::Idle::initializeRequest(
 		handler.transformScenarioRelativeTo(anchorID);
 		handler.controlMode = ObjectControl::RELATIVE_KINEMATICS;
 		setState(handler, new RelativeKinematics::Initialized);
-		LogMessage(LOG_LEVEL_INFO, "Relative control mode enabled");
+		RCLCPP_INFO(handler.get_logger(), "Relative control mode enabled");
 	} catch (std::invalid_argument) {
 		handler.controlMode = ObjectControl::ABSOLUTE_KINEMATICS;
 		setState(handler, new AbsoluteKinematics::Initialized);
-		LogMessage(LOG_LEVEL_INFO, "Absolute control mode enabled");
+		RCLCPP_INFO(handler.get_logger(), "Absolute control mode enabled");
 	}
 }

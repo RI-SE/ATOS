@@ -86,8 +86,8 @@ class ObjectControl : public Module
 	friend class ObjectListener;
 
 public:
-	int initialize(LOG_LEVEL logLevel);
-	ObjectControl(LOG_LEVEL logLevel);
+	int initialize();
+	ObjectControl();
 	typedef enum {
 		RELATIVE_KINEMATICS,	//!< Scenario executed relative to immobile VUT
 		ABSOLUTE_KINEMATICS		//!< Scenario executed relative to earth-fixed point

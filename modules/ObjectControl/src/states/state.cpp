@@ -10,7 +10,7 @@ void ObjectControlState::setState(
 	// TODO mutex on state modification
 	// Before replacing state, execute any exit behaviour
 	handler.state->onExit(handler);
-	LogMessage(LOG_LEVEL_INFO, "Transitioning to state %s", type(*st).c_str());
+	RCLCPP_INFO(handler.get_logger(), "Transitioning to state %s", type(*st).c_str());
 	// Store state in a temporary variable to avoid handler.state being null at any point
 	ObjectControlState* temp = handler.state;
 	handler.state = st;
