@@ -109,6 +109,9 @@ set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
 set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/module.hpp
 )
+set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/loggable.hpp
+)
 
 # Tests
 add_executable(test_relativetrajectory tests/test_relativetrajectory.cpp)
