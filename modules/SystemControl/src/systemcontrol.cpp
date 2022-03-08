@@ -125,8 +125,8 @@ bool SystemControl::shouldExit(){
 	return iExit;
 }
 
-void SystemControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
-	LogInit("SystemControl", logLevel);
+void SystemControl::initialize(LOG_LEVEL logLevel){
+	LogInit(get_name(), logLevel);
 	RCLCPP_INFO(get_logger(), "System control task running with PID: %i", getpid());
 
 	// Initialise data dictionary
@@ -163,7 +163,7 @@ void SystemControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logL
 }
 
 
-void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+void SystemControl::receiveUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 	if (SystemControlState == SERVER_STATE_ERROR) {
 		this->abortPub->publish(Empty());
 		return;
@@ -393,7 +393,7 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 	SystemControlGetStatusMessage("", 0);
 }
 
-void SystemControl::sendUnsolicitedData(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+void SystemControl::sendUnsolicitedData(TimeType * GPSTime, LOG_LEVEL logLevel){
 		TimeSetToCurrentSystemTime(&tvTime);
 
 	if (timercmp(&tvTime, &nextRVSSSendTime, >)) {
@@ -409,7 +409,7 @@ void SystemControl::sendUnsolicitedData(TimeType * GPSTime, GSDType * GSD, LOG_L
 			}
 
 			if (RVSSConfigU32 & RVSS_MAESTRO_CHANNEL) {
-				SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32, GSD,
+				SystemControlBuildRVSSMaestroChannelMessage(RVSSData, &RVSSMessageLengthU32,
 															SystemControlState, 0);
 				UtilSendUDPData((uint8_t*) module_name.c_str(), &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
 								RVSSMessageLengthU32, 0);
@@ -431,7 +431,7 @@ void SystemControl::sendUnsolicitedData(TimeType * GPSTime, GSDType * GSD, LOG_L
 	}
 }
 
-void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
+void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 	switch (SystemControlCommand) {
 		// can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
 	case Idle_0:
@@ -485,7 +485,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 		if (CurrentInputArgCount == CommandArgCount) {
 			SystemControlCommand = Idle_0;
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-			SystemControlGetServerParameter(GSD, SystemControlArgument[0], ControlResponseBuffer,
+			SystemControlGetServerParameter(SystemControlArgument[0], ControlResponseBuffer,
 											SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE, 0);
 			SystemControlSendControlResponse(strlen(ControlResponseBuffer) >
 												0 ? SYSTEM_CONTROL_RESPONSE_CODE_OK :
@@ -502,7 +502,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 		if (CurrentInputArgCount == CommandArgCount) {
 			SystemControlCommand = Idle_0;
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
-			SystemControlSetServerParameter(GSD, SystemControlArgument[0], SystemControlArgument[1], 1);
+			SystemControlSetServerParameter(SystemControlArgument[0], SystemControlArgument[1], 1);
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:",
 												ControlResponseBuffer, 0, &ClientSocket, 0);
 			//Send COMM_DATA_DICT to notify to update data from DataDictionary
@@ -1150,7 +1150,6 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 		try{
 			this->exitPub->publish(Empty());
 			iExit = 1;
-			GSD->ExitU8 = 1;
 			usleep(1000000);
 			SystemControlCommand = Idle_0;
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -1709,7 +1708,7 @@ char SystemControl::SystemControlVerifyHostAddress(char *addr) {
 }
 
 
-I32 SystemControl::SystemControlGetServerParameter(GSDType * GSD, char * ParameterName, char * ReturnValue, U32 BufferLength,
+I32 SystemControl::SystemControlGetServerParameter(char * ParameterName, char * ReturnValue, U32 BufferLength,
 									U8 Debug) {
 	bzero(ReturnValue, 20);
 	dbl ValueDbl = 0;
@@ -1810,7 +1809,7 @@ I32 SystemControl::SystemControlGetServerParameter(GSDType * GSD, char * Paramet
 
 
 
-I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, char * parameterName, char * newValue, U8 debug) {
+I32 SystemControl::SystemControlSetServerParameter(char * parameterName, char * newValue, U8 debug) {
 
 	ReadWriteAccess_t result = PARAMETER_NOTFOUND;
 	U32 object_transmitter_ids[MAX_OBJECTS];
@@ -2575,36 +2574,6 @@ See the architecture document for the protocol of RVSS.
 */
 I32 SystemControl::SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, TimeType * GPSTime,
 											 U8 Debug) {
-	// TODO add RVSS buffer length as parameter or even better replace with std vector
-	//I32 MessageIndex = 0, i;
-	//char *p;
-	//
-	//RVSSTimeType RVSSTimeData;
-	//
-	//RVSSTimeData.MessageLengthU32 = SwapU32((U32) sizeof (RVSSTimeType) - 4);
-	//RVSSTimeData.ChannelCodeU32 = SwapU32((U32) RVSS_TIME_CHANNEL);
-	//RVSSTimeData.YearU16 = SwapU16(GPSTime->YearU16);
-	//RVSSTimeData.MonthU8 = GPSTime->MonthU8;
-	//RVSSTimeData.DayU8 = GPSTime->DayU8;
-	//RVSSTimeData.HourU8 = GPSTime->HourU8;
-	//RVSSTimeData.MinuteU8 = GPSTime->MinuteU8;
-	//RVSSTimeData.SecondU8 = GPSTime->SecondU8;
-	//RVSSTimeData.MillisecondU16 = SwapU16(TimeControlGetMillisecond(GPSTime));
-	//RVSSTimeData.SecondCounterU32 = SwapU32(GPSTime->SecondCounterU32);
-	//RVSSTimeData.GPSMillisecondsU64 =
-	//SwapU64(GPSTime->GPSMillisecondsU64 + (U64) TimeControlGetMillisecond(GPSTime));
-	//RVSSTimeData.GPSMinutesU32 = SwapU32(GPSTime->GPSMinutesU32);
-	//RVSSTimeData.GPSWeekU16 = SwapU16(GPSTime->GPSWeekU16);
-	//RVSSTimeData.GPSSecondsOfWeekU32 = SwapU32(GPSTime->GPSSecondsOfWeekU32);
-	//RVSSTimeData.GPSSecondsOfDayU32 = SwapU32(GPSTime->GPSSecondsOfDayU32);
-	//RVSSTimeData.FixQualityU8 = GPSTime->FixQualityU8;
-	//RVSSTimeData.NSatellitesU8 = GPSTime->NSatellitesU8;
-	//
-	//p = (char *) & RVSSTimeData;
-	//for (i = 0; i < sizeof (RVSSTimeType); i++)
-	//	*(RVSSData + i) = *p++;
-	//*RVSSDataLengthU32 = i;
-
 	struct timeval systemTime;
 	time_t ttime;
 	struct tm* ttm;
@@ -2626,16 +2595,15 @@ I32 SystemControl::SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32
 
 
 /*
-SystemControlBuildRVSSMaestroChannelMessage builds a message from OBCState in *GSD and SysCtrlState. The message is stored in *RVSSData.
+SystemControlBuildRVSSMaestroChannelMessage builds a message from OBCState in DataDictionary and SysCtrlState. The message is stored in *RVSSData.
 See the architecture document for the protocol of RVSS.
 
 - *RVSSData the buffer the message
 - *RVSSDataLengthU32 the length of the message
-- *GSD the Global System Data
 - U8 SysCtrlState the SystemControl state (SystemControlState)
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
-I32 SystemControl::SystemControlBuildRVSSMaestroChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
+I32 SystemControl::SystemControlBuildRVSSMaestroChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32,
 												U8 SysCtrlState, U8 Debug) {
 	I32 MessageIndex = 0, i;
 	char *p;
