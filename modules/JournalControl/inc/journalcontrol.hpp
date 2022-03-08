@@ -31,8 +31,8 @@ extern "C" {
 class JournalControl : public Module
 {
 public:
-	explicit JournalControl(LOG_LEVEL logLevel);
-	void initialize(LOG_LEVEL logLevel);
+	explicit JournalControl();
+	void initialize();
 private:
 	static inline std::string const moduleName = "journal_control";
 

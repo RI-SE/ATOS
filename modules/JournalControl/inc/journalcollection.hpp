@@ -6,14 +6,16 @@
 #include <string>
 #include <vector>
 #include "journal.hpp"
+#include "loggable.hpp"
 
 // Add a C++20 type
 namespace std::chrono {
 	typedef duration<int64_t, ratio<60*60*24>> days;
 }
 
-class JournalCollection : public std::unordered_set<Journal> {
+class JournalCollection : public std::unordered_set<Journal>, public Loggable {
 public:
+	JournalCollection(rclcpp::Logger log) : Loggable(log) {}
 	void placeStartBookmarks();
 	void placeStopBookmarks();
 	void insertNonBookmarked();
