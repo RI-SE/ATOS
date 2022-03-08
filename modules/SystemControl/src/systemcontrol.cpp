@@ -70,16 +70,16 @@ void SystemControl::onFailureMessage(const UInt8::SharedPtr msg){
 		if (failedCommand == COMM_INIT && PreviousSystemControlCommand == InitializeScenario_0) {
 			SystemControlState = SERVER_STATE_IDLE;
 			SystemControlCommand = Idle_0;
-			LogMessage(LOG_LEVEL_INFO, "Initialization failed");
+			RCLCPP_INFO(get_logger(), "Initialization failed");
 			// TODO: report to user?
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Unhandled FAILURE (command: %u) reply in state %s",
+			RCLCPP_ERROR(get_logger(), "Unhandled FAILURE (command: %u) reply in state %s",
 						msg->data, SystemControlStatesArr[SystemControlState]);
 		}
 	}
 	else {
-	LogMessage(LOG_LEVEL_WARNING, "Received unexpected FAILURE (command: %u) reply in state %s",
+	RCLCPP_WARN(get_logger(), "Received unexpected FAILURE (command: %u) reply in state %s",
 				msg->data, SystemControlStatesArr[SystemControlState]);
 	// TODO: React more?
 	}
@@ -91,30 +91,30 @@ void SystemControl::onGetStatusResponse(const String::SharedPtr msg){
 
 void SystemControl::onBackToStartResponse(const Int8::SharedPtr msg){
 	if(msg->data == BTS_FAIL){
-		LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", msg->data);
+		RCLCPP_DEBUG(get_logger(), "Back-to-start result: %s", msg->data);
 		SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
 											"0", 1,
 											&ClientSocket, 0);		//TODO: Send SMCP response the right way(?)
 	}
 	else if(msg->data == BTS_PASS){
-		LogMessage(LOG_LEVEL_DEBUG, "Back-to-start result: %s", msg->data);
+		RCLCPP_DEBUG(get_logger(), "Back-to-start result: %s", msg->data);
 		memset(ControlResponseBuffer, 0, sizeof (ControlResponseBuffer));
 		SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "BTS:",
 											"1", 1,
 											&ClientSocket, 0);
 	}
 	else{
-		LogMessage(LOG_LEVEL_ERROR, "Cannot parse COMM_BACKTOSTART_RESPONSE message.");
+		RCLCPP_ERROR(get_logger(), "Cannot parse COMM_BACKTOSTART_RESPONSE message.");
 	}
 }
 
 void SystemControl::signalHandler(int signo) {
 	if (signo == SIGINT) {
-		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
+		RCLCPP_WARN(get_logger(), "Caught keyboard interrupt");
 		iExit = 1;
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
+		RCLCPP_ERROR(get_logger(), "Caught unhandled signal");
 	}
 }
 
@@ -127,24 +127,24 @@ bool SystemControl::shouldExit(){
 
 void SystemControl::initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 	LogInit("SystemControl", logLevel);
-	LogMessage(LOG_LEVEL_INFO, "System control task running with PID: %i", getpid());
+	RCLCPP_INFO(get_logger(), "System control task running with PID: %i", getpid());
 
 	// Initialise data dictionary
-	LogMessage(LOG_LEVEL_INFO, "Initializing data dictionary");
+	RCLCPP_INFO(get_logger(), "Initializing data dictionary");
 	ReadWriteAccess_t dataDictOperationResult = DataDictionaryConstructor();
 	if (dataDictOperationResult != READ_WRITE_OK) {
 		DataDictionaryDestructor();
 		util_error("Unable to initialize shared memory space");
 	}
 	else {
-		LogMessage(LOG_LEVEL_INFO, "Data dictionary succesfully initialized");
+		RCLCPP_INFO(get_logger(), "Data dictionary succesfully initialized");
 	}
 
 	DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
-	LogMessage(LOG_LEVEL_INFO, "RVSSConfigU32 = %d", RVSSConfigU32);
+	RCLCPP_INFO(get_logger(), "RVSSConfigU32 = %d", RVSSConfigU32);
 
 	DataDictionaryGetRVSSRateU8(&RVSSRateU8);
-	LogMessage(LOG_LEVEL_INFO, "Real-time variable subscription service rate set to %u Hz", RVSSRateU8);
+	RCLCPP_INFO(get_logger(), "Real-time variable subscription service rate set to %u Hz", RVSSRateU8);
 
 	if (ModeU8 == 0) {
 
@@ -184,7 +184,7 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 				ClientResult = SystemControlInitServer(&ClientSocket, &ServerHandle, &ip_addr);
 				bzero(UserControlIPchar, SMALL_BUFFER_SIZE_20);
 				sprintf((char* )UserControlIPchar, "%s", inet_ntoa(ip_addr));
-				LogMessage(LOG_LEVEL_INFO, "UserControl IP address is %s", inet_ntoa(ip_addr));
+				RCLCPP_INFO(get_logger(), "UserControl IP address is %s", inet_ntoa(ip_addr));
 				SystemControlCreateProcessChannel(UserControlIPchar, SYSTEM_CONTROL_PROCESS_PORT,
 													&RVSSChannelSocket, &RVSSChannelAddr);
 
@@ -207,7 +207,7 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 
 		if (ClientResult <= -1) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-				LogMessage(LOG_LEVEL_ERROR, "Failed to receive from command socket");
+				RCLCPP_ERROR(get_logger(), "Failed to receive from command socket");
 				try{
 					this->abortPub->publish(Empty());
 				}
@@ -217,7 +217,7 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 			}
 		}
 		else if (ClientResult == 0) {
-			LogMessage(LOG_LEVEL_INFO, "Client closed connection");
+			RCLCPP_INFO(get_logger(), "Client closed connection");
 			close(ClientSocket);
 			ClientSocket = -1;
 			if (USE_LOCAL_USER_CONTROL == 0) {
@@ -259,14 +259,14 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 				UtilDecodeHTTPRequestHeader((char*)pcBuffer, &HTTPHeader);
 
 				if (HTTPHeader.Host[0] == '\0') {
-					LogMessage(LOG_LEVEL_INFO, "Unspecified host in request <%s>", pcBuffer);
+					RCLCPP_INFO(get_logger(), "Unspecified host in request <%s>", pcBuffer);
 				}
 				else if (SystemControlVerifyHostAddress(HTTPHeader.Host)) {
 					// Find opening parenthesis
 					StartPtr = strchr(CmdPtr, '(');
 					// If there was no opening or closing parenthesis, the format is not correct
 					if (StartPtr == NULL || strchr(StartPtr, ')') == NULL)
-						LogMessage(LOG_LEVEL_WARNING,
+						RCLCPP_WARN(get_logger(),
 									"Received command not conforming to MSCP standards");
 					else {
 						StartPtr++;
@@ -297,7 +297,7 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 									if (ClosingQuotationMarkPtr == NULL) {
 										CmdPtr = NULL;
 										StopPtr = NULL;
-										LogMessage(LOG_LEVEL_WARNING,
+										RCLCPP_WARN(get_logger(),
 													"Received MSCP command with single quotation mark");
 										break;
 									}
@@ -320,26 +320,26 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 
 						if (CmdPtr != NULL) {
 							SystemControlFindCommand(CmdPtr, &SystemControlCommand, &CommandArgCount);
-							LogMessage(LOG_LEVEL_DEBUG, "Received MSCP command %s", SystemControlCommand);
+							RCLCPP_DEBUG(get_logger(), "Received MSCP command %s", SystemControlCommand);
 						}
 						else
-							LogMessage(LOG_LEVEL_WARNING, "Invalid MSCP command received");
+							RCLCPP_WARN(get_logger(), "Invalid MSCP command received");
 					}
 				}
 				else {
-					LogMessage(LOG_LEVEL_INFO,
+					RCLCPP_INFO(get_logger(),
 								"Request specified host <%s> not among known local addresses",
 								HTTPHeader.Host);
 				}
 			}
 			else {
-				LogMessage(LOG_LEVEL_WARNING,
+				RCLCPP_WARN(get_logger(),
 							"Received badly formatted HTTP request: <%s>, must contain \"POST\" and \"\\r\\n\\r\\n\"",
 							pcBuffer);
 			}
 		}
 		else {
-			LogMessage(LOG_LEVEL_WARNING, "Ignored received TCP message which was too large to handle");
+			RCLCPP_WARN(get_logger(), "Ignored received TCP message which was too large to handle");
 		}
 
 	}
@@ -354,7 +354,7 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 
 
 	if (DataDictionaryGetOBCState(&objectControlState) != READ_OK) {
-		LogMessage(LOG_LEVEL_ERROR, "Error fetching object control state");
+		RCLCPP_ERROR(get_logger(), "Error fetching object control state");
 		// TODO more?
 	}
 
@@ -363,7 +363,7 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 			SystemControlCommand = SystemControlCommand;
 		}
 		else if (SystemControlCommand == GetServerStatus_0) {
-			LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s, PreviousCommand: %s",
+			RCLCPP_INFO(get_logger(), "State: %s, OBCState: %s, PreviousCommand: %s",
 						SystemControlStatesArr[SystemControlState],
 						SystemControlOBCStatesArr[objectControlState],
 						SystemControlCommandsArr[PreviousSystemControlCommand]);
@@ -375,7 +375,7 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 			SystemControlCommand = PreviousSystemControlCommand;
 		}
 		else if (SystemControlCommand != PreviousSystemControlCommand) {
-			LogMessage(LOG_LEVEL_WARNING,
+			RCLCPP_WARN(get_logger(),
 						"Command not allowed, SystemControl is busy in state %s, PreviousCommand: %s",
 						SystemControlStatesArr[SystemControlState],
 						SystemControlCommandsArr[PreviousSystemControlCommand]);
@@ -439,7 +439,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 	case GetServerStatus_0:
 		DataDictionaryGetOBCState(&objectControlState);
 		if (SystemControlCommand != PreviousSystemControlCommand) {
-			LogMessage(LOG_LEVEL_INFO, "State: %s, OBCState: %s",
+			RCLCPP_INFO(get_logger(), "State: %s, OBCState: %s",
 						SystemControlStatesArr[SystemControlState],
 						SystemControlOBCStatesArr[objectControlState]);
 		}
@@ -448,7 +448,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 		ControlResponseBuffer[0] = SystemControlState;
 		ControlResponseBuffer[1] = objectControlState;
 		appendSysInfoString(ControlResponseBuffer + 2, sizeof (ControlResponseBuffer) - 2);
-		LogMessage(LOG_LEVEL_DEBUG, "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
+		RCLCPP_DEBUG(get_logger(), "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
 		SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
 											ControlResponseBuffer, strlen(ControlResponseBuffer),
 											&ClientSocket, 0);
@@ -494,7 +494,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 												&ClientSocket, 0);
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetServerParameter(Name)!");
+			RCLCPP_ERROR(get_logger(), "Wrong parameter count in GetServerParameter(Name)!");
 			SystemControlCommand = Idle_0;
 		}
 		break;
@@ -509,7 +509,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 			this->dataDictPub->publish(Empty());
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in SetServerParameter(Name, Value)!");
+			RCLCPP_ERROR(get_logger(), "Wrong parameter count in SetServerParameter(Name, Value)!");
 			SystemControlCommand = Idle_0;
 		}
 		break;
@@ -523,7 +523,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in CheckFFExist(path)!");
+			RCLCPP_ERROR(get_logger(), "Wrong parameter count in CheckFFExist(path)!");
 			SystemControlCommand = Idle_0;
 		}
 		break;
@@ -537,12 +537,12 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in CreateDirectory(path)!");
+			RCLCPP_ERROR(get_logger(), "Wrong parameter count in CreateDirectory(path)!");
 			SystemControlCommand = Idle_0;
 		}
 		break;
 	case GetRootDirectoryContent_0:
-		LogMessage(LOG_LEVEL_INFO, "GetRootDirectory called: defaulting to GetDirectoryContent");
+		RCLCPP_INFO(get_logger(), "GetRootDirectory called: defaulting to GetDirectoryContent");
 	case GetDirectoryContent_1:
 		if (CurrentInputArgCount == CommandArgCount) {
 			SystemControlCommand = Idle_0;
@@ -563,7 +563,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 			}
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR,
+			RCLCPP_ERROR(get_logger(),
 						"Wrong parameter count in GetDirectoryContent(path)! got:%d, expected:%d",
 						CurrentInputArgCount, CommandArgCount);
 			SystemControlCommand = Idle_0;
@@ -580,7 +580,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 												ControlResponseBuffer, 1, &ClientSocket, 0);
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR,
+			RCLCPP_ERROR(get_logger(),
 						"Wrong parameter count in DeleteTrajectory(name)! got:%d, expected:%d",
 						CurrentInputArgCount, CommandArgCount);
 			SystemControlCommand = Idle_0;
@@ -596,7 +596,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 												ControlResponseBuffer, 1, &ClientSocket, 0);
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR,
+			RCLCPP_ERROR(get_logger(),
 						"Wrong parameter count in DeleteGeofence(name)! got:%d, expected:%d",
 						CurrentInputArgCount, CommandArgCount);
 			SystemControlCommand = Idle_0;
@@ -613,7 +613,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 												ControlResponseBuffer, 1, &ClientSocket, 0);
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR,
+			RCLCPP_ERROR(get_logger(),
 						"Wrong parameter count in DeleteFileDirectory(path)! got:%d, expected:%d",
 						CurrentInputArgCount, CommandArgCount);
 			SystemControlCommand = Idle_0;
@@ -628,7 +628,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 												ControlResponseBuffer, 1, &ClientSocket, 0);
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR,
+			RCLCPP_ERROR(get_logger(),
 						"Wrong parameter count in ClearTrajectories()! got:%d, expected:%d",
 						CurrentInputArgCount, CommandArgCount);
 			SystemControlCommand = Idle_0;
@@ -643,7 +643,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 												ControlResponseBuffer, 1, &ClientSocket, 0);
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR,
+			RCLCPP_ERROR(get_logger(),
 						"Wrong parameter count in ClearGeofences()! got:%d, expected:%d",
 						CurrentInputArgCount, CommandArgCount);
 			SystemControlCommand = Idle_0;
@@ -658,7 +658,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 												ControlResponseBuffer, 1, &ClientSocket, 0);
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR,
+			RCLCPP_ERROR(get_logger(),
 						"Wrong parameter count in ClearObjects()! got:%d, expected:%d",
 						CurrentInputArgCount, CommandArgCount);
 			SystemControlCommand = Idle_0;
@@ -684,7 +684,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
+			RCLCPP_ERROR(get_logger(), "Wrong parameter count in GetDirectoryContent(path)!");
 			SystemControlCommand = Idle_0;
 		}
 		break;
@@ -752,7 +752,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 			}
 			SystemControlCommand = Idle_0;
 		} else {
-			LogMessage(LOG_LEVEL_ERROR, "Wrong parameter count in GetDirectoryContent(path)!");
+			RCLCPP_ERROR(get_logger(), "Wrong parameter count in GetDirectoryContent(path)!");
 			SystemControlCommand = Idle_0;
 		}
 		break;
@@ -766,23 +766,23 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 									ControlResponseBuffer, RxFilePath, 0);
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "UploadFile:",
 												ControlResponseBuffer, 1, &ClientSocket, 0);
-			LogMessage(LOG_LEVEL_DEBUG, "UploadFile filelength: %s", SystemControlArgument[1]);
+			RCLCPP_DEBUG(get_logger(), "UploadFile filelength: %s", SystemControlArgument[1]);
 			if (ControlResponseBuffer[0] == SERVER_PREPARED_BIG_PACKET_SIZE)	//Server is ready to receive data
 			{
-				LogMessage(LOG_LEVEL_INFO, "Receiving file: %s", SystemControlArgument[0]);
+				RCLCPP_INFO(get_logger(), "Receiving file: %s", SystemControlArgument[0]);
 				SystemControlReceiveRxData(&ClientSocket, RxFilePath,
 											SystemControlArgument[1], STR_SYSTEM_CONTROL_RX_PACKET_SIZE,
 											ControlResponseBuffer, 0);
 			}
 			else if (ControlResponseBuffer[0] == PATH_INVALID_MISSING) {
-				LogMessage(LOG_LEVEL_INFO, "Failed receiving file: %s", SystemControlArgument[0]);
+				RCLCPP_INFO(get_logger(), "Failed receiving file: %s", SystemControlArgument[0]);
 				SystemControlReceiveRxData(&ClientSocket, RxFilePath, SystemControlArgument[1],
 											STR_SYSTEM_CONTROL_RX_PACKET_SIZE, ControlResponseBuffer, 0);
 				SystemControlDeleteFileDirectory(RxFilePath, ControlResponseBuffer, 0);
 				ControlResponseBuffer[0] = PATH_INVALID_MISSING;
 			}
 			else {
-				LogMessage(LOG_LEVEL_INFO, "Receiving file: %s", SystemControlArgument[0]);
+				RCLCPP_INFO(get_logger(), "Receiving file: %s", SystemControlArgument[0]);
 				SystemControlReceiveRxData(&ClientSocket, RxFilePath,
 											SystemControlArgument[1], SystemControlArgument[2],
 											ControlResponseBuffer, 0);
@@ -793,7 +793,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR,
+			RCLCPP_ERROR(get_logger(),
 						"Wrong parameter count in UploadFile(path, filesize, packetsize, filetype)!");
 			SystemControlCommand = Idle_0;
 		}
@@ -804,7 +804,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 				this->initPub->publish(Empty());
 			}
 			catch(...){
-				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending INIT command");
+				RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending INIT command");
 				SystemControlState = SERVER_STATE_ERROR;
 
 			}
@@ -836,7 +836,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 				this->connectPub->publish(Empty());
 			}
 			catch(...){
-				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending CONNECT command");
+				RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending CONNECT command");
 				SystemControlState = SERVER_STATE_ERROR;
 
 			}		
@@ -866,7 +866,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 				this->disconnectPub->publish(Empty());
 			}
 			catch(...){
-				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending DISCONNECT command");
+				RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending DISCONNECT command");
 				SystemControlState = SERVER_STATE_ERROR;				
 			}
 			SystemControlCommand = Idle_0;
@@ -891,7 +891,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 				this->armPub->publish(Empty());
 			}
 			catch(...){
-				LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ARM command");
+				RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending ARM command");
 				SystemControlState = SERVER_STATE_ERROR;				
 			}
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -921,18 +921,18 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 					|| objectControlState == OBC_STATE_REMOTECTRL)) {
 				if (!strcasecmp(SystemControlArgument[0], ENABLE_COMMAND_STRING)
 					&& objectControlState == OBC_STATE_CONNECTED) {
-					LogMessage(LOG_LEVEL_INFO, "Requesting enabling of remote control");
+					RCLCPP_INFO(get_logger(), "Requesting enabling of remote control");
 					this->remoteControlEnablePub->publish(Empty());
 					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 				}
 				else if (!strcasecmp(SystemControlArgument[0], DISABLE_COMMAND_STRING)
 							&& objectControlState == OBC_STATE_REMOTECTRL) {
-					LogMessage(LOG_LEVEL_INFO, "Requesting disabling of remote control");
+					RCLCPP_INFO(get_logger(), "Requesting disabling of remote control");
 					this->remoteControlDisablePub->publish(Empty());
 					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 				}
 				else {
-					LogMessage(LOG_LEVEL_WARNING, "Incorrect remote control command");
+					RCLCPP_WARN(get_logger(), "Incorrect remote control command");
 					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
 				}
 			}
@@ -942,7 +942,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 
 		}
 		else {
-			LogMessage(LOG_LEVEL_WARNING, "Remote control command parameter count error");
+			RCLCPP_WARN(get_logger(), "Remote control command parameter count error");
 			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
 		}
 		SystemControlCommand = Idle_0;
@@ -976,7 +976,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 			}
 		}
 		else {
-			LogMessage(LOG_LEVEL_WARNING, "Remote control manoeuvre command parameter count error");
+			RCLCPP_WARN(get_logger(), "Remote control manoeuvre command parameter count error");
 			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
 		}
 		SystemControlCommand = Idle_0;
@@ -1013,7 +1013,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 			}
 		}
 		else {
-			LogMessage(LOG_LEVEL_WARNING, "SetObjectEnableStatus command parameter count error");
+			RCLCPP_WARN(get_logger(), "SetObjectEnableStatus command parameter count error");
 			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
 		}
 		SystemControlCommand = Idle_0;
@@ -1042,7 +1042,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 				responseCode = SYSTEM_CONTROL_RESPONSE_CODE_INCORRECT_STATE;
 		}
 		else {
-			LogMessage(LOG_LEVEL_WARNING, "GetObjectEnableStatus command parameter count error");
+			RCLCPP_WARN(get_logger(), "GetObjectEnableStatus command parameter count error");
 			responseCode = SYSTEM_CONTROL_RESPONSE_CODE_ERROR;
 		}
 
@@ -1061,17 +1061,17 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 				if (TIME_COMPENSATE_LAGING_VM)
 					timersub(&tvTime, &VirtualMachineLagCompensation, &tvTime);
 
-				LogMessage(LOG_LEVEL_INFO, "Current timestamp (epoch): %lu", TimeGetAsUTCms(&tvTime));
+				RCLCPP_INFO(get_logger(), "Current timestamp (epoch): %lu", TimeGetAsUTCms(&tvTime));
 
 				DelayedStartU32 = atoi(SystemControlArgument[0]);
 				sprintf(pcBuffer, "%" PRIi64 ";%" PRIu32 ";", TimeGetAsUTCms(&tvTime), DelayedStartU32);
-				LogMessage(LOG_LEVEL_INFO, "Sending START <%s> (delayed +%u ms)", pcBuffer,
+				RCLCPP_INFO(get_logger(), "Sending START <%s> (delayed +%u ms)", pcBuffer,
 							DelayedStartU32);
 				try{
 					this->startPub->publish(Empty());
 				}
 				catch(...){
-					LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending STRT command");
+					RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending STRT command");
 					SystemControlState = SERVER_STATE_ERROR;				
 				}
 				bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
@@ -1096,7 +1096,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 
 		}
 		else
-			LogMessage(LOG_LEVEL_WARNING, "START command parameter count error");
+			RCLCPP_WARN(get_logger(), "START command parameter count error");
 		break;
 	case stop_0:
 		try{
@@ -1108,7 +1108,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 												ControlResponseBuffer, 0, &ClientSocket, 0);
 		}
 		catch(...){this->disconnectPub->publish(Empty());
-			LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending DISCONSTOPNECTSTOP command");
+			RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending DISCONSTOPNECTSTOP command");
 			SystemControlState = SERVER_STATE_ERROR;				
 		}
 		break;
@@ -1125,7 +1125,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 			}
 		}
 		catch(...){
-			LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending ABORT command");
+			RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending ABORT command");
 			SystemControlState = SERVER_STATE_ERROR;
 		}
 	break;
@@ -1142,7 +1142,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 			}
 		}
 		catch (...){
-			LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending COMM_ABORT_DONE command");
+			RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending COMM_ABORT_DONE command");
 			SystemControlState = SERVER_STATE_ERROR;
 		}
 	break;
@@ -1162,16 +1162,16 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 				close(ServerHandle);
 				ServerHandle = -1;
 			}
-			LogMessage(LOG_LEVEL_INFO, "Server closing");
+			RCLCPP_INFO(get_logger(), "Server closing");
 		}
 		catch(...){
-			LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending EXIT command");
+			RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending EXIT command");
 			SystemControlState = SERVER_STATE_ERROR;
 
 		}
 		/*
 		if (iCommSend(COMM_EXIT, NULL, 0) < 0) {
-			LogMessage(LOG_LEVEL_ERROR, "Fatal communication fault when sending EXIT command");
+			RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending EXIT command");
 			SystemControlState = SERVER_STATE_ERROR;
 		}
 		else {
@@ -1188,7 +1188,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LE
 				close(ServerHandle);
 				ServerHandle = -1;
 			}
-			LogMessage(LOG_LEVEL_INFO, "Server closing");
+			RCLCPP_INFO(get_logger(), "Server closing");
 		}*/
 		break;
 
@@ -1267,12 +1267,12 @@ ssize_t SystemControl::SystemControlReceiveUserControlData(I32 socket, char * da
 			messageLength = 0;
 			readResult = -1;
 			errno = EAGAIN;
-			LogMessage(LOG_LEVEL_WARNING, "Part of message received");
+			RCLCPP_WARN(get_logger(), "Part of message received");
 		}
 
 		if (bytesInBuffer >= messageLength) {
 			if (dataBufferLength < messageLength) {
-				LogMessage(LOG_LEVEL_WARNING, "Discarding message too large for data buffer");
+				RCLCPP_WARN(get_logger(), "Discarding message too large for data buffer");
 				readResult = -1;
 				errno = ENOBUFS;
 			}
@@ -1314,7 +1314,7 @@ void SystemControl::SystemControlSendMONR(const char * MONRStr, I32 * Sockfd, U8
 		UtilSendTCPData((uint8_t*) "System Control", (uint8_t*) Data, n + 4, Sockfd, 0);
 	}
 	else
-		LogMessage(LOG_LEVEL_ERROR, "MONR string longer than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+		RCLCPP_ERROR(get_logger(), "MONR string longer than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
 
 
@@ -1348,7 +1348,7 @@ void SystemControl::SystemControlSendLog(const char * LogString, I32 * Sockfd, U
 		UtilSendTCPData((uint8_t*) "System Control", (uint8_t*) Data, n + 4, Sockfd, 0);
 	}
 	else
-		LogMessage(LOG_LEVEL_ERROR, "Log string longer than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+		RCLCPP_ERROR(get_logger(), "Log string longer than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 
 }
 
@@ -1390,7 +1390,7 @@ void SystemControl::SystemControlSendControlResponse(U16 ResponseStatus, const c
 		UtilSendTCPData((uint8_t*) "System Control", (uint8_t*) Data, n + 4, Sockfd, 0);
 	}
 	else
-		LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+		RCLCPP_ERROR(get_logger(), "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 }
 
 
@@ -1469,7 +1469,7 @@ I32 SystemControl::SystemControlBuildControlResponse(U16 ResponseStatus, char * 
 
 	}
 	else
-		LogMessage(LOG_LEVEL_ERROR, "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
+		RCLCPP_ERROR(get_logger(), "Response data more than %d bytes!", SYSTEM_CONTROL_SEND_BUFFER_SIZE);
 
 
 
@@ -1513,7 +1513,7 @@ I32 SystemControl::SystemControlInitServer(int *ClientSocket, int *ServerHandle,
 
 
 	/* Init user control socket */
-	LogMessage(LOG_LEVEL_INFO, "Init control socket");
+	RCLCPP_INFO(get_logger(), "Init control socket");
 
 	*ServerHandle = socket(AF_INET, SOCK_STREAM, 0);
 	if (*ServerHandle < 0) {
@@ -1541,7 +1541,7 @@ I32 SystemControl::SystemControlInitServer(int *ClientSocket, int *ServerHandle,
 	}
 
 	/* Monitor and control sockets up. Wait for central to connect to control socket to get server address */
-	LogMessage(LOG_LEVEL_INFO, "Listening for connection from client...");
+	RCLCPP_INFO(get_logger(), "Listening for connection from client...");
 
 	listen(*ServerHandle, 1);
 	cli_length = sizeof (cli_addr);
@@ -1563,7 +1563,7 @@ I32 SystemControl::SystemControlInitServer(int *ClientSocket, int *ServerHandle,
 		//bytesReceived = iCommRecv(&iCommand, pcRecvBuffer, SC_RECV_MESSAGE_BUFFER, NULL);
 	} while (*ClientSocket == -1);
 
-	LogMessage(LOG_LEVEL_INFO, "Connection established: %s:%i", inet_ntoa(cli_addr.sin_addr),
+	RCLCPP_INFO(get_logger(), "Connection established: %s:%i", inet_ntoa(cli_addr.sin_addr),
 			   htons(command_server_addr.sin_port));
 
 	ip_addr->s_addr = cli_addr.sin_addr.s_addr;	//Set IP-address of Usercontrol
@@ -1602,14 +1602,14 @@ I32 SystemControl::SystemControlConnectServer(int *sockfd, const char *name, con
 	bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
 	serv_addr.sin_port = htons(port);
 
-	LogMessage(LOG_LEVEL_INFO, "Attempting to connect to control socket: %s:%i", name, port);
+	RCLCPP_INFO(get_logger(), "Attempting to connect to control socket: %s:%i", name, port);
 
 	do {
 		iResult = connect(*sockfd, (struct sockaddr *)&serv_addr, sizeof (serv_addr));
 
 		if (iResult < 0) {
 			if (errno == ECONNREFUSED) {
-				LogMessage(LOG_LEVEL_WARNING, "Unable to connect to UserControl, retrying in 3 sec...");
+				RCLCPP_WARN(get_logger(), "Unable to connect to UserControl, retrying in 3 sec...");
 				(void)sleep(3);
 			}
 			else {
@@ -1621,7 +1621,7 @@ I32 SystemControl::SystemControlConnectServer(int *sockfd, const char *name, con
 
 	iResult = fcntl(*sockfd, F_SETFL, fcntl(*sockfd, F_GETFL, 0) | O_NONBLOCK);
 
-	LogMessage(LOG_LEVEL_DEBUG, "Maestro connected to UserControl: %s:%i", name, port);
+	RCLCPP_DEBUG(get_logger(), "Maestro connected to UserControl: %s:%i", name, port);
 	return iResult;
 
 }
@@ -1634,7 +1634,7 @@ void SystemControl::SystemControlCreateProcessChannel(const char * name, const U
 
 	/* Connect to object safety socket */
 
-	LogMessage(LOG_LEVEL_DEBUG, "Creating process channel socket");
+	RCLCPP_DEBUG(get_logger(), "Creating process channel socket");
 
 	*sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (*sockfd < 0) {
@@ -1658,7 +1658,7 @@ void SystemControl::SystemControlCreateProcessChannel(const char * name, const U
 		util_error("[SystemControl] ERR: calling fcntl");
 	}
 
-	LogMessage(LOG_LEVEL_INFO, "Created process channel socket and address: %s:%d", name, port);
+	RCLCPP_INFO(get_logger(), "Created process channel socket and address: %s:%d", name, port);
 }
 
 /*!
@@ -1672,7 +1672,7 @@ char SystemControl::SystemControlVerifyHostAddress(char *addr) {
 	char host[NI_MAXHOST];
 
 	if (getifaddrs(&ifaddr) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Could not get interface data");
+		RCLCPP_ERROR(get_logger(), "Could not get interface data");
 		freeifaddrs(ifaddr);
 		return 0;
 	}
@@ -1690,7 +1690,7 @@ char SystemControl::SystemControlVerifyHostAddress(char *addr) {
 							(family == AF_INET) ? sizeof (struct sockaddr_in) :
 							sizeof (struct sockaddr_in6), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
 			if (s != 0) {
-				LogMessage(LOG_LEVEL_ERROR, "getnameinfo() failed: %s", gai_strerror(s));
+				RCLCPP_ERROR(get_logger(), "getnameinfo() failed: %s", gai_strerror(s));
 				continue;
 			}
 
@@ -1819,7 +1819,7 @@ I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, char * paramet
 	char *endptr;
 
 	if (parameterName == NULL || newValue == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Set server parameter null pointer error");
+		RCLCPP_ERROR(get_logger(), "Set server parameter null pointer error");
 		return -1;
 	}
 
@@ -1836,14 +1836,14 @@ I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, char * paramet
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_LATITUDE:
 		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error"
+			RCLCPP_ERROR(get_logger(), "Data dictionary number of objects read error"
 					   "- cannot set origin on objects");
 			break;
 		}
 
 		if ((result =
 			 DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR,
+			RCLCPP_ERROR(get_logger(),
 					   "Data dictionary TransmitterID read error" "- cannot set origin on objects");
 			break;
 		}
@@ -1854,19 +1854,19 @@ I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, char * paramet
 			}
 			else {
 				if (DataDictionaryGetOrigin(object_transmitter_ids[i], &origin) != READ_OK) {
-					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin read error"
+					RCLCPP_ERROR(get_logger(), "Data dictionary origin read error"
 							   "- cannot read the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
 					continue;
 				}
 				origin.Latitude = strtod(newValue, &endptr);
 				if (endptr == newValue) {
-					LogMessage(LOG_LEVEL_ERROR, "Unable to convert origin setting %s to double", newValue);
+					RCLCPP_ERROR(get_logger(), "Unable to convert origin setting %s to double", newValue);
 					result = UNDEFINED;
 					break;
 				}
 				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
-					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
+					RCLCPP_ERROR(get_logger(), "Data dictionary origin write error"
 							   "- cannot set the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
 					break;
@@ -1879,14 +1879,14 @@ I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, char * paramet
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_LONGITUDE:
 		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error"
+			RCLCPP_ERROR(get_logger(), "Data dictionary number of objects read error"
 					   "- cannot set origin on objects");
 			break;
 		}
 
 		if ((result =
 			 DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR,
+			RCLCPP_ERROR(get_logger(),
 					   "Data dictionary TransmitterID read error" "- cannot set origin on objects");
 			break;
 		}
@@ -1897,19 +1897,19 @@ I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, char * paramet
 			}
 			else {
 				if (DataDictionaryGetOrigin(object_transmitter_ids[i], &origin) != READ_OK) {
-					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin read error"
+					RCLCPP_ERROR(get_logger(), "Data dictionary origin read error"
 							   "- cannot read the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
 					continue;
 				}
 				origin.Longitude = strtod(newValue, &endptr);
 				if (endptr == newValue) {
-					LogMessage(LOG_LEVEL_ERROR, "Unable to convert origin setting %s to double", newValue);
+					RCLCPP_ERROR(get_logger(), "Unable to convert origin setting %s to double", newValue);
 					result = UNDEFINED;
 					break;
 				}
 				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
-					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
+					RCLCPP_ERROR(get_logger(), "Data dictionary origin write error"
 							   "- cannot set the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
 					break;
@@ -1922,14 +1922,14 @@ I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, char * paramet
 		break;
 	case CONFIGURATION_PARAMETER_ORIGIN_ALTITUDE:
 		if ((result = DataDictionaryGetNumberOfObjects(&numberOfObjects)) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR, "Data dictionary number of objects read error"
+			RCLCPP_ERROR(get_logger(), "Data dictionary number of objects read error"
 					   "- cannot set origin on objects");
 			break;
 		}
 
 		if ((result =
 			 DataDictionaryGetObjectTransmitterIDs(object_transmitter_ids, numberOfObjects)) != READ_OK) {
-			LogMessage(LOG_LEVEL_ERROR,
+			RCLCPP_ERROR(get_logger(),
 					   "Data dictionary TransmitterID read error" "- cannot set origin on objects");
 			break;
 		}
@@ -1940,19 +1940,19 @@ I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, char * paramet
 			}
 			else {
 				if (DataDictionaryGetOrigin(object_transmitter_ids[i], &origin) != READ_OK) {
-					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin read error"
+					RCLCPP_ERROR(get_logger(), "Data dictionary origin read error"
 							   "- cannot read the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
 					continue;
 				}
 				origin.Altitude = strtod(newValue, &endptr);
 				if (endptr == newValue) {
-					LogMessage(LOG_LEVEL_ERROR, "Unable to convert origin setting %s to double", newValue);
+					RCLCPP_ERROR(get_logger(), "Unable to convert origin setting %s to double", newValue);
 					result = UNDEFINED;
 					break;
 				}
 				if (DataDictionarySetOrigin(&object_transmitter_ids[i], &origin) != WRITE_OK) {
-					LogMessage(LOG_LEVEL_ERROR, "Data dictionary origin write error"
+					RCLCPP_ERROR(get_logger(), "Data dictionary origin write error"
 							   "- cannot set the origin for object %u", object_transmitter_ids[i]);
 					result = UNDEFINED;
 					break;
@@ -2018,13 +2018,13 @@ I32 SystemControl::SystemControlSetServerParameter(GSDType * GSD, char * paramet
 		result = DataDictionarySetRVSSRateU8((uint8_t) strtoul(newValue, NULL, 10));
 		break;
 	case CONFIGURATION_PARAMETER_MISC_DATA:
-		LogMessage(LOG_LEVEL_WARNING, "Unable to set MiscData - size unknown");
+		RCLCPP_WARN(get_logger(), "Unable to set MiscData - size unknown");
 		result = DataDictionarySetMiscData(newValue, 0);
 		break;
 	case CONFIGURATION_PARAMETER_INVALID:
-		LogMessage(LOG_LEVEL_WARNING, "Attempted to set invalid parameter %s", parameterName);
+		RCLCPP_WARN(get_logger(), "Attempted to set invalid parameter %s", parameterName);
 	default:
-		LogMessage(LOG_LEVEL_ERROR, "No action is implemented for setting parameter %s");
+		RCLCPP_ERROR(get_logger(), "No action is implemented for setting parameter %s");
 	}
 
 	return result == WRITE_OK ? 0 : -1;
@@ -2055,7 +2055,7 @@ I32 SystemControl::SystemControlReadServerParameterList(char * ParameterList, U8
 		free(line);
 	}
 	else {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", confPathDir);
+		RCLCPP_ERROR(get_logger(), "Unable to open file %s", confPathDir);
 	}
 
 	if (Debug) {
@@ -2239,9 +2239,9 @@ I32 SystemControl::SystemControlDeleteFileDirectory(const char * Path, char * Re
 	}
 
 	if (*ReturnValue == SUCCEEDED_DELETE)
-		LogMessage(LOG_LEVEL_INFO, "Deleted %s", CompletePath);
+		RCLCPP_INFO(get_logger(), "Deleted %s", CompletePath);
 	else if (*ReturnValue == FAILED_DELETE)
-		LogMessage(LOG_LEVEL_INFO, "Failed to delete %s", CompletePath);
+		RCLCPP_INFO(get_logger(), "Failed to delete %s", CompletePath);
 
 	return 0;
 }
@@ -2285,7 +2285,7 @@ I32 SystemControl::SystemControlCreateDirectory(const char * Path, char * Return
 		LogPrint("%d %s", *(ReturnValue), CompletePath);
 
 	if (*ReturnValue == SUCCEDED_CREATE_FOLDER)
-		LogMessage(LOG_LEVEL_INFO, "Directory created: %s", CompletePath);
+		RCLCPP_INFO(get_logger(), "Directory created: %s", CompletePath);
 
 	return 0;
 }
@@ -2301,7 +2301,7 @@ I32 SystemControl::SystemControlUploadFile(const char * Filename, const char * F
 	//GetCurrentDir(CompletePath, MAX_FILE_PATH);
 	//strcat(CompletePath, Filename);
 	if (Filename == NULL || FileSize == NULL || PacketSize == NULL || FileType == NULL || ReturnValue == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Invalid function parameter passed to upload file handler function");
+		RCLCPP_ERROR(get_logger(), "Invalid function parameter passed to upload file handler function");
 		return -1;
 	}
 
@@ -2322,7 +2322,7 @@ I32 SystemControl::SystemControlUploadFile(const char * Filename, const char * F
 		UtilGetObjectDirectoryPath(CompletePath, sizeof (CompletePath));
 		break;
 	default:
-		LogMessage(LOG_LEVEL_ERROR, "Received invalid file type upload request");
+		RCLCPP_ERROR(get_logger(), "Received invalid file type upload request");
 		//Create temporary file for handling data anyway
 		UtilGetTestDirectoryPath(CompletePath, sizeof (CompletePath));
 		strcat(CompletePath, "/file.tmp");
@@ -2357,7 +2357,7 @@ I32 SystemControl::SystemControlUploadFile(const char * Filename, const char * F
 	if (fd != NULL) {
 		fclose(fd);
 		remove(CompletePath);	//Remove file if exist
-		LogMessage(LOG_LEVEL_INFO, "Deleted existing file <%s>", CompletePath);
+		RCLCPP_INFO(get_logger(), "Deleted existing file <%s>", CompletePath);
 	}
 
 	fd = fopen(CompletePath, "w+");	//Create the file
@@ -2460,15 +2460,15 @@ I32 SystemControl::SystemControlReceiveRxData(I32 * sockfd, const char * Path, c
 		else if (TotalRxCount > FileSizeU32) {
 			*ReturnValue = FILE_TO_MUCH_DATA;
 			remove(CompletePath);
-			LogMessage(LOG_LEVEL_INFO, "CORRUPT FILE, REMOVING...");
+			RCLCPP_INFO(get_logger(), "CORRUPT FILE, REMOVING...");
 		}
 		else {
 			*ReturnValue = TIME_OUT;
 			remove(CompletePath);
-			LogMessage(LOG_LEVEL_INFO, "CORRUPT FILE, REMOVING...");
+			RCLCPP_INFO(get_logger(), "CORRUPT FILE, REMOVING...");
 		}
 
-		LogMessage(LOG_LEVEL_INFO, "Rec count = %d, Req count = %d", TotalRxCount, FileSizeU32);
+		RCLCPP_INFO(get_logger(), "Rec count = %d, Req count = %d", TotalRxCount, FileSizeU32);
 
 	}
 
@@ -2526,7 +2526,7 @@ I32 SystemControl::SystemControlSendFileContent(I32 * sockfd, const char * Path,
 		if (Remove)
 			remove(CompletePath);
 
-		LogMessage(LOG_LEVEL_INFO, "Sent file: %s, total size = %d, transmissions = %d", CompletePath,
+		RCLCPP_INFO(get_logger(), "Sent file: %s, total size = %d, transmissions = %d", CompletePath,
 				   (PacketSizeU16 * TransmissionCount + RestCount), i + 1);
 
 	}
@@ -2683,7 +2683,7 @@ int32_t SystemControl::SystemControlSendRVSSMonitorChannelMessages(int *socket, 
 
 	// Get number of objects present in shared memory
 	if (DataDictionaryGetNumberOfObjects(&numberOfObjects) != READ_OK) {
-		LogMessage(LOG_LEVEL_ERROR,
+		RCLCPP_ERROR(get_logger(),
 				   "Data dictionary number of objects read error - RVSS messages cannot be sent");
 		return -1;
 	}
@@ -2691,19 +2691,19 @@ int32_t SystemControl::SystemControlSendRVSSMonitorChannelMessages(int *socket, 
 	// Allocate an array for objects' transmitter IDs
 	transmitterIDs = (uint32_t*) malloc(numberOfObjects * sizeof (uint32_t));
 	if (transmitterIDs == NULL) {
-		LogMessage(LOG_LEVEL_ERROR, "Memory allocation error - RVSS messages cannot be sent");
+		RCLCPP_ERROR(get_logger(), "Memory allocation error - RVSS messages cannot be sent");
 		return -1;
 	}
 
 	// Get transmitter IDs for all connected objects
 	if (DataDictionaryGetObjectTransmitterIDs(transmitterIDs, numberOfObjects) != READ_OK) {
 		free(transmitterIDs);
-		LogMessage(LOG_LEVEL_ERROR,
+		RCLCPP_ERROR(get_logger(),
 				   "Data dictionary transmitter ID read error - RVSS messages cannot be sent");
 		return -1;
 	}
 
-	LogMessage(LOG_LEVEL_DEBUG, "%s: Found %u transmitter IDs", __FUNCTION__, numberOfObjects);
+	RCLCPP_DEBUG(get_logger(), "%s: Found %u transmitter IDs", __FUNCTION__, numberOfObjects);
 	// Loop over transmitter IDs, sending a message on the RVSS channel for each
 	int32_t retval = 0;
 
@@ -2713,7 +2713,7 @@ int32_t SystemControl::SystemControlSendRVSSMonitorChannelMessages(int *socket, 
 			struct timeval recvTime;
 
 			if (DataDictionaryGetMonitorDataReceiveTime(transmitterIDs[i], &recvTime) != READ_OK) {
-				LogMessage(LOG_LEVEL_ERROR,
+				RCLCPP_ERROR(get_logger(),
 						   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
 						   transmitterIDs[i]);
 				retval = -1;
@@ -2725,13 +2725,13 @@ int32_t SystemControl::SystemControlSendRVSSMonitorChannelMessages(int *socket, 
 			}
 
 			if (DataDictionaryGetObjectIPByTransmitterID(transmitterIDs[i], &monitorData.ClientIP) != READ_OK) {
-				LogMessage(LOG_LEVEL_ERROR,
+				RCLCPP_ERROR(get_logger(),
 						   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
 						   transmitterIDs[i]);
 				retval = -1;
 			}
 			else if (DataDictionaryGetMonitorData(transmitterIDs[i], &monitorData.MonrData) != READ_OK) {
-				LogMessage(LOG_LEVEL_ERROR,
+				RCLCPP_ERROR(get_logger(),
 						   "Data dictionary monitor data read error for transmitter ID %u - RVSS message cannot be sent",
 						   transmitterIDs[i]);
 				retval = -1;
@@ -2739,11 +2739,11 @@ int32_t SystemControl::SystemControlSendRVSSMonitorChannelMessages(int *socket, 
 			else if (UtilObjectDataToString(monitorData, monitorDataString,
 											sizeof (RVSSData) - (size_t)(monitorDataString - RVSSData)) ==
 					 -1) {
-				LogMessage(LOG_LEVEL_ERROR, "Error building object data string");
+				RCLCPP_ERROR(get_logger(), "Error building object data string");
 				retval = -1;
 			}
 			else {
-				LogMessage(LOG_LEVEL_DEBUG, "%s: Transmitter ID %u", __FUNCTION__, transmitterIDs[i]);
+				RCLCPP_DEBUG(get_logger(), "%s: Transmitter ID %u", __FUNCTION__, transmitterIDs[i]);
 				messageLength =
 					(uint32_t) (strlen(monitorDataString) + sizeof (messageLength) + sizeof (RVSSChannel));
 				messageLength = htole32(messageLength);
@@ -2821,7 +2821,7 @@ I32 SystemControl::SystemControlGetStatusMessage(const char *respondingModule, U
 			this->getStatusPub->publish(Empty());
 
 			if (debug) {
-				LogMessage(LOG_LEVEL_INFO, "GETSTATUS SENT");
+				RCLCPP_INFO(get_logger(), "GETSTATUS SENT");
 			}
 
 			//Next Case
@@ -2835,7 +2835,7 @@ I32 SystemControl::SystemControlGetStatusMessage(const char *respondingModule, U
 	case GETSTATUS_WAITFORRESPONSE:
 		if (respondingModule == NULL) {
 			errno = EINVAL;
-			LogMessage(LOG_LEVEL_ERROR, "Responding module parameter is null");
+			RCLCPP_ERROR(get_logger(), "Responding module parameter is null");
 			return -1;
 		}
 
@@ -2851,7 +2851,7 @@ I32 SystemControl::SystemControlGetStatusMessage(const char *respondingModule, U
 
 				U8 diff = numberOfResponses - SYSTEM_CONTROL_NO_OF_MODULES_IN_USE;
 
-				LogMessage(LOG_LEVEL_ERROR, "%d too many responses to GET_STATUS command", diff);
+				RCLCPP_ERROR(get_logger(), "%d too many responses to GET_STATUS command", diff);
 
 			}
 
@@ -2860,7 +2860,7 @@ I32 SystemControl::SystemControlGetStatusMessage(const char *respondingModule, U
 
 				U8 diff = SYSTEM_CONTROL_NO_OF_MODULES_IN_USE - numberOfResponses;
 
-				LogMessage(LOG_LEVEL_ERROR, "%d module(s) not responding to GET_STATUS command", diff);
+				RCLCPP_ERROR(get_logger(), "%d module(s) not responding to GET_STATUS command", diff);
 			}
 
 			//Just right
@@ -2879,7 +2879,7 @@ I32 SystemControl::SystemControlGetStatusMessage(const char *respondingModule, U
 		break;
 
 	default:
-		LogMessage(LOG_LEVEL_INFO, "getStatusState: %d", getStatusState);
+		RCLCPP_INFO(get_logger(), "getStatusState: %d", getStatusState);
 		break;
 	}
 

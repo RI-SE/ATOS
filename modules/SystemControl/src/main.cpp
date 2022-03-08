@@ -48,6 +48,6 @@ void systemcontrol_task(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel){
 	if (dataDictOperationResult != WRITE_OK && dataDictOperationResult != READ_WRITE_OK) {
 		util_error("Unable to clear shared memory space");
 	}
-	LogMessage(LOG_LEVEL_INFO, "System control exiting");
+	RCLCPP_INFO(sc->get_logger(), "System control exiting");
 	rclcpp::shutdown();
 }

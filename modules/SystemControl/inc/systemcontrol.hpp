@@ -24,7 +24,6 @@
 #include "maestroTime.h"
 #include "datadictionary.h"
 #include "util.h"
-#include "logging.h"
 
 class SystemControl : public Module
 {
