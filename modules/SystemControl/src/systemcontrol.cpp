@@ -129,15 +129,18 @@ void SystemControl::initialize(LOG_LEVEL logLevel){
 	LogInit(get_name(), logLevel);
 	RCLCPP_INFO(get_logger(), "System control task running with PID: %i", getpid());
 
-	// Initialise data dictionary
-	RCLCPP_INFO(get_logger(), "Initializing data dictionary");
-	ReadWriteAccess_t dataDictOperationResult = DataDictionaryConstructor();
-	if (dataDictOperationResult != READ_WRITE_OK) {
-		DataDictionaryDestructor();
-		util_error("Unable to initialize shared memory space");
+	// Initialize state and object data
+	if (DataDictionaryInitStateData() != READ_OK) {
+		DataDictionaryFreeStateData();
+		throw std::runtime_error("Found no previously initialized shared memory for state data");
 	}
-	else {
-		RCLCPP_INFO(get_logger(), "Data dictionary succesfully initialized");
+	if (DataDictionaryInitObjectData() != READ_OK) {
+		DataDictionaryFreeObjectData();
+		throw std::runtime_error("Found no previously initialized shared memory for object data");
+	}
+	if (DataDictionaryInitRVSSAsp() != READ_OK) {
+		DataDictionaryFreeRVSSAsp();
+		throw std::runtime_error("Found no previously initialized shared memory for RVSS ASP data");
 	}
 
 	DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
