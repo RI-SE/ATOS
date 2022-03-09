@@ -11,7 +11,6 @@ find_package(rclcpp REQUIRED)
 # Define target names
 set(JOURNAL_CONTROL_TARGET ${PROJECT_NAME})
 
-set(LOGGING_LIBRARY MaestroLogging)
 set(COREUTILS_LIBRARY MaestroCoreUtil)
 set(FILESYSTEM_LIBRARY stdc++fs)
 
@@ -27,7 +26,6 @@ add_executable(${JOURNAL_CONTROL_TARGET}
 # Link project executable to util libraries
 target_link_libraries(${JOURNAL_CONTROL_TARGET}
 	${rclcpp_LIBRARIES}
-	${LOGGING_LIBRARY}
 	${FILESYSTEM_LIBRARY}
 	${COREUTILS_LIBRARY}
 )

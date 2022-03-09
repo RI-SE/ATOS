@@ -52,14 +52,14 @@ void AbstractKinematics::Aborting::objectAbortDisarmed(
 void AbstractKinematics::Aborting::objectDisarmed(
 		ObjectControl& handler,
 		uint32_t id) {
-	LogMessage(LOG_LEVEL_WARNING, "Object disarmed while expecting abort");
+	RCLCPP_WARN(handler.get_logger(), "Object disarmed while expecting abort");
 	handler.disconnectObject(id); // TODO just stop sending HEAB to keep tracking available
 }
 
 void AbstractKinematics::Aborting::objectArmed(
 		ObjectControl& handler,
 		uint32_t id) {
-	LogMessage(LOG_LEVEL_WARNING, "Object armed while expecting abort");
+	RCLCPP_WARN(handler.get_logger(), "Object armed while expecting abort");
 	handler.disconnectObject(id); // TODO just stop sending HEAB to keep tracking available
 }
 

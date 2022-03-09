@@ -19,8 +19,8 @@ void JournalCollection::placeStartBookmarks() {
 	this->clear();
 
 	for (const auto &journalFile : journalFilesFromToday) {
-		LogMessage(LOG_LEVEL_DEBUG, "Storing start bookmark in file %s", journalFile.c_str());
-		Journal journal;
+		RCLCPP_DEBUG(get_logger(), "Storing start bookmark in file %s", journalFile.c_str());
+		Journal journal(get_logger());
 		auto datePosition = journalFile.stem().string().find("-" + currentDate);
 		journal.moduleName = journalFile.stem().string().substr(0, datePosition);
 		journal.startReference.place(journalFile);
@@ -41,9 +41,9 @@ void JournalCollection::placeStopBookmarks() {
 	auto currentDate = getCurrentDateAsString();
 
 	for (const auto &journalFile : journalFilesFromToday) {
-		LogMessage(LOG_LEVEL_DEBUG, "Storing stop bookmark in file %s", journalFile.c_str());
+		RCLCPP_DEBUG(get_logger(), "Storing stop bookmark in file %s", journalFile.c_str());
 		// Find existing journal matching module name from file
-		Journal soughtJournal;
+		Journal soughtJournal(get_logger());
 		auto datePosition = journalFile.stem().string().find("-" + currentDate);
 		soughtJournal.moduleName = journalFile.stem().string().substr(0, datePosition);
 		soughtJournal.startReference.place(journalFile, true); // In case we are emplacing, startReference at beginning
@@ -65,15 +65,15 @@ void JournalCollection::placeStopBookmarks() {
 void JournalCollection::insertNonBookmarked() {
 
 	if (startDay.time_since_epoch().count() == 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Start time invalid, unable to insert non-bookmarked journals");
+		RCLCPP_ERROR(get_logger(), "Start time invalid, unable to insert non-bookmarked journals");
 		return;
 	}
 	if (stopDay.time_since_epoch().count() == 0) {
-		LogMessage(LOG_LEVEL_ERROR, "Stop time invalid, unable to insert non-bookmarked journals");
+		RCLCPP_ERROR(get_logger(), "Stop time invalid, unable to insert non-bookmarked journals");
 		return;
 	}
 	if (stopDay.time_since_epoch().count() < startDay.time_since_epoch().count()) {
-		LogMessage(LOG_LEVEL_ERROR, "Stop time is before start time, unable to insert non-bookmarked journals");
+		RCLCPP_ERROR(get_logger(), "Stop time is before start time, unable to insert non-bookmarked journals");
 		return;
 	}
 
@@ -86,17 +86,17 @@ void JournalCollection::insertNonBookmarked() {
 
 		for (const auto &journalFile : journalFilesFromDay) {
 			// Find existing journal matching module name from file
-			Journal soughtJournal;
+			Journal soughtJournal(get_logger());
 			auto datePosition = journalFile.stem().string().find("-" + date);
 			soughtJournal.moduleName = journalFile.stem().string().substr(0, datePosition);
 			// Insert checks if an equivalent element (same module) already exists
 			auto matchingJournal = insert(soughtJournal).first;
 			if (matchingJournal->containedFiles.insert(journalFile).second) {
-				LogMessage(LOG_LEVEL_DEBUG, "Inserted non-bookmarked file %s",
+				RCLCPP_DEBUG(get_logger(), "Inserted non-bookmarked file %s",
 						   journalFile.c_str());
 			}
 			if (!matchingJournal->startReference.valid) {
-				LogMessage(LOG_LEVEL_DEBUG, "Storing start bookmark at beginning of file %s",
+				RCLCPP_DEBUG(get_logger(), "Storing start bookmark at beginning of file %s",
 						   journalFile.c_str());
 				matchingJournal->startReference.place(journalFile, true);
 			}
@@ -115,7 +115,7 @@ void JournalCollection::insertNonBookmarked() {
 				auto matchingFile = std::find_if(journal.containedFiles.begin(),
 												 journal.containedFiles.end(), isFromDate);
 				if (matchingFile != journal.containedFiles.end()) {
-					LogMessage(LOG_LEVEL_DEBUG, "Storing end bookmark at end of file %s",
+					RCLCPP_DEBUG(get_logger(), "Storing end bookmark at end of file %s",
 							   matchingFile->c_str());
 					journal.stopReference.place(*matchingFile);
 					break;
@@ -140,7 +140,7 @@ int JournalCollection::dumpToFile() {
 
 	// Construct output file name and path
 	if (DataDictionaryGetScenarioName(scenarioName, sizeof (scenarioName)) != READ_OK) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to get scenario name parameter to generate output file");
+		RCLCPP_ERROR(get_logger(), "Unable to get scenario name parameter to generate output file");
 		return -1;
 	}
 	UtilGetJournalDirectoryPath(journalDir, sizeof (journalDir));
@@ -148,12 +148,16 @@ int JournalCollection::dumpToFile() {
 
 	std::ofstream ostrm(journalDirPath);
 	if (!ostrm.is_open()) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to open %s for writing", journalDirPath.c_str());
+		RCLCPP_ERROR(get_logger(), "Unable to open %s for writing", journalDirPath.c_str());
 		return -1;
 	}
 
-	if (printJournalHeaderTo(ostrm) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Error writing journal header");
+	try {
+		printJournalHeaderTo(ostrm);
+	}
+	catch (const std::runtime_error& e) {
+		RCLCPP_ERROR(get_logger(), "Unable to write journal header to %s: %s",
+				   journalDirPath.c_str(), e.what());
 		ostrm.close();
 		return -1;
 	}
@@ -179,7 +183,7 @@ int JournalCollection::dumpToFile() {
 		}
 	};
 
-	LogMessage(LOG_LEVEL_INFO, "Creating output log for journals\n%s", this->toString().c_str());
+	RCLCPP_INFO(get_logger(), "Creating output log for journals\n%s", this->toString().c_str());
 	// Fill a vector with all files pertaining to recorded data,
 	// along with the correct start and stop references.
 	// After this, the vector contains opened streams positioned
@@ -191,7 +195,7 @@ int JournalCollection::dumpToFile() {
 			section.path = file;
 			section.istrm.open(file);
 			if (section.istrm.is_open()) {
-				LogMessage(LOG_LEVEL_DEBUG, "Opened file %s", file.c_str());
+				RCLCPP_DEBUG(get_logger(), "Opened file %s", file.c_str());
 				if (file == journal.startReference.getFilePath()) {
 					section.beg = journal.startReference.getPosition();
 				}
@@ -210,18 +214,18 @@ int JournalCollection::dumpToFile() {
 				section.istrm.seekg(section.beg);
 
 				if (section.end - section.beg < 0) {
-					LogMessage(LOG_LEVEL_ERROR, "End precedes beginning in file %s: beg @%ld, end @%ld",
+					RCLCPP_ERROR(get_logger(), "End precedes beginning in file %s: beg @%ld, end @%ld",
 							   file.c_str(), section.beg, section.end);
 					section.istrm.close();
 					inputFiles.pop_back();
 				}
 				else if (section.beg == section.end) {
-					LogMessage(LOG_LEVEL_DEBUG, "No data found");
+					RCLCPP_DEBUG(get_logger(), "No data found");
 					section.istrm.close();
 					inputFiles.pop_back();
 				}
 				else if (!std::getline(section.istrm, section.lastRead)) {
-					LogMessage(LOG_LEVEL_DEBUG, "Failed to read line");
+					RCLCPP_DEBUG(get_logger(), "Failed to read line");
 					section.istrm.close();
 					inputFiles.pop_back();
 				}
@@ -230,7 +234,7 @@ int JournalCollection::dumpToFile() {
 				}
 			}
 			else {
-				LogMessage(LOG_LEVEL_ERROR, "Unable to open %s for reading", file.c_str());
+				RCLCPP_ERROR(get_logger(), "Unable to open %s for reading", file.c_str());
 				inputFiles.pop_back();
 				retval = -1;
 			}
@@ -242,13 +246,13 @@ int JournalCollection::dumpToFile() {
 		std::vector<JournalFileSection>::iterator oldestFile = std::min_element(inputFiles.begin(), inputFiles.end());
 		ostrm << oldestFile->lastRead << std::endl;
 		if (!std::getline(oldestFile->istrm, oldestFile->lastRead)) {
-			LogMessage(LOG_LEVEL_DEBUG, "Reached end of journal file %s, read %u rows",
+			RCLCPP_DEBUG(get_logger(), "Reached end of journal file %s, read %u rows",
 					   oldestFile->path.c_str(), oldestFile->nReadRows);
 			oldestFile->istrm.close();
 			inputFiles.erase(oldestFile);
 		}
 		else if (oldestFile->nReadRows > oldestFile->end - oldestFile->beg) {
-			LogMessage(LOG_LEVEL_DEBUG, "Read %u rows from journal file %s",
+			RCLCPP_DEBUG(get_logger(), "Read %u rows from journal file %s",
 					   oldestFile->nReadRows, oldestFile->path.c_str());
 			oldestFile->istrm.close();
 			inputFiles.erase(oldestFile);
@@ -259,7 +263,7 @@ int JournalCollection::dumpToFile() {
 	}
 
 	ostrm.close();
-	LogMessage(LOG_LEVEL_INFO, "Generated output journal %s", journalDirPath.stem().c_str());
+	RCLCPP_INFO(get_logger(), "Generated output journal %s", journalDirPath.stem().c_str());
 	return retval;
 }
 
@@ -283,10 +287,7 @@ int JournalCollection::printJournalHeaderTo(std::ofstream &ostrm) {
 				objectDirectory.end(), '\0');
 	fileDirectory.assign(objectDirectory.begin(), objectDirectory.end());
 
-	if (printFilesTo(fileDirectory, ostrm) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to print object files to log - terminating log generation");
-		return -1;
-	}
+	printFilesTo(fileDirectory, ostrm);
 
 	ostrm << "------------------------------------------" << std::endl;
 	ostrm << "Whole trajectory files" << std::endl;
@@ -299,10 +300,7 @@ int JournalCollection::printJournalHeaderTo(std::ofstream &ostrm) {
 				trajectoryDirectory.end(), '\0');
 	fileDirectory.assign(trajectoryDirectory.begin(), trajectoryDirectory.end());
 
-	if (printFilesTo(fileDirectory, ostrm) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to print trajectory files to log - terminating log generation");
-		return -1;
-	}
+	printFilesTo(fileDirectory, ostrm);
 
 	ostrm << "------------------------------------------" << std::endl;
 	ostrm << "Whole configuration files" << std::endl;
@@ -315,10 +313,7 @@ int JournalCollection::printJournalHeaderTo(std::ofstream &ostrm) {
 				configurationDirectory.end(), '\0');
 	fileDirectory.assign(configurationDirectory.begin(), configurationDirectory.end());
 
-	if (printFilesTo(fileDirectory, ostrm) == -1) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to print configuration files to log - terminating log generation");
-		return -1;
-	}
+	printFilesTo(fileDirectory, ostrm);
 
 	// TODO: information about file structure
 	return 0;
@@ -363,8 +358,7 @@ std::vector<fs::path> JournalCollection::getJournalFilesFrom(const std::chrono::
 	fs::path journalDirPath(buffer.begin(), buffer.end());
 
 	if (!exists(journalDirPath)) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to find journal directory %s", journalDirPath.string().c_str());
-		return journalsFromDate;
+		throw std::runtime_error("Journal directory " + journalDirPath.string() + " does not exist");
 	}
 
 	auto dateString = getDateAsString(date);
@@ -392,16 +386,14 @@ std::vector<fs::path> JournalCollection::getJournalFilesFrom(const std::chrono::
 int JournalCollection::printFilesTo(const fs::path &inputDirectory, std::ostream &outputFile) {
 
 	if (!exists(inputDirectory)) {
-		LogMessage(LOG_LEVEL_ERROR, "Unable to find directory %s", inputDirectory.c_str());
-		return -1;
+		throw std::runtime_error("Unable to find directory " + inputDirectory.string());
 	}
 	for (const auto &dirEntry : fs::directory_iterator(inputDirectory)) {
 		if (fs::is_regular_file(dirEntry.status())) {
 			const auto inputFile = dirEntry.path();
 			std::ifstream istrm(inputFile.string());
 			if (!istrm.is_open()) {
-				LogMessage(LOG_LEVEL_ERROR, "Unable to open file %s", inputFile.c_str());
-				return -1;
+				throw std::runtime_error("Unable to open file " + inputFile.string());
 			}
 			istrm.unsetf(std::ios_base::skipws);
 			for (std::istream_iterator<char> it(istrm); it != std::istream_iterator<char>(); ++it) {

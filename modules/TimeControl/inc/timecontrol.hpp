@@ -24,7 +24,7 @@
 class TimeControl : public Module
 {
 public:
-	static inline const std::string module_name = "TimeControl";
+	static inline const std::string module_name = "time_control";
 	TimeControl();
 	bool shouldExit() const;
 	const int64_t getQueueEmptyPollPeriod() const;

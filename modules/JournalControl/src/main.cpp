@@ -4,9 +4,8 @@
 #include "journalcontrol.hpp"
 
 int main(int argc, char **argv) {
-	const LOG_LEVEL logLevel = LOG_LEVEL_DEBUG;
 	rclcpp::init(argc,argv);
-	auto node = std::make_shared<JournalControl>(logLevel);
+	auto node = std::make_shared<JournalControl>();
 	rclcpp::spin(node);
 	return 0;
 }
