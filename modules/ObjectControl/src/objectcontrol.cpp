@@ -6,7 +6,10 @@
 #include <fstream>
 #include <functional>
 #include <thread>
+#include <future>
+#include <memory>
 #include <dirent.h>
+#include <std_srvs/srv/set_bool.hpp>
 
 #include "state.hpp"
 #include "util.h"
@@ -19,9 +22,13 @@ using std_msgs::msg::Empty;
 using std_msgs::msg::String;
 using std_msgs::msg::UInt8;
 
-ObjectControl::ObjectControl() : Module(ObjectControl::moduleName){
-	this->initialize();
+ObjectControl::ObjectControl() : Module(ObjectControl::moduleName)
+{
 	int queueSize=0;
+
+	if (this->initialize() == -1) {
+		throw std::runtime_error(std::string("Failed to initialize ") + get_name());
+	}
 	
 	// ** Subscriptions
 	this->initSub = this->create_subscription<Empty>(topicNames[COMM_INIT], queueSize, std::bind(&ObjectControl::onInitMessage, this, _1));
@@ -39,6 +46,7 @@ ObjectControl::ObjectControl() : Module(ObjectControl::moduleName){
 	// ** Publishers
 	this->failurePub = this->create_publisher<UInt8>(topicNames[COMM_FAILURE],queueSize);
 	this->getStatusResponsePub = this->create_publisher<String>(topicNames[COMM_GETSTATUS_OK],queueSize);	
+
 };
 
 ObjectControl::~ObjectControl() {
@@ -57,24 +65,30 @@ int ObjectControl::initialize() {
 		RCLCPP_ERROR(get_logger(), "Unable to create test journal");
 	}
 
-	// Initialize state and object data
-	if (DataDictionaryInitStateData() != READ_OK) {
-		DataDictionaryFreeStateData();
-		retval = -1;
-		RCLCPP_ERROR(get_logger(),
-					"Found no previously initialized shared memory for state data");
+	if (requestDataDictInitialization()) {
+		// Map state and object data into memory
+		if (DataDictionaryInitObjectData() != READ_OK) {
+			DataDictionaryFreeObjectData();
+			retval = -1;
+			RCLCPP_ERROR(get_logger(),
+						"Found no previously initialized shared memory for object data");
+		}
+		if (DataDictionaryInitStateData() != READ_OK) {
+			DataDictionaryFreeStateData();
+			retval = -1;
+			RCLCPP_ERROR(get_logger(),
+						"Found no previously initialized shared memory for state data");
+		}
+		else {
+			// Set state
+			this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
+			DataDictionarySetOBCState(this->state->asNumber());
+		}
 	}
-	if (DataDictionaryInitObjectData() != READ_OK) {
-		DataDictionaryFreeObjectData();
+	else {
 		retval = -1;
-		RCLCPP_ERROR(get_logger(),
-					"Found no previously initialized shared memory for object data");
+		RCLCPP_ERROR(get_logger(), "Unable to initialize data dictionary");
 	}
-
-	// Set state
-	this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
-	DataDictionarySetOBCState(this->state->asNumber());
-
 	return retval;
 }
 
