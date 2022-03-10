@@ -7,6 +7,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 project(maestro_base)
 
 find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 
 # Define target names
 set(MAESTRO_BASE_TARGET ${PROJECT_NAME})
@@ -46,6 +48,7 @@ rosidl_target_interfaces(${MAESTRO_BASE_TARGET}
 ament_target_dependencies(${MAESTRO_BASE_TARGET}
   rclcpp
   std_msgs
+  std_srvs
 )
 
 # Installation rules

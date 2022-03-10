@@ -1,11 +1,15 @@
 #include "maestrobase.hpp"
 #include "datadictionary.h"
+#include <functional>
 
 MaestroBase::MaestroBase()
     : Module(MaestroBase::moduleName)
 {
-    initialize();
-    exitSub = create_subscription<Empty>(topicNames[COMM_EXIT], 0, bind(&MaestroBase::onExitMessage, this, _1));
+	auto test = create_service<std_srvs::srv::SetBool>("init_data_dictionary",
+		std::bind(&MaestroBase::onInitDataDictionary, this, std::placeholders::_1, std::placeholders::_2));
+    initDataDictionaryService = test;
+
+	exitSub = create_subscription<Empty>(topicNames[COMM_EXIT], 0, bind(&MaestroBase::onExitMessage, this, _1));
 }
 
 MaestroBase::~MaestroBase()
@@ -30,6 +34,28 @@ void MaestroBase::initialize()
 	}
 	else {
 		RCLCPP_INFO(get_logger(), "Data dictionary succesfully initialized");
+	}
+}
+
+void MaestroBase::onInitDataDictionary(
+	const std::shared_ptr<std_srvs::srv::SetBool::Request> req,
+	std::shared_ptr<std_srvs::srv::SetBool::Response> res)
+{
+	RCLCPP_DEBUG(get_logger(), "Received request to initialize data dictionary, ignoring value %d", req->data);
+	
+	if (isInitialized) {
+		res->success = true;
+		return;
+	}
+
+	auto result = DataDictionaryConstructor();
+	res->success = result == READ_WRITE_OK;
+	if (res->success) {
+		DataDictionaryDestructor();
+	}
+	else {
+		RCLCPP_INFO(get_logger(), "Data dictionary succesfully initialized");
+		isInitialized = true;
 	}
 }
 
