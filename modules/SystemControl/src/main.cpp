@@ -5,21 +5,21 @@ using namespace std::chrono;
 
 /* decl */
 static std::shared_ptr<SystemControl> sc;
-static void systemcontrol_task(TimeType * GPSTime, LOG_LEVEL logLevel);
+static void systemcontrol_task(TimeType * GPSTime, LOG_LEVEL logLevel, int argc, char** argv);
 
 int main(int argc, char** argv){
 	TimeType *GPSTime;
 	GPSTime = (TimeType*) mmap(NULL, sizeof *GPSTime, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-	systemcontrol_task(GPSTime,LOG_LEVEL_INFO);
+	systemcontrol_task(GPSTime,LOG_LEVEL_INFO, argc, argv);
 	return 0;
 }
 
 /*
 Initializes Logs, Shared memory and mode, then runs the main loop
 */
-void systemcontrol_task(TimeType * GPSTime, LOG_LEVEL logLevel){
+void systemcontrol_task(TimeType * GPSTime, LOG_LEVEL logLevel, int argc, char** argv){
 	// Initialize ROS node
-	rclcpp::init(0,nullptr);
+	rclcpp::init(argc, argv);
 	sc = std::make_shared<SystemControl>();
 	sc->initialize(logLevel);
 	
