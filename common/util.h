@@ -8,8 +8,7 @@
   -- Reference   :
   ------------------------------------------------------------------------------*/
 
-#ifndef __UTIL_H_INCLUDED__
-#define __UTIL_H_INCLUDED__
+#pragma once
 
 #ifdef __cplusplus
 extern "C"{
@@ -796,4 +795,3 @@ void traj2ldm ( float      time ,
 }
 #endif
 
-#endif //__UTIL_H_INCLUDED__
