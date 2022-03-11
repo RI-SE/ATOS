@@ -5,19 +5,17 @@ using namespace std::chrono;
 
 /* decl */
 static std::shared_ptr<SystemControl> sc;
-static void systemcontrol_task(TimeType * GPSTime, LOG_LEVEL logLevel, int argc, char** argv);
+static void systemcontrol_task(LOG_LEVEL logLevel, int argc, char** argv);
 
 int main(int argc, char** argv){
-	TimeType *GPSTime;
-	GPSTime = (TimeType*) mmap(NULL, sizeof *GPSTime, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-	systemcontrol_task(GPSTime,LOG_LEVEL_INFO, argc, argv);
+	systemcontrol_task(LOG_LEVEL_INFO, argc, argv);
 	return 0;
 }
 
 /*
 Initializes Logs, Shared memory and mode, then runs the main loop
 */
-void systemcontrol_task(TimeType * GPSTime, LOG_LEVEL logLevel, int argc, char** argv){
+void systemcontrol_task(LOG_LEVEL logLevel, int argc, char** argv){
 	// Initialize ROS node
 	rclcpp::init(argc, argv);
 	sc = std::make_shared<SystemControl>();
@@ -32,10 +30,9 @@ void systemcontrol_task(TimeType * GPSTime, LOG_LEVEL logLevel, int argc, char**
 	rclcpp::executors::SingleThreadedExecutor executor;
 
 	while (rclcpp::ok() && !sc->shouldExit()){
-		sc->receiveUserCommand(GPSTime, logLevel);
-		sc->processUserCommand(GPSTime, logLevel);
-		sc->sendUnsolicitedData(GPSTime, logLevel);
-		
+		sc->receiveUserCommand();
+		sc->processUserCommand();
+		sc->sendUnsolicitedData();
 
 		// If SystemControl is not in work state and clientResult < 0 then wait at most QUEUE_EMPTY_POLL_PERIOD for a msg
 		// else keep running at full speed.

@@ -34,9 +34,9 @@ public:
 	bool shouldExit();
 	void initialize(LOG_LEVEL logLevel);
 	void signalHandler(int signo);
-	void receiveUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel);
-	void processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel);
-	void sendUnsolicitedData(TimeType * GPSTime, LOG_LEVEL logLevel);
+	void receiveUserCommand();
+	void processUserCommand();
+	void sendUnsolicitedData();
 
 private:
 	static inline std::string const module_name = "system_control";
@@ -160,7 +160,7 @@ private:
 	I32 SystemControlSendFileContent(I32 * sockfd, const char * Path, const char * PacketSize, char * ReturnValue, U8 Remove,
 									U8 Debug);
 	I32 SystemControlCreateDirectory(const char * Path, char * ReturnValue, U8 Debug);
-	I32 SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, TimeType * GPSTime,
+	I32 SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32,
 												U8 Debug);
 	I32 SystemControlBuildRVSSMaestroChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32,
 													U8 SysCtrlState, U8 Debug);
