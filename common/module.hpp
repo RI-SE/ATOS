@@ -13,7 +13,7 @@
 #include "maestro_msgs/msg/accm.hpp"
 #include "maestro_msgs/msg/manoeuvre_command.hpp"
 #include "maestro_msgs/msg/object_enabled.hpp"
-#include "maestro_msgs/msg/dm_msg.hpp"
+#include "maestro_msgs/msg/control_signal_percentage.hpp"
 
 
 using std_msgs::msg::Empty;
@@ -26,7 +26,7 @@ using maestro_msgs::msg::ManoeuvreCommand;
 using maestro_msgs::msg::ObjectEnabled;
 using std::placeholders::_1;
 using rclcpp::Node;
-using maestro_msgs::msg::DmMsg;
+using maestro_msgs::msg::ControlSignalPercentage;
 
 // TODO move somewhere else
 static std::map<COMMAND, std::string> topicNames = {
@@ -61,6 +61,7 @@ static std::map<COMMAND, std::string> topicNames = {
 	{COMM_REMOTECTRL_DISABLE, "/remote_control_disable"},
 	{COMM_REMOTECTRL_MANOEUVRE, "/remote_control_manoeuvre"},
 	{COMM_ENABLE_OBJECT, "/enable_object"},
+	{COMM_CONTROL_SIGNAL_PERCENTAGE, "/control_signal_perc"},
 	{COMM_OBJECTS_CONNECTED, "/objects_connected"},
 	{COMM_FAILURE, "/failure"}
 };
@@ -192,8 +193,8 @@ protected:
 	rclcpp::Subscription<Empty>::SharedPtr dataDictResponseSub;
 	rclcpp::Publisher<Empty>::SharedPtr dataDictResponsePub;
 
-	rclcpp::Subscription<DmMsg>::SharedPtr dmSub;
-	rclcpp::Publisher<DmMsg>::SharedPtr dmPub;
+	rclcpp::Subscription<ControlSignalPercentage>::SharedPtr controlSignalPercentageSub;
+	rclcpp::Publisher<ControlSignalPercentage>::SharedPtr controlSignalPercentagePub;
 
 	virtual void onFailureMessage(const UInt8::SharedPtr) {};
 	virtual void onGetStatusResponse(const String::SharedPtr) { };
@@ -233,14 +234,15 @@ protected:
 	virtual void onBackToStartMessage(const Empty::SharedPtr){};
 	virtual void onBackToStartResponse(const Int8::SharedPtr){};
 	virtual void onDataDictResponse(const Empty::SharedPtr){};
+	virtual void onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr){};
 
 	static void tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail) {
 		try {
-			LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames[commandCode].c_str());
+			LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames.at(commandCode).c_str());
 			tryExecute();
 		}
 		catch (std::invalid_argument& e) {
-			LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames[commandCode].c_str(), e.what());
+			LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames.at(commandCode).c_str(), e.what());
 			executeIfFail();
 		}
 	}
