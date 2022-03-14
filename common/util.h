@@ -11,9 +11,7 @@
 #ifndef __UTIL_H_INCLUDED__
 #define __UTIL_H_INCLUDED__
 
-#ifdef __cplusplus
-extern "C"{
-#endif
+
 
 /*------------------------------------------------------------
   -- Include files.
@@ -34,6 +32,10 @@ extern "C"{
 #include "iso22133.h"
 #include "logging.h"
 #include "positioning.h"
+
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 /*------------------------------------------------------------
   -- Defines
@@ -258,13 +260,14 @@ COMM_REMOTECTRL_ENABLE = 31,
 COMM_REMOTECTRL_DISABLE = 32,
 COMM_REMOTECTRL_MANOEUVRE = 33,
 COMM_ENABLE_OBJECT = 34,
+COMM_CONTROL_SIGNAL_PERCENTAGE = 35,
 COMM_OBJECTS_CONNECTED = 111,
 COMM_FAILURE = 254,
 COMM_INV = 255
 };
 
 typedef struct {
-	RemoteControlManoeuvreCommandType manoeuvre;
+	enum RemoteControlManoeuvreCommandType manoeuvre;
 	in_addr_t objectIP;
 } ManoeuvreCommandType;
 
