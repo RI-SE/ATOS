@@ -15,9 +15,6 @@ endif()
 # point out where CMake scripts are located
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/util/cmake)
 
-#point out the ros install location for modules
-set_property(GLOBAL PROPERTY ros_install_dir_property "lib/maestro")
-
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
