@@ -36,6 +36,9 @@ ObjectControl::ObjectControl(LOG_LEVEL logLevel) : Module(ObjectControl::moduleN
 	this->accmSub = this->create_subscription<Accm>(topicNames[COMM_ACCM], queueSize, std::bind(&ObjectControl::onACCMMessage, this, _1));
 	this->exacSub = this->create_subscription<Exac>(topicNames[COMM_EXAC], queueSize, std::bind(&ObjectControl::onEXACMessage, this, _1));
 	this->getStatusSub = this->create_subscription<Empty>(topicNames[COMM_GETSTATUS], queueSize, std::bind(&ObjectControl::onGetStatusMessage, this, _1));
+	this->remoteControlEnableSub = this->create_subscription<Empty>(topicNames[COMM_REMOTECTRL_ENABLE], queueSize, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1));
+	this->remoteControlDisableSub = this->create_subscription<Empty>(topicNames[COMM_REMOTECTRL_DISABLE], queueSize, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1));
+	this->controlSignalPercentageSub = this->create_subscription<ControlSignalPercentage>(topicNames[COMM_CONTROL_SIGNAL_PERCENTAGE], queueSize, std::bind(&ObjectControl::onControlSignalPercentageMessage, this, _1));
 
 	// ** Publishers
 	this->failurePub = this->create_publisher<UInt8>(topicNames[COMM_FAILURE],queueSize);
@@ -107,6 +110,11 @@ void ObjectControl::handleExecuteActionCommand(
 	thd.detach();
 }
 
+void ObjectControl::sendRCMMToObject(
+		RemoteControlManoeuvreMessageType& rcmm,
+		uint32_t id){
+			objects.at(id).sendControlSignal(rcmm);
+		}
 
 void ObjectControl::onInitMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_INIT;
@@ -191,6 +199,33 @@ void ObjectControl::onEXACMessage(const Exac::SharedPtr exac){
 	};
 	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(cmd,f_try,f_catch);
+}
+
+void ObjectControl::onRemoteControlEnableMessage(const Empty::SharedPtr){
+	COMMAND cmd = COMM_REMOTECTRL_ENABLE;
+	auto f_try = [&]() { this->state->enableRemoteControlRequest(*this); };
+	auto f_catch = [&]() {
+			failurePub->publish(msgCtr1<UInt8>(cmd));
+	};
+	this->tryHandleMessage(cmd,f_try,f_catch);	
+}
+
+void ObjectControl::onRemoteControlDisableMessage(const Empty::SharedPtr){
+	COMMAND cmd = COMM_REMOTECTRL_DISABLE;
+	auto f_try = [&]() { this->state->disableRemoteControlRequest(*this); };
+	auto f_catch = [&]() {
+			failurePub->publish(msgCtr1<UInt8>(cmd));
+	};
+	this->tryHandleMessage(cmd,f_try,f_catch);	
+}
+
+void ObjectControl::onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr csp){
+	COMMAND cmd = COMM_CONTROL_SIGNAL_PERCENTAGE;
+	auto f_try = [&]() { this->state->sendControlSignal(*this,csp); };
+	auto f_catch = [&]() {
+			failurePub->publish(msgCtr1<UInt8>(cmd));
+	};
+	this->tryHandleMessage(cmd,f_try,f_catch);	
 }
 
 void ObjectControl::loadScenario() {

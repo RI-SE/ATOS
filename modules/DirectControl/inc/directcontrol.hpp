@@ -4,6 +4,7 @@
 #include "module.hpp"
 #include "tcphandler.hpp"
 #include "server.hpp"
+#include "maestro_msgs/msg/control_signal_percentage.hpp"
 
 class DirectControl : public Module {
 public:

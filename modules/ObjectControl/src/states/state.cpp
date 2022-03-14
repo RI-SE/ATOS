@@ -50,4 +50,9 @@ void ObjectControlState::abortRequest(ObjectControl&) {
 void ObjectControlState::allClearRequest(ObjectControl&) {
 	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
 }
-
+void ObjectControlState::enableRemoteControlRequest(ObjectControl&) {
+	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
+}
+void ObjectControlState::disableRemoteControlRequest(ObjectControl&) {
+	throw std::logic_error("Call to pure virtual function " + std::string(__FUNCTION__));
+}

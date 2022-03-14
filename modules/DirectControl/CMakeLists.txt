@@ -26,12 +26,16 @@ add_executable(${DIRECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/directcontrol.cpp
 )
 # Link project executable to util libraries
-target_link_libraries(${DIRECT_CONTROL_TARGET} LINK_PUBLIC
+target_link_libraries(${DIRECT_CONTROL_TARGET}
 	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${LOGGING_LIBRARY}
 	${SOCKET_LIBRARY}
 	${THREAD_LIBRARY}
+)
+
+target_include_directories(${DIRECT_CONTROL_TARGET} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
 # ROS specific rules

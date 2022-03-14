@@ -7,13 +7,16 @@
 #include "datadictionary.h"
 #include "maestro_msgs/msg/control_signal_percentage.hpp"
 
-DirectControl::DirectControl()
-	: tcpHandler(commandPort, "", "off", 1, O_NONBLOCK) {
-
 using maestro_msgs::msg::ControlSignalPercentage;
 
 #define TCP_BUFFER_SIZE 2048
 
+// ! Helper functions (Put somehwere else? util.cpp?)
+
+/** @struct DmMsg
+ *  @brief Driver Model message, used in esmini to send
+ * control signals to a vehicle from a driver model.
+ */
 typedef struct
 {
 	unsigned int version;
@@ -24,44 +27,6 @@ typedef struct
 	double brake;          // range [0, 1]
 	double steeringAngle;  // range [-pi/2, pi/2]
 } DmMsg;
-
-void DirectControl::onAbortMessage(const Empty::SharedPtr){}
-
-void DirectControl::onAllClearMessage(const Empty::SharedPtr){}
-
-bool DirectControl::shouldExit(){
-	return this->quit;
-}
-
-DirectControl::DirectControl() :
-	Module(module_name),
-	tcpHandler(TCPPort, "", "off", 1, O_NONBLOCK), 
-	udpServer("0.0.0.0",UDPPort) {
-	// Publishers
-	this->dmPub = this->create_publisher<ControlSignalPercentage>("/control_perc",0);
-}
-
-DirectControl::DirectControl() :
-	Module(module_name),
-	tcpHandler(TCPPort, "", "off", 1, O_NONBLOCK), 
-	udpServer("0.0.0.0",UDPPort) {
-	// Publishers
-	this->dmPub = this->create_publisher<DmMsg>("/dm",0);
-}
-
-void DirectControl::startThreads() {
-	receiveThread=std::make_unique<std::thread>(&DirectControl::readTCPSocketData, this);
-	receiveThreadUDP=std::make_unique<std::thread>(&DirectControl::readUDPSocketData, this);
-}
-
-void DirectControl::joinThreads(){
-	//Tear down connections
-	if(this->tcpHandler.isConnected()) this->tcpHandler.TCPHandlerclose();
-	this->udpServer.close();
-	//Join threads
-	receiveThread->join();
-	receiveThreadUDP->join();
-}
 
 /*!
  * \brief transfers x bytes, on the interval from idx to idx+x, 
@@ -92,29 +57,70 @@ void decodeNextXBytes(int x, T& field, int& idx, const std::vector<char>& bytes)
  * \param DMMsg the data structure to be populated with contents of the message 
  * \return 1 on success, 0 otherwise
  */
-bool decodeDMMessage(const std::vector<char>& bytes, DmMsg& DMMsg){
+bool decodeDMMessage(const std::vector<char>& bytes, DmMsg& dmMsg){
 	int idx=0;
-	decodeNextXBytes(4,DMMsg.version,idx,bytes);
-	decodeNextXBytes(4,DMMsg.input_mode,idx,bytes);
-	if (DMMsg.input_mode != 1) { return 0;}
-	decodeNextXBytes(4,DMMsg.object_id,idx,bytes);
-	decodeNextXBytes(4,DMMsg.frame_number,idx,bytes);
-	decodeNextXBytes(8,DMMsg.throttle,idx,bytes);
-	decodeNextXBytes(8,DMMsg.brake,idx,bytes);
-	decodeNextXBytes(8,DMMsg.steering_angle,idx,bytes);
+	decodeNextXBytes(4,dmMsg.version,idx,bytes);
+	decodeNextXBytes(4,dmMsg.inputMode,idx,bytes);
+	if (dmMsg.inputMode != 1) { return 0;}
+	decodeNextXBytes(4,dmMsg.objectId,idx,bytes);
+	decodeNextXBytes(4,dmMsg.frameNumber,idx,bytes);
+	decodeNextXBytes(8,dmMsg.throttle,idx,bytes);
+	decodeNextXBytes(8,dmMsg.brake,idx,bytes);
+	decodeNextXBytes(8,dmMsg.steeringAngle,idx,bytes);
 	return 1;
 }
 
-ControlSignalPercentage DirectControl::buildMaestroMsg(DmMsg& dmmsg){
+ControlSignalPercentage buildMaestroMsg(DmMsg& dmMsg){
 	ControlSignalPercentage cspmsg = ControlSignalPercentage();
-	cspmsg.maestro_header.object_id = dmmsg.object_id;
-	cspmsg.throttle = dmmsg.throttle;
-	cspmsg.brake = dmmsg.brake;
-	cspmsg.steering_angle = dmmsg.steering_angle;
+	cspmsg.maestro_header.object_id = dmMsg.objectId;
+	// Convert throttle brake and steering angle to integers between 0,100 and -100,100 respectively.  
+	cspmsg.throttle = round(dmMsg.throttle * 100);
+	cspmsg.brake = round(dmMsg.brake * 100);
+	cspmsg.steering_angle = round(dmMsg.steeringAngle * 100);
+	return cspmsg;
 }
 
+//! Message queue callbacks
+
+void DirectControl::onAbortMessage(const Empty::SharedPtr){}
+
+void DirectControl::onAllClearMessage(const Empty::SharedPtr){}
+
+void DirectControl::onExitMessage(const Empty::SharedPtr){
+	this->quit=true;
+}
+
+//! Class methods
+
+bool DirectControl::shouldExit(){
+	return this->quit;
+}
+
+DirectControl::DirectControl() :
+	Module(module_name),
+	tcpHandler(TCPPort, "", "off", 1, O_NONBLOCK), 
+	udpServer("0.0.0.0",UDPPort) {
+	// Publishers
+	this->controlSignalPercentagePub = this->create_publisher<ControlSignalPercentage>(topicNames[COMM_CONTROL_SIGNAL_PERCENTAGE],0);
+}
+
+void DirectControl::startThreads() {
+	receiveThread=std::make_unique<std::thread>(&DirectControl::readTCPSocketData, this);
+	receiveThreadUDP=std::make_unique<std::thread>(&DirectControl::readUDPSocketData, this);
+}
+
+void DirectControl::joinThreads(){
+	//Tear down connections
+	if(this->tcpHandler.isConnected()) this->tcpHandler.TCPHandlerclose();
+	this->udpServer.close();
+	//Join threads
+	receiveThread->join();
+	receiveThreadUDP->join();
+}
+
+
 /*!
- * \brief Listens for UDP data and sends DM message on ros topic when recevied
+ * \brief Listens for UDP data and sends a control signal on ros topic when recevied
  */
 void DirectControl::readUDPSocketData() {
 	std::pair<std::vector<char>, BasicSocket::HostInfo> message;
@@ -125,37 +131,14 @@ void DirectControl::readUDPSocketData() {
 	while (!this->quit){
 		try{
 			auto [data, remote] = udpServer.recvfrom();
-			DmMsg dmmsg;
-			wasSuccessful = decodeDMMessage(data, dmmsg);
+			DmMsg dmMsg;
+			wasSuccessful = decodeDMMessage(data, dmMsg);
+			// TODO: add re-ordering with frame numbers? 
+			// Have to think abt if/what kind of re-ordering makes sense for 
+			// the application (driver model).
 			if (wasSuccessful){
-				dmPub->publish(dmmsg);
-			}
-		}
-		catch(const SocketErrors::DisconnectedError& error){
-			//If we get a disconnected exception when we do not intend to exit, propagate said exception
-			if (!this->quit){
-				throw error;
-			}
-		}
-	}
-}
-
-/*!
- * \brief Listens for UDP data and sends DM message on ros topic when recevied
- */
-void DirectControl::readUDPSocketData() {
-	std::pair<std::vector<char>, BasicSocket::HostInfo> message;
-	int wasSuccessful;
-
-	LogMessage(LOG_LEVEL_INFO, "Listening on UDP port %d",UDPPort);
-	
-	while (!this->quit){
-		try{
-			auto [data, remote] = udpServer.recvfrom();
-			DmMsg dmmsg = DmMsg();
-			wasSuccessful = decodeDMMessage(data, dmmsg);
-			if (wasSuccessful){
-				dmPub->publish(dmmsg);
+				ControlSignalPercentage cspmsg = buildMaestroMsg(dmMsg);
+				controlSignalPercentagePub->publish(cspmsg);
 			}
 		}
 		catch(const SocketErrors::DisconnectedError& error){
@@ -246,10 +229,6 @@ size_t DirectControl::handleUnknownMessage(
 		std::vector<char> &byteData) {
 	std::fill(byteData.begin(), byteData.end(), 0);
 	return byteData.size();
-}
-
-void DirectControl::onExitMessage(const Empty::SharedPtr){
-	this->quit=true;
 }
 
 /*!
