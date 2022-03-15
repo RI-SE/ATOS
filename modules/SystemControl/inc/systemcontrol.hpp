@@ -24,7 +24,6 @@
 #include "maestroTime.h"
 #include "datadictionary.h"
 #include "util.h"
-#include "logging.h"
 
 class SystemControl : public Module
 {
@@ -33,14 +32,14 @@ public:
 	const int64_t getQueueEmptyPollPeriod();
 	bool isWorking();
 	bool shouldExit();
-	void initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	void initialize(LOG_LEVEL logLevel);
 	void signalHandler(int signo);
-	void receiveUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
-	void processUserCommand(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
-	void sendUnsolicitedData(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
+	void receiveUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel);
+	void processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel);
+	void sendUnsolicitedData(TimeType * GPSTime, LOG_LEVEL logLevel);
 
 private:
-	static inline std::string const module_name = "SystemControl";
+	static inline std::string const module_name = "system_control";
 	//const std::string module_name = std::string("SystemControl");
 	/* constants and datatypes */
 	const int64_t QUEUE_EMPTY_POLL_PERIOD_NS = 10000000;
@@ -141,9 +140,9 @@ private:
 												struct sockaddr_in *addr);
 	//I32 SystemControlSendUDPData(I32 *sockfd, struct sockaddr_in* addr, char *SendData, I32 Length, U8 debug);
 	I32 SystemControlReadServerParameterList(char * ParameterList, U8 debug);
-	I32 SystemControlGetServerParameter(GSDType * GSD, char * ParameterName, char * ReturnValue, U32 BufferLength,
+	I32 SystemControlGetServerParameter(char * ParameterName, char * ReturnValue, U32 BufferLength,
 										U8 Debug);
-	I32 SystemControlSetServerParameter(GSDType * GSD, char * ParameterName, char * NewValue, U8 Debug);
+	I32 SystemControlSetServerParameter(char * ParameterName, char * NewValue, U8 Debug);
 	I32 SystemControlCheckFileDirectoryExist(char * ParameterName, char * ReturnValue, U8 Debug);
 	I32 SystemControlUploadFile(const char * Filename, const char * FileSize, const char * PacketSize, const char * FileType, char * ReturnValue,
 								char * CompleteFilePath, U8 Debug);
@@ -163,7 +162,7 @@ private:
 	I32 SystemControlCreateDirectory(const char * Path, char * ReturnValue, U8 Debug);
 	I32 SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, TimeType * GPSTime,
 												U8 Debug);
-	I32 SystemControlBuildRVSSMaestroChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, GSDType * GSD,
+	I32 SystemControlBuildRVSSMaestroChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32,
 													U8 SysCtrlState, U8 Debug);
 	I32 SystemControlBuildRVSSAspChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, U8 Debug);
 	int32_t SystemControlSendRVSSMonitorChannelMessages(int *socket, struct sockaddr_in *addr);

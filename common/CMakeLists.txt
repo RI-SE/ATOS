@@ -13,6 +13,8 @@ set(MAESTRO_UTIL_TARGET ${TARGET_NAMESPACE}MaestroCoreUtil)
 
 find_package(Eigen3 REQUIRED IMPORTED)
 find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 
 set(LOGGING_LIBRARY MaestroLogging)
 set(TIME_LIBRARY MaestroTime)
@@ -39,6 +41,7 @@ add_library(${MAESTRO_UTIL_TARGET} SHARED
 add_library(${MAESTRO_COMMON_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/trajectory.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/objectconfig.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/module.cpp
 )
 
 # Includes
@@ -83,6 +86,7 @@ rosidl_target_interfaces(${MAESTRO_COMMON_TARGET}
 ament_target_dependencies(${MAESTRO_COMMON_TARGET}
   rclcpp
   std_msgs
+  std_srvs
 )
 
 # Exported headers
@@ -108,6 +112,9 @@ set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
 )
 set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
 	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/module.hpp
+)
+set_property(TARGET ${MAESTRO_COMMON_TARGET} APPEND PROPERTY
+	PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/loggable.hpp
 )
 
 # Tests

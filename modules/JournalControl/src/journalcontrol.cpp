@@ -36,11 +36,11 @@ namespace fs = std::experimental::filesystem;
 #endif
 static void signalHandler(int signo);
 
-JournalControl::JournalControl(LOG_LEVEL logLevel)
-	: Module(JournalControl::moduleName)
+JournalControl::JournalControl()
+	: Module(JournalControl::moduleName), journals(get_logger())
 {
 	using std::bind;
-	initialize(logLevel);
+	initialize();
 	int queueSize = 0;
 	armSub = create_subscription<Empty>(topicNames[COMM_ARM], queueSize, bind(&JournalControl::onArmMessage, this, _1));
 	exitSub = create_subscription<Empty>(topicNames[COMM_EXIT], queueSize, bind(&JournalControl::onExitMessage, this, _1));
@@ -51,12 +51,10 @@ JournalControl::JournalControl(LOG_LEVEL logLevel)
 	getStatusResponsePub = create_publisher<String>(topicNames[COMM_GETSTATUS_OK], queueSize);
 }
 
-void JournalControl::initialize(LOG_LEVEL logLevel)
+void JournalControl::initialize()
 {
 	int retval = 0;
-	// Initialize log
-	LogInit(get_name(), logLevel);
-	LogMessage(LOG_LEVEL_INFO, "%s task running with PID: %d", get_name(), getpid());
+	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());
 
 	if (std::signal(SIGINT, signalHandler) == SIG_ERR) {
 		throw std::runtime_error("Failed to register signal handler");
@@ -70,13 +68,17 @@ void JournalControl::onArmMessage(const Empty::SharedPtr msg)
 
 void JournalControl::onStopMessage(const Empty::SharedPtr msg)
 {
-	// Save stop references
-	journals.placeStopBookmarks();
-	// If any additional journals were created in the start-stop interval,
-	// insert them
-	journals.insertNonBookmarked();
-	// Merge journals into named output
-	journals.dumpToFile();
+	try {
+		// Save stop references
+		journals.placeStopBookmarks();
+		// If any additional journals were created in the start-stop interval,
+		// insert them
+		journals.insertNonBookmarked();
+		// Merge journals into named output
+		journals.dumpToFile();
+	} catch (std::exception &e) {
+		RCLCPP_ERROR(get_logger(), "Failed to save journal: %s", e.what());
+	}
 }
 
 void JournalControl::onAbortMessage(const Empty::SharedPtr msg)
@@ -92,7 +94,7 @@ void JournalControl::onReplayMessage(const Empty::SharedPtr msg)
 
 void JournalControl::onExitMessage(const Empty::SharedPtr msg)
 {
-	LogMessage(LOG_LEVEL_INFO, "%s task exiting", get_name());
+	RCLCPP_INFO(get_logger(), "%s task exiting", get_name());
 	rclcpp::shutdown();
 }
 

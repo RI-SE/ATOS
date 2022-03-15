@@ -12,22 +12,23 @@ static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, con
 
 ObjectListener::ObjectListener(
 		ObjectControl* sh,
-		TestObject* ob)
-	:  obj(ob), handler(sh)
+		TestObject* ob,
+		rclcpp::Logger log)
+	:  obj(ob), handler(sh), Loggable(log)
 {
 	if (!obj->isConnected()) {
 		throw std::invalid_argument("Attempted to start listener for disconnected object");
 	}
-	LogMessage(LOG_LEVEL_DEBUG, "Starting listener thread for object %u", ob->getTransmitterID());
+	RCLCPP_DEBUG(get_logger(), "Starting listener thread for object %u", ob->getTransmitterID());
 	listener = std::thread(&ObjectListener::listen, this);
 }
 
 ObjectListener::~ObjectListener() {
 	this->quit = true;
-	LogMessage(LOG_LEVEL_DEBUG, "Awaiting thread exit");
+	RCLCPP_DEBUG(get_logger(), "Awaiting thread exit");
 	pthread_cancel(listener.native_handle());
 	listener.join(); // TODO this blocks if MONR timeout (still?)
-	LogMessage(LOG_LEVEL_DEBUG, "Thread exited");
+	RCLCPP_DEBUG(get_logger(), "Thread exited");
 }
 
 void ObjectListener::listen() {
@@ -59,22 +60,22 @@ void ObjectListener::listen() {
 					switch (obj->getState()) {
 					case OBJECT_STATE_DISARMED:
 						if (prevObjState == OBJECT_STATE_ABORTING) {
-							LogMessage(LOG_LEVEL_INFO, "Object %u abort cleared", obj->getTransmitterID());
+							RCLCPP_INFO(get_logger(), "Object %u abort cleared", obj->getTransmitterID());
 							handler->state->objectAbortDisarmed(*handler, obj->getTransmitterID());
 						}
 						else {
-							LogMessage(LOG_LEVEL_INFO, "Object %u disarmed", obj->getTransmitterID());
+							RCLCPP_INFO(get_logger(), "Object %u disarmed", obj->getTransmitterID());
 							handler->state->objectDisarmed(*handler, obj->getTransmitterID());
 						}
 						break;
 					case OBJECT_STATE_POSTRUN:
 						break;
 					case OBJECT_STATE_ARMED:
-						LogMessage(LOG_LEVEL_INFO, "Object %u armed", obj->getTransmitterID());
+						RCLCPP_INFO(get_logger(), "Object %u armed", obj->getTransmitterID());
 						handler->state->objectArmed(*handler, obj->getTransmitterID());
 						break;
 					case OBJECT_STATE_ABORTING:
-						LogMessage(LOG_LEVEL_INFO, "Object %u aborting", obj->getTransmitterID());
+						RCLCPP_INFO(get_logger(), "Object %u aborting", obj->getTransmitterID());
 						handler->state->objectAborting(*handler, obj->getTransmitterID());
 						break;
 					}
@@ -85,24 +86,24 @@ void ObjectListener::listen() {
 				break;
 			}
 			case MESSAGE_ID_TREO:
-				LogMessage(LOG_LEVEL_WARNING, "Unhandled TREO message");
+				RCLCPP_WARN(get_logger(), "Unhandled TREO message");
 				break;
 			case MESSAGE_ID_VENDOR_SPECIFIC_ASTAZERO_OPRO:
 				obj->parseObjectPropertyMessage();
 				break;
 			default:
-				LogMessage(LOG_LEVEL_WARNING, "Received unknown message type");
+				RCLCPP_WARN(get_logger(), "Received unknown message type");
 				break;
 			}
 		}
 	} catch (std::invalid_argument& e) {
-		LogMessage(LOG_LEVEL_ERROR, e.what());
+		RCLCPP_ERROR(get_logger(), e.what());
 	} catch (std::runtime_error& e) {
-		LogMessage(LOG_LEVEL_ERROR, e.what());
+		RCLCPP_ERROR(get_logger(), e.what());
 		obj->disconnect();
 		handler->state->disconnectedFromObject(*handler, obj->getTransmitterID());
 	}
-	LogMessage(LOG_LEVEL_INFO, "Listener thread for object %u exiting", obj->getTransmitterID());
+	RCLCPP_INFO(get_logger(), "Listener thread for object %u exiting", obj->getTransmitterID());
 }
 
 /*!

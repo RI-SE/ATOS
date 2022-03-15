@@ -10,14 +10,16 @@ namespace fs = std::experimental::filesystem;
 #endif
 
 #include <set>
+#include "loggable.hpp"
 
-class Journal {
+class Journal : public Loggable {
 public:
-	class Bookmark {
+	class Bookmark : public Loggable {
 	private:
 		fs::path filePath;
 		std::streampos filePosition;
 	public:
+		Bookmark(rclcpp::Logger log) : Loggable(log) {}
 		bool valid = false;
 		void place(const fs::path &path, const bool placeAtBeginning=false);
 		const std::streampos& getPosition() const { return filePosition; }
@@ -28,7 +30,7 @@ public:
 		}
 	};
 
-	Journal() {}
+	Journal(rclcpp::Logger log) : Loggable(log), startReference(log), stopReference(log) {}
 	std::string moduleName;
 	mutable Bookmark startReference;
 	mutable Bookmark stopReference;

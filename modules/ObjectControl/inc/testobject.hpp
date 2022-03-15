@@ -7,6 +7,7 @@
 #include "objectconfig.hpp"
 #include "osi_handler.hpp"
 #include "maestro_msgs/msg/control_signal_percentage.hpp"
+#include "loggable.hpp"
 
 using maestro_msgs::msg::ControlSignalPercentage;
 
@@ -27,14 +28,16 @@ struct MonitorMessage : std::pair<uint32_t,ObjectMonitorType> {};
  * \brief The Channel class represents any socket based connection
  *			and allows transmission / reception of ISO messages
  */
-class Channel {
+class Channel : public Loggable
+{
 public:
-	Channel(const size_t bufferLength, const int type)
+	Channel(const size_t bufferLength, const int type, rclcpp::Logger log)
 		: channelType(type),
 		  transmitBuffer(bufferLength, 0),
-		  receiveBuffer(bufferLength, 0)
+		  receiveBuffer(bufferLength, 0),
+		  Loggable(log)
 	{}
-	Channel(int type) : Channel(1024, type) {}
+	Channel(int type, rclcpp::Logger log) : Channel(1024, type, log) {}
 	struct sockaddr_in addr = {};
 	int socket = -1;
 	int channelType = 0; //!< SOCK_STREAM or SOCK_DGRAM
@@ -66,12 +69,15 @@ public:
  *			a single object, i.e. the two channels for command and
  *			safety data.
  */
-class ObjectConnection {
+class ObjectConnection : public Loggable {
 public:
 	Channel cmd;
 	Channel mntr;
 
-	ObjectConnection() : cmd(SOCK_STREAM), mntr(SOCK_DGRAM) {}
+	ObjectConnection(rclcpp::Logger log)
+		: cmd(SOCK_STREAM, log),
+		mntr(SOCK_DGRAM, log),
+		Loggable(log) {}
 
 	bool isValid() const;
 	bool isConnected() const;
@@ -81,10 +87,10 @@ public:
 	ISOMessageID pendingMessageType(bool awaitNext = false);
 };
 
-class TestObject {
+class TestObject : public Loggable {
 	using clock = std::chrono::steady_clock;
 public:
-	TestObject();
+	TestObject(rclcpp::Logger log);
 	TestObject(const TestObject&) = delete;
 	TestObject(TestObject&&);
 
@@ -119,7 +125,7 @@ public:
 	bool isConnected() const { return comms.isConnected(); }
 	void establishConnection(std::shared_future<void> stopRequest);
 	void disconnect() {
-		LogMessage(LOG_LEVEL_INFO, "Disconnecting object %u",
+		RCLCPP_INFO(get_logger(), "Disconnecting object %u",
 				   this->getTransmitterID());
 		this->comms.disconnect();
 	}
@@ -157,7 +163,7 @@ public:
 	ObjectPropertiesType parseObjectPropertyMessage() {
 		ObjectPropertiesType retval;
 		this->comms.cmd >> retval; // TODO make use of this
-		LogMessage(LOG_LEVEL_DEBUG, "Ignoring object properties message");
+		RCLCPP_DEBUG(get_logger(), "Ignoring object properties message");
 		return retval;
 	}
 

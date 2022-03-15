@@ -92,8 +92,8 @@ class ObjectControl : public Module
 	friend class ObjectListener;
 
 public:
-	int initialize(LOG_LEVEL logLevel);
-	ObjectControl(LOG_LEVEL logLevel);
+	int initialize();
+	ObjectControl();
 	typedef enum {
 		RELATIVE_KINEMATICS,	//!< Scenario executed relative to immobile VUT
 		ABSOLUTE_KINEMATICS		//!< Scenario executed relative to earth-fixed point
@@ -178,7 +178,7 @@ public:
 	void sendRCMMToObject(RemoteControlManoeuvreMessageType&,uint32_t);
 
 private:
-	static inline std::string const moduleName = "ObjectControl";
+	static inline std::string const moduleName = "object_control";
 	void onInitMessage(const Empty::SharedPtr) override;
 	void onConnectMessage(const Empty::SharedPtr) override;
 	void onArmMessage(const Empty::SharedPtr) override;

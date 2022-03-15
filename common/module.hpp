@@ -66,6 +66,10 @@ static std::map<COMMAND, std::string> topicNames = {
 	{COMM_FAILURE, "/failure"}
 };
 
+namespace ServiceNames {
+	const std::string initDataDict = "init_data_dictionary";
+}
+
 //TODO move somewhere else? also make generic to allow more args (variadic template)?
 /*!
  * \brief Facilitates one-line intialization
@@ -236,16 +240,10 @@ protected:
 	virtual void onDataDictResponse(const Empty::SharedPtr){};
 	virtual void onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr){};
 
-	static void tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail) {
-		try {
-			LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames.at(commandCode).c_str());
-			tryExecute();
-		}
-		catch (std::invalid_argument& e) {
-			LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames.at(commandCode).c_str(), e.what());
-			executeIfFail();
-		}
-	}
+
+	static void tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail);
+
+	bool requestDataDictInitialization(int maxRetries = 3);
 
 private:
 	static void printUnhandledMessage(const std::string& topic, const std::string& message) {

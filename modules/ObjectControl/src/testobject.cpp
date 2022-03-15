@@ -4,15 +4,20 @@
 #include "datadictionary.h"
 #include "osi_handler.hpp"
 
-TestObject::TestObject() : osiChannel(SOCK_STREAM) {
+TestObject::TestObject(rclcpp::Logger log) :
+	osiChannel(SOCK_STREAM, log),
+	comms(log),
+	Loggable(log) {
 }
 
 TestObject::TestObject(TestObject&& other) :
-	osiChannel(SOCK_STREAM),
+	osiChannel(SOCK_STREAM, other.get_logger()),
+	comms(other.get_logger()),
 	state(other.state),
 	conf(other.conf),
 	lastMonitor(other.lastMonitor),
-	maxAllowedMonitorPeriod(other.maxAllowedMonitorPeriod)
+	maxAllowedMonitorPeriod(other.maxAllowedMonitorPeriod),
+	Loggable(other.get_logger())
 {
 	this->comms = other.comms;
 	this->osiChannel = other.osiChannel;
@@ -200,7 +205,7 @@ void Channel::connect(
 	}
 
 	// Begin connection attempt
-	LogMessage(LOG_LEVEL_INFO, "Attempting %s connection to %s:%u", type.c_str(), ipString,
+	RCLCPP_INFO(get_logger(), "Attempting %s connection to %s:%u", type.c_str(), ipString,
 			   ntohs(this->addr.sin_port));
 
 	while (true) {
@@ -210,7 +215,7 @@ void Channel::connect(
 			break;
 		}
 		else {
-			LogMessage(LOG_LEVEL_ERROR, "Failed %s connection attempt to %s:%u, retrying in %.3f s ...",
+			RCLCPP_ERROR(get_logger(), "Failed %s connection attempt to %s:%u, retrying in %.3f s ...",
 					   type.c_str(), ipString, ntohs(this->addr.sin_port), retryPeriod.count() / 1000.0);
 			if (stopRequest.wait_for(retryPeriod)
 					!= std::future_status::timeout) {
@@ -224,10 +229,10 @@ void Channel::connect(
 void Channel::disconnect() {
 	if (this->socket != -1) {
 		if (shutdown(this->socket, SHUT_RDWR) == -1) {
-			LogMessage(LOG_LEVEL_ERROR, "Socket shutdown: %s", strerror(errno));
+			RCLCPP_ERROR(get_logger(), "Socket shutdown: %s", strerror(errno));
 		}
 		if (close(this->socket) == -1) {
-			LogMessage(LOG_LEVEL_ERROR, "Socket close: %s", strerror(errno));
+			RCLCPP_ERROR(get_logger(), "Socket close: %s", strerror(errno));
 		}
 		this->socket = -1;
 	}

@@ -9,7 +9,6 @@
 #include <dirent.h>
 
 #include "state.hpp"
-#include "logging.h"
 #include "util.h"
 #include "journal.h"
 #include "datadictionary.h"
@@ -20,9 +19,13 @@ using std_msgs::msg::Empty;
 using std_msgs::msg::String;
 using std_msgs::msg::UInt8;
 
-ObjectControl::ObjectControl(LOG_LEVEL logLevel) : Module(ObjectControl::moduleName){
-	this->initialize(logLevel);
+ObjectControl::ObjectControl() : Module(ObjectControl::moduleName)
+{
 	int queueSize=0;
+
+	if (this->initialize() == -1) {
+		throw std::runtime_error(std::string("Failed to initialize ") + get_name());
+	}
 	
 	// ** Subscriptions
 	this->initSub = this->create_subscription<Empty>(topicNames[COMM_INIT], queueSize, std::bind(&ObjectControl::onInitMessage, this, _1));
@@ -43,43 +46,49 @@ ObjectControl::ObjectControl(LOG_LEVEL logLevel) : Module(ObjectControl::moduleN
 	// ** Publishers
 	this->failurePub = this->create_publisher<UInt8>(topicNames[COMM_FAILURE],queueSize);
 	this->getStatusResponsePub = this->create_publisher<String>(topicNames[COMM_GETSTATUS_OK],queueSize);	
+
 };
 
 ObjectControl::~ObjectControl() {
 	delete state;
 }
 
-int ObjectControl::initialize(const LOG_LEVEL logLevel) {
+int ObjectControl::initialize() {
 	int retval = 0;
 
 	// Initialize log
-	LogInit(get_name(), logLevel);
-	LogMessage(LOG_LEVEL_INFO, "%s task running with PID: %d",get_name(), getpid());
+	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",get_name(), getpid());
 
 	// Create test journal
 	if (JournalInit(get_name()) == -1) {
 		retval = -1;
-		LogMessage(LOG_LEVEL_ERROR, "Unable to create test journal");
+		RCLCPP_ERROR(get_logger(), "Unable to create test journal");
 	}
 
-	// Initialize state and object data
-	if (DataDictionaryInitStateData() != READ_OK) {
-		DataDictionaryFreeStateData();
+	if (requestDataDictInitialization()) {
+		// Map state and object data into memory
+		if (DataDictionaryInitObjectData() != READ_OK) {
+			DataDictionaryFreeObjectData();
+			retval = -1;
+			RCLCPP_ERROR(get_logger(),
+						"Found no previously initialized shared memory for object data");
+		}
+		if (DataDictionaryInitStateData() != READ_OK) {
+			DataDictionaryFreeStateData();
+			retval = -1;
+			RCLCPP_ERROR(get_logger(),
+						"Found no previously initialized shared memory for state data");
+		}
+		else {
+			// Set state
+			this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
+			DataDictionarySetOBCState(this->state->asNumber());
+		}
+	}
+	else {
 		retval = -1;
-		LogMessage(LOG_LEVEL_ERROR,
-					"Found no previously initialized shared memory for state data");
+		RCLCPP_ERROR(get_logger(), "Unable to initialize data dictionary");
 	}
-	if (DataDictionaryInitObjectData() != READ_OK) {
-		DataDictionaryFreeObjectData();
-		retval = -1;
-		LogMessage(LOG_LEVEL_ERROR,
-					"Found no previously initialized shared memory for object data");
-	}
-
-	// Set state
-	this->state = static_cast<ObjectControlState*>(new AbstractKinematics::Idle);
-	DataDictionarySetOBCState(this->state->asNumber());
-
 	return retval;
 }
 
@@ -87,10 +96,10 @@ void ObjectControl::handleActionConfigurationCommand(
 		const TestScenarioCommandAction& action) {
 	this->state->settingModificationRequested(*this);
 	if (action.command == ACTION_PARAMETER_VS_SEND_START) {
-		LogMessage(LOG_LEVEL_INFO, "Configuring delayed start for object %u", action.objectID);
-		objects[action.objectID].setTriggerStart(true);
+		RCLCPP_INFO(get_logger(), "Configuring delayed start for object %u", action.objectID);
+		objects.at(action.objectID).setTriggerStart(true);
 		this->storedActions[action.actionID] = std::bind(&TestObject::sendStart,
-														 &objects[action.objectID]);
+														 &objects.at(action.objectID));
 	}
 }
 
@@ -100,10 +109,10 @@ void ObjectControl::handleExecuteActionCommand(
 	this->state->actionExecutionRequested(*this);
 	auto delayedExecutor = [&](){
 		using namespace std::chrono;
-		LogMessage(LOG_LEVEL_DEBUG, "Executing action %u in %d ms", actionID,
+		RCLCPP_DEBUG(get_logger(), "Executing action %u in %d ms", actionID,
 				   duration_cast<milliseconds>(when - system_clock::now()).count());
 		std::this_thread::sleep_until(when);
-		LogMessage(LOG_LEVEL_INFO, "Executing action %u", actionID);
+		RCLCPP_INFO(get_logger(), "Executing action %u", actionID);
 		this->storedActions[actionID]();
 	};
 	auto thd = std::thread(delayedExecutor);
@@ -250,11 +259,11 @@ void ObjectControl::loadObjectFiles() {
 	for (const auto& entry : fs::directory_iterator(objectDir)) {
 		if (fs::is_regular_file(entry.status())) {
 			const auto inputFile = entry.path();
-			TestObject object;
+			TestObject object(get_logger());
 			try {
 				object.parseConfigurationFile(entry.path());
 
-				LogMessage(LOG_LEVEL_INFO, "Loaded configuration: %s", object.toString().c_str());
+				RCLCPP_INFO(get_logger(), "Loaded configuration: %s", object.toString().c_str());
 				// Check preexisting
 				auto foundObject = objects.find(object.getTransmitterID());
 				if (foundObject == objects.end()) {
@@ -263,13 +272,13 @@ void ObjectControl::loadObjectFiles() {
 				else {
 					auto badID = object.getTransmitterID();
 					std::string errMsg = "Duplicate object ID " + std::to_string(badID)
-							+ " detected in files " + objects[badID].getTrajectoryFileName()
+							+ " detected in files " + objects.at(badID).getTrajectoryFileName()
 							+ " and " + object.getTrajectoryFileName();
 					throw std::invalid_argument(errMsg);
 				}
 			}
 			catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_ERROR, e.what());
+				RCLCPP_ERROR(get_logger(), e.what());
 				errors.push_back(e);
 			}
 		}
@@ -277,11 +286,11 @@ void ObjectControl::loadObjectFiles() {
 
 	// Fix injector ID maps - reverse their direction
 	for (const auto& id : getVehicleIDs()) {
-		auto injMap = objects[id].getObjectConfig().getInjectionMap();
+		auto injMap = objects.at(id).getObjectConfig().getInjectionMap();
 		for (const auto& sourceID : injMap.sourceIDs) {
-			auto conf = objects[sourceID].getObjectConfig();
+			auto conf = objects.at(sourceID).getObjectConfig();
 			conf.addInjectionTarget(id);
-			objects[sourceID].setObjectConfig(conf);
+			objects.at(sourceID).setObjectConfig(conf);
 		}
 	}
 	
@@ -325,10 +334,10 @@ void ObjectControl::transformScenarioRelativeTo(
 			// Skip for now TODO also here - maybe?
 			continue;
 		}
-		auto traj = objects[id].getTrajectory();
-		auto relTraj = traj.relativeTo(objects[objectID].getTrajectory());
+		auto traj = objects.at(id).getTrajectory();
+		auto relTraj = traj.relativeTo(objects.at(objectID).getTrajectory());
 
-		objects[id].setTrajectory(relTraj);
+		objects.at(id).setTrajectory(relTraj);
 	}
 }
 
@@ -342,10 +351,10 @@ void ObjectControl::beginConnectionAttempt() {
 	connStopReqPromise = std::promise<void>();
 	connStopReqFuture = connStopReqPromise.get_future();
 
-	LogMessage(LOG_LEVEL_DEBUG, "Initiating connection attempt");
+	RCLCPP_DEBUG(get_logger(), "Initiating connection attempt");
 	for (const auto id : getVehicleIDs()) {
 		auto t = std::thread(&ObjectControl::connectToObject, this,
-							 std::ref(objects[id]),
+							 std::ref(objects.at(id)),
 							 std::ref(connStopReqFuture));
 		t.detach();
 	}
@@ -369,20 +378,20 @@ void ObjectControl::disconnectObjects() {
 		// Attempted to stop when none in progress
 	}
 	for (const auto id : getVehicleIDs()) {
-		objects[id].disconnect();
+		objects.at(id).disconnect();
 	}
 	objectListeners.clear();
 }
 
 void ObjectControl::disconnectObject(
 		const uint32_t id) {
-	objects[id].disconnect();
+	objects.at(id).disconnect();
 	objectListeners.erase(id);
 }
 
 void ObjectControl::uploadObjectConfiguration(
 		const uint32_t id) {
-	objects[id].sendSettings();
+	objects.at(id).sendSettings();
 }
 
 void ObjectControl::startSafetyThread() {
@@ -397,18 +406,18 @@ void ObjectControl::heartbeat() {
 	auto stopRequest = stopHeartbeatSignal.get_future();
 	clock::time_point nextHeartbeat = clock::now();
 
-	LogMessage(LOG_LEVEL_DEBUG, "Starting heartbeat thread");
+	RCLCPP_DEBUG(get_logger(), "Starting heartbeat thread");
 	while (stopRequest.wait_until(nextHeartbeat) == std::future_status::timeout) {
 		nextHeartbeat += heartbeatPeriod;
 
 		// Check time since MONR for all objects
 		for (const auto& id : getVehicleIDs()) {
-			if (objects[id].isConnected()) {
-				auto diff = objects[id].getTimeSinceLastMonitor();
-				if (diff > objects[id].getMaxAllowedMonitorPeriod()) {
-					LogMessage(LOG_LEVEL_WARNING, "MONR timeout for object %u: %d ms > %d ms", id,
-							   diff.count(), objects[id].getMaxAllowedMonitorPeriod().count());
-					objects[id].disconnect();
+			if (objects.at(id).isConnected()) {
+				auto diff = objects.at(id).getTimeSinceLastMonitor();
+				if (diff > objects.at(id).getMaxAllowedMonitorPeriod()) {
+					RCLCPP_WARN(get_logger(), "MONR timeout for object %u: %d ms > %d ms", id,
+							   diff.count(), objects.at(id).getMaxAllowedMonitorPeriod().count());
+					objects.at(id).disconnect();
 					this->state->disconnectedFromObject(*this, id);
 				}
 			}
@@ -417,18 +426,18 @@ void ObjectControl::heartbeat() {
 		// Send heartbeat
 		for (const auto& id : getVehicleIDs()) {
 			try {
-				if (objects[id].isConnected()) {
-					objects[id].sendHeartbeat(this->state->asControlCenterStatus());
+				if (objects.at(id).isConnected()) {
+					objects.at(id).sendHeartbeat(this->state->asControlCenterStatus());
 				}
 			}
 			catch (std::invalid_argument& e) {
-				LogMessage(LOG_LEVEL_WARNING, e.what());
-				objects[id].disconnect();
+				RCLCPP_WARN(get_logger(), e.what());
+				objects.at(id).disconnect();
 				this->state->disconnectedFromObject(*this, id);
 			}
 		}
 	}
-	LogMessage(LOG_LEVEL_INFO, "Heartbeat thread exiting");
+	RCLCPP_INFO(get_logger(), "Heartbeat thread exiting");
 }
 
 OsiHandler::LocalObjectGroundTruth_t ObjectControl::buildOSILocalGroundTruth(
@@ -454,15 +463,15 @@ OsiHandler::LocalObjectGroundTruth_t ObjectControl::buildOSILocalGroundTruth(
 }
 
 void ObjectControl::injectObjectData(const MonitorMessage &monr) {
-	if (!objects[monr.first].getObjectConfig().getInjectionMap().targetIDs.empty()) {
+	if (!objects.at(monr.first).getObjectConfig().getInjectionMap().targetIDs.empty()) {
 		std::chrono::system_clock::time_point ts;
 		auto secs = std::chrono::seconds(monr.second.timestamp.tv_sec);
 		auto usecs = std::chrono::microseconds(monr.second.timestamp.tv_usec);
 		ts += secs + usecs;
 		auto osiGtData = buildOSILocalGroundTruth(monr);
-		for (const auto& targetID : objects[monr.first].getObjectConfig().getInjectionMap().targetIDs) {
-			if (objects[targetID].isOsiCompatible()) {
-				objects[targetID].sendOsiData(osiGtData, objects[targetID].getProjString(), ts);
+		for (const auto& targetID : objects.at(monr.first).getObjectConfig().getInjectionMap().targetIDs) {
+			if (objects.at(targetID).isOsiCompatible()) {
+				objects.at(targetID).sendOsiData(osiGtData, objects.at(targetID).getProjString(), ts);
 			}
 		}
 	}
@@ -470,10 +479,10 @@ void ObjectControl::injectObjectData(const MonitorMessage &monr) {
 
 
 void ObjectControl::startListeners() {
-	LogMessage(LOG_LEVEL_DEBUG, "Starting listeners");
+	RCLCPP_DEBUG(get_logger(), "Starting listeners");
 	objectListeners.clear();
 	for (const auto& id : getVehicleIDs()) {
-		objectListeners.try_emplace(id, this, &objects[id]);
+		objectListeners.try_emplace(id, this, &objects.at(id), get_logger());
 	}
 }
 
@@ -489,7 +498,7 @@ void ObjectControl::connectToObject(
 				obj.sendSettings();
 			}
 			catch (std::runtime_error& e) {
-				LogMessage(LOG_LEVEL_ERROR, "Connection attempt for object %u failed: %s",
+				RCLCPP_ERROR(get_logger(), "Connection attempt for object %u failed: %s",
 						   obj.getTransmitterID(), e.what());
 				obj.disconnect();
 				return;
@@ -519,13 +528,13 @@ void ObjectControl::connectToObject(
 					switch (objState) {
 					case OBJECT_STATE_ARMED:
 					case OBJECT_STATE_REMOTE_CONTROL:
-						LogMessage(LOG_LEVEL_INFO, "Connected to armed object ID %u", obj.getTransmitterID());
+						RCLCPP_INFO(get_logger(), "Connected to armed object ID %u", obj.getTransmitterID());
 						this->state->connectedToArmedObject(*this, obj.getTransmitterID());
 						break;
 					case OBJECT_STATE_ABORTING:
 					case OBJECT_STATE_POSTRUN:
 					case OBJECT_STATE_RUNNING:
-						LogMessage(LOG_LEVEL_INFO, "Connected to running object ID %u", obj.getTransmitterID());
+						RCLCPP_INFO(get_logger(), "Connected to running object ID %u", obj.getTransmitterID());
 						this->state->connectedToLiveObject(*this, obj.getTransmitterID());
 						break;
 					case OBJECT_STATE_INIT:
@@ -533,23 +542,23 @@ void ObjectControl::connectToObject(
 							continue;
 						}
 						else {
-							LogMessage(LOG_LEVEL_INFO, "Connected object %u in initializing state after connection", obj.getTransmitterID());
+							RCLCPP_INFO(get_logger(), "Connected object %u in initializing state after connection", obj.getTransmitterID());
 							this->state->connectedToLiveObject(*this, obj.getTransmitterID());
 						}
 						break;
 					case OBJECT_STATE_DISARMED:
-						LogMessage(LOG_LEVEL_INFO, "Connected to disarmed object ID %u", obj.getTransmitterID());
+						RCLCPP_INFO(get_logger(), "Connected to disarmed object ID %u", obj.getTransmitterID());
 						this->state->connectedToObject(*this, obj.getTransmitterID());
 						break;
 					default:
-						LogMessage(LOG_LEVEL_INFO, "Connected to object %u in unknown state", obj.getTransmitterID());
+						RCLCPP_INFO(get_logger(), "Connected to object %u in unknown state", obj.getTransmitterID());
 						this->state->connectedToLiveObject(*this, obj.getTransmitterID());
 					}
 					break;
 				}
 			}
 			catch (std::runtime_error &e) {
-				LogMessage(LOG_LEVEL_ERROR, "Connection startup procedure failed for object %u: %s",
+				RCLCPP_ERROR(get_logger(), "Connection startup procedure failed for object %u: %s",
 						   obj.getTransmitterID(), e.what());
 				obj.disconnect();
 				// TODO: connection failed event?
@@ -557,7 +566,7 @@ void ObjectControl::connectToObject(
 		}
 	}
 	catch (std::invalid_argument &e) {
-		LogMessage(LOG_LEVEL_ERROR, "Bad connection attempt for object %u: %s",
+		RCLCPP_ERROR(get_logger(), "Bad connection attempt for object %u: %s",
 				   obj.getTransmitterID(), e.what());
 		obj.disconnect();
 		// TODO: connection failed event?
@@ -567,17 +576,17 @@ void ObjectControl::connectToObject(
 
 void ObjectControl::armObjects() {
 	for (auto& id : getVehicleIDs()) {
-		objects[id].sendArm();
+		objects.at(id).sendArm();
 	}
 }
 
 void ObjectControl::disarmObjects() {
 	for (auto& id : getVehicleIDs()) {
 		try {
-			objects[id].sendDisarm();
+			objects.at(id).sendDisarm();
 		}
 		catch (std::invalid_argument& e) {
-			LogMessage(LOG_LEVEL_ERROR, "Unable to disarm object %u: %s", id, e.what());
+			RCLCPP_ERROR(get_logger(), "Unable to disarm object %u: %s", id, e.what());
 		}
 	}
 	this->state->allObjectsDisarmed(*this); // TODO add a check on object states as well
@@ -585,15 +594,15 @@ void ObjectControl::disarmObjects() {
 
 void ObjectControl::startObjects() {
 	for (auto& id : getVehicleIDs()) {
-		if (!objects[id].isStartingOnTrigger()) {
-			objects[id].sendStart();
+		if (!objects.at(id).isStartingOnTrigger()) {
+			objects.at(id).sendStart();
 		}
 	}
 }
 
 void ObjectControl::allClearObjects() {
 	for (auto& id : getVehicleIDs()) {
-		objects[id].sendAllClear();
+		objects.at(id).sendAllClear();
 	}
 	this->state->allObjectsAbortDisarmed(*this); // TODO wait for all objects really are disarmed
 }
