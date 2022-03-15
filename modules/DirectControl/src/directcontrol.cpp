@@ -40,7 +40,10 @@ typedef struct
 template<typename T>
 void decodeNextXBytes(int x, T& field, int& idx, const std::vector<char>& bytes){
 	std::memcpy(&field, &(bytes[idx]), sizeof(T));
-	if (sizeof(T) == 4){
+	if (sizeof(T) == 2){
+		le16toh(field);
+	}
+	else if (sizeof(T) == 4){
 		le32toh(field);
 	}
 	else if (sizeof(T) == 8){
