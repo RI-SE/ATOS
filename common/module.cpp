@@ -24,11 +24,11 @@ void Module::tryHandleMessage(
 bool Module::requestDataDictInitialization(int maxRetries) {
     int retries = 0;
     bool success = false;
-    auto initClient = create_client<std_srvs::srv::SetBool>(ServiceNames::initDataDict);
+    auto client = create_client<std_srvs::srv::SetBool>(ServiceNames::initDataDict);
     auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
 
     do {
-        while (initClient->wait_for_service(std::chrono::seconds(1)) != true) {
+        while (client->wait_for_service(std::chrono::seconds(1)) != true) {
             if (!rclcpp::ok()) {
                 throw std::runtime_error("Interrupted while waiting for service " + ServiceNames::initDataDict);
             }
@@ -36,7 +36,7 @@ bool Module::requestDataDictInitialization(int maxRetries) {
         }
         RCLCPP_DEBUG(get_logger(), "Service " + ServiceNames::initDataDict + " found");
         
-        auto response = initClient->async_send_request(request);
+        auto response = client->async_send_request(request);
         if (rclcpp::spin_until_future_complete(get_node_base_interface(), response, std::chrono::seconds(1)) ==
             rclcpp::FutureReturnCode::SUCCESS) {
             success = response.get()->success;
@@ -47,7 +47,7 @@ bool Module::requestDataDictInitialization(int maxRetries) {
                 RCLCPP_ERROR(get_logger(), "Data dictionary initialization failed: " + response.get()->message);
             }
         } else {
-            RCLCPP_ERROR(get_logger(), "Failed to call service %s", initClient->get_service_name());
+            RCLCPP_ERROR(get_logger(), "Failed to call service %s", client->get_service_name());
         }
     } while (++retries < maxRetries);
     
