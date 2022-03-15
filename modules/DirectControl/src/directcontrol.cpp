@@ -245,7 +245,7 @@ int DirectControl::initializeModule(const LOG_LEVEL logLevel) {
 
 	// Initialize log
 	LogInit(module_name.c_str(), logLevel);
-	LogMessage(LOG_LEVEL_INFO, "%s task running with PID: %d",module_name.c_str(), getpid());
+	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",module_name.c_str(), getpid());
 
 	if (DataDictionaryInitObjectData() != READ_OK) {
 		retval = -1;
