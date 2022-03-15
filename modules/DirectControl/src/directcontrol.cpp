@@ -126,7 +126,6 @@ void DirectControl::joinThreads(){
  * \brief Listens for UDP data and sends a control signal on ros topic when recevied
  */
 void DirectControl::readUDPSocketData() {
-	std::pair<std::vector<char>, BasicSocket::HostInfo> message;
 	int wasSuccessful;
 
 	LogMessage(LOG_LEVEL_INFO, "Listening on UDP port %d",UDPPort);
