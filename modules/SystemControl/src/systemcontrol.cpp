@@ -129,26 +129,30 @@ void SystemControl::initialize(LOG_LEVEL logLevel){
 	LogInit(get_name(), logLevel);
 	RCLCPP_INFO(get_logger(), "System control task running with PID: %i", getpid());
 
-	// Initialize state and object data
-	if (DataDictionaryInitStateData() != READ_OK) {
-		DataDictionaryFreeStateData();
-		throw std::runtime_error("Found no previously initialized shared memory for state data");
-	}
-	if (DataDictionaryInitObjectData() != READ_OK) {
-		DataDictionaryFreeObjectData();
-		throw std::runtime_error("Found no previously initialized shared memory for object data");
-	}
-	if (DataDictionaryInitRVSSAsp() != READ_OK) {
-		DataDictionaryFreeRVSSAsp();
-		throw std::runtime_error("Found no previously initialized shared memory for RVSS ASP data");
-	}
+	if (requestDataDictInitialization()) {
+		// Map state and object data into memory
+		if (DataDictionaryInitStateData() != READ_OK) {
+			DataDictionaryFreeStateData();
+			throw std::runtime_error("Found no previously initialized shared memory for state data");
+		}
+		if (DataDictionaryInitObjectData() != READ_OK) {
+			DataDictionaryFreeObjectData();
+			throw std::runtime_error("Found no previously initialized shared memory for object data");
+		}
+		if (DataDictionaryInitRVSSAsp() != READ_OK) {
+			DataDictionaryFreeRVSSAsp();
+			throw std::runtime_error("Found no previously initialized shared memory for RVSS ASP data");
+		}
 
-	DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
-	RCLCPP_INFO(get_logger(), "RVSSConfigU32 = %d", RVSSConfigU32);
+		DataDictionaryGetRVSSConfigU32(&RVSSConfigU32);
+		RCLCPP_INFO(get_logger(), "RVSSConfigU32 = %d", RVSSConfigU32);
 
-	DataDictionaryGetRVSSRateU8(&RVSSRateU8);
-	RCLCPP_INFO(get_logger(), "Real-time variable subscription service rate set to %u Hz", RVSSRateU8);
-
+		DataDictionaryGetRVSSRateU8(&RVSSRateU8);
+		RCLCPP_INFO(get_logger(), "Real-time variable subscription service rate set to %u Hz", RVSSRateU8);
+	}
+	else {
+		throw std::runtime_error("Unable to initialize data dictionary");
+	}
 	if (ModeU8 == 0) {
 
 	}
