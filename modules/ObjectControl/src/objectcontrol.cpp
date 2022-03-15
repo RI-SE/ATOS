@@ -9,7 +9,6 @@
 #include <future>
 #include <memory>
 #include <dirent.h>
-#include <std_srvs/srv/set_bool.hpp>
 
 #include "state.hpp"
 #include "util.h"
