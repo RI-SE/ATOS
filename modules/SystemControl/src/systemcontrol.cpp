@@ -36,25 +36,25 @@
 
 SystemControl::SystemControl() : Module(SystemControl::module_name) {
 	// ** Subscriptions
-	this->failureSub = this->create_subscription<UInt8>(topicNames[COMM_FAILURE], 0, std::bind(&SystemControl::onFailureMessage, this, _1));
-	this->getStatusResponseSub= this->create_subscription<String>(topicNames[COMM_GETSTATUS_OK], 0, std::bind(&SystemControl::onGetStatusResponse, this, _1));
+	this->failureSub = this->create_subscription<UInt8>(TopicNames::failure, 0, std::bind(&SystemControl::onFailureMessage, this, _1));
+	this->getStatusResponseSub= this->create_subscription<String>(TopicNames::getStatusResponse, 0, std::bind(&SystemControl::onGetStatusResponse, this, _1));
 
 	// ** Publishers
-	this->initPub = this->create_publisher<Empty>(topicNames[COMM_INIT],0);
-	this->connectPub  = this->create_publisher<Empty>(topicNames[COMM_CONNECT],0);
-	this->disconnectPub = this->create_publisher<Empty>(topicNames[COMM_DISCONNECT],0);
-	this->armPub = this->create_publisher<Empty>(topicNames[COMM_ARM],0);
-	this->startPub = this->create_publisher<Empty>(topicNames[COMM_STRT],0);
-	this->stopPub = this->create_publisher<Empty>(topicNames[COMM_STOP],0);
-	this->abortPub = this->create_publisher<Empty>(topicNames[COMM_ABORT],0);
-	this->backToStartPub = this->create_publisher<ManoeuvreCommand>(topicNames[COMM_BACKTOSTART_CALL],0); 
-	this->dataDictPub = this->create_publisher<Empty>(topicNames[COMM_DATA_DICT],0);
-	this->remoteControlEnablePub = this->create_publisher<Empty>(topicNames[COMM_REMOTECTRL_ENABLE],0);
-	this->remoteControlDisablePub = this->create_publisher<Empty>(topicNames[COMM_REMOTECTRL_DISABLE],0);
-	this->enableObjectPub = this->create_publisher<ObjectEnabled>(topicNames[COMM_ENABLE_OBJECT],0);
-	this->allClearPub = this->create_publisher<Empty>(topicNames[COMM_ABORT_DONE],0);
-	this->exitPub = this->create_publisher<Empty>(topicNames[COMM_EXIT],0);
-	this->getStatusPub = this->create_publisher<Empty>(topicNames[COMM_GETSTATUS],0); 
+	this->initPub = this->create_publisher<Empty>(TopicNames::init,0);
+	this->connectPub  = this->create_publisher<Empty>(TopicNames::connect,0);
+	this->disconnectPub = this->create_publisher<Empty>(TopicNames::disconnect,0);
+	this->armPub = this->create_publisher<Empty>(TopicNames::arm,0);
+	this->startPub = this->create_publisher<Empty>(TopicNames::start,0);
+	this->stopPub = this->create_publisher<Empty>(TopicNames::stop,0);
+	this->abortPub = this->create_publisher<Empty>(TopicNames::abort,0);
+	this->backToStartPub = this->create_publisher<ManoeuvreCommand>(TopicNames::backToStart,0); 
+	this->dataDictPub = this->create_publisher<Empty>(TopicNames::dataDict,0);
+	this->remoteControlEnablePub = this->create_publisher<Empty>(TopicNames::remoteControlEnable,0);
+	this->remoteControlDisablePub = this->create_publisher<Empty>(TopicNames::remoteControlDisable,0);
+	this->enableObjectPub = this->create_publisher<ObjectEnabled>(TopicNames::enableObject,0);
+	this->allClearPub = this->create_publisher<Empty>(TopicNames::abortDone,0);
+	this->exitPub = this->create_publisher<Empty>(TopicNames::exit,0);
+	this->getStatusPub = this->create_publisher<Empty>(TopicNames::getStatus,0); 
 }; 
 
 const int64_t SystemControl::getQueueEmptyPollPeriod(){return QUEUE_EMPTY_POLL_PERIOD_NS;}

@@ -42,13 +42,13 @@ JournalControl::JournalControl()
 	using std::bind;
 	initialize();
 	int queueSize = 0;
-	armSub = create_subscription<Empty>(topicNames[COMM_ARM], queueSize, bind(&JournalControl::onArmMessage, this, _1));
-	exitSub = create_subscription<Empty>(topicNames[COMM_EXIT], queueSize, bind(&JournalControl::onExitMessage, this, _1));
-	stopSub = create_subscription<Empty>(topicNames[COMM_STOP], queueSize, bind(&JournalControl::onStopMessage, this, _1));
-	abortSub = create_subscription<Empty>(topicNames[COMM_ABORT], queueSize, bind(&JournalControl::onAbortMessage, this, _1));
-	replaySub = create_subscription<Empty>(topicNames[COMM_REPLAY], queueSize, bind(&JournalControl::onReplayMessage, this, _1));
+	armSub = create_subscription<Empty>(TopicNames::arm, queueSize, bind(&JournalControl::onArmMessage, this, _1));
+	exitSub = create_subscription<Empty>(TopicNames::exit, queueSize, bind(&JournalControl::onExitMessage, this, _1));
+	stopSub = create_subscription<Empty>(TopicNames::stop, queueSize, bind(&JournalControl::onStopMessage, this, _1));
+	abortSub = create_subscription<Empty>(TopicNames::abort, queueSize, bind(&JournalControl::onAbortMessage, this, _1));
+	replaySub = create_subscription<Empty>(TopicNames::replay, queueSize, bind(&JournalControl::onReplayMessage, this, _1));
 
-	getStatusResponsePub = create_publisher<String>(topicNames[COMM_GETSTATUS_OK], queueSize);
+	getStatusResponsePub = create_publisher<String>(TopicNames::getStatusResponse, queueSize);
 }
 
 void JournalControl::initialize()
