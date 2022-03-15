@@ -43,6 +43,12 @@ private:
 	void onAbortMessage(const Empty::SharedPtr) override;
   void onReplayMessage(const Empty::SharedPtr) override;
   void onExitMessage(const Empty::SharedPtr) override;
+
+  ROSChannels::Arm::Sub armSub;
+  ROSChannels::Stop::Sub stopSub;
+  ROSChannels::Abort::Sub abortSub;
+  ROSChannels::Replay::Sub replaySub;
+  ROSChannels::Exit::Sub exitSub;
 };
 
 #endif //__LOGGER_H_INCLUDED__

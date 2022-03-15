@@ -4,6 +4,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include "util.h"
+#include "roschannel.hpp"
 
 #include "maestro_interfaces/msg/accm.hpp"
 #include "maestro_interfaces/msg/exac.hpp"
@@ -90,57 +91,60 @@ Msg_T msgCtr1(MsgData_T data) {
  */
 class Module : public Node {
    public:
-	Module(const std::string name) : Node(name){};
+	Module(const std::string name) : Node(name), getStatusResponsePub(*this) {};
 	Module() = default;
 
    protected:
-	template<typename T>
-	struct PubSub {
-		typename rclcpp::Publisher<T>::SharedPtr pub;
-		typename rclcpp::Subscription<T>::SharedPtr sub;
-		inline virtual void publish(const T& msg) { assert(pub); pub->publish(msg); };
-	};
-	PubSub<Empty> startChannel;
-	PubSub<Empty> armChannel;
-	PubSub<Empty> connectChannel;
-	PubSub<Empty> initChannel;
-	PubSub<Empty> disconnectChannel;
-	PubSub<Empty> stopChannel;
-	PubSub<Empty> exitChannel;
-	PubSub<Empty> replayChannel;
-	PubSub<Empty> abortChannel;
-	PubSub<Empty> allClearChannel;
-	PubSub<Empty> viopChannel;
-	PubSub<Empty> trajChannel;
-	PubSub<Empty> trajToSupChannel;
-	PubSub<Empty> trajFromSupChannel;
-	PubSub<Empty> aspChannel;
-	PubSub<Empty> osemChannel;
-	PubSub<Empty> dataDictChannel;
-	PubSub<Exac> executeActionChannel;
-	// PubSub<Treo> eventOccurred;
-	PubSub<Accm> actionConfigurationChannel;
-	//PubSub<Trcm> triggerConfiguration;
-	PubSub<Empty> disarmChannel;
-	PubSub<Empty> getStatusChannel;
-	PubSub<String> getStatusResponseChannel;
-	PubSub<ManoeuvreCommand> backToStartChannel;
-	PubSub<Empty> backToStartResponseChannel;
-	PubSub<Empty> remoteControlEnableChannel;
-	PubSub<Empty> remoteControlDisableChannel;
-	PubSub<Empty> remoteControlManoeuvreChannel;
-	PubSub<ObjectEnabled> enableObjectChannel;
-	PubSub<Empty> objectsConnectedChannel;
-	PubSub<Monitor> objectMonitorChannel;
-	PubSub<UInt8> failureChannel;
-	PubSub<Int8> obcStateChannel;
+
+	//template<typename T>
+	//class PubSub {
+	//   public:
+	//	typename rclcpp::Publisher<T>::SharedPtr pub;
+	//	typename rclcpp::Subscription<T>::SharedPtr sub;
+	//	inline virtual void publish(const T& msg) { assert(pub); pub->publish(msg); };
+	//};
+	//PubSub<Empty> startChannel;
+	//PubSub<Empty> armChannel;
+	//PubSub<Empty> connectChannel;
+	//PubSub<Empty> initChannel;
+	//PubSub<Empty> disconnectChannel;
+	//PubSub<Empty> stopChannel;
+	//PubSub<Empty> exitChannel;
+	//PubSub<Empty> replayChannel;
+	//PubSub<Empty> abortChannel;
+	//PubSub<Empty> allClearChannel;
+	//PubSub<Empty> viopChannel;
+	//PubSub<Empty> trajChannel;
+	//PubSub<Empty> trajToSupChannel;
+	//PubSub<Empty> trajFromSupChannel;
+	//PubSub<Empty> aspChannel;
+	//PubSub<Empty> osemChannel;
+	//PubSub<Empty> dataDictChannel;
+	//PubSub<Exac> executeActionChannel;
+	//// PubSub<Treo> eventOccurred;
+	//PubSub<Accm> actionConfigurationChannel;
+	////PubSub<Trcm> triggerConfiguration;
+	//PubSub<Empty> disarmChannel;
+	//PubSub<Empty> getStatusChannel;
+	//PubSub<String> getStatusResponseChannel;
+	//PubSub<ManoeuvreCommand> backToStartChannel;
+	//PubSub<Empty> backToStartResponseChannel;
+	//PubSub<Empty> remoteControlEnableChannel;
+	//PubSub<Empty> remoteControlDisableChannel;
+	//PubSub<Empty> remoteControlManoeuvreChannel;
+	//PubSub<ObjectEnabled> enableObjectChannel;
+	//PubSub<Empty> objectsConnectedChannel;
+	//PubSub<Monitor> objectMonitorChannel;
+	//PubSub<UInt8> failureChannel;
+	//PubSub<Int8> obcStateChannel;
+	ROSChannels::GetStatusResponse::Pub getStatusResponsePub;
 
 	virtual void onFailureMessage(const UInt8::SharedPtr){};
 	virtual void onGetStatusResponse(const String::SharedPtr){};
 	virtual void onGetStatusMessage(const Empty::SharedPtr) {
 		auto msg = String();
 		msg.data = this->get_name();
-		getStatusResponseChannel.publish(msg);
+		getStatusResponsePub.publish(msg);
 	};
 	virtual void onInitMessage(const Empty::SharedPtr){};
 	virtual void onConnectMessage(const Empty::SharedPtr){};

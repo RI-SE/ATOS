@@ -34,27 +34,27 @@
 #define MAESTRO_TRAJ_DIRECTORY_STRING "traj/"
 
 
-SystemControl::SystemControl() : Module(SystemControl::module_name) {
-	// ** Subscriptions
-	this->failureChannel.sub = this->create_subscription<UInt8>(TopicNames::failure, 0, std::bind(&SystemControl::onFailureMessage, this, _1));
-	this->getStatusResponseChannel.sub = this->create_subscription<String>(TopicNames::getStatusResponse, 0, std::bind(&SystemControl::onGetStatusResponse, this, _1));
-
-	// ** Publishers
-	this->initChannel.pub = this->create_publisher<Empty>(TopicNames::init,0);
-	this->connectChannel.pub = this->create_publisher<Empty>(TopicNames::connect,0);
-	this->disconnectChannel.pub = this->create_publisher<Empty>(TopicNames::disconnect,0);
-	this->armChannel.pub = this->create_publisher<Empty>(TopicNames::arm,0);
-	this->startChannel.pub = this->create_publisher<Empty>(TopicNames::start,0);
-	this->stopChannel.pub = this->create_publisher<Empty>(TopicNames::stop,0);
-	this->abortChannel.pub = this->create_publisher<Empty>(TopicNames::abort,0);
-	this->backToStartChannel.pub = this->create_publisher<ManoeuvreCommand>(TopicNames::backToStart,0); 
-	this->dataDictChannel.pub = this->create_publisher<Empty>(TopicNames::dataDict,0);
-	this->remoteControlEnableChannel.pub = this->create_publisher<Empty>(TopicNames::remoteControlEnable,0);
-	this->remoteControlDisableChannel.pub = this->create_publisher<Empty>(TopicNames::remoteControlDisable,0);
-	this->enableObjectChannel.pub = this->create_publisher<ObjectEnabled>(TopicNames::enableObject,0);
-	this->allClearChannel.pub = this->create_publisher<Empty>(TopicNames::abortDone,0);
-	this->exitChannel.pub = this->create_publisher<Empty>(TopicNames::exit,0);
-	this->getStatusChannel.pub = this->create_publisher<Empty>(TopicNames::getStatus,0); 
+SystemControl::SystemControl()
+: Module(SystemControl::module_name),
+initPub(*this),
+connectPub(*this),
+disconnectPub(*this),
+armPub(*this),
+disarmPub(*this),
+startPub(*this),
+stopPub(*this),
+abortPub(*this),
+allClearPub(*this),
+backToStartPub(*this),
+dataDictionaryPub(*this),
+remoteControlEnablePub(*this),
+remoteControlDisablePub(*this),
+enableObjectPub(*this),
+exitPub(*this),
+getStatusPub(*this),
+failureSub(*this, std::bind(&SystemControl::onFailureMessage, this, std::placeholders::_1)),
+getStatusResponseSub(*this, std::bind(&SystemControl::onGetStatusResponse, this, std::placeholders::_1))
+{
 }; 
 
 const int64_t SystemControl::getQueueEmptyPollPeriod(){return QUEUE_EMPTY_POLL_PERIOD_NS;}
@@ -172,7 +172,7 @@ void SystemControl::initialize(LOG_LEVEL logLevel){
 
 void SystemControl::receiveUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 	if (SystemControlState == SERVER_STATE_ERROR) {
-		this->abortChannel.publish(Empty());
+		this->abortPub.publish(Empty());
 		return;
 	}
 
@@ -182,7 +182,7 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 				//Do some initialization
 
 				//Send COMM_DATA_DICT to notify to update data from DataDictionary
-				this->dataDictChannel.publish(Empty());
+				this->dataDictionaryPub.publish(Empty());
 				SystemControlState = SERVER_STATE_INITIALIZED;
 			}
 
@@ -216,7 +216,7 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
 				RCLCPP_ERROR(get_logger(), "Failed to receive from command socket");
 				try{
-					this->abortChannel.publish(Empty());
+					this->abortPub.publish(Empty());
 				}
 				catch(...){
 					util_error("Fatal communication fault when sending ABORT command");
@@ -513,7 +513,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "SetServerParameter:",
 												ControlResponseBuffer, 0, &ClientSocket, 0);
 			//Send COMM_DATA_DICT to notify to update data from DataDictionary
-			this->dataDictChannel.publish(Empty());
+			this->dataDictionaryPub.publish(Empty());
 		}
 		else {
 			RCLCPP_ERROR(get_logger(), "Wrong parameter count in SetServerParameter(Name, Value)!");
@@ -808,7 +808,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 	case InitializeScenario_0:
 		if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_IDLE) {
 			try{
-				this->initChannel.publish(Empty());
+				this->initPub.publish(Empty());
 			}
 			catch(...){
 				RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending INIT command");
@@ -840,7 +840,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 	case ConnectObject_0:
 		if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_INITIALIZED) {
 			try{
-				this->connectChannel.publish(Empty());
+				this->connectPub.publish(Empty());
 			}
 			catch(...){
 				RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending CONNECT command");
@@ -870,7 +870,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 	case DisconnectObject_0:
 		if (SystemControlState == SERVER_STATE_IDLE) {
 			try{
-				this->disconnectChannel.publish(Empty());
+				this->disconnectPub.publish(Empty());
 			}
 			catch(...){
 				RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending DISCONNECT command");
@@ -895,7 +895,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 		if (SystemControlState == SERVER_STATE_IDLE && objectControlState == OBC_STATE_CONNECTED) {
 			SystemControlState = SERVER_STATE_INWORK;
 			try{
-				this->armChannel.publish(Empty());
+				this->armPub.publish(Empty());
 			}
 			catch(...){
 				RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending ARM command");
@@ -929,13 +929,13 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 				if (!strcasecmp(SystemControlArgument[0], ENABLE_COMMAND_STRING)
 					&& objectControlState == OBC_STATE_CONNECTED) {
 					RCLCPP_INFO(get_logger(), "Requesting enabling of remote control");
-					this->remoteControlEnableChannel.publish(Empty());
+					this->remoteControlEnablePub.publish(Empty());
 					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 				}
 				else if (!strcasecmp(SystemControlArgument[0], DISABLE_COMMAND_STRING)
 							&& objectControlState == OBC_STATE_REMOTECTRL) {
 					RCLCPP_INFO(get_logger(), "Requesting disabling of remote control");
-					this->remoteControlDisableChannel.publish(Empty());
+					this->remoteControlDisablePub.publish(Empty());
 					responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 				}
 				else {
@@ -970,7 +970,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
 					}
 					if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
-						this->backToStartChannel.publish(msg);
+						this->backToStartPub.publish(msg);
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 					}
 				}
@@ -1007,7 +1007,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE;
 					}
 					if (responseCode != SYSTEM_CONTROL_RESPONSE_CODE_FUNCTION_NOT_AVAILABLE) {
-						this->enableObjectChannel.publish(msg);
+						this->enableObjectPub.publish(msg);
 						responseCode = SYSTEM_CONTROL_RESPONSE_CODE_OK;
 					}
 				}
@@ -1075,7 +1075,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 				RCLCPP_INFO(get_logger(), "Sending START <%s> (delayed +%u ms)", pcBuffer,
 							DelayedStartU32);
 				try{
-					this->startChannel.publish(Empty());
+					this->startPub.publish(Empty());
 				}
 				catch(...){
 					RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending STRT command");
@@ -1107,21 +1107,21 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 		break;
 	case stop_0:
 		try{
-			this->stopChannel.publish(Empty());
+			this->stopPub.publish(Empty());
 			SystemControlState = SERVER_STATE_IDLE;
 			SystemControlCommand = Idle_0;
 			bzero(ControlResponseBuffer, SYSTEM_CONTROL_CONTROL_RESPONSE_SIZE);
 			SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "stop:",
 												ControlResponseBuffer, 0, &ClientSocket, 0);
 		}
-		catch(...){this->disconnectChannel.publish(Empty());
+		catch(...){this->disconnectPub.publish(Empty());
 			RCLCPP_ERROR(get_logger(), "Fatal communication fault when sending DISCONSTOPNECTSTOP command");
 			SystemControlState = SERVER_STATE_ERROR;				
 		}
 		break;
 	case AbortScenario_0:
 		try{
-			this->abortChannel.publish(Empty());
+			this->abortPub.publish(Empty());
 			SystemControlState = SERVER_STATE_IDLE;
 			SystemControlCommand = Idle_0;
 			if (ClientSocket >= 0) {
@@ -1138,7 +1138,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 	break;
 	case ClearAllScenario_0:
 		try{
-			this->allClearChannel.publish(Empty());
+			this->allClearPub.publish(Empty());
 			SystemControlState = SERVER_STATE_IDLE;
 			SystemControlCommand = Idle_0;
 			if (ClientSocket >= 0) {
@@ -1155,7 +1155,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 	break;
 	case Exit_0:
 		try{
-			this->exitChannel.publish(Empty());
+			this->exitPub.publish(Empty());
 			iExit = 1;
 			usleep(1000000);
 			SystemControlCommand = Idle_0;
@@ -2793,7 +2793,7 @@ I32 SystemControl::SystemControlGetStatusMessage(const char *respondingModule, U
 			getStatusTimeoutTimer.tv_sec += SYSTEM_CONTROL_GETSTATUS_TIMEOUT_MS / 1000;
 
 			//Send getstatus
-			this->getStatusChannel.publish(Empty());
+			this->getStatusPub.publish(Empty());
 
 			if (debug) {
 				RCLCPP_INFO(get_logger(), "GETSTATUS SENT");

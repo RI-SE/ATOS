@@ -37,18 +37,15 @@ namespace fs = std::experimental::filesystem;
 static void signalHandler(int signo);
 
 JournalControl::JournalControl()
-	: Module(JournalControl::moduleName), journals(get_logger())
+	: Module(JournalControl::moduleName),
+	journals(get_logger()),
+	armSub(*this, std::bind(&JournalControl::onArmMessage, this, std::placeholders::_1)),
+	stopSub(*this, std::bind(&JournalControl::onStopMessage, this, std::placeholders::_1)),
+	abortSub(*this, std::bind(&JournalControl::onAbortMessage, this, std::placeholders::_1)),
+	replaySub(*this, std::bind(&JournalControl::onReplayMessage, this, std::placeholders::_1)),
+	exitSub(*this, std::bind(&JournalControl::onExitMessage, this, std::placeholders::_1))
 {
-	using std::bind;
 	initialize();
-	int queueSize = 0;
-	armChannel.sub = create_subscription<Empty>(TopicNames::arm, queueSize, bind(&JournalControl::onArmMessage, this, _1));
-	exitChannel.sub = create_subscription<Empty>(TopicNames::exit, queueSize, bind(&JournalControl::onExitMessage, this, _1));
-	stopChannel.sub = create_subscription<Empty>(TopicNames::stop, queueSize, bind(&JournalControl::onStopMessage, this, _1));
-	abortChannel.sub = create_subscription<Empty>(TopicNames::abort, queueSize, bind(&JournalControl::onAbortMessage, this, _1));
-	replayChannel.sub = create_subscription<Empty>(TopicNames::replay, queueSize, bind(&JournalControl::onReplayMessage, this, _1));
-
-	getStatusResponseChannel.pub = create_publisher<String>(TopicNames::getStatusResponse, queueSize);
 }
 
 void JournalControl::initialize()

@@ -268,4 +268,26 @@ private:
 	U32 RVSSMessageLengthU32;
 	U16 PCDMessageCodeU16;
 	char RxFilePath[MAX_FILE_PATH];
+
+	ROSChannels::Init::Pub initPub;
+	ROSChannels::Connect::Pub connectPub;
+	ROSChannels::Disconnect::Pub disconnectPub;
+	ROSChannels::Arm::Pub armPub;
+	ROSChannels::Disarm::Pub disarmPub;
+	ROSChannels::Start::Pub startPub;
+	ROSChannels::Stop::Pub stopPub;
+	ROSChannels::Abort::Pub abortPub;
+	ROSChannels::AllClear::Pub allClearPub;
+	ROSChannels::BackToStart::Pub backToStartPub;
+	ROSChannels::DataDictionary::Pub dataDictionaryPub;
+	ROSChannels::RemoteControlEnable::Pub remoteControlEnablePub;
+	ROSChannels::RemoteControlDisable::Pub remoteControlDisablePub;
+	ROSChannels::EnableObject::Pub enableObjectPub;
+	ROSChannels::Exit::Pub exitPub;
+	ROSChannels::GetStatus::Pub getStatusPub;
+
+	ROSChannels::Failure::Sub failureSub;
+	ROSChannels::GetStatusResponse::Sub getStatusResponseSub;
+
+
 };
