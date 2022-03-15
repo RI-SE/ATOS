@@ -9,6 +9,7 @@
 #include "maestro_interfaces/msg/exac.hpp"
 #include "maestro_interfaces/msg/manoeuvre_command.hpp"
 #include "maestro_interfaces/msg/object_enabled.hpp"
+#include "maestro_interfaces/msg/monitor.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/int8.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -18,6 +19,7 @@ using maestro_interfaces::msg::Accm;
 using maestro_interfaces::msg::Exac;
 using maestro_interfaces::msg::ManoeuvreCommand;
 using maestro_interfaces::msg::ObjectEnabled;
+using maestro_interfaces::msg::Monitor;
 using rclcpp::Node;
 using std::placeholders::_1;
 using std_msgs::msg::Empty;
@@ -59,6 +61,7 @@ const std::string remoteControlDisable = "remote_control_disable";
 const std::string remoteControlManoeuvre = "remote_control_manoeuvre";
 const std::string enableObject = "enable_object";
 const std::string objectsConnected = "objects_connected";
+const std::string objectMonitor = "object_monitor";
 const std::string failure = "failure";
 }  // namespace TopicNames
 
@@ -91,114 +94,53 @@ class Module : public Node {
 	Module() = default;
 
    protected:
-	rclcpp::Publisher<String>::SharedPtr getStatusResponsePub;
-	rclcpp::Subscription<String>::SharedPtr getStatusResponseSub;
-
-	rclcpp::Publisher<Empty>::SharedPtr getStatusPub;
-	rclcpp::Subscription<Empty>::SharedPtr getStatusSub;
-
-	rclcpp::Publisher<UInt8>::SharedPtr failurePub;
-	rclcpp::Subscription<UInt8>::SharedPtr failureSub;
-
-	rclcpp::Publisher<Empty>::SharedPtr initPub;
-	rclcpp::Subscription<Empty>::SharedPtr initSub;
-
-	rclcpp::Publisher<Empty>::SharedPtr connectPub;
-	rclcpp::Subscription<Empty>::SharedPtr connectSub;
-
-	rclcpp::Publisher<Empty>::SharedPtr armPub;
-	rclcpp::Subscription<Empty>::SharedPtr armSub;
-
-	rclcpp::Publisher<Empty>::SharedPtr startPub;
-	rclcpp::Subscription<Empty>::SharedPtr startSub;
-
-	rclcpp::Publisher<Empty>::SharedPtr stopPub;
-	rclcpp::Subscription<Empty>::SharedPtr stopSub;
-
-	rclcpp::Publisher<Empty>::SharedPtr exitPub;
-	rclcpp::Subscription<Empty>::SharedPtr exitSub;
-
-	rclcpp::Publisher<Empty>::SharedPtr replayPub;
-	rclcpp::Subscription<Empty>::SharedPtr replaySub;
-
-	rclcpp::Publisher<Empty>::SharedPtr abortPub;
-	rclcpp::Subscription<Empty>::SharedPtr abortSub;
-
-	rclcpp::Publisher<Empty>::SharedPtr allClearPub;
-	rclcpp::Subscription<Empty>::SharedPtr allClearSub;
-
-	rclcpp::Publisher<Empty>::SharedPtr obcStatePub;
-	rclcpp::Subscription<Empty>::SharedPtr obcStateSub;
-
-	rclcpp::Publisher<Empty>::SharedPtr disconnectPub;
-	rclcpp::Subscription<Empty>::SharedPtr disconnectSub;
-
-	rclcpp::Subscription<Empty>::SharedPtr viopSub;
-	rclcpp::Publisher<Empty>::SharedPtr viopPub;
-
-	rclcpp::Subscription<Empty>::SharedPtr trajSub;
-	rclcpp::Publisher<Empty>::SharedPtr trajPub;
-
-	rclcpp::Subscription<Empty>::SharedPtr trajToSupSub;
-	rclcpp::Publisher<Empty>::SharedPtr trajToSupPub;
-
-	rclcpp::Subscription<Empty>::SharedPtr trajFromSupSub;
-	rclcpp::Publisher<Empty>::SharedPtr trajFromSupPub;
-
-	rclcpp::Subscription<Empty>::SharedPtr aspSub;
-	rclcpp::Publisher<Empty>::SharedPtr aspPub;
-
-	rclcpp::Subscription<Empty>::SharedPtr osemSub;
-	rclcpp::Publisher<Empty>::SharedPtr osemPub;
-
-	rclcpp::Subscription<Exac>::SharedPtr exacSub;
-	rclcpp::Publisher<Exac>::SharedPtr exacPub;
-
-	rclcpp::Subscription<Accm>::SharedPtr accmSub;
-	rclcpp::Publisher<Accm>::SharedPtr accmPub;
-
-	rclcpp::Subscription<Empty>::SharedPtr treoSub;
-	rclcpp::Publisher<Empty>::SharedPtr treoPub;
-
-	rclcpp::Subscription<Empty>::SharedPtr trcmSub;
-	rclcpp::Publisher<Empty>::SharedPtr trcmPub;
-
-	rclcpp::Subscription<Empty>::SharedPtr disarmSub;
-	rclcpp::Publisher<Empty>::SharedPtr disarmPub;
-
-	rclcpp::Subscription<ManoeuvreCommand>::SharedPtr backToStartSub;
-	rclcpp::Publisher<ManoeuvreCommand>::SharedPtr backToStartPub;
-
-	rclcpp::Subscription<Empty>::SharedPtr backToStartResponseSub;
-	rclcpp::Publisher<Empty>::SharedPtr backToStartResponsePub;
-
-	rclcpp::Subscription<Empty>::SharedPtr remoteControlEnableSub;
-	rclcpp::Publisher<Empty>::SharedPtr remoteControlEnablePub;
-
-	rclcpp::Subscription<Empty>::SharedPtr remoteControlDisableSub;
-	rclcpp::Publisher<Empty>::SharedPtr remoteControlDisablePub;
-
-	rclcpp::Subscription<Empty>::SharedPtr remoteControlManoeuvreSub;
-	rclcpp::Publisher<Empty>::SharedPtr remoteControlManoeuvrePub;
-
-	rclcpp::Subscription<ObjectEnabled>::SharedPtr enableObjectSub;
-	rclcpp::Publisher<ObjectEnabled>::SharedPtr enableObjectPub;
-
-	rclcpp::Subscription<Empty>::SharedPtr objectsConnectedSub;
-	rclcpp::Publisher<Empty>::SharedPtr objectsConnectedPub;
-
-	rclcpp::Subscription<Empty>::SharedPtr dataDictSub;
-	rclcpp::Publisher<Empty>::SharedPtr dataDictPub;
-
-	rclcpp::Subscription<Empty>::SharedPtr dataDictResponseSub;
-	rclcpp::Publisher<Empty>::SharedPtr dataDictResponsePub;
+	template<typename T>
+	struct PubSub {
+		typename rclcpp::Publisher<T>::SharedPtr pub;
+		typename rclcpp::Subscription<T>::SharedPtr sub;
+		inline virtual void publish(const T& msg) { assert(pub); pub->publish(msg); };
+	};
+	PubSub<Empty> startChannel;
+	PubSub<Empty> armChannel;
+	PubSub<Empty> connectChannel;
+	PubSub<Empty> initChannel;
+	PubSub<Empty> disconnectChannel;
+	PubSub<Empty> stopChannel;
+	PubSub<Empty> exitChannel;
+	PubSub<Empty> replayChannel;
+	PubSub<Empty> abortChannel;
+	PubSub<Empty> allClearChannel;
+	PubSub<Empty> viopChannel;
+	PubSub<Empty> trajChannel;
+	PubSub<Empty> trajToSupChannel;
+	PubSub<Empty> trajFromSupChannel;
+	PubSub<Empty> aspChannel;
+	PubSub<Empty> osemChannel;
+	PubSub<Empty> dataDictChannel;
+	PubSub<Exac> executeActionChannel;
+	// PubSub<Treo> eventOccurred;
+	PubSub<Accm> actionConfigurationChannel;
+	//PubSub<Trcm> triggerConfiguration;
+	PubSub<Empty> disarmChannel;
+	PubSub<Empty> getStatusChannel;
+	PubSub<String> getStatusResponseChannel;
+	PubSub<ManoeuvreCommand> backToStartChannel;
+	PubSub<Empty> backToStartResponseChannel;
+	PubSub<Empty> remoteControlEnableChannel;
+	PubSub<Empty> remoteControlDisableChannel;
+	PubSub<Empty> remoteControlManoeuvreChannel;
+	PubSub<ObjectEnabled> enableObjectChannel;
+	PubSub<Empty> objectsConnectedChannel;
+	PubSub<Monitor> objectMonitorChannel;
+	PubSub<UInt8> failureChannel;
+	PubSub<Int8> obcStateChannel;
 
 	virtual void onFailureMessage(const UInt8::SharedPtr){};
 	virtual void onGetStatusResponse(const String::SharedPtr){};
 	virtual void onGetStatusMessage(const Empty::SharedPtr) {
 		auto msg = String();
 		msg.data = this->get_name();
-		getStatusResponsePub->publish(msg);
+		getStatusResponseChannel.publish(msg);
 	};
 	virtual void onInitMessage(const Empty::SharedPtr){};
 	virtual void onConnectMessage(const Empty::SharedPtr){};

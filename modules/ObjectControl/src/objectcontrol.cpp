@@ -28,21 +28,23 @@ ObjectControl::ObjectControl() : Module(ObjectControl::moduleName)
 	}
 	
 	// ** Subscriptions
-	this->initSub = this->create_subscription<Empty>(TopicNames::init, queueSize, std::bind(&ObjectControl::onInitMessage, this, _1));
-	this->connectSub = this->create_subscription<Empty>(TopicNames::connect, queueSize, std::bind(&ObjectControl::onConnectMessage, this, _1));
-	this->armSub = this->create_subscription<Empty>(TopicNames::arm, queueSize, std::bind(&ObjectControl::onArmMessage, this, _1));
-	this->startSub = this->create_subscription<Empty>(TopicNames::start, queueSize, std::bind(&ObjectControl::onStartMessage, this, _1));
-	this->disconnectSub = this->create_subscription<Empty>(TopicNames::disconnect, queueSize, std::bind(&ObjectControl::onDisconnectMessage, this, _1));
-	this->stopSub = this->create_subscription<Empty>(TopicNames::stop, queueSize, std::bind(&ObjectControl::onStopMessage, this, _1));
-	this->abortSub = this->create_subscription<Empty>(TopicNames::abort, queueSize, std::bind(&ObjectControl::onAbortMessage, this, _1));
-	this->allClearSub = this->create_subscription<Empty>(TopicNames::abortDone, queueSize, std::bind(&ObjectControl::onAllClearMessage, this, _1));
-	this->accmSub = this->create_subscription<Accm>(TopicNames::actionConfiguration, queueSize, std::bind(&ObjectControl::onACCMMessage, this, _1));
-	this->exacSub = this->create_subscription<Exac>(TopicNames::executeAction, queueSize, std::bind(&ObjectControl::onEXACMessage, this, _1));
-	this->getStatusSub = this->create_subscription<Empty>(TopicNames::getStatus, queueSize, std::bind(&ObjectControl::onGetStatusMessage, this, _1));
+	this->initChannel.sub = this->create_subscription<Empty>(TopicNames::init, queueSize, std::bind(&ObjectControl::onInitMessage, this, _1));
+	this->connectChannel.sub = this->create_subscription<Empty>(TopicNames::connect, queueSize, std::bind(&ObjectControl::onConnectMessage, this, _1));
+	this->armChannel.sub = this->create_subscription<Empty>(TopicNames::arm, queueSize, std::bind(&ObjectControl::onArmMessage, this, _1));
+	this->startChannel.sub = this->create_subscription<Empty>(TopicNames::start, queueSize, std::bind(&ObjectControl::onStartMessage, this, _1));
+	this->startChannel.sub = this->create_subscription<Empty>(TopicNames::start, queueSize, std::bind(&ObjectControl::onStartMessage, this, _1));
+	this->disconnectChannel.sub = this->create_subscription<Empty>(TopicNames::disconnect, queueSize, std::bind(&ObjectControl::onDisconnectMessage, this, _1));
+	this->stopChannel.sub = this->create_subscription<Empty>(TopicNames::stop, queueSize, std::bind(&ObjectControl::onStopMessage, this, _1));
+	this->abortChannel.sub = this->create_subscription<Empty>(TopicNames::abort, queueSize, std::bind(&ObjectControl::onAbortMessage, this, _1));
+	this->allClearChannel.sub = this->create_subscription<Empty>(TopicNames::abortDone, queueSize, std::bind(&ObjectControl::onAllClearMessage, this, _1));
+	this->actionConfigurationChannel.sub = this->create_subscription<Accm>(TopicNames::actionConfiguration, queueSize, std::bind(&ObjectControl::onACCMMessage, this, _1));
+	this->executeActionChannel.sub = this->create_subscription<Exac>(TopicNames::executeAction, queueSize, std::bind(&ObjectControl::onEXACMessage, this, _1));
+	this->getStatusChannel.sub = this->create_subscription<Empty>(TopicNames::getStatus, queueSize, std::bind(&ObjectControl::onGetStatusMessage, this, _1));
 
 	// ** Publishers
-	this->failurePub = this->create_publisher<UInt8>(TopicNames::failure,queueSize);
-	this->getStatusResponsePub = this->create_publisher<String>(TopicNames::getStatusResponse,queueSize);	
+	this->failureChannel.pub = this->create_publisher<UInt8>(TopicNames::failure,queueSize);
+	this->getStatusResponseChannel.pub = this->create_publisher<String>(TopicNames::getStatusResponse,queueSize);	
+	//this->object
 
 };
 
@@ -120,35 +122,35 @@ void ObjectControl::handleExecuteActionCommand(
 void ObjectControl::onInitMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_INIT;
 	auto f_try = [&]() { this->state->initializeRequest(*this); };
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failureChannel.publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,TopicNames::init, get_logger());
 }
 
 void ObjectControl::onConnectMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_CONNECT;
 	auto f_try = [&]() { this->state->connectRequest(*this); };
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failureChannel.publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,TopicNames::connect, get_logger());
 }
 
 void ObjectControl::onArmMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_ARM;
 	auto f_try = [&]() { this->state->armRequest(*this); };
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failureChannel.publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,TopicNames::arm, get_logger());
 }
 
 void ObjectControl::onStartMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_STRT;
 	auto f_try = [&]() { this->state->startRequest(*this); };
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failureChannel.publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,TopicNames::start, get_logger());
 }
 
 void ObjectControl::onDisconnectMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_DISCONNECT;
 	auto f_try = [&]() { this->state->disconnectRequest(*this); };
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failureChannel.publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,TopicNames::disconnect, get_logger());
 }
 
@@ -156,8 +158,8 @@ void ObjectControl::onStopMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_STOP;
 	auto f_try = [&]() { this->state->stopRequest(*this); };
 	auto f_catch = [&]() {
-			failurePub->publish(msgCtr1<UInt8>(cmd));
-			abortPub->publish(Empty());
+			failureChannel.publish(msgCtr1<UInt8>(cmd));
+			abortChannel.publish(Empty());
 	};
 	this->tryHandleMessage(f_try,f_catch,TopicNames::stop, get_logger());	
 }
@@ -170,7 +172,7 @@ void ObjectControl::onAbortMessage(const Empty::SharedPtr){
 void ObjectControl::onAllClearMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_ABORT_DONE;
 	auto f_try = [&]() { this->state->allClearRequest(*this); };
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failureChannel.publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,TopicNames::abortDone, get_logger());
 }
 
@@ -185,7 +187,7 @@ void ObjectControl::onACCMMessage(const Accm::SharedPtr accm){
 			handleActionConfigurationCommand(cmdAction);
 		}
 	};
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failureChannel.publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,TopicNames::actionConfiguration, get_logger());
 }
 
@@ -198,7 +200,7 @@ void ObjectControl::onEXACMessage(const Exac::SharedPtr exac){
 		auto startOfWeek = system_clock::time_point(weeks(TimeGetAsGPSweek(&now)));
 		handleExecuteActionCommand(exac->action_id, startOfWeek+qmsow);	
 	};
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
+	auto f_catch = [&]() { failureChannel.publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,TopicNames::executeAction, get_logger());
 }
 

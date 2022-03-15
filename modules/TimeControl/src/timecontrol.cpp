@@ -2,7 +2,7 @@
 
 TimeControl::TimeControl() : Module(TimeControl::module_name){
 	// ** Subscriptions
-	this->exitSub = this->create_subscription<Empty>(TopicNames::exit, 0, std::bind(&TimeControl::onExitMessage, this, _1));
+	this->exitChannel.sub = this->create_subscription<Empty>(TopicNames::exit, 0, std::bind(&TimeControl::onExitMessage, this, _1));
 };
 
 void TimeControl::signalHandler(int signo) {

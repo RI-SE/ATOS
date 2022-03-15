@@ -9,7 +9,7 @@ MaestroBase::MaestroBase()
 	initDataDictionaryService = create_service<std_srvs::srv::SetBool>(ServiceNames::initDataDict,
 		std::bind(&MaestroBase::onInitDataDictionary, this, std::placeholders::_1, std::placeholders::_2));
 
-	exitSub = create_subscription<Empty>(TopicNames::exit, 0, bind(&MaestroBase::onExitMessage, this, _1));
+	exitChannel.sub = create_subscription<Empty>(TopicNames::exit, 0, bind(&MaestroBase::onExitMessage, this, _1));
 }
 
 MaestroBase::~MaestroBase()
