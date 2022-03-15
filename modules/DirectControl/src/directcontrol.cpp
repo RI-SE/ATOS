@@ -249,7 +249,7 @@ int DirectControl::initializeModule(const LOG_LEVEL logLevel) {
 
 	if (DataDictionaryInitObjectData() != READ_OK) {
 		retval = -1;
-		LogMessage(LOG_LEVEL_ERROR, "Preexisting data dictionary not found");
+		RCLCPP_ERROR(get_logger(), "Preexisting data dictionary not found");
 	}
 	return retval;
 }
