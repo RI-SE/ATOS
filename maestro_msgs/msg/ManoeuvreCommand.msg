@@ -1,2 +1,0 @@
-int8 manoeuvre
-uint32 object_ip

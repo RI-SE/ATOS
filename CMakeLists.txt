@@ -22,7 +22,6 @@ set_property(GLOBAL PROPERTY ros_install_dir_property "lib/maestro")
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-add_subdirectory(maestro_msgs)
 find_package(Systemd REQUIRED)
 
 # Enable or disable modules

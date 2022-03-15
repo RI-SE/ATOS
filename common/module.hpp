@@ -9,20 +9,20 @@
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/u_int8.hpp"
 #include "std_msgs/msg/int8.hpp"
-#include "maestro_msgs/msg/exac.hpp"
-#include "maestro_msgs/msg/accm.hpp"
-#include "maestro_msgs/msg/manoeuvre_command.hpp"
-#include "maestro_msgs/msg/object_enabled.hpp"
+#include "maestro_interfaces/msg/exac.hpp"
+#include "maestro_interfaces/msg/accm.hpp"
+#include "maestro_interfaces/msg/manoeuvre_command.hpp"
+#include "maestro_interfaces/msg/object_enabled.hpp"
 
 
 using std_msgs::msg::Empty;
 using std_msgs::msg::String;
 using std_msgs::msg::UInt8;
 using std_msgs::msg::Int8;
-using maestro_msgs::msg::Exac;
-using maestro_msgs::msg::Accm;
-using maestro_msgs::msg::ManoeuvreCommand;
-using maestro_msgs::msg::ObjectEnabled;
+using maestro_interfaces::msg::Exac;
+using maestro_interfaces::msg::Accm;
+using maestro_interfaces::msg::ManoeuvreCommand;
+using maestro_interfaces::msg::ObjectEnabled;
 using std::placeholders::_1;
 using rclcpp::Node;
 
