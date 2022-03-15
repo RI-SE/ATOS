@@ -21,7 +21,7 @@
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
-  <depend>maestro_msgs</depend>
+  <depend>maestro_interfaces</depend>
   <doc_depend>doxygen</doc_depend>
 
   <test_depend>ament_lint_auto</test_depend>

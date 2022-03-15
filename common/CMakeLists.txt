@@ -15,6 +15,7 @@ find_package(Eigen3 REQUIRED IMPORTED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(maestro_interfaces REQUIRED)
 
 set(LOGGING_LIBRARY MaestroLogging)
 set(TIME_LIBRARY MaestroTime)
@@ -80,13 +81,11 @@ target_link_libraries(${MAESTRO_COMMON_TARGET}
 )
 
 # ROS specifics
-rosidl_target_interfaces(${MAESTRO_COMMON_TARGET}
-	maestro_msgs "rosidl_typesupport_cpp"
-)
 ament_target_dependencies(${MAESTRO_COMMON_TARGET}
   rclcpp
   std_msgs
   std_srvs
+  maestro_interfaces
 )
 
 # Exported headers

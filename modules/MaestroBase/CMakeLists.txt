@@ -9,6 +9,7 @@ project(maestro_base)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(maestro_interfaces REQUIRED)
 
 # Define target names
 set(MAESTRO_BASE_TARGET ${PROJECT_NAME})
@@ -42,13 +43,11 @@ target_include_directories(${MAESTRO_BASE_TARGET} PUBLIC
 )
 
 # ROS specific rules
-rosidl_target_interfaces(${MAESTRO_BASE_TARGET}
-	maestro_msgs "rosidl_typesupport_cpp"
-)
 ament_target_dependencies(${MAESTRO_BASE_TARGET}
   rclcpp
   std_msgs
   std_srvs
+  maestro_interfaces
 )
 
 # Installation rules

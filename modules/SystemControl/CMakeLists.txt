@@ -6,6 +6,9 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 
 project(system_control)
+find_package(rclcpp REQUIRED)
+find_package(maestro_interfaces REQUIRED)
+find_package(std_msgs REQUIRED)
 
 # Define target names
 set(SYSTEM_CONTROL_TARGET ${PROJECT_NAME})
@@ -22,14 +25,11 @@ add_executable(${SYSTEM_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/systemcontrol.cpp
 )
-# Link project executable to util libraries
 
-rosidl_target_interfaces(${SYSTEM_CONTROL_TARGET}
-	maestro_msgs "rosidl_typesupport_cpp"
-)
 ament_target_dependencies(${SYSTEM_CONTROL_TARGET}
   rclcpp
   std_msgs
+  maestro_interfaces
 )
   
 target_link_libraries(${SYSTEM_CONTROL_TARGET}
