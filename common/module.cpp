@@ -7,7 +7,7 @@ void Module::tryHandleMessage(
     std::function<void()> executeIfFail)
 {
 	try {
-		LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames[commandCode].c_str());
+		LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames.at(commandCode).c_str());
 		tryExecute();
 	} catch (std::invalid_argument& e) {
 		LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames[commandCode].c_str(),
