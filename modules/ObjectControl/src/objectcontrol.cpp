@@ -6,8 +6,6 @@
 #include <fstream>
 #include <functional>
 #include <thread>
-#include <future>
-#include <memory>
 #include <dirent.h>
 
 #include "state.hpp"
