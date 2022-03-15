@@ -170,7 +170,8 @@ void SystemControl::initialize(LOG_LEVEL logLevel){
 }
 
 
-void SystemControl::receiveUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
+void SystemControl::receiveUserCommand()
+{
 	if (SystemControlState == SERVER_STATE_ERROR) {
 		this->abortPub->publish(Empty());
 		return;
@@ -400,7 +401,7 @@ void SystemControl::receiveUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 	SystemControlGetStatusMessage("", 0);
 }
 
-void SystemControl::sendUnsolicitedData(TimeType * GPSTime, LOG_LEVEL logLevel){
+void SystemControl::sendUnsolicitedData(){
 		TimeSetToCurrentSystemTime(&tvTime);
 
 	if (timercmp(&tvTime, &nextRVSSSendTime, >)) {
@@ -410,7 +411,7 @@ void SystemControl::sendUnsolicitedData(TimeType * GPSTime, LOG_LEVEL logLevel){
 			memset(RVSSData, 0, sizeof (RVSSData));
 
 			if (RVSSConfigU32 & RVSS_TIME_CHANNEL) {
-				SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, GPSTime, 0);
+				SystemControlBuildRVSSTimeChannelMessage(RVSSData, &RVSSMessageLengthU32, 0);
 				UtilSendUDPData((uint8_t*) module_name.c_str(), &RVSSChannelSocket, &RVSSChannelAddr, (uint8_t*) RVSSData,
 								RVSSMessageLengthU32, 0);
 			}
@@ -438,7 +439,8 @@ void SystemControl::sendUnsolicitedData(TimeType * GPSTime, LOG_LEVEL logLevel){
 	}
 }
 
-void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
+void SystemControl::processUserCommand()
+{
 	switch (SystemControlCommand) {
 		// can you access GetServerParameterList_0, GetServerParameter_1, SetServerParameter_2 and DISarmScenario and Exit from the GUI
 	case Idle_0:
@@ -455,7 +457,7 @@ void SystemControl::processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel){
 		ControlResponseBuffer[0] = SystemControlState;
 		ControlResponseBuffer[1] = objectControlState;
 		appendSysInfoString(ControlResponseBuffer + 2, sizeof (ControlResponseBuffer) - 2);
-		RCLCPP_DEBUG(get_logger(), "GPSMillisecondsU64: %ld", GPSTime->GPSMillisecondsU64);	// GPSTime just ticks from 0 up shouldent it be in the global GPStime?
+		RCLCPP_DEBUG(get_logger(), "Sending response: %s", ControlResponseBuffer);
 		SystemControlSendControlResponse(SYSTEM_CONTROL_RESPONSE_CODE_OK, "GetServerStatus:",
 											ControlResponseBuffer, strlen(ControlResponseBuffer),
 											&ClientSocket, 0);
@@ -2579,7 +2581,7 @@ See the architecture document for the protocol of RVSS.
 - *GPSTime current time data
 - Debug enable(1)/disable(0) debug printouts (Not used)
 */
-I32 SystemControl::SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, TimeType * GPSTime,
+I32 SystemControl::SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32,
 											 U8 Debug) {
 	struct timeval systemTime;
 	time_t ttime;
