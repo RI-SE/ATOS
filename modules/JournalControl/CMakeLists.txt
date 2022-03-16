@@ -13,6 +13,9 @@ set(JOURNAL_CONTROL_TARGET ${PROJECT_NAME})
 
 set(COREUTILS_LIBRARY MaestroCoreUtil)
 set(FILESYSTEM_LIBRARY stdc++fs)
+set(COMMON_LIBRARY MaestroCommon)
+
+get_target_property(COMMON_HEADERS ${COMMON_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
@@ -28,10 +31,12 @@ target_link_libraries(${JOURNAL_CONTROL_TARGET}
 	${rclcpp_LIBRARIES}
 	${FILESYSTEM_LIBRARY}
 	${COREUTILS_LIBRARY}
+	${COMMON_LIBRARY}
 )
 target_include_directories(${JOURNAL_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
 	${COREUTILS_HEADERS}
+	${COMMON_HEADERS}
 )
 
 # ROS specific rules
