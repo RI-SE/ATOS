@@ -11,14 +11,47 @@ using maestro_msgs::msg::ControlSignalPercentage;
 
 #define TCP_BUFFER_SIZE 2048
 
-// ! Helper functions (Put somehwere else? util.cpp?)
-
-/** @struct DmMsg
+/** @class DmMsg
  *  @brief Driver Model message, used in esmini to send
  * control signals to a vehicle from a driver model.
  */
-typedef struct
-{
+class DmMsg{
+public:
+	DmMsg(){};
+
+	ControlSignalPercentage toMaestroMsg(){
+		ControlSignalPercentage cspmsg = ControlSignalPercentage();
+		cspmsg.maestro_header.object_id = this->objectId;
+		// Convert throttle brake and steering angle to integers between 0,100 and -100,100 respectively.  
+		cspmsg.throttle = round(this->throttle * 100);
+		cspmsg.brake = round(this->brake * 100);
+		cspmsg.steering_angle = round(this->steeringAngle * 100);
+		return cspmsg;
+	}
+
+	/*!
+	* \brief Decodes a DM message from esmini compatible sender. 
+	*			if the message is not of type inputMode=1 (DRIVER_INPUT)
+	*			the function returns
+	*
+	* \param bytes vector of (char) bytes
+	* \param DMMsg the data structure to be populated with contents of the message 
+	* \return number of bytes on successfully parsed message, -1 otherwise
+	*/
+	int parseFromBytes(const std::vector<char>& bytes){
+		int idx=0;
+		decodeNextXBytes(4,this->version,idx,bytes);
+		decodeNextXBytes(4,this->inputMode,idx,bytes);
+		if (this->inputMode != 1) { return 0;}
+		decodeNextXBytes(4,this->objectId,idx,bytes);
+		decodeNextXBytes(4,this->frameNumber,idx,bytes);
+		decodeNextXBytes(8,this->throttle,idx,bytes);
+		decodeNextXBytes(8,this->brake,idx,bytes);
+		decodeNextXBytes(8,this->steeringAngle,idx,bytes);
+		return idx;
+	}
+
+private:
 	unsigned int version;
 	unsigned int inputMode;
 	unsigned int objectId;
@@ -26,84 +59,46 @@ typedef struct
 	double throttle;       // range [0, 1]
 	double brake;          // range [0, 1]
 	double steeringAngle;  // range [-pi/2, pi/2]
-} DmMsg;
 
-/*!
- * \brief transfers x bytes, on the interval from idx to idx+x, 
- *			from a vector of bytes into a variable
- *
- * \param x number of bytes to transfer
- * \param field variable to receive bytes
- * \param idx starting byte
- * \param bytes vector of (char) bytes
- */
-template<typename T>
-void decodeNextXBytes(int x, T& field, int& idx, const std::vector<char>& bytes){
-	std::memcpy(&field, &(bytes[idx]), sizeof(T));
-	if (sizeof(T) == 2){
-		le16toh(field);
+	/*!
+	* \brief transfers x bytes, on the interval from idx to idx+x, 
+	*			from a vector of bytes into a variable
+	*
+	* \param x number of bytes to transfer
+	* \param field variable to receive bytes
+	* \param idx starting byte
+	* \param bytes vector of (char) bytes
+	*/
+	template<typename T>
+	void decodeNextXBytes(int x, T& field, int& idx, const std::vector<char>& bytes){
+		std::memcpy(&field, &(bytes[idx]), sizeof(T));
+		if (sizeof(T) == 2){
+			le16toh(field);
+		}
+		else if (sizeof(T) == 4){
+			le32toh(field);
+		}
+		else if (sizeof(T) == 8){
+			le64toh(field);
+		} 
+		idx+=x;
 	}
-	else if (sizeof(T) == 4){
-		le32toh(field);
-	}
-	else if (sizeof(T) == 8){
-		le64toh(field);
-	} 
-	idx+=x;
-}
-/*!
- * \brief Decodes a DM message from esmini compatible sender. 
- *			if the message is not of type inputMode=1 (DRIVER_INPUT)
- *			the function returns
- *
- * \param bytes vector of (char) bytes
- * \param DMMsg the data structure to be populated with contents of the message 
- * \return 1 on success, 0 otherwise
- */
-bool decodeDMMessage(const std::vector<char>& bytes, DmMsg& dmMsg){
-	int idx=0;
-	decodeNextXBytes(4,dmMsg.version,idx,bytes);
-	decodeNextXBytes(4,dmMsg.inputMode,idx,bytes);
-	if (dmMsg.inputMode != 1) { return 0;}
-	decodeNextXBytes(4,dmMsg.objectId,idx,bytes);
-	decodeNextXBytes(4,dmMsg.frameNumber,idx,bytes);
-	decodeNextXBytes(8,dmMsg.throttle,idx,bytes);
-	decodeNextXBytes(8,dmMsg.brake,idx,bytes);
-	decodeNextXBytes(8,dmMsg.steeringAngle,idx,bytes);
-	return 1;
-}
 
-ControlSignalPercentage buildMaestroMsg(DmMsg& dmMsg){
-	ControlSignalPercentage cspmsg = ControlSignalPercentage();
-	cspmsg.maestro_header.object_id = dmMsg.objectId;
-	// Convert throttle brake and steering angle to integers between 0,100 and -100,100 respectively.  
-	cspmsg.throttle = round(dmMsg.throttle * 100);
-	cspmsg.brake = round(dmMsg.brake * 100);
-	cspmsg.steering_angle = round(dmMsg.steeringAngle * 100);
-	return cspmsg;
-}
+};
 
 //! Message queue callbacks
 
-void DirectControl::onAbortMessage(const Empty::SharedPtr){}
+void DirectControl::onAbortMessage(const Empty::SharedPtr) {}
 
-void DirectControl::onAllClearMessage(const Empty::SharedPtr){}
-
-void DirectControl::onExitMessage(const Empty::SharedPtr){
-	this->quit=true;
-}
+void DirectControl::onAllClearMessage(const Empty::SharedPtr) {}
 
 //! Class methods
-
-bool DirectControl::shouldExit(){
-	return this->quit;
-}
 
 DirectControl::DirectControl() :
 	Module(module_name),
 	tcpHandler(TCPPort, "", "off", 1, O_NONBLOCK), 
 	udpServer("0.0.0.0",UDPPort) {
-	// Publishers
+	//! Publishers
 	this->controlSignalPercentagePub = this->create_publisher<ControlSignalPercentage>(topicNames[COMM_CONTROL_SIGNAL_PERCENTAGE],0);
 }
 
@@ -126,20 +121,19 @@ void DirectControl::joinThreads(){
  * \brief Listens for UDP data and sends a control signal on ros topic when recevied
  */
 void DirectControl::readUDPSocketData() {
-	int wasSuccessful;
-
-	LogMessage(LOG_LEVEL_INFO, "Listening on UDP port %d",UDPPort);
+	RCLCPP_INFO(get_logger(),"Listening on UDP port %d",UDPPort);
 	
 	while (!this->quit){
 		try{
 			auto [data, remote] = udpServer.recvfrom();
 			DmMsg dmMsg;
-			wasSuccessful = decodeDMMessage(data, dmMsg);
+
+			auto bytesParsed = dmMsg.parseFromBytes(data);
 			// TODO: add re-ordering with frame numbers? 
 			// Have to think abt if/what kind of re-ordering makes sense for 
 			// the application (driver model).
-			if (wasSuccessful){
-				ControlSignalPercentage cspmsg = buildMaestroMsg(dmMsg);
+			if (bytesParsed != -1){
+				ControlSignalPercentage cspmsg = dmMsg.toMaestroMsg();
 				controlSignalPercentagePub->publish(cspmsg);
 			}
 		}
@@ -157,7 +151,7 @@ void DirectControl::readTCPSocketData() {
 	std::vector<char> data(TCP_BUFFER_SIZE);
 	int recvData = 0;
 
-	LogMessage(LOG_LEVEL_INFO, "Awaiting TCP connection...");
+	RCLCPP_INFO(get_logger(),"Awaiting TCP connection...");
 	this->tcpHandler.CreateServer();
 
 	while (!this->quit) {
@@ -165,7 +159,7 @@ void DirectControl::readTCPSocketData() {
 		this->tcpHandler.TCPHandlerAccept(1000);
 
 		if (this->tcpHandler.isConnected()){
-			LogMessage(LOG_LEVEL_INFO, "Connected");
+			RCLCPP_INFO(get_logger(),"Connected");
 		
 			while (!this->quit && tcpHandler.isConnected()) {
 				data.resize(TCP_BUFFER_SIZE);
@@ -173,8 +167,8 @@ void DirectControl::readTCPSocketData() {
 				recvData = tcpHandler.receiveTCP(data, 0);
 				if (recvData == TCPHandler::FAILURE) {
 					this->tcpHandler.TCPHandlerclose();
-					LogMessage(LOG_LEVEL_INFO, "TCP connection closed unexpectedly...");
-					LogMessage(LOG_LEVEL_INFO, "Awaiting new TCP connection...");
+					RCLCPP_INFO(get_logger(),"TCP connection closed unexpectedly...");
+					RCLCPP_INFO(get_logger(),"Awaiting new TCP connection...");;
 					this->tcpHandler.CreateServer();
 					break;
 				}
@@ -182,7 +176,7 @@ void DirectControl::readTCPSocketData() {
 					try {
 						this->handleISOMessage(data, static_cast<size_t>(recvData));
 					} catch (std::invalid_argument& e) {
-						LogMessage(LOG_LEVEL_ERROR, e.what());
+						RCLCPP_ERROR(get_logger(),e.what());
 						std::fill(data.begin(), data.end(), 0);
 					}
 				}
@@ -242,23 +236,16 @@ size_t DirectControl::handleUnknownMessage(
 int DirectControl::initializeModule(const LOG_LEVEL logLevel) {
 	int retval = 0;
 
-	// Initialize log
-	LogInit(module_name.c_str(), logLevel);
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",module_name.c_str(), getpid());
-
-	if (DataDictionaryInitObjectData() != READ_OK) {
+	if (requestDataDictInitialization()) {
+		if (DataDictionaryInitObjectData() != READ_OK) {
+			retval = -1;
+			RCLCPP_ERROR(get_logger(), "Preexisting data dictionary not found");
+		}
+	}
+	else{
 		retval = -1;
-		RCLCPP_ERROR(get_logger(), "Preexisting data dictionary not found");
+		RCLCPP_ERROR(get_logger(), "Unable to initialize data dictionary");
 	}
 	return retval;
-}
-
-void DirectControl::signalHandler(int signo) {
-	if (signo == SIGINT) {
-		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");
-		this->quit = true;
-	}
-	else {
-		LogMessage(LOG_LEVEL_ERROR, "Caught unhandled signal");
-	}
 }

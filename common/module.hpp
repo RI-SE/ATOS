@@ -91,10 +91,14 @@ Msg_T msgCtr1(MsgData_T data){
  */
 class Module : public Node {
 public:
-	Module(const std::string name) : Node(name) {};
+	Module(const std::string name);
 	Module() = default;
 
+	bool shouldExit();
+
 protected:
+	bool quit;
+
 	rclcpp::Publisher<String>::SharedPtr getStatusResponsePub;
 	rclcpp::Subscription<String>::SharedPtr getStatusResponseSub;
 

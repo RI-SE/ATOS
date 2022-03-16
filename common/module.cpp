@@ -1,6 +1,28 @@
 #include "module.hpp"
 #include <std_srvs/srv/set_bool.hpp>
 
+Module::Module(const std::string name) : 
+        Node(name)
+        {
+    exitSub = create_subscription<Empty>(topicNames[COMM_EXIT], queueSize, bind(&JournalControl::onExitMessage, this, _1));
+    this->quit = false;
+}
+
+Module::shouldExit(){
+    return this->quit;
+}
+
+Module::onExitMessage(){
+    this->quit=true;
+}
+
+/*!
+ * \brief A try/catch wrapper that logs messages 
+ * \param commandCode The message type to be processed
+ * \param tryExecute function to execute
+ * \param executeIfFail if executing tryExecute fails, this function is executed
+ * \return true if the initialization was successful, false otherwise
+ */
 void Module::tryHandleMessage(
     COMMAND commandCode,
     std::function<void()> tryExecute,

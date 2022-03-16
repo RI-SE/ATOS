@@ -46,7 +46,6 @@ ObjectControl::ObjectControl() : Module(ObjectControl::moduleName)
 	// ** Publishers
 	this->failurePub = this->create_publisher<UInt8>(topicNames[COMM_FAILURE],queueSize);
 	this->getStatusResponsePub = this->create_publisher<String>(topicNames[COMM_GETSTATUS_OK],queueSize);	
-
 };
 
 ObjectControl::~ObjectControl() {
