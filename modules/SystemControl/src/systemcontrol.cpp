@@ -35,11 +35,11 @@
 
 
 SystemControl::SystemControl() : Module(SystemControl::module_name) {
-	// ** Subscriptions
+	//! Subscriptions
 	this->failureSub = this->create_subscription<UInt8>(topicNames[COMM_FAILURE], 0, std::bind(&SystemControl::onFailureMessage, this, _1));
-	this->getStatusResponseSub= this->create_subscription<String>(topicNames[COMM_GETSTATUS_OK], 0, std::bind(&SystemControl::onGetStatusResponse, this, _1));
+	this->getStatusResponseSub = this->create_subscription<String>(topicNames[COMM_GETSTATUS_OK], 0, std::bind(&SystemControl::onGetStatusResponse, this, _1));
 
-	// ** Publishers
+	//! Publishers
 	this->initPub = this->create_publisher<Empty>(topicNames[COMM_INIT],0);
 	this->connectPub  = this->create_publisher<Empty>(topicNames[COMM_CONNECT],0);
 	this->disconnectPub = this->create_publisher<Empty>(topicNames[COMM_DISCONNECT],0);
