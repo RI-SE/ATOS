@@ -95,7 +95,7 @@ void DirectControl::onAllClearMessage(const Empty::SharedPtr) {}
 //! Class methods
 
 DirectControl::DirectControl() :
-	Module(module_name),
+	Module(moduleName),
 	tcpHandler(TCPPort, "", "off", 1, O_NONBLOCK), 
 	udpServer("0.0.0.0",UDPPort) {
 	//! Publishers
@@ -236,7 +236,7 @@ size_t DirectControl::handleUnknownMessage(
 int DirectControl::initializeModule(const LOG_LEVEL logLevel) {
 	int retval = 0;
 
-	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",module_name.c_str(), getpid());
+	RCLCPP_INFO(get_logger(), "%s task running with PID: %d",moduleName.c_str(), getpid());
 	if (requestDataDictInitialization()) {
 		if (DataDictionaryInitObjectData() != READ_OK) {
 			retval = -1;
