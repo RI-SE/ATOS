@@ -13,10 +13,11 @@ set(COREUTILS_LIBRARY MaestroCoreUtil)
 set(ISO_22133_LIBRARY MaestroISO22133)
 set(POSITIONING_LIBRARY MaestroPositioning)
 set(TIME_LIBRARY MaestroTime)
-set(LOGGING_LIBRARY MaestroLogging)
-set(MESSAGE_BUS_LIBRARY MaestroMQ)
+set(COMMON_LIBRARY MaestroCommon)
 set(SOCKET_LIBRARY TCPUDPSocket)
 set(THREAD_LIBRARY pthread)
+
+get_target_property(COMMON_HEADERS ${COMMON_LIBRARY} INCLUDE_DIRECTORIES)
 
 include(GNUInstallDirs)
 
@@ -32,10 +33,12 @@ target_link_libraries(${DIRECT_CONTROL_TARGET}
 	${LOGGING_LIBRARY}
 	${SOCKET_LIBRARY}
 	${THREAD_LIBRARY}
+	${COMMON_LIBRARY}
 )
 
 target_include_directories(${DIRECT_CONTROL_TARGET} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/inc
+	${COMMON_HEADERS}
 )
 
 # ROS specific rules

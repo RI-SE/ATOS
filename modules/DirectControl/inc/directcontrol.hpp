@@ -26,7 +26,6 @@ private:
 
 	void onAbortMessage(const Empty::SharedPtr) override;
 	void onAllClearMessage(const Empty::SharedPtr) override;
-	void onExitMessage(const Empty::SharedPtr) override;
 
 	std::unique_ptr<std::thread> receiveThread;
 	std::unique_ptr<std::thread> receiveThreadUDP;
