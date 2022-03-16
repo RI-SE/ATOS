@@ -237,12 +237,13 @@ protected:
 	virtual void onTRCMMessage(const Empty::SharedPtr){};
 	virtual void onEXACMessage(const Exac::SharedPtr){};
 	virtual void onTREOMessage(const Empty::SharedPtr){};
-	virtual void onExitMessage(const Empty::SharedPtr){};
 	virtual void onReplayMessage(const Empty::SharedPtr){};
 	virtual void onBackToStartMessage(const Empty::SharedPtr){};
 	virtual void onBackToStartResponse(const Int8::SharedPtr){};
 	virtual void onDataDictResponse(const Empty::SharedPtr){};
 	virtual void onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr){};
+
+	virtual void onExitMessage(const Empty::SharedPtr);
 
 
 	static void tryHandleMessage(COMMAND commandCode, std::function<void()> tryExecute, std::function<void()> executeIfFail);

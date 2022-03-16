@@ -4,15 +4,15 @@
 Module::Module(const std::string name) : 
         Node(name)
         {
-    exitSub = create_subscription<Empty>(topicNames[COMM_EXIT], queueSize, bind(&JournalControl::onExitMessage, this, _1));
+    exitSub = create_subscription<Empty>(topicNames[COMM_EXIT], 0, bind(&Module::onExitMessage, this, _1));
     this->quit = false;
 }
 
-Module::shouldExit(){
+bool Module::shouldExit(){
     return this->quit;
 }
 
-Module::onExitMessage(){
+void Module::onExitMessage(const Empty::SharedPtr){
     this->quit=true;
 }
 
