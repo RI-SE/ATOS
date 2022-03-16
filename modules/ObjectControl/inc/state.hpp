@@ -42,7 +42,6 @@ public:
 	virtual void postProcessingCompleted(ObjectControl&) { throw std::runtime_error("Unexpected postprocessing completion in state " + type(*this)); }
 	virtual void settingModificationRequested(ObjectControl&) { throw std::runtime_error("Unexpected setting modification in state " + type(*this)); }
 	virtual void actionExecutionRequested(ObjectControl&) { throw std::runtime_error("Unexpected action execution in state " + type(*this)); }
-	virtual void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) { throw std::runtime_error("Unexpected action execution in state " + type(*this)); }
 
 	//! Enter/exit functionality - defaults to nothing
 	virtual void onEnter(ObjectControl&) {}
@@ -82,8 +81,6 @@ public:
 
 	//! Allow modifications of the settings to occur
 	void settingModificationRequested(ObjectControl&) override {}
-	//! Ignore control signals
-	void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) override {}
 	//! All other spontaneous events unexpected
 	//
 
@@ -111,8 +108,6 @@ public:
 
 	//! Allow modifications of the settings to occur
 	void settingModificationRequested(ObjectControl&) override {}
-	//! Ignore control signals
-	void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) override {}
 	//! Other spontaneous events unexpected
 	//
 
@@ -149,8 +144,6 @@ public:
 
 	//! Other spontaneous events unexpected
 	// TODO perhaps settings may be modified here?
-	//! Ignore control signals
-	void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) override {}
 
 	// TODO integrate this state into the enum variable
 	OBCState_t asNumber() const override { return OBC_STATE_INITIALIZED; }
@@ -184,8 +177,6 @@ public:
 
 	//! Allow modifications of the settings to occur
 	virtual void settingModificationRequested(ObjectControl&) override;
-	//! Ignore control signals
-	void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) override {}
 
 	//! Other spontaneous events unexpected
 	//
@@ -225,9 +216,6 @@ public:
 
 	virtual void onExit(ObjectControl&) override;
 
-	//! Ignore control signals
-	void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) override {}
-
 	//! Other spontaneous events unexpected
 	//
 
@@ -261,9 +249,6 @@ public:
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
 
-
-	//! Ignore control signals
-	void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) override {}
 	//! Other spontaneous events unexpected
 	//
 
@@ -299,8 +284,6 @@ public:
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
 
-	//! Ignore control signals
-	void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) override {}
 	//! Other spontaneous events unexpected
 	//
 
@@ -333,9 +316,6 @@ public:
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
 
-	//! Ignore control signals
-	void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) override {}
-
 	//! Other spontaneous events unexpected
 	//
 	OBCState_t asNumber() const override { return OBC_STATE_ARMED; }
@@ -363,9 +343,6 @@ public:
 	void enableRemoteControlRequest(ObjectControl&) override {}
 	void disableRemoteControlRequest(ObjectControl&) override {}
 
-	//! Ignore control signals
-	void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) override {}
-
 	//! Other spontaneous events unexpected
 	//
 
@@ -378,9 +355,11 @@ class RemoteControlled : public ObjectControlState {
 public:
 	RemoteControlled();
 
+	virtual void onEnter(ObjectControl&) override;
+	virtual void onExit(ObjectControl&) override;
+
 	// Should handle these requests
 	virtual void disableRemoteControlRequest(ObjectControl&) override;
-	virtual void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) override;
 
 	// Ignore
 	void initializeRequest(ObjectControl&) override {}
@@ -393,6 +372,9 @@ public:
 	void abortRequest(ObjectControl&) override {} // safe?
 	void allClearRequest(ObjectControl&) override {}
 	void enableRemoteControlRequest(ObjectControl&) override {}
+
+	OBCState_t asNumber() const override { return OBC_STATE_REMOTECTRL; }
+	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_READY; }
 };
 
 }
@@ -475,8 +457,11 @@ class Done : public AbstractKinematics::Done {
 };
 
 class RemoteControlled : public AbstractKinematics::RemoteControlled {
+
+	void onEnter(ObjectControl&) override;
+	void onExit(ObjectControl&) override;
+
 	void disableRemoteControlRequest(ObjectControl&) override;
-	void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) override;
 };
 
 }
@@ -556,8 +541,11 @@ class Armed : public AbstractKinematics::Armed {
 };
 
 class RemoteControlled : public AbstractKinematics::RemoteControlled {
+
+	void onEnter(ObjectControl&) override;
+	void onExit(ObjectControl&) override;
+
 	void disableRemoteControlRequest(ObjectControl&) override;
-	void sendControlSignal(ObjectControl&, const ControlSignalPercentage::SharedPtr) override;
 };
 
 class Done : public AbstractKinematics::Done {

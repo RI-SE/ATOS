@@ -41,7 +41,6 @@ ObjectControl::ObjectControl() : Module(ObjectControl::moduleName)
 	this->getStatusSub = this->create_subscription<Empty>(topicNames[COMM_GETSTATUS], queueSize, std::bind(&ObjectControl::onGetStatusMessage, this, _1));
 	this->remoteControlEnableSub = this->create_subscription<Empty>(topicNames[COMM_REMOTECTRL_ENABLE], queueSize, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1));
 	this->remoteControlDisableSub = this->create_subscription<Empty>(topicNames[COMM_REMOTECTRL_DISABLE], queueSize, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1));
-	this->controlSignalPercentageSub = this->create_subscription<ControlSignalPercentage>(topicNames[COMM_CONTROL_SIGNAL_PERCENTAGE], queueSize, std::bind(&ObjectControl::onControlSignalPercentageMessage, this, _1));
 
 	// ** Publishers
 	this->failurePub = this->create_publisher<UInt8>(topicNames[COMM_FAILURE],queueSize);
@@ -117,12 +116,6 @@ void ObjectControl::handleExecuteActionCommand(
 	auto thd = std::thread(delayedExecutor);
 	thd.detach();
 }
-
-void ObjectControl::sendRCMMToObject(
-		RemoteControlManoeuvreMessageType& rcmm,
-		uint32_t id){
-			objects.at(id).sendControlSignal(rcmm);
-		}
 
 void ObjectControl::onInitMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_INIT;
@@ -227,13 +220,29 @@ void ObjectControl::onRemoteControlDisableMessage(const Empty::SharedPtr){
 	this->tryHandleMessage(cmd,f_try,f_catch);	
 }
 
+void ObjectControl::maestroMsgToRCMM(const ControlSignalPercentage::SharedPtr csp, 
+					RemoteControlManoeuvreMessageType& rcmm){
+	rcmm.command = MANOEUVRE_NONE;
+	rcmm.isThrottleManoeuvreValid = true;
+	rcmm.isBrakeManoeuvreValid = true;
+	rcmm.isSteeringManoeuvreValid = true;
+	rcmm.throttleUnit = ISO_UNIT_TYPE_THROTTLE_PERCENTAGE;
+	rcmm.brakeUnit = ISO_UNIT_TYPE_BRAKE_PERCENTAGE;
+	rcmm.steeringUnit = ISO_UNIT_TYPE_STEERING_PERCENTAGE;
+	rcmm.throttleManoeuvre.pct = csp->throttle;
+	rcmm.brakeManoeuvre.pct = csp->brake;
+	rcmm.steeringManoeuvre.pct = csp->steering_angle;
+}
+
 void ObjectControl::onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr csp){
-	COMMAND cmd = COMM_CONTROL_SIGNAL_PERCENTAGE;
-	auto f_try = [&]() { this->state->sendControlSignal(*this,csp); };
-	auto f_catch = [&]() {
-			failurePub->publish(msgCtr1<UInt8>(cmd));
-	};
-	this->tryHandleMessage(cmd,f_try,f_catch);	
+	try{
+		RemoteControlManoeuvreMessageType rcmm;
+		maestroMsgToRCMM(csp,rcmm);
+		objects.at(csp->maestro_header.object_id).sendControlSignal(rcmm);
+	}
+	catch(...){
+		RCLCPP_WARN(get_logger(), "Failed to translate/send Control Signal Percentage to rcmm");
+	}
 }
 
 void ObjectControl::loadScenario() {
@@ -632,4 +641,13 @@ bool ObjectControl::areAllObjectsIn(
 	return std::all_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,TestObject>& obj) {
 		return states.find(obj.second.getState()) != states.end();
 	});
+}
+
+void ObjectControl::startControlSignalSubscriber(){
+	this->controlSignalPercentageSub = this->create_subscription<ControlSignalPercentage>(
+			topicNames[COMM_CONTROL_SIGNAL_PERCENTAGE], 0, std::bind(&ObjectControl::onControlSignalPercentageMessage, this, _1)
+	);
+}
+void ObjectControl::stopControlSignalSubscriber(){
+	this->controlSignalPercentageSub.reset();
 }

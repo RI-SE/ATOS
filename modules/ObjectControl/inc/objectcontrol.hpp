@@ -175,7 +175,8 @@ public:
 	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
 
 	//! Setters
-	void sendRCMMToObject(RemoteControlManoeuvreMessageType&,uint32_t);
+	void startControlSignalSubscriber();
+	void stopControlSignalSubscriber();
 
 private:
 	static inline std::string const moduleName = "object_control";
@@ -255,5 +256,9 @@ private:
 	void injectObjectData(const MonitorMessage& monr);
 	//! \brief TODO
 	OsiHandler::LocalObjectGroundTruth_t buildOSILocalGroundTruth(const MonitorMessage&) const;
+
+	void maestroMsgToRCMM(const ControlSignalPercentage::SharedPtr csp, 
+								RemoteControlManoeuvreMessageType& rcmm);
+
 };
 
