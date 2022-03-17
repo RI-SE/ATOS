@@ -65,44 +65,6 @@ static std::map<COMMAND, std::string> topicNames = {
 	{COMM_FAILURE, "/failure"}
 };
 
-// TODO: Move somewhere else
-namespace TopicNames {
-const std::string start = "start";
-const std::string arm = "arm";
-const std::string stop = "stop";
-const std::string exit = "exit";
-const std::string replay = "replay";
-const std::string abort = "abort";
-const std::string abortDone = "all_clear";
-const std::string init = "init";
-const std::string connect = "connect";
-const std::string obc_state = "obc_state";
-const std::string disconnect = "disconnect";
-const std::string viop = "viop";
-const std::string traj = "traj";
-const std::string trajToSup = "traj_tosup";
-const std::string trajFromSup = "traj_fromsup";
-const std::string asp = "asp";
-const std::string osem = "osem";
-const std::string dataDict = "data_dict";
-const std::string executeAction = "execute_action";
-const std::string eventOccurred = "event_occurred";
-const std::string actionConfiguration = "action_configuration";
-const std::string triggerConfiguration = "trigger_configuration";
-const std::string disarm = "disarm";
-const std::string getStatus = "get_status";
-const std::string getStatusResponse = "get_status_response";
-const std::string backToStart = "back_to_start";
-const std::string backToStartResponse = "back_to_start_response";
-const std::string remoteControlEnable = "remote_control_enable";
-const std::string remoteControlDisable = "remote_control_disable";
-const std::string remoteControlManoeuvre = "remote_control_manoeuvre";
-const std::string enableObject = "enable_object";
-const std::string objectsConnected = "objects_connected";
-const std::string objectMonitor = "object_monitor";
-const std::string failure = "failure";
-}  // namespace TopicNames
-
 namespace ServiceNames {
 const std::string initDataDict = "init_data_dictionary";
 }

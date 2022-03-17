@@ -117,35 +117,35 @@ void ObjectControl::onInitMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_INIT;
 	auto f_try = [&]() { this->state->initializeRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch,TopicNames::init, get_logger());
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::Init::topicName, get_logger());
 }
 
 void ObjectControl::onConnectMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_CONNECT;
 	auto f_try = [&]() { this->state->connectRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch,TopicNames::connect, get_logger());
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::Connect::topicName, get_logger());
 }
 
 void ObjectControl::onArmMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_ARM;
 	auto f_try = [&]() { this->state->armRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch,TopicNames::arm, get_logger());
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::Arm::topicName, get_logger());
 }
 
 void ObjectControl::onStartMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_STRT;
 	auto f_try = [&]() { this->state->startRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch,TopicNames::start, get_logger());
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::Start::topicName, get_logger());
 }
 
 void ObjectControl::onDisconnectMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_DISCONNECT;
 	auto f_try = [&]() { this->state->disconnectRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch,TopicNames::disconnect, get_logger());
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::Disconnect::topicName, get_logger());
 }
 
 void ObjectControl::onStopMessage(const Empty::SharedPtr){
@@ -155,7 +155,7 @@ void ObjectControl::onStopMessage(const Empty::SharedPtr){
 			failurePub.publish(msgCtr1<UInt8>(cmd));
 			scnAbortPub.publish(Empty());
 	};
-	this->tryHandleMessage(f_try,f_catch,TopicNames::stop, get_logger());	
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::Stop::topicName, get_logger());	
 }
 
 void ObjectControl::onAbortMessage(const Empty::SharedPtr){	
@@ -167,7 +167,7 @@ void ObjectControl::onAllClearMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_ABORT_DONE;
 	auto f_try = [&]() { this->state->allClearRequest(*this); };
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch,TopicNames::abortDone, get_logger());
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::AllClear::topicName, get_logger());
 }
 
 void ObjectControl::onACCMMessage(const Accm::SharedPtr accm){
@@ -182,7 +182,7 @@ void ObjectControl::onACCMMessage(const Accm::SharedPtr accm){
 		}
 	};
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch,TopicNames::actionConfiguration, get_logger());
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::ActionConfiguration::topicName, get_logger());
 }
 
 void ObjectControl::onEXACMessage(const Exac::SharedPtr exac){
@@ -195,7 +195,7 @@ void ObjectControl::onEXACMessage(const Exac::SharedPtr exac){
 		handleExecuteActionCommand(exac->action_id, startOfWeek+qmsow);	
 	};
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(f_try,f_catch,TopicNames::executeAction, get_logger());
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::ExecuteAction::topicName, get_logger());
 }
 
 void ObjectControl::loadScenario() {
