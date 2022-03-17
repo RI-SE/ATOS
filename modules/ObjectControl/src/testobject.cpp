@@ -337,6 +337,11 @@ void TestObject::sendStart() {
 	this->comms.cmd << strt;
 }
 
+void TestObject::sendControlSignal(const ControlSignalPercentage::SharedPtr csp) {
+	this->comms.cmd << csp;
+}
+
+
 ISOMessageID Channel::pendingMessageType(bool awaitNext) {
 	auto result = recv(this->socket, this->receiveBuffer.data(), this->receiveBuffer.size(), (awaitNext ? 0 : MSG_DONTWAIT) | MSG_PEEK);
 	if (result < 0 && !awaitNext && (errno == EAGAIN || errno == EWOULDBLOCK)) {
@@ -525,6 +530,29 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 	return chnl;
 }
 
+Channel& operator<<(Channel& chnl, const ControlSignalPercentage::SharedPtr csp) {
+	RemoteControlManoeuvreMessageType rcmm;
+	rcmm.command = MANOEUVRE_NONE;
+	rcmm.isThrottleManoeuvreValid = true;
+	rcmm.isBrakeManoeuvreValid = true;
+	rcmm.isSteeringManoeuvreValid = true;
+	rcmm.throttleUnit = ISO_UNIT_TYPE_THROTTLE_PERCENTAGE;
+	rcmm.brakeUnit = ISO_UNIT_TYPE_BRAKE_PERCENTAGE;
+	rcmm.steeringUnit = ISO_UNIT_TYPE_STEERING_PERCENTAGE;
+	rcmm.throttleManoeuvre.pct = csp->throttle;
+	rcmm.brakeManoeuvre.pct = csp->brake;
+	rcmm.steeringManoeuvre.pct = csp->steering_angle;
+	auto nBytes = encodeRCMMMessage(&rcmm, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
+	if (nBytes < 0) {
+		throw std::invalid_argument(std::string("Failed to encode RCM message: ") + strerror(errno));
+	}
+
+	nBytes = send(chnl.socket, chnl.transmitBuffer.data(), static_cast<size_t>(nBytes), 0);
+	if (nBytes < 0) {
+		throw std::runtime_error(std::string("Failed to send RCM: ") + strerror(errno));
+	}
+	return chnl;
+}
 
 Channel& operator<<(Channel& chnl, const std::vector<char>& data) {
 	auto nBytes = send(chnl.socket, data.data(), data.size(), 0);

@@ -1,13 +1,21 @@
 #include "module.hpp"
 #include <std_srvs/srv/set_bool.hpp>
 
+bool Module::shouldExit(){
+    return this->quit;
+}
+
+void Module::onExitMessage(const Empty::SharedPtr){
+    this->quit=true;
+}
+
 /*!
- * \brief Attempts to call a given function. Prints an error message
- * and calls another function if it fails.
- * \param tryExecute The function to call.
- * \param executeIfFail The function to call if the function fails.
+ * \brief A try/catch wrapper that logs messages 
+ * \param tryExecute function to execute
+ * \param executeIfFail if executing tryExecute fails, this function is executed
  * \param topic The topic to print.
  * \param logger The logger to use.
+ * \return true if the initialization was successful, false otherwise
  */
 void Module::tryHandleMessage(
     std::function<void()> tryExecute,

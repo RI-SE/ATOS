@@ -89,10 +89,8 @@ void JournalControl::onReplayMessage(const Empty::SharedPtr msg)
 	LogMessage(LOG_LEVEL_WARNING, "Replay function out of date");
 }
 
-void JournalControl::onExitMessage(const Empty::SharedPtr msg)
-{
-	RCLCPP_INFO(get_logger(), "%s task exiting", get_name());
-	rclcpp::shutdown();
+void Module::onExitMessage(const Empty::SharedPtr){
+    this->quit=true;
 }
 
 void signalHandler(int signo) {

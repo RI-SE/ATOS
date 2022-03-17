@@ -11,6 +11,7 @@
 #include "maestro_interfaces/msg/manoeuvre_command.hpp"
 #include "maestro_interfaces/msg/object_enabled.hpp"
 #include "maestro_interfaces/msg/monitor.hpp"
+#include "maestro_interfaces/msg/control_signal_percentage.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/int8.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -21,6 +22,7 @@ using maestro_interfaces::msg::Exac;
 using maestro_interfaces::msg::ManoeuvreCommand;
 using maestro_interfaces::msg::ObjectEnabled;
 using maestro_interfaces::msg::Monitor;
+using maestro_interfaces::msg::ControlSignalPercentage;
 using rclcpp::Node;
 using std::placeholders::_1;
 using std_msgs::msg::Empty;
@@ -61,6 +63,7 @@ static std::map<COMMAND, std::string> topicNames = {
 	{COMM_REMOTECTRL_DISABLE, "/remote_control_disable"},
 	{COMM_REMOTECTRL_MANOEUVRE, "/remote_control_manoeuvre"},
 	{COMM_ENABLE_OBJECT, "/enable_object"},
+	{COMM_CONTROL_SIGNAL_PERCENTAGE, "/control_signal_perc"},
 	{COMM_OBJECTS_CONNECTED, "/objects_connected"},
 	{COMM_FAILURE, "/failure"}
 };
@@ -92,8 +95,10 @@ class Module : public Node {
    public:
 	Module(const std::string name) : Node(name), getStatusResponsePub(*this) {};
 	Module() = default;
+	bool shouldExit();
 
    protected:
+	bool quit=false;
 
 	ROSChannels::GetStatusResponse::Pub getStatusResponsePub;
 
@@ -130,11 +135,14 @@ class Module : public Node {
 	virtual void onTRCMMessage(const Empty::SharedPtr){};
 	virtual void onEXACMessage(const Exac::SharedPtr){};
 	virtual void onTREOMessage(const Empty::SharedPtr){};
-	virtual void onExitMessage(const Empty::SharedPtr){};
 	virtual void onReplayMessage(const Empty::SharedPtr){};
 	virtual void onBackToStartMessage(const Empty::SharedPtr){};
 	virtual void onBackToStartResponse(const Int8::SharedPtr){};
 	virtual void onDataDictResponse(const Empty::SharedPtr){};
+	virtual void onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr){};
+
+	virtual void onExitMessage(const Empty::SharedPtr);
+
 
 	static void tryHandleMessage(std::function<void()> tryExecute,
 								 std::function<void()> executeIfFail,

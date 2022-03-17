@@ -43,6 +43,7 @@ add_executable(${OBJECT_CONTROL_TARGET}
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/disarming.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/armed.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/states/done.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/states/remotecontrolled.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/objectcontrol.cpp
 )
 # Link project executable to util libraries

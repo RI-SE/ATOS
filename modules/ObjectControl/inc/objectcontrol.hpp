@@ -24,6 +24,7 @@ namespace AbstractKinematics {
 	class TestLive;
 	class Disarming;
 	class Done;
+	class RemoteControlled;
 }
 
 namespace RelativeKinematics {
@@ -35,6 +36,7 @@ namespace RelativeKinematics {
 	class TestLive;
 	class Disarming;
 	class Done;
+	class RemoteControlled;
 }
 
 namespace AbsoluteKinematics {
@@ -46,6 +48,7 @@ namespace AbsoluteKinematics {
 	class TestLive;
 	class Disarming;
 	class Done;
+	class RemoteControlled;
 }
 
 /*!
@@ -66,6 +69,7 @@ class ObjectControl : public Module
 	friend class AbstractKinematics::TestLive;
 	friend class AbstractKinematics::Disarming;
 	friend class AbstractKinematics::Done;
+	friend class AbstractKinematics::RemoteControlled;
 	friend class RelativeKinematics::Initialized;
 	friend class RelativeKinematics::Connecting;
 	friend class RelativeKinematics::Ready;
@@ -74,6 +78,7 @@ class ObjectControl : public Module
 	friend class RelativeKinematics::TestLive;
 	friend class RelativeKinematics::Disarming;
 	friend class RelativeKinematics::Done;
+	friend class RelativeKinematics::RemoteControlled;
 	friend class AbsoluteKinematics::Initialized;
 	friend class AbsoluteKinematics::Connecting;
 	friend class AbsoluteKinematics::Ready;
@@ -82,6 +87,7 @@ class ObjectControl : public Module
 	friend class AbsoluteKinematics::TestLive;
 	friend class AbsoluteKinematics::Disarming;
 	friend class AbsoluteKinematics::Done;
+	friend class AbsoluteKinematics::RemoteControlled;
 
 	friend class ObjectListener;
 
@@ -168,6 +174,10 @@ public:
 	//!			The method does not wait for the next MONR to arrive.
 	bool areAllObjectsIn(const std::set<ObjectStateType>& state);
 
+	//! Setters
+	void startControlSignalSubscriber();
+	void stopControlSignalSubscriber();
+
 private:
 	static inline std::string const moduleName = "object_control";
 	void onInitMessage(const Empty::SharedPtr) override;
@@ -180,6 +190,9 @@ private:
 	void onAllClearMessage(const Empty::SharedPtr) override;
 	void onACCMMessage(const Accm::SharedPtr) override;
 	void onEXACMessage(const Exac::SharedPtr) override;
+	void onRemoteControlEnableMessage(const Empty::SharedPtr) override;
+	void onRemoteControlDisableMessage(const Empty::SharedPtr) override;
+	void onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr) override;
 
 	using clock = std::chrono::steady_clock;
 
@@ -206,7 +219,10 @@ private:
 	ROSChannels::Disconnect::Sub scnDisconnectSub;	//!< Subscriber to scenario disconnect requests
 	ROSChannels::ExecuteAction::Sub scnActionSub;		//!< Subscriber to scenario action requests
 	ROSChannels::ActionConfiguration::Sub scnActionConfigSub;	//!< Subscriber to scenario action configuration requests
+	ROSChannels::RemoteControlEnable::Sub scnRemoteControlEnableSub;		//!< Subscriber to remote control enable requests
+	ROSChannels::RemoteControlDisable::Sub scnRemoteControlDisableSub;	//!< Subscriber to remote control disable requests
 	ROSChannels::GetStatus::Sub getStatusSub;				//!< Subscriber to scenario get status requests
+	std::shared_ptr<ROSChannels::ControlSignalPercentage::Sub> controlSignalPercentageSub;	//!< Pointer to subscriber to receive control signal messages with percentage
 
 	ROSChannels::Failure::Pub failurePub;					//!< Publisher to scenario failure reports
 	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports

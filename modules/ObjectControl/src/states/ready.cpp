@@ -43,7 +43,9 @@ void AbstractKinematics::Ready::settingModificationRequested(
 		ObjectControl& handler) {
 	// TODO
 }
-
+void AbstractKinematics::Ready::enableRemoteControlRequest(
+	ObjectControl& handler){
+}
 
 /*! ******************************************************
  * \section RelativeKinematics
@@ -88,6 +90,13 @@ void RelativeKinematics::Ready::settingModificationRequested(
 	// TODO call ObjectControl to update OSEM if modified etc.
 }
 
+void RelativeKinematics::Ready::enableRemoteControlRequest(
+	ObjectControl& handler){
+	RCLCPP_WARN(handler.get_logger(), "Relative mode control input conversion not currently supported");
+	return;
+	//setState(handler, new RelativeKinematics::RemoteControlled);
+}
+
 
 /*! ******************************************************
  * \section AbsoluteKinematics
@@ -129,4 +138,9 @@ void AbsoluteKinematics::Ready::settingModificationRequested(
 		ObjectControl& handler) {
 	AbstractKinematics::Ready::settingModificationRequested(handler);
 	// TODO call ObjectControl to update OSEM if modified etc.
+}
+
+void AbsoluteKinematics::Ready::enableRemoteControlRequest(
+	ObjectControl& handler){
+	setState(handler, new AbsoluteKinematics::RemoteControlled);
 }

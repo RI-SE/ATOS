@@ -6,8 +6,10 @@
 #include "trajectory.hpp"
 #include "objectconfig.hpp"
 #include "osi_handler.hpp"
+#include "maestro_interfaces/msg/control_signal_percentage.hpp"
 #include "loggable.hpp"
 
+using maestro_interfaces::msg::ControlSignalPercentage;
 
 // GCC version 8.1 brings non-experimental support for std::filesystem
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)
@@ -55,6 +57,7 @@ public:
 	friend Channel& operator<<(Channel&,const ObjectCommandType&);
 	friend Channel& operator<<(Channel&,const StartMessageType&);
 	friend Channel& operator<<(Channel&,const std::vector<char>&);
+	friend Channel& operator<<(Channel&,const ControlSignalPercentage::SharedPtr csp);
 
 	friend Channel& operator>>(Channel&,MonitorMessage&);
 	friend Channel& operator>>(Channel&,ObjectPropertiesType&);
@@ -136,6 +139,8 @@ public:
 	void sendOsiData(const OsiHandler::LocalObjectGroundTruth_t& osidata,
 					 const std::string& projStr,
 					 const std::chrono::system_clock::time_point& timestamp);
+
+	void sendControlSignal(const ControlSignalPercentage::SharedPtr csp);
 
 	std::chrono::milliseconds getTimeSinceLastMonitor() const {
 		if (lastMonitorTime.time_since_epoch().count() == 0) {

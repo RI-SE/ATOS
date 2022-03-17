@@ -32,6 +32,8 @@ ObjectControl::ObjectControl()
 	scnActionSub(*this, std::bind(&ObjectControl::onEXACMessage, this, _1)),
 	scnActionConfigSub(*this, std::bind(&ObjectControl::onACCMMessage, this, _1)),
 	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),
+	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1)),
+	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
 	failurePub(*this),
 	scnAbortPub(*this)
 {
@@ -111,7 +113,6 @@ void ObjectControl::handleExecuteActionCommand(
 	auto thd = std::thread(delayedExecutor);
 	thd.detach();
 }
-
 
 void ObjectControl::onInitMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_INIT;
@@ -196,6 +197,33 @@ void ObjectControl::onEXACMessage(const Exac::SharedPtr exac){
 	};
 	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
 	this->tryHandleMessage(f_try,f_catch,ROSChannels::ExecuteAction::topicName, get_logger());
+}
+
+void ObjectControl::onRemoteControlEnableMessage(const Empty::SharedPtr){
+	COMMAND cmd = COMM_REMOTECTRL_ENABLE;
+	auto f_try = [&]() { this->state->enableRemoteControlRequest(*this); };
+	auto f_catch = [&]() {
+			failurePub.publish(msgCtr1<UInt8>(cmd));
+	};
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::RemoteControlEnable::topicName, get_logger());	
+}
+
+void ObjectControl::onRemoteControlDisableMessage(const Empty::SharedPtr){
+	COMMAND cmd = COMM_REMOTECTRL_DISABLE;
+	auto f_try = [&]() { this->state->disableRemoteControlRequest(*this); };
+	auto f_catch = [&]() {
+			failurePub.publish(msgCtr1<UInt8>(cmd));
+	};
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::RemoteControlDisable::topicName, get_logger());	
+}
+
+void ObjectControl::onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr csp){
+	try{
+		objects.at(csp->maestro_header.object_id).sendControlSignal(csp);
+	}
+	catch(...){
+		RCLCPP_WARN(get_logger(), "Failed to translate/send Control Signal Percentage to rcmm");
+	}
 }
 
 void ObjectControl::loadScenario() {
@@ -594,4 +622,11 @@ bool ObjectControl::areAllObjectsIn(
 	return std::all_of(objects.cbegin(), objects.cend(), [states](const std::pair<const uint32_t,TestObject>& obj) {
 		return states.find(obj.second.getState()) != states.end();
 	});
+}
+
+void ObjectControl::startControlSignalSubscriber(){
+	controlSignalPercentageSub = std::make_shared<ROSChannels::ControlSignalPercentage::Sub>(*this, std::bind(&ObjectControl::onControlSignalPercentageMessage, this, _1));
+}
+void ObjectControl::stopControlSignalSubscriber(){
+	this->controlSignalPercentageSub.reset();
 }
