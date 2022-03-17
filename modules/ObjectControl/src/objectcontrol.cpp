@@ -19,31 +19,27 @@ using std_msgs::msg::Empty;
 using std_msgs::msg::String;
 using std_msgs::msg::UInt8;
 
-ObjectControl::ObjectControl() : Module(ObjectControl::moduleName)
+ObjectControl::ObjectControl()
+	: Module(ObjectControl::moduleName),
+	scnInitSub(*this, std::bind(&ObjectControl::onInitMessage, this, _1)),
+	scnStartSub(*this, std::bind(&ObjectControl::onStartMessage, this, _1)),
+	scnArmSub(*this, std::bind(&ObjectControl::onArmMessage, this, _1)),
+	scnStopSub(*this, std::bind(&ObjectControl::onStopMessage, this, _1)),
+	scnAbortSub(*this, std::bind(&ObjectControl::onAbortMessage, this, _1)),
+	scnAllClearSub(*this, std::bind(&ObjectControl::onAllClearMessage, this, _1)),
+	scnConnectSub(*this, std::bind(&ObjectControl::onConnectMessage, this, _1)),
+	scnDisconnectSub(*this, std::bind(&ObjectControl::onDisconnectMessage, this, _1)),
+	scnActionSub(*this, std::bind(&ObjectControl::onEXACMessage, this, _1)),
+	scnActionConfigSub(*this, std::bind(&ObjectControl::onACCMMessage, this, _1)),
+	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),
+	failurePub(*this),
+	scnAbortPub(*this)
 {
 	int queueSize=0;
 
 	if (this->initialize() == -1) {
 		throw std::runtime_error(std::string("Failed to initialize ") + get_name());
 	}
-	
-	// ** Subscriptions
-	this->initSub = this->create_subscription<Empty>(topicNames[COMM_INIT], queueSize, std::bind(&ObjectControl::onInitMessage, this, _1));
-	this->connectSub = this->create_subscription<Empty>(topicNames[COMM_CONNECT], queueSize, std::bind(&ObjectControl::onConnectMessage, this, _1));
-	this->armSub = this->create_subscription<Empty>(topicNames[COMM_ARM], queueSize, std::bind(&ObjectControl::onArmMessage, this, _1));
-	this->startSub = this->create_subscription<Empty>(topicNames[COMM_STRT], queueSize, std::bind(&ObjectControl::onStartMessage, this, _1));
-	this->disconnectSub = this->create_subscription<Empty>(topicNames[COMM_DISCONNECT], queueSize, std::bind(&ObjectControl::onDisconnectMessage, this, _1));
-	this->stopSub = this->create_subscription<Empty>(topicNames[COMM_STOP], queueSize, std::bind(&ObjectControl::onStopMessage, this, _1));
-	this->abortSub = this->create_subscription<Empty>(topicNames[COMM_ABORT], queueSize, std::bind(&ObjectControl::onAbortMessage, this, _1));
-	this->allClearSub = this->create_subscription<Empty>(topicNames[COMM_ABORT_DONE], queueSize, std::bind(&ObjectControl::onAllClearMessage, this, _1));
-	this->accmSub = this->create_subscription<Accm>(topicNames[COMM_ACCM], queueSize, std::bind(&ObjectControl::onACCMMessage, this, _1));
-	this->exacSub = this->create_subscription<Exac>(topicNames[COMM_EXAC], queueSize, std::bind(&ObjectControl::onEXACMessage, this, _1));
-	this->getStatusSub = this->create_subscription<Empty>(topicNames[COMM_GETSTATUS], queueSize, std::bind(&ObjectControl::onGetStatusMessage, this, _1));
-
-	// ** Publishers
-	this->failurePub = this->create_publisher<UInt8>(topicNames[COMM_FAILURE],queueSize);
-	this->getStatusResponsePub = this->create_publisher<String>(topicNames[COMM_GETSTATUS_OK],queueSize);	
-
 };
 
 ObjectControl::~ObjectControl() {
@@ -120,46 +116,46 @@ void ObjectControl::handleExecuteActionCommand(
 void ObjectControl::onInitMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_INIT;
 	auto f_try = [&]() { this->state->initializeRequest(*this); };
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(cmd,f_try,f_catch);
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::Init::topicName, get_logger());
 }
 
 void ObjectControl::onConnectMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_CONNECT;
 	auto f_try = [&]() { this->state->connectRequest(*this); };
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(cmd,f_try,f_catch);
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::Connect::topicName, get_logger());
 }
 
 void ObjectControl::onArmMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_ARM;
 	auto f_try = [&]() { this->state->armRequest(*this); };
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(cmd,f_try,f_catch);
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::Arm::topicName, get_logger());
 }
 
 void ObjectControl::onStartMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_STRT;
 	auto f_try = [&]() { this->state->startRequest(*this); };
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(cmd,f_try,f_catch);
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::Start::topicName, get_logger());
 }
 
 void ObjectControl::onDisconnectMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_DISCONNECT;
 	auto f_try = [&]() { this->state->disconnectRequest(*this); };
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(cmd,f_try,f_catch);
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::Disconnect::topicName, get_logger());
 }
 
 void ObjectControl::onStopMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_STOP;
 	auto f_try = [&]() { this->state->stopRequest(*this); };
 	auto f_catch = [&]() {
-			failurePub->publish(msgCtr1<UInt8>(cmd));
-			abortPub->publish(Empty());
+			failurePub.publish(msgCtr1<UInt8>(cmd));
+			scnAbortPub.publish(Empty());
 	};
-	this->tryHandleMessage(cmd,f_try,f_catch);	
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::Stop::topicName, get_logger());	
 }
 
 void ObjectControl::onAbortMessage(const Empty::SharedPtr){	
@@ -170,8 +166,8 @@ void ObjectControl::onAbortMessage(const Empty::SharedPtr){
 void ObjectControl::onAllClearMessage(const Empty::SharedPtr){	
 	COMMAND cmd = COMM_ABORT_DONE;
 	auto f_try = [&]() { this->state->allClearRequest(*this); };
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(cmd,f_try,f_catch);
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::AllClear::topicName, get_logger());
 }
 
 void ObjectControl::onACCMMessage(const Accm::SharedPtr accm){
@@ -185,8 +181,8 @@ void ObjectControl::onACCMMessage(const Accm::SharedPtr accm){
 			handleActionConfigurationCommand(cmdAction);
 		}
 	};
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(cmd,f_try,f_catch);
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::ActionConfiguration::topicName, get_logger());
 }
 
 void ObjectControl::onEXACMessage(const Exac::SharedPtr exac){
@@ -198,8 +194,8 @@ void ObjectControl::onEXACMessage(const Exac::SharedPtr exac){
 		auto startOfWeek = system_clock::time_point(weeks(TimeGetAsGPSweek(&now)));
 		handleExecuteActionCommand(exac->action_id, startOfWeek+qmsow);	
 	};
-	auto f_catch = [&]() { failurePub->publish(msgCtr1<UInt8>(cmd)); };
-	this->tryHandleMessage(cmd,f_try,f_catch);
+	auto f_catch = [&]() { failurePub.publish(msgCtr1<UInt8>(cmd)); };
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::ExecuteAction::topicName, get_logger());
 }
 
 void ObjectControl::loadScenario() {

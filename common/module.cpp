@@ -1,17 +1,25 @@
 #include "module.hpp"
 #include <std_srvs/srv/set_bool.hpp>
 
+/*!
+ * \brief Attempts to call a given function. Prints an error message
+ * and calls another function if it fails.
+ * \param tryExecute The function to call.
+ * \param executeIfFail The function to call if the function fails.
+ * \param topic The topic to print.
+ * \param logger The logger to use.
+ */
 void Module::tryHandleMessage(
-    COMMAND commandCode,
     std::function<void()> tryExecute,
-    std::function<void()> executeIfFail)
+    std::function<void()> executeIfFail,
+    const std::string& topic,
+    const rclcpp::Logger& logger)
 {
 	try {
-		LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames.at(commandCode).c_str());
+		RCLCPP_DEBUG(logger, "Handling command on %s", topic.c_str());
 		tryExecute();
 	} catch (std::invalid_argument& e) {
-		LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames.at(commandCode).c_str(),
-				   e.what());
+		RCLCPP_ERROR(logger, "Handling command on %s failed - %s", topic.c_str(), e.what());
 		executeIfFail();
 	}
 }

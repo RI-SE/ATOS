@@ -3,13 +3,12 @@
 #include <functional>
 
 MaestroBase::MaestroBase()
-    : Module(MaestroBase::moduleName)
+    : Module(MaestroBase::moduleName),
+	exitSub(*this, std::bind(&MaestroBase::onExitMessage, this, std::placeholders::_1))
 {
 	RCLCPP_INFO(get_logger(), "%s task running with PID: %d", get_name(), getpid());
 	initDataDictionaryService = create_service<std_srvs::srv::SetBool>(ServiceNames::initDataDict,
 		std::bind(&MaestroBase::onInitDataDictionary, this, std::placeholders::_1, std::placeholders::_2));
-
-	exitSub = create_subscription<Empty>(topicNames[COMM_EXIT], 0, bind(&MaestroBase::onExitMessage, this, _1));
 }
 
 MaestroBase::~MaestroBase()
