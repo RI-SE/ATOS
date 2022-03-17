@@ -28,6 +28,43 @@ using std_msgs::msg::Int8;
 using std_msgs::msg::String;
 using std_msgs::msg::UInt8;
 
+// TODO move somewhere else
+static std::map<COMMAND, std::string> topicNames = {
+	{COMM_STRT, "/start"},
+	{COMM_ARM, "/arm"},
+	{COMM_STOP, "/stop"},
+	{COMM_EXIT, "/exit"},
+	{COMM_REPLAY, "/replay"},
+	{COMM_ABORT, "/abort"},
+	{COMM_ABORT_DONE, "/all_clear"},
+	{COMM_INIT, "/init"},
+	{COMM_CONNECT, "/connect"},
+	{COMM_OBC_STATE, "/obc_state"},
+	{COMM_DISCONNECT, "/disconnect"},
+	{COMM_VIOP, "/viop"},
+	{COMM_TRAJ, "/traj"},
+	{COMM_TRAJ_TOSUP, "/traj_tosup"},
+	{COMM_TRAJ_FROMSUP, "/traj_fromsup"},
+	{COMM_ASP, "/asp"},
+	{COMM_OSEM, "/osem"},
+	{COMM_DATA_DICT, "/data_dict"},
+	{COMM_EXAC, "/execute_action"},
+	{COMM_TREO, "/event_occurred"},
+	{COMM_ACCM, "/action_configuration"},
+	{COMM_TRCM, "/trigger_configuration"},
+	{COMM_DISARM, "/disarm"},
+	{COMM_GETSTATUS, "/get_status"},
+	{COMM_GETSTATUS_OK, "/get_status_response"},
+	{COMM_BACKTOSTART_CALL, "/back_to_start"},
+	{COMM_BACKTOSTART_RESPONSE, "/back_to_start_response"},
+	{COMM_REMOTECTRL_ENABLE, "/remote_control_enable"},
+	{COMM_REMOTECTRL_DISABLE, "/remote_control_disable"},
+	{COMM_REMOTECTRL_MANOEUVRE, "/remote_control_manoeuvre"},
+	{COMM_ENABLE_OBJECT, "/enable_object"},
+	{COMM_OBJECTS_CONNECTED, "/objects_connected"},
+	{COMM_FAILURE, "/failure"}
+};
+
 // TODO: Move somewhere else
 namespace TopicNames {
 const std::string start = "start";
