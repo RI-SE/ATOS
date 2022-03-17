@@ -6,6 +6,11 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(object_control)
 
+find_package(rclcpp REQUIRED)
+find_package(maestro_interfaces REQUIRED)
+find_package(std_msgs REQUIRED)
+
+
 # Define target names
 set(OBJECT_CONTROL_TARGET ${PROJECT_NAME})
 
@@ -54,12 +59,10 @@ target_link_libraries(${OBJECT_CONTROL_TARGET}
 )
 
 # ROS specific settings
-rosidl_target_interfaces(${OBJECT_CONTROL_TARGET}
-	maestro_msgs "rosidl_typesupport_cpp"
-)
 ament_target_dependencies(${OBJECT_CONTROL_TARGET}
   rclcpp
   std_msgs
+  maestro_interfaces
 )
 
 target_include_directories(${OBJECT_CONTROL_TARGET} PUBLIC

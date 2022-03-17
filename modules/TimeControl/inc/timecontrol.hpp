@@ -32,7 +32,7 @@ public:
 	void signalHandler(int signo);
 	void initialize(TimeType * GPSTime, GSDType * GSD, LOG_LEVEL logLevel);
 private:
-
+	ROSChannels::Exit::Sub exitSub;
 	/* definitions */
 	static const int TIME_CONTROL_HOSTNAME_BUFFER_SIZE = 20;
 	static const int TIME_CONTROL_RECEIVE_BUFFER_SIZE = 80;

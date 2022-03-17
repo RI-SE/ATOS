@@ -1,6 +1,0 @@
-uint16 action_id
-uint16 action_type
-uint32 action_type_parameter1
-uint32 action_type_parameter2
-uint32 action_type_parameter3
-uint32 ip

@@ -1,9 +1,8 @@
 #include "timecontrol.hpp"
 
-TimeControl::TimeControl() : Module(TimeControl::module_name){
-	// ** Subscriptions
-	this->exitSub = this->create_subscription<Empty>(topicNames[COMM_EXIT], 0, std::bind(&TimeControl::onExitMessage, this, _1));
-};
+TimeControl::TimeControl()
+: Module(TimeControl::module_name),
+exitSub(*this,std::bind(&TimeControl::onExitMessage,this,std::placeholders::_1)) {}
 
 void TimeControl::signalHandler(int signo) {
 	if (signo == SIGINT) {

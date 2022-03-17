@@ -34,9 +34,9 @@ public:
 	bool shouldExit();
 	void initialize(LOG_LEVEL logLevel);
 	void signalHandler(int signo);
-	void receiveUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel);
-	void processUserCommand(TimeType * GPSTime, LOG_LEVEL logLevel);
-	void sendUnsolicitedData(TimeType * GPSTime, LOG_LEVEL logLevel);
+	void receiveUserCommand();
+	void processUserCommand();
+	void sendUnsolicitedData();
 
 private:
 	static inline std::string const module_name = "system_control";
@@ -160,7 +160,7 @@ private:
 	I32 SystemControlSendFileContent(I32 * sockfd, const char * Path, const char * PacketSize, char * ReturnValue, U8 Remove,
 									U8 Debug);
 	I32 SystemControlCreateDirectory(const char * Path, char * ReturnValue, U8 Debug);
-	I32 SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32, TimeType * GPSTime,
+	I32 SystemControlBuildRVSSTimeChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32,
 												U8 Debug);
 	I32 SystemControlBuildRVSSMaestroChannelMessage(char * RVSSData, U32 * RVSSDataLengthU32,
 													U8 SysCtrlState, U8 Debug);
@@ -268,4 +268,26 @@ private:
 	U32 RVSSMessageLengthU32;
 	U16 PCDMessageCodeU16;
 	char RxFilePath[MAX_FILE_PATH];
+
+	ROSChannels::Init::Pub initPub;
+	ROSChannels::Connect::Pub connectPub;
+	ROSChannels::Disconnect::Pub disconnectPub;
+	ROSChannels::Arm::Pub armPub;
+	ROSChannels::Disarm::Pub disarmPub;
+	ROSChannels::Start::Pub startPub;
+	ROSChannels::Stop::Pub stopPub;
+	ROSChannels::Abort::Pub abortPub;
+	ROSChannels::AllClear::Pub allClearPub;
+	ROSChannels::BackToStart::Pub backToStartPub;
+	ROSChannels::DataDictionary::Pub dataDictionaryPub;
+	ROSChannels::RemoteControlEnable::Pub remoteControlEnablePub;
+	ROSChannels::RemoteControlDisable::Pub remoteControlDisablePub;
+	ROSChannels::EnableObject::Pub enableObjectPub;
+	ROSChannels::Exit::Pub exitPub;
+	ROSChannels::GetStatus::Pub getStatusPub;
+
+	ROSChannels::Failure::Sub failureSub;
+	ROSChannels::GetStatusResponse::Sub getStatusResponseSub;
+
+
 };

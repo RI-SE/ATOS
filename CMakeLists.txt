@@ -19,7 +19,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/util/cmake)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-add_subdirectory(maestro_msgs)
 find_package(Systemd REQUIRED)
 
 # Enable or disable modules

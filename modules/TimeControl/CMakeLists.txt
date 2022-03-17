@@ -7,6 +7,10 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(time_control)
 
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(maestro_interfaces REQUIRED)
+
 # Define target names
 set(TIME_CONTROL_TARGET ${PROJECT_NAME})
 
@@ -35,12 +39,10 @@ target_link_libraries(${TIME_CONTROL_TARGET}
 	${MAESTRO_COMMON_LIBRARY}
 )
 
-rosidl_target_interfaces(${TIME_CONTROL_TARGET}
-	maestro_msgs "rosidl_typesupport_cpp"
-)
 ament_target_dependencies(${TIME_CONTROL_TARGET}
   rclcpp
   std_msgs
+  maestro_interfaces
 )
   
 target_include_directories(${TIME_CONTROL_TARGET} PUBLIC

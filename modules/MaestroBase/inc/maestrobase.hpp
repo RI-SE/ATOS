@@ -22,6 +22,7 @@ class MaestroBase : public Module {
 	void onInitDataDictionary(const std::shared_ptr<std_srvs::srv::SetBool::Request>,
 							  std::shared_ptr<std_srvs::srv::SetBool::Response>);
 	bool isInitialized = false;
+	ROSChannels::Exit::Sub exitSub;
 };
 
 #endif

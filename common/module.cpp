@@ -18,22 +18,23 @@ void Module::onExitMessage(const Empty::SharedPtr){
 
 /*!
  * \brief A try/catch wrapper that logs messages 
- * \param commandCode The message type to be processed
  * \param tryExecute function to execute
  * \param executeIfFail if executing tryExecute fails, this function is executed
+ * \param topic The topic to print.
+ * \param logger The logger to use.
  * \return true if the initialization was successful, false otherwise
  */
 void Module::tryHandleMessage(
-    COMMAND commandCode,
     std::function<void()> tryExecute,
-    std::function<void()> executeIfFail)
+    std::function<void()> executeIfFail,
+    const std::string& topic,
+    const rclcpp::Logger& logger)
 {
 	try {
-		LogMessage(LOG_LEVEL_DEBUG, "Handling %s command", topicNames.at(commandCode).c_str());
+		RCLCPP_DEBUG(logger, "Handling command on %s", topic.c_str());
 		tryExecute();
 	} catch (std::invalid_argument& e) {
-		LogMessage(LOG_LEVEL_ERROR, "Handling %s command failed - %s", topicNames.at(commandCode).c_str(),
-				   e.what());
+		RCLCPP_ERROR(logger, "Handling command on %s failed - %s", topic.c_str(), e.what());
 		executeIfFail();
 	}
 }

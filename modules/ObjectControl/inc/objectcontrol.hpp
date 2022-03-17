@@ -209,6 +209,21 @@ private:
 	std::shared_future<void> connStopReqFuture;	//!< Request to stop a connection attempt
 	std::promise<void> connStopReqPromise;		//!< Promise that the above value will be emitted
 
+	ROSChannels::Init::Sub scnInitSub;			//!< Subscriber to scenario initialization requests
+	ROSChannels::Start::Sub scnStartSub;		//!< Subscriber to scenario start requests
+	ROSChannels::Arm::Sub scnArmSub;			//!< Subscriber to scenario arm requests
+	ROSChannels::Stop::Sub scnStopSub;			//!< Subscriber to scenario stop requests
+	ROSChannels::Abort::Sub scnAbortSub;		//!< Subscriber to scenario abort requests
+	ROSChannels::AllClear::Sub scnAllClearSub;	//!< Subscriber to scenario all clear requests
+	ROSChannels::Connect::Sub scnConnectSub;	//!< Subscriber to scenario connect requests
+	ROSChannels::Disconnect::Sub scnDisconnectSub;	//!< Subscriber to scenario disconnect requests
+	ROSChannels::ExecuteAction::Sub scnActionSub;		//!< Subscriber to scenario action requests
+	ROSChannels::ActionConfiguration::Sub scnActionConfigSub;	//!< Subscriber to scenario action configuration requests
+	ROSChannels::GetStatus::Sub getStatusSub;				//!< Subscriber to scenario get status requests
+
+	ROSChannels::Failure::Pub failurePub;					//!< Publisher to scenario failure reports
+	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports
+	
 	//! Connection methods
 	//! \brief Initiate a thread-based connection attempt. Threads are detached after start,
 	//!			and can be terminated by calling ::abortConnectionAttempt or setting ::connStopReqFuture.
