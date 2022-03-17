@@ -220,25 +220,9 @@ void ObjectControl::onRemoteControlDisableMessage(const Empty::SharedPtr){
 	this->tryHandleMessage(cmd,f_try,f_catch);	
 }
 
-void ObjectControl::maestroMsgToRCMM(const ControlSignalPercentage::SharedPtr csp, 
-					RemoteControlManoeuvreMessageType& rcmm){
-	rcmm.command = MANOEUVRE_NONE;
-	rcmm.isThrottleManoeuvreValid = true;
-	rcmm.isBrakeManoeuvreValid = true;
-	rcmm.isSteeringManoeuvreValid = true;
-	rcmm.throttleUnit = ISO_UNIT_TYPE_THROTTLE_PERCENTAGE;
-	rcmm.brakeUnit = ISO_UNIT_TYPE_BRAKE_PERCENTAGE;
-	rcmm.steeringUnit = ISO_UNIT_TYPE_STEERING_PERCENTAGE;
-	rcmm.throttleManoeuvre.pct = csp->throttle;
-	rcmm.brakeManoeuvre.pct = csp->brake;
-	rcmm.steeringManoeuvre.pct = csp->steering_angle;
-}
-
 void ObjectControl::onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr csp){
 	try{
-		RemoteControlManoeuvreMessageType rcmm;
-		maestroMsgToRCMM(csp,rcmm);
-		objects.at(csp->maestro_header.object_id).sendControlSignal(rcmm);
+		objects.at(csp->maestro_header.object_id).sendControlSignal(csp);
 	}
 	catch(...){
 		RCLCPP_WARN(get_logger(), "Failed to translate/send Control Signal Percentage to rcmm");

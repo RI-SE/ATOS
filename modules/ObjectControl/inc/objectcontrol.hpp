@@ -256,9 +256,5 @@ private:
 	void injectObjectData(const MonitorMessage& monr);
 	//! \brief TODO
 	OsiHandler::LocalObjectGroundTruth_t buildOSILocalGroundTruth(const MonitorMessage&) const;
-
-	void maestroMsgToRCMM(const ControlSignalPercentage::SharedPtr csp, 
-								RemoteControlManoeuvreMessageType& rcmm);
-
 };
 

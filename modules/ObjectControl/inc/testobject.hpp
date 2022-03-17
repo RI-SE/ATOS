@@ -57,7 +57,7 @@ public:
 	friend Channel& operator<<(Channel&,const ObjectCommandType&);
 	friend Channel& operator<<(Channel&,const StartMessageType&);
 	friend Channel& operator<<(Channel&,const std::vector<char>&);
-	friend Channel& operator<<(Channel&,const RemoteControlManoeuvreMessageType&);
+	friend Channel& operator<<(Channel&,const ControlSignalPercentage::SharedPtr csp);
 
 	friend Channel& operator>>(Channel&,MonitorMessage&);
 	friend Channel& operator>>(Channel&,ObjectPropertiesType&);
@@ -140,7 +140,7 @@ public:
 					 const std::string& projStr,
 					 const std::chrono::system_clock::time_point& timestamp);
 
-	void sendControlSignal(RemoteControlManoeuvreMessageType& rcmm);
+	void sendControlSignal(const ControlSignalPercentage::SharedPtr csp);
 
 	std::chrono::milliseconds getTimeSinceLastMonitor() const {
 		if (lastMonitorTime.time_since_epoch().count() == 0) {

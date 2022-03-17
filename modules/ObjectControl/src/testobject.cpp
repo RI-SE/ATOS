@@ -337,8 +337,8 @@ void TestObject::sendStart() {
 	this->comms.cmd << strt;
 }
 
-void TestObject::sendControlSignal(RemoteControlManoeuvreMessageType& rcmm) {
-	this->comms.cmd << rcmm;
+void TestObject::sendControlSignal(const ControlSignalPercentage::SharedPtr csp) {
+	this->comms.cmd << csp;
 }
 
 
@@ -530,7 +530,18 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 	return chnl;
 }
 
-Channel& operator<<(Channel& chnl, const ControlSignalPercentage& ctrl) {
+Channel& operator<<(Channel& chnl, const ControlSignalPercentage::SharedPtr csp) {
+	RemoteControlManoeuvreMessageType rcmm;
+	rcmm.command = MANOEUVRE_NONE;
+	rcmm.isThrottleManoeuvreValid = true;
+	rcmm.isBrakeManoeuvreValid = true;
+	rcmm.isSteeringManoeuvreValid = true;
+	rcmm.throttleUnit = ISO_UNIT_TYPE_THROTTLE_PERCENTAGE;
+	rcmm.brakeUnit = ISO_UNIT_TYPE_BRAKE_PERCENTAGE;
+	rcmm.steeringUnit = ISO_UNIT_TYPE_STEERING_PERCENTAGE;
+	rcmm.throttleManoeuvre.pct = csp->throttle;
+	rcmm.brakeManoeuvre.pct = csp->brake;
+	rcmm.steeringManoeuvre.pct = csp->steering_angle;
 	auto nBytes = encodeRCMMMessage(&rcmm, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to encode RCM message: ") + strerror(errno));
