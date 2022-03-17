@@ -530,7 +530,7 @@ Channel& operator>>(Channel& chnl, ObjectPropertiesType& prop) {
 	return chnl;
 }
 
-Channel& operator<<(Channel& chnl, const RemoteControlManoeuvreMessageType& rcmm) {
+Channel& operator<<(Channel& chnl, const ControlSignalPercentage& ctrl) {
 	auto nBytes = encodeRCMMMessage(&rcmm, chnl.transmitBuffer.data(), chnl.transmitBuffer.size(), false);
 	if (nBytes < 0) {
 		throw std::invalid_argument(std::string("Failed to encode RCM message: ") + strerror(errno));
