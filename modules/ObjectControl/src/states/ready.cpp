@@ -92,7 +92,9 @@ void RelativeKinematics::Ready::settingModificationRequested(
 
 void RelativeKinematics::Ready::enableRemoteControlRequest(
 	ObjectControl& handler){
-	setState(handler, new RelativeKinematics::RemoteControlled);
+	RCLCPP_WARN(handler.get_logger(), "Relative mode control input conversion not currently supported");
+	return;
+	//setState(handler, new RelativeKinematics::RemoteControlled);
 }
 
 
