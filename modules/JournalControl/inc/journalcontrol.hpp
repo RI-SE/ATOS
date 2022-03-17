@@ -42,7 +42,6 @@ private:
 	void onStopMessage(const Empty::SharedPtr) override;
 	void onAbortMessage(const Empty::SharedPtr) override;
   void onReplayMessage(const Empty::SharedPtr) override;
-  //void onExitMessage(const Empty::SharedPtr) override;
 };
 
 #endif //__LOGGER_H_INCLUDED__
