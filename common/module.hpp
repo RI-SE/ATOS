@@ -22,6 +22,7 @@ using maestro_interfaces::msg::Exac;
 using maestro_interfaces::msg::ManoeuvreCommand;
 using maestro_interfaces::msg::ObjectEnabled;
 using maestro_interfaces::msg::Monitor;
+using maestro_interfaces::msg::ControlSignalPercentage;
 using rclcpp::Node;
 using std::placeholders::_1;
 using std_msgs::msg::Empty;
@@ -94,8 +95,10 @@ class Module : public Node {
    public:
 	Module(const std::string name) : Node(name), getStatusResponsePub(*this) {};
 	Module() = default;
+	bool shouldExit();
 
    protected:
+	bool quit=false;
 
 	ROSChannels::GetStatusResponse::Pub getStatusResponsePub;
 

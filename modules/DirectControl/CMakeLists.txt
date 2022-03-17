@@ -5,6 +5,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(direct_control)
+find_package(maestro_interfaces REQUIRED)
 
 # Define target names
 set(DIRECT_CONTROL_TARGET ${PROJECT_NAME})
@@ -42,12 +43,10 @@ target_include_directories(${DIRECT_CONTROL_TARGET} PUBLIC
 )
 
 # ROS specific rules
-rosidl_target_interfaces(${DIRECT_CONTROL_TARGET}
-	maestro_msgs "rosidl_typesupport_cpp"
-)
 ament_target_dependencies(${DIRECT_CONTROL_TARGET}
   rclcpp
   std_msgs
+  maestro_interfaces
 )
 
 # Installation rules

@@ -10,6 +10,7 @@
 #include "maestro_interfaces/msg/object_enabled.hpp"
 #include "maestro_interfaces/msg/monitor.hpp"
 #include "maestro_interfaces/msg/manoeuvre_command.hpp"
+#include "maestro_interfaces/msg/control_signal_percentage.hpp"
 
 namespace ROSChannels {
 
@@ -370,6 +371,21 @@ namespace Exit {
 namespace Replay {
     const std::string topicName = "replay";
     using message_type = std_msgs::msg::Empty;
+
+    class Pub : public BasePub<message_type> {
+    public:
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
+    };
+
+    class Sub : public BaseSub<message_type> {
+    public:
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
+    };
+}
+
+namespace ControlSignalPercentage {
+    const std::string topicName = "control_signal_pct";
+    using message_type = maestro_interfaces::msg::ControlSignalPercentage;
 
     class Pub : public BasePub<message_type> {
     public:

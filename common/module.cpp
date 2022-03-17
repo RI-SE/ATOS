@@ -1,13 +1,6 @@
 #include "module.hpp"
 #include <std_srvs/srv/set_bool.hpp>
 
-Module::Module(const std::string name) : 
-        Node(name)
-        {
-    exitSub = create_subscription<Empty>(topicNames[COMM_EXIT], 0, bind(&Module::onExitMessage, this, _1));
-    this->quit = false;
-}
-
 bool Module::shouldExit(){
     return this->quit;
 }

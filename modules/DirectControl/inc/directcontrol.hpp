@@ -4,7 +4,7 @@
 #include "module.hpp"
 #include "tcphandler.hpp"
 #include "server.hpp"
-#include "maestro_msgs/msg/control_signal_percentage.hpp"
+#include "maestro_interfaces/msg/control_signal_percentage.hpp"
 
 class DirectControl : public Module {
 public:
@@ -23,6 +23,7 @@ private:
 	void handleISOMessage(std::vector<char>& byteData, size_t receivedBytes);
 	size_t handleRDCAMessage(std::vector<char>& byteData);
 	size_t handleUnknownMessage(std::vector<char>& byteData);
+	ROSChannels::ControlSignalPercentage::Pub controlSignalPercentagePub;
 
 	void onAbortMessage(const Empty::SharedPtr) override;
 	void onAllClearMessage(const Empty::SharedPtr) override;

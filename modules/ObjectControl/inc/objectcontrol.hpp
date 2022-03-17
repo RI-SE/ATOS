@@ -219,7 +219,10 @@ private:
 	ROSChannels::Disconnect::Sub scnDisconnectSub;	//!< Subscriber to scenario disconnect requests
 	ROSChannels::ExecuteAction::Sub scnActionSub;		//!< Subscriber to scenario action requests
 	ROSChannels::ActionConfiguration::Sub scnActionConfigSub;	//!< Subscriber to scenario action configuration requests
+	ROSChannels::RemoteControlEnable::Sub scnRemoteControlEnableSub;		//!< Subscriber to remote control enable requests
+	ROSChannels::RemoteControlDisable::Sub scnRemoteControlDisableSub;	//!< Subscriber to remote control disable requests
 	ROSChannels::GetStatus::Sub getStatusSub;				//!< Subscriber to scenario get status requests
+	std::shared_ptr<ROSChannels::ControlSignalPercentage::Sub> controlSignalPercentageSub;	//!< Pointer to subscriber to receive control signal messages with percentage
 
 	ROSChannels::Failure::Pub failurePub;					//!< Publisher to scenario failure reports
 	ROSChannels::Abort::Pub scnAbortPub;					//!< Publisher to scenario abort reports

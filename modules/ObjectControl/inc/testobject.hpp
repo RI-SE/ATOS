@@ -6,10 +6,10 @@
 #include "trajectory.hpp"
 #include "objectconfig.hpp"
 #include "osi_handler.hpp"
-#include "maestro_msgs/msg/control_signal_percentage.hpp"
+#include "maestro_interfaces/msg/control_signal_percentage.hpp"
 #include "loggable.hpp"
 
-using maestro_msgs::msg::ControlSignalPercentage;
+using maestro_interfaces::msg::ControlSignalPercentage;
 
 // GCC version 8.1 brings non-experimental support for std::filesystem
 #if __GNUC__ > 8 || (__GNUC__ == 8 && __GNUC_MINOR__ >= 1)

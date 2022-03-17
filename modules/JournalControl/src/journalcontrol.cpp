@@ -89,6 +89,10 @@ void JournalControl::onReplayMessage(const Empty::SharedPtr msg)
 	LogMessage(LOG_LEVEL_WARNING, "Replay function out of date");
 }
 
+void Module::onExitMessage(const Empty::SharedPtr){
+    this->quit=true;
+}
+
 void signalHandler(int signo) {
 	if (signo == SIGINT) {
 		LogMessage(LOG_LEVEL_WARNING, "Caught keyboard interrupt");

@@ -32,6 +32,8 @@ ObjectControl::ObjectControl()
 	scnActionSub(*this, std::bind(&ObjectControl::onEXACMessage, this, _1)),
 	scnActionConfigSub(*this, std::bind(&ObjectControl::onACCMMessage, this, _1)),
 	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),
+	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1)),
+	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
 	failurePub(*this),
 	scnAbortPub(*this)
 {
@@ -201,18 +203,18 @@ void ObjectControl::onRemoteControlEnableMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_REMOTECTRL_ENABLE;
 	auto f_try = [&]() { this->state->enableRemoteControlRequest(*this); };
 	auto f_catch = [&]() {
-			failurePub->publish(msgCtr1<UInt8>(cmd));
+			failurePub.publish(msgCtr1<UInt8>(cmd));
 	};
-	this->tryHandleMessage(cmd,f_try,f_catch);	
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::RemoteControlEnable::topicName, get_logger());	
 }
 
 void ObjectControl::onRemoteControlDisableMessage(const Empty::SharedPtr){
 	COMMAND cmd = COMM_REMOTECTRL_DISABLE;
 	auto f_try = [&]() { this->state->disableRemoteControlRequest(*this); };
 	auto f_catch = [&]() {
-			failurePub->publish(msgCtr1<UInt8>(cmd));
+			failurePub.publish(msgCtr1<UInt8>(cmd));
 	};
-	this->tryHandleMessage(cmd,f_try,f_catch);	
+	this->tryHandleMessage(f_try,f_catch,ROSChannels::RemoteControlDisable::topicName, get_logger());	
 }
 
 void ObjectControl::onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr csp){
@@ -623,9 +625,7 @@ bool ObjectControl::areAllObjectsIn(
 }
 
 void ObjectControl::startControlSignalSubscriber(){
-	this->controlSignalPercentageSub = this->create_subscription<ControlSignalPercentage>(
-			topicNames[COMM_CONTROL_SIGNAL_PERCENTAGE], 0, std::bind(&ObjectControl::onControlSignalPercentageMessage, this, _1)
-	);
+	controlSignalPercentageSub = std::make_shared<ROSChannels::ControlSignalPercentage::Sub>(*this, std::bind(&ObjectControl::onControlSignalPercentageMessage, this, _1));
 }
 void ObjectControl::stopControlSignalSubscriber(){
 	this->controlSignalPercentageSub.reset();

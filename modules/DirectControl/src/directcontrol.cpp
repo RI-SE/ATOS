@@ -5,9 +5,9 @@
 #include "logging.h"
 #include "maestroTime.h"
 #include "datadictionary.h"
-#include "maestro_msgs/msg/control_signal_percentage.hpp"
+#include "maestro_interfaces/msg/control_signal_percentage.hpp"
 
-using maestro_msgs::msg::ControlSignalPercentage;
+using maestro_interfaces::msg::ControlSignalPercentage;
 
 #define TCP_BUFFER_SIZE 2048
 
@@ -96,11 +96,9 @@ void DirectControl::onAllClearMessage(const Empty::SharedPtr) {}
 
 DirectControl::DirectControl() :
 	Module(moduleName),
+	controlSignalPercentagePub(*this),
 	tcpHandler(TCPPort, "", "off", 1, O_NONBLOCK), 
-	udpServer("0.0.0.0",UDPPort) {
-	//! Publishers
-	this->controlSignalPercentagePub = this->create_publisher<ControlSignalPercentage>(topicNames[COMM_CONTROL_SIGNAL_PERCENTAGE],0);
-}
+	udpServer("0.0.0.0",UDPPort) {}
 
 void DirectControl::startThreads() {
 	receiveThread=std::make_unique<std::thread>(&DirectControl::readTCPSocketData, this);
@@ -134,7 +132,7 @@ void DirectControl::readUDPSocketData() {
 			// the application (driver model).
 			if (bytesParsed != -1){
 				ControlSignalPercentage cspmsg = dmMsg.toMaestroMsg();
-				controlSignalPercentagePub->publish(cspmsg);
+				controlSignalPercentagePub.publish(cspmsg);
 			}
 		}
 		catch(const SocketErrors::DisconnectedError& error){
