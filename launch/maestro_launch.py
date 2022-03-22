@@ -40,6 +40,12 @@ def generate_launch_description():
         Node(
             package='maestro',
             namespace='maestro',
+            executable='scenario_control',
+            name='scenario_control'
+        ),
+        Node(
+            package='maestro',
+            namespace='maestro',
             executable='journal_control',
             name='journal_control'
         )
