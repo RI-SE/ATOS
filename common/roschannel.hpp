@@ -12,6 +12,7 @@
 #include "maestro_interfaces/msg/object_enabled.hpp"
 #include "maestro_interfaces/msg/monitor.hpp"
 #include "maestro_interfaces/msg/manoeuvre_command.hpp"
+#include "maestro_interfaces/msg/control_signal_percentage.hpp"
 
 namespace ROSChannels {
 
@@ -41,323 +42,361 @@ public:
 
 namespace Init {
     const std::string topicName = "init";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace Start {
     const std::string topicName = "start";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace Arm {
     const std::string topicName = "arm";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace Disarm {
     const std::string topicName = "disarm";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace Connect {
     const std::string topicName = "connect";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace Disconnect {
     const std::string topicName = "disconnect";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace Stop {
     const std::string topicName = "stop";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace Abort {
     const std::string topicName = "abort";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace AllClear {
     const std::string topicName = "all_clear";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace ActionConfiguration {
     const std::string topicName = "action_configuration";
+    using message_type = maestro_interfaces::msg::Accm;
 
-    class Pub : public BasePub<maestro_interfaces::msg::Accm> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<maestro_interfaces::msg::Accm>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<maestro_interfaces::msg::Accm> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const maestro_interfaces::msg::Accm::SharedPtr)> callback) : BaseSub<maestro_interfaces::msg::Accm>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace ExecuteAction {
     const std::string topicName = "execute_action";
+    using message_type = maestro_interfaces::msg::Exac;
 
-    class Pub : public BasePub<maestro_interfaces::msg::Exac> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<maestro_interfaces::msg::Exac>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<maestro_interfaces::msg::Exac> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const maestro_interfaces::msg::Exac::SharedPtr)> callback) : BaseSub<maestro_interfaces::msg::Exac>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace GetStatus {
     const std::string topicName = "get_status";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace Failure {
     const std::string topicName = "failure";
+    using message_type = std_msgs::msg::UInt8;
 
-    class Pub : public BasePub<std_msgs::msg::UInt8> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::UInt8>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::UInt8> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::UInt8::SharedPtr)> callback) : BaseSub<std_msgs::msg::UInt8>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace GetStatusResponse {
     const std::string topicName = "get_status_response";
+    using message_type = std_msgs::msg::String;
 
-    class Pub : public BasePub<std_msgs::msg::String> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::String>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::String> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::String::SharedPtr)> callback) : BaseSub<std_msgs::msg::String>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace BackToStart {
     const std::string topicName = "back_to_start";
+    using message_type = maestro_interfaces::msg::ManoeuvreCommand;
 
-    class Pub : public BasePub<maestro_interfaces::msg::ManoeuvreCommand> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<maestro_interfaces::msg::ManoeuvreCommand>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<maestro_interfaces::msg::ManoeuvreCommand> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const maestro_interfaces::msg::ManoeuvreCommand::SharedPtr)> callback) : BaseSub<maestro_interfaces::msg::ManoeuvreCommand>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace BackToStartResponse {
     const std::string topicName = "back_to_start_response";
+    using message_type = std_msgs::msg::String;
 
-    class Pub : public BasePub<std_msgs::msg::String> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::String>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::String> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::String::SharedPtr)> callback) : BaseSub<std_msgs::msg::String>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace DataDictionary {
     const std::string topicName = "data_dict";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace RemoteControlEnable {
     const std::string topicName = "remote_control_enable";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace RemoteControlDisable {
     const std::string topicName = "remote_control_disable";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace RemoteControlManoeuvre {
     const std::string topicName = "remote_control_manoeuvre";
+    using message_type = maestro_interfaces::msg::ManoeuvreCommand;
 
-    class Pub : public BasePub<maestro_interfaces::msg::ManoeuvreCommand> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<maestro_interfaces::msg::ManoeuvreCommand>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<maestro_interfaces::msg::ManoeuvreCommand> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const maestro_interfaces::msg::ManoeuvreCommand::SharedPtr)> callback) : BaseSub<maestro_interfaces::msg::ManoeuvreCommand>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace EnableObject {
     const std::string topicName = "enable_object";
+    using message_type = maestro_interfaces::msg::ObjectEnabled;
 
-    class Pub : public BasePub<maestro_interfaces::msg::ObjectEnabled> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<maestro_interfaces::msg::ObjectEnabled>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<maestro_interfaces::msg::ObjectEnabled> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const maestro_interfaces::msg::ObjectEnabled::SharedPtr)> callback) : BaseSub<maestro_interfaces::msg::ObjectEnabled>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace Exit {
     const std::string topicName = "exit";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 
 namespace Replay {
     const std::string topicName = "replay";
+    using message_type = std_msgs::msg::Empty;
 
-    class Pub : public BasePub<std_msgs::msg::Empty> {
+    class Pub : public BasePub<message_type> {
     public:
-        Pub(rclcpp::Node& node) : BasePub<std_msgs::msg::Empty>(node, topicName) {}
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
     };
 
-    class Sub : public BaseSub<std_msgs::msg::Empty> {
+    class Sub : public BaseSub<message_type> {
     public:
-        Sub(rclcpp::Node& node, std::function<void(const std_msgs::msg::Empty::SharedPtr)> callback) : BaseSub<std_msgs::msg::Empty>(node, topicName, callback) {}
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
+    };
+}
+
+namespace ControlSignalPercentage {
+    const std::string topicName = "control_signal_pct";
+    using message_type = maestro_interfaces::msg::ControlSignalPercentage;
+
+    class Pub : public BasePub<message_type> {
+    public:
+        Pub(rclcpp::Node& node) : BasePub<message_type>(node, topicName) {}
+    };
+
+    class Sub : public BaseSub<message_type> {
+    public:
+        Sub(rclcpp::Node& node, std::function<void(const message_type::SharedPtr)> callback) : BaseSub<message_type>(node, topicName, callback) {}
     };
 }
 

@@ -11,6 +11,7 @@
 #include "maestro_interfaces/msg/manoeuvre_command.hpp"
 #include "maestro_interfaces/msg/object_enabled.hpp"
 #include "maestro_interfaces/msg/monitor.hpp"
+#include "maestro_interfaces/msg/control_signal_percentage.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/int8.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -21,6 +22,7 @@ using maestro_interfaces::msg::Exac;
 using maestro_interfaces::msg::ManoeuvreCommand;
 using maestro_interfaces::msg::ObjectEnabled;
 using maestro_interfaces::msg::Monitor;
+using maestro_interfaces::msg::ControlSignalPercentage;
 using rclcpp::Node;
 using std::placeholders::_1;
 using std_msgs::msg::Empty;
@@ -28,43 +30,43 @@ using std_msgs::msg::Int8;
 using std_msgs::msg::String;
 using std_msgs::msg::UInt8;
 
-// TODO: Move somewhere else
-namespace TopicNames {
-const std::string start = "start";
-const std::string arm = "arm";
-const std::string stop = "stop";
-const std::string exit = "exit";
-const std::string replay = "replay";
-const std::string abort = "abort";
-const std::string abortDone = "all_clear";
-const std::string init = "init";
-const std::string connect = "connect";
-const std::string obc_state = "obc_state";
-const std::string disconnect = "disconnect";
-const std::string viop = "viop";
-const std::string traj = "traj";
-const std::string trajToSup = "traj_tosup";
-const std::string trajFromSup = "traj_fromsup";
-const std::string asp = "asp";
-const std::string osem = "osem";
-const std::string dataDict = "data_dict";
-const std::string executeAction = "execute_action";
-const std::string eventOccurred = "event_occurred";
-const std::string actionConfiguration = "action_configuration";
-const std::string triggerConfiguration = "trigger_configuration";
-const std::string disarm = "disarm";
-const std::string getStatus = "get_status";
-const std::string getStatusResponse = "get_status_response";
-const std::string backToStart = "back_to_start";
-const std::string backToStartResponse = "back_to_start_response";
-const std::string remoteControlEnable = "remote_control_enable";
-const std::string remoteControlDisable = "remote_control_disable";
-const std::string remoteControlManoeuvre = "remote_control_manoeuvre";
-const std::string enableObject = "enable_object";
-const std::string objectsConnected = "objects_connected";
-const std::string objectMonitor = "object_monitor";
-const std::string failure = "failure";
-}  // namespace TopicNames
+// TODO move somewhere else
+static std::map<COMMAND, std::string> topicNames = {
+	{COMM_STRT, "/start"},
+	{COMM_ARM, "/arm"},
+	{COMM_STOP, "/stop"},
+	{COMM_EXIT, "/exit"},
+	{COMM_REPLAY, "/replay"},
+	{COMM_ABORT, "/abort"},
+	{COMM_ABORT_DONE, "/all_clear"},
+	{COMM_INIT, "/init"},
+	{COMM_CONNECT, "/connect"},
+	{COMM_OBC_STATE, "/obc_state"},
+	{COMM_DISCONNECT, "/disconnect"},
+	{COMM_VIOP, "/viop"},
+	{COMM_TRAJ, "/traj"},
+	{COMM_TRAJ_TOSUP, "/traj_tosup"},
+	{COMM_TRAJ_FROMSUP, "/traj_fromsup"},
+	{COMM_ASP, "/asp"},
+	{COMM_OSEM, "/osem"},
+	{COMM_DATA_DICT, "/data_dict"},
+	{COMM_EXAC, "/execute_action"},
+	{COMM_TREO, "/event_occurred"},
+	{COMM_ACCM, "/action_configuration"},
+	{COMM_TRCM, "/trigger_configuration"},
+	{COMM_DISARM, "/disarm"},
+	{COMM_GETSTATUS, "/get_status"},
+	{COMM_GETSTATUS_OK, "/get_status_response"},
+	{COMM_BACKTOSTART_CALL, "/back_to_start"},
+	{COMM_BACKTOSTART_RESPONSE, "/back_to_start_response"},
+	{COMM_REMOTECTRL_ENABLE, "/remote_control_enable"},
+	{COMM_REMOTECTRL_DISABLE, "/remote_control_disable"},
+	{COMM_REMOTECTRL_MANOEUVRE, "/remote_control_manoeuvre"},
+	{COMM_ENABLE_OBJECT, "/enable_object"},
+	{COMM_CONTROL_SIGNAL_PERCENTAGE, "/control_signal_perc"},
+	{COMM_OBJECTS_CONNECTED, "/objects_connected"},
+	{COMM_FAILURE, "/failure"}
+};
 
 namespace ServiceNames {
 const std::string initDataDict = "init_data_dictionary";
@@ -93,8 +95,10 @@ class Module : public Node {
    public:
 	Module(const std::string name) : Node(name), getStatusResponsePub(*this) {};
 	Module() = default;
+	bool shouldExit();
 
    protected:
+	bool quit=false;
 
 	ROSChannels::GetStatusResponse::Pub getStatusResponsePub;
 
@@ -131,11 +135,14 @@ class Module : public Node {
 	virtual void onTRCMMessage(const Empty::SharedPtr){};
 	virtual void onEXACMessage(const Exac::SharedPtr){};
 	virtual void onTREOMessage(const Empty::SharedPtr){};
-	virtual void onExitMessage(const Empty::SharedPtr){};
 	virtual void onReplayMessage(const Empty::SharedPtr){};
 	virtual void onBackToStartMessage(const Empty::SharedPtr){};
 	virtual void onBackToStartResponse(const Int8::SharedPtr){};
 	virtual void onDataDictResponse(const Empty::SharedPtr){};
+	virtual void onControlSignalPercentageMessage(const ControlSignalPercentage::SharedPtr){};
+
+	virtual void onExitMessage(const Empty::SharedPtr);
+
 
 	static void tryHandleMessage(std::function<void()> tryExecute,
 								 std::function<void()> executeIfFail,

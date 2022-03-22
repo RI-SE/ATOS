@@ -43,7 +43,6 @@ add_library(${MAESTRO_COMMON_TARGET} SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/trajectory.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/objectconfig.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/module.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/roschannel.cpp
 )
 
 # Includes

@@ -21,6 +21,8 @@ public:
 	virtual void stopRequest(ObjectControl&) = 0;
 	virtual void abortRequest(ObjectControl&) = 0;
 	virtual void allClearRequest(ObjectControl&) = 0;
+	virtual void enableRemoteControlRequest(ObjectControl&) = 0;
+	virtual void disableRemoteControlRequest(ObjectControl&) = 0;
 
 	//! The below transitions represent spontaneous actions uninitiated by
 	//! the user - inheriting classes may throw exceptions if transitions
@@ -74,6 +76,8 @@ public:
 	void stopRequest(ObjectControl&) override {}
 	void abortRequest(ObjectControl&) override {}
 	void allClearRequest(ObjectControl&) override {}
+	void enableRemoteControlRequest(ObjectControl&) override {}
+	void disableRemoteControlRequest(ObjectControl&) override {}
 
 	//! Allow modifications of the settings to occur
 	void settingModificationRequested(ObjectControl&) override {}
@@ -99,6 +103,8 @@ public:
 	void stopRequest(ObjectControl&) override {}
 	void abortRequest(ObjectControl&) override {}
 	void allClearRequest(ObjectControl&) override {}
+	void enableRemoteControlRequest(ObjectControl&) override {}
+	void disableRemoteControlRequest(ObjectControl&) override {}
 
 	//! Allow modifications of the settings to occur
 	void settingModificationRequested(ObjectControl&) override {}
@@ -133,6 +139,8 @@ public:
 	void startRequest(ObjectControl&) override {}
 	void stopRequest(ObjectControl&) override {}
 	void allClearRequest(ObjectControl&) override {}
+	void enableRemoteControlRequest(ObjectControl&) override {}
+	void disableRemoteControlRequest(ObjectControl&) override {}
 
 	//! Other spontaneous events unexpected
 	// TODO perhaps settings may be modified here?
@@ -151,6 +159,9 @@ public:
 	virtual void disconnectedFromObject(ObjectControl&, uint32_t) override;
 	virtual void objectAborting(ObjectControl&,uint32_t) override;
 	virtual void objectAbortDisarmed(ObjectControl&,uint32_t) override;
+	//! Handle entering the remote control state
+	virtual void enableRemoteControlRequest(ObjectControl&) override;
+	
 
 	virtual void onEnter(ObjectControl&) override;
 
@@ -162,9 +173,11 @@ public:
 	void stopRequest(ObjectControl&) override {}
 	void abortRequest(ObjectControl&) override {}
 	void allClearRequest(ObjectControl&) override {}
+	void disableRemoteControlRequest(ObjectControl&) override {}
 
 	//! Allow modifications of the settings to occur
-	void settingModificationRequested(ObjectControl&) override;
+	virtual void settingModificationRequested(ObjectControl&) override;
+
 	//! Other spontaneous events unexpected
 	//
 
@@ -194,6 +207,8 @@ public:
 	void startRequest(ObjectControl&) override {}
 	void stopRequest(ObjectControl&) override {}
 	void abortRequest(ObjectControl&) override {}
+	void enableRemoteControlRequest(ObjectControl&) override {}
+	void disableRemoteControlRequest(ObjectControl&) override {}
 
 	//! Handle strange object transitions
 	void objectDisarmed(ObjectControl&, uint32_t) override;
@@ -231,6 +246,8 @@ public:
 	void startRequest(ObjectControl&) override {}
 	void allClearRequest(ObjectControl&) override {}
 	void actionExecutionRequested(ObjectControl&) override {}
+	void enableRemoteControlRequest(ObjectControl&) override {}
+	void disableRemoteControlRequest(ObjectControl&) override {}
 
 	//! Other spontaneous events unexpected
 	//
@@ -264,6 +281,8 @@ public:
 	void stopRequest(ObjectControl&) override {}
 	void abortRequest(ObjectControl&) override {}
 	void allClearRequest(ObjectControl&) override {}
+	void enableRemoteControlRequest(ObjectControl&) override {}
+	void disableRemoteControlRequest(ObjectControl&) override {}
 
 	//! Other spontaneous events unexpected
 	//
@@ -294,10 +313,11 @@ public:
 	void stopRequest(ObjectControl&) override {}
 	void abortRequest(ObjectControl&) override {}
 	void allClearRequest(ObjectControl&) override {}
+	void enableRemoteControlRequest(ObjectControl&) override {}
+	void disableRemoteControlRequest(ObjectControl&) override {}
 
 	//! Other spontaneous events unexpected
 	//
-
 	OBCState_t asNumber() const override { return OBC_STATE_ARMED; }
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_RUNNING; } // TODO
 };
@@ -320,6 +340,8 @@ public:
 	void stopRequest(ObjectControl&) override {}
 	void abortRequest(ObjectControl&) override {} // safe?
 	void allClearRequest(ObjectControl&) override {}
+	void enableRemoteControlRequest(ObjectControl&) override {}
+	void disableRemoteControlRequest(ObjectControl&) override {}
 
 	//! Other spontaneous events unexpected
 	//
@@ -327,6 +349,32 @@ public:
 	// TODO integrate this state into the enum variable
 	OBCState_t asNumber() const override { return OBC_STATE_RUNNING; }
 	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_TEST_DONE; }
+};
+
+class RemoteControlled : public ObjectControlState {
+public:
+	RemoteControlled();
+
+	virtual void onEnter(ObjectControl&) override;
+	virtual void onExit(ObjectControl&) override;
+
+	// Should handle these requests
+	virtual void disableRemoteControlRequest(ObjectControl&) override;
+
+	// Ignore
+	void initializeRequest(ObjectControl&) override {}
+	void disconnectRequest(ObjectControl&) override {}
+	void connectRequest(ObjectControl&) override {}
+	void armRequest(ObjectControl&) override {}
+	void disarmRequest(ObjectControl&) override {}
+	void startRequest(ObjectControl&) override {}
+	void stopRequest(ObjectControl&) override {}
+	void abortRequest(ObjectControl&) override {} // safe?
+	void allClearRequest(ObjectControl&) override {}
+	void enableRemoteControlRequest(ObjectControl&) override {}
+
+	OBCState_t asNumber() const override { return OBC_STATE_REMOTECTRL; }
+	virtual ControlCenterStatusType asControlCenterStatus() const override { return CONTROL_CENTER_STATUS_READY; }
 };
 
 }
@@ -350,6 +398,7 @@ class Connecting : public AbstractKinematics::Connecting {
 	void allObjectsConnected(ObjectControl&) override;
 	void objectArmed(ObjectControl&, uint32_t) override;
 	void objectAborting(ObjectControl&, uint32_t) override;
+	
 };
 
 class Ready : public AbstractKinematics::Ready {
@@ -359,6 +408,7 @@ class Ready : public AbstractKinematics::Ready {
 	void objectAborting(ObjectControl&, uint32_t) override;
 	void objectAbortDisarmed(ObjectControl&, uint32_t) override;
 	void settingModificationRequested(ObjectControl&) override;
+	void enableRemoteControlRequest(ObjectControl&) override;
 };
 
 class Aborting : public AbstractKinematics::Aborting {
@@ -406,6 +456,14 @@ class Done : public AbstractKinematics::Done {
 	void postProcessingCompleted(ObjectControl&) override;
 };
 
+class RemoteControlled : public AbstractKinematics::RemoteControlled {
+
+	void onEnter(ObjectControl&) override;
+	void onExit(ObjectControl&) override;
+
+	void disableRemoteControlRequest(ObjectControl&) override;
+};
+
 }
 
 namespace AbsoluteKinematics {
@@ -436,6 +494,7 @@ class Ready : public AbstractKinematics::Ready {
 	void objectAborting(ObjectControl&, uint32_t) override;
 	void objectAbortDisarmed(ObjectControl&, uint32_t) override;
 	void settingModificationRequested(ObjectControl&) override;
+	void enableRemoteControlRequest(ObjectControl&) override;
 };
 
 class Aborting : public AbstractKinematics::Aborting {
@@ -479,6 +538,14 @@ class Armed : public AbstractKinematics::Armed {
 	void objectArmed(ObjectControl&,uint32_t) override;
 	void objectDisarmed(ObjectControl&,uint32_t) override;
 	void objectAborting(ObjectControl&,uint32_t) override;
+};
+
+class RemoteControlled : public AbstractKinematics::RemoteControlled {
+
+	void onEnter(ObjectControl&) override;
+	void onExit(ObjectControl&) override;
+
+	void disableRemoteControlRequest(ObjectControl&) override;
 };
 
 class Done : public AbstractKinematics::Done {
