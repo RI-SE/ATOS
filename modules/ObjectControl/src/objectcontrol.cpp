@@ -33,7 +33,8 @@ ObjectControl::ObjectControl()
 	scnActionConfigSub(*this, std::bind(&ObjectControl::onACCMMessage, this, _1)),
 	getStatusSub(*this, std::bind(&ObjectControl::onGetStatusMessage, this, _1)),
 	failurePub(*this),
-	scnAbortPub(*this)
+	scnAbortPub(*this),
+	monitorPub(*this)
 {
 	int queueSize=0;
 
@@ -443,7 +444,7 @@ void ObjectControl::startListeners() {
 	RCLCPP_DEBUG(get_logger(), "Starting listeners");
 	objectListeners.clear();
 	for (const auto& id : getVehicleIDs()) {
-		objectListeners.try_emplace(id, this, &objects.at(id), get_logger());
+		objectListeners.try_emplace(id, this, &objects.at(id), monitorPub, get_logger());
 	}
 }
 
