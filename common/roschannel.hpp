@@ -361,4 +361,19 @@ namespace Replay {
     };
 }
 
+namespace Monitor {
+    const std::string topicName = "object_monitor";
+    const rclcpp::QoS qos(rclcpp::KeepLast(1));
+
+    class Pub : public BasePub<maestro_interfaces::msg::Monitor> {
+    public:
+        Pub(rclcpp::Node& node) : BasePub<maestro_interfaces::msg::Monitor>(node, topicName, qos) {}
+    };
+
+    class Sub : public BaseSub<maestro_interfaces::msg::Monitor> {
+    public:
+        Sub(rclcpp::Node& node, std::function<void(const maestro_interfaces::msg::Monitor::SharedPtr)> callback) : BaseSub<maestro_interfaces::msg::Monitor>(node, topicName, callback, qos) {}
+    };
+}
+
 } // namespace ROSChannels
