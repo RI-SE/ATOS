@@ -53,7 +53,7 @@ public:
     }
 
     void resetISOTriggers(void);
-    void refresh(void) const;
+    void executeTriggeredActions(void) const;
 	void reset(void);
     void clear(void);
 

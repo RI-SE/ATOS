@@ -31,7 +31,7 @@ public:
     TriggerOperator_t getOperator(void) const { return oper; }
     std::string getOperatorString(void) const;
 
-    void refresh(void) const;
+    void executeIfActive(void) const;
     bool isActive(void) const;
 
     void addAction(Action* ap) { actions.insert(ap); }
