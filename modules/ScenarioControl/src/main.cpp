@@ -1,4 +1,3 @@
-#include <iostream>
 #include "rclcpp/rclcpp.hpp"
 #include "scenariocontrol.hpp"
 
