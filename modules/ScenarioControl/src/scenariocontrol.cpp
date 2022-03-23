@@ -125,6 +125,10 @@ void ScenarioControl::executeScenario(){
 			// Allow for retriggering on received TREO messages
 			scenario.resetISOTriggers();
 		
+if (std::chono::steady_clock::now() > nextShmemReadTime) {
+  nextShmemReadTime += shmemReadInterval;
+  doStuff();
+  }
 			TimeSetToCurrentSystemTime(&tvTime);
 			if (timercmp(&tvTime, &nextSHMEMreadTime, >)) {
 				updateObjectCheckTimer(&nextSHMEMreadTime, SHMEM_READ_RATE_HZ);
