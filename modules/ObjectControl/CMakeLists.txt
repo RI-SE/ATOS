@@ -9,6 +9,7 @@ project(object_control)
 find_package(rclcpp REQUIRED)
 find_package(maestro_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(tf2 REQUIRED)
 
 
 # Define target names
@@ -63,6 +64,7 @@ ament_target_dependencies(${OBJECT_CONTROL_TARGET}
   rclcpp
   std_msgs
   maestro_interfaces
+  tf2
 )
 
 target_include_directories(${OBJECT_CONTROL_TARGET} PUBLIC

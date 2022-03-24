@@ -4,17 +4,22 @@
 #include "maestroTime.h"
 #include "iso22133.h"
 #include "journal.h"
+#include "maestro_interfaces/msg/monitor.hpp"
 #include <eigen3/Eigen/Dense>
 #include <csignal>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 
 static ObjectMonitorType transformCoordinate(const ObjectMonitorType& point, const ObjectMonitorType& anchor, const bool debug = false);
+static maestro_interfaces::msg::Monitor createROSMessage(const MonitorMessage& data); // TODO move to somewhere central
 
 ObjectListener::ObjectListener(
 		ObjectControl* sh,
 		TestObject* ob,
+		ROSChannels::Monitor::Pub& mc,
 		rclcpp::Logger log)
-	:  obj(ob), handler(sh), Loggable(log)
+	:  obj(ob), handler(sh), monitorChannel(mc), Loggable(log)
 {
 	if (!obj->isConnected()) {
 		throw std::invalid_argument("Attempted to start listener for disconnected object");
@@ -52,6 +57,8 @@ void ObjectListener::listen() {
 				auto objData = obj->getAsObjectData();
 				objData.MonrData = monr.second;
 				JournalRecordMonitorData(&objData);
+
+				monitorChannel.publish(createROSMessage(monr));
 				// Reset thread cancelling
 				pthread_setcancelstate(oldCancelState, nullptr);
 
@@ -184,4 +191,50 @@ ObjectMonitorType transformCoordinate(
 		LogPrint(dbg.str().c_str());
 	}
 	return retval;
+}
+
+
+maestro_interfaces::msg::Monitor createROSMessage(const MonitorMessage& monrMessage) {
+	maestro_interfaces::msg::Monitor msg;
+	auto txid = monrMessage.first;
+	auto indata = monrMessage.second;
+	auto stamp = rclcpp::Time(indata.timestamp.tv_sec, indata.timestamp.tv_usec*1000);
+	
+	// Set stamp for all subtypes
+	msg.maestro_header.header.stamp = stamp;
+	msg.pose.header.stamp = stamp;
+	msg.velocity.header.stamp = stamp;
+	msg.acceleration.header.stamp = stamp;
+
+	// Set frame ids
+	msg.maestro_header.header.frame_id = "map"; // TODO
+	msg.pose.header.frame_id = "map"; // TODO
+	msg.velocity.header.frame_id = "map"; // TODO vehicle local
+	msg.acceleration.header.frame_id = "map"; // TODO vehicle local
+
+	msg.maestro_header.object_id = txid;
+	msg.object_state.state = indata.state;
+	if (indata.position.isPositionValid) {
+		msg.pose.pose.position.x = indata.position.xCoord_m;
+		msg.pose.pose.position.y = indata.position.yCoord_m;
+		msg.pose.pose.position.z = indata.position.zCoord_m;
+	}
+	if (indata.position.isHeadingValid) {
+		tf2::Quaternion orientation;
+		orientation.setRPY(0, 0, indata.position.heading_rad);
+		msg.pose.pose.orientation = tf2::toMsg(orientation);
+	}
+	msg.velocity.twist.linear.x = indata.speed.isLongitudinalValid ? indata.speed.longitudinal_m_s : 0;
+	msg.velocity.twist.linear.y = indata.speed.isLateralValid ? indata.speed.lateral_m_s : 0;
+	msg.velocity.twist.linear.z = 0;
+	msg.velocity.twist.angular.x = 0;
+	msg.velocity.twist.angular.y = 0;
+	msg.velocity.twist.angular.z = 0;
+	msg.acceleration.accel.linear.x = indata.acceleration.isLongitudinalValid ? indata.acceleration.longitudinal_m_s2 : 0;
+	msg.acceleration.accel.linear.y = indata.acceleration.isLateralValid ? indata.acceleration.lateral_m_s2 : 0;
+	msg.acceleration.accel.linear.z = 0;
+	msg.acceleration.accel.angular.x = 0;
+	msg.acceleration.accel.angular.y = 0;
+	msg.acceleration.accel.angular.z = 0;
+	return msg;
 }

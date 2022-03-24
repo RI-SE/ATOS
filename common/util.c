@@ -1033,10 +1033,10 @@ int UtilVincentyDirect(double refLat, double refLon, double a1, double distance,
 }
 
 double UtilDegToRad(double Deg) {
-	return (PI * Deg / 180);
+	return (M_PI * Deg / 180);
 }
 double UtilRadToDeg(double Rad) {
-	return (180 * Rad / PI);
+	return (180 * Rad / M_PI);
 }
 
 
@@ -1325,7 +1325,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 	Init = 1;
 	while (i < (OP->TrajectoryPositionCount - 1) && i <= OP->SyncIndex) {
 
-		Angle1 = PI / 2 - atan(fabs(OP->SpaceTimeArr[i].y) / fabs(OP->SpaceTimeArr[i].x));
+		Angle1 = M_PI / 2 - atan(fabs(OP->SpaceTimeArr[i].y) / fabs(OP->SpaceTimeArr[i].x));
 		Q1 = 0;
 		if (OP->SpaceTimeArr[i].y >= 0 && OP->SpaceTimeArr[i].x >= 0)
 			Q1 = 1;
@@ -1336,7 +1336,7 @@ int UtilFindCurrentTrajectoryPosition(ObjectPosition * OP, int StartIndex, doubl
 		else if (OP->SpaceTimeArr[i].y < 0 && OP->SpaceTimeArr[i].x > 0)
 			Q1 = 4;
 
-		Angle2 = PI / 2 - atan(fabs(OP->y) / fabs(OP->x));
+		Angle2 = M_PI / 2 - atan(fabs(OP->y) / fabs(OP->x));
 		Q2 = 0;
 		if (OP->y >= 0 && OP->x >= 0)
 			Q2 = 1;
@@ -1424,7 +1424,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 		FutDiff = (fabs(OP->SpaceTimeArr[i + 2].OrigoDistance - OP->OrigoDistance));
 		BearingDiff = fabs(OP->SpaceTimeArr[i].Bearing - OP->ForwardAzimuth2);
 
-		Angle1 = PI / 2 - atan(fabs(OP->SpaceTimeArr[i].y) / fabs(OP->SpaceTimeArr[i].x));
+		Angle1 = M_PI / 2 - atan(fabs(OP->SpaceTimeArr[i].y) / fabs(OP->SpaceTimeArr[i].x));
 		Q1 = 0;
 		if (OP->SpaceTimeArr[i].y >= 0 && OP->SpaceTimeArr[i].x >= 0)
 			Q1 = 1;
@@ -1435,7 +1435,7 @@ int UtilFindCurrentTrajectoryPositionNew(ObjectPosition * OP, int StartIndex, do
 		else if (OP->SpaceTimeArr[i].y < 0 && OP->SpaceTimeArr[i].x > 0)
 			Q1 = 4;
 
-		Angle2 = PI / 2 - atan(fabs(OP->y) / fabs(OP->x));
+		Angle2 = M_PI / 2 - atan(fabs(OP->y) / fabs(OP->x));
 		Q2 = 0;
 		if (OP->y >= 0 && OP->x >= 0)
 			Q2 = 1;
@@ -3129,9 +3129,9 @@ void traj2ldm(float time, double x, double y, double z, float hdg, float vel, mo
 	iUtilGetParaConfFile("OrigoAltitude=", pcTempBuffer);
 	sscanf(pcTempBuffer, "%lf", &alt_origin);
 
-	lat = ((y * 180) / (PI * earth_radius)) + lat_origin;
+	lat = ((y * 180) / (M_PI * earth_radius)) + lat_origin;
 	lon =
-		((x * 180) / (PI * earth_radius)) * (1 / (cos((PI / 180) * (0.5 * (lat_origin + lat))))) + lon_origin;
+		((x * 180) / (M_PI * earth_radius)) * (1 / (cos((M_PI / 180) * (0.5 * (lat_origin + lat))))) + lon_origin;
 	alt = z + alt_origin;
 
 	ldm->latitude = (uint32_t) (lat * 10000000);

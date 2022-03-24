@@ -35,7 +35,8 @@ ObjectControl::ObjectControl()
 	scnRemoteControlEnableSub(*this, std::bind(&ObjectControl::onRemoteControlEnableMessage, this, _1)),
 	scnRemoteControlDisableSub(*this, std::bind(&ObjectControl::onRemoteControlDisableMessage, this, _1)),
 	failurePub(*this),
-	scnAbortPub(*this)
+	scnAbortPub(*this),
+	monitorPub(*this)
 {
 	int queueSize=0;
 
@@ -471,7 +472,7 @@ void ObjectControl::startListeners() {
 	RCLCPP_DEBUG(get_logger(), "Starting listeners");
 	objectListeners.clear();
 	for (const auto& id : getVehicleIDs()) {
-		objectListeners.try_emplace(id, this, &objects.at(id), get_logger());
+		objectListeners.try_emplace(id, this, &objects.at(id), monitorPub, get_logger());
 	}
 }
 
