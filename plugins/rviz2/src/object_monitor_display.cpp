@@ -74,8 +74,6 @@ void MonitorDisplay::processMessage(maestro_interfaces::msg::Monitor::ConstShare
   scene_node_->setPosition(position);
   scene_node_->setOrientation(orientation);
 
-  //coll_handler_->setMessage(message);
-
   context_->queueRender();
 }
 
@@ -161,13 +159,11 @@ void MonitorDisplay::onEnable()
 {
   RTDClass::onEnable();
   updateShapeVisibility();
-  //setupSelectionHandler();
 }
 
 void MonitorDisplay::onDisable()
 {
   RTDClass::onDisable();
-  //coll_handler_.reset();
 }
 
 void MonitorDisplay::reset()
@@ -177,25 +173,11 @@ void MonitorDisplay::reset()
   updateShapeVisibility();
 }
 
-//void MonitorDisplay::setupSelectionHandler()
-//{
-//  coll_handler_ = rviz_common::interaction::createSelectionHandler
-//    <MonitorDisplaySelectionHandler>(this, context_);
-//  coll_handler_->addTrackedObjects(arrow_->getSceneNode());
-//  coll_handler_->addTrackedObjects(axes_->getSceneNode());
-//}
 
 }  // namespace maestro_rviz_plugins
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(maestro_rviz_plugins::MonitorDisplay, rviz_common::Display)
 
-/*
-#include "rviz_common/display_context.hpp"
-#include "rviz_common/frame_manager_iface.hpp"
-#include "rviz_common/interaction/selection_manager.hpp"
-#include "rviz_common/properties/quaternion_property.hpp"
-#include "rviz_common/properties/vector_property.hpp"
-*/
 
 

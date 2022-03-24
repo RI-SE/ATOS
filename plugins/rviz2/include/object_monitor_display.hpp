@@ -11,19 +11,6 @@
 #include "rviz_rendering/objects/axes.hpp"
 #include "rviz_rendering/objects/shape.hpp"
 
-// namespace rviz_rendering {
-// class Arrow;
-// class Axes;
-// class Shape;
-//}  // namespace rviz_rendering
-// namespace rviz_common {
-// namespace properties {
-// class ColorProperty;
-// class EnumProperty;
-// class FloatProperty;
-//}  // namespace properties
-//}  // namespace rviz_common
-
 namespace maestro_rviz_plugins {
 
 class MonitorDisplay : public rviz_common::RosTopicDisplay<maestro_interfaces::msg::Monitor> {
@@ -74,45 +61,3 @@ class MonitorDisplay : public rviz_common::RosTopicDisplay<maestro_interfaces::m
 };
 
 }  // namespace maestro_rviz_plugins
-
-//#include "rviz_common/message_filter_display.hpp"
-//
-//#include "rviz_default_plugins/visibility_control.hpp"
-
-// class PoseDisplaySelectionHandler;
-
-// typedef std::shared_ptr<PoseDisplaySelectionHandler> PoseDisplaySelectionHandlerPtr;
-
-/** @brief Accumulates and displays the pose from a geometry_msgs::PoseStamped message. */
-
-/*
-Q_OBJECT
-
-public:
-
-~MonitorDisplay() override;
-void onInitialize() override;
-void reset() override;
-*/
-/** @brief Overridden from MessageFilterDisplay to get arrow/axes visibility correct. */
-/*
-void onEnable() override;
-void onDisable() override;
-
-private Q_SLOTS:
-void updateShapeVisibility();
-void updateColorAndAlpha();
-void updateShapeChoice();
-void updateAxisGeometry();
-void updateArrowGeometry();
-
-private:
-void processMessage(geometry_msgs::msg::PoseStamped::ConstSharedPtr message) override;
-void setupSelectionHandler();
-
-bool pose_valid_;
-//PoseDisplaySelectionHandlerPtr coll_handler_;
-
-*/
-// friend class PoseDisplaySelectionHandler;
-// namespace rviz_default_plugins
