@@ -15,7 +15,6 @@ set(SCENARIO_CONTROL_TARGET ${PROJECT_NAME})
 
 set(COREUTILS_LIBRARY MaestroCoreUtil)
 set(ISO_22133_LIBRARY ISO22133)
-set(TIME_LIBRARY MaestroTime)
 set(COMMON_LIBRARY MaestroCommon)
 
 get_target_property(COMMON_HEADERS ${COMMON_LIBRARY} INCLUDE_DIRECTORIES)
@@ -40,7 +39,6 @@ add_executable(${SCENARIO_CONTROL_TARGET}
 # Link project executable to util libraries
 target_link_libraries(${SCENARIO_CONTROL_TARGET}
 	${rclcpp_LIBRARIES}
-	${TIME_LIBRARY}
 	${COREUTILS_LIBRARY}
 	${POSITIONING_LIBRARY}
 	${ISO_22133_LIBRARY}
